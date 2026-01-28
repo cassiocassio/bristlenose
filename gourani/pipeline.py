@@ -64,6 +64,7 @@ class Pipeline:
         )
         from gourani.stages.quote_clustering import cluster_by_screen
         from gourani.stages.quote_extraction import extract_quotes
+        from gourani.stages.render_html import render_html
         from gourani.stages.render_output import (
             render_markdown,
             write_intermediate_json,
@@ -182,6 +183,14 @@ class Pipeline:
                 output_dir,
                 all_quotes=all_quotes,
             )
+            render_html(
+                screen_clusters,
+                theme_groups,
+                sessions,
+                self.settings.project_name,
+                output_dir,
+                all_quotes=all_quotes,
+            )
             progress.remove_task(task)
 
         return PipelineResult(
@@ -245,6 +254,7 @@ class Pipeline:
         from gourani.llm.client import LLMClient
         from gourani.stages.quote_clustering import cluster_by_screen
         from gourani.stages.quote_extraction import extract_quotes
+        from gourani.stages.render_html import render_html
         from gourani.stages.render_output import render_markdown, write_intermediate_json
         from gourani.stages.thematic_grouping import group_by_theme
         from gourani.stages.topic_segmentation import segment_topics
@@ -274,6 +284,11 @@ class Pipeline:
         theme_groups = await group_by_theme(all_quotes, llm_client)
 
         render_markdown(
+            screen_clusters, theme_groups, [],
+            self.settings.project_name, output_dir,
+            all_quotes=all_quotes,
+        )
+        render_html(
             screen_clusters, theme_groups, [],
             self.settings.project_name, output_dir,
             all_quotes=all_quotes,

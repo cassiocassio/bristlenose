@@ -114,6 +114,7 @@ def run(
     console.print(f"  Screen clusters: {len(result.screen_clusters)}")
     console.print(f"  Themes: {len(result.theme_groups)}")
     console.print(f"  Final report: {result.output_dir / 'research_quotes.md'}")
+    console.print(f"  HTML report:  {result.output_dir / 'research_quotes.html'}")
 
 
 @app.command()
@@ -200,3 +201,4 @@ def analyze(
     console.print(f"  Screen clusters: {len(result.screen_clusters)}")
     console.print(f"  Themes: {len(result.theme_groups)}")
     console.print(f"  Final report: {result.output_dir / 'research_quotes.md'}")
+    console.print(f"  HTML report:  {result.output_dir / 'research_quotes.html'}")

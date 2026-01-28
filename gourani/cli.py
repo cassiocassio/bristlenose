@@ -113,8 +113,8 @@ def run(
     console.print(f"  Participants: {len(result.participants)}")
     console.print(f"  Screen clusters: {len(result.screen_clusters)}")
     console.print(f"  Themes: {len(result.theme_groups)}")
-    console.print(f"  Final report: {result.output_dir / 'research_quotes.md'}")
-    console.print(f"  HTML report:  {result.output_dir / 'research_quotes.html'}")
+    console.print(f"  Final report: {result.output_dir / 'research_report.md'}")
+    console.print(f"  HTML report:  {result.output_dir / 'research_report.html'}")
 
 
 @app.command()
@@ -200,5 +200,5 @@ def analyze(
     console.print(f"\n[bold green]Done.[/bold green] Output written to {result.output_dir}")
     console.print(f"  Screen clusters: {len(result.screen_clusters)}")
     console.print(f"  Themes: {len(result.theme_groups)}")
-    console.print(f"  Final report: {result.output_dir / 'research_quotes.md'}")
-    console.print(f"  HTML report:  {result.output_dir / 'research_quotes.html'}")
+    console.print(f"  Final report: {result.output_dir / 'research_report.md'}")
+    console.print(f"  HTML report:  {result.output_dir / 'research_report.html'}")

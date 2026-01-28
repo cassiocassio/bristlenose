@@ -254,7 +254,7 @@ def render_html(
     output_dir: Path,
     all_quotes: list[ExtractedQuote] | None = None,
 ) -> Path:
-    """Generate research_quotes.html with an external CSS stylesheet.
+    """Generate research_report.html with an external CSS stylesheet.
 
     Writes ``gourani-theme.css`` only if it does not already exist so that
     user customisations are preserved across re-runs.
@@ -270,7 +270,7 @@ def render_html(
         css_path.write_text(DEFAULT_CSS, encoding="utf-8")
         logger.info("Wrote default theme: %s", css_path)
 
-    html_path = output_dir / "research_quotes.html"
+    html_path = output_dir / "research_report.html"
 
     parts: list[str] = []
     _w = parts.append

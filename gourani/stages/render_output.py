@@ -29,7 +29,7 @@ def render_markdown(
     output_dir: Path,
     all_quotes: list[ExtractedQuote] | None = None,
 ) -> Path:
-    """Generate the final research_quotes.md file.
+    """Generate the final research_report.md file.
 
     Args:
         screen_clusters: Screen-specific quote clusters.
@@ -43,7 +43,7 @@ def render_markdown(
         Path to the written Markdown file.
     """
     output_dir.mkdir(parents=True, exist_ok=True)
-    md_path = output_dir / "research_quotes.md"
+    md_path = output_dir / "research_report.md"
 
     lines: list[str] = []
 

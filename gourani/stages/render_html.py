@@ -218,6 +218,17 @@ tr:last-child td {
     color: var(--colour-frustration);
 }
 
+/* --- Source file links --- */
+
+td a {
+    color: var(--colour-accent);
+    text-decoration: none;
+}
+
+td a:hover {
+    text-decoration: underline;
+}
+
 /* --- Print --- */
 
 @media print {
@@ -284,6 +295,34 @@ def render_html(
     _w(f"<p>Sessions processed: {len(sessions)}</p>")
     _w("</div>")
 
+    # --- Participant Summary (at top for quick reference) ---
+    if sessions:
+        _w("<section>")
+        _w("<h2>Participants</h2>")
+        _w("<table>")
+        _w("<thead><tr>")
+        _w("<th>ID</th><th>Session Date</th><th>Duration</th><th>Source File</th>")
+        _w("</tr></thead>")
+        _w("<tbody>")
+        for session in sessions:
+            duration = _session_duration(session)
+            if session.files:
+                source_name = _esc(session.files[0].path.name)
+                file_uri = session.files[0].path.resolve().as_uri()
+                source = f'<a href="{file_uri}">{source_name}</a>'
+            else:
+                source = "&mdash;"
+            _w("<tr>")
+            _w(f"<td>{_esc(session.participant_id)}</td>")
+            _w(f"<td>{session.session_date.strftime('%Y-%m-%d')}</td>")
+            _w(f"<td>{duration}</td>")
+            _w(f"<td>{source}</td>")
+            _w("</tr>")
+        _w("</tbody>")
+        _w("</table>")
+        _w("</section>")
+        _w("<hr>")
+
     # --- Screen-Specific Findings ---
     if screen_clusters:
         _w("<section>")
@@ -333,27 +372,6 @@ def render_html(
             _w(task_html)
             _w("</section>")
             _w("<hr>")
-
-    # --- Appendix: Participant Summary ---
-    _w("<section>")
-    _w("<h2>Appendix: Participant Summary</h2>")
-    _w("<table>")
-    _w("<thead><tr>")
-    _w("<th>ID</th><th>Session Date</th><th>Duration</th><th>Source File</th>")
-    _w("</tr></thead>")
-    _w("<tbody>")
-    for session in sessions:
-        duration = _session_duration(session)
-        source = _esc(session.files[0].path.name) if session.files else "&mdash;"
-        _w("<tr>")
-        _w(f"<td>{_esc(session.participant_id)}</td>")
-        _w(f"<td>{session.session_date.strftime('%Y-%m-%d')}</td>")
-        _w(f"<td>{duration}</td>")
-        _w(f"<td>{source}</td>")
-        _w("</tr>")
-    _w("</tbody>")
-    _w("</table>")
-    _w("</section>")
 
     # --- Close ---
     _w("</article>")

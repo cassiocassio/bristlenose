@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 from datetime import datetime
 from pathlib import Path
 
@@ -132,7 +133,16 @@ def render_markdown(
 
     for session in sessions:
         duration = _session_duration(session)
-        source = session.files[0].path.name if session.files else "—"
+        if session.files:
+            source_path = session.files[0].path
+            try:
+                link_target = os.path.relpath(source_path, output_dir)
+            except ValueError:
+                # Different drive on Windows — fall back to absolute
+                link_target = str(source_path)
+            source = f"[{source_path.name}]({Path(link_target).as_posix()})"
+        else:
+            source = "—"
         lines.append(
             f"| {session.participant_id} "
             f"| {session.session_date.strftime('%Y-%m-%d')} "

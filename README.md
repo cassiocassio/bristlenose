@@ -2,7 +2,8 @@
 
 User-research transcription and quote extraction engine.
 
-Drop a folder of interview recordings in, get themed verbatim quotes out.
+Drop a folder of interview recordings in, get themed verbatim quotes out --
+as a browsable HTML report with clickable timecodes and a popout video player.
 
 ## What it does
 
@@ -19,30 +20,54 @@ Gourani processes user-research interview files through a 12-stage pipeline:
 9. **Extract quotes** -- LLM pulls verbatim quotes from participant speech with editorial cleanup
 10. **Cluster by screen** -- groups screen-specific quotes across all participants
 11. **Group by theme** -- groups general/contextual quotes into emergent themes
-12. **Render output** -- writes the final `research_quotes.md`
+12. **Render output** -- writes `research_report.html` and `research_report.md`
 
 ### Output
 
 ```
 output/
-  raw_transcripts/           # one .txt per participant
-  pii_removed_transcripts/   # PII-scrubbed versions
-  intermediate/              # JSON debug files
-  research_quotes.md         # the deliverable
+  research_report.html         # the deliverable -- browsable report
+  research_report.md           # Markdown version
+  gourani-theme.css            # editable theme (auto-generated, safe to customise)
+  gourani-player.html          # popout video player (auto-generated)
+  raw_transcripts/             # one .txt per participant
+  cooked_transcripts/          # cleaned transcripts after PII removal
+  intermediate/                # JSON debug files (quotes, clusters, themes)
 ```
+
+### HTML report
+
+The HTML report is the primary output. It includes:
+
+- **Participant table** at the top with session dates, durations, and clickable source file links
+- **Table of contents** -- side-by-side Sections and Themes columns on wide screens, stacked on narrow
+- **Sections** -- screen-specific quote clusters, ordered by product flow
+- **Themes** -- emergent cross-participant themes with grouped quotes
+- **Sentiment** -- mirror-reflection histogram showing the balance of positive and negative emotions across all quotes
+- **Friction points** -- moments flagged for researcher review (confusion, frustration, error-recovery)
+- **User journeys** -- per-participant stage progression and friction point counts
+
+Every timecode is a clickable link. Clicking opens a **popout video player** that seeks to that moment. The player stays in a separate resizable window so you can arrange the report and video side by side at whatever sizes work for your screen.
 
 ### Quote format
 
 Quotes preserve authentic participant expression with light editorial cleanup:
 
 ```
-[00:05:23] "I was... trying to find the button and it just... wasn't there." -- p3
+[05:23] "I was... trying to find the button and it just... wasn't there." -- p3
 ```
 
+- Timecodes use `MM:SS` when under one hour, `HH:MM:SS` when over
 - `...` replaces removed filler (um, uh, like, you know)
 - `[square brackets]` mark editorial insertions for clarity
 - `[When asked about X]` prefixes researcher context where needed
 - Emotion, frustration, humour, and strong language are preserved verbatim
+
+### Theming
+
+The report ships with `gourani-theme.css` -- a clean, print-friendly stylesheet.
+You can edit it freely; Gourani won't overwrite your changes on re-run. If you
+want to reset to the default theme, just delete the file and re-run.
 
 ---
 
@@ -279,6 +304,10 @@ M4 Ultra and beyond) exposes the same Metal compute API that MLX targets.
 
 ```bash
 # Full pipeline: transcribe + analyse + output
+gourani run ./interviews/ -o ./results/
+
+# Project name defaults to the input folder name.
+# Override with --project:
 gourani run ./interviews/ -o ./results/ -p "Q1 Usability Study"
 
 # Transcribe only (no LLM needed, no API key required)

@@ -9,6 +9,7 @@ from gourani.llm.client import LLMClient
 from gourani.llm.prompts import THEMATIC_GROUPING_PROMPT
 from gourani.llm.structured import ThematicGroupingResult
 from gourani.models import ExtractedQuote, QuoteType, ThemeGroup
+from gourani.utils.timecodes import format_timecode
 
 logger = logging.getLogger(__name__)
 
@@ -42,7 +43,7 @@ async def group_by_theme(
         {
             "index": i,
             "participant": q.participant_id,
-            "timecode": f"{int(q.start_timecode // 3600):02d}:{int((q.start_timecode % 3600) // 60):02d}:{int(q.start_timecode % 60):02d}",
+            "timecode": format_timecode(q.start_timecode),
             "topic_label": q.topic_label,
             "text": q.text,
         }

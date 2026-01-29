@@ -302,12 +302,14 @@ class PipelineResult(BaseModel):
 
 
 def format_timecode(seconds: float) -> str:
-    """Format seconds as HH:MM:SS."""
-    total = int(seconds)
+    """Format seconds as MM:SS or HH:MM:SS (hours only when >= 1 h)."""
+    total = max(0, int(seconds))
     h = total // 3600
     m = (total % 3600) // 60
     s = total % 60
-    return f"{h:02d}:{m:02d}:{s:02d}"
+    if h:
+        return f"{h:02d}:{m:02d}:{s:02d}"
+    return f"{m:02d}:{s:02d}"
 
 
 def parse_timecode(tc: str) -> float:

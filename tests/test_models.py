@@ -9,10 +9,10 @@ from gourani.models import (
 
 
 def test_format_timecode() -> None:
-    assert format_timecode(0) == "00:00:00"
-    assert format_timecode(61) == "00:01:01"
+    assert format_timecode(0) == "00:00"
+    assert format_timecode(61) == "01:01"
     assert format_timecode(3661) == "01:01:01"
-    assert format_timecode(3599.9) == "00:59:59"
+    assert format_timecode(3599.9) == "59:59"
 
 
 def test_parse_timecode_hhmmss() -> None:
@@ -40,7 +40,7 @@ def test_quote_formatted() -> None:
         quote_type=QuoteType.SCREEN_SPECIFIC,
     )
     result = quote.formatted()
-    assert "[00:05:23]" in result
+    assert "[05:23]" in result
     assert "\u201c" in result  # left smart quote
     assert "\u201d" in result  # right smart quote
     assert "p3" in result

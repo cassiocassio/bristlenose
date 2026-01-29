@@ -294,6 +294,52 @@ a.timecode:hover {
     color: var(--colour-accent);
 }
 
+/* --- Sentiment histogram --- */
+
+.sentiment-chart {
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    gap: 0;
+    margin: 1.5rem 0;
+    min-height: 160px;
+}
+
+.sentiment-bar-group {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-width: 3.5rem;
+    flex: 0 1 5rem;
+}
+
+.sentiment-bar {
+    width: 70%;
+    border-radius: 3px 3px 0 0;
+    min-height: 2px;
+}
+
+.sentiment-bar-label {
+    font-size: 0.7rem;
+    color: var(--colour-muted);
+    margin-top: 0.3rem;
+    text-align: center;
+    line-height: 1.2;
+}
+
+.sentiment-bar-count {
+    font-size: 0.75rem;
+    font-weight: 600;
+    margin-bottom: 0.2rem;
+}
+
+.sentiment-divider {
+    width: 1px;
+    background: var(--colour-border);
+    align-self: stretch;
+    margin: 0 0.25rem;
+}
+
 /* --- Active quote highlight (bidirectional sync) --- */
 
 blockquote.quote-active {
@@ -398,8 +444,17 @@ def render_html(
             duration = _session_duration(session)
             if session.files:
                 source_name = _esc(session.files[0].path.name)
-                file_uri = session.files[0].path.resolve().as_uri()
-                source = f'<a href="{file_uri}">{source_name}</a>'
+                pid = _esc(session.participant_id)
+                if video_map and session.participant_id in video_map:
+                    source = (
+                        f'<a href="#" class="timecode" '
+                        f'data-participant="{pid}" '
+                        f'data-seconds="0" data-end-seconds="0">'
+                        f'{source_name}</a>'
+                    )
+                else:
+                    file_uri = session.files[0].path.resolve().as_uri()
+                    source = f'<a href="{file_uri}">{source_name}</a>'
             else:
                 source = "&mdash;"
             _w("<tr>")
@@ -424,6 +479,8 @@ def render_html(
         for theme in theme_groups:
             anchor = f"theme-{theme.theme_label.lower().replace(' ', '-')}"
             theme_toc.append((anchor, theme.theme_label))
+    if all_quotes:
+        theme_toc.append(("sentiment", "Sentiment"))
     if all_quotes and _has_rewatch_quotes(all_quotes):
         theme_toc.append(("friction-points", "Friction points"))
     if section_toc or theme_toc:
@@ -474,6 +531,16 @@ def render_html(
                 _w(_format_quote_html(quote, video_map))
         _w("</section>")
         _w("<hr>")
+
+    # --- Sentiment ---
+    if all_quotes:
+        sentiment_html = _build_sentiment_html(all_quotes)
+        if sentiment_html:
+            _w("<section>")
+            _w('<h2 id="sentiment">Sentiment</h2>')
+            _w(sentiment_html)
+            _w("</section>")
+            _w("<hr>")
 
     # --- Friction Points ---
     if all_quotes:
@@ -592,6 +659,90 @@ def _quote_badges(quote: ExtractedQuote) -> str:
         label = "moderate" if quote.intensity == 2 else "strong"
         badges.append(f'<span class="badge">intensity:{label}</span>')
     return " ".join(badges)
+
+
+def _build_sentiment_html(quotes: list[ExtractedQuote]) -> str:
+    """Build a mirror-reflection sentiment histogram.
+
+    Negative sentiments fan out to the left, positive to the right,
+    with the highest counts nearest the centre.
+    """
+    from collections import Counter
+
+    # Map emotions and intents to positive/negative buckets
+    negative_labels = {
+        EmotionalTone.CONFUSED: "confused",
+        EmotionalTone.FRUSTRATED: "frustrated",
+        EmotionalTone.CRITICAL: "critical",
+        EmotionalTone.SARCASTIC: "sarcastic",
+    }
+    positive_labels = {
+        EmotionalTone.DELIGHTED: "delighted",
+        EmotionalTone.AMUSED: "amused",
+        QuoteIntent.DELIGHT: "delight",
+    }
+
+    neg_counts: Counter[str] = Counter()
+    pos_counts: Counter[str] = Counter()
+
+    for q in quotes:
+        if q.emotion in negative_labels:
+            neg_counts[negative_labels[q.emotion]] += 1
+        if q.emotion in positive_labels:
+            pos_counts[positive_labels[q.emotion]] += 1
+        # Intent-based (delight intent may differ from delighted emotion)
+        if q.intent == QuoteIntent.DELIGHT and q.emotion != EmotionalTone.DELIGHTED:
+            pos_counts["delight"] += 1
+        if q.intent == QuoteIntent.CONFUSION and q.emotion != EmotionalTone.CONFUSED:
+            neg_counts["confused"] += 1
+        if q.intent == QuoteIntent.FRUSTRATION and q.emotion != EmotionalTone.FRUSTRATED:
+            neg_counts["frustrated"] += 1
+
+    if not neg_counts and not pos_counts:
+        return ""
+
+    # Colours matching the badge CSS
+    colour_map = {
+        "confused": "var(--colour-confusion)",
+        "frustrated": "var(--colour-frustration)",
+        "critical": "var(--colour-frustration)",
+        "sarcastic": "var(--colour-muted)",
+        "delighted": "var(--colour-delight)",
+        "amused": "var(--colour-delight)",
+        "delight": "var(--colour-delight)",
+    }
+
+    all_counts = list(neg_counts.values()) + list(pos_counts.values())
+    max_count = max(all_counts) if all_counts else 1
+    max_bar_px = 120
+
+    def _bar(label: str, count: int) -> str:
+        height = max(4, int((count / max_count) * max_bar_px))
+        colour = colour_map.get(label, "var(--colour-muted)")
+        return (
+            f'<div class="sentiment-bar-group">'
+            f'<span class="sentiment-bar-count" style="color:{colour}">{count}</span>'
+            f'<div class="sentiment-bar" style="height:{height}px;background:{colour}"></div>'
+            f'<span class="sentiment-bar-label">{_esc(label)}</span>'
+            f'</div>'
+        )
+
+    parts: list[str] = []
+
+    # Negative bars: sorted ascending (smallest at left edge, largest near centre)
+    neg_sorted = sorted(neg_counts.items(), key=lambda x: x[1])
+    for label, count in neg_sorted:
+        parts.append(_bar(label, count))
+
+    # Divider
+    parts.append('<div class="sentiment-divider"></div>')
+
+    # Positive bars: sorted descending (largest near centre, smallest at right edge)
+    pos_sorted = sorted(pos_counts.items(), key=lambda x: x[1], reverse=True)
+    for label, count in pos_sorted:
+        parts.append(_bar(label, count))
+
+    return f'<div class="sentiment-chart">{"".join(parts)}</div>'
 
 
 def _has_rewatch_quotes(quotes: list[ExtractedQuote]) -> bool:
@@ -714,26 +865,61 @@ video { flex: 1; width: 100%; min-height: 0; background: #000; }
     return h ? (h < 10 ? '0' : '') + h + ':' + mm : mm;
   }
 
-  // Called by the report window to load + seek
-  window.gourani_seekTo = function(pid, fileUri, seconds) {
+  function loadAndSeek(pid, fileUri, seconds) {
     currentPid = pid;
     if (fileUri !== currentUri) {
       currentUri = fileUri;
       video.src = fileUri;
+      video.addEventListener('loadeddata', function onLoad() {
+        video.removeEventListener('loadeddata', onLoad);
+        video.currentTime = seconds;
+        video.play().catch(function() {});
+      });
+      video.load();
+    } else {
+      video.currentTime = seconds;
+      video.play().catch(function() {});
     }
-    video.currentTime = seconds;
-    video.play().catch(function() { /* autoplay blocked — fine */ });
     status.className = '';
     status.textContent = pid + ' @ ' + fmtTC(seconds);
+  }
+
+  // Called by the report window to load + seek
+  window.gourani_seekTo = function(pid, fileUri, seconds) {
+    loadAndSeek(pid, fileUri, seconds);
   };
+
+  // Read video source and seek time from URL hash
+  function handleHash() {
+    var hash = window.location.hash.substring(1);
+    if (!hash) return;
+    var params = {};
+    hash.split('&').forEach(function(part) {
+      var kv = part.split('=');
+      if (kv.length === 2) params[kv[0]] = decodeURIComponent(kv[1]);
+    });
+    if (params.src) {
+      loadAndSeek(params.pid || '', params.src, parseFloat(params.t) || 0);
+    }
+  }
+
+  // Listen for postMessage from the report window
+  window.addEventListener('message', function(e) {
+    var d = e.data;
+    if (d && d.type === 'gourani-seek' && d.src) {
+      loadAndSeek(d.pid || '', d.src, parseFloat(d.t) || 0);
+    }
+  });
+
+  // Handle initial load from URL hash
+  handleHash();
 
   video.addEventListener('timeupdate', function() {
     if (currentPid) {
       status.textContent = currentPid + ' @ ' + fmtTC(video.currentTime);
-      // Future: notify report for bidirectional sync
       if (window.opener && window.opener.gourani_onTimeUpdate) {
         try { window.opener.gourani_onTimeUpdate(currentPid, video.currentTime); }
-        catch(e) { /* opener closed */ }
+        catch(e) {}
       }
     }
   });
@@ -757,28 +943,19 @@ _REPORT_JS = """\
 (function() {
   var playerWin = null;
 
-  function openPlayer() {
-    if (!playerWin || playerWin.closed) {
-      playerWin = window.open('gourani-player.html', 'gourani-player',
-        'width=720,height=480,resizable=yes,scrollbars=no');
-    }
-    playerWin.focus();
-    return playerWin;
-  }
-
   function seekTo(pid, seconds) {
     var uri = GOURANI_VIDEO_MAP[pid];
     if (!uri) return;
-    var pw = openPlayer();
-    // The player page may still be loading on first open
-    function doSeek() {
-      if (pw.gourani_seekTo) {
-        pw.gourani_seekTo(pid, uri, seconds);
-      } else {
-        setTimeout(doSeek, 100);
-      }
+    var msg = { type: 'gourani-seek', pid: pid, src: uri, t: seconds };
+    var hash = '#src=' + encodeURIComponent(uri) + '&t=' + seconds
+             + '&pid=' + encodeURIComponent(pid);
+    if (!playerWin || playerWin.closed) {
+      playerWin = window.open('gourani-player.html' + hash, 'gourani-player',
+        'width=720,height=480,resizable=yes,scrollbars=no');
+    } else {
+      playerWin.postMessage(msg, '*');
+      playerWin.focus();
     }
-    doSeek();
   }
 
   // Event delegation — single listener for all timecode clicks

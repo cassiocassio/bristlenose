@@ -150,7 +150,7 @@ Your task:
 4. Order the screen clusters in the logical flow of the product/prototype being tested \
 (i.e. the order a user would encounter them)
 
-Provide a brief 1-2 sentence description for each screen cluster.
+Provide a short, punchy subtitle for each screen cluster (under 15 words, no filler).
 
 ## Quotes
 
@@ -173,7 +173,7 @@ or shared experiences emerge?
 "Tool adoption barriers", "Team collaboration patterns")
 3. Assign each quote to one or more themes (a quote may appear in multiple themes \
 if genuinely relevant)
-4. Provide a brief 1-2 sentence description for each theme
+4. Provide a short, punchy subtitle for each theme (under 15 words, no filler)
 
 ## Quotes
 

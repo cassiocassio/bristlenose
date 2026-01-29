@@ -48,7 +48,7 @@ def render_markdown(
     lines: list[str] = []
 
     # Header
-    lines.append(f"# Research Quotes: {project_name}")
+    lines.append(f"# {project_name}")
     lines.append("")
     lines.append(f"Generated: {datetime.now().strftime('%Y-%m-%d')}")
     lines.append(f"Participants: {len(sessions)} ({_participant_range(sessions)})")
@@ -57,13 +57,13 @@ def render_markdown(
     lines.append("---")
     lines.append("")
 
-    # Screen-Specific Findings
+    # Sections
     if screen_clusters:
-        lines.append("## Screen-Specific Findings")
+        lines.append("## Sections")
         lines.append("")
 
-        for i, cluster in enumerate(screen_clusters, start=1):
-            lines.append(f"### {i}. {cluster.screen_label}")
+        for cluster in screen_clusters:
+            lines.append(f"### {cluster.screen_label}")
             lines.append("")
             if cluster.description:
                 lines.append(f"_{cluster.description}_")
@@ -76,13 +76,13 @@ def render_markdown(
         lines.append("---")
         lines.append("")
 
-    # Contextual Themes
+    # Themes
     if theme_groups:
-        lines.append("## Contextual Themes")
+        lines.append("## Themes")
         lines.append("")
 
         for theme in theme_groups:
-            lines.append(f"### Theme: {theme.theme_label}")
+            lines.append(f"### {theme.theme_label}")
             lines.append("")
             if theme.description:
                 lines.append(f"_{theme.description}_")
@@ -95,11 +95,11 @@ def render_markdown(
         lines.append("---")
         lines.append("")
 
-    # Rewatch List — timestamps where confusion/frustration/error_recovery detected
+    # Friction Points — timestamps where confusion/frustration/error_recovery detected
     if all_quotes:
         rewatch_items = _build_rewatch_list(all_quotes)
         if rewatch_items:
-            lines.append("## Rewatch List")
+            lines.append("## Friction points")
             lines.append("")
             lines.append(
                 "_Moments flagged for researcher review — confusion, "
@@ -112,11 +112,11 @@ def render_markdown(
             lines.append("---")
             lines.append("")
 
-    # Task Outcome Summary
+    # User Journeys
     if all_quotes and sessions:
         task_summary = _build_task_outcome_summary(all_quotes, sessions)
         if task_summary:
-            lines.append("## Task Outcome Summary")
+            lines.append("## User journeys")
             lines.append("")
             for item in task_summary:
                 lines.append(item)
@@ -125,9 +125,9 @@ def render_markdown(
             lines.append("")
 
     # Appendix: Participant Summary
-    lines.append("## Appendix: Participant Summary")
+    lines.append("## Appendix: Participant summary")
     lines.append("")
-    lines.append("| ID | Session Date | Duration | Source File |")
+    lines.append("| ID | Session date | Duration | Source file |")
     lines.append("|----|-------------|----------|-------------|")
 
     for session in sessions:
@@ -302,8 +302,8 @@ def _build_task_outcome_summary(
         by_participant.setdefault(q.participant_id, []).append(q)
 
     lines: list[str] = []
-    lines.append("| Participant | Journey Stages Observed | Furthest Stage | Friction Points |")
-    lines.append("|------------|----------------------|----------------|-----------------|")
+    lines.append("| Participant | Stages | Friction points |")
+    lines.append("|------------|----------------------|-----------------|")
 
     pids = sorted(by_participant.keys())
     for pid in pids:
@@ -312,12 +312,7 @@ def _build_task_outcome_summary(
 
         # Stages observed (exclude OTHER)
         observed = [s for s in STAGE_ORDER if stage_counts.get(s, 0) > 0]
-        if not observed:
-            observed_str = "other"
-            furthest = "—"
-        else:
-            observed_str = " → ".join(s.value for s in observed)
-            furthest = observed[-1].value
+        observed_str = " → ".join(s.value for s in observed) if observed else "other"
 
         # Count friction points (confusion + frustration)
         friction = sum(
@@ -326,6 +321,6 @@ def _build_task_outcome_summary(
             or q.emotion in (EmotionalTone.FRUSTRATED, EmotionalTone.CONFUSED)
         )
 
-        lines.append(f"| {pid} | {observed_str} | {furthest} | {friction} |")
+        lines.append(f"| {pid} | {observed_str} | {friction} |")
 
     return lines

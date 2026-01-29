@@ -35,9 +35,9 @@ def run(
         typer.Option("--output", "-o", help="Output directory for results."),
     ] = Path("output"),
     project_name: Annotated[
-        str,
-        typer.Option("--project", "-p", help="Name of the research project."),
-    ] = "User Research",
+        Optional[str],
+        typer.Option("--project", "-p", help="Name of the research project (defaults to input folder name)."),
+    ] = None,
     whisper_backend: Annotated[
         str,
         typer.Option(
@@ -92,6 +92,9 @@ def run(
                 f"Use [bold]--clean[/bold] to delete it and re-run."
             )
             raise typer.Exit(1)
+
+    if project_name is None:
+        project_name = input_dir.resolve().name
 
     settings = load_settings(
         input_dir=input_dir,
@@ -173,9 +176,9 @@ def analyze(
         typer.Option("--output", "-o", help="Output directory for results."),
     ] = Path("output"),
     project_name: Annotated[
-        str,
-        typer.Option("--project", "-p", help="Name of the research project."),
-    ] = "User Research",
+        Optional[str],
+        typer.Option("--project", "-p", help="Name of the research project (defaults to input folder name)."),
+    ] = None,
     llm_provider: Annotated[
         str,
         typer.Option("--llm", "-l", help="LLM provider: anthropic, openai."),
@@ -186,6 +189,9 @@ def analyze(
     ] = False,
 ) -> None:
     """Run LLM analysis on existing transcripts (skip ingestion and transcription)."""
+    if project_name is None:
+        project_name = transcripts_dir.resolve().name
+
     settings = load_settings(
         output_dir=output_dir,
         project_name=project_name,

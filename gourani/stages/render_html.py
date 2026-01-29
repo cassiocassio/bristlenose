@@ -116,6 +116,17 @@ hr {
 
 /* --- Table of Contents --- */
 
+.toc-row {
+    display: flex;
+    gap: 3rem;
+    flex-wrap: wrap;
+}
+
+.toc-row > nav {
+    flex: 1;
+    min-width: 12rem;
+}
+
 .toc h2 {
     font-size: 1.1rem;
     margin-bottom: 0.5rem;
@@ -125,8 +136,6 @@ hr {
     list-style: none;
     padding: 0;
     margin: 0;
-    columns: 2;
-    column-gap: 2rem;
 }
 
 .toc li {
@@ -197,7 +206,6 @@ blockquote .badges {
 /* --- Description text --- */
 
 .description {
-    font-style: italic;
     color: var(--colour-muted);
     margin-bottom: 1rem;
 }
@@ -383,7 +391,7 @@ def render_html(
         _w("<h2>Participants</h2>")
         _w("<table>")
         _w("<thead><tr>")
-        _w("<th>ID</th><th>Session Date</th><th>Duration</th><th>Source File</th>")
+        _w("<th>ID</th><th>Session date</th><th>Duration</th><th>Source file</th>")
         _w("</tr></thead>")
         _w("<tbody>")
         for session in sessions:
@@ -406,25 +414,37 @@ def render_html(
         _w("<hr>")
 
     # --- Table of Contents ---
-    toc_items: list[tuple[str, str]] = []  # (anchor_id, label)
+    section_toc: list[tuple[str, str]] = []
+    theme_toc: list[tuple[str, str]] = []
     if screen_clusters:
         for cluster in screen_clusters:
             anchor = f"section-{cluster.screen_label.lower().replace(' ', '-')}"
-            toc_items.append((anchor, cluster.screen_label))
+            section_toc.append((anchor, cluster.screen_label))
     if theme_groups:
         for theme in theme_groups:
             anchor = f"theme-{theme.theme_label.lower().replace(' ', '-')}"
-            toc_items.append((anchor, theme.theme_label))
+            theme_toc.append((anchor, theme.theme_label))
     if all_quotes and _has_rewatch_quotes(all_quotes):
-        toc_items.append(("rewatch-list", "Rewatch List"))
-    if toc_items:
-        _w('<nav class="toc">')
-        _w("<h2>Contents</h2>")
-        _w("<ul>")
-        for anchor, label in toc_items:
-            _w(f'<li><a href="#{_esc(anchor)}">{_esc(label)}</a></li>')
-        _w("</ul>")
-        _w("</nav>")
+        theme_toc.append(("friction-points", "Friction points"))
+    if section_toc or theme_toc:
+        _w('<div class="toc-row">')
+        if section_toc:
+            _w('<nav class="toc">')
+            _w("<h2>Sections</h2>")
+            _w("<ul>")
+            for anchor, label in section_toc:
+                _w(f'<li><a href="#{_esc(anchor)}">{_esc(label)}</a></li>')
+            _w("</ul>")
+            _w("</nav>")
+        if theme_toc:
+            _w('<nav class="toc">')
+            _w("<h2>Themes</h2>")
+            _w("<ul>")
+            for anchor, label in theme_toc:
+                _w(f'<li><a href="#{_esc(anchor)}">{_esc(label)}</a></li>')
+            _w("</ul>")
+            _w("</nav>")
+        _w("</div>")
         _w("<hr>")
 
     # --- Sections (screen-specific findings) ---
@@ -455,12 +475,12 @@ def render_html(
         _w("</section>")
         _w("<hr>")
 
-    # --- Rewatch List ---
+    # --- Friction Points ---
     if all_quotes:
         rewatch = _build_rewatch_html(all_quotes, video_map)
         if rewatch:
             _w("<section>")
-            _w('<h2 id="rewatch-list">Rewatch List</h2>')
+            _w('<h2 id="friction-points">Friction points</h2>')
             _w(
                 '<p class="description">Moments flagged for researcher review '
                 "&mdash; confusion, frustration, or error-recovery detected.</p>"
@@ -469,12 +489,12 @@ def render_html(
             _w("</section>")
             _w("<hr>")
 
-    # --- Task Outcome Summary ---
+    # --- User Journeys ---
     if all_quotes and sessions:
         task_html = _build_task_outcome_html(all_quotes, sessions)
         if task_html:
             _w("<section>")
-            _w("<h2>Task Outcome Summary</h2>")
+            _w("<h2>User journeys</h2>")
             _w(task_html)
             _w("</section>")
             _w("<hr>")
@@ -664,7 +684,7 @@ def _write_player_html(output_dir: Path) -> Path:
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<title>Gourani Player</title>
+<title>Gourani player</title>
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
 html, body { height: 100%; background: #111; color: #e5e7eb; font-family: system-ui, sans-serif; }
@@ -809,9 +829,8 @@ def _build_task_outcome_html(
     rows.append("<thead><tr>")
     rows.append(
         "<th>Participant</th>"
-        "<th>Journey Stages Observed</th>"
-        "<th>Furthest Stage</th>"
-        "<th>Friction Points</th>"
+        "<th>Stages</th>"
+        "<th>Friction points</th>"
     )
     rows.append("</tr></thead>")
     rows.append("<tbody>")
@@ -821,12 +840,7 @@ def _build_task_outcome_html(
         stage_counts = Counter(q.journey_stage for q in pq)
 
         observed = [s for s in STAGE_ORDER if stage_counts.get(s, 0) > 0]
-        if not observed:
-            observed_str = "other"
-            furthest = "&mdash;"
-        else:
-            observed_str = " &rarr; ".join(s.value for s in observed)
-            furthest = observed[-1].value
+        observed_str = " &rarr; ".join(s.value for s in observed) if observed else "other"
 
         friction = sum(
             1
@@ -838,7 +852,6 @@ def _build_task_outcome_html(
         rows.append("<tr>")
         rows.append(f"<td>{_esc(pid)}</td>")
         rows.append(f"<td>{observed_str}</td>")
-        rows.append(f"<td>{furthest}</td>")
         rows.append(f"<td>{friction}</td>")
         rows.append("</tr>")
 

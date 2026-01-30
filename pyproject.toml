@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "bristlenose"
-version = "0.3.0"
+dynamic = ["version"]
 description = "User-research transcription and quote extraction engine"
 requires-python = ">=3.10"
 license = "AGPL-3.0-only"
@@ -45,6 +45,9 @@ packages = ["bristlenose"]
 
 [tool.hatch.build]
 artifacts = ["bristlenose/theme/**/*.css", "bristlenose/theme/**/*.js"]
+
+[tool.hatch.version]
+path = "bristlenose/__init__.py"
 
 [tool.hatch.build.targets.sdist]
 exclude = [".claude/", "trial-runs/", "tests/"]

@@ -5,6 +5,7 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
+  workflow_call:  # allow release.yml to invoke this workflow
 
 jobs:
   lint-and-test:

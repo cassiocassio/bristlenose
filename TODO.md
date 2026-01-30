@@ -33,13 +33,9 @@ Last updated: 30 Jan 2026
 
 These are ready to implement. Do them in order — each builds on the previous.
 
-### 1. CI on every push/PR (most valuable, do first)
+### 1. ✅ CI on every push/PR
 
-GitHub Actions workflow: `.github/workflows/ci.yml`
-- Run `ruff check .`
-- Run `mypy bristlenose/`
-- Run `pytest`
-- Trigger on push to `main` and on pull requests
+Done — `.github/workflows/ci.yml`. Ruff and pytest are hard gates; mypy runs informational (`continue-on-error`) due to 9 pre-existing third-party SDK type errors.
 
 ### 2. Publish to PyPI on tagged release
 

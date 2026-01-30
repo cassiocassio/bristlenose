@@ -3,11 +3,11 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "gourani"
+name = "bristlenose"
 version = "0.1.0"
 description = "User-research transcription and quote extraction engine"
 requires-python = ">=3.10"
-license = "MIT"
+license = "AGPL-3.0-only"
 
 dependencies = [
     "typer[all]>=0.12",
@@ -38,7 +38,7 @@ dev = [
 ]
 
 [project.scripts]
-gourani = "gourani.cli:app"
+bristlenose = "bristlenose.cli:app"
 
 [tool.ruff]
 target-version = "py310"
@@ -46,6 +46,7 @@ line-length = 100
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "N", "W", "UP"]
+ignore = ["E501"]
 
 [tool.mypy]
 python_version = "3.10"

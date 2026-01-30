@@ -1,6 +1,6 @@
 """Tests for text utility functions."""
 
-from gourani.utils.text import (
+from bristlenose.utils.text import (
     apply_smart_quotes,
     clean_transcript_text,
     remove_disfluencies,

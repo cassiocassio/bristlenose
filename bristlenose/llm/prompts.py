@@ -1,4 +1,4 @@
-"""All LLM prompt templates for Gourani pipeline stages."""
+"""All LLM prompt templates for Bristlenose pipeline stages."""
 
 # ---------------------------------------------------------------------------
 # Stage 5b: Speaker Role Identification

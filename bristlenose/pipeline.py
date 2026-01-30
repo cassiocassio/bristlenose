@@ -8,10 +8,9 @@ from pathlib import Path
 from rich.console import Console
 from rich.progress import Progress, SpinnerColumn, TextColumn
 
-from gourani.config import GouraniSettings
-from gourani.models import (
+from bristlenose.config import BristlenoseSettings
+from bristlenose.models import (
     FileType,
-    FullTranscript,
     InputSession,
     PiiCleanTranscript,
     PipelineResult,
@@ -23,9 +22,9 @@ console = Console()
 
 
 class Pipeline:
-    """Orchestrates the full Gourani processing pipeline."""
+    """Orchestrates the full Bristlenose processing pipeline."""
 
-    def __init__(self, settings: GouraniSettings, verbose: bool = False) -> None:
+    def __init__(self, settings: BristlenoseSettings, verbose: bool = False) -> None:
         self.settings = settings
         self.verbose = verbose
 
@@ -46,31 +45,31 @@ class Pipeline:
         Returns:
             PipelineResult with all data and paths.
         """
-        from gourani.llm.client import LLMClient
-        from gourani.stages.extract_audio import extract_audio_for_sessions
-        from gourani.stages.identify_speakers import (
+        from bristlenose.llm.client import LLMClient
+        from bristlenose.stages.extract_audio import extract_audio_for_sessions
+        from bristlenose.stages.identify_speakers import (
             identify_speaker_roles_heuristic,
             identify_speaker_roles_llm,
         )
-        from gourani.stages.ingest import ingest
-        from gourani.stages.merge_transcript import (
+        from bristlenose.stages.ingest import ingest
+        from bristlenose.stages.merge_transcript import (
             merge_transcripts,
             write_raw_transcripts,
         )
-        from gourani.stages.pii_removal import (
+        from bristlenose.stages.pii_removal import (
             remove_pii,
             write_cooked_transcripts,
             write_pii_summary,
         )
-        from gourani.stages.quote_clustering import cluster_by_screen
-        from gourani.stages.quote_extraction import extract_quotes
-        from gourani.stages.render_html import render_html
-        from gourani.stages.render_output import (
+        from bristlenose.stages.quote_clustering import cluster_by_screen
+        from bristlenose.stages.quote_extraction import extract_quotes
+        from bristlenose.stages.render_html import render_html
+        from bristlenose.stages.render_output import (
             render_markdown,
             write_intermediate_json,
         )
-        from gourani.stages.thematic_grouping import group_by_theme
-        from gourani.stages.topic_segmentation import segment_topics
+        from bristlenose.stages.thematic_grouping import group_by_theme
+        from bristlenose.stages.topic_segmentation import segment_topics
 
         output_dir.mkdir(parents=True, exist_ok=True)
 
@@ -210,10 +209,10 @@ class Pipeline:
 
         Useful for producing raw transcripts without needing an API key.
         """
-        from gourani.stages.extract_audio import extract_audio_for_sessions
-        from gourani.stages.identify_speakers import identify_speaker_roles_heuristic
-        from gourani.stages.ingest import ingest
-        from gourani.stages.merge_transcript import merge_transcripts, write_raw_transcripts
+        from bristlenose.stages.extract_audio import extract_audio_for_sessions
+        from bristlenose.stages.identify_speakers import identify_speaker_roles_heuristic
+        from bristlenose.stages.ingest import ingest
+        from bristlenose.stages.merge_transcript import merge_transcripts, write_raw_transcripts
 
         output_dir.mkdir(parents=True, exist_ok=True)
 
@@ -251,13 +250,13 @@ class Pipeline:
 
         Loads .txt transcripts from a directory and runs stages 8-12.
         """
-        from gourani.llm.client import LLMClient
-        from gourani.stages.quote_clustering import cluster_by_screen
-        from gourani.stages.quote_extraction import extract_quotes
-        from gourani.stages.render_html import render_html
-        from gourani.stages.render_output import render_markdown, write_intermediate_json
-        from gourani.stages.thematic_grouping import group_by_theme
-        from gourani.stages.topic_segmentation import segment_topics
+        from bristlenose.llm.client import LLMClient
+        from bristlenose.stages.quote_clustering import cluster_by_screen
+        from bristlenose.stages.quote_extraction import extract_quotes
+        from bristlenose.stages.render_html import render_html
+        from bristlenose.stages.render_output import render_markdown, write_intermediate_json
+        from bristlenose.stages.thematic_grouping import group_by_theme
+        from bristlenose.stages.topic_segmentation import segment_topics
 
         output_dir.mkdir(parents=True, exist_ok=True)
 
@@ -318,9 +317,9 @@ class Pipeline:
         Returns:
             Dict mapping participant_id to list of TranscriptSegments.
         """
-        from gourani.stages.parse_docx import parse_docx_file
-        from gourani.stages.parse_subtitles import parse_subtitle_file
-        from gourani.stages.transcribe import transcribe_sessions
+        from bristlenose.stages.parse_docx import parse_docx_file
+        from bristlenose.stages.parse_subtitles import parse_subtitle_file
+        from bristlenose.stages.transcribe import transcribe_sessions
 
         session_segments: dict[str, list[TranscriptSegment]] = {}
 
@@ -411,8 +410,9 @@ def _load_transcripts_from_dir(
     """
     import re
     from datetime import datetime, timezone
-    from gourani.models import SpeakerRole
-    from gourani.utils.timecodes import parse_timecode
+
+    from bristlenose.models import SpeakerRole
+    from bristlenose.utils.timecodes import parse_timecode
 
     transcripts: list[PiiCleanTranscript] = []
 

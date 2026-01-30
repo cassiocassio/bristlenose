@@ -5,11 +5,11 @@ from __future__ import annotations
 import json
 import logging
 
-from gourani.llm.client import LLMClient
-from gourani.llm.prompts import THEMATIC_GROUPING_PROMPT
-from gourani.llm.structured import ThematicGroupingResult
-from gourani.models import ExtractedQuote, QuoteType, ThemeGroup
-from gourani.utils.timecodes import format_timecode
+from bristlenose.llm.client import LLMClient
+from bristlenose.llm.prompts import THEMATIC_GROUPING_PROMPT
+from bristlenose.llm.structured import ThematicGroupingResult
+from bristlenose.models import ExtractedQuote, QuoteType, ThemeGroup
+from bristlenose.utils.timecodes import format_timecode
 
 logger = logging.getLogger(__name__)
 
@@ -90,11 +90,11 @@ async def group_by_theme(
 
     # Enforce minimum evidence threshold: themes with fewer than 2 quotes
     # get folded into an "Uncategorised observations" bucket.
-    MIN_THEME_QUOTES = 2
-    strong_themes = [t for t in themes if len(t.quotes) >= MIN_THEME_QUOTES]
+    min_theme_quotes = 2
+    strong_themes = [t for t in themes if len(t.quotes) >= min_theme_quotes]
     weak_quotes: list[ExtractedQuote] = []
     for t in themes:
-        if len(t.quotes) < MIN_THEME_QUOTES:
+        if len(t.quotes) < min_theme_quotes:
             weak_quotes.extend(t.quotes)
 
     if weak_quotes:

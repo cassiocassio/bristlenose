@@ -1,4 +1,4 @@
-"""Application settings loaded from environment variables, .env, or gourani.toml."""
+"""Application settings loaded from environment variables, .env, or bristlenose.toml."""
 
 from __future__ import annotations
 
@@ -12,16 +12,16 @@ def _find_env_files() -> list[Path]:
     """Find .env files to load, searching upward from CWD and in the package dir.
 
     Checks (in priority order, last wins in pydantic-settings):
-    1. The gourani package directory (next to this file)
+    1. The bristlenose package directory (next to this file)
     2. The current working directory
     3. Parent directories up to the filesystem root
 
-    This means ``gourani`` finds its .env whether you run it from the
+    This means ``bristlenose`` finds its .env whether you run it from the
     project root, a trial-runs subfolder, or anywhere on your system.
     """
     candidates: list[Path] = []
 
-    # Package directory (where gourani is installed / editable-linked)
+    # Package directory (where bristlenose is installed / editable-linked)
     pkg_env = Path(__file__).resolve().parent.parent / ".env"
     if pkg_env.is_file():
         candidates.append(pkg_env)
@@ -37,9 +37,9 @@ def _find_env_files() -> list[Path]:
     return candidates
 
 
-class GouraniSettings(BaseSettings):
+class BristlenoseSettings(BaseSettings):
     model_config = SettingsConfigDict(
-        env_prefix="GOURANI_",
+        env_prefix="BRISTLENOSE_",
         env_file=_find_env_files(),
         env_file_encoding="utf-8",
         extra="ignore",
@@ -82,6 +82,6 @@ class GouraniSettings(BaseSettings):
     llm_concurrency: int = 3
 
 
-def load_settings(**overrides: object) -> GouraniSettings:
+def load_settings(**overrides: object) -> BristlenoseSettings:
     """Load settings with optional CLI overrides."""
-    return GouraniSettings(**overrides)  # type: ignore[arg-type]
+    return BristlenoseSettings(**overrides)  # type: ignore[arg-type]

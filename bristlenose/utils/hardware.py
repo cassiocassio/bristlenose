@@ -87,7 +87,7 @@ def detect_hardware() -> HardwareInfo:
         if not info.mlx_available:
             logger.info(
                 "Apple Silicon detected (%s) but mlx-whisper not installed. "
-                "Install with: pip install gourani[apple]",
+                "Install with: pip install bristlenose[apple]",
                 info.chip_name,
             )
     else:
@@ -164,7 +164,6 @@ def _get_apple_gpu_cores() -> int | None:
 
 def _get_system_memory_gb() -> float | None:
     """Get total system memory in GB."""
-    import os
 
     try:
         if platform.system() == "Darwin":
@@ -179,7 +178,7 @@ def _get_system_memory_gb() -> float | None:
         else:
             # Linux / Windows
             import shutil
-            total = shutil.disk_usage("/").total  # not memory, but a fallback
+            _ = shutil.disk_usage("/").total  # not memory, but a fallback
             # Better: read /proc/meminfo on Linux
             if platform.system() == "Linux":
                 with open("/proc/meminfo") as f:

@@ -5,11 +5,11 @@ from __future__ import annotations
 import json
 import logging
 
-from gourani.llm.client import LLMClient
-from gourani.llm.prompts import QUOTE_CLUSTERING_PROMPT
-from gourani.llm.structured import ScreenClusteringResult
-from gourani.models import ExtractedQuote, QuoteType, ScreenCluster
-from gourani.utils.timecodes import format_timecode
+from bristlenose.llm.client import LLMClient
+from bristlenose.llm.prompts import QUOTE_CLUSTERING_PROMPT
+from bristlenose.llm.structured import ScreenClusteringResult
+from bristlenose.models import ExtractedQuote, QuoteType, ScreenCluster
+from bristlenose.utils.timecodes import format_timecode
 
 logger = logging.getLogger(__name__)
 

@@ -6,8 +6,8 @@ import logging
 from collections import Counter
 from pathlib import Path
 
-from gourani.config import GouraniSettings
-from gourani.models import (
+from bristlenose.config import BristlenoseSettings
+from bristlenose.models import (
     FullTranscript,
     PiiCleanTranscript,
     TranscriptSegment,
@@ -85,7 +85,7 @@ class PiiRedaction:
 
 def remove_pii(
     transcripts: list[FullTranscript],
-    settings: GouraniSettings,
+    settings: BristlenoseSettings,
 ) -> tuple[list[PiiCleanTranscript], list[PiiRedaction]]:
     """Remove PII from transcripts using Presidio.
 
@@ -242,7 +242,7 @@ def write_pii_summary(
 
 
 def _init_presidio(
-    settings: GouraniSettings,
+    settings: BristlenoseSettings,
 ) -> tuple[object, object]:
     """Initialise Presidio analyzer and anonymizer.
 
@@ -264,7 +264,7 @@ def _redact_text(
     timecode: float,
     analyzer: object,
     anonymizer: object,
-    settings: GouraniSettings,
+    settings: BristlenoseSettings,
 ) -> tuple[str, list[PiiRedaction]]:
     """Redact PII from a text string.
 

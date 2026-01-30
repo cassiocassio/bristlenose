@@ -5,8 +5,8 @@ from __future__ import annotations
 import logging
 from pathlib import Path
 
-from gourani.models import FileType, InputSession
-from gourani.utils.audio import extract_audio_from_video, has_audio_stream
+from bristlenose.models import FileType, InputSession
+from bristlenose.utils.audio import extract_audio_from_video, has_audio_stream
 
 logger = logging.getLogger(__name__)
 

@@ -3,14 +3,11 @@
 from __future__ import annotations
 
 import logging
-from datetime import datetime
 from pathlib import Path
 
-from gourani.models import (
-    FileType,
+from bristlenose.models import (
     FullTranscript,
     InputSession,
-    SpeakerRole,
     TranscriptSegment,
     format_timecode,
 )

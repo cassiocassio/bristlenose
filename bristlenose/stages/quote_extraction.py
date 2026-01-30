@@ -4,10 +4,10 @@ from __future__ import annotations
 
 import logging
 
-from gourani.llm.client import LLMClient
-from gourani.llm.prompts import QUOTE_EXTRACTION_PROMPT
-from gourani.llm.structured import QuoteExtractionResult
-from gourani.models import (
+from bristlenose.llm.client import LLMClient
+from bristlenose.llm.prompts import QUOTE_EXTRACTION_PROMPT
+from bristlenose.llm.structured import QuoteExtractionResult
+from bristlenose.models import (
     EmotionalTone,
     ExtractedQuote,
     JourneyStage,
@@ -17,8 +17,8 @@ from gourani.models import (
     SessionTopicMap,
     format_timecode,
 )
-from gourani.utils.text import apply_smart_quotes
-from gourani.utils.timecodes import parse_timecode
+from bristlenose.utils.text import apply_smart_quotes
+from bristlenose.utils.timecodes import parse_timecode
 
 logger = logging.getLogger(__name__)
 

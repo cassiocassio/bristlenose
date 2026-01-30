@@ -7,11 +7,10 @@ import logging
 from datetime import datetime
 from pathlib import Path
 
-from gourani.models import (
+from bristlenose.models import (
     EmotionalTone,
     ExtractedQuote,
     InputSession,
-    PipelineResult,
     QuoteIntent,
     ScreenCluster,
     ThemeGroup,
@@ -241,7 +240,7 @@ def _build_rewatch_list(quotes: list[ExtractedQuote]) -> list[str]:
     Flags moments where participants showed confusion, frustration,
     or were in error-recovery — these are high-value for researchers.
     """
-    from gourani.models import JourneyStage
+    from bristlenose.models import JourneyStage
 
     flagged: list[ExtractedQuote] = []
     for q in quotes:
@@ -284,10 +283,11 @@ def _build_task_outcome_summary(
     progressed through the user journey.
     """
     from collections import Counter
-    from gourani.models import JourneyStage
+
+    from bristlenose.models import JourneyStage
 
     # Ordered stages representing a typical e-commerce flow
-    STAGE_ORDER = [
+    stage_order = [
         JourneyStage.LANDING,
         JourneyStage.BROWSE,
         JourneyStage.SEARCH,
@@ -311,7 +311,7 @@ def _build_task_outcome_summary(
         stage_counts = Counter(q.journey_stage for q in pq)
 
         # Stages observed (exclude OTHER)
-        observed = [s for s in STAGE_ORDER if stage_counts.get(s, 0) > 0]
+        observed = [s for s in stage_order if stage_counts.get(s, 0) > 0]
         observed_str = " → ".join(s.value for s in observed) if observed else "other"
 
         # Count friction points (confusion + frustration)

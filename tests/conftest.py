@@ -1,14 +1,13 @@
-"""Shared test fixtures for Gourani tests."""
+"""Shared test fixtures for Bristlenose tests."""
 
 from __future__ import annotations
 
-import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
 
 import pytest
 
-from gourani.models import (
+from bristlenose.models import (
     ExtractedQuote,
     FileType,
     FullTranscript,

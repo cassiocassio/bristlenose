@@ -9,7 +9,7 @@ from datetime import datetime
 from html import escape
 from pathlib import Path
 
-from gourani.models import (
+from bristlenose.models import (
     EmotionalTone,
     ExtractedQuote,
     FileType,
@@ -27,11 +27,11 @@ logger = logging.getLogger(__name__)
 # Default theme CSS — written once, never overwritten
 # ---------------------------------------------------------------------------
 
-_CSS_VERSION = "gourani-theme v2"
+_CSS_VERSION = "bristlenose-theme v5"
 
 DEFAULT_CSS = (
     f"/* {_CSS_VERSION} — default research report theme */\n"
-    "/* Edit freely; Gourani will not overwrite this file once created. */\n"
+    "/* Edit freely; Bristlenose will not overwrite this file once created. */\n"
 ) + """\
 
 :root {
@@ -157,7 +157,7 @@ hr {
 
 blockquote {
     background: var(--colour-quote-bg);
-    border-left: 3px solid var(--colour-border);
+    border-left: 1px solid var(--colour-border);
     margin: 0.8rem 0;
     padding: 0.75rem 1rem;
     border-radius: 0 6px 6px 0;
@@ -348,6 +348,155 @@ blockquote.quote-active {
     transition: background 0.3s ease, border-left-color 0.3s ease;
 }
 
+/* --- Favourite quotes --- */
+
+.quote-group {
+    display: flex;
+    flex-direction: column;
+}
+
+.quote-group blockquote {
+    position: relative;
+    padding-right: 3rem;
+}
+
+.fav-star {
+    position: absolute;
+    top: 0.65rem;
+    right: 0.65rem;
+    background: none;
+    border: none;
+    font-size: 0.8rem;
+    color: #e5e7eb;
+    cursor: pointer;
+    padding: 0.15rem;
+    line-height: 1;
+    transition: color 0.2s ease;
+}
+
+.fav-star:hover {
+    color: var(--colour-accent);
+}
+
+blockquote.favourited .fav-star {
+    color: #999;
+}
+
+blockquote.favourited {
+    font-weight: 600;
+    border-left-color: #999;
+}
+
+blockquote.favourited .context,
+blockquote.favourited .timecode,
+blockquote.favourited .speaker,
+blockquote.favourited .badges {
+    font-weight: 400;
+}
+
+.edit-pencil {
+    position: absolute;
+    top: 0.65rem;
+    right: 2rem;
+    background: none;
+    border: none;
+    font-size: 0.8rem;
+    color: #e5e7eb;
+    cursor: pointer;
+    padding: 0.15rem;
+    line-height: 1;
+    transition: color 0.2s ease;
+}
+
+.edit-pencil:hover {
+    color: var(--colour-accent);
+}
+
+blockquote.editing .edit-pencil {
+    color: var(--colour-accent);
+}
+
+blockquote.editing .quote-text {
+    background: #fffbe6;
+    outline: 1px solid #e5e0c0;
+    border-radius: 3px;
+    padding: 0.15rem 0.3rem;
+    min-width: 10rem;
+    cursor: text;
+}
+
+.quote-text.edited {
+    border-bottom: 1px dashed var(--colour-muted);
+}
+
+blockquote.fav-animating {
+    transition: transform 0.2s ease;
+    z-index: 1;
+}
+
+/* --- Toolbar --- */
+
+.toolbar {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.5rem;
+    padding: 0.5rem 0;
+    background: var(--colour-bg);
+    border-bottom: 1px solid var(--colour-border);
+    margin-bottom: 0.5rem;
+}
+
+.toolbar-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    background: var(--colour-bg);
+    border: 1px solid var(--colour-border);
+    border-radius: 6px;
+    padding: 0.4rem 0.85rem;
+    font-family: var(--font-body);
+    font-size: 0.82rem;
+    color: var(--colour-text);
+    cursor: pointer;
+    transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.toolbar-btn:hover {
+    background: var(--colour-quote-bg);
+    border-color: var(--colour-muted);
+}
+
+.toolbar-btn .toolbar-icon {
+    font-size: 0.95rem;
+    color: var(--colour-muted);
+}
+
+/* --- Clipboard toast --- */
+
+.clipboard-toast {
+    position: fixed;
+    bottom: 1.5rem;
+    right: 1.5rem;
+    background: var(--colour-text);
+    color: var(--colour-bg);
+    padding: 0.6rem 1.2rem;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    opacity: 0;
+    transform: translateY(0.5rem);
+    transition: opacity 0.25s ease, transform 0.25s ease;
+    z-index: 200;
+    pointer-events: none;
+}
+
+.clipboard-toast.show {
+    opacity: 1;
+    transform: translateY(0);
+}
+
 /* --- Print --- */
 
 @media print {
@@ -357,6 +506,9 @@ blockquote.quote-active {
     blockquote { break-inside: avoid; }
     table { break-inside: avoid; }
     a.timecode { color: var(--colour-muted); text-decoration: none; cursor: default; }
+    .toolbar { display: none; }
+    .fav-star { display: none; }
+    .edit-pencil { display: none; }
 }
 """
 
@@ -376,7 +528,7 @@ def render_html(
 ) -> Path:
     """Generate research_report.html with an external CSS stylesheet.
 
-    Writes ``gourani-theme.css`` only if it does not already exist so that
+    Writes ``bristlenose-theme.css`` only if it does not already exist so that
     user customisations are preserved across re-runs.
 
     Returns:
@@ -385,13 +537,13 @@ def render_html(
     output_dir.mkdir(parents=True, exist_ok=True)
 
     # Write default CSS on first run, or upgrade if auto-generated v1
-    css_path = output_dir / "gourani-theme.css"
+    css_path = output_dir / "bristlenose-theme.css"
     _write_css = False
     if not css_path.exists():
         _write_css = True
     else:
         existing = css_path.read_text(encoding="utf-8")
-        if _CSS_VERSION not in existing and "gourani-theme.css" in existing:
+        if _CSS_VERSION not in existing and "bristlenose-theme" in existing:
             # Auto-generated older version — safe to upgrade
             _write_css = True
     if _write_css:
@@ -418,13 +570,25 @@ def render_html(
     _w('<meta charset="utf-8">')
     _w('<meta name="viewport" content="width=device-width, initial-scale=1">')
     _w(f"<title>{_esc(project_name)}</title>")
-    _w('<link rel="stylesheet" href="gourani-theme.css">')
+    _w('<link rel="stylesheet" href="bristlenose-theme.css">')
     _w("</head>")
     _w("<body>")
     _w("<article>")
 
     # --- Header ---
     _w(f"<h1>{_esc(project_name)}</h1>")
+    _w('<div class="toolbar">')
+    _w(
+        '<button class="toolbar-btn" id="export-favourites">'
+        '<span class="toolbar-icon">&#9733;</span> Export favourites'
+        "</button>"
+    )
+    _w(
+        '<button class="toolbar-btn" id="export-all">'
+        '<span class="toolbar-icon">&#9776;</span> Export all'
+        "</button>"
+    )
+    _w("</div>")
     _w('<div class="meta">')
     _w(f"<p>Generated: {datetime.now().strftime('%Y-%m-%d')}</p>")
     _w(f"<p>Participants: {len(sessions)} ({_esc(_participant_range(sessions))})</p>")
@@ -513,8 +677,10 @@ def render_html(
             _w(f'<h3 id="{_esc(anchor)}">{_esc(cluster.screen_label)}</h3>')
             if cluster.description:
                 _w(f'<p class="description">{_esc(cluster.description)}</p>')
+            _w('<div class="quote-group">')
             for quote in cluster.quotes:
                 _w(_format_quote_html(quote, video_map))
+            _w("</div>")
         _w("</section>")
         _w("<hr>")
 
@@ -527,8 +693,10 @@ def render_html(
             _w(f'<h3 id="{_esc(anchor)}">{_esc(theme.theme_label)}</h3>')
             if theme.description:
                 _w(f'<p class="description">{_esc(theme.description)}</p>')
+            _w('<div class="quote-group">')
             for quote in theme.quotes:
                 _w(_format_quote_html(quote, video_map))
+            _w("</div>")
         _w("</section>")
         _w("<hr>")
 
@@ -569,12 +737,14 @@ def render_html(
     # --- Close ---
     _w("</article>")
 
-    # --- Embed video player JavaScript ---
+    # --- Embed JavaScript ---
+    _w("<script>")
     if has_media:
-        _w("<script>")
-        _w(f"var GOURANI_VIDEO_MAP = {json.dumps(video_map)};")
-        _w(_REPORT_JS)
-        _w("</script>")
+        _w(f"var BRISTLENOSE_VIDEO_MAP = {json.dumps(video_map)};")
+    else:
+        _w("var BRISTLENOSE_VIDEO_MAP = {};")
+    _w(_REPORT_JS)
+    _w("</script>")
 
     _w("</body>")
     _w("</html>")
@@ -617,7 +787,13 @@ def _format_quote_html(
     """Render a single quote as an HTML blockquote."""
     tc = format_timecode(quote.start_timecode)
     quote_id = f"q-{quote.participant_id}-{int(quote.start_timecode)}"
-    parts: list[str] = [f'<blockquote id="{quote_id}">']
+    parts: list[str] = [
+        f'<blockquote id="{quote_id}"'
+        f' data-timecode="{_esc(tc)}"'
+        f' data-participant="{_esc(quote.participant_id)}"'
+        f' data-emotion="{_esc(quote.emotion.value)}"'
+        f' data-intent="{_esc(quote.intent.value)}">'
+    ]
 
     if quote.researcher_context:
         parts.append(f'<span class="context">[{_esc(quote.researcher_context)}]</span>')
@@ -634,7 +810,7 @@ def _format_quote_html(
 
     parts.append(
         f"{tc_html} "
-        f"\u201c{_esc(quote.text)}\u201d "
+        f'<span class="quote-text">\u201c{_esc(quote.text)}\u201d</span> '
         f'<span class="speaker">&mdash; {_esc(quote.participant_id)}</span>'
     )
 
@@ -642,6 +818,8 @@ def _format_quote_html(
     if badges:
         parts.append(f'<div class="badges">{badges}</div>')
 
+    parts.append('<button class="edit-pencil" aria-label="Edit this quote">&#9998;</button>')
+    parts.append('<button class="fav-star" aria-label="Favourite this quote">&#9733;</button>')
     parts.append("</blockquote>")
     return "\n".join(parts)
 
@@ -828,14 +1006,14 @@ def _build_video_map(sessions: list[InputSession]) -> dict[str, str]:
 
 def _write_player_html(output_dir: Path) -> Path:
     """Write the popout video player page."""
-    player_path = output_dir / "gourani-player.html"
+    player_path = output_dir / "bristlenose-player.html"
     player_path.write_text(
         """\
 <!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<title>Gourani player</title>
+<title>Bristlenose player</title>
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
 html, body { height: 100%; background: #111; color: #e5e7eb; font-family: system-ui, sans-serif; }
@@ -849,10 +1027,10 @@ video { flex: 1; width: 100%; min-height: 0; background: #000; }
 </head>
 <body>
 <div id="status">No video loaded</div>
-<video id="gourani-video" controls preload="none"></video>
+<video id="bristlenose-video" controls preload="none"></video>
 <script>
 (function() {
-  var video = document.getElementById('gourani-video');
+  var video = document.getElementById('bristlenose-video');
   var status = document.getElementById('status');
   var currentUri = null;
   var currentPid = null;
@@ -885,7 +1063,7 @@ video { flex: 1; width: 100%; min-height: 0; background: #000; }
   }
 
   // Called by the report window to load + seek
-  window.gourani_seekTo = function(pid, fileUri, seconds) {
+  window.bristlenose_seekTo = function(pid, fileUri, seconds) {
     loadAndSeek(pid, fileUri, seconds);
   };
 
@@ -906,7 +1084,7 @@ video { flex: 1; width: 100%; min-height: 0; background: #000; }
   // Listen for postMessage from the report window
   window.addEventListener('message', function(e) {
     var d = e.data;
-    if (d && d.type === 'gourani-seek' && d.src) {
+    if (d && d.type === 'bristlenose-seek' && d.src) {
       loadAndSeek(d.pid || '', d.src, parseFloat(d.t) || 0);
     }
   });
@@ -917,8 +1095,8 @@ video { flex: 1; width: 100%; min-height: 0; background: #000; }
   video.addEventListener('timeupdate', function() {
     if (currentPid) {
       status.textContent = currentPid + ' @ ' + fmtTC(video.currentTime);
-      if (window.opener && window.opener.gourani_onTimeUpdate) {
-        try { window.opener.gourani_onTimeUpdate(currentPid, video.currentTime); }
+      if (window.opener && window.opener.bristlenose_onTimeUpdate) {
+        try { window.opener.bristlenose_onTimeUpdate(currentPid, video.currentTime); }
         catch(e) {}
       }
     }
@@ -941,16 +1119,17 @@ video { flex: 1; width: 100%; min-height: 0; background: #000; }
 
 _REPORT_JS = """\
 (function() {
+  // --- Video player ---
   var playerWin = null;
 
   function seekTo(pid, seconds) {
-    var uri = GOURANI_VIDEO_MAP[pid];
+    var uri = BRISTLENOSE_VIDEO_MAP[pid];
     if (!uri) return;
-    var msg = { type: 'gourani-seek', pid: pid, src: uri, t: seconds };
+    var msg = { type: 'bristlenose-seek', pid: pid, src: uri, t: seconds };
     var hash = '#src=' + encodeURIComponent(uri) + '&t=' + seconds
              + '&pid=' + encodeURIComponent(pid);
     if (!playerWin || playerWin.closed) {
-      playerWin = window.open('gourani-player.html' + hash, 'gourani-player',
+      playerWin = window.open('bristlenose-player.html' + hash, 'bristlenose-player',
         'width=720,height=480,resizable=yes,scrollbars=no');
     } else {
       playerWin.postMessage(msg, '*');
@@ -958,7 +1137,6 @@ _REPORT_JS = """\
     }
   }
 
-  // Event delegation — single listener for all timecode clicks
   document.addEventListener('click', function(e) {
     var link = e.target.closest('a.timecode');
     if (!link) return;
@@ -968,14 +1146,307 @@ _REPORT_JS = """\
     if (pid && !isNaN(seconds)) seekTo(pid, seconds);
   });
 
-  // Stubs for future bidirectional sync
-  window.gourani_onTimeUpdate = function(pid, seconds) {
-    // Future: find nearest quote, scroll to it, highlight it
-  };
+  window.bristlenose_onTimeUpdate = function(pid, seconds) {};
+  window.bristlenose_scrollToQuote = function(pid, seconds) {};
 
-  window.gourani_scrollToQuote = function(pid, seconds) {
-    // Future: scroll to and highlight the blockquote nearest to this timecode
-  };
+  // --- Favourite quotes ---
+  var FAV_KEY = 'bristlenose-favourites';
+
+  function getFavourites() {
+    try { var s = localStorage.getItem(FAV_KEY); return s ? JSON.parse(s) : {}; }
+    catch(e) { return {}; }
+  }
+  function saveFavourites(f) {
+    try { localStorage.setItem(FAV_KEY, JSON.stringify(f)); } catch(e) {}
+  }
+
+  var favourites = getFavourites();
+
+  // Store original DOM order per group so unfavourited quotes return home
+  var originalOrder = {};
+  var allGroups = document.querySelectorAll('.quote-group');
+  for (var g = 0; g < allGroups.length; g++) {
+    var bqs = Array.prototype.slice.call(allGroups[g].querySelectorAll('blockquote'));
+    bqs.forEach(function(bq, idx) { originalOrder[bq.id] = idx; });
+  }
+
+  function reorderGroup(group, animate) {
+    var quotes = Array.prototype.slice.call(group.querySelectorAll('blockquote'));
+    if (!quotes.length) return;
+
+    // FIRST — record positions
+    var rects = {};
+    if (animate) {
+      quotes.forEach(function(bq) { rects[bq.id] = bq.getBoundingClientRect(); });
+    }
+
+    // Partition: favourited first, non-favourited in original order
+    var favs = [], rest = [];
+    quotes.forEach(function(bq) {
+      (bq.classList.contains('favourited') ? favs : rest).push(bq);
+    });
+    rest.sort(function(a, b) {
+      return (originalOrder[a.id] || 0) - (originalOrder[b.id] || 0);
+    });
+    favs.concat(rest).forEach(function(bq) { group.appendChild(bq); });
+
+    if (!animate) return;
+
+    // INVERT
+    quotes.forEach(function(bq) {
+      var old = rects[bq.id];
+      var cur = bq.getBoundingClientRect();
+      var dy = old.top - cur.top;
+      if (Math.abs(dy) < 1) return;
+      bq.style.transform = 'translateY(' + dy + 'px)';
+      bq.style.transition = 'none';
+    });
+
+    // PLAY
+    requestAnimationFrame(function() {
+      requestAnimationFrame(function() {
+        quotes.forEach(function(bq) {
+          bq.classList.add('fav-animating');
+          bq.style.transform = '';
+          bq.style.transition = '';
+        });
+        setTimeout(function() {
+          quotes.forEach(function(bq) { bq.classList.remove('fav-animating'); });
+        }, 250);
+      });
+    });
+  }
+
+  // Restore on load
+  Object.keys(favourites).forEach(function(qid) {
+    var bq = document.getElementById(qid);
+    if (bq) bq.classList.add('favourited');
+  });
+  var groups = document.querySelectorAll('.quote-group');
+  for (var i = 0; i < groups.length; i++) reorderGroup(groups[i], false);
+
+  // Star click
+  document.addEventListener('click', function(e) {
+    var star = e.target.closest('.fav-star');
+    if (!star) return;
+    e.preventDefault();
+    var bq = star.closest('blockquote');
+    if (!bq || !bq.id) return;
+    var isFav = bq.classList.toggle('favourited');
+    if (isFav) { favourites[bq.id] = true; }
+    else { delete favourites[bq.id]; }
+    saveFavourites(favourites);
+    var group = bq.closest('.quote-group');
+    if (group) reorderGroup(group, true);
+  });
+
+  // --- Inline quote editing ---
+  var EDITS_KEY = 'bristlenose-edits';
+
+  function getEdits() {
+    try { var s = localStorage.getItem(EDITS_KEY); return s ? JSON.parse(s) : {}; }
+    catch(e) { return {}; }
+  }
+  function saveEdits(edits) {
+    try { localStorage.setItem(EDITS_KEY, JSON.stringify(edits)); } catch(e) {}
+  }
+
+  var edits = getEdits();
+
+  // Restore edits on load
+  Object.keys(edits).forEach(function(qid) {
+    var bq = document.getElementById(qid);
+    if (!bq) return;
+    var span = bq.querySelector('.quote-text');
+    if (!span) return;
+    span.textContent = '\\u201c' + edits[qid] + '\\u201d';
+    span.classList.add('edited');
+  });
+
+  var activeEdit = null; // { bq, span, original }
+
+  function startEdit(bq) {
+    if (activeEdit) cancelEdit();
+    var span = bq.querySelector('.quote-text');
+    if (!span) return;
+    var raw = span.textContent.replace(/^[\\u201c\\u201d"]+|[\\u201c\\u201d"]+$/g, '').trim();
+    activeEdit = { bq: bq, span: span, original: raw };
+    bq.classList.add('editing');
+    span.setAttribute('contenteditable', 'true');
+    span.textContent = raw;
+    span.focus();
+    // Select all text
+    var range = document.createRange();
+    range.selectNodeContents(span);
+    var sel = window.getSelection();
+    sel.removeAllRanges();
+    sel.addRange(range);
+  }
+
+  function cancelEdit() {
+    if (!activeEdit) return;
+    var ae = activeEdit;
+    activeEdit = null;
+    ae.bq.classList.remove('editing');
+    ae.span.removeAttribute('contenteditable');
+    // Restore: if there was a saved edit use that, otherwise the original
+    var qid = ae.bq.id;
+    var saved = edits[qid];
+    var text = saved !== undefined ? saved : ae.original;
+    ae.span.textContent = '\\u201c' + text + '\\u201d';
+    if (saved !== undefined) ae.span.classList.add('edited');
+  }
+
+  function acceptEdit() {
+    if (!activeEdit) return;
+    var ae = activeEdit;
+    activeEdit = null;
+    ae.bq.classList.remove('editing');
+    ae.span.removeAttribute('contenteditable');
+    var newText = ae.span.textContent.trim();
+    ae.span.textContent = '\\u201c' + newText + '\\u201d';
+    if (newText !== ae.original) {
+      edits[ae.bq.id] = newText;
+      ae.span.classList.add('edited');
+      saveEdits(edits);
+    }
+  }
+
+  // Pencil click
+  document.addEventListener('click', function(e) {
+    var pencil = e.target.closest('.edit-pencil');
+    if (!pencil) return;
+    e.preventDefault();
+    var bq = pencil.closest('blockquote');
+    if (!bq) return;
+    if (bq.classList.contains('editing')) {
+      cancelEdit();
+    } else {
+      startEdit(bq);
+    }
+  });
+
+  // Keyboard: Enter to accept, Esc to cancel
+  document.addEventListener('keydown', function(e) {
+    if (!activeEdit) return;
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      cancelEdit();
+    } else if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      acceptEdit();
+    }
+  });
+
+  // Click outside to accept
+  document.addEventListener('click', function(e) {
+    if (!activeEdit) return;
+    if (!activeEdit.bq.contains(e.target)) {
+      acceptEdit();
+    }
+  });
+
+  // --- CSV export ---
+  function getSection(bq) {
+    var el = bq.closest('.quote-group');
+    while (el) {
+      el = el.previousElementSibling;
+      if (el && el.tagName === 'H3') return el.textContent.trim();
+    }
+    return '';
+  }
+
+  function getQuoteText(bq) {
+    var span = bq.querySelector('.quote-text');
+    if (span) {
+      return span.textContent.replace(/^[\\u201c\\u201d"]+|[\\u201c\\u201d"]+$/g, '').trim();
+    }
+    var clone = bq.cloneNode(true);
+    var rm = clone.querySelectorAll('.context, .timecode, a.timecode, .speaker, .badges, .fav-star, .edit-pencil');
+    for (var i = 0; i < rm.length; i++) rm[i].remove();
+    var t = clone.textContent.trim();
+    return t.replace(/^[\\u201c\\u201d"]+|[\\u201c\\u201d"]+$/g, '').trim();
+  }
+
+  function csvEsc(v) {
+    v = String(v);
+    if (v.indexOf('"') !== -1 || v.indexOf(',') !== -1 || v.indexOf('\\n') !== -1) {
+      return '"' + v.replace(/"/g, '""') + '"';
+    }
+    return v;
+  }
+
+  function buildCsv(onlyFavs) {
+    var rows = ['Timecode,Quote,Participant,Section,Emotion,Intent'];
+    var bqs = document.querySelectorAll('.quote-group blockquote');
+    for (var i = 0; i < bqs.length; i++) {
+      var bq = bqs[i];
+      if (onlyFavs && !bq.classList.contains('favourited')) continue;
+      rows.push([
+        csvEsc(bq.getAttribute('data-timecode') || ''),
+        csvEsc(getQuoteText(bq)),
+        csvEsc(bq.getAttribute('data-participant') || ''),
+        csvEsc(getSection(bq)),
+        csvEsc(bq.getAttribute('data-emotion') || ''),
+        csvEsc(bq.getAttribute('data-intent') || '')
+      ].join(','));
+    }
+    return rows.join('\\n');
+  }
+
+  function copyToClipboard(text) {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      return navigator.clipboard.writeText(text);
+    }
+    var ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.position = 'fixed';
+    ta.style.left = '-9999px';
+    document.body.appendChild(ta);
+    ta.select();
+    var ok = false;
+    try { ok = document.execCommand('copy'); } catch(e) {}
+    document.body.removeChild(ta);
+    return ok ? Promise.resolve() : Promise.reject();
+  }
+
+  function showToast(msg) {
+    var old = document.querySelector('.clipboard-toast');
+    if (old) old.remove();
+    var t = document.createElement('div');
+    t.className = 'clipboard-toast';
+    t.textContent = msg;
+    document.body.appendChild(t);
+    t.offsetHeight;
+    t.classList.add('show');
+    setTimeout(function() {
+      t.classList.remove('show');
+      setTimeout(function() { t.remove(); }, 300);
+    }, 2000);
+  }
+
+  document.addEventListener('click', function(e) {
+    var btn = e.target.closest('#export-favourites');
+    if (btn) {
+      var csv = buildCsv(true);
+      var n = csv.split('\\n').length - 1;
+      if (n === 0) { showToast('No favourites to export'); return; }
+      copyToClipboard(csv).then(
+        function() { showToast(n + ' favourite' + (n !== 1 ? 's' : '') + ' copied as CSV'); },
+        function() { showToast('Could not copy to clipboard'); }
+      );
+      return;
+    }
+    btn = e.target.closest('#export-all');
+    if (btn) {
+      var csv = buildCsv(false);
+      var n = csv.split('\\n').length - 1;
+      copyToClipboard(csv).then(
+        function() { showToast(n + ' quote' + (n !== 1 ? 's' : '') + ' copied as CSV'); },
+        function() { showToast('Could not copy to clipboard'); }
+      );
+    }
+  });
 })();
 """
 
@@ -985,7 +1456,7 @@ def _build_task_outcome_html(
     sessions: list[InputSession],
 ) -> str:
     """Build the task outcome summary as an HTML table."""
-    STAGE_ORDER = [
+    stage_order = [
         JourneyStage.LANDING,
         JourneyStage.BROWSE,
         JourneyStage.SEARCH,
@@ -1016,7 +1487,7 @@ def _build_task_outcome_html(
         pq = by_participant[pid]
         stage_counts = Counter(q.journey_stage for q in pq)
 
-        observed = [s for s in STAGE_ORDER if stage_counts.get(s, 0) > 0]
+        observed = [s for s in stage_order if stage_counts.get(s, 0) > 0]
         observed_str = " &rarr; ".join(s.value for s in observed) if observed else "other"
 
         friction = sum(

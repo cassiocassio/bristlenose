@@ -4,16 +4,16 @@ from __future__ import annotations
 
 import logging
 
-from gourani.llm.client import LLMClient
-from gourani.llm.prompts import TOPIC_SEGMENTATION_PROMPT
-from gourani.llm.structured import TopicSegmentationResult
-from gourani.models import (
+from bristlenose.llm.client import LLMClient
+from bristlenose.llm.prompts import TOPIC_SEGMENTATION_PROMPT
+from bristlenose.llm.structured import TopicSegmentationResult
+from bristlenose.models import (
     PiiCleanTranscript,
     SessionTopicMap,
     TopicBoundary,
     TransitionType,
 )
-from gourani.utils.timecodes import parse_timecode
+from bristlenose.utils.timecodes import parse_timecode
 
 logger = logging.getLogger(__name__)
 

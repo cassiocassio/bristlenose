@@ -13,16 +13,16 @@ from __future__ import annotations
 import logging
 from pathlib import Path
 
-from gourani.config import GouraniSettings
-from gourani.models import InputSession, TranscriptSegment, Word
-from gourani.utils.hardware import AcceleratorType, HardwareInfo, detect_hardware
+from bristlenose.config import BristlenoseSettings
+from bristlenose.models import InputSession, TranscriptSegment, Word
+from bristlenose.utils.hardware import AcceleratorType, HardwareInfo, detect_hardware
 
 logger = logging.getLogger(__name__)
 
 
 def transcribe_sessions(
     sessions: list[InputSession],
-    settings: GouraniSettings,
+    settings: BristlenoseSettings,
 ) -> dict[str, list[TranscriptSegment]]:
     """Transcribe audio for sessions that need it.
 
@@ -113,7 +113,7 @@ def _resolve_backend(configured: str, hw: HardwareInfo) -> str:
         if not hw.mlx_available:
             logger.warning(
                 "MLX backend requested but mlx-whisper not installed. "
-                "Install with: pip install gourani[apple]  "
+                "Install with: pip install bristlenose[apple]  "
                 "Falling back to faster-whisper."
             )
             return "faster-whisper"
@@ -134,7 +134,7 @@ def _resolve_backend(configured: str, hw: HardwareInfo) -> str:
         logger.info(
             "Apple Silicon detected but mlx-whisper not installed. "
             "Using faster-whisper on CPU. For GPU acceleration: "
-            "pip install gourani[apple]"
+            "pip install bristlenose[apple]"
         )
 
     return "faster-whisper"
@@ -148,7 +148,7 @@ TranscribeFn = type(lambda path, settings: [])  # callable type hint placeholder
 
 
 def _init_mlx_backend(
-    settings: GouraniSettings,
+    settings: BristlenoseSettings,
 ) -> callable:  # type: ignore[valid-type]
     """Initialise the MLX-whisper backend.
 
@@ -169,7 +169,7 @@ def _init_mlx_backend(
 
     def transcribe_mlx(
         audio_path: Path,
-        settings: GouraniSettings,
+        settings: BristlenoseSettings,
     ) -> list[TranscriptSegment]:
         # mlx-whisper uses HuggingFace model names
         model_name = _mlx_model_name(settings.whisper_model)
@@ -240,7 +240,7 @@ def _mlx_model_name(whisper_model: str) -> str:
 # ---------------------------------------------------------------------------
 
 def _init_faster_whisper_backend(
-    settings: GouraniSettings,
+    settings: BristlenoseSettings,
     hw: HardwareInfo,
 ) -> callable:  # type: ignore[valid-type]
     """Initialise the faster-whisper backend.
@@ -270,7 +270,7 @@ def _init_faster_whisper_backend(
 
     def transcribe_faster_whisper(
         audio_path: Path,
-        settings: GouraniSettings,
+        settings: BristlenoseSettings,
     ) -> list[TranscriptSegment]:
         segments_iter, info = model.transcribe(
             str(audio_path),

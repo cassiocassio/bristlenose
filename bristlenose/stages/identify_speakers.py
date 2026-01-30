@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import logging
 
-from gourani.models import SpeakerRole, TranscriptSegment
+from bristlenose.models import SpeakerRole, TranscriptSegment
 
 logger = logging.getLogger(__name__)
 
@@ -148,8 +148,8 @@ async def identify_speaker_roles_llm(
     Returns:
         Segments with refined speaker_role values.
     """
-    from gourani.llm.client import LLMClient
-    from gourani.llm.prompts import SPEAKER_IDENTIFICATION_PROMPT
+    from bristlenose.llm.client import LLMClient
+    from bristlenose.llm.prompts import SPEAKER_IDENTIFICATION_PROMPT
 
     client: LLMClient = llm_client  # type: ignore[assignment]
 
@@ -177,7 +177,7 @@ async def identify_speaker_roles_llm(
     )
 
     try:
-        from gourani.llm.structured import SpeakerRoleAssignment
+        from bristlenose.llm.structured import SpeakerRoleAssignment
         result = await client.analyze(
             system_prompt="You are an expert at analysing user-research interview transcripts.",
             user_prompt=prompt,

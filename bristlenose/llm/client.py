@@ -8,7 +8,7 @@ from typing import TypeVar
 
 from pydantic import BaseModel
 
-from gourani.config import GouraniSettings
+from bristlenose.config import BristlenoseSettings
 
 logger = logging.getLogger(__name__)
 
@@ -21,7 +21,7 @@ class LLMClient:
     Supports Anthropic (Claude) and OpenAI as providers.
     """
 
-    def __init__(self, settings: GouraniSettings) -> None:
+    def __init__(self, settings: BristlenoseSettings) -> None:
         self.settings = settings
         self.provider = settings.llm_provider
         self._anthropic_client: object | None = None
@@ -35,13 +35,13 @@ class LLMClient:
         if self.provider == "anthropic" and not self.settings.anthropic_api_key:
             raise ValueError(
                 "Anthropic API key not set. "
-                "Set GOURANI_ANTHROPIC_API_KEY in your .env file or environment. "
-                "Looked for .env in: current directory and gourani package directory."
+                "Set BRISTLENOSE_ANTHROPIC_API_KEY in your .env file or environment. "
+                "Looked for .env in: current directory and bristlenose package directory."
             )
         if self.provider == "openai" and not self.settings.openai_api_key:
             raise ValueError(
                 "OpenAI API key not set. "
-                "Set GOURANI_OPENAI_API_KEY in your .env file or environment."
+                "Set BRISTLENOSE_OPENAI_API_KEY in your .env file or environment."
             )
 
     async def analyze(

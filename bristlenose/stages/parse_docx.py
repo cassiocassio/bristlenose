@@ -6,8 +6,8 @@ import logging
 import re
 from pathlib import Path
 
-from gourani.models import InputFile, TranscriptSegment
-from gourani.utils.timecodes import parse_timecode
+from bristlenose.models import InputFile, TranscriptSegment
+from bristlenose.utils.timecodes import parse_timecode
 
 logger = logging.getLogger(__name__)
 

@@ -3,19 +3,17 @@
 from __future__ import annotations
 
 import logging
-import os
 import platform
 from datetime import datetime, timezone
 from pathlib import Path
 
-from gourani.models import (
-    ALL_EXTENSIONS,
+from bristlenose.models import (
     FileType,
     InputFile,
     InputSession,
     classify_file,
 )
-from gourani.utils.audio import probe_duration
+from bristlenose.utils.audio import probe_duration
 
 logger = logging.getLogger(__name__)
 

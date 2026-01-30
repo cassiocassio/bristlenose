@@ -1,6 +1,6 @@
-"""Tests for Gourani data models and helpers."""
+"""Tests for Bristlenose data models and helpers."""
 
-from gourani.models import (
+from bristlenose.models import (
     ExtractedQuote,
     QuoteType,
     format_timecode,

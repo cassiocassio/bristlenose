@@ -1,18 +1,18 @@
-"""Command-line interface for Gourani."""
+"""Command-line interface for Bristlenose."""
 
 from __future__ import annotations
 
 import asyncio
 from pathlib import Path
-from typing import Annotated, Optional
+from typing import Annotated
 
 import typer
 from rich.console import Console
 
-from gourani.config import load_settings
+from bristlenose.config import load_settings
 
 app = typer.Typer(
-    name="gourani",
+    name="bristlenose",
     help="User-research transcription and quote extraction engine.",
     no_args_is_help=True,
 )
@@ -35,7 +35,7 @@ def run(
         typer.Option("--output", "-o", help="Output directory for results."),
     ] = Path("output"),
     project_name: Annotated[
-        Optional[str],
+        str | None,
         typer.Option("--project", "-p", help="Name of the research project (defaults to input folder name)."),
     ] = None,
     whisper_backend: Annotated[
@@ -67,8 +67,8 @@ def run(
         typer.Option("--no-pii", help="Disable PII removal pass."),
     ] = False,
     config: Annotated[
-        Optional[Path],
-        typer.Option("--config", "-c", help="Path to gourani.toml config file."),
+        Path | None,
+        typer.Option("--config", "-c", help="Path to bristlenose.toml config file."),
     ] = None,
     clean: Annotated[
         bool,
@@ -107,7 +107,7 @@ def run(
         pii_enabled=not no_pii,
     )
 
-    from gourani.pipeline import Pipeline
+    from bristlenose.pipeline import Pipeline
 
     pipeline = Pipeline(settings, verbose=verbose)
     result = asyncio.run(pipeline.run(input_dir, output_dir))
@@ -151,7 +151,7 @@ def transcribe_only(
         skip_transcription=False,
     )
 
-    from gourani.pipeline import Pipeline
+    from bristlenose.pipeline import Pipeline
 
     pipeline = Pipeline(settings, verbose=verbose)
     result = asyncio.run(pipeline.run_transcription_only(input_dir, output_dir))
@@ -176,7 +176,7 @@ def analyze(
         typer.Option("--output", "-o", help="Output directory for results."),
     ] = Path("output"),
     project_name: Annotated[
-        Optional[str],
+        str | None,
         typer.Option("--project", "-p", help="Name of the research project (defaults to input folder name)."),
     ] = None,
     llm_provider: Annotated[
@@ -198,7 +198,7 @@ def analyze(
         llm_provider=llm_provider,
     )
 
-    from gourani.pipeline import Pipeline
+    from bristlenose.pipeline import Pipeline
 
     pipeline = Pipeline(settings, verbose=verbose)
     result = asyncio.run(pipeline.run_analysis_only(transcripts_dir, output_dir))

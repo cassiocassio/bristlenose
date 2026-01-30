@@ -4,7 +4,7 @@ Last updated: 30 Jan 2026
 
 ---
 
-## Done (0.1.x)
+## Done
 
 - [x] Full 12-stage pipeline (ingest → render)
 - [x] HTML report with CSS theme (v5), clickable timecodes, popout video player
@@ -26,6 +26,7 @@ Last updated: 30 Jan 2026
 - [x] Homebrew tap (cassiocassio/homebrew-bristlenose) — `brew install cassiocassio/bristlenose/bristlenose` works
 - [x] README with install instructions (brew, pipx, uv)
 - [x] CONTRIBUTING.md with release process and design system documented
+- [x] (0.3.2) Tag auto-suggest: don't offer tags the quote already has
 
 ---
 

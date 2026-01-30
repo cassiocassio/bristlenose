@@ -132,8 +132,12 @@ function buildSuggest(input, wrap) {
   var val = input.value.trim().toLowerCase();
   if (!val) return;
 
+  // Collect tags the current quote already has, so we don't suggest them.
+  var bq = activeTagInput ? activeTagInput.bq : null;
+  var existing = bq && bq.id && userTags[bq.id] ? userTags[bq.id].map(function (t) { return t.toLowerCase(); }) : [];
+
   var names = allTagNames().filter(function (n) {
-    return n.toLowerCase().indexOf(val) !== -1 && n.toLowerCase() !== val;
+    return n.toLowerCase().indexOf(val) !== -1 && n.toLowerCase() !== val && existing.indexOf(n.toLowerCase()) === -1;
   });
   if (!names.length) return;
 

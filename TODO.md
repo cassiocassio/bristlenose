@@ -37,13 +37,9 @@ These are ready to implement. Do them in order — each builds on the previous.
 
 Done — `.github/workflows/ci.yml`. Ruff and pytest are hard gates; mypy runs informational (`continue-on-error`) due to 9 pre-existing third-party SDK type errors.
 
-### 2. Publish to PyPI on tagged release
+### 2. ✅ Publish to PyPI on tagged release
 
-GitHub Actions workflow: `.github/workflows/release.yml`
-- Trigger on push of `v*` tags
-- Build sdist + wheel with `python -m build`
-- Upload to PyPI using trusted publisher (no API token in secrets)
-- Requires one-time setup: go to pypi.org/manage/project/bristlenose/settings/publishing/ and add a trusted publisher for the GitHub repo + workflow
+Done — `.github/workflows/release.yml`. Triggers on `v*` tags, runs CI first, builds sdist + wheel, publishes via PyPI trusted publishing (OIDC, no token needed). Trusted publisher configured at pypi.org.
 
 ### 3. Auto-update Homebrew tap after PyPI publish
 

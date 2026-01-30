@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "bristlenose"
-version = "0.2.0"
+version = "0.3.0"
 description = "User-research transcription and quote extraction engine"
 requires-python = ">=3.10"
 license = "AGPL-3.0-only"

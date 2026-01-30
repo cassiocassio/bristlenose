@@ -55,6 +55,8 @@ Full pipeline, HTML report with CSS theme, clickable timecodes, popout video pla
 
 Tag system, search-as-you-type filtering, hide/show quotes, keyboard shortcuts, theme management in the browser, lost quotes (surface what the AI didn't select), transcript linking, .docx export, edit writeback, multi-participant sessions.
 
+**Packaging** -- `brew install bristlenose` (macOS), `snap install bristlenose` (Ubuntu/Linux), `winget install bristlenose` or similar (Windows). One-command install without needing Python or pip.
+
 Details and priorities may shift. If something is missing that matters to you, open an issue.
 
 ---

@@ -72,7 +72,7 @@ Current state and planned improvements.
 
 ### To do
 
-- [ ] **PyPI Trusted Publishing** — eliminate the local PyPI token entirely for releases; configure pypi.org to trust the GitHub Actions release workflow directly (no secrets in GitHub Settings needed). One-time setup at pypi.org/manage/project/bristlenose/settings/publishing/
+- [x] **PyPI Trusted Publishing** — configured; `release.yml` publishes via OIDC, no token needed in CI or locally for releases
 - [ ] **Bristlenose API keys → Keychain** — add optional `keyring` support in `config.py` so bristlenose can read `BRISTLENOSE_ANTHROPIC_API_KEY` from macOS Keychain (falling back to env var / `.env`). Would let users avoid plaintext keys on disk.
 - [ ] **Document the secrets setup** — add a "Secrets & credentials" section to CONTRIBUTING.md covering: where each secret lives, how to set them up from scratch (keyring commands, gh auth, .env), and the CI trusted-publisher flow.
 
@@ -124,7 +124,8 @@ Organised from easiest to hardest. The README has a condensed version; this is t
 
 | File | What it does |
 |------|-------------|
-| `pyproject.toml` | Package metadata, deps, version number, tool config |
+| `pyproject.toml` | Package metadata, deps, tool config (version is dynamic — read from `__init__.py`) |
+| `bristlenose/__init__.py` | **Single source of truth for version** (`__version__`); the only file to edit when releasing |
 | `bristlenose/cli.py` | Typer CLI entry point (`run`, `transcribe-only`, `analyze`, `render`) |
 | `bristlenose/config.py` | Pydantic settings (env vars, .env, bristlenose.toml) |
 | `bristlenose/pipeline.py` | Pipeline orchestrator (full run, transcribe-only, analyze-only, render-only) |

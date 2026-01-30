@@ -166,70 +166,62 @@ This will be loaded via a theme picker in the browser toolbar (see roadmap). The
 
 ## Releasing
 
-Day-to-day development just means committing and pushing to `main`. PyPI and Homebrew only need updating when you cut a release.
+Day-to-day development just means committing and pushing to `main`. CI runs automatically. PyPI and Homebrew are updated when you tag a release.
 
-### 1. Bump the version
+### Version — single source of truth
 
-Edit `pyproject.toml`:
+The version lives in **one place only**: `bristlenose/__init__.py`.
 
-```toml
-version = "0.2.0"
+```python
+__version__ = "0.4.0"
 ```
 
-### 2. Build the distribution
+`pyproject.toml` uses `dynamic = ["version"]` with `[tool.hatch.version] path = "bristlenose/__init__.py"`, so hatchling reads it from there. Do **not** add a `version` key to `[project]`.
+
+### Cutting a release
 
 ```bash
-pip install build twine     # if not already installed
-python -m build
+# 1. Bump the version (the only file you edit)
+#    Edit bristlenose/__init__.py → __version__ = "X.Y.Z"
+
+# 2. Commit and tag
+git add bristlenose/__init__.py
+git commit -m "vX.Y.Z"
+git tag vX.Y.Z
+git push origin main --tags
 ```
 
-This creates `dist/bristlenose-0.2.0.tar.gz` and `dist/bristlenose-0.2.0-py3-none-any.whl`.
+That's it. GitHub Actions handles the rest:
 
-### 3. Publish to PyPI
+1. **CI** (`.github/workflows/ci.yml`) — ruff, mypy, pytest
+2. **Build** — sdist + wheel via `python -m build`
+3. **Publish to PyPI** (`.github/workflows/release.yml`) — via OIDC trusted publishing (no tokens needed)
 
-```bash
-twine upload dist/bristlenose-0.2.0*
-```
+### Updating the Homebrew tap (manual for now)
 
-Username is `__token__`. Password is a PyPI API token (starts with `pypi-`). Create tokens at https://pypi.org/manage/account/token/.
-
-Verify at https://pypi.org/project/bristlenose/.
-
-### 4. Update the Homebrew tap
-
-The tap lives at https://github.com/cassiocassio/homebrew-bristlenose.
-
-Get the new sdist URL and sha256:
+After PyPI publishes, update the tap at https://github.com/cassiocassio/homebrew-bristlenose:
 
 ```bash
-python3 -c "
-import json, urllib.request
-with urllib.request.urlopen('https://pypi.org/pypi/bristlenose/0.2.0/json') as r:
-    data = json.loads(r.read())
-    for f in data['urls']:
-        if f['packagetype'] == 'sdist':
-            print(f'url: {f[\"url\"]}')
-            print(f'sha256: {f[\"digests\"][\"sha256\"]}')
+# Get the new sdist URL and sha256
+curl -s https://pypi.org/pypi/bristlenose/X.Y.Z/json | python3 -c "
+import json, sys
+data = json.load(sys.stdin)
+for f in data['urls']:
+    if f['packagetype'] == 'sdist':
+        print(f'url: {f[\"url\"]}')
+        print(f'sha256: {f[\"digests\"][\"sha256\"]}')
 "
 ```
 
-Edit `Formula/bristlenose.rb` in the tap repo — update `url`, `sha256`, and the version string in the `pip install` line. Commit and push.
-
-### 5. Tag the release
-
-```bash
-git tag v0.2.0
-git push origin v0.2.0
-```
+Edit `Formula/bristlenose.rb` — update the `url` and `sha256` lines. Commit and push.
 
 ### Summary
 
 | What              | When                  | How                                            |
 |-------------------|-----------------------|------------------------------------------------|
-| Commit to `main`  | Every change          | `git push`                                     |
-| PyPI              | Each release          | `python -m build && twine upload dist/*`       |
+| Commit to `main`  | Every change          | `git push` (CI runs automatically)             |
+| PyPI release      | Each release          | Tag `vX.Y.Z` and push (automated via Actions)  |
 | Homebrew tap      | After PyPI publish    | Update `url` + `sha256` in `Formula/*.rb`      |
-| Git tag           | After PyPI publish    | `git tag vX.Y.Z && git push origin vX.Y.Z`    |
 
 ### Homebrew architecture note
 

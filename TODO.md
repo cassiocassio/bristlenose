@@ -65,6 +65,27 @@ Add to the release workflow (item 2)
 
 ---
 
+## Secrets management
+
+Current state and planned improvements.
+
+### Done
+
+- [x] **GitHub token** — stored in macOS Keychain via `gh auth`, accessed by `gh` CLI and git-credential-manager
+- [x] **PyPI token** — stored in macOS Keychain via `keyring set https://upload.pypi.org/legacy/ __token__`, picked up automatically by `twine upload`
+
+### Current (works but could be better)
+
+- **Anthropic/OpenAI API keys** — shell env var (`ANTHROPIC_API_KEY`) set in shell profile, plus `.env` file in project root (gitignored). Standard approach, fine for local dev.
+
+### To do
+
+- [ ] **PyPI Trusted Publishing** — eliminate the local PyPI token entirely for releases; configure pypi.org to trust the GitHub Actions release workflow directly (no secrets in GitHub Settings needed). One-time setup at pypi.org/manage/project/bristlenose/settings/publishing/
+- [ ] **Bristlenose API keys → Keychain** — add optional `keyring` support in `config.py` so bristlenose can read `BRISTLENOSE_ANTHROPIC_API_KEY` from macOS Keychain (falling back to env var / `.env`). Would let users avoid plaintext keys on disk.
+- [ ] **Document the secrets setup** — add a "Secrets & credentials" section to CONTRIBUTING.md covering: where each secret lives, how to set them up from scratch (keyring commands, gh auth, .env), and the CI trusted-publisher flow.
+
+---
+
 ## Feature roadmap
 
 Organised from easiest to hardest. The README has a condensed version; this is the full list.

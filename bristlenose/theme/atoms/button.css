@@ -1,0 +1,79 @@
+/* Atom: button — fav-star, edit-pencil, badge-restore, toolbar-btn */
+
+.fav-star {
+    position: absolute;
+    top: 0.65rem;
+    right: 0.65rem;
+    background: none;
+    border: none;
+    font-size: 0.8rem;
+    color: var(--bn-colour-icon-idle);
+    cursor: pointer;
+    padding: var(--bn-space-xs);
+    line-height: 1;
+    transition: color var(--bn-transition-normal);
+}
+
+.fav-star:hover {
+    color: var(--bn-colour-accent);
+}
+
+.edit-pencil {
+    position: absolute;
+    top: 0.65rem;
+    right: 2rem;
+    background: none;
+    border: none;
+    font-size: 0.8rem;
+    color: var(--bn-colour-icon-idle);
+    cursor: pointer;
+    padding: var(--bn-space-xs);
+    line-height: 1;
+    transition: color var(--bn-transition-normal);
+}
+
+.edit-pencil:hover {
+    color: var(--bn-colour-accent);
+}
+
+.badge-restore {
+    margin-left: auto;
+    background: none;
+    border: none;
+    color: var(--bn-colour-muted);
+    font-size: 0.8rem;
+    cursor: pointer;
+    padding: 0.1rem 0.25rem;
+    line-height: 1;
+    transition: color var(--bn-transition-fast);
+    flex-shrink: 0;
+}
+
+.badge-restore:hover {
+    color: var(--bn-colour-accent);
+}
+
+.toolbar-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--bn-space-sm);
+    background: var(--bn-colour-bg);
+    border: 1px solid var(--bn-colour-border);
+    border-radius: var(--bn-radius-md);
+    padding: 0.4rem 0.85rem;
+    font-family: var(--bn-font-body);
+    font-size: 0.82rem;
+    color: var(--bn-colour-text);
+    cursor: pointer;
+    transition: background var(--bn-transition-fast), border-color var(--bn-transition-fast);
+}
+
+.toolbar-btn:hover {
+    background: var(--bn-colour-quote-bg);
+    border-color: var(--bn-colour-muted);
+}
+
+.toolbar-btn .toolbar-icon {
+    font-size: 0.95rem;
+    color: var(--bn-colour-muted);
+}

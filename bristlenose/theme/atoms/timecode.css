@@ -1,0 +1,13 @@
+/* Atom: timecode — clickable and plain timecode links */
+
+a.timecode {
+    color: var(--bn-colour-accent);
+    font-family: var(--bn-font-mono);
+    font-size: 0.8rem;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+a.timecode:hover {
+    text-decoration: underline;
+}

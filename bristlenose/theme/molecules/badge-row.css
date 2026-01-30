@@ -1,0 +1,8 @@
+/* Molecule: badge-row — badges container inside a blockquote */
+
+blockquote .badges {
+    display: flex;
+    gap: var(--bn-space-sm);
+    margin-top: 0.4rem;
+    flex-wrap: wrap;
+}

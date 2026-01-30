@@ -1,0 +1,38 @@
+/* Organism: toc — table of contents with side-by-side columns */
+
+.toc-row {
+    display: flex;
+    gap: 3rem;
+    flex-wrap: wrap;
+}
+
+.toc-row > nav {
+    flex: 1;
+    min-width: 12rem;
+}
+
+.toc h2 {
+    font-size: 1.1rem;
+    margin-bottom: 0.5rem;
+}
+
+.toc ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.toc li {
+    margin: 0.2rem 0;
+    font-size: 0.9rem;
+    break-inside: avoid;
+}
+
+.toc a {
+    color: var(--bn-colour-accent);
+    text-decoration: none;
+}
+
+.toc a:hover {
+    text-decoration: underline;
+}

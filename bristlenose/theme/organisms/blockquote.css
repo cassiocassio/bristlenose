@@ -1,0 +1,74 @@
+/* Organism: blockquote — the full quote card */
+
+blockquote {
+    background: var(--bn-colour-quote-bg);
+    border-left: 1px solid var(--bn-colour-border);
+    margin: 0.8rem 0;
+    padding: var(--bn-space-md) 1rem;
+    border-radius: 0 var(--bn-radius-md) var(--bn-radius-md) 0;
+}
+
+blockquote .context {
+    display: block;
+    color: var(--bn-colour-muted);
+    font-size: 0.85rem;
+    margin-bottom: 0.3rem;
+}
+
+blockquote .timecode {
+    color: var(--bn-colour-muted);
+    font-family: var(--bn-font-mono);
+    font-size: 0.8rem;
+}
+
+blockquote .speaker {
+    color: var(--bn-colour-muted);
+    font-size: 0.9rem;
+}
+
+blockquote.quote-active {
+    border-left-color: var(--bn-colour-delight);
+    background: var(--bn-colour-active-bg);
+    transition: background var(--bn-transition-slow), border-left-color var(--bn-transition-slow);
+}
+
+.quote-group {
+    display: flex;
+    flex-direction: column;
+}
+
+.quote-group blockquote {
+    position: relative;
+    padding-right: 3rem;
+}
+
+/* Rewatch items inside quotes / friction points */
+.rewatch-participant {
+    font-weight: 600;
+    margin-top: 1rem;
+    margin-bottom: 0.25rem;
+}
+
+.rewatch-item {
+    margin: 0.2rem 0 0.2rem 1.2rem;
+    font-size: 0.9rem;
+}
+
+.rewatch-item .timecode {
+    font-family: var(--bn-font-mono);
+    font-size: 0.8rem;
+    color: var(--bn-colour-muted);
+}
+
+.rewatch-item .reason {
+    font-style: italic;
+    color: var(--bn-colour-frustration);
+}
+
+.rewatch-item a.timecode {
+    color: var(--bn-colour-muted);
+}
+
+.rewatch-item a.timecode:hover {
+    color: var(--bn-colour-accent);
+}

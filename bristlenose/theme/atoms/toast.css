@@ -1,0 +1,22 @@
+/* Atom: toast — clipboard notification */
+
+.clipboard-toast {
+    position: fixed;
+    bottom: var(--bn-space-lg);
+    right: var(--bn-space-lg);
+    background: var(--bn-colour-text);
+    color: var(--bn-colour-bg);
+    padding: 0.6rem 1.2rem;
+    border-radius: var(--bn-radius-lg);
+    font-size: 0.85rem;
+    opacity: 0;
+    transform: translateY(0.5rem);
+    transition: opacity 0.25s ease, transform 0.25s ease;
+    z-index: 200;
+    pointer-events: none;
+}
+
+.clipboard-toast.show {
+    opacity: 1;
+    transform: translateY(0);
+}

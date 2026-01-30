@@ -1,0 +1,25 @@
+/* Atom: input — tag-input and its sizing helper */
+
+.tag-input {
+    font-family: var(--bn-font-mono);
+    font-size: 0.72rem;
+    padding: var(--bn-space-xs) 0.4rem;
+    border: 1px solid var(--bn-colour-accent);
+    border-radius: var(--bn-radius-sm);
+    outline: none;
+    background: var(--bn-colour-bg);
+    color: var(--bn-colour-text);
+    min-width: 3rem;
+    width: 3rem;
+}
+
+.tag-sizer {
+    position: absolute;
+    visibility: hidden;
+    height: 0;
+    overflow: hidden;
+    white-space: pre;
+    font-family: var(--bn-font-mono);
+    font-size: 0.72rem;
+    padding: 0 0.4rem;
+}

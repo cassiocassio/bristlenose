@@ -1,0 +1,14 @@
+/* Organism: toolbar — sticky top bar with export buttons */
+
+.toolbar {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.5rem;
+    padding: 0.5rem 0;
+    background: var(--bn-colour-bg);
+    border-bottom: 1px solid var(--bn-colour-border);
+    margin-bottom: 0.5rem;
+}

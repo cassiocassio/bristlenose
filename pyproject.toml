@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "bristlenose"
-version = "0.1.0"
+version = "0.2.0"
 description = "User-research transcription and quote extraction engine"
 requires-python = ">=3.10"
 license = "AGPL-3.0-only"
@@ -39,6 +39,15 @@ dev = [
 
 [project.scripts]
 bristlenose = "bristlenose.cli:app"
+
+[tool.hatch.build.targets.wheel]
+packages = ["bristlenose"]
+
+[tool.hatch.build]
+artifacts = ["bristlenose/theme/**/*.css", "bristlenose/theme/**/*.js"]
+
+[tool.hatch.build.targets.sdist]
+exclude = [".claude/", "trial-runs/", "tests/"]
 
 [tool.ruff]
 target-version = "py310"

@@ -1,0 +1,19 @@
+/* Template: print — overrides for @media print */
+
+@media print {
+    body { padding: 0; font-size: 11pt; }
+    article { max-width: none; }
+    h2 { break-before: page; }
+    blockquote { break-inside: avoid; }
+    table { break-inside: avoid; }
+    a.timecode { color: var(--bn-colour-muted); text-decoration: none; cursor: default; }
+    .toolbar { display: none; }
+    .fav-star { display: none; }
+    .edit-pencil { display: none; }
+    .badge-add { display: none; }
+    .badge-restore { display: none; }
+    .tag-input-wrap { display: none; }
+    .tag-suggest { display: none; }
+    .badge-delete { display: none; }
+    .badge-ai::after { display: none; }
+}

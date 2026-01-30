@@ -382,6 +382,88 @@ class Pipeline:
 
         return session_segments
 
+    def run_render_only(
+        self,
+        output_dir: Path,
+        input_dir: Path,
+    ) -> PipelineResult:
+        """Re-render reports from existing intermediate JSON.
+
+        No transcription or LLM calls — just reads the JSON files written by
+        a previous pipeline run and regenerates the HTML and Markdown output.
+
+        Args:
+            output_dir: Output directory containing ``intermediate/`` JSON.
+            input_dir:  Original input directory. Sessions are re-ingested
+                        (fast, no transcription) so the report can link
+                        clickable timecodes to video files.
+
+        Returns:
+            PipelineResult (with empty transcripts — only clusters/themes populated).
+        """
+        import json as _json
+
+        from bristlenose.models import ExtractedQuote, ScreenCluster, ThemeGroup
+        from bristlenose.stages.render_html import render_html
+        from bristlenose.stages.render_output import render_markdown
+
+        intermediate = output_dir / "intermediate"
+
+        # --- Load intermediate JSON ---
+        sc_path = intermediate / "screen_clusters.json"
+        tg_path = intermediate / "theme_groups.json"
+        eq_path = intermediate / "extracted_quotes.json"
+
+        if not sc_path.exists() or not tg_path.exists():
+            console.print(
+                "[red]Missing intermediate files.[/red] "
+                "Expected screen_clusters.json and theme_groups.json in "
+                f"{intermediate}"
+            )
+            return self._empty_result(output_dir)
+
+        screen_clusters = [
+            ScreenCluster.model_validate(obj)
+            for obj in _json.loads(sc_path.read_text(encoding="utf-8"))
+        ]
+        theme_groups = [
+            ThemeGroup.model_validate(obj)
+            for obj in _json.loads(tg_path.read_text(encoding="utf-8"))
+        ]
+        all_quotes: list[ExtractedQuote] = []
+        if eq_path.exists():
+            all_quotes = [
+                ExtractedQuote.model_validate(obj)
+                for obj in _json.loads(eq_path.read_text(encoding="utf-8"))
+            ]
+
+        # --- Re-ingest input files for video linking ---
+        from bristlenose.stages.ingest import ingest
+
+        sessions = ingest(input_dir)
+
+        # --- Render ---
+        render_markdown(
+            screen_clusters, theme_groups, sessions,
+            self.settings.project_name, output_dir,
+            all_quotes=all_quotes,
+        )
+        render_html(
+            screen_clusters, theme_groups, sessions,
+            self.settings.project_name, output_dir,
+            all_quotes=all_quotes,
+        )
+
+        return PipelineResult(
+            project_name=self.settings.project_name,
+            participants=sessions,
+            raw_transcripts=[],
+            clean_transcripts=[],
+            screen_clusters=screen_clusters,
+            theme_groups=theme_groups,
+            output_dir=output_dir,
+        )
+
     def _empty_result(self, output_dir: Path) -> PipelineResult:
         """Return an empty pipeline result."""
         return PipelineResult(

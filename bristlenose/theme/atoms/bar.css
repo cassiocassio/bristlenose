@@ -1,0 +1,33 @@
+/* Atom: bar — sentiment histogram bar and count */
+
+.sentiment-bar {
+    height: 1rem;
+    border-radius: 0 var(--bn-radius-sm) var(--bn-radius-sm) 0;
+    min-width: 2px;
+}
+
+.sentiment-bar-count {
+    font-size: 0.75rem;
+    font-weight: 600;
+    flex-shrink: 0;
+}
+
+.sentiment-bar-label {
+    display: inline-block;
+    font-family: var(--bn-font-mono);
+    font-size: 0.72rem;
+    padding: var(--bn-space-xs) 0.45rem;
+    border-radius: var(--bn-radius-sm);
+    background: var(--bn-colour-badge-bg);
+    color: var(--bn-colour-badge-text);
+    line-height: 1.2;
+    min-width: 5rem;
+    text-align: left;
+    flex-shrink: 0;
+}
+
+.sentiment-divider {
+    height: 1px;
+    background: var(--bn-colour-border);
+    margin: var(--bn-space-sm) 0;
+}

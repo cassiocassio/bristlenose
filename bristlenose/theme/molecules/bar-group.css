@@ -1,0 +1,8 @@
+/* Molecule: bar-group — label + bar + count row in a sentiment chart */
+
+.sentiment-bar-group {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    min-height: 1.6rem;
+}

@@ -1,0 +1,48 @@
+/* Bristlenose design system — atomic CSS index.
+   This file defines the import order. At render time, these files are
+   concatenated into a single stylesheet (bristlenose-theme.css).
+
+   Layer order:
+   1. Tokens   — custom properties (colours, fonts, spacing, radii)
+   2. Atoms    — smallest reusable pieces (badge, button, input, etc.)
+   3. Molecules — small groups of atoms (badge-row, bar-group, etc.)
+   4. Organisms — self-contained UI sections (blockquote, chart, toolbar)
+   5. Templates — page-level layout and print overrides
+*/
+
+/* --- 1. Tokens --- */
+/* tokens.css */
+
+/* --- 2. Atoms --- */
+/* atoms/badge.css */
+/* atoms/button.css */
+/* atoms/input.css */
+/* atoms/toast.css */
+/* atoms/timecode.css */
+/* atoms/bar.css */
+
+/* --- 3. Molecules --- */
+/* molecules/badge-row.css */
+/* molecules/bar-group.css */
+/* molecules/quote-actions.css */
+/* molecules/tag-input.css */
+
+/* --- 4. Organisms --- */
+/* organisms/blockquote.css */
+/* organisms/sentiment-chart.css */
+/* organisms/toolbar.css */
+/* organisms/toc.css */
+
+/* --- 5. Templates --- */
+/* templates/report.css */
+/* templates/print.css */
+
+/* --- JavaScript modules (see js/ directory) --- */
+/* js/storage.js       — localStorage abstraction                */
+/* js/player.js        — Popout video/audio player integration   */
+/* js/favourites.js    — Star/un-star quotes with FLIP animation */
+/* js/editing.js       — Inline quote text editing               */
+/* js/tags.js          — AI badge management & user tagging      */
+/* js/histogram.js     — Dynamic user-tags histogram             */
+/* js/csv-export.js    — CSV export & clipboard copy             */
+/* js/main.js          — Orchestrator (boot sequence)            */

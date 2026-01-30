@@ -1,0 +1,39 @@
+/* Molecule: quote-actions — edit and favourite state styles on blockquotes */
+
+blockquote.favourited .fav-star {
+    color: var(--bn-colour-favourited);
+}
+
+blockquote.favourited {
+    font-weight: 600;
+    border-left-color: var(--bn-colour-favourited);
+}
+
+blockquote.favourited .context,
+blockquote.favourited .timecode,
+blockquote.favourited .speaker,
+blockquote.favourited .badges {
+    font-weight: 400;
+}
+
+blockquote.editing .edit-pencil {
+    color: var(--bn-colour-accent);
+}
+
+blockquote.editing .quote-text {
+    background: var(--bn-colour-editing-bg);
+    outline: 1px solid var(--bn-colour-editing-border);
+    border-radius: var(--bn-radius-sm);
+    padding: var(--bn-space-xs) 0.3rem;
+    min-width: 10rem;
+    cursor: text;
+}
+
+.quote-text.edited {
+    border-bottom: 1px dashed var(--bn-colour-muted);
+}
+
+blockquote.fav-animating {
+    transition: transform var(--bn-transition-normal);
+    z-index: 1;
+}

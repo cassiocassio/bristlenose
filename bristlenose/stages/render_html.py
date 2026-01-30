@@ -24,493 +24,102 @@ from bristlenose.models import (
 logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
-# Default theme CSS — written once, never overwritten
+# Default theme CSS — loaded from bristlenose/theme/ (atomic design system)
 # ---------------------------------------------------------------------------
 
-_CSS_VERSION = "bristlenose-theme v5"
-
-DEFAULT_CSS = (
-    f"/* {_CSS_VERSION} — default research report theme */\n"
-    "/* Edit freely; Bristlenose will not overwrite this file once created. */\n"
-) + """\
-
-:root {
-    --font-body: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
-    --font-mono: "SF Mono", "Fira Code", "Consolas", monospace;
-    --colour-bg: #ffffff;
-    --colour-text: #1a1a1a;
-    --colour-muted: #6b7280;
-    --colour-border: #e5e7eb;
-    --colour-accent: #2563eb;
-    --colour-quote-bg: #f9fafb;
-    --colour-badge-bg: #f3f4f6;
-    --colour-badge-text: #374151;
-    --colour-confusion: #dc2626;
-    --colour-frustration: #ea580c;
-    --colour-delight: #16a34a;
-    --colour-suggestion: #2563eb;
-    --max-width: 52rem;
-}
-
-*,
-*::before,
-*::after {
-    box-sizing: border-box;
-}
-
-html {
-    font-size: 16px;
-    -webkit-font-smoothing: antialiased;
-}
-
-body {
-    font-family: var(--font-body);
-    color: var(--colour-text);
-    background: var(--colour-bg);
-    line-height: 1.6;
-    margin: 0;
-    padding: 2rem 1.5rem;
-}
-
-article {
-    max-width: var(--max-width);
-    margin: 0 auto;
-}
-
-h1 {
-    font-size: 1.75rem;
-    font-weight: 700;
-    margin: 0 0 0.5rem;
-    letter-spacing: -0.01em;
-}
-
-h2 {
-    font-size: 1.35rem;
-    font-weight: 600;
-    margin: 2.5rem 0 1rem;
-    padding-bottom: 0.4rem;
-    border-bottom: 2px solid var(--colour-border);
-}
-
-h3 {
-    font-size: 1.1rem;
-    font-weight: 600;
-    margin: 1.8rem 0 0.6rem;
-}
-
-.meta {
-    color: var(--colour-muted);
-    font-size: 0.9rem;
-    margin-bottom: 2rem;
-}
-
-.meta p {
-    margin: 0.15rem 0;
-}
-
-hr {
-    border: none;
-    border-top: 1px solid var(--colour-border);
-    margin: 2rem 0;
-}
-
-/* --- Table of Contents --- */
-
-.toc-row {
-    display: flex;
-    gap: 3rem;
-    flex-wrap: wrap;
-}
-
-.toc-row > nav {
-    flex: 1;
-    min-width: 12rem;
-}
-
-.toc h2 {
-    font-size: 1.1rem;
-    margin-bottom: 0.5rem;
-}
-
-.toc ul {
-    list-style: none;
-    padding: 0;
-    margin: 0;
-}
-
-.toc li {
-    margin: 0.2rem 0;
-    font-size: 0.9rem;
-    break-inside: avoid;
-}
-
-.toc a {
-    color: var(--colour-accent);
-    text-decoration: none;
-}
-
-.toc a:hover {
-    text-decoration: underline;
-}
-
-/* --- Quotes --- */
-
-blockquote {
-    background: var(--colour-quote-bg);
-    border-left: 1px solid var(--colour-border);
-    margin: 0.8rem 0;
-    padding: 0.75rem 1rem;
-    border-radius: 0 6px 6px 0;
-}
-
-blockquote .context {
-    display: block;
-    color: var(--colour-muted);
-    font-size: 0.85rem;
-    margin-bottom: 0.3rem;
-}
-
-blockquote .timecode {
-    color: var(--colour-muted);
-    font-family: var(--font-mono);
-    font-size: 0.8rem;
-}
-
-blockquote .speaker {
-    color: var(--colour-muted);
-    font-size: 0.9rem;
-}
-
-blockquote .badges {
-    display: flex;
-    gap: 0.35rem;
-    margin-top: 0.4rem;
-    flex-wrap: wrap;
-}
-
-.badge {
-    display: inline-block;
-    font-family: var(--font-mono);
-    font-size: 0.72rem;
-    padding: 0.15rem 0.45rem;
-    border-radius: 4px;
-    background: var(--colour-badge-bg);
-    color: var(--colour-badge-text);
-}
-
-.badge-confusion { background: #fef2f2; color: var(--colour-confusion); }
-.badge-frustration { background: #fff7ed; color: var(--colour-frustration); }
-.badge-delight { background: #f0fdf4; color: var(--colour-delight); }
-.badge-suggestion { background: #eff6ff; color: var(--colour-suggestion); }
-
-/* --- Description text --- */
-
-.description {
-    color: var(--colour-muted);
-    margin-bottom: 1rem;
-}
-
-/* --- Tables --- */
-
-table {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 0.9rem;
-    margin: 1rem 0;
-}
-
-th {
-    text-align: left;
-    font-weight: 600;
-    padding: 0.6rem 0.75rem;
-    border-bottom: 2px solid var(--colour-border);
-    white-space: nowrap;
-}
-
-td {
-    padding: 0.5rem 0.75rem;
-    border-bottom: 1px solid var(--colour-border);
-    vertical-align: top;
-}
-
-tr:last-child td {
-    border-bottom: none;
-}
-
-/* --- Rewatch list --- */
-
-.rewatch-participant {
-    font-weight: 600;
-    margin-top: 1rem;
-    margin-bottom: 0.25rem;
-}
-
-.rewatch-item {
-    margin: 0.2rem 0 0.2rem 1.2rem;
-    font-size: 0.9rem;
-}
-
-.rewatch-item .timecode {
-    font-family: var(--font-mono);
-    font-size: 0.8rem;
-    color: var(--colour-muted);
-}
-
-.rewatch-item .reason {
-    font-style: italic;
-    color: var(--colour-frustration);
-}
-
-/* --- Source file links --- */
-
-td a {
-    color: var(--colour-accent);
-    text-decoration: none;
-}
-
-td a:hover {
-    text-decoration: underline;
-}
-
-/* --- Clickable timecodes --- */
-
-a.timecode {
-    color: var(--colour-accent);
-    font-family: var(--font-mono);
-    font-size: 0.8rem;
-    text-decoration: none;
-    cursor: pointer;
-}
-
-a.timecode:hover {
-    text-decoration: underline;
-}
-
-.rewatch-item a.timecode {
-    color: var(--colour-muted);
-}
-
-.rewatch-item a.timecode:hover {
-    color: var(--colour-accent);
-}
-
-/* --- Sentiment histogram --- */
-
-.sentiment-chart {
-    display: flex;
-    align-items: flex-end;
-    justify-content: center;
-    gap: 0;
-    margin: 1.5rem 0;
-    min-height: 160px;
-}
-
-.sentiment-bar-group {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    min-width: 3.5rem;
-    flex: 0 1 5rem;
-}
-
-.sentiment-bar {
-    width: 70%;
-    border-radius: 3px 3px 0 0;
-    min-height: 2px;
-}
-
-.sentiment-bar-label {
-    font-size: 0.7rem;
-    color: var(--colour-muted);
-    margin-top: 0.3rem;
-    text-align: center;
-    line-height: 1.2;
-}
-
-.sentiment-bar-count {
-    font-size: 0.75rem;
-    font-weight: 600;
-    margin-bottom: 0.2rem;
-}
-
-.sentiment-divider {
-    width: 1px;
-    background: var(--colour-border);
-    align-self: stretch;
-    margin: 0 0.25rem;
-}
-
-/* --- Active quote highlight (bidirectional sync) --- */
-
-blockquote.quote-active {
-    border-left-color: var(--colour-delight);
-    background: #f0fdf4;
-    transition: background 0.3s ease, border-left-color 0.3s ease;
-}
-
-/* --- Favourite quotes --- */
-
-.quote-group {
-    display: flex;
-    flex-direction: column;
-}
-
-.quote-group blockquote {
-    position: relative;
-    padding-right: 3rem;
-}
-
-.fav-star {
-    position: absolute;
-    top: 0.65rem;
-    right: 0.65rem;
-    background: none;
-    border: none;
-    font-size: 0.8rem;
-    color: #e5e7eb;
-    cursor: pointer;
-    padding: 0.15rem;
-    line-height: 1;
-    transition: color 0.2s ease;
-}
-
-.fav-star:hover {
-    color: var(--colour-accent);
-}
-
-blockquote.favourited .fav-star {
-    color: #999;
-}
-
-blockquote.favourited {
-    font-weight: 600;
-    border-left-color: #999;
-}
-
-blockquote.favourited .context,
-blockquote.favourited .timecode,
-blockquote.favourited .speaker,
-blockquote.favourited .badges {
-    font-weight: 400;
-}
-
-.edit-pencil {
-    position: absolute;
-    top: 0.65rem;
-    right: 2rem;
-    background: none;
-    border: none;
-    font-size: 0.8rem;
-    color: #e5e7eb;
-    cursor: pointer;
-    padding: 0.15rem;
-    line-height: 1;
-    transition: color 0.2s ease;
-}
-
-.edit-pencil:hover {
-    color: var(--colour-accent);
-}
-
-blockquote.editing .edit-pencil {
-    color: var(--colour-accent);
-}
-
-blockquote.editing .quote-text {
-    background: #fffbe6;
-    outline: 1px solid #e5e0c0;
-    border-radius: 3px;
-    padding: 0.15rem 0.3rem;
-    min-width: 10rem;
-    cursor: text;
-}
-
-.quote-text.edited {
-    border-bottom: 1px dashed var(--colour-muted);
-}
-
-blockquote.fav-animating {
-    transition: transform 0.2s ease;
-    z-index: 1;
-}
-
-/* --- Toolbar --- */
-
-.toolbar {
-    position: sticky;
-    top: 0;
-    z-index: 100;
-    display: flex;
-    justify-content: flex-end;
-    gap: 0.5rem;
-    padding: 0.5rem 0;
-    background: var(--colour-bg);
-    border-bottom: 1px solid var(--colour-border);
-    margin-bottom: 0.5rem;
-}
-
-.toolbar-btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.35rem;
-    background: var(--colour-bg);
-    border: 1px solid var(--colour-border);
-    border-radius: 6px;
-    padding: 0.4rem 0.85rem;
-    font-family: var(--font-body);
-    font-size: 0.82rem;
-    color: var(--colour-text);
-    cursor: pointer;
-    transition: background 0.15s ease, border-color 0.15s ease;
-}
-
-.toolbar-btn:hover {
-    background: var(--colour-quote-bg);
-    border-color: var(--colour-muted);
-}
-
-.toolbar-btn .toolbar-icon {
-    font-size: 0.95rem;
-    color: var(--colour-muted);
-}
-
-/* --- Clipboard toast --- */
-
-.clipboard-toast {
-    position: fixed;
-    bottom: 1.5rem;
-    right: 1.5rem;
-    background: var(--colour-text);
-    color: var(--colour-bg);
-    padding: 0.6rem 1.2rem;
-    border-radius: 8px;
-    font-size: 0.85rem;
-    opacity: 0;
-    transform: translateY(0.5rem);
-    transition: opacity 0.25s ease, transform 0.25s ease;
-    z-index: 200;
-    pointer-events: none;
-}
-
-.clipboard-toast.show {
-    opacity: 1;
-    transform: translateY(0);
-}
-
-/* --- Print --- */
-
-@media print {
-    body { padding: 0; font-size: 11pt; }
-    article { max-width: none; }
-    h2 { break-before: page; }
-    blockquote { break-inside: avoid; }
-    table { break-inside: avoid; }
-    a.timecode { color: var(--colour-muted); text-decoration: none; cursor: default; }
-    .toolbar { display: none; }
-    .fav-star { display: none; }
-    .edit-pencil { display: none; }
-}
-"""
+_CSS_VERSION = "bristlenose-theme v6"
+
+_THEME_DIR = Path(__file__).resolve().parent.parent / "theme"
+
+# Files concatenated in atomic-design order.
+_THEME_FILES: list[str] = [
+    "tokens.css",
+    "atoms/badge.css",
+    "atoms/button.css",
+    "atoms/input.css",
+    "atoms/toast.css",
+    "atoms/timecode.css",
+    "atoms/bar.css",
+    "molecules/badge-row.css",
+    "molecules/bar-group.css",
+    "molecules/quote-actions.css",
+    "molecules/tag-input.css",
+    "organisms/blockquote.css",
+    "organisms/sentiment-chart.css",
+    "organisms/toolbar.css",
+    "organisms/toc.css",
+    "templates/report.css",
+    "templates/print.css",
+]
+
+
+def _load_default_css() -> str:
+    """Read and concatenate all theme CSS files into a single stylesheet."""
+    header = (
+        f"/* {_CSS_VERSION} — default research report theme */\n"
+        "/* Auto-generated from bristlenose/theme/ — "
+        "edits will be overwritten on the next run. */\n\n"
+    )
+    parts: list[str] = [header]
+    for name in _THEME_FILES:
+        path = _THEME_DIR / name
+        parts.append(f"/* --- {name} --- */\n")
+        parts.append(path.read_text(encoding="utf-8").strip())
+        parts.append("\n\n")
+    return "".join(parts)
+
+
+# Lazy-loaded cache so the file I/O only happens once per process.
+_default_css_cache: str | None = None
+
+
+def _get_default_css() -> str:
+    global _default_css_cache  # noqa: PLW0603
+    if _default_css_cache is None:
+        _default_css_cache = _load_default_css()
+    return _default_css_cache
+
+
+# ---------------------------------------------------------------------------
+# Report JavaScript — loaded from bristlenose/theme/js/
+# ---------------------------------------------------------------------------
+
+# Files concatenated in dependency order (later files may reference
+# globals defined by earlier ones).
+_JS_FILES: list[str] = [
+    "js/storage.js",
+    "js/player.js",
+    "js/favourites.js",
+    "js/editing.js",
+    "js/tags.js",
+    "js/histogram.js",
+    "js/csv-export.js",
+    "js/main.js",
+]
+
+
+def _load_report_js() -> str:
+    """Read and concatenate all report JS modules into a single script."""
+    parts: list[str] = [
+        "/* bristlenose report.js — auto-generated from bristlenose/theme/js/ */\n\n"
+    ]
+    for name in _JS_FILES:
+        path = _THEME_DIR / name
+        parts.append(f"// --- {name} ---\n")
+        parts.append(path.read_text(encoding="utf-8").strip())
+        parts.append("\n\n")
+    return "".join(parts)
+
+
+# Lazy-loaded cache so the file I/O only happens once per process.
+_report_js_cache: str | None = None
+
+
+def _get_report_js() -> str:
+    global _report_js_cache  # noqa: PLW0603
+    if _report_js_cache is None:
+        _report_js_cache = _load_report_js()
+    return _report_js_cache
 
 
 # ---------------------------------------------------------------------------
@@ -528,27 +137,18 @@ def render_html(
 ) -> Path:
     """Generate research_report.html with an external CSS stylesheet.
 
-    Writes ``bristlenose-theme.css`` only if it does not already exist so that
-    user customisations are preserved across re-runs.
+    Always writes ``bristlenose-theme.css`` so that code changes are
+    picked up without manual intervention.
 
     Returns:
         Path to the written HTML file.
     """
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    # Write default CSS on first run, or upgrade if auto-generated v1
+    # Always write CSS — keeps the stylesheet in sync with the renderer
     css_path = output_dir / "bristlenose-theme.css"
-    _write_css = False
-    if not css_path.exists():
-        _write_css = True
-    else:
-        existing = css_path.read_text(encoding="utf-8")
-        if _CSS_VERSION not in existing and "bristlenose-theme" in existing:
-            # Auto-generated older version — safe to upgrade
-            _write_css = True
-    if _write_css:
-        css_path.write_text(DEFAULT_CSS, encoding="utf-8")
-        logger.info("Wrote default theme: %s", css_path)
+    css_path.write_text(_get_default_css(), encoding="utf-8")
+    logger.info("Wrote theme: %s", css_path)
 
     # Build video/audio map for clickable timecodes
     video_map = _build_video_map(sessions)
@@ -739,11 +339,13 @@ def render_html(
 
     # --- Embed JavaScript ---
     _w("<script>")
+    _w("(function() {")
     if has_media:
         _w(f"var BRISTLENOSE_VIDEO_MAP = {json.dumps(video_map)};")
     else:
         _w("var BRISTLENOSE_VIDEO_MAP = {};")
-    _w(_REPORT_JS)
+    _w(_get_report_js())
+    _w("})();")
     _w("</script>")
 
     _w("</body>")
@@ -815,8 +417,13 @@ def _format_quote_html(
     )
 
     badges = _quote_badges(quote)
-    if badges:
-        parts.append(f'<div class="badges">{badges}</div>')
+    parts.append(
+        f'<div class="badges">{badges}'
+        ' <span class="badge badge-add" aria-label="Add tag">+</span>'
+        ' <button class="badge-restore" aria-label="Restore tags"'
+        ' title="Restore tags" style="display:none">&#x21A9;</button>'
+        "</div>"
+    )
 
     parts.append('<button class="edit-pencil" aria-label="Edit this quote">&#9998;</button>')
     parts.append('<button class="fav-star" aria-label="Favourite this quote">&#9733;</button>')
@@ -828,22 +435,33 @@ def _quote_badges(quote: ExtractedQuote) -> str:
     """Build HTML badge spans for non-default quote metadata."""
     badges: list[str] = []
     if quote.intent != QuoteIntent.NARRATION:
-        css_class = f"badge badge-{quote.intent.value}"
-        badges.append(f'<span class="{css_class}">{_esc(quote.intent.value)}</span>')
+        css_class = f"badge badge-ai badge-{quote.intent.value}"
+        badges.append(
+            f'<span class="{css_class}" data-badge-type="ai">'
+            f"{_esc(quote.intent.value)}</span>"
+        )
     if quote.emotion != EmotionalTone.NEUTRAL:
-        css_class = f"badge badge-{quote.emotion.value}"
-        badges.append(f'<span class="{css_class}">{_esc(quote.emotion.value)}</span>')
+        css_class = f"badge badge-ai badge-{quote.emotion.value}"
+        badges.append(
+            f'<span class="{css_class}" data-badge-type="ai">'
+            f"{_esc(quote.emotion.value)}</span>"
+        )
     if quote.intensity >= 2:
         label = "moderate" if quote.intensity == 2 else "strong"
-        badges.append(f'<span class="badge">intensity:{label}</span>')
+        badges.append(
+            f'<span class="badge badge-ai" data-badge-type="ai">'
+            f"intensity:{label}</span>"
+        )
     return " ".join(badges)
 
 
 def _build_sentiment_html(quotes: list[ExtractedQuote]) -> str:
-    """Build a mirror-reflection sentiment histogram.
+    """Build a horizontal-bar sentiment histogram.
 
-    Negative sentiments fan out to the left, positive to the right,
-    with the highest counts nearest the centre.
+    Positive sentiments on top (largest first), divider, negative below
+    (smallest at top so the worst clusters near the divider).
+    Each label is styled as a badge tag.  The chart is placed inside
+    a ``sentiment-row`` wrapper together with a JS-rendered user-tags chart.
     """
     from collections import Counter
 
@@ -879,7 +497,18 @@ def _build_sentiment_html(quotes: list[ExtractedQuote]) -> str:
     if not neg_counts and not pos_counts:
         return ""
 
-    # Colours matching the badge CSS
+    # Badge-colour CSS class mapping (reuse existing badge-* classes)
+    badge_class_map: dict[str, str] = {
+        "confused": "badge-confusion",
+        "frustrated": "badge-frustration",
+        "critical": "badge-frustration",
+        "sarcastic": "",
+        "delighted": "badge-delight",
+        "amused": "badge-delight",
+        "delight": "badge-delight",
+    }
+
+    # Bar colour mapping
     colour_map = {
         "confused": "var(--colour-confusion)",
         "frustrated": "var(--colour-frustration)",
@@ -892,35 +521,43 @@ def _build_sentiment_html(quotes: list[ExtractedQuote]) -> str:
 
     all_counts = list(neg_counts.values()) + list(pos_counts.values())
     max_count = max(all_counts) if all_counts else 1
-    max_bar_px = 120
+    max_bar_px = 180
 
     def _bar(label: str, count: int) -> str:
-        height = max(4, int((count / max_count) * max_bar_px))
+        width = max(4, int((count / max_count) * max_bar_px))
         colour = colour_map.get(label, "var(--colour-muted)")
+        badge_cls = badge_class_map.get(label, "")
+        label_cls = f"sentiment-bar-label badge {badge_cls}".strip()
         return (
             f'<div class="sentiment-bar-group">'
+            f'<span class="{label_cls}">{_esc(label)}</span>'
+            f'<div class="sentiment-bar" style="width:{width}px;background:{colour}"></div>'
             f'<span class="sentiment-bar-count" style="color:{colour}">{count}</span>'
-            f'<div class="sentiment-bar" style="height:{height}px;background:{colour}"></div>'
-            f'<span class="sentiment-bar-label">{_esc(label)}</span>'
-            f'</div>'
+            f"</div>"
         )
 
-    parts: list[str] = []
+    parts: list[str] = ['<div class="sentiment-chart">']
+    parts.append('<div class="sentiment-chart-title">AI sentiment</div>')
 
-    # Negative bars: sorted ascending (smallest at left edge, largest near centre)
-    neg_sorted = sorted(neg_counts.items(), key=lambda x: x[1])
-    for label, count in neg_sorted:
+    # Positive bars first: sorted descending (largest at top)
+    pos_sorted = sorted(pos_counts.items(), key=lambda x: x[1], reverse=True)
+    for label, count in pos_sorted:
         parts.append(_bar(label, count))
 
     # Divider
     parts.append('<div class="sentiment-divider"></div>')
 
-    # Positive bars: sorted descending (largest near centre, smallest at right edge)
-    pos_sorted = sorted(pos_counts.items(), key=lambda x: x[1], reverse=True)
-    for label, count in pos_sorted:
+    # Negative bars below: sorted ascending (smallest at top, worst near divider)
+    neg_sorted = sorted(neg_counts.items(), key=lambda x: x[1])
+    for label, count in neg_sorted:
         parts.append(_bar(label, count))
 
-    return f'<div class="sentiment-chart">{"".join(parts)}</div>'
+    parts.append("</div>")
+
+    # User-tags chart placeholder (populated by JS)
+    parts.append('<div class="sentiment-chart" id="user-tags-chart"></div>')
+
+    return f'<div class="sentiment-row" data-max-count="{max_count}">{"".join(parts)}</div>'
 
 
 def _has_rewatch_quotes(quotes: list[ExtractedQuote]) -> bool:
@@ -1115,340 +752,6 @@ video { flex: 1; width: 100%; min-height: 0; background: #000; }
     )
     logger.info("Wrote video player: %s", player_path)
     return player_path
-
-
-_REPORT_JS = """\
-(function() {
-  // --- Video player ---
-  var playerWin = null;
-
-  function seekTo(pid, seconds) {
-    var uri = BRISTLENOSE_VIDEO_MAP[pid];
-    if (!uri) return;
-    var msg = { type: 'bristlenose-seek', pid: pid, src: uri, t: seconds };
-    var hash = '#src=' + encodeURIComponent(uri) + '&t=' + seconds
-             + '&pid=' + encodeURIComponent(pid);
-    if (!playerWin || playerWin.closed) {
-      playerWin = window.open('bristlenose-player.html' + hash, 'bristlenose-player',
-        'width=720,height=480,resizable=yes,scrollbars=no');
-    } else {
-      playerWin.postMessage(msg, '*');
-      playerWin.focus();
-    }
-  }
-
-  document.addEventListener('click', function(e) {
-    var link = e.target.closest('a.timecode');
-    if (!link) return;
-    e.preventDefault();
-    var pid = link.dataset.participant;
-    var seconds = parseFloat(link.dataset.seconds);
-    if (pid && !isNaN(seconds)) seekTo(pid, seconds);
-  });
-
-  window.bristlenose_onTimeUpdate = function(pid, seconds) {};
-  window.bristlenose_scrollToQuote = function(pid, seconds) {};
-
-  // --- Favourite quotes ---
-  var FAV_KEY = 'bristlenose-favourites';
-
-  function getFavourites() {
-    try { var s = localStorage.getItem(FAV_KEY); return s ? JSON.parse(s) : {}; }
-    catch(e) { return {}; }
-  }
-  function saveFavourites(f) {
-    try { localStorage.setItem(FAV_KEY, JSON.stringify(f)); } catch(e) {}
-  }
-
-  var favourites = getFavourites();
-
-  // Store original DOM order per group so unfavourited quotes return home
-  var originalOrder = {};
-  var allGroups = document.querySelectorAll('.quote-group');
-  for (var g = 0; g < allGroups.length; g++) {
-    var bqs = Array.prototype.slice.call(allGroups[g].querySelectorAll('blockquote'));
-    bqs.forEach(function(bq, idx) { originalOrder[bq.id] = idx; });
-  }
-
-  function reorderGroup(group, animate) {
-    var quotes = Array.prototype.slice.call(group.querySelectorAll('blockquote'));
-    if (!quotes.length) return;
-
-    // FIRST — record positions
-    var rects = {};
-    if (animate) {
-      quotes.forEach(function(bq) { rects[bq.id] = bq.getBoundingClientRect(); });
-    }
-
-    // Partition: favourited first, non-favourited in original order
-    var favs = [], rest = [];
-    quotes.forEach(function(bq) {
-      (bq.classList.contains('favourited') ? favs : rest).push(bq);
-    });
-    rest.sort(function(a, b) {
-      return (originalOrder[a.id] || 0) - (originalOrder[b.id] || 0);
-    });
-    favs.concat(rest).forEach(function(bq) { group.appendChild(bq); });
-
-    if (!animate) return;
-
-    // INVERT
-    quotes.forEach(function(bq) {
-      var old = rects[bq.id];
-      var cur = bq.getBoundingClientRect();
-      var dy = old.top - cur.top;
-      if (Math.abs(dy) < 1) return;
-      bq.style.transform = 'translateY(' + dy + 'px)';
-      bq.style.transition = 'none';
-    });
-
-    // PLAY
-    requestAnimationFrame(function() {
-      requestAnimationFrame(function() {
-        quotes.forEach(function(bq) {
-          bq.classList.add('fav-animating');
-          bq.style.transform = '';
-          bq.style.transition = '';
-        });
-        setTimeout(function() {
-          quotes.forEach(function(bq) { bq.classList.remove('fav-animating'); });
-        }, 250);
-      });
-    });
-  }
-
-  // Restore on load
-  Object.keys(favourites).forEach(function(qid) {
-    var bq = document.getElementById(qid);
-    if (bq) bq.classList.add('favourited');
-  });
-  var groups = document.querySelectorAll('.quote-group');
-  for (var i = 0; i < groups.length; i++) reorderGroup(groups[i], false);
-
-  // Star click
-  document.addEventListener('click', function(e) {
-    var star = e.target.closest('.fav-star');
-    if (!star) return;
-    e.preventDefault();
-    var bq = star.closest('blockquote');
-    if (!bq || !bq.id) return;
-    var isFav = bq.classList.toggle('favourited');
-    if (isFav) { favourites[bq.id] = true; }
-    else { delete favourites[bq.id]; }
-    saveFavourites(favourites);
-    var group = bq.closest('.quote-group');
-    if (group) reorderGroup(group, true);
-  });
-
-  // --- Inline quote editing ---
-  var EDITS_KEY = 'bristlenose-edits';
-
-  function getEdits() {
-    try { var s = localStorage.getItem(EDITS_KEY); return s ? JSON.parse(s) : {}; }
-    catch(e) { return {}; }
-  }
-  function saveEdits(edits) {
-    try { localStorage.setItem(EDITS_KEY, JSON.stringify(edits)); } catch(e) {}
-  }
-
-  var edits = getEdits();
-
-  // Restore edits on load
-  Object.keys(edits).forEach(function(qid) {
-    var bq = document.getElementById(qid);
-    if (!bq) return;
-    var span = bq.querySelector('.quote-text');
-    if (!span) return;
-    span.textContent = '\\u201c' + edits[qid] + '\\u201d';
-    span.classList.add('edited');
-  });
-
-  var activeEdit = null; // { bq, span, original }
-
-  function startEdit(bq) {
-    if (activeEdit) cancelEdit();
-    var span = bq.querySelector('.quote-text');
-    if (!span) return;
-    var raw = span.textContent.replace(/^[\\u201c\\u201d"]+|[\\u201c\\u201d"]+$/g, '').trim();
-    activeEdit = { bq: bq, span: span, original: raw };
-    bq.classList.add('editing');
-    span.setAttribute('contenteditable', 'true');
-    span.textContent = raw;
-    span.focus();
-    // Select all text
-    var range = document.createRange();
-    range.selectNodeContents(span);
-    var sel = window.getSelection();
-    sel.removeAllRanges();
-    sel.addRange(range);
-  }
-
-  function cancelEdit() {
-    if (!activeEdit) return;
-    var ae = activeEdit;
-    activeEdit = null;
-    ae.bq.classList.remove('editing');
-    ae.span.removeAttribute('contenteditable');
-    // Restore: if there was a saved edit use that, otherwise the original
-    var qid = ae.bq.id;
-    var saved = edits[qid];
-    var text = saved !== undefined ? saved : ae.original;
-    ae.span.textContent = '\\u201c' + text + '\\u201d';
-    if (saved !== undefined) ae.span.classList.add('edited');
-  }
-
-  function acceptEdit() {
-    if (!activeEdit) return;
-    var ae = activeEdit;
-    activeEdit = null;
-    ae.bq.classList.remove('editing');
-    ae.span.removeAttribute('contenteditable');
-    var newText = ae.span.textContent.trim();
-    ae.span.textContent = '\\u201c' + newText + '\\u201d';
-    if (newText !== ae.original) {
-      edits[ae.bq.id] = newText;
-      ae.span.classList.add('edited');
-      saveEdits(edits);
-    }
-  }
-
-  // Pencil click
-  document.addEventListener('click', function(e) {
-    var pencil = e.target.closest('.edit-pencil');
-    if (!pencil) return;
-    e.preventDefault();
-    var bq = pencil.closest('blockquote');
-    if (!bq) return;
-    if (bq.classList.contains('editing')) {
-      cancelEdit();
-    } else {
-      startEdit(bq);
-    }
-  });
-
-  // Keyboard: Enter to accept, Esc to cancel
-  document.addEventListener('keydown', function(e) {
-    if (!activeEdit) return;
-    if (e.key === 'Escape') {
-      e.preventDefault();
-      cancelEdit();
-    } else if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      acceptEdit();
-    }
-  });
-
-  // Click outside to accept
-  document.addEventListener('click', function(e) {
-    if (!activeEdit) return;
-    if (!activeEdit.bq.contains(e.target)) {
-      acceptEdit();
-    }
-  });
-
-  // --- CSV export ---
-  function getSection(bq) {
-    var el = bq.closest('.quote-group');
-    while (el) {
-      el = el.previousElementSibling;
-      if (el && el.tagName === 'H3') return el.textContent.trim();
-    }
-    return '';
-  }
-
-  function getQuoteText(bq) {
-    var span = bq.querySelector('.quote-text');
-    if (span) {
-      return span.textContent.replace(/^[\\u201c\\u201d"]+|[\\u201c\\u201d"]+$/g, '').trim();
-    }
-    var clone = bq.cloneNode(true);
-    var rm = clone.querySelectorAll('.context, .timecode, a.timecode, .speaker, .badges, .fav-star, .edit-pencil');
-    for (var i = 0; i < rm.length; i++) rm[i].remove();
-    var t = clone.textContent.trim();
-    return t.replace(/^[\\u201c\\u201d"]+|[\\u201c\\u201d"]+$/g, '').trim();
-  }
-
-  function csvEsc(v) {
-    v = String(v);
-    if (v.indexOf('"') !== -1 || v.indexOf(',') !== -1 || v.indexOf('\\n') !== -1) {
-      return '"' + v.replace(/"/g, '""') + '"';
-    }
-    return v;
-  }
-
-  function buildCsv(onlyFavs) {
-    var rows = ['Timecode,Quote,Participant,Section,Emotion,Intent'];
-    var bqs = document.querySelectorAll('.quote-group blockquote');
-    for (var i = 0; i < bqs.length; i++) {
-      var bq = bqs[i];
-      if (onlyFavs && !bq.classList.contains('favourited')) continue;
-      rows.push([
-        csvEsc(bq.getAttribute('data-timecode') || ''),
-        csvEsc(getQuoteText(bq)),
-        csvEsc(bq.getAttribute('data-participant') || ''),
-        csvEsc(getSection(bq)),
-        csvEsc(bq.getAttribute('data-emotion') || ''),
-        csvEsc(bq.getAttribute('data-intent') || '')
-      ].join(','));
-    }
-    return rows.join('\\n');
-  }
-
-  function copyToClipboard(text) {
-    if (navigator.clipboard && navigator.clipboard.writeText) {
-      return navigator.clipboard.writeText(text);
-    }
-    var ta = document.createElement('textarea');
-    ta.value = text;
-    ta.style.position = 'fixed';
-    ta.style.left = '-9999px';
-    document.body.appendChild(ta);
-    ta.select();
-    var ok = false;
-    try { ok = document.execCommand('copy'); } catch(e) {}
-    document.body.removeChild(ta);
-    return ok ? Promise.resolve() : Promise.reject();
-  }
-
-  function showToast(msg) {
-    var old = document.querySelector('.clipboard-toast');
-    if (old) old.remove();
-    var t = document.createElement('div');
-    t.className = 'clipboard-toast';
-    t.textContent = msg;
-    document.body.appendChild(t);
-    t.offsetHeight;
-    t.classList.add('show');
-    setTimeout(function() {
-      t.classList.remove('show');
-      setTimeout(function() { t.remove(); }, 300);
-    }, 2000);
-  }
-
-  document.addEventListener('click', function(e) {
-    var btn = e.target.closest('#export-favourites');
-    if (btn) {
-      var csv = buildCsv(true);
-      var n = csv.split('\\n').length - 1;
-      if (n === 0) { showToast('No favourites to export'); return; }
-      copyToClipboard(csv).then(
-        function() { showToast(n + ' favourite' + (n !== 1 ? 's' : '') + ' copied as CSV'); },
-        function() { showToast('Could not copy to clipboard'); }
-      );
-      return;
-    }
-    btn = e.target.closest('#export-all');
-    if (btn) {
-      var csv = buildCsv(false);
-      var n = csv.split('\\n').length - 1;
-      copyToClipboard(csv).then(
-        function() { showToast(n + ' quote' + (n !== 1 ? 's' : '') + ' copied as CSV'); },
-        function() { showToast('Could not copy to clipboard'); }
-      );
-    }
-  });
-})();
-"""
 
 
 def _build_task_outcome_html(

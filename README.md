@@ -28,14 +28,14 @@ bristlenose run ./interviews/ -o ./results/
 output/
   research_report.html       # browsable report
   research_report.md         # Markdown version
-  bristlenose-theme.css      # editable stylesheet (safe to customise)
+  bristlenose-theme.css      # stylesheet (regenerated on every run)
   bristlenose-player.html    # popout video player
   raw_transcripts/           # one .txt per participant
   cooked_transcripts/        # cleaned transcripts after PII removal
-  intermediate/              # JSON debug files
+  intermediate/              # JSON files (used by `bristlenose render`)
 ```
 
-The HTML report includes: participant table, sections (by screen), themes (cross-participant), sentiment histogram, friction points, user journeys, clickable timecodes with popout video player, favourite quotes (star, reorder, export as CSV), and inline editing for transcription corrections.
+The HTML report includes: participant table, sections (by screen), themes (cross-participant), sentiment histogram, friction points, user journeys, clickable timecodes with popout video player, favourite quotes (star, reorder, export as CSV), inline editing for transcription corrections, and a tag system (AI-generated badges plus user-added tags with auto-suggest).
 
 ### Quote format
 
@@ -47,15 +47,15 @@ Filler words replaced with `...`. Editorial insertions in `[square brackets]`. E
 
 ---
 
-## Built so far (0.1.0)
+## Built so far (0.1.x)
 
-Full pipeline, HTML report with CSS theme, clickable timecodes, popout video player, sentiment histogram, favourite quotes with CSV export, inline quote editing, Apple Silicon GPU acceleration (MLX), cross-platform support.
+Full pipeline, HTML report with atomic CSS design system, clickable timecodes, popout video player, sentiment histogram (horizontal bars, side-by-side AI and user-tag charts), favourite quotes with CSV export, inline quote editing, tag system (AI-generated and user-added tags with auto-suggest, localStorage persistence, CSV export with separate AI/User columns), re-render command (`bristlenose render`), Apple Silicon GPU acceleration (MLX), cross-platform support.
 
 ## Roadmap
 
-Tag system, search-as-you-type filtering, hide/show quotes, keyboard shortcuts, theme management in the browser, lost quotes (surface what the AI didn't select), transcript linking, .docx export, edit writeback, multi-participant sessions.
+Search-as-you-type filtering, hide/show quotes, keyboard shortcuts, theme management in the browser (dark mode, user-generated themes), lost quotes (surface what the AI didn't select), transcript linking, .docx export, edit writeback, multi-participant sessions.
 
-**Packaging** -- `brew install bristlenose` (macOS), `snap install bristlenose` (Ubuntu/Linux), `winget install bristlenose` or similar (Windows). One-command install without needing Python or pip.
+**Packaging** -- native installers for macOS, Ubuntu/Linux, and Windows so you don't need to manage Python yourself.
 
 Details and priorities may shift. If something is missing that matters to you, open an issue.
 
@@ -69,9 +69,36 @@ Details and priorities may shift. If something is missing that matters to you, o
 
 ---
 
-## Setup
+## Install
 
-Requires Python 3.10+ (3.12 recommended), ffmpeg, pkg-config, and an API key for Anthropic or OpenAI.
+Requires ffmpeg and an API key for Anthropic or OpenAI.
+
+```bash
+# macOS (Homebrew)
+brew install cassiocassio/bristlenose/bristlenose
+
+# macOS / Linux / Windows (pipx)
+pipx install bristlenose
+
+# or with uv (faster alternative to pipx)
+uv tool install bristlenose
+```
+
+The Homebrew formula handles ffmpeg and Python automatically. If using pipx or uv, install ffmpeg separately (`brew install ffmpeg` on macOS, `sudo apt install ffmpeg` on Debian/Ubuntu).
+
+Then configure your API key:
+
+```bash
+export BRISTLENOSE_ANTHROPIC_API_KEY=sk-ant-...
+# or
+export BRISTLENOSE_OPENAI_API_KEY=sk-...
+```
+
+---
+
+## Development setup
+
+For contributing or working from source:
 
 ```bash
 # macOS (Apple Silicon)
@@ -86,15 +113,11 @@ cp .env.example .env   # add your BRISTLENOSE_ANTHROPIC_API_KEY
 /usr/local/bin/python3.12 -m venv .venv && source .venv/bin/activate && pip install -e ".[dev]"
 
 # Linux
-sudo apt install python3.12 python3.12-venv ffmpeg pkg-config \
-  libavformat-dev libavcodec-dev libavutil-dev libswscale-dev libswresample-dev
 python3.12 -m venv .venv && source .venv/bin/activate && pip install -e ".[dev]"
 
 # Windows
 python -m venv .venv && .venv\Scripts\activate && pip install -e ".[dev]"
 ```
-
-For global access: `pipx install /path/to/bristlenose --python python3.12`
 
 ---
 
@@ -105,6 +128,7 @@ bristlenose run ./interviews/ -o ./results/
 bristlenose run ./interviews/ -o ./results/ -p "Q1 Usability Study"
 bristlenose transcribe-only ./interviews/ -o ./results/       # no LLM needed
 bristlenose analyze ./results/raw_transcripts/ -o ./results/  # skip transcription
+bristlenose render ./interviews/ -o ./results/                # re-render reports (no LLM)
 ```
 
 Supported: `.wav`, `.mp3`, `.m4a`, `.flac`, `.ogg`, `.wma`, `.aac`, `.mp4`, `.mov`, `.avi`, `.mkv`, `.webm`, `.srt`, `.vtt`, `.docx` (Teams exports). Files sharing a name stem are treated as one session.

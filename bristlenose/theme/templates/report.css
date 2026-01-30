@@ -1,0 +1,103 @@
+/* Template: report — page-level layout, typography, and base elements */
+
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+}
+
+html {
+    font-size: 16px;
+    -webkit-font-smoothing: antialiased;
+}
+
+body {
+    font-family: var(--bn-font-body);
+    color: var(--bn-colour-text);
+    background: var(--bn-colour-bg);
+    line-height: 1.6;
+    margin: 0;
+    padding: var(--bn-space-xl) var(--bn-space-lg);
+}
+
+article {
+    max-width: var(--bn-max-width);
+    margin: 0 auto;
+}
+
+h1 {
+    font-size: 1.75rem;
+    font-weight: 700;
+    margin: 0 0 0.5rem;
+    letter-spacing: -0.01em;
+}
+
+h2 {
+    font-size: 1.35rem;
+    font-weight: 600;
+    margin: 2.5rem 0 1rem;
+    padding-bottom: 0.4rem;
+    border-bottom: 2px solid var(--bn-colour-border);
+}
+
+h3 {
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin: 1.8rem 0 0.6rem;
+}
+
+.meta {
+    color: var(--bn-colour-muted);
+    font-size: 0.9rem;
+    margin-bottom: var(--bn-space-xl);
+}
+
+.meta p {
+    margin: var(--bn-space-xs) 0;
+}
+
+hr {
+    border: none;
+    border-top: 1px solid var(--bn-colour-border);
+    margin: var(--bn-space-xl) 0;
+}
+
+.description {
+    color: var(--bn-colour-muted);
+    margin-bottom: 1rem;
+}
+
+/* Tables */
+table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.9rem;
+    margin: 1rem 0;
+}
+
+th {
+    text-align: left;
+    font-weight: 600;
+    padding: 0.6rem var(--bn-space-md);
+    border-bottom: 2px solid var(--bn-colour-border);
+    white-space: nowrap;
+}
+
+td {
+    padding: 0.5rem var(--bn-space-md);
+    border-bottom: 1px solid var(--bn-colour-border);
+    vertical-align: top;
+}
+
+tr:last-child td {
+    border-bottom: none;
+}
+
+td a {
+    color: var(--bn-colour-accent);
+    text-decoration: none;
+}
+
+td a:hover {
+    text-decoration: underline;
+}

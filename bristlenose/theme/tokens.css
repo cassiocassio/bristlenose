@@ -1,0 +1,80 @@
+/* Design tokens — the single source of truth for all visual decisions.
+   Override these custom properties to create a custom theme. */
+
+:root {
+    /* Typography */
+    --bn-font-body: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
+    --bn-font-mono: "SF Mono", "Fira Code", "Consolas", monospace;
+
+    /* Colour palette */
+    --bn-colour-bg: #ffffff;
+    --bn-colour-text: #1a1a1a;
+    --bn-colour-muted: #6b7280;
+    --bn-colour-border: #e5e7eb;
+    --bn-colour-accent: #2563eb;
+
+    /* Semantic surfaces */
+    --bn-colour-quote-bg: #f9fafb;
+    --bn-colour-badge-bg: #f3f4f6;
+    --bn-colour-badge-text: #374151;
+    --bn-colour-user-tag-bg: #f3f4f6;
+    --bn-colour-user-tag-text: #4b5563;
+    --bn-colour-editing-bg: #fffbe6;
+    --bn-colour-editing-border: #e5e0c0;
+    --bn-colour-active-bg: #f0fdf4;
+
+    /* Sentiment colours */
+    --bn-colour-confusion: #dc2626;
+    --bn-colour-confusion-bg: #fef2f2;
+    --bn-colour-frustration: #ea580c;
+    --bn-colour-frustration-bg: #fff7ed;
+    --bn-colour-delight: #16a34a;
+    --bn-colour-delight-bg: #f0fdf4;
+    --bn-colour-suggestion: #2563eb;
+    --bn-colour-suggestion-bg: #eff6ff;
+
+    /* Layout */
+    --bn-max-width: 52rem;
+
+    /* Spacing scale */
+    --bn-space-xs: 0.15rem;
+    --bn-space-sm: 0.35rem;
+    --bn-space-md: 0.75rem;
+    --bn-space-lg: 1.5rem;
+    --bn-space-xl: 2rem;
+
+    /* Radii */
+    --bn-radius-sm: 3px;
+    --bn-radius-md: 6px;
+    --bn-radius-lg: 8px;
+    --bn-radius-pill: 999px;
+
+    /* Transitions */
+    --bn-transition-fast: 0.15s ease;
+    --bn-transition-normal: 0.2s ease;
+    --bn-transition-slow: 0.3s ease;
+
+    /* Interactive element colours */
+    --bn-colour-icon-idle: #e5e7eb;
+    --bn-colour-favourited: #999;
+    --bn-colour-shadow: rgba(0, 0, 0, 0.1);
+
+    /* Legacy aliases — used by inline styles in generated HTML.
+       Theme authors: override the --bn-* versions above;
+       these aliases follow automatically. */
+    --font-body: var(--bn-font-body);
+    --font-mono: var(--bn-font-mono);
+    --colour-bg: var(--bn-colour-bg);
+    --colour-text: var(--bn-colour-text);
+    --colour-muted: var(--bn-colour-muted);
+    --colour-border: var(--bn-colour-border);
+    --colour-accent: var(--bn-colour-accent);
+    --colour-quote-bg: var(--bn-colour-quote-bg);
+    --colour-badge-bg: var(--bn-colour-badge-bg);
+    --colour-badge-text: var(--bn-colour-badge-text);
+    --colour-confusion: var(--bn-colour-confusion);
+    --colour-frustration: var(--bn-colour-frustration);
+    --colour-delight: var(--bn-colour-delight);
+    --colour-suggestion: var(--bn-colour-suggestion);
+    --max-width: var(--bn-max-width);
+}

@@ -1,0 +1,122 @@
+/* Atom: badge — base badge, sentiment variants, AI and user variants */
+
+.badge {
+    display: inline-block;
+    font-family: var(--bn-font-mono);
+    font-size: 0.72rem;
+    padding: var(--bn-space-xs) 0.45rem;
+    border-radius: var(--bn-radius-sm);
+    background: var(--bn-colour-badge-bg);
+    color: var(--bn-colour-badge-text);
+}
+
+/* Sentiment variants */
+.badge-confusion { background: var(--bn-colour-confusion-bg); color: var(--bn-colour-confusion); }
+.badge-frustration { background: var(--bn-colour-frustration-bg); color: var(--bn-colour-frustration); }
+.badge-delight { background: var(--bn-colour-delight-bg); color: var(--bn-colour-delight); }
+.badge-suggestion { background: var(--bn-colour-suggestion-bg); color: var(--bn-colour-suggestion); }
+
+/* AI badge — deletable on hover */
+.badge-ai {
+    cursor: pointer;
+    position: relative;
+    transition: opacity var(--bn-transition-fast);
+}
+
+.badge-ai:hover {
+    opacity: 0.8;
+}
+
+.badge-ai::after {
+    content: "\00d7";
+    position: absolute;
+    top: -0.3rem;
+    right: -0.3rem;
+    font-size: 0.65rem;
+    line-height: 1;
+    width: 0.85rem;
+    height: 0.85rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--bn-colour-text);
+    color: var(--bn-colour-bg);
+    border-radius: 50%;
+    opacity: 0;
+    transition: opacity var(--bn-transition-fast);
+    pointer-events: none;
+}
+
+.badge-ai:hover::after {
+    opacity: 1;
+}
+
+/* User tag */
+.badge-user {
+    background: var(--bn-colour-user-tag-bg);
+    color: var(--bn-colour-user-tag-text);
+    cursor: default;
+    position: relative;
+    padding-right: 1.1rem;
+}
+
+.badge-user .badge-delete {
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: 1rem;
+    background: none;
+    border: none;
+    color: inherit;
+    font-size: 0.7rem;
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity var(--bn-transition-fast);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+}
+
+.badge-user:hover .badge-delete {
+    opacity: 0.6;
+}
+
+.badge-user:hover .badge-delete:hover {
+    opacity: 1;
+}
+
+/* Add-tag ghost button */
+.badge-add {
+    border: 1px dashed var(--bn-colour-border);
+    background: transparent;
+    color: var(--bn-colour-muted);
+    cursor: pointer;
+    transition: border-color var(--bn-transition-fast), color var(--bn-transition-fast);
+    user-select: none;
+}
+
+.badge-add:hover {
+    border-color: var(--bn-colour-accent);
+    color: var(--bn-colour-accent);
+}
+
+/* Badge animations */
+@keyframes badge-fade-out {
+    to { opacity: 0; transform: scale(0.8); }
+}
+
+.badge-removing {
+    animation: badge-fade-out 0.15s ease-out forwards;
+    pointer-events: none;
+}
+
+@keyframes badge-fade-in {
+    from { opacity: 0; transform: scale(0.8); }
+    to   { opacity: 1; transform: scale(1); }
+}
+
+.badge-appearing {
+    animation: badge-fade-in 0.15s ease-out;
+}

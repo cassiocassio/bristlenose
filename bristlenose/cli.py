@@ -208,3 +208,52 @@ def analyze(
     console.print(f"  Themes: {len(result.theme_groups)}")
     console.print(f"  Final report: {result.output_dir / 'research_report.md'}")
     console.print(f"  HTML report:  {result.output_dir / 'research_report.html'}")
+
+
+@app.command()
+def render(
+    input_dir: Annotated[
+        Path,
+        typer.Argument(
+            help="Directory containing audio, video, subtitle, or docx files.",
+            exists=True,
+            file_okay=False,
+            dir_okay=True,
+        ),
+    ],
+    output_dir: Annotated[
+        Path,
+        typer.Option("--output", "-o", help="Output directory (must contain intermediate/ JSON from a previous run)."),
+    ] = Path("output"),
+    project_name: Annotated[
+        str | None,
+        typer.Option("--project", "-p", help="Name of the research project (defaults to input folder name)."),
+    ] = None,
+    verbose: Annotated[
+        bool,
+        typer.Option("--verbose", "-v", help="Enable verbose logging."),
+    ] = False,
+) -> None:
+    """Re-render the HTML and Markdown reports from existing intermediate data.
+
+    No transcription or LLM calls. Useful after CSS/JS changes or to regenerate
+    reports without re-processing.
+    """
+    if project_name is None:
+        project_name = input_dir.resolve().name
+
+    settings = load_settings(
+        output_dir=output_dir,
+        project_name=project_name,
+    )
+
+    from bristlenose.pipeline import Pipeline
+
+    pipeline = Pipeline(settings, verbose=verbose)
+    result = pipeline.run_render_only(output_dir, input_dir)
+
+    console.print(f"\n[bold green]Done.[/bold green] Reports re-rendered in {result.output_dir}")
+    console.print(f"  Screen clusters: {len(result.screen_clusters)}")
+    console.print(f"  Themes: {len(result.theme_groups)}")
+    console.print(f"  Final report: {result.output_dir / 'research_report.md'}")
+    console.print(f"  HTML report:  {result.output_dir / 'research_report.html'}")

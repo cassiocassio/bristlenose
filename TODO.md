@@ -45,7 +45,7 @@ Done — `.github/workflows/release.yml`. Triggers on `v*` tags, runs CI first, 
 
 ### 3. ✅ Auto-update Homebrew tap after PyPI publish
 
-Done — `release.yml` dispatches to `cassiocassio/homebrew-bristlenose` after PyPI publish. The tap repo's `update-formula.yml` fetches the sdist sha256 from PyPI and patches the formula. Requires `HOMEBREW_TAP_TOKEN` secret (fine-grained PAT scoped to the tap repo).
+Done — `release.yml` dispatches to `cassiocassio/homebrew-bristlenose` after PyPI publish. The tap repo's `update-formula.yml` fetches the sdist sha256 from PyPI and patches the formula. Requires `HOMEBREW_TAP_TOKEN` secret (classic PAT with `repo` scope).
 
 ### 4. ✅ GitHub Release with changelog
 

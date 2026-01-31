@@ -138,3 +138,18 @@ Core pipeline complete and published to PyPI + Homebrew. v0.3.8 adds timecode ed
 - Run `.venv/bin/python -m pytest tests/` to verify changes
 - Commit messages: short, descriptive, lowercase (e.g., "fix tag suggest offering tags the quote already has")
 - The repo directory is `/Users/cassio/Code/gourani` (legacy name, package is bristlenose)
+
+## Session-end housekeeping
+
+When the user says thanks/goodbye/goodnight or otherwise signals the end of a session, **proactively offer to run the full housekeeping checklist** before the session is archived. The goal is to leave the codebase, docs, and CI in a clean state so the next session (human or Claude) starts with everything up to date.
+
+### Checklist (offer to do all of these):
+
+1. **Run tests** — `.venv/bin/python -m pytest tests/` — make sure nothing is broken
+2. **Run linter** — `.venv/bin/ruff check bristlenose/` — no lint warnings
+3. **Update `TODO.md`** — mark completed items as done, add any new items discovered during the session
+4. **Update `CLAUDE.md`** — persist any new conventions, architectural decisions, file map changes, or operational knowledge learned during the session
+5. **Update `README.md`** — if there's a version bump, add a changelog entry
+6. **Check for uncommitted changes** — `git status` + `git diff` — nothing should be left uncommitted
+7. **Commit and push** — all changes committed with descriptive messages, pushed to `origin/main`
+8. **Verify CI** — check that the latest push passes CI (link the user to the Actions page if a tagged release was pushed)

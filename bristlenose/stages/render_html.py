@@ -217,7 +217,7 @@ def render_html(
         _w("<h2>Participants</h2>")
         _w("<table>")
         _w("<thead><tr>")
-        _w("<th>ID</th><th>Session date</th><th>Duration</th><th>Source file</th>")
+        _w("<th>Session</th><th>Date</th><th>Start</th><th>Duration</th><th>Source file</th>")
         _w("</tr></thead>")
         _w("<tbody>")
         for session in sessions:
@@ -239,7 +239,8 @@ def render_html(
                 source = "&mdash;"
             _w("<tr>")
             _w(f"<td>{_esc(session.participant_id)}</td>")
-            _w(f"<td>{session.session_date.strftime('%Y-%m-%d')}</td>")
+            _w(f"<td>{session.session_date.strftime('%d-%m-%Y')}</td>")
+            _w(f"<td>{session.session_date.strftime('%H:%M')}</td>")
             _w(f"<td>{duration}</td>")
             _w(f"<td>{source}</td>")
             _w("</tr>")

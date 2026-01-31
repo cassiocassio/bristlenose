@@ -126,15 +126,16 @@ def render_markdown(
     # Appendix: Participant Summary
     lines.append("## Appendix: Participant summary")
     lines.append("")
-    lines.append("| ID | Session date | Duration | Source file |")
-    lines.append("|----|-------------|----------|-------------|")
+    lines.append("| Session | Date | Start | Duration | Source file |")
+    lines.append("|---------|------|------|----------|-------------|")
 
     for session in sessions:
         duration = _session_duration(session)
         source = session.files[0].path.name if session.files else "—"
         lines.append(
             f"| {session.participant_id} "
-            f"| {session.session_date.strftime('%Y-%m-%d')} "
+            f"| {session.session_date.strftime('%d-%m-%Y')} "
+            f"| {session.session_date.strftime('%H:%M')} "
             f"| {duration} "
             f"| {source} |"
         )

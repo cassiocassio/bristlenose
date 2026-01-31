@@ -30,6 +30,38 @@ def test_parse_timecode_with_millis() -> None:
     assert abs(result - 83.456) < 0.001
 
 
+def test_format_timecode_boundary_one_hour() -> None:
+    """59:59 → MM:SS, 01:00:00 → HH:MM:SS."""
+    assert format_timecode(3599) == "59:59"
+    assert format_timecode(3600) == "01:00:00"
+
+
+def test_format_timecode_long_session() -> None:
+    """Sessions >= 1 hour use HH:MM:SS."""
+    assert format_timecode(7943) == "02:12:23"
+    assert format_timecode(86400) == "24:00:00"
+    assert format_timecode(90061) == "25:01:01"
+
+
+def test_format_timecode_sub_minute() -> None:
+    """Sessions under a minute still show MM:SS with zero minutes."""
+    assert format_timecode(0) == "00:00"
+    assert format_timecode(5) == "00:05"
+    assert format_timecode(59) == "00:59"
+
+
+def test_parse_timecode_round_trip_short() -> None:
+    """format → parse round-trip for MM:SS."""
+    for secs in [0, 30, 107, 599, 3599]:
+        assert int(parse_timecode(format_timecode(secs))) == secs
+
+
+def test_parse_timecode_round_trip_long() -> None:
+    """format → parse round-trip for HH:MM:SS."""
+    for secs in [3600, 7943, 86400, 90061]:
+        assert int(parse_timecode(format_timecode(secs))) == secs
+
+
 def test_quote_formatted() -> None:
     quote = ExtractedQuote(
         participant_id="p3",

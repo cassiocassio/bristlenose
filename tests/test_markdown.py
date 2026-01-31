@@ -34,7 +34,6 @@ from bristlenose.utils.markdown import (
     format_transcript_header_txt,
 )
 
-
 # ---------------------------------------------------------------------------
 # 1. Typographic constants
 # ---------------------------------------------------------------------------

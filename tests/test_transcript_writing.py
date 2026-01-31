@@ -336,3 +336,79 @@ def test_parser_extracts_metadata(tmp_path: Path) -> None:
     write_cooked_transcripts([transcript], tmp_path)
     loaded = _load_transcripts_from_dir(tmp_path)
     assert loaded[0].source_file == "interview_01.mp4"
+
+
+def test_parser_mixed_timecode_formats(tmp_path: Path) -> None:
+    """Long sessions produce mixed MM:SS and HH:MM:SS — parser handles both."""
+    from bristlenose.pipeline import _load_transcripts_from_dir
+
+    long_transcript = PiiCleanTranscript(
+        participant_id="p5",
+        source_file="marathon.mp4",
+        session_date=datetime(2026, 1, 20, 9, 0, 0, tzinfo=timezone.utc),
+        duration_seconds=7943.0,
+        pii_entities_found=0,
+        segments=[
+            TranscriptSegment(
+                start_time=0.0, end_time=10.0,
+                text="Start.", speaker_role=SpeakerRole.RESEARCHER, source="whisper",
+            ),
+            TranscriptSegment(
+                start_time=3590.0, end_time=3599.0,
+                text="Before the hour.", speaker_role=SpeakerRole.PARTICIPANT, source="whisper",
+            ),
+            TranscriptSegment(
+                start_time=3600.0, end_time=3620.0,
+                text="Exactly one hour.", speaker_role=SpeakerRole.PARTICIPANT, source="whisper",
+            ),
+            TranscriptSegment(
+                start_time=7900.0, end_time=7943.0,
+                text="End.", speaker_role=SpeakerRole.PARTICIPANT, source="whisper",
+            ),
+        ],
+    )
+    write_cooked_transcripts([long_transcript], tmp_path)
+
+    # Verify file has mixed MM:SS and HH:MM:SS
+    content = (tmp_path / "p5_cooked.txt").read_text()
+    assert "[00:00]" in content       # MM:SS
+    assert "[59:50]" in content       # MM:SS
+    assert "[01:00:00]" in content    # HH:MM:SS
+    assert "[02:11:40]" in content    # HH:MM:SS
+    assert "Duration: 02:12:23" in content
+
+    # Round-trip: parser should recover all timecodes
+    loaded = _load_transcripts_from_dir(tmp_path)
+    assert len(loaded) == 1
+    assert loaded[0].duration_seconds == 7943.0
+    times = [seg.start_time for seg in loaded[0].segments]
+    assert times == [0.0, 3590.0, 3600.0, 7900.0]
+
+
+def test_write_raw_md_long_session(tmp_path: Path) -> None:
+    """Raw .md files use HH:MM:SS for segments at or past one hour."""
+    from bristlenose.stages.merge_transcript import write_raw_transcripts_md
+
+    long = FullTranscript(
+        participant_id="p6",
+        source_file="long_interview.mp4",
+        session_date=datetime(2026, 1, 20, 9, 0, 0, tzinfo=timezone.utc),
+        duration_seconds=7200.0,
+        segments=[
+            TranscriptSegment(
+                start_time=30.0, end_time=60.0,
+                text="Hello.", speaker_label="Speaker A",
+                speaker_role=SpeakerRole.RESEARCHER, source="whisper",
+            ),
+            TranscriptSegment(
+                start_time=3660.0, end_time=3700.0,
+                text="One hour in.", speaker_label="Speaker B",
+                speaker_role=SpeakerRole.PARTICIPANT, source="whisper",
+            ),
+        ],
+    )
+    write_raw_transcripts_md([long], tmp_path)
+    content = (tmp_path / "p6_raw.md").read_text()
+    assert "**[00:30] p6**" in content      # MM:SS
+    assert "**[01:01:00] p6**" in content    # HH:MM:SS
+    assert "**Duration:** 02:00:00" in content

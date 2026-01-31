@@ -179,6 +179,14 @@ Edit `bristlenose/__init__.py` (the single source of truth for version), commit,
 
 ## Changelog
 
+### 0.4.0
+
+- Dark mode — report follows OS/browser preference automatically via CSS `light-dark()` function
+- Override with `color_scheme = "dark"` (or `"light"`) in `bristlenose.toml` or `BRISTLENOSE_COLOR_SCHEME` env var
+- Dark-mode logo variant (placeholder; proper albino bristlenose pleco coming soon)
+- Print always uses light mode
+- Replaced hard-coded colours in histogram JS with CSS custom properties
+
 ### 0.3.8
 
 - Timecode handling audit: verified full pipeline copes with sessions shorter and longer than one hour (mixed `MM:SS` and `HH:MM:SS` in the same file round-trips correctly)
@@ -252,7 +260,7 @@ Edit `bristlenose/__init__.py` (the single source of truth for version), commit,
 - Search-as-you-type quote filtering
 - Hide/show individual quotes
 - Keyboard shortcuts (j/k navigation, s to star, e to edit)
-- Dark mode and user-generated themes
+- User-generated themes
 - Lost quotes -- surface what the AI didn't select
 - Transcript linking -- click a quote to jump to its full context
 - .docx export

@@ -32,7 +32,9 @@ _CSS_VERSION = "bristlenose-theme v6"
 
 _THEME_DIR = Path(__file__).resolve().parent.parent / "theme"
 _LOGO_PATH = _THEME_DIR / "images" / "bristlenose.png"
+_LOGO_DARK_PATH = _THEME_DIR / "images" / "bristlenose-dark.png"
 _LOGO_FILENAME = "bristlenose-logo.png"
+_LOGO_DARK_FILENAME = "bristlenose-logo-dark.png"
 
 # Files concatenated in atomic-design order.
 _THEME_FILES: list[str] = [
@@ -138,6 +140,7 @@ def render_html(
     project_name: str,
     output_dir: Path,
     all_quotes: list[ExtractedQuote] | None = None,
+    color_scheme: str = "auto",
 ) -> Path:
     """Generate research_report.html with an external CSS stylesheet.
 
@@ -154,10 +157,13 @@ def render_html(
     css_path.write_text(_get_default_css(), encoding="utf-8")
     logger.info("Wrote theme: %s", css_path)
 
-    # Copy logo image alongside the report
+    # Copy logo images alongside the report
     logo_dest = output_dir / _LOGO_FILENAME
     if _LOGO_PATH.exists():
         shutil.copy2(_LOGO_PATH, logo_dest)
+    logo_dark_dest = output_dir / _LOGO_DARK_FILENAME
+    if _LOGO_DARK_PATH.exists():
+        shutil.copy2(_LOGO_DARK_PATH, logo_dark_dest)
 
     # Build video/audio map for clickable timecodes
     video_map = _build_video_map(sessions)
@@ -174,10 +180,14 @@ def render_html(
 
     # --- Document shell ---
     _w("<!DOCTYPE html>")
-    _w('<html lang="en">')
+    if color_scheme in ("light", "dark"):
+        _w(f'<html lang="en" data-theme="{color_scheme}">')
+    else:
+        _w('<html lang="en">')
     _w("<head>")
     _w('<meta charset="utf-8">')
     _w('<meta name="viewport" content="width=device-width, initial-scale=1">')
+    _w('<meta name="color-scheme" content="light dark">')
     _w(f"<title>{_esc(project_name)}</title>")
     _w('<link rel="stylesheet" href="bristlenose-theme.css">')
     _w("</head>")
@@ -188,10 +198,22 @@ def render_html(
     _w('<div class="report-header">')
     _w(f"<h1>{_esc(project_name)}</h1>")
     if logo_dest.exists():
-        _w(
-            f'<img class="report-logo" src="{_LOGO_FILENAME}" '
-            f'alt="Bristlenose logo">'
-        )
+        if logo_dark_dest.exists():
+            _w("<picture>")
+            _w(
+                f'<source srcset="{_LOGO_DARK_FILENAME}" '
+                f'media="(prefers-color-scheme: dark)">'
+            )
+            _w(
+                f'<img class="report-logo" src="{_LOGO_FILENAME}" '
+                f'alt="Bristlenose logo">'
+            )
+            _w("</picture>")
+        else:
+            _w(
+                f'<img class="report-logo" src="{_LOGO_FILENAME}" '
+                f'alt="Bristlenose logo">'
+            )
     _w("</div>")
     _w('<div class="toolbar">')
     _w(

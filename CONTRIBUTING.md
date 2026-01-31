@@ -149,20 +149,31 @@ These aliases point to the `--bn-` versions, so theme authors only need to overr
 | Page layout, headings, tables  | `templates/report.css`      |
 | What gets hidden when printing | `templates/print.css`       |
 
-### Future: user-generated themes
+### Dark mode
 
-The token architecture is designed to support user themes. A theme is just a CSS file that overrides `--bn-*` properties:
+Dark mode is built into `tokens.css` using the CSS `light-dark()` function. Every colour token has both a light and dark value:
 
 ```css
-/* dark-theme.css */
-:root {
-    --bn-colour-bg: #1a1a2e;
-    --bn-colour-text: #e0e0e0;
-    --bn-colour-border: #333;
+@supports (color: light-dark(#000, #fff)) {
+    :root {
+        color-scheme: light dark;
+        --bn-colour-bg: light-dark(#ffffff, #111111);
+        /* ... */
+    }
 }
 ```
 
-This will be loaded via a theme picker in the browser toolbar (see roadmap). The infrastructure is ready -- what's needed is the picker UI and a way to bundle/discover theme files.
+By default the report follows the user's OS/browser preference. Users can override via `color_scheme = "dark"` in `bristlenose.toml` (or `BRISTLENOSE_COLOR_SCHEME` env var), which causes `render_html.py` to emit `<html data-theme="dark">` and force the dark scheme.
+
+**Adding a new colour token:** add both light and dark values in the `light-dark()` call inside the `@supports` block, and the plain light fallback in the `:root` block above it.
+
+**Logo:** The report uses a `<picture>` element to swap between `bristlenose-logo.png` (light) and `bristlenose-logo-dark.png` (dark). Both files live in `bristlenose/theme/images/`.
+
+**Print:** always uses light mode (`color-scheme: light` in `print.css`).
+
+### Future: user-generated themes
+
+The token architecture supports user themes beyond dark mode. A theme is just a CSS file that overrides `--bn-*` properties. This will be loaded via a theme picker in the browser toolbar (see roadmap).
 
 ## Releasing
 

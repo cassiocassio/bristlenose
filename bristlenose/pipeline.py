@@ -193,6 +193,7 @@ class Pipeline:
                 self.settings.project_name,
                 output_dir,
                 all_quotes=all_quotes,
+                color_scheme=self.settings.color_scheme,
             )
             progress.remove_task(task)
 
@@ -300,6 +301,7 @@ class Pipeline:
             screen_clusters, theme_groups, [],
             self.settings.project_name, output_dir,
             all_quotes=all_quotes,
+            color_scheme=self.settings.color_scheme,
         )
 
         return PipelineResult(
@@ -461,6 +463,7 @@ class Pipeline:
             screen_clusters, theme_groups, sessions,
             self.settings.project_name, output_dir,
             all_quotes=all_quotes,
+            color_scheme=self.settings.color_scheme,
         )
 
         return PipelineResult(

@@ -1,6 +1,6 @@
 # Bristlenose — Where I Left Off
 
-Last updated: 31 Jan 2026
+Last updated: 31 Jan 2026 (v0.4.0)
 
 ---
 
@@ -36,6 +36,7 @@ Last updated: 31 Jan 2026
 - [x] Sentiment histogram: tag text left-aligned, shared bar scale across AI + user charts, positive greens on top / negative reds below, negatives sorted ascending (worst near divider)
 - [x] `bristlenose help` command — rich-formatted help with topics: commands, config, workflows; plus `--version` / `-V` flag
 - [x] Man page (`man/bristlenose.1`) — full groff man page covering all commands, options, config, examples; included in sdist, Homebrew formula installs to `man1/`
+- [x] (0.4.0) Dark mode — CSS `light-dark()` function, follows OS/browser preference by default, `color_scheme` config override (`auto`/`light`/`dark`), `<meta name="color-scheme">` tag, `<picture>` element for dark logo, print forced to light, histogram hard-coded colours replaced with CSS tokens, 17 tests
 
 ---
 
@@ -99,7 +100,7 @@ Organised from easiest to hardest. The README has a condensed version; this is t
 - [ ] JS: `'use strict'` — add to each JS module to catch accidental globals and silent errors
 - [ ] JS: shared `utils.js` — extract duplicated quote-stripping regex (`QUOTE_RE` / `CSV_QUOTE_RE`) into a shared module
 - [ ] JS: magic numbers → config — extract `150`ms blur delay, `200`ms animation, `250`ms FLIP duration, `2000`ms toast, `8` max suggestions, `48`px min input into a shared constants object
-- [ ] JS: histogram hardcoded colours — replace inline `'#9ca3af'` / `'#6b7280'` with CSS custom properties (`var(--bn-colour-muted)`) via classes or `getComputedStyle()`
+- [x] JS: histogram hardcoded colours — replaced inline `'#9ca3af'` / `'#6b7280'` with `var(--bn-colour-muted)` (done in v0.4.0 dark mode)
 - [ ] JS: drop `execCommand('copy')` fallback — `navigator.clipboard.writeText` is sufficient for all supported browsers; remove deprecated fallback or gate behind a warning
 
 ### Small (a day or two each)
@@ -111,7 +112,8 @@ Organised from easiest to hardest. The README has a condensed version; this is t
 - [ ] Clickable histogram bars — clicking a bar in sentiment or user-tags chart opens a filtered view showing only quotes with that tag/emotion
 - [ ] Sticky header — move project name + logo into the sticky toolbar bar so they're always visible on scroll
 - [ ] Burger menu — replace the export button bar with a dropdown/hamburger menu triggered from the logo; export favourites, export all, and room for future actions (settings, theme picker, etc.)
-- [ ] Theme management in browser — create/rename/reorder/delete themes in the report, dark mode, user-generated CSS themes (token architecture ready)
+- [ ] Theme management in browser — create/rename/reorder/delete themes in the report, user-generated CSS themes (dark mode done; token architecture ready for custom themes)
+- [ ] Dark logo — replace placeholder inverted image with a proper albino bristlenose pleco (transparent PNG, ~480x480, suitable licence)
 - [ ] Lost quotes — surface quotes the AI didn't select, let users rescue them
 - [ ] Transcript linking — click a quote to jump to its position in the full transcript
 - [ ] .docx export — export the report as a Word document

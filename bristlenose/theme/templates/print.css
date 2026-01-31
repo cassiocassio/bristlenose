@@ -1,6 +1,7 @@
 /* Template: print — overrides for @media print */
 
 @media print {
+    :root { color-scheme: light; }
     body { padding: 0; font-size: 11pt; }
     article { max-width: none; }
     h2 { break-before: page; }

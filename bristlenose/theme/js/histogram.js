@@ -80,11 +80,11 @@ function renderUserTagsChart() {
     bar.className = 'sentiment-bar';
     var w = Math.max(4, Math.round((e.count / maxCount) * maxBarPx));
     bar.style.width = w + 'px';
-    bar.style.background = '#9ca3af';
+    bar.style.background = 'var(--bn-colour-muted)';
 
     var cnt = document.createElement('span');
     cnt.className = 'sentiment-bar-count';
-    cnt.style.color = '#6b7280';
+    cnt.style.color = 'var(--bn-colour-muted)';
     cnt.textContent = e.count;
 
     group.appendChild(label);

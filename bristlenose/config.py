@@ -68,6 +68,9 @@ class BristlenoseSettings(BaseSettings):
     pii_llm_pass: bool = False
     pii_custom_names: list[str] = Field(default_factory=list)
 
+    # Theme
+    color_scheme: str = "auto"  # "auto", "light", or "dark"
+
     # Pipeline
     skip_transcription: bool = False
     write_intermediate: bool = True

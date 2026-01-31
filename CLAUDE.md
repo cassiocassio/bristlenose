@@ -10,6 +10,7 @@ Bristlenose is a local-first user-research analysis tool. It takes a folder of i
 - **Type hints everywhere** — Pydantic models for all data structures
 - **Single source of version**: `bristlenose/__init__.py` (`__version__`). Never add version to `pyproject.toml`
 - **Atomic CSS design system** in `bristlenose/theme/` — tokens, atoms, molecules, organisms, templates. All values via `--bn-*` custom properties in `tokens.css`, never hard-coded
+- **Dark mode** via CSS `light-dark()` function — follows OS/browser preference by default; overridable via `color_scheme` config setting. See "Dark mode architecture" section below
 - **JS modules** in `bristlenose/theme/js/` — 8 standalone files concatenated at render time (same pattern as CSS)
 - **Markdown style template** in `bristlenose/utils/markdown.py` — single source of truth for all markdown/txt formatting (headings, quotes, badges, transcript segments). Change formatting here, not in stage files
 - **Licence**: AGPL-3.0 with CLA
@@ -53,6 +54,23 @@ output/
 
 Both `models.py` and `utils/timecodes.py` define `format_timecode()` and `parse_timecode()`. They behave identically. Stage files import from one or the other — both are fine. The `utils/timecodes.py` version has a more sophisticated parser (SRT/VTT milliseconds support).
 
+### Dark mode architecture
+
+Dark mode uses the CSS `light-dark()` function (supported in all major browsers since mid-2024, ~87%+ global). The cascade:
+
+1. **OS/browser preference** → `prefers-color-scheme` is respected automatically via `color-scheme: light dark` on `:root`
+2. **User override** → `color_scheme` setting in `bristlenose.toml` (or `BRISTLENOSE_COLOR_SCHEME` env var). Values: `"auto"` (default), `"light"`, `"dark"`
+3. **HTML attribute** → when config is `"light"` or `"dark"`, `render_html.py` emits `<html data-theme="light|dark">` which forces `color-scheme: light|dark` via CSS selector
+4. **Print** → always light (forced by `color-scheme: light` in `print.css`)
+
+**How tokens work:** `tokens.css` has two blocks:
+- `:root { --bn-colour-bg: #ffffff; ... }` — plain light values (fallback for old browsers)
+- `@supports (color: light-dark(...)) { :root { --bn-colour-bg: light-dark(#ffffff, #111111); ... } }` — modern browsers get both values, resolved by `color-scheme`
+
+**Logo:** The `<picture>` element swaps between `bristlenose-logo.png` (light) and `bristlenose-logo-dark.png` (dark) using `<source media="(prefers-color-scheme: dark)">`. The dark logo is currently a placeholder (inverted version) — needs replacing with a proper albino bristlenose pleco image.
+
+**No JS theme toggle.** Dark mode is CSS-only. No localStorage, no toggle button, no JS involved.
+
 ## File map
 
 | File | Role |
@@ -71,7 +89,7 @@ Both `models.py` and `utils/timecodes.py` define `format_timecode()` and `parse_
 | `bristlenose/llm/structured.py` | Pydantic schemas for structured LLM output |
 | `bristlenose/llm/client.py` | Anthropic/OpenAI client abstraction |
 | `bristlenose/theme/tokens.css` | Design tokens (`--bn-*` custom properties) |
-| `bristlenose/theme/images/` | Static assets (project logo) |
+| `bristlenose/theme/images/` | Static assets (light + dark logos) |
 | `bristlenose/theme/atoms/` | Smallest CSS components (badge, button, input, etc.) |
 | `bristlenose/theme/js/` | 8 JS modules (storage, player, favourites, editing, tags, histogram, csv-export, main) |
 | `bristlenose/utils/hardware.py` | GPU/CPU auto-detection (MLX, CUDA, CPU fallback) |
@@ -82,6 +100,7 @@ Both `models.py` and `utils/timecodes.py` define `format_timecode()` and `parse_
 | `tests/test_markdown.py` | Tests for `utils/markdown.py` — constants, formatters, quote blocks, friction items (25 tests) |
 | `tests/test_transcript_writing.py` | Tests for transcript writers (.txt, .md) and parser round-trips, incl. mixed timecodes (22 tests) |
 | `tests/test_models.py` | Tests for timecode format/parse, round-trips, ExtractedQuote (12 tests) |
+| `tests/test_dark_mode.py` | Tests for dark mode: CSS tokens, HTML attributes, logo switching, config (17 tests) |
 | `tests/test_text_utils.py` | Tests for smart quotes, disfluency removal, text cleanup (11 tests) |
 | `.github/workflows/ci.yml` | CI: ruff, mypy, pytest on push/PR |
 | `.github/workflows/release.yml` | Release: build → PyPI → GitHub Release → Homebrew dispatch |
@@ -127,9 +146,9 @@ The Homebrew tap is a **separate repo**: [`cassiocassio/homebrew-bristlenose`](h
 
 API keys via env vars (`ANTHROPIC_API_KEY` or `OPENAI_API_KEY`), `.env` file, or `bristlenose.toml`. Prefix with `BRISTLENOSE_` for namespaced variants.
 
-## Current status (v0.3.8, Jan 2026)
+## Current status (v0.4.0, Jan 2026)
 
-Core pipeline complete and published to PyPI + Homebrew. v0.3.8 adds timecode edge-case tests confirming the full pipeline handles sessions shorter and longer than one hour. Active roadmap is UI polish and report interactivity improvements. See `TODO.md` for full task list.
+Core pipeline complete and published to PyPI + Homebrew. v0.4.0 adds dark mode support — reports automatically follow the user's OS/browser preference, with an optional `color_scheme` config override. Dark logo placeholder (inverted image) included; needs replacing with a proper albino bristlenose pleco. See `TODO.md` for full task list.
 
 ## Working preferences
 

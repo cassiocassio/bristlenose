@@ -179,6 +179,10 @@ Edit `bristlenose/__init__.py` (the single source of truth for version), commit,
 
 ## Changelog
 
+### 0.3.6
+
+- Document full CI/CD pipeline topology, secrets, and cross-repo setup
+
 ### 0.3.5
 
 - Automated Homebrew tap updates and GitHub Releases on every tagged release

@@ -45,6 +45,7 @@ CLI commands: `run` (full pipeline), `transcribe-only`, `analyze` (skip transcri
 | `tests/` | pytest test suite |
 | `.github/workflows/ci.yml` | CI: ruff, mypy, pytest on push/PR |
 | `.github/workflows/release.yml` | Release: build → PyPI → GitHub Release → Homebrew dispatch |
+| `.github/workflows/homebrew-tap/update-formula.yml` | Reference copy of tap repo workflow (authoritative copy lives in `homebrew-bristlenose`) |
 | `TODO.md` | Detailed roadmap and task tracking |
 | `CONTRIBUTING.md` | Dev setup, design system docs, release process |
 
@@ -54,6 +55,27 @@ CLI commands: `run` (full pipeline), `transcribe-only`, `analyze` (skip transcri
 2. Update changelog in `README.md` (## Changelog section)
 3. `git commit && git tag vX.Y.Z && git push origin main --tags`
 4. GitHub Actions handles the rest: CI → PyPI publish → GitHub Release → Homebrew tap update
+
+The full release pipeline runs in two repos:
+
+| Step | Where | Trigger |
+|------|-------|---------|
+| CI (ruff, mypy, pytest) | `bristlenose` repo, `ci.yml` | `release.yml` calls it via `workflow_call` |
+| Build sdist + wheel | `bristlenose` repo, `release.yml` `build` job | After CI passes |
+| Publish to PyPI | `bristlenose` repo, `release.yml` `publish` job | After build, via OIDC trusted publishing |
+| Create GitHub Release | `bristlenose` repo, `release.yml` `github-release` job | After publish |
+| Dispatch to Homebrew tap | `bristlenose` repo, `release.yml` `notify-homebrew` job | After publish, sends `repository_dispatch` |
+| Update formula | `homebrew-bristlenose` repo, `update-formula.yml` | Receives dispatch, fetches sha256 from PyPI, patches formula, pushes |
+
+## CI/CD secrets and cross-repo setup
+
+| Secret | Stored in | Purpose |
+|--------|-----------|---------|
+| `HOMEBREW_TAP_TOKEN` | bristlenose repo → Settings → Secrets → Actions | Classic PAT with `repo` scope; used by `notify-homebrew` to dispatch to the tap repo |
+| PyPI OIDC | pypi.org trusted publisher config | No token needed — `release.yml` uses `id-token: write` permission |
+| `GITHUB_TOKEN` | automatic | Used by `github-release` job to create GitHub Releases |
+
+The Homebrew tap is a **separate repo**: [`cassiocassio/homebrew-bristlenose`](https://github.com/cassiocassio/homebrew-bristlenose). It contains `Formula/bristlenose.rb` and `.github/workflows/update-formula.yml`. A reference copy of `update-formula.yml` is kept in this repo at `.github/workflows/homebrew-tap/update-formula.yml` for convenience — the authoritative copy is in the tap repo.
 
 ## CI gates
 
@@ -65,7 +87,7 @@ CLI commands: `run` (full pipeline), `transcribe-only`, `analyze` (skip transcri
 
 API keys via env vars (`ANTHROPIC_API_KEY` or `OPENAI_API_KEY`), `.env` file, or `bristlenose.toml`. Prefix with `BRISTLENOSE_` for namespaced variants.
 
-## Current status (v0.3.5, Jan 2026)
+## Current status (v0.3.6, Jan 2026)
 
 Core pipeline complete and published to PyPI + Homebrew. Active roadmap is UI polish and report interactivity improvements. See `TODO.md` for full task list.
 

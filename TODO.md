@@ -1,6 +1,6 @@
 # Bristlenose — Where I Left Off
 
-Last updated: 30 Jan 2026
+Last updated: 31 Jan 2026
 
 ---
 
@@ -61,6 +61,8 @@ Current state and planned improvements.
 
 - [x] **GitHub token** — stored in macOS Keychain via `gh auth`, accessed by `gh` CLI and git-credential-manager
 - [x] **PyPI token** — stored in macOS Keychain via `keyring set https://upload.pypi.org/legacy/ __token__`, picked up automatically by `twine upload`
+- [x] **PyPI Trusted Publishing** — configured; `release.yml` publishes via OIDC, no token needed in CI or locally for releases
+- [x] **`HOMEBREW_TAP_TOKEN`** — classic PAT with `repo` scope (no expiry), stored as a GitHub Actions secret in the bristlenose repo; used by `notify-homebrew` job to dispatch `repository_dispatch` to `cassiocassio/homebrew-bristlenose`
 
 ### Current (works but could be better)
 
@@ -68,9 +70,7 @@ Current state and planned improvements.
 
 ### To do
 
-- [x] **PyPI Trusted Publishing** — configured; `release.yml` publishes via OIDC, no token needed in CI or locally for releases
 - [ ] **Bristlenose API keys → Keychain** — add optional `keyring` support in `config.py` so bristlenose can read `BRISTLENOSE_ANTHROPIC_API_KEY` from macOS Keychain (falling back to env var / `.env`). Would let users avoid plaintext keys on disk.
-- [ ] **Document the secrets setup** — add a "Secrets & credentials" section to CONTRIBUTING.md covering: where each secret lives, how to set them up from scratch (keyring commands, gh auth, .env), and the CI trusted-publisher flow.
 
 ---
 
@@ -142,11 +142,17 @@ Organised from easiest to hardest. The README has a condensed version; this is t
 | `bristlenose/theme/js/` | Report JavaScript modules (storage, player, favourites, editing, tags, histogram, csv-export, main) — concatenated at render time |
 | `bristlenose/llm/prompts.py` | LLM prompt templates |
 | `bristlenose/utils/hardware.py` | GPU/CPU auto-detection |
-| `CONTRIBUTING.md` | CLA, code style, design system docs, full release process |
+| `.github/workflows/ci.yml` | CI: ruff, mypy, pytest on push/PR; also called by release.yml via workflow_call |
+| `.github/workflows/release.yml` | Release pipeline: build → PyPI → GitHub Release → Homebrew dispatch |
+| `.github/workflows/homebrew-tap/update-formula.yml` | Reference copy of the tap repo's workflow (authoritative copy is in homebrew-bristlenose) |
+| `CONTRIBUTING.md` | CLA, code style, design system docs, full release process and cross-repo topology |
 
 ## Key URLs
 
 - **Repo:** https://github.com/cassiocassio/bristlenose
 - **PyPI:** https://pypi.org/project/bristlenose/
-- **Homebrew tap:** https://github.com/cassiocassio/homebrew-bristlenose
-- **PyPI tokens:** https://pypi.org/manage/account/token/
+- **Homebrew tap repo:** https://github.com/cassiocassio/homebrew-bristlenose
+- **CI runs:** https://github.com/cassiocassio/bristlenose/actions
+- **Tap workflow runs:** https://github.com/cassiocassio/homebrew-bristlenose/actions
+- **PyPI trusted publisher settings:** https://pypi.org/manage/project/bristlenose/settings/publishing/
+- **Repo secrets:** https://github.com/cassiocassio/bristlenose/settings/secrets/actions

@@ -148,8 +148,9 @@ When the user says thanks/goodbye/goodnight or otherwise signals the end of a se
 1. **Run tests** — `.venv/bin/python -m pytest tests/` — make sure nothing is broken
 2. **Run linter** — `.venv/bin/ruff check bristlenose/` — no lint warnings
 3. **Update `TODO.md`** — mark completed items as done, add any new items discovered during the session
-4. **Update `CLAUDE.md`** — persist any new conventions, architectural decisions, file map changes, or operational knowledge learned during the session
-5. **Update `README.md`** — if there's a version bump, add a changelog entry
-6. **Check for uncommitted changes** — `git status` + `git diff` — nothing should be left uncommitted
-7. **Commit and push** — all changes committed with descriptive messages, pushed to `origin/main`
-8. **Verify CI** — check that the latest push passes CI (link the user to the Actions page if a tagged release was pushed)
+4. **Update `CLAUDE.md`** — persist any new conventions, architectural decisions, file map changes, or operational knowledge learned during the session; update the version in the `Current status` section if it was bumped
+5. **Update `CONTRIBUTING.md`** — if the design system, release process, or dev setup changed during the session
+6. **Update `README.md`** — if there's a version bump, add a changelog entry
+7. **Check for uncommitted changes** — `git status` + `git diff` — commit everything with descriptive messages, push to `origin/main`
+8. **Clean up branches** — delete any feature branches created during the session that have been merged
+9. **Verify CI** — check that the latest push passes CI (link the user to the Actions page if a tagged release was pushed)

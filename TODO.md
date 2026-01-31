@@ -32,6 +32,7 @@ Last updated: 31 Jan 2026
 - [x] (0.3.7) Per-session `.md` transcripts alongside `.txt` in `raw_transcripts/` and `cooked_transcripts/`
 - [x] (0.3.7) Participant codes in transcript segments — `[p1]` instead of `[PARTICIPANT]` for researcher context
 - [x] (0.3.7) Transcript parser accepts both `MM:SS` and `HH:MM:SS` timecodes
+- [x] (0.3.8) Timecode handling audit: verified full pipeline for sessions <1h and ≥1h, added edge-case tests
 
 ---
 

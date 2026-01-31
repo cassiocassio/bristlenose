@@ -91,9 +91,9 @@ The Homebrew tap is a **separate repo**: [`cassiocassio/homebrew-bristlenose`](h
 
 API keys via env vars (`ANTHROPIC_API_KEY` or `OPENAI_API_KEY`), `.env` file, or `bristlenose.toml`. Prefix with `BRISTLENOSE_` for namespaced variants.
 
-## Current status (v0.3.7, Jan 2026)
+## Current status (v0.3.8, Jan 2026)
 
-Core pipeline complete and published to PyPI + Homebrew. v0.3.7 adds a markdown style template system, per-session `.md` transcripts, and participant codes in transcript output. Active roadmap is UI polish and report interactivity improvements. See `TODO.md` for full task list.
+Core pipeline complete and published to PyPI + Homebrew. v0.3.8 adds timecode edge-case tests confirming the full pipeline handles sessions shorter and longer than one hour. Active roadmap is UI polish and report interactivity improvements. See `TODO.md` for full task list.
 
 ## Working preferences
 

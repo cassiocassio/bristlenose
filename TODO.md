@@ -31,6 +31,10 @@ Last updated: 30 Jan 2026
 
 ---
 
+### titlebar
+
+menuburger fish bristlenose:project ikea V/p1 V
+
 ## Next up: CI/CD automation
 
 These are ready to implement. Do them in order — each builds on the previous.
@@ -89,6 +93,11 @@ Organised from easiest to hardest. The README has a condensed version; this is t
 - [ ] Search-as-you-type filtering — filter visible quotes by text content
 - [ ] Hide/show quotes — toggle individual quotes, persist state
 - [ ] Keyboard shortcuts — j/k navigation, s to star, e to edit, / to search
+- [ ] Timecodes: restore blue colour — currently showing visited-link colour; force `--bn-colour-accent` and drop the `[]` square brackets since the blue makes them visually distinct already
+- [ ] User tag × button — vertically centre the close button optically (currently sits too low)
+- [ ] AI badge × button — the circled × is ugly; restyle to match user tag delete or use a simpler glyph
+- [ ] Indent tags — add left margin/padding so the badge row sits indented under the quote text
+- [ ] Logo: slightly bigger — bump from 80px to ~100px
 - [ ] JS: `'use strict'` — add to each JS module to catch accidental globals and silent errors
 - [ ] JS: shared `utils.js` — extract duplicated quote-stripping regex (`QUOTE_RE` / `CSV_QUOTE_RE`) into a shared module
 - [ ] JS: magic numbers → config — extract `150`ms blur delay, `200`ms animation, `250`ms FLIP duration, `2000`ms toast, `8` max suggestions, `48`px min input into a shared constants object
@@ -97,6 +106,13 @@ Organised from easiest to hardest. The README has a condensed version; this is t
 
 ### Small (a day or two each)
 
+- [ ] Participant metadata: days of the week and times of recordings — show when each session was recorded in the participant table
+- [ ] Reduce AI tag density — too many AI badges per quote; tune the LLM prompt or filter to show only the most relevant 2–3
+- [ ] Sentiment & friction as standalone sections — currently listed under Themes in the TOC but they're not themes; give them their own subsection/heading level
+- [ ] User-tags histogram: right-align bars — bars should grow from the same zero-x baseline as the AI sentiment chart so the two read side-by-side
+- [ ] Clickable histogram bars — clicking a bar in sentiment or user-tags chart opens a filtered view showing only quotes with that tag/emotion
+- [ ] Sticky header — move project name + logo into the sticky toolbar bar so they're always visible on scroll
+- [ ] Burger menu — replace the export button bar with a dropdown/hamburger menu triggered from the logo; export favourites, export all, and room for future actions (settings, theme picker, etc.)
 - [ ] Theme management in browser — create/rename/reorder/delete themes in the report, dark mode, user-generated CSS themes (token architecture ready)
 - [ ] Lost quotes — surface quotes the AI didn't select, let users rescue them
 - [ ] Transcript linking — click a quote to jump to its position in the full transcript

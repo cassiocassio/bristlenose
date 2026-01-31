@@ -49,9 +49,10 @@ CLI commands: `run` (full pipeline), `transcribe-only`, `analyze` (skip transcri
 ## How to release
 
 1. Edit version in `bristlenose/__init__.py`
-2. `git commit && git tag vX.Y.Z && git push origin main --tags`
-3. GitHub Actions handles CI, build, and PyPI publish (OIDC trusted publishing)
-4. Homebrew tap update is manual: update url + sha256 in `Formula/bristlenose.rb`
+2. Update changelog in `README.md` (## Changelog section)
+3. `git commit && git tag vX.Y.Z && git push origin main --tags`
+4. GitHub Actions handles CI, build, and PyPI publish (OIDC trusted publishing)
+5. Homebrew tap update is manual: update url + sha256 in `Formula/bristlenose.rb`
 
 ## CI gates
 
@@ -70,7 +71,7 @@ Core pipeline complete and published to PyPI + Homebrew. Active roadmap is UI po
 ## Working preferences
 
 - Keep changes minimal and focused — don't refactor or add features beyond what's asked
-- Run `ruff check bristlenose/` before committing
-- Run `pytest` to verify changes
+- Run `.venv/bin/ruff check bristlenose/` before committing (no global ruff install)
+- Run `.venv/bin/python -m pytest tests/` to verify changes
 - Commit messages: short, descriptive, lowercase (e.g., "fix tag suggest offering tags the quote already has")
 - The repo directory is `/Users/cassio/Code/gourani` (legacy name, package is bristlenose)

@@ -31,10 +31,6 @@ Last updated: 30 Jan 2026
 
 ---
 
-### titlebar
-
-menuburger fish bristlenose:project ikea V/p1 V
-
 ## Next up: CI/CD automation
 
 These are ready to implement. Do them in order — each builds on the previous.

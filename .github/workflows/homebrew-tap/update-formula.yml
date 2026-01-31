@@ -1,0 +1,73 @@
+name: Update Homebrew formula
+
+# Triggered by repository_dispatch from the bristlenose release workflow.
+
+on:
+  repository_dispatch:
+    types: [update-formula]
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Fetch sdist URL and sha256 from PyPI
+        id: pypi
+        env:
+          VERSION: ${{ github.event.client_payload.version }}
+        run: |
+          # Retry loop — PyPI CDN may need a few seconds after publish.
+          for i in 1 2 3 4 5; do
+            response=$(curl -sf "https://pypi.org/pypi/bristlenose/${VERSION}/json") && break
+            echo "Attempt $i: PyPI not ready, retrying in 30s..."
+            sleep 30
+          done
+
+          if [ -z "$response" ]; then
+            echo "::error::Failed to fetch release metadata from PyPI after 5 attempts"
+            exit 1
+          fi
+
+          url=$(echo "$response" | python3 -c "
+          import json, sys
+          data = json.load(sys.stdin)
+          for f in data['urls']:
+              if f['packagetype'] == 'sdist':
+                  print(f['url'])
+                  break
+          ")
+
+          sha256=$(echo "$response" | python3 -c "
+          import json, sys
+          data = json.load(sys.stdin)
+          for f in data['urls']:
+              if f['packagetype'] == 'sdist':
+                  print(f['digests']['sha256'])
+                  break
+          ")
+
+          echo "url=$url" >> "$GITHUB_OUTPUT"
+          echo "sha256=$sha256" >> "$GITHUB_OUTPUT"
+          echo "Found sdist: $url"
+          echo "SHA256: $sha256"
+
+      - name: Update formula
+        env:
+          VERSION: ${{ github.event.client_payload.version }}
+        run: |
+          sed -i "s|url \".*\"|url \"${{ steps.pypi.outputs.url }}\"|" Formula/bristlenose.rb
+          sed -i "s|sha256 \".*\"|sha256 \"${{ steps.pypi.outputs.sha256 }}\"|" Formula/bristlenose.rb
+          sed -i "s|version \".*\"|version \"${VERSION}\"|" Formula/bristlenose.rb
+
+      - name: Commit and push
+        env:
+          VERSION: ${{ github.event.client_payload.version }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add Formula/bristlenose.rb
+          git diff --cached --quiet && echo "No changes to commit" && exit 0
+          git commit -m "bristlenose ${VERSION}"
+          git push

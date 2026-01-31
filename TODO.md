@@ -43,19 +43,13 @@ Done — `.github/workflows/ci.yml`. Ruff and pytest are hard gates; mypy runs i
 
 Done — `.github/workflows/release.yml`. Triggers on `v*` tags, runs CI first, builds sdist + wheel, publishes via PyPI trusted publishing (OIDC, no token needed). Trusted publisher configured at pypi.org.
 
-### 3. Auto-update Homebrew tap after PyPI publish
+### 3. ✅ Auto-update Homebrew tap after PyPI publish
 
-GitHub Actions workflow in the **homebrew-bristlenose** repo
-- Triggered by repository_dispatch from the main release workflow
-- Fetches new sdist URL + sha256 from PyPI JSON API
-- Patches `Formula/bristlenose.rb`
-- Commits and pushes
+Done — `release.yml` dispatches to `cassiocassio/homebrew-bristlenose` after PyPI publish. The tap repo's `update-formula.yml` fetches the sdist sha256 from PyPI and patches the formula. Requires `HOMEBREW_TAP_TOKEN` secret (fine-grained PAT scoped to the tap repo).
 
-### 4. GitHub Release with changelog
+### 4. ✅ GitHub Release with changelog
 
-Add to the release workflow (item 2)
-- After PyPI publish, create a GitHub Release on the tag
-- Use auto-generated release notes (PR titles since last tag)
+Done — `release.yml` `github-release` job creates a GitHub Release on the tag with auto-generated release notes.
 
 ---
 

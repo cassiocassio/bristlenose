@@ -196,10 +196,20 @@ That's it. GitHub Actions handles the rest:
 1. **CI** (`.github/workflows/ci.yml`) — ruff, mypy, pytest
 2. **Build** — sdist + wheel via `python -m build`
 3. **Publish to PyPI** (`.github/workflows/release.yml`) — via OIDC trusted publishing (no tokens needed)
+4. **GitHub Release** — auto-created on the tag with generated release notes
+5. **Homebrew tap** — `release.yml` dispatches to `cassiocassio/homebrew-bristlenose`, which auto-updates the formula URL and sha256
 
-### Updating the Homebrew tap (manual for now)
+### Homebrew tap automation
 
-After PyPI publishes, update the tap at https://github.com/cassiocassio/homebrew-bristlenose:
+The Homebrew tap updates automatically after every PyPI publish. The flow:
+
+1. `release.yml` `notify-homebrew` job sends a `repository_dispatch` event to the tap repo
+2. The tap's `update-formula.yml` fetches the new sdist URL + sha256 from PyPI's JSON API
+3. It patches `Formula/bristlenose.rb` and pushes
+
+This requires a `HOMEBREW_TAP_TOKEN` secret in the bristlenose repo — a fine-grained PAT scoped to `cassiocassio/homebrew-bristlenose` with Contents read/write.
+
+**Manual fallback** — if the automation fails (e.g. expired token), you can update the tap manually:
 
 ```bash
 # Get the new sdist URL and sha256
@@ -213,7 +223,7 @@ for f in data['urls']:
 "
 ```
 
-Edit `Formula/bristlenose.rb` — update the `url` and `sha256` lines. Commit and push.
+Edit `Formula/bristlenose.rb` in the tap repo — update the `url` and `sha256` lines. Commit and push.
 
 ### Summary
 
@@ -221,7 +231,8 @@ Edit `Formula/bristlenose.rb` — update the `url` and `sha256` lines. Commit an
 |-------------------|-----------------------|------------------------------------------------|
 | Commit to `main`  | Every change          | `git push` (CI runs automatically)             |
 | PyPI release      | Each release          | Tag `vX.Y.Z` and push (automated via Actions)  |
-| Homebrew tap      | After PyPI publish    | Update `url` + `sha256` in `Formula/*.rb`      |
+| GitHub Release    | Each release          | Auto-created by Actions with generated notes   |
+| Homebrew tap      | After PyPI publish    | Auto-dispatched to tap repo by Actions         |
 
 ### Homebrew architecture note
 

@@ -43,6 +43,8 @@ CLI commands: `run` (full pipeline), `transcribe-only`, `analyze` (skip transcri
 | `bristlenose/utils/audio.py` | Audio extraction helpers |
 | `bristlenose/utils/timecodes.py` | Timecode parsing and formatting |
 | `tests/` | pytest test suite |
+| `.github/workflows/ci.yml` | CI: ruff, mypy, pytest on push/PR |
+| `.github/workflows/release.yml` | Release: build → PyPI → GitHub Release → Homebrew dispatch |
 | `TODO.md` | Detailed roadmap and task tracking |
 | `CONTRIBUTING.md` | Dev setup, design system docs, release process |
 
@@ -51,8 +53,7 @@ CLI commands: `run` (full pipeline), `transcribe-only`, `analyze` (skip transcri
 1. Edit version in `bristlenose/__init__.py`
 2. Update changelog in `README.md` (## Changelog section)
 3. `git commit && git tag vX.Y.Z && git push origin main --tags`
-4. GitHub Actions handles CI, build, and PyPI publish (OIDC trusted publishing)
-5. Homebrew tap update is manual: update url + sha256 in `Formula/bristlenose.rb`
+4. GitHub Actions handles the rest: CI → PyPI publish → GitHub Release → Homebrew tap update
 
 ## CI gates
 
@@ -64,7 +65,7 @@ CLI commands: `run` (full pipeline), `transcribe-only`, `analyze` (skip transcri
 
 API keys via env vars (`ANTHROPIC_API_KEY` or `OPENAI_API_KEY`), `.env` file, or `bristlenose.toml`. Prefix with `BRISTLENOSE_` for namespaced variants.
 
-## Current status (v0.3.4, Jan 2026)
+## Current status (v0.3.5, Jan 2026)
 
 Core pipeline complete and published to PyPI + Homebrew. Active roadmap is UI polish and report interactivity improvements. See `TODO.md` for full task list.
 

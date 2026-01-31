@@ -179,6 +179,10 @@ Edit `bristlenose/__init__.py` (the single source of truth for version), commit,
 
 ## Changelog
 
+### 0.3.5
+
+- Automated Homebrew tap updates and GitHub Releases on every tagged release
+
 ### 0.3.4
 
 - Participants table: renamed columns (ID→Session, Session date→Date), added Start time column, date format now dd-mm-yyyy

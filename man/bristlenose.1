@@ -1,0 +1,319 @@
+.\" Man page for bristlenose
+.\" Generated from cli.py help text
+.TH BRISTLENOSE 1 "January 2026" "bristlenose 0.3.8" "User Commands"
+.SH NAME
+bristlenose \- user-research transcription and quote extraction engine
+.SH SYNOPSIS
+.B bristlenose
+.RI [ command ]
+.RI [ options ]
+.br
+.B bristlenose run
+.I input-dir
+.RB [ \-o
+.IR output-dir ]
+.RB [ \-p
+.IR project-name ]
+.RI [ options ]
+.br
+.B bristlenose transcribe-only
+.I input-dir
+.RB [ \-o
+.IR output-dir ]
+.RI [ options ]
+.br
+.B bristlenose analyze
+.I transcripts-dir
+.RB [ \-o
+.IR output-dir ]
+.RI [ options ]
+.br
+.B bristlenose render
+.I input-dir
+.RB [ \-o
+.IR output-dir ]
+.RI [ options ]
+.br
+.B bristlenose help
+.RI [ topic ]
+.SH DESCRIPTION
+.B bristlenose
+processes user-research interview recordings into structured, themed, timestamped
+quotes. It transcribes audio locally using Whisper, extracts and enriches quotes
+via LLM (Anthropic or OpenAI), groups them by screen and theme, and renders a
+browsable HTML report. Nothing is uploaded; recordings stay on your machine.
+.PP
+The HTML report includes sections (grouped by screen), themes (cross-participant
+patterns), a sentiment histogram, friction points, user journeys, clickable
+timecodes with a popout video player, favourite quotes with CSV export, inline
+editing, and a tag system with auto-suggest.
+.SH COMMANDS
+.TP
+.B run
+Full pipeline: ingest files, transcribe, identify speakers, redact PII, extract
+quotes, cluster by screen, group by theme, render HTML and Markdown reports.
+Requires an API key.
+.TP
+.B transcribe-only
+Transcription only. No LLM calls, no API key needed. Produces raw transcript
+files in \fIoutput/raw_transcripts/\fR.
+.TP
+.B analyze
+Run LLM analysis on existing transcript \fI.txt\fR files. Skips ingestion and
+transcription. Useful after reviewing or editing raw transcripts.
+.TP
+.B render
+Re-render reports from existing intermediate JSON data. No transcription, no LLM
+calls, no API key needed. Useful after CSS or JavaScript changes.
+.TP
+.B help \fR[\fItopic\fR]
+Show detailed help. Topics: \fBcommands\fR, \fBconfig\fR, \fBworkflows\fR, or
+any command name.
+.SH OPTIONS
+.SS Global options
+.TP
+.BR \-V ", " \-\-version
+Show version and exit.
+.TP
+.BR \-\-help
+Show command help and exit.
+.SS Options for \fBrun\fR
+.TP
+.BR \-o ", " \-\-output " " \fIDIR\fR
+Output directory. Default: \fIoutput\fR.
+.TP
+.BR \-p ", " \-\-project " " \fINAME\fR
+Project name for the report header. Defaults to the input folder name.
+.TP
+.BR \-b ", " \-\-whisper\-backend " " \fIBACKEND\fR
+Transcription backend: \fBauto\fR (detect hardware), \fBmlx\fR (Apple Silicon GPU),
+\fBfaster-whisper\fR (CUDA/CPU). Default: \fBauto\fR.
+.TP
+.BR \-w ", " \-\-whisper\-model " " \fIMODEL\fR
+Whisper model size: \fBtiny\fR, \fBbase\fR, \fBsmall\fR, \fBmedium\fR,
+\fBlarge-v3\fR, \fBlarge-v3-turbo\fR. Default: \fBlarge-v3-turbo\fR.
+.TP
+.BR \-l ", " \-\-llm " " \fIPROVIDER\fR
+LLM provider: \fBanthropic\fR, \fBopenai\fR. Default: \fBanthropic\fR.
+.TP
+.BR \-\-no\-pii
+Disable the PII redaction pass.
+.TP
+.BR \-\-skip\-transcription
+Skip audio transcription (use existing transcripts).
+.TP
+.BR \-c ", " \-\-config " " \fIPATH\fR
+Path to a \fIbristlenose.toml\fR config file.
+.TP
+.BR \-\-clean
+Delete the output directory before running.
+.TP
+.BR \-v ", " \-\-verbose
+Enable verbose logging.
+.SS Options for \fBtranscribe-only\fR
+.TP
+.BR \-o ", " \-\-output " " \fIDIR\fR
+Output directory.
+.TP
+.BR \-w ", " \-\-whisper\-model " " \fIMODEL\fR
+Whisper model size.
+.TP
+.BR \-v ", " \-\-verbose
+Enable verbose logging.
+.SS Options for \fBanalyze\fR
+.TP
+.BR \-o ", " \-\-output " " \fIDIR\fR
+Output directory.
+.TP
+.BR \-p ", " \-\-project " " \fINAME\fR
+Project name.
+.TP
+.BR \-l ", " \-\-llm " " \fIPROVIDER\fR
+LLM provider.
+.TP
+.BR \-v ", " \-\-verbose
+Enable verbose logging.
+.SS Options for \fBrender\fR
+.TP
+.BR \-o ", " \-\-output " " \fIDIR\fR
+Output directory. Must contain an \fIintermediate/\fR directory from a previous
+run.
+.TP
+.BR \-p ", " \-\-project " " \fINAME\fR
+Project name.
+.TP
+.BR \-v ", " \-\-verbose
+Enable verbose logging.
+.SH CONFIGURATION
+Settings are loaded in order (last wins):
+.IP 1. 4
+Built-in defaults
+.IP 2. 4
+\fI.env\fR file (searched upward from the current directory)
+.IP 3. 4
+Environment variables with prefix \fBBRISTLENOSE_\fR
+.IP 4. 4
+CLI flags
+.SS API keys
+.TP
+.B BRISTLENOSE_ANTHROPIC_API_KEY
+Anthropic API key.
+.TP
+.B BRISTLENOSE_OPENAI_API_KEY
+OpenAI API key.
+.SS LLM settings
+.TP
+.B BRISTLENOSE_LLM_PROVIDER
+\fBanthropic\fR or \fBopenai\fR. Default: \fBanthropic\fR.
+.TP
+.B BRISTLENOSE_LLM_MODEL
+Model name. Default: \fBclaude-sonnet-4-20250514\fR.
+.TP
+.B BRISTLENOSE_LLM_MAX_TOKENS
+Maximum response tokens. Default: \fB8192\fR.
+.TP
+.B BRISTLENOSE_LLM_TEMPERATURE
+Sampling temperature. Default: \fB0.1\fR.
+.TP
+.B BRISTLENOSE_LLM_CONCURRENCY
+Parallel LLM calls. Default: \fB3\fR.
+.SS Transcription settings
+.TP
+.B BRISTLENOSE_WHISPER_BACKEND
+\fBauto\fR, \fBmlx\fR, or \fBfaster-whisper\fR. Default: \fBauto\fR.
+.TP
+.B BRISTLENOSE_WHISPER_MODEL
+Model size. Default: \fBlarge-v3-turbo\fR.
+.TP
+.B BRISTLENOSE_WHISPER_LANGUAGE
+Language code. Default: \fBen\fR.
+.TP
+.B BRISTLENOSE_WHISPER_DEVICE
+Device for faster-whisper: \fBcpu\fR, \fBcuda\fR, or \fBauto\fR. Default: \fBauto\fR.
+.TP
+.B BRISTLENOSE_WHISPER_COMPUTE_TYPE
+Compute type for faster-whisper: \fBint8\fR, \fBfloat16\fR, or \fBfloat32\fR. Default: \fBint8\fR.
+.SS PII settings
+.TP
+.B BRISTLENOSE_PII_ENABLED
+Enable PII redaction. Default: \fBtrue\fR.
+.TP
+.B BRISTLENOSE_PII_LLM_PASS
+Extra LLM-based PII pass. Default: \fBfalse\fR.
+.TP
+.B BRISTLENOSE_PII_CUSTOM_NAMES
+Comma-separated list of additional names to redact.
+.SS Pipeline settings
+.TP
+.B BRISTLENOSE_MIN_QUOTE_WORDS
+Minimum words per extracted quote. Default: \fB5\fR.
+.TP
+.B BRISTLENOSE_MERGE_SPEAKER_GAP_SECONDS
+Gap threshold for merging consecutive speaker segments. Default: \fB2.0\fR.
+.SH INPUT FILES
+.B bristlenose
+accepts any mix of audio, video, subtitle, and transcript files:
+.PP
+.RS
+.nf
+Audio:       .wav .mp3 .m4a .flac .ogg .wma .aac
+Video:       .mp4 .mov .avi .mkv .webm
+Subtitles:   .srt .vtt
+Transcripts: .docx (Microsoft Teams exports)
+.fi
+.RE
+.PP
+Files sharing a name stem (e.g. \fIp1.mp4\fR and \fIp1.srt\fR) are treated as
+a single session. When subtitles exist, transcription is skipped for that
+session.
+.SH OUTPUT
+.PP
+.RS
+.nf
+output/
+  research_report.html       browsable report
+  research_report.md         Markdown version
+  bristlenose-theme.css      stylesheet (regenerated on every run)
+  bristlenose-logo.png       project logo
+  bristlenose-player.html    popout video player
+  raw_transcripts/           one .txt and .md per participant
+  cooked_transcripts/        cleaned transcripts after PII removal
+  intermediate/              JSON snapshots for re-rendering
+.fi
+.RE
+.SH EXAMPLES
+Full pipeline run:
+.PP
+.RS
+.nf
+bristlenose run ./interviews/ -o ./results/ -p "Q1 Usability Study"
+.fi
+.RE
+.PP
+Transcribe only (no API key needed):
+.PP
+.RS
+.nf
+bristlenose transcribe-only ./interviews/ -o ./results/
+.fi
+.RE
+.PP
+Analyse existing transcripts:
+.PP
+.RS
+.nf
+bristlenose analyze ./results/raw_transcripts/ -o ./results/
+.fi
+.RE
+.PP
+Re-render after CSS changes (no API key needed):
+.PP
+.RS
+.nf
+bristlenose render ./interviews/ -o ./results/
+.fi
+.RE
+.PP
+Show configuration reference:
+.PP
+.RS
+.nf
+bristlenose help config
+.fi
+.RE
+.SH HARDWARE
+Transcription hardware is auto-detected:
+.IP \(bu 4
+Apple Silicon: MLX on Metal GPU
+.IP \(bu 4
+NVIDIA: faster-whisper with CUDA
+.IP \(bu 4
+Other: CPU fallback
+.SH FILES
+.TP
+.I .env
+Environment variables file, searched upward from the current directory.
+.TP
+.I .env.example
+Template with all available configuration variables.
+.TP
+.I bristlenose.toml
+Optional TOML configuration file.
+.SH EXIT STATUS
+.TP
+.B 0
+Success.
+.TP
+.B 1
+Error (missing input, configuration problem, pipeline failure).
+.SH BUGS
+Report bugs at \fIhttps://github.com/cassiocassio/bristlenose/issues\fR.
+.SH AUTHOR
+Cassio \fIhttps://github.com/cassiocassio\fR
+.SH LICENSE
+AGPL-3.0. See the LICENSE file in the source distribution.
+.SH SEE ALSO
+.BR ffmpeg (1),
+.BR whisper (1)
+.PP
+Full documentation: \fIhttps://github.com/cassiocassio/bristlenose\fR

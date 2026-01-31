@@ -9,6 +9,7 @@ from typing import Annotated
 import typer
 from rich.console import Console
 
+from bristlenose import __version__
 from bristlenose.config import load_settings
 
 app = typer.Typer(
@@ -17,6 +18,186 @@ app = typer.Typer(
     no_args_is_help=True,
 )
 console = Console()
+
+
+def _version_callback(value: bool) -> None:
+    if value:
+        console.print(f"bristlenose {__version__}")
+        raise typer.Exit()
+
+
+@app.callback()
+def main(
+    version: Annotated[
+        bool,
+        typer.Option(
+            "--version", "-V",
+            help="Show version and exit.",
+            callback=_version_callback,
+            is_eager=True,
+        ),
+    ] = False,
+) -> None:
+    """User-research transcription and quote extraction engine."""
+
+
+@app.command()
+def help(
+    topic: Annotated[
+        str | None,
+        typer.Argument(help="Topic: commands, config, workflows, or a command name."),
+    ] = None,
+) -> None:
+    """Show detailed help on commands, configuration, and common workflows."""
+    if topic is None:
+        _help_overview()
+    elif topic == "commands":
+        _help_commands()
+    elif topic == "config":
+        _help_config()
+    elif topic == "workflows":
+        _help_workflows()
+    elif topic in ("run", "transcribe-only", "analyze", "render", "help"):
+        import subprocess
+        import sys
+
+        subprocess.run([sys.argv[0], topic, "--help"])
+    else:
+        console.print(f"[red]Unknown topic:[/red] {topic}")
+        console.print("Try: bristlenose help commands | config | workflows")
+        raise typer.Exit(1)
+
+
+def _help_overview() -> None:
+    console.print(f"\n[bold]bristlenose[/bold] {__version__}")
+    console.print("User-research transcription and quote extraction engine.\n")
+    console.print("[bold]Commands[/bold]")
+    console.print("  run               Full pipeline: transcribe → analyse → render")
+    console.print("  transcribe-only   Transcription only, no LLM calls")
+    console.print("  analyze           LLM analysis on existing transcripts")
+    console.print("  render            Re-render reports from intermediate JSON")
+    console.print("  help              This help (try: help commands, help config, help workflows)")
+    console.print()
+    console.print("[bold]Quick start[/bold]")
+    console.print("  bristlenose run ./interviews/ -o ./results/")
+    console.print()
+    console.print("[bold]More info[/bold]")
+    console.print("  bristlenose help commands     All commands and their options")
+    console.print("  bristlenose help config       Environment variables and config files")
+    console.print("  bristlenose help workflows    Common usage patterns")
+    console.print("  bristlenose <command> --help  Detailed options for a command")
+    console.print()
+    console.print("[dim]https://github.com/cassiocassio/bristlenose[/dim]")
+
+
+def _help_commands() -> None:
+    console.print("\n[bold]Commands[/bold]\n")
+    console.print("[bold]bristlenose run[/bold] <input-dir> [options]")
+    console.print("  Full pipeline. Transcribes recordings, extracts and enriches quotes")
+    console.print("  via LLM, groups by screen and theme, renders HTML + Markdown reports.")
+    console.print("  -o, --output DIR         Output directory (default: output)")
+    console.print("  -p, --project NAME       Project name for the report header")
+    console.print("  -b, --whisper-backend    auto | mlx | faster-whisper")
+    console.print("  -w, --whisper-model      tiny | base | small | medium | large-v3 | large-v3-turbo")
+    console.print("  -l, --llm               anthropic | openai")
+    console.print("  --no-pii                Skip PII redaction")
+    console.print("  --clean                 Delete output dir before running")
+    console.print("  -v, --verbose           Verbose logging")
+    console.print()
+    console.print("[bold]bristlenose transcribe-only[/bold] <input-dir> [options]")
+    console.print("  Transcription only. No LLM calls, no API key needed.")
+    console.print("  Produces raw transcripts in output/raw_transcripts/.")
+    console.print("  -o, --output DIR         Output directory")
+    console.print("  -w, --whisper-model      Whisper model size")
+    console.print("  -v, --verbose           Verbose logging")
+    console.print()
+    console.print("[bold]bristlenose analyze[/bold] <transcripts-dir> [options]")
+    console.print("  LLM analysis on existing .txt transcripts. Skips transcription.")
+    console.print("  -o, --output DIR         Output directory")
+    console.print("  -p, --project NAME       Project name")
+    console.print("  -l, --llm               LLM provider")
+    console.print("  -v, --verbose           Verbose logging")
+    console.print()
+    console.print("[bold]bristlenose render[/bold] <input-dir> [options]")
+    console.print("  Re-render reports from intermediate/ JSON. No transcription,")
+    console.print("  no LLM calls, no API key needed. Useful after CSS/JS changes.")
+    console.print("  -o, --output DIR         Output directory (must contain intermediate/)")
+    console.print("  -p, --project NAME       Project name")
+    console.print("  -v, --verbose           Verbose logging")
+    console.print()
+
+
+def _help_config() -> None:
+    console.print("\n[bold]Configuration[/bold]\n")
+    console.print("Settings are loaded in order (last wins):")
+    console.print("  1. Defaults")
+    console.print("  2. .env file (searched upward from CWD)")
+    console.print("  3. Environment variables (prefix BRISTLENOSE_)")
+    console.print("  4. CLI flags")
+    console.print()
+    console.print("[bold]Environment variables[/bold]\n")
+    console.print("  [bold]API keys[/bold]")
+    console.print("  BRISTLENOSE_ANTHROPIC_API_KEY    Anthropic API key")
+    console.print("  BRISTLENOSE_OPENAI_API_KEY       OpenAI API key")
+    console.print()
+    console.print("  [bold]LLM[/bold]")
+    console.print("  BRISTLENOSE_LLM_PROVIDER         anthropic | openai")
+    console.print("  BRISTLENOSE_LLM_MODEL            Model name (default: claude-sonnet-4-20250514)")
+    console.print("  BRISTLENOSE_LLM_MAX_TOKENS       Max response tokens (default: 8192)")
+    console.print("  BRISTLENOSE_LLM_TEMPERATURE      Temperature (default: 0.1)")
+    console.print("  BRISTLENOSE_LLM_CONCURRENCY      Parallel LLM calls (default: 3)")
+    console.print()
+    console.print("  [bold]Transcription[/bold]")
+    console.print("  BRISTLENOSE_WHISPER_BACKEND      auto | mlx | faster-whisper")
+    console.print("  BRISTLENOSE_WHISPER_MODEL         Model size (default: large-v3-turbo)")
+    console.print("  BRISTLENOSE_WHISPER_LANGUAGE      Language code (default: en)")
+    console.print("  BRISTLENOSE_WHISPER_DEVICE        cpu | cuda | auto (faster-whisper only)")
+    console.print("  BRISTLENOSE_WHISPER_COMPUTE_TYPE  int8 | float16 | float32")
+    console.print()
+    console.print("  [bold]PII[/bold]")
+    console.print("  BRISTLENOSE_PII_ENABLED           true | false (default: true)")
+    console.print("  BRISTLENOSE_PII_LLM_PASS          Extra LLM PII pass (default: false)")
+    console.print("  BRISTLENOSE_PII_CUSTOM_NAMES      Comma-separated names to redact")
+    console.print()
+    console.print("  [bold]Pipeline[/bold]")
+    console.print("  BRISTLENOSE_MIN_QUOTE_WORDS       Minimum words per quote (default: 5)")
+    console.print("  BRISTLENOSE_MERGE_SPEAKER_GAP_SECONDS  Speaker merge gap (default: 2.0)")
+    console.print()
+    console.print("See .env.example in the repository for a template.")
+    console.print()
+
+
+def _help_workflows() -> None:
+    console.print("\n[bold]Common workflows[/bold]\n")
+    console.print("[bold]1. Full run[/bold] (most common)")
+    console.print("   bristlenose run ./interviews/ -o ./results/ -p 'Q1 Study'")
+    console.print("   → transcribe → analyse → render")
+    console.print()
+    console.print("[bold]2. Transcribe first, analyse later[/bold]")
+    console.print("   bristlenose transcribe-only ./interviews/ -o ./results/")
+    console.print("   # review raw_transcripts/, then:")
+    console.print("   bristlenose analyze ./results/raw_transcripts/ -o ./results/")
+    console.print()
+    console.print("[bold]3. Re-render after CSS/JS changes[/bold]")
+    console.print("   bristlenose render ./interviews/ -o ./results/")
+    console.print("   # no LLM calls, no API key needed")
+    console.print()
+    console.print("[bold]4. Different LLM provider[/bold]")
+    console.print("   bristlenose run ./interviews/ -o ./results/ --llm openai")
+    console.print()
+    console.print("[bold]5. Smaller Whisper model (faster, less accurate)[/bold]")
+    console.print("   bristlenose run ./interviews/ -o ./results/ -w small")
+    console.print()
+    console.print("[bold]6. Skip PII redaction[/bold]")
+    console.print("   bristlenose run ./interviews/ -o ./results/ --no-pii")
+    console.print()
+    console.print("[bold]Input files[/bold]")
+    console.print("  Audio: .wav .mp3 .m4a .flac .ogg .wma .aac")
+    console.print("  Video: .mp4 .mov .avi .mkv .webm")
+    console.print("  Subtitles: .srt .vtt")
+    console.print("  Transcripts: .docx (Teams exports)")
+    console.print("  Files sharing a name stem are treated as one session.")
+    console.print()
 
 
 @app.command()

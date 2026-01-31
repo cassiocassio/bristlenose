@@ -11,6 +11,7 @@ from bristlenose.models import (
     EmotionalTone,
     ExtractedQuote,
     InputSession,
+    PeopleFile,
     QuoteIntent,
     ScreenCluster,
     ThemeGroup,
@@ -39,6 +40,8 @@ def render_markdown(
     project_name: str,
     output_dir: Path,
     all_quotes: list[ExtractedQuote] | None = None,
+    display_names: dict[str, str] | None = None,
+    people: PeopleFile | None = None,
 ) -> Path:
     """Generate the final research_report.md file.
 
@@ -49,6 +52,8 @@ def render_markdown(
         project_name: Name of the research project.
         output_dir: Output directory.
         all_quotes: All extracted quotes (used for rewatch list).
+        display_names: Mapping of participant_id → display name.
+        people: People file data for enriched participant table.
 
     Returns:
         Path to the written Markdown file.
@@ -83,7 +88,8 @@ def render_markdown(
                 lines.append("")
 
             for quote in cluster.quotes:
-                lines.append(format_quote_block(quote))
+                dn = display_names.get(quote.participant_id) if display_names else None
+                lines.append(format_quote_block(quote, display_name=dn))
                 lines.append("")
 
         lines.append(HORIZONTAL_RULE)
@@ -102,7 +108,8 @@ def render_markdown(
                 lines.append("")
 
             for quote in theme.quotes:
-                lines.append(format_quote_block(quote))
+                dn = display_names.get(quote.participant_id) if display_names else None
+                lines.append(format_quote_block(quote, display_name=dn))
                 lines.append("")
 
         lines.append(HORIZONTAL_RULE)
@@ -110,7 +117,7 @@ def render_markdown(
 
     # Friction Points — timestamps where confusion/frustration/error_recovery detected
     if all_quotes:
-        rewatch_items = _build_rewatch_list(all_quotes)
+        rewatch_items = _build_rewatch_list(all_quotes, display_names=display_names)
         if rewatch_items:
             lines.append(HEADING_2.format(title="Friction points"))
             lines.append("")
@@ -129,7 +136,9 @@ def render_markdown(
 
     # User Journeys
     if all_quotes and sessions:
-        task_summary = _build_task_outcome_summary(all_quotes, sessions)
+        task_summary = _build_task_outcome_summary(
+            all_quotes, sessions, display_names=display_names,
+        )
         if task_summary:
             lines.append(HEADING_2.format(title="User journeys"))
             lines.append("")
@@ -142,19 +151,54 @@ def render_markdown(
     # Appendix: Participant Summary
     lines.append(HEADING_2.format(title="Appendix: Participant summary"))
     lines.append("")
-    lines.append("| Session | Date | Start | Duration | Source file |")
-    lines.append("|---------|------|------|----------|-------------|")
 
-    for session in sessions:
-        duration = _session_duration(session)
-        source = session.files[0].path.name if session.files else EM_DASH
+    if people and people.participants:
         lines.append(
-            f"| {session.participant_id} "
-            f"| {session.session_date.strftime('%d-%m-%Y')} "
-            f"| {session.session_date.strftime('%H:%M')} "
-            f"| {duration} "
-            f"| {source} |"
+            "| Name | Date | Start | Duration | Words | % Words"
+            " | % Time | Role | Source file |"
         )
+        lines.append(
+            "|------|------|------|----------|-------|---------|"
+            "--------|------|-------------|"
+        )
+        for session in sessions:
+            pid = session.participant_id
+            name = _dn(pid, display_names)
+            entry = people.participants.get(pid)
+            if entry:
+                words = str(entry.computed.words_spoken)
+                pct_w = f"{entry.computed.pct_words:.1f}%"
+                pct_t = f"{entry.computed.pct_time_speaking:.1f}%"
+                role = entry.editable.role or EM_DASH
+            else:
+                words = pct_w = pct_t = EM_DASH
+                role = EM_DASH
+            duration = _session_duration(session)
+            source = session.files[0].path.name if session.files else EM_DASH
+            lines.append(
+                f"| {name} "
+                f"| {session.session_date.strftime('%d-%m-%Y')} "
+                f"| {session.session_date.strftime('%H:%M')} "
+                f"| {duration} "
+                f"| {words} "
+                f"| {pct_w} "
+                f"| {pct_t} "
+                f"| {role} "
+                f"| {source} |"
+            )
+    else:
+        lines.append("| Session | Date | Start | Duration | Source file |")
+        lines.append("|---------|------|------|----------|-------------|")
+        for session in sessions:
+            duration = _session_duration(session)
+            source = session.files[0].path.name if session.files else EM_DASH
+            lines.append(
+                f"| {_dn(session.participant_id, display_names)} "
+                f"| {session.session_date.strftime('%d-%m-%Y')} "
+                f"| {session.session_date.strftime('%H:%M')} "
+                f"| {duration} "
+                f"| {source} |"
+            )
 
     lines.append("")
 
@@ -218,7 +262,17 @@ def _session_duration(session: InputSession) -> str:
     return EM_DASH
 
 
-def _build_rewatch_list(quotes: list[ExtractedQuote]) -> list[str]:
+def _dn(pid: str, display_names: dict[str, str] | None) -> str:
+    """Resolve participant_id to display name."""
+    if display_names and pid in display_names:
+        return display_names[pid]
+    return pid
+
+
+def _build_rewatch_list(
+    quotes: list[ExtractedQuote],
+    display_names: dict[str, str] | None = None,
+) -> list[str]:
     """Build a list of timestamps worth rewatching.
 
     Flags moments where participants showed confusion, frustration,
@@ -248,7 +302,7 @@ def _build_rewatch_list(quotes: list[ExtractedQuote]) -> list[str]:
     for q in flagged:
         if q.participant_id != current_pid:
             current_pid = q.participant_id
-            lines.append(BOLD.format(text=current_pid))
+            lines.append(BOLD.format(text=_dn(current_pid, display_names)))
         tc = format_timecode(q.start_timecode)
         reason = (
             q.intent.value
@@ -263,6 +317,7 @@ def _build_rewatch_list(quotes: list[ExtractedQuote]) -> list[str]:
 def _build_task_outcome_summary(
     quotes: list[ExtractedQuote],
     sessions: list[InputSession],
+    display_names: dict[str, str] | None = None,
 ) -> list[str]:
     """Build a per-participant summary of journey stages observed.
 
@@ -310,6 +365,6 @@ def _build_task_outcome_summary(
             or q.emotion in (EmotionalTone.FRUSTRATED, EmotionalTone.CONFUSED)
         )
 
-        lines.append(f"| {pid} | {observed_str} | {friction} |")
+        lines.append(f"| {_dn(pid, display_names)} | {observed_str} | {friction} |")
 
     return lines

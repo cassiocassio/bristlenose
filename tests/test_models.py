@@ -91,3 +91,30 @@ def test_quote_formatted_with_context() -> None:
     result = quote.formatted()
     assert "[When asked about the settings page]" in result
     assert "\u201cI didn\u2019t even know" in result
+
+
+def test_quote_formatted_with_display_name() -> None:
+    quote = ExtractedQuote(
+        participant_id="p1",
+        start_timecode=323.0,
+        end_timecode=340.0,
+        text="This is great.",
+        topic_label="Homepage",
+        quote_type=QuoteType.SCREEN_SPECIFIC,
+    )
+    result = quote.formatted(display_name="Sarah")
+    assert "\u2014 Sarah" in result
+    assert "p1" not in result
+
+
+def test_quote_formatted_display_name_none_uses_pid() -> None:
+    quote = ExtractedQuote(
+        participant_id="p2",
+        start_timecode=10.0,
+        end_timecode=20.0,
+        text="Hello.",
+        topic_label="Intro",
+        quote_type=QuoteType.SCREEN_SPECIFIC,
+    )
+    result = quote.formatted(display_name=None)
+    assert "\u2014 p2" in result

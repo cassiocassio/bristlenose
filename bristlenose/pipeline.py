@@ -176,6 +176,23 @@ class Pipeline:
                 write_intermediate_json(theme_groups, "theme_groups.json", output_dir)
             progress.remove_task(task)
 
+            # ── People file ───────────────────────────────────────────
+            task = progress.add_task("Updating people file...", total=None)
+            from bristlenose.people import (
+                build_display_name_map,
+                compute_participant_stats,
+                load_people_file,
+                merge_people,
+                write_people_file,
+            )
+
+            existing_people = load_people_file(output_dir)
+            computed_stats = compute_participant_stats(sessions, transcripts)
+            people = merge_people(existing_people, computed_stats)
+            write_people_file(people, output_dir)
+            display_names = build_display_name_map(people)
+            progress.remove_task(task)
+
             # ── Stage 12: Render output ──────────────────────────────
             task = progress.add_task("Rendering output...", total=None)
             render_markdown(
@@ -185,6 +202,8 @@ class Pipeline:
                 self.settings.project_name,
                 output_dir,
                 all_quotes=all_quotes,
+                display_names=display_names,
+                people=people,
             )
             render_html(
                 screen_clusters,
@@ -194,6 +213,8 @@ class Pipeline:
                 output_dir,
                 all_quotes=all_quotes,
                 color_scheme=self.settings.color_scheme,
+                display_names=display_names,
+                people=people,
             )
             progress.remove_task(task)
 
@@ -205,6 +226,7 @@ class Pipeline:
             screen_clusters=screen_clusters,
             theme_groups=theme_groups,
             output_dir=output_dir,
+            people=people,
         )
 
     async def run_transcription_only(
@@ -243,6 +265,19 @@ class Pipeline:
         write_raw_transcripts(transcripts, raw_dir)
         write_raw_transcripts_md(transcripts, raw_dir)
 
+        # People file (stats only, no rendering)
+        from bristlenose.people import (
+            compute_participant_stats,
+            load_people_file,
+            merge_people,
+            write_people_file,
+        )
+
+        existing_people = load_people_file(output_dir)
+        computed_stats = compute_participant_stats(sessions, transcripts)
+        people = merge_people(existing_people, computed_stats)
+        write_people_file(people, output_dir)
+
         return PipelineResult(
             project_name=self.settings.project_name,
             participants=sessions,
@@ -251,6 +286,7 @@ class Pipeline:
             screen_clusters=[],
             theme_groups=[],
             output_dir=output_dir,
+            people=people,
         )
 
     async def run_analysis_only(
@@ -292,16 +328,26 @@ class Pipeline:
         screen_clusters = await cluster_by_screen(all_quotes, llm_client)
         theme_groups = await group_by_theme(all_quotes, llm_client)
 
+        # Load existing people file for display names (no recompute).
+        from bristlenose.people import build_display_name_map, load_people_file
+
+        people = load_people_file(output_dir)
+        display_names = build_display_name_map(people) if people else {}
+
         render_markdown(
             screen_clusters, theme_groups, [],
             self.settings.project_name, output_dir,
             all_quotes=all_quotes,
+            display_names=display_names,
+            people=people,
         )
         render_html(
             screen_clusters, theme_groups, [],
             self.settings.project_name, output_dir,
             all_quotes=all_quotes,
             color_scheme=self.settings.color_scheme,
+            display_names=display_names,
+            people=people,
         )
 
         return PipelineResult(
@@ -312,6 +358,7 @@ class Pipeline:
             screen_clusters=screen_clusters,
             theme_groups=theme_groups,
             output_dir=output_dir,
+            people=people,
         )
 
     async def _gather_all_segments(
@@ -453,17 +500,27 @@ class Pipeline:
 
         sessions = ingest(input_dir)
 
+        # --- Load existing people file for display names ---
+        from bristlenose.people import build_display_name_map, load_people_file
+
+        people = load_people_file(output_dir)
+        display_names = build_display_name_map(people) if people else {}
+
         # --- Render ---
         render_markdown(
             screen_clusters, theme_groups, sessions,
             self.settings.project_name, output_dir,
             all_quotes=all_quotes,
+            display_names=display_names,
+            people=people,
         )
         render_html(
             screen_clusters, theme_groups, sessions,
             self.settings.project_name, output_dir,
             all_quotes=all_quotes,
             color_scheme=self.settings.color_scheme,
+            display_names=display_names,
+            people=people,
         )
 
         return PipelineResult(
@@ -474,6 +531,7 @@ class Pipeline:
             screen_clusters=screen_clusters,
             theme_groups=theme_groups,
             output_dir=output_dir,
+            people=people,
         )
 
     def _empty_result(self, output_dir: Path) -> PipelineResult:

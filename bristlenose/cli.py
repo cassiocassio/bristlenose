@@ -100,7 +100,8 @@ def _help_commands() -> None:
     console.print("  -b, --whisper-backend    auto | mlx | faster-whisper")
     console.print("  -w, --whisper-model      tiny | base | small | medium | large-v3 | large-v3-turbo")
     console.print("  -l, --llm               anthropic | openai")
-    console.print("  --no-pii                Skip PII redaction")
+    console.print("  --redact-pii            Redact personally identifying information")
+    console.print("  --retain-pii            Retain PII in transcripts (default)")
     console.print("  --clean                 Delete output dir before running")
     console.print("  -v, --verbose           Verbose logging")
     console.print()
@@ -155,7 +156,7 @@ def _help_config() -> None:
     console.print("  BRISTLENOSE_WHISPER_COMPUTE_TYPE  int8 | float16 | float32")
     console.print()
     console.print("  [bold]PII[/bold]")
-    console.print("  BRISTLENOSE_PII_ENABLED           true | false (default: true)")
+    console.print("  BRISTLENOSE_PII_ENABLED           true | false (default: false)")
     console.print("  BRISTLENOSE_PII_LLM_PASS          Extra LLM PII pass (default: false)")
     console.print("  BRISTLENOSE_PII_CUSTOM_NAMES      Comma-separated names to redact")
     console.print()
@@ -188,8 +189,8 @@ def _help_workflows() -> None:
     console.print("[bold]5. Smaller Whisper model (faster, less accurate)[/bold]")
     console.print("   bristlenose run ./interviews/ -o ./results/ -w small")
     console.print()
-    console.print("[bold]6. Skip PII redaction[/bold]")
-    console.print("   bristlenose run ./interviews/ -o ./results/ --no-pii")
+    console.print("[bold]6. Redact PII from transcripts[/bold]")
+    console.print("   bristlenose run ./interviews/ -o ./results/ --redact-pii")
     console.print()
     console.print("[bold]Input files[/bold]")
     console.print("  Audio: .wav .mp3 .m4a .flac .ogg .wma .aac")
@@ -243,9 +244,13 @@ def run(
         bool,
         typer.Option("--skip-transcription", help="Skip audio transcription."),
     ] = False,
-    no_pii: Annotated[
+    redact_pii: Annotated[
         bool,
-        typer.Option("--no-pii", help="Disable PII removal pass."),
+        typer.Option("--redact-pii", help="Redact personally identifying information from transcripts."),
+    ] = False,
+    retain_pii: Annotated[
+        bool,
+        typer.Option("--retain-pii", help="Retain PII in transcripts (default behaviour)."),
     ] = False,
     config: Annotated[
         Path | None,
@@ -274,6 +279,10 @@ def run(
             )
             raise typer.Exit(1)
 
+    if redact_pii and retain_pii:
+        console.print("[red]Cannot use both --redact-pii and --retain-pii.[/red]")
+        raise typer.Exit(1)
+
     if project_name is None:
         project_name = input_dir.resolve().name
 
@@ -285,7 +294,7 @@ def run(
         whisper_model=whisper_model,
         llm_provider=llm_provider,
         skip_transcription=skip_transcription,
-        pii_enabled=not no_pii,
+        pii_enabled=redact_pii,
     )
 
     from bristlenose.pipeline import Pipeline

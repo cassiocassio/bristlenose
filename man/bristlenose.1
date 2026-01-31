@@ -1,6 +1,6 @@
 .\" Man page for bristlenose
 .\" Generated from cli.py help text
-.TH BRISTLENOSE 1 "January 2026" "bristlenose 0.3.8" "User Commands"
+.TH BRISTLENOSE 1 "January 2026" "bristlenose 0.4.1" "User Commands"
 .SH NAME
 bristlenose \- user-research transcription and quote extraction engine
 .SH SYNOPSIS
@@ -50,9 +50,10 @@ editing, and a tag system with auto-suggest.
 .SH COMMANDS
 .TP
 .B run
-Full pipeline: ingest files, transcribe, identify speakers, redact PII, extract
-quotes, cluster by screen, group by theme, render HTML and Markdown reports.
-Requires an API key.
+Full pipeline: ingest files, transcribe, identify speakers, extract quotes,
+cluster by screen, group by theme, update participant registry, render HTML and
+Markdown reports. Requires an API key. PII redaction is off by default; use
+\fB\-\-redact\-pii\fR to enable.
 .TP
 .B transcribe-only
 Transcription only. No LLM calls, no API key needed. Produces raw transcript
@@ -96,8 +97,13 @@ Whisper model size: \fBtiny\fR, \fBbase\fR, \fBsmall\fR, \fBmedium\fR,
 .BR \-l ", " \-\-llm " " \fIPROVIDER\fR
 LLM provider: \fBanthropic\fR, \fBopenai\fR. Default: \fBanthropic\fR.
 .TP
-.BR \-\-no\-pii
-Disable the PII redaction pass.
+.BR \-\-redact\-pii
+Redact personally identifying information from transcripts. PII is retained by
+default.
+.TP
+.BR \-\-retain\-pii
+Retain PII in transcripts (default behaviour). Mutually exclusive with
+\fB\-\-redact\-pii\fR.
 .TP
 .BR \-\-skip\-transcription
 Skip audio transcription (use existing transcripts).
@@ -196,7 +202,7 @@ Compute type for faster-whisper: \fBint8\fR, \fBfloat16\fR, or \fBfloat32\fR. De
 .SS PII settings
 .TP
 .B BRISTLENOSE_PII_ENABLED
-Enable PII redaction. Default: \fBtrue\fR.
+Enable PII redaction. Default: \fBfalse\fR.
 .TP
 .B BRISTLENOSE_PII_LLM_PASS
 Extra LLM-based PII pass. Default: \fBfalse\fR.
@@ -236,8 +242,9 @@ output/
   bristlenose-theme.css      stylesheet (regenerated on every run)
   bristlenose-logo.png       project logo
   bristlenose-player.html    popout video player
+  people.yaml                participant registry (stats + editable fields)
   raw_transcripts/           one .txt and .md per participant
-  cooked_transcripts/        cleaned transcripts after PII removal
+  cooked_transcripts/        PII-redacted transcripts (only with --redact-pii)
   intermediate/              JSON snapshots for re-rendering
 .fi
 .RE

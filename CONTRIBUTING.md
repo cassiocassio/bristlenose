@@ -151,138 +151,24 @@ These aliases point to the `--bn-` versions, so theme authors only need to overr
 
 ### Dark mode
 
-Dark mode is built into `tokens.css` using the CSS `light-dark()` function. Every colour token has both a light and dark value:
-
-```css
-@supports (color: light-dark(#000, #fff)) {
-    :root {
-        color-scheme: light dark;
-        --bn-colour-bg: light-dark(#ffffff, #111111);
-        /* ... */
-    }
-}
-```
-
-By default the report follows the user's OS/browser preference. Users can override via `color_scheme = "dark"` in `bristlenose.toml` (or `BRISTLENOSE_COLOR_SCHEME` env var), which causes `render_html.py` to emit `<html data-theme="dark">` and force the dark scheme.
-
-**Adding a new colour token:** add both light and dark values in the `light-dark()` call inside the `@supports` block, and the plain light fallback in the `:root` block above it.
-
-**Logo:** The report uses a `<picture>` element to swap between `bristlenose-logo.png` (light) and `bristlenose-logo-dark.png` (dark). Both files live in `bristlenose/theme/images/`.
-
-**Print:** always uses light mode (`color-scheme: light` in `print.css`).
-
-### Future: user-generated themes
-
-The token architecture supports user themes beyond dark mode. A theme is just a CSS file that overrides `--bn-*` properties. This will be loaded via a theme picker in the browser toolbar (see roadmap).
+Dark mode is built into `tokens.css` using the CSS `light-dark()` function. For full details on the dark mode cascade, how tokens work, and adding new colour tokens, see `bristlenose/theme/CLAUDE.md`.
 
 ## Releasing
 
 Day-to-day development just means committing and pushing to `main`. CI runs automatically. PyPI and Homebrew are updated when you tag a release.
 
-### Version — single source of truth
-
-The version lives in **one place only**: `bristlenose/__init__.py`.
-
-```python
-__version__ = "0.4.0"
-```
-
-`pyproject.toml` uses `dynamic = ["version"]` with `[tool.hatch.version] path = "bristlenose/__init__.py"`, so hatchling reads it from there. Do **not** add a `version` key to `[project]`.
-
-### Cutting a release
+### Quick release
 
 ```bash
-# 1. Bump the version
-#    Edit bristlenose/__init__.py → __version__ = "X.Y.Z"
-
-# 2. Add a changelog entry
-#    Edit README.md → add a ### X.Y.Z section under ## Changelog
-
-# 3. Commit and tag
+# 1. Bump the version in bristlenose/__init__.py
+# 2. Add a changelog entry in README.md
+# 3. Commit, tag, and push:
 git add bristlenose/__init__.py README.md
 git commit -m "vX.Y.Z"
 git tag vX.Y.Z
 git push origin main --tags
 ```
 
-That's it. GitHub Actions handles the rest automatically.
+GitHub Actions handles the rest: CI → PyPI publish → GitHub Release → Homebrew tap update.
 
-### What happens after you push a tag
-
-The release pipeline spans **two repos** and runs five jobs:
-
-```
-bristlenose repo (release.yml)
-├─ ci           → ruff, mypy, pytest (via workflow_call to ci.yml)
-├─ build        → sdist + wheel (python -m build)
-├─ publish      → PyPI via OIDC trusted publishing (no token needed)
-├─ github-release → creates GitHub Release with auto-generated notes
-└─ notify-homebrew → sends repository_dispatch to tap repo
-                        │
-                        ▼
-homebrew-bristlenose repo (update-formula.yml)
-└─ update       → fetches sdist URL + sha256 from PyPI JSON API
-                  → patches Formula/bristlenose.rb (url, sha256, version)
-                  → commits and pushes
-```
-
-### Cross-repo topology
-
-The release system spans two repos and GitHub settings:
-
-| Component | Location |
-|-----------|----------|
-| CI workflow | `bristlenose` repo → `.github/workflows/ci.yml` |
-| Release workflow (build, publish, GitHub Release, dispatch) | `bristlenose` repo → `.github/workflows/release.yml` |
-| Reference copy of tap workflow | `bristlenose` repo → `.github/workflows/homebrew-tap/update-formula.yml` |
-| Homebrew formula | `homebrew-bristlenose` repo → `Formula/bristlenose.rb` |
-| Tap update workflow (authoritative) | `homebrew-bristlenose` repo → `.github/workflows/update-formula.yml` |
-| `HOMEBREW_TAP_TOKEN` secret | `bristlenose` repo → Settings → Secrets → Actions |
-| PyPI trusted publisher | pypi.org → bristlenose project → Publishing settings |
-| PyPI `pypi` environment | `bristlenose` repo → Settings → Environments |
-
-### Secrets
-
-| Secret | Where | What it does | Rotation |
-|--------|-------|-------------|----------|
-| `HOMEBREW_TAP_TOKEN` | bristlenose repo → Actions secrets | Classic PAT with `repo` scope; lets `notify-homebrew` dispatch to the tap repo | No expiry set; rotate if compromised |
-| PyPI OIDC | pypi.org trusted publisher | `release.yml` `publish` job uses `id-token: write` — no token stored anywhere | N/A (keyless) |
-| `GITHUB_TOKEN` | automatic per workflow run | `github-release` job uses it to create GitHub Releases | Automatic |
-
-### Homebrew tap automation
-
-The Homebrew tap updates automatically after every PyPI publish. The `notify-homebrew` job in `release.yml` sends a `repository_dispatch` event to the [`homebrew-bristlenose`](https://github.com/cassiocassio/homebrew-bristlenose) repo. The tap's `update-formula.yml` workflow:
-
-1. Receives the version from the dispatch payload
-2. Fetches the sdist URL + sha256 from `https://pypi.org/pypi/bristlenose/{version}/json` (with a retry loop for CDN propagation)
-3. Uses `sed` to patch the `url`, `sha256`, and `version` lines in `Formula/bristlenose.rb`
-4. Commits as `github-actions[bot]` and pushes
-
-**Manual fallback** — if the automation fails (e.g. expired token, PyPI API issue), update the tap manually:
-
-```bash
-# Get the new sdist URL and sha256
-curl -s https://pypi.org/pypi/bristlenose/X.Y.Z/json | python3 -c "
-import json, sys
-data = json.load(sys.stdin)
-for f in data['urls']:
-    if f['packagetype'] == 'sdist':
-        print(f'url: {f[\"url\"]}')
-        print(f'sha256: {f[\"digests\"][\"sha256\"]}')
-"
-```
-
-Clone `cassiocassio/homebrew-bristlenose`, edit `Formula/bristlenose.rb` — update the `url`, `sha256`, and `version` lines. Commit and push.
-
-### Homebrew architecture note
-
-The formula at `Formula/bristlenose.rb` creates a Python 3.12 virtualenv and runs `pip install bristlenose==<version>` from PyPI. This uses pre-built wheels rather than individual Homebrew resource stanzas. A traditional resource-stanza formula would require maintaining 100+ pinned dependencies (including PyTorch, onnxruntime, spacy) — impractical for an ML-heavy tool. The pip-in-venv approach is standard for custom taps with complex dependency trees.
-
-### Summary
-
-| What              | When                  | How                                            |
-|-------------------|-----------------------|------------------------------------------------|
-| Commit to `main`  | Every change          | `git push` (CI runs automatically)             |
-| PyPI release      | Each release          | Tag `vX.Y.Z` and push (automated via Actions)  |
-| GitHub Release    | Each release          | Auto-created by Actions with generated notes   |
-| Homebrew tap      | After PyPI publish    | Auto-dispatched to tap repo by Actions         |
+For the full release pipeline details, cross-repo topology, secrets, and Homebrew tap automation, see [`docs/release.md`](docs/release.md).

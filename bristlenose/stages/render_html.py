@@ -16,6 +16,7 @@ from bristlenose.models import (
     FileType,
     InputSession,
     JourneyStage,
+    PeopleFile,
     QuoteIntent,
     ScreenCluster,
     ThemeGroup,
@@ -141,6 +142,8 @@ def render_html(
     output_dir: Path,
     all_quotes: list[ExtractedQuote] | None = None,
     color_scheme: str = "auto",
+    display_names: dict[str, str] | None = None,
+    people: PeopleFile | None = None,
 ) -> Path:
     """Generate research_report.html with an external CSS stylesheet.
 
@@ -239,18 +242,28 @@ def render_html(
         _w("<h2>Participants</h2>")
         _w("<table>")
         _w("<thead><tr>")
-        _w("<th>Session</th><th>Date</th><th>Start</th><th>Duration</th><th>Source file</th>")
+        if people and people.participants:
+            _w(
+                "<th>Name</th><th>Date</th><th>Start</th><th>Duration</th>"
+                "<th>Words</th><th>% Words</th><th>% Time</th>"
+                "<th>Role</th><th>Source file</th>"
+            )
+        else:
+            _w("<th>Session</th><th>Date</th><th>Start</th>"
+               "<th>Duration</th><th>Source file</th>")
         _w("</tr></thead>")
         _w("<tbody>")
         for session in sessions:
             duration = _session_duration(session)
+            pid = session.participant_id
+            name = _esc(_display_name(pid, display_names))
             if session.files:
                 source_name = _esc(session.files[0].path.name)
-                pid = _esc(session.participant_id)
-                if video_map and session.participant_id in video_map:
+                pid_esc = _esc(pid)
+                if video_map and pid in video_map:
                     source = (
                         f'<a href="#" class="timecode" '
-                        f'data-participant="{pid}" '
+                        f'data-participant="{pid_esc}" '
                         f'data-seconds="0" data-end-seconds="0">'
                         f'{source_name}</a>'
                     )
@@ -260,11 +273,31 @@ def render_html(
             else:
                 source = "&mdash;"
             _w("<tr>")
-            _w(f"<td>{_esc(session.participant_id)}</td>")
-            _w(f"<td>{session.session_date.strftime('%d-%m-%Y')}</td>")
-            _w(f"<td>{session.session_date.strftime('%H:%M')}</td>")
-            _w(f"<td>{duration}</td>")
-            _w(f"<td>{source}</td>")
+            if people and people.participants:
+                entry = people.participants.get(pid)
+                if entry:
+                    words = str(entry.computed.words_spoken)
+                    pct_w = f"{entry.computed.pct_words:.1f}%"
+                    pct_t = f"{entry.computed.pct_time_speaking:.1f}%"
+                    role = _esc(entry.editable.role) if entry.editable.role else "&mdash;"
+                else:
+                    words = pct_w = pct_t = "&mdash;"
+                    role = "&mdash;"
+                _w(f"<td>{name}</td>")
+                _w(f"<td>{session.session_date.strftime('%d-%m-%Y')}</td>")
+                _w(f"<td>{session.session_date.strftime('%H:%M')}</td>")
+                _w(f"<td>{duration}</td>")
+                _w(f"<td>{words}</td>")
+                _w(f"<td>{pct_w}</td>")
+                _w(f"<td>{pct_t}</td>")
+                _w(f"<td>{role}</td>")
+                _w(f"<td>{source}</td>")
+            else:
+                _w(f"<td>{name}</td>")
+                _w(f"<td>{session.session_date.strftime('%d-%m-%Y')}</td>")
+                _w(f"<td>{session.session_date.strftime('%H:%M')}</td>")
+                _w(f"<td>{duration}</td>")
+                _w(f"<td>{source}</td>")
             _w("</tr>")
         _w("</tbody>")
         _w("</table>")
@@ -318,7 +351,7 @@ def render_html(
                 _w(f'<p class="description">{_esc(cluster.description)}</p>')
             _w('<div class="quote-group">')
             for quote in cluster.quotes:
-                _w(_format_quote_html(quote, video_map))
+                _w(_format_quote_html(quote, video_map, display_names))
             _w("</div>")
         _w("</section>")
         _w("<hr>")
@@ -334,7 +367,7 @@ def render_html(
                 _w(f'<p class="description">{_esc(theme.description)}</p>')
             _w('<div class="quote-group">')
             for quote in theme.quotes:
-                _w(_format_quote_html(quote, video_map))
+                _w(_format_quote_html(quote, video_map, display_names))
             _w("</div>")
         _w("</section>")
         _w("<hr>")
@@ -351,7 +384,7 @@ def render_html(
 
     # --- Friction Points ---
     if all_quotes:
-        rewatch = _build_rewatch_html(all_quotes, video_map)
+        rewatch = _build_rewatch_html(all_quotes, video_map, display_names)
         if rewatch:
             _w("<section>")
             _w('<h2 id="friction-points">Friction points</h2>')
@@ -365,7 +398,7 @@ def render_html(
 
     # --- User Journeys ---
     if all_quotes and sessions:
-        task_html = _build_task_outcome_html(all_quotes, sessions)
+        task_html = _build_task_outcome_html(all_quotes, sessions, display_names)
         if task_html:
             _w("<section>")
             _w("<h2>User journeys</h2>")
@@ -405,6 +438,15 @@ def _esc(text: str) -> str:
     return escape(text)
 
 
+def _display_name(
+    pid: str, display_names: dict[str, str] | None
+) -> str:
+    """Resolve participant_id to display name."""
+    if display_names and pid in display_names:
+        return display_names[pid]
+    return pid
+
+
 def _participant_range(sessions: list[InputSession]) -> str:
     if not sessions:
         return "none"
@@ -424,10 +466,12 @@ def _session_duration(session: InputSession) -> str:
 def _format_quote_html(
     quote: ExtractedQuote,
     video_map: dict[str, str] | None = None,
+    display_names: dict[str, str] | None = None,
 ) -> str:
     """Render a single quote as an HTML blockquote."""
     tc = format_timecode(quote.start_timecode)
     quote_id = f"q-{quote.participant_id}-{int(quote.start_timecode)}"
+    # data-participant keeps canonical ID for JS; visible text uses display name
     parts: list[str] = [
         f'<blockquote id="{quote_id}"'
         f' data-timecode="{_esc(tc)}"'
@@ -449,10 +493,11 @@ def _format_quote_html(
     else:
         tc_html = f'<span class="timecode">[{tc}]</span>'
 
+    name = _esc(_display_name(quote.participant_id, display_names))
     parts.append(
         f"{tc_html} "
         f'<span class="quote-text">\u201c{_esc(quote.text)}\u201d</span> '
-        f'<span class="speaker">&mdash; {_esc(quote.participant_id)}</span>'
+        f'<span class="speaker">&mdash; {name}</span>'
     )
 
     badges = _quote_badges(quote)
@@ -613,6 +658,7 @@ def _has_rewatch_quotes(quotes: list[ExtractedQuote]) -> bool:
 def _build_rewatch_html(
     quotes: list[ExtractedQuote],
     video_map: dict[str, str] | None = None,
+    display_names: dict[str, str] | None = None,
 ) -> str:
     """Build the rewatch list as HTML."""
     flagged: list[ExtractedQuote] = []
@@ -636,7 +682,10 @@ def _build_rewatch_html(
     for q in flagged:
         if q.participant_id != current_pid:
             current_pid = q.participant_id
-            parts.append(f'<p class="rewatch-participant">{_esc(current_pid)}</p>')
+            parts.append(
+                f'<p class="rewatch-participant">'
+                f'{_esc(_display_name(current_pid, display_names))}</p>'
+            )
         tc = format_timecode(q.start_timecode)
         reason = (
             q.intent.value
@@ -796,6 +845,7 @@ video { flex: 1; width: 100%; min-height: 0; background: #000; }
 def _build_task_outcome_html(
     quotes: list[ExtractedQuote],
     sessions: list[InputSession],
+    display_names: dict[str, str] | None = None,
 ) -> str:
     """Build the task outcome summary as an HTML table."""
     stage_order = [
@@ -840,7 +890,7 @@ def _build_task_outcome_html(
         )
 
         rows.append("<tr>")
-        rows.append(f"<td>{_esc(pid)}</td>")
+        rows.append(f"<td>{_esc(_display_name(pid, display_names))}</td>")
         rows.append(f"<td>{observed_str}</td>")
         rows.append(f"<td>{friction}</td>")
         rows.append("</tr>")

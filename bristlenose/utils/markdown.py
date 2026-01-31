@@ -142,7 +142,10 @@ Example: **[00:16] p1** [NAME] has been using this..."""
 # ═══════════════════════════════════════════════════════════════════════════
 
 
-def format_quote_block(quote: ExtractedQuote) -> str:
+def format_quote_block(
+    quote: ExtractedQuote,
+    display_name: str | None = None,
+) -> str:
     """Format a single quote as a Markdown blockquote with metadata badges.
 
     Composes the researcher-context line (if present), the main quote line
@@ -151,6 +154,7 @@ def format_quote_block(quote: ExtractedQuote) -> str:
 
     Args:
         quote: The extracted quote to format.
+        display_name: Optional display name to use instead of participant_id.
 
     Returns:
         Multi-line string ready to insert into a markdown document.
@@ -164,14 +168,15 @@ def format_quote_block(quote: ExtractedQuote) -> str:
     from bristlenose.models import EmotionalTone, QuoteIntent, format_timecode
 
     tc = format_timecode(quote.start_timecode)
+    name = display_name if display_name else quote.participant_id
     parts: list[str] = []
 
     # Optional researcher context prefix
     if quote.researcher_context:
         parts.append(BLOCKQUOTE_LINE.format(content=f"[{quote.researcher_context}]"))
 
-    # The quote itself with timecode and participant ID
-    body = f"[{tc}] {LQUOTE}{quote.text}{RQUOTE} {EM_DASH} {quote.participant_id}"
+    # The quote itself with timecode and attribution
+    body = f"[{tc}] {LQUOTE}{quote.text}{RQUOTE} {EM_DASH} {name}"
     parts.append(BLOCKQUOTE_LINE.format(content=body))
 
     # Metadata badges — only show non-default values to keep output clean

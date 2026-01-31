@@ -64,7 +64,7 @@ class BristlenoseSettings(BaseSettings):
     whisper_compute_type: str = "int8"  # faster-whisper only
 
     # PII
-    pii_enabled: bool = True
+    pii_enabled: bool = False
     pii_llm_pass: bool = False
     pii_custom_names: list[str] = Field(default_factory=list)
 

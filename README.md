@@ -100,8 +100,9 @@ results/
   bristlenose-theme.css      # stylesheet (regenerated on every run)
   bristlenose-logo.png       # project logo
   bristlenose-player.html    # popout video player (if media files present)
+  people.yaml                # participant registry (edit names here)
   raw_transcripts/           # one .txt per participant
-  cooked_transcripts/        # cleaned transcripts after PII removal
+  cooked_transcripts/        # PII-redacted transcripts (only with --redact-pii)
   intermediate/              # JSON snapshots (used by `bristlenose render`)
 ```
 
@@ -178,6 +179,14 @@ Edit `bristlenose/__init__.py` (the single source of truth for version), commit,
 ---
 
 ## Changelog
+
+### 0.4.1
+
+- People file (`people.yaml`) — participant registry with computed stats (words, % words, % speaking time) and human-editable fields (name, role, persona, notes); preserved across re-runs
+- Display names — set `short_name` in `people.yaml`, re-render with `bristlenose render` to update quotes and tables
+- Enriched participant table in reports (9 columns: Name, Date, Start, Duration, Words, % Words, % Time, Role, Source)
+- PII redaction now off by default; opt in with `--redact-pii` (replaces `--no-pii`)
+- Man page updated for new CLI flags and output structure
 
 ### 0.4.0
 

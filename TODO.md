@@ -1,6 +1,6 @@
 # Bristlenose — Where I Left Off
 
-Last updated: 31 Jan 2026 (v0.4.0)
+Last updated: 31 Jan 2026 (v0.4.1)
 
 ---
 
@@ -37,6 +37,8 @@ Last updated: 31 Jan 2026 (v0.4.0)
 - [x] `bristlenose help` command — rich-formatted help with topics: commands, config, workflows; plus `--version` / `-V` flag
 - [x] Man page (`man/bristlenose.1`) — full groff man page covering all commands, options, config, examples; included in sdist, Homebrew formula installs to `man1/`
 - [x] (0.4.0) Dark mode — CSS `light-dark()` function, follows OS/browser preference by default, `color_scheme` config override (`auto`/`light`/`dark`), `<meta name="color-scheme">` tag, `<picture>` element for dark logo, print forced to light, histogram hard-coded colours replaced with CSS tokens, 17 tests
+- [x] PII redaction default OFF — `pii_enabled: bool = False` in config; CLI flags `--redact-pii` (opt in) / `--retain-pii` (explicit default); replaced `--no-pii`; 3 tests
+- [x] People file (participant registry) — `people.yaml` in output dir; Pydantic models (`PersonComputed`, `PersonEditable`, `PersonEntry`, `PeopleFile`); `bristlenose/people.py` (load, compute, merge, write, display name map); merge strategy preserves human edits across re-runs; display names in quotes/tables/friction/journeys in both markdown and HTML reports; enriched participant table (9 columns: Name, Date, Start, Duration, Words, % Words, % Time, Role, Source); `data-participant` HTML attributes kept as canonical `participant_id` for JS; 21 new tests (14 people, 3 PII, 2 models, 2 markdown)
 
 ---
 
@@ -124,6 +126,7 @@ Organised from easiest to hardest. The README has a condensed version; this is t
 
 ### Medium (a few days each)
 
+- [ ] LLM name/role extraction from transcripts — auto-populate `people.yaml` editable fields (see design notes below)
 - [ ] Multi-participant sessions — handle recordings with more than one interviewee
 - [ ] Speaker diarisation improvements — better accuracy, manual correction UI
 - [ ] Batch processing dashboard — progress bars, partial results, resume interrupted runs
@@ -147,6 +150,7 @@ Organised from easiest to hardest. The README has a condensed version; this is t
 | `bristlenose/cli.py` | Typer CLI entry point (`run`, `transcribe-only`, `analyze`, `render`) |
 | `bristlenose/config.py` | Pydantic settings (env vars, .env, bristlenose.toml) |
 | `bristlenose/pipeline.py` | Pipeline orchestrator (full run, transcribe-only, analyze-only, render-only) |
+| `bristlenose/people.py` | People file: load, compute stats, merge, write, display name map |
 | `bristlenose/stages/render_html.py` | HTML report renderer — loads CSS + JS from theme/, all interactive features |
 | `bristlenose/theme/` | Atomic CSS design system (tokens, atoms, molecules, organisms, templates) |
 | `bristlenose/theme/js/` | Report JavaScript modules (storage, player, favourites, editing, tags, histogram, csv-export, main) — concatenated at render time |
@@ -166,3 +170,39 @@ Organised from easiest to hardest. The README has a condensed version; this is t
 - **Tap workflow runs:** https://github.com/cassiocassio/homebrew-bristlenose/actions
 - **PyPI trusted publisher settings:** https://pypi.org/manage/project/bristlenose/settings/publishing/
 - **Repo secrets:** https://github.com/cassiocassio/bristlenose/settings/secrets/actions
+
+---
+
+## Design notes: LLM name/role extraction (stretch goal)
+
+This feature auto-populates `people.yaml` editable fields (`full_name`, `short_name`, `role`) by analysing raw transcripts with an LLM. It builds on the existing people file infrastructure.
+
+### Architecture
+
+- **New file**: `bristlenose/stages/extract_names.py`
+- **Config flag**: `llm_extract_names: bool = False` in `bristlenose/config.py` (off by default — requires internet)
+- **CLI flag**: `--extract-names` on the `run` command (opt in)
+- **Pipeline position**: after stage 6 (merge transcript) and before people file compute/merge. The LLM reads raw transcripts, not PII-redacted ones, because names ARE the PII we want here
+
+### How it works
+
+1. For each session, send the raw transcript (or first N minutes) to the LLM
+2. Prompt asks: "Extract the participant's name and role/occupation if mentioned in conversation"
+3. LLM returns structured output: `{"full_name": "Sarah Jones", "short_name": "Sarah", "role": "Product Manager"}`
+4. Results are passed to `merge_people()` — **only pre-populate fields that are currently empty**. If the user has already set a `short_name`, the LLM result is discarded for that field
+5. This means: first run auto-fills; user edits override; subsequent runs don't clobber
+
+### Key design decisions
+
+- **Only fill empty fields**: human edits always win. The LLM is a convenience, not authoritative
+- **Off by default**: this feature requires internet (LLM API call). The long-term vision is fully local operation ("works on a freelancer's laptop on a desert island"). When a capable local model is available, this could become default-on
+- **Raw transcript input**: the LLM needs to see actual names to extract them. If PII redaction runs first, names are gone. Pipeline ordering matters
+- **Graceful degradation**: if the LLM can't find a name (e.g., participant never introduces themselves), fields stay empty. The user can still set them manually in `people.yaml` or the future web UI
+- **Per-session, not per-project**: each transcript is processed independently. No cross-session name matching (a participant might give different names in different sessions — the human resolves this)
+
+### Future considerations
+
+- **Local models**: when a local LLM (MLX, llama.cpp) can do reliable name extraction, make it the default path and remove the internet dependency
+- **Web UI**: the planned web interface for editing `people.yaml` should show LLM-suggested names as pre-filled defaults that the user confirms or corrects
+- **Confidence scores**: the LLM could return confidence, and low-confidence extractions could be flagged for review rather than auto-populated
+- **⚠️ Internet required**: this is one of several features that need API access (speaker identification LLM pass is another). All such features should be clearly flagged and optional

@@ -148,6 +148,19 @@ def test_format_quote_block_no_badges_for_defaults() -> None:
     assert "`" not in result
 
 
+def test_format_quote_block_with_display_name() -> None:
+    quote = _make_quote()
+    result = format_quote_block(quote, display_name="Sarah")
+    assert f"{EM_DASH} Sarah" in result
+    assert "p1" not in result
+
+
+def test_format_quote_block_display_name_none_uses_pid() -> None:
+    quote = _make_quote(participant_id="p3")
+    result = format_quote_block(quote, display_name=None)
+    assert f"{EM_DASH} p3" in result
+
+
 # ---------------------------------------------------------------------------
 # 4. format_friction_item
 # ---------------------------------------------------------------------------

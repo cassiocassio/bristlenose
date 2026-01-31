@@ -254,13 +254,14 @@ class ExtractedQuote(BaseModel):
     intensity: int = 1  # 1=low, 2=medium, 3=high
     journey_stage: JourneyStage = JourneyStage.OTHER
 
-    def formatted(self) -> str:
+    def formatted(self, display_name: str | None = None) -> str:
         """Render the quote in final output format."""
         from bristlenose.utils.markdown import EM_DASH, LQUOTE, RQUOTE
 
         tc = format_timecode(self.start_timecode)
+        name = display_name if display_name else self.participant_id
         prefix = f"[{self.researcher_context}] " if self.researcher_context else ""
-        return f"{prefix}[{tc}] {LQUOTE}{self.text}{RQUOTE} {EM_DASH} {self.participant_id}"
+        return f"{prefix}[{tc}] {LQUOTE}{self.text}{RQUOTE} {EM_DASH} {name}"
 
 
 class ScreenCluster(BaseModel):
@@ -295,6 +296,53 @@ class PipelineResult(BaseModel):
     screen_clusters: list[ScreenCluster]
     theme_groups: list[ThemeGroup]
     output_dir: Path
+    people: PeopleFile | None = None
+
+
+# ---------------------------------------------------------------------------
+# People file models (participant registry)
+# ---------------------------------------------------------------------------
+
+
+class PersonComputed(BaseModel):
+    """Stats refreshed on every pipeline run."""
+
+    participant_id: str
+    session_date: datetime
+    duration_seconds: float
+    words_spoken: int
+    pct_words: float  # % of total words across all participants
+    pct_time_speaking: float  # % of session duration spent speaking
+    source_file: str
+
+
+class PersonEditable(BaseModel):
+    """Human-editable fields — preserved across re-runs."""
+
+    full_name: str = ""
+    short_name: str = ""  # display name in reports
+    role: str = ""  # job title or main activity
+    persona: str = ""  # archetype label
+    notes: str = ""
+
+
+class PersonEntry(BaseModel):
+    """One participant: computed stats + human-editable fields."""
+
+    computed: PersonComputed
+    editable: PersonEditable = Field(default_factory=PersonEditable)
+
+
+class PeopleFile(BaseModel):
+    """Complete people.yaml structure."""
+
+    generated_by: str = "bristlenose"
+    last_updated: datetime = Field(default_factory=datetime.now)
+    participants: dict[str, PersonEntry] = Field(default_factory=dict)
+
+
+# Resolve forward reference: PipelineResult.people uses PeopleFile defined above.
+PipelineResult.model_rebuild()
 
 
 # ---------------------------------------------------------------------------

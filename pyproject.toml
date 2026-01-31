@@ -22,6 +22,7 @@ dependencies = [
     "anthropic>=0.39",
     "openai>=1.50",
     "rich>=13.0",
+    "pyyaml>=6.0",
 ]
 
 [project.optional-dependencies]

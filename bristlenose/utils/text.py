@@ -27,13 +27,15 @@ def apply_smart_quotes(text: str) -> str:
 
 def wrap_in_smart_quotes(text: str) -> str:
     """Wrap text in smart double quotes, stripping any existing outer quotes."""
+    from bristlenose.utils.markdown import LQUOTE, RQUOTE
+
     text = text.strip()
     # Remove existing outer quotes (straight or smart)
     if (text.startswith('"') and text.endswith('"')) or (
-        text.startswith("\u201c") and text.endswith("\u201d")
+        text.startswith(LQUOTE) and text.endswith(RQUOTE)
     ):
         text = text[1:-1].strip()
-    return f"\u201c{text}\u201d"
+    return f"{LQUOTE}{text}{RQUOTE}"
 
 
 # Filler patterns to remove — replaced with ellipsis

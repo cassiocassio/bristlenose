@@ -55,10 +55,12 @@ class Pipeline:
         from bristlenose.stages.merge_transcript import (
             merge_transcripts,
             write_raw_transcripts,
+            write_raw_transcripts_md,
         )
         from bristlenose.stages.pii_removal import (
             remove_pii,
             write_cooked_transcripts,
+            write_cooked_transcripts_md,
             write_pii_summary,
         )
         from bristlenose.stages.quote_clustering import cluster_by_screen
@@ -116,6 +118,7 @@ class Pipeline:
             transcripts = merge_transcripts(sessions, session_segments)
             raw_dir = output_dir / "raw_transcripts"
             write_raw_transcripts(transcripts, raw_dir)
+            write_raw_transcripts_md(transcripts, raw_dir)
             progress.remove_task(task)
 
             # ── Stage 7: PII removal ────────────────────────────────
@@ -124,6 +127,7 @@ class Pipeline:
                 clean_transcripts, pii_redactions = remove_pii(transcripts, self.settings)
                 cooked_dir = output_dir / "cooked_transcripts"
                 write_cooked_transcripts(clean_transcripts, cooked_dir)
+                write_cooked_transcripts_md(clean_transcripts, cooked_dir)
                 write_pii_summary(pii_redactions, output_dir)
                 progress.remove_task(task)
             else:
@@ -212,7 +216,11 @@ class Pipeline:
         from bristlenose.stages.extract_audio import extract_audio_for_sessions
         from bristlenose.stages.identify_speakers import identify_speaker_roles_heuristic
         from bristlenose.stages.ingest import ingest
-        from bristlenose.stages.merge_transcript import merge_transcripts, write_raw_transcripts
+        from bristlenose.stages.merge_transcript import (
+            merge_transcripts,
+            write_raw_transcripts,
+            write_raw_transcripts_md,
+        )
 
         output_dir.mkdir(parents=True, exist_ok=True)
 
@@ -232,6 +240,7 @@ class Pipeline:
         transcripts = merge_transcripts(sessions, session_segments)
         raw_dir = output_dir / "raw_transcripts"
         write_raw_transcripts(transcripts, raw_dir)
+        write_raw_transcripts_md(transcripts, raw_dir)
 
         return PipelineResult(
             project_name=self.settings.project_name,
@@ -488,7 +497,10 @@ def _load_transcripts_from_dir(
         # Date: ...
         # Duration: ...
 
-        [HH:MM:SS] [ROLE] text...
+        [HH:MM:SS] [p1] text...
+
+    The bracket token after the timecode is the participant code (e.g. ``p1``).
+    Legacy files with speaker roles (e.g. ``[PARTICIPANT]``) are also accepted.
     """
     import re
     from datetime import datetime, timezone
@@ -535,19 +547,26 @@ def _load_transcripts_from_dir(
             if line.startswith("#"):
                 continue
 
-            # Parse transcript lines: [HH:MM:SS] [ROLE] text
+            # Parse transcript lines: [MM:SS] or [HH:MM:SS] [participant_id] text
+            # The bracket token is the participant code (p1, p2, ...) or
+            # a legacy speaker role (PARTICIPANT, RESEARCHER, etc.).
             match = re.match(
-                r"\[(\d{2}:\d{2}:\d{2})\]\s*(?:\[(\w+)\])?\s*(.*)", line
+                r"\[(\d{2}:\d{2}(?::\d{2})?)\]\s*(?:\[(\w+)\])?\s*(.*)", line
             )
             if match:
-                tc_str, role_str, text = match.groups()
+                tc_str, bracket_token, text = match.groups()
                 start_time = parse_timecode(tc_str)
+
+                # Try to interpret bracket token as a speaker role (legacy
+                # format); if it doesn't match a known role, treat it as
+                # participant_id and default role to UNKNOWN.
                 role = SpeakerRole.UNKNOWN
-                if role_str:
+                if bracket_token:
                     try:
-                        role = SpeakerRole(role_str.lower())
+                        role = SpeakerRole(bracket_token.lower())
                     except ValueError:
-                        pass
+                        pass  # participant code like "p1" — role stays UNKNOWN
+
                 segments.append(
                     TranscriptSegment(
                         start_time=start_time,

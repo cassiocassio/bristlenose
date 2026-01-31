@@ -179,6 +179,13 @@ Edit `bristlenose/__init__.py` (the single source of truth for version), commit,
 
 ## Changelog
 
+### 0.3.7
+
+- Markdown style template (`bristlenose/utils/markdown.py`) — single source of truth for all markdown/txt formatting constants and formatter functions
+- Per-session `.md` transcripts alongside `.txt` in `raw_transcripts/` and `cooked_transcripts/`
+- Participant codes in transcript segments (`[p1]` instead of `[PARTICIPANT]`) for better researcher context when copying quotes
+- Transcript parser accepts both `MM:SS` and `HH:MM:SS` timecodes
+
 ### 0.3.6
 
 - Document full CI/CD pipeline topology, secrets, and cross-repo setup

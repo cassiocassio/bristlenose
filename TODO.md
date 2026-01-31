@@ -28,6 +28,10 @@ Last updated: 31 Jan 2026
 - [x] CONTRIBUTING.md with release process and design system documented
 - [x] (0.3.2) Tag auto-suggest: don't offer tags the quote already has
 - [x] Project logo in report header (top-right, copied alongside HTML)
+- [x] (0.3.7) Markdown style template (`bristlenose/utils/markdown.py`) — single source of truth for all markdown/txt formatting; all stage files refactored to use it
+- [x] (0.3.7) Per-session `.md` transcripts alongside `.txt` in `raw_transcripts/` and `cooked_transcripts/`
+- [x] (0.3.7) Participant codes in transcript segments — `[p1]` instead of `[PARTICIPANT]` for researcher context
+- [x] (0.3.7) Transcript parser accepts both `MM:SS` and `HH:MM:SS` timecodes
 
 ---
 

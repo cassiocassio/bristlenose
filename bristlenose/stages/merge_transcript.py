@@ -78,8 +78,8 @@ def write_raw_transcripts(
 ) -> list[Path]:
     """Write raw transcript text files.
 
-    Format:
-        [HH:MM:SS] [ROLE] Speaker text here.
+    Format uses the markdown style template from
+    :mod:`bristlenose.utils.markdown`.
 
     Args:
         transcripts: Transcripts to write.
@@ -88,6 +88,11 @@ def write_raw_transcripts(
     Returns:
         List of written file paths.
     """
+    from bristlenose.utils.markdown import (
+        format_raw_segment_txt,
+        format_transcript_header_txt,
+    )
+
     output_dir.mkdir(parents=True, exist_ok=True)
     paths: list[Path] = []
 
@@ -95,23 +100,82 @@ def write_raw_transcripts(
         filename = f"{transcript.participant_id}_raw.txt"
         path = output_dir / filename
 
-        lines: list[str] = []
-        lines.append(f"# Transcript: {transcript.participant_id}")
-        lines.append(f"# Source: {transcript.source_file}")
-        lines.append(f"# Date: {transcript.session_date.date()}")
-        lines.append(f"# Duration: {format_timecode(transcript.duration_seconds)}")
-        lines.append("")
+        header = format_transcript_header_txt(
+            participant_id=transcript.participant_id,
+            source_file=transcript.source_file,
+            session_date=str(transcript.session_date.date()),
+            duration=format_timecode(transcript.duration_seconds),
+        )
+
+        lines: list[str] = [header, ""]
 
         for seg in transcript.segments:
             tc = format_timecode(seg.start_time)
-            role = seg.speaker_role.value.upper()
-            speaker = f" ({seg.speaker_label})" if seg.speaker_label else ""
-            lines.append(f"[{tc}] [{role}]{speaker} {seg.text}")
+            lines.append(
+                format_raw_segment_txt(
+                    tc, transcript.participant_id, seg.speaker_label, seg.text,
+                )
+            )
             lines.append("")
 
         path.write_text("\n".join(lines), encoding="utf-8")
         paths.append(path)
         logger.info("Wrote raw transcript: %s", path)
+
+    return paths
+
+
+def write_raw_transcripts_md(
+    transcripts: list[FullTranscript],
+    output_dir: Path,
+) -> list[Path]:
+    """Write raw transcript Markdown files alongside the .txt files.
+
+    The ``.md`` version provides a more readable format with bold
+    participant code labels and structured metadata.  Files are named
+    ``{participant_id}_raw.md`` and placed in the same directory as the
+    ``.txt`` files (``raw_transcripts/``).
+
+    Args:
+        transcripts: Transcripts to write.
+        output_dir: Directory to write to.
+
+    Returns:
+        List of written file paths.
+    """
+    from bristlenose.utils.markdown import (
+        format_raw_segment_md,
+        format_transcript_header_md,
+    )
+
+    output_dir.mkdir(parents=True, exist_ok=True)
+    paths: list[Path] = []
+
+    for transcript in transcripts:
+        filename = f"{transcript.participant_id}_raw.md"
+        path = output_dir / filename
+
+        header = format_transcript_header_md(
+            participant_id=transcript.participant_id,
+            source_file=transcript.source_file,
+            session_date=str(transcript.session_date.date()),
+            duration=format_timecode(transcript.duration_seconds),
+        )
+
+        lines: list[str] = [header, ""]
+
+        for seg in transcript.segments:
+            tc = format_timecode(seg.start_time)
+            lines.append(
+                format_raw_segment_md(
+                    tc, transcript.participant_id, seg.speaker_label, seg.text,
+                )
+            )
+            lines.append("")
+
+        path.write_text("\n".join(lines), encoding="utf-8")
+        paths.append(path)
+        logger.info("Wrote raw transcript (md): %s", path)
 
     return paths
 

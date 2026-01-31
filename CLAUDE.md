@@ -11,6 +11,7 @@ Bristlenose is a local-first user-research analysis tool. It takes a folder of i
 - **Single source of version**: `bristlenose/__init__.py` (`__version__`). Never add version to `pyproject.toml`
 - **Atomic CSS design system** in `bristlenose/theme/` — tokens, atoms, molecules, organisms, templates. All values via `--bn-*` custom properties in `tokens.css`, never hard-coded
 - **JS modules** in `bristlenose/theme/js/` — 8 standalone files concatenated at render time (same pattern as CSS)
+- **Markdown style template** in `bristlenose/utils/markdown.py` — single source of truth for all markdown/txt formatting (headings, quotes, badges, transcript segments). Change formatting here, not in stage files
 - **Licence**: AGPL-3.0 with CLA
 
 ## Architecture
@@ -37,10 +38,13 @@ CLI commands: `run` (full pipeline), `transcribe-only`, `analyze` (skip transcri
 | `bristlenose/llm/structured.py` | Pydantic schemas for structured LLM output |
 | `bristlenose/llm/client.py` | Anthropic/OpenAI client abstraction |
 | `bristlenose/theme/tokens.css` | Design tokens (`--bn-*` custom properties) |
+| `bristlenose/theme/images/` | Static assets (project logo) |
 | `bristlenose/theme/atoms/` | Smallest CSS components (badge, button, input, etc.) |
 | `bristlenose/theme/js/` | 8 JS modules (storage, player, favourites, editing, tags, histogram, csv-export, main) |
 | `bristlenose/utils/hardware.py` | GPU/CPU auto-detection (MLX, CUDA, CPU fallback) |
 | `bristlenose/utils/audio.py` | Audio extraction helpers |
+| `bristlenose/utils/markdown.py` | **Markdown style template** — single source of truth for all markdown formatting (constants + formatter functions) |
+| `bristlenose/utils/text.py` | Text processing (smart quotes, disfluency removal) |
 | `bristlenose/utils/timecodes.py` | Timecode parsing and formatting |
 | `tests/` | pytest test suite |
 | `.github/workflows/ci.yml` | CI: ruff, mypy, pytest on push/PR |
@@ -87,9 +91,9 @@ The Homebrew tap is a **separate repo**: [`cassiocassio/homebrew-bristlenose`](h
 
 API keys via env vars (`ANTHROPIC_API_KEY` or `OPENAI_API_KEY`), `.env` file, or `bristlenose.toml`. Prefix with `BRISTLENOSE_` for namespaced variants.
 
-## Current status (v0.3.6, Jan 2026)
+## Current status (v0.3.7, Jan 2026)
 
-Core pipeline complete and published to PyPI + Homebrew. Active roadmap is UI polish and report interactivity improvements. See `TODO.md` for full task list.
+Core pipeline complete and published to PyPI + Homebrew. v0.3.7 adds a markdown style template system, per-session `.md` transcripts, and participant codes in transcript output. Active roadmap is UI polish and report interactivity improvements. See `TODO.md` for full task list.
 
 ## Working preferences
 

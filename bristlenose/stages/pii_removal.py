@@ -142,6 +142,9 @@ def write_cooked_transcripts(
 ) -> list[Path]:
     """Write PII-cleaned ('cooked') transcript text files.
 
+    Format uses the markdown style template from
+    :mod:`bristlenose.utils.markdown`.
+
     Args:
         transcripts: Cleaned transcripts.
         output_dir: Directory to write to.
@@ -149,6 +152,11 @@ def write_cooked_transcripts(
     Returns:
         List of written file paths.
     """
+    from bristlenose.utils.markdown import (
+        format_cooked_segment_txt,
+        format_transcript_header_txt,
+    )
+
     output_dir.mkdir(parents=True, exist_ok=True)
     paths: list[Path] = []
 
@@ -156,23 +164,86 @@ def write_cooked_transcripts(
         filename = f"{transcript.participant_id}_cooked.txt"
         path = output_dir / filename
 
-        lines: list[str] = []
-        lines.append(f"# Transcript (cooked): {transcript.participant_id}")
-        lines.append(f"# Source: {transcript.source_file}")
-        lines.append(f"# Date: {transcript.session_date.date()}")
-        lines.append(f"# Duration: {format_timecode(transcript.duration_seconds)}")
-        lines.append(f"# PII entities redacted: {transcript.pii_entities_found}")
-        lines.append("")
+        header = format_transcript_header_txt(
+            participant_id=transcript.participant_id,
+            source_file=transcript.source_file,
+            session_date=str(transcript.session_date.date()),
+            duration=format_timecode(transcript.duration_seconds),
+            label="Transcript (cooked)",
+            extra_headers={
+                "PII entities redacted": str(transcript.pii_entities_found),
+            },
+        )
+
+        lines: list[str] = [header, ""]
 
         for seg in transcript.segments:
             tc = format_timecode(seg.start_time)
-            role = seg.speaker_role.value.upper()
-            lines.append(f"[{tc}] [{role}] {seg.text}")
+            lines.append(
+                format_cooked_segment_txt(tc, transcript.participant_id, seg.text)
+            )
             lines.append("")
 
         path.write_text("\n".join(lines), encoding="utf-8")
         paths.append(path)
         logger.info("Wrote cooked transcript: %s", path)
+
+    return paths
+
+
+def write_cooked_transcripts_md(
+    transcripts: list[PiiCleanTranscript],
+    output_dir: Path,
+) -> list[Path]:
+    """Write PII-cleaned transcript Markdown files alongside the .txt files.
+
+    The ``.md`` version provides a more readable format with bold
+    participant code labels and structured metadata.  Files are named
+    ``{participant_id}_cooked.md`` and placed in the same directory as
+    the ``.txt`` files (``cooked_transcripts/``).
+
+    Args:
+        transcripts: Cleaned transcripts.
+        output_dir: Directory to write to.
+
+    Returns:
+        List of written file paths.
+    """
+    from bristlenose.utils.markdown import (
+        format_cooked_segment_md,
+        format_transcript_header_md,
+    )
+
+    output_dir.mkdir(parents=True, exist_ok=True)
+    paths: list[Path] = []
+
+    for transcript in transcripts:
+        filename = f"{transcript.participant_id}_cooked.md"
+        path = output_dir / filename
+
+        header = format_transcript_header_md(
+            participant_id=transcript.participant_id,
+            source_file=transcript.source_file,
+            session_date=str(transcript.session_date.date()),
+            duration=format_timecode(transcript.duration_seconds),
+            label="Transcript (cooked)",
+            extra_headers={
+                "PII entities redacted": str(transcript.pii_entities_found),
+            },
+        )
+
+        lines: list[str] = [header, ""]
+
+        for seg in transcript.segments:
+            tc = format_timecode(seg.start_time)
+            lines.append(
+                format_cooked_segment_md(tc, transcript.participant_id, seg.text)
+            )
+            lines.append("")
+
+        path.write_text("\n".join(lines), encoding="utf-8")
+        paths.append(path)
+        logger.info("Wrote cooked transcript (md): %s", path)
 
     return paths
 

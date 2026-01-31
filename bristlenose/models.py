@@ -256,9 +256,11 @@ class ExtractedQuote(BaseModel):
 
     def formatted(self) -> str:
         """Render the quote in final output format."""
+        from bristlenose.utils.markdown import EM_DASH, LQUOTE, RQUOTE
+
         tc = format_timecode(self.start_timecode)
         prefix = f"[{self.researcher_context}] " if self.researcher_context else ""
-        return f'{prefix}[{tc}] \u201c{self.text}\u201d \u2014 {self.participant_id}'
+        return f"{prefix}[{tc}] {LQUOTE}{self.text}{RQUOTE} {EM_DASH} {self.participant_id}"
 
 
 class ScreenCluster(BaseModel):

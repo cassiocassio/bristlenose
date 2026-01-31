@@ -20,6 +20,39 @@ Bristlenose is a local-first user-research analysis tool. It takes a folder of i
 
 CLI commands: `run` (full pipeline), `transcribe-only`, `analyze` (skip transcription), `render` (re-render from JSON, no LLM calls).
 
+### Output directory structure
+
+```
+output/
+├── raw_transcripts/          # Stage 6 output
+│   ├── p1_raw.txt            # Plain text (canonical, machine-readable)
+│   ├── p1_raw.md             # Markdown companion (human-readable)
+│   ├── p2_raw.txt
+│   └── p2_raw.md
+├── cooked_transcripts/       # Stage 7 output (PII-redacted)
+│   ├── p1_cooked.txt
+│   ├── p1_cooked.md
+│   ├── p2_cooked.txt
+│   └── p2_cooked.md
+├── intermediate/             # JSON snapshots (if write_intermediate=True)
+├── temp/                     # Extracted audio, working files
+├── research_report.md        # Final markdown report
+└── research_report.html      # Final HTML report with interactive features
+```
+
+### Transcript format conventions
+
+- **Participant codes**: Segments use `[p1]`, `[p2]` etc. — never generic role labels like `[PARTICIPANT]`
+- **Speaker labels**: Original Whisper labels (`Speaker A`, `Speaker B`) kept in parentheses in raw transcripts only
+- **Timecodes**: `MM:SS` for segments under 1 hour, `HH:MM:SS` at or above 1 hour. A long session will have mixed formats in the same file — this is correct and the parser handles both
+- **Timecodes are floats internally**: All data structures store seconds as `float`. String formatting happens only at output. Never parse formatted timecodes back within the same session
+- **`.txt` is canonical**: The parser (`_load_transcripts_from_dir`) reads only `.txt` files. `.md` files are human-readable companions, not parsed back
+- **Legacy format support**: Parser also accepts old-format files with `[PARTICIPANT]`/`[RESEARCHER]` role labels
+
+### Duplicate timecode helpers
+
+Both `models.py` and `utils/timecodes.py` define `format_timecode()` and `parse_timecode()`. They behave identically. Stage files import from one or the other — both are fine. The `utils/timecodes.py` version has a more sophisticated parser (SRT/VTT milliseconds support).
+
 ## File map
 
 | File | Role |
@@ -46,7 +79,10 @@ CLI commands: `run` (full pipeline), `transcribe-only`, `analyze` (skip transcri
 | `bristlenose/utils/markdown.py` | **Markdown style template** — single source of truth for all markdown formatting (constants + formatter functions) |
 | `bristlenose/utils/text.py` | Text processing (smart quotes, disfluency removal) |
 | `bristlenose/utils/timecodes.py` | Timecode parsing and formatting |
-| `tests/` | pytest test suite |
+| `tests/test_markdown.py` | Tests for `utils/markdown.py` — constants, formatters, quote blocks, friction items (25 tests) |
+| `tests/test_transcript_writing.py` | Tests for transcript writers (.txt, .md) and parser round-trips, incl. mixed timecodes (22 tests) |
+| `tests/test_models.py` | Tests for timecode format/parse, round-trips, ExtractedQuote (12 tests) |
+| `tests/test_text_utils.py` | Tests for smart quotes, disfluency removal, text cleanup (11 tests) |
 | `.github/workflows/ci.yml` | CI: ruff, mypy, pytest on push/PR |
 | `.github/workflows/release.yml` | Release: build → PyPI → GitHub Release → Homebrew dispatch |
 | `.github/workflows/homebrew-tap/update-formula.yml` | Reference copy of tap repo workflow (authoritative copy lives in `homebrew-bristlenose`) |

@@ -63,7 +63,7 @@ CLI commands: `run` (full pipeline), `transcribe-only`, `analyze` (skip transcri
 
 API keys via env vars (`ANTHROPIC_API_KEY` or `OPENAI_API_KEY`), `.env` file, or `bristlenose.toml`. Prefix with `BRISTLENOSE_` for namespaced variants.
 
-## Current status (v0.3.3, Jan 2026)
+## Current status (v0.3.4, Jan 2026)
 
 Core pipeline complete and published to PyPI + Homebrew. Active roadmap is UI polish and report interactivity improvements. See `TODO.md` for full task list.
 

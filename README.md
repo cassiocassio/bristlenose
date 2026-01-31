@@ -179,6 +179,10 @@ Edit `bristlenose/__init__.py` (the single source of truth for version), commit,
 
 ## Changelog
 
+### 0.3.4
+
+- Participants table: renamed columns (ID→Session, Session date→Date), added Start time column, date format now dd-mm-yyyy
+
 ### 0.3.3
 
 - README rewrite: install moved up, new quick start section, changelog with all versions, dev setup leads with git clone

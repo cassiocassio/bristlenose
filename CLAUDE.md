@@ -28,8 +28,11 @@ CLI commands: `run` (full pipeline), `transcribe-only`, `analyze` (skip transcri
 | `bristlenose/config.py` | Pydantic settings (env vars, .env, bristlenose.toml) |
 | `bristlenose/models.py` | Data models and enums |
 | `bristlenose/pipeline.py` | Pipeline orchestrator |
+| `bristlenose/__main__.py` | `python -m bristlenose` entry point |
 | `bristlenose/stages/` | All 12 pipeline stages |
+| `bristlenose/stages/parse_docx.py` | Parse .docx transcripts |
 | `bristlenose/stages/render_html.py` | HTML report renderer, loads CSS/JS from theme/ |
+| `bristlenose/stages/render_output.py` | Markdown report + JSON snapshots for `render` command |
 | `bristlenose/llm/prompts.py` | LLM prompt templates |
 | `bristlenose/llm/structured.py` | Pydantic schemas for structured LLM output |
 | `bristlenose/llm/client.py` | Anthropic/OpenAI client abstraction |
@@ -37,6 +40,8 @@ CLI commands: `run` (full pipeline), `transcribe-only`, `analyze` (skip transcri
 | `bristlenose/theme/atoms/` | Smallest CSS components (badge, button, input, etc.) |
 | `bristlenose/theme/js/` | 8 JS modules (storage, player, favourites, editing, tags, histogram, csv-export, main) |
 | `bristlenose/utils/hardware.py` | GPU/CPU auto-detection (MLX, CUDA, CPU fallback) |
+| `bristlenose/utils/audio.py` | Audio extraction helpers |
+| `bristlenose/utils/timecodes.py` | Timecode parsing and formatting |
 | `tests/` | pytest test suite |
 | `TODO.md` | Detailed roadmap and task tracking |
 | `CONTRIBUTING.md` | Dev setup, design system docs, release process |

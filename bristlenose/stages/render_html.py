@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import logging
+import shutil
 from collections import Counter
 from datetime import datetime
 from html import escape
@@ -30,6 +31,8 @@ logger = logging.getLogger(__name__)
 _CSS_VERSION = "bristlenose-theme v6"
 
 _THEME_DIR = Path(__file__).resolve().parent.parent / "theme"
+_LOGO_PATH = _THEME_DIR / "images" / "bristlenose.png"
+_LOGO_FILENAME = "bristlenose-logo.png"
 
 # Files concatenated in atomic-design order.
 _THEME_FILES: list[str] = [
@@ -40,6 +43,7 @@ _THEME_FILES: list[str] = [
     "atoms/toast.css",
     "atoms/timecode.css",
     "atoms/bar.css",
+    "atoms/logo.css",
     "molecules/badge-row.css",
     "molecules/bar-group.css",
     "molecules/quote-actions.css",
@@ -150,6 +154,11 @@ def render_html(
     css_path.write_text(_get_default_css(), encoding="utf-8")
     logger.info("Wrote theme: %s", css_path)
 
+    # Copy logo image alongside the report
+    logo_dest = output_dir / _LOGO_FILENAME
+    if _LOGO_PATH.exists():
+        shutil.copy2(_LOGO_PATH, logo_dest)
+
     # Build video/audio map for clickable timecodes
     video_map = _build_video_map(sessions)
     has_media = bool(video_map)
@@ -176,7 +185,14 @@ def render_html(
     _w("<article>")
 
     # --- Header ---
+    _w('<div class="report-header">')
     _w(f"<h1>{_esc(project_name)}</h1>")
+    if logo_dest.exists():
+        _w(
+            f'<img class="report-logo" src="{_LOGO_FILENAME}" '
+            f'alt="Bristlenose logo">'
+        )
+    _w("</div>")
     _w('<div class="toolbar">')
     _w(
         '<button class="toolbar-btn" id="export-favourites">'

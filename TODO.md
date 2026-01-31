@@ -27,6 +27,7 @@ Last updated: 30 Jan 2026
 - [x] README with install instructions (brew, pipx, uv)
 - [x] CONTRIBUTING.md with release process and design system documented
 - [x] (0.3.2) Tag auto-suggest: don't offer tags the quote already has
+- [x] Project logo in report header (top-right, copied alongside HTML)
 
 ---
 

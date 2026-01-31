@@ -1,0 +1,31 @@
+/* Atom: logo — project logo positioned in the report header */
+
+.report-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: var(--bn-space-lg);
+}
+
+.report-header h1 {
+    margin: 0;
+}
+
+.report-logo {
+    width: 80px;
+    height: auto;
+    flex-shrink: 0;
+    opacity: 0.85;
+    transition: opacity var(--bn-transition-normal);
+}
+
+.report-logo:hover {
+    opacity: 1;
+}
+
+@media print {
+    .report-logo {
+        width: 60px;
+        opacity: 1;
+    }
+}

@@ -43,6 +43,23 @@ output/
 - **`SpeakerInfo` import**: defined in `identify_speakers.py`. Other modules import it under `TYPE_CHECKING` to avoid circular imports (e.g. `people.py` uses `if TYPE_CHECKING: from bristlenose.stages.identify_speakers import SpeakerInfo`)
 - **Structured output**: `SpeakerRoleItem` in `llm/structured.py` has `person_name` and `job_title` fields (both default `""` for backward compatibility with existing LLM responses)
 
+## LLM concurrency in stages
+
+Stages 8 and 9 accept a `concurrency: int = 1` kwarg, passed by the pipeline from `settings.llm_concurrency`. The pattern:
+
+```python
+semaphore = asyncio.Semaphore(concurrency)
+async def _process(transcript):
+    async with semaphore:
+        return await _segment_single(transcript, llm_client)
+return list(await asyncio.gather(*(_process(t) for t in transcripts)))
+```
+
+- **Default 1**: behaves identically to the old sequential loop (backward compatible, useful for tests)
+- **Pipeline passes 3**: `concurrency=self.settings.llm_concurrency` in both `run()` and `run_analysis_only()`
+- **Error isolation**: each `_process()` closure has its own try/except. A failed participant doesn't cancel siblings (asyncio.gather default behaviour — if one raises, others still complete since the exception is caught inside `_process`)
+- **No cross-stage semaphore**: each stage creates its own semaphore. Stages still execute sequentially in the pipeline
+
 ## Duplicate timecode helpers
 
 Both `models.py` and `utils/timecodes.py` define `format_timecode()` and `parse_timecode()`. They behave identically. Stage files import from one or the other — both are fine. The `utils/timecodes.py` version has a more sophisticated parser (SRT/VTT milliseconds support).

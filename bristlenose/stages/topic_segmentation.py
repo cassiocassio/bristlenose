@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import logging
 
 from bristlenose.llm.client import LLMClient
@@ -21,48 +22,47 @@ logger = logging.getLogger(__name__)
 async def segment_topics(
     transcripts: list[PiiCleanTranscript],
     llm_client: LLMClient,
+    concurrency: int = 1,
 ) -> list[SessionTopicMap]:
     """Identify topic/screen transitions in each transcript.
 
     Args:
         transcripts: PII-cleaned transcripts to analyse.
         llm_client: LLM client for analysis.
+        concurrency: Max concurrent LLM calls (default 1 = sequential).
 
     Returns:
         List of SessionTopicMap objects, one per transcript.
     """
-    topic_maps: list[SessionTopicMap] = []
+    semaphore = asyncio.Semaphore(concurrency)
 
-    for transcript in transcripts:
-        logger.info(
-            "%s: Segmenting topics (duration=%.0fs)",
-            transcript.participant_id,
-            transcript.duration_seconds,
-        )
-
-        try:
-            topic_map = await _segment_single(transcript, llm_client)
-            topic_maps.append(topic_map)
+    async def _process(transcript: PiiCleanTranscript) -> SessionTopicMap:
+        async with semaphore:
             logger.info(
-                "%s: Found %d topic boundaries",
+                "%s: Segmenting topics (duration=%.0fs)",
                 transcript.participant_id,
-                len(topic_map.boundaries),
+                transcript.duration_seconds,
             )
-        except Exception as exc:
-            logger.error(
-                "%s: Topic segmentation failed: %s",
-                transcript.participant_id,
-                exc,
-            )
-            # Return empty map so pipeline can continue
-            topic_maps.append(
-                SessionTopicMap(
+            try:
+                topic_map = await _segment_single(transcript, llm_client)
+                logger.info(
+                    "%s: Found %d topic boundaries",
+                    transcript.participant_id,
+                    len(topic_map.boundaries),
+                )
+                return topic_map
+            except Exception as exc:
+                logger.error(
+                    "%s: Topic segmentation failed: %s",
+                    transcript.participant_id,
+                    exc,
+                )
+                return SessionTopicMap(
                     participant_id=transcript.participant_id,
                     boundaries=[],
                 )
-            )
 
-    return topic_maps
+    return list(await asyncio.gather(*(_process(t) for t in transcripts)))
 
 
 async def _segment_single(

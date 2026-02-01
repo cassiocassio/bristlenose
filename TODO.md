@@ -161,6 +161,39 @@ Full design doc: `docs/design-doctor-and-snap.md`
 - [ ] `--prefetch-model` flag — download Whisper model and exit (for slow connections, CI setups)
 - [ ] Homebrew formula: add `post_install` for spaCy model download, improve caveats
 
+### Performance (audited Feb 2026)
+
+Full audit done. Stage concurrency (item 1) is shipped. Remaining items ranked by impact.
+
+#### Done
+
+- [x] **Concurrent per-participant LLM calls** — stages 5b, 8, 9 use `asyncio.Semaphore(llm_concurrency)` + `asyncio.gather()` to run up to 3 concurrent API calls per stage. Stages 10+11 (clustering + theming) also run concurrently via `asyncio.gather()`. Wires up the existing `llm_concurrency: int = 3` config. For 8 participants, estimated ~2.5x speedup on LLM-bound time (~220s → ~85s)
+
+#### Quick wins (minimal code changes)
+
+- [ ] **Compact JSON in LLM prompts** — `quote_clustering.py:54` and `thematic_grouping.py:53` use `json.dumps(indent=2)` to serialize quotes for the LLM prompt. Switching to `indent=None` (or `separators=(",",":")`) saves 10–20% input tokens on the two cross-participant calls. Change: 2 lines
+- [ ] **Cache `system_profiler` results** — `utils/hardware.py` runs `system_profiler SPHardwareDataType` and `system_profiler SPDisplaysDataType` on every startup (~2–4s on macOS). Results don't change between runs. Cache to `~/.config/bristlenose/.hardware-cache.json` with a TTL (e.g. 24h). Change: ~30 lines in `hardware.py`
+- [ ] **Skip logo copy when unchanged** — `render_html.py` runs `shutil.copy2()` for both logo images on every render. Add a size/mtime check first. Minor savings but avoids unnecessary disk writes
+
+#### Medium effort (one module each)
+
+- [ ] **Pipeline stages 8→9 per participant** — instead of "all stage 8 then all stage 9", run `_segment_single(p) → _extract_single(p)` as a chained coroutine per participant, then gather all. This lets participant B's topic segmentation overlap with participant A's quote extraction. Max utilisation of the `llm_concurrency` window across both stages. Change: refactor the stage 8→9 calls in `pipeline.py` into a per-participant async chain, bounded by the same semaphore
+- [ ] **Pass transcript data to renderer** — `render_transcript_pages()` in `render_html.py:652` re-reads `.txt` files from disk via `load_transcripts_from_dir()`, even though the full pipeline had all transcript data in memory during stages 6–11. Thread `clean_transcripts` through to the render call to avoid redundant disk I/O. Change: add a `transcripts` parameter to `render_html()` and `render_transcript_pages()`, pass it from `pipeline.py`
+- [ ] **Concurrent FFmpeg audio extraction** — `stages/extract_audio.py:36` processes video files one at a time. Use `asyncio.create_subprocess_exec()` (or `asyncio.to_thread()` wrapping the existing subprocess) to run multiple FFmpeg instances in parallel. Bounded by number of CPU cores. Change: refactor `extract_audio_for_sessions()` to async with gather
+- [ ] **Temp WAV cleanup** — extracted WAV files in `output/temp/` are never cleaned up. At ~115 MB per hour of audio per participant, 10 one-hour interviews leave ~1.15 GB of temp files. Add a cleanup step after transcription (or a `--clean-temp` flag). Change: add `shutil.rmtree(temp_dir)` after `_gather_all_segments` in `pipeline.py`, guarded by a config flag
+
+#### Larger effort (new subsystem)
+
+- [ ] **LLM response cache** — hash `(transcript content + prompt template + model name)` → store response JSON in `output/intermediate/cache/`. On `analyze` re-runs with unchanged transcripts, skip the API call and return cached response. Benefits: saves money and time on re-runs (e.g. after editing prompts for one stage, the other stages don't re-run). Implementation: compute SHA-256 of `(system_prompt + user_prompt + model)` in `LLMClient.analyze()`, check for cached file, write on miss. Add `--no-cache` flag to force fresh calls. Change: ~80 lines in `llm/client.py` + config flag
+- [ ] **Word timestamp pruning** — `TranscriptSegment.words: list[Word]` stores per-word timing for every segment. These are used only during transcript merging (overlap detection). After stage 6 (merge), the word lists could be dropped to free memory. For 10 one-hour interviews: ~80,000 Word objects freed. Also reduces intermediate JSON size. Change: add a `strip_word_timestamps()` pass after merge in `pipeline.py`
+
+#### Not worth optimising (documented for completeness)
+
+- **Whisper transcription is sequential**: GPU is already saturated by a single transcription. Parallelising wouldn't help on single-GPU machines. On CPU-only builds, `asyncio.to_thread()` could help for multi-file runs but the speedup is marginal vs the total transcription time
+- **CSS/JS reads (32 small files)**: already lazy-cached in module-level globals. Only read once per process. Not a bottleneck
+- **Intermediate JSON `indent=2` on disk**: adds ~15% file size vs compact JSON, but these files are for human debugging. Keep pretty-printed
+- **Pydantic `model_dump()` serialisation cost**: called for every model when writing intermediate JSON. Profiling shows this is <100ms even for large quote lists. Not worth optimising
+
 ### Packaging (partially done)
 
 - [x] PyPI (`pipx install bristlenose`)

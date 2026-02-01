@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import logging
 
 from bristlenose.llm.client import LLMClient
@@ -28,6 +29,7 @@ async def extract_quotes(
     topic_maps: list[SessionTopicMap],
     llm_client: LLMClient,
     min_quote_words: int = 5,
+    concurrency: int = 1,
 ) -> list[ExtractedQuote]:
     """Extract verbatim quotes from all transcripts.
 
@@ -36,6 +38,7 @@ async def extract_quotes(
         topic_maps: Topic boundaries for each transcript.
         llm_client: LLM client for analysis.
         min_quote_words: Minimum word count for a quote to be included.
+        concurrency: Max concurrent LLM calls (default 1 = sequential).
 
     Returns:
         List of all extracted quotes across all sessions.
@@ -45,33 +48,40 @@ async def extract_quotes(
         tm.participant_id: tm for tm in topic_maps
     }
 
-    all_quotes: list[ExtractedQuote] = []
+    semaphore = asyncio.Semaphore(concurrency)
 
-    for transcript in transcripts:
-        logger.info(
-            "%s: Extracting quotes",
-            transcript.participant_id,
-        )
-
-        topic_map = topic_map_lookup.get(transcript.participant_id)
-
-        try:
-            quotes = await _extract_single(
-                transcript, topic_map, llm_client, min_quote_words
-            )
-            all_quotes.extend(quotes)
+    async def _process(
+        transcript: PiiCleanTranscript,
+    ) -> list[ExtractedQuote]:
+        async with semaphore:
             logger.info(
-                "%s: Extracted %d quotes",
+                "%s: Extracting quotes",
                 transcript.participant_id,
-                len(quotes),
             )
-        except Exception as exc:
-            logger.error(
-                "%s: Quote extraction failed: %s",
-                transcript.participant_id,
-                exc,
-            )
+            topic_map = topic_map_lookup.get(transcript.participant_id)
+            try:
+                quotes = await _extract_single(
+                    transcript, topic_map, llm_client, min_quote_words
+                )
+                logger.info(
+                    "%s: Extracted %d quotes",
+                    transcript.participant_id,
+                    len(quotes),
+                )
+                return quotes
+            except Exception as exc:
+                logger.error(
+                    "%s: Quote extraction failed: %s",
+                    transcript.participant_id,
+                    exc,
+                )
+                return []
 
+    results = await asyncio.gather(*(_process(t) for t in transcripts))
+    # Flatten per-participant quote lists into a single list
+    all_quotes: list[ExtractedQuote] = []
+    for quotes in results:
+        all_quotes.extend(quotes)
     return all_quotes
 
 

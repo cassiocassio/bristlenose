@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import logging
 from pathlib import Path
 
@@ -105,14 +106,26 @@ class Pipeline:
             # ── Stage 5b: Speaker role identification ────────────────
             task = progress.add_task("Identifying speakers...", total=None)
             llm_client = LLMClient(self.settings)
+            concurrency = self.settings.llm_concurrency
 
-            all_speaker_infos: dict[str, list] = {}
-            for pid, segments in session_segments.items():
-                # Heuristic pass first
+            # Heuristic pass (synchronous) for all participants first
+            for segments in session_segments.values():
                 identify_speaker_roles_heuristic(segments)
-                # LLM refinement (also extracts names/titles)
-                infos = await identify_speaker_roles_llm(segments, llm_client)
-                all_speaker_infos[pid] = infos
+
+            # LLM refinement concurrently (bounded by llm_concurrency)
+            _sem_5b = asyncio.Semaphore(concurrency)
+
+            async def _identify(
+                pid: str, segments: list[TranscriptSegment],
+            ) -> tuple[str, list]:
+                async with _sem_5b:
+                    infos = await identify_speaker_roles_llm(segments, llm_client)
+                    return pid, infos
+
+            _results_5b = await asyncio.gather(
+                *(_identify(p, s) for p, s in session_segments.items())
+            )
+            all_speaker_infos: dict[str, list] = dict(_results_5b)
 
             progress.remove_task(task)
 
@@ -148,7 +161,9 @@ class Pipeline:
 
             # ── Stage 8: Topic segmentation ──────────────────────────
             task = progress.add_task("Segmenting topics...", total=None)
-            topic_maps = await segment_topics(clean_transcripts, llm_client)
+            topic_maps = await segment_topics(
+                clean_transcripts, llm_client, concurrency=concurrency,
+            )
             if self.settings.write_intermediate:
                 write_intermediate_json(topic_maps, "topic_boundaries.json", output_dir)
             progress.remove_task(task)
@@ -160,22 +175,20 @@ class Pipeline:
                 topic_maps,
                 llm_client,
                 min_quote_words=self.settings.min_quote_words,
+                concurrency=concurrency,
             )
             if self.settings.write_intermediate:
                 write_intermediate_json(all_quotes, "extracted_quotes.json", output_dir)
             progress.remove_task(task)
 
-            # ── Stage 10: Cluster by screen ──────────────────────────
-            task = progress.add_task("Clustering by screen...", total=None)
-            screen_clusters = await cluster_by_screen(all_quotes, llm_client)
+            # ── Stages 10+11: Cluster by screen + thematic grouping ──
+            task = progress.add_task("Clustering and grouping...", total=None)
+            screen_clusters, theme_groups = await asyncio.gather(
+                cluster_by_screen(all_quotes, llm_client),
+                group_by_theme(all_quotes, llm_client),
+            )
             if self.settings.write_intermediate:
                 write_intermediate_json(screen_clusters, "screen_clusters.json", output_dir)
-            progress.remove_task(task)
-
-            # ── Stage 11: Thematic grouping ──────────────────────────
-            task = progress.add_task("Grouping themes...", total=None)
-            theme_groups = await group_by_theme(all_quotes, llm_client)
-            if self.settings.write_intermediate:
                 write_intermediate_json(theme_groups, "theme_groups.json", output_dir)
             progress.remove_task(task)
 
@@ -342,20 +355,26 @@ class Pipeline:
             return self._empty_result(output_dir)
 
         llm_client = LLMClient(self.settings)
+        concurrency = self.settings.llm_concurrency
 
-        topic_maps = await segment_topics(clean_transcripts, llm_client)
+        topic_maps = await segment_topics(
+            clean_transcripts, llm_client, concurrency=concurrency,
+        )
         if self.settings.write_intermediate:
             write_intermediate_json(topic_maps, "topic_boundaries.json", output_dir)
 
         all_quotes = await extract_quotes(
             clean_transcripts, topic_maps, llm_client,
             min_quote_words=self.settings.min_quote_words,
+            concurrency=concurrency,
         )
         if self.settings.write_intermediate:
             write_intermediate_json(all_quotes, "extracted_quotes.json", output_dir)
 
-        screen_clusters = await cluster_by_screen(all_quotes, llm_client)
-        theme_groups = await group_by_theme(all_quotes, llm_client)
+        screen_clusters, theme_groups = await asyncio.gather(
+            cluster_by_screen(all_quotes, llm_client),
+            group_by_theme(all_quotes, llm_client),
+        )
 
         # Load existing people file for display names (no recompute).
         from bristlenose.people import build_display_name_map, load_people_file

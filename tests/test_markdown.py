@@ -25,6 +25,7 @@ from bristlenose.utils.markdown import (
     SNIPPET_MAX_LENGTH,
     format_cooked_segment_md,
     format_cooked_segment_txt,
+    format_finder_date,
     format_friction_item,
     format_participant_range,
     format_quote_block,
@@ -298,3 +299,72 @@ def test_format_cooked_segment_txt() -> None:
 def test_format_cooked_segment_md() -> None:
     result = format_cooked_segment_md("00:16", "p1", "[NAME] said hi")
     assert result == "**[00:16] p1** [NAME] said hi"
+
+
+# ---------------------------------------------------------------------------
+# 8. format_finder_date
+# ---------------------------------------------------------------------------
+
+
+def test_format_finder_date_today() -> None:
+    from datetime import datetime
+
+    now = datetime(2026, 1, 31, 18, 0, 0)
+    dt = datetime(2026, 1, 31, 16, 59, 0)
+    assert format_finder_date(dt, now=now) == "Today at 16:59"
+
+
+def test_format_finder_date_today_midnight() -> None:
+    from datetime import datetime
+
+    now = datetime(2026, 1, 31, 23, 59, 0)
+    dt = datetime(2026, 1, 31, 0, 0, 0)
+    assert format_finder_date(dt, now=now) == "Today at 00:00"
+
+
+def test_format_finder_date_yesterday() -> None:
+    from datetime import datetime
+
+    now = datetime(2026, 2, 1, 10, 0, 0)
+    dt = datetime(2026, 1, 31, 17, 0, 0)
+    assert format_finder_date(dt, now=now) == "Yesterday at 17:00"
+
+
+def test_format_finder_date_yesterday_midnight() -> None:
+    from datetime import datetime
+
+    now = datetime(2026, 2, 1, 10, 0, 0)
+    dt = datetime(2026, 1, 31, 0, 0, 0)
+    assert format_finder_date(dt, now=now) == "Yesterday at 00:00"
+
+
+def test_format_finder_date_older_same_year() -> None:
+    from datetime import datetime
+
+    now = datetime(2026, 2, 1, 10, 0, 0)
+    dt = datetime(2026, 1, 29, 20, 56, 0)
+    assert format_finder_date(dt, now=now) == "29 Jan 2026 at 20:56"
+
+
+def test_format_finder_date_older_different_year() -> None:
+    from datetime import datetime
+
+    now = datetime(2026, 2, 1, 10, 0, 0)
+    dt = datetime(2025, 12, 25, 8, 30, 0)
+    assert format_finder_date(dt, now=now) == "25 Dec 2025 at 08:30"
+
+
+def test_format_finder_date_no_zero_pad_day() -> None:
+    from datetime import datetime
+
+    now = datetime(2026, 2, 15, 10, 0, 0)
+    dt = datetime(2026, 2, 9, 8, 30, 0)
+    assert format_finder_date(dt, now=now) == "9 Feb 2026 at 08:30"
+
+
+def test_format_finder_date_two_days_ago_not_yesterday() -> None:
+    from datetime import datetime
+
+    now = datetime(2026, 2, 3, 10, 0, 0)
+    dt = datetime(2026, 2, 1, 16, 54, 0)
+    assert format_finder_date(dt, now=now) == "1 Feb 2026 at 16:54"

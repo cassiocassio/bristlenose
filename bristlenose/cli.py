@@ -419,6 +419,10 @@ def render(
         str | None,
         typer.Option("--project", "-p", help="Name of the research project (defaults to input folder name)."),
     ] = None,
+    clean: Annotated[
+        bool,
+        typer.Option("--clean", help="Accepted for consistency but ignored — render is always non-destructive."),
+    ] = False,
     verbose: Annotated[
         bool,
         typer.Option("--verbose", "-v", help="Enable verbose logging."),
@@ -429,6 +433,12 @@ def render(
     No transcription or LLM calls. Useful after CSS/JS changes or to regenerate
     reports without re-processing.
     """
+    if clean:
+        console.print(
+            "[dim]--clean ignored — render is always non-destructive "
+            "(overwrites reports only, never touches transcripts, "
+            "people.yaml, or intermediate data).[/dim]"
+        )
     if project_name is None:
         project_name = input_dir.resolve().name
 

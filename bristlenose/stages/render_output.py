@@ -25,6 +25,7 @@ from bristlenose.utils.markdown import (
     HEADING_2,
     HEADING_3,
     HORIZONTAL_RULE,
+    format_finder_date,
     format_friction_item,
     format_participant_range,
     format_quote_block,
@@ -152,50 +153,50 @@ def render_markdown(
     lines.append(HEADING_2.format(title="Appendix: Participant summary"))
     lines.append("")
 
+    now = datetime.now()
     if people and people.participants:
         lines.append(
-            "| Name | Date | Start | Duration | Words | % Words"
-            " | % Time | Role | Source file |"
+            "| ID | Name | Role | Start | Duration"
+            " | Words | Source file |"
         )
         lines.append(
-            "|------|------|------|----------|-------|---------|"
-            "--------|------|-------------|"
+            "|------|------|------|-------|----------|"
+            "-------|-------------|"
         )
         for session in sessions:
             pid = session.participant_id
-            name = _dn(pid, display_names)
             entry = people.participants.get(pid)
             if entry:
                 words = str(entry.computed.words_spoken)
-                pct_w = f"{entry.computed.pct_words:.1f}%"
-                pct_t = f"{entry.computed.pct_time_speaking:.1f}%"
+                full_name = entry.editable.full_name or "_Unnamed_"
                 role = entry.editable.role or EM_DASH
             else:
-                words = pct_w = pct_t = EM_DASH
+                words = EM_DASH
+                full_name = "_Unnamed_"
                 role = EM_DASH
             duration = _session_duration(session)
+            start = format_finder_date(session.session_date, now=now)
             source = session.files[0].path.name if session.files else EM_DASH
             lines.append(
-                f"| {name} "
-                f"| {session.session_date.strftime('%d-%m-%Y')} "
-                f"| {session.session_date.strftime('%H:%M')} "
+                f"| {pid} "
+                f"| {full_name} "
+                f"| {role} "
+                f"| {start} "
                 f"| {duration} "
                 f"| {words} "
-                f"| {pct_w} "
-                f"| {pct_t} "
-                f"| {role} "
                 f"| {source} |"
             )
     else:
-        lines.append("| Session | Date | Start | Duration | Source file |")
-        lines.append("|---------|------|------|----------|-------------|")
+        lines.append("| ID | Start | Duration | Source file |")
+        lines.append("|------|-------|----------|-------------|")
         for session in sessions:
+            pid = session.participant_id
             duration = _session_duration(session)
+            start = format_finder_date(session.session_date, now=now)
             source = session.files[0].path.name if session.files else EM_DASH
             lines.append(
-                f"| {_dn(session.participant_id, display_names)} "
-                f"| {session.session_date.strftime('%d-%m-%Y')} "
-                f"| {session.session_date.strftime('%H:%M')} "
+                f"| {pid} "
+                f"| {start} "
                 f"| {duration} "
                 f"| {source} |"
             )

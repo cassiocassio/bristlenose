@@ -21,6 +21,8 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
+    from datetime import datetime
+
     from bristlenose.models import ExtractedQuote
 
 
@@ -445,3 +447,60 @@ def format_cooked_segment_md(
     return MD_TRANSCRIPT_SEGMENT_COOKED.format(
         timecode=timecode, participant_id=participant_id, text=text,
     )
+
+
+# ---------------------------------------------------------------------------
+# Date formatting
+# ---------------------------------------------------------------------------
+
+_MONTH_ABBR = [
+    "", "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+    "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+]
+
+
+def format_finder_date(dt: datetime, *, now: datetime | None = None) -> str:
+    """Format a datetime using macOS Finder-style relative dates.
+
+    Rules (matching macOS Finder's "relative dates" display):
+
+    - **Same calendar day** as *now*: ``Today at HH:MM``
+    - **Previous calendar day**: ``Yesterday at HH:MM``
+    - **Any older date**: ``D Mon YYYY at HH:MM``
+
+    Day is *not* zero-padded.  Month is a 3-letter English abbreviation.
+    Time is 24-hour ``HH:MM``.
+
+    Args:
+        dt: The datetime to format.
+        now: Reference "current" datetime.  Defaults to
+            :func:`~datetime.datetime.now` when *None* — pass explicitly
+            in tests.
+
+    Returns:
+        Human-readable date string.
+
+    Examples::
+
+        Today at 16:59
+        Yesterday at 17:00
+        29 Jan 2026 at 20:56
+        9 Feb 2025 at 08:30
+    """
+    import datetime as _dtmod
+
+    if now is None:
+        now = _dtmod.datetime.now()
+
+    time_part = f"{dt.hour:02d}:{dt.minute:02d}"
+    dt_date = dt.date()
+    now_date = now.date()
+
+    if dt_date == now_date:
+        return f"Today at {time_part}"
+
+    if dt_date == now_date - _dtmod.timedelta(days=1):
+        return f"Yesterday at {time_part}"
+
+    month = _MONTH_ABBR[dt.month]
+    return f"{dt.day} {month} {dt.year} at {time_part}"

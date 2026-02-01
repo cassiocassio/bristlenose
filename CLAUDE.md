@@ -40,11 +40,12 @@ LLM provider: API keys via env vars (`ANTHROPIC_API_KEY` or `OPENAI_API_KEY`), `
 - **Models**: `PersonComputed` (refreshed each run) + `PersonEditable` (preserved across runs) → `PersonEntry` → `PeopleFile` — all in `bristlenose/models.py`
 - **Core logic**: `bristlenose/people.py` — load, compute, merge, write, build display name map
 - **Merge strategy**: computed fields always overwritten; editable fields always preserved; new participants added with empty defaults; old participants missing from current run are **kept** (not deleted)
-- **Display names**: `short_name` in editable fields → used as display name in reports. Resolved at render time only — canonical `participant_id` (p1, p2) stays in all data models and HTML `data-participant` attributes. Display names are cosmetic
+- **Display names**: `short_name` → used as display name in quotes/friction/journeys. `full_name` → used in participant table Name column. Resolved at render time only — canonical `participant_id` (p1, p2) stays in all data models and HTML `data-participant` attributes. Display names are cosmetic
+- **Participant table columns**: `ID | Name | Role | Start | Duration | Words | Source file`. ID shows raw `participant_id`. Name shows `full_name` (pale-grey italic "Unnamed" placeholder when empty). Start uses macOS Finder-style relative dates via `format_finder_date()` in `utils/markdown.py`
 - **Pipeline wiring**: `run()` and `run_transcription_only()` compute+write; `run_analysis_only()` and `run_render_only()` load existing for display names only
-- **Key workflow**: user edits `short_name` in `people.yaml` → `bristlenose render` → report uses new names
+- **Key workflow**: user edits `short_name` / `full_name` in `people.yaml` → `bristlenose render` → report uses new names
 - **YAML comments**: inline comments added by users are lost on re-write (PyYAML limitation, documented in file header)
-- **Future**: web UI for editing people names; LLM-based auto name/role extraction (see TODO.md)
+- **Future**: editable participant names in HTML report; web UI for editing people; LLM-based auto name/role extraction (see TODO.md)
 
 ## PII redaction
 
@@ -59,6 +60,8 @@ PII redaction is **off by default** (transcripts retain PII). Opt in with `--red
 - The repo directory is `/Users/cassio/Code/gourani` (legacy name, package is bristlenose)
 - Both `models.py` and `utils/timecodes.py` define `format_timecode()` / `parse_timecode()` — they behave identically, stage files import from either
 - `PipelineResult` references `PeopleFile` but is defined before it in `models.py` — resolved with `PipelineResult.model_rebuild()` after PeopleFile definition
+- `format_finder_date()` in `utils/markdown.py` uses a local `import datetime as _dtmod` inside the function body because `from __future__ import annotations` makes the type hints string-only; `datetime` is in `TYPE_CHECKING` for the linter but not available at runtime otherwise
+- `render --clean` is accepted but ignored — render is always non-destructive (overwrites HTML/markdown reports only, never touches people.yaml, transcripts, or intermediate JSON)
 - For transcript/timecode gotchas, see `bristlenose/stages/CLAUDE.md`
 
 ## Reference docs (read when working in these areas)

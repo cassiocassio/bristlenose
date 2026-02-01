@@ -38,7 +38,9 @@ Last updated: 31 Jan 2026 (v0.4.1)
 - [x] Man page (`man/bristlenose.1`) — full groff man page covering all commands, options, config, examples; included in sdist, Homebrew formula installs to `man1/`
 - [x] (0.4.0) Dark mode — CSS `light-dark()` function, follows OS/browser preference by default, `color_scheme` config override (`auto`/`light`/`dark`), `<meta name="color-scheme">` tag, `<picture>` element for dark logo, print forced to light, histogram hard-coded colours replaced with CSS tokens, 17 tests
 - [x] PII redaction default OFF — `pii_enabled: bool = False` in config; CLI flags `--redact-pii` (opt in) / `--retain-pii` (explicit default); replaced `--no-pii`; 3 tests
-- [x] People file (participant registry) — `people.yaml` in output dir; Pydantic models (`PersonComputed`, `PersonEditable`, `PersonEntry`, `PeopleFile`); `bristlenose/people.py` (load, compute, merge, write, display name map); merge strategy preserves human edits across re-runs; display names in quotes/tables/friction/journeys in both markdown and HTML reports; enriched participant table (9 columns: Name, Date, Start, Duration, Words, % Words, % Time, Role, Source); `data-participant` HTML attributes kept as canonical `participant_id` for JS; 21 new tests (14 people, 3 PII, 2 models, 2 markdown)
+- [x] People file (participant registry) — `people.yaml` in output dir; Pydantic models (`PersonComputed`, `PersonEditable`, `PersonEntry`, `PeopleFile`); `bristlenose/people.py` (load, compute, merge, write, display name map); merge strategy preserves human edits across re-runs; display names in quotes/tables/friction/journeys in both markdown and HTML reports; `data-participant` HTML attributes kept as canonical `participant_id` for JS; 21 new tests (14 people, 3 PII, 2 models, 2 markdown)
+- [x] Participant table redesign — columns now `ID | Name | Role | Start | Duration | Words | Source file` (was 9 cols, now 7); ID shows raw `p1`/`p2`/`p3`; Name shows `full_name` from people.yaml (pale-grey italic "Unnamed" placeholder when empty); Role moved next to Name; Date+Start merged into single Start column with macOS Finder-style relative dates (`Today at 16:59` / `Yesterday at 17:00` / `29 Jan 2026 at 20:56`); removed % Words and % Time; `format_finder_date()` helper in `utils/markdown.py` with 8 tests
+- [x] `render --clean` accepted gracefully — flag is ignored with a reassuring message that render is always non-destructive (overwrites reports only)
 
 ---
 
@@ -107,7 +109,8 @@ Organised from easiest to hardest. The README has a condensed version; this is t
 
 ### Small (a day or two each)
 
-- [ ] Participant metadata: days of the week and times of recordings — show when each session was recorded in the participant table
+- [ ] Editable participant names in report — allow users to edit `full_name` directly in the HTML report participant table (currently shows pale-grey italic "Unnamed" placeholder when empty)
+- [ ] Participant metadata: day of the week in recordings — Start column now shows date+time (Finder-style), but could also show day name (e.g. "Mon 29 Jan 2026 at 20:56")
 - [ ] Reduce AI tag density — too many AI badges per quote; tune the LLM prompt or filter to show only the most relevant 2–3
 - [ ] Sentiment & friction as standalone sections — currently listed under Themes in the TOC but they're not themes; give them their own subsection/heading level
 - [ ] User-tags histogram: right-align bars — bars should grow from the same zero-x baseline as the AI sentiment chart so the two read side-by-side

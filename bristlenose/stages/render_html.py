@@ -22,6 +22,7 @@ from bristlenose.models import (
     ThemeGroup,
     format_timecode,
 )
+from bristlenose.utils.markdown import format_finder_date
 
 logger = logging.getLogger(__name__)
 
@@ -244,22 +245,22 @@ def render_html(
         _w("<thead><tr>")
         if people and people.participants:
             _w(
-                "<th>Name</th><th>Date</th><th>Start</th><th>Duration</th>"
-                "<th>Words</th><th>% Words</th><th>% Time</th>"
-                "<th>Role</th><th>Source file</th>"
+                "<th>ID</th><th>Name</th><th>Role</th><th>Start</th>"
+                "<th>Duration</th><th>Words</th><th>Source file</th>"
             )
         else:
-            _w("<th>Session</th><th>Date</th><th>Start</th>"
+            _w("<th>ID</th><th>Start</th>"
                "<th>Duration</th><th>Source file</th>")
         _w("</tr></thead>")
         _w("<tbody>")
+        now = datetime.now()
         for session in sessions:
             duration = _session_duration(session)
             pid = session.participant_id
-            name = _esc(_display_name(pid, display_names))
+            pid_esc = _esc(pid)
+            start = _esc(format_finder_date(session.session_date, now=now))
             if session.files:
                 source_name = _esc(session.files[0].path.name)
-                pid_esc = _esc(pid)
                 if video_map and pid in video_map:
                     source = (
                         f'<a href="#" class="timecode" '
@@ -275,27 +276,31 @@ def render_html(
             _w("<tr>")
             if people and people.participants:
                 entry = people.participants.get(pid)
+                _unnamed = (
+                    '<span style="color:var(--bn-colour-muted);'
+                    'font-style:italic">Unnamed</span>'
+                )
                 if entry:
                     words = str(entry.computed.words_spoken)
-                    pct_w = f"{entry.computed.pct_words:.1f}%"
-                    pct_t = f"{entry.computed.pct_time_speaking:.1f}%"
+                    full_name = (
+                        _esc(entry.editable.full_name)
+                        if entry.editable.full_name else _unnamed
+                    )
                     role = _esc(entry.editable.role) if entry.editable.role else "&mdash;"
                 else:
-                    words = pct_w = pct_t = "&mdash;"
+                    words = "&mdash;"
+                    full_name = _unnamed
                     role = "&mdash;"
-                _w(f"<td>{name}</td>")
-                _w(f"<td>{session.session_date.strftime('%d-%m-%Y')}</td>")
-                _w(f"<td>{session.session_date.strftime('%H:%M')}</td>")
+                _w(f"<td>{pid_esc}</td>")
+                _w(f"<td>{full_name}</td>")
+                _w(f"<td>{role}</td>")
+                _w(f"<td>{start}</td>")
                 _w(f"<td>{duration}</td>")
                 _w(f"<td>{words}</td>")
-                _w(f"<td>{pct_w}</td>")
-                _w(f"<td>{pct_t}</td>")
-                _w(f"<td>{role}</td>")
                 _w(f"<td>{source}</td>")
             else:
-                _w(f"<td>{name}</td>")
-                _w(f"<td>{session.session_date.strftime('%d-%m-%Y')}</td>")
-                _w(f"<td>{session.session_date.strftime('%H:%M')}</td>")
+                _w(f"<td>{pid_esc}</td>")
+                _w(f"<td>{start}</td>")
                 _w(f"<td>{duration}</td>")
                 _w(f"<td>{source}</td>")
             _w("</tr>")

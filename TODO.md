@@ -1,6 +1,6 @@
 # Bristlenose — Where I Left Off
 
-Last updated: 1 Feb 2026 (v0.6.4, compact JSON + VideoToolbox hwaccel)
+Last updated: 1 Feb 2026 (v0.6.4, compact JSON + VideoToolbox hwaccel + concurrent extraction)
 
 ---
 
@@ -180,7 +180,7 @@ Full audit done. Stage concurrency (item 1) is shipped. Remaining items ranked b
 
 - [ ] **Pipeline stages 8→9 per participant** — instead of "all stage 8 then all stage 9", run `_segment_single(p) → _extract_single(p)` as a chained coroutine per participant, then gather all. This lets participant B's topic segmentation overlap with participant A's quote extraction. Max utilisation of the `llm_concurrency` window across both stages. Change: refactor the stage 8→9 calls in `pipeline.py` into a per-participant async chain, bounded by the same semaphore
 - [ ] **Pass transcript data to renderer** — `render_transcript_pages()` in `render_html.py:652` re-reads `.txt` files from disk via `load_transcripts_from_dir()`, even though the full pipeline had all transcript data in memory during stages 6–11. Thread `clean_transcripts` through to the render call to avoid redundant disk I/O. Change: add a `transcripts` parameter to `render_html()` and `render_transcript_pages()`, pass it from `pipeline.py`
-- [ ] **Concurrent FFmpeg audio extraction** — `stages/extract_audio.py:36` processes video files one at a time. Use `asyncio.create_subprocess_exec()` (or `asyncio.to_thread()` wrapping the existing subprocess) to run multiple FFmpeg instances in parallel. Bounded by number of CPU cores. Hardware decode (VideoToolbox) already in place — stacks with concurrency. Change: refactor `extract_audio_for_sessions()` to async with gather
+- [x] **Concurrent FFmpeg audio extraction** — `extract_audio_for_sessions()` is now async with `asyncio.Semaphore(4)` + `asyncio.gather()`. Blocking `subprocess.run` calls wrapped in `asyncio.to_thread()`. Up to 4 FFmpeg processes in parallel, stacks with VideoToolbox hardware decode. Default of 4 is optimal across all Apple Silicon (M1–M4 Ultra) — bottleneck is the shared media engine, not CPU cores
 - [ ] **Temp WAV cleanup** — extracted WAV files in `output/temp/` are never cleaned up. At ~115 MB per hour of audio per participant, 10 one-hour interviews leave ~1.15 GB of temp files. Add a cleanup step after transcription (or a `--clean-temp` flag). Change: add `shutil.rmtree(temp_dir)` after `_gather_all_segments` in `pipeline.py`, guarded by a config flag
 
 #### Larger effort (new subsystem)

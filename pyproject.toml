@@ -6,6 +6,7 @@ build-backend = "hatchling.build"
 name = "bristlenose"
 dynamic = ["version"]
 description = "User-research transcription and quote extraction engine"
+authors = [{name = "Martin Storey", email = "martin@cassiocassio.co.uk"}]
 requires-python = ">=3.10"
 license = "AGPL-3.0-only"
 

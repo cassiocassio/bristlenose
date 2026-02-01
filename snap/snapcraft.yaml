@@ -1,0 +1,60 @@
+name: bristlenose
+base: core24
+confinement: classic
+grade: stable
+license: AGPL-3.0-only
+adopt-info: bristlenose
+title: Bristlenose
+website: https://github.com/cassiocassio/bristlenose
+source-code: https://github.com/cassiocassio/bristlenose
+issues: https://github.com/cassiocassio/bristlenose/issues
+contact: martin@cassiocassio.co.uk
+
+summary: User-research transcription and quote extraction engine
+description: |
+  Bristlenose takes a folder of interview recordings and produces a
+  browsable HTML report with extracted quotes, themes, sentiment,
+  friction points, and user journeys. Everything runs locally.
+  LLM calls go to Anthropic or OpenAI APIs.
+
+apps:
+  bristlenose:
+    command: bin/bristlenose
+    environment:
+      LANG: C.UTF-8
+      LC_ALL: C.UTF-8
+      PATH: $SNAP/usr/bin:$SNAP/bin:$PATH
+      PYTHONPATH: $SNAP/lib/python3.12/site-packages
+      PYTHONHOME: $SNAP/usr
+
+parts:
+  bristlenose:
+    plugin: python
+    source: .
+    python-packages:
+      - .
+    stage-packages:
+      - ffmpeg
+      - libsndfile1
+      - python3-minimal
+      - python3.12-minimal
+      - libpython3.12-stdlib
+      - libpython3.12-minimal
+      - python3-venv
+    build-packages:
+      - python3-dev
+      - build-essential
+    override-build: |
+      craftctl default
+      # Read version from the package and set snap metadata.
+      VERSION=$($CRAFT_PART_INSTALL/bin/python3 -c "import bristlenose; print(bristlenose.__version__)")
+      craftctl set version="$VERSION"
+      # Download spaCy model into the snap's Python environment so
+      # --redact-pii works out of the box without user action.
+      $CRAFT_PART_INSTALL/bin/python3 -m spacy download en_core_web_sm
+
+platforms:
+  amd64:
+    build-on: [amd64]
+  arm64:
+    build-on: [arm64]

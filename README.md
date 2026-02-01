@@ -55,6 +55,9 @@ Requires ffmpeg and an API key from [Anthropic](https://console.anthropic.com/se
 # macOS (Homebrew) -- recommended, handles ffmpeg + Python for you
 brew install cassiocassio/bristlenose/bristlenose
 
+# Ubuntu / Linux (snap) -- bundles ffmpeg and all dependencies
+sudo snap install bristlenose --classic
+
 # macOS / Linux / Windows (pipx)
 pipx install bristlenose
 
@@ -293,12 +296,14 @@ Edit `bristlenose/__init__.py` (the single source of truth for version), commit,
 - .docx export
 - Edit writeback to transcript files
 - Multi-participant session support
-- Native installers for Ubuntu (Snap -- in progress) and Windows
+- Native installer for Windows
 
 Priorities may shift. If something is missing that matters to you, [open an issue](https://github.com/cassiocassio/bristlenose/issues).
 
 ---
 
 ## Licence
+
+Copyright (C) 2025-2026 Martin Storey (<martin@cassiocassio.co.uk>)
 
 AGPL-3.0. See [LICENSE](LICENSE) and [CONTRIBUTING.md](CONTRIBUTING.md).

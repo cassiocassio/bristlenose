@@ -88,7 +88,7 @@ def _help_overview() -> None:
     console.print("  bristlenose help workflows    Common usage patterns")
     console.print("  bristlenose <command> --help  Detailed options for a command")
     console.print()
-    console.print("[dim]https://github.com/cassiocassio/bristlenose[/dim]")
+    console.print("[dim]By Martin Storey · https://github.com/cassiocassio/bristlenose[/dim]")
 
 
 def _help_commands() -> None:

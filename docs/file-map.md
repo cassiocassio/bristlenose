@@ -74,13 +74,21 @@ All 12 stages of the pipeline, from ingest to render.
 | `tests/test_dark_mode.py` | Dark mode: CSS tokens, HTML attributes, logo switching, config (17 tests) |
 | `tests/test_text_utils.py` | Smart quotes, disfluency removal, text cleanup (11 tests) |
 
+## Snap packaging
+
+| File | Role |
+|------|------|
+| `snap/snapcraft.yaml` | Snap recipe: classic confinement, core24, Python plugin, bundles FFmpeg + spaCy model |
+
 ## CI/CD and docs
 
 | File | Role |
 |------|------|
 | `.github/workflows/ci.yml` | CI: ruff, mypy, pytest on push/PR |
 | `.github/workflows/release.yml` | Release: build → PyPI → GitHub Release → Homebrew dispatch |
+| `.github/workflows/snap.yml` | Snap: build → edge (on push to main) / stable (on v* tags) |
 | `.github/workflows/homebrew-tap/update-formula.yml` | Reference copy of tap repo workflow (authoritative copy lives in `homebrew-bristlenose`) |
-| `docs/release.md` | Full release pipeline, secrets, Homebrew tap details |
+| `docs/release.md` | Full release pipeline, secrets, Homebrew tap details, Snap Store setup |
+| `docs/design-doctor-and-snap.md` | Design doc: doctor command + snap packaging (includes implementation notes and local build workflow) |
 | `TODO.md` | Detailed roadmap and task tracking |
 | `CONTRIBUTING.md` | Dev setup, design system docs, release process |

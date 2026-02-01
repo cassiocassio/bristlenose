@@ -7,10 +7,10 @@ Thanks for your interest in contributing!
 By submitting a pull request or patch to this project, you agree that:
 
 1. You have the right to assign the contribution.
-2. You grant the project maintainer (Cassio) a perpetual, worldwide,
-   irrevocable, royalty-free licence to use, modify, sublicence, and
-   relicence your contribution — including under licences other than
-   AGPL-3.0.
+2. You grant the project maintainer (Martin Storey, martin@cassiocassio.co.uk)
+   a perpetual, worldwide, irrevocable, royalty-free licence to use, modify,
+   sublicence, and relicence your contribution — including under licences
+   other than AGPL-3.0.
 3. Your contribution is provided as-is, without warranty.
 
 This allows the maintainer to offer commercial or dual-licence versions
@@ -54,6 +54,8 @@ bristlenose/          # main package
     index.css         # documents concatenation order
   utils/
     hardware.py       # GPU/CPU detection
+snap/
+  snapcraft.yaml      # Snap recipe (classic confinement, core24 base)
 tests/
 pyproject.toml        # package metadata, deps, tool config (hatchling build)
 ```
@@ -171,6 +173,6 @@ git tag vX.Y.Z
 git push origin main --tags
 ```
 
-GitHub Actions handles the rest: CI → PyPI publish → GitHub Release → Homebrew tap update.
+GitHub Actions handles the rest: CI → PyPI publish → GitHub Release → Homebrew tap update. The snap workflow also triggers: edge on push to main, stable on tags.
 
-For the full release pipeline details, cross-repo topology, secrets, and Homebrew tap automation, see [`docs/release.md`](docs/release.md).
+For the full release pipeline details, cross-repo topology, secrets, Homebrew tap automation, and Snap Store setup, see [`docs/release.md`](docs/release.md).

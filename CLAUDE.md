@@ -86,6 +86,22 @@ Each participant gets a dedicated HTML page (`transcript_p1.html`, etc.) showing
 - **Rich formatting**: `ok` = dim green, `!!` = bold yellow, `--` = dim grey. Feels like `git status`
 - **Design doc**: `docs/design-doctor-and-snap.md`
 
+## Snap packaging
+
+`snap/snapcraft.yaml` builds a classic-confinement snap for Linux. `.github/workflows/snap.yml` builds on CI and publishes to the Snap Store.
+
+- **Recipe**: `snap/snapcraft.yaml` — core24 base, Python plugin, bundles FFmpeg + spaCy model + all Python deps
+- **CI**: `.github/workflows/snap.yml` — edge on push to main, stable on v* tags, build-only on PRs
+- **Version**: uses `adopt-info` + `craftctl set version=...` to read from `bristlenose/__init__.py` at build time — no manual version in snapcraft.yaml
+- **Python path wiring**: the snap must set `PATH`, `PYTHONPATH`, and `PYTHONHOME` in the app environment block. Without all three, the pip-generated shim script finds the system Python instead of the snap's bundled Python and crashes with `ModuleNotFoundError`. This is the #1 gotcha
+- **Snap size**: ~307 MB (larger than estimated 130-160 MB due to FFmpeg's full dependency tree). Normal for the Store
+- **Local testing**: requires Multipass 1.16.1+ on macOS (older versions have broken VM boot on Apple Silicon). Use `multipass launch lts` (not `noble`). Build with `sudo snapcraft --destructive-mode` inside the VM. Install with `sudo snap install --dangerous --classic ./bristlenose_*.snap`
+- **Architecture**: CI builds amd64. Local Multipass on Apple Silicon builds arm64. Cross-compilation not possible for Python wheels with native C extensions
+- **Install method detection**: `$SNAP` env var is set inside the snap runtime → `detect_install_method()` in `doctor_fixes.py` returns `"snap"`
+- **Pre-launch steps** (manual, one-off): register snap name, request classic confinement approval at forum.snapcraft.io, export store credentials, add `SNAPCRAFT_STORE_CREDENTIALS` to GitHub secrets
+- **Design doc**: `docs/design-doctor-and-snap.md` — full implementation notes, gotchas, local build workflow
+- **Release process**: `docs/release.md` — snap section covers channels, manual operations, first-time setup
+
 ## Gotchas
 
 - The repo directory is `/Users/cassio/Code/gourani` (legacy name, package is bristlenose)
@@ -133,4 +149,4 @@ When the user signals end of session, **proactively offer to run this checklist*
 
 ## Current status (v0.6.0, Feb 2026)
 
-Core pipeline complete and published to PyPI + Homebrew. v0.6.0 adds `bristlenose doctor` (dependency health checks with guided recovery, first-run auto-doctor, pre-flight gate, install-method-aware fix messages). v0.5.0 added per-participant transcript pages with deep-link anchors from quote attributions. Next up: Snap packaging for Linux (classic confinement, ~150 MB, full-featured). Design doc at `docs/design-doctor-and-snap.md`. See `TODO.md` for full task list.
+Core pipeline complete and published to PyPI + Homebrew + Snap (pending store registration). v0.6.0 adds `bristlenose doctor` (dependency health checks with guided recovery, first-run auto-doctor, pre-flight gate, install-method-aware fix messages) and Snap packaging for Linux (classic confinement, ~307 MB, bundles FFmpeg + faster-whisper + spaCy). v0.5.0 added per-participant transcript pages with deep-link anchors from quote attributions. Next up: register snap name, request classic confinement approval, first edge channel publish. See `TODO.md` for full task list.

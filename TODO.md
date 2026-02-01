@@ -155,7 +155,7 @@ Full design doc: `docs/design-doctor-and-snap.md`
 
 - [x] PyPI (`pipx install bristlenose`)
 - [x] Homebrew tap (`brew install cassiocassio/bristlenose/bristlenose`)
-- [ ] Snap for Ubuntu/Linux (`snap install bristlenose --classic`) — designed, not yet implemented. Full design doc: `docs/design-doctor-and-snap.md`. Classic confinement, ~150 MB full-featured snap, GitHub Actions CI, channels (edge/beta/candidate/stable). Key decisions: bundle FFmpeg + spaCy model + all ML deps; no torch needed on Linux (faster-whisper uses ctranslate2). Estimated snap size ~130-160 MB compressed.
+- [x] Snap for Ubuntu/Linux (`snap install bristlenose --classic`) — `snap/snapcraft.yaml` + `.github/workflows/snap.yml`. Classic confinement, ~150 MB full-featured snap, GitHub Actions CI (edge on push to main, stable on tags). Bundles FFmpeg + spaCy model + all ML deps; no torch needed on Linux. Pre-launch: register name, request classic confinement approval, add `SNAPCRAFT_STORE_CREDENTIALS` secret.
 - [ ] Windows installer (winget or similar)
 
 ---

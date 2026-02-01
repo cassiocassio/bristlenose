@@ -109,7 +109,7 @@ Both work well. If you already pay for one, use that one. If you're starting fre
 - **Claude** -- the default in bristlenose. Tends to produce nuanced qualitative analysis. Pay-as-you-go billing from the first API call (no free API tier; a typical 8-participant study costs roughly $1--3)
 - **ChatGPT** -- widely used. New API accounts get a small amount of free credit (check your [usage page](https://platform.openai.com/usage) to see if you have any remaining). After that, pay-as-you-go. Similar cost per study
 
-> **Important:** A ChatGPT Plus / Pro subscription ($20--200/month) does **not** include API access. The API is billed separately at [platform.openai.com/usage](https://platform.openai.com/usage). Likewise, a Claude Pro subscription does not include API credits. API billing is separate at [console.anthropic.com](https://console.anthropic.com).
+> **Important:** A ChatGPT Plus or Pro subscription does **not** include API access. The API is billed separately at [platform.openai.com/usage](https://platform.openai.com/usage). Likewise, a Claude Pro or Max subscription does not include API credits. API billing is separate at [console.anthropic.com](https://console.anthropic.com).
 
 ### Making your key permanent
 

@@ -713,10 +713,14 @@ def _format_quote_html(
         tc_html = f'<span class="timecode">[{tc}]</span>'
 
     name = _esc(_display_name(quote.participant_id, display_names))
+    pid_esc = _esc(quote.participant_id)
+    speaker_link = (
+        f'<a href="transcript_{pid_esc}.html" class="speaker-link">{name}</a>'
+    )
     parts.append(
         f"{tc_html} "
         f'<span class="quote-text">\u201c{_esc(quote.text)}\u201d</span> '
-        f'<span class="speaker">&mdash; {name}</span>'
+        f'<span class="speaker">&mdash; {speaker_link}</span>'
     )
 
     badges = _quote_badges(quote)

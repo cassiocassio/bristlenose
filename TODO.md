@@ -1,6 +1,6 @@
 # Bristlenose — Where I Left Off
 
-Last updated: 1 Feb 2026 (v0.5.0)
+Last updated: 1 Feb 2026 (v0.5.0, doctor + snap design session)
 
 ---
 
@@ -138,11 +138,24 @@ Organised from easiest to hardest. The README has a condensed version; this is t
 - [ ] Batch processing dashboard — progress bars, partial results, resume interrupted runs
 - [ ] JS tests — add lightweight DOM-based tests (jsdom or Playwright) covering tag persistence, CSV export output, favourite reordering, and edit save/restore
 
+### `bristlenose doctor` and dependency UX (designed, not yet implemented)
+
+Full design doc: `docs/design-doctor-and-snap.md`
+
+- [ ] `bristlenose doctor` command — seven checks (FFmpeg, backend, model, API key, network, PII, disk)
+- [ ] Pre-flight gate on `run`/`transcribe-only`/`analyze` — catches problems before slow work starts
+- [ ] First-run auto-doctor — runs automatically on first invocation, sentinel at `~/.config/bristlenose/.doctor-ran`
+- [ ] Install-method-aware fix messages — detect snap/brew/pip, show tailored install instructions
+- [ ] API key validation in pre-flight — cheap API call to catch expired/revoked keys upfront
+- [ ] Whisper model cache check — detect whether model is cached without triggering download
+- [ ] `--prefetch-model` flag — download Whisper model and exit (for slow connections, CI setups)
+- [ ] Homebrew formula: add `post_install` for spaCy model download, improve caveats
+
 ### Packaging (partially done)
 
 - [x] PyPI (`pipx install bristlenose`)
 - [x] Homebrew tap (`brew install cassiocassio/bristlenose/bristlenose`)
-- [ ] Snap for Ubuntu/Linux (`snap install bristlenose`)
+- [ ] Snap for Ubuntu/Linux (`snap install bristlenose --classic`) — designed, not yet implemented. Full design doc: `docs/design-doctor-and-snap.md`. Classic confinement, ~150 MB full-featured snap, GitHub Actions CI, channels (edge/beta/candidate/stable). Key decisions: bundle FFmpeg + spaCy model + all ML deps; no torch needed on Linux (faster-whisper uses ctranslate2). Estimated snap size ~130-160 MB compressed.
 - [ ] Windows installer (winget or similar)
 
 ---

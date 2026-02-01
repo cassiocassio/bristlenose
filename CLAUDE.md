@@ -87,6 +87,7 @@ Each participant gets a dedicated HTML page (`transcript_p1.html`, etc.) showing
 - **File map** (what lives where): `docs/file-map.md`
 - **Release process / CI / secrets**: `docs/release.md`
 - **Design system / contributing**: `CONTRIBUTING.md`
+- **Doctor command + Snap packaging design**: `docs/design-doctor-and-snap.md`
 
 ## Working preferences
 
@@ -114,4 +115,4 @@ When the user signals end of session, **proactively offer to run this checklist*
 
 ## Current status (v0.5.0, Feb 2026)
 
-Core pipeline complete and published to PyPI + Homebrew. v0.5.0 adds per-participant transcript pages with deep-link anchors from quote attributions. v0.4.1 added people file (participant registry with display names), flipped PII redaction to off-by-default, and redesigned participant table with Finder-style dates. See `TODO.md` for full task list.
+Core pipeline complete and published to PyPI + Homebrew. v0.5.0 adds per-participant transcript pages with deep-link anchors from quote attributions. v0.4.1 added people file (participant registry with display names), flipped PII redaction to off-by-default, and redesigned participant table with Finder-style dates. Next up: `bristlenose doctor` (dependency health checks with guided recovery, first-run auto-doctor, install-method-aware fix messages) and Snap packaging for Linux (classic confinement, ~150 MB, full-featured). Design doc at `docs/design-doctor-and-snap.md`. See `TODO.md` for full task list.

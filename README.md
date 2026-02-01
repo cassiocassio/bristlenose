@@ -29,6 +29,7 @@ The report includes:
 - **Sentiment** -- histogram of emotions across all quotes
 - **Friction points** -- confusion, frustration, and error-recovery moments flagged for review
 - **User journeys** -- per-participant stage progression
+- **Per-participant transcripts** -- full transcript pages with clickable timecodes, linked from the participant table
 - **Clickable timecodes** -- jump to the exact moment in a popout video player
 - **Favourite quotes** -- star, reorder, export as CSV
 - **Inline editing** -- fix transcription errors directly in the report
@@ -97,6 +98,9 @@ Files sharing a name stem (e.g. `p1.mp4` and `p1.srt`) are treated as one sessio
 results/
   research_report.html       # the report -- open this
   research_report.md         # Markdown version
+  transcript_p1.html         # per-participant transcript pages
+  transcript_p2.html
+  ...
   bristlenose-theme.css      # stylesheet (regenerated on every run)
   bristlenose-logo.png       # project logo
   bristlenose-player.html    # popout video player (if media files present)
@@ -185,6 +189,7 @@ Edit `bristlenose/__init__.py` (the single source of truth for version), commit,
 - People file (`people.yaml`) — participant registry with computed stats (words, % words, % speaking time) and human-editable fields (name, role, persona, notes); preserved across re-runs
 - Display names — set `short_name` in `people.yaml`, re-render with `bristlenose render` to update quotes and tables
 - Enriched participant table in reports (ID, Name, Role, Start, Duration, Words, Source) with macOS Finder-style relative dates
+- Per-participant transcript pages — full transcript for each participant with clickable timecodes and video player; participant IDs in the table link to these pages
 - PII redaction now off by default; opt in with `--redact-pii` (replaces `--no-pii`)
 - Man page updated for new CLI flags and output structure
 

@@ -31,6 +31,10 @@ The `<picture>` element swaps between `bristlenose-logo.png` (light) and `bristl
 
 Dark mode is CSS-only. No localStorage, no toggle button, no JS involved.
 
+## Template CSS files
+
+Template-level CSS in `templates/`: `report.css` (main report layout), `transcript.css` (per-participant transcript pages — back button, segment layout, meta styling), `print.css` (print overrides, hides interactive elements).
+
 ## JS modules
 
-8 standalone files in `js/` concatenated at render time (same pattern as CSS): storage, player, favourites, editing, tags, histogram, csv-export, main.
+8 standalone files in `js/` concatenated at render time (same pattern as CSS): storage, player, favourites, editing, tags, histogram, csv-export, main. Transcript pages use only `storage.js` + `player.js` (no favourites/editing/tags).

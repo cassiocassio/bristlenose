@@ -18,7 +18,7 @@ T = TypeVar("T", bound=BaseModel)
 class LLMClient:
     """Unified interface for LLM calls with Pydantic-validated structured output.
 
-    Supports Anthropic (Claude) and OpenAI as providers.
+    Supports Claude (Anthropic) and ChatGPT (OpenAI) as providers.
     """
 
     def __init__(self, settings: BristlenoseSettings) -> None:
@@ -34,14 +34,15 @@ class LLMClient:
         """Check that the required API key is configured."""
         if self.provider == "anthropic" and not self.settings.anthropic_api_key:
             raise ValueError(
-                "Anthropic API key not set. "
+                "Claude API key not set. "
                 "Set BRISTLENOSE_ANTHROPIC_API_KEY in your .env file or environment. "
-                "Looked for .env in: current directory and bristlenose package directory."
+                "Get a key from console.anthropic.com"
             )
         if self.provider == "openai" and not self.settings.openai_api_key:
             raise ValueError(
-                "OpenAI API key not set. "
-                "Set BRISTLENOSE_OPENAI_API_KEY in your .env file or environment."
+                "ChatGPT API key not set. "
+                "Set BRISTLENOSE_OPENAI_API_KEY in your .env file or environment. "
+                "Get a key from platform.openai.com"
             )
 
     async def analyze(

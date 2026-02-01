@@ -100,7 +100,7 @@ def _help_commands() -> None:
     console.print("  -p, --project NAME       Project name for the report header")
     console.print("  -b, --whisper-backend    auto | mlx | faster-whisper")
     console.print("  -w, --whisper-model      tiny | base | small | medium | large-v3 | large-v3-turbo")
-    console.print("  -l, --llm               anthropic | openai")
+    console.print("  -l, --llm               anthropic (Claude) | openai (ChatGPT)")
     console.print("  --redact-pii            Redact personally identifying information")
     console.print("  --retain-pii            Retain PII in transcripts (default)")
     console.print("  --clean                 Delete output dir before running")
@@ -142,12 +142,12 @@ def _help_config() -> None:
     console.print("  4. CLI flags")
     console.print()
     console.print("[bold]Environment variables[/bold]\n")
-    console.print("  [bold]API keys[/bold]")
-    console.print("  BRISTLENOSE_ANTHROPIC_API_KEY    Anthropic API key")
-    console.print("  BRISTLENOSE_OPENAI_API_KEY       OpenAI API key")
+    console.print("  [bold]API keys[/bold] (you only need one)")
+    console.print("  BRISTLENOSE_ANTHROPIC_API_KEY    Claude API key (from console.anthropic.com)")
+    console.print("  BRISTLENOSE_OPENAI_API_KEY       ChatGPT API key (from platform.openai.com)")
     console.print()
     console.print("  [bold]LLM[/bold]")
-    console.print("  BRISTLENOSE_LLM_PROVIDER         anthropic | openai")
+    console.print("  BRISTLENOSE_LLM_PROVIDER         anthropic (Claude) | openai (ChatGPT)")
     console.print("  BRISTLENOSE_LLM_MODEL            Model name (default: claude-sonnet-4-20250514)")
     console.print("  BRISTLENOSE_LLM_MAX_TOKENS       Max response tokens (default: 8192)")
     console.print("  BRISTLENOSE_LLM_TEMPERATURE      Temperature (default: 0.1)")
@@ -188,7 +188,7 @@ def _help_workflows() -> None:
     console.print("   bristlenose render ./interviews/ -o ./results/")
     console.print("   # no LLM calls, no API key needed")
     console.print()
-    console.print("[bold]4. Different LLM provider[/bold]")
+    console.print("[bold]4. Use ChatGPT instead of Claude[/bold]")
     console.print("   bristlenose run ./interviews/ -o ./results/ --llm openai")
     console.print()
     console.print("[bold]5. Smaller Whisper model (faster, less accurate)[/bold]")
@@ -436,7 +436,7 @@ def run(
     ] = "large-v3-turbo",
     llm_provider: Annotated[
         str,
-        typer.Option("--llm", "-l", help="LLM provider: anthropic, openai."),
+        typer.Option("--llm", "-l", help="LLM provider: anthropic (Claude) or openai (ChatGPT)."),
     ] = "anthropic",
     skip_transcription: Annotated[
         bool,
@@ -575,7 +575,7 @@ def analyze(
     ] = None,
     llm_provider: Annotated[
         str,
-        typer.Option("--llm", "-l", help="LLM provider: anthropic, openai."),
+        typer.Option("--llm", "-l", help="LLM provider: anthropic (Claude) or openai (ChatGPT)."),
     ] = "anthropic",
     verbose: Annotated[
         bool,

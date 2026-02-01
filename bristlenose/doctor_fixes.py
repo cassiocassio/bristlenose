@@ -87,31 +87,31 @@ def _fix_backend_import_fail(method: str) -> str:
 def _fix_api_key_missing_anthropic(_method: str) -> str:
     return (
         "bristlenose needs an API key to analyse transcripts.\n"
-        "Get one from console.anthropic.com, then:\n\n"
+        "Get a Claude API key from console.anthropic.com, then:\n\n"
         "  export BRISTLENOSE_ANTHROPIC_API_KEY=sk-ant-...\n\n"
         "Or add it to a .env file in your project directory.\n\n"
-        "To use OpenAI instead:  bristlenose run <input> --llm openai\n"
-        "To only transcribe:     bristlenose transcribe-only <input>"
+        "To use ChatGPT instead:  bristlenose run <input> --llm openai\n"
+        "To only transcribe:      bristlenose transcribe-only <input>"
     )
 
 
 def _fix_api_key_missing_openai(_method: str) -> str:
     return (
         "bristlenose needs an API key to analyse transcripts.\n"
-        "Get one from platform.openai.com, then:\n\n"
+        "Get a ChatGPT API key from platform.openai.com, then:\n\n"
         "  export BRISTLENOSE_OPENAI_API_KEY=sk-...\n\n"
         "Or add it to a .env file in your project directory.\n\n"
-        "To use Anthropic instead:  bristlenose run <input> --llm anthropic\n"
-        "To only transcribe:         bristlenose transcribe-only <input>"
+        "To use Claude instead:  bristlenose run <input> --llm anthropic\n"
+        "To only transcribe:     bristlenose transcribe-only <input>"
     )
 
 
 def _fix_api_key_invalid_anthropic(_method: str) -> str:
-    return "Check your key at console.anthropic.com/settings/keys."
+    return "Your Claude API key was rejected. Check it at console.anthropic.com/settings/keys."
 
 
 def _fix_api_key_invalid_openai(_method: str) -> str:
-    return "Check your key at platform.openai.com/api-keys."
+    return "Your ChatGPT API key was rejected. Check it at platform.openai.com/api-keys."
 
 
 def _fix_network_unreachable(_method: str) -> str:

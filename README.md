@@ -20,7 +20,7 @@ It's built by a practising researcher. It's free and open source under AGPL-3.0.
 
 You give it a folder of recordings. It gives you back a report.
 
-Behind the scenes: transcription (Whisper, local), speaker identification, PII redaction, quote extraction and enrichment (via Anthropic or OpenAI API), thematic grouping, and HTML rendering. One command, no manual steps.
+Behind the scenes: transcription (Whisper, local), speaker identification, PII redaction, quote extraction and enrichment (via Claude or ChatGPT API), thematic grouping, and HTML rendering. One command, no manual steps.
 
 The report includes:
 
@@ -49,7 +49,7 @@ Filler words replaced with `...`. Editorial context in `[square brackets]`. Emot
 
 ## Install
 
-Requires ffmpeg and an API key from [Anthropic](https://console.anthropic.com/settings/keys) or [OpenAI](https://platform.openai.com/api-keys).
+Requires ffmpeg and an API key from either **Claude** (by Anthropic) or **ChatGPT** (by OpenAI). You only need one.
 
 ```bash
 # macOS (Homebrew) -- recommended, handles ffmpeg + Python for you
@@ -68,13 +68,64 @@ uv tool install bristlenose
 
 If using pipx or uv, you'll also need ffmpeg (`brew install ffmpeg` on macOS, `sudo apt install ffmpeg` on Debian/Ubuntu).
 
-Then set your API key:
+---
+
+## Getting an API key
+
+If you've used Claude or ChatGPT before, you might only know the chat interface. Bristlenose talks to the same AI models, but through their **API** (a direct connection for software). This needs a separate API key -- a password that lets bristlenose call the AI on your behalf.
+
+You only need one key -- **Claude or ChatGPT, not both**.
+
+### Option A: Claude (by Anthropic)
+
+1. Go to [console.anthropic.com](https://console.anthropic.com/settings/keys) and sign up or log in
+2. Click **Create Key**, give it a name (e.g. "bristlenose"), and copy the key
+3. Set it in your terminal:
 
 ```bash
 export BRISTLENOSE_ANTHROPIC_API_KEY=sk-ant-...
-# or
+```
+
+### Option B: ChatGPT (by OpenAI)
+
+1. Go to [platform.openai.com](https://platform.openai.com/api-keys) and sign up or log in
+2. Click **Create new secret key**, give it a name, and copy the key
+3. Set it in your terminal:
+
+```bash
 export BRISTLENOSE_OPENAI_API_KEY=sk-...
 ```
+
+To use ChatGPT instead of the default, add `--llm openai` to your commands:
+
+```bash
+bristlenose run ./interviews/ -o ./results/ --llm openai
+```
+
+### Which should I pick?
+
+Both work well. If you already pay for one, use that one. If you're starting fresh:
+
+- **Claude** -- the default in bristlenose. Tends to produce nuanced qualitative analysis. Pay-as-you-go billing from the first API call (no free API tier; a typical 8-participant study costs roughly $1--3)
+- **ChatGPT** -- widely used. New API accounts get a small amount of free credit (check your [usage page](https://platform.openai.com/usage) to see if you have any remaining). After that, pay-as-you-go. Similar cost per study
+
+> **Important:** A ChatGPT Plus / Pro subscription ($20--200/month) does **not** include API access. The API is billed separately at [platform.openai.com/usage](https://platform.openai.com/usage). Likewise, a Claude Pro subscription does not include API credits. API billing is separate at [console.anthropic.com](https://console.anthropic.com).
+
+### Making your key permanent
+
+The `export` command only lasts until you close the terminal. To make it stick, add the line to your shell profile:
+
+```bash
+# macOS / Linux -- add to the end of your shell config:
+echo 'export BRISTLENOSE_ANTHROPIC_API_KEY=sk-ant-...' >> ~/.zshrc
+
+# Or for ChatGPT:
+echo 'export BRISTLENOSE_OPENAI_API_KEY=sk-...' >> ~/.zshrc
+```
+
+Then open a new terminal window (or run `source ~/.zshrc`).
+
+Alternatively, create a `.env` file in your project folder -- see `.env.example` for a template.
 
 ---
 
@@ -185,8 +236,9 @@ sudo snap install --dangerous --classic ./bristlenose_*.snap
 bristlenose --version
 bristlenose doctor
 
-# 4. Run it for real
-export BRISTLENOSE_ANTHROPIC_API_KEY=sk-ant-...
+# 4. Run it for real (set whichever API key you have)
+export BRISTLENOSE_ANTHROPIC_API_KEY=sk-ant-...   # for Claude
+# or: export BRISTLENOSE_OPENAI_API_KEY=sk-...    # for ChatGPT (add --llm openai)
 bristlenose run ./interviews/ -o ./results/
 ```
 

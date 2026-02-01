@@ -33,7 +33,7 @@ Dark mode is CSS-only. No localStorage, no toggle button, no JS involved.
 
 ## Template CSS files
 
-Template-level CSS in `templates/`: `report.css` (main report layout), `transcript.css` (per-participant transcript pages — back button, segment layout, meta styling), `print.css` (print overrides, hides interactive elements).
+Template-level CSS in `templates/`: `report.css` (main report layout), `transcript.css` (per-participant transcript pages — back button, segment layout, meta styling), `print.css` (print overrides, hides interactive elements). Quote attribution links styled via `.speaker-link` in `organisms/blockquote.css` (inherits muted colour from `.speaker`, accent on hover).
 
 ## JS modules
 

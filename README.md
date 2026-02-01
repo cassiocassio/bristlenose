@@ -189,7 +189,7 @@ Edit `bristlenose/__init__.py` (the single source of truth for version), commit,
 - People file (`people.yaml`) — participant registry with computed stats (words, % words, % speaking time) and human-editable fields (name, role, persona, notes); preserved across re-runs
 - Display names — set `short_name` in `people.yaml`, re-render with `bristlenose render` to update quotes and tables
 - Enriched participant table in reports (ID, Name, Role, Start, Duration, Words, Source) with macOS Finder-style relative dates
-- Per-participant transcript pages — full transcript for each participant with clickable timecodes and video player; participant IDs in the table link to these pages
+- Per-participant transcript pages — full transcript for each participant with clickable timecodes and video player; participant IDs in the table link to these pages; quote attributions (`— p1`) deep-link to the exact segment in the transcript
 - PII redaction now off by default; opt in with `--redact-pii` (replaces `--no-pii`)
 - Man page updated for new CLI flags and output structure
 

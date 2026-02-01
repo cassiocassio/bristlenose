@@ -65,7 +65,9 @@ Each participant gets a dedicated HTML page (`transcript_p1.html`, etc.) showing
 - **Back button**: `← {project_name} Research Report` linking to `research_report.html`, styled muted with accent on hover, hidden in print
 - **JS**: only `storage.js` + `player.js` + `initPlayer()` — no favourites/editing/tags modules
 - **Participant table linking**: ID column (`p1`, `p2`) is a hyperlink to the transcript page
-- **CSS**: `transcript.css` in theme templates (back button, segment layout, meta styling)
+- **Quote attribution linking**: `— p1` at end of each quote in the main report links to `transcript_p1.html#t-{seconds}`, deep-linking to the exact segment. `.speaker-link` CSS in `blockquote.css` (inherits muted colour, accent on hover)
+- **Segment anchors**: each transcript segment has `id="t-{int(seconds)}"` for deep linking from quotes
+- **CSS**: `transcript.css` in theme templates (back button, segment layout, meta styling); `.speaker-link` in `organisms/blockquote.css`
 - **Speaker role caveat**: `.txt` files store `[p1]` for all segments — researcher/participant role not preserved on disk. All segments render with same styling
 
 ## Gotchas
@@ -110,6 +112,6 @@ When the user signals end of session, **proactively offer to run this checklist*
 8. **Clean up branches** — delete merged feature branches
 9. **Verify CI** — check latest push passes CI
 
-## Current status (v0.4.1, Jan 2026)
+## Current status (v0.4.1, Feb 2026)
 
-Core pipeline complete and published to PyPI + Homebrew. v0.4.1 adds people file (participant registry with display names) and flips PII redaction to off-by-default. See `TODO.md` for full task list.
+Core pipeline complete and published to PyPI + Homebrew. v0.4.1 adds people file (participant registry with display names), flips PII redaction to off-by-default, per-participant transcript pages with deep-link anchors from quote attributions, and redesigned participant table with Finder-style dates. See `TODO.md` for full task list.

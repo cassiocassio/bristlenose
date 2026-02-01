@@ -194,6 +194,7 @@ Full audit done. Stage concurrency (item 1) is shipped. Remaining items ranked b
 - **CSS/JS reads (32 small files)**: already lazy-cached in module-level globals. Only read once per process. Not a bottleneck
 - **Intermediate JSON `indent=2` on disk**: adds ~15% file size vs compact JSON, but these files are for human debugging. Keep pretty-printed
 - **Pydantic `model_dump()` serialisation cost**: called for every model when writing intermediate JSON. Profiling shows this is <100ms even for large quote lists. Not worth optimising
+- **spaCy GPU acceleration for PII redaction**: benchmarked Feb 2026 — Presidio+spaCy (`en_core_web_sm`) processes 1,600 segments (8 participants × 200 segs) in ~6s on CPU (3.7ms/seg). For 10 participants that's 7.5s; for 20 it's 15s. Compared to transcription (~50 min for 10 participants) PII is 0.2% of total runtime. Adding `thinc-apple-ops` for Metal GPU would save single-digit seconds, add a dependency, and risk version compatibility issues. The `en_core_web_sm` model is too small to benefit from GPU — data-transfer overhead would likely negate any speedup
 
 ### Packaging (partially done)
 

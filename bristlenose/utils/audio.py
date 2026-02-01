@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import logging
+import platform
 import subprocess
 from pathlib import Path
 
@@ -60,9 +61,14 @@ def extract_audio_from_video(
     """
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
+    # Use hardware video decode on macOS (VideoToolbox / Media Engine).
+    # Harmless no-op for audio-only inputs; ignored if unsupported.
+    hwaccel = ["-hwaccel", "videotoolbox"] if platform.system() == "Darwin" else []
+
     result = subprocess.run(
         [
             "ffmpeg",
+            *hwaccel,
             "-i", str(video_path),
             "-vn",                    # no video
             "-acodec", "pcm_s16le",   # 16-bit PCM

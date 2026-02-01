@@ -1,6 +1,6 @@
 # Bristlenose — Where I Left Off
 
-Last updated: 1 Feb 2026 (v0.6.3, header redesign + view switcher + Analysis ToC)
+Last updated: 1 Feb 2026 (v0.6.4, concurrent LLM calls + performance audit)
 
 ---
 

@@ -605,6 +605,180 @@ class TestCheckNetwork:
         assert result.status == CheckStatus.OK
         assert "api.anthropic.com" in result.detail
 
+    # -- HTTP error responses still mean the host is reachable ---------------
+
+    def test_network_http_404_is_reachable(self) -> None:
+        """Root URL returns 404 — host is reachable (the actual bug)."""
+        import urllib.error
+
+        settings = _settings(llm_provider="anthropic")
+        err = urllib.error.HTTPError(
+            url="https://api.anthropic.com",
+            code=404,
+            msg="Not Found",
+            hdrs=None,  # type: ignore[arg-type]
+            fp=None,
+        )
+        with patch("urllib.request.urlopen", side_effect=err):
+            result = check_network(settings)
+        assert result.status == CheckStatus.OK
+        assert "api.anthropic.com" in result.detail
+        assert "ms)" in result.detail
+
+    def test_network_http_403_is_reachable(self) -> None:
+        """403 Forbidden (e.g. unauthenticated HEAD) — still reachable."""
+        import urllib.error
+
+        settings = _settings(llm_provider="openai")
+        err = urllib.error.HTTPError(
+            url="https://api.openai.com",
+            code=403,
+            msg="Forbidden",
+            hdrs=None,  # type: ignore[arg-type]
+            fp=None,
+        )
+        with patch("urllib.request.urlopen", side_effect=err):
+            result = check_network(settings)
+        assert result.status == CheckStatus.OK
+        assert "api.openai.com" in result.detail
+
+    def test_network_http_500_is_reachable(self) -> None:
+        """500 Internal Server Error — server is broken but reachable."""
+        import urllib.error
+
+        settings = _settings(llm_provider="anthropic")
+        err = urllib.error.HTTPError(
+            url="https://api.anthropic.com",
+            code=500,
+            msg="Internal Server Error",
+            hdrs=None,  # type: ignore[arg-type]
+            fp=None,
+        )
+        with patch("urllib.request.urlopen", side_effect=err):
+            result = check_network(settings)
+        assert result.status == CheckStatus.OK
+        assert "api.anthropic.com" in result.detail
+
+    def test_network_http_301_is_reachable(self) -> None:
+        """301 redirect raised as HTTPError — still reachable."""
+        import urllib.error
+
+        settings = _settings(llm_provider="anthropic")
+        err = urllib.error.HTTPError(
+            url="https://api.anthropic.com",
+            code=301,
+            msg="Moved Permanently",
+            hdrs=None,  # type: ignore[arg-type]
+            fp=None,
+        )
+        with patch("urllib.request.urlopen", side_effect=err):
+            result = check_network(settings)
+        assert result.status == CheckStatus.OK
+
+    # -- True network failures -----------------------------------------------
+
+    def test_network_ssl_error_is_failure(self) -> None:
+        """SSL certificate error — can't trust the connection, report FAIL."""
+        import ssl
+        import urllib.error
+
+        settings = _settings(llm_provider="anthropic")
+        ssl_err = ssl.SSLCertVerificationError(1, "certificate verify failed")
+        err = urllib.error.URLError(ssl_err)
+        with patch("urllib.request.urlopen", side_effect=err):
+            result = check_network(settings)
+        assert result.status == CheckStatus.FAIL
+        assert result.fix_key == "network_unreachable"
+
+    def test_network_dns_failure(self) -> None:
+        """DNS resolution failure — host doesn't resolve."""
+        import socket
+        import urllib.error
+
+        settings = _settings(llm_provider="anthropic")
+        dns_err = socket.gaierror(8, "nodename nor servname provided")
+        err = urllib.error.URLError(dns_err)
+        with patch("urllib.request.urlopen", side_effect=err):
+            result = check_network(settings)
+        assert result.status == CheckStatus.FAIL
+        assert result.fix_key == "network_unreachable"
+
+    def test_network_connection_refused(self) -> None:
+        """Connection refused — port not open."""
+        import urllib.error
+
+        settings = _settings(llm_provider="anthropic")
+        err = urllib.error.URLError(ConnectionRefusedError("Connection refused"))
+        with patch("urllib.request.urlopen", side_effect=err):
+            result = check_network(settings)
+        assert result.status == CheckStatus.FAIL
+        assert result.fix_key == "network_unreachable"
+
+    def test_network_generic_oserror_is_failure(self) -> None:
+        """Unexpected OSError falls through to the catch-all except."""
+        settings = _settings(llm_provider="anthropic")
+        with patch("urllib.request.urlopen", side_effect=OSError("broken")):
+            result = check_network(settings)
+        assert result.status == CheckStatus.FAIL
+        assert result.fix_key == "network_unreachable"
+
+    def test_network_http_error_reports_elapsed_time(self) -> None:
+        """HTTPError path still computes a plausible elapsed time."""
+        import urllib.error
+
+        settings = _settings(llm_provider="anthropic")
+        err = urllib.error.HTTPError(
+            url="https://api.anthropic.com",
+            code=404,
+            msg="Not Found",
+            hdrs=None,  # type: ignore[arg-type]
+            fp=None,
+        )
+        with patch("urllib.request.urlopen", side_effect=err):
+            result = check_network(settings)
+        assert result.status == CheckStatus.OK
+        # Extract ms value — should be a non-negative integer.
+        # Detail format: "api.anthropic.com reachable (Xms)"
+        import re
+
+        m = re.search(r"\((\d+)ms\)", result.detail)
+        assert m is not None, f"Expected elapsed time in detail: {result.detail}"
+        assert int(m.group(1)) >= 0
+
+    def test_network_http_error_openai_provider(self) -> None:
+        """HTTPError on OpenAI endpoint — correct host in detail."""
+        import urllib.error
+
+        settings = _settings(llm_provider="openai")
+        err = urllib.error.HTTPError(
+            url="https://api.openai.com",
+            code=404,
+            msg="Not Found",
+            hdrs=None,  # type: ignore[arg-type]
+            fp=None,
+        )
+        with patch("urllib.request.urlopen", side_effect=err):
+            result = check_network(settings)
+        assert result.status == CheckStatus.OK
+        assert "api.openai.com" in result.detail
+
+    def test_network_http_error_unknown_provider(self) -> None:
+        """HTTPError with unknown provider — falls back to anthropic host."""
+        import urllib.error
+
+        settings = _settings(llm_provider="gemini")
+        err = urllib.error.HTTPError(
+            url="https://api.anthropic.com",
+            code=404,
+            msg="Not Found",
+            hdrs=None,  # type: ignore[arg-type]
+            fp=None,
+        )
+        with patch("urllib.request.urlopen", side_effect=err):
+            result = check_network(settings)
+        assert result.status == CheckStatus.OK
+        assert "api.anthropic.com" in result.detail
+
 
 # ---------------------------------------------------------------------------
 # check_pii

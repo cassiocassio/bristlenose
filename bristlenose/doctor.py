@@ -335,6 +335,14 @@ def check_network(settings: BristlenoseSettings) -> CheckResult:
             label="Network",
             detail=f"{host} reachable ({elapsed_ms}ms)",
         )
+    except urllib.error.HTTPError:
+        # Any HTTP response (even 404) means the host is reachable.
+        elapsed_ms = int((time.monotonic() - start) * 1000)
+        return CheckResult(
+            status=CheckStatus.OK,
+            label="Network",
+            detail=f"{host} reachable ({elapsed_ms}ms)",
+        )
     except urllib.error.URLError:
         return CheckResult(
             status=CheckStatus.FAIL,

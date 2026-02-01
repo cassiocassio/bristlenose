@@ -52,6 +52,7 @@ _THEME_FILES: list[str] = [
     "molecules/bar-group.css",
     "molecules/quote-actions.css",
     "molecules/tag-input.css",
+    "molecules/name-edit.css",
     "organisms/blockquote.css",
     "organisms/sentiment-chart.css",
     "organisms/toolbar.css",
@@ -103,6 +104,7 @@ _JS_FILES: list[str] = [
     "js/tags.js",
     "js/histogram.js",
     "js/csv-export.js",
+    "js/names.js",
     "js/main.js",
 ]
 
@@ -231,6 +233,11 @@ def render_html(
         '<span class="toolbar-icon">&#9776;</span> Export all'
         "</button>"
     )
+    _w(
+        '<button class="toolbar-btn" id="export-names">'
+        '<span class="toolbar-icon">&#9998;</span> Export names'
+        "</button>"
+    )
     _w("</div>")
     _w('<div class="meta">')
     _w(f"<p>Generated: {datetime.now().strftime('%Y-%m-%d')}</p>")
@@ -274,33 +281,49 @@ def render_html(
                     source = f'<a href="{file_uri}">{source_name}</a>'
             else:
                 source = "&mdash;"
-            _w("<tr>")
+            _w(f'<tr data-participant="{pid_esc}">')
             if people and people.participants:
                 entry = people.participants.get(pid)
-                _unnamed = (
-                    '<span style="color:var(--bn-colour-muted);'
-                    'font-style:italic">Unnamed</span>'
-                )
+                _unnamed = '<span class="unnamed">Unnamed</span>'
                 if entry:
                     words = str(entry.computed.words_spoken)
-                    full_name = (
+                    name_text = (
                         _esc(entry.editable.full_name)
                         if entry.editable.full_name else _unnamed
                     )
-                    role = _esc(entry.editable.role) if entry.editable.role else "&mdash;"
+                    role_text = (
+                        _esc(entry.editable.role)
+                        if entry.editable.role else "&mdash;"
+                    )
                 else:
                     words = "&mdash;"
-                    full_name = _unnamed
-                    role = "&mdash;"
-                _w(f'<td><a href="transcript_{pid_esc}.html">{pid_esc}</a></td>')
-                _w(f"<td>{full_name}</td>")
-                _w(f"<td>{role}</td>")
+                    name_text = _unnamed
+                    role_text = "&mdash;"
+                _w(
+                    f'<td><a href="transcript_{pid_esc}.html">'
+                    f"{pid_esc}</a></td>"
+                )
+                _w(
+                    f'<td class="name-cell" data-field="full_name">'
+                    f'<span class="name-text">{name_text}</span>'
+                    f'<button class="name-pencil" '
+                    f'aria-label="Edit name">&#9998;</button></td>'
+                )
+                _w(
+                    f'<td class="role-cell" data-field="role">'
+                    f'<span class="role-text">{role_text}</span>'
+                    f'<button class="name-pencil" '
+                    f'aria-label="Edit role">&#9998;</button></td>'
+                )
                 _w(f"<td>{start}</td>")
                 _w(f"<td>{duration}</td>")
                 _w(f"<td>{words}</td>")
                 _w(f"<td>{source}</td>")
             else:
-                _w(f'<td><a href="transcript_{pid_esc}.html">{pid_esc}</a></td>')
+                _w(
+                    f'<td><a href="transcript_{pid_esc}.html">'
+                    f"{pid_esc}</a></td>"
+                )
                 _w(f"<td>{start}</td>")
                 _w(f"<td>{duration}</td>")
                 _w(f"<td>{source}</td>")
@@ -332,7 +355,16 @@ def render_html(
             _w("<h2>Sections</h2>")
             _w("<ul>")
             for anchor, label in section_toc:
-                _w(f'<li><a href="#{_esc(anchor)}">{_esc(label)}</a></li>')
+                a_esc = _esc(anchor)
+                l_esc = _esc(label)
+                _w(
+                    f'<li><a href="#{a_esc}">'
+                    f'<span class="editable-text"'
+                    f' data-edit-key="{a_esc}:title"'
+                    f' data-original="{l_esc}">{l_esc}</span></a>'
+                    f' <button class="edit-pencil edit-pencil-inline"'
+                    f' aria-label="Edit section title">&#9998;</button></li>'
+                )
             _w("</ul>")
             _w("</nav>")
         if theme_toc:
@@ -340,7 +372,20 @@ def render_html(
             _w("<h2>Themes</h2>")
             _w("<ul>")
             for anchor, label in theme_toc:
-                _w(f'<li><a href="#{_esc(anchor)}">{_esc(label)}</a></li>')
+                a_esc = _esc(anchor)
+                l_esc = _esc(label)
+                # Sentiment and Friction points are not editable.
+                if anchor.startswith("theme-"):
+                    _w(
+                        f'<li><a href="#{a_esc}">'
+                        f'<span class="editable-text"'
+                        f' data-edit-key="{a_esc}:title"'
+                        f' data-original="{l_esc}">{l_esc}</span></a>'
+                        f' <button class="edit-pencil edit-pencil-inline"'
+                        f' aria-label="Edit theme title">&#9998;</button></li>'
+                    )
+                else:
+                    _w(f'<li><a href="#{a_esc}">{l_esc}</a></li>')
             _w("</ul>")
             _w("</nav>")
         _w("</div>")
@@ -352,9 +397,26 @@ def render_html(
         _w("<h2>Sections</h2>")
         for cluster in screen_clusters:
             anchor = f"section-{cluster.screen_label.lower().replace(' ', '-')}"
-            _w(f'<h3 id="{_esc(anchor)}">{_esc(cluster.screen_label)}</h3>')
+            label_esc = _esc(cluster.screen_label)
+            anchor_esc = _esc(anchor)
+            _w(
+                f'<h3 id="{anchor_esc}">'
+                f'<span class="editable-text"'
+                f' data-edit-key="{anchor_esc}:title"'
+                f' data-original="{label_esc}">{label_esc}</span>'
+                f' <button class="edit-pencil edit-pencil-inline"'
+                f' aria-label="Edit section title">&#9998;</button></h3>'
+            )
             if cluster.description:
-                _w(f'<p class="description">{_esc(cluster.description)}</p>')
+                desc_esc = _esc(cluster.description)
+                _w(
+                    f'<p class="description">'
+                    f'<span class="editable-text"'
+                    f' data-edit-key="{anchor_esc}:desc"'
+                    f' data-original="{desc_esc}">{desc_esc}</span>'
+                    f' <button class="edit-pencil edit-pencil-inline"'
+                    f' aria-label="Edit section description">&#9998;</button></p>'
+                )
             _w('<div class="quote-group">')
             for quote in cluster.quotes:
                 _w(_format_quote_html(quote, video_map, display_names))
@@ -368,9 +430,26 @@ def render_html(
         _w("<h2>Themes</h2>")
         for theme in theme_groups:
             anchor = f"theme-{theme.theme_label.lower().replace(' ', '-')}"
-            _w(f'<h3 id="{_esc(anchor)}">{_esc(theme.theme_label)}</h3>')
+            label_esc = _esc(theme.theme_label)
+            anchor_esc = _esc(anchor)
+            _w(
+                f'<h3 id="{anchor_esc}">'
+                f'<span class="editable-text"'
+                f' data-edit-key="{anchor_esc}:title"'
+                f' data-original="{label_esc}">{label_esc}</span>'
+                f' <button class="edit-pencil edit-pencil-inline"'
+                f' aria-label="Edit theme title">&#9998;</button></h3>'
+            )
             if theme.description:
-                _w(f'<p class="description">{_esc(theme.description)}</p>')
+                desc_esc = _esc(theme.description)
+                _w(
+                    f'<p class="description">'
+                    f'<span class="editable-text"'
+                    f' data-edit-key="{anchor_esc}:desc"'
+                    f' data-original="{desc_esc}">{desc_esc}</span>'
+                    f' <button class="edit-pencil edit-pencil-inline"'
+                    f' aria-label="Edit theme description">&#9998;</button></p>'
+                )
             _w('<div class="quote-group">')
             for quote in theme.quotes:
                 _w(_format_quote_html(quote, video_map, display_names))
@@ -422,6 +501,18 @@ def render_html(
         _w(f"var BRISTLENOSE_VIDEO_MAP = {json.dumps(video_map)};")
     else:
         _w("var BRISTLENOSE_VIDEO_MAP = {};")
+
+    # Participant data for JS name editing and reconciliation.
+    participant_data: dict[str, dict[str, str]] = {}
+    if people:
+        for _pid, _entry in people.participants.items():
+            participant_data[_pid] = {
+                "full_name": _entry.editable.full_name,
+                "short_name": _entry.editable.short_name,
+                "role": _entry.editable.role,
+            }
+    _w(f"var BN_PARTICIPANTS = {json.dumps(participant_data)};")
+
     _w(_get_report_js())
     _w("})();")
     _w("</script>")

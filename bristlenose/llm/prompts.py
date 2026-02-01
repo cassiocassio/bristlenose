@@ -21,6 +21,13 @@ Transcript sample:
 Speakers found: {speaker_list}
 
 For each speaker, assign exactly one role and explain your reasoning briefly.
+
+Additionally, for each speaker:
+- **person_name**: If the speaker introduces themselves or is addressed by name \
+in the transcript, provide their real name. Leave empty if no name is mentioned.
+- **job_title**: If the speaker mentions their job title, role, or professional \
+activity (e.g. "I'm a product manager", "I work in design"), provide it. Leave \
+empty if not mentioned.
 """
 
 # ---------------------------------------------------------------------------

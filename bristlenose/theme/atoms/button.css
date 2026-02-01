@@ -36,6 +36,14 @@
     color: var(--bn-colour-accent);
 }
 
+.edit-pencil-inline {
+    position: static;
+    display: inline;
+    margin-left: 0.4em;
+    vertical-align: baseline;
+    font-size: 0.75em;
+}
+
 .badge-restore {
     margin-left: auto;
     background: none;

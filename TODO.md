@@ -1,6 +1,6 @@
 # Bristlenose — Where I Left Off
 
-Last updated: 1 Feb 2026 (v0.6.1, snap packaging + author identity)
+Last updated: 1 Feb 2026 (v0.6.1, editable section/theme headings session)
 
 ---
 
@@ -14,7 +14,7 @@ Last updated: 1 Feb 2026 (v0.6.1, snap packaging + author identity)
 - [x] Inline quote editing (pencil icon, contenteditable, localStorage persistence)
 - [x] Tag system — AI-generated badges (deletable with restore) + user-added tags (auto-suggest, keyboard nav), localStorage persistence, CSV export with separate AI/User columns
 - [x] Atomic design system (`bristlenose/theme/`) — tokens, atoms, molecules, organisms, templates; CSS concatenated at render time
-- [x] JavaScript extraction — report JS broken out of `render_html.py` into 8 standalone modules (`bristlenose/theme/js/`): storage, player, favourites, editing, tags, histogram, csv-export, main; concatenated at render time mirroring the CSS pattern; `render_html.py` reduced from 1534 → 811 lines
+- [x] JavaScript extraction — report JS broken out of `render_html.py` into standalone modules (`bristlenose/theme/js/`): storage, player, favourites, editing, tags, histogram, csv-export, names, main; concatenated at render time mirroring the CSS pattern
 - [x] `bristlenose render` command — re-render reports from intermediate JSON without retranscribing or calling LLMs
 - [x] Apple Silicon GPU acceleration (MLX)
 - [x] PII redaction (Presidio)
@@ -43,6 +43,10 @@ Last updated: 1 Feb 2026 (v0.6.1, snap packaging + author identity)
 - [x] `render --clean` accepted gracefully — flag is ignored with a reassuring message that render is always non-destructive (overwrites reports only)
 - [x] Per-participant HTML transcript pages — `transcript_p1.html`, `transcript_p2.html` etc.; participant table ID column is a hyperlink; back button styled after Claude search (`← {project_name} Research Report`); timecodes clickable with video player; speaker names resolved (short_name → full_name → pid); prefers cooked transcripts over raw when both exist; `transcript.css` added to theme; only `storage.js` + `player.js` loaded (no favourites/editing/tags); 17 tests
 - [x] Quote attribution links to transcripts — `— p1` at end of each quote is a hyperlink to `transcript_p1.html#t-{seconds}`, deep-linking to the exact segment; `.speaker-link` CSS in `blockquote.css` (inherits muted colour, accent on hover)
+- [x] Editable participant names in report — pencil icon on participant table Name/Role cells; `contenteditable` inline editing; localStorage persistence; YAML clipboard export; reconciliation with baked-in data on re-render; `names.js` module + `name-edit.css` molecule
+- [x] Auto name/role extraction from transcripts — Stage 5b LLM prompt extended to extract `person_name` and `job_title`; `SpeakerInfo` dataclass; speaker label metadata harvesting for Teams/DOCX/VTT sources; `auto_populate_names()` fills empty editable fields (LLM > metadata, never overwrites); wired into `run()` and `run_transcription_only()`
+- [x] Short name suggestion heuristic — `suggest_short_names()` in `people.py`; first token of `full_name`, disambiguates collisions with last-name initial ("Sarah J." vs "Sarah K."); JS mirror `suggestShortName()` in `names.js` for browser-side auto-fill; 26 new tests
+- [x] Editable section/theme headings — pencil icon inline editing on section titles, section descriptions, theme titles, theme descriptions; bidirectional ToC sync; shared `bristlenose-edits` localStorage; `initInlineEditing()` in `editing.js`; 19 tests
 
 ---
 
@@ -111,7 +115,7 @@ Organised from easiest to hardest. The README has a condensed version; this is t
 
 ### Small (a day or two each)
 
-- [ ] Editable participant names in report — allow users to edit `full_name` directly in the HTML report participant table (currently shows pale-grey italic "Unnamed" placeholder when empty)
+- [x] Editable participant names in report — pencil icon inline editing, localStorage, YAML export, reconciliation
 - [ ] Participant metadata: day of the week in recordings — Start column now shows date+time (Finder-style), but could also show day name (e.g. "Mon 29 Jan 2026 at 20:56")
 - [ ] Reduce AI tag density — too many AI badges per quote; tune the LLM prompt or filter to show only the most relevant 2–3
 - [ ] Sentiment & friction as standalone sections — currently listed under Themes in the TOC but they're not themes; give them their own subsection/heading level
@@ -132,7 +136,7 @@ Organised from easiest to hardest. The README has a condensed version; this is t
 ### Medium (a few days each)
 
 - [ ] Moderator identification and transcript page speaker styling (see design notes below)
-- [ ] LLM name/role extraction from transcripts — auto-populate `people.yaml` editable fields (see design notes below)
+- [x] LLM name/role extraction from transcripts — extended Stage 5b, `SpeakerInfo` dataclass, metadata harvesting, auto-populate
 - [ ] Multi-participant sessions — handle recordings with more than one interviewee
 - [ ] Speaker diarisation improvements — better accuracy, manual correction UI
 - [ ] Batch processing dashboard — progress bars, partial results, resume interrupted runs
@@ -196,39 +200,25 @@ Full design doc: `docs/design-doctor-and-snap.md`
 
 ---
 
-## Design notes: LLM name/role extraction (stretch goal)
+## Implementation notes: Name extraction and editable names (done)
 
-This feature auto-populates `people.yaml` editable fields (`full_name`, `short_name`, `role`) by analysing raw transcripts with an LLM. It builds on the existing people file infrastructure.
-
-### Architecture
-
-- **New file**: `bristlenose/stages/extract_names.py`
-- **Config flag**: `llm_extract_names: bool = False` in `bristlenose/config.py` (off by default — requires internet)
-- **CLI flag**: `--extract-names` on the `run` command (opt in)
-- **Pipeline position**: after stage 6 (merge transcript) and before people file compute/merge. The LLM reads raw transcripts, not PII-redacted ones, because names ARE the PII we want here
+Implemented as an extension to the existing Stage 5b speaker identification — no new pipeline stage, no new config flag.
 
 ### How it works
 
-1. For each session, send the raw transcript (or first N minutes) to the LLM
-2. Prompt asks: "Extract the participant's name and role/occupation if mentioned in conversation"
-3. LLM returns structured output: `{"full_name": "Sarah Jones", "short_name": "Sarah", "role": "Product Manager"}`
-4. Results are passed to `merge_people()` — **only pre-populate fields that are currently empty**. If the user has already set a `short_name`, the LLM result is discarded for that field
-5. This means: first run auto-fills; user edits override; subsequent runs don't clobber
+1. **LLM extraction**: Stage 5b prompt asks for `person_name` and `job_title` alongside role assignment. `SpeakerRoleItem` (structured output model) has both fields defaulting to `""`. `identify_speaker_roles_llm()` returns `list[SpeakerInfo]` with extracted data
+2. **Metadata harvesting**: `extract_names_from_labels()` in `people.py` checks `speaker_label` metadata for real names (Teams/DOCX/VTT sources often have them). Skips generic labels ("Speaker A", "SPEAKER_00", "Unknown") via `_GENERIC_LABEL_RE`
+3. **Auto-populate**: `auto_populate_names()` fills empty `full_name` (LLM > metadata) and empty `role` (LLM only). Never overwrites human edits
+4. **Short name**: `suggest_short_names()` takes first token of `full_name`, disambiguates collisions ("Sarah J." vs "Sarah K.")
+5. **Browser editing**: `names.js` — pencil icon inline editing, localStorage persistence, YAML clipboard export, reconciliation with baked-in `BN_PARTICIPANTS` data
+6. **Data flow**: pipeline → auto-populate → write people.yaml → bake into HTML → browser edits → export YAML → paste into people.yaml → re-render → reconcile
 
-### Key design decisions
+### Key decisions
 
-- **Only fill empty fields**: human edits always win. The LLM is a convenience, not authoritative
-- **Off by default**: this feature requires internet (LLM API call). The long-term vision is fully local operation ("works on a freelancer's laptop on a desert island"). When a capable local model is available, this could become default-on
-- **Raw transcript input**: the LLM needs to see actual names to extract them. If PII redaction runs first, names are gone. Pipeline ordering matters
-- **Graceful degradation**: if the LLM can't find a name (e.g., participant never introduces themselves), fields stay empty. The user can still set them manually in `people.yaml` or the future web UI
-- **Per-session, not per-project**: each transcript is processed independently. No cross-session name matching (a participant might give different names in different sessions — the human resolves this)
-
-### Future considerations
-
-- **Local models**: when a local LLM (MLX, llama.cpp) can do reliable name extraction, make it the default path and remove the internet dependency
-- **Web UI**: the planned web interface for editing `people.yaml` should show LLM-suggested names as pre-filled defaults that the user confirms or corrects
-- **Confidence scores**: the LLM could return confidence, and low-confidence extractions could be flagged for review rather than auto-populated
-- **⚠️ Internet required**: this is one of several features that need API access (speaker identification LLM pass is another). All such features should be clearly flagged and optional
+- **Extends Stage 5b** (no extra LLM call) — name extraction piggybacks on the speaker identification prompt
+- **Always on** — no opt-in flag; the LLM is already being called for role assignment
+- **localStorage only** — static HTML can't write files; YAML clipboard export bridges the gap
+- **Human edits always win** — `auto_populate_names()` only fills empty fields
 
 ---
 

@@ -11,6 +11,7 @@ Quick reference for finding things in the bristlenose codebase.
 | `bristlenose/config.py` | Pydantic settings (env vars, .env, bristlenose.toml) |
 | `bristlenose/models.py` | Data models and enums |
 | `bristlenose/pipeline.py` | Pipeline orchestrator |
+| `bristlenose/people.py` | People file: load, compute, merge, write, display names, name extraction, short name heuristic |
 | `bristlenose/__main__.py` | `python -m bristlenose` entry point |
 
 ## Pipeline stages (`bristlenose/stages/`)
@@ -24,7 +25,7 @@ All 12 stages of the pipeline, from ingest to render.
 | `parse_subtitles.py` | Stage 3: parse SRT/VTT subtitle files |
 | `parse_docx.py` | Stage 4: parse .docx transcripts |
 | `transcribe.py` | Stage 5: Whisper transcription |
-| `identify_speakers.py` | Stage 6: speaker diarisation |
+| `identify_speakers.py` | Stage 5b: speaker role identification + name/title extraction (`SpeakerInfo`) |
 | `merge_transcript.py` | Stage 7: merge and write transcripts |
 | `pii_removal.py` | Stage 8: PII redaction |
 | `topic_segmentation.py` | Stage 9: segment by topic |
@@ -49,10 +50,10 @@ All 12 stages of the pipeline, from ingest to render.
 | `tokens.css` | Design tokens (`--bn-*` custom properties) |
 | `images/` | Static assets (light + dark logos) |
 | `atoms/` | Smallest CSS components (badge, button, input, etc.) |
-| `molecules/` | Small groups of atoms (badge-row, bar-group, etc.) |
+| `molecules/` | Small groups of atoms (badge-row, bar-group, name-edit, etc.) |
 | `organisms/` | Self-contained UI sections (blockquote, toolbar, etc.) |
 | `templates/` | Page-level layout (report.css, print.css) |
-| `js/` | 8 JS modules (storage, player, favourites, editing, tags, histogram, csv-export, main) |
+| `js/` | 9 JS modules (storage, player, favourites, editing, tags, histogram, csv-export, names, main) |
 
 ## Utilities (`bristlenose/utils/`)
 
@@ -73,6 +74,7 @@ All 12 stages of the pipeline, from ingest to render.
 | `tests/test_models.py` | Timecode format/parse, round-trips, ExtractedQuote (12 tests) |
 | `tests/test_dark_mode.py` | Dark mode: CSS tokens, HTML attributes, logo switching, config (17 tests) |
 | `tests/test_text_utils.py` | Smart quotes, disfluency removal, text cleanup (11 tests) |
+| `tests/test_name_extraction.py` | Name extraction, auto-populate, short name heuristic, SpeakerRoleItem compat (26 tests) |
 
 ## Snap packaging
 

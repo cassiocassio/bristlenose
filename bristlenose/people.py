@@ -8,8 +8,10 @@ each run; human-editable fields (name, role, persona, notes) are preserved.
 from __future__ import annotations
 
 import logging
+import re
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import yaml
 
@@ -22,6 +24,9 @@ from bristlenose.models import (
     PersonEntry,
     SpeakerRole,
 )
+
+if TYPE_CHECKING:
+    from bristlenose.stages.identify_speakers import SpeakerInfo
 
 logger = logging.getLogger(__name__)
 
@@ -214,3 +219,126 @@ def build_display_name_map(people: PeopleFile) -> dict[str, str]:
         else:
             names[pid] = pid
     return names
+
+
+# ---------------------------------------------------------------------------
+# Name extraction from metadata
+# ---------------------------------------------------------------------------
+
+# Labels that are generic placeholders, not real names.
+_GENERIC_LABEL_RE = re.compile(
+    r"^(speaker\s*[a-z0-9]|SPEAKER_\d+|unknown|narrator)$",
+    re.IGNORECASE,
+)
+
+
+def extract_names_from_labels(
+    transcripts: list[FullTranscript],
+) -> dict[str, str]:
+    """Extract probable real names from ``speaker_label`` metadata.
+
+    Teams/VTT transcripts often have real names as speaker labels
+    (e.g. "Sarah Jones" instead of "Speaker A").  Returns
+    ``{participant_id: name}`` for labels that look like real names.
+    """
+    names: dict[str, str] = {}
+    for transcript in transcripts:
+        pid = transcript.participant_id
+        # Find the dominant PARTICIPANT-role speaker label.
+        label_counts: dict[str, int] = {}
+        for seg in transcript.segments:
+            if seg.speaker_role == SpeakerRole.PARTICIPANT and seg.speaker_label:
+                label_counts[seg.speaker_label] = (
+                    label_counts.get(seg.speaker_label, 0) + 1
+                )
+        if not label_counts:
+            continue
+        # Pick the most frequent label.
+        label = max(label_counts, key=label_counts.get)  # type: ignore[arg-type]
+        # Skip generic labels.
+        if _GENERIC_LABEL_RE.match(label):
+            continue
+        # Skip purely numeric labels.
+        if label.strip().isdigit():
+            continue
+        names[pid] = label.strip()
+    return names
+
+
+# ---------------------------------------------------------------------------
+# Auto-populate editable fields from extracted data
+# ---------------------------------------------------------------------------
+
+
+def auto_populate_names(
+    people: PeopleFile,
+    speaker_infos: dict[str, SpeakerInfo],
+    label_names: dict[str, str],
+) -> None:
+    """Pre-populate empty ``full_name``/``role`` fields from extracted data.
+
+    Only fills fields that are currently empty — never overwrites user edits.
+    Priority: LLM-extracted name > speaker-label metadata name.
+
+    Mutates *people* in place.
+    """
+    for pid, entry in people.participants.items():
+        ed = entry.editable
+
+        # full_name: LLM > label metadata
+        if not ed.full_name:
+            info = speaker_infos.get(pid)
+            if info and info.person_name:
+                ed.full_name = info.person_name
+            elif pid in label_names:
+                ed.full_name = label_names[pid]
+
+        # role (job title): LLM only
+        if not ed.role:
+            info = speaker_infos.get(pid)
+            if info and info.job_title:
+                ed.role = info.job_title
+
+
+# ---------------------------------------------------------------------------
+# Short name suggestion
+# ---------------------------------------------------------------------------
+
+
+def suggest_short_names(people: PeopleFile) -> None:
+    """Auto-suggest ``short_name`` for participants missing one.
+
+    Uses the first token of ``full_name``.  When two participants share a
+    first name, disambiguates with the last-name initial
+    (e.g. "Sarah J." vs "Sarah K.").
+
+    Only sets ``short_name`` on entries where it is currently empty.
+    Mutates *people* in place.
+    """
+    # Collect candidates: entries that have full_name but no short_name.
+    candidates: dict[str, str] = {}  # pid -> first_name
+    for pid, entry in people.participants.items():
+        if entry.editable.full_name and not entry.editable.short_name:
+            first = entry.editable.full_name.split()[0]
+            candidates[pid] = first
+
+    if not candidates:
+        return
+
+    # Detect first-name collisions.
+    first_counts: dict[str, int] = {}
+    for first in candidates.values():
+        first_counts[first] = first_counts.get(first, 0) + 1
+
+    # Assign short names.
+    for pid, first in candidates.items():
+        if first_counts[first] > 1:
+            # Disambiguate: append last-name initial if available.
+            parts = people.participants[pid].editable.full_name.split()
+            if len(parts) >= 2:
+                short = f"{first} {parts[-1][0]}."
+            else:
+                short = first
+        else:
+            short = first
+        people.participants[pid].editable.short_name = short

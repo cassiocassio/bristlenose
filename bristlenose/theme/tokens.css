@@ -55,7 +55,7 @@
     --bn-transition-slow: 0.3s ease;
 
     /* Interactive element colours */
-    --bn-colour-icon-idle: #e5e7eb;
+    --bn-colour-icon-idle: #c9ccd1;
     --bn-colour-favourited: #999;
     --bn-colour-shadow: rgba(0, 0, 0, 0.1);
 
@@ -115,7 +115,7 @@
         --bn-colour-suggestion-bg:    light-dark(#eff6ff, #111d2e);
 
         /* Interactive elements */
-        --bn-colour-icon-idle:        light-dark(#e5e7eb, #3f3f3f);
+        --bn-colour-icon-idle:        light-dark(#c9ccd1, #595959);
         --bn-colour-favourited:       light-dark(#999, #ccc);
         --bn-colour-shadow:           light-dark(rgba(0,0,0,0.1), rgba(0,0,0,0.4));
     }

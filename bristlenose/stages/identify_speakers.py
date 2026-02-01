@@ -3,8 +3,19 @@
 from __future__ import annotations
 
 import logging
+from dataclasses import dataclass
 
 from bristlenose.models import SpeakerRole, TranscriptSegment
+
+
+@dataclass
+class SpeakerInfo:
+    """Name and title extracted for one speaker during role identification."""
+
+    speaker_label: str
+    role: SpeakerRole
+    person_name: str = ""
+    job_title: str = ""
 
 logger = logging.getLogger(__name__)
 
@@ -135,18 +146,22 @@ def identify_speaker_roles_heuristic(
 async def identify_speaker_roles_llm(
     segments: list[TranscriptSegment],
     llm_client: object,
-) -> list[TranscriptSegment]:
+) -> list[SpeakerInfo]:
     """Refine speaker role identification using an LLM.
 
     Takes the first few minutes of transcript and asks the LLM to
     classify each speaker as researcher, participant, or observer.
+    Also extracts names and job titles when mentioned in the transcript.
+
+    Mutates *segments* in place (sets ``speaker_role``).
 
     Args:
         segments: Transcript segments (heuristic roles already assigned).
         llm_client: The LLM client for analysis.
 
     Returns:
-        Segments with refined speaker_role values.
+        A :class:`SpeakerInfo` for each speaker the LLM identified, or
+        an empty list if the LLM call fails.
     """
     from bristlenose.llm.client import LLMClient
     from bristlenose.llm.prompts import SPEAKER_IDENTIFICATION_PROMPT
@@ -162,7 +177,7 @@ async def identify_speaker_roles_llm(
         sample_lines.append(f"[{label}] {seg.text}")
 
     if not sample_lines:
-        return segments
+        return []
 
     sample_text = "\n".join(sample_lines)
 
@@ -184,10 +199,18 @@ async def identify_speaker_roles_llm(
             response_model=SpeakerRoleAssignment,
         )
 
-        # Apply LLM assignments
+        # Apply LLM assignments and collect extracted info
+        infos: list[SpeakerInfo] = []
         role_map: dict[str, SpeakerRole] = {}
         for assignment in result.assignments:  # type: ignore[attr-defined]
-            role_map[assignment.speaker_label] = SpeakerRole(assignment.role)
+            role = SpeakerRole(assignment.role)
+            role_map[assignment.speaker_label] = role
+            infos.append(SpeakerInfo(
+                speaker_label=assignment.speaker_label,
+                role=role,
+                person_name=getattr(assignment, "person_name", "") or "",
+                job_title=getattr(assignment, "job_title", "") or "",
+            ))
 
         for seg in segments:
             label = seg.speaker_label or "Unknown"
@@ -195,11 +218,11 @@ async def identify_speaker_roles_llm(
                 seg.speaker_role = role_map[label]
 
         logger.info("LLM speaker identification: %s", role_map)
+        return infos
 
     except Exception as exc:
         logger.warning("LLM speaker identification failed, using heuristics: %s", exc)
-
-    return segments
+        return []
 
 
 class _SpeakerStats:

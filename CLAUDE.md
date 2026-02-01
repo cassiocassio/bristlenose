@@ -39,14 +39,51 @@ LLM provider: API keys via env vars (`ANTHROPIC_API_KEY` or `OPENAI_API_KEY`), `
 `people.yaml` lives in the output directory. It tracks every participant across pipeline runs.
 
 - **Models**: `PersonComputed` (refreshed each run) + `PersonEditable` (preserved across runs) → `PersonEntry` → `PeopleFile` — all in `bristlenose/models.py`
-- **Core logic**: `bristlenose/people.py` — load, compute, merge, write, build display name map
+- **Core logic**: `bristlenose/people.py` — load, compute, merge, write, build display name map, extract names from labels, auto-populate names, suggest short names
 - **Merge strategy**: computed fields always overwritten; editable fields always preserved; new participants added with empty defaults; old participants missing from current run are **kept** (not deleted)
 - **Display names**: `short_name` → used as display name in quotes/friction/journeys. `full_name` → used in participant table Name column. Resolved at render time only — canonical `participant_id` (p1, p2) stays in all data models and HTML `data-participant` attributes. Display names are cosmetic
-- **Participant table columns**: `ID | Name | Role | Start | Duration | Words | Source file`. ID shows raw `participant_id`. Name shows `full_name` (pale-grey italic "Unnamed" placeholder when empty). Start uses macOS Finder-style relative dates via `format_finder_date()` in `utils/markdown.py`
-- **Pipeline wiring**: `run()` and `run_transcription_only()` compute+write; `run_analysis_only()` and `run_render_only()` load existing for display names only
-- **Key workflow**: user edits `short_name` / `full_name` in `people.yaml` → `bristlenose render` → report uses new names
+- **Participant table columns**: `ID | Name | Role | Start | Duration | Words | Source file`. ID shows raw `participant_id`. Name column has pencil icon for inline editing (see "Name editing in HTML report" below). Start uses macOS Finder-style relative dates via `format_finder_date()` in `utils/markdown.py`
+- **Pipeline wiring**: `run()` and `run_transcription_only()` compute+write+auto-populate; `run_analysis_only()` and `run_render_only()` load existing for display names only
+- **Key workflows**:
+  - User edits `short_name` / `full_name` in `people.yaml` → `bristlenose render` → report uses new names
+  - User edits name in HTML report → localStorage → "Export names" → paste YAML into `people.yaml` → `bristlenose render`
+  - Full pipeline run auto-extracts names from LLM + speaker label metadata → auto-populates empty fields
 - **YAML comments**: inline comments added by users are lost on re-write (PyYAML limitation, documented in file header)
-- **Future**: editable participant names in HTML report; web UI for editing people; LLM-based auto name/role extraction (see TODO.md)
+
+### Auto name/role extraction
+
+Stage 5b (speaker identification) extracts participant names and job titles alongside role classification — no extra LLM call.
+
+- **LLM extraction**: `SpeakerRoleItem` in `bristlenose/llm/structured.py` has optional `person_name` and `job_title` fields (default `""`). The Stage 5b prompt in `prompts.py` asks the LLM to extract these from self-introductions. `identify_speaker_roles_llm()` in `identify_speakers.py` returns `list[SpeakerInfo]` (dataclass: `speaker_label`, `role`, `person_name`, `job_title`)
+- **Metadata extraction**: `extract_names_from_labels()` in `people.py` harvests real names from `speaker_label` on `TranscriptSegment` — works for Teams/DOCX/VTT sources where labels are real names (e.g. "Sarah Jones"), skips generic labels ("Speaker A", "SPEAKER_00", "Unknown")
+- **Auto-populate**: `auto_populate_names()` fills empty `full_name` (LLM > label metadata) and `role` (LLM only). Never overwrites user edits
+- **Short name suggestion**: `suggest_short_names()` auto-fills `short_name` from first token of `full_name`. Disambiguates collisions: "Sarah J." vs "Sarah K." when two participants share a first name
+- **Pipeline wiring**: `run()` collects `SpeakerInfo` from Stage 5b → calls `extract_names_from_labels()` + `auto_populate_names()` + `suggest_short_names()` after `merge_people()` and before `write_people_file()`. `run_transcription_only()` uses label extraction only (no LLM)
+
+### Name editing in HTML report
+
+Participant names and roles are editable inline in the HTML report.
+
+- **Pencil icon**: `.name-pencil` button in Name and Role table cells, visible on row hover. Same contenteditable lifecycle as quote editing (Enter/Escape/click-outside)
+- **JS module**: `bristlenose/theme/js/names.js` — `initNames()` in boot sequence (after `initCsvExport()`). Uses `createStore('bristlenose-names')` for localStorage. Shape: `{pid: {full_name, short_name, role}}`
+- **Live DOM updates**: `updateAllReferences(pid)` propagates name changes to quote attributions (`.speaker-link`), participant table cells, etc.
+- **Short name auto-suggest**: JS-side `suggestShortName()` mirrors the Python heuristic — when `full_name` is edited and `short_name` is empty, auto-fills with first name
+- **YAML export**: "Export names" toolbar button copies edited names as a YAML snippet via `buildNamesYaml()` + `copyToClipboard()`. User pastes into `people.yaml`
+- **Reconciliation**: `reconcileWithBaked()` on page load prunes localStorage entries that match the baked-in `BN_PARTICIPANTS` data (user already pasted edits and re-rendered)
+- **BN_PARTICIPANTS**: JSON blob emitted in the HTML `<script>` block containing `{pid: {full_name, short_name, role}}` from people.yaml at render time. Used by JS for reconciliation and display name resolution
+- **CSS**: `molecules/name-edit.css` — `.name-cell`, `.role-cell` positioning; `.name-pencil` hover reveal; `.unnamed` placeholder style; `.edited` indicator; print hidden
+
+## Editable section/theme headings
+
+Section titles, section descriptions, theme titles, and theme descriptions are editable inline in the HTML report — same UX as quote editing.
+
+- **Markup**: `<span class="editable-text" data-edit-key="{anchor}:title|desc" data-original="...">` wraps the text inside `<h3>` (titles) and `<p class="description">` (descriptions). Pencil button (`.edit-pencil-inline`) sits inline after the text
+- **ToC entries**: Section and theme titles in the Table of Contents are also editable (same `data-edit-key`). Sentiment and Friction points are NOT editable
+- **Bidirectional sync**: Editing a title in the ToC updates the heading, and vice versa. Uses `_syncSiblings()` — all `.editable-text` spans sharing the same `data-edit-key` are kept in sync
+- **Storage**: Reuses the same `bristlenose-edits` localStorage store as quote edits. Keys: `section-{slug}:title`, `section-{slug}:desc`, `theme-{slug}:title`, `theme-{slug}:desc`
+- **JS**: `initInlineEditing()` in `editing.js`, called from `main.js` boot sequence after `initEditing()`. Separate `activeInlineEdit` tracker from `activeEdit` (quote editing)
+- **CSS**: `.edit-pencil-inline` in `atoms/button.css` (static inline positioning); `.editable-text.editing` and `.editable-text.edited` in `molecules/quote-actions.css`
+- **Tests**: `tests/test_editable_headings.py` — 19 tests covering markup, data attributes, CSS, JS bootstrap, ToC editability, and sentiment exclusion
 
 ## PII redaction
 
@@ -114,6 +151,9 @@ Each participant gets a dedicated HTML page (`transcript_p1.html`, etc.) showing
 - For transcript/timecode gotchas, see `bristlenose/stages/CLAUDE.md`
 - `doctor.py` imports `platform` and `urllib` locally inside function bodies (not at module level). When testing, patch at stdlib level (`patch("platform.system")`) not module level (`patch("bristlenose.doctor.platform.system")`)
 - `check_backend()` catches `Exception` (not just `ImportError`) for faster_whisper import — torch native libs can raise `OSError` on some machines
+- `people.py` imports `SpeakerInfo` from `identify_speakers.py` under `TYPE_CHECKING` only (avoids circular import at runtime). The `auto_populate_names()` type hint works because `from __future__ import annotations` makes all annotations strings
+- `identify_speaker_roles_llm()` changed return type from `list[TranscriptSegment]` to `list[SpeakerInfo]` — still mutates segments in place for role assignment, but now also returns extracted name/title data. Only one call site in `pipeline.py`
+- `names.js` loads **after** `csv-export.js` in `_JS_FILES` because it depends on `copyToClipboard()` and `showToast()` defined there
 
 ## Reference docs (read when working in these areas)
 

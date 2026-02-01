@@ -33,6 +33,16 @@ output/
 └── ...
 ```
 
+## Stage 5b: Speaker identification
+
+`identify_speakers.py` runs a two-pass speaker role assignment: heuristic first, then LLM refinement.
+
+- **Heuristic pass** (`identify_speaker_roles_heuristic`): scores speakers by question ratio and researcher-phrase hits. Assigns `RESEARCHER`, `PARTICIPANT`, or `OBSERVER`. Fast, no LLM needed
+- **LLM pass** (`identify_speaker_roles_llm`): sends first ~5 minutes to the LLM for refined role assignment. Also extracts `person_name` and `job_title` for each speaker when mentioned in the transcript
+- **Return type**: `identify_speaker_roles_llm()` returns `list[SpeakerInfo]` — a dataclass with `speaker_label`, `role`, `person_name`, `job_title`. Still mutates segments in place for role assignment (existing behaviour). Returns empty list on exception
+- **`SpeakerInfo` import**: defined in `identify_speakers.py`. Other modules import it under `TYPE_CHECKING` to avoid circular imports (e.g. `people.py` uses `if TYPE_CHECKING: from bristlenose.stages.identify_speakers import SpeakerInfo`)
+- **Structured output**: `SpeakerRoleItem` in `llm/structured.py` has `person_name` and `job_title` fields (both default `""` for backward compatibility with existing LLM responses)
+
 ## Duplicate timecode helpers
 
 Both `models.py` and `utils/timecodes.py` define `format_timecode()` and `parse_timecode()`. They behave identically. Stage files import from one or the other — both are fine. The `utils/timecodes.py` version has a more sophisticated parser (SRT/VTT milliseconds support).

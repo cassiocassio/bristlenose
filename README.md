@@ -20,7 +20,7 @@ It's built by a practising researcher. It's free and open source under AGPL-3.0.
 
 You give it a folder of recordings. It gives you back a report.
 
-Behind the scenes: transcription (Whisper, local), speaker identification, PII redaction, quote extraction and enrichment (via Claude or ChatGPT API), thematic grouping, and HTML rendering. One command, no manual steps.
+Behind the scenes: transcription (Whisper, local), speaker identification with automatic name and role extraction, PII redaction, quote extraction and enrichment (via Claude or ChatGPT API), thematic grouping, and HTML rendering. One command, no manual steps.
 
 The report includes:
 
@@ -33,6 +33,7 @@ The report includes:
 - **Clickable timecodes** -- jump to the exact moment in a popout video player
 - **Favourite quotes** -- star, reorder, export as CSV
 - **Inline editing** -- fix transcription errors directly in the report
+- **Editable participant names** -- click the pencil icon to name participants in-browser; export edits as YAML
 - **Tags** -- AI-generated badges plus your own free-text tags with auto-suggest
 
 All interactive state (favourites, edits, tags) persists in your browser's localStorage.
@@ -159,7 +160,7 @@ results/
   bristlenose-theme.css      # stylesheet (regenerated on every run)
   bristlenose-logo.png       # project logo
   bristlenose-player.html    # popout video player (if media files present)
-  people.yaml                # participant registry (edit names here)
+  people.yaml                # participant registry (names auto-extracted, edit here or in browser)
   raw_transcripts/           # one .txt per participant
   cooked_transcripts/        # PII-redacted transcripts (only with --redact-pii)
   intermediate/              # JSON snapshots (used by `bristlenose render`)
@@ -215,7 +216,7 @@ On Linux, install `python3.12` and `ffmpeg` via your package manager. On Windows
 ### Verify everything works
 
 ```bash
-pytest                       # ~260 tests, should pass in <2s
+pytest                       # ~280 tests, should pass in <2s
 ruff check .                 # lint
 mypy bristlenose/            # type check (some third-party SDK errors are expected)
 ```
@@ -251,7 +252,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for the full project layout, but the shor
 - `bristlenose/stages/` -- the 12-stage pipeline (ingest through render), one module per stage
 - `bristlenose/stages/render_html.py` -- HTML report renderer, loads CSS + JS from theme/
 - `bristlenose/theme/` -- atomic CSS design system (tokens, atoms, molecules, organisms, templates)
-- `bristlenose/theme/js/` -- report JavaScript (8 modules, concatenated at render time)
+- `bristlenose/theme/js/` -- report JavaScript (9 modules, concatenated at render time)
 - `bristlenose/llm/prompts.py` -- LLM prompt templates
 - `bristlenose/pipeline.py` -- orchestrator that wires the stages together
 - `bristlenose/cli.py` -- Typer CLI entry point

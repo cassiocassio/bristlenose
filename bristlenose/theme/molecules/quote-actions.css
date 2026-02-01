@@ -33,6 +33,18 @@ blockquote.editing .quote-text {
     border-bottom: 1px dashed var(--bn-colour-muted);
 }
 
+.editable-text.editing {
+    background: var(--bn-colour-editing-bg);
+    outline: 1px solid var(--bn-colour-editing-border);
+    border-radius: var(--bn-radius-sm);
+    padding: var(--bn-space-xs) 0.3rem;
+    cursor: text;
+}
+
+.editable-text.edited {
+    border-bottom: 1px dashed var(--bn-colour-muted);
+}
+
 blockquote.fav-animating {
     transition: transform var(--bn-transition-normal);
     z-index: 1;

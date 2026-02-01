@@ -14,6 +14,7 @@ from bristlenose.models import (
     InputSession,
     PiiCleanTranscript,
     PipelineResult,
+    SpeakerRole,
     TranscriptSegment,
 )
 
@@ -105,11 +106,13 @@ class Pipeline:
             task = progress.add_task("Identifying speakers...", total=None)
             llm_client = LLMClient(self.settings)
 
+            all_speaker_infos: dict[str, list] = {}
             for pid, segments in session_segments.items():
                 # Heuristic pass first
                 identify_speaker_roles_heuristic(segments)
-                # LLM refinement
-                await identify_speaker_roles_llm(segments, llm_client)
+                # LLM refinement (also extracts names/titles)
+                infos = await identify_speaker_roles_llm(segments, llm_client)
+                all_speaker_infos[pid] = infos
 
             progress.remove_task(task)
 
@@ -179,16 +182,33 @@ class Pipeline:
             # ── People file ───────────────────────────────────────────
             task = progress.add_task("Updating people file...", total=None)
             from bristlenose.people import (
+                auto_populate_names,
                 build_display_name_map,
                 compute_participant_stats,
+                extract_names_from_labels,
                 load_people_file,
                 merge_people,
+                suggest_short_names,
                 write_people_file,
             )
 
             existing_people = load_people_file(output_dir)
             computed_stats = compute_participant_stats(sessions, transcripts)
             people = merge_people(existing_people, computed_stats)
+
+            # Auto-populate names from speaker labels and LLM extraction.
+            label_names = extract_names_from_labels(transcripts)
+            # Build pid → SpeakerInfo map: find the PARTICIPANT-role speaker
+            # from the LLM results for each session.
+            pid_speaker_info = {}
+            for pid, infos in all_speaker_infos.items():
+                for info in infos:
+                    if info.role == SpeakerRole.PARTICIPANT:
+                        pid_speaker_info[pid] = info
+                        break
+            auto_populate_names(people, pid_speaker_info, label_names)
+            suggest_short_names(people)
+
             write_people_file(people, output_dir)
             display_names = build_display_name_map(people)
             progress.remove_task(task)
@@ -267,15 +287,24 @@ class Pipeline:
 
         # People file (stats only, no rendering)
         from bristlenose.people import (
+            auto_populate_names,
             compute_participant_stats,
+            extract_names_from_labels,
             load_people_file,
             merge_people,
+            suggest_short_names,
             write_people_file,
         )
 
         existing_people = load_people_file(output_dir)
         computed_stats = compute_participant_stats(sessions, transcripts)
         people = merge_people(existing_people, computed_stats)
+
+        # Auto-populate names from speaker label metadata (no LLM here).
+        label_names = extract_names_from_labels(transcripts)
+        auto_populate_names(people, {}, label_names)
+        suggest_short_names(people)
+
         write_people_file(people, output_dir)
 
         return PipelineResult(

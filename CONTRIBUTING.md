@@ -45,12 +45,14 @@ bristlenose/          # main package
   llm/
     prompts.py        # LLM prompt templates
     structured.py     # Pydantic schemas for LLM structured output
+  people.py           # people file: load, compute, merge, write, name extraction
   theme/              # design system (atomic CSS) — see below
     tokens.css
     atoms/
     molecules/
     organisms/
     templates/
+    js/               # 9 JS modules concatenated at render time
     index.css         # documents concatenation order
   utils/
     hardware.py       # GPU/CPU detection
@@ -81,6 +83,7 @@ theme/
   molecules/                  # 3. Molecules       (small groups of atoms)
     badge-row.css             #    badges flex container
     bar-group.css             #    bar-group row (label + bar + count)
+    name-edit.css             #    participant name inline editing
     quote-actions.css         #    favourite/edit states, animations
     tag-input.css             #    input wrapper + suggest dropdown
   organisms/                  # 4. Organisms       (self-contained UI sections)

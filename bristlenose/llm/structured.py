@@ -10,11 +10,29 @@ from pydantic import BaseModel, Field
 
 
 class SpeakerRoleItem(BaseModel):
-    """A single speaker-to-role assignment."""
+    """A single speaker-to-role assignment with optional name extraction."""
 
-    speaker_label: str = Field(description="The speaker label from the transcript (e.g. 'Speaker A', 'John Smith')")
+    speaker_label: str = Field(
+        description="The speaker label from the transcript (e.g. 'Speaker A', 'John Smith')"
+    )
     role: str = Field(description="One of: researcher, participant, observer")
     reasoning: str = Field(description="Brief explanation for the assignment")
+    person_name: str = Field(
+        default="",
+        description=(
+            "The person's real name if mentioned in the transcript "
+            "(e.g. from a self-introduction like 'Hi, I'm Sarah'). "
+            "Empty string if unknown."
+        ),
+    )
+    job_title: str = Field(
+        default="",
+        description=(
+            "The person's job title or professional role if mentioned "
+            "(e.g. 'product manager', 'UX designer'). "
+            "Empty string if unknown."
+        ),
+    )
 
 
 class SpeakerRoleAssignment(BaseModel):

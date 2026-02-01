@@ -37,4 +37,30 @@ Template-level CSS in `templates/`: `report.css` (main report layout), `transcri
 
 ## JS modules
 
-8 standalone files in `js/` concatenated at render time (same pattern as CSS): storage, player, favourites, editing, tags, histogram, csv-export, main. Transcript pages use only `storage.js` + `player.js` (no favourites/editing/tags).
+9 standalone files in `js/` concatenated at render time (same pattern as CSS): storage, player, favourites, editing, tags, histogram, csv-export, names, main. Transcript pages use only `storage.js` + `player.js` (no favourites/editing/tags/names).
+
+### names.js
+
+Inline name editing for the participant table. Follows the same `contenteditable` lifecycle as `editing.js` (start → accept/cancel → persist).
+
+- **Store**: `createStore('bristlenose-names')` — shape `{pid: {full_name, short_name, role}}`
+- **Edit flow**: pencil icon on hover → click makes cell `contenteditable` → Enter/click-outside saves, Escape cancels
+- **Auto-suggest**: `suggestShortName(fullName, allNames)` mirrors the Python heuristic — first name, disambiguate collisions with last-name initial ("Sarah J.")
+- **DOM updates**: `updateAllReferences(pid)` propagates name changes to quote attributions (`.speaker-link`) and participant table cells
+- **Reconciliation**: `reconcileWithBaked()` prunes localStorage entries that match `BN_PARTICIPANTS` (baked-in JSON from render time) — after user pastes edits into `people.yaml` and re-renders, browser state auto-cleans
+- **Export**: "Export names" toolbar button copies a YAML snippet via `copyToClipboard()` + `showToast()` (from `csv-export.js`)
+- **Dependencies**: must load after `csv-export.js` (needs `showToast`, `copyToClipboard`) and before `main.js` (boot calls `initNames()`)
+- **Data source**: `BN_PARTICIPANTS` global — JSON object `{pid: {full_name, short_name, role}}` emitted by `render_html.py` in a `<script>` block
+
+### Inline heading/description editing
+
+Section titles, descriptions, theme titles, and theme descriptions use `.editable-text` spans with pencil icons for inline editing. Handled by `initInlineEditing()` in `editing.js` (same file as quote editing, separate state tracker).
+
+- **`.edit-pencil-inline`** in `atoms/button.css` — overrides `.edit-pencil` absolute positioning with `position: static; display: inline` for flow-inline placement after text
+- **`.editable-text.editing`** in `molecules/quote-actions.css` — editing highlight (same visual as `.quote-text` editing)
+- **`.editable-text.edited`** in `molecules/quote-actions.css` — dashed underline indicator for changed text
+- **Bidirectional ToC sync** — ToC entries and section headings share the same `data-edit-key`; `_syncSiblings()` keeps all matching spans in sync on edit
+
+### name-edit.css (molecule)
+
+Styles for participant name inline editing: `.name-cell` / `.role-cell` positioning, `.name-pencil` (opacity 0 → 1 on row hover), editing state background, `.edited` dashed-underline indicator, `.unnamed` muted italic placeholder. Print-hidden.

@@ -1,0 +1,54 @@
+/* Molecule: name-edit — inline name/role editing in participant table */
+
+.name-cell,
+.role-cell {
+    position: relative;
+    padding-right: 2rem;
+}
+
+.name-pencil {
+    position: absolute;
+    top: 50%;
+    right: 0.4rem;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    font-size: 0.8rem;
+    color: var(--bn-colour-icon-idle);
+    cursor: pointer;
+    padding: var(--bn-space-xs);
+    line-height: 1;
+    opacity: 0;
+    transition: opacity var(--bn-transition-fast), color var(--bn-transition-fast);
+}
+
+tr:hover .name-pencil,
+.name-pencil:focus {
+    opacity: 1;
+}
+
+.name-pencil:hover {
+    color: var(--bn-colour-accent);
+}
+
+.name-cell.editing .name-text,
+.role-cell.editing .role-text {
+    background: var(--bn-colour-editing-bg);
+    outline: 1px solid var(--bn-colour-editing-border);
+    border-radius: var(--bn-radius-sm);
+    padding: 0.1rem 0.3rem;
+}
+
+.name-text.edited,
+.role-text.edited {
+    border-bottom: 1px dashed var(--bn-colour-accent);
+}
+
+.unnamed {
+    color: var(--bn-colour-muted);
+    font-style: italic;
+}
+
+@media print {
+    .name-pencil { display: none; }
+}

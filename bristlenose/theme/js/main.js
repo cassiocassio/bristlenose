@@ -14,7 +14,8 @@
  *   editing.js      → initEditing()
  *   tags.js         → userTags, persistUserTags(), initTags()
  *   histogram.js    → renderUserTagsChart()   (called by tags.js)
- *   csv-export.js   → initCsvExport()
+ *   csv-export.js   → initCsvExport(), copyToClipboard(), showToast()
+ *   names.js        → initNames()            (depends on csv-export.js)
  *   main.js         → this file (orchestrator)
  *
  * The Python renderer concatenates these files in order and wraps them
@@ -28,6 +29,8 @@
 initPlayer();
 initFavourites();
 initEditing();
+initInlineEditing();
 initTags();
 renderUserTagsChart();
 initCsvExport();
+initNames();

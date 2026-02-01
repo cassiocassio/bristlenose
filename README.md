@@ -55,8 +55,9 @@ Requires ffmpeg and an API key from [Anthropic](https://console.anthropic.com/se
 # macOS (Homebrew) -- recommended, handles ffmpeg + Python for you
 brew install cassiocassio/bristlenose/bristlenose
 
-# Ubuntu / Linux (snap) -- bundles ffmpeg and all dependencies
-sudo snap install bristlenose --classic
+# Ubuntu / Linux (snap) -- coming soon, pending Snap Store registration
+# sudo snap install bristlenose --classic
+# In the meantime, see "Try the snap (pre-release)" below
 
 # macOS / Linux / Windows (pipx)
 pipx install bristlenose
@@ -168,6 +169,29 @@ ruff check .                 # lint
 mypy bristlenose/            # type check (some third-party SDK errors are expected)
 ```
 
+### Try the snap (pre-release)
+
+The snap isn't in the Store yet, but you can grab the CI-built `.snap` from GitHub Actions and test it on any amd64 Linux box:
+
+```bash
+# 1. Download the snap artifact from the latest CI run
+#    Go to https://github.com/cassiocassio/bristlenose/actions/workflows/snap.yml
+#    Click the latest successful run → Artifacts → snap-amd64 → download and unzip
+
+# 2. Install it (--dangerous bypasses Store signature, --classic gives filesystem access)
+sudo snap install --dangerous --classic ./bristlenose_*.snap
+
+# 3. Verify
+bristlenose --version
+bristlenose doctor
+
+# 4. Run it for real
+export BRISTLENOSE_ANTHROPIC_API_KEY=sk-ant-...
+bristlenose run ./interviews/ -o ./results/
+```
+
+FFmpeg, Python, faster-whisper, and spaCy are all bundled — no system dependencies needed. Feedback welcome via [issues](https://github.com/cassiocassio/bristlenose/issues).
+
 ### Architecture
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for the full project layout, but the short version:
@@ -187,6 +211,12 @@ Edit `bristlenose/__init__.py` (the single source of truth for version), commit,
 ---
 
 ## Changelog
+
+### 0.6.1
+
+- Snap packaging for Linux — `snap/snapcraft.yaml` recipe and CI workflow (`.github/workflows/snap.yml`); builds on every push to main, publishes to edge/stable when Store registration completes
+- Pre-release snap testing instructions in README for early feedback on amd64 Linux
+- Author identity (Martin Storey) added to copyright headers, metadata, and legal files
 
 ### 0.6.0
 

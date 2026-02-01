@@ -1,6 +1,6 @@
 # Bristlenose — Where I Left Off
 
-Last updated: 1 Feb 2026 (v0.6.4, concurrent LLM calls + performance audit)
+Last updated: 1 Feb 2026 (v0.6.4, compact JSON + VideoToolbox hwaccel)
 
 ---
 
@@ -171,7 +171,8 @@ Full audit done. Stage concurrency (item 1) is shipped. Remaining items ranked b
 
 #### Quick wins (minimal code changes)
 
-- [ ] **Compact JSON in LLM prompts** — `quote_clustering.py:54` and `thematic_grouping.py:53` use `json.dumps(indent=2)` to serialize quotes for the LLM prompt. Switching to `indent=None` (or `separators=(",",":")`) saves 10–20% input tokens on the two cross-participant calls. Change: 2 lines
+- [x] **Compact JSON in LLM prompts** — `quote_clustering.py:54` and `thematic_grouping.py:53` switched from `json.dumps(indent=2)` to `separators=(",",":")`. Saves 10–20% input tokens on the two cross-participant calls
+- [x] **FFmpeg VideoToolbox hardware decode** — `utils/audio.py` now passes `-hwaccel videotoolbox` on macOS, offloading H.264/HEVC video decode to the Apple Silicon media engine. No-op for audio-only inputs and non-macOS platforms
 - [ ] **Cache `system_profiler` results** — `utils/hardware.py` runs `system_profiler SPHardwareDataType` and `system_profiler SPDisplaysDataType` on every startup (~2–4s on macOS). Results don't change between runs. Cache to `~/.config/bristlenose/.hardware-cache.json` with a TTL (e.g. 24h). Change: ~30 lines in `hardware.py`
 - [ ] **Skip logo copy when unchanged** — `render_html.py` runs `shutil.copy2()` for both logo images on every render. Add a size/mtime check first. Minor savings but avoids unnecessary disk writes
 
@@ -179,7 +180,7 @@ Full audit done. Stage concurrency (item 1) is shipped. Remaining items ranked b
 
 - [ ] **Pipeline stages 8→9 per participant** — instead of "all stage 8 then all stage 9", run `_segment_single(p) → _extract_single(p)` as a chained coroutine per participant, then gather all. This lets participant B's topic segmentation overlap with participant A's quote extraction. Max utilisation of the `llm_concurrency` window across both stages. Change: refactor the stage 8→9 calls in `pipeline.py` into a per-participant async chain, bounded by the same semaphore
 - [ ] **Pass transcript data to renderer** — `render_transcript_pages()` in `render_html.py:652` re-reads `.txt` files from disk via `load_transcripts_from_dir()`, even though the full pipeline had all transcript data in memory during stages 6–11. Thread `clean_transcripts` through to the render call to avoid redundant disk I/O. Change: add a `transcripts` parameter to `render_html()` and `render_transcript_pages()`, pass it from `pipeline.py`
-- [ ] **Concurrent FFmpeg audio extraction** — `stages/extract_audio.py:36` processes video files one at a time. Use `asyncio.create_subprocess_exec()` (or `asyncio.to_thread()` wrapping the existing subprocess) to run multiple FFmpeg instances in parallel. Bounded by number of CPU cores. Change: refactor `extract_audio_for_sessions()` to async with gather
+- [ ] **Concurrent FFmpeg audio extraction** — `stages/extract_audio.py:36` processes video files one at a time. Use `asyncio.create_subprocess_exec()` (or `asyncio.to_thread()` wrapping the existing subprocess) to run multiple FFmpeg instances in parallel. Bounded by number of CPU cores. Hardware decode (VideoToolbox) already in place — stacks with concurrency. Change: refactor `extract_audio_for_sessions()` to async with gather
 - [ ] **Temp WAV cleanup** — extracted WAV files in `output/temp/` are never cleaned up. At ~115 MB per hour of audio per participant, 10 one-hour interviews leave ~1.15 GB of temp files. Add a cleanup step after transcription (or a `--clean-temp` flag). Change: add `shutil.rmtree(temp_dir)` after `_gather_all_segments` in `pipeline.py`, guarded by a config flag
 
 #### Larger effort (new subsystem)

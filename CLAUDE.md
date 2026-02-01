@@ -194,6 +194,11 @@ Per-participant LLM calls (stages 5b, 8, 9) run concurrently, bounded by `llm_co
 - **Ordering**: `asyncio.gather()` returns results in input order — quote ordering by participant is preserved
 - **Dependency chain**: stage 8 must complete before stage 9 (topic maps feed quote extraction). Stages 10+11 depend on stage 9 output. Concurrency is within-stage only, not cross-stage
 
+## Performance optimisations
+
+- **Compact JSON in LLM prompts**: `quote_clustering.py` and `thematic_grouping.py` use `json.dumps(separators=(",",":"))` (no whitespace) to minimise input tokens sent to the LLM for stages 10 and 11. Saves 10–20% tokens on these cross-participant calls
+- **FFmpeg VideoToolbox hardware decode**: `utils/audio.py` passes `-hwaccel videotoolbox` on macOS, offloading H.264/HEVC video decoding to the Apple Silicon media engine. Harmless no-op for audio-only inputs; flag omitted on non-macOS platforms. 2–4× faster video decode, frees CPU/GPU for other work
+
 ## Gotchas
 
 - The repo directory is `/Users/cassio/Code/gourani` (legacy name, package is bristlenose)

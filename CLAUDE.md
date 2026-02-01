@@ -188,6 +188,6 @@ When the user signals end of session, **proactively offer to run this checklist*
 8. **Clean up branches** — delete merged feature branches
 9. **Verify CI** — check latest push passes CI
 
-## Current status (v0.6.1, Feb 2026)
+## Current status (v0.6.2, Feb 2026)
 
-Core pipeline complete and published to PyPI + Homebrew. Snap packaging implemented and tested locally (arm64); CI builds amd64 on every push. Snap Store publication in progress. v0.6.1 adds snap recipe, CI workflow, author identity, and pre-release testing instructions. v0.6.0 added `bristlenose doctor`. v0.5.0 added per-participant transcript pages. Next up: register snap name, request classic confinement approval, first edge channel publish. See `TODO.md` for full task list.
+Core pipeline complete and published to PyPI + Homebrew. Snap packaging implemented and tested locally (arm64); CI builds amd64 on every push. v0.6.2 adds editable participant names (inline editing + YAML export), auto name/role extraction from Stage 5b, short name suggestion heuristics, and editable section/theme headings. v0.6.1 adds snap recipe, CI workflow, author identity. v0.6.0 added `bristlenose doctor`. v0.5.0 added per-participant transcript pages. Next up: register snap name, request classic confinement approval, first edge channel publish. See `TODO.md` for full task list.

@@ -1,6 +1,6 @@
 # Bristlenose — Where I Left Off
 
-Last updated: 1 Feb 2026 (v0.6.1, editable section/theme headings session)
+Last updated: 1 Feb 2026 (v0.6.2, editable names + section headings)
 
 ---
 

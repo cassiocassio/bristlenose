@@ -611,7 +611,8 @@ def _render_transcript_page(
     has_media = video_map is not None and pid in (video_map or {})
     for seg in transcript.segments:
         tc = format_timecode(seg.start_time)
-        _w('<div class="transcript-segment">')
+        anchor = f"t-{int(seg.start_time)}"
+        _w(f'<div class="transcript-segment" id="{anchor}">')
         if has_media:
             _w(
                 f'<a href="#" class="timecode" '
@@ -714,8 +715,9 @@ def _format_quote_html(
 
     name = _esc(_display_name(quote.participant_id, display_names))
     pid_esc = _esc(quote.participant_id)
+    anchor = f"t-{int(quote.start_timecode)}"
     speaker_link = (
-        f'<a href="transcript_{pid_esc}.html" class="speaker-link">{name}</a>'
+        f'<a href="transcript_{pid_esc}.html#{anchor}" class="speaker-link">{name}</a>'
     )
     parts.append(
         f"{tc_html} "

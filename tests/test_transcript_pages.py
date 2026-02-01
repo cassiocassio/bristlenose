@@ -223,6 +223,18 @@ def test_transcript_page_no_transcripts(tmp_path: Path) -> None:
     assert paths == []
 
 
+def test_transcript_page_segment_anchors(tmp_path: Path) -> None:
+    _write_raw_transcripts(tmp_path)
+    render_transcript_pages(
+        sessions=[], project_name="Test", output_dir=tmp_path,
+    )
+    html = (tmp_path / "transcript_p1.html").read_text(encoding="utf-8")
+    # Each segment should have an anchor id based on its start time in seconds
+    assert 'id="t-16"' in html
+    assert 'id="t-42"' in html
+    assert 'id="t-70"' in html
+
+
 def test_transcript_page_js_has_player(tmp_path: Path) -> None:
     _write_raw_transcripts(tmp_path)
     render_transcript_pages(

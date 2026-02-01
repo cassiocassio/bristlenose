@@ -1,6 +1,6 @@
 .\" Man page for bristlenose
 .\" Generated from cli.py help text
-.TH BRISTLENOSE 1 "January 2026" "bristlenose 0.4.1" "User Commands"
+.TH BRISTLENOSE 1 "February 2026" "bristlenose 0.6.0" "User Commands"
 .SH NAME
 bristlenose \- user-research transcription and quote extraction engine
 .SH SYNOPSIS
@@ -34,6 +34,8 @@ bristlenose \- user-research transcription and quote extraction engine
 .IR output-dir ]
 .RI [ options ]
 .br
+.B bristlenose doctor
+.br
 .B bristlenose help
 .RI [ topic ]
 .SH DESCRIPTION
@@ -66,6 +68,12 @@ transcription. Useful after reviewing or editing raw transcripts.
 .B render
 Re-render reports from existing intermediate JSON data. No transcription, no LLM
 calls, no API key needed. Useful after CSS or JavaScript changes.
+.TP
+.B doctor
+Check runtime dependencies and show tailored fix instructions. Tests FFmpeg,
+transcription backend, Whisper model cache, API key validity, network
+connectivity, PII redaction dependencies, and disk space. Also runs automatically
+on first invocation and as a pre-flight check before pipeline commands.
 .TP
 .B help \fR[\fItopic\fR]
 Show detailed help. Topics: \fBcommands\fR, \fBconfig\fR, \fBworkflows\fR, or
@@ -278,6 +286,14 @@ Re-render after CSS changes (no API key needed):
 .RS
 .nf
 bristlenose render ./interviews/ -o ./results/
+.fi
+.RE
+.PP
+Check dependencies and setup:
+.PP
+.RS
+.nf
+bristlenose doctor
 .fi
 .RE
 .PP

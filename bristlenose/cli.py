@@ -57,7 +57,7 @@ def help(
         _help_config()
     elif topic == "workflows":
         _help_workflows()
-    elif topic in ("run", "transcribe-only", "analyze", "render", "help"):
+    elif topic in ("run", "transcribe-only", "analyze", "render", "doctor", "help"):
         import subprocess
         import sys
 
@@ -76,6 +76,7 @@ def _help_overview() -> None:
     console.print("  transcribe-only   Transcription only, no LLM calls")
     console.print("  analyze           LLM analysis on existing transcripts")
     console.print("  render            Re-render reports from intermediate JSON")
+    console.print("  doctor            Check dependencies and configuration")
     console.print("  help              This help (try: help commands, help config, help workflows)")
     console.print()
     console.print("[bold]Quick start[/bold]")
@@ -125,6 +126,10 @@ def _help_commands() -> None:
     console.print("  -o, --output DIR         Output directory (must contain intermediate/)")
     console.print("  -p, --project NAME       Project name")
     console.print("  -v, --verbose           Verbose logging")
+    console.print()
+    console.print("[bold]bristlenose doctor[/bold]")
+    console.print("  Check dependencies, API keys, and system configuration.")
+    console.print("  Runs automatically on first use; re-run anytime to diagnose issues.")
     console.print()
 
 
@@ -192,6 +197,9 @@ def _help_workflows() -> None:
     console.print("[bold]6. Redact PII from transcripts[/bold]")
     console.print("   bristlenose run ./interviews/ -o ./results/ --redact-pii")
     console.print()
+    console.print("[bold]7. Check your setup[/bold]")
+    console.print("   bristlenose doctor")
+    console.print()
     console.print("[bold]Input files[/bold]")
     console.print("  Audio: .wav .mp3 .m4a .flac .ogg .wma .aac")
     console.print("  Video: .mp4 .mov .avi .mkv .webm")
@@ -199,6 +207,196 @@ def _help_workflows() -> None:
     console.print("  Transcripts: .docx (Teams exports)")
     console.print("  Files sharing a name stem are treated as one session.")
     console.print()
+
+
+# ---------------------------------------------------------------------------
+# Doctor
+# ---------------------------------------------------------------------------
+
+_DOCTOR_SENTINEL_DIR = Path("~/.config/bristlenose").expanduser()
+_DOCTOR_SENTINEL_FILE = _DOCTOR_SENTINEL_DIR / ".doctor-ran"
+
+
+def _doctor_sentinel_dir() -> Path:
+    """Return sentinel directory, respecting $SNAP_USER_COMMON."""
+    import os
+
+    snap_common = os.environ.get("SNAP_USER_COMMON")
+    if snap_common:
+        return Path(snap_common)
+    return _DOCTOR_SENTINEL_DIR
+
+
+def _doctor_sentinel_file() -> Path:
+    return _doctor_sentinel_dir() / ".doctor-ran"
+
+
+def _should_auto_doctor() -> bool:
+    """Check if auto-doctor should run (first run or version changed)."""
+    sentinel = _doctor_sentinel_file()
+    if not sentinel.exists():
+        return True
+    try:
+        content = sentinel.read_text().strip()
+        return content != __version__
+    except OSError:
+        return True
+
+
+def _write_doctor_sentinel() -> None:
+    """Write the sentinel file after a successful auto-doctor."""
+    sentinel = _doctor_sentinel_file()
+    try:
+        sentinel.parent.mkdir(parents=True, exist_ok=True)
+        sentinel.write_text(__version__)
+    except OSError:
+        pass  # non-critical
+
+
+def _format_doctor_table(report: object) -> None:
+    """Print the doctor results table using Rich."""
+    from bristlenose.doctor import CheckStatus, DoctorReport
+
+    assert isinstance(report, DoctorReport)
+
+    for result in report.results:
+        if result.status == CheckStatus.OK:
+            status = "[dim green]ok[/dim green]"
+        elif result.status == CheckStatus.WARN:
+            status = "[bold yellow]!![/bold yellow]"
+        elif result.status == CheckStatus.FAIL:
+            status = "[bold yellow]!![/bold yellow]"
+        else:
+            status = "[dim]--[/dim]"
+
+        label = f"{result.label:<16}"
+        detail = f"[dim]{result.detail}[/dim]" if result.detail else ""
+        console.print(f"  {label}{status}   {detail}")
+
+
+def _print_doctor_fixes(report: object) -> None:
+    """Print fix instructions for failures and notes for skipped checks."""
+    from bristlenose.doctor import DoctorReport
+    from bristlenose.doctor_fixes import get_fix
+
+    assert isinstance(report, DoctorReport)
+
+    failures = report.failures
+    warnings = report.warnings
+    notes = report.notes
+
+    if failures:
+        count = len(failures)
+        label = "issue" if count == 1 else "issues"
+        console.print(f"\n{count} {label}:\n")
+        for result in failures:
+            fix = get_fix(result.fix_key)
+            if fix:
+                console.print(f"  [bold]{result.label}[/bold]: {fix}\n")
+
+    if warnings:
+        count = len(warnings)
+        label = "warning" if count == 1 else "warnings"
+        console.print(f"\n{count} {label}:\n")
+        for result in warnings:
+            fix = get_fix(result.fix_key)
+            if fix:
+                console.print(f"  [bold]{result.label}[/bold]: {fix}\n")
+
+    if notes:
+        count = len(notes)
+        label = "note" if count == 1 else "notes"
+        console.print(f"\n{count} {label}:\n")
+        for result in notes:
+            if result.detail:
+                console.print(f"  {result.label}: {result.detail}")
+
+
+@app.command()
+def doctor() -> None:
+    """Check dependencies, API keys, and system configuration."""
+    from bristlenose.doctor import run_all
+
+    settings = load_settings()
+
+    console.print(f"\nbristlenose {__version__}\n")
+
+    report = run_all(settings)
+    _format_doctor_table(report)
+
+    if not report.has_failures and not report.has_warnings:
+        console.print("\n[dim green]All clear.[/dim green]")
+    else:
+        _print_doctor_fixes(report)
+
+    # Always update sentinel on explicit doctor
+    _write_doctor_sentinel()
+    console.print()
+
+
+def _maybe_auto_doctor(settings: object, command: str) -> None:
+    """Run auto-doctor on first invocation or after version change.
+
+    If any check fails, print the table and exit. If all pass, write the
+    sentinel and continue silently.
+    """
+    from bristlenose.config import BristlenoseSettings
+    from bristlenose.doctor import run_preflight
+
+    assert isinstance(settings, BristlenoseSettings)
+
+    if not _should_auto_doctor():
+        return
+
+    console.print("\n[dim]First run — checking your setup.[/dim]\n")
+
+    report = run_preflight(settings, command)
+    _format_doctor_table(report)
+
+    if report.has_failures:
+        _print_doctor_fixes(report)
+        console.print()
+        raise typer.Exit(1)
+
+    # Passed — write sentinel
+    _write_doctor_sentinel()
+    console.print("\n[dim green]All clear.[/dim green]\n")
+
+
+def _run_preflight(settings: object, command: str, *, skip_transcription: bool = False) -> None:
+    """Run pre-flight checks on every pipeline invocation.
+
+    Unlike auto-doctor, this is terse: only prints the first failure and exits.
+    """
+    from bristlenose.config import BristlenoseSettings
+    from bristlenose.doctor import run_preflight
+
+    assert isinstance(settings, BristlenoseSettings)
+
+    report = run_preflight(settings, command, skip_transcription=skip_transcription)
+
+    if not report.has_failures:
+        return
+
+    # Terse output: first failure only, with fix
+    from bristlenose.doctor_fixes import get_fix
+
+    failure = report.failures[0]
+    console.print()
+    console.print(f"[bold yellow]{failure.detail}[/bold yellow]")
+    fix = get_fix(failure.fix_key)
+    if fix:
+        console.print(f"\n{fix}")
+    console.print(
+        "\n[dim]Run [bold]bristlenose doctor[/bold] for full diagnostics.[/dim]"
+    )
+    console.print()
+    raise typer.Exit(1)
+
+
+# ---------------------------------------------------------------------------
+# Pipeline commands
+# ---------------------------------------------------------------------------
 
 
 @app.command()
@@ -297,6 +495,9 @@ def run(
         pii_enabled=redact_pii,
     )
 
+    _maybe_auto_doctor(settings, "run")
+    _run_preflight(settings, "run", skip_transcription=skip_transcription)
+
     from bristlenose.pipeline import Pipeline
 
     pipeline = Pipeline(settings, verbose=verbose)
@@ -340,6 +541,9 @@ def transcribe_only(
         whisper_model=whisper_model,
         skip_transcription=False,
     )
+
+    _maybe_auto_doctor(settings, "transcribe-only")
+    _run_preflight(settings, "transcribe-only")
 
     from bristlenose.pipeline import Pipeline
 
@@ -387,6 +591,9 @@ def analyze(
         project_name=project_name,
         llm_provider=llm_provider,
     )
+
+    _maybe_auto_doctor(settings, "analyze")
+    _run_preflight(settings, "analyze")
 
     from bristlenose.pipeline import Pipeline
 
@@ -446,6 +653,8 @@ def render(
         output_dir=output_dir,
         project_name=project_name,
     )
+
+    # render: no auto-doctor, no pre-flight (reads JSON, writes HTML, needs nothing external)
 
     from bristlenose.pipeline import Pipeline
 

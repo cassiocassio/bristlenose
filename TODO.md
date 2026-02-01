@@ -1,6 +1,6 @@
 # Bristlenose — Where I Left Off
 
-Last updated: 1 Feb 2026 (v0.5.0, doctor + snap design session)
+Last updated: 1 Feb 2026 (v0.6.0, doctor implemented)
 
 ---
 
@@ -138,16 +138,16 @@ Organised from easiest to hardest. The README has a condensed version; this is t
 - [ ] Batch processing dashboard — progress bars, partial results, resume interrupted runs
 - [ ] JS tests — add lightweight DOM-based tests (jsdom or Playwright) covering tag persistence, CSV export output, favourite reordering, and edit save/restore
 
-### `bristlenose doctor` and dependency UX (designed, not yet implemented)
+### `bristlenose doctor` and dependency UX
 
 Full design doc: `docs/design-doctor-and-snap.md`
 
-- [ ] `bristlenose doctor` command — seven checks (FFmpeg, backend, model, API key, network, PII, disk)
-- [ ] Pre-flight gate on `run`/`transcribe-only`/`analyze` — catches problems before slow work starts
-- [ ] First-run auto-doctor — runs automatically on first invocation, sentinel at `~/.config/bristlenose/.doctor-ran`
-- [ ] Install-method-aware fix messages — detect snap/brew/pip, show tailored install instructions
-- [ ] API key validation in pre-flight — cheap API call to catch expired/revoked keys upfront
-- [ ] Whisper model cache check — detect whether model is cached without triggering download
+- [x] `bristlenose doctor` command — seven checks (FFmpeg, backend, model, API key, network, PII, disk)
+- [x] Pre-flight gate on `run`/`transcribe-only`/`analyze` — catches problems before slow work starts
+- [x] First-run auto-doctor — runs automatically on first invocation, sentinel at `~/.config/bristlenose/.doctor-ran`
+- [x] Install-method-aware fix messages — detect snap/brew/pip, show tailored install instructions
+- [x] API key validation in pre-flight — cheap API call to catch expired/revoked keys upfront
+- [x] Whisper model cache check — detect whether model is cached without triggering download
 - [ ] `--prefetch-model` flag — download Whisper model and exit (for slow connections, CI setups)
 - [ ] Homebrew formula: add `post_install` for spaCy model download, improve caveats
 
@@ -166,7 +166,7 @@ Full design doc: `docs/design-doctor-and-snap.md`
 |------|-------------|
 | `pyproject.toml` | Package metadata, deps, tool config (version is dynamic — read from `__init__.py`) |
 | `bristlenose/__init__.py` | **Single source of truth for version** (`__version__`); the only file to edit when releasing |
-| `bristlenose/cli.py` | Typer CLI entry point (`run`, `transcribe-only`, `analyze`, `render`) |
+| `bristlenose/cli.py` | Typer CLI entry point (`run`, `transcribe-only`, `analyze`, `render`, `doctor`) |
 | `bristlenose/config.py` | Pydantic settings (env vars, .env, bristlenose.toml) |
 | `bristlenose/pipeline.py` | Pipeline orchestrator (full run, transcribe-only, analyze-only, render-only) |
 | `bristlenose/people.py` | People file: load, compute stats, merge, write, display name map |
@@ -175,6 +175,8 @@ Full design doc: `docs/design-doctor-and-snap.md`
 | `bristlenose/theme/js/` | Report JavaScript modules (storage, player, favourites, editing, tags, histogram, csv-export, main) — concatenated at render time |
 | `bristlenose/llm/prompts.py` | LLM prompt templates |
 | `bristlenose/utils/hardware.py` | GPU/CPU auto-detection |
+| `bristlenose/doctor.py` | Doctor check logic (pure, no UI) — 7 checks, `run_all()`, `run_preflight()` |
+| `bristlenose/doctor_fixes.py` | Install-method-aware fix instructions (`detect_install_method()`, `get_fix()`) |
 | `.github/workflows/ci.yml` | CI: ruff, mypy, pytest on push/PR; also called by release.yml via workflow_call |
 | `.github/workflows/release.yml` | Release pipeline: build → PyPI → GitHub Release → Homebrew dispatch |
 | `.github/workflows/homebrew-tap/update-formula.yml` | Reference copy of the tap repo's workflow (authoritative copy is in homebrew-bristlenose) |

@@ -117,6 +117,7 @@ bristlenose run ./interviews/ -o ./results/ -p "Q1 Usability Study"  # name the 
 bristlenose transcribe-only ./interviews/ -o ./results/              # transcribe, no LLM
 bristlenose analyze ./results/raw_transcripts/ -o ./results/         # skip transcription
 bristlenose render ./interviews/ -o ./results/                       # re-render from JSON, no LLM
+bristlenose doctor                                                   # check dependencies
 ```
 
 ### Configuration
@@ -159,7 +160,7 @@ On Linux, install `python3.12` and `ffmpeg` via your package manager. On Windows
 ### Verify everything works
 
 ```bash
-pytest                       # 16 tests, should pass in <1s
+pytest                       # ~260 tests, should pass in <2s
 ruff check .                 # lint
 mypy bristlenose/            # type check (some third-party SDK errors are expected)
 ```
@@ -183,6 +184,14 @@ Edit `bristlenose/__init__.py` (the single source of truth for version), commit,
 ---
 
 ## Changelog
+
+### 0.6.0
+
+- `bristlenose doctor` command — checks FFmpeg, transcription backend, Whisper model cache, API key validity, network, PII dependencies, and disk space
+- Pre-flight gate on `run`, `transcribe-only`, and `analyze` — catches missing dependencies before slow work starts
+- First-run auto-doctor — runs automatically on first invocation, guides users through setup
+- Install-method-aware fix messages — detects snap, Homebrew, or pip and shows tailored install instructions
+- API key validation — cheap API call catches expired or revoked keys upfront
 
 ### 0.5.0
 
@@ -284,7 +293,7 @@ Edit `bristlenose/__init__.py` (the single source of truth for version), commit,
 - .docx export
 - Edit writeback to transcript files
 - Multi-participant session support
-- Native installers for Ubuntu (Snap) and Windows
+- Native installers for Ubuntu (Snap -- in progress) and Windows
 
 Priorities may shift. If something is missing that matters to you, [open an issue](https://github.com/cassiocassio/bristlenose/issues).
 

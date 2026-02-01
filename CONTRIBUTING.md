@@ -34,8 +34,10 @@ individually.
 
 ```
 bristlenose/          # main package
-  cli.py              # Typer CLI (run, transcribe-only, analyze, render)
+  cli.py              # Typer CLI (run, transcribe-only, analyze, render, doctor)
   config.py           # Pydantic settings (env vars, .env, bristlenose.toml)
+  doctor.py           # Doctor check logic (7 checks, run_all, run_preflight)
+  doctor_fixes.py     # Install-method-aware fix instructions
   models.py           # Pydantic data models (quotes, themes, enums)
   pipeline.py         # orchestrator (full run, transcribe-only, analyze-only, render-only)
   stages/             # 12-stage pipeline (ingest → render)

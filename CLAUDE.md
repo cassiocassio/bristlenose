@@ -24,7 +24,7 @@ Bristlenose is a local-first user-research analysis tool. It takes a folder of i
 
 12-stage pipeline: ingest → extract audio → parse subtitles → parse docx → transcribe → identify speakers → merge transcript → PII removal → topic segmentation → quote extraction → quote clustering → thematic grouping → render HTML + output files.
 
-CLI commands: `run` (full pipeline), `transcribe-only`, `analyze` (skip transcription), `render` (re-render from JSON, no LLM calls).
+CLI commands: `run` (full pipeline), `transcribe-only`, `analyze` (skip transcription), `render` (re-render from JSON, no LLM calls), `doctor` (dependency health checks).
 
 LLM provider: API keys via env vars (`ANTHROPIC_API_KEY` or `OPENAI_API_KEY`), `.env` file, or `bristlenose.toml`. Prefix with `BRISTLENOSE_` for namespaced variants.
 
@@ -70,6 +70,22 @@ Each participant gets a dedicated HTML page (`transcript_p1.html`, etc.) showing
 - **CSS**: `transcript.css` in theme templates (back button, segment layout, meta styling); `.speaker-link` in `organisms/blockquote.css`
 - **Speaker role caveat**: `.txt` files store `[p1]` for all segments — researcher/participant role not preserved on disk. All segments render with same styling
 
+## Doctor command (dependency health checks)
+
+`bristlenose doctor` checks the runtime environment and gives install-method-aware fix instructions.
+
+- **Pure check logic**: `bristlenose/doctor.py` — `CheckResult`, `CheckStatus` (OK/WARN/FAIL/SKIP), `DoctorReport`, 7 check functions, `run_all()`, `run_preflight()`
+- **Fix instructions**: `bristlenose/doctor_fixes.py` — `detect_install_method()` (snap/brew/pip), `get_fix(fix_key, install_method)`, 12 fix functions in `_FIX_TABLE`
+- **CLI wiring**: `cli.py` — `doctor` command, `_maybe_auto_doctor()`, `_run_preflight()`, sentinel logic
+- **Seven checks**: FFmpeg, transcription backend, Whisper model cache, API key (with validation), network, PII deps, disk space
+- **Command-to-check matrix**: `_COMMAND_CHECKS` dict in `doctor.py` — different commands need different checks. `render` has no pre-flight at all
+- **Three invocation modes**: (1) explicit `bristlenose doctor` — full report, always runs; (2) first-run auto-doctor — triggers when sentinel missing or version mismatch; (3) pre-flight — terse single-failure output on every `run`/`transcribe-only`/`analyze`
+- **Sentinel file**: `~/.config/bristlenose/.doctor-ran` (or `$SNAP_USER_COMMON/.doctor-ran` in snap). Contains version string. Written on successful doctor or auto-doctor
+- **API key validation**: `_validate_anthropic_key()` and `_validate_openai_key()` make cheap HTTP calls; return `(True, "")`, `(False, error)`, or `(None, error)` for network issues
+- **Install method detection**: snap (`$SNAP` env var) > brew (`/opt/homebrew/` or `/usr/local/Cellar/` in `sys.executable`) > pip (default). Linuxbrew (`/home/linuxbrew/`) is NOT detected as brew — falls through to pip (gives correct instructions)
+- **Rich formatting**: `ok` = dim green, `!!` = bold yellow, `--` = dim grey. Feels like `git status`
+- **Design doc**: `docs/design-doctor-and-snap.md`
+
 ## Gotchas
 
 - The repo directory is `/Users/cassio/Code/gourani` (legacy name, package is bristlenose)
@@ -79,6 +95,8 @@ Each participant gets a dedicated HTML page (`transcript_p1.html`, etc.) showing
 - `render --clean` is accepted but ignored — render is always non-destructive (overwrites HTML/markdown reports only, never touches people.yaml, transcripts, or intermediate JSON)
 - `load_transcripts_from_dir()` in `pipeline.py` is a public function (no underscore) — used both internally by the pipeline and by `render_html.py` for transcript pages
 - For transcript/timecode gotchas, see `bristlenose/stages/CLAUDE.md`
+- `doctor.py` imports `platform` and `urllib` locally inside function bodies (not at module level). When testing, patch at stdlib level (`patch("platform.system")`) not module level (`patch("bristlenose.doctor.platform.system")`)
+- `check_backend()` catches `Exception` (not just `ImportError`) for faster_whisper import — torch native libs can raise `OSError` on some machines
 
 ## Reference docs (read when working in these areas)
 
@@ -113,6 +131,6 @@ When the user signals end of session, **proactively offer to run this checklist*
 8. **Clean up branches** — delete merged feature branches
 9. **Verify CI** — check latest push passes CI
 
-## Current status (v0.5.0, Feb 2026)
+## Current status (v0.6.0, Feb 2026)
 
-Core pipeline complete and published to PyPI + Homebrew. v0.5.0 adds per-participant transcript pages with deep-link anchors from quote attributions. v0.4.1 added people file (participant registry with display names), flipped PII redaction to off-by-default, and redesigned participant table with Finder-style dates. Next up: `bristlenose doctor` (dependency health checks with guided recovery, first-run auto-doctor, install-method-aware fix messages) and Snap packaging for Linux (classic confinement, ~150 MB, full-featured). Design doc at `docs/design-doctor-and-snap.md`. See `TODO.md` for full task list.
+Core pipeline complete and published to PyPI + Homebrew. v0.6.0 adds `bristlenose doctor` (dependency health checks with guided recovery, first-run auto-doctor, pre-flight gate, install-method-aware fix messages). v0.5.0 added per-participant transcript pages with deep-link anchors from quote attributions. Next up: Snap packaging for Linux (classic confinement, ~150 MB, full-featured). Design doc at `docs/design-doctor-and-snap.md`. See `TODO.md` for full task list.

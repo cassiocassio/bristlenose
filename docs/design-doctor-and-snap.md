@@ -1,6 +1,6 @@
 # Design: `bristlenose doctor` and Snap packaging
 
-Status: design complete, not yet implemented (Feb 2026)
+Status: Part 1 (doctor) implemented in v0.6.0. Part 2 (snap) designed, not yet implemented. (Feb 2026)
 
 ---
 

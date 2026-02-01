@@ -50,7 +50,7 @@ async def group_by_theme(
         for i, q in enumerate(context_quotes)
     ]
 
-    quotes_json = json.dumps(quotes_for_llm, indent=2, ensure_ascii=False)
+    quotes_json = json.dumps(quotes_for_llm, ensure_ascii=False, separators=(",", ":"))
 
     prompt = THEMATIC_GROUPING_PROMPT.format(quotes_json=quotes_json)
 

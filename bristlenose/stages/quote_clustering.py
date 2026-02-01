@@ -51,7 +51,7 @@ async def cluster_by_screen(
         for i, q in enumerate(screen_quotes)
     ]
 
-    quotes_json = json.dumps(quotes_for_llm, indent=2, ensure_ascii=False)
+    quotes_json = json.dumps(quotes_for_llm, ensure_ascii=False, separators=(",", ":"))
 
     prompt = QUOTE_CLUSTERING_PROMPT.format(quotes_json=quotes_json)
 

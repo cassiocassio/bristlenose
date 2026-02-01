@@ -25,30 +25,46 @@ jobs:
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     needs: build
     runs-on: ubuntu-latest
+    env:
+      HAS_CREDS: ${{ secrets.SNAPCRAFT_STORE_CREDENTIALS != '' }}
     steps:
       - uses: actions/download-artifact@v4
+        if: env.HAS_CREDS == 'true'
         with:
           name: snap-amd64
 
       - uses: snapcore/action-publish@v1
+        if: env.HAS_CREDS == 'true'
         env:
           SNAPCRAFT_STORE_CREDENTIALS: ${{ secrets.SNAPCRAFT_STORE_CREDENTIALS }}
         with:
           snap: "*.snap"
           release: edge
 
+      - name: Skip publish (no credentials)
+        if: env.HAS_CREDS != 'true'
+        run: echo "Skipping publish — SNAPCRAFT_STORE_CREDENTIALS not set"
+
   publish-stable:
     if: startsWith(github.ref, 'refs/tags/v')
     needs: build
     runs-on: ubuntu-latest
+    env:
+      HAS_CREDS: ${{ secrets.SNAPCRAFT_STORE_CREDENTIALS != '' }}
     steps:
       - uses: actions/download-artifact@v4
+        if: env.HAS_CREDS == 'true'
         with:
           name: snap-amd64
 
       - uses: snapcore/action-publish@v1
+        if: env.HAS_CREDS == 'true'
         env:
           SNAPCRAFT_STORE_CREDENTIALS: ${{ secrets.SNAPCRAFT_STORE_CREDENTIALS }}
         with:
           snap: "*.snap"
           release: stable
+
+      - name: Skip publish (no credentials)
+        if: env.HAS_CREDS != 'true'
+        run: echo "Skipping publish — SNAPCRAFT_STORE_CREDENTIALS not set"

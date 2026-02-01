@@ -1,6 +1,6 @@
 # Bristlenose — Where I Left Off
 
-Last updated: 1 Feb 2026 (v0.6.0, doctor implemented)
+Last updated: 1 Feb 2026 (v0.6.1, snap packaging + author identity)
 
 ---
 
@@ -155,7 +155,7 @@ Full design doc: `docs/design-doctor-and-snap.md`
 
 - [x] PyPI (`pipx install bristlenose`)
 - [x] Homebrew tap (`brew install cassiocassio/bristlenose/bristlenose`)
-- [x] Snap for Ubuntu/Linux (`snap install bristlenose --classic`) — `snap/snapcraft.yaml` + `.github/workflows/snap.yml`. Classic confinement, ~150 MB full-featured snap, GitHub Actions CI (edge on push to main, stable on tags). Bundles FFmpeg + spaCy model + all ML deps; no torch needed on Linux. Pre-launch: register name, request classic confinement approval, add `SNAPCRAFT_STORE_CREDENTIALS` secret.
+- [x] Snap for Ubuntu/Linux (`snap install bristlenose --classic`) — `snap/snapcraft.yaml` + `.github/workflows/snap.yml`. Classic confinement, ~307 MB full-featured snap, GitHub Actions CI (edge on push to main, stable on tags). Bundles FFmpeg + spaCy model + all ML deps. Tested locally on arm64 (Multipass), CI builds amd64. Pre-launch: register name, request classic confinement approval, add `SNAPCRAFT_STORE_CREDENTIALS` secret.
 - [ ] Windows installer (winget or similar)
 
 ---
@@ -179,7 +179,9 @@ Full design doc: `docs/design-doctor-and-snap.md`
 | `bristlenose/doctor_fixes.py` | Install-method-aware fix instructions (`detect_install_method()`, `get_fix()`) |
 | `.github/workflows/ci.yml` | CI: ruff, mypy, pytest on push/PR; also called by release.yml via workflow_call |
 | `.github/workflows/release.yml` | Release pipeline: build → PyPI → GitHub Release → Homebrew dispatch |
+| `.github/workflows/snap.yml` | Snap build & publish: edge on push to main, stable on v* tags |
 | `.github/workflows/homebrew-tap/update-formula.yml` | Reference copy of the tap repo's workflow (authoritative copy is in homebrew-bristlenose) |
+| `snap/snapcraft.yaml` | Snap recipe: classic confinement, core24, Python plugin, bundles FFmpeg + spaCy |
 | `CONTRIBUTING.md` | CLA, code style, design system docs, full release process and cross-repo topology |
 
 ## Key URLs

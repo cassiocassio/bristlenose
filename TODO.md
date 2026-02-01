@@ -121,7 +121,7 @@ Organised from easiest to hardest. The README has a condensed version; this is t
 - [ ] Theme management in browser — create/rename/reorder/delete themes in the report, user-generated CSS themes (dark mode done; token architecture ready for custom themes)
 - [ ] Dark logo — replace placeholder inverted image with a proper albino bristlenose pleco (transparent PNG, ~480x480, suitable licence)
 - [ ] Lost quotes — surface quotes the AI didn't select, let users rescue them
-- [ ] Transcript linking — click a quote to jump to its position in the full transcript
+- [ ] Transcript linking — click a quote to jump to its position in the full transcript (transcript pages now exist; need deep-link anchors per segment and a link from each quote in the main report)
 - [ ] .docx export — export the report as a Word document
 - [ ] Edit writeback — write inline corrections back to cooked transcript files
 - [ ] JS: split `tags.js` (453 lines) — separate AI badge lifecycle, user tag CRUD, and auto-suggest UI into `ai-badges.js`, `user-tags.js`, `suggest.js`
@@ -130,6 +130,7 @@ Organised from easiest to hardest. The README has a condensed version; this is t
 
 ### Medium (a few days each)
 
+- [ ] Moderator identification and transcript page speaker styling (see design notes below)
 - [ ] LLM name/role extraction from transcripts — auto-populate `people.yaml` editable fields (see design notes below)
 - [ ] Multi-participant sessions — handle recordings with more than one interviewee
 - [ ] Speaker diarisation improvements — better accuracy, manual correction UI
@@ -210,3 +211,71 @@ This feature auto-populates `people.yaml` editable fields (`full_name`, `short_n
 - **Web UI**: the planned web interface for editing `people.yaml` should show LLM-suggested names as pre-filled defaults that the user confirms or corrects
 - **Confidence scores**: the LLM could return confidence, and low-confidence extractions could be flagged for review rather than auto-populated
 - **⚠️ Internet required**: this is one of several features that need API access (speaker identification LLM pass is another). All such features should be clearly flagged and optional
+
+---
+
+## Design notes: Moderator identification and transcript page speaker styling
+
+Transcript pages currently show every segment as the same speaker (`p1:`) because the `.txt` files store `[p1]` for all segments — the researcher/participant role distinction is lost when writing to disk. This needs to change before multi-speaker transcripts can render properly.
+
+### The problem
+
+In a real user research interview there are (at least) two speakers: a **moderator** (the researcher asking questions) and a **participant** (the user being interviewed). Currently:
+
+- Speaker diarisation labels everyone as participants (`p1`, `p2`...)
+- The `SpeakerRole` enum exists in models (`PARTICIPANT` / `RESEARCHER`) and is used during the pipeline
+- But when transcripts are written to `.txt` files, only the participant code `[p1]` is stored — the role is discarded
+- When transcript pages load from disk, all segments look the same
+
+### What needs to happen
+
+#### 1. Moderator identity in `people.yaml`
+
+Moderators need entries in `people.yaml` with a distinct code scheme. Options to decide:
+
+- **`m1`, `m2`** — clear prefix distinction from `p1`, `p2`
+- **`moderator`** — single code if there's always one researcher (but some studies have two)
+- **`r1`, `r2`** — "researcher" prefix
+
+The `PersonEditable` model already has `full_name`, `short_name`, `role` — moderators would use the same fields. The `role` field could default to "Moderator" for these entries.
+
+#### 2. Role preserved in `.txt` files
+
+The canonical `.txt` format needs to encode who is the moderator vs participant. Options:
+
+- **Extend the `[p1]` code** — use `[m1]` for moderator segments: `[00:16] [m1] So tell me about your experience...`
+- **Add a role marker** — `[00:16] [p1:researcher] ...` (more explicit but noisier)
+- Simplest: just use the `m1`/`m2` prefix convention — the parser already reads the code between `[]`, and anything not starting with `p` would be a non-participant
+
+#### 3. Transcript page visual treatment
+
+The moderator's questions should be visually distinct — they're context, not evidence. Design direction from user research practice:
+
+- **Moderator lines are structural headers** — a good moderator speaks ~20% of the time, so their questions naturally break the participant's responses into chunks
+- **Heavier/darker styling for moderator** — bold or semi-bold, slightly larger, acting as section breaks
+- **Participant text flows beneath** — lighter weight, the "body text" of each Q&A block
+- Think of it as a **Q&A layout**: moderator question as a bold heading, followed by the participant's response paragraphs
+
+This is the opposite of what you might expect (usually the important content is bold) — but in research the moderator's words are scaffolding and the participant's words are the data. The moderator lines stand out as **structural markers** that help you navigate, while the participant's words are what you actually read.
+
+#### 4. CSS classes needed
+
+```css
+.segment-moderator { font-weight: 600; /* or 700 */ }
+.segment-participant { /* default weight, the readable body */ }
+```
+
+Possibly with spacing: more margin-top before a moderator segment to create visual "question blocks".
+
+### Blockers
+
+- **No multi-speaker test data** — current test recordings are single-person. Need a real two-person interview (moderator + participant) flowing through the full pipeline before we can validate the design
+- **Speaker diarisation → role assignment** — the pipeline currently assigns `PARTICIPANT` / `RESEARCHER` roles during stage 5 (identify speakers), but this distinction doesn't survive to disk. Need to verify the role assignment logic works correctly before persisting it
+- **Parser changes** — `load_transcripts_from_dir()` needs to handle moderator codes (`m1` etc.) and return the role information so the transcript page renderer can apply different CSS classes
+
+### Dependencies
+
+- Depends on having real multi-speaker test data
+- Related to "Multi-participant sessions" TODO item
+- Related to "Speaker diarisation improvements" TODO item
+- LLM name extraction could auto-populate moderator names too

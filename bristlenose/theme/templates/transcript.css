@@ -1,0 +1,41 @@
+/* Template: transcript — per-participant transcript page layout */
+
+.transcript-back {
+    margin-bottom: var(--bn-space-lg);
+}
+
+.transcript-back a {
+    color: var(--bn-colour-muted);
+    text-decoration: none;
+    font-size: 0.9rem;
+    font-weight: 500;
+    transition: color var(--bn-transition-fast);
+}
+
+.transcript-back a:hover {
+    color: var(--bn-colour-accent);
+}
+
+.transcript-header h1 {
+    margin-bottom: var(--bn-space-xs);
+}
+
+.transcript-meta {
+    color: var(--bn-colour-muted);
+    font-size: 0.85rem;
+    margin-bottom: var(--bn-space-md);
+}
+
+.transcript-body {
+    margin-top: var(--bn-space-lg);
+}
+
+.transcript-segment {
+    margin: 0.5rem 0;
+    line-height: 1.7;
+}
+
+.transcript-segment .segment-speaker {
+    font-weight: 600;
+    font-size: 0.85rem;
+}

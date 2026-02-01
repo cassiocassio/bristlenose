@@ -57,6 +57,7 @@ _THEME_FILES: list[str] = [
     "organisms/toolbar.css",
     "organisms/toc.css",
     "templates/report.css",
+    "templates/transcript.css",
     "templates/print.css",
 ]
 
@@ -291,7 +292,7 @@ def render_html(
                     words = "&mdash;"
                     full_name = _unnamed
                     role = "&mdash;"
-                _w(f"<td>{pid_esc}</td>")
+                _w(f'<td><a href="transcript_{pid_esc}.html">{pid_esc}</a></td>')
                 _w(f"<td>{full_name}</td>")
                 _w(f"<td>{role}</td>")
                 _w(f"<td>{start}</td>")
@@ -299,7 +300,7 @@ def render_html(
                 _w(f"<td>{words}</td>")
                 _w(f"<td>{source}</td>")
             else:
-                _w(f"<td>{pid_esc}</td>")
+                _w(f'<td><a href="transcript_{pid_esc}.html">{pid_esc}</a></td>')
                 _w(f"<td>{start}</td>")
                 _w(f"<td>{duration}</td>")
                 _w(f"<td>{source}</td>")
@@ -430,7 +431,220 @@ def render_html(
 
     html_path.write_text("\n".join(parts), encoding="utf-8")
     logger.info("Wrote HTML report: %s", html_path)
+
+    # --- Generate per-participant transcript pages ---
+    render_transcript_pages(
+        sessions=sessions,
+        project_name=project_name,
+        output_dir=output_dir,
+        video_map=video_map,
+        color_scheme=color_scheme,
+        display_names=display_names,
+        people=people,
+    )
+
     return html_path
+
+
+# ---------------------------------------------------------------------------
+# Transcript pages
+# ---------------------------------------------------------------------------
+
+_TRANSCRIPT_JS_FILES: list[str] = [
+    "js/storage.js",
+    "js/player.js",
+]
+
+
+def _load_transcript_js() -> str:
+    """Read and concatenate only the JS modules needed for transcript pages."""
+    parts: list[str] = []
+    for name in _TRANSCRIPT_JS_FILES:
+        path = _THEME_DIR / name
+        parts.append(f"// --- {name} ---\n")
+        parts.append(path.read_text(encoding="utf-8").strip())
+        parts.append("\n\n")
+    return "".join(parts)
+
+
+_transcript_js_cache: str | None = None
+
+
+def _get_transcript_js() -> str:
+    global _transcript_js_cache  # noqa: PLW0603
+    if _transcript_js_cache is None:
+        _transcript_js_cache = _load_transcript_js()
+    return _transcript_js_cache
+
+
+def _resolve_speaker_name(
+    pid: str,
+    people: PeopleFile | None,
+    display_names: dict[str, str] | None,
+) -> str:
+    """Resolve speaker name for transcript segments.
+
+    Priority: short_name → full_name → pid.
+    """
+    if people and pid in people.participants:
+        entry = people.participants[pid]
+        if entry.editable.short_name:
+            return entry.editable.short_name
+        if entry.editable.full_name:
+            return entry.editable.full_name
+    return pid
+
+
+def render_transcript_pages(
+    sessions: list[InputSession],
+    project_name: str,
+    output_dir: Path,
+    video_map: dict[str, str] | None = None,
+    color_scheme: str = "auto",
+    display_names: dict[str, str] | None = None,
+    people: PeopleFile | None = None,
+) -> list[Path]:
+    """Generate per-participant transcript HTML pages.
+
+    Reads transcript segments from ``cooked_transcripts/`` (if present) or
+    ``raw_transcripts/``, renders one HTML page per participant, and returns
+    the list of written file paths.
+    """
+    from bristlenose.pipeline import load_transcripts_from_dir
+
+    # Prefer cooked (PII-redacted) transcripts, fall back to raw
+    cooked_dir = output_dir / "cooked_transcripts"
+    raw_dir = output_dir / "raw_transcripts"
+    if cooked_dir.is_dir() and any(cooked_dir.glob("*.txt")):
+        transcripts_dir = cooked_dir
+    elif raw_dir.is_dir() and any(raw_dir.glob("*.txt")):
+        transcripts_dir = raw_dir
+    else:
+        logger.info("No transcript files found — skipping transcript pages")
+        return []
+
+    transcripts = load_transcripts_from_dir(transcripts_dir)
+    if not transcripts:
+        return []
+
+    paths: list[Path] = []
+    for transcript in transcripts:
+        page_path = _render_transcript_page(
+            transcript=transcript,
+            project_name=project_name,
+            output_dir=output_dir,
+            video_map=video_map,
+            color_scheme=color_scheme,
+            people=people,
+        )
+        paths.append(page_path)
+        logger.info("Wrote transcript page: %s", page_path)
+
+    return paths
+
+
+def _render_transcript_page(
+    transcript: object,  # PiiCleanTranscript (avoid circular import at module level)
+    project_name: str,
+    output_dir: Path,
+    video_map: dict[str, str] | None = None,
+    color_scheme: str = "auto",
+    people: PeopleFile | None = None,
+) -> Path:
+    """Render a single participant transcript as an HTML page."""
+    from bristlenose.models import PiiCleanTranscript
+
+    assert isinstance(transcript, PiiCleanTranscript)
+    pid = transcript.participant_id
+
+    # Resolve names
+    speaker_name = _resolve_speaker_name(pid, people, None)
+    full_name = ""
+    if people and pid in people.participants:
+        full_name = people.participants[pid].editable.full_name
+
+    # Page heading: "p1 Sarah Jones" or just "p1"
+    heading = f"{_esc(pid)} {_esc(full_name)}" if full_name else _esc(pid)
+
+    # Build HTML
+    parts: list[str] = []
+    _w = parts.append
+
+    _w("<!DOCTYPE html>")
+    theme_attr = ""
+    if color_scheme in ("light", "dark"):
+        theme_attr = f' data-theme="{color_scheme}"'
+    _w(f'<html lang="en"{theme_attr}>')
+    _w("<head>")
+    _w('<meta charset="utf-8">')
+    _w('<meta name="viewport" content="width=device-width, initial-scale=1">')
+    _w('<meta name="color-scheme" content="light dark">')
+    title = f"{pid} {full_name}".strip() if full_name else pid
+    _w(f"<title>{_esc(title)} \u2014 {_esc(project_name)}</title>")
+    _w('<link rel="stylesheet" href="bristlenose-theme.css">')
+    _w("</head>")
+    _w("<body>")
+    _w("<article>")
+
+    # Back button
+    _w('<nav class="transcript-back">')
+    _w(f'<a href="research_report.html">&larr; {_esc(project_name)} Research Report</a>')
+    _w("</nav>")
+
+    # Header
+    _w('<div class="transcript-header">')
+    _w(f"<h1>{heading}</h1>")
+
+    # Meta line
+    meta_parts: list[str] = []
+    if transcript.source_file:
+        meta_parts.append(f"Source: {_esc(transcript.source_file)}")
+    if transcript.duration_seconds > 0:
+        meta_parts.append(f"Duration: {format_timecode(transcript.duration_seconds)}")
+    if meta_parts:
+        _w(f'<p class="transcript-meta">{" &middot; ".join(meta_parts)}</p>')
+    _w("</div>")
+    _w("<hr>")
+
+    # Transcript segments
+    _w('<section class="transcript-body">')
+    has_media = video_map is not None and pid in (video_map or {})
+    for seg in transcript.segments:
+        tc = format_timecode(seg.start_time)
+        _w('<div class="transcript-segment">')
+        if has_media:
+            _w(
+                f'<a href="#" class="timecode" '
+                f'data-participant="{_esc(pid)}" '
+                f'data-seconds="{seg.start_time}">[{tc}]</a>'
+            )
+        else:
+            _w(f'<span class="timecode">[{tc}]</span>')
+        _w(f' <span class="segment-speaker">{_esc(speaker_name)}:</span>')
+        _w(f" {_esc(seg.text)}")
+        _w("</div>")
+    _w("</section>")
+
+    _w("</article>")
+
+    # JavaScript (player only)
+    _w("<script>")
+    _w("(function() {")
+    if has_media:
+        _w(f"var BRISTLENOSE_VIDEO_MAP = {json.dumps(video_map)};")
+    else:
+        _w("var BRISTLENOSE_VIDEO_MAP = {};")
+    _w(_get_transcript_js())
+    _w("initPlayer();")
+    _w("})();")
+    _w("</script>")
+
+    _w("</body>")
+    _w("</html>")
+
+    page_path = output_dir / f"transcript_{pid}.html"
+    page_path.write_text("\n".join(parts), encoding="utf-8")
+    return page_path
 
 
 # ---------------------------------------------------------------------------

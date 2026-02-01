@@ -292,11 +292,11 @@ def test_write_cooked_transcripts_txt_pii_text(tmp_path: Path) -> None:
 
 def test_parser_reads_participant_code_format(tmp_path: Path) -> None:
     """Parser loads .txt files that use participant codes [p1]."""
-    from bristlenose.pipeline import _load_transcripts_from_dir
+    from bristlenose.pipeline import load_transcripts_from_dir
 
     transcript = _make_cooked_transcript()
     write_cooked_transcripts([transcript], tmp_path)
-    loaded = _load_transcripts_from_dir(tmp_path)
+    loaded = load_transcripts_from_dir(tmp_path)
     assert len(loaded) == 1
     assert loaded[0].participant_id == "p1"
     assert len(loaded[0].segments) == 2
@@ -306,7 +306,7 @@ def test_parser_reads_participant_code_format(tmp_path: Path) -> None:
 
 def test_parser_reads_legacy_role_format(tmp_path: Path) -> None:
     """Parser loads legacy .txt files that use role labels [PARTICIPANT]."""
-    from bristlenose.pipeline import _load_transcripts_from_dir
+    from bristlenose.pipeline import load_transcripts_from_dir
 
     # Write a legacy-format file manually
     legacy = (
@@ -320,7 +320,7 @@ def test_parser_reads_legacy_role_format(tmp_path: Path) -> None:
         "[00:00:15] [PARTICIPANT] Thanks for having me.\n"
     )
     (tmp_path / "p3_cooked.txt").write_text(legacy, encoding="utf-8")
-    loaded = _load_transcripts_from_dir(tmp_path)
+    loaded = load_transcripts_from_dir(tmp_path)
     assert len(loaded) == 1
     assert loaded[0].participant_id == "p3"
     assert len(loaded[0].segments) == 2
@@ -330,17 +330,17 @@ def test_parser_reads_legacy_role_format(tmp_path: Path) -> None:
 
 def test_parser_extracts_metadata(tmp_path: Path) -> None:
     """Parser correctly reads header metadata from .txt files."""
-    from bristlenose.pipeline import _load_transcripts_from_dir
+    from bristlenose.pipeline import load_transcripts_from_dir
 
     transcript = _make_cooked_transcript()
     write_cooked_transcripts([transcript], tmp_path)
-    loaded = _load_transcripts_from_dir(tmp_path)
+    loaded = load_transcripts_from_dir(tmp_path)
     assert loaded[0].source_file == "interview_01.mp4"
 
 
 def test_parser_mixed_timecode_formats(tmp_path: Path) -> None:
     """Long sessions produce mixed MM:SS and HH:MM:SS — parser handles both."""
-    from bristlenose.pipeline import _load_transcripts_from_dir
+    from bristlenose.pipeline import load_transcripts_from_dir
 
     long_transcript = PiiCleanTranscript(
         participant_id="p5",
@@ -378,7 +378,7 @@ def test_parser_mixed_timecode_formats(tmp_path: Path) -> None:
     assert "Duration: 02:12:23" in content
 
     # Round-trip: parser should recover all timecodes
-    loaded = _load_transcripts_from_dir(tmp_path)
+    loaded = load_transcripts_from_dir(tmp_path)
     assert len(loaded) == 1
     assert loaded[0].duration_seconds == 7943.0
     times = [seg.start_time for seg in loaded[0].segments]

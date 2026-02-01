@@ -307,7 +307,7 @@ class Pipeline:
         output_dir.mkdir(parents=True, exist_ok=True)
 
         # Load existing transcripts from text files
-        clean_transcripts = _load_transcripts_from_dir(transcripts_dir)
+        clean_transcripts = load_transcripts_from_dir(transcripts_dir)
         if not clean_transcripts:
             console.print("[red]No transcript files found.[/red]")
             return self._empty_result(output_dir)
@@ -547,7 +547,7 @@ class Pipeline:
         )
 
 
-def _load_transcripts_from_dir(
+def load_transcripts_from_dir(
     transcripts_dir: Path,
 ) -> list[PiiCleanTranscript]:
     """Load transcript .txt files from a directory into PiiCleanTranscript objects.

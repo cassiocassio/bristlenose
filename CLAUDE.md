@@ -55,6 +55,19 @@ PII redaction is **off by default** (transcripts retain PII). Opt in with `--red
 - **CLI flags**: `--redact-pii` (opt in) / `--retain-pii` (explicit default, redundant). Mutually exclusive
 - When off: transcripts pass through as `PiiCleanTranscript` wrappers, no `cooked_transcripts/` directory written
 
+## Per-participant transcript pages
+
+Each participant gets a dedicated HTML page (`transcript_p1.html`, etc.) showing their full transcript with clickable timecodes. Generated at the end of `render_html()`.
+
+- **Data source**: prefers `cooked_transcripts/` (PII-redacted) over `raw_transcripts/`. Uses `load_transcripts_from_dir()` from `pipeline.py` (public function, formerly `_load_transcripts_from_dir`)
+- **Page heading**: `{pid} {full_name}` (e.g. "p1 Sarah Jones") or just `{pid}` if no name
+- **Speaker name per segment**: resolved as `short_name` → `full_name` → `pid` via `_resolve_speaker_name()` in `render_html.py`
+- **Back button**: `← {project_name} Research Report` linking to `research_report.html`, styled muted with accent on hover, hidden in print
+- **JS**: only `storage.js` + `player.js` + `initPlayer()` — no favourites/editing/tags modules
+- **Participant table linking**: ID column (`p1`, `p2`) is a hyperlink to the transcript page
+- **CSS**: `transcript.css` in theme templates (back button, segment layout, meta styling)
+- **Speaker role caveat**: `.txt` files store `[p1]` for all segments — researcher/participant role not preserved on disk. All segments render with same styling
+
 ## Gotchas
 
 - The repo directory is `/Users/cassio/Code/gourani` (legacy name, package is bristlenose)
@@ -62,6 +75,7 @@ PII redaction is **off by default** (transcripts retain PII). Opt in with `--red
 - `PipelineResult` references `PeopleFile` but is defined before it in `models.py` — resolved with `PipelineResult.model_rebuild()` after PeopleFile definition
 - `format_finder_date()` in `utils/markdown.py` uses a local `import datetime as _dtmod` inside the function body because `from __future__ import annotations` makes the type hints string-only; `datetime` is in `TYPE_CHECKING` for the linter but not available at runtime otherwise
 - `render --clean` is accepted but ignored — render is always non-destructive (overwrites HTML/markdown reports only, never touches people.yaml, transcripts, or intermediate JSON)
+- `load_transcripts_from_dir()` in `pipeline.py` is a public function (no underscore) — used both internally by the pipeline and by `render_html.py` for transcript pages
 - For transcript/timecode gotchas, see `bristlenose/stages/CLAUDE.md`
 
 ## Reference docs (read when working in these areas)

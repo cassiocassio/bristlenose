@@ -112,6 +112,6 @@ When the user signals end of session, **proactively offer to run this checklist*
 8. **Clean up branches** — delete merged feature branches
 9. **Verify CI** — check latest push passes CI
 
-## Current status (v0.4.1, Feb 2026)
+## Current status (v0.5.0, Feb 2026)
 
-Core pipeline complete and published to PyPI + Homebrew. v0.4.1 adds people file (participant registry with display names), flips PII redaction to off-by-default, per-participant transcript pages with deep-link anchors from quote attributions, and redesigned participant table with Finder-style dates. See `TODO.md` for full task list.
+Core pipeline complete and published to PyPI + Homebrew. v0.5.0 adds per-participant transcript pages with deep-link anchors from quote attributions. v0.4.1 added people file (participant registry with display names), flipped PII redaction to off-by-default, and redesigned participant table with Finder-style dates. See `TODO.md` for full task list.

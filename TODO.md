@@ -1,6 +1,6 @@
 # Bristlenose — Where I Left Off
 
-Last updated: 1 Feb 2026 (v0.4.1)
+Last updated: 1 Feb 2026 (v0.5.0)
 
 ---
 

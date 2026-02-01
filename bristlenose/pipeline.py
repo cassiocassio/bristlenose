@@ -95,7 +95,7 @@ class Pipeline:
             # ── Stage 2: Extract audio from video ────────────────────
             task = progress.add_task("Extracting audio...", total=None)
             temp_dir = output_dir / "temp"
-            sessions = extract_audio_for_sessions(sessions, temp_dir)
+            sessions = await extract_audio_for_sessions(sessions, temp_dir)
             progress.remove_task(task)
 
             # ── Stages 3-5: Parse existing transcripts + Transcribe ──
@@ -285,7 +285,7 @@ class Pipeline:
             return self._empty_result(output_dir)
 
         temp_dir = output_dir / "temp"
-        sessions = extract_audio_for_sessions(sessions, temp_dir)
+        sessions = await extract_audio_for_sessions(sessions, temp_dir)
 
         session_segments = await self._gather_all_segments(sessions)
 

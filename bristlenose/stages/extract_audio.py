@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import logging
 from pathlib import Path
 
@@ -10,10 +11,15 @@ from bristlenose.utils.audio import extract_audio_from_video, has_audio_stream
 
 logger = logging.getLogger(__name__)
 
+# Max concurrent FFmpeg processes.  Kept modest — each process is I/O-heavy
+# and (on macOS) may share the hardware media engine.
+_DEFAULT_CONCURRENCY = 4
 
-def extract_audio_for_sessions(
+
+async def extract_audio_for_sessions(
     sessions: list[InputSession],
     temp_dir: Path,
+    concurrency: int = _DEFAULT_CONCURRENCY,
 ) -> list[InputSession]:
     """Extract audio from video files in sessions that need it.
 
@@ -24,17 +30,23 @@ def extract_audio_for_sessions(
     - Skips sessions with existing transcripts (docx/srt) unless audio is
       needed for timecode alignment.
 
+    Video extractions run concurrently (up to *concurrency* FFmpeg processes).
+
     Args:
         sessions: List of InputSession objects.
         temp_dir: Directory to write extracted audio files.
+        concurrency: Max concurrent FFmpeg processes (default 4).
 
     Returns:
         Updated list of sessions with audio_path set where applicable.
     """
     temp_dir.mkdir(parents=True, exist_ok=True)
 
+    semaphore = asyncio.Semaphore(concurrency)
+    tasks: list[asyncio.Task[None]] = []
+
     for session in sessions:
-        # If session already has an audio file, use it
+        # If session already has an audio file, use it (no extraction needed)
         audio_files = [f for f in session.files if f.file_type == FileType.AUDIO]
         if audio_files:
             session.audio_path = audio_files[0].path
@@ -45,37 +57,17 @@ def extract_audio_for_sessions(
             )
             continue
 
-        # If session has a video file, extract audio
+        # If session has a video file, schedule extraction
         video_files = [f for f in session.files if f.file_type == FileType.VIDEO]
         if video_files:
             video_path = video_files[0].path
-
-            # Check the video actually has an audio stream
-            if not has_audio_stream(video_path):
-                logger.warning(
-                    "%s: Video file %s has no audio stream, skipping.",
-                    session.participant_id,
-                    video_path.name,
-                )
-                continue
-
             output_path = temp_dir / f"{session.participant_id}_extracted.wav"
-            try:
-                extracted = extract_audio_from_video(video_path, output_path)
-                session.audio_path = extracted
-                logger.info(
-                    "%s: Extracted audio from %s",
-                    session.participant_id,
-                    video_path.name,
+            tasks.append(
+                asyncio.create_task(
+                    _extract_one(session, video_path, output_path, semaphore)
                 )
-            except RuntimeError as exc:
-                logger.error(
-                    "%s: Failed to extract audio from %s: %s",
-                    session.participant_id,
-                    video_path.name,
-                    exc,
-                )
-                continue
+            )
+            continue
 
         # No audio or video — session must rely on subtitle/docx transcripts
         if session.audio_path is None and not session.has_existing_transcript:
@@ -84,4 +76,45 @@ def extract_audio_for_sessions(
                 session.participant_id,
             )
 
+    if tasks:
+        await asyncio.gather(*tasks)
+
     return sessions
+
+
+async def _extract_one(
+    session: InputSession,
+    video_path: Path,
+    output_path: Path,
+    semaphore: asyncio.Semaphore,
+) -> None:
+    """Extract audio for a single session, bounded by *semaphore*."""
+    async with semaphore:
+        # has_audio_stream and extract_audio_from_video are blocking
+        # (subprocess.run) — run in the default thread-pool executor.
+        has_audio = await asyncio.to_thread(has_audio_stream, video_path)
+        if not has_audio:
+            logger.warning(
+                "%s: Video file %s has no audio stream, skipping.",
+                session.participant_id,
+                video_path.name,
+            )
+            return
+
+        try:
+            extracted = await asyncio.to_thread(
+                extract_audio_from_video, video_path, output_path
+            )
+            session.audio_path = extracted
+            logger.info(
+                "%s: Extracted audio from %s",
+                session.participant_id,
+                video_path.name,
+            )
+        except RuntimeError as exc:
+            logger.error(
+                "%s: Failed to extract audio from %s: %s",
+                session.participant_id,
+                video_path.name,
+                exc,
+            )

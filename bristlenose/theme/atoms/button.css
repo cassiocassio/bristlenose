@@ -85,3 +85,8 @@
     font-size: 0.95rem;
     color: var(--bn-colour-muted);
 }
+
+.toolbar-btn .toolbar-icon-svg {
+    color: var(--bn-colour-muted);
+    vertical-align: -0.15em;
+}

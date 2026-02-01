@@ -18,4 +18,5 @@
     .badge-delete { display: none; }
     .badge-ai::after { display: none; }
     .transcript-back { display: none; }
+    .view-switcher { display: none; }
 }

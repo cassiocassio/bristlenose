@@ -46,16 +46,6 @@ h3 {
     margin: 1.8rem 0 0.6rem;
 }
 
-.meta {
-    color: var(--bn-colour-muted);
-    font-size: 0.9rem;
-    margin-bottom: var(--bn-space-xl);
-}
-
-.meta p {
-    margin: var(--bn-space-xs) 0;
-}
-
 hr {
     border: none;
     border-top: 1px solid var(--bn-colour-border);

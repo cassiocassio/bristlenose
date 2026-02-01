@@ -1,14 +1,17 @@
-/* Atom: logo — project logo positioned in the report header */
+/* Atom: logo — report header with logo, logotype, project name, doc title */
 
 .report-header {
     display: flex;
-    align-items: flex-start;
+    align-items: baseline;
     justify-content: space-between;
     gap: var(--bn-space-lg);
+    flex-wrap: wrap;
 }
 
-.report-header h1 {
-    margin: 0;
+.header-left {
+    display: flex;
+    align-items: baseline;
+    gap: 0.6rem;
 }
 
 .report-logo {
@@ -17,10 +20,54 @@
     flex-shrink: 0;
     opacity: 0.85;
     transition: opacity var(--bn-transition-normal);
+    transform: scaleX(-1);
+    align-self: flex-start;
+    position: relative;
+    top: 1.7rem;
 }
 
 .report-logo:hover {
     opacity: 1;
+}
+
+.header-title {
+    white-space: nowrap;
+}
+
+.header-logotype {
+    font-size: 1.35rem;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+}
+
+.header-project {
+    font-size: 1.35rem;
+    font-weight: 400;
+    letter-spacing: -0.01em;
+}
+
+.header-right {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: var(--bn-space-xs);
+    flex-shrink: 0;
+}
+
+.header-doc-title {
+    font-size: 1.1rem;
+    font-weight: 400;
+}
+
+.header-meta {
+    font-size: 0.82rem;
+    color: var(--bn-colour-muted);
+}
+
+/* Tighten vertical spacing: header → rule → toolbar */
+.report-header + hr {
+    margin-top: 0.75rem;
+    margin-bottom: 0.75rem;
 }
 
 @media print {

@@ -16,10 +16,6 @@
     color: var(--bn-colour-accent);
 }
 
-.transcript-header h1 {
-    margin-bottom: var(--bn-space-xs);
-}
-
 .transcript-meta {
     color: var(--bn-colour-muted);
     font-size: 0.85rem;

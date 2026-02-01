@@ -1,14 +1,92 @@
-/* Organism: toolbar — sticky top bar with export buttons */
+/* Organism: toolbar — sticky bar with view switcher and export buttons */
 
 .toolbar {
     position: sticky;
     top: 0;
     z-index: 100;
     display: flex;
+    align-items: baseline;
     justify-content: flex-end;
-    gap: 0.5rem;
-    padding: 0.5rem 0;
+    gap: 0.75rem;
+    padding: 0.35rem 0;
     background: var(--bn-colour-bg);
-    border-bottom: 1px solid var(--bn-colour-border);
-    margin-bottom: 0.5rem;
+    margin-top: -0.5rem;
+}
+
+/* View switcher dropdown */
+.view-switcher {
+    position: relative;
+}
+
+.view-switcher-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    background: none;
+    border: none;
+    padding: 0.4rem 0.25rem;
+    font-family: var(--bn-font-body);
+    font-size: 0.82rem;
+    color: var(--bn-colour-text);
+    cursor: pointer;
+    transition: color var(--bn-transition-fast);
+}
+
+.view-switcher-btn:hover {
+    color: var(--bn-colour-accent);
+}
+
+.view-switcher-arrow {
+    color: var(--bn-colour-muted);
+    vertical-align: -0.05em;
+    flex-shrink: 0;
+}
+
+.view-switcher-menu {
+    display: none;
+    position: absolute;
+    top: 100%;
+    right: 0;
+    margin: 0.25rem 0 0;
+    padding: 0.25rem 0;
+    list-style: none;
+    background: var(--bn-colour-bg);
+    border: 1px solid var(--bn-colour-border);
+    border-radius: var(--bn-radius-md);
+    box-shadow: 0 4px 12px var(--bn-colour-shadow);
+    min-width: 12rem;
+    z-index: 200;
+}
+
+.view-switcher-menu.open {
+    display: block;
+}
+
+.view-switcher-menu li {
+    display: flex;
+    align-items: center;
+    gap: var(--bn-space-sm);
+    padding: 0.4rem 0.85rem;
+    font-size: 0.82rem;
+    color: var(--bn-colour-text);
+    cursor: pointer;
+    transition: background var(--bn-transition-fast);
+    white-space: nowrap;
+}
+
+.view-switcher-menu li:hover {
+    background: var(--bn-colour-quote-bg);
+}
+
+.view-switcher-menu li.active {
+    color: var(--bn-colour-text);
+}
+
+.view-switcher-menu .menu-icon {
+    display: inline-block;
+    width: 1em;
+    text-align: center;
+    font-size: 0.95rem;
+    color: var(--bn-colour-muted);
+    flex-shrink: 0;
 }

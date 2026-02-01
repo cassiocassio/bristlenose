@@ -52,7 +52,7 @@ bristlenose/          # main package
     molecules/
     organisms/
     templates/
-    js/               # 9 JS modules concatenated at render time
+    js/               # 10 JS modules concatenated at render time
     index.css         # documents concatenation order
   utils/
     hardware.py       # GPU/CPU detection
@@ -75,7 +75,8 @@ theme/
   tokens.css                  # 1. Design tokens  (CSS custom properties)
   atoms/                      # 2. Atoms          (smallest reusable pieces)
     badge.css                 #    base badge, sentiment variants, AI/user/add
-    button.css                #    fav-star, edit-pencil, restore, toolbar-btn
+    button.css                #    fav-star, edit-pencil, restore, toolbar-btn, toolbar-icon-svg
+    logo.css                  #    report header layout, logotype, project name
     input.css                 #    tag input + sizer
     toast.css                 #    clipboard toast
     timecode.css              #    clickable timecodes
@@ -89,10 +90,11 @@ theme/
   organisms/                  # 4. Organisms       (self-contained UI sections)
     blockquote.css            #    full quote card, rewatch items
     sentiment-chart.css       #    chart layout, side-by-side row
-    toolbar.css               #    sticky toolbar
+    toolbar.css               #    sticky toolbar, view-switcher dropdown
     toc.css                   #    table of contents columns
   templates/                  # 5. Templates       (page-level layout)
     report.css                #    body, article, headings, tables, links
+    transcript.css            #    per-participant transcript pages
     print.css                 #    @media print overrides
   index.css                   # human-readable index (not used by code)
 ```

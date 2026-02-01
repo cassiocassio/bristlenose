@@ -1,6 +1,6 @@
 # Bristlenose — Where I Left Off
 
-Last updated: 1 Feb 2026 (v0.6.2, editable names + section headings)
+Last updated: 1 Feb 2026 (v0.6.3, header redesign + view switcher + Analysis ToC)
 
 ---
 
@@ -47,6 +47,11 @@ Last updated: 1 Feb 2026 (v0.6.2, editable names + section headings)
 - [x] Auto name/role extraction from transcripts — Stage 5b LLM prompt extended to extract `person_name` and `job_title`; `SpeakerInfo` dataclass; speaker label metadata harvesting for Teams/DOCX/VTT sources; `auto_populate_names()` fills empty editable fields (LLM > metadata, never overwrites); wired into `run()` and `run_transcription_only()`
 - [x] Short name suggestion heuristic — `suggest_short_names()` in `people.py`; first token of `full_name`, disambiguates collisions with last-name initial ("Sarah J." vs "Sarah K."); JS mirror `suggestShortName()` in `names.js` for browser-side auto-fill; 26 new tests
 - [x] Editable section/theme headings — pencil icon inline editing on section titles, section descriptions, theme titles, theme descriptions; bidirectional ToC sync; shared `bristlenose-edits` localStorage; `initInlineEditing()` in `editing.js`; 19 tests
+- [x] (0.6.3) Header redesign — logo top-left (flipped, baseline-aligned), "Bristlenose" logotype + project name, right-aligned doc title + participant/session count + Finder-date meta; new `atoms/logo.css` layout
+- [x] (0.6.3) View-switcher dropdown — borderless "All quotes" / "Favourite quotes" / "Participant data" menu in sticky toolbar; `view-switcher.js` module; replaces old hamburger/button-bar pattern; `currentViewMode` global shared with `csv-export.js`
+- [x] (0.6.3) Copy CSV button with clipboard SVG icon — single adaptive button (exports all or favourites based on view mode); inline SVG replaces character entity
+- [x] (0.6.3) Quote attributions use raw pids — report quotes show `— p1` (anonymisation boundary); transcript pages keep display names; `names.js` no longer updates `.speaker-link` text
+- [x] (0.6.3) Analysis ToC column — Sentiment, Tags, Friction points, and User journeys in their own "Analysis" nav column, separate from Themes
 
 ---
 
@@ -118,11 +123,12 @@ Organised from easiest to hardest. The README has a condensed version; this is t
 - [x] Editable participant names in report — pencil icon inline editing, localStorage, YAML export, reconciliation
 - [ ] Participant metadata: day of the week in recordings — Start column now shows date+time (Finder-style), but could also show day name (e.g. "Mon 29 Jan 2026 at 20:56")
 - [ ] Reduce AI tag density — too many AI badges per quote; tune the LLM prompt or filter to show only the most relevant 2–3
-- [ ] Sentiment & friction as standalone sections — currently listed under Themes in the TOC but they're not themes; give them their own subsection/heading level
+- [x] Sentiment & friction as standalone sections — moved to "Analysis" TOC column alongside Tags and User journeys
 - [ ] User-tags histogram: right-align bars — bars should grow from the same zero-x baseline as the AI sentiment chart so the two read side-by-side
 - [ ] Clickable histogram bars — clicking a bar in sentiment or user-tags chart opens a filtered view showing only quotes with that tag/emotion
-- [ ] Sticky header — move project name + logo into the sticky toolbar bar so they're always visible on scroll
-- [ ] Burger menu — replace the export button bar with a dropdown/hamburger menu triggered from the logo; export favourites, export all, and room for future actions (settings, theme picker, etc.)
+- [ ] Sticky header — the toolbar (view-switcher + Copy CSV) is sticky but the header (logo, logotype, project name) scrolls away; decide whether to make the full header sticky or keep current behaviour where only the toolbar sticks
+- [x] Burger menu — replaced with borderless view-switcher dropdown (All quotes / Favourite quotes / Participant data) + Copy CSV button in sticky toolbar
+- [ ] Refactor render_html.py header/toolbar into template helpers — the report page and transcript page duplicate header HTML (logo, logotype, project name, meta) and toolbar markup; extract into shared helper functions so page-specific rendering doesn't repeat the boilerplate
 - [ ] Theme management in browser — create/rename/reorder/delete themes in the report, user-generated CSS themes (dark mode done; token architecture ready for custom themes)
 - [ ] Dark logo — replace placeholder inverted image with a proper albino bristlenose pleco (transparent PNG, ~480x480, suitable licence)
 - [ ] Lost quotes — surface quotes the AI didn't select, let users rescue them
@@ -176,7 +182,7 @@ Full design doc: `docs/design-doctor-and-snap.md`
 | `bristlenose/people.py` | People file: load, compute stats, merge, write, display name map |
 | `bristlenose/stages/render_html.py` | HTML report renderer — loads CSS + JS from theme/, all interactive features |
 | `bristlenose/theme/` | Atomic CSS design system (tokens, atoms, molecules, organisms, templates) |
-| `bristlenose/theme/js/` | Report JavaScript modules (storage, player, favourites, editing, tags, histogram, csv-export, main) — concatenated at render time |
+| `bristlenose/theme/js/` | Report JavaScript modules (storage, player, favourites, editing, tags, histogram, csv-export, view-switcher, names, main) — concatenated at render time |
 | `bristlenose/llm/prompts.py` | LLM prompt templates |
 | `bristlenose/utils/hardware.py` | GPU/CPU auto-detection |
 | `bristlenose/doctor.py` | Doctor check logic (pure, no UI) — 7 checks, `run_all()`, `run_preflight()` |

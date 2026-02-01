@@ -77,19 +77,14 @@ function resolveDisplayName(pid) {
  * @param {string} pid
  */
 function updateAllReferences(pid) {
-  var displayName = resolveDisplayName(pid);
   var edit = nameEdits[pid] || {};
   var baked = (typeof BN_PARTICIPANTS !== 'undefined' && BN_PARTICIPANTS[pid]) || {};
   var fullName = edit.full_name || baked.full_name || '';
   var roleName = edit.role || baked.role || '';
 
-  // Speaker links in quotes: a.speaker-link whose href starts with transcript_{pid}
-  var links = document.querySelectorAll(
-    'a.speaker-link[href^="transcript_' + pid + '.html"]'
-  );
-  for (var i = 0; i < links.length; i++) {
-    links[i].textContent = displayName;
-  }
+  // Quote attributions intentionally show raw pid (p1, p2) for anonymisation
+  // when researchers copy quotes into external tools.  Only the participant
+  // table name/role cells are updated here.
 
   // Participant table: update name and role cells.
   var row = document.querySelector('tr[data-participant="' + pid + '"]');

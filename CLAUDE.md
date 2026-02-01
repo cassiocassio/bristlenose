@@ -85,6 +85,45 @@ Section titles, section descriptions, theme titles, and theme descriptions are e
 - **CSS**: `.edit-pencil-inline` in `atoms/button.css` (static inline positioning); `.editable-text.editing` and `.editable-text.edited` in `molecules/quote-actions.css`
 - **Tests**: `tests/test_editable_headings.py` — 19 tests covering markup, data attributes, CSS, JS bootstrap, ToC editability, and sentiment exclusion
 
+## Report header and toolbar
+
+The HTML report header uses a two-column flexbox layout with the logo, logotype, and project name on the left, and the document title and metadata on the right.
+
+- **Header structure**: `.report-header` flex container → `.header-left` (logo + logotype + project name) + `.header-right` (doc title + meta line)
+- **Logo**: fish image flipped horizontally (`transform: scaleX(-1)`) so it faces into the page from the right. 80px wide, positioned with `top: 1.7rem` to align nose near the text baseline. Dark mode uses `<picture>` with separate dark logo
+- **Logotype**: "Bristlenose" (capitalised) in semibold 1.35rem, followed by an em-space (`\u2003`), then project name in regular weight at same size
+- **Meta line**: session/participant count and Finder-style date in muted 0.82rem
+- **Spacing**: `.report-header + hr` has tightened margins (0.75rem top/bottom); toolbar has negative top margin (-0.5rem) to pull it closer to the rule
+- **CSS**: `atoms/logo.css` — header layout, logotype, project name, doc title, meta, print overrides
+- **Shared layout**: both report and transcript pages use the same header structure (logotype + project name). The transcript page additionally has a back-link nav and `<h1>` heading below
+
+### Sticky toolbar
+
+Below the header rule, a sticky toolbar holds the view-switcher dropdown and export buttons.
+
+- **CSS**: `organisms/toolbar.css` — `.toolbar` (sticky, flex, right-aligned), `.view-switcher-btn`, `.view-switcher-arrow` (SVG chevron), `.view-switcher-menu` (dropdown), `.menu-icon` (invisible spacers for alignment)
+- **View switcher**: borderless dropdown button showing current view ("All quotes" default). Three views: `all` (show everything), `favourites` (show only starred quotes), `participants` (show only participant table)
+- **JS**: `view-switcher.js` — `initViewSwitcher()` handles menu toggle, item selection, section visibility. Sets `currentViewMode` global (defined in `csv-export.js`) so the CSV export button adapts
+- **Export buttons**: single `#export-csv` button (Copy CSV) with inline SVG clipboard icon; `#export-names` button (Export names) shown only in participants view. Both swap visibility based on view mode
+- **Menu items**: "All quotes" (no icon), "★ Favourite quotes" (star icon), "⊞ Participant data" (grid icon). Items without icons get `<span class="menu-icon">&nbsp;</span>` spacers for text alignment
+- **Boot order**: `initViewSwitcher()` runs after `initCsvExport()` in `main.js` because it depends on `currentViewMode`
+
+### Table of Contents
+
+The ToC row (`.toc-row` flexbox) shows up to three navigation columns:
+
+- **Sections** — screen-specific findings (editable titles with pencil icons)
+- **Themes** — thematic clusters (editable titles with pencil icons)
+- **Analysis** — Sentiment, Tags, Friction points, User journeys (not editable, plain links)
+
+## Quote attribution and anonymisation boundary
+
+Quote attributions in the main report intentionally show **raw participant IDs** (`— p1`, `— p2`) instead of display names. This is the anonymisation boundary: when researchers copy quotes to external tools (Miro, presentations, etc.), the IDs protect participant identity.
+
+- **Report quotes**: `_format_quote_html()` uses `pid_esc` for the `.speaker-link` text. `names.js` `updateAllReferences()` does NOT update `.speaker-link` text
+- **Transcript pages**: use display names (`short_name` → `full_name` → `pid`) since these are private to the researcher
+- **Participant table**: Name column shows `full_name` (editable); ID column shows raw `p1`/`p2` as a link to the transcript page
+
 ## PII redaction
 
 PII redaction is **off by default** (transcripts retain PII). Opt in with `--redact-pii`.
@@ -153,7 +192,7 @@ Each participant gets a dedicated HTML page (`transcript_p1.html`, etc.) showing
 - `check_backend()` catches `Exception` (not just `ImportError`) for faster_whisper import — torch native libs can raise `OSError` on some machines
 - `people.py` imports `SpeakerInfo` from `identify_speakers.py` under `TYPE_CHECKING` only (avoids circular import at runtime). The `auto_populate_names()` type hint works because `from __future__ import annotations` makes all annotations strings
 - `identify_speaker_roles_llm()` changed return type from `list[TranscriptSegment]` to `list[SpeakerInfo]` — still mutates segments in place for role assignment, but now also returns extracted name/title data. Only one call site in `pipeline.py`
-- `names.js` loads **after** `csv-export.js` in `_JS_FILES` because it depends on `copyToClipboard()` and `showToast()` defined there
+- `view-switcher.js` and `names.js` both load **after** `csv-export.js` in `_JS_FILES` — `view-switcher.js` writes the `currentViewMode` global defined in `csv-export.js`; `names.js` depends on `copyToClipboard()` and `showToast()`
 
 ## Reference docs (read when working in these areas)
 
@@ -188,6 +227,6 @@ When the user signals end of session, **proactively offer to run this checklist*
 8. **Clean up branches** — delete merged feature branches
 9. **Verify CI** — check latest push passes CI
 
-## Current status (v0.6.2, Feb 2026)
+## Current status (v0.6.3, Feb 2026)
 
-Core pipeline complete and published to PyPI + Homebrew. Snap packaging implemented and tested locally (arm64); CI builds amd64 on every push. v0.6.2 adds editable participant names (inline editing + YAML export), auto name/role extraction from Stage 5b, short name suggestion heuristics, and editable section/theme headings. v0.6.1 adds snap recipe, CI workflow, author identity. v0.6.0 added `bristlenose doctor`. v0.5.0 added per-participant transcript pages. Next up: register snap name, request classic confinement approval, first edge channel publish. See `TODO.md` for full task list.
+Core pipeline complete and published to PyPI + Homebrew. Snap packaging implemented and tested locally (arm64); CI builds amd64 on every push. v0.6.3 redesigns the report header (logo top-left, "Bristlenose" logotype + project name, right-aligned doc title + meta), adds a view-switcher dropdown (All quotes / Favourite quotes / Participant data) with Copy CSV button in a sticky toolbar, moves Sentiment/Tags/Friction/User journeys into an "Analysis" ToC column, and uses raw participant IDs in quote attributions (anonymisation boundary). v0.6.2 adds editable participant names, auto name/role extraction, short name suggestions, and editable section/theme headings. v0.6.1 adds snap recipe, CI workflow, author identity. v0.6.0 added `bristlenose doctor`. v0.5.0 added per-participant transcript pages. Next up: register snap name, request classic confinement approval, first edge channel publish. See `TODO.md` for full task list.

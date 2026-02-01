@@ -190,40 +190,29 @@ function showToast(msg) {
 
 // ── Initialisation ────────────────────────────────────────────────────────
 
+/** The current view mode — set by the view-switcher dropdown. */
+var currentViewMode = 'all';
+
 /**
  * Attach click handlers for the export buttons.
  */
 function initCsvExport() {
   document.addEventListener('click', function (e) {
-    var btn = e.target.closest('#export-favourites');
+    var btn = e.target.closest('#export-csv');
     if (btn) {
-      var csv = buildCsv(true);
+      var onlyFavs = currentViewMode === 'favourites';
+      var csv = buildCsv(onlyFavs);
       var n = csv.split('\n').length - 1;
       if (n === 0) {
-        showToast('No favourites to export');
+        showToast(onlyFavs ? 'No favourites to export' : 'No quotes to export');
         return;
       }
       copyToClipboard(csv).then(
         function () {
-          showToast(
-            n + ' favourite' + (n !== 1 ? 's' : '') + ' copied as CSV'
-          );
-        },
-        function () {
-          showToast('Could not copy to clipboard');
-        }
-      );
-      return;
-    }
-    btn = e.target.closest('#export-all');
-    if (btn) {
-      var csvAll = buildCsv(false);
-      var nAll = csvAll.split('\n').length - 1;
-      copyToClipboard(csvAll).then(
-        function () {
-          showToast(
-            nAll + ' quote' + (nAll !== 1 ? 's' : '') + ' copied as CSV'
-          );
+          var label = onlyFavs
+            ? n + ' favourite' + (n !== 1 ? 's' : '')
+            : n + ' quote' + (n !== 1 ? 's' : '');
+          showToast(label + ' copied as CSV');
         },
         function () {
           showToast('Could not copy to clipboard');

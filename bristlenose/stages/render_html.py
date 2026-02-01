@@ -104,6 +104,7 @@ _JS_FILES: list[str] = [
     "js/tags.js",
     "js/histogram.js",
     "js/csv-export.js",
+    "js/view-switcher.js",
     "js/names.js",
     "js/main.js",
 ]
@@ -202,8 +203,14 @@ def render_html(
     _w("<article>")
 
     # --- Header ---
+    now = datetime.now()
+    n_participants = len({s.participant_id for s in sessions})
+    n_sessions = len(sessions)
+    meta_date = format_finder_date(now, now=now)
+
     _w('<div class="report-header">')
-    _w(f"<h1>{_esc(project_name)}</h1>")
+    # Left: logo + logotype + project name
+    _w('<div class="header-left">')
     if logo_dest.exists():
         if logo_dark_dest.exists():
             _w("<picture>")
@@ -221,28 +228,75 @@ def render_html(
                 f'<img class="report-logo" src="{_LOGO_FILENAME}" '
                 f'alt="Bristlenose logo">'
             )
+    _w(
+        f'<span class="header-title">'
+        f'<span class="header-logotype">Bristlenose</span>'
+        f"\u2003"
+        f'<span class="header-project">{_esc(project_name)}</span>'
+        f"</span>"
+    )
     _w("</div>")
+    # Right: document title + meta
+    _w('<div class="header-right">')
+    _w('<span class="header-doc-title">Research report</span>')
+    _w(
+        f'<span class="header-meta">'
+        f"{n_sessions}\u00a0session{'s' if n_sessions != 1 else ''}, "
+        f"{n_participants}\u00a0participant{'s' if n_participants != 1 else ''}, "
+        f"{_esc(meta_date)}"
+        f"</span>"
+    )
+    _w("</div>")
+    _w("</div>")
+    _w("<hr>")
+
+    # --- Toolbar ---
     _w('<div class="toolbar">')
+    # View switcher dropdown (left)
+    _w('<div class="view-switcher">')
     _w(
-        '<button class="toolbar-btn" id="export-favourites">'
-        '<span class="toolbar-icon">&#9733;</span> Export favourites'
+        '<button class="view-switcher-btn" id="view-switcher-btn"'
+        ' aria-haspopup="true" aria-expanded="false">'
+        "All quotes "
+        '<svg class="view-switcher-arrow" width="10" height="10"'
+        ' viewBox="0 0 10 10" fill="none" stroke="currentColor"'
+        ' stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">'
+        '<path d="M2.5 3.75 5 6.25 7.5 3.75"/></svg>'
+        "</button>"
+    )
+    _w('<ul class="view-switcher-menu" id="view-switcher-menu" role="menu">')
+    _w(
+        '<li role="menuitem" data-view="all" class="active">'
+        '<span class="menu-icon">&nbsp;</span> All quotes</li>'
+    )
+    _w(
+        '<li role="menuitem" data-view="favourites">'
+        '<span class="menu-icon">&#9733;</span> Favourite quotes</li>'
+    )
+    _w(
+        '<li role="menuitem" data-view="participants">'
+        '<span class="menu-icon">&nbsp;</span> Participant data</li>'
+    )
+    _w("</ul>")
+    _w("</div>")
+    # Export buttons (right)
+    _w(
+        '<button class="toolbar-btn" id="export-csv">'
+        '<svg class="toolbar-icon-svg" width="14" height="14" viewBox="0 0 16 16"'
+        ' fill="none" stroke="currentColor" stroke-width="1.5"'
+        ' stroke-linecap="round" stroke-linejoin="round">'
+        '<rect x="5" y="1" width="9" height="11" rx="1.5"/>'
+        '<path d="M3 5H2.5A1.5 1.5 0 0 0 1 6.5v8A1.5 1.5 0 0 0 2.5 16h8'
+        'a1.5 1.5 0 0 0 1.5-1.5V14"/>'
+        "</svg>"
+        " Copy CSV"
         "</button>"
     )
     _w(
-        '<button class="toolbar-btn" id="export-all">'
-        '<span class="toolbar-icon">&#9776;</span> Export all'
-        "</button>"
-    )
-    _w(
-        '<button class="toolbar-btn" id="export-names">'
+        '<button class="toolbar-btn" id="export-names" style="display:none">'
         '<span class="toolbar-icon">&#9998;</span> Export names'
         "</button>"
     )
-    _w("</div>")
-    _w('<div class="meta">')
-    _w(f"<p>Generated: {datetime.now().strftime('%Y-%m-%d')}</p>")
-    _w(f"<p>Participants: {len(sessions)} ({_esc(_participant_range(sessions))})</p>")
-    _w(f"<p>Sessions processed: {len(sessions)}</p>")
     _w("</div>")
 
     # --- Participant Summary (at top for quick reference) ---
@@ -261,7 +315,6 @@ def render_html(
                "<th>Duration</th><th>Source file</th>")
         _w("</tr></thead>")
         _w("<tbody>")
-        now = datetime.now()
         for session in sessions:
             duration = _session_duration(session)
             pid = session.participant_id
@@ -336,6 +389,7 @@ def render_html(
     # --- Table of Contents ---
     section_toc: list[tuple[str, str]] = []
     theme_toc: list[tuple[str, str]] = []
+    chart_toc: list[tuple[str, str]] = []
     if screen_clusters:
         for cluster in screen_clusters:
             anchor = f"section-{cluster.screen_label.lower().replace(' ', '-')}"
@@ -345,10 +399,13 @@ def render_html(
             anchor = f"theme-{theme.theme_label.lower().replace(' ', '-')}"
             theme_toc.append((anchor, theme.theme_label))
     if all_quotes:
-        theme_toc.append(("sentiment", "Sentiment"))
+        chart_toc.append(("sentiment", "Sentiment"))
+        chart_toc.append(("user-tags-chart", "Tags"))
     if all_quotes and _has_rewatch_quotes(all_quotes):
-        theme_toc.append(("friction-points", "Friction points"))
-    if section_toc or theme_toc:
+        chart_toc.append(("friction-points", "Friction points"))
+    if all_quotes and sessions:
+        chart_toc.append(("user-journeys", "User journeys"))
+    if section_toc or theme_toc or chart_toc:
         _w('<div class="toc-row">')
         if section_toc:
             _w('<nav class="toc">')
@@ -374,18 +431,24 @@ def render_html(
             for anchor, label in theme_toc:
                 a_esc = _esc(anchor)
                 l_esc = _esc(label)
-                # Sentiment and Friction points are not editable.
-                if anchor.startswith("theme-"):
-                    _w(
-                        f'<li><a href="#{a_esc}">'
-                        f'<span class="editable-text"'
-                        f' data-edit-key="{a_esc}:title"'
-                        f' data-original="{l_esc}">{l_esc}</span></a>'
-                        f' <button class="edit-pencil edit-pencil-inline"'
-                        f' aria-label="Edit theme title">&#9998;</button></li>'
-                    )
-                else:
-                    _w(f'<li><a href="#{a_esc}">{l_esc}</a></li>')
+                _w(
+                    f'<li><a href="#{a_esc}">'
+                    f'<span class="editable-text"'
+                    f' data-edit-key="{a_esc}:title"'
+                    f' data-original="{l_esc}">{l_esc}</span></a>'
+                    f' <button class="edit-pencil edit-pencil-inline"'
+                    f' aria-label="Edit theme title">&#9998;</button></li>'
+                )
+            _w("</ul>")
+            _w("</nav>")
+        if chart_toc:
+            _w('<nav class="toc">')
+            _w("<h2>Analysis</h2>")
+            _w("<ul>")
+            for anchor, label in chart_toc:
+                a_esc = _esc(anchor)
+                l_esc = _esc(label)
+                _w(f'<li><a href="#{a_esc}">{l_esc}</a></li>')
             _w("</ul>")
             _w("</nav>")
         _w("</div>")
@@ -419,7 +482,7 @@ def render_html(
                 )
             _w('<div class="quote-group">')
             for quote in cluster.quotes:
-                _w(_format_quote_html(quote, video_map, display_names))
+                _w(_format_quote_html(quote, video_map))
             _w("</div>")
         _w("</section>")
         _w("<hr>")
@@ -452,7 +515,7 @@ def render_html(
                 )
             _w('<div class="quote-group">')
             for quote in theme.quotes:
-                _w(_format_quote_html(quote, video_map, display_names))
+                _w(_format_quote_html(quote, video_map))
             _w("</div>")
         _w("</section>")
         _w("<hr>")
@@ -469,7 +532,7 @@ def render_html(
 
     # --- Friction Points ---
     if all_quotes:
-        rewatch = _build_rewatch_html(all_quotes, video_map, display_names)
+        rewatch = _build_rewatch_html(all_quotes, video_map)
         if rewatch:
             _w("<section>")
             _w('<h2 id="friction-points">Friction points</h2>')
@@ -483,10 +546,10 @@ def render_html(
 
     # --- User Journeys ---
     if all_quotes and sessions:
-        task_html = _build_task_outcome_html(all_quotes, sessions, display_names)
+        task_html = _build_task_outcome_html(all_quotes, sessions)
         if task_html:
             _w("<section>")
-            _w("<h2>User journeys</h2>")
+            _w('<h2 id="user-journeys">User journeys</h2>')
             _w(task_html)
             _w("</section>")
             _w("<hr>")
@@ -677,25 +740,64 @@ def _render_transcript_page(
     _w("<body>")
     _w("<article>")
 
-    # Back button
-    _w('<nav class="transcript-back">')
-    _w(f'<a href="research_report.html">&larr; {_esc(project_name)} Research Report</a>')
-    _w("</nav>")
+    # Header (same layout as report)
+    logo_dest = output_dir / _LOGO_FILENAME
+    logo_dark_dest = output_dir / _LOGO_DARK_FILENAME
 
-    # Header
-    _w('<div class="transcript-header">')
-    _w(f"<h1>{heading}</h1>")
+    _w('<div class="report-header">')
+    _w('<div class="header-left">')
+    if logo_dest.exists():
+        if logo_dark_dest.exists():
+            _w("<picture>")
+            _w(
+                f'<source srcset="{_LOGO_DARK_FILENAME}" '
+                f'media="(prefers-color-scheme: dark)">'
+            )
+            _w(
+                f'<img class="report-logo" src="{_LOGO_FILENAME}" '
+                f'alt="Bristlenose logo">'
+            )
+            _w("</picture>")
+        else:
+            _w(
+                f'<img class="report-logo" src="{_LOGO_FILENAME}" '
+                f'alt="Bristlenose logo">'
+            )
+    _w(
+        f'<span class="header-title">'
+        f'<span class="header-logotype">Bristlenose</span>'
+        f"\u2003"
+        f'<span class="header-project">{_esc(project_name)}</span>'
+        f"</span>"
+    )
+    _w("</div>")
+    _w('<div class="header-right">')
+    _w('<span class="header-doc-title">Participant transcript</span>')
 
     # Meta line
     meta_parts: list[str] = []
     if transcript.source_file:
-        meta_parts.append(f"Source: {_esc(transcript.source_file)}")
+        meta_parts.append(_esc(transcript.source_file))
     if transcript.duration_seconds > 0:
-        meta_parts.append(f"Duration: {format_timecode(transcript.duration_seconds)}")
+        meta_parts.append(format_timecode(transcript.duration_seconds))
     if meta_parts:
-        _w(f'<p class="transcript-meta">{" &middot; ".join(meta_parts)}</p>')
+        _w(
+            f'<span class="header-meta">'
+            f"{' &middot; '.join(meta_parts)}"
+            f"</span>"
+        )
+    _w("</div>")
     _w("</div>")
     _w("<hr>")
+
+    # Back link + participant heading
+    _w('<nav class="transcript-back">')
+    _w(
+        f'<a href="research_report.html">'
+        f"&larr; {_esc(project_name)} Research Report</a>"
+    )
+    _w("</nav>")
+    _w(f"<h1>{heading}</h1>")
 
     # Transcript segments
     _w('<section class="transcript-body">')
@@ -777,12 +879,11 @@ def _session_duration(session: InputSession) -> str:
 def _format_quote_html(
     quote: ExtractedQuote,
     video_map: dict[str, str] | None = None,
-    display_names: dict[str, str] | None = None,
 ) -> str:
     """Render a single quote as an HTML blockquote."""
     tc = format_timecode(quote.start_timecode)
     quote_id = f"q-{quote.participant_id}-{int(quote.start_timecode)}"
-    # data-participant keeps canonical ID for JS; visible text uses display name
+    # Quote attributions use raw pid (p1, p2) for anonymisation
     parts: list[str] = [
         f'<blockquote id="{quote_id}"'
         f' data-timecode="{_esc(tc)}"'
@@ -804,11 +905,10 @@ def _format_quote_html(
     else:
         tc_html = f'<span class="timecode">[{tc}]</span>'
 
-    name = _esc(_display_name(quote.participant_id, display_names))
     pid_esc = _esc(quote.participant_id)
     anchor = f"t-{int(quote.start_timecode)}"
     speaker_link = (
-        f'<a href="transcript_{pid_esc}.html#{anchor}" class="speaker-link">{name}</a>'
+        f'<a href="transcript_{pid_esc}.html#{anchor}" class="speaker-link">{pid_esc}</a>'
     )
     parts.append(
         f"{tc_html} "
@@ -974,7 +1074,6 @@ def _has_rewatch_quotes(quotes: list[ExtractedQuote]) -> bool:
 def _build_rewatch_html(
     quotes: list[ExtractedQuote],
     video_map: dict[str, str] | None = None,
-    display_names: dict[str, str] | None = None,
 ) -> str:
     """Build the rewatch list as HTML."""
     flagged: list[ExtractedQuote] = []
@@ -999,8 +1098,7 @@ def _build_rewatch_html(
         if q.participant_id != current_pid:
             current_pid = q.participant_id
             parts.append(
-                f'<p class="rewatch-participant">'
-                f'{_esc(_display_name(current_pid, display_names))}</p>'
+                f'<p class="rewatch-participant">{_esc(current_pid)}</p>'
             )
         tc = format_timecode(q.start_timecode)
         reason = (
@@ -1161,7 +1259,6 @@ video { flex: 1; width: 100%; min-height: 0; background: #000; }
 def _build_task_outcome_html(
     quotes: list[ExtractedQuote],
     sessions: list[InputSession],
-    display_names: dict[str, str] | None = None,
 ) -> str:
     """Build the task outcome summary as an HTML table."""
     stage_order = [
@@ -1206,7 +1303,7 @@ def _build_task_outcome_html(
         )
 
         rows.append("<tr>")
-        rows.append(f"<td>{_esc(_display_name(pid, display_names))}</td>")
+        rows.append(f"<td>{_esc(pid)}</td>")
         rows.append(f"<td>{observed_str}</td>")
         rows.append(f"<td>{friction}</td>")
         rows.append("</tr>")

@@ -202,6 +202,11 @@ ruff check .                 # lint
 mypy bristlenose/            # type check
 ```
 
+> **If you rename or move the project directory**, the editable install breaks silently
+> (absolute paths baked into `.pth` files and CLI shebangs). Fix with:
+> `find . -name __pycache__ -exec rm -rf {} +` then
+> `.venv/bin/python -m pip install -e ".[dev]"`
+
 Primary development is on macOS. Feedback from Linux and Windows users is welcome.
 
 ---

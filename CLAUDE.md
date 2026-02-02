@@ -260,9 +260,11 @@ Each participant gets a dedicated HTML page (`transcript_p1.html`, etc.) showing
 
 ## Man page
 
-`man/bristlenose.1` is a full troff man page covering all commands, options, configuration, examples, input/output, and hardware auto-detection.
+Full troff man page covering all commands, options, configuration, examples, input/output, and hardware auto-detection.
 
-- **Dev environment**: `man man/bristlenose.1` (macOS accepts a path argument) or `man -l man/bristlenose.1`
+- **Canonical location**: `bristlenose/data/bristlenose.1` (inside the package, bundled in the wheel via `pyproject.toml` artifacts)
+- **Repo symlink**: `man/bristlenose.1` → `../bristlenose/data/bristlenose.1` — keeps CI, snap build, release asset, and `man man/bristlenose.1` working
+- **Self-install (pip/pipx)**: `_install_man_page()` in `cli.py` copies the man page to `~/.local/share/man/man1/` on first run (piggybacks on auto-doctor sentinel). Skipped in snap and Homebrew (they handle their own installation)
 - **Snap**: installed to `$CRAFT_PART_INSTALL/share/man/man1/` during `override-build` in `snapcraft.yaml`
 - **Homebrew**: formula in the tap repo needs `man1.install "man/bristlenose.1"` (sdist includes the file)
 - **GitHub Release**: attached as a release asset by `release.yml`

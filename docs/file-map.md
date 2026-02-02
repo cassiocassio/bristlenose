@@ -80,7 +80,8 @@ All 12 stages of the pipeline, from ingest to render.
 
 | File | Role |
 |------|------|
-| `man/bristlenose.1` | Man page (troff). Version must match `__version__`; CI enforces this |
+| `bristlenose/data/bristlenose.1` | Man page (troff, canonical). Bundled in wheel. Self-installs to `~/.local/share/man/man1/` on first run |
+| `man/bristlenose.1` | Symlink → `../bristlenose/data/bristlenose.1`. Used by CI version check, snap build, release asset |
 
 ## Snap packaging
 

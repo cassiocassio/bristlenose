@@ -243,6 +243,37 @@ def _should_auto_doctor() -> bool:
         return True
 
 
+def _install_man_page() -> None:
+    """Install man page to ~/.local/share/man/man1/ for pip/pipx users.
+
+    Skipped inside snap and Homebrew — those package managers handle their own
+    man page installation.
+    """
+    import os
+    import shutil
+    import sys
+
+    # Snap runtime installs man page via snapcraft.yaml.
+    if os.environ.get("SNAP"):
+        return
+
+    # Homebrew installs man page via formula.
+    exe = sys.executable or ""
+    if "/homebrew/" in exe.lower() or "/Cellar/" in exe:
+        return
+
+    source = Path(__file__).resolve().parent / "data" / "bristlenose.1"
+    if not source.exists():
+        return
+
+    man_dir = Path.home() / ".local" / "share" / "man" / "man1"
+    try:
+        man_dir.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(source, man_dir / "bristlenose.1")
+    except OSError:
+        pass  # non-critical
+
+
 def _write_doctor_sentinel() -> None:
     """Write the sentinel file after a successful auto-doctor."""
     sentinel = _doctor_sentinel_file()
@@ -251,6 +282,7 @@ def _write_doctor_sentinel() -> None:
         sentinel.write_text(__version__)
     except OSError:
         pass  # non-critical
+    _install_man_page()
 
 
 def _format_doctor_table(report: object) -> None:

@@ -52,9 +52,9 @@ parts:
       # Download spaCy model into the snap's Python environment so
       # --redact-pii works out of the box without user action.
       $CRAFT_PART_INSTALL/bin/python3 -m spacy download en_core_web_sm
-      # Install man page.
+      # Install man page (canonical location: bristlenose/data/).
       mkdir -p $CRAFT_PART_INSTALL/share/man/man1
-      cp man/bristlenose.1 $CRAFT_PART_INSTALL/share/man/man1/
+      cp bristlenose/data/bristlenose.1 $CRAFT_PART_INSTALL/share/man/man1/
 
 platforms:
   amd64:

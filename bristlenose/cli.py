@@ -17,7 +17,7 @@ app = typer.Typer(
     help="User-research transcription and quote extraction engine.",
     no_args_is_help=True,
 )
-console = Console()
+console = Console(width=min(80, Console().width))
 
 
 def _version_callback(value: bool) -> None:
@@ -395,6 +395,67 @@ def _run_preflight(settings: object, command: str, *, skip_transcription: bool =
 
 
 # ---------------------------------------------------------------------------
+# Pipeline summary output
+# ---------------------------------------------------------------------------
+
+
+def _print_pipeline_summary(result: object) -> None:
+    """Print a clean summary after any pipeline command.
+
+    Adapts to the fields available on the result (LLM usage, timing, etc.).
+    """
+    from bristlenose.llm.pricing import PRICING_URLS, estimate_cost
+    from bristlenose.pipeline import _format_duration
+
+    elapsed = getattr(result, "elapsed_seconds", 0.0)
+    if elapsed:
+        console.print(f"\n  [green]Done[/green] in {_format_duration(elapsed)}\n")
+    else:
+        console.print("\n  [green]Done.[/green]\n")
+
+    # Stats line — build dynamically from what's available
+    parts: list[str] = []
+    participants = getattr(result, "participants", [])
+    if participants:
+        parts.append(f"{len(participants)} participants")
+    screen_clusters = getattr(result, "screen_clusters", [])
+    if screen_clusters:
+        parts.append(f"{len(screen_clusters)} screens")
+    theme_groups = getattr(result, "theme_groups", [])
+    if theme_groups:
+        parts.append(f"{len(theme_groups)} themes")
+    total_quotes = getattr(result, "total_quotes", 0)
+    if total_quotes:
+        parts.append(f"{total_quotes} quotes")
+    if parts:
+        console.print(f"  [dim]{' · '.join(parts)}[/dim]")
+
+    # LLM usage line
+    llm_calls = getattr(result, "llm_calls", 0)
+    if llm_calls > 0:
+        llm_in = getattr(result, "llm_input_tokens", 0)
+        llm_out = getattr(result, "llm_output_tokens", 0)
+        model = getattr(result, "llm_model", "")
+        provider = getattr(result, "llm_provider", "")
+        cost = estimate_cost(model, llm_in, llm_out)
+        cost_str = f" · ~${cost:.2f}" if cost is not None else ""
+        console.print(
+            f"  [dim]LLM: {llm_in:,} in · {llm_out:,} out{cost_str} ({model})[/dim]"
+        )
+        url = PRICING_URLS.get(provider, "")
+        if url:
+            console.print(f"  [dim]Verify pricing → [link={url}]{url}[/link][/dim]")
+
+    # Report path with OSC 8 file:// hyperlink
+    output_dir = getattr(result, "output_dir", None)
+    if output_dir:
+        report_path = output_dir / "research_report.html"
+        if report_path.exists():
+            file_url = f"file://{report_path.resolve()}"
+            console.print(f"\n  [dim]Report[/dim]  [link={file_url}]{report_path}[/link]")
+
+
+# ---------------------------------------------------------------------------
 # Pipeline commands
 # ---------------------------------------------------------------------------
 
@@ -503,12 +564,7 @@ def run(
     pipeline = Pipeline(settings, verbose=verbose)
     result = asyncio.run(pipeline.run(input_dir, output_dir))
 
-    console.print(f"\n[bold green]Done.[/bold green] Output written to {result.output_dir}")
-    console.print(f"  Participants: {len(result.participants)}")
-    console.print(f"  Screen clusters: {len(result.screen_clusters)}")
-    console.print(f"  Themes: {len(result.theme_groups)}")
-    console.print(f"  Final report: {result.output_dir / 'research_report.md'}")
-    console.print(f"  HTML report:  {result.output_dir / 'research_report.html'}")
+    _print_pipeline_summary(result)
 
 
 @app.command()
@@ -550,8 +606,11 @@ def transcribe_only(
     pipeline = Pipeline(settings, verbose=verbose)
     result = asyncio.run(pipeline.run_transcription_only(input_dir, output_dir))
 
-    console.print(f"\n[bold green]Done.[/bold green] Transcripts written to {result.output_dir}")
-    console.print(f"  Participants: {len(result.participants)}")
+    _print_pipeline_summary(result)
+    # Transcript-specific: point to the transcripts dir, not the report
+    raw_dir = result.output_dir / "raw_transcripts"
+    if raw_dir.exists():
+        console.print(f"\n  Transcripts  {raw_dir}")
 
 
 @app.command()
@@ -600,11 +659,7 @@ def analyze(
     pipeline = Pipeline(settings, verbose=verbose)
     result = asyncio.run(pipeline.run_analysis_only(transcripts_dir, output_dir))
 
-    console.print(f"\n[bold green]Done.[/bold green] Output written to {result.output_dir}")
-    console.print(f"  Screen clusters: {len(result.screen_clusters)}")
-    console.print(f"  Themes: {len(result.theme_groups)}")
-    console.print(f"  Final report: {result.output_dir / 'research_report.md'}")
-    console.print(f"  HTML report:  {result.output_dir / 'research_report.html'}")
+    _print_pipeline_summary(result)
 
 
 @app.command()
@@ -661,8 +716,4 @@ def render(
     pipeline = Pipeline(settings, verbose=verbose)
     result = pipeline.run_render_only(output_dir, input_dir)
 
-    console.print(f"\n[bold green]Done.[/bold green] Reports re-rendered in {result.output_dir}")
-    console.print(f"  Screen clusters: {len(result.screen_clusters)}")
-    console.print(f"  Themes: {len(result.theme_groups)}")
-    console.print(f"  Final report: {result.output_dir / 'research_report.md'}")
-    console.print(f"  HTML report:  {result.output_dir / 'research_report.html'}")
+    _print_pipeline_summary(result)

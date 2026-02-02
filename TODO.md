@@ -1,6 +1,6 @@
 # Bristlenose — Where I Left Off
 
-Last updated: 2 Feb 2026 (v0.6.5, search-as-you-type filtering + platform session grouping)
+Last updated: 2 Feb 2026 (v0.6.5, CLI output overhaul)
 
 ---
 
@@ -57,6 +57,7 @@ Last updated: 2 Feb 2026 (v0.6.5, search-as-you-type filtering + platform sessio
 - [x] (0.6.5) Non-breaking spaces on quote attribution — `&nbsp;` around em-dash prevents `— p1` widowing at line breaks
 - [x] (0.6.5) Transcript page name propagation — `transcript-names.js` reads localStorage name edits from report page, updates heading + speaker labels on load; `data-participant` attributes on `<h1>` and `.segment-speaker`
 - [x] Platform-aware session grouping — `_normalise_stem()` strips Teams/Zoom cloud/Google Meet naming conventions; `_is_zoom_local_dir()` detects Zoom local folders; `group_into_sessions()` two-pass grouping (Zoom folders by directory, remaining by normalised stem); `extract_audio.py` skips FFmpeg when platform transcript present; 37 new tests. Design doc: `docs/design-platform-transcripts.md`
+- [x] CLI output overhaul — Cargo/uv-style green `✓` checkmark lines with per-stage timing, dim header (version · sessions · provider · hardware), LLM token usage tracking with cost estimate, OSC 8 terminal hyperlinks. Output capped at 80 columns. All tqdm/HuggingFace progress bars suppressed (mlx-whisper `verbose=None`, module-level `TQDM_DISABLE`, programmatic `disable_progress_bars()`). New: `LLMUsageTracker`, `estimate_cost()`, `HardwareInfo.label`, `_format_duration()`, `_print_step()`. 23 new tests
 
 ---
 

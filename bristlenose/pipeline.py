@@ -4,10 +4,15 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import os as _os
 from pathlib import Path
 
 from rich.console import Console
-from rich.progress import Progress, SpinnerColumn, TextColumn
+
+# Suppress all tqdm/huggingface_hub progress bars at module level.
+# Must be set before any tqdm import; setting inside __init__() is too late.
+_os.environ.setdefault("TQDM_DISABLE", "1")
+_os.environ.setdefault("HF_HUB_DISABLE_PROGRESS_BARS", "1")
 
 from bristlenose.config import BristlenoseSettings
 from bristlenose.models import (
@@ -20,7 +25,27 @@ from bristlenose.models import (
 )
 
 logger = logging.getLogger(__name__)
-console = Console()
+console = Console(width=min(80, Console().width))
+
+
+# ---------------------------------------------------------------------------
+# CLI output helpers
+# ---------------------------------------------------------------------------
+
+
+def _format_duration(seconds: float) -> str:
+    """Format seconds as '0.1s' or '3m 41s'."""
+    if seconds >= 60:
+        m, s = divmod(int(seconds), 60)
+        return f"{m}m {s:02d}s"
+    return f"{seconds:.1f}s"
+
+
+def _print_step(message: str, elapsed: float) -> None:
+    """Print a completed pipeline step with green ✓ and right-aligned timing."""
+    time_str = _format_duration(elapsed)
+    padding = max(1, 58 - len(message))
+    console.print(f" [green]✓[/green] {message}{' ' * padding}[dim]{time_str}[/dim]")
 
 
 class Pipeline:
@@ -30,12 +55,16 @@ class Pipeline:
         self.settings = settings
         self.verbose = verbose
 
-        # Configure logging
-        log_level = logging.DEBUG if verbose else logging.INFO
+        # Configure logging: suppress at default verbosity, show at -v
+        log_level = logging.DEBUG if verbose else logging.WARNING
         logging.basicConfig(
             level=log_level,
             format="%(levelname)s | %(name)s | %(message)s",
+            force=True,
         )
+        # Always suppress noisy third-party loggers, even with -v
+        for name in ("httpx", "presidio-analyzer", "presidio_analyzer", "faster_whisper"):
+            logging.getLogger(name).setLevel(logging.WARNING)
 
     async def run(self, input_dir: Path, output_dir: Path) -> PipelineResult:
         """Run the full pipeline: ingest → transcribe → analyse → output.
@@ -47,6 +76,10 @@ class Pipeline:
         Returns:
             PipelineResult with all data and paths.
         """
+        import time
+        from collections import Counter
+
+        from bristlenose import __version__
         from bristlenose.llm.client import LLMClient
         from bristlenose.stages.extract_audio import extract_audio_for_sessions
         from bristlenose.stages.identify_speakers import (
@@ -74,37 +107,69 @@ class Pipeline:
         )
         from bristlenose.stages.thematic_grouping import group_by_theme
         from bristlenose.stages.topic_segmentation import segment_topics
+        from bristlenose.utils.hardware import detect_hardware
 
+        pipeline_start = time.perf_counter()
         output_dir.mkdir(parents=True, exist_ok=True)
 
-        with Progress(
-            SpinnerColumn(),
-            TextColumn("[progress.description]{task.description}"),
-            console=console,
-        ) as progress:
+        with console.status("", spinner="dots") as status:
 
             # ── Stage 1: Ingest ──────────────────────────────────────
-            task = progress.add_task("Ingesting files...", total=None)
+            status.update("[dim]Ingesting files...[/dim]")
+            t0 = time.perf_counter()
             sessions = ingest(input_dir)
             if not sessions:
                 console.print("[red]No supported files found.[/red]")
                 return self._empty_result(output_dir)
-            progress.update(task, description=f"Ingested {len(sessions)} sessions")
-            progress.remove_task(task)
+
+            ingest_elapsed = time.perf_counter() - t0
+
+            # ── Print header, then ingest checkmark ──
+            hw = detect_hardware()
+            provider_name = (
+                "Claude" if self.settings.llm_provider == "anthropic" else "ChatGPT"
+            )
+            console.print(
+                f"\n[dim]Bristlenose v{__version__} · "
+                f"{len(sessions)} sessions · {provider_name} · {hw.label}[/dim]\n",
+            )
+            type_counts = Counter(
+                f.file_type.value for s in sessions for f in s.files
+            )
+            type_parts = [f"{n} {t}" for t, n in type_counts.most_common()]
+            _print_step(
+                f"Ingested {len(sessions)} sessions ({', '.join(type_parts)})",
+                ingest_elapsed,
+            )
 
             # ── Stage 2: Extract audio from video ────────────────────
-            task = progress.add_task("Extracting audio...", total=None)
+            status.update("[dim]Extracting audio...[/dim]")
+            t0 = time.perf_counter()
             temp_dir = output_dir / "temp"
             sessions = await extract_audio_for_sessions(sessions, temp_dir)
-            progress.remove_task(task)
+            _print_step(
+                f"Extracted audio from {len(sessions)} sessions",
+                time.perf_counter() - t0,
+            )
 
             # ── Stages 3-5: Parse existing transcripts + Transcribe ──
-            task = progress.add_task("Transcribing...", total=None)
-            session_segments = await self._gather_all_segments(sessions, progress)
-            progress.remove_task(task)
+            status.update("[dim]Transcribing...[/dim]")
+            t0 = time.perf_counter()
+            session_segments = await self._gather_all_segments(sessions)
+            total_segments = sum(len(s) for s in session_segments.values())
+            total_audio = sum(
+                f.duration_seconds or 0 for s in sessions for f in s.files
+            )
+            audio_str = _format_duration(total_audio) if total_audio else ""
+            msg = f"Transcribed {len(sessions)} sessions ({total_segments} segments"
+            if audio_str:
+                msg += f", {audio_str} audio"
+            msg += ")"
+            _print_step(msg, time.perf_counter() - t0)
 
             # ── Stage 5b: Speaker role identification ────────────────
-            task = progress.add_task("Identifying speakers...", total=None)
+            status.update("[dim]Identifying speakers...[/dim]")
+            t0 = time.perf_counter()
             llm_client = LLMClient(self.settings)
             concurrency = self.settings.llm_concurrency
 
@@ -126,26 +191,32 @@ class Pipeline:
                 *(_identify(p, s) for p, s in session_segments.items())
             )
             all_speaker_infos: dict[str, list] = dict(_results_5b)
-
-            progress.remove_task(task)
+            _print_step("Identified speakers", time.perf_counter() - t0)
 
             # ── Stage 6: Merge and write raw transcripts ─────────────
-            task = progress.add_task("Merging transcripts...", total=None)
+            status.update("[dim]Merging transcripts...[/dim]")
+            t0 = time.perf_counter()
             transcripts = merge_transcripts(sessions, session_segments)
             raw_dir = output_dir / "raw_transcripts"
             write_raw_transcripts(transcripts, raw_dir)
             write_raw_transcripts_md(transcripts, raw_dir)
-            progress.remove_task(task)
+            _print_step("Merged transcripts", time.perf_counter() - t0)
 
             # ── Stage 7: PII removal ────────────────────────────────
             if self.settings.pii_enabled:
-                task = progress.add_task("Removing PII...", total=None)
-                clean_transcripts, pii_redactions = remove_pii(transcripts, self.settings)
+                status.update("[dim]Removing PII...[/dim]")
+                t0 = time.perf_counter()
+                clean_transcripts, pii_redactions = remove_pii(
+                    transcripts, self.settings,
+                )
                 cooked_dir = output_dir / "cooked_transcripts"
                 write_cooked_transcripts(clean_transcripts, cooked_dir)
                 write_cooked_transcripts_md(clean_transcripts, cooked_dir)
                 write_pii_summary(pii_redactions, output_dir)
-                progress.remove_task(task)
+                _print_step(
+                    f"Redacted PII ({len(pii_redactions)} entities)",
+                    time.perf_counter() - t0,
+                )
             else:
                 # Pass through without PII removal
                 clean_transcripts = [
@@ -160,16 +231,24 @@ class Pipeline:
                 ]
 
             # ── Stage 8: Topic segmentation ──────────────────────────
-            task = progress.add_task("Segmenting topics...", total=None)
+            status.update("[dim]Segmenting topics...[/dim]")
+            t0 = time.perf_counter()
             topic_maps = await segment_topics(
                 clean_transcripts, llm_client, concurrency=concurrency,
             )
             if self.settings.write_intermediate:
-                write_intermediate_json(topic_maps, "topic_boundaries.json", output_dir)
-            progress.remove_task(task)
+                write_intermediate_json(
+                    topic_maps, "topic_boundaries.json", output_dir,
+                )
+            total_boundaries = sum(len(m.boundaries) for m in topic_maps)
+            _print_step(
+                f"Segmented {total_boundaries} topic boundaries",
+                time.perf_counter() - t0,
+            )
 
             # ── Stage 9: Quote extraction ────────────────────────────
-            task = progress.add_task("Extracting quotes...", total=None)
+            status.update("[dim]Extracting quotes...[/dim]")
+            t0 = time.perf_counter()
             all_quotes = await extract_quotes(
                 clean_transcripts,
                 topic_maps,
@@ -178,22 +257,36 @@ class Pipeline:
                 concurrency=concurrency,
             )
             if self.settings.write_intermediate:
-                write_intermediate_json(all_quotes, "extracted_quotes.json", output_dir)
-            progress.remove_task(task)
+                write_intermediate_json(
+                    all_quotes, "extracted_quotes.json", output_dir,
+                )
+            _print_step(
+                f"Extracted {len(all_quotes)} quotes",
+                time.perf_counter() - t0,
+            )
 
             # ── Stages 10+11: Cluster by screen + thematic grouping ──
-            task = progress.add_task("Clustering and grouping...", total=None)
+            status.update("[dim]Clustering and grouping...[/dim]")
+            t0 = time.perf_counter()
             screen_clusters, theme_groups = await asyncio.gather(
                 cluster_by_screen(all_quotes, llm_client),
                 group_by_theme(all_quotes, llm_client),
             )
             if self.settings.write_intermediate:
-                write_intermediate_json(screen_clusters, "screen_clusters.json", output_dir)
-                write_intermediate_json(theme_groups, "theme_groups.json", output_dir)
-            progress.remove_task(task)
+                write_intermediate_json(
+                    screen_clusters, "screen_clusters.json", output_dir,
+                )
+                write_intermediate_json(
+                    theme_groups, "theme_groups.json", output_dir,
+                )
+            _print_step(
+                f"Clustered {len(screen_clusters)} screens"
+                f" · Grouped {len(theme_groups)} themes",
+                time.perf_counter() - t0,
+            )
 
             # ── People file ───────────────────────────────────────────
-            task = progress.add_task("Updating people file...", total=None)
+            status.update("[dim]Updating people file...[/dim]")
             from bristlenose.people import (
                 auto_populate_names,
                 build_display_name_map,
@@ -211,8 +304,6 @@ class Pipeline:
 
             # Auto-populate names from speaker labels and LLM extraction.
             label_names = extract_names_from_labels(transcripts)
-            # Build pid → SpeakerInfo map: find the PARTICIPANT-role speaker
-            # from the LLM results for each session.
             pid_speaker_info = {}
             for pid, infos in all_speaker_infos.items():
                 for info in infos:
@@ -224,10 +315,10 @@ class Pipeline:
 
             write_people_file(people, output_dir)
             display_names = build_display_name_map(people)
-            progress.remove_task(task)
 
             # ── Stage 12: Render output ──────────────────────────────
-            task = progress.add_task("Rendering output...", total=None)
+            status.update("[dim]Rendering output...[/dim]")
+            t0 = time.perf_counter()
             render_markdown(
                 screen_clusters,
                 theme_groups,
@@ -249,7 +340,9 @@ class Pipeline:
                 display_names=display_names,
                 people=people,
             )
-            progress.remove_task(task)
+            _print_step("Rendered report", time.perf_counter() - t0)
+
+        elapsed = time.perf_counter() - pipeline_start
 
         return PipelineResult(
             project_name=self.settings.project_name,
@@ -260,6 +353,13 @@ class Pipeline:
             theme_groups=theme_groups,
             output_dir=output_dir,
             people=people,
+            elapsed_seconds=elapsed,
+            llm_input_tokens=llm_client.tracker.input_tokens,
+            llm_output_tokens=llm_client.tracker.output_tokens,
+            llm_calls=llm_client.tracker.calls,
+            llm_model=self.settings.llm_model,
+            llm_provider=self.settings.llm_provider,
+            total_quotes=len(all_quotes),
         )
 
     async def run_transcription_only(
@@ -269,6 +369,10 @@ class Pipeline:
 
         Useful for producing raw transcripts without needing an API key.
         """
+        import time
+        from collections import Counter
+
+        from bristlenose import __version__
         from bristlenose.stages.extract_audio import extract_audio_for_sessions
         from bristlenose.stages.identify_speakers import identify_speaker_roles_heuristic
         from bristlenose.stages.ingest import ingest
@@ -277,26 +381,78 @@ class Pipeline:
             write_raw_transcripts,
             write_raw_transcripts_md,
         )
+        from bristlenose.utils.hardware import detect_hardware
 
+        pipeline_start = time.perf_counter()
         output_dir.mkdir(parents=True, exist_ok=True)
 
-        sessions = ingest(input_dir)
-        if not sessions:
-            return self._empty_result(output_dir)
+        with console.status("", spinner="dots") as status:
 
-        temp_dir = output_dir / "temp"
-        sessions = await extract_audio_for_sessions(sessions, temp_dir)
+            # ── Stage 1: Ingest ──
+            status.update("[dim]Ingesting files...[/dim]")
+            t0 = time.perf_counter()
+            sessions = ingest(input_dir)
+            if not sessions:
+                console.print("[red]No supported files found.[/red]")
+                return self._empty_result(output_dir)
 
-        session_segments = await self._gather_all_segments(sessions)
+            ingest_elapsed = time.perf_counter() - t0
 
-        # Heuristic speaker identification only (no LLM)
-        for pid, segments in session_segments.items():
-            identify_speaker_roles_heuristic(segments)
+            # ── Print header, then ingest checkmark ──
+            hw = detect_hardware()
+            console.print(
+                f"\n[dim]Bristlenose v{__version__} · "
+                f"{len(sessions)} sessions · {hw.label}[/dim]\n",
+            )
+            type_counts = Counter(
+                f.file_type.value for s in sessions for f in s.files
+            )
+            type_parts = [f"{n} {t}" for t, n in type_counts.most_common()]
+            _print_step(
+                f"Ingested {len(sessions)} sessions ({', '.join(type_parts)})",
+                ingest_elapsed,
+            )
 
-        transcripts = merge_transcripts(sessions, session_segments)
-        raw_dir = output_dir / "raw_transcripts"
-        write_raw_transcripts(transcripts, raw_dir)
-        write_raw_transcripts_md(transcripts, raw_dir)
+            # ── Stage 2: Extract audio ──
+            status.update("[dim]Extracting audio...[/dim]")
+            t0 = time.perf_counter()
+            temp_dir = output_dir / "temp"
+            sessions = await extract_audio_for_sessions(sessions, temp_dir)
+            _print_step(
+                f"Extracted audio from {len(sessions)} sessions",
+                time.perf_counter() - t0,
+            )
+
+            # ── Stages 3-5: Transcribe ──
+            status.update("[dim]Transcribing...[/dim]")
+            t0 = time.perf_counter()
+            session_segments = await self._gather_all_segments(sessions)
+            total_segments = sum(len(s) for s in session_segments.values())
+            total_audio = sum(
+                f.duration_seconds or 0 for s in sessions for f in s.files
+            )
+            audio_str = _format_duration(total_audio) if total_audio else ""
+            msg = f"Transcribed {len(sessions)} sessions ({total_segments} segments"
+            if audio_str:
+                msg += f", {audio_str} audio"
+            msg += ")"
+            _print_step(msg, time.perf_counter() - t0)
+
+            # ── Heuristic speaker identification (no LLM) ──
+            status.update("[dim]Identifying speakers...[/dim]")
+            t0 = time.perf_counter()
+            for pid, segments in session_segments.items():
+                identify_speaker_roles_heuristic(segments)
+            _print_step("Identified speakers (heuristic)", time.perf_counter() - t0)
+
+            # ── Merge and write transcripts ──
+            status.update("[dim]Merging transcripts...[/dim]")
+            t0 = time.perf_counter()
+            transcripts = merge_transcripts(sessions, session_segments)
+            raw_dir = output_dir / "raw_transcripts"
+            write_raw_transcripts(transcripts, raw_dir)
+            write_raw_transcripts_md(transcripts, raw_dir)
+            _print_step("Merged transcripts", time.perf_counter() - t0)
 
         # People file (stats only, no rendering)
         from bristlenose.people import (
@@ -313,12 +469,13 @@ class Pipeline:
         computed_stats = compute_participant_stats(sessions, transcripts)
         people = merge_people(existing_people, computed_stats)
 
-        # Auto-populate names from speaker label metadata (no LLM here).
         label_names = extract_names_from_labels(transcripts)
         auto_populate_names(people, {}, label_names)
         suggest_short_names(people)
 
         write_people_file(people, output_dir)
+
+        elapsed = time.perf_counter() - pipeline_start
 
         return PipelineResult(
             project_name=self.settings.project_name,
@@ -329,6 +486,7 @@ class Pipeline:
             theme_groups=[],
             output_dir=output_dir,
             people=people,
+            elapsed_seconds=elapsed,
         )
 
     async def run_analysis_only(
@@ -338,6 +496,9 @@ class Pipeline:
 
         Loads .txt transcripts from a directory and runs stages 8-12.
         """
+        import time
+
+        from bristlenose import __version__
         from bristlenose.llm.client import LLMClient
         from bristlenose.stages.quote_clustering import cluster_by_screen
         from bristlenose.stages.quote_extraction import extract_quotes
@@ -346,6 +507,7 @@ class Pipeline:
         from bristlenose.stages.thematic_grouping import group_by_theme
         from bristlenose.stages.topic_segmentation import segment_topics
 
+        pipeline_start = time.perf_counter()
         output_dir.mkdir(parents=True, exist_ok=True)
 
         # Load existing transcripts from text files
@@ -357,46 +519,89 @@ class Pipeline:
         llm_client = LLMClient(self.settings)
         concurrency = self.settings.llm_concurrency
 
-        topic_maps = await segment_topics(
-            clean_transcripts, llm_client, concurrency=concurrency,
+        provider_name = (
+            "Claude" if self.settings.llm_provider == "anthropic" else "ChatGPT"
         )
-        if self.settings.write_intermediate:
-            write_intermediate_json(topic_maps, "topic_boundaries.json", output_dir)
-
-        all_quotes = await extract_quotes(
-            clean_transcripts, topic_maps, llm_client,
-            min_quote_words=self.settings.min_quote_words,
-            concurrency=concurrency,
-        )
-        if self.settings.write_intermediate:
-            write_intermediate_json(all_quotes, "extracted_quotes.json", output_dir)
-
-        screen_clusters, theme_groups = await asyncio.gather(
-            cluster_by_screen(all_quotes, llm_client),
-            group_by_theme(all_quotes, llm_client),
+        console.print(
+            f"\n[dim]Bristlenose v{__version__} · "
+            f"{len(clean_transcripts)} transcripts · {provider_name}[/dim]\n",
         )
 
-        # Load existing people file for display names (no recompute).
-        from bristlenose.people import build_display_name_map, load_people_file
+        with console.status("", spinner="dots") as status:
 
-        people = load_people_file(output_dir)
-        display_names = build_display_name_map(people) if people else {}
+            # ── Topic segmentation ──
+            status.update("[dim]Segmenting topics...[/dim]")
+            t0 = time.perf_counter()
+            topic_maps = await segment_topics(
+                clean_transcripts, llm_client, concurrency=concurrency,
+            )
+            if self.settings.write_intermediate:
+                write_intermediate_json(
+                    topic_maps, "topic_boundaries.json", output_dir,
+                )
+            total_boundaries = sum(len(m.boundaries) for m in topic_maps)
+            _print_step(
+                f"Segmented {total_boundaries} topic boundaries",
+                time.perf_counter() - t0,
+            )
 
-        render_markdown(
-            screen_clusters, theme_groups, [],
-            self.settings.project_name, output_dir,
-            all_quotes=all_quotes,
-            display_names=display_names,
-            people=people,
-        )
-        render_html(
-            screen_clusters, theme_groups, [],
-            self.settings.project_name, output_dir,
-            all_quotes=all_quotes,
-            color_scheme=self.settings.color_scheme,
-            display_names=display_names,
-            people=people,
-        )
+            # ── Quote extraction ──
+            status.update("[dim]Extracting quotes...[/dim]")
+            t0 = time.perf_counter()
+            all_quotes = await extract_quotes(
+                clean_transcripts, topic_maps, llm_client,
+                min_quote_words=self.settings.min_quote_words,
+                concurrency=concurrency,
+            )
+            if self.settings.write_intermediate:
+                write_intermediate_json(
+                    all_quotes, "extracted_quotes.json", output_dir,
+                )
+            _print_step(
+                f"Extracted {len(all_quotes)} quotes",
+                time.perf_counter() - t0,
+            )
+
+            # ── Cluster + group ──
+            status.update("[dim]Clustering and grouping...[/dim]")
+            t0 = time.perf_counter()
+            screen_clusters, theme_groups = await asyncio.gather(
+                cluster_by_screen(all_quotes, llm_client),
+                group_by_theme(all_quotes, llm_client),
+            )
+            _print_step(
+                f"Clustered {len(screen_clusters)} screens"
+                f" · Grouped {len(theme_groups)} themes",
+                time.perf_counter() - t0,
+            )
+
+            # ── Render ──
+            status.update("[dim]Rendering output...[/dim]")
+            t0 = time.perf_counter()
+
+            from bristlenose.people import build_display_name_map, load_people_file
+
+            people = load_people_file(output_dir)
+            display_names = build_display_name_map(people) if people else {}
+
+            render_markdown(
+                screen_clusters, theme_groups, [],
+                self.settings.project_name, output_dir,
+                all_quotes=all_quotes,
+                display_names=display_names,
+                people=people,
+            )
+            render_html(
+                screen_clusters, theme_groups, [],
+                self.settings.project_name, output_dir,
+                all_quotes=all_quotes,
+                color_scheme=self.settings.color_scheme,
+                display_names=display_names,
+                people=people,
+            )
+            _print_step("Rendered report", time.perf_counter() - t0)
+
+        elapsed = time.perf_counter() - pipeline_start
 
         return PipelineResult(
             project_name=self.settings.project_name,
@@ -407,6 +612,13 @@ class Pipeline:
             theme_groups=theme_groups,
             output_dir=output_dir,
             people=people,
+            elapsed_seconds=elapsed,
+            llm_input_tokens=llm_client.tracker.input_tokens,
+            llm_output_tokens=llm_client.tracker.output_tokens,
+            llm_calls=llm_client.tracker.calls,
+            llm_model=self.settings.llm_model,
+            llm_provider=self.settings.llm_provider,
+            total_quotes=len(all_quotes),
         )
 
     async def _gather_all_segments(
@@ -508,6 +720,7 @@ class Pipeline:
             PipelineResult (with empty transcripts — only clusters/themes populated).
         """
         import json as _json
+        import time
 
         from bristlenose.models import ExtractedQuote, ScreenCluster, ThemeGroup
         from bristlenose.stages.render_html import render_html
@@ -555,6 +768,7 @@ class Pipeline:
         display_names = build_display_name_map(people) if people else {}
 
         # --- Render ---
+        t0 = time.perf_counter()
         render_markdown(
             screen_clusters, theme_groups, sessions,
             self.settings.project_name, output_dir,
@@ -570,6 +784,7 @@ class Pipeline:
             display_names=display_names,
             people=people,
         )
+        _print_step("Rendered report", time.perf_counter() - t0)
 
         return PipelineResult(
             project_name=self.settings.project_name,
@@ -580,6 +795,7 @@ class Pipeline:
             theme_groups=theme_groups,
             output_dir=output_dir,
             people=people,
+            total_quotes=len(all_quotes),
         )
 
     def _empty_result(self, output_dir: Path) -> PipelineResult:

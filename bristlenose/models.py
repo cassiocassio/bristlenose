@@ -297,6 +297,14 @@ class PipelineResult(BaseModel):
     theme_groups: list[ThemeGroup]
     output_dir: Path
     people: PeopleFile | None = None
+    # Pipeline timing and LLM usage (populated by run/analyze, zero for render)
+    elapsed_seconds: float = 0.0
+    llm_input_tokens: int = 0
+    llm_output_tokens: int = 0
+    llm_calls: int = 0
+    llm_model: str = ""
+    llm_provider: str = ""
+    total_quotes: int = 0
 
 
 # ---------------------------------------------------------------------------

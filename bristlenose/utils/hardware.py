@@ -56,6 +56,18 @@ class HardwareInfo:
                 return "medium"
         return "small"
 
+    @property
+    def label(self) -> str:
+        """Short label for CLI header: 'Apple M2 Max · MLX' or 'RTX 4090 · CUDA'."""
+        name = self.chip_name or self.accelerator.value
+        if self.accelerator == AcceleratorType.APPLE_SILICON:
+            backend = "MLX" if self.mlx_available else "CPU"
+        elif self.accelerator == AcceleratorType.CUDA:
+            backend = "CUDA"
+        else:
+            backend = "CPU"
+        return f"{name} · {backend}"
+
     def summary(self) -> str:
         """Human-readable summary of detected hardware."""
         parts = [f"Accelerator: {self.accelerator.value}"]

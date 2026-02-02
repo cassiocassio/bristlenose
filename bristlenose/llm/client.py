@@ -15,6 +15,28 @@ logger = logging.getLogger(__name__)
 T = TypeVar("T", bound=BaseModel)
 
 
+class LLMUsageTracker:
+    """Accumulates token usage across multiple LLM calls.
+
+    Safe to share across concurrent asyncio tasks (single-threaded event loop).
+    """
+
+    def __init__(self) -> None:
+        self.input_tokens: int = 0
+        self.output_tokens: int = 0
+        self.calls: int = 0
+
+    def record(self, input_tokens: int, output_tokens: int) -> None:
+        """Record token usage from a single API call."""
+        self.input_tokens += input_tokens
+        self.output_tokens += output_tokens
+        self.calls += 1
+
+    @property
+    def total_tokens(self) -> int:
+        return self.input_tokens + self.output_tokens
+
+
 class LLMClient:
     """Unified interface for LLM calls with Pydantic-validated structured output.
 
@@ -26,6 +48,7 @@ class LLMClient:
         self.provider = settings.llm_provider
         self._anthropic_client: object | None = None
         self._openai_client: object | None = None
+        self.tracker = LLMUsageTracker()
 
         # Validate API key is present for the selected provider
         self._validate_api_key()
@@ -115,6 +138,10 @@ class LLMClient:
             tool_choice={"type": "tool", "name": tool_name},
         )
 
+        # Track token usage
+        if hasattr(response, "usage") and response.usage:
+            self.tracker.record(response.usage.input_tokens, response.usage.output_tokens)
+
         # Extract the tool use result
         for block in response.content:
             if block.type == "tool_use" and block.name == tool_name:
@@ -158,6 +185,12 @@ class LLMClient:
                 {"role": "user", "content": user_prompt},
             ],
         )
+
+        # Track token usage
+        if hasattr(response, "usage") and response.usage:
+            self.tracker.record(
+                response.usage.prompt_tokens, response.usage.completion_tokens
+            )
 
         content = response.choices[0].message.content
         if content is None:

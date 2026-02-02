@@ -162,6 +162,15 @@ def _init_mlx_backend(
     """
     import mlx_whisper
 
+    # huggingface_hub is now imported (transitive dep of mlx_whisper).
+    # Programmatically disable its download progress bars — the env var
+    # may have been too late if huggingface_hub was imported earlier.
+    try:
+        from huggingface_hub.utils import disable_progress_bars
+        disable_progress_bars()
+    except ImportError:
+        pass
+
     logger.info(
         "MLX backend initialised (model will be loaded on first use): %s",
         settings.whisper_model,
@@ -179,7 +188,7 @@ def _init_mlx_backend(
             path_or_hf_repo=model_name,
             language=settings.whisper_language if settings.whisper_language != "auto" else None,
             word_timestamps=True,
-            verbose=False,
+            verbose=None,
         )
 
         segments: list[TranscriptSegment] = []

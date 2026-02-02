@@ -76,11 +76,17 @@ All 12 stages of the pipeline, from ingest to render.
 | `tests/test_text_utils.py` | Smart quotes, disfluency removal, text cleanup (11 tests) |
 | `tests/test_name_extraction.py` | Name extraction, auto-populate, short name heuristic, SpeakerRoleItem compat (26 tests) |
 
+## Man page
+
+| File | Role |
+|------|------|
+| `man/bristlenose.1` | Man page (troff). Version must match `__version__`; CI enforces this |
+
 ## Snap packaging
 
 | File | Role |
 |------|------|
-| `snap/snapcraft.yaml` | Snap recipe: classic confinement, core24, Python plugin, bundles FFmpeg + spaCy model |
+| `snap/snapcraft.yaml` | Snap recipe: classic confinement, core24, Python plugin, bundles FFmpeg + spaCy model + man page |
 
 ## CI/CD and docs
 

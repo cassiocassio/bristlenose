@@ -1,6 +1,11 @@
 name: Update Homebrew formula
 
 # Triggered by repository_dispatch from the bristlenose release workflow.
+#
+# NOTE: The formula in the tap repo should include:
+#   man1.install "man/bristlenose.1"
+# The man page is included in the sdist tarball and attached as a GitHub
+# Release asset.
 
 on:
   repository_dispatch:

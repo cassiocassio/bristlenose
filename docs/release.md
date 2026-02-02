@@ -16,11 +16,15 @@ __version__ = "0.4.0"
 # 1. Bump the version
 #    Edit bristlenose/__init__.py → __version__ = "X.Y.Z"
 
-# 2. Add a changelog entry
+# 2. Update the man page version
+#    Edit man/bristlenose.1 → .TH line → "bristlenose X.Y.Z"
+#    CI will fail if the man page version doesn't match __version__
+
+# 3. Add a changelog entry
 #    Edit README.md → add a ### X.Y.Z section under ## Changelog
 
-# 3. Commit and tag
-git add bristlenose/__init__.py README.md
+# 4. Commit and tag
+git add bristlenose/__init__.py man/bristlenose.1 README.md
 git commit -m "vX.Y.Z"
 git tag vX.Y.Z
 git push origin main --tags

@@ -1,6 +1,6 @@
 .\" Man page for bristlenose
 .\" Generated from cli.py help text
-.TH BRISTLENOSE 1 "February 2026" "bristlenose 0.6.0" "User Commands"
+.TH BRISTLENOSE 1 "February 2026" "bristlenose 0.6.5" "User Commands"
 .SH NAME
 bristlenose \- user-research transcription and quote extraction engine
 .SH SYNOPSIS
@@ -156,6 +156,11 @@ run.
 .BR \-p ", " \-\-project " " \fINAME\fR
 Project name.
 .TP
+.BR \-\-clean
+Accepted for consistency but ignored \(em render is always non-destructive
+(overwrites reports only, never touches transcripts, people.yaml, or
+intermediate data).
+.TP
 .BR \-v ", " \-\-verbose
 Enable verbose logging.
 .SH CONFIGURATION
@@ -233,13 +238,18 @@ accepts any mix of audio, video, subtitle, and transcript files:
 Audio:       .wav .mp3 .m4a .flac .ogg .wma .aac
 Video:       .mp4 .mov .avi .mkv .webm
 Subtitles:   .srt .vtt
-Transcripts: .docx (Microsoft Teams exports)
+Transcripts: .docx (Microsoft Teams exports), .txt
 .fi
 .RE
 .PP
 Files sharing a name stem (e.g. \fIp1.mp4\fR and \fIp1.srt\fR) are treated as
-a single session. When subtitles exist, transcription is skipped for that
-session.
+a single session. When subtitles or transcripts exist, transcription is skipped
+for that session.
+.PP
+Platform naming conventions are auto-detected for session grouping: Microsoft
+Teams recording/transcript suffixes, Zoom cloud prefixes and meeting IDs, Zoom
+local recording folders, and Google Meet parenthetical timestamps are all
+stripped before stem comparison.
 .SH OUTPUT
 .PP
 .RS
@@ -247,8 +257,10 @@ session.
 output/
   research_report.html       browsable report
   research_report.md         Markdown version
+  transcript_p*.html         per-participant transcript pages
   bristlenose-theme.css      stylesheet (regenerated on every run)
-  bristlenose-logo.png       project logo
+  bristlenose-logo.png       project logo (light mode)
+  bristlenose-logo-dark.png  project logo (dark mode)
   bristlenose-player.html    popout video player
   people.yaml                participant registry (stats + editable fields)
   raw_transcripts/           one .txt and .md per participant

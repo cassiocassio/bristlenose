@@ -47,5 +47,14 @@ jobs:
           pip install pip-audit
           pip-audit
 
+      - name: Check man page version matches __version__
+        run: |
+          VERSION=$(python3 -c "import bristlenose; print(bristlenose.__version__)")
+          grep -q "bristlenose $VERSION" man/bristlenose.1 || {
+            echo "::error::Man page version doesn't match __version__ ($VERSION)"
+            echo "Update the .TH line in man/bristlenose.1"
+            exit 1
+          }
+
       - name: Run tests
         run: pytest --tb=short -q

@@ -1,0 +1,27 @@
+/* Atom: footer — colophon at page bottom */
+
+.report-footer {
+    max-width: var(--bn-max-width);
+    margin: var(--bn-space-xl) auto 0;
+    padding-top: var(--bn-space-md);
+    border-top: 1px solid var(--bn-colour-border);
+    font-size: 0.72rem;
+    color: var(--bn-colour-muted);
+}
+
+.footer-logotype {
+    font-weight: 600;
+}
+
+.footer-version {
+    color: var(--bn-colour-muted);
+    text-decoration: none;
+}
+
+.footer-version:visited {
+    color: var(--bn-colour-muted);
+}
+
+.footer-version:hover {
+    text-decoration: underline;
+}

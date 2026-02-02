@@ -19,4 +19,5 @@
     .badge-ai::after { display: none; }
     .transcript-back { display: none; }
     .view-switcher { display: none; }
+    .report-footer a { color: var(--bn-colour-muted); text-decoration: none; }
 }

@@ -48,6 +48,7 @@ _THEME_FILES: list[str] = [
     "atoms/timecode.css",
     "atoms/bar.css",
     "atoms/logo.css",
+    "atoms/footer.css",
     "molecules/badge-row.css",
     "molecules/bar-group.css",
     "molecules/quote-actions.css",
@@ -556,6 +557,7 @@ def render_html(
 
     # --- Close ---
     _w("</article>")
+    _w(_footer_html())
 
     # --- Embed JavaScript ---
     _w("<script>")
@@ -822,6 +824,7 @@ def _render_transcript_page(
     _w("</section>")
 
     _w("</article>")
+    _w(_footer_html())
 
     # JavaScript (player + name propagation)
     _w("<script>")
@@ -847,6 +850,20 @@ def _render_transcript_page(
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
+
+def _footer_html() -> str:
+    """Return the page footer with version link."""
+    from bristlenose import __version__
+
+    return (
+        '<footer class="report-footer">'
+        '<span class="footer-logotype">Bristlenose</span>'
+        "\u2002"
+        f'<a class="footer-version" href="https://github.com/cassiocassio/bristlenose">'
+        f"version {__version__}</a>"
+        "</footer>"
+    )
 
 
 def _esc(text: str) -> str:

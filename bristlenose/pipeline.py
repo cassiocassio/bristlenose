@@ -48,6 +48,53 @@ def _print_step(message: str, elapsed: float) -> None:
     console.print(f" [green]✓[/green] {message}{' ' * padding}[dim]{time_str}[/dim]")
 
 
+_printed_warnings: set[str] = set()
+
+
+def _print_warn(message: str, link: str = "") -> None:
+    """Print a warning line below the most recent step (deduplicated)."""
+    if message in _printed_warnings:
+        return
+    _printed_warnings.add(message)
+    console.print(f"   [dim yellow]{message}[/dim yellow]")
+    if link:
+        console.print(f"   [dim yellow][link={link}]{link}[/link][/dim yellow]")
+
+
+_MAX_WARN_LEN = 74  # 80 col - 3 indent - small margin
+
+
+_BILLING_URLS: dict[str, str] = {
+    "anthropic": "https://platform.claude.com/settings/billing",
+    "openai": "https://platform.openai.com/settings/organization/billing",
+}
+
+
+def _short_reason(errors: list[str], provider: str = "") -> tuple[str, str]:
+    """Extract a short human-readable reason from the first error message.
+
+    Returns:
+        (message, link) — link is a billing URL when applicable, else "".
+    """
+    if not errors:
+        return "", ""
+    msg = errors[0]
+    link = ""
+    # Anthropic API errors embed a JSON 'message' field
+    if "'message':" in msg:
+        import re
+        m = re.search(r"'message':\s*'([^']+)'", msg)
+        if m:
+            msg = m.group(1)
+    # Detect billing issues and provide a direct link
+    if "credit balance" in msg.lower() and provider in _BILLING_URLS:
+        link = _BILLING_URLS[provider]
+        msg = "API credit balance too low"
+    if len(msg) > _MAX_WARN_LEN:
+        msg = msg[:_MAX_WARN_LEN - 1] + "\u2026"
+    return msg, link
+
+
 class Pipeline:
     """Orchestrates the full Bristlenose processing pipeline."""
 
@@ -110,6 +157,7 @@ class Pipeline:
         from bristlenose.utils.hardware import detect_hardware
 
         pipeline_start = time.perf_counter()
+        _printed_warnings.clear()
         output_dir.mkdir(parents=True, exist_ok=True)
 
         with console.status("", spinner="dots") as status:
@@ -130,7 +178,7 @@ class Pipeline:
                 "Claude" if self.settings.llm_provider == "anthropic" else "ChatGPT"
             )
             console.print(
-                f"\n[dim]Bristlenose v{__version__} · "
+                f"\nBristlenose [dim]v{__version__} · "
                 f"{len(sessions)} sessions · {provider_name} · {hw.label}[/dim]\n",
             )
             type_counts = Counter(
@@ -179,12 +227,15 @@ class Pipeline:
 
             # LLM refinement concurrently (bounded by llm_concurrency)
             _sem_5b = asyncio.Semaphore(concurrency)
+            _speaker_errors: list[str] = []
 
             async def _identify(
                 pid: str, segments: list[TranscriptSegment],
             ) -> tuple[str, list]:
                 async with _sem_5b:
-                    infos = await identify_speaker_roles_llm(segments, llm_client)
+                    infos = await identify_speaker_roles_llm(
+                        segments, llm_client, errors=_speaker_errors,
+                    )
                     return pid, infos
 
             _results_5b = await asyncio.gather(
@@ -192,6 +243,8 @@ class Pipeline:
             )
             all_speaker_infos: dict[str, list] = dict(_results_5b)
             _print_step("Identified speakers", time.perf_counter() - t0)
+            if _speaker_errors:
+                _print_warn(*_short_reason(_speaker_errors, self.settings.llm_provider))
 
             # ── Stage 6: Merge and write raw transcripts ─────────────
             status.update("[dim]Merging transcripts...[/dim]")
@@ -233,8 +286,10 @@ class Pipeline:
             # ── Stage 8: Topic segmentation ──────────────────────────
             status.update("[dim]Segmenting topics...[/dim]")
             t0 = time.perf_counter()
+            _seg_errors: list[str] = []
             topic_maps = await segment_topics(
                 clean_transcripts, llm_client, concurrency=concurrency,
+                errors=_seg_errors,
             )
             if self.settings.write_intermediate:
                 write_intermediate_json(
@@ -245,16 +300,20 @@ class Pipeline:
                 f"Segmented {total_boundaries} topic boundaries",
                 time.perf_counter() - t0,
             )
+            if _seg_errors:
+                _print_warn(*_short_reason(_seg_errors, self.settings.llm_provider))
 
             # ── Stage 9: Quote extraction ────────────────────────────
             status.update("[dim]Extracting quotes...[/dim]")
             t0 = time.perf_counter()
+            _quote_errors: list[str] = []
             all_quotes = await extract_quotes(
                 clean_transcripts,
                 topic_maps,
                 llm_client,
                 min_quote_words=self.settings.min_quote_words,
                 concurrency=concurrency,
+                errors=_quote_errors,
             )
             if self.settings.write_intermediate:
                 write_intermediate_json(
@@ -264,6 +323,8 @@ class Pipeline:
                 f"Extracted {len(all_quotes)} quotes",
                 time.perf_counter() - t0,
             )
+            if _quote_errors:
+                _print_warn(*_short_reason(_quote_errors, self.settings.llm_provider))
 
             # ── Stages 10+11: Cluster by screen + thematic grouping ──
             status.update("[dim]Clustering and grouping...[/dim]")
@@ -401,7 +462,7 @@ class Pipeline:
             # ── Print header, then ingest checkmark ──
             hw = detect_hardware()
             console.print(
-                f"\n[dim]Bristlenose v{__version__} · "
+                f"\nBristlenose [dim]v{__version__} · "
                 f"{len(sessions)} sessions · {hw.label}[/dim]\n",
             )
             type_counts = Counter(
@@ -508,6 +569,7 @@ class Pipeline:
         from bristlenose.stages.topic_segmentation import segment_topics
 
         pipeline_start = time.perf_counter()
+        _printed_warnings.clear()
         output_dir.mkdir(parents=True, exist_ok=True)
 
         # Load existing transcripts from text files
@@ -523,7 +585,7 @@ class Pipeline:
             "Claude" if self.settings.llm_provider == "anthropic" else "ChatGPT"
         )
         console.print(
-            f"\n[dim]Bristlenose v{__version__} · "
+            f"\nBristlenose [dim]v{__version__} · "
             f"{len(clean_transcripts)} transcripts · {provider_name}[/dim]\n",
         )
 
@@ -532,8 +594,10 @@ class Pipeline:
             # ── Topic segmentation ──
             status.update("[dim]Segmenting topics...[/dim]")
             t0 = time.perf_counter()
+            _seg_errors_a: list[str] = []
             topic_maps = await segment_topics(
                 clean_transcripts, llm_client, concurrency=concurrency,
+                errors=_seg_errors_a,
             )
             if self.settings.write_intermediate:
                 write_intermediate_json(
@@ -544,14 +608,18 @@ class Pipeline:
                 f"Segmented {total_boundaries} topic boundaries",
                 time.perf_counter() - t0,
             )
+            if _seg_errors_a:
+                _print_warn(*_short_reason(_seg_errors_a, self.settings.llm_provider))
 
             # ── Quote extraction ──
             status.update("[dim]Extracting quotes...[/dim]")
             t0 = time.perf_counter()
+            _quote_errors_a: list[str] = []
             all_quotes = await extract_quotes(
                 clean_transcripts, topic_maps, llm_client,
                 min_quote_words=self.settings.min_quote_words,
                 concurrency=concurrency,
+                errors=_quote_errors_a,
             )
             if self.settings.write_intermediate:
                 write_intermediate_json(
@@ -561,6 +629,8 @@ class Pipeline:
                 f"Extracted {len(all_quotes)} quotes",
                 time.perf_counter() - t0,
             )
+            if _quote_errors_a:
+                _print_warn(*_short_reason(_quote_errors_a, self.settings.llm_provider))
 
             # ── Cluster + group ──
             status.update("[dim]Clustering and grouping...[/dim]")

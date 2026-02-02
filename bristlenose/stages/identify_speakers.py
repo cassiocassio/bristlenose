@@ -146,6 +146,7 @@ def identify_speaker_roles_heuristic(
 async def identify_speaker_roles_llm(
     segments: list[TranscriptSegment],
     llm_client: object,
+    errors: list[str] | None = None,
 ) -> list[SpeakerInfo]:
     """Refine speaker role identification using an LLM.
 
@@ -158,6 +159,7 @@ async def identify_speaker_roles_llm(
     Args:
         segments: Transcript segments (heuristic roles already assigned).
         llm_client: The LLM client for analysis.
+        errors: Optional list to append error messages to.
 
     Returns:
         A :class:`SpeakerInfo` for each speaker the LLM identified, or
@@ -221,7 +223,9 @@ async def identify_speaker_roles_llm(
         return infos
 
     except Exception as exc:
-        logger.warning("LLM speaker identification failed, using heuristics: %s", exc)
+        logger.debug("LLM speaker identification failed, using heuristics: %s", exc)
+        if errors is not None:
+            errors.append(str(exc))
         return []
 
 

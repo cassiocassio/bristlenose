@@ -19,6 +19,7 @@
 
 var _searchTimer = null;
 var _searchQuery = '';
+var _savedViewLabel = '';
 
 /**
  * Initialise the search filter: wire up toggle, input, and keyboard handlers.
@@ -27,6 +28,7 @@ function initSearchFilter() {
   var container = document.getElementById('search-container');
   var toggle = document.getElementById('search-toggle');
   var input = document.getElementById('search-input');
+  var clear = document.getElementById('search-clear');
   if (!container || !toggle || !input) return;
 
   toggle.addEventListener('click', function () {
@@ -58,6 +60,15 @@ function initSearchFilter() {
       _collapseSearch(container, input);
     }
   });
+
+  if (clear) {
+    clear.addEventListener('click', function () {
+      input.value = '';
+      _searchQuery = '';
+      _applySearchFilter();
+      input.focus();
+    });
+  }
 }
 
 function _expandSearch(container, input) {
@@ -79,22 +90,146 @@ function _collapseSearch(container, input) {
  * When query < 3 chars: restore the view-switcher's visibility state.
  */
 function _applySearchFilter() {
+  var container = document.getElementById('search-container');
   if (currentViewMode === 'participants') return;
+
+  _clearHighlights();
 
   var query = _searchQuery;
 
   if (query.length < 3) {
+    if (container) container.classList.remove('has-query');
     _restoreViewMode();
     return;
   }
 
+  if (container) container.classList.add('has-query');
+
   // Search across all quotes regardless of view mode.
   var bqs = document.querySelectorAll('.quote-group blockquote');
+  var matchCount = 0;
   for (var i = 0; i < bqs.length; i++) {
-    bqs[i].style.display = _matchesQuery(bqs[i], query) ? '' : 'none';
+    var matches = _matchesQuery(bqs[i], query);
+    bqs[i].style.display = matches ? '' : 'none';
+    if (matches) matchCount++;
   }
 
+  _highlightMatches(query);
+  _setNonQuoteVisibility('none');
+
+  var label = matchCount === 0 ? 'No matching quotes '
+    : matchCount === 1 ? '1 matching quote '
+    : matchCount + ' matching quotes ';
+  _overrideViewLabel(label);
   _hideEmptySections();
+}
+
+/**
+ * Show or hide the ToC row and Participants section during search.
+ *
+ * @param {string} display '' to show, 'none' to hide.
+ */
+function _setNonQuoteVisibility(display) {
+  var toc = document.querySelector('.toc-row');
+  if (toc) toc.style.display = display;
+
+  // Find Participants section by its h2 text.
+  var sections = document.querySelectorAll('article > section');
+  for (var i = 0; i < sections.length; i++) {
+    var h2 = sections[i].querySelector('h2');
+    if (h2 && h2.textContent.trim() === 'Participants') {
+      sections[i].style.display = display;
+      // Also hide the preceding <hr>.
+      var prev = sections[i].previousElementSibling;
+      if (prev && prev.tagName === 'HR') prev.style.display = display;
+      break;
+    }
+  }
+}
+
+/**
+ * Override the view-switcher button label during an active search.
+ *
+ * Saves the current label on first call so it can be restored later.
+ *
+ * @param {string} label The temporary label text.
+ */
+function _overrideViewLabel(label) {
+  var btn = document.getElementById('view-switcher-btn');
+  if (!btn || !btn.firstChild) return;
+  if (!_savedViewLabel) _savedViewLabel = btn.firstChild.textContent;
+  btn.firstChild.textContent = label;
+}
+
+/**
+ * Restore the view-switcher button label saved before search override.
+ */
+function _restoreViewLabel() {
+  if (!_savedViewLabel) return;
+  var btn = document.getElementById('view-switcher-btn');
+  if (btn && btn.firstChild) btn.firstChild.textContent = _savedViewLabel;
+  _savedViewLabel = '';
+}
+
+/**
+ * Wrap matched substrings in visible .quote-text elements with <mark>.
+ *
+ * @param {string} query Lowercase query string (>= 3 chars).
+ */
+function _highlightMatches(query) {
+  var bqs = document.querySelectorAll('.quote-group blockquote');
+  for (var i = 0; i < bqs.length; i++) {
+    if (bqs[i].style.display === 'none') continue;
+    var span = bqs[i].querySelector('.quote-text');
+    if (span) _highlightTextNodes(span, query);
+  }
+}
+
+/**
+ * Walk text nodes inside an element and wrap query matches in <mark>.
+ *
+ * @param {Element} el    The element to search within.
+ * @param {string}  query Lowercase query string.
+ */
+function _highlightTextNodes(el, query) {
+  var walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT, null);
+  var nodes = [];
+  while (walker.nextNode()) nodes.push(walker.currentNode);
+
+  for (var i = 0; i < nodes.length; i++) {
+    var node = nodes[i];
+    var text = node.nodeValue;
+    var lower = text.toLowerCase();
+    var idx = lower.indexOf(query);
+    if (idx === -1) continue;
+
+    var frag = document.createDocumentFragment();
+    var pos = 0;
+    while (idx !== -1) {
+      if (idx > pos) frag.appendChild(document.createTextNode(text.slice(pos, idx)));
+      var mark = document.createElement('mark');
+      mark.className = 'search-mark';
+      mark.textContent = text.slice(idx, idx + query.length);
+      frag.appendChild(mark);
+      pos = idx + query.length;
+      idx = lower.indexOf(query, pos);
+    }
+    if (pos < text.length) frag.appendChild(document.createTextNode(text.slice(pos)));
+    node.parentNode.replaceChild(frag, node);
+  }
+}
+
+/**
+ * Remove all <mark class="search-mark"> elements, unwrapping their text.
+ */
+function _clearHighlights() {
+  var marks = document.querySelectorAll('.search-mark');
+  for (var i = 0; i < marks.length; i++) {
+    var mark = marks[i];
+    var parent = mark.parentNode;
+    parent.replaceChild(document.createTextNode(mark.textContent), mark);
+    parent.normalize();
+  }
 }
 
 /**
@@ -147,6 +282,10 @@ function _restoreViewMode() {
       bqs[i].style.display = '';
     }
   }
+
+  // Restore ToC, Participants, and view-switcher label.
+  _setNonQuoteVisibility('');
+  _restoreViewLabel();
 
   // Restore all sections and hrs.
   for (var i = 0; i < sections.length; i++) sections[i].style.display = '';
@@ -247,6 +386,7 @@ function _onViewModeChange() {
       _searchQuery = '';
     }
     container.classList.remove('expanded');
+    container.classList.remove('has-query');
   } else {
     container.style.display = '';
     _applySearchFilter();

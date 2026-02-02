@@ -30,6 +30,7 @@ async def extract_quotes(
     llm_client: LLMClient,
     min_quote_words: int = 5,
     concurrency: int = 1,
+    errors: list[str] | None = None,
 ) -> list[ExtractedQuote]:
     """Extract verbatim quotes from all transcripts.
 
@@ -39,6 +40,7 @@ async def extract_quotes(
         llm_client: LLM client for analysis.
         min_quote_words: Minimum word count for a quote to be included.
         concurrency: Max concurrent LLM calls (default 1 = sequential).
+        errors: Optional list to append error messages to.
 
     Returns:
         List of all extracted quotes across all sessions.
@@ -70,11 +72,13 @@ async def extract_quotes(
                 )
                 return quotes
             except Exception as exc:
-                logger.error(
+                logger.debug(
                     "%s: Quote extraction failed: %s",
                     transcript.participant_id,
                     exc,
                 )
+                if errors is not None:
+                    errors.append(str(exc))
                 return []
 
     results = await asyncio.gather(*(_process(t) for t in transcripts))

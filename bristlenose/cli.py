@@ -484,7 +484,7 @@ def _print_pipeline_summary(result: object) -> None:
         report_path = output_dir / "research_report.html"
         if report_path.exists():
             file_url = f"file://{report_path.resolve()}"
-            console.print(f"\n  [dim]Report[/dim]  [link={file_url}]{report_path}[/link]")
+            console.print(f"\n  Report:  [link={file_url}]{report_path}[/link]")
 
 
 # ---------------------------------------------------------------------------

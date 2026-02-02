@@ -267,8 +267,19 @@ def render_html(
         '<line x1="10.5" y1="10.5" x2="15" y2="15"/>'
         "</svg>"
         "</button>"
+        '<div class="search-field">'
         '<input class="search-input" id="search-input" type="text"'
         ' placeholder="Filter quotes\u2026" autocomplete="off">'
+        '<button class="search-clear" id="search-clear"'
+        ' aria-label="Clear search">'
+        '<svg width="12" height="12" viewBox="0 0 12 12"'
+        ' fill="none" stroke="currentColor" stroke-width="1.5"'
+        ' stroke-linecap="round">'
+        '<line x1="2" y1="2" x2="10" y2="10"/>'
+        '<line x1="10" y1="2" x2="2" y2="10"/>'
+        "</svg>"
+        "</button>"
+        "</div>"
         "</div>"
     )
     # View switcher dropdown

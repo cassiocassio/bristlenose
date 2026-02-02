@@ -23,6 +23,7 @@ async def segment_topics(
     transcripts: list[PiiCleanTranscript],
     llm_client: LLMClient,
     concurrency: int = 1,
+    errors: list[str] | None = None,
 ) -> list[SessionTopicMap]:
     """Identify topic/screen transitions in each transcript.
 
@@ -30,6 +31,7 @@ async def segment_topics(
         transcripts: PII-cleaned transcripts to analyse.
         llm_client: LLM client for analysis.
         concurrency: Max concurrent LLM calls (default 1 = sequential).
+        errors: Optional list to append error messages to.
 
     Returns:
         List of SessionTopicMap objects, one per transcript.
@@ -52,11 +54,13 @@ async def segment_topics(
                 )
                 return topic_map
             except Exception as exc:
-                logger.error(
+                logger.debug(
                     "%s: Topic segmentation failed: %s",
                     transcript.participant_id,
                     exc,
                 )
+                if errors is not None:
+                    errors.append(str(exc))
                 return SessionTopicMap(
                     participant_id=transcript.participant_id,
                     boundaries=[],

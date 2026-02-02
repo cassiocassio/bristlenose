@@ -111,6 +111,7 @@ function buildCsv(onlyFavs) {
   var bqs = document.querySelectorAll('.quote-group blockquote');
   for (var i = 0; i < bqs.length; i++) {
     var bq = bqs[i];
+    if (bq.style.display === 'none') continue;
     if (onlyFavs && !bq.classList.contains('favourited')) continue;
     rows.push(
       [

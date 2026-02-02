@@ -22,6 +22,7 @@
     --bn-colour-editing-bg: #fffbe6;
     --bn-colour-editing-border: #e5e0c0;
     --bn-colour-active-bg: #f0fdf4;
+    --bn-colour-highlight: #fef08a;
 
     /* Sentiment colours */
     --bn-colour-confusion: #dc2626;
@@ -103,6 +104,7 @@
         --bn-colour-editing-bg:       light-dark(#fffbe6, #2a2614);
         --bn-colour-editing-border:   light-dark(#e5e0c0, #4a4528);
         --bn-colour-active-bg:        light-dark(#f0fdf4, #0f2918);
+        --bn-colour-highlight:        light-dark(#fef08a, #854d0e);
 
         /* Sentiment colours — foreground hues lighter on dark; tinted backgrounds */
         --bn-colour-confusion:        light-dark(#dc2626, #f87171);

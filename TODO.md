@@ -20,7 +20,7 @@ Last updated: 2 Feb 2026 (v0.6.5, timecode typography + hanging indent + transcr
 - [x] PII redaction (Presidio)
 - [x] Cross-platform support (macOS, Linux, Windows)
 - [x] AGPL-3.0 licence with CLA
-- [x] Renamed gourani → bristlenose
+- [x] Renamed gourani → bristlenose (including repo directory)
 - [x] Published to PyPI (0.1.0)
 - [x] Published to GitHub (cassiocassio/bristlenose)
 - [x] Homebrew tap (cassiocassio/homebrew-bristlenose) — `brew install cassiocassio/bristlenose/bristlenose` works
@@ -78,6 +78,39 @@ Done — `release.yml` dispatches to `cassiocassio/homebrew-bristlenose` after P
 ### 4. ✅ GitHub Release with changelog
 
 Done — `release.yml` `github-release` job creates a GitHub Release on the tag with auto-generated release notes.
+
+---
+
+## Dependency maintenance
+
+Bristlenose has ~30 direct + transitive deps across Python, ML, LLM SDKs, and NLP. CI runs `pip-audit` on every push (informational, non-blocking). This schedule keeps things from rotting.
+
+### Quarterly dep review (next: May 2026, then Aug 2026, Nov 2026)
+
+- [ ] **May 2026** — Run `pip list --outdated` in the venv. Bump floor pins in `pyproject.toml` only if there's a security fix, a feature you need, or the floor is 2+ major versions behind. Run tests, commit
+- [ ] **Aug 2026** — Same as above
+- [ ] **Nov 2026** — Same as above
+
+### Annual review (next: Feb 2027)
+
+- [ ] **Feb 2027** — Full annual review:
+  - Check Python EOL dates — Python 3.10 EOL is Oct 2026; if past EOL, bump `requires-python`, `target-version` (ruff), `python_version` (mypy)
+  - Check faster-whisper / ctranslate2 project health — is ctranslate2 still maintained? If dormant, evaluate `whisper.cpp` bindings or `mlx-whisper` as default
+  - Check spaCy major version — if spaCy 4.x is out, plan coordinated upgrade of spacy + thinc + models (only affects PII/presidio)
+  - Check Pydantic major version — if Pydantic 3.x is out, assess migration scope
+  - Rebuild snap to pick up fresh transitive deps
+  - Review `pip-audit` CI output for any persistent unfixed CVEs; decide if workarounds needed
+
+### Risk register
+
+| Dependency | Risk | Why | Escape hatch |
+|---|---|---|---|
+| faster-whisper / ctranslate2 | High | Fragile chain, ctranslate2 ties to specific torch versions, maintenance activity varies | `mlx-whisper` (macOS), `whisper.cpp` Python bindings |
+| spaCy + thinc + presidio | Medium | spaCy 3.x pins thinc 8.x; a spaCy 4.x release forces coordinated upgrade | Contained to PII stage only; can pin spaCy 3.x indefinitely |
+| anthropic / openai SDKs | Low | Bump weekly, backward-compatible within major versions | Floor pins are fine; no action needed |
+| Pydantic | Low | Stable at 2.x; no 3.x imminent | Would be a large migration but not urgent |
+| Python itself | Low (now) | 3.10 EOL Oct 2026; running 3.12 | Bump floor when 3.10 reaches EOL |
+| protobuf (transitive) | Low | CVE-2026-0994 (DoS via nested Any); no fix version yet; we don't parse untrusted protobuf | Resolves when patched version ships |
 
 ---
 

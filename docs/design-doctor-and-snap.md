@@ -690,10 +690,10 @@ normal range for the Store (VS Code snap is ~150 MB but has no ML deps).
 multipass launch lts --name snap-test --cpus 4 --memory 4G --disk 20G
 
 # Mount source and copy (mount alone won't work — snapcraft needs local files)
-multipass mount /path/to/gourani snap-test:/home/ubuntu/gourani
+multipass mount /path/to/bristlenose snap-test:/home/ubuntu/bristlenose
 multipass exec snap-test -- bash -c \
   "rsync -a --exclude='.venv' --exclude='.git' --exclude='__pycache__' \
-   /home/ubuntu/gourani/ /home/ubuntu/build/"
+   /home/ubuntu/bristlenose/ /home/ubuntu/build/"
 
 # Install snapcraft and build
 multipass exec snap-test -- sudo snap install snapcraft --classic

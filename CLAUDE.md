@@ -230,7 +230,7 @@ Per-participant LLM calls (stages 5b, 8, 9) run concurrently, bounded by `llm_co
 
 ## Gotchas
 
-- The repo directory is `/Users/cassio/Code/gourani` (legacy name, package is bristlenose)
+- The repo directory is `/Users/cassio/Code/bristlenose` — package name matches
 - Both `models.py` and `utils/timecodes.py` define `format_timecode()` / `parse_timecode()` — they behave identically, stage files import from either
 - `PipelineResult` references `PeopleFile` but is defined before it in `models.py` — resolved with `PipelineResult.model_rebuild()` after PeopleFile definition
 - `format_finder_date()` in `utils/markdown.py` uses a local `import datetime as _dtmod` inside the function body because `from __future__ import annotations` makes the type hints string-only; `datetime` is in `TYPE_CHECKING` for the linter but not available at runtime otherwise
@@ -270,13 +270,14 @@ When the user signals end of session, **proactively offer to run this checklist*
 
 1. **Run tests** — `.venv/bin/python -m pytest tests/`
 2. **Run linter** — `.venv/bin/ruff check bristlenose/`
-3. **Update `TODO.md`** — mark completed items, add new items discovered
-4. **Update CLAUDE.md files** — persist new conventions, architectural decisions, or gotchas learned during the session (root CLAUDE.md or the appropriate child file: `bristlenose/theme/CLAUDE.md`, `bristlenose/stages/CLAUDE.md`); update version in "Current status" if bumped
-5. **Update `CONTRIBUTING.md`** — if design system, release process, or dev setup changed
-6. **Update `README.md`** — if version bump, add changelog entry
-7. **Check for uncommitted changes** — `git status` + `git diff` — commit everything, push to `origin/main`
-8. **Clean up branches** — delete merged feature branches
-9. **Verify CI** — check latest push passes CI
+3. **Check maintenance schedule** — read the "Dependency maintenance" section of `TODO.md`; if today's date is past any unchecked quarterly/annual item, remind the user it's due
+4. **Update `TODO.md`** — mark completed items, add new items discovered
+5. **Update CLAUDE.md files** — persist new conventions, architectural decisions, or gotchas learned during the session (root CLAUDE.md or the appropriate child file: `bristlenose/theme/CLAUDE.md`, `bristlenose/stages/CLAUDE.md`); update version in "Current status" if bumped
+6. **Update `CONTRIBUTING.md`** — if design system, release process, or dev setup changed
+7. **Update `README.md`** — if version bump, add changelog entry
+8. **Check for uncommitted changes** — `git status` + `git diff` — commit everything, push to `origin/main`
+9. **Clean up branches** — delete merged feature branches
+10. **Verify CI** — check latest push passes CI
 
 ## Current status (v0.6.5, Feb 2026)
 

@@ -130,6 +130,7 @@ class Pipeline:
         from bristlenose.llm.client import LLMClient
         from bristlenose.stages.extract_audio import extract_audio_for_sessions
         from bristlenose.stages.identify_speakers import (
+            SpeakerInfo,
             identify_speaker_roles_heuristic,
             identify_speaker_roles_llm,
         )
@@ -161,6 +162,7 @@ class Pipeline:
         output_dir.mkdir(parents=True, exist_ok=True)
 
         with console.status("", spinner="dots") as status:
+            status.renderable.frames = [" " + f for f in status.renderable.frames]
 
             # ── Stage 1: Ingest ──────────────────────────────────────
             status.update("[dim]Ingesting files...[/dim]")
@@ -242,6 +244,14 @@ class Pipeline:
                 *(_identify(p, s) for p, s in session_segments.items())
             )
             all_speaker_infos: dict[str, list] = dict(_results_5b)
+
+            # Assign per-segment speaker codes (m1, o1, etc.)
+            from bristlenose.stages.identify_speakers import assign_speaker_codes
+
+            all_label_code_maps: dict[str, dict[str, str]] = {}
+            for pid, segments in session_segments.items():
+                all_label_code_maps[pid] = assign_speaker_codes(pid, segments)
+
             _print_step("Identified speakers", time.perf_counter() - t0)
             if _speaker_errors:
                 _print_warn(*_short_reason(_speaker_errors, self.settings.llm_provider))
@@ -365,12 +375,15 @@ class Pipeline:
 
             # Auto-populate names from speaker labels and LLM extraction.
             label_names = extract_names_from_labels(transcripts)
-            pid_speaker_info = {}
+            pid_speaker_info: dict[str, SpeakerInfo] = {}
             for pid, infos in all_speaker_infos.items():
+                label_code_map = all_label_code_maps.get(pid, {})
                 for info in infos:
+                    code = label_code_map.get(info.speaker_label, pid)
                     if info.role == SpeakerRole.PARTICIPANT:
                         pid_speaker_info[pid] = info
-                        break
+                    elif info.role == SpeakerRole.RESEARCHER and code.startswith("m"):
+                        pid_speaker_info[code] = info
             auto_populate_names(people, pid_speaker_info, label_names)
             suggest_short_names(people)
 
@@ -448,6 +461,7 @@ class Pipeline:
         output_dir.mkdir(parents=True, exist_ok=True)
 
         with console.status("", spinner="dots") as status:
+            status.renderable.frames = [" " + f for f in status.renderable.frames]
 
             # ── Stage 1: Ingest ──
             status.update("[dim]Ingesting files...[/dim]")
@@ -590,6 +604,7 @@ class Pipeline:
         )
 
         with console.status("", spinner="dots") as status:
+            status.renderable.frames = [" " + f for f in status.renderable.frames]
 
             # ── Topic segmentation ──
             status.update("[dim]Segmenting topics...[/dim]")
@@ -952,15 +967,25 @@ def load_transcripts_from_dir(
                 tc_str, bracket_token, text = match.groups()
                 start_time = parse_timecode(tc_str)
 
-                # Try to interpret bracket token as a speaker role (legacy
-                # format); if it doesn't match a known role, treat it as
-                # participant_id and default role to UNKNOWN.
+                # Interpret bracket token: moderator codes (m1, m2),
+                # observer codes (o1), participant codes (p1), or
+                # legacy speaker roles (PARTICIPANT, RESEARCHER).
                 role = SpeakerRole.UNKNOWN
+                speaker_code = ""
                 if bracket_token:
-                    try:
-                        role = SpeakerRole(bracket_token.lower())
-                    except ValueError:
-                        pass  # participant code like "p1" — role stays UNKNOWN
+                    if bracket_token[0] == "m" and bracket_token[1:].isdigit():
+                        role = SpeakerRole.RESEARCHER
+                        speaker_code = bracket_token
+                    elif bracket_token[0] == "o" and bracket_token[1:].isdigit():
+                        role = SpeakerRole.OBSERVER
+                        speaker_code = bracket_token
+                    elif bracket_token[0] == "p" and bracket_token[1:].isdigit():
+                        speaker_code = bracket_token
+                    else:
+                        try:
+                            role = SpeakerRole(bracket_token.lower())
+                        except ValueError:
+                            pass
 
                 segments.append(
                     TranscriptSegment(
@@ -968,6 +993,7 @@ def load_transcripts_from_dir(
                         end_time=start_time,
                         text=text,
                         speaker_role=role,
+                        speaker_code=speaker_code,
                         source="file",
                     )
                 )

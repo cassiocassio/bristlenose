@@ -165,6 +165,7 @@ class TranscriptSegment(BaseModel):
     text: str
     speaker_label: str | None = None  # "Speaker A", "John Smith", etc.
     speaker_role: SpeakerRole = SpeakerRole.UNKNOWN
+    speaker_code: str = ""  # "p1", "m1", "m2", "o1" — per-segment speaker identity
     words: list[Word] = Field(default_factory=list)
     source: str = ""  # "whisper", "srt", "vtt", "docx"
 

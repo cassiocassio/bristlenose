@@ -47,3 +47,12 @@
     font-weight: 600;
     font-size: 0.85rem;
 }
+
+/* Moderator segments are visually receded so participant answers stand out */
+.segment-moderator .segment-body {
+    color: var(--bn-colour-muted);
+}
+
+.segment-moderator .segment-speaker {
+    color: var(--bn-colour-muted);
+}

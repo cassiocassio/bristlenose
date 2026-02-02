@@ -111,10 +111,9 @@ def write_raw_transcripts(
 
         for seg in transcript.segments:
             tc = format_timecode(seg.start_time)
+            code = seg.speaker_code or transcript.participant_id
             lines.append(
-                format_raw_segment_txt(
-                    tc, transcript.participant_id, seg.speaker_label, seg.text,
-                )
+                format_raw_segment_txt(tc, code, seg.speaker_label, seg.text)
             )
             lines.append("")
 
@@ -166,10 +165,9 @@ def write_raw_transcripts_md(
 
         for seg in transcript.segments:
             tc = format_timecode(seg.start_time)
+            code = seg.speaker_code or transcript.participant_id
             lines.append(
-                format_raw_segment_md(
-                    tc, transcript.participant_id, seg.speaker_label, seg.text,
-                )
+                format_raw_segment_md(tc, code, seg.speaker_label, seg.text)
             )
             lines.append("")
 

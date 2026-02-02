@@ -68,169 +68,17 @@ Transcript pages use a separate list (`_TRANSCRIPT_JS_FILES`): `storage.js`, `pl
 - **Safe to edit**: `bristlenose/`, `tests/`
 - **Never touch**: `.env`, output directories, `bristlenose/theme/images/`
 
-## People file (participant registry)
+## HTML report features
 
-`people.yaml` lives in the output directory. It tracks every participant across pipeline runs.
+The generated HTML report has interactive features: inline editing (quotes, headings, names), search-as-you-type, view switching, CSV export, and per-participant transcript pages with deep-linked timecodes. Full implementation details in `docs/design-html-report.md`. Key concepts:
 
-- **Models**: `PersonComputed` (refreshed each run) + `PersonEditable` (preserved across runs) → `PersonEntry` → `PeopleFile` — all in `bristlenose/models.py`
-- **Core logic**: `bristlenose/people.py` — load, compute, merge, write, build display name map, extract names from labels, auto-populate names, suggest short names
-- **Merge strategy**: computed fields always overwritten; editable fields always preserved; new participants added with empty defaults; old participants missing from current run are **kept** (not deleted)
-- **Display names**: `short_name` → used as display name in quotes/friction/journeys. `full_name` → used in participant table Name column. Resolved at render time only — canonical `participant_id` (p1, p2) stays in all data models and HTML `data-participant` attributes. Display names are cosmetic
-- **Participant table columns**: `ID | Name | Role | Start | Duration | Words | Source file`. ID shows raw `participant_id`. Name column has pencil icon for inline editing (see "Name editing in HTML report" below). Start uses macOS Finder-style relative dates via `format_finder_date()` in `utils/markdown.py`
-- **Pipeline wiring**: `run()` and `run_transcription_only()` compute+write+auto-populate; `run_analysis_only()` and `run_render_only()` load existing for display names only
-- **Key workflows**:
-  - User edits `short_name` / `full_name` in `people.yaml` → `bristlenose render` → report uses new names
-  - User edits name in HTML report → localStorage → "Export names" → paste YAML into `people.yaml` → `bristlenose render`
-  - Full pipeline run auto-extracts names from LLM + speaker label metadata → auto-populates empty fields
-- **YAML comments**: inline comments added by users are lost on re-write (PyYAML limitation, documented in file header)
-
-### Auto name/role extraction
-
-Stage 5b (speaker identification) extracts participant names and job titles alongside role classification — no extra LLM call.
-
-- **LLM extraction**: `SpeakerRoleItem` in `bristlenose/llm/structured.py` has optional `person_name` and `job_title` fields (default `""`). The Stage 5b prompt in `prompts.py` asks the LLM to extract these from self-introductions. `identify_speaker_roles_llm()` in `identify_speakers.py` returns `list[SpeakerInfo]` (dataclass: `speaker_label`, `role`, `person_name`, `job_title`)
-- **Metadata extraction**: `extract_names_from_labels()` in `people.py` harvests real names from `speaker_label` on `TranscriptSegment` — works for Teams/DOCX/VTT sources where labels are real names (e.g. "Sarah Jones"), skips generic labels ("Speaker A", "SPEAKER_00", "Unknown")
-- **Auto-populate**: `auto_populate_names()` fills empty `full_name` (LLM > label metadata) and `role` (LLM only). Never overwrites user edits
-- **Short name suggestion**: `suggest_short_names()` auto-fills `short_name` from first token of `full_name`. Disambiguates collisions: "Sarah J." vs "Sarah K." when two participants share a first name
-- **Pipeline wiring**: `run()` collects `SpeakerInfo` from Stage 5b → calls `extract_names_from_labels()` + `auto_populate_names()` + `suggest_short_names()` after `merge_people()` and before `write_people_file()`. `run_transcription_only()` uses label extraction only (no LLM)
-
-### Name editing in HTML report
-
-Participant names and roles are editable inline in the HTML report.
-
-- **Pencil icon**: `.name-pencil` button in Name and Role table cells, visible on row hover. Same contenteditable lifecycle as quote editing (Enter/Escape/click-outside)
-- **JS module**: `bristlenose/theme/js/names.js` — `initNames()` in boot sequence (after `initSearchFilter()`). Uses `createStore('bristlenose-names')` for localStorage. Shape: `{pid: {full_name, short_name, role}}`
-- **Live DOM updates**: `updateAllReferences(pid)` propagates name changes to participant table Name and Role cells only. Quote attributions (`.speaker-link`) intentionally show raw pids — not updated by JS (anonymisation boundary)
-- **Short name auto-suggest**: JS-side `suggestShortName()` mirrors the Python heuristic — when `full_name` is edited and `short_name` is empty, auto-fills with first name
-- **YAML export**: "Export names" toolbar button copies edited names as a YAML snippet via `buildNamesYaml()` + `copyToClipboard()`. User pastes into `people.yaml`
-- **Reconciliation**: `reconcileWithBaked()` on page load prunes localStorage entries that match the baked-in `BN_PARTICIPANTS` data (user already pasted edits and re-rendered)
-- **BN_PARTICIPANTS**: JSON blob emitted in the HTML `<script>` block containing `{pid: {full_name, short_name, role}}` from people.yaml at render time. Used by JS for reconciliation and display name resolution
-- **CSS**: `molecules/name-edit.css` — `.name-cell`, `.role-cell` positioning; `.name-pencil` hover reveal; `.unnamed` placeholder style; `.edited` indicator; print hidden
-
-## Editable section/theme headings
-
-Section titles, section descriptions, theme titles, and theme descriptions are editable inline in the HTML report — same UX as quote editing.
-
-- **Markup**: `<span class="editable-text" data-edit-key="{anchor}:title|desc" data-original="...">` wraps the text inside `<h3>` (titles) and `<p class="description">` (descriptions). Pencil button (`.edit-pencil-inline`) sits inline after the text
-- **ToC entries**: Section and theme titles in the Table of Contents are also editable (same `data-edit-key`). Sentiment and Friction points are NOT editable
-- **Bidirectional sync**: Editing a title in the ToC updates the heading, and vice versa. Uses `_syncSiblings()` — all `.editable-text` spans sharing the same `data-edit-key` are kept in sync
-- **Storage**: Reuses the same `bristlenose-edits` localStorage store as quote edits. Keys: `section-{slug}:title`, `section-{slug}:desc`, `theme-{slug}:title`, `theme-{slug}:desc`
-- **JS**: `initInlineEditing()` in `editing.js`, called from `main.js` boot sequence after `initEditing()`. Separate `activeInlineEdit` tracker from `activeEdit` (quote editing)
-- **CSS**: `.edit-pencil-inline` in `atoms/button.css` (static inline positioning); `.editable-text.editing` and `.editable-text.edited` in `molecules/quote-actions.css`
-- **Tests**: `tests/test_editable_headings.py` — 19 tests covering markup, data attributes, CSS, JS bootstrap, ToC editability, and sentiment exclusion
-
-## Report header and toolbar
-
-The HTML report header uses a two-column flexbox layout with the logo, logotype, and project name on the left, and the document title and metadata on the right.
-
-- **Header structure**: `.report-header` flex container → `.header-left` (logo + logotype + project name) + `.header-right` (doc title + meta line)
-- **Logo**: fish image flipped horizontally (`transform: scaleX(-1)`) so it faces into the page from the right. 80px wide, positioned with `top: 1.7rem` to align nose near the text baseline. Dark mode uses `<picture>` with separate dark logo
-- **Logotype**: "Bristlenose" (capitalised) in semibold 1.35rem, followed by an em-space (`\u2003`), then project name in regular weight at same size
-- **Meta line**: session/participant count and Finder-style date in muted 0.82rem
-- **Spacing**: `.report-header + hr` has tightened margins (0.75rem top/bottom); toolbar has negative top margin (-0.5rem) to pull it closer to the rule
-- **CSS**: `atoms/logo.css` — header layout, logotype, project name, doc title, meta, print overrides
-- **Shared layout**: both report and transcript pages use the same header structure (logotype + project name). The transcript page additionally has a back-link nav and `<h1>` heading below
-
-### Sticky toolbar
-
-Below the header rule, a sticky toolbar holds the view-switcher dropdown and export buttons.
-
-- **CSS**: `organisms/toolbar.css` — `.toolbar` (sticky, flex, right-aligned), `.view-switcher-btn`, `.view-switcher-arrow` (SVG chevron), `.view-switcher-menu` (dropdown), `.menu-icon` (invisible spacers for alignment)
-- **View switcher**: borderless dropdown button showing current view ("All quotes" default). Three views: `all` (show everything), `favourites` (show only starred quotes), `participants` (show only participant table)
-- **JS**: `view-switcher.js` — `initViewSwitcher()` handles menu toggle, item selection, section visibility. Sets `currentViewMode` global (defined in `csv-export.js`) so the CSV export button adapts
-- **Export buttons**: single `#export-csv` button (Copy CSV) with inline SVG clipboard icon; `#export-names` button (Export names) shown only in participants view. Both swap visibility based on view mode
-- **Menu items**: "All quotes" (no icon), "★ Favourite quotes" (star icon), "⊞ Participant data" (grid icon). Items without icons get `<span class="menu-icon">&nbsp;</span>` spacers for text alignment
-- **Boot order**: `initViewSwitcher()` runs after `initCsvExport()` in `main.js` because it depends on `currentViewMode`
-
-### Search filter
-
-Search-as-you-type filtering for report quotes. Collapsed by default to a magnifying glass icon on the left side of the toolbar.
-
-- **HTML**: search container (`#search-container`) with toggle button (`#search-toggle`, SVG magnifying glass) and field wrapper (`.search-field` containing `#search-input` + `#search-clear`). Emitted in `render_html.py` before the view-switcher in the toolbar
-- **Expand/collapse**: clicking the icon toggles `.expanded` class on the container, showing/hiding the field. Escape key clears and collapses. Clicking icon when expanded+empty also collapses
-- **Clear button**: `#search-clear` (SVG × icon) positioned inside the input field (right-aligned via `position: absolute` inside `.search-field` wrapper). Appears when query is non-empty (`.has-query` class on container). Clears input and re-focuses for a new query
-- **Min 3 chars**: no filtering until query >= 3 characters
-- **Match scope**: `.quote-text` content, `.speaker-link` text, `.badge` text (skipping `.badge-add`). Case-insensitive substring match via `indexOf()`
-- **Yellow highlights**: matched substrings in `.quote-text` wrapped in `<mark class="search-mark">` with `--bn-colour-highlight` background (soft yellow in light mode, amber in dark). `_highlightMatches()` uses a TreeWalker to wrap text nodes; `_clearHighlights()` unwraps on each new query
-- **Search overrides view mode**: an active query always searches across ALL quotes regardless of the view-switcher state (all/favourites). Researchers working across 10–20 hours of interviews need to find any idea, verb, name, or product across all extracted quotes. When the query is cleared, the view-switcher state is restored
-- **View-switcher label override**: during active search, the view-switcher button shows the match count ("7 matching quotes" / "1 matching quote" / "No matching quotes") via `_overrideViewLabel()`. Puts the count right next to the "Copy CSV" button. Original label saved in `_savedViewLabel` and restored when search clears
-- **ToC + Participants hiding**: `_setNonQuoteVisibility('none')` hides `.toc-row` and the Participants section during active search. Restored to `display: ''` when search clears
-- **Section hiding**: `_hideEmptySections()` hides outer `<section>` elements (and preceding `<hr>`) when all child blockquotes are hidden. `_hideEmptySubsections()` hides individual h3+description+quote-group clusters within a section. Only targets sections with `.quote-group` (skips Participants, Sentiment, Friction, Journeys)
-- **CSV export filtering**: `buildCsv()` in `csv-export.js` skips blockquotes with `style.display === 'none'` — "Copy CSV" exports only visible (matching) quotes during an active search
-- **View mode hook**: `_onViewModeChange()` (defined in `search.js`) called from `view-switcher.js` `_applyView()` — hides search in participants mode, re-applies filter or restores view mode otherwise. The call in `view-switcher.js` is guarded with `typeof _onViewModeChange === 'function'` so transcript pages (which don't load search.js) don't error
-- **Debounce**: 150ms debounce on input handler via `setTimeout`
-- **CSS**: `molecules/search.css` — `.search-container`, `.search-toggle`, `.search-field` (relative wrapper, hidden until `.expanded`), `.search-input` (right padding for clear button), `.search-clear` (absolute right inside field, hidden until `.has-query`), `.search-mark` (highlight background)
-- **Colour token**: `--bn-colour-highlight` in `tokens.css` — `#fef08a` (light) / `light-dark(#fef08a, #854d0e)` (dark)
-- **JS**: `js/search.js` — `initSearchFilter()` in boot sequence (after `initViewSwitcher()`, before `initNames()`)
-- **Print**: hidden automatically (`.toolbar { display: none }` in `print.css`)
-- **Tests**: `tests/test_search_filter.py` — 20 tests covering HTML structure (clear button, field wrapper), CSS output (clear, field, highlight token, search-mark), JS bootstrap, transcript exclusion
-
-### Table of Contents
-
-The ToC row (`.toc-row` flexbox) shows up to three navigation columns:
-
-- **Sections** — screen-specific findings (editable titles with pencil icons)
-- **Themes** — thematic clusters (editable titles with pencil icons)
-- **Analysis** — Sentiment, Tags, Friction points, User journeys (not editable, plain links)
-
-## Page footer
-
-A minimal colophon at the bottom of every generated page (report + transcript pages): "Bristlenose" logotype + "version X.Y.Z" linking to the GitHub repo.
-
-- **HTML**: `_footer_html()` helper in `render_html.py` — renders a `<footer class="report-footer">` after `</article>` on both report and transcript pages. Version string imported from `bristlenose.__version__` (local import inside the helper)
-- **CSS**: `atoms/footer.css` — `.report-footer` (max-width aligned with article, top border, 0.72rem muted text), `.footer-logotype` (semibold), `.footer-version` (subtle link: muted colour, no underline, underline on hover, `:visited` locked to muted)
-- **Print**: `templates/print.css` locks footer link to muted colour
-- **Link**: `https://github.com/cassiocassio/bristlenose`
-
-## Timecode typography
-
-Timecodes use a two-tone treatment: blue digits (`--bn-colour-accent`) with muted grey brackets (`--bn-colour-muted`). This makes the actionable timecode scannable while the `[]` brackets provide genre context (established subtitle/transcription convention).
-
-- **CSS**: `atoms/timecode.css` — `a.timecode` and `span.timecode` both get accent colour; `a.timecode:visited` forced to accent (prevents browser default purple); `.timecode-bracket` gets muted colour
-- **Specificity overrides**: `organisms/blockquote.css` has `blockquote .timecode` and `.rewatch-item .timecode` rules that must also use `--bn-colour-accent` (not muted) — the bracket spans handle the muting
-- **HTML helper**: `_tc_brackets(tc)` in `render_html.py` wraps digits in bracket spans: `<span class="timecode-bracket">[</span>00:42<span class="timecode-bracket">]</span>`
-- **Applied everywhere**: report quotes, transcript segments, rewatch items — all 6 rendering sites use `_tc_brackets()`
-
-## Quote card layout (hanging indent)
-
-Report quotes use a flexbox hanging-indent layout: timecodes sit in a left gutter column, quote text + speaker + badges flow indented beside them. This makes timecodes scannable as a vertical column.
-
-- **HTML structure**: `<div class="quote-row">` contains the `.timecode` and `<div class="quote-body">` (quote text, speaker, badges)
-- **CSS**: `blockquote .quote-row` (`display: flex; gap: 0.5rem; align-items: baseline`), `.quote-body` (`flex: 1; min-width: 0`)
-- **Transcript pages**: use the same layout — `.transcript-segment` is also `display: flex` with `.segment-body` (`flex: 1`)
-- **Timecode** is `flex-shrink: 0` so it never wraps or compresses
-
-## Quote attribution and anonymisation boundary
-
-Quote attributions in the main report intentionally show **raw participant IDs** (`— p1`, `— p2`) instead of display names. This is the anonymisation boundary: when researchers copy quotes to external tools (Miro, presentations, etc.), the IDs protect participant identity.
-
-- **Report quotes**: `_format_quote_html()` uses `pid_esc` for the `.speaker-link` text. `names.js` `updateAllReferences()` does NOT update `.speaker-link` text. Attribution uses `&nbsp;` around the em-dash (`"…text"&nbsp;—&nbsp;p1`) to prevent widowing at line breaks
-- **Transcript pages**: use display names (`short_name` → `full_name` → `pid`) since these are private to the researcher
-- **Participant table**: Name column shows `full_name` (editable); ID column shows raw `p1`/`p2` as a link to the transcript page
-
-## PII redaction
-
-PII redaction is **off by default** (transcripts retain PII). Opt in with `--redact-pii`.
-
-- **Config**: `pii_enabled: bool = False` in `bristlenose/config.py`
-- **CLI flags**: `--redact-pii` (opt in) / `--retain-pii` (explicit default, redundant). Mutually exclusive
-- When off: transcripts pass through as `PiiCleanTranscript` wrappers, no `cooked_transcripts/` directory written
-
-## Per-participant transcript pages
-
-Each participant gets a dedicated HTML page (`transcript_p1.html`, etc.) showing their full transcript with clickable timecodes. Generated at the end of `render_html()`.
-
-- **Data source**: prefers `cooked_transcripts/` (PII-redacted) over `raw_transcripts/`. Uses `load_transcripts_from_dir()` from `pipeline.py` (public function, formerly `_load_transcripts_from_dir`)
-- **Page heading**: `{pid} {full_name}` (e.g. "p1 Sarah Jones") or just `{pid}` if no name
-- **Speaker name per segment**: resolved as `short_name` → `full_name` → `pid` via `_resolve_speaker_name()` in `render_html.py`
-- **Back button**: `← {project_name} Research Report` linking to `research_report.html`, styled muted with accent on hover, hidden in print
-- **JS**: `storage.js` + `player.js` + `transcript-names.js` — no favourites/editing/tags modules. `transcript-names.js` reads localStorage name edits (written by `names.js` on the report page) and updates the heading + speaker labels on load
-- **Name propagation**: `transcript-names.js` reads `bristlenose-names` localStorage store on page load; updates `<h1 data-participant>` heading and `.segment-speaker[data-participant]` labels. Read-only — no editing UI on transcript pages
-- **Participant table linking**: ID column (`p1`, `p2`) is a hyperlink to the transcript page
-- **Quote attribution linking**: `— p1` at end of each quote in the main report links to `transcript_p1.html#t-{seconds}`, deep-linking to the exact segment. `.speaker-link` CSS in `blockquote.css` (inherits muted colour, accent on hover)
-- **Segment anchors**: each transcript segment has `id="t-{int(seconds)}"` for deep linking from quotes
-- **CSS**: `transcript.css` in theme templates (back button, segment layout, meta styling); `.speaker-link` in `organisms/blockquote.css`
-- **Speaker role caveat**: `.txt` files store `[p1]` for all segments — researcher/participant role not preserved on disk. All segments render with same styling
+- **People file** (`people.yaml`): participant registry with computed stats + human-editable fields. Models in `models.py`, logic in `people.py`. Merge strategy preserves user edits across runs. Moderator codes (`m1`/`m2`) get their own entries alongside participants
+- **Speaker codes**: per-segment identity (`p1`, `m1`, `m2`, `o1`) assigned by `assign_speaker_codes()` after Stage 5b. Persisted in `.txt` files as bracket tokens. Phase 1 = per-session only; Phase 2 (cross-session linking) not yet implemented
+- **Name editing**: inline in the report via `names.js` → localStorage → "Export names" YAML → paste into `people.yaml` → `bristlenose render`. Auto name/role extraction from LLM + speaker labels
+- **Anonymisation boundary**: report quotes show raw `p1`/`p2` IDs (safe to copy to Miro/presentations). Transcript pages show display names (private to researcher)
+- **Search**: search-as-you-type with yellow highlights, match count in view-switcher, CSV export respects filter
+- **Transcript pages**: per-participant HTML pages with per-segment speaker name resolution, `.segment-moderator` CSS class for muted moderator styling, deep-link anchors from quote attributions
+- **PII redaction**: off by default (`--redact-pii` to opt in)
 
 ## Doctor command (dependency health checks)
 
@@ -303,7 +151,8 @@ Per-participant LLM calls (stages 5b, 8, 9) run concurrently, bounded by `llm_co
 
 Pipeline output uses clean Cargo/uv-style checkmark lines with per-stage timing, a dim header, and a post-run summary. No Rich spinners or logging at default verbosity.
 
-- **Output pattern**: `console.status()` spinner during work → `_print_step()` checkmark when done. Each stage: `status.update("[dim]Doing X...[/dim]")` → do work → `_print_step("Did X", elapsed)`. Spinner is hidden; checkmark is permanent
+- **Output pattern**: `console.status()` spinner during work → `_print_step()` checkmark when done. Each stage: `status.update(" [dim]Doing X...[/dim]")` → do work → `_print_step("Did X", elapsed)`. Spinner is hidden; checkmark is permanent
+- **Spinner–checkmark column alignment**: the spinner character (`⠋`) and the checkmark (`✓`) both render at column 1. `_print_step()` achieves this with a leading space (`" [green]✓[/green] {message}"` — text at col 3). The spinner is aligned by prepending a space to every frame in the Rich `Spinner` object immediately after creating the `console.status()` context: `status.renderable.frames = [" " + f for f in status.renderable.frames]`. Rich's `Text.assemble(frame, " ", text)` adds one separator space between the padded frame and the status text, so status text (no leading space) lands at col 3, matching the checkmark text. This line appears in all three pipeline methods (`run`, `run_transcription_only`, `run_analysis_only`). Rich's `Status.renderable` returns the internal `Spinner` object, and its `.frames` list is mutable — this is the least invasive way to shift the spinner position without subclassing or monkey-patching
 - **Width cap**: `Console(width=min(80, Console().width))` in both `pipeline.py` and `cli.py`. Keeps output tidy on wide terminals while respecting narrow ones
 - **Timing**: `time.perf_counter()` bracketing each stage. `_format_duration()` formats as `0.1s` or `3m 41s`
 - **Header**: `Bristlenose [dim]v{version} · {n} sessions · {provider} · {hw.label}[/dim]` — "Bristlenose" in regular weight, rest dim. Printed after ingest (session count not known until then)
@@ -351,9 +200,14 @@ These are documented to prevent re-exploration of dead ends:
 - **`_format_duration` and `_print_step` are module-level in `pipeline.py`** — `cli.py` imports `_format_duration` from there. Don't move them into the `Pipeline` class
 - **`PipelineResult` has optional LLM fields** (default 0/empty string) — `run_transcription_only()` doesn't use `LLMClient` so these stay at defaults. `_print_pipeline_summary()` in `cli.py` uses `getattr()` defensively
 - **Homebrew tap repo must be named `homebrew-bristlenose`** (not `bristlenose-homebrew`). `brew tap cassiocassio/bristlenose` looks for a GitHub repo called `cassiocassio/homebrew-bristlenose` — this is a Homebrew convention, not configurable. The local directory name doesn't matter to Git, but keeping it matching avoids confusion
+- **`speaker_code` defaults to `""`** — existing code that doesn't set it uses `seg.speaker_code or transcript.participant_id` as a fallback in all write functions. This means old transcripts and single-speaker sessions work unchanged
+- **`assign_speaker_codes()` must run after Stage 5b** — it reads `speaker_role` set by the heuristic/LLM passes. If called before role assignment, all speakers get the session's `participant_id` (UNKNOWN → fallback)
+- **Moderator codes are per-session, not cross-session** — `m1` in session 1 and `m1` in session 2 are independent entries in `people.yaml`. Cross-session linking is Phase 2 (not implemented)
+- **`transcript-names.js` already handles moderator codes** — it queries `[data-participant]` generically, so `data-participant="m1"` works without JS changes
 
 ## Reference docs (read when working in these areas)
 
+- **HTML report / people file / transcript pages**: `docs/design-html-report.md`
 - **Theme / dark mode / CSS**: `bristlenose/theme/CLAUDE.md`
 - **Pipeline stages / transcript format / output structure**: `bristlenose/stages/CLAUDE.md`
 - **File map** (what lives where): `docs/file-map.md`
@@ -389,4 +243,4 @@ When the user signals end of session, **proactively offer to run this checklist*
 
 ## Current status (v0.6.7, Feb 2026)
 
-Core pipeline complete and published to PyPI + Homebrew. Snap packaging implemented and tested locally (arm64); CI builds amd64 on every push. Latest: search enhancements — clear button (×) inside input field, yellow highlight markers on matching text (`--bn-colour-highlight`), match count in view-switcher label ("7 matching quotes"), ToC/Participants hidden during search, CSV export respects search filter; removed separate hint span in favour of view-switcher label. Pipeline warnings — clean dim-yellow warning lines when LLM stages fail (credit balance, network errors), with clickable billing URLs for Claude/ChatGPT; deduplication via `_printed_warnings` set; 74-char truncation. CLI polish — "Bristlenose" in regular weight in header, "Report:" label in regular weight. v0.6.6 adds Cargo/uv-style CLI output, search-as-you-type filtering, platform-aware session grouping, man page, page footer. v0.6.5 adds timecode typography, hanging-indent quote layout, transcript name propagation. v0.6.4 adds concurrent per-participant LLM calls. v0.6.3 redesigns report header, adds view-switcher dropdown, Analysis ToC column, anonymisation boundary. v0.6.2 adds editable participant names, auto name/role extraction, editable headings. v0.6.1 adds snap recipe, CI workflow. v0.6.0 added `bristlenose doctor`. v0.5.0 added per-participant transcript pages. Next up: register snap name, request classic confinement approval, first edge channel publish. See `TODO.md` for full task list.
+Core pipeline complete and published to PyPI + Homebrew. Snap packaging implemented and tested locally (arm64); CI builds amd64 on every push. Latest: moderator identification (Phase 1) — per-session speaker codes (`[m1]`/`[p1]`) in transcript files, moderator entries in `people.yaml`, per-segment speaker name resolution on transcript pages, `.segment-moderator` CSS class for muted moderator styling; backward-compatible with old transcript files. v0.6.7 adds search enhancements, pipeline warnings, CLI polish. v0.6.6 adds Cargo/uv-style CLI output, search-as-you-type filtering, platform-aware session grouping, man page, page footer. v0.6.5 adds timecode typography, hanging-indent quote layout, transcript name propagation. v0.6.4 adds concurrent per-participant LLM calls. v0.6.3 redesigns report header, adds view-switcher dropdown, Analysis ToC column, anonymisation boundary. v0.6.2 adds editable participant names, auto name/role extraction, editable headings. v0.6.1 adds snap recipe, CI workflow. v0.6.0 added `bristlenose doctor`. v0.5.0 added per-participant transcript pages. Next up: Phase 2 cross-session moderator linking; register snap name, request classic confinement approval, first edge channel publish. See `TODO.md` for full task list.

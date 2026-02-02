@@ -180,7 +180,8 @@ Organised from easiest to hardest. The README has a condensed version; this is t
 
 ### Medium (a few days each)
 
-- [ ] Moderator identification and transcript page speaker styling (see design notes below)
+- [x] Moderator identification Phase 1 — per-session speaker codes (`[m1]`/`[p1]`), moderator entries in `people.yaml`, per-segment speaker rendering on transcript pages, `.segment-moderator` CSS
+- [ ] Moderator identification Phase 2 — cross-session moderator linking (`same_as` field), web UI for declaring same-person across sessions
 - [x] LLM name/role extraction from transcripts — extended Stage 5b, `SpeakerInfo` dataclass, metadata harvesting, auto-populate
 - [ ] Multi-participant sessions — handle recordings with more than one interviewee
 - [ ] Speaker diarisation improvements — better accuracy, manual correction UI
@@ -353,66 +354,37 @@ Implemented as an extension to the existing Stage 5b speaker identification — 
 
 ## Design notes: Moderator identification and transcript page speaker styling
 
-Transcript pages currently show every segment as the same speaker (`p1:`) because the `.txt` files store `[p1]` for all segments — the researcher/participant role distinction is lost when writing to disk. This needs to change before multi-speaker transcripts can render properly.
+### Phase 1 — IMPLEMENTED
 
-### The problem
+Per-session moderator identification. Speaker codes (`[m1]`/`[p1]`/`[o1]`) in transcript files, moderator entries in `people.yaml`, per-segment speaker rendering on transcript pages with `.segment-moderator` CSS styling.
 
-In a real user research interview there are (at least) two speakers: a **moderator** (the researcher asking questions) and a **participant** (the user being interviewed). Currently:
+**How it works:**
 
-- Speaker diarisation labels everyone as participants (`p1`, `p2`...)
-- The `SpeakerRole` enum exists in models (`PARTICIPANT` / `RESEARCHER`) and is used during the pipeline
-- But when transcripts are written to `.txt` files, only the participant code `[p1]` is stored — the role is discarded
-- When transcript pages load from disk, all segments look the same
+1. Stage 5b identifies speaker roles (RESEARCHER, PARTICIPANT, OBSERVER) via heuristic + LLM
+2. `assign_speaker_codes()` maps each `speaker_label` to a code based on role: RESEARCHER → `m1`/`m2`, OBSERVER → `o1`, PARTICIPANT/UNKNOWN → session pid
+3. Transcript write functions use `seg.speaker_code` for the bracket token in `.txt`/`.md` files
+4. Parser (`load_transcripts_from_dir()`) recognises `[m1]` prefix → `speaker_role=RESEARCHER, speaker_code="m1"`
+5. `compute_participant_stats()` creates `PersonComputed` entries for moderator codes alongside participant entries
+6. Transcript pages resolve speaker name per-segment and apply `.segment-moderator` class (muted colour)
 
-### What needs to happen
+**Decisions made:**
+- `m` prefix for moderator (not `r` for researcher) — "moderator" is the user-research term
+- Moderator text is muted (visually receded) — participant answers are the primary content
+- Moderators get full `PersonEntry` in `people.yaml` with editable name/role fields
+- Per-session codes: `m1` in session 1 and `m1` in session 2 are independent entries
 
-#### 1. Moderator identity in `people.yaml`
+**Key files:** `identify_speakers.py` (`assign_speaker_codes()`), `models.py` (`speaker_code` field), `merge_transcript.py` / `pii_removal.py` (write functions), `pipeline.py` (wiring + parser), `people.py` (stats), `render_html.py` (per-segment rendering), `transcript.css` (`.segment-moderator`)
 
-Moderators need entries in `people.yaml` with a distinct code scheme. Options to decide:
+**Tests:** `tests/test_moderator_identification.py` — 21 tests
 
-- **`m1`, `m2`** — clear prefix distinction from `p1`, `p2`
-- **`moderator`** — single code if there's always one researcher (but some studies have two)
-- **`r1`, `r2`** — "researcher" prefix
+### Phase 2 — NOT YET IMPLEMENTED
 
-The `PersonEditable` model already has `full_name`, `short_name`, `role` — moderators would use the same fields. The `role` field could default to "Moderator" for these entries.
+Cross-session moderator linking. The same researcher moderating 10 interviews creates 10 independent `m1` entries. Phase 2 adds:
 
-#### 2. Role preserved in `.txt` files
+- **`same_as` field in `PersonEditable`** — declare "this `m1` is the same person as that `m1`"
+- **Auto-linking signals**: platform speaker labels (Teams carries real names), LLM-extracted `person_name`, frequency heuristic (speaker appearing in most sessions)
+- **Web UI for manual linking** — drag-and-drop or checkbox-select moderator entries across sessions
+- **Aggregated moderator stats** in participant table
+- **Data complexity**: two moderators in one session (`m1`, `m2`); same researcher with different labels across sessions; multiple researchers in a study
 
-The canonical `.txt` format needs to encode who is the moderator vs participant. Options:
-
-- **Extend the `[p1]` code** — use `[m1]` for moderator segments: `[00:16] [m1] So tell me about your experience...`
-- **Add a role marker** — `[00:16] [p1:researcher] ...` (more explicit but noisier)
-- Simplest: just use the `m1`/`m2` prefix convention — the parser already reads the code between `[]`, and anything not starting with `p` would be a non-participant
-
-#### 3. Transcript page visual treatment
-
-The moderator's questions should be visually distinct — they're context, not evidence. Design direction from user research practice:
-
-- **Moderator lines are structural headers** — a good moderator speaks ~20% of the time, so their questions naturally break the participant's responses into chunks
-- **Heavier/darker styling for moderator** — bold or semi-bold, slightly larger, acting as section breaks
-- **Participant text flows beneath** — lighter weight, the "body text" of each Q&A block
-- Think of it as a **Q&A layout**: moderator question as a bold heading, followed by the participant's response paragraphs
-
-This is the opposite of what you might expect (usually the important content is bold) — but in research the moderator's words are scaffolding and the participant's words are the data. The moderator lines stand out as **structural markers** that help you navigate, while the participant's words are what you actually read.
-
-#### 4. CSS classes needed
-
-```css
-.segment-moderator { font-weight: 600; /* or 700 */ }
-.segment-participant { /* default weight, the readable body */ }
-```
-
-Possibly with spacing: more margin-top before a moderator segment to create visual "question blocks".
-
-### Blockers
-
-- **No multi-speaker test data** — current test recordings are single-person. Need a real two-person interview (moderator + participant) flowing through the full pipeline before we can validate the design
-- **Speaker diarisation → role assignment** — the pipeline currently assigns `PARTICIPANT` / `RESEARCHER` roles during stage 5 (identify speakers), but this distinction doesn't survive to disk. Need to verify the role assignment logic works correctly before persisting it
-- **Parser changes** — `load_transcripts_from_dir()` needs to handle moderator codes (`m1` etc.) and return the role information so the transcript page renderer can apply different CSS classes
-
-### Dependencies
-
-- Depends on having real multi-speaker test data
-- Related to "Multi-participant sessions" TODO item
-- Related to "Speaker diarisation improvements" TODO item
-- LLM name extraction could auto-populate moderator names too
+Needs real multi-speaker data from Phase 1 runs to inform the right approach.

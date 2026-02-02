@@ -179,9 +179,8 @@ def write_cooked_transcripts(
 
         for seg in transcript.segments:
             tc = format_timecode(seg.start_time)
-            lines.append(
-                format_cooked_segment_txt(tc, transcript.participant_id, seg.text)
-            )
+            code = seg.speaker_code or transcript.participant_id
+            lines.append(format_cooked_segment_txt(tc, code, seg.text))
             lines.append("")
 
         path.write_text("\n".join(lines), encoding="utf-8")
@@ -236,9 +235,8 @@ def write_cooked_transcripts_md(
 
         for seg in transcript.segments:
             tc = format_timecode(seg.start_time)
-            lines.append(
-                format_cooked_segment_md(tc, transcript.participant_id, seg.text)
-            )
+            code = seg.speaker_code or transcript.participant_id
+            lines.append(format_cooked_segment_md(tc, code, seg.text))
             lines.append("")
 
         path.write_text("\n".join(lines), encoding="utf-8")

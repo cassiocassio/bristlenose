@@ -744,7 +744,6 @@ def _render_transcript_page(
     pid = transcript.participant_id
 
     # Resolve names
-    speaker_name = _resolve_speaker_name(pid, people, None)
     full_name = ""
     if people and pid in people.participants:
         full_name = people.participants[pid].editable.full_name
@@ -837,7 +836,11 @@ def _render_transcript_page(
     for seg in transcript.segments:
         tc = format_timecode(seg.start_time)
         anchor = f"t-{int(seg.start_time)}"
-        _w(f'<div class="transcript-segment" id="{anchor}">')
+        code = seg.speaker_code or pid
+        seg_name = _resolve_speaker_name(code, people, None)
+        is_moderator = code.startswith("m")
+        role_cls = " segment-moderator" if is_moderator else ""
+        _w(f'<div class="transcript-segment{role_cls}" id="{anchor}">')
         if has_media:
             _w(
                 f'<a href="#" class="timecode" '
@@ -847,7 +850,10 @@ def _render_transcript_page(
         else:
             _w(f'<span class="timecode">{_tc_brackets(tc)}</span>')
         _w('<div class="segment-body">')
-        _w(f'<span class="segment-speaker" data-participant="{_esc(pid)}">{_esc(speaker_name)}:</span>')
+        _w(
+            f'<span class="segment-speaker" data-participant="{_esc(code)}">'
+            f"{_esc(seg_name)}:</span>"
+        )
         _w(f" {_esc(seg.text)}")
         _w("</div></div>")
     _w("</section>")

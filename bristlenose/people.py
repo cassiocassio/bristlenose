@@ -180,12 +180,47 @@ def compute_participant_stats(
             source_file=transcript.source_file,
         )
 
+    # Collect moderator/observer stats from speaker_code on segments.
+    for session in sessions:
+        pid = session.participant_id
+        transcript = transcript_map.get(pid)
+        if transcript is None:
+            continue
+        # Group segments by non-participant speaker_code
+        code_words: dict[str, int] = {}
+        code_seconds: dict[str, float] = {}
+        for seg in transcript.segments:
+            code = seg.speaker_code
+            if not code or code == pid:
+                continue  # participant already counted above
+            if code not in code_words:
+                code_words[code] = 0
+                code_seconds[code] = 0.0
+            code_words[code] += len(seg.text.split())
+            code_seconds[code] += max(0.0, seg.end_time - seg.start_time)
+        for code in code_words:
+            stats[code] = PersonComputed(
+                participant_id=code,
+                session_date=transcript.session_date,
+                duration_seconds=transcript.duration_seconds,
+                words_spoken=code_words[code],
+                pct_words=0.0,
+                pct_time_speaking=(
+                    round(code_seconds[code] / transcript.duration_seconds * 100, 1)
+                    if transcript.duration_seconds > 0
+                    else 0.0
+                ),
+                source_file=transcript.source_file,
+            )
+
     # Second pass: compute pct_words relative to total across all participants.
+    # Only count participant codes (pN) for the denominator.
     if total_words_all > 0:
         for computed in stats.values():
-            computed.pct_words = round(
-                computed.words_spoken / total_words_all * 100, 1
-            )
+            if computed.participant_id.startswith("p"):
+                computed.pct_words = round(
+                    computed.words_spoken / total_words_all * 100, 1
+                )
 
     return stats
 

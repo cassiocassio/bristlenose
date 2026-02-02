@@ -229,6 +229,57 @@ async def identify_speaker_roles_llm(
         return []
 
 
+def assign_speaker_codes(
+    participant_id: str,
+    segments: list[TranscriptSegment],
+) -> dict[str, str]:
+    """Assign speaker codes (p1, m1, m2, o1...) based on identified roles.
+
+    Sets ``speaker_code`` on every segment.  Returns a map of
+    ``speaker_label -> speaker_code`` for downstream people-file wiring.
+
+    Code prefixes:
+    - ``p`` — participant (uses the session's *participant_id*)
+    - ``m`` — moderator / researcher
+    - ``o`` — observer
+
+    Args:
+        participant_id: The session participant code (e.g. ``"p1"``).
+        segments: Segments with ``speaker_role`` already set.
+
+    Returns:
+        Mapping from speaker label to assigned code.
+    """
+    # Build label → role from first occurrence
+    label_role: dict[str, SpeakerRole] = {}
+    for seg in segments:
+        label = seg.speaker_label or "Unknown"
+        if label not in label_role:
+            label_role[label] = seg.speaker_role
+
+    # Assign codes per role
+    label_code: dict[str, str] = {}
+    mod_counter = 0
+    obs_counter = 0
+    for label, role in label_role.items():
+        if role == SpeakerRole.RESEARCHER:
+            mod_counter += 1
+            label_code[label] = f"m{mod_counter}"
+        elif role == SpeakerRole.OBSERVER:
+            obs_counter += 1
+            label_code[label] = f"o{obs_counter}"
+        else:
+            # PARTICIPANT and UNKNOWN both map to the session participant_id
+            label_code[label] = participant_id
+
+    # Stamp every segment
+    for seg in segments:
+        label = seg.speaker_label or "Unknown"
+        seg.speaker_code = label_code[label]
+
+    return label_code
+
+
 class _SpeakerStats:
     """Accumulated statistics for one speaker."""
 

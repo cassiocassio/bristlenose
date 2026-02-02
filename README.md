@@ -1,16 +1,24 @@
 # Bristlenose
 
-Open-source user-research analysis. Runs on your laptop.
+User-research interview analysis tool.
 
-Point it at a folder of interview recordings. It transcribes, extracts verbatim quotes, groups them by screen and theme, and produces a browsable HTML report. Nothing gets uploaded. Your recordings stay on your machine.
+Point it at a folder of interview recordings: audio, video, and/or transcripts from Teams or Zoom.
 
-<!-- TODO: screenshot of an HTML report here -->
+Bristlenose will:
+- transcribe, identify participants and moderators
+- extract and lightly tidy near-verbatim quotes
+- produce a browsable HTML report, grouping quotes by screen or topic, and by theme
+- let you favourite and tag quotes, to pick the best evidence and gather your own insights
+- suggest frustration and pain points via sentiment analysis
+- let you copy blocks of quotes as CSV to clipboard, for pasting into research boards like Miro
+
+Runs on your machine, but needs a Claude or ChatGPT API key. Recordings stay local -- transcript text is sent to the LLM API.
 
 ---
 
 ## Why
 
-The tooling for analysing user-research interviews is either expensive or manual. Bristlenose connects local recordings to AI models via API and produces structured output -- themed quotes, sentiment, friction points -- without requiring a platform subscription or hours of spreadsheet work.
+The tooling for analysing user-research interviews is either expensive SaaS platforms or manual spreadsheet work.
 
 It's built by a practising researcher. It's free and open source under AGPL-3.0.
 
@@ -18,25 +26,27 @@ It's built by a practising researcher. It's free and open source under AGPL-3.0.
 
 ## What it does
 
-You give it a folder of recordings. It gives you back a report.
+A 12-stage pipeline: ingest files, extract audio, parse existing subtitles/transcripts, transcribe via Whisper, identify speakers, merge and normalise transcripts, redact PII (Presidio), segment topics, extract quotes, cluster by screen, group by theme, render output.
 
-Behind the scenes: transcription (Whisper, local), speaker identification with automatic name and role extraction, PII redaction, quote extraction and enrichment (via Claude or ChatGPT API), thematic grouping, and HTML rendering. One command, no manual steps.
+```bash
+bristlenose run ./interviews/ -o ./results/
+```
 
-The report includes:
+### Output
 
-- **Sections** -- quotes grouped by screen or task
-- **Themes** -- cross-participant patterns, surfaced automatically
-- **Sentiment** -- histogram of emotions across all quotes
-- **Friction points** -- confusion, frustration, and error-recovery moments flagged for review
-- **User journeys** -- per-participant stage progression
-- **Per-participant transcripts** -- full transcript pages with clickable timecodes, linked from the participant table
-- **Clickable timecodes** -- jump to the exact moment in a popout video player
-- **Favourite quotes** -- star, reorder, export as CSV
-- **Inline editing** -- fix transcription errors directly in the report
-- **Editable participant names** -- click the pencil icon to name participants in-browser; export edits as YAML
-- **Tags** -- AI-generated badges plus your own free-text tags with auto-suggest
+```
+output/
+  research_report.html       # browsable report
+  research_report.md         # Markdown version
+  bristlenose-theme.css      # stylesheet (regenerated on every run)
+  bristlenose-logo.png       # project logo
+  bristlenose-player.html    # popout video player
+  raw_transcripts/           # one .txt per participant
+  cooked_transcripts/        # cleaned transcripts after PII removal
+  intermediate/              # JSON files (used by `bristlenose render`)
+```
 
-All interactive state (favourites, edits, tags) persists in your browser's localStorage.
+The HTML report includes: participant table, sections (by screen), themes (cross-participant), sentiment histogram, friction points, user journeys, clickable timecodes with popout video player, favourite quotes (star, reorder, export as CSV), inline editing for transcription corrections, and a tag system (AI-generated badges plus user-added tags with auto-suggest).
 
 ### Quote format
 
@@ -44,145 +54,113 @@ All interactive state (favourites, edits, tags) persists in your browser's local
 05:23 "I was... trying to find the button and it just... wasn't there." -- p3
 ```
 
-Filler words replaced with `...`. Editorial context in `[square brackets]`. Emotion and strong language preserved.
+Filler words replaced with `...`. Editorial insertions in `[square brackets]`. Emotion and strong language preserved.
 
 ---
 
 ## Install
 
-Requires ffmpeg and an API key from either **Claude** (by Anthropic) or **ChatGPT** (by OpenAI). You only need one.
+Requires ffmpeg and an API key for Anthropic or OpenAI.
 
 ```bash
-# macOS (Homebrew) -- recommended, handles ffmpeg + Python for you
+# macOS (Homebrew)
 brew install cassiocassio/bristlenose/bristlenose
-
-# Ubuntu / Linux (snap) -- coming soon, pending Snap Store registration
-# sudo snap install bristlenose --classic
-# In the meantime, see "Try the snap (pre-release)" below
 
 # macOS / Linux / Windows (pipx)
 pipx install bristlenose
 
-# or with uv
+# or with uv (faster alternative to pipx)
 uv tool install bristlenose
 ```
 
-If using pipx or uv, you'll also need ffmpeg (`brew install ffmpeg` on macOS, `sudo apt install ffmpeg` on Debian/Ubuntu).
+The Homebrew formula handles ffmpeg and Python automatically. If using pipx or uv, install ffmpeg separately (`brew install ffmpeg` on macOS, `sudo apt install ffmpeg` on Debian/Ubuntu).
 
----
-
-## Getting an API key
-
-If you've used Claude or ChatGPT before, you might only know the chat interface. Bristlenose talks to the same AI models, but through their **API** (a direct connection for software). This needs a separate API key -- a password that lets bristlenose call the AI on your behalf.
-
-You only need one key -- **Claude or ChatGPT, not both**.
-
-### Option A: Claude (by Anthropic)
-
-1. Go to [console.anthropic.com](https://console.anthropic.com/settings/keys) and sign up or log in
-2. Click **Create Key**, give it a name (e.g. "bristlenose"), and copy the key
-3. Set it in your terminal:
+Then configure your API key:
 
 ```bash
 export BRISTLENOSE_ANTHROPIC_API_KEY=sk-ant-...
-```
-
-### Option B: ChatGPT (by OpenAI)
-
-1. Go to [platform.openai.com](https://platform.openai.com/api-keys) and sign up or log in
-2. Click **Create new secret key**, give it a name, and copy the key
-3. Set it in your terminal:
-
-```bash
+# or
 export BRISTLENOSE_OPENAI_API_KEY=sk-...
 ```
 
-To use ChatGPT instead of the default, add `--llm openai` to your commands:
-
-```bash
-bristlenose run ./interviews/ -o ./results/ --llm openai
-```
-
-### Which should I pick?
-
-Both work well. If you already pay for one, use that one. If you're starting fresh:
-
-- **Claude** -- the default in bristlenose. Tends to produce nuanced qualitative analysis. Pay-as-you-go billing from the first API call (no free API tier; a typical 8-participant study costs roughly $1--3)
-- **ChatGPT** -- widely used. New API accounts get a small amount of free credit (check your [usage page](https://platform.openai.com/usage) to see if you have any remaining). After that, pay-as-you-go. Similar cost per study
-
-> **Important:** A ChatGPT Plus or Pro subscription does **not** include API access. The API is billed separately at [platform.openai.com/usage](https://platform.openai.com/usage). Likewise, a Claude Pro or Max subscription does not include API credits. API billing is separate at [console.anthropic.com](https://console.anthropic.com).
-
-### Making your key permanent
-
-The `export` command only lasts until you close the terminal. To make it stick, add the line to your shell profile:
-
-```bash
-# macOS / Linux -- add to the end of your shell config:
-echo 'export BRISTLENOSE_ANTHROPIC_API_KEY=sk-ant-...' >> ~/.zshrc
-
-# Or for ChatGPT:
-echo 'export BRISTLENOSE_OPENAI_API_KEY=sk-...' >> ~/.zshrc
-```
-
-Then open a new terminal window (or run `source ~/.zshrc`).
-
-Alternatively, create a `.env` file in your project folder -- see `.env.example` for a template.
-
 ---
 
-## Quick start
+## Usage
 
 ```bash
 bristlenose run ./interviews/ -o ./results/
+bristlenose run ./interviews/ -o ./results/ -p "Q1 Usability Study"
+bristlenose transcribe-only ./interviews/ -o ./results/       # no LLM needed
+bristlenose analyze ./results/raw_transcripts/ -o ./results/  # skip transcription
+bristlenose render ./interviews/ -o ./results/                # re-render reports (no LLM)
 ```
 
-That's it. Point it at a folder containing your recordings and it will produce the report in `./results/`. Expect roughly 2--5 minutes per participant on Apple Silicon, longer on CPU.
+Supported: `.wav`, `.mp3`, `.m4a`, `.flac`, `.ogg`, `.wma`, `.aac`, `.mp4`, `.mov`, `.avi`, `.mkv`, `.webm`, `.srt`, `.vtt`, `.docx` (Teams exports). Files sharing a name stem are treated as one session.
 
-Open `results/research_report.html` in your browser.
+Configuration via `.env`, environment variables (prefix `BRISTLENOSE_`), or `bristlenose.toml`. See `.env.example`.
 
-### What goes in
+---
 
-Any mix of audio, video, subtitles, or transcripts:
+## Hardware
 
-`.wav` `.mp3` `.m4a` `.flac` `.ogg` `.wma` `.aac` `.mp4` `.mov` `.avi` `.mkv` `.webm` `.srt` `.vtt` `.docx`
+Auto-detected. Apple Silicon uses MLX on Metal GPU. NVIDIA uses faster-whisper with CUDA. Everything else falls back to CPU.
 
-Files sharing a name stem (e.g. `p1.mp4` and `p1.srt`) are treated as one session. Existing subtitles skip transcription.
+---
 
-### What comes out
+## Changelog
 
-```
-results/
-  research_report.html       # the report -- open this
-  research_report.md         # Markdown version
-  transcript_p1.html         # per-participant transcript pages
-  transcript_p2.html
-  ...
-  bristlenose-theme.css      # stylesheet (regenerated on every run)
-  bristlenose-logo.png       # project logo
-  bristlenose-player.html    # popout video player (if media files present)
-  people.yaml                # participant registry (names auto-extracted, edit here or in browser)
-  raw_transcripts/           # one .txt per participant
-  cooked_transcripts/        # PII-redacted transcripts (only with --redact-pii)
-  intermediate/              # JSON snapshots (used by `bristlenose render`)
-```
+### 0.3.2
 
-### More commands
+- Fix tag auto-suggest offering tags the quote already has
 
-```bash
-bristlenose run ./interviews/ -o ./results/ -p "Q1 Usability Study"  # name the project
-bristlenose transcribe-only ./interviews/ -o ./results/              # transcribe, no LLM
-bristlenose analyze ./results/raw_transcripts/ -o ./results/         # skip transcription
-bristlenose render ./interviews/ -o ./results/                       # re-render from JSON, no LLM
-bristlenose doctor                                                   # check dependencies
-```
+### 0.3.1
 
-### Configuration
+- Single-source version: `__init__.py` is the only file to edit when releasing
+- Updated release process docs in CONTRIBUTING.md
 
-Via `.env` file, environment variables (prefix `BRISTLENOSE_`), or `bristlenose.toml`. See `.env.example` for all options.
+### 0.3.0
 
-### Hardware
+- CI on every push/PR (ruff lint, mypy type-check, pytest)
+- Automated PyPI publishing on tagged releases via OIDC trusted publishing
+- No tokens needed in CI -- uses GitHub's OpenID Connect
 
-Transcription hardware is auto-detected. Apple Silicon uses MLX on Metal GPU. NVIDIA uses faster-whisper with CUDA. Everything else falls back to CPU.
+### 0.2.0
+
+- Extract 720-line JS from `render_html.py` into 8 standalone modules (`bristlenose/theme/js/`): storage, player, favourites, editing, tags, histogram, csv-export, main
+- Atomic CSS design system (`bristlenose/theme/`): tokens, atoms, molecules, organisms, templates; concatenated at render time
+- Tag system: AI-generated badges (deletable with restore) + user-added tags with auto-suggest, keyboard navigation, localStorage persistence
+- Favourite quotes with FLIP animation and CSV export (separate AI/User tag columns)
+- Inline quote editing with contenteditable and localStorage persistence
+- Sentiment histogram: horizontal bars, side-by-side AI + user-tag charts
+- `bristlenose render` command for re-rendering from intermediate JSON without LLM calls
+- `render_html.py` reduced from 1,534 to 811 lines
+- README, CONTRIBUTING.md, TODO roadmap
+
+### 0.1.0
+
+- 12-stage pipeline: ingest, extract audio, parse subtitles/docx, transcribe (Whisper), identify speakers, merge, PII redaction (Presidio), topic segmentation, quote extraction, screen clustering, thematic grouping, render
+- HTML report with external CSS theme, clickable timecodes, popout video player
+- Markdown report output
+- Quote enrichment: intent, emotion, intensity, journey stage
+- Friction points (confusion/frustration/error-recovery moments)
+- User journey summary per participant
+- Apple Silicon GPU acceleration (MLX on Metal)
+- Cross-platform support (macOS, Linux, Windows)
+- Hardware auto-detection (MLX, CUDA, CPU fallback)
+- PII redaction with Presidio (narrowed entities, cooked transcripts)
+- Published to PyPI and Homebrew tap
+- AGPL-3.0 licence with CLA
+- 16 passing tests
+
+---
+
+## Roadmap
+
+Search-as-you-type filtering, hide/show quotes, keyboard shortcuts, theme management in the browser (dark mode, user-generated themes), lost quotes (surface what the AI didn't select), transcript linking, .docx export, edit writeback, multi-participant sessions.
+
+**Packaging** -- native installers for macOS, Ubuntu/Linux, and Windows so you don't need to manage Python yourself.
+
+Details and priorities may shift. If something is missing that matters to you, open an issue.
 
 ---
 
@@ -190,229 +168,44 @@ Transcription hardware is auto-detected. Apple Silicon uses MLX on Metal GPU. NV
 
 **Researchers** -- use it on real recordings, open issues when the output is wrong or incomplete.
 
-**Developers** -- Python 3.10+, fully typed, Pydantic models. See [CONTRIBUTING.md](CONTRIBUTING.md) for the CLA, project layout, and design system docs.
+**Developers** -- Python 3.10+, fully typed, Pydantic models. See [CONTRIBUTING.md](CONTRIBUTING.md) for the CLA. Key files: `bristlenose/stages/render_html.py` (report renderer), `bristlenose/llm/prompts.py` (LLM prompts).
 
 ---
 
 ## Development setup
 
-Clone the repo, create a virtual environment, and install in editable mode:
+For contributing or working from source:
 
 ```bash
-# Prerequisites (macOS)
+# macOS (Apple Silicon)
 brew install python@3.12 ffmpeg pkg-config
-
-# Clone and set up
-git clone https://github.com/cassiocassio/bristlenose.git
 cd bristlenose
-python3.12 -m venv .venv
+/opt/homebrew/bin/python3.12 -m venv .venv
 source .venv/bin/activate
-pip install -e ".[dev,apple]"                 # drop ,apple on Intel/Linux/Windows
-cp .env.example .env                          # add your API key
+pip install -e ".[dev,apple]"
+cp .env.example .env   # add your BRISTLENOSE_ANTHROPIC_API_KEY
+
+# macOS (Intel)
+/usr/local/bin/python3.12 -m venv .venv && source .venv/bin/activate && pip install -e ".[dev]"
+
+# Linux
+python3.12 -m venv .venv && source .venv/bin/activate && pip install -e ".[dev]"
+
+# Windows
+python -m venv .venv && .venv\Scripts\activate && pip install -e ".[dev]"
 ```
 
-On Linux, install `python3.12` and `ffmpeg` via your package manager. On Windows, use `python -m venv .venv` and `.venv\Scripts\activate`.
-
-### Verify everything works
-
 ```bash
-pytest                       # ~280 tests, should pass in <2s
+pytest                       # tests
+pytest --cov=bristlenose     # coverage
 ruff check .                 # lint
-mypy bristlenose/            # type check (some third-party SDK errors are expected)
+mypy bristlenose/            # type check
 ```
 
-### Try the snap (pre-release)
-
-The snap isn't in the Store yet, but you can grab the CI-built `.snap` from GitHub Actions and test it on any amd64 Linux box:
-
-```bash
-# 1. Download the snap artifact from the latest CI run
-#    Go to https://github.com/cassiocassio/bristlenose/actions/workflows/snap.yml
-#    Click the latest successful run → Artifacts → snap-amd64 → download and unzip
-
-# 2. Install it (--dangerous bypasses Store signature, --classic gives filesystem access)
-sudo snap install --dangerous --classic ./bristlenose_*.snap
-
-# 3. Verify
-bristlenose --version
-bristlenose doctor
-
-# 4. Run it for real (set whichever API key you have)
-export BRISTLENOSE_ANTHROPIC_API_KEY=sk-ant-...   # for Claude
-# or: export BRISTLENOSE_OPENAI_API_KEY=sk-...    # for ChatGPT (add --llm openai)
-bristlenose run ./interviews/ -o ./results/
-```
-
-FFmpeg, Python, faster-whisper, and spaCy are all bundled — no system dependencies needed. Feedback welcome via [issues](https://github.com/cassiocassio/bristlenose/issues).
-
-### Architecture
-
-See [CONTRIBUTING.md](CONTRIBUTING.md) for the full project layout, but the short version:
-
-- `bristlenose/stages/` -- the 12-stage pipeline (ingest through render), one module per stage
-- `bristlenose/stages/render_html.py` -- HTML report renderer, loads CSS + JS from theme/
-- `bristlenose/theme/` -- atomic CSS design system (tokens, atoms, molecules, organisms, templates)
-- `bristlenose/theme/js/` -- report JavaScript (9 modules, concatenated at render time)
-- `bristlenose/llm/prompts.py` -- LLM prompt templates
-- `bristlenose/pipeline.py` -- orchestrator that wires the stages together
-- `bristlenose/cli.py` -- Typer CLI entry point
-
-### Releasing
-
-Edit `bristlenose/__init__.py` (the single source of truth for version), commit, tag, push. GitHub Actions handles CI, build, and PyPI publishing automatically. See [CONTRIBUTING.md](CONTRIBUTING.md) for details.
-
----
-
-## Changelog
-
-### 0.6.5
-
-- Timecode typography — two-tone treatment with blue digits and muted grey brackets; `:visited` colour fix so clicked timecodes stay blue
-- Hanging-indent layout — timecodes sit in a left gutter column on both report quotes and transcript pages, making them scannable as a vertical column
-- Non-breaking spaces on quote attributions prevent the `— p1` from widowing onto a new line
-- Transcript name propagation — name edits made in the report's participant table now appear on transcript page headings and speaker labels via shared localStorage
-
-### 0.6.4
-
-- Concurrent LLM calls — per-participant stages (speaker identification, topic segmentation, quote extraction) now run up to 3 API calls in parallel via `llm_concurrency` config; screen clustering and thematic grouping also run concurrently; ~2.7× speedup on the LLM-bound portion for multi-participant studies
-
-### 0.6.3
-
-- Report header redesign — logo top-left (flipped horizontally), "Bristlenose" logotype with project name, right-aligned document title and session metadata
-- View-switcher dropdown — borderless menu to switch between All quotes, Favourite quotes, and Participant data views; replaces old button-bar pattern
-- Copy CSV button with clipboard icon — single adaptive button that exports all or favourites based on the current view
-- Quote attributions use raw participant IDs (`— p1`) in the report for anonymisation; transcript pages continue to show display names
-- Table of Contents reorganised — Sentiment, Tags, Friction points, and User journeys moved to a dedicated "Analysis" column, separate from Themes
-
-### 0.6.2
-
-- Editable participant names — pencil icon on Name and Role cells in the participant table; inline editing with localStorage persistence; YAML clipboard export for writing back to `people.yaml`; reconciliation with baked-in data on re-render
-- Auto name and role extraction — Stage 5b LLM prompt now extracts participant names and job titles alongside speaker role identification; speaker label metadata harvested from Teams/DOCX/VTT sources; empty `people.yaml` fields auto-populated (LLM results take priority over metadata, human edits never overwritten)
-- Short name suggestion — `short_name` auto-suggested from first token of `full_name` with disambiguation for collisions ("Sarah J." vs "Sarah K."); works both in the pipeline and in-browser
-- Editable section and theme headings — inline editing on section titles, descriptions, theme titles, and theme descriptions with bidirectional Table of Contents sync
-
-### 0.6.1
-
-- Snap packaging for Linux — `snap/snapcraft.yaml` recipe and CI workflow (`.github/workflows/snap.yml`); builds on every push to main, publishes to edge/stable when Store registration completes
-- Pre-release snap testing instructions in README for early feedback on amd64 Linux
-- Author identity (Martin Storey) added to copyright headers, metadata, and legal files
-
-### 0.6.0
-
-- `bristlenose doctor` command — checks FFmpeg, transcription backend, Whisper model cache, API key validity, network, PII dependencies, and disk space
-- Pre-flight gate on `run`, `transcribe-only`, and `analyze` — catches missing dependencies before slow work starts
-- First-run auto-doctor — runs automatically on first invocation, guides users through setup
-- Install-method-aware fix messages — detects snap, Homebrew, or pip and shows tailored install instructions
-- API key validation — cheap API call catches expired or revoked keys upfront
-
-### 0.5.0
-
-- Per-participant transcript pages — full transcript for each participant with clickable timecodes and video player; participant IDs in the table link to these pages
-- Quote attribution deep-links — clicking `— p1` at the end of a quote jumps to the exact segment in the participant's transcript page
-- Segment anchors on transcript pages for deep linking from quotes and external tools
-
-### 0.4.1
-
-- People file (`people.yaml`) — participant registry with computed stats (words, % words, % speaking time) and human-editable fields (name, role, persona, notes); preserved across re-runs
-- Display names — set `short_name` in `people.yaml`, re-render with `bristlenose render` to update quotes and tables
-- Enriched participant table in reports (ID, Name, Role, Start, Duration, Words, Source) with macOS Finder-style relative dates
-- PII redaction now off by default; opt in with `--redact-pii` (replaces `--no-pii`)
-- Man page updated for new CLI flags and output structure
-
-### 0.4.0
-
-- Dark mode — report follows OS/browser preference automatically via CSS `light-dark()` function
-- Override with `color_scheme = "dark"` (or `"light"`) in `bristlenose.toml` or `BRISTLENOSE_COLOR_SCHEME` env var
-- Dark-mode logo variant (placeholder; proper albino bristlenose pleco coming soon)
-- Print always uses light mode
-- Replaced hard-coded colours in histogram JS with CSS custom properties
-
-### 0.3.8
-
-- Timecode handling audit: verified full pipeline copes with sessions shorter and longer than one hour (mixed `MM:SS` and `HH:MM:SS` in the same file round-trips correctly)
-- Edge-case tests for timecode formatting at the 1-hour boundary, sub-minute sessions, long sessions (24h+), and format→parse round-trips
-
-### 0.3.7
-
-- Markdown style template (`bristlenose/utils/markdown.py`) — single source of truth for all markdown/txt formatting constants and formatter functions
-- Per-session `.md` transcripts alongside `.txt` in `raw_transcripts/` and `cooked_transcripts/`
-- Participant codes in transcript segments (`[p1]` instead of `[PARTICIPANT]`) for better researcher context when copying quotes
-- Transcript parser accepts both `MM:SS` and `HH:MM:SS` timecodes
-
-### 0.3.6
-
-- Document full CI/CD pipeline topology, secrets, and cross-repo setup
-
-### 0.3.5
-
-- Automated Homebrew tap updates and GitHub Releases on every tagged release
-
-### 0.3.4
-
-- Participants table: renamed columns (ID→Session, Session date→Date), added Start time column, date format now dd-mm-yyyy
-
-### 0.3.3
-
-- README rewrite: install moved up, new quick start section, changelog with all versions, dev setup leads with git clone
-- Links to Anthropic and OpenAI API key pages in install instructions
-
-### 0.3.2
-
-- Fix tag auto-suggest offering tags the quote already has
-- Project logo in report header
-
-### 0.3.1
-
-- Single-source version: `__init__.py` is the only place to bump
-- Updated release process in CONTRIBUTING.md
-
-### 0.3.0
-
-- CI on every push/PR (ruff, mypy, pytest)
-- Automated PyPI publishing on tagged releases (OIDC trusted publishing)
-
-### 0.2.0
-
-- Tag system: AI-generated badges (deletable/restorable) + user tags with auto-suggest and keyboard navigation
-- Favourite quotes with reorder animation and CSV export (separate AI/User tag columns)
-- Inline quote editing with localStorage persistence
-- Sentiment histogram (side-by-side AI + user-tag charts)
-- `bristlenose render` command for re-rendering without LLM calls
-- Report JS extracted into 8 standalone modules under `bristlenose/theme/js/`
-- Atomic CSS design system (`bristlenose/theme/`)
-
-### 0.1.0
-
-- 12-stage pipeline: ingest, extract audio, parse subtitles/docx, transcribe (Whisper), identify speakers, merge, PII redaction (Presidio), topic segmentation, quote extraction, screen clustering, thematic grouping, render
-- HTML report with clickable timecodes and popout video player
-- Quote enrichment: intent, emotion, intensity, journey stage
-- Friction points and user journey summaries
-- Apple Silicon GPU acceleration (MLX), CUDA support, CPU fallback
-- PII redaction with Presidio
-- Cross-platform (macOS, Linux, Windows)
-- Published to PyPI and Homebrew tap
-- AGPL-3.0 licence with CLA
-
----
-
-## Roadmap
-
-- Search-as-you-type quote filtering
-- Hide/show individual quotes
-- Keyboard shortcuts (j/k navigation, s to star, e to edit)
-- User-generated themes
-- Lost quotes -- surface what the AI didn't select
-- .docx export
-- Edit writeback to transcript files
-- Multi-participant session support
-- Native installer for Windows
-
-Priorities may shift. If something is missing that matters to you, [open an issue](https://github.com/cassiocassio/bristlenose/issues).
+Primary development is on macOS. Feedback from Linux and Windows users is welcome.
 
 ---
 
 ## Licence
-
-Copyright (C) 2025-2026 Martin Storey (<martin@cassiocassio.co.uk>)
 
 AGPL-3.0. See [LICENSE](LICENSE) and [CONTRIBUTING.md](CONTRIBUTING.md).

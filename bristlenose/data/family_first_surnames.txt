@@ -1,0 +1,819 @@
+# Family names from cultures where the family name comes FIRST
+# (before the given name): Chinese, Korean, Vietnamese, Japanese, Hungarian.
+#
+# Used by suggest_short_names() to detect that in "Kim Minsoo", "Kim" is
+# the family name and "Minsoo" is the given name, so the short name
+# should be "Minsoo" not "Kim".
+#
+# Format: one entry per line, lowercase.  Blank lines and lines starting
+# with # are ignored.  Callers must .lower() the input token before
+# checking membership.
+#
+# Maintenance
+# -----------
+# Add new entries as needed.  Keep sorted within each section.  Include
+# common romanisation variants for the same underlying surname.
+# Some entries overlap with Western given names (e.g. "lee", "kim") —
+# that is intentional; false-positive handling is the caller's job.
+#
+# Total: ~337 unique entries across all cultures.
+
+
+# =========================================================================
+# Chinese — top ~100 surnames by frequency
+# =========================================================================
+#
+# Primary source: 2019 Ministry of Public Security report on surname
+# distribution (covers 1.2 billion people).
+# https://en.wikipedia.org/wiki/Chinese_surname#Distribution
+#
+# Mandarin pinyin is the primary romanisation.  Variants include:
+# - Cantonese (HK government romanisation)
+# - Wade-Giles (common in Taiwan)
+# - Hokkien / Teochew (common in Singapore, Malaysia, Philippines)
+#
+# Variant sources:
+# - Wikipedia articles on individual Chinese surnames
+# - "Chinese Singaporean names" https://en.wikipedia.org/wiki/Chinese_Singaporean#Names
+# - Hong Kong name romanisation practices
+
+# 1 王 Wáng — Cantonese: Wong; Hokkien: Ong, Heng
+ong
+wang
+wong
+
+# 2 李 Lǐ — common variant: Lee
+lee
+li
+
+# 3 张/張 Zhāng — Wade-Giles: Chang; Cantonese: Cheung; Hokkien: Teo
+chang
+cheung
+teo
+zhang
+
+# 4 刘/劉 Liú — Cantonese: Lau; Hokkien: Lew, Liew
+lau
+lew
+liew
+liu
+
+# 5 陈/陳 Chén — Cantonese: Chan; Hokkien: Tan; Wade-Giles: Chin
+chan
+chen
+chin
+tan
+
+# 6 杨/楊 Yáng — Cantonese: Yeung; Hokkien: Yeo
+yang
+yeo
+yeung
+
+# 7 黄/黃 Huáng — Cantonese: Wong (same as 王); Hokkien: Ooi, Wee, Ng
+huang
+hwang
+ng
+ooi
+wee
+
+# 8 赵/趙 Zhào — Cantonese: Chiu; Wade-Giles: Chao
+chao
+chiu
+zhao
+
+# 9 吴/吳 Wú — Hokkien: Goh, Go; Cantonese: Ng (same as 黄)
+go
+goh
+wu
+
+# 10 周 Zhōu — Cantonese: Chow; Wade-Giles: Chou; Hokkien: Chew
+chew
+chou
+chow
+zhou
+
+# 11 徐 Xú — Wade-Giles: Hsu; Cantonese: Tsui, Chui
+chui
+hsu
+tsui
+xu
+
+# 12 孙/孫 Sūn — Cantonese: Suen
+suen
+sun
+
+# 13 马/馬 Mǎ — Cantonese: Mah
+ma
+mah
+
+# 14 朱 Zhū — Cantonese: Chu
+chu
+zhu
+
+# 15 胡 Hú — Cantonese: Woo; Hokkien: Aw
+aw
+hu
+woo
+
+# 16 郭 Guō — Cantonese: Kwok; Wade-Giles: Kuo; Hokkien: Quek, Kuok
+guo
+kuok
+kuo
+kwok
+quek
+
+# 17 何 Hé — Cantonese: Ho
+he
+ho
+
+# 18 高 Gāo — Cantonese: Ko; Wade-Giles: Kao
+gao
+kao
+ko
+
+# 19 林 Lín — Cantonese: Lam; Hokkien: Lim
+lam
+lim
+lin
+
+# 20 罗/羅 Luó — Cantonese: Lo; variant: Law
+law
+lo
+luo
+
+# 21 郑/鄭 Zhèng — Cantonese: Cheng; Hokkien: Tay, Teh
+cheng
+tay
+teh
+zheng
+
+# 22 梁 Liáng — Cantonese: Leung, Leong; Hokkien: Neo
+leong
+leung
+liang
+neo
+
+# 23 谢/謝 Xiè — Cantonese: Tse; Wade-Giles: Hsieh; Hokkien: Chia, Cheah, Sia
+cheah
+chia
+hsieh
+sia
+tse
+xie
+
+# 24 宋 Sòng — variant: Sung
+song
+sung
+
+# 25 唐 Táng — Cantonese: Tong
+tang
+tong
+
+# 26 韩/韓 Hán
+han
+
+# 27 冯/馮 Féng — Cantonese: Fung; Hokkien: Png
+feng
+fung
+png
+
+# 28 于/於 Yú
+yu
+
+# 29 董 Dǒng — Cantonese: Tung
+dong
+tung
+
+# 30 魏 Wèi — Cantonese: Ngai
+ngai
+wei
+
+# 31 萧/蕭/肖 Xiāo — Wade-Giles: Hsiao; Cantonese: Siu; Hokkien: Siew, Seow
+hsiao
+seow
+siew
+siu
+xiao
+
+# 32 曹 Cáo — Wade-Giles: Tso
+cao
+tso
+
+# 33 袁 Yuán — Cantonese: Yuen
+yuan
+yuen
+
+# 34 邓/鄧 Dèng
+deng
+
+# 35 彭 Péng — Cantonese: Pang; Hokkien: Phang
+pang
+peng
+phang
+
+# 36 曾 Zēng — Cantonese: Tsang; Wade-Giles: Tseng
+tsang
+tseng
+zeng
+
+# 37 潘 Pān — Cantonese: Poon; Hokkien: Phua
+pan
+phua
+poon
+
+# 38 蔡 Cài — Wade-Giles: Tsai; Cantonese: Choi, Choy; Hokkien: Chua
+cai
+choi
+choy
+chua
+tsai
+
+# 39 田 Tián — Cantonese: Tin
+tian
+tin
+
+# 40 苏/蘇 Sū — Cantonese: So; variant: Soo
+so
+soo
+su
+
+# 41 吕/呂 Lǚ — romanised as Lv, Lu; Cantonese: Lui
+lu
+lui
+lv
+
+# 42 蒋/蔣 Jiǎng — Wade-Giles: Chiang; Cantonese: Cheong
+cheong
+chiang
+jiang
+
+# 43 杜 Dù — Hokkien: Toh
+du
+toh
+
+# 44 丁 Dīng — Hokkien: Teng
+ding
+teng
+
+# 45 沈 Shěn — Cantonese: Shum; Hokkien: Sim
+shen
+shum
+sim
+
+# 46 任 Rèn — Cantonese: Yam
+ren
+yam
+
+# 47 姚 Yáo — Cantonese: Yiu
+yao
+yiu
+
+# 48 范/範 Fàn
+fan
+
+# 49 廖 Liào
+liao
+
+# 50 石 Shí — Cantonese: Shek; Hokkien: Seah
+seah
+shek
+shi
+
+# 51 金 Jīn — Cantonese: Kam
+jin
+kam
+
+# 52 贾/賈 Jiǎ
+jia
+
+# 53 夏 Xià — Korean/Cantonese: Ha
+ha
+xia
+
+# 54 付/傅 Fù — variant: Foo
+foo
+fu
+
+# 55 方 Fāng — Cantonese: Fong
+fang
+fong
+
+# 56 邹/鄒 Zōu
+zou
+
+# 57 熊 Xióng — Cantonese: Hung
+hung
+xiong
+
+# 58 白 Bái — Cantonese: Pak; Hokkien: Peh
+bai
+pak
+peh
+
+# 59 孟 Mèng
+meng
+
+# 60 秦 Qín
+qin
+
+# 61 邱/丘 Qiū — Cantonese: Yau; Hokkien: Khoo, Hew
+hew
+khoo
+qiu
+yau
+
+# 62 侯 Hóu — Cantonese: Hau
+hau
+hou
+
+# 63 尹 Yǐn
+yin
+
+# 64 薛 Xuē
+xue
+
+# 65 闫/閻 Yán — Cantonese: Yim
+yan
+yim
+
+# 66 段 Duàn
+duan
+
+# 67 雷 Léi
+lei
+
+# 68 龙/龍 Lóng — Cantonese: Lung
+long
+lung
+
+# 69 黎 Lí — Cantonese: Lai
+lai
+
+# 70 陶 Táo
+tao
+
+# 71 毛 Máo
+mao
+
+# 72 莫 Mò — Cantonese: Mok
+mo
+mok
+
+# 73 郝 Hǎo
+hao
+
+# 74 顾/顧 Gù — Cantonese: Ku
+gu
+ku
+
+# 75 龚/龔 Gōng — Cantonese: Kung
+gong
+kung
+
+# 76 邵 Shào
+shao
+
+# 77 万/萬 Wàn
+wan
+
+# 78 戴 Dài — variant: Tai
+dai
+tai
+
+# 79 孔 Kǒng
+kong
+
+# 80 向 Xiàng — Cantonese: Heung
+heung
+xiang
+
+# 81 欧/歐 Ōu — Cantonese: Au
+au
+ou
+
+# 82 汤/湯 Tāng (same romanisation as 唐, already listed)
+
+# 83 文 Wén — Cantonese: Man
+man
+wen
+
+# 84 钟/鍾 Zhōng — Cantonese: Chung
+chung
+zhong
+
+# 85 康 Kāng
+kang
+
+# 86 赖/賴 Lài (Cantonese: Lai — already listed under 黎)
+
+# 87 叶/葉 Yè — Cantonese: Yip, Ip; Wade-Giles: Yeh
+ip
+ye
+yeh
+yip
+
+# 88 关/關 Guān — Cantonese: Kwan
+kwan
+
+# 89 谭/譚 Tán — Cantonese: Tam
+tam
+
+# 90 麦/麥 Mài — Cantonese: Mak
+mai
+mak
+
+# 91 骆/駱 Luò — Cantonese: Lok
+lok
+
+# 92 邝/鄺 Kuàng — Cantonese: Kwong
+kwong
+
+
+# =========================================================================
+# Korean — top ~30 surnames by frequency
+# =========================================================================
+#
+# Primary source: 2015 South Korean census (Statistics Korea).
+# https://en.wikipedia.org/wiki/List_of_Korean_surnames
+#
+# Romanisation follows Revised Romanisation (primary) with
+# McCune-Reischauer and ad-hoc variants common in English-language use.
+
+# 1 김 Kim
+gim
+kim
+
+# 2 이 Lee/Yi/Rhee/Ri (Lee is by far the most common English spelling)
+# "lee" already in Chinese section — shared entry
+rhee
+ri
+yi
+
+# 3 박 Park/Pak/Bak
+bak
+park
+
+# 4 최 Choi/Choe (Choi already in Chinese 蔡 section — shared entry)
+choe
+
+# 5 정 Jung/Jeong/Chung (Chung already in Chinese 钟 section)
+jeong
+jung
+
+# 6 강 Kang/Gang (Kang already in Chinese 康 section)
+gang
+
+# 7 조 Cho/Jo
+cho
+jo
+
+# 8 윤 Yoon/Yun
+yoon
+yun
+
+# 9 장 Jang (Chang already in Chinese 张 section)
+jang
+
+# 10 임 Im/Lim (Lim already in Chinese 林 section)
+im
+
+# 11 한 Han (already in Chinese 韩 section)
+
+# 12 오 Oh
+oh
+
+# 13 서 Seo/Suh
+seo
+suh
+
+# 14 신 Shin
+shin
+
+# 15 권 Kwon/Gwon
+gwon
+kwon
+
+# 16 황 Hwang (already in Chinese 黄 section)
+
+# 17 안 Ahn/An
+ahn
+an
+
+# 18 송 Song (already in Chinese 宋 section)
+
+# 19 유 Ryu/Yoo/You
+ryu
+yoo
+you
+
+# 20 홍 Hong
+hong
+
+# 21 전 Jeon
+jeon
+
+# 22 고 Ko (already in Chinese 高 section)
+
+# 23 문 Moon/Mun
+moon
+mun
+
+# 24 양 Yang (already in Chinese 杨 section)
+
+# 25 손 Son
+son
+
+# 26 배 Bae
+bae
+
+# 27 백 Baek/Paek
+baek
+paek
+
+# 28 허 Heo/Huh/Hur
+heo
+huh
+hur
+
+# 29 남 Nam
+nam
+
+# 30 심 Shim (Sim already in Chinese 沈 section)
+shim
+
+# 31 노 Noh/Roh
+noh
+roh
+
+# 32 하 Ha (already in Chinese 夏 section)
+
+# 33 곽 Kwak/Gwak
+gwak
+kwak
+
+
+# =========================================================================
+# Vietnamese — top ~20 surnames by frequency
+# =========================================================================
+#
+# Primary source: Vietnamese census data and Wikipedia.
+# https://en.wikipedia.org/wiki/Vietnamese_name#Family_name
+#
+# Nguyễn alone accounts for ~38% of the Vietnamese population.
+# Romanisation is standard Vietnamese without diacritics (as commonly
+# used in English-language contexts).
+
+# 1 Nguyễn (~38%)
+nguyen
+
+# 2 Trần (~11%)
+tran
+
+# 3 Lê (~9.5%)
+le
+
+# 4 Phạm (~7%)
+pham
+
+# 5 Hoàng/Huỳnh (~5%) — Hoang (northern), Huynh (southern)
+hoang
+huynh
+
+# 6 Phan
+phan
+
+# 7 Vũ/Võ — Vu (northern), Vo (southern)
+vo
+vu
+
+# 8 Đặng
+dang
+
+# 9 Bùi
+bui
+
+# 10 Đỗ
+do
+
+# 11 Hồ (Ho already in Chinese 何 section)
+
+# 12 Ngô
+ngo
+
+# 13 Dương
+duong
+
+# 14 Lý
+ly
+
+# 15 Đinh
+dinh
+
+# 16 Đào
+dao
+
+# 17 Trịnh
+trinh
+
+# 18 Đoàn
+doan
+
+# 19 Lâm (Lam already in Chinese 林 section)
+
+# 20 Lương
+luong
+
+
+# =========================================================================
+# Japanese — top ~30 surnames by frequency
+# =========================================================================
+#
+# Primary source: Meiji Yasuda Life Insurance surname survey and
+# Wikipedia "Japanese surname".
+# https://en.wikipedia.org/wiki/Japanese_surname
+#
+# Romanisation is modified Hepburn (standard).  Long-vowel variants
+# (-oh, -ou) included where common in passports and English-language use.
+
+# 1 佐藤 Satō
+sato
+satoh
+satou
+
+# 2 鈴木 Suzuki
+suzuki
+
+# 3 高橋 Takahashi
+takahashi
+
+# 4 田中 Tanaka
+tanaka
+
+# 5 渡辺 Watanabe
+watanabe
+
+# 6 伊藤 Itō
+ito
+itoh
+itou
+
+# 7 山本 Yamamoto
+yamamoto
+
+# 8 中村 Nakamura
+nakamura
+
+# 9 小林 Kobayashi
+kobayashi
+
+# 10 加藤 Katō
+kato
+katoh
+katou
+
+# 11 吉田 Yoshida
+yoshida
+
+# 12 山田 Yamada
+yamada
+
+# 13 佐々木 Sasaki
+sasaki
+
+# 14 山口 Yamaguchi
+yamaguchi
+
+# 15 松本 Matsumoto
+matsumoto
+
+# 16 斎藤 Saitō
+saito
+saitoh
+saitou
+
+# 17 井上 Inoue
+inoue
+
+# 18 木村 Kimura
+kimura
+
+# 19 林 Hayashi (Lin already in Chinese section — different kanji)
+hayashi
+
+# 20 清水 Shimizu
+shimizu
+
+# 21 山崎 Yamazaki
+yamazaki
+
+# 22 池田 Ikeda
+ikeda
+
+# 23 阿部 Abe
+abe
+
+# 24 橋本 Hashimoto
+hashimoto
+
+# 25 山下 Yamashita
+yamashita
+
+# 26 森 Mori
+mori
+
+# 27 石川 Ishikawa
+ishikawa
+
+# 28 中島 Nakajima/Nakashima
+nakajima
+nakashima
+
+# 29 前田 Maeda
+maeda
+
+# 30 藤田 Fujita
+fujita
+
+
+# =========================================================================
+# Hungarian — top ~20 surnames by frequency
+# =========================================================================
+#
+# Primary source: Hungarian Central Statistical Office (KSH) and
+# Wikipedia "List of most common surnames in Europe".
+# https://en.wikipedia.org/wiki/List_of_most_common_surnames_in_Europe#Hungary
+#
+# Both accented (proper Hungarian) and unaccented (common in
+# English-language text) forms are included.
+
+# 1 Nagy
+nagy
+
+# 2 Kovács
+kovacs
+kovács
+
+# 3 Tóth
+toth
+tóth
+
+# 4 Szabó
+szabo
+szabó
+
+# 5 Horváth
+horvath
+horváth
+
+# 6 Varga
+varga
+
+# 7 Kiss
+kiss
+
+# 8 Molnár
+molnar
+molnár
+
+# 9 Németh
+nemeth
+németh
+
+# 10 Farkas
+farkas
+
+# 11 Balogh
+balogh
+
+# 12 Juhász
+juhasz
+juhász
+
+# 13 Lakatos
+lakatos
+
+# 14 Oláh
+olah
+oláh
+
+# 15 Mészáros
+meszaros
+mészáros
+
+# 16 Fekete
+fekete
+
+# 17 Szilágyi
+szilagyi
+szilágyi
+
+# 18 Török
+torok
+török
+
+# 19 Papp
+papp
+
+# 20 Takács
+takacs
+takács

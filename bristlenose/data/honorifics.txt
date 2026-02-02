@@ -1,0 +1,129 @@
+# Honorific prefixes that appear before a person's name.
+#
+# Used by suggest_short_names() to strip leading titles so that
+# "Dr. Sarah Jones" suggests "Sarah" not "Dr.".
+#
+# Format: one entry per line, lowercase, WITHOUT trailing periods.
+# Callers strip periods from the input token before checking membership.
+# Blank lines and lines starting with # are ignored.
+#
+# Sources
+# -------
+# - Wikipedia: "English honorifics", "Honorific"
+#   https://en.wikipedia.org/wiki/English_honorifics
+#   https://en.wikipedia.org/wiki/Honorific
+# - Wikipedia: "Indian honorifics"
+#   https://en.wikipedia.org/wiki/Indian_honorifics
+# - Wikipedia: "Malay styles and titles"
+#   https://en.wikipedia.org/wiki/Malay_styles_and_titles
+# - Wikipedia: "Thai honorifics", "Filipino styles and honorifics"
+#   https://en.wikipedia.org/wiki/Thai_honorifics
+#   https://en.wikipedia.org/wiki/Filipino_styles_and_honorifics
+# - GitHub Gist (Neil Hawkins): "List of salutations, honorifics, titles"
+#   https://gist.github.com/neilhawkins/c7bb94e5b7ae558e826989d330418938
+#
+# Maintenance
+# -----------
+# Add new entries as needed.  Keep sorted within each section.
+# Only include prefixes that commonly appear BEFORE a person's name in
+# written text.  Skip suffixes (PhD, Jr, Esq, OBE, etc.).
+# Multi-word prefixes ("Tan Sri", "Air Marshal") are not supported by
+# the current single-token stripping logic — don't add them here.
+
+# English
+dame
+madam
+master
+miss
+mr
+mrs
+ms
+mx
+sir
+
+# Academic / professional
+doctor
+dr
+dra
+engr
+ing
+ir
+prof
+professor
+
+# Military (common abbreviations only — full forms like "general" are
+# also common first names in some cultures, so we prefer abbreviations)
+adm
+capt
+cdr
+cmdr
+col
+cpl
+gen
+lt
+maj
+sgt
+
+# Legal / government
+adv
+amb
+atty
+gov
+hon
+judge
+justice
+rep
+sen
+
+# Religious
+bishop
+br
+fr
+imam
+mufti
+pastor
+rabbi
+rev
+sheikh
+sr
+
+# European
+frau
+herr
+mlle
+mme
+monsieur
+senhora
+senhor
+sig
+signora
+signore
+sra
+
+# South / Southeast Asian
+# Sources: Wikipedia "Shri", "Malay styles and titles"
+# https://en.wikipedia.org/wiki/Shri
+# https://www.tatlerasia.com/lifestyle/entertainment/sg-using-malaysian-honorary-titles-correctly
+dato
+datuk
+pandit
+shri
+smt
+sri
+
+# East Asian (used as prefix in English-language text)
+sensei
+
+# Arabic / Islamic
+# Source: Wikipedia "Islamic honorifics"
+# https://en.wikipedia.org/wiki/Category:Islamic_honorifics
+hajj
+hajji
+sayyid
+
+# African
+# Source: ALCASA "Honorific titles"
+# https://africanalibrarians.wixsite.com/alcasa/5-honorific-titles
+chief
+nana
+oba

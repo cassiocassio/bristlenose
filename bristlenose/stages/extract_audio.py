@@ -57,6 +57,15 @@ async def extract_audio_for_sessions(
             )
             continue
 
+        # If session already has a platform transcript, skip extraction — the
+        # pipeline will use the parsed transcript and never call Whisper.
+        if session.has_existing_transcript:
+            logger.info(
+                "%s: Has platform transcript, skipping audio extraction",
+                session.participant_id,
+            )
+            continue
+
         # If session has a video file, schedule extraction
         video_files = [f for f in session.files if f.file_type == FileType.VIDEO]
         if video_files:

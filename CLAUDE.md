@@ -29,6 +29,24 @@ CLI commands: `run` (full pipeline), `transcribe-only`, `analyze` (skip transcri
 
 LLM provider: API keys via env vars (`ANTHROPIC_API_KEY` or `OPENAI_API_KEY`), `.env` file, or `bristlenose.toml`. Prefix with `BRISTLENOSE_` for namespaced variants.
 
+## Platform-aware session grouping (Stage 1)
+
+`ingest.py` groups input files into sessions using a two-pass strategy that understands Teams, Zoom, and Google Meet naming conventions.
+
+- **`_normalise_stem(stem)`**: strips platform naming suffixes before stem comparison:
+  - **Teams**: strips `{YYYYMMDD}_{HHMMSS}-Meeting Recording` and `-meeting transcript` suffixes (case-insensitive)
+  - **Zoom cloud**: strips `Audio Transcript_` prefix and trailing `_{MeetingID}_{Month_DD_YYYY}` (meeting ID is 9–11 digits)
+  - **Google Meet** (Phase 2 prep): strips `({YYYY-MM-DD at ...})` parenthetical and `- Transcript` suffix
+  - **Legacy**: existing `_transcript`, `_subtitles`, `_captions`, `_sub`, `_srt` suffixes still work
+- **`_is_zoom_local_dir(dir_name)`**: detects Zoom local recording folder pattern (`YYYY-MM-DD HH.MM.SS Topic MeetingID`)
+- **`group_into_sessions()`** two-pass grouping:
+  1. Files inside a Zoom local folder are grouped by directory (regardless of individual filenames)
+  2. Remaining files are grouped by normalised stem
+- **Regex patterns**: `_TEAMS_SUFFIX_RE`, `_ZOOM_CLOUD_TAIL_RE`, `_ZOOM_CLOUD_PREFIX_RE`, `_ZOOM_LOCAL_DIR_RE`, `_GMEET_PAREN_RE`, `_GMEET_TRANSCRIPT_SUFFIX_RE` — all compiled at module level
+- **Audio extraction skip**: `extract_audio.py` skips FFmpeg extraction when `session.has_existing_transcript=True` (the pipeline already skips Whisper; now it also skips the unnecessary audio decode)
+- **Design doc**: `docs/design-platform-transcripts.md` — full platform catalogue, market data, implementation phases
+- **Tests**: `tests/test_ingest.py` (35 tests: normalisation, Zoom dir detection, session grouping for all platforms), `tests/test_extract_audio.py` (2 tests: extraction skip behaviour)
+
 ## Boundaries
 
 - **Safe to edit**: `bristlenose/`, `tests/`
@@ -227,10 +245,11 @@ Per-participant LLM calls (stages 5b, 8, 9) run concurrently, bounded by `llm_co
 - **Compact JSON in LLM prompts**: `quote_clustering.py` and `thematic_grouping.py` use `json.dumps(separators=(",",":"))` (no whitespace) to minimise input tokens sent to the LLM for stages 10 and 11. Saves 10–20% tokens on these cross-participant calls
 - **FFmpeg VideoToolbox hardware decode**: `utils/audio.py` passes `-hwaccel videotoolbox` on macOS, offloading H.264/HEVC video decoding to the Apple Silicon media engine. Harmless no-op for audio-only inputs; flag omitted on non-macOS platforms. 2–4× faster video decode, frees CPU/GPU for other work
 - **Concurrent audio extraction**: `extract_audio_for_sessions()` in `stages/extract_audio.py` is async — up to 4 FFmpeg processes run in parallel via `asyncio.Semaphore(4)` + `asyncio.gather()`. Blocking `subprocess.run` calls wrapped in `asyncio.to_thread()`. Default concurrency of 4 is a fixed constant (not hardware-adaptive) because the bottleneck is the shared media engine on macOS, not CPU core count — works well across all Apple Silicon variants (M1 through M4 Ultra). On Linux without hardware decode, 4 concurrent software-decode processes is still reasonable. `concurrency` kwarg exposed for future config wiring if needed
+- **Audio extraction skip for platform transcripts**: `extract_audio.py` checks `session.has_existing_transcript` and skips FFmpeg entirely when a platform transcript (VTT/SRT/DOCX) is present — avoids unnecessary video decode when Whisper won't be called
 
 ## Gotchas
 
-- The repo directory is `/Users/cassio/Code/bristlenose` — package name matches
+- The repo directory is `/Users/cassio/Code/gourani` (legacy name, package is bristlenose)
 - Both `models.py` and `utils/timecodes.py` define `format_timecode()` / `parse_timecode()` — they behave identically, stage files import from either
 - `PipelineResult` references `PeopleFile` but is defined before it in `models.py` — resolved with `PipelineResult.model_rebuild()` after PeopleFile definition
 - `format_finder_date()` in `utils/markdown.py` uses a local `import datetime as _dtmod` inside the function body because `from __future__ import annotations` makes the type hints string-only; `datetime` is in `TYPE_CHECKING` for the linter but not available at runtime otherwise
@@ -244,6 +263,7 @@ Per-participant LLM calls (stages 5b, 8, 9) run concurrently, bounded by `llm_co
 - `view-switcher.js` and `names.js` both load **after** `csv-export.js` in `_JS_FILES` — `view-switcher.js` writes the `currentViewMode` global defined in `csv-export.js`; `names.js` depends on `copyToClipboard()` and `showToast()`
 - `_TRANSCRIPT_JS_FILES` includes `transcript-names.js` (after `storage.js`) — reads localStorage name edits and updates the heading + speaker labels. Separate from the report's `names.js` (which has full editing UI)
 - `blockquote .timecode` in `blockquote.css` must use `--bn-colour-accent` not `--bn-colour-muted` — the `.timecode-bracket` children handle the muting. If you add a new timecode rendering context, ensure the parent rule uses accent
+- `_normalise_stem()` expects a lowercased stem — callers must `.lower()` before passing. `group_into_sessions()` does this; unit tests pass lowercased literals directly
 
 ## Reference docs (read when working in these areas)
 
@@ -253,6 +273,7 @@ Per-participant LLM calls (stages 5b, 8, 9) run concurrently, bounded by `llm_co
 - **Release process / CI / secrets**: `docs/release.md`
 - **Design system / contributing**: `CONTRIBUTING.md`
 - **Doctor command + Snap packaging design**: `docs/design-doctor-and-snap.md`
+- **Platform transcript ingestion**: `docs/design-platform-transcripts.md`
 
 ## Working preferences
 
@@ -281,4 +302,4 @@ When the user signals end of session, **proactively offer to run this checklist*
 
 ## Current status (v0.6.5, Feb 2026)
 
-Core pipeline complete and published to PyPI + Homebrew. Snap packaging implemented and tested locally (arm64); CI builds amd64 on every push. v0.6.5 adds page footer (logotype + version link to GitHub, `atoms/footer.css`), fixes timecode typography (two-tone brackets: blue digits + muted grey `[]`, `:visited` fix), adds hanging-indent layout for quote cards and transcript segments (timecodes form a scannable left column), non-breaking spaces on quote attributions to prevent widowing, and localStorage name propagation to transcript pages via `transcript-names.js`. v0.6.4 adds concurrent per-participant LLM calls (stages 5b, 8, 9 bounded by `llm_concurrency`, stages 10+11 run in parallel), measured ~2.7x speedup on LLM-bound time. v0.6.3 redesigns the report header (logo top-left, "Bristlenose" logotype + project name, right-aligned doc title + meta), adds a view-switcher dropdown (All quotes / Favourite quotes / Participant data) with Copy CSV button in a sticky toolbar, moves Sentiment/Tags/Friction/User journeys into an "Analysis" ToC column, and uses raw participant IDs in quote attributions (anonymisation boundary). v0.6.2 adds editable participant names, auto name/role extraction, short name suggestions, and editable section/theme headings. v0.6.1 adds snap recipe, CI workflow, author identity. v0.6.0 added `bristlenose doctor`. v0.5.0 added per-participant transcript pages. Next up: register snap name, request classic confinement approval, first edge channel publish. See `TODO.md` for full task list.
+Core pipeline complete and published to PyPI + Homebrew. Snap packaging implemented and tested locally (arm64); CI builds amd64 on every push. Latest work: platform-aware session grouping in `ingest.py` — `_normalise_stem()` strips Teams, Zoom cloud, and Google Meet naming conventions; `_is_zoom_local_dir()` detects Zoom local folders; `group_into_sessions()` uses two-pass grouping (Zoom folders by directory, remaining files by normalised stem); `extract_audio.py` skips FFmpeg when platform transcript present. 37 new tests. v0.6.5 adds page footer (logotype + version link to GitHub, `atoms/footer.css`), fixes timecode typography (two-tone brackets: blue digits + muted grey `[]`, `:visited` fix), adds hanging-indent layout for quote cards and transcript segments (timecodes form a scannable left column), non-breaking spaces on quote attributions to prevent widowing, and localStorage name propagation to transcript pages via `transcript-names.js`. v0.6.4 adds concurrent per-participant LLM calls (stages 5b, 8, 9 bounded by `llm_concurrency`, stages 10+11 run in parallel), measured ~2.7x speedup on LLM-bound time. v0.6.3 redesigns the report header (logo top-left, "Bristlenose" logotype + project name, right-aligned doc title + meta), adds a view-switcher dropdown (All quotes / Favourite quotes / Participant data) with Copy CSV button in a sticky toolbar, moves Sentiment/Tags/Friction/User journeys into an "Analysis" ToC column, and uses raw participant IDs in quote attributions (anonymisation boundary). v0.6.2 adds editable participant names, auto name/role extraction, short name suggestions, and editable section/theme headings. v0.6.1 adds snap recipe, CI workflow, author identity. v0.6.0 added `bristlenose doctor`. v0.5.0 added per-participant transcript pages. Next up: register snap name, request classic confinement approval, first edge channel publish. See `TODO.md` for full task list.

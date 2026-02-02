@@ -56,6 +56,7 @@ Last updated: 2 Feb 2026 (v0.6.5, timecode typography + hanging indent + transcr
 - [x] (0.6.5) Hanging-indent quote layout — flexbox `.quote-row` with timecode in left gutter, `.quote-body` indented beside it; badges naturally indented; same layout on transcript pages (`.transcript-segment` + `.segment-body`)
 - [x] (0.6.5) Non-breaking spaces on quote attribution — `&nbsp;` around em-dash prevents `— p1` widowing at line breaks
 - [x] (0.6.5) Transcript page name propagation — `transcript-names.js` reads localStorage name edits from report page, updates heading + speaker labels on load; `data-participant` attributes on `<h1>` and `.segment-speaker`
+- [x] Platform-aware session grouping — `_normalise_stem()` strips Teams/Zoom cloud/Google Meet naming conventions; `_is_zoom_local_dir()` detects Zoom local folders; `group_into_sessions()` two-pass grouping (Zoom folders by directory, remaining by normalised stem); `extract_audio.py` skips FFmpeg when platform transcript present; 37 new tests. Design doc: `docs/design-platform-transcripts.md`
 
 ---
 

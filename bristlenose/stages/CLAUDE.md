@@ -60,15 +60,31 @@ return list(await asyncio.gather(*(_process(t) for t in transcripts)))
 - **Error isolation**: each `_process()` closure has its own try/except. A failed participant doesn't cancel siblings (asyncio.gather default behaviour — if one raises, others still complete since the exception is caught inside `_process`)
 - **No cross-stage semaphore**: each stage creates its own semaphore. Stages still execute sequentially in the pipeline
 
+## Platform-aware session grouping (Stage 1)
+
+`ingest.py` groups input files into sessions using a two-pass strategy that handles Teams, Zoom, and Google Meet naming conventions.
+
+- **`_normalise_stem(stem)`**: strips platform suffixes before stem matching. Expects lowercased input:
+  - Teams: `{YYYYMMDD}_{HHMMSS}-Meeting Recording`, `-meeting transcript`
+  - Zoom cloud: `Audio Transcript_` prefix, `_{MeetingID}_{Month_DD_YYYY}` tail (9–11 digit IDs)
+  - Google Meet: `({YYYY-MM-DD at ...})` parenthetical, `- Transcript` suffix
+  - Legacy: `_transcript`, `_subtitles`, `_captions`, `_sub`, `_srt`
+- **`_is_zoom_local_dir(dir_name)`**: matches `YYYY-MM-DD HH.MM.SS Topic MeetingID` pattern
+- **`group_into_sessions()`**: Pass 1 groups Zoom local folder files by directory; Pass 2 groups remaining files by normalised stem
+- **Regex patterns**: 6 compiled module-level patterns (`_TEAMS_SUFFIX_RE`, `_ZOOM_CLOUD_TAIL_RE`, `_ZOOM_CLOUD_PREFIX_RE`, `_ZOOM_LOCAL_DIR_RE`, `_GMEET_PAREN_RE`, `_GMEET_TRANSCRIPT_SUFFIX_RE`)
+- **Tests**: `tests/test_ingest.py` — 35 tests covering normalisation, Zoom dir detection, session grouping for all platforms, false positive prevention
+
 ## Concurrent audio extraction (Stage 2)
 
 `extract_audio_for_sessions()` is async — video files are extracted in parallel via `asyncio.to_thread()` (wrapping blocking `subprocess.run` FFmpeg calls) bounded by `asyncio.Semaphore(4)`.
 
 - **Default 4**: fixed constant, not hardware-adaptive. The bottleneck is the macOS media engine (shared hardware decode), not CPU cores. 4 works well from M1 to M4 Ultra
 - **`_extract_one()` helper**: runs `has_audio_stream()` + `extract_audio_from_video()` inside the semaphore. Both are blocking subprocess calls wrapped in `asyncio.to_thread()`
+- **Platform transcript skip**: when `session.has_existing_transcript=True`, FFmpeg extraction is skipped entirely — the pipeline will use the parsed transcript and never call Whisper, so audio decode is unnecessary
 - **Error isolation**: same pattern as LLM stages — a failed extraction doesn't cancel siblings
 - **VideoToolbox**: `utils/audio.py` passes `-hwaccel videotoolbox` on macOS, so concurrent extractions share the hardware media engine for H.264/HEVC decode
 - **`concurrency` kwarg**: exposed but not yet wired to config (unlike `llm_concurrency`). Default of 4 is sufficient; config wiring deferred until there's a real need
+- **Tests**: `tests/test_extract_audio.py` — 2 tests for extraction skip behaviour
 
 ## Duplicate timecode helpers
 

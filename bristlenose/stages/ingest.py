@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 import platform
+import re
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -86,33 +87,111 @@ def _try_add_file(path: Path, files: list[InputFile]) -> None:
     logger.info("Found %s file: %s", file_type.value, path.name)
 
 
+# -- Platform filename patterns --------------------------------------------------
+
+# Teams: "Title 20260130_093012-Meeting Recording" or "-meeting transcript"
+_TEAMS_SUFFIX_RE = re.compile(
+    r"\s+\d{8}_\d{6}-(meeting recording|meeting transcript)$",
+    re.IGNORECASE,
+)
+
+# Zoom cloud: "Topic_987654321_Jan_15_2026" or "Audio Transcript_Topic_..."
+# The meeting ID is 9-11 digits; the date is Month_DD_YYYY.
+_ZOOM_CLOUD_TAIL_RE = re.compile(
+    r"_\d{9,11}_[a-z]{3}_\d{1,2}_\d{4}$",
+    re.IGNORECASE,
+)
+_ZOOM_CLOUD_PREFIX_RE = re.compile(
+    r"^audio transcript_",
+    re.IGNORECASE,
+)
+
+# Zoom local folder: "2026-01-15 14.30.22 Topic 987654321"
+_ZOOM_LOCAL_DIR_RE = re.compile(
+    r"^\d{4}-\d{2}-\d{2}\s+\d{2}\.\d{2}\.\d{2}\s+.+\s+\d{9,11}$",
+)
+
+# Google Meet (prep for Phase 2): "Title (2026-01-28 at 14 30 GMT-5)"
+_GMEET_PAREN_RE = re.compile(
+    r"\s+\(\d{4}-\d{1,2}-\d{1,2}\s+at\s+.+?\)\s*$",
+    re.IGNORECASE,
+)
+_GMEET_TRANSCRIPT_SUFFIX_RE = re.compile(
+    r"\s*[-–]\s*transcript$",
+    re.IGNORECASE,
+)
+
+
+def _normalise_stem(stem: str) -> str:
+    """Normalise a filename stem for session matching.
+
+    Strips platform-specific naming suffixes so that a video file and its
+    transcript end up with the same key even when the platforms use different
+    filename conventions.
+
+    Expects *stem* to already be lowercased.
+    """
+    # 1. Legacy suffixes (existing behaviour)
+    for suffix in ("_transcript", "_subtitles", "_captions", "_sub", "_srt"):
+        if stem.endswith(suffix):
+            stem = stem[: -len(suffix)]
+            break
+
+    # 2. Teams: strip "-Meeting Recording" / "-meeting transcript" + date prefix
+    stem = _TEAMS_SUFFIX_RE.sub("", stem)
+
+    # 3. Zoom cloud: strip "Audio Transcript_" prefix and trailing "_ID_DATE"
+    stem = _ZOOM_CLOUD_PREFIX_RE.sub("", stem)
+    stem = _ZOOM_CLOUD_TAIL_RE.sub("", stem)
+
+    # 4. Google Meet: strip "(YYYY-MM-DD at ...)" and "- Transcript"
+    stem = _GMEET_TRANSCRIPT_SUFFIX_RE.sub("", stem)
+    stem = _GMEET_PAREN_RE.sub("", stem)
+
+    return stem.strip()
+
+
+def _is_zoom_local_dir(dir_name: str) -> bool:
+    """Return True if *dir_name* matches the Zoom local recording folder pattern."""
+    return bool(_ZOOM_LOCAL_DIR_RE.match(dir_name))
+
+
 def group_into_sessions(files: list[InputFile]) -> list[InputSession]:
     """Group files into sessions and assign participant numbers.
 
     Grouping heuristic:
-    1. Files sharing the same stem (ignoring extension) are one session.
-    2. Files in the same subdirectory with only one primary file (audio/video)
-       are one session.
+    1. Files in a Zoom-style subdirectory are grouped by directory.
+    2. Remaining files sharing the same normalised stem are one session.
     3. Otherwise, each file is its own session.
+
+    Stems are normalised to strip platform naming conventions (Teams date/suffix,
+    Zoom cloud meeting ID, Google Meet parenthetical date).
 
     Participant numbers (p1, p2, ...) are assigned by the creation date of the
     session's earliest file.
     """
-    # Group by stem — e.g. "interview_01.mp4" and "interview_01.srt" share a session
-    stem_groups: dict[str, list[InputFile]] = {}
+    # -- Pass 1: Zoom local folders (all files in the folder = one session) ------
+    zoom_dir_groups: dict[str, list[InputFile]] = {}
+    remaining: list[InputFile] = []
     for f in files:
-        stem = f.path.stem.lower()
-        # Strip common suffixes like "_transcript", "_subtitles" to match base name
-        for suffix in ("_transcript", "_subtitles", "_captions", "_sub", "_srt"):
-            if stem.endswith(suffix):
-                stem = stem[: -len(suffix)]
-                break
+        parent = f.path.parent.name
+        if parent and _is_zoom_local_dir(parent):
+            zoom_dir_groups.setdefault(parent, []).append(f)
+        else:
+            remaining.append(f)
+
+    # -- Pass 2: normalised stem matching on remaining files ---------------------
+    stem_groups: dict[str, list[InputFile]] = {}
+    for f in remaining:
+        stem = _normalise_stem(f.path.stem.lower())
         stem_groups.setdefault(stem, []).append(f)
 
-    # Build sessions from groups
+    # -- Merge both grouping passes into raw sessions --------------------------
     raw_sessions: list[tuple[datetime, list[InputFile]]] = []
+    for _dir, group_files in zoom_dir_groups.items():
+        session_date = min(f.created_at for f in group_files)
+        raw_sessions.append((session_date, group_files))
     for _stem, group_files in stem_groups.items():
-        # Session date is the earliest creation date in the group
         session_date = min(f.created_at for f in group_files)
         raw_sessions.append((session_date, group_files))
 

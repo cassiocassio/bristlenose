@@ -38,5 +38,14 @@ jobs:
         continue-on-error: true
         run: mypy bristlenose/ --ignore-missing-imports
 
+      - name: Audit dependencies for known vulnerabilities
+        # Informational — flags known CVEs in the log but doesn't block
+        # the build. Transitive deps (torch, protobuf) often have unfixed
+        # advisories that we can't act on. Review on each run.
+        continue-on-error: true
+        run: |
+          pip install pip-audit
+          pip-audit
+
       - name: Run tests
         run: pytest --tb=short -q

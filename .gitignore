@@ -24,3 +24,6 @@ output/
 htmlcov/
 .DS_Store
 trial-runs/
+.nova/
+plan.md
+gitcheat.md

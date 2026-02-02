@@ -37,7 +37,7 @@ Template-level CSS in `templates/`: `report.css` (main report layout), `transcri
 
 ## JS modules
 
-10 standalone files in `js/` concatenated at render time (same pattern as CSS): storage, player, favourites, editing, tags, histogram, csv-export, view-switcher, names, main. Transcript pages use only `storage.js` + `player.js` (no favourites/editing/tags/names/view-switcher).
+11 standalone files in `js/` concatenated at render time (same pattern as CSS): storage, player, favourites, editing, tags, histogram, csv-export, view-switcher, search, names, main. Transcript pages use `storage.js` + `player.js` + `transcript-names.js` (no favourites/editing/tags/search/names/view-switcher).
 
 ### names.js
 
@@ -60,8 +60,22 @@ Dropdown menu to switch between report views. Three modes: `all` (default), `fav
 - **`_applyView(view, btn, menu, items)`** — sets `currentViewMode` global (defined in `csv-export.js`), updates button label text, toggles active menu item, swaps export button visibility, toggles `<section>` visibility
 - **Section visibility**: `all` shows everything, `favourites` shows all sections but hides non-starred blockquotes, `participants` shows only the section whose `<h2>` contains "Participants"
 - **Export button swap**: `#export-csv` (Copy CSV) visible in `all`/`favourites` views; `#export-names` (Export names) visible in `participants` view
-- **Dependencies**: must load after `csv-export.js` (writes `currentViewMode`); before `main.js` (boot calls `initViewSwitcher()`)
+- **Search notification**: `_applyView()` calls `_onViewModeChange()` (defined in `search.js`) after applying the view — guarded with `typeof` check so transcript pages (which don't load search.js) don't error
+- **Dependencies**: must load after `csv-export.js` (writes `currentViewMode`); before `search.js` and `main.js`
 - **CSS**: `organisms/toolbar.css` — `.view-switcher`, `.view-switcher-btn`, `.view-switcher-arrow` (SVG chevron), `.view-switcher-menu` (dropdown positioned absolute right), `.menu-icon` (invisible spacer for alignment)
+
+### search.js
+
+Search-as-you-type filtering for report quotes. Collapsed magnifying glass icon in the toolbar.
+
+- **`initSearchFilter()`** — wires up toggle button (expand/collapse), text input (debounced 150ms), Escape to clear+collapse
+- **`_applySearchFilter()`** — when query >= 3 chars, searches across ALL quotes regardless of view mode (`currentViewMode`). Matches against `.quote-text`, `.speaker-link`, and `.badge` text (skipping `.badge-add`). Case-insensitive `indexOf()` matching
+- **`_restoreViewMode()`** — when query is cleared or < 3 chars, restores the view-switcher's visibility state (respects favourites mode)
+- **`_hideEmptySections()`** — hides `<section>` elements (and preceding `<hr>`) when all child blockquotes are hidden. Only targets sections with `.quote-group` (skips Participants, Sentiment, Friction, Journeys)
+- **`_hideEmptySubsections()`** — hides individual h3+description+quote-group clusters within a section when all their quotes are hidden
+- **`_onViewModeChange()`** — called by `view-switcher.js` after view mode changes. Hides search in participants mode (no quotes to search), re-applies filter or restores view mode otherwise
+- **Dependencies**: must load after `csv-export.js` (reads `currentViewMode` global) and after `view-switcher.js` (which calls `_onViewModeChange()`); before `names.js` and `main.js`
+- **CSS**: `molecules/search.css`
 
 ### Inline heading/description editing
 
@@ -71,6 +85,10 @@ Section titles, descriptions, theme titles, and theme descriptions use `.editabl
 - **`.editable-text.editing`** in `molecules/quote-actions.css` — editing highlight (same visual as `.quote-text` editing)
 - **`.editable-text.edited`** in `molecules/quote-actions.css` — dashed underline indicator for changed text
 - **Bidirectional ToC sync** — ToC entries and section headings share the same `data-edit-key`; `_syncSiblings()` keeps all matching spans in sync on edit
+
+### search.css (molecule)
+
+Collapsible search filter in the toolbar: `.search-container` (flex, `margin-right: auto` for left alignment), `.search-toggle` (muted icon, accent on hover), `.search-input` (hidden by default, shown when `.search-container.expanded`), focus border accent, italic placeholder.
 
 ### name-edit.css (molecule)
 

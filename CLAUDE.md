@@ -29,6 +29,22 @@ CLI commands: `run` (full pipeline), `transcribe-only`, `analyze` (skip transcri
 
 LLM provider: API keys via env vars (`ANTHROPIC_API_KEY` or `OPENAI_API_KEY`), `.env` file, or `bristlenose.toml`. Prefix with `BRISTLENOSE_` for namespaced variants.
 
+Report JavaScript — 11 modules in `bristlenose/theme/js/`, concatenated in dependency order into a single `<script>` block by `render_html.py` (`_JS_FILES`). Boot sequence in `main.js`:
+
+1. `storage.js` — `createStore()` localStorage abstraction (used by all stateful modules)
+2. `player.js` — `seekTo()`, `initPlayer()` for timecode playback
+3. `favourites.js` — `initFavourites()`, star toggle, FLIP reorder animation
+4. `editing.js` — `initEditing()`, `initInlineEditing()` for quote + heading editing
+5. `tags.js` — `initTags()`, AI badge delete/restore, user tag CRUD, auto-suggest
+6. `histogram.js` — `renderUserTagsChart()` for user-tags sentiment chart
+7. `csv-export.js` — `initCsvExport()`, `copyToClipboard()`, `showToast()`, defines `currentViewMode` global
+8. `view-switcher.js` — `initViewSwitcher()`, dropdown menu, section visibility (depends on `currentViewMode`)
+9. `search.js` — `initSearchFilter()`, search-as-you-type filtering, exposes `_onViewModeChange()` hook
+10. `names.js` — `initNames()`, participant name/role inline editing, YAML export
+11. `main.js` — boot orchestrator, calls all `init*()` functions
+
+Transcript pages use a separate list (`_TRANSCRIPT_JS_FILES`): `storage.js`, `player.js`, `transcript-names.js`.
+
 ## Platform-aware session grouping (Stage 1)
 
 `ingest.py` groups input files into sessions using a two-pass strategy that understands Teams, Zoom, and Google Meet naming conventions.
@@ -83,8 +99,8 @@ Stage 5b (speaker identification) extracts participant names and job titles alon
 Participant names and roles are editable inline in the HTML report.
 
 - **Pencil icon**: `.name-pencil` button in Name and Role table cells, visible on row hover. Same contenteditable lifecycle as quote editing (Enter/Escape/click-outside)
-- **JS module**: `bristlenose/theme/js/names.js` — `initNames()` in boot sequence (after `initCsvExport()`). Uses `createStore('bristlenose-names')` for localStorage. Shape: `{pid: {full_name, short_name, role}}`
-- **Live DOM updates**: `updateAllReferences(pid)` propagates name changes to quote attributions (`.speaker-link`), participant table cells, etc.
+- **JS module**: `bristlenose/theme/js/names.js` — `initNames()` in boot sequence (after `initSearchFilter()`). Uses `createStore('bristlenose-names')` for localStorage. Shape: `{pid: {full_name, short_name, role}}`
+- **Live DOM updates**: `updateAllReferences(pid)` propagates name changes to participant table Name and Role cells only. Quote attributions (`.speaker-link`) intentionally show raw pids — not updated by JS (anonymisation boundary)
 - **Short name auto-suggest**: JS-side `suggestShortName()` mirrors the Python heuristic — when `full_name` is edited and `short_name` is empty, auto-fills with first name
 - **YAML export**: "Export names" toolbar button copies edited names as a YAML snippet via `buildNamesYaml()` + `copyToClipboard()`. User pastes into `people.yaml`
 - **Reconciliation**: `reconcileWithBaked()` on page load prunes localStorage entries that match the baked-in `BN_PARTICIPANTS` data (user already pasted edits and re-rendered)
@@ -125,6 +141,23 @@ Below the header rule, a sticky toolbar holds the view-switcher dropdown and exp
 - **Export buttons**: single `#export-csv` button (Copy CSV) with inline SVG clipboard icon; `#export-names` button (Export names) shown only in participants view. Both swap visibility based on view mode
 - **Menu items**: "All quotes" (no icon), "★ Favourite quotes" (star icon), "⊞ Participant data" (grid icon). Items without icons get `<span class="menu-icon">&nbsp;</span>` spacers for text alignment
 - **Boot order**: `initViewSwitcher()` runs after `initCsvExport()` in `main.js` because it depends on `currentViewMode`
+
+### Search filter
+
+Search-as-you-type filtering for report quotes. Collapsed by default to a magnifying glass icon on the left side of the toolbar.
+
+- **HTML**: search container (`#search-container`) with toggle button (`#search-toggle`, SVG magnifying glass) and text input (`#search-input`). Emitted in `render_html.py` before the view-switcher in the toolbar
+- **Expand/collapse**: clicking the icon toggles `.expanded` class on the container, showing/hiding the input. Escape key clears and collapses. Clicking icon when expanded+empty also collapses
+- **Min 3 chars**: no filtering until query >= 3 characters
+- **Match scope**: `.quote-text` content, `.speaker-link` text, `.badge` text (skipping `.badge-add`). Case-insensitive substring match via `indexOf()`
+- **Search overrides view mode**: an active query always searches across ALL quotes regardless of the view-switcher state (all/favourites). Researchers working across 10–20 hours of interviews need to find any idea, verb, name, or product across all extracted quotes. When the query is cleared, the view-switcher state is restored
+- **Section hiding**: `_hideEmptySections()` hides outer `<section>` elements (and preceding `<hr>`) when all child blockquotes are hidden. `_hideEmptySubsections()` hides individual h3+description+quote-group clusters within a section. Only targets sections with `.quote-group` (skips Participants, Sentiment, Friction, Journeys)
+- **View mode hook**: `_onViewModeChange()` (defined in `search.js`) called from `view-switcher.js` `_applyView()` — hides search in participants mode, re-applies filter or restores view mode otherwise. The call in `view-switcher.js` is guarded with `typeof _onViewModeChange === 'function'` so transcript pages (which don't load search.js) don't error
+- **Debounce**: 150ms debounce on input handler via `setTimeout`
+- **CSS**: `molecules/search.css` — `.search-container` (flex, `margin-right: auto` for left alignment), `.search-toggle`, `.search-input`, `.search-container.expanded`
+- **JS**: `js/search.js` — `initSearchFilter()` in boot sequence (after `initViewSwitcher()`, before `initNames()`)
+- **Print**: hidden automatically (`.toolbar { display: none }` in `print.css`)
+- **Tests**: `tests/test_search_filter.py` — 12 tests covering HTML structure, CSS output, JS bootstrap, transcript exclusion
 
 ### Table of Contents
 
@@ -249,7 +282,7 @@ Per-participant LLM calls (stages 5b, 8, 9) run concurrently, bounded by `llm_co
 
 ## Gotchas
 
-- The repo directory is `/Users/cassio/Code/gourani` (legacy name, package is bristlenose)
+- The repo directory is `/Users/cassio/Code/bristlenose`
 - Both `models.py` and `utils/timecodes.py` define `format_timecode()` / `parse_timecode()` — they behave identically, stage files import from either
 - `PipelineResult` references `PeopleFile` but is defined before it in `models.py` — resolved with `PipelineResult.model_rebuild()` after PeopleFile definition
 - `format_finder_date()` in `utils/markdown.py` uses a local `import datetime as _dtmod` inside the function body because `from __future__ import annotations` makes the type hints string-only; `datetime` is in `TYPE_CHECKING` for the linter but not available at runtime otherwise
@@ -260,7 +293,7 @@ Per-participant LLM calls (stages 5b, 8, 9) run concurrently, bounded by `llm_co
 - `check_backend()` catches `Exception` (not just `ImportError`) for faster_whisper import — torch native libs can raise `OSError` on some machines
 - `people.py` imports `SpeakerInfo` from `identify_speakers.py` under `TYPE_CHECKING` only (avoids circular import at runtime). The `auto_populate_names()` type hint works because `from __future__ import annotations` makes all annotations strings
 - `identify_speaker_roles_llm()` changed return type from `list[TranscriptSegment]` to `list[SpeakerInfo]` — still mutates segments in place for role assignment, but now also returns extracted name/title data. Only one call site in `pipeline.py`
-- `view-switcher.js` and `names.js` both load **after** `csv-export.js` in `_JS_FILES` — `view-switcher.js` writes the `currentViewMode` global defined in `csv-export.js`; `names.js` depends on `copyToClipboard()` and `showToast()`
+- `view-switcher.js`, `search.js`, and `names.js` all load **after** `csv-export.js` in `_JS_FILES` — `view-switcher.js` writes the `currentViewMode` global defined in `csv-export.js`; `search.js` reads `currentViewMode` and exposes `_onViewModeChange()` called by `view-switcher.js`; `names.js` depends on `copyToClipboard()` and `showToast()`
 - `_TRANSCRIPT_JS_FILES` includes `transcript-names.js` (after `storage.js`) — reads localStorage name edits and updates the heading + speaker labels. Separate from the report's `names.js` (which has full editing UI)
 - `blockquote .timecode` in `blockquote.css` must use `--bn-colour-accent` not `--bn-colour-muted` — the `.timecode-bracket` children handle the muting. If you add a new timecode rendering context, ensure the parent rule uses accent
 - `_normalise_stem()` expects a lowercased stem — callers must `.lower()` before passing. `group_into_sessions()` does this; unit tests pass lowercased literals directly
@@ -302,4 +335,4 @@ When the user signals end of session, **proactively offer to run this checklist*
 
 ## Current status (v0.6.5, Feb 2026)
 
-Core pipeline complete and published to PyPI + Homebrew. Snap packaging implemented and tested locally (arm64); CI builds amd64 on every push. Latest work: platform-aware session grouping in `ingest.py` — `_normalise_stem()` strips Teams, Zoom cloud, and Google Meet naming conventions; `_is_zoom_local_dir()` detects Zoom local folders; `group_into_sessions()` uses two-pass grouping (Zoom folders by directory, remaining files by normalised stem); `extract_audio.py` skips FFmpeg when platform transcript present. 37 new tests. v0.6.5 adds page footer (logotype + version link to GitHub, `atoms/footer.css`), fixes timecode typography (two-tone brackets: blue digits + muted grey `[]`, `:visited` fix), adds hanging-indent layout for quote cards and transcript segments (timecodes form a scannable left column), non-breaking spaces on quote attributions to prevent widowing, and localStorage name propagation to transcript pages via `transcript-names.js`. v0.6.4 adds concurrent per-participant LLM calls (stages 5b, 8, 9 bounded by `llm_concurrency`, stages 10+11 run in parallel), measured ~2.7x speedup on LLM-bound time. v0.6.3 redesigns the report header (logo top-left, "Bristlenose" logotype + project name, right-aligned doc title + meta), adds a view-switcher dropdown (All quotes / Favourite quotes / Participant data) with Copy CSV button in a sticky toolbar, moves Sentiment/Tags/Friction/User journeys into an "Analysis" ToC column, and uses raw participant IDs in quote attributions (anonymisation boundary). v0.6.2 adds editable participant names, auto name/role extraction, short name suggestions, and editable section/theme headings. v0.6.1 adds snap recipe, CI workflow, author identity. v0.6.0 added `bristlenose doctor`. v0.5.0 added per-participant transcript pages. Next up: register snap name, request classic confinement approval, first edge channel publish. See `TODO.md` for full task list.
+Core pipeline complete and published to PyPI + Homebrew. Snap packaging implemented and tested locally (arm64); CI builds amd64 on every push. Latest work: search-as-you-type filtering (`search.js` + `molecules/search.css`) — collapsible magnifying glass in toolbar, filters quotes by text/speaker/tags, overrides view mode during search, hides empty sections/subsections, 12 tests. Also: platform-aware session grouping in `ingest.py` — `_normalise_stem()` strips Teams, Zoom cloud, and Google Meet naming conventions; `_is_zoom_local_dir()` detects Zoom local folders; `group_into_sessions()` uses two-pass grouping (Zoom folders by directory, remaining files by normalised stem); `extract_audio.py` skips FFmpeg when platform transcript present. 37 new tests. v0.6.5 adds page footer (logotype + version link to GitHub, `atoms/footer.css`), fixes timecode typography (two-tone brackets: blue digits + muted grey `[]`, `:visited` fix), adds hanging-indent layout for quote cards and transcript segments (timecodes form a scannable left column), non-breaking spaces on quote attributions to prevent widowing, and localStorage name propagation to transcript pages via `transcript-names.js`. v0.6.4 adds concurrent per-participant LLM calls (stages 5b, 8, 9 bounded by `llm_concurrency`, stages 10+11 run in parallel), measured ~2.7x speedup on LLM-bound time. v0.6.3 redesigns the report header (logo top-left, "Bristlenose" logotype + project name, right-aligned doc title + meta), adds a view-switcher dropdown (All quotes / Favourite quotes / Participant data) with Copy CSV button in a sticky toolbar, moves Sentiment/Tags/Friction/User journeys into an "Analysis" ToC column, and uses raw participant IDs in quote attributions (anonymisation boundary). v0.6.2 adds editable participant names, auto name/role extraction, short name suggestions, and editable section/theme headings. v0.6.1 adds snap recipe, CI workflow, author identity. v0.6.0 added `bristlenose doctor`. v0.5.0 added per-participant transcript pages. Next up: register snap name, request classic confinement approval, first edge channel publish. See `TODO.md` for full task list.

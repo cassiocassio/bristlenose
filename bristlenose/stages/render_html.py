@@ -54,6 +54,7 @@ _THEME_FILES: list[str] = [
     "molecules/quote-actions.css",
     "molecules/tag-input.css",
     "molecules/name-edit.css",
+    "molecules/search.css",
     "organisms/blockquote.css",
     "organisms/sentiment-chart.css",
     "organisms/toolbar.css",
@@ -106,6 +107,7 @@ _JS_FILES: list[str] = [
     "js/histogram.js",
     "js/csv-export.js",
     "js/view-switcher.js",
+    "js/search.js",
     "js/names.js",
     "js/main.js",
 ]
@@ -253,7 +255,23 @@ def render_html(
 
     # --- Toolbar ---
     _w('<div class="toolbar">')
-    # View switcher dropdown (left)
+    # Search filter (left — margin-right:auto pushes rest right)
+    _w(
+        '<div class="search-container" id="search-container">'
+        '<button class="search-toggle" id="search-toggle"'
+        ' aria-label="Search quotes">'
+        '<svg width="15" height="15" viewBox="0 0 16 16"'
+        ' fill="none" stroke="currentColor" stroke-width="1.5"'
+        ' stroke-linecap="round" stroke-linejoin="round">'
+        '<circle cx="6.5" cy="6.5" r="5.5"/>'
+        '<line x1="10.5" y1="10.5" x2="15" y2="15"/>'
+        "</svg>"
+        "</button>"
+        '<input class="search-input" id="search-input" type="text"'
+        ' placeholder="Filter quotes\u2026" autocomplete="off">'
+        "</div>"
+    )
+    # View switcher dropdown
     _w('<div class="view-switcher">')
     _w(
         '<button class="view-switcher-btn" id="view-switcher-btn"'

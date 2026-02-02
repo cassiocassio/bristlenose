@@ -94,6 +94,9 @@ function _applyView(view, btn, menu, items) {
   } else if (view === 'participants') {
     _showParticipantsOnly(sections, hrs);
   }
+
+  // Notify search module of view change.
+  if (typeof _onViewModeChange === 'function') _onViewModeChange();
 }
 
 /** Show all sections and horizontal rules. */

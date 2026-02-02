@@ -1,6 +1,6 @@
 # Bristlenose — Where I Left Off
 
-Last updated: 2 Feb 2026 (v0.6.5, timecode typography + hanging indent + transcript name propagation)
+Last updated: 2 Feb 2026 (v0.6.5, search-as-you-type filtering + platform session grouping)
 
 ---
 
@@ -14,7 +14,7 @@ Last updated: 2 Feb 2026 (v0.6.5, timecode typography + hanging indent + transcr
 - [x] Inline quote editing (pencil icon, contenteditable, localStorage persistence)
 - [x] Tag system — AI-generated badges (deletable with restore) + user-added tags (auto-suggest, keyboard nav), localStorage persistence, CSV export with separate AI/User columns
 - [x] Atomic design system (`bristlenose/theme/`) — tokens, atoms, molecules, organisms, templates; CSS concatenated at render time
-- [x] JavaScript extraction — report JS broken out of `render_html.py` into standalone modules (`bristlenose/theme/js/`): storage, player, favourites, editing, tags, histogram, csv-export, names, main; concatenated at render time mirroring the CSS pattern
+- [x] JavaScript extraction — report JS broken out of `render_html.py` into standalone modules (`bristlenose/theme/js/`): storage, player, favourites, editing, tags, histogram, csv-export, view-switcher, search, names, transcript-names, main; concatenated at render time mirroring the CSS pattern
 - [x] `bristlenose render` command — re-render reports from intermediate JSON without retranscribing or calling LLMs
 - [x] Apple Silicon GPU acceleration (MLX)
 - [x] PII redaction (Presidio)
@@ -142,7 +142,7 @@ Organised from easiest to hardest. The README has a condensed version; this is t
 
 ### Trivial (hours each)
 
-- [ ] Search-as-you-type filtering — filter visible quotes by text content
+- [x] Search-as-you-type filtering — collapsible magnifying glass icon in toolbar, filters quotes by text/speaker/tags, overrides view mode, hides empty sections
 - [ ] Hide/show quotes — toggle individual quotes, persist state
 - [ ] Keyboard shortcuts — j/k navigation, s to star, e to edit, / to search
 - [x] Timecodes: two-tone typography — blue digits + muted grey brackets, `:visited` fix, `_tc_brackets()` helper; hanging-indent layout for quote cards and transcript segments
@@ -304,7 +304,7 @@ Full audit done. Stage concurrency (item 1) is shipped. Remaining items ranked b
 | `bristlenose/people.py` | People file: load, compute stats, merge, write, display name map |
 | `bristlenose/stages/render_html.py` | HTML report renderer — loads CSS + JS from theme/, all interactive features |
 | `bristlenose/theme/` | Atomic CSS design system (tokens, atoms, molecules, organisms, templates) |
-| `bristlenose/theme/js/` | Report JavaScript modules (storage, player, favourites, editing, tags, histogram, csv-export, view-switcher, names, transcript-names, main) — concatenated at render time |
+| `bristlenose/theme/js/` | Report JavaScript modules (storage, player, favourites, editing, tags, histogram, csv-export, view-switcher, search, names, transcript-names, main) — concatenated at render time |
 | `bristlenose/llm/prompts.py` | LLM prompt templates |
 | `bristlenose/utils/hardware.py` | GPU/CPU auto-detection |
 | `bristlenose/doctor.py` | Doctor check logic (pure, no UI) — 7 checks, `run_all()`, `run_preflight()` |

@@ -16,6 +16,7 @@
  *   histogram.js    → renderUserTagsChart()   (called by tags.js)
  *   csv-export.js   → initCsvExport(), copyToClipboard(), showToast()
  *   view-switcher.js → initViewSwitcher()    (depends on csv-export.js)
+ *   search.js       → initSearchFilter()   (depends on csv-export.js)
  *   names.js        → initNames()            (depends on csv-export.js)
  *   main.js         → this file (orchestrator)
  *
@@ -35,4 +36,5 @@ initTags();
 renderUserTagsChart();
 initCsvExport();
 initViewSwitcher();
+initSearchFilter();
 initNames();

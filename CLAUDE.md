@@ -116,11 +116,29 @@ The ToC row (`.toc-row` flexbox) shows up to three navigation columns:
 - **Themes** — thematic clusters (editable titles with pencil icons)
 - **Analysis** — Sentiment, Tags, Friction points, User journeys (not editable, plain links)
 
+## Timecode typography
+
+Timecodes use a two-tone treatment: blue digits (`--bn-colour-accent`) with muted grey brackets (`--bn-colour-muted`). This makes the actionable timecode scannable while the `[]` brackets provide genre context (established subtitle/transcription convention).
+
+- **CSS**: `atoms/timecode.css` — `a.timecode` and `span.timecode` both get accent colour; `a.timecode:visited` forced to accent (prevents browser default purple); `.timecode-bracket` gets muted colour
+- **Specificity overrides**: `organisms/blockquote.css` has `blockquote .timecode` and `.rewatch-item .timecode` rules that must also use `--bn-colour-accent` (not muted) — the bracket spans handle the muting
+- **HTML helper**: `_tc_brackets(tc)` in `render_html.py` wraps digits in bracket spans: `<span class="timecode-bracket">[</span>00:42<span class="timecode-bracket">]</span>`
+- **Applied everywhere**: report quotes, transcript segments, rewatch items — all 6 rendering sites use `_tc_brackets()`
+
+## Quote card layout (hanging indent)
+
+Report quotes use a flexbox hanging-indent layout: timecodes sit in a left gutter column, quote text + speaker + badges flow indented beside them. This makes timecodes scannable as a vertical column.
+
+- **HTML structure**: `<div class="quote-row">` contains the `.timecode` and `<div class="quote-body">` (quote text, speaker, badges)
+- **CSS**: `blockquote .quote-row` (`display: flex; gap: 0.5rem; align-items: baseline`), `.quote-body` (`flex: 1; min-width: 0`)
+- **Transcript pages**: use the same layout — `.transcript-segment` is also `display: flex` with `.segment-body` (`flex: 1`)
+- **Timecode** is `flex-shrink: 0` so it never wraps or compresses
+
 ## Quote attribution and anonymisation boundary
 
 Quote attributions in the main report intentionally show **raw participant IDs** (`— p1`, `— p2`) instead of display names. This is the anonymisation boundary: when researchers copy quotes to external tools (Miro, presentations, etc.), the IDs protect participant identity.
 
-- **Report quotes**: `_format_quote_html()` uses `pid_esc` for the `.speaker-link` text. `names.js` `updateAllReferences()` does NOT update `.speaker-link` text
+- **Report quotes**: `_format_quote_html()` uses `pid_esc` for the `.speaker-link` text. `names.js` `updateAllReferences()` does NOT update `.speaker-link` text. Attribution uses `&nbsp;` around the em-dash (`"…text"&nbsp;—&nbsp;p1`) to prevent widowing at line breaks
 - **Transcript pages**: use display names (`short_name` → `full_name` → `pid`) since these are private to the researcher
 - **Participant table**: Name column shows `full_name` (editable); ID column shows raw `p1`/`p2` as a link to the transcript page
 
@@ -140,7 +158,8 @@ Each participant gets a dedicated HTML page (`transcript_p1.html`, etc.) showing
 - **Page heading**: `{pid} {full_name}` (e.g. "p1 Sarah Jones") or just `{pid}` if no name
 - **Speaker name per segment**: resolved as `short_name` → `full_name` → `pid` via `_resolve_speaker_name()` in `render_html.py`
 - **Back button**: `← {project_name} Research Report` linking to `research_report.html`, styled muted with accent on hover, hidden in print
-- **JS**: only `storage.js` + `player.js` + `initPlayer()` — no favourites/editing/tags modules
+- **JS**: `storage.js` + `player.js` + `transcript-names.js` — no favourites/editing/tags modules. `transcript-names.js` reads localStorage name edits (written by `names.js` on the report page) and updates the heading + speaker labels on load
+- **Name propagation**: `transcript-names.js` reads `bristlenose-names` localStorage store on page load; updates `<h1 data-participant>` heading and `.segment-speaker[data-participant]` labels. Read-only — no editing UI on transcript pages
 - **Participant table linking**: ID column (`p1`, `p2`) is a hyperlink to the transcript page
 - **Quote attribution linking**: `— p1` at end of each quote in the main report links to `transcript_p1.html#t-{seconds}`, deep-linking to the exact segment. `.speaker-link` CSS in `blockquote.css` (inherits muted colour, accent on hover)
 - **Segment anchors**: each transcript segment has `id="t-{int(seconds)}"` for deep linking from quotes
@@ -214,6 +233,8 @@ Per-participant LLM calls (stages 5b, 8, 9) run concurrently, bounded by `llm_co
 - `people.py` imports `SpeakerInfo` from `identify_speakers.py` under `TYPE_CHECKING` only (avoids circular import at runtime). The `auto_populate_names()` type hint works because `from __future__ import annotations` makes all annotations strings
 - `identify_speaker_roles_llm()` changed return type from `list[TranscriptSegment]` to `list[SpeakerInfo]` — still mutates segments in place for role assignment, but now also returns extracted name/title data. Only one call site in `pipeline.py`
 - `view-switcher.js` and `names.js` both load **after** `csv-export.js` in `_JS_FILES` — `view-switcher.js` writes the `currentViewMode` global defined in `csv-export.js`; `names.js` depends on `copyToClipboard()` and `showToast()`
+- `_TRANSCRIPT_JS_FILES` includes `transcript-names.js` (after `storage.js`) — reads localStorage name edits and updates the heading + speaker labels. Separate from the report's `names.js` (which has full editing UI)
+- `blockquote .timecode` in `blockquote.css` must use `--bn-colour-accent` not `--bn-colour-muted` — the `.timecode-bracket` children handle the muting. If you add a new timecode rendering context, ensure the parent rule uses accent
 
 ## Reference docs (read when working in these areas)
 
@@ -248,6 +269,6 @@ When the user signals end of session, **proactively offer to run this checklist*
 8. **Clean up branches** — delete merged feature branches
 9. **Verify CI** — check latest push passes CI
 
-## Current status (v0.6.4, Feb 2026)
+## Current status (v0.6.5, Feb 2026)
 
-Core pipeline complete and published to PyPI + Homebrew. Snap packaging implemented and tested locally (arm64); CI builds amd64 on every push. v0.6.4 adds concurrent per-participant LLM calls (stages 5b, 8, 9 bounded by `llm_concurrency`, stages 10+11 run in parallel), measured ~2.7x speedup on LLM-bound time. v0.6.3 redesigns the report header (logo top-left, "Bristlenose" logotype + project name, right-aligned doc title + meta), adds a view-switcher dropdown (All quotes / Favourite quotes / Participant data) with Copy CSV button in a sticky toolbar, moves Sentiment/Tags/Friction/User journeys into an "Analysis" ToC column, and uses raw participant IDs in quote attributions (anonymisation boundary). v0.6.2 adds editable participant names, auto name/role extraction, short name suggestions, and editable section/theme headings. v0.6.1 adds snap recipe, CI workflow, author identity. v0.6.0 added `bristlenose doctor`. v0.5.0 added per-participant transcript pages. Next up: register snap name, request classic confinement approval, first edge channel publish. See `TODO.md` for full task list.
+Core pipeline complete and published to PyPI + Homebrew. Snap packaging implemented and tested locally (arm64); CI builds amd64 on every push. v0.6.5 fixes timecode typography (two-tone brackets: blue digits + muted grey `[]`, `:visited` fix), adds hanging-indent layout for quote cards and transcript segments (timecodes form a scannable left column), non-breaking spaces on quote attributions to prevent widowing, and localStorage name propagation to transcript pages via `transcript-names.js`. v0.6.4 adds concurrent per-participant LLM calls (stages 5b, 8, 9 bounded by `llm_concurrency`, stages 10+11 run in parallel), measured ~2.7x speedup on LLM-bound time. v0.6.3 redesigns the report header (logo top-left, "Bristlenose" logotype + project name, right-aligned doc title + meta), adds a view-switcher dropdown (All quotes / Favourite quotes / Participant data) with Copy CSV button in a sticky toolbar, moves Sentiment/Tags/Friction/User journeys into an "Analysis" ToC column, and uses raw participant IDs in quote attributions (anonymisation boundary). v0.6.2 adds editable participant names, auto name/role extraction, short name suggestions, and editable section/theme headings. v0.6.1 adds snap recipe, CI workflow, author identity. v0.6.0 added `bristlenose doctor`. v0.5.0 added per-participant transcript pages. Next up: register snap name, request classic confinement approval, first edge channel publish. See `TODO.md` for full task list.

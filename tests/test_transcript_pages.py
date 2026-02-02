@@ -127,7 +127,7 @@ def test_transcript_page_heading_with_name(tmp_path: Path) -> None:
         people=people,
     )
     html = (tmp_path / "transcript_p1.html").read_text(encoding="utf-8")
-    assert "<h1>p1 Sarah Jones</h1>" in html
+    assert '<h1 data-participant="p1">p1 Sarah Jones</h1>' in html
 
 
 def test_transcript_page_heading_without_name(tmp_path: Path) -> None:
@@ -136,7 +136,7 @@ def test_transcript_page_heading_without_name(tmp_path: Path) -> None:
         sessions=[], project_name="Test Project", output_dir=tmp_path,
     )
     html = (tmp_path / "transcript_p1.html").read_text(encoding="utf-8")
-    assert "<h1>p1</h1>" in html
+    assert '<h1 data-participant="p1">p1</h1>' in html
 
 
 def test_transcript_page_timecodes_without_media(tmp_path: Path) -> None:
@@ -146,7 +146,7 @@ def test_transcript_page_timecodes_without_media(tmp_path: Path) -> None:
     )
     html = (tmp_path / "transcript_p1.html").read_text(encoding="utf-8")
     # Without media, timecodes should be spans, not links
-    assert '<span class="timecode">[00:16]</span>' in html
+    assert '<span class="timecode"><span class="timecode-bracket">[</span>00:16<span class="timecode-bracket">]</span></span>' in html
 
 
 def test_transcript_page_timecodes_with_media(tmp_path: Path) -> None:

@@ -265,6 +265,13 @@ Edit `bristlenose/__init__.py` (the single source of truth for version), commit,
 
 ## Changelog
 
+### 0.6.5
+
+- Timecode typography — two-tone treatment with blue digits and muted grey brackets; `:visited` colour fix so clicked timecodes stay blue
+- Hanging-indent layout — timecodes sit in a left gutter column on both report quotes and transcript pages, making them scannable as a vertical column
+- Non-breaking spaces on quote attributions prevent the `— p1` from widowing onto a new line
+- Transcript name propagation — name edits made in the report's participant table now appear on transcript page headings and speaker labels via shared localStorage
+
 ### 0.6.4
 
 - Concurrent LLM calls — per-participant stages (speaker identification, topic segmentation, quote extraction) now run up to 3 API calls in parallel via `llm_concurrency` config; screen clustering and thematic grouping also run concurrently; ~2.7× speedup on the LLM-bound portion for multi-participant studies

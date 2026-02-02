@@ -1,6 +1,6 @@
 # Bristlenose — Where I Left Off
 
-Last updated: 1 Feb 2026 (v0.6.4, compact JSON + VideoToolbox hwaccel + concurrent extraction)
+Last updated: 2 Feb 2026 (v0.6.5, timecode typography + hanging indent + transcript name propagation)
 
 ---
 
@@ -52,6 +52,10 @@ Last updated: 1 Feb 2026 (v0.6.4, compact JSON + VideoToolbox hwaccel + concurre
 - [x] (0.6.3) Copy CSV button with clipboard SVG icon — single adaptive button (exports all or favourites based on view mode); inline SVG replaces character entity
 - [x] (0.6.3) Quote attributions use raw pids — report quotes show `— p1` (anonymisation boundary); transcript pages keep display names; `names.js` no longer updates `.speaker-link` text
 - [x] (0.6.3) Analysis ToC column — Sentiment, Tags, Friction points, and User journeys in their own "Analysis" nav column, separate from Themes
+- [x] (0.6.5) Timecode two-tone typography — blue digits + muted grey brackets, `:visited` fix, `_tc_brackets()` helper in `render_html.py`, applied to all 6 rendering sites
+- [x] (0.6.5) Hanging-indent quote layout — flexbox `.quote-row` with timecode in left gutter, `.quote-body` indented beside it; badges naturally indented; same layout on transcript pages (`.transcript-segment` + `.segment-body`)
+- [x] (0.6.5) Non-breaking spaces on quote attribution — `&nbsp;` around em-dash prevents `— p1` widowing at line breaks
+- [x] (0.6.5) Transcript page name propagation — `transcript-names.js` reads localStorage name edits from report page, updates heading + speaker labels on load; `data-participant` attributes on `<h1>` and `.segment-speaker`
 
 ---
 
@@ -107,10 +111,10 @@ Organised from easiest to hardest. The README has a condensed version; this is t
 - [ ] Search-as-you-type filtering — filter visible quotes by text content
 - [ ] Hide/show quotes — toggle individual quotes, persist state
 - [ ] Keyboard shortcuts — j/k navigation, s to star, e to edit, / to search
-- [ ] Timecodes: restore blue colour — currently showing visited-link colour; force `--bn-colour-accent` and drop the `[]` square brackets since the blue makes them visually distinct already
+- [x] Timecodes: two-tone typography — blue digits + muted grey brackets, `:visited` fix, `_tc_brackets()` helper; hanging-indent layout for quote cards and transcript segments
 - [ ] User tag × button — vertically centre the close button optically (currently sits too low)
 - [ ] AI badge × button — the circled × is ugly; restyle to match user tag delete or use a simpler glyph
-- [ ] Indent tags — add left margin/padding so the badge row sits indented under the quote text
+- [x] Indent tags — badges now sit inside `.quote-body` div, naturally indented at the quote text level by the hanging-indent flexbox layout
 - [ ] Logo: slightly bigger — bump from 80px to ~100px
 - [ ] JS: `'use strict'` — add to each JS module to catch accidental globals and silent errors
 - [ ] JS: shared `utils.js` — extract duplicated quote-stripping regex (`QUOTE_RE` / `CSV_QUOTE_RE`) into a shared module
@@ -147,6 +151,55 @@ Organised from easiest to hardest. The README has a condensed version; this is t
 - [ ] Speaker diarisation improvements — better accuracy, manual correction UI
 - [ ] Batch processing dashboard — progress bars, partial results, resume interrupted runs
 - [ ] JS tests — add lightweight DOM-based tests (jsdom or Playwright) covering tag persistence, CSV export output, favourite reordering, and edit save/restore
+
+### Large: Reactive UI architecture (local dev server + framework)
+
+The current report is static HTML with vanilla JS and localStorage for state. This worked for single-page interactions but is hitting walls:
+
+- **Cross-page state**: name edits on the report don't propagate to transcript pages without hacks (currently: read-only localStorage bridge via `transcript-names.js`). Any new cross-page feature (e.g. hiding quotes, search state) would need the same workaround
+- **Data binding**: every piece of interactive state (favourites, edits, tags, names, hidden quotes) needs hand-written DOM update functions. Adding a new interactive feature means writing both the data logic and the DOM synchronisation from scratch
+- **No server**: static HTML can't write files. The YAML clipboard export → manual paste → re-render workflow is friction that users shouldn't need to accept
+- **Growing JS complexity**: 10 modules, ~2,200 lines, implicit globals for cross-module communication. Adding search, keyboard shortcuts, and hide/show will push this further
+
+#### What we need
+
+A local dev server (bundled with bristlenose) that:
+1. **Serves the report** as a local web app (`bristlenose serve` or auto-open after `bristlenose run`)
+2. **Provides a data API** — reads/writes `people.yaml`, intermediate JSON, and edit state directly (no clipboard export dance)
+3. **Uses a reactive UI framework** — component model, reactive data binding, declarative rendering
+4. **Stays local-first** — no cloud, no accounts, no telemetry. The server runs on localhost and dies when you close it
+
+#### Framework options
+
+| Framework | Bundle size | Learning curve | Ecosystem | Notes |
+|-----------|------------|----------------|-----------|-------|
+| **Svelte** | ~2 KB runtime | Low | Growing | Compiles to vanilla JS; smallest bundle; no virtual DOM; reactive by default. Best fit for "feels like enhanced HTML" |
+| **Preact** | ~3 KB | Low (React-compatible) | Large (React) | Drop-in React alternative at 1/10th the size; familiar API; huge ecosystem via compat layer |
+| **Vue** | ~33 KB | Medium | Large | Single-file components; good template syntax; heavier than Svelte/Preact |
+| **React** | ~42 KB | Medium | Largest | Industry standard; heaviest bundle; most hiring/docs/tooling |
+| **HTMX + Alpine.js** | ~15 KB + ~15 KB | Low | Niche | Server-rendered HTML with sprinkles of interactivity; closest to current architecture; limited for complex client state |
+| **Solid** | ~7 KB | Medium | Small | Fine-grained reactivity (no virtual DOM); React-like JSX; very fast; smaller ecosystem |
+
+**Recommendation**: Svelte or Preact. Both are small, fast, and work well for a local tool where bundle size matters less than developer experience. Svelte's compiler approach means the runtime cost is near-zero, and its reactivity model is the most natural fit for "data changes → DOM updates" without boilerplate. Preact is the safe choice if we want React ecosystem access.
+
+#### Server options
+
+- **FastAPI** (Python) — already in the Python ecosystem; async; easy to add alongside the CLI; serves both the API and the built frontend
+- **Flask** — simpler, synchronous, lighter weight; fine for a local tool
+- Built-in `http.server` — too basic, no routing/API support
+
+FastAPI is the natural choice: async (matches our pipeline), Pydantic models (already used everywhere), auto-generated API docs, WebSocket support for live updates.
+
+#### Migration path
+
+This is a large effort. Incremental approach:
+
+1. **`bristlenose serve`** — add a FastAPI server that serves the current static HTML + a few API endpoints (read/write people.yaml, read intermediate JSON)
+2. **Data API first** — replace localStorage → clipboard → paste → re-render with direct API calls. Keep the vanilla JS but swap the storage layer
+3. **Component-by-component migration** — replace one interactive feature at a time (e.g. participant table → Svelte component) while keeping the rest as static HTML
+4. **Full SPA** — eventually the entire report is a framework app served by the local server
+
+Step 1 alone would fix the immediate pain (cross-page state, file writes) without touching the frontend. Steps 2–4 can happen gradually.
 
 ### `bristlenose doctor` and dependency UX
 
@@ -217,7 +270,7 @@ Full audit done. Stage concurrency (item 1) is shipped. Remaining items ranked b
 | `bristlenose/people.py` | People file: load, compute stats, merge, write, display name map |
 | `bristlenose/stages/render_html.py` | HTML report renderer — loads CSS + JS from theme/, all interactive features |
 | `bristlenose/theme/` | Atomic CSS design system (tokens, atoms, molecules, organisms, templates) |
-| `bristlenose/theme/js/` | Report JavaScript modules (storage, player, favourites, editing, tags, histogram, csv-export, view-switcher, names, main) — concatenated at render time |
+| `bristlenose/theme/js/` | Report JavaScript modules (storage, player, favourites, editing, tags, histogram, csv-export, view-switcher, names, transcript-names, main) — concatenated at render time |
 | `bristlenose/llm/prompts.py` | LLM prompt templates |
 | `bristlenose/utils/hardware.py` | GPU/CPU auto-detection |
 | `bristlenose/doctor.py` | Doctor check logic (pure, no UI) — 7 checks, `run_all()`, `run_preflight()` |

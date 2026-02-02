@@ -607,6 +607,7 @@ def render_html(
 _TRANSCRIPT_JS_FILES: list[str] = [
     "js/storage.js",
     "js/player.js",
+    "js/transcript-names.js",
 ]
 
 
@@ -797,7 +798,7 @@ def _render_transcript_page(
         f"&larr; {_esc(project_name)} Research Report</a>"
     )
     _w("</nav>")
-    _w(f"<h1>{heading}</h1>")
+    _w(f'<h1 data-participant="{_esc(pid)}">{heading}</h1>')
 
     # Transcript segments
     _w('<section class="transcript-body">')
@@ -810,18 +811,19 @@ def _render_transcript_page(
             _w(
                 f'<a href="#" class="timecode" '
                 f'data-participant="{_esc(pid)}" '
-                f'data-seconds="{seg.start_time}">[{tc}]</a>'
+                f'data-seconds="{seg.start_time}">{_tc_brackets(tc)}</a>'
             )
         else:
-            _w(f'<span class="timecode">[{tc}]</span>')
-        _w(f' <span class="segment-speaker">{_esc(speaker_name)}:</span>')
+            _w(f'<span class="timecode">{_tc_brackets(tc)}</span>')
+        _w('<div class="segment-body">')
+        _w(f'<span class="segment-speaker" data-participant="{_esc(pid)}">{_esc(speaker_name)}:</span>')
         _w(f" {_esc(seg.text)}")
-        _w("</div>")
+        _w("</div></div>")
     _w("</section>")
 
     _w("</article>")
 
-    # JavaScript (player only)
+    # JavaScript (player + name propagation)
     _w("<script>")
     _w("(function() {")
     if has_media:
@@ -830,6 +832,7 @@ def _render_transcript_page(
         _w("var BRISTLENOSE_VIDEO_MAP = {};")
     _w(_get_transcript_js())
     _w("initPlayer();")
+    _w("initTranscriptNames();")
     _w("})();")
     _w("</script>")
 
@@ -849,6 +852,11 @@ def _render_transcript_page(
 def _esc(text: str) -> str:
     """HTML-escape user-supplied text."""
     return escape(text)
+
+
+def _tc_brackets(tc: str) -> str:
+    """Wrap timecode digits in muted-bracket markup: [00:42]."""
+    return f'<span class="timecode-bracket">[</span>{tc}<span class="timecode-bracket">]</span>'
 
 
 def _display_name(
@@ -900,29 +908,32 @@ def _format_quote_html(
             f'<a href="#" class="timecode" '
             f'data-participant="{_esc(quote.participant_id)}" '
             f'data-seconds="{quote.start_timecode}" '
-            f'data-end-seconds="{quote.end_timecode}">[{tc}]</a>'
+            f'data-end-seconds="{quote.end_timecode}">{_tc_brackets(tc)}</a>'
         )
     else:
-        tc_html = f'<span class="timecode">[{tc}]</span>'
+        tc_html = f'<span class="timecode">{_tc_brackets(tc)}</span>'
 
     pid_esc = _esc(quote.participant_id)
     anchor = f"t-{int(quote.start_timecode)}"
     speaker_link = (
         f'<a href="transcript_{pid_esc}.html#{anchor}" class="speaker-link">{pid_esc}</a>'
     )
-    parts.append(
-        f"{tc_html} "
-        f'<span class="quote-text">\u201c{_esc(quote.text)}\u201d</span> '
-        f'<span class="speaker">&mdash; {speaker_link}</span>'
-    )
-
     badges = _quote_badges(quote)
-    parts.append(
+    badge_html = (
         f'<div class="badges">{badges}'
         ' <span class="badge badge-add" aria-label="Add tag">+</span>'
         ' <button class="badge-restore" aria-label="Restore tags"'
         ' title="Restore tags" style="display:none">&#x21A9;</button>'
         "</div>"
+    )
+
+    parts.append(
+        f'<div class="quote-row">{tc_html}'
+        f'<div class="quote-body">'
+        f'<span class="quote-text">\u201c{_esc(quote.text)}\u201d</span>&nbsp;'
+        f'<span class="speaker">&mdash;&nbsp;{speaker_link}</span>'
+        f"{badge_html}"
+        f"</div></div>"
     )
 
     parts.append('<button class="edit-pencil" aria-label="Edit this quote">&#9998;</button>')
@@ -1113,10 +1124,10 @@ def _build_rewatch_html(
                 f'<a href="#" class="timecode" '
                 f'data-participant="{_esc(q.participant_id)}" '
                 f'data-seconds="{q.start_timecode}" '
-                f'data-end-seconds="{q.end_timecode}">[{tc}]</a>'
+                f'data-end-seconds="{q.end_timecode}">{_tc_brackets(tc)}</a>'
             )
         else:
-            tc_html = f'<span class="timecode">[{tc}]</span>'
+            tc_html = f'<span class="timecode">{_tc_brackets(tc)}</span>'
 
         parts.append(
             f'<p class="rewatch-item">'

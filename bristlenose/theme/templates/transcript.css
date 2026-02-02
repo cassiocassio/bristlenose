@@ -27,8 +27,20 @@
 }
 
 .transcript-segment {
+    display: flex;
+    gap: 0.5rem;
+    align-items: baseline;
     margin: 0.5rem 0;
     line-height: 1.7;
+}
+
+.transcript-segment .timecode {
+    flex-shrink: 0;
+}
+
+.transcript-segment .segment-body {
+    flex: 1;
+    min-width: 0;
 }
 
 .transcript-segment .segment-speaker {

@@ -15,8 +15,24 @@ blockquote .context {
     margin-bottom: 0.3rem;
 }
 
+/* Hanging-indent layout: timecode in left gutter, quote body indented */
+blockquote .quote-row {
+    display: flex;
+    gap: 0.5rem;
+    align-items: baseline;
+}
+
+blockquote .quote-row .timecode {
+    flex-shrink: 0;
+}
+
+blockquote .quote-body {
+    flex: 1;
+    min-width: 0;
+}
+
 blockquote .timecode {
-    color: var(--bn-colour-muted);
+    color: var(--bn-colour-accent);
     font-family: var(--bn-font-mono);
     font-size: 0.8rem;
 }
@@ -67,7 +83,7 @@ blockquote.quote-active {
 .rewatch-item .timecode {
     font-family: var(--bn-font-mono);
     font-size: 0.8rem;
-    color: var(--bn-colour-muted);
+    color: var(--bn-colour-accent);
 }
 
 .rewatch-item .reason {
@@ -76,7 +92,7 @@ blockquote.quote-active {
 }
 
 .rewatch-item a.timecode {
-    color: var(--bn-colour-muted);
+    color: var(--bn-colour-accent);
 }
 
 .rewatch-item a.timecode:hover {

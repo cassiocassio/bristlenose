@@ -15,7 +15,7 @@ Bristlenose is a local-first user-research analysis tool. It takes a folder of i
 
 - **Python 3.10+**, strict mypy, Ruff linting (line-length 100, rules: E/F/I/N/W/UP, E501 ignored)
 - **Type hints everywhere** — Pydantic models for all data structures
-- **Single source of version**: `bristlenose/__init__.py` (`__version__`). Never add version to `pyproject.toml`
+- **Single source of version**: `bristlenose/__init__.py` (`__version__`). Never add version to `pyproject.toml`. Use `./scripts/bump-version.py` to bump (updates `__init__.py`, man page, creates git tag)
 - **Markdown style template** in `bristlenose/utils/markdown.py` — single source of truth for all markdown/txt formatting. Change formatting here, not in stage files
 - **Atomic CSS design system** in `bristlenose/theme/` — tokens, atoms, molecules, organisms, templates (see `bristlenose/theme/CLAUDE.md`)
 - **Licence**: AGPL-3.0 with CLA
@@ -25,7 +25,7 @@ Bristlenose is a local-first user-research analysis tool. It takes a folder of i
 
 12-stage pipeline: ingest → extract audio → parse subtitles → parse docx → transcribe → identify speakers → merge transcript → PII removal → topic segmentation → quote extraction → quote clustering → thematic grouping → render HTML + output files.
 
-CLI commands: `run` (full pipeline), `transcribe-only`, `analyze` (skip transcription), `render` (re-render from JSON, no LLM calls), `doctor` (dependency health checks).
+CLI commands: `run` (full pipeline), `transcribe-only`, `analyze` (skip transcription), `render` (re-render from JSON, no LLM calls), `doctor` (dependency health checks). **Default command**: `bristlenose <folder>` is shorthand for `bristlenose run <folder>` — if the first argument is an existing directory (not a known command), `run` is injected automatically.
 
 LLM provider: API keys via env vars (`ANTHROPIC_API_KEY` or `OPENAI_API_KEY`), `.env` file, or `bristlenose.toml`. Prefix with `BRISTLENOSE_` for namespaced variants.
 
@@ -179,6 +179,21 @@ These are documented to prevent re-exploration of dead ends:
 
 ## Gotchas
 
+### Ruff auto-removes unused imports (F401)
+
+Ruff `--fix` removes unused imports. When making multi-step edits:
+
+1. **Add imports and their usage in the same edit** — don't add imports in one edit and the code that uses them in a later edit
+2. **If editing a large file incrementally**, add imports last (after the code that uses them is already in place), or add them together with at least one usage
+3. **If an import keeps disappearing**, check whether the code that uses it is actually in place — the linter is telling you the import genuinely isn't used yet
+
+This is especially common when:
+- Planning to add a function call but editing the import section first
+- Copy-pasting code that needs new imports but forgetting to verify the imports landed
+- Making changes across multiple files where one file's import depends on another file's changes
+
+### Other gotchas
+
 - The repo directory is `/Users/cassio/Code/bristlenose`
 - Both `models.py` and `utils/timecodes.py` define `format_timecode()` / `parse_timecode()` — they behave identically, stage files import from either
 - `PipelineResult` references `PeopleFile` but is defined before it in `models.py` — resolved with `PipelineResult.model_rebuild()` after PeopleFile definition
@@ -210,6 +225,20 @@ These are documented to prevent re-exploration of dead ends:
 - **Report sessions table groups speakers by `computed.session_id`** — if people file is missing, falls back to showing `[session.participant_id]` only
 - **Transcript files named by `session_id`** (`s1_raw.txt`, not `p1_raw.txt`) — a single file contains segments from all speakers in that session (`[m1]`, `[p1]`, `[p2]`, `[o1]`)
 - **`assign_speaker_codes()` signature is `(session_id, next_participant_number, segments)`** — returns `(dict[str, str], int)` (label→code map, updated next number). The `next_participant_number` counter enables global p-code numbering across sessions
+- **`cooked_transcripts/` only exists with `--redact-pii`** — if a previous run used PII redaction but the current one doesn't, stale cooked files remain on disk. Coverage and transcript pages must use the same transcript source to avoid broken links. `render_transcript_pages()` accepts a `transcripts` parameter to ensure consistency; see `bristlenose/stages/CLAUDE.md` for details
+
+## Transcript coverage
+
+Collapsible section at the end of the research report showing what proportion of the transcript made it into quotes.
+
+- **Purpose**: researchers worry the AI silently dropped important material. The coverage section provides triage: if "% omitted" is low, they can trust the report; if high, they expand and review
+- **Three percentages**: `X% in report · Y% moderator · Z% omitted` — word-count based, whole numbers. "In report" = participant words in quote timecode ranges. "Moderator" = moderator + observer speech. "Omitted" = participant words not covered by any quote
+- **Omitted content**: per-session, shows participant speech that didn't become quotes. Segments >3 words shown in full with speaker code and timecode; segments ≤3 words collapsed into a summary with repeat counts (`Okay. (4×), Yeah. (2×)`)
+- **Module**: `bristlenose/coverage.py` — `CoverageStats`, `SessionOmitted`, `OmittedSegment` dataclasses, `calculate_coverage()` function
+- **Rendering**: `_build_coverage_html()` in `render_html.py`. HTML `<details>` element, collapsed by default. CSS in `organisms/coverage.css`
+- **Pipeline wiring**: `render_html()` accepts optional `transcripts` parameter. All three paths (`run`, `analyze`, `render`) pass transcripts
+- **Tests**: `tests/test_coverage.py` — 14 tests covering percentage calculation, fragment threshold, repeat counting, edge cases
+- **Design doc**: `docs/design-transcript-coverage.md`
 
 ## Reference docs (read when working in these areas)
 
@@ -221,11 +250,26 @@ These are documented to prevent re-exploration of dead ends:
 - **Design system / contributing**: `CONTRIBUTING.md`
 - **Doctor command + Snap packaging design**: `docs/design-doctor-and-snap.md`
 - **Platform transcript ingestion**: `docs/design-platform-transcripts.md`
+- **Transcript coverage feature**: `docs/design-transcript-coverage.md`
 
 ## Working preferences
 
 - Keep changes minimal and focused — don't refactor or add features beyond what's asked
 - Commit messages: short, descriptive, lowercase (e.g., "fix tag suggest offering tags the quote already has")
+
+### Release timing (evening releases)
+
+Releases should land on GitHub after 9pm London time on weekdays to avoid pushing version bumps during working hours.
+
+**Workflow:**
+1. Work on `main` as usual — commit everything locally
+2. Don't push to `origin/main` until after 9pm (or weekends)
+3. To see work remotely before release (CI checks, another machine): `git push origin main:wip` — the `wip` branch doesn't trigger releases
+4. After 9pm: `git push origin main --tags`
+
+**Override:** Just push if something is urgent. This is a guideline, not a gate.
+
+**Why:** Avoids notifications during client working hours; batches releases into a predictable window.
 
 ## Before committing
 

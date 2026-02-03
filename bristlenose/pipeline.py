@@ -195,7 +195,9 @@ class Pipeline:
             # ── Stage 2: Extract audio from video ────────────────────
             status.update("[dim]Extracting audio...[/dim]")
             t0 = time.perf_counter()
-            temp_dir = output_dir / "temp"
+            # Temp files go in .bristlenose/temp/
+            temp_dir = output_dir / ".bristlenose" / "temp"
+            temp_dir.mkdir(parents=True, exist_ok=True)
             sessions = await extract_audio_for_sessions(sessions, temp_dir)
             _print_step(
                 f"Extracted audio from {len(sessions)} sessions",
@@ -271,7 +273,7 @@ class Pipeline:
             status.update("[dim]Merging transcripts...[/dim]")
             t0 = time.perf_counter()
             transcripts = merge_transcripts(sessions, session_segments)
-            raw_dir = output_dir / "raw_transcripts"
+            raw_dir = output_dir / "transcripts-raw"
             write_raw_transcripts(transcripts, raw_dir)
             write_raw_transcripts_md(transcripts, raw_dir)
             _print_step("Merged transcripts", time.perf_counter() - t0)
@@ -283,7 +285,7 @@ class Pipeline:
                 clean_transcripts, pii_redactions = remove_pii(
                     transcripts, self.settings,
                 )
-                cooked_dir = output_dir / "cooked_transcripts"
+                cooked_dir = output_dir / "transcripts-cooked"
                 write_cooked_transcripts(clean_transcripts, cooked_dir)
                 write_cooked_transcripts_md(clean_transcripts, cooked_dir)
                 write_pii_summary(pii_redactions, output_dir)
@@ -316,6 +318,7 @@ class Pipeline:
             if self.settings.write_intermediate:
                 write_intermediate_json(
                     topic_maps, "topic_boundaries.json", output_dir,
+                    self.settings.project_name,
                 )
             total_boundaries = sum(len(m.boundaries) for m in topic_maps)
             _print_step(
@@ -340,6 +343,7 @@ class Pipeline:
             if self.settings.write_intermediate:
                 write_intermediate_json(
                     all_quotes, "extracted_quotes.json", output_dir,
+                    self.settings.project_name,
                 )
             _print_step(
                 f"Extracted {len(all_quotes)} quotes",
@@ -358,9 +362,11 @@ class Pipeline:
             if self.settings.write_intermediate:
                 write_intermediate_json(
                     screen_clusters, "screen_clusters.json", output_dir,
+                    self.settings.project_name,
                 )
                 write_intermediate_json(
                     theme_groups, "theme_groups.json", output_dir,
+                    self.settings.project_name,
                 )
             _print_step(
                 f"Clustered {len(screen_clusters)} screens"
@@ -427,6 +433,7 @@ class Pipeline:
                 color_scheme=self.settings.color_scheme,
                 display_names=display_names,
                 people=people,
+                transcripts=transcripts,
             )
             _print_step("Rendered report", time.perf_counter() - t0)
 
@@ -505,7 +512,8 @@ class Pipeline:
             # ── Stage 2: Extract audio ──
             status.update("[dim]Extracting audio...[/dim]")
             t0 = time.perf_counter()
-            temp_dir = output_dir / "temp"
+            temp_dir = output_dir / ".bristlenose" / "temp"
+            temp_dir.mkdir(parents=True, exist_ok=True)
             sessions = await extract_audio_for_sessions(sessions, temp_dir)
             _print_step(
                 f"Extracted audio from {len(sessions)} sessions",
@@ -538,7 +546,7 @@ class Pipeline:
             status.update("[dim]Merging transcripts...[/dim]")
             t0 = time.perf_counter()
             transcripts = merge_transcripts(sessions, session_segments)
-            raw_dir = output_dir / "raw_transcripts"
+            raw_dir = output_dir / "transcripts-raw"
             write_raw_transcripts(transcripts, raw_dir)
             write_raw_transcripts_md(transcripts, raw_dir)
             _print_step("Merged transcripts", time.perf_counter() - t0)
@@ -631,6 +639,7 @@ class Pipeline:
             if self.settings.write_intermediate:
                 write_intermediate_json(
                     topic_maps, "topic_boundaries.json", output_dir,
+                    self.settings.project_name,
                 )
             total_boundaries = sum(len(m.boundaries) for m in topic_maps)
             _print_step(
@@ -653,6 +662,7 @@ class Pipeline:
             if self.settings.write_intermediate:
                 write_intermediate_json(
                     all_quotes, "extracted_quotes.json", output_dir,
+                    self.settings.project_name,
                 )
             _print_step(
                 f"Extracted {len(all_quotes)} quotes",
@@ -697,6 +707,7 @@ class Pipeline:
                 color_scheme=self.settings.color_scheme,
                 display_names=display_names,
                 people=people,
+                transcripts=clean_transcripts,
             )
             _print_step("Rendered report", time.perf_counter() - t0)
 
@@ -825,7 +836,10 @@ class Pipeline:
         from bristlenose.stages.render_html import render_html
         from bristlenose.stages.render_output import render_markdown
 
-        intermediate = output_dir / "intermediate"
+        # Try new layout first (.bristlenose/intermediate/), fall back to legacy (intermediate/)
+        intermediate = output_dir / ".bristlenose" / "intermediate"
+        if not intermediate.is_dir():
+            intermediate = output_dir / "intermediate"
 
         # --- Load intermediate JSON ---
         sc_path = intermediate / "screen_clusters.json"
@@ -866,6 +880,27 @@ class Pipeline:
         people = load_people_file(output_dir)
         display_names = build_display_name_map(people) if people else {}
 
+        # --- Load transcripts for coverage calculation ---
+        # Use same preference as render_transcript_pages: cooked > raw
+        # Try new layout first (transcripts-cooked/), fall back to legacy (cooked_transcripts/)
+        cooked_dir = output_dir / "transcripts-cooked"
+        if not cooked_dir.is_dir():
+            cooked_dir = output_dir / "cooked_transcripts"
+        raw_dir = output_dir / "transcripts-raw"
+        if not raw_dir.is_dir():
+            raw_dir = output_dir / "raw_transcripts"
+        if cooked_dir.is_dir() and any(cooked_dir.glob("*.txt")):
+            transcripts_dir = cooked_dir
+        elif raw_dir.is_dir():
+            transcripts_dir = raw_dir
+        else:
+            transcripts_dir = None
+        transcripts = (
+            load_transcripts_from_dir(transcripts_dir)
+            if transcripts_dir
+            else []
+        )
+
         # --- Render ---
         t0 = time.perf_counter()
         render_markdown(
@@ -882,6 +917,7 @@ class Pipeline:
             color_scheme=self.settings.color_scheme,
             display_names=display_names,
             people=people,
+            transcripts=transcripts,
         )
         _print_step("Rendered report", time.perf_counter() - t0)
 
@@ -915,7 +951,7 @@ def load_transcripts_from_dir(
 ) -> list[PiiCleanTranscript]:
     """Load transcript .txt files from a directory into PiiCleanTranscript objects.
 
-    Expects files named like s1_raw.txt or s1_cooked.txt (or legacy p1_raw.txt)
+    Expects files named like s1.txt (new layout) or s1_raw.txt (legacy layout)
     with the format::
 
         # Transcript: s1

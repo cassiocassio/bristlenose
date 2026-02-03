@@ -3,6 +3,52 @@
 from __future__ import annotations
 
 import re
+import unicodedata
+
+# Maximum length for slugified project names in filenames
+_MAX_SLUG_LENGTH = 50
+
+
+def slugify(text: str, max_length: int = _MAX_SLUG_LENGTH) -> str:
+    """Convert text to a URL/filename-safe slug.
+
+    - Lowercase
+    - Replace spaces and underscores with hyphens
+    - Strip accents (café → cafe)
+    - Remove all non-alphanumeric chars except hyphens
+    - Collapse multiple hyphens
+    - Truncate to max_length (default 50)
+
+    Examples:
+        "Rockclimbing" → "rockclimbing"
+        "Rock Climbing" → "rock-climbing"
+        "My Project (2026)" → "my-project-2026"
+        "Client: Acme / Phase 1" → "client-acme-phase-1"
+    """
+    # Normalise unicode and strip accents
+    text = unicodedata.normalize("NFKD", text)
+    text = "".join(c for c in text if not unicodedata.combining(c))
+
+    # Lowercase
+    text = text.lower()
+
+    # Replace spaces and underscores with hyphens
+    text = re.sub(r"[\s_]+", "-", text)
+
+    # Remove anything that's not alphanumeric or hyphen
+    text = re.sub(r"[^a-z0-9-]", "", text)
+
+    # Collapse multiple hyphens
+    text = re.sub(r"-+", "-", text)
+
+    # Strip leading/trailing hyphens
+    text = text.strip("-")
+
+    # Truncate
+    if len(text) > max_length:
+        text = text[:max_length].rstrip("-")
+
+    return text
 
 
 def apply_smart_quotes(text: str) -> str:

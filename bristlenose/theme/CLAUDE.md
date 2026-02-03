@@ -97,3 +97,17 @@ Collapsible search filter in the toolbar: `.search-container` (flex, `margin-rig
 ### name-edit.css (molecule)
 
 Styles for participant name inline editing: `.name-cell` / `.role-cell` positioning, `.name-pencil` (opacity 0 → 1 on row hover), editing state background, `.edited` dashed-underline indicator, `.unnamed` muted italic placeholder. Print-hidden.
+
+### coverage.css (organism)
+
+Styles for the transcript coverage section at the end of the report. Section has `<h2>` heading like other sections.
+
+- **`.coverage-summary`** — percentages line below heading (muted colour)
+- **`.coverage-details`** — `<details>` element for session list with custom disclosure triangle (▶/▼ via `::before` pseudo-element)
+- **`.coverage-details summary`** — clickable "Show omitted segments" text, styled with custom list-style-none and `::before` for arrow
+- **`.coverage-body`** — inner content wrapper
+- **`.coverage-session`** — per-session group
+- **`.coverage-session-title`** — "Session 1" heading (semibold)
+- **`.coverage-segment`** — omitted segment text (muted colour, left padding); timecode links to transcript page
+- **`.coverage-fragments`** — summary line for short fragments (`.label` italic, `.verbatim` roman)
+- **`.coverage-empty`** — "Nothing omitted" message (muted, italic)

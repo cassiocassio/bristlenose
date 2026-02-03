@@ -52,7 +52,7 @@ def _render_report(tmp_path: Path) -> str:
         project_name="Search Test",
         output_dir=tmp_path,
     )
-    return (tmp_path / "research_report.html").read_text(encoding="utf-8")
+    return (tmp_path / "bristlenose-search-test-report.html").read_text(encoding="utf-8")
 
 
 # ---------------------------------------------------------------------------
@@ -118,49 +118,49 @@ def test_toolbar_has_search_field_wrapper(tmp_path: Path) -> None:
 
 def test_css_has_search_container(tmp_path: Path) -> None:
     _render_report(tmp_path)
-    css = (tmp_path / "bristlenose-theme.css").read_text(encoding="utf-8")
+    css = (tmp_path / "assets" / "bristlenose-theme.css").read_text(encoding="utf-8")
     assert ".search-container" in css
 
 
 def test_css_has_search_input(tmp_path: Path) -> None:
     _render_report(tmp_path)
-    css = (tmp_path / "bristlenose-theme.css").read_text(encoding="utf-8")
+    css = (tmp_path / "assets" / "bristlenose-theme.css").read_text(encoding="utf-8")
     assert ".search-input" in css
 
 
 def test_css_has_search_toggle(tmp_path: Path) -> None:
     _render_report(tmp_path)
-    css = (tmp_path / "bristlenose-theme.css").read_text(encoding="utf-8")
+    css = (tmp_path / "assets" / "bristlenose-theme.css").read_text(encoding="utf-8")
     assert ".search-toggle" in css
 
 
 def test_css_has_search_clear(tmp_path: Path) -> None:
     _render_report(tmp_path)
-    css = (tmp_path / "bristlenose-theme.css").read_text(encoding="utf-8")
+    css = (tmp_path / "assets" / "bristlenose-theme.css").read_text(encoding="utf-8")
     assert ".search-clear" in css
 
 
 def test_css_has_query_shows_clear(tmp_path: Path) -> None:
     _render_report(tmp_path)
-    css = (tmp_path / "bristlenose-theme.css").read_text(encoding="utf-8")
+    css = (tmp_path / "assets" / "bristlenose-theme.css").read_text(encoding="utf-8")
     assert ".search-container.has-query .search-clear" in css
 
 
 def test_css_has_search_field(tmp_path: Path) -> None:
     _render_report(tmp_path)
-    css = (tmp_path / "bristlenose-theme.css").read_text(encoding="utf-8")
+    css = (tmp_path / "assets" / "bristlenose-theme.css").read_text(encoding="utf-8")
     assert ".search-field" in css
 
 
 def test_css_has_highlight_token(tmp_path: Path) -> None:
     _render_report(tmp_path)
-    css = (tmp_path / "bristlenose-theme.css").read_text(encoding="utf-8")
+    css = (tmp_path / "assets" / "bristlenose-theme.css").read_text(encoding="utf-8")
     assert "--bn-colour-highlight" in css
 
 
 def test_css_has_search_mark(tmp_path: Path) -> None:
     _render_report(tmp_path)
-    css = (tmp_path / "bristlenose-theme.css").read_text(encoding="utf-8")
+    css = (tmp_path / "assets" / "bristlenose-theme.css").read_text(encoding="utf-8")
     assert ".search-mark" in css
 
 

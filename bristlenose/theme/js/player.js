@@ -43,7 +43,7 @@ function seekTo(pid, seconds) {
 
   if (!playerWin || playerWin.closed) {
     playerWin = window.open(
-      'bristlenose-player.html' + hash,
+      'assets/bristlenose-player.html' + hash,
       'bristlenose-player',
       'width=720,height=480,resizable=yes,scrollbars=no'
     );
@@ -63,10 +63,14 @@ function initPlayer() {
   document.addEventListener('click', function (e) {
     var link = e.target.closest('a.timecode');
     if (!link) return;
-    e.preventDefault();
     var pid = link.dataset.participant;
     var seconds = parseFloat(link.dataset.seconds);
-    if (pid && !isNaN(seconds)) seekTo(pid, seconds);
+    // Only intercept if this is a player-enabled timecode (has data attributes).
+    // Coverage section links use class="timecode" but navigate to transcript pages.
+    if (pid && !isNaN(seconds)) {
+      e.preventDefault();
+      seekTo(pid, seconds);
+    }
   });
 
   // Extension hooks — currently unused but reserved for future features

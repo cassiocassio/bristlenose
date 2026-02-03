@@ -33,6 +33,7 @@ def _make_quote(pid: str = "p1") -> ExtractedQuote:
 
 def _render_with_sections_and_themes(tmp_path: Path) -> str:
     """Render a report with one section and one theme, return HTML string."""
+    project_name = "Editable Test"
     render_html(
         screen_clusters=[
             ScreenCluster(
@@ -50,10 +51,11 @@ def _render_with_sections_and_themes(tmp_path: Path) -> str:
             ),
         ],
         sessions=[],
-        project_name="Editable Test",
+        project_name=project_name,
         output_dir=tmp_path,
     )
-    return (tmp_path / "research_report.html").read_text(encoding="utf-8")
+    # New layout: bristlenose-{slug}-report.html
+    return (tmp_path / "bristlenose-editable-test-report.html").read_text(encoding="utf-8")
 
 
 # ---------------------------------------------------------------------------
@@ -152,14 +154,14 @@ def test_init_inline_editing_called(tmp_path: Path) -> None:
 
 def test_css_has_editable_text_rules(tmp_path: Path) -> None:
     _render_with_sections_and_themes(tmp_path)
-    css = (tmp_path / "bristlenose-theme.css").read_text(encoding="utf-8")
+    css = (tmp_path / "assets" / "bristlenose-theme.css").read_text(encoding="utf-8")
     assert ".editable-text.editing" in css
     assert ".editable-text.edited" in css
 
 
 def test_css_has_inline_pencil_rules(tmp_path: Path) -> None:
     _render_with_sections_and_themes(tmp_path)
-    css = (tmp_path / "bristlenose-theme.css").read_text(encoding="utf-8")
+    css = (tmp_path / "assets" / "bristlenose-theme.css").read_text(encoding="utf-8")
     assert ".edit-pencil-inline" in css
 
 
@@ -196,7 +198,7 @@ def test_toc_sentiment_not_editable(tmp_path: Path) -> None:
         project_name="Sentiment Test",
         output_dir=tmp_path,
     )
-    html = (tmp_path / "research_report.html").read_text(encoding="utf-8")
+    html = (tmp_path / "bristlenose-sentiment-test-report.html").read_text(encoding="utf-8")
     assert '<a href="#sentiment">Sentiment</a>' in html
     assert 'data-edit-key="sentiment:title"' not in html
 

@@ -56,3 +56,15 @@
 .segment-moderator .segment-speaker {
     color: var(--bn-colour-muted);
 }
+
+/* Anchor highlight animation — flash yellow, fade to normal over 5s.
+   Applied by transcript-names.js when navigating via #t-NNN anchor. */
+@keyframes anchor-fade {
+    0%   { background-color: var(--bn-colour-highlight); }
+    100% { background-color: transparent; }
+}
+
+.transcript-segment.anchor-highlight {
+    animation: anchor-fade 5s ease-out forwards;
+    border-radius: var(--bn-radius-sm);
+}

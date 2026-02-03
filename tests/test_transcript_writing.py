@@ -88,21 +88,21 @@ def test_write_raw_transcripts_md_creates_file(tmp_path: Path) -> None:
     paths = write_raw_transcripts_md([transcript], tmp_path)
     assert len(paths) == 1
     assert paths[0].suffix == ".md"
-    assert paths[0].name == "s1_raw.md"
+    assert paths[0].name == "s1.md"
     assert paths[0].exists()
 
 
 def test_write_raw_transcripts_md_heading(tmp_path: Path) -> None:
     transcript = _make_transcript()
     write_raw_transcripts_md([transcript], tmp_path)
-    content = (tmp_path / "s1_raw.md").read_text()
+    content = (tmp_path / "s1.md").read_text()
     assert content.startswith("# Transcript: s1")
 
 
 def test_write_raw_transcripts_md_metadata(tmp_path: Path) -> None:
     transcript = _make_transcript()
     write_raw_transcripts_md([transcript], tmp_path)
-    content = (tmp_path / "s1_raw.md").read_text()
+    content = (tmp_path / "s1.md").read_text()
     assert "**Source:** interview_01.mp4" in content
     assert "**Date:** 2026-01-10" in content
     assert "**Duration:** 01:10" in content
@@ -111,7 +111,7 @@ def test_write_raw_transcripts_md_metadata(tmp_path: Path) -> None:
 def test_write_raw_transcripts_md_segments(tmp_path: Path) -> None:
     transcript = _make_transcript()
     write_raw_transcripts_md([transcript], tmp_path)
-    content = (tmp_path / "s1_raw.md").read_text()
+    content = (tmp_path / "s1.md").read_text()
     # Bold timecode + participant code
     assert "**[00:00] p1**" in content
     assert "**[00:16] p1**" in content
@@ -125,7 +125,7 @@ def test_write_raw_transcripts_md_segments(tmp_path: Path) -> None:
 def test_write_raw_transcripts_md_horizontal_rule(tmp_path: Path) -> None:
     transcript = _make_transcript()
     write_raw_transcripts_md([transcript], tmp_path)
-    content = (tmp_path / "s1_raw.md").read_text()
+    content = (tmp_path / "s1.md").read_text()
     assert "\n---\n" in content
 
 
@@ -149,8 +149,8 @@ def test_write_raw_transcripts_md_multiple(tmp_path: Path) -> None:
     )
     paths = write_raw_transcripts_md([t1, t2], tmp_path)
     assert len(paths) == 2
-    assert (tmp_path / "s1_raw.md").exists()
-    assert (tmp_path / "s2_raw.md").exists()
+    assert (tmp_path / "s1.md").exists()
+    assert (tmp_path / "s2.md").exists()
 
 
 # ---------------------------------------------------------------------------
@@ -163,28 +163,28 @@ def test_write_cooked_transcripts_md_creates_file(tmp_path: Path) -> None:
     paths = write_cooked_transcripts_md([transcript], tmp_path)
     assert len(paths) == 1
     assert paths[0].suffix == ".md"
-    assert paths[0].name == "s1_cooked.md"
+    assert paths[0].name == "s1.md"
     assert paths[0].exists()
 
 
 def test_write_cooked_transcripts_md_heading(tmp_path: Path) -> None:
     transcript = _make_cooked_transcript()
     write_cooked_transcripts_md([transcript], tmp_path)
-    content = (tmp_path / "s1_cooked.md").read_text()
+    content = (tmp_path / "s1.md").read_text()
     assert content.startswith("# Transcript (cooked): s1")
 
 
 def test_write_cooked_transcripts_md_pii_count(tmp_path: Path) -> None:
     transcript = _make_cooked_transcript()
     write_cooked_transcripts_md([transcript], tmp_path)
-    content = (tmp_path / "s1_cooked.md").read_text()
+    content = (tmp_path / "s1.md").read_text()
     assert "**PII entities redacted:** 2" in content
 
 
 def test_write_cooked_transcripts_md_segments(tmp_path: Path) -> None:
     transcript = _make_cooked_transcript()
     write_cooked_transcripts_md([transcript], tmp_path)
-    content = (tmp_path / "s1_cooked.md").read_text()
+    content = (tmp_path / "s1.md").read_text()
     # Bold timecode + participant code (no speaker label in cooked)
     assert "**[00:00] p1**" in content
     assert "**[00:16] p1**" in content
@@ -204,14 +204,14 @@ def test_write_raw_transcripts_txt_creates_file(tmp_path: Path) -> None:
     paths = write_raw_transcripts([transcript], tmp_path)
     assert len(paths) == 1
     assert paths[0].suffix == ".txt"
-    assert paths[0].name == "s1_raw.txt"
+    assert paths[0].name == "s1.txt"
     assert paths[0].exists()
 
 
 def test_write_raw_transcripts_txt_header(tmp_path: Path) -> None:
     transcript = _make_transcript()
     write_raw_transcripts([transcript], tmp_path)
-    content = (tmp_path / "s1_raw.txt").read_text()
+    content = (tmp_path / "s1.txt").read_text()
     assert "# Transcript: s1" in content
     assert "# Source: interview_01.mp4" in content
     assert "# Date: 2026-01-10" in content
@@ -221,7 +221,7 @@ def test_write_raw_transcripts_txt_header(tmp_path: Path) -> None:
 def test_write_raw_transcripts_txt_participant_codes(tmp_path: Path) -> None:
     transcript = _make_transcript()
     write_raw_transcripts([transcript], tmp_path)
-    content = (tmp_path / "s1_raw.txt").read_text()
+    content = (tmp_path / "s1.txt").read_text()
     # Participant code in brackets, not role label
     assert "[00:00] [p1]" in content
     assert "[00:16] [p1]" in content
@@ -233,7 +233,7 @@ def test_write_raw_transcripts_txt_participant_codes(tmp_path: Path) -> None:
 def test_write_raw_transcripts_txt_speaker_labels(tmp_path: Path) -> None:
     transcript = _make_transcript()
     write_raw_transcripts([transcript], tmp_path)
-    content = (tmp_path / "s1_raw.txt").read_text()
+    content = (tmp_path / "s1.txt").read_text()
     # Speaker labels in parentheses
     assert "(Speaker A)" in content
     assert "(Speaker B)" in content
@@ -242,7 +242,7 @@ def test_write_raw_transcripts_txt_speaker_labels(tmp_path: Path) -> None:
 def test_write_raw_transcripts_txt_segment_text(tmp_path: Path) -> None:
     transcript = _make_transcript()
     write_raw_transcripts([transcript], tmp_path)
-    content = (tmp_path / "s1_raw.txt").read_text()
+    content = (tmp_path / "s1.txt").read_text()
     assert "Hi, thanks for joining us today." in content
     assert "Yeah I\u2019ve been using this for about two years." in content
 
@@ -257,14 +257,14 @@ def test_write_cooked_transcripts_txt_creates_file(tmp_path: Path) -> None:
     paths = write_cooked_transcripts([transcript], tmp_path)
     assert len(paths) == 1
     assert paths[0].suffix == ".txt"
-    assert paths[0].name == "s1_cooked.txt"
+    assert paths[0].name == "s1.txt"
     assert paths[0].exists()
 
 
 def test_write_cooked_transcripts_txt_header(tmp_path: Path) -> None:
     transcript = _make_cooked_transcript()
     write_cooked_transcripts([transcript], tmp_path)
-    content = (tmp_path / "s1_cooked.txt").read_text()
+    content = (tmp_path / "s1.txt").read_text()
     assert "# Transcript (cooked): s1" in content
     assert "# PII entities redacted: 2" in content
 
@@ -272,7 +272,7 @@ def test_write_cooked_transcripts_txt_header(tmp_path: Path) -> None:
 def test_write_cooked_transcripts_txt_participant_codes(tmp_path: Path) -> None:
     transcript = _make_cooked_transcript()
     write_cooked_transcripts([transcript], tmp_path)
-    content = (tmp_path / "s1_cooked.txt").read_text()
+    content = (tmp_path / "s1.txt").read_text()
     # Participant code in brackets, not role label
     assert "[00:00] [p1]" in content
     assert "[00:16] [p1]" in content
@@ -284,7 +284,7 @@ def test_write_cooked_transcripts_txt_participant_codes(tmp_path: Path) -> None:
 def test_write_cooked_transcripts_txt_pii_text(tmp_path: Path) -> None:
     transcript = _make_cooked_transcript()
     write_cooked_transcripts([transcript], tmp_path)
-    content = (tmp_path / "s1_cooked.txt").read_text()
+    content = (tmp_path / "s1.txt").read_text()
     assert "[NAME] has been using this for about two years." in content
 
 
@@ -374,7 +374,7 @@ def test_parser_mixed_timecode_formats(tmp_path: Path) -> None:
     write_cooked_transcripts([long_transcript], tmp_path)
 
     # Verify file has mixed MM:SS and HH:MM:SS
-    content = (tmp_path / "s5_cooked.txt").read_text()
+    content = (tmp_path / "s5.txt").read_text()
     assert "[00:00]" in content       # MM:SS
     assert "[59:50]" in content       # MM:SS
     assert "[01:00:00]" in content    # HH:MM:SS
@@ -413,7 +413,7 @@ def test_write_raw_md_long_session(tmp_path: Path) -> None:
         ],
     )
     write_raw_transcripts_md([long], tmp_path)
-    content = (tmp_path / "s6_raw.md").read_text()
+    content = (tmp_path / "s6.md").read_text()
     assert "**[00:30] p6**" in content      # MM:SS
     assert "**[01:01:00] p6**" in content    # HH:MM:SS
     assert "**Duration:** 02:00:00" in content

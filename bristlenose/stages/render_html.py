@@ -10,10 +10,12 @@ from datetime import datetime
 from html import escape
 from pathlib import Path
 
+from bristlenose.coverage import CoverageStats, calculate_coverage
 from bristlenose.models import (
     EmotionalTone,
     ExtractedQuote,
     FileType,
+    FullTranscript,
     InputSession,
     JourneyStage,
     PeopleFile,
@@ -56,6 +58,7 @@ _THEME_FILES: list[str] = [
     "molecules/name-edit.css",
     "molecules/search.css",
     "organisms/blockquote.css",
+    "organisms/coverage.css",
     "organisms/sentiment-chart.css",
     "organisms/toolbar.css",
     "organisms/toc.css",
@@ -152,29 +155,42 @@ def render_html(
     color_scheme: str = "auto",
     display_names: dict[str, str] | None = None,
     people: PeopleFile | None = None,
+    transcripts: list[FullTranscript] | None = None,
 ) -> Path:
-    """Generate research_report.html with an external CSS stylesheet.
+    """Generate the HTML research report with external CSS stylesheet.
 
-    Always writes ``bristlenose-theme.css`` so that code changes are
-    picked up without manual intervention.
+    Output layout (v2):
+        output/
+        ├── bristlenose-{slug}-report.html   # Main report
+        ├── assets/                           # Static assets
+        │   ├── bristlenose-theme.css
+        │   ├── bristlenose-logo.png
+        │   ├── bristlenose-logo-dark.png
+        │   └── bristlenose-player.html
+        └── sessions/                         # Transcript pages
+            └── transcript_{session_id}.html
 
     Returns:
         Path to the written HTML file.
     """
+    from bristlenose.output_paths import OutputPaths
+
+    paths = OutputPaths(output_dir, project_name)
+
+    # Create directories
     output_dir.mkdir(parents=True, exist_ok=True)
+    paths.assets_dir.mkdir(parents=True, exist_ok=True)
+    paths.sessions_dir.mkdir(parents=True, exist_ok=True)
 
     # Always write CSS — keeps the stylesheet in sync with the renderer
-    css_path = output_dir / "bristlenose-theme.css"
-    css_path.write_text(_get_default_css(), encoding="utf-8")
-    logger.info("Wrote theme: %s", css_path)
+    paths.css_file.write_text(_get_default_css(), encoding="utf-8")
+    logger.info("Wrote theme: %s", paths.css_file)
 
-    # Copy logo images alongside the report
-    logo_dest = output_dir / _LOGO_FILENAME
+    # Copy logo images to assets/
     if _LOGO_PATH.exists():
-        shutil.copy2(_LOGO_PATH, logo_dest)
-    logo_dark_dest = output_dir / _LOGO_DARK_FILENAME
+        shutil.copy2(_LOGO_PATH, paths.logo_file)
     if _LOGO_DARK_PATH.exists():
-        shutil.copy2(_LOGO_DARK_PATH, logo_dark_dest)
+        shutil.copy2(_LOGO_DARK_PATH, paths.logo_dark_file)
 
     # Build video/audio map for clickable timecodes
     video_map = _build_video_map(sessions)
@@ -182,9 +198,9 @@ def render_html(
 
     # Write popout player page when media files exist
     if has_media:
-        _write_player_html(output_dir)
+        _write_player_html(paths.assets_dir, paths.player_file)
 
-    html_path = output_dir / "research_report.html"
+    html_path = paths.html_report
 
     parts: list[str] = []
     _w = parts.append
@@ -200,7 +216,7 @@ def render_html(
     _w('<meta name="viewport" content="width=device-width, initial-scale=1">')
     _w('<meta name="color-scheme" content="light dark">')
     _w(f"<title>{_esc(project_name)}</title>")
-    _w('<link rel="stylesheet" href="bristlenose-theme.css">')
+    _w('<link rel="stylesheet" href="assets/bristlenose-theme.css">')
     _w("</head>")
     _w("<body>")
     _w("<article>")
@@ -217,22 +233,22 @@ def render_html(
     _w('<div class="report-header">')
     # Left: logo + logotype + project name
     _w('<div class="header-left">')
-    if logo_dest.exists():
-        if logo_dark_dest.exists():
+    if paths.logo_file.exists():
+        if paths.logo_dark_file.exists():
             _w("<picture>")
             _w(
-                f'<source srcset="{_LOGO_DARK_FILENAME}" '
-                f'media="(prefers-color-scheme: dark)">'
+                '<source srcset="assets/bristlenose-logo-dark.png" '
+                'media="(prefers-color-scheme: dark)">'
             )
             _w(
-                f'<img class="report-logo" src="{_LOGO_FILENAME}" '
-                f'alt="Bristlenose logo">'
+                '<img class="report-logo" src="assets/bristlenose-logo.png" '
+                'alt="Bristlenose logo">'
             )
             _w("</picture>")
         else:
             _w(
-                f'<img class="report-logo" src="{_LOGO_FILENAME}" '
-                f'alt="Bristlenose logo">'
+                '<img class="report-logo" src="assets/bristlenose-logo.png" '
+                'alt="Bristlenose logo">'
             )
     _w(
         f'<span class="header-title">'
@@ -381,7 +397,7 @@ def render_html(
                 source = "&mdash;"
             _w("<tr>")
             _w(
-                f'<td><a href="transcript_{sid_esc}.html">'
+                f'<td><a href="sessions/transcript_{sid_esc}.html">'
                 f"{_esc(session_num)}</a></td>"
             )
             # Speakers column: comma-separated codes with data-participant spans.
@@ -423,6 +439,8 @@ def render_html(
         chart_toc.append(("friction-points", "Friction points"))
     if all_quotes and sessions:
         chart_toc.append(("user-journeys", "User journeys"))
+    if transcripts and all_quotes:
+        chart_toc.append(("transcript-coverage", "Transcript coverage"))
     if section_toc or theme_toc or chart_toc:
         _w('<div class="toc-row">')
         if section_toc:
@@ -572,6 +590,12 @@ def render_html(
             _w("</section>")
             _w("<hr>")
 
+    # --- Coverage ---
+    if transcripts and all_quotes:
+        coverage = calculate_coverage(transcripts, all_quotes)
+        coverage_html = _build_coverage_html(coverage)
+        _w(coverage_html)
+
     # --- Close ---
     _w("</article>")
     _w(_footer_html())
@@ -614,6 +638,7 @@ def render_html(
         color_scheme=color_scheme,
         display_names=display_names,
         people=people,
+        transcripts=transcripts,
     )
 
     return html_path
@@ -677,27 +702,38 @@ def render_transcript_pages(
     color_scheme: str = "auto",
     display_names: dict[str, str] | None = None,
     people: PeopleFile | None = None,
+    transcripts: list[FullTranscript] | None = None,
 ) -> list[Path]:
-    """Generate per-participant transcript HTML pages.
+    """Generate per-participant transcript HTML pages in sessions/.
 
-    Reads transcript segments from ``cooked_transcripts/`` (if present) or
-    ``raw_transcripts/``, renders one HTML page per participant, and returns
-    the list of written file paths.
+    If ``transcripts`` is provided, uses those directly. Otherwise reads
+    transcript segments from ``transcripts-cooked/`` (if present) or
+    ``transcripts-raw/``.
+
+    Returns the list of written file paths.
     """
-    from bristlenose.pipeline import load_transcripts_from_dir
+    from bristlenose.output_paths import OutputPaths
 
-    # Prefer cooked (PII-redacted) transcripts, fall back to raw
-    cooked_dir = output_dir / "cooked_transcripts"
-    raw_dir = output_dir / "raw_transcripts"
-    if cooked_dir.is_dir() and any(cooked_dir.glob("*.txt")):
-        transcripts_dir = cooked_dir
-    elif raw_dir.is_dir() and any(raw_dir.glob("*.txt")):
-        transcripts_dir = raw_dir
-    else:
-        logger.info("No transcript files found — skipping transcript pages")
-        return []
+    paths_helper = OutputPaths(output_dir, project_name)
+    paths_helper.sessions_dir.mkdir(parents=True, exist_ok=True)
 
-    transcripts = load_transcripts_from_dir(transcripts_dir)
+    # Use provided transcripts, or load from disk
+    if transcripts is None:
+        from bristlenose.pipeline import load_transcripts_from_dir
+
+        # Prefer cooked (PII-redacted) transcripts, fall back to raw
+        cooked_dir = paths_helper.transcripts_cooked_dir
+        raw_dir = paths_helper.transcripts_raw_dir
+        if cooked_dir.is_dir() and any(cooked_dir.glob("*.txt")):
+            transcripts_dir = cooked_dir
+        elif raw_dir.is_dir() and any(raw_dir.glob("*.txt")):
+            transcripts_dir = raw_dir
+        else:
+            logger.info("No transcript files found — skipping transcript pages")
+            return []
+
+        transcripts = load_transcripts_from_dir(transcripts_dir)
+
     if not transcripts:
         return []
 
@@ -718,19 +754,25 @@ def render_transcript_pages(
 
 
 def _render_transcript_page(
-    transcript: object,  # PiiCleanTranscript (avoid circular import at module level)
+    transcript: object,  # FullTranscript or PiiCleanTranscript (avoid circular import)
     project_name: str,
     output_dir: Path,
     video_map: dict[str, str] | None = None,
     color_scheme: str = "auto",
     people: PeopleFile | None = None,
 ) -> Path:
-    """Render a single participant transcript as an HTML page."""
-    from bristlenose.models import PiiCleanTranscript
+    """Render a single participant transcript as an HTML page in sessions/."""
+    from bristlenose.models import FullTranscript
+    from bristlenose.output_paths import OutputPaths
+    from bristlenose.utils.text import slugify
 
-    assert isinstance(transcript, PiiCleanTranscript)
+    assert isinstance(transcript, FullTranscript)
     pid = transcript.participant_id
     sid = transcript.session_id
+
+    # Set up paths (session pages are in sessions/ subdirectory)
+    paths = OutputPaths(output_dir, project_name)
+    slug = slugify(project_name)
 
     # Collect all speaker codes present in the transcript (stable insertion order)
     seen_codes: dict[str, None] = {}
@@ -790,33 +832,31 @@ def _render_transcript_page(
     _w('<meta name="color-scheme" content="light dark">')
     title = f"Session {_esc(session_num)}: {', '.join(_esc(lb) for lb in code_labels)}"
     _w(f"<title>{title} \u2014 {_esc(project_name)}</title>")
-    _w('<link rel="stylesheet" href="bristlenose-theme.css">')
+    # Session pages are in sessions/ — CSS is at ../assets/
+    _w('<link rel="stylesheet" href="../assets/bristlenose-theme.css">')
     _w("</head>")
     _w("<body>")
     _w("<article>")
 
-    # Header (same layout as report)
-    logo_dest = output_dir / _LOGO_FILENAME
-    logo_dark_dest = output_dir / _LOGO_DARK_FILENAME
-
+    # Header (same layout as report) — logos at ../assets/
     _w('<div class="report-header">')
     _w('<div class="header-left">')
-    if logo_dest.exists():
-        if logo_dark_dest.exists():
+    if paths.logo_file.exists():
+        if paths.logo_dark_file.exists():
             _w("<picture>")
             _w(
-                f'<source srcset="{_LOGO_DARK_FILENAME}" '
-                f'media="(prefers-color-scheme: dark)">'
+                '<source srcset="../assets/bristlenose-logo-dark.png" '
+                'media="(prefers-color-scheme: dark)">'
             )
             _w(
-                f'<img class="report-logo" src="{_LOGO_FILENAME}" '
-                f'alt="Bristlenose logo">'
+                '<img class="report-logo" src="../assets/bristlenose-logo.png" '
+                'alt="Bristlenose logo">'
             )
             _w("</picture>")
         else:
             _w(
-                f'<img class="report-logo" src="{_LOGO_FILENAME}" '
-                f'alt="Bristlenose logo">'
+                '<img class="report-logo" src="../assets/bristlenose-logo.png" '
+                'alt="Bristlenose logo">'
             )
     _w(
         f'<span class="header-title">'
@@ -845,10 +885,11 @@ def _render_transcript_page(
     _w("</div>")
     _w("<hr>")
 
-    # Back link + participant heading
+    # Back link + participant heading — report is at ../bristlenose-{slug}-report.html
     _w('<nav class="transcript-back">')
+    report_filename = f"bristlenose-{slug}-report.html"
     _w(
-        f'<a href="research_report.html">'
+        f'<a href="../{report_filename}">'
         f"&larr; {_esc(project_name)} Research Report</a>"
     )
     _w("</nav>")
@@ -901,8 +942,8 @@ def _render_transcript_page(
     _w("</body>")
     _w("</html>")
 
-    sid = transcript.session_id
-    page_path = output_dir / f"transcript_{sid}.html"
+    # Write to sessions/ subdirectory
+    page_path = paths.transcript_page(transcript.session_id)
     page_path.write_text("\n".join(parts), encoding="utf-8")
     return page_path
 
@@ -1005,7 +1046,7 @@ def _format_quote_html(
     sid_esc = _esc(quote.session_id) if quote.session_id else pid_esc
     anchor = f"t-{int(quote.start_timecode)}"
     speaker_link = (
-        f'<a href="transcript_{sid_esc}.html#{anchor}" class="speaker-link">{pid_esc}</a>'
+        f'<a href="sessions/transcript_{sid_esc}.html#{anchor}" class="speaker-link">{pid_esc}</a>'
     )
     badges = _quote_badges(quote)
     badge_html = (
@@ -1248,9 +1289,9 @@ def _build_video_map(sessions: list[InputSession]) -> dict[str, str]:
     return video_map
 
 
-def _write_player_html(output_dir: Path) -> Path:
-    """Write the popout video player page."""
-    player_path = output_dir / "bristlenose-player.html"
+def _write_player_html(assets_dir: Path, player_path: Path) -> Path:
+    """Write the popout video player page to assets/."""
+    assets_dir.mkdir(parents=True, exist_ok=True)
     player_path.write_text(
         """\
 <!DOCTYPE html>
@@ -1416,3 +1457,99 @@ def _build_task_outcome_html(
     rows.append("</tbody>")
     rows.append("</table>")
     return "\n".join(rows)
+
+
+# ---------------------------------------------------------------------------
+# Coverage section builder
+# ---------------------------------------------------------------------------
+
+
+def _build_coverage_html(coverage: CoverageStats) -> str:
+    """Build the coverage disclosure section as HTML.
+
+    Shows transcript coverage percentages and omitted content per session.
+    Collapsed by default; expands to show what wasn't extracted.
+    """
+    parts: list[str] = []
+
+    # Section with heading (same level as User Journeys)
+    parts.append("<section>")
+    parts.append('<h2 id="transcript-coverage">Transcript coverage</h2>')
+
+    # Summary percentages as content
+    summary = (
+        f"{coverage.pct_in_report}% in report · "
+        f"{coverage.pct_moderator}% moderator · "
+        f"{coverage.pct_omitted}% omitted"
+    )
+    parts.append(f'<p class="coverage-summary">{summary}</p>')
+
+    # Handle 0% omitted case
+    if coverage.pct_omitted == 0:
+        parts.append(
+            '<p class="coverage-empty">'
+            "Nothing omitted — all participant speech is in the report."
+            "</p>"
+        )
+    else:
+        # Disclosure triangle for session details
+        parts.append('<details class="coverage-details">')
+        parts.append("<summary>Show omitted segments</summary>")
+        parts.append('<div class="coverage-body">')
+
+        # Show per-session omitted content
+        for session_id, omitted in coverage.omitted_by_session.items():
+            # Skip sessions with nothing omitted
+            if not omitted.full_segments and not omitted.fragment_counts:
+                continue
+
+            # Extract session number from "s1" -> "1"
+            session_num = session_id[1:] if session_id.startswith("s") else session_id
+
+            parts.append('<div class="coverage-session">')
+            parts.append(f'<p class="coverage-session-title">Session {session_num}</p>')
+
+            # Full segments (>3 words)
+            for seg in omitted.full_segments:
+                tc_esc = _esc(seg.timecode)
+                code_esc = _esc(seg.speaker_code)
+                text_esc = _esc(seg.text)
+                anchor = f"t-{seg.timecode_seconds}"
+                parts.append(
+                    f'<p class="coverage-segment">'
+                    f'<a href="sessions/transcript_{session_id}.html#{anchor}" class="timecode">'
+                    f"[{code_esc} {tc_esc}]</a> "
+                    f"{text_esc}</p>"
+                )
+
+            # Fragment summary (≤3 words)
+            if omitted.fragment_counts:
+                fragment_strs: list[str] = []
+                for text, count in omitted.fragment_counts:
+                    text_esc = _esc(text)
+                    if count > 1:
+                        fragment_strs.append(
+                            f'<span class="verbatim">{text_esc} ({count}×)</span>'
+                        )
+                    else:
+                        fragment_strs.append(f'<span class="verbatim">{text_esc}</span>')
+
+                # Use "Also omitted:" only if there were full segments
+                if omitted.full_segments:
+                    prefix = '<span class="label">Also omitted:</span> '
+                else:
+                    prefix = ""
+
+                parts.append(
+                    f'<p class="coverage-fragments">{prefix}{", ".join(fragment_strs)}</p>'
+                )
+
+            parts.append("</div>")
+
+        parts.append("</div>")
+        parts.append("</details>")
+
+    parts.append("</section>")
+    parts.append("<hr>")
+
+    return "\n".join(parts)

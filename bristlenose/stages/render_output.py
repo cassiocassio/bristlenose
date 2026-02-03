@@ -44,7 +44,7 @@ def render_markdown(
     display_names: dict[str, str] | None = None,
     people: PeopleFile | None = None,
 ) -> Path:
-    """Generate the final research_report.md file.
+    """Generate the final Markdown report file.
 
     Args:
         screen_clusters: Screen-specific quote clusters.
@@ -59,8 +59,11 @@ def render_markdown(
     Returns:
         Path to the written Markdown file.
     """
+    from bristlenose.output_paths import OutputPaths
+
+    paths = OutputPaths(output_dir, project_name)
     output_dir.mkdir(parents=True, exist_ok=True)
-    md_path = output_dir / "research_report.md"
+    md_path = paths.md_report
 
     lines: list[str] = []
 
@@ -210,6 +213,7 @@ def write_intermediate_json(
     data: object,
     filename: str,
     output_dir: Path,
+    project_name: str = "",
 ) -> Path:
     """Write intermediate data as JSON for debugging/resumability.
 
@@ -217,11 +221,19 @@ def write_intermediate_json(
         data: Any Pydantic model or list of models, or a plain dict.
         filename: Filename (e.g. "extracted_quotes.json").
         output_dir: Output directory.
+        project_name: Project name (for OutputPaths; optional for back-compat).
 
     Returns:
         Path to the written file.
     """
-    intermediate_dir = output_dir / "intermediate"
+    from bristlenose.output_paths import OutputPaths
+
+    if project_name:
+        paths = OutputPaths(output_dir, project_name)
+        intermediate_dir = paths.intermediate_dir
+    else:
+        # Legacy fallback for callers not passing project_name
+        intermediate_dir = output_dir / ".bristlenose" / "intermediate"
     intermediate_dir.mkdir(parents=True, exist_ok=True)
     path = intermediate_dir / filename
 

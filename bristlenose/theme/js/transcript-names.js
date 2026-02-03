@@ -39,17 +39,34 @@ function _resolveTranscriptName(pid, edits) {
 function initTranscriptNames() {
   var store = createStore('bristlenose-names');
   var edits = store.get({});
-  if (!edits || Object.keys(edits).length === 0) return;
-
-  // Update speaker name spans inside the <h1> heading.
-  // Format: "m1 Sarah Chen" — code prefix preserved.
-  var headingSpeakers = document.querySelectorAll('h1 .heading-speaker[data-participant]');
-  for (var j = 0; j < headingSpeakers.length; j++) {
-    var hEl = headingSpeakers[j];
-    var hPid = hEl.getAttribute('data-participant');
-    var hName = _resolveTranscriptName(hPid, edits);
-    if (hName) {
-      hEl.textContent = hPid + ' ' + hName;
+  if (edits && Object.keys(edits).length > 0) {
+    // Update speaker name spans inside the <h1> heading.
+    // Format: "m1 Sarah Chen" — code prefix preserved.
+    var headingSpeakers = document.querySelectorAll('h1 .heading-speaker[data-participant]');
+    for (var j = 0; j < headingSpeakers.length; j++) {
+      var hEl = headingSpeakers[j];
+      var hPid = hEl.getAttribute('data-participant');
+      var hName = _resolveTranscriptName(hPid, edits);
+      if (hName) {
+        hEl.textContent = hPid + ' ' + hName;
+      }
     }
+  }
+
+  // Highlight the anchor target when navigating via #t-NNN.
+  // Flash pale yellow, fade to normal over 5s — helps user spot the segment.
+  _highlightAnchorTarget();
+}
+
+/**
+ * If the URL has a #t-NNN anchor, highlight that segment with a fade animation.
+ */
+function _highlightAnchorTarget() {
+  var hash = window.location.hash;
+  if (!hash || !/^#t-\d+$/.test(hash)) return;
+
+  var target = document.querySelector(hash);
+  if (target && target.classList.contains('transcript-segment')) {
+    target.classList.add('anchor-highlight');
   }
 }

@@ -180,3 +180,16 @@ Each session gets a dedicated HTML page (`transcript_s1.html`, etc.) showing the
 - **Quote attribution linking**: `— p1` at end of each quote in the main report links to `transcript_s1.html#t-{seconds}` (session-based filename), deep-linking to the exact segment. `.speaker-link` CSS in `blockquote.css` (inherits muted colour, accent on hover)
 - **Segment anchors**: each transcript segment has `id="t-{int(seconds)}"` for deep linking from quotes
 - **CSS**: `transcript.css` in theme templates (back button, segment layout, meta styling); `.speaker-link` in `organisms/blockquote.css`
+
+## Transcript coverage section
+
+Collapsible section at the end of the research report showing what proportion of the transcript made it into quotes. Helps researchers verify nothing important was missed.
+
+- **Summary line**: `Transcript coverage: 78% in report · 14% moderator · 8% omitted` — collapsed by default (`<details>` element)
+- **Percentages**: word-count based, whole numbers. "In report" = participant words in extracted quote timecode ranges. "Moderator" = moderator + observer speech (counted but never shown in review). "Omitted" = participant words not covered by any quote
+- **Expanded view**: per-session omitted content. Segments >3 words shown in full with speaker code and timecode (linked to transcript page). Segments ≤3 words collapsed into a summary line with repeat counts (`Okay. (4×), Yeah. (2×)`). "Also omitted:" prefix only when there are full segments above
+- **Styling**: muted text colour for omitted content, transcript-style formatting (no stars/tags/badges)
+- **Edge cases**: 0% omitted shows "Nothing omitted — all participant speech is in the report."; sessions with nothing omitted are hidden
+- **Module**: `bristlenose/coverage.py` — `calculate_coverage()`, `CoverageStats`, `SessionOmitted`, `OmittedSegment` dataclasses
+- **Rendering**: `_build_coverage_html()` in `render_html.py`, CSS in `organisms/coverage.css`
+- **Design doc**: `docs/design-transcript-coverage.md`

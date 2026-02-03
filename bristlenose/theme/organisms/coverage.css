@@ -1,0 +1,78 @@
+/* Organism: coverage — transcript coverage section */
+
+/* Summary percentages line */
+.coverage-summary {
+    color: var(--bn-colour-muted);
+    margin-bottom: var(--bn-space-md);
+}
+
+/* Disclosure for session details */
+.coverage-details summary {
+    cursor: pointer;
+    font-weight: 500;
+    color: var(--bn-colour-muted);
+    list-style: none;
+}
+
+.coverage-details summary::-webkit-details-marker {
+    display: none;
+}
+
+.coverage-details summary::before {
+    content: "\25B6\00a0";  /* ▶ + nbsp */
+    font-size: 0.65em;
+    vertical-align: middle;
+}
+
+.coverage-details[open] summary::before {
+    content: "\25BC\00a0";  /* ▼ + nbsp */
+}
+
+.coverage-body {
+    margin-top: var(--bn-space-md);
+}
+
+.coverage-session {
+    margin-top: var(--bn-space-md);
+}
+
+.coverage-session:first-child {
+    margin-top: var(--bn-space-sm);
+}
+
+.coverage-session-title {
+    font-weight: 600;
+    margin-bottom: var(--bn-space-xs);
+}
+
+.coverage-segment {
+    color: var(--bn-colour-muted);
+    margin: var(--bn-space-xs) 0;
+    padding-left: var(--bn-space-md);
+    line-height: 1.6;
+}
+
+.coverage-segment .timecode {
+    font-family: var(--bn-font-mono);
+    font-size: 0.85em;
+}
+
+.coverage-fragments {
+    color: var(--bn-colour-muted);
+    padding-left: var(--bn-space-md);
+    margin-top: var(--bn-space-sm);
+}
+
+.coverage-fragments .label {
+    font-style: italic;
+}
+
+/* Verbatim text stays roman (not italic) */
+.coverage-fragments .verbatim {
+    font-style: normal;
+}
+
+.coverage-empty {
+    color: var(--bn-colour-muted);
+    font-style: italic;
+}

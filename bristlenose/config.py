@@ -85,6 +85,22 @@ class BristlenoseSettings(BaseSettings):
     llm_concurrency: int = 3
 
 
+# Provider aliases: user-friendly names → internal names
+_LLM_PROVIDER_ALIASES: dict[str, str] = {
+    "claude": "anthropic",
+    "chatgpt": "openai",
+    "gpt": "openai",
+}
+
+
 def load_settings(**overrides: object) -> BristlenoseSettings:
-    """Load settings with optional CLI overrides."""
+    """Load settings with optional CLI overrides.
+
+    Normalises LLM provider aliases (claude → anthropic, chatgpt → openai).
+    """
+    # Normalise LLM provider aliases
+    if "llm_provider" in overrides and isinstance(overrides["llm_provider"], str):
+        provider = overrides["llm_provider"].lower()
+        overrides["llm_provider"] = _LLM_PROVIDER_ALIASES.get(provider, provider)
+
     return BristlenoseSettings(**overrides)  # type: ignore[arg-type]

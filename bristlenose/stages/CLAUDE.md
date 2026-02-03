@@ -91,3 +91,21 @@ return list(await asyncio.gather(*(_process(t) for t in transcripts)))
 ## Duplicate timecode helpers
 
 Both `models.py` and `utils/timecodes.py` define `format_timecode()` and `parse_timecode()`. They behave identically. Stage files import from one or the other — both are fine. The `utils/timecodes.py` version has a more sophisticated parser (SRT/VTT milliseconds support).
+
+## Transcript page / coverage link consistency
+
+The HTML report has three places that generate links to transcript pages:
+1. **Sessions table** (line ~388): `transcript_{session.session_id}.html`
+2. **Quote speaker links** (line ~1027): `transcript_{quote.session_id}.html#t-{seconds}`
+3. **Coverage section** (line ~1491): `transcript_{transcript.session_id}.html#t-{seconds}`
+
+Transcript pages are named `transcript_{transcript.session_id}.html` with anchor IDs `t-{int(seg.start_time)}`.
+
+**The gotcha**: `cooked_transcripts/` only exists when `--redact-pii` was used. If a previous run used PII redaction but the current run doesn't:
+- `cooked_transcripts/` contains stale files from the old run
+- `raw_transcripts/` contains fresh files from the new run
+- If coverage and transcript pages loaded from different directories, links would break
+
+**Solution**: `render_transcript_pages()` accepts an optional `transcripts` parameter. When `render_html()` is called with transcripts, it passes them through to `render_transcript_pages()`, ensuring both coverage calculation and transcript page generation use the exact same data. For the `render` command (which loads from disk), both use the same preference: cooked > raw.
+
+**Rule**: Always ensure coverage, quote links, and transcript pages use the same transcript source. If you add new timecode links, make sure they derive `session_id` from the same transcripts passed to `render_html()`.

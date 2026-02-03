@@ -2,8 +2,58 @@
 
 from __future__ import annotations
 
+import sys
+from pathlib import Path
+from unittest.mock import patch
+
+from bristlenose.cli import _COMMANDS, _maybe_inject_run
 from bristlenose.pipeline import _format_duration
 from bristlenose.utils.hardware import AcceleratorType, HardwareInfo
+
+# ---------------------------------------------------------------------------
+# _maybe_inject_run (default command)
+# ---------------------------------------------------------------------------
+
+
+class TestMaybeInjectRun:
+    def test_injects_run_for_directory(self, tmp_path: Path) -> None:
+        """A bare directory argument gets 'run' injected."""
+        test_dir = tmp_path / "interviews"
+        test_dir.mkdir()
+        with patch.object(sys, "argv", ["bristlenose", str(test_dir)]):
+            _maybe_inject_run()
+            assert sys.argv == ["bristlenose", "run", str(test_dir)]
+
+    def test_no_injection_for_known_command(self, tmp_path: Path) -> None:
+        """Known commands are not treated as directories."""
+        # Even if a directory named 'doctor' exists, the command takes precedence
+        (tmp_path / "doctor").mkdir()
+        with patch.object(sys, "argv", ["bristlenose", "doctor"]):
+            _maybe_inject_run()
+            assert sys.argv == ["bristlenose", "doctor"]
+
+    def test_no_injection_for_flags(self) -> None:
+        """Flags like --version are passed through."""
+        with patch.object(sys, "argv", ["bristlenose", "--version"]):
+            _maybe_inject_run()
+            assert sys.argv == ["bristlenose", "--version"]
+
+    def test_no_injection_for_nonexistent_path(self) -> None:
+        """Non-existent paths are passed through (let Typer handle the error)."""
+        with patch.object(sys, "argv", ["bristlenose", "nonexistent-folder"]):
+            _maybe_inject_run()
+            assert sys.argv == ["bristlenose", "nonexistent-folder"]
+
+    def test_no_injection_with_no_args(self) -> None:
+        """No arguments means show help — don't inject anything."""
+        with patch.object(sys, "argv", ["bristlenose"]):
+            _maybe_inject_run()
+            assert sys.argv == ["bristlenose"]
+
+    def test_all_commands_in_set(self) -> None:
+        """Sanity check: all expected commands are in _COMMANDS."""
+        expected = {"run", "transcribe", "analyze", "analyse", "render", "doctor", "help"}
+        assert _COMMANDS == expected
 
 # ---------------------------------------------------------------------------
 # _format_duration

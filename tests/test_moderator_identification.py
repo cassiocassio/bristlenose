@@ -155,7 +155,7 @@ class TestTranscriptRoundTrip:
 
         transcript = self._make_transcript_with_moderator()
         write_raw_transcripts([transcript], tmp_path)
-        content = (tmp_path / "s1_raw.txt").read_text()
+        content = (tmp_path / "s1.txt").read_text()
 
         assert "[00:00] [m1]" in content
         assert "[00:11] [p1]" in content
@@ -167,7 +167,7 @@ class TestTranscriptRoundTrip:
 
         transcript = self._make_transcript_with_moderator()
         write_raw_transcripts_md([transcript], tmp_path)
-        content = (tmp_path / "s1_raw.md").read_text()
+        content = (tmp_path / "s1.md").read_text()
 
         assert "**[00:00] m1**" in content
         assert "**[00:11] p1**" in content
@@ -186,7 +186,7 @@ class TestTranscriptRoundTrip:
             segments=segs,
         )
         write_cooked_transcripts([transcript], tmp_path)
-        content = (tmp_path / "s1_cooked.txt").read_text()
+        content = (tmp_path / "s1.txt").read_text()
 
         assert "[00:00] [m1]" in content
         assert "[00:11] [p1]" in content
@@ -205,7 +205,7 @@ class TestTranscriptRoundTrip:
             segments=segs,
         )
         write_cooked_transcripts_md([transcript], tmp_path)
-        content = (tmp_path / "s1_cooked.md").read_text()
+        content = (tmp_path / "s1.md").read_text()
 
         assert "**[00:00] m1**" in content
         assert "**[00:11] p1**" in content
@@ -365,7 +365,7 @@ class TestModeratorPeopleStats:
 
 class TestTranscriptPageRendering:
     _MODERATOR_TRANSCRIPT = (
-        "# Transcript: p1\n"
+        "# Transcript: s1\n"
         "# Source: interview_01.mp4\n"
         "# Date: 2026-01-20\n"
         "# Duration: 00:01:00\n"
@@ -382,14 +382,14 @@ class TestTranscriptPageRendering:
     def _setup_and_render(self, tmp_path: Path, people: PeopleFile | None = None) -> str:
         from bristlenose.stages.render_html import render_transcript_pages
 
-        raw_dir = tmp_path / "raw_transcripts"
+        raw_dir = tmp_path / "transcripts-raw"
         raw_dir.mkdir(parents=True, exist_ok=True)
-        (raw_dir / "s1_raw.txt").write_text(self._MODERATOR_TRANSCRIPT, encoding="utf-8")
+        (raw_dir / "s1.txt").write_text(self._MODERATOR_TRANSCRIPT, encoding="utf-8")
 
         render_transcript_pages(
             sessions=[], project_name="Test", output_dir=tmp_path, people=people,
         )
-        return (tmp_path / "transcript_p1.html").read_text(encoding="utf-8")
+        return (tmp_path / "sessions" / "transcript_s1.html").read_text(encoding="utf-8")
 
     def test_moderator_segments_have_css_class(self, tmp_path: Path) -> None:
         html = self._setup_and_render(tmp_path)
@@ -447,7 +447,7 @@ class TestTranscriptPageRendering:
         from bristlenose.stages.render_html import render_transcript_pages
 
         old_transcript = (
-            "# Transcript: p1\n"
+            "# Transcript: s1\n"
             "# Source: interview.mp4\n"
             "# Date: 2026-01-20\n"
             "# Duration: 00:01:00\n"
@@ -456,14 +456,14 @@ class TestTranscriptPageRendering:
             "\n"
             "[00:10] [p1] Goodbye.\n"
         )
-        raw_dir = tmp_path / "raw_transcripts"
+        raw_dir = tmp_path / "transcripts-raw"
         raw_dir.mkdir(parents=True, exist_ok=True)
-        (raw_dir / "s1_raw.txt").write_text(old_transcript, encoding="utf-8")
+        (raw_dir / "s1.txt").write_text(old_transcript, encoding="utf-8")
 
         render_transcript_pages(
             sessions=[], project_name="Test", output_dir=tmp_path,
         )
-        html = (tmp_path / "transcript_p1.html").read_text(encoding="utf-8")
+        html = (tmp_path / "sessions" / "transcript_s1.html").read_text(encoding="utf-8")
 
         assert "segment-moderator" not in html
 
@@ -669,7 +669,7 @@ class TestMultiParticipantRoundTrip:
         write_cooked_transcripts([transcript], tmp_path)
 
         # Verify file was written
-        assert (tmp_path / "s1_cooked.txt").exists()
+        assert (tmp_path / "s1.txt").exists()
 
         # Load back
         loaded = load_transcripts_from_dir(tmp_path)

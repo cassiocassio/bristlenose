@@ -162,7 +162,8 @@ def write_cooked_transcripts(
     paths: list[Path] = []
 
     for transcript in transcripts:
-        filename = f"{transcript.session_id}_cooked.txt"
+        # New naming: s1.txt (was s1_cooked.txt — directory name now indicates raw/cooked)
+        filename = f"{transcript.session_id}.txt"
         path = output_dir / filename
 
         header = format_transcript_header_txt(
@@ -199,8 +200,7 @@ def write_cooked_transcripts_md(
 
     The ``.md`` version provides a more readable format with bold
     participant code labels and structured metadata.  Files are named
-    ``{participant_id}_cooked.md`` and placed in the same directory as
-    the ``.txt`` files (``cooked_transcripts/``).
+    ``{session_id}.md`` and placed in ``transcripts-cooked/``.
 
     Args:
         transcripts: Cleaned transcripts.
@@ -218,7 +218,8 @@ def write_cooked_transcripts_md(
     paths: list[Path] = []
 
     for transcript in transcripts:
-        filename = f"{transcript.session_id}_cooked.md"
+        # New naming: s1.md (was s1_cooked.md)
+        filename = f"{transcript.session_id}.md"
         path = output_dir / filename
 
         header = format_transcript_header_md(

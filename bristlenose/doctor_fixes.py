@@ -215,7 +215,8 @@ def _fix_ollama_not_running(_method: str) -> str:
     return (
         "Start Ollama:\n\n"
         "  ollama serve\n\n"
-        f"Then re-run bristlenose. {hint}"
+        f"Then re-run bristlenose. {hint}\n\n"
+        "For interactive setup: bristlenose doctor"
     )
 
 
@@ -225,7 +226,8 @@ def _fix_ollama_not_installed(_method: str) -> str:
         "Install Ollama from https://ollama.ai (free, no account needed).\n\n"
         "Then start it:\n\n"
         "  ollama serve\n\n"
-        f"{hint}"
+        f"{hint}\n\n"
+        "For interactive setup: bristlenose doctor"
     )
 
 
@@ -234,7 +236,8 @@ def _fix_ollama_model_missing(_method: str) -> str:
     return (
         "Download the model:\n\n"
         "  ollama pull llama3.2\n\n"
-        f"{hint}"
+        f"{hint}\n\n"
+        "For interactive setup: bristlenose doctor"
     )
 
 

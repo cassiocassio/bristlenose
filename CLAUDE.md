@@ -45,6 +45,51 @@ Report JavaScript — 11 modules in `bristlenose/theme/js/`, concatenated in dep
 
 Transcript pages use a separate list (`_TRANSCRIPT_JS_FILES`): `storage.js`, `player.js`, `transcript-names.js`.
 
+## Output directory structure
+
+Output goes **inside the input folder** by default: `bristlenose run interviews/` creates `interviews/bristlenose-output/`. This avoids collisions when processing multiple projects and keeps everything self-contained.
+
+```
+interviews/                              # input folder
+├── Session 1.mp4
+├── Session 2.mp4
+└── bristlenose-output/                  # output folder (inside input)
+    ├── bristlenose-interviews-report.html
+    ├── bristlenose-interviews-report.md
+    ├── people.yaml
+    ├── assets/
+    │   ├── bristlenose-theme.css
+    │   ├── bristlenose-logo.png
+    │   ├── bristlenose-logo-dark.png
+    │   └── bristlenose-player.html
+    ├── sessions/
+    │   ├── transcript_s1.html
+    │   └── transcript_s2.html
+    ├── transcripts-raw/
+    │   ├── s1.txt
+    │   ├── s1.md
+    │   └── ...
+    ├── transcripts-cooked/              # only if --redact-pii
+    │   └── ...
+    └── .bristlenose/
+        ├── intermediate/
+        │   ├── extracted_quotes.json
+        │   ├── screen_clusters.json
+        │   ├── theme_groups.json
+        │   └── topic_boundaries.json
+        └── temp/
+```
+
+- **Report filenames include project name** — `bristlenose-{slug}-report.html` — so multiple reports in Downloads are distinguishable
+- **`assets/`** — static files (CSS, logos, player)
+- **`sessions/`** — per-session transcript HTML pages
+- **`transcripts-raw/` / `transcripts-cooked/`** — Lévi-Strauss naming (researchers get it); cooked only exists with `--redact-pii`
+- **`.bristlenose/`** — hidden internal files; `intermediate/` for JSON resumability, `temp/` for FFmpeg scratch
+- **Path helpers** — `bristlenose/output_paths.py` defines `OutputPaths` dataclass for consistent path construction
+- **Slugify** — `bristlenose/utils/text.py` has `slugify()` for project names in filenames (lowercase, hyphens, max 50 chars)
+
+Override with `--output`: `bristlenose run interviews/ -o /elsewhere/`
+
 ## Platform-aware session grouping (Stage 1)
 
 `ingest.py` groups input files into sessions using a two-pass strategy that understands Teams, Zoom, and Google Meet naming conventions.
@@ -77,7 +122,7 @@ The generated HTML report has interactive features: inline editing (quotes, head
 - **Name editing**: inline in the report via `names.js` → localStorage → "Export names" YAML → paste into `people.yaml` → `bristlenose render`. Auto name/role extraction from LLM + speaker labels
 - **Anonymisation boundary**: report quotes show raw `p1`/`p2` IDs (safe to copy to Miro/presentations). Transcript page segment labels also show raw codes (`p1:`, `m1:`); only the heading shows display names (private to researcher)
 - **Search**: search-as-you-type with yellow highlights, match count in view-switcher, CSV export respects filter
-- **Transcript pages**: per-session HTML pages (`transcript_s1.html`) with heading showing all speakers (`Session 1: m1 Sarah Chen, p5 Maya, o1`), per-segment raw speaker codes (`p1:`, `m1:`), `.segment-moderator` CSS class for muted moderator styling, deep-link anchors from quote attributions
+- **Transcript pages**: per-session HTML pages in `sessions/transcript_s1.html` with heading showing all speakers (`Session 1: m1 Sarah Chen, p5 Maya, o1`), per-segment raw speaker codes (`p1:`, `m1:`), `.segment-moderator` CSS class for muted moderator styling, deep-link anchors from quote attributions, anchor highlight animation (yellow flash when arriving via link)
 - **Sessions table**: report table shows one row per session with columns Session | Speakers | Start | Duration | Source. Speakers column lists all codes (m→p→o sorted) with `data-participant` spans for JS name resolution
 - **PII redaction**: off by default (`--redact-pii` to opt in)
 
@@ -223,10 +268,11 @@ This is especially common when:
 - **`PersonComputed.session_id` defaults to `""`** — backward compat with existing `people.yaml` files. New runs set it to `"s1"`, `"s2"`, etc. via `compute_participant_stats()`
 - **`_session_duration()` accepts optional `people` parameter** — checks `PersonComputed.duration_seconds` (matched by `session_id`) before falling back to `InputFile.duration_seconds`. This fixes VTT-only sessions that have no `InputFile.duration_seconds` but do have segment timestamps
 - **Report sessions table groups speakers by `computed.session_id`** — if people file is missing, falls back to showing `[session.participant_id]` only
-- **Transcript files named by `session_id`** (`s1_raw.txt`, not `p1_raw.txt`) — a single file contains segments from all speakers in that session (`[m1]`, `[p1]`, `[p2]`, `[o1]`)
+- **Transcript files named by `session_id`** (`s1.txt` in `transcripts-raw/`, not `p1_raw.txt`) — a single file contains segments from all speakers in that session (`[m1]`, `[p1]`, `[p2]`, `[o1]`)
 - **`assign_speaker_codes()` signature is `(session_id, next_participant_number, segments)`** — returns `(dict[str, str], int)` (label→code map, updated next number). The `next_participant_number` counter enables global p-code numbering across sessions
-- **`cooked_transcripts/` only exists with `--redact-pii`** — if a previous run used PII redaction but the current one doesn't, stale cooked files remain on disk. Coverage and transcript pages must use the same transcript source to avoid broken links. `render_transcript_pages()` accepts a `transcripts` parameter to ensure consistency; see `bristlenose/stages/CLAUDE.md` for details
+- **`transcripts-cooked/` only exists with `--redact-pii`** — if a previous run used PII redaction but the current one doesn't, stale cooked files remain on disk. Coverage and transcript pages must use the same transcript source to avoid broken links. `render_transcript_pages()` accepts a `transcripts` parameter to ensure consistency; see `bristlenose/stages/CLAUDE.md` for details
 - **`_render_transcript_page()` accepts `FullTranscript`, not just `PiiCleanTranscript`** — the assertion uses `isinstance(transcript, FullTranscript)`. Since `PiiCleanTranscript` is a subclass, both types pass. Don't tighten this to `PiiCleanTranscript` or it will crash when PII redaction is off (the default)
+- **`player.js` only intercepts `.timecode` clicks with `data-participant` and `data-seconds`** — coverage section links use `class="timecode"` but NO data attributes, so they navigate normally. If you add new timecode links that should navigate (not open the player), omit the data attributes
 
 ## Transcript coverage
 
@@ -292,6 +338,6 @@ When the user signals end of session, **proactively offer to run this checklist*
 9. **Clean up branches** — delete merged feature branches
 10. **Verify CI** — check latest push passes CI
 
-## Current status (v0.6.9, Feb 2026)
+## Current status (v0.6.10, Feb 2026)
 
-Core pipeline complete and published to PyPI + Homebrew. Snap packaging implemented and tested locally (arm64); CI builds amd64 on every push. Latest: transcript coverage section showing % in report / moderator / omitted with expandable omitted content; `--hierarchical` flag for theme-grouped quote layout; transcript page fix for non-PII runs. Prior: multi-participant session support — sessions with multiple interviewees get globally-numbered participant codes (`p1`–`p11`); report sessions table with Speakers column; transcript pages show `Session N: m1 Name, p5 Name` heading and raw code segment labels; `PersonComputed.session_id` for session→speaker grouping; VTT duration from transcript timestamps. v0.6.7 adds search enhancements, pipeline warnings, CLI polish. v0.6.6 adds Cargo/uv-style CLI output, search-as-you-type filtering, platform-aware session grouping, man page, page footer. v0.6.5 adds timecode typography, hanging-indent quote layout, transcript name propagation. v0.6.4 adds concurrent per-participant LLM calls. v0.6.3 redesigns report header, adds view-switcher dropdown, Analysis ToC column, anonymisation boundary. v0.6.2 adds editable participant names, auto name/role extraction, editable headings. v0.6.1 adds snap recipe, CI workflow. v0.6.0 added `bristlenose doctor`. v0.5.0 added per-participant transcript pages. Next up: Phase 2 cross-session moderator linking; register snap name, request classic confinement approval, first edge channel publish. See `TODO.md` for full task list.
+Core pipeline complete and published to PyPI + Homebrew. Snap packaging implemented and tested locally (arm64); CI builds amd64 on every push. Latest: **output inside input folder** (`bristlenose run interviews/` → `interviews/bristlenose-output/`) prevents collisions when processing multiple projects; **new directory structure** — `assets/` for static files, `sessions/` for transcript pages, `transcripts-raw/`/`transcripts-cooked/` for transcripts, `.bristlenose/` for internal files; **report filenames include project name** (`bristlenose-{slug}-report.html`); **coverage link fix** — player.js no longer intercepts non-player timecode links; **anchor highlight** — transcript page segments flash yellow when arriving via anchor link. Prior: transcript coverage section (% in report / moderator / omitted); multi-participant sessions with global p-codes; sessions table; transcript pages with speaker codes. v0.6.7 adds search enhancements, pipeline warnings, CLI polish. v0.6.6 adds Cargo/uv-style CLI output, search-as-you-type filtering, platform-aware session grouping, man page, page footer. v0.6.5 adds timecode typography, hanging-indent quote layout, transcript name propagation. v0.6.4 adds concurrent per-participant LLM calls. v0.6.3 redesigns report header, adds view-switcher dropdown, Analysis ToC column, anonymisation boundary. v0.6.2 adds editable participant names, auto name/role extraction, editable headings. v0.6.1 adds snap recipe, CI workflow. v0.6.0 added `bristlenose doctor`. v0.5.0 added per-participant transcript pages. Next up: Phase 2 cross-session moderator linking; register snap name, request classic confinement approval, first edge channel publish. See `TODO.md` for full task list.

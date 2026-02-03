@@ -1,6 +1,6 @@
 .\" Man page for bristlenose
 .\" Generated from cli.py help text
-.TH BRISTLENOSE 1 "February 2026" "bristlenose 0.6.9" "User Commands"
+.TH BRISTLENOSE 1 "February 2026" "bristlenose 0.6.10" "User Commands"
 .SH NAME
 bristlenose \- user-research transcription and quote extraction engine
 .SH SYNOPSIS
@@ -29,9 +29,7 @@ bristlenose \- user-research transcription and quote extraction engine
 .RI [ options ]
 .br
 .B bristlenose render
-.I input-dir
-.RB [ \-o
-.IR output-dir ]
+.RI [ output-dir ]
 .RI [ options ]
 .br
 .B bristlenose doctor
@@ -59,7 +57,7 @@ Markdown reports. Requires an API key. PII redaction is off by default; use
 .TP
 .B transcribe-only
 Transcription only. No LLM calls, no API key needed. Produces raw transcript
-files in \fIoutput/raw_transcripts/\fR.
+files in \fIbristlenose-output/transcripts-raw/\fR.
 .TP
 .B analyze
 Run LLM analysis on existing transcript \fI.txt\fR files. Skips ingestion and
@@ -89,7 +87,7 @@ Show command help and exit.
 .SS Options for \fBrun\fR
 .TP
 .BR \-o ", " \-\-output " " \fIDIR\fR
-Output directory. Default: \fIoutput\fR.
+Output directory. Default: \fIbristlenose-output/\fR inside the input folder.
 .TP
 .BR \-p ", " \-\-project " " \fINAME\fR
 Project name for the report header. Defaults to the input folder name.
@@ -150,8 +148,8 @@ Enable verbose logging.
 .SS Options for \fBrender\fR
 .TP
 .BR \-o ", " \-\-output " " \fIDIR\fR
-Output directory. Must contain an \fIintermediate/\fR directory from a previous
-run.
+Output directory. Must contain a \fI.bristlenose/intermediate/\fR directory from
+a previous run. Default: auto-detected from current directory.
 .TP
 .BR \-p ", " \-\-project " " \fINAME\fR
 Project name.
@@ -251,25 +249,42 @@ Teams recording/transcript suffixes, Zoom cloud prefixes and meeting IDs, Zoom
 local recording folders, and Google Meet parenthetical timestamps are all
 stripped before stem comparison.
 .SH OUTPUT
+Output goes inside the input folder by default (avoids collisions when
+processing multiple projects):
 .PP
 .RS
 .nf
-output/
-  research_report.html       browsable report
-  research_report.md         Markdown version
-  transcript_s*.html         per-session transcript pages
-  bristlenose-theme.css      stylesheet (regenerated on every run)
-  bristlenose-logo.png       project logo (light mode)
-  bristlenose-logo-dark.png  project logo (dark mode)
-  bristlenose-player.html    popout video player
-  people.yaml                participant registry (stats + editable fields)
-  raw_transcripts/           one .txt and .md per session
-  cooked_transcripts/        PII-redacted transcripts (only with --redact-pii)
-  intermediate/              JSON snapshots for re-rendering
+interviews/                          input folder
+  bristlenose-output/                output folder (inside input)
+    bristlenose-interviews-report.html    browsable report
+    bristlenose-interviews-report.md      Markdown version
+    people.yaml                           participant registry
+    assets/
+      bristlenose-theme.css               stylesheet
+      bristlenose-logo.png                logo (light)
+      bristlenose-logo-dark.png           logo (dark)
+      bristlenose-player.html             popout video player
+    sessions/
+      transcript_s1.html                  per-session transcript pages
+      transcript_s2.html
+    transcripts-raw/                      one .txt and .md per session
+    transcripts-cooked/                   PII-redacted (only with --redact-pii)
+    .bristlenose/
+      intermediate/                       JSON snapshots for re-rendering
+      temp/                               FFmpeg scratch files
 .fi
 .RE
 .SH EXAMPLES
-Full pipeline run:
+Full pipeline run (output created inside input folder):
+.PP
+.RS
+.nf
+bristlenose run ./interviews/
+# Creates ./interviews/bristlenose-output/
+.fi
+.RE
+.PP
+Full pipeline with custom output location:
 .PP
 .RS
 .nf
@@ -281,7 +296,7 @@ Transcribe only (no API key needed):
 .PP
 .RS
 .nf
-bristlenose transcribe-only ./interviews/ -o ./results/
+bristlenose transcribe-only ./interviews/
 .fi
 .RE
 .PP
@@ -289,7 +304,7 @@ Analyse existing transcripts:
 .PP
 .RS
 .nf
-bristlenose analyze ./results/raw_transcripts/ -o ./results/
+bristlenose analyze ./interviews/bristlenose-output/transcripts-raw/
 .fi
 .RE
 .PP
@@ -297,7 +312,9 @@ Re-render after CSS changes (no API key needed):
 .PP
 .RS
 .nf
-bristlenose render ./interviews/ -o ./results/
+cd ./interviews/ && bristlenose render
+# Or specify explicitly:
+bristlenose render ./interviews/bristlenose-output/
 .fi
 .RE
 .PP

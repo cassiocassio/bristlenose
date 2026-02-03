@@ -12,27 +12,29 @@
 
 ## Output directory structure
 
+Output goes **inside the input folder** by default. See root `CLAUDE.md` for the full v2 layout. Key paths for stages:
+
 ```
-output/
-├── raw_transcripts/          # Stage 6 output
-│   ├── s1_raw.txt            # Plain text (canonical, machine-readable)
-│   ├── s1_raw.md             # Markdown companion (human-readable)
-│   ├── s2_raw.txt            # Each file contains all speakers: [m1], [p1], [p2], etc.
-│   └── s2_raw.md
-├── cooked_transcripts/       # Stage 7 output (PII-redacted, only when --redact-pii)
-│   ├── s1_cooked.txt
-│   ├── s1_cooked.md
-│   ├── s2_cooked.txt
-│   └── s2_cooked.md
-├── intermediate/             # JSON snapshots (if write_intermediate=True)
-├── temp/                     # Extracted audio, working files
-├── people.yaml               # Participant registry (computed stats + human-editable fields)
-├── research_report.md        # Final markdown report
-├── research_report.html      # Final HTML report with interactive features
-├── transcript_s1.html        # Per-session transcript page (one per session)
-├── transcript_s2.html
-└── ...
+interviews/bristlenose-output/          # default output location
+├── bristlenose-{slug}-report.html      # render_html.py output
+├── bristlenose-{slug}-report.md        # render_output.py output
+├── people.yaml                         # people.py output
+├── assets/                             # static files (CSS, logos, player)
+├── sessions/                           # transcript pages (render_html.py)
+│   ├── transcript_s1.html
+│   └── transcript_s2.html
+├── transcripts-raw/                    # Stage 6 output (merge_transcript.py)
+│   ├── s1.txt                          # each file has all speakers: [m1], [p1], [p2]
+│   └── s1.md
+├── transcripts-cooked/                 # Stage 7 output (pii_removal.py, only with --redact-pii)
+│   ├── s1.txt
+│   └── s1.md
+└── .bristlenose/
+    ├── intermediate/                   # JSON snapshots (render_output.py)
+    └── temp/                           # FFmpeg scratch files
 ```
+
+**Path helpers**: Use `OutputPaths` from `bristlenose/output_paths.py` for consistent path construction.
 
 ## Stage 5b: Speaker identification
 
@@ -101,9 +103,9 @@ The HTML report has three places that generate links to transcript pages:
 
 Transcript pages are named `transcript_{transcript.session_id}.html` with anchor IDs `t-{int(seg.start_time)}`.
 
-**The gotcha**: `cooked_transcripts/` only exists when `--redact-pii` was used. If a previous run used PII redaction but the current run doesn't:
-- `cooked_transcripts/` contains stale files from the old run
-- `raw_transcripts/` contains fresh files from the new run
+**The gotcha**: `transcripts-cooked/` only exists when `--redact-pii` was used. If a previous run used PII redaction but the current run doesn't:
+- `transcripts-cooked/` contains stale files from the old run
+- `transcripts-raw/` contains fresh files from the new run
 - If coverage and transcript pages loaded from different directories, links would break
 
 **Solution**: `render_transcript_pages()` accepts an optional `transcripts` parameter. When `render_html()` is called with transcripts, it passes them through to `render_transcript_pages()`, ensuring both coverage calculation and transcript page generation use the exact same data. For the `render` command (which loads from disk), both use the same preference: cooked > raw.

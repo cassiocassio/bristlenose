@@ -341,9 +341,9 @@ def run(
         ),
     ],
     output_dir: Annotated[
-        Path,
-        typer.Option("--output", "-o", help="Output directory for results."),
-    ] = Path("output"),
+        Path | None,
+        typer.Option("--output", "-o", help="Output directory (default: bristlenose-output/ inside input folder)."),
+    ] = None,
     project_name: Annotated[
         str | None,
         typer.Option("--project", "-p", help="Name of the research project (defaults to input folder name)."),
@@ -394,6 +394,10 @@ def run(
     ] = False,
 ) -> None:
     """Process a folder of user-research recordings into themed, timestamped quotes."""
+    # Default output location: inside the input folder
+    if output_dir is None:
+        output_dir = input_dir / "bristlenose-output"
+
     if output_dir.exists() and any(output_dir.iterdir()):
         if clean:
             import shutil
@@ -448,9 +452,9 @@ def transcribe(
         ),
     ],
     output_dir: Annotated[
-        Path,
-        typer.Option("--output", "-o", help="Output directory for transcripts."),
-    ] = Path("output"),
+        Path | None,
+        typer.Option("--output", "-o", help="Output directory (default: bristlenose-output/ inside input folder)."),
+    ] = None,
     whisper_model: Annotated[
         str,
         typer.Option("--whisper-model", "-w", help="Whisper model size."),
@@ -461,6 +465,10 @@ def transcribe(
     ] = False,
 ) -> None:
     """Only run transcription (no LLM analysis). Produces raw transcripts."""
+    # Default output location: inside the input folder
+    if output_dir is None:
+        output_dir = input_dir / "bristlenose-output"
+
     settings = load_settings(
         output_dir=output_dir,
         whisper_model=whisper_model,
@@ -477,7 +485,7 @@ def transcribe(
 
     _print_pipeline_summary(result)
     # Transcript-specific: point to the transcripts dir, not the report
-    raw_dir = result.output_dir / "raw_transcripts"
+    raw_dir = result.output_dir / "transcripts-raw"
     if raw_dir.exists():
         console.print(f"\n  Transcripts  {raw_dir}")
 
@@ -494,9 +502,9 @@ def analyze(
         ),
     ],
     output_dir: Annotated[
-        Path,
-        typer.Option("--output", "-o", help="Output directory for results."),
-    ] = Path("output"),
+        Path | None,
+        typer.Option("--output", "-o", help="Output directory (default: parent of transcripts_dir, or bristlenose-output/ if transcripts_dir is named transcripts-raw)."),
+    ] = None,
     project_name: Annotated[
         str | None,
         typer.Option("--project", "-p", help="Name of the research project (defaults to input folder name)."),
@@ -511,6 +519,14 @@ def analyze(
     ] = False,
 ) -> None:
     """Run LLM analysis on existing transcripts (skip ingestion and transcription)."""
+    # Default output location: if transcripts_dir is transcripts-raw/ inside a bristlenose-output,
+    # use the parent; otherwise create bristlenose-output/ alongside transcripts_dir
+    if output_dir is None:
+        if transcripts_dir.name in ("transcripts-raw", "transcripts-cooked", "raw_transcripts", "cooked_transcripts"):
+            output_dir = transcripts_dir.parent
+        else:
+            output_dir = transcripts_dir.parent / "bristlenose-output"
+
     if project_name is None:
         project_name = transcripts_dir.resolve().name
 
@@ -540,8 +556,8 @@ def render(
     output_dir: Annotated[
         Path | None,
         typer.Argument(
-            help="Output directory containing intermediate/ from a previous run. "
-                 "Defaults to ./output/ if it exists.",
+            help="Output directory containing .bristlenose/intermediate/ from a previous run. "
+                 "Defaults to ./bristlenose-output/ if it exists.",
         ),
     ] = None,
     input_dir: Annotated[
@@ -568,44 +584,61 @@ def render(
     """
     # Auto-detect output directory
     if output_dir is None:
-        if (Path.cwd() / "output" / "intermediate").exists():
+        # New layout: bristlenose-output/.bristlenose/intermediate/
+        if (Path.cwd() / "bristlenose-output" / ".bristlenose" / "intermediate").exists():
+            output_dir = Path("bristlenose-output")
+        # Legacy layout: output/intermediate/ or output/.bristlenose/intermediate/
+        elif (Path.cwd() / "output" / ".bristlenose" / "intermediate").exists():
             output_dir = Path("output")
+        elif (Path.cwd() / "output" / "intermediate").exists():
+            output_dir = Path("output")
+        elif (Path.cwd() / ".bristlenose" / "intermediate").exists():
+            output_dir = Path.cwd()
         elif (Path.cwd() / "intermediate").exists():
             output_dir = Path.cwd()
         else:
-            console.print("[red]No intermediate/ directory found.[/red]")
+            console.print("[red]No intermediate data found.[/red]")
             console.print(
-                "Run from a project directory containing output/intermediate/, "
+                "Run from a directory containing bristlenose-output/, "
                 "or specify the output path as an argument."
             )
             raise typer.Exit(1)
 
-    # Validate that intermediate exists
-    intermediate_dir = output_dir / "intermediate"
+    # Validate that intermediate exists (try new layout first, then legacy)
+    intermediate_dir = output_dir / ".bristlenose" / "intermediate"
     if not intermediate_dir.exists():
-        console.print(f"[red]No intermediate/ directory in {output_dir}[/red]")
+        intermediate_dir = output_dir / "intermediate"
+    if not intermediate_dir.exists():
+        console.print(f"[red]No intermediate data in {output_dir}[/red]")
         console.print("Run 'bristlenose run' first to generate intermediate data.")
         raise typer.Exit(1)
 
     # Auto-detect input directory if not specified
     if input_dir is None:
-        # Common project layout: input_dir is sibling of output_dir
-        # e.g., project/interviews/ and project/output/
-        project_root = output_dir.resolve().parent
-        candidates = [
-            d for d in project_root.iterdir()
-            if d.is_dir() and d.name != output_dir.name and d.name != "output"
-        ]
-        # Look for directories with media files
-        for candidate in candidates:
-            media_exts = {".mp4", ".mov", ".mp3", ".wav", ".m4a", ".vtt", ".srt", ".docx"}
-            if any(f.suffix.lower() in media_exts for f in candidate.iterdir() if f.is_file()):
-                input_dir = candidate
-                break
+        # New layout: output is inside input (interviews/bristlenose-output/)
+        if output_dir.name == "bristlenose-output":
+            input_dir = output_dir.resolve().parent
+        else:
+            # Legacy layout: input_dir is sibling of output_dir
+            # e.g., project/interviews/ and project/output/
+            project_root = output_dir.resolve().parent
+            candidates = [
+                d for d in project_root.iterdir()
+                if d.is_dir() and d.name != output_dir.name and d.name not in ("output", "bristlenose-output")
+            ]
+            # Look for directories with media files
+            for candidate in candidates:
+                media_exts = {".mp4", ".mov", ".mp3", ".wav", ".m4a", ".vtt", ".srt", ".docx"}
+                try:
+                    if any(f.suffix.lower() in media_exts for f in candidate.iterdir() if f.is_file()):
+                        input_dir = candidate
+                        break
+                except PermissionError:
+                    continue
 
-        if input_dir is None:
-            # Fall back to project root (render will work but no video linking)
-            input_dir = project_root
+            if input_dir is None:
+                # Fall back to project root (render will work but no video linking)
+                input_dir = project_root
 
     if clean:
         console.print(

@@ -207,7 +207,13 @@ class Pipeline:
             # ── Stages 3-5: Parse existing transcripts + Transcribe ──
             status.update("[dim]Transcribing...[/dim]")
             t0 = time.perf_counter()
-            session_segments = await self._gather_all_segments(sessions)
+
+            def _on_transcribe_progress(current: int, total: int) -> None:
+                status.update(f"[dim]Transcribing... ({current}/{total} files)[/dim]")
+
+            session_segments = await self._gather_all_segments(
+                sessions, on_progress=_on_transcribe_progress
+            )
             total_segments = sum(len(s) for s in session_segments.values())
             total_audio = sum(
                 f.duration_seconds or 0 for s in sessions for f in s.files
@@ -523,7 +529,13 @@ class Pipeline:
             # ── Stages 3-5: Transcribe ──
             status.update("[dim]Transcribing...[/dim]")
             t0 = time.perf_counter()
-            session_segments = await self._gather_all_segments(sessions)
+
+            def _on_transcribe_progress(current: int, total: int) -> None:
+                status.update(f"[dim]Transcribing... ({current}/{total} files)[/dim]")
+
+            session_segments = await self._gather_all_segments(
+                sessions, on_progress=_on_transcribe_progress
+            )
             total_segments = sum(len(s) for s in session_segments.values())
             total_audio = sum(
                 f.duration_seconds or 0 for s in sessions for f in s.files
@@ -734,13 +746,14 @@ class Pipeline:
     async def _gather_all_segments(
         self,
         sessions: list[InputSession],
-        progress: object | None = None,
+        *,
+        on_progress: object | None = None,
     ) -> dict[str, list[TranscriptSegment]]:
         """Gather transcript segments from all sources (subtitle, docx, whisper).
 
         Args:
             sessions: Input sessions.
-            progress: Optional Rich progress bar.
+            on_progress: Optional callback(current, total) for transcription progress.
 
         Returns:
             Dict mapping session_id to list of TranscriptSegments.
@@ -805,7 +818,11 @@ class Pipeline:
                 if s.session_id not in session_segments and s.audio_path is not None
             ]
             if needs_transcription:
-                whisper_results = transcribe_sessions(needs_transcription, self.settings)
+                whisper_results = transcribe_sessions(
+                    needs_transcription,
+                    self.settings,
+                    on_progress=on_progress,
+                )
                 session_segments.update(whisper_results)
 
         return session_segments

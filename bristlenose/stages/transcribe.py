@@ -20,9 +20,14 @@ from bristlenose.utils.hardware import AcceleratorType, HardwareInfo, detect_har
 logger = logging.getLogger(__name__)
 
 
+ProgressCallback = type(lambda current, total: None)
+
+
 def transcribe_sessions(
     sessions: list[InputSession],
     settings: BristlenoseSettings,
+    *,
+    on_progress: ProgressCallback | None = None,
 ) -> dict[str, list[TranscriptSegment]]:
     """Transcribe audio for sessions that need it.
 
@@ -35,6 +40,7 @@ def transcribe_sessions(
     Args:
         sessions: Sessions to transcribe.
         settings: Application settings.
+        on_progress: Optional callback(current, total) called after each file completes.
 
     Returns:
         Dict mapping session_id to list of TranscriptSegments.
@@ -67,8 +73,9 @@ def transcribe_sessions(
         transcribe_fn = _init_faster_whisper_backend(settings, hw)
 
     results: dict[str, list[TranscriptSegment]] = {}
+    total = len(needs_transcription)
 
-    for session in needs_transcription:
+    for i, session in enumerate(needs_transcription, start=1):
         assert session.audio_path is not None
         logger.info(
             "%s: Transcribing %s",
@@ -91,6 +98,9 @@ def transcribe_sessions(
                 exc,
             )
             results[session.session_id] = []
+
+        if on_progress:
+            on_progress(i, total)
 
     return results
 

@@ -407,15 +407,23 @@ class TestInteractivePromptFlows:
         settings = _settings(llm_provider="anthropic", anthropic_api_key="")
         assert _needs_provider_prompt(settings) is True
 
-    def test_prompt_triggers_for_no_openai_key(self) -> None:
-        """No key + OpenAI provider → prompt triggers."""
+    def test_prompt_does_not_trigger_for_explicit_openai(self) -> None:
+        """Explicit OpenAI provider (no key) → no prompt, preflight will catch it.
+
+        When user explicitly chooses --llm openai, we don't second-guess them
+        with the 3-way prompt. Preflight will show a specific error.
+        """
         from bristlenose.cli import _needs_provider_prompt
 
         settings = _settings(llm_provider="openai", openai_api_key="")
-        assert _needs_provider_prompt(settings) is True
+        assert _needs_provider_prompt(settings) is False
 
-    def test_prompt_triggers_for_ollama_not_ready(self) -> None:
-        """Local provider + Ollama not ready → prompt triggers."""
+    def test_prompt_does_not_trigger_for_explicit_local(self) -> None:
+        """Explicit local provider (Ollama not ready) → no prompt, preflight will catch it.
+
+        When user explicitly chooses --llm local/ollama, we don't second-guess them
+        with the 3-way prompt. Preflight will show a specific Ollama error.
+        """
         from bristlenose.cli import _needs_provider_prompt
 
         settings = _settings(llm_provider="local")
@@ -424,7 +432,7 @@ class TestInteractivePromptFlows:
                 is_running=False,
                 has_suitable_model=False,
             )
-            assert _needs_provider_prompt(settings) is True
+            assert _needs_provider_prompt(settings) is False
 
     def test_prompt_does_not_trigger_when_anthropic_key_set(self) -> None:
         """Valid Anthropic key → no prompt."""

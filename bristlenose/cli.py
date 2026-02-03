@@ -271,26 +271,24 @@ def _run_preflight(settings: object, command: str, *, skip_transcription: bool =
 def _needs_provider_prompt(settings: object) -> bool:
     """Check if we need to prompt the user to choose an LLM provider.
 
-    Returns True if:
-    - Provider is 'anthropic' but no API key is set, OR
-    - Provider is 'openai' but no API key is set, OR
-    - Provider is 'local' but Ollama is not running
+    Returns True ONLY if:
+    - Provider is 'anthropic' (the default) AND no Anthropic key is set
 
-    This catches the "no config at all" case (default anthropic, no key).
+    This catches the "no config at all" case where a first-time user runs
+    bristlenose without any API key or provider choice.
+
+    Note: We don't prompt for 'openai' or 'local' — if the user explicitly
+    chose those (via --llm or env var), they know what they want. If it's
+    not ready, preflight will catch it with a specific error.
     """
     from bristlenose.config import BristlenoseSettings
 
     assert isinstance(settings, BristlenoseSettings)
 
+    # Only prompt for the default case: anthropic with no key
+    # If user chose openai or local explicitly, don't second-guess them
     if settings.llm_provider == "anthropic" and not settings.anthropic_api_key:
         return True
-    if settings.llm_provider == "openai" and not settings.openai_api_key:
-        return True
-    if settings.llm_provider == "local":
-        from bristlenose.ollama import check_ollama
-
-        status = check_ollama()
-        return not status.has_suitable_model
     return False
 
 

@@ -40,8 +40,9 @@ bristlenose \- user-research transcription and quote extraction engine
 .B bristlenose
 processes user-research interview recordings into structured, themed, timestamped
 quotes. It transcribes audio locally using Whisper, extracts and enriches quotes
-via LLM (Anthropic or OpenAI), groups them by screen and theme, and renders a
-browsable HTML report. Nothing is uploaded; recordings stay on your machine.
+via LLM (Claude, ChatGPT, or local models via Ollama), groups them by screen and
+theme, and renders a browsable HTML report. Nothing is uploaded; recordings stay
+on your machine.
 .PP
 The HTML report includes sections (grouped by screen), themes (cross-participant
 patterns), a sentiment histogram, friction points, user journeys, clickable
@@ -101,7 +102,9 @@ Whisper model size: \fBtiny\fR, \fBbase\fR, \fBsmall\fR, \fBmedium\fR,
 \fBlarge-v3\fR, \fBlarge-v3-turbo\fR. Default: \fBlarge-v3-turbo\fR.
 .TP
 .BR \-l ", " \-\-llm " " \fIPROVIDER\fR
-LLM provider: \fBanthropic\fR, \fBopenai\fR. Default: \fBanthropic\fR.
+LLM provider: \fBanthropic\fR (or \fBclaude\fR), \fBopenai\fR (or \fBchatgpt\fR),
+\fBlocal\fR (or \fBollama\fR). Default: \fBanthropic\fR. The \fBlocal\fR provider
+uses Ollama for free, private, offline analysis.
 .TP
 .BR \-\-redact\-pii
 Redact personally identifying information from transcripts. PII is retained by
@@ -181,7 +184,7 @@ OpenAI API key.
 .SS LLM settings
 .TP
 .B BRISTLENOSE_LLM_PROVIDER
-\fBanthropic\fR or \fBopenai\fR. Default: \fBanthropic\fR.
+\fBanthropic\fR, \fBopenai\fR, or \fBlocal\fR. Default: \fBanthropic\fR.
 .TP
 .B BRISTLENOSE_LLM_MODEL
 Model name. Default: \fBclaude-sonnet-4-20250514\fR.
@@ -194,6 +197,14 @@ Sampling temperature. Default: \fB0.1\fR.
 .TP
 .B BRISTLENOSE_LLM_CONCURRENCY
 Parallel LLM calls. Default: \fB3\fR.
+.SS Local LLM settings (Ollama)
+.TP
+.B BRISTLENOSE_LOCAL_URL
+Ollama API endpoint. Default: \fBhttp://localhost:11434/v1\fR.
+.TP
+.B BRISTLENOSE_LOCAL_MODEL
+Local model name. Default: \fBllama3.2:3b\fR. Other options: \fBllama3.1:8b\fR,
+\fBmistral:7b\fR, \fBqwen2.5:7b\fR.
 .SS Transcription settings
 .TP
 .B BRISTLENOSE_WHISPER_BACKEND
@@ -297,6 +308,15 @@ Transcribe only (no API key needed):
 .RS
 .nf
 bristlenose transcribe-only ./interviews/
+.fi
+.RE
+.PP
+Use local AI via Ollama (free, no API key):
+.PP
+.RS
+.nf
+bristlenose run ./interviews/ --llm local
+# Requires Ollama running: ollama serve
 .fi
 .RE
 .PP

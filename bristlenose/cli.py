@@ -166,7 +166,12 @@ def _format_doctor_table(report: object) -> None:
 
 
 def _print_doctor_fixes(report: object) -> None:
-    """Print fix instructions for failures and notes for skipped checks."""
+    """Print fix instructions for failures only.
+
+    The table already shows what passed/failed/skipped with details.
+    We only need to print actionable fix instructions for failures.
+    Notes and warnings are already visible in the table — no need to repeat.
+    """
     from bristlenose.doctor import DoctorReport
     from bristlenose.doctor_fixes import get_fix
 
@@ -174,33 +179,16 @@ def _print_doctor_fixes(report: object) -> None:
 
     failures = report.failures
     warnings = report.warnings
-    notes = report.notes
 
-    if failures:
-        count = len(failures)
-        label = "issue" if count == 1 else "issues"
-        console.print(f"\n{count} {label}:\n")
-        for result in failures:
+    # Only print fixes for failures — the table already shows the status
+    all_fixable = failures + warnings
+    if all_fixable:
+        console.print()  # Blank line after table
+        for result in all_fixable:
             fix = get_fix(result.fix_key)
             if fix:
-                console.print(f"  [bold]{result.label}[/bold]: {fix}\n")
-
-    if warnings:
-        count = len(warnings)
-        label = "warning" if count == 1 else "warnings"
-        console.print(f"\n{count} {label}:\n")
-        for result in warnings:
-            fix = get_fix(result.fix_key)
-            if fix:
-                console.print(f"  [bold]{result.label}[/bold]: {fix}\n")
-
-    if notes:
-        count = len(notes)
-        label = "note" if count == 1 else "notes"
-        console.print(f"\n{count} {label}:\n")
-        for result in notes:
-            if result.detail:
-                console.print(f"  {result.label}: {result.detail}")
+                console.print(fix)
+                console.print()  # Blank line between fixes
 
 
 def _maybe_auto_doctor(settings: object, command: str) -> None:

@@ -244,9 +244,6 @@ def _run_preflight(settings: object, command: str, *, skip_transcription: bool =
     fix = get_fix(failure.fix_key)
     if fix:
         console.print(f"\n{fix}")
-    console.print(
-        "\n[dim]Run [bold]bristlenose doctor[/bold] for full diagnostics.[/dim]"
-    )
     console.print()
     raise typer.Exit(1)
 

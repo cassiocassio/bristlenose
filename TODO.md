@@ -314,6 +314,34 @@ Full design doc: `docs/design-doctor-and-snap.md`
 - [ ] `--prefetch-model` flag — download Whisper model and exit (for slow connections, CI setups)
 - [ ] Homebrew formula: add `post_install` for spaCy model download, improve caveats
 
+### Platform detection refactor (future PR)
+
+The codebase has grown to have 12+ instances of `shutil.which() + subprocess.run() + exception handling` across `ollama.py`, `doctor.py`, `hardware.py`, and `audio.py`. Worth consolidating into a shared module.
+
+**Proposed `bristlenose/utils/system.py`** (~100 lines):
+- `which(name: str) -> Path | None` — wraps `shutil.which`
+- `command_exists(name: str) -> bool`
+- `run_safe(cmd: list[str], timeout: int = 10) -> CompletedProcess | None` — handles all exception patterns
+- `is_darwin()`, `is_linux()`, `is_windows()`, `is_apple_silicon()` → simple booleans
+- `can_import(module_name: str) -> bool` — try-import pattern
+
+**Keep domain-specific detection where it is:**
+- `detect_install_method()` stays in `doctor_fixes.py` (how Bristlenose was installed)
+- `get_ollama_install_method()` stays in `ollama.py` (how Ollama was installed — different thing)
+- `HardwareInfo` stays in `hardware.py` — already well-encapsulated
+
+**Benefits:**
+- Reduces repeated subprocess boilerplate by ~30-40%
+- Standardises timeout constants (currently 5, 10, 30, 600 scattered as magic numbers)
+- Makes tests cleaner (mock one function instead of patching subprocess everywhere)
+- Foundation for future providers (Azure, Gemini will need similar checks)
+
+**Files to simplify:**
+- `ollama.py` — 6 instances of which + subprocess pattern
+- `doctor.py` — 3 instances
+- `hardware.py` — 5 instances (sysctl, nvidia-smi, system_profiler)
+- `audio.py` — 2 instances (ffprobe, ffmpeg)
+
 ### Performance (audited Feb 2026)
 
 Full audit done. Stage concurrency (item 1) is shipped. Remaining items ranked by impact.

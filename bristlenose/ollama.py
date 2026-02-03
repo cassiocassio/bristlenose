@@ -180,6 +180,9 @@ def validate_local_endpoint(url: str, model: str) -> tuple[bool | None, str]:
             return (False, f"Model '{model}' not found. Run: ollama pull {model}")
 
     except urllib.error.URLError:
-        return (None, "Cannot connect to local model server. Is Ollama running?")
+        # Check if Ollama is installed to give a more specific message
+        if is_ollama_installed():
+            return (None, "Ollama is installed but not running")
+        return (None, "Ollama is not installed")
     except Exception as e:
         return (None, str(e))

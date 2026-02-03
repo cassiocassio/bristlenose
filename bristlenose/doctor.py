@@ -333,11 +333,16 @@ def check_local_provider(settings: BristlenoseSettings) -> CheckResult:
             fix_key="ollama_model_missing",
         )
     # valid is None — couldn't connect
+    # Determine appropriate fix based on error message
+    if "not installed" in err:
+        fix_key = "ollama_not_installed"
+    else:
+        fix_key = "ollama_not_running"
     return CheckResult(
         status=CheckStatus.FAIL,
         label="LLM provider",
         detail=err,
-        fix_key="ollama_not_running",
+        fix_key=fix_key,
     )
 
 

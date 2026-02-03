@@ -186,22 +186,26 @@ def _fix_low_disk_space(_method: str) -> str:
 
 def _fix_ollama_not_running(_method: str) -> str:
     return (
-        "Ollama is not running. Start it with:\n\n"
+        "Start Ollama:\n\n"
         "  ollama serve\n\n"
-        "Or install it from https://ollama.ai (no account needed).\n\n"
-        "To use a cloud API instead:\n"
-        "  bristlenose run <input> --llm claude"
+        "Then re-run bristlenose. Or use a cloud API: --llm claude"
+    )
+
+
+def _fix_ollama_not_installed(_method: str) -> str:
+    return (
+        "Install Ollama from https://ollama.ai (free, no account needed).\n\n"
+        "Then start it:\n\n"
+        "  ollama serve\n\n"
+        "Or use a cloud API: --llm claude"
     )
 
 
 def _fix_ollama_model_missing(_method: str) -> str:
     return (
-        "The local model is not installed. Download it with:\n\n"
+        "Download the model:\n\n"
         "  ollama pull llama3.2\n\n"
-        "Or use a different model:\n"
-        "  bristlenose run <input> --model llama3.1\n\n"
-        "To use a cloud API instead:\n"
-        "  bristlenose run <input> --llm claude"
+        "Or use a cloud API: --llm claude"
     )
 
 
@@ -223,5 +227,6 @@ _FIX_TABLE: dict[str, object] = {
     "cuda_not_available": _fix_cuda_not_available,
     "low_disk_space": _fix_low_disk_space,
     "ollama_not_running": _fix_ollama_not_running,
+    "ollama_not_installed": _fix_ollama_not_installed,
     "ollama_model_missing": _fix_ollama_model_missing,
 }

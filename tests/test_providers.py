@@ -232,21 +232,43 @@ class TestOllamaHelpers:
         assert valid is False
         assert "not found" in err
 
-    def test_validate_local_endpoint_not_reachable(self) -> None:
+    def test_validate_local_endpoint_not_reachable_installed(self) -> None:
         import urllib.error
 
         from bristlenose.ollama import validate_local_endpoint
 
-        with patch(
-            "urllib.request.urlopen",
-            side_effect=urllib.error.URLError("Connection refused"),
+        with (
+            patch(
+                "urllib.request.urlopen",
+                side_effect=urllib.error.URLError("Connection refused"),
+            ),
+            patch("bristlenose.ollama.is_ollama_installed", return_value=True),
         ):
             valid, err = validate_local_endpoint(
                 "http://localhost:11434/v1", "llama3.2:3b"
             )
 
         assert valid is None
-        assert "Cannot connect" in err
+        assert "installed but not running" in err
+
+    def test_validate_local_endpoint_not_reachable_not_installed(self) -> None:
+        import urllib.error
+
+        from bristlenose.ollama import validate_local_endpoint
+
+        with (
+            patch(
+                "urllib.request.urlopen",
+                side_effect=urllib.error.URLError("Connection refused"),
+            ),
+            patch("bristlenose.ollama.is_ollama_installed", return_value=False),
+        ):
+            valid, err = validate_local_endpoint(
+                "http://localhost:11434/v1", "llama3.2:3b"
+            )
+
+        assert valid is None
+        assert "not installed" in err
 
 
 # ---------------------------------------------------------------------------
@@ -313,12 +335,25 @@ class TestDoctorLocalProvider:
         settings = _settings()
         with patch(
             "bristlenose.ollama.validate_local_endpoint",
-            return_value=(None, "Cannot connect to local model server"),
+            return_value=(None, "Ollama is installed but not running"),
         ):
             result = check_local_provider(settings)
 
         assert result.status == CheckStatus.FAIL
         assert result.fix_key == "ollama_not_running"
+
+    def test_check_local_provider_not_installed(self) -> None:
+        from bristlenose.doctor import CheckStatus, check_local_provider
+
+        settings = _settings()
+        with patch(
+            "bristlenose.ollama.validate_local_endpoint",
+            return_value=(None, "Ollama is not installed"),
+        ):
+            result = check_local_provider(settings)
+
+        assert result.status == CheckStatus.FAIL
+        assert result.fix_key == "ollama_not_installed"
 
     def test_check_network_skipped_for_local(self) -> None:
         from bristlenose.doctor import CheckStatus, check_network
@@ -336,7 +371,14 @@ class TestDoctorFixesOllama:
 
         fix = get_fix("ollama_not_running", "pip")
         assert "ollama serve" in fix
+        assert "--llm claude" in fix
+
+    def test_fix_ollama_not_installed(self) -> None:
+        from bristlenose.doctor_fixes import get_fix
+
+        fix = get_fix("ollama_not_installed", "pip")
         assert "ollama.ai" in fix
+        assert "ollama serve" in fix
         assert "--llm claude" in fix
 
     def test_fix_ollama_model_missing(self) -> None:

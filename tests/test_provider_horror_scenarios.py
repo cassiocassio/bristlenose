@@ -316,26 +316,23 @@ class TestNoCreditOrRateLimited:
 class TestOllamaNotAvailable:
     """User selected local provider but Ollama isn't ready."""
 
-    def test_ollama_not_running(self) -> None:
+    def test_ollama_installed_but_not_running(self) -> None:
         """
         User ran `bristlenose run ./interviews --llm local` but Ollama isn't started.
 
         They'll see:
-            Cannot connect to local model server. Is Ollama running?
+            LLM provider  !!   Ollama is installed but not running
 
-            Ollama is not running. Start it with:
+            Start Ollama:
 
               ollama serve
 
-            Or install it from https://ollama.ai (no account needed).
-
-            To use a cloud API instead:
-              bristlenose run <input> --llm claude
+            Then re-run bristlenose. Or use a cloud API: --llm claude
         """
         settings = _settings(llm_provider="local")
         with patch(
             "bristlenose.ollama.validate_local_endpoint",
-            return_value=(None, "Cannot connect to local model server. Is Ollama running?"),
+            return_value=(None, "Ollama is installed but not running"),
         ):
             result = check_local_provider(settings)
 
@@ -344,7 +341,36 @@ class TestOllamaNotAvailable:
 
         fix = get_fix(result.fix_key)
         assert "ollama serve" in fix
+        assert "--llm claude" in fix
+
+    def test_ollama_not_installed(self) -> None:
+        """
+        User ran `bristlenose run ./interviews --llm local` but Ollama isn't installed.
+
+        They'll see:
+            LLM provider  !!   Ollama is not installed
+
+            Install Ollama from https://ollama.ai (free, no account needed).
+
+            Then start it:
+
+              ollama serve
+
+            Or use a cloud API: --llm claude
+        """
+        settings = _settings(llm_provider="local")
+        with patch(
+            "bristlenose.ollama.validate_local_endpoint",
+            return_value=(None, "Ollama is not installed"),
+        ):
+            result = check_local_provider(settings)
+
+        assert result.status == CheckStatus.FAIL
+        assert result.fix_key == "ollama_not_installed"
+
+        fix = get_fix(result.fix_key)
         assert "ollama.ai" in fix
+        assert "ollama serve" in fix
         assert "--llm claude" in fix
 
     def test_ollama_running_but_no_model(self) -> None:

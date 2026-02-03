@@ -302,6 +302,16 @@ Edit `bristlenose/__init__.py` (the single source of truth for version), commit,
 
 ## Changelog
 
+### 0.6.12
+
+- File-level transcription progress — spinner now shows "(2/4 sessions)" during transcription
+- Improved Ollama start command detection — uses `brew services start ollama` for Homebrew installs, `open -a Ollama` for macOS app, platform-appropriate commands for snap/systemd
+- Doctor displays "(MLX)" accelerator — when mlx-whisper is installed on Apple Silicon, doctor now shows "(MLX)" instead of "(CPU)"
+- Whisper model line fits 80 columns — shortened to "~1.5 GB download on first run"
+- Provider header fix — pipeline header now shows "Local (Ollama)" instead of "ChatGPT" when using local provider
+- Improved fix messages — doctor fix messages now use `pipx inject` for pipx installs, proper Homebrew Python path for brew installs (PEP 668 compliance)
+- Retry logic catches ValidationError — local model retries now also handle Pydantic schema validation failures, not just JSON parse errors
+
 ### 0.6.11
 
 - Local AI support via Ollama — run bristlenose without an API key using local models like Llama 3.2; interactive first-run prompt offers Local/Claude/ChatGPT choice

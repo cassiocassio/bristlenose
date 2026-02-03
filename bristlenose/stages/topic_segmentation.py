@@ -42,26 +42,27 @@ async def segment_topics(
         async with semaphore:
             logger.info(
                 "%s: Segmenting topics (duration=%.0fs)",
-                transcript.participant_id,
+                transcript.session_id,
                 transcript.duration_seconds,
             )
             try:
                 topic_map = await _segment_single(transcript, llm_client)
                 logger.info(
                     "%s: Found %d topic boundaries",
-                    transcript.participant_id,
+                    transcript.session_id,
                     len(topic_map.boundaries),
                 )
                 return topic_map
             except Exception as exc:
                 logger.debug(
                     "%s: Topic segmentation failed: %s",
-                    transcript.participant_id,
+                    transcript.session_id,
                     exc,
                 )
                 if errors is not None:
                     errors.append(str(exc))
                 return SessionTopicMap(
+                    session_id=transcript.session_id,
                     participant_id=transcript.participant_id,
                     boundaries=[],
                 )
@@ -119,6 +120,7 @@ async def _segment_single(
     boundaries.sort(key=lambda b: b.timecode_seconds)
 
     return SessionTopicMap(
+        session_id=transcript.session_id,
         participant_id=transcript.participant_id,
         boundaries=boundaries,
     )

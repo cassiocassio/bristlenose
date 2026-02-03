@@ -29,6 +29,8 @@ def tmp_dir(tmp_path: Path) -> Path:
 def sample_session() -> InputSession:
     """Create a sample InputSession for testing."""
     return InputSession(
+        session_id="s1",
+        session_number=1,
         participant_id="p1",
         participant_number=1,
         files=[
@@ -87,6 +89,7 @@ def sample_segments() -> list[TranscriptSegment]:
 def sample_transcript(sample_segments: list[TranscriptSegment]) -> FullTranscript:
     """Create a sample FullTranscript for testing."""
     return FullTranscript(
+        session_id="s1",
         participant_id="p1",
         source_file="interview_01.mp4",
         session_date=datetime(2026, 1, 10, 10, 0, 0, tzinfo=timezone.utc),

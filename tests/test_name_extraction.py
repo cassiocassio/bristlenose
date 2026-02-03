@@ -26,6 +26,7 @@ _NOW = datetime(2026, 1, 15, 10, 0, 0, tzinfo=timezone.utc)
 def _computed(pid: str) -> PersonComputed:
     return PersonComputed(
         participant_id=pid,
+        session_id="s1",
         session_date=_NOW,
         duration_seconds=600.0,
         words_spoken=100,
@@ -57,6 +58,7 @@ def _transcript(
     role: SpeakerRole = SpeakerRole.PARTICIPANT,
 ) -> FullTranscript:
     return FullTranscript(
+        session_id=f"s-{pid}",
         participant_id=pid,
         source_file="test.mp4",
         session_date=_NOW,
@@ -117,6 +119,7 @@ class TestExtractNamesFromLabels:
     def test_researcher_segments_ignored(self) -> None:
         """Only PARTICIPANT-role segments contribute labels."""
         t = FullTranscript(
+            session_id="s-p1",
             participant_id="p1",
             source_file="test.mp4",
             session_date=_NOW,

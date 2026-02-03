@@ -50,6 +50,7 @@ def _make_people() -> PeopleFile:
             "p1": PersonEntry(
                 computed=PersonComputed(
                     participant_id="p1",
+                    session_id="s1",
                     session_date=datetime(2026, 1, 20, tzinfo=timezone.utc),
                     duration_seconds=300.0,
                     words_spoken=42,
@@ -127,7 +128,8 @@ def test_transcript_page_heading_with_name(tmp_path: Path) -> None:
         people=people,
     )
     html = (tmp_path / "transcript_p1.html").read_text(encoding="utf-8")
-    assert '<h1 data-participant="p1">p1 Sarah Jones</h1>' in html
+    assert "Session 1:" in html
+    assert 'class="heading-speaker" data-participant="p1">p1 Sarah</span>' in html
 
 
 def test_transcript_page_heading_without_name(tmp_path: Path) -> None:
@@ -136,7 +138,8 @@ def test_transcript_page_heading_without_name(tmp_path: Path) -> None:
         sessions=[], project_name="Test Project", output_dir=tmp_path,
     )
     html = (tmp_path / "transcript_p1.html").read_text(encoding="utf-8")
-    assert '<h1 data-participant="p1">p1</h1>' in html
+    assert "Session 1:" in html
+    assert 'class="heading-speaker" data-participant="p1">p1</span>' in html
 
 
 def test_transcript_page_timecodes_without_media(tmp_path: Path) -> None:
@@ -170,8 +173,8 @@ def test_transcript_page_speaker_name(tmp_path: Path) -> None:
         people=people,
     )
     html = (tmp_path / "transcript_p1.html").read_text(encoding="utf-8")
-    # short_name should be used as speaker label
-    assert "Sarah:" in html
+    # Segment labels show speaker code, not resolved name
+    assert "p1:" in html
 
 
 def test_transcript_page_segment_text(tmp_path: Path) -> None:

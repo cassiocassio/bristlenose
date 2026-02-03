@@ -23,7 +23,7 @@ def merge_transcripts(
 
     Args:
         sessions: The input sessions.
-        session_segments: Map of participant_id -> segments from any source
+        session_segments: Map of session_id -> segments from any source
             (whisper, subtitle, docx).
 
     Returns:
@@ -32,11 +32,11 @@ def merge_transcripts(
     transcripts: list[FullTranscript] = []
 
     for session in sessions:
-        segments = session_segments.get(session.participant_id, [])
+        segments = session_segments.get(session.session_id, [])
         if not segments:
             logger.warning(
                 "%s: No transcript segments available.",
-                session.participant_id,
+                session.session_id,
             )
             continue
 
@@ -55,6 +55,7 @@ def merge_transcripts(
         source_file = session.files[0].path.name if session.files else "unknown"
 
         transcript = FullTranscript(
+            session_id=session.session_id,
             participant_id=session.participant_id,
             source_file=source_file,
             session_date=session.session_date,
@@ -64,7 +65,7 @@ def merge_transcripts(
         transcripts.append(transcript)
         logger.info(
             "%s: Merged %d segments, duration=%.0fs",
-            session.participant_id,
+            session.session_id,
             len(merged),
             duration,
         )
@@ -97,11 +98,11 @@ def write_raw_transcripts(
     paths: list[Path] = []
 
     for transcript in transcripts:
-        filename = f"{transcript.participant_id}_raw.txt"
+        filename = f"{transcript.session_id}_raw.txt"
         path = output_dir / filename
 
         header = format_transcript_header_txt(
-            participant_id=transcript.participant_id,
+            participant_id=transcript.session_id,
             source_file=transcript.source_file,
             session_date=str(transcript.session_date.date()),
             duration=format_timecode(transcript.duration_seconds),
@@ -151,11 +152,11 @@ def write_raw_transcripts_md(
     paths: list[Path] = []
 
     for transcript in transcripts:
-        filename = f"{transcript.participant_id}_raw.md"
+        filename = f"{transcript.session_id}_raw.md"
         path = output_dir / filename
 
         header = format_transcript_header_md(
-            participant_id=transcript.participant_id,
+            participant_id=transcript.session_id,
             source_file=transcript.source_file,
             session_date=str(transcript.session_date.date()),
             duration=format_timecode(transcript.duration_seconds),

@@ -3,7 +3,7 @@
  *
  * On page load, reads name edits from the shared localStorage store
  * (written by names.js on the report page) and updates the page heading
- * and speaker labels to reflect them.
+ * to reflect them.  Segment speaker labels show raw codes (p1, m1).
  *
  * This is intentionally lightweight: no editing, no export, no
  * reconciliation.  Transcript pages are read-only consumers of the
@@ -41,24 +41,15 @@ function initTranscriptNames() {
   var edits = store.get({});
   if (!edits || Object.keys(edits).length === 0) return;
 
-  // Update the <h1> heading (has data-participant="p1").
-  var h1 = document.querySelector('h1[data-participant]');
-  if (h1) {
-    var pid = h1.getAttribute('data-participant');
-    var name = _resolveTranscriptName(pid, edits);
-    if (name) {
-      h1.textContent = pid + ' ' + name;
-    }
-  }
-
-  // Update all segment speaker labels.
-  var speakers = document.querySelectorAll('.segment-speaker[data-participant]');
-  for (var i = 0; i < speakers.length; i++) {
-    var el = speakers[i];
-    var sPid = el.getAttribute('data-participant');
-    var sName = _resolveTranscriptName(sPid, edits);
-    if (sName) {
-      el.textContent = sName + ':';
+  // Update speaker name spans inside the <h1> heading.
+  // Format: "m1 Sarah Chen" — code prefix preserved.
+  var headingSpeakers = document.querySelectorAll('h1 .heading-speaker[data-participant]');
+  for (var j = 0; j < headingSpeakers.length; j++) {
+    var hEl = headingSpeakers[j];
+    var hPid = hEl.getAttribute('data-participant');
+    var hName = _resolveTranscriptName(hPid, edits);
+    if (hName) {
+      hEl.textContent = hPid + ' ' + hName;
     }
   }
 }

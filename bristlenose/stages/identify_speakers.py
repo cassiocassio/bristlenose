@@ -230,25 +230,29 @@ async def identify_speaker_roles_llm(
 
 
 def assign_speaker_codes(
-    participant_id: str,
+    next_participant_number: int,
     segments: list[TranscriptSegment],
-) -> dict[str, str]:
-    """Assign speaker codes (p1, m1, m2, o1...) based on identified roles.
+) -> tuple[dict[str, str], int]:
+    """Assign speaker codes (p1, p2, m1, m2, o1...) based on identified roles.
 
     Sets ``speaker_code`` on every segment.  Returns a map of
-    ``speaker_label -> speaker_code`` for downstream people-file wiring.
+    ``speaker_label -> speaker_code`` and the next available participant number.
+
+    Participant numbering is global across sessions: the caller tracks
+    ``next_participant_number`` so that session s1 might get p1 + p2 and
+    session s2 starts at p3.
 
     Code prefixes:
-    - ``p`` — participant (uses the session's *participant_id*)
-    - ``m`` — moderator / researcher
-    - ``o`` — observer
+    - ``p`` — participant (globally numbered)
+    - ``m`` — moderator / researcher (per-session)
+    - ``o`` — observer (per-session)
 
     Args:
-        participant_id: The session participant code (e.g. ``"p1"``).
+        next_participant_number: The next available participant number (e.g. 1).
         segments: Segments with ``speaker_role`` already set.
 
     Returns:
-        Mapping from speaker label to assigned code.
+        Tuple of (label-to-code mapping, next available participant number).
     """
     # Build label → role from first occurrence
     label_role: dict[str, SpeakerRole] = {}
@@ -269,15 +273,16 @@ def assign_speaker_codes(
             obs_counter += 1
             label_code[label] = f"o{obs_counter}"
         else:
-            # PARTICIPANT and UNKNOWN both map to the session participant_id
-            label_code[label] = participant_id
+            # PARTICIPANT and UNKNOWN get globally-numbered codes
+            label_code[label] = f"p{next_participant_number}"
+            next_participant_number += 1
 
     # Stamp every segment
     for seg in segments:
         label = seg.speaker_label or "Unknown"
         seg.speaker_code = label_code[label]
 
-    return label_code
+    return label_code, next_participant_number
 
 
 class _SpeakerStats:

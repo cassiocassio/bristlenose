@@ -207,7 +207,10 @@ def render_html(
 
     # --- Header ---
     now = datetime.now()
-    n_participants = len({s.participant_id for s in sessions})
+    if people and people.participants:
+        n_participants = sum(1 for k in people.participants if k.startswith("p"))
+    else:
+        n_participants = len(sessions)
     n_sessions = len(sessions)
     meta_date = format_finder_date(now, now=now)
 
@@ -329,33 +332,45 @@ def render_html(
     )
     _w("</div>")
 
-    # --- Participant Summary (at top for quick reference) ---
+    # --- Session Summary (at top for quick reference) ---
     if sessions:
+        # Build session_id → sorted speaker codes from people entries.
+        _session_codes: dict[str, list[str]] = {}
+        if people and people.participants:
+            for code, entry in people.participants.items():
+                sid_key = entry.computed.session_id
+                if sid_key:
+                    _session_codes.setdefault(sid_key, []).append(code)
+            # Sort each list: m-codes first, then p-codes, then o-codes.
+            _prefix_order = {"m": 0, "p": 1, "o": 2}
+            for codes in _session_codes.values():
+                codes.sort(key=lambda c: (
+                    _prefix_order.get(c[0], 3) if c else 3,
+                    int(c[1:]) if len(c) > 1 and c[1:].isdigit() else 0,
+                ))
+
         _w("<section>")
-        _w("<h2>Participants</h2>")
+        _w("<h2>Sessions</h2>")
         _w("<table>")
         _w("<thead><tr>")
-        if people and people.participants:
-            _w(
-                "<th>ID</th><th>Name</th><th>Role</th><th>Start</th>"
-                "<th>Duration</th><th>Words</th><th>Source file</th>"
-            )
-        else:
-            _w("<th>ID</th><th>Start</th>"
-               "<th>Duration</th><th>Source file</th>")
+        _w(
+            "<th>Session</th><th>Speakers</th><th>Start</th>"
+            "<th>Duration</th><th>Source file</th>"
+        )
         _w("</tr></thead>")
         _w("<tbody>")
         for session in sessions:
-            duration = _session_duration(session)
-            pid = session.participant_id
-            pid_esc = _esc(pid)
+            duration = _session_duration(session, people)
+            sid = session.session_id
+            sid_esc = _esc(sid)
+            session_num = sid[1:] if len(sid) > 1 and sid[1:].isdigit() else sid
             start = _esc(format_finder_date(session.session_date, now=now))
             if session.files:
                 source_name = _esc(session.files[0].path.name)
-                if video_map and pid in video_map:
+                if video_map and sid in video_map:
                     source = (
                         f'<a href="#" class="timecode" '
-                        f'data-participant="{pid_esc}" '
+                        f'data-participant="{_esc(session.participant_id)}" '
                         f'data-seconds="0" data-end-seconds="0">'
                         f'{source_name}</a>'
                     )
@@ -364,52 +379,25 @@ def render_html(
                     source = f'<a href="{file_uri}">{source_name}</a>'
             else:
                 source = "&mdash;"
-            _w(f'<tr data-participant="{pid_esc}">')
-            if people and people.participants:
-                entry = people.participants.get(pid)
-                _unnamed = '<span class="unnamed">Unnamed</span>'
-                if entry:
-                    words = str(entry.computed.words_spoken)
-                    name_text = (
-                        _esc(entry.editable.full_name)
-                        if entry.editable.full_name else _unnamed
-                    )
-                    role_text = (
-                        _esc(entry.editable.role)
-                        if entry.editable.role else "&mdash;"
-                    )
-                else:
-                    words = "&mdash;"
-                    name_text = _unnamed
-                    role_text = "&mdash;"
-                _w(
-                    f'<td><a href="transcript_{pid_esc}.html">'
-                    f"{pid_esc}</a></td>"
+            _w("<tr>")
+            _w(
+                f'<td><a href="transcript_{sid_esc}.html">'
+                f"{_esc(session_num)}</a></td>"
+            )
+            # Speakers column: comma-separated codes with data-participant spans.
+            codes = _session_codes.get(sid, [session.participant_id])
+            speaker_spans = []
+            for code in codes:
+                name = _resolve_speaker_name(code, people, display_names)
+                speaker_spans.append(
+                    f'<span class="speaker-code" '
+                    f'data-participant="{_esc(code)}">'
+                    f"{_esc(name)}</span>"
                 )
-                _w(
-                    f'<td class="name-cell" data-field="full_name">'
-                    f'<span class="name-text">{name_text}</span>'
-                    f'<button class="name-pencil" '
-                    f'aria-label="Edit name">&#9998;</button></td>'
-                )
-                _w(
-                    f'<td class="role-cell" data-field="role">'
-                    f'<span class="role-text">{role_text}</span>'
-                    f'<button class="name-pencil" '
-                    f'aria-label="Edit role">&#9998;</button></td>'
-                )
-                _w(f"<td>{start}</td>")
-                _w(f"<td>{duration}</td>")
-                _w(f"<td>{words}</td>")
-                _w(f"<td>{source}</td>")
-            else:
-                _w(
-                    f'<td><a href="transcript_{pid_esc}.html">'
-                    f"{pid_esc}</a></td>"
-                )
-                _w(f"<td>{start}</td>")
-                _w(f"<td>{duration}</td>")
-                _w(f"<td>{source}</td>")
+            _w(f'<td>{", ".join(speaker_spans)}</td>')
+            _w(f"<td>{start}</td>")
+            _w(f"<td>{duration}</td>")
+            _w(f"<td>{source}</td>")
             _w("</tr>")
         _w("</tbody>")
         _w("</table>")
@@ -742,14 +730,50 @@ def _render_transcript_page(
 
     assert isinstance(transcript, PiiCleanTranscript)
     pid = transcript.participant_id
+    sid = transcript.session_id
 
-    # Resolve names
-    full_name = ""
-    if people and pid in people.participants:
-        full_name = people.participants[pid].editable.full_name
+    # Collect all speaker codes present in the transcript (stable insertion order)
+    seen_codes: dict[str, None] = {}
+    for seg in transcript.segments:
+        code = seg.speaker_code or pid
+        if code not in seen_codes:
+            seen_codes[code] = None
+    speaker_codes = list(seen_codes)
 
-    # Page heading: "p1 Sarah Jones" or just "p1"
-    heading = f"{_esc(pid)} {_esc(full_name)}" if full_name else _esc(pid)
+    # Sort: m-codes first, then p-codes, then o-codes
+    def _code_sort_key(c: str) -> tuple[int, int]:
+        prefix_order = {"m": 0, "p": 1, "o": 2}
+        order = prefix_order.get(c[0], 3) if c else 3
+        num = int(c[1:]) if len(c) > 1 and c[1:].isdigit() else 0
+        return (order, num)
+
+    speaker_codes.sort(key=_code_sort_key)
+
+    # Build heading: "Session 1: m1, p1, p2" or with names
+    # Extract session number — "s1" → "1", legacy "p1" → "1"
+    session_num = sid[1:] if len(sid) > 1 and sid[0] in "sp" and sid[1:].isdigit() else sid
+
+    # Plain-text labels for <title>: "m1 Sarah Chen, p5 Maya, o1"
+    code_labels: list[str] = []
+    for code in speaker_codes:
+        name = _resolve_speaker_name(code, people, None)
+        if name != code:
+            code_labels.append(f"{code} {name}")
+        else:
+            code_labels.append(code)
+
+    # HTML spans for <h1> — each code gets its own data-participant span
+    code_spans: list[str] = []
+    for code in speaker_codes:
+        name = _resolve_speaker_name(code, people, None)
+        if name != code:
+            label = f"{_esc(code)} {_esc(name)}"
+        else:
+            label = _esc(code)
+        code_spans.append(
+            f'<span class="heading-speaker" data-participant="{_esc(code)}">'
+            f"{label}</span>"
+        )
 
     # Build HTML
     parts: list[str] = []
@@ -764,8 +788,8 @@ def _render_transcript_page(
     _w('<meta charset="utf-8">')
     _w('<meta name="viewport" content="width=device-width, initial-scale=1">')
     _w('<meta name="color-scheme" content="light dark">')
-    title = f"{pid} {full_name}".strip() if full_name else pid
-    _w(f"<title>{_esc(title)} \u2014 {_esc(project_name)}</title>")
+    title = f"Session {_esc(session_num)}: {', '.join(_esc(lb) for lb in code_labels)}"
+    _w(f"<title>{title} \u2014 {_esc(project_name)}</title>")
     _w('<link rel="stylesheet" href="bristlenose-theme.css">')
     _w("</head>")
     _w("<body>")
@@ -803,7 +827,7 @@ def _render_transcript_page(
     )
     _w("</div>")
     _w('<div class="header-right">')
-    _w('<span class="header-doc-title">Participant transcript</span>')
+    _w('<span class="header-doc-title">Session transcript</span>')
 
     # Meta line
     meta_parts: list[str] = []
@@ -828,16 +852,16 @@ def _render_transcript_page(
         f"&larr; {_esc(project_name)} Research Report</a>"
     )
     _w("</nav>")
-    _w(f'<h1 data-participant="{_esc(pid)}">{heading}</h1>')
+    heading_html = f"Session {_esc(session_num)}: {', '.join(code_spans)}"
+    _w(f"<h1>{heading_html}</h1>")
 
     # Transcript segments
     _w('<section class="transcript-body">')
-    has_media = video_map is not None and pid in (video_map or {})
+    has_media = video_map is not None and sid in (video_map or {})
     for seg in transcript.segments:
         tc = format_timecode(seg.start_time)
         anchor = f"t-{int(seg.start_time)}"
         code = seg.speaker_code or pid
-        seg_name = _resolve_speaker_name(code, people, None)
         is_moderator = code.startswith("m")
         role_cls = " segment-moderator" if is_moderator else ""
         _w(f'<div class="transcript-segment{role_cls}" id="{anchor}">')
@@ -852,7 +876,7 @@ def _render_transcript_page(
         _w('<div class="segment-body">')
         _w(
             f'<span class="segment-speaker" data-participant="{_esc(code)}">'
-            f"{_esc(seg_name)}:</span>"
+            f"{_esc(code)}:</span>"
         )
         _w(f" {_esc(seg.text)}")
         _w("</div></div>")
@@ -877,7 +901,8 @@ def _render_transcript_page(
     _w("</body>")
     _w("</html>")
 
-    page_path = output_dir / f"transcript_{pid}.html"
+    sid = transcript.session_id
+    page_path = output_dir / f"transcript_{sid}.html"
     page_path.write_text("\n".join(parts), encoding="utf-8")
     return page_path
 
@@ -929,7 +954,18 @@ def _participant_range(sessions: list[InputSession]) -> str:
     return f"{ids[0]}\u2013{ids[-1]}"
 
 
-def _session_duration(session: InputSession) -> str:
+def _session_duration(
+    session: InputSession,
+    people: PeopleFile | None = None,
+) -> str:
+    # Prefer PersonComputed.duration_seconds (works for VTT — derived
+    # from last segment end_time in merge_transcript.py).
+    if people and people.participants:
+        for entry in people.participants.values():
+            if (entry.computed.session_id == session.session_id
+                    and entry.computed.duration_seconds > 0):
+                return format_timecode(entry.computed.duration_seconds)
+    # Fallback: InputFile.duration_seconds (audio/video with real timecodes).
     for f in session.files:
         if f.duration_seconds is not None:
             return format_timecode(f.duration_seconds)
@@ -966,9 +1002,10 @@ def _format_quote_html(
         tc_html = f'<span class="timecode">{_tc_brackets(tc)}</span>'
 
     pid_esc = _esc(quote.participant_id)
+    sid_esc = _esc(quote.session_id) if quote.session_id else pid_esc
     anchor = f"t-{int(quote.start_timecode)}"
     speaker_link = (
-        f'<a href="transcript_{pid_esc}.html#{anchor}" class="speaker-link">{pid_esc}</a>'
+        f'<a href="transcript_{sid_esc}.html#{anchor}" class="speaker-link">{pid_esc}</a>'
     )
     badges = _quote_badges(quote)
     badge_html = (
@@ -1192,16 +1229,21 @@ def _build_rewatch_html(
 
 
 def _build_video_map(sessions: list[InputSession]) -> dict[str, str]:
-    """Map participant_id → file:// URI of their video (or audio) file."""
+    """Map session_id → file:// URI of their video (or audio) file.
+
+    Also adds entries keyed by participant_id for quote-level lookups.
+    """
     video_map: dict[str, str] = {}
     for session in sessions:
         # Prefer video, fall back to audio
         for ftype in (FileType.VIDEO, FileType.AUDIO):
             for f in session.files:
                 if f.file_type == ftype:
-                    video_map[session.participant_id] = f.path.resolve().as_uri()
+                    uri = f.path.resolve().as_uri()
+                    video_map[session.session_id] = uri
+                    video_map[session.participant_id] = uri
                     break
-            if session.participant_id in video_map:
+            if session.session_id in video_map:
                 break
     return video_map
 

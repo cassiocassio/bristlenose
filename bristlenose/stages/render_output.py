@@ -68,8 +68,19 @@ def render_markdown(
     lines.append(HEADING_1.format(title=project_name))
     lines.append("")
     lines.append(f"Generated: {datetime.now().strftime('%Y-%m-%d')}")
+    if people and people.participants:
+        _n_p = sum(1 for k in people.participants if k.startswith("p"))
+    else:
+        _n_p = len(sessions)
+    if people and people.participants:
+        _p_ids = sorted(
+            (k for k in people.participants if k.startswith("p")),
+            key=lambda c: int(c[1:]) if c[1:].isdigit() else 0,
+        )
+    else:
+        _p_ids = [s.participant_id for s in sessions]
     lines.append(
-        f"Participants: {len(sessions)} ({_participant_range(sessions)})"
+        f"Participants: {_n_p} ({format_participant_range(_p_ids)})"
     )
     lines.append(f"Sessions processed: {len(sessions)}")
     lines.append("")
@@ -149,57 +160,42 @@ def render_markdown(
             lines.append(HORIZONTAL_RULE)
             lines.append("")
 
-    # Appendix: Participant Summary
-    lines.append(HEADING_2.format(title="Appendix: Participant summary"))
+    # Appendix: Session Summary
+    lines.append(HEADING_2.format(title="Appendix: Session summary"))
     lines.append("")
 
     now = datetime.now()
+    # Build session_id → sorted speaker codes from people entries.
+    _session_codes: dict[str, list[str]] = {}
     if people and people.participants:
+        _prefix_order = {"m": 0, "p": 1, "o": 2}
+        for code, entry in people.participants.items():
+            sid_key = entry.computed.session_id
+            if sid_key:
+                _session_codes.setdefault(sid_key, []).append(code)
+        for codes in _session_codes.values():
+            codes.sort(key=lambda c: (
+                _prefix_order.get(c[0], 3) if c else 3,
+                int(c[1:]) if len(c) > 1 and c[1:].isdigit() else 0,
+            ))
+
+    lines.append("| Session | Speakers | Start | Duration | Source file |")
+    lines.append("|---------|----------|-------|----------|-------------|")
+    for session in sessions:
+        sid = session.session_id
+        session_num = sid[1:] if len(sid) > 1 and sid[1:].isdigit() else sid
+        codes = _session_codes.get(sid, [session.participant_id])
+        speakers = ", ".join(codes)
+        duration = _session_duration(session, people)
+        start = format_finder_date(session.session_date, now=now)
+        source = session.files[0].path.name if session.files else EM_DASH
         lines.append(
-            "| ID | Name | Role | Start | Duration"
-            " | Words | Source file |"
+            f"| {session_num} "
+            f"| {speakers} "
+            f"| {start} "
+            f"| {duration} "
+            f"| {source} |"
         )
-        lines.append(
-            "|------|------|------|-------|----------|"
-            "-------|-------------|"
-        )
-        for session in sessions:
-            pid = session.participant_id
-            entry = people.participants.get(pid)
-            if entry:
-                words = str(entry.computed.words_spoken)
-                full_name = entry.editable.full_name or "_Unnamed_"
-                role = entry.editable.role or EM_DASH
-            else:
-                words = EM_DASH
-                full_name = "_Unnamed_"
-                role = EM_DASH
-            duration = _session_duration(session)
-            start = format_finder_date(session.session_date, now=now)
-            source = session.files[0].path.name if session.files else EM_DASH
-            lines.append(
-                f"| {pid} "
-                f"| {full_name} "
-                f"| {role} "
-                f"| {start} "
-                f"| {duration} "
-                f"| {words} "
-                f"| {source} |"
-            )
-    else:
-        lines.append("| ID | Start | Duration | Source file |")
-        lines.append("|------|-------|----------|-------------|")
-        for session in sessions:
-            pid = session.participant_id
-            duration = _session_duration(session)
-            start = format_finder_date(session.session_date, now=now)
-            source = session.files[0].path.name if session.files else EM_DASH
-            lines.append(
-                f"| {pid} "
-                f"| {start} "
-                f"| {duration} "
-                f"| {source} |"
-            )
 
     lines.append("")
 
@@ -255,8 +251,19 @@ def _participant_range(sessions: list[InputSession]) -> str:
     return format_participant_range(ids)
 
 
-def _session_duration(session: InputSession) -> str:
+def _session_duration(
+    session: InputSession,
+    people: PeopleFile | None = None,
+) -> str:
     """Get formatted duration for a session."""
+    # Prefer PersonComputed.duration_seconds (works for VTT — derived
+    # from last segment end_time in merge_transcript.py).
+    if people and people.participants:
+        for entry in people.participants.values():
+            if (entry.computed.session_id == session.session_id
+                    and entry.computed.duration_seconds > 0):
+                return format_timecode(entry.computed.duration_seconds)
+    # Fallback: InputFile.duration_seconds (audio/video with real timecodes).
     for f in session.files:
         if f.duration_seconds is not None:
             return format_timecode(f.duration_seconds)

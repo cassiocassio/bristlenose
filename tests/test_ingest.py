@@ -286,3 +286,35 @@ class TestGroupIntoSessions:
         assert sessions[0].participant_id == "p1"
         assert sessions[0].files[0].path.name == "first.mp4"
         assert sessions[1].participant_id == "p2"
+
+    def test_session_id_assigned(self) -> None:
+        """Sessions get session_id = s1, s2, ... independently from participant_id."""
+        early = datetime(2026, 1, 10, 10, 0, 0, tzinfo=timezone.utc)
+        late = datetime(2026, 1, 20, 10, 0, 0, tzinfo=timezone.utc)
+        files = [
+            InputFile(
+                path=Path("/input/second.mp4"),
+                file_type=FileType.VIDEO,
+                created_at=late,
+                size_bytes=1000,
+            ),
+            InputFile(
+                path=Path("/input/first.mp4"),
+                file_type=FileType.VIDEO,
+                created_at=early,
+                size_bytes=1000,
+            ),
+        ]
+        sessions = group_into_sessions(files)
+        assert sessions[0].session_id == "s1"
+        assert sessions[0].session_number == 1
+        assert sessions[1].session_id == "s2"
+        assert sessions[1].session_number == 2
+
+    def test_session_id_distinct_from_participant_id(self) -> None:
+        """session_id uses 's' prefix, participant_id uses 'p' prefix."""
+        files = [_file("interview_01.mp4", FileType.VIDEO)]
+        sessions = group_into_sessions(files)
+        assert sessions[0].session_id == "s1"
+        assert sessions[0].participant_id == "p1"
+        assert sessions[0].session_id != sessions[0].participant_id

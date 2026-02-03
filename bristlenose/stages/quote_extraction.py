@@ -45,9 +45,9 @@ async def extract_quotes(
     Returns:
         List of all extracted quotes across all sessions.
     """
-    # Build a lookup from participant_id to topic map
+    # Build a lookup from session_id to topic map
     topic_map_lookup: dict[str, SessionTopicMap] = {
-        tm.participant_id: tm for tm in topic_maps
+        tm.session_id: tm for tm in topic_maps
     }
 
     semaphore = asyncio.Semaphore(concurrency)
@@ -58,23 +58,23 @@ async def extract_quotes(
         async with semaphore:
             logger.info(
                 "%s: Extracting quotes",
-                transcript.participant_id,
+                transcript.session_id,
             )
-            topic_map = topic_map_lookup.get(transcript.participant_id)
+            topic_map = topic_map_lookup.get(transcript.session_id)
             try:
                 quotes = await _extract_single(
                     transcript, topic_map, llm_client, min_quote_words
                 )
                 logger.info(
                     "%s: Extracted %d quotes",
-                    transcript.participant_id,
+                    transcript.session_id,
                     len(quotes),
                 )
                 return quotes
             except Exception as exc:
                 logger.debug(
                     "%s: Quote extraction failed: %s",
-                    transcript.participant_id,
+                    transcript.session_id,
                     exc,
                 )
                 if errors is not None:
@@ -175,6 +175,7 @@ async def _extract_single(
 
         quotes.append(
             ExtractedQuote(
+                session_id=transcript.session_id,
                 participant_id=transcript.participant_id,
                 start_timecode=start_tc,
                 end_timecode=end_tc,

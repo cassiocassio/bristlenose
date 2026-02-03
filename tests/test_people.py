@@ -37,6 +37,8 @@ _NOW = datetime(2026, 1, 15, 10, 0, 0, tzinfo=timezone.utc)
 
 def _session(pid: str, num: int, filename: str = "test.mp4") -> InputSession:
     return InputSession(
+        session_id=f"s{num}",
+        session_number=num,
         participant_id=pid,
         participant_number=num,
         files=[
@@ -56,7 +58,10 @@ def _transcript(
     segments: list[TranscriptSegment],
     duration: float = 600.0,
 ) -> FullTranscript:
+    # session_id must match _session()'s s{num} pattern
+    num = pid.lstrip("p") or "1"
     return FullTranscript(
+        session_id=f"s{num}",
         participant_id=pid,
         source_file="test.mp4",
         session_date=_NOW,
@@ -82,6 +87,7 @@ def _seg(
 def _computed(pid: str, words: int = 100, pct_words: float = 50.0) -> PersonComputed:
     return PersonComputed(
         participant_id=pid,
+        session_id="s1",
         session_date=_NOW,
         duration_seconds=600.0,
         words_spoken=words,
@@ -139,11 +145,11 @@ def test_compute_stats_basic() -> None:
     stats = compute_participant_stats(sessions, transcripts)
 
     assert "p1" in stats
-    # participant words: 5 + 6 = 11 (researcher excluded)
-    assert stats["p1"].words_spoken == 11
+    # All segments fall back to "p1" (no speaker codes assigned): 5 + 5 + 6 = 16
+    assert stats["p1"].words_spoken == 16
     assert stats["p1"].pct_words == 100.0  # only one participant
-    # speaking time: 10 + 10 = 20 seconds out of 60
-    assert stats["p1"].pct_time_speaking == round(20 / 60 * 100, 1)
+    # speaking time: 10 + 10 + 10 = 30 seconds out of 60
+    assert stats["p1"].pct_time_speaking == round(30 / 60 * 100, 1)
 
 
 def test_compute_stats_multiple_participants() -> None:

@@ -24,6 +24,7 @@ def _make_transcript(pid: str) -> PiiCleanTranscript:
     """Build a minimal PiiCleanTranscript for testing."""
     return PiiCleanTranscript(
         participant_id=pid,
+        session_id=f"s-{pid}",
         source_file=f"{pid}.mp4",
         session_date=datetime(2026, 1, 10, tzinfo=timezone.utc),
         duration_seconds=120.0,
@@ -215,7 +216,7 @@ class TestQuoteExtractionConcurrency:
 
         transcripts = [_make_transcript(f"p{i}") for i in range(1, 7)]
         topic_maps = [
-            SessionTopicMap(participant_id=f"p{i}", boundaries=[])
+            SessionTopicMap(participant_id=f"p{i}", session_id=f"s{i}", boundaries=[])
             for i in range(1, 7)
         ]
         mock_client = AsyncMock()
@@ -242,7 +243,7 @@ class TestQuoteExtractionConcurrency:
 
         transcripts = [_make_transcript(f"p{i}") for i in range(1, 4)]
         topic_maps = [
-            SessionTopicMap(participant_id=f"p{i}", boundaries=[])
+            SessionTopicMap(participant_id=f"p{i}", session_id=f"s{i}", boundaries=[])
             for i in range(1, 4)
         ]
         mock_client = AsyncMock()

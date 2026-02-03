@@ -37,7 +37,7 @@ def transcribe_sessions(
         settings: Application settings.
 
     Returns:
-        Dict mapping participant_id to list of TranscriptSegments.
+        Dict mapping session_id to list of TranscriptSegments.
     """
     needs_transcription = [
         s for s in sessions
@@ -72,25 +72,25 @@ def transcribe_sessions(
         assert session.audio_path is not None
         logger.info(
             "%s: Transcribing %s",
-            session.participant_id,
+            session.session_id,
             session.audio_path.name,
         )
 
         try:
             segments = transcribe_fn(session.audio_path, settings)
-            results[session.participant_id] = segments
+            results[session.session_id] = segments
             logger.info(
                 "%s: Transcribed %d segments",
-                session.participant_id,
+                session.session_id,
                 len(segments),
             )
         except Exception as exc:
             logger.error(
                 "%s: Transcription failed: %s",
-                session.participant_id,
+                session.session_id,
                 exc,
             )
-            results[session.participant_id] = []
+            results[session.session_id] = []
 
     return results
 

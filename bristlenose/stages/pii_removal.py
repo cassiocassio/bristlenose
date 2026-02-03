@@ -118,6 +118,7 @@ def remove_pii(
             clean_segments.append(clean_seg)
 
         clean_transcript = PiiCleanTranscript(
+            session_id=transcript.session_id,
             participant_id=transcript.participant_id,
             source_file=transcript.source_file,
             session_date=transcript.session_date,
@@ -129,7 +130,7 @@ def remove_pii(
 
         logger.info(
             "%s: Removed %d PII entities",
-            transcript.participant_id,
+            transcript.session_id,
             total_entities,
         )
 
@@ -161,11 +162,11 @@ def write_cooked_transcripts(
     paths: list[Path] = []
 
     for transcript in transcripts:
-        filename = f"{transcript.participant_id}_cooked.txt"
+        filename = f"{transcript.session_id}_cooked.txt"
         path = output_dir / filename
 
         header = format_transcript_header_txt(
-            participant_id=transcript.participant_id,
+            participant_id=transcript.session_id,
             source_file=transcript.source_file,
             session_date=str(transcript.session_date.date()),
             duration=format_timecode(transcript.duration_seconds),
@@ -217,11 +218,11 @@ def write_cooked_transcripts_md(
     paths: list[Path] = []
 
     for transcript in transcripts:
-        filename = f"{transcript.participant_id}_cooked.md"
+        filename = f"{transcript.session_id}_cooked.md"
         path = output_dir / filename
 
         header = format_transcript_header_md(
-            participant_id=transcript.participant_id,
+            participant_id=transcript.session_id,
             source_file=transcript.source_file,
             session_date=str(transcript.session_date.date()),
             duration=format_timecode(transcript.duration_seconds),

@@ -223,7 +223,7 @@ class Pipeline:
             llm_client = LLMClient(self.settings)
             concurrency = self.settings.llm_concurrency
 
-            # Heuristic pass (synchronous) for all participants first
+            # Heuristic pass (synchronous) for all sessions first
             for segments in session_segments.values():
                 identify_speaker_roles_heuristic(segments)
 
@@ -232,25 +232,36 @@ class Pipeline:
             _speaker_errors: list[str] = []
 
             async def _identify(
-                pid: str, segments: list[TranscriptSegment],
+                sid: str, segments: list[TranscriptSegment],
             ) -> tuple[str, list]:
                 async with _sem_5b:
                     infos = await identify_speaker_roles_llm(
                         segments, llm_client, errors=_speaker_errors,
                     )
-                    return pid, infos
+                    return sid, infos
 
             _results_5b = await asyncio.gather(
-                *(_identify(p, s) for p, s in session_segments.items())
+                *(_identify(s, segs) for s, segs in session_segments.items())
             )
             all_speaker_infos: dict[str, list] = dict(_results_5b)
 
-            # Assign per-segment speaker codes (m1, o1, etc.)
+            # Assign per-segment speaker codes with global participant numbering
             from bristlenose.stages.identify_speakers import assign_speaker_codes
 
             all_label_code_maps: dict[str, dict[str, str]] = {}
-            for pid, segments in session_segments.items():
-                all_label_code_maps[pid] = assign_speaker_codes(pid, segments)
+            next_pnum = 1
+            for session in sessions:
+                sid = session.session_id
+                segments = session_segments.get(sid, [])
+                if not segments:
+                    continue
+                label_map, next_pnum = assign_speaker_codes(next_pnum, segments)
+                all_label_code_maps[sid] = label_map
+                # Update session's participant_id from assigned codes
+                p_codes = [c for c in label_map.values() if c.startswith("p")]
+                if p_codes:
+                    session.participant_id = p_codes[0]
+                    session.participant_number = int(p_codes[0][1:])
 
             _print_step("Identified speakers", time.perf_counter() - t0)
             if _speaker_errors:
@@ -284,6 +295,7 @@ class Pipeline:
                 # Pass through without PII removal
                 clean_transcripts = [
                     PiiCleanTranscript(
+                        session_id=t.session_id,
                         participant_id=t.participant_id,
                         source_file=t.source_file,
                         session_date=t.session_date,
@@ -376,12 +388,14 @@ class Pipeline:
             # Auto-populate names from speaker labels and LLM extraction.
             label_names = extract_names_from_labels(transcripts)
             pid_speaker_info: dict[str, SpeakerInfo] = {}
-            for pid, infos in all_speaker_infos.items():
-                label_code_map = all_label_code_maps.get(pid, {})
+            for sid, infos in all_speaker_infos.items():
+                label_code_map = all_label_code_maps.get(sid, {})
                 for info in infos:
-                    code = label_code_map.get(info.speaker_label, pid)
+                    code = label_code_map.get(info.speaker_label, "")
+                    if not code:
+                        continue
                     if info.role == SpeakerRole.PARTICIPANT:
-                        pid_speaker_info[pid] = info
+                        pid_speaker_info[code] = info
                     elif info.role == SpeakerRole.RESEARCHER and code.startswith("m"):
                         pid_speaker_info[code] = info
             auto_populate_names(people, pid_speaker_info, label_names)
@@ -718,7 +732,7 @@ class Pipeline:
             progress: Optional Rich progress bar.
 
         Returns:
-            Dict mapping participant_id to list of TranscriptSegments.
+            Dict mapping session_id to list of TranscriptSegments.
         """
         from bristlenose.stages.parse_docx import parse_docx_file
         from bristlenose.stages.parse_subtitles import parse_subtitle_file
@@ -737,14 +751,14 @@ class Pipeline:
                         segments.extend(subs)
                         logger.info(
                             "%s: Parsed %d segments from %s",
-                            session.participant_id,
+                            session.session_id,
                             len(subs),
                             f.path.name,
                         )
                     except Exception as exc:
                         logger.error(
                             "%s: Failed to parse %s: %s",
-                            session.participant_id,
+                            session.session_id,
                             f.path.name,
                             exc,
                         )
@@ -757,27 +771,27 @@ class Pipeline:
                         segments.extend(docs)
                         logger.info(
                             "%s: Parsed %d segments from %s",
-                            session.participant_id,
+                            session.session_id,
                             len(docs),
                             f.path.name,
                         )
                     except Exception as exc:
                         logger.error(
                             "%s: Failed to parse %s: %s",
-                            session.participant_id,
+                            session.session_id,
                             f.path.name,
                             exc,
                         )
 
             if segments:
-                session_segments[session.participant_id] = segments
+                session_segments[session.session_id] = segments
             # If no existing transcript, audio will be transcribed below
 
         # Transcribe sessions that still need it
         if not self.settings.skip_transcription:
             needs_transcription = [
                 s for s in sessions
-                if s.participant_id not in session_segments and s.audio_path is not None
+                if s.session_id not in session_segments and s.audio_path is not None
             ]
             if needs_transcription:
                 whisper_results = transcribe_sessions(needs_transcription, self.settings)
@@ -901,16 +915,19 @@ def load_transcripts_from_dir(
 ) -> list[PiiCleanTranscript]:
     """Load transcript .txt files from a directory into PiiCleanTranscript objects.
 
-    Expects files named like p1_raw.txt or p1_cooked.txt with the format:
-        # Transcript: p1
+    Expects files named like s1_raw.txt or s1_cooked.txt (or legacy p1_raw.txt)
+    with the format::
+
+        # Transcript: s1
         # Source: ...
         # Date: ...
         # Duration: ...
 
         [HH:MM:SS] [p1] text...
 
-    The bracket token after the timecode is the participant code (e.g. ``p1``).
-    Legacy files with speaker roles (e.g. ``[PARTICIPANT]``) are also accepted.
+    The bracket token after the timecode is the speaker code (e.g. ``p1``,
+    ``m1``).  Legacy files with speaker roles (e.g. ``[PARTICIPANT]``) are
+    also accepted.
     """
     import re
     from datetime import datetime, timezone
@@ -922,7 +939,7 @@ def load_transcripts_from_dir(
 
     for path in sorted(transcripts_dir.glob("*.txt")):
         segments: list[TranscriptSegment] = []
-        participant_id = ""
+        session_id = ""
         source_file = ""
         session_date = datetime.now(tz=timezone.utc)
         duration = 0.0
@@ -934,9 +951,10 @@ def load_transcripts_from_dir(
 
             # Parse header comments
             if line.startswith("# Transcript"):
-                match = re.search(r":\s*(p\d+)", line)
+                # Accept both "s1" (new) and "p1" (legacy) in header
+                match = re.search(r":\s*([sp]\d+)", line)
                 if match:
-                    participant_id = match.group(1)
+                    session_id = match.group(1)
                 continue
             if line.startswith("# Source:"):
                 source_file = line.split(":", 1)[1].strip()
@@ -957,8 +975,8 @@ def load_transcripts_from_dir(
             if line.startswith("#"):
                 continue
 
-            # Parse transcript lines: [MM:SS] or [HH:MM:SS] [participant_id] text
-            # The bracket token is the participant code (p1, p2, ...) or
+            # Parse transcript lines: [MM:SS] or [HH:MM:SS] [speaker_code] text
+            # The bracket token is the speaker code (p1, m1, o1, ...) or
             # a legacy speaker role (PARTICIPANT, RESEARCHER, etc.).
             match = re.match(
                 r"\[(\d{2}:\d{2}(?::\d{2})?)\]\s*(?:\[(\w+)\])?\s*(.*)", line
@@ -998,14 +1016,25 @@ def load_transcripts_from_dir(
                     )
                 )
 
-        if not participant_id:
-            # Derive from filename
+        if not session_id:
+            # Derive from filename (s1_raw.txt → s1, legacy p1_raw.txt → p1)
             stem = path.stem.replace("_raw", "").replace("_cooked", "").replace("_clean", "")
-            participant_id = stem
+            session_id = stem
+
+        # Derive primary participant_id from first p-code in segments
+        participant_id = ""
+        for seg in segments:
+            if seg.speaker_code.startswith("p"):
+                participant_id = seg.speaker_code
+                break
+        if not participant_id:
+            # Legacy fallback: if session_id is a p-code, use it
+            participant_id = session_id if session_id.startswith("p") else ""
 
         if segments:
             transcripts.append(
                 PiiCleanTranscript(
+                    session_id=session_id,
                     participant_id=participant_id,
                     source_file=source_file,
                     session_date=session_date,

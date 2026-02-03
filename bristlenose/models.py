@@ -115,10 +115,12 @@ class InputFile(BaseModel):
 
 
 class InputSession(BaseModel):
-    """One research session — one participant, one or more input files."""
+    """One research session — one or more participants, one or more input files."""
 
-    participant_id: str  # "p1", "p2", ...
-    participant_number: int  # 1, 2, ...
+    session_id: str  # "s1", "s2", ... — session identity
+    session_number: int  # 1, 2, ...
+    participant_id: str  # primary participant "p1" — provisional until Stage 5b
+    participant_number: int  # primary participant number
     files: list[InputFile]
     audio_path: Path | None = None
     has_existing_transcript: bool = False
@@ -173,7 +175,8 @@ class TranscriptSegment(BaseModel):
 class FullTranscript(BaseModel):
     """Complete transcript for one session, with all segments normalised."""
 
-    participant_id: str
+    session_id: str  # "s1", "s2", ... — session identity
+    participant_id: str  # primary participant code
     source_file: str
     session_date: datetime
     duration_seconds: float
@@ -221,7 +224,8 @@ class TopicBoundary(BaseModel):
 class SessionTopicMap(BaseModel):
     """All topic boundaries for one session."""
 
-    participant_id: str
+    session_id: str  # "s1", "s2", ... — session identity
+    participant_id: str  # primary participant code
     boundaries: list[TopicBoundary]
 
     def topic_at(self, seconds: float) -> TopicBoundary | None:
@@ -243,6 +247,7 @@ class SessionTopicMap(BaseModel):
 class ExtractedQuote(BaseModel):
     """A single verbatim quote extracted from participant speech."""
 
+    session_id: str = ""  # "s1", "s2", ... — session identity
     participant_id: str
     start_timecode: float  # seconds
     end_timecode: float  # seconds
@@ -317,6 +322,7 @@ class PersonComputed(BaseModel):
     """Stats refreshed on every pipeline run."""
 
     participant_id: str
+    session_id: str = ""  # "s1", "s2", ... — which session this entry belongs to
     session_date: datetime
     duration_seconds: float
     words_spoken: int

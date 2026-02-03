@@ -198,10 +198,11 @@ def group_into_sessions(files: list[InputFile]) -> list[InputSession]:
     # Sort by session date, then first filename
     raw_sessions.sort(key=lambda s: (s[0], s[1][0].path.name))
 
-    # Assign participant numbers
+    # Assign session and provisional participant numbers
     sessions: list[InputSession] = []
     for i, (session_date, group_files) in enumerate(raw_sessions, start=1):
-        participant_id = f"p{i}"
+        session_id = f"s{i}"
+        participant_id = f"p{i}"  # provisional — reassigned after Stage 5b
 
         # Determine if this session has an existing transcript
         has_transcript = any(
@@ -210,6 +211,8 @@ def group_into_sessions(files: list[InputFile]) -> list[InputSession]:
         )
 
         session = InputSession(
+            session_id=session_id,
+            session_number=i,
             participant_id=participant_id,
             participant_number=i,
             files=group_files,
@@ -219,7 +222,7 @@ def group_into_sessions(files: list[InputFile]) -> list[InputSession]:
         sessions.append(session)
         logger.info(
             "Session %s: %d files, date=%s, has_transcript=%s",
-            participant_id,
+            session_id,
             len(group_files),
             session_date.date(),
             has_transcript,

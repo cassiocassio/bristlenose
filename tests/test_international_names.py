@@ -49,6 +49,7 @@ def _people_with_names(name_map: dict[str, str]) -> PeopleFile:
         participants[pid] = PersonEntry(
             computed=PersonComputed(
                 participant_id=pid,
+                session_id="s1",
                 session_date=datetime(2026, 1, 1, tzinfo=timezone.utc),
                 duration_seconds=60.0,
                 words_spoken=100,
@@ -78,6 +79,7 @@ def _transcript_with_labels(pid: str, labels: list[str]) -> FullTranscript:
             )
         )
     return FullTranscript(
+        session_id=f"s-{pid}",
         participant_id=pid,
         segments=segs,
         source_file="test.vtt",

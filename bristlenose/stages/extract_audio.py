@@ -52,7 +52,7 @@ async def extract_audio_for_sessions(
             session.audio_path = audio_files[0].path
             logger.info(
                 "%s: Using existing audio file: %s",
-                session.participant_id,
+                session.session_id,
                 audio_files[0].path.name,
             )
             continue
@@ -62,7 +62,7 @@ async def extract_audio_for_sessions(
         if session.has_existing_transcript:
             logger.info(
                 "%s: Has platform transcript, skipping audio extraction",
-                session.participant_id,
+                session.session_id,
             )
             continue
 
@@ -70,7 +70,7 @@ async def extract_audio_for_sessions(
         video_files = [f for f in session.files if f.file_type == FileType.VIDEO]
         if video_files:
             video_path = video_files[0].path
-            output_path = temp_dir / f"{session.participant_id}_extracted.wav"
+            output_path = temp_dir / f"{session.session_id}_extracted.wav"
             tasks.append(
                 asyncio.create_task(
                     _extract_one(session, video_path, output_path, semaphore)
@@ -82,7 +82,7 @@ async def extract_audio_for_sessions(
         if session.audio_path is None and not session.has_existing_transcript:
             logger.warning(
                 "%s: No audio, video, or transcript files found.",
-                session.participant_id,
+                session.session_id,
             )
 
     if tasks:
@@ -105,7 +105,7 @@ async def _extract_one(
         if not has_audio:
             logger.warning(
                 "%s: Video file %s has no audio stream, skipping.",
-                session.participant_id,
+                session.session_id,
                 video_path.name,
             )
             return
@@ -117,13 +117,13 @@ async def _extract_one(
             session.audio_path = extracted
             logger.info(
                 "%s: Extracted audio from %s",
-                session.participant_id,
+                session.session_id,
                 video_path.name,
             )
         except RuntimeError as exc:
             logger.error(
                 "%s: Failed to extract audio from %s: %s",
-                session.participant_id,
+                session.session_id,
                 video_path.name,
                 exc,
             )

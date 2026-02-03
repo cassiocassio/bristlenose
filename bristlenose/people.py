@@ -134,19 +134,22 @@ def compute_participant_stats(
     Returns a dict keyed by ``participant_id``.
     """
     transcript_map: dict[str, FullTranscript] = {
-        t.participant_id: t for t in transcripts
+        t.session_id: t for t in transcripts
     }
 
     stats: dict[str, PersonComputed] = {}
     total_words_all = 0
 
     for session in sessions:
-        pid = session.participant_id
-        transcript = transcript_map.get(pid)
+        sid = session.session_id
+        transcript = transcript_map.get(sid)
 
         if transcript is None:
+            # No transcript — create a placeholder for the primary participant
+            pid = session.participant_id
             stats[pid] = PersonComputed(
                 participant_id=pid,
+                session_id=sid,
                 session_date=session.session_date,
                 duration_seconds=0.0,
                 words_spoken=0,
@@ -156,55 +159,27 @@ def compute_participant_stats(
             )
             continue
 
-        # Count words and speaking time for PARTICIPANT-role segments
-        words_spoken = 0
-        speaking_seconds = 0.0
-        for seg in transcript.segments:
-            if seg.speaker_role == SpeakerRole.PARTICIPANT:
-                words_spoken += len(seg.text.split())
-                speaking_seconds += max(0.0, seg.end_time - seg.start_time)
-
-        total_words_all += words_spoken
-
-        stats[pid] = PersonComputed(
-            participant_id=pid,
-            session_date=transcript.session_date,
-            duration_seconds=transcript.duration_seconds,
-            words_spoken=words_spoken,
-            pct_words=0.0,  # filled in second pass
-            pct_time_speaking=(
-                round(speaking_seconds / transcript.duration_seconds * 100, 1)
-                if transcript.duration_seconds > 0
-                else 0.0
-            ),
-            source_file=transcript.source_file,
-        )
-
-    # Collect moderator/observer stats from speaker_code on segments.
-    for session in sessions:
-        pid = session.participant_id
-        transcript = transcript_map.get(pid)
-        if transcript is None:
-            continue
-        # Group segments by non-participant speaker_code
+        # Group ALL segments by speaker_code, creating per-code entries
         code_words: dict[str, int] = {}
         code_seconds: dict[str, float] = {}
         for seg in transcript.segments:
-            code = seg.speaker_code
-            if not code or code == pid:
-                continue  # participant already counted above
+            code = seg.speaker_code or session.participant_id
             if code not in code_words:
                 code_words[code] = 0
                 code_seconds[code] = 0.0
             code_words[code] += len(seg.text.split())
             code_seconds[code] += max(0.0, seg.end_time - seg.start_time)
-        for code in code_words:
+
+        for code, words in code_words.items():
+            if code.startswith("p"):
+                total_words_all += words
             stats[code] = PersonComputed(
                 participant_id=code,
+                session_id=sid,
                 session_date=transcript.session_date,
                 duration_seconds=transcript.duration_seconds,
-                words_spoken=code_words[code],
-                pct_words=0.0,
+                words_spoken=words,
+                pct_words=0.0,  # filled in second pass
                 pct_time_speaking=(
                     round(code_seconds[code] / transcript.duration_seconds * 100, 1)
                     if transcript.duration_seconds > 0

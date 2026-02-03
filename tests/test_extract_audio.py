@@ -38,6 +38,8 @@ def _session(
             )
         )
     return InputSession(
+        session_id="s1",
+        session_number=1,
         participant_id="p1",
         participant_number=1,
         files=files,

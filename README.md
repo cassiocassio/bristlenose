@@ -270,6 +270,12 @@ Edit `bristlenose/__init__.py` (the single source of truth for version), commit,
 
 ## Changelog
 
+### 0.6.9
+
+- Transcript coverage section — collapsible section at the end of the report showing what % of the transcript made it into quotes (X% in report · Y% moderator · Z% omitted), with expandable omitted content per session
+- `--hierarchical` flag — alternative quote layout grouped by theme instead of by screen
+- Transcript page fix — pages now render correctly when PII redaction is off (was failing with assertion error)
+
 ### 0.6.8
 
 - Multi-participant session support — sessions with multiple interviewees get globally-numbered participant codes (p1–p11 across sessions); report header shows correct participant count

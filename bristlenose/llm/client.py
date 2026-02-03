@@ -40,7 +40,7 @@ class LLMUsageTracker:
 class LLMClient:
     """Unified interface for LLM calls with Pydantic-validated structured output.
 
-    Supports Claude (Anthropic) and ChatGPT (OpenAI) as providers.
+    Supports Claude (Anthropic), ChatGPT (OpenAI), and Local (Ollama) as providers.
     """
 
     def __init__(self, settings: BristlenoseSettings) -> None:
@@ -48,13 +48,14 @@ class LLMClient:
         self.provider = settings.llm_provider
         self._anthropic_client: object | None = None
         self._openai_client: object | None = None
+        self._local_client: object | None = None
         self.tracker = LLMUsageTracker()
 
         # Validate API key is present for the selected provider
         self._validate_api_key()
 
     def _validate_api_key(self) -> None:
-        """Check that the required API key is configured."""
+        """Check that the required API key is configured (cloud providers only)."""
         if self.provider == "anthropic" and not self.settings.anthropic_api_key:
             raise ValueError(
                 "Claude API key not set. "
@@ -67,6 +68,7 @@ class LLMClient:
                 "Set BRISTLENOSE_OPENAI_API_KEY in your .env file or environment. "
                 "Get a key from platform.openai.com"
             )
+        # Local provider doesn't need an API key
 
     async def analyze(
         self,
@@ -94,6 +96,10 @@ class LLMClient:
             )
         elif self.provider == "openai":
             return await self._analyze_openai(
+                system_prompt, user_prompt, response_model, max_tokens
+            )
+        elif self.provider == "local":
+            return await self._analyze_local(
                 system_prompt, user_prompt, response_model, max_tokens
             )
         else:
@@ -198,3 +204,83 @@ class LLMClient:
 
         data = json.loads(content)
         return response_model.model_validate(data)
+
+    async def _analyze_local(
+        self,
+        system_prompt: str,
+        user_prompt: str,
+        response_model: type[T],
+        max_tokens: int,
+    ) -> T:
+        """Call local Ollama-compatible API with JSON mode.
+
+        Uses the OpenAI SDK pointed at a local endpoint. Includes retry logic
+        for JSON parsing failures since local models are less reliable (~85%
+        schema compliance vs ~99% for cloud models).
+        """
+        import asyncio
+
+        import openai
+
+        if self._local_client is None:
+            self._local_client = openai.AsyncOpenAI(
+                base_url=self.settings.local_url,
+                api_key="ollama",  # Required by SDK but ignored by Ollama
+            )
+
+        client: openai.AsyncOpenAI = self._local_client  # type: ignore[assignment]
+
+        # Add JSON schema instruction to the system prompt
+        schema = response_model.model_json_schema()
+        schema_instruction = (
+            f"\n\nYou must respond with valid JSON matching this schema:\n"
+            f"```json\n{json.dumps(schema, indent=2)}\n```"
+        )
+
+        model = self.settings.local_model
+        logger.debug("Calling local API: url=%s model=%s", self.settings.local_url, model)
+
+        # Retry logic for JSON parsing failures
+        max_retries = 3
+        last_error: Exception | None = None
+
+        for attempt in range(max_retries):
+            try:
+                response = await client.chat.completions.create(
+                    model=model,
+                    max_tokens=max_tokens,
+                    temperature=self.settings.llm_temperature,
+                    response_format={"type": "json_object"},
+                    messages=[
+                        {"role": "system", "content": system_prompt + schema_instruction},
+                        {"role": "user", "content": user_prompt},
+                    ],
+                )
+
+                # Track token usage (Ollama provides this)
+                if hasattr(response, "usage") and response.usage:
+                    self.tracker.record(
+                        response.usage.prompt_tokens or 0,
+                        response.usage.completion_tokens or 0,
+                    )
+
+                content = response.choices[0].message.content
+                if content is None:
+                    raise RuntimeError("Empty response from local model")
+
+                data = json.loads(content)
+                return response_model.model_validate(data)
+
+            except json.JSONDecodeError as e:
+                last_error = e
+                logger.debug(
+                    "JSON parse failed (attempt %d/%d): %s", attempt + 1, max_retries, e
+                )
+                if attempt < max_retries - 1:
+                    await asyncio.sleep(0.5 * (attempt + 1))  # Backoff
+
+        raise RuntimeError(
+            f"Local model failed to produce valid JSON after {max_retries} attempts. "
+            f"Last error: {last_error}. "
+            f"Try a larger model (--model llama3.1:8b) or use a cloud API (--llm claude)."
+        )

@@ -264,6 +264,182 @@ def _run_preflight(settings: object, command: str, *, skip_transcription: bool =
 
 
 # ---------------------------------------------------------------------------
+# Interactive first-run provider selection
+# ---------------------------------------------------------------------------
+
+
+def _needs_provider_prompt(settings: object) -> bool:
+    """Check if we need to prompt the user to choose an LLM provider.
+
+    Returns True if:
+    - Provider is 'anthropic' but no API key is set, OR
+    - Provider is 'openai' but no API key is set, OR
+    - Provider is 'local' but Ollama is not running
+
+    This catches the "no config at all" case (default anthropic, no key).
+    """
+    from bristlenose.config import BristlenoseSettings
+
+    assert isinstance(settings, BristlenoseSettings)
+
+    if settings.llm_provider == "anthropic" and not settings.anthropic_api_key:
+        return True
+    if settings.llm_provider == "openai" and not settings.openai_api_key:
+        return True
+    if settings.llm_provider == "local":
+        from bristlenose.ollama import check_ollama
+
+        status = check_ollama()
+        return not status.has_suitable_model
+    return False
+
+
+def _prompt_for_provider() -> str | None:
+    """Interactive prompt when no provider is configured.
+
+    Returns the chosen provider name, or None if the user needs to
+    set up an API key first.
+    """
+    from rich.prompt import Prompt
+
+
+    console.print()
+    console.print("[bold]No LLM provider configured.[/bold] Choose one:")
+    console.print()
+    console.print("  [1] Local AI (free, private, slower)")
+    console.print("      [dim]Requires Ollama — https://ollama.ai[/dim]")
+    console.print()
+    console.print("  [2] Claude API (best quality, ~$1.50/study)")
+    console.print("      [dim]Get a key from console.anthropic.com[/dim]")
+    console.print()
+    console.print("  [3] ChatGPT API (good quality, ~$1.00/study)")
+    console.print("      [dim]Get a key from platform.openai.com[/dim]")
+    console.print()
+
+    choice = Prompt.ask("Choice", choices=["1", "2", "3"], default="1")
+
+    if choice == "1":
+        return _setup_local_provider()
+    elif choice == "2":
+        console.print()
+        console.print("Get your API key from: [link]https://console.anthropic.com/settings/keys[/link]")
+        console.print("Then run:")
+        console.print()
+        console.print("  [bold]export BRISTLENOSE_ANTHROPIC_API_KEY=sk-ant-...[/bold]")
+        console.print()
+        console.print("Or add it to a .env file in your project directory.")
+        return None
+    else:  # choice == "3"
+        console.print()
+        console.print("Get your API key from: [link]https://platform.openai.com/api-keys[/link]")
+        console.print("Then run:")
+        console.print()
+        console.print("  [bold]export BRISTLENOSE_OPENAI_API_KEY=sk-...[/bold]")
+        console.print()
+        console.print("Or add it to a .env file in your project directory.")
+        return None
+
+
+def _setup_local_provider() -> str | None:
+    """Set up local provider, pulling model if needed.
+
+    Returns 'local' if ready, or None if user needs to install Ollama.
+    """
+    import webbrowser
+
+    from rich.prompt import Confirm
+
+    from bristlenose.ollama import DEFAULT_MODEL, check_ollama, is_ollama_installed, pull_model
+
+    status = check_ollama()
+
+    if not status.is_running:
+        console.print()
+        console.print("[yellow]Ollama is not running.[/yellow]")
+
+        if is_ollama_installed():
+            console.print()
+            console.print("Start it with:")
+            console.print()
+            console.print("  [bold]ollama serve[/bold]")
+            console.print()
+            console.print("Then try again.")
+        else:
+            console.print()
+            console.print("Install it from: [link]https://ollama.ai[/link]")
+            console.print("[dim](Single download, no account needed)[/dim]")
+            console.print()
+            console.print("After installing, run:")
+            console.print()
+            console.print("  [bold]ollama pull llama3.2[/bold]")
+            console.print()
+            console.print("Then try again.")
+            console.print()
+
+            if Confirm.ask("Open the download page?", default=True):
+                webbrowser.open("https://ollama.ai")
+
+        return None
+
+    if not status.has_suitable_model:
+        console.print()
+        console.print("[yellow]Ollama is running but no suitable model found.[/yellow]")
+        console.print()
+
+        if Confirm.ask(f"Download {DEFAULT_MODEL} (2 GB)?", default=True):
+            console.print()
+            if pull_model(DEFAULT_MODEL):
+                console.print()
+                console.print(f"[green]Downloaded {DEFAULT_MODEL}[/green]")
+                return "local"
+            else:
+                console.print()
+                console.print("[red]Download failed.[/red]")
+                console.print("Try manually: [bold]ollama pull llama3.2[/bold]")
+                return None
+        return None
+
+    # Ready to go
+    console.print()
+    console.print(f"[green]Using local AI ({status.recommended_model})[/green]")
+    console.print("[dim]This is slower than cloud APIs but completely free and private.[/dim]")
+    console.print("[dim]For production quality: export BRISTLENOSE_ANTHROPIC_API_KEY=...[/dim]")
+    console.print()
+
+    return "local"
+
+
+def _maybe_prompt_for_provider(settings: object) -> object:
+    """Check if provider prompt is needed and return updated settings if so.
+
+    Returns the original settings if no prompt needed, or new settings with
+    the chosen provider if the user selected local.
+    """
+    from bristlenose.config import BristlenoseSettings, load_settings
+
+    assert isinstance(settings, BristlenoseSettings)
+
+    if not _needs_provider_prompt(settings):
+        return settings
+
+    provider = _prompt_for_provider()
+    if provider is None:
+        raise typer.Exit(0)
+
+    # Reload settings with the chosen provider
+    return load_settings(
+        llm_provider=provider,
+        input_dir=settings.input_dir,
+        output_dir=settings.output_dir,
+        project_name=settings.project_name,
+        whisper_backend=settings.whisper_backend,
+        whisper_model=settings.whisper_model,
+        skip_transcription=settings.skip_transcription,
+        pii_enabled=settings.pii_enabled,
+    )
+
+
+# ---------------------------------------------------------------------------
 # Pipeline summary output
 # ---------------------------------------------------------------------------
 
@@ -366,7 +542,7 @@ def run(
     ] = "large-v3-turbo",
     llm_provider: Annotated[
         str,
-        typer.Option("--llm", "-l", help="LLM provider: claude, chatgpt (or anthropic, openai)."),
+        typer.Option("--llm", "-l", help="LLM provider: claude, chatgpt, local (or anthropic, openai, ollama)."),
     ] = "anthropic",
     skip_transcription: Annotated[
         bool,
@@ -428,6 +604,9 @@ def run(
         skip_transcription=skip_transcription,
         pii_enabled=redact_pii,
     )
+
+    # Offer provider selection if no API key / local provider is not ready
+    settings = _maybe_prompt_for_provider(settings)
 
     _maybe_auto_doctor(settings, "run")
     _run_preflight(settings, "run", skip_transcription=skip_transcription)
@@ -511,7 +690,7 @@ def analyze(
     ] = None,
     llm_provider: Annotated[
         str,
-        typer.Option("--llm", "-l", help="LLM provider: claude, chatgpt (or anthropic, openai)."),
+        typer.Option("--llm", "-l", help="LLM provider: claude, chatgpt, local (or anthropic, openai, ollama)."),
     ] = "anthropic",
     verbose: Annotated[
         bool,
@@ -535,6 +714,9 @@ def analyze(
         project_name=project_name,
         llm_provider=llm_provider,
     )
+
+    # Offer provider selection if no API key / local provider is not ready
+    settings = _maybe_prompt_for_provider(settings)
 
     _maybe_auto_doctor(settings, "analyze")
     _run_preflight(settings, "analyze")

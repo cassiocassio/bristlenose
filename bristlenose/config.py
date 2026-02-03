@@ -49,12 +49,16 @@ class BristlenoseSettings(BaseSettings):
     project_name: str = "User Research"
 
     # LLM
-    llm_provider: str = "anthropic"  # "anthropic" or "openai"
+    llm_provider: str = "anthropic"  # "anthropic", "openai", or "local"
     anthropic_api_key: str = ""
     openai_api_key: str = ""
     llm_model: str = "claude-sonnet-4-20250514"
     llm_max_tokens: int = 8192
     llm_temperature: float = 0.1
+
+    # Local LLM (Ollama)
+    local_url: str = "http://localhost:11434/v1"
+    local_model: str = "llama3.2:3b"
 
     # Whisper
     whisper_backend: str = "auto"  # "auto", "mlx", "faster-whisper"
@@ -85,22 +89,19 @@ class BristlenoseSettings(BaseSettings):
     llm_concurrency: int = 3
 
 
-# Provider aliases: user-friendly names → internal names
-_LLM_PROVIDER_ALIASES: dict[str, str] = {
-    "claude": "anthropic",
-    "chatgpt": "openai",
-    "gpt": "openai",
-}
-
-
 def load_settings(**overrides: object) -> BristlenoseSettings:
     """Load settings with optional CLI overrides.
 
-    Normalises LLM provider aliases (claude → anthropic, chatgpt → openai).
+    Normalises LLM provider aliases (claude → anthropic, chatgpt/gpt → openai,
+    ollama → local).
     """
+    # Import here to avoid circular import at module load time
+    from bristlenose.providers import get_provider_aliases
+
     # Normalise LLM provider aliases
     if "llm_provider" in overrides and isinstance(overrides["llm_provider"], str):
         provider = overrides["llm_provider"].lower()
-        overrides["llm_provider"] = _LLM_PROVIDER_ALIASES.get(provider, provider)
+        aliases = get_provider_aliases()
+        overrides["llm_provider"] = aliases.get(provider, provider)
 
     return BristlenoseSettings(**overrides)  # type: ignore[arg-type]

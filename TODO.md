@@ -1,6 +1,6 @@
 # Bristlenose — Where I Left Off
 
-Last updated: 3 Feb 2026 (v0.6.10, output inside input folder)
+Last updated: 3 Feb 2026 (v0.6.11, Ollama local LLM support)
 
 ---
 
@@ -261,13 +261,13 @@ Full design doc: `docs/design-cli-improvements.md` — "LLM Provider Roadmap" se
 
 Goal: support whatever LLM your organisation has access to. Detailed designs for all providers with implementation sketches, testing checklists, and abstraction patterns.
 
-**Phase 1: Ollama as zero-friction entry point (~5h)** ← START HERE
-- [ ] `bristlenose/providers.py` — `ProviderSpec` registry, `resolve_provider()`, config fields
-- [ ] Interactive first-run prompt when no API key configured — offer Local/Claude/ChatGPT choice
-- [ ] Ollama detection — check if running, find suitable models
-- [ ] Model auto-pull with consent — download `llama3.2:3b` (2 GB) on first use
-- [ ] Retry logic for JSON parsing failures (local models are ~85% reliable)
-- [ ] Doctor integration — show "Local (llama3.2:3b via Ollama)" status
+**Phase 1: Ollama as zero-friction entry point** ✅ DONE
+- [x] `bristlenose/providers.py` — `ProviderSpec` registry, `resolve_provider()`, config fields
+- [x] Interactive first-run prompt when no API key configured — offer Local/Claude/ChatGPT choice
+- [x] Ollama detection — check if running, find suitable models (`bristlenose/ollama.py`)
+- [x] Model auto-pull with consent — download `llama3.2:3b` (2 GB) on first use
+- [x] Retry logic for JSON parsing failures (local models are ~85% reliable) — 3 retries with exponential backoff
+- [x] Doctor integration — show "Local (llama3.2:3b via Ollama)" status
 
 **Why Ollama first:** Removes biggest adoption barrier. No signup, no payment, no API key. Users can try the tool for free in 10 minutes.
 

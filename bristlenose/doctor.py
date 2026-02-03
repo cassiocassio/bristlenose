@@ -298,11 +298,46 @@ def check_api_key(settings: BristlenoseSettings) -> CheckResult:
             detail=f"OpenAI ({masked})",
         )
 
+    if provider == "local":
+        # Local provider doesn't need an API key, but needs Ollama running
+        return check_local_provider(settings)
+
     return CheckResult(
         status=CheckStatus.FAIL,
         label="API key",
         detail=f"Unknown LLM provider: {provider}",
         fix_key="api_key_missing_anthropic",
+    )
+
+
+def check_local_provider(settings: BristlenoseSettings) -> CheckResult:
+    """Check whether Ollama is running and has a suitable model."""
+    from bristlenose.ollama import validate_local_endpoint
+
+    url = settings.local_url
+    model = settings.local_model
+
+    valid, err = validate_local_endpoint(url, model)
+
+    if valid is True:
+        return CheckResult(
+            status=CheckStatus.OK,
+            label="LLM provider",
+            detail=f"Local ({model} via Ollama)",
+        )
+    if valid is False:
+        return CheckResult(
+            status=CheckStatus.FAIL,
+            label="LLM provider",
+            detail=err,
+            fix_key="ollama_model_missing",
+        )
+    # valid is None — couldn't connect
+    return CheckResult(
+        status=CheckStatus.FAIL,
+        label="LLM provider",
+        detail=err,
+        fix_key="ollama_not_running",
     )
 
 
@@ -312,6 +347,15 @@ def check_network(settings: BristlenoseSettings) -> CheckResult:
     import urllib.request
 
     provider = settings.llm_provider
+
+    # Local provider doesn't need network connectivity to cloud APIs
+    if provider == "local":
+        return CheckResult(
+            status=CheckStatus.SKIP,
+            label="Network",
+            detail="local provider (no cloud API needed)",
+        )
+
     if provider == "anthropic":
         url = "https://api.anthropic.com"
         host = "api.anthropic.com"

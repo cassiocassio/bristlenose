@@ -50,7 +50,9 @@ Filler words replaced with `...`. Editorial context in `[square brackets]`. Emot
 
 ## Install
 
-Requires ffmpeg and an API key from either **Claude** (by Anthropic) or **ChatGPT** (by OpenAI). You only need one.
+Requires ffmpeg. For LLM analysis, you can use:
+- **Local AI** (free, via [Ollama](https://ollama.ai)) — no signup, no API key needed
+- **Claude** (by Anthropic) or **ChatGPT** (by OpenAI) — cloud APIs, pay per use
 
 ```bash
 # macOS (Homebrew) -- recommended, handles ffmpeg + Python for you
@@ -275,6 +277,22 @@ Edit `bristlenose/__init__.py` (the single source of truth for version), commit,
 ---
 
 ## Changelog
+
+### 0.6.11
+
+- Local AI support via Ollama — run bristlenose without an API key using local models like Llama 3.2; interactive first-run prompt offers Local/Claude/ChatGPT choice
+- Provider registry — centralised `bristlenose/providers.py` with `ProviderSpec` dataclass, alias resolution (claude→anthropic, chatgpt→openai, ollama→local)
+- Ollama integration — `bristlenose/ollama.py` with status checking, model detection, and auto-pull with consent
+- Retry logic for local models — 3 retries with exponential backoff for JSON parsing failures (~85% reliability vs ~99% for cloud)
+- Doctor integration for local provider — shows "Local (llama3.2:3b via Ollama)" status, helpful fix messages for Ollama not running or model missing
+
+### 0.6.10
+
+- Output directory inside input folder — `bristlenose run interviews/` now creates `interviews/bristlenose-output/` to avoid collisions when processing multiple projects
+- New directory structure — `assets/` for static files, `sessions/` for transcript pages, `transcripts-raw/`/`transcripts-cooked/` for transcripts, `.bristlenose/` for internal files
+- Report filenames include project name — `bristlenose-{slug}-report.html` so multiple reports in Downloads are distinguishable
+- Coverage link fix — player.js no longer intercepts non-player timecode links
+- Anchor highlight — transcript page segments flash yellow when arriving via anchor link
 
 ### 0.6.9
 

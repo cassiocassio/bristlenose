@@ -6,11 +6,11 @@ Reference doc for the generated HTML report and per-participant transcript pages
 
 `people.yaml` lives in the output directory. It tracks every participant across pipeline runs.
 
-- **Models**: `PersonComputed` (refreshed each run) + `PersonEditable` (preserved across runs) → `PersonEntry` → `PeopleFile` — all in `bristlenose/models.py`
+- **Models**: `PersonComputed` (refreshed each run; includes `session_id: str = ""` for session→speaker grouping) + `PersonEditable` (preserved across runs) → `PersonEntry` → `PeopleFile` — all in `bristlenose/models.py`
 - **Core logic**: `bristlenose/people.py` — load, compute, merge, write, build display name map, extract names from labels, auto-populate names, suggest short names
 - **Merge strategy**: computed fields always overwritten; editable fields always preserved; new participants added with empty defaults; old participants missing from current run are **kept** (not deleted)
 - **Display names**: `short_name` → used as display name in quotes/friction/journeys. `full_name` → used in participant table Name column. Resolved at render time only — canonical `participant_id` (p1, p2) stays in all data models and HTML `data-participant` attributes. Display names are cosmetic
-- **Participant table columns**: `ID | Name | Role | Start | Duration | Words | Source file`. ID shows raw `participant_id`. Name column has pencil icon for inline editing (see "Name editing in HTML report" below). Start uses macOS Finder-style relative dates via `format_finder_date()` in `utils/markdown.py`
+- **Sessions table columns**: `Session | Speakers | Start | Duration | Source file`. One row per session. Session column links to the transcript page (`transcript_s1.html`). Speakers column lists all speaker codes for that session (m→p→o sorted, comma-separated), each in `<span class="speaker-code" data-participant="...">` for JS name resolution. Start uses macOS Finder-style relative dates via `format_finder_date()` in `utils/markdown.py`. Duration from `PersonComputed.duration_seconds` (works for VTT-only sessions); falls back to `InputFile.duration_seconds`
 - **Pipeline wiring**: `run()` and `run_transcription_only()` compute+write+auto-populate; `run_analysis_only()` and `run_render_only()` load existing for display names only
 - **Key workflows**:
   - User edits `short_name` / `full_name` in `people.yaml` → `bristlenose render` → report uses new names
@@ -34,7 +34,7 @@ Within each session, speakers are assigned **speaker codes** that distinguish mo
 
 - **Code scheme**: `p1` = participant (uses session's participant_id), `m1`/`m2` = moderator(s) (researcher role), `o1` = observer. A session's `.txt` file contains segments from all speakers: `[00:16] [m1] Can you tell me...` / `[00:28] [p1] Yeah I've been using...`
 - **Model field**: `TranscriptSegment.speaker_code: str = ""` — per-segment speaker identity. Default empty string for backward compat (existing code that doesn't set it falls back to `transcript.participant_id`)
-- **Assignment**: `assign_speaker_codes(participant_id, segments)` in `identify_speakers.py` — called after Stage 5b role classification. Groups segments by `speaker_label`, maps each label to a code based on its `speaker_role` (RESEARCHER → m1/m2, OBSERVER → o1, PARTICIPANT/UNKNOWN → session pid). Returns `dict[str, str]` (label → code) for people-file wiring
+- **Assignment**: `assign_speaker_codes(session_id, next_participant_number, segments)` in `identify_speakers.py` — called after Stage 5b role classification. Groups segments by `speaker_label`, maps each label to a code based on its `speaker_role` (RESEARCHER → m1/m2, OBSERVER → o1, PARTICIPANT/UNKNOWN → globally-numbered `p{next_participant_number}`). Returns `(dict[str, str], int)` — label→code map and updated next participant number. The pipeline passes `next_participant_number` across sessions for unique p-codes across the study
 - **Disk format**: `write_raw_transcripts()` and `write_cooked_transcripts()` now write `seg.speaker_code` instead of `transcript.participant_id` for the bracket token. File is still named `p1_raw.txt` (session identity), but contains `[m1]` and `[p1]` segments
 - **Parser**: `load_transcripts_from_dir()` recognises `[m1]` → `speaker_role=RESEARCHER, speaker_code="m1"`, `[o1]` → `speaker_role=OBSERVER, speaker_code="o1"`, `[p1]` → `speaker_code="p1"` (role stays UNKNOWN for backward compat with old files)
 - **People entries**: `compute_participant_stats()` in `people.py` creates `PersonComputed` entries for moderator/observer codes found in segments, alongside the session participant entry. Moderators get full `PersonEntry` in `people.yaml` with editable name/role fields
@@ -156,8 +156,8 @@ Report quotes use a flexbox hanging-indent layout: timecodes sit in a left gutte
 Quote attributions in the main report intentionally show **raw participant IDs** (`— p1`, `— p2`) instead of display names. This is the anonymisation boundary: when researchers copy quotes to external tools (Miro, presentations, etc.), the IDs protect participant identity.
 
 - **Report quotes**: `_format_quote_html()` uses `pid_esc` for the `.speaker-link` text. `names.js` `updateAllReferences()` does NOT update `.speaker-link` text. Attribution uses `&nbsp;` around the em-dash (`"…text"&nbsp;—&nbsp;p1`) to prevent widowing at line breaks
-- **Transcript pages**: use display names (`short_name` → `full_name` → `pid`) since these are private to the researcher
-- **Participant table**: Name column shows `full_name` (editable); ID column shows raw `p1`/`p2` as a link to the transcript page
+- **Transcript page headings**: show code prefix + display name (`m1 Sarah Chen`, `p5 Maya`) since headings are private to the researcher. Segment labels show raw codes (`p1:`)
+- **Sessions table**: Speakers column shows comma-separated codes with `data-participant` spans for JS name resolution; Session column links to transcript page
 
 ## PII redaction
 
@@ -169,15 +169,14 @@ PII redaction is **off by default** (transcripts retain PII). Opt in with `--red
 
 ## Per-participant transcript pages
 
-Each participant gets a dedicated HTML page (`transcript_p1.html`, etc.) showing their full transcript with clickable timecodes. Generated at the end of `render_html()`.
+Each session gets a dedicated HTML page (`transcript_s1.html`, etc.) showing the full transcript with clickable timecodes. Generated at the end of `render_html()`.
 
 - **Data source**: prefers `cooked_transcripts/` (PII-redacted) over `raw_transcripts/`. Uses `load_transcripts_from_dir()` from `pipeline.py` (public function, formerly `_load_transcripts_from_dir`)
-- **Page heading**: `{pid} {full_name}` (e.g. "p1 Sarah Jones") or just `{pid}` if no name
-- **Speaker name per segment**: resolved as `short_name` → `full_name` → `pid` via `_resolve_speaker_name()` in `render_html.py`
+- **Page heading**: `Session N: m1 Sarah Chen, p5 Maya, o1` — lists all speakers for the session with code prefix + resolved name. Each code in `<span class="heading-speaker" data-participant="...">` for JS name resolution
+- **Speaker label per segment**: shows raw speaker code (`p1:`, `m1:`) — not resolved display name. Consistent with anonymisation boundary
 - **Back button**: `← {project_name} Research Report` linking to `research_report.html`, styled muted with accent on hover, hidden in print
-- **JS**: `storage.js` + `player.js` + `transcript-names.js` — no favourites/editing/tags modules. `transcript-names.js` reads localStorage name edits (written by `names.js` on the report page) and updates the heading + speaker labels on load
-- **Name propagation**: `transcript-names.js` reads `bristlenose-names` localStorage store on page load; updates `<h1 data-participant>` heading and `.segment-speaker[data-participant]` labels. Read-only — no editing UI on transcript pages
-- **Participant table linking**: ID column (`p1`, `p2`) is a hyperlink to the transcript page
-- **Quote attribution linking**: `— p1` at end of each quote in the main report links to `transcript_p1.html#t-{seconds}`, deep-linking to the exact segment. `.speaker-link` CSS in `blockquote.css` (inherits muted colour, accent on hover)
+- **JS**: `storage.js` + `player.js` + `transcript-names.js` — no favourites/editing/tags modules. `transcript-names.js` reads localStorage name edits (written by `names.js` on the report page) and updates heading speaker names only (preserving code prefix: `"m1 Sarah Chen"`). Does NOT override segment speaker labels (they stay as raw codes). Read-only — no editing UI on transcript pages
+- **Sessions table linking**: Session column (`s1`, `s2`) is a hyperlink to the transcript page
+- **Quote attribution linking**: `— p1` at end of each quote in the main report links to `transcript_s1.html#t-{seconds}` (session-based filename), deep-linking to the exact segment. `.speaker-link` CSS in `blockquote.css` (inherits muted colour, accent on hover)
 - **Segment anchors**: each transcript segment has `id="t-{int(seconds)}"` for deep linking from quotes
 - **CSS**: `transcript.css` in theme templates (back button, segment layout, meta styling); `.speaker-link` in `organisms/blockquote.css`

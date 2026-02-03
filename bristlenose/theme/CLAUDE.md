@@ -37,7 +37,7 @@ Template-level CSS in `templates/`: `report.css` (main report layout), `transcri
 
 ## JS modules
 
-11 standalone files in `js/` concatenated at render time (same pattern as CSS): storage, player, favourites, editing, tags, histogram, csv-export, view-switcher, search, names, main. Transcript pages use `storage.js` + `player.js` + `transcript-names.js` (no favourites/editing/tags/search/names/view-switcher).
+11 standalone files in `js/` concatenated at render time (same pattern as CSS): storage, player, favourites, editing, tags, histogram, csv-export, view-switcher, search, names, main. Transcript pages use `storage.js` + `player.js` + `transcript-names.js` (no favourites/editing/tags/search/names/view-switcher). `transcript-names.js` only updates heading speaker names (preserving code prefix: `"m1 Sarah Chen"`); segment speaker labels stay as raw codes (`p1:`, `m1:`) and are not overridden by JS.
 
 ### names.js
 

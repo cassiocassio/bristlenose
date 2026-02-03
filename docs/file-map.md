@@ -53,7 +53,7 @@ All 12 stages of the pipeline, from ingest to render.
 | `molecules/` | Small groups of atoms (badge-row, bar-group, name-edit, etc.) |
 | `organisms/` | Self-contained UI sections (blockquote, toolbar, etc.) |
 | `templates/` | Page-level layout (report.css, print.css) |
-| `js/` | 9 JS modules (storage, player, favourites, editing, tags, histogram, csv-export, names, main) |
+| `js/` | 12 JS modules (storage, player, favourites, editing, tags, histogram, csv-export, view-switcher, search, names, transcript-names, main) |
 
 ## Utilities (`bristlenose/utils/`)
 

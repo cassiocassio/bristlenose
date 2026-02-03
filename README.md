@@ -154,14 +154,14 @@ Files sharing a name stem (e.g. `p1.mp4` and `p1.srt`) are treated as one sessio
 results/
   research_report.html       # the report -- open this
   research_report.md         # Markdown version
-  transcript_p1.html         # per-participant transcript pages
-  transcript_p2.html
+  transcript_s1.html         # per-session transcript pages
+  transcript_s2.html
   ...
   bristlenose-theme.css      # stylesheet (regenerated on every run)
   bristlenose-logo.png       # project logo
   bristlenose-player.html    # popout video player (if media files present)
   people.yaml                # participant registry (names auto-extracted, edit here or in browser)
-  raw_transcripts/           # one .txt per participant
+  raw_transcripts/           # one .txt per session (contains all speakers)
   cooked_transcripts/        # PII-redacted transcripts (only with --redact-pii)
   intermediate/              # JSON snapshots (used by `bristlenose render`)
 ```
@@ -216,7 +216,7 @@ On Linux, install `python3.12` and `ffmpeg` via your package manager. On Windows
 ### Verify everything works
 
 ```bash
-pytest                       # ~280 tests, should pass in <2s
+pytest                       # ~512 tests, should pass in <2s
 ruff check .                 # lint
 mypy bristlenose/            # type check (some third-party SDK errors are expected)
 ```
@@ -257,7 +257,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for the full project layout, but the shor
 - `bristlenose/stages/` -- the 12-stage pipeline (ingest through render), one module per stage
 - `bristlenose/stages/render_html.py` -- HTML report renderer, loads CSS + JS from theme/
 - `bristlenose/theme/` -- atomic CSS design system (tokens, atoms, molecules, organisms, templates)
-- `bristlenose/theme/js/` -- report JavaScript (9 modules, concatenated at render time)
+- `bristlenose/theme/js/` -- report JavaScript (12 modules, concatenated at render time)
 - `bristlenose/llm/prompts.py` -- LLM prompt templates
 - `bristlenose/pipeline.py` -- orchestrator that wires the stages together
 - `bristlenose/cli.py` -- Typer CLI entry point
@@ -269,6 +269,14 @@ Edit `bristlenose/__init__.py` (the single source of truth for version), commit,
 ---
 
 ## Changelog
+
+### Latest (unreleased)
+
+- Multi-participant session support — sessions with multiple interviewees get globally-numbered participant codes (p1–p11 across sessions); report header shows correct participant count
+- Sessions table — restructured from per-participant rows to per-session rows with a Speakers column showing all speaker codes (m1, p1, p2, o1) per session
+- Transcript page format — heading shows `Session N: m1 Name, p5 Name, o1`; segment labels show raw codes for consistency with the anonymisation boundary
+- Session duration — now derived from transcript timestamps for VTT-only sessions (previously showed "—")
+- Moderator identification (Phase 1) — per-session speaker codes (`[m1]`/`[p1]`) in transcript files, moderator entries in `people.yaml`, `.segment-moderator` CSS class for muted moderator styling
 
 ### 0.6.7
 
@@ -416,14 +424,13 @@ Edit `bristlenose/__init__.py` (the single source of truth for version), commit,
 
 ## Roadmap
 
-- Search-as-you-type quote filtering
 - Hide/show individual quotes
 - Keyboard shortcuts (j/k navigation, s to star, e to edit)
 - User-generated themes
 - Lost quotes -- surface what the AI didn't select
 - .docx export
 - Edit writeback to transcript files
-- Multi-participant session support
+- Cross-session moderator linking (Phase 2)
 - Native installer for Windows
 
 Priorities may shift. If something is missing that matters to you, [open an issue](https://github.com/cassiocassio/bristlenose/issues).

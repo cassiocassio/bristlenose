@@ -15,22 +15,22 @@
 ```
 output/
 ├── raw_transcripts/          # Stage 6 output
-│   ├── p1_raw.txt            # Plain text (canonical, machine-readable)
-│   ├── p1_raw.md             # Markdown companion (human-readable)
-│   ├── p2_raw.txt
-│   └── p2_raw.md
+│   ├── s1_raw.txt            # Plain text (canonical, machine-readable)
+│   ├── s1_raw.md             # Markdown companion (human-readable)
+│   ├── s2_raw.txt            # Each file contains all speakers: [m1], [p1], [p2], etc.
+│   └── s2_raw.md
 ├── cooked_transcripts/       # Stage 7 output (PII-redacted, only when --redact-pii)
-│   ├── p1_cooked.txt
-│   ├── p1_cooked.md
-│   ├── p2_cooked.txt
-│   └── p2_cooked.md
+│   ├── s1_cooked.txt
+│   ├── s1_cooked.md
+│   ├── s2_cooked.txt
+│   └── s2_cooked.md
 ├── intermediate/             # JSON snapshots (if write_intermediate=True)
 ├── temp/                     # Extracted audio, working files
 ├── people.yaml               # Participant registry (computed stats + human-editable fields)
 ├── research_report.md        # Final markdown report
 ├── research_report.html      # Final HTML report with interactive features
-├── transcript_p1.html        # Per-participant transcript page (one per participant)
-├── transcript_p2.html
+├── transcript_s1.html        # Per-session transcript page (one per session)
+├── transcript_s2.html
 └── ...
 ```
 
@@ -43,7 +43,7 @@ output/
 - **Return type**: `identify_speaker_roles_llm()` returns `list[SpeakerInfo]` — a dataclass with `speaker_label`, `role`, `person_name`, `job_title`. Still mutates segments in place for role assignment (existing behaviour). Returns empty list on exception
 - **`SpeakerInfo` import**: defined in `identify_speakers.py`. Other modules import it under `TYPE_CHECKING` to avoid circular imports (e.g. `people.py` uses `if TYPE_CHECKING: from bristlenose.stages.identify_speakers import SpeakerInfo`)
 - **Structured output**: `SpeakerRoleItem` in `llm/structured.py` has `person_name` and `job_title` fields (both default `""` for backward compatibility with existing LLM responses)
-- **Speaker code assignment**: `assign_speaker_codes(participant_id, segments)` runs after both heuristic and LLM passes. Groups segments by `speaker_label`, assigns codes based on `speaker_role`: RESEARCHER → `m1`/`m2`, OBSERVER → `o1`, PARTICIPANT/UNKNOWN → session's `participant_id`. Sets `seg.speaker_code` on every segment. Returns `dict[str, str]` (label → code) for people-file wiring. Called from `pipeline.py` after Stage 5b, before Stage 6
+- **Speaker code assignment**: `assign_speaker_codes(session_id, next_participant_number, segments)` runs after both heuristic and LLM passes. Groups segments by `speaker_label`, assigns codes based on `speaker_role`: RESEARCHER → `m1`/`m2`, OBSERVER → `o1`, PARTICIPANT/UNKNOWN → globally-numbered `p{next_participant_number}` (incremented per speaker). Sets `seg.speaker_code` on every segment. Returns `(dict[str, str], int)` — label→code map and the updated next participant number. The pipeline passes `next_participant_number` across sessions to ensure unique p-codes across the entire study (e.g. session 1 gets p1–p3, session 2 gets p4–p6). Called from `pipeline.py` after Stage 5b, before Stage 6
 
 ## LLM concurrency in stages
 

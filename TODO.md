@@ -1,6 +1,6 @@
 # Bristlenose — Where I Left Off
 
-Last updated: 2 Feb 2026 (v0.6.5, CLI output overhaul)
+Last updated: 3 Feb 2026 (v0.6.7, multi-participant sessions)
 
 ---
 
@@ -183,7 +183,7 @@ Organised from easiest to hardest. The README has a condensed version; this is t
 - [x] Moderator identification Phase 1 — per-session speaker codes (`[m1]`/`[p1]`), moderator entries in `people.yaml`, per-segment speaker rendering on transcript pages, `.segment-moderator` CSS
 - [ ] Moderator identification Phase 2 — cross-session moderator linking (`same_as` field), web UI for declaring same-person across sessions
 - [x] LLM name/role extraction from transcripts — extended Stage 5b, `SpeakerInfo` dataclass, metadata harvesting, auto-populate
-- [ ] Multi-participant sessions — handle recordings with more than one interviewee
+- [x] Multi-participant sessions — session_id decoupling from participant_id, global participant numbering (`p1`–`p11` across sessions), sessions table with Speakers column, transcript page heading format (`Session N: m1 Name, p5 Name`), raw code segment labels, `PersonComputed.session_id` for grouping, VTT duration from transcript timestamps
 - [ ] Speaker diarisation improvements — better accuracy, manual correction UI
 - [ ] Batch processing dashboard — progress bars, partial results, resume interrupted runs
 - [ ] JS tests — add lightweight DOM-based tests (jsdom or Playwright) covering tag persistence, CSV export output, favourite reordering, and edit save/restore
@@ -361,7 +361,7 @@ Per-session moderator identification. Speaker codes (`[m1]`/`[p1]`/`[o1]`) in tr
 **How it works:**
 
 1. Stage 5b identifies speaker roles (RESEARCHER, PARTICIPANT, OBSERVER) via heuristic + LLM
-2. `assign_speaker_codes()` maps each `speaker_label` to a code based on role: RESEARCHER → `m1`/`m2`, OBSERVER → `o1`, PARTICIPANT/UNKNOWN → session pid
+2. `assign_speaker_codes(session_id, next_participant_number, segments)` maps each `speaker_label` to a code based on role: RESEARCHER → `m1`/`m2`, OBSERVER → `o1`, PARTICIPANT/UNKNOWN → globally-numbered `p{next_participant_number}`. Returns `(dict[str, str], int)` — label→code map and updated next number
 3. Transcript write functions use `seg.speaker_code` for the bracket token in `.txt`/`.md` files
 4. Parser (`load_transcripts_from_dir()`) recognises `[m1]` prefix → `speaker_role=RESEARCHER, speaker_code="m1"`
 5. `compute_participant_stats()` creates `PersonComputed` entries for moderator codes alongside participant entries

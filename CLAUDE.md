@@ -375,7 +375,7 @@ When the user signals end of session, **proactively offer to run this checklist*
 9. **Clean up branches** — delete merged feature branches
 10. **Verify CI** — check latest push passes CI
 
-## Current status (v0.6.12, Feb 2026)
+## Current status (v0.6.13, Feb 2026)
 
 Core pipeline complete and published to PyPI + Homebrew. Snap packaging implemented and tested locally (arm64); CI builds amd64 on every push. Latest: **Keychain credential storage (Phase 3 complete)** — `bristlenose configure claude` (or `chatgpt`) validates and stores API keys securely in macOS Keychain (`security` CLI) or Linux Secret Service (`secret-tool`). Priority: keychain → env var → .env. Doctor shows "(Keychain)" suffix. No external keyring library — uses native CLI tools. Files: `credentials.py`, `credentials_macos.py`, `credentials_linux.py`. 25 new credential tests. Prior: **Ollama local LLM support (Phase 1)** — provider registry, Ollama detection/installation/auto-start, interactive first-run prompt, 78 provider tests. Prior: output inside input folder; transcript coverage; multi-participant sessions with global p-codes; sessions table; transcript pages with speaker codes. v0.6.7 adds search enhancements, pipeline warnings, CLI polish. v0.6.6 adds Cargo/uv-style CLI output, search-as-you-type filtering, platform-aware session grouping, man page. v0.6.5 adds timecode typography, hanging-indent quote layout. v0.6.4 adds concurrent per-participant LLM calls. v0.6.3 redesigns report header, adds view-switcher dropdown. v0.6.2 adds editable participant names, auto name/role extraction. v0.6.1 adds snap recipe, CI workflow. v0.6.0 added `bristlenose doctor`. v0.5.0 added per-participant transcript pages.
 

@@ -67,9 +67,9 @@ class TestNewUserNoConfig:
 
         # Verify the fix message is helpful
         fix = get_fix(result.fix_key)
-        assert "BRISTLENOSE_ANTHROPIC_API_KEY" in fix
+        assert "bristlenose configure claude" in fix
         assert "console.anthropic.com" in fix
-        assert "--llm openai" in fix  # Shows alternative
+        assert "--llm chatgpt" in fix  # Shows alternative
 
     def test_preflight_fails_for_run_command(self) -> None:
         """Pre-flight check catches the missing key before any work starts."""
@@ -130,12 +130,12 @@ class TestWrongProviderSelected:
             bristlenose needs an API key to analyse transcripts.
             Get a Claude API key from console.anthropic.com, then:
 
-              export BRISTLENOSE_ANTHROPIC_API_KEY=sk-ant-...
+              bristlenose configure claude
 
-            Or add it to a .env file in your project directory.
+            This stores your key securely in the system Keychain.
 
-            To use ChatGPT instead:  bristlenose run <input> --llm openai
-            To only transcribe:      bristlenose transcribe-only <input>
+            To use ChatGPT instead:  bristlenose run <input> --llm chatgpt
+            To only transcribe:      bristlenose transcribe <input>
         """
         settings = _settings(
             llm_provider="anthropic",
@@ -147,11 +147,11 @@ class TestWrongProviderSelected:
         assert result.status == CheckStatus.FAIL
         fix = get_fix(result.fix_key)
         # The fix should mention the alternative they actually have
-        assert "--llm openai" in fix
+        assert "--llm chatgpt" in fix
 
     def test_has_claude_key_but_selected_openai(self) -> None:
         """
-        User set ANTHROPIC_API_KEY but ran `bristlenose run ./interviews --llm openai`.
+        User set ANTHROPIC_API_KEY but ran `bristlenose run ./interviews --llm chatgpt`.
 
         They'll see:
             No OpenAI API key
@@ -159,12 +159,12 @@ class TestWrongProviderSelected:
             bristlenose needs an API key to analyse transcripts.
             Get a ChatGPT API key from platform.openai.com, then:
 
-              export BRISTLENOSE_OPENAI_API_KEY=sk-...
+              bristlenose configure chatgpt
 
-            Or add it to a .env file in your project directory.
+            This stores your key securely in the system Keychain.
 
-            To use Claude instead:  bristlenose run <input> --llm anthropic
-            To only transcribe:     bristlenose transcribe-only <input>
+            To use Claude instead:  bristlenose run <input> --llm claude
+            To only transcribe:     bristlenose transcribe <input>
         """
         settings = _settings(
             llm_provider="openai",
@@ -175,7 +175,7 @@ class TestWrongProviderSelected:
 
         assert result.status == CheckStatus.FAIL
         fix = get_fix(result.fix_key)
-        assert "--llm anthropic" in fix
+        assert "--llm claude" in fix
 
 
 # ---------------------------------------------------------------------------
@@ -681,13 +681,13 @@ class TestMixedKeyStates:
 
     def test_anthropic_key_set_openai_selected_and_missing(self) -> None:
         """
-        User has Anthropic key, but ran --llm openai without OpenAI key.
+        User has Anthropic key, but ran --llm chatgpt without OpenAI key.
 
         They'll see:
             No OpenAI API key
 
             ...
-            To use Claude instead:  bristlenose run <input> --llm anthropic
+            To use Claude instead:  bristlenose run <input> --llm claude
         """
         settings = _settings(
             llm_provider="openai",
@@ -698,7 +698,7 @@ class TestMixedKeyStates:
 
         assert result.status == CheckStatus.FAIL
         fix = get_fix(result.fix_key)
-        assert "--llm anthropic" in fix
+        assert "--llm claude" in fix
 
 
 # ---------------------------------------------------------------------------

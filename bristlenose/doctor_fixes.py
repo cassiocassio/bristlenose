@@ -122,10 +122,10 @@ def _fix_api_key_missing_anthropic(_method: str) -> str:
     return (
         "bristlenose needs an API key to analyse transcripts.\n"
         "Get a Claude API key from console.anthropic.com, then:\n\n"
-        "  export BRISTLENOSE_ANTHROPIC_API_KEY=sk-ant-...\n\n"
-        "Or add it to a .env file in your project directory.\n\n"
-        "To use ChatGPT instead:  bristlenose run <input> --llm openai\n"
-        "To only transcribe:      bristlenose transcribe-only <input>"
+        "  bristlenose configure claude\n\n"
+        "This stores your key securely in the system Keychain.\n\n"
+        "To use ChatGPT instead:  bristlenose run <input> --llm chatgpt\n"
+        "To only transcribe:      bristlenose transcribe <input>"
     )
 
 
@@ -133,19 +133,27 @@ def _fix_api_key_missing_openai(_method: str) -> str:
     return (
         "bristlenose needs an API key to analyse transcripts.\n"
         "Get a ChatGPT API key from platform.openai.com, then:\n\n"
-        "  export BRISTLENOSE_OPENAI_API_KEY=sk-...\n\n"
-        "Or add it to a .env file in your project directory.\n\n"
-        "To use Claude instead:  bristlenose run <input> --llm anthropic\n"
-        "To only transcribe:     bristlenose transcribe-only <input>"
+        "  bristlenose configure chatgpt\n\n"
+        "This stores your key securely in the system Keychain.\n\n"
+        "To use Claude instead:  bristlenose run <input> --llm claude\n"
+        "To only transcribe:     bristlenose transcribe <input>"
     )
 
 
 def _fix_api_key_invalid_anthropic(_method: str) -> str:
-    return "Your Claude API key was rejected. Check it at console.anthropic.com/settings/keys."
+    return (
+        "Your Claude API key was rejected. Get a new key from\n"
+        "console.anthropic.com/settings/keys, then:\n\n"
+        "  bristlenose configure claude"
+    )
 
 
 def _fix_api_key_invalid_openai(_method: str) -> str:
-    return "Your ChatGPT API key was rejected. Check it at platform.openai.com/api-keys."
+    return (
+        "Your ChatGPT API key was rejected. Get a new key from\n"
+        "platform.openai.com/api-keys, then:\n\n"
+        "  bristlenose configure chatgpt"
+    )
 
 
 def _fix_network_unreachable(_method: str) -> str:

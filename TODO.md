@@ -1,6 +1,6 @@
 # Bristlenose — Where I Left Off
 
-Last updated: 3 Feb 2026 (v0.6.11, Ollama local LLM support)
+Last updated: 3 Feb 2026 (v0.6.12, Keychain credential storage)
 
 ---
 
@@ -127,13 +127,9 @@ Current state and planned improvements.
 - [x] **PyPI Trusted Publishing** — configured; `release.yml` publishes via OIDC, no token needed in CI or locally for releases
 - [x] **`HOMEBREW_TAP_TOKEN`** — classic PAT with `repo` scope (no expiry), stored as a GitHub Actions secret in the bristlenose repo; used by `notify-homebrew` job to dispatch `repository_dispatch` to `cassiocassio/homebrew-bristlenose`
 
-### Current (works but could be better)
+### Done
 
-- **Anthropic/OpenAI API keys** — shell env var (`ANTHROPIC_API_KEY`) set in shell profile, plus `.env` file in project root (gitignored). Standard approach, fine for local dev.
-
-### To do
-
-- [ ] **Bristlenose API keys → Keychain** — add optional `keyring` support in `config.py` so bristlenose can read `BRISTLENOSE_ANTHROPIC_API_KEY` from macOS Keychain (falling back to env var / `.env`). Would let users avoid plaintext keys on disk.
+- [x] **Bristlenose API keys → Keychain** — `bristlenose configure claude` (or `chatgpt`) validates and stores keys securely in macOS Keychain (via `security` CLI) or Linux Secret Service (via `secret-tool`). Priority: keychain → env var → .env. Doctor shows "(Keychain)" suffix when key comes from system credential store. No `keyring` library — uses native CLI tools. Files: `credentials.py`, `credentials_macos.py`, `credentials_linux.py`. Tests: `test_credentials.py` (25 tests).
 
 ---
 
@@ -247,9 +243,9 @@ Full design doc: `docs/design-cli-improvements.md`
 - [x] `render` argument fix — now auto-detects output dir, positional renamed from `INPUT_DIR` to `OUTPUT_DIR`
 - [x] Command reordering — help shows `run`, `transcribe`, `analyze`, `render`, `doctor`, `help` (workflow order)
 - [x] `--llm claude/chatgpt` aliases — normalised in `load_settings()`
+- [x] File-level progress — "Transcribing... (2/5 files)" gives sense of movement
 
 **Documented for later:**
-- [ ] File-level progress — "Transcribing... (2/5 files)" gives sense of movement
 - [ ] Time estimate warning — warn before jobs >30min, based on audio duration
 - [ ] Britannification pass — standardise on British spellings throughout
 
@@ -282,11 +278,12 @@ Goal: support whatever LLM your organisation has access to. Detailed designs for
 
 **Why Azure:** High enterprise demand. Users with Microsoft 365 E5 contracts need Azure routing for compliance.
 
-**Phase 3: Keychain integration (~3h)**
-- [ ] `bristlenose/keychain.py` using `keyring` library
-- [ ] `bristlenose config set-key claude` CLI command
-- [ ] Credential loading: Keychain → env var → .env (fallback chain)
-- [ ] Doctor shows key source (Keychain vs env var)
+**Phase 3: ✅ Keychain integration — DONE**
+- [x] `bristlenose/credentials.py` + `credentials_macos.py` + `credentials_linux.py` using native CLI tools (no `keyring` library)
+- [x] `bristlenose configure claude` (or `chatgpt`) CLI command with `--key` option
+- [x] Credential loading: Keychain → env var → .env (fallback chain)
+- [x] Doctor shows "(Keychain)" suffix when key comes from system credential store
+- [x] Validates keys before storing (catches typos/truncation)
 
 **Phase 4: Gemini (~3h)**
 - [ ] Add `google-genai` dependency (~15 MB)

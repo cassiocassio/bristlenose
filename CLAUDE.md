@@ -27,7 +27,7 @@ Bristlenose is a local-first user-research analysis tool. It takes a folder of i
 
 CLI commands: `run` (full pipeline), `transcribe-only`, `analyze` (skip transcription), `render` (re-render from JSON, no LLM calls), `doctor` (dependency health checks). **Default command**: `bristlenose <folder>` is shorthand for `bristlenose run <folder>` — if the first argument is an existing directory (not a known command), `run` is injected automatically.
 
-LLM provider: Three providers supported — Claude (Anthropic), ChatGPT (OpenAI), and Local (Ollama). API keys via env vars (`ANTHROPIC_API_KEY` or `OPENAI_API_KEY`), `.env` file, or `bristlenose.toml`. Prefix with `BRISTLENOSE_` for namespaced variants. Local provider requires no API key — just Ollama running locally.
+LLM provider: Three providers supported — Claude (Anthropic), ChatGPT (OpenAI), and Local (Ollama). API keys stored in system keychain (`bristlenose configure claude` or `bristlenose configure chatgpt`), or via env vars (`ANTHROPIC_API_KEY` or `OPENAI_API_KEY`), `.env` file, or `bristlenose.toml`. Priority: keychain → env var → .env file. Prefix with `BRISTLENOSE_` for namespaced variants. Local provider requires no API key — just Ollama running locally.
 
 Report JavaScript — 11 modules in `bristlenose/theme/js/`, concatenated in dependency order into a single `<script>` block by `render_html.py` (`_JS_FILES`). Boot sequence in `main.js`:
 
@@ -141,6 +141,22 @@ The generated HTML report has interactive features: inline editing (quotes, head
 - **Install method detection**: snap (`$SNAP` env var) > brew (`/opt/homebrew/` or `/usr/local/Cellar/` in `sys.executable`) > pip (default). Linuxbrew (`/home/linuxbrew/`) is NOT detected as brew — falls through to pip (gives correct instructions)
 - **Rich formatting**: `ok` = dim green, `!!` = bold yellow, `--` = dim grey. Feels like `git status`
 - **Design doc**: `docs/design-doctor-and-snap.md`
+
+## Credential storage (Keychain)
+
+API keys are stored securely in the system keychain. Uses native CLI tools — no Python keyring shim.
+
+- **CLI command**: `bristlenose configure <provider>` — prompts for key, validates with API, stores in keychain. Accepts `--key` option to bypass interactive prompt (useful in scripts or when TTY has issues)
+- **Provider aliases**: `claude` → `anthropic`, `chatgpt`/`gpt` → `openai`
+- **Priority order**: keychain → env var (`ANTHROPIC_API_KEY`) → .env file
+- **macOS**: `bristlenose/credentials_macos.py` — uses `security` CLI (add-generic-password, find-generic-password, delete-generic-password). Service names: "Bristlenose Anthropic API Key", "Bristlenose OpenAI API Key"
+- **Linux**: `bristlenose/credentials_linux.py` — uses `secret-tool` (Secret Service API). Falls back to `EnvCredentialStore` if secret-tool unavailable
+- **Fallback**: `bristlenose/credentials.py` — `EnvCredentialStore` reads from env vars (cannot write)
+- **Integration**: `_populate_keys_from_keychain()` in `config.py` loads from keychain when settings don't have keys from env/.env
+- **Doctor display**: shows "(Keychain)" suffix when key source is keychain
+- **Validation**: keys are validated before storing — catches typos/truncation
+- **Tests**: `tests/test_credentials.py` — 25 tests (macOS tests run on macOS, Linux tests skipped)
+- **Design doc**: `docs/design-keychain.md`
 
 ## Local LLM provider (Ollama)
 
@@ -361,6 +377,6 @@ When the user signals end of session, **proactively offer to run this checklist*
 
 ## Current status (v0.6.12, Feb 2026)
 
-Core pipeline complete and published to PyPI + Homebrew. Snap packaging implemented and tested locally (arm64); CI builds amd64 on every push. Latest: **Ollama local LLM support (Phase 1 complete)** — provider registry (`bristlenose/providers.py`), Ollama detection/installation/auto-start (`bristlenose/ollama.py`), interactive first-run prompt offering Local/Claude/ChatGPT choice, automated Ollama installation (brew on macOS, snap on Linux, curl fallback), smart cloud fallback hints in fix messages (checks which API keys are configured), retry logic for local model JSON parsing (~85% reliability), doctor integration; **78 new provider tests** (`test_providers.py` + `test_provider_horror_scenarios.py`). Prior: output inside input folder; transcript coverage section; multi-participant sessions with global p-codes; sessions table; transcript pages with speaker codes. v0.6.7 adds search enhancements, pipeline warnings, CLI polish. v0.6.6 adds Cargo/uv-style CLI output, search-as-you-type filtering, platform-aware session grouping, man page, page footer. v0.6.5 adds timecode typography, hanging-indent quote layout, transcript name propagation. v0.6.4 adds concurrent per-participant LLM calls. v0.6.3 redesigns report header, adds view-switcher dropdown, Analysis ToC column, anonymisation boundary. v0.6.2 adds editable participant names, auto name/role extraction, editable headings. v0.6.1 adds snap recipe, CI workflow. v0.6.0 added `bristlenose doctor`. v0.5.0 added per-participant transcript pages.
+Core pipeline complete and published to PyPI + Homebrew. Snap packaging implemented and tested locally (arm64); CI builds amd64 on every push. Latest: **Keychain credential storage (Phase 3 complete)** — `bristlenose configure claude` (or `chatgpt`) validates and stores API keys securely in macOS Keychain (`security` CLI) or Linux Secret Service (`secret-tool`). Priority: keychain → env var → .env. Doctor shows "(Keychain)" suffix. No external keyring library — uses native CLI tools. Files: `credentials.py`, `credentials_macos.py`, `credentials_linux.py`. 25 new credential tests. Prior: **Ollama local LLM support (Phase 1)** — provider registry, Ollama detection/installation/auto-start, interactive first-run prompt, 78 provider tests. Prior: output inside input folder; transcript coverage; multi-participant sessions with global p-codes; sessions table; transcript pages with speaker codes. v0.6.7 adds search enhancements, pipeline warnings, CLI polish. v0.6.6 adds Cargo/uv-style CLI output, search-as-you-type filtering, platform-aware session grouping, man page. v0.6.5 adds timecode typography, hanging-indent quote layout. v0.6.4 adds concurrent per-participant LLM calls. v0.6.3 redesigns report header, adds view-switcher dropdown. v0.6.2 adds editable participant names, auto name/role extraction. v0.6.1 adds snap recipe, CI workflow. v0.6.0 added `bristlenose doctor`. v0.5.0 added per-participant transcript pages.
 
-**Next up:** Phase 2 Azure OpenAI for enterprise users, Phase 3 Keychain integration for secure credential storage, Phase 4 Gemini for budget users. Also: Phase 2 cross-session moderator linking; snap store publishing. See `TODO.md` for full task list.
+**Next up:** Phase 2 Azure OpenAI for enterprise users, Phase 4 Gemini for budget users. Also: Phase 2 cross-session moderator linking; snap store publishing. See `TODO.md` for full task list.

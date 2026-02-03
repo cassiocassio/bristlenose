@@ -245,6 +245,8 @@ def check_whisper_model(settings: BristlenoseSettings) -> CheckResult:
 
 def check_api_key(settings: BristlenoseSettings) -> CheckResult:
     """Check whether an API key is configured for the selected LLM provider."""
+    from bristlenose.credentials import get_credential_source
+
     provider = settings.llm_provider
 
     if provider == "anthropic":
@@ -257,6 +259,8 @@ def check_api_key(settings: BristlenoseSettings) -> CheckResult:
                 fix_key="api_key_missing_anthropic",
             )
         masked = f"sk-ant-...{key[-3:]}" if len(key) > 10 else "(set)"
+        source = get_credential_source("anthropic")
+        source_label = " (Keychain)" if source == "keychain" else ""
         # Validate key with a cheap API call
         valid, err = _validate_anthropic_key(key)
         if valid is False:
@@ -271,12 +275,12 @@ def check_api_key(settings: BristlenoseSettings) -> CheckResult:
             return CheckResult(
                 status=CheckStatus.OK,
                 label="API key",
-                detail=f"Anthropic ({masked}) (could not validate: {err})",
+                detail=f"Anthropic ({masked}){source_label} (could not validate: {err})",
             )
         return CheckResult(
             status=CheckStatus.OK,
             label="API key",
-            detail=f"Anthropic ({masked})",
+            detail=f"Anthropic ({masked}){source_label}",
         )
 
     if provider == "openai":
@@ -289,6 +293,8 @@ def check_api_key(settings: BristlenoseSettings) -> CheckResult:
                 fix_key="api_key_missing_openai",
             )
         masked = f"sk-...{key[-3:]}" if len(key) > 10 else "(set)"
+        source = get_credential_source("openai")
+        source_label = " (Keychain)" if source == "keychain" else ""
         valid, err = _validate_openai_key(key)
         if valid is False:
             return CheckResult(
@@ -301,12 +307,12 @@ def check_api_key(settings: BristlenoseSettings) -> CheckResult:
             return CheckResult(
                 status=CheckStatus.OK,
                 label="API key",
-                detail=f"OpenAI ({masked}) (could not validate: {err})",
+                detail=f"OpenAI ({masked}){source_label} (could not validate: {err})",
             )
         return CheckResult(
             status=CheckStatus.OK,
             label="API key",
-            detail=f"OpenAI ({masked})",
+            detail=f"OpenAI ({masked}){source_label}",
         )
 
     if provider == "local":

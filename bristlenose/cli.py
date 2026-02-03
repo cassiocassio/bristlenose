@@ -14,7 +14,7 @@ from bristlenose import __version__
 from bristlenose.config import load_settings
 
 # Known commands — used by _maybe_inject_run() to detect bare directory arguments
-_COMMANDS = {"run", "transcribe", "analyze", "analyse", "render", "doctor", "help"}
+_COMMANDS = {"run", "transcribe", "analyze", "analyse", "render", "doctor", "help", "configure"}
 
 
 def _maybe_inject_run() -> None:
@@ -896,8 +896,98 @@ def render(
 
 
 # ---------------------------------------------------------------------------
-# Utility commands (doctor, help)
+# Utility commands (doctor, configure, help)
 # ---------------------------------------------------------------------------
+
+
+@app.command()
+def configure(
+    provider: Annotated[
+        str,
+        typer.Argument(help="Provider to configure: anthropic (Claude), openai (ChatGPT)."),
+    ],
+    key: Annotated[
+        str | None,
+        typer.Option("--key", "-k", help="API key (if not provided, prompts interactively)."),
+    ] = None,
+) -> None:
+    """Set up API credentials for an LLM provider.
+
+    Validates the key with a test API call and stores it securely in
+    your system keychain (macOS Keychain or Linux Secret Service).
+    """
+    from bristlenose.credentials import EnvCredentialStore, get_credential_store
+    from bristlenose.doctor import _validate_anthropic_key, _validate_openai_key
+
+    provider = provider.lower()
+
+    # Normalise aliases
+    provider_map = {
+        "anthropic": "anthropic",
+        "claude": "anthropic",
+        "openai": "openai",
+        "chatgpt": "openai",
+    }
+    canonical = provider_map.get(provider)
+    if canonical is None:
+        console.print(f"[red]Unknown provider: {provider}[/red]")
+        console.print("Available: anthropic (claude), openai (chatgpt)")
+        raise typer.Exit(1)
+
+    display_name = "Claude" if canonical == "anthropic" else "ChatGPT"
+
+    # Get key from option or prompt
+    if key is None:
+        console.print()
+        key = typer.prompt(f"Enter your {display_name} API key", hide_input=True)
+
+    if not key.strip():
+        console.print("[red]No key entered[/red]")
+        raise typer.Exit(1)
+
+    key = key.strip()
+
+    # Validate
+    console.print("Validating...", end=" ")
+    if canonical == "anthropic":
+        is_valid, error = _validate_anthropic_key(key)
+    else:
+        is_valid, error = _validate_openai_key(key)
+
+    if is_valid is False:
+        console.print(f"[red]Invalid — {error}[/red]")
+        raise typer.Exit(1)
+    elif is_valid is None:
+        console.print(f"[yellow]Could not validate: {error}[/yellow]")
+        console.print("Storing anyway...")
+    else:
+        console.print("[green]Valid[/green]")
+
+    # Store in keychain
+    store = get_credential_store()
+    try:
+        store.set(canonical, key)
+        # Show where it was stored
+        if isinstance(store, EnvCredentialStore):
+            # Shouldn't happen on set() — it raises NotImplementedError
+            pass
+        else:
+            service_name = f"Bristlenose {display_name} API Key"
+            console.print(f'[green]Stored in Keychain as "{service_name}"[/green]')
+    except NotImplementedError:
+        # EnvCredentialStore — can't persist
+        console.print()
+        console.print("[yellow]No system keychain available.[/yellow]")
+        console.print("Add this to your .env file or shell profile:")
+        console.print()
+        env_var = "ANTHROPIC_API_KEY" if canonical == "anthropic" else "OPENAI_API_KEY"
+        console.print(f"  export BRISTLENOSE_{env_var}={key}")
+        console.print()
+        console.print("[dim](The key is not stored anywhere — save it yourself)[/dim]")
+        raise typer.Exit(0)
+
+    console.print()
+    console.print("You can now run: [bold]bristlenose run ./interviews[/bold]")
 
 
 @app.command()

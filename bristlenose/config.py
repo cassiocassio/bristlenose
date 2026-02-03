@@ -94,6 +94,9 @@ def load_settings(**overrides: object) -> BristlenoseSettings:
 
     Normalises LLM provider aliases (claude → anthropic, chatgpt/gpt → openai,
     ollama → local).
+
+    Also populates API keys from the system keychain if not already set
+    from environment variables or .env file.
     """
     # Import here to avoid circular import at module load time
     from bristlenose.providers import get_provider_aliases
@@ -104,4 +107,38 @@ def load_settings(**overrides: object) -> BristlenoseSettings:
         aliases = get_provider_aliases()
         overrides["llm_provider"] = aliases.get(provider, provider)
 
-    return BristlenoseSettings(**overrides)  # type: ignore[arg-type]
+    settings = BristlenoseSettings(**overrides)  # type: ignore[arg-type]
+
+    # Populate API keys from keychain if not set from env/.env
+    settings = _populate_keys_from_keychain(settings)
+
+    return settings
+
+
+def _populate_keys_from_keychain(settings: BristlenoseSettings) -> BristlenoseSettings:
+    """Check keychain for API keys not already set from env vars.
+
+    Returns a new settings object with keys populated from keychain.
+    """
+    from bristlenose.credentials import get_credential_store
+
+    store = get_credential_store()
+    updates: dict[str, str] = {}
+
+    # Only check keychain if the key isn't already set
+    if not settings.anthropic_api_key:
+        key = store.get("anthropic")
+        if key:
+            updates["anthropic_api_key"] = key
+
+    if not settings.openai_api_key:
+        key = store.get("openai")
+        if key:
+            updates["openai_api_key"] = key
+
+    if not updates:
+        return settings
+
+    # Create new settings with keychain values
+    # We need to merge the original values with keychain values
+    return settings.model_copy(update=updates)

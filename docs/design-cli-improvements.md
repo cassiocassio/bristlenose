@@ -159,60 +159,9 @@ Maybe `--force` should just be an alias for "run render instead of erroring". Ke
 
 **Status:** Won't fix — current messages are fine. Focus effort on multi-provider support instead.
 
-### 5. No progress during long stages
+### 5. ✅ File-level progress during transcription — DONE
 
-The spinner shows "Transcribing audio..." but for a 1-hour video, that sits there for 10+ minutes with no feedback. Users don't know if it's stuck.
-
-Whisper's tqdm progress bar was intentionally suppressed (it doesn't work well with Rich's spinner — see CLAUDE.md gotchas). But some progress indication would help.
-
-**Options:**
-- (a) Show file-level progress: "Transcribing audio... (2/5 files)"
-- (b) Show elapsed time updating live: "Transcribing audio... 3m 42s"
-- (c) Show percentage for single-file runs via Whisper's internal progress callback
-- (d) Do nothing — the per-stage timing at completion is sufficient
-
-**Recommendation:** (a) — file count is low-friction to implement and gives useful feedback for multi-file runs. Could combine with (b) for single-file runs.
-
-**Implementation sketch:**
-
-The pipeline already knows the file count after ingest. The challenge is threading that info back to the spinner.
-
-Option 1: Callback-based progress
-```python
-# In pipeline.py
-async def run(...):
-    ...
-    def on_file_progress(current: int, total: int):
-        status.update(f" [dim]Transcribing audio... ({current}/{total} files)[/dim]")
-
-    segments = await transcribe_sessions(sessions, ..., progress_callback=on_file_progress)
-```
-
-Option 2: Return progress from transcribe step
-```python
-# transcribe.py yields progress tuples
-async for file_idx, total, segments in transcribe_sessions_with_progress(...):
-    status.update(f" [dim]Transcribing... ({file_idx}/{total})[/dim]")
-```
-
-Option 3: Simpler — just show "Transcribing N files..." upfront
-```python
-status.update(f" [dim]Transcribing {len(sessions)} files...[/dim]")
-# No per-file updates, but at least user knows the scale
-```
-
-Option 3 is easiest. Options 1-2 require refactoring the transcribe module to support callbacks or async iteration, which is more invasive.
-
-For elapsed time display (option b), Rich's `Status` doesn't natively support timers, but we could:
-```python
-import time
-start = time.perf_counter()
-while transcribing:
-    elapsed = time.perf_counter() - start
-    status.update(f" [dim]Transcribing... {_format_duration(elapsed)}[/dim]")
-    await asyncio.sleep(1)
-```
-This needs the transcription to be truly async (yielding control), which mlx-whisper isn't. Would need `asyncio.to_thread()` wrapping.
+The spinner now shows file-level progress: "Transcribing audio... (2/5 files)" during the transcription stage. Implemented via callback from `transcribe_sessions()` to `pipeline.py`.
 
 ---
 
@@ -317,22 +266,13 @@ if estimated_minutes > 30:
 
 Could also store actual timing from previous runs in `~/.config/bristlenose/timing-history.json` to improve estimates over time.
 
-### 10. Config file support is underdocumented
+### 10. ✅ Config file support is underdocumented — DONE
 
-`-c / --config` accepts a path to `bristlenose.toml` but:
-- There's no example `bristlenose.toml` in the repo
-- `help config` doesn't mention it
-- The TOML schema isn't documented
-
-Users discover it in `--help` output but don't know what keys are valid.
-
-**Options:**
-- (a) Add `bristlenose.toml.example` to the repo with all keys documented
-- (b) Add `help config-file` topic explaining the TOML format
-- (c) Add `bristlenose init` command that creates a starter config file
-- (d) Do nothing — env vars are the primary config method
-
-**Recommendation:** (a) + (b) — document what exists.
+Configuration is now well documented:
+- `.env.example` in repo with all env vars documented
+- `bristlenose help config` shows all settings with descriptions
+- Man page has full CONFIGURATION section
+- TOML keys map 1:1 from env vars (lowercase, without `BRISTLENOSE_` prefix)
 
 ---
 
@@ -537,10 +477,7 @@ Think of it as ethnographically quirky. The tool is opinionated about language t
 
 ### Do now (quick wins)
 
-### Do soon (valuable UX)
-
-4. **File-level progress** (#5) — "Transcribing... (2/5 files)" gives sense of movement
-5. **Time estimate warning** (#9) — warn before jobs >30min, based on audio duration
+4. **Time estimate warning** (#9) — warn before jobs >30min, based on audio duration
 
 ### Roadmap (enterprise enablement)
 
@@ -2104,11 +2041,13 @@ The zero-friction entry point is the highest value feature for adoption. Build O
 2. Add doctor validation for Azure credentials
 3. Test with enterprise deployment
 
-**Phase 3: Keychain Integration (~3 hours)**
-1. Create `bristlenose/keychain.py` using `keyring` library
-2. Add `bristlenose config set-key` CLI command
-3. Update credential loading to check Keychain first
-4. Update doctor to show key source (Keychain vs env var)
+**Phase 3: ✅ Keychain Integration — DONE**
+1. ✅ Created `bristlenose/credentials.py` (abstraction), `credentials_macos.py` (macOS Keychain via `security` CLI), `credentials_linux.py` (Linux Secret Service via `secret-tool`)
+2. ✅ Added `bristlenose configure <provider>` CLI command with `--key` option
+3. ✅ Updated credential loading to check Keychain first (priority: keychain → env var → .env)
+4. ✅ Updated doctor to show "(Keychain)" suffix when key comes from keychain
+5. ✅ Validates keys before storing — catches typos/truncation
+6. ✅ Tests in `tests/test_credentials.py` (25 tests)
 
 **Phase 4: Gemini (~3 hours)**
 1. Add `google-genai` dependency
@@ -2125,9 +2064,9 @@ The zero-friction entry point is the highest value feature for adoption. Build O
 **Total: ~15 hours**
 
 The order prioritises:
-1. **Adoption** (Ollama removes the biggest barrier)
+1. ✅ **Adoption** (Ollama removes the biggest barrier) — DONE
 2. **Enterprise** (Azure unblocks corporate users)
-3. **UX polish** (Keychain is nice-to-have)
+3. ✅ **UX polish** (Keychain secure credential storage) — DONE
 4. **Budget option** (Gemini is cheaper but requires new SDK)
 
 ---
@@ -2136,18 +2075,20 @@ The order prioritises:
 
 ```
 bristlenose/
-├── providers.py          # NEW: ProviderSpec, PROVIDERS registry, resolve_provider()
-├── keychain.py           # NEW: get_key(), set_key(), delete_key(), list_keys()
-├── config.py             # MODIFY: remove _LLM_PROVIDER_ALIASES (moved to providers.py)
+├── providers.py          # ✅ DONE: ProviderSpec, PROVIDERS registry, resolve_provider()
+├── credentials.py        # ✅ DONE: CredentialStore ABC, EnvCredentialStore fallback, get_credential()
+├── credentials_macos.py  # ✅ DONE: MacOSCredentialStore using `security` CLI
+├── credentials_linux.py  # ✅ DONE: LinuxCredentialStore using `secret-tool`, fallback to env
+├── config.py             # ✅ DONE: loads from keychain via _populate_keys_from_keychain()
 ├── llm/
 │   ├── client.py         # MODIFY: use registry, add _analyze_openai_compatible(), _analyze_gemini()
 │   └── pricing.py        # MODIFY: add Gemini models, use registry for URLs
-├── cli.py                # MODIFY: add `config` subcommand group
-└── doctor.py             # MODIFY: use registry for provider checks
+├── cli.py                # ✅ DONE: added `configure` command
+└── doctor.py             # ✅ DONE: shows key source (Keychain vs env)
 
 tests/
-├── test_providers.py     # NEW: registry tests, alias resolution
-├── test_keychain.py      # NEW: mock keyring tests
+├── test_providers.py     # ✅ DONE: registry tests, alias resolution (47 tests)
+├── test_credentials.py   # ✅ DONE: credential store tests (25 tests)
 └── test_llm_client.py    # MODIFY: test new providers with mocked SDKs
 ```
 

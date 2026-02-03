@@ -52,7 +52,7 @@ class TestMaybeInjectRun:
 
     def test_all_commands_in_set(self) -> None:
         """Sanity check: all expected commands are in _COMMANDS."""
-        expected = {"run", "transcribe", "analyze", "analyse", "render", "doctor", "help"}
+        expected = {"run", "transcribe", "analyze", "analyse", "render", "doctor", "help", "configure"}
         assert _COMMANDS == expected
 
 # ---------------------------------------------------------------------------

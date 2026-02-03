@@ -266,11 +266,12 @@ class TestOllamaHelpers:
         with patch("bristlenose.ollama.get_install_method", return_value=None):
             assert install_ollama() is False
 
-    def test_start_ollama_serve_macos(self) -> None:
+    def test_start_ollama_serve_macos_app(self) -> None:
+        """On macOS with Ollama.app, should use 'open -a Ollama'."""
         from bristlenose.ollama import start_ollama_serve
 
         with (
-            patch("platform.system", return_value="Darwin"),
+            patch("bristlenose.ollama.get_ollama_install_method", return_value="app"),
             patch("subprocess.Popen") as mock_popen,
             patch("time.sleep"),
             patch("bristlenose.ollama.check_ollama") as mock_check,
@@ -278,14 +279,30 @@ class TestOllamaHelpers:
             mock_check.return_value = MagicMock(is_running=True)
             assert start_ollama_serve() is True
             mock_popen.assert_called_once()
-            # Should use 'open -a Ollama' on macOS
             assert mock_popen.call_args[0][0] == ["open", "-a", "Ollama"]
 
-    def test_start_ollama_serve_linux(self) -> None:
+    def test_start_ollama_serve_macos_brew(self) -> None:
+        """On macOS with Homebrew, should use 'brew services start ollama'."""
         from bristlenose.ollama import start_ollama_serve
 
         with (
-            patch("platform.system", return_value="Linux"),
+            patch("bristlenose.ollama.get_ollama_install_method", return_value="brew"),
+            patch("subprocess.run") as mock_run,
+            patch("time.sleep"),
+            patch("bristlenose.ollama.check_ollama") as mock_check,
+        ):
+            mock_run.return_value = MagicMock(returncode=0)
+            mock_check.return_value = MagicMock(is_running=True)
+            assert start_ollama_serve() is True
+            mock_run.assert_called_once()
+            assert mock_run.call_args[0][0] == ["brew", "services", "start", "ollama"]
+
+    def test_start_ollama_serve_linux_generic(self) -> None:
+        """On Linux with generic install, should use 'ollama serve'."""
+        from bristlenose.ollama import start_ollama_serve
+
+        with (
+            patch("bristlenose.ollama.get_ollama_install_method", return_value=None),
             patch("subprocess.Popen") as mock_popen,
             patch("time.sleep"),
             patch("bristlenose.ollama.check_ollama") as mock_check,
@@ -293,8 +310,23 @@ class TestOllamaHelpers:
             mock_check.return_value = MagicMock(is_running=True)
             assert start_ollama_serve() is True
             mock_popen.assert_called_once()
-            # Should use 'ollama serve' on Linux
             assert mock_popen.call_args[0][0] == ["ollama", "serve"]
+
+    def test_start_ollama_serve_linux_systemd(self) -> None:
+        """On Linux with systemd service, should use 'systemctl start ollama'."""
+        from bristlenose.ollama import start_ollama_serve
+
+        with (
+            patch("bristlenose.ollama.get_ollama_install_method", return_value="systemd"),
+            patch("subprocess.run") as mock_run,
+            patch("time.sleep"),
+            patch("bristlenose.ollama.check_ollama") as mock_check,
+        ):
+            mock_run.return_value = MagicMock(returncode=0)
+            mock_check.return_value = MagicMock(is_running=True)
+            assert start_ollama_serve() is True
+            mock_run.assert_called_once()
+            assert mock_run.call_args[0][0] == ["systemctl", "start", "ollama"]
 
     def test_validate_local_endpoint_success(self) -> None:
         import json
@@ -471,9 +503,17 @@ class TestDoctorLocalProvider:
 
 class TestDoctorFixesOllama:
     def test_fix_ollama_not_running(self) -> None:
+        from unittest.mock import patch
+
         from bristlenose.doctor_fixes import get_fix
 
-        fix = get_fix("ollama_not_running", "pip")
+        # Mock get_start_command to return generic "ollama serve" for test consistency
+        with patch(
+            "bristlenose.ollama.get_start_command",
+            return_value=(["ollama", "serve"], "ollama serve"),
+        ):
+            fix = get_fix("ollama_not_running", "pip")
+        assert "Start Ollama" in fix
         assert "ollama serve" in fix
         # Cloud fallback hint should be present (varies based on available keys)
         assert "cloud" in fix.lower() or "claude" in fix.lower() or "console.anthropic.com" in fix
@@ -483,7 +523,9 @@ class TestDoctorFixesOllama:
 
         fix = get_fix("ollama_not_installed", "pip")
         assert "ollama.ai" in fix
-        assert "ollama serve" in fix
+        # Auto-start message instead of manual command (we can't know the start
+        # command before Ollama is installed)
+        assert "bristlenose will start it automatically" in fix
         # Cloud fallback hint should be present
         assert "cloud" in fix.lower() or "claude" in fix.lower() or "console.anthropic.com" in fix
 

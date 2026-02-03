@@ -278,6 +278,20 @@ class LLMClient:
                 )
                 if attempt < max_retries - 1:
                     await asyncio.sleep(0.5 * (attempt + 1))  # Backoff
+            except Exception as e:
+                # Catch Pydantic ValidationError and other parsing issues
+                if "ValidationError" in type(e).__name__ or "validation" in str(e).lower():
+                    last_error = e
+                    logger.debug(
+                        "Schema validation failed (attempt %d/%d): %s",
+                        attempt + 1,
+                        max_retries,
+                        e,
+                    )
+                    if attempt < max_retries - 1:
+                        await asyncio.sleep(0.5 * (attempt + 1))  # Backoff
+                else:
+                    raise  # Re-raise non-validation errors
 
         raise RuntimeError(
             f"Local model failed to produce valid JSON after {max_retries} attempts. "

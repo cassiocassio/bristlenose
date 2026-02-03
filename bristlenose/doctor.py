@@ -155,6 +155,22 @@ def check_backend() -> CheckResult:
     except Exception:
         pass
 
+    # Check for MLX on Apple Silicon
+    import platform as _platform
+
+    has_mlx = False
+    is_apple_silicon = (
+        _platform.system() == "Darwin" and _platform.machine() == "arm64"
+    )
+    if is_apple_silicon:
+        try:
+            import mlx_whisper  # noqa: F401
+
+            has_mlx = True
+            accel = "MLX"
+        except ImportError:
+            pass
+
     parts = []
     if fw_version:
         parts.append(f"faster-whisper {fw_version}")
@@ -167,18 +183,13 @@ def check_backend() -> CheckResult:
     detail = ", ".join(parts[:-1]) + f" {parts[-1]}" if len(parts) > 1 else parts[0]
 
     # Warn if Apple Silicon without MLX
-    import platform as _platform
-
-    if _platform.system() == "Darwin" and _platform.machine() == "arm64":
-        try:
-            import mlx_whisper  # noqa: F401
-        except ImportError:
-            return CheckResult(
-                status=CheckStatus.WARN,
-                label="Transcription",
-                detail=f"{detail.rstrip(')')}, Apple Silicon, CPU mode)",
-                fix_key="mlx_not_installed",
-            )
+    if is_apple_silicon and not has_mlx:
+        return CheckResult(
+            status=CheckStatus.WARN,
+            label="Transcription",
+            detail=f"{detail.rstrip(')')}, Apple Silicon, CPU mode)",
+            fix_key="mlx_not_installed",
+        )
 
     # Warn if NVIDIA GPU detected but CUDA not available
     if accel == "CPU":
@@ -228,7 +239,7 @@ def check_whisper_model(settings: BristlenoseSettings) -> CheckResult:
     return CheckResult(
         status=CheckStatus.SKIP,
         label="Whisper model",
-        detail=f"{model_name} not cached (will download ~1.5 GB on first run)",
+        detail=f"{model_name} not cached (~1.5 GB download on first run)",
     )
 
 

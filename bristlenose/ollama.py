@@ -10,6 +10,7 @@ import logging
 import subprocess
 import sys
 from dataclasses import dataclass
+from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
@@ -121,6 +122,73 @@ def is_ollama_installed() -> bool:
     return shutil.which("ollama") is not None
 
 
+def get_ollama_install_method() -> str | None:
+    """Detect how Ollama was installed on this system.
+
+    Returns one of: "brew", "app", "snap", "systemd", or None if unknown.
+
+    Detection strategy:
+    - macOS: Check if Ollama.app exists (app install) or if brew formula installed
+    - Linux: Check for snap or systemd service
+    - Fallback: None (assume manual/curl install)
+    """
+    import platform
+    import shutil
+    import subprocess
+
+    system = platform.system()
+
+    if system == "Darwin":
+        # Check for Homebrew formula first (more specific)
+        if shutil.which("brew") is not None:
+            try:
+                result = subprocess.run(
+                    ["brew", "list", "ollama"],
+                    capture_output=True,
+                    timeout=5,
+                )
+                if result.returncode == 0:
+                    return "brew"
+            except (subprocess.TimeoutExpired, FileNotFoundError):
+                pass
+
+        # Check for Ollama.app (standard macOS install)
+        if Path("/Applications/Ollama.app").exists():
+            return "app"
+
+        return None
+
+    if system == "Linux":
+        # Check for snap install
+        if shutil.which("snap") is not None:
+            try:
+                result = subprocess.run(
+                    ["snap", "list", "ollama"],
+                    capture_output=True,
+                    timeout=5,
+                )
+                if result.returncode == 0:
+                    return "snap"
+            except (subprocess.TimeoutExpired, FileNotFoundError):
+                pass
+
+        # Check for systemd service (curl install creates this)
+        try:
+            result = subprocess.run(
+                ["systemctl", "list-unit-files", "ollama.service"],
+                capture_output=True,
+                timeout=5,
+            )
+            if b"ollama.service" in result.stdout:
+                return "systemd"
+        except (subprocess.TimeoutExpired, FileNotFoundError):
+            pass
+
+        return None
+
+    return None
+
+
 def get_install_method() -> str | None:
     """Determine the best method to install Ollama on this system.
 
@@ -205,28 +273,83 @@ def install_ollama(method: str | None = None) -> bool:
     return False
 
 
+def get_start_command() -> tuple[list[str], str]:
+    """Get the appropriate command to start Ollama based on install method.
+
+    Returns:
+        (command_list, human_readable_string) tuple.
+        command_list is for subprocess; human_readable_string is for display.
+    """
+    install_method = get_ollama_install_method()
+
+    if install_method == "brew":
+        return (["brew", "services", "start", "ollama"], "brew services start ollama")
+    if install_method == "app":
+        return (["open", "-a", "Ollama"], "open -a Ollama")
+    if install_method == "snap":
+        return (["snap", "run", "ollama", "serve"], "snap run ollama serve")
+    if install_method == "systemd":
+        return (["systemctl", "start", "ollama"], "sudo systemctl start ollama")
+
+    # Fallback: generic ollama serve
+    return (["ollama", "serve"], "ollama serve")
+
+
 def start_ollama_serve() -> bool:
     """Start Ollama server in the background.
+
+    Detects how Ollama was installed and uses the appropriate start method:
+    - brew: `brew services start ollama`
+    - app (macOS): `open -a Ollama`
+    - snap: `snap run ollama serve`
+    - systemd: `systemctl start ollama`
+    - other: `ollama serve`
 
     Returns:
         True if started successfully, False otherwise.
     """
-    import platform
-
-    system = platform.system()
+    cmd, _display = get_start_command()
 
     try:
-        if system == "Darwin":
-            # On macOS, Ollama installs as an app — launch it
+        # Special handling for different start methods
+        if cmd[0] == "open":
+            # macOS app: open -a returns immediately
             subprocess.Popen(
-                ["open", "-a", "Ollama"],
+                cmd,
                 stdout=subprocess.DEVNULL,
                 stderr=subprocess.DEVNULL,
             )
+        elif cmd[0] == "brew":
+            # brew services: runs as a launchctl service
+            result = subprocess.run(
+                cmd,
+                capture_output=True,
+                timeout=30,
+            )
+            if result.returncode != 0:
+                logger.debug("brew services start failed: %s", result.stderr.decode())
+                return False
+        elif cmd[0] == "systemctl":
+            # systemd: may need sudo, runs as system service
+            result = subprocess.run(
+                cmd,
+                capture_output=True,
+                timeout=30,
+            )
+            if result.returncode != 0:
+                # Try with sudo
+                result = subprocess.run(
+                    ["sudo"] + cmd,
+                    capture_output=True,
+                    timeout=30,
+                )
+                if result.returncode != 0:
+                    logger.debug("systemctl start failed: %s", result.stderr.decode())
+                    return False
         else:
-            # On Linux, run ollama serve in background
+            # Generic ollama serve: run in background
             subprocess.Popen(
-                ["ollama", "serve"],
+                cmd,
                 stdout=subprocess.DEVNULL,
                 stderr=subprocess.DEVNULL,
                 start_new_session=True,
@@ -239,6 +362,9 @@ def start_ollama_serve() -> bool:
         # Verify it's running
         status = check_ollama()
         return status.is_running
+    except subprocess.TimeoutExpired:
+        logger.debug("Timeout starting Ollama")
+        return False
     except Exception as e:
         logger.debug("Error starting Ollama: %s", e)
         return False

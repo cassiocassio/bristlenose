@@ -210,7 +210,7 @@ class TestCheckBackend:
         assert result.fix_key == "backend_import_fail"
 
     def test_apple_silicon_with_mlx(self) -> None:
-        """macOS arm64 with MLX installed → OK."""
+        """macOS arm64 with MLX installed → OK, shows MLX accelerator."""
         mock_fw = MagicMock(__version__="1.2.1")
         mock_ct2 = MagicMock(__version__="4.6.3")
         mock_ct2.get_cuda_device_count.return_value = 0
@@ -228,7 +228,7 @@ class TestCheckBackend:
         ):
             result = check_backend()
         assert result.status == CheckStatus.OK
-        assert "CPU" in result.detail
+        assert "(MLX)" in result.detail
 
     def test_apple_silicon_without_mlx(self) -> None:
         """macOS arm64 without MLX → WARN with mlx_not_installed fix."""
@@ -1188,7 +1188,8 @@ class TestGetFixGrid:
 
     def test_backend_import_fail_pip(self) -> None:
         fix = get_fix("backend_import_fail", "pip")
-        assert "pip install --upgrade" in fix
+        assert "pipx inject bristlenose" in fix
+        assert "ctranslate2" in fix
 
     # -- api_key_missing_anthropic: same for all methods --
 
@@ -1257,19 +1258,19 @@ class TestGetFixGrid:
     def test_mlx_not_installed_brew(self) -> None:
         fix = get_fix("mlx_not_installed", "brew")
         assert "brew --prefix" in fix
-        assert "bristlenose[apple]" in fix
+        assert "mlx mlx-whisper" in fix
 
     def test_mlx_not_installed_pip(self) -> None:
         fix = get_fix("mlx_not_installed", "pip")
-        assert "pip install" in fix
-        assert "bristlenose[apple]" in fix
-        assert "brew" not in fix
+        assert "pipx inject bristlenose" in fix
+        assert "mlx mlx-whisper" in fix
+        assert "brew --prefix" not in fix  # no brew-specific path
 
     def test_mlx_not_installed_snap(self) -> None:
         """Snap is Linux-only, MLX is macOS-only — message still works."""
         fix = get_fix("mlx_not_installed", "snap")
         # Falls through to non-brew path
-        assert "bristlenose[apple]" in fix
+        assert "mlx mlx-whisper" in fix
 
     # -- cuda_not_available: same for all methods --
 

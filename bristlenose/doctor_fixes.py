@@ -103,9 +103,17 @@ def _fix_backend_import_fail(method: str) -> str:
             "  sudo snap refresh bristlenose\n"
             "If it persists: github.com/cassiocassio/bristlenose/issues"
         )
+    if method == "brew":
+        return (
+            "Transcription backend failed to load.\n\n"
+            "  $(brew --prefix bristlenose)/libexec/bin/python -m pip install "
+            "--upgrade ctranslate2 faster-whisper\n\n"
+            "If that doesn't help: github.com/cassiocassio/bristlenose/issues"
+        )
     return (
         "Transcription backend failed to load.\n\n"
-        "  pip install --upgrade ctranslate2 faster-whisper\n\n"
+        "  pipx inject bristlenose ctranslate2 faster-whisper\n\n"
+        "If you used a venv, activate it first then: pip install ctranslate2 faster-whisper\n\n"
         "If that doesn't help: github.com/cassiocassio/bristlenose/issues"
     )
 
@@ -168,10 +176,18 @@ def _fix_spacy_model_missing(method: str) -> str:
     )
 
 
-def _fix_presidio_missing(_method: str) -> str:
+def _fix_presidio_missing(method: str) -> str:
+    if method == "brew":
+        return (
+            "PII redaction requires presidio-analyzer.\n\n"
+            "  $(brew --prefix bristlenose)/libexec/bin/python -m pip install "
+            "presidio-analyzer presidio-anonymizer\n\n"
+            "Then re-run. Or drop --redact-pii if you don't need it."
+        )
     return (
         "PII redaction requires presidio-analyzer.\n\n"
-        "  pip install presidio-analyzer presidio-anonymizer\n\n"
+        "  pipx inject bristlenose presidio-analyzer presidio-anonymizer\n\n"
+        "If you used a venv, activate it first then: pip install presidio-analyzer presidio-anonymizer\n\n"
         "Then re-run. Or drop --redact-pii if you don't need it."
     )
 
@@ -181,13 +197,14 @@ def _fix_mlx_not_installed(method: str) -> str:
         return (
             "Apple Silicon detected but MLX not installed. Transcription will\n"
             "use CPU (works fine, GPU is faster).\n\n"
-            "  $(brew --prefix bristlenose)/libexec/bin/pip "
-            "install 'bristlenose[apple]'"
+            "  $(brew --prefix bristlenose)/libexec/bin/python -m pip install mlx mlx-whisper"
         )
     return (
         "Apple Silicon detected but MLX not installed. Transcription will\n"
         "use CPU (works fine, GPU is faster).\n\n"
-        "  pip install 'bristlenose[apple]'"
+        "  pipx inject bristlenose mlx mlx-whisper\n\n"
+        "If you used a venv instead of pipx, activate it first then:\n"
+        "  pip install mlx mlx-whisper"
     )
 
 
@@ -211,10 +228,13 @@ def _fix_low_disk_space(_method: str) -> str:
 
 
 def _fix_ollama_not_running(_method: str) -> str:
+    from bristlenose.ollama import get_start_command
+
     hint = _get_cloud_fallback_hint()
+    _cmd, display_cmd = get_start_command()
     return (
         "Start Ollama:\n\n"
-        "  ollama serve\n\n"
+        f"  {display_cmd}\n\n"
         f"Then re-run bristlenose. {hint}\n\n"
         "For interactive setup: bristlenose doctor"
     )
@@ -222,10 +242,10 @@ def _fix_ollama_not_running(_method: str) -> str:
 
 def _fix_ollama_not_installed(_method: str) -> str:
     hint = _get_cloud_fallback_hint()
+    # Can't know the start command before install, so give generic advice
     return (
         "Install Ollama from https://ollama.ai (free, no account needed).\n\n"
-        "Then start it:\n\n"
-        "  ollama serve\n\n"
+        "After installing, bristlenose will start it automatically.\n\n"
         f"{hint}\n\n"
         "For interactive setup: bristlenose doctor"
     )

@@ -325,14 +325,20 @@ class TestOllamaNotAvailable:
 
             Start Ollama:
 
-              ollama serve
+              ollama serve  (or brew services start ollama, etc.)
 
             Then re-run bristlenose. Or use a cloud API: --llm claude
         """
         settings = _settings(llm_provider="local")
-        with patch(
-            "bristlenose.ollama.validate_local_endpoint",
-            return_value=(None, "Ollama is installed but not running"),
+        with (
+            patch(
+                "bristlenose.ollama.validate_local_endpoint",
+                return_value=(None, "Ollama is installed but not running"),
+            ),
+            patch(
+                "bristlenose.ollama.get_start_command",
+                return_value=(["ollama", "serve"], "ollama serve"),
+            ),
         ):
             result = check_local_provider(settings)
 
@@ -340,7 +346,7 @@ class TestOllamaNotAvailable:
         assert result.fix_key == "ollama_not_running"
 
         fix = get_fix(result.fix_key)
-        assert "ollama serve" in fix
+        assert "Start Ollama" in fix
         assert "--llm claude" in fix
 
     def test_ollama_not_installed(self) -> None:
@@ -352,9 +358,7 @@ class TestOllamaNotAvailable:
 
             Install Ollama from https://ollama.ai (free, no account needed).
 
-            Then start it:
-
-              ollama serve
+            After installing, bristlenose will start it automatically.
 
             Or use a cloud API: --llm claude
         """
@@ -370,7 +374,7 @@ class TestOllamaNotAvailable:
 
         fix = get_fix(result.fix_key)
         assert "ollama.ai" in fix
-        assert "ollama serve" in fix
+        assert "bristlenose will start it automatically" in fix
         assert "--llm claude" in fix
 
     def test_ollama_running_but_no_model(self) -> None:
@@ -549,18 +553,24 @@ class TestReturningUserStaleConfig:
 
             Ollama is not running. Start it with:
 
-              ollama serve
+              ollama serve  (or brew services start ollama, etc.)
         """
         settings = _settings(llm_provider="local")
-        with patch(
-            "bristlenose.ollama.validate_local_endpoint",
-            return_value=(None, "Cannot connect to local model server. Is Ollama running?"),
+        with (
+            patch(
+                "bristlenose.ollama.validate_local_endpoint",
+                return_value=(None, "Cannot connect to local model server. Is Ollama running?"),
+            ),
+            patch(
+                "bristlenose.ollama.get_start_command",
+                return_value=(["ollama", "serve"], "ollama serve"),
+            ),
         ):
             result = check_local_provider(settings)
 
         assert result.status == CheckStatus.FAIL
         fix = get_fix(result.fix_key)
-        assert "ollama serve" in fix
+        assert "Start Ollama" in fix
 
 
 # ---------------------------------------------------------------------------

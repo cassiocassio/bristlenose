@@ -133,12 +133,12 @@ Alternatively, create a `.env` file in your project folder -- see `.env.example`
 ## Quick start
 
 ```bash
-bristlenose run ./interviews/ -o ./results/
+bristlenose run ./interviews/
 ```
 
-That's it. Point it at a folder containing your recordings and it will produce the report in `./results/`. Expect roughly 2--5 minutes per participant on Apple Silicon, longer on CPU.
+That's it. Point it at a folder containing your recordings and it will produce the report inside that folder. Expect roughly 2--5 minutes per participant on Apple Silicon, longer on CPU.
 
-Open `results/research_report.html` in your browser.
+Open `interviews/bristlenose-output/bristlenose-interviews-report.html` in your browser.
 
 ### What goes in
 
@@ -150,30 +150,36 @@ Files sharing a name stem (e.g. `p1.mp4` and `p1.srt`) are treated as one sessio
 
 ### What comes out
 
+Output goes inside the input folder by default:
+
 ```
-results/
-  research_report.html       # the report -- open this
-  research_report.md         # Markdown version
-  transcript_s1.html         # per-session transcript pages
-  transcript_s2.html
-  ...
-  bristlenose-theme.css      # stylesheet (regenerated on every run)
-  bristlenose-logo.png       # project logo
-  bristlenose-player.html    # popout video player (if media files present)
-  people.yaml                # participant registry (names auto-extracted, edit here or in browser)
-  raw_transcripts/           # one .txt per session (contains all speakers)
-  cooked_transcripts/        # PII-redacted transcripts (only with --redact-pii)
-  intermediate/              # JSON snapshots (used by `bristlenose render`)
+interviews/                              # your input folder
+├── Session 1.mp4
+├── Session 2.mp4
+└── bristlenose-output/                  # output folder (created inside input)
+    ├── bristlenose-interviews-report.html   # the report -- open this
+    ├── bristlenose-interviews-report.md     # Markdown version
+    ├── people.yaml                          # participant registry
+    ├── assets/                              # static files (CSS, logos, player)
+    ├── sessions/                            # per-session transcript pages
+    │   ├── transcript_s1.html
+    │   └── transcript_s2.html
+    ├── transcripts-raw/                     # one .txt + .md per session
+    ├── transcripts-cooked/                  # PII-redacted (only with --redact-pii)
+    └── .bristlenose/                        # internal files
+        └── intermediate/                    # JSON snapshots for `bristlenose render`
 ```
+
+Override the output location with `--output`: `bristlenose run interviews/ -o /elsewhere/`
 
 ### More commands
 
 ```bash
-bristlenose run ./interviews/ -o ./results/ -p "Q1 Usability Study"  # name the project
-bristlenose transcribe-only ./interviews/ -o ./results/              # transcribe, no LLM
-bristlenose analyze ./results/raw_transcripts/ -o ./results/         # skip transcription
-bristlenose render ./interviews/ -o ./results/                       # re-render from JSON, no LLM
-bristlenose doctor                                                   # check dependencies
+bristlenose run ./interviews/ -p "Q1 Usability Study"    # name the project
+bristlenose transcribe-only ./interviews/                # transcribe, no LLM
+bristlenose analyze ./interviews/bristlenose-output/     # skip transcription, run LLM analysis
+bristlenose render ./interviews/bristlenose-output/      # re-render from JSON, no LLM calls
+bristlenose doctor                                       # check dependencies
 ```
 
 ### Configuration
@@ -216,7 +222,7 @@ On Linux, install `python3.12` and `ffmpeg` via your package manager. On Windows
 ### Verify everything works
 
 ```bash
-pytest                       # ~512 tests, should pass in <2s
+pytest                       # ~550 tests, should pass in <2s
 ruff check .                 # lint
 mypy bristlenose/            # type check (some third-party SDK errors are expected)
 ```
@@ -273,7 +279,6 @@ Edit `bristlenose/__init__.py` (the single source of truth for version), commit,
 ### 0.6.9
 
 - Transcript coverage section — collapsible section at the end of the report showing what % of the transcript made it into quotes (X% in report · Y% moderator · Z% omitted), with expandable omitted content per session
-- `--hierarchical` flag — alternative quote layout grouped by theme instead of by screen
 - Transcript page fix — pages now render correctly when PII redaction is off (was failing with assertion error)
 
 ### 0.6.8

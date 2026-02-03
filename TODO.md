@@ -1,6 +1,6 @@
 # Bristlenose — Where I Left Off
 
-Last updated: 3 Feb 2026 (v0.6.7, multi-participant sessions)
+Last updated: 3 Feb 2026 (v0.6.10, output inside input folder)
 
 ---
 
@@ -236,6 +236,67 @@ This is a large effort. Incremental approach:
 4. **Full SPA** — eventually the entire report is a framework app served by the local server
 
 Step 1 alone would fix the immediate pain (cross-page state, file writes) without touching the frontend. Steps 2–4 can happen gradually.
+
+### CLI improvements (Feb 2026)
+
+Full design doc: `docs/design-cli-improvements.md`
+
+**Done in this session:**
+- [x] `analyse` alias — hidden alias for `analyze` (British English convenience)
+- [x] `transcribe` is now primary — renamed from `transcribe-only`
+- [x] `render` argument fix — now auto-detects output dir, positional renamed from `INPUT_DIR` to `OUTPUT_DIR`
+- [x] Command reordering — help shows `run`, `transcribe`, `analyze`, `render`, `doctor`, `help` (workflow order)
+- [x] `--llm claude/chatgpt` aliases — normalised in `load_settings()`
+
+**Documented for later:**
+- [ ] File-level progress — "Transcribing... (2/5 files)" gives sense of movement
+- [ ] Time estimate warning — warn before jobs >30min, based on audio duration
+- [ ] Britannification pass — standardise on British spellings throughout
+
+**Backward compat policy:** Don't worry until v1.0.0. Make the CLI good, don't carry cruft.
+
+### LLM provider roadmap (Feb 2026)
+
+Full design doc: `docs/design-cli-improvements.md` — "LLM Provider Roadmap" section
+
+Goal: support whatever LLM your organisation has access to. Detailed designs for all providers with implementation sketches, testing checklists, and abstraction patterns.
+
+**Phase 1: Ollama as zero-friction entry point (~5h)** ← START HERE
+- [ ] `bristlenose/providers.py` — `ProviderSpec` registry, `resolve_provider()`, config fields
+- [ ] Interactive first-run prompt when no API key configured — offer Local/Claude/ChatGPT choice
+- [ ] Ollama detection — check if running, find suitable models
+- [ ] Model auto-pull with consent — download `llama3.2:3b` (2 GB) on first use
+- [ ] Retry logic for JSON parsing failures (local models are ~85% reliable)
+- [ ] Doctor integration — show "Local (llama3.2:3b via Ollama)" status
+
+**Why Ollama first:** Removes biggest adoption barrier. No signup, no payment, no API key. Users can try the tool for free in 10 minutes.
+
+**Phase 2: Azure OpenAI (~2h)**
+- [ ] Add Azure to registry (same SDK as OpenAI/Ollama)
+- [ ] `_analyze_openai_compatible()` — unified method for OpenAI/Azure/Local
+- [ ] Doctor validation for Azure credentials
+- [ ] Config: `BRISTLENOSE_AZURE_ENDPOINT`, `BRISTLENOSE_AZURE_KEY`, `BRISTLENOSE_AZURE_DEPLOYMENT`
+
+**Why Azure:** High enterprise demand. Users with Microsoft 365 E5 contracts need Azure routing for compliance.
+
+**Phase 3: Keychain integration (~3h)**
+- [ ] `bristlenose/keychain.py` using `keyring` library
+- [ ] `bristlenose config set-key claude` CLI command
+- [ ] Credential loading: Keychain → env var → .env (fallback chain)
+- [ ] Doctor shows key source (Keychain vs env var)
+
+**Phase 4: Gemini (~3h)**
+- [ ] Add `google-genai` dependency (~15 MB)
+- [ ] Add Gemini to registry — native JSON schema support
+- [ ] `_analyze_gemini()` method (different SDK pattern)
+- [ ] Pricing: Gemini Flash is 5–7× cheaper than Claude/GPT-4o
+
+**Phase 5: Documentation (~2h)**
+- [ ] README section: "Choosing an LLM provider"
+- [ ] Man page updates
+- [ ] `.env.example` with all provider env vars
+
+**GitHub Copilot:** NOT supported. Copilot ≠ Azure OpenAI. No public inference API. Point enterprise users to Azure instead.
 
 ### `bristlenose doctor` and dependency UX
 

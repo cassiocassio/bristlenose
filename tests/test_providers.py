@@ -192,6 +192,110 @@ class TestOllamaHelpers:
         with patch("shutil.which", return_value=None):
             assert is_ollama_installed() is False
 
+    def test_get_install_method_macos_with_brew(self) -> None:
+        from bristlenose.ollama import get_install_method
+
+        with (
+            patch("platform.system", return_value="Darwin"),
+            patch("shutil.which", side_effect=lambda cmd: "/usr/local/bin/brew" if cmd == "brew" else None),
+        ):
+            assert get_install_method() == "brew"
+
+    def test_get_install_method_macos_without_brew(self) -> None:
+        from bristlenose.ollama import get_install_method
+
+        with (
+            patch("platform.system", return_value="Darwin"),
+            patch("shutil.which", side_effect=lambda cmd: "/usr/bin/curl" if cmd == "curl" else None),
+        ):
+            assert get_install_method() == "curl"
+
+    def test_get_install_method_linux_with_snap(self) -> None:
+        from bristlenose.ollama import get_install_method
+
+        with (
+            patch("platform.system", return_value="Linux"),
+            patch("shutil.which", side_effect=lambda cmd: "/usr/bin/snap" if cmd == "snap" else None),
+        ):
+            assert get_install_method() == "snap"
+
+    def test_get_install_method_linux_without_snap(self) -> None:
+        from bristlenose.ollama import get_install_method
+
+        with (
+            patch("platform.system", return_value="Linux"),
+            patch("shutil.which", side_effect=lambda cmd: "/usr/bin/curl" if cmd == "curl" else None),
+        ):
+            assert get_install_method() == "curl"
+
+    def test_get_install_method_windows(self) -> None:
+        from bristlenose.ollama import get_install_method
+
+        with patch("platform.system", return_value="Windows"):
+            assert get_install_method() is None
+
+    def test_install_ollama_brew(self) -> None:
+        from bristlenose.ollama import install_ollama
+
+        with patch("subprocess.run") as mock_run:
+            mock_run.return_value = MagicMock(returncode=0)
+            assert install_ollama("brew") is True
+            mock_run.assert_called_once()
+            assert mock_run.call_args[0][0] == ["brew", "install", "ollama"]
+
+    def test_install_ollama_snap(self) -> None:
+        from bristlenose.ollama import install_ollama
+
+        with patch("subprocess.run") as mock_run:
+            mock_run.return_value = MagicMock(returncode=0)
+            assert install_ollama("snap") is True
+            mock_run.assert_called_once()
+            assert mock_run.call_args[0][0] == ["sudo", "snap", "install", "ollama"]
+
+    def test_install_ollama_curl(self) -> None:
+        from bristlenose.ollama import install_ollama
+
+        with patch("subprocess.run") as mock_run:
+            mock_run.return_value = MagicMock(returncode=0)
+            assert install_ollama("curl") is True
+            mock_run.assert_called_once()
+
+    def test_install_ollama_no_method(self) -> None:
+        from bristlenose.ollama import install_ollama
+
+        with patch("bristlenose.ollama.get_install_method", return_value=None):
+            assert install_ollama() is False
+
+    def test_start_ollama_serve_macos(self) -> None:
+        from bristlenose.ollama import start_ollama_serve
+
+        with (
+            patch("platform.system", return_value="Darwin"),
+            patch("subprocess.Popen") as mock_popen,
+            patch("time.sleep"),
+            patch("bristlenose.ollama.check_ollama") as mock_check,
+        ):
+            mock_check.return_value = MagicMock(is_running=True)
+            assert start_ollama_serve() is True
+            mock_popen.assert_called_once()
+            # Should use 'open -a Ollama' on macOS
+            assert mock_popen.call_args[0][0] == ["open", "-a", "Ollama"]
+
+    def test_start_ollama_serve_linux(self) -> None:
+        from bristlenose.ollama import start_ollama_serve
+
+        with (
+            patch("platform.system", return_value="Linux"),
+            patch("subprocess.Popen") as mock_popen,
+            patch("time.sleep"),
+            patch("bristlenose.ollama.check_ollama") as mock_check,
+        ):
+            mock_check.return_value = MagicMock(is_running=True)
+            assert start_ollama_serve() is True
+            mock_popen.assert_called_once()
+            # Should use 'ollama serve' on Linux
+            assert mock_popen.call_args[0][0] == ["ollama", "serve"]
+
     def test_validate_local_endpoint_success(self) -> None:
         import json
 
@@ -371,7 +475,8 @@ class TestDoctorFixesOllama:
 
         fix = get_fix("ollama_not_running", "pip")
         assert "ollama serve" in fix
-        assert "--llm claude" in fix
+        # Cloud fallback hint should be present (varies based on available keys)
+        assert "cloud" in fix.lower() or "claude" in fix.lower() or "console.anthropic.com" in fix
 
     def test_fix_ollama_not_installed(self) -> None:
         from bristlenose.doctor_fixes import get_fix
@@ -379,11 +484,58 @@ class TestDoctorFixesOllama:
         fix = get_fix("ollama_not_installed", "pip")
         assert "ollama.ai" in fix
         assert "ollama serve" in fix
-        assert "--llm claude" in fix
+        # Cloud fallback hint should be present
+        assert "cloud" in fix.lower() or "claude" in fix.lower() or "console.anthropic.com" in fix
 
     def test_fix_ollama_model_missing(self) -> None:
         from bristlenose.doctor_fixes import get_fix
 
         fix = get_fix("ollama_model_missing", "pip")
         assert "ollama pull" in fix
-        assert "--llm claude" in fix
+        # Cloud fallback hint should be present
+        assert "cloud" in fix.lower() or "claude" in fix.lower() or "console.anthropic.com" in fix
+
+    def test_cloud_fallback_with_anthropic_key(self) -> None:
+        """When user has Anthropic key, suggest --llm claude."""
+        from bristlenose.doctor_fixes import get_fix
+
+        with patch(
+            "bristlenose.config.load_settings",
+            return_value=MagicMock(anthropic_api_key="sk-ant-xxx", openai_api_key=""),
+        ):
+            fix = get_fix("ollama_not_running", "pip")
+            assert "--llm claude" in fix
+
+    def test_cloud_fallback_with_openai_key(self) -> None:
+        """When user has only OpenAI key, suggest --llm chatgpt."""
+        from bristlenose.doctor_fixes import get_fix
+
+        with patch(
+            "bristlenose.config.load_settings",
+            return_value=MagicMock(anthropic_api_key="", openai_api_key="sk-xxx"),
+        ):
+            fix = get_fix("ollama_not_running", "pip")
+            assert "--llm chatgpt" in fix
+
+    def test_cloud_fallback_with_both_keys(self) -> None:
+        """When user has both keys, suggest both options."""
+        from bristlenose.doctor_fixes import get_fix
+
+        with patch(
+            "bristlenose.config.load_settings",
+            return_value=MagicMock(anthropic_api_key="sk-ant-xxx", openai_api_key="sk-xxx"),
+        ):
+            fix = get_fix("ollama_not_running", "pip")
+            assert "--llm claude" in fix
+            assert "--llm chatgpt" in fix
+
+    def test_cloud_fallback_with_no_keys(self) -> None:
+        """When user has no keys, suggest getting a Claude key."""
+        from bristlenose.doctor_fixes import get_fix
+
+        with patch(
+            "bristlenose.config.load_settings",
+            return_value=MagicMock(anthropic_api_key="", openai_api_key=""),
+        ):
+            fix = get_fix("ollama_not_running", "pip")
+            assert "console.anthropic.com" in fix

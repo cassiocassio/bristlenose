@@ -327,15 +327,23 @@ def _prompt_for_provider() -> str | None:
 
 
 def _setup_local_provider() -> str | None:
-    """Set up local provider, pulling model if needed.
+    """Set up local provider, installing Ollama and pulling model if needed.
 
-    Returns 'local' if ready, or None if user needs to install Ollama.
+    Returns 'local' if ready, or None if setup failed.
     """
     import webbrowser
 
     from rich.prompt import Confirm
 
-    from bristlenose.ollama import DEFAULT_MODEL, check_ollama, is_ollama_installed, pull_model
+    from bristlenose.ollama import (
+        DEFAULT_MODEL,
+        check_ollama,
+        get_install_method,
+        install_ollama,
+        is_ollama_installed,
+        pull_model,
+        start_ollama_serve,
+    )
 
     status = check_ollama()
 
@@ -345,27 +353,79 @@ def _setup_local_provider() -> str | None:
 
         if is_ollama_installed():
             console.print()
-            console.print("Start it with:")
-            console.print()
-            console.print("  [bold]ollama serve[/bold]")
-            console.print()
-            console.print("Then try again.")
+            console.print("Starting Ollama...")
+            if start_ollama_serve():
+                console.print("[green]Ollama started.[/green]")
+                status = check_ollama()  # Re-check status
+            else:
+                console.print()
+                console.print("Could not start automatically. Run manually:")
+                console.print()
+                console.print("  [bold]ollama serve[/bold]")
+                console.print()
+                console.print("Then try again.")
+                return None
         else:
-            console.print()
-            console.print("Install it from: [link]https://ollama.ai[/link]")
-            console.print("[dim](Single download, no account needed)[/dim]")
-            console.print()
-            console.print("After installing, run:")
-            console.print()
-            console.print("  [bold]ollama pull llama3.2[/bold]")
-            console.print()
-            console.print("Then try again.")
-            console.print()
+            # Ollama not installed — offer to install it
+            method = get_install_method()
+            if method is not None:
+                console.print()
+                console.print("Ollama is not installed.")
+                console.print("[dim](Free, open-source, no account needed)[/dim]")
+                console.print()
 
-            if Confirm.ask("Open the download page?", default=True):
-                webbrowser.open("https://ollama.ai")
+                # Show what we'll run
+                if method == "brew":
+                    install_cmd = "brew install ollama"
+                elif method == "snap":
+                    install_cmd = "sudo snap install ollama"
+                else:
+                    install_cmd = "curl -fsSL https://ollama.ai/install.sh | sh"
 
-        return None
+                if Confirm.ask("Install Ollama now?", default=True):
+                    console.print()
+                    console.print(f"[dim]Running: {install_cmd}[/dim]")
+                    console.print()
+                    if install_ollama(method):
+                        console.print()
+                        console.print("[green]Ollama installed.[/green]")
+                        console.print("Starting Ollama...")
+                        if start_ollama_serve():
+                            console.print("[green]Ollama started.[/green]")
+                            status = check_ollama()
+                        else:
+                            console.print()
+                            console.print("Installed but could not start. Run manually:")
+                            console.print()
+                            console.print("  [bold]ollama serve[/bold]")
+                            console.print()
+                            console.print("Then try again.")
+                            return None
+                    else:
+                        # Installation failed — fall back to download page
+                        console.print()
+                        console.print("[red]Installation failed.[/red]")
+                        console.print("Install manually from: [link]https://ollama.ai[/link]")
+                        if Confirm.ask("Open the download page?", default=True):
+                            webbrowser.open("https://ollama.ai")
+                        return None
+                else:
+                    return None
+            else:
+                # No install method available (Windows or missing tools)
+                console.print()
+                console.print("Install Ollama from: [link]https://ollama.ai[/link]")
+                console.print("[dim](Single download, no account needed)[/dim]")
+                console.print()
+                console.print("After installing, run:")
+                console.print()
+                console.print("  [bold]ollama pull llama3.2[/bold]")
+                console.print()
+                console.print("Then try again.")
+                console.print()
+                if Confirm.ask("Open the download page?", default=True):
+                    webbrowser.open("https://ollama.ai")
+                return None
 
     if not status.has_suitable_model:
         console.print()

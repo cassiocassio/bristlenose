@@ -198,6 +198,11 @@ Sampling temperature. Default: \fB0.1\fR.
 .B BRISTLENOSE_LLM_CONCURRENCY
 Parallel LLM calls. Default: \fB3\fR.
 .SS Local LLM settings (Ollama)
+When no API key is configured and you run bristlenose, it offers an interactive
+choice: Local AI (free via Ollama), Claude, or ChatGPT. If you choose Local and
+Ollama isn't installed, bristlenose offers to install it automatically (Homebrew
+on macOS, snap on Linux, curl script fallback). If Ollama is installed but not
+running, bristlenose will start it for you.
 .TP
 .B BRISTLENOSE_LOCAL_URL
 Ollama API endpoint. Default: \fBhttp://localhost:11434/v1\fR.

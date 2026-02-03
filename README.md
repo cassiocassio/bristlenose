@@ -105,9 +105,33 @@ To use ChatGPT instead of the default, add `--llm openai` to your commands:
 bristlenose run ./interviews/ -o ./results/ --llm openai
 ```
 
+### Option C: Local AI (via Ollama) — free, no signup
+
+Run analysis entirely on your machine using open-source models. No account, no API key, no cost.
+
+1. Install [Ollama](https://ollama.ai) (one download, no signup)
+2. Run bristlenose — it will offer to set up local AI automatically:
+
+```bash
+bristlenose run ./interviews/
+
+# Or explicitly:
+bristlenose run ./interviews/ --llm local
+```
+
+If Ollama isn't installed, bristlenose will offer to install it for you (via Homebrew on macOS, snap on Linux).
+
+**Trade-offs:** Local models are slower (~10 min vs ~2 min per study) and less accurate (~85% vs ~99% JSON reliability). Good for trying the tool; use cloud APIs for production quality.
+
 ### Which should I pick?
 
-Both work well. If you already pay for one, use that one. If you're starting fresh:
+| Option | Cost | Quality | Speed | Setup |
+|--------|------|---------|-------|-------|
+| **Local (Ollama)** | Free | Good | Slower | Easiest — no signup |
+| **Claude** | ~$1.50/study | Excellent | Fast | Create account + add payment |
+| **ChatGPT** | ~$1.00/study | Excellent | Fast | Create account + add payment |
+
+If you're just trying bristlenose, start with **Local**. If you're running a real study, use **Claude** or **ChatGPT**.
 
 - **Claude** -- the default in bristlenose. Tends to produce nuanced qualitative analysis. Pay-as-you-go billing from the first API call (no free API tier; a typical 8-participant study costs roughly $1--3)
 - **ChatGPT** -- widely used. New API accounts get a small amount of free credit (check your [usage page](https://platform.openai.com/usage) to see if you have any remaining). After that, pay-as-you-go. Similar cost per study
@@ -281,9 +305,12 @@ Edit `bristlenose/__init__.py` (the single source of truth for version), commit,
 ### 0.6.11
 
 - Local AI support via Ollama — run bristlenose without an API key using local models like Llama 3.2; interactive first-run prompt offers Local/Claude/ChatGPT choice
+- Automated Ollama installation — offers to install Ollama automatically (Homebrew on macOS, snap on Linux, curl script fallback); falls back to download page if installation fails
+- Auto-start Ollama — if installed but not running, bristlenose will start it for you
 - Provider registry — centralised `bristlenose/providers.py` with `ProviderSpec` dataclass, alias resolution (claude→anthropic, chatgpt→openai, ollama→local)
 - Ollama integration — `bristlenose/ollama.py` with status checking, model detection, and auto-pull with consent
 - Retry logic for local models — 3 retries with exponential backoff for JSON parsing failures (~85% reliability vs ~99% for cloud)
+- Smart cloud fallback hints — fix messages for Ollama issues now check which API keys you have and only suggest providers you can actually use
 - Doctor integration for local provider — shows "Local (llama3.2:3b via Ollama)" status, helpful fix messages for Ollama not running or model missing
 
 ### 0.6.10

@@ -29,6 +29,32 @@ def detect_install_method() -> str:
     return "pip"
 
 
+def _get_cloud_fallback_hint() -> str:
+    """Return a cloud provider hint based on available API keys.
+
+    Checks which cloud API keys are configured and suggests the appropriate
+    fallback. Only suggests providers the user can actually use.
+    """
+    from bristlenose.config import load_settings
+
+    try:
+        settings = load_settings()
+        has_anthropic = bool(settings.anthropic_api_key)
+        has_openai = bool(settings.openai_api_key)
+
+        if has_anthropic and has_openai:
+            return "Or use a cloud API: --llm claude (or --llm chatgpt)"
+        if has_anthropic:
+            return "Or use a cloud API: --llm claude"
+        if has_openai:
+            return "Or use a cloud API: --llm chatgpt"
+        # No keys configured — suggest Claude as the default recommendation
+        return "Or get a Claude API key: console.anthropic.com"
+    except Exception:
+        # If settings fail to load, fall back to generic suggestion
+        return "Or use a cloud API: --llm claude"
+
+
 def get_fix(fix_key: str, install_method: str | None = None) -> str:
     """Get the fix instruction for a given fix_key and install method."""
     if install_method is None:
@@ -185,27 +211,30 @@ def _fix_low_disk_space(_method: str) -> str:
 
 
 def _fix_ollama_not_running(_method: str) -> str:
+    hint = _get_cloud_fallback_hint()
     return (
         "Start Ollama:\n\n"
         "  ollama serve\n\n"
-        "Then re-run bristlenose. Or use a cloud API: --llm claude"
+        f"Then re-run bristlenose. {hint}"
     )
 
 
 def _fix_ollama_not_installed(_method: str) -> str:
+    hint = _get_cloud_fallback_hint()
     return (
         "Install Ollama from https://ollama.ai (free, no account needed).\n\n"
         "Then start it:\n\n"
         "  ollama serve\n\n"
-        "Or use a cloud API: --llm claude"
+        f"{hint}"
     )
 
 
 def _fix_ollama_model_missing(_method: str) -> str:
+    hint = _get_cloud_fallback_hint()
     return (
         "Download the model:\n\n"
         "  ollama pull llama3.2\n\n"
-        "Or use a cloud API: --llm claude"
+        f"{hint}"
     )
 
 

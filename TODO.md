@@ -265,9 +265,12 @@ Goal: support whatever LLM your organisation has access to. Detailed designs for
 - [x] `bristlenose/providers.py` — `ProviderSpec` registry, `resolve_provider()`, config fields
 - [x] Interactive first-run prompt when no API key configured — offer Local/Claude/ChatGPT choice
 - [x] Ollama detection — check if running, find suitable models (`bristlenose/ollama.py`)
+- [x] Automated Ollama installation — `get_install_method()` detects brew/snap/curl, `install_ollama()` runs appropriate command, falls back to download page on failure
+- [x] Auto-start Ollama — `start_ollama_serve()` launches Ollama if installed but not running (macOS: `open -a Ollama`, Linux: `ollama serve` in background)
 - [x] Model auto-pull with consent — download `llama3.2:3b` (2 GB) on first use
 - [x] Retry logic for JSON parsing failures (local models are ~85% reliable) — 3 retries with exponential backoff
 - [x] Doctor integration — show "Local (llama3.2:3b via Ollama)" status
+- [x] Smart cloud fallback hints — fix messages check which API keys are configured and only suggest usable providers
 
 **Why Ollama first:** Removes biggest adoption barrier. No signup, no payment, no API key. Users can try the tool for free in 10 minutes.
 

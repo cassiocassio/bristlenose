@@ -121,6 +121,129 @@ def is_ollama_installed() -> bool:
     return shutil.which("ollama") is not None
 
 
+def get_install_method() -> str | None:
+    """Determine the best method to install Ollama on this system.
+
+    Returns one of: "brew", "snap", "curl", or None if no method available.
+
+    Priority:
+    - macOS: brew if available, else curl
+    - Linux: snap if available (cleaner updates), else curl
+    - Windows: None (manual install required)
+    """
+    import platform
+    import shutil
+
+    system = platform.system()
+
+    if system == "Windows":
+        return None
+
+    if system == "Darwin":
+        # macOS: prefer Homebrew (common among CLI users), fallback to curl
+        if shutil.which("brew") is not None:
+            return "brew"
+        if shutil.which("curl") is not None:
+            return "curl"
+        return None
+
+    if system == "Linux":
+        # Linux: prefer snap (cleaner updates, sandboxed), fallback to curl
+        if shutil.which("snap") is not None:
+            return "snap"
+        if shutil.which("curl") is not None:
+            return "curl"
+        return None
+
+    return None
+
+
+def install_ollama(method: str | None = None) -> bool:
+    """Install Ollama using the specified or auto-detected method.
+
+    Args:
+        method: One of "brew", "snap", "curl", or None to auto-detect.
+
+    Returns:
+        True if installation succeeded, False otherwise.
+    """
+    if method is None:
+        method = get_install_method()
+
+    if method is None:
+        logger.debug("No suitable install method found")
+        return False
+
+    try:
+        if method == "brew":
+            result = subprocess.run(
+                ["brew", "install", "ollama"],
+                stdout=sys.stdout,
+                stderr=sys.stderr,
+            )
+            return result.returncode == 0
+
+        if method == "snap":
+            result = subprocess.run(
+                ["sudo", "snap", "install", "ollama"],
+                stdout=sys.stdout,
+                stderr=sys.stderr,
+            )
+            return result.returncode == 0
+
+        if method == "curl":
+            result = subprocess.run(
+                ["sh", "-c", "curl -fsSL https://ollama.ai/install.sh | sh"],
+                stdout=sys.stdout,
+                stderr=sys.stderr,
+            )
+            return result.returncode == 0
+
+    except Exception as e:
+        logger.debug("Error installing Ollama via %s: %s", method, e)
+
+    return False
+
+
+def start_ollama_serve() -> bool:
+    """Start Ollama server in the background.
+
+    Returns:
+        True if started successfully, False otherwise.
+    """
+    import platform
+
+    system = platform.system()
+
+    try:
+        if system == "Darwin":
+            # On macOS, Ollama installs as an app — launch it
+            subprocess.Popen(
+                ["open", "-a", "Ollama"],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+            )
+        else:
+            # On Linux, run ollama serve in background
+            subprocess.Popen(
+                ["ollama", "serve"],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                start_new_session=True,
+            )
+
+        # Give it a moment to start
+        import time
+        time.sleep(2)
+
+        # Verify it's running
+        status = check_ollama()
+        return status.is_running
+    except Exception as e:
+        logger.debug("Error starting Ollama: %s", e)
+        return False
+
+
 def pull_model(model: str = DEFAULT_MODEL) -> bool:
     """Pull a model from the Ollama registry.
 

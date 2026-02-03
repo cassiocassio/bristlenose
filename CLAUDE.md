@@ -2,7 +2,7 @@
 
 ## What this is
 
-Bristlenose is a local-first user-research analysis tool. It takes a folder of interview recordings (audio, video, or existing transcripts) and produces a browsable HTML report with extracted quotes, themes, sentiment, friction points, and user journeys. Everything runs on your laptop — nothing is uploaded to the cloud. LLM calls go to Claude (Anthropic) or ChatGPT (OpenAI) APIs.
+Bristlenose is a local-first user-research analysis tool. It takes a folder of interview recordings (audio, video, or existing transcripts) and produces a browsable HTML report with extracted quotes, themes, sentiment, friction points, and user journeys. Everything runs on your laptop — nothing is uploaded to the cloud. LLM calls go to Claude (Anthropic), ChatGPT (OpenAI), or local models via Ollama (free, no account required).
 
 ## Commands
 
@@ -27,7 +27,7 @@ Bristlenose is a local-first user-research analysis tool. It takes a folder of i
 
 CLI commands: `run` (full pipeline), `transcribe-only`, `analyze` (skip transcription), `render` (re-render from JSON, no LLM calls), `doctor` (dependency health checks). **Default command**: `bristlenose <folder>` is shorthand for `bristlenose run <folder>` — if the first argument is an existing directory (not a known command), `run` is injected automatically.
 
-LLM provider: API keys via env vars (`ANTHROPIC_API_KEY` or `OPENAI_API_KEY`), `.env` file, or `bristlenose.toml`. Prefix with `BRISTLENOSE_` for namespaced variants.
+LLM provider: Three providers supported — Claude (Anthropic), ChatGPT (OpenAI), and Local (Ollama). API keys via env vars (`ANTHROPIC_API_KEY` or `OPENAI_API_KEY`), `.env` file, or `bristlenose.toml`. Prefix with `BRISTLENOSE_` for namespaced variants. Local provider requires no API key — just Ollama running locally.
 
 Report JavaScript — 11 modules in `bristlenose/theme/js/`, concatenated in dependency order into a single `<script>` block by `render_html.py` (`_JS_FILES`). Boot sequence in `main.js`:
 
@@ -141,6 +141,22 @@ The generated HTML report has interactive features: inline editing (quotes, head
 - **Install method detection**: snap (`$SNAP` env var) > brew (`/opt/homebrew/` or `/usr/local/Cellar/` in `sys.executable`) > pip (default). Linuxbrew (`/home/linuxbrew/`) is NOT detected as brew — falls through to pip (gives correct instructions)
 - **Rich formatting**: `ok` = dim green, `!!` = bold yellow, `--` = dim grey. Feels like `git status`
 - **Design doc**: `docs/design-doctor-and-snap.md`
+
+## Local LLM provider (Ollama)
+
+`bristlenose/ollama.py` handles Ollama detection, installation, and model management. `bristlenose/providers.py` defines the provider registry.
+
+- **Provider registry**: `ProviderSpec` dataclass with `name`, `display_name`, `aliases`, `default_model`, `sdk_module`, `pricing_url`. `PROVIDERS` dict maps canonical names to specs. `resolve_provider()` normalises aliases (claude→anthropic, chatgpt→openai, ollama→local)
+- **Interactive first-run prompt**: `_prompt_for_provider()` in `cli.py` — when no API key and default provider, offers 3 choices: Local (free), Claude (~$1.50/study), ChatGPT (~$1.00/study). Only triggers for default anthropic case; explicit `--llm` choices skip the prompt
+- **Ollama detection**: `check_ollama()` hits `http://localhost:11434/api/tags` to check if running and list models. `is_ollama_installed()` checks PATH. `validate_local_endpoint()` returns `(True, "")`, `(False, error)`, or `(None, error)` for connection issues
+- **Auto-install**: `get_install_method()` returns "brew"/"snap"/"curl"/None based on platform and available tools. `install_ollama(method)` runs the appropriate command. Priority: macOS prefers brew, Linux prefers snap, fallback to curl script. Falls back to download page on failure
+- **Auto-start**: `start_ollama_serve()` — macOS uses `open -a Ollama`, Linux uses `ollama serve` in background with `start_new_session=True`. Waits 2s and verifies running
+- **Model auto-pull**: `pull_model()` runs `ollama pull` with stdout passthrough for progress bar. Triggered via interactive prompt when no suitable model found
+- **Preferred models**: `PREFERRED_MODELS` list in order — `llama3.2:3b` (default), `llama3.2`, `llama3.2:1b`, `llama3.1:8b`, `mistral:7b`, `qwen2.5:7b`
+- **LLM client**: `_analyze_local()` in `llm/client.py` uses OpenAI SDK with `base_url=settings.local_url`. Includes JSON schema in system prompt and 3 retries with exponential backoff for parse failures (~85% reliability vs ~99% for cloud)
+- **Doctor integration**: `check_local_provider()` validates endpoint and model. Three fix keys: `ollama_not_installed`, `ollama_not_running`, `ollama_model_missing`. Fix messages are context-aware — suggest `--llm claude` only if user has Anthropic key, etc.
+- **Config**: `local_url` (default `http://localhost:11434/v1`), `local_model` (default `llama3.2:3b`)
+- **Tests**: `tests/test_providers.py` (47 tests), `tests/test_provider_horror_scenarios.py` (31 tests) — covers all error paths, fix messages, interactive prompt logic
 
 ## Snap packaging
 
@@ -345,6 +361,6 @@ When the user signals end of session, **proactively offer to run this checklist*
 
 ## Current status (v0.6.11, Feb 2026)
 
-Core pipeline complete and published to PyPI + Homebrew. Snap packaging implemented and tested locally (arm64); CI builds amd64 on every push. Latest: **Ollama local LLM support** — `bristlenose/providers.py` (provider registry with `ProviderSpec`), `bristlenose/ollama.py` (Ollama detection, model checking), interactive first-run prompt offering Local/Claude/ChatGPT choice, retry logic for local model JSON parsing (~85% reliability), doctor integration for local provider; **63 new provider tests** (`test_providers.py` + `test_provider_horror_scenarios.py`). Prior: output inside input folder; transcript coverage section; multi-participant sessions with global p-codes; sessions table; transcript pages with speaker codes. v0.6.7 adds search enhancements, pipeline warnings, CLI polish. v0.6.6 adds Cargo/uv-style CLI output, search-as-you-type filtering, platform-aware session grouping, man page, page footer. v0.6.5 adds timecode typography, hanging-indent quote layout, transcript name propagation. v0.6.4 adds concurrent per-participant LLM calls. v0.6.3 redesigns report header, adds view-switcher dropdown, Analysis ToC column, anonymisation boundary. v0.6.2 adds editable participant names, auto name/role extraction, editable headings. v0.6.1 adds snap recipe, CI workflow. v0.6.0 added `bristlenose doctor`. v0.5.0 added per-participant transcript pages.
+Core pipeline complete and published to PyPI + Homebrew. Snap packaging implemented and tested locally (arm64); CI builds amd64 on every push. Latest: **Ollama local LLM support (Phase 1 complete)** — provider registry (`bristlenose/providers.py`), Ollama detection/installation/auto-start (`bristlenose/ollama.py`), interactive first-run prompt offering Local/Claude/ChatGPT choice, automated Ollama installation (brew on macOS, snap on Linux, curl fallback), smart cloud fallback hints in fix messages (checks which API keys are configured), retry logic for local model JSON parsing (~85% reliability), doctor integration; **78 new provider tests** (`test_providers.py` + `test_provider_horror_scenarios.py`). Prior: output inside input folder; transcript coverage section; multi-participant sessions with global p-codes; sessions table; transcript pages with speaker codes. v0.6.7 adds search enhancements, pipeline warnings, CLI polish. v0.6.6 adds Cargo/uv-style CLI output, search-as-you-type filtering, platform-aware session grouping, man page, page footer. v0.6.5 adds timecode typography, hanging-indent quote layout, transcript name propagation. v0.6.4 adds concurrent per-participant LLM calls. v0.6.3 redesigns report header, adds view-switcher dropdown, Analysis ToC column, anonymisation boundary. v0.6.2 adds editable participant names, auto name/role extraction, editable headings. v0.6.1 adds snap recipe, CI workflow. v0.6.0 added `bristlenose doctor`. v0.5.0 added per-participant transcript pages.
 
 **Next up:** Phase 2 Azure OpenAI for enterprise users, Phase 3 Keychain integration for secure credential storage, Phase 4 Gemini for budget users. Also: Phase 2 cross-session moderator linking; snap store publishing. See `TODO.md` for full task list.

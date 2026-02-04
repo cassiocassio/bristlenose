@@ -398,7 +398,7 @@ class TestTranscriptPageRendering:
     def test_participant_segments_no_moderator_class(self, tmp_path: Path) -> None:
         html = self._setup_and_render(tmp_path)
         # Participant segments should not have segment-moderator class
-        lines = [l for l in html.split("\n") if "been using this" in l]
+        lines = [line for line in html.split("\n") if "been using this" in line]
         assert lines  # sanity check
         for line in lines:
             assert "segment-moderator" not in line

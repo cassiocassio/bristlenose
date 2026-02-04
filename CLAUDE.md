@@ -271,6 +271,7 @@ This is especially common when:
 
 ### Other gotchas
 
+- **Tests must not depend on local environment** — CI runs with no API keys, no Ollama, no local config. Functions like `_get_cloud_fallback_hint()` in `doctor_fixes.py` return different output based on configured keys. Always mock environment-dependent functions in tests. The v0.6.7–v0.6.13 release failures were caused by tests that passed locally (where API keys exist) but failed in CI
 - **Provider registry** — `bristlenose/providers.py` is the single source of truth for provider metadata (names, aliases, default models, SDK modules). `resolve_provider()` handles alias normalisation (claude→anthropic, ollama→local). `load_settings()` in `config.py` calls the registry to normalise aliases
 - **Local LLM uses OpenAI SDK** — Ollama is OpenAI-compatible, so `_analyze_local()` in `llm/client.py` uses the same `openai.AsyncOpenAI` client with `base_url=settings.local_url` and `api_key="ollama"` (required by SDK but ignored by Ollama)
 - **Local model retry logic** — `_analyze_local()` retries JSON parsing failures up to 3 times with exponential backoff; local models are ~85% reliable vs ~99% for cloud
@@ -358,7 +359,11 @@ Releases should land on GitHub after 9pm London time on weekdays to avoid pushin
 ## Before committing
 
 1. `.venv/bin/python -m pytest tests/` — all pass
-2. `.venv/bin/ruff check bristlenose/` — no lint errors
+2. `.venv/bin/ruff check .` — no lint errors (**note: check whole repo, not just `bristlenose/`** — CI runs `ruff check .` which includes `tests/`)
+
+**CI parity matters.** The release workflow failed for 7 versions (v0.6.7–v0.6.13) because local checks didn't match CI:
+- Local ran `ruff check bristlenose/`, CI runs `ruff check .` — test file lint errors went unnoticed
+- Tests that depend on environment (API keys, installed tools) must mock those dependencies — CI has no keys configured
 
 ## Session-end housekeeping
 
@@ -375,7 +380,7 @@ When the user signals end of session, **proactively offer to run this checklist*
 9. **Clean up branches** — delete merged feature branches
 10. **Verify CI** — check latest push passes CI
 
-## Current status (v0.6.13, Feb 2026)
+## Current status (v0.6.14, Feb 2026)
 
 Core pipeline complete and published to PyPI + Homebrew. Snap packaging implemented and tested locally (arm64); CI builds amd64 on every push. Latest: **Keychain credential storage (Phase 3 complete)** — `bristlenose configure claude` (or `chatgpt`) validates and stores API keys securely in macOS Keychain (`security` CLI) or Linux Secret Service (`secret-tool`). Priority: keychain → env var → .env. Doctor shows "(Keychain)" suffix. No external keyring library — uses native CLI tools. Files: `credentials.py`, `credentials_macos.py`, `credentials_linux.py`. 25 new credential tests. Prior: **Ollama local LLM support (Phase 1)** — provider registry, Ollama detection/installation/auto-start, interactive first-run prompt, 78 provider tests. Prior: output inside input folder; transcript coverage; multi-participant sessions with global p-codes; sessions table; transcript pages with speaker codes. v0.6.7 adds search enhancements, pipeline warnings, CLI polish. v0.6.6 adds Cargo/uv-style CLI output, search-as-you-type filtering, platform-aware session grouping, man page. v0.6.5 adds timecode typography, hanging-indent quote layout. v0.6.4 adds concurrent per-participant LLM calls. v0.6.3 redesigns report header, adds view-switcher dropdown. v0.6.2 adds editable participant names, auto name/role extraction. v0.6.1 adds snap recipe, CI workflow. v0.6.0 added `bristlenose doctor`. v0.5.0 added per-participant transcript pages.
 

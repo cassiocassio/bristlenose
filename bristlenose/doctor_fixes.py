@@ -175,12 +175,12 @@ def _fix_spacy_model_missing(method: str) -> str:
             "PII redaction needs a spaCy language model.\n\n"
             "  $(brew --prefix bristlenose)/libexec/bin/python "
             "-m spacy download en_core_web_sm\n\n"
-            "Then re-run. Or drop --redact-pii if you don't need it."
+            "Or ignore this if you don't need PII redaction."
         )
     return (
         "PII redaction needs a spaCy language model.\n\n"
         "  python3 -m spacy download en_core_web_sm\n\n"
-        "Then re-run. Or drop --redact-pii if you don't need it."
+        "Or ignore this if you don't need PII redaction."
     )
 
 

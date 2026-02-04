@@ -210,26 +210,36 @@ def check_backend() -> CheckResult:
 
 def check_whisper_model(settings: BristlenoseSettings) -> CheckResult:
     """Check whether the configured Whisper model is already cached."""
+    from bristlenose.stages.transcribe import _mlx_model_name
+
     model_name = settings.whisper_model
 
-    # Try huggingface_hub cache scan first
+    # Build list of possible repo IDs to check — depends on which backend will be used
+    # MLX models: mlx-community/whisper-{model} (via _mlx_model_name mapping)
+    # faster-whisper models: mobiuslabsgmbh/faster-whisper-{model} (current default)
+    #                        Systran/faster-whisper-{model} (legacy)
+    possible_repos = [
+        _mlx_model_name(model_name),  # e.g. "mlx-community/whisper-large-v3-turbo"
+        f"mobiuslabsgmbh/faster-whisper-{model_name}",
+        f"Systran/faster-whisper-{model_name}",
+    ]
+
+    # Try huggingface_hub cache scan
     try:
         from huggingface_hub import scan_cache_dir
 
         cache_info = scan_cache_dir()
-        # faster-whisper models are stored as "Systran/faster-whisper-{model}"
-        repo_id = f"Systran/faster-whisper-{model_name}"
-        cached_repos = {r.repo_id for r in cache_info.repos}
-        if repo_id in cached_repos:
-            # Find size
-            for repo in cache_info.repos:
-                if repo.repo_id == repo_id:
-                    size_gb = repo.size_on_disk / (1024**3)
-                    return CheckResult(
-                        status=CheckStatus.OK,
-                        label="Whisper model",
-                        detail=f"{model_name} cached ({size_gb:.1f} GB)",
-                    )
+        cached_repos = {r.repo_id: r for r in cache_info.repos}
+
+        for repo_id in possible_repos:
+            if repo_id in cached_repos:
+                repo = cached_repos[repo_id]
+                size_gb = repo.size_on_disk / (1024**3)
+                return CheckResult(
+                    status=CheckStatus.OK,
+                    label="Whisper model",
+                    detail=f"{model_name} cached ({size_gb:.1f} GB)",
+                )
     except ImportError:
         pass
     except Exception:
@@ -426,14 +436,7 @@ def check_network(settings: BristlenoseSettings) -> CheckResult:
 
 
 def check_pii(settings: BristlenoseSettings) -> CheckResult:
-    """Check PII redaction dependencies (only when --redact-pii is active)."""
-    if not settings.pii_enabled:
-        return CheckResult(
-            status=CheckStatus.SKIP,
-            label="PII redaction",
-            detail="off (use --redact-pii to enable)",
-        )
-
+    """Check PII redaction dependencies are installed and working."""
     # Check presidio
     try:
         import presidio_analyzer  # noqa: F401

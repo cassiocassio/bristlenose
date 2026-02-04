@@ -786,14 +786,8 @@ class TestCheckNetwork:
 
 
 class TestCheckPii:
-    def test_pii_disabled(self) -> None:
-        settings = _settings(pii_enabled=False)
-        result = check_pii(settings)
-        assert result.status == CheckStatus.SKIP
-        assert "off" in result.detail
-
-    def test_pii_enabled_all_present(self) -> None:
-        settings = _settings(pii_enabled=True)
+    def test_pii_all_present(self) -> None:
+        settings = _settings()
         mock_spacy = MagicMock()
         mock_nlp = MagicMock()
         mock_nlp.meta = {"version": "3.8.0"}
@@ -810,8 +804,8 @@ class TestCheckPii:
         assert "presidio" in result.detail
         assert "spaCy" in result.detail
 
-    def test_pii_enabled_spacy_model_missing(self) -> None:
-        settings = _settings(pii_enabled=True)
+    def test_pii_spacy_model_missing(self) -> None:
+        settings = _settings()
         mock_spacy = MagicMock()
         mock_spacy.load.side_effect = OSError("model not found")
 
@@ -825,9 +819,9 @@ class TestCheckPii:
         assert result.status == CheckStatus.FAIL
         assert result.fix_key == "spacy_model_missing"
 
-    def test_pii_enabled_presidio_missing(self) -> None:
+    def test_pii_presidio_missing(self) -> None:
         """presidio not installed → FAIL."""
-        settings = _settings(pii_enabled=True)
+        settings = _settings()
         saved = sys.modules.pop("presidio_analyzer", None)
         try:
             with patch(
@@ -840,9 +834,9 @@ class TestCheckPii:
                 sys.modules["presidio_analyzer"] = saved
         assert result.status == CheckStatus.FAIL
 
-    def test_pii_enabled_spacy_not_installed(self) -> None:
+    def test_pii_spacy_not_installed(self) -> None:
         """spaCy itself not installed → FAIL."""
-        settings = _settings(pii_enabled=True)
+        settings = _settings()
         mock_spacy = MagicMock()
         # spacy.load raises ImportError (spacy installed but broken)
         mock_spacy.load.side_effect = ImportError("no module")

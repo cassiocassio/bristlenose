@@ -45,12 +45,13 @@
 .badge-ai::after {
     content: "\00d7";
     position: absolute;
-    top: -0.3rem;
-    right: -0.3rem;
-    font-size: 0.65rem;
+    top: -0.25rem;
+    right: -0.25rem;
+    font-size: 0.7rem;
+    font-weight: 700;
     line-height: 1;
-    width: 0.85rem;
-    height: 0.85rem;
+    width: 0.75rem;
+    height: 0.75rem;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -72,19 +73,21 @@
     color: var(--bn-colour-user-tag-text);
     cursor: default;
     position: relative;
-    padding-right: 1.1rem;
 }
 
 .badge-user .badge-delete {
     position: absolute;
-    top: 0;
-    right: 0;
-    bottom: 0;
-    width: 1rem;
-    background: none;
+    top: -0.25rem;
+    right: -0.25rem;
+    width: 0.75rem;
+    height: 0.75rem;
+    background: var(--bn-colour-text);
     border: none;
-    color: inherit;
+    border-radius: 50%;
+    color: var(--bn-colour-bg);
     font-size: 0.7rem;
+    font-weight: 700;
+    line-height: 1;
     cursor: pointer;
     opacity: 0;
     transition: opacity var(--bn-transition-fast);
@@ -92,14 +95,12 @@
     align-items: center;
     justify-content: center;
     padding: 0;
+    pointer-events: none;
 }
 
 .badge-user:hover .badge-delete {
-    opacity: 0.6;
-}
-
-.badge-user:hover .badge-delete:hover {
     opacity: 1;
+    pointer-events: auto;
 }
 
 /* Add-tag ghost button */

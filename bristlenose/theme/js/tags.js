@@ -195,12 +195,15 @@ var activeTagInput = null; // { bq, wrap, input, addBtn }
  * Close the active tag input, optionally committing the value.
  *
  * @param {boolean} commit If true and the input is non-empty, save the tag.
+ * @param {boolean} [reopenAfterCommit=false] If true and a tag was committed,
+ *        immediately open a fresh input for adding another tag.
  */
-function closeTagInput(commit) {
+function closeTagInput(commit, reopenAfterCommit) {
   if (!activeTagInput) return;
   var ati = activeTagInput;
   activeTagInput = null;
   var val = ati.input.value.trim();
+  var didCommit = false;
 
   if (commit && val) {
     var qid = ati.bq.id;
@@ -211,11 +214,17 @@ function closeTagInput(commit) {
       persistUserTags(userTags);
       var tagEl = createUserTagEl(val);
       ati.addBtn.parentNode.insertBefore(tagEl, ati.addBtn);
+      didCommit = true;
     }
   }
 
   ati.wrap.remove();
   ati.addBtn.style.display = '';
+
+  // Re-open for another tag if requested and we actually added one.
+  if (reopenAfterCommit && didCommit) {
+    openTagInput(ati.addBtn, ati.bq);
+  }
 }
 
 /**
@@ -264,20 +273,26 @@ function openTagInput(addBtn, bq) {
       ev.preventDefault();
       suggestIndex = Math.max(suggestIndex - 1, -1);
       highlightSuggestItem(wrap, suggestIndex);
-    } else if (ev.key === 'Tab' && count > 0) {
+    } else if (ev.key === 'Tab') {
       ev.preventDefault();
-      // Tab picks the first or currently highlighted item.
-      var pickIdx = suggestIndex >= 0 ? suggestIndex : 0;
-      var val = getSuggestValue(wrap, pickIdx);
-      if (val) {
-        input.value = val;
-        closeTagInput(true);
-      }
-    } else if (ev.key === 'Enter') {
-      ev.preventDefault();
+      // Tab commits and re-opens for another tag.
+      // If a suggestion is highlighted, use it; otherwise use typed text.
       if (suggestIndex >= 0) {
         var picked = getSuggestValue(wrap, suggestIndex);
         if (picked) input.value = picked;
+      } else if (count > 0) {
+        // No highlight but suggestions exist — pick the first one.
+        var first = getSuggestValue(wrap, 0);
+        if (first) input.value = first;
+      }
+      // Only re-open if there's something to commit.
+      var hasValue = input.value.trim().length > 0;
+      closeTagInput(hasValue, hasValue);
+    } else if (ev.key === 'Enter') {
+      ev.preventDefault();
+      if (suggestIndex >= 0) {
+        var pickedEnter = getSuggestValue(wrap, suggestIndex);
+        if (pickedEnter) input.value = pickedEnter;
       }
       closeTagInput(true);
     } else if (ev.key === 'Escape') {

@@ -830,13 +830,20 @@ def render(
             raise typer.Exit(1)
 
     # Validate that intermediate exists (try new layout first, then legacy)
+    # Also handle case where user passes input dir instead of output dir
     intermediate_dir = output_dir / ".bristlenose" / "intermediate"
     if not intermediate_dir.exists():
         intermediate_dir = output_dir / "intermediate"
     if not intermediate_dir.exists():
-        console.print(f"[red]No intermediate data in {output_dir}[/red]")
-        console.print("Run 'bristlenose run' first to generate intermediate data.")
-        raise typer.Exit(1)
+        # User might have passed the input dir — check for bristlenose-output/ inside
+        nested_output = output_dir / "bristlenose-output"
+        if (nested_output / ".bristlenose" / "intermediate").exists():
+            output_dir = nested_output
+            intermediate_dir = nested_output / ".bristlenose" / "intermediate"
+        else:
+            console.print(f"[red]No intermediate data in {output_dir}[/red]")
+            console.print("Run 'bristlenose run' first to generate intermediate data.")
+            raise typer.Exit(1)
 
     # Auto-detect input directory if not specified
     if input_dir is None:

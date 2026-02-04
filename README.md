@@ -302,6 +302,16 @@ Edit `bristlenose/__init__.py` (the single source of truth for version), commit,
 
 ## Changelog
 
+### 0.6.15
+
+- Unified tag close buttons — AI badges and user tags now use the same floating circle "×" style
+- Tab-to-continue tagging — pressing Tab commits the current tag and immediately opens a new input for adding another tag (type, Tab, type, Tab, Enter for fast keyboard-only tagging)
+- Render command path fix — `bristlenose render <input-dir>` now auto-detects `bristlenose-output/` inside the input directory
+
+### 0.6.14
+
+- Doctor fixes — improved Whisper model detection and PII capability checking
+
 ### 0.6.13
 
 - Keychain credential storage — `bristlenose configure claude` (or `chatgpt`) validates and stores API keys securely in macOS Keychain or Linux Secret Service; keys are loaded automatically with priority keychain → env var → .env; `bristlenose doctor` now shows "(Keychain)" suffix when key comes from system credential store; `--key` option available for non-interactive use

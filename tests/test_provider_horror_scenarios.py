@@ -345,7 +345,11 @@ class TestOllamaNotAvailable:
         assert result.status == CheckStatus.FAIL
         assert result.fix_key == "ollama_not_running"
 
-        fix = get_fix(result.fix_key)
+        with patch(
+            "bristlenose.doctor_fixes._get_cloud_fallback_hint",
+            return_value="Or use a cloud API: --llm claude",
+        ):
+            fix = get_fix(result.fix_key)
         assert "Start Ollama" in fix
         assert "--llm claude" in fix
 
@@ -372,7 +376,11 @@ class TestOllamaNotAvailable:
         assert result.status == CheckStatus.FAIL
         assert result.fix_key == "ollama_not_installed"
 
-        fix = get_fix(result.fix_key)
+        with patch(
+            "bristlenose.doctor_fixes._get_cloud_fallback_hint",
+            return_value="Or use a cloud API: --llm claude",
+        ):
+            fix = get_fix(result.fix_key)
         assert "ollama.ai" in fix
         assert "bristlenose will start it automatically" in fix
         assert "--llm claude" in fix
@@ -404,7 +412,11 @@ class TestOllamaNotAvailable:
         assert result.status == CheckStatus.FAIL
         assert result.fix_key == "ollama_model_missing"
 
-        fix = get_fix(result.fix_key)
+        with patch(
+            "bristlenose.doctor_fixes._get_cloud_fallback_hint",
+            return_value="Or use a cloud API: --llm claude",
+        ):
+            fix = get_fix(result.fix_key)
         assert "ollama pull" in fix
         assert "--llm claude" in fix
 

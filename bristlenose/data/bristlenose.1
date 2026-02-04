@@ -16,7 +16,7 @@ bristlenose \- user-research transcription and quote extraction engine
 .IR project-name ]
 .RI [ options ]
 .br
-.B bristlenose transcribe-only
+.B bristlenose transcribe
 .I input-dir
 .RB [ \-o
 .IR output-dir ]
@@ -33,6 +33,11 @@ bristlenose \- user-research transcription and quote extraction engine
 .RI [ options ]
 .br
 .B bristlenose doctor
+.br
+.B bristlenose configure
+.I provider
+.RB [ \-k
+.IR key ]
 .br
 .B bristlenose help
 .RI [ topic ]
@@ -56,13 +61,16 @@ cluster by screen, group by theme, update participant registry, render HTML and
 Markdown reports. Requires an API key. PII redaction is off by default; use
 \fB\-\-redact\-pii\fR to enable.
 .TP
-.B transcribe-only
+.B transcribe
 Transcription only. No LLM calls, no API key needed. Produces raw transcript
 files in \fIbristlenose-output/transcripts-raw/\fR.
 .TP
 .B analyze
 Run LLM analysis on existing transcript \fI.txt\fR files. Skips ingestion and
 transcription. Useful after reviewing or editing raw transcripts.
+.TP
+.B analyse
+British English alias for \fBanalyze\fR.
 .TP
 .B render
 Re-render reports from existing intermediate JSON data. No transcription, no LLM
@@ -73,6 +81,12 @@ Check runtime dependencies and show tailored fix instructions. Tests FFmpeg,
 transcription backend, Whisper model cache, API key validity, network
 connectivity, PII redaction dependencies, and disk space. Also runs automatically
 on first invocation and as a pre-flight check before pipeline commands.
+.TP
+.B configure \fIprovider\fR [\fB\-k\fR \fIKEY\fR]
+Store API credentials securely in the system keychain. Provider can be
+\fBclaude\fR (or \fBanthropic\fR), \fBchatgpt\fR (or \fBopenai\fR, \fBgpt\fR).
+The key is validated with a test API call before storing. Use \fB\-k\fR to
+provide the key non-interactively.
 .TP
 .B help \fR[\fItopic\fR]
 Show detailed help. Topics: \fBcommands\fR, \fBconfig\fR, \fBworkflows\fR, or
@@ -125,7 +139,7 @@ Delete the output directory before running.
 .TP
 .BR \-v ", " \-\-verbose
 Enable verbose logging.
-.SS Options for \fBtranscribe-only\fR
+.SS Options for \fBtranscribe\fR
 .TP
 .BR \-o ", " \-\-output " " \fIDIR\fR
 Output directory.
@@ -150,9 +164,8 @@ LLM provider.
 Enable verbose logging.
 .SS Options for \fBrender\fR
 .TP
-.BR \-o ", " \-\-output " " \fIDIR\fR
-Output directory. Must contain a \fI.bristlenose/intermediate/\fR directory from
-a previous run. Default: auto-detected from current directory.
+.BR \-i ", " \-\-input " " \fIDIR\fR
+Original input directory for video linking. Auto-detected if not specified.
 .TP
 .BR \-p ", " \-\-project " " \fINAME\fR
 Project name.
@@ -164,6 +177,10 @@ intermediate data).
 .TP
 .BR \-v ", " \-\-verbose
 Enable verbose logging.
+.SS Options for \fBconfigure\fR
+.TP
+.BR \-k ", " \-\-key " " \fIKEY\fR
+API key to store. If not provided, prompts interactively.
 .SH CONFIGURATION
 Settings are loaded in order (last wins):
 .IP 1. 4
@@ -174,6 +191,11 @@ Built-in defaults
 Environment variables with prefix \fBBRISTLENOSE_\fR
 .IP 4. 4
 CLI flags
+.PP
+API keys have special priority: system keychain \(-> environment variable \(->
+\fI.env\fR file. Use \fBbristlenose configure claude\fR or
+\fBbristlenose configure chatgpt\fR to store keys securely in the system
+keychain (macOS Keychain or Linux Secret Service).
 .SS API keys
 .TP
 .B BRISTLENOSE_ANTHROPIC_API_KEY
@@ -312,7 +334,7 @@ Transcribe only (no API key needed):
 .PP
 .RS
 .nf
-bristlenose transcribe-only ./interviews/
+bristlenose transcribe ./interviews/
 .fi
 .RE
 .PP

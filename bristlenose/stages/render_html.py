@@ -1073,7 +1073,21 @@ def _format_quote_html(
 
 
 def _quote_badges(quote: ExtractedQuote) -> str:
-    """Build HTML badge spans for non-default quote metadata."""
+    """Build HTML badge span for the quote's sentiment (if any).
+
+    Uses the new sentiment field (v0.7+). Falls back to deprecated
+    intent/emotion fields for backward compatibility with old intermediate JSON.
+    """
+
+    # New sentiment field takes priority
+    if quote.sentiment is not None:
+        css_class = f"badge badge-ai badge-{quote.sentiment.value}"
+        return (
+            f'<span class="{css_class}" data-badge-type="ai">'
+            f"{_esc(quote.sentiment.value)}</span>"
+        )
+
+    # Backward compatibility: fall back to deprecated intent/emotion fields
     badges: list[str] = []
     if quote.intent != QuoteIntent.NARRATION:
         css_class = f"badge badge-ai badge-{quote.intent.value}"
@@ -1087,12 +1101,7 @@ def _quote_badges(quote: ExtractedQuote) -> str:
             f'<span class="{css_class}" data-badge-type="ai">'
             f"{_esc(quote.emotion.value)}</span>"
         )
-    if quote.intensity >= 2:
-        label = "moderate" if quote.intensity == 2 else "strong"
-        badges.append(
-            f'<span class="badge badge-ai" data-badge-type="ai">'
-            f"intensity:{label}</span>"
-        )
+    # Note: intensity badges removed — intensity is stored but not displayed
     return " ".join(badges)
 
 
@@ -1103,17 +1112,35 @@ def _build_sentiment_html(quotes: list[ExtractedQuote]) -> str:
     (smallest at top so the worst clusters near the divider).
     Each label is styled as a badge tag.  The chart is placed inside
     a ``sentiment-row`` wrapper together with a JS-rendered user-tags chart.
+
+    Uses the new sentiment field (v0.7+). Falls back to deprecated
+    intent/emotion fields for backward compatibility with old intermediate JSON.
     """
     from collections import Counter
 
-    # Map emotions and intents to positive/negative buckets
-    negative_labels = {
+    from bristlenose.models import Sentiment
+
+    # New sentiment categories (v0.7+)
+    negative_sentiments = {
+        Sentiment.FRUSTRATION,
+        Sentiment.CONFUSION,
+        Sentiment.DOUBT,
+    }
+    positive_sentiments = {
+        Sentiment.SATISFACTION,
+        Sentiment.DELIGHT,
+        Sentiment.CONFIDENCE,
+    }
+    # Sentiment.SURPRISE is neutral — not counted in histogram
+
+    # Deprecated emotion/intent mappings (backward compat)
+    negative_labels_legacy = {
         EmotionalTone.CONFUSED: "confused",
         EmotionalTone.FRUSTRATED: "frustrated",
         EmotionalTone.CRITICAL: "critical",
         EmotionalTone.SARCASTIC: "sarcastic",
     }
-    positive_labels = {
+    positive_labels_legacy = {
         EmotionalTone.DELIGHTED: "delighted",
         EmotionalTone.AMUSED: "amused",
         QuoteIntent.DELIGHT: "delight",
@@ -1121,13 +1148,24 @@ def _build_sentiment_html(quotes: list[ExtractedQuote]) -> str:
 
     neg_counts: Counter[str] = Counter()
     pos_counts: Counter[str] = Counter()
+    surprise_count = 0
 
     for q in quotes:
-        if q.emotion in negative_labels:
-            neg_counts[negative_labels[q.emotion]] += 1
-        if q.emotion in positive_labels:
-            pos_counts[positive_labels[q.emotion]] += 1
-        # Intent-based (delight intent may differ from delighted emotion)
+        # New sentiment field takes priority
+        if q.sentiment is not None:
+            if q.sentiment in negative_sentiments:
+                neg_counts[q.sentiment.value] += 1
+            elif q.sentiment in positive_sentiments:
+                pos_counts[q.sentiment.value] += 1
+            elif q.sentiment == Sentiment.SURPRISE:
+                surprise_count += 1
+            continue
+
+        # Backward compat: fall back to deprecated fields
+        if q.emotion in negative_labels_legacy:
+            neg_counts[negative_labels_legacy[q.emotion]] += 1
+        if q.emotion in positive_labels_legacy:
+            pos_counts[positive_labels_legacy[q.emotion]] += 1
         if q.intent == QuoteIntent.DELIGHT and q.emotion != EmotionalTone.DELIGHTED:
             pos_counts["delight"] += 1
         if q.intent == QuoteIntent.CONFUSION and q.emotion != EmotionalTone.CONFUSED:
@@ -1135,29 +1173,45 @@ def _build_sentiment_html(quotes: list[ExtractedQuote]) -> str:
         if q.intent == QuoteIntent.FRUSTRATION and q.emotion != EmotionalTone.FRUSTRATED:
             neg_counts["frustrated"] += 1
 
-    if not neg_counts and not pos_counts:
+    if not neg_counts and not pos_counts and surprise_count == 0:
         return ""
 
-    # Badge-colour CSS class mapping (reuse existing badge-* classes)
+    # Badge-colour CSS class mapping
     badge_class_map: dict[str, str] = {
+        # New sentiments (v0.7+)
+        "frustration": "badge-frustration",
+        "confusion": "badge-confusion",
+        "doubt": "badge-doubt",
+        "surprise": "badge-surprise",
+        "satisfaction": "badge-satisfaction",
+        "delight": "badge-delight",
+        "confidence": "badge-confidence",
+        # Deprecated (backward compat)
         "confused": "badge-confusion",
         "frustrated": "badge-frustration",
         "critical": "badge-frustration",
         "sarcastic": "",
         "delighted": "badge-delight",
         "amused": "badge-delight",
-        "delight": "badge-delight",
     }
 
     # Bar colour mapping
     colour_map = {
+        # New sentiments (v0.7+)
+        "frustration": "var(--bn-sentiment-frustration)",
+        "confusion": "var(--bn-sentiment-confusion)",
+        "doubt": "var(--bn-sentiment-doubt)",
+        "surprise": "var(--bn-sentiment-surprise)",
+        "satisfaction": "var(--bn-sentiment-satisfaction)",
+        "delight": "var(--bn-sentiment-delight)",
+        "confidence": "var(--bn-sentiment-confidence)",
+        # Deprecated (backward compat) — use old token names
         "confused": "var(--colour-confusion)",
         "frustrated": "var(--colour-frustration)",
         "critical": "var(--colour-frustration)",
         "sarcastic": "var(--colour-muted)",
         "delighted": "var(--colour-delight)",
         "amused": "var(--colour-delight)",
-        "delight": "var(--colour-delight)",
     }
 
     all_counts = list(neg_counts.values()) + list(pos_counts.values())
@@ -1193,6 +1247,11 @@ def _build_sentiment_html(quotes: list[ExtractedQuote]) -> str:
     for label, count in neg_sorted:
         parts.append(_bar(label, count))
 
+    # Surprise bar (neutral — separate from positive/negative)
+    if surprise_count > 0:
+        parts.append('<div class="sentiment-divider"></div>')
+        parts.append(_bar("surprise", surprise_count))
+
     parts.append("</div>")
 
     # User-tags chart placeholder (populated by JS)
@@ -1202,23 +1261,39 @@ def _build_sentiment_html(quotes: list[ExtractedQuote]) -> str:
 
 
 def _has_rewatch_quotes(quotes: list[ExtractedQuote]) -> bool:
-    """Check if any quotes would appear in the rewatch list."""
-    return any(
-        q.intent in (QuoteIntent.CONFUSION, QuoteIntent.FRUSTRATION)
-        or q.emotion in (EmotionalTone.FRUSTRATED, EmotionalTone.CONFUSED)
-        or q.journey_stage == JourneyStage.ERROR_RECOVERY
-        or q.intensity >= 3
-        for q in quotes
-    )
+    """Check if any quotes would appear in the rewatch list (friction points)."""
+    from bristlenose.models import Sentiment
+
+    for q in quotes:
+        # New sentiment field (v0.7+)
+        if q.sentiment in (Sentiment.FRUSTRATION, Sentiment.CONFUSION, Sentiment.DOUBT):
+            return True
+        # Backward compat: deprecated fields
+        if q.intent in (QuoteIntent.CONFUSION, QuoteIntent.FRUSTRATION):
+            return True
+        if q.emotion in (EmotionalTone.FRUSTRATED, EmotionalTone.CONFUSED):
+            return True
+        if q.journey_stage == JourneyStage.ERROR_RECOVERY:
+            return True
+        if q.intensity >= 3:
+            return True
+    return False
 
 
 def _build_rewatch_html(
     quotes: list[ExtractedQuote],
     video_map: dict[str, str] | None = None,
 ) -> str:
-    """Build the rewatch list as HTML."""
+    """Build the rewatch list (friction points) as HTML."""
+    from bristlenose.models import Sentiment
+
     flagged: list[ExtractedQuote] = []
     for q in quotes:
+        # New sentiment field (v0.7+)
+        if q.sentiment in (Sentiment.FRUSTRATION, Sentiment.CONFUSION, Sentiment.DOUBT):
+            flagged.append(q)
+            continue
+        # Backward compat: deprecated fields
         is_rewatch = (
             q.intent in (QuoteIntent.CONFUSION, QuoteIntent.FRUSTRATION)
             or q.emotion in (EmotionalTone.FRUSTRATED, EmotionalTone.CONFUSED)
@@ -1242,11 +1317,13 @@ def _build_rewatch_html(
                 f'<p class="rewatch-participant">{_esc(current_pid)}</p>'
             )
         tc = format_timecode(q.start_timecode)
-        reason = (
-            q.intent.value
-            if q.intent in (QuoteIntent.CONFUSION, QuoteIntent.FRUSTRATION)
-            else q.emotion.value
-        )
+        # Determine reason label
+        if q.sentiment is not None:
+            reason = q.sentiment.value
+        elif q.intent in (QuoteIntent.CONFUSION, QuoteIntent.FRUSTRATION):
+            reason = q.intent.value
+        else:
+            reason = q.emotion.value
         snippet = q.text[:80] + ("..." if len(q.text) > 80 else "")
 
         if video_map and q.participant_id in video_map:

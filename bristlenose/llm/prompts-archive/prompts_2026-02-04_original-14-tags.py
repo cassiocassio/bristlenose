@@ -126,18 +126,19 @@ Extract all substantive quotes from the PARTICIPANT segments, applying the edito
 
 For each quote, provide:
 - Which topic/screen it relates to, and whether it is screen-specific or general context
-- **sentiment**: the single dominant feeling expressed — one of:
-  - `frustration` — difficulty, annoyance, friction ("This is so slow", "Why won't it work?")
-  - `confusion` — not understanding, uncertainty ("I don't get what this means", "Where am I supposed to click?")
-  - `doubt` — scepticism, worry, distrust ("I'm not sure I'd trust this", "This seems sketchy")
-  - `surprise` — expectation mismatch, the interface behaved differently than anticipated \
-("Oh, that's not what I expected", "Wait, that button does *that*?"). Flags quotes for researcher investigation
-  - `satisfaction` — met expectations, task success ("Good, that worked", "Okay, found it")
-  - `delight` — exceeded expectations, pleasure, positive surprise ("Oh I love this!", "That's really nice")
-  - `confidence` — trust, feeling in control ("I know exactly what to do here", "This feels solid")
-  Leave sentiment empty/null if the quote is purely descriptive with no emotional content \
-(e.g., "I'm clicking on beds", "Home textiles and rugs").
-- **intensity**: how strong the sentiment is — `1` (mild), `2` (moderate), `3` (strong)
+- **intent**: classify the utterance type — one of:
+  - `narration` — describing actions, reading UI elements, navigating ("I'm clicking beds")
+  - `confusion` — expressing uncertainty or not understanding ("Why is that not working?")
+  - `judgment` — evaluating, comparing, appraising ("That's quite cheap", "the photos are good")
+  - `frustration` — expressing annoyance or difficulty ("Something's up with this")
+  - `delight` — positive surprise or pleasure ("Oh I like that")
+  - `suggestion` — proposing alternatives or preferences ("Maybe brown and orange")
+  - `task_management` — session admin, meta-commentary ("This is enough data")
+- **emotion**: the emotional tone — one of: `neutral`, `frustrated`, `delighted`, \
+`confused`, `amused`, `sarcastic`, `critical`
+- **intensity**: how strong the reaction is — `1` (low/neutral), `2` (moderate), `3` (high/strong)
+- **journey_stage**: where in the user journey this occurs — one of: `landing`, `browse`, \
+`search`, `product_detail`, `cart`, `checkout`, `error_recovery`, `other`
 """
 
 # ---------------------------------------------------------------------------

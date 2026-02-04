@@ -97,32 +97,32 @@ class ExtractedQuoteItem(BaseModel):
             "Only include if the quote is unintelligible without it."
         ),
     )
-    intent: str = Field(
-        default="narration",
+    # New sentiment field (v0.7+)
+    sentiment: str | None = Field(
+        default=None,
         description=(
-            "Utterance type: narration, confusion, judgment, "
-            "frustration, delight, suggestion, task_management"
-        ),
-    )
-    emotion: str = Field(
-        default="neutral",
-        description=(
-            "Emotional tone: neutral, frustrated, delighted, "
-            "confused, amused, sarcastic, critical"
+            "Single dominant sentiment: frustration, confusion, doubt, surprise, "
+            "satisfaction, delight, confidence. Leave empty/null if purely descriptive."
         ),
     )
     intensity: int = Field(
         default=1,
-        description="Reaction intensity: 1 (low/neutral), 2 (moderate), 3 (high/strong)",
+        description="Sentiment intensity: 1 (mild), 2 (moderate), 3 (strong)",
         ge=1,
         le=3,
     )
+    # Deprecated fields — kept for backward compatibility
+    intent: str = Field(
+        default="narration",
+        description="DEPRECATED: use sentiment instead",
+    )
+    emotion: str = Field(
+        default="neutral",
+        description="DEPRECATED: use sentiment instead",
+    )
     journey_stage: str = Field(
         default="other",
-        description=(
-            "User journey stage: landing, browse, search, "
-            "product_detail, cart, checkout, error_recovery, other"
-        ),
+        description="DEPRECATED",
     )
 
 

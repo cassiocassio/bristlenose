@@ -1,0 +1,5 @@
+# This folder contains archived versions of prompts.py for easy comparison.
+# These are not used by the application — just for reference during iteration.
+#
+# Naming convention: prompts_YYYY-MM-DD_description.py
+# e.g., prompts_2026-02-04_original-14-tags.py

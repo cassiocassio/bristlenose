@@ -24,13 +24,37 @@
     --bn-colour-active-bg: #f0fdf4;
     --bn-colour-highlight: #fef08a;
 
-    /* Sentiment colours */
-    --bn-colour-confusion: #dc2626;
-    --bn-colour-confusion-bg: #fef2f2;
-    --bn-colour-frustration: #ea580c;
-    --bn-colour-frustration-bg: #fff7ed;
-    --bn-colour-delight: #16a34a;
-    --bn-colour-delight-bg: #f0fdf4;
+    /* Sentiment colours (v0.7+ taxonomy)
+       See docs/academic-sources.html for theoretical foundations.
+       Override --bn-sentiment-* to customise the palette. */
+
+    /* Negative sentiments */
+    --bn-sentiment-frustration: #ea580c;
+    --bn-sentiment-frustration-bg: #fff7ed;
+    --bn-sentiment-confusion: #dc2626;
+    --bn-sentiment-confusion-bg: #fef2f2;
+    --bn-sentiment-doubt: #7c3aed;
+    --bn-sentiment-doubt-bg: #f5f3ff;
+
+    /* Neutral (investigation flag) */
+    --bn-sentiment-surprise: #d97706;
+    --bn-sentiment-surprise-bg: #fffbeb;
+
+    /* Positive sentiments */
+    --bn-sentiment-satisfaction: #16a34a;
+    --bn-sentiment-satisfaction-bg: #f0fdf4;
+    --bn-sentiment-delight: #059669;
+    --bn-sentiment-delight-bg: #ecfdf5;
+    --bn-sentiment-confidence: #2563eb;
+    --bn-sentiment-confidence-bg: #eff6ff;
+
+    /* Legacy sentiment colours (deprecated — kept for backward compat) */
+    --bn-colour-confusion: var(--bn-sentiment-confusion);
+    --bn-colour-confusion-bg: var(--bn-sentiment-confusion-bg);
+    --bn-colour-frustration: var(--bn-sentiment-frustration);
+    --bn-colour-frustration-bg: var(--bn-sentiment-frustration-bg);
+    --bn-colour-delight: var(--bn-sentiment-delight);
+    --bn-colour-delight-bg: var(--bn-sentiment-delight-bg);
     --bn-colour-suggestion: #2563eb;
     --bn-colour-suggestion-bg: #eff6ff;
 
@@ -106,13 +130,29 @@
         --bn-colour-active-bg:        light-dark(#f0fdf4, #0f2918);
         --bn-colour-highlight:        light-dark(#fef08a, #854d0e);
 
-        /* Sentiment colours — foreground hues lighter on dark; tinted backgrounds */
-        --bn-colour-confusion:        light-dark(#dc2626, #f87171);
-        --bn-colour-confusion-bg:     light-dark(#fef2f2, #2d1515);
-        --bn-colour-frustration:      light-dark(#ea580c, #fb923c);
-        --bn-colour-frustration-bg:   light-dark(#fff7ed, #2d1d0e);
-        --bn-colour-delight:          light-dark(#16a34a, #4ade80);
-        --bn-colour-delight-bg:       light-dark(#f0fdf4, #0f2918);
+        /* Sentiment colours (v0.7+ taxonomy) — foreground hues lighter on dark */
+        --bn-sentiment-frustration:      light-dark(#ea580c, #fb923c);
+        --bn-sentiment-frustration-bg:   light-dark(#fff7ed, #2d1d0e);
+        --bn-sentiment-confusion:        light-dark(#dc2626, #f87171);
+        --bn-sentiment-confusion-bg:     light-dark(#fef2f2, #2d1515);
+        --bn-sentiment-doubt:            light-dark(#7c3aed, #a78bfa);
+        --bn-sentiment-doubt-bg:         light-dark(#f5f3ff, #1e1533);
+        --bn-sentiment-surprise:         light-dark(#d97706, #fbbf24);
+        --bn-sentiment-surprise-bg:      light-dark(#fffbeb, #2d2305);
+        --bn-sentiment-satisfaction:     light-dark(#16a34a, #4ade80);
+        --bn-sentiment-satisfaction-bg:  light-dark(#f0fdf4, #0f2918);
+        --bn-sentiment-delight:          light-dark(#059669, #34d399);
+        --bn-sentiment-delight-bg:       light-dark(#ecfdf5, #0d261c);
+        --bn-sentiment-confidence:       light-dark(#2563eb, #60a5fa);
+        --bn-sentiment-confidence-bg:    light-dark(#eff6ff, #111d2e);
+
+        /* Legacy aliases (deprecated) */
+        --bn-colour-confusion:        var(--bn-sentiment-confusion);
+        --bn-colour-confusion-bg:     var(--bn-sentiment-confusion-bg);
+        --bn-colour-frustration:      var(--bn-sentiment-frustration);
+        --bn-colour-frustration-bg:   var(--bn-sentiment-frustration-bg);
+        --bn-colour-delight:          var(--bn-sentiment-delight);
+        --bn-colour-delight-bg:       var(--bn-sentiment-delight-bg);
         --bn-colour-suggestion:       light-dark(#2563eb, #60a5fa);
         --bn-colour-suggestion-bg:    light-dark(#eff6ff, #111d2e);
 

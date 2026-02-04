@@ -29,6 +29,8 @@ CLI commands: `run` (full pipeline), `transcribe-only`, `analyze` (skip transcri
 
 LLM provider: Three providers supported — Claude (Anthropic), ChatGPT (OpenAI), and Local (Ollama). API keys stored in system keychain (`bristlenose configure claude` or `bristlenose configure chatgpt`), or via env vars (`ANTHROPIC_API_KEY` or `OPENAI_API_KEY`), `.env` file, or `bristlenose.toml`. Priority: keychain → env var → .env file. Prefix with `BRISTLENOSE_` for namespaced variants. Local provider requires no API key — just Ollama running locally.
 
+LLM prompts: All prompt templates live in `bristlenose/llm/prompts.py`. When iterating on prompts, archive the old version to `bristlenose/llm/prompts-archive/` with naming convention `prompts_YYYY-MM-DD_description.py` (e.g., `prompts_2026-02-04_original-14-tags.py`). This folder is ignored by the application but tracked in git for easy comparison without digging through commit history. Future goal: allow users to customise prompts via config.
+
 Report JavaScript — 11 modules in `bristlenose/theme/js/`, concatenated in dependency order into a single `<script>` block by `render_html.py` (`_JS_FILES`). Boot sequence in `main.js`:
 
 1. `storage.js` — `createStore()` localStorage abstraction (used by all stateful modules)
@@ -336,6 +338,7 @@ Collapsible section at the end of the research report showing what proportion of
 - **Platform transcript ingestion**: `docs/design-platform-transcripts.md`
 - **Transcript coverage feature**: `docs/design-transcript-coverage.md`
 - **CLI improvements + LLM provider roadmap**: `docs/design-cli-improvements.md`
+- **Academic sources for analysis categories**: `docs/academic-sources.html` — theoretical foundations (emotion science, UX research, trust/credibility) behind quote tagging and sentiment analysis. **Update this file when investigating theories behind any Bristlenose features.**
 
 ## Working preferences
 
@@ -380,8 +383,8 @@ When the user signals end of session, **proactively offer to run this checklist*
 9. **Clean up branches** — delete merged feature branches
 10. **Verify CI** — check latest push passes CI
 
-## Current status (v0.6.14, Feb 2026)
+## Current status (v0.6.15, Feb 2026)
 
-Core pipeline complete and published to PyPI + Homebrew. Snap packaging implemented and tested locally (arm64); CI builds amd64 on every push. Latest: **Keychain credential storage (Phase 3 complete)** — `bristlenose configure claude` (or `chatgpt`) validates and stores API keys securely in macOS Keychain (`security` CLI) or Linux Secret Service (`secret-tool`). Priority: keychain → env var → .env. Doctor shows "(Keychain)" suffix. No external keyring library — uses native CLI tools. Files: `credentials.py`, `credentials_macos.py`, `credentials_linux.py`. 25 new credential tests. Prior: **Ollama local LLM support (Phase 1)** — provider registry, Ollama detection/installation/auto-start, interactive first-run prompt, 78 provider tests. Prior: output inside input folder; transcript coverage; multi-participant sessions with global p-codes; sessions table; transcript pages with speaker codes. v0.6.7 adds search enhancements, pipeline warnings, CLI polish. v0.6.6 adds Cargo/uv-style CLI output, search-as-you-type filtering, platform-aware session grouping, man page. v0.6.5 adds timecode typography, hanging-indent quote layout. v0.6.4 adds concurrent per-participant LLM calls. v0.6.3 redesigns report header, adds view-switcher dropdown. v0.6.2 adds editable participant names, auto name/role extraction. v0.6.1 adds snap recipe, CI workflow. v0.6.0 added `bristlenose doctor`. v0.5.0 added per-participant transcript pages.
+Core pipeline complete and published to PyPI + Homebrew. Snap packaging implemented and tested locally (arm64); CI builds amd64 on every push. Latest: **Tag taxonomy redesign** — replaced 14 overlapping intent/emotion categories with 7 research-backed sentiments: frustration, confusion, doubt, surprise, satisfaction, delight, confidence. New `Sentiment` enum in `models.py`, `--bn-sentiment-*` CSS token layer for easy palette customisation, backward-compatible with old intermediate JSON. See `docs/academic-sources.html` for theoretical foundations (Russell, Fogg, etc.). Prior: Keychain credential storage, Ollama local LLM support, output inside input folder, transcript coverage, multi-participant sessions. See git log for full history.
 
-**Next up:** Phase 2 Azure OpenAI for enterprise users, Phase 4 Gemini for budget users. Also: Phase 2 cross-session moderator linking; snap store publishing. See `TODO.md` for full task list.
+**Next up:** Phase 2 Azure OpenAI for enterprise users, Phase 4 Gemini for budget users. Also: Phase 2 cross-session moderator linking; snap store publishing; tag definitions page in report UI. See `TODO.md` for full task list.

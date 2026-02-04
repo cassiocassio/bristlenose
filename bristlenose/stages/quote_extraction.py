@@ -15,6 +15,7 @@ from bristlenose.models import (
     PiiCleanTranscript,
     QuoteIntent,
     QuoteType,
+    Sentiment,
     SessionTopicMap,
     format_timecode,
 )
@@ -145,7 +146,16 @@ async def _extract_single(
         except ValueError:
             quote_type = QuoteType.SCREEN_SPECIFIC
 
-        # Parse enrichment fields
+        # Parse new sentiment field (v0.7+)
+        sentiment: Sentiment | None = None
+        if item.sentiment:
+            try:
+                sentiment = Sentiment(item.sentiment)
+            except ValueError:
+                sentiment = None
+        intensity = max(1, min(3, item.intensity))
+
+        # Parse deprecated fields for backward compatibility
         try:
             intent = QuoteIntent(item.intent)
         except ValueError:
@@ -158,7 +168,6 @@ async def _extract_single(
             journey_stage = JourneyStage(item.journey_stage)
         except ValueError:
             journey_stage = JourneyStage.OTHER
-        intensity = max(1, min(3, item.intensity))
 
         # Skip very short quotes
         word_count = len(item.text.split())
@@ -183,9 +192,11 @@ async def _extract_single(
                 topic_label=item.topic_label,
                 quote_type=quote_type,
                 researcher_context=item.researcher_context,
+                sentiment=sentiment,
+                intensity=intensity,
+                # Deprecated fields (backward compat)
                 intent=intent,
                 emotion=emotion,
-                intensity=intensity,
                 journey_stage=journey_stage,
             )
         )

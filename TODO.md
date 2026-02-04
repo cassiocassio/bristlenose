@@ -1,6 +1,6 @@
 # Bristlenose — Where I Left Off
 
-Last updated: 3 Feb 2026 (v0.6.12, Keychain credential storage)
+Last updated: 4 Feb 2026 (v0.6.14, Tag taxonomy research)
 
 ---
 
@@ -157,7 +157,9 @@ Organised from easiest to hardest. The README has a condensed version; this is t
 
 - [x] Editable participant names in report — pencil icon inline editing, localStorage, YAML export, reconciliation
 - [ ] Participant metadata: day of the week in recordings — Start column now shows date+time (Finder-style), but could also show day name (e.g. "Mon 29 Jan 2026 at 20:56")
-- [ ] Reduce AI tag density — too many AI badges per quote; tune the LLM prompt or filter to show only the most relevant 2–3
+- [x] Tag taxonomy redesign — replaced 14 overlapping intent/emotion categories with 7 research-backed tags: Frustration, Confusion, Doubt, Surprise, Satisfaction, Delight, Confidence. See `docs/academic-sources.html` for theoretical foundations. New `Sentiment` enum, `--bn-sentiment-*` CSS tokens, backward-compatible with old intermediate JSON
+- [ ] Tag definitions page — expose tag definitions and their theoretical basis in the HTML report (collapsible "About these tags" section or dedicated page) so researchers understand what each tag means
+- [ ] Custom prompts — allow users to define their own tag categories via config or UI; load from `bristlenose.toml` or a `prompts.toml` file
 - [x] Sentiment & friction as standalone sections — moved to "Analysis" TOC column alongside Tags and User journeys
 - [ ] User-tags histogram: right-align bars — bars should grow from the same zero-x baseline as the AI sentiment chart so the two read side-by-side
 - [ ] Clickable histogram bars — clicking a bar in sentiment or user-tags chart opens a filtered view showing only quotes with that tag/emotion

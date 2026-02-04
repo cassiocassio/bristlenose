@@ -10,11 +10,26 @@
     color: var(--bn-colour-badge-text);
 }
 
-/* Sentiment variants */
-.badge-confusion { background: var(--bn-colour-confusion-bg); color: var(--bn-colour-confusion); }
-.badge-frustration { background: var(--bn-colour-frustration-bg); color: var(--bn-colour-frustration); }
-.badge-delight { background: var(--bn-colour-delight-bg); color: var(--bn-colour-delight); }
+/* Sentiment variants (v0.7+ taxonomy) — see docs/academic-sources.html */
+.badge-frustration { background: var(--bn-sentiment-frustration-bg); color: var(--bn-sentiment-frustration); }
+.badge-confusion { background: var(--bn-sentiment-confusion-bg); color: var(--bn-sentiment-confusion); }
+.badge-doubt { background: var(--bn-sentiment-doubt-bg); color: var(--bn-sentiment-doubt); }
+.badge-surprise { background: var(--bn-sentiment-surprise-bg); color: var(--bn-sentiment-surprise); }
+.badge-satisfaction { background: var(--bn-sentiment-satisfaction-bg); color: var(--bn-sentiment-satisfaction); }
+.badge-delight { background: var(--bn-sentiment-delight-bg); color: var(--bn-sentiment-delight); }
+.badge-confidence { background: var(--bn-sentiment-confidence-bg); color: var(--bn-sentiment-confidence); }
+
+/* Legacy variants (deprecated — kept for backward compat with old intermediate JSON) */
 .badge-suggestion { background: var(--bn-colour-suggestion-bg); color: var(--bn-colour-suggestion); }
+.badge-frustrated { background: var(--bn-sentiment-frustration-bg); color: var(--bn-sentiment-frustration); }
+.badge-delighted { background: var(--bn-sentiment-delight-bg); color: var(--bn-sentiment-delight); }
+.badge-confused { background: var(--bn-sentiment-confusion-bg); color: var(--bn-sentiment-confusion); }
+.badge-amused { background: var(--bn-sentiment-delight-bg); color: var(--bn-sentiment-delight); }
+.badge-critical { background: var(--bn-sentiment-frustration-bg); color: var(--bn-sentiment-frustration); }
+.badge-sarcastic { background: var(--bn-colour-badge-bg); color: var(--bn-colour-badge-text); }
+.badge-judgment { background: var(--bn-colour-badge-bg); color: var(--bn-colour-badge-text); }
+.badge-narration { background: var(--bn-colour-badge-bg); color: var(--bn-colour-badge-text); }
+.badge-task_management { background: var(--bn-colour-badge-bg); color: var(--bn-colour-badge-text); }
 
 /* AI badge — deletable on hover */
 .badge-ai {

@@ -40,14 +40,30 @@ class QuoteType(str, Enum):
     GENERAL_CONTEXT = "general_context"
 
 
+class Sentiment(str, Enum):
+    """Research-backed sentiment categories for quote tagging.
+
+    See docs/academic-sources.html for theoretical foundations.
+    """
+
+    FRUSTRATION = "frustration"  # Difficulty, annoyance, friction
+    CONFUSION = "confusion"  # Not understanding, uncertainty
+    DOUBT = "doubt"  # Scepticism, worry, distrust
+    SURPRISE = "surprise"  # Expectation mismatch (neutral — flag for investigation)
+    SATISFACTION = "satisfaction"  # Met expectations, task success
+    DELIGHT = "delight"  # Exceeded expectations, pleasure
+    CONFIDENCE = "confidence"  # Trust, feeling in control
+
+
+# Deprecated enums — kept for backward compatibility with existing intermediate JSON
 class QuoteIntent(str, Enum):
-    NARRATION = "narration"  # Describing actions: "I'm clicking beds"
-    CONFUSION = "confusion"  # Expressing confusion: "Why is that not working?"
-    JUDGMENT = "judgment"  # Evaluating: "That's quite cheap"
-    FRUSTRATION = "frustration"  # Expressing frustration: "Something's up"
-    DELIGHT = "delight"  # Positive reaction: "Oh I like that"
-    SUGGESTION = "suggestion"  # Proposing alternatives: "Maybe brown and orange"
-    TASK_MANAGEMENT = "task_management"  # Session admin: "This is enough data"
+    NARRATION = "narration"
+    CONFUSION = "confusion"
+    JUDGMENT = "judgment"
+    FRUSTRATION = "frustration"
+    DELIGHT = "delight"
+    SUGGESTION = "suggestion"
+    TASK_MANAGEMENT = "task_management"
 
 
 class EmotionalTone(str, Enum):
@@ -255,9 +271,14 @@ class ExtractedQuote(BaseModel):
     topic_label: str
     quote_type: QuoteType
     researcher_context: str | None = None  # e.g. "When asked about the dashboard"
+
+    # New sentiment field (v0.7+)
+    sentiment: Sentiment | None = None  # Single dominant sentiment, or None if descriptive
+    intensity: int = 1  # 1=mild, 2=moderate, 3=strong — kept for future use
+
+    # Deprecated fields — kept for backward compatibility with existing intermediate JSON
     intent: QuoteIntent = QuoteIntent.NARRATION
     emotion: EmotionalTone = EmotionalTone.NEUTRAL
-    intensity: int = 1  # 1=low, 2=medium, 3=high
     journey_stage: JourneyStage = JourneyStage.OTHER
 
     def formatted(self, display_name: str | None = None) -> str:

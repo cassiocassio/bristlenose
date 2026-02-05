@@ -141,7 +141,7 @@ Organised from easiest to hardest. The README has a condensed version; this is t
 
 - [x] Search-as-you-type filtering — collapsible magnifying glass icon in toolbar, filters quotes by text/speaker/tags, overrides view mode, hides empty sections
 - [ ] Hide/show quotes — toggle individual quotes, persist state
-- [ ] Keyboard shortcuts — j/k navigation, s to star, e to edit, / to search
+- [ ] Keyboard shortcuts — j/k navigation, s to star, t to tag, / to search, ? for help. Includes focus system (ring visual), background tint, rename favourites→starred. See `docs/design-keyboard-navigation.md`
 - [x] Timecodes: two-tone typography — blue digits + muted grey brackets, `:visited` fix, `_tc_brackets()` helper; hanging-indent layout for quote cards and transcript segments
 - [ ] User tag × button — vertically centre the close button optically (currently sits too low)
 - [ ] AI badge × button — the circled × is ugly; restyle to match user tag delete or use a simpler glyph

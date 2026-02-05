@@ -953,7 +953,7 @@ def _render_transcript_page(
 
 
 def _footer_html() -> str:
-    """Return the page footer with version link."""
+    """Return the page footer with version link and keyboard hint."""
     from bristlenose import __version__
 
     return (
@@ -962,6 +962,8 @@ def _footer_html() -> str:
         "\u2002"
         f'<a class="footer-version" href="https://github.com/cassiocassio/bristlenose">'
         f"version {__version__}</a>"
+        '<a class="footer-keyboard-hint" href="#" onclick="toggleHelpOverlay(); return false;">'
+        "<kbd>?</kbd> for Help</a>"
         "</footer>"
     )
 

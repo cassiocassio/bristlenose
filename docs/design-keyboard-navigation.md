@@ -90,8 +90,7 @@ Left border priority: **Starred grey > Selected blue > Default grey**
 |-----|--------|-------|
 | `s` | Toggle star | Gmail convention |
 | `t` | Add tag | Opens tag input |
-| `Enter` | Open transcript | At quote's timecode anchor |
-| `Space` | Play in video player | Opens/seeks popup |
+| `Enter` | Play in video player | Opens/seeks popup at timecode |
 
 ### Global (no focus needed)
 
@@ -108,6 +107,7 @@ Left border priority: **Starred grey > Selected blue > Default grey**
 | `e` (edit) | Not obvious; pencil icon is discoverable |
 | `v` (view cycle) | Toolbar territory |
 | `c` (copy CSV) | Toolbar territory |
+| `Space` | Reserved for browser scroll |
 | `x` (toggle select) | Future: multi-select |
 | `Shift+j/k` | Future: extend selection |
 
@@ -159,8 +159,7 @@ Navigation
 Actions
   s        Star quote
   t        Add tag
-  Enter    View in transcript
-  Space    Play in video
+  Enter    Play in video
 
 Global
   /        Search
@@ -172,41 +171,36 @@ Future: Expand to include feature explanations (tags, starring, CSV export).
 
 ## Implementation Phases
 
-### Phase 1: Rename favourites → starred ✅ READY TO IMPLEMENT
+### Phase 1: Rename favourites → starred ✅ DONE
 - CSS class: `.favourited` → `.starred`
 - JS: `favStore` → `starStore`, `initFavourites()` → `initStarred()`, `favourites.js` → `starred.js`
 - localStorage: migrate `bristlenose-favourites` → `bristlenose-starred`
 - View switcher: "Favourite quotes" → "Starred quotes"
 - Token: `--bn-colour-favourited` → `--bn-colour-starred`
-- Effort: ~1 hour
 
-### Phase 2: Add focus/selection CSS tokens
-- Add `--bn-focus-shadow` and `--bn-selection-bg` to `tokens.css`
-- Create `atoms/interactive.css` with `.bn-focused` and `.bn-selected` classes
-- Effort: ~30 minutes
+### Phase 2: Add focus/selection CSS tokens ✅ DONE
+- Added `--bn-focus-shadow` and `--bn-selection-bg` to `tokens.css`
+- Created `atoms/interactive.css` with `.bn-focused` and `.bn-selected` classes
 
-### Phase 3: Global shortcuts
-- New module: `keyboard.js`
+### Phase 3: Global shortcuts ✅ DONE
+- Implemented in `focus.js` (not separate keyboard.js)
 - `isEditing()` guard function
-- `/` → focus search
-- `?` → help overlay
-- `Escape` → close help, clear search
-- Effort: ~2 hours
+- `/` → focus search (expands search container first)
+- `?` → help overlay modal
+- `Escape` → close help, clear search, or unfocus (in that priority)
 
-### Phase 4: Focus system
-- `focusedQuoteId` state
-- `.focused` CSS class (shadow lift)
+### Phase 4: Focus system ✅ DONE
+- `focusedQuoteId` state in `focus.js`
+- `.bn-focused` CSS class (white bg + shadow lift)
 - `j`/`k`/arrow handlers
 - Click to focus, Escape/background-click to blur
 - Scroll-into-view on focus change
-- Effort: ~3 hours
 
-### Phase 5: Actions on focused quote
+### Phase 5: Actions on focused quote ✅ DONE
 - `s` → toggle star
 - `t` → open tag input
-- `Enter` → navigate to transcript
-- `Space` → open video player
-- Effort: ~2 hours
+- `Enter` → open video player at timecode
+- `Space` rejected — reserved for browser scroll
 
 ### Future: Multi-select
 - `selectedQuoteIds: Set<string>`

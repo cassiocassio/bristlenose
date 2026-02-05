@@ -371,6 +371,44 @@ Releases should land on GitHub after 9pm London time on weekdays to avoid pushin
 - Local ran `ruff check bristlenose/`, CI runs `ruff check .` — test file lint errors went unnoticed
 - Tests that depend on environment (API keys, installed tools) must mock those dependencies — CI has no keys configured
 
+## Branch switching
+
+When the user says "let's switch to branch X" or similar, **automatically run this checklist before switching**:
+
+### Pre-switch checks (on current branch)
+
+1. **Check for uncommitted changes** — `git status`
+   - If changes exist, commit them with a descriptive message (ask user for message if unclear)
+   - Never leave uncommitted work when switching branches
+2. **Run tests** — `.venv/bin/python -m pytest tests/`
+   - If tests fail, warn the user before proceeding
+3. **Run linter** — `.venv/bin/ruff check .`
+   - If lint errors, fix them or warn before proceeding
+
+### Switch
+
+4. **Execute the switch** — `git checkout <branch-name>`
+   - If branch doesn't exist locally but exists on remote: `git checkout -b <branch-name> origin/<branch-name>`
+   - If branch doesn't exist anywhere, ask user if they want to create it
+
+### Post-switch cleanup
+
+5. **Clear Python cache** — `find . -name __pycache__ -exec rm -rf {} +`
+   - Editable installs cache imports; stale `.pyc` files cause mysterious bugs
+6. **Reinstall package** — `.venv/bin/pip install -e .`
+   - Shebang paths and import paths may reference old locations
+7. **Report status** — `git status` + `git log --oneline -3`
+   - Show user what branch they're on and recent commits
+
+### Why this matters
+
+Python editable installs (`pip install -e .`) write absolute paths into `.pth` files. Switching branches can leave stale bytecode that serves old code, causing:
+- `ImportError` for modules that don't exist on the new branch
+- Functions behaving like the old branch's version
+- Mysterious test failures
+
+The PreferencesFile incident (keyboard-navigation branch, Feb 2026) was caused by exactly this — stale imports from a feature that was stashed on another branch.
+
 ## Session-end housekeeping
 
 When the user signals end of session, **proactively offer to run this checklist**:

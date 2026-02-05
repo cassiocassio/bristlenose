@@ -15,7 +15,6 @@
  *   tags.js         → userTags, persistUserTags(), initTags()
  *   histogram.js    → renderUserTagsChart()   (called by tags.js)
  *   csv-export.js   → initCsvExport(), copyToClipboard(), showToast()
- *   preferences.js  → initPreferences(), getPref(), setPref()
  *   view-switcher.js → initViewSwitcher()    (depends on csv-export.js)
  *   search.js       → initSearchFilter()   (depends on csv-export.js)
  *   names.js        → initNames()            (depends on csv-export.js)
@@ -37,7 +36,6 @@ initInlineEditing();
 initTags();
 renderUserTagsChart();
 initCsvExport();
-initPreferences();
 initViewSwitcher();
 initSearchFilter();
 initNames();

@@ -19,7 +19,6 @@ from bristlenose.models import (
     InputSession,
     JourneyStage,
     PeopleFile,
-    PreferencesFile,
     QuoteIntent,
     ScreenCluster,
     ThemeGroup,
@@ -59,6 +58,7 @@ _THEME_FILES: list[str] = [
     "molecules/tag-input.css",
     "molecules/name-edit.css",
     "molecules/search.css",
+    "molecules/help-overlay.css",
     "organisms/blockquote.css",
     "organisms/coverage.css",
     "organisms/sentiment-chart.css",
@@ -111,7 +111,6 @@ _JS_FILES: list[str] = [
     "js/tags.js",
     "js/histogram.js",
     "js/csv-export.js",
-    "js/preferences.js",  # After csv-export (needs copyToClipboard, showToast)
     "js/view-switcher.js",
     "js/search.js",
     "js/names.js",
@@ -160,7 +159,6 @@ def render_html(
     display_names: dict[str, str] | None = None,
     people: PeopleFile | None = None,
     transcripts: list[FullTranscript] | None = None,
-    preferences: PreferencesFile | None = None,
 ) -> Path:
     """Generate the HTML research report with external CSS stylesheet.
 
@@ -326,10 +324,6 @@ def render_html(
     _w(
         '<li role="menuitem" data-view="starred">'
         '<span class="menu-icon">&#9733;</span> Starred quotes</li>'
-    )
-    _w(
-        '<li role="menuitem" data-view="participants">'
-        '<span class="menu-icon">&nbsp;</span> Participant data</li>'
     )
     _w("</ul>")
     _w("</div>")
@@ -623,16 +617,6 @@ def render_html(
                 "role": _entry.editable.role,
             }
     _w(f"var BN_PARTICIPANTS = {json.dumps(participant_data)};")
-
-    # Preferences for JS preference management and reconciliation.
-    prefs_data: dict[str, object] = {}
-    if preferences:
-        prefs_data = {
-            "color_scheme": preferences.preferences.color_scheme,
-            "animations_enabled": preferences.preferences.animations_enabled,
-            "ai_tags_visible": preferences.preferences.ai_tags_visible,
-        }
-    _w(f"var BN_PREFERENCES = {json.dumps(prefs_data)};")
 
     _w(_get_report_js())
     _w("})();")

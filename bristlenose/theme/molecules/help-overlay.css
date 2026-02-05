@@ -1,0 +1,95 @@
+/* Help overlay — keyboard shortcuts modal triggered by ? key.
+   See focus.js for the JavaScript that creates and toggles this overlay. */
+
+.help-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity var(--bn-transition-normal), visibility var(--bn-transition-normal);
+}
+
+.help-overlay.visible {
+    opacity: 1;
+    visibility: visible;
+}
+
+.help-modal {
+    background: var(--bn-colour-bg);
+    border-radius: var(--bn-radius-lg);
+    padding: var(--bn-space-xl);
+    max-width: 600px;
+    width: 90%;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+}
+
+.help-modal h2 {
+    margin: 0 0 var(--bn-space-lg) 0;
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--bn-colour-text);
+}
+
+.help-columns {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--bn-space-lg);
+}
+
+@media (max-width: 500px) {
+    .help-columns {
+        grid-template-columns: 1fr;
+    }
+}
+
+.help-section h3 {
+    margin: 0 0 var(--bn-space-sm) 0;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--bn-colour-muted);
+}
+
+.help-section dl {
+    margin: 0;
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: var(--bn-space-xs) var(--bn-space-sm);
+    align-items: baseline;
+}
+
+.help-section dt {
+    text-align: right;
+}
+
+.help-section dd {
+    margin: 0;
+    color: var(--bn-colour-text);
+    font-size: 0.875rem;
+}
+
+.help-modal kbd {
+    display: inline-block;
+    padding: 0.15em 0.4em;
+    font-family: var(--bn-font-mono);
+    font-size: 0.75rem;
+    line-height: 1;
+    color: var(--bn-colour-text);
+    background: var(--bn-colour-badge-bg);
+    border: 1px solid var(--bn-colour-border);
+    border-radius: var(--bn-radius-sm);
+    box-shadow: 0 1px 0 var(--bn-colour-border);
+}
+
+.help-footer {
+    margin: var(--bn-space-lg) 0 0 0;
+    text-align: center;
+    font-size: 0.75rem;
+    color: var(--bn-colour-muted);
+}

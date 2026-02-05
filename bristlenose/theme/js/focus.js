@@ -243,6 +243,8 @@ function moveFocus(direction) {
 function handleQuoteClick(e) {
   // Don't interfere with clicks on interactive elements
   if (e.target.closest('button, a, input, [contenteditable="true"]')) return;
+  // Don't interfere with tag input (preserves selection during bulk tagging)
+  if (e.target.closest('.badge-add, .tag-input-wrap')) return;
 
   // Don't interfere with text selection — if user selected text, ignore the click
   var sel = window.getSelection();
@@ -263,8 +265,9 @@ function handleQuoteClick(e) {
     selectRange(anchorQuoteId, bq.id);
     setFocus(bq.id, { scroll: false });
   } else {
-    // Plain click: focus only, clear selection
+    // Plain click: focus + single-select (like Finder)
     clearSelection();
+    toggleSelection(bq.id);
     setFocus(bq.id, { scroll: false });
     anchorQuoteId = bq.id;
   }
@@ -280,7 +283,8 @@ function handleBackgroundClick(e) {
   if (e.target.closest('.quote-group blockquote')) return;
   // If click was on toolbar/header/nav, ignore
   if (e.target.closest('.toolbar, header, nav, .toc')) return;
-  // Clear focus
+  // Clear focus and selection (like Finder)
+  clearSelection();
   setFocus(null);
 }
 
@@ -317,7 +321,7 @@ function createHelpOverlay() {
     '      <h3>Actions</h3>',
     '      <dl>',
     '        <dt><kbd>s</kbd></dt><dd>Star quote(s)</dd>',
-    '        <dt><kbd>t</kbd></dt><dd>Add tag</dd>',
+    '        <dt><kbd>t</kbd></dt><dd>Add tag(s)</dd>',
     '        <dt><kbd>Enter</kbd></dt><dd>Play in video</dd>',
     '      </dl>',
     '    </div>',
@@ -422,6 +426,7 @@ function bulkStarSelected() {
 
 /**
  * Open the tag input on the focused quote.
+ * If there's a selection, pass all selected IDs for bulk tagging.
  */
 function tagFocusedQuote() {
   if (!focusedQuoteId) return;
@@ -429,7 +434,12 @@ function tagFocusedQuote() {
   if (!bq) return;
   var addTagBtn = bq.querySelector('.badge-add');
   if (addTagBtn) {
-    addTagBtn.click();
+    // If we have a selection, open tag input with bulk targetIds
+    if (selectedQuoteIds.size > 0 && typeof openTagInput === 'function') {
+      openTagInput(addTagBtn, bq, Array.from(selectedQuoteIds));
+    } else {
+      addTagBtn.click();
+    }
   }
 }
 

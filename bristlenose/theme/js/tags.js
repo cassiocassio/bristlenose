@@ -140,9 +140,25 @@ function buildSuggest(input, wrap) {
     return;
   }
 
-  // Collect tags the current quote already has, so we don't suggest them.
-  var bq = activeTagInput ? activeTagInput.bq : null;
-  var existing = bq && bq.id && userTags[bq.id] ? userTags[bq.id].map(function (t) { return t.toLowerCase(); }) : [];
+  // Collect tags that ALL target quotes already have (intersection).
+  // Only filter out a tag if every target quote has it.
+  var existing = [];
+  if (activeTagInput && activeTagInput.targetIds && activeTagInput.targetIds.length > 0) {
+    // Bulk mode: compute intersection of existing tags across all targets
+    var targetIds = activeTagInput.targetIds;
+    var firstTags = userTags[targetIds[0]] || [];
+    existing = firstTags.filter(function(t) {
+      var tLower = t.toLowerCase();
+      return targetIds.every(function(qid) {
+        var qTags = userTags[qid] || [];
+        return qTags.some(function(qt) { return qt.toLowerCase() === tLower; });
+      });
+    }).map(function(t) { return t.toLowerCase(); });
+  } else {
+    // Single quote mode
+    var bq = activeTagInput ? activeTagInput.bq : null;
+    existing = bq && bq.id && userTags[bq.id] ? userTags[bq.id].map(function (t) { return t.toLowerCase(); }) : [];
+  }
 
   var names = allTagNames().filter(function (n) {
     return n.toLowerCase().indexOf(val) !== -1 && n.toLowerCase() !== val && existing.indexOf(n.toLowerCase()) === -1;
@@ -232,15 +248,29 @@ function closeTagInput(commit, reopenAfterCommit) {
   var didCommit = false;
 
   if (commit && val) {
-    var qid = ati.bq.id;
-    if (!userTags[qid]) userTags[qid] = [];
-    // Avoid duplicates.
-    if (userTags[qid].indexOf(val) === -1) {
-      userTags[qid].push(val);
+    // Determine target quote IDs: bulk mode or single quote
+    var targetIds = ati.targetIds && ati.targetIds.length > 0 ? ati.targetIds : [ati.bq.id];
+
+    targetIds.forEach(function(qid) {
+      if (!userTags[qid]) userTags[qid] = [];
+      // Avoid duplicates per quote
+      if (userTags[qid].indexOf(val) === -1) {
+        userTags[qid].push(val);
+        // Insert DOM element for this quote
+        var bq = document.getElementById(qid);
+        if (bq) {
+          var addBtn = bq.querySelector('.badge-add');
+          if (addBtn) {
+            var tagEl = createUserTagEl(val);
+            addBtn.parentNode.insertBefore(tagEl, addBtn);
+          }
+        }
+        didCommit = true;
+      }
+    });
+
+    if (didCommit) {
       persistUserTags(userTags);
-      var tagEl = createUserTagEl(val);
-      ati.addBtn.parentNode.insertBefore(tagEl, ati.addBtn);
-      didCommit = true;
     }
   }
 
@@ -248,8 +278,9 @@ function closeTagInput(commit, reopenAfterCommit) {
   ati.addBtn.style.display = '';
 
   // Re-open for another tag if requested and we actually added one.
+  // In bulk mode, re-open with same targetIds.
   if (reopenAfterCommit && didCommit) {
-    openTagInput(ati.addBtn, ati.bq);
+    openTagInput(ati.addBtn, ati.bq, ati.targetIds);
   }
 }
 
@@ -258,8 +289,9 @@ function closeTagInput(commit, reopenAfterCommit) {
  *
  * @param {Element} addBtn The `.badge-add` element that was clicked.
  * @param {Element} bq     The parent blockquote.
+ * @param {string[]} [targetIds] Optional array of quote IDs for bulk tagging.
  */
-function openTagInput(addBtn, bq) {
+function openTagInput(addBtn, bq, targetIds) {
   if (activeTagInput) closeTagInput(false);
 
   addBtn.style.display = 'none';
@@ -300,7 +332,7 @@ function openTagInput(addBtn, bq) {
   addBtn.parentNode.insertBefore(wrap, addBtn);
   input.focus();
 
-  activeTagInput = { bq: bq, wrap: wrap, input: input, addBtn: addBtn, ghost: ghost, ghostSpacer: ghostSpacer, sizer: sizer };
+  activeTagInput = { bq: bq, wrap: wrap, input: input, addBtn: addBtn, ghost: ghost, ghostSpacer: ghostSpacer, sizer: sizer, targetIds: targetIds || null };
 
   // Auto-resize box to fit typed text + ghost; update spacer to align ghost.
   function updateSize() {
@@ -555,7 +587,15 @@ function initTags() {
     e.preventDefault();
     var bq = addBtnEl.closest('blockquote');
     if (!bq || !bq.id) return;
-    openTagInput(addBtnEl, bq);
+    // Check for multi-select from focus.js
+    var targetIds = null;
+    if (typeof getSelectedQuoteIds === 'function') {
+      var selected = getSelectedQuoteIds();
+      if (selected && selected.size > 0) {
+        targetIds = Array.from(selected);
+      }
+    }
+    openTagInput(addBtnEl, bq, targetIds);
   });
 
   // ── Close tag input on outside click ──

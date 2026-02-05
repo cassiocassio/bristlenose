@@ -1,7 +1,7 @@
 /**
  * csv-export.js — CSV export and clipboard copy for quotes.
  *
- * Provides "Export all" and "Export favourites" buttons that build a CSV
+ * Provides "Export all" and "Export starred" buttons that build a CSV
  * string from the DOM and copy it to the clipboard.  A toast notification
  * confirms the action.
  *
@@ -55,7 +55,7 @@ function getQuoteText(bq) {
   // Fallback: clone and strip known non-text elements.
   var clone = bq.cloneNode(true);
   var rm = clone.querySelectorAll(
-    '.context, .timecode, a.timecode, .speaker, .badges, .fav-star, .edit-pencil'
+    '.context, .timecode, a.timecode, .speaker, .badges, .star-btn, .edit-pencil'
   );
   for (var i = 0; i < rm.length; i++) rm[i].remove();
   return clone.textContent.trim().replace(CSV_QUOTE_RE, '').trim();
@@ -98,21 +98,21 @@ function getQuoteTagsByType(bq, type) {
 // ── CSV builder ───────────────────────────────────────────────────────────
 
 /**
- * Build a CSV string from all (or only favourited) quotes in the report.
+ * Build a CSV string from all (or only starred) quotes in the report.
  *
  * Columns: Timecode, Quote, Participant, Section, Emotion, Intent,
  *          AI tags, User tags.
  *
- * @param {boolean} onlyFavs If true, include only favourited quotes.
+ * @param {boolean} onlyStarred If true, include only starred quotes.
  * @returns {string} The complete CSV text.
  */
-function buildCsv(onlyFavs) {
+function buildCsv(onlyStarred) {
   var rows = ['Timecode,Quote,Participant,Section,Emotion,Intent,AI tags,User tags'];
   var bqs = document.querySelectorAll('.quote-group blockquote');
   for (var i = 0; i < bqs.length; i++) {
     var bq = bqs[i];
     if (bq.style.display === 'none') continue;
-    if (onlyFavs && !bq.classList.contains('favourited')) continue;
+    if (onlyStarred && !bq.classList.contains('starred')) continue;
     rows.push(
       [
         csvEsc(bq.getAttribute('data-timecode') || ''),
@@ -201,17 +201,17 @@ function initCsvExport() {
   document.addEventListener('click', function (e) {
     var btn = e.target.closest('#export-csv');
     if (btn) {
-      var onlyFavs = currentViewMode === 'favourites';
-      var csv = buildCsv(onlyFavs);
+      var onlyStarred = currentViewMode === 'starred';
+      var csv = buildCsv(onlyStarred);
       var n = csv.split('\n').length - 1;
       if (n === 0) {
-        showToast(onlyFavs ? 'No favourites to export' : 'No quotes to export');
+        showToast(onlyStarred ? 'No starred quotes to export' : 'No quotes to export');
         return;
       }
       copyToClipboard(csv).then(
         function () {
-          var label = onlyFavs
-            ? n + ' favourite' + (n !== 1 ? 's' : '')
+          var label = onlyStarred
+            ? n + ' starred quote' + (n !== 1 ? 's' : '')
             : n + ' quote' + (n !== 1 ? 's' : '');
           showToast(label + ' copied as CSV');
         },

@@ -1,0 +1,1181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Focus &amp; Selection v2 — Bristlenose</title>
+  <style>
+    /* ========================================================================
+       BASE TOKENS (from tokens.css)
+       ======================================================================== */
+    :root {
+      --bn-font-body: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
+      --bn-colour-text: #1a1a1a;
+      --bn-colour-muted: #6b7280;
+      --bn-colour-border: #e5e7eb;
+      --bn-colour-accent: #2563eb;
+      --bn-colour-quote-bg: #f9fafb;
+      --bn-transition-fast: 0.15s ease;
+
+      /* Star icon colours */
+      --bn-colour-icon-idle: #c9ccd1;
+      --bn-colour-starred: #f59e0b;
+    }
+
+    /* ========================================================================
+       REFINED OPTIONS based on feedback:
+       - Page stays white (save tint for future left nav)
+       - Focus: shadow lift is classy, but needs subtle help
+       - Selection: very light blue (not Google-strong)
+       - No rounded corners on quotes
+       ======================================================================== */
+
+    /* --- FOCUS OPTIONS (shadow lift variants) --- */
+
+    /* F1: Pure shadow lift (current D) */
+    .focus-shadow-pure {
+      --focus-bg: #ffffff;
+      --focus-shadow: 0 2px 8px rgba(0,0,0,0.10), 0 0 0 1px rgba(0,0,0,0.04);
+      --focus-ring: none;
+    }
+
+    /* F2: Shadow + barely-there grey ring */
+    .focus-shadow-whisper {
+      --focus-bg: #ffffff;
+      --focus-shadow: 0 2px 6px rgba(0,0,0,0.08);
+      --focus-ring: 1px solid rgba(0,0,0,0.06);
+    }
+
+    /* F3: Shadow + slightly more visible ring */
+    .focus-shadow-subtle {
+      --focus-bg: #ffffff;
+      --focus-shadow: 0 2px 6px rgba(0,0,0,0.08);
+      --focus-ring: 1px solid rgba(0,0,0,0.10);
+    }
+
+    /* F4: Shadow + light grey ring */
+    .focus-shadow-ring {
+      --focus-bg: #ffffff;
+      --focus-shadow: 0 1px 4px rgba(0,0,0,0.06);
+      --focus-ring: 1px solid #e0e0e0;
+    }
+
+    /* F5: Stronger shadow, no ring */
+    .focus-shadow-strong {
+      --focus-bg: #ffffff;
+      --focus-shadow: 0 3px 12px rgba(0,0,0,0.12), 0 0 0 1px rgba(0,0,0,0.05);
+      --focus-ring: none;
+    }
+
+    /* F6: Very subtle background tint on card + shadow */
+    .focus-shadow-tint {
+      --focus-bg: #ffffff;
+      --focus-shadow: 0 2px 8px rgba(0,0,0,0.10);
+      --focus-ring: none;
+      --card-bg-focused: #fefefe;  /* card gets ever-so-slightly darker when NOT focused */
+    }
+
+    /* --- SELECTION OPTIONS (light blue variants) --- */
+
+    /* S1: Very light blue (your choice) */
+    .select-light-blue {
+      --selection-bg: #f0f7ff;
+    }
+
+    /* S2: Even lighter blue */
+    .select-lighter-blue {
+      --selection-bg: #f5f9ff;
+    }
+
+    /* S3: Barely-there blue */
+    .select-whisper-blue {
+      --selection-bg: #f8fbff;
+    }
+
+    /* S4: Light blue with hint of warmth */
+    .select-warm-blue {
+      --selection-bg: #f2f6fc;
+    }
+
+    /* S5: Blue left bar (square corners) */
+    .select-left-bar {
+      --selection-bg: #fafbfc;
+      --selection-bar: 3px solid var(--bn-colour-accent);
+    }
+
+    /* S6: Blue left bar + light blue bg */
+    .select-left-bar-blue {
+      --selection-bg: #f5f9ff;
+      --selection-bar: 3px solid var(--bn-colour-accent);
+    }
+
+    /* ========================================================================
+       PAGE LAYOUT
+       ======================================================================== */
+    * { box-sizing: border-box; }
+
+    body {
+      font-family: var(--bn-font-body);
+      color: var(--bn-colour-text);
+      margin: 0;
+      padding: 2rem;
+      line-height: 1.5;
+      background: #ffffff;
+    }
+
+    h1 {
+      font-size: 1.5rem;
+      font-weight: 600;
+      margin: 0 0 0.5rem 0;
+    }
+
+    .subtitle {
+      color: var(--bn-colour-muted);
+      margin: 0 0 2rem 0;
+    }
+
+    section {
+      margin-bottom: 3rem;
+    }
+
+    section > h2 {
+      font-size: 1.1rem;
+      font-weight: 600;
+      margin: 0 0 0.5rem 0;
+      padding-bottom: 0.5rem;
+      border-bottom: 1px solid var(--bn-colour-border);
+    }
+
+    section > p {
+      color: var(--bn-colour-muted);
+      font-size: 0.875rem;
+      margin: 0 0 1.5rem 0;
+    }
+
+    .experiments {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+      gap: 1.5rem;
+    }
+
+    .experiment {
+      border: 1px solid var(--bn-colour-border);
+      overflow: hidden;
+    }
+
+    .experiment-header {
+      background: #f9fafb;
+      padding: 0.6rem 1rem;
+      border-bottom: 1px solid var(--bn-colour-border);
+    }
+
+    .experiment-header h3 {
+      font-size: 0.8rem;
+      font-weight: 600;
+      margin: 0;
+    }
+
+    .experiment-header code {
+      font-size: 0.7rem;
+      color: var(--bn-colour-muted);
+      display: block;
+      margin-top: 0.2rem;
+    }
+
+    .experiment-body {
+      padding: 1.25rem;
+      background: #ffffff;
+      min-height: 200px;
+    }
+
+    /* ========================================================================
+       QUOTE CARD — NO ROUNDED CORNERS
+       ======================================================================== */
+    .quote-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+
+    .quote {
+      background: var(--bn-colour-quote-bg);
+      padding: 0.75rem 1rem;
+      position: relative;
+      transition: all var(--bn-transition-fast);
+      /* NO border-radius */
+    }
+
+    .quote-row {
+      display: flex;
+      gap: 0.5rem;
+      align-items: baseline;
+    }
+
+    .timecode {
+      color: var(--bn-colour-accent);
+      font-size: 0.8rem;
+      flex-shrink: 0;
+    }
+
+    .timecode-bracket {
+      color: var(--bn-colour-muted);
+    }
+
+    .quote-body {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .quote-text {
+      font-size: 0.9rem;
+      margin: 0;
+    }
+
+    .quote-meta {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-top: 0.4rem;
+      font-size: 0.8rem;
+    }
+
+    .speaker {
+      color: var(--bn-colour-muted);
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 0.12rem 0.45rem;
+      font-size: 0.7rem;
+      background: #f3f4f6;
+      color: #374151;
+    }
+
+    /* Star button */
+    .star {
+      position: absolute;
+      top: 0.5rem;
+      right: 0.5rem;
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 0.25rem;
+      color: var(--bn-colour-icon-idle);
+      transition: color var(--bn-transition-fast);
+    }
+
+    .star:hover {
+      color: var(--bn-colour-starred);
+    }
+
+    .quote.starred .star {
+      color: var(--bn-colour-starred);
+    }
+
+    /* State labels */
+    .state-label {
+      font-size: 0.65rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--bn-colour-muted);
+      margin-bottom: 0.25rem;
+    }
+
+    /* ========================================================================
+       FOCUS STATES
+       ======================================================================== */
+    .quote.focused {
+      background: var(--focus-bg, #ffffff);
+      box-shadow: var(--focus-shadow, none);
+      outline: var(--focus-ring, none);
+      outline-offset: 0;
+    }
+
+    /* For the tint variant */
+    .focus-shadow-tint .quote:not(.focused) {
+      background: #fafafa;
+    }
+    .focus-shadow-tint .quote.focused {
+      background: #ffffff;
+    }
+
+    /* ========================================================================
+       SELECTION STATES
+       ======================================================================== */
+    .quote.selected {
+      background: var(--selection-bg, #f0f7ff);
+      border-left: var(--selection-bar, none);
+    }
+
+    /* Adjust padding when left bar is present */
+    .select-left-bar .quote.selected,
+    .select-left-bar-blue .quote.selected {
+      padding-left: calc(1rem - 3px);
+    }
+
+    .quote.focused.selected {
+      background: var(--selection-bg, #f0f7ff);
+      box-shadow: var(--focus-shadow, none);
+      outline: var(--focus-ring, none);
+      border-left: var(--selection-bar, none);
+    }
+
+    /* ========================================================================
+       COMBINED SCENARIOS
+       ======================================================================== */
+    .scenario {
+      border: 1px solid var(--bn-colour-border);
+      margin-bottom: 1.5rem;
+    }
+
+    .scenario-header {
+      background: #f9fafb;
+      padding: 0.6rem 1rem;
+      border-bottom: 1px solid var(--bn-colour-border);
+    }
+
+    .scenario-header h3 {
+      font-size: 0.85rem;
+      font-weight: 600;
+      margin: 0;
+    }
+
+    .scenario-header p {
+      font-size: 0.75rem;
+      color: var(--bn-colour-muted);
+      margin: 0.2rem 0 0 0;
+    }
+
+    .scenario-body {
+      padding: 1.25rem;
+      background: #ffffff;
+    }
+
+    /* ========================================================================
+       DROPDOWN EXAMPLES
+       ======================================================================== */
+    .dropdown {
+      background: #ffffff;
+      border: 1px solid var(--bn-colour-border);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      overflow: hidden;
+      width: 180px;
+      display: inline-block;
+      vertical-align: top;
+      margin-right: 1.5rem;
+      margin-bottom: 1rem;
+    }
+
+    .dropdown-label {
+      font-size: 0.7rem;
+      color: var(--bn-colour-muted);
+      margin-bottom: 0.4rem;
+    }
+
+    .dropdown-item {
+      padding: 0.45rem 0.7rem;
+      font-size: 0.82rem;
+      cursor: pointer;
+      transition: background var(--bn-transition-fast);
+    }
+
+    .dropdown-item:hover {
+      background: #f9fafb;
+    }
+
+    .dropdown-item.highlighted {
+      background: var(--selection-bg, #f0f7ff);
+    }
+
+    .dropdown-item.current {
+      color: var(--bn-colour-accent);
+      font-weight: 500;
+    }
+
+    .dropdown-item.current::before {
+      content: "✓ ";
+    }
+
+    /* ========================================================================
+       NAV
+       ======================================================================== */
+    nav {
+      position: sticky;
+      top: 0;
+      background: #ffffff;
+      padding: 0.75rem 0;
+      margin: -2rem -2rem 1.5rem -2rem;
+      padding: 0.75rem 2rem;
+      border-bottom: 1px solid var(--bn-colour-border);
+      z-index: 100;
+    }
+
+    nav a {
+      color: var(--bn-colour-accent);
+      text-decoration: none;
+      margin-right: 1.5rem;
+      font-size: 0.85rem;
+    }
+
+    nav a:hover {
+      text-decoration: underline;
+    }
+  </style>
+</head>
+<body>
+
+<nav>
+  <a href="#focus">Focus Variants</a>
+  <a href="#selection">Selection Blue</a>
+  <a href="#combined">Combined</a>
+  <a href="#dropdowns">Dropdowns</a>
+</nav>
+
+<h1>Focus &amp; Selection v2</h1>
+<p class="subtitle">Refined based on feedback: shadow lift focus, very light blue selection, no rounded corners, white page</p>
+
+<!-- ===================================================================== -->
+<section id="focus">
+  <h2>Focus: Shadow Lift Variants</h2>
+  <p>Shadow lift is classy. Testing subtle variations — pure shadow vs adding a barely-there ring.</p>
+
+  <div class="experiments">
+
+    <!-- F1: Pure shadow -->
+    <div class="experiment focus-shadow-pure">
+      <div class="experiment-header">
+        <h3>F1. Pure Shadow</h3>
+        <code>shadow: 0 2px 8px rgba(0,0,0,0.10), inset ring rgba(0,0,0,0.04)</code>
+      </div>
+      <div class="experiment-body">
+        <div class="quote-list">
+          <p class="state-label">Normal</p>
+          <div class="quote">
+            <div class="quote-row">
+              <span class="timecode"><span class="timecode-bracket">[</span>02:34<span class="timecode-bracket">]</span></span>
+              <div class="quote-body">
+                <p class="quote-text">"I found the onboarding really confusing."</p>
+                <div class="quote-meta"><span class="speaker">— p1</span></div>
+              </div>
+            </div>
+          </div>
+          <p class="state-label">Focused</p>
+          <div class="quote focused">
+            <div class="quote-row">
+              <span class="timecode"><span class="timecode-bracket">[</span>05:12<span class="timecode-bracket">]</span></span>
+              <div class="quote-body">
+                <p class="quote-text">"Once I got it, it was actually intuitive."</p>
+                <div class="quote-meta"><span class="speaker">— p1</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- F2: Shadow + whisper ring -->
+    <div class="experiment focus-shadow-whisper">
+      <div class="experiment-header">
+        <h3>F2. Shadow + Whisper Ring</h3>
+        <code>shadow + 1px solid rgba(0,0,0,0.06)</code>
+      </div>
+      <div class="experiment-body">
+        <div class="quote-list">
+          <p class="state-label">Normal</p>
+          <div class="quote">
+            <div class="quote-row">
+              <span class="timecode"><span class="timecode-bracket">[</span>02:34<span class="timecode-bracket">]</span></span>
+              <div class="quote-body">
+                <p class="quote-text">"I found the onboarding really confusing."</p>
+                <div class="quote-meta"><span class="speaker">— p1</span></div>
+              </div>
+            </div>
+          </div>
+          <p class="state-label">Focused</p>
+          <div class="quote focused">
+            <div class="quote-row">
+              <span class="timecode"><span class="timecode-bracket">[</span>05:12<span class="timecode-bracket">]</span></span>
+              <div class="quote-body">
+                <p class="quote-text">"Once I got it, it was actually intuitive."</p>
+                <div class="quote-meta"><span class="speaker">— p1</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- F3: Shadow + subtle ring -->
+    <div class="experiment focus-shadow-subtle">
+      <div class="experiment-header">
+        <h3>F3. Shadow + Subtle Ring</h3>
+        <code>shadow + 1px solid rgba(0,0,0,0.10)</code>
+      </div>
+      <div class="experiment-body">
+        <div class="quote-list">
+          <p class="state-label">Normal</p>
+          <div class="quote">
+            <div class="quote-row">
+              <span class="timecode"><span class="timecode-bracket">[</span>02:34<span class="timecode-bracket">]</span></span>
+              <div class="quote-body">
+                <p class="quote-text">"I found the onboarding really confusing."</p>
+                <div class="quote-meta"><span class="speaker">— p1</span></div>
+              </div>
+            </div>
+          </div>
+          <p class="state-label">Focused</p>
+          <div class="quote focused">
+            <div class="quote-row">
+              <span class="timecode"><span class="timecode-bracket">[</span>05:12<span class="timecode-bracket">]</span></span>
+              <div class="quote-body">
+                <p class="quote-text">"Once I got it, it was actually intuitive."</p>
+                <div class="quote-meta"><span class="speaker">— p1</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- F4: Shadow + grey ring -->
+    <div class="experiment focus-shadow-ring">
+      <div class="experiment-header">
+        <h3>F4. Shadow + Light Grey Ring</h3>
+        <code>shadow + 1px solid #e0e0e0</code>
+      </div>
+      <div class="experiment-body">
+        <div class="quote-list">
+          <p class="state-label">Normal</p>
+          <div class="quote">
+            <div class="quote-row">
+              <span class="timecode"><span class="timecode-bracket">[</span>02:34<span class="timecode-bracket">]</span></span>
+              <div class="quote-body">
+                <p class="quote-text">"I found the onboarding really confusing."</p>
+                <div class="quote-meta"><span class="speaker">— p1</span></div>
+              </div>
+            </div>
+          </div>
+          <p class="state-label">Focused</p>
+          <div class="quote focused">
+            <div class="quote-row">
+              <span class="timecode"><span class="timecode-bracket">[</span>05:12<span class="timecode-bracket">]</span></span>
+              <div class="quote-body">
+                <p class="quote-text">"Once I got it, it was actually intuitive."</p>
+                <div class="quote-meta"><span class="speaker">— p1</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- F5: Stronger shadow -->
+    <div class="experiment focus-shadow-strong">
+      <div class="experiment-header">
+        <h3>F5. Stronger Shadow</h3>
+        <code>0 3px 12px rgba(0,0,0,0.12) + inset ring</code>
+      </div>
+      <div class="experiment-body">
+        <div class="quote-list">
+          <p class="state-label">Normal</p>
+          <div class="quote">
+            <div class="quote-row">
+              <span class="timecode"><span class="timecode-bracket">[</span>02:34<span class="timecode-bracket">]</span></span>
+              <div class="quote-body">
+                <p class="quote-text">"I found the onboarding really confusing."</p>
+                <div class="quote-meta"><span class="speaker">— p1</span></div>
+              </div>
+            </div>
+          </div>
+          <p class="state-label">Focused</p>
+          <div class="quote focused">
+            <div class="quote-row">
+              <span class="timecode"><span class="timecode-bracket">[</span>05:12<span class="timecode-bracket">]</span></span>
+              <div class="quote-body">
+                <p class="quote-text">"Once I got it, it was actually intuitive."</p>
+                <div class="quote-meta"><span class="speaker">— p1</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- F6: Card tint approach -->
+    <div class="experiment focus-shadow-tint">
+      <div class="experiment-header">
+        <h3>F6. Unfocused Cards Tinted</h3>
+        <code>Unfocused: #fafafa bg, Focused: #fff + shadow</code>
+      </div>
+      <div class="experiment-body">
+        <div class="quote-list">
+          <p class="state-label">Normal (tinted)</p>
+          <div class="quote">
+            <div class="quote-row">
+              <span class="timecode"><span class="timecode-bracket">[</span>02:34<span class="timecode-bracket">]</span></span>
+              <div class="quote-body">
+                <p class="quote-text">"I found the onboarding really confusing."</p>
+                <div class="quote-meta"><span class="speaker">— p1</span></div>
+              </div>
+            </div>
+          </div>
+          <p class="state-label">Focused (white)</p>
+          <div class="quote focused">
+            <div class="quote-row">
+              <span class="timecode"><span class="timecode-bracket">[</span>05:12<span class="timecode-bracket">]</span></span>
+              <div class="quote-body">
+                <p class="quote-text">"Once I got it, it was actually intuitive."</p>
+                <div class="quote-meta"><span class="speaker">— p1</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- ===================================================================== -->
+<section id="selection">
+  <h2>Selection: Light Blue Variants</h2>
+  <p>Very light blue for selection (not Google-strong). Testing subtle variations.</p>
+
+  <div class="experiments">
+
+    <!-- S1: Light blue -->
+    <div class="experiment select-light-blue focus-shadow-subtle">
+      <div class="experiment-header">
+        <h3>S1. Light Blue</h3>
+        <code>--selection-bg: #f0f7ff</code>
+      </div>
+      <div class="experiment-body">
+        <div class="quote-list">
+          <p class="state-label">Normal</p>
+          <div class="quote">
+            <div class="quote-row">
+              <span class="timecode"><span class="timecode-bracket">[</span>02:34<span class="timecode-bracket">]</span></span>
+              <div class="quote-body">
+                <p class="quote-text">"I found the onboarding confusing."</p>
+              </div>
+            </div>
+          </div>
+          <p class="state-label">Selected</p>
+          <div class="quote selected">
+            <div class="quote-row">
+              <span class="timecode"><span class="timecode-bracket">[</span>05:12<span class="timecode-bracket">]</span></span>
+              <div class="quote-body">
+                <p class="quote-text">"Once I got it, it was intuitive."</p>
+              </div>
+            </div>
+          </div>
+          <p class="state-label">Focused + Selected</p>
+          <div class="quote focused selected">
+            <div class="quote-row">
+              <span class="timecode"><span class="timecode-bracket">[</span>08:45<span class="timecode-bracket">]</span></span>
+              <div class="quote-body">
+                <p class="quote-text">"I'd recommend this to my team."</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- S2: Lighter blue -->
+    <div class="experiment select-lighter-blue focus-shadow-subtle">
+      <div class="experiment-header">
+        <h3>S2. Lighter Blue</h3>
+        <code>--selection-bg: #f5f9ff</code>
+      </div>
+      <div class="experiment-body">
+        <div class="quote-list">
+          <p class="state-label">Normal</p>
+          <div class="quote">
+            <div class="quote-row">
+              <span class="timecode"><span class="timecode-bracket">[</span>02:34<span class="timecode-bracket">]</span></span>
+              <div class="quote-body">
+                <p class="quote-text">"I found the onboarding confusing."</p>
+              </div>
+            </div>
+          </div>
+          <p class="state-label">Selected</p>
+          <div class="quote selected">
+            <div class="quote-row">
+              <span class="timecode"><span class="timecode-bracket">[</span>05:12<span class="timecode-bracket">]</span></span>
+              <div class="quote-body">
+                <p class="quote-text">"Once I got it, it was intuitive."</p>
+              </div>
+            </div>
+          </div>
+          <p class="state-label">Focused + Selected</p>
+          <div class="quote focused selected">
+            <div class="quote-row">
+              <span class="timecode"><span class="timecode-bracket">[</span>08:45<span class="timecode-bracket">]</span></span>
+              <div class="quote-body">
+                <p class="quote-text">"I'd recommend this to my team."</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- S3: Whisper blue -->
+    <div class="experiment select-whisper-blue focus-shadow-subtle">
+      <div class="experiment-header">
+        <h3>S3. Barely-There Blue</h3>
+        <code>--selection-bg: #f8fbff</code>
+      </div>
+      <div class="experiment-body">
+        <div class="quote-list">
+          <p class="state-label">Normal</p>
+          <div class="quote">
+            <div class="quote-row">
+              <span class="timecode"><span class="timecode-bracket">[</span>02:34<span class="timecode-bracket">]</span></span>
+              <div class="quote-body">
+                <p class="quote-text">"I found the onboarding confusing."</p>
+              </div>
+            </div>
+          </div>
+          <p class="state-label">Selected</p>
+          <div class="quote selected">
+            <div class="quote-row">
+              <span class="timecode"><span class="timecode-bracket">[</span>05:12<span class="timecode-bracket">]</span></span>
+              <div class="quote-body">
+                <p class="quote-text">"Once I got it, it was intuitive."</p>
+              </div>
+            </div>
+          </div>
+          <p class="state-label">Focused + Selected</p>
+          <div class="quote focused selected">
+            <div class="quote-row">
+              <span class="timecode"><span class="timecode-bracket">[</span>08:45<span class="timecode-bracket">]</span></span>
+              <div class="quote-body">
+                <p class="quote-text">"I'd recommend this to my team."</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- S4: Warm blue -->
+    <div class="experiment select-warm-blue focus-shadow-subtle">
+      <div class="experiment-header">
+        <h3>S4. Warm-ish Blue</h3>
+        <code>--selection-bg: #f2f6fc</code>
+      </div>
+      <div class="experiment-body">
+        <div class="quote-list">
+          <p class="state-label">Normal</p>
+          <div class="quote">
+            <div class="quote-row">
+              <span class="timecode"><span class="timecode-bracket">[</span>02:34<span class="timecode-bracket">]</span></span>
+              <div class="quote-body">
+                <p class="quote-text">"I found the onboarding confusing."</p>
+              </div>
+            </div>
+          </div>
+          <p class="state-label">Selected</p>
+          <div class="quote selected">
+            <div class="quote-row">
+              <span class="timecode"><span class="timecode-bracket">[</span>05:12<span class="timecode-bracket">]</span></span>
+              <div class="quote-body">
+                <p class="quote-text">"Once I got it, it was intuitive."</p>
+              </div>
+            </div>
+          </div>
+          <p class="state-label">Focused + Selected</p>
+          <div class="quote focused selected">
+            <div class="quote-row">
+              <span class="timecode"><span class="timecode-bracket">[</span>08:45<span class="timecode-bracket">]</span></span>
+              <div class="quote-body">
+                <p class="quote-text">"I'd recommend this to my team."</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- S5: Left bar -->
+    <div class="experiment select-left-bar focus-shadow-subtle">
+      <div class="experiment-header">
+        <h3>S5. Blue Left Bar</h3>
+        <code>3px accent bar + subtle bg #fafbfc</code>
+      </div>
+      <div class="experiment-body">
+        <div class="quote-list">
+          <p class="state-label">Normal</p>
+          <div class="quote">
+            <div class="quote-row">
+              <span class="timecode"><span class="timecode-bracket">[</span>02:34<span class="timecode-bracket">]</span></span>
+              <div class="quote-body">
+                <p class="quote-text">"I found the onboarding confusing."</p>
+              </div>
+            </div>
+          </div>
+          <p class="state-label">Selected</p>
+          <div class="quote selected">
+            <div class="quote-row">
+              <span class="timecode"><span class="timecode-bracket">[</span>05:12<span class="timecode-bracket">]</span></span>
+              <div class="quote-body">
+                <p class="quote-text">"Once I got it, it was intuitive."</p>
+              </div>
+            </div>
+          </div>
+          <p class="state-label">Focused + Selected</p>
+          <div class="quote focused selected">
+            <div class="quote-row">
+              <span class="timecode"><span class="timecode-bracket">[</span>08:45<span class="timecode-bracket">]</span></span>
+              <div class="quote-body">
+                <p class="quote-text">"I'd recommend this to my team."</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- S6: Left bar + blue bg -->
+    <div class="experiment select-left-bar-blue focus-shadow-subtle">
+      <div class="experiment-header">
+        <h3>S6. Left Bar + Light Blue</h3>
+        <code>3px accent bar + light blue #f5f9ff</code>
+      </div>
+      <div class="experiment-body">
+        <div class="quote-list">
+          <p class="state-label">Normal</p>
+          <div class="quote">
+            <div class="quote-row">
+              <span class="timecode"><span class="timecode-bracket">[</span>02:34<span class="timecode-bracket">]</span></span>
+              <div class="quote-body">
+                <p class="quote-text">"I found the onboarding confusing."</p>
+              </div>
+            </div>
+          </div>
+          <p class="state-label">Selected</p>
+          <div class="quote selected">
+            <div class="quote-row">
+              <span class="timecode"><span class="timecode-bracket">[</span>05:12<span class="timecode-bracket">]</span></span>
+              <div class="quote-body">
+                <p class="quote-text">"Once I got it, it was intuitive."</p>
+              </div>
+            </div>
+          </div>
+          <p class="state-label">Focused + Selected</p>
+          <div class="quote focused selected">
+            <div class="quote-row">
+              <span class="timecode"><span class="timecode-bracket">[</span>08:45<span class="timecode-bracket">]</span></span>
+              <div class="quote-body">
+                <p class="quote-text">"I'd recommend this to my team."</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- ===================================================================== -->
+<section id="combined">
+  <h2>Combined: Realistic Quote Lists</h2>
+  <p>Full scenarios with starred, selected, and focused quotes together.</p>
+
+  <!-- Combo 1: Shadow subtle + light blue -->
+  <div class="scenario focus-shadow-subtle select-light-blue">
+    <div class="scenario-header">
+      <h3>Recommended: Shadow + Subtle Ring + Light Blue</h3>
+      <p>F3 focus (shadow + rgba 0.10 ring) + S1 selection (#f0f7ff)</p>
+    </div>
+    <div class="scenario-body">
+      <div class="quote-list">
+        <div class="quote starred">
+          <div class="quote-row">
+            <span class="timecode"><span class="timecode-bracket">[</span>02:34<span class="timecode-bracket">]</span></span>
+            <div class="quote-body">
+              <p class="quote-text">"I found the onboarding really confusing at first. The buttons weren't where I expected."</p>
+              <div class="quote-meta">
+                <span class="speaker">— p1</span>
+                <span class="badge">confusion</span>
+              </div>
+            </div>
+          </div>
+          <button class="star">★</button>
+        </div>
+        <div class="quote selected">
+          <div class="quote-row">
+            <span class="timecode"><span class="timecode-bracket">[</span>05:12<span class="timecode-bracket">]</span></span>
+            <div class="quote-body">
+              <p class="quote-text">"Once I figured it out, it was actually pretty intuitive. I like how everything flows."</p>
+              <div class="quote-meta">
+                <span class="speaker">— p1</span>
+                <span class="badge">satisfaction</span>
+              </div>
+            </div>
+          </div>
+          <button class="star">★</button>
+        </div>
+        <div class="quote focused selected starred">
+          <div class="quote-row">
+            <span class="timecode"><span class="timecode-bracket">[</span>08:45<span class="timecode-bracket">]</span></span>
+            <div class="quote-body">
+              <p class="quote-text">"I'd definitely recommend this to my team. We've been looking for something like this."</p>
+              <div class="quote-meta">
+                <span class="speaker">— p1</span>
+                <span class="badge">confidence</span>
+              </div>
+            </div>
+          </div>
+          <button class="star">★</button>
+        </div>
+        <div class="quote">
+          <div class="quote-row">
+            <span class="timecode"><span class="timecode-bracket">[</span>12:03<span class="timecode-bracket">]</span></span>
+            <div class="quote-body">
+              <p class="quote-text">"The pricing page was a bit confusing though. I wasn't sure which tier we needed."</p>
+              <div class="quote-meta">
+                <span class="speaker">— p1</span>
+                <span class="badge">doubt</span>
+              </div>
+            </div>
+          </div>
+          <button class="star">★</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Combo 2: Pure shadow + lighter blue -->
+  <div class="scenario focus-shadow-pure select-lighter-blue">
+    <div class="scenario-header">
+      <h3>Alternative: Pure Shadow + Lighter Blue</h3>
+      <p>F1 focus (pure shadow, no ring) + S2 selection (#f5f9ff)</p>
+    </div>
+    <div class="scenario-body">
+      <div class="quote-list">
+        <div class="quote starred">
+          <div class="quote-row">
+            <span class="timecode"><span class="timecode-bracket">[</span>02:34<span class="timecode-bracket">]</span></span>
+            <div class="quote-body">
+              <p class="quote-text">"I found the onboarding really confusing at first. The buttons weren't where I expected."</p>
+              <div class="quote-meta">
+                <span class="speaker">— p1</span>
+                <span class="badge">confusion</span>
+              </div>
+            </div>
+          </div>
+          <button class="star">★</button>
+        </div>
+        <div class="quote selected">
+          <div class="quote-row">
+            <span class="timecode"><span class="timecode-bracket">[</span>05:12<span class="timecode-bracket">]</span></span>
+            <div class="quote-body">
+              <p class="quote-text">"Once I figured it out, it was actually pretty intuitive. I like how everything flows."</p>
+              <div class="quote-meta">
+                <span class="speaker">— p1</span>
+                <span class="badge">satisfaction</span>
+              </div>
+            </div>
+          </div>
+          <button class="star">★</button>
+        </div>
+        <div class="quote focused selected starred">
+          <div class="quote-row">
+            <span class="timecode"><span class="timecode-bracket">[</span>08:45<span class="timecode-bracket">]</span></span>
+            <div class="quote-body">
+              <p class="quote-text">"I'd definitely recommend this to my team. We've been looking for something like this."</p>
+              <div class="quote-meta">
+                <span class="speaker">— p1</span>
+                <span class="badge">confidence</span>
+              </div>
+            </div>
+          </div>
+          <button class="star">★</button>
+        </div>
+        <div class="quote">
+          <div class="quote-row">
+            <span class="timecode"><span class="timecode-bracket">[</span>12:03<span class="timecode-bracket">]</span></span>
+            <div class="quote-body">
+              <p class="quote-text">"The pricing page was a bit confusing though. I wasn't sure which tier we needed."</p>
+              <div class="quote-meta">
+                <span class="speaker">— p1</span>
+                <span class="badge">doubt</span>
+              </div>
+            </div>
+          </div>
+          <button class="star">★</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Combo 3: Shadow + left bar -->
+  <div class="scenario focus-shadow-subtle select-left-bar">
+    <div class="scenario-header">
+      <h3>Alternative: Shadow + Left Bar</h3>
+      <p>F3 focus (shadow + subtle ring) + S5 selection (left bar + #fafbfc)</p>
+    </div>
+    <div class="scenario-body">
+      <div class="quote-list">
+        <div class="quote starred">
+          <div class="quote-row">
+            <span class="timecode"><span class="timecode-bracket">[</span>02:34<span class="timecode-bracket">]</span></span>
+            <div class="quote-body">
+              <p class="quote-text">"I found the onboarding really confusing at first. The buttons weren't where I expected."</p>
+              <div class="quote-meta">
+                <span class="speaker">— p1</span>
+                <span class="badge">confusion</span>
+              </div>
+            </div>
+          </div>
+          <button class="star">★</button>
+        </div>
+        <div class="quote selected">
+          <div class="quote-row">
+            <span class="timecode"><span class="timecode-bracket">[</span>05:12<span class="timecode-bracket">]</span></span>
+            <div class="quote-body">
+              <p class="quote-text">"Once I figured it out, it was actually pretty intuitive. I like how everything flows."</p>
+              <div class="quote-meta">
+                <span class="speaker">— p1</span>
+                <span class="badge">satisfaction</span>
+              </div>
+            </div>
+          </div>
+          <button class="star">★</button>
+        </div>
+        <div class="quote focused selected starred">
+          <div class="quote-row">
+            <span class="timecode"><span class="timecode-bracket">[</span>08:45<span class="timecode-bracket">]</span></span>
+            <div class="quote-body">
+              <p class="quote-text">"I'd definitely recommend this to my team. We've been looking for something like this."</p>
+              <div class="quote-meta">
+                <span class="speaker">— p1</span>
+                <span class="badge">confidence</span>
+              </div>
+            </div>
+          </div>
+          <button class="star">★</button>
+        </div>
+        <div class="quote">
+          <div class="quote-row">
+            <span class="timecode"><span class="timecode-bracket">[</span>12:03<span class="timecode-bracket">]</span></span>
+            <div class="quote-body">
+              <p class="quote-text">"The pricing page was a bit confusing though. I wasn't sure which tier we needed."</p>
+              <div class="quote-meta">
+                <span class="speaker">— p1</span>
+                <span class="badge">doubt</span>
+              </div>
+            </div>
+          </div>
+          <button class="star">★</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Combo 4: Card tint + whisper blue -->
+  <div class="scenario focus-shadow-tint select-whisper-blue">
+    <div class="scenario-header">
+      <h3>Experiment: Tinted Cards + Whisper Blue</h3>
+      <p>F6 focus (unfocused cards #fafafa, focused #fff) + S3 selection (#f8fbff)</p>
+    </div>
+    <div class="scenario-body">
+      <div class="quote-list">
+        <div class="quote starred">
+          <div class="quote-row">
+            <span class="timecode"><span class="timecode-bracket">[</span>02:34<span class="timecode-bracket">]</span></span>
+            <div class="quote-body">
+              <p class="quote-text">"I found the onboarding really confusing at first. The buttons weren't where I expected."</p>
+              <div class="quote-meta">
+                <span class="speaker">— p1</span>
+                <span class="badge">confusion</span>
+              </div>
+            </div>
+          </div>
+          <button class="star">★</button>
+        </div>
+        <div class="quote selected">
+          <div class="quote-row">
+            <span class="timecode"><span class="timecode-bracket">[</span>05:12<span class="timecode-bracket">]</span></span>
+            <div class="quote-body">
+              <p class="quote-text">"Once I figured it out, it was actually pretty intuitive. I like how everything flows."</p>
+              <div class="quote-meta">
+                <span class="speaker">— p1</span>
+                <span class="badge">satisfaction</span>
+              </div>
+            </div>
+          </div>
+          <button class="star">★</button>
+        </div>
+        <div class="quote focused selected starred">
+          <div class="quote-row">
+            <span class="timecode"><span class="timecode-bracket">[</span>08:45<span class="timecode-bracket">]</span></span>
+            <div class="quote-body">
+              <p class="quote-text">"I'd definitely recommend this to my team. We've been looking for something like this."</p>
+              <div class="quote-meta">
+                <span class="speaker">— p1</span>
+                <span class="badge">confidence</span>
+              </div>
+            </div>
+          </div>
+          <button class="star">★</button>
+        </div>
+        <div class="quote">
+          <div class="quote-row">
+            <span class="timecode"><span class="timecode-bracket">[</span>12:03<span class="timecode-bracket">]</span></span>
+            <div class="quote-body">
+              <p class="quote-text">"The pricing page was a bit confusing though. I wasn't sure which tier we needed."</p>
+              <div class="quote-meta">
+                <span class="speaker">— p1</span>
+                <span class="badge">doubt</span>
+              </div>
+            </div>
+          </div>
+          <button class="star">★</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</section>
+
+<!-- ===================================================================== -->
+<section id="dropdowns">
+  <h2>Dropdowns: Keyboard Highlight</h2>
+  <p>Tag suggestions and view switcher use selection colour for keyboard navigation highlight.</p>
+
+  <div class="experiment select-light-blue" style="border: none;">
+    <div class="experiment-body" style="padding: 0;">
+
+      <p class="dropdown-label">View Switcher (S1: #f0f7ff)</p>
+      <div class="dropdown">
+        <div class="dropdown-item current">All quotes</div>
+        <div class="dropdown-item highlighted">Starred quotes</div>
+        <div class="dropdown-item">Participant data</div>
+      </div>
+
+      <div class="dropdown select-lighter-blue">
+        <div class="dropdown-label" style="padding: 0.5rem 0.7rem 0; margin: 0;">S2: #f5f9ff</div>
+        <div class="dropdown-item current">All quotes</div>
+        <div class="dropdown-item highlighted">Starred quotes</div>
+        <div class="dropdown-item">Participant data</div>
+      </div>
+
+      <div class="dropdown select-whisper-blue">
+        <div class="dropdown-label" style="padding: 0.5rem 0.7rem 0; margin: 0;">S3: #f8fbff</div>
+        <div class="dropdown-item current">All quotes</div>
+        <div class="dropdown-item highlighted">Starred quotes</div>
+        <div class="dropdown-item">Participant data</div>
+      </div>
+
+    </div>
+  </div>
+
+</section>
+
+</body>
+</html>

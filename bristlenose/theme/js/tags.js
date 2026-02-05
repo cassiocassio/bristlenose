@@ -386,6 +386,7 @@ function openTagInput(addBtn, bq) {
       closeTagInput(hasValue, hasValue);
     } else if (ev.key === 'Enter') {
       ev.preventDefault();
+      ev.stopPropagation();  // Don't let focus.js intercept this
       // Accept ghost text or highlighted suggestion.
       if (ghost.textContent) {
         input.value = input.value + ghost.textContent;

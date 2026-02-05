@@ -51,12 +51,14 @@ _THEME_FILES: list[str] = [
     "atoms/bar.css",
     "atoms/logo.css",
     "atoms/footer.css",
+    "atoms/interactive.css",
     "molecules/badge-row.css",
     "molecules/bar-group.css",
     "molecules/quote-actions.css",
     "molecules/tag-input.css",
     "molecules/name-edit.css",
     "molecules/search.css",
+    "molecules/help-overlay.css",
     "organisms/blockquote.css",
     "organisms/coverage.css",
     "organisms/sentiment-chart.css",
@@ -104,7 +106,7 @@ def _get_default_css() -> str:
 _JS_FILES: list[str] = [
     "js/storage.js",
     "js/player.js",
-    "js/favourites.js",
+    "js/starred.js",
     "js/editing.js",
     "js/tags.js",
     "js/histogram.js",
@@ -112,6 +114,7 @@ _JS_FILES: list[str] = [
     "js/view-switcher.js",
     "js/search.js",
     "js/names.js",
+    "js/focus.js",
     "js/main.js",
 ]
 
@@ -319,12 +322,8 @@ def render_html(
         '<span class="menu-icon">&nbsp;</span> All quotes</li>'
     )
     _w(
-        '<li role="menuitem" data-view="favourites">'
-        '<span class="menu-icon">&#9733;</span> Favourite quotes</li>'
-    )
-    _w(
-        '<li role="menuitem" data-view="participants">'
-        '<span class="menu-icon">&nbsp;</span> Participant data</li>'
+        '<li role="menuitem" data-view="starred">'
+        '<span class="menu-icon">&#9733;</span> Starred quotes</li>'
     )
     _w("</ul>")
     _w("</div>")
@@ -954,7 +953,7 @@ def _render_transcript_page(
 
 
 def _footer_html() -> str:
-    """Return the page footer with version link."""
+    """Return the page footer with version link and keyboard hint."""
     from bristlenose import __version__
 
     return (
@@ -963,6 +962,8 @@ def _footer_html() -> str:
         "\u2002"
         f'<a class="footer-version" href="https://github.com/cassiocassio/bristlenose">'
         f"version {__version__}</a>"
+        '<a class="footer-keyboard-hint" href="#" onclick="toggleHelpOverlay(); return false;">'
+        "<kbd>?</kbd> for Help</a>"
         "</footer>"
     )
 
@@ -1067,7 +1068,7 @@ def _format_quote_html(
     )
 
     parts.append('<button class="edit-pencil" aria-label="Edit this quote">&#9998;</button>')
-    parts.append('<button class="fav-star" aria-label="Favourite this quote">&#9733;</button>')
+    parts.append('<button class="star-btn" aria-label="Star this quote">&#9733;</button>')
     parts.append("</blockquote>")
     return "\n".join(parts)
 

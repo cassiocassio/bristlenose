@@ -7,6 +7,9 @@
     border-top: 1px solid var(--bn-colour-border);
     font-size: 0.72rem;
     color: var(--bn-colour-muted);
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
 }
 
 .footer-logotype {
@@ -24,4 +27,41 @@
 
 .footer-version:hover {
     text-decoration: underline;
+}
+
+/* Keyboard shortcut hint — subtle, right-aligned */
+.footer-keyboard-hint {
+    color: var(--bn-colour-muted);
+    text-decoration: none;
+    opacity: 0.6;
+    transition: opacity var(--bn-transition-fast);
+}
+
+.footer-keyboard-hint:visited {
+    color: var(--bn-colour-muted);
+}
+
+.footer-keyboard-hint:hover {
+    opacity: 1;
+}
+
+.footer-keyboard-hint kbd {
+    display: inline-block;
+    padding: 0.1em 0.35em;
+    font-family: var(--bn-font-mono);
+    font-size: 0.85em;
+    line-height: 1;
+    color: var(--bn-colour-muted);
+    background: var(--bn-colour-badge-bg);
+    border: 1px solid var(--bn-colour-border);
+    border-radius: var(--bn-radius-sm);
+    box-shadow: 0 1px 0 var(--bn-colour-border);
+    margin-right: 0.25em;
+}
+
+/* Hide keyboard hint on touch devices */
+@media (pointer: coarse) {
+    .footer-keyboard-hint {
+        display: none;
+    }
 }

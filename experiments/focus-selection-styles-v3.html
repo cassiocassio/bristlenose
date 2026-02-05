@@ -1,0 +1,689 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Focus &amp; Selection v3 — All State Combinations</title>
+  <style>
+    /* ========================================================================
+       BASE TOKENS (matching existing tokens.css)
+       ======================================================================== */
+    :root {
+      --bn-font-body: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
+      --bn-colour-text: #1a1a1a;
+      --bn-colour-muted: #6b7280;
+      --bn-colour-border: #e5e7eb;
+      --bn-colour-accent: #2563eb;
+      --bn-colour-quote-bg: #f9fafb;
+      --bn-transition-fast: 0.15s ease;
+      --bn-radius-md: 6px;
+
+      /* Existing star/favourite colours */
+      --bn-colour-icon-idle: #c9ccd1;
+      --bn-colour-favourited: #999;
+
+      /* ================================================================
+         FINAL DECISIONS:
+         - Page: white
+         - Starred: existing style (1px grey bar, font-weight 600, grey star)
+         - Focus: F5 stronger shadow
+         - Selection: S2 lighter blue (#f5f9ff) + 1px blue left bar
+         ================================================================ */
+
+      /* Focus (F5: stronger shadow) */
+      --bn-focus-shadow: 0 3px 12px rgba(0,0,0,0.12), 0 0 0 1px rgba(0,0,0,0.05);
+
+      /* Selection */
+      --bn-selection-bg: #f5f9ff;
+    }
+
+    /* ========================================================================
+       PAGE LAYOUT
+       ======================================================================== */
+    * { box-sizing: border-box; }
+
+    body {
+      font-family: var(--bn-font-body);
+      color: var(--bn-colour-text);
+      margin: 0;
+      padding: 2rem;
+      line-height: 1.5;
+      background: #ffffff;
+    }
+
+    h1 {
+      font-size: 1.5rem;
+      font-weight: 600;
+      margin: 0 0 0.5rem 0;
+    }
+
+    .subtitle {
+      color: var(--bn-colour-muted);
+      margin: 0 0 2rem 0;
+    }
+
+    section {
+      margin-bottom: 3rem;
+    }
+
+    section > h2 {
+      font-size: 1.1rem;
+      font-weight: 600;
+      margin: 0 0 0.5rem 0;
+      padding-bottom: 0.5rem;
+      border-bottom: 1px solid var(--bn-colour-border);
+    }
+
+    section > p {
+      color: var(--bn-colour-muted);
+      font-size: 0.875rem;
+      margin: 0 0 1.5rem 0;
+    }
+
+    /* ========================================================================
+       QUOTE CARD — matching existing blockquote.css
+       ======================================================================== */
+    .quote-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+      max-width: 720px;
+    }
+
+    .quote {
+      background: var(--bn-colour-quote-bg);
+      padding: 0.75rem 1rem;
+      position: relative;
+      transition: all var(--bn-transition-fast);
+      /* Existing: 1px border, right side has radius */
+      border-left: 1px solid var(--bn-colour-border);
+      border-radius: 0 var(--bn-radius-md) var(--bn-radius-md) 0;
+      padding-right: 2.5rem;  /* space for star */
+    }
+
+    .quote-row {
+      display: flex;
+      gap: 0.5rem;
+      align-items: baseline;
+    }
+
+    .timecode {
+      color: var(--bn-colour-accent);
+      font-size: 0.8rem;
+      flex-shrink: 0;
+      font-family: monospace;
+    }
+
+    .timecode-bracket {
+      color: var(--bn-colour-muted);
+    }
+
+    .quote-body {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .quote-text {
+      font-size: 0.9rem;
+      margin: 0;
+    }
+
+    .quote-meta {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-top: 0.4rem;
+      font-size: 0.9rem;
+    }
+
+    .speaker {
+      color: var(--bn-colour-muted);
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 0.12rem 0.45rem;
+      font-size: 0.7rem;
+      background: #f3f4f6;
+      color: #374151;
+    }
+
+    /* ========================================================================
+       STAR BUTTON — matching existing button.css
+       ======================================================================== */
+    .star {
+      position: absolute;
+      top: 0.65rem;
+      right: 0.65rem;
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 0.15rem;
+      font-size: 0.8rem;
+      line-height: 1;
+      color: var(--bn-colour-icon-idle);
+      transition: color var(--bn-transition-fast);
+    }
+
+    .star:hover {
+      color: var(--bn-colour-accent);  /* blue on hover */
+    }
+
+    /* ========================================================================
+       STARRED STATE — matching existing quote-actions.css
+       Starred uses grey (#999) not orange, with font-weight 600
+       ======================================================================== */
+    .quote.starred {
+      font-weight: 600;
+      border-left-color: var(--bn-colour-favourited);  /* grey */
+    }
+
+    .quote.starred .star {
+      color: var(--bn-colour-favourited);  /* grey filled star */
+    }
+
+    /* Reset font-weight on metadata */
+    .quote.starred .timecode,
+    .quote.starred .speaker,
+    .quote.starred .badge {
+      font-weight: 400;
+    }
+
+    /* ========================================================================
+       FOCUSED STATE — F5: stronger shadow + white bg
+       ======================================================================== */
+    .quote.focused {
+      background: #ffffff;
+      box-shadow: var(--bn-focus-shadow);
+      z-index: 1;
+      position: relative;
+    }
+
+    /* ========================================================================
+       SELECTED STATE — S2: light blue bg + 1px blue left bar
+       ======================================================================== */
+    .quote.selected {
+      background: var(--bn-selection-bg);
+      border-left: 1px solid var(--bn-colour-accent);  /* thin blue bar */
+    }
+
+    /* ========================================================================
+       COMBINED STATES
+       Priority for border-left: starred > selected > default
+       ======================================================================== */
+
+    /* Focused + Starred */
+    .quote.focused.starred {
+      background: #ffffff;
+      box-shadow: var(--bn-focus-shadow);
+      border-left-color: var(--bn-colour-favourited);  /* grey wins */
+    }
+
+    /* Focused + Selected (not starred) */
+    .quote.focused.selected:not(.starred) {
+      background: var(--bn-selection-bg);
+      box-shadow: var(--bn-focus-shadow);
+      border-left-color: var(--bn-colour-accent);  /* blue */
+    }
+
+    /* Selected + Starred (not focused) — starred grey bar wins, blue bg */
+    .quote.selected.starred:not(.focused) {
+      background: var(--bn-selection-bg);
+      border-left-color: var(--bn-colour-favourited);  /* grey wins */
+    }
+
+    /* Focused + Selected + Starred — grey bar, blue bg, shadow */
+    .quote.focused.selected.starred {
+      background: var(--bn-selection-bg);
+      box-shadow: var(--bn-focus-shadow);
+      border-left-color: var(--bn-colour-favourited);  /* grey wins */
+    }
+
+    /* ========================================================================
+       STATE LABELS
+       ======================================================================== */
+    .state-label {
+      font-size: 0.7rem;
+      font-weight: 500;
+      letter-spacing: 0.02em;
+      color: var(--bn-colour-muted);
+      margin: 1.5rem 0 0.4rem 0;
+      padding-top: 1rem;
+      border-top: 1px dashed var(--bn-colour-border);
+    }
+
+    .state-label:first-child {
+      margin-top: 0;
+      padding-top: 0;
+      border-top: none;
+    }
+
+    .state-label code {
+      font-family: var(--bn-font-body);
+      background: #f3f4f6;
+      padding: 0.15rem 0.4rem;
+      font-size: 0.65rem;
+      margin-left: 0.5rem;
+    }
+
+    /* ========================================================================
+       LEGEND
+       ======================================================================== */
+    .legend {
+      display: flex;
+      gap: 2rem;
+      flex-wrap: wrap;
+      margin-bottom: 2rem;
+      padding: 1rem;
+      background: #f9fafb;
+      border: 1px solid var(--bn-colour-border);
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 0.8rem;
+    }
+
+    .legend-swatch {
+      width: 40px;
+      height: 24px;
+      background: var(--bn-colour-quote-bg);
+      border: 1px solid var(--bn-colour-border);
+      border-radius: 0 3px 3px 0;
+    }
+
+    .legend-swatch.starred {
+      border-left: 1px solid var(--bn-colour-favourited);
+      font-weight: 600;
+    }
+
+    .legend-swatch.selected {
+      border-left: 1px solid var(--bn-colour-accent);
+      background: var(--bn-selection-bg);
+    }
+
+    .legend-swatch.focused {
+      background: #ffffff;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+    }
+
+    /* ========================================================================
+       TOKEN SUMMARY
+       ======================================================================== */
+    .token-summary {
+      background: #f9fafb;
+      border: 1px solid var(--bn-colour-border);
+      padding: 1rem 1.25rem;
+      font-size: 0.75rem;
+      font-family: "SF Mono", "Fira Code", monospace;
+      margin-top: 2rem;
+      overflow-x: auto;
+    }
+
+    .token-summary h3 {
+      font-family: var(--bn-font-body);
+      font-size: 0.85rem;
+      margin: 0 0 0.75rem 0;
+    }
+
+    .token-summary pre {
+      margin: 0;
+      white-space: pre-wrap;
+    }
+  </style>
+</head>
+<body>
+
+<h1>Focus &amp; Selection v3 — All State Combinations</h1>
+<p class="subtitle">
+  Starred: existing (grey 1px bar, font-weight 600) · Focus: shadow lift · Selection: #f5f9ff + blue 1px bar
+</p>
+
+<!-- Legend -->
+<div class="legend">
+  <div class="legend-item">
+    <div class="legend-swatch starred"></div>
+    <span>Starred (grey 1px bar, bold text)</span>
+  </div>
+  <div class="legend-item">
+    <div class="legend-swatch selected"></div>
+    <span>Selected (blue 1px bar + #f5f9ff bg)</span>
+  </div>
+  <div class="legend-item">
+    <div class="legend-swatch focused"></div>
+    <span>Focused (white + shadow lift)</span>
+  </div>
+</div>
+
+<!-- ===================================================================== -->
+<section>
+  <h2>Single States</h2>
+  <p>Each state in isolation.</p>
+
+  <div class="quote-list">
+
+    <p class="state-label">Normal <code>no classes</code></p>
+    <div class="quote">
+      <div class="quote-row">
+        <span class="timecode"><span class="timecode-bracket">[</span>02:34<span class="timecode-bracket">]</span></span>
+        <div class="quote-body">
+          <p class="quote-text">"I found the onboarding process really confusing at first."</p>
+          <div class="quote-meta">
+            <span class="speaker">— p1</span>
+            <span class="badge">confusion</span>
+          </div>
+        </div>
+      </div>
+      <button class="star">☆</button>
+    </div>
+
+    <p class="state-label">Starred only <code>.starred</code></p>
+    <div class="quote starred">
+      <div class="quote-row">
+        <span class="timecode"><span class="timecode-bracket">[</span>05:12<span class="timecode-bracket">]</span></span>
+        <div class="quote-body">
+          <p class="quote-text">"Once I figured it out, it was actually pretty intuitive."</p>
+          <div class="quote-meta">
+            <span class="speaker">— p1</span>
+            <span class="badge">satisfaction</span>
+          </div>
+        </div>
+      </div>
+      <button class="star">★</button>
+    </div>
+
+    <p class="state-label">Focused only <code>.focused</code></p>
+    <div class="quote focused">
+      <div class="quote-row">
+        <span class="timecode"><span class="timecode-bracket">[</span>08:45<span class="timecode-bracket">]</span></span>
+        <div class="quote-body">
+          <p class="quote-text">"I'd definitely recommend this to my team."</p>
+          <div class="quote-meta">
+            <span class="speaker">— p1</span>
+            <span class="badge">confidence</span>
+          </div>
+        </div>
+      </div>
+      <button class="star">☆</button>
+    </div>
+
+    <p class="state-label">Selected only <code>.selected</code></p>
+    <div class="quote selected">
+      <div class="quote-row">
+        <span class="timecode"><span class="timecode-bracket">[</span>12:03<span class="timecode-bracket">]</span></span>
+        <div class="quote-body">
+          <p class="quote-text">"The pricing page was a bit confusing though."</p>
+          <div class="quote-meta">
+            <span class="speaker">— p1</span>
+            <span class="badge">doubt</span>
+          </div>
+        </div>
+      </div>
+      <button class="star">☆</button>
+    </div>
+
+  </div>
+</section>
+
+<!-- ===================================================================== -->
+<section>
+  <h2>Two-State Combinations</h2>
+  <p>Pairs of states combined.</p>
+
+  <div class="quote-list">
+
+    <p class="state-label">Starred + Focused <code>.starred.focused</code></p>
+    <div class="quote starred focused">
+      <div class="quote-row">
+        <span class="timecode"><span class="timecode-bracket">[</span>02:34<span class="timecode-bracket">]</span></span>
+        <div class="quote-body">
+          <p class="quote-text">"This is a starred quote that currently has keyboard focus."</p>
+          <div class="quote-meta">
+            <span class="speaker">— p1</span>
+            <span class="badge">satisfaction</span>
+          </div>
+        </div>
+      </div>
+      <button class="star">★</button>
+    </div>
+
+    <p class="state-label">Starred + Selected <code>.starred.selected</code></p>
+    <div class="quote starred selected">
+      <div class="quote-row">
+        <span class="timecode"><span class="timecode-bracket">[</span>05:12<span class="timecode-bracket">]</span></span>
+        <div class="quote-body">
+          <p class="quote-text">"This is a starred quote that's also in the selection set."</p>
+          <div class="quote-meta">
+            <span class="speaker">— p1</span>
+            <span class="badge">confidence</span>
+          </div>
+        </div>
+      </div>
+      <button class="star">★</button>
+    </div>
+
+    <p class="state-label">Focused + Selected <code>.focused.selected</code></p>
+    <div class="quote focused selected">
+      <div class="quote-row">
+        <span class="timecode"><span class="timecode-bracket">[</span>08:45<span class="timecode-bracket">]</span></span>
+        <div class="quote-body">
+          <p class="quote-text">"This has focus AND is selected, but not starred."</p>
+          <div class="quote-meta">
+            <span class="speaker">— p1</span>
+            <span class="badge">delight</span>
+          </div>
+        </div>
+      </div>
+      <button class="star">☆</button>
+    </div>
+
+  </div>
+</section>
+
+<!-- ===================================================================== -->
+<section>
+  <h2>All Three States</h2>
+  <p>The full combination.</p>
+
+  <div class="quote-list">
+
+    <p class="state-label">Starred + Focused + Selected <code>.starred.focused.selected</code></p>
+    <div class="quote starred focused selected">
+      <div class="quote-row">
+        <span class="timecode"><span class="timecode-bracket">[</span>02:34<span class="timecode-bracket">]</span></span>
+        <div class="quote-body">
+          <p class="quote-text">"This quote has all three states: starred, focused, and selected."</p>
+          <div class="quote-meta">
+            <span class="speaker">— p1</span>
+            <span class="badge">delight</span>
+          </div>
+        </div>
+      </div>
+      <button class="star">★</button>
+    </div>
+
+  </div>
+</section>
+
+<!-- ===================================================================== -->
+<section>
+  <h2>Realistic List Context</h2>
+  <p>How the states look in a real quote list with mixed states.</p>
+
+  <div class="quote-list">
+
+    <div class="quote starred">
+      <div class="quote-row">
+        <span class="timecode"><span class="timecode-bracket">[</span>02:34<span class="timecode-bracket">]</span></span>
+        <div class="quote-body">
+          <p class="quote-text">"I found the onboarding really confusing at first. The buttons weren't where I expected them to be."</p>
+          <div class="quote-meta">
+            <span class="speaker">— p1</span>
+            <span class="badge">confusion</span>
+          </div>
+        </div>
+      </div>
+      <button class="star">★</button>
+    </div>
+
+    <div class="quote selected">
+      <div class="quote-row">
+        <span class="timecode"><span class="timecode-bracket">[</span>05:12<span class="timecode-bracket">]</span></span>
+        <div class="quote-body">
+          <p class="quote-text">"Once I figured it out though, it was actually pretty intuitive. I like how everything flows together."</p>
+          <div class="quote-meta">
+            <span class="speaker">— p1</span>
+            <span class="badge">satisfaction</span>
+          </div>
+        </div>
+      </div>
+      <button class="star">☆</button>
+    </div>
+
+    <div class="quote focused selected">
+      <div class="quote-row">
+        <span class="timecode"><span class="timecode-bracket">[</span>08:45<span class="timecode-bracket">]</span></span>
+        <div class="quote-body">
+          <p class="quote-text">"I'd definitely recommend this to my team. We've been looking for something like this for a while now."</p>
+          <div class="quote-meta">
+            <span class="speaker">— p1</span>
+            <span class="badge">confidence</span>
+          </div>
+        </div>
+      </div>
+      <button class="star">☆</button>
+    </div>
+
+    <div class="quote starred selected">
+      <div class="quote-row">
+        <span class="timecode"><span class="timecode-bracket">[</span>12:03<span class="timecode-bracket">]</span></span>
+        <div class="quote-body">
+          <p class="quote-text">"The pricing page was a bit confusing though. I wasn't sure which tier we actually needed."</p>
+          <div class="quote-meta">
+            <span class="speaker">— p1</span>
+            <span class="badge">doubt</span>
+          </div>
+        </div>
+      </div>
+      <button class="star">★</button>
+    </div>
+
+    <div class="quote">
+      <div class="quote-row">
+        <span class="timecode"><span class="timecode-bracket">[</span>15:28<span class="timecode-bracket">]</span></span>
+        <div class="quote-body">
+          <p class="quote-text">"Yeah the documentation could use some work. I had to figure a lot of things out on my own."</p>
+          <div class="quote-meta">
+            <span class="speaker">— p1</span>
+            <span class="badge">frustration</span>
+          </div>
+        </div>
+      </div>
+      <button class="star">☆</button>
+    </div>
+
+    <div class="quote starred">
+      <div class="quote-row">
+        <span class="timecode"><span class="timecode-bracket">[</span>18:52<span class="timecode-bracket">]</span></span>
+        <div class="quote-body">
+          <p class="quote-text">"But overall I'm really happy with it. It's saved us a ton of time already."</p>
+          <div class="quote-meta">
+            <span class="speaker">— p1</span>
+            <span class="badge">delight</span>
+          </div>
+        </div>
+      </div>
+      <button class="star">★</button>
+    </div>
+
+  </div>
+</section>
+
+<!-- ===================================================================== -->
+<section>
+  <h2>Multi-Select Scenario</h2>
+  <p>Simulating a user selecting multiple quotes for bulk action.</p>
+
+  <div class="quote-list">
+
+    <div class="quote selected">
+      <div class="quote-row">
+        <span class="timecode"><span class="timecode-bracket">[</span>02:34<span class="timecode-bracket">]</span></span>
+        <div class="quote-body">
+          <p class="quote-text">"First selected quote in the set."</p>
+          <div class="quote-meta"><span class="speaker">— p1</span></div>
+        </div>
+      </div>
+      <button class="star">☆</button>
+    </div>
+
+    <div class="quote selected starred">
+      <div class="quote-row">
+        <span class="timecode"><span class="timecode-bracket">[</span>05:12<span class="timecode-bracket">]</span></span>
+        <div class="quote-body">
+          <p class="quote-text">"Second selected quote — this one is also starred."</p>
+          <div class="quote-meta"><span class="speaker">— p1</span></div>
+        </div>
+      </div>
+      <button class="star">★</button>
+    </div>
+
+    <div class="quote">
+      <div class="quote-row">
+        <span class="timecode"><span class="timecode-bracket">[</span>08:45<span class="timecode-bracket">]</span></span>
+        <div class="quote-body">
+          <p class="quote-text">"Not selected, not starred, just a normal quote in between."</p>
+          <div class="quote-meta"><span class="speaker">— p1</span></div>
+        </div>
+      </div>
+      <button class="star">☆</button>
+    </div>
+
+    <div class="quote focused selected">
+      <div class="quote-row">
+        <span class="timecode"><span class="timecode-bracket">[</span>12:03<span class="timecode-bracket">]</span></span>
+        <div class="quote-body">
+          <p class="quote-text">"Third selected quote — keyboard cursor is here."</p>
+          <div class="quote-meta"><span class="speaker">— p1</span></div>
+        </div>
+      </div>
+      <button class="star">☆</button>
+    </div>
+
+    <div class="quote selected">
+      <div class="quote-row">
+        <span class="timecode"><span class="timecode-bracket">[</span>15:28<span class="timecode-bracket">]</span></span>
+        <div class="quote-body">
+          <p class="quote-text">"Fourth selected quote in the set."</p>
+          <div class="quote-meta"><span class="speaker">— p1</span></div>
+        </div>
+      </div>
+      <button class="star">☆</button>
+    </div>
+
+  </div>
+</section>
+
+<!-- ===================================================================== -->
+<div class="token-summary">
+  <h3>New Tokens for tokens.css</h3>
+  <pre>
+/* Focus state (shadow lift) */
+--bn-focus-shadow: 0 3px 12px rgba(0,0,0,0.12), 0 0 0 1px rgba(0,0,0,0.05);
+
+/* Selection state (light blue + blue bar) */
+--bn-selection-bg: light-dark(#f5f9ff, #1a2332);
+/* Selection uses 1px solid var(--bn-colour-accent) for left border */
+
+/* Starred: no changes needed — already uses:
+   --bn-colour-favourited: #999
+   border-left: 1px solid
+   font-weight: 600
+*/
+  </pre>
+</div>
+
+</body>
+</html>

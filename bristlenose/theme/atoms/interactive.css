@@ -1,0 +1,64 @@
+/* Atom: interactive — focus and selection states for keyboard navigation.
+
+   Focus: the keyboard cursor (0 or 1 item). Shadow lift on white background.
+   Selection: operand set for bulk actions (0 to N items). Light blue tint + blue bar.
+
+   These classes are generic — apply to blockquotes, table rows, list items, etc.
+   For blockquote-specific styling, see molecules/quote-actions.css.
+
+   State priority for left border: starred > selected > default
+   See docs/design-keyboard-navigation.md for full state combination matrix.
+*/
+
+/* ---------------------------------------------------------------------
+   Focused state — keyboard cursor, shadow lift
+   --------------------------------------------------------------------- */
+
+.bn-focused {
+    background: var(--bn-colour-bg);
+    box-shadow: var(--bn-focus-shadow);
+    z-index: 1;
+    position: relative;
+}
+
+/* ---------------------------------------------------------------------
+   Selected state — multi-select for bulk actions
+   --------------------------------------------------------------------- */
+
+.bn-selected {
+    background: var(--bn-selection-bg);
+    border-left-color: var(--bn-colour-accent);
+}
+
+/* ---------------------------------------------------------------------
+   Combined: focused + selected
+   Selection background wins, shadow adds lift
+   --------------------------------------------------------------------- */
+
+.bn-focused.bn-selected {
+    background: var(--bn-selection-bg);
+    box-shadow: var(--bn-focus-shadow);
+}
+
+/* ---------------------------------------------------------------------
+   Preference: disable animations
+   Applied via preferences.js when animations_enabled = false
+   --------------------------------------------------------------------- */
+
+.bn-no-animations *,
+.bn-no-animations *::before,
+.bn-no-animations *::after {
+    animation-duration: 0s !important;
+    animation-delay: 0s !important;
+    transition-duration: 0s !important;
+    transition-delay: 0s !important;
+}
+
+/* ---------------------------------------------------------------------
+   Preference: hide AI-generated tags
+   Applied via preferences.js when ai_tags_visible = false
+   --------------------------------------------------------------------- */
+
+.bn-hide-ai-tags [data-badge-type="ai"] {
+    display: none !important;
+}

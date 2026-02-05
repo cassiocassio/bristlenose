@@ -273,9 +273,9 @@ function _restoreViewMode() {
   var sections = document.querySelectorAll('article > section');
   var hrs = document.querySelectorAll('article > hr');
 
-  if (currentViewMode === 'favourites') {
+  if (currentViewMode === 'starred') {
     for (var i = 0; i < bqs.length; i++) {
-      bqs[i].style.display = bqs[i].classList.contains('favourited') ? '' : 'none';
+      bqs[i].style.display = bqs[i].classList.contains('starred') ? '' : 'none';
     }
   } else {
     for (var i = 0; i < bqs.length; i++) {

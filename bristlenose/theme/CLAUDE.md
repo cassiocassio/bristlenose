@@ -43,7 +43,7 @@ When navigating to a transcript page via anchor link (e.g., from coverage sectio
 
 ## JS modules
 
-11 standalone files in `js/` concatenated at render time (same pattern as CSS): storage, player, favourites, editing, tags, histogram, csv-export, view-switcher, search, names, main. Transcript pages use `storage.js` + `player.js` + `transcript-names.js` (no favourites/editing/tags/search/names/view-switcher). `transcript-names.js` only updates heading speaker names (preserving code prefix: `"m1 Sarah Chen"`); segment speaker labels stay as raw codes (`p1:`, `m1:`) and are not overridden by JS.
+12 standalone files in `js/` concatenated at render time (same pattern as CSS): storage, player, starred, editing, tags, histogram, csv-export, preferences, view-switcher, search, names, focus, main. Transcript pages use `storage.js` + `player.js` + `transcript-names.js` (no starred/editing/tags/search/names/view-switcher/focus). `transcript-names.js` only updates heading speaker names (preserving code prefix: `"m1 Sarah Chen"`); segment speaker labels stay as raw codes (`p1:`, `m1:`) and are not overridden by JS.
 
 ### names.js
 
@@ -60,12 +60,12 @@ Inline name editing for the participant table. Follows the same `contenteditable
 
 ### view-switcher.js
 
-Dropdown menu to switch between report views. Three modes: `all` (default), `favourites`, `participants`.
+Dropdown menu to switch between report views. Three modes: `all` (default), `starred`, `participants`.
 
 - **`initViewSwitcher()`** — wires up button toggle, menu item selection, outside-click-to-close
 - **`_applyView(view, btn, menu, items)`** — sets `currentViewMode` global (defined in `csv-export.js`), updates button label text, toggles active menu item, swaps export button visibility, toggles `<section>` visibility
-- **Section visibility**: `all` shows everything, `favourites` shows all sections but hides non-starred blockquotes, `participants` shows only the section whose `<h2>` contains "Participants"
-- **Export button swap**: `#export-csv` (Copy CSV) visible in `all`/`favourites` views; `#export-names` (Export names) visible in `participants` view
+- **Section visibility**: `all` shows everything, `starred` shows all sections but hides non-starred blockquotes, `participants` shows only the section whose `<h2>` contains "Participants"
+- **Export button swap**: `#export-csv` (Copy CSV) visible in `all`/`starred` views; `#export-names` (Export names) visible in `participants` view
 - **Search notification**: `_applyView()` calls `_onViewModeChange()` (defined in `search.js`) after applying the view — guarded with `typeof` check so transcript pages (which don't load search.js) don't error
 - **Dependencies**: must load after `csv-export.js` (writes `currentViewMode`); before `search.js` and `main.js`
 - **CSS**: `organisms/toolbar.css` — `.view-switcher`, `.view-switcher-btn`, `.view-switcher-arrow` (SVG chevron), `.view-switcher-menu` (dropdown positioned absolute right), `.menu-icon` (invisible spacer for alignment)
@@ -80,7 +80,7 @@ Search-as-you-type filtering for report quotes. Collapsed magnifying glass icon 
 - **`_clearHighlights()`** — removes all `<mark class="search-mark">` elements, unwrapping text. Called at start of every `_applySearchFilter()`
 - **`_setNonQuoteVisibility(display)`** — hides/shows `.toc-row` and Participants section during active search
 - **`_overrideViewLabel(label)` / `_restoreViewLabel()`** — temporarily sets the view-switcher button text to the match count ("7 matching quotes") during active search. Saves/restores original label via `_savedViewLabel` module variable
-- **`_restoreViewMode()`** — when query is cleared or < 3 chars, restores the view-switcher's visibility state (respects favourites mode), restores ToC/Participants, restores view-switcher label
+- **`_restoreViewMode()`** — when query is cleared or < 3 chars, restores the view-switcher's visibility state (respects starred mode), restores ToC/Participants, restores view-switcher label
 - **`_hideEmptySections()`** — hides `<section>` elements (and preceding `<hr>`) when all child blockquotes are hidden. Only targets sections with `.quote-group` (skips Participants, Sentiment, Friction, Journeys)
 - **`_hideEmptySubsections()`** — hides individual h3+description+quote-group clusters within a section when all their quotes are hidden
 - **`_onViewModeChange()`** — called by `view-switcher.js` after view mode changes. Hides search in participants mode (no quotes to search), re-applies filter or restores view mode otherwise

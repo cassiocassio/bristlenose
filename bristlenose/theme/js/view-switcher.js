@@ -3,7 +3,7 @@
  *
  * Three views:
  * - "all"          — show all content sections (default)
- * - "favourites"   — show only favourited quotes
+ * - "starred"      — show only starred quotes
  * - "participants" — show only the participant table
  *
  * The active view is reflected in the `currentViewMode` global (defined in
@@ -48,7 +48,7 @@ function initViewSwitcher() {
  * Apply a view mode: update the active menu item, button label, and
  * toggle visibility of report sections.
  *
- * @param {string} view        One of "all", "favourites", "participants".
+ * @param {string} view        One of "all", "starred", "participants".
  * @param {Element} btn        The dropdown trigger button.
  * @param {Element} menu       The dropdown menu element.
  * @param {NodeList} items     All menu item elements.
@@ -67,7 +67,7 @@ function _applyView(view, btn, menu, items) {
 
   // Update button label (text only, keep the arrow).
   var label = 'All quotes';
-  if (view === 'favourites') label = 'Favourite quotes';
+  if (view === 'starred') label = 'Starred quotes';
   if (view === 'participants') label = 'Participant data';
   btn.firstChild.textContent = label + ' ';
 
@@ -88,9 +88,9 @@ function _applyView(view, btn, menu, items) {
   if (view === 'all') {
     _showAll(sections, hrs);
     _showAllQuotes();
-  } else if (view === 'favourites') {
+  } else if (view === 'starred') {
     _showAll(sections, hrs);
-    _showFavouritesOnly();
+    _showStarredOnly();
   } else if (view === 'participants') {
     _showParticipantsOnly(sections, hrs);
   }
@@ -111,11 +111,11 @@ function _showAllQuotes() {
   for (var i = 0; i < bqs.length; i++) bqs[i].style.display = '';
 }
 
-/** Show all blockquotes but hide those that are not favourited. */
-function _showFavouritesOnly() {
+/** Show all blockquotes but hide those that are not starred. */
+function _showStarredOnly() {
   var bqs = document.querySelectorAll('.quote-group blockquote');
   for (var i = 0; i < bqs.length; i++) {
-    bqs[i].style.display = bqs[i].classList.contains('favourited') ? '' : 'none';
+    bqs[i].style.display = bqs[i].classList.contains('starred') ? '' : 'none';
   }
 }
 

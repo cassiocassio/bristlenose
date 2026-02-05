@@ -9,7 +9,7 @@
     table { break-inside: avoid; }
     a.timecode { color: var(--bn-colour-muted); text-decoration: none; cursor: default; }
     .toolbar { display: none; }
-    .fav-star { display: none; }
+    .star-btn { display: none; }
     .edit-pencil { display: none; }
     .badge-add { display: none; }
     .badge-restore { display: none; }

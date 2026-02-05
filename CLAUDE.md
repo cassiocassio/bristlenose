@@ -330,6 +330,7 @@ Collapsible section at the end of the research report showing what proportion of
 
 ## Reference docs (read when working in these areas)
 
+- **Export and sharing**: `docs/design-export-sharing.md`
 - **HTML report / people file / transcript pages**: `docs/design-html-report.md`
 - **Theme / dark mode / CSS**: `bristlenose/theme/CLAUDE.md`
 - **Pipeline stages / transcript format / output structure**: `bristlenose/stages/CLAUDE.md`
@@ -369,6 +370,44 @@ Releases should land on GitHub after 9pm London time on weekdays to avoid pushin
 **CI parity matters.** The release workflow failed for 7 versions (v0.6.7–v0.6.13) because local checks didn't match CI:
 - Local ran `ruff check bristlenose/`, CI runs `ruff check .` — test file lint errors went unnoticed
 - Tests that depend on environment (API keys, installed tools) must mock those dependencies — CI has no keys configured
+
+## Branch switching
+
+When the user says "let's switch to branch X" or similar, **automatically run this checklist before switching**:
+
+### Pre-switch checks (on current branch)
+
+1. **Check for uncommitted changes** — `git status`
+   - If changes exist, commit them with a descriptive message (ask user for message if unclear)
+   - Never leave uncommitted work when switching branches
+2. **Run tests** — `.venv/bin/python -m pytest tests/`
+   - If tests fail, warn the user before proceeding
+3. **Run linter** — `.venv/bin/ruff check .`
+   - If lint errors, fix them or warn before proceeding
+
+### Switch
+
+4. **Execute the switch** — `git checkout <branch-name>`
+   - If branch doesn't exist locally but exists on remote: `git checkout -b <branch-name> origin/<branch-name>`
+   - If branch doesn't exist anywhere, ask user if they want to create it
+
+### Post-switch cleanup
+
+5. **Clear Python cache** — `find . -name __pycache__ -exec rm -rf {} +`
+   - Editable installs cache imports; stale `.pyc` files cause mysterious bugs
+6. **Reinstall package** — `.venv/bin/pip install -e .`
+   - Shebang paths and import paths may reference old locations
+7. **Report status** — `git status` + `git log --oneline -3`
+   - Show user what branch they're on and recent commits
+
+### Why this matters
+
+Python editable installs (`pip install -e .`) write absolute paths into `.pth` files. Switching branches can leave stale bytecode that serves old code, causing:
+- `ImportError` for modules that don't exist on the new branch
+- Functions behaving like the old branch's version
+- Mysterious test failures
+
+The PreferencesFile incident (keyboard-navigation branch, Feb 2026) was caused by exactly this — stale imports from a feature that was stashed on another branch.
 
 ## Session-end housekeeping
 

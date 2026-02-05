@@ -1,6 +1,6 @@
-/* Atom: button — fav-star, edit-pencil, badge-restore, toolbar-btn */
+/* Atom: button — star-btn, edit-pencil, badge-restore, toolbar-btn */
 
-.fav-star {
+.star-btn {
     position: absolute;
     top: 0.65rem;
     right: 0.65rem;
@@ -14,7 +14,7 @@
     transition: color var(--bn-transition-normal);
 }
 
-.fav-star:hover {
+.star-btn:hover {
     color: var(--bn-colour-accent);
 }
 

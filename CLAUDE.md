@@ -427,8 +427,8 @@ When the user signals end of session, **proactively offer to run this checklist*
 9. **Clean up branches** — delete merged feature branches
 10. **Verify CI** — check latest push passes CI
 
-## Current status (v0.6.15, Feb 2026)
+## Current status (v0.7.0, Feb 2026)
 
-Core pipeline complete and published to PyPI + Homebrew. Snap packaging implemented and tested locally (arm64); CI builds amd64 on every push. Latest: **Tag taxonomy redesign** — replaced 14 overlapping intent/emotion categories with 7 research-backed sentiments: frustration, confusion, doubt, surprise, satisfaction, delight, confidence. New `Sentiment` enum in `models.py`, `--bn-sentiment-*` CSS token layer for easy palette customisation, backward-compatible with old intermediate JSON. See `docs/academic-sources.html` for theoretical foundations (Russell, Fogg, etc.). Prior: Keychain credential storage, Ollama local LLM support, output inside input folder, transcript coverage, multi-participant sessions. See git log for full history.
+Core pipeline complete and published to PyPI + Homebrew. Snap packaging implemented and tested locally (arm64); CI builds amd64 on every push. Latest: **Multi-select and tag filter** — Finder-like click selection (click, Shift-click, Cmd-click) with bulk starring and tagging; tag-filter dropdown in toolbar filters quotes by user tags with per-tag counts, search-within-filter, and clearAll semantics. Prior: Tag taxonomy redesign (7 research-backed sentiments), keychain credential storage, Ollama local LLM support, output inside input folder, transcript coverage, multi-participant sessions. See git log for full history.
 
 **Next up:** Phase 2 Azure OpenAI for enterprise users, Phase 4 Gemini for budget users. Also: Phase 2 cross-session moderator linking; snap store publishing; tag definitions page in report UI. See `TODO.md` for full task list.

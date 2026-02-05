@@ -100,6 +100,13 @@ Left border priority: **Starred grey > Selected blue > Default grey**
 | `?` | Help overlay | Gmail, GitHub convention |
 | `Escape` | Close/clear/unfocus | Context-dependent |
 
+### Selection (multi-select)
+
+| Key | Action | Notes |
+|-----|--------|-------|
+| `x` | Toggle select | Add/remove focused quote from selection |
+| `Shift+j/k` | Extend selection | Moves focus and adds to selection |
+
 ### Rejected/Deferred
 
 | Key | Reason |
@@ -108,8 +115,6 @@ Left border priority: **Starred grey > Selected blue > Default grey**
 | `v` (view cycle) | Toolbar territory |
 | `c` (copy CSV) | Toolbar territory |
 | `Space` | Reserved for browser scroll |
-| `x` (toggle select) | Future: multi-select |
-| `Shift+j/k` | Future: extend selection |
 
 ## Focus State Model
 
@@ -152,22 +157,17 @@ Minimal modal listing shortcuts. Triggered by `?`. Closes on Escape or click out
 ```
 Keyboard Shortcuts
 
-Navigation
-  j / ↓    Next quote
-  k / ↑    Previous quote
+Navigation              Selection
+  j / ↓   Next quote      x           Toggle select
+  k / ↑   Previous        Shift+j/k   Extend
 
-Actions
-  s        Star quote
-  t        Add tag
-  Enter    Play in video
-
-Global
-  /        Search
-  ?        This help
-  Esc      Close / clear
+Actions                 Global
+  s       Star quote(s)   /           Search
+  t       Add tag(s)      ?           This help
+  Enter   Play in video   Esc         Close / clear
 ```
 
-Future: Expand to include feature explanations (tags, starring, CSV export).
+Four-column layout with Navigation, Selection, Actions, Global sections.
 
 ## Implementation Phases
 
@@ -202,19 +202,33 @@ Future: Expand to include feature explanations (tags, starring, CSV export).
 - `Enter` → open video player at timecode
 - `Space` rejected — reserved for browser scroll
 
-### Future: Multi-select
-- `selectedQuoteIds: Set<string>`
-- `.selected` CSS class (light blue bg + blue bar)
-- `x` → toggle selection
-- `Shift+j/k` → extend selection
-- Bulk actions TBD
+### Phase 6: Multi-select ✅ DONE
+- `selectedQuoteIds: Set<string>` in `focus.js`
+- `.bn-selected` CSS class (light blue bg + blue left bar)
+- Finder-like click behavior:
+  - Plain click = focus + single-select
+  - Cmd/Ctrl+click = toggle selection
+  - Shift+click = range selection from anchor
+  - Background click = clear selection
+- Keyboard selection:
+  - `x` → toggle selection on focused quote
+  - `Shift+j/k` → extend selection while navigating
+  - `Escape` → clear selection (after help/search)
+- Header shows "N quotes selected" when selection exists
+- Bulk actions:
+  - `s` → star/unstar all selected (if any unstarred → star all; if all starred → unstar all)
+  - `t` or click `+` → bulk tagging (applies tag to all selected quotes)
+  - CSV export respects selection (exports only selected quotes)
+- Auto-suggest in bulk mode filters by intersection (only hides tags ALL quotes have)
+
+**Known issue:** Dark mode selection highlight (`--bn-selection-bg: #1a2838`) is hard to see — needs a more visible variant.
 
 ## Outstanding Design Questions
 
 ### Still to confirm:
-1. **Dark mode colours** for selection bg — proposed `#1a2332` but needs testing
+1. **Dark mode selection visibility** — current `#1a2838` is hard to see; needs brighter variant
 2. **Help overlay styling** — simple modal vs more elaborate design
-3. **Dropdown keyboard highlights** — should use same selection colour (`#f5f9ff`)
+3. **Dropdown keyboard highlights** — should use same selection colour (`#eef4fc`)
 
 ### Future considerations:
 1. **Left-hand navigation** — will use page tint; keep page white for now

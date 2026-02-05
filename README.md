@@ -35,6 +35,7 @@ The report includes:
 - **Inline editing** -- fix transcription errors directly in the report
 - **Editable participant names** -- click the pencil icon to name participants in-browser; export edits as YAML
 - **Tags** -- AI-generated badges plus your own free-text tags with auto-suggest
+- **Keyboard shortcuts** -- j/k navigation, s to star, t to tag, / to search, ? for help; multi-select with Cmd+click or Shift+j/k for bulk actions
 
 All interactive state (favourites, edits, tags) persists in your browser's localStorage.
 
@@ -505,7 +506,6 @@ Edit `bristlenose/__init__.py` (the single source of truth for version), commit,
 ## Roadmap
 
 - Hide/show individual quotes
-- Keyboard shortcuts (j/k navigation, s to star, e to edit)
 - User-generated themes
 - Lost quotes -- surface what the AI didn't select
 - .docx export

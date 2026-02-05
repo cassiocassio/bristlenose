@@ -36,6 +36,11 @@
     color: var(--bn-colour-accent);
 }
 
+.view-switcher-label {
+    display: inline-block;
+    text-align: right;
+}
+
 .view-switcher-arrow {
     color: var(--bn-colour-muted);
     vertical-align: -0.05em;

@@ -23,6 +23,13 @@ function initViewSwitcher() {
   // Toggle menu open/closed.
   btn.addEventListener('click', function (e) {
     e.stopPropagation();
+    // Close tag-filter menu if open.
+    var tfMenu = document.getElementById('tag-filter-menu');
+    if (tfMenu) {
+      tfMenu.classList.remove('open');
+      var tfBtn = document.getElementById('tag-filter-btn');
+      if (tfBtn) tfBtn.setAttribute('aria-expanded', 'false');
+    }
     var open = menu.classList.toggle('open');
     btn.setAttribute('aria-expanded', String(open));
   });
@@ -97,6 +104,9 @@ function _applyView(view, btn, menu, items) {
 
   // Notify search module of view change.
   if (typeof _onViewModeChange === 'function') _onViewModeChange();
+
+  // Notify tag-filter module of view change.
+  if (typeof _onTagFilterViewChange === 'function') _onTagFilterViewChange();
 }
 
 /** Show all sections and horizontal rules. */
@@ -142,10 +152,14 @@ function _updateViewLabel(selectionCount) {
   if (selectionCount > 0) {
     btn.firstChild.textContent = selectionCount + ' quote' + (selectionCount !== 1 ? 's' : '') + ' selected ';
   } else {
-    // Restore based on current view mode
-    var label = 'All quotes';
-    if (currentViewMode === 'starred') label = 'Starred quotes';
-    if (currentViewMode === 'participants') label = 'Participant data';
-    btn.firstChild.textContent = label + ' ';
+    // Let tag filter update the label if it's active; otherwise restore view mode.
+    if (typeof _isTagFilterActive === 'function' && _isTagFilterActive()) {
+      if (typeof _updateVisibleQuoteCount === 'function') _updateVisibleQuoteCount();
+    } else {
+      var label = 'All quotes';
+      if (currentViewMode === 'starred') label = 'Starred quotes';
+      if (currentViewMode === 'participants') label = 'Participant data';
+      btn.firstChild.textContent = label + ' ';
+    }
   }
 }

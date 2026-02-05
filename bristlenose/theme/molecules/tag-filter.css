@@ -1,0 +1,160 @@
+/* Molecule: tag-filter — dropdown menu for filtering quotes by tag */
+
+.tag-filter {
+    position: relative;
+}
+
+.tag-filter-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    background: none;
+    border: none;
+    padding: 0.4rem 0.25rem;
+    font-family: var(--bn-font-body);
+    font-size: 0.82rem;
+    color: var(--bn-colour-text);
+    cursor: pointer;
+    transition: color var(--bn-transition-fast);
+}
+
+.tag-filter-btn:hover {
+    color: var(--bn-colour-accent);
+}
+
+.tag-filter-icon {
+    flex-shrink: 0;
+}
+
+.tag-filter-arrow {
+    color: var(--bn-colour-muted);
+    vertical-align: -0.05em;
+    flex-shrink: 0;
+}
+
+.tag-filter-label {
+    display: inline-block;
+    text-align: right;
+}
+
+.tag-filter-menu {
+    display: none;
+    position: absolute;
+    top: 100%;
+    right: 0;
+    margin: 0.25rem 0 0;
+    padding: 0.4rem 0;
+    background: var(--bn-colour-bg);
+    border: 1px solid var(--bn-colour-border);
+    border-radius: var(--bn-radius-md);
+    box-shadow: 0 4px 12px var(--bn-colour-shadow);
+    min-width: 14rem;
+    max-height: 32rem;
+    overflow-y: auto;
+    z-index: 200;
+}
+
+.tag-filter-menu.open {
+    display: block;
+}
+
+.tag-filter-actions {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+    padding: 0.25rem 0.85rem 0.4rem;
+    border-bottom: 1px solid var(--bn-colour-border);
+    margin-bottom: 0.25rem;
+}
+
+.tag-filter-action {
+    font-size: 0.78rem;
+    color: var(--bn-colour-accent);
+    text-decoration: none;
+    cursor: pointer;
+    background: none;
+    border: none;
+    padding: 0;
+    font-family: var(--bn-font-body);
+}
+
+.tag-filter-action:hover {
+    text-decoration: underline;
+}
+
+.tag-filter-separator {
+    color: var(--bn-colour-border);
+    font-size: 0.78rem;
+}
+
+.tag-filter-search {
+    padding: 0.3rem 0.85rem;
+    border-bottom: 1px solid var(--bn-colour-border);
+    margin-bottom: 0.25rem;
+}
+
+.tag-filter-search-input {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 0.3rem 0.5rem;
+    font-family: var(--bn-font-body);
+    font-size: 0.78rem;
+    color: var(--bn-colour-text);
+    background: var(--bn-colour-quote-bg);
+    border: 1px solid var(--bn-colour-border);
+    border-radius: var(--bn-radius-sm);
+    outline: none;
+}
+
+.tag-filter-search-input:focus {
+    border-color: var(--bn-colour-accent);
+}
+
+.tag-filter-search-input::placeholder {
+    color: var(--bn-colour-muted);
+}
+
+.tag-filter-divider {
+    height: 1px;
+    background: var(--bn-colour-border);
+    margin: 0.25rem 0.85rem;
+}
+
+.tag-filter-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.3rem 0.85rem;
+    font-size: 0.82rem;
+    color: var(--bn-colour-text);
+    cursor: pointer;
+    transition: background var(--bn-transition-fast);
+    white-space: nowrap;
+}
+
+.tag-filter-item-name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 16rem;
+}
+
+.tag-filter-item:hover {
+    background: var(--bn-colour-quote-bg);
+}
+
+.tag-filter-item input[type="checkbox"] {
+    margin: 0;
+    flex-shrink: 0;
+}
+
+.tag-filter-item-muted {
+    color: var(--bn-colour-muted);
+    font-style: italic;
+}
+
+.tag-filter-count {
+    margin-left: auto;
+    font-size: 0.72rem;
+    color: var(--bn-colour-muted);
+    font-variant-numeric: tabular-nums;
+}

@@ -51,6 +51,9 @@ function persistUserTags(tags) {
   tagsStore.set(tags);
   // Re-render the user-tags histogram if available (defined in histogram.js).
   if (typeof renderUserTagsChart === 'function') renderUserTagsChart();
+  // Re-apply tag filter to account for added/removed tags.
+  if (typeof _applyTagFilter === 'function') _applyTagFilter();
+  if (typeof _updateTagFilterButton === 'function') _updateTagFilterButton();
 }
 
 /**

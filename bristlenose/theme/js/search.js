@@ -304,6 +304,9 @@ function _restoreViewMode() {
       prev.style.display = '';
     }
   }
+
+  // Re-apply tag filter after restoring view mode.
+  if (typeof _applyTagFilter === 'function') _applyTagFilter();
 }
 
 /**

@@ -17,6 +17,7 @@
  *   csv-export.js   → initCsvExport(), copyToClipboard(), showToast()
  *   view-switcher.js → initViewSwitcher()    (depends on csv-export.js)
  *   search.js       → initSearchFilter()   (depends on csv-export.js)
+ *   tag-filter.js   → initTagFilter()      (depends on tags.js, search.js)
  *   names.js        → initNames()            (depends on csv-export.js)
  *   focus.js        → initFocus(), setFocus(), isEditing()
  *   main.js         → this file (orchestrator)
@@ -38,5 +39,6 @@ renderUserTagsChart();
 initCsvExport();
 initViewSwitcher();
 initSearchFilter();
+initTagFilter();
 initNames();
 initFocus();

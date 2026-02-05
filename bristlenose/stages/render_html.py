@@ -58,6 +58,7 @@ _THEME_FILES: list[str] = [
     "molecules/tag-input.css",
     "molecules/name-edit.css",
     "molecules/search.css",
+    "molecules/tag-filter.css",
     "molecules/help-overlay.css",
     "organisms/blockquote.css",
     "organisms/coverage.css",
@@ -113,6 +114,7 @@ _JS_FILES: list[str] = [
     "js/csv-export.js",
     "js/view-switcher.js",
     "js/search.js",
+    "js/tag-filter.js",
     "js/names.js",
     "js/focus.js",
     "js/main.js",
@@ -304,12 +306,33 @@ def render_html(
         "</div>"
         "</div>"
     )
+    # Tag filter dropdown
+    _w(
+        '<div class="tag-filter">'
+        '<button class="tag-filter-btn" id="tag-filter-btn"'
+        ' aria-haspopup="true" aria-expanded="false">'
+        '<svg class="tag-filter-icon" width="14" height="14" viewBox="0 0 16 16"'
+        ' fill="none" stroke="currentColor" stroke-width="1.5"'
+        ' stroke-linecap="round">'
+        '<line x1="1" y1="3" x2="15" y2="3"/>'
+        '<line x1="3" y1="8" x2="13" y2="8"/>'
+        '<line x1="5.5" y1="13" x2="10.5" y2="13"/>'
+        "</svg>"
+        ' <span class="tag-filter-label">Tags</span>'
+        '<svg class="tag-filter-arrow" width="10" height="10"'
+        ' viewBox="0 0 10 10" fill="none" stroke="currentColor"'
+        ' stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">'
+        '<path d="M2.5 3.75 5 6.25 7.5 3.75"/></svg>'
+        "</button>"
+        '<div class="tag-filter-menu" id="tag-filter-menu"></div>'
+        "</div>"
+    )
     # View switcher dropdown
     _w('<div class="view-switcher">')
     _w(
         '<button class="view-switcher-btn" id="view-switcher-btn"'
         ' aria-haspopup="true" aria-expanded="false">'
-        "All quotes "
+        '<span class="view-switcher-label">All quotes </span>'
         '<svg class="view-switcher-arrow" width="10" height="10"'
         ' viewBox="0 0 10 10" fill="none" stroke="currentColor"'
         ' stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">'

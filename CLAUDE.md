@@ -31,19 +31,21 @@ LLM provider: Three providers supported — Claude (Anthropic), ChatGPT (OpenAI)
 
 LLM prompts: All prompt templates live in `bristlenose/llm/prompts.py`. When iterating on prompts, archive the old version to `bristlenose/llm/prompts-archive/` with naming convention `prompts_YYYY-MM-DD_description.py` (e.g., `prompts_2026-02-04_original-14-tags.py`). This folder is ignored by the application but tracked in git for easy comparison without digging through commit history. Future goal: allow users to customise prompts via config.
 
-Report JavaScript — 11 modules in `bristlenose/theme/js/`, concatenated in dependency order into a single `<script>` block by `render_html.py` (`_JS_FILES`). Boot sequence in `main.js`:
+Report JavaScript — 13 modules in `bristlenose/theme/js/`, concatenated in dependency order into a single `<script>` block by `render_html.py` (`_JS_FILES`). Boot sequence in `main.js`:
 
 1. `storage.js` — `createStore()` localStorage abstraction (used by all stateful modules)
 2. `player.js` — `seekTo()`, `initPlayer()` for timecode playback
-3. `favourites.js` — `initFavourites()`, star toggle, FLIP reorder animation
+3. `starred.js` — `initStarred()`, star toggle, FLIP reorder animation
 4. `editing.js` — `initEditing()`, `initInlineEditing()` for quote + heading editing
 5. `tags.js` — `initTags()`, AI badge delete/restore, user tag CRUD, auto-suggest
 6. `histogram.js` — `renderUserTagsChart()` for user-tags sentiment chart
 7. `csv-export.js` — `initCsvExport()`, `copyToClipboard()`, `showToast()`, defines `currentViewMode` global
 8. `view-switcher.js` — `initViewSwitcher()`, dropdown menu, section visibility (depends on `currentViewMode`)
 9. `search.js` — `initSearchFilter()`, search-as-you-type filtering, exposes `_onViewModeChange()` hook
-10. `names.js` — `initNames()`, participant name/role inline editing, YAML export
-11. `main.js` — boot orchestrator, calls all `init*()` functions
+10. `tag-filter.js` — `initTagFilter()`, filter quotes by user tags, dropdown with checkboxes/search/counts
+11. `names.js` — `initNames()`, participant name/role inline editing, YAML export
+12. `focus.js` — `initFocus()`, Finder-like click selection, multi-select with Shift/Cmd, bulk operations
+13. `main.js` — boot orchestrator, calls all `init*()` functions
 
 Transcript pages use a separate list (`_TRANSCRIPT_JS_FILES`): `storage.js`, `player.js`, `transcript-names.js`.
 
@@ -124,6 +126,7 @@ The generated HTML report has interactive features: inline editing (quotes, head
 - **Name editing**: inline in the report via `names.js` → localStorage → "Export names" YAML → paste into `people.yaml` → `bristlenose render`. Auto name/role extraction from LLM + speaker labels
 - **Anonymisation boundary**: report quotes show raw `p1`/`p2` IDs (safe to copy to Miro/presentations). Transcript page segment labels also show raw codes (`p1:`, `m1:`); only the heading shows display names (private to researcher)
 - **Search**: search-as-you-type with yellow highlights, match count in view-switcher, CSV export respects filter
+- **Tag filter**: toolbar dropdown (between search and view-switcher) filters quotes by user tags. Checkbox per tag + "(No tags)" for untagged quotes. Shows per-tag quote counts, search-within-filter for 8+ tags. State persisted in localStorage (`bristlenose-tag-filter`). `clearAll` flag ensures new tags created after "Clear" stay hidden. Module: `tag-filter.js`, CSS: `molecules/tag-filter.css`
 - **Transcript pages**: per-session HTML pages in `sessions/transcript_s1.html` with heading showing all speakers (`Session 1: m1 Sarah Chen, p5 Maya, o1`), per-segment raw speaker codes (`p1:`, `m1:`), `.segment-moderator` CSS class for muted moderator styling, deep-link anchors from quote attributions, anchor highlight animation (yellow flash when arriving via link)
 - **Sessions table**: report table shows one row per session with columns Session | Speakers | Start | Duration | Source. Speakers column lists all codes (m→p→o sorted) with `data-participant` spans for JS name resolution
 - **PII redaction**: off by default (`--redact-pii` to opt in)
@@ -289,7 +292,7 @@ This is especially common when:
 - `check_backend()` catches `Exception` (not just `ImportError`) for faster_whisper import — torch native libs can raise `OSError` on some machines
 - `people.py` imports `SpeakerInfo` from `identify_speakers.py` under `TYPE_CHECKING` only (avoids circular import at runtime). The `auto_populate_names()` type hint works because `from __future__ import annotations` makes all annotations strings
 - `identify_speaker_roles_llm()` changed return type from `list[TranscriptSegment]` to `list[SpeakerInfo]` — still mutates segments in place for role assignment, but now also returns extracted name/title data. Only one call site in `pipeline.py`
-- `view-switcher.js`, `search.js`, and `names.js` all load **after** `csv-export.js` in `_JS_FILES` — `view-switcher.js` writes the `currentViewMode` global defined in `csv-export.js`; `search.js` reads `currentViewMode` and exposes `_onViewModeChange()` called by `view-switcher.js`; `names.js` depends on `copyToClipboard()` and `showToast()`
+- `view-switcher.js`, `search.js`, `tag-filter.js`, and `names.js` all load **after** `csv-export.js` in `_JS_FILES` — `view-switcher.js` writes the `currentViewMode` global defined in `csv-export.js`; `search.js` reads `currentViewMode` and exposes `_onViewModeChange()` called by `view-switcher.js`; `tag-filter.js` loads after `search.js` (reads `currentViewMode`, `_hideEmptySections`, `_hideEmptySubsections`; exposes `_applyTagFilter()`, `_onTagFilterViewChange()`, `_isTagFilterActive()`, `_updateVisibleQuoteCount()` called by `view-switcher.js`, `search.js`, and `tags.js`); `names.js` depends on `copyToClipboard()` and `showToast()`
 - `_TRANSCRIPT_JS_FILES` includes `transcript-names.js` (after `storage.js`) — reads localStorage name edits and updates heading speaker names only (preserving code prefix: `"m1 Sarah Chen"`). Does NOT override segment speaker labels (they stay as raw codes). Separate from the report's `names.js` (which has full editing UI)
 - `blockquote .timecode` in `blockquote.css` must use `--bn-colour-accent` not `--bn-colour-muted` — the `.timecode-bracket` children handle the muting. If you add a new timecode rendering context, ensure the parent rule uses accent
 - `_normalise_stem()` expects a lowercased stem — callers must `.lower()` before passing. `group_into_sessions()` does this; unit tests pass lowercased literals directly

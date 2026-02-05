@@ -26,6 +26,18 @@
 var focusedQuoteId = null;
 
 /**
+ * Set of selected quote IDs for multi-select operations.
+ * @type {Set<string>}
+ */
+var selectedQuoteIds = new Set();
+
+/**
+ * Anchor quote ID for Shift-extend selection ranges.
+ * @type {string|null}
+ */
+var anchorQuoteId = null;
+
+/**
  * Check if user is currently editing (in an input, textarea, or contenteditable).
  * Keyboard shortcuts should not fire while editing.
  *
@@ -96,6 +108,84 @@ function setFocus(quoteId, options) {
   }
 }
 
+// ── Selection ────────────────────────────────────────────────────────────────
+
+/**
+ * Toggle selection on a quote by ID.
+ *
+ * @param {string} quoteId
+ */
+function toggleSelection(quoteId) {
+  var bq = document.getElementById(quoteId);
+  if (!bq) return;
+
+  if (selectedQuoteIds.has(quoteId)) {
+    selectedQuoteIds.delete(quoteId);
+    bq.classList.remove('bn-selected');
+  } else {
+    selectedQuoteIds.add(quoteId);
+    bq.classList.add('bn-selected');
+  }
+  updateSelectionCount();
+}
+
+/**
+ * Clear all selections.
+ */
+function clearSelection() {
+  selectedQuoteIds.forEach(function(id) {
+    var bq = document.getElementById(id);
+    if (bq) bq.classList.remove('bn-selected');
+  });
+  selectedQuoteIds.clear();
+  updateSelectionCount();
+}
+
+/**
+ * Select a range of quotes between two IDs (inclusive).
+ *
+ * @param {string} fromId - Start of range
+ * @param {string} toId - End of range
+ */
+function selectRange(fromId, toId) {
+  var quotes = getVisibleQuotes();
+  var fromIdx = -1, toIdx = -1;
+  for (var i = 0; i < quotes.length; i++) {
+    if (quotes[i].id === fromId) fromIdx = i;
+    if (quotes[i].id === toId) toIdx = i;
+  }
+  if (fromIdx === -1 || toIdx === -1) return;
+
+  var start = Math.min(fromIdx, toIdx);
+  var end = Math.max(fromIdx, toIdx);
+
+  for (var j = start; j <= end; j++) {
+    selectedQuoteIds.add(quotes[j].id);
+    quotes[j].classList.add('bn-selected');
+  }
+  updateSelectionCount();
+}
+
+/**
+ * Get the set of selected quote IDs.
+ * Exposed for other modules (csv-export, etc).
+ *
+ * @returns {Set<string>}
+ */
+function getSelectedQuoteIds() {
+  return selectedQuoteIds;
+}
+
+/**
+ * Update the header label with selection count.
+ * Calls _updateViewLabel from view-switcher.js if available.
+ */
+function updateSelectionCount() {
+  if (typeof _updateViewLabel === 'function') {
+    _updateViewLabel(selectedQuoteIds.size);
+  }
+}
+
 /**
  * Move focus to the next or previous quote.
  *
@@ -140,7 +230,13 @@ function moveFocus(direction) {
 }
 
 /**
- * Handle click on a quote — set focus to it.
+ * Handle click on a quote — set focus, with modifier support for selection.
+ *
+ * - Plain click: focus only, clear selection
+ * - Cmd/Ctrl+click: toggle selection
+ * - Shift+click: range selection from anchor
+ *
+ * Ignores clicks when user is selecting text (non-empty window selection).
  *
  * @param {MouseEvent} e
  */
@@ -148,9 +244,29 @@ function handleQuoteClick(e) {
   // Don't interfere with clicks on interactive elements
   if (e.target.closest('button, a, input, [contenteditable="true"]')) return;
 
+  // Don't interfere with text selection — if user selected text, ignore the click
+  var sel = window.getSelection();
+  if (sel && sel.toString().length > 0) return;
+
   var bq = e.target.closest('.quote-group blockquote[id]');
-  if (bq) {
+  if (!bq) return;
+
+  if (e.metaKey || e.ctrlKey) {
+    // Cmd/Ctrl+Click: toggle selection
+    e.preventDefault();
+    toggleSelection(bq.id);
+    anchorQuoteId = bq.id;
     setFocus(bq.id, { scroll: false });
+  } else if (e.shiftKey && anchorQuoteId) {
+    // Shift+Click: range selection
+    e.preventDefault();
+    selectRange(anchorQuoteId, bq.id);
+    setFocus(bq.id, { scroll: false });
+  } else {
+    // Plain click: focus only, clear selection
+    clearSelection();
+    setFocus(bq.id, { scroll: false });
+    anchorQuoteId = bq.id;
   }
 }
 
@@ -188,6 +304,13 @@ function createHelpOverlay() {
     '      <dl>',
     '        <dt><kbd>j</kbd> / <kbd>↓</kbd></dt><dd>Next quote</dd>',
     '        <dt><kbd>k</kbd> / <kbd>↑</kbd></dt><dd>Previous quote</dd>',
+    '      </dl>',
+    '    </div>',
+    '    <div class="help-section">',
+    '      <h3>Selection</h3>',
+    '      <dl>',
+    '        <dt><kbd>x</kbd></dt><dd>Toggle select</dd>',
+    '        <dt><kbd>Shift</kbd>+<kbd>j</kbd>/<kbd>k</kbd></dt><dd>Extend</dd>',
     '      </dl>',
     '    </div>',
     '    <div class="help-section">',
@@ -336,7 +459,7 @@ function clearSearch() {
 function handleKeydown(e) {
   var key = e.key;
 
-  // Escape — close help, clear search, or clear focus (in that order)
+  // Escape — close help, clear search, clear selection, or clear focus (in that order)
   if (key === 'Escape') {
     if (helpOverlayVisible) {
       e.preventDefault();
@@ -345,6 +468,11 @@ function handleKeydown(e) {
     }
     if (clearSearch()) {
       e.preventDefault();
+      return;
+    }
+    if (selectedQuoteIds.size > 0) {
+      e.preventDefault();
+      clearSelection();
       return;
     }
     if (focusedQuoteId) {
@@ -372,17 +500,57 @@ function handleKeydown(e) {
     return;
   }
 
-  // j or ArrowDown — next quote
+  // Shift+j/ArrowDown — extend selection down
+  if ((key === 'j' || key === 'ArrowDown') && e.shiftKey) {
+    e.preventDefault();
+    if (focusedQuoteId) {
+      if (!selectedQuoteIds.has(focusedQuoteId)) {
+        toggleSelection(focusedQuoteId);
+      }
+      if (!anchorQuoteId) anchorQuoteId = focusedQuoteId;
+    }
+    moveFocus(1);
+    if (focusedQuoteId && !selectedQuoteIds.has(focusedQuoteId)) {
+      toggleSelection(focusedQuoteId);
+    }
+    return;
+  }
+
+  // Shift+k/ArrowUp — extend selection up
+  if ((key === 'k' || key === 'ArrowUp') && e.shiftKey) {
+    e.preventDefault();
+    if (focusedQuoteId) {
+      if (!selectedQuoteIds.has(focusedQuoteId)) {
+        toggleSelection(focusedQuoteId);
+      }
+      if (!anchorQuoteId) anchorQuoteId = focusedQuoteId;
+    }
+    moveFocus(-1);
+    if (focusedQuoteId && !selectedQuoteIds.has(focusedQuoteId)) {
+      toggleSelection(focusedQuoteId);
+    }
+    return;
+  }
+
+  // j or ArrowDown — next quote (no shift)
   if (key === 'j' || key === 'ArrowDown') {
     e.preventDefault();
     moveFocus(1);
     return;
   }
 
-  // k or ArrowUp — previous quote
+  // k or ArrowUp — previous quote (no shift)
   if (key === 'k' || key === 'ArrowUp') {
     e.preventDefault();
     moveFocus(-1);
+    return;
+  }
+
+  // x — toggle selection on focused quote
+  if (key === 'x' && focusedQuoteId) {
+    e.preventDefault();
+    toggleSelection(focusedQuoteId);
+    if (!anchorQuoteId) anchorQuoteId = focusedQuoteId;
     return;
   }
 

@@ -27,7 +27,7 @@
 
 .bn-selected {
     background: var(--bn-selection-bg);
-    border-left-color: var(--bn-colour-accent);
+    border-left-color: var(--bn-selection-border);
 }
 
 /* ---------------------------------------------------------------------

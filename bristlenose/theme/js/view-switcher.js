@@ -128,3 +128,24 @@ function _showParticipantsOnly(sections, hrs) {
   }
   for (var j = 0; j < hrs.length; j++) hrs[j].style.display = 'none';
 }
+
+/**
+ * Update the view-switcher button label to show selection count.
+ * Called by focus.js when selection changes.
+ *
+ * @param {number} selectionCount - Number of selected quotes (0 to restore normal label)
+ */
+function _updateViewLabel(selectionCount) {
+  var btn = document.getElementById('view-switcher-btn');
+  if (!btn) return;
+
+  if (selectionCount > 0) {
+    btn.firstChild.textContent = selectionCount + ' quote' + (selectionCount !== 1 ? 's' : '') + ' selected ';
+  } else {
+    // Restore based on current view mode
+    var label = 'All quotes';
+    if (currentViewMode === 'starred') label = 'Starred quotes';
+    if (currentViewMode === 'participants') label = 'Participant data';
+    btn.firstChild.textContent = label + ' ';
+  }
+}

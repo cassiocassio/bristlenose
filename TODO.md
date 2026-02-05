@@ -157,6 +157,10 @@ Organised from easiest to hardest. The README has a condensed version; this is t
 
 ### Small (a day or two each)
 
+- [ ] Export and sharing Phase 0 — foundation work: state hydration architecture (check `CURATED_STATE` before localStorage), relative media path option, audit embedded data for shareability. See `docs/design-export-sharing.md`
+- [ ] Export and sharing Phase 1 — "Save curated report" button in toolbar, anonymise checkbox (strips participant names, keeps codes), export dialog modal. Browser-only, no CLI needed
+- [ ] Export and sharing Phase 2 — bundle transcript pages into zip (using fflate ~8KB), fix relative paths in bundle, optional inline CSS/logos for single-file output
+- [ ] Export and sharing Phase 5 — "Made with Bristlenose" branding footer CTA (independent, can ship anytime)
 - [x] Editable participant names in report — pencil icon inline editing, localStorage, YAML export, reconciliation
 - [ ] Participant metadata: day of the week in recordings — Start column now shows date+time (Finder-style), but could also show day name (e.g. "Mon 29 Jan 2026 at 20:56")
 - [x] Tag taxonomy redesign — replaced 14 overlapping intent/emotion categories with 7 research-backed tags: Frustration, Confusion, Doubt, Surprise, Satisfaction, Delight, Confidence. See `docs/academic-sources.html` for theoretical foundations. New `Sentiment` enum, `--bn-sentiment-*` CSS tokens, backward-compatible with old intermediate JSON
@@ -180,6 +184,8 @@ Organised from easiest to hardest. The README has a condensed version; this is t
 
 ### Medium (a few days each)
 
+- [ ] Export and sharing Phase 3 — full archive export: `--include-media` flag at render time (copies files into output), full archive export from browser (if media present), include people.yaml
+- [ ] Export and sharing Phase 4 — video clips: browser writes `clips-manifest.json`, `bristlenose package` CLI command extracts clips via FFmpeg, update player for clip-relative seeking, merge adjacent clips. Requires CLI for curator only; recipient never needs CLI
 - [x] Moderator identification Phase 1 — per-session speaker codes (`[m1]`/`[p1]`), moderator entries in `people.yaml`, per-segment speaker rendering on transcript pages, `.segment-moderator` CSS
 - [ ] Moderator identification Phase 2 — cross-session moderator linking (`same_as` field), web UI for declaring same-person across sessions
 - [x] LLM name/role extraction from transcripts — extended Stage 5b, `SpeakerInfo` dataclass, metadata harvesting, auto-populate

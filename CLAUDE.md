@@ -348,6 +348,21 @@ Collapsible section at the end of the research report showing what proportion of
 
 ## Working preferences
 
+### Branch check (do this first!)
+
+**At the start of every session**, check which branch you're on and whether it's correct for the task:
+
+```bash
+git branch --show-current
+cat docs/BRANCHES.md
+```
+
+If the user starts asking about a feature without specifying, **remind them to check** which branch they want to work on. Multiple features may be in progress on different branches — don't let them accidentally commit to the wrong one.
+
+See `docs/BRANCHES.md` for active branches, what files they touch, and conflict resolution strategies.
+
+### General
+
 - Keep changes minimal and focused — don't refactor or add features beyond what's asked
 - Commit messages: short, descriptive, lowercase (e.g., "fix tag suggest offering tags the quote already has")
 

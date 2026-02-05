@@ -81,8 +81,14 @@
 
     /* Interactive element colours */
     --bn-colour-icon-idle: #c9ccd1;
-    --bn-colour-favourited: #999;
+    --bn-colour-starred: #999;
     --bn-colour-shadow: rgba(0, 0, 0, 0.1);
+
+    /* Focus state (keyboard navigation cursor) */
+    --bn-focus-shadow: 0 3px 12px rgba(0,0,0,0.12), 0 0 0 1px rgba(0,0,0,0.05);
+
+    /* Selection state (multi-select for bulk actions) */
+    --bn-selection-bg: #f5f9ff;
 
     /* Legacy aliases — used by inline styles in generated HTML.
        Theme authors: override the --bn-* versions above;
@@ -158,8 +164,11 @@
 
         /* Interactive elements */
         --bn-colour-icon-idle:        light-dark(#c9ccd1, #595959);
-        --bn-colour-favourited:       light-dark(#999, #ccc);
+        --bn-colour-starred:          light-dark(#999, #ccc);
         --bn-colour-shadow:           light-dark(rgba(0,0,0,0.1), rgba(0,0,0,0.4));
+
+        /* Focus and selection */
+        --bn-selection-bg:            light-dark(#f5f9ff, #1a2332);
     }
 
     /* Explicit overrides — lock theme regardless of OS preference */

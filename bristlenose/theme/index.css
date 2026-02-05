@@ -21,6 +21,7 @@
 /* atoms/timecode.css */
 /* atoms/bar.css */
 /* atoms/logo.css */
+/* atoms/interactive.css */
 
 /* --- 3. Molecules --- */
 /* molecules/badge-row.css */
@@ -41,7 +42,7 @@
 /* --- JavaScript modules (see js/ directory) --- */
 /* js/storage.js       — localStorage abstraction                */
 /* js/player.js        — Popout video/audio player integration   */
-/* js/favourites.js    — Star/un-star quotes with FLIP animation */
+/* js/starred.js       — Star/un-star quotes with FLIP animation */
 /* js/editing.js       — Inline quote text editing               */
 /* js/tags.js          — AI badge management & user tagging      */
 /* js/histogram.js     — Dynamic user-tags histogram             */

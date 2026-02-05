@@ -10,14 +10,16 @@
  *
  *   storage.js      → createStore()           (used by all stateful modules)
  *   player.js       → seekTo(), initPlayer()
- *   favourites.js   → initFavourites()
+ *   starred.js      → initStarred(), toggleStar()
  *   editing.js      → initEditing()
  *   tags.js         → userTags, persistUserTags(), initTags()
  *   histogram.js    → renderUserTagsChart()   (called by tags.js)
  *   csv-export.js   → initCsvExport(), copyToClipboard(), showToast()
+ *   preferences.js  → initPreferences(), getPref(), setPref()
  *   view-switcher.js → initViewSwitcher()    (depends on csv-export.js)
  *   search.js       → initSearchFilter()   (depends on csv-export.js)
  *   names.js        → initNames()            (depends on csv-export.js)
+ *   focus.js        → initFocus(), setFocus(), isEditing()
  *   main.js         → this file (orchestrator)
  *
  * The Python renderer concatenates these files in order and wraps them
@@ -29,12 +31,14 @@
 // ── Boot sequence ─────────────────────────────────────────────────────────
 
 initPlayer();
-initFavourites();
+initStarred();
 initEditing();
 initInlineEditing();
 initTags();
 renderUserTagsChart();
 initCsvExport();
+initPreferences();
 initViewSwitcher();
 initSearchFilter();
 initNames();
+initFocus();

@@ -1,18 +1,18 @@
-/* Molecule: quote-actions — edit and favourite state styles on blockquotes */
+/* Molecule: quote-actions — edit and starred state styles on blockquotes */
 
-blockquote.favourited .fav-star {
-    color: var(--bn-colour-favourited);
+blockquote.starred .star-btn {
+    color: var(--bn-colour-starred);
 }
 
-blockquote.favourited {
+blockquote.starred {
     font-weight: 600;
-    border-left-color: var(--bn-colour-favourited);
+    border-left-color: var(--bn-colour-starred);
 }
 
-blockquote.favourited .context,
-blockquote.favourited .timecode,
-blockquote.favourited .speaker,
-blockquote.favourited .badges {
+blockquote.starred .context,
+blockquote.starred .timecode,
+blockquote.starred .speaker,
+blockquote.starred .badges {
     font-weight: 400;
 }
 
@@ -45,7 +45,7 @@ blockquote.editing .quote-text {
     border-bottom: 1px dashed var(--bn-colour-muted);
 }
 
-blockquote.fav-animating {
+blockquote.star-animating {
     transition: transform var(--bn-transition-normal);
     z-index: 1;
 }

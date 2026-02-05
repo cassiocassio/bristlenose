@@ -1,37 +1,44 @@
 /**
- * favourites.js — Star / un-star quotes and reorder them within their group.
+ * starred.js — Star / un-star quotes and reorder them within their group.
  *
- * Users click the star icon on a quote to mark it as a favourite.  Favourited
+ * Users click the star icon on a quote to mark it as starred.  Starred
  * quotes float to the top of their section group with a smooth FLIP animation.
- * State is persisted in localStorage so favourites survive page reloads.
+ * State is persisted in localStorage so starred quotes survive page reloads.
  *
  * Architecture
  * ────────────
- * - `favourites` (object): an in-memory map of quote ID → `true`.
+ * - `starred` (object): an in-memory map of quote ID → `true`.
  * - `originalOrder` (object): snapshot of DOM indices taken on load so that
- *   un-favourited quotes return to their original position.
+ *   un-starred quotes return to their original position.
  * - `reorderGroup(group, animate)` implements the FLIP (First-Last-Invert-Play)
  *   animation technique:
  *     1. Record each blockquote's bounding rect            (FIRST)
- *     2. DOM-reorder: favourites first, rest in original order
+ *     2. DOM-reorder: starred first, rest in original order
  *     3. Compute the delta between old and new positions    (INVERT)
  *     4. Animate the transform back to zero                 (PLAY)
  *
- * Dependencies: `createStore` from storage.js.
+ * Dependencies: `createStore` from storage.js, `getPref` from preferences.js.
  *
- * @module favourites
+ * @module starred
  */
 
-/* global createStore */
+/* global createStore, getPref */
 
-var favStore = createStore('bristlenose-favourites');
-var favourites = favStore.get({});
+// Migrate from old localStorage key if present (one-time migration).
+var _oldStarredData = localStorage.getItem('bristlenose-favourites');
+if (_oldStarredData && !localStorage.getItem('bristlenose-starred')) {
+  localStorage.setItem('bristlenose-starred', _oldStarredData);
+  localStorage.removeItem('bristlenose-favourites');
+}
 
-// Capture original DOM order per group so un-favourited quotes go home.
+var starStore = createStore('bristlenose-starred');
+var starred = starStore.get({});
+
+// Capture original DOM order per group so un-starred quotes go home.
 var originalOrder = {};
 
 /**
- * Sort blockquotes inside a `.quote-group` — favourites first.
+ * Sort blockquotes inside a `.quote-group` — starred first.
  *
  * @param {Element} group    The `.quote-group` container.
  * @param {boolean} animate  Whether to run the FLIP animation.
@@ -48,16 +55,16 @@ function reorderGroup(group, animate) {
     });
   }
 
-  // --- Partition: favourited first, rest in original order ---
-  var favs = [];
+  // --- Partition: starred first, rest in original order ---
+  var starredQuotes = [];
   var rest = [];
   quotes.forEach(function (bq) {
-    (bq.classList.contains('favourited') ? favs : rest).push(bq);
+    (bq.classList.contains('starred') ? starredQuotes : rest).push(bq);
   });
   rest.sort(function (a, b) {
     return (originalOrder[a.id] || 0) - (originalOrder[b.id] || 0);
   });
-  favs.concat(rest).forEach(function (bq) {
+  starredQuotes.concat(rest).forEach(function (bq) {
     group.appendChild(bq);
   });
 
@@ -77,13 +84,13 @@ function reorderGroup(group, animate) {
   requestAnimationFrame(function () {
     requestAnimationFrame(function () {
       quotes.forEach(function (bq) {
-        bq.classList.add('fav-animating');
+        bq.classList.add('star-animating');
         bq.style.transform = '';
         bq.style.transition = '';
       });
       setTimeout(function () {
         quotes.forEach(function (bq) {
-          bq.classList.remove('fav-animating');
+          bq.classList.remove('star-animating');
         });
       }, 250);
     });
@@ -91,10 +98,38 @@ function reorderGroup(group, animate) {
 }
 
 /**
- * Bootstrap favourites: restore state from localStorage, reorder groups,
+ * Toggle star state on a quote by ID.
+ * Called by keyboard shortcut handler in focus.js.
+ *
+ * @param {string} quoteId  The ID of the quote to toggle.
+ * @returns {boolean}       The new starred state.
+ */
+function toggleStar(quoteId) {
+  var bq = document.getElementById(quoteId);
+  if (!bq) return false;
+
+  var isStarred = bq.classList.toggle('starred');
+  if (isStarred) {
+    starred[quoteId] = true;
+  } else {
+    delete starred[quoteId];
+  }
+  starStore.set(starred);
+
+  var group = bq.closest('.quote-group');
+  if (group) {
+    var shouldAnimate = typeof getPref === 'function' ? getPref('animations_enabled') : true;
+    reorderGroup(group, shouldAnimate);
+  }
+
+  return isStarred;
+}
+
+/**
+ * Bootstrap starred: restore state from localStorage, reorder groups,
  * and attach the star-click handler.
  */
-function initFavourites() {
+function initStarred() {
   // Snapshot original DOM order for every group.
   var allGroups = document.querySelectorAll('.quote-group');
   for (var g = 0; g < allGroups.length; g++) {
@@ -106,10 +141,10 @@ function initFavourites() {
     });
   }
 
-  // Restore favourited class from localStorage.
-  Object.keys(favourites).forEach(function (qid) {
+  // Restore starred class from localStorage.
+  Object.keys(starred).forEach(function (qid) {
     var bq = document.getElementById(qid);
-    if (bq) bq.classList.add('favourited');
+    if (bq) bq.classList.add('starred');
   });
 
   // Initial reorder (no animation on page load).
@@ -120,21 +155,12 @@ function initFavourites() {
 
   // Delegate star clicks.
   document.addEventListener('click', function (e) {
-    var star = e.target.closest('.fav-star');
+    var star = e.target.closest('.star-btn');
     if (!star) return;
     e.preventDefault();
     var bq = star.closest('blockquote');
     if (!bq || !bq.id) return;
 
-    var isFav = bq.classList.toggle('favourited');
-    if (isFav) {
-      favourites[bq.id] = true;
-    } else {
-      delete favourites[bq.id];
-    }
-    favStore.set(favourites);
-
-    var group = bq.closest('.quote-group');
-    if (group) reorderGroup(group, true);
+    toggleStar(bq.id);
   });
 }

@@ -98,21 +98,27 @@ function getQuoteTagsByType(bq, type) {
 // ── CSV builder ───────────────────────────────────────────────────────────
 
 /**
- * Build a CSV string from all (or only starred) quotes in the report.
+ * Build a CSV string from quotes in the report.
  *
  * Columns: Timecode, Quote, Participant, Section, Emotion, Intent,
  *          AI tags, User tags.
  *
  * @param {boolean} onlyStarred If true, include only starred quotes.
+ * @param {Set<string>|null} selectedIds If provided, include only these quote IDs.
  * @returns {string} The complete CSV text.
  */
-function buildCsv(onlyStarred) {
+function buildCsv(onlyStarred, selectedIds) {
   var rows = ['Timecode,Quote,Participant,Section,Emotion,Intent,AI tags,User tags'];
   var bqs = document.querySelectorAll('.quote-group blockquote');
   for (var i = 0; i < bqs.length; i++) {
     var bq = bqs[i];
-    if (bq.style.display === 'none') continue;
-    if (onlyStarred && !bq.classList.contains('starred')) continue;
+    // If selection exists, only include selected quotes (ignore visibility/starred)
+    if (selectedIds && selectedIds.size > 0) {
+      if (!selectedIds.has(bq.id)) continue;
+    } else {
+      if (bq.style.display === 'none') continue;
+      if (onlyStarred && !bq.classList.contains('starred')) continue;
+    }
     rows.push(
       [
         csvEsc(bq.getAttribute('data-timecode') || ''),
@@ -201,18 +207,35 @@ function initCsvExport() {
   document.addEventListener('click', function (e) {
     var btn = e.target.closest('#export-csv');
     if (btn) {
-      var onlyStarred = currentViewMode === 'starred';
-      var csv = buildCsv(onlyStarred);
+      // Check for selection (from focus.js)
+      var selectedIds = typeof getSelectedQuoteIds === 'function' ? getSelectedQuoteIds() : null;
+      var hasSelection = selectedIds && selectedIds.size > 0;
+
+      var onlyStarred = !hasSelection && currentViewMode === 'starred';
+      var csv = buildCsv(onlyStarred, selectedIds);
       var n = csv.split('\n').length - 1;
+
       if (n === 0) {
-        showToast(onlyStarred ? 'No starred quotes to export' : 'No quotes to export');
+        if (hasSelection) {
+          showToast('No selected quotes to export');
+        } else if (onlyStarred) {
+          showToast('No starred quotes to export');
+        } else {
+          showToast('No quotes to export');
+        }
         return;
       }
+
       copyToClipboard(csv).then(
         function () {
-          var label = onlyStarred
-            ? n + ' starred quote' + (n !== 1 ? 's' : '')
-            : n + ' quote' + (n !== 1 ? 's' : '');
+          var label;
+          if (hasSelection) {
+            label = n + ' selected quote' + (n !== 1 ? 's' : '');
+          } else if (onlyStarred) {
+            label = n + ' starred quote' + (n !== 1 ? 's' : '');
+          } else {
+            label = n + ' quote' + (n !== 1 ? 's' : '');
+          }
           showToast(label + ' copied as CSV');
         },
         function () {

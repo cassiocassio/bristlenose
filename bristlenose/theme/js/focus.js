@@ -316,7 +316,7 @@ function createHelpOverlay() {
     '    <div class="help-section">',
     '      <h3>Actions</h3>',
     '      <dl>',
-    '        <dt><kbd>s</kbd></dt><dd>Star quote</dd>',
+    '        <dt><kbd>s</kbd></dt><dd>Star quote(s)</dd>',
     '        <dt><kbd>t</kbd></dt><dd>Add tag</dd>',
     '        <dt><kbd>Enter</kbd></dt><dd>Play in video</dd>',
     '      </dl>',
@@ -387,6 +387,37 @@ function starFocusedQuote() {
   if (starBtn) {
     starBtn.click();
   }
+}
+
+/**
+ * Bulk star/unstar all selected quotes.
+ * If any selected quote is unstarred, star all. Otherwise unstar all.
+ */
+function bulkStarSelected() {
+  if (selectedQuoteIds.size === 0) return;
+
+  // Check if any selected quote is unstarred
+  var anyUnstarred = false;
+  selectedQuoteIds.forEach(function(id) {
+    var bq = document.getElementById(id);
+    if (bq && !bq.classList.contains('starred')) {
+      anyUnstarred = true;
+    }
+  });
+
+  // Star or unstar all based on anyUnstarred
+  selectedQuoteIds.forEach(function(id) {
+    var bq = document.getElementById(id);
+    if (!bq) return;
+    var isStarred = bq.classList.contains('starred');
+    // If anyUnstarred, we want to star all unstarred ones
+    // If !anyUnstarred (all starred), we want to unstar all
+    if (anyUnstarred && !isStarred) {
+      if (typeof toggleStar === 'function') toggleStar(id);
+    } else if (!anyUnstarred && isStarred) {
+      if (typeof toggleStar === 'function') toggleStar(id);
+    }
+  });
 }
 
 /**
@@ -554,15 +585,21 @@ function handleKeydown(e) {
     return;
   }
 
-  // Actions on focused quote
-  if (focusedQuoteId) {
-    // s — toggle star
-    if (key === 's') {
+  // s — star (bulk if selection, single if focused)
+  if (key === 's') {
+    if (selectedQuoteIds.size > 0) {
+      e.preventDefault();
+      bulkStarSelected();
+      return;
+    } else if (focusedQuoteId) {
       e.preventDefault();
       starFocusedQuote();
       return;
     }
+  }
 
+  // Actions on focused quote
+  if (focusedQuoteId) {
     // t — add tag
     if (key === 't') {
       e.preventDefault();

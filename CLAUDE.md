@@ -330,6 +330,7 @@ Collapsible section at the end of the research report showing what proportion of
 
 ## Reference docs (read when working in these areas)
 
+- **Export and sharing**: `docs/design-export-sharing.md`
 - **HTML report / people file / transcript pages**: `docs/design-html-report.md`
 - **Theme / dark mode / CSS**: `bristlenose/theme/CLAUDE.md`
 - **Pipeline stages / transcript format / output structure**: `bristlenose/stages/CLAUDE.md`

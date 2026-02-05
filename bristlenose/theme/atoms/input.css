@@ -1,16 +1,56 @@
-/* Atom: input — tag-input and its sizing helper */
+/* Atom: input — tag-input with inline ghost text */
 
-.tag-input {
+.tag-input-box {
+    position: relative;
+    display: inline-block;
     font-family: var(--bn-font-mono);
     font-size: 0.72rem;
     padding: var(--bn-space-xs) 0.4rem;
     border: 1px solid var(--bn-colour-accent);
     border-radius: var(--bn-radius-sm);
-    outline: none;
     background: var(--bn-colour-bg);
-    color: var(--bn-colour-text);
     min-width: 3rem;
-    width: 3rem;
+}
+
+.tag-input {
+    position: relative;
+    font-family: inherit;
+    font-size: inherit;
+    border: none;
+    outline: none;
+    background: transparent;
+    color: var(--bn-colour-text);
+    padding: 0;
+    width: 100%;
+    min-width: 0;
+    z-index: 1;
+    caret-color: var(--bn-colour-text);
+}
+
+.tag-input::placeholder {
+    color: var(--bn-colour-muted);
+}
+
+/* Ghost layer overlays the input, showing completion after typed text */
+.tag-ghost-layer {
+    position: absolute;
+    top: var(--bn-space-xs);
+    left: 0.4rem;
+    right: 0.4rem;
+    display: flex;
+    pointer-events: none;
+    user-select: none;
+    white-space: pre;
+    overflow: hidden;
+}
+
+.tag-ghost-spacer {
+    /* Invisible text matching input value — pushes ghost to the right */
+    color: transparent;
+}
+
+.tag-ghost {
+    color: var(--bn-colour-muted);
 }
 
 .tag-sizer {

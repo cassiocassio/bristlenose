@@ -120,6 +120,7 @@ var suggestIndex = -1;
 
 /**
  * Build (or rebuild) the auto-suggest dropdown below the tag input.
+ * Also updates the inline ghost text with the best prefix match.
  *
  * @param {HTMLInputElement} input The tag input element.
  * @param {Element}          wrap  The `.tag-input-wrap` container.
@@ -129,8 +130,15 @@ function buildSuggest(input, wrap) {
   if (old) old.remove();
   suggestIndex = -1;
 
+  var ghost = activeTagInput ? activeTagInput.ghost : null;
   var val = input.value.trim().toLowerCase();
-  if (!val) return;
+  var rawVal = input.value; // preserve case for ghost text matching
+
+  // Clear ghost if no input.
+  if (!val) {
+    if (ghost) ghost.textContent = '';
+    return;
+  }
 
   // Collect tags the current quote already has, so we don't suggest them.
   var bq = activeTagInput ? activeTagInput.bq : null;
@@ -139,6 +147,23 @@ function buildSuggest(input, wrap) {
   var names = allTagNames().filter(function (n) {
     return n.toLowerCase().indexOf(val) !== -1 && n.toLowerCase() !== val && existing.indexOf(n.toLowerCase()) === -1;
   });
+
+  // Find best prefix match for ghost text (must start with typed text).
+  var prefixMatches = names.filter(function (n) {
+    return n.toLowerCase().indexOf(val) === 0;
+  });
+
+  // Update ghost text: show suffix of best prefix match.
+  if (ghost) {
+    if (prefixMatches.length > 0) {
+      // Show the part of the suggestion after what's typed.
+      var best = prefixMatches[0];
+      ghost.textContent = best.substring(rawVal.length);
+    } else {
+      ghost.textContent = '';
+    }
+  }
+
   if (!names.length) return;
 
   var list = document.createElement('div');
@@ -150,6 +175,7 @@ function buildSuggest(input, wrap) {
     item.addEventListener('mousedown', function (ev) {
       ev.preventDefault(); // keep focus on input
       input.value = name;
+      if (ghost) ghost.textContent = '';
       closeTagInput(true);
     });
     list.appendChild(item);
@@ -238,46 +264,116 @@ function openTagInput(addBtn, bq) {
 
   addBtn.style.display = 'none';
 
-  // Build input wrapper.
+  // Build input wrapper with ghost text support.
+  // Structure: .tag-input-wrap > .tag-input-box > (input + .tag-ghost-layer > spacer + ghost) + .tag-sizer
+  // The ghost layer is stacked on top of input via CSS grid. Spacer pushes ghost to align after typed text.
   var wrap = document.createElement('span');
   wrap.className = 'tag-input-wrap';
+
+  var box = document.createElement('span');
+  box.className = 'tag-input-box';
+
   var input = document.createElement('input');
   input.className = 'tag-input';
   input.type = 'text';
   input.placeholder = 'tag';
+
+  var ghostLayer = document.createElement('span');
+  ghostLayer.className = 'tag-ghost-layer';
+
+  var ghostSpacer = document.createElement('span');
+  ghostSpacer.className = 'tag-ghost-spacer';
+
+  var ghost = document.createElement('span');
+  ghost.className = 'tag-ghost';
+
+  ghostLayer.appendChild(ghostSpacer);
+  ghostLayer.appendChild(ghost);
+
   var sizer = document.createElement('span');
   sizer.className = 'tag-sizer';
-  wrap.appendChild(input);
+
+  box.appendChild(input);
+  box.appendChild(ghostLayer);
+  wrap.appendChild(box);
   wrap.appendChild(sizer);
   addBtn.parentNode.insertBefore(wrap, addBtn);
   input.focus();
 
-  activeTagInput = { bq: bq, wrap: wrap, input: input, addBtn: addBtn };
+  activeTagInput = { bq: bq, wrap: wrap, input: input, addBtn: addBtn, ghost: ghost, ghostSpacer: ghostSpacer, sizer: sizer };
 
-  // Auto-resize input to fit typed text.
-  input.addEventListener('input', function () {
-    sizer.textContent = input.value || input.placeholder;
+  // Auto-resize box to fit typed text + ghost; update spacer to align ghost.
+  function updateSize() {
+    var fullText = input.value + ghost.textContent;
+    sizer.textContent = fullText || input.placeholder;
     var w = Math.max(sizer.offsetWidth + 16, 48);
-    input.style.width = w + 'px';
+    box.style.width = w + 'px';
+    // Spacer mirrors the typed text so ghost appears right after it.
+    ghostSpacer.textContent = input.value;
+  }
+
+  input.addEventListener('input', function () {
     buildSuggest(input, wrap);
+    updateSize();
   });
+
+  // Update ghost text to reflect the highlighted suggestion.
+  function updateGhostForSelection(idx) {
+    if (!ghost) return;
+    if (idx >= 0) {
+      var sel = getSuggestValue(wrap, idx);
+      if (sel && sel.toLowerCase().indexOf(input.value.toLowerCase()) === 0) {
+        ghost.textContent = sel.substring(input.value.length);
+      } else {
+        // Highlighted item doesn't start with typed text — show full replacement hint.
+        ghost.textContent = '';
+      }
+    } else {
+      // No selection — rebuild ghost from best prefix match.
+      buildSuggest(input, wrap);
+    }
+    updateSize();
+  }
 
   // Keyboard navigation within the suggest dropdown.
   input.addEventListener('keydown', function (ev) {
     var count = suggestCount(wrap);
-    if (ev.key === 'ArrowDown' && count > 0) {
+
+    if (ev.key === 'ArrowRight' && ghost.textContent) {
+      // Accept ghost text (like fish shell).
       ev.preventDefault();
-      suggestIndex = Math.min(suggestIndex + 1, count - 1);
+      input.value = input.value + ghost.textContent;
+      ghost.textContent = '';
+      updateSize();
+      buildSuggest(input, wrap); // refresh dropdown
+    } else if (ev.key === 'ArrowDown' && count > 0) {
+      ev.preventDefault();
+      // Loop: at bottom, go back to -1 (no selection).
+      if (suggestIndex >= count - 1) {
+        suggestIndex = -1;
+      } else {
+        suggestIndex++;
+      }
       highlightSuggestItem(wrap, suggestIndex);
+      updateGhostForSelection(suggestIndex);
     } else if (ev.key === 'ArrowUp' && count > 0) {
       ev.preventDefault();
-      suggestIndex = Math.max(suggestIndex - 1, -1);
+      // Loop: at -1, go to bottom.
+      if (suggestIndex <= -1) {
+        suggestIndex = count - 1;
+      } else {
+        suggestIndex--;
+      }
       highlightSuggestItem(wrap, suggestIndex);
+      updateGhostForSelection(suggestIndex);
     } else if (ev.key === 'Tab') {
       ev.preventDefault();
       // Tab commits and re-opens for another tag.
-      // If a suggestion is highlighted, use it; otherwise use typed text.
-      if (suggestIndex >= 0) {
+      // If ghost text visible, accept it first.
+      if (ghost.textContent) {
+        input.value = input.value + ghost.textContent;
+        ghost.textContent = '';
+      } else if (suggestIndex >= 0) {
         var picked = getSuggestValue(wrap, suggestIndex);
         if (picked) input.value = picked;
       } else if (count > 0) {
@@ -290,7 +386,11 @@ function openTagInput(addBtn, bq) {
       closeTagInput(hasValue, hasValue);
     } else if (ev.key === 'Enter') {
       ev.preventDefault();
-      if (suggestIndex >= 0) {
+      // Accept ghost text or highlighted suggestion.
+      if (ghost.textContent) {
+        input.value = input.value + ghost.textContent;
+        ghost.textContent = '';
+      } else if (suggestIndex >= 0) {
         var pickedEnter = getSuggestValue(wrap, suggestIndex);
         if (pickedEnter) input.value = pickedEnter;
       }

@@ -257,6 +257,49 @@ def write_intermediate_json(
     return path
 
 
+def write_pipeline_metadata(
+    output_dir: Path,
+    project_name: str,
+) -> Path:
+    """Write pipeline metadata JSON so render can recover the project name.
+
+    Written once at the start of run/analyze. The file lives alongside
+    the intermediate JSON (e.g. ``.bristlenose/intermediate/metadata.json``).
+
+    Returns:
+        Path to the written file.
+    """
+    from bristlenose.output_paths import OutputPaths
+
+    paths = OutputPaths(output_dir, project_name)
+    intermediate_dir = paths.intermediate_dir
+    intermediate_dir.mkdir(parents=True, exist_ok=True)
+    path = intermediate_dir / "metadata.json"
+    path.write_text(
+        json.dumps({"project_name": project_name}, indent=2) + "\n",
+        encoding="utf-8",
+    )
+    return path
+
+
+def read_pipeline_metadata(output_dir: Path) -> dict[str, str]:
+    """Read pipeline metadata JSON from intermediate directory.
+
+    Returns an empty dict if the file doesn't exist or can't be parsed.
+    """
+    for intermediate_dir in (
+        output_dir / ".bristlenose" / "intermediate",
+        output_dir / "intermediate",
+    ):
+        path = intermediate_dir / "metadata.json"
+        if path.exists():
+            try:
+                return json.loads(path.read_text(encoding="utf-8"))
+            except (json.JSONDecodeError, OSError):
+                return {}
+    return {}
+
+
 def _participant_range(sessions: list[InputSession]) -> str:
     """Format participant range: 'p1\u2013p8'."""
     ids = [s.participant_id for s in sessions]

@@ -1,0 +1,132 @@
+/* Molecule: feedback — feedback modal triggered by footer link.
+   Extends .bn-overlay / .bn-modal / .bn-modal-close from atoms/modal.css.
+   See feedback.js for the JavaScript that creates and toggles this overlay. */
+
+/* Feedback modal width override (narrower — simple form) */
+.feedback-modal {
+    max-width: 420px;
+}
+
+.feedback-modal h2 {
+    font-size: 1.1rem;
+}
+
+/* Sentiment picker — 5 emoji faces in a row */
+.feedback-sentiments {
+    display: flex;
+    justify-content: center;
+    gap: var(--bn-space-lg);
+    margin-bottom: var(--bn-space-lg);
+}
+
+.feedback-sentiment {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--bn-space-xs);
+    cursor: pointer;
+    padding: var(--bn-space-sm);
+    border-radius: var(--bn-radius-md);
+    border: 2px solid transparent;
+    transition: border-color var(--bn-transition-fast), background var(--bn-transition-fast);
+    background: none;
+    font-family: var(--bn-font-body);
+}
+
+.feedback-sentiment:hover {
+    background: var(--bn-colour-quote-bg);
+}
+
+.feedback-sentiment.selected {
+    border-color: var(--bn-colour-accent);
+    background: var(--bn-colour-quote-bg);
+}
+
+.feedback-sentiment-face {
+    font-size: 1.5rem;
+    line-height: 1;
+}
+
+.feedback-sentiment-label {
+    font-size: 0.65rem;
+    color: var(--bn-colour-muted);
+    white-space: nowrap;
+}
+
+/* Label */
+.feedback-label {
+    display: block;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--bn-colour-text);
+    margin-bottom: var(--bn-space-sm);
+}
+
+/* Textarea */
+.feedback-textarea {
+    display: block;
+    width: 100%;
+    box-sizing: border-box;
+    min-height: 5rem;
+    padding: var(--bn-space-md);
+    font-family: var(--bn-font-body);
+    font-size: 0.85rem;
+    color: var(--bn-colour-text);
+    background: var(--bn-colour-bg);
+    border: 1px solid var(--bn-colour-border);
+    border-radius: var(--bn-radius-md);
+    resize: vertical;
+    margin-bottom: var(--bn-space-lg);
+    transition: border-color var(--bn-transition-fast);
+}
+
+.feedback-textarea:focus {
+    outline: none;
+    border-color: var(--bn-colour-accent);
+}
+
+.feedback-textarea::placeholder {
+    color: var(--bn-colour-muted);
+}
+
+/* Action buttons */
+.feedback-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: var(--bn-space-md);
+}
+
+.feedback-btn {
+    padding: 0.45rem 1rem;
+    font-family: var(--bn-font-body);
+    font-size: 0.82rem;
+    border-radius: var(--bn-radius-md);
+    cursor: pointer;
+    transition: background var(--bn-transition-fast), border-color var(--bn-transition-fast);
+}
+
+.feedback-btn-cancel {
+    background: none;
+    border: 1px solid var(--bn-colour-border);
+    color: var(--bn-colour-muted);
+}
+
+.feedback-btn-cancel:hover {
+    border-color: var(--bn-colour-muted);
+    color: var(--bn-colour-text);
+}
+
+.feedback-btn-send {
+    background: var(--bn-colour-accent);
+    border: 1px solid var(--bn-colour-accent);
+    color: #ffffff;
+}
+
+.feedback-btn-send:hover {
+    opacity: 0.9;
+}
+
+.feedback-btn-send:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}

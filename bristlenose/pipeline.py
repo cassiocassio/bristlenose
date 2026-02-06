@@ -152,6 +152,7 @@ class Pipeline:
         from bristlenose.stages.render_output import (
             render_markdown,
             write_intermediate_json,
+            write_pipeline_metadata,
         )
         from bristlenose.stages.thematic_grouping import group_by_theme
         from bristlenose.stages.topic_segmentation import segment_topics
@@ -160,6 +161,7 @@ class Pipeline:
         pipeline_start = time.perf_counter()
         _printed_warnings.clear()
         output_dir.mkdir(parents=True, exist_ok=True)
+        write_pipeline_metadata(output_dir, self.settings.project_name)
 
         with console.status("", spinner="dots") as status:
             status.renderable.frames = [" " + f for f in status.renderable.frames]
@@ -429,7 +431,7 @@ class Pipeline:
                 display_names=display_names,
                 people=people,
             )
-            render_html(
+            report_path = render_html(
                 screen_clusters,
                 theme_groups,
                 sessions,
@@ -453,6 +455,7 @@ class Pipeline:
             screen_clusters=screen_clusters,
             theme_groups=theme_groups,
             output_dir=output_dir,
+            report_path=report_path,
             people=people,
             elapsed_seconds=elapsed,
             llm_input_tokens=llm_client.tracker.input_tokens,
@@ -612,13 +615,18 @@ class Pipeline:
         from bristlenose.stages.quote_clustering import cluster_by_screen
         from bristlenose.stages.quote_extraction import extract_quotes
         from bristlenose.stages.render_html import render_html
-        from bristlenose.stages.render_output import render_markdown, write_intermediate_json
+        from bristlenose.stages.render_output import (
+            render_markdown,
+            write_intermediate_json,
+            write_pipeline_metadata,
+        )
         from bristlenose.stages.thematic_grouping import group_by_theme
         from bristlenose.stages.topic_segmentation import segment_topics
 
         pipeline_start = time.perf_counter()
         _printed_warnings.clear()
         output_dir.mkdir(parents=True, exist_ok=True)
+        write_pipeline_metadata(output_dir, self.settings.project_name)
 
         # Load existing transcripts from text files
         clean_transcripts = load_transcripts_from_dir(transcripts_dir)
@@ -712,7 +720,7 @@ class Pipeline:
                 display_names=display_names,
                 people=people,
             )
-            render_html(
+            report_path = render_html(
                 screen_clusters, theme_groups, [],
                 self.settings.project_name, output_dir,
                 all_quotes=all_quotes,
@@ -733,6 +741,7 @@ class Pipeline:
             screen_clusters=screen_clusters,
             theme_groups=theme_groups,
             output_dir=output_dir,
+            report_path=report_path,
             people=people,
             elapsed_seconds=elapsed,
             llm_input_tokens=llm_client.tracker.input_tokens,
@@ -927,7 +936,7 @@ class Pipeline:
             display_names=display_names,
             people=people,
         )
-        render_html(
+        report_path = render_html(
             screen_clusters, theme_groups, sessions,
             self.settings.project_name, output_dir,
             all_quotes=all_quotes,
@@ -946,6 +955,7 @@ class Pipeline:
             screen_clusters=screen_clusters,
             theme_groups=theme_groups,
             output_dir=output_dir,
+            report_path=report_path,
             people=people,
             total_quotes=len(all_quotes),
         )

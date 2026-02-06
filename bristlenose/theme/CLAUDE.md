@@ -33,7 +33,7 @@ Dark mode is CSS-only. No localStorage, no toggle button, no JS involved.
 
 ## Template CSS files
 
-Template-level CSS in `templates/`: `report.css` (main report layout), `transcript.css` (per-session transcript pages — back button, segment layout, meta styling, anchor highlight animation), `print.css` (print overrides, hides interactive elements). Quote attribution links styled via `.speaker-link` in `organisms/blockquote.css` (inherits muted colour from `.speaker`, accent on hover).
+Template-level CSS in `templates/`: `report.css` (main report layout), `transcript.css` (per-session transcript pages — back button, segment layout, meta styling, anchor highlight animation), `print.css` (print overrides, hides interactive elements — includes `.feedback-links`, `.feedback-overlay`, `.footer-logo-picture`). Quote attribution links styled via `.speaker-link` in `organisms/blockquote.css` (inherits muted colour from `.speaker`, accent on hover).
 
 ### Anchor highlight animation
 
@@ -43,7 +43,7 @@ When navigating to a transcript page via anchor link (e.g., from coverage sectio
 
 ## JS modules
 
-12 standalone files in `js/` concatenated at render time (same pattern as CSS): storage, player, starred, editing, tags, histogram, csv-export, preferences, view-switcher, search, names, focus, main. Transcript pages use `storage.js` + `player.js` + `transcript-names.js` (no starred/editing/tags/search/names/view-switcher/focus). `transcript-names.js` only updates heading speaker names (preserving code prefix: `"m1 Sarah Chen"`); segment speaker labels stay as raw codes (`p1:`, `m1:`) and are not overridden by JS.
+15 standalone files in `js/` concatenated at render time (same pattern as CSS): storage, modal, player, starred, editing, tags, histogram, csv-export, view-switcher, search, tag-filter, names, focus, feedback, main. Transcript pages use `storage.js` + `player.js` + `transcript-names.js` (no starred/editing/tags/search/names/view-switcher/focus/feedback). `transcript-names.js` only updates heading speaker names (preserving code prefix: `"m1 Sarah Chen"`); segment speaker labels stay as raw codes (`p1:`, `m1:`) and are not overridden by JS.
 
 ### names.js
 
@@ -103,6 +103,22 @@ Collapsible search filter in the toolbar: `.search-container` (flex, `margin-rig
 ### tag-filter.css (molecule)
 
 Dropdown filter for quotes by user tag. `.tag-filter` (relative wrapper), `.tag-filter-btn` (inline-flex, text colour, accent on hover), `.tag-filter-icon` (filter-lines SVG), `.tag-filter-arrow` (chevron, muted), `.tag-filter-label` (inline-block, text-align right, min-width set by JS for layout stability). `.tag-filter-menu` (absolute dropdown, right-aligned, `z-index: 200`, `max-height: 32rem`, width locked by JS on open). `.tag-filter-actions` (Select all · Clear row), `.tag-filter-search` / `.tag-filter-search-input` (search field, only shown for 8+ tags). `.tag-filter-item` (flex row: checkbox + name + count), `.tag-filter-item-name` (ellipsis truncation at `max-width: 16rem`), `.tag-filter-item-muted` (italic for "(No tags)"), `.tag-filter-count` (right-aligned, muted, tabular-nums). `.tag-filter-divider` between "(No tags)" and user tags.
+
+### modal.css (atom)
+
+Shared base styles for overlay modal dialogs, used by both help-overlay and feedback modals. `.bn-overlay` (fixed fullscreen backdrop, `z-index: 1000`, opacity/visibility transition), `.bn-modal` (centred card, relative position, `--bn-colour-bg` background, `--bn-radius-lg`, shadow), `.bn-modal-close` (absolute top-right × button, muted → text on hover), `.bn-modal-footer` (centred footer text, small muted). Each modal adds its own content-specific classes on top (e.g. `.help-modal { max-width: 600px }`, `.feedback-modal { max-width: 420px }`).
+
+### feedback.css (molecule)
+
+Feedback modal content styles, extends `.bn-modal` from `modal.css`. `.feedback-modal` (max-width), `.feedback-sentiments` (flex row of emoji buttons), `.feedback-sentiment` (column layout, border highlight on `.selected`), `.feedback-label` (above textarea), `.feedback-textarea` (accent border on focus), `.feedback-actions` (Cancel + Send buttons), `.feedback-btn-send:disabled` (dimmed).
+
+### modal.js
+
+Shared modal factory used by both help overlay (`focus.js`) and feedback modal (`feedback.js`). `createModal({ className, modalClassName, content, onHide })` builds overlay + card + close button DOM, wires click-outside and close button, registers in `_modalRegistry`. Returns `{ show, hide, isVisible, el, card }`. `closeTopmostModal()` pops the most recent visible modal — called from Escape handler in `focus.js`, replaces per-modal visibility flag checks.
+
+### feedback.js
+
+Feedback modal logic, gated behind `BRISTLENOSE_FEEDBACK` JS constant. `initFeedback()` checks flag, adds `body.feedback-enabled` class (CSS shows footer links), creates draft store, wires footer trigger. `getFeedbackModal()` lazily creates modal via `createModal()`. `submitFeedback()` tries `fetch()` to `BRISTLENOSE_FEEDBACK_URL` if endpoint configured and HTTP(S), falls back to `copyToClipboard()`. Draft persistence via `createStore('bristlenose-feedback-draft')`. Dependencies: `storage.js`, `modal.js`, `csv-export.js`.
 
 ### name-edit.css (molecule)
 

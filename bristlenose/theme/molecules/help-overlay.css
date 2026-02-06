@@ -1,38 +1,14 @@
 /* Help overlay — keyboard shortcuts modal triggered by ? key.
+   Extends .bn-overlay / .bn-modal / .bn-modal-close from atoms/modal.css.
    See focus.js for the JavaScript that creates and toggles this overlay. */
 
-.help-overlay {
-    position: fixed;
-    inset: 0;
-    background: rgba(0, 0, 0, 0.5);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 1000;
-    opacity: 0;
-    visibility: hidden;
-    transition: opacity var(--bn-transition-normal), visibility var(--bn-transition-normal);
-}
-
-.help-overlay.visible {
-    opacity: 1;
-    visibility: visible;
-}
-
+/* Help modal width override (wider than default for 3-column layout) */
 .help-modal {
-    background: var(--bn-colour-bg);
-    border-radius: var(--bn-radius-lg);
-    padding: var(--bn-space-xl);
     max-width: 600px;
-    width: 90%;
-    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
 }
 
 .help-modal h2 {
-    margin: 0 0 var(--bn-space-lg) 0;
     font-size: 1.25rem;
-    font-weight: 600;
-    color: var(--bn-colour-text);
 }
 
 .help-columns {
@@ -85,11 +61,4 @@
     border: 1px solid var(--bn-colour-border);
     border-radius: var(--bn-radius-sm);
     box-shadow: 0 1px 0 var(--bn-colour-border);
-}
-
-.help-footer {
-    margin: var(--bn-space-lg) 0 0 0;
-    text-align: center;
-    font-size: 0.75rem;
-    color: var(--bn-colour-muted);
 }

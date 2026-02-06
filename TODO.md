@@ -321,21 +321,6 @@ Full design doc: `docs/design-doctor-and-snap.md`
 - [ ] `--prefetch-model` flag — download Whisper model and exit (for slow connections, CI setups)
 - [ ] Homebrew formula: add `post_install` for spaCy model download, improve caveats
 
-### Bug: `render` command derives wrong project name
-
-The `render` command checks for `output_dir.name == "output"` to decide whether to use the parent directory name as the project name. But the actual output folder is `bristlenose-output`, so the check fails and it uses `bristlenose-output` as the project name, creating files like `bristlenose-bristlenose-output-report.html`.
-
-**Root cause:** `project_name` derivation happens in 3 places in `cli.py` with slightly different logic:
-- `run` command (line 637-638): `input_dir.resolve().name`
-- `analyze` command (line 752-753): `transcripts_dir.resolve().name`
-- `render` command (lines 883-888): checks for `"output"` (should be `"bristlenose-output"`)
-
-**Fix:**
-1. Add `derive_project_name(path: Path) -> str` helper to `output_paths.py`
-2. Check for both `"bristlenose-output"` and `"output"` (backward compat)
-3. Update all 3 CLI commands to use it
-
-**Edge case:** If someone names their project folder `"bristlenose-output"`, we'd incorrectly use the parent. Acceptable — unlikely scenario and current behaviour is worse.
 
 ### Platform detection refactor (future PR)
 

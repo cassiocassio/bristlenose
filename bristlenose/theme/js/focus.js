@@ -290,91 +290,69 @@ function handleBackgroundClick(e) {
 
 // ── Help overlay ─────────────────────────────────────────────────────────────
 
-var helpOverlayVisible = false;
+/* global createModal */
+
+var helpModal = null;
 
 /**
- * Create the help overlay element (once, on first show).
- * @returns {HTMLElement}
+ * Lazily create the help modal (once, on first show).
+ * @returns {{show: function, hide: function, isVisible: function}}
  */
-function createHelpOverlay() {
-  var overlay = document.createElement('div');
-  overlay.className = 'help-overlay';
-  overlay.innerHTML = [
-    '<div class="help-modal">',
-    '  <h2>Keyboard Shortcuts</h2>',
-    '  <div class="help-columns">',
-    '    <div class="help-section">',
-    '      <h3>Navigation</h3>',
-    '      <dl>',
-    '        <dt><kbd>j</kbd> / <kbd>↓</kbd></dt><dd>Next quote</dd>',
-    '        <dt><kbd>k</kbd> / <kbd>↑</kbd></dt><dd>Previous quote</dd>',
-    '      </dl>',
-    '    </div>',
-    '    <div class="help-section">',
-    '      <h3>Selection</h3>',
-    '      <dl>',
-    '        <dt><kbd>x</kbd></dt><dd>Toggle select</dd>',
-    '        <dt><kbd>Shift</kbd>+<kbd>j</kbd>/<kbd>k</kbd></dt><dd>Extend</dd>',
-    '      </dl>',
-    '    </div>',
-    '    <div class="help-section">',
-    '      <h3>Actions</h3>',
-    '      <dl>',
-    '        <dt><kbd>s</kbd></dt><dd>Star quote(s)</dd>',
-    '        <dt><kbd>t</kbd></dt><dd>Add tag(s)</dd>',
-    '        <dt><kbd>Enter</kbd></dt><dd>Play in video</dd>',
-    '      </dl>',
-    '    </div>',
-    '    <div class="help-section">',
-    '      <h3>Global</h3>',
-    '      <dl>',
-    '        <dt><kbd>/</kbd></dt><dd>Search</dd>',
-    '        <dt><kbd>?</kbd></dt><dd>This help</dd>',
-    '        <dt><kbd>Esc</kbd></dt><dd>Close / clear</dd>',
-    '      </dl>',
-    '    </div>',
-    '  </div>',
-    '  <p class="help-footer">Press <kbd>Esc</kbd> or click outside to close</p>',
-    '</div>'
-  ].join('\n');
-  document.body.appendChild(overlay);
-  // Close on click outside modal
-  overlay.addEventListener('click', function(e) {
-    if (e.target === overlay) {
-      hideHelpOverlay();
-    }
-  });
-  return overlay;
-}
-
-/**
- * Show the help overlay.
- */
-function showHelpOverlay() {
-  var overlay = document.querySelector('.help-overlay') || createHelpOverlay();
-  overlay.classList.add('visible');
-  helpOverlayVisible = true;
-}
-
-/**
- * Hide the help overlay.
- */
-function hideHelpOverlay() {
-  var overlay = document.querySelector('.help-overlay');
-  if (overlay) {
-    overlay.classList.remove('visible');
+function getHelpModal() {
+  if (!helpModal) {
+    helpModal = createModal({
+      className: 'help-overlay',
+      modalClassName: 'help-modal',
+      content: [
+        '<h2>Keyboard Shortcuts</h2>',
+        '<div class="help-columns">',
+        '  <div class="help-section">',
+        '    <h3>Navigation</h3>',
+        '    <dl>',
+        '      <dt><kbd>j</kbd> / <kbd>↓</kbd></dt><dd>Next quote</dd>',
+        '      <dt><kbd>k</kbd> / <kbd>↑</kbd></dt><dd>Previous quote</dd>',
+        '    </dl>',
+        '  </div>',
+        '  <div class="help-section">',
+        '    <h3>Selection</h3>',
+        '    <dl>',
+        '      <dt><kbd>x</kbd></dt><dd>Toggle select</dd>',
+        '      <dt><kbd>Shift</kbd>+<kbd>j</kbd>/<kbd>k</kbd></dt><dd>Extend</dd>',
+        '    </dl>',
+        '  </div>',
+        '  <div class="help-section">',
+        '    <h3>Actions</h3>',
+        '    <dl>',
+        '      <dt><kbd>s</kbd></dt><dd>Star quote(s)</dd>',
+        '      <dt><kbd>t</kbd></dt><dd>Add tag(s)</dd>',
+        '      <dt><kbd>Enter</kbd></dt><dd>Play in video</dd>',
+        '    </dl>',
+        '  </div>',
+        '  <div class="help-section">',
+        '    <h3>Global</h3>',
+        '    <dl>',
+        '      <dt><kbd>/</kbd></dt><dd>Search</dd>',
+        '      <dt><kbd>?</kbd></dt><dd>This help</dd>',
+        '      <dt><kbd>Esc</kbd></dt><dd>Close / clear</dd>',
+        '    </dl>',
+        '  </div>',
+        '</div>',
+        '<p class="bn-modal-footer">Press <kbd>?</kbd> to open this help, <kbd>Esc</kbd> or click outside to close</p>'
+      ].join('\n')
+    });
   }
-  helpOverlayVisible = false;
+  return helpModal;
 }
 
 /**
  * Toggle the help overlay.
  */
 function toggleHelpOverlay() {
-  if (helpOverlayVisible) {
-    hideHelpOverlay();
+  var m = getHelpModal();
+  if (m.isVisible()) {
+    m.hide();
   } else {
-    showHelpOverlay();
+    m.show();
   }
 }
 
@@ -500,11 +478,10 @@ function clearSearch() {
 function handleKeydown(e) {
   var key = e.key;
 
-  // Escape — close help, clear search, clear selection, or clear focus (in that order)
+  // Escape — close modal, clear search, clear selection, or clear focus (in that order)
   if (key === 'Escape') {
-    if (helpOverlayVisible) {
+    if (typeof closeTopmostModal !== 'undefined' && closeTopmostModal()) {
       e.preventDefault();
-      hideHelpOverlay();
       return;
     }
     if (clearSearch()) {
@@ -531,8 +508,11 @@ function handleKeydown(e) {
     return;
   }
 
-  // Don't intercept other keys while editing or help is open
-  if (isEditing() || helpOverlayVisible) return;
+  // Don't intercept other keys while editing or a modal is open
+  if (isEditing()) return;
+  var anyModalOpen = typeof _modalRegistry !== 'undefined' &&
+    _modalRegistry.some(function (m) { return m.isVisible(); });
+  if (anyModalOpen) return;
 
   // / — focus search
   if (key === '/') {
@@ -633,4 +613,13 @@ function initFocus() {
   document.addEventListener('keydown', handleKeydown);
   document.addEventListener('click', handleQuoteClick);
   document.addEventListener('click', handleBackgroundClick);
+
+  // Wire the footer "? for Help" link (can't use inline onclick — IIFE scope)
+  var helpLink = document.querySelector('.footer-keyboard-hint');
+  if (helpLink) {
+    helpLink.addEventListener('click', function (e) {
+      e.preventDefault();
+      toggleHelpOverlay();
+    });
+  }
 }

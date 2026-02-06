@@ -1,0 +1,68 @@
+/* Atom: modal — shared overlay backdrop, card, and close button.
+   Used by help-overlay.css and feedback.css. Each adds its own
+   content-specific styles on top. */
+
+/* Overlay backdrop — fullscreen, centred, fade transition */
+.bn-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity var(--bn-transition-normal), visibility var(--bn-transition-normal);
+}
+
+.bn-overlay.visible {
+    opacity: 1;
+    visibility: visible;
+}
+
+/* Modal card — centred white box with shadow */
+.bn-modal {
+    position: relative;
+    background: var(--bn-colour-bg);
+    border-radius: var(--bn-radius-lg);
+    padding: var(--bn-space-xl);
+    width: 90%;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+}
+
+/* Modal heading */
+.bn-modal h2 {
+    margin: 0 0 var(--bn-space-lg) 0;
+    font-weight: 600;
+    color: var(--bn-colour-text);
+}
+
+/* Close button — top right */
+.bn-modal-close {
+    position: absolute;
+    top: var(--bn-space-md);
+    right: var(--bn-space-md);
+    background: none;
+    border: none;
+    font-size: 1.25rem;
+    line-height: 1;
+    color: var(--bn-colour-muted);
+    cursor: pointer;
+    padding: 0.25rem 0.4rem;
+    border-radius: var(--bn-radius-sm);
+    transition: color var(--bn-transition-fast), background var(--bn-transition-fast);
+}
+
+.bn-modal-close:hover {
+    color: var(--bn-colour-text);
+    background: var(--bn-colour-quote-bg);
+}
+
+/* Modal footer text */
+.bn-modal-footer {
+    margin: var(--bn-space-lg) 0 0 0;
+    text-align: center;
+    font-size: 0.75rem;
+    color: var(--bn-colour-muted);
+}

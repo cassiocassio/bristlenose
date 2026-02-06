@@ -9,6 +9,7 @@
  * earlier ones:
  *
  *   storage.js      → createStore()           (used by all stateful modules)
+ *   modal.js        → createModal(), closeTopmostModal() (used by focus.js, feedback.js)
  *   player.js       → seekTo(), initPlayer()
  *   starred.js      → initStarred(), toggleStar()
  *   editing.js      → initEditing()
@@ -20,6 +21,7 @@
  *   tag-filter.js   → initTagFilter()      (depends on tags.js, search.js)
  *   names.js        → initNames()            (depends on csv-export.js)
  *   focus.js        → initFocus(), setFocus(), isEditing()
+ *   feedback.js     → initFeedback(), showFeedbackModal()
  *   main.js         → this file (orchestrator)
  *
  * The Python renderer concatenates these files in order and wraps them
@@ -42,3 +44,4 @@ initSearchFilter();
 initTagFilter();
 initNames();
 initFocus();
+initFeedback();

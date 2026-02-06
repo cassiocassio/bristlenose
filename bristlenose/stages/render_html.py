@@ -52,6 +52,7 @@ _THEME_FILES: list[str] = [
     "atoms/logo.css",
     "atoms/footer.css",
     "atoms/interactive.css",
+    "atoms/modal.css",
     "molecules/badge-row.css",
     "molecules/bar-group.css",
     "molecules/quote-actions.css",
@@ -60,6 +61,7 @@ _THEME_FILES: list[str] = [
     "molecules/search.css",
     "molecules/tag-filter.css",
     "molecules/help-overlay.css",
+    "molecules/feedback.css",
     "organisms/blockquote.css",
     "organisms/coverage.css",
     "organisms/sentiment-chart.css",
@@ -106,6 +108,7 @@ def _get_default_css() -> str:
 # globals defined by earlier ones).
 _JS_FILES: list[str] = [
     "js/storage.js",
+    "js/modal.js",
     "js/player.js",
     "js/starred.js",
     "js/editing.js",
@@ -117,6 +120,7 @@ _JS_FILES: list[str] = [
     "js/tag-filter.js",
     "js/names.js",
     "js/focus.js",
+    "js/feedback.js",
     "js/main.js",
 ]
 
@@ -641,6 +645,10 @@ def render_html(
             }
     _w(f"var BN_PARTICIPANTS = {json.dumps(participant_data)};")
 
+    # Feedback feature flag — set to true to enable the feedback widget.
+    _w("var BRISTLENOSE_FEEDBACK = false;")
+    _w("var BRISTLENOSE_FEEDBACK_URL = '';")
+
     _w(_get_report_js())
     _w("})();")
     _w("</script>")
@@ -976,16 +984,36 @@ def _render_transcript_page(
 
 
 def _footer_html() -> str:
-    """Return the page footer with version link and keyboard hint."""
+    """Return the page footer with logo, version, feedback links, and keyboard hint."""
     from bristlenose import __version__
 
     return (
         '<footer class="report-footer">'
+        # Left zone: fish logo + logotype + version
+        '<div class="footer-left">'
+        '<picture class="footer-logo-picture">'
+        '<source srcset="assets/bristlenose-logo-dark.png" '
+        'media="(prefers-color-scheme: dark)">'
+        '<img class="footer-logo" src="assets/bristlenose-logo.png" alt="">'
+        "</picture>"
         '<span class="footer-logotype">Bristlenose</span>'
         "\u2002"
-        f'<a class="footer-version" href="https://github.com/cassiocassio/bristlenose">'
+        f'<a class="footer-version" '
+        f'href="https://github.com/cassiocassio/bristlenose">'
         f"version {__version__}</a>"
-        '<a class="footer-keyboard-hint" href="#" onclick="toggleHelpOverlay(); return false;">'
+        "</div>"
+        # Middle zone: feedback links (hidden unless BRISTLENOSE_FEEDBACK is true)
+        '<div class="feedback-links">'
+        '<a class="footer-link" '
+        'href="https://github.com/cassiocassio/bristlenose/issues/new" '
+        'target="_blank" rel="noopener">'
+        "\U0001f41b Report a bug</a>"
+        '<span class="footer-link-sep">\u00b7</span>'
+        '<a class="footer-link feedback-trigger" role="button" tabindex="0">'
+        "\u2661 Feedback</a>"
+        "</div>"
+        # Right zone: keyboard hint
+        '<a class="footer-keyboard-hint" role="button" tabindex="0">'
         "<kbd>?</kbd> for Help</a>"
         "</footer>"
     )

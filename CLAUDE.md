@@ -31,21 +31,23 @@ LLM provider: Three providers supported — Claude (Anthropic), ChatGPT (OpenAI)
 
 LLM prompts: All prompt templates live in `bristlenose/llm/prompts.py`. When iterating on prompts, archive the old version to `bristlenose/llm/prompts-archive/` with naming convention `prompts_YYYY-MM-DD_description.py` (e.g., `prompts_2026-02-04_original-14-tags.py`). This folder is ignored by the application but tracked in git for easy comparison without digging through commit history. Future goal: allow users to customise prompts via config.
 
-Report JavaScript — 13 modules in `bristlenose/theme/js/`, concatenated in dependency order into a single `<script>` block by `render_html.py` (`_JS_FILES`). Boot sequence in `main.js`:
+Report JavaScript — 15 modules in `bristlenose/theme/js/`, concatenated in dependency order into a single `<script>` block by `render_html.py` (`_JS_FILES`). Boot sequence in `main.js`:
 
 1. `storage.js` — `createStore()` localStorage abstraction (used by all stateful modules)
-2. `player.js` — `seekTo()`, `initPlayer()` for timecode playback
-3. `starred.js` — `initStarred()`, star toggle, FLIP reorder animation
-4. `editing.js` — `initEditing()`, `initInlineEditing()` for quote + heading editing
-5. `tags.js` — `initTags()`, AI badge delete/restore, user tag CRUD, auto-suggest
-6. `histogram.js` — `renderUserTagsChart()` for user-tags sentiment chart
-7. `csv-export.js` — `initCsvExport()`, `copyToClipboard()`, `showToast()`, defines `currentViewMode` global
-8. `view-switcher.js` — `initViewSwitcher()`, dropdown menu, section visibility (depends on `currentViewMode`)
-9. `search.js` — `initSearchFilter()`, search-as-you-type filtering, exposes `_onViewModeChange()` hook
-10. `tag-filter.js` — `initTagFilter()`, filter quotes by user tags, dropdown with checkboxes/search/counts
-11. `names.js` — `initNames()`, participant name/role inline editing, YAML export
-12. `focus.js` — `initFocus()`, Finder-like click selection, multi-select with Shift/Cmd, bulk operations
-13. `main.js` — boot orchestrator, calls all `init*()` functions
+2. `modal.js` — `createModal()` shared overlay/card/close helper, `closeTopmostModal()` for Escape key, `_modalRegistry` (used by focus.js, feedback.js)
+3. `player.js` — `seekTo()`, `initPlayer()` for timecode playback
+4. `starred.js` — `initStarred()`, star toggle, FLIP reorder animation
+5. `editing.js` — `initEditing()`, `initInlineEditing()` for quote + heading editing
+6. `tags.js` — `initTags()`, AI badge delete/restore, user tag CRUD, auto-suggest
+7. `histogram.js` — `renderUserTagsChart()` for user-tags sentiment chart
+8. `csv-export.js` — `initCsvExport()`, `copyToClipboard()`, `showToast()`, defines `currentViewMode` global
+9. `view-switcher.js` — `initViewSwitcher()`, dropdown menu, section visibility (depends on `currentViewMode`)
+10. `search.js` — `initSearchFilter()`, search-as-you-type filtering, exposes `_onViewModeChange()` hook
+11. `tag-filter.js` — `initTagFilter()`, filter quotes by user tags, dropdown with checkboxes/search/counts
+12. `names.js` — `initNames()`, participant name/role inline editing, YAML export
+13. `focus.js` — `initFocus()`, Finder-like click selection, multi-select with Shift/Cmd, bulk operations
+14. `feedback.js` — `initFeedback()`, `showFeedbackModal()`, feedback widget (feature-flagged)
+15. `main.js` — boot orchestrator, calls all `init*()` functions
 
 Transcript pages use a separate list (`_TRANSCRIPT_JS_FILES`): `storage.js`, `player.js`, `transcript-names.js`.
 
@@ -130,6 +132,7 @@ The generated HTML report has interactive features: inline editing (quotes, head
 - **Transcript pages**: per-session HTML pages in `sessions/transcript_s1.html` with heading showing all speakers (`Session 1: m1 Sarah Chen, p5 Maya, o1`), per-segment raw speaker codes (`p1:`, `m1:`), `.segment-moderator` CSS class for muted moderator styling, deep-link anchors from quote attributions, anchor highlight animation (yellow flash when arriving via link)
 - **Sessions table**: report table shows one row per session with columns Session | Speakers | Start | Duration | Source. Speakers column lists all codes (m→p→o sorted) with `data-participant` spans for JS name resolution
 - **PII redaction**: off by default (`--redact-pii` to opt in)
+- **Feedback widget** (feature-flagged): footer has "Report a bug" (links to GitHub Issues) and "Feedback" (opens modal with sentiment picker + textarea). Gated behind `BRISTLENOSE_FEEDBACK` JS constant (injected `false` by `render_html.py`). When flag is off, footer links are hidden via CSS; `initFeedback()` returns immediately. Submit tries `fetch()` to `BRISTLENOSE_FEEDBACK_URL`; falls back to clipboard copy on `file://` or when no endpoint is configured. Anonymous: payload is `{ version, rating, message }` only. Draft persistence via `createStore('bristlenose-feedback-draft')`. Module: `feedback.js`, CSS: `molecules/feedback.css`
 
 ## Doctor command (dependency health checks)
 
@@ -315,8 +318,11 @@ This is especially common when:
 - **`transcripts-cooked/` only exists with `--redact-pii`** — if a previous run used PII redaction but the current one doesn't, stale cooked files remain on disk. Coverage and transcript pages must use the same transcript source to avoid broken links. `render_transcript_pages()` accepts a `transcripts` parameter to ensure consistency; see `bristlenose/stages/CLAUDE.md` for details
 - **`_render_transcript_page()` accepts `FullTranscript`, not just `PiiCleanTranscript`** — the assertion uses `isinstance(transcript, FullTranscript)`. Since `PiiCleanTranscript` is a subclass, both types pass. Don't tighten this to `PiiCleanTranscript` or it will crash when PII redaction is off (the default)
 - **`player.js` only intercepts `.timecode` clicks with `data-participant` and `data-seconds`** — coverage section links use `class="timecode"` but NO data attributes, so they navigate normally. If you add new timecode links that should navigate (not open the player), omit the data attributes
-- **`render` command creates wrong filename** — `bristlenose render project-foo` looks for `project-foo/bristlenose-output/` and derives the project name. But the logic checks for `output_dir.name == "output"` (should be `"bristlenose-output"`), so it uses `"bristlenose-output"` as the project name and creates `bristlenose-bristlenose-output-report.html` instead of overwriting `bristlenose-project-foo-report.html`. Workaround: pass `-p project-foo` explicitly. Bug documented in TODO.md with fix plan
-- **Stale HTML files cause debugging confusion** — when `render` creates a new filename instead of overwriting, the old file remains. If you're viewing the old file in the browser, you won't see changes from re-renders. Always check which HTML file you're viewing matches the timestamp of your last render
+- **Pipeline metadata** (`metadata.json`): `write_pipeline_metadata()` in `render_output.py` writes `{"project_name": "..."}` to the intermediate directory during `run`/`analyze`. `read_pipeline_metadata()` reads it back. The CLI `render` command uses this as the source of truth for project name, falling back to directory-name heuristics for pre-metadata output dirs only
+- **`PipelineResult.report_path`**: populated by all three pipeline methods (`run`, `run_analysis_only`, `run_render_only`) from the return value of `render_html()`. `_print_pipeline_summary()` in `cli.py` uses it to print the clickable report link (shows filename only, `file://` hyperlink resolves the full path)
+- **Modal infrastructure**: `atoms/modal.css` provides shared `.bn-overlay`, `.bn-modal`, `.bn-modal-close`, `.bn-modal-footer` classes. `js/modal.js` provides `createModal({ className, modalClassName, content, onHide })` factory + `_modalRegistry` + `closeTopmostModal()`. Both help and feedback modals use these — don't duplicate overlay/card/close patterns
+- **IIFE scoping and inline onclick**: all report JS is wrapped in `(function() { ... })()` by `render_html.py`. Functions defined inside are NOT accessible from inline `onclick` HTML attributes. Wire click handlers via `addEventListener` from JS instead. Footer links use `role="button" tabindex="0"` (no `href`) for keyboard accessibility
+- **Stale HTML files cause debugging confusion** — if a previous render created a differently-named file (e.g. from a bug), the old file remains on disk. Always check which HTML file you're viewing matches the timestamp of your last render
 
 ## Transcript coverage
 

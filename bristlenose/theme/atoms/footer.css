@@ -34,6 +34,7 @@
     color: var(--bn-colour-muted);
     text-decoration: none;
     opacity: 0.6;
+    cursor: pointer;
     transition: opacity var(--bn-transition-fast);
 }
 
@@ -63,5 +64,71 @@
 @media (pointer: coarse) {
     .footer-keyboard-hint {
         display: none;
+    }
+}
+
+/* Footer three-zone layout: left (logo+text) | middle (feedback links) | right (help) */
+
+.footer-left {
+    display: flex;
+    align-items: baseline;
+}
+
+/* Tiny footer fish logo */
+.footer-logo-picture {
+    display: inline-flex;
+    align-items: baseline;
+    margin-right: 0.35rem;
+}
+
+.footer-logo {
+    width: 14px;
+    height: auto;
+    opacity: 0.5;
+    transform: scaleX(-1);
+    position: relative;
+    top: 0.15em;
+    transition: opacity var(--bn-transition-normal);
+}
+
+.footer-logo:hover {
+    opacity: 0.8;
+}
+
+/* Feedback links — hidden by default, shown by JS when feature flag is true */
+.feedback-links {
+    display: none;
+}
+
+body.feedback-enabled .feedback-links {
+    display: flex;
+    align-items: baseline;
+    gap: 0.5em;
+}
+
+.footer-link {
+    color: var(--bn-colour-muted);
+    text-decoration: none;
+    opacity: 0.6;
+    cursor: pointer;
+    transition: opacity var(--bn-transition-fast);
+}
+
+.footer-link:visited {
+    color: var(--bn-colour-muted);
+}
+
+.footer-link:hover {
+    opacity: 1;
+}
+
+.footer-link-sep {
+    color: var(--bn-colour-muted);
+    opacity: 0.4;
+}
+
+@media (pointer: coarse) {
+    .feedback-links {
+        display: none !important;
     }
 }

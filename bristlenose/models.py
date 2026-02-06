@@ -323,6 +323,7 @@ class PipelineResult(BaseModel):
     screen_clusters: list[ScreenCluster]
     theme_groups: list[ThemeGroup]
     output_dir: Path
+    report_path: Path | None = None
     people: PeopleFile | None = None
     # Pipeline timing and LLM usage (populated by run/analyze, zero for render)
     elapsed_seconds: float = 0.0

@@ -20,4 +20,7 @@
     .transcript-back { display: none; }
     .view-switcher { display: none; }
     .report-footer a { color: var(--bn-colour-muted); text-decoration: none; }
+    .feedback-links { display: none; }
+    .feedback-overlay { display: none; }
+    .footer-logo-picture { display: none; }
 }

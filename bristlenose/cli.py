@@ -534,13 +534,11 @@ def _print_pipeline_summary(result: object) -> None:
         if url:
             console.print(f"  [dim]Verify pricing → [link={url}]{url}[/link][/dim]")
 
-    # Report path with OSC 8 file:// hyperlink
-    output_dir = getattr(result, "output_dir", None)
-    if output_dir:
-        report_path = output_dir / "research_report.html"
-        if report_path.exists():
-            file_url = f"file://{report_path.resolve()}"
-            console.print(f"\n  Report:  [link={file_url}]{report_path}[/link]")
+    # Report path with OSC 8 file:// hyperlink (show filename only, link resolves)
+    report_path = getattr(result, "report_path", None)
+    if report_path and report_path.exists():
+        file_url = f"file://{report_path.resolve()}"
+        console.print(f"\n  Report:  [link={file_url}]{report_path.name}[/link]")
 
 
 # ---------------------------------------------------------------------------
@@ -879,10 +877,16 @@ def render(
             "people.yaml, or intermediate data).[/dim]"
         )
 
-    # Derive project name from the output directory's parent (the project root)
+    # Recover project name from metadata written by a previous run
     if project_name is None:
-        # If output_dir is "output", use parent dir name; otherwise use output_dir name
-        if output_dir.name == "output":
+        from bristlenose.stages.render_output import read_pipeline_metadata
+
+        meta = read_pipeline_metadata(output_dir)
+        project_name = meta.get("project_name")
+
+    # Fallback: derive from directory name (pre-metadata output dirs)
+    if project_name is None:
+        if output_dir.name in ("bristlenose-output", "output"):
             project_name = output_dir.resolve().parent.name
         else:
             project_name = output_dir.resolve().name

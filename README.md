@@ -303,6 +303,13 @@ Edit `bristlenose/__init__.py` (the single source of truth for version), commit,
 
 ## Changelog
 
+### 0.7.1
+
+- Bar chart alignment — sentiment and user-tag charts use CSS grid so bar left edges align within each chart; labels hug text with variable gap to bars
+- Histogram delete — hover × on user tag labels in the histogram to remove that tag from all quotes (with confirmation modal)
+- Surprise placement — surprise sentiment bar now renders between positive and negative sentiments
+- Quote exclusivity in themes — each quote assigned to exactly one theme (pick strongest fit)
+
 ### 0.7.0
 
 - Multi-select — Finder-like click selection (click, Shift-click, Cmd/Ctrl-click) with bulk starring (`s` key) and bulk tagging; selection count shown in view-switcher label; CSV export respects selection

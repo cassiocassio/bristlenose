@@ -90,6 +90,20 @@ return list(await asyncio.gather(*(_process(t) for t in transcripts)))
 - **`concurrency` kwarg**: exposed but not yet wired to config (unlike `llm_concurrency`). Default of 4 is sufficient; config wiring deferred until there's a real need
 - **Tests**: `tests/test_extract_audio.py` — 2 tests for extraction skip behaviour
 
+## Quote exclusivity across report sections (Stages 9–11)
+
+**Design rule: every quote appears in exactly one section of the final report.** Researchers expect this — duplicates confuse non-researchers and complicate downstream processing (Miro boards, spreadsheets, etc.).
+
+The exclusivity is enforced at three levels:
+
+1. **Quote type separation (Stage 9 → Stages 10/11)**: `extract_quotes()` classifies every quote as `QuoteType.SCREEN_SPECIFIC` or `QuoteType.GENERAL_CONTEXT`. Stage 10 (`quote_clustering.py`) filters to `SCREEN_SPECIFIC` only; stage 11 (`thematic_grouping.py`) filters to `GENERAL_CONTEXT` only. A quote cannot appear in both a screen cluster and a theme group.
+
+2. **Within screen clusters (Stage 10)**: The LLM prompt in `prompts.py` says "Assign each quote to exactly one screen cluster." The structured output schema (`ScreenClusterItem.quote_indices`) enforces this at the index level.
+
+3. **Within theme groups (Stage 11)**: The LLM prompt says "Assign each quote to exactly one theme (even when it could fit several, pick the strongest fit — the researcher will reassign if needed)." The schema description on `ThemeGroupItem.quote_indices` reinforces this. A safety-net dedup in `thematic_grouping.py` catches LLM violations when weak themes are folded into "Uncategorised observations."
+
+**History**: before Feb 2026, the theme prompt allowed "one or more themes" per quote. Changed to exclusive assignment because: (a) researchers expect to see each quote once and make reassignment decisions themselves, (b) non-researchers receiving the report find duplicates confusing, (c) export to CSV/clipboard doubles up rows unexpectedly.
+
 ## Duplicate timecode helpers
 
 Both `models.py` and `utils/timecodes.py` define `format_timecode()` and `parse_timecode()`. They behave identically. Stage files import from one or the other — both are fine. The `utils/timecodes.py` version has a more sophisticated parser (SRT/VTT milliseconds support).

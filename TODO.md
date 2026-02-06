@@ -181,6 +181,7 @@ Organised from easiest to hardest. The README has a condensed version; this is t
 - [ ] JS: split `tags.js` (453 lines) — separate AI badge lifecycle, user tag CRUD, and auto-suggest UI into `ai-badges.js`, `user-tags.js`, `suggest.js`
 - [ ] JS: explicit cross-module state — replace implicit globals (`userTags` read by `histogram.js`) with a shared namespace object (`bn.state.userTags`) or pass state through init functions
 - [ ] JS: auto-suggest accessibility — add ARIA attributes (`role="combobox"`, `aria-expanded`, `aria-activedescendant`) so screen readers can navigate the tag suggest dropdown
+- [ ] User research panel opt-in — add an optional email field (e.g. in feedback modal or settings) to join the user research panel and receive invites to research sessions
 
 ### Medium (a few days each)
 

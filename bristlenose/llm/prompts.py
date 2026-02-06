@@ -177,8 +177,8 @@ Your task:
 or shared experiences emerge?
 2. Give each theme a clear, concise label (e.g. "Daily workflow challenges", \
 "Tool adoption barriers", "Team collaboration patterns")
-3. Assign each quote to one or more themes (a quote may appear in multiple themes \
-if genuinely relevant)
+3. Assign each quote to exactly one theme (even when it could fit several, pick the \
+strongest fit — the researcher will reassign if needed)
 4. Provide a short, punchy subtitle for each theme (under 15 words, no filler)
 
 ## Quotes

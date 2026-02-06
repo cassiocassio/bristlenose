@@ -169,7 +169,7 @@ class ThemeGroupItem(BaseModel):
     theme_label: str = Field(description="Concise label for this theme")
     description: str = Field(description="Brief 1-2 sentence description of this theme")
     quote_indices: list[int] = Field(
-        description="Indices of quotes (0-based) that belong to this theme. A quote may appear in multiple themes."
+        description="Indices of quotes (0-based) that belong to this theme. Each quote should appear in exactly one theme."
     )
 
 

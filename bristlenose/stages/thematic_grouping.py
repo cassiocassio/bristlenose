@@ -98,7 +98,8 @@ async def group_by_theme(
             weak_quotes.extend(t.quotes)
 
     if weak_quotes:
-        # Deduplicate (a quote could appear in multiple weak themes)
+        # Deduplicate (safety net — LLM should assign each quote once,
+        # but may occasionally duplicate across weak themes)
         seen_ids: set[tuple[str, float, str]] = set()
         unique_weak: list[ExtractedQuote] = []
         for q in weak_quotes:

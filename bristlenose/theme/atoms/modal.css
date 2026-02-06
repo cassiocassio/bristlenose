@@ -66,3 +66,45 @@
     font-size: 0.75rem;
     color: var(--bn-colour-muted);
 }
+
+/* Modal action buttons */
+.bn-modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: var(--bn-space-sm);
+    margin-top: var(--bn-space-lg);
+}
+
+.bn-btn {
+    font-family: inherit;
+    font-size: 0.85rem;
+    padding: 0.4rem 1rem;
+    border-radius: var(--bn-radius-sm);
+    border: 1px solid var(--bn-colour-border);
+    cursor: pointer;
+    transition: background var(--bn-transition-fast), color var(--bn-transition-fast);
+}
+
+.bn-btn-cancel {
+    background: var(--bn-colour-bg);
+    color: var(--bn-colour-text);
+}
+
+.bn-btn-cancel:hover {
+    background: var(--bn-colour-quote-bg);
+}
+
+.bn-btn-danger {
+    background: var(--bn-sentiment-frustration);
+    color: #fff;
+    border-color: var(--bn-sentiment-frustration);
+}
+
+.bn-btn-danger:hover {
+    opacity: 0.85;
+}
+
+/* Confirm-delete modal — narrow width */
+.confirm-delete-modal {
+    max-width: 24rem;
+}

@@ -16,13 +16,16 @@
  * - Bar widths are normalised against the maximum of the user count and
  *   the AI chart's max count (read from `data-max-count` on the parent
  *   `.sentiment-row`) so the two charts are visually comparable.
+ * - Each tag label has a hover delete button that removes the tag from
+ *   all quotes after confirmation.
  *
- * Dependencies: `userTags` from tags.js (shared global).
+ * Dependencies: `userTags` from tags.js, `createModal` from modal.js,
+ *               `persistUserTags` from tags.js.
  *
  * @module histogram
  */
 
-/* global userTags */
+/* global userTags, persistUserTags, createModal */
 
 /**
  * (Re-)render the user-tags histogram.
@@ -75,6 +78,17 @@ function renderUserTagsChart() {
     var label = document.createElement('span');
     label.className = 'sentiment-bar-label badge';
     label.textContent = e.tag;
+    if (e.tag.length > 18) label.title = e.tag;
+
+    // Delete button (visible on hover).
+    var del = document.createElement('button');
+    del.type = 'button';
+    del.className = 'histogram-bar-delete';
+    del.setAttribute('aria-label', 'Delete tag');
+    del.textContent = '\u00d7';
+    del.setAttribute('data-tag', e.tag);
+    del.setAttribute('data-count', e.count);
+    label.appendChild(del);
 
     var bar = document.createElement('div');
     bar.className = 'sentiment-bar';
@@ -93,3 +107,69 @@ function renderUserTagsChart() {
     container.appendChild(group);
   });
 }
+
+/**
+ * Delete a user tag from every quote and update the UI.
+ *
+ * @param {string} tagName The tag to remove.
+ */
+function _deleteTagFromAllQuotes(tagName) {
+  // Remove from in-memory userTags map.
+  Object.keys(userTags).forEach(function (qid) {
+    if (!userTags[qid]) return;
+    userTags[qid] = userTags[qid].filter(function (t) {
+      return t !== tagName;
+    });
+    if (userTags[qid].length === 0) delete userTags[qid];
+  });
+
+  // Remove badge elements from the DOM.
+  var badges = document.querySelectorAll('.badge-user[data-tag-name="' + tagName + '"]');
+  for (var i = 0; i < badges.length; i++) {
+    badges[i].classList.add('badge-removing');
+    (function (el) {
+      el.addEventListener('animationend', function () { el.remove(); }, { once: true });
+    })(badges[i]);
+  }
+
+  // Persist — triggers histogram re-render and tag-filter update.
+  persistUserTags(userTags);
+}
+
+// ── Delete-from-histogram click handler (event delegation) ──
+
+document.addEventListener('click', function (e) {
+  var del = e.target.closest('.histogram-bar-delete');
+  if (!del) return;
+  e.preventDefault();
+  e.stopPropagation();
+
+  var tagName = del.getAttribute('data-tag');
+  var count = parseInt(del.getAttribute('data-count'), 10) || 0;
+  var noun = count === 1 ? 'quote' : 'quotes';
+
+  var modal = createModal({
+    className: 'confirm-delete-overlay',
+    modalClassName: 'confirm-delete-modal',
+    content:
+      '<h2>Delete tag</h2>' +
+      '<p>Remove \u201c<strong>' + tagName.replace(/</g, '&lt;') + '</strong>\u201d from ' +
+      count + ' ' + noun + '?</p>' +
+      '<div class="bn-modal-actions">' +
+      '<button type="button" class="bn-btn bn-btn-cancel">Cancel</button>' +
+      '<button type="button" class="bn-btn bn-btn-danger">Delete all</button>' +
+      '</div>'
+  });
+
+  // Wire buttons.
+  var actions = modal.card.querySelector('.bn-modal-actions');
+  actions.querySelector('.bn-btn-cancel').addEventListener('click', function () {
+    modal.hide();
+  });
+  actions.querySelector('.bn-btn-danger').addEventListener('click', function () {
+    _deleteTagFromAllQuotes(tagName);
+    modal.hide();
+  });
+
+  modal.show();
+});

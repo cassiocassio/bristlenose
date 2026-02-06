@@ -1291,6 +1291,10 @@ def _build_sentiment_html(quotes: list[ExtractedQuote]) -> str:
     for label, count in pos_sorted:
         parts.append(_bar(label, count))
 
+    # Surprise bar (neutral — between positive and negative)
+    if surprise_count > 0:
+        parts.append(_bar("surprise", surprise_count))
+
     # Divider
     parts.append('<div class="sentiment-divider"></div>')
 
@@ -1298,11 +1302,6 @@ def _build_sentiment_html(quotes: list[ExtractedQuote]) -> str:
     neg_sorted = sorted(neg_counts.items(), key=lambda x: x[1])
     for label, count in neg_sorted:
         parts.append(_bar(label, count))
-
-    # Surprise bar (neutral — separate from positive/negative)
-    if surprise_count > 0:
-        parts.append('<div class="sentiment-divider"></div>')
-        parts.append(_bar("surprise", surprise_count))
 
     parts.append("</div>")
 

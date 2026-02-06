@@ -2,6 +2,7 @@
 
 .sentiment-row {
     display: flex;
+    align-items: flex-start;
     gap: var(--bn-space-xl);
     flex-wrap: wrap;
     margin: var(--bn-space-lg) 0;
@@ -17,11 +18,14 @@
     font-weight: 600;
     color: var(--bn-colour-text);
     margin-bottom: 0.6rem;
+    grid-column: 1 / -1;
 }
 
 .sentiment-chart {
-    display: flex;
-    flex-direction: column;
-    gap: 0;
+    display: grid;
+    grid-template-columns: max-content 1fr max-content;
+    column-gap: 0.5rem;
+    row-gap: var(--bn-space-md);
+    align-items: center;
     margin: var(--bn-space-lg) 0;
 }

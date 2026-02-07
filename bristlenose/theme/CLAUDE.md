@@ -70,7 +70,11 @@ Each user tag label has a hover `×` button (`.histogram-bar-delete` in `atoms/b
 
 ## JS modules
 
-16 standalone files in `js/` concatenated at render time (same pattern as CSS): storage, modal, codebook, player, starred, editing, tags, histogram, csv-export, view-switcher, search, tag-filter, names, focus, feedback, main. Transcript pages use `storage.js` + `player.js` + `transcript-names.js` (no starred/editing/tags/search/names/view-switcher/focus/feedback). Codebook page uses `storage.js` + `codebook.js` only. `transcript-names.js` only updates heading speaker names (preserving code prefix: `"m1 Sarah Chen"`); segment speaker labels stay as raw codes (`p1:`, `m1:`) and are not overridden by JS.
+16 standalone files in `js/` concatenated at render time (same pattern as CSS): storage, modal, codebook, player, starred, editing, tags, histogram, csv-export, view-switcher, search, tag-filter, names, focus, feedback, main. Transcript pages use `storage.js` + `player.js` + `transcript-names.js` (no starred/editing/tags/search/names/view-switcher/focus/feedback). Codebook page uses `storage.js` + `modal.js` + `codebook.js`. `transcript-names.js` only updates heading speaker names (preserving code prefix: `"m1 Sarah Chen"`); segment speaker labels stay as raw codes (`p1:`, `m1:`) and are not overridden by JS.
+
+### storage.js
+
+Thin localStorage abstraction. `createStore(key)` returns `{ get, set }` pair. Also provides `escapeHtml(s)` — shared HTML escaping utility (escapes `&`, `<`, `>`, `"`) used by `codebook.js`, `histogram.js`, and any module inserting user-provided text into `innerHTML`. Defined before `createStore()` so it's available to all modules in the concatenation order.
 
 ### names.js
 
@@ -133,7 +137,7 @@ Dropdown filter for quotes by user tag. `.tag-filter` (relative wrapper). The ta
 
 ### modal.css (atom)
 
-Shared base styles for overlay modal dialogs, used by both help-overlay and feedback modals. `.bn-overlay` (fixed fullscreen backdrop, `z-index: 1000`, opacity/visibility transition), `.bn-modal` (centred card, relative position, `--bn-colour-bg` background, `--bn-radius-lg`, shadow), `.bn-modal-close` (absolute top-right × button, muted → text on hover), `.bn-modal-footer` (centred footer text, small muted). Each modal adds its own content-specific classes on top (e.g. `.help-modal { max-width: 600px }`, `.feedback-modal { max-width: 420px }`).
+Shared base styles for overlay modal dialogs, used by help-overlay, feedback, and confirmation modals. `.bn-overlay` (fixed fullscreen backdrop, `z-index: 1000`, opacity/visibility transition), `.bn-modal` (centred card, relative position, `--bn-colour-bg` background, `--bn-radius-lg`, shadow, `max-width: 24rem` default — override per-modal for wider content), `.bn-modal-close` (absolute top-right × button, muted → text on hover), `.bn-modal-footer` (centred footer text, small muted), `.bn-btn-primary` (accent-coloured action button). Each modal adds its own content-specific classes on top (e.g. `.help-modal { max-width: 600px }`, `.feedback-modal { max-width: 420px }`).
 
 ### feedback.css (molecule)
 
@@ -141,7 +145,12 @@ Feedback modal content styles, extends `.bn-modal` from `modal.css`. `.feedback-
 
 ### modal.js
 
-Shared modal factory used by both help overlay (`focus.js`) and feedback modal (`feedback.js`). `createModal({ className, modalClassName, content, onHide })` builds overlay + card + close button DOM, wires click-outside and close button, registers in `_modalRegistry`. Returns `{ show, hide, isVisible, el, card }`. `closeTopmostModal()` pops the most recent visible modal — called from Escape handler in `focus.js`, replaces per-modal visibility flag checks.
+Shared modal factory used by help overlay (`focus.js`), feedback modal (`feedback.js`), codebook panel (`codebook.js`), and histogram delete (`histogram.js`). Two main functions:
+
+- **`createModal({ className, modalClassName, content, onHide })`** — builds overlay + card + close button DOM, wires click-outside and close button, registers in `_modalRegistry`. Returns `{ show, hide, isVisible, toggle, el, card }`. The `toggle()` method simplifies show/hide switching (used by `focus.js` help overlay and codebook help)
+- **`showConfirmModal({ title, body, confirmLabel, confirmClass, onConfirm })`** — reusable confirmation dialog with Cancel + action button. Lazily creates a single modal instance, replaces body content each call. `confirmClass` defaults to `'bn-btn-danger'`; use `'bn-btn-primary'` for non-destructive actions (e.g. merge). Used by `codebook.js` (delete tag, delete group, merge tags) and `histogram.js` (delete tag from all quotes)
+
+`closeTopmostModal()` pops the most recent visible modal — called from Escape handler in `focus.js` and codebook panel keydown handler.
 
 ### feedback.js
 
@@ -149,26 +158,43 @@ Feedback modal logic, gated behind `BRISTLENOSE_FEEDBACK` JS constant. `initFeed
 
 ### codebook.js
 
-Codebook data model and colour assignment module. Manages the researcher's tag taxonomy: named groups of tags with colours from the OKLCH pentadic palette. Also wires up the toolbar Codebook button (opens `codebook.html` in a new window).
+Codebook data model, colour assignment, and interactive panel UI. Manages the researcher's tag taxonomy: named groups of tags with colours from the OKLCH pentadic palette. On the report page, provides colour lookups and the toolbar button. On `codebook.html`, renders the full interactive panel with drag-and-drop, inline editing, and group CRUD.
 
 - **Store**: `createStore('bristlenose-codebook')` — shape `{ groups: [], tags: {}, aiTagsVisible: true }`
-- **Colour sets**: 5 pentadic sets (UX blue, Emotion red-pink, Task green-teal, Trust purple, Opportunity amber), each with 5–6 slots mapping to CSS custom properties `--bn-{set}-{N}-bg`
+- **Colour sets**: 5 pentadic sets (UX blue, Emotion red-pink, Task green-teal, Trust purple, Opportunity amber), each with 5–6 slots. `COLOUR_SETS` includes `bgVar`, `groupBg`, `barVar` properties for panel rendering
 - **`getTagColourVar(tagName)`** — returns CSS `var()` reference for a tag's background colour; `var(--bn-custom-bg)` for ungrouped tags
 - **`assignTagToGroup(tagName, groupId)`** — assigns tag with auto-picked colour index
 - **`createCodebookGroup(name, colourSet)`** — creates a group with auto-assigned colour set if not specified
-- **`initCodebook()`** — restores AI tag visibility, applies codebook colours to badges, wires Codebook toolbar button
+- **`initCodebook()`** — restores AI tag visibility, applies codebook colours to badges, wires Codebook toolbar button. On codebook page, calls `_initCodebookPanel()` to render the interactive grid
 - **Codebook button**: opens `codebook.html` via `window.open()` with `'bristlenose-codebook'` window name
 - **AI tag toggle**: code commented out (removed from toolbar — TODO: relocate to future settings panel). Functions `isAiTagsVisible()`, `toggleAiTags()`, `_applyAiTagVisibility()` remain available
-- **Dependencies**: `storage.js` (must load before)
+- **Cross-window sync**: `storage` event listener reloads codebook state and re-renders panel (or re-applies colours on report page) when the other window writes
+- **Panel rendering** (codebook page only):
+  - `_initCodebookPanel(grid)` — renders grid, wires `?` key for help modal and `Escape` for `closeTopmostModal()`
+  - `_renderCodebookGrid(grid)` — builds ungrouped column, group columns, and "+ New group" placeholder
+  - `_renderGroupColumn()` — header (title, subtitle, close button), tag list with micro bars, add-tag row
+  - `_renderTagRow()` — badge with colour, delete button, micro histogram bar, quote count, drag handlers
+- **Drag-and-drop**: `_dragTag`/`_dragGhost` state. Drag tag → group column = move. Drag tag → tag row = merge (with `showConfirmModal`). Drag tag → "+ New group" = create group with tag
+- **Inline editing**: `_editGroupTitle()`, `_editGroupSubtitle()`, `_addTagInline()` — all use `committed` flag guard pattern to prevent double-commit on blur+Enter
+- **Confirmation dialogs**: `_confirmMergeTags()`, `_confirmDeleteTag()`, `_confirmDeleteGroup()` — all use `showConfirmModal()` from `modal.js`
+- **Help modal**: `_toggleCodebookHelp()` with codebook-specific shortcuts (?, Esc, Enter, drag actions), wired to `?` key
+- **Tag name collection**: `_allTagNames()` merges tags from both `bristlenose-tags` (user tags with quotes) AND `codebook.tags` (tags assigned to groups but possibly with 0 quotes)
+- **Dependencies**: `storage.js` (for `createStore`, `escapeHtml`), `modal.js` (for `createModal`, `showConfirmModal`, `closeTopmostModal` — on codebook page only)
 
 ### Codebook page
 
-Standalone HTML page (`codebook.html`) at the output root, opened in a new window by the toolbar Codebook button. Rendered by `_render_codebook_page()` in `render_html.py`. Currently a placeholder with project header, back link to report, and footer. Loads `storage.js` + `codebook.js` for cross-window sync via localStorage events.
+Standalone HTML page (`codebook.html`) at the output root, opened in a new window by the toolbar Codebook button. Rendered by `_render_codebook_page()` in `render_html.py`. Features:
+
+- **Layout**: CSS columns masonry grid (`columns: 240px`, `organisms/codebook-panel.css`) with colour-coded group cards
+- **Content**: description text + `<div class="codebook-grid" id="codebook-grid">` container populated by `_initCodebookPanel()` from `codebook.js`
+- **JS files**: `_CODEBOOK_JS_FILES` = `storage.js` + `modal.js` + `codebook.js`. Boot calls `initCodebook()` which detects the `#codebook-grid` element and renders the panel
+- **Interactive features**: drag-and-drop tags between groups, merge tags, inline-edit group titles/subtitles, add/delete tags, create/delete groups, keyboard shortcuts (? help, Esc close)
+- **Cross-window sync**: localStorage `storage` event — changes in the codebook page propagate to the report (badge colours update), and vice versa (new user tags appear)
 
 Three page types in the output:
 1. **Report** (`bristlenose-{slug}-report.html`) — main window, full JS suite
 2. **Transcript** (`sessions/transcript_{id}.html`) — separate pages, `storage.js` + `player.js` + `transcript-names.js`
-3. **Codebook** (`codebook.html`) — new window, `storage.js` + `codebook.js`
+3. **Codebook** (`codebook.html`) — new window, `storage.js` + `modal.js` + `codebook.js`
 
 ### Toolbar button styling
 
@@ -198,3 +224,48 @@ Styles for the transcript coverage section at the end of the report. Section has
 - **`.coverage-segment`** — omitted segment text (muted colour, left padding); timecode links to transcript page
 - **`.coverage-fragments`** — summary line for short fragments (`.label` italic, `.verbatim` roman)
 - **`.coverage-empty`** — "Nothing omitted" message (muted, italic)
+
+### codebook-panel.css (organism)
+
+Codebook page grid layout and interactive components. Uses CSS columns masonry (`columns: 240px`) for space-efficient tiling with `break-inside: avoid` on group cards. All values via design tokens — no hard-coded colours/spacing. Dark mode handled automatically via `light-dark()` tokens.
+
+- **`.codebook-grid`** — masonry container, `max-width: 1200px`
+- **`.codebook-group`** — group card with rounded corners, transparent border (accent on `.drag-over`), coloured background via `--bn-group-*` tokens
+- **`.group-header`** — flex row: title area + close button (close fades in on group hover)
+- **`.group-title-text`** / **`.group-subtitle`** — click-to-edit text with hover highlight
+- **`.group-title-input`** / **`.group-subtitle-input`** — inline edit inputs with focus ring
+- **`.group-total-row`** — tag count + total quote count summary
+- **`.tag-row`** — grid row: badge + bar area, `cursor: grab`, drag states (`.dragging`, `.merge-target`)
+- **`.tag-bar-area`** / **`.tag-micro-bar`** / **`.tag-count`** — micro histogram with bar colours from `--bn-bar-*` tokens
+- **`.tag-add-row`** / **`.tag-add-badge`** / **`.tag-add-input`** — dashed "+" button → inline input
+- **`.new-group-placeholder`** — dashed border card for creating new groups, also a drop target
+- **`.drag-ghost`** — fixed-position ghost element during drag
+- **`.tag-preview`** — inline badge in merge confirmation modal
+
+## Future refactoring opportunities
+
+Identified during the codebook panel implementation. These are low-priority improvements to pick up when working in these areas — not blockers.
+
+### Tag-count aggregation (3 implementations)
+
+Three modules independently count user tags by iterating `userTags`: `histogram.js` (`renderUserTagsChart`), `tag-filter.js` (`_getFilteredTagCounts`), and `codebook.js` (`_countQuotesPerTag`). A shared `countUserTags()` function in `storage.js` or a new `tag-utils.js` module would eliminate the duplication. Not urgent — the implementations are simple and correct.
+
+### Shared user-tags data layer
+
+`tags.js` (report page) owns the in-memory `userTags` map and `persistUserTags()` function. `codebook.js` (codebook page) reads user tags via `createStore('bristlenose-tags').get({})` directly. If a future feature needs write access from the codebook page (e.g. bulk rename), extract a shared `userTagStore` module with `get()`, `set()`, and `count()` methods.
+
+### isEditing() guard deduplication
+
+Both `editing.js` and `names.js` have their own `isEditing` / `nameIsEditing` boolean to prevent conflicting edits. A shared `EditGuard` class (`acquire()`, `release()`, `isActive()`) would unify these. Low value until a third editing context is added.
+
+### Inline edit commit pattern
+
+`codebook.js` (`_editGroupTitle`, `_editGroupSubtitle`, `_addTagInline`), `editing.js`, and `names.js` all use the same pattern: create `<input>`, focus, wire `blur`/`Enter`/`Escape` with a `committed` flag guard. A shared `inlineEdit({ element, value, onCommit, onCancel })` helper would reduce boilerplate. Medium value — the pattern is well-understood but repeated ~6 times.
+
+### Close button CSS base class
+
+`.bn-modal-close`, `.group-close`, `.histogram-bar-delete`, and `.badge-delete` all share the same visual pattern: muted → text on hover, small padding, `×` character. Extract a `.close-btn` atom with the shared base styles, then each context adds positioning overrides.
+
+### Input focus CSS base class
+
+`.group-title-input`, `.group-subtitle-input`, `.tag-add-input`, `.search-input`, and `.tag-filter-search-input` all share: `font-family: inherit`, `border: 1px solid var(--bn-colour-border)`, `border-radius: var(--bn-radius-sm)`, accent border + focus ring on `:focus`. Extract a `.bn-input` atom with shared base styles.

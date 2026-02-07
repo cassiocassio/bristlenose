@@ -21,13 +21,16 @@
     visibility: visible;
 }
 
-/* Modal card — centred white box with shadow */
+/* Modal card — centred white box with shadow.
+   Default max-width suits confirmation dialogs; override per-modal for
+   wider content (help-modal 600px, feedback-modal 420px). */
 .bn-modal {
     position: relative;
     background: var(--bn-colour-bg);
     border-radius: var(--bn-radius-lg);
     padding: var(--bn-space-xl);
     width: 90%;
+    max-width: 24rem;
     box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
 }
 
@@ -101,6 +104,16 @@
 }
 
 .bn-btn-danger:hover {
+    opacity: 0.85;
+}
+
+.bn-btn-primary {
+    background: var(--bn-colour-accent);
+    color: #fff;
+    border-color: var(--bn-colour-accent);
+}
+
+.bn-btn-primary:hover {
     opacity: 0.85;
 }
 

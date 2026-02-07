@@ -67,6 +67,7 @@ _THEME_FILES: list[str] = [
     "organisms/sentiment-chart.css",
     "organisms/toolbar.css",
     "organisms/toc.css",
+    "organisms/codebook-panel.css",
     "templates/report.css",
     "templates/transcript.css",
     "templates/print.css",
@@ -1013,6 +1014,7 @@ def _render_transcript_page(
 
 _CODEBOOK_JS_FILES: list[str] = [
     "js/storage.js",
+    "js/modal.js",
     "js/codebook.js",
 ]
 
@@ -1115,21 +1117,21 @@ def _render_codebook_page(
 
     _w("<h1>Codebook</h1>")
 
-    # Placeholder content — the full interactive codebook UI is Phase 2.
-    _w('<section style="margin-top: 1.5rem;">')
-    _w('<p style="color: var(--bn-colour-muted); font-size: 0.85rem;">')
-    _w("The codebook will show your tag taxonomy here &mdash; ")
-    _w("groups, colour assignments, and tag definitions.")
+    # Description and interactive grid container (populated by codebook.js)
+    _w('<p class="codebook-description">')
+    _w("Drag tags between groups to reclassify. ")
+    _w("Drag onto another tag to merge. Sorted by frequency.")
     _w("</p>")
-    _w("</section>")
+    _w('<div class="codebook-grid" id="codebook-grid"></div>')
 
     _w("</article>")
     _w(_footer_html())
 
-    # JavaScript — codebook data model + storage for cross-window sync
+    # JavaScript — codebook data model + modal + storage for cross-window sync
     _w("<script>")
     _w("(function() {")
     _w(_get_codebook_js())
+    _w("initCodebook();")
     _w("})();")
     _w("</script>")
 

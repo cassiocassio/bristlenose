@@ -35,14 +35,14 @@ LLM prompts: All prompt templates live in `bristlenose/llm/prompts.py`. When ite
 
 Report JavaScript — 16 modules in `bristlenose/theme/js/`, concatenated in dependency order into a single `<script>` block by `render_html.py` (`_JS_FILES`). Boot sequence in `main.js`:
 
-1. `storage.js` — `createStore()` localStorage abstraction (used by all stateful modules)
-2. `modal.js` — `createModal()` shared overlay/card/close helper, `closeTopmostModal()` for Escape key, `_modalRegistry` (used by focus.js, feedback.js)
-3. `codebook.js` — `initCodebook()`, codebook data model (groups, tag→colour assignments), AI tag visibility, Codebook toolbar button (opens `codebook.html` in new window)
+1. `storage.js` — `createStore()` localStorage abstraction (used by all stateful modules), `escapeHtml()` shared HTML escaping utility
+2. `modal.js` — `createModal()` shared overlay/card/close helper (returns `{ show, hide, isVisible, toggle }`), `showConfirmModal()` reusable confirmation dialog, `closeTopmostModal()` for Escape key, `_modalRegistry` (used by focus.js, feedback.js, codebook.js, histogram.js)
+3. `codebook.js` — `initCodebook()`, codebook data model (groups, tag→colour assignments), AI tag visibility, Codebook toolbar button (opens `codebook.html` in new window), interactive panel rendering (drag-drop, inline editing, group CRUD) on codebook page
 4. `player.js` — `seekTo()`, `initPlayer()` for timecode playback
 5. `starred.js` — `initStarred()`, star toggle, FLIP reorder animation
 6. `editing.js` — `initEditing()`, `initInlineEditing()` for quote + heading editing
 7. `tags.js` — `initTags()`, AI badge delete/restore, user tag CRUD, auto-suggest
-8. `histogram.js` — `renderUserTagsChart()` for user-tags sentiment chart, `_deleteTagFromAllQuotes()` for bulk tag removal with confirmation modal
+8. `histogram.js` — `renderUserTagsChart()` for user-tags sentiment chart, `_deleteTagFromAllQuotes()` for bulk tag removal via `showConfirmModal()`
 9. `csv-export.js` — `initCsvExport()`, `copyToClipboard()`, `showToast()`, defines `currentViewMode` global
 10. `view-switcher.js` — `initViewSwitcher()`, dropdown menu, section visibility (depends on `currentViewMode`)
 11. `search.js` — `initSearchFilter()`, search-as-you-type filtering, exposes `_onViewModeChange()` hook
@@ -54,7 +54,7 @@ Report JavaScript — 16 modules in `bristlenose/theme/js/`, concatenated in dep
 
 Transcript pages use a separate list (`_TRANSCRIPT_JS_FILES`): `storage.js`, `player.js`, `transcript-names.js`.
 
-Codebook page uses a separate list (`_CODEBOOK_JS_FILES`): `storage.js`, `codebook.js`.
+Codebook page uses a separate list (`_CODEBOOK_JS_FILES`): `storage.js`, `modal.js`, `codebook.js`.
 
 ## Output directory structure
 
@@ -327,10 +327,10 @@ This is especially common when:
 - **`player.js` only intercepts `.timecode` clicks with `data-participant` and `data-seconds`** — coverage section links use `class="timecode"` but NO data attributes, so they navigate normally. If you add new timecode links that should navigate (not open the player), omit the data attributes
 - **Pipeline metadata** (`metadata.json`): `write_pipeline_metadata()` in `render_output.py` writes `{"project_name": "..."}` to the intermediate directory during `run`/`analyze`. `read_pipeline_metadata()` reads it back. The CLI `render` command uses this as the source of truth for project name, falling back to directory-name heuristics for pre-metadata output dirs only
 - **`PipelineResult.report_path`**: populated by all three pipeline methods (`run`, `run_analysis_only`, `run_render_only`) from the return value of `render_html()`. `_print_pipeline_summary()` in `cli.py` uses it to print the clickable report link (shows filename only, `file://` hyperlink resolves the full path)
-- **Modal infrastructure**: `atoms/modal.css` provides shared `.bn-overlay`, `.bn-modal`, `.bn-modal-close`, `.bn-modal-footer`, `.bn-modal-actions`, `.bn-btn`, `.bn-btn-cancel`, `.bn-btn-danger` classes. `js/modal.js` provides `createModal({ className, modalClassName, content, onHide })` factory + `_modalRegistry` + `closeTopmostModal()`. Help, feedback, and histogram delete-confirmation modals all use these — don't duplicate overlay/card/close patterns
+- **Modal infrastructure**: `atoms/modal.css` provides shared `.bn-overlay`, `.bn-modal`, `.bn-modal-close`, `.bn-modal-footer`, `.bn-modal-actions`, `.bn-btn`, `.bn-btn-cancel`, `.bn-btn-danger`, `.bn-btn-primary` classes. `.bn-modal` has `max-width: 24rem` default — override per-modal for wider content (e.g. `.help-modal { max-width: 600px }`). `js/modal.js` provides `createModal()` factory (returns `{ show, hide, isVisible, toggle }`) + `showConfirmModal()` reusable confirmation dialog + `_modalRegistry` + `closeTopmostModal()`. Help, feedback, codebook, and histogram modals all use these — don't duplicate overlay/card/close patterns
 - **Sentiment chart layout**: both AI sentiment and user-tags charts use CSS grid (`grid-template-columns: max-content 1fr max-content`) on `.sentiment-chart`. Bar groups use `display: contents` so label/bar/count participate directly in the parent grid — this is what aligns all bar left edges within each chart. Labels use `width: fit-content` + `justify-self: start` so the background hugs the text and the variable gap falls between the label's right edge and the bar. The two charts sit side-by-side in `.sentiment-row` (flexbox, `align-items: flex-start` for top-alignment). Don't change the grid structure without checking both charts
 - **Surprise sentiment placement**: surprise is neutral — it renders between positive sentiments and the divider, not after negative sentiments. See `_build_sentiment_html()` in `render_html.py`
-- **Histogram delete-from-all**: clicking the hover `×` on a user tag label in the histogram shows a confirmation modal, then removes that tag from every quote via `_deleteTagFromAllQuotes()` in `histogram.js`. This calls `persistUserTags()` which re-renders the histogram and re-applies tag filter. The confirmation modal is created dynamically per click (not a singleton) using `createModal()`
+- **Histogram delete-from-all**: clicking the hover `×` on a user tag label in the histogram shows a confirmation modal via `showConfirmModal()`, then removes that tag from every quote via `_deleteTagFromAllQuotes()` in `histogram.js`. This calls `persistUserTags()` which re-renders the histogram and re-applies tag filter
 - **IIFE scoping and inline onclick**: all report JS is wrapped in `(function() { ... })()` by `render_html.py`. Functions defined inside are NOT accessible from inline `onclick` HTML attributes. Wire click handlers via `addEventListener` from JS instead. Footer links use `role="button" tabindex="0"` (no `href`) for keyboard accessibility
 - **Stale HTML files cause debugging confusion** — if a previous render created a differently-named file (e.g. from a bug), the old file remains on disk. Always check which HTML file you're viewing matches the timestamp of your last render
 - **Codebook page sits at output root** — `codebook.html` is at the same level as the report (not in `sessions/` or `assets/`), so it uses `assets/bristlenose-theme.css` (no `../` prefix). The `_footer_html()` helper uses `assets/` paths which work correctly for root-level pages

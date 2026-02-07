@@ -25,7 +25,7 @@
  * @module histogram
  */
 
-/* global userTags, persistUserTags, createModal, getTagColourVar */
+/* global userTags, persistUserTags, createModal, showConfirmModal, getTagColourVar, escapeHtml */
 
 /**
  * (Re-)render the user-tags histogram.
@@ -156,28 +156,12 @@ document.addEventListener('click', function (e) {
   var count = parseInt(del.getAttribute('data-count'), 10) || 0;
   var noun = count === 1 ? 'quote' : 'quotes';
 
-  var modal = createModal({
-    className: 'confirm-delete-overlay',
-    modalClassName: 'confirm-delete-modal',
-    content:
-      '<h2>Delete tag</h2>' +
-      '<p>Remove \u201c<strong>' + tagName.replace(/</g, '&lt;') + '</strong>\u201d from ' +
-      count + ' ' + noun + '?</p>' +
-      '<div class="bn-modal-actions">' +
-      '<button type="button" class="bn-btn bn-btn-cancel">Cancel</button>' +
-      '<button type="button" class="bn-btn bn-btn-danger">Delete all</button>' +
-      '</div>'
+  showConfirmModal({
+    title: 'Delete tag',
+    body: '<p>Remove \u201c<strong>' + escapeHtml(tagName) + '</strong>\u201d from ' +
+      count + ' ' + noun + '?</p>',
+    confirmLabel: 'Delete all',
+    confirmClass: 'bn-btn-danger',
+    onConfirm: function () { _deleteTagFromAllQuotes(tagName); }
   });
-
-  // Wire buttons.
-  var actions = modal.card.querySelector('.bn-modal-actions');
-  actions.querySelector('.bn-btn-cancel').addEventListener('click', function () {
-    modal.hide();
-  });
-  actions.querySelector('.bn-btn-danger').addEventListener('click', function () {
-    _deleteTagFromAllQuotes(tagName);
-    modal.hide();
-  });
-
-  modal.show();
 });

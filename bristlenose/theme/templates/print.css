@@ -11,6 +11,8 @@
     .toolbar { display: none; }
     .star-btn { display: none; }
     .edit-pencil { display: none; }
+    .hide-btn { display: none; }
+    .bn-hidden-badge { display: none; }
     .badge-add { display: none; }
     .badge-restore { display: none; }
     .tag-input-wrap { display: none; }

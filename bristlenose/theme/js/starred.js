@@ -47,10 +47,18 @@ function reorderGroup(group, animate) {
   var quotes = Array.prototype.slice.call(group.querySelectorAll('blockquote'));
   if (!quotes.length) return;
 
+  // Separate hidden quotes — they don't participate in reorder (display: none).
+  var visible = [];
+  var hidden = [];
+  quotes.forEach(function (bq) {
+    (bq.classList.contains('bn-hidden') ? hidden : visible).push(bq);
+  });
+  if (!visible.length) return;
+
   // --- FIRST: record current positions ---
   var rects = {};
   if (animate) {
-    quotes.forEach(function (bq) {
+    visible.forEach(function (bq) {
       rects[bq.id] = bq.getBoundingClientRect();
     });
   }
@@ -58,20 +66,20 @@ function reorderGroup(group, animate) {
   // --- Partition: starred first, rest in original order ---
   var starredQuotes = [];
   var rest = [];
-  quotes.forEach(function (bq) {
+  visible.forEach(function (bq) {
     (bq.classList.contains('starred') ? starredQuotes : rest).push(bq);
   });
   rest.sort(function (a, b) {
     return (originalOrder[a.id] || 0) - (originalOrder[b.id] || 0);
   });
-  starredQuotes.concat(rest).forEach(function (bq) {
+  starredQuotes.concat(rest).concat(hidden).forEach(function (bq) {
     group.appendChild(bq);
   });
 
   if (!animate) return;
 
   // --- INVERT: offset each element back to where it was ---
-  quotes.forEach(function (bq) {
+  visible.forEach(function (bq) {
     var old = rects[bq.id];
     var cur = bq.getBoundingClientRect();
     var dy = old.top - cur.top;
@@ -83,13 +91,13 @@ function reorderGroup(group, animate) {
   // --- PLAY: animate to final position ---
   requestAnimationFrame(function () {
     requestAnimationFrame(function () {
-      quotes.forEach(function (bq) {
+      visible.forEach(function (bq) {
         bq.classList.add('star-animating');
         bq.style.transform = '';
         bq.style.transition = '';
       });
       setTimeout(function () {
-        quotes.forEach(function (bq) {
+        visible.forEach(function (bq) {
           bq.classList.remove('star-animating');
         });
       }, 250);

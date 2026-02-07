@@ -42,6 +42,7 @@ initCsvExport();
 initViewSwitcher();
 initSearchFilter();
 initTagFilter();
+initHidden();
 initNames();
 initFocus();
 initFeedback();

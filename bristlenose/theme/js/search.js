@@ -109,6 +109,10 @@ function _applySearchFilter() {
   var bqs = document.querySelectorAll('.quote-group blockquote');
   var matchCount = 0;
   for (var i = 0; i < bqs.length; i++) {
+    if (bqs[i].classList.contains('bn-hidden')) {
+      bqs[i].style.display = 'none';
+      continue;
+    }
     var matches = _matchesQuery(bqs[i], query);
     bqs[i].style.display = matches ? '' : 'none';
     if (matches) matchCount++;
@@ -275,10 +279,15 @@ function _restoreViewMode() {
 
   if (currentViewMode === 'starred') {
     for (var i = 0; i < bqs.length; i++) {
+      if (bqs[i].classList.contains('bn-hidden')) {
+        bqs[i].style.display = 'none';
+        continue;
+      }
       bqs[i].style.display = bqs[i].classList.contains('starred') ? '' : 'none';
     }
   } else {
     for (var i = 0; i < bqs.length; i++) {
+      if (bqs[i].classList.contains('bn-hidden')) continue;
       bqs[i].style.display = '';
     }
   }
@@ -314,6 +323,9 @@ function _restoreViewMode() {
  * Also hide the preceding <hr> sibling of hidden sections.
  * Only processes sections that contain .quote-group (not Participants,
  * Sentiment, Friction, or Journeys).
+ *
+ * Sections with hidden-quotes badges remain visible even if all
+ * blockquotes are hidden — the badge is the evidence indicator.
  */
 function _hideEmptySections() {
   var sections = document.querySelectorAll('article > section');
@@ -331,6 +343,11 @@ function _hideEmptySections() {
       }
     }
 
+    // Keep section visible if it has hidden-quotes badges.
+    if (!hasVisible && section.querySelector('.bn-hidden-badge')) {
+      hasVisible = true;
+    }
+
     section.style.display = hasVisible ? '' : 'none';
 
     var prev = section.previousElementSibling;
@@ -345,6 +362,9 @@ function _hideEmptySections() {
 /**
  * Within a section, hide individual h3 + .description + .quote-group
  * clusters where all quotes are hidden.
+ *
+ * Groups with hidden-quotes badges remain visible — the badge shows
+ * the researcher that evidence exists even when all quotes are hidden.
  */
 function _hideEmptySubsections() {
   var groups = document.querySelectorAll('.quote-group');
@@ -357,6 +377,11 @@ function _hideEmptySubsections() {
         hasVisible = true;
         break;
       }
+    }
+
+    // Keep group visible if it has a hidden-quotes badge.
+    if (!hasVisible && group.querySelector('.bn-hidden-badge')) {
+      hasVisible = true;
     }
 
     var visible = hasVisible ? '' : 'none';

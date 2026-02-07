@@ -449,6 +449,12 @@ function _applyTagFilter() {
   for (var i = 0; i < bqs.length; i++) {
     var bq = bqs[i];
 
+    // Respect hidden quotes — never show them regardless of filter state.
+    if (bq.classList.contains('bn-hidden')) {
+      bq.style.display = 'none';
+      continue;
+    }
+
     // Respect starred view mode.
     if (currentViewMode === 'starred' && !bq.classList.contains('starred')) {
       bq.style.display = 'none';
@@ -497,6 +503,10 @@ function _applyTagFilter() {
 function _restoreQuotesForViewMode() {
   var bqs = document.querySelectorAll('.quote-group blockquote');
   for (var i = 0; i < bqs.length; i++) {
+    if (bqs[i].classList.contains('bn-hidden')) {
+      bqs[i].style.display = 'none';
+      continue;
+    }
     if (currentViewMode === 'starred') {
       bqs[i].style.display = bqs[i].classList.contains('starred') ? '' : 'none';
     } else {

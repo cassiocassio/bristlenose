@@ -70,7 +70,7 @@ Each user tag label has a hover `×` button (`.histogram-bar-delete` in `atoms/b
 
 ## JS modules
 
-15 standalone files in `js/` concatenated at render time (same pattern as CSS): storage, modal, player, starred, editing, tags, histogram, csv-export, view-switcher, search, tag-filter, names, focus, feedback, main. Transcript pages use `storage.js` + `player.js` + `transcript-names.js` (no starred/editing/tags/search/names/view-switcher/focus/feedback). `transcript-names.js` only updates heading speaker names (preserving code prefix: `"m1 Sarah Chen"`); segment speaker labels stay as raw codes (`p1:`, `m1:`) and are not overridden by JS.
+16 standalone files in `js/` concatenated at render time (same pattern as CSS): storage, modal, player, starred, editing, tags, histogram, csv-export, view-switcher, search, tag-filter, hidden, names, focus, feedback, main. Transcript pages use `storage.js` + `player.js` + `transcript-names.js` (no starred/editing/tags/search/names/view-switcher/focus/feedback). `transcript-names.js` only updates heading speaker names (preserving code prefix: `"m1 Sarah Chen"`); segment speaker labels stay as raw codes (`p1:`, `m1:`) and are not overridden by JS.
 
 ### names.js
 
@@ -130,6 +130,32 @@ Collapsible search filter in the toolbar: `.search-container` (flex, `margin-rig
 ### tag-filter.css (molecule)
 
 Dropdown filter for quotes by user tag. `.tag-filter` (relative wrapper), `.tag-filter-btn` (inline-flex, text colour, accent on hover), `.tag-filter-icon` (filter-lines SVG), `.tag-filter-arrow` (chevron, muted), `.tag-filter-label` (inline-block, text-align right, min-width set by JS for layout stability). `.tag-filter-menu` (absolute dropdown, right-aligned, `z-index: 200`, `max-height: 32rem`, width locked by JS on open). `.tag-filter-actions` (Select all · Clear row), `.tag-filter-search` / `.tag-filter-search-input` (search field, only shown for 8+ tags). `.tag-filter-item` (flex row: checkbox + name + count), `.tag-filter-item-name` (ellipsis truncation at `max-width: 16rem`), `.tag-filter-item-muted` (italic for "(No tags)"), `.tag-filter-count` (right-aligned, muted, tabular-nums). `.tag-filter-divider` between "(No tags)" and user tags.
+
+### hidden-quotes.css (molecule)
+
+Styles for hidden quotes feature: `.bn-hidden` state, hide button, per-group badge, dropdown, preview items.
+
+- **`blockquote.bn-hidden`** — `display: none !important` (defence-in-depth; JS also sets `style.display = 'none'`)
+- **`.hide-btn`** — absolute positioned at `right: 2rem` (between star at `0.65rem` and pencil at `3.35rem`), eye-slash SVG icon, opacity 0 by default → 1 on `blockquote:hover` / `.bn-focused`
+- **`.bn-hidden-badge`** — right-aligned in `.quote-group` via `align-self: flex-end`, contains toggle button + dropdown
+- **`.bn-hidden-toggle`** — accent-coloured text button ("3 hidden quotes ▾"), underline on hover
+- **`.bn-hidden-dropdown`** — absolute below badge, `z-index: 200`, card styling (border, shadow, radius), scrollable
+- **`.bn-hidden-item`** — flex row: timecode | preview (ellipsis-truncated) | participant code, border-bottom separator
+- **`.bn-hidden-preview`** — clickable text to unhide, cursor pointer, underline on hover, `title="Unhide"`
+
+### hidden.js
+
+Hide/unhide quotes with per-group badge and dropdown. ~350 lines.
+
+- **Store**: `createStore('bristlenose-hidden')` — shape `{ "q-p1-42": true }` (same pattern as starred)
+- **`hideQuote(quoteId)`** — adds `.bn-hidden` + `display: none`, persists, updates badge, shows toast, animates (ghost clone shrinks toward badge + FLIP siblings slide up, 300ms)
+- **`unhideQuote(quoteId)`** — removes `.bn-hidden`, restores display (respects `currentViewMode` starred filter and tag filter), persists, updates badge, scrolls to quote with highlight, animates (expand from badge + FLIP siblings slide down)
+- **`bulkHideSelected()`** — hide all selected quotes (called by `focus.js` for multi-select `h`)
+- **`isHidden(quoteId)`** — check if quote is hidden (called by other modules)
+- **`_updateBadgeForGroup(group)`** — create/update/remove badge as first child of `.quote-group`
+- **`initHidden()`** — restore from localStorage, prune stale IDs, build all badges, wire event delegation
+- **Dropdown**: click badge → toggle, click outside / Escape → close, click `.bn-hidden-preview` → unhide, timecode/participant links navigate normally
+- **Dependencies**: loads after `tag-filter.js` (reads `currentViewMode`, `_isTagFilterActive`, `_applyTagFilter`, `_hideEmptySections`); exposes `hideQuote()`, `bulkHideSelected()`, `isHidden()` called by `focus.js`
 
 ### modal.css (atom)
 

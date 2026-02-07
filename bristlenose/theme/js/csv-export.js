@@ -112,6 +112,8 @@ function buildCsv(onlyStarred, selectedIds) {
   var bqs = document.querySelectorAll('.quote-group blockquote');
   for (var i = 0; i < bqs.length; i++) {
     var bq = bqs[i];
+    // Never export hidden quotes, even when explicitly selected.
+    if (bq.classList.contains('bn-hidden')) continue;
     // If selection exists, only include selected quotes (ignore visibility/starred)
     if (selectedIds && selectedIds.size > 0) {
       if (!selectedIds.has(bq.id)) continue;

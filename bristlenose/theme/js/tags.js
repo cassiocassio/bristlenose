@@ -347,6 +347,10 @@ function openTagInput(addBtn, bq, targetIds) {
     ghostSpacer.textContent = input.value;
   }
 
+  // Set initial width so the box opens close to its final size.
+  buildSuggest(input, wrap);
+  updateSize();
+
   input.addEventListener('input', function () {
     buildSuggest(input, wrap);
     updateSize();

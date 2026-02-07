@@ -60,6 +60,7 @@ _THEME_FILES: list[str] = [
     "molecules/name-edit.css",
     "molecules/search.css",
     "molecules/tag-filter.css",
+    "molecules/hidden-quotes.css",
     "molecules/help-overlay.css",
     "molecules/feedback.css",
     "organisms/blockquote.css",
@@ -118,6 +119,7 @@ _JS_FILES: list[str] = [
     "js/view-switcher.js",
     "js/search.js",
     "js/tag-filter.js",
+    "js/hidden.js",
     "js/names.js",
     "js/focus.js",
     "js/feedback.js",
@@ -1118,6 +1120,17 @@ def _format_quote_html(
         f"</div></div>"
     )
 
+    parts.append(
+        '<button class="hide-btn" aria-label="Hide this quote">'
+        '<svg width="14" height="14" viewBox="0 0 24 24" fill="none"'
+        ' stroke="currentColor" stroke-width="2" stroke-linecap="round">'
+        '<path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8'
+        'a18.45 18.45 0 0 1 5.06-5.94"/>'
+        '<path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8'
+        'a18.5 18.5 0 0 1-2.16 3.19"/>'
+        '<line x1="1" y1="1" x2="23" y2="23"/>'
+        "</svg></button>"
+    )
     parts.append('<button class="edit-pencil" aria-label="Edit this quote">&#9998;</button>')
     parts.append('<button class="star-btn" aria-label="Star this quote">&#9733;</button>')
     parts.append("</blockquote>")

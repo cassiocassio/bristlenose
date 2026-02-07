@@ -33,7 +33,7 @@ Quote exclusivity: **Every quote appears in exactly one section of the report.**
 
 LLM prompts: All prompt templates live in `bristlenose/llm/prompts.py`. When iterating on prompts, archive the old version to `bristlenose/llm/prompts-archive/` with naming convention `prompts_YYYY-MM-DD_description.py` (e.g., `prompts_2026-02-04_original-14-tags.py`). This folder is ignored by the application but tracked in git for easy comparison without digging through commit history. Future goal: allow users to customise prompts via config.
 
-Report JavaScript — 15 modules in `bristlenose/theme/js/`, concatenated in dependency order into a single `<script>` block by `render_html.py` (`_JS_FILES`). Boot sequence in `main.js`:
+Report JavaScript — 16 modules in `bristlenose/theme/js/`, concatenated in dependency order into a single `<script>` block by `render_html.py` (`_JS_FILES`). Boot sequence in `main.js`:
 
 1. `storage.js` — `createStore()` localStorage abstraction (used by all stateful modules)
 2. `modal.js` — `createModal()` shared overlay/card/close helper, `closeTopmostModal()` for Escape key, `_modalRegistry` (used by focus.js, feedback.js)
@@ -46,10 +46,11 @@ Report JavaScript — 15 modules in `bristlenose/theme/js/`, concatenated in dep
 9. `view-switcher.js` — `initViewSwitcher()`, dropdown menu, section visibility (depends on `currentViewMode`)
 10. `search.js` — `initSearchFilter()`, search-as-you-type filtering, exposes `_onViewModeChange()` hook
 11. `tag-filter.js` — `initTagFilter()`, filter quotes by user tags, dropdown with checkboxes/search/counts
-12. `names.js` — `initNames()`, participant name/role inline editing, YAML export
-13. `focus.js` — `initFocus()`, Finder-like click selection, multi-select with Shift/Cmd, bulk operations
-14. `feedback.js` — `initFeedback()`, `showFeedbackModal()`, feedback widget (feature-flagged)
-15. `main.js` — boot orchestrator, calls all `init*()` functions
+12. `hidden.js` — `initHidden()`, hide/unhide quotes, per-group badge with dropdown, `bulkHideSelected()` for multi-select
+13. `names.js` — `initNames()`, participant name/role inline editing, YAML export
+14. `focus.js` — `initFocus()`, Finder-like click selection, multi-select with Shift/Cmd, bulk operations
+15. `feedback.js` — `initFeedback()`, `showFeedbackModal()`, feedback widget (feature-flagged)
+16. `main.js` — boot orchestrator, calls all `init*()` functions
 
 Transcript pages use a separate list (`_TRANSCRIPT_JS_FILES`): `storage.js`, `player.js`, `transcript-names.js`.
 
@@ -134,6 +135,7 @@ The generated HTML report has interactive features: inline editing (quotes, head
 - **Transcript pages**: per-session HTML pages in `sessions/transcript_s1.html` with heading showing all speakers (`Session 1: m1 Sarah Chen, p5 Maya, o1`), per-segment raw speaker codes (`p1:`, `m1:`), `.segment-moderator` CSS class for muted moderator styling, deep-link anchors from quote attributions, anchor highlight animation (yellow flash when arriving via link)
 - **Sessions table**: report table shows one row per session with columns Session | Speakers | Start | Duration | Source. Speakers column lists all codes (m→p→o sorted) with `data-participant` spans for JS name resolution
 - **PII redaction**: off by default (`--redact-pii` to opt in)
+- **Hidden quotes**: researchers press `h` (or click eye-slash button) to hide volume quotes — evidence they want to keep but need out of their head. Hidden state persisted in localStorage (`bristlenose-hidden`). Per-subsection badge ("3 hidden quotes ▾") with dropdown showing truncated previews; clicking preview text unhides with highlight animation. `.bn-hidden` CSS class provides `display: none !important` defence-in-depth. All visibility restore paths (view-switcher, search, tag-filter) guard against `.bn-hidden` to prevent accidentally showing hidden quotes. Bulk hide via multi-select + `h`. Module: `hidden.js`, CSS: `molecules/hidden-quotes.css`
 - **Feedback widget** (feature-flagged): footer has "Report a bug" (links to GitHub Issues) and "Feedback" (opens modal with sentiment picker + textarea). Gated behind `BRISTLENOSE_FEEDBACK` JS constant (injected `false` by `render_html.py`). When flag is off, footer links are hidden via CSS; `initFeedback()` returns immediately. Submit tries `fetch()` to `BRISTLENOSE_FEEDBACK_URL`; falls back to clipboard copy on `file://` or when no endpoint is configured. Anonymous: payload is `{ version, rating, message }` only. Draft persistence via `createStore('bristlenose-feedback-draft')`. Module: `feedback.js`, CSS: `molecules/feedback.css`
 
 ## Doctor command (dependency health checks)
@@ -299,7 +301,8 @@ This is especially common when:
 - `check_backend()` catches `Exception` (not just `ImportError`) for faster_whisper import — torch native libs can raise `OSError` on some machines
 - `people.py` imports `SpeakerInfo` from `identify_speakers.py` under `TYPE_CHECKING` only (avoids circular import at runtime). The `auto_populate_names()` type hint works because `from __future__ import annotations` makes all annotations strings
 - `identify_speaker_roles_llm()` changed return type from `list[TranscriptSegment]` to `list[SpeakerInfo]` — still mutates segments in place for role assignment, but now also returns extracted name/title data. Only one call site in `pipeline.py`
-- `view-switcher.js`, `search.js`, `tag-filter.js`, and `names.js` all load **after** `csv-export.js` in `_JS_FILES` — `view-switcher.js` writes the `currentViewMode` global defined in `csv-export.js`; `search.js` reads `currentViewMode` and exposes `_onViewModeChange()` called by `view-switcher.js`; `tag-filter.js` loads after `search.js` (reads `currentViewMode`, `_hideEmptySections`, `_hideEmptySubsections`; exposes `_applyTagFilter()`, `_onTagFilterViewChange()`, `_isTagFilterActive()`, `_updateVisibleQuoteCount()` called by `view-switcher.js`, `search.js`, and `tags.js`); `names.js` depends on `copyToClipboard()` and `showToast()`
+- `view-switcher.js`, `search.js`, `tag-filter.js`, `hidden.js`, and `names.js` all load **after** `csv-export.js` in `_JS_FILES` — `view-switcher.js` writes the `currentViewMode` global defined in `csv-export.js`; `search.js` reads `currentViewMode` and exposes `_onViewModeChange()` called by `view-switcher.js`; `tag-filter.js` loads after `search.js` (reads `currentViewMode`, `_hideEmptySections`, `_hideEmptySubsections`; exposes `_applyTagFilter()`, `_onTagFilterViewChange()`, `_isTagFilterActive()`, `_updateVisibleQuoteCount()` called by `view-switcher.js`, `search.js`, and `tags.js`); `hidden.js` loads after `tag-filter.js` (reads `currentViewMode`, `_isTagFilterActive`, `_applyTagFilter`, `_hideEmptySections`; exposes `hideQuote()`, `bulkHideSelected()`, `isHidden()` called by `focus.js`); `names.js` depends on `copyToClipboard()` and `showToast()`
+- **Hidden quotes vs visibility filters**: hidden quotes use `.bn-hidden` class + `style.display = 'none'`. This is fundamentally different from search/tag-filter/starred hiding (which are temporary view filters). Every visibility restore path (`_showAllQuotes`, `_showStarredOnly`, `_restoreViewMode`, `_restoreQuotesForViewMode`, `_applyTagFilter`, `_applySearchFilter`) must check for `.bn-hidden` and skip those quotes. The CSS `display: none !important` on `.bn-hidden` is defence-in-depth
 - `_TRANSCRIPT_JS_FILES` includes `transcript-names.js` (after `storage.js`) — reads localStorage name edits and updates heading speaker names only (preserving code prefix: `"m1 Sarah Chen"`). Does NOT override segment speaker labels (they stay as raw codes). Separate from the report's `names.js` (which has full editing UI)
 - `blockquote .timecode` in `blockquote.css` must use `--bn-colour-accent` not `--bn-colour-muted` — the `.timecode-bracket` children handle the muting. If you add a new timecode rendering context, ensure the parent rule uses accent
 - `_normalise_stem()` expects a lowercased stem — callers must `.lower()` before passing. `group_into_sessions()` does this; unit tests pass lowercased literals directly

@@ -360,18 +360,38 @@ Collapsible section at the end of the research report showing what proportion of
 
 ## Working preferences
 
-### Branch check (do this first!)
+### Worktree check (do this first!)
 
-**At the start of every session**, check which branch you're on and whether it's correct for the task:
+Feature branches live in **separate git worktrees** — each is a full working copy in its own directory. This lets multiple Claude sessions work on different features simultaneously.
+
+**Directory convention:** `/Users/cassio/Code/bristlenose_branch <name>`
+
+| Directory | Branch | Purpose |
+|-----------|--------|---------|
+| `bristlenose/` | `main` | Main repo — always stays on main |
+| `bristlenose_branch codebook/` | `codebook` | Codebook feature |
+| `bristlenose_branch CI/` | `CI` | CI improvements |
+
+**At the start of every session**, check which worktree you're in and whether it's correct for the task:
 
 ```bash
+pwd
 git branch --show-current
 cat docs/BRANCHES.md
 ```
 
-If the user starts asking about a feature without specifying, **remind them to check** which branch they want to work on. Multiple features may be in progress on different branches — don't let them accidentally commit to the wrong one.
+If the user starts asking about a feature without specifying, **remind them to check** which worktree they want to work in. Never check out a feature branch inside the main `bristlenose/` directory — use the worktree instead.
 
-See `docs/BRANCHES.md` for active branches, what files they touch, and conflict resolution strategies.
+**Creating a new feature branch worktree** (from the main repo):
+```bash
+cd /Users/cassio/Code/bristlenose
+git branch my-feature main
+git worktree add "/Users/cassio/Code/bristlenose_branch my-feature" my-feature
+```
+
+Each worktree needs its own `.venv` to run tests. Commits are shared instantly across all worktrees.
+
+See `docs/BRANCHES.md` for active branches, worktree paths, what files they touch, and conflict resolution strategies.
 
 ### General
 

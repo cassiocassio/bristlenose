@@ -2,7 +2,58 @@
 
 This document tracks active feature branches to help multiple Claude sessions coordinate without conflicts.
 
-**Updated:** 5 Feb 2026
+**Updated:** 7 Feb 2026
+
+---
+
+## Worktree Convention
+
+Each active feature branch gets its own **git worktree** — a full working copy in a separate directory. This lets multiple Claude sessions work on different features simultaneously without interfering.
+
+**Directory pattern:** `/Users/cassio/Code/bristlenose_branch <name>`
+
+| Directory | Branch | Purpose |
+|-----------|--------|---------|
+| `bristlenose/` | `main` | Main repo, releases, hotfixes |
+| `bristlenose_branch codebook/` | `codebook` | Codebook feature (tag taxonomy) |
+| `bristlenose_branch CI/` | `CI` | CI improvements |
+
+**Creating a new feature branch worktree:**
+
+```bash
+# From the main repo:
+cd /Users/cassio/Code/bristlenose
+
+# Create the branch (if it doesn't exist) and the worktree in one go:
+git branch my-feature main
+git worktree add "/Users/cassio/Code/bristlenose_branch my-feature" my-feature
+
+# Or if the branch already exists:
+git worktree add "/Users/cassio/Code/bristlenose_branch my-feature" my-feature
+```
+
+**Each worktree needs its own venv** to run tests:
+
+```bash
+cd "/Users/cassio/Code/bristlenose_branch my-feature"
+python3 -m venv .venv
+.venv/bin/pip install -e '.[dev]'
+```
+
+**Listing worktrees:** `git worktree list` (from any worktree)
+
+**Removing a worktree** (after merging to main):
+
+```bash
+git worktree remove "/Users/cassio/Code/bristlenose_branch my-feature"
+git branch -d my-feature
+```
+
+**Rules:**
+- `bristlenose/` always stays on `main` — never check out a feature branch there
+- Each Claude session should confirm which worktree it's operating in at session start
+- Commits made in any worktree are immediately visible to all others (shared `.git`)
+- Don't run `git checkout` to switch branches inside a worktree — that defeats the point
 
 ---
 
@@ -10,18 +61,66 @@ This document tracks active feature branches to help multiple Claude sessions co
 
 When starting a new Claude session on a feature branch:
 1. Check this file to see what other branches are active
-2. Note which files they're touching
-3. Avoid editing those files unless necessary
-4. Update this file when you create/complete a branch
+2. Confirm you're in the right worktree directory
+3. Note which files other branches are touching
+4. Avoid editing those files unless necessary
+5. Update this file when you create/complete a branch
 
 When merging back to main:
 1. Read the merge plan for your branch
 2. Check for conflicts with other branches
 3. Update this file to mark your branch as merged
+4. Remove the worktree
 
 ---
 
 ## Active Branches
+
+### `codebook`
+
+**Status:** Phase 1 complete, Phase 2 next
+**Started:** 7 Feb 2026
+**Worktree:** `/Users/cassio/Code/bristlenose_branch codebook/`
+**Plan:** `~/.claude/plans/immutable-chasing-patterson.md`
+
+**What's done (Phase 1 — Visual Foundation):**
+- OKLCH v5 colour tokens in `tokens.css` (5 sets × 5-6 slots + custom, light-dark)
+- Mode-dependent badge styling (washed light / saturated dark)
+- `codebook.js` — localStorage data model, colour lookups, AI tag toggle
+- AI tag toggle button in toolbar
+- `tags.js` and `histogram.js` wired to use codebook colours
+- 90% resting opacity on badge rows, 100% on hover
+
+**What's next (Phase 2 — Codebook Panel):**
+- Codebook modal UI (group list, tag counts, CRUD)
+- `codebook.css` for panel layout
+- Tag-to-group assignment from panel
+
+**Files this branch touches:**
+- `bristlenose/theme/tokens.css` — codebook colour tokens
+- `bristlenose/theme/atoms/badge.css` — user tag styling
+- `bristlenose/theme/atoms/button.css` — toggle button variant
+- `bristlenose/theme/molecules/badge-row.css` — opacity behaviour
+- `bristlenose/theme/js/codebook.js` — new module
+- `bristlenose/theme/js/tags.js` — codebook colour integration
+- `bristlenose/theme/js/histogram.js` — codebook colour integration
+- `bristlenose/theme/js/main.js` — boot sequence
+- `bristlenose/stages/render_html.py` — JS file list, toolbar button
+- Will add: `bristlenose/theme/molecules/codebook.css`, more `render_html.py` changes
+
+---
+
+### `CI`
+
+**Status:** Not started
+**Started:** 7 Feb 2026
+**Worktree:** `/Users/cassio/Code/bristlenose_branch CI/`
+
+**Files this branch will touch:**
+- `.github/workflows/` — CI workflow files
+- Potentially `pyproject.toml`, `Makefile`, or similar build config
+
+---
 
 ### `export-sharing`
 

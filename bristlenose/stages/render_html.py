@@ -68,6 +68,7 @@ _THEME_FILES: list[str] = [
     "organisms/sentiment-chart.css",
     "organisms/toolbar.css",
     "organisms/toc.css",
+    "organisms/codebook-panel.css",
     "templates/report.css",
     "templates/transcript.css",
     "templates/print.css",
@@ -110,6 +111,7 @@ def _get_default_css() -> str:
 _JS_FILES: list[str] = [
     "js/storage.js",
     "js/modal.js",
+    "js/codebook.js",
     "js/player.js",
     "js/starred.js",
     "js/editing.js",
@@ -312,12 +314,26 @@ def render_html(
         "</div>"
         "</div>"
     )
+    # Codebook (opens in new window)
+    _w(
+        '<button class="toolbar-btn" id="codebook-btn"'
+        ' title="Open codebook in new window">'
+        '<svg class="toolbar-icon-svg" width="14" height="14" viewBox="0 0 16 16"'
+        ' fill="none" stroke="currentColor" stroke-width="1.5"'
+        ' stroke-linecap="round" stroke-linejoin="round">'
+        '<rect x="1" y="3" width="11" height="11" rx="1.5"/>'
+        '<path d="M9 1h6v6"/>'
+        '<path d="M15 1 8 8"/>'
+        "</svg>"
+        " Codebook"
+        "</button>"
+    )
     # Tag filter dropdown
     _w(
         '<div class="tag-filter">'
-        '<button class="tag-filter-btn" id="tag-filter-btn"'
+        '<button class="toolbar-btn tag-filter-btn" id="tag-filter-btn"'
         ' aria-haspopup="true" aria-expanded="false">'
-        '<svg class="tag-filter-icon" width="14" height="14" viewBox="0 0 16 16"'
+        '<svg class="toolbar-icon-svg" width="14" height="14" viewBox="0 0 16 16"'
         ' fill="none" stroke="currentColor" stroke-width="1.5"'
         ' stroke-linecap="round">'
         '<line x1="1" y1="3" x2="15" y2="3"/>'
@@ -325,7 +341,7 @@ def render_html(
         '<line x1="5.5" y1="13" x2="10.5" y2="13"/>'
         "</svg>"
         ' <span class="tag-filter-label">Tags</span>'
-        '<svg class="tag-filter-arrow" width="10" height="10"'
+        '<svg class="toolbar-arrow" width="10" height="10"'
         ' viewBox="0 0 10 10" fill="none" stroke="currentColor"'
         ' stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">'
         '<path d="M2.5 3.75 5 6.25 7.5 3.75"/></svg>'
@@ -333,13 +349,20 @@ def render_html(
         '<div class="tag-filter-menu" id="tag-filter-menu"></div>'
         "</div>"
     )
+    # AI tag toggle — TODO: relocate to future settings/view-controls panel
+    # _w(
+    #     '<button class="toolbar-btn toolbar-btn-toggle" id="ai-tag-toggle"'
+    #     ' aria-label="Toggle AI tags" title="Show/hide AI sentiment tags">'
+    #     '<span class="ai-toggle-label">AI tags</span>'
+    #     "</button>"
+    # )
     # View switcher dropdown
     _w('<div class="view-switcher">')
     _w(
-        '<button class="view-switcher-btn" id="view-switcher-btn"'
+        '<button class="toolbar-btn view-switcher-btn" id="view-switcher-btn"'
         ' aria-haspopup="true" aria-expanded="false">'
         '<span class="view-switcher-label">All quotes </span>'
-        '<svg class="view-switcher-arrow" width="10" height="10"'
+        '<svg class="toolbar-arrow" width="10" height="10"'
         ' viewBox="0 0 10 10" fill="none" stroke="currentColor"'
         ' stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">'
         '<path d="M2.5 3.75 5 6.25 7.5 3.75"/></svg>'
@@ -673,6 +696,13 @@ def render_html(
         transcripts=transcripts,
     )
 
+    # --- Generate codebook page ---
+    _render_codebook_page(
+        project_name=project_name,
+        output_dir=output_dir,
+        color_scheme=color_scheme,
+    )
+
     return html_path
 
 
@@ -977,6 +1007,142 @@ def _render_transcript_page(
     # Write to sessions/ subdirectory
     page_path = paths.transcript_page(transcript.session_id)
     page_path.write_text("\n".join(parts), encoding="utf-8")
+    return page_path
+
+
+# ---------------------------------------------------------------------------
+# Codebook page
+# ---------------------------------------------------------------------------
+
+_CODEBOOK_JS_FILES: list[str] = [
+    "js/storage.js",
+    "js/modal.js",
+    "js/codebook.js",
+]
+
+
+def _load_codebook_js() -> str:
+    """Read and concatenate only the JS modules needed for the codebook page."""
+    parts: list[str] = []
+    for name in _CODEBOOK_JS_FILES:
+        path = _THEME_DIR / name
+        parts.append(f"// --- {name} ---\n")
+        parts.append(path.read_text(encoding="utf-8").strip())
+        parts.append("\n\n")
+    return "".join(parts)
+
+
+_codebook_js_cache: str | None = None
+
+
+def _get_codebook_js() -> str:
+    global _codebook_js_cache  # noqa: PLW0603
+    if _codebook_js_cache is None:
+        _codebook_js_cache = _load_codebook_js()
+    return _codebook_js_cache
+
+
+def _render_codebook_page(
+    project_name: str,
+    output_dir: Path,
+    color_scheme: str = "auto",
+) -> Path:
+    """Render the codebook page as a standalone HTML file.
+
+    The codebook page sits at the output root (same level as the report),
+    opened in a new window via the toolbar Codebook button.
+    """
+    from bristlenose.output_paths import OutputPaths
+    from bristlenose.utils.text import slugify
+
+    paths = OutputPaths(output_dir, project_name)
+    slug = slugify(project_name)
+
+    parts: list[str] = []
+    _w = parts.append
+
+    _w("<!DOCTYPE html>")
+    theme_attr = ""
+    if color_scheme in ("light", "dark"):
+        theme_attr = f' data-theme="{color_scheme}"'
+    _w(f'<html lang="en"{theme_attr}>')
+    _w("<head>")
+    _w('<meta charset="utf-8">')
+    _w('<meta name="viewport" content="width=device-width, initial-scale=1">')
+    _w('<meta name="color-scheme" content="light dark">')
+    _w(f"<title>Codebook \u2014 {_esc(project_name)}</title>")
+    _w('<link rel="stylesheet" href="assets/bristlenose-theme.css">')
+    _w("</head>")
+    _w("<body>")
+    _w("<article>")
+
+    # Header (same layout as report — logos at assets/)
+    _w('<div class="report-header">')
+    _w('<div class="header-left">')
+    if paths.logo_file.exists():
+        if paths.logo_dark_file.exists():
+            _w("<picture>")
+            _w(
+                '<source srcset="assets/bristlenose-logo-dark.png" '
+                'media="(prefers-color-scheme: dark)">'
+            )
+            _w(
+                '<img class="report-logo" src="assets/bristlenose-logo.png" '
+                'alt="Bristlenose logo">'
+            )
+            _w("</picture>")
+        else:
+            _w(
+                '<img class="report-logo" src="assets/bristlenose-logo.png" '
+                'alt="Bristlenose logo">'
+            )
+    _w(
+        f'<span class="header-title">'
+        f'<span class="header-logotype">Bristlenose</span>'
+        f"\u2003"
+        f'<span class="header-project">{_esc(project_name)}</span>'
+        f"</span>"
+    )
+    _w("</div>")
+    _w('<div class="header-right">')
+    _w('<span class="header-doc-title">Codebook</span>')
+    _w("</div>")
+    _w("</div>")
+    _w("<hr>")
+
+    # Back link to report
+    report_filename = f"bristlenose-{slug}-report.html"
+    _w('<nav class="transcript-back">')
+    _w(f'<a href="{report_filename}">')
+    _w(f"&larr; {_esc(project_name)} Research Report</a>")
+    _w("</nav>")
+
+    _w("<h1>Codebook</h1>")
+
+    # Description and interactive grid container (populated by codebook.js)
+    _w('<p class="codebook-description">')
+    _w("Drag tags between groups to reclassify. ")
+    _w("Drag onto another tag to merge. Sorted by frequency.")
+    _w("</p>")
+    _w('<div class="codebook-grid" id="codebook-grid"></div>')
+
+    _w("</article>")
+    _w(_footer_html())
+
+    # JavaScript — codebook data model + modal + storage for cross-window sync
+    _w("<script>")
+    _w("(function() {")
+    _w(_get_codebook_js())
+    _w("initCodebook();")
+    _w("})();")
+    _w("</script>")
+
+    _w("</body>")
+    _w("</html>")
+
+    page_path = paths.codebook_file
+    page_path.write_text("\n".join(parts), encoding="utf-8")
+    logger.info("Wrote codebook page: %s", page_path)
     return page_path
 
 

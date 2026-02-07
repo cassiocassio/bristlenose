@@ -1,0 +1,998 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tag Placement Comparison — Bristlenose</title>
+<style>
+/* ════════════════════════════════════════════════════════════
+   TAG PLACEMENT COMPARISON MOCKUP
+   ════════════════════════════════════════════════════════════
+   Three layout approaches + de-emphasis variations,
+   all using the same 6 quotes for direct comparison.
+
+   Sections:
+   1. LAYOUT A — De-emphasis matrix (9 variations of inline-below)
+   2. LAYOUT C — Two-column (quote left, tags right)
+   3. LAYOUT E — Right margin gutter (tags outside the quote)
+   4. Responsive collapse demo (tags → coloured squares)
+   ════════════════════════════════════════════════════════════ */
+
+:root {
+    --bn-font-body: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
+    --bn-font-mono: "SF Mono", "Fira Code", "Consolas", monospace;
+    --bn-colour-bg: #ffffff;
+    --bn-colour-text: #1a1a1a;
+    --bn-colour-muted: #6b7280;
+    --bn-colour-border: #e5e7eb;
+    --bn-colour-accent: #2563eb;
+    --bn-colour-quote-bg: #f9fafb;
+
+    /* AI sentiment — dark text on pale bg (unchanged, high contrast) */
+    --bn-sentiment-frustration: #c2410c;
+    --bn-sentiment-frustration-bg: #fff7ed;
+    --bn-sentiment-confusion: #b91c1c;
+    --bn-sentiment-confusion-bg: #fef2f2;
+    --bn-sentiment-doubt: #6d28d9;
+    --bn-sentiment-doubt-bg: #f5f3ff;
+    --bn-sentiment-satisfaction: #15803d;
+    --bn-sentiment-satisfaction-bg: #f0fdf4;
+    --bn-sentiment-delight: #047857;
+    --bn-sentiment-delight-bg: #ecfdf5;
+    --bn-sentiment-confidence: #1d4ed8;
+    --bn-sentiment-confidence-bg: #eff6ff;
+
+    /* User tag colours — OKLCH v4 calmed palette
+       WIDER hue spread: sets now span ±25° (50° total, was ±20°)
+       with ~12° steps between tags for better distinguishability */
+
+    /* UX set (blue, H=225-275, anchor 250) */
+    --bn-ux-1: oklch(50% 0.12 225);   /* usability */
+    --bn-ux-2: oklch(48% 0.11 237);   /* navigation */
+    --bn-ux-3: oklch(53% 0.12 250);   /* expectation */
+    --bn-ux-4: oklch(55% 0.10 263);   /* accessibility */
+    --bn-ux-5: oklch(49% 0.11 275);   /* performance */
+
+    /* Emotion set (red-pink, H=340-40, anchor 10) — wider wrap */
+    --bn-emo-1: oklch(50% 0.12 340);  /* frustration */
+    --bn-emo-2: oklch(48% 0.11 352);  /* anxiety */
+    --bn-emo-3: oklch(53% 0.10 4);    /* disoriented */
+    --bn-emo-4: oklch(49% 0.12 16);   /* anger */
+    --bn-emo-5: oklch(55% 0.10 28);   /* joy */
+    --bn-emo-6: oklch(51% 0.11 40);   /* mismatch */
+
+    /* Task set (green-teal, H=130-180, anchor 155) */
+    --bn-role-1: oklch(50% 0.10 130);  /* workflow */
+    --bn-role-2: oklch(48% 0.09 142);  /* tooling */
+    --bn-role-3: oklch(53% 0.09 155);  /* process */
+    --bn-role-4: oklch(49% 0.10 168);  /* stakeholder */
+    --bn-role-5: oklch(51% 0.09 180);  /* workaround */
+
+    /* Trust set (purple-violet, H=275-325, anchor 300) */
+    --bn-trust-1: oklch(50% 0.11 275);  /* credibility */
+    --bn-trust-2: oklch(48% 0.10 287);  /* privacy */
+    --bn-trust-3: oklch(53% 0.10 300);  /* security */
+    --bn-trust-4: oklch(49% 0.11 313);  /* proof */
+    --bn-trust-5: oklch(51% 0.10 325);  /* compliance */
+
+    /* Opportunity set (amber-orange, H=50-100, anchor 75) */
+    --bn-opp-1: oklch(52% 0.11 50);   /* request */
+    --bn-opp-2: oklch(50% 0.10 62);   /* need */
+    --bn-opp-3: oklch(54% 0.12 75);   /* competitor */
+    --bn-opp-4: oklch(48% 0.10 88);   /* willingness */
+    --bn-opp-5: oklch(51% 0.11 100);  /* value */
+
+    /* Custom / ungrouped */
+    --bn-custom: oklch(52% 0.02 260);
+
+    --bn-tag-text: #ffffff;
+    --bn-space-xs: 0.15rem;
+    --bn-space-md: 0.75rem;
+    --bn-radius-sm: 3px;
+    --bn-radius-md: 6px;
+    --bn-max-width: 72rem;
+}
+
+/* Dark mode */
+[data-theme="dark"] {
+    color-scheme: dark;
+    --bn-colour-bg: #111111;
+    --bn-colour-text: #e5e7eb;
+    --bn-colour-muted: #9ca3af;
+    --bn-colour-border: #2d2d2d;
+    --bn-colour-accent: #60a5fa;
+    --bn-colour-quote-bg: #1a1a1a;
+
+    --bn-sentiment-frustration: #fb923c;
+    --bn-sentiment-frustration-bg: #2d1d0e;
+    --bn-sentiment-confusion: #f87171;
+    --bn-sentiment-confusion-bg: #2d1515;
+    --bn-sentiment-doubt: #a78bfa;
+    --bn-sentiment-doubt-bg: #1e1533;
+    --bn-sentiment-satisfaction: #4ade80;
+    --bn-sentiment-satisfaction-bg: #0f2918;
+    --bn-sentiment-delight: #34d399;
+    --bn-sentiment-delight-bg: #0d261c;
+    --bn-sentiment-confidence: #60a5fa;
+    --bn-sentiment-confidence-bg: #111d2e;
+
+    /* User tags — lighter in dark mode */
+    --bn-ux-1: oklch(60% 0.10 225);
+    --bn-ux-2: oklch(58% 0.09 237);
+    --bn-ux-3: oklch(63% 0.10 250);
+    --bn-ux-4: oklch(65% 0.08 263);
+    --bn-ux-5: oklch(59% 0.09 275);
+    --bn-emo-1: oklch(60% 0.10 340);
+    --bn-emo-2: oklch(58% 0.09 352);
+    --bn-emo-3: oklch(63% 0.08 4);
+    --bn-emo-4: oklch(59% 0.10 16);
+    --bn-emo-5: oklch(65% 0.08 28);
+    --bn-emo-6: oklch(61% 0.09 40);
+    --bn-role-1: oklch(60% 0.08 130);
+    --bn-role-2: oklch(58% 0.07 142);
+    --bn-role-3: oklch(63% 0.07 155);
+    --bn-role-4: oklch(59% 0.08 168);
+    --bn-role-5: oklch(61% 0.07 180);
+    --bn-trust-1: oklch(60% 0.09 275);
+    --bn-trust-2: oklch(58% 0.08 287);
+    --bn-trust-3: oklch(63% 0.08 300);
+    --bn-trust-4: oklch(59% 0.09 313);
+    --bn-trust-5: oklch(61% 0.08 325);
+    --bn-opp-1: oklch(62% 0.09 50);
+    --bn-opp-2: oklch(60% 0.08 62);
+    --bn-opp-3: oklch(64% 0.10 75);
+    --bn-opp-4: oklch(58% 0.08 88);
+    --bn-opp-5: oklch(61% 0.09 100);
+    --bn-custom: oklch(60% 0.02 260);
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+    font-family: var(--bn-font-body);
+    background: var(--bn-colour-bg);
+    color: var(--bn-colour-text);
+    max-width: var(--bn-max-width);
+    margin: 2rem auto;
+    padding: 0 1.5rem;
+    line-height: 1.6;
+    transition: background 0.2s, color 0.2s;
+}
+h1 { font-size: 1.3rem; font-weight: 600; margin-bottom: 0.2rem; }
+h2 { font-size: 1.05rem; font-weight: 600; margin: 2.5rem 0 0.3rem; padding-bottom: 0.3rem; border-bottom: 1px solid var(--bn-colour-border); }
+h3 { font-size: 0.85rem; font-weight: 600; margin: 1.5rem 0 0.5rem; color: var(--bn-colour-muted); text-transform: uppercase; letter-spacing: 0.05em; }
+.subtitle { color: var(--bn-colour-muted); font-size: 0.85rem; margin-bottom: 1.5rem; }
+.note { color: var(--bn-colour-muted); font-size: 0.78rem; margin-bottom: 0.75rem; line-height: 1.6; }
+.section-divider { border: none; border-top: 1px solid var(--bn-colour-border); margin: 2.5rem 0; }
+
+/* Toolbar */
+.toolbar {
+    position: sticky; top: 0; z-index: 100;
+    background: var(--bn-colour-bg);
+    border-bottom: 1px solid var(--bn-colour-border);
+    padding: 0.5rem 0;
+    margin-bottom: 1.5rem;
+    display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;
+}
+.toolbar-group { display: flex; align-items: center; gap: 0.4rem; font-size: 0.78rem; color: var(--bn-colour-muted); }
+.toolbar-group label { cursor: pointer; user-select: none; }
+.toolbar-divider { width: 1px; height: 1.2rem; background: var(--bn-colour-border); }
+.theme-toggle {
+    display: inline-flex; align-items: center; gap: 0.3rem;
+    padding: 0.2rem 0.5rem; border: 1px solid var(--bn-colour-border);
+    border-radius: var(--bn-radius-md); background: transparent;
+    color: var(--bn-colour-muted); font-family: var(--bn-font-body);
+    font-size: 0.75rem; cursor: pointer; user-select: none;
+}
+.theme-toggle:hover { border-color: var(--bn-colour-accent); color: var(--bn-colour-accent); }
+
+/* ── Shared blockquote base ── */
+.bq {
+    background: var(--bn-colour-quote-bg);
+    border-left: 1px solid var(--bn-colour-border);
+    margin: 0.7rem 0;
+    padding: var(--bn-space-md) 1rem;
+    border-radius: 0 var(--bn-radius-md) var(--bn-radius-md) 0;
+}
+.bq .quote-row { display: flex; gap: 0.5rem; align-items: baseline; }
+.bq .timecode { color: var(--bn-colour-accent); font-family: var(--bn-font-mono); font-size: 0.8rem; flex-shrink: 0; }
+.tc { color: var(--bn-colour-muted); }
+.bq .quote-body { flex: 1; min-width: 0; }
+.bq .speaker { color: var(--bn-colour-muted); font-size: 0.9rem; }
+
+/* ── Badge base ── */
+.badge {
+    display: inline-block;
+    font-family: var(--bn-font-mono);
+    padding: var(--bn-space-xs) 0.45rem;
+    border-radius: var(--bn-radius-sm);
+}
+.badge-ai { cursor: default; }
+.badge-frustration { background: var(--bn-sentiment-frustration-bg); color: var(--bn-sentiment-frustration); }
+.badge-confusion   { background: var(--bn-sentiment-confusion-bg);   color: var(--bn-sentiment-confusion); }
+.badge-doubt       { background: var(--bn-sentiment-doubt-bg);       color: var(--bn-sentiment-doubt); }
+.badge-satisfaction { background: var(--bn-sentiment-satisfaction-bg); color: var(--bn-sentiment-satisfaction); }
+.badge-delight     { background: var(--bn-sentiment-delight-bg);     color: var(--bn-sentiment-delight); }
+.badge-confidence  { background: var(--bn-sentiment-confidence-bg);  color: var(--bn-sentiment-confidence); }
+.badge-user { cursor: default; color: var(--bn-tag-text); font-weight: 500; }
+.badge-add {
+    border: 1px dashed var(--bn-colour-border); background: transparent;
+    color: var(--bn-colour-muted); cursor: pointer; user-select: none;
+}
+body.hide-ai-tags .badge-ai { display: none; }
+
+/* ══════════════════════════════════════════════════════════════
+   SECTION A: DE-EMPHASIS MATRIX
+   9 variations of inline-below tags, varying:
+   - font size (0.72rem / 0.65rem / 0.58rem)
+   - opacity (1.0 / 0.55 / 0.35)
+   - lighter bg (normal / washed-out)
+   Each variation shown with the same quote.
+   ══════════════════════════════════════════════════════════════ */
+
+.variation-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+}
+@media (max-width: 800px) { .variation-grid { grid-template-columns: 1fr; } }
+
+.var-card {
+    border: 1px solid var(--bn-colour-border);
+    border-radius: var(--bn-radius-md);
+    padding: 0.75rem 1rem;
+}
+.var-label {
+    font-family: var(--bn-font-mono);
+    font-size: 0.7rem;
+    color: var(--bn-colour-muted);
+    margin-bottom: 0.5rem;
+    padding-bottom: 0.35rem;
+    border-bottom: 1px solid var(--bn-colour-border);
+}
+
+/* Variation: badge sizes */
+.badges-inline { margin-top: 0.35rem; display: flex; flex-wrap: wrap; gap: 0.3rem; align-items: center; }
+.sz-normal .badge { font-size: 0.72rem; }
+.sz-small  .badge { font-size: 0.65rem; }
+.sz-tiny   .badge { font-size: 0.58rem; }
+
+/* Variation: opacity */
+.op-full   .badges-inline { opacity: 1; }
+.op-mid    .badges-inline { opacity: 0.55; }
+.op-low    .badges-inline { opacity: 0.35; }
+
+/* Hover restore for opacity variations */
+.op-mid .bq:hover .badges-inline,
+.op-low .bq:hover .badges-inline { opacity: 1; transition: opacity 0.15s ease; }
+
+/* Variation: washed-out backgrounds (lighter user tags) */
+.wash .badge-user {
+    color: var(--bn-colour-text);
+    font-weight: 400;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   SECTION C: TWO-COLUMN LAYOUT
+   Quote text left, tags stacked vertically on right.
+   ══════════════════════════════════════════════════════════════ */
+
+.layout-c .bq {
+    display: grid;
+    grid-template-columns: 1fr 140px;
+    gap: 0.75rem;
+    align-items: start;
+}
+.layout-c .bq-content { min-width: 0; }
+.layout-c .bq-tags {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    padding-top: 0.1rem;
+    border-left: 1px solid var(--bn-colour-border);
+    padding-left: 0.6rem;
+}
+.layout-c .badge { font-size: 0.65rem; text-align: center; }
+.layout-c .badge-add { font-size: 0.6rem; align-self: flex-start; }
+
+/* ══════════════════════════════════════════════════════════════
+   SECTION E: RIGHT MARGIN GUTTER
+   Tags float outside the blockquote in a dedicated margin.
+   The blockquote body is the same width as sections A/C.
+   ══════════════════════════════════════════════════════════════ */
+
+.layout-e {
+    display: grid;
+    grid-template-columns: 1fr 160px;
+    gap: 0;
+}
+.layout-e-main { min-width: 0; }
+.layout-e-gutter {
+    padding-left: 0.75rem;
+}
+
+.layout-e .bq {
+    border-radius: 0 0 0 0;
+    margin-right: 0;
+    border-right: none;
+    border-radius: 0 0 var(--bn-radius-md) 0;
+}
+
+/* Gutter tag row — aligns with its quote */
+.gutter-tags {
+    padding: var(--bn-space-md) 0 var(--bn-space-md) 0;
+    margin: 0.7rem 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    min-height: 2.5rem;
+    border-left: 1px dashed var(--bn-colour-border);
+    padding-left: 0.6rem;
+}
+.gutter-tags .badge { font-size: 0.65rem; align-self: flex-start; }
+.gutter-tags .badge-add { font-size: 0.6rem; }
+
+/* Section heading spans both columns */
+.layout-e .section-heading {
+    grid-column: 1 / -1;
+    font-size: 1rem;
+    font-weight: 600;
+    margin: 1.5rem 0 0.3rem;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   SECTION R: RESPONSIVE COLLAPSE
+   Tags collapse from pills → coloured squares as width shrinks.
+   This is a self-contained demo with a resizable container.
+   ══════════════════════════════════════════════════════════════ */
+
+.resize-demo {
+    border: 2px dashed var(--bn-colour-border);
+    border-radius: var(--bn-radius-md);
+    padding: 1rem;
+    resize: horizontal;
+    overflow: auto;
+    min-width: 320px;
+    max-width: 100%;
+}
+
+.responsive-tags { margin-top: 0.35rem; display: flex; flex-wrap: wrap; gap: 0.3rem; align-items: center; }
+.responsive-tags .badge { font-size: 0.65rem; transition: all 0.2s ease; }
+
+/* At narrow widths, collapse user tags to squares */
+@container quote-container (max-width: 500px) {
+    .responsive-tags .badge-user {
+        width: 1rem;
+        height: 1rem;
+        padding: 0;
+        font-size: 0;
+        border-radius: 2px;
+        overflow: hidden;
+    }
+    .responsive-tags .badge-user::after { content: none; }
+    .responsive-tags .badge-add { display: none; }
+}
+
+/* Fallback: viewport-based collapse for browsers without container queries */
+.collapse-demo .badge-user {
+    transition: all 0.25s ease;
+}
+.collapse-demo.collapsed .badge-user {
+    width: 0.9rem;
+    height: 0.9rem;
+    padding: 0;
+    font-size: 0;
+    border-radius: 2px;
+    overflow: hidden;
+}
+.collapse-demo.collapsed .badge-add { display: none; }
+.collapse-demo.collapsed .badge-ai { font-size: 0.6rem; }
+</style>
+</head>
+<body>
+
+<h1>Tag Placement Comparison</h1>
+<p class="subtitle">Same quotes, different tag layouts. Compare visual hierarchy: does the quote text dominate, or do the tags?</p>
+
+<div class="toolbar">
+    <div class="toolbar-group">
+        <input type="checkbox" id="ai-toggle" checked>
+        <label for="ai-toggle">AI tags</label>
+    </div>
+    <div class="toolbar-divider"></div>
+    <button class="theme-toggle" id="theme-toggle">
+        <span id="theme-icon">&#9789;</span>
+        <span id="theme-label">Dark</span>
+    </button>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════
+     SECTION A: DE-EMPHASIS MATRIX
+     ════════════════════════════════════════════════════════════ -->
+
+<h2>A. De-emphasis Variations (inline below)</h2>
+<p class="note">
+    All use the same quote. Varying: font size (0.72rem → 0.65rem → 0.58rem),
+    opacity (100% → 55% → 35%), and "washed" mode (user tags become pale bg + dark text, matching AI tag treatment).
+    Opacity variants restore to 100% on quote hover. Hue spread widened to ±25° per set (50° total, was ±20°).
+</p>
+
+<div class="variation-grid">
+
+    <!-- A1: Current (baseline) -->
+    <div class="var-card sz-normal op-full">
+        <div class="var-label">A1 · baseline · 0.72rem · 100% opacity</div>
+        <div class="bq">
+            <div class="quote-row">
+                <span class="timecode"><span class="tc">[</span>04:23<span class="tc">]</span></span>
+                <div class="quote-body">
+                    <span>"I keep clicking 'Continue' but nothing happens... I've tried three times now. Is the site broken or am I doing something wrong?"</span>
+                    <span class="speaker">&nbsp;&mdash;&nbsp;p1</span>
+                    <div class="badges-inline">
+                        <span class="badge badge-ai badge-frustration">frustration</span>
+                        <span class="badge badge-user" style="background:var(--bn-ux-1)">usability</span>
+                        <span class="badge badge-user" style="background:var(--bn-ux-5)">performance</span>
+                        <span class="badge badge-user" style="background:var(--bn-opp-1)">request</span>
+                        <span class="badge badge-add">+</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- A2: Smaller font -->
+    <div class="var-card sz-small op-full">
+        <div class="var-label">A2 · 0.65rem · 100% opacity</div>
+        <div class="bq">
+            <div class="quote-row">
+                <span class="timecode"><span class="tc">[</span>04:23<span class="tc">]</span></span>
+                <div class="quote-body">
+                    <span>"I keep clicking 'Continue' but nothing happens... I've tried three times now. Is the site broken or am I doing something wrong?"</span>
+                    <span class="speaker">&nbsp;&mdash;&nbsp;p1</span>
+                    <div class="badges-inline">
+                        <span class="badge badge-ai badge-frustration">frustration</span>
+                        <span class="badge badge-user" style="background:var(--bn-ux-1)">usability</span>
+                        <span class="badge badge-user" style="background:var(--bn-ux-5)">performance</span>
+                        <span class="badge badge-user" style="background:var(--bn-opp-1)">request</span>
+                        <span class="badge badge-add">+</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- A3: Tiny font -->
+    <div class="var-card sz-tiny op-full">
+        <div class="var-label">A3 · 0.58rem · 100% opacity</div>
+        <div class="bq">
+            <div class="quote-row">
+                <span class="timecode"><span class="tc">[</span>04:23<span class="tc">]</span></span>
+                <div class="quote-body">
+                    <span>"I keep clicking 'Continue' but nothing happens... I've tried three times now. Is the site broken or am I doing something wrong?"</span>
+                    <span class="speaker">&nbsp;&mdash;&nbsp;p1</span>
+                    <div class="badges-inline">
+                        <span class="badge badge-ai badge-frustration">frustration</span>
+                        <span class="badge badge-user" style="background:var(--bn-ux-1)">usability</span>
+                        <span class="badge badge-user" style="background:var(--bn-ux-5)">performance</span>
+                        <span class="badge badge-user" style="background:var(--bn-opp-1)">request</span>
+                        <span class="badge badge-add">+</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- A4: Normal size + mid opacity -->
+    <div class="var-card sz-normal op-mid">
+        <div class="var-label">A4 · 0.72rem · 55% opacity (hover restores)</div>
+        <div class="bq">
+            <div class="quote-row">
+                <span class="timecode"><span class="tc">[</span>04:23<span class="tc">]</span></span>
+                <div class="quote-body">
+                    <span>"I keep clicking 'Continue' but nothing happens... I've tried three times now. Is the site broken or am I doing something wrong?"</span>
+                    <span class="speaker">&nbsp;&mdash;&nbsp;p1</span>
+                    <div class="badges-inline">
+                        <span class="badge badge-ai badge-frustration">frustration</span>
+                        <span class="badge badge-user" style="background:var(--bn-ux-1)">usability</span>
+                        <span class="badge badge-user" style="background:var(--bn-ux-5)">performance</span>
+                        <span class="badge badge-user" style="background:var(--bn-opp-1)">request</span>
+                        <span class="badge badge-add">+</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- A5: Small + mid opacity -->
+    <div class="var-card sz-small op-mid">
+        <div class="var-label">A5 · 0.65rem · 55% opacity (hover restores)</div>
+        <div class="bq">
+            <div class="quote-row">
+                <span class="timecode"><span class="tc">[</span>04:23<span class="tc">]</span></span>
+                <div class="quote-body">
+                    <span>"I keep clicking 'Continue' but nothing happens... I've tried three times now. Is the site broken or am I doing something wrong?"</span>
+                    <span class="speaker">&nbsp;&mdash;&nbsp;p1</span>
+                    <div class="badges-inline">
+                        <span class="badge badge-ai badge-frustration">frustration</span>
+                        <span class="badge badge-user" style="background:var(--bn-ux-1)">usability</span>
+                        <span class="badge badge-user" style="background:var(--bn-ux-5)">performance</span>
+                        <span class="badge badge-user" style="background:var(--bn-opp-1)">request</span>
+                        <span class="badge badge-add">+</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- A6: Small + low opacity -->
+    <div class="var-card sz-small op-low">
+        <div class="var-label">A6 · 0.65rem · 35% opacity (hover restores)</div>
+        <div class="bq">
+            <div class="quote-row">
+                <span class="timecode"><span class="tc">[</span>04:23<span class="tc">]</span></span>
+                <div class="quote-body">
+                    <span>"I keep clicking 'Continue' but nothing happens... I've tried three times now. Is the site broken or am I doing something wrong?"</span>
+                    <span class="speaker">&nbsp;&mdash;&nbsp;p1</span>
+                    <div class="badges-inline">
+                        <span class="badge badge-ai badge-frustration">frustration</span>
+                        <span class="badge badge-user" style="background:var(--bn-ux-1)">usability</span>
+                        <span class="badge badge-user" style="background:var(--bn-ux-5)">performance</span>
+                        <span class="badge badge-user" style="background:var(--bn-opp-1)">request</span>
+                        <span class="badge badge-add">+</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- A7: Washed — user tags become pale bg + dark text -->
+    <div class="var-card sz-small op-full wash">
+        <div class="var-label">A7 · 0.65rem · "washed" user tags (pale bg, dark text like AI)</div>
+        <div class="bq">
+            <div class="quote-row">
+                <span class="timecode"><span class="tc">[</span>04:23<span class="tc">]</span></span>
+                <div class="quote-body">
+                    <span>"I keep clicking 'Continue' but nothing happens... I've tried three times now. Is the site broken or am I doing something wrong?"</span>
+                    <span class="speaker">&nbsp;&mdash;&nbsp;p1</span>
+                    <div class="badges-inline">
+                        <span class="badge badge-ai badge-frustration">frustration</span>
+                        <span class="badge badge-user" style="background:oklch(94% 0.03 225)">usability</span>
+                        <span class="badge badge-user" style="background:oklch(94% 0.03 275)">performance</span>
+                        <span class="badge badge-user" style="background:oklch(94% 0.03 50)">request</span>
+                        <span class="badge badge-add">+</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- A8: Washed + mid opacity -->
+    <div class="var-card sz-small op-mid wash">
+        <div class="var-label">A8 · 0.65rem · washed + 55% opacity (hover restores)</div>
+        <div class="bq">
+            <div class="quote-row">
+                <span class="timecode"><span class="tc">[</span>04:23<span class="tc">]</span></span>
+                <div class="quote-body">
+                    <span>"I keep clicking 'Continue' but nothing happens... I've tried three times now. Is the site broken or am I doing something wrong?"</span>
+                    <span class="speaker">&nbsp;&mdash;&nbsp;p1</span>
+                    <div class="badges-inline">
+                        <span class="badge badge-ai badge-frustration">frustration</span>
+                        <span class="badge badge-user" style="background:oklch(94% 0.03 225)">usability</span>
+                        <span class="badge badge-user" style="background:oklch(94% 0.03 275)">performance</span>
+                        <span class="badge badge-user" style="background:oklch(94% 0.03 50)">request</span>
+                        <span class="badge badge-add">+</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- A9: Tiny font + low opacity (maximum de-emphasis) -->
+    <div class="var-card sz-tiny op-low">
+        <div class="var-label">A9 · 0.58rem · 35% opacity · maximum de-emphasis (hover restores)</div>
+        <div class="bq">
+            <div class="quote-row">
+                <span class="timecode"><span class="tc">[</span>04:23<span class="tc">]</span></span>
+                <div class="quote-body">
+                    <span>"I keep clicking 'Continue' but nothing happens... I've tried three times now. Is the site broken or am I doing something wrong?"</span>
+                    <span class="speaker">&nbsp;&mdash;&nbsp;p1</span>
+                    <div class="badges-inline">
+                        <span class="badge badge-ai badge-frustration">frustration</span>
+                        <span class="badge badge-user" style="background:var(--bn-ux-1)">usability</span>
+                        <span class="badge badge-user" style="background:var(--bn-ux-5)">performance</span>
+                        <span class="badge badge-user" style="background:var(--bn-opp-1)">request</span>
+                        <span class="badge badge-add">+</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<hr class="section-divider">
+
+<!-- ════════════════════════════════════════════════════════════
+     SECTION C: TWO-COLUMN (quote left, tags right)
+     ════════════════════════════════════════════════════════════ -->
+
+<h2>C. Two-Column Layout (tags on right)</h2>
+<p class="note">
+    Quote occupies the main column. Tags stack vertically in a narrow right column,
+    separated by a light border. Tags are clearly secondary — spatially distinct from the quote text.
+</p>
+
+<div class="layout-c">
+    <div class="bq">
+        <div class="bq-content">
+            <div class="quote-row">
+                <span class="timecode"><span class="tc">[</span>04:23<span class="tc">]</span></span>
+                <div class="quote-body">
+                    <span>"I keep clicking 'Continue' but nothing happens... I've tried three times now. Is the site broken or am I doing something wrong?"</span>
+                    <span class="speaker">&nbsp;&mdash;&nbsp;p1</span>
+                </div>
+            </div>
+        </div>
+        <div class="bq-tags">
+            <span class="badge badge-ai badge-frustration">frustration</span>
+            <span class="badge badge-user" style="background:var(--bn-ux-1)">usability</span>
+            <span class="badge badge-user" style="background:var(--bn-ux-5)">performance</span>
+            <span class="badge badge-user" style="background:var(--bn-opp-1)">request</span>
+            <span class="badge badge-add">+</span>
+        </div>
+    </div>
+
+    <div class="bq">
+        <div class="bq-content">
+            <div class="quote-row">
+                <span class="timecode"><span class="tc">[</span>06:11<span class="tc">]</span></span>
+                <div class="quote-body">
+                    <span>"Wait, where did my basket go? I was just on the checkout page and now I'm... on the homepage? I don't understand what happened."</span>
+                    <span class="speaker">&nbsp;&mdash;&nbsp;p3</span>
+                </div>
+            </div>
+        </div>
+        <div class="bq-tags">
+            <span class="badge badge-ai badge-confusion">confusion</span>
+            <span class="badge badge-user" style="background:var(--bn-ux-2)">navigation</span>
+            <span class="badge badge-user" style="background:var(--bn-emo-3)">disoriented</span>
+            <span class="badge badge-user" style="background:var(--bn-custom)">basket</span>
+            <span class="badge badge-add">+</span>
+        </div>
+    </div>
+
+    <div class="bq">
+        <div class="bq-content">
+            <div class="quote-row">
+                <span class="timecode"><span class="tc">[</span>08:45<span class="tc">]</span></span>
+                <div class="quote-body">
+                    <span>"I'm not sure I'd put my card details in here. There's no padlock icon and the URL looks weird... it just doesn't feel like a real checkout page."</span>
+                    <span class="speaker">&nbsp;&mdash;&nbsp;p2</span>
+                </div>
+            </div>
+        </div>
+        <div class="bq-tags">
+            <span class="badge badge-ai badge-doubt">doubt</span>
+            <span class="badge badge-user" style="background:var(--bn-trust-1)">credibility</span>
+            <span class="badge badge-user" style="background:var(--bn-trust-3)">security</span>
+            <span class="badge badge-user" style="background:var(--bn-trust-2)">privacy</span>
+            <span class="badge badge-add">+</span>
+        </div>
+    </div>
+
+    <div class="bq">
+        <div class="bq-content">
+            <div class="quote-row">
+                <span class="timecode"><span class="tc">[</span>22:40<span class="tc">]</span></span>
+                <div class="quote-body">
+                    <span>"In my day job I'm switching between Slack, Jira, and about four different spreadsheets just to track one project. It's... exhausting, honestly."</span>
+                    <span class="speaker">&nbsp;&mdash;&nbsp;p3</span>
+                </div>
+            </div>
+        </div>
+        <div class="bq-tags">
+            <span class="badge badge-ai badge-frustration">frustration</span>
+            <span class="badge badge-user" style="background:var(--bn-role-2)">tooling</span>
+            <span class="badge badge-user" style="background:var(--bn-role-1)">workflow</span>
+            <span class="badge badge-user" style="background:var(--bn-opp-2)">need</span>
+            <span class="badge badge-add">+</span>
+        </div>
+    </div>
+
+    <div class="bq">
+        <div class="bq-content">
+            <div class="quote-row">
+                <span class="timecode"><span class="tc">[</span>28:17<span class="tc">]</span></span>
+                <div class="quote-body">
+                    <span>"The other tool we tried had this brilliant feature where you could just... tag everything in bulk and then see it all on a board. We don't have anything like that. I'd pay extra for it."</span>
+                    <span class="speaker">&nbsp;&mdash;&nbsp;p4</span>
+                </div>
+            </div>
+        </div>
+        <div class="bq-tags">
+            <span class="badge badge-ai badge-delight">delight</span>
+            <span class="badge badge-user" style="background:var(--bn-opp-1)">request</span>
+            <span class="badge badge-user" style="background:var(--bn-opp-3)">competitor</span>
+            <span class="badge badge-user" style="background:var(--bn-opp-4)">willingness</span>
+            <span class="badge badge-user" style="background:var(--bn-role-2)">tooling</span>
+            <span class="badge badge-add">+</span>
+        </div>
+    </div>
+
+    <div class="bq">
+        <div class="bq-content">
+            <div class="quote-row">
+                <span class="timecode"><span class="tc">[</span>34:22<span class="tc">]</span></span>
+                <div class="quote-body">
+                    <span>"The delivery estimate said 3-5 days but then at checkout it changed to 7-10. That's annoying — I was making a decision based on the faster number."</span>
+                    <span class="speaker">&nbsp;&mdash;&nbsp;p5</span>
+                </div>
+            </div>
+        </div>
+        <div class="bq-tags">
+            <span class="badge badge-ai badge-frustration">frustration</span>
+            <span class="badge badge-user" style="background:var(--bn-trust-1)">credibility</span>
+            <span class="badge badge-user" style="background:var(--bn-emo-1)">frustration</span>
+            <span class="badge badge-user" style="background:var(--bn-custom)">delivery</span>
+            <span class="badge badge-user" style="background:var(--bn-custom)">checkout</span>
+            <span class="badge badge-add">+</span>
+        </div>
+    </div>
+</div>
+
+<hr class="section-divider">
+
+<!-- ════════════════════════════════════════════════════════════
+     SECTION E: RIGHT MARGIN GUTTER
+     ════════════════════════════════════════════════════════════ -->
+
+<h2>E. Right Margin Gutter (tags outside the quote)</h2>
+<p class="note">
+    Tags live in a dedicated gutter column to the right of the blockquotes.
+    The quote body is completely clean — no tag badges inside it at all.
+    The gutter has a dashed left border to visually separate it.
+</p>
+
+<div class="layout-e">
+    <h3 class="section-heading">Checkout Flow</h3>
+
+    <div class="layout-e-main">
+        <div class="bq">
+            <div class="quote-row">
+                <span class="timecode"><span class="tc">[</span>04:23<span class="tc">]</span></span>
+                <div class="quote-body">
+                    <span>"I keep clicking 'Continue' but nothing happens... I've tried three times now. Is the site broken or am I doing something wrong?"</span>
+                    <span class="speaker">&nbsp;&mdash;&nbsp;p1</span>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="layout-e-gutter">
+        <div class="gutter-tags">
+            <span class="badge badge-ai badge-frustration">frustration</span>
+            <span class="badge badge-user" style="background:var(--bn-ux-1)">usability</span>
+            <span class="badge badge-user" style="background:var(--bn-ux-5)">performance</span>
+            <span class="badge badge-user" style="background:var(--bn-opp-1)">request</span>
+            <span class="badge badge-add">+</span>
+        </div>
+    </div>
+
+    <div class="layout-e-main">
+        <div class="bq">
+            <div class="quote-row">
+                <span class="timecode"><span class="tc">[</span>06:11<span class="tc">]</span></span>
+                <div class="quote-body">
+                    <span>"Wait, where did my basket go? I was just on the checkout page and now I'm... on the homepage? I don't understand what happened."</span>
+                    <span class="speaker">&nbsp;&mdash;&nbsp;p3</span>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="layout-e-gutter">
+        <div class="gutter-tags">
+            <span class="badge badge-ai badge-confusion">confusion</span>
+            <span class="badge badge-user" style="background:var(--bn-ux-2)">navigation</span>
+            <span class="badge badge-user" style="background:var(--bn-emo-3)">disoriented</span>
+            <span class="badge badge-user" style="background:var(--bn-custom)">basket</span>
+            <span class="badge badge-add">+</span>
+        </div>
+    </div>
+
+    <div class="layout-e-main">
+        <div class="bq">
+            <div class="quote-row">
+                <span class="timecode"><span class="tc">[</span>08:45<span class="tc">]</span></span>
+                <div class="quote-body">
+                    <span>"I'm not sure I'd put my card details in here. There's no padlock icon and the URL looks weird... it just doesn't feel like a real checkout page."</span>
+                    <span class="speaker">&nbsp;&mdash;&nbsp;p2</span>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="layout-e-gutter">
+        <div class="gutter-tags">
+            <span class="badge badge-ai badge-doubt">doubt</span>
+            <span class="badge badge-user" style="background:var(--bn-trust-1)">credibility</span>
+            <span class="badge badge-user" style="background:var(--bn-trust-3)">security</span>
+            <span class="badge badge-user" style="background:var(--bn-trust-2)">privacy</span>
+            <span class="badge badge-add">+</span>
+        </div>
+    </div>
+
+    <h3 class="section-heading">General Context</h3>
+
+    <div class="layout-e-main">
+        <div class="bq">
+            <div class="quote-row">
+                <span class="timecode"><span class="tc">[</span>22:40<span class="tc">]</span></span>
+                <div class="quote-body">
+                    <span>"In my day job I'm switching between Slack, Jira, and about four different spreadsheets just to track one project. It's... exhausting, honestly."</span>
+                    <span class="speaker">&nbsp;&mdash;&nbsp;p3</span>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="layout-e-gutter">
+        <div class="gutter-tags">
+            <span class="badge badge-ai badge-frustration">frustration</span>
+            <span class="badge badge-user" style="background:var(--bn-role-2)">tooling</span>
+            <span class="badge badge-user" style="background:var(--bn-role-1)">workflow</span>
+            <span class="badge badge-user" style="background:var(--bn-opp-2)">need</span>
+            <span class="badge badge-add">+</span>
+        </div>
+    </div>
+
+    <div class="layout-e-main">
+        <div class="bq">
+            <div class="quote-row">
+                <span class="timecode"><span class="tc">[</span>28:17<span class="tc">]</span></span>
+                <div class="quote-body">
+                    <span>"The other tool we tried had this brilliant feature where you could just... tag everything in bulk and then see it all on a board. We don't have anything like that. I'd pay extra for it."</span>
+                    <span class="speaker">&nbsp;&mdash;&nbsp;p4</span>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="layout-e-gutter">
+        <div class="gutter-tags">
+            <span class="badge badge-ai badge-delight">delight</span>
+            <span class="badge badge-user" style="background:var(--bn-opp-1)">request</span>
+            <span class="badge badge-user" style="background:var(--bn-opp-3)">competitor</span>
+            <span class="badge badge-user" style="background:var(--bn-opp-4)">willingness</span>
+            <span class="badge badge-user" style="background:var(--bn-role-2)">tooling</span>
+            <span class="badge badge-add">+</span>
+        </div>
+    </div>
+
+    <div class="layout-e-main">
+        <div class="bq">
+            <div class="quote-row">
+                <span class="timecode"><span class="tc">[</span>34:22<span class="tc">]</span></span>
+                <div class="quote-body">
+                    <span>"The delivery estimate said 3-5 days but then at checkout it changed to 7-10. That's annoying — I was making a decision based on the faster number."</span>
+                    <span class="speaker">&nbsp;&mdash;&nbsp;p5</span>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="layout-e-gutter">
+        <div class="gutter-tags">
+            <span class="badge badge-ai badge-frustration">frustration</span>
+            <span class="badge badge-user" style="background:var(--bn-trust-1)">credibility</span>
+            <span class="badge badge-user" style="background:var(--bn-emo-1)">frustration</span>
+            <span class="badge badge-user" style="background:var(--bn-custom)">delivery</span>
+            <span class="badge badge-user" style="background:var(--bn-custom)">checkout</span>
+            <span class="badge badge-add">+</span>
+        </div>
+    </div>
+</div>
+
+<hr class="section-divider">
+
+<!-- ════════════════════════════════════════════════════════════
+     RESPONSIVE COLLAPSE DEMO
+     ════════════════════════════════════════════════════════════ -->
+
+<h2>Responsive Collapse (tag pills → coloured squares)</h2>
+<p class="note">
+    For the right-gutter layout (E): as viewport narrows, tag labels collapse to small coloured squares.
+    Same height as a tag badge, same colour — just no text. Enough to know "this quote was tagged" at a glance.
+    Click the toggle to preview the collapsed state.
+</p>
+
+<div style="display:flex; gap:0.5rem; margin-bottom:1rem;">
+    <button class="theme-toggle" id="collapse-toggle" style="font-size:0.75rem">
+        Toggle collapsed view
+    </button>
+</div>
+
+<div class="collapse-demo" id="collapse-demo">
+    <div class="bq" style="display:grid; grid-template-columns:1fr 160px; gap:0; align-items:start;">
+        <div style="min-width:0;">
+            <div class="quote-row">
+                <span class="timecode"><span class="tc">[</span>04:23<span class="tc">]</span></span>
+                <div class="quote-body">
+                    <span>"I keep clicking 'Continue' but nothing happens... I've tried three times now. Is the site broken or am I doing something wrong?"</span>
+                    <span class="speaker">&nbsp;&mdash;&nbsp;p1</span>
+                </div>
+            </div>
+        </div>
+        <div style="padding-left:0.6rem; border-left:1px dashed var(--bn-colour-border); display:flex; flex-direction:column; gap:0.25rem; padding-top:0.1rem;">
+            <span class="badge badge-ai badge-frustration">frustration</span>
+            <span class="badge badge-user" style="background:var(--bn-ux-1)">usability</span>
+            <span class="badge badge-user" style="background:var(--bn-ux-5)">performance</span>
+            <span class="badge badge-user" style="background:var(--bn-opp-1)">request</span>
+            <span class="badge badge-add">+</span>
+        </div>
+    </div>
+
+    <div class="bq" style="display:grid; grid-template-columns:1fr 160px; gap:0; align-items:start;">
+        <div style="min-width:0;">
+            <div class="quote-row">
+                <span class="timecode"><span class="tc">[</span>22:40<span class="tc">]</span></span>
+                <div class="quote-body">
+                    <span>"In my day job I'm switching between Slack, Jira, and about four different spreadsheets just to track one project. It's... exhausting, honestly."</span>
+                    <span class="speaker">&nbsp;&mdash;&nbsp;p3</span>
+                </div>
+            </div>
+        </div>
+        <div style="padding-left:0.6rem; border-left:1px dashed var(--bn-colour-border); display:flex; flex-direction:column; gap:0.25rem; padding-top:0.1rem;">
+            <span class="badge badge-ai badge-frustration">frustration</span>
+            <span class="badge badge-user" style="background:var(--bn-role-2)">tooling</span>
+            <span class="badge badge-user" style="background:var(--bn-role-1)">workflow</span>
+            <span class="badge badge-user" style="background:var(--bn-opp-2)">need</span>
+            <span class="badge badge-add">+</span>
+        </div>
+    </div>
+
+    <div class="bq" style="display:grid; grid-template-columns:1fr 160px; gap:0; align-items:start;">
+        <div style="min-width:0;">
+            <div class="quote-row">
+                <span class="timecode"><span class="tc">[</span>25:03<span class="tc">]</span></span>
+                <div class="quote-body">
+                    <span>"We usually do a team standup at nine, check the dashboard, then just... react to whatever fires come in. There isn't really a structured process."</span>
+                    <span class="speaker">&nbsp;&mdash;&nbsp;p1</span>
+                </div>
+            </div>
+        </div>
+        <div style="padding-left:0.6rem; border-left:1px dashed var(--bn-colour-border); display:flex; flex-direction:column; gap:0.25rem; padding-top:0.1rem;">
+            <span class="badge badge-user" style="background:var(--bn-role-1)">workflow</span>
+            <span class="badge badge-user" style="background:var(--bn-role-3)">process</span>
+            <span class="badge badge-user" style="background:var(--bn-role-5)">workaround</span>
+            <span class="badge badge-add">+</span>
+        </div>
+    </div>
+</div>
+
+<hr class="section-divider">
+
+<h3>Layout Comparison Notes</h3>
+<p class="note" style="max-width:50rem; line-height:1.8">
+    <strong>Layout A (de-emphasis):</strong> Cheapest to implement — CSS-only changes. Best candidates: A5 (0.65rem + 55% opacity) or A6 (0.65rem + 35% opacity). Tags are still physically below the quote, so they still add vertical space. Washed variants (A7/A8) make user tags look identical to AI tags — defeats the visual distinction.<br><br>
+    <strong>Layout C (two-column):</strong> Tags no longer contribute to vertical scroll height — they fill horizontal space instead. Good for widescreen laptops. The 140px tag column costs ~15% of a 900px content area. Tags feel clearly secondary: spatially "over there." Responsive: on narrow viewports, could collapse to inline-below (A) or squares.<br><br>
+    <strong>Layout E (right gutter):</strong> The cleanest quote body — zero tag clutter inside the blockquote. Tags float in a dedicated margin with their own visual rhythm. The dashed border separates the reading zone from the coding zone. Similar to ATLAS.ti's margin model but adapted for discrete quote cards instead of continuous text. Responsive: gutter collapses to coloured squares (see demo above).<br><br>
+    <strong>Responsive collapse:</strong> Natural extension of E. As the gutter narrows, tag text disappears and only the coloured square remains. Square = "tagged", no square = "untagged." Hover on a square could show the label in a tooltip. On mobile, the squares give a vestigial signal without taking any width.
+</p>
+
+<script>
+// AI tag toggle
+document.getElementById('ai-toggle').addEventListener('change', function() {
+    document.body.classList.toggle('hide-ai-tags', !this.checked);
+});
+
+// Theme toggle
+document.getElementById('theme-toggle').addEventListener('click', function() {
+    var html = document.documentElement;
+    var isDark = html.getAttribute('data-theme') === 'dark';
+    html.setAttribute('data-theme', isDark ? 'light' : 'dark');
+    document.getElementById('theme-icon').innerHTML = isDark ? '&#9789;' : '&#9788;';
+    document.getElementById('theme-label').textContent = isDark ? 'Dark' : 'Light';
+});
+
+// Collapse toggle
+document.getElementById('collapse-toggle').addEventListener('click', function() {
+    document.getElementById('collapse-demo').classList.toggle('collapsed');
+});
+</script>
+
+</body>
+</html>

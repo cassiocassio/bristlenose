@@ -15,7 +15,6 @@ Each active feature branch gets its own **git worktree** — a full working copy
 | Directory | Branch | Purpose |
 |-----------|--------|---------|
 | `bristlenose/` | `main` | Main repo, releases, hotfixes |
-| `bristlenose_branch codebook/` | `codebook` | Codebook feature (tag taxonomy) |
 | `bristlenose_branch CI/` | `CI` | CI improvements |
 
 **Creating a new feature branch worktree:**
@@ -76,40 +75,6 @@ When merging back to main:
 
 ## Active Branches
 
-### `codebook`
-
-**Status:** Phase 1 complete, Phase 2 next
-**Started:** 7 Feb 2026
-**Worktree:** `/Users/cassio/Code/bristlenose_branch codebook/`
-**Plan:** `~/.claude/plans/immutable-chasing-patterson.md`
-
-**What's done (Phase 1 — Visual Foundation):**
-- OKLCH v5 colour tokens in `tokens.css` (5 sets × 5-6 slots + custom, light-dark)
-- Mode-dependent badge styling (washed light / saturated dark)
-- `codebook.js` — localStorage data model, colour lookups, AI tag toggle
-- AI tag toggle button in toolbar
-- `tags.js` and `histogram.js` wired to use codebook colours
-- 90% resting opacity on badge rows, 100% on hover
-
-**What's next (Phase 2 — Codebook Panel):**
-- Codebook modal UI (group list, tag counts, CRUD)
-- `codebook.css` for panel layout
-- Tag-to-group assignment from panel
-
-**Files this branch touches:**
-- `bristlenose/theme/tokens.css` — codebook colour tokens
-- `bristlenose/theme/atoms/badge.css` — user tag styling
-- `bristlenose/theme/atoms/button.css` — toggle button variant
-- `bristlenose/theme/molecules/badge-row.css` — opacity behaviour
-- `bristlenose/theme/js/codebook.js` — new module
-- `bristlenose/theme/js/tags.js` — codebook colour integration
-- `bristlenose/theme/js/histogram.js` — codebook colour integration
-- `bristlenose/theme/js/main.js` — boot sequence
-- `bristlenose/stages/render_html.py` — JS file list, toolbar button
-- Will add: `bristlenose/theme/molecules/codebook.css`, more `render_html.py` changes
-
----
-
 ### `CI`
 
 **Status:** Not started
@@ -169,7 +134,9 @@ When merging back to main:
 
 ## Completed Branches (for reference)
 
-_None yet — add branches here after they're merged to main._
+### `codebook` — merged 7 Feb 2026
+
+Interactive codebook page with tag taxonomy management. Phases 1–3: OKLCH colour tokens, toolbar redesign, standalone `codebook.html` with drag-and-drop, inline editing, group CRUD, cross-window sync. Also: shared `escapeHtml()`, `showConfirmModal()`, `toggle()` in modal infrastructure.
 
 ---
 

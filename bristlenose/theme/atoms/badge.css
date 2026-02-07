@@ -67,13 +67,35 @@
     opacity: 1;
 }
 
-/* User tag */
+/* User tag — mode-dependent treatment.
+   Light mode: dark text on washed codebook bg (pale tint).
+   Dark mode: white text on saturated codebook bg.
+   Background colour set via inline style from codebook.js.
+   Falls back to --bn-colour-user-tag-bg when no codebook colour assigned. */
 .badge-user {
     background: var(--bn-colour-user-tag-bg);
-    color: var(--bn-colour-user-tag-text);
+    color: var(--bn-colour-text);
+    font-weight: 400;
     cursor: default;
     position: relative;
 }
+
+/* Dark mode: user tags switch to white-on-saturated */
+@supports (color: light-dark(#000, #fff)) {
+    [data-theme="dark"] .badge-user {
+        color: #ffffff;
+        font-weight: 500;
+    }
+    @media (prefers-color-scheme: dark) {
+        :root:not([data-theme="light"]) .badge-user {
+            color: #ffffff;
+            font-weight: 500;
+        }
+    }
+}
+
+/* AI tag visibility toggle */
+body.hide-ai-tags .badge-ai { display: none; }
 
 .badge-user .badge-delete {
     position: absolute;

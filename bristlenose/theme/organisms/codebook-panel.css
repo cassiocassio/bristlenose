@@ -1,0 +1,337 @@
+/* organisms/codebook-panel.css — Codebook page grid layout and components.
+   Used only on codebook.html (standalone page opened from toolbar button).
+   All values via design tokens — no hard-coded colours/spacing. */
+
+/* ── Grid — CSS columns masonry layout ─────────────────────────────────── */
+
+.codebook-grid {
+    columns: 240px;
+    column-gap: var(--bn-space-lg);
+    max-width: 1200px;
+}
+
+/* ── Group column ──────────────────────────────────────────────────────── */
+
+.codebook-group {
+    border-radius: var(--bn-radius-lg);
+    padding: 12px;
+    min-height: 120px;
+    position: relative;
+    border: 1px solid transparent;
+    transition: border-color var(--bn-transition-fast), box-shadow var(--bn-transition-fast);
+    break-inside: avoid;
+    margin-bottom: var(--bn-space-lg);
+}
+
+.codebook-group.drag-over {
+    border-color: var(--bn-colour-accent);
+    box-shadow: var(--bn-focus-ring);
+}
+
+/* ── Group header ──────────────────────────────────────────────────────── */
+
+.group-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    margin-bottom: 6px;
+    gap: 4px;
+}
+
+.group-title-area {
+    flex: 1;
+    min-width: 0;
+}
+
+.group-title {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--bn-colour-text);
+    line-height: 1.3;
+}
+
+.group-title-text {
+    cursor: default;
+    border-radius: var(--bn-radius-sm);
+    padding: 1px 3px;
+    margin: -1px -3px;
+}
+.group-title-text:hover {
+    background: var(--bn-hover-bg);
+}
+
+.group-close {
+    background: none;
+    border: none;
+    font-size: 1rem;
+    line-height: 1;
+    color: var(--bn-colour-muted);
+    cursor: pointer;
+    padding: 0.15rem 0.3rem;
+    border-radius: var(--bn-radius-sm);
+    opacity: 0;
+    transition: opacity var(--bn-transition-fast),
+                color var(--bn-transition-fast),
+                background var(--bn-transition-fast);
+    flex-shrink: 0;
+    margin-top: -2px;
+    margin-right: -4px;
+}
+.codebook-group:hover .group-close {
+    opacity: 0.5;
+}
+.group-close:hover {
+    opacity: 1 !important;
+    color: var(--bn-colour-text);
+    background: var(--bn-colour-quote-bg);
+}
+
+/* Subtitle — click to edit */
+.group-subtitle {
+    font-size: 0.78rem;
+    color: var(--bn-colour-muted);
+    margin-top: 1px;
+    cursor: text;
+    padding: 1px 3px;
+    margin-left: -3px;
+    border-radius: var(--bn-radius-sm);
+    min-height: 1.2em;
+    line-height: 1.4;
+}
+.group-subtitle:hover {
+    background: var(--bn-hover-bg-subtle);
+}
+.group-subtitle.placeholder {
+    font-style: italic;
+    opacity: 0.45;
+}
+
+/* Editable inputs — title and subtitle */
+.group-title-input,
+.group-subtitle-input {
+    font-family: var(--bn-font-body);
+    border: 1px solid var(--bn-colour-border);
+    border-radius: var(--bn-radius-sm);
+    padding: 1px 3px;
+    font-size: inherit;
+    font-weight: inherit;
+    color: inherit;
+    background: var(--bn-colour-bg);
+    width: 100%;
+    outline: none;
+}
+.group-title-input:focus,
+.group-subtitle-input:focus {
+    border-color: var(--bn-colour-accent);
+    box-shadow: var(--bn-focus-ring);
+}
+
+/* Group total row — aligns with tag-row count column */
+.group-total-row {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: center;
+    gap: 6px;
+    padding: 0 4px 4px;
+}
+.group-total-label {
+    font-size: 0.7rem;
+    color: var(--bn-colour-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+.group-total-count {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--bn-colour-muted);
+    font-variant-numeric: tabular-nums;
+    min-width: 16px;
+    text-align: right;
+}
+
+/* ── Tag list ──────────────────────────────────────────────────────────── */
+
+.tag-list {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+/* ── Tag row ───────────────────────────────────────────────────────────── */
+
+.tag-row {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: center;
+    gap: 6px;
+    padding: 3px 4px;
+    border-radius: var(--bn-radius-sm);
+    cursor: grab;
+    transition: background var(--bn-transition-fast),
+                box-shadow var(--bn-transition-fast),
+                opacity var(--bn-transition-fast);
+    position: relative;
+}
+.tag-row:hover {
+    background: var(--bn-hover-bg-subtle);
+}
+.tag-row:active {
+    cursor: grabbing;
+}
+
+/* Drag states */
+.tag-row.dragging {
+    opacity: 0.4;
+}
+.tag-row.merge-target {
+    box-shadow: 0 0 0 2px var(--bn-colour-accent);
+    background: rgba(37, 99, 235, 0.06);
+}
+
+.tag-name-area {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    min-width: 0;
+    position: relative;
+}
+
+/* In codebook panel, badges are primary content — sized up from 0.72rem */
+.codebook-group .badge {
+    font-size: 0.82rem;
+    padding: 0.2rem 0.5rem;
+}
+
+/* Micro histogram bar + count */
+.tag-bar-area {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    min-width: 50px;
+    justify-content: flex-end;
+}
+.tag-micro-bar {
+    height: 0.6rem;
+    border-radius: 0 var(--bn-radius-sm) var(--bn-radius-sm) 0;
+    min-width: 2px;
+    transition: width 0.2s ease;
+}
+.tag-count {
+    font-size: 0.75rem;
+    color: var(--bn-colour-muted);
+    min-width: 16px;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+}
+
+/* ── Add tag ───────────────────────────────────────────────────────────── */
+
+.tag-add-row {
+    display: inline-flex;
+    align-items: center;
+    gap: 0;
+    padding: 3px 4px;
+    margin-top: 4px;
+    cursor: pointer;
+    color: var(--bn-colour-muted);
+    transition: color var(--bn-transition-fast);
+}
+.tag-add-row:hover {
+    color: var(--bn-colour-accent);
+}
+.tag-add-badge {
+    display: inline-block;
+    font-family: var(--bn-font-mono);
+    font-size: 0.82rem;
+    padding: 0.2rem 0.5rem;
+    border-radius: var(--bn-radius-sm);
+    border: 1px dashed var(--bn-colour-border);
+    background: transparent;
+    color: var(--bn-colour-muted);
+    transition: border-color var(--bn-transition-fast), color var(--bn-transition-fast);
+    user-select: none;
+}
+.tag-add-row:hover .tag-add-badge {
+    border-color: var(--bn-colour-accent);
+    color: var(--bn-colour-accent);
+}
+
+/* Inline input for new tag */
+.tag-add-input {
+    font-family: var(--bn-font-mono);
+    font-size: 0.82rem;
+    border: 1px solid var(--bn-colour-border);
+    border-radius: var(--bn-radius-sm);
+    padding: 0.2rem 0.5rem;
+    outline: none;
+    width: 100%;
+    max-width: 160px;
+    color: var(--bn-colour-text);
+    background: var(--bn-colour-bg);
+}
+.tag-add-input:focus {
+    border-color: var(--bn-colour-accent);
+    box-shadow: var(--bn-focus-ring);
+}
+
+/* ── New group placeholder ─────────────────────────────────────────────── */
+
+.codebook-group.new-group-placeholder {
+    border: 1.5px dashed var(--bn-colour-border);
+    background: transparent;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 120px;
+    cursor: pointer;
+    transition: border-color var(--bn-transition-fast), background var(--bn-transition-fast);
+    gap: 6px;
+}
+.codebook-group.new-group-placeholder:hover {
+    border-color: var(--bn-colour-muted);
+    background: var(--bn-hover-bg-subtle);
+}
+.new-group-icon {
+    font-size: 1.2rem;
+    color: var(--bn-colour-muted);
+    line-height: 1;
+}
+.new-group-label {
+    font-size: 0.82rem;
+    color: var(--bn-colour-muted);
+}
+
+/* ── Drag ghost ────────────────────────────────────────────────────────── */
+
+.drag-ghost {
+    position: fixed;
+    pointer-events: none;
+    z-index: 200;
+    font-family: var(--bn-font-mono);
+    font-size: 0.82rem;
+    padding: 0.2rem 0.5rem;
+    border-radius: var(--bn-radius-sm);
+    color: var(--bn-colour-text);
+    box-shadow: 0 2px 8px var(--bn-colour-shadow);
+    opacity: 0.9;
+    white-space: nowrap;
+}
+
+/* Tag preview in merge modal */
+.tag-preview {
+    display: inline;
+    font-family: var(--bn-font-mono);
+    font-size: 0.72rem;
+    padding: var(--bn-space-xs) 0.45rem;
+    border-radius: var(--bn-radius-sm);
+    font-weight: 400;
+}
+
+/* ── Codebook page layout ──────────────────────────────────────────────── */
+
+.codebook-description {
+    font-size: 0.85rem;
+    color: var(--bn-colour-muted);
+    margin-bottom: var(--bn-space-lg);
+}

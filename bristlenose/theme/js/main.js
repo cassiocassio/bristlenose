@@ -10,6 +10,7 @@
  *
  *   storage.js      → createStore()           (used by all stateful modules)
  *   modal.js        → createModal(), closeTopmostModal() (used by focus.js, feedback.js)
+ *   codebook.js     → codebook, getTagColourVar(), initCodebook() (used by tags.js, histogram.js)
  *   player.js       → seekTo(), initPlayer()
  *   starred.js      → initStarred(), toggleStar()
  *   editing.js      → initEditing()
@@ -37,6 +38,7 @@ initStarred();
 initEditing();
 initInlineEditing();
 initTags();
+initCodebook();
 renderUserTagsChart();
 initCsvExport();
 initViewSwitcher();

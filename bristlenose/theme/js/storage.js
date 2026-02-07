@@ -25,6 +25,17 @@
  * @param {string} key  The localStorage key name.
  * @returns {{ get: (fallback?: *) => *, set: (value: *) => void }}
  */
+/**
+ * Escape a string for safe insertion into innerHTML.
+ *
+ * @param {string} s  The raw string.
+ * @returns {string}  The HTML-escaped string.
+ */
+function escapeHtml(s) {
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
 function createStore(key) {
   return {
     get: function (fallback) {

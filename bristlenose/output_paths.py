@@ -82,6 +82,11 @@ class OutputPaths:
         """Participant registry: people.yaml (no prefix — user-editable)"""
         return self.output_dir / "people.yaml"
 
+    @property
+    def codebook_file(self) -> Path:
+        """Codebook page: codebook.html (same level as report)"""
+        return self.output_dir / "codebook.html"
+
     # --- Asset directory ---
 
     @property

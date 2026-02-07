@@ -499,11 +499,22 @@ def check_network(settings: BristlenoseSettings) -> CheckResult:
 
 
 def check_pii(settings: BristlenoseSettings) -> CheckResult:
-    """Check PII redaction dependencies are installed and working."""
+    """Check PII redaction dependencies are installed and working.
+
+    Catches ``Exception`` (not just ``ImportError``) because spacy's
+    pydantic v1 dependency raises ``ConfigError`` on Python 3.14+.
+    """
+    if not settings.pii_enabled:
+        return CheckResult(
+            status=CheckStatus.SKIP,
+            label="PII redaction",
+            detail="off (use --redact-pii to enable)",
+        )
+
     # Check presidio
     try:
         import presidio_analyzer  # noqa: F401
-    except ImportError:
+    except Exception:
         return CheckResult(
             status=CheckStatus.FAIL,
             label="PII redaction",
@@ -536,6 +547,13 @@ def check_pii(settings: BristlenoseSettings) -> CheckResult:
             status=CheckStatus.FAIL,
             label="PII redaction",
             detail="spaCy model en_core_web_sm not found",
+            fix_key="spacy_model_missing",
+        )
+    except Exception:
+        return CheckResult(
+            status=CheckStatus.FAIL,
+            label="PII redaction",
+            detail="spaCy not compatible (Python 3.14+)",
             fix_key="spacy_model_missing",
         )
 

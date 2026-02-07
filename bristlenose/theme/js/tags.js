@@ -29,7 +29,7 @@
  * @module tags
  */
 
-/* global createStore, renderUserTagsChart */
+/* global createStore, renderUserTagsChart, getTagColourVar */
 
 var tagsStore = createStore('bristlenose-tags');
 var deletedBadgesStore = createStore('bristlenose-deleted-badges');
@@ -89,6 +89,11 @@ function createUserTagEl(name) {
   span.setAttribute('data-badge-type', 'user');
   span.setAttribute('data-tag-name', name);
   span.textContent = name;
+
+  // Apply codebook colour if available.
+  if (typeof getTagColourVar === 'function') {
+    span.style.background = getTagColourVar(name);
+  }
 
   var del = document.createElement('button');
   del.className = 'badge-delete';

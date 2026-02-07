@@ -1,0 +1,1347 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Codebook Panel Mockup — Bristlenose</title>
+<style>
+/* ================================================================
+   CODEBOOK PANEL MOCKUP v2 — Phase 2 UX Prototype
+   ================================================================
+   Uses real Bristlenose design tokens and component patterns:
+   - badge.css: .badge, .badge-user, .badge-delete
+   - modal.css: .bn-overlay, .bn-modal, .bn-btn
+   - bar.css: .sentiment-bar, .histogram-bar-delete
+   - tokens.css: radii, spacing, colours, OKLCH palette
+   ================================================================ */
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+/* ── Design tokens (from tokens.css) ────────────────────────── */
+
+:root {
+    --bn-font-body: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
+    --bn-font-mono: "SF Mono", "Fira Code", "Consolas", monospace;
+
+    --bn-colour-bg: #ffffff;
+    --bn-colour-text: #1a1a1a;
+    --bn-colour-muted: #6b7280;
+    --bn-colour-border: #e5e7eb;
+    --bn-colour-accent: #2563eb;
+    --bn-colour-quote-bg: #f9fafb;
+    --bn-colour-badge-bg: #f3f4f6;
+    --bn-colour-badge-text: #374151;
+    --bn-colour-user-tag-bg: #f3f4f6;
+    --bn-colour-user-tag-text: #4b5563;
+    --bn-colour-icon-idle: #c9ccd1;
+    --bn-colour-shadow: rgba(0, 0, 0, 0.1);
+
+    --bn-sentiment-frustration: #ea580c;
+
+    --bn-space-xs: 0.15rem;
+    --bn-space-sm: 0.35rem;
+    --bn-space-md: 0.75rem;
+    --bn-space-lg: 1.5rem;
+    --bn-space-xl: 2rem;
+
+    --bn-radius-sm: 3px;
+    --bn-radius-md: 6px;
+    --bn-radius-lg: 8px;
+    --bn-radius-pill: 999px;
+
+    --bn-transition-fast: 0.15s ease;
+    --bn-transition-normal: 0.2s ease;
+
+    /* Group background tints — very subtle set tint */
+    --bn-group-ux:    oklch(97% 0.015 250);
+    --bn-group-emo:   oklch(97% 0.015 10);
+    --bn-group-task:  oklch(97% 0.015 155);
+    --bn-group-trust: oklch(97% 0.015 300);
+    --bn-group-opp:   oklch(97% 0.015 75);
+    --bn-group-none:  #f9fafb;
+
+    /* Tag badge bg — washed (light mode) — from tokens.css */
+    --bn-ux-1-bg: oklch(94% 0.03 225);
+    --bn-ux-2-bg: oklch(94% 0.03 237);
+    --bn-ux-3-bg: oklch(94% 0.03 250);
+    --bn-ux-4-bg: oklch(94% 0.03 263);
+    --bn-ux-5-bg: oklch(94% 0.03 275);
+    --bn-emo-1-bg: oklch(94% 0.03 340);
+    --bn-emo-2-bg: oklch(94% 0.03 352);
+    --bn-emo-3-bg: oklch(94% 0.03 4);
+    --bn-emo-4-bg: oklch(94% 0.03 16);
+    --bn-emo-5-bg: oklch(94% 0.03 28);
+    --bn-emo-6-bg: oklch(94% 0.03 40);
+    --bn-task-1-bg: oklch(94% 0.03 130);
+    --bn-task-2-bg: oklch(94% 0.03 142);
+    --bn-task-3-bg: oklch(94% 0.03 155);
+    --bn-task-4-bg: oklch(94% 0.03 168);
+    --bn-task-5-bg: oklch(94% 0.03 180);
+    --bn-trust-1-bg: oklch(94% 0.03 275);
+    --bn-trust-2-bg: oklch(94% 0.03 287);
+    --bn-trust-3-bg: oklch(94% 0.03 300);
+    --bn-trust-4-bg: oklch(94% 0.03 313);
+    --bn-trust-5-bg: oklch(94% 0.03 325);
+    --bn-opp-1-bg: oklch(94% 0.03 50);
+    --bn-opp-2-bg: oklch(94% 0.03 62);
+    --bn-opp-3-bg: oklch(94% 0.03 75);
+    --bn-opp-4-bg: oklch(94% 0.03 88);
+    --bn-opp-5-bg: oklch(94% 0.03 100);
+    --bn-custom-bg: oklch(94% 0.005 260);
+
+    /* Bar colours — slightly more saturated than badge bg */
+    --bn-bar-ux:    oklch(70% 0.08 250);
+    --bn-bar-emo:   oklch(70% 0.08 10);
+    --bn-bar-task:  oklch(70% 0.06 155);
+    --bn-bar-trust: oklch(70% 0.07 300);
+    --bn-bar-opp:   oklch(72% 0.07 75);
+    --bn-bar-none:  #d1d5db;
+}
+
+body {
+    font-family: var(--bn-font-body);
+    color: var(--bn-colour-text);
+    background: var(--bn-colour-bg);
+    line-height: 1.5;
+    padding: 2rem;
+}
+
+/* ── Real badge styles (from badge.css) ──────────────────────── */
+
+/* In the codebook panel, badges are the primary content (not subordinate
+   metadata under a quote), so they're sized up from the report's 0.72rem. */
+.badge {
+    display: inline-block;
+    font-family: var(--bn-font-mono);
+    font-size: 0.82rem;
+    padding: 0.2rem 0.5rem;
+    border-radius: var(--bn-radius-sm);
+    background: var(--bn-colour-badge-bg);
+    color: var(--bn-colour-badge-text);
+}
+
+.badge-user {
+    background: var(--bn-colour-user-tag-bg);
+    color: var(--bn-colour-text);
+    font-weight: 400;
+    cursor: default;
+    position: relative;
+}
+
+/* Delete × on badges — real pattern from badge.css */
+.badge-user .badge-delete {
+    position: absolute;
+    top: -0.25rem;
+    right: -0.25rem;
+    width: 0.75rem;
+    height: 0.75rem;
+    background: var(--bn-colour-text);
+    border: none;
+    border-radius: 50%;
+    color: var(--bn-colour-bg);
+    font-size: 0.7rem;
+    font-weight: 700;
+    line-height: 1;
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity var(--bn-transition-fast);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    pointer-events: none;
+}
+
+.badge-user:hover .badge-delete {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+/* ── Real modal styles (from modal.css) ──────────────────────── */
+
+.bn-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity var(--bn-transition-normal), visibility var(--bn-transition-normal);
+}
+
+.bn-overlay.visible {
+    opacity: 1;
+    visibility: visible;
+}
+
+.bn-modal {
+    position: relative;
+    background: var(--bn-colour-bg);
+    border-radius: var(--bn-radius-lg);
+    padding: var(--bn-space-xl);
+    width: 90%;
+    max-width: 24rem;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+}
+
+.bn-modal h2 {
+    margin: 0 0 var(--bn-space-md) 0;
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--bn-colour-text);
+}
+
+.bn-modal p {
+    font-size: 0.82rem;
+    color: var(--bn-colour-muted);
+    line-height: 1.5;
+    margin-bottom: var(--bn-space-lg);
+}
+
+.bn-modal-close {
+    position: absolute;
+    top: var(--bn-space-md);
+    right: var(--bn-space-md);
+    background: none;
+    border: none;
+    font-size: 1.25rem;
+    line-height: 1;
+    color: var(--bn-colour-muted);
+    cursor: pointer;
+    padding: 0.25rem 0.4rem;
+    border-radius: var(--bn-radius-sm);
+    transition: color var(--bn-transition-fast), background var(--bn-transition-fast);
+}
+
+.bn-modal-close:hover {
+    color: var(--bn-colour-text);
+    background: var(--bn-colour-quote-bg);
+}
+
+.bn-modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: var(--bn-space-sm);
+}
+
+.bn-btn {
+    font-family: inherit;
+    font-size: 0.85rem;
+    padding: 0.4rem 1rem;
+    border-radius: var(--bn-radius-sm);
+    border: 1px solid var(--bn-colour-border);
+    cursor: pointer;
+    transition: background var(--bn-transition-fast), color var(--bn-transition-fast);
+}
+
+.bn-btn-cancel {
+    background: var(--bn-colour-bg);
+    color: var(--bn-colour-text);
+}
+
+.bn-btn-cancel:hover {
+    background: var(--bn-colour-quote-bg);
+}
+
+.bn-btn-danger {
+    background: var(--bn-sentiment-frustration);
+    color: #fff;
+    border-color: var(--bn-sentiment-frustration);
+}
+
+.bn-btn-danger:hover {
+    opacity: 0.85;
+}
+
+.bn-btn-primary {
+    background: var(--bn-colour-accent);
+    color: #fff;
+    border-color: var(--bn-colour-accent);
+}
+
+.bn-btn-primary:hover {
+    opacity: 0.85;
+}
+
+/* Tag preview in modal */
+.tag-preview {
+    display: inline;
+    font-family: var(--bn-font-mono);
+    font-size: 0.72rem;
+    padding: var(--bn-space-xs) 0.45rem;
+    border-radius: var(--bn-radius-sm);
+    font-weight: 400;
+}
+
+/* ── Page header ─────────────────────────────────────────────── */
+
+.page-header {
+    margin-bottom: 1.5rem;
+    max-width: 1200px;
+}
+.page-header h1 {
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin-bottom: 0.25rem;
+}
+.page-header p {
+    font-size: 0.85rem;
+    color: var(--bn-colour-muted);
+}
+
+/* ── Codebook grid ───────────────────────────────────────────── */
+
+.codebook-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: var(--bn-space-lg);    /* 1.5rem — matches spacing scale */
+    max-width: 1200px;
+    align-items: start;
+}
+
+/* ── Group column ────────────────────────────────────────────── */
+
+.codebook-group {
+    border-radius: var(--bn-radius-lg);
+    padding: 12px;
+    min-height: 120px;
+    position: relative;
+    border: 1px solid transparent;
+    transition: border-color var(--bn-transition-fast), box-shadow var(--bn-transition-fast);
+}
+
+.codebook-group.drag-over {
+    border-color: var(--bn-colour-accent);
+    box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.15);
+}
+
+/* Group header */
+.group-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    margin-bottom: 6px;
+    gap: 4px;
+}
+
+.group-title-area {
+    flex: 1;
+    min-width: 0;
+}
+
+.group-title {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--bn-colour-text);
+    line-height: 1.3;
+}
+
+.group-title-text {
+    cursor: default;
+    border-radius: var(--bn-radius-sm);
+    padding: 1px 3px;
+    margin: -1px -3px;
+}
+.group-title-text:hover {
+    background: rgba(0,0,0,0.04);
+}
+
+/* Group close — matches .bn-modal-close pattern */
+.group-close {
+    background: none;
+    border: none;
+    font-size: 1rem;
+    line-height: 1;
+    color: var(--bn-colour-muted);
+    cursor: pointer;
+    padding: 0.15rem 0.3rem;
+    border-radius: var(--bn-radius-sm);
+    opacity: 0;
+    transition: opacity var(--bn-transition-fast), color var(--bn-transition-fast), background var(--bn-transition-fast);
+    flex-shrink: 0;
+    margin-top: -2px;
+    margin-right: -4px;
+}
+.codebook-group:hover .group-close {
+    opacity: 0.5;
+}
+.group-close:hover {
+    opacity: 1 !important;
+    color: var(--bn-colour-text);
+    background: var(--bn-colour-quote-bg);
+}
+
+/* Subtitle — single-click editable */
+.group-subtitle {
+    font-size: 0.78rem;
+    color: var(--bn-colour-muted);
+    margin-top: 1px;
+    cursor: text;
+    padding: 1px 3px;
+    margin-left: -3px;
+    border-radius: var(--bn-radius-sm);
+    min-height: 1.2em;
+    line-height: 1.4;
+}
+.group-subtitle:hover {
+    background: rgba(0,0,0,0.03);
+}
+.group-subtitle.placeholder {
+    font-style: italic;
+    opacity: 0.45;
+}
+
+/* Editable inputs — title and subtitle */
+.group-title-input,
+.group-subtitle-input {
+    font-family: var(--bn-font-body);
+    border: 1px solid var(--bn-colour-border);
+    border-radius: var(--bn-radius-sm);
+    padding: 1px 3px;
+    font-size: inherit;
+    font-weight: inherit;
+    color: inherit;
+    background: var(--bn-colour-bg);
+    width: 100%;
+    outline: none;
+}
+.group-title-input:focus,
+.group-subtitle-input:focus {
+    border-color: var(--bn-colour-accent);
+    box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.12);
+}
+
+/* Group quote total — sits inside tag-list grid so count column aligns */
+.group-total-row {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: center;
+    gap: 6px;
+    padding: 0 4px 4px;
+}
+.group-total-label {
+    font-size: 0.7rem;
+    color: var(--bn-colour-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+.group-total-count {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--bn-colour-muted);
+    font-variant-numeric: tabular-nums;
+    min-width: 16px;
+    text-align: right;
+}
+
+/* ── Tag list ────────────────────────────────────────────────── */
+
+.tag-list {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+/* ── Tag row ─────────────────────────────────────────────────── */
+
+.tag-row {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: center;
+    gap: 6px;
+    padding: 3px 4px;
+    border-radius: var(--bn-radius-sm);
+    cursor: grab;
+    transition: background var(--bn-transition-fast), box-shadow var(--bn-transition-fast), opacity var(--bn-transition-fast);
+    position: relative;
+}
+
+.tag-row:hover {
+    background: rgba(0,0,0,0.03);
+}
+
+.tag-row:active {
+    cursor: grabbing;
+}
+
+/* Drag states */
+.tag-row.dragging {
+    opacity: 0.4;
+}
+
+.tag-row.merge-target {
+    box-shadow: 0 0 0 2px var(--bn-colour-accent);
+    background: rgba(37, 99, 235, 0.06);
+}
+
+/* Tag name badge — uses real .badge .badge-user */
+.tag-name-area {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    min-width: 0;
+    position: relative;
+}
+
+/* Micro histogram bar + count */
+.tag-bar-area {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    min-width: 50px;
+    justify-content: flex-end;
+}
+
+.tag-micro-bar {
+    height: 0.6rem;
+    border-radius: 0 var(--bn-radius-sm) var(--bn-radius-sm) 0;
+    min-width: 2px;
+    transition: width 0.2s ease;
+}
+
+.tag-count {
+    font-size: 0.75rem;
+    color: var(--bn-colour-muted);
+    min-width: 16px;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+}
+
+/* ── Add tag ─────────────────────────────────────────────────── */
+
+.tag-add-row {
+    display: inline-flex;
+    align-items: center;
+    gap: 0;
+    padding: 3px 4px;
+    margin-top: 4px;
+    cursor: pointer;
+    color: var(--bn-colour-muted);
+    transition: color var(--bn-transition-fast);
+}
+.tag-add-row:hover {
+    color: var(--bn-colour-accent);
+}
+
+/* The "+" is a dashed badge — matches .badge-add from badge.css */
+.tag-add-badge {
+    display: inline-block;
+    font-family: var(--bn-font-mono);
+    font-size: 0.82rem;
+    padding: 0.2rem 0.5rem;
+    border-radius: var(--bn-radius-sm);
+    border: 1px dashed var(--bn-colour-border);
+    background: transparent;
+    color: var(--bn-colour-muted);
+    transition: border-color var(--bn-transition-fast), color var(--bn-transition-fast);
+    user-select: none;
+}
+.tag-add-row:hover .tag-add-badge {
+    border-color: var(--bn-colour-accent);
+    color: var(--bn-colour-accent);
+}
+
+/* Inline input for new tag */
+.tag-add-input {
+    font-family: var(--bn-font-mono);
+    font-size: 0.82rem;
+    border: 1px solid var(--bn-colour-border);
+    border-radius: var(--bn-radius-sm);
+    padding: 0.2rem 0.5rem;
+    outline: none;
+    width: 100%;
+    max-width: 160px;
+    color: var(--bn-colour-text);
+    background: var(--bn-colour-bg);
+}
+.tag-add-input:focus {
+    border-color: var(--bn-colour-accent);
+    box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.12);
+}
+
+/* ── New group placeholder ───────────────────────────────────── */
+
+.codebook-group.new-group-placeholder {
+    border: 1.5px dashed var(--bn-colour-border);
+    background: transparent;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 120px;
+    cursor: pointer;
+    transition: border-color var(--bn-transition-fast), background var(--bn-transition-fast);
+    gap: 6px;
+}
+.codebook-group.new-group-placeholder:hover {
+    border-color: var(--bn-colour-muted);
+    background: rgba(0,0,0,0.01);
+}
+.new-group-icon {
+    font-size: 1.2rem;
+    color: var(--bn-colour-muted);
+    line-height: 1;
+}
+.new-group-label {
+    font-size: 0.82rem;
+    color: var(--bn-colour-muted);
+}
+
+/* ── Drag ghost ──────────────────────────────────────────────── */
+
+.drag-ghost {
+    position: fixed;
+    pointer-events: none;
+    z-index: 200;
+    font-family: var(--bn-font-mono);
+    font-size: 0.82rem;
+    padding: 0.2rem 0.5rem;
+    border-radius: var(--bn-radius-sm);
+    color: var(--bn-colour-text);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    opacity: 0.9;
+    white-space: nowrap;
+}
+
+/* ── Status bar (prototype only) ─────────────────────────────── */
+
+.status-bar {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding: 6px 16px;
+    background: #1a1a1a;
+    color: #9ca3af;
+    font-size: 0.7rem;
+    font-family: var(--bn-font-mono);
+    z-index: 50;
+    display: flex;
+    gap: 16px;
+}
+.status-bar span { color: #e5e7eb; }
+
+/* ── Dark mode ───────────────────────────────────────────────── */
+
+[data-theme="dark"] {
+    --bn-colour-bg: #111111;
+    --bn-colour-text: #e5e7eb;
+    --bn-colour-muted: #9ca3af;
+    --bn-colour-border: #2d2d2d;
+    --bn-colour-accent: #60a5fa;
+    --bn-colour-quote-bg: #1a1a1a;
+    --bn-colour-badge-bg: #252525;
+    --bn-colour-badge-text: #d1d5db;
+    --bn-colour-user-tag-bg: #252525;
+    --bn-colour-icon-idle: #595959;
+
+    --bn-group-ux:    oklch(22% 0.025 250);
+    --bn-group-emo:   oklch(22% 0.025 10);
+    --bn-group-task:  oklch(22% 0.020 155);
+    --bn-group-trust: oklch(22% 0.025 300);
+    --bn-group-opp:   oklch(22% 0.022 75);
+    --bn-group-none:  #1e1e1e;
+
+    --bn-ux-1-bg: oklch(50% 0.12 225);
+    --bn-ux-2-bg: oklch(48% 0.11 237);
+    --bn-ux-3-bg: oklch(53% 0.12 250);
+    --bn-ux-4-bg: oklch(55% 0.10 263);
+    --bn-ux-5-bg: oklch(49% 0.11 275);
+    --bn-emo-1-bg: oklch(50% 0.12 340);
+    --bn-emo-2-bg: oklch(48% 0.11 352);
+    --bn-emo-3-bg: oklch(53% 0.10 4);
+    --bn-emo-4-bg: oklch(49% 0.12 16);
+    --bn-emo-5-bg: oklch(55% 0.10 28);
+    --bn-emo-6-bg: oklch(51% 0.11 40);
+    --bn-task-1-bg: oklch(50% 0.10 130);
+    --bn-task-2-bg: oklch(48% 0.09 142);
+    --bn-task-3-bg: oklch(53% 0.09 155);
+    --bn-task-4-bg: oklch(49% 0.10 168);
+    --bn-task-5-bg: oklch(51% 0.09 180);
+    --bn-trust-1-bg: oklch(50% 0.11 275);
+    --bn-trust-2-bg: oklch(48% 0.10 287);
+    --bn-trust-3-bg: oklch(53% 0.10 300);
+    --bn-trust-4-bg: oklch(49% 0.11 313);
+    --bn-trust-5-bg: oklch(51% 0.10 325);
+    --bn-opp-1-bg: oklch(52% 0.11 50);
+    --bn-opp-2-bg: oklch(50% 0.10 62);
+    --bn-opp-3-bg: oklch(54% 0.12 75);
+    --bn-opp-4-bg: oklch(48% 0.10 88);
+    --bn-opp-5-bg: oklch(51% 0.11 100);
+    --bn-custom-bg: oklch(52% 0.02 260);
+
+    --bn-bar-ux:    oklch(55% 0.08 250);
+    --bn-bar-emo:   oklch(55% 0.08 10);
+    --bn-bar-task:  oklch(55% 0.06 155);
+    --bn-bar-trust: oklch(55% 0.07 300);
+    --bn-bar-opp:   oklch(57% 0.07 75);
+    --bn-bar-none:  #4b5563;
+}
+
+/* Dark mode: user badges get white text + weight 500 (from badge.css) */
+[data-theme="dark"] .badge-user {
+    color: #ffffff;
+    font-weight: 500;
+}
+
+[data-theme="dark"] .group-title-text:hover { background: rgba(255,255,255,0.06); }
+[data-theme="dark"] .group-subtitle:hover { background: rgba(255,255,255,0.04); }
+[data-theme="dark"] .tag-row:hover { background: rgba(255,255,255,0.04); }
+
+/* ── Theme toggle ────────────────────────────────────────────── */
+
+.theme-toggle {
+    position: fixed;
+    top: 12px;
+    right: 12px;
+    padding: 4px 10px;
+    border-radius: var(--bn-radius-pill);
+    border: 1px solid var(--bn-colour-border);
+    background: var(--bn-colour-bg);
+    color: var(--bn-colour-muted);
+    font-size: 0.7rem;
+    cursor: pointer;
+    font-family: var(--bn-font-body);
+    z-index: 50;
+}
+</style>
+</head>
+<body>
+
+<button class="theme-toggle" onclick="toggleTheme()">Toggle dark mode</button>
+
+<div class="page-header">
+    <h1>Codebook</h1>
+    <p>Drag tags between groups to reclassify. Drag onto another tag to merge. Sorted by frequency.</p>
+</div>
+
+<div class="codebook-grid" id="codebook-grid"></div>
+
+<!-- Modal overlay (reused for all confirmations) -->
+<div class="bn-overlay" id="modal">
+    <div class="bn-modal" id="modal-card">
+        <button type="button" class="bn-modal-close" id="modal-close">&times;</button>
+        <div id="modal-body"></div>
+    </div>
+</div>
+
+<div class="status-bar">
+    <div>Tags: <span id="stat-tags">0</span></div>
+    <div>Groups: <span id="stat-groups">0</span></div>
+    <div>Quotes: <span id="stat-quotes">0</span></div>
+    <div id="drag-status"></div>
+</div>
+
+<script>
+// ================================================================
+//  MOCK DATA — realistic research study
+// ================================================================
+
+var COLOUR_SETS = {
+    ux:    { slots: 5, bgVar: '--bn-ux-',    groupBg: '--bn-group-ux',    barVar: '--bn-bar-ux' },
+    emo:   { slots: 6, bgVar: '--bn-emo-',   groupBg: '--bn-group-emo',   barVar: '--bn-bar-emo' },
+    task:  { slots: 5, bgVar: '--bn-task-',  groupBg: '--bn-group-task',  barVar: '--bn-bar-task' },
+    trust: { slots: 5, bgVar: '--bn-trust-', groupBg: '--bn-group-trust', barVar: '--bn-bar-trust' },
+    opp:   { slots: 5, bgVar: '--bn-opp-',   groupBg: '--bn-group-opp',   barVar: '--bn-bar-opp' }
+};
+var SET_ORDER = ['ux', 'emo', 'task', 'trust', 'opp'];
+
+var mockGroups = [
+    {
+        id: 'unclassified', name: 'Unclassified', subtitle: 'New tags appear here until assigned to a group',
+        colourSet: null, tags: [
+            { name: 'interesting', count: 14 },
+            { name: 'follow-up', count: 9 },
+            { name: 'compare with v1', count: 3 },
+            { name: 'revisit', count: 2 }
+        ]
+    },
+    {
+        id: 'g1', name: 'Friction', subtitle: 'Pain points and blockers',
+        colourSet: 'emo', tags: [
+            { name: 'confusion', count: 18 },
+            { name: 'dead end', count: 12 },
+            { name: 'error recovery', count: 9 },
+            { name: 'cognitive load', count: 7 },
+            { name: 'workaround', count: 5 }
+        ]
+    },
+    {
+        id: 'g2', name: 'Navigation', subtitle: 'Wayfinding and information architecture',
+        colourSet: 'ux', tags: [
+            { name: 'lost', count: 11 },
+            { name: 'breadcrumbs', count: 8 },
+            { name: 'search failure', count: 6 },
+            { name: 'deep linking', count: 4 }
+        ]
+    },
+    {
+        id: 'g3', name: 'Trust signals', subtitle: '',
+        colourSet: 'trust', tags: [
+            { name: 'credibility concern', count: 15 },
+            { name: 'social proof', count: 10 },
+            { name: 'privacy worry', count: 7 },
+            { name: 'data ownership', count: 4 },
+            { name: 'transparency', count: 3 }
+        ]
+    },
+    {
+        id: 'g4', name: 'Opportunities', subtitle: 'Feature requests and unmet needs',
+        colourSet: 'opp', tags: [
+            { name: 'feature request', count: 21 },
+            { name: 'unmet need', count: 13 },
+            { name: 'competitor mention', count: 8 },
+            { name: 'willingness to pay', count: 5 }
+        ]
+    }
+];
+
+var totalQuotes = 247;
+
+// ================================================================
+//  COLOUR HELPERS
+// ================================================================
+
+function getTagBg(colourSet, index) {
+    if (!colourSet) return 'var(--bn-custom-bg)';
+    var set = COLOUR_SETS[colourSet];
+    if (!set) return 'var(--bn-custom-bg)';
+    return 'var(' + set.bgVar + ((index % set.slots) + 1) + '-bg)';
+}
+
+function getBarColour(colourSet) {
+    if (!colourSet) return 'var(--bn-bar-none)';
+    var set = COLOUR_SETS[colourSet];
+    return set ? 'var(' + set.barVar + ')' : 'var(--bn-bar-none)';
+}
+
+function getGroupBg(colourSet) {
+    if (!colourSet) return 'var(--bn-group-none)';
+    var set = COLOUR_SETS[colourSet];
+    return set ? 'var(' + set.groupBg + ')' : 'var(--bn-group-none)';
+}
+
+function maxCount() {
+    var m = 0;
+    mockGroups.forEach(function(g) {
+        g.tags.forEach(function(t) { if (t.count > m) m = t.count; });
+    });
+    return m;
+}
+
+// ================================================================
+//  RENDER
+// ================================================================
+
+function render() {
+    var grid = document.getElementById('codebook-grid');
+    grid.innerHTML = '';
+    var mc = maxCount();
+    var maxBarW = 48;
+
+    mockGroups.forEach(function(group) {
+        var col = document.createElement('div');
+        col.className = 'codebook-group';
+        col.setAttribute('data-group-id', group.id);
+        col.style.background = getGroupBg(group.colourSet);
+
+        // ── Header ──
+        var header = document.createElement('div');
+        header.className = 'group-header';
+
+        var titleArea = document.createElement('div');
+        titleArea.className = 'group-title-area';
+
+        // Title
+        var title = document.createElement('div');
+        title.className = 'group-title';
+        var titleText = document.createElement('span');
+        titleText.className = 'group-title-text';
+        titleText.textContent = group.name;
+        titleText.addEventListener('click', function() { editGroupTitle(group.id); });
+        title.appendChild(titleText);
+        titleArea.appendChild(title);
+
+        // Subtitle — single click to edit
+        var subtitle = document.createElement('div');
+        subtitle.className = 'group-subtitle' + (group.subtitle ? '' : ' placeholder');
+        subtitle.textContent = group.subtitle || 'Add description\u2026';
+        subtitle.addEventListener('click', function() { editGroupSubtitle(group.id); });
+        titleArea.appendChild(subtitle);
+
+        header.appendChild(titleArea);
+
+        // Close button (not for Unclassified)
+        if (group.id !== 'unclassified') {
+            var close = document.createElement('button');
+            close.className = 'group-close';
+            close.textContent = '\u00d7';
+            close.title = 'Delete group';
+            close.addEventListener('click', function() { confirmDeleteGroup(group.id); });
+            header.appendChild(close);
+        }
+
+        col.appendChild(header);
+
+        // ── Tag list ──
+        var tagList = document.createElement('div');
+        tagList.className = 'tag-list';
+
+        // Total row — uses same grid as tag rows so count aligns
+        var totalTagQuotes = group.tags.reduce(function(s, t) { return s + t.count; }, 0);
+        if (totalTagQuotes > 0) {
+            var totalRow = document.createElement('div');
+            totalRow.className = 'group-total-row';
+            var totalLabel = document.createElement('span');
+            totalLabel.className = 'group-total-label';
+            totalLabel.textContent = group.tags.length + ' tags';
+            var totalCount = document.createElement('span');
+            totalCount.className = 'group-total-count';
+            totalCount.textContent = totalTagQuotes;
+            totalCount.title = totalTagQuotes + ' quotes';
+            totalRow.appendChild(totalLabel);
+            totalRow.appendChild(totalCount);
+            tagList.appendChild(totalRow);
+        }
+
+        group.tags.forEach(function(tag, idx) {
+            var row = document.createElement('div');
+            row.className = 'tag-row';
+            row.setAttribute('draggable', 'true');
+            row.setAttribute('data-tag', tag.name);
+            row.setAttribute('data-group', group.id);
+
+            // Badge (real .badge .badge-user)
+            var nameArea = document.createElement('div');
+            nameArea.className = 'tag-name-area';
+
+            var badge = document.createElement('span');
+            badge.className = 'badge badge-user';
+            badge.setAttribute('data-tag-name', tag.name);
+            badge.textContent = tag.name;
+            badge.style.background = getTagBg(group.colourSet, idx);
+            badge.title = tag.name + ' \u2014 ' + tag.count + ' quote' + (tag.count !== 1 ? 's' : '');
+
+            // Delete × — real .badge-delete pattern
+            var del = document.createElement('button');
+            del.className = 'badge-delete';
+            del.setAttribute('aria-label', 'Delete tag');
+            del.textContent = '\u00d7';
+            del.addEventListener('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                confirmDeleteTag(tag.name, tag.count);
+            });
+            badge.appendChild(del);
+
+            nameArea.appendChild(badge);
+            row.appendChild(nameArea);
+
+            // Micro bar + count
+            var barArea = document.createElement('div');
+            barArea.className = 'tag-bar-area';
+
+            var bar = document.createElement('div');
+            bar.className = 'tag-micro-bar';
+            bar.style.width = Math.max(2, Math.round((tag.count / mc) * maxBarW)) + 'px';
+            bar.style.background = getBarColour(group.colourSet);
+            barArea.appendChild(bar);
+
+            var count = document.createElement('span');
+            count.className = 'tag-count';
+            count.textContent = tag.count;
+            barArea.appendChild(count);
+
+            row.appendChild(barArea);
+
+            // Drag handlers
+            row.addEventListener('dragstart', function(e) { onDragStart(e, tag.name, group.id); });
+            row.addEventListener('dragend', onDragEnd);
+            row.addEventListener('dragover', function(e) { onTagDragOver(e, this); });
+            row.addEventListener('dragleave', function() { onTagDragLeave(this); });
+            row.addEventListener('drop', function(e) { onTagDrop(e, tag.name, group.id); });
+
+            tagList.appendChild(row);
+        });
+
+        col.appendChild(tagList);
+
+        // Add tag — dashed badge style
+        var addRow = document.createElement('div');
+        addRow.className = 'tag-add-row';
+        var addBadge = document.createElement('span');
+        addBadge.className = 'tag-add-badge';
+        addBadge.textContent = '+';
+        addRow.appendChild(addBadge);
+        addRow.addEventListener('click', function() { addTagToGroup(group.id); });
+        col.appendChild(addRow);
+
+        // Group drop zone
+        col.addEventListener('dragover', function(e) { onGroupDragOver(e, col); });
+        col.addEventListener('dragleave', function(e) { onGroupDragLeave(e, col); });
+        col.addEventListener('drop', function(e) { onGroupDrop(e, group.id, col); });
+
+        grid.appendChild(col);
+    });
+
+    // New group placeholder
+    var placeholder = document.createElement('div');
+    placeholder.className = 'codebook-group new-group-placeholder';
+    placeholder.innerHTML = '<span class="new-group-icon">+</span><span class="new-group-label">New group</span>';
+    placeholder.addEventListener('click', createNewGroup);
+    placeholder.addEventListener('dragover', function(e) { e.preventDefault(); placeholder.style.borderColor = 'var(--bn-colour-accent)'; });
+    placeholder.addEventListener('dragleave', function() { placeholder.style.borderColor = ''; });
+    placeholder.addEventListener('drop', function(e) {
+        e.preventDefault();
+        placeholder.style.borderColor = '';
+        createNewGroupFromDrag();
+    });
+    grid.appendChild(placeholder);
+
+    updateStats();
+}
+
+function updateStats() {
+    var tagCount = 0, groupCount = 0;
+    mockGroups.forEach(function(g) {
+        tagCount += g.tags.length;
+        if (g.id !== 'unclassified') groupCount++;
+    });
+    document.getElementById('stat-tags').textContent = tagCount;
+    document.getElementById('stat-groups').textContent = groupCount;
+    document.getElementById('stat-quotes').textContent = totalQuotes;
+}
+
+// ================================================================
+//  DRAG AND DROP
+// ================================================================
+
+var dragTag = null;
+var dragGhost = null;
+
+function onDragStart(e, tagName, groupId) {
+    dragTag = { name: tagName, fromGroup: groupId };
+    e.target.classList.add('dragging');
+
+    dragGhost = document.createElement('div');
+    dragGhost.className = 'drag-ghost';
+    dragGhost.textContent = tagName;
+    var group = mockGroups.find(function(g) { return g.id === groupId; });
+    var tagIdx = group ? group.tags.findIndex(function(t) { return t.name === tagName; }) : 0;
+    dragGhost.style.background = getTagBg(group ? group.colourSet : null, tagIdx);
+    document.body.appendChild(dragGhost);
+    e.dataTransfer.setDragImage(dragGhost, 0, 0);
+    e.dataTransfer.effectAllowed = 'move';
+
+    document.getElementById('drag-status').innerHTML = 'Dragging: <span>' + esc(tagName) + '</span>';
+}
+
+function onDragEnd(e) {
+    e.target.classList.remove('dragging');
+    if (dragGhost) { dragGhost.remove(); dragGhost = null; }
+    dragTag = null;
+    document.getElementById('drag-status').textContent = '';
+    document.querySelectorAll('.merge-target').forEach(function(el) { el.classList.remove('merge-target'); });
+    document.querySelectorAll('.drag-over').forEach(function(el) { el.classList.remove('drag-over'); });
+}
+
+function onTagDragOver(e, rowEl) {
+    if (!dragTag) return;
+    e.preventDefault();
+    e.stopPropagation();
+    if (rowEl.getAttribute('data-tag') !== dragTag.name) {
+        rowEl.classList.add('merge-target');
+    }
+}
+
+function onTagDragLeave(rowEl) { rowEl.classList.remove('merge-target'); }
+
+function onTagDrop(e, targetTagName, targetGroupId) {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!dragTag || dragTag.name === targetTagName) return;
+    document.querySelectorAll('.merge-target, .drag-over').forEach(function(el) {
+        el.classList.remove('merge-target', 'drag-over');
+    });
+    confirmMergeTags(dragTag.name, dragTag.fromGroup, targetTagName, targetGroupId);
+}
+
+function onGroupDragOver(e, colEl) {
+    if (!dragTag) return;
+    e.preventDefault();
+    if (colEl.getAttribute('data-group-id') !== dragTag.fromGroup) {
+        colEl.classList.add('drag-over');
+    }
+}
+
+function onGroupDragLeave(e, colEl) {
+    if (!colEl.contains(e.relatedTarget)) colEl.classList.remove('drag-over');
+}
+
+function onGroupDrop(e, targetGroupId, colEl) {
+    e.preventDefault();
+    colEl.classList.remove('drag-over');
+    if (!dragTag || dragTag.fromGroup === targetGroupId) return;
+    moveTag(dragTag.name, dragTag.fromGroup, targetGroupId);
+}
+
+// ================================================================
+//  TAG OPERATIONS
+// ================================================================
+
+function moveTag(tagName, fromGroupId, toGroupId) {
+    var from = mockGroups.find(function(g) { return g.id === fromGroupId; });
+    var to = mockGroups.find(function(g) { return g.id === toGroupId; });
+    if (!from || !to) return;
+    var idx = from.tags.findIndex(function(t) { return t.name === tagName; });
+    if (idx === -1) return;
+    var tag = from.tags.splice(idx, 1)[0];
+    to.tags.push(tag);
+    to.tags.sort(function(a, b) { return b.count - a.count; });
+    render();
+}
+
+function confirmMergeTags(dragName, dragGroupId, targetName, targetGroupId) {
+    var dg = mockGroups.find(function(g) { return g.id === dragGroupId; });
+    var dt = dg ? dg.tags.find(function(t) { return t.name === dragName; }) : null;
+    var tg = mockGroups.find(function(g) { return g.id === targetGroupId; });
+    var tt = tg ? tg.tags.find(function(t) { return t.name === targetName; }) : null;
+    if (!dt || !tt) return;
+    var total = dt.count + tt.count;
+
+    showModal(
+        'Merge tags',
+        '<p>Rename all ' +
+        '<span class="tag-preview badge badge-user" style="background:' + getTagBg(dg.colourSet, dg.tags.indexOf(dt)) + '">' + esc(dragName) + '</span>' +
+        ' into ' +
+        '<span class="tag-preview badge badge-user" style="background:' + getTagBg(tg.colourSet, tg.tags.indexOf(tt)) + '">' + esc(targetName) + '</span>?' +
+        '</p><p>' + dt.count + ' quote' + (dt.count !== 1 ? 's' : '') + ' will be renamed. The merged tag will have ' + total + ' quotes.</p>',
+        [
+            { label: 'Cancel', cls: 'bn-btn bn-btn-cancel', action: hideModal },
+            { label: 'Merge tags', cls: 'bn-btn bn-btn-primary', action: function() {
+                tt.count = total;
+                dg.tags = dg.tags.filter(function(t) { return t.name !== dragName; });
+                tg.tags.sort(function(a, b) { return b.count - a.count; });
+                hideModal(); render();
+            }}
+        ]
+    );
+}
+
+function confirmDeleteTag(tagName, count) {
+    showModal(
+        'Delete tag',
+        '<p>Remove \u201c<strong>' + esc(tagName) + '</strong>\u201d from ' + count + ' quote' + (count !== 1 ? 's' : '') + '?</p><p>This cannot be undone.</p>',
+        [
+            { label: 'Cancel', cls: 'bn-btn bn-btn-cancel', action: hideModal },
+            { label: 'Delete', cls: 'bn-btn bn-btn-danger', action: function() {
+                mockGroups.forEach(function(g) {
+                    g.tags = g.tags.filter(function(t) { return t.name !== tagName; });
+                });
+                hideModal(); render();
+            }}
+        ]
+    );
+}
+
+function confirmDeleteGroup(groupId) {
+    var group = mockGroups.find(function(g) { return g.id === groupId; });
+    if (!group) return;
+    var tc = group.tags.length;
+
+    showModal(
+        'Delete group',
+        '<p>Delete \u201c<strong>' + esc(group.name) + '</strong>\u201d?</p>' +
+        '<p>' + tc + ' tag' + (tc !== 1 ? 's' : '') + ' will be moved to Unclassified. No quotes will be affected.</p>',
+        [
+            { label: 'Cancel', cls: 'bn-btn bn-btn-cancel', action: hideModal },
+            { label: 'Delete group', cls: 'bn-btn bn-btn-danger', action: function() {
+                var uncl = mockGroups.find(function(g) { return g.id === 'unclassified'; });
+                if (uncl) {
+                    group.tags.forEach(function(t) { uncl.tags.push(t); });
+                    uncl.tags.sort(function(a, b) { return b.count - a.count; });
+                }
+                mockGroups = mockGroups.filter(function(g) { return g.id !== groupId; });
+                hideModal(); render();
+            }}
+        ]
+    );
+}
+
+// ================================================================
+//  INLINE EDITING
+// ================================================================
+
+function editGroupTitle(groupId) {
+    var group = mockGroups.find(function(g) { return g.id === groupId; });
+    if (!group) return;
+    var col = document.querySelector('[data-group-id="' + groupId + '"]');
+    var titleText = col.querySelector('.group-title-text');
+    if (!titleText) return;
+
+    var input = document.createElement('input');
+    input.className = 'group-title-input';
+    input.value = group.name;
+    titleText.style.display = 'none';
+    titleText.parentNode.insertBefore(input, titleText.nextSibling);
+    input.focus();
+    input.select();
+
+    function commit() {
+        var v = input.value.trim();
+        if (v) group.name = v;
+        input.remove();
+        titleText.style.display = '';
+        render();
+    }
+    input.addEventListener('blur', commit);
+    input.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') { e.preventDefault(); commit(); }
+        if (e.key === 'Escape') { e.preventDefault(); input.value = group.name; commit(); }
+    });
+}
+
+function editGroupSubtitle(groupId) {
+    var group = mockGroups.find(function(g) { return g.id === groupId; });
+    if (!group) return;
+    var col = document.querySelector('[data-group-id="' + groupId + '"]');
+    var sub = col.querySelector('.group-subtitle');
+    if (!sub) return;
+
+    var input = document.createElement('input');
+    input.className = 'group-subtitle-input';
+    input.value = group.subtitle || '';
+    input.placeholder = 'Add description\u2026';
+    sub.style.display = 'none';
+    sub.parentNode.insertBefore(input, sub.nextSibling);
+    input.focus();
+
+    function commit() {
+        group.subtitle = input.value.trim();
+        input.remove();
+        sub.style.display = '';
+        render();
+    }
+    input.addEventListener('blur', commit);
+    input.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') { e.preventDefault(); commit(); }
+        if (e.key === 'Escape') { e.preventDefault(); input.value = group.subtitle || ''; commit(); }
+    });
+}
+
+function addTagToGroup(groupId) {
+    var col = document.querySelector('[data-group-id="' + groupId + '"]');
+    var addRow = col.querySelector('.tag-add-row');
+    if (!addRow) return;
+
+    addRow.style.display = 'none';
+    var input = document.createElement('input');
+    input.className = 'tag-add-input';
+    input.placeholder = 'Tag name\u2026';
+    input.maxLength = 40;
+    addRow.parentNode.insertBefore(input, addRow);
+    input.focus();
+
+    function commit() {
+        var name = input.value.trim();
+        if (name) {
+            var group = mockGroups.find(function(g) { return g.id === groupId; });
+            if (group && !group.tags.find(function(t) { return t.name.toLowerCase() === name.toLowerCase(); })) {
+                group.tags.push({ name: name, count: 0 });
+            }
+        }
+        input.remove();
+        addRow.style.display = '';
+        render();
+    }
+    input.addEventListener('blur', commit);
+    input.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') { e.preventDefault(); commit(); }
+        if (e.key === 'Escape') { e.preventDefault(); input.value = ''; commit(); }
+    });
+}
+
+function createNewGroup() {
+    var usedSets = {};
+    mockGroups.forEach(function(g) { if (g.colourSet) usedSets[g.colourSet] = true; });
+    var newSet = null;
+    for (var i = 0; i < SET_ORDER.length; i++) {
+        if (!usedSets[SET_ORDER[i]]) { newSet = SET_ORDER[i]; break; }
+    }
+    if (!newSet) newSet = SET_ORDER[0];
+
+    var id = 'g' + Date.now();
+    mockGroups.push({ id: id, name: 'New group', subtitle: '', colourSet: newSet, tags: [] });
+    render();
+    setTimeout(function() { editGroupTitle(id); }, 50);
+}
+
+function createNewGroupFromDrag() {
+    if (!dragTag) return;
+    var usedSets = {};
+    mockGroups.forEach(function(g) { if (g.colourSet) usedSets[g.colourSet] = true; });
+    var newSet = null;
+    for (var i = 0; i < SET_ORDER.length; i++) {
+        if (!usedSets[SET_ORDER[i]]) { newSet = SET_ORDER[i]; break; }
+    }
+    if (!newSet) newSet = SET_ORDER[0];
+    var id = 'g' + Date.now();
+    mockGroups.push({ id: id, name: 'New group', subtitle: '', colourSet: newSet, tags: [] });
+    moveTag(dragTag.name, dragTag.fromGroup, id);
+    setTimeout(function() { editGroupTitle(id); }, 50);
+}
+
+// ================================================================
+//  MODAL (uses real .bn-overlay / .bn-modal pattern)
+// ================================================================
+
+function showModal(title, bodyHtml, buttons) {
+    var body = document.getElementById('modal-body');
+    var html = '<h2>' + title + '</h2>' + bodyHtml + '<div class="bn-modal-actions">';
+    buttons.forEach(function(b, i) {
+        html += '<button type="button" class="' + b.cls + '" data-idx="' + i + '">' + b.label + '</button>';
+    });
+    html += '</div>';
+    body.innerHTML = html;
+
+    buttons.forEach(function(b, i) {
+        body.querySelector('[data-idx="' + i + '"]').addEventListener('click', b.action);
+    });
+
+    document.getElementById('modal').classList.add('visible');
+}
+
+function hideModal() {
+    document.getElementById('modal').classList.remove('visible');
+}
+
+document.getElementById('modal').addEventListener('click', function(e) {
+    if (e.target === this) hideModal();
+});
+document.getElementById('modal-close').addEventListener('click', hideModal);
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') hideModal();
+});
+
+// ================================================================
+//  UTILS
+// ================================================================
+
+function esc(s) { return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+
+function toggleTheme() {
+    var h = document.documentElement;
+    h.setAttribute('data-theme', h.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
+}
+
+// ================================================================
+//  BOOT
+// ================================================================
+
+render();
+</script>
+</body>
+</html>

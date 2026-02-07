@@ -48,6 +48,74 @@
     --bn-sentiment-confidence: #2563eb;
     --bn-sentiment-confidence-bg: #eff6ff;
 
+    /* Codebook user-tag colours — OKLCH v5 pentadic palette.
+       5 sets at ~72° hue anchors, ±25° per set, ~12° steps.
+       Light mode: washed (pale bg, dark text).
+       Dark mode: saturated (mid-dark bg, white text).
+       See immutable-chasing-patterson plan for rationale. */
+
+    /* UX set (blue, H=225-275, anchor 250) */
+    --bn-ux-1-bg: oklch(94% 0.03 225);
+    --bn-ux-2-bg: oklch(94% 0.03 237);
+    --bn-ux-3-bg: oklch(94% 0.03 250);
+    --bn-ux-4-bg: oklch(94% 0.03 263);
+    --bn-ux-5-bg: oklch(94% 0.03 275);
+
+    /* Emotion set (red-pink, H=340-40, anchor 10) */
+    --bn-emo-1-bg: oklch(94% 0.03 340);
+    --bn-emo-2-bg: oklch(94% 0.03 352);
+    --bn-emo-3-bg: oklch(94% 0.03 4);
+    --bn-emo-4-bg: oklch(94% 0.03 16);
+    --bn-emo-5-bg: oklch(94% 0.03 28);
+    --bn-emo-6-bg: oklch(94% 0.03 40);
+
+    /* Task set (green-teal, H=130-180, anchor 155) */
+    --bn-task-1-bg: oklch(94% 0.03 130);
+    --bn-task-2-bg: oklch(94% 0.03 142);
+    --bn-task-3-bg: oklch(94% 0.03 155);
+    --bn-task-4-bg: oklch(94% 0.03 168);
+    --bn-task-5-bg: oklch(94% 0.03 180);
+
+    /* Trust set (purple, H=275-325, anchor 300) */
+    --bn-trust-1-bg: oklch(94% 0.03 275);
+    --bn-trust-2-bg: oklch(94% 0.03 287);
+    --bn-trust-3-bg: oklch(94% 0.03 300);
+    --bn-trust-4-bg: oklch(94% 0.03 313);
+    --bn-trust-5-bg: oklch(94% 0.03 325);
+
+    /* Opportunity set (amber, H=50-100, anchor 75) */
+    --bn-opp-1-bg: oklch(94% 0.03 50);
+    --bn-opp-2-bg: oklch(94% 0.03 62);
+    --bn-opp-3-bg: oklch(94% 0.03 75);
+    --bn-opp-4-bg: oklch(94% 0.03 88);
+    --bn-opp-5-bg: oklch(94% 0.03 100);
+
+    /* Custom / ungrouped */
+    --bn-custom-bg: oklch(94% 0.005 260);
+
+    /* Group card background tints (very subtle set tint for codebook panel) */
+    --bn-group-ux:    oklch(97% 0.015 250);
+    --bn-group-emo:   oklch(97% 0.015 10);
+    --bn-group-task:  oklch(97% 0.015 155);
+    --bn-group-trust: oklch(97% 0.015 300);
+    --bn-group-opp:   oklch(97% 0.015 75);
+    --bn-group-none:  #f9fafb;
+
+    /* Micro histogram bar colours (slightly more saturated than badge bg) */
+    --bn-bar-ux:    oklch(70% 0.08 250);
+    --bn-bar-emo:   oklch(70% 0.08 10);
+    --bn-bar-task:  oklch(70% 0.06 155);
+    --bn-bar-trust: oklch(70% 0.07 300);
+    --bn-bar-opp:   oklch(72% 0.07 75);
+    --bn-bar-none:  #d1d5db;
+
+    /* Set indicator dots (saturated anchors for codebook panel) */
+    --bn-set-ux-dot: oklch(50% 0.12 250);
+    --bn-set-emo-dot: oklch(50% 0.12 10);
+    --bn-set-task-dot: oklch(50% 0.10 155);
+    --bn-set-trust-dot: oklch(50% 0.11 300);
+    --bn-set-opp-dot: oklch(52% 0.11 75);
+
     /* Legacy sentiment colours (deprecated — kept for backward compat) */
     --bn-colour-confusion: var(--bn-sentiment-confusion);
     --bn-colour-confusion-bg: var(--bn-sentiment-confusion-bg);
@@ -79,13 +147,29 @@
     --bn-transition-normal: 0.2s ease;
     --bn-transition-slow: 0.3s ease;
 
-    /* Interactive element colours */
+    /* Interactive element colours
+       Toolbar buttons use a 3-state border progression:
+         rest    → --bn-colour-border       (#e5e7eb / gray-200)
+         hover   → --bn-colour-border-hover (#d1d5db / gray-300)
+         active  → --bn-colour-accent       (#2563eb / blue-600)
+       Background shifts from --bn-colour-bg to --bn-colour-quote-bg on hover.
+       Icon/arrow children use --bn-colour-muted; text uses --bn-colour-text.
+       Toggle variant (.toolbar-btn-toggle) uses accent for border+text when active,
+       muted text when inactive. */
+    --bn-colour-border-hover: #d1d5db;
     --bn-colour-icon-idle: #c9ccd1;
     --bn-colour-starred: #999;
     --bn-colour-shadow: rgba(0, 0, 0, 0.1);
 
     /* Focus state (keyboard navigation cursor) */
     --bn-focus-shadow: 0 3px 12px rgba(0,0,0,0.12), 0 0 0 1px rgba(0,0,0,0.05);
+
+    /* Focus ring for inputs and interactive elements */
+    --bn-focus-ring: 0 0 0 2px rgba(37, 99, 235, 0.12);
+
+    /* Hover backgrounds — subtle tint for interactive surfaces */
+    --bn-hover-bg: rgba(0, 0, 0, 0.04);
+    --bn-hover-bg-subtle: rgba(0, 0, 0, 0.03);
 
     /* Selection state (multi-select for bulk actions) */
     --bn-selection-bg: #eef4fc;
@@ -153,6 +237,56 @@
         --bn-sentiment-confidence:       light-dark(#2563eb, #60a5fa);
         --bn-sentiment-confidence-bg:    light-dark(#eff6ff, #111d2e);
 
+        /* Codebook user-tag colours — dark mode: saturated bg, white text */
+        --bn-ux-1-bg: light-dark(oklch(94% 0.03 225), oklch(50% 0.12 225));
+        --bn-ux-2-bg: light-dark(oklch(94% 0.03 237), oklch(48% 0.11 237));
+        --bn-ux-3-bg: light-dark(oklch(94% 0.03 250), oklch(53% 0.12 250));
+        --bn-ux-4-bg: light-dark(oklch(94% 0.03 263), oklch(55% 0.10 263));
+        --bn-ux-5-bg: light-dark(oklch(94% 0.03 275), oklch(49% 0.11 275));
+        --bn-emo-1-bg: light-dark(oklch(94% 0.03 340), oklch(50% 0.12 340));
+        --bn-emo-2-bg: light-dark(oklch(94% 0.03 352), oklch(48% 0.11 352));
+        --bn-emo-3-bg: light-dark(oklch(94% 0.03 4), oklch(53% 0.10 4));
+        --bn-emo-4-bg: light-dark(oklch(94% 0.03 16), oklch(49% 0.12 16));
+        --bn-emo-5-bg: light-dark(oklch(94% 0.03 28), oklch(55% 0.10 28));
+        --bn-emo-6-bg: light-dark(oklch(94% 0.03 40), oklch(51% 0.11 40));
+        --bn-task-1-bg: light-dark(oklch(94% 0.03 130), oklch(50% 0.10 130));
+        --bn-task-2-bg: light-dark(oklch(94% 0.03 142), oklch(48% 0.09 142));
+        --bn-task-3-bg: light-dark(oklch(94% 0.03 155), oklch(53% 0.09 155));
+        --bn-task-4-bg: light-dark(oklch(94% 0.03 168), oklch(49% 0.10 168));
+        --bn-task-5-bg: light-dark(oklch(94% 0.03 180), oklch(51% 0.09 180));
+        --bn-trust-1-bg: light-dark(oklch(94% 0.03 275), oklch(50% 0.11 275));
+        --bn-trust-2-bg: light-dark(oklch(94% 0.03 287), oklch(48% 0.10 287));
+        --bn-trust-3-bg: light-dark(oklch(94% 0.03 300), oklch(53% 0.10 300));
+        --bn-trust-4-bg: light-dark(oklch(94% 0.03 313), oklch(49% 0.11 313));
+        --bn-trust-5-bg: light-dark(oklch(94% 0.03 325), oklch(51% 0.10 325));
+        --bn-opp-1-bg: light-dark(oklch(94% 0.03 50), oklch(52% 0.11 50));
+        --bn-opp-2-bg: light-dark(oklch(94% 0.03 62), oklch(50% 0.10 62));
+        --bn-opp-3-bg: light-dark(oklch(94% 0.03 75), oklch(54% 0.12 75));
+        --bn-opp-4-bg: light-dark(oklch(94% 0.03 88), oklch(48% 0.10 88));
+        --bn-opp-5-bg: light-dark(oklch(94% 0.03 100), oklch(51% 0.11 100));
+        --bn-custom-bg: light-dark(oklch(94% 0.005 260), oklch(52% 0.02 260));
+        /* Group card background tints */
+        --bn-group-ux:    light-dark(oklch(97% 0.015 250), oklch(22% 0.025 250));
+        --bn-group-emo:   light-dark(oklch(97% 0.015 10),  oklch(22% 0.025 10));
+        --bn-group-task:  light-dark(oklch(97% 0.015 155), oklch(22% 0.020 155));
+        --bn-group-trust: light-dark(oklch(97% 0.015 300), oklch(22% 0.025 300));
+        --bn-group-opp:   light-dark(oklch(97% 0.015 75),  oklch(22% 0.022 75));
+        --bn-group-none:  light-dark(#f9fafb, #1e1e1e);
+
+        /* Micro histogram bar colours */
+        --bn-bar-ux:    light-dark(oklch(70% 0.08 250), oklch(55% 0.08 250));
+        --bn-bar-emo:   light-dark(oklch(70% 0.08 10),  oklch(55% 0.08 10));
+        --bn-bar-task:  light-dark(oklch(70% 0.06 155), oklch(55% 0.06 155));
+        --bn-bar-trust: light-dark(oklch(70% 0.07 300), oklch(55% 0.07 300));
+        --bn-bar-opp:   light-dark(oklch(72% 0.07 75),  oklch(57% 0.07 75));
+        --bn-bar-none:  light-dark(#d1d5db, #4b5563);
+
+        --bn-set-ux-dot: light-dark(oklch(50% 0.12 250), oklch(60% 0.10 250));
+        --bn-set-emo-dot: light-dark(oklch(50% 0.12 10), oklch(60% 0.10 10));
+        --bn-set-task-dot: light-dark(oklch(50% 0.10 155), oklch(60% 0.08 155));
+        --bn-set-trust-dot: light-dark(oklch(50% 0.11 300), oklch(60% 0.09 300));
+        --bn-set-opp-dot: light-dark(oklch(52% 0.11 75), oklch(62% 0.09 75));
+
         /* Legacy aliases (deprecated) */
         --bn-colour-confusion:        var(--bn-sentiment-confusion);
         --bn-colour-confusion-bg:     var(--bn-sentiment-confusion-bg);
@@ -164,13 +298,19 @@
         --bn-colour-suggestion-bg:    light-dark(#eff6ff, #111d2e);
 
         /* Interactive elements */
+        --bn-colour-border-hover:     light-dark(#d1d5db, #4b5563);
         --bn-colour-icon-idle:        light-dark(#c9ccd1, #595959);
         --bn-colour-starred:          light-dark(#999, #ccc);
         --bn-colour-shadow:           light-dark(rgba(0,0,0,0.1), rgba(0,0,0,0.4));
 
         /* Focus and selection */
+        --bn-focus-ring:              light-dark(0 0 0 2px rgba(37, 99, 235, 0.12), 0 0 0 2px rgba(96, 165, 250, 0.2));
         --bn-selection-bg:            light-dark(#eef4fc, #1a2838);
         --bn-selection-border:        light-dark(#2563eb, #60a5fa);
+
+        /* Hover backgrounds */
+        --bn-hover-bg:                light-dark(rgba(0,0,0,0.04), rgba(255,255,255,0.06));
+        --bn-hover-bg-subtle:         light-dark(rgba(0,0,0,0.03), rgba(255,255,255,0.04));
     }
 
     /* Explicit overrides — lock theme regardless of OS preference */

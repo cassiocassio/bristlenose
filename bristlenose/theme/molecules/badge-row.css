@@ -5,4 +5,10 @@ blockquote .badges {
     gap: var(--bn-space-sm);
     margin-top: 0.4rem;
     flex-wrap: wrap;
+    opacity: 0.9;
+    transition: opacity var(--bn-transition-fast);
+}
+
+blockquote:hover .badges {
+    opacity: 1;
 }

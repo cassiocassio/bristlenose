@@ -116,5 +116,60 @@ function createModal(opts) {
   var handle = { isVisible: isVisible, hide: hide };
   _modalRegistry.push(handle);
 
-  return { show: show, hide: hide, isVisible: isVisible, el: overlay, card: card };
+  function toggle() {
+    if (visible) { hide(); } else { show(); }
+  }
+
+  return {
+    show: show, hide: hide, isVisible: isVisible, toggle: toggle,
+    el: overlay, card: card
+  };
+}
+
+/**
+ * Show a confirmation dialog with Cancel + action button.
+ *
+ * Builds on createModal() — handles title, body, button wiring, and
+ * auto-hide on action.  Re-uses a single modal instance (created lazily).
+ *
+ * @param {Object} opts
+ * @param {string} opts.title         — dialog heading text
+ * @param {string} opts.body          — body HTML (already escaped by caller)
+ * @param {string} opts.confirmLabel  — action button label (e.g. "Delete")
+ * @param {string} [opts.confirmClass] — button class: 'bn-btn-danger' (default) or 'bn-btn-primary'
+ * @param {function} opts.onConfirm   — called when action button is clicked (modal auto-hides)
+ */
+var _confirmModal = null;
+
+function showConfirmModal(opts) {
+  if (!_confirmModal) {
+    _confirmModal = createModal({
+      className: 'confirm-delete-overlay',
+      modalClassName: 'confirm-delete-modal'
+    });
+  }
+  var cls = opts.confirmClass || 'bn-btn-danger';
+  var body = _confirmModal.card.querySelector('.bn-modal-body') ||
+    _confirmModal.card.lastElementChild;
+
+  // Replace content (card has close-btn + body wrapper from createModal)
+  body.innerHTML =
+    '<h2>' + opts.title + '</h2>' +
+    opts.body +
+    '<div class="bn-modal-actions">' +
+    '<button type="button" class="bn-btn bn-btn-cancel">Cancel</button>' +
+    '<button type="button" class="bn-btn ' + cls + '">' +
+    opts.confirmLabel + '</button>' +
+    '</div>';
+
+  // Wire buttons (fresh each time — innerHTML replaced above)
+  body.querySelector('.bn-btn-cancel').addEventListener('click', function () {
+    _confirmModal.hide();
+  });
+  body.querySelector('.bn-btn:not(.bn-btn-cancel)').addEventListener('click', function () {
+    opts.onConfirm();
+    _confirmModal.hide();
+  });
+
+  _confirmModal.show();
 }

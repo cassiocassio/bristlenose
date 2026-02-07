@@ -349,12 +349,7 @@ function getHelpModal() {
  * Toggle the help overlay.
  */
 function toggleHelpOverlay() {
-  var m = getHelpModal();
-  if (m.isVisible()) {
-    m.hide();
-  } else {
-    m.show();
-  }
+  getHelpModal().toggle();
 }
 
 // ── Quote actions ────────────────────────────────────────────────────────────

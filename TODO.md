@@ -1,6 +1,6 @@
 # Bristlenose — Where I Left Off
 
-Last updated: 7 Feb 2026 (hidden quotes feature)
+Last updated: 7 Feb 2026 (codebook merge + hidden quotes)
 
 ---
 
@@ -148,6 +148,7 @@ Organised from easiest to hardest. The README has a condensed version; this is t
 - [ ] Dark mode: selection highlight visibility — the blue selection background (`--bn-selection-bg`) is hard to see in dark mode; needs a more visible dark variant
 - [ ] AI badge × button — the circled × is ugly; restyle to match user tag delete or use a simpler glyph
 - [x] Indent tags — badges now sit inside `.quote-body` div, naturally indented at the quote text level by the hanging-indent flexbox layout
+- [ ] Relocate AI tag toggle — removed from toolbar (too crowded with Codebook button); find a better home, probably a future settings/view-controls panel. Code is commented out in `render_html.py` and `codebook.js`/`tags.js` ready to rewire
 - [ ] Logo: slightly bigger — bump from 80px to ~100px
 - [ ] JS: `'use strict'` — add to each JS module to catch accidental globals and silent errors
 - [ ] JS: shared `utils.js` — extract duplicated quote-stripping regex (`QUOTE_RE` / `CSV_QUOTE_RE`) into a shared module

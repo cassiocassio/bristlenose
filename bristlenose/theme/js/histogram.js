@@ -25,7 +25,7 @@
  * @module histogram
  */
 
-/* global userTags, persistUserTags, createModal */
+/* global userTags, persistUserTags, createModal, showConfirmModal, getTagColourVar, escapeHtml */
 
 /**
  * (Re-)render the user-tags histogram.
@@ -75,9 +75,17 @@ function renderUserTagsChart() {
     var group = document.createElement('div');
     group.className = 'sentiment-bar-group';
 
+    // Look up codebook colour for this tag.
+    var colourVar = (typeof getTagColourVar === 'function')
+      ? getTagColourVar(e.tag)
+      : 'var(--bn-colour-muted)';
+    var isCustom = colourVar === 'var(--bn-custom-bg)' || colourVar === 'var(--bn-colour-muted)';
+    var barColour = isCustom ? 'var(--bn-colour-muted)' : colourVar;
+
     var label = document.createElement('span');
-    label.className = 'sentiment-bar-label badge';
+    label.className = 'sentiment-bar-label badge badge-user';
     label.textContent = e.tag;
+    label.style.background = colourVar;
     if (e.tag.length > 18) label.title = e.tag;
 
     // Delete button (visible on hover).
@@ -94,7 +102,7 @@ function renderUserTagsChart() {
     bar.className = 'sentiment-bar';
     var w = Math.max(4, Math.round((e.count / maxCount) * maxBarPx));
     bar.style.width = w + 'px';
-    bar.style.background = 'var(--bn-colour-muted)';
+    bar.style.background = barColour;
 
     var cnt = document.createElement('span');
     cnt.className = 'sentiment-bar-count';
@@ -148,28 +156,12 @@ document.addEventListener('click', function (e) {
   var count = parseInt(del.getAttribute('data-count'), 10) || 0;
   var noun = count === 1 ? 'quote' : 'quotes';
 
-  var modal = createModal({
-    className: 'confirm-delete-overlay',
-    modalClassName: 'confirm-delete-modal',
-    content:
-      '<h2>Delete tag</h2>' +
-      '<p>Remove \u201c<strong>' + tagName.replace(/</g, '&lt;') + '</strong>\u201d from ' +
-      count + ' ' + noun + '?</p>' +
-      '<div class="bn-modal-actions">' +
-      '<button type="button" class="bn-btn bn-btn-cancel">Cancel</button>' +
-      '<button type="button" class="bn-btn bn-btn-danger">Delete all</button>' +
-      '</div>'
+  showConfirmModal({
+    title: 'Delete tag',
+    body: '<p>Remove \u201c<strong>' + escapeHtml(tagName) + '</strong>\u201d from ' +
+      count + ' ' + noun + '?</p>',
+    confirmLabel: 'Delete all',
+    confirmClass: 'bn-btn-danger',
+    onConfirm: function () { _deleteTagFromAllQuotes(tagName); }
   });
-
-  // Wire buttons.
-  var actions = modal.card.querySelector('.bn-modal-actions');
-  actions.querySelector('.bn-btn-cancel').addEventListener('click', function () {
-    modal.hide();
-  });
-  actions.querySelector('.bn-btn-danger').addEventListener('click', function () {
-    _deleteTagFromAllQuotes(tagName);
-    modal.hide();
-  });
-
-  modal.show();
 });

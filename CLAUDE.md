@@ -403,13 +403,15 @@ See `docs/BRANCHES.md` for active branches, worktree paths, what files they touc
 
 ### Release timing (evening releases)
 
-Releases should land on GitHub after 9pm London time on weekdays to avoid pushing version bumps during working hours.
+Releases should land on GitHub after 9pm London time on weekdays to avoid pushing version bumps during working hours. Weekends are fine any time.
 
-**Workflow:**
+**Workflow (weekdays only):**
 1. Work on `main` as usual — commit everything locally
-2. Don't push to `origin/main` until after 9pm (or weekends)
+2. Don't push to `origin/main` until after 9pm
 3. To see work remotely before release (CI checks, another machine): `git push origin main:wip` — the `wip` branch doesn't trigger releases
 4. After 9pm: `git push origin main --tags`
+
+**Weekends:** Push any time — no restrictions.
 
 **Override:** Just push if something is urgent. This is a guideline, not a gate.
 

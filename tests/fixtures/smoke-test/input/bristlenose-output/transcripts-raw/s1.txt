@@ -1,0 +1,13 @@
+# Transcript: s1
+# Source: Session 1.vtt
+# Date: 2026-01-20
+# Duration: 00:01:18
+
+[00:02] [m1] Thanks for joining me today. Can you tell me about your experience with the dashboard?
+[00:10] [p1] Sure. I found the dashboard pretty confusing at first. I couldn't figure out where my settings were.
+[00:19] [m1] What specifically was confusing about it?
+[00:26] [p1] The navigation was hidden behind a hamburger menu. I kept looking for a sidebar but there wasn't one. Once I found it though, it made sense.
+[00:39] [m1] And how did you feel about the search feature?
+[00:46] [p1] Oh, the search was great actually. It was fast and the results were really relevant. That was probably the best part of the whole thing.
+[00:56] [m1] Good to hear. Any other thoughts on the overall experience?
+[01:06] [p1] I think the onboarding could be better. When I first signed up I had no idea what to do. A quick tutorial or walkthrough would have helped a lot.

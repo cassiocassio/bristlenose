@@ -1,0 +1,223 @@
+name: Install & Smoke Test
+
+# Verifies install instructions work on clean VMs.
+# Each job follows the documented install steps, then runs:
+#   bristlenose doctor    (dependency check — no API key needed)
+#   bristlenose render    (render from pre-built fixtures — no LLM needed)
+
+on:
+  # Weekly Monday 6am UTC — catches breakage from upstream deps
+  schedule:
+    - cron: "0 6 * * 1"
+
+  # Manual trigger from Actions tab
+  workflow_dispatch:
+
+  # When install docs or this workflow change
+  push:
+    branches: [main]
+    paths:
+      - "INSTALL.md"
+      - "README.md"
+      - ".github/workflows/install-test.yml"
+      - "tests/fixtures/smoke-test/**"
+  pull_request:
+    branches: [main]
+    paths:
+      - "INSTALL.md"
+      - "README.md"
+      - ".github/workflows/install-test.yml"
+      - "tests/fixtures/smoke-test/**"
+
+jobs:
+
+  # ── Linux: pip install from source ──────────────────────────────
+
+  linux-pip:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install system dependencies (following INSTALL.md)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install bristlenose from local source
+        run: |
+          python -m pip install --upgrade pip
+          pip install .
+
+      - name: Verify CLI is available
+        run: bristlenose --version
+
+      - name: Run doctor (skip API key check)
+        # Doctor will warn about missing API key — that's expected.
+        # We just want to verify FFmpeg and Python deps are found.
+        run: bristlenose doctor || true
+
+      - name: Smoke test — render from fixtures
+        run: |
+          bristlenose render \
+            tests/fixtures/smoke-test/input/bristlenose-output \
+            -i tests/fixtures/smoke-test/input \
+            -p "Smoke Test"
+
+      - name: Verify report was generated
+        run: |
+          test -f tests/fixtures/smoke-test/input/bristlenose-output/bristlenose-smoke-test-report.html
+          echo "HTML report exists ($(wc -c < tests/fixtures/smoke-test/input/bristlenose-output/bristlenose-smoke-test-report.html) bytes)"
+
+          test -f tests/fixtures/smoke-test/input/bristlenose-output/bristlenose-smoke-test-report.md
+          echo "Markdown report exists"
+
+  # ── Linux: pipx install from source ─────────────────────────────
+
+  linux-pipx:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg pipx
+          pipx ensurepath
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install bristlenose via pipx
+        run: pipx install .
+
+      - name: Verify CLI
+        run: |
+          export PATH="$HOME/.local/bin:$PATH"
+          bristlenose --version
+
+      - name: Smoke test — render from fixtures
+        run: |
+          export PATH="$HOME/.local/bin:$PATH"
+          bristlenose render \
+            tests/fixtures/smoke-test/input/bristlenose-output \
+            -i tests/fixtures/smoke-test/input \
+            -p "Smoke Test"
+
+      - name: Verify report
+        run: test -f tests/fixtures/smoke-test/input/bristlenose-output/bristlenose-smoke-test-report.html
+
+  # ── macOS: pip install from source ──────────────────────────────
+
+  macos-pip:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install FFmpeg via Homebrew
+        run: brew install ffmpeg
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install bristlenose
+        run: |
+          python -m pip install --upgrade pip
+          pip install .
+
+      - name: Verify CLI
+        run: bristlenose --version
+
+      - name: Run doctor
+        run: bristlenose doctor || true
+
+      - name: Smoke test — render from fixtures
+        run: |
+          bristlenose render \
+            tests/fixtures/smoke-test/input/bristlenose-output \
+            -i tests/fixtures/smoke-test/input \
+            -p "Smoke Test"
+
+      - name: Verify report
+        run: |
+          test -f tests/fixtures/smoke-test/input/bristlenose-output/bristlenose-smoke-test-report.html
+          echo "HTML report exists ($(wc -c < tests/fixtures/smoke-test/input/bristlenose-output/bristlenose-smoke-test-report.html) bytes)"
+
+  # ── macOS: Homebrew tap install ─────────────────────────────────
+
+  macos-brew:
+    # Only on schedule or manual — brew install fetches from PyPI,
+    # so this tests the published release, not the current commit.
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install bristlenose via Homebrew
+        run: brew install cassiocassio/bristlenose/bristlenose
+
+      - name: Verify CLI
+        run: bristlenose --version
+
+      - name: Run doctor
+        run: bristlenose doctor || true
+
+      - name: Smoke test — render from fixtures
+        run: |
+          bristlenose render \
+            tests/fixtures/smoke-test/input/bristlenose-output \
+            -i tests/fixtures/smoke-test/input \
+            -p "Smoke Test"
+
+      - name: Verify report
+        run: test -f tests/fixtures/smoke-test/input/bristlenose-output/bristlenose-smoke-test-report.html
+
+  # ── Full pipeline run with real API key (weekly only) ───────────
+
+  full-run:
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    env:
+      HAS_KEY: ${{ secrets.ANTHROPIC_API_KEY != '' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Skip if no API key
+        if: env.HAS_KEY != 'true'
+        run: echo "Skipping — ANTHROPIC_API_KEY not configured"
+
+      - name: Install system dependencies
+        if: env.HAS_KEY == 'true'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg
+
+      - uses: actions/setup-python@v5
+        if: env.HAS_KEY == 'true'
+        with:
+          python-version: "3.12"
+
+      - name: Install bristlenose
+        if: env.HAS_KEY == 'true'
+        run: |
+          python -m pip install --upgrade pip
+          pip install .
+
+      - name: Run full pipeline on VTT fixtures
+        if: env.HAS_KEY == 'true'
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          bristlenose run tests/fixtures/multi_participant/ -p "CI Full Run"
+
+      - name: Verify full pipeline output
+        if: env.HAS_KEY == 'true'
+        run: |
+          ls -la tests/fixtures/multi_participant/bristlenose-output/
+          test -f tests/fixtures/multi_participant/bristlenose-output/bristlenose-ci-full-run-report.html
+          echo "Full pipeline report generated successfully"

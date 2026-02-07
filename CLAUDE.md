@@ -357,6 +357,7 @@ Collapsible section at the end of the research report showing what proportion of
 - **CLI improvements + LLM provider roadmap**: `docs/design-cli-improvements.md`
 - **Research methodology** (quote selection, sentiment taxonomy, clustering/theming rationale): `docs/design-research-methodology.md` — single source of truth for analytical decisions. **Read this before changing prompts or analysis logic.**
 - **Academic sources for analysis categories**: `docs/academic-sources.html` — theoretical foundations (emotion science, UX research, trust/credibility) behind quote tagging and sentiment analysis. **Update this file when investigating theories behind any Bristlenose features.**
+- **Installation guide**: `INSTALL.md` — detailed per-platform install instructions for non-technical users
 
 ## Working preferences
 

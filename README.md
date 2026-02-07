@@ -51,26 +51,28 @@ Filler words replaced with `...`. Editorial context in `[square brackets]`. Emot
 
 ## Install
 
-Requires ffmpeg. For LLM analysis, you can use:
-- **Local AI** (free, via [Ollama](https://ollama.ai)) — no signup, no API key needed
-- **Claude** (by Anthropic) or **ChatGPT** (by OpenAI) — cloud APIs, pay per use
+For LLM analysis, you can use **Local AI** (free, via [Ollama](https://ollama.ai)), **Claude**, or **ChatGPT** — see [Getting an API key](#getting-an-api-key) below.
 
 ```bash
 # macOS (Homebrew) -- recommended, handles ffmpeg + Python for you
 brew install cassiocassio/bristlenose/bristlenose
 
-# Ubuntu / Linux (snap) -- coming soon, pending Snap Store registration
-# sudo snap install bristlenose --classic
-# In the meantime, see "Try the snap (pre-release)" below
-
-# macOS / Linux / Windows (pipx)
+# Windows (pipx) -- requires Python, see install guide for details
 pipx install bristlenose
 
-# or with uv
-uv tool install bristlenose
+# Linux (snap) -- coming soon
+# sudo snap install bristlenose --classic
+
+# Linux / macOS / Windows (pipx or uv)
+pipx install bristlenose
+uv tool install bristlenose    # alternative
 ```
 
-If using pipx or uv, you'll also need ffmpeg (`brew install ffmpeg` on macOS, `sudo apt install ffmpeg` on Debian/Ubuntu).
+If using pipx or uv, you'll also need FFmpeg (`brew install ffmpeg` on macOS, `sudo apt install ffmpeg` on Ubuntu, `winget install FFmpeg` on Windows).
+
+After installing, run `bristlenose doctor` to verify your setup.
+
+**New to the command line?** See the **[detailed installation guide](INSTALL.md)** for step-by-step instructions for your platform, including Python/FFmpeg setup and AI provider configuration.
 
 ---
 

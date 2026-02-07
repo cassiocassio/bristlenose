@@ -31,7 +31,7 @@ Sidequest: [what is a Bristlenose?](https://www.theaquariumwiki.com/wiki/Ancistr
 
 ## What it does
 
-The report includes: 
+The report includes:    
 
 - **Sections** -- quotes grouped by screen or task
 - **Themes** -- cross-participant patterns, surfaced automatically

@@ -23,7 +23,6 @@ from bristlenose.models import (
     SpeakerRole,
     TranscriptSegment,
 )
-from bristlenose.providers import PROVIDERS
 
 logger = logging.getLogger(__name__)
 console = Console(width=min(80, Console().width))
@@ -128,7 +127,6 @@ class Pipeline:
         import time
         from collections import Counter
 
-        from bristlenose import __version__
         from bristlenose.llm.client import LLMClient
         from bristlenose.stages.extract_audio import extract_audio_for_sessions
         from bristlenose.stages.identify_speakers import (
@@ -158,7 +156,6 @@ class Pipeline:
         )
         from bristlenose.stages.thematic_grouping import group_by_theme
         from bristlenose.stages.topic_segmentation import segment_topics
-        from bristlenose.utils.hardware import detect_hardware
 
         pipeline_start = time.perf_counter()
         _printed_warnings.clear()
@@ -178,14 +175,9 @@ class Pipeline:
 
             ingest_elapsed = time.perf_counter() - t0
 
-            # ── Print header, then ingest checkmark ──
-            hw = detect_hardware()
-            provider_name = PROVIDERS.get(
-                self.settings.llm_provider, PROVIDERS["anthropic"]
-            ).display_name
+            # ── Print found-sessions line, then ingest checkmark ──
             console.print(
-                f"\nBristlenose [dim]v{__version__} · "
-                f"{len(sessions)} sessions · {provider_name} · {hw.label}[/dim]\n",
+                f"[dim]{len(sessions)} sessions in {input_dir.name}/[/dim]\n",
             )
             type_counts = Counter(
                 f.file_type.value for s in sessions for f in s.files
@@ -478,7 +470,6 @@ class Pipeline:
         import time
         from collections import Counter
 
-        from bristlenose import __version__
         from bristlenose.stages.extract_audio import extract_audio_for_sessions
         from bristlenose.stages.identify_speakers import identify_speaker_roles_heuristic
         from bristlenose.stages.ingest import ingest
@@ -487,7 +478,6 @@ class Pipeline:
             write_raw_transcripts,
             write_raw_transcripts_md,
         )
-        from bristlenose.utils.hardware import detect_hardware
 
         pipeline_start = time.perf_counter()
         output_dir.mkdir(parents=True, exist_ok=True)
@@ -505,11 +495,9 @@ class Pipeline:
 
             ingest_elapsed = time.perf_counter() - t0
 
-            # ── Print header, then ingest checkmark ──
-            hw = detect_hardware()
+            # ── Print found-sessions line, then ingest checkmark ──
             console.print(
-                f"\nBristlenose [dim]v{__version__} · "
-                f"{len(sessions)} sessions · {hw.label}[/dim]\n",
+                f"[dim]{len(sessions)} sessions in {input_dir.name}/[/dim]\n",
             )
             type_counts = Counter(
                 f.file_type.value for s in sessions for f in s.files
@@ -612,7 +600,6 @@ class Pipeline:
         """
         import time
 
-        from bristlenose import __version__
         from bristlenose.llm.client import LLMClient
         from bristlenose.stages.quote_clustering import cluster_by_screen
         from bristlenose.stages.quote_extraction import extract_quotes
@@ -639,12 +626,9 @@ class Pipeline:
         llm_client = LLMClient(self.settings)
         concurrency = self.settings.llm_concurrency
 
-        provider_name = PROVIDERS.get(
-            self.settings.llm_provider, PROVIDERS["anthropic"]
-        ).display_name
         console.print(
-            f"\nBristlenose [dim]v{__version__} · "
-            f"{len(clean_transcripts)} transcripts · {provider_name}[/dim]\n",
+            f"[dim]{len(clean_transcripts)} transcripts in"
+            f" {transcripts_dir.name}/[/dim]\n",
         )
 
         with console.status("", spinner="dots") as status:

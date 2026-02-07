@@ -352,45 +352,45 @@ Edit `bristlenose/__init__.py` (the single source of truth for version), commit,
 
 ## Changelog
 
-**0.8.1**_7-Feb-2026_
+**0.8.1** — _7 Feb 2026_
 
 - Hidden quotes — press `h` to hide volume quotes from your working view; per-subsection badge with dropdown previews; bulk hide via multi-select
 - Codebook — standalone page for organising tags into groups with drag-and-drop, inline editing, and colour-coded badges
 - Toolbar redesign — unified round-rect button styling
 - Python 3.14 compatibility fix for PII check
 
-**0.8.0**_7-Feb-2026_
+**0.8.0** — _7 Feb 2026_
 
 - Azure OpenAI provider — `--llm azure` for enterprise users with Microsoft Azure contracts
 - Install smoke tests — new CI workflow verifies install instructions on clean VMs
 
-**0.7.1**_6-Feb-2026_
+**0.7.1** — _6 Feb 2026_
 
 - Bar chart alignment — sentiment and user-tag charts use CSS grid so bar left edges align within each chart; labels hug text with variable gap to bars
 - Histogram delete — hover × on user tag labels in the histogram to remove that tag from all quotes (with confirmation modal)
 - Surprise placement — surprise sentiment bar now renders between positive and negative sentiments
 - Quote exclusivity in themes — each quote assigned to exactly one theme (pick strongest fit)
 
-**0.7.0**_5-Feb-2026_
+**0.7.0** — _5 Feb 2026_
 
 - Multi-select — Finder-like click selection (click, Shift-click, Cmd/Ctrl-click) with bulk starring (`s` key) and bulk tagging; selection count shown in view-switcher label; CSV export respects selection
 - Tag filter — toolbar dropdown between search and view-switcher filters quotes by user tags; checkboxes per tag with "(No tags)" for untagged quotes; per-tag quote counts, search-within-filter for large tag lists, dropdown chevron, ellipsis truncation for long names
 
-**0.6.15**_4-Feb-2026_
+**0.6.15** — _4 Feb 2026_
 
 - Unified tag close buttons — AI badges and user tags now use the same floating circle "×" style
 - Tab-to-continue tagging — pressing Tab commits the current tag and immediately opens a new input for adding another tag (type, Tab, type, Tab, Enter for fast keyboard-only tagging)
 - Render command path fix — `bristlenose render <input-dir>` now auto-detects `bristlenose-output/` inside the input directory
 
-**0.6.14**_4-Feb-2026_
+**0.6.14** — _4 Feb 2026_
 
 - Doctor fixes — improved Whisper model detection and PII capability checking
 
-**0.6.13**_3-Feb-2026_
+**0.6.13** — _3 Feb 2026_
 
 - Keychain credential storage — `bristlenose configure claude` (or `chatgpt`) validates and stores API keys securely in macOS Keychain or Linux Secret Service; keys are loaded automatically with priority keychain → env var → .env; `bristlenose doctor` now shows "(Keychain)" suffix when key comes from system credential store; `--key` option available for non-interactive use
 
-**0.6.12**_3-Feb-2026_
+**0.6.12** — _3 Feb 2026_
 
 - File-level transcription progress — spinner now shows "(2/4 sessions)" during transcription
 - Improved Ollama start command detection — uses `brew services start ollama` for Homebrew installs, `open -a Ollama` for macOS app, platform-appropriate commands for snap/systemd

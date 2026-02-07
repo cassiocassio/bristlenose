@@ -583,7 +583,7 @@ def run(
     ] = "large-v3-turbo",
     llm_provider: Annotated[
         str,
-        typer.Option("--llm", "-l", help="LLM provider: claude, chatgpt, local (or anthropic, openai, ollama)."),
+        typer.Option("--llm", "-l", help="LLM provider: claude, chatgpt, azure, local."),
     ] = "anthropic",
     skip_transcription: Annotated[
         bool,
@@ -731,7 +731,7 @@ def analyze(
     ] = None,
     llm_provider: Annotated[
         str,
-        typer.Option("--llm", "-l", help="LLM provider: claude, chatgpt, local (or anthropic, openai, ollama)."),
+        typer.Option("--llm", "-l", help="LLM provider: claude, chatgpt, azure, local."),
     ] = "anthropic",
     verbose: Annotated[
         bool,
@@ -915,7 +915,7 @@ def render(
 def configure(
     provider: Annotated[
         str,
-        typer.Argument(help="Provider to configure: anthropic (Claude), openai (ChatGPT)."),
+        typer.Argument(help="Provider to configure: claude, chatgpt, or azure."),
     ],
     key: Annotated[
         str | None,
@@ -938,14 +938,17 @@ def configure(
         "claude": "anthropic",
         "openai": "openai",
         "chatgpt": "openai",
+        "azure": "azure",
+        "azure-openai": "azure",
     }
     canonical = provider_map.get(provider)
     if canonical is None:
         console.print(f"[red]Unknown provider: {provider}[/red]")
-        console.print("Available: anthropic (claude), openai (chatgpt)")
+        console.print("Available: claude, chatgpt, azure")
         raise typer.Exit(1)
 
-    display_name = "Claude" if canonical == "anthropic" else "ChatGPT"
+    display_names = {"anthropic": "Claude", "openai": "ChatGPT", "azure": "Azure OpenAI"}
+    display_name = display_names.get(canonical, canonical.title())
 
     # Get key from option or prompt
     if key is None:
@@ -962,8 +965,11 @@ def configure(
     console.print("Validating...", end=" ")
     if canonical == "anthropic":
         is_valid, error = _validate_anthropic_key(key)
-    else:
+    elif canonical == "openai":
         is_valid, error = _validate_openai_key(key)
+    else:
+        # Azure needs endpoint+deployment to validate fully; skip for now
+        is_valid, error = None, "needs endpoint and deployment to validate"
 
     if is_valid is False:
         console.print(f"[red]Invalid — {error}[/red]")
@@ -991,11 +997,25 @@ def configure(
         console.print("[yellow]No system keychain available.[/yellow]")
         console.print("Add this to your .env file or shell profile:")
         console.print()
-        env_var = "ANTHROPIC_API_KEY" if canonical == "anthropic" else "OPENAI_API_KEY"
+        env_vars = {
+            "anthropic": "ANTHROPIC_API_KEY",
+            "openai": "OPENAI_API_KEY",
+            "azure": "AZURE_API_KEY",
+        }
+        env_var = env_vars.get(canonical, f"{canonical.upper()}_API_KEY")
         console.print(f"  export BRISTLENOSE_{env_var}={key}")
         console.print()
         console.print("[dim](The key is not stored anywhere — save it yourself)[/dim]")
         raise typer.Exit(0)
+
+    # Azure needs additional config beyond the API key
+    if canonical == "azure":
+        console.print()
+        console.print("[dim]Azure OpenAI also needs endpoint and deployment name.[/dim]")
+        console.print("[dim]Add to .env or environment:[/dim]")
+        console.print()
+        console.print("  BRISTLENOSE_AZURE_ENDPOINT=https://your-resource.openai.azure.com/")
+        console.print("  BRISTLENOSE_AZURE_DEPLOYMENT=your-deployment-name")
 
     console.print()
     console.print("You can now run: [bold]bristlenose run ./interviews[/bold]")
@@ -1082,7 +1102,7 @@ def _help_commands() -> None:
     console.print("  -p, --project NAME       Project name for the report header")
     console.print("  -b, --whisper-backend    auto | mlx | faster-whisper")
     console.print("  -w, --whisper-model      tiny | base | small | medium | large-v3 | large-v3-turbo")
-    console.print("  -l, --llm               claude | chatgpt (or anthropic | openai)")
+    console.print("  -l, --llm               claude | chatgpt | azure | local")
     console.print("  --redact-pii            Redact personally identifying information")
     console.print("  --retain-pii            Retain PII in transcripts (default)")
     console.print("  --clean                 Delete output dir before running")
@@ -1128,9 +1148,12 @@ def _help_config() -> None:
     console.print("  [bold]API keys[/bold] (you only need one)")
     console.print("  BRISTLENOSE_ANTHROPIC_API_KEY    Claude API key (from console.anthropic.com)")
     console.print("  BRISTLENOSE_OPENAI_API_KEY       ChatGPT API key (from platform.openai.com)")
+    console.print("  BRISTLENOSE_AZURE_API_KEY        Azure OpenAI API key (from Azure portal)")
+    console.print("  BRISTLENOSE_AZURE_ENDPOINT       Azure OpenAI endpoint URL")
+    console.print("  BRISTLENOSE_AZURE_DEPLOYMENT     Azure OpenAI deployment name")
     console.print()
     console.print("  [bold]LLM[/bold]")
-    console.print("  BRISTLENOSE_LLM_PROVIDER         claude | chatgpt (or anthropic | openai)")
+    console.print("  BRISTLENOSE_LLM_PROVIDER         claude | chatgpt | azure | local")
     console.print("  BRISTLENOSE_LLM_MODEL            Model name (default: claude-sonnet-4-20250514)")
     console.print("  BRISTLENOSE_LLM_MAX_TOKENS       Max response tokens (default: 8192)")
     console.print("  BRISTLENOSE_LLM_TEMPERATURE      Temperature (default: 0.1)")

@@ -325,6 +325,59 @@ def check_api_key(settings: BristlenoseSettings) -> CheckResult:
             detail=f"OpenAI ({masked}){source_label}",
         )
 
+    if provider == "azure":
+        endpoint = settings.azure_endpoint
+        key = settings.azure_api_key
+        deployment = settings.azure_deployment
+
+        if not endpoint:
+            return CheckResult(
+                status=CheckStatus.FAIL,
+                label="API key",
+                detail="No Azure OpenAI endpoint",
+                fix_key="api_key_missing_azure",
+            )
+        if not key:
+            return CheckResult(
+                status=CheckStatus.FAIL,
+                label="API key",
+                detail="No Azure OpenAI API key",
+                fix_key="api_key_missing_azure",
+            )
+        if not deployment:
+            return CheckResult(
+                status=CheckStatus.FAIL,
+                label="API key",
+                detail="No Azure OpenAI deployment name",
+                fix_key="api_key_missing_azure",
+            )
+
+        masked = f"...{key[-3:]}" if len(key) > 10 else "(set)"
+        source = get_credential_source("azure")
+        source_label = " (Keychain)" if source == "keychain" else ""
+
+        valid, err = _validate_azure_key(
+            endpoint, key, deployment, settings.azure_api_version
+        )
+        if valid is False:
+            return CheckResult(
+                status=CheckStatus.FAIL,
+                label="API key",
+                detail=f"Azure OpenAI rejected ({err})",
+                fix_key="api_key_invalid_azure",
+            )
+        if valid is None:
+            return CheckResult(
+                status=CheckStatus.OK,
+                label="API key",
+                detail=f"Azure OpenAI ({masked}){source_label} (could not validate: {err})",
+            )
+        return CheckResult(
+            status=CheckStatus.OK,
+            label="API key",
+            detail=f"Azure OpenAI ({masked}){source_label}",
+        )
+
     if provider == "local":
         # Local provider doesn't need an API key, but needs Ollama running
         return check_local_provider(settings)
@@ -394,6 +447,16 @@ def check_network(settings: BristlenoseSettings) -> CheckResult:
     elif provider == "openai":
         url = "https://api.openai.com"
         host = "api.openai.com"
+    elif provider == "azure":
+        endpoint = settings.azure_endpoint
+        if not endpoint:
+            return CheckResult(
+                status=CheckStatus.SKIP,
+                label="Network",
+                detail="azure endpoint not configured",
+            )
+        url = endpoint.rstrip("/")
+        host = url.replace("https://", "").replace("http://", "").split("/")[0]
     else:
         url = "https://api.anthropic.com"
         host = "api.anthropic.com"
@@ -671,6 +734,54 @@ def _validate_openai_key(key: str) -> tuple[bool | None, str]:
         if exc.code == 401:
             return (False, "401 Unauthorized")
         if exc.code in (429, 500, 503):
+            return (True, "")
+        return (None, f"HTTP {exc.code}")
+    except urllib.error.URLError as exc:
+        return (None, str(exc.reason))
+    except Exception as exc:
+        return (None, str(exc))
+
+
+def _validate_azure_key(
+    endpoint: str, key: str, deployment: str, api_version: str,
+) -> tuple[bool | None, str]:
+    """Validate Azure OpenAI credentials with a minimal API call.
+
+    Returns (True, "") if valid, (False, error) if rejected,
+    (None, error) if we couldn't check (network issue).
+    """
+    import json
+    import urllib.error
+    import urllib.request
+
+    url = (
+        f"{endpoint.rstrip('/')}/openai/deployments/{deployment}"
+        f"/chat/completions?api-version={api_version}"
+    )
+    try:
+        req = urllib.request.Request(
+            url,
+            method="POST",
+            headers={
+                "api-key": key,
+                "Content-Type": "application/json",
+            },
+            data=json.dumps({
+                "messages": [{"role": "user", "content": "hi"}],
+                "max_tokens": 1,
+            }).encode(),
+        )
+        with urllib.request.urlopen(req, timeout=10):
+            pass
+        return (True, "")
+    except urllib.error.HTTPError as exc:
+        if exc.code == 401:
+            return (False, "401 Unauthorized")
+        if exc.code == 403:
+            return (False, "403 Forbidden")
+        if exc.code == 404:
+            return (False, f"Deployment '{deployment}' not found")
+        if exc.code in (400, 429, 500, 503):
             return (True, "")
         return (None, f"HTTP {exc.code}")
     except urllib.error.URLError as exc:

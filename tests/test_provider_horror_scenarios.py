@@ -780,3 +780,144 @@ class TestEdgeCases:
 
         assert result.status == CheckStatus.OK
         assert "llama3.2:3b" in result.detail
+
+
+# ---------------------------------------------------------------------------
+# Scenario: Azure OpenAI partial configuration
+# ---------------------------------------------------------------------------
+
+
+class TestAzurePartialConfig:
+    """Enterprise user who set --llm azure but forgot some config fields."""
+
+    def test_azure_missing_endpoint(self) -> None:
+        """User set key and deployment but forgot the endpoint URL."""
+        settings = _settings(
+            llm_provider="azure",
+            azure_api_key="test-key",
+            azure_deployment="my-deployment",
+            azure_endpoint="",
+        )
+        result = check_api_key(settings)
+        assert result.status == CheckStatus.FAIL
+        assert "endpoint" in result.detail.lower()
+        assert result.fix_key == "api_key_missing_azure"
+
+    def test_azure_missing_key(self) -> None:
+        """User set endpoint and deployment but forgot the API key."""
+        settings = _settings(
+            llm_provider="azure",
+            azure_api_key="",
+            azure_endpoint="https://example.openai.azure.com/",
+            azure_deployment="my-deployment",
+        )
+        result = check_api_key(settings)
+        assert result.status == CheckStatus.FAIL
+        assert result.fix_key == "api_key_missing_azure"
+
+    def test_azure_missing_deployment(self) -> None:
+        """User set endpoint and key but forgot the deployment name."""
+        settings = _settings(
+            llm_provider="azure",
+            azure_api_key="test-key",
+            azure_endpoint="https://example.openai.azure.com/",
+            azure_deployment="",
+        )
+        result = check_api_key(settings)
+        assert result.status == CheckStatus.FAIL
+        assert "deployment" in result.detail.lower()
+
+    def test_azure_all_configured_validates(self) -> None:
+        """All Azure fields set, mock validation succeeds."""
+        settings = _settings(
+            llm_provider="azure",
+            azure_api_key="test-key",
+            azure_endpoint="https://example.openai.azure.com/",
+            azure_deployment="my-deployment",
+        )
+        with patch("bristlenose.doctor._validate_azure_key", return_value=(True, "")):
+            result = check_api_key(settings)
+        assert result.status == CheckStatus.OK
+        assert "Azure OpenAI" in result.detail
+
+    def test_azure_invalid_key(self) -> None:
+        """Azure returns 401 for bad credentials."""
+        settings = _settings(
+            llm_provider="azure",
+            azure_api_key="bad-key",
+            azure_endpoint="https://example.openai.azure.com/",
+            azure_deployment="my-deployment",
+        )
+        with patch(
+            "bristlenose.doctor._validate_azure_key",
+            return_value=(False, "401 Unauthorized"),
+        ):
+            result = check_api_key(settings)
+        assert result.status == CheckStatus.FAIL
+        assert result.fix_key == "api_key_invalid_azure"
+
+    def test_azure_deployment_not_found(self) -> None:
+        """Azure returns 404 for nonexistent deployment."""
+        settings = _settings(
+            llm_provider="azure",
+            azure_api_key="test-key",
+            azure_endpoint="https://example.openai.azure.com/",
+            azure_deployment="nonexistent",
+        )
+        with patch(
+            "bristlenose.doctor._validate_azure_key",
+            return_value=(False, "Deployment 'nonexistent' not found"),
+        ):
+            result = check_api_key(settings)
+        assert result.status == CheckStatus.FAIL
+        assert result.fix_key == "api_key_invalid_azure"
+
+    def test_azure_network_unreachable(self) -> None:
+        """Can't reach Azure endpoint (corporate firewall, etc.)."""
+        settings = _settings(
+            llm_provider="azure",
+            azure_api_key="test-key",
+            azure_endpoint="https://example.openai.azure.com/",
+            azure_deployment="my-deployment",
+        )
+        with patch(
+            "bristlenose.doctor._validate_azure_key",
+            return_value=(None, "Connection refused"),
+        ):
+            result = check_api_key(settings)
+        assert result.status == CheckStatus.OK  # key present, can't validate
+        assert "could not validate" in result.detail.lower()
+
+    def test_azure_fix_message_helpful(self) -> None:
+        """Fix message lists all three required env vars."""
+        fix = get_fix("api_key_missing_azure")
+        assert "BRISTLENOSE_AZURE_ENDPOINT" in fix
+        assert "BRISTLENOSE_AZURE_API_KEY" in fix
+        assert "BRISTLENOSE_AZURE_DEPLOYMENT" in fix
+        assert "bristlenose configure azure" in fix
+
+    def test_azure_invalid_fix_message(self) -> None:
+        """Invalid key fix message has troubleshooting steps."""
+        fix = get_fix("api_key_invalid_azure")
+        assert "API key is correct" in fix
+        assert "Endpoint URL" in fix
+        assert "Deployment name" in fix
+
+    def test_azure_network_check_uses_endpoint(self) -> None:
+        """Network check should hit the user's Azure endpoint, not api.openai.com."""
+        settings = _settings(
+            llm_provider="azure",
+            azure_endpoint="https://myresource.openai.azure.com/",
+        )
+        with patch("urllib.request.urlopen") as mock_urlopen:
+            mock_urlopen.return_value.__enter__ = lambda s: s
+            mock_urlopen.return_value.__exit__ = lambda s, *a: None
+            result = check_network(settings)
+        assert result.status == CheckStatus.OK
+        assert "myresource.openai.azure.com" in result.detail
+
+    def test_azure_network_check_no_endpoint(self) -> None:
+        """Network check should skip if no endpoint configured."""
+        settings = _settings(llm_provider="azure", azure_endpoint="")
+        result = check_network(settings)
+        assert result.status == CheckStatus.SKIP

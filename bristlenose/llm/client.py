@@ -48,6 +48,7 @@ class LLMClient:
         self.provider = settings.llm_provider
         self._anthropic_client: object | None = None
         self._openai_client: object | None = None
+        self._azure_client: object | None = None
         self._local_client: object | None = None
         self.tracker = LLMUsageTracker()
 
@@ -68,6 +69,23 @@ class LLMClient:
                 "Set BRISTLENOSE_OPENAI_API_KEY in your .env file or environment. "
                 "Get a key from platform.openai.com"
             )
+        if self.provider == "azure":
+            if not self.settings.azure_endpoint:
+                raise ValueError(
+                    "Azure OpenAI endpoint not set. "
+                    "Set BRISTLENOSE_AZURE_ENDPOINT to your resource URL "
+                    "(e.g. https://my-resource.openai.azure.com/)."
+                )
+            if not self.settings.azure_api_key:
+                raise ValueError(
+                    "Azure OpenAI API key not set. "
+                    "Set BRISTLENOSE_AZURE_API_KEY from your Azure portal."
+                )
+            if not self.settings.azure_deployment:
+                raise ValueError(
+                    "Azure OpenAI deployment name not set. "
+                    "Set BRISTLENOSE_AZURE_DEPLOYMENT to your model deployment name."
+                )
         # Local provider doesn't need an API key
 
     async def analyze(
@@ -96,6 +114,10 @@ class LLMClient:
             )
         elif self.provider == "openai":
             return await self._analyze_openai(
+                system_prompt, user_prompt, response_model, max_tokens
+            )
+        elif self.provider == "azure":
+            return await self._analyze_azure(
                 system_prompt, user_prompt, response_model, max_tokens
             )
         elif self.provider == "local":
@@ -201,6 +223,60 @@ class LLMClient:
         content = response.choices[0].message.content
         if content is None:
             raise RuntimeError("Empty response from OpenAI")
+
+        data = json.loads(content)
+        return response_model.model_validate(data)
+
+    async def _analyze_azure(
+        self,
+        system_prompt: str,
+        user_prompt: str,
+        response_model: type[T],
+        max_tokens: int,
+    ) -> T:
+        """Call Azure OpenAI API with JSON mode for structured output."""
+        import openai
+
+        if self._azure_client is None:
+            self._azure_client = openai.AsyncAzureOpenAI(
+                api_key=self.settings.azure_api_key,
+                azure_endpoint=self.settings.azure_endpoint,
+                api_version=self.settings.azure_api_version,
+            )
+
+        client: openai.AsyncAzureOpenAI = self._azure_client  # type: ignore[assignment]
+
+        # Add JSON schema instruction to the system prompt
+        schema = response_model.model_json_schema()
+        schema_instruction = (
+            f"\n\nYou must respond with valid JSON matching this schema:\n"
+            f"```json\n{json.dumps(schema, indent=2)}\n```"
+        )
+
+        logger.debug(
+            "Calling Azure OpenAI API: deployment=%s", self.settings.azure_deployment
+        )
+
+        response = await client.chat.completions.create(
+            model=self.settings.azure_deployment,
+            max_tokens=max_tokens,
+            temperature=self.settings.llm_temperature,
+            response_format={"type": "json_object"},
+            messages=[
+                {"role": "system", "content": system_prompt + schema_instruction},
+                {"role": "user", "content": user_prompt},
+            ],
+        )
+
+        # Track token usage
+        if hasattr(response, "usage") and response.usage:
+            self.tracker.record(
+                response.usage.prompt_tokens, response.usage.completion_tokens
+            )
+
+        content = response.choices[0].message.content
+        if content is None:
+            raise RuntimeError("Empty response from Azure OpenAI")
 
         data = json.loads(content)
         return response_model.model_validate(data)

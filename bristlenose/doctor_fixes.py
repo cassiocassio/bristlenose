@@ -41,13 +41,21 @@ def _get_cloud_fallback_hint() -> str:
         settings = load_settings()
         has_anthropic = bool(settings.anthropic_api_key)
         has_openai = bool(settings.openai_api_key)
+        has_azure = bool(settings.azure_api_key and settings.azure_endpoint)
 
-        if has_anthropic and has_openai:
-            return "Or use a cloud API: --llm claude (or --llm chatgpt)"
+        options = []
         if has_anthropic:
-            return "Or use a cloud API: --llm claude"
+            options.append("--llm claude")
         if has_openai:
-            return "Or use a cloud API: --llm chatgpt"
+            options.append("--llm chatgpt")
+        if has_azure:
+            options.append("--llm azure")
+        if len(options) == 1:
+            return f"Or use a cloud API: {options[0]}"
+        if options:
+            last = options[-1]
+            rest = ", ".join(options[:-1])
+            return f"Or use a cloud API: {rest} (or {last})"
         # No keys configured — suggest Claude as the default recommendation
         return "Or get a Claude API key: console.anthropic.com"
     except Exception:
@@ -153,6 +161,30 @@ def _fix_api_key_invalid_openai(_method: str) -> str:
         "Your ChatGPT API key was rejected. Get a new key from\n"
         "platform.openai.com/api-keys, then:\n\n"
         "  bristlenose configure chatgpt"
+    )
+
+
+def _fix_api_key_missing_azure(_method: str) -> str:
+    return (
+        "bristlenose needs Azure OpenAI credentials to analyse transcripts.\n"
+        "From your Azure portal, set these environment variables:\n\n"
+        "  export BRISTLENOSE_AZURE_ENDPOINT=https://your-resource.openai.azure.com/\n"
+        "  export BRISTLENOSE_AZURE_API_KEY=your-key-here\n"
+        "  export BRISTLENOSE_AZURE_DEPLOYMENT=your-deployment-name\n\n"
+        "Or add them to a .env file. To store the key in the system Keychain:\n\n"
+        "  bristlenose configure azure\n\n"
+        "To use Claude instead:  bristlenose run <input> --llm claude\n"
+        "To only transcribe:     bristlenose transcribe <input>"
+    )
+
+
+def _fix_api_key_invalid_azure(_method: str) -> str:
+    return (
+        "Your Azure OpenAI credentials were rejected. Check:\n\n"
+        "  1. API key is correct (Azure portal > your OpenAI resource > Keys)\n"
+        "  2. Endpoint URL matches your resource (https://NAME.openai.azure.com/)\n"
+        "  3. Deployment name exists in your resource\n\n"
+        "Then re-run: bristlenose configure azure"
     )
 
 
@@ -280,6 +312,8 @@ _FIX_TABLE: dict[str, object] = {
     "api_key_missing_openai": _fix_api_key_missing_openai,
     "api_key_invalid_anthropic": _fix_api_key_invalid_anthropic,
     "api_key_invalid_openai": _fix_api_key_invalid_openai,
+    "api_key_missing_azure": _fix_api_key_missing_azure,
+    "api_key_invalid_azure": _fix_api_key_invalid_azure,
     "network_unreachable": _fix_network_unreachable,
     "spacy_model_missing": _fix_spacy_model_missing,
     "presidio_missing": _fix_presidio_missing,

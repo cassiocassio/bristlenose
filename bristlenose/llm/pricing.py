@@ -19,6 +19,7 @@ PRICING: dict[str, tuple[float, float]] = {
 PRICING_URLS: dict[str, str] = {
     "anthropic": "https://docs.anthropic.com/en/docs/about-claude/models",
     "openai": "https://platform.openai.com/docs/pricing",
+    "azure": "https://azure.microsoft.com/pricing/details/cognitive-services/openai-service/",
     # Local provider has no pricing — models are free
 }
 

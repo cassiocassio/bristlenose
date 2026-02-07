@@ -20,7 +20,7 @@ It's built by a practising researcher. It's free and open source under AGPL-3.0.
 
 You give it a folder of recordings. It gives you back a report.
 
-Behind the scenes: transcription (Whisper, local), speaker identification with automatic name and role extraction, PII redaction, quote extraction and enrichment (via Claude or ChatGPT API), thematic grouping, and HTML rendering. One command, no manual steps.
+Behind the scenes: transcription (Whisper, local), speaker identification with automatic name and role extraction, PII redaction, quote extraction and enrichment (via Claude, ChatGPT, or Azure OpenAI API), thematic grouping, and HTML rendering. One command, no manual steps.
 
 The report includes:
 
@@ -51,7 +51,7 @@ Filler words replaced with `...`. Editorial context in `[square brackets]`. Emot
 
 ## Install
 
-For LLM analysis, you can use **Local AI** (free, via [Ollama](https://ollama.ai)), **Claude**, or **ChatGPT** — see [Getting an API key](#getting-an-api-key) below.
+For LLM analysis, you can use **Local AI** (free, via [Ollama](https://ollama.ai)), **Claude**, **ChatGPT**, or **Azure OpenAI** — see [Getting an API key](#getting-an-api-key) below.
 
 ```bash
 # macOS (Homebrew) -- recommended, handles ffmpeg + Python for you
@@ -126,6 +126,19 @@ If Ollama isn't installed, bristlenose will offer to install it for you (via Hom
 
 **Trade-offs:** Local models are slower (~10 min vs ~2 min per study) and less accurate (~85% vs ~99% JSON reliability). Good for trying the tool; use cloud APIs for production quality.
 
+### Option D: Azure OpenAI (enterprise)
+
+If your organisation has a Microsoft Azure contract that includes Azure OpenAI Service:
+
+```bash
+export BRISTLENOSE_AZURE_ENDPOINT=https://your-resource.openai.azure.com/
+export BRISTLENOSE_AZURE_DEPLOYMENT=your-deployment-name
+bristlenose configure azure    # stores the API key in your system keychain
+bristlenose run ./interviews/ --llm azure
+```
+
+You'll need your endpoint URL, API key, and deployment name from the [Azure portal](https://portal.azure.com).
+
 ### Which should I pick?
 
 | Option | Cost | Quality | Speed | Setup |
@@ -133,8 +146,9 @@ If Ollama isn't installed, bristlenose will offer to install it for you (via Hom
 | **Local (Ollama)** | Free | Good | Slower | Easiest — no signup |
 | **Claude** | ~$1.50/study | Excellent | Fast | Create account + add payment |
 | **ChatGPT** | ~$1.00/study | Excellent | Fast | Create account + add payment |
+| **Azure OpenAI** | Varies | Excellent | Fast | Azure subscription required |
 
-If you're just trying bristlenose, start with **Local**. If you're running a real study, use **Claude** or **ChatGPT**.
+If you're just trying bristlenose, start with **Local**. If you're running a real study, use **Claude** or **ChatGPT**. If your organisation has Azure, use **Azure OpenAI**.
 
 - **Claude** -- the default in bristlenose. Tends to produce nuanced qualitative analysis. Pay-as-you-go billing from the first API call (no free API tier; a typical 8-participant study costs roughly $1--3)
 - **ChatGPT** -- widely used. New API accounts get a small amount of free credit (check your [usage page](https://platform.openai.com/usage) to see if you have any remaining). After that, pay-as-you-go. Similar cost per study
@@ -226,6 +240,11 @@ Transcription hardware is auto-detected. Apple Silicon uses MLX on Metal GPU. NV
 **Researchers** -- use it on real recordings, open issues when the output is wrong or incomplete.
 
 **Developers** -- Python 3.10+, fully typed, Pydantic models. See [CONTRIBUTING.md](CONTRIBUTING.md) for the CLA, project layout, and design system docs.
+
+**Help us test** -- we'd love feedback from people using bristlenose with:
+- **Azure OpenAI** -- newly added; we need real-world testing with Azure deployments
+- **Windows** -- the pipeline works but hasn't been widely tested
+- **Linux** -- snap package coming soon, looking for testers on various distros
 
 ---
 

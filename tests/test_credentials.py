@@ -56,6 +56,18 @@ class TestEnvCredentialStore:
         store = EnvCredentialStore()
         assert store.get("openai") == "sk-test"
 
+    def test_get_azure(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Azure key should work."""
+        monkeypatch.setenv("AZURE_API_KEY", "az-test")
+        store = EnvCredentialStore()
+        assert store.get("azure") == "az-test"
+
+    def test_get_azure_with_prefix(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Prefixed Azure key should work."""
+        monkeypatch.setenv("BRISTLENOSE_AZURE_API_KEY", "az-prefixed")
+        store = EnvCredentialStore()
+        assert store.get("azure") == "az-prefixed"
+
     def test_set_raises(self) -> None:
         """Cannot store to env — should raise."""
         store = EnvCredentialStore()

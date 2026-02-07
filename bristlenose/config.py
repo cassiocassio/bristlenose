@@ -49,12 +49,18 @@ class BristlenoseSettings(BaseSettings):
     project_name: str = "User Research"
 
     # LLM
-    llm_provider: str = "anthropic"  # "anthropic", "openai", or "local"
+    llm_provider: str = "anthropic"  # "anthropic", "openai", "azure", or "local"
     anthropic_api_key: str = ""
     openai_api_key: str = ""
     llm_model: str = "claude-sonnet-4-20250514"
     llm_max_tokens: int = 8192
     llm_temperature: float = 0.1
+
+    # Azure OpenAI
+    azure_api_key: str = ""
+    azure_endpoint: str = ""  # e.g. https://my-resource.openai.azure.com/
+    azure_deployment: str = ""  # Deployment name from Azure portal
+    azure_api_version: str = "2024-10-21"
 
     # Local LLM (Ollama)
     local_url: str = "http://localhost:11434/v1"
@@ -135,6 +141,11 @@ def _populate_keys_from_keychain(settings: BristlenoseSettings) -> BristlenoseSe
         key = store.get("openai")
         if key:
             updates["openai_api_key"] = key
+
+    if not settings.azure_api_key:
+        key = store.get("azure")
+        if key:
+            updates["azure_api_key"] = key
 
     if not updates:
         return settings

@@ -66,6 +66,41 @@ PROVIDERS: dict[str, ProviderSpec] = {
         sdk_module="openai",
         pricing_url="https://platform.openai.com/docs/pricing",
     ),
+    "azure": ProviderSpec(
+        name="azure",
+        display_name="Azure OpenAI",
+        aliases=["azure-openai"],
+        config_fields=[
+            ConfigField(
+                "endpoint",
+                "BRISTLENOSE_AZURE_ENDPOINT",
+                "Azure OpenAI endpoint URL",
+                secret=False,
+            ),
+            ConfigField(
+                "api_key",
+                "BRISTLENOSE_AZURE_API_KEY",
+                "Azure OpenAI API key",
+            ),
+            ConfigField(
+                "deployment",
+                "BRISTLENOSE_AZURE_DEPLOYMENT",
+                "Azure OpenAI deployment name",
+                secret=False,
+            ),
+            ConfigField(
+                "api_version",
+                "BRISTLENOSE_AZURE_API_VERSION",
+                "Azure OpenAI API version",
+                secret=False,
+                required=False,
+                default="2024-10-21",
+            ),
+        ],
+        default_model="",  # Azure uses deployment names, not model names
+        sdk_module="openai",  # Same SDK, different client class
+        pricing_url="https://azure.microsoft.com/pricing/details/cognitive-services/openai-service/",
+    ),
     "local": ProviderSpec(
         name="local",
         display_name="Local (Ollama)",

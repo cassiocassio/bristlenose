@@ -37,6 +37,15 @@ class TestProviderSpec:
         assert spec.default_model == "gpt-4o"
         assert spec.sdk_module == "openai"
 
+    def test_azure_spec(self) -> None:
+        spec = PROVIDERS["azure"]
+        assert spec.name == "azure"
+        assert spec.display_name == "Azure OpenAI"
+        assert "azure-openai" in spec.aliases
+        assert spec.default_model == ""  # Azure uses deployment names
+        assert spec.sdk_module == "openai"
+        assert len(spec.config_fields) == 4
+
     def test_local_spec(self) -> None:
         spec = PROVIDERS["local"]
         assert spec.name == "local"
@@ -51,17 +60,20 @@ class TestResolveProvider:
     def test_canonical_names(self) -> None:
         assert resolve_provider("anthropic") == "anthropic"
         assert resolve_provider("openai") == "openai"
+        assert resolve_provider("azure") == "azure"
         assert resolve_provider("local") == "local"
 
     def test_aliases(self) -> None:
         assert resolve_provider("claude") == "anthropic"
         assert resolve_provider("chatgpt") == "openai"
         assert resolve_provider("gpt") == "openai"
+        assert resolve_provider("azure-openai") == "azure"
         assert resolve_provider("ollama") == "local"
 
     def test_case_insensitive(self) -> None:
         assert resolve_provider("Claude") == "anthropic"
         assert resolve_provider("CHATGPT") == "openai"
+        assert resolve_provider("Azure") == "azure"
         assert resolve_provider("Ollama") == "local"
 
     def test_unknown_provider_raises(self) -> None:
@@ -74,6 +86,7 @@ class TestResolveProvider:
         msg = str(exc_info.value)
         assert "anthropic" in msg
         assert "openai" in msg
+        assert "azure" in msg
         assert "local" in msg
 
 
@@ -83,6 +96,7 @@ class TestGetProviderAliases:
         assert aliases["claude"] == "anthropic"
         assert aliases["chatgpt"] == "openai"
         assert aliases["gpt"] == "openai"
+        assert aliases["azure-openai"] == "azure"
         assert aliases["ollama"] == "local"
 
 
@@ -99,6 +113,10 @@ class TestConfigProviderAliases:
     def test_load_settings_normalises_chatgpt(self) -> None:
         settings = load_settings(llm_provider="chatgpt")
         assert settings.llm_provider == "openai"
+
+    def test_load_settings_normalises_azure_openai(self) -> None:
+        settings = load_settings(llm_provider="azure-openai")
+        assert settings.llm_provider == "azure"
 
     def test_load_settings_normalises_ollama(self) -> None:
         settings = load_settings(llm_provider="ollama")
@@ -543,7 +561,10 @@ class TestDoctorFixesOllama:
 
         with patch(
             "bristlenose.config.load_settings",
-            return_value=MagicMock(anthropic_api_key="sk-ant-xxx", openai_api_key=""),
+            return_value=MagicMock(
+                anthropic_api_key="sk-ant-xxx", openai_api_key="",
+                azure_api_key="", azure_endpoint="",
+            ),
         ):
             fix = get_fix("ollama_not_running", "pip")
             assert "--llm claude" in fix
@@ -554,7 +575,10 @@ class TestDoctorFixesOllama:
 
         with patch(
             "bristlenose.config.load_settings",
-            return_value=MagicMock(anthropic_api_key="", openai_api_key="sk-xxx"),
+            return_value=MagicMock(
+                anthropic_api_key="", openai_api_key="sk-xxx",
+                azure_api_key="", azure_endpoint="",
+            ),
         ):
             fix = get_fix("ollama_not_running", "pip")
             assert "--llm chatgpt" in fix
@@ -565,7 +589,10 @@ class TestDoctorFixesOllama:
 
         with patch(
             "bristlenose.config.load_settings",
-            return_value=MagicMock(anthropic_api_key="sk-ant-xxx", openai_api_key="sk-xxx"),
+            return_value=MagicMock(
+                anthropic_api_key="sk-ant-xxx", openai_api_key="sk-xxx",
+                azure_api_key="", azure_endpoint="",
+            ),
         ):
             fix = get_fix("ollama_not_running", "pip")
             assert "--llm claude" in fix
@@ -577,7 +604,10 @@ class TestDoctorFixesOllama:
 
         with patch(
             "bristlenose.config.load_settings",
-            return_value=MagicMock(anthropic_api_key="", openai_api_key=""),
+            return_value=MagicMock(
+                anthropic_api_key="", openai_api_key="",
+                azure_api_key="", azure_endpoint="",
+            ),
         ):
             fix = get_fix("ollama_not_running", "pip")
             assert "console.anthropic.com" in fix

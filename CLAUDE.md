@@ -2,7 +2,7 @@
 
 ## What this is
 
-Bristlenose is a local-first user-research analysis tool. It takes a folder of interview recordings (audio, video, or existing transcripts) and produces a browsable HTML report with extracted quotes, themes, sentiment, friction points, and user journeys. Everything runs on your laptop — nothing is uploaded to the cloud. LLM calls go to Claude (Anthropic), ChatGPT (OpenAI), or local models via Ollama (free, no account required).
+Bristlenose is a local-first user-research analysis tool. It takes a folder of interview recordings (audio, video, or existing transcripts) and produces a browsable HTML report with extracted quotes, themes, sentiment, friction points, and user journeys. Everything runs on your laptop — nothing is uploaded to the cloud. LLM calls go to Claude (Anthropic), ChatGPT (OpenAI), Azure OpenAI (enterprise), or local models via Ollama (free, no account required).
 
 ## Commands
 
@@ -19,7 +19,7 @@ Bristlenose is a local-first user-research analysis tool. It takes a folder of i
 - **Markdown style template** in `bristlenose/utils/markdown.py` — single source of truth for all markdown/txt formatting. Change formatting here, not in stage files
 - **Atomic CSS design system** in `bristlenose/theme/` — tokens, atoms, molecules, organisms, templates (see `bristlenose/theme/CLAUDE.md`)
 - **Licence**: AGPL-3.0 with CLA
-- **Provider naming**: user-facing text says "Claude" and "ChatGPT" (product names), not "Anthropic" and "OpenAI" (company names). Researchers know the products, not the companies. Internal code uses `"anthropic"` / `"openai"` as config values — that's fine, only human-readable strings need product names
+- **Provider naming**: user-facing text says "Claude", "ChatGPT", and "Azure OpenAI" (product names), not "Anthropic" and "OpenAI" (company names). Researchers know the products, not the companies. Internal code uses `"anthropic"` / `"openai"` / `"azure"` as config values — that's fine, only human-readable strings need product names
 
 ## Architecture
 
@@ -27,7 +27,7 @@ Bristlenose is a local-first user-research analysis tool. It takes a folder of i
 
 CLI commands: `run` (full pipeline), `transcribe-only`, `analyze` (skip transcription), `render` (re-render from JSON, no LLM calls), `doctor` (dependency health checks). **Default command**: `bristlenose <folder>` is shorthand for `bristlenose run <folder>` — if the first argument is an existing directory (not a known command), `run` is injected automatically.
 
-LLM provider: Three providers supported — Claude (Anthropic), ChatGPT (OpenAI), and Local (Ollama). API keys stored in system keychain (`bristlenose configure claude` or `bristlenose configure chatgpt`), or via env vars (`ANTHROPIC_API_KEY` or `OPENAI_API_KEY`), `.env` file, or `bristlenose.toml`. Priority: keychain → env var → .env file. Prefix with `BRISTLENOSE_` for namespaced variants. Local provider requires no API key — just Ollama running locally.
+LLM provider: Four providers supported — Claude (Anthropic), ChatGPT (OpenAI), Azure OpenAI (enterprise), and Local (Ollama). API keys stored in system keychain (`bristlenose configure claude`, `bristlenose configure chatgpt`, or `bristlenose configure azure`), or via env vars (`ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, or `AZURE_API_KEY`), `.env` file, or `bristlenose.toml`. Priority: keychain → env var → .env file. Prefix with `BRISTLENOSE_` for namespaced variants. Local provider requires no API key — just Ollama running locally. Azure also requires `BRISTLENOSE_AZURE_ENDPOINT` and `BRISTLENOSE_AZURE_DEPLOYMENT`.
 
 Quote exclusivity: **Every quote appears in exactly one section of the report.** Stage 9 classifies each quote as `SCREEN_SPECIFIC` or `GENERAL_CONTEXT`. Stage 10 (screen clustering) only sees screen-specific quotes; stage 11 (thematic grouping) only sees general-context quotes — the two pools are mutually exclusive. Within screen clusters, the prompt enforces "exactly one cluster." Within themes, the prompt enforces "exactly one theme" (pick strongest fit; the researcher reassigns if needed). A safety-net dedup in `thematic_grouping.py` catches any LLM violations for weak themes folded into "Uncategorised observations." This matches researcher expectations: each quote appears once, making the report suitable for further processing or handoff to non-researchers.
 
@@ -282,7 +282,9 @@ This is especially common when:
 ### Other gotchas
 
 - **Tests must not depend on local environment** — CI runs with no API keys, no Ollama, no local config. Functions like `_get_cloud_fallback_hint()` in `doctor_fixes.py` return different output based on configured keys. Always mock environment-dependent functions in tests. The v0.6.7–v0.6.13 release failures were caused by tests that passed locally (where API keys exist) but failed in CI
-- **Provider registry** — `bristlenose/providers.py` is the single source of truth for provider metadata (names, aliases, default models, SDK modules). `resolve_provider()` handles alias normalisation (claude→anthropic, ollama→local). `load_settings()` in `config.py` calls the registry to normalise aliases
+- **Provider registry** — `bristlenose/providers.py` is the single source of truth for provider metadata (names, aliases, default models, SDK modules). `resolve_provider()` handles alias normalisation (claude→anthropic, azure-openai→azure, ollama→local). `load_settings()` in `config.py` calls the registry to normalise aliases
+- **Azure OpenAI uses `AsyncAzureOpenAI`** — same OpenAI SDK, different client class. Key differences from regular OpenAI: needs `azure_endpoint` and `api_version` on client init, uses deployment name (not model name) as the `model` parameter. `configure azure` stores only the API key in keychain — endpoint and deployment are non-secret, go in env vars or `.env`
+- **Azure cost estimation returns None** — deployment names are user-defined strings, not model names, so `estimate_cost()` can't look up pricing. The pricing URL is still shown
 - **Local LLM uses OpenAI SDK** — Ollama is OpenAI-compatible, so `_analyze_local()` in `llm/client.py` uses the same `openai.AsyncOpenAI` client with `base_url=settings.local_url` and `api_key="ollama"` (required by SDK but ignored by Ollama)
 - **Local model retry logic** — `_analyze_local()` retries JSON parsing failures up to 3 times with exponential backoff; local models are ~85% reliable vs ~99% for cloud
 - **`_needs_provider_prompt()` checks Ollama status** — for local provider, it calls `validate_local_endpoint()` to check if Ollama is running and has the model; for cloud providers, it just checks if the API key is set
@@ -477,6 +479,6 @@ When the user signals end of session, **proactively offer to run this checklist*
 
 ## Current status (v0.7.1, Feb 2026)
 
-Core pipeline complete and published to PyPI + Homebrew. Snap packaging implemented and tested locally (arm64); CI builds amd64 on every push. Latest: **Chart layout + histogram delete** — bar charts use CSS grid for aligned left edges, user tag labels have hover delete-from-all with confirmation modal, surprise sentiment placed between positive/negative. Prior: Multi-select and tag filter, tag taxonomy redesign (7 research-backed sentiments), keychain credential storage, Ollama local LLM support, output inside input folder, transcript coverage, multi-participant sessions. See git log for full history.
+Core pipeline complete and published to PyPI + Homebrew. Snap packaging implemented and tested locally (arm64); CI builds amd64 on every push. Latest: **Azure OpenAI provider** — `--llm azure` for enterprise users with Microsoft Azure contracts; uses `AsyncAzureOpenAI` from the existing OpenAI SDK, no new dependencies. Prior: Chart layout + histogram delete, multi-select and tag filter, tag taxonomy redesign (7 research-backed sentiments), keychain credential storage, Ollama local LLM support, output inside input folder, transcript coverage, multi-participant sessions. See git log for full history.
 
-**Next up:** Phase 2 Azure OpenAI for enterprise users, Phase 4 Gemini for budget users. Also: Phase 2 cross-session moderator linking; snap store publishing; tag definitions page in report UI. See `TODO.md` for full task list.
+**Next up:** Phase 4 Gemini for budget users. Also: Phase 2 cross-session moderator linking; snap store publishing; tag definitions page in report UI. See `TODO.md` for full task list.

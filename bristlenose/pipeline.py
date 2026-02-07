@@ -23,6 +23,7 @@ from bristlenose.models import (
     SpeakerRole,
     TranscriptSegment,
 )
+from bristlenose.providers import PROVIDERS
 
 logger = logging.getLogger(__name__)
 console = Console(width=min(80, Console().width))
@@ -67,6 +68,7 @@ _MAX_WARN_LEN = 74  # 80 col - 3 indent - small margin
 _BILLING_URLS: dict[str, str] = {
     "anthropic": "https://platform.claude.com/settings/billing",
     "openai": "https://platform.openai.com/settings/organization/billing",
+    "azure": "https://portal.azure.com/#view/Microsoft_Azure_Billing",
 }
 
 
@@ -178,9 +180,9 @@ class Pipeline:
 
             # ── Print header, then ingest checkmark ──
             hw = detect_hardware()
-            provider_name = (
-                "Claude" if self.settings.llm_provider == "anthropic" else "ChatGPT"
-            )
+            provider_name = PROVIDERS.get(
+                self.settings.llm_provider, PROVIDERS["anthropic"]
+            ).display_name
             console.print(
                 f"\nBristlenose [dim]v{__version__} · "
                 f"{len(sessions)} sessions · {provider_name} · {hw.label}[/dim]\n",
@@ -637,9 +639,9 @@ class Pipeline:
         llm_client = LLMClient(self.settings)
         concurrency = self.settings.llm_concurrency
 
-        provider_name = (
-            "Claude" if self.settings.llm_provider == "anthropic" else "ChatGPT"
-        )
+        provider_name = PROVIDERS.get(
+            self.settings.llm_provider, PROVIDERS["anthropic"]
+        ).display_name
         console.print(
             f"\nBristlenose [dim]v{__version__} · "
             f"{len(clean_transcripts)} transcripts · {provider_name}[/dim]\n",

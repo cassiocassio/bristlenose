@@ -53,6 +53,7 @@ class EnvCredentialStore(CredentialStore):
     ENV_VAR_MAP = {
         "anthropic": "ANTHROPIC_API_KEY",
         "openai": "OPENAI_API_KEY",
+        "azure": "AZURE_API_KEY",
     }
 
     def get(self, key: str) -> str | None:

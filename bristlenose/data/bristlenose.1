@@ -45,7 +45,7 @@ bristlenose \- user-research transcription and quote extraction engine
 .B bristlenose
 processes user-research interview recordings into structured, themed, timestamped
 quotes. It transcribes audio locally using Whisper, extracts and enriches quotes
-via LLM (Claude, ChatGPT, or local models via Ollama), groups them by screen and
+via LLM (Claude, ChatGPT, Azure OpenAI, or local models via Ollama), groups them by screen and
 theme, and renders a browsable HTML report. Nothing is uploaded; recordings stay
 on your machine.
 .PP
@@ -84,9 +84,11 @@ on first invocation and as a pre-flight check before pipeline commands.
 .TP
 .B configure \fIprovider\fR [\fB\-k\fR \fIKEY\fR]
 Store API credentials securely in the system keychain. Provider can be
-\fBclaude\fR (or \fBanthropic\fR), \fBchatgpt\fR (or \fBopenai\fR, \fBgpt\fR).
-The key is validated with a test API call before storing. Use \fB\-k\fR to
-provide the key non-interactively.
+\fBclaude\fR (or \fBanthropic\fR), \fBchatgpt\fR (or \fBopenai\fR, \fBgpt\fR),
+or \fBazure\fR (or \fBazure-openai\fR).
+The key is validated with a test API call before storing (Azure validates
+via \fBbristlenose doctor\fR instead, since it also needs endpoint and
+deployment). Use \fB\-k\fR to provide the key non-interactively.
 .TP
 .B help \fR[\fItopic\fR]
 Show detailed help. Topics: \fBcommands\fR, \fBconfig\fR, \fBworkflows\fR, or
@@ -117,8 +119,10 @@ Whisper model size: \fBtiny\fR, \fBbase\fR, \fBsmall\fR, \fBmedium\fR,
 .TP
 .BR \-l ", " \-\-llm " " \fIPROVIDER\fR
 LLM provider: \fBanthropic\fR (or \fBclaude\fR), \fBopenai\fR (or \fBchatgpt\fR),
-\fBlocal\fR (or \fBollama\fR). Default: \fBanthropic\fR. The \fBlocal\fR provider
-uses Ollama for free, private, offline analysis.
+\fBazure\fR (or \fBazure-openai\fR), \fBlocal\fR (or \fBollama\fR). Default:
+\fBanthropic\fR. The \fBlocal\fR provider uses Ollama for free, private, offline
+analysis. The \fBazure\fR provider uses Azure OpenAI Service for enterprise
+environments.
 .TP
 .BR \-\-redact\-pii
 Redact personally identifying information from transcripts. PII is retained by
@@ -193,9 +197,9 @@ Environment variables with prefix \fBBRISTLENOSE_\fR
 CLI flags
 .PP
 API keys have special priority: system keychain \(-> environment variable \(->
-\fI.env\fR file. Use \fBbristlenose configure claude\fR or
-\fBbristlenose configure chatgpt\fR to store keys securely in the system
-keychain (macOS Keychain or Linux Secret Service).
+\fI.env\fR file. Use \fBbristlenose configure claude\fR, \fBbristlenose configure chatgpt\fR, or
+\fBbristlenose configure azure\fR to store keys securely in the system keychain
+(macOS Keychain or Linux Secret Service).
 .SS API keys
 .TP
 .B BRISTLENOSE_ANTHROPIC_API_KEY
@@ -203,10 +207,23 @@ Anthropic API key.
 .TP
 .B BRISTLENOSE_OPENAI_API_KEY
 OpenAI API key.
+.SS Azure OpenAI settings
+.TP
+.B BRISTLENOSE_AZURE_API_KEY
+Azure OpenAI API key (from the Azure portal).
+.TP
+.B BRISTLENOSE_AZURE_ENDPOINT
+Azure OpenAI endpoint URL (e.g. \fBhttps://my-resource.openai.azure.com/\fR).
+.TP
+.B BRISTLENOSE_AZURE_DEPLOYMENT
+Azure OpenAI deployment name (defined in the Azure portal, not a model name).
+.TP
+.B BRISTLENOSE_AZURE_API_VERSION
+Azure OpenAI API version. Default: \fB2024-10-21\fR.
 .SS LLM settings
 .TP
 .B BRISTLENOSE_LLM_PROVIDER
-\fBanthropic\fR, \fBopenai\fR, or \fBlocal\fR. Default: \fBanthropic\fR.
+\fBanthropic\fR, \fBopenai\fR, \fBazure\fR, or \fBlocal\fR. Default: \fBanthropic\fR.
 .TP
 .B BRISTLENOSE_LLM_MODEL
 Model name. Default: \fBclaude-sonnet-4-20250514\fR.
@@ -335,6 +352,17 @@ Transcribe only (no API key needed):
 .RS
 .nf
 bristlenose transcribe ./interviews/
+.fi
+.RE
+.PP
+Use Azure OpenAI (enterprise):
+.PP
+.RS
+.nf
+export BRISTLENOSE_AZURE_ENDPOINT=https://my-resource.openai.azure.com/
+export BRISTLENOSE_AZURE_DEPLOYMENT=gpt-4o-research
+bristlenose configure azure
+bristlenose run ./interviews/ --llm azure
 .fi
 .RE
 .PP

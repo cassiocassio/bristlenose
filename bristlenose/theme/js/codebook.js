@@ -246,25 +246,35 @@ function applyCodebookColours() {
  * Initialise the codebook module.
  *
  * - Restores AI tag visibility from persisted state.
- * - Wires up the AI tag toggle button.
+ * - Wires up the codebook button (opens codebook.html in a new window).
  * - Applies codebook colours to existing user tag badges.
  */
 function initCodebook() {
   _applyAiTagVisibility();
   applyCodebookColours();
 
-  // AI tag toggle button.
-  var toggleBtn = document.getElementById('ai-tag-toggle');
-  if (toggleBtn) {
-    // Set initial visual state.
-    toggleBtn.classList.toggle('active', isAiTagsVisible());
-
-    toggleBtn.addEventListener('click', function (e) {
-      e.preventDefault();
-      var visible = toggleAiTags();
-      toggleBtn.classList.toggle('active', visible);
+  // Codebook button — opens codebook.html in a new window.
+  var codebookBtn = document.getElementById('codebook-btn');
+  if (codebookBtn) {
+    codebookBtn.addEventListener('click', function () {
+      var href = 'codebook.html';
+      window.open(href, 'bristlenose-codebook',
+        'width=960,height=700,menubar=no,toolbar=no,status=no');
     });
   }
+
+  // AI tag toggle button — TODO: relocate to future settings/view-controls panel.
+  // The toggle functions (isAiTagsVisible, toggleAiTags, _applyAiTagVisibility)
+  // remain available above; just needs a new UI trigger.
+  // var toggleBtn = document.getElementById('ai-tag-toggle');
+  // if (toggleBtn) {
+  //   toggleBtn.classList.toggle('active', isAiTagsVisible());
+  //   toggleBtn.addEventListener('click', function (e) {
+  //     e.preventDefault();
+  //     var visible = toggleAiTags();
+  //     toggleBtn.classList.toggle('active', visible);
+  //   });
+  // }
 }
 
 // ── Internal helpers ──────────────────────────────────────────────────────

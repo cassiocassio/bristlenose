@@ -131,7 +131,16 @@
     --bn-transition-normal: 0.2s ease;
     --bn-transition-slow: 0.3s ease;
 
-    /* Interactive element colours */
+    /* Interactive element colours
+       Toolbar buttons use a 3-state border progression:
+         rest    → --bn-colour-border       (#e5e7eb / gray-200)
+         hover   → --bn-colour-border-hover (#d1d5db / gray-300)
+         active  → --bn-colour-accent       (#2563eb / blue-600)
+       Background shifts from --bn-colour-bg to --bn-colour-quote-bg on hover.
+       Icon/arrow children use --bn-colour-muted; text uses --bn-colour-text.
+       Toggle variant (.toolbar-btn-toggle) uses accent for border+text when active,
+       muted text when inactive. */
+    --bn-colour-border-hover: #d1d5db;
     --bn-colour-icon-idle: #c9ccd1;
     --bn-colour-starred: #999;
     --bn-colour-shadow: rgba(0, 0, 0, 0.1);
@@ -250,6 +259,7 @@
         --bn-colour-suggestion-bg:    light-dark(#eff6ff, #111d2e);
 
         /* Interactive elements */
+        --bn-colour-border-hover:     light-dark(#d1d5db, #4b5563);
         --bn-colour-icon-idle:        light-dark(#c9ccd1, #595959);
         --bn-colour-starred:          light-dark(#999, #ccc);
         --bn-colour-shadow:           light-dark(rgba(0,0,0,0.1), rgba(0,0,0,0.4));

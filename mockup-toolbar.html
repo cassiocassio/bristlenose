@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Toolbar Mockup — Bristlenose</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+    --bn-font-body: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
+    --bn-font-mono: "SF Mono", "Fira Code", "Consolas", monospace;
+    --bn-colour-bg: #ffffff;
+    --bn-colour-text: #1a1a1a;
+    --bn-colour-muted: #6b7280;
+    --bn-colour-border: #e5e7eb;
+    --bn-colour-accent: #2563eb;
+    --bn-colour-quote-bg: #f9fafb;
+    --bn-colour-border-hover: #d1d5db;
+    --bn-colour-shadow: rgba(0, 0, 0, 0.1);
+    --bn-space-sm: 0.35rem;
+    --bn-space-xs: 0.15rem;
+    --bn-radius-md: 6px;
+    --bn-radius-pill: 999px;
+    --bn-transition-fast: 0.15s ease;
+    --bn-transition-normal: 0.2s ease;
+}
+
+[data-theme="dark"] {
+    --bn-colour-bg: #111111;
+    --bn-colour-text: #e5e7eb;
+    --bn-colour-muted: #9ca3af;
+    --bn-colour-border: #2d2d2d;
+    --bn-colour-accent: #60a5fa;
+    --bn-colour-quote-bg: #1a1a1a;
+    --bn-colour-border-hover: #4b5563;
+}
+
+body {
+    font-family: var(--bn-font-body);
+    color: var(--bn-colour-text);
+    background: var(--bn-colour-bg);
+    padding: 2rem;
+}
+
+h2 {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--bn-colour-muted);
+    margin: 2rem 0 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+/* ── Toolbar ─────────────────────────────────────────────── */
+
+.toolbar {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    display: flex;
+    align-items: baseline;
+    justify-content: flex-end;
+    gap: 0.75rem;
+    padding: 0.35rem 0;
+    background: var(--bn-colour-bg);
+}
+
+/* ── Search (unchanged — left side, pushes rest right) ──── */
+
+.search-container {
+    display: flex;
+    gap: var(--bn-space-sm);
+    margin-right: auto;
+}
+
+.search-toggle {
+    background: none;
+    border: none;
+    padding: 0.3rem;
+    color: var(--bn-colour-muted);
+    cursor: pointer;
+    transition: color var(--bn-transition-fast);
+    line-height: 1;
+}
+.search-toggle:hover { color: var(--bn-colour-accent); }
+
+/* ── Toolbar button (round-rect) — used for ALL controls ── */
+
+.toolbar-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--bn-space-sm);
+    background: var(--bn-colour-bg);
+    border: 1px solid var(--bn-colour-border);
+    border-radius: var(--bn-radius-md);
+    padding: 0.4rem 0.85rem;
+    font-family: var(--bn-font-body);
+    font-size: 0.82rem;
+    color: var(--bn-colour-text);
+    cursor: pointer;
+    transition: background var(--bn-transition-fast), border-color var(--bn-transition-fast);
+    white-space: nowrap;
+    position: relative;
+}
+
+.toolbar-btn:hover {
+    background: var(--bn-colour-quote-bg);
+    border-color: var(--bn-colour-border-hover);
+}
+
+.toolbar-btn .toolbar-icon-svg {
+    color: var(--bn-colour-muted);
+    vertical-align: -0.15em;
+    flex-shrink: 0;
+}
+
+.toolbar-btn .toolbar-arrow {
+    color: var(--bn-colour-muted);
+    vertical-align: -0.05em;
+    flex-shrink: 0;
+    margin-left: -0.1rem;
+}
+
+/* Toggle variant (AI tags) */
+.toolbar-btn-toggle {
+    user-select: none;
+}
+.toolbar-btn-toggle.active {
+    background: var(--bn-colour-quote-bg);
+    border-color: var(--bn-colour-accent);
+    color: var(--bn-colour-accent);
+}
+.toolbar-btn-toggle:not(.active) {
+    color: var(--bn-colour-muted);
+}
+
+/* ── Dropdown menus (shared) ──────────────────────────────── */
+
+.toolbar-dropdown {
+    position: relative;
+}
+
+.toolbar-dropdown-menu {
+    display: none;
+    position: absolute;
+    top: 100%;
+    right: 0;
+    margin: 0.25rem 0 0;
+    padding: 0.25rem 0;
+    list-style: none;
+    background: var(--bn-colour-bg);
+    border: 1px solid var(--bn-colour-border);
+    border-radius: var(--bn-radius-md);
+    box-shadow: 0 4px 12px var(--bn-colour-shadow);
+    min-width: 12rem;
+    z-index: 200;
+}
+
+.toolbar-dropdown-menu.open {
+    display: block;
+}
+
+.toolbar-dropdown-menu li {
+    display: flex;
+    align-items: center;
+    gap: var(--bn-space-sm);
+    padding: 0.4rem 0.85rem;
+    font-size: 0.82rem;
+    color: var(--bn-colour-text);
+    cursor: pointer;
+    transition: background var(--bn-transition-fast);
+    white-space: nowrap;
+}
+
+.toolbar-dropdown-menu li:hover {
+    background: var(--bn-colour-quote-bg);
+}
+
+.toolbar-dropdown-menu li .menu-icon {
+    display: inline-block;
+    width: 1em;
+    text-align: center;
+    font-size: 0.95rem;
+    color: var(--bn-colour-muted);
+    flex-shrink: 0;
+}
+
+/* ── Demo content (fake quotes below toolbar) ─────────────── */
+
+.demo-content {
+    margin-top: 2rem;
+    padding: 1rem;
+    border: 1px dashed var(--bn-colour-border);
+    border-radius: var(--bn-radius-md);
+    color: var(--bn-colour-muted);
+    font-size: 0.85rem;
+    text-align: center;
+}
+
+/* ── Theme toggle ─────────────────────────────────────────── */
+
+.theme-toggle {
+    position: fixed;
+    top: 12px;
+    right: 12px;
+    padding: 4px 10px;
+    border-radius: var(--bn-radius-pill);
+    border: 1px solid var(--bn-colour-border);
+    background: var(--bn-colour-bg);
+    color: var(--bn-colour-muted);
+    font-size: 0.7rem;
+    cursor: pointer;
+    font-family: var(--bn-font-body);
+    z-index: 300;
+}
+
+/* ── Comparison section ──────────────────────────────────── */
+
+.comparison { display: flex; flex-direction: column; gap: 2rem; max-width: 960px; }
+.variant-label {
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: var(--bn-colour-accent);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-bottom: 0.5rem;
+}
+</style>
+</head>
+<body>
+
+<button class="theme-toggle" onclick="toggleTheme()">Toggle dark mode</button>
+
+<div class="comparison">
+
+<!-- ════════════════════════════════════════════════════════════
+     VARIANT: NEW TOOLBAR — all round-rect buttons
+     ════════════════════════════════════════════════════════════ -->
+<div>
+<h2>New toolbar — all round-rect buttons</h2>
+<div class="variant-label">Codebook (new window icon) · Tag filter · View switcher · Copy CSV</div>
+
+<div class="toolbar">
+    <!-- Search (left) -->
+    <div class="search-container">
+        <button class="search-toggle" aria-label="Search quotes">
+            <svg width="15" height="15" viewBox="0 0 16 16"
+                 fill="none" stroke="currentColor" stroke-width="1.5"
+                 stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="6.5" cy="6.5" r="5.5"/>
+                <line x1="10.5" y1="10.5" x2="15" y2="15"/>
+            </svg>
+        </button>
+    </div>
+
+    <!-- Codebook (new window) -->
+    <button class="toolbar-btn" id="codebook-btn" title="Open codebook in new window">
+        <!-- New window icon — box with arrow pointing up-right (Teams-style) -->
+        <svg class="toolbar-icon-svg" width="14" height="14" viewBox="0 0 16 16"
+             fill="none" stroke="currentColor" stroke-width="1.5"
+             stroke-linecap="round" stroke-linejoin="round">
+            <rect x="1" y="3" width="11" height="11" rx="1.5"/>
+            <path d="M9 1h6v6"/>
+            <path d="M15 1 8 8"/>
+        </svg>
+        Codebook
+    </button>
+
+    <!-- Tag filter (now round-rect) -->
+    <div class="toolbar-dropdown">
+        <button class="toolbar-btn" id="tag-filter-btn"
+                aria-haspopup="true" aria-expanded="false">
+            <svg class="toolbar-icon-svg" width="14" height="14" viewBox="0 0 16 16"
+                 fill="none" stroke="currentColor" stroke-width="1.5"
+                 stroke-linecap="round">
+                <line x1="1" y1="3" x2="15" y2="3"/>
+                <line x1="3" y1="8" x2="13" y2="8"/>
+                <line x1="5.5" y1="13" x2="10.5" y2="13"/>
+            </svg>
+            <span id="tag-filter-label">2 of 16 tags</span>
+            <svg class="toolbar-arrow" width="10" height="10"
+                 viewBox="0 0 10 10" fill="none" stroke="currentColor"
+                 stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M2.5 3.75 5 6.25 7.5 3.75"/>
+            </svg>
+        </button>
+    </div>
+
+    <!-- View switcher (now round-rect) -->
+    <div class="toolbar-dropdown">
+        <button class="toolbar-btn" id="view-switcher-btn"
+                aria-haspopup="true" aria-expanded="false">
+            <span id="view-switcher-label">20 quotes</span>
+            <svg class="toolbar-arrow" width="10" height="10"
+                 viewBox="0 0 10 10" fill="none" stroke="currentColor"
+                 stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M2.5 3.75 5 6.25 7.5 3.75"/>
+            </svg>
+        </button>
+        <ul class="toolbar-dropdown-menu" role="menu">
+            <li role="menuitem"><span class="menu-icon">&nbsp;</span> All quotes</li>
+            <li role="menuitem"><span class="menu-icon">&#9733;</span> Starred quotes</li>
+        </ul>
+    </div>
+
+    <!-- AI tag toggle — TODO: relocate to future settings panel -->
+    <!-- <button class="toolbar-btn toolbar-btn-toggle active" id="ai-tag-toggle"
+            aria-label="Toggle AI tags" title="Show/hide AI sentiment tags">
+        AI tags
+    </button> -->
+
+    <!-- Copy CSV -->
+    <button class="toolbar-btn" id="export-csv">
+        <svg class="toolbar-icon-svg" width="14" height="14" viewBox="0 0 16 16"
+             fill="none" stroke="currentColor" stroke-width="1.5"
+             stroke-linecap="round" stroke-linejoin="round">
+            <rect x="5" y="1" width="9" height="11" rx="1.5"/>
+            <path d="M3 5H2.5A1.5 1.5 0 0 0 1 6.5v8A1.5 1.5 0 0 0 2.5 16h8a1.5 1.5 0 0 0 1.5-1.5V14"/>
+        </svg>
+        Copy CSV
+    </button>
+</div>
+
+<div class="demo-content">
+    ↑ All four controls use the same .toolbar-btn round-rect treatment.<br>
+    Codebook opens a new window. Tag filter and view switcher have dropdown arrows.
+</div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════
+     REFERENCE: Current toolbar (for comparison)
+     ════════════════════════════════════════════════════════════ -->
+<div>
+<h2>Current toolbar (reference)</h2>
+<div class="variant-label">Tag filter and view switcher are borderless text-only</div>
+
+<div class="toolbar">
+    <div class="search-container">
+        <button class="search-toggle" aria-label="Search quotes">
+            <svg width="15" height="15" viewBox="0 0 16 16"
+                 fill="none" stroke="currentColor" stroke-width="1.5"
+                 stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="6.5" cy="6.5" r="5.5"/>
+                <line x1="10.5" y1="10.5" x2="15" y2="15"/>
+            </svg>
+        </button>
+    </div>
+
+    <!-- Tag filter (old: borderless) -->
+    <button style="display: inline-flex; align-items: center; gap: 0.3rem;
+                   background: none; border: none; padding: 0.4rem 0.25rem;
+                   font-family: var(--bn-font-body); font-size: 0.82rem;
+                   color: var(--bn-colour-text); cursor: pointer;">
+        <svg width="14" height="14" viewBox="0 0 16 16"
+             fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
+            <line x1="1" y1="3" x2="15" y2="3"/>
+            <line x1="3" y1="8" x2="13" y2="8"/>
+            <line x1="5.5" y1="13" x2="10.5" y2="13"/>
+        </svg>
+        <span>2 of 16 tags</span>
+        <svg width="10" height="10" viewBox="0 0 10 10" fill="none"
+             stroke="currentColor" stroke-width="1.5" stroke-linecap="round"
+             stroke-linejoin="round" style="color: var(--bn-colour-muted);">
+            <path d="M2.5 3.75 5 6.25 7.5 3.75"/>
+        </svg>
+    </button>
+
+    <!-- View switcher (old: borderless) -->
+    <button style="display: inline-flex; align-items: center; gap: 0.3rem;
+                   background: none; border: none; padding: 0.4rem 0.25rem;
+                   font-family: var(--bn-font-body); font-size: 0.82rem;
+                   color: var(--bn-colour-text); cursor: pointer;">
+        <span>20 quotes</span>
+        <svg width="10" height="10" viewBox="0 0 10 10" fill="none"
+             stroke="currentColor" stroke-width="1.5" stroke-linecap="round"
+             stroke-linejoin="round" style="color: var(--bn-colour-muted);">
+            <path d="M2.5 3.75 5 6.25 7.5 3.75"/>
+        </svg>
+    </button>
+
+    <!-- Copy CSV (old: already round-rect) -->
+    <button class="toolbar-btn">
+        <svg class="toolbar-icon-svg" width="14" height="14" viewBox="0 0 16 16"
+             fill="none" stroke="currentColor" stroke-width="1.5"
+             stroke-linecap="round" stroke-linejoin="round">
+            <rect x="5" y="1" width="9" height="11" rx="1.5"/>
+            <path d="M3 5H2.5A1.5 1.5 0 0 0 1 6.5v8A1.5 1.5 0 0 0 2.5 16h8a1.5 1.5 0 0 0 1.5-1.5V14"/>
+        </svg>
+        Copy CSV
+    </button>
+</div>
+
+<div class="demo-content">
+    ↑ Current toolbar for comparison — tag filter and view switcher are borderless text.
+</div>
+</div>
+
+</div><!-- .comparison -->
+
+<script>
+function toggleTheme() {
+    var h = document.documentElement;
+    h.setAttribute('data-theme', h.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
+}
+
+// Simple dropdown toggle for demo
+document.querySelectorAll('.toolbar-dropdown .toolbar-btn').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+        var menu = btn.parentNode.querySelector('.toolbar-dropdown-menu');
+        if (menu) {
+            menu.classList.toggle('open');
+        }
+    });
+});
+
+document.addEventListener('click', function(e) {
+    if (!e.target.closest('.toolbar-dropdown')) {
+        document.querySelectorAll('.toolbar-dropdown-menu.open').forEach(function(m) {
+            m.classList.remove('open');
+        });
+    }
+});
+</script>
+</body>
+</html>

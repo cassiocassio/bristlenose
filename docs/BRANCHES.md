@@ -70,24 +70,43 @@ When merging back to main:
 
 ### `codebook`
 
-**Status:** Phase 2 UX prototyping (standalone mockup complete, iterating)
+**Status:** Phase 2 in progress — toolbar redesign done, codebook page scaffold done, full interactive UI next
 **Started:** 7 Feb 2026
 **Worktree:** `/Users/cassio/Code/bristlenose_branch codebook/`
 **Plan:** `~/.claude/plans/immutable-chasing-patterson.md`
 **Phase 1 commit:** `1c66628` (colour tokens, AI tag toggle, badge styling — on main)
 
 **What this branch does:**
-Codebook panel for organising user tags into colour-coded groups. Researchers drag tags between groups, merge duplicates, and assign semantic colours. Six phases: Visual Foundation (done) → Data Model + Panel → Tag Operations → Filter & Histogram Integration → File Persistence → Import/Export + Polish.
+Codebook as standalone HTML page (opened via toolbar button in new window). Architecture: Report = main window, Transcript = separate pages (existing), Codebook = new standalone page. Cross-window sync via localStorage `storage` events (already supported by `createStore()` in `storage.js`).
 
-**Files this branch will touch:**
-- `bristlenose/theme/js/codebook.js` — existing Phase 1 data model, expanding with panel UI
+**Completed so far on this branch:**
+- Toolbar redesign: all toolbar controls (Codebook, tag filter, view switcher, Copy CSV) now use unified `.toolbar-btn` round-rect styling
+- Codebook button with Teams-style new-window icon added to toolbar
+- AI tag toggle removed from toolbar (commented out, TODO for settings panel)
+- `--bn-colour-border-hover` token added (3-state border: rest → hover → active)
+- Minimal codebook.html page rendered by pipeline (placeholder content, header/footer, storage.js + codebook.js loaded)
+- Fixed `check_pii` crash on Python 3.14 (pydantic v1 incompatibility)
+
+**Files this branch touches:**
+- `bristlenose/output_paths.py` — added `codebook_file` property
+- `bristlenose/stages/render_html.py` — codebook button, toolbar restyling, `_render_codebook_page()`, `_CODEBOOK_JS_FILES`
+- `bristlenose/theme/js/codebook.js` — existing Phase 1 data model + codebook button window.open wiring
+- `bristlenose/theme/atoms/button.css` — `.toolbar-arrow`, documentation, border-hover
+- `bristlenose/theme/organisms/toolbar.css` — stripped standalone view-switcher-btn styles
+- `bristlenose/theme/molecules/tag-filter.css` — stripped standalone tag-filter-btn styles
+- `bristlenose/theme/tokens.css` — `--bn-colour-border-hover` token
+- `bristlenose/doctor.py` — fixed `check_pii` for Python 3.14
+- `tests/test_doctor.py` — updated PII tests
+- `mockup-toolbar.html` — toolbar UX prototype
+- `mockup-codebook-panel.html` — codebook panel UX prototype (for Phase 2 interactive UI)
+
+**Next: build full interactive codebook UI in codebook.html**
+- `bristlenose/theme/js/codebook.js` — expand with panel UI rendering
 - `bristlenose/theme/js/tags.js` — tag CRUD hooks for codebook integration
 - `bristlenose/theme/js/histogram.js` — codebook colour awareness
 - `bristlenose/theme/js/main.js` — boot sequence (new `initCodebook()` call)
 - `bristlenose/theme/molecules/` — new `codebook-panel.css`
 - `bristlenose/theme/organisms/` — possible new `codebook-layout.css`
-- `bristlenose/stages/render_html.py` — codebook panel HTML, JS file list
-- `mockup-codebook-panel.html` — standalone UX prototype (temporary)
 
 **Safe for other branches to edit:**
 - `bristlenose/llm/` — no overlap

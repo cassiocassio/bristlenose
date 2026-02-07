@@ -4,33 +4,8 @@
     position: relative;
 }
 
-.tag-filter-btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.3rem;
-    background: none;
-    border: none;
-    padding: 0.4rem 0.25rem;
-    font-family: var(--bn-font-body);
-    font-size: 0.82rem;
-    color: var(--bn-colour-text);
-    cursor: pointer;
-    transition: color var(--bn-transition-fast);
-}
-
-.tag-filter-btn:hover {
-    color: var(--bn-colour-accent);
-}
-
-.tag-filter-icon {
-    flex-shrink: 0;
-}
-
-.tag-filter-arrow {
-    color: var(--bn-colour-muted);
-    vertical-align: -0.05em;
-    flex-shrink: 0;
-}
+/* .tag-filter-btn inherits round-rect from .toolbar-btn (both classes on element).
+   Only dropdown-specific overrides here. */
 
 .tag-filter-label {
     display: inline-block;

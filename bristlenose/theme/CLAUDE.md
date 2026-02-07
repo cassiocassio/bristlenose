@@ -70,7 +70,7 @@ Each user tag label has a hover `×` button (`.histogram-bar-delete` in `atoms/b
 
 ## JS modules
 
-15 standalone files in `js/` concatenated at render time (same pattern as CSS): storage, modal, player, starred, editing, tags, histogram, csv-export, view-switcher, search, tag-filter, names, focus, feedback, main. Transcript pages use `storage.js` + `player.js` + `transcript-names.js` (no starred/editing/tags/search/names/view-switcher/focus/feedback). `transcript-names.js` only updates heading speaker names (preserving code prefix: `"m1 Sarah Chen"`); segment speaker labels stay as raw codes (`p1:`, `m1:`) and are not overridden by JS.
+16 standalone files in `js/` concatenated at render time (same pattern as CSS): storage, modal, codebook, player, starred, editing, tags, histogram, csv-export, view-switcher, search, tag-filter, names, focus, feedback, main. Transcript pages use `storage.js` + `player.js` + `transcript-names.js` (no starred/editing/tags/search/names/view-switcher/focus/feedback). Codebook page uses `storage.js` + `codebook.js` only. `transcript-names.js` only updates heading speaker names (preserving code prefix: `"m1 Sarah Chen"`); segment speaker labels stay as raw codes (`p1:`, `m1:`) and are not overridden by JS.
 
 ### names.js
 
@@ -95,7 +95,7 @@ Dropdown menu to switch between report views. Three modes: `all` (default), `sta
 - **Export button swap**: `#export-csv` (Copy CSV) visible in `all`/`starred` views; `#export-names` (Export names) visible in `participants` view
 - **Search notification**: `_applyView()` calls `_onViewModeChange()` (defined in `search.js`) after applying the view — guarded with `typeof` check so transcript pages (which don't load search.js) don't error
 - **Dependencies**: must load after `csv-export.js` (writes `currentViewMode`); before `search.js` and `main.js`
-- **CSS**: `organisms/toolbar.css` — `.view-switcher`, `.view-switcher-btn`, `.view-switcher-arrow` (SVG chevron), `.view-switcher-menu` (dropdown positioned absolute right), `.menu-icon` (invisible spacer for alignment)
+- **CSS**: `organisms/toolbar.css` — `.view-switcher`, `.view-switcher-label`, `.view-switcher-menu` (dropdown positioned absolute right), `.menu-icon` (invisible spacer for alignment). The view switcher button uses dual classes `toolbar-btn view-switcher-btn` — shared round-rect from `atoms/button.css`, dropdown arrow uses `.toolbar-arrow`
 
 ### search.js
 
@@ -129,7 +129,7 @@ Collapsible search filter in the toolbar: `.search-container` (flex, `margin-rig
 
 ### tag-filter.css (molecule)
 
-Dropdown filter for quotes by user tag. `.tag-filter` (relative wrapper), `.tag-filter-btn` (inline-flex, text colour, accent on hover), `.tag-filter-icon` (filter-lines SVG), `.tag-filter-arrow` (chevron, muted), `.tag-filter-label` (inline-block, text-align right, min-width set by JS for layout stability). `.tag-filter-menu` (absolute dropdown, right-aligned, `z-index: 200`, `max-height: 32rem`, width locked by JS on open). `.tag-filter-actions` (Select all · Clear row), `.tag-filter-search` / `.tag-filter-search-input` (search field, only shown for 8+ tags). `.tag-filter-item` (flex row: checkbox + name + count), `.tag-filter-item-name` (ellipsis truncation at `max-width: 16rem`), `.tag-filter-item-muted` (italic for "(No tags)"), `.tag-filter-count` (right-aligned, muted, tabular-nums). `.tag-filter-divider` between "(No tags)" and user tags.
+Dropdown filter for quotes by user tag. `.tag-filter` (relative wrapper). The tag filter button uses dual classes `toolbar-btn tag-filter-btn` — shared round-rect from `atoms/button.css`, dropdown-specific overrides in this file. SVG icons use `.toolbar-icon-svg` and `.toolbar-arrow` (shared toolbar classes). `.tag-filter-label` (inline-block, text-align right, min-width set by JS for layout stability). `.tag-filter-menu` (absolute dropdown, right-aligned, `z-index: 200`, `max-height: 32rem`, width locked by JS on open). `.tag-filter-actions` (Select all · Clear row), `.tag-filter-search` / `.tag-filter-search-input` (search field, only shown for 8+ tags). `.tag-filter-item` (flex row: checkbox + name + count), `.tag-filter-item-name` (ellipsis truncation at `max-width: 16rem`), `.tag-filter-item-muted` (italic for "(No tags)"), `.tag-filter-count` (right-aligned, muted, tabular-nums). `.tag-filter-divider` between "(No tags)" and user tags.
 
 ### modal.css (atom)
 
@@ -146,6 +146,40 @@ Shared modal factory used by both help overlay (`focus.js`) and feedback modal (
 ### feedback.js
 
 Feedback modal logic, gated behind `BRISTLENOSE_FEEDBACK` JS constant. `initFeedback()` checks flag, adds `body.feedback-enabled` class (CSS shows footer links), creates draft store, wires footer trigger. `getFeedbackModal()` lazily creates modal via `createModal()`. `submitFeedback()` tries `fetch()` to `BRISTLENOSE_FEEDBACK_URL` if endpoint configured and HTTP(S), falls back to `copyToClipboard()`. Draft persistence via `createStore('bristlenose-feedback-draft')`. Dependencies: `storage.js`, `modal.js`, `csv-export.js`.
+
+### codebook.js
+
+Codebook data model and colour assignment module. Manages the researcher's tag taxonomy: named groups of tags with colours from the OKLCH pentadic palette. Also wires up the toolbar Codebook button (opens `codebook.html` in a new window).
+
+- **Store**: `createStore('bristlenose-codebook')` — shape `{ groups: [], tags: {}, aiTagsVisible: true }`
+- **Colour sets**: 5 pentadic sets (UX blue, Emotion red-pink, Task green-teal, Trust purple, Opportunity amber), each with 5–6 slots mapping to CSS custom properties `--bn-{set}-{N}-bg`
+- **`getTagColourVar(tagName)`** — returns CSS `var()` reference for a tag's background colour; `var(--bn-custom-bg)` for ungrouped tags
+- **`assignTagToGroup(tagName, groupId)`** — assigns tag with auto-picked colour index
+- **`createCodebookGroup(name, colourSet)`** — creates a group with auto-assigned colour set if not specified
+- **`initCodebook()`** — restores AI tag visibility, applies codebook colours to badges, wires Codebook toolbar button
+- **Codebook button**: opens `codebook.html` via `window.open()` with `'bristlenose-codebook'` window name
+- **AI tag toggle**: code commented out (removed from toolbar — TODO: relocate to future settings panel). Functions `isAiTagsVisible()`, `toggleAiTags()`, `_applyAiTagVisibility()` remain available
+- **Dependencies**: `storage.js` (must load before)
+
+### Codebook page
+
+Standalone HTML page (`codebook.html`) at the output root, opened in a new window by the toolbar Codebook button. Rendered by `_render_codebook_page()` in `render_html.py`. Currently a placeholder with project header, back link to report, and footer. Loads `storage.js` + `codebook.js` for cross-window sync via localStorage events.
+
+Three page types in the output:
+1. **Report** (`bristlenose-{slug}-report.html`) — main window, full JS suite
+2. **Transcript** (`sessions/transcript_{id}.html`) — separate pages, `storage.js` + `player.js` + `transcript-names.js`
+3. **Codebook** (`codebook.html`) — new window, `storage.js` + `codebook.js`
+
+### Toolbar button styling
+
+All toolbar controls use the shared `.toolbar-btn` round-rect atom from `atoms/button.css`. Controls with additional behaviour (dropdowns, toggles) use dual classes:
+
+- Codebook: `class="toolbar-btn"` (plain)
+- Tag filter: `class="toolbar-btn tag-filter-btn"` (dropdown)
+- View switcher: `class="toolbar-btn view-switcher-btn"` (dropdown)
+- Copy CSV: `class="toolbar-btn"` (plain)
+
+Shared child elements: `.toolbar-icon-svg` (SVG icon), `.toolbar-arrow` (dropdown chevron). Three-state border: rest (`--bn-colour-border`) → hover (`--bn-colour-border-hover`) → active (`--bn-colour-accent`).
 
 ### name-edit.css (molecule)
 

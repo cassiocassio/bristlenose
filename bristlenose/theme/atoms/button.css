@@ -61,6 +61,16 @@
     color: var(--bn-colour-accent);
 }
 
+/* .toolbar-btn — round-rect button used for all toolbar controls.
+   Tokens: bg, border, border-hover, quote-bg, text, muted, accent.
+   Variants:
+     default       — Codebook, Copy CSV, Export names (icon + label)
+     dropdown      — Tag filter, View switcher (icon + label + arrow)
+     toggle        — .toolbar-btn-toggle: active/inactive binary state
+   Child elements:
+     .toolbar-icon     — emoji/text icon (0.95rem, muted)
+     .toolbar-icon-svg — SVG icon (muted, baseline-aligned)
+     .toolbar-arrow    — dropdown chevron SVG (muted, right side) */
 .toolbar-btn {
     display: inline-flex;
     align-items: center;
@@ -78,7 +88,7 @@
 
 .toolbar-btn:hover {
     background: var(--bn-colour-quote-bg);
-    border-color: var(--bn-colour-muted);
+    border-color: var(--bn-colour-border-hover);
 }
 
 .toolbar-btn .toolbar-icon {
@@ -89,6 +99,13 @@
 .toolbar-btn .toolbar-icon-svg {
     color: var(--bn-colour-muted);
     vertical-align: -0.15em;
+}
+
+.toolbar-btn .toolbar-arrow {
+    color: var(--bn-colour-muted);
+    vertical-align: -0.05em;
+    flex-shrink: 0;
+    margin-left: -0.1rem;
 }
 
 /* Toggle variant — pressed/active state for AI tag toggle etc. */

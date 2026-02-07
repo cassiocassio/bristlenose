@@ -151,13 +151,12 @@ jobs:
   # ── macOS: Homebrew tap install ─────────────────────────────────
 
   macos-brew:
-    # Only on schedule or manual — brew install fetches from PyPI,
-    # so this tests the published release, not the current commit.
-    # continue-on-error because the tap may lag behind the latest release,
-    # and upstream dylib issues (e.g. PyAV) can cause transient failures.
-    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    # Schedule only — brew installs the published release from PyPI, which
+    # needs time to propagate after a release (tap update + PyPI index).
+    # By the weekly Monday run, the tap is always current. Manual dispatch
+    # skips this job to avoid false negatives on release day.
+    if: github.event_name == 'schedule'
     runs-on: macos-latest
-    continue-on-error: true
     steps:
       - uses: actions/checkout@v4
 

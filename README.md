@@ -1,26 +1,33 @@
 # Bristlenose
 
-Open-source user-research analysis. Runs on your laptop.
+Open-source user-research transcript analysis.
 
-Point it at a folder of interview recordings. It transcribes, extracts verbatim quotes, groups them by screen and theme, and produces a browsable HTML report. Nothing gets uploaded. Your recordings stay on your machine.
+Point Bristlenose at a folder of interview recordings – videos, audio or transcripts from Zoom, Teams or Google Meet. 
 
+It transcribes, identifies moderators and participants, extracts good verbatim quotes, groups them by screen and theme. Filler words are stripped, editorial context is (sparingly) added `[thus]`. Emotion and strong language are preserved.
+
+The (HTML) report aggregates all your interview quotes. 
+
+You can check a summary of unused quotes - to ensure nothing crucial was trimmed by the AI - typically ~20% or less of the original.
+
+You can tag and favourite, to organise the most powerful quotes. It auto-tags with a sentiment-analysis to help you identify moments of frustration or delight.
+
+Filter your quotes, and export via CSV to your boards in Miro, Figjam, Mural or Lucidspark, or spreadsheet - for further analysis.   
+
+Bristlenose transcribes locally, and can do the thematic analysis on a (built in) local LLM –– but for speedy results you'll want an API key from Anthropic, OpenAI or Azure. For commercial work, obviously check your org's policies on public LLM use.
+
+For a typical study, e.g. 5–8 participant-hours, you'd be looking at roughly $1.50–$2.50 total cost from your LLM provider.
+
+Take care. Bristlenose is very alpha, without warranty. All feedback welcome.  
 <!-- TODO: screenshot of an HTML report here -->
 
----
+Bristlenose is built by me, Martin Storey, a practising user researcher. It's free and open source under AGPL-3.0.
 
-## Why
-
-The tooling for analysing user-research interviews is either expensive or manual. Bristlenose connects local recordings to AI models via API and produces structured output -- themed quotes, sentiment, friction points -- without requiring a platform subscription or hours of spreadsheet work.
-
-It's built by a practising researcher. It's free and open source under AGPL-3.0.
+Sidequest: [what is a Bristlenose?](https://www.theaquariumwiki.com/wiki/Ancistrus_sp)
 
 ---
 
 ## What it does
-
-You give it a folder of recordings. It gives you back a report.
-
-Behind the scenes: transcription (Whisper, local), speaker identification with automatic name and role extraction, PII redaction, quote extraction and enrichment (via Claude, ChatGPT, or Azure OpenAI API), thematic grouping, and HTML rendering. One command, no manual steps.
 
 The report includes:
 
@@ -37,17 +44,6 @@ The report includes:
 - **Tags** -- AI-generated badges plus your own free-text tags with auto-suggest
 - **Keyboard shortcuts** -- j/k navigation, s to star, t to tag, / to search, ? for help; multi-select with Cmd+click or Shift+j/k for bulk actions
 
-All interactive state (favourites, edits, tags) persists in your browser's localStorage.
-
-### Quote format
-
-```
-05:23 "I was... trying to find the button and it just... wasn't there." -- p3
-```
-
-Filler words replaced with `...`. Editorial context in `[square brackets]`. Emotion and strong language preserved.
-
----
 
 ## Install
 
@@ -72,7 +68,7 @@ If using pipx or uv, you'll also need FFmpeg (`brew install ffmpeg` on macOS, `s
 
 After installing, run `bristlenose doctor` to verify your setup.
 
-**New to the command line?** See the **[detailed installation guide](INSTALL.md)** for step-by-step instructions for your platform, including Python/FFmpeg setup and AI provider configuration.
+See the **[installation guide](INSTALL.md)** for detailed step-by-step instructions for your platform, including Python/FFmpeg setup and AI provider configuration.
 
 ---
 
@@ -141,14 +137,12 @@ You'll need your endpoint URL, API key, and deployment name from the [Azure port
 
 ### Which should I pick?
 
-| Option | Cost | Quality | Speed | Setup |
-|--------|------|---------|-------|-------|
-| **Local (Ollama)** | Free | Good | Slower | Easiest — no signup |
-| **Claude** | ~$1.50/study | Excellent | Fast | Create account + add payment |
-| **ChatGPT** | ~$1.00/study | Excellent | Fast | Create account + add payment |
-| **Azure OpenAI** | Varies | Excellent | Fast | Azure subscription required |
 
-If you're just trying bristlenose, start with **Local**. If you're running a real study, use **Claude** or **ChatGPT**. If your organisation has Azure, use **Azure OpenAI**.
+If you're just trying Bristlenose, start with **Local**. Text stays on your machine.
+
+ If you're running a study of any size, use **Claude** or **ChatGPT**. If your organisation has Azure, use **Azure OpenAI**.
+ 
+ Be aware: transcripts are sent to Anthropic/OpenAI for processing.
 
 - **Claude** -- the default in bristlenose. Tends to produce nuanced qualitative analysis. Pay-as-you-go billing from the first API call (no free API tier; a typical 8-participant study costs roughly $1--3)
 - **ChatGPT** -- widely used. New API accounts get a small amount of free credit (check your [usage page](https://platform.openai.com/usage) to see if you have any remaining). After that, pay-as-you-go. Similar cost per study
@@ -261,7 +255,7 @@ git clone https://github.com/cassiocassio/bristlenose.git
 cd bristlenose
 python3.12 -m venv .venv
 source .venv/bin/activate
-pip install -e ".[dev,apple]"                 # drop ,apple on Intel/Linux/Windows
+pip install -e ".[dev,apple]"                 # apple extra installs MLX for Apple Silicon GPU acceleration; omit on other platforms
 cp .env.example .env                          # add your API key
 ```
 
@@ -270,9 +264,9 @@ On Linux, install `python3.12` and `ffmpeg` via your package manager. On Windows
 ### Verify everything works
 
 ```bash
-pytest                       # ~550 tests, should pass in <2s
-ruff check .                 # lint
-mypy bristlenose/            # type check (some third-party SDK errors are expected)
+.venv/bin/python -m pytest tests/    # ~550 tests (approximate), should pass in <2s
+.venv/bin/ruff check .               # lint
+.venv/bin/mypy bristlenose/          # type check (some third-party SDK errors are expected)
 ```
 
 > **If you rename or move the project directory**, the editable install breaks silently
@@ -543,13 +537,29 @@ Edit `bristlenose/__init__.py` (the single source of truth for version), commit,
 
 ## Roadmap
 
-- Hide/show individual quotes
-- User-generated themes
-- Lost quotes -- surface what the AI didn't select
-- .docx export
-- Edit writeback to transcript files
-- Cross-session moderator linking (Phase 2)
-- Native installer for Windows
+### Analysis
+
+- **Codebook** -- define your own tags (codes) with descriptions; apply them consistently across quotes
+- **Your own themes** -- create, rename and reorder themes manually, not just the AI-generated ones
+- **Hide/show quotes** -- dismiss irrelevant quotes from the report without losing them
+- **Tag definitions** -- explain what each sentiment tag means (and its theoretical basis) inside the report
+- **Clickable histogram** -- click a sentiment bar to filter the report to just those quotes
+
+### Sharing
+
+- **Save curated report** -- export your starred, tagged, edited report as a standalone file you can share with stakeholders
+- **.docx export** -- download the report as a Word document
+- **Edit writeback** -- save your in-browser corrections back to the transcript files on disk
+
+### Providers
+
+- **Gemini** -- Google's API, 5–7× cheaper than Claude or ChatGPT; good option for budget-conscious teams
+
+### Platform
+
+- **Snap Store** -- publish to the Snap Store for one-command install on Ubuntu and other Linux distros
+- **Windows installer** -- native setup wizard so you don't need Python or the command line
+- **Cross-session moderator linking** -- recognise the same moderator across sessions (currently each session tracks moderators independently)
 
 Priorities may shift. If something is missing that matters to you, [open an issue](https://github.com/cassiocassio/bristlenose/issues).
 

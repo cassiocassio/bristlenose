@@ -352,10 +352,17 @@ Edit `bristlenose/__init__.py` (the single source of truth for version), commit,
 
 ## Changelog
 
+**0.8.1**_7-Feb-2026_
+
+- Hidden quotes — press `h` to hide volume quotes from your working view; per-subsection badge with dropdown previews; bulk hide via multi-select
+- Codebook — standalone page for organising tags into groups with drag-and-drop, inline editing, and colour-coded badges
+- Toolbar redesign — unified round-rect button styling
+- Python 3.14 compatibility fix for PII check
+
 **0.8.0**_7-Feb-2026_
 
-- Azure OpenAI provider — `--llm azure` for enterprise users with Microsoft Azure contracts; uses `AsyncAzureOpenAI` from the existing OpenAI SDK (no new dependencies); configure with `bristlenose configure azure` or `AZURE_OPENAI_API_KEY` + `AZURE_OPENAI_ENDPOINT` env vars
-- Install smoke tests — new CI workflow (`install-test.yml`) verifies install instructions work on clean Linux and macOS VMs; runs `bristlenose doctor` and `bristlenose render` from pre-built fixtures with no API key needed; weekly full-pipeline run with real API key catches integration regressions
+- Azure OpenAI provider — `--llm azure` for enterprise users with Microsoft Azure contracts
+- Install smoke tests — new CI workflow verifies install instructions on clean VMs
 
 **0.7.1**_6-Feb-2026_
 

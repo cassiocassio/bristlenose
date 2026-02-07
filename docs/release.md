@@ -21,7 +21,8 @@ __version__ = "0.4.0"
 #    CI will fail if the man page version doesn't match __version__
 
 # 3. Add a changelog entry
-#    Edit README.md → add a ### X.Y.Z section under ## Changelog
+#    Edit CHANGELOG.md and README.md
+#    Format: **X.Y.Z** — _D Mon YYYY_  (e.g. **0.8.1** — _7 Feb 2026_)
 
 # 4. Commit and tag
 git add bristlenose/__init__.py man/bristlenose.1 README.md

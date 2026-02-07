@@ -170,7 +170,8 @@ Day-to-day development just means committing and pushing to `main`. CI runs auto
 
 ```bash
 # 1. Bump the version in bristlenose/__init__.py
-# 2. Add a changelog entry in README.md
+# 2. Add a changelog entry in CHANGELOG.md and README.md
+#    Format: **X.Y.Z** — _D Mon YYYY_  (e.g. **0.8.1** — _7 Feb 2026_)
 # 3. Commit, tag, and push:
 git add bristlenose/__init__.py README.md
 git commit -m "vX.Y.Z"

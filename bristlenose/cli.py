@@ -191,11 +191,14 @@ def _print_doctor_fixes(report: object) -> None:
                 console.print()  # Blank line between fixes
 
 
-def _maybe_auto_doctor(settings: object, command: str) -> None:
+def _maybe_auto_doctor(settings: object, command: str) -> bool:
     """Run auto-doctor on first invocation or after version change.
 
     If any check fails, print the table and exit. If all pass, write the
-    sentinel and continue silently.
+    sentinel and continue.
+
+    Returns True if auto-doctor ran (so the caller can skip the preflight,
+    which would duplicate the same checks).
     """
     from bristlenose.config import BristlenoseSettings
     from bristlenose.doctor import run_preflight
@@ -203,9 +206,9 @@ def _maybe_auto_doctor(settings: object, command: str) -> None:
     assert isinstance(settings, BristlenoseSettings)
 
     if not _should_auto_doctor():
-        return
+        return False
 
-    console.print("\n[dim]First run — checking your setup.[/dim]\n")
+    console.print("[dim]Checking your setup[/dim]")
 
     report = run_preflight(settings, command)
     _format_doctor_table(report)
@@ -217,35 +220,29 @@ def _maybe_auto_doctor(settings: object, command: str) -> None:
 
     # Passed — write sentinel
     _write_doctor_sentinel()
-    console.print("\n[dim green]All clear.[/dim green]\n")
+    return True
 
 
 def _run_preflight(settings: object, command: str, *, skip_transcription: bool = False) -> None:
     """Run pre-flight checks on every pipeline invocation.
 
-    Unlike auto-doctor, this is terse: only prints the first failure and exits.
+    Always prints the full doctor table so the user sees their setup context.
+    Exits on failure with fix instructions.
     """
     from bristlenose.config import BristlenoseSettings
     from bristlenose.doctor import run_preflight
 
     assert isinstance(settings, BristlenoseSettings)
 
+    console.print("[dim]Checking your setup[/dim]")
+
     report = run_preflight(settings, command, skip_transcription=skip_transcription)
+    _format_doctor_table(report)
 
-    if not report.has_failures:
-        return
-
-    # Terse output: first failure only, with fix
-    from bristlenose.doctor_fixes import get_fix
-
-    failure = report.failures[0]
-    console.print()
-    console.print(f"[bold yellow]{failure.detail}[/bold yellow]")
-    fix = get_fix(failure.fix_key)
-    if fix:
-        console.print(f"\n{fix}")
-    console.print()
-    raise typer.Exit(1)
+    if report.has_failures:
+        _print_doctor_fixes(report)
+        console.print()
+        raise typer.Exit(1)
 
 
 # ---------------------------------------------------------------------------
@@ -483,8 +480,25 @@ def _maybe_prompt_for_provider(settings: object) -> object:
 
 
 # ---------------------------------------------------------------------------
-# Pipeline summary output
+# Pipeline header and summary output
 # ---------------------------------------------------------------------------
+
+
+def _print_header(settings: object, *, show_provider: bool = True, show_hardware: bool = True) -> None:
+    """Print the Bristlenose version + provider + hardware header line."""
+    from bristlenose.providers import PROVIDERS
+    from bristlenose.utils.hardware import detect_hardware
+
+    parts: list[str] = [f"v{__version__}"]
+    if show_provider:
+        provider_name = PROVIDERS.get(
+            settings.llm_provider, PROVIDERS["anthropic"]  # type: ignore[union-attr]
+        ).display_name
+        parts.append(provider_name)
+    if show_hardware:
+        hw = detect_hardware()
+        parts.append(hw.label)
+    console.print(f"\nBristlenose [dim]{' · '.join(parts)}[/dim]\n")
 
 
 def _print_pipeline_summary(result: object) -> None:
@@ -494,12 +508,6 @@ def _print_pipeline_summary(result: object) -> None:
     """
     from bristlenose.llm.pricing import PRICING_URLS, estimate_cost
     from bristlenose.pipeline import _format_duration
-
-    elapsed = getattr(result, "elapsed_seconds", 0.0)
-    if elapsed:
-        console.print(f"\n  [green]Done[/green] in {_format_duration(elapsed)}\n")
-    else:
-        console.print("\n  [green]Done.[/green]\n")
 
     # Stats line — build dynamically from what's available
     parts: list[str] = []
@@ -516,7 +524,7 @@ def _print_pipeline_summary(result: object) -> None:
     if total_quotes:
         parts.append(f"{total_quotes} quotes")
     if parts:
-        console.print(f"  [dim]{' · '.join(parts)}[/dim]")
+        console.print(f"\n  [dim]{' · '.join(parts)}[/dim]")
 
     # LLM usage line
     llm_calls = getattr(result, "llm_calls", 0)
@@ -532,13 +540,20 @@ def _print_pipeline_summary(result: object) -> None:
         )
         url = PRICING_URLS.get(provider, "")
         if url:
-            console.print(f"  [dim]Verify pricing → [link={url}]{url}[/link][/dim]")
+            console.print(f"  [dim]Pricing → [link={url}]{url}[/link][/dim]")
 
     # Report path with OSC 8 file:// hyperlink (show filename only, link resolves)
     report_path = getattr(result, "report_path", None)
     if report_path and report_path.exists():
         file_url = f"file://{report_path.resolve()}"
         console.print(f"\n  Report:  [link={file_url}]{report_path.name}[/link]")
+
+    # Done line — always last
+    elapsed = getattr(result, "elapsed_seconds", 0.0)
+    if elapsed:
+        console.print(f"\n  [green]Done[/green] in {_format_duration(elapsed)}")
+    else:
+        console.print("\n  [green]Done.[/green]")
 
 
 # ---------------------------------------------------------------------------
@@ -615,18 +630,14 @@ def run(
     if output_dir is None:
         output_dir = input_dir / "bristlenose-output"
 
-    if output_dir.exists() and any(output_dir.iterdir()):
-        if clean:
-            import shutil
-
-            shutil.rmtree(output_dir)
-            console.print(f"[dim]Cleaned {output_dir}[/dim]")
-        else:
-            console.print(
-                f"[red]Output directory already exists: {output_dir}[/red]\n"
-                f"Use [bold]--clean[/bold] to delete it and re-run."
-            )
-            raise typer.Exit(1)
+    # Fail early if output exists and --clean not given
+    output_exists = output_dir.exists() and any(output_dir.iterdir())
+    if output_exists and not clean:
+        console.print(
+            f"[red]Output directory already exists: {output_dir}[/red]\n"
+            f"Use [bold]--clean[/bold] to delete it and re-run."
+        )
+        raise typer.Exit(1)
 
     if redact_pii and retain_pii:
         console.print("[red]Cannot use both --redact-pii and --retain-pii.[/red]")
@@ -649,8 +660,18 @@ def run(
     # Offer provider selection if no API key / local provider is not ready
     settings = _maybe_prompt_for_provider(settings)
 
-    _maybe_auto_doctor(settings, "run")
-    _run_preflight(settings, "run", skip_transcription=skip_transcription)
+    # Header is the first visible output
+    _print_header(settings)
+
+    if not _maybe_auto_doctor(settings, "run"):
+        _run_preflight(settings, "run", skip_transcription=skip_transcription)
+
+    # Clean after checks so user sees setup context first
+    if output_exists and clean:
+        import shutil
+
+        shutil.rmtree(output_dir)
+        console.print(f"\n[dim]Cleaned {output_dir}[/dim]")
 
     from bristlenose.pipeline import Pipeline
 
@@ -695,8 +716,10 @@ def transcribe(
         skip_transcription=False,
     )
 
-    _maybe_auto_doctor(settings, "transcribe-only")
-    _run_preflight(settings, "transcribe-only")
+    _print_header(settings, show_provider=False)
+
+    if not _maybe_auto_doctor(settings, "transcribe-only"):
+        _run_preflight(settings, "transcribe-only")
 
     from bristlenose.pipeline import Pipeline
 
@@ -759,8 +782,10 @@ def analyze(
     # Offer provider selection if no API key / local provider is not ready
     settings = _maybe_prompt_for_provider(settings)
 
-    _maybe_auto_doctor(settings, "analyze")
-    _run_preflight(settings, "analyze")
+    _print_header(settings)
+
+    if not _maybe_auto_doctor(settings, "analyze"):
+        _run_preflight(settings, "analyze")
 
     from bristlenose.pipeline import Pipeline
 

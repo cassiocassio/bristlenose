@@ -324,6 +324,7 @@ function getHelpModal() {
         '    <h3>Actions</h3>',
         '    <dl>',
         '      <dt><kbd>s</kbd></dt><dd>Star quote(s)</dd>',
+        '      <dt><kbd>h</kbd></dt><dd>Hide quote(s)</dd>',
         '      <dt><kbd>t</kbd></dt><dd>Add tag(s)</dd>',
         '      <dt><kbd>Enter</kbd></dt><dd>Play in video</dd>',
         '    </dl>',
@@ -573,6 +574,20 @@ function handleKeydown(e) {
     toggleSelection(focusedQuoteId);
     if (!anchorQuoteId) anchorQuoteId = focusedQuoteId;
     return;
+  }
+
+  // h — hide (bulk if selection, single if focused)
+  if (key === 'h') {
+    if (selectedQuoteIds.size > 0) {
+      e.preventDefault();
+      if (typeof bulkHideSelected === 'function') bulkHideSelected();
+      return;
+    } else if (focusedQuoteId) {
+      e.preventDefault();
+      if (typeof hideQuote === 'function') hideQuote(focusedQuoteId);
+      moveFocus(1);
+      return;
+    }
   }
 
   // s — star (bulk if selection, single if focused)

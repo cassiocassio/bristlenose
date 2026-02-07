@@ -1,6 +1,6 @@
 # Bristlenose — Where I Left Off
 
-Last updated: 5 Feb 2026 (multi-select branch, bulk tagging)
+Last updated: 7 Feb 2026 (hidden quotes feature)
 
 ---
 
@@ -140,7 +140,7 @@ Organised from easiest to hardest. The README has a condensed version; this is t
 ### Trivial (hours each)
 
 - [x] Search-as-you-type filtering — collapsible magnifying glass icon in toolbar, filters quotes by text/speaker/tags, overrides view mode, hides empty sections
-- [ ] Hide/show quotes — toggle individual quotes, persist state
+- [x] Hide/show quotes — `h` key or eye-slash button hides focused/selected quotes, per-subsection badge with dropdown of truncated previews, unhide by clicking preview text, FLIP animations, `.bn-hidden` CSS defence-in-depth, 7 visibility restore paths guarded, localStorage persistence, 22 tests. Module: `hidden.js`, CSS: `molecules/hidden-quotes.css`
 - [x] Keyboard shortcuts — j/k navigation, s to star, t to tag, / to search, ? for help. Focus system with white lift visual, help overlay. See `docs/design-keyboard-navigation.md`
 - [x] Multi-select — Finder-like selection: plain click = focus + select, Cmd+click = toggle, Shift+click = range, background click = clear all. Selection state (`selectedQuoteIds` Set), header shows "N quotes selected", Escape clears selection. Bulk actions: `s` stars/unstars all selected, `t` or `+` click opens tag input that applies to all selected quotes (auto-suggest filters by intersection of existing tags)
 - [x] Timecodes: two-tone typography — blue digits + muted grey brackets, `:visited` fix, `_tc_brackets()` helper; hanging-indent layout for quote cards and transcript segments

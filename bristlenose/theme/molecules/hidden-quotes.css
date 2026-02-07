@@ -1,0 +1,144 @@
+/* Molecule: hidden-quotes — badge, dropdown, and hide button for quote volume management */
+
+/* ── Hidden quote state ─────────────────────────────────────────────────── */
+
+blockquote.bn-hidden {
+    display: none !important;
+}
+
+/* ── Hide button on blockquote ──────────────────────────────────────────── */
+
+.hide-btn {
+    position: absolute;
+    top: 0.65rem;
+    right: 2rem;
+    background: none;
+    border: none;
+    font-size: 0.8rem;
+    color: var(--bn-colour-icon-idle);
+    cursor: pointer;
+    padding: var(--bn-space-xs);
+    line-height: 1;
+    transition: color var(--bn-transition-normal), opacity var(--bn-transition-normal);
+    opacity: 0;
+}
+
+blockquote:hover .hide-btn,
+blockquote.bn-focused .hide-btn {
+    opacity: 1;
+}
+
+.hide-btn:hover {
+    color: var(--bn-colour-accent);
+}
+
+.hide-btn svg {
+    display: block;
+}
+
+/* ── Badge container ────────────────────────────────────────────────────── */
+
+.bn-hidden-badge {
+    align-self: flex-end;
+    margin-bottom: var(--bn-space-xs);
+    position: relative;
+}
+
+/* ── Badge toggle button ────────────────────────────────────────────────── */
+
+.bn-hidden-toggle {
+    background: none;
+    border: none;
+    font-size: 0.82rem;
+    color: var(--bn-colour-accent);
+    cursor: pointer;
+    padding: var(--bn-space-xs) var(--bn-space-sm);
+    font-family: var(--bn-font-body);
+    transition: color var(--bn-transition-fast);
+}
+
+.bn-hidden-toggle:hover {
+    text-decoration: underline;
+}
+
+.bn-hidden-chevron {
+    font-size: 0.7em;
+    margin-left: 0.15em;
+}
+
+/* ── Dropdown ───────────────────────────────────────────────────────────── */
+
+.bn-hidden-dropdown {
+    position: absolute;
+    right: 0;
+    top: 100%;
+    z-index: 200;
+    background: var(--bn-colour-bg);
+    border: 1px solid var(--bn-colour-border);
+    border-radius: var(--bn-radius-md);
+    box-shadow: 0 4px 12px light-dark(rgba(0, 0, 0, 0.1), rgba(0, 0, 0, 0.3));
+    min-width: 20rem;
+    max-width: 36rem;
+    max-height: 20rem;
+    overflow-y: auto;
+    padding: var(--bn-space-md);
+}
+
+.bn-hidden-header {
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--bn-colour-muted);
+    margin-bottom: var(--bn-space-sm);
+}
+
+/* ── Dropdown items ─────────────────────────────────────────────────────── */
+
+.bn-hidden-item {
+    display: flex;
+    align-items: baseline;
+    gap: 0.5em;
+    padding: var(--bn-space-xs) 0;
+    border-bottom: 1px solid var(--bn-colour-border);
+    font-size: 0.85rem;
+}
+
+.bn-hidden-item:last-child {
+    border-bottom: none;
+}
+
+.bn-hidden-item .timecode {
+    flex-shrink: 0;
+    font-family: var(--bn-font-mono);
+    font-size: 0.8rem;
+    color: var(--bn-colour-accent);
+    text-decoration: none;
+}
+
+.bn-hidden-preview {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--bn-colour-text);
+    cursor: pointer;
+    transition: color var(--bn-transition-fast);
+}
+
+.bn-hidden-preview:hover {
+    text-decoration: underline;
+    color: var(--bn-colour-accent);
+}
+
+.bn-hidden-item .speaker-link {
+    flex-shrink: 0;
+    margin-left: 0.3em;
+    color: var(--bn-colour-muted);
+    text-decoration: none;
+    font-size: 0.8rem;
+    transition: color var(--bn-transition-fast);
+}
+
+.bn-hidden-item .speaker-link:hover {
+    color: var(--bn-colour-accent);
+}

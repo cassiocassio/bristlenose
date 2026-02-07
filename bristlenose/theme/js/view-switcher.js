@@ -115,16 +115,23 @@ function _showAll(sections, hrs) {
   for (var j = 0; j < hrs.length; j++) hrs[j].style.display = '';
 }
 
-/** Ensure all blockquotes are visible. */
+/** Ensure all blockquotes are visible (except hidden quotes). */
 function _showAllQuotes() {
   var bqs = document.querySelectorAll('.quote-group blockquote');
-  for (var i = 0; i < bqs.length; i++) bqs[i].style.display = '';
+  for (var i = 0; i < bqs.length; i++) {
+    if (bqs[i].classList.contains('bn-hidden')) continue;
+    bqs[i].style.display = '';
+  }
 }
 
-/** Show all blockquotes but hide those that are not starred. */
+/** Show all blockquotes but hide those that are not starred (and hidden quotes). */
 function _showStarredOnly() {
   var bqs = document.querySelectorAll('.quote-group blockquote');
   for (var i = 0; i < bqs.length; i++) {
+    if (bqs[i].classList.contains('bn-hidden')) {
+      bqs[i].style.display = 'none';
+      continue;
+    }
     bqs[i].style.display = bqs[i].classList.contains('starred') ? '' : 'none';
   }
 }

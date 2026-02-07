@@ -109,6 +109,7 @@ def _get_default_css() -> str:
 _JS_FILES: list[str] = [
     "js/storage.js",
     "js/modal.js",
+    "js/codebook.js",
     "js/player.js",
     "js/starred.js",
     "js/editing.js",
@@ -330,6 +331,13 @@ def render_html(
         "</button>"
         '<div class="tag-filter-menu" id="tag-filter-menu"></div>'
         "</div>"
+    )
+    # AI tag toggle
+    _w(
+        '<button class="toolbar-btn toolbar-btn-toggle" id="ai-tag-toggle"'
+        ' aria-label="Toggle AI tags" title="Show/hide AI sentiment tags">'
+        '<span class="ai-toggle-label">AI tags</span>'
+        "</button>"
     )
     # View switcher dropdown
     _w('<div class="view-switcher">')

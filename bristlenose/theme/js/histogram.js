@@ -25,7 +25,7 @@
  * @module histogram
  */
 
-/* global userTags, persistUserTags, createModal */
+/* global userTags, persistUserTags, createModal, getTagColourVar */
 
 /**
  * (Re-)render the user-tags histogram.
@@ -75,9 +75,17 @@ function renderUserTagsChart() {
     var group = document.createElement('div');
     group.className = 'sentiment-bar-group';
 
+    // Look up codebook colour for this tag.
+    var colourVar = (typeof getTagColourVar === 'function')
+      ? getTagColourVar(e.tag)
+      : 'var(--bn-colour-muted)';
+    var isCustom = colourVar === 'var(--bn-custom-bg)' || colourVar === 'var(--bn-colour-muted)';
+    var barColour = isCustom ? 'var(--bn-colour-muted)' : colourVar;
+
     var label = document.createElement('span');
-    label.className = 'sentiment-bar-label badge';
+    label.className = 'sentiment-bar-label badge badge-user';
     label.textContent = e.tag;
+    label.style.background = colourVar;
     if (e.tag.length > 18) label.title = e.tag;
 
     // Delete button (visible on hover).
@@ -94,7 +102,7 @@ function renderUserTagsChart() {
     bar.className = 'sentiment-bar';
     var w = Math.max(4, Math.round((e.count / maxCount) * maxBarPx));
     bar.style.width = w + 'px';
-    bar.style.background = 'var(--bn-colour-muted)';
+    bar.style.background = barColour;
 
     var cnt = document.createElement('span');
     cnt.className = 'sentiment-bar-count';

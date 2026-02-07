@@ -90,3 +90,18 @@
     color: var(--bn-colour-muted);
     vertical-align: -0.15em;
 }
+
+/* Toggle variant — pressed/active state for AI tag toggle etc. */
+.toolbar-btn-toggle {
+    user-select: none;
+}
+
+.toolbar-btn-toggle.active {
+    background: var(--bn-colour-quote-bg);
+    border-color: var(--bn-colour-accent);
+    color: var(--bn-colour-accent);
+}
+
+.toolbar-btn-toggle:not(.active) {
+    color: var(--bn-colour-muted);
+}

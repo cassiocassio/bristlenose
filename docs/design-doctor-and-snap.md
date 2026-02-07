@@ -32,9 +32,9 @@ instructions tailored to their install method.
    On first-ever invocation of any pipeline command, doctor runs automatically.
    If it finds blocking issues, the pipeline doesn't start.
 
-3. **Subsequent runs show only the specific failure, not the full doctor
-   output.** Terse: one problem, one fix, escape hatches. Suggest
-   `bristlenose doctor` at the bottom for full diagnostics.
+3. **Every run shows the full setup table.** The doctor table prints on every
+   pipeline invocation so the user always sees their setup context. On failure,
+   fix instructions appear below the table.
 
 4. **Never give false reassurance.** If the pipeline fails 30 minutes in, the
    user is gone. The pre-flight exists so this doesn't happen. For the rare
@@ -153,8 +153,9 @@ bristlenose/cli.py              # Wiring
 ```
 $ bristlenose run ./interviews/ -o ./output/
 
-First run — checking your setup.
+Bristlenose v0.8.1 · Claude · Apple M2 Max · MLX
 
+Checking your setup
   FFmpeg          ok
   Transcription   ok   faster-whisper 1.2.1
   Whisper model   --   large-v3-turbo not cached (will download ~1.5 GB on first run)
@@ -177,34 +178,37 @@ To only transcribe:     bristlenose transcribe-only ./interviews/
 ```
 $ bristlenose run ./interviews/ -o ./output/
 
-First run — checking your setup.
+Bristlenose v0.8.1 · Claude · Apple M2 Max · MLX
 
+Checking your setup
   FFmpeg          ok
   Transcription   ok
   Whisper model   --   large-v3-turbo will download (~1.5 GB) on first run
   API key         ok   Anthropic (sk-ant-...xyz)
   Network         ok
 
-All clear.
+3 sessions in interviews/
 
-Downloading Whisper model large-v3-turbo...
-████████████████████████████████████ 1.5 GB   2m 13s
-
-Processing 3 recordings...
+ ✓ Ingested 3 sessions (3 video)                             0.3s
+...
 ```
 
-#### Subsequent run, API key gone (pre-flight, terse)
+#### Subsequent run, API key gone
 
 ```
 $ bristlenose run ./interviews/ -o ./output/
 
-No API key configured.
+Bristlenose v0.8.1 · Claude · Apple M2 Max · MLX
 
-  export BRISTLENOSE_ANTHROPIC_API_KEY=sk-ant-...
-  Or add to .env file in your project directory.
+Checking your setup
+  FFmpeg          ok
+  Transcription   ok   faster-whisper 1.2.1
+  Whisper model   ok   large-v3-turbo cached (1.5 GB)
+  API key         !!   No Anthropic API key
+  Network         ok
 
-To only transcribe (no API key needed):
-  bristlenose transcribe-only ./interviews/
+bristlenose needs an API key to analyse transcripts.
+...
 ```
 
 #### Subsequent run, API key invalid
@@ -212,7 +216,12 @@ To only transcribe (no API key needed):
 ```
 $ bristlenose run ./interviews/ -o ./output/
 
-API key rejected (401 Unauthorized).
+Bristlenose v0.8.1 · Claude · Apple M2 Max · MLX
+
+Checking your setup
+  FFmpeg          ok
+  ...
+  API key         !!   API key rejected (401 Unauthorized)
 
 Your Anthropic key starting with sk-ant-...89f was not accepted.
 Check it at console.anthropic.com/settings/keys.
@@ -223,7 +232,10 @@ Check it at console.anthropic.com/settings/keys.
 ```
 $ bristlenose run ./interviews/ -o ./output/
 
-FFmpeg not found.
+Bristlenose v0.8.1 · Claude · Apple M2 Max · MLX
+
+Checking your setup
+  FFmpeg          !!   not found
 
 bristlenose needs FFmpeg to extract audio from video files.
 

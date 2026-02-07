@@ -1,0 +1,61 @@
+[
+  {
+    "screen_label": "Dashboard",
+    "description": "Users found the dashboard layout confusing, particularly the hidden navigation.",
+    "display_order": 1,
+    "quotes": [
+      {
+        "session_id": "s1",
+        "participant_id": "p1",
+        "start_timecode": 10.0,
+        "end_timecode": 18.0,
+        "text": "I found the dashboard pretty confusing at first. I couldn't figure out where my settings were.",
+        "topic_label": "Dashboard",
+        "quote_type": "screen_specific",
+        "researcher_context": "When asked about dashboard experience",
+        "sentiment": "confusion",
+        "intensity": 2,
+        "intent": "narration",
+        "emotion": "neutral",
+        "journey_stage": "other"
+      },
+      {
+        "session_id": "s1",
+        "participant_id": "p1",
+        "start_timecode": 26.0,
+        "end_timecode": 38.0,
+        "text": "The navigation was hidden behind a hamburger menu. I kept looking for a sidebar but there wasn't one.",
+        "topic_label": "Dashboard",
+        "quote_type": "screen_specific",
+        "researcher_context": "Describing navigation confusion",
+        "sentiment": "frustration",
+        "intensity": 2,
+        "intent": "narration",
+        "emotion": "neutral",
+        "journey_stage": "other"
+      }
+    ]
+  },
+  {
+    "screen_label": "Search",
+    "description": "The search feature was well-received, with users praising its speed and relevance.",
+    "display_order": 2,
+    "quotes": [
+      {
+        "session_id": "s1",
+        "participant_id": "p1",
+        "start_timecode": 46.0,
+        "end_timecode": 55.0,
+        "text": "The search was great actually. It was fast and the results were really relevant. That was probably the best part of the whole thing.",
+        "topic_label": "Search",
+        "quote_type": "screen_specific",
+        "researcher_context": "When asked about search",
+        "sentiment": "delight",
+        "intensity": 2,
+        "intent": "narration",
+        "emotion": "neutral",
+        "journey_stage": "other"
+      }
+    ]
+  }
+]

@@ -1,0 +1,23 @@
+[
+  {
+    "theme_label": "Onboarding gaps",
+    "description": "Participants felt lost during initial setup and wanted guided tutorials.",
+    "quotes": [
+      {
+        "session_id": "s1",
+        "participant_id": "p1",
+        "start_timecode": 66.0,
+        "end_timecode": 78.0,
+        "text": "I think the onboarding could be better. When I first signed up I had no idea what to do. A quick tutorial or walkthrough would have helped a lot.",
+        "topic_label": "Onboarding",
+        "quote_type": "general_context",
+        "researcher_context": "Unprompted feedback at end of session",
+        "sentiment": "frustration",
+        "intensity": 1,
+        "intent": "narration",
+        "emotion": "neutral",
+        "journey_stage": "other"
+      }
+    ]
+  }
+]

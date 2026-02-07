@@ -2,7 +2,7 @@
 
 This document tracks active feature branches to help multiple Claude sessions coordinate without conflicts.
 
-**Updated:** 5 Feb 2026
+**Updated:** 7 Feb 2026
 
 ---
 
@@ -65,6 +65,39 @@ When merging back to main:
 - `main.js` — both branches add new init calls
 
 **Resolution strategy:** Keyboard navigation merges first (more complete). Export-sharing rebases on main after keyboard merge.
+
+---
+
+### `codebook`
+
+**Status:** Phase 2 UX prototyping (standalone mockup complete, iterating)
+**Started:** 7 Feb 2026
+**Worktree:** `/Users/cassio/Code/bristlenose_branch codebook/`
+**Plan:** `~/.claude/plans/immutable-chasing-patterson.md`
+**Phase 1 commit:** `1c66628` (colour tokens, AI tag toggle, badge styling — on main)
+
+**What this branch does:**
+Codebook panel for organising user tags into colour-coded groups. Researchers drag tags between groups, merge duplicates, and assign semantic colours. Six phases: Visual Foundation (done) → Data Model + Panel → Tag Operations → Filter & Histogram Integration → File Persistence → Import/Export + Polish.
+
+**Files this branch will touch:**
+- `bristlenose/theme/js/codebook.js` — existing Phase 1 data model, expanding with panel UI
+- `bristlenose/theme/js/tags.js` — tag CRUD hooks for codebook integration
+- `bristlenose/theme/js/histogram.js` — codebook colour awareness
+- `bristlenose/theme/js/main.js` — boot sequence (new `initCodebook()` call)
+- `bristlenose/theme/molecules/` — new `codebook-panel.css`
+- `bristlenose/theme/organisms/` — possible new `codebook-layout.css`
+- `bristlenose/stages/render_html.py` — codebook panel HTML, JS file list
+- `mockup-codebook-panel.html` — standalone UX prototype (temporary)
+
+**Safe for other branches to edit:**
+- `bristlenose/llm/` — no overlap
+- `bristlenose/stages/` (except `render_html.py`) — no overlap
+- `bristlenose/theme/js/` modules other than `codebook.js`, `tags.js`, `histogram.js` — minimal overlap
+
+**Potential conflicts:**
+- `render_html.py` — shared with export-sharing and keyboard-navigation
+- `main.js` — shared with all UI feature branches
+- `tags.js` — shared if tag-related fixes land on main
 
 ---
 

@@ -76,6 +76,19 @@ Each user tag label has a hover `×` button (`.histogram-bar-delete` in `atoms/b
 
 Thin localStorage abstraction. `createStore(key)` returns `{ get, set }` pair. Also provides `escapeHtml(s)` — shared HTML escaping utility (escapes `&`, `<`, `>`, `"`) used by `codebook.js`, `histogram.js`, and any module inserting user-provided text into `innerHTML`. Defined before `createStore()` so it's available to all modules in the concatenation order.
 
+### player.js
+
+Popout video/audio player integration and playback-synced glow highlighting.
+
+- **`seekTo(pid, seconds)`** — opens player window (or posts seek message to existing one)
+- **`initPlayer()`** — click delegation on `a.timecode[data-participant][data-seconds]`; listens for `postMessage` from the player window (`bristlenose-timeupdate`, `bristlenose-playstate`); polls `playerWin.closed` every 1s to clean up glow
+- **Glow index**: `_buildGlowIndex()` runs lazily on first `timeupdate`. Indexes `.transcript-segment[data-start-seconds]` (transcript pages) and `blockquote[data-participant]` (report pages) into a `{pid → [{el, start, end}]}` lookup. Zero-length segments (where `end == start`, common in `.txt`-parsed transcripts) are patched to use the next segment's start time
+- **Glow classes**: `.bn-timecode-glow` (steady, player paused) and `.bn-timecode-playing` (pulsating, player playing). Set-based diffing ensures only changed elements touch the DOM each tick (~4 calls/sec)
+- **Auto-scroll**: transcript page segments auto-scroll to center on first entry into glow state. Report blockquotes do not auto-scroll
+- **Cleanup**: `_clearAllGlow()` removes all glow classes when the player window is closed
+- **CSS**: glow tokens in `tokens.css` (`--bn-glow-colour`, `--bn-glow-colour-strong`); keyframes and classes in `atoms/timecode.css`; suppressed in `templates/print.css`
+- **Accessibility**: `.bn-no-animations` zeroes animation durations; `@media (prefers-reduced-motion: reduce)` disables pulse; steady glow (box-shadow) remains in all cases
+
 ### names.js
 
 Inline name editing for the participant table. Follows the same `contenteditable` lifecycle as `editing.js` (start → accept/cancel → persist).
@@ -284,6 +297,7 @@ Codebook page grid layout and interactive components. Uses CSS columns masonry (
 - **Toolbar button dual-class pattern** — tag filter and view switcher buttons use dual classes (`toolbar-btn tag-filter-btn`, `toolbar-btn view-switcher-btn`). The shared `.toolbar-btn` provides round-rect styling; the component-specific class allows dropdown-specific overrides. Don't remove either class
 - **`--bn-colour-border-hover` token** — 3-state border progression for toolbar buttons: rest (`--bn-colour-border` gray-200) → hover (`--bn-colour-border-hover` gray-300) → active (`--bn-colour-accent` blue-600). Adding a new interactive bordered element should follow this pattern
 - **`BRISTLENOSE_PLAYER_URL` for transcript pages** — `player.js` needs to open `assets/bristlenose-player.html`, but transcript pages live in `sessions/` so the relative path is `../assets/bristlenose-player.html`. The renderer injects `BRISTLENOSE_PLAYER_URL` on transcript pages; `player.js` falls back to `'assets/bristlenose-player.html'` when the variable is absent (report pages). If you add a new page type that loads `player.js` from a subdirectory, inject this variable
+- **Player→opener uses `postMessage`, not `window.opener` function calls** — Safari (and other browsers) block `window.opener` property access for `file://` URIs opened via `window.open()`. The player sends `bristlenose-timeupdate` and `bristlenose-playstate` messages via `postMessage`; `player.js` receives them with `window.addEventListener('message', ...)`. Never switch back to direct `window.opener.fn()` calls — they silently fail on `file://`
 
 ## Future refactoring opportunities
 

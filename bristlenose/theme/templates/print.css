@@ -25,4 +25,5 @@
     .feedback-links { display: none; }
     .feedback-overlay { display: none; }
     .footer-logo-picture { display: none; }
+    .bn-timecode-glow { box-shadow: none; border-left-color: inherit; animation: none; }
 }

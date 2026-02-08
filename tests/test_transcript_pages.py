@@ -166,6 +166,19 @@ def test_transcript_page_timecodes_with_media(tmp_path: Path) -> None:
     assert 'data-seconds="16.0"' in html
 
 
+def test_transcript_page_segment_time_range_attributes(tmp_path: Path) -> None:
+    """Segment divs should have data-participant, data-start-seconds, data-end-seconds."""
+    _write_raw_transcripts(tmp_path)
+    render_transcript_pages(
+        sessions=[], project_name="Test Project", output_dir=tmp_path,
+    )
+    html = (tmp_path / "sessions" / "transcript_s1.html").read_text(encoding="utf-8")
+    # Segment div should carry time-range and participant attributes for glow sync
+    assert 'data-start-seconds="16.0"' in html
+    assert 'data-end-seconds="16.0"' in html  # end_time == start_time from .txt parser
+    assert 'data-participant="p1"' in html
+
+
 def test_transcript_page_speaker_name(tmp_path: Path) -> None:
     _write_raw_transcripts(tmp_path)
     people = _make_people()

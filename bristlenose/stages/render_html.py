@@ -672,7 +672,7 @@ def render_html(
 
     # Feedback feature flag — set to true to enable the feedback widget.
     _w("var BRISTLENOSE_FEEDBACK = true;")
-    _w("var BRISTLENOSE_FEEDBACK_URL = 'https://www.cassiocassio.co.uk/feedback.php';")
+    _w("var BRISTLENOSE_FEEDBACK_URL = 'https://cassiocassio.co.uk/feedback.php';")
 
     _w(_get_report_js())
     _w("})();")

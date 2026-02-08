@@ -671,8 +671,8 @@ def render_html(
     _w(f"var BN_PARTICIPANTS = {json.dumps(participant_data)};")
 
     # Feedback feature flag — set to true to enable the feedback widget.
-    _w("var BRISTLENOSE_FEEDBACK = false;")
-    _w("var BRISTLENOSE_FEEDBACK_URL = '';")
+    _w("var BRISTLENOSE_FEEDBACK = true;")
+    _w("var BRISTLENOSE_FEEDBACK_URL = 'https://www.cassiocassio.co.uk/feedback.php';")
 
     _w(_get_report_js())
     _w("})();")

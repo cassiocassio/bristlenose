@@ -65,8 +65,6 @@ If you prefer not to use Homebrew:
 
 ## Windows
 
-These instructions assume you've never used the command line before. That's fine — just follow each step.
-
 ### Step 1: Install Python
 
 1. Go to [python.org/downloads](https://www.python.org/downloads/) and click the big yellow "Download Python" button
@@ -155,13 +153,43 @@ pipx install bristlenose
 
 ### Snap (coming soon)
 
-Once available in the Snap Store, this will be the easiest option — it bundles everything:
+Once available in the Snap Store, this will bundle Python, FFmpeg, and all dependencies into a single package:
 
 ```bash
 sudo snap install bristlenose --classic
 ```
 
 This is pending Snap Store registration. In the meantime, use the pipx instructions above.
+
+### Fedora
+
+```bash
+sudo dnf install pipx ffmpeg-free
+pipx ensurepath
+```
+
+Close and reopen your terminal, then:
+
+```bash
+pipx install bristlenose
+```
+
+### Arch / Manjaro
+
+```bash
+sudo pacman -S python-pipx ffmpeg
+pipx ensurepath
+```
+
+Close and reopen your terminal, then:
+
+```bash
+pipx install bristlenose
+```
+
+### Linux Mint
+
+Linux Mint is Debian-based — follow the [Ubuntu / Debian](#ubuntu--debian) instructions above.
 
 ### Other distributions
 
@@ -177,75 +205,35 @@ pipx install bristlenose
 
 ## Set up your AI provider
 
-Bristlenose uses AI to analyse your transcripts. You need one of these three options. (Transcription — converting audio to text — works without any provider.)
+Bristlenose uses AI to analyse your transcripts. Use whichever provider you already have an API key for — see [Getting an API key](README.md#getting-an-api-key) in the README for full details including Azure OpenAI.
 
-### Option 1: Local AI (Ollama) — free, private, no signup
+### Cloud providers (Claude or ChatGPT)
 
-Run everything on your own machine using open-source models. No account needed, no data leaves your laptop.
-
-The easiest way: just run `bristlenose run ./your-interviews/` and bristlenose will offer to set up Ollama for you automatically — it handles installation, startup, and model download.
-
-Or install Ollama yourself from [ollama.ai](https://ollama.ai) and run:
-
-```bash
-bristlenose run ./your-interviews/ --llm local
-```
-
-**Trade-offs:** Local models are slower and less accurate than cloud APIs. Good for trying the tool; use Claude or ChatGPT for production studies.
-
-### Option 2: Claude — best quality (~$1.50 per study)
-
-1. Go to [console.anthropic.com](https://console.anthropic.com) and create an account
-2. Add a payment method (billing is pay-as-you-go)
-3. Go to [API Keys](https://console.anthropic.com/settings/keys) and create a new key
-4. Store it securely:
+1. Create an account and API key at [console.anthropic.com](https://console.anthropic.com/settings/keys) (Claude) or [platform.openai.com](https://platform.openai.com/api-keys) (ChatGPT)
+2. Store the key securely:
 
    ```bash
-   bristlenose configure claude
+   bristlenose configure claude      # or: bristlenose configure chatgpt
    ```
 
-   This validates your key and stores it in your system's keychain (macOS Keychain or Linux Secret Service). You only need to do this once.
+   This validates your key and saves it to your system's secure credential store:
+   - **macOS** — saved to your **login keychain** (viewable in the Keychain Access app, search for "Bristlenose")
+   - **Linux** — saved via **Secret Service** (GNOME Keyring / KDE Wallet)
+   - **Windows** — keychain not yet supported; use `setx` to save the key permanently instead:
 
-   On Windows (or if you prefer environment variables):
+     ```
+     setx BRISTLENOSE_ANTHROPIC_API_KEY "sk-ant-..."
+     ```
 
-   ```bash
-   export BRISTLENOSE_ANTHROPIC_API_KEY=sk-ant-...
-   ```
+     Close and reopen your terminal after running `setx`.
 
-### Option 3: ChatGPT (~$1.00 per study)
+> **Important:** A ChatGPT Plus/Pro or Claude Pro/Max subscription does **not** include API access. The API is billed separately — you need to add a payment method in the API console.
 
-1. Go to [platform.openai.com](https://platform.openai.com) and create an account
-2. Add a payment method (billing is pay-as-you-go)
-3. Go to [API Keys](https://platform.openai.com/api-keys) and create a new key
-4. Store it securely:
+### Local AI (Ollama) — free, no signup
 
-   ```bash
-   bristlenose configure chatgpt
-   ```
+Just run `bristlenose run ./your-interviews/` — bristlenose will offer to set up Ollama automatically (installation, startup, and model download).
 
-   On Windows (or if you prefer environment variables):
-
-   ```bash
-   export BRISTLENOSE_OPENAI_API_KEY=sk-...
-   ```
-
-To use ChatGPT instead of the default (Claude), add `--llm chatgpt`:
-
-```bash
-bristlenose run ./your-interviews/ --llm chatgpt
-```
-
-> **Important:** A ChatGPT Plus or Pro subscription does **not** include API access. The API is billed separately. Likewise for Claude Pro/Max subscriptions.
-
-### Which should I pick?
-
-| | Cost | Quality | Speed | Setup |
-|---|---|---|---|---|
-| **Local (Ollama)** | Free | Good | ~10 min/study | No signup |
-| **Claude** | ~$1.50/study | Excellent | ~2 min/study | Account + payment |
-| **ChatGPT** | ~$1.00/study | Excellent | ~2 min/study | Account + payment |
-
-**Just trying it?** Start with Local. **Running a real study?** Use Claude or ChatGPT.
+Or install [Ollama](https://ollama.ai) yourself and run with `--llm local`.
 
 ---
 

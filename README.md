@@ -51,7 +51,7 @@ The report includes:
 
 ## Install
 
-For LLM analysis, you can use **Local AI** (free, via [Ollama](https://ollama.ai)), **Claude**, **ChatGPT**, or **Azure OpenAI** — see [Getting an API key](#getting-an-api-key) below.
+For LLM analysis, you can use **Claude**, **ChatGPT**, **Azure OpenAI**, or **Local AI** (free, via [Ollama](https://ollama.ai)) — see [Getting an API key](#getting-an-api-key) below.
 
 ```bash
 # macOS (Homebrew) -- recommended, handles ffmpeg + Python for you
@@ -86,20 +86,20 @@ You only need one key -- **Claude or ChatGPT, not both**.
 
 1. Go to [console.anthropic.com](https://console.anthropic.com/settings/keys) and sign up or log in
 2. Click **Create Key**, give it a name (e.g. "bristlenose"), and copy the key
-3. Set it in your terminal:
+3. Store it securely:
 
 ```bash
-export BRISTLENOSE_ANTHROPIC_API_KEY=sk-ant-...
+bristlenose configure claude    # validates the key and stores it in your system keychain
 ```
 
 ### Option B: ChatGPT (by OpenAI)
 
 1. Go to [platform.openai.com](https://platform.openai.com/api-keys) and sign up or log in
 2. Click **Create new secret key**, give it a name, and copy the key
-3. Set it in your terminal:
+3. Store it securely:
 
 ```bash
-export BRISTLENOSE_OPENAI_API_KEY=sk-...
+bristlenose configure chatgpt    # validates the key and stores it in your system keychain
 ```
 
 To use ChatGPT instead of the default, add `--llm openai` to your commands:
@@ -108,7 +108,20 @@ To use ChatGPT instead of the default, add `--llm openai` to your commands:
 bristlenose run ./interviews/ -o ./results/ --llm openai
 ```
 
-### Option C: Local AI (via Ollama) — free, no signup
+### Option C: Azure OpenAI (enterprise)
+
+If your organisation has a Microsoft Azure contract that includes Azure OpenAI Service:
+
+```bash
+export BRISTLENOSE_AZURE_ENDPOINT=https://your-resource.openai.azure.com/
+export BRISTLENOSE_AZURE_DEPLOYMENT=your-deployment-name
+bristlenose configure azure    # validates the key and stores it in your system keychain
+bristlenose run ./interviews/ --llm azure
+```
+
+You'll need your endpoint URL, API key, and deployment name from the [Azure portal](https://portal.azure.com).
+
+### Option D: Local AI (via Ollama) — free, no signup
 
 Run analysis entirely on your machine using open-source models. No account, no API key, no cost.
 
@@ -126,48 +139,42 @@ If Ollama isn't installed, bristlenose will offer to install it for you (via Hom
 
 **Trade-offs:** Local models are slower (~10 min vs ~2 min per study) and less accurate (~85% vs ~99% JSON reliability). Good for trying the tool; use cloud APIs for production quality.
 
-### Option D: Azure OpenAI (enterprise)
+Use whichever provider you already have an API key for. If you don't have one yet, Option A (Claude) is the default. A typical 8-participant study costs roughly $1--3 with any cloud provider.
 
-If your organisation has a Microsoft Azure contract that includes Azure OpenAI Service:
-
-```bash
-export BRISTLENOSE_AZURE_ENDPOINT=https://your-resource.openai.azure.com/
-export BRISTLENOSE_AZURE_DEPLOYMENT=your-deployment-name
-bristlenose configure azure    # stores the API key in your system keychain
-bristlenose run ./interviews/ --llm azure
-```
-
-You'll need your endpoint URL, API key, and deployment name from the [Azure portal](https://portal.azure.com).
-
-### Which should I pick?
-
-
-If you're just trying Bristlenose, start with **Local**. Text stays on your machine.
-
- If you're running a study of any size, use **Claude** or **ChatGPT**. If your organisation has Azure, use **Azure OpenAI**.
- 
- Be aware: transcripts are sent to Anthropic/OpenAI for processing.
-
-- **Claude** -- the default in bristlenose. Tends to produce nuanced qualitative analysis. Pay-as-you-go billing from the first API call (no free API tier; a typical 8-participant study costs roughly $1--3)
-- **ChatGPT** -- widely used. New API accounts get a small amount of free credit (check your [usage page](https://platform.openai.com/usage) to see if you have any remaining). After that, pay-as-you-go. Similar cost per study
-
-> **Important:** A ChatGPT Plus or Pro subscription does **not** include API access. The API is billed separately at [platform.openai.com/usage](https://platform.openai.com/usage). Likewise, a Claude Pro or Max subscription does not include API credits. API billing is separate at [console.anthropic.com](https://console.anthropic.com).
+> **Note:** A ChatGPT Plus/Pro or Claude Pro/Max subscription does **not** include API access. The API is billed separately — you need an API key from [console.anthropic.com](https://console.anthropic.com) or [platform.openai.com](https://platform.openai.com).
 
 ### Making your key permanent
 
-The `export` command only lasts until you close the terminal. To make it stick, add the line to your shell profile:
+**macOS and Linux:** The recommended way is `bristlenose configure` (shown in Options A--C above). It validates your key and stores it in your operating system's secure credential store:
 
-```bash
-# macOS / Linux -- add to the end of your shell config:
-echo 'export BRISTLENOSE_ANTHROPIC_API_KEY=sk-ant-...' >> ~/.zshrc
+- **macOS** — saved to your **login keychain**. You can view or delete it in the Keychain Access app (search for "Bristlenose")
+- **Linux** — saved via **Secret Service** (GNOME Keyring / KDE Wallet). Requires `secret-tool` to be installed (included by default on most desktop Linux distributions)
 
-# Or for ChatGPT:
-echo 'export BRISTLENOSE_OPENAI_API_KEY=sk-...' >> ~/.zshrc
+The key is loaded automatically on every run — no environment variables needed. Run `bristlenose doctor` to verify your key is detected (it will show "(Keychain)" next to the API key check).
+
+**Windows:** Keychain storage is not yet supported. Set the key permanently with `setx` (built into Windows):
+
+```
+setx BRISTLENOSE_ANTHROPIC_API_KEY "sk-ant-..."
 ```
 
-Then open a new terminal window (or run `source ~/.zshrc`).
+For ChatGPT, use `BRISTLENOSE_OPENAI_API_KEY` instead. Close and reopen your terminal after running `setx` — the variable only takes effect in new windows.
 
-Alternatively, create a `.env` file in your project folder -- see `.env.example` for a template.
+**Alternative: shell profile (macOS/Linux).** If you prefer environment variables over the keychain, add the export to your shell startup file:
+
+```bash
+# macOS (zsh is the default shell):
+echo 'export BRISTLENOSE_ANTHROPIC_API_KEY=sk-ant-...' >> ~/.zshrc
+
+# Linux (bash is the default shell on most distributions):
+echo 'export BRISTLENOSE_ANTHROPIC_API_KEY=sk-ant-...' >> ~/.bashrc
+```
+
+Then open a new terminal window (or run `source ~/.zshrc` / `source ~/.bashrc`).
+
+**Alternative: `.env` file.** Create a `.env` file in your project folder -- see `.env.example` for a template.
+
+**Troubleshooting:** Run `bristlenose doctor` at any time to check your setup — it verifies your API key, FFmpeg, transcription backend, and other dependencies.
 
 ---
 
@@ -324,9 +331,9 @@ sudo snap install --dangerous --classic ./bristlenose_*.snap
 bristlenose --version
 bristlenose doctor
 
-# 4. Run it for real (set whichever API key you have)
-export BRISTLENOSE_ANTHROPIC_API_KEY=sk-ant-...   # for Claude
-# or: export BRISTLENOSE_OPENAI_API_KEY=sk-...    # for ChatGPT (add --llm openai)
+# 4. Run it for real (store whichever API key you have)
+bristlenose configure claude      # validates and saves to system keychain
+# or: bristlenose configure chatgpt
 bristlenose run ./interviews/ -o ./results/
 ```
 

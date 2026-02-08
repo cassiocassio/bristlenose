@@ -967,7 +967,12 @@ def _render_transcript_page(
         code = seg.speaker_code or pid
         is_moderator = code.startswith("m")
         role_cls = " segment-moderator" if is_moderator else ""
-        _w(f'<div class="transcript-segment{role_cls}" id="{anchor}">')
+        _w(
+            f'<div class="transcript-segment{role_cls}" id="{anchor}"'
+            f' data-participant="{_esc(pid)}"'
+            f' data-start-seconds="{seg.start_time}"'
+            f' data-end-seconds="{seg.end_time}">'
+        )
         if has_media:
             _w(
                 f'<a href="#" class="timecode" '
@@ -1685,14 +1690,29 @@ video { flex: 1; width: 100%; min-height: 0; background: #000; }
   // Handle initial load from URL hash
   handleHash();
 
+  // Post messages back to the opener window for playback-synced glow.
+  // Uses postMessage (not window.opener function calls) because browsers
+  // block window.opener access for file:// URIs.
+  function _notify(type, extra) {
+    if (!window.opener) return;
+    var msg = { type: type, pid: currentPid };
+    if (extra) { for (var k in extra) { msg[k] = extra[k]; } }
+    try { window.opener.postMessage(msg, '*'); } catch(e) {}
+  }
+
   video.addEventListener('timeupdate', function() {
     if (currentPid) {
       status.textContent = currentPid + ' @ ' + fmtTC(video.currentTime);
-      if (window.opener && window.opener.bristlenose_onTimeUpdate) {
-        try { window.opener.bristlenose_onTimeUpdate(currentPid, video.currentTime); }
-        catch(e) {}
-      }
+      _notify('bristlenose-timeupdate', { seconds: video.currentTime, playing: !video.paused });
     }
+  });
+
+  video.addEventListener('play', function() {
+    _notify('bristlenose-playstate', { playing: true });
+  });
+
+  video.addEventListener('pause', function() {
+    _notify('bristlenose-playstate', { playing: false });
   });
 
   video.addEventListener('error', function() {

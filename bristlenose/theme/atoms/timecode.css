@@ -22,3 +22,29 @@ a.timecode:hover {
 .timecode-bracket {
     color: var(--bn-colour-muted);
 }
+
+/* --- Glow states: synced playback highlight (driven by player.js) --- */
+
+.bn-timecode-glow {
+    box-shadow: 0 0 8px 2px var(--bn-glow-colour);
+    border-left-color: var(--bn-colour-accent);
+    background-color: var(--bn-glow-colour);
+    border-radius: var(--bn-radius-sm);
+    transition: box-shadow var(--bn-transition-normal),
+                background-color var(--bn-transition-normal);
+}
+
+@keyframes bn-glow-pulse {
+    0%, 100% { box-shadow: 0 0 8px 2px var(--bn-glow-colour); }
+    50%      { box-shadow: 0 0 12px 4px var(--bn-glow-colour-strong); }
+}
+
+.bn-timecode-glow.bn-timecode-playing {
+    animation: bn-glow-pulse 2s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .bn-timecode-glow.bn-timecode-playing {
+        animation: none;
+    }
+}

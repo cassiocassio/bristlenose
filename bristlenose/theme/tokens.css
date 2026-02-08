@@ -24,6 +24,10 @@
     --bn-colour-active-bg: #f0fdf4;
     --bn-colour-highlight: #fef08a;
 
+    /* Playback-sync glow (player.js applies .bn-timecode-glow / .bn-timecode-playing) */
+    --bn-glow-colour: rgba(37, 99, 235, 0.12);
+    --bn-glow-colour-strong: rgba(37, 99, 235, 0.22);
+
     /* Sentiment colours (v0.7+ taxonomy)
        See docs/academic-sources.html for theoretical foundations.
        Override --bn-sentiment-* to customise the palette. */
@@ -220,6 +224,10 @@
         --bn-colour-editing-border:   light-dark(#e5e0c0, #4a4528);
         --bn-colour-active-bg:        light-dark(#f0fdf4, #0f2918);
         --bn-colour-highlight:        light-dark(#fef08a, #854d0e);
+
+        /* Playback-sync glow */
+        --bn-glow-colour:             light-dark(rgba(37, 99, 235, 0.12), rgba(96, 165, 250, 0.25));
+        --bn-glow-colour-strong:      light-dark(rgba(37, 99, 235, 0.22), rgba(96, 165, 250, 0.4));
 
         /* Sentiment colours (v0.7+ taxonomy) — foreground hues lighter on dark */
         --bn-sentiment-frustration:      light-dark(#ea580c, #fb923c);

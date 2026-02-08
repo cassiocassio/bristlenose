@@ -852,6 +852,11 @@ def render(
             )
             raise typer.Exit(1)
 
+    # Check that the directory actually exists first
+    if not output_dir.exists():
+        console.print(f"[red]Directory {output_dir} not found.[/red]")
+        raise typer.Exit(1)
+
     # Validate that intermediate exists (try new layout first, then legacy)
     # Also handle case where user passes input dir instead of output dir
     intermediate_dir = output_dir / ".bristlenose" / "intermediate"

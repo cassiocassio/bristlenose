@@ -18,7 +18,7 @@
  * @module player
  */
 
-/* global BRISTLENOSE_VIDEO_MAP */
+/* global BRISTLENOSE_VIDEO_MAP, BRISTLENOSE_PLAYER_URL */
 
 var playerWin = null;
 
@@ -41,9 +41,13 @@ function seekTo(pid, seconds) {
     '&t=' + seconds +
     '&pid=' + encodeURIComponent(pid);
 
+  var playerUrl = (typeof BRISTLENOSE_PLAYER_URL !== 'undefined')
+    ? BRISTLENOSE_PLAYER_URL
+    : 'assets/bristlenose-player.html';
+
   if (!playerWin || playerWin.closed) {
     playerWin = window.open(
-      'assets/bristlenose-player.html' + hash,
+      playerUrl + hash,
       'bristlenose-player',
       'width=720,height=480,resizable=yes,scrollbars=no'
     );

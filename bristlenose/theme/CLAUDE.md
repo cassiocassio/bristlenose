@@ -283,6 +283,7 @@ Codebook page grid layout and interactive components. Uses CSS columns masonry (
 - **Codebook page sits at output root** — `codebook.html` is at the same level as the report (not in `sessions/` or `assets/`), so it uses `assets/bristlenose-theme.css` (no `../` prefix). The `_footer_html()` helper uses `assets/` paths which work correctly for root-level pages
 - **Toolbar button dual-class pattern** — tag filter and view switcher buttons use dual classes (`toolbar-btn tag-filter-btn`, `toolbar-btn view-switcher-btn`). The shared `.toolbar-btn` provides round-rect styling; the component-specific class allows dropdown-specific overrides. Don't remove either class
 - **`--bn-colour-border-hover` token** — 3-state border progression for toolbar buttons: rest (`--bn-colour-border` gray-200) → hover (`--bn-colour-border-hover` gray-300) → active (`--bn-colour-accent` blue-600). Adding a new interactive bordered element should follow this pattern
+- **`BRISTLENOSE_PLAYER_URL` for transcript pages** — `player.js` needs to open `assets/bristlenose-player.html`, but transcript pages live in `sessions/` so the relative path is `../assets/bristlenose-player.html`. The renderer injects `BRISTLENOSE_PLAYER_URL` on transcript pages; `player.js` falls back to `'assets/bristlenose-player.html'` when the variable is absent (report pages). If you add a new page type that loads `player.js` from a subdirectory, inject this variable
 
 ## Future refactoring opportunities
 

@@ -991,6 +991,7 @@ def _render_transcript_page(
     # JavaScript (player + name propagation)
     _w("<script>")
     _w("(function() {")
+    _w("var BRISTLENOSE_PLAYER_URL = '../assets/bristlenose-player.html';")
     if has_media:
         _w(f"var BRISTLENOSE_VIDEO_MAP = {json.dumps(video_map)};")
     else:

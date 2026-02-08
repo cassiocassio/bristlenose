@@ -25,10 +25,10 @@ The endpoint also logs a timestamp and IP address in the CSV (for spam detection
 
 ### 1. Generate a download token
 
-On your Mac:
+On your Mac (Python — no PHP needed locally):
 
 ```bash
-php -r "echo bin2hex(random_bytes(20)) . PHP_EOL;"
+python3 -c "import secrets; print(secrets.token_hex(20))"
 ```
 
 Save this string — you'll need it in step 3 and to download the CSV later.
@@ -99,6 +99,11 @@ The endpoint sends `Access-Control-Allow-Origin: *` so it works from:
 - Any other origin
 
 This is fine — the endpoint only appends to a CSV. There's nothing to steal.
+
+## Gotchas
+
+- **`From:` header must be a real mailbox** — Dreamhost silently drops `mail()` calls where the `From` address doesn't exist as a mailbox on the domain. Use a real address (e.g. `martin@cassiocassio.co.uk`), not `noreply@`
+- **`www.` redirects to bare domain** — use `https://cassiocassio.co.uk/feedback.php` (no `www.`), otherwise POST requests get a 301 redirect which `fetch()` won't follow
 
 ## Security
 

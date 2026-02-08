@@ -18,7 +18,7 @@
 
 // ── Config ───────────────────────────────────────────────────────────────
 
-$EMAIL_TO       = 'cassio@cassiocassio.co.uk';   // change to your email
+$EMAIL_TO       = 'martin@cassiocassio.co.uk';   // change to your email
 $DOWNLOAD_TOKEN = 'CHANGE_ME_TO_A_RANDOM_STRING'; // e.g. bin2hex(random_bytes(20))
 
 // ── Paths ────────────────────────────────────────────────────────────────
@@ -103,7 +103,7 @@ $body    = "Rating:  $rating\n"
          . "Time:    $time UTC\n\n"
          . ($message ? "Message:\n$message\n" : "(no message)\n");
 
-mail($EMAIL_TO, $subject, $body, "From: noreply@cassiocassio.co.uk");
+mail($EMAIL_TO, $subject, $body, "From: martin@cassiocassio.co.uk");
 
 // ── Response ─────────────────────────────────────────────────────────────
 

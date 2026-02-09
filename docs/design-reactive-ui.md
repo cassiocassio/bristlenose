@@ -117,3 +117,9 @@ This is a large effort. Incremental approach:
 4. **Full SPA** — eventually the entire report is a framework app served by the local server
 
 Step 1 alone would fix the immediate pain (cross-page state, file writes) without touching the frontend. Steps 2–4 can happen gradually.
+
+### Export-sharing depends on this migration
+
+The export-sharing feature (see `docs/design-export-sharing.md`) was originally designed for the vanilla JS + static HTML stack, using browser-side DOM cloning and a zip library (fflate). Analysis in Feb 2026 concluded: **build export once, after React, not twice.** The React app can hydrate from either a server API or an embedded JSON blob, so export falls out naturally as "snapshot the project data, embed in the React app shell, output a standalone file." Building it on vanilla JS first would create plumbing that the migration replaces, and maintaining two export paths during the hybrid phase adds friction to every component migration. See the "Dependency on React migration" section in `docs/design-export-sharing.md`.
+
+This makes the reactive UI migration not just a developer experience improvement but a **prerequisite for the sharing story** — the feature that makes Bristlenose useful beyond the solo researcher. The near-term sharing mechanism is CSV/Miro export (see `docs/private/design-miro-bridge.md`); the long-term mechanism is the rich interactive report itself as a shareable artefact, which requires this migration.

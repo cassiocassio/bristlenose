@@ -429,6 +429,45 @@ Out of scope for now, but the JSON state format makes merge theoretically possib
 
 5. **Filename convention?** `{project}-curated.html`? `{project}-report-{date}.zip`?
 
+## Dependency on React migration (Feb 2026 analysis)
+
+**Decision: build export once, after React. Don't build it twice.**
+
+The original phased plan (above) assumes a vanilla JS + static HTML stack. Analysis of the interaction with the React migration (see `docs/private/frontend-evolution.md`) reveals that Phases 0–2 would build plumbing that a React migration replaces:
+
+- **State hydration** (Phase 0) invents `CURATED_STATE` with custom merge logic. A React app has proper state management with its own serialisation
+- **Browser-side DOM cloning + zip** (Phases 1–2) works around having no server. With `bristlenose serve`, the server builds the export natively in Python
+- **fflate dependency** exists only because there's no server. Python's `zipfile` replaces it
+- **Relative media paths** (`--portable`) are a workaround for `file://`. The served app uses a media API endpoint
+
+### What survives regardless of stack
+
+- Export dialog UX (modal, two modes, anonymise checkbox) — product decisions, not implementation
+- `CURATED_STATE` schema shape (favourites, edits, tags, names) — the data contract
+- Anonymisation logic (strip participant names, keep moderator names)
+- Clips manifest + FFmpeg extraction (Phase 4) — purely CLI/backend
+- Branding footer (Phase 5) — just HTML/CSS
+
+### The hybrid problem
+
+During a gradual React migration (React islands pattern), the report is a mix of Jinja2-rendered HTML and React components mounting into placeholder divs. Exporting this hybrid is tractable — the exported HTML includes both pre-rendered HTML and the React bundle, and re-renders client-side when the recipient opens it. But maintaining two state systems (vanilla JS localStorage + React state) during the transition adds friction to every export-related change.
+
+### Revised strategy
+
+The near-term product story is: Bristlenose is the preprocessor. It finds evidence that gets arranged in Miro (or PowerPoint/Notion) for team synthesis. The CSV export and a potential Miro bridge (see `docs/private/design-miro-bridge.md`) serve this use case today.
+
+The further-out goal is the Bristlenose report itself becoming the shareable deliverable — rich enough (video, charts, curation) that stakeholders use it directly. That's when export matters, and that's when React is in place.
+
+**Sequence:**
+1. Keep improving CSV export as the Miro/PowerPoint bridge (now)
+2. Build `bristlenose serve` + React migration (see `docs/private/frontend-evolution.md` phases A–F)
+3. Build export as a server endpoint: serialise project data as JSON, embed in React app shell, output standalone HTML/zip. One mechanism, not two
+4. Clips (Phase 4) and branding footer (Phase 5) can ship at any point — they're stack-independent
+
+### Why not build export now for vanilla JS and rewrite later?
+
+It's not that it wouldn't work — it's that it complicates the React migration. Every export-related feature becomes "does this work in the vanilla JS path AND the React path?" during the transition. Building it once on the final stack is cleaner, faster overall, and avoids the hybrid state management headache.
+
 ## Related Files
 
 - `bristlenose/theme/js/storage.js` — localStorage abstraction
@@ -436,3 +475,5 @@ Out of scope for now, but the JSON state format makes merge theoretically possib
 - `bristlenose/stages/render_html.py` — HTML generation, embedded globals
 - `bristlenose/output_paths.py` — path construction
 - `docs/design-html-report.md` — report architecture reference
+- `docs/private/frontend-evolution.md` — full frontend roadmap (React migration, server, SaaS)
+- `docs/private/design-miro-bridge.md` — Miro integration design (private)

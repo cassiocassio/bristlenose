@@ -1,5 +1,6 @@
 /* Molecule: transcript-annotations — right-margin annotations on transcript pages.
-   Shows section/theme labels and tag badges alongside quoted segments. */
+   Shows section/theme labels, tag badges, and vertical span bars alongside
+   quoted segments. */
 
 /* The transcript body needs room for the margin column on wide viewports */
 @media (min-width: 1100px) {
@@ -68,7 +69,10 @@
 .margin-tags {
     display: flex;
     flex-wrap: wrap;
-    gap: 2px;
+    gap: 4px;
+    overflow: visible; /* allow delete × circles to protrude */
+    padding-top: 2px;  /* room for × circle above badges */
+    padding-right: 2px; /* room for × circle to the right */
 }
 
 /* Smaller badges in the margin context */
@@ -78,15 +82,9 @@
     line-height: 1.4;
 }
 
-/* Connection line from quoted segment to margin (wide viewports only) */
-@media (min-width: 1100px) {
-    .segment-quoted::after {
-        content: '';
-        position: absolute;
-        top: 0.6em;
-        right: 0;
-        width: 0.5rem;
-        height: 1px;
-        background: var(--bn-colour-border);
+/* Hide span bars on narrow viewports (annotations are inline) */
+@media (max-width: 1099px) {
+    .span-bar {
+        display: none;
     }
 }

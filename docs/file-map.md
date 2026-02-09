@@ -49,11 +49,11 @@ All 12 stages of the pipeline, from ingest to render.
 |------|------|
 | `tokens.css` | Design tokens (`--bn-*` custom properties) |
 | `images/` | Static assets (light + dark logos) |
-| `atoms/` | Smallest CSS components (badge, button, input, etc.) |
-| `molecules/` | Small groups of atoms (badge-row, bar-group, name-edit, etc.) |
+| `atoms/` | Smallest CSS components (badge, button, input, span-bar, etc.) |
+| `molecules/` | Small groups of atoms (badge-row, bar-group, name-edit, transcript-annotations, etc.) |
 | `organisms/` | Self-contained UI sections (blockquote, toolbar, etc.) |
-| `templates/` | Page-level layout (report.css, print.css) |
-| `js/` | 12 JS modules (storage, player, favourites, editing, tags, histogram, csv-export, view-switcher, search, names, transcript-names, main) |
+| `templates/` | Page-level layout (report.css, transcript.css, print.css) |
+| `js/` | 18 JS modules — report: storage, badge-utils, modal, codebook, player, starred, editing, tags, histogram, csv-export, view-switcher, search, tag-filter, hidden, names, focus, feedback, main; transcript: storage, badge-utils, player, transcript-names, transcript-annotations; codebook: storage, badge-utils, modal, codebook |
 
 ## Utilities (`bristlenose/utils/`)
 
@@ -75,6 +75,7 @@ All 12 stages of the pipeline, from ingest to render.
 | `tests/test_dark_mode.py` | Dark mode: CSS tokens, HTML attributes, logo switching, config (17 tests) |
 | `tests/test_text_utils.py` | Smart quotes, disfluency removal, text cleanup (11 tests) |
 | `tests/test_name_extraction.py` | Name extraction, auto-populate, short name heuristic, SpeakerRoleItem compat (26 tests) |
+| `tests/test_transcript_annotations.py` | Transcript quote annotations: highlight marking, quote map, segment classes, citation marks, JS bootstrap (26 tests) |
 
 ## Man page
 

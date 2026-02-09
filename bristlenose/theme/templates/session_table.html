@@ -1,0 +1,20 @@
+<section>
+<h2>Sessions</h2>
+<table>
+<thead><tr>
+<th>Session</th><th>Speakers</th><th>Start</th><th>Duration</th><th>Source file</th>
+</tr></thead>
+<tbody>
+{%- for row in rows %}
+<tr>
+<td><a href="sessions/transcript_{{ row.sid }}.html">{{ row.num }}</a></td>
+<td>{{ row.speakers }}</td>
+<td>{{ row.start }}</td>
+<td>{{ row.duration }}</td>
+<td>{{ row.source }}</td>
+</tr>
+{%- endfor %}
+</tbody>
+</table>
+</section>
+<hr>

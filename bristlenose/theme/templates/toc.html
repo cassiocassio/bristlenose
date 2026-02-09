@@ -1,0 +1,33 @@
+<div class="toc-row">
+{%- if section_toc %}
+<nav class="toc">
+<h2>Sections</h2>
+<ul>
+{%- for anchor, label in section_toc %}
+<li><a href="#{{ anchor }}"><span class="editable-text" data-edit-key="{{ anchor }}:title" data-original="{{ label }}">{{ label }}</span></a> <button class="edit-pencil edit-pencil-inline" aria-label="Edit section title">&#9998;</button></li>
+{%- endfor %}
+</ul>
+</nav>
+{%- endif %}
+{%- if theme_toc %}
+<nav class="toc">
+<h2>Themes</h2>
+<ul>
+{%- for anchor, label in theme_toc %}
+<li><a href="#{{ anchor }}"><span class="editable-text" data-edit-key="{{ anchor }}:title" data-original="{{ label }}">{{ label }}</span></a> <button class="edit-pencil edit-pencil-inline" aria-label="Edit theme title">&#9998;</button></li>
+{%- endfor %}
+</ul>
+</nav>
+{%- endif %}
+{%- if chart_toc %}
+<nav class="toc">
+<h2>Analysis</h2>
+<ul>
+{%- for anchor, label in chart_toc %}
+<li><a href="#{{ anchor }}">{{ label }}</a></li>
+{%- endfor %}
+</ul>
+</nav>
+{%- endif %}
+</div>
+<hr>

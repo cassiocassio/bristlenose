@@ -1,0 +1,13 @@
+<section>
+<h2>{{ heading }}</h2>
+{%- for group in groups %}
+<h3 id="{{ group.anchor }}"><span class="editable-text" data-edit-key="{{ group.anchor }}:title" data-original="{{ group.label }}">{{ group.label }}</span> <button class="edit-pencil edit-pencil-inline" aria-label="Edit {{ item_type }} title">&#9998;</button></h3>
+{%- if group.description %}
+<p class="description"><span class="editable-text" data-edit-key="{{ group.anchor }}:desc" data-original="{{ group.description }}">{{ group.description }}</span> <button class="edit-pencil edit-pencil-inline" aria-label="Edit {{ item_type }} description">&#9998;</button></p>
+{%- endif %}
+<div class="quote-group">
+{{ group.quotes_html }}
+</div>
+{%- endfor %}
+</section>
+<hr>

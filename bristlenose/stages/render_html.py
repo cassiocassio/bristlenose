@@ -268,118 +268,7 @@ def render_html(
     ))
 
     # --- Toolbar ---
-    _w('<div class="toolbar">')
-    # Search filter (left — margin-right:auto pushes rest right)
-    _w(
-        '<div class="search-container" id="search-container">'
-        '<button class="search-toggle" id="search-toggle"'
-        ' aria-label="Search quotes">'
-        '<svg width="15" height="15" viewBox="0 0 16 16"'
-        ' fill="none" stroke="currentColor" stroke-width="1.5"'
-        ' stroke-linecap="round" stroke-linejoin="round">'
-        '<circle cx="6.5" cy="6.5" r="5.5"/>'
-        '<line x1="10.5" y1="10.5" x2="15" y2="15"/>'
-        "</svg>"
-        "</button>"
-        '<div class="search-field">'
-        '<input class="search-input" id="search-input" type="text"'
-        ' placeholder="Filter quotes\u2026" autocomplete="off">'
-        '<button class="search-clear" id="search-clear"'
-        ' aria-label="Clear search">'
-        '<svg width="12" height="12" viewBox="0 0 12 12"'
-        ' fill="none" stroke="currentColor" stroke-width="1.5"'
-        ' stroke-linecap="round">'
-        '<line x1="2" y1="2" x2="10" y2="10"/>'
-        '<line x1="10" y1="2" x2="2" y2="10"/>'
-        "</svg>"
-        "</button>"
-        "</div>"
-        "</div>"
-    )
-    # Codebook (opens in new window)
-    _w(
-        '<button class="toolbar-btn" id="codebook-btn"'
-        ' title="Open codebook in new window">'
-        '<svg class="toolbar-icon-svg" width="14" height="14" viewBox="0 0 16 16"'
-        ' fill="none" stroke="currentColor" stroke-width="1.5"'
-        ' stroke-linecap="round" stroke-linejoin="round">'
-        '<rect x="1" y="3" width="11" height="11" rx="1.5"/>'
-        '<path d="M9 1h6v6"/>'
-        '<path d="M15 1 8 8"/>'
-        "</svg>"
-        " Codebook"
-        "</button>"
-    )
-    # Tag filter dropdown
-    _w(
-        '<div class="tag-filter">'
-        '<button class="toolbar-btn tag-filter-btn" id="tag-filter-btn"'
-        ' aria-haspopup="true" aria-expanded="false">'
-        '<svg class="toolbar-icon-svg" width="14" height="14" viewBox="0 0 16 16"'
-        ' fill="none" stroke="currentColor" stroke-width="1.5"'
-        ' stroke-linecap="round">'
-        '<line x1="1" y1="3" x2="15" y2="3"/>'
-        '<line x1="3" y1="8" x2="13" y2="8"/>'
-        '<line x1="5.5" y1="13" x2="10.5" y2="13"/>'
-        "</svg>"
-        ' <span class="tag-filter-label">Tags</span>'
-        '<svg class="toolbar-arrow" width="10" height="10"'
-        ' viewBox="0 0 10 10" fill="none" stroke="currentColor"'
-        ' stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">'
-        '<path d="M2.5 3.75 5 6.25 7.5 3.75"/></svg>'
-        "</button>"
-        '<div class="tag-filter-menu" id="tag-filter-menu"></div>'
-        "</div>"
-    )
-    # AI tag toggle — TODO: relocate to future settings/view-controls panel
-    # _w(
-    #     '<button class="toolbar-btn toolbar-btn-toggle" id="ai-tag-toggle"'
-    #     ' aria-label="Toggle AI tags" title="Show/hide AI sentiment tags">'
-    #     '<span class="ai-toggle-label">AI tags</span>'
-    #     "</button>"
-    # )
-    # View switcher dropdown
-    _w('<div class="view-switcher">')
-    _w(
-        '<button class="toolbar-btn view-switcher-btn" id="view-switcher-btn"'
-        ' aria-haspopup="true" aria-expanded="false">'
-        '<span class="view-switcher-label">All quotes </span>'
-        '<svg class="toolbar-arrow" width="10" height="10"'
-        ' viewBox="0 0 10 10" fill="none" stroke="currentColor"'
-        ' stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">'
-        '<path d="M2.5 3.75 5 6.25 7.5 3.75"/></svg>'
-        "</button>"
-    )
-    _w('<ul class="view-switcher-menu" id="view-switcher-menu" role="menu">')
-    _w(
-        '<li role="menuitem" data-view="all" class="active">'
-        '<span class="menu-icon">&nbsp;</span> All quotes</li>'
-    )
-    _w(
-        '<li role="menuitem" data-view="starred">'
-        '<span class="menu-icon">&#9733;</span> Starred quotes</li>'
-    )
-    _w("</ul>")
-    _w("</div>")
-    # Export buttons (right)
-    _w(
-        '<button class="toolbar-btn" id="export-csv">'
-        '<svg class="toolbar-icon-svg" width="14" height="14" viewBox="0 0 16 16"'
-        ' fill="none" stroke="currentColor" stroke-width="1.5"'
-        ' stroke-linecap="round" stroke-linejoin="round">'
-        '<rect x="5" y="1" width="9" height="11" rx="1.5"/>'
-        '<path d="M3 5H2.5A1.5 1.5 0 0 0 1 6.5v8A1.5 1.5 0 0 0 2.5 16h8'
-        'a1.5 1.5 0 0 0 1.5-1.5V14"/>'
-        "</svg>"
-        " Copy CSV"
-        "</button>"
-    )
-    _w(
-        '<button class="toolbar-btn" id="export-names" style="display:none">'
-        '<span class="toolbar-icon">&#9998;</span> Export names'
-        "</button>"
-    )
-    _w("</div>")
+    _w(_jinja_env.get_template("toolbar.html").render())
 
     # --- Session Summary (at top for quick reference) ---
     if sessions:
@@ -398,16 +287,7 @@ def render_html(
                     int(c[1:]) if len(c) > 1 and c[1:].isdigit() else 0,
                 ))
 
-        _w("<section>")
-        _w("<h2>Sessions</h2>")
-        _w("<table>")
-        _w("<thead><tr>")
-        _w(
-            "<th>Session</th><th>Speakers</th><th>Start</th>"
-            "<th>Duration</th><th>Source file</th>"
-        )
-        _w("</tr></thead>")
-        _w("<tbody>")
+        session_rows: list[dict[str, str]] = []
         for session in sessions:
             duration = _session_duration(session, people)
             sid = session.session_id
@@ -428,11 +308,6 @@ def render_html(
                     source = f'<a href="{file_uri}">{source_name}</a>'
             else:
                 source = "&mdash;"
-            _w("<tr>")
-            _w(
-                f'<td><a href="sessions/transcript_{sid_esc}.html">'
-                f"{_esc(session_num)}</a></td>"
-            )
             # Speakers column: comma-separated codes with data-participant spans.
             codes = _session_codes.get(sid, [session.participant_id])
             speaker_spans = []
@@ -443,15 +318,14 @@ def render_html(
                     f'data-participant="{_esc(code)}">'
                     f"{_esc(name)}</span>"
                 )
-            _w(f'<td>{", ".join(speaker_spans)}</td>')
-            _w(f"<td>{start}</td>")
-            _w(f"<td>{duration}</td>")
-            _w(f"<td>{source}</td>")
-            _w("</tr>")
-        _w("</tbody>")
-        _w("</table>")
-        _w("</section>")
-        _w("<hr>")
+            session_rows.append({
+                "sid": sid_esc, "num": _esc(session_num),
+                "speakers": ", ".join(speaker_spans),
+                "start": start, "duration": duration, "source": source,
+            })
+        _w(_jinja_env.get_template("session_table.html").render(
+            rows=session_rows,
+        ).rstrip("\n"))
 
     # --- Table of Contents ---
     section_toc: list[tuple[str, str]] = []
@@ -475,119 +349,50 @@ def render_html(
     if transcripts and all_quotes:
         chart_toc.append(("transcript-coverage", "Transcript coverage"))
     if section_toc or theme_toc or chart_toc:
-        _w('<div class="toc-row">')
-        if section_toc:
-            _w('<nav class="toc">')
-            _w("<h2>Sections</h2>")
-            _w("<ul>")
-            for anchor, label in section_toc:
-                a_esc = _esc(anchor)
-                l_esc = _esc(label)
-                _w(
-                    f'<li><a href="#{a_esc}">'
-                    f'<span class="editable-text"'
-                    f' data-edit-key="{a_esc}:title"'
-                    f' data-original="{l_esc}">{l_esc}</span></a>'
-                    f' <button class="edit-pencil edit-pencil-inline"'
-                    f' aria-label="Edit section title">&#9998;</button></li>'
-                )
-            _w("</ul>")
-            _w("</nav>")
-        if theme_toc:
-            _w('<nav class="toc">')
-            _w("<h2>Themes</h2>")
-            _w("<ul>")
-            for anchor, label in theme_toc:
-                a_esc = _esc(anchor)
-                l_esc = _esc(label)
-                _w(
-                    f'<li><a href="#{a_esc}">'
-                    f'<span class="editable-text"'
-                    f' data-edit-key="{a_esc}:title"'
-                    f' data-original="{l_esc}">{l_esc}</span></a>'
-                    f' <button class="edit-pencil edit-pencil-inline"'
-                    f' aria-label="Edit theme title">&#9998;</button></li>'
-                )
-            _w("</ul>")
-            _w("</nav>")
-        if chart_toc:
-            _w('<nav class="toc">')
-            _w("<h2>Analysis</h2>")
-            _w("<ul>")
-            for anchor, label in chart_toc:
-                a_esc = _esc(anchor)
-                l_esc = _esc(label)
-                _w(f'<li><a href="#{a_esc}">{l_esc}</a></li>')
-            _w("</ul>")
-            _w("</nav>")
-        _w("</div>")
-        _w("<hr>")
+        # Pre-escape TOC entries for template
+        esc_section_toc = [(_esc(a), _esc(lbl)) for a, lbl in section_toc]
+        esc_theme_toc = [(_esc(a), _esc(lbl)) for a, lbl in theme_toc]
+        esc_chart_toc = [(_esc(a), _esc(lbl)) for a, lbl in chart_toc]
+        _w(_jinja_env.get_template("toc.html").render(
+            section_toc=esc_section_toc,
+            theme_toc=esc_theme_toc,
+            chart_toc=esc_chart_toc,
+        ).rstrip("\n"))
 
     # --- Sections (screen-specific findings) ---
+    _content_tmpl = _jinja_env.get_template("content_section.html")
     if screen_clusters:
-        _w("<section>")
-        _w("<h2>Sections</h2>")
+        groups = []
         for cluster in screen_clusters:
             anchor = f"section-{cluster.screen_label.lower().replace(' ', '-')}"
-            label_esc = _esc(cluster.screen_label)
-            anchor_esc = _esc(anchor)
-            _w(
-                f'<h3 id="{anchor_esc}">'
-                f'<span class="editable-text"'
-                f' data-edit-key="{anchor_esc}:title"'
-                f' data-original="{label_esc}">{label_esc}</span>'
-                f' <button class="edit-pencil edit-pencil-inline"'
-                f' aria-label="Edit section title">&#9998;</button></h3>'
+            quotes_html = "\n".join(
+                _format_quote_html(q, video_map) for q in cluster.quotes
             )
-            if cluster.description:
-                desc_esc = _esc(cluster.description)
-                _w(
-                    f'<p class="description">'
-                    f'<span class="editable-text"'
-                    f' data-edit-key="{anchor_esc}:desc"'
-                    f' data-original="{desc_esc}">{desc_esc}</span>'
-                    f' <button class="edit-pencil edit-pencil-inline"'
-                    f' aria-label="Edit section description">&#9998;</button></p>'
-                )
-            _w('<div class="quote-group">')
-            for quote in cluster.quotes:
-                _w(_format_quote_html(quote, video_map))
-            _w("</div>")
-        _w("</section>")
-        _w("<hr>")
+            groups.append({
+                "anchor": _esc(anchor), "label": _esc(cluster.screen_label),
+                "description": _esc(cluster.description) if cluster.description else "",
+                "quotes_html": quotes_html,
+            })
+        _w(_content_tmpl.render(
+            heading="Sections", item_type="section", groups=groups,
+        ).rstrip("\n"))
 
     # --- Themes ---
     if theme_groups:
-        _w("<section>")
-        _w("<h2>Themes</h2>")
+        groups = []
         for theme in theme_groups:
             anchor = f"theme-{theme.theme_label.lower().replace(' ', '-')}"
-            label_esc = _esc(theme.theme_label)
-            anchor_esc = _esc(anchor)
-            _w(
-                f'<h3 id="{anchor_esc}">'
-                f'<span class="editable-text"'
-                f' data-edit-key="{anchor_esc}:title"'
-                f' data-original="{label_esc}">{label_esc}</span>'
-                f' <button class="edit-pencil edit-pencil-inline"'
-                f' aria-label="Edit theme title">&#9998;</button></h3>'
+            quotes_html = "\n".join(
+                _format_quote_html(q, video_map) for q in theme.quotes
             )
-            if theme.description:
-                desc_esc = _esc(theme.description)
-                _w(
-                    f'<p class="description">'
-                    f'<span class="editable-text"'
-                    f' data-edit-key="{anchor_esc}:desc"'
-                    f' data-original="{desc_esc}">{desc_esc}</span>'
-                    f' <button class="edit-pencil edit-pencil-inline"'
-                    f' aria-label="Edit theme description">&#9998;</button></p>'
-                )
-            _w('<div class="quote-group">')
-            for quote in theme.quotes:
-                _w(_format_quote_html(quote, video_map))
-            _w("</div>")
-        _w("</section>")
-        _w("<hr>")
+            groups.append({
+                "anchor": _esc(anchor), "label": _esc(theme.theme_label),
+                "description": _esc(theme.description) if theme.description else "",
+                "quotes_html": quotes_html,
+            })
+        _w(_content_tmpl.render(
+            heading="Themes", item_type="theme", groups=groups,
+        ).rstrip("\n"))
 
     # --- Sentiment ---
     if all_quotes:
@@ -1559,45 +1364,34 @@ def _build_sentiment_html(quotes: list[ExtractedQuote]) -> str:
     max_count = max(all_counts) if all_counts else 1
     max_bar_px = 180
 
-    def _bar(label: str, count: int) -> str:
+    def _make_bar(label: str, count: int) -> dict[str, str | int]:
         width = max(4, int((count / max_count) * max_bar_px))
         colour = colour_map.get(label, "var(--colour-muted)")
         badge_cls = badge_class_map.get(label, "")
         label_cls = f"sentiment-bar-label badge {badge_cls}".strip()
-        return (
-            f'<div class="sentiment-bar-group">'
-            f'<span class="{label_cls}">{_esc(label)}</span>'
-            f'<div class="sentiment-bar" style="width:{width}px;background:{colour}"></div>'
-            f'<span class="sentiment-bar-count" style="color:{colour}">{count}</span>'
-            f"</div>"
-        )
+        return {
+            "label": _esc(label), "count": count,
+            "width": width, "colour": colour, "label_cls": label_cls,
+        }
 
-    parts: list[str] = ['<div class="sentiment-chart">']
-    parts.append('<div class="sentiment-chart-title">AI sentiment</div>')
-
-    # Positive bars first: sorted descending (largest at top)
-    pos_sorted = sorted(pos_counts.items(), key=lambda x: x[1], reverse=True)
-    for label, count in pos_sorted:
-        parts.append(_bar(label, count))
+    # Positive bars: sorted descending (largest at top)
+    pos_bars = [_make_bar(lbl, c) for lbl, c in
+                sorted(pos_counts.items(), key=lambda x: x[1], reverse=True)]
 
     # Surprise bar (neutral — between positive and negative)
-    if surprise_count > 0:
-        parts.append(_bar("surprise", surprise_count))
+    surprise_bar = _make_bar("surprise", surprise_count) if surprise_count > 0 else None
 
-    # Divider
-    parts.append('<div class="sentiment-divider"></div>')
+    # Negative bars: sorted ascending (smallest at top, worst near divider)
+    neg_bars = [_make_bar(lbl, c) for lbl, c in
+                sorted(neg_counts.items(), key=lambda x: x[1])]
 
-    # Negative bars below: sorted ascending (smallest at top, worst near divider)
-    neg_sorted = sorted(neg_counts.items(), key=lambda x: x[1])
-    for label, count in neg_sorted:
-        parts.append(_bar(label, count))
-
-    parts.append("</div>")
-
-    # User-tags chart placeholder (populated by JS)
-    parts.append('<div class="sentiment-chart" id="user-tags-chart"></div>')
-
-    return f'<div class="sentiment-row" data-max-count="{max_count}">{"".join(parts)}</div>'
+    tmpl = _jinja_env.get_template("sentiment_chart.html")
+    return tmpl.render(
+        max_count=max_count,
+        pos_bars=pos_bars,
+        surprise_bar=surprise_bar,
+        neg_bars=neg_bars,
+    ).rstrip("\n")
 
 
 def _has_rewatch_quotes(quotes: list[ExtractedQuote]) -> bool:
@@ -1648,14 +1442,16 @@ def _build_rewatch_html(
 
     flagged.sort(key=lambda q: (q.participant_id, q.start_timecode))
 
-    parts: list[str] = []
+    # Group items by participant_id for template rendering
+    groups: list[dict[str, object]] = []
     current_pid = ""
+    current_items: list[dict[str, str]] = []
     for q in flagged:
         if q.participant_id != current_pid:
+            if current_pid:
+                groups.append({"pid": _esc(current_pid), "entries": current_items})
             current_pid = q.participant_id
-            parts.append(
-                f'<p class="rewatch-participant">{_esc(current_pid)}</p>'
-            )
+            current_items = []
         tc = format_timecode(q.start_timecode)
         # Determine reason label
         if q.sentiment is not None:
@@ -1676,14 +1472,14 @@ def _build_rewatch_html(
         else:
             tc_html = f'<span class="timecode">{_tc_brackets(tc)}</span>'
 
-        parts.append(
-            f'<p class="rewatch-item">'
-            f"{tc_html} "
-            f'<span class="reason">{_esc(reason)}</span> '
-            f"&mdash; \u201c{_esc(snippet)}\u201d"
-            f"</p>"
-        )
-    return "\n".join(parts)
+        current_items.append({
+            "tc_html": tc_html, "reason": _esc(reason), "snippet": _esc(snippet),
+        })
+    if current_pid:
+        groups.append({"pid": _esc(current_pid), "entries": current_items})
+
+    tmpl = _jinja_env.get_template("friction_points.html")
+    return tmpl.render(groups=groups).strip("\n")
 
 
 def _build_video_map(sessions: list[InputSession]) -> dict[str, str]:
@@ -1709,127 +1505,8 @@ def _build_video_map(sessions: list[InputSession]) -> dict[str, str]:
 def _write_player_html(assets_dir: Path, player_path: Path) -> Path:
     """Write the popout video player page to assets/."""
     assets_dir.mkdir(parents=True, exist_ok=True)
-    player_path.write_text(
-        """\
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="utf-8">
-<title>Bristlenose player</title>
-<style>
-* { margin: 0; padding: 0; box-sizing: border-box; }
-html, body { height: 100%; background: #111; color: #e5e7eb; font-family: system-ui, sans-serif; }
-body { display: flex; flex-direction: column; }
-#status { padding: 0.4rem 0.75rem; font-size: 0.8rem; color: #9ca3af;
-           font-family: "SF Mono", "Fira Code", "Consolas", monospace;
-           border-bottom: 1px solid #333; flex-shrink: 0; min-height: 1.8rem; }
-#status.error { color: #ef4444; }
-video { flex: 1; width: 100%; min-height: 0; background: #000; }
-</style>
-</head>
-<body>
-<div id="status">No video loaded</div>
-<video id="bristlenose-video" controls preload="none"></video>
-<script>
-(function() {
-  var video = document.getElementById('bristlenose-video');
-  var status = document.getElementById('status');
-  var currentUri = null;
-  var currentPid = null;
-
-  function fmtTC(s) {
-    var h = Math.floor(s / 3600);
-    var m = Math.floor((s % 3600) / 60);
-    var sec = Math.floor(s % 60);
-    var mm = (m < 10 ? '0' : '') + m + ':' + (sec < 10 ? '0' : '') + sec;
-    return h ? (h < 10 ? '0' : '') + h + ':' + mm : mm;
-  }
-
-  function loadAndSeek(pid, fileUri, seconds) {
-    currentPid = pid;
-    if (fileUri !== currentUri) {
-      currentUri = fileUri;
-      video.src = fileUri;
-      video.addEventListener('loadeddata', function onLoad() {
-        video.removeEventListener('loadeddata', onLoad);
-        video.currentTime = seconds;
-        video.play().catch(function() {});
-      });
-      video.load();
-    } else {
-      video.currentTime = seconds;
-      video.play().catch(function() {});
-    }
-    status.className = '';
-    status.textContent = pid + ' @ ' + fmtTC(seconds);
-  }
-
-  // Called by the report window to load + seek
-  window.bristlenose_seekTo = function(pid, fileUri, seconds) {
-    loadAndSeek(pid, fileUri, seconds);
-  };
-
-  // Read video source and seek time from URL hash
-  function handleHash() {
-    var hash = window.location.hash.substring(1);
-    if (!hash) return;
-    var params = {};
-    hash.split('&').forEach(function(part) {
-      var kv = part.split('=');
-      if (kv.length === 2) params[kv[0]] = decodeURIComponent(kv[1]);
-    });
-    if (params.src) {
-      loadAndSeek(params.pid || '', params.src, parseFloat(params.t) || 0);
-    }
-  }
-
-  // Listen for postMessage from the report window
-  window.addEventListener('message', function(e) {
-    var d = e.data;
-    if (d && d.type === 'bristlenose-seek' && d.src) {
-      loadAndSeek(d.pid || '', d.src, parseFloat(d.t) || 0);
-    }
-  });
-
-  // Handle initial load from URL hash
-  handleHash();
-
-  // Post messages back to the opener window for playback-synced glow.
-  // Uses postMessage (not window.opener function calls) because browsers
-  // block window.opener access for file:// URIs.
-  function _notify(type, extra) {
-    if (!window.opener) return;
-    var msg = { type: type, pid: currentPid };
-    if (extra) { for (var k in extra) { msg[k] = extra[k]; } }
-    try { window.opener.postMessage(msg, '*'); } catch(e) {}
-  }
-
-  video.addEventListener('timeupdate', function() {
-    if (currentPid) {
-      status.textContent = currentPid + ' @ ' + fmtTC(video.currentTime);
-      _notify('bristlenose-timeupdate', { seconds: video.currentTime, playing: !video.paused });
-    }
-  });
-
-  video.addEventListener('play', function() {
-    _notify('bristlenose-playstate', { playing: true });
-  });
-
-  video.addEventListener('pause', function() {
-    _notify('bristlenose-playstate', { playing: false });
-  });
-
-  video.addEventListener('error', function() {
-    status.className = 'error';
-    status.textContent = 'Cannot play this format \\u2014 try converting to .mp4';
-  });
-})();
-</script>
-</body>
-</html>
-""",
-        encoding="utf-8",
-    )
+    tmpl = _jinja_env.get_template("player.html")
+    player_path.write_text(tmpl.render(), encoding="utf-8")
     logger.info("Wrote video player: %s", player_path)
     return player_path
 
@@ -1855,17 +1532,7 @@ def _build_task_outcome_html(
     if not by_participant:
         return ""
 
-    rows: list[str] = []
-    rows.append("<table>")
-    rows.append("<thead><tr>")
-    rows.append(
-        "<th>Participant</th>"
-        "<th>Stages</th>"
-        "<th>Friction points</th>"
-    )
-    rows.append("</tr></thead>")
-    rows.append("<tbody>")
-
+    row_data: list[dict[str, str | int]] = []
     for pid in sorted(by_participant.keys()):
         pq = by_participant[pid]
         stage_counts = Counter(q.journey_stage for q in pq)
@@ -1879,16 +1546,12 @@ def _build_task_outcome_html(
             if q.intent in (QuoteIntent.CONFUSION, QuoteIntent.FRUSTRATION)
             or q.emotion in (EmotionalTone.FRUSTRATED, EmotionalTone.CONFUSED)
         )
+        row_data.append({
+            "pid": _esc(pid), "stages": observed_str, "friction": friction,
+        })
 
-        rows.append("<tr>")
-        rows.append(f"<td>{_esc(pid)}</td>")
-        rows.append(f"<td>{observed_str}</td>")
-        rows.append(f"<td>{friction}</td>")
-        rows.append("</tr>")
-
-    rows.append("</tbody>")
-    rows.append("</table>")
-    return "\n".join(rows)
+    tmpl = _jinja_env.get_template("user_journeys.html")
+    return tmpl.render(rows=row_data).rstrip("\n")
 
 
 # ---------------------------------------------------------------------------
@@ -1902,86 +1565,52 @@ def _build_coverage_html(coverage: CoverageStats) -> str:
     Shows transcript coverage percentages and omitted content per session.
     Collapsed by default; expands to show what wasn't extracted.
     """
-    parts: list[str] = []
-
-    # Section with heading (same level as User Journeys)
-    parts.append("<section>")
-    parts.append('<h2 id="transcript-coverage">Transcript coverage</h2>')
-
-    # Summary percentages as content
     summary = (
-        f"{coverage.pct_in_report}% in report · "
-        f"{coverage.pct_moderator}% moderator · "
+        f"{coverage.pct_in_report}% in report \u00b7 "
+        f"{coverage.pct_moderator}% moderator \u00b7 "
         f"{coverage.pct_omitted}% omitted"
     )
-    parts.append(f'<p class="coverage-summary">{summary}</p>')
 
-    # Handle 0% omitted case
-    if coverage.pct_omitted == 0:
-        parts.append(
-            '<p class="coverage-empty">'
-            "Nothing omitted — all participant speech is in the report."
-            "</p>"
-        )
-    else:
-        # Disclosure triangle for session details
-        parts.append('<details class="coverage-details">')
-        parts.append("<summary>Show omitted segments</summary>")
-        parts.append('<div class="coverage-body">')
-
-        # Show per-session omitted content
+    # Prepare per-session data for template
+    session_data: list[dict[str, object]] = []
+    if coverage.pct_omitted > 0:
         for session_id, omitted in coverage.omitted_by_session.items():
-            # Skip sessions with nothing omitted
             if not omitted.full_segments and not omitted.fragment_counts:
                 continue
 
-            # Extract session number from "s1" -> "1"
             session_num = session_id[1:] if session_id.startswith("s") else session_id
-
-            parts.append('<div class="coverage-session">')
-            parts.append(f'<p class="coverage-session-title">Session {session_num}</p>')
-
-            # Full segments (>3 words)
+            seg_data = []
             for seg in omitted.full_segments:
-                tc_esc = _esc(seg.timecode)
-                code_esc = _esc(seg.speaker_code)
-                text_esc = _esc(seg.text)
-                anchor = f"t-{seg.timecode_seconds}"
-                parts.append(
-                    f'<p class="coverage-segment">'
-                    f'<a href="sessions/transcript_{session_id}.html#{anchor}" class="timecode">'
-                    f"[{code_esc} {tc_esc}]</a> "
-                    f"{text_esc}</p>"
-                )
+                seg_data.append({
+                    "anchor": f"t-{seg.timecode_seconds}",
+                    "code": _esc(seg.speaker_code),
+                    "tc": _esc(seg.timecode),
+                    "text": _esc(seg.text),
+                })
 
-            # Fragment summary (≤3 words)
+            # Build fragments HTML string
+            fragments_html = ""
             if omitted.fragment_counts:
                 fragment_strs: list[str] = []
                 for text, count in omitted.fragment_counts:
                     text_esc = _esc(text)
                     if count > 1:
                         fragment_strs.append(
-                            f'<span class="verbatim">{text_esc} ({count}×)</span>'
+                            f'<span class="verbatim">{text_esc} ({count}\u00d7)</span>'
                         )
                     else:
                         fragment_strs.append(f'<span class="verbatim">{text_esc}</span>')
+                prefix = '<span class="label">Also omitted:</span> ' if omitted.full_segments else ""
+                fragments_html = f"{prefix}{', '.join(fragment_strs)}"
 
-                # Use "Also omitted:" only if there were full segments
-                if omitted.full_segments:
-                    prefix = '<span class="label">Also omitted:</span> '
-                else:
-                    prefix = ""
+            session_data.append({
+                "id": session_id, "num": session_num,
+                "full_segments": seg_data, "fragments_html": fragments_html,
+            })
 
-                parts.append(
-                    f'<p class="coverage-fragments">{prefix}{", ".join(fragment_strs)}</p>'
-                )
-
-            parts.append("</div>")
-
-        parts.append("</div>")
-        parts.append("</details>")
-
-    parts.append("</section>")
-    parts.append("<hr>")
-
-    return "\n".join(parts)
+    tmpl = _jinja_env.get_template("coverage.html")
+    return tmpl.render(
+        summary=summary,
+        pct_omitted=coverage.pct_omitted,
+        sessions=session_data,
+    ).rstrip("\n")

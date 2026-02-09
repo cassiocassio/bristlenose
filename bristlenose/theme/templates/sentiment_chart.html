@@ -1,0 +1,12 @@
+<div class="sentiment-row" data-max-count="{{ max_count }}"><div class="sentiment-chart"><div class="sentiment-chart-title">AI sentiment</div>
+{%- for bar in pos_bars -%}
+<div class="sentiment-bar-group"><span class="{{ bar.label_cls }}">{{ bar.label }}</span><div class="sentiment-bar" style="width:{{ bar.width }}px;background:{{ bar.colour }}"></div><span class="sentiment-bar-count" style="color:{{ bar.colour }}">{{ bar.count }}</span></div>
+{%- endfor -%}
+{%- if surprise_bar -%}
+<div class="sentiment-bar-group"><span class="{{ surprise_bar.label_cls }}">{{ surprise_bar.label }}</span><div class="sentiment-bar" style="width:{{ surprise_bar.width }}px;background:{{ surprise_bar.colour }}"></div><span class="sentiment-bar-count" style="color:{{ surprise_bar.colour }}">{{ surprise_bar.count }}</span></div>
+{%- endif -%}
+<div class="sentiment-divider"></div>
+{%- for bar in neg_bars -%}
+<div class="sentiment-bar-group"><span class="{{ bar.label_cls }}">{{ bar.label }}</span><div class="sentiment-bar" style="width:{{ bar.width }}px;background:{{ bar.colour }}"></div><span class="sentiment-bar-count" style="color:{{ bar.colour }}">{{ bar.count }}</span></div>
+{%- endfor -%}
+</div><div class="sentiment-chart" id="user-tags-chart"></div></div>

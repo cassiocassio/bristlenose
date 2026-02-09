@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Bristlenose player</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { height: 100%; background: #111; color: #e5e7eb; font-family: system-ui, sans-serif; }
+body { display: flex; flex-direction: column; }
+#status { padding: 0.4rem 0.75rem; font-size: 0.8rem; color: #9ca3af;
+           font-family: "SF Mono", "Fira Code", "Consolas", monospace;
+           border-bottom: 1px solid #333; flex-shrink: 0; min-height: 1.8rem; }
+#status.error { color: #ef4444; }
+video { flex: 1; width: 100%; min-height: 0; background: #000; }
+</style>
+</head>
+<body>
+<div id="status">No video loaded</div>
+<video id="bristlenose-video" controls preload="none"></video>
+<script>
+(function() {
+  var video = document.getElementById('bristlenose-video');
+  var status = document.getElementById('status');
+  var currentUri = null;
+  var currentPid = null;
+
+  function fmtTC(s) {
+    var h = Math.floor(s / 3600);
+    var m = Math.floor((s % 3600) / 60);
+    var sec = Math.floor(s % 60);
+    var mm = (m < 10 ? '0' : '') + m + ':' + (sec < 10 ? '0' : '') + sec;
+    return h ? (h < 10 ? '0' : '') + h + ':' + mm : mm;
+  }
+
+  function loadAndSeek(pid, fileUri, seconds) {
+    currentPid = pid;
+    if (fileUri !== currentUri) {
+      currentUri = fileUri;
+      video.src = fileUri;
+      video.addEventListener('loadeddata', function onLoad() {
+        video.removeEventListener('loadeddata', onLoad);
+        video.currentTime = seconds;
+        video.play().catch(function() {});
+      });
+      video.load();
+    } else {
+      video.currentTime = seconds;
+      video.play().catch(function() {});
+    }
+    status.className = '';
+    status.textContent = pid + ' @ ' + fmtTC(seconds);
+  }
+
+  // Called by the report window to load + seek
+  window.bristlenose_seekTo = function(pid, fileUri, seconds) {
+    loadAndSeek(pid, fileUri, seconds);
+  };
+
+  // Read video source and seek time from URL hash
+  function handleHash() {
+    var hash = window.location.hash.substring(1);
+    if (!hash) return;
+    var params = {};
+    hash.split('&').forEach(function(part) {
+      var kv = part.split('=');
+      if (kv.length === 2) params[kv[0]] = decodeURIComponent(kv[1]);
+    });
+    if (params.src) {
+      loadAndSeek(params.pid || '', params.src, parseFloat(params.t) || 0);
+    }
+  }
+
+  // Listen for postMessage from the report window
+  window.addEventListener('message', function(e) {
+    var d = e.data;
+    if (d && d.type === 'bristlenose-seek' && d.src) {
+      loadAndSeek(d.pid || '', d.src, parseFloat(d.t) || 0);
+    }
+  });
+
+  // Handle initial load from URL hash
+  handleHash();
+
+  // Post messages back to the opener window for playback-synced glow.
+  // Uses postMessage (not window.opener function calls) because browsers
+  // block window.opener access for file:// URIs.
+  function _notify(type, extra) {
+    if (!window.opener) return;
+    var msg = { type: type, pid: currentPid };
+    if (extra) { for (var k in extra) { msg[k] = extra[k]; } }
+    try { window.opener.postMessage(msg, '*'); } catch(e) {}
+  }
+
+  video.addEventListener('timeupdate', function() {
+    if (currentPid) {
+      status.textContent = currentPid + ' @ ' + fmtTC(video.currentTime);
+      _notify('bristlenose-timeupdate', { seconds: video.currentTime, playing: !video.paused });
+    }
+  });
+
+  video.addEventListener('play', function() {
+    _notify('bristlenose-playstate', { playing: true });
+  });
+
+  video.addEventListener('pause', function() {
+    _notify('bristlenose-playstate', { playing: false });
+  });
+
+  video.addEventListener('error', function() {
+    status.className = 'error';
+    status.textContent = 'Cannot play this format \u2014 try converting to .mp4';
+  });
+})();
+</script>
+</body>
+</html>

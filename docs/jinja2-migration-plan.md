@@ -287,32 +287,56 @@ This is the highest-value extraction — the quote card is rendered ~57 times in
 
 ---
 
-## What we don't touch in Phase 1
+## Phase 2 — Report body extraction (9 Feb 2026)
 
-- Toolbar (lines 288–400) — heavy SVG, inline comments, commented-out code
-- Session table (lines 402–472) — data preparation interleaved with HTML
-- TOC (lines 474–542) — editable text with data attributes
-- Sections/themes loops (lines 544–608) — delegates to `_format_quote_html()` (benefits from 1e)
-- Sentiment chart (lines 1345–1498) — ~150 lines, complex
-- Coverage, rewatch, user journeys — self-contained but lower priority
-- Player HTML (lines 1605–1731) — large, self-contained, separate file output
+Extracted all remaining inline HTML from the report page's `render_html()` function. Data preparation stays in Python; HTML rendering moved to Jinja2 templates. Worked from most self-contained to most reused.
 
-These become Phase 2+ once we have confidence in the pattern.
+| Step | Template | What | Lines saved |
+|------|----------|------|-------------|
+| 2a | `player.html` | Static popout video player page | ~120 |
+| 2b | `sentiment_chart.html` | Horizontal-bar histogram | ~30 |
+| 2c | `friction_points.html` | Rewatch/friction points list | ~30 |
+| 2d | `user_journeys.html` | Task outcome table | ~25 |
+| 2e | `coverage.html` | Transcript coverage disclosure | ~45 |
+| 2f | `toolbar.html` | Search, codebook, tag filter, view switcher, export | ~110 |
+| 2g | `session_table.html` | Session summary table | ~20 |
+| 2h | `toc.html` | Three-column table of contents | ~40 |
+| 2i | `content_section.html` | Shared template for sections and themes (dedup) | ~50 |
+
+**Result:** `render_html.py` reduced from 1987 → 1616 lines (−371). Combined with Phase 1 (−170), the file is down ~540 lines from the original ~1883.
+
+**Pattern:** Each helper function (`_build_sentiment_html`, `_build_rewatch_html`, etc.) keeps its data logic but delegates HTML assembly to `tmpl.render()`. Static blocks (toolbar, player) are parameter-free templates. The `content_section.html` template is shared by both sections and themes — a true dedup.
 
 ---
 
-## Template directory layout (after Phase 1)
+## Template directory layout (after Phase 2)
 
 ```
 bristlenose/theme/templates/
-├── report.css              # existing
-├── transcript.css          # existing
-├── print.css               # existing
-├── footer.html             # Step 1b
+├── report.css               # existing
+├── transcript.css           # existing
+├── print.css                # existing
+├── content_section.html     # Step 2i — shared sections/themes
+├── coverage.html            # Step 2e
 ├── document_shell_open.html # Step 1c
-├── report_header.html      # Step 1d
-└── quote_card.html         # Step 1e
+├── footer.html              # Step 1b
+├── friction_points.html     # Step 2c
+├── player.html              # Step 2a
+├── quote_card.html          # Step 1e
+├── report_header.html       # Step 1d
+├── sentiment_chart.html     # Step 2b
+├── session_table.html       # Step 2g
+├── toc.html                 # Step 2h
+├── toolbar.html             # Step 2f
+└── user_journeys.html       # Step 2d
 ```
+
+## What remains (Phase 3+ candidates)
+
+- **Transcript page body** (`_render_transcript_page`) — segments loop, back-link nav, JS bootstrap. Already uses Phase 1 templates for shell/header/footer
+- **Codebook page body** (`_render_codebook_page`) — minimal HTML (mostly JS-populated). Already uses Phase 1 templates
+- **Report JS bootstrap** (lines 497–527) — `<script>` block with JSON data injection. Could become a template, but mixing JS vars with Jinja2 `{{ }}` needs care
+- **Autoescaping migration** — switch from `autoescape=False` + manual `_esc()` to Jinja2 `autoescape=True` + `|safe` annotations. Separate effort, lower priority
 
 ---
 

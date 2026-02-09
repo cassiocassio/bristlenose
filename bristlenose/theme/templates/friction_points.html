@@ -1,0 +1,6 @@
+{%- for group in groups %}
+<p class="rewatch-participant">{{ group.pid }}</p>
+{%- for item in group.entries %}
+<p class="rewatch-item">{{ item.tc_html }} <span class="reason">{{ item.reason }}</span> &mdash; “{{ item.snippet }}”</p>
+{%- endfor %}
+{%- endfor %}

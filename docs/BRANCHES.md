@@ -73,6 +73,18 @@ When merging back to main:
 
 ---
 
+## Backup Strategy
+
+Feature branches are pushed to GitHub for backup without triggering releases (only `main` triggers releases). Use `git push origin <branch-name>` to back up.
+
+| Branch | Local worktree | GitHub remote |
+|--------|---------------|---------------|
+| `main` | `bristlenose/` | `origin/main` (push via `origin/main:wip` until release time) |
+| `transcript-annotations` | `bristlenose_branch transcript-annotations/` | `origin/transcript-annotations` |
+| `CI` | `bristlenose_branch CI/` | not yet pushed |
+
+---
+
 ## Active Branches
 
 ### `CI`
@@ -84,6 +96,32 @@ When merging back to main:
 **Files this branch will touch:**
 - `.github/workflows/` — CI workflow files
 - Potentially `pyproject.toml`, `Makefile`, or similar build config
+
+---
+
+### `transcript-annotations`
+
+**Status:** Phase 1–3 implemented, needs visual polish
+**Started:** 9 Feb 2026
+**Worktree:** `/Users/cassio/Code/bristlenose_branch transcript-annotations/`
+**Remote:** `origin/transcript-annotations`
+
+**What it does:** Annotated transcript pages — quote highlighting (inline `<mark>` using `verbatim_excerpt` from LLM), right-margin section/theme labels, sentiment + user tag badges, cross-window sync. Data pipeline working; visual design needs refinement.
+
+**Files this branch touches:**
+- `bristlenose/llm/structured.py` — `verbatim_excerpt` field on `ExtractedQuoteItem`
+- `bristlenose/models.py` — `verbatim_excerpt` field on `ExtractedQuote`
+- `bristlenose/stages/quote_extraction.py` — passes `verbatim_excerpt` through
+- `bristlenose/stages/render_html.py` — highlight rendering, quote map data injection, margin JS init
+- `bristlenose/theme/tokens.css` — `--bn-colour-cited-bg` token
+- `bristlenose/theme/templates/transcript.css` — quoted/uncited segment styles
+- `bristlenose/theme/js/transcript-annotations.js` — **new** margin annotation module
+- `bristlenose/theme/molecules/transcript-annotations.css` — **new** margin layout
+- `tests/test_transcript_annotations.py` — **new** 26 tests
+
+**Potential conflicts with other branches:**
+- `render_html.py` — always hot; `_render_transcript_page()` modified heavily
+- `tokens.css` — new token added
 
 ---
 

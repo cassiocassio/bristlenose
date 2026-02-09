@@ -42,25 +42,31 @@
     opacity: 0.8;
 }
 
+/* Delete circle — white floating chip with grey ×.
+   The × glyph sits slightly high in its font metrics box; padding-top: 0.5px
+   nudges it into optical centre. Flexbox handles the rest.
+   TODO: replace × character with SVG icon for cross-platform consistency. */
 .badge-ai::after {
     content: "\00d7";
     position: absolute;
-    top: -0.25rem;
-    right: -0.25rem;
-    font-size: 0.7rem;
-    font-weight: 700;
-    line-height: 1;
-    width: 0.75rem;
-    height: 0.75rem;
+    top: calc(-0.3rem - 1px);
+    right: calc(-0.3rem - 1px);
+    width: calc(0.875rem + 0.5px);   /* ~14.5px */
+    height: calc(0.875rem + 0.5px);
     display: flex;
     align-items: center;
     justify-content: center;
-    background: var(--bn-colour-text);
-    color: var(--bn-colour-bg);
+    padding-top: 0.5px;              /* optical nudge: × sits high in glyph box */
+    background: var(--bn-colour-bg);
+    color: var(--bn-colour-muted);
     border-radius: 50%;
+    font-size: 0.6rem;
+    font-weight: 700;
+    line-height: 1;
     opacity: 0;
     transition: opacity var(--bn-transition-fast);
     pointer-events: none;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.16), 0 0 1px rgba(0, 0, 0, 0.06);
 }
 
 .badge-ai:hover::after {
@@ -99,15 +105,15 @@ body.hide-ai-tags .badge-ai { display: none; }
 
 .badge-user .badge-delete {
     position: absolute;
-    top: -0.25rem;
-    right: -0.25rem;
-    width: 0.75rem;
-    height: 0.75rem;
-    background: var(--bn-colour-text);
+    top: calc(-0.3rem - 1px);
+    right: calc(-0.3rem - 1px);
+    width: calc(0.875rem + 0.5px);   /* ~14.5px */
+    height: calc(0.875rem + 0.5px);
+    background: var(--bn-colour-bg);
     border: none;
     border-radius: 50%;
-    color: var(--bn-colour-bg);
-    font-size: 0.7rem;
+    color: var(--bn-colour-muted);
+    font-size: 0.6rem;
     font-weight: 700;
     line-height: 1;
     cursor: pointer;
@@ -117,7 +123,9 @@ body.hide-ai-tags .badge-ai { display: none; }
     align-items: center;
     justify-content: center;
     padding: 0;
+    padding-top: 0.5px;              /* optical nudge: × sits high in glyph box */
     pointer-events: none;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.16), 0 0 1px rgba(0, 0, 0, 0.06);
 }
 
 .badge-user:hover .badge-delete {

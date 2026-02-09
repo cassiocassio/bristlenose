@@ -29,30 +29,33 @@ individually.
 - Python 3.10+
 - Ruff for linting (config in `pyproject.toml`)
 - Type hints everywhere
+- Jinja2 templates for HTML components (in `bristlenose/theme/templates/`)
 
 ## Project layout
 
 ```
 bristlenose/          # main package
-  cli.py              # Typer CLI (run, transcribe-only, analyze, render, doctor)
+  cli.py              # Typer CLI (run, transcribe, analyze, render, doctor)
   config.py           # Pydantic settings (env vars, .env, bristlenose.toml)
   doctor.py           # Doctor check logic (7 checks, run_all, run_preflight)
   doctor_fixes.py     # Install-method-aware fix instructions
   models.py           # Pydantic data models (quotes, themes, enums)
   pipeline.py         # orchestrator (full run, transcribe-only, analyze-only, render-only)
   stages/             # 12-stage pipeline (ingest → render)
-    render_html.py    # HTML report renderer (loads CSS from theme/, embeds JS)
+    render_html.py    # HTML report renderer (Jinja2 templates + CSS from theme/, embeds JS)
   llm/
     prompts.py        # LLM prompt templates
     structured.py     # Pydantic schemas for LLM structured output
   people.py           # people file: load, compute, merge, write, name extraction
-  theme/              # design system (atomic CSS) — see below
+  theme/              # design system (atomic CSS + Jinja2 templates) — see below
     tokens.css
     atoms/
     molecules/
     organisms/
-    templates/
-    js/               # 10 JS modules concatenated at render time
+    templates/        # Jinja2 HTML templates + CSS page layouts
+      *.html          # 13 component templates (quote card, toolbar, etc.)
+      *.css           # page-level CSS (report, transcript, print)
+    js/               # 20 JS modules concatenated at render time
     index.css         # documents concatenation order
   utils/
     hardware.py       # GPU/CPU detection
@@ -92,16 +95,26 @@ theme/
     sentiment-chart.css       #    chart layout, side-by-side row
     toolbar.css               #    sticky toolbar, view-switcher dropdown
     toc.css                   #    table of contents columns
-  templates/                  # 5. Templates       (page-level layout)
+  templates/                  # 5. Templates + Jinja2 components
     report.css                #    body, article, headings, tables, links
     transcript.css            #    per-participant transcript pages
     print.css                 #    @media print overrides
+    quote_card.html           #    Jinja2: single quote card
+    toolbar.html              #    Jinja2: sticky toolbar
+    report_header.html        #    Jinja2: header with logo and meta
+    footer.html               #    Jinja2: report footer
+    sentiment_chart.html      #    Jinja2: sentiment histogram
+    ...                       #    (13 templates total)
   index.css                   # human-readable index (not used by code)
 ```
 
 ### How it works
 
-`render_html.py` defines a `_THEME_FILES` list that specifies the exact concatenation order. The function `_load_default_css()` reads each file, wraps it with a section comment, and joins them into one string. This is cached once per process, then written to `bristlenose-theme.css` in the output directory on every run (always overwritten -- user state like favourites and tags lives in localStorage, not CSS).
+**CSS:** `render_html.py` defines a `_THEME_FILES` list that specifies the exact concatenation order. The function `_load_default_css()` reads each file, wraps it with a section comment, and joins them into one string. This is cached once per process, then written to `bristlenose-theme.css` in the output directory on every run (always overwritten -- user state like favourites and tags lives in localStorage, not CSS).
+
+**HTML templates:** Report components are Jinja2 templates in `theme/templates/`. Each template receives a context dict from `render_html.py` and renders a self-contained HTML fragment (quote card, toolbar, sentiment chart, etc.). `render_html.py` loads the Jinja2 environment once, then calls `template.render(context)` for each component. The Jinja2 templates live alongside the CSS templates in the same directory -- `.html` files are Jinja2, `.css` files are page-level stylesheets.
+
+**JS:** `render_html.py` defines `_JS_FILES` (and separate lists for transcript/codebook pages) that specify concatenation order. Each `.js` file is an IIFE. They're joined into a single `<script>` block in the rendered HTML.
 
 ### Design tokens
 

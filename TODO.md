@@ -19,8 +19,9 @@ This file contains: session reminders, feature groupings with context, items too
 1. **Moderator Phase 2** (#25) — cross-session linking
 2. **Dark mode selection highlight** (#52) — visibility bug
 3. **SVG icon set** — replace fragile × character glyphs (no issue — small enough to just do)
-4. Export & sharing — design doc at `docs/design-export-sharing.md`
-5. **Reactive UI architecture** (#29) — design doc at `docs/design-reactive-ui.md`
+4. **Miro bridge** — near-term sharing story. See `docs/private/design-miro-bridge.md`
+5. Export & sharing — deferred until after React migration. See `docs/design-export-sharing.md`
+6. **Reactive UI architecture** (#29) — prerequisite for export. See `docs/design-reactive-ui.md`
 
 ---
 
@@ -119,7 +120,8 @@ These are too small for issues or are internal-only concerns.
 - [ ] **Relocate AI tag toggle** — removed from toolbar (too crowded with Codebook button); needs a new home. Code commented out in `render_html.py` and `codebook.js`/`tags.js`
 - [ ] **Feedback endpoint** — deploy `server/feedback.php` to Dreamhost. See `server/README.md`
 - [ ] **User research panel opt-in** — optional email field in feedback modal
-- [ ] **Export and sharing Phases 0–5** — see `docs/design-export-sharing.md`
+- [ ] **Export and sharing** — deferred until after React migration (see `docs/design-export-sharing.md`, "Dependency on React migration" section)
+- [ ] **Miro bridge** — Miro-shaped CSV export → API integration → layout engine. See `docs/private/design-miro-bridge.md`
 - [ ] **Tag definitions page** — also tracked as #53
 - [ ] **Custom prompts** — user-defined tag categories via `bristlenose.toml` or `prompts.toml`
 - [ ] **Pass transcript data to renderer** — avoid redundant disk I/O in `render_html.py`

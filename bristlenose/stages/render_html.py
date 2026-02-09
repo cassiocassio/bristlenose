@@ -1397,36 +1397,8 @@ def _footer_html(assets_prefix: str = "assets") -> str:
     """
     from bristlenose import __version__
 
-    return (
-        '<footer class="report-footer">'
-        # Left zone: fish logo + logotype + version
-        '<div class="footer-left">'
-        '<picture class="footer-logo-picture">'
-        f'<source srcset="{assets_prefix}/bristlenose-logo-dark.png" '
-        'media="(prefers-color-scheme: dark)">'
-        f'<img class="footer-logo" src="{assets_prefix}/bristlenose-logo.png" alt="">'
-        "</picture>"
-        '<span class="footer-logotype">Bristlenose</span>'
-        "\u2002"
-        f'<a class="footer-version" '
-        f'href="https://github.com/cassiocassio/bristlenose">'
-        f"version {__version__}</a>"
-        "</div>"
-        # Middle zone: feedback links (hidden unless BRISTLENOSE_FEEDBACK is true)
-        '<div class="feedback-links">'
-        '<a class="footer-link" '
-        'href="https://github.com/cassiocassio/bristlenose/issues/new" '
-        'target="_blank" rel="noopener">'
-        "\U0001f41b Report a bug</a>"
-        '<span class="footer-link-sep">\u00b7</span>'
-        '<a class="footer-link feedback-trigger" role="button" tabindex="0">'
-        "\u2661 Feedback</a>"
-        "</div>"
-        # Right zone: keyboard hint
-        '<a class="footer-keyboard-hint" role="button" tabindex="0">'
-        "<kbd>?</kbd> for Help</a>"
-        "</footer>"
-    )
+    tmpl = _jinja_env.get_template("footer.html")
+    return tmpl.render(version=__version__, assets_prefix=assets_prefix)
 
 
 def _esc(text: str) -> str:

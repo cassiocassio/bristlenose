@@ -10,6 +10,8 @@ from datetime import datetime
 from html import escape
 from pathlib import Path
 
+import jinja2
+
 from bristlenose.coverage import CoverageStats, calculate_coverage
 from bristlenose.models import (
     EmotionalTone,
@@ -154,6 +156,18 @@ def _get_report_js() -> str:
     if _report_js_cache is None:
         _report_js_cache = _load_report_js()
     return _report_js_cache
+
+
+# ---------------------------------------------------------------------------
+# Jinja2 template environment
+# ---------------------------------------------------------------------------
+
+_TEMPLATE_DIR = _THEME_DIR / "templates"
+_jinja_env = jinja2.Environment(
+    loader=jinja2.FileSystemLoader(str(_TEMPLATE_DIR)),
+    autoescape=False,  # We manage escaping via _esc(); switch later
+    keep_trailing_newline=True,
+)
 
 
 # ---------------------------------------------------------------------------

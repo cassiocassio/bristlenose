@@ -70,6 +70,7 @@ _THEME_FILES: list[str] = [
     "organisms/toc.css",
     "organisms/codebook-panel.css",
     "templates/report.css",
+    "molecules/transcript-annotations.css",
     "templates/transcript.css",
     "templates/print.css",
 ]
@@ -694,6 +695,9 @@ def render_html(
         display_names=display_names,
         people=people,
         transcripts=transcripts,
+        all_quotes=all_quotes,
+        screen_clusters=screen_clusters,
+        theme_groups=theme_groups,
     )
 
     # --- Generate codebook page ---
@@ -714,6 +718,7 @@ _TRANSCRIPT_JS_FILES: list[str] = [
     "js/storage.js",
     "js/player.js",
     "js/transcript-names.js",
+    "js/transcript-annotations.js",
 ]
 
 
@@ -756,6 +761,81 @@ def _resolve_speaker_name(
     return pid
 
 
+class _QuoteAnnotation:
+    """Annotation data for a single quote mapped to transcript segments."""
+
+    __slots__ = (
+        "quote_id", "participant_id", "start_tc", "end_tc",
+        "verbatim_excerpt", "label", "label_type", "sentiment",
+    )
+
+    def __init__(
+        self,
+        quote_id: str,
+        participant_id: str,
+        start_tc: float,
+        end_tc: float,
+        verbatim_excerpt: str,
+        label: str,
+        label_type: str,
+        sentiment: str,
+    ) -> None:
+        self.quote_id = quote_id
+        self.participant_id = participant_id
+        self.start_tc = start_tc
+        self.end_tc = end_tc
+        self.verbatim_excerpt = verbatim_excerpt
+        self.label = label
+        self.label_type = label_type
+        self.sentiment = sentiment
+
+
+# Keyed by session_id, contains list of annotations for that session.
+_QuoteMap = dict[str, list["_QuoteAnnotation"]]
+
+
+def _build_transcript_quote_map(
+    all_quotes: list[ExtractedQuote] | None,
+    screen_clusters: list[ScreenCluster] | None,
+    theme_groups: list[ThemeGroup] | None,
+) -> _QuoteMap:
+    """Build a mapping of quotes to their section/theme assignments.
+
+    Returns a dict keyed by session_id, each value a list of
+    _QuoteAnnotation objects for quotes in that session.
+    """
+    if not all_quotes:
+        return {}
+
+    # Build quote_id → (label, label_type) lookup from clusters/themes
+    assignment: dict[str, tuple[str, str]] = {}
+    for cluster in screen_clusters or []:
+        for q in cluster.quotes:
+            qid = f"q-{q.participant_id}-{int(q.start_timecode)}"
+            assignment[qid] = (cluster.screen_label, "section")
+    for theme in theme_groups or []:
+        for q in theme.quotes:
+            qid = f"q-{q.participant_id}-{int(q.start_timecode)}"
+            assignment[qid] = (theme.theme_label, "theme")
+
+    result: _QuoteMap = {}
+    for q in all_quotes:
+        qid = f"q-{q.participant_id}-{int(q.start_timecode)}"
+        label, label_type = assignment.get(qid, ("", ""))
+        ann = _QuoteAnnotation(
+            quote_id=qid,
+            participant_id=q.participant_id,
+            start_tc=q.start_timecode,
+            end_tc=q.end_timecode,
+            verbatim_excerpt=q.verbatim_excerpt,
+            label=label,
+            label_type=label_type,
+            sentiment=q.sentiment.value if q.sentiment else "",
+        )
+        result.setdefault(q.session_id, []).append(ann)
+    return result
+
+
 def render_transcript_pages(
     sessions: list[InputSession],
     project_name: str,
@@ -765,6 +845,9 @@ def render_transcript_pages(
     display_names: dict[str, str] | None = None,
     people: PeopleFile | None = None,
     transcripts: list[FullTranscript] | None = None,
+    all_quotes: list[ExtractedQuote] | None = None,
+    screen_clusters: list[ScreenCluster] | None = None,
+    theme_groups: list[ThemeGroup] | None = None,
 ) -> list[Path]:
     """Generate per-participant transcript HTML pages in sessions/.
 
@@ -799,6 +882,11 @@ def render_transcript_pages(
     if not transcripts:
         return []
 
+    # Build quote annotation data for transcript pages
+    quote_map = _build_transcript_quote_map(
+        all_quotes, screen_clusters, theme_groups
+    )
+
     paths: list[Path] = []
     for transcript in transcripts:
         page_path = _render_transcript_page(
@@ -808,6 +896,7 @@ def render_transcript_pages(
             video_map=video_map,
             color_scheme=color_scheme,
             people=people,
+            quote_map=quote_map,
         )
         paths.append(page_path)
         logger.info("Wrote transcript page: %s", page_path)
@@ -822,6 +911,7 @@ def _render_transcript_page(
     video_map: dict[str, str] | None = None,
     color_scheme: str = "auto",
     people: PeopleFile | None = None,
+    quote_map: _QuoteMap | None = None,
 ) -> Path:
     """Render a single participant transcript as an HTML page in sessions/."""
     from bristlenose.models import FullTranscript
@@ -961,13 +1051,43 @@ def _render_transcript_page(
     # Transcript segments
     _w('<section class="transcript-body">')
     has_media = video_map is not None and sid in (video_map or {})
+
+    # Build quote coverage lookup for this session
+    session_annotations = (quote_map or {}).get(sid, [])
+
     for seg in transcript.segments:
         tc = format_timecode(seg.start_time)
         anchor = f"t-{int(seg.start_time)}"
         code = seg.speaker_code or pid
         is_moderator = code.startswith("m")
-        role_cls = " segment-moderator" if is_moderator else ""
-        _w(f'<div class="transcript-segment{role_cls}" id="{anchor}">')
+
+        # Check if this segment is covered by any quote (timecode range overlap)
+        seg_quotes = [
+            a for a in session_annotations
+            if a.start_tc <= seg.start_time <= a.end_tc
+            and a.participant_id == code
+        ]
+        is_quoted = bool(seg_quotes) and not is_moderator
+
+        # Build CSS classes
+        classes = ["transcript-segment"]
+        if is_moderator:
+            classes.append("segment-moderator")
+        if is_quoted:
+            classes.append("segment-quoted")
+        cls_str = " ".join(classes)
+
+        # Data attributes for glow sync (player.js) and annotation JS
+        data_attrs = (
+            f' data-participant="{_esc(code)}"'
+            f' data-start-seconds="{seg.start_time}"'
+            f' data-end-seconds="{seg.end_time}"'
+        )
+        if is_quoted:
+            qids = " ".join(a.quote_id for a in seg_quotes)
+            data_attrs += f' data-quote-ids="{_esc(qids)}"'
+
+        _w(f'<div class="{cls_str}" id="{anchor}"{data_attrs}>')
         if has_media:
             _w(
                 f'<a href="#" class="timecode" '
@@ -981,14 +1101,22 @@ def _render_transcript_page(
             f'<span class="segment-speaker" data-participant="{_esc(code)}">'
             f"{_esc(code)}:</span>"
         )
-        _w(f" {_esc(seg.text)}")
+
+        # Render segment text with inline quote highlights
+        seg_text = seg.text
+        if is_quoted:
+            seg_text = _highlight_quoted_text(seg_text, seg_quotes)
+            _w(f" {seg_text}")  # already HTML-escaped inside _highlight_quoted_text
+        else:
+            _w(f" {_esc(seg_text)}")
+
         _w("</div></div>")
     _w("</section>")
 
     _w("</article>")
     _w(_footer_html())
 
-    # JavaScript (player + name propagation)
+    # JavaScript (player + name propagation + annotations)
     _w("<script>")
     _w("(function() {")
     _w("var BRISTLENOSE_PLAYER_URL = '../assets/bristlenose-player.html';")
@@ -996,9 +1124,28 @@ def _render_transcript_page(
         _w(f"var BRISTLENOSE_VIDEO_MAP = {json.dumps(video_map)};")
     else:
         _w("var BRISTLENOSE_VIDEO_MAP = {};")
+
+    # Quote annotation data for margin rendering (Phase 2/3)
+    report_filename = f"bristlenose-{slug}-report.html"
+    _w(f"var BRISTLENOSE_REPORT_URL = '../{report_filename}';")
+    if session_annotations:
+        qmap: dict[str, dict[str, object]] = {}
+        for ann in session_annotations:
+            qmap[ann.quote_id] = {
+                "label": ann.label,
+                "type": ann.label_type,
+                "sentiment": ann.sentiment,
+                "pid": ann.participant_id,
+            }
+        _w(f"var BRISTLENOSE_QUOTE_MAP = {json.dumps(qmap)};")
+    else:
+        _w("var BRISTLENOSE_QUOTE_MAP = {};")
+
     _w(_get_transcript_js())
     _w("initPlayer();")
     _w("initTranscriptNames();")
+    if session_annotations:
+        _w("initTranscriptAnnotations();")
     _w("})();")
     _w("</script>")
 
@@ -1145,6 +1292,76 @@ def _render_codebook_page(
     page_path.write_text("\n".join(parts), encoding="utf-8")
     logger.info("Wrote codebook page: %s", page_path)
     return page_path
+
+
+# ---------------------------------------------------------------------------
+# Transcript highlighting
+# ---------------------------------------------------------------------------
+
+
+def _highlight_quoted_text(
+    segment_text: str,
+    annotations: list[_QuoteAnnotation],
+) -> str:
+    """Wrap quoted portions of segment text in <mark> tags.
+
+    Uses verbatim_excerpt from each annotation to find the exact substring
+    in the raw segment text.  Falls back to highlighting the entire segment
+    if no verbatim_excerpt is available or the substring isn't found.
+
+    Returns HTML-safe string (all text is escaped, <mark> tags are injected).
+    """
+    if not annotations:
+        return _esc(segment_text)
+
+    # Collect all (start, end, quote_id) ranges to highlight
+    ranges: list[tuple[int, int, str]] = []
+    has_any_match = False
+
+    for ann in annotations:
+        excerpt = ann.verbatim_excerpt
+        if not excerpt:
+            continue
+        # Simple case-insensitive substring search
+        idx = segment_text.lower().find(excerpt.lower())
+        if idx >= 0:
+            ranges.append((idx, idx + len(excerpt), ann.quote_id))
+            has_any_match = True
+
+    if not has_any_match:
+        # No verbatim excerpts matched — highlight entire segment as fallback
+        qid = annotations[0].quote_id
+        return (
+            f'<mark class="bn-cited" data-quote-id="{_esc(qid)}">'
+            f"{_esc(segment_text)}</mark>"
+        )
+
+    # Sort ranges by start position, merge overlaps
+    ranges.sort(key=lambda r: r[0])
+    merged: list[tuple[int, int, str]] = []
+    for start, end, qid in ranges:
+        if merged and start <= merged[-1][1]:
+            # Overlapping — extend the previous range
+            prev_start, prev_end, prev_qid = merged[-1]
+            merged[-1] = (prev_start, max(prev_end, end), prev_qid)
+        else:
+            merged.append((start, end, qid))
+
+    # Build output with <mark> tags around matched ranges
+    parts: list[str] = []
+    pos = 0
+    for start, end, qid in merged:
+        if pos < start:
+            parts.append(_esc(segment_text[pos:start]))
+        parts.append(
+            f'<mark class="bn-cited" data-quote-id="{_esc(qid)}">'
+            f"{_esc(segment_text[start:end])}</mark>"
+        )
+        pos = end
+    if pos < len(segment_text):
+        parts.append(_esc(segment_text[pos:]))
+
+    return "".join(parts)
 
 
 # ---------------------------------------------------------------------------

@@ -42,6 +42,7 @@ def _get_cloud_fallback_hint() -> str:
         has_anthropic = bool(settings.anthropic_api_key)
         has_openai = bool(settings.openai_api_key)
         has_azure = bool(settings.azure_api_key and settings.azure_endpoint)
+        has_google = bool(settings.google_api_key)
 
         options = []
         if has_anthropic:
@@ -50,6 +51,8 @@ def _get_cloud_fallback_hint() -> str:
             options.append("--llm chatgpt")
         if has_azure:
             options.append("--llm azure")
+        if has_google:
+            options.append("--llm gemini")
         if len(options) == 1:
             return f"Or use a cloud API: {options[0]}"
         if options:
@@ -126,12 +129,33 @@ def _fix_backend_import_fail(method: str) -> str:
     )
 
 
+def _credential_store_hint() -> str:
+    """Return a platform-specific description of where keys are stored."""
+    if sys.platform == "darwin":
+        return "This stores your key securely in your macOS Keychain."
+    if sys.platform.startswith("linux"):
+        return (
+            "This stores your key securely via Secret Service"
+            " (GNOME Keyring / KDE Wallet)."
+        )
+    return "This stores your key securely."
+
+
+def _credential_store_label() -> str:
+    """Short label for the credential store (for inline references)."""
+    if sys.platform == "darwin":
+        return "Keychain"
+    if sys.platform.startswith("linux"):
+        return "Secret Service"
+    return "credential store"
+
+
 def _fix_api_key_missing_anthropic(_method: str) -> str:
     return (
         "bristlenose needs an API key to analyse transcripts.\n"
         "Get a Claude API key from console.anthropic.com, then:\n\n"
         "  bristlenose configure claude\n\n"
-        "This stores your key securely in the system Keychain.\n\n"
+        f"{_credential_store_hint()}\n\n"
         "To use ChatGPT instead:  bristlenose run <input> --llm chatgpt\n"
         "To only transcribe:      bristlenose transcribe <input>"
     )
@@ -142,7 +166,7 @@ def _fix_api_key_missing_openai(_method: str) -> str:
         "bristlenose needs an API key to analyse transcripts.\n"
         "Get a ChatGPT API key from platform.openai.com, then:\n\n"
         "  bristlenose configure chatgpt\n\n"
-        "This stores your key securely in the system Keychain.\n\n"
+        f"{_credential_store_hint()}\n\n"
         "To use Claude instead:  bristlenose run <input> --llm claude\n"
         "To only transcribe:     bristlenose transcribe <input>"
     )
@@ -164,6 +188,25 @@ def _fix_api_key_invalid_openai(_method: str) -> str:
     )
 
 
+def _fix_api_key_missing_google(_method: str) -> str:
+    return (
+        "bristlenose needs an API key to analyse transcripts.\n"
+        "Get a Gemini API key from aistudio.google.com/apikey, then:\n\n"
+        "  bristlenose configure gemini\n\n"
+        f"{_credential_store_hint()}\n\n"
+        "To use Claude instead:  bristlenose run <input> --llm claude\n"
+        "To only transcribe:     bristlenose transcribe <input>"
+    )
+
+
+def _fix_api_key_invalid_google(_method: str) -> str:
+    return (
+        "Your Gemini API key was rejected. Get a new key from\n"
+        "aistudio.google.com/apikey, then:\n\n"
+        "  bristlenose configure gemini"
+    )
+
+
 def _fix_api_key_missing_azure(_method: str) -> str:
     return (
         "bristlenose needs Azure OpenAI credentials to analyse transcripts.\n"
@@ -171,7 +214,7 @@ def _fix_api_key_missing_azure(_method: str) -> str:
         "  export BRISTLENOSE_AZURE_ENDPOINT=https://your-resource.openai.azure.com/\n"
         "  export BRISTLENOSE_AZURE_API_KEY=your-key-here\n"
         "  export BRISTLENOSE_AZURE_DEPLOYMENT=your-deployment-name\n\n"
-        "Or add them to a .env file. To store the key in the system Keychain:\n\n"
+        f"Or add them to a .env file. To store the key in your {_credential_store_label()}:\n\n"
         "  bristlenose configure azure\n\n"
         "To use Claude instead:  bristlenose run <input> --llm claude\n"
         "To only transcribe:     bristlenose transcribe <input>"
@@ -312,6 +355,8 @@ _FIX_TABLE: dict[str, object] = {
     "api_key_missing_openai": _fix_api_key_missing_openai,
     "api_key_invalid_anthropic": _fix_api_key_invalid_anthropic,
     "api_key_invalid_openai": _fix_api_key_invalid_openai,
+    "api_key_missing_google": _fix_api_key_missing_google,
+    "api_key_invalid_google": _fix_api_key_invalid_google,
     "api_key_missing_azure": _fix_api_key_missing_azure,
     "api_key_invalid_azure": _fix_api_key_invalid_azure,
     "network_unreachable": _fix_network_unreachable,

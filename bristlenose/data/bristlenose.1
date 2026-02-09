@@ -1,6 +1,6 @@
 .\" Man page for bristlenose
 .\" Generated from cli.py help text
-.TH BRISTLENOSE 1 "February 2026" "bristlenose 0.8.1" "User Commands"
+.TH BRISTLENOSE 1 "February 2026" "bristlenose 0.8.2" "User Commands"
 .SH NAME
 bristlenose \- user-research transcription and quote extraction engine
 .SH SYNOPSIS
@@ -45,7 +45,7 @@ bristlenose \- user-research transcription and quote extraction engine
 .B bristlenose
 processes user-research interview recordings into structured, themed, timestamped
 quotes. It transcribes audio locally using Whisper, extracts and enriches quotes
-via LLM (Claude, ChatGPT, Azure OpenAI, or local models via Ollama), groups them by screen and
+via LLM (Claude, ChatGPT, Azure OpenAI, Gemini, or local models via Ollama), groups them by screen and
 theme, and renders a browsable HTML report. Nothing is uploaded; recordings stay
 on your machine.
 .PP
@@ -83,9 +83,9 @@ connectivity, PII redaction dependencies, and disk space. Also runs automaticall
 on first invocation and as a pre-flight check before pipeline commands.
 .TP
 .B configure \fIprovider\fR [\fB\-k\fR \fIKEY\fR]
-Store API credentials securely in the system keychain. Provider can be
+Store API credentials securely in the system credential store. Provider can be
 \fBclaude\fR (or \fBanthropic\fR), \fBchatgpt\fR (or \fBopenai\fR, \fBgpt\fR),
-or \fBazure\fR (or \fBazure-openai\fR).
+\fBazure\fR (or \fBazure-openai\fR), or \fBgemini\fR (or \fBgoogle\fR).
 The key is validated with a test API call before storing (Azure validates
 via \fBbristlenose doctor\fR instead, since it also needs endpoint and
 deployment). Use \fB\-k\fR to provide the key non-interactively.
@@ -119,8 +119,10 @@ Whisper model size: \fBtiny\fR, \fBbase\fR, \fBsmall\fR, \fBmedium\fR,
 .TP
 .BR \-l ", " \-\-llm " " \fIPROVIDER\fR
 LLM provider: \fBanthropic\fR (or \fBclaude\fR), \fBopenai\fR (or \fBchatgpt\fR),
-\fBazure\fR (or \fBazure-openai\fR), \fBlocal\fR (or \fBollama\fR). Default:
-\fBanthropic\fR. The \fBlocal\fR provider uses Ollama for free, private, offline
+\fBazure\fR (or \fBazure-openai\fR), \fBgoogle\fR (or \fBgemini\fR),
+\fBlocal\fR (or \fBollama\fR). Default:
+\fBanthropic\fR. The \fBgoogle\fR provider uses Google Gemini (budget option).
+The \fBlocal\fR provider uses Ollama for free, private, offline
 analysis. The \fBazure\fR provider uses Azure OpenAI Service for enterprise
 environments.
 .TP
@@ -196,10 +198,10 @@ Environment variables with prefix \fBBRISTLENOSE_\fR
 .IP 4. 4
 CLI flags
 .PP
-API keys have special priority: system keychain \(-> environment variable \(->
-\fI.env\fR file. Use \fBbristlenose configure claude\fR, \fBbristlenose configure chatgpt\fR, or
-\fBbristlenose configure azure\fR to store keys securely in the system keychain
-(macOS Keychain or Linux Secret Service).
+API keys have special priority: system credential store \(-> environment variable \(->
+\fI.env\fR file. Use \fBbristlenose configure claude\fR, \fBbristlenose configure chatgpt\fR,
+\fBbristlenose configure azure\fR, or \fBbristlenose configure gemini\fR to store keys
+securely in the system credential store (macOS Keychain, Linux Secret Service).
 .SS API keys
 .TP
 .B BRISTLENOSE_ANTHROPIC_API_KEY
@@ -207,6 +209,9 @@ Anthropic API key.
 .TP
 .B BRISTLENOSE_OPENAI_API_KEY
 OpenAI API key.
+.TP
+.B BRISTLENOSE_GOOGLE_API_KEY
+Google Gemini API key.
 .SS Azure OpenAI settings
 .TP
 .B BRISTLENOSE_AZURE_API_KEY
@@ -223,7 +228,7 @@ Azure OpenAI API version. Default: \fB2024-10-21\fR.
 .SS LLM settings
 .TP
 .B BRISTLENOSE_LLM_PROVIDER
-\fBanthropic\fR, \fBopenai\fR, \fBazure\fR, or \fBlocal\fR. Default: \fBanthropic\fR.
+\fBanthropic\fR, \fBopenai\fR, \fBazure\fR, \fBgoogle\fR, or \fBlocal\fR. Default: \fBanthropic\fR.
 .TP
 .B BRISTLENOSE_LLM_MODEL
 Model name. Default: \fBclaude-sonnet-4-20250514\fR.
@@ -363,6 +368,15 @@ export BRISTLENOSE_AZURE_ENDPOINT=https://my-resource.openai.azure.com/
 export BRISTLENOSE_AZURE_DEPLOYMENT=gpt-4o-research
 bristlenose configure azure
 bristlenose run ./interviews/ --llm azure
+.fi
+.RE
+.PP
+Use Gemini (budget option):
+.PP
+.RS
+.nf
+bristlenose configure gemini
+bristlenose run ./interviews/ --llm gemini
 .fi
 .RE
 .PP

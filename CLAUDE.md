@@ -2,7 +2,7 @@
 
 ## What this is
 
-Bristlenose is a local-first user-research analysis tool. It takes a folder of interview recordings (audio, video, or existing transcripts) and produces a browsable HTML report with extracted quotes, themes, sentiment, friction points, and user journeys. Everything runs on your laptop — nothing is uploaded to the cloud. LLM calls go to Claude (Anthropic), ChatGPT (OpenAI), Azure OpenAI (enterprise), or local models via Ollama (free, no account required).
+Bristlenose is a local-first user-research analysis tool. It takes a folder of interview recordings (audio, video, or existing transcripts) and produces a browsable HTML report with extracted quotes, themes, sentiment, friction points, and user journeys. Everything runs on your laptop — nothing is uploaded to the cloud. LLM calls go to Claude (Anthropic), ChatGPT (OpenAI), Azure OpenAI (enterprise), Gemini (Google), or local models via Ollama (free, no account required).
 
 ## Commands
 
@@ -28,7 +28,7 @@ Bristlenose is a local-first user-research analysis tool. It takes a folder of i
 
 CLI commands: `run` (full pipeline), `transcribe-only`, `analyze` (skip transcription), `render` (re-render from JSON, no LLM calls), `doctor` (dependency health checks). **Default command**: `bristlenose <folder>` is shorthand for `bristlenose run <folder>` — if the first argument is an existing directory (not a known command), `run` is injected automatically.
 
-LLM providers: Claude, ChatGPT, Azure OpenAI, Local (Ollama). See `bristlenose/llm/CLAUDE.md` for credentials, config, and provider details.
+LLM providers: Claude, ChatGPT, Azure OpenAI, Gemini, Local (Ollama). See `bristlenose/llm/CLAUDE.md` for credentials, config, and provider details.
 
 Quote exclusivity: **every quote appears in exactly one report section.** See `bristlenose/stages/CLAUDE.md` for the three-level enforcement design (quote type separation → within-cluster → within-theme). This matches researcher expectations — each quote appears once, suitable for handoff to non-researchers.
 
@@ -126,7 +126,10 @@ This is especially common when:
 - **Doctor command + Snap packaging design**: `docs/design-doctor-and-snap.md`
 - **Platform transcript ingestion**: `docs/design-platform-transcripts.md`
 - **Transcript coverage feature**: `docs/design-transcript-coverage.md`
-- **CLI improvements + LLM provider roadmap**: `docs/design-cli-improvements.md`
+- **CLI improvements**: `docs/design-cli-improvements.md`
+- **LLM provider roadmap**: `docs/design-llm-providers.md`
+- **Reactive UI architecture / framework / migration**: `docs/design-reactive-ui.md`
+- **Performance audit / optimisation decisions**: `docs/design-performance.md`
 - **Research methodology** (quote selection, sentiment taxonomy, clustering/theming rationale): `docs/design-research-methodology.md` — single source of truth for analytical decisions. **Read this before changing prompts or analysis logic.**
 - **Academic sources for analysis categories**: `docs/academic-sources.html` — theoretical foundations (emotion science, UX research, trust/credibility) behind quote tagging and sentiment analysis. **Update this file when investigating theories behind any Bristlenose features.**
 - **Installation guide**: `INSTALL.md` — detailed per-platform install instructions for non-technical users
@@ -248,8 +251,8 @@ When the user signals end of session, **proactively offer to run this checklist*
 9. **Clean up branches** — delete merged feature branches
 10. **Verify CI** — check latest push passes CI
 
-## Current status (v0.8.1, Feb 2026)
+## Current status (v0.8.2, Feb 2026)
 
-Core pipeline complete and published to PyPI + Homebrew. Snap packaging implemented and tested locally (arm64); CI builds amd64 on every push. Latest: **Hidden quotes + Codebook** — hide volume quotes with `h` key, per-subsection badge with dropdown previews; standalone codebook page with drag-drop tag organisation, colour-coded badges, group CRUD; toolbar redesign with unified button styling. Prior: Azure OpenAI provider, install smoke tests, chart layout + histogram delete, multi-select and tag filter, tag taxonomy redesign (7 research-backed sentiments), keychain credential storage, Ollama local LLM support, output inside input folder, transcript coverage, multi-participant sessions. See git log for full history.
+Core pipeline complete and published to PyPI + Homebrew. Snap packaging implemented and tested locally (arm64); CI builds amd64 on every push. Latest: **Gemini provider** — budget option (~$0.20/study), `_flatten_schema_for_gemini()` for native structured output, platform-specific credential labels (Keychain/Secret Service). Prior: Hidden quotes + Codebook, Azure OpenAI provider, install smoke tests, chart layout + histogram delete, multi-select and tag filter, tag taxonomy redesign (7 research-backed sentiments), keychain credential storage, Ollama local LLM support, output inside input folder, transcript coverage, multi-participant sessions. See git log for full history.
 
-**Next up:** Phase 4 Gemini for budget users. Also: Phase 2 cross-session moderator linking; snap store publishing; tag definitions page in report UI. See `TODO.md` for full task list.
+**Next up:** Phase 2 cross-session moderator linking; snap store publishing; tag definitions page in report UI. See `TODO.md` for full task list.

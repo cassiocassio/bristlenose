@@ -16,7 +16,7 @@ You can tag and favourite, to organise the most powerful quotes. It auto-tags wi
 
 Filter your quotes, and export via CSV to your boards in Miro, Figjam, Mural or Lucidspark, or spreadsheet - for further analysis.   
 
-Bristlenose transcribes locally, and can do the thematic analysis on a (built in) local LLM –– but for speedy results you'll want an API key from Anthropic, OpenAI or Azure. For commercial work, obviously check your org's policies on public LLM use.
+Bristlenose transcribes locally, and can do the thematic analysis on a (built in) local LLM –– but for speedy results you'll want an API key from Anthropic, OpenAI, Google or Azure. For commercial work, obviously check your org's policies on public LLM use.
 
 For a typical study, e.g. 5–8 participant-hours, you'd be looking at roughly $1.50–$2.50 total cost from your LLM provider.
 
@@ -51,7 +51,7 @@ The report includes:
 
 ## Install
 
-For LLM analysis, you can use **Claude**, **ChatGPT**, **Azure OpenAI**, or **Local AI** (free, via [Ollama](https://ollama.ai)) — see [Getting an API key](#getting-an-api-key) below.
+For LLM analysis, you can use **Claude**, **ChatGPT**, **Azure OpenAI**, **Gemini**, or **Local AI** (free, via [Ollama](https://ollama.ai)) — see [Getting an API key](#getting-an-api-key) below.
 
 ```bash
 # macOS (Homebrew) -- recommended, handles ffmpeg + Python for you
@@ -89,7 +89,7 @@ You only need one key -- **Claude or ChatGPT, not both**.
 3. Store it securely:
 
 ```bash
-bristlenose configure claude    # validates the key and stores it in your system keychain
+bristlenose configure claude    # validates the key and stores it in your system credential store
 ```
 
 ### Option B: ChatGPT (by OpenAI)
@@ -99,7 +99,7 @@ bristlenose configure claude    # validates the key and stores it in your system
 3. Store it securely:
 
 ```bash
-bristlenose configure chatgpt    # validates the key and stores it in your system keychain
+bristlenose configure chatgpt    # validates the key and stores it in your system credential store
 ```
 
 To use ChatGPT instead of the default, add `--llm openai` to your commands:
@@ -115,13 +115,31 @@ If your organisation has a Microsoft Azure contract that includes Azure OpenAI S
 ```bash
 export BRISTLENOSE_AZURE_ENDPOINT=https://your-resource.openai.azure.com/
 export BRISTLENOSE_AZURE_DEPLOYMENT=your-deployment-name
-bristlenose configure azure    # validates the key and stores it in your system keychain
+bristlenose configure azure    # validates the key and stores it in your system credential store
 bristlenose run ./interviews/ --llm azure
 ```
 
 You'll need your endpoint URL, API key, and deployment name from the [Azure portal](https://portal.azure.com).
 
-### Option D: Local AI (via Ollama) — free, no signup
+### Option D: Gemini (by Google)
+
+1. Go to [aistudio.google.com/apikey](https://aistudio.google.com/apikey) and sign up or log in
+2. Click **Create API key**, give it a name, and copy the key
+3. Store it securely:
+
+```bash
+bristlenose configure gemini    # validates the key and stores it in your system credential store
+```
+
+To use Gemini instead of the default, add `--llm gemini` to your commands:
+
+```bash
+bristlenose run ./interviews/ -o ./results/ --llm gemini
+```
+
+**Budget option:** Gemini is 5–7× cheaper than Claude or ChatGPT — roughly $0.20 per study instead of $1–3.
+
+### Option E: Local AI (via Ollama) — free, no signup
 
 Run analysis entirely on your machine using open-source models. No account, no API key, no cost.
 
@@ -139,28 +157,28 @@ If Ollama isn't installed, bristlenose will offer to install it for you (via Hom
 
 **Trade-offs:** Local models are slower (~10 min vs ~2 min per study) and less accurate (~85% vs ~99% JSON reliability). Good for trying the tool; use cloud APIs for production quality.
 
-Use whichever provider you already have an API key for. If you don't have one yet, Option A (Claude) is the default. A typical 8-participant study costs roughly $1--3 with any cloud provider.
+Use whichever provider you already have an API key for. If you don't have one yet, Option A (Claude) is the default. A typical 8-participant study costs roughly $1--3 with any cloud provider ($0.20 with Gemini).
 
 > **Note:** A ChatGPT Plus/Pro or Claude Pro/Max subscription does **not** include API access. The API is billed separately — you need an API key from [console.anthropic.com](https://console.anthropic.com) or [platform.openai.com](https://platform.openai.com).
 
 ### Making your key permanent
 
-**macOS and Linux:** The recommended way is `bristlenose configure` (shown in Options A--C above). It validates your key and stores it in your operating system's secure credential store:
+**macOS and Linux:** The recommended way is `bristlenose configure` (shown in Options A--D above). It validates your key and stores it in your operating system's secure credential store:
 
 - **macOS** — saved to your **login keychain**. You can view or delete it in the Keychain Access app (search for "Bristlenose")
 - **Linux** — saved via **Secret Service** (GNOME Keyring / KDE Wallet). Requires `secret-tool` to be installed (included by default on most desktop Linux distributions)
 
-The key is loaded automatically on every run — no environment variables needed. Run `bristlenose doctor` to verify your key is detected (it will show "(Keychain)" next to the API key check).
+The key is loaded automatically on every run — no environment variables needed. Run `bristlenose doctor` to verify your key is detected (it will show "(Credential Store)" next to the API key check).
 
-**Windows:** Keychain storage is not yet supported. Set the key permanently with `setx` (built into Windows):
+**Windows:** Credential store storage is not yet supported. Set the key permanently with `setx` (built into Windows):
 
 ```
 setx BRISTLENOSE_ANTHROPIC_API_KEY "sk-ant-..."
 ```
 
-For ChatGPT, use `BRISTLENOSE_OPENAI_API_KEY` instead. Close and reopen your terminal after running `setx` — the variable only takes effect in new windows.
+For ChatGPT, use `BRISTLENOSE_OPENAI_API_KEY`; for Gemini, use `BRISTLENOSE_GOOGLE_API_KEY`. Close and reopen your terminal after running `setx` — the variable only takes effect in new windows.
 
-**Alternative: shell profile (macOS/Linux).** If you prefer environment variables over the keychain, add the export to your shell startup file:
+**Alternative: shell profile (macOS/Linux).** If you prefer environment variables over the credential store, add the export to your shell startup file:
 
 ```bash
 # macOS (zsh is the default shell):
@@ -256,10 +274,6 @@ Transcription hardware is auto-detected. Apple Silicon uses MLX on Metal GPU. NV
 - **.docx export** -- download the report as a Word document
 - **Edit writeback** -- save your in-browser corrections back to the transcript files on disk
 
-### Providers
-
-- **Gemini** -- Google's API, 5–7× cheaper than Claude or ChatGPT; good option for budget-conscious teams
-
 ### Platform
 
 - **Snap Store** -- publish to the Snap Store for one-command install on Ubuntu and other Linux distros
@@ -277,7 +291,8 @@ Priorities may shift. If something is missing that matters to you, [open an issu
 **Developers** -- Python 3.10+, fully typed, Pydantic models. See [CONTRIBUTING.md](CONTRIBUTING.md) for the CLA, project layout, and design system docs.
 
 **Help us test** -- we'd love feedback from people using bristlenose with:
-- **Azure OpenAI** -- newly added; we need real-world testing with Azure deployments
+- **Gemini** -- newly added; budget option at ~$0.20/study
+- **Azure OpenAI** -- enterprise deployments
 - **Windows** -- the pipeline works but hasn't been widely tested
 - **Linux** -- snap package coming soon, looking for testers on various distros
 
@@ -332,7 +347,7 @@ bristlenose --version
 bristlenose doctor
 
 # 4. Run it for real (store whichever API key you have)
-bristlenose configure claude      # validates and saves to system keychain
+bristlenose configure claude      # validates and saves to system credential store
 # or: bristlenose configure chatgpt
 bristlenose run ./interviews/ -o ./results/
 ```
@@ -358,6 +373,12 @@ Edit `bristlenose/__init__.py` (the single source of truth for version), commit,
 ---
 
 ## Changelog
+
+**0.8.2** — _9 Feb 2026_
+
+- Transcript annotations — transcript pages highlight selected quotes with margin labels, sentiment colours, span bars, and playback-synced glow
+- Gemini provider — `--llm gemini` for budget-conscious teams (~$0.20/study, 5–7× cheaper than Claude or ChatGPT); `bristlenose configure gemini` stores your key in the system credential store
+- Jinja2 templates — report renderer migrated from f-strings to 13 Jinja2 templates (internal refactor, no output changes)
 
 **0.8.1** — _7 Feb 2026_
 

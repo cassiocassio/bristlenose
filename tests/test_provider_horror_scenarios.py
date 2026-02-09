@@ -132,7 +132,7 @@ class TestWrongProviderSelected:
 
               bristlenose configure claude
 
-            This stores your key securely in the system Keychain.
+            This stores your key securely in your macOS Keychain.
 
             To use ChatGPT instead:  bristlenose run <input> --llm chatgpt
             To only transcribe:      bristlenose transcribe <input>
@@ -161,7 +161,7 @@ class TestWrongProviderSelected:
 
               bristlenose configure chatgpt
 
-            This stores your key securely in the system Keychain.
+            This stores your key securely in your macOS Keychain.
 
             To use Claude instead:  bristlenose run <input> --llm claude
             To only transcribe:     bristlenose transcribe <input>
@@ -757,9 +757,9 @@ class TestEdgeCases:
         User somehow has an unknown provider configured.
 
         They'll see:
-            Unknown LLM provider: gemini
+            Unknown LLM provider: deepseek
         """
-        settings = _settings(llm_provider="gemini")
+        settings = _settings(llm_provider="deepseek")
         result = check_api_key(settings)
 
         assert result.status == CheckStatus.FAIL

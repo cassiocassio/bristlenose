@@ -5,13 +5,13 @@
 API keys are stored securely in the system keychain. Uses native CLI tools — no Python keyring shim.
 
 - **CLI command**: `bristlenose configure <provider>` — prompts for key, validates with API, stores in keychain. Accepts `--key` option to bypass interactive prompt (useful in scripts or when TTY has issues)
-- **Provider aliases**: `claude` → `anthropic`, `chatgpt`/`gpt` → `openai`
+- **Provider aliases**: `claude` → `anthropic`, `chatgpt`/`gpt` → `openai`, `gemini` → `google`
 - **Priority order**: keychain → env var (`ANTHROPIC_API_KEY`) → .env file
-- **macOS**: `bristlenose/credentials_macos.py` — uses `security` CLI (add-generic-password, find-generic-password, delete-generic-password). Service names: "Bristlenose Anthropic API Key", "Bristlenose OpenAI API Key"
+- **macOS**: `bristlenose/credentials_macos.py` — uses `security` CLI (add-generic-password, find-generic-password, delete-generic-password). Service names: "Bristlenose Anthropic API Key", "Bristlenose OpenAI API Key", "Bristlenose Google Gemini API Key"
 - **Linux**: `bristlenose/credentials_linux.py` — uses `secret-tool` (Secret Service API). Falls back to `EnvCredentialStore` if secret-tool unavailable
 - **Fallback**: `bristlenose/credentials.py` — `EnvCredentialStore` reads from env vars (cannot write)
 - **Integration**: `_populate_keys_from_keychain()` in `config.py` loads from keychain when settings don't have keys from env/.env
-- **Doctor display**: shows "(Keychain)" suffix when key source is keychain
+- **Doctor display**: shows platform-specific suffix when key source is keychain — "(Keychain)" on macOS, "(Secret Service)" on Linux
 - **Validation**: keys are validated before storing — catches typos/truncation
 - **Tests**: `tests/test_credentials.py` — 25 tests (macOS tests run on macOS, Linux tests skipped)
 - **Design doc**: `docs/design-keychain.md`
@@ -55,3 +55,7 @@ Per-participant LLM calls (stages 5b, 8, 9) run concurrently, bounded by `llm_co
 - **Local LLM uses OpenAI SDK** — Ollama is OpenAI-compatible, so `_analyze_local()` in `llm/client.py` uses the same `openai.AsyncOpenAI` client with `base_url=settings.local_url` and `api_key="ollama"` (required by SDK but ignored by Ollama)
 - **Local model retry logic** — `_analyze_local()` retries JSON parsing failures up to 3 times with exponential backoff; local models are ~85% reliable vs ~99% for cloud
 - **`_needs_provider_prompt()` checks Ollama status** — for local provider, it calls `validate_local_endpoint()` to check if Ollama is running and has the model; for cloud providers, it just checks if the API key is set
+- **Gemini uses native JSON schema** — not JSON mode or tool use. `response_mime_type="application/json"` + `response_schema=schema_dict` on the `GenerationConfig`. This gives structured output without tool-call overhead
+- **`_flatten_schema_for_gemini()`** — Gemini's schema support is a subset of JSON Schema. The helper inlines `$defs`/`$ref` (recursive resolution), converts `anyOf`-with-null to `{"type": "STRING", "nullable": true}`, maps Python types to Gemini types (`string`→`STRING`, `integer`→`INTEGER`, etc.), and strips unsupported keys (`title`, `default`, `$defs`). Without this, Gemini rejects Pydantic-generated schemas
+- **Gemini async via `.aio` property** — `google.genai.Client` exposes async methods as `client.aio.models.generate_content()`, not a separate `AsyncClient` class. This is different from the Anthropic/OpenAI pattern
+- **Gemini lazy client init** — same `_get_or_create_client()` pattern as other providers. Client is created on first call, cached as `_gemini_client` on the `LLMClient` instance

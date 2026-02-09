@@ -78,7 +78,7 @@ class TestResolveProvider:
 
     def test_unknown_provider_raises(self) -> None:
         with pytest.raises(ValueError, match="Unknown LLM provider"):
-            resolve_provider("gemini")
+            resolve_provider("deepseek")
 
     def test_error_message_lists_valid_providers(self) -> None:
         with pytest.raises(ValueError) as exc_info:
@@ -563,7 +563,7 @@ class TestDoctorFixesOllama:
             "bristlenose.config.load_settings",
             return_value=MagicMock(
                 anthropic_api_key="sk-ant-xxx", openai_api_key="",
-                azure_api_key="", azure_endpoint="",
+                azure_api_key="", azure_endpoint="", google_api_key="",
             ),
         ):
             fix = get_fix("ollama_not_running", "pip")
@@ -577,7 +577,7 @@ class TestDoctorFixesOllama:
             "bristlenose.config.load_settings",
             return_value=MagicMock(
                 anthropic_api_key="", openai_api_key="sk-xxx",
-                azure_api_key="", azure_endpoint="",
+                azure_api_key="", azure_endpoint="", google_api_key="",
             ),
         ):
             fix = get_fix("ollama_not_running", "pip")
@@ -591,7 +591,7 @@ class TestDoctorFixesOllama:
             "bristlenose.config.load_settings",
             return_value=MagicMock(
                 anthropic_api_key="sk-ant-xxx", openai_api_key="sk-xxx",
-                azure_api_key="", azure_endpoint="",
+                azure_api_key="", azure_endpoint="", google_api_key="",
             ),
         ):
             fix = get_fix("ollama_not_running", "pip")
@@ -606,7 +606,7 @@ class TestDoctorFixesOllama:
             "bristlenose.config.load_settings",
             return_value=MagicMock(
                 anthropic_api_key="", openai_api_key="",
-                azure_api_key="", azure_endpoint="",
+                azure_api_key="", azure_endpoint="", google_api_key="",
             ),
         ):
             fix = get_fix("ollama_not_running", "pip")

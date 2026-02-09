@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import copy
 import json
 import logging
 from typing import TypeVar
@@ -13,6 +14,67 @@ from bristlenose.config import BristlenoseSettings
 logger = logging.getLogger(__name__)
 
 T = TypeVar("T", bound=BaseModel)
+
+
+# ---------------------------------------------------------------------------
+# Gemini schema helpers
+# ---------------------------------------------------------------------------
+
+
+def _flatten_schema_for_gemini(schema: dict) -> dict:
+    """Flatten a Pydantic JSON schema for Gemini's native structured output.
+
+    Gemini's ``response_schema`` may not support JSON Schema ``$ref`` pointers
+    or ``anyOf`` unions with null.  This function:
+
+    1. Inlines all ``$defs`` / ``$ref`` references.
+    2. Converts ``anyOf``-with-null (``[{"type": "string"}, {"type": "null"}]``)
+       to the non-null branch (Gemini returns "" instead of null).
+    3. Removes the top-level ``$defs`` key after inlining.
+    4. Strips ``title`` keys (Gemini ignores them, but they bloat the schema).
+
+    The returned schema is a deep copy — the original is not modified.
+    """
+    schema = copy.deepcopy(schema)
+    defs = schema.pop("$defs", {})
+
+    def _resolve(node: object) -> object:
+        """Recursively resolve $ref pointers and simplify anyOf-with-null."""
+        if isinstance(node, dict):
+            # Resolve $ref
+            if "$ref" in node:
+                ref_path: str = node["$ref"]
+                # Only handle local #/$defs/Name references
+                if ref_path.startswith("#/$defs/"):
+                    def_name = ref_path[len("#/$defs/"):]
+                    if def_name in defs:
+                        return _resolve(copy.deepcopy(defs[def_name]))
+                return node  # unresolvable ref — leave as-is
+
+            # Simplify anyOf with null
+            if "anyOf" in node:
+                variants = node["anyOf"]
+                non_null = [v for v in variants if v != {"type": "null"}]
+                if len(non_null) == 1 and len(variants) == 2:
+                    # anyOf: [{"type": "string"}, {"type": "null"}] → {"type": "string"}
+                    merged = {**node}
+                    del merged["anyOf"]
+                    merged.update(_resolve(non_null[0]))  # type: ignore[arg-type]
+                    merged.pop("default", None)  # remove null default
+                    return merged
+
+            # Recurse into all dict values
+            return {
+                k: _resolve(v) for k, v in node.items()
+                if k != "title"  # strip title keys
+            }
+
+        if isinstance(node, list):
+            return [_resolve(item) for item in node]
+
+        return node
+
+    return _resolve(schema)  # type: ignore[return-value]
 
 
 class LLMUsageTracker:
@@ -40,7 +102,8 @@ class LLMUsageTracker:
 class LLMClient:
     """Unified interface for LLM calls with Pydantic-validated structured output.
 
-    Supports Claude (Anthropic), ChatGPT (OpenAI), and Local (Ollama) as providers.
+    Supports Claude (Anthropic), ChatGPT (OpenAI), Azure OpenAI, Gemini (Google),
+    and Local (Ollama) as providers.
     """
 
     def __init__(self, settings: BristlenoseSettings) -> None:
@@ -49,6 +112,7 @@ class LLMClient:
         self._anthropic_client: object | None = None
         self._openai_client: object | None = None
         self._azure_client: object | None = None
+        self._google_client: object | None = None
         self._local_client: object | None = None
         self.tracker = LLMUsageTracker()
 
@@ -86,6 +150,12 @@ class LLMClient:
                     "Azure OpenAI deployment name not set. "
                     "Set BRISTLENOSE_AZURE_DEPLOYMENT to your model deployment name."
                 )
+        if self.provider == "google" and not self.settings.google_api_key:
+            raise ValueError(
+                "Gemini API key not set. "
+                "Set BRISTLENOSE_GOOGLE_API_KEY in your .env file or environment. "
+                "Get a key from aistudio.google.com/apikey"
+            )
         # Local provider doesn't need an API key
 
     async def analyze(
@@ -118,6 +188,10 @@ class LLMClient:
             )
         elif self.provider == "azure":
             return await self._analyze_azure(
+                system_prompt, user_prompt, response_model, max_tokens
+            )
+        elif self.provider == "google":
+            return await self._analyze_google(
                 system_prompt, user_prompt, response_model, max_tokens
             )
         elif self.provider == "local":
@@ -279,6 +353,53 @@ class LLMClient:
             raise RuntimeError("Empty response from Azure OpenAI")
 
         data = json.loads(content)
+        return response_model.model_validate(data)
+
+    async def _analyze_google(
+        self,
+        system_prompt: str,
+        user_prompt: str,
+        response_model: type[T],
+        max_tokens: int,
+    ) -> T:
+        """Call Google Gemini API with native JSON schema for structured output."""
+        from google import genai
+        from google.genai import types
+
+        if self._google_client is None:
+            self._google_client = genai.Client(
+                api_key=self.settings.google_api_key,
+            )
+
+        client = self._google_client.aio  # type: ignore[union-attr]
+
+        schema = _flatten_schema_for_gemini(response_model.model_json_schema())
+
+        logger.debug("Calling Gemini API: model=%s", self.settings.llm_model)
+
+        response = await client.models.generate_content(
+            model=self.settings.llm_model,
+            contents=user_prompt,
+            config=types.GenerateContentConfig(
+                system_instruction=system_prompt,
+                response_mime_type="application/json",
+                response_schema=schema,
+                max_output_tokens=max_tokens,
+                temperature=self.settings.llm_temperature,
+            ),
+        )
+
+        # Track token usage
+        if hasattr(response, "usage_metadata") and response.usage_metadata:
+            self.tracker.record(
+                response.usage_metadata.prompt_token_count or 0,
+                response.usage_metadata.candidates_token_count or 0,
+            )
+
+        if not response.text:
+            raise RuntimeError("Empty response from Gemini")
+
+        data = json.loads(response.text)
         return response_model.model_validate(data)
 
     async def _analyze_local(

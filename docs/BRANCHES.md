@@ -82,10 +82,32 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 | `main` | `bristlenose/` | `origin/main` (push via `origin/main:wip` until release time) |
 | `transcript-annotations` | `bristlenose_branch transcript-annotations/` | `origin/transcript-annotations` |
 | `CI` | `bristlenose_branch CI/` | not yet pushed |
+| `jinja2-migration` | `bristlenose_branch jinja2-migration/` | not yet pushed |
 
 ---
 
 ## Active Branches
+
+### `jinja2-migration`
+
+**Status:** Phase 0 — comparison infrastructure (no render_html.py changes)
+**Started:** 9 Feb 2026
+**Worktree:** `/Users/cassio/Code/bristlenose_branch jinja2-migration/`
+**Design doc:** `docs/private/frontend-evolution.md`
+
+**What it does:** Incremental migration of `render_html.py` from `_w = parts.append` string building to Jinja2 templates. Phase 0 sets up comparison tooling only. Phase 1+ replaces `_w()` sections one at a time.
+
+**Files this branch will touch:**
+- `pyproject.toml` — add `jinja2>=3.1` dependency
+- `bristlenose/stages/render_html.py` — Phase 1+ only (not Phase 0)
+- `bristlenose/theme/templates/*.html` — new Jinja2 template files (Phase 1+)
+- `scripts/compare-render.sh` — new comparison script
+- `tests/test_jinja2_parity.py` — new parity tests
+
+**Potential conflicts with other branches:**
+- `render_html.py` — but Phase 0 does not touch it; Phase 1 starts after pending branches merge
+
+---
 
 ### `CI`
 

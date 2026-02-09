@@ -220,6 +220,7 @@
         --bn-colour-editing-border:   light-dark(#e5e0c0, #4a4528);
         --bn-colour-active-bg:        light-dark(#f0fdf4, #0f2918);
         --bn-colour-highlight:        light-dark(#fef08a, #854d0e);
+        --bn-colour-cited-bg:         light-dark(#fef9c3, #3b2f05);
 
         /* Sentiment colours (v0.7+ taxonomy) — foreground hues lighter on dark */
         --bn-sentiment-frustration:      light-dark(#ea580c, #fb923c);

@@ -268,6 +268,7 @@ class ExtractedQuote(BaseModel):
     start_timecode: float  # seconds
     end_timecode: float  # seconds
     text: str  # verbatim with editorial cleanup applied
+    verbatim_excerpt: str = ""  # exact original substring before editorial cleanup
     topic_label: str
     quote_type: QuoteType
     researcher_context: str | None = None  # e.g. "When asked about the dashboard"

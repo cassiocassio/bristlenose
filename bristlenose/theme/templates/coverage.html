@@ -1,0 +1,25 @@
+<section>
+<h2 id="transcript-coverage">Transcript coverage</h2>
+<p class="coverage-summary">{{ summary }}</p>
+{%- if pct_omitted == 0 %}
+<p class="coverage-empty">Nothing omitted — all participant speech is in the report.</p>
+{%- else %}
+<details class="coverage-details">
+<summary>Show omitted segments</summary>
+<div class="coverage-body">
+{%- for session in sessions %}
+<div class="coverage-session">
+<p class="coverage-session-title">Session {{ session.num }}</p>
+{%- for seg in session.full_segments %}
+<p class="coverage-segment"><a href="sessions/transcript_{{ session.id }}.html#{{ seg.anchor }}" class="timecode">[{{ seg.code }} {{ seg.tc }}]</a> {{ seg.text }}</p>
+{%- endfor %}
+{%- if session.fragments_html %}
+<p class="coverage-fragments">{{ session.fragments_html }}</p>
+{%- endif %}
+</div>
+{%- endfor %}
+</div>
+</details>
+{%- endif %}
+</section>
+<hr>

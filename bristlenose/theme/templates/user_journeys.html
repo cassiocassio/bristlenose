@@ -1,0 +1,14 @@
+<table>
+<thead><tr>
+<th>Participant</th><th>Stages</th><th>Friction points</th>
+</tr></thead>
+<tbody>
+{%- for row in rows %}
+<tr>
+<td>{{ row.pid }}</td>
+<td>{{ row.stages }}</td>
+<td>{{ row.friction }}</td>
+</tr>
+{%- endfor %}
+</tbody>
+</table>

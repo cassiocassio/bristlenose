@@ -236,20 +236,11 @@ def render_html(
     _w = parts.append
 
     # --- Document shell ---
-    _w("<!DOCTYPE html>")
-    if color_scheme in ("light", "dark"):
-        _w(f'<html lang="en" data-theme="{color_scheme}">')
-    else:
-        _w('<html lang="en">')
-    _w("<head>")
-    _w('<meta charset="utf-8">')
-    _w('<meta name="viewport" content="width=device-width, initial-scale=1">')
-    _w('<meta name="color-scheme" content="light dark">')
-    _w(f"<title>{_esc(project_name)}</title>")
-    _w('<link rel="stylesheet" href="assets/bristlenose-theme.css">')
-    _w("</head>")
-    _w("<body>")
-    _w("<article>")
+    _w(_document_shell_open(
+        title=_esc(project_name),
+        css_href="assets/bristlenose-theme.css",
+        color_scheme=color_scheme,
+    ))
 
     # --- Header ---
     now = datetime.now()
@@ -990,22 +981,12 @@ def _render_transcript_page(
     parts: list[str] = []
     _w = parts.append
 
-    _w("<!DOCTYPE html>")
-    theme_attr = ""
-    if color_scheme in ("light", "dark"):
-        theme_attr = f' data-theme="{color_scheme}"'
-    _w(f'<html lang="en"{theme_attr}>')
-    _w("<head>")
-    _w('<meta charset="utf-8">')
-    _w('<meta name="viewport" content="width=device-width, initial-scale=1">')
-    _w('<meta name="color-scheme" content="light dark">')
     title = f"Session {_esc(session_num)}: {', '.join(_esc(lb) for lb in code_labels)}"
-    _w(f"<title>{title} \u2014 {_esc(project_name)}</title>")
-    # Session pages are in sessions/ — CSS is at ../assets/
-    _w('<link rel="stylesheet" href="../assets/bristlenose-theme.css">')
-    _w("</head>")
-    _w("<body>")
-    _w("<article>")
+    _w(_document_shell_open(
+        title=f"{title} \u2014 {_esc(project_name)}",
+        css_href="../assets/bristlenose-theme.css",
+        color_scheme=color_scheme,
+    ))
 
     # Header (same layout as report) — logos at ../assets/
     _w('<div class="report-header">')
@@ -1227,20 +1208,11 @@ def _render_codebook_page(
     parts: list[str] = []
     _w = parts.append
 
-    _w("<!DOCTYPE html>")
-    theme_attr = ""
-    if color_scheme in ("light", "dark"):
-        theme_attr = f' data-theme="{color_scheme}"'
-    _w(f'<html lang="en"{theme_attr}>')
-    _w("<head>")
-    _w('<meta charset="utf-8">')
-    _w('<meta name="viewport" content="width=device-width, initial-scale=1">')
-    _w('<meta name="color-scheme" content="light dark">')
-    _w(f"<title>Codebook \u2014 {_esc(project_name)}</title>")
-    _w('<link rel="stylesheet" href="assets/bristlenose-theme.css">')
-    _w("</head>")
-    _w("<body>")
-    _w("<article>")
+    _w(_document_shell_open(
+        title=f"Codebook \u2014 {_esc(project_name)}",
+        css_href="assets/bristlenose-theme.css",
+        color_scheme=color_scheme,
+    ))
 
     # Header (same layout as report — logos at assets/)
     _w('<div class="report-header">')
@@ -1385,6 +1357,15 @@ def _highlight_quoted_text(
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
+
+def _document_shell_open(
+    title: str, css_href: str, color_scheme: str = "auto"
+) -> str:
+    """Return the opening document shell (DOCTYPE through <article>)."""
+    data_theme = color_scheme if color_scheme in ("light", "dark") else ""
+    tmpl = _jinja_env.get_template("document_shell_open.html")
+    return tmpl.render(title=title, css_href=css_href, data_theme=data_theme)
 
 
 def _footer_html(assets_prefix: str = "assets") -> str:

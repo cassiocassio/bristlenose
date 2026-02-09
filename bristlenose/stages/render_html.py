@@ -251,47 +251,21 @@ def render_html(
     n_sessions = len(sessions)
     meta_date = format_finder_date(now, now=now)
 
-    _w('<div class="report-header">')
-    # Left: logo + logotype + project name
-    _w('<div class="header-left">')
-    if paths.logo_file.exists():
-        if paths.logo_dark_file.exists():
-            _w("<picture>")
-            _w(
-                '<source srcset="assets/bristlenose-logo-dark.png" '
-                'media="(prefers-color-scheme: dark)">'
-            )
-            _w(
-                '<img class="report-logo" src="assets/bristlenose-logo.png" '
-                'alt="Bristlenose logo">'
-            )
-            _w("</picture>")
-        else:
-            _w(
-                '<img class="report-logo" src="assets/bristlenose-logo.png" '
-                'alt="Bristlenose logo">'
-            )
-    _w(
-        f'<span class="header-title">'
-        f'<span class="header-logotype">Bristlenose</span>'
-        f"\u2003"
-        f'<span class="header-project">{_esc(project_name)}</span>'
-        f"</span>"
-    )
-    _w("</div>")
-    # Right: document title + meta
-    _w('<div class="header-right">')
-    _w('<span class="header-doc-title">Research report</span>')
-    _w(
+    meta_right = (
         f'<span class="header-meta">'
         f"{n_sessions}\u00a0session{'s' if n_sessions != 1 else ''}, "
         f"{n_participants}\u00a0participant{'s' if n_participants != 1 else ''}, "
         f"{_esc(meta_date)}"
         f"</span>"
     )
-    _w("</div>")
-    _w("</div>")
-    _w("<hr>")
+    _w(_report_header_html(
+        assets_prefix="assets",
+        has_logo=paths.logo_file.exists(),
+        has_dark_logo=paths.logo_dark_file.exists(),
+        project_name=_esc(project_name),
+        doc_title="Research report",
+        meta_right=meta_right,
+    ))
 
     # --- Toolbar ---
     _w('<div class="toolbar">')
@@ -989,51 +963,24 @@ def _render_transcript_page(
     ))
 
     # Header (same layout as report) — logos at ../assets/
-    _w('<div class="report-header">')
-    _w('<div class="header-left">')
-    if paths.logo_file.exists():
-        if paths.logo_dark_file.exists():
-            _w("<picture>")
-            _w(
-                '<source srcset="../assets/bristlenose-logo-dark.png" '
-                'media="(prefers-color-scheme: dark)">'
-            )
-            _w(
-                '<img class="report-logo" src="../assets/bristlenose-logo.png" '
-                'alt="Bristlenose logo">'
-            )
-            _w("</picture>")
-        else:
-            _w(
-                '<img class="report-logo" src="../assets/bristlenose-logo.png" '
-                'alt="Bristlenose logo">'
-            )
-    _w(
-        f'<span class="header-title">'
-        f'<span class="header-logotype">Bristlenose</span>'
-        f"\u2003"
-        f'<span class="header-project">{_esc(project_name)}</span>'
-        f"</span>"
-    )
-    _w("</div>")
-    _w('<div class="header-right">')
-    _w('<span class="header-doc-title">Session transcript</span>')
-
-    # Meta line
     meta_parts: list[str] = []
     if transcript.source_file:
         meta_parts.append(_esc(transcript.source_file))
     if transcript.duration_seconds > 0:
         meta_parts.append(format_timecode(transcript.duration_seconds))
-    if meta_parts:
-        _w(
-            f'<span class="header-meta">'
-            f"{' &middot; '.join(meta_parts)}"
-            f"</span>"
-        )
-    _w("</div>")
-    _w("</div>")
-    _w("<hr>")
+    t_meta_right = (
+        f'<span class="header-meta">'
+        f"{' &middot; '.join(meta_parts)}"
+        f"</span>"
+    ) if meta_parts else None
+    _w(_report_header_html(
+        assets_prefix="../assets",
+        has_logo=paths.logo_file.exists(),
+        has_dark_logo=paths.logo_dark_file.exists(),
+        project_name=_esc(project_name),
+        doc_title="Session transcript",
+        meta_right=t_meta_right,
+    ))
 
     # Back link + participant heading — report is at ../bristlenose-{slug}-report.html
     _w('<nav class="transcript-back">')
@@ -1215,38 +1162,13 @@ def _render_codebook_page(
     ))
 
     # Header (same layout as report — logos at assets/)
-    _w('<div class="report-header">')
-    _w('<div class="header-left">')
-    if paths.logo_file.exists():
-        if paths.logo_dark_file.exists():
-            _w("<picture>")
-            _w(
-                '<source srcset="assets/bristlenose-logo-dark.png" '
-                'media="(prefers-color-scheme: dark)">'
-            )
-            _w(
-                '<img class="report-logo" src="assets/bristlenose-logo.png" '
-                'alt="Bristlenose logo">'
-            )
-            _w("</picture>")
-        else:
-            _w(
-                '<img class="report-logo" src="assets/bristlenose-logo.png" '
-                'alt="Bristlenose logo">'
-            )
-    _w(
-        f'<span class="header-title">'
-        f'<span class="header-logotype">Bristlenose</span>'
-        f"\u2003"
-        f'<span class="header-project">{_esc(project_name)}</span>'
-        f"</span>"
-    )
-    _w("</div>")
-    _w('<div class="header-right">')
-    _w('<span class="header-doc-title">Codebook</span>')
-    _w("</div>")
-    _w("</div>")
-    _w("<hr>")
+    _w(_report_header_html(
+        assets_prefix="assets",
+        has_logo=paths.logo_file.exists(),
+        has_dark_logo=paths.logo_dark_file.exists(),
+        project_name=_esc(project_name),
+        doc_title="Codebook",
+    ))
 
     # Back link to report
     report_filename = f"bristlenose-{slug}-report.html"
@@ -1366,6 +1288,27 @@ def _document_shell_open(
     data_theme = color_scheme if color_scheme in ("light", "dark") else ""
     tmpl = _jinja_env.get_template("document_shell_open.html")
     return tmpl.render(title=title, css_href=css_href, data_theme=data_theme)
+
+
+def _report_header_html(
+    *,
+    assets_prefix: str,
+    has_logo: bool,
+    has_dark_logo: bool,
+    project_name: str,
+    doc_title: str,
+    meta_right: str | None = None,
+) -> str:
+    """Return the report header block (logo, title, doc type, meta)."""
+    tmpl = _jinja_env.get_template("report_header.html")
+    return tmpl.render(
+        assets_prefix=assets_prefix,
+        has_logo=has_logo,
+        has_dark_logo=has_dark_logo,
+        project_name=project_name,
+        doc_title=doc_title,
+        meta_right=meta_right,
+    )
 
 
 def _footer_html(assets_prefix: str = "assets") -> str:

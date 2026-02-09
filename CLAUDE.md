@@ -28,60 +28,19 @@ Bristlenose is a local-first user-research analysis tool. It takes a folder of i
 
 CLI commands: `run` (full pipeline), `transcribe-only`, `analyze` (skip transcription), `render` (re-render from JSON, no LLM calls), `doctor` (dependency health checks). **Default command**: `bristlenose <folder>` is shorthand for `bristlenose run <folder>` — if the first argument is an existing directory (not a known command), `run` is injected automatically.
 
-LLM provider: Four providers supported — Claude (Anthropic), ChatGPT (OpenAI), Azure OpenAI (enterprise), and Local (Ollama). API keys stored in system keychain (`bristlenose configure claude`, `bristlenose configure chatgpt`, or `bristlenose configure azure`), or via env vars (`ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, or `AZURE_API_KEY`), `.env` file, or `bristlenose.toml`. Priority: keychain → env var → .env file. Prefix with `BRISTLENOSE_` for namespaced variants. Local provider requires no API key — just Ollama running locally. Azure also requires `BRISTLENOSE_AZURE_ENDPOINT` and `BRISTLENOSE_AZURE_DEPLOYMENT`.
+LLM providers: Claude, ChatGPT, Azure OpenAI, Local (Ollama). See `bristlenose/llm/CLAUDE.md` for credentials, config, and provider details.
 
-Quote exclusivity: **Every quote appears in exactly one section of the report.** Stage 9 classifies each quote as `SCREEN_SPECIFIC` or `GENERAL_CONTEXT`. Stage 10 (screen clustering) only sees screen-specific quotes; stage 11 (thematic grouping) only sees general-context quotes — the two pools are mutually exclusive. Within screen clusters, the prompt enforces "exactly one cluster." Within themes, the prompt enforces "exactly one theme" (pick strongest fit; the researcher reassigns if needed). A safety-net dedup in `thematic_grouping.py` catches any LLM violations for weak themes folded into "Uncategorised observations." This matches researcher expectations: each quote appears once, making the report suitable for further processing or handoff to non-researchers.
+Quote exclusivity: **every quote appears in exactly one report section.** See `bristlenose/stages/CLAUDE.md` for the three-level enforcement design (quote type separation → within-cluster → within-theme). This matches researcher expectations — each quote appears once, suitable for handoff to non-researchers.
 
 LLM prompts: All prompt templates live in `bristlenose/llm/prompts.py`. When iterating on prompts, archive the old version to `bristlenose/llm/prompts-archive/` with naming convention `prompts_YYYY-MM-DD_description.py` (e.g., `prompts_2026-02-04_original-14-tags.py`). This folder is ignored by the application but tracked in git for easy comparison without digging through commit history. Future goal: allow users to customise prompts via config.
 
-Report JavaScript — 17 modules in `bristlenose/theme/js/`, concatenated in dependency order into a single `<script>` block by `render_html.py` (`_JS_FILES`). Transcript pages and codebook page use separate JS lists. See `bristlenose/theme/CLAUDE.md` for boot sequence and module details.
+Report JavaScript — 17 modules in `bristlenose/theme/js/`, concatenated in dependency order into a single `<script>` block by `render_html.py` (`_JS_FILES`). Transcript pages and codebook page use separate JS lists. See `bristlenose/theme/js/MODULES.md` for per-module API docs.
 
 ## Output directory structure
 
-Output goes **inside the input folder** by default: `bristlenose run interviews/` creates `interviews/bristlenose-output/`. This avoids collisions when processing multiple projects and keeps everything self-contained.
+Output goes **inside the input folder** by default: `bristlenose run interviews/` creates `interviews/bristlenose-output/`. Override with `--output`. See `bristlenose/stages/CLAUDE.md` for the full directory layout.
 
-```
-interviews/                              # input folder
-├── Session 1.mp4
-├── Session 2.mp4
-└── bristlenose-output/                  # output folder (inside input)
-    ├── bristlenose-interviews-report.html
-    ├── bristlenose-interviews-report.md
-    ├── codebook.html
-    ├── people.yaml
-    ├── assets/
-    │   ├── bristlenose-theme.css
-    │   ├── bristlenose-logo.png
-    │   ├── bristlenose-logo-dark.png
-    │   └── bristlenose-player.html
-    ├── sessions/
-    │   ├── transcript_s1.html
-    │   └── transcript_s2.html
-    ├── transcripts-raw/
-    │   ├── s1.txt
-    │   ├── s1.md
-    │   └── ...
-    ├── transcripts-cooked/              # only if --redact-pii
-    │   └── ...
-    └── .bristlenose/
-        ├── intermediate/
-        │   ├── extracted_quotes.json
-        │   ├── screen_clusters.json
-        │   ├── theme_groups.json
-        │   └── topic_boundaries.json
-        └── temp/
-```
-
-- **Report filenames include project name** — `bristlenose-{slug}-report.html` — so multiple reports in Downloads are distinguishable
-- **`codebook.html`** — standalone codebook page (opened in new window via toolbar button)
-- **`assets/`** — static files (CSS, logos, player)
-- **`sessions/`** — per-session transcript HTML pages
-- **`transcripts-raw/` / `transcripts-cooked/`** — Lévi-Strauss naming (researchers get it); cooked only exists with `--redact-pii`
-- **`.bristlenose/`** — hidden internal files; `intermediate/` for JSON resumability, `temp/` for FFmpeg scratch
-- **Path helpers** — `bristlenose/output_paths.py` defines `OutputPaths` dataclass for consistent path construction
-- **Slugify** — `bristlenose/utils/text.py` has `slugify()` for project names in filenames (lowercase, hyphens, max 50 chars)
-
-Override with `--output`: `bristlenose run interviews/ -o /elsewhere/`
+Key helpers: `OutputPaths` in `output_paths.py` (consistent path construction), `slugify()` in `utils/text.py` (project names in filenames — lowercase, hyphens, max 50 chars). Report filenames include project name (`bristlenose-{slug}-report.html`) so multiple reports in Downloads are distinguishable.
 
 ## Boundaries
 
@@ -92,7 +51,7 @@ Override with `--output`: `bristlenose run interviews/ -o /elsewhere/`
 
 ## HTML report features
 
-The generated HTML report has interactive features: inline editing (quotes, headings, names), search-as-you-type, view switching, CSV export, tag filter, hidden quotes, and per-participant transcript pages with deep-linked timecodes. Full implementation details in `docs/design-html-report.md`. Key concepts: people file merge strategy, speaker codes, anonymisation boundary, tag filter persistence, hidden quotes with `.bn-hidden` defence-in-depth. See `bristlenose/theme/CLAUDE.md` for JS module details and CSS gotchas.
+The generated HTML report has interactive features: inline editing (quotes, headings, names), search-as-you-type, view switching, CSV export, tag filter, hidden quotes, and per-participant transcript pages with deep-linked timecodes. Full implementation details in `docs/design-html-report.md`. Key concepts: people file merge strategy, speaker codes, anonymisation boundary, tag filter persistence, hidden quotes with `.bn-hidden` defence-in-depth. See `bristlenose/theme/CLAUDE.md` for CSS/design gotchas, `bristlenose/theme/js/MODULES.md` for JS module details, `bristlenose/theme/CSS-REFERENCE.md` for per-component CSS docs.
 
 ## Doctor command
 
@@ -144,26 +103,21 @@ This is especially common when:
 - **`_format_duration` and `_print_step` are module-level in `pipeline.py`** — `cli.py` imports `_format_duration` from there. Don't move them into the `Pipeline` class
 - **`PipelineResult` has optional LLM fields** (default 0/empty string) — `run_transcription_only()` doesn't use `LLMClient` so these stay at defaults. `_print_pipeline_summary()` in `cli.py` uses `getattr()` defensively
 - **Homebrew tap repo must be named `homebrew-bristlenose`** (not `bristlenose-homebrew`). `brew tap cassiocassio/bristlenose` looks for a GitHub repo called `cassiocassio/homebrew-bristlenose` — this is a Homebrew convention, not configurable. The local directory name doesn't matter to Git, but keeping it matching avoids confusion
-- **`speaker_code` defaults to `""`** — existing code that doesn't set it uses `seg.speaker_code or transcript.participant_id` as a fallback in all write functions. This means old transcripts and single-speaker sessions work unchanged
-- **`assign_speaker_codes()` must run after Stage 5b** — it reads `speaker_role` set by the heuristic/LLM passes. If called before role assignment, all speakers get the session's `participant_id` (UNKNOWN → fallback)
-- **Moderator codes are per-session, not cross-session** — `m1` in session 1 and `m1` in session 2 are independent entries in `people.yaml`. Cross-session linking is Phase 2 (not implemented)
-- **`PersonComputed.session_id` defaults to `""`** — backward compat with existing `people.yaml` files. New runs set it to `"s1"`, `"s2"`, etc. via `compute_participant_stats()`
-- **`_session_duration()` accepts optional `people` parameter** — checks `PersonComputed.duration_seconds` (matched by `session_id`) before falling back to `InputFile.duration_seconds`. This fixes VTT-only sessions that have no `InputFile.duration_seconds` but do have segment timestamps
-- **Report sessions table groups speakers by `computed.session_id`** — if people file is missing, falls back to showing `[session.participant_id]` only
-- **Transcript files named by `session_id`** (`s1.txt` in `transcripts-raw/`, not `p1_raw.txt`) — a single file contains segments from all speakers in that session (`[m1]`, `[p1]`, `[p2]`, `[o1]`)
-- **`assign_speaker_codes()` signature is `(session_id, next_participant_number, segments)`** — returns `(dict[str, str], int)` (label→code map, updated next number). The `next_participant_number` counter enables global p-code numbering across sessions
+- For speaker code conventions (`assign_speaker_codes`, moderator codes, `session_id`, transcript file naming), see `bristlenose/stages/CLAUDE.md`
 - **Pipeline metadata** (`metadata.json`): `write_pipeline_metadata()` in `render_output.py` writes `{"project_name": "..."}` to the intermediate directory during `run`/`analyze`. `read_pipeline_metadata()` reads it back. The CLI `render` command uses this as the source of truth for project name, falling back to directory-name heuristics for pre-metadata output dirs only
 - **`PipelineResult.report_path`**: populated by all three pipeline methods (`run`, `run_analysis_only`, `run_render_only`) from the return value of `render_html()`. `_print_pipeline_summary()` in `cli.py` uses it to print the clickable report link (shows filename only, `file://` hyperlink resolves the full path)
 - **Python 3.14 + pydantic v1 crash** — `import presidio_analyzer` → spacy → pydantic v1 → `ConfigError` on Python 3.14. `check_pii` in `doctor.py` catches `Exception` (not just `ImportError`) and returns `SKIP` when `pii_enabled=False` (the default). If adding new import-guarded checks, use `except Exception` for robustness
 - For LLM/provider gotchas (Azure, Ollama, provider registry), see `bristlenose/llm/CLAUDE.md`
-- For JS/CSS/report gotchas (load order, modals, hidden quotes, toolbar), see `bristlenose/theme/CLAUDE.md`
+- For JS/CSS/report gotchas (load order, modals, hidden quotes, toolbar), see `bristlenose/theme/CLAUDE.md`; for per-module JS docs see `bristlenose/theme/js/MODULES.md`; for per-component CSS docs see `bristlenose/theme/CSS-REFERENCE.md`
 - For stage/pipeline gotchas (topic maps, transcripts, coverage), see `bristlenose/stages/CLAUDE.md`
 
 ## Reference docs (read when working in these areas)
 
 - **Export and sharing**: `docs/design-export-sharing.md`
 - **HTML report / people file / transcript pages**: `docs/design-html-report.md`
-- **Theme / dark mode / CSS / JS modules**: `bristlenose/theme/CLAUDE.md`
+- **Theme / dark mode / CSS conventions / gotchas**: `bristlenose/theme/CLAUDE.md`
+- **JS module API reference**: `bristlenose/theme/js/MODULES.md`
+- **CSS component reference**: `bristlenose/theme/CSS-REFERENCE.md`
 - **Pipeline stages / transcript format / output structure**: `bristlenose/stages/CLAUDE.md`
 - **LLM providers / credentials / concurrency**: `bristlenose/llm/CLAUDE.md`
 - **File map** (what lives where): `docs/file-map.md`

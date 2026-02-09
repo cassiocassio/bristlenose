@@ -160,6 +160,17 @@ Organised from easiest to hardest. The README has a condensed version; this is t
 - [x] JS: histogram hardcoded colours — replaced inline `'#9ca3af'` / `'#6b7280'` with `var(--bn-colour-muted)` (done in v0.4.0 dark mode)
 - [ ] JS: drop `execCommand('copy')` fallback — `navigator.clipboard.writeText` is sufficient for all supported browsers; remove deprecated fallback or gate behind a warning
 
+### Theme refactoring opportunities
+
+Identified during the codebook panel implementation. Low-priority improvements to pick up when working in these areas — not blockers.
+
+- [ ] **Tag-count aggregation (3 implementations)** — `histogram.js` (`renderUserTagsChart`), `tag-filter.js` (`_getFilteredTagCounts`), and `codebook.js` (`_countQuotesPerTag`) independently count user tags. A shared `countUserTags()` function in `storage.js` or a new `tag-utils.js` would eliminate duplication. Not urgent — implementations are simple and correct
+- [ ] **Shared user-tags data layer** — `tags.js` owns in-memory `userTags` map and `persistUserTags()`. `codebook.js` reads via `createStore('bristlenose-tags').get({})` directly. If a future feature needs write access from the codebook page (e.g. bulk rename), extract a shared `userTagStore` module
+- [ ] **isEditing() guard deduplication** — `editing.js` and `names.js` each have `isEditing` / `nameIsEditing` booleans to prevent conflicts. A shared `EditGuard` class (`acquire()`, `release()`, `isActive()`) would unify these. Low value until a third editing context is added
+- [ ] **Inline edit commit pattern** — `codebook.js`, `editing.js`, and `names.js` all use: create `<input>`, focus, wire `blur`/`Enter`/`Escape` with a `committed` flag guard. A shared `inlineEdit()` helper would reduce boilerplate (~6 repetitions)
+- [ ] **Close button CSS base class** — `.bn-modal-close`, `.group-close`, `.histogram-bar-delete`, `.badge-delete` share the same pattern: muted → text on hover, small padding, × character. Extract a `.close-btn` atom
+- [ ] **Input focus CSS base class** — `.group-title-input`, `.tag-add-input`, `.search-input`, `.tag-filter-search-input` share: `font-family: inherit`, border, radius, accent focus ring. Extract a `.bn-input` atom
+
 ### Small (a day or two each)
 
 - [ ] Export and sharing Phase 0 — foundation work: state hydration architecture (check `CURATED_STATE` before localStorage), relative media path option, audit embedded data for shareability. See `docs/design-export-sharing.md`

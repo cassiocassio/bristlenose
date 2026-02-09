@@ -1,5 +1,7 @@
 # Merge Plan: export-sharing → main
 
+> **Status:** Merged. This plan is kept for historical reference.
+
 Step-by-step guide for merging the export-sharing feature branch back to main.
 
 **Branch:** `export-sharing`

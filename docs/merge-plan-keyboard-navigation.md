@@ -1,5 +1,7 @@
 # Merge Plan: keyboard-navigation → main
 
+> **Status:** Merged. This plan is kept for historical reference.
+
 This branch contains keyboard navigation work. Preferences system is stashed separately.
 
 ## Branch Status

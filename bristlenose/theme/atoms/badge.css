@@ -43,8 +43,7 @@
 }
 
 /* Delete circle — white floating chip with grey ×.
-   The × glyph sits slightly high in its font metrics box; padding-top: 0.5px
-   nudges it into optical centre. Flexbox handles the rest.
+   Pure flexbox centering (10c-fix2 approach).
    TODO: replace × character with SVG icon for cross-platform consistency. */
 .badge-ai::after {
     content: "\00d7";
@@ -56,7 +55,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    padding-top: 0.5px;              /* optical nudge: × sits high in glyph box */
+    padding: 0;
     background: var(--bn-colour-bg);
     color: var(--bn-colour-muted);
     border-radius: 50%;
@@ -123,7 +122,6 @@ body.hide-ai-tags .badge-ai { display: none; }
     align-items: center;
     justify-content: center;
     padding: 0;
-    padding-top: 0.5px;              /* optical nudge: × sits high in glyph box */
     pointer-events: none;
     box-shadow: 0 1px 4px rgba(0, 0, 0, 0.16), 0 0 1px rgba(0, 0, 0, 0.06);
 }

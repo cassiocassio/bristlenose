@@ -2,7 +2,7 @@
 
 This document tracks active feature branches to help multiple Claude sessions coordinate without conflicts.
 
-**Updated:** 7 Feb 2026
+**Updated:** 9 Feb 2026
 
 ---
 
@@ -15,7 +15,7 @@ Each active feature branch gets its own **git worktree** — a full working copy
 | Directory | Branch | Purpose |
 |-----------|--------|---------|
 | `bristlenose/` | `main` | Main repo, releases, hotfixes |
-| `bristlenose_branch CI/` | `CI` | CI improvements |
+| `bristlenose_branch CI/` | `CI` | CI improvements (not started) |
 
 **Creating a new feature branch worktree:**
 
@@ -80,47 +80,11 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 | Branch | Local worktree | GitHub remote |
 |--------|---------------|---------------|
 | `main` | `bristlenose/` | `origin/main` (push via `origin/main:wip` until release time) |
-| `transcript-annotations` | `bristlenose_branch transcript-annotations/` | `origin/transcript-annotations` |
 | `CI` | `bristlenose_branch CI/` | not yet pushed |
-| `jinja2-migration` | `bristlenose_branch jinja2-migration/` | not yet pushed |
 
 ---
 
 ## Active Branches
-
-### `jinja2-migration`
-
-**Status:** Phase 0 complete. Phase 1 planned, waiting for pending branches to merge
-**Started:** 9 Feb 2026
-**Worktree:** `/Users/cassio/Code/bristlenose_branch jinja2-migration/`
-**Design doc:** `docs/private/frontend-evolution.md` (long-term roadmap)
-**Implementation plan:** `docs/jinja2-migration-plan.md` (on this branch — concrete steps, gotchas, code examples)
-
-**What it does:** Incremental migration of `render_html.py` from `_w = parts.append` string building to Jinja2 templates. Phase 0 sets up comparison tooling only. Phase 1 extracts 4 components: footer, document shell, report header, quote card.
-
-**Phase 0 (complete):** Jinja2 dependency, `scripts/compare-render.sh` (side-by-side visual diffing), `tests/test_jinja2_parity.py` (12 structural assertions), baseline HTML captured. Zero changes to `render_html.py`.
-
-**Phase 1 steps (not started):**
-1. 1a: Jinja2 `Environment` setup + hatch build artifacts update
-2. 1b: Footer → `footer.html` template (fixes transcript footer logo bug)
-3. 1c: Document shell → `document_shell_open.html` template
-4. 1d: Report header → `report_header.html` template
-5. 1e: Quote card → `quote_card.html` template
-
-**Before starting Phase 1:** rebase onto main (after pending branches merge), re-capture baseline, verify tests pass.
-
-**Files this branch touches:**
-- `pyproject.toml` — `jinja2>=3.1` dependency (done)
-- `bristlenose/stages/render_html.py` — Phase 1+ only
-- `bristlenose/theme/templates/*.html` — new Jinja2 template files (Phase 1+)
-- `scripts/compare-render.sh` — comparison script (done)
-- `tests/test_jinja2_parity.py` — parity tests (done)
-- `docs/jinja2-migration-plan.md` — implementation plan (done)
-
-**Potential conflicts with other branches:**
-- `render_html.py` — Phase 1 starts after pending branches merge
-
----
 
 ### `CI`
 
@@ -206,6 +170,10 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 ---
 
 ## Completed Branches (for reference)
+
+### `jinja2-migration` — merged 9 Feb 2026
+
+Phase 1 Jinja2 template extraction: footer, document shell, report header, quote card. Adds `jinja2>=3.1` dependency, comparison script (`scripts/compare-render.sh`), 12 parity tests. `render_html.py` reduced by ~170 lines. Output byte-identical. Phase 2+ (toolbar, sentiment chart, coverage, player) tracked in `docs/jinja2-migration-plan.md`.
 
 ### `transcript-annotations` — merged 9 Feb 2026
 

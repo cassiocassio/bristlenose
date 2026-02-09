@@ -68,6 +68,7 @@
    re-enabled by restoring `background: var(--bn-colour-cited-bg)`. */
 .bn-cited {
     background: transparent;
+    color: inherit;
     border-radius: 2px;
     padding: 0 1px;
 }

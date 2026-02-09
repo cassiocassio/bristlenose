@@ -1,0 +1,22 @@
+<div class="report-header">
+<div class="header-left">
+{%- if has_logo %}
+{%- if has_dark_logo %}
+<picture>
+<source srcset="{{ assets_prefix }}/bristlenose-logo-dark.png" media="(prefers-color-scheme: dark)">
+<img class="report-logo" src="{{ assets_prefix }}/bristlenose-logo.png" alt="Bristlenose logo">
+</picture>
+{%- else %}
+<img class="report-logo" src="{{ assets_prefix }}/bristlenose-logo.png" alt="Bristlenose logo">
+{%- endif %}
+{%- endif %}
+<span class="header-title"><span class="header-logotype">Bristlenose</span> <span class="header-project">{{ project_name }}</span></span>
+</div>
+<div class="header-right">
+<span class="header-doc-title">{{ doc_title }}</span>
+{%- if meta_right %}
+{{ meta_right }}
+{%- endif %}
+</div>
+</div>
+<hr>

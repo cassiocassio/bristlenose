@@ -229,7 +229,60 @@ A local dev server (bundled with bristlenose) that:
 | **HTMX + Alpine.js** | ~15 KB + ~15 KB | Low | Niche | Server-rendered HTML with sprinkles of interactivity; closest to current architecture; limited for complex client state |
 | **Solid** | ~7 KB | Medium | Small | Fine-grained reactivity (no virtual DOM); React-like JSX; very fast; smaller ecosystem |
 
-**Recommendation**: Svelte or Preact. Both are small, fast, and work well for a local tool where bundle size matters less than developer experience. Svelte's compiler approach means the runtime cost is near-zero, and its reactivity model is the most natural fit for "data changes → DOM updates" without boilerplate. Preact is the safe choice if we want React ecosystem access.
+#### Business risk assessment (Feb 2026)
+
+Technical fit and business risk point in opposite directions. Svelte compiles to imperative DOM updates (what we already write by hand), handles contenteditable natively, doesn't fight TreeWalker text mutation, and has ~2 KB runtime. React's virtual DOM fights all of those patterns and needs workarounds (uncontrolled refs, dangerouslySetInnerHTML, careful memoisation for large quote lists).
+
+But technical fit is not the deciding factor. The Angular 1 → 2 lesson applies: choosing a framework that fades means spending years rewriting while shipping nothing. Business risk assessment:
+
+| Risk | React | Svelte | Vue |
+|------|-------|--------|-----|
+| Abandoned in 5 years | ~0% | ~5-10% | ~2-5% |
+| Breaking rewrite (Angular-style) | ~2% | ~10-15% | ~5-10% |
+| "Still works but feels legacy" in 5 years | ~15% | ~20% | ~25% |
+| Can't hire devs who know it (UK market) | ~0% | ~40% | ~20% |
+| Security patches stop within 3 years of last major | ~0% | ~10% | ~5% |
+
+**React is too big to fail.** Meta runs Facebook, Instagram, WhatsApp Web, and Threads on it. Next.js, Remix, React Native, and thousands of enterprise apps depend on it. Even if Meta walked away, it's MIT-licensed and Vercel has existential dependency. The only realistic risk is React becoming the new jQuery — still maintained, but gradually "legacy." That's a 10-year timeline.
+
+**Svelte's risk is funding concentration.** One primary maintainer (Rich Harris), funded by Vercel, who use Next.js (React) for their own commercial product. Svelte is a strategic bet for Vercel, not a core dependency. Svelte 4 → 5 (runes) showed willingness to break the API. Community is enthusiastic but thin.
+
+**Vue's risk is similar but mitigated.** Evan You is funded by sponsors + VoidZero. Large adoption in Asia (Alibaba, Baidu). Vue 2 → 3 transition was painful (ecosystem split for years). UK/US hiring pool is thinner than React.
+
+**Preact deserves a second look.** ~3 KB, React-compatible API (full compat layer via preact/compat), access to the entire React ecosystem. If React is the safe long-term bet, Preact gives you the API without the bundle size — and migration to full React is near-trivial if Preact ever fades. The contenteditable and TreeWalker pain from React applies equally, but the escape hatch (uncontrolled refs) is the same.
+
+**Recommendation (revised)**: React. The contenteditable and TreeWalker pain is real but bounded — a few hundred lines of careful ref management, not a fundamental impossibility. The price is boilerplate and some fights with the reconciler. The price you don't pay is ever worrying whether your framework exists next year. Consider starting with Preact (identical API, 1/10th bundle) and swapping to full React only if needed — the migration is a dependency change, not a rewrite.
+
+#### file:// → http:// migration audit (Feb 2026)
+
+Assumptions in the current JS/HTML that break or need rework when moving to served http://:
+
+**Hard breaks (must fix):**
+- `BRISTLENOSE_VIDEO_MAP` contains `file://` URIs from `Path.as_uri()` — invalid from http:// pages. Need backend media endpoint or upload model
+- `localStorage` keys have no project namespace — all reports on same http:// origin will clobber each other's edits, stars, hidden quotes, tags, codebook. Fix: prefix keys with project slug
+- `postMessage(msg, '*')` in `player.js` — security hole over http://. Tighten to `window.location.origin`
+
+**Architecture mismatches (work at migration time):**
+- 17 JS modules concatenated as IIFEs with implicit global dependencies → need ES modules + bundler
+- All DOM manipulation is imperative (classList.toggle, innerHTML rebuild, TreeWalker text mutation) → must become component state in any framework
+- `storage` event as IPC between report/codebook windows → won't fire if both become routes in same SPA window. Replace with state management
+- Relative paths (`assets/…`, `../assets/…`, `sessions/…`) break with client-side routing. Need absolute paths from configurable base URL
+- Hash fragments used for both player params (`#src=…&t=…`) and deep links (`#t-123`, `#sentiment`) — conflicts with hash-based SPA routing
+- `setInterval` polling for closed player window — leaks in SPA (no cleanup on unmount)
+- `codebook.html` opened via `window.open()` with hardcoded relative path
+
+**Fix now (cheap, prevents debt):**
+- [ ] Namespace localStorage keys by project slug (prevents multi-report collision)
+- [ ] Tighten `postMessage` origin from `'*'` to same-origin
+- [ ] Inject `BRISTLENOSE_CODEBOOK_URL` as configurable global (like `BRISTLENOSE_PLAYER_URL`)
+
+**Actually fine (survives migration unchanged):**
+- Dark mode (CSS custom properties + `light-dark()`)
+- Print styles (media query)
+- CSV export (blob URL in JS)
+- Feedback HTTP check (already tests `location.protocol`)
+- Modal infrastructure (event-driven, no protocol assumption)
+- Toast notifications, keyboard shortcuts (just need cleanup on unmount)
 
 #### Server options
 

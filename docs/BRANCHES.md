@@ -15,7 +15,6 @@ Each active feature branch gets its own **git worktree** — a full working copy
 | Directory | Branch | Purpose |
 |-----------|--------|---------|
 | `bristlenose/` | `main` | Main repo, releases, hotfixes |
-| `bristlenose_branch CI/` | `CI` | CI improvements (not started) |
 
 **Creating a new feature branch worktree:**
 
@@ -43,9 +42,22 @@ python3 -m venv .venv
 
 **Removing a worktree** (after merging to main):
 
+**Important:** Always `cd` to the main repo *before* removing a worktree. If a Claude session or terminal has its CWD inside the worktree directory, removing it will break that shell — every subsequent command fails with "path does not exist" and the session is unrecoverable.
+
 ```bash
+# 1. Switch to main repo FIRST (never remove a worktree from inside it)
+cd /Users/cassio/Code/bristlenose
+
+# 2. Remove the worktree and branch
 git worktree remove "/Users/cassio/Code/bristlenose_branch my-feature"
 git branch -d my-feature
+
+# 3. If the directory was already deleted (rm -rf or Finder):
+git worktree prune          # cleans stale worktree refs
+git branch -d my-feature    # delete the branch
+
+# 4. If also on remote:
+git push origin --delete my-feature
 ```
 
 **Rules:**
@@ -80,23 +92,10 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 | Branch | Local worktree | GitHub remote |
 |--------|---------------|---------------|
 | `main` | `bristlenose/` | `origin/main` (push via `origin/main:wip` until release time) |
-| `CI` | `bristlenose_branch CI/` | not yet pushed |
 
 ---
 
 ## Active Branches
-
-### `CI`
-
-**Status:** Not started
-**Started:** 7 Feb 2026
-**Worktree:** `/Users/cassio/Code/bristlenose_branch CI/`
-
-**Files this branch will touch:**
-- `.github/workflows/` — CI workflow files
-- Potentially `pyproject.toml`, `Makefile`, or similar build config
-
----
 
 ### `transcript-annotations`
 

@@ -1,6 +1,8 @@
 # Jinja2 Migration — Implementation Plan
 
-_Created 9 Feb 2026. Read this before starting any Phase 1 work._
+> **Status:** Phases 1–2 complete, merged to main (Feb 2026). Phase 3+ candidates listed at bottom.
+
+_Created 9 Feb 2026._
 
 ## Overview
 

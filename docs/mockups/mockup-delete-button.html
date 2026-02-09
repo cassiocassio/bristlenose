@@ -1,0 +1,1007 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Badge Delete Button — Design Exploration</title>
+<style>
+/* ── Bristlenose design tokens (subset) ──────────────────────── */
+:root {
+    --bn-font-body: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
+    --bn-font-mono: "SF Mono", "Fira Code", "Consolas", monospace;
+    --bn-colour-bg: #ffffff;
+    --bn-colour-text: #1a1a1a;
+    --bn-colour-muted: #6b7280;
+    --bn-colour-border: #e5e7eb;
+    --bn-colour-border-hover: #d1d5db;
+    --bn-colour-icon-idle: #c9ccd1;
+    --bn-colour-badge-bg: #f3f4f6;
+    --bn-colour-badge-text: #374151;
+    --bn-colour-user-tag-bg: #f3f4f6;
+    --bn-colour-shadow: rgba(0, 0, 0, 0.1);
+    --bn-radius-sm: 3px;
+    --bn-radius-md: 6px;
+    --bn-transition-fast: 0.15s ease;
+    --bn-space-xs: 0.15rem;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+    font-family: var(--bn-font-body);
+    color: var(--bn-colour-text);
+    background: var(--bn-colour-bg);
+    padding: 2rem 3rem;
+    line-height: 1.5;
+}
+
+h1 {
+    font-size: 1.5rem;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+}
+
+.subtitle {
+    color: var(--bn-colour-muted);
+    font-size: 0.9rem;
+    margin-bottom: 2rem;
+    max-width: 60ch;
+}
+
+/* ── Grid of variations ──────────────────────────────────────── */
+.grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 2rem;
+}
+
+.card {
+    border: 1px solid var(--bn-colour-border);
+    border-radius: var(--bn-radius-md);
+    padding: 1.5rem;
+    position: relative;
+}
+
+.card-title {
+    font-size: 0.85rem;
+    font-weight: 600;
+    margin-bottom: 0.25rem;
+}
+
+.card-meta {
+    font-size: 0.72rem;
+    color: var(--bn-colour-muted);
+    font-family: var(--bn-font-mono);
+    margin-bottom: 1rem;
+    line-height: 1.6;
+}
+
+.card-meta code {
+    background: var(--bn-colour-badge-bg);
+    padding: 1px 4px;
+    border-radius: 2px;
+}
+
+.card-number {
+    position: absolute;
+    top: 0.75rem;
+    right: 0.75rem;
+    font-size: 0.65rem;
+    font-weight: 700;
+    color: var(--bn-colour-icon-idle);
+}
+
+/* Badge row inside each card */
+.demo-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    align-items: flex-start;
+    padding-top: 4px; /* room for circle above */
+    padding-right: 4px;
+}
+
+/* ── Base badge (matches Bristlenose) ────────────────────────── */
+.badge {
+    display: inline-block;
+    font-family: var(--bn-font-mono);
+    font-size: 0.72rem;
+    padding: var(--bn-space-xs) 0.45rem;
+    border-radius: var(--bn-radius-sm);
+    background: var(--bn-colour-badge-bg);
+    color: var(--bn-colour-badge-text);
+    position: relative;
+    cursor: default;
+}
+
+.badge-user {
+    background: var(--bn-colour-user-tag-bg);
+    color: var(--bn-colour-text);
+}
+
+/* Colour tints to simulate codebook colours */
+.badge-blue { background: oklch(94% 0.03 250); }
+.badge-pink { background: oklch(94% 0.03 340); }
+.badge-green { background: oklch(94% 0.03 155); }
+
+/* Sentiment badge for AI demo */
+.badge-ai {
+    font-family: var(--bn-font-mono);
+    font-size: 0.72rem;
+    padding: var(--bn-space-xs) 0.45rem;
+    border-radius: var(--bn-radius-sm);
+    background: #fff7ed;
+    color: #ea580c;
+    position: relative;
+    cursor: pointer;
+}
+
+/* ── Delete button — the thing we're exploring ───────────────── */
+.badge-delete {
+    position: absolute;
+    border: none;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    cursor: pointer;
+    /* Show always for the mockup (normally opacity:0 until hover) */
+    opacity: 1;
+    pointer-events: auto;
+    font-family: var(--bn-font-body);
+}
+
+/* ── Current production style (for comparison) ───────────────── */
+.var-current .badge-delete {
+    top: -0.25rem;
+    right: -0.25rem;
+    width: 0.75rem;    /* 12px */
+    height: 0.75rem;
+    background: var(--bn-colour-text);   /* #1a1a1a — near black */
+    color: var(--bn-colour-bg);          /* #ffffff */
+    font-size: 0.7rem;
+    font-weight: 700;
+    line-height: 1;
+}
+
+/* ── Variation 1: Muted grey, same size ──────────────────────── */
+.var-1 .badge-delete {
+    top: -0.25rem;
+    right: -0.25rem;
+    width: 0.75rem;
+    height: 0.75rem;
+    background: var(--bn-colour-muted);  /* #6b7280 — mid grey */
+    color: var(--bn-colour-bg);
+    font-size: 0.7rem;
+    font-weight: 700;
+    line-height: 1;
+}
+
+/* ── Variation 2: Muted grey, subtle shadow ──────────────────── */
+.var-2 .badge-delete {
+    top: -0.25rem;
+    right: -0.25rem;
+    width: 0.75rem;
+    height: 0.75rem;
+    background: var(--bn-colour-muted);
+    color: var(--bn-colour-bg);
+    font-size: 0.7rem;
+    font-weight: 700;
+    line-height: 1;
+    box-shadow: 0 1px 3px var(--bn-colour-shadow);
+}
+
+/* ── Variation 3: Muted grey, larger circle (14px) ───────────── */
+.var-3 .badge-delete {
+    top: -0.3rem;
+    right: -0.3rem;
+    width: 0.875rem;   /* 14px */
+    height: 0.875rem;
+    background: var(--bn-colour-muted);
+    color: var(--bn-colour-bg);
+    font-size: 0.65rem;
+    font-weight: 700;
+    line-height: 1;
+    box-shadow: 0 1px 3px var(--bn-colour-shadow);
+}
+
+/* ── Variation 4: Muted grey, larger circle, heavier shadow ──── */
+.var-4 .badge-delete {
+    top: -0.3rem;
+    right: -0.3rem;
+    width: 0.875rem;
+    height: 0.875rem;
+    background: var(--bn-colour-muted);
+    color: var(--bn-colour-bg);
+    font-size: 0.65rem;
+    font-weight: 700;
+    line-height: 1;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.18), 0 0 1px rgba(0, 0, 0, 0.08);
+}
+
+/* ── Variation 5: Border-hover grey (lighter), shadow ────────── */
+.var-5 .badge-delete {
+    top: -0.25rem;
+    right: -0.25rem;
+    width: 0.75rem;
+    height: 0.75rem;
+    background: var(--bn-colour-border-hover); /* #d1d5db — light grey */
+    color: var(--bn-colour-muted);             /* darker × on light bg */
+    font-size: 0.65rem;
+    font-weight: 700;
+    line-height: 1;
+    box-shadow: 0 1px 3px var(--bn-colour-shadow);
+}
+
+/* ── Variation 6: Border-hover grey, larger, heavier shadow ──── */
+.var-6 .badge-delete {
+    top: -0.3rem;
+    right: -0.3rem;
+    width: 0.875rem;
+    height: 0.875rem;
+    background: var(--bn-colour-border-hover);
+    color: var(--bn-colour-muted);
+    font-size: 0.6rem;
+    font-weight: 700;
+    line-height: 1;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.18), 0 0 1px rgba(0, 0, 0, 0.08);
+}
+
+/* ── Variation 7: Muted grey, thin × (font-weight 500) ──────── */
+.var-7 .badge-delete {
+    top: -0.25rem;
+    right: -0.25rem;
+    width: 0.75rem;
+    height: 0.75rem;
+    background: var(--bn-colour-muted);
+    color: var(--bn-colour-bg);
+    font-size: 0.65rem;
+    font-weight: 500;
+    line-height: 1;
+    box-shadow: 0 1px 3px var(--bn-colour-shadow);
+}
+
+/* ── Variation 8: Muted grey, larger, thin ×, gentle shadow ──── */
+.var-8 .badge-delete {
+    top: -0.3rem;
+    right: -0.3rem;
+    width: 0.875rem;
+    height: 0.875rem;
+    background: var(--bn-colour-muted);
+    color: var(--bn-colour-bg);
+    font-size: 0.6rem;
+    font-weight: 500;
+    line-height: 1;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.12);
+}
+
+/* ── Variation 9: White circle with grey border + shadow ─────── */
+.var-9 .badge-delete {
+    top: -0.3rem;
+    right: -0.3rem;
+    width: 0.875rem;
+    height: 0.875rem;
+    background: var(--bn-colour-bg);            /* white */
+    color: var(--bn-colour-muted);              /* grey × */
+    border: 1px solid var(--bn-colour-border);  /* subtle ring */
+    font-size: 0.6rem;
+    font-weight: 700;
+    line-height: 1;
+    box-shadow: 0 1px 3px var(--bn-colour-shadow);
+}
+
+/* ── 10a: Original var-10 baseline (for comparison) ──────────── */
+.var-10a .badge-delete {
+    top: -0.3rem;
+    right: -0.3rem;
+    width: 0.875rem;     /* 14px */
+    height: 0.875rem;
+    background: var(--bn-colour-bg);
+    color: var(--bn-colour-muted);
+    font-size: 0.6rem;
+    font-weight: 700;
+    line-height: 1;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.16), 0 0 1px rgba(0, 0, 0, 0.06);
+}
+
+/* ── 10b: Nudged up+right 1px, × centred with padding-top fix ── */
+.var-10b .badge-delete {
+    top: calc(-0.3rem - 1px);
+    right: calc(-0.3rem - 1px);
+    width: 0.875rem;
+    height: 0.875rem;
+    background: var(--bn-colour-bg);
+    color: var(--bn-colour-muted);
+    font-size: 0.6rem;
+    font-weight: 700;
+    line-height: 1;
+    padding-top: 0.5px;  /* nudge × down into optical centre */
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.16), 0 0 1px rgba(0, 0, 0, 0.06);
+}
+
+/* ── 10c: Same as 10b + half-pixel extra on circle (14.5px) ──── */
+/* Centering approach: padding-top 0.5px (original, slightly off) */
+.var-10c .badge-delete {
+    top: calc(-0.3rem - 1px);
+    right: calc(-0.3rem - 1px);
+    width: calc(0.875rem + 0.5px);   /* ~14.5px */
+    height: calc(0.875rem + 0.5px);
+    background: var(--bn-colour-bg);
+    color: var(--bn-colour-muted);
+    font-size: 0.6rem;
+    font-weight: 700;
+    line-height: 1;
+    padding-top: 0.5px;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.16), 0 0 1px rgba(0, 0, 0, 0.06);
+}
+
+/* ── 10c-fix: Figma-aligned × centring ───────────────────────── */
+/* Uses transform to nudge the × glyph into true optical centre */
+.var-10c-fix .badge-delete {
+    top: calc(-0.3rem - 1px);
+    right: calc(-0.3rem - 1px);
+    width: calc(0.875rem + 0.5px);
+    height: calc(0.875rem + 0.5px);
+    background: var(--bn-colour-bg);
+    color: var(--bn-colour-muted);
+    font-size: 0.6rem;
+    font-weight: 700;
+    line-height: 0;       /* collapse line-height to remove vertical offset */
+    padding: 0;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.16), 0 0 1px rgba(0, 0, 0, 0.06);
+}
+.var-10c-fix .badge-delete::after {
+    content: "\00d7";
+    display: block;
+    transform: translate(0.1px, 0.5px);  /* optical nudge: right 0.1px, down 0.5px */
+}
+
+/* ── 10c-fix2: Same but × rendered via content, no text node ─── */
+/* Button has no text content — × comes purely from CSS */
+.var-10c-fix2 .badge-delete {
+    top: calc(-0.3rem - 1px);
+    right: calc(-0.3rem - 1px);
+    width: calc(0.875rem + 0.5px);
+    height: calc(0.875rem + 0.5px);
+    background: var(--bn-colour-bg);
+    color: var(--bn-colour-muted);
+    font-size: 0.6rem;
+    font-weight: 700;
+    line-height: 1;
+    padding: 0;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.16), 0 0 1px rgba(0, 0, 0, 0.06);
+}
+
+/* ── 10c-fix3: Larger nudge down — 1px ───────────────────────── */
+.var-10c-fix3 .badge-delete {
+    top: calc(-0.3rem - 1px);
+    right: calc(-0.3rem - 1px);
+    width: calc(0.875rem + 0.5px);
+    height: calc(0.875rem + 0.5px);
+    background: var(--bn-colour-bg);
+    color: var(--bn-colour-muted);
+    font-size: 0.6rem;
+    font-weight: 700;
+    line-height: 0;
+    padding: 0;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.16), 0 0 1px rgba(0, 0, 0, 0.06);
+}
+.var-10c-fix3 .badge-delete::after {
+    content: "\00d7";
+    display: block;
+    transform: translate(0, 1px);  /* stronger downward nudge */
+}
+
+/* ── 10d: Same as 10c + slightly larger × (0.625rem) ─────────── */
+.var-10d .badge-delete {
+    top: calc(-0.3rem - 1px);
+    right: calc(-0.3rem - 1px);
+    width: calc(0.875rem + 0.5px);
+    height: calc(0.875rem + 0.5px);
+    background: var(--bn-colour-bg);
+    color: var(--bn-colour-muted);
+    font-size: 0.625rem;  /* slightly larger × */
+    font-weight: 700;
+    line-height: 1;
+    padding-top: 0.5px;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.16), 0 0 1px rgba(0, 0, 0, 0.06);
+}
+
+/* ── 10e: Same as 10c + medium × weight (600) ────────────────── */
+.var-10e .badge-delete {
+    top: calc(-0.3rem - 1px);
+    right: calc(-0.3rem - 1px);
+    width: calc(0.875rem + 0.5px);
+    height: calc(0.875rem + 0.5px);
+    background: var(--bn-colour-bg);
+    color: var(--bn-colour-muted);
+    font-size: 0.6rem;
+    font-weight: 600;     /* slightly lighter × stroke */
+    line-height: 1;
+    padding-top: 0.5px;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.16), 0 0 1px rgba(0, 0, 0, 0.06);
+}
+
+/* ── 10f: Same as 10c + slightly heavier shadow ──────────────── */
+.var-10f .badge-delete {
+    top: calc(-0.3rem - 1px);
+    right: calc(-0.3rem - 1px);
+    width: calc(0.875rem + 0.5px);
+    height: calc(0.875rem + 0.5px);
+    background: var(--bn-colour-bg);
+    color: var(--bn-colour-muted);
+    font-size: 0.6rem;
+    font-weight: 700;
+    line-height: 1;
+    padding-top: 0.5px;
+    box-shadow: 0 1px 5px rgba(0, 0, 0, 0.2), 0 0 1px rgba(0, 0, 0, 0.08);
+}
+
+/* ── Reference: smaller margin context ───────────────────────── */
+.demo-small .badge {
+    font-size: 0.65rem;
+    padding: 1px 4px;
+    line-height: 1.4;
+}
+.demo-small .badge-ai {
+    font-size: 0.65rem;
+    padding: 1px 4px;
+    line-height: 1.4;
+}
+
+/* ── Token reference table ───────────────────────────────────── */
+.token-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.8rem;
+    margin-top: 2rem;
+}
+.token-table th,
+.token-table td {
+    text-align: left;
+    padding: 0.5rem 0.75rem;
+    border-bottom: 1px solid var(--bn-colour-border);
+}
+.token-table th {
+    font-weight: 600;
+    color: var(--bn-colour-muted);
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+.token-table code {
+    font-family: var(--bn-font-mono);
+    font-size: 0.75rem;
+    background: var(--bn-colour-badge-bg);
+    padding: 1px 5px;
+    border-radius: 2px;
+}
+.swatch {
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    border-radius: 3px;
+    vertical-align: middle;
+    margin-right: 6px;
+    border: 1px solid var(--bn-colour-border);
+}
+
+.section-title {
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin-top: 2.5rem;
+    margin-bottom: 1rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid var(--bn-colour-border);
+}
+
+.notes {
+    font-size: 0.8rem;
+    color: var(--bn-colour-muted);
+    margin-top: 2rem;
+    max-width: 72ch;
+    line-height: 1.7;
+}
+.notes strong { color: var(--bn-colour-text); }
+.notes li { margin-bottom: 0.25rem; }
+
+.rec {
+    display: inline-block;
+    font-size: 0.6rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    background: #f0fdf4;
+    color: #16a34a;
+    padding: 1px 6px;
+    border-radius: 3px;
+    margin-left: 6px;
+    vertical-align: middle;
+}
+</style>
+</head>
+<body>
+
+<h1>Badge Delete Button — Iteration on Var 10</h1>
+<p class="subtitle">
+    White circle with float shadow. 6 sub-variations (10a–10f) iterating on centering,
+    position nudge, circle size, &times; weight, and shadow intensity. Vars 1–9 from
+    round 1 kept for context. Each card shows full-size (top) and margin-size (bottom).
+</p>
+
+<!-- ── Reference: current production ─────────────────────────── -->
+<h2 class="section-title">Current (production)</h2>
+
+<div class="grid">
+<div class="card var-current">
+    <span class="card-number">REF</span>
+    <div class="card-title">Current production style</div>
+    <div class="card-meta">
+        bg: <code>--bn-colour-text</code> (#1a1a1a) &mdash; near black<br>
+        size: 0.75rem (12px) &bull; &times; weight: 700 &bull; no shadow
+    </div>
+    <div class="demo-row">
+        <span class="badge badge-user badge-blue">usability<button class="badge-delete">&times;</button></span>
+        <span class="badge badge-user badge-pink">emotion<button class="badge-delete">&times;</button></span>
+        <span class="badge badge-ai">frustration<button class="badge-delete">&times;</button></span>
+    </div>
+    <div class="demo-row demo-small" style="margin-top: 12px;">
+        <span class="badge badge-user badge-green">navigation<button class="badge-delete">&times;</button></span>
+        <span class="badge badge-ai">confusion<button class="badge-delete">&times;</button></span>
+    </div>
+</div>
+</div>
+
+<!-- ── Explorations ──────────────────────────────────────────── -->
+<h2 class="section-title">Variations</h2>
+
+<div class="grid">
+
+<!-- Var 1 -->
+<div class="card var-1">
+    <span class="card-number">1</span>
+    <div class="card-title">Muted grey, same size</div>
+    <div class="card-meta">
+        bg: <code>--bn-colour-muted</code> (#6b7280)<br>
+        size: 0.75rem (12px) &bull; &times; weight: 700 &bull; no shadow
+    </div>
+    <div class="demo-row">
+        <span class="badge badge-user badge-blue">usability<button class="badge-delete">&times;</button></span>
+        <span class="badge badge-user badge-pink">emotion<button class="badge-delete">&times;</button></span>
+        <span class="badge badge-ai">frustration<button class="badge-delete">&times;</button></span>
+    </div>
+    <div class="demo-row demo-small" style="margin-top: 12px;">
+        <span class="badge badge-user badge-green">navigation<button class="badge-delete">&times;</button></span>
+        <span class="badge badge-ai">confusion<button class="badge-delete">&times;</button></span>
+    </div>
+</div>
+
+<!-- Var 2 -->
+<div class="card var-2">
+    <span class="card-number">2</span>
+    <div class="card-title">Muted grey + subtle shadow <span class="rec">recommended</span></div>
+    <div class="card-meta">
+        bg: <code>--bn-colour-muted</code> (#6b7280)<br>
+        size: 0.75rem (12px) &bull; &times; weight: 700<br>
+        shadow: <code>0 1px 3px --bn-colour-shadow</code>
+    </div>
+    <div class="demo-row">
+        <span class="badge badge-user badge-blue">usability<button class="badge-delete">&times;</button></span>
+        <span class="badge badge-user badge-pink">emotion<button class="badge-delete">&times;</button></span>
+        <span class="badge badge-ai">frustration<button class="badge-delete">&times;</button></span>
+    </div>
+    <div class="demo-row demo-small" style="margin-top: 12px;">
+        <span class="badge badge-user badge-green">navigation<button class="badge-delete">&times;</button></span>
+        <span class="badge badge-ai">confusion<button class="badge-delete">&times;</button></span>
+    </div>
+</div>
+
+<!-- Var 3 -->
+<div class="card var-3">
+    <span class="card-number">3</span>
+    <div class="card-title">Muted grey, larger circle (14px)</div>
+    <div class="card-meta">
+        bg: <code>--bn-colour-muted</code> (#6b7280)<br>
+        size: 0.875rem (14px) &bull; &times; size: 0.65rem &bull; weight: 700<br>
+        shadow: <code>0 1px 3px --bn-colour-shadow</code>
+    </div>
+    <div class="demo-row">
+        <span class="badge badge-user badge-blue">usability<button class="badge-delete">&times;</button></span>
+        <span class="badge badge-user badge-pink">emotion<button class="badge-delete">&times;</button></span>
+        <span class="badge badge-ai">frustration<button class="badge-delete">&times;</button></span>
+    </div>
+    <div class="demo-row demo-small" style="margin-top: 12px;">
+        <span class="badge badge-user badge-green">navigation<button class="badge-delete">&times;</button></span>
+        <span class="badge badge-ai">confusion<button class="badge-delete">&times;</button></span>
+    </div>
+</div>
+
+<!-- Var 4 -->
+<div class="card var-4">
+    <span class="card-number">4</span>
+    <div class="card-title">Muted grey, larger, heavier shadow</div>
+    <div class="card-meta">
+        bg: <code>--bn-colour-muted</code> (#6b7280)<br>
+        size: 0.875rem (14px) &bull; &times; size: 0.65rem &bull; weight: 700<br>
+        shadow: <code>0 1px 4px rgba(0,0,0,0.18)</code> + <code>0 0 1px rgba(0,0,0,0.08)</code>
+    </div>
+    <div class="demo-row">
+        <span class="badge badge-user badge-blue">usability<button class="badge-delete">&times;</button></span>
+        <span class="badge badge-user badge-pink">emotion<button class="badge-delete">&times;</button></span>
+        <span class="badge badge-ai">frustration<button class="badge-delete">&times;</button></span>
+    </div>
+    <div class="demo-row demo-small" style="margin-top: 12px;">
+        <span class="badge badge-user badge-green">navigation<button class="badge-delete">&times;</button></span>
+        <span class="badge badge-ai">confusion<button class="badge-delete">&times;</button></span>
+    </div>
+</div>
+
+<!-- Var 5 -->
+<div class="card var-5">
+    <span class="card-number">5</span>
+    <div class="card-title">Light grey circle, dark &times;</div>
+    <div class="card-meta">
+        bg: <code>--bn-colour-border-hover</code> (#d1d5db)<br>
+        &times; colour: <code>--bn-colour-muted</code> (#6b7280)<br>
+        size: 0.75rem (12px) &bull; weight: 700<br>
+        shadow: <code>0 1px 3px --bn-colour-shadow</code>
+    </div>
+    <div class="demo-row">
+        <span class="badge badge-user badge-blue">usability<button class="badge-delete">&times;</button></span>
+        <span class="badge badge-user badge-pink">emotion<button class="badge-delete">&times;</button></span>
+        <span class="badge badge-ai">frustration<button class="badge-delete">&times;</button></span>
+    </div>
+    <div class="demo-row demo-small" style="margin-top: 12px;">
+        <span class="badge badge-user badge-green">navigation<button class="badge-delete">&times;</button></span>
+        <span class="badge badge-ai">confusion<button class="badge-delete">&times;</button></span>
+    </div>
+</div>
+
+<!-- Var 6 -->
+<div class="card var-6">
+    <span class="card-number">6</span>
+    <div class="card-title">Light grey, larger, heavy shadow</div>
+    <div class="card-meta">
+        bg: <code>--bn-colour-border-hover</code> (#d1d5db)<br>
+        &times; colour: <code>--bn-colour-muted</code> (#6b7280)<br>
+        size: 0.875rem (14px) &bull; &times; size: 0.6rem &bull; weight: 700<br>
+        shadow: <code>0 1px 4px rgba(0,0,0,0.18)</code>
+    </div>
+    <div class="demo-row">
+        <span class="badge badge-user badge-blue">usability<button class="badge-delete">&times;</button></span>
+        <span class="badge badge-user badge-pink">emotion<button class="badge-delete">&times;</button></span>
+        <span class="badge badge-ai">frustration<button class="badge-delete">&times;</button></span>
+    </div>
+    <div class="demo-row demo-small" style="margin-top: 12px;">
+        <span class="badge badge-user badge-green">navigation<button class="badge-delete">&times;</button></span>
+        <span class="badge badge-ai">confusion<button class="badge-delete">&times;</button></span>
+    </div>
+</div>
+
+<!-- Var 7 -->
+<div class="card var-7">
+    <span class="card-number">7</span>
+    <div class="card-title">Muted grey, thin &times; (weight 500)</div>
+    <div class="card-meta">
+        bg: <code>--bn-colour-muted</code> (#6b7280)<br>
+        size: 0.75rem (12px) &bull; &times; size: 0.65rem &bull; weight: 500<br>
+        shadow: <code>0 1px 3px --bn-colour-shadow</code>
+    </div>
+    <div class="demo-row">
+        <span class="badge badge-user badge-blue">usability<button class="badge-delete">&times;</button></span>
+        <span class="badge badge-user badge-pink">emotion<button class="badge-delete">&times;</button></span>
+        <span class="badge badge-ai">frustration<button class="badge-delete">&times;</button></span>
+    </div>
+    <div class="demo-row demo-small" style="margin-top: 12px;">
+        <span class="badge badge-user badge-green">navigation<button class="badge-delete">&times;</button></span>
+        <span class="badge badge-ai">confusion<button class="badge-delete">&times;</button></span>
+    </div>
+</div>
+
+<!-- Var 8 -->
+<div class="card var-8">
+    <span class="card-number">8</span>
+    <div class="card-title">Muted grey, larger, thin &times;, gentle shadow</div>
+    <div class="card-meta">
+        bg: <code>--bn-colour-muted</code> (#6b7280)<br>
+        size: 0.875rem (14px) &bull; &times; size: 0.6rem &bull; weight: 500<br>
+        shadow: <code>0 1px 2px rgba(0,0,0,0.12)</code>
+    </div>
+    <div class="demo-row">
+        <span class="badge badge-user badge-blue">usability<button class="badge-delete">&times;</button></span>
+        <span class="badge badge-user badge-pink">emotion<button class="badge-delete">&times;</button></span>
+        <span class="badge badge-ai">frustration<button class="badge-delete">&times;</button></span>
+    </div>
+    <div class="demo-row demo-small" style="margin-top: 12px;">
+        <span class="badge badge-user badge-green">navigation<button class="badge-delete">&times;</button></span>
+        <span class="badge badge-ai">confusion<button class="badge-delete">&times;</button></span>
+    </div>
+</div>
+
+<!-- Var 9 -->
+<div class="card var-9">
+    <span class="card-number">9</span>
+    <div class="card-title">White circle with grey border</div>
+    <div class="card-meta">
+        bg: <code>--bn-colour-bg</code> (#ffffff)<br>
+        &times; colour: <code>--bn-colour-muted</code> (#6b7280)<br>
+        border: <code>1px solid --bn-colour-border</code><br>
+        size: 0.875rem (14px) &bull; weight: 700<br>
+        shadow: <code>0 1px 3px --bn-colour-shadow</code>
+    </div>
+    <div class="demo-row">
+        <span class="badge badge-user badge-blue">usability<button class="badge-delete">&times;</button></span>
+        <span class="badge badge-user badge-pink">emotion<button class="badge-delete">&times;</button></span>
+        <span class="badge badge-ai">frustration<button class="badge-delete">&times;</button></span>
+    </div>
+    <div class="demo-row demo-small" style="margin-top: 12px;">
+        <span class="badge badge-user badge-green">navigation<button class="badge-delete">&times;</button></span>
+        <span class="badge badge-ai">confusion<button class="badge-delete">&times;</button></span>
+    </div>
+</div>
+
+<!-- 10a: Original var-10 baseline -->
+<div class="card var-10a">
+    <span class="card-number">10a</span>
+    <div class="card-title">Baseline (original var 10)</div>
+    <div class="card-meta">
+        White circle, grey &times;, 14px, bold 700<br>
+        Position: top -0.3rem, right -0.3rem<br>
+        No centering fix &bull; no nudge
+    </div>
+    <div class="demo-row">
+        <span class="badge badge-user badge-blue">usability<button class="badge-delete">&times;</button></span>
+        <span class="badge badge-user badge-pink">emotion<button class="badge-delete">&times;</button></span>
+        <span class="badge badge-ai">frustration<button class="badge-delete">&times;</button></span>
+    </div>
+    <div class="demo-row demo-small" style="margin-top: 12px;">
+        <span class="badge badge-user badge-green">navigation<button class="badge-delete">&times;</button></span>
+        <span class="badge badge-ai">confusion<button class="badge-delete">&times;</button></span>
+    </div>
+</div>
+
+<!-- 10b: Nudged + centred -->
+<div class="card var-10b">
+    <span class="card-number">10b</span>
+    <div class="card-title">Nudged 1px up+right, &times; centred</div>
+    <div class="card-meta">
+        Position: <code>calc(-0.3rem - 1px)</code> both axes<br>
+        <code>padding-top: 0.5px</code> to drop &times; into optical centre<br>
+        Same 14px circle, bold 700
+    </div>
+    <div class="demo-row">
+        <span class="badge badge-user badge-blue">usability<button class="badge-delete">&times;</button></span>
+        <span class="badge badge-user badge-pink">emotion<button class="badge-delete">&times;</button></span>
+        <span class="badge badge-ai">frustration<button class="badge-delete">&times;</button></span>
+    </div>
+    <div class="demo-row demo-small" style="margin-top: 12px;">
+        <span class="badge badge-user badge-green">navigation<button class="badge-delete">&times;</button></span>
+        <span class="badge badge-ai">confusion<button class="badge-delete">&times;</button></span>
+    </div>
+</div>
+
+<!-- 10c: + half-pixel larger circle -->
+<div class="card var-10c">
+    <span class="card-number">10c</span>
+    <div class="card-title">+ half-pixel larger circle (14.5px) <span class="rec">recommended</span></div>
+    <div class="card-meta">
+        Circle: <code>calc(0.875rem + 0.5px)</code> &asymp; 14.5px<br>
+        Same nudge + centering fix as 10b<br>
+        Sub-pixel rendering &mdash; yes, browsers handle 0.5px
+    </div>
+    <div class="demo-row">
+        <span class="badge badge-user badge-blue">usability<button class="badge-delete">&times;</button></span>
+        <span class="badge badge-user badge-pink">emotion<button class="badge-delete">&times;</button></span>
+        <span class="badge badge-ai">frustration<button class="badge-delete">&times;</button></span>
+    </div>
+    <div class="demo-row demo-small" style="margin-top: 12px;">
+        <span class="badge badge-user badge-green">navigation<button class="badge-delete">&times;</button></span>
+        <span class="badge badge-ai">confusion<button class="badge-delete">&times;</button></span>
+    </div>
+</div>
+
+<!-- 10c-fix: Figma-aligned centring via transform -->
+<div class="card var-10c-fix">
+    <span class="card-number">10c-fix</span>
+    <div class="card-title">&times; centred via transform(0.1px, 0.5px) <span class="rec">recommended</span></div>
+    <div class="card-meta">
+        <code>line-height: 0</code> to collapse metric offset<br>
+        <code>::after { transform: translate(0.1px, 0.5px) }</code><br>
+        Button text node hidden; &times; drawn by pseudo-element
+    </div>
+    <div class="demo-row">
+        <span class="badge badge-user badge-blue">usability<button class="badge-delete"></button></span>
+        <span class="badge badge-user badge-pink">emotion<button class="badge-delete"></button></span>
+        <span class="badge badge-ai">frustration<button class="badge-delete"></button></span>
+    </div>
+    <div class="demo-row demo-small" style="margin-top: 12px;">
+        <span class="badge badge-user badge-green">navigation<button class="badge-delete"></button></span>
+        <span class="badge badge-ai">confusion<button class="badge-delete"></button></span>
+    </div>
+</div>
+
+<!-- 10c-fix2: Same circle, × via text node with flexbox centering -->
+<div class="card var-10c-fix2">
+    <span class="card-number">10c-fix2</span>
+    <div class="card-title">&times; via text node, flexbox only (no transform)</div>
+    <div class="card-meta">
+        Standard <code>align-items/justify-content: center</code><br>
+        <code>line-height: 1</code>, <code>padding: 0</code><br>
+        Control: does flexbox alone centre it?
+    </div>
+    <div class="demo-row">
+        <span class="badge badge-user badge-blue">usability<button class="badge-delete">&times;</button></span>
+        <span class="badge badge-user badge-pink">emotion<button class="badge-delete">&times;</button></span>
+        <span class="badge badge-ai">frustration<button class="badge-delete">&times;</button></span>
+    </div>
+    <div class="demo-row demo-small" style="margin-top: 12px;">
+        <span class="badge badge-user badge-green">navigation<button class="badge-delete">&times;</button></span>
+        <span class="badge badge-ai">confusion<button class="badge-delete">&times;</button></span>
+    </div>
+</div>
+
+<!-- 10c-fix3: Larger downward nudge (1px) -->
+<div class="card var-10c-fix3">
+    <span class="card-number">10c-fix3</span>
+    <div class="card-title">&times; centred via transform(0, 1px) — stronger nudge</div>
+    <div class="card-meta">
+        Same as 10c-fix but <code>translate(0, 1px)</code><br>
+        In case 0.5px isn't enough on your display
+    </div>
+    <div class="demo-row">
+        <span class="badge badge-user badge-blue">usability<button class="badge-delete"></button></span>
+        <span class="badge badge-user badge-pink">emotion<button class="badge-delete"></button></span>
+        <span class="badge badge-ai">frustration<button class="badge-delete"></button></span>
+    </div>
+    <div class="demo-row demo-small" style="margin-top: 12px;">
+        <span class="badge badge-user badge-green">navigation<button class="badge-delete"></button></span>
+        <span class="badge badge-ai">confusion<button class="badge-delete"></button></span>
+    </div>
+</div>
+
+<!-- 10d: + larger × glyph -->
+<div class="card var-10d">
+    <span class="card-number">10d</span>
+    <div class="card-title">+ slightly larger &times; (0.625rem)</div>
+    <div class="card-meta">
+        Same as 10c but &times; at <code>0.625rem</code> (10px) vs 0.6rem (9.6px)<br>
+        Fills the circle a bit more
+    </div>
+    <div class="demo-row">
+        <span class="badge badge-user badge-blue">usability<button class="badge-delete">&times;</button></span>
+        <span class="badge badge-user badge-pink">emotion<button class="badge-delete">&times;</button></span>
+        <span class="badge badge-ai">frustration<button class="badge-delete">&times;</button></span>
+    </div>
+    <div class="demo-row demo-small" style="margin-top: 12px;">
+        <span class="badge badge-user badge-green">navigation<button class="badge-delete">&times;</button></span>
+        <span class="badge badge-ai">confusion<button class="badge-delete">&times;</button></span>
+    </div>
+</div>
+
+<!-- 10e: + lighter × weight -->
+<div class="card var-10e">
+    <span class="card-number">10e</span>
+    <div class="card-title">+ medium &times; weight (600)</div>
+    <div class="card-meta">
+        Same as 10c but <code>font-weight: 600</code> vs 700<br>
+        Slightly thinner stroke, more refined
+    </div>
+    <div class="demo-row">
+        <span class="badge badge-user badge-blue">usability<button class="badge-delete">&times;</button></span>
+        <span class="badge badge-user badge-pink">emotion<button class="badge-delete">&times;</button></span>
+        <span class="badge badge-ai">frustration<button class="badge-delete">&times;</button></span>
+    </div>
+    <div class="demo-row demo-small" style="margin-top: 12px;">
+        <span class="badge badge-user badge-green">navigation<button class="badge-delete">&times;</button></span>
+        <span class="badge badge-ai">confusion<button class="badge-delete">&times;</button></span>
+    </div>
+</div>
+
+<!-- 10f: + heavier shadow -->
+<div class="card var-10f">
+    <span class="card-number">10f</span>
+    <div class="card-title">+ heavier shadow (more float)</div>
+    <div class="card-meta">
+        Same as 10c but shadow: <code>0 1px 5px rgba(0,0,0,0.2)</code><br>
+        More pronounced floating effect
+    </div>
+    <div class="demo-row">
+        <span class="badge badge-user badge-blue">usability<button class="badge-delete">&times;</button></span>
+        <span class="badge badge-user badge-pink">emotion<button class="badge-delete">&times;</button></span>
+        <span class="badge badge-ai">frustration<button class="badge-delete">&times;</button></span>
+    </div>
+    <div class="demo-row demo-small" style="margin-top: 12px;">
+        <span class="badge badge-user badge-green">navigation<button class="badge-delete">&times;</button></span>
+        <span class="badge badge-ai">confusion<button class="badge-delete">&times;</button></span>
+    </div>
+</div>
+
+</div><!-- .grid -->
+
+<!-- ── Design token reference ────────────────────────────────── -->
+<h2 class="section-title">Design system tokens for consistency</h2>
+
+<table class="token-table">
+<thead>
+<tr>
+    <th>Token</th>
+    <th>Value (light)</th>
+    <th>Role</th>
+    <th>Use here?</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+    <td><code>--bn-colour-text</code></td>
+    <td><span class="swatch" style="background:#1a1a1a"></span>#1a1a1a</td>
+    <td>Primary text, current delete circle bg</td>
+    <td>Current — too heavy / near-black</td>
+</tr>
+<tr>
+    <td><code>--bn-colour-muted</code></td>
+    <td><span class="swatch" style="background:#6b7280"></span>#6b7280</td>
+    <td>Secondary text, icons, timestamps, add-tag borders</td>
+    <td><strong>Best fit for circle bg</strong> — already used for other de-emphasised interactive elements (search clear, modal close text)</td>
+</tr>
+<tr>
+    <td><code>--bn-colour-border-hover</code></td>
+    <td><span class="swatch" style="background:#d1d5db"></span>#d1d5db</td>
+    <td>Interactive border hover state, toolbar hover border</td>
+    <td>Option for lighter circle bg (vars 5, 6)</td>
+</tr>
+<tr>
+    <td><code>--bn-colour-icon-idle</code></td>
+    <td><span class="swatch" style="background:#c9ccd1"></span>#c9ccd1</td>
+    <td>Toolbar dropdown arrows at rest</td>
+    <td>Too light for a filled circle — low contrast</td>
+</tr>
+<tr>
+    <td><code>--bn-colour-shadow</code></td>
+    <td>rgba(0,0,0,0.1)</td>
+    <td>Standard shadow colour throughout the design system</td>
+    <td><strong>Use as shadow colour</strong> — consistent with existing elevations</td>
+</tr>
+<tr>
+    <td><code>--bn-colour-bg</code></td>
+    <td><span class="swatch" style="background:#ffffff; border: 1px solid #e5e7eb"></span>#ffffff</td>
+    <td>Page background, white surfaces</td>
+    <td>Option for white-circle approach (vars 9, 10)</td>
+</tr>
+<tr>
+    <td><code>--bn-colour-border</code></td>
+    <td><span class="swatch" style="background:#e5e7eb"></span>#e5e7eb</td>
+    <td>Borders, dividers, subtle lines</td>
+    <td>Option for circle border ring (var 9)</td>
+</tr>
+<tr>
+    <td><code>--bn-transition-fast</code></td>
+    <td>0.15s ease</td>
+    <td>Hover, opacity transitions</td>
+    <td><strong>Keep for opacity fade-in</strong> — already used</td>
+</tr>
+<tr>
+    <td><code>--bn-focus-shadow</code></td>
+    <td>0 3px 12px rgba(0,0,0,0.12)</td>
+    <td>Keyboard-nav focus state</td>
+    <td>Reference for shadow intensity — our delete shadow should be lighter than this</td>
+</tr>
+</tbody>
+</table>
+
+<!-- ── Design notes ──────────────────────────────────────────── -->
+<div class="notes">
+    <h3 style="font-size: 0.9rem; margin-bottom: 0.5rem;">Observations</h3>
+    <ul>
+        <li><strong>Circle background:</strong> <code>--bn-colour-muted</code> (#6b7280) is the natural choice — it's already the "secondary/quiet interactive" colour in the system (used by add-tag ghost badges, modal close, search clear text). Much softer than the current near-black <code>--bn-colour-text</code>.</li>
+        <li><strong>Shadow:</strong> A single-layer <code>0 1px 3px var(--bn-colour-shadow)</code> creates a subtle "floating chip" effect without drawing attention. The two-layer shadows (vars 4, 10, 11) create more depth but may be too prominent for something that only appears on hover.</li>
+        <li><strong>Circle size:</strong> 0.75rem (12px) is tight but works at report scale. 0.875rem (14px) gives more breathing room for the &times; and looks less cramped, especially at the smaller margin-badge size. 1rem (16px, var 11) dominates the badge — probably too big.</li>
+        <li><strong>&times; weight:</strong> Bold (700) reads clearly at 12px. Medium (500, vars 7-8) is more elegant but thinner strokes may look "spidery" at small sizes. Ultra-thin (400, var 12) depends heavily on font rendering and may vanish on low-DPI screens.</li>
+        <li><strong>White circle:</strong> Vars 9–10 use a white bg with grey &times;. These float visually but look less "button-like" — more like an annotation marker. They also need dark-mode consideration (would need to flip).</li>
+        <li><strong>Centering:</strong> The current wonky alignment comes from font metrics of the &times; character combined with <code>font-weight: 700</code>. Using flexbox <code>align-items: center; justify-content: center</code> with consistent <code>line-height: 1</code> fixes the centering across all variations shown here.</li>
+        <li><strong>AI badge &times;:</strong> The AI badge uses a <code>::after</code> pseudo-element instead of a <code>&lt;button&gt;</code>. The same circle/shadow tokens should apply to both — define them as custom properties or share via a common class.</li>
+    </ul>
+</div>
+
+</body>
+</html>

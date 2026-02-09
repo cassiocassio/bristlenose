@@ -86,7 +86,9 @@ Override with `--output`: `bristlenose run interviews/ -o /elsewhere/`
 ## Boundaries
 
 - **Safe to edit**: `bristlenose/`, `tests/`
+- **Design artifacts** (tracked, not shipped): `docs/mockups/`, `docs/design-system/`, `experiments/` — HTML mockups, style guides, throwaway prototypes. These are working materials for contributors, kept in the tree for backup and collaboration. Users never navigate to them. Add new mockups to `docs/mockups/`, not the repo root
 - **Never touch**: `.env`, output directories, `bristlenose/theme/images/`
+- **Gitignored (private)**: `docs/private/`, `trial-runs/` — contain names, contacts, and value judgements not suitable for a public repo
 
 ## HTML report features
 

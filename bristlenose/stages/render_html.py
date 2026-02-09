@@ -10,6 +10,8 @@ from datetime import datetime
 from html import escape
 from pathlib import Path
 
+import jinja2
+
 from bristlenose.coverage import CoverageStats, calculate_coverage
 from bristlenose.models import (
     EmotionalTone,
@@ -157,6 +159,18 @@ def _get_report_js() -> str:
 
 
 # ---------------------------------------------------------------------------
+# Jinja2 template environment
+# ---------------------------------------------------------------------------
+
+_TEMPLATE_DIR = _THEME_DIR / "templates"
+_jinja_env = jinja2.Environment(
+    loader=jinja2.FileSystemLoader(str(_TEMPLATE_DIR)),
+    autoescape=False,  # We manage escaping via _esc(); switch later
+    keep_trailing_newline=True,
+)
+
+
+# ---------------------------------------------------------------------------
 # Public API
 # ---------------------------------------------------------------------------
 
@@ -222,20 +236,11 @@ def render_html(
     _w = parts.append
 
     # --- Document shell ---
-    _w("<!DOCTYPE html>")
-    if color_scheme in ("light", "dark"):
-        _w(f'<html lang="en" data-theme="{color_scheme}">')
-    else:
-        _w('<html lang="en">')
-    _w("<head>")
-    _w('<meta charset="utf-8">')
-    _w('<meta name="viewport" content="width=device-width, initial-scale=1">')
-    _w('<meta name="color-scheme" content="light dark">')
-    _w(f"<title>{_esc(project_name)}</title>")
-    _w('<link rel="stylesheet" href="assets/bristlenose-theme.css">')
-    _w("</head>")
-    _w("<body>")
-    _w("<article>")
+    _w(_document_shell_open(
+        title=_esc(project_name),
+        css_href="assets/bristlenose-theme.css",
+        color_scheme=color_scheme,
+    ))
 
     # --- Header ---
     now = datetime.now()
@@ -246,47 +251,21 @@ def render_html(
     n_sessions = len(sessions)
     meta_date = format_finder_date(now, now=now)
 
-    _w('<div class="report-header">')
-    # Left: logo + logotype + project name
-    _w('<div class="header-left">')
-    if paths.logo_file.exists():
-        if paths.logo_dark_file.exists():
-            _w("<picture>")
-            _w(
-                '<source srcset="assets/bristlenose-logo-dark.png" '
-                'media="(prefers-color-scheme: dark)">'
-            )
-            _w(
-                '<img class="report-logo" src="assets/bristlenose-logo.png" '
-                'alt="Bristlenose logo">'
-            )
-            _w("</picture>")
-        else:
-            _w(
-                '<img class="report-logo" src="assets/bristlenose-logo.png" '
-                'alt="Bristlenose logo">'
-            )
-    _w(
-        f'<span class="header-title">'
-        f'<span class="header-logotype">Bristlenose</span>'
-        f"\u2003"
-        f'<span class="header-project">{_esc(project_name)}</span>'
-        f"</span>"
-    )
-    _w("</div>")
-    # Right: document title + meta
-    _w('<div class="header-right">')
-    _w('<span class="header-doc-title">Research report</span>')
-    _w(
+    meta_right = (
         f'<span class="header-meta">'
         f"{n_sessions}\u00a0session{'s' if n_sessions != 1 else ''}, "
         f"{n_participants}\u00a0participant{'s' if n_participants != 1 else ''}, "
         f"{_esc(meta_date)}"
         f"</span>"
     )
-    _w("</div>")
-    _w("</div>")
-    _w("<hr>")
+    _w(_report_header_html(
+        assets_prefix="assets",
+        has_logo=paths.logo_file.exists(),
+        has_dark_logo=paths.logo_dark_file.exists(),
+        project_name=_esc(project_name),
+        doc_title="Research report",
+        meta_right=meta_right,
+    ))
 
     # --- Toolbar ---
     _w('<div class="toolbar">')
@@ -976,69 +955,32 @@ def _render_transcript_page(
     parts: list[str] = []
     _w = parts.append
 
-    _w("<!DOCTYPE html>")
-    theme_attr = ""
-    if color_scheme in ("light", "dark"):
-        theme_attr = f' data-theme="{color_scheme}"'
-    _w(f'<html lang="en"{theme_attr}>')
-    _w("<head>")
-    _w('<meta charset="utf-8">')
-    _w('<meta name="viewport" content="width=device-width, initial-scale=1">')
-    _w('<meta name="color-scheme" content="light dark">')
     title = f"Session {_esc(session_num)}: {', '.join(_esc(lb) for lb in code_labels)}"
-    _w(f"<title>{title} \u2014 {_esc(project_name)}</title>")
-    # Session pages are in sessions/ — CSS is at ../assets/
-    _w('<link rel="stylesheet" href="../assets/bristlenose-theme.css">')
-    _w("</head>")
-    _w("<body>")
-    _w("<article>")
+    _w(_document_shell_open(
+        title=f"{title} \u2014 {_esc(project_name)}",
+        css_href="../assets/bristlenose-theme.css",
+        color_scheme=color_scheme,
+    ))
 
     # Header (same layout as report) — logos at ../assets/
-    _w('<div class="report-header">')
-    _w('<div class="header-left">')
-    if paths.logo_file.exists():
-        if paths.logo_dark_file.exists():
-            _w("<picture>")
-            _w(
-                '<source srcset="../assets/bristlenose-logo-dark.png" '
-                'media="(prefers-color-scheme: dark)">'
-            )
-            _w(
-                '<img class="report-logo" src="../assets/bristlenose-logo.png" '
-                'alt="Bristlenose logo">'
-            )
-            _w("</picture>")
-        else:
-            _w(
-                '<img class="report-logo" src="../assets/bristlenose-logo.png" '
-                'alt="Bristlenose logo">'
-            )
-    _w(
-        f'<span class="header-title">'
-        f'<span class="header-logotype">Bristlenose</span>'
-        f"\u2003"
-        f'<span class="header-project">{_esc(project_name)}</span>'
-        f"</span>"
-    )
-    _w("</div>")
-    _w('<div class="header-right">')
-    _w('<span class="header-doc-title">Session transcript</span>')
-
-    # Meta line
     meta_parts: list[str] = []
     if transcript.source_file:
         meta_parts.append(_esc(transcript.source_file))
     if transcript.duration_seconds > 0:
         meta_parts.append(format_timecode(transcript.duration_seconds))
-    if meta_parts:
-        _w(
-            f'<span class="header-meta">'
-            f"{' &middot; '.join(meta_parts)}"
-            f"</span>"
-        )
-    _w("</div>")
-    _w("</div>")
-    _w("<hr>")
+    t_meta_right = (
+        f'<span class="header-meta">'
+        f"{' &middot; '.join(meta_parts)}"
+        f"</span>"
+    ) if meta_parts else None
+    _w(_report_header_html(
+        assets_prefix="../assets",
+        has_logo=paths.logo_file.exists(),
+        has_dark_logo=paths.logo_dark_file.exists(),
+        project_name=_esc(project_name),
+        doc_title="Session transcript",
+        meta_right=t_meta_right,
+    ))
 
     # Back link + participant heading — report is at ../bristlenose-{slug}-report.html
     _w('<nav class="transcript-back">')
@@ -1213,54 +1155,20 @@ def _render_codebook_page(
     parts: list[str] = []
     _w = parts.append
 
-    _w("<!DOCTYPE html>")
-    theme_attr = ""
-    if color_scheme in ("light", "dark"):
-        theme_attr = f' data-theme="{color_scheme}"'
-    _w(f'<html lang="en"{theme_attr}>')
-    _w("<head>")
-    _w('<meta charset="utf-8">')
-    _w('<meta name="viewport" content="width=device-width, initial-scale=1">')
-    _w('<meta name="color-scheme" content="light dark">')
-    _w(f"<title>Codebook \u2014 {_esc(project_name)}</title>")
-    _w('<link rel="stylesheet" href="assets/bristlenose-theme.css">')
-    _w("</head>")
-    _w("<body>")
-    _w("<article>")
+    _w(_document_shell_open(
+        title=f"Codebook \u2014 {_esc(project_name)}",
+        css_href="assets/bristlenose-theme.css",
+        color_scheme=color_scheme,
+    ))
 
     # Header (same layout as report — logos at assets/)
-    _w('<div class="report-header">')
-    _w('<div class="header-left">')
-    if paths.logo_file.exists():
-        if paths.logo_dark_file.exists():
-            _w("<picture>")
-            _w(
-                '<source srcset="assets/bristlenose-logo-dark.png" '
-                'media="(prefers-color-scheme: dark)">'
-            )
-            _w(
-                '<img class="report-logo" src="assets/bristlenose-logo.png" '
-                'alt="Bristlenose logo">'
-            )
-            _w("</picture>")
-        else:
-            _w(
-                '<img class="report-logo" src="assets/bristlenose-logo.png" '
-                'alt="Bristlenose logo">'
-            )
-    _w(
-        f'<span class="header-title">'
-        f'<span class="header-logotype">Bristlenose</span>'
-        f"\u2003"
-        f'<span class="header-project">{_esc(project_name)}</span>'
-        f"</span>"
-    )
-    _w("</div>")
-    _w('<div class="header-right">')
-    _w('<span class="header-doc-title">Codebook</span>')
-    _w("</div>")
-    _w("</div>")
-    _w("<hr>")
+    _w(_report_header_html(
+        assets_prefix="assets",
+        has_logo=paths.logo_file.exists(),
+        has_dark_logo=paths.logo_dark_file.exists(),
+        project_name=_esc(project_name),
+        doc_title="Codebook",
+    ))
 
     # Back link to report
     report_filename = f"bristlenose-{slug}-report.html"
@@ -1373,6 +1281,36 @@ def _highlight_quoted_text(
 # ---------------------------------------------------------------------------
 
 
+def _document_shell_open(
+    title: str, css_href: str, color_scheme: str = "auto"
+) -> str:
+    """Return the opening document shell (DOCTYPE through <article>)."""
+    data_theme = color_scheme if color_scheme in ("light", "dark") else ""
+    tmpl = _jinja_env.get_template("document_shell_open.html")
+    return tmpl.render(title=title, css_href=css_href, data_theme=data_theme)
+
+
+def _report_header_html(
+    *,
+    assets_prefix: str,
+    has_logo: bool,
+    has_dark_logo: bool,
+    project_name: str,
+    doc_title: str,
+    meta_right: str | None = None,
+) -> str:
+    """Return the report header block (logo, title, doc type, meta)."""
+    tmpl = _jinja_env.get_template("report_header.html")
+    return tmpl.render(
+        assets_prefix=assets_prefix,
+        has_logo=has_logo,
+        has_dark_logo=has_dark_logo,
+        project_name=project_name,
+        doc_title=doc_title,
+        meta_right=meta_right,
+    )
+
+
 def _footer_html(assets_prefix: str = "assets") -> str:
     """Return the page footer with logo, version, feedback links, and keyboard hint.
 
@@ -1383,36 +1321,8 @@ def _footer_html(assets_prefix: str = "assets") -> str:
     """
     from bristlenose import __version__
 
-    return (
-        '<footer class="report-footer">'
-        # Left zone: fish logo + logotype + version
-        '<div class="footer-left">'
-        '<picture class="footer-logo-picture">'
-        f'<source srcset="{assets_prefix}/bristlenose-logo-dark.png" '
-        'media="(prefers-color-scheme: dark)">'
-        f'<img class="footer-logo" src="{assets_prefix}/bristlenose-logo.png" alt="">'
-        "</picture>"
-        '<span class="footer-logotype">Bristlenose</span>'
-        "\u2002"
-        f'<a class="footer-version" '
-        f'href="https://github.com/cassiocassio/bristlenose">'
-        f"version {__version__}</a>"
-        "</div>"
-        # Middle zone: feedback links (hidden unless BRISTLENOSE_FEEDBACK is true)
-        '<div class="feedback-links">'
-        '<a class="footer-link" '
-        'href="https://github.com/cassiocassio/bristlenose/issues/new" '
-        'target="_blank" rel="noopener">'
-        "\U0001f41b Report a bug</a>"
-        '<span class="footer-link-sep">\u00b7</span>'
-        '<a class="footer-link feedback-trigger" role="button" tabindex="0">'
-        "\u2661 Feedback</a>"
-        "</div>"
-        # Right zone: keyboard hint
-        '<a class="footer-keyboard-hint" role="button" tabindex="0">'
-        "<kbd>?</kbd> for Help</a>"
-        "</footer>"
-    )
+    tmpl = _jinja_env.get_template("footer.html")
+    return tmpl.render(version=__version__, assets_prefix=assets_prefix)
 
 
 def _esc(text: str) -> str:
@@ -1468,18 +1378,8 @@ def _format_quote_html(
     """Render a single quote as an HTML blockquote."""
     tc = format_timecode(quote.start_timecode)
     quote_id = f"q-{quote.participant_id}-{int(quote.start_timecode)}"
-    # Quote attributions use raw pid (p1, p2) for anonymisation
-    parts: list[str] = [
-        f'<blockquote id="{quote_id}"'
-        f' data-timecode="{_esc(tc)}"'
-        f' data-participant="{_esc(quote.participant_id)}"'
-        f' data-emotion="{_esc(quote.emotion.value)}"'
-        f' data-intent="{_esc(quote.intent.value)}">'
-    ]
 
-    if quote.researcher_context:
-        parts.append(f'<span class="context">[{_esc(quote.researcher_context)}]</span>')
-
+    # Build timecode HTML — clickable link if video exists, plain span otherwise
     if video_map and quote.participant_id in video_map:
         tc_html = (
             f'<a href="#" class="timecode" '
@@ -1490,45 +1390,27 @@ def _format_quote_html(
     else:
         tc_html = f'<span class="timecode">{_tc_brackets(tc)}</span>'
 
+    # Speaker link targets the transcript page
     pid_esc = _esc(quote.participant_id)
     sid_esc = _esc(quote.session_id) if quote.session_id else pid_esc
     anchor = f"t-{int(quote.start_timecode)}"
     speaker_link = (
         f'<a href="sessions/transcript_{sid_esc}.html#{anchor}" class="speaker-link">{pid_esc}</a>'
     )
-    badges = _quote_badges(quote)
-    badge_html = (
-        f'<div class="badges">{badges}'
-        ' <span class="badge badge-add" aria-label="Add tag">+</span>'
-        ' <button class="badge-restore" aria-label="Restore tags"'
-        ' title="Restore tags" style="display:none">&#x21A9;</button>'
-        "</div>"
-    )
 
-    parts.append(
-        f'<div class="quote-row">{tc_html}'
-        f'<div class="quote-body">'
-        f'<span class="quote-text">\u201c{_esc(quote.text)}\u201d</span>&nbsp;'
-        f'<span class="speaker">&mdash;&nbsp;{speaker_link}</span>'
-        f"{badge_html}"
-        f"</div></div>"
-    )
-
-    parts.append(
-        '<button class="hide-btn" aria-label="Hide this quote">'
-        '<svg width="14" height="14" viewBox="0 0 24 24" fill="none"'
-        ' stroke="currentColor" stroke-width="2" stroke-linecap="round">'
-        '<path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8'
-        'a18.45 18.45 0 0 1 5.06-5.94"/>'
-        '<path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8'
-        'a18.5 18.5 0 0 1-2.16 3.19"/>'
-        '<line x1="1" y1="1" x2="23" y2="23"/>'
-        "</svg></button>"
-    )
-    parts.append('<button class="edit-pencil" aria-label="Edit this quote">&#9998;</button>')
-    parts.append('<button class="star-btn" aria-label="Star this quote">&#9733;</button>')
-    parts.append("</blockquote>")
-    return "\n".join(parts)
+    tmpl = _jinja_env.get_template("quote_card.html")
+    return tmpl.render(
+        quote_id=quote_id,
+        timecode=_esc(tc),
+        participant_id=_esc(quote.participant_id),
+        emotion=_esc(quote.emotion.value),
+        intent=_esc(quote.intent.value),
+        researcher_context=_esc(quote.researcher_context) if quote.researcher_context else "",
+        tc_html=tc_html,
+        quote_text=_esc(quote.text),
+        speaker_link=speaker_link,
+        badges=_quote_badges(quote),
+    ).rstrip("\n")
 
 
 def _quote_badges(quote: ExtractedQuote) -> str:

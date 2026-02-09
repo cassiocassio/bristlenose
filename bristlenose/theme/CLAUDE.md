@@ -337,8 +337,29 @@ Codebook page grid layout and interactive components. Uses CSS columns masonry (
 - **`.drag-ghost`** — fixed-position ghost element during drag
 - **`.tag-preview`** — inline badge in merge confirmation modal
 
+## Jinja2 templates
+
+13 HTML templates in `templates/` (alongside CSS template files). All use `autoescape=False` — escape in Python with `_esc()` before passing to template. Jinja2 environment: `_jinja_env` at module level in `render_html.py`.
+
+| Template | Parameters | Used by |
+|----------|------------|---------|
+| `document_shell_open.html` | `color_scheme`, `title`, `css_href` | Report, transcript, codebook |
+| `report_header.html` | `assets_prefix`, `has_logo`, `has_dark_logo`, `project_name`, `doc_title`, `meta_right` | Report, transcript, codebook |
+| `footer.html` | `version`, `assets_prefix` | Report, transcript, codebook |
+| `quote_card.html` | `q` (quote context dict) | Report |
+| `toolbar.html` | (none — static) | Report |
+| `session_table.html` | `rows` (list of dicts) | Report |
+| `toc.html` | `section_toc`, `theme_toc`, `chart_toc` | Report |
+| `content_section.html` | `heading`, `item_type`, `groups` | Report (sections + themes) |
+| `sentiment_chart.html` | `max_count`, `pos_bars`, `surprise_bar`, `neg_bars` | Report |
+| `friction_points.html` | `groups` (list of dicts with `pid`, `entries`) | Report |
+| `user_journeys.html` | `rows` (list of dicts) | Report |
+| `coverage.html` | `summary`, `pct_omitted`, `sessions` | Report |
+| `player.html` | (none — static) | Separate player file |
+
 ## Gotchas
 
+- **Jinja2 dict key naming**: never use Python dict method names (`items`, `keys`, `values`, `get`, `update`, `pop`) as dict keys passed to templates. Jinja2's attribute lookup resolves `group.items` as `dict.items` (the method) before `dict["items"]` (the key). Use alternative names (e.g. `entries` instead of `items`). Bracket notation (`group["items"]`) also works but is less readable
 - **JS load order matters**: `view-switcher.js`, `search.js`, `tag-filter.js`, `hidden.js`, and `names.js` all load **after** `csv-export.js` in `_JS_FILES` — `view-switcher.js` writes the `currentViewMode` global defined in `csv-export.js`; `search.js` reads `currentViewMode` and exposes `_onViewModeChange()` called by `view-switcher.js`; `tag-filter.js` loads after `search.js` (reads `currentViewMode`, `_hideEmptySections`, `_hideEmptySubsections`; exposes `_applyTagFilter()`, `_onTagFilterViewChange()`, `_isTagFilterActive()`, `_updateVisibleQuoteCount()` called by `view-switcher.js`, `search.js`, and `tags.js`); `hidden.js` loads after `tag-filter.js` (reads `currentViewMode`, `_isTagFilterActive`, `_applyTagFilter`, `_hideEmptySections`; exposes `hideQuote()`, `bulkHideSelected()`, `isHidden()` called by `focus.js`); `names.js` depends on `copyToClipboard()` and `showToast()`
 - **Hidden quotes vs visibility filters**: hidden quotes use `.bn-hidden` class + `style.display = 'none'`. This is fundamentally different from search/tag-filter/starred hiding (which are temporary view filters). Every visibility restore path (`_showAllQuotes`, `_showStarredOnly`, `_restoreViewMode`, `_restoreQuotesForViewMode`, `_applyTagFilter`, `_applySearchFilter`) must check for `.bn-hidden` and skip those quotes. The CSS `display: none !important` on `.bn-hidden` is defence-in-depth
 - **`_TRANSCRIPT_JS_FILES`** includes `badge-utils.js`, `transcript-names.js`, and `transcript-annotations.js` (after `storage.js`). `transcript-names.js` reads localStorage name edits and updates heading speaker names only (preserving code prefix: `"m1 Sarah Chen"`). Does NOT override segment speaker labels (they stay as raw codes). Separate from the report's `names.js` (which has full editing UI). `transcript-annotations.js` renders margin annotations, span bars, and handles badge deletion

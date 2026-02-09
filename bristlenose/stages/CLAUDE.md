@@ -111,9 +111,9 @@ Both `models.py` and `utils/timecodes.py` define `format_timecode()` and `parse_
 ## Transcript page / coverage link consistency
 
 The HTML report has three places that generate links to transcript pages:
-1. **Sessions table** (line ~388): `transcript_{session.session_id}.html`
-2. **Quote speaker links** (line ~1027): `transcript_{quote.session_id}.html#t-{seconds}`
-3. **Coverage section** (line ~1491): `transcript_{transcript.session_id}.html#t-{seconds}`
+1. **Sessions table** (`session_table.html` template): `transcript_{session.session_id}.html`
+2. **Quote speaker links** (`quote_card.html` template): `transcript_{quote.session_id}.html#t-{seconds}`
+3. **Coverage section** (`coverage.html` template): `transcript_{transcript.session_id}.html#t-{seconds}`
 
 Transcript pages are named `transcript_{transcript.session_id}.html` with anchor IDs `t-{int(seg.start_time)}`.
 

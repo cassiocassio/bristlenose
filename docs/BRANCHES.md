@@ -207,6 +207,10 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 
 ## Completed Branches (for reference)
 
+### `transcript-annotations` — merged 9 Feb 2026
+
+Transcript page annotations: quote highlighting with margin labels, tag badges, span bars for quote extent, citation toggle. Also: badge abstraction (`badge-utils.js`), delete circle restyle (white floating chip), design-system reference docs (`docs/design-system/`).
+
 ### `codebook` — merged 7 Feb 2026
 
 Interactive codebook page with tag taxonomy management. Phases 1–3: OKLCH colour tokens, toolbar redesign, standalone `codebook.html` with drag-and-drop, inline editing, group CRUD, cross-window sync. Also: shared `escapeHtml()`, `showConfirmModal()`, `toggle()` in modal infrastructure.

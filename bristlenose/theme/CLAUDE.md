@@ -33,7 +33,15 @@ Dark mode is CSS-only. No localStorage, no toggle button, no JS involved.
 
 ## Template CSS files
 
-Template-level CSS in `templates/`: `report.css` (main report layout), `transcript.css` (per-session transcript pages — back button, segment layout, meta styling, anchor highlight animation), `print.css` (print overrides, hides interactive elements — includes `.feedback-links`, `.feedback-overlay`, `.footer-logo-picture`). Quote attribution links styled via `.speaker-link` in `organisms/blockquote.css` (inherits muted colour from `.speaker`, accent on hover).
+Template-level CSS in `templates/`: `report.css` (main report layout), `transcript.css` (per-session transcript pages — back button, segment layout, meta styling, citation highlight, anchor highlight animation), `print.css` (print overrides, hides interactive elements — includes `.feedback-links`, `.feedback-overlay`, `.footer-logo-picture`). Quote attribution links styled via `.speaker-link` in `organisms/blockquote.css` (inherits muted colour from `.speaker`, accent on hover).
+
+### Inline citation highlight (bn-cited)
+
+Quoted text within transcript segments is wrapped in `<mark class="bn-cited">` elements by the Python renderer. This marks the verbatim excerpt that was extracted as a quote — the rest of the segment is context.
+
+- **CSS**: `.bn-cited` in `transcript.css` — currently `background: transparent` (visually invisible while treatment is being rethought). The `--bn-colour-cited-bg` token (`#fef9c3` light / `#3b2f05` dark) is preserved in `tokens.css`. To re-enable: change `background: transparent` to `background: var(--bn-colour-cited-bg)`
+- **HTML**: `<mark class="bn-cited">` elements are always emitted by `render_html.py` regardless of CSS visibility — the mechanism is intact
+- **Design rationale**: the knocked-back opacity on non-quoted segments (0.6) plus first-occurrence section/theme labels plus span bars provide sufficient visual cues for quote extent, making the inline highlight redundant for now
 
 ### Anchor highlight animation
 
@@ -68,13 +76,43 @@ Each user tag label has a hover `×` button (`.histogram-bar-delete` in `atoms/b
 - `molecules/bar-group.css` — `.sentiment-bar-group` (`display: contents`)
 - `organisms/sentiment-chart.css` — `.sentiment-row`, `.sentiment-chart`, `.sentiment-chart-title`
 
+## Span bar atom
+
+Reusable vertical extent indicator for showing how far a range (e.g. a quote) extends across a list of items. Positioned absolutely by JS; visual properties come from `--bn-span-bar-*` tokens.
+
+- **CSS**: `atoms/span-bar.css` — `.span-bar` uses `background`, `border-radius`, `opacity`, `width` from tokens, `pointer-events: none`
+- **Tokens** (in `tokens.css`): `--bn-span-bar-width` (2px), `--bn-span-bar-gap` (6px), `--bn-span-bar-offset` (8px), `--bn-span-bar-colour` (border colour), `--bn-span-bar-opacity` (0.5), `--bn-span-bar-radius` (1px)
+- **Usage**: JS creates `<div class="span-bar">`, sets `position: absolute`, `top`, `height`, `right` via inline styles, and appends to a `position: relative` container. Currently used by `transcript-annotations.js` for quote extent bars
+- **Responsive**: hidden on narrow viewports via `molecules/transcript-annotations.css` (`@media (max-width: 1099px) { .span-bar { display: none } }`)
+
+## Transcript annotations molecule
+
+Right-margin annotation layout for transcript pages. Shows section/theme labels, tag badges, and span bars alongside quoted segments.
+
+- **CSS**: `molecules/transcript-annotations.css`
+- **`.segment-margin`** — annotation container. Wide viewports: absolute-positioned in right margin (`right: -13.5rem`, `width: 12.5rem`). Narrow viewports: inline below the segment text (`margin-left: 3.5rem` to align past timecode column)
+- **`.transcript-body`** — gets `padding-right: 14rem` on wide viewports to make room for the margin column
+- **`.margin-annotation`** — one per quote in a segment, flex column with 2px gap
+- **`.margin-label`** — section/theme label, accent colour, truncated with ellipsis, links to report quote
+- **`.margin-tags`** — flex row of badge elements, `overflow: visible` to allow delete × circles to protrude
+- **Breakpoint**: 1100px — below this, annotations are inline and span bars are hidden
+
 ## JS modules
 
-17 standalone files in `js/` concatenated at render time (same pattern as CSS): storage, modal, codebook, player, starred, editing, tags, histogram, csv-export, view-switcher, search, tag-filter, hidden, names, focus, feedback, main. Transcript pages use `storage.js` + `player.js` + `transcript-names.js` (no starred/editing/tags/search/names/view-switcher/focus/feedback). Codebook page uses `storage.js` + `modal.js` + `codebook.js`. `transcript-names.js` only updates heading speaker names (preserving code prefix: `"m1 Sarah Chen"`); segment speaker labels stay as raw codes (`p1:`, `m1:`) and are not overridden by JS.
+18 standalone files in `js/` concatenated at render time (same pattern as CSS): storage, badge-utils, modal, codebook, player, starred, editing, tags, histogram, csv-export, view-switcher, search, tag-filter, hidden, names, focus, feedback, main. Transcript pages use `storage.js` + `badge-utils.js` + `player.js` + `transcript-names.js` + `transcript-annotations.js`. Codebook page uses `storage.js` + `badge-utils.js` + `modal.js` + `codebook.js`. `transcript-names.js` only updates heading speaker names (preserving code prefix: `"m1 Sarah Chen"`); segment speaker labels stay as raw codes (`p1:`, `m1:`) and are not overridden by JS.
 
 ### storage.js
 
 Thin localStorage abstraction. `createStore(key)` returns `{ get, set }` pair. Also provides `escapeHtml(s)` — shared HTML escaping utility (escapes `&`, `<`, `>`, `"`) used by `codebook.js`, `histogram.js`, and any module inserting user-provided text into `innerHTML`. Defined before `createStore()` so it's available to all modules in the concatenation order.
+
+### badge-utils.js
+
+Shared badge DOM helpers loaded on all three page types (report, transcript, codebook). Pure DOM — no localStorage access, no side-effects. Load after `storage.js` and before any feature module.
+
+- **`createUserTagBadge(name, colourVar)`** — returns `<span class="badge badge-user" data-badge-type="user" data-tag-name="...">name<button class="badge-delete">×</button></span>`. Does NOT add `badge-appearing` class (callers opt-in). `colourVar` is a CSS var string or null
+- **`animateBadgeRemoval(el, opts)`** — adds `.badge-removing`, on `animationend` either `el.remove()` (default) or `el.style.display = 'none'` (if `opts.hide` is true). Optional `opts.onDone` callback
+- **`getTagColour(tagName, codebookData)`** — pure function, takes codebook data object `{ groups: [], tags: {} }` as parameter. Returns CSS `var()` string or null for ungrouped tags. Used directly by `transcript-annotations.js`; wrapped by `getTagColourVar()` in `codebook.js` (which adds `'var(--bn-custom-bg)'` fallback for ungrouped)
+- **Consumers**: `tags.js` (`createUserTagEl` wraps `createUserTagBadge`, delete handlers call `animateBadgeRemoval`), `transcript-annotations.js` (badge creation and deletion), `codebook.js` (`getTagColourVar` delegates to `getTagColour`, `_renderTagRow` uses `createUserTagBadge`)
 
 ### player.js
 
@@ -88,6 +126,24 @@ Popout video/audio player integration and playback-synced glow highlighting.
 - **Cleanup**: `_clearAllGlow()` removes all glow classes when the player window is closed
 - **CSS**: glow tokens in `tokens.css` (`--bn-glow-colour`, `--bn-glow-colour-strong`); keyframes and classes in `atoms/timecode.css`; suppressed in `templates/print.css`
 - **Accessibility**: `.bn-no-animations` zeroes animation durations; `@media (prefers-reduced-motion: reduce)` disables pulse; steady glow (box-shadow) remains in all cases
+
+### transcript-annotations.js
+
+Right-margin annotations on transcript pages: section/theme labels, tag badges, and vertical span bars alongside quoted segments. Non-quoted segments are knocked back to 0.6 opacity by CSS.
+
+- **Stores**: `bristlenose-tags`, `bristlenose-deleted-badges`, `bristlenose-codebook` — same stores as the report page, enabling cross-page sync
+- **`initTranscriptAnnotations()`** — reads `BRISTLENOSE_QUOTE_MAP` (baked into HTML by Python renderer), initialises stores, renders annotations, installs event handlers, listens for `storage` events to re-render on cross-window changes
+- **Two-pass rendering** (`_renderAllAnnotations`):
+  1. Build `quoteSegments` map (qid → ordered list of `.segment-quoted` elements)
+  2. For each segment, render margin annotations on the FIRST segment only per quote
+  3. Render vertical span bars showing each quote's extent
+- **Label dedup**: section/theme labels shown only on first occurrence via `seenLabels` map keyed by `type:label`
+- **Badge deletion** (event delegation on `document`, scoped to `.segment-margin`):
+  - AI sentiment badges: click anywhere to delete, animates out, persists to `bristlenose-deleted-badges`
+  - User tags: click × button to delete, animates out, persists to `bristlenose-tags`
+- **Span bars** (`_renderSpanBars`): reads `--bn-span-bar-gap` and `--bn-span-bar-offset` tokens from CSS. Greedy slot assignment avoids vertical overlap. Creates `.span-bar` elements (styled by `atoms/span-bar.css`); JS only sets position and height
+- **Dependencies**: `storage.js` (`createStore`), `badge-utils.js` (`createUserTagBadge`, `animateBadgeRemoval`, `getTagColour`)
+- **CSS**: `molecules/transcript-annotations.css` (margin layout, badge sizing, responsive breakpoints), `atoms/span-bar.css` (visual properties)
 
 ### names.js
 
@@ -201,7 +257,7 @@ Codebook data model, colour assignment, and interactive panel UI. Manages the re
 
 - **Store**: `createStore('bristlenose-codebook')` — shape `{ groups: [], tags: {}, aiTagsVisible: true }`
 - **Colour sets**: 5 pentadic sets (UX blue, Emotion red-pink, Task green-teal, Trust purple, Opportunity amber), each with 5–6 slots. `COLOUR_SETS` includes `bgVar`, `groupBg`, `barVar` properties for panel rendering
-- **`getTagColourVar(tagName)`** — returns CSS `var()` reference for a tag's background colour; `var(--bn-custom-bg)` for ungrouped tags
+- **`getTagColourVar(tagName)`** — returns CSS `var()` reference for a tag's background colour; `var(--bn-custom-bg)` for ungrouped tags. Delegates to shared `getTagColour()` from `badge-utils.js` and adds the ungrouped fallback
 - **`assignTagToGroup(tagName, groupId)`** — assigns tag with auto-picked colour index
 - **`createCodebookGroup(name, colourSet)`** — creates a group with auto-assigned colour set if not specified
 - **`initCodebook()`** — restores AI tag visibility, applies codebook colours to badges, wires Codebook toolbar button. On codebook page, calls `_initCodebookPanel()` to render the interactive grid
@@ -218,7 +274,7 @@ Codebook data model, colour assignment, and interactive panel UI. Manages the re
 - **Confirmation dialogs**: `_confirmMergeTags()`, `_confirmDeleteTag()`, `_confirmDeleteGroup()` — all use `showConfirmModal()` from `modal.js`
 - **Help modal**: `_toggleCodebookHelp()` with codebook-specific shortcuts (?, Esc, Enter, drag actions), wired to `?` key
 - **Tag name collection**: `_allTagNames()` merges tags from both `bristlenose-tags` (user tags with quotes) AND `codebook.tags` (tags assigned to groups but possibly with 0 quotes)
-- **Dependencies**: `storage.js` (for `createStore`, `escapeHtml`), `modal.js` (for `createModal`, `showConfirmModal`, `closeTopmostModal` — on codebook page only)
+- **Dependencies**: `storage.js` (for `createStore`, `escapeHtml`), `badge-utils.js` (for `createUserTagBadge`, `getTagColour`), `modal.js` (for `createModal`, `showConfirmModal`, `closeTopmostModal` — on codebook page only)
 
 ### Codebook page
 
@@ -226,14 +282,14 @@ Standalone HTML page (`codebook.html`) at the output root, opened in a new windo
 
 - **Layout**: CSS columns masonry grid (`columns: 240px`, `organisms/codebook-panel.css`) with colour-coded group cards
 - **Content**: description text + `<div class="codebook-grid" id="codebook-grid">` container populated by `_initCodebookPanel()` from `codebook.js`
-- **JS files**: `_CODEBOOK_JS_FILES` = `storage.js` + `modal.js` + `codebook.js`. Boot calls `initCodebook()` which detects the `#codebook-grid` element and renders the panel
+- **JS files**: `_CODEBOOK_JS_FILES` = `storage.js` + `badge-utils.js` + `modal.js` + `codebook.js`. Boot calls `initCodebook()` which detects the `#codebook-grid` element and renders the panel
 - **Interactive features**: drag-and-drop tags between groups, merge tags, inline-edit group titles/subtitles, add/delete tags, create/delete groups, keyboard shortcuts (? help, Esc close)
 - **Cross-window sync**: localStorage `storage` event — changes in the codebook page propagate to the report (badge colours update), and vice versa (new user tags appear)
 
 Three page types in the output:
-1. **Report** (`bristlenose-{slug}-report.html`) — main window, full JS suite
-2. **Transcript** (`sessions/transcript_{id}.html`) — separate pages, `storage.js` + `player.js` + `transcript-names.js`
-3. **Codebook** (`codebook.html`) — new window, `storage.js` + `modal.js` + `codebook.js`
+1. **Report** (`bristlenose-{slug}-report.html`) — main window, full JS suite (18 modules)
+2. **Transcript** (`sessions/transcript_{id}.html`) — separate pages, `storage.js` + `badge-utils.js` + `player.js` + `transcript-names.js` + `transcript-annotations.js`
+3. **Codebook** (`codebook.html`) — new window, `storage.js` + `badge-utils.js` + `modal.js` + `codebook.js`
 
 ### Toolbar button styling
 
@@ -285,7 +341,7 @@ Codebook page grid layout and interactive components. Uses CSS columns masonry (
 
 - **JS load order matters**: `view-switcher.js`, `search.js`, `tag-filter.js`, `hidden.js`, and `names.js` all load **after** `csv-export.js` in `_JS_FILES` — `view-switcher.js` writes the `currentViewMode` global defined in `csv-export.js`; `search.js` reads `currentViewMode` and exposes `_onViewModeChange()` called by `view-switcher.js`; `tag-filter.js` loads after `search.js` (reads `currentViewMode`, `_hideEmptySections`, `_hideEmptySubsections`; exposes `_applyTagFilter()`, `_onTagFilterViewChange()`, `_isTagFilterActive()`, `_updateVisibleQuoteCount()` called by `view-switcher.js`, `search.js`, and `tags.js`); `hidden.js` loads after `tag-filter.js` (reads `currentViewMode`, `_isTagFilterActive`, `_applyTagFilter`, `_hideEmptySections`; exposes `hideQuote()`, `bulkHideSelected()`, `isHidden()` called by `focus.js`); `names.js` depends on `copyToClipboard()` and `showToast()`
 - **Hidden quotes vs visibility filters**: hidden quotes use `.bn-hidden` class + `style.display = 'none'`. This is fundamentally different from search/tag-filter/starred hiding (which are temporary view filters). Every visibility restore path (`_showAllQuotes`, `_showStarredOnly`, `_restoreViewMode`, `_restoreQuotesForViewMode`, `_applyTagFilter`, `_applySearchFilter`) must check for `.bn-hidden` and skip those quotes. The CSS `display: none !important` on `.bn-hidden` is defence-in-depth
-- **`_TRANSCRIPT_JS_FILES`** includes `transcript-names.js` (after `storage.js`) — reads localStorage name edits and updates heading speaker names only (preserving code prefix: `"m1 Sarah Chen"`). Does NOT override segment speaker labels (they stay as raw codes). Separate from the report's `names.js` (which has full editing UI)
+- **`_TRANSCRIPT_JS_FILES`** includes `badge-utils.js`, `transcript-names.js`, and `transcript-annotations.js` (after `storage.js`). `transcript-names.js` reads localStorage name edits and updates heading speaker names only (preserving code prefix: `"m1 Sarah Chen"`). Does NOT override segment speaker labels (they stay as raw codes). Separate from the report's `names.js` (which has full editing UI). `transcript-annotations.js` renders margin annotations, span bars, and handles badge deletion
 - **`blockquote .timecode`** in `blockquote.css` must use `--bn-colour-accent` not `--bn-colour-muted` — the `.timecode-bracket` children handle the muting. If you add a new timecode rendering context, ensure the parent rule uses accent
 - **Modal infrastructure**: `atoms/modal.css` provides shared `.bn-overlay`, `.bn-modal`, `.bn-modal-close`, `.bn-modal-footer`, `.bn-modal-actions`, `.bn-btn`, `.bn-btn-cancel`, `.bn-btn-danger`, `.bn-btn-primary` classes. `.bn-modal` has `max-width: 24rem` default — override per-modal for wider content (e.g. `.help-modal { max-width: 600px }`). `js/modal.js` provides `createModal()` factory (returns `{ show, hide, isVisible, toggle }`) + `showConfirmModal()` reusable confirmation dialog + `_modalRegistry` + `closeTopmostModal()`. Help, feedback, codebook, and histogram modals all use these — don't duplicate overlay/card/close patterns
 - **Sentiment chart layout**: both AI sentiment and user-tags charts use CSS grid (`grid-template-columns: max-content 1fr max-content`) on `.sentiment-chart`. Bar groups use `display: contents` so label/bar/count participate directly in the parent grid — this is what aligns all bar left edges within each chart. Labels use `width: fit-content` + `justify-self: start` so the background hugs the text and the variable gap falls between the label's right edge and the bar. The two charts sit side-by-side in `.sentiment-row` (flexbox, `align-items: flex-start` for top-alignment). Don't change the grid structure without checking both charts

@@ -189,6 +189,7 @@ async def _extract_single(
                 start_timecode=start_tc,
                 end_timecode=end_tc,
                 text=text,
+                verbatim_excerpt=item.verbatim_excerpt or "",
                 topic_label=item.topic_label,
                 quote_type=quote_type,
                 researcher_context=item.researcher_context,

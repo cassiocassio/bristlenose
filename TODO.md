@@ -148,9 +148,9 @@ Organised from easiest to hardest. The README has a condensed version; this is t
 - [x] Keyboard shortcuts — j/k navigation, s to star, t to tag, / to search, ? for help. Focus system with white lift visual, help overlay. See `docs/design-keyboard-navigation.md`
 - [x] Multi-select — Finder-like selection: plain click = focus + select, Cmd+click = toggle, Shift+click = range, background click = clear all. Selection state (`selectedQuoteIds` Set), header shows "N quotes selected", Escape clears selection. Bulk actions: `s` stars/unstars all selected, `t` or `+` click opens tag input that applies to all selected quotes (auto-suggest filters by intersection of existing tags)
 - [x] Timecodes: two-tone typography — blue digits + muted grey brackets, `:visited` fix, `_tc_brackets()` helper; hanging-indent layout for quote cards and transcript segments
-- [ ] User tag × button — vertically centre the close button optically (currently sits too low)
+- [x] Delete circle restyle — white floating chip with grey × and drop shadow, replacing near-black circles. Applied to `.badge-delete`, `.badge-ai::after`, `.histogram-bar-delete`. Interim fix using × character with optical centering hacks (`padding-top: 0.5px`)
+- [ ] **SVG icon set** — replace all × character glyphs (delete circles, modal close, search clear) with SVG icons from a coherent open-source icon set. Current approach (overlaying × text on circles) is fragile across fonts/platforms. Candidates: Lucide, Heroicons, Phosphor, Tabler. See `docs/design-system/icon-catalog.html` for current inventory. Pick a set with MIT/ISC licence, consistent stroke weight, good small-size rendering
 - [ ] Dark mode: selection highlight visibility — the blue selection background (`--bn-selection-bg`) is hard to see in dark mode; needs a more visible dark variant
-- [ ] AI badge × button — the circled × is ugly; restyle to match user tag delete or use a simpler glyph
 - [x] Indent tags — badges now sit inside `.quote-body` div, naturally indented at the quote text level by the hanging-indent flexbox layout
 - [ ] Relocate AI tag toggle — removed from toolbar (too crowded with Codebook button); find a better home, probably a future settings/view-controls panel. Code is commented out in `render_html.py` and `codebook.js`/`tags.js` ready to rewire
 - [ ] Logo: slightly bigger — bump from 80px to ~100px

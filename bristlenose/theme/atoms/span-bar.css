@@ -1,0 +1,15 @@
+/* Atom: span-bar — vertical extent indicator for ranges.
+   A thin rounded rectangle showing how far a range (e.g. a quote) extends
+   across a list of items.  Positioned absolutely by JS; visual properties
+   come from --bn-span-bar-* tokens.
+
+   Usage: JS creates `<div class="span-bar">`, sets position/height via
+   inline style, and appends to a position:relative container. */
+
+.span-bar {
+    background: var(--bn-span-bar-colour);
+    border-radius: var(--bn-span-bar-radius);
+    opacity: var(--bn-span-bar-opacity);
+    width: var(--bn-span-bar-width);
+    pointer-events: none;
+}

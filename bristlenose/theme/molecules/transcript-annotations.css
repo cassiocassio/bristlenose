@@ -1,0 +1,90 @@
+/* Molecule: transcript-annotations — right-margin annotations on transcript pages.
+   Shows section/theme labels, tag badges, and vertical span bars alongside
+   quoted segments. */
+
+/* The transcript body needs room for the margin column on wide viewports */
+@media (min-width: 1100px) {
+    .transcript-body {
+        padding-right: 14rem;
+    }
+}
+
+/* Transcript segment positions the margin annotation */
+.transcript-segment {
+    position: relative;
+}
+
+/* Right-margin annotation container */
+.segment-margin {
+    font-size: 0.75rem;
+    line-height: 1.4;
+    display: flex;
+    flex-direction: column;
+    gap: var(--bn-space-xs);
+}
+
+/* Wide viewports: absolute-positioned in the right margin */
+@media (min-width: 1100px) {
+    .segment-margin {
+        position: absolute;
+        right: -13.5rem;
+        top: 0;
+        width: 12.5rem;
+    }
+}
+
+/* Narrow viewports: inline below the segment text */
+@media (max-width: 1099px) {
+    .segment-margin {
+        margin-left: 3.5rem; /* align past the timecode column */
+        margin-top: var(--bn-space-xs);
+        margin-bottom: var(--bn-space-xs);
+    }
+}
+
+/* Individual annotation block (one per quote in this segment) */
+.margin-annotation {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+/* Section/theme label */
+.margin-label {
+    color: var(--bn-colour-accent);
+    font-weight: 500;
+    text-decoration: none;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+    transition: color var(--bn-transition-fast);
+}
+
+.margin-label:hover {
+    color: var(--bn-colour-text);
+}
+
+/* Tag badges row in margin */
+.margin-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    overflow: visible; /* allow delete × circles to protrude */
+    padding-top: 2px;  /* room for × circle above badges */
+    padding-right: 2px; /* room for × circle to the right */
+}
+
+/* Smaller badges in the margin context */
+.margin-tags .badge {
+    font-size: 0.65rem;
+    padding: 1px 4px;
+    line-height: 1.4;
+}
+
+/* Hide span bars on narrow viewports (annotations are inline) */
+@media (max-width: 1099px) {
+    .span-bar {
+        display: none;
+    }
+}

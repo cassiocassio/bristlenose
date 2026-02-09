@@ -38,7 +38,8 @@
  * @module codebook
  */
 
-/* global createStore, escapeHtml, createModal, showConfirmModal, closeTopmostModal */
+/* global createStore, escapeHtml, createModal, showConfirmModal, closeTopmostModal,
+          createUserTagBadge, getTagColour */
 
 var codebookStore = createStore('bristlenose-codebook');
 
@@ -79,23 +80,16 @@ function persistCodebook() {
 /**
  * Get the CSS variable name for a tag's background colour.
  *
+ * Delegates to the shared `getTagColour()` from badge-utils.js using
+ * the module-level codebook data.  Returns a fallback for ungrouped tags
+ * so callers always get a valid CSS value.
+ *
  * @param {string} tagName The tag name (case-sensitive as stored).
  * @returns {string} A CSS var() reference, e.g. "var(--bn-ux-2-bg)" or
  *                   "var(--bn-custom-bg)" for ungrouped tags.
  */
 function getTagColourVar(tagName) {
-  var entry = codebook.tags[tagName];
-  if (!entry || !entry.group) return 'var(--bn-custom-bg)';
-
-  var group = _findGroup(entry.group);
-  if (!group || !group.colourSet) return 'var(--bn-custom-bg)';
-
-  var setInfo = COLOUR_SETS[group.colourSet];
-  if (!setInfo) return 'var(--bn-custom-bg)';
-
-  // colourIndex within the set (0-based), clamped to available slots.
-  var idx = (entry.colourIndex || 0) % setInfo.slots;
-  return 'var(--bn-' + group.colourSet + '-' + (idx + 1) + '-bg)';
+  return getTagColour(tagName, codebook) || 'var(--bn-custom-bg)';
 }
 
 /**
@@ -673,24 +667,19 @@ function _renderTagRow(tag, group, mc, maxBarW, grid) {
   var nameArea = document.createElement('div');
   nameArea.className = 'tag-name-area';
 
-  var badge = document.createElement('span');
-  badge.className = 'badge badge-user';
-  badge.setAttribute('data-tag-name', tag.name);
-  badge.textContent = tag.name;
-  badge.style.background = _getTagBg(group.colourSet, tag.colourIndex);
+  var badge = createUserTagBadge(tag.name, _getTagBg(group.colourSet, tag.colourIndex));
   badge.title = tag.name + ' \u2014 ' + tag.count + ' quote' + (tag.count !== 1 ? 's' : '');
 
-  // Delete × on badge
-  var del = document.createElement('button');
-  del.className = 'badge-delete';
-  del.setAttribute('aria-label', 'Delete tag');
-  del.textContent = '\u00d7';
-  del.addEventListener('click', function (e) {
-    e.preventDefault();
-    e.stopPropagation();
-    _confirmDeleteTag(tag.name, tag.count, grid);
-  });
-  badge.appendChild(del);
+  // Override delete button with confirmation modal (codebook-specific).
+  var del = badge.querySelector('.badge-delete');
+  if (del) {
+    del.setAttribute('aria-label', 'Delete tag');
+    del.addEventListener('click', function (e) {
+      e.preventDefault();
+      e.stopPropagation();
+      _confirmDeleteTag(tag.name, tag.count, grid);
+    });
+  }
 
   nameArea.appendChild(badge);
   row.appendChild(nameArea);

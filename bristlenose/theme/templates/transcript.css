@@ -57,6 +57,21 @@
     color: var(--bn-colour-muted);
 }
 
+/* Quoted segments — non-quoted participant text knocked back */
+.transcript-segment:not(.segment-quoted):not(.segment-moderator) .segment-body {
+    opacity: 0.6;
+}
+
+/* Inline citation highlight — wraps the verbatim excerpt within a segment.
+   Currently invisible while we rethink the visual treatment; the <mark>
+   elements and --bn-colour-cited-bg token are preserved so this can be
+   re-enabled by restoring `background: var(--bn-colour-cited-bg)`. */
+.bn-cited {
+    background: transparent;
+    border-radius: 2px;
+    padding: 0 1px;
+}
+
 /* Anchor highlight animation — flash yellow, fade to normal over 5s.
    Applied by transcript-names.js when navigating via #t-NNN anchor. */
 @keyframes anchor-fade {

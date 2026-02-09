@@ -1,0 +1,834 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bristlenose Icon Catalog</title>
+<style>
+/* ── Bristlenose design tokens (subset) ──────────────────────── */
+:root {
+    --bn-font-body: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
+    --bn-font-mono: "SF Mono", "Fira Code", "Consolas", monospace;
+    --bn-colour-bg: #ffffff;
+    --bn-colour-text: #1a1a1a;
+    --bn-colour-muted: #6b7280;
+    --bn-colour-border: #e5e7eb;
+    --bn-colour-border-hover: #d1d5db;
+    --bn-colour-accent: #2563eb;
+    --bn-colour-quote-bg: #f9fafb;
+    --bn-colour-badge-bg: #f3f4f6;
+    --bn-colour-badge-text: #374151;
+    --bn-colour-icon-idle: #c9ccd1;
+    --bn-radius-sm: 3px;
+    --bn-radius-md: 6px;
+    --bn-space-xs: 0.15rem;
+    --bn-transition-fast: 0.15s ease;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+    font-family: var(--bn-font-body);
+    color: var(--bn-colour-text);
+    background: var(--bn-colour-bg);
+    line-height: 1.6;
+    max-width: 72rem;
+    margin: 0 auto;
+    padding: 2rem 3rem;
+}
+
+/* ── Page chrome ─────────────────────────────────────────────── */
+.page-header {
+    margin-bottom: 2rem;
+    padding-bottom: 1rem;
+    border-bottom: 2px solid var(--bn-colour-text);
+}
+.page-header h1 {
+    font-size: 2rem;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    margin-bottom: 0.25rem;
+}
+.page-header .subtitle {
+    color: var(--bn-colour-muted);
+    font-size: 0.9rem;
+    max-width: 70ch;
+}
+
+.section-title {
+    font-size: 1.2rem;
+    font-weight: 700;
+    margin-top: 2.5rem;
+    margin-bottom: 0.5rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid var(--bn-colour-border);
+}
+
+.section-desc {
+    color: var(--bn-colour-muted);
+    font-size: 0.85rem;
+    margin-bottom: 1.25rem;
+    max-width: 70ch;
+}
+
+/* ── Icon grid ───────────────────────────────────────────────── */
+.icon-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 1rem;
+}
+
+.icon-card {
+    border: 1px solid var(--bn-colour-border);
+    border-radius: var(--bn-radius-md);
+    overflow: hidden;
+}
+
+.icon-preview {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1.5rem;
+    min-height: 5rem;
+    background: var(--bn-colour-bg);
+    gap: 1rem;
+}
+
+/* Show the icon at multiple sizes */
+.icon-preview .size-sm { font-size: 0.72rem; }
+.icon-preview .size-md { font-size: 1rem; }
+.icon-preview .size-lg { font-size: 1.5rem; }
+.icon-preview .size-xl { font-size: 2rem; color: var(--bn-colour-muted); }
+
+/* SVG icon sizes */
+.icon-preview .svg-sm svg { width: 12px; height: 12px; }
+.icon-preview .svg-md svg { width: 16px; height: 16px; }
+.icon-preview .svg-lg svg { width: 24px; height: 24px; }
+.icon-preview .svg-xl svg { width: 32px; height: 32px; color: var(--bn-colour-muted); }
+
+/* Delete circle context */
+.icon-preview .delete-context {
+    display: inline-block;
+    font-family: var(--bn-font-mono);
+    font-size: 0.72rem;
+    padding: var(--bn-space-xs) 0.45rem;
+    border-radius: var(--bn-radius-sm);
+    background: var(--bn-colour-badge-bg);
+    color: var(--bn-colour-badge-text);
+    position: relative;
+}
+.icon-preview .delete-circle {
+    position: absolute;
+    top: calc(-0.3rem - 1px);
+    right: calc(-0.3rem - 1px);
+    width: calc(0.875rem + 0.5px);
+    height: calc(0.875rem + 0.5px);
+    background: var(--bn-colour-bg);
+    border: none;
+    border-radius: 50%;
+    color: var(--bn-colour-muted);
+    font-size: 0.6rem;
+    font-weight: 700;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.16), 0 0 1px rgba(0, 0, 0, 0.06);
+}
+
+.icon-meta {
+    padding: 0.6rem 0.75rem;
+    background: var(--bn-colour-quote-bg);
+    border-top: 1px solid var(--bn-colour-border);
+}
+
+.icon-name {
+    font-weight: 600;
+    font-size: 0.78rem;
+    margin-bottom: 2px;
+}
+
+.icon-detail {
+    font-family: var(--bn-font-mono);
+    font-size: 0.62rem;
+    color: var(--bn-colour-muted);
+    line-height: 1.5;
+}
+
+.icon-usage {
+    font-size: 0.68rem;
+    color: var(--bn-colour-muted);
+    margin-top: 2px;
+}
+
+.icon-type {
+    display: inline-block;
+    font-family: var(--bn-font-mono);
+    font-size: 0.55rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding: 1px 5px;
+    border-radius: 2px;
+    margin-left: 4px;
+    vertical-align: middle;
+}
+.type-svg {
+    background: #eff6ff;
+    color: #2563eb;
+}
+.type-char {
+    background: #f0fdf4;
+    color: #16a34a;
+}
+.type-pseudo {
+    background: #fef2f2;
+    color: #dc2626;
+}
+
+/* ── Summary table ───────────────────────────────────────────── */
+.summary-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.78rem;
+    margin: 1.5rem 0;
+}
+.summary-table th,
+.summary-table td {
+    text-align: left;
+    padding: 6px 10px;
+    border-bottom: 1px solid var(--bn-colour-border);
+}
+.summary-table th {
+    font-weight: 600;
+    color: var(--bn-colour-muted);
+    font-size: 0.65rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+.summary-table code {
+    font-family: var(--bn-font-mono);
+    font-size: 0.72rem;
+    background: var(--bn-colour-badge-bg);
+    padding: 1px 5px;
+    border-radius: 2px;
+}
+.summary-table .glyph {
+    font-size: 1rem;
+    text-align: center;
+    width: 2rem;
+}
+
+.notes {
+    font-size: 0.82rem;
+    color: var(--bn-colour-muted);
+    margin-top: 2rem;
+    max-width: 70ch;
+    line-height: 1.7;
+}
+.notes strong { color: var(--bn-colour-text); }
+.notes li { margin-bottom: 0.35rem; }
+.notes code {
+    font-family: var(--bn-font-mono);
+    font-size: 0.75rem;
+    background: var(--bn-colour-badge-bg);
+    padding: 1px 4px;
+    border-radius: 2px;
+}
+
+.section-break {
+    border: none;
+    border-top: 1px solid var(--bn-colour-border);
+    margin: 2rem 0;
+}
+</style>
+</head>
+<body>
+
+<header class="page-header">
+    <h1>Icon Catalog</h1>
+    <p class="subtitle">
+        Every icon used in Bristlenose HTML reports, shown at multiple sizes.
+        Currently a mix of inline SVGs, Unicode characters, and CSS pseudo-elements.
+        Goal: migrate to a single coherent SVG icon set.
+    </p>
+</header>
+
+<!-- ════════════════════════════════════════════════════════════════
+     INLINE SVG ICONS
+     ════════════════════════════════════════════════════════════ -->
+<h2 class="section-title">Inline SVG Icons</h2>
+<p class="section-desc">
+    Custom SVG icons embedded directly in HTML by <code>render_html.py</code>.
+    All use <code>stroke="currentColor"</code> for CSS colour inheritance.
+    These are the most "proper" icons in the system.
+</p>
+
+<div class="icon-grid">
+
+    <!-- Search (magnifying glass) -->
+    <div class="icon-card">
+        <div class="icon-preview">
+            <span class="svg-sm">
+                <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="6.5" cy="6.5" r="5.5"/><line x1="10.5" y1="10.5" x2="15" y2="15"/></svg>
+            </span>
+            <span class="svg-md">
+                <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="6.5" cy="6.5" r="5.5"/><line x1="10.5" y1="10.5" x2="15" y2="15"/></svg>
+            </span>
+            <span class="svg-lg">
+                <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="6.5" cy="6.5" r="5.5"/><line x1="10.5" y1="10.5" x2="15" y2="15"/></svg>
+            </span>
+            <span class="svg-xl">
+                <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="6.5" cy="6.5" r="5.5"/><line x1="10.5" y1="10.5" x2="15" y2="15"/></svg>
+            </span>
+        </div>
+        <div class="icon-meta">
+            <div class="icon-name">Search <span class="icon-type type-svg">SVG</span></div>
+            <div class="icon-detail">viewBox 0 0 16 16 &bull; stroke 1.5</div>
+            <div class="icon-usage">Toolbar search toggle button</div>
+        </div>
+    </div>
+
+    <!-- Search clear (X) -->
+    <div class="icon-card">
+        <div class="icon-preview">
+            <span class="svg-sm">
+                <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><line x1="2" y1="2" x2="10" y2="10"/><line x1="10" y1="2" x2="2" y2="10"/></svg>
+            </span>
+            <span class="svg-md">
+                <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><line x1="2" y1="2" x2="10" y2="10"/><line x1="10" y1="2" x2="2" y2="10"/></svg>
+            </span>
+            <span class="svg-lg">
+                <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><line x1="2" y1="2" x2="10" y2="10"/><line x1="10" y1="2" x2="2" y2="10"/></svg>
+            </span>
+            <span class="svg-xl">
+                <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><line x1="2" y1="2" x2="10" y2="10"/><line x1="10" y1="2" x2="2" y2="10"/></svg>
+            </span>
+        </div>
+        <div class="icon-meta">
+            <div class="icon-name">Search clear <span class="icon-type type-svg">SVG</span></div>
+            <div class="icon-detail">viewBox 0 0 12 12 &bull; stroke 1.5</div>
+            <div class="icon-usage">Clear search input button</div>
+        </div>
+    </div>
+
+    <!-- Codebook (external link) -->
+    <div class="icon-card">
+        <div class="icon-preview">
+            <span class="svg-sm">
+                <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="11" height="11" rx="1.5"/><path d="M9 1h6v6"/><path d="M15 1 8 8"/></svg>
+            </span>
+            <span class="svg-md">
+                <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="11" height="11" rx="1.5"/><path d="M9 1h6v6"/><path d="M15 1 8 8"/></svg>
+            </span>
+            <span class="svg-lg">
+                <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="11" height="11" rx="1.5"/><path d="M9 1h6v6"/><path d="M15 1 8 8"/></svg>
+            </span>
+            <span class="svg-xl">
+                <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="11" height="11" rx="1.5"/><path d="M9 1h6v6"/><path d="M15 1 8 8"/></svg>
+            </span>
+        </div>
+        <div class="icon-meta">
+            <div class="icon-name">Codebook / external link <span class="icon-type type-svg">SVG</span></div>
+            <div class="icon-detail">viewBox 0 0 16 16 &bull; stroke 1.5</div>
+            <div class="icon-usage">Toolbar codebook button (opens new window)</div>
+        </div>
+    </div>
+
+    <!-- Filter (horizontal lines) -->
+    <div class="icon-card">
+        <div class="icon-preview">
+            <span class="svg-sm">
+                <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><line x1="1" y1="3" x2="15" y2="3"/><line x1="3" y1="8" x2="13" y2="8"/><line x1="5.5" y1="13" x2="10.5" y2="13"/></svg>
+            </span>
+            <span class="svg-md">
+                <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><line x1="1" y1="3" x2="15" y2="3"/><line x1="3" y1="8" x2="13" y2="8"/><line x1="5.5" y1="13" x2="10.5" y2="13"/></svg>
+            </span>
+            <span class="svg-lg">
+                <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><line x1="1" y1="3" x2="15" y2="3"/><line x1="3" y1="8" x2="13" y2="8"/><line x1="5.5" y1="13" x2="10.5" y2="13"/></svg>
+            </span>
+            <span class="svg-xl">
+                <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><line x1="1" y1="3" x2="15" y2="3"/><line x1="3" y1="8" x2="13" y2="8"/><line x1="5.5" y1="13" x2="10.5" y2="13"/></svg>
+            </span>
+        </div>
+        <div class="icon-meta">
+            <div class="icon-name">Filter <span class="icon-type type-svg">SVG</span></div>
+            <div class="icon-detail">viewBox 0 0 16 16 &bull; stroke 1.5</div>
+            <div class="icon-usage">Toolbar tag filter button</div>
+        </div>
+    </div>
+
+    <!-- Dropdown arrow (chevron) -->
+    <div class="icon-card">
+        <div class="icon-preview">
+            <span class="svg-sm">
+                <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 3.75 5 6.25 7.5 3.75"/></svg>
+            </span>
+            <span class="svg-md">
+                <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 3.75 5 6.25 7.5 3.75"/></svg>
+            </span>
+            <span class="svg-lg">
+                <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 3.75 5 6.25 7.5 3.75"/></svg>
+            </span>
+            <span class="svg-xl">
+                <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 3.75 5 6.25 7.5 3.75"/></svg>
+            </span>
+        </div>
+        <div class="icon-meta">
+            <div class="icon-name">Dropdown chevron <span class="icon-type type-svg">SVG</span></div>
+            <div class="icon-detail">viewBox 0 0 10 10 &bull; stroke 1.5</div>
+            <div class="icon-usage">View switcher + tag filter dropdown arrows</div>
+        </div>
+    </div>
+
+    <!-- CSV export (clipboard/stacked pages) -->
+    <div class="icon-card">
+        <div class="icon-preview">
+            <span class="svg-sm">
+                <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="1" width="9" height="11" rx="1.5"/><path d="M3 5H2.5A1.5 1.5 0 0 0 1 6.5v8A1.5 1.5 0 0 0 2.5 16h8a1.5 1.5 0 0 0 1.5-1.5V14"/></svg>
+            </span>
+            <span class="svg-md">
+                <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="1" width="9" height="11" rx="1.5"/><path d="M3 5H2.5A1.5 1.5 0 0 0 1 6.5v8A1.5 1.5 0 0 0 2.5 16h8a1.5 1.5 0 0 0 1.5-1.5V14"/></svg>
+            </span>
+            <span class="svg-lg">
+                <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="1" width="9" height="11" rx="1.5"/><path d="M3 5H2.5A1.5 1.5 0 0 0 1 6.5v8A1.5 1.5 0 0 0 2.5 16h8a1.5 1.5 0 0 0 1.5-1.5V14"/></svg>
+            </span>
+            <span class="svg-xl">
+                <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="1" width="9" height="11" rx="1.5"/><path d="M3 5H2.5A1.5 1.5 0 0 0 1 6.5v8A1.5 1.5 0 0 0 2.5 16h8a1.5 1.5 0 0 0 1.5-1.5V14"/></svg>
+            </span>
+        </div>
+        <div class="icon-meta">
+            <div class="icon-name">Copy / export <span class="icon-type type-svg">SVG</span></div>
+            <div class="icon-detail">viewBox 0 0 16 16 &bull; stroke 1.5</div>
+            <div class="icon-usage">Toolbar CSV export button</div>
+        </div>
+    </div>
+
+    <!-- Hide (eye-slash) -->
+    <div class="icon-card">
+        <div class="icon-preview">
+            <span class="svg-sm">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+            </span>
+            <span class="svg-md">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+            </span>
+            <span class="svg-lg">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+            </span>
+            <span class="svg-xl">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+            </span>
+        </div>
+        <div class="icon-meta">
+            <div class="icon-name">Hide / eye-slash <span class="icon-type type-svg">SVG</span></div>
+            <div class="icon-detail">viewBox 0 0 24 24 &bull; stroke 2</div>
+            <div class="icon-usage">Quote hide button (appears on hover)</div>
+        </div>
+    </div>
+
+</div>
+
+<hr class="section-break">
+
+<!-- ════════════════════════════════════════════════════════════════
+     UNICODE / HTML ENTITY ICONS
+     ════════════════════════════════════════════════════════════ -->
+<h2 class="section-title">Unicode Character Icons</h2>
+<p class="section-desc">
+    Characters used as icons throughout the UI. Rendered via HTML entities in
+    <code>render_html.py</code> or via <code>textContent</code> in JS modules.
+    These are the ones most in need of replacement with proper SVG icons.
+</p>
+
+<div class="icon-grid">
+
+    <!-- Delete / close (multiplication sign) -->
+    <div class="icon-card">
+        <div class="icon-preview">
+            <span class="size-sm">&times;</span>
+            <span class="size-md">&times;</span>
+            <span class="size-lg">&times;</span>
+            <span class="size-xl">&times;</span>
+            &nbsp;
+            <span class="delete-context">
+                frustration
+                <span class="delete-circle">&times;</span>
+            </span>
+        </div>
+        <div class="icon-meta">
+            <div class="icon-name">Delete / close <span class="icon-type type-char">CHAR</span></div>
+            <div class="icon-detail">U+00D7 &times; (multiplication sign) &bull; 7+ uses</div>
+            <div class="icon-usage">Badge delete circles, modal close, search clear fallback</div>
+        </div>
+    </div>
+
+    <!-- Star -->
+    <div class="icon-card">
+        <div class="icon-preview">
+            <span class="size-sm">&#9733;</span>
+            <span class="size-md">&#9733;</span>
+            <span class="size-lg" style="color: var(--bn-colour-starred);">&#9733;</span>
+            <span class="size-xl">&#9733;</span>
+        </div>
+        <div class="icon-meta">
+            <div class="icon-name">Star (favourite) <span class="icon-type type-char">CHAR</span></div>
+            <div class="icon-detail">U+2605 &#9733; (black star) &bull; render_html.py</div>
+            <div class="icon-usage">Quote star/favourite toggle button</div>
+        </div>
+    </div>
+
+    <!-- Pencil -->
+    <div class="icon-card">
+        <div class="icon-preview">
+            <span class="size-sm">&#9998;</span>
+            <span class="size-md">&#9998;</span>
+            <span class="size-lg">&#9998;</span>
+            <span class="size-xl">&#9998;</span>
+        </div>
+        <div class="icon-meta">
+            <div class="icon-name">Edit (pencil) <span class="icon-type type-char">CHAR</span></div>
+            <div class="icon-detail">U+270E &#9998; (lower right pencil) &bull; render_html.py</div>
+            <div class="icon-usage">Quote edit button, name edit hint</div>
+        </div>
+    </div>
+
+    <!-- Back arrow -->
+    <div class="icon-card">
+        <div class="icon-preview">
+            <span class="size-sm">&larr;</span>
+            <span class="size-md">&larr;</span>
+            <span class="size-lg">&larr;</span>
+            <span class="size-xl">&larr;</span>
+        </div>
+        <div class="icon-meta">
+            <div class="icon-name">Back arrow <span class="icon-type type-char">CHAR</span></div>
+            <div class="icon-detail">U+2190 &larr; (leftwards arrow) &bull; render_html.py</div>
+            <div class="icon-usage">Transcript page "back to report" link</div>
+        </div>
+    </div>
+
+    <!-- Forward arrow -->
+    <div class="icon-card">
+        <div class="icon-preview">
+            <span class="size-sm">&rarr;</span>
+            <span class="size-md">&rarr;</span>
+            <span class="size-lg">&rarr;</span>
+            <span class="size-xl">&rarr;</span>
+        </div>
+        <div class="icon-meta">
+            <div class="icon-name">Journey arrow <span class="icon-type type-char">CHAR</span></div>
+            <div class="icon-detail">U+2192 &rarr; (rightwards arrow) &bull; render_html.py</div>
+            <div class="icon-usage">User journey flow indicators</div>
+        </div>
+    </div>
+
+    <!-- Undo / restore -->
+    <div class="icon-card">
+        <div class="icon-preview">
+            <span class="size-sm">&#x21A9;</span>
+            <span class="size-md">&#x21A9;</span>
+            <span class="size-lg">&#x21A9;</span>
+            <span class="size-xl">&#x21A9;</span>
+        </div>
+        <div class="icon-meta">
+            <div class="icon-name">Undo / restore <span class="icon-type type-char">CHAR</span></div>
+            <div class="icon-detail">U+21A9 &#x21A9; (leftwards arrow with hook) &bull; render_html.py</div>
+            <div class="icon-usage">Restore original text button (after editing)</div>
+        </div>
+    </div>
+
+    <!-- Heart -->
+    <div class="icon-card">
+        <div class="icon-preview">
+            <span class="size-sm">&hearts;</span>
+            <span class="size-md">&hearts;</span>
+            <span class="size-lg">&hearts;</span>
+            <span class="size-xl">&hearts;</span>
+        </div>
+        <div class="icon-meta">
+            <div class="icon-name">Heart <span class="icon-type type-char">CHAR</span></div>
+            <div class="icon-detail">U+2661 &#x2661; (white heart suit) &bull; render_html.py</div>
+            <div class="icon-usage">Footer "made with" attribution</div>
+        </div>
+    </div>
+
+    <!-- Plus -->
+    <div class="icon-card">
+        <div class="icon-preview">
+            <span class="size-sm">+</span>
+            <span class="size-md">+</span>
+            <span class="size-lg">+</span>
+            <span class="size-xl">+</span>
+        </div>
+        <div class="icon-meta">
+            <div class="icon-name">Add / plus <span class="icon-type type-char">CHAR</span></div>
+            <div class="icon-detail">U+002B + (plus sign) &bull; codebook.js, render_html.py</div>
+            <div class="icon-usage">Add tag button ("+ add"), codebook new group card</div>
+        </div>
+    </div>
+
+    <!-- Chevron / triangle -->
+    <div class="icon-card">
+        <div class="icon-preview">
+            <span class="size-sm">&#x25BE;</span>
+            <span class="size-md">&#x25BE;</span>
+            <span class="size-lg">&#x25BE;</span>
+            <span class="size-xl">&#x25BE;</span>
+        </div>
+        <div class="icon-meta">
+            <div class="icon-name">Dropdown chevron (text) <span class="icon-type type-char">CHAR</span></div>
+            <div class="icon-detail">U+25BE &#x25BE; (black down-pointing small triangle) &bull; hidden.js</div>
+            <div class="icon-usage">Hidden quotes badge dropdown toggle</div>
+        </div>
+    </div>
+
+    <!-- Em dash -->
+    <div class="icon-card">
+        <div class="icon-preview">
+            <span class="size-md">&mdash;</span>
+            <span class="size-lg">&mdash;</span>
+            <span class="size-xl">&mdash;</span>
+        </div>
+        <div class="icon-meta">
+            <div class="icon-name">Em dash (separator) <span class="icon-type type-char">CHAR</span></div>
+            <div class="icon-detail">U+2014 &mdash; &bull; names.js, render_html.py</div>
+            <div class="icon-usage">Speaker attribution separator ("&mdash; p1")</div>
+        </div>
+    </div>
+
+    <!-- Middle dot -->
+    <div class="icon-card">
+        <div class="icon-preview">
+            <span class="size-md">&middot;</span>
+            <span class="size-lg">&middot;</span>
+            <span class="size-xl">&middot;</span>
+        </div>
+        <div class="icon-meta">
+            <div class="icon-name">Middle dot (separator) <span class="icon-type type-char">CHAR</span></div>
+            <div class="icon-detail">U+00B7 &middot; &bull; tag-filter.js, render_html.py</div>
+            <div class="icon-usage">Inline metadata separator, tag filter active label</div>
+        </div>
+    </div>
+
+</div>
+
+<hr class="section-break">
+
+<!-- ════════════════════════════════════════════════════════════════
+     CSS PSEUDO-ELEMENT ICONS
+     ════════════════════════════════════════════════════════════ -->
+<h2 class="section-title">CSS Pseudo-element Icons</h2>
+<p class="section-desc">
+    Characters rendered via CSS <code>::before</code> / <code>::after</code>
+    pseudo-elements. These bypass the DOM entirely.
+</p>
+
+<div class="icon-grid">
+
+    <!-- Delete circle (::after) -->
+    <div class="icon-card">
+        <div class="icon-preview">
+            <span class="delete-context" style="margin-right: 1rem;">
+                tag name
+                <span class="delete-circle">&times;</span>
+            </span>
+            <span style="font-size: 0.72rem; color: var(--bn-colour-muted);">.badge-ai::after</span>
+        </div>
+        <div class="icon-meta">
+            <div class="icon-name">AI badge delete circle <span class="icon-type type-pseudo">PSEUDO</span></div>
+            <div class="icon-detail">content: "\00d7" &bull; atoms/badge.css</div>
+            <div class="icon-usage">Delete AI-generated tags (appears on hover)</div>
+        </div>
+    </div>
+
+    <!-- Disclosure triangle -->
+    <div class="icon-card">
+        <div class="icon-preview">
+            <span class="size-md" style="color: var(--bn-colour-accent);">&#x25B6;</span>
+            <span style="font-size: 0.72rem; color: var(--bn-colour-muted); margin: 0 0.5rem;">closed</span>
+            <span class="size-md" style="color: var(--bn-colour-accent);">&#x25BC;</span>
+            <span style="font-size: 0.72rem; color: var(--bn-colour-muted);">open</span>
+        </div>
+        <div class="icon-meta">
+            <div class="icon-name">Disclosure triangles <span class="icon-type type-pseudo">PSEUDO</span></div>
+            <div class="icon-detail">content: "&#x25B6;" / "&#x25BC;" &bull; organisms/coverage.css</div>
+            <div class="icon-usage">Coverage details toggle ("Show omitted segments")</div>
+        </div>
+    </div>
+
+</div>
+
+<hr class="section-break">
+
+<!-- ════════════════════════════════════════════════════════════════
+     SUMMARY TABLE
+     ════════════════════════════════════════════════════════════ -->
+<h2 class="section-title">Summary</h2>
+
+<table class="summary-table">
+    <thead>
+        <tr>
+            <th>Icon</th>
+            <th>Glyph</th>
+            <th>Type</th>
+            <th>Uses</th>
+            <th>Source</th>
+            <th>Replaceable?</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td>Search</td>
+            <td class="glyph"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="6.5" cy="6.5" r="5.5"/><line x1="10.5" y1="10.5" x2="15" y2="15"/></svg></td>
+            <td><span class="icon-type type-svg">SVG</span></td>
+            <td>1</td>
+            <td><code>render_html.py</code></td>
+            <td>Replace with icon set version</td>
+        </tr>
+        <tr>
+            <td>Search clear</td>
+            <td class="glyph"><svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><line x1="2" y1="2" x2="10" y2="10"/><line x1="10" y1="2" x2="2" y2="10"/></svg></td>
+            <td><span class="icon-type type-svg">SVG</span></td>
+            <td>1</td>
+            <td><code>render_html.py</code></td>
+            <td>Replace with icon set version</td>
+        </tr>
+        <tr>
+            <td>External link</td>
+            <td class="glyph"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="11" height="11" rx="1.5"/><path d="M9 1h6v6"/><path d="M15 1 8 8"/></svg></td>
+            <td><span class="icon-type type-svg">SVG</span></td>
+            <td>1</td>
+            <td><code>render_html.py</code></td>
+            <td>Replace with icon set version</td>
+        </tr>
+        <tr>
+            <td>Filter</td>
+            <td class="glyph"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><line x1="1" y1="3" x2="15" y2="3"/><line x1="3" y1="8" x2="13" y2="8"/><line x1="5.5" y1="13" x2="10.5" y2="13"/></svg></td>
+            <td><span class="icon-type type-svg">SVG</span></td>
+            <td>1</td>
+            <td><code>render_html.py</code></td>
+            <td>Replace with icon set version</td>
+        </tr>
+        <tr>
+            <td>Chevron down</td>
+            <td class="glyph"><svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 3.75 5 6.25 7.5 3.75"/></svg></td>
+            <td><span class="icon-type type-svg">SVG</span></td>
+            <td>2</td>
+            <td><code>render_html.py</code></td>
+            <td>Replace with icon set version</td>
+        </tr>
+        <tr>
+            <td>Copy / clipboard</td>
+            <td class="glyph"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="1" width="9" height="11" rx="1.5"/><path d="M3 5H2.5A1.5 1.5 0 0 0 1 6.5v8A1.5 1.5 0 0 0 2.5 16h8a1.5 1.5 0 0 0 1.5-1.5V14"/></svg></td>
+            <td><span class="icon-type type-svg">SVG</span></td>
+            <td>1</td>
+            <td><code>render_html.py</code></td>
+            <td>Replace with icon set version</td>
+        </tr>
+        <tr>
+            <td>Eye-slash / hide</td>
+            <td class="glyph"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg></td>
+            <td><span class="icon-type type-svg">SVG</span></td>
+            <td>1</td>
+            <td><code>render_html.py</code></td>
+            <td>Replace with icon set version</td>
+        </tr>
+        <tr>
+            <td>Delete / close</td>
+            <td class="glyph">&times;</td>
+            <td><span class="icon-type type-char">CHAR</span></td>
+            <td>7+</td>
+            <td>CSS, JS, HTML</td>
+            <td><strong>Priority</strong> &mdash; most used icon, fragile centering</td>
+        </tr>
+        <tr>
+            <td>Star</td>
+            <td class="glyph">&#9733;</td>
+            <td><span class="icon-type type-char">CHAR</span></td>
+            <td>2</td>
+            <td><code>render_html.py</code></td>
+            <td>Yes &mdash; filled/outline star from icon set</td>
+        </tr>
+        <tr>
+            <td>Pencil</td>
+            <td class="glyph">&#9998;</td>
+            <td><span class="icon-type type-char">CHAR</span></td>
+            <td>3</td>
+            <td><code>render_html.py</code></td>
+            <td>Yes &mdash; edit/pencil icon from icon set</td>
+        </tr>
+        <tr>
+            <td>Back arrow</td>
+            <td class="glyph">&larr;</td>
+            <td><span class="icon-type type-char">CHAR</span></td>
+            <td>1</td>
+            <td><code>render_html.py</code></td>
+            <td>Yes &mdash; arrow-left from icon set</td>
+        </tr>
+        <tr>
+            <td>Journey arrow</td>
+            <td class="glyph">&rarr;</td>
+            <td><span class="icon-type type-char">CHAR</span></td>
+            <td>1</td>
+            <td><code>render_html.py</code></td>
+            <td>Yes &mdash; arrow-right from icon set</td>
+        </tr>
+        <tr>
+            <td>Undo / restore</td>
+            <td class="glyph">&#x21A9;</td>
+            <td><span class="icon-type type-char">CHAR</span></td>
+            <td>1</td>
+            <td><code>render_html.py</code></td>
+            <td>Yes &mdash; undo/rotate-ccw from icon set</td>
+        </tr>
+        <tr>
+            <td>Heart</td>
+            <td class="glyph">&hearts;</td>
+            <td><span class="icon-type type-char">CHAR</span></td>
+            <td>1</td>
+            <td><code>render_html.py</code></td>
+            <td>Low priority &mdash; decorative only</td>
+        </tr>
+        <tr>
+            <td>Plus</td>
+            <td class="glyph">+</td>
+            <td><span class="icon-type type-char">CHAR</span></td>
+            <td>2</td>
+            <td>JS, HTML</td>
+            <td>Yes &mdash; plus icon from icon set</td>
+        </tr>
+        <tr>
+            <td>Down triangle</td>
+            <td class="glyph">&#x25BE;</td>
+            <td><span class="icon-type type-char">CHAR</span></td>
+            <td>1</td>
+            <td><code>hidden.js</code></td>
+            <td>Yes &mdash; chevron-down from icon set</td>
+        </tr>
+        <tr>
+            <td>Disclosure &#x25B6;/&#x25BC;</td>
+            <td class="glyph">&#x25B6;</td>
+            <td><span class="icon-type type-pseudo">PSEUDO</span></td>
+            <td>1</td>
+            <td><code>coverage.css</code></td>
+            <td>Yes &mdash; chevron-right/down from icon set</td>
+        </tr>
+    </tbody>
+</table>
+
+<!-- ── Design notes ──────────────────────────────────────────── -->
+<div class="notes">
+    <h3 style="font-size: 0.95rem; margin-bottom: 0.5rem;">Migration plan</h3>
+    <ul>
+        <li><strong>Pick an icon set:</strong> Candidates are <a href="https://lucide.dev">Lucide</a> (MIT, 1500+ icons, 24px grid, clean stroke style), <a href="https://heroicons.com">Heroicons</a> (MIT, by Tailwind team, 24px+20px, outline/solid), <a href="https://phosphoricons.com">Phosphor</a> (MIT, 6 weights, 256px viewBox), and <a href="https://tabler.io/icons">Tabler Icons</a> (MIT, 5700+, 24px, stroke-based).</li>
+        <li><strong>Requirements:</strong> MIT or ISC licence. Stroke-based (matches our existing SVGs). Good rendering at 12&ndash;16px (toolbar icon size). Includes: x/close, search, filter, chevron, external-link, copy, eye-off, star, pencil, arrow-left/right, undo, plus, heart.</li>
+        <li><strong>Priority order:</strong> (1) Delete/close &times; &mdash; 7+ uses, fragile centering. (2) Star &#9733; &mdash; rendering varies across OS. (3) Pencil &#9998; &mdash; ditto. (4) Arrows &amp; undo. (5) Decorative (heart, separators).</li>
+        <li><strong>Implementation:</strong> Inline SVG strings in <code>render_html.py</code> (same as current toolbar icons). No icon font, no sprite sheet, no external files &mdash; reports must be self-contained single-file HTML.</li>
+        <li><strong>Existing SVGs:</strong> Our 7 custom SVGs use varied viewBox sizes (10, 12, 16, 24) and stroke widths (1.5, 2). The chosen icon set should normalise these to a consistent grid.</li>
+    </ul>
+</div>
+
+</body>
+</html>

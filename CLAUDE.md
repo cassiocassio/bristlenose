@@ -138,6 +138,7 @@ This is especially common when:
 - `people.py` imports `SpeakerInfo` from `identify_speakers.py` under `TYPE_CHECKING` only (avoids circular import at runtime). The `auto_populate_names()` type hint works because `from __future__ import annotations` makes all annotations strings
 - `identify_speaker_roles_llm()` changed return type from `list[TranscriptSegment]` to `list[SpeakerInfo]` — still mutates segments in place for role assignment, but now also returns extracted name/title data. Only one call site in `pipeline.py`
 - `_normalise_stem()` expects a lowercased stem — callers must `.lower()` before passing. `group_into_sessions()` does this; unit tests pass lowercased literals directly
+- **Never remove a worktree from inside it.** If a shell (or Claude session) has its CWD inside a worktree directory, deleting that directory makes the shell unrecoverable — every command fails with "path does not exist." Always `cd /Users/cassio/Code/bristlenose` first, then `git worktree remove ...`. If the directory was already deleted, run `git worktree prune` from the main repo. See `docs/BRANCHES.md` for the full cleanup recipe
 - **Renaming the repo directory breaks the venv.** Python editable installs (`pip install -e .`) write the absolute path into `.pth` files and CLI shim shebangs. If you `mv` the project directory, the venv silently breaks — imports may appear to work (CWD fallback on `sys.path`) but stale bytecode in `__pycache__/` will serve old code. Fix: `find . -name __pycache__ -exec rm -rf {} +` then `.venv/bin/python -m pip install -e '.[dev]'` (use `python -m pip`, not bare `pip`, because the pip shim's shebang is also broken). Alternatively, delete `.venv` and recreate
 - **`Console(width=min(80, Console().width))`** — the `Console()` inside `min()` is a throwaway instance that auto-detects the real terminal width. This is the intended pattern; don't cache it
 - **`_format_duration` and `_print_step` are module-level in `pipeline.py`** — `cli.py` imports `_format_duration` from there. Don't move them into the `Pipeline` class
@@ -188,7 +189,6 @@ Feature branches live in **separate git worktrees** — each is a full working c
 |-----------|--------|---------|
 | `bristlenose/` | `main` | Main repo — always stays on main |
 | `bristlenose_branch codebook/` | `codebook` | Codebook feature |
-| `bristlenose_branch CI/` | `CI` | CI improvements |
 
 **At the start of every session**, check which worktree you're in and whether it's correct for the task:
 

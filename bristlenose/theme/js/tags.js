@@ -29,7 +29,7 @@
  * @module tags
  */
 
-/* global createStore, renderUserTagsChart, getTagColourVar */
+/* global createStore, createUserTagBadge, animateBadgeRemoval, renderUserTagsChart, getTagColourVar */
 
 var tagsStore = createStore('bristlenose-tags');
 var deletedBadgesStore = createStore('bristlenose-deleted-badges');
@@ -78,29 +78,18 @@ function allTagNames() {
 }
 
 /**
- * Create a user-tag badge DOM element.
+ * Create a user-tag badge DOM element with fade-in animation.
+ *
+ * Thin wrapper around shared `createUserTagBadge()` (badge-utils.js) that
+ * adds the report-specific fade-in animation and codebook colour lookup.
  *
  * @param {string} name The tag text.
  * @returns {Element} A `<span class="badge badge-user">` with a delete button.
  */
 function createUserTagEl(name) {
-  var span = document.createElement('span');
-  span.className = 'badge badge-user badge-appearing';
-  span.setAttribute('data-badge-type', 'user');
-  span.setAttribute('data-tag-name', name);
-  span.textContent = name;
-
-  // Apply codebook colour if available.
-  if (typeof getTagColourVar === 'function') {
-    span.style.background = getTagColourVar(name);
-  }
-
-  var del = document.createElement('button');
-  del.className = 'badge-delete';
-  del.setAttribute('aria-label', 'Remove tag');
-  del.textContent = '\u00d7'; // ×
-  span.appendChild(del);
-
+  var colourVar = (typeof getTagColourVar === 'function') ? getTagColourVar(name) : null;
+  var span = createUserTagBadge(name, colourVar);
+  span.classList.add('badge-appearing');
   setTimeout(function () {
     span.classList.remove('badge-appearing');
   }, 200);
@@ -508,16 +497,8 @@ function initTags() {
     if (!bq || !bq.id) return;
     var badgeLabel = badge.textContent.trim();
 
-    // Animate removal.
-    badge.classList.add('badge-removing');
-    badge.addEventListener(
-      'animationend',
-      function () {
-        badge.style.display = 'none';
-        badge.classList.remove('badge-removing');
-      },
-      { once: true }
-    );
+    // Animate and hide (not remove — may be restored).
+    animateBadgeRemoval(badge, { hide: true });
 
     // Persist.
     var id = bq.id;
@@ -570,15 +551,8 @@ function initTags() {
     if (!bq || !bq.id) return;
     var tagName = tagEl.getAttribute('data-tag-name');
 
-    // Animate removal.
-    tagEl.classList.add('badge-removing');
-    tagEl.addEventListener(
-      'animationend',
-      function () {
-        tagEl.remove();
-      },
-      { once: true }
-    );
+    // Animate and remove from DOM.
+    animateBadgeRemoval(tagEl);
 
     // Persist.
     var id = bq.id;

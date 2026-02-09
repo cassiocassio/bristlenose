@@ -52,6 +52,7 @@ _THEME_FILES: list[str] = [
     "atoms/logo.css",
     "atoms/footer.css",
     "atoms/interactive.css",
+    "atoms/span-bar.css",
     "atoms/modal.css",
     "molecules/badge-row.css",
     "molecules/bar-group.css",
@@ -111,6 +112,7 @@ def _get_default_css() -> str:
 # globals defined by earlier ones).
 _JS_FILES: list[str] = [
     "js/storage.js",
+    "js/badge-utils.js",
     "js/modal.js",
     "js/codebook.js",
     "js/player.js",
@@ -716,6 +718,7 @@ def render_html(
 
 _TRANSCRIPT_JS_FILES: list[str] = [
     "js/storage.js",
+    "js/badge-utils.js",
     "js/player.js",
     "js/transcript-names.js",
     "js/transcript-annotations.js",
@@ -1114,7 +1117,7 @@ def _render_transcript_page(
     _w("</section>")
 
     _w("</article>")
-    _w(_footer_html())
+    _w(_footer_html(assets_prefix="../assets"))
 
     # JavaScript (player + name propagation + annotations)
     _w("<script>")
@@ -1164,6 +1167,7 @@ def _render_transcript_page(
 
 _CODEBOOK_JS_FILES: list[str] = [
     "js/storage.js",
+    "js/badge-utils.js",
     "js/modal.js",
     "js/codebook.js",
 ]
@@ -1369,8 +1373,14 @@ def _highlight_quoted_text(
 # ---------------------------------------------------------------------------
 
 
-def _footer_html() -> str:
-    """Return the page footer with logo, version, feedback links, and keyboard hint."""
+def _footer_html(assets_prefix: str = "assets") -> str:
+    """Return the page footer with logo, version, feedback links, and keyboard hint.
+
+    Args:
+        assets_prefix: Path prefix for logo images. Use ``"assets"`` for pages
+            at the output root (report, codebook) and ``"../assets"`` for pages
+            in subdirectories (transcript pages in ``sessions/``).
+    """
     from bristlenose import __version__
 
     return (
@@ -1378,9 +1388,9 @@ def _footer_html() -> str:
         # Left zone: fish logo + logotype + version
         '<div class="footer-left">'
         '<picture class="footer-logo-picture">'
-        '<source srcset="assets/bristlenose-logo-dark.png" '
+        f'<source srcset="{assets_prefix}/bristlenose-logo-dark.png" '
         'media="(prefers-color-scheme: dark)">'
-        '<img class="footer-logo" src="assets/bristlenose-logo.png" alt="">'
+        f'<img class="footer-logo" src="{assets_prefix}/bristlenose-logo.png" alt="">'
         "</picture>"
         '<span class="footer-logotype">Bristlenose</span>'
         "\u2002"

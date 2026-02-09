@@ -90,6 +90,16 @@ All 12 stages of the pipeline, from ingest to render.
 |------|------|
 | `snap/snapcraft.yaml` | Snap recipe: classic confinement, core24, Python plugin, bundles FFmpeg + spaCy model + man page |
 
+## Design artifacts (WIP, not shipped to users)
+
+| Directory | Contents |
+|-----------|----------|
+| `docs/mockups/` | Standalone HTML mockups — visual experiments for features in progress |
+| `docs/design-system/` | Style guide and icon catalog — reference for contributors |
+| `experiments/` | Throwaway prototypes — CSS/JS experiments, A/B comparisons |
+
+These are working materials for contributors, not part of the application. Users never see them (no links from the report or CLI). They live in the tree for backup and collaboration — anyone working on the UI should browse them to understand design intent.
+
 ## CI/CD and docs
 
 | File | Role |

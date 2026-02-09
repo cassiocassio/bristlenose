@@ -14,12 +14,16 @@ PRICING: dict[str, tuple[float, float]] = {
     # OpenAI (ChatGPT)
     "gpt-4o": (2.50, 10.0),
     "gpt-4o-mini": (0.15, 0.60),
+    # Google (Gemini)
+    "gemini-2.5-flash": (0.15, 3.50),
+    "gemini-2.5-pro": (1.25, 10.0),
 }
 
 PRICING_URLS: dict[str, str] = {
     "anthropic": "https://docs.anthropic.com/en/docs/about-claude/models",
     "openai": "https://platform.openai.com/docs/pricing",
     "azure": "https://azure.microsoft.com/pricing/details/cognitive-services/openai-service/",
+    "google": "https://ai.google.dev/gemini-api/docs/pricing",
     # Local provider has no pricing — models are free
 }
 

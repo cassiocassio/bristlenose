@@ -101,6 +101,21 @@ PROVIDERS: dict[str, ProviderSpec] = {
         sdk_module="openai",  # Same SDK, different client class
         pricing_url="https://azure.microsoft.com/pricing/details/cognitive-services/openai-service/",
     ),
+    "google": ProviderSpec(
+        name="google",
+        display_name="Gemini",
+        aliases=["gemini"],
+        config_fields=[
+            ConfigField(
+                "api_key",
+                "BRISTLENOSE_GOOGLE_API_KEY",
+                "Gemini API key",
+            ),
+        ],
+        default_model="gemini-2.5-flash",
+        sdk_module="google.genai",
+        pricing_url="https://ai.google.dev/gemini-api/docs/pricing",
+    ),
     "local": ProviderSpec(
         name="local",
         display_name="Local (Ollama)",

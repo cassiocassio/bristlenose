@@ -205,21 +205,22 @@ pipx install bristlenose
 
 ## Set up your AI provider
 
-Bristlenose uses AI to analyse your transcripts. Use whichever provider you already have an API key for — see [Getting an API key](README.md#getting-an-api-key) in the README for full details including Azure OpenAI.
+Bristlenose uses AI to analyse your transcripts. Use whichever provider you already have an API key for — see [Getting an API key](README.md#getting-an-api-key) in the README for full details including Azure OpenAI and Gemini.
 
-### Cloud providers (Claude or ChatGPT)
+### Cloud providers (Claude, ChatGPT, or Gemini)
 
-1. Create an account and API key at [console.anthropic.com](https://console.anthropic.com/settings/keys) (Claude) or [platform.openai.com](https://platform.openai.com/api-keys) (ChatGPT)
+1. Create an account and API key at [console.anthropic.com](https://console.anthropic.com/settings/keys) (Claude), [platform.openai.com](https://platform.openai.com/api-keys) (ChatGPT), or [aistudio.google.com/apikey](https://aistudio.google.com/apikey) (Gemini)
 2. Store the key securely:
 
    ```bash
    bristlenose configure claude      # or: bristlenose configure chatgpt
+   bristlenose configure gemini      # budget option (~$0.20/study)
    ```
 
    This validates your key and saves it to your system's secure credential store:
    - **macOS** — saved to your **login keychain** (viewable in the Keychain Access app, search for "Bristlenose")
    - **Linux** — saved via **Secret Service** (GNOME Keyring / KDE Wallet)
-   - **Windows** — keychain not yet supported; use `setx` to save the key permanently instead:
+   - **Windows** — credential store not yet supported; use `setx` to save the key permanently instead:
 
      ```
      setx BRISTLENOSE_ANTHROPIC_API_KEY "sk-ant-..."

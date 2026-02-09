@@ -286,38 +286,59 @@ def _prompt_for_provider() -> str | None:
     console.print()
     console.print("[bold]No LLM provider configured.[/bold] Choose one:")
     console.print()
-    console.print("  [1] Local AI (free, private, slower)")
-    console.print("      [dim]Requires Ollama — https://ollama.ai[/dim]")
-    console.print()
-    console.print("  [2] Claude API (best quality, ~$1.50/study)")
+    console.print("  [1] Claude API (best quality, ~$1.50/study)")
     console.print("      [dim]Get a key from console.anthropic.com[/dim]")
     console.print()
-    console.print("  [3] ChatGPT API (good quality, ~$1.00/study)")
+    console.print("  [2] ChatGPT API (good quality, ~$1.00/study)")
     console.print("      [dim]Get a key from platform.openai.com[/dim]")
     console.print()
+    console.print("  [3] Azure OpenAI (enterprise)")
+    console.print("      [dim]Requires Azure subscription[/dim]")
+    console.print()
+    console.print("  [4] Gemini API (budget, ~$0.20/study)")
+    console.print("      [dim]Get a key from aistudio.google.com[/dim]")
+    console.print()
+    console.print("  [5] Local AI (free, private, slower)")
+    console.print("      [dim]Requires Ollama — https://ollama.ai[/dim]")
+    console.print()
 
-    choice = Prompt.ask("Choice", choices=["1", "2", "3"], default="1")
+    choice = Prompt.ask("Choice", choices=["1", "2", "3", "4", "5"], default="1")
 
     if choice == "1":
-        return _setup_local_provider()
-    elif choice == "2":
         console.print()
         console.print("Get your API key from: [link]https://console.anthropic.com/settings/keys[/link]")
         console.print("Then run:")
         console.print()
-        console.print("  [bold]export BRISTLENOSE_ANTHROPIC_API_KEY=sk-ant-...[/bold]")
+        console.print("  [bold]bristlenose configure claude[/bold]")
         console.print()
-        console.print("Or add it to a .env file in your project directory.")
         return None
-    else:  # choice == "3"
+    elif choice == "2":
         console.print()
         console.print("Get your API key from: [link]https://platform.openai.com/api-keys[/link]")
         console.print("Then run:")
         console.print()
-        console.print("  [bold]export BRISTLENOSE_OPENAI_API_KEY=sk-...[/bold]")
+        console.print("  [bold]bristlenose configure chatgpt[/bold]")
         console.print()
-        console.print("Or add it to a .env file in your project directory.")
         return None
+    elif choice == "3":
+        console.print()
+        console.print("Set your Azure OpenAI credentials:")
+        console.print()
+        console.print("  [bold]export BRISTLENOSE_AZURE_ENDPOINT=https://your-resource.openai.azure.com/[/bold]")
+        console.print("  [bold]export BRISTLENOSE_AZURE_DEPLOYMENT=your-deployment-name[/bold]")
+        console.print("  [bold]bristlenose configure azure[/bold]")
+        console.print()
+        return None
+    elif choice == "4":
+        console.print()
+        console.print("Get your API key from: [link]https://aistudio.google.com/apikey[/link]")
+        console.print("Then run:")
+        console.print()
+        console.print("  [bold]bristlenose configure gemini[/bold]")
+        console.print()
+        return None
+    else:  # choice == "5"
+        return _setup_local_provider()
 
 
 def _setup_local_provider() -> str | None:
@@ -598,7 +619,7 @@ def run(
     ] = "large-v3-turbo",
     llm_provider: Annotated[
         str,
-        typer.Option("--llm", "-l", help="LLM provider: claude, chatgpt, azure, local."),
+        typer.Option("--llm", "-l", help="LLM provider: claude, chatgpt, azure, gemini, local."),
     ] = "anthropic",
     skip_transcription: Annotated[
         bool,
@@ -754,7 +775,7 @@ def analyze(
     ] = None,
     llm_provider: Annotated[
         str,
-        typer.Option("--llm", "-l", help="LLM provider: claude, chatgpt, azure, local."),
+        typer.Option("--llm", "-l", help="LLM provider: claude, chatgpt, azure, gemini, local."),
     ] = "anthropic",
     verbose: Annotated[
         bool,
@@ -945,7 +966,7 @@ def render(
 def configure(
     provider: Annotated[
         str,
-        typer.Argument(help="Provider to configure: claude, chatgpt, or azure."),
+        typer.Argument(help="Provider to configure: claude, chatgpt, gemini, or azure."),
     ],
     key: Annotated[
         str | None,
@@ -955,10 +976,13 @@ def configure(
     """Set up API credentials for an LLM provider.
 
     Validates the key with a test API call and stores it securely in
-    your system keychain (macOS Keychain or Linux Secret Service).
+    your system credential store (macOS Keychain or Linux Secret Service).
     """
     from bristlenose.credentials import EnvCredentialStore, get_credential_store
-    from bristlenose.doctor import _validate_anthropic_key, _validate_openai_key
+    from bristlenose.doctor import (
+        _validate_anthropic_key,
+        _validate_openai_key,
+    )
 
     provider = provider.lower()
 
@@ -970,14 +994,21 @@ def configure(
         "chatgpt": "openai",
         "azure": "azure",
         "azure-openai": "azure",
+        "google": "google",
+        "gemini": "google",
     }
     canonical = provider_map.get(provider)
     if canonical is None:
         console.print(f"[red]Unknown provider: {provider}[/red]")
-        console.print("Available: claude, chatgpt, azure")
+        console.print("Available: claude, chatgpt, gemini, azure")
         raise typer.Exit(1)
 
-    display_names = {"anthropic": "Claude", "openai": "ChatGPT", "azure": "Azure OpenAI"}
+    display_names = {
+        "anthropic": "Claude",
+        "openai": "ChatGPT",
+        "azure": "Azure OpenAI",
+        "google": "Gemini",
+    }
     display_name = display_names.get(canonical, canonical.title())
 
     # Get key from option or prompt
@@ -997,6 +1028,10 @@ def configure(
         is_valid, error = _validate_anthropic_key(key)
     elif canonical == "openai":
         is_valid, error = _validate_openai_key(key)
+    elif canonical == "google":
+        from bristlenose.doctor import _validate_google_key
+
+        is_valid, error = _validate_google_key(key)
     else:
         # Azure needs endpoint+deployment to validate fully; skip for now
         is_valid, error = None, "needs endpoint and deployment to validate"
@@ -1019,18 +1054,22 @@ def configure(
             # Shouldn't happen on set() — it raises NotImplementedError
             pass
         else:
+            from bristlenose.credentials import get_credential_store_label
+
+            store_label = get_credential_store_label()
             service_name = f"Bristlenose {display_name} API Key"
-            console.print(f'[green]Stored in Keychain as "{service_name}"[/green]')
+            console.print(f'[green]Stored in {store_label} as "{service_name}"[/green]')
     except NotImplementedError:
         # EnvCredentialStore — can't persist
         console.print()
-        console.print("[yellow]No system keychain available.[/yellow]")
+        console.print("[yellow]No system credential store available.[/yellow]")
         console.print("Add this to your .env file or shell profile:")
         console.print()
         env_vars = {
             "anthropic": "ANTHROPIC_API_KEY",
             "openai": "OPENAI_API_KEY",
             "azure": "AZURE_API_KEY",
+            "google": "GOOGLE_API_KEY",
         }
         env_var = env_vars.get(canonical, f"{canonical.upper()}_API_KEY")
         console.print(f"  export BRISTLENOSE_{env_var}={key}")
@@ -1132,7 +1171,7 @@ def _help_commands() -> None:
     console.print("  -p, --project NAME       Project name for the report header")
     console.print("  -b, --whisper-backend    auto | mlx | faster-whisper")
     console.print("  -w, --whisper-model      tiny | base | small | medium | large-v3 | large-v3-turbo")
-    console.print("  -l, --llm               claude | chatgpt | azure | local")
+    console.print("  -l, --llm               claude | chatgpt | azure | gemini | local")
     console.print("  --redact-pii            Redact personally identifying information")
     console.print("  --retain-pii            Retain PII in transcripts (default)")
     console.print("  --clean                 Delete output dir before running")
@@ -1181,9 +1220,10 @@ def _help_config() -> None:
     console.print("  BRISTLENOSE_AZURE_API_KEY        Azure OpenAI API key (from Azure portal)")
     console.print("  BRISTLENOSE_AZURE_ENDPOINT       Azure OpenAI endpoint URL")
     console.print("  BRISTLENOSE_AZURE_DEPLOYMENT     Azure OpenAI deployment name")
+    console.print("  BRISTLENOSE_GOOGLE_API_KEY       Gemini API key (from aistudio.google.com)")
     console.print()
     console.print("  [bold]LLM[/bold]")
-    console.print("  BRISTLENOSE_LLM_PROVIDER         claude | chatgpt | azure | local")
+    console.print("  BRISTLENOSE_LLM_PROVIDER         claude | chatgpt | azure | gemini | local")
     console.print("  BRISTLENOSE_LLM_MODEL            Model name (default: claude-sonnet-4-20250514)")
     console.print("  BRISTLENOSE_LLM_MAX_TOKENS       Max response tokens (default: 8192)")
     console.print("  BRISTLENOSE_LLM_TEMPERATURE      Temperature (default: 0.1)")

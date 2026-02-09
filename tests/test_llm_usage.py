@@ -71,6 +71,7 @@ class TestEstimateCost:
         """The default model from config.py must have a pricing entry."""
         assert "claude-sonnet-4-20250514" in PRICING
 
-    def test_pricing_urls_have_both_providers(self) -> None:
+    def test_pricing_urls_have_all_cloud_providers(self) -> None:
         assert "anthropic" in PRICING_URLS
         assert "openai" in PRICING_URLS
+        assert "google" in PRICING_URLS

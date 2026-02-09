@@ -255,8 +255,9 @@ def check_whisper_model(settings: BristlenoseSettings) -> CheckResult:
 
 def check_api_key(settings: BristlenoseSettings) -> CheckResult:
     """Check whether an API key is configured for the selected LLM provider."""
-    from bristlenose.credentials import get_credential_source
+    from bristlenose.credentials import get_credential_source, get_credential_store_label
 
+    _store_label = get_credential_store_label()
     provider = settings.llm_provider
 
     if provider == "anthropic":
@@ -270,7 +271,7 @@ def check_api_key(settings: BristlenoseSettings) -> CheckResult:
             )
         masked = f"sk-ant-...{key[-3:]}" if len(key) > 10 else "(set)"
         source = get_credential_source("anthropic")
-        source_label = " (Keychain)" if source == "keychain" else ""
+        source_label = f" ({_store_label})" if source == "keychain" else ""
         # Validate key with a cheap API call
         valid, err = _validate_anthropic_key(key)
         if valid is False:
@@ -304,7 +305,7 @@ def check_api_key(settings: BristlenoseSettings) -> CheckResult:
             )
         masked = f"sk-...{key[-3:]}" if len(key) > 10 else "(set)"
         source = get_credential_source("openai")
-        source_label = " (Keychain)" if source == "keychain" else ""
+        source_label = f" ({_store_label})" if source == "keychain" else ""
         valid, err = _validate_openai_key(key)
         if valid is False:
             return CheckResult(
@@ -354,7 +355,7 @@ def check_api_key(settings: BristlenoseSettings) -> CheckResult:
 
         masked = f"...{key[-3:]}" if len(key) > 10 else "(set)"
         source = get_credential_source("azure")
-        source_label = " (Keychain)" if source == "keychain" else ""
+        source_label = f" ({_store_label})" if source == "keychain" else ""
 
         valid, err = _validate_azure_key(
             endpoint, key, deployment, settings.azure_api_version
@@ -376,6 +377,38 @@ def check_api_key(settings: BristlenoseSettings) -> CheckResult:
             status=CheckStatus.OK,
             label="API key",
             detail=f"Azure OpenAI ({masked}){source_label}",
+        )
+
+    if provider == "google":
+        key = settings.google_api_key
+        if not key:
+            return CheckResult(
+                status=CheckStatus.FAIL,
+                label="API key",
+                detail="No Google Gemini API key",
+                fix_key="api_key_missing_google",
+            )
+        masked = f"AIza...{key[-3:]}" if len(key) > 10 else "(set)"
+        source = get_credential_source("google")
+        source_label = f" ({_store_label})" if source == "keychain" else ""
+        valid, err = _validate_google_key(key)
+        if valid is False:
+            return CheckResult(
+                status=CheckStatus.FAIL,
+                label="API key",
+                detail=f"Gemini key rejected ({err})",
+                fix_key="api_key_invalid_google",
+            )
+        if valid is None:
+            return CheckResult(
+                status=CheckStatus.OK,
+                label="API key",
+                detail=f"Gemini ({masked}){source_label} (could not validate: {err})",
+            )
+        return CheckResult(
+            status=CheckStatus.OK,
+            label="API key",
+            detail=f"Gemini ({masked}){source_label}",
         )
 
     if provider == "local":
@@ -457,6 +490,9 @@ def check_network(settings: BristlenoseSettings) -> CheckResult:
             )
         url = endpoint.rstrip("/")
         host = url.replace("https://", "").replace("http://", "").split("/")[0]
+    elif provider == "google":
+        url = "https://generativelanguage.googleapis.com"
+        host = "generativelanguage.googleapis.com"
     else:
         url = "https://api.anthropic.com"
         host = "api.anthropic.com"
@@ -799,6 +835,36 @@ def _validate_azure_key(
             return (False, "403 Forbidden")
         if exc.code == 404:
             return (False, f"Deployment '{deployment}' not found")
+        if exc.code in (400, 429, 500, 503):
+            return (True, "")
+        return (None, f"HTTP {exc.code}")
+    except urllib.error.URLError as exc:
+        return (None, str(exc.reason))
+    except Exception as exc:
+        return (None, str(exc))
+
+
+def _validate_google_key(key: str) -> tuple[bool | None, str]:
+    """Validate a Google Gemini API key with a cheap API call.
+
+    Returns (True, "") if valid, (False, error) if rejected,
+    (None, error) if we couldn't check (network issue).
+    """
+    import urllib.error
+    import urllib.request
+
+    try:
+        # List models endpoint — lightweight, no generation needed.
+        url = f"https://generativelanguage.googleapis.com/v1beta/models?key={key}"
+        req = urllib.request.Request(url, method="GET")
+        with urllib.request.urlopen(req, timeout=10):
+            pass
+        return (True, "")
+    except urllib.error.HTTPError as exc:
+        if exc.code == 401:
+            return (False, "401 Unauthorized")
+        if exc.code == 403:
+            return (False, "403 Forbidden")
         if exc.code in (400, 429, 500, 503):
             return (True, "")
         return (None, f"HTTP {exc.code}")

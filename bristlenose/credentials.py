@@ -54,6 +54,7 @@ class EnvCredentialStore(CredentialStore):
         "anthropic": "ANTHROPIC_API_KEY",
         "openai": "OPENAI_API_KEY",
         "azure": "AZURE_API_KEY",
+        "google": "GOOGLE_API_KEY",
     }
 
     def get(self, key: str) -> str | None:
@@ -68,7 +69,7 @@ class EnvCredentialStore(CredentialStore):
     def set(self, key: str, value: str) -> None:
         """Cannot persist to environment — this is read-only."""
         raise NotImplementedError(
-            "Cannot store credentials in environment. Use Keychain or .env file."
+            "Cannot store credentials in environment. Use system credential store or .env file."
         )
 
     def delete(self, key: str) -> None:
@@ -119,6 +120,24 @@ def get_credential(provider: str) -> str | None:
     # Fall back to environment
     env_store = EnvCredentialStore()
     return env_store.get(provider)
+
+
+def get_credential_store_label() -> str:
+    """Return a user-facing label for the current platform's credential store.
+
+    macOS → "Keychain" (matches Keychain Access app)
+    Linux → "Secret Service" (matches GNOME Keyring / KDE Wallet)
+    Other → "environment" (env vars / .env fallback)
+    """
+    if sys.platform == "darwin":
+        return "Keychain"
+    if sys.platform.startswith("linux"):
+        from bristlenose.credentials_linux import _is_secret_service_available
+
+        if _is_secret_service_available():
+            return "Secret Service"
+        return "environment"
+    return "environment"
 
 
 def get_credential_source(provider: str) -> str | None:

@@ -87,6 +87,16 @@ class ExtractedQuoteItem(BaseModel):
             "preserving natural emotion and expression"
         )
     )
+    verbatim_excerpt: str = Field(
+        default="",
+        description=(
+            "The EXACT original substring from the transcript that this quote "
+            "is based on, before any editorial cleanup. Copy-paste the "
+            "participant's words verbatim — including filler words, grammar "
+            "errors, and disfluencies. Must be a contiguous substring of the "
+            "transcript text."
+        ),
+    )
     topic_label: str = Field(description="The topic/screen this quote relates to")
     quote_type: str = Field(description="One of: screen_specific, general_context")
     researcher_context: str | None = Field(

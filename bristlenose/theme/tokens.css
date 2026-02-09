@@ -146,6 +146,14 @@
     --bn-radius-lg: 8px;
     --bn-radius-pill: 999px;
 
+    /* Span bar — vertical extent indicator for ranges (e.g. quote coverage) */
+    --bn-span-bar-width: 2px;
+    --bn-span-bar-gap: 6px;
+    --bn-span-bar-offset: 8px;  /* gap between bars and margin column left edge */
+    --bn-span-bar-colour: var(--bn-colour-border);
+    --bn-span-bar-opacity: 0.5;
+    --bn-span-bar-radius: 1px;
+
     /* Transitions */
     --bn-transition-fast: 0.15s ease;
     --bn-transition-normal: 0.2s ease;
@@ -224,6 +232,7 @@
         --bn-colour-editing-border:   light-dark(#e5e0c0, #4a4528);
         --bn-colour-active-bg:        light-dark(#f0fdf4, #0f2918);
         --bn-colour-highlight:        light-dark(#fef08a, #854d0e);
+        --bn-colour-cited-bg:         light-dark(#fef9c3, #3b2f05);
 
         /* Playback-sync glow */
         --bn-glow-colour:             light-dark(rgba(37, 99, 235, 0.12), rgba(96, 165, 250, 0.25));

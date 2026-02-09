@@ -34,15 +34,15 @@
 /* Delete button on histogram user-tag labels — matches .badge-delete pattern */
 .histogram-bar-delete {
     position: absolute;
-    top: -0.25rem;
-    right: -0.25rem;
-    width: 0.75rem;
-    height: 0.75rem;
-    background: var(--bn-colour-text);
+    top: calc(-0.3rem - 1px);
+    right: calc(-0.3rem - 1px);
+    width: calc(0.875rem + 0.5px);   /* ~14.5px */
+    height: calc(0.875rem + 0.5px);
+    background: var(--bn-colour-bg);
     border: none;
     border-radius: 50%;
-    color: var(--bn-colour-bg);
-    font-size: 0.7rem;
+    color: var(--bn-colour-muted);
+    font-size: 0.6rem;
     font-weight: 700;
     line-height: 1;
     cursor: pointer;
@@ -53,6 +53,7 @@
     justify-content: center;
     padding: 0;
     pointer-events: none;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.16), 0 0 1px rgba(0, 0, 0, 0.06);
 }
 
 .sentiment-bar-label:hover .histogram-bar-delete {

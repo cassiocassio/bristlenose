@@ -124,6 +124,17 @@ These are too small for issues or are internal-only concerns.
 - [ ] **Custom prompts** — user-defined tag categories via `bristlenose.toml` or `prompts.toml`
 - [ ] **Pass transcript data to renderer** — avoid redundant disk I/O in `render_html.py`
 
+### Transcript page interactions
+
+Ideas from 9 Feb 2026 session, roughly in order of effort:
+
+- [ ] **User tags on transcript page** — add user tags directly to cited quotes from the transcript page (small)
+- [ ] **Tidy up extent bars** — span bars are visually confusing; review layout and spacing (small)
+- [ ] **Expand/collapse sections and themes** — collapsible sections in the main report (medium)
+- [ ] **Pulldown menu on margin annotations** — dropdown on section/theme labels to move a quote to a different section or theme (medium)
+- [ ] **Flag uncited quote for inclusion** — override the LLM: mark an uncited transcript segment to be included in a theme or section (medium–large)
+- [ ] **Drag-and-drop quote reordering** — drag quotes into other sections/themes, into sequence if open, or onto closed sections to append (large)
+
 ### Theme refactoring opportunities
 
 Low-priority improvements to pick up when working in these areas — not blockers.

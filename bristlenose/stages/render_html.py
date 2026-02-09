@@ -1378,18 +1378,8 @@ def _format_quote_html(
     """Render a single quote as an HTML blockquote."""
     tc = format_timecode(quote.start_timecode)
     quote_id = f"q-{quote.participant_id}-{int(quote.start_timecode)}"
-    # Quote attributions use raw pid (p1, p2) for anonymisation
-    parts: list[str] = [
-        f'<blockquote id="{quote_id}"'
-        f' data-timecode="{_esc(tc)}"'
-        f' data-participant="{_esc(quote.participant_id)}"'
-        f' data-emotion="{_esc(quote.emotion.value)}"'
-        f' data-intent="{_esc(quote.intent.value)}">'
-    ]
 
-    if quote.researcher_context:
-        parts.append(f'<span class="context">[{_esc(quote.researcher_context)}]</span>')
-
+    # Build timecode HTML — clickable link if video exists, plain span otherwise
     if video_map and quote.participant_id in video_map:
         tc_html = (
             f'<a href="#" class="timecode" '
@@ -1400,45 +1390,27 @@ def _format_quote_html(
     else:
         tc_html = f'<span class="timecode">{_tc_brackets(tc)}</span>'
 
+    # Speaker link targets the transcript page
     pid_esc = _esc(quote.participant_id)
     sid_esc = _esc(quote.session_id) if quote.session_id else pid_esc
     anchor = f"t-{int(quote.start_timecode)}"
     speaker_link = (
         f'<a href="sessions/transcript_{sid_esc}.html#{anchor}" class="speaker-link">{pid_esc}</a>'
     )
-    badges = _quote_badges(quote)
-    badge_html = (
-        f'<div class="badges">{badges}'
-        ' <span class="badge badge-add" aria-label="Add tag">+</span>'
-        ' <button class="badge-restore" aria-label="Restore tags"'
-        ' title="Restore tags" style="display:none">&#x21A9;</button>'
-        "</div>"
-    )
 
-    parts.append(
-        f'<div class="quote-row">{tc_html}'
-        f'<div class="quote-body">'
-        f'<span class="quote-text">\u201c{_esc(quote.text)}\u201d</span>&nbsp;'
-        f'<span class="speaker">&mdash;&nbsp;{speaker_link}</span>'
-        f"{badge_html}"
-        f"</div></div>"
-    )
-
-    parts.append(
-        '<button class="hide-btn" aria-label="Hide this quote">'
-        '<svg width="14" height="14" viewBox="0 0 24 24" fill="none"'
-        ' stroke="currentColor" stroke-width="2" stroke-linecap="round">'
-        '<path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8'
-        'a18.45 18.45 0 0 1 5.06-5.94"/>'
-        '<path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8'
-        'a18.5 18.5 0 0 1-2.16 3.19"/>'
-        '<line x1="1" y1="1" x2="23" y2="23"/>'
-        "</svg></button>"
-    )
-    parts.append('<button class="edit-pencil" aria-label="Edit this quote">&#9998;</button>')
-    parts.append('<button class="star-btn" aria-label="Star this quote">&#9733;</button>')
-    parts.append("</blockquote>")
-    return "\n".join(parts)
+    tmpl = _jinja_env.get_template("quote_card.html")
+    return tmpl.render(
+        quote_id=quote_id,
+        timecode=_esc(tc),
+        participant_id=_esc(quote.participant_id),
+        emotion=_esc(quote.emotion.value),
+        intent=_esc(quote.intent.value),
+        researcher_context=_esc(quote.researcher_context) if quote.researcher_context else "",
+        tc_html=tc_html,
+        quote_text=_esc(quote.text),
+        speaker_link=speaker_link,
+        badges=_quote_badges(quote),
+    ).rstrip("\n")
 
 
 def _quote_badges(quote: ExtractedQuote) -> str:

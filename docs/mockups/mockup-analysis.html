@@ -1,0 +1,1543 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Analysis Mockup — Bristlenose</title>
+<style>
+/* ================================================================
+   ANALYSIS PAGE MOCKUP — Signal Concentration Prototype
+   ================================================================
+   Self-contained mockup with fake data. All metrics computed
+   client-side so you can tweak the dataset and see results.
+   ================================================================ */
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+/* ── Design tokens (from tokens.css) ────────────────────────── */
+
+:root {
+    --bn-font-body: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
+    --bn-font-mono: "SF Mono", "Fira Code", "Consolas", monospace;
+
+    --bn-colour-bg: #ffffff;
+    --bn-colour-text: #1a1a1a;
+    --bn-colour-muted: #6b7280;
+    --bn-colour-border: #e5e7eb;
+    --bn-colour-accent: #2563eb;
+    --bn-colour-quote-bg: #f9fafb;
+    --bn-colour-shadow: rgba(0, 0, 0, 0.08);
+
+    --bn-space-xs: 0.15rem;
+    --bn-space-sm: 0.35rem;
+    --bn-space-md: 0.75rem;
+    --bn-space-lg: 1.5rem;
+    --bn-space-xl: 2rem;
+
+    --bn-radius-sm: 3px;
+    --bn-radius-md: 6px;
+    --bn-radius-lg: 8px;
+
+    --bn-transition-fast: 0.15s ease;
+
+    /* Sentiment colours — Bristlenose palette */
+    --bn-sentiment-frustration: #ea580c;
+    --bn-sentiment-frustration-bg: #fff7ed;
+    --bn-sentiment-confusion: #dc2626;
+    --bn-sentiment-confusion-bg: #fef2f2;
+    --bn-sentiment-doubt: #7c3aed;
+    --bn-sentiment-doubt-bg: #f5f3ff;
+    --bn-sentiment-surprise: #d97706;
+    --bn-sentiment-surprise-bg: #fffbeb;
+    --bn-sentiment-satisfaction: #16a34a;
+    --bn-sentiment-satisfaction-bg: #f0fdf4;
+    --bn-sentiment-delight: #059669;
+    --bn-sentiment-delight-bg: #ecfdf5;
+    --bn-sentiment-confidence: #2563eb;
+    --bn-sentiment-confidence-bg: #eff6ff;
+
+    /* Heatmap — per-sentiment OKLCH colour ramps.
+       Lightness goes from 95% (near-white, low count) to 45% (saturated, high count).
+       Hue matches the sentiment colour. Chroma stays constant.
+       OKLCH L is perceptually uniform — equal L steps look like equal brightness steps. */
+    --bn-heat-frustration-h: 55;     /* oklch hue for #ea580c */
+    --bn-heat-confusion-h: 30;       /* oklch hue for #dc2626 */
+    --bn-heat-doubt-h: 295;          /* oklch hue for #7c3aed */
+    --bn-heat-surprise-h: 75;        /* oklch hue for #d97706 */
+    --bn-heat-satisfaction-h: 155;    /* oklch hue for #16a34a */
+    --bn-heat-delight-h: 170;        /* oklch hue for #059669 */
+    --bn-heat-confidence-h: 260;     /* oklch hue for #2563eb */
+    --bn-heat-chroma: 0.12;
+    --bn-heat-l-min: 95%;            /* lightest (fewest quotes) */
+    --bn-heat-l-max: 45%;            /* darkest (most quotes / highest residual) */
+    --bn-heat-depleted-h: 75;        /* amber for negative residuals */
+    --bn-heat-depleted-chroma: 0.08;
+
+    /* Span-bar tokens (from tokens.css) */
+    --bn-span-bar-width: 2px;
+    --bn-span-bar-radius: 1px;
+}
+
+/* ── Dark mode ────────────────────────────────────────────────── */
+
+[data-theme="dark"] {
+    --bn-colour-bg: #111113;
+    --bn-colour-text: #e5e7eb;
+    --bn-colour-muted: #9ca3af;
+    --bn-colour-border: #2d2d30;
+    --bn-colour-accent: #60a5fa;
+    --bn-colour-quote-bg: #1a1a1e;
+    --bn-colour-shadow: rgba(0, 0, 0, 0.3);
+
+    --bn-sentiment-frustration: #fb923c;
+    --bn-sentiment-frustration-bg: #2d1d0e;
+    --bn-sentiment-confusion: #f87171;
+    --bn-sentiment-confusion-bg: #2d1515;
+    --bn-sentiment-doubt: #a78bfa;
+    --bn-sentiment-doubt-bg: #1e1533;
+    --bn-sentiment-surprise: #fbbf24;
+    --bn-sentiment-surprise-bg: #2d2305;
+    --bn-sentiment-satisfaction: #4ade80;
+    --bn-sentiment-satisfaction-bg: #0f2918;
+    --bn-sentiment-delight: #34d399;
+    --bn-sentiment-delight-bg: #0d261c;
+    --bn-sentiment-confidence: #60a5fa;
+    --bn-sentiment-confidence-bg: #111d2e;
+
+    --bn-heat-chroma: 0.10;
+    --bn-heat-l-min: 30%;            /* dark mode: lightest = dark bg */
+    --bn-heat-l-max: 75%;            /* dark mode: darkest = bright */
+    --bn-heat-depleted-chroma: 0.06;
+}
+
+/* ── Page layout ──────────────────────────────────────────────── */
+
+body {
+    font-family: var(--bn-font-body);
+    background: var(--bn-colour-bg);
+    color: var(--bn-colour-text);
+    line-height: 1.6;
+    padding: 0;
+    transition: background 0.2s, color 0.2s;
+}
+
+article {
+    max-width: 960px;
+    margin: 0 auto;
+    padding: var(--bn-space-xl) var(--bn-space-lg);
+}
+
+/* ── Header ───────────────────────────────────────────────────── */
+
+.page-header {
+    margin-bottom: var(--bn-space-xl);
+}
+
+.back-link {
+    display: inline-block;
+    color: var(--bn-colour-muted);
+    text-decoration: none;
+    font-size: 0.85rem;
+    margin-bottom: var(--bn-space-md);
+}
+
+.back-link:hover {
+    color: var(--bn-colour-accent);
+}
+
+.page-header h1 {
+    font-size: 1.5rem;
+    font-weight: 600;
+    margin-bottom: 0.25rem;
+}
+
+.page-header .subtitle {
+    color: var(--bn-colour-muted);
+    font-size: 0.9rem;
+}
+
+/* ── Theme toggle ─────────────────────────────────────────────── */
+
+.theme-toggle {
+    position: fixed;
+    top: 1rem;
+    right: 1rem;
+    background: var(--bn-colour-quote-bg);
+    border: 1px solid var(--bn-colour-border);
+    border-radius: var(--bn-radius-md);
+    padding: 0.4rem 0.8rem;
+    font-size: 0.8rem;
+    cursor: pointer;
+    color: var(--bn-colour-muted);
+    z-index: 100;
+}
+
+.theme-toggle:hover { border-color: var(--bn-colour-accent); }
+
+/* ── Section headings ─────────────────────────────────────────── */
+
+.section-heading {
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin: var(--bn-space-xl) 0 var(--bn-space-md) 0;
+    padding-bottom: 0.4rem;
+    border-bottom: 1px solid var(--bn-colour-border);
+}
+
+.section-desc {
+    color: var(--bn-colour-muted);
+    font-size: 0.85rem;
+    margin-bottom: var(--bn-space-lg);
+}
+
+/* ── Signal cards ─────────────────────────────────────────────── */
+
+.signal-cards {
+    display: flex;
+    flex-direction: column;
+    gap: var(--bn-space-md);
+}
+
+.signal-card {
+    border: 1px solid var(--bn-colour-border);
+    border-radius: var(--bn-radius-sm);
+    padding: var(--bn-space-lg);
+    background: var(--bn-colour-bg);
+    transition: box-shadow var(--bn-transition-fast);
+    position: relative;
+}
+
+.signal-card:hover {
+    box-shadow: 0 2px 8px var(--bn-colour-shadow);
+}
+
+/* Left accent bar — colour set by inline style */
+.signal-card::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: var(--bn-span-bar-width);
+    border-radius: var(--bn-span-bar-radius) 0 0 var(--bn-span-bar-radius);
+    background: var(--card-accent, var(--bn-colour-muted));
+}
+
+/* Two-column card top: left = identity, right = metrics */
+.signal-card-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: var(--bn-space-lg);
+    margin-bottom: var(--bn-space-sm);
+}
+
+.signal-card-identity {
+    flex: 1;
+    min-width: 0;
+}
+
+.signal-card-source {
+    display: block;
+    font-size: 0.7rem;
+    font-weight: 400;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--bn-colour-muted);
+    margin-bottom: 0.1rem;
+}
+
+.signal-card-location {
+    font-size: 1.05rem;
+    font-weight: 600;
+    margin-bottom: var(--bn-space-sm);
+}
+
+.signal-card-location-link {
+    color: inherit;
+    text-decoration: none;
+    transition: color var(--bn-transition-fast);
+}
+
+.signal-card-location-link:hover {
+    color: var(--bn-colour-accent);
+}
+
+/* Right-aligned metrics table */
+.signal-card-metrics {
+    flex-shrink: 0;
+    display: grid;
+    grid-template-columns: auto auto auto;
+    gap: 0.2rem 0.6rem;
+    align-items: center;
+    font-size: 0.8rem;
+    white-space: nowrap;
+}
+
+.metric-label {
+    color: var(--bn-colour-muted);
+    text-align: right;
+    cursor: help;
+}
+
+.metric-value {
+    font-family: var(--bn-font-mono);
+    font-size: 0.8rem;
+    color: var(--bn-colour-text);
+    text-align: right;
+}
+
+.metric-viz {
+    display: flex;
+    align-items: center;
+}
+
+/* Concentration bar — light grey track = 100% of max, mid grey fill = this card's proportion */
+.conc-bar-track {
+    display: block;
+    width: 96px;
+    height: 6px;
+    background: var(--bn-colour-border);
+    border-radius: var(--bn-radius-sm);
+    overflow: hidden;
+}
+
+.conc-bar-fill {
+    display: block;
+    height: 100%;
+    border-radius: var(--bn-radius-sm);
+    background: var(--bn-colour-text);
+    opacity: 0.45;
+    transition: width 0.3s ease;
+}
+
+/* Intensity dots (SVG) — fixed width so per-quote dots align underneath */
+.intensity-dots-svg {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    width: 46px;
+}
+
+/* Signal card quotes — single list that expands/collapses */
+.signal-card-quotes {
+    background: var(--bn-colour-quote-bg);
+    border-radius: var(--bn-radius-md);
+    margin: var(--bn-space-md) 0;
+    padding: var(--bn-space-sm) 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    overflow: hidden;
+}
+
+.signal-card-quotes blockquote {
+    background: transparent;
+    border-left: 1px solid var(--bn-colour-border);
+    margin: 0 var(--bn-space-md);
+    padding: var(--bn-space-sm) 1rem;
+    border-radius: 0 var(--bn-radius-md) var(--bn-radius-md) 0;
+}
+
+/* Quote text inherits body font-size (1rem) — matches organisms/blockquote.css
+   which sets no explicit size on the quote body, only on .speaker and .timecode. */
+
+.signal-card-quotes blockquote .speaker {
+    color: var(--bn-colour-muted);
+    font-size: 0.9rem;
+}
+
+/* Hanging-indent layout: timecode in left gutter, quote body fills, dots right */
+.signal-card-quotes blockquote .quote-row {
+    display: flex;
+    gap: 0.5rem;
+    align-items: baseline;
+}
+
+.signal-card-quotes blockquote .quote-row .timecode {
+    flex-shrink: 0;
+}
+
+.signal-card-quotes blockquote .quote-body {
+    flex: 1;
+    min-width: 0;
+}
+
+/* Timecode atom — from atoms/timecode.css */
+a.timecode,
+a.timecode:visited {
+    color: var(--bn-colour-accent);
+    font-family: var(--bn-font-mono);
+    font-size: 0.8rem;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+a.timecode:hover {
+    text-decoration: underline;
+}
+
+.timecode-bracket {
+    color: var(--bn-colour-muted);
+}
+
+/* Speaker link — from organisms/blockquote.css */
+.speaker-link {
+    color: inherit;
+    text-decoration: none;
+    transition: color var(--bn-transition-fast);
+}
+
+.speaker-link:hover {
+    color: var(--bn-colour-accent);
+}
+
+.signal-card-quotes blockquote .intensity-dots {
+    flex-shrink: 0;
+    width: 46px;
+    align-self: center;
+    cursor: help;
+    margin-right: 22px;
+    --dot-colour: var(--bn-colour-muted);
+}
+
+/* Hidden quotes — animated reveal via max-height */
+.signal-card-expansion {
+    max-height: 0;
+    opacity: 0;
+    overflow: hidden;
+    transition: max-height 0.35s ease, opacity 0.25s ease;
+}
+
+.signal-card.expanded .signal-card-expansion {
+    opacity: 1;
+    /* max-height set by JS */
+}
+
+.signal-card-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.8rem;
+    color: var(--bn-colour-muted);
+}
+
+/* Participant presence grid — scaled-down badges matching the design system badge atom */
+.participant-grid {
+    display: flex;
+    gap: 3px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.participant-grid .p-box {
+    display: inline-block;
+    font-family: var(--bn-font-mono);
+    font-size: 0.72rem;
+    padding: var(--bn-space-xs) 0.45rem;
+    border-radius: var(--bn-radius-sm);
+    line-height: 1;
+    background: var(--bn-colour-border);
+    color: var(--bn-colour-muted);
+    opacity: 0.6;
+}
+
+.participant-grid .participant-count {
+    font-size: 0.72rem;
+    color: var(--bn-colour-muted);
+    margin-right: 0.2rem;
+    white-space: nowrap;
+}
+
+.participant-grid .p-box.p-present {
+    background: color-mix(in srgb, var(--card-accent, var(--bn-colour-muted)) 12%, var(--bn-colour-bg));
+    color: var(--card-accent, var(--bn-colour-muted));
+    opacity: 1;
+}
+
+.signal-card-link {
+    color: var(--bn-colour-accent);
+    text-decoration: none;
+    font-weight: 400;
+}
+
+.signal-card-link:hover { text-decoration: underline; }
+
+/* Confidence badge — grey scale so colour is reserved for sentiment meaning.
+   Uses design-system tokens where exact matches exist.
+   TODO: currently hidden from UI (misleading next to signal strength number).
+   CSS preserved for future use — find a better home for it (e.g. card border,
+   subtle icon, or a dedicated "confidence" view). */
+.confidence-badge {
+    display: inline-block;
+    font-size: 0.65rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    padding: 0.15rem 0.5rem;
+    border-radius: var(--bn-radius-sm);
+}
+
+.confidence-strong {
+    background: #9ca3af;              /* gray-400 — dark enough for white text */
+    color: #fff;
+}
+
+.confidence-moderate {
+    background: #c9cdd3;              /* between gray-300 and gray-400 */
+    color: var(--bn-colour-badge-text);
+}
+
+.confidence-emerging {
+    background: var(--bn-colour-border);
+    color: var(--bn-colour-muted);
+}
+
+[data-theme="dark"] .confidence-strong {
+    background: #9ca3af;
+    color: #111;
+}
+
+[data-theme="dark"] .confidence-moderate {
+    background: #6b7280;
+    color: var(--bn-colour-text);
+}
+
+[data-theme="dark"] .confidence-emerging {
+    background: #4b5563;
+    color: var(--bn-colour-muted);
+}
+
+/* ── Sentiment badges (replicates atoms/badge.css from design system) ── */
+
+.badge {
+    display: inline-block;
+    font-family: var(--bn-font-mono);
+    font-size: 0.72rem;
+    padding: var(--bn-space-xs) 0.45rem;
+    border-radius: var(--bn-radius-sm);
+}
+
+.badge-frustration  { background: var(--bn-sentiment-frustration-bg); color: var(--bn-sentiment-frustration); }
+.badge-confusion    { background: var(--bn-sentiment-confusion-bg);   color: var(--bn-sentiment-confusion); }
+.badge-doubt        { background: var(--bn-sentiment-doubt-bg);       color: var(--bn-sentiment-doubt); }
+.badge-surprise     { background: var(--bn-sentiment-surprise-bg);    color: var(--bn-sentiment-surprise); }
+.badge-satisfaction { background: var(--bn-sentiment-satisfaction-bg); color: var(--bn-sentiment-satisfaction); }
+.badge-delight      { background: var(--bn-sentiment-delight-bg);     color: var(--bn-sentiment-delight); }
+.badge-confidence   { background: var(--bn-sentiment-confidence-bg);  color: var(--bn-sentiment-confidence); }
+
+/* ── Heatmap ──────────────────────────────────────────────────── */
+
+.analysis-heatmap {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.82rem;
+    margin-bottom: var(--bn-space-xl);
+}
+
+.analysis-heatmap th {
+    text-align: center;
+    padding: 0.5rem 0.3rem;
+    font-weight: 600;
+    font-size: 0.75rem;
+    color: var(--bn-colour-muted);
+    border-bottom: 2px solid var(--bn-colour-border);
+    white-space: nowrap;
+}
+
+/* Badge inside th inherits centering, no extra weight needed */
+.analysis-heatmap th .badge {
+    font-weight: 500;
+}
+
+.analysis-heatmap th:first-child {
+    text-align: left;
+    min-width: 140px;
+}
+
+.analysis-heatmap td {
+    text-align: center;
+    padding: 0.45rem 0.4rem;
+    border-bottom: 1px solid var(--bn-colour-border);
+    transition: background 0.15s;
+}
+
+.analysis-heatmap td:first-child {
+    text-align: left;
+    font-weight: 500;
+    font-size: 0.85rem;
+    padding-right: var(--bn-space-md);
+}
+
+/* Heatmap cell colouring — per-sentiment OKLCH with perceptual lightness ramp.
+   --cell-l is computed by JS (0–1 heat → interpolated between l-min and l-max).
+   --cell-h and --cell-c come from the sentiment's hue column. */
+.heatmap-cell {
+    font-family: var(--bn-font-mono);
+    font-size: 0.8rem;
+    font-weight: 500;
+    border-radius: var(--bn-radius-sm);
+    min-width: 36px;
+    position: relative;
+    cursor: pointer;
+    transition: background 0.15s, outline 0.1s;
+}
+
+.heatmap-cell:hover {
+    outline: 2px solid var(--bn-colour-accent);
+    outline-offset: -1px;
+}
+
+.heatmap-cell[data-count="0"] {
+    color: var(--bn-colour-border);
+    cursor: default;
+}
+
+.heatmap-cell[data-count="0"]:hover {
+    outline: none;
+}
+
+/* Coloured cell — background set by inline style (oklch) from JS */
+.heatmap-cell.heat-positive,
+.heatmap-cell.heat-negative {
+    /* background is set inline by JS as oklch(L% C H) */
+}
+
+/* Strong positive — white text for contrast */
+.heatmap-cell.heat-strong {
+    color: #fff;
+}
+
+[data-theme="dark"] .heatmap-cell.heat-strong {
+    color: #111;
+}
+
+/* Totals column/row */
+.heatmap-total {
+    font-weight: 600;
+    color: var(--bn-colour-muted);
+    background: transparent !important;
+    cursor: default;
+}
+
+.heatmap-total:hover { outline: none; }
+
+/* Heatmap cells that link to a signal card */
+.heatmap-cell.has-card {
+    cursor: pointer;
+}
+
+.heatmap-cell:not(.has-card) {
+    cursor: default;
+}
+
+.heatmap-cell:not(.has-card):hover {
+    outline: none;
+}
+
+/* ── Footer ───────────────────────────────────────────────────── */
+
+.page-footer {
+    margin-top: var(--bn-space-xl);
+    padding-top: var(--bn-space-lg);
+    border-top: 1px solid var(--bn-colour-border);
+    text-align: center;
+    color: var(--bn-colour-muted);
+    font-size: 0.75rem;
+}
+</style>
+</head>
+<body>
+<button class="theme-toggle" onclick="toggleTheme()">Toggle dark mode</button>
+
+<article>
+    <div class="page-header">
+        <a class="back-link" href="#">&larr; Back to report</a>
+        <h1>Analysis</h1>
+        <p class="subtitle">Signal concentration across sections and sentiments</p>
+    </div>
+
+    <h2 class="section-heading">Key findings</h2>
+    <p class="section-desc">Patterns ranked by signal strength — concentration, participant breadth, and intensity combined. These are starting points; which findings matter most depends on business context and project goals.</p>
+    <div id="signal-cards" class="signal-cards"></div>
+
+    <h2 class="section-heading">Section &times; Sentiment</h2>
+    <p class="section-desc">Quote counts per report section and sentiment. Coloured cells show where a sentiment is more (blue) or less (amber) concentrated than expected.</p>
+    <div id="heatmap-section-container"></div>
+
+    <h2 class="section-heading">Theme &times; Sentiment</h2>
+    <p class="section-desc">The same view grouped by cross-cutting themes instead of sections. Themes span multiple sections — a pattern here means the sentiment recurs across different parts of the product.</p>
+    <div id="heatmap-theme-container"></div>
+
+    <div class="page-footer">
+        Mockup — Bristlenose analysis prototype
+    </div>
+</article>
+
+<script>
+(function () {
+    "use strict";
+
+    // ── Theme toggle ────────────────────────────────────────────
+    window.toggleTheme = function () {
+        var html = document.documentElement;
+        html.setAttribute(
+            "data-theme",
+            html.getAttribute("data-theme") === "dark" ? "light" : "dark"
+        );
+    };
+
+    // ── Sentiments (canonical order) ────────────────────────────
+    var SENTIMENTS = [
+        "frustration", "confusion", "doubt", "surprise",
+        "satisfaction", "delight", "confidence"
+    ];
+
+    var SENTIMENT_LABELS = {
+        frustration: "Frustration",
+        confusion: "Confusion",
+        doubt: "Doubt",
+        surprise: "Surprise",
+        satisfaction: "Satisfaction",
+        delight: "Delight",
+        confidence: "Confidence"
+    };
+
+    var SENTIMENT_CSS = {};
+    SENTIMENTS.forEach(function (s) {
+        SENTIMENT_CSS[s] = "var(--bn-sentiment-" + s + ")";
+    });
+
+    // OKLCH hues per sentiment (matches CSS tokens)
+    var SENTIMENT_HUE = {
+        frustration: 55,
+        confusion: 30,
+        doubt: 295,
+        surprise: 75,
+        satisfaction: 155,
+        delight: 170,
+        confidence: 260
+    };
+
+    var DEPLETED_HUE = 75;  // amber
+
+    // ── Fake dataset ────────────────────────────────────────────
+    // ~150 quotes across 8 sections, 6 themes, 10 participants.
+    // Distribution is intentionally skewed to create interesting
+    // signal cards and heatmap patterns.
+
+    var SECTIONS = [
+        { label: "Onboarding", order: 1 },
+        { label: "Dashboard", order: 2 },
+        { label: "Search", order: 3 },
+        { label: "Product listing", order: 4 },
+        { label: "Product detail", order: 5 },
+        { label: "Checkout", order: 6 },
+        { label: "Payment", order: 7 },
+        { label: "Confirmation", order: 8 }
+    ];
+
+    var THEMES = [
+        { label: "Performance concerns" },
+        { label: "Trust and credibility" },
+        { label: "Information architecture" },
+        { label: "Pricing transparency" },
+        { label: "Personalisation" },
+        { label: "Error recovery" }
+    ];
+
+    var PARTICIPANTS = ["p1","p2","p3","p4","p5","p6","p7","p8","p9","p10"];
+
+    // Participant → session mapping (for transcript page links)
+    var SESSION_MAP = {
+        "p1": "s1", "p2": "s2", "p3": "s3", "p4": "s4", "p5": "s5",
+        "p6": "s6", "p7": "s7", "p8": "s8", "p9": "s9", "p10": "s10"
+    };
+
+    // Representative quotes per section (for signal card display)
+    var REP_QUOTES = {
+        "Checkout|frustration": "I couldn\u2019t figure out where to enter the discount code \u2014 I tried three different places before giving up.",
+        "Checkout|confusion": "Wait, is this the final price? I thought shipping was included.",
+        "Payment|doubt": "I\u2019m not sure I trust this page \u2014 it doesn\u2019t look like the rest of the site.",
+        "Payment|frustration": "It rejected my card twice with no explanation. I almost abandoned the purchase.",
+        "Onboarding|delight": "Oh nice, it remembered my preferences from last time!",
+        "Onboarding|satisfaction": "The setup was surprisingly quick \u2014 I was done in about a minute.",
+        "Dashboard|confusion": "There\u2019s so much on this page. I don\u2019t know where to start.",
+        "Search|frustration": "The search results are completely irrelevant. I typed the exact product name.",
+        "Product detail|satisfaction": "I like that you can see the reviews right here without scrolling.",
+        "Confirmation|confidence": "The order summary is really clear. I know exactly what I bought and when it arrives.",
+        // Theme-based representative quotes
+        "Trust and credibility|doubt": "I\u2019m not sure I trust this page \u2014 it doesn\u2019t look like the rest of the site.",
+        "Trust and credibility|confidence": "The order summary is really clear. I know exactly what I bought.",
+        "Performance concerns|frustration": "The search results are completely irrelevant. I typed the exact product name.",
+        "Information architecture|confusion": "There\u2019s so much on this page. I don\u2019t know where to start.",
+        "Pricing transparency|frustration": "I couldn\u2019t figure out where to enter the discount code.",
+        "Personalisation|delight": "Oh nice, it remembered my preferences from last time!",
+        "Error recovery|frustration": "It rejected my card twice with no explanation. I almost abandoned the purchase."
+    };
+
+    // Fake quote texts for expansion panels (keyed by "section|sentiment|participant")
+    // In a real implementation these come from the actual ExtractedQuote data.
+    var QUOTE_TEXTS = {
+        "Checkout|frustration|p1": "Where do I put the promo code? I\u2019ve been looking for two minutes.",
+        "Checkout|frustration|p2": "I tried clicking \u2018apply\u2019 but nothing happened. Twice.",
+        "Checkout|frustration|p3": "The total changed when I added my address. That\u2019s not okay.",
+        "Checkout|frustration|p4": "I can\u2019t figure out where to enter the discount code \u2014 I tried three different places.",
+        "Checkout|frustration|p5": "It won\u2019t let me remove this item. The X button doesn\u2019t work.",
+        "Checkout|frustration|p6": "I had to start over because it timed out while I was finding my card.",
+        "Checkout|frustration|p7": "Why is the shipping cost only showing now? Should have said earlier.",
+        "Checkout|frustration|p8": "The form cleared everything when I went back to check the cart.",
+        "Checkout|frustration|p9": "Every time I correct my postcode it resets the delivery option.",
+        "Payment|doubt|p1": "This page looks completely different from the rest of the site. Feels sketchy.",
+        "Payment|doubt|p2": "I don\u2019t see a padlock icon. Is this actually secure?",
+        "Payment|doubt|p3": "It\u2019s asking for my phone number. Why does a payment form need that?",
+        "Payment|doubt|p5": "The card logos look blurry. Like a photocopy of a real payment page.",
+        "Payment|doubt|p7": "I\u2019d normally check the URL here but I can\u2019t see the full address.",
+        "Payment|doubt|p9": "No mention of encryption or security anywhere on this page.",
+        "Onboarding|delight|p1": "Oh nice, it remembered my preferences from last time!",
+        "Onboarding|delight|p2": "That was actually fun. The little animations are a nice touch.",
+        "Onboarding|delight|p3": "I love that it asked what I\u2019m interested in right away.",
+        "Onboarding|delight|p5": "The progress indicator is clever \u2014 I can see I\u2019m almost done.",
+        "Onboarding|delight|p7": "It suggested things based on what I picked. That\u2019s smart.",
+        "Dashboard|confusion|p1": "There\u2019s so much on this page. I don\u2019t know where to start.",
+        "Dashboard|confusion|p1#2": "OK I found the spending section but\u2026 which number is the total?",
+        "Dashboard|confusion|p1#3": "I\u2019ve been on this page for five minutes and I still can\u2019t find my orders.",
+        "Dashboard|confusion|p4": "I can\u2019t tell which of these numbers is my total spend.",
+        "Dashboard|confusion|p4#2": "These icons don\u2019t mean anything to me. Where\u2019s the label?",
+        "Dashboard|confusion|p4#3": "Wait, is this my dashboard or the account settings? It looks the same.",
+        "Dashboard|confusion|p5": "Are these tabs or buttons? I clicked one and the page changed.",
+        "Search|frustration|p1": "The search results are completely irrelevant. I typed the exact name.",
+        "Search|frustration|p1#2": "I tried adding quotes around it and got zero results. Come on.",
+        "Search|frustration|p1#3": "Now it\u2019s suggesting categories that don\u2019t exist. What is this?",
+        "Search|frustration|p1#4": "Filtering by \u2018in stock\u2019 removed everything. But I can see it on the shelf.",
+        "Search|frustration|p9": "I searched for \u2018blue shoes\u2019 and got red handbags.",
+        "Search|frustration|p9#2": "Sorting by price doesn\u2019t work \u2014 it\u2019s just random.",
+        "Search|frustration|p9#3": "I tried the category browse instead and it\u2019s equally useless.",
+        "Search|frustration|p9#4": "At this point I\u2019d just leave and use Google to find it.",
+        "Confirmation|confidence|p1": "The order summary is really clear. I know exactly what I bought.",
+        "Confirmation|confidence|p2": "I like that it shows the estimated delivery date right here.",
+        "Confirmation|confidence|p3": "The confirmation email arrived before I even finished reading this page.",
+        "Confirmation|confidence|p5": "Easy to print this. I always save a copy for my records.",
+        "Confirmation|confidence|p6": "Good, there\u2019s a tracking link. I\u2019ll check that tomorrow.",
+        "Confirmation|confidence|p8": "It even shows the return policy. That\u2019s reassuring."
+    };
+
+    // Generate quotes with realistic distribution
+    // Format: [section_label, sentiment, intensity, participant_id, theme_label]
+    //
+    // Distribution is intentionally varied to show different signal profiles:
+    //   Checkout frustration = 9 quotes / 9 participants → broad convergence (high N_eff)
+    //   Search frustration   = 8 quotes / 2 participants → one-person rant (low N_eff)
+    //   Payment doubt        = 6 quotes / 6 participants → moderate, broad
+    //   Dashboard confusion  = 7 quotes / 3 participants → repeat offenders
+    //   Onboarding delight   = 5 quotes / 5 participants → clean spread
+    //
+    // This contrast is the whole point of showing the participant grid.
+
+    // Format: [section, sentiment, intensity, pid, theme, startSeconds]
+    // Timecodes simulate a ~45min interview progressing through the product flow.
+    // Within a signal card, quotes appear in data order (not timecode order) —
+    // because quotes are grouped by location+sentiment, the timecodes will
+    // appear non-sequential (different participants, different moments).
+    var QUOTES = [
+        // Checkout — heavy frustration, BROAD (9 quotes from 9 participants)
+        ["Checkout", "frustration", 3, "p1", "Pricing transparency", 1842],
+        ["Checkout", "frustration", 3, "p2", "Error recovery", 1920],
+        ["Checkout", "frustration", 1, "p3", "Pricing transparency", 1755],
+        ["Checkout", "frustration", 3, "p4", "Information architecture", 1680],
+        ["Checkout", "frustration", 2, "p5", "Pricing transparency", 1890],
+        ["Checkout", "frustration", 1, "p6", "Error recovery", 1965],
+        ["Checkout", "frustration", 3, "p7", "Information architecture", 1800],
+        ["Checkout", "frustration", 2, "p8", "Pricing transparency", 1710],
+        ["Checkout", "frustration", 3, "p9", "Error recovery", 1845],
+        ["Checkout", "confusion", 2, "p2", "Pricing transparency", 1860],
+        ["Checkout", "confusion", 2, "p4", "Information architecture", 1725],
+        ["Checkout", "confusion", 1, "p7", "Pricing transparency", 1770],
+        ["Checkout", "doubt", 1, "p3", "Trust and credibility", 1815],
+        ["Checkout", "doubt", 2, "p5", "Trust and credibility", 1830],
+        ["Checkout", "satisfaction", 1, "p10", "Personalisation", 2010],
+
+        // Payment — doubt cluster, MODERATE BREADTH (6 quotes / 6 participants)
+        ["Payment", "doubt", 3, "p1", "Trust and credibility", 2100],
+        ["Payment", "doubt", 1, "p2", "Trust and credibility", 2145],
+        ["Payment", "doubt", 2, "p3", "Trust and credibility", 2070],
+        ["Payment", "doubt", 1, "p5", "Trust and credibility", 2130],
+        ["Payment", "doubt", 3, "p7", "Trust and credibility", 2055],
+        ["Payment", "doubt", 2, "p9", "Trust and credibility", 2115],
+        ["Payment", "frustration", 2, "p1", "Error recovery", 2160],
+        ["Payment", "frustration", 3, "p4", "Error recovery", 2085],
+        ["Payment", "frustration", 2, "p6", "Error recovery", 2175],
+        ["Payment", "confusion", 1, "p2", "Information architecture", 2040],
+        ["Payment", "confusion", 2, "p8", "Information architecture", 2025],
+
+        // Onboarding — delight, CLEAN SPREAD (5 quotes / 5 participants)
+        ["Onboarding", "delight", 2, "p1", "Personalisation", 180],
+        ["Onboarding", "delight", 3, "p2", "Personalisation", 210],
+        ["Onboarding", "delight", 2, "p3", "Personalisation", 165],
+        ["Onboarding", "delight", 2, "p5", "Personalisation", 195],
+        ["Onboarding", "delight", 1, "p7", "Personalisation", 240],
+        ["Onboarding", "satisfaction", 2, "p4", "Performance concerns", 150],
+        ["Onboarding", "satisfaction", 2, "p6", "Performance concerns", 135],
+        ["Onboarding", "satisfaction", 1, "p8", "Information architecture", 225],
+        ["Onboarding", "satisfaction", 2, "p9", "Personalisation", 120],
+        ["Onboarding", "satisfaction", 1, "p10", "Performance concerns", 255],
+        ["Onboarding", "confidence", 1, "p1", "Trust and credibility", 270],
+        ["Onboarding", "confidence", 2, "p3", "Trust and credibility", 285],
+        ["Onboarding", "surprise", 2, "p2", "Personalisation", 300],
+        ["Onboarding", "surprise", 1, "p6", "Personalisation", 315],
+        ["Onboarding", "confusion", 1, "p4", "Information architecture", 330],
+
+        // Dashboard — confusion, REPEAT OFFENDERS (7 quotes / 3 participants)
+        // p1 and p4 dominate — low N_eff despite decent quote count
+        ["Dashboard", "confusion", 2, "p1", "Information architecture", 480],
+        ["Dashboard", "confusion", 3, "p1", "Information architecture", 525],
+        ["Dashboard", "confusion", 1, "p4", "Information architecture", 450],
+        ["Dashboard", "confusion", 2, "p4", "Information architecture", 495],
+        ["Dashboard", "confusion", 3, "p4", "Information architecture", 540],
+        ["Dashboard", "confusion", 1, "p5", "Information architecture", 510],
+        ["Dashboard", "confusion", 2, "p1", "Information architecture", 570],
+        ["Dashboard", "frustration", 1, "p3", "Performance concerns", 465],
+        ["Dashboard", "frustration", 2, "p7", "Performance concerns", 435],
+        ["Dashboard", "satisfaction", 1, "p6", "Personalisation", 420],
+        ["Dashboard", "satisfaction", 1, "p9", "Personalisation", 405],
+        ["Dashboard", "surprise", 1, "p10", "Personalisation", 555],
+
+        // Search — frustration spike, NARROW (8 quotes / 2 participants)
+        // p1 and p9 went on long rants — high count but terrible N_eff
+        ["Search", "frustration", 3, "p1", "Performance concerns", 720],
+        ["Search", "frustration", 3, "p1", "Performance concerns", 750],
+        ["Search", "frustration", 2, "p1", "Performance concerns", 780],
+        ["Search", "frustration", 3, "p1", "Performance concerns", 810],
+        ["Search", "frustration", 3, "p9", "Performance concerns", 690],
+        ["Search", "frustration", 2, "p9", "Performance concerns", 735],
+        ["Search", "frustration", 3, "p9", "Performance concerns", 765],
+        ["Search", "frustration", 2, "p9", "Performance concerns", 795],
+        ["Search", "confusion", 2, "p2", "Information architecture", 705],
+        ["Search", "confusion", 1, "p4", "Information architecture", 675],
+        ["Search", "satisfaction", 1, "p6", "Personalisation", 660],
+        ["Search", "satisfaction", 1, "p10", "Information architecture", 825],
+        ["Search", "surprise", 1, "p8", "Performance concerns", 840],
+
+        // Product listing — mild, scattered
+        ["Product listing", "satisfaction", 2, "p1", "Information architecture", 960],
+        ["Product listing", "satisfaction", 1, "p3", "Information architecture", 930],
+        ["Product listing", "satisfaction", 2, "p5", "Personalisation", 975],
+        ["Product listing", "frustration", 1, "p2", "Performance concerns", 945],
+        ["Product listing", "frustration", 1, "p7", "Performance concerns", 915],
+        ["Product listing", "confusion", 1, "p4", "Information architecture", 900],
+        ["Product listing", "surprise", 2, "p6", "Personalisation", 990],
+        ["Product listing", "confidence", 1, "p8", "Trust and credibility", 1005],
+
+        // Product detail — mostly positive
+        ["Product detail", "satisfaction", 2, "p1", "Information architecture", 1200],
+        ["Product detail", "satisfaction", 3, "p2", "Information architecture", 1230],
+        ["Product detail", "satisfaction", 2, "p3", "Trust and credibility", 1170],
+        ["Product detail", "satisfaction", 2, "p5", "Information architecture", 1260],
+        ["Product detail", "satisfaction", 1, "p7", "Performance concerns", 1185],
+        ["Product detail", "delight", 2, "p4", "Personalisation", 1215],
+        ["Product detail", "delight", 1, "p6", "Personalisation", 1245],
+        ["Product detail", "confidence", 2, "p8", "Trust and credibility", 1275],
+        ["Product detail", "confidence", 1, "p9", "Trust and credibility", 1290],
+        ["Product detail", "confusion", 1, "p10", "Information architecture", 1155],
+
+        // Confirmation — positive, confidence
+        ["Confirmation", "confidence", 2, "p1", "Trust and credibility", 2340],
+        ["Confirmation", "confidence", 2, "p2", "Trust and credibility", 2370],
+        ["Confirmation", "confidence", 3, "p3", "Trust and credibility", 2310],
+        ["Confirmation", "confidence", 2, "p5", "Information architecture", 2400],
+        ["Confirmation", "confidence", 1, "p6", "Information architecture", 2355],
+        ["Confirmation", "confidence", 2, "p8", "Trust and credibility", 2415],
+        ["Confirmation", "satisfaction", 2, "p4", "Information architecture", 2325],
+        ["Confirmation", "satisfaction", 1, "p7", "Personalisation", 2385],
+        ["Confirmation", "satisfaction", 2, "p9", "Trust and credibility", 2430],
+        ["Confirmation", "delight", 1, "p10", "Personalisation", 2445]
+    ];
+
+    var TOTAL_PARTICIPANTS = PARTICIPANTS.length;
+
+    // ── Math: Concentration ratio ───────────────────────────────
+
+    function concentrationRatio(cellCount, rowTotal, colTotal, grandTotal) {
+        if (grandTotal === 0 || rowTotal === 0 || colTotal === 0) return 0;
+        var expected = colTotal / grandTotal;
+        var observed = cellCount / rowTotal;
+        return expected === 0 ? 0 : observed / expected;
+    }
+
+    // ── Math: Simpson's reciprocal diversity (N_eff) ────────────
+
+    function simpsonsNeff(participantCounts) {
+        // participantCounts: array of counts per participant
+        var n = 0;
+        var sumNiNiMinus1 = 0;
+        for (var i = 0; i < participantCounts.length; i++) {
+            var ni = participantCounts[i];
+            n += ni;
+            sumNiNiMinus1 += ni * (ni - 1);
+        }
+        if (n <= 1) return n;
+        if (sumNiNiMinus1 === 0) return n; // perfect diversity
+        return (n * (n - 1)) / sumNiNiMinus1;
+    }
+
+    // ── Math: Mean intensity ────────────────────────────────────
+
+    function meanIntensity(intensities) {
+        if (intensities.length === 0) return 0;
+        var sum = 0;
+        for (var i = 0; i < intensities.length; i++) sum += intensities[i];
+        return sum / intensities.length;
+    }
+
+    // ── Math: Composite signal score ────────────────────────────
+
+    function compositeSignal(concRatio, nEff, totalParticipants, mIntensity) {
+        return concRatio * (nEff / totalParticipants) * (mIntensity / 3);
+    }
+
+    // ── Math: Adjusted standardised residual ────────────────────
+
+    function adjustedResidual(observed, rowTotal, colTotal, grandTotal) {
+        if (grandTotal === 0 || rowTotal === 0 || colTotal === 0) return 0;
+        var expected = (rowTotal * colTotal) / grandTotal;
+        if (expected === 0) return 0;
+        var denom = Math.sqrt(
+            expected * (1 - rowTotal / grandTotal) * (1 - colTotal / grandTotal)
+        );
+        return denom === 0 ? 0 : (observed - expected) / denom;
+    }
+
+    // ── Build data matrix (generic — works for any row axis) ───
+
+    // rowLabels: array of strings (section labels or theme labels)
+    // rowIndex: which index in the quote tuple to use as the row key
+    //   0 = section, 4 = theme
+    function buildMatrix(quotes, rowLabels, sentiments, rowIndex) {
+        var grandTotal = quotes.length;
+
+        // Count totals
+        var rowTotals = {};
+        var colTotals = {};
+        var cells = {};  // "row|sentiment" -> { count, participants: {pid: count}, intensities: [] }
+
+        rowLabels.forEach(function (r) { rowTotals[r] = 0; });
+        sentiments.forEach(function (s) { colTotals[s] = 0; });
+
+        rowLabels.forEach(function (row) {
+            sentiments.forEach(function (sent) {
+                cells[row + "|" + sent] = { count: 0, participants: {}, intensities: [] };
+            });
+        });
+
+        quotes.forEach(function (q) {
+            var row = q[rowIndex], sent = q[1], intensity = q[2], pid = q[3];
+            rowTotals[row] = (rowTotals[row] || 0) + 1;
+            colTotals[sent] = (colTotals[sent] || 0) + 1;
+            var key = row + "|" + sent;
+            if (cells[key]) {
+                cells[key].count++;
+                cells[key].participants[pid] = (cells[key].participants[pid] || 0) + 1;
+                cells[key].intensities.push(intensity);
+            }
+        });
+
+        return {
+            cells: cells, rowTotals: rowTotals, colTotals: colTotals,
+            grandTotal: grandTotal, rowLabels: rowLabels
+        };
+    }
+
+    // ── Compute signal cards (generic — works for any matrix) ───
+    // sourceType: "section" or "theme" — labels the card's origin
+
+    function computeSignals(matrix, sentiments, sourceType) {
+        var signals = [];
+
+        matrix.rowLabels.forEach(function (row) {
+            sentiments.forEach(function (sent) {
+                var cell = matrix.cells[row + "|" + sent];
+                if (!cell || cell.count < 2) return;  // min 2 quotes
+
+                var pCounts = Object.values(cell.participants);
+                var nEff = simpsonsNeff(pCounts);
+                var mInt = meanIntensity(cell.intensities);
+                var concR = concentrationRatio(
+                    cell.count, matrix.rowTotals[row],
+                    matrix.colTotals[sent], matrix.grandTotal
+                );
+                var signal = compositeSignal(concR, nEff, TOTAL_PARTICIPANTS, mInt);
+                var uniqueParticipants = Object.keys(cell.participants);
+
+                var confidence;
+                if (concR > 2 && uniqueParticipants.length >= 5 && cell.count >= 6) {
+                    confidence = "strong";
+                } else if (concR > 1.5 && uniqueParticipants.length >= 3 && cell.count >= 4) {
+                    confidence = "moderate";
+                } else {
+                    confidence = "emerging";
+                }
+
+                signals.push({
+                    location: row,
+                    sourceType: sourceType,
+                    sentiment: sent,
+                    count: cell.count,
+                    participants: uniqueParticipants,
+                    nEff: nEff,
+                    meanIntensity: mInt,
+                    concentration: concR,
+                    signal: signal,
+                    confidence: confidence,
+                    quote: REP_QUOTES[row + "|" + sent] || "\u201c...\u201d"
+                });
+            });
+        });
+
+        return signals;
+    }
+
+    // ── Card type label — just the sentiment name ──────────────
+    // The accent colour already comes from the sentiment, so the label
+    // should match. No invented categories (trust concern, friction
+    // hotspot, etc.) — those implied a third colour palette.
+
+    // ── Intensity dots (SVG) ─────────────────────────────────────
+    // Renders 3 circles: filled, half-filled (vertical split), or hollow.
+    // Mean intensity is rounded to nearest 0.5 before rendering.
+    // All circles have identical radius regardless of fill state.
+
+    function intensityDotsSvg(meanVal) {
+        var rounded = Math.round(meanVal * 2) / 2;  // round to nearest 0.5
+        var r = 5;       // circle radius — same for all states
+        var cx = 7;      // first circle centre-x
+        var gap = 16;    // centre-to-centre spacing
+        var w = cx + gap * 2 + r + 2;  // total SVG width
+        var h = r * 2 + 2;             // total SVG height
+        var svg = '<svg class="intensity-dots-svg" width="' + w + '" height="' + h + '" viewBox="0 0 ' + w + ' ' + h + '">';
+
+        for (var i = 0; i < 3; i++) {
+            var threshold = i + 1;  // 1, 2, 3
+            var x = cx + i * gap;
+            var y = r + 1;
+
+            if (rounded >= threshold) {
+                // Filled circle
+                svg += '<circle cx="' + x + '" cy="' + y + '" r="' + r + '" fill="var(--dot-colour, var(--bn-colour-text))" opacity="0.7"/>';
+            } else if (rounded >= threshold - 0.5) {
+                // Half-filled circle — left half filled, right half hollow
+                // Use clipPath for clean vertical split
+                var clipId = 'half-' + i + '-' + Math.random().toString(36).substr(2, 5);
+                svg += '<defs>';
+                svg += '<clipPath id="' + clipId + '-l"><rect x="' + (x - r) + '" y="' + (y - r) + '" width="' + r + '" height="' + (r * 2) + '"/></clipPath>';
+                svg += '<clipPath id="' + clipId + '-r"><rect x="' + x + '" y="' + (y - r) + '" width="' + r + '" height="' + (r * 2) + '"/></clipPath>';
+                svg += '</defs>';
+                // Left half — filled
+                svg += '<circle cx="' + x + '" cy="' + y + '" r="' + r + '" fill="var(--dot-colour, var(--bn-colour-text))" opacity="0.7" clip-path="url(#' + clipId + '-l)"/>';
+                // Right half — hollow (just stroke)
+                svg += '<circle cx="' + x + '" cy="' + y + '" r="' + r + '" fill="none" stroke="var(--dot-colour, var(--bn-colour-text))" stroke-width="1.2" opacity="0.35" clip-path="url(#' + clipId + '-r)"/>';
+                // Full outline to unify the two halves visually
+                svg += '<circle cx="' + x + '" cy="' + y + '" r="' + r + '" fill="none" stroke="var(--dot-colour, var(--bn-colour-text))" stroke-width="1.2" opacity="0.35"/>';
+            } else {
+                // Hollow circle
+                svg += '<circle cx="' + x + '" cy="' + y + '" r="' + r + '" fill="none" stroke="var(--dot-colour, var(--bn-colour-text))" stroke-width="1.2" opacity="0.35"/>';
+            }
+        }
+
+        svg += '</svg>';
+        return svg;
+    }
+
+    // ── Build quote list for a given location + sentiment ──────
+    // Returns array of { text, pid, intensity } from the QUOTES dataset.
+    // rowIndex: 0 = section, 4 = theme
+
+    function buildQuoteList(location, sentiment, rowIndex) {
+        var matching = [];
+        var pidSeen = {};
+        QUOTES.forEach(function (q) {
+            if (q[rowIndex] === location && q[1] === sentiment) {
+                var pid = q[3];
+                var startSeconds = q[5] || 0;
+                var sessionId = SESSION_MAP[pid] || "s1";
+                pidSeen[pid] = (pidSeen[pid] || 0) + 1;
+                var key = location + "|" + sentiment + "|" + pid;
+                if (pidSeen[pid] > 1) key += "#" + pidSeen[pid];
+                var text = QUOTE_TEXTS[key] || q[1] + " quote from " + pid;
+                matching.push({
+                    text: text,
+                    pid: pid,
+                    intensity: q[2],
+                    startSeconds: startSeconds,
+                    sessionId: sessionId
+                });
+            }
+        });
+        // Sort: by participant (numeric), then by timecode within each participant
+        matching.sort(function (a, b) {
+            var pA = parseInt(a.pid.replace(/\D/g, ""), 10) || 0;
+            var pB = parseInt(b.pid.replace(/\D/g, ""), 10) || 0;
+            if (pA !== pB) return pA - pB;
+            return a.startSeconds - b.startSeconds;
+        });
+        return matching;
+    }
+
+    // ── Render a single blockquote HTML from a quote object ──────
+
+    function renderQuoteBlockquote(m) {
+        var tc = formatTimecode(m.startSeconds);
+        var playerHref = "bristlenose-player.html?pid=" + m.pid + "&t=" + m.startSeconds;
+        var transcriptHref = "sessions/transcript_" + m.sessionId + ".html#t-" + m.startSeconds;
+
+        var bq = '<blockquote>';
+        bq += '<div class="quote-row">';
+        // Left gutter: clickable timecode (links to pretend player)
+        bq += '<a class="timecode" href="' + playerHref + '" data-participant="' + m.pid + '" data-seconds="' + m.startSeconds + '">';
+        bq += '<span class="timecode-bracket">[</span>' + tc + '<span class="timecode-bracket">]</span>';
+        bq += '</a>';
+        // Quote body: text + speaker link
+        bq += '<span class="quote-body">';
+        bq += '<span class="quote-text">\u201c' + esc(m.text) + '\u201d</span>';
+        bq += ' <span class="speaker">\u2014\u00a0<a class="speaker-link" href="' + transcriptHref + '">' + m.pid + '</a></span>';
+        bq += '</span>';
+        // Right-aligned intensity dots — same SVG as the mean dots in the header
+        bq += '<span class="intensity-dots" title="Intensity ' + m.intensity + ' of 3">' + intensityDotsSvg(m.intensity) + '</span>';
+        bq += '</div>';
+        bq += '</blockquote>';
+        return bq;
+    }
+
+    // ── Signal card ID from location + sentiment + source ───────
+    // e.g. "signal-section-checkout-frustration"
+
+    function signalCardId(sourceType, location, sentiment) {
+        var slug = location.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
+        return "signal-" + sourceType + "-" + slug + "-" + sentiment;
+    }
+
+    // ── Render signal cards ─────────────────────────────────────
+
+    function renderSignalCards(signals) {
+        var container = document.getElementById("signal-cards");
+        // Show top 12 or all if fewer
+        var topN = Math.min(signals.length, 12);
+        // Absolute scale for concentration bar — cap at 8× so differences are always visible.
+        // 1× = expected, 8× = bar fully filled. Values above 8× still show a full bar.
+        var concScale = 8;
+        var html = "";
+
+        for (var i = 0; i < topN; i++) {
+            var s = signals[i];
+            var accent = SENTIMENT_CSS[s.sentiment] || "var(--bn-colour-muted)";
+            var typeLabel = SENTIMENT_LABELS[s.sentiment] || s.sentiment;
+            var confClass = "confidence-" + s.confidence;
+            var confLabel = s.confidence.charAt(0).toUpperCase() + s.confidence.slice(1);
+            var concPct = Math.min(100, Math.round((s.concentration / concScale) * 100));
+            var breadthPct = Math.min(100, Math.round((s.nEff / TOTAL_PARTICIPANTS) * 100));
+            var sourceLabel = s.sourceType === "theme" ? "Theme" : "Section";
+            var rowIndex = s.sourceType === "theme" ? 4 : 0;
+            var cardId = signalCardId(s.sourceType, s.location, s.sentiment);
+
+            // Deep-link to report
+            var slug = s.location.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
+            var reportHref = "bristlenose-report.html#" + slug + "?tag=" + s.sentiment;
+
+            // Build ALL quotes for this card
+            var allQuotes = buildQuoteList(s.location, s.sentiment, rowIndex);
+
+            html += '<div class="signal-card" id="' + cardId + '" style="--card-accent: ' + accent + '">';
+
+            // ── Two-column top: identity left, metrics right ──
+            html += '<div class="signal-card-top">';
+            html += '<div class="signal-card-identity">';
+            html += '<span class="signal-card-source">' + sourceLabel + '</span>';
+            html += '<div class="signal-card-location"><a class="signal-card-location-link" href="' + reportHref + '">' + esc(s.location) + '</a></div>';
+            html += '<span class="badge badge-' + s.sentiment + '">' + typeLabel + '</span>';
+            html += '</div>';
+            html += '<div class="signal-card-metrics">';
+            html += '<span class="metric-label" title="Overall importance, combines all metrics">Signal strength:</span>';
+            html += '<span class="metric-value">' + s.signal.toFixed(2) + '</span>';
+            // TODO: restore confidence badge when UX has a better home for it.
+            // The label (Strong/Moderate/Emerging) is a composite classification
+            // based on thresholds across concentration, participant count, and
+            // quote count — it does NOT track the signal number, so placing it
+            // next to the number is misleading. All computation is preserved.
+            // Was: html += '<span class="metric-viz"><span class="confidence-badge ' + confClass + '">' + confLabel + '</span></span>';
+            html += '<span class="metric-viz"></span>';
+            html += '<span class="metric-label" title="Participant agreement, times sentiment is overrepresented here">Concentration:</span>';
+            html += '<span class="metric-value">' + s.concentration.toFixed(1) + '\u00d7</span>';
+            html += '<span class="metric-viz"><span class="conc-bar-track"><span class="conc-bar-fill" style="width:' + concPct + '%"></span></span></span>';
+            html += '<span class="metric-label" title="Measure of quotes coming from all ' + TOTAL_PARTICIPANTS + ' voices">Agreement:</span>';
+            html += '<span class="metric-value">' + s.nEff.toFixed(1) + '</span>';
+            html += '<span class="metric-viz"><span class="conc-bar-track"><span class="conc-bar-fill" style="width:' + breadthPct + '%"></span></span></span>';
+            html += '<span class="metric-label" title="Average emotional strength of quotes">Mean intensity:</span>';
+            html += '<span class="metric-value">' + s.meanIntensity.toFixed(1) + '</span>';
+            html += '<span class="metric-viz">' + intensityDotsSvg(s.meanIntensity) + '</span>';
+            html += '</div>';
+            html += '</div>';
+
+            // ── Quotes: exemplar visible, rest in expansion ──
+            html += '<div class="signal-card-quotes">';
+            // First quote always visible (the exemplar)
+            if (allQuotes.length > 0) {
+                html += renderQuoteBlockquote(allQuotes[0]);
+            }
+            // Remaining quotes in collapsible expansion
+            if (allQuotes.length > 1) {
+                html += '<div class="signal-card-expansion">';
+                for (var qi = 1; qi < allQuotes.length; qi++) {
+                    html += renderQuoteBlockquote(allQuotes[qi]);
+                }
+                html += '</div>';
+            }
+            html += '</div>';
+
+            // ── Footer: toggle link + participant grid ──
+            html += '<div class="signal-card-footer">';
+            if (allQuotes.length > 1) {
+                html += '<a class="signal-card-link signal-card-toggle" href="#">Show all ' + allQuotes.length + ' quotes \u2192</a>';
+            } else {
+                html += '<span class="signal-card-link" style="visibility:hidden">1 quote</span>';
+            }
+            html += '<span class="participant-grid">';
+            html += '<span class="participant-count">' + s.participants.length + ' of ' + TOTAL_PARTICIPANTS + '</span>';
+            for (var pi = 0; pi < PARTICIPANTS.length; pi++) {
+                var pid = PARTICIPANTS[pi];
+                var present = s.participants.indexOf(pid) >= 0;
+                html += '<span class="p-box' + (present ? " p-present" : "") + '">' + pid + '</span>';
+            }
+            html += '</span>';
+            html += '</div>';
+            html += '</div>';
+        }
+
+        container.innerHTML = html;
+
+        // ── Toggle expansion on "Show all N quotes" click ──────
+        container.addEventListener("click", function (e) {
+            var toggle = e.target.closest(".signal-card-toggle");
+            if (!toggle) return;
+            e.preventDefault();
+
+            var card = toggle.closest(".signal-card");
+            var expansion = card.querySelector(".signal-card-expansion");
+            if (!expansion) return;
+
+            if (card.classList.contains("expanded")) {
+                // Collapse: animate max-height to 0
+                expansion.style.maxHeight = expansion.scrollHeight + "px";
+                expansion.offsetHeight; // force reflow
+                expansion.style.maxHeight = "0";
+                expansion.style.opacity = "0";
+                card.classList.remove("expanded");
+                toggle.textContent = "Show all " + (expansion.children.length + 1) + " quotes \u2192";
+                expansion.addEventListener("transitionend", function handler(evt) {
+                    if (evt.propertyName === "max-height") {
+                        expansion.style.overflow = "hidden";
+                        expansion.removeEventListener("transitionend", handler);
+                    }
+                });
+            } else {
+                // Expand: measure and animate
+                expansion.style.overflow = "hidden";
+                expansion.style.maxHeight = "0";
+                card.classList.add("expanded");
+                expansion.offsetHeight; // force reflow
+                var target = expansion.scrollHeight;
+                expansion.style.maxHeight = target + "px";
+                expansion.style.opacity = "1";
+                toggle.textContent = "Hide";
+                expansion.addEventListener("transitionend", function handler(evt) {
+                    if (evt.propertyName === "max-height" && card.classList.contains("expanded")) {
+                        expansion.style.maxHeight = "none";
+                        expansion.style.overflow = "visible";
+                    }
+                    expansion.removeEventListener("transitionend", handler);
+                });
+            }
+        });
+
+        // Store card IDs for heatmap linking
+        renderSignalCards._cardIds = {};
+        for (var ci = 0; ci < topN; ci++) {
+            var sig = signals[ci];
+            var key = sig.sourceType + "|" + sig.location + "|" + sig.sentiment;
+            renderSignalCards._cardIds[key] = signalCardId(sig.sourceType, sig.location, sig.sentiment);
+        }
+    }
+
+    // ── OKLCH colour for heatmap cell ──────────────────────────
+    // heat: 0–1 (normalised residual magnitude)
+    // hue: OKLCH hue for this sentiment
+    // isDark: current theme is dark
+    // Returns an oklch() CSS string.
+
+    function heatCellColour(heat, hue, chroma, isDark) {
+        // Perceptual lightness ramp: interpolate between l-min and l-max.
+        // Light mode: 95% → 45% (light to dark). Dark mode: 30% → 75% (dark to bright).
+        var lMin = isDark ? 30 : 95;
+        var lMax = isDark ? 75 : 45;
+        var l = lMin + (lMax - lMin) * heat;
+        return "oklch(" + l.toFixed(1) + "% " + chroma.toFixed(2) + " " + hue + ")";
+    }
+
+    // ── Render heatmap (generic — works for any row axis) ──────
+    // Heatmap is now a pure data table. Clicking a cell scrolls to
+    // the matching signal card (if one exists). No expansion panels.
+
+    // containerId: DOM id of the target div
+    // rowHeader: column header for the row axis ("Section", "Theme")
+    // sourceType: "section" or "theme" — for looking up signal card IDs
+    function renderHeatmap(matrix, sentiments, containerId, rowHeader, sourceType) {
+        var container = document.getElementById(containerId);
+        var isDark = document.documentElement.getAttribute("data-theme") === "dark";
+        var chroma = isDark ? 0.10 : 0.12;
+        var depletedChroma = isDark ? 0.06 : 0.08;
+
+        // Compute residuals for all cells
+        var residuals = {};
+        var maxAbsResidual = 0;
+        matrix.rowLabels.forEach(function (row) {
+            sentiments.forEach(function (sent) {
+                var cell = matrix.cells[row + "|" + sent];
+                var r = adjustedResidual(
+                    cell.count, matrix.rowTotals[row],
+                    matrix.colTotals[sent], matrix.grandTotal
+                );
+                residuals[row + "|" + sent] = r;
+                if (Math.abs(r) > maxAbsResidual) maxAbsResidual = Math.abs(r);
+            });
+        });
+
+        var html = '<table class="analysis-heatmap">';
+        html += '<thead><tr><th>' + esc(rowHeader) + '</th>';
+        sentiments.forEach(function (s) {
+            html += '<th><span class="badge badge-' + s + '">' + SENTIMENT_LABELS[s] + '</span></th>';
+        });
+        html += '<th>Total</th></tr></thead>';
+        html += '<tbody>';
+
+        matrix.rowLabels.forEach(function (row) {
+            html += '<tr class="heatmap-data-row">';
+            html += '<td>' + esc(row) + '</td>';
+            sentiments.forEach(function (sent) {
+                var cell = matrix.cells[row + "|" + sent];
+                var r = residuals[row + "|" + sent];
+                var absR = Math.abs(r);
+                var heat = maxAbsResidual > 0 ? absR / maxAbsResidual : 0;
+
+                var cls = "heatmap-cell";
+                var bgStyle = "";
+
+                // Check if this cell has a matching signal card
+                var cardKey = sourceType + "|" + row + "|" + sent;
+                var hasCard = renderSignalCards._cardIds && renderSignalCards._cardIds[cardKey];
+                if (hasCard) cls += " has-card";
+
+                if (cell.count > 0 && absR > 0.5) {
+                    var hue = r > 0 ? (SENTIMENT_HUE[sent] || 260) : DEPLETED_HUE;
+                    var c = r > 0 ? chroma : depletedChroma;
+                    cls += r > 0 ? " heat-positive" : " heat-negative";
+                    if (heat > 0.7 && r > 0) cls += " heat-strong";
+                    bgStyle = "background:" + heatCellColour(heat, hue, c, isDark);
+                }
+
+                var title = "d = " + (r >= 0 ? "+" : "") + r.toFixed(2);
+                if (absR > 3) title += " (strong)";
+                else if (absR > 2) title += " (notable)";
+
+                html += '<td class="' + cls + '"';
+                if (bgStyle) html += ' style="' + bgStyle + '"';
+                html += ' data-count="' + cell.count + '"';
+                html += ' data-row="' + esc(row) + '"';
+                html += ' data-sentiment="' + sent + '"';
+                html += ' title="' + title + '">';
+                html += cell.count;
+                html += '</td>';
+            });
+            html += '<td class="heatmap-total">' + matrix.rowTotals[row] + '</td>';
+            html += '</tr>';
+        });
+
+        // Column totals
+        html += '<tr>';
+        html += '<td class="heatmap-total" style="font-weight:600">Total</td>';
+        sentiments.forEach(function (sent) {
+            html += '<td class="heatmap-total">' + matrix.colTotals[sent] + '</td>';
+        });
+        html += '<td class="heatmap-total" style="font-weight:700">' + matrix.grandTotal + '</td>';
+        html += '</tr>';
+
+        html += '</tbody></table>';
+        container.innerHTML = html;
+
+        // ── Cell click → scroll to matching signal card ───────────
+        container.addEventListener("click", function (e) {
+            var cell = e.target.closest(".heatmap-cell.has-card");
+            if (!cell) return;
+
+            var row = cell.getAttribute("data-row");
+            var sent = cell.getAttribute("data-sentiment");
+            var cardKey = sourceType + "|" + row + "|" + sent;
+            var cardId = renderSignalCards._cardIds && renderSignalCards._cardIds[cardKey];
+            if (!cardId) return;
+
+            var cardEl = document.getElementById(cardId);
+            if (!cardEl) return;
+
+            cardEl.scrollIntoView({ behavior: "smooth", block: "center" });
+            // Brief highlight flash so you can see which card was targeted
+            cardEl.style.boxShadow = "0 0 0 3px var(--bn-colour-accent)";
+            setTimeout(function () {
+                cardEl.style.boxShadow = "";
+            }, 1500);
+        });
+    }
+
+    // ── Helpers ──────────────────────────────────────────────────
+
+    function esc(s) {
+        var d = document.createElement("div");
+        d.textContent = s;
+        return d.innerHTML;
+    }
+
+    // Format seconds as mm:ss or h:mm:ss timecode string
+    function formatTimecode(totalSeconds) {
+        var s = Math.floor(totalSeconds);
+        var h = Math.floor(s / 3600);
+        var m = Math.floor((s % 3600) / 60);
+        var sec = s % 60;
+        var pad = function (n) { return n < 10 ? "0" + n : "" + n; };
+        if (h > 0) return h + ":" + pad(m) + ":" + pad(sec);
+        return m + ":" + pad(sec);
+    }
+
+    // ── Boot ────────────────────────────────────────────────────
+
+    var sectionLabels = SECTIONS.map(function (s) { return s.label; });
+    var themeLabels = THEMES.map(function (t) { return t.label; });
+
+    var sectionMatrix = buildMatrix(QUOTES, sectionLabels, SENTIMENTS, 0);
+    var themeMatrix = buildMatrix(QUOTES, themeLabels, SENTIMENTS, 4);
+
+    var sectionSignals = computeSignals(sectionMatrix, SENTIMENTS, "section");
+    var themeSignals = computeSignals(themeMatrix, SENTIMENTS, "theme");
+    var allSignals = sectionSignals.concat(themeSignals);
+    allSignals.sort(function (a, b) { return b.signal - a.signal; });
+    renderSignalCards(allSignals);
+    renderHeatmap(sectionMatrix, SENTIMENTS, "heatmap-section-container", "Section", "section");
+    renderHeatmap(themeMatrix, SENTIMENTS, "heatmap-theme-container", "Theme", "theme");
+
+    // Re-render heatmaps on theme toggle to update OKLCH lightness direction
+    var origToggle = window.toggleTheme;
+    window.toggleTheme = function () {
+        origToggle();
+        renderHeatmap(sectionMatrix, SENTIMENTS, "heatmap-section-container", "Section", "section");
+        renderHeatmap(themeMatrix, SENTIMENTS, "heatmap-theme-container", "Theme", "theme");
+    };
+
+})();
+</script>
+</body>
+</html>

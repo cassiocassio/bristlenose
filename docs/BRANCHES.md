@@ -101,18 +101,18 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 
 ### `analysis`
 
-**Status:** Phase 2 in progress (math module done)
+**Status:** Phase 1 mockup complete (static HTML, fake data, no pipeline connection)
 **Started:** 10 Feb 2026
 **Worktree:** `/Users/cassio/Code/bristlenose_branch analysis/`
 **Remote:** `origin/analysis`
+**Design doc:** `docs/private/signal-concentration.md`
 
-**What it does:** Analysis page — signal cards, heatmap, concentration metrics. Phase 1: static mockup. Phase 2: Python math module. Future: matrix builder, pipeline integration, HTML rendering.
+**What it does:** Analysis page mockup — signal cards ranked by composite score (concentration × agreement × intensity), screen × sentiment heatmap with adjusted standardised residuals, dark mode toggle. Self-contained HTML with inline CSS/JS computing all metrics client-side from a fake dataset of ~150 quotes across 8 screen clusters and 10 participants.
 
 **Files this branch touches:**
-- `docs/mockups/mockup-analysis.html` — **new** static mockup (phase 1)
-- `bristlenose/analysis/__init__.py` — **new** package init
-- `bristlenose/analysis/metrics.py` — **new** five math functions (concentration ratio, Simpson's N_eff, mean intensity, composite signal, adjusted standardised residual)
-- `tests/test_analysis_metrics.py` — **new** 32 tests
+- `docs/mockups/mockup-analysis.html` — **new** (the only file)
+
+**Potential conflicts with other branches:** None — mockup-only, no pipeline or theme files modified.
 
 ---
 

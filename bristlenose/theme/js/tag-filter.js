@@ -9,6 +9,8 @@
  *
  * Dependencies:
  *   - storage.js: createStore()
+ *   - badge-utils.js: createReadOnlyBadge(), getTagColour()
+ *   - codebook.js: codebook, COLOUR_SETS, getTagColourVar()
  *   - tags.js: allTagNames(), userTags
  *   - csv-export.js: currentViewMode
  *   - search.js: _hideEmptySections(), _hideEmptySubsections()
@@ -18,6 +20,7 @@
 
 /* global createStore, allTagNames, userTags, currentViewMode */
 /* global _hideEmptySections, _hideEmptySubsections */
+/* global codebook, COLOUR_SETS, getTagColourVar, createReadOnlyBadge */
 
 var _tagFilterStore = createStore('bristlenose-tag-filter');
 var _tagFilterState = _tagFilterStore.get({ unchecked: [], noTagsUnchecked: false, clearAll: false });
@@ -165,8 +168,8 @@ function _buildTagFilterMenu(menu) {
     var searchInput = document.createElement('input');
     searchInput.type = 'text';
     searchInput.className = 'tag-filter-search-input';
-    searchInput.placeholder = 'Search tags\u2026';
-    searchInput.setAttribute('aria-label', 'Search tags');
+    searchInput.placeholder = 'Search tags and groups\u2026';
+    searchInput.setAttribute('aria-label', 'Search tags and groups');
     searchInput.addEventListener('input', function () {
       _filterMenuItems(menu, searchInput.value.toLowerCase());
     });
@@ -195,41 +198,191 @@ function _buildTagFilterMenu(menu) {
     menu.appendChild(divider);
   }
 
-  // ── User tags ──
-  for (var i = 0; i < names.length; i++) {
-    var name = names[i];
-    var checked = _tagFilterState.clearAll ? false : !uncheckedSet[name.toLowerCase()];
-    var count = tagCounts[name.toLowerCase()] || 0;
-    var item = _createCheckboxItem(name, name, checked, false, count);
-    menu.appendChild(item);
+  // ── User tags (grouped by codebook hierarchy) ──
+  var grouped = _groupTagsByCodebook(names, tagCounts);
+  for (var g = 0; g < grouped.length; g++) {
+    var section = grouped[g];
+
+    if (section.label) {
+      // Codebook group — wrapped in a tinted container.
+      var container = document.createElement('div');
+      container.className = 'tag-filter-group';
+      container.setAttribute('data-group-name', section.label.toLowerCase());
+      if (section.groupBgVar) container.style.background = section.groupBgVar;
+
+      var header = document.createElement('div');
+      header.className = 'tag-filter-group-header';
+      header.textContent = section.label;
+      container.appendChild(header);
+
+      for (var i = 0; i < section.tags.length; i++) {
+        var tag = section.tags[i];
+        var checked = _tagFilterState.clearAll ? false : !uncheckedSet[tag.name.toLowerCase()];
+        var item = _createCheckboxItem(tag.name, tag.name, checked, false, tag.count, tag.colourVar);
+        container.appendChild(item);
+      }
+
+      menu.appendChild(container);
+    } else {
+      // Ungrouped tags — flat, no wrapper.
+      for (var i = 0; i < section.tags.length; i++) {
+        var tag = section.tags[i];
+        var checked = _tagFilterState.clearAll ? false : !uncheckedSet[tag.name.toLowerCase()];
+        var item = _createCheckboxItem(tag.name, tag.name, checked, false, tag.count, tag.colourVar);
+        menu.appendChild(item);
+      }
+    }
   }
 }
 
 /**
+ * Organise tag names into codebook groups for the filter menu.
+ *
+ * Returns an array of sections, each with { label, groupId, groupBgVar, tags }.
+ * Ungrouped tags come first (no label, no background).  Codebook groups
+ * follow in codebook order, each with a tinted background from the group's
+ * colour set.  Tags within each section are sorted by count desc, name asc.
+ *
+ * If the codebook has no groups, returns a single unlabelled section with
+ * all tags sorted by count (preserving the pre-codebook behaviour).
+ *
+ * @param {string[]} names     All user tag names from allTagNames().
+ * @param {Object}   tagCounts Map of lowercase tag name → count.
+ * @returns {Array}
+ */
+function _groupTagsByCodebook(names, tagCounts) {
+  // Sort helper: count desc, then name asc.
+  var sortFn = function (a, b) {
+    return b.count - a.count || a.name.toLowerCase().localeCompare(b.name.toLowerCase());
+  };
+
+  // If codebook is not available or has no groups, fall back to flat list.
+  if (typeof codebook === 'undefined' || !codebook.groups || codebook.groups.length === 0) {
+    var flatTags = [];
+    for (var i = 0; i < names.length; i++) {
+      flatTags.push({
+        name: names[i],
+        count: tagCounts[names[i].toLowerCase()] || 0,
+        colourVar: (typeof getTagColourVar === 'function') ? getTagColourVar(names[i]) : null
+      });
+    }
+    flatTags.sort(sortFn);
+    return [{ label: null, groupId: null, groupBgVar: null, tags: flatTags }];
+  }
+
+  // Build a lookup: lowercase tag name → codebook entry.
+  var tagEntryByLower = {};
+  Object.keys(codebook.tags).forEach(function (t) {
+    tagEntryByLower[t.toLowerCase()] = { name: t, entry: codebook.tags[t] };
+  });
+
+  // Bucket tags into groups.
+  var buckets = {};  // groupId → [ { name, count, colourVar } ]
+  var ungrouped = [];
+
+  for (var i = 0; i < names.length; i++) {
+    var name = names[i];
+    var lower = name.toLowerCase();
+    var count = tagCounts[lower] || 0;
+    var colourVar = (typeof getTagColourVar === 'function') ? getTagColourVar(name) : null;
+    var tagObj = { name: name, count: count, colourVar: colourVar };
+
+    var mapped = tagEntryByLower[lower];
+    if (mapped && mapped.entry && mapped.entry.group) {
+      var gid = mapped.entry.group;
+      if (!buckets[gid]) buckets[gid] = [];
+      buckets[gid].push(tagObj);
+    } else {
+      ungrouped.push(tagObj);
+    }
+  }
+
+  // Build sections in codebook group order.
+  var sections = [];
+  for (var g = 0; g < codebook.groups.length; g++) {
+    var group = codebook.groups[g];
+    var tags = buckets[group.id];
+    if (!tags || tags.length === 0) continue;
+    tags.sort(sortFn);
+
+    var groupBgVar = null;
+    if (group.colourSet && typeof COLOUR_SETS !== 'undefined') {
+      var setInfo = COLOUR_SETS[group.colourSet];
+      if (setInfo) groupBgVar = 'var(' + setInfo.groupBg + ')';
+    }
+
+    sections.push({
+      label: group.name,
+      groupId: group.id,
+      groupBgVar: groupBgVar,
+      tags: tags
+    });
+  }
+
+  // Ungrouped tags come first — during live tagging these are the tags the
+  // researcher is actively working with.  Groups emerge later as the taxonomy
+  // takes shape; putting them second respects that workflow.
+  var result = [];
+  if (ungrouped.length > 0) {
+    ungrouped.sort(sortFn);
+    result.push({
+      label: null,
+      groupId: '_ungrouped',
+      groupBgVar: null,
+      tags: ungrouped
+    });
+  }
+  result = result.concat(sections);
+
+  return result;
+}
+
+/**
  * Filter visible tag items in the dropdown by a search query.
- * Hides items that don't match; shows all if query is empty.
- * "(No tags)" and the divider are hidden when a query is active.
+ * Matches against tag names AND group names — typing a group name shows
+ * all tags in that group.  "(No tags)" and the divider are hidden when
+ * a query is active.
  *
  * @param {Element} menu  The .tag-filter-menu container.
  * @param {string}  query Lowercase search query.
  */
 function _filterMenuItems(menu, query) {
-  var items = menu.querySelectorAll('.tag-filter-item');
   var divider = menu.querySelector('.tag-filter-divider');
 
-  for (var i = 0; i < items.length; i++) {
-    var tag = items[i].querySelector('input').getAttribute('data-tag');
+  // Hide divider and "(No tags)" while searching.
+  if (divider) divider.style.display = query ? 'none' : '';
+
+  // Ungrouped items (direct children of menu).
+  var topItems = menu.querySelectorAll(':scope > .tag-filter-item');
+  for (var i = 0; i < topItems.length; i++) {
+    var tag = topItems[i].querySelector('input').getAttribute('data-tag');
     if (tag === _NO_TAGS_KEY) {
-      // Hide "(No tags)" while searching.
-      items[i].style.display = query ? 'none' : '';
+      topItems[i].style.display = query ? 'none' : '';
     } else {
       var matches = !query || tag.toLowerCase().indexOf(query) !== -1;
-      items[i].style.display = matches ? '' : 'none';
+      topItems[i].style.display = matches ? '' : 'none';
     }
   }
 
-  // Hide divider while searching.
-  if (divider) divider.style.display = query ? 'none' : '';
+  // Group containers — match on group name OR individual tag names.
+  var containers = menu.querySelectorAll('.tag-filter-group');
+  for (var c = 0; c < containers.length; c++) {
+    var groupName = containers[c].getAttribute('data-group-name') || '';
+    var groupMatches = query && groupName.indexOf(query) !== -1;
+    var items = containers[c].querySelectorAll('.tag-filter-item');
+    var anyVisible = false;
+
+    for (var j = 0; j < items.length; j++) {
+      var tagKey = items[j].querySelector('input').getAttribute('data-tag');
+      var tagMatches = !query || tagKey.toLowerCase().indexOf(query) !== -1;
+      var show = !query || groupMatches || tagMatches;
+      items[j].style.display = show ? '' : 'none';
+      if (show) anyVisible = true;
+    }
+
+    // Hide the entire container (header + tags) if nothing matches.
+    containers[c].style.display = (query && !anyVisible) ? 'none' : '';
+  }
 }
 
 /**
@@ -267,14 +420,19 @@ function _countQuotesPerTag(names) {
 /**
  * Create a checkbox label element for the tag-filter menu.
  *
- * @param {string}  tag     The tag key (tag name or _NO_TAGS_KEY).
- * @param {string}  label   Display text.
- * @param {boolean} checked Whether the checkbox is checked.
- * @param {boolean} muted   Whether to use muted/italic styling.
- * @param {number}  count   Number of quotes with this tag.
+ * Non-muted items (user tags) are rendered as badge-styled labels using the
+ * same design-system classes as the report and codebook pages.  No delete
+ * button — this is a filter context, not an editing context.
+ *
+ * @param {string}      tag       The tag key (tag name or _NO_TAGS_KEY).
+ * @param {string}      label     Display text.
+ * @param {boolean}     checked   Whether the checkbox is checked.
+ * @param {boolean}     muted     Whether to use muted/italic styling.
+ * @param {number}      count     Number of quotes with this tag.
+ * @param {string|null} colourVar CSS var() for the badge background, or null.
  * @returns {Element}
  */
-function _createCheckboxItem(tag, label, checked, muted, count) {
+function _createCheckboxItem(tag, label, checked, muted, count, colourVar) {
   var el = document.createElement('label');
   el.className = 'tag-filter-item';
 
@@ -287,13 +445,21 @@ function _createCheckboxItem(tag, label, checked, muted, count) {
     _onTagFilterChange(tag, cb.checked);
   });
 
-  var span = document.createElement('span');
-  span.className = muted ? 'tag-filter-item-muted' : 'tag-filter-item-name';
-  span.textContent = label;
-  if (!muted && label.length > 31) span.title = label;
-
   el.appendChild(cb);
-  el.appendChild(span);
+
+  if (muted) {
+    // "(No tags)" — plain italic text.
+    var mutedSpan = document.createElement('span');
+    mutedSpan.className = 'tag-filter-item-muted';
+    mutedSpan.textContent = label;
+    el.appendChild(mutedSpan);
+  } else {
+    // User tag — read-only badge (shared factory from badge-utils.js).
+    var badge = createReadOnlyBadge(label, colourVar);
+    badge.classList.add('tag-filter-badge');
+    if (label.length > 31) badge.title = label;
+    el.appendChild(badge);
+  }
 
   // Append quote count.
   if (count !== undefined) {

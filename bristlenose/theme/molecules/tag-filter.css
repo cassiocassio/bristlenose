@@ -95,6 +95,24 @@
     margin: 0.25rem 0.85rem;
 }
 
+/* Group container — tinted background matching the codebook panel columns */
+.tag-filter-group {
+    border-radius: var(--bn-radius-sm);
+    margin: 0.25rem 0.4rem;
+    padding: 0.15rem 0;
+}
+
+/* Group header — codebook group name label inside the tinted container */
+.tag-filter-group-header {
+    padding: 0.3rem 0.5rem 0.15rem;
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: var(--bn-colour-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    white-space: nowrap;
+}
+
 .tag-filter-item {
     display: flex;
     align-items: center;
@@ -107,7 +125,15 @@
     white-space: nowrap;
 }
 
-.tag-filter-item-name {
+/* Items inside a group container get tighter horizontal padding */
+.tag-filter-group > .tag-filter-item {
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+}
+
+/* Badge inside the filter — inherits design-system badge styles, with
+   overflow handling for long names.  No delete button. */
+.tag-filter-badge {
     overflow: hidden;
     text-overflow: ellipsis;
     max-width: 16rem;

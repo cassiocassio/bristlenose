@@ -74,5 +74,9 @@ Analysis and Settings tabs can ship as placeholders — they're behind other tab
 
 Other branches that touch `render_html.py` or `main.js` should rebase onto main after this merge lands, since navigation wraps all report content in tab panels. Specifically:
 
+- **`analysis`** — touches `render_html.py`, `main.js`, `toolbar.html`. See `docs/merge-plan-analysis.md` for full resolution guide. Conflict is manageable:
+  - `render_html.py`: analysis adds `"organisms/analysis.css"` to `_THEME_FILES` (new line, auto-merge), adds `analysis` parameter to `render_html()`, adds `_render_analysis_page()` and `_ANALYSIS_JS_FILES` (new functions at end of file). No structural conflict — analysis renders a **separate** `analysis.html` page, not inline content. The navigation Analysis tab placeholder stays as-is for now
+  - `main.js`: navigation restructured boot to `_bootFns` array; analysis added `initAnalysis()` to the old sequential style. Resolution: add `['initAnalysis', initAnalysis]` to `_bootFns` array. But note: `initAnalysis()` runs on the analysis page (separate HTML file with its own `<script>` block), not the report page. On the report page it only wires the toolbar button — which navigation removes (codebook button pattern). Decision needed: keep analysis toolbar button, or make the Analysis tab link to `analysis.html`
+  - `toolbar.html`: navigation removed codebook button; analysis added analysis button on the same line. Resolution: drop both (codebook is now a tab, analysis will be linked from the tab)
 - `keyboard-navigation` — touches `focus.js` and `main.js`
 - `export-sharing` — touches `render_html.py` and `main.js`

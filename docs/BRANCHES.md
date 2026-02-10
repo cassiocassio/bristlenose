@@ -2,7 +2,7 @@
 
 This document tracks active feature branches to help multiple Claude sessions coordinate without conflicts.
 
-**Updated:** 9 Feb 2026
+**Updated:** 10 Feb 2026
 
 ---
 
@@ -15,6 +15,8 @@ Each active feature branch gets its own **git worktree** — a full working copy
 | Directory | Branch | Purpose |
 |-----------|--------|---------|
 | `bristlenose/` | `main` | Main repo, releases, hotfixes |
+| `bristlenose_branch analysis/` | `analysis` | Analysis feature |
+| `bristlenose_branch navigation/` | `navigation` | Global navigation prototype |
 
 **Creating a new feature branch worktree:**
 
@@ -92,10 +94,43 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 | Branch | Local worktree | GitHub remote |
 |--------|---------------|---------------|
 | `main` | `bristlenose/` | `origin/main` (push via `origin/main:wip` until release time) |
+| `analysis` | `bristlenose_branch analysis/` | `origin/analysis` |
+| `navigation` | `bristlenose_branch navigation/` | `origin/navigation` |
 
 ---
 
 ## Active Branches
+
+### `analysis`
+
+**Status:** Phase 2 in progress (math module done)
+**Started:** 10 Feb 2026
+**Worktree:** `/Users/cassio/Code/bristlenose_branch analysis/`
+**Remote:** `origin/analysis`
+
+**What it does:** Analysis page — signal cards, heatmap, concentration metrics. Phase 1: static mockup. Phase 2: Python math module. Future: matrix builder, pipeline integration, HTML rendering.
+
+**Files this branch touches:**
+- `docs/mockups/mockup-analysis.html` — **new** static mockup (phase 1)
+- `bristlenose/analysis/__init__.py` — **new** package init
+- `bristlenose/analysis/metrics.py` — **new** five math functions (concentration ratio, Simpson's N_eff, mean intensity, composite signal, adjusted standardised residual)
+- `tests/test_analysis_metrics.py` — **new** 32 tests
+
+---
+
+### `navigation`
+
+**Status:** New, not started
+**Started:** 10 Feb 2026
+**Worktree:** `/Users/cassio/Code/bristlenose_branch navigation/`
+**Remote:** `origin/navigation`
+
+**What it does:** Global navigation prototype — cross-page nav (report, transcripts, codebook, analysis).
+
+**Files this branch touches:**
+- TBD
+
+---
 
 ### `transcript-annotations`
 

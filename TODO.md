@@ -65,6 +65,11 @@ This file contains: session reminders, feature groupings with context, items too
 
 | Item | Issue | Effort |
 |------|-------|--------|
+| Signal concentration: Phase 2 — Python math module | — | medium |
+| Signal concentration: Phase 3 — pipeline integration + toolbar button | — | medium |
+| Signal concentration: Phase 4 — JS interactivity (filter, heatmap click) | — | medium |
+| Signal concentration: Phase 5 — LLM narration of signal cards | — | small |
+| Signal concentration: restore confidence badge in better UX location | — | small |
 | Moderator Phase 2: cross-session linking | #25 | medium |
 | Speaker diarisation improvements | #26 | medium |
 | Batch processing dashboard | #27 | medium |

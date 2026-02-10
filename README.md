@@ -80,7 +80,7 @@ See the **[installation guide](INSTALL.md)** for detailed step-by-step instructi
 
 If you've used Claude or ChatGPT before, you might only know the chat interface. Bristlenose talks to the same AI models, but through their **API** (a direct connection for software). This needs a separate API key -- a password that lets bristlenose call the AI on your behalf.
 
-You only need one key -- **Claude or ChatGPT, not both**.
+You need one key:
 
 ### Option A: Claude (by Anthropic)
 

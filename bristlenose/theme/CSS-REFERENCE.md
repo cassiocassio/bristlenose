@@ -87,3 +87,35 @@ Uses CSS columns masonry (`columns: 240px`) for space-efficient tiling with `bre
 - **`.new-group-placeholder`** — dashed border card for creating new groups, also a drop target
 - **`.drag-ghost`** — fixed-position ghost element during drag
 - **`.tag-preview`** — inline badge in merge confirmation modal
+
+## analysis.css (organism)
+
+Analysis page signal cards and heatmap table. The analysis page presents statistical patterns detected across sections/themes and sentiments, helping researchers identify where sentiment is concentrated.
+
+### Signal cards
+
+- **`.signal-cards`** — flex column container for all cards
+- **`.signal-card`** — bordered card with left accent bar (colour set by inline `--card-accent` custom property, maps to sentiment colour). Hover adds box-shadow. `.expanded` class triggers quote list expansion
+- **`.signal-card::before`** — accent bar using `var(--card-accent)`, same span-bar border-radius
+- **`.signal-card-top`** — flex row: identity (location + sentiment) left, metrics right
+- **`.signal-card-identity`** — location name, source type label (section/theme), sentiment badge
+- **`.signal-card-metrics`** — 3-column grid: label | value | visualisation (concentration bar, Neff, intensity dots)
+- **`.conc-bar-track`** / **`.conc-bar-fill`** — horizontal bar showing concentration ratio (0–100% of track width)
+- **`.intensity-dots-svg`** — inline container for 1–5 dot SVGs
+- **`.signal-card-quotes`** — expandable quote list with `--bn-colour-quote-bg` background. Blockquotes have left border, hanging-indent layout (timecode | body | intensity dots)
+- **`.signal-card-expansion`** — max-height/opacity transition for expand/collapse animation (max-height set by JS)
+- **`.signal-card-footer`** — participant count + link back to report section
+- **`.participant-grid`** — flex-wrap row of `.p-box` participant code chips. `.p-present` gets accent-tinted background via `color-mix()`
+
+### Confidence badges (hidden from UI, preserved for future)
+
+- **`.confidence-badge`** — base: small uppercase label
+- **`.confidence-strong`** / **`.confidence-moderate`** / **`.confidence-emerging`** — colour variants using `light-dark()` for dark mode
+
+### Heatmap
+
+- **`.analysis-heatmap`** — full-width collapsed-border table
+- **`.analysis-heatmap th`** — column headers (sentiment names with badge), first column left-aligned (row labels)
+- **`.heatmap-cell`** — data cell with OKLCH background set inline by JS. Clickable cells (`.has-card`) scroll to matching signal card. `.heat-strong` class inverts text colour for readability on dark backgrounds using `light-dark(#fff, #111)`
+- **`.heatmap-cell[data-count="0"]`** — zero cells: muted colour, no cursor, no hover outline
+- **`.heatmap-total`** — row/column total cells: transparent background, no interaction

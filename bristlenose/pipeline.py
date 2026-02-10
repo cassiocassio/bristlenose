@@ -16,11 +16,14 @@ _os.environ.setdefault("HF_HUB_DISABLE_PROGRESS_BARS", "1")
 
 from bristlenose.config import BristlenoseSettings
 from bristlenose.models import (
+    ExtractedQuote,
     FileType,
     InputSession,
     PiiCleanTranscript,
     PipelineResult,
+    ScreenCluster,
     SpeakerRole,
+    ThemeGroup,
     TranscriptSegment,
 )
 
@@ -94,6 +97,40 @@ def _short_reason(errors: list[str], provider: str = "") -> tuple[str, str]:
     if len(msg) > _MAX_WARN_LEN:
         msg = msg[:_MAX_WARN_LEN - 1] + "\u2026"
     return msg, link
+
+
+def _compute_analysis(
+    screen_clusters: list[ScreenCluster],
+    theme_groups: list[ThemeGroup],
+    all_quotes: list[ExtractedQuote],
+    sessions: list[InputSession] | None = None,
+) -> object | None:
+    """Compute analysis data if quotes have sentiments.
+
+    Returns an AnalysisResult or None if no sentiment data is available.
+    Pure computation — no LLM calls.
+    """
+    if not screen_clusters and not theme_groups:
+        return None
+    if not any(q.sentiment is not None for q in all_quotes):
+        return None
+
+    from bristlenose.analysis.matrix import build_section_matrix, build_theme_matrix
+    from bristlenose.analysis.signals import detect_signals
+
+    section_matrix = build_section_matrix(screen_clusters)
+    theme_matrix = build_theme_matrix(theme_groups)
+
+    if sessions:
+        total_participants = sum(1 for s in sessions if s.participant_id.startswith("p"))
+    else:
+        total_participants = len({q.participant_id for q in all_quotes if q.participant_id.startswith("p")})
+
+    return detect_signals(
+        section_matrix, theme_matrix,
+        screen_clusters, theme_groups,
+        total_participants,
+    )
 
 
 class Pipeline:
@@ -415,6 +452,9 @@ class Pipeline:
             # ── Stage 12: Render output ──────────────────────────────
             status.update("[dim]Rendering output...[/dim]")
             t0 = time.perf_counter()
+            analysis = _compute_analysis(
+                screen_clusters, theme_groups, all_quotes, sessions,
+            )
             render_markdown(
                 screen_clusters,
                 theme_groups,
@@ -436,6 +476,7 @@ class Pipeline:
                 display_names=display_names,
                 people=people,
                 transcripts=transcripts,
+                analysis=analysis,
             )
             _print_step("Rendered report", time.perf_counter() - t0)
 
@@ -699,6 +740,9 @@ class Pipeline:
             people = load_people_file(output_dir)
             display_names = build_display_name_map(people) if people else {}
 
+            analysis = _compute_analysis(
+                screen_clusters, theme_groups, all_quotes,
+            )
             render_markdown(
                 screen_clusters, theme_groups, [],
                 self.settings.project_name, output_dir,
@@ -714,6 +758,7 @@ class Pipeline:
                 display_names=display_names,
                 people=people,
                 transcripts=clean_transcripts,
+                analysis=analysis,
             )
             _print_step("Rendered report", time.perf_counter() - t0)
 
@@ -915,6 +960,9 @@ class Pipeline:
 
         # --- Render ---
         t0 = time.perf_counter()
+        analysis = _compute_analysis(
+            screen_clusters, theme_groups, all_quotes, sessions,
+        )
         render_markdown(
             screen_clusters, theme_groups, sessions,
             self.settings.project_name, output_dir,
@@ -930,6 +978,7 @@ class Pipeline:
             display_names=display_names,
             people=people,
             transcripts=transcripts,
+            analysis=analysis,
         )
         _print_step("Rendered report", time.perf_counter() - t0)
 

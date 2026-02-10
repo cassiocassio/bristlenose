@@ -13,6 +13,18 @@ Quick reference for finding things in the bristlenose codebase.
 | `bristlenose/pipeline.py` | Pipeline orchestrator |
 | `bristlenose/people.py` | People file: load, compute, merge, write, display names, name extraction, short name heuristic |
 | `bristlenose/__main__.py` | `python -m bristlenose` entry point |
+| `bristlenose/output_paths.py` | Output directory structure and path helpers (`OutputPaths` dataclass) |
+
+## Analysis (`bristlenose/analysis/`)
+
+Post-pipeline statistical analysis — matrix building and signal detection. Pure computation from existing quote/cluster/theme data, no LLM calls.
+
+| File | Role |
+|------|------|
+| `models.py` | Data models: `MatrixCell`, `Matrix`, `SignalQuote`, `Signal`, `AnalysisResult` (plain dataclasses, not Pydantic) |
+| `metrics.py` | 5 pure math functions: `concentration_ratio`, `simpsons_neff`, `mean_intensity`, `composite_signal`, `adjusted_residual` |
+| `matrix.py` | Build section×sentiment and theme×sentiment contingency matrices from grouped quotes |
+| `signals.py` | Detect notable cells, classify confidence (strong/moderate/emerging), attach quotes |
 
 ## Pipeline stages (`bristlenose/stages/`)
 
@@ -53,7 +65,7 @@ All 12 stages of the pipeline, from ingest to render.
 | `molecules/` | Small groups of atoms (badge-row, bar-group, name-edit, transcript-annotations, etc.) |
 | `organisms/` | Self-contained UI sections (blockquote, toolbar, etc.) |
 | `templates/` | Page-level layout (report.css, transcript.css, print.css) |
-| `js/` | 18 JS modules — report: storage, badge-utils, modal, codebook, player, starred, editing, tags, histogram, csv-export, view-switcher, search, tag-filter, hidden, names, focus, feedback, main; transcript: storage, badge-utils, player, transcript-names, transcript-annotations; codebook: storage, badge-utils, modal, codebook |
+| `js/` | 19 JS modules — report: storage, badge-utils, modal, codebook, player, starred, editing, tags, histogram, csv-export, view-switcher, search, tag-filter, hidden, names, focus, feedback, analysis, main; transcript: storage, badge-utils, player, transcript-names, transcript-annotations; codebook: storage, badge-utils, modal, codebook; analysis: storage, analysis |
 
 ## Utilities (`bristlenose/utils/`)
 
@@ -76,6 +88,9 @@ All 12 stages of the pipeline, from ingest to render.
 | `tests/test_text_utils.py` | Smart quotes, disfluency removal, text cleanup (11 tests) |
 | `tests/test_name_extraction.py` | Name extraction, auto-populate, short name heuristic, SpeakerRoleItem compat (26 tests) |
 | `tests/test_transcript_annotations.py` | Transcript quote annotations: highlight marking, quote map, segment classes, citation marks, JS bootstrap (26 tests) |
+| `tests/test_analysis_metrics.py` | Analysis math: concentration ratio, Simpson's Neff, mean intensity, composite signal, adjusted residual (32 tests) |
+| `tests/test_analysis_matrix.py` | Analysis matrix builder: empty/single/multi clusters, sentiment filtering, participant counting (12 tests) |
+| `tests/test_analysis_signals.py` | Signal detection: thresholds, sorting, top-n limiting, confidence classification, quote ordering (11 tests) |
 
 ## Man page
 

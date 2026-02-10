@@ -1,6 +1,6 @@
 # JS Module Reference
 
-19 standalone files in `js/` concatenated at render time (same pattern as CSS): storage, badge-utils, modal, codebook, player, starred, editing, tags, histogram, csv-export, view-switcher, search, tag-filter, hidden, names, focus, feedback, global-nav, main. Transcript pages use `storage.js` + `badge-utils.js` + `player.js` + `transcript-names.js` + `transcript-annotations.js`. Codebook page uses `storage.js` + `badge-utils.js` + `modal.js` + `codebook.js`. `transcript-names.js` only updates heading speaker names (preserving code prefix: `"m1 Sarah Chen"`); segment speaker labels stay as raw codes (`p1:`, `m1:`) and are not overridden by JS.
+20 standalone files in `js/` concatenated at render time (same pattern as CSS): storage, badge-utils, modal, codebook, player, starred, editing, tags, histogram, csv-export, view-switcher, search, tag-filter, hidden, names, focus, feedback, analysis, global-nav, main. Transcript pages use `storage.js` + `badge-utils.js` + `player.js` + `transcript-names.js` + `transcript-annotations.js`. Codebook page uses `storage.js` + `badge-utils.js` + `modal.js` + `codebook.js`. Analysis page uses `storage.js` + `analysis.js`. `transcript-names.js` only updates heading speaker names (preserving code prefix: `"m1 Sarah Chen"`); segment speaker labels stay as raw codes (`p1:`, `m1:`) and are not overridden by JS.
 
 ## storage.js
 
@@ -192,7 +192,33 @@ Standalone HTML page (`codebook.html`) at the output root, opened in a new windo
 - **Interactive features**: drag-and-drop tags between groups, merge tags, inline-edit group titles/subtitles, add/delete tags, create/delete groups, keyboard shortcuts (? help, Esc close)
 - **Cross-window sync**: localStorage `storage` event — changes in the codebook page propagate to the report (badge colours update), and vice versa (new user tags appear)
 
-Three page types in the output:
+## analysis.js
+
+Analysis page: signal cards, heatmaps, and interactive features. On the report page, wires the toolbar Analysis button. On `analysis.html`, renders the full analysis content from injected JSON data.
+
+- **Data source**: `BRISTLENOSE_ANALYSIS` global — JSON object injected by `render_html.py` containing `signals`, `sectionMatrix`, `themeMatrix`, `totalParticipants`, `sentiments`, `participantIds`, `reportFilename`
+- **`initAnalysis()`** — detects page type: report page (wires toolbar button to open `analysis.html` in new window) vs analysis page (renders signal cards + heatmaps)
+- **`renderSignalCards()`** — builds signal card list from `data.signals`. Each card has: accent bar (sentiment colour), location/sentiment header, metrics grid (concentration bar, Neff, intensity dots), expandable quote list, participant presence grid, link back to report section
+- **`renderHeatmap(matrix, containerId, rowHeader, sourceType)`** — builds contingency table with OKLCH-coloured cells. Computes adjusted residuals client-side for theme-responsive colouring. Cells with matching signals are clickable (smooth-scroll to card with highlight flash)
+- **`adjustedResidual(observed, rowTotal, colTotal, grandTotal)`** — client-side duplicate of Python `adjusted_residual()` from `metrics.py`, needed for theme-responsive heatmap colours (recomputed on dark mode toggle)
+- **`heatCellColour(heat, hue, chroma, isDark)`** — OKLCH colour ramp: lightness interpolated between `lMin` and `lMax` based on normalised heat value
+- **`intensityDotsSvg(intensity, size, colour)`** — renders 1–5 filled/empty dots as inline SVG
+- **Dark mode**: `MutationObserver` on `<html>` attribute changes re-renders heatmaps when theme toggles (OKLCH lightness direction inverts). Uses `THEME_ATTR = "data-" + "theme"` constant to avoid literal string in embedded HTML (dark mode tests assert absence)
+- **Dependencies**: none (self-contained). Loaded on both report page (`_JS_FILES`, for toolbar button) and analysis page (`_ANALYSIS_JS_FILES`, for content rendering)
+- **CSS**: `organisms/analysis.css` (signal cards, heatmap table, confidence badges, expansion animation)
+
+## Analysis page
+
+Standalone HTML page (`analysis.html`) at the output root, opened in a new window by the toolbar Analysis button. Rendered by `_render_analysis_page()` in `render_html.py`. Features:
+
+- **Layout**: signal cards list + two heatmap tables (Section×Sentiment, Theme×Sentiment)
+- **JS files**: `_ANALYSIS_JS_FILES` = `storage.js` + `analysis.js`. Boot calls `initAnalysis()` which detects `#signal-cards` element and renders content
+- **Data injection**: `BRISTLENOSE_ANALYSIS` JSON global with serialised matrices and signals
+- **Interactive features**: expandable quote lists per signal card, heatmap cell click → scroll to signal card, dark mode toggle re-renders heatmaps
+- **Cross-page**: toolbar button on report page opens analysis in new window; signal card links point back to report sections
+
+Four page types in the output:
 1. **Report** (`bristlenose-{slug}-report.html`) — main window, full JS suite (19 modules)
 2. **Transcript** (`sessions/transcript_{id}.html`) — separate pages, `storage.js` + `badge-utils.js` + `player.js` + `transcript-names.js` + `transcript-annotations.js`
 3. **Codebook** (`codebook.html`) — new window, `storage.js` + `badge-utils.js` + `modal.js` + `codebook.js`
+4. **Analysis** (`analysis.html`) — new window, `storage.js` + `analysis.js`

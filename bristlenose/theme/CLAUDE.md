@@ -99,7 +99,7 @@ Right-margin annotation layout for transcript pages. Shows section/theme labels,
 
 ## JS modules
 
-18 standalone files in `js/` — see `js/MODULES.md` for per-module API docs. Key dependency: load order matters (see Gotchas below).
+19 standalone files in `js/` — see `js/MODULES.md` for per-module API docs. Key dependency: load order matters (see Gotchas below).
 
 ## CSS component reference
 
@@ -107,7 +107,7 @@ Per-component CSS docs in `CSS-REFERENCE.md`. Key patterns: toolbar dual-class (
 
 ## Jinja2 templates
 
-13 HTML templates in `templates/` (alongside CSS template files). All use `autoescape=False` — escape in Python with `_esc()` before passing to template. Jinja2 environment: `_jinja_env` at module level in `render_html.py`.
+14 HTML templates in `templates/` (alongside CSS template files). All use `autoescape=False` — escape in Python with `_esc()` before passing to template. Jinja2 environment: `_jinja_env` at module level in `render_html.py`.
 
 | Template | Parameters | Used by |
 |----------|------------|---------|
@@ -124,6 +124,7 @@ Per-component CSS docs in `CSS-REFERENCE.md`. Key patterns: toolbar dual-class (
 | `user_journeys.html` | `rows` (list of dicts) | Report |
 | `coverage.html` | `summary`, `pct_omitted`, `sessions` | Report |
 | `player.html` | (none — static) | Separate player file |
+| `analysis.html` | (none — structural only, JS populates) | Analysis page |
 
 ## Gotchas
 
@@ -146,3 +147,6 @@ Per-component CSS docs in `CSS-REFERENCE.md`. Key patterns: toolbar dual-class (
 - **`--bn-colour-border-hover` token** — 3-state border progression for toolbar buttons: rest (`--bn-colour-border` gray-200) → hover (`--bn-colour-border-hover` gray-300) → active (`--bn-colour-accent` blue-600). Adding a new interactive bordered element should follow this pattern
 - **`BRISTLENOSE_PLAYER_URL` for transcript pages** — `player.js` needs to open `assets/bristlenose-player.html`, but transcript pages live in `sessions/` so the relative path is `../assets/bristlenose-player.html`. The renderer injects `BRISTLENOSE_PLAYER_URL` on transcript pages; `player.js` falls back to `'assets/bristlenose-player.html'` when the variable is absent (report pages). If you add a new page type that loads `player.js` from a subdirectory, inject this variable
 - **Player→opener uses `postMessage`, not `window.opener` function calls** — Safari (and other browsers) block `window.opener` property access for `file://` URIs opened via `window.open()`. The player sends `bristlenose-timeupdate` and `bristlenose-playstate` messages via `postMessage`; `player.js` receives them with `window.addEventListener('message', ...)`. Never switch back to direct `window.opener.fn()` calls — they silently fail on `file://`
+- **Analysis page sits at output root** — `analysis.html` is at the same level as the report (same pattern as codebook), uses `assets/bristlenose-theme.css`. Toolbar Analysis button opens it in a new window via `window.open()`
+- **`analysis.js` avoids literal `"data-theme"` string** — dark mode tests (`test_dark_mode.py`) assert that `"data-theme"` doesn't appear in the full HTML when `color_scheme="auto"`. Since `analysis.js` is embedded inline, it uses `var THEME_ATTR = "data-" + "theme"` to construct the attribute name. Similarly, `analysis.css` uses `light-dark()` instead of `[data-theme="dark"]` selectors. If adding new dark-mode-responsive code to inline JS or embedded CSS, avoid the literal string
+- **Analysis heatmap uses client-side `adjustedResidual()`** — the function exists in both Python (`metrics.py`) and JS (`analysis.js`). The JS copy is needed because heatmap cell colours are theme-responsive (OKLCH lightness direction inverts in dark mode), so residuals must be recomputed on theme toggle. Keep both implementations in sync

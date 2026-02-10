@@ -11,9 +11,10 @@ Thin localStorage abstraction. `createStore(key)` returns `{ get, set }` pair. A
 Shared badge DOM helpers loaded on all three page types (report, transcript, codebook). Pure DOM — no localStorage access, no side-effects. Load after `storage.js` and before any feature module.
 
 - **`createUserTagBadge(name, colourVar)`** — returns `<span class="badge badge-user" data-badge-type="user" data-tag-name="...">name<button class="badge-delete">×</button></span>`. Does NOT add `badge-appearing` class (callers opt-in). `colourVar` is a CSS var string or null
+- **`createReadOnlyBadge(name, colourVar)`** — same markup as `createUserTagBadge` but without the `×` delete button. For informational/non-editable contexts (tag filter dropdown, tooltips, previews)
 - **`animateBadgeRemoval(el, opts)`** — adds `.badge-removing`, on `animationend` either `el.remove()` (default) or `el.style.display = 'none'` (if `opts.hide` is true). Optional `opts.onDone` callback
 - **`getTagColour(tagName, codebookData)`** — pure function, takes codebook data object `{ groups: [], tags: {} }` as parameter. Returns CSS `var()` string or null for ungrouped tags. Used directly by `transcript-annotations.js`; wrapped by `getTagColourVar()` in `codebook.js` (which adds `'var(--bn-custom-bg)'` fallback for ungrouped)
-- **Consumers**: `tags.js` (`createUserTagEl` wraps `createUserTagBadge`, delete handlers call `animateBadgeRemoval`), `transcript-annotations.js` (badge creation and deletion), `codebook.js` (`getTagColourVar` delegates to `getTagColour`, `_renderTagRow` uses `createUserTagBadge`)
+- **Consumers**: `tags.js` (`createUserTagEl` wraps `createUserTagBadge`, delete handlers call `animateBadgeRemoval`), `transcript-annotations.js` (badge creation and deletion), `codebook.js` (`getTagColourVar` delegates to `getTagColour`, `_renderTagRow` uses `createUserTagBadge`), `tag-filter.js` (`createReadOnlyBadge` for filter badges)
 
 ## player.js
 
@@ -87,6 +88,24 @@ Search-as-you-type filtering for report quotes. Collapsed magnifying glass icon 
 - **`_onViewModeChange()`** — called by `view-switcher.js` after view mode changes. Hides search in participants mode (no quotes to search), re-applies filter or restores view mode otherwise
 - **Dependencies**: must load after `csv-export.js` (reads `currentViewMode` global) and after `view-switcher.js` (which calls `_onViewModeChange()`); before `names.js` and `main.js`
 - **CSS**: `molecules/search.css`
+
+## tag-filter.js
+
+Dropdown filter for quotes by user tag. Reads the codebook's group hierarchy to organise tags into tinted sections matching the codebook page's visual design. Search matches both tag names and group names.
+
+- **Store**: `createStore('bristlenose-tag-filter')` — shape `{ unchecked: [], noTagsUnchecked: false, clearAll: false }`
+- **`initTagFilter()`** — wires up button toggle, outside-click close, Escape handling, applies persisted filter state on load
+- **`_buildTagFilterMenu(menu)`** — called every time the menu opens (tags are dynamic). Renders: actions row → search input (8+ tags) → "(No tags)" checkbox → divider → ungrouped tags (flat) → codebook groups (tinted `.tag-filter-group` containers with `var(--bn-group-{set})` background)
+- **`_groupTagsByCodebook(names, tagCounts)`** — reads the `codebook` global, buckets tags into groups. Returns array of sections `{ label, groupId, groupBgVar, tags }`. Ungrouped first, codebook groups in order. Falls back to flat count-sorted list when codebook has no groups
+- **`_createCheckboxItem(tag, label, checked, muted, count, colourVar)`** — creates checkbox + badge row. User tags use `createReadOnlyBadge()` from badge-utils.js (no delete button). "(No tags)" uses plain italic text
+- **`_filterMenuItems(menu, query)`** — search matches tag names OR group names (via `data-group-name` attribute on containers). Group name match shows all tags in that group. Hides containers when no children match
+- **`_applyTagFilter()`** — core filtering: quotes visible if ≥1 checked tag. Respects `.bn-hidden`, starred view, "(No tags)" toggle. Cascades `_hideEmptySections()` / `_hideEmptySubsections()`
+- **`_updateTagFilterButton()`** — updates button label ("12 of 16 tags"). Sets stable `min-width` to prevent layout shift
+- **`_updateVisibleQuoteCount()`** — replaces view-switcher label with filtered count during active filter
+- **`_onTagFilterViewChange()`** — called by `view-switcher.js` on mode change. Hides filter in participants view
+- **Dependencies**: `storage.js`, `badge-utils.js` (`createReadOnlyBadge`), `codebook.js` (`codebook`, `COLOUR_SETS`, `getTagColourVar`), `tags.js` (`allTagNames`, `userTags`), `csv-export.js` (`currentViewMode`), `search.js` (`_hideEmptySections`, `_hideEmptySubsections`)
+- **Rebuild-on-open**: menu DOM is rebuilt every open, so codebook colour changes from the codebook window are picked up without a dedicated `storage` event listener
+- **CSS**: `molecules/tag-filter.css`
 
 ## Inline heading/description editing
 

@@ -46,6 +46,31 @@ function createUserTagBadge(name, colourVar) {
 }
 
 /**
+ * Create a read-only user-tag badge (no delete button).
+ *
+ * Same markup as `createUserTagBadge()` but without the `×` button — for
+ * contexts where the badge is informational, not editable (e.g. the tag
+ * filter dropdown, tooltips, previews).
+ *
+ * @param {string}      name      The tag text.
+ * @param {string|null} colourVar CSS var string for background, or null/undefined.
+ * @returns {Element}   The badge span element.
+ */
+function createReadOnlyBadge(name, colourVar) {
+  var span = document.createElement('span');
+  span.className = 'badge badge-user';
+  span.setAttribute('data-badge-type', 'user');
+  span.setAttribute('data-tag-name', name);
+  span.textContent = name;
+
+  if (colourVar) {
+    span.style.background = colourVar;
+  }
+
+  return span;
+}
+
+/**
  * Animate a badge's removal with a fade-out + scale animation.
  *
  * Adds `.badge-removing` and listens for `animationend`.  By default the

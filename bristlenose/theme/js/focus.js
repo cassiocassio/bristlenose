@@ -497,10 +497,14 @@ function handleKeydown(e) {
     return;
   }
 
-  // ? — toggle help overlay (only when not editing)
+  // ? — switch to About tab (only when not editing)
   if (key === '?' && !isEditing()) {
     e.preventDefault();
-    toggleHelpOverlay();
+    if (typeof switchToTab === 'function') {
+      switchToTab('about');
+    } else {
+      toggleHelpOverlay();
+    }
     return;
   }
 

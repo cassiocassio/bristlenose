@@ -189,17 +189,13 @@ def test_toc_theme_entry_is_editable(tmp_path: Path) -> None:
 
 
 def test_toc_sentiment_not_editable(tmp_path: Path) -> None:
-    """Sentiment ToC entry (when present) should NOT be editable."""
-    render_html(
-        screen_clusters=[],
-        theme_groups=[],
-        sessions=[],
-        all_quotes=[_make_quote()],
-        project_name="Sentiment Test",
-        output_dir=tmp_path,
-    )
-    html = (tmp_path / "bristlenose-sentiment-test-report.html").read_text(encoding="utf-8")
-    assert '<a href="#sentiment">Sentiment</a>' in html
+    """Analysis chart headings should NOT have editable data-edit-key attributes.
+
+    The Analysis column was removed from the TOC (navigation branch).
+    This test verifies the sentiment heading never gets edit keys.
+    """
+    html = _render_with_sections_and_themes(tmp_path)
+    # Sentiment heading should never have edit keys
     assert 'data-edit-key="sentiment:title"' not in html
 
 

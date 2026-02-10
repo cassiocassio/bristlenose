@@ -23,6 +23,9 @@
  *   names.js        → initNames()            (depends on csv-export.js)
  *   focus.js        → initFocus(), setFocus(), isEditing()
  *   feedback.js     → initFeedback(), showFeedbackModal()
+ *   global-nav.js   → initGlobalNav(), switchToTab()
+ *   transcript-names.js → initTranscriptNames()
+ *   transcript-annotations.js → initTranscriptAnnotations()
  *   main.js         → this file (orchestrator)
  *
  * The Python renderer concatenates these files in order and wraps them
@@ -48,3 +51,6 @@ initHidden();
 initNames();
 initFocus();
 initFeedback();
+initGlobalNav();
+if (typeof initTranscriptNames === 'function') initTranscriptNames();
+if (typeof initTranscriptAnnotations === 'function' && typeof BRISTLENOSE_QUOTE_MAP !== 'undefined') initTranscriptAnnotations();

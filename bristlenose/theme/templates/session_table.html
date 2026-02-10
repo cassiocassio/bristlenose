@@ -6,8 +6,8 @@
 </tr></thead>
 <tbody>
 {%- for row in rows %}
-<tr>
-<td><a href="sessions/transcript_{{ row.sid }}.html">{{ row.num }}</a></td>
+<tr data-session="{{ row.sid }}">
+<td><a href="sessions/transcript_{{ row.sid }}.html" data-session-link="{{ row.sid }}">{{ row.num }}</a></td>
 <td>{{ row.speakers }}</td>
 <td>{{ row.start }}</td>
 <td>{{ row.duration }}</td>

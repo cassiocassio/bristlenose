@@ -1,20 +1,23 @@
 # Merge Plan: `navigation` → `main`
 
 **Written:** 10 Feb 2026
-**Branch:** `navigation` (3 commits ahead of main)
-**Tests:** 757 passed, lint clean
+**Updated:** 11 Feb 2026
+**Branch:** `navigation` (7 commits ahead of main)
+**Tests:** 781 passed, lint clean
 
 ---
 
-## Pre-merge: finish Project tab (minimum)
+## Pre-merge: Project tab ✅ DONE
 
-The only blocker is the **Project tab** — it's the first thing users see when they open the report, and it currently says "Project summary coming soon." Give it something minimum viable (project name, session count, date range, participant list — whatever metadata is already available from the pipeline).
+The Project tab is now a full dashboard:
 
-Analysis and Settings tabs can ship as placeholders — they're behind other tabs and users won't land on them by default. Improve them later on main.
+1. **Stats row** — duration, words, quotes, sections, themes, AI-tagged, user tags (JS), coverage
+2. **Sessions table** — full-width, reuses `_build_session_rows()` helper
+3. **Featured quotes** — 3 × 1/3 cards, scoring algorithm (sentiment × intensity × length 12–33 words × diversity), JS reshuffle for starred/hidden
+4. **Sections + Themes** — compact tables (1/2 + 1/2)
+5. **Sentiment chart** — reused from Quotes tab
 
-- **Project tab** (line ~278 in `render_html.py`) — **must populate before merge**
-- **Analysis tab** (line ~494) — placeholder is fine for now
-- **Settings tab** (line ~500) — placeholder is fine for now
+Analysis and Settings tabs ship as placeholders — they're behind other tabs and users won't land on them by default. Improve them later on main.
 
 ---
 
@@ -63,8 +66,8 @@ Analysis and Settings tabs can ship as placeholders — they're behind other tab
 
 **Low risk.** The branch is self-contained:
 
-- **New files** (no conflict possible): `global-nav.js`, `global-nav.css`, `global_nav.html`, `test_navigation.py`
-- **Modified files:** `render_html.py` is the big one (309 lines added) but changes are additive — existing content is wrapped in tab panels, not restructured
+- **New files** (no conflict possible): `global-nav.js`, `global-nav.css`, `global_nav.html`, `session_table.html`, `test_navigation.py`
+- **Modified files:** `render_html.py` is the big one (~500 lines added) — dashboard, featured quotes algorithm, session row helper extraction. Changes are additive; existing content is wrapped in tab panels, not restructured
 - **Only shared-file conflict:** `docs/BRANCHES.md` (documentation, trivial)
 - **No model/pipeline/CLI changes** — purely a rendering-layer feature
 

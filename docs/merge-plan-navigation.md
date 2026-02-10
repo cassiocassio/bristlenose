@@ -6,15 +6,15 @@
 
 ---
 
-## Pre-merge: finish placeholder tabs
+## Pre-merge: finish Project tab (minimum)
 
-Before merging, populate or remove the placeholder content in these tabs:
+The only blocker is the **Project tab** — it's the first thing users see when they open the report, and it currently says "Project summary coming soon." Give it something minimum viable (project name, session count, date range, participant list — whatever metadata is already available from the pipeline).
 
-- **Project tab** (line ~278 in `render_html.py`) — currently "Project summary coming soon"
-- **Analysis tab** (line ~494) — currently "Analysis features coming soon"
-- **Settings tab** (line ~500) — currently "Report settings coming soon"
+Analysis and Settings tabs can ship as placeholders — they're behind other tabs and users won't land on them by default. Improve them later on main.
 
-Decide for each: populate with real content, or ship as-is with placeholder text.
+- **Project tab** (line ~278 in `render_html.py`) — **must populate before merge**
+- **Analysis tab** (line ~494) — placeholder is fine for now
+- **Settings tab** (line ~500) — placeholder is fine for now
 
 ---
 

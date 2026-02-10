@@ -169,10 +169,14 @@ function _renderAllAnnotations() {
     );
   }
 
-  // Pass 3: Render span bars (positioned relative to transcript-body)
-  var body = document.querySelector('.transcript-body');
-  if (body) {
-    _renderSpanBars(quoteSegments, body);
+  // Pass 3: Render span bars (positioned relative to transcript-body).
+  // Multiple transcript bodies may exist (inline transcripts in Sessions tab).
+  // Only render span bars in visible ones — hidden elements return zero rects.
+  var bodies = document.querySelectorAll('.transcript-body');
+  for (var k = 0; k < bodies.length; k++) {
+    if (bodies[k].offsetParent !== null) {
+      _renderSpanBars(quoteSegments, bodies[k]);
+    }
   }
 }
 

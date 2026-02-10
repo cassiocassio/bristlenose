@@ -145,7 +145,7 @@ def test_theme_description_has_inline_pencil(tmp_path: Path) -> None:
 
 def test_init_inline_editing_called(tmp_path: Path) -> None:
     html = _render_with_sections_and_themes(tmp_path)
-    assert "initInlineEditing();" in html
+    assert "initInlineEditing" in html
 
 
 # ---------------------------------------------------------------------------

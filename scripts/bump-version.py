@@ -18,6 +18,7 @@ INIT_FILE = ROOT / "bristlenose" / "__init__.py"
 MAN_FILE = ROOT / "bristlenose" / "data" / "bristlenose.1"
 
 
+
 def get_current_version() -> str:
     """Read current version from __init__.py."""
     text = INIT_FILE.read_text()

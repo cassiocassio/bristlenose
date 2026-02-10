@@ -138,7 +138,7 @@ function _setNonQuoteVisibility(display) {
   if (toc) toc.style.display = display;
 
   // Find Participants section by its h2 text.
-  var sections = document.querySelectorAll('article > section');
+  var sections = document.querySelectorAll('.bn-tab-panel section');
   for (var i = 0; i < sections.length; i++) {
     var h2 = sections[i].querySelector('h2');
     if (h2 && h2.textContent.trim() === 'Participants') {
@@ -274,8 +274,8 @@ function _matchesQuery(bq, query) {
  */
 function _restoreViewMode() {
   var bqs = document.querySelectorAll('.quote-group blockquote');
-  var sections = document.querySelectorAll('article > section');
-  var hrs = document.querySelectorAll('article > hr');
+  var sections = document.querySelectorAll('.bn-tab-panel section');
+  var hrs = document.querySelectorAll('.bn-tab-panel hr');
 
   if (currentViewMode === 'starred') {
     for (var i = 0; i < bqs.length; i++) {
@@ -328,7 +328,7 @@ function _restoreViewMode() {
  * blockquotes are hidden — the badge is the evidence indicator.
  */
 function _hideEmptySections() {
-  var sections = document.querySelectorAll('article > section');
+  var sections = document.querySelectorAll('.bn-tab-panel section');
   for (var i = 0; i < sections.length; i++) {
     var section = sections[i];
     var quoteGroups = section.querySelectorAll('.quote-group');

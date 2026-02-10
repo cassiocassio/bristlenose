@@ -89,8 +89,8 @@ function _applyView(view, btn, menu, items) {
   if (namesBtn) namesBtn.style.display = view === 'participants' ? '' : 'none';
 
   // Toggle section visibility.
-  var sections = document.querySelectorAll('article > section');
-  var hrs = document.querySelectorAll('article > hr');
+  var sections = document.querySelectorAll('.bn-tab-panel section');
+  var hrs = document.querySelectorAll('.bn-tab-panel hr');
 
   if (view === 'all') {
     _showAll(sections, hrs);

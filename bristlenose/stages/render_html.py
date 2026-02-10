@@ -71,6 +71,7 @@ _THEME_FILES: list[str] = [
     "organisms/sentiment-chart.css",
     "organisms/toolbar.css",
     "organisms/toc.css",
+    "organisms/global-nav.css",
     "organisms/codebook-panel.css",
     "templates/report.css",
     "molecules/transcript-annotations.css",
@@ -130,6 +131,9 @@ _JS_FILES: list[str] = [
     "js/names.js",
     "js/focus.js",
     "js/feedback.js",
+    "js/global-nav.js",
+    "js/transcript-names.js",
+    "js/transcript-annotations.js",
     "js/main.js",
 ]
 
@@ -263,12 +267,26 @@ def render_html(
         has_logo=paths.logo_file.exists(),
         has_dark_logo=paths.logo_dark_file.exists(),
         project_name=_esc(project_name),
-        doc_title="Research report",
+        doc_title="",
         meta_right=meta_right,
     ))
 
-    # --- Toolbar ---
-    _w(_jinja_env.get_template("toolbar.html").render())
+    # --- Global Navigation ---
+    _w(_jinja_env.get_template("global_nav.html").render())
+
+    # --- Project tab (placeholder) ---
+    _w('<div class="bn-tab-panel active" data-tab="project" role="tabpanel">')
+    _w("<h2>Project</h2>")
+    _w('<p class="description">Project summary coming soon.</p>')
+    _w("</div>")
+
+    # --- Sessions tab ---
+    _w('<div class="bn-tab-panel" data-tab="sessions" role="tabpanel">')
+    _w('<div class="bn-session-subnav" style="display:none">')
+    _w('<button class="bn-session-back">&larr; All sessions</button>')
+    _w('<span class="bn-session-label"></span>')
+    _w("</div>")
+    _w('<div class="bn-session-grid">')
 
     # --- Session Summary (at top for quick reference) ---
     if sessions:
@@ -326,6 +344,33 @@ def render_html(
         _w(_jinja_env.get_template("session_table.html").render(
             rows=session_rows,
         ).rstrip("\n"))
+
+    # Close session grid
+    _w("</div>")  # .bn-session-grid
+
+    # Inline transcripts (rendered as hidden divs, shown via JS drill-down)
+    inline_transcripts = _render_inline_transcripts(
+        sessions=sessions,
+        project_name=project_name,
+        output_dir=output_dir,
+        video_map=video_map,
+        people=people,
+        display_names=display_names,
+        transcripts=transcripts,
+        all_quotes=all_quotes,
+        screen_clusters=screen_clusters,
+        theme_groups=theme_groups,
+    )
+    for t_html in inline_transcripts:
+        _w(t_html)
+
+    _w("</div>")  # .bn-tab-panel[sessions]
+
+    # --- Quotes tab ---
+    _w('<div class="bn-tab-panel" data-tab="quotes" role="tabpanel">')
+
+    # --- Toolbar ---
+    _w(_jinja_env.get_template("toolbar.html").render())
 
     # --- Table of Contents ---
     section_toc: list[tuple[str, str]] = []
@@ -434,6 +479,78 @@ def render_html(
         coverage_html = _build_coverage_html(coverage)
         _w(coverage_html)
 
+    _w("</div>")  # .bn-tab-panel[quotes]
+
+    # --- Codebook tab ---
+    _w('<div class="bn-tab-panel" data-tab="codebook" role="tabpanel">')
+    _w('<h1>Codebook</h1>')
+    _w('<p class="codebook-description">Drag tags between groups to '
+       "reorganise. Click a tag to rename it. Changes are saved automatically "
+       "and sync across all open windows.</p>")
+    _w('<div class="codebook-grid" id="codebook-grid"></div>')
+    _w("</div>")  # .bn-tab-panel[codebook]
+
+    # --- Analysis tab (placeholder) ---
+    _w('<div class="bn-tab-panel" data-tab="analysis" role="tabpanel">')
+    _w("<h2>Analysis</h2>")
+    _w('<p class="description">Analysis features coming soon.</p>')
+    _w("</div>")  # .bn-tab-panel[analysis]
+
+    # --- Settings tab (placeholder) ---
+    _w('<div class="bn-tab-panel" data-tab="settings" role="tabpanel">')
+    _w("<h2>Settings</h2>")
+    _w('<p class="description">Report settings coming soon.</p>')
+    _w("</div>")  # .bn-tab-panel[settings]
+
+    # --- About tab ---
+    from bristlenose import __version__ as _ver
+    _w('<div class="bn-tab-panel" data-tab="about" role="tabpanel">')
+    _w('<div class="bn-about">')
+    _w("<h2>About Bristlenose</h2>")
+    _w(f'<p>Version {_esc(_ver)} &middot; '
+       '<a href="https://github.com/cassiocassio/bristlenose" '
+       'target="_blank" rel="noopener">GitHub</a></p>')
+    _w('<h3>Keyboard Shortcuts</h3>')
+    _w('<div class="help-columns">')
+    _w('  <div class="help-section">')
+    _w('    <h3>Navigation</h3>')
+    _w("    <dl>")
+    _w("      <dt><kbd>j</kbd> / <kbd>&darr;</kbd></dt><dd>Next quote</dd>")
+    _w("      <dt><kbd>k</kbd> / <kbd>&uarr;</kbd></dt><dd>Previous quote</dd>")
+    _w("    </dl>")
+    _w("  </div>")
+    _w('  <div class="help-section">')
+    _w('    <h3>Selection</h3>')
+    _w("    <dl>")
+    _w("      <dt><kbd>x</kbd></dt><dd>Toggle select</dd>")
+    _w("      <dt><kbd>Shift</kbd>+<kbd>j</kbd>/<kbd>k</kbd></dt><dd>Extend</dd>")
+    _w("    </dl>")
+    _w("  </div>")
+    _w('  <div class="help-section">')
+    _w('    <h3>Actions</h3>')
+    _w("    <dl>")
+    _w("      <dt><kbd>s</kbd></dt><dd>Star quote(s)</dd>")
+    _w("      <dt><kbd>h</kbd></dt><dd>Hide quote(s)</dd>")
+    _w("      <dt><kbd>t</kbd></dt><dd>Add tag(s)</dd>")
+    _w("      <dt><kbd>Enter</kbd></dt><dd>Play in video</dd>")
+    _w("    </dl>")
+    _w("  </div>")
+    _w('  <div class="help-section">')
+    _w('    <h3>Global</h3>')
+    _w("    <dl>")
+    _w("      <dt><kbd>/</kbd></dt><dd>Search</dd>")
+    _w("      <dt><kbd>?</kbd></dt><dd>This help</dd>")
+    _w("      <dt><kbd>Esc</kbd></dt><dd>Close / clear</dd>")
+    _w("    </dl>")
+    _w("  </div>")
+    _w("</div>")
+    _w("<hr>")
+    _w("<h3>Feedback</h3>")
+    _w('<p><a href="https://github.com/cassiocassio/bristlenose/issues/new" '
+       'target="_blank" rel="noopener">Report a bug</a></p>')
+    _w("</div>")  # .bn-about
+    _w("</div>")  # .bn-tab-panel[about]
+
     # --- Close ---
     _w("</article>")
     _w(_footer_html())
@@ -460,6 +577,26 @@ def render_html(
     # Feedback feature flag — set to true to enable the feedback widget.
     _w("var BRISTLENOSE_FEEDBACK = true;")
     _w("var BRISTLENOSE_FEEDBACK_URL = 'https://cassiocassio.co.uk/feedback.php';")
+
+    # Quote annotation data for inline transcript pages (transcript-annotations.js).
+    # Build a combined quote map for all sessions.
+    _all_quote_map = _build_transcript_quote_map(
+        all_quotes, screen_clusters, theme_groups
+    )
+    _combined_qmap: dict[str, dict[str, object]] = {}
+    for _sid_key, _anns in _all_quote_map.items():
+        for _ann in _anns:
+            _combined_qmap[_ann.quote_id] = {
+                "label": _ann.label,
+                "type": _ann.label_type,
+                "sentiment": _ann.sentiment,
+                "pid": _ann.participant_id,
+            }
+    _w(f"var BRISTLENOSE_QUOTE_MAP = {json.dumps(_combined_qmap)};")
+    _w("var BRISTLENOSE_REPORT_URL = '';")
+
+    # Player popup URL.
+    _w("var BRISTLENOSE_PLAYER_URL = 'assets/bristlenose-player.html';")
 
     _w(_get_report_js())
     _w("})();")
@@ -1079,6 +1216,167 @@ def _highlight_quoted_text(
         parts.append(_esc(segment_text[pos:]))
 
     return "".join(parts)
+
+
+# ---------------------------------------------------------------------------
+# Inline transcript rendering (for Sessions tab)
+# ---------------------------------------------------------------------------
+
+
+def _render_inline_transcripts(
+    sessions: list[InputSession],
+    project_name: str,
+    output_dir: Path,
+    video_map: dict[str, str] | None,
+    people: PeopleFile | None,
+    display_names: dict[str, str] | None,
+    transcripts: list[FullTranscript] | None,
+    all_quotes: list[ExtractedQuote] | None,
+    screen_clusters: list[ScreenCluster] | None,
+    theme_groups: list[ThemeGroup] | None,
+) -> list[str]:
+    """Render transcript content as inline divs for the Sessions tab panel.
+
+    Returns a list of HTML strings (one per transcript) to be appended
+    inside the Sessions tab panel, after the session grid.
+    """
+    if not transcripts:
+        return []
+
+    quote_map = _build_transcript_quote_map(all_quotes, screen_clusters, theme_groups)
+    parts: list[str] = []
+
+    for transcript in transcripts:
+        html = _render_inline_transcript(
+            transcript=transcript,
+            video_map=video_map,
+            people=people,
+            quote_map=quote_map,
+        )
+        parts.append(html)
+
+    return parts
+
+
+def _render_inline_transcript(
+    transcript: FullTranscript,
+    video_map: dict[str, str] | None,
+    people: PeopleFile | None,
+    quote_map: _QuoteMap | None,
+) -> str:
+    """Render a single transcript as an inline HTML div (not a standalone page)."""
+    pid = transcript.participant_id
+    sid = transcript.session_id
+
+    # Collect speaker codes
+    seen_codes: dict[str, None] = {}
+    for seg in transcript.segments:
+        code = seg.speaker_code or pid
+        if code not in seen_codes:
+            seen_codes[code] = None
+    speaker_codes = list(seen_codes)
+
+    def _code_sort_key(c: str) -> tuple[int, int]:
+        prefix_order = {"m": 0, "p": 1, "o": 2}
+        order = prefix_order.get(c[0], 3) if c else 3
+        num = int(c[1:]) if len(c) > 1 and c[1:].isdigit() else 0
+        return (order, num)
+
+    speaker_codes.sort(key=_code_sort_key)
+
+    session_num = sid[1:] if len(sid) > 1 and sid[0] in "sp" and sid[1:].isdigit() else sid
+
+    # Build label for sub-nav
+    code_labels: list[str] = []
+    for code in speaker_codes:
+        name = _resolve_speaker_name(code, people, None)
+        if name != code:
+            code_labels.append(f"{code} {name}")
+        else:
+            code_labels.append(code)
+    session_label = f"Session {_esc(session_num)}: {', '.join(_esc(lb) for lb in code_labels)}"
+
+    # HTML spans for heading
+    code_spans: list[str] = []
+    for code in speaker_codes:
+        name = _resolve_speaker_name(code, people, None)
+        label = f"{_esc(code)} {_esc(name)}" if name != code else _esc(code)
+        code_spans.append(
+            f'<span class="heading-speaker" data-participant="{_esc(code)}">'
+            f"{label}</span>"
+        )
+
+    p: list[str] = []
+    w = p.append
+
+    heading_html = f"Session {_esc(session_num)}: {', '.join(code_spans)}"
+    w(
+        f'<div class="bn-session-page" data-session="{_esc(sid)}" '
+        f'data-session-label="{_esc(session_label)}" style="display:none">'
+    )
+    w(f"<h1>{heading_html}</h1>")
+
+    # Transcript segments
+    w('<section class="transcript-body">')
+    has_media = video_map is not None and sid in (video_map or {})
+    session_annotations = (quote_map or {}).get(sid, [])
+
+    for seg in transcript.segments:
+        tc = format_timecode(seg.start_time)
+        anchor = f"t-{sid}-{int(seg.start_time)}"
+        code = seg.speaker_code or pid
+        is_moderator = code.startswith("m")
+
+        seg_quotes = [
+            a for a in session_annotations
+            if a.start_tc <= seg.start_time <= a.end_tc
+            and a.participant_id == code
+        ]
+        is_quoted = bool(seg_quotes) and not is_moderator
+
+        classes = ["transcript-segment"]
+        if is_moderator:
+            classes.append("segment-moderator")
+        if is_quoted:
+            classes.append("segment-quoted")
+        cls_str = " ".join(classes)
+
+        data_attrs = (
+            f' data-participant="{_esc(code)}"'
+            f' data-start-seconds="{seg.start_time}"'
+            f' data-end-seconds="{seg.end_time}"'
+        )
+        if is_quoted:
+            qids = " ".join(a.quote_id for a in seg_quotes)
+            data_attrs += f' data-quote-ids="{_esc(qids)}"'
+
+        w(f'<div class="{cls_str}" id="{anchor}"{data_attrs}>')
+        if has_media:
+            w(
+                f'<a href="#" class="timecode" '
+                f'data-participant="{_esc(pid)}" '
+                f'data-seconds="{seg.start_time}">{_tc_brackets(tc)}</a>'
+            )
+        else:
+            w(f'<span class="timecode">{_tc_brackets(tc)}</span>')
+        w('<div class="segment-body">')
+        w(
+            f'<span class="segment-speaker" data-participant="{_esc(code)}">'
+            f"{_esc(code)}:</span>"
+        )
+
+        seg_text = seg.text
+        if is_quoted:
+            seg_text = _highlight_quoted_text(seg_text, seg_quotes)
+            w(f" {seg_text}")
+        else:
+            w(f" {_esc(seg_text)}")
+
+        w("</div></div>")
+
+    w("</section>")
+    w("</div>")  # .bn-session-page
+    return "\n".join(p)
 
 
 # ---------------------------------------------------------------------------

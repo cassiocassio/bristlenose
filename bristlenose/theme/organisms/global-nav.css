@@ -1,0 +1,107 @@
+/* Organism: global-nav — top-level tab bar for report navigation */
+
+.bn-global-nav {
+    display: flex;
+    align-items: stretch;
+    gap: 0;
+    border-bottom: 1px solid var(--bn-colour-border);
+    margin-bottom: var(--bn-space-lg);
+}
+
+.bn-tab {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--bn-space-sm);
+    padding: 0.6rem 1rem;
+    background: none;
+    border: none;
+    border-bottom: 3px solid transparent;
+    font-family: var(--bn-font-body);
+    font-size: 0.88rem;
+    font-weight: 500;
+    color: var(--bn-colour-muted);
+    cursor: pointer;
+    transition: color var(--bn-transition-fast), border-color var(--bn-transition-fast);
+    white-space: nowrap;
+}
+
+.bn-tab:hover {
+    color: var(--bn-colour-text);
+}
+
+.bn-tab.active {
+    color: var(--bn-colour-accent);
+    border-bottom-color: var(--bn-colour-accent);
+}
+
+/* Spacer pushes icon tabs to the right */
+.bn-tab-spacer {
+    flex: 1;
+}
+
+/* Icon-only utility tabs (Settings, About) */
+.bn-tab-icon {
+    padding: 0.6rem 0.75rem;
+}
+
+.bn-tab-icon svg {
+    display: block;
+}
+
+/* Tab panels — only the active one is visible */
+.bn-tab-panel {
+    display: none;
+}
+
+.bn-tab-panel.active {
+    display: block;
+}
+
+/* Session sub-navigation (inside Sessions tab) */
+.bn-session-subnav {
+    display: flex;
+    align-items: center;
+    gap: var(--bn-space-md);
+    padding: 0.5rem 0;
+    margin-bottom: var(--bn-space-md);
+    border-bottom: 1px solid var(--bn-colour-border);
+}
+
+.bn-session-back {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--bn-space-sm);
+    background: none;
+    border: none;
+    font-family: var(--bn-font-body);
+    font-size: 0.88rem;
+    color: var(--bn-colour-accent);
+    cursor: pointer;
+    padding: 0.3rem 0.5rem;
+    border-radius: var(--bn-radius-md);
+    transition: background var(--bn-transition-fast);
+}
+
+.bn-session-back:hover {
+    background: var(--bn-hover-bg);
+}
+
+.bn-session-label {
+    font-size: 0.88rem;
+    font-weight: 600;
+    color: var(--bn-colour-text);
+}
+
+/* Responsive: horizontal scroll on narrow viewports */
+@media (max-width: 600px) {
+    .bn-global-nav {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .bn-tab {
+        font-size: 0.82rem;
+        padding: 0.5rem 0.75rem;
+    }
+}

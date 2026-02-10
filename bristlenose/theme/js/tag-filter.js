@@ -515,8 +515,8 @@ function _restoreQuotesForViewMode() {
   }
 
   // Restore sections.
-  var sections = document.querySelectorAll('article > section');
-  var hrs = document.querySelectorAll('article > hr');
+  var sections = document.querySelectorAll('.bn-tab-panel section');
+  var hrs = document.querySelectorAll('.bn-tab-panel hr');
   for (var i = 0; i < sections.length; i++) sections[i].style.display = '';
   for (var i = 0; i < hrs.length; i++) hrs[i].style.display = '';
 

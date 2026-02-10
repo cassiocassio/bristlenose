@@ -23,6 +23,7 @@ from bristlenose.models import (
     PeopleFile,
     QuoteIntent,
     ScreenCluster,
+    Sentiment,
     ThemeGroup,
     format_timecode,
 )
@@ -274,10 +275,20 @@ def render_html(
     # --- Global Navigation ---
     _w(_jinja_env.get_template("global_nav.html").render())
 
-    # --- Project tab (placeholder) ---
+    # --- Project tab ---
     _w('<div class="bn-tab-panel active" data-tab="project" id="panel-project" role="tabpanel" aria-label="Project">')
-    _w("<h2>Project</h2>")
-    _w('<p class="description">Project summary coming soon.</p>')
+    _w(_render_project_tab(
+        project_name=project_name,
+        sessions=sessions,
+        screen_clusters=screen_clusters,
+        theme_groups=theme_groups,
+        all_quotes=all_quotes,
+        people=people,
+        display_names=display_names,
+        video_map=video_map,
+        transcripts=transcripts,
+        now=now,
+    ))
     _w("</div>")
 
     # --- Sessions tab ---
@@ -290,57 +301,9 @@ def render_html(
 
     # --- Session Summary (at top for quick reference) ---
     if sessions:
-        # Build session_id → sorted speaker codes from people entries.
-        _session_codes: dict[str, list[str]] = {}
-        if people and people.participants:
-            for code, entry in people.participants.items():
-                sid_key = entry.computed.session_id
-                if sid_key:
-                    _session_codes.setdefault(sid_key, []).append(code)
-            # Sort each list: m-codes first, then p-codes, then o-codes.
-            _prefix_order = {"m": 0, "p": 1, "o": 2}
-            for codes in _session_codes.values():
-                codes.sort(key=lambda c: (
-                    _prefix_order.get(c[0], 3) if c else 3,
-                    int(c[1:]) if len(c) > 1 and c[1:].isdigit() else 0,
-                ))
-
-        session_rows: list[dict[str, str]] = []
-        for session in sessions:
-            duration = _session_duration(session, people)
-            sid = session.session_id
-            sid_esc = _esc(sid)
-            session_num = sid[1:] if len(sid) > 1 and sid[1:].isdigit() else sid
-            start = _esc(format_finder_date(session.session_date, now=now))
-            if session.files:
-                source_name = _esc(session.files[0].path.name)
-                if video_map and sid in video_map:
-                    source = (
-                        f'<a href="#" class="timecode" '
-                        f'data-participant="{_esc(session.participant_id)}" '
-                        f'data-seconds="0" data-end-seconds="0">'
-                        f'{source_name}</a>'
-                    )
-                else:
-                    file_uri = session.files[0].path.resolve().as_uri()
-                    source = f'<a href="{file_uri}">{source_name}</a>'
-            else:
-                source = "&mdash;"
-            # Speakers column: comma-separated codes with data-participant spans.
-            codes = _session_codes.get(sid, [session.participant_id])
-            speaker_spans = []
-            for code in codes:
-                name = _resolve_speaker_name(code, people, display_names)
-                speaker_spans.append(
-                    f'<span class="speaker-code" '
-                    f'data-participant="{_esc(code)}">'
-                    f"{_esc(name)}</span>"
-                )
-            session_rows.append({
-                "sid": sid_esc, "num": _esc(session_num),
-                "speakers": ", ".join(speaker_spans),
-                "start": start, "duration": duration, "source": source,
-            })
+        session_rows = _build_session_rows(
+            sessions, people, display_names, video_map, now,
+        )
         _w(_jinja_env.get_template("session_table.html").render(
             rows=session_rows,
         ).rstrip("\n"))
@@ -712,6 +675,434 @@ class _QuoteAnnotation:
         self.label = label
         self.label_type = label_type
         self.sentiment = sentiment
+
+
+# ---------------------------------------------------------------------------
+# Project tab (dashboard)
+# ---------------------------------------------------------------------------
+
+
+def _build_session_rows(
+    sessions: list[InputSession],
+    people: PeopleFile | None,
+    display_names: dict[str, str] | None,
+    video_map: dict[str, str] | None,
+    now: datetime,
+) -> list[dict[str, str]]:
+    """Build session-table row dicts (reused by Sessions tab and Project tab)."""
+    # Build session_id → sorted speaker codes from people entries.
+    session_codes: dict[str, list[str]] = {}
+    if people and people.participants:
+        for code, entry in people.participants.items():
+            sid_key = entry.computed.session_id
+            if sid_key:
+                session_codes.setdefault(sid_key, []).append(code)
+        prefix_order = {"m": 0, "p": 1, "o": 2}
+        for codes in session_codes.values():
+            codes.sort(key=lambda c: (
+                prefix_order.get(c[0], 3) if c else 3,
+                int(c[1:]) if len(c) > 1 and c[1:].isdigit() else 0,
+            ))
+
+    rows: list[dict[str, str]] = []
+    for session in sessions:
+        duration = _session_duration(session, people)
+        sid = session.session_id
+        sid_esc = _esc(sid)
+        session_num = sid[1:] if len(sid) > 1 and sid[1:].isdigit() else sid
+        start = _esc(format_finder_date(session.session_date, now=now))
+        if session.files:
+            source_name = _esc(session.files[0].path.name)
+            if video_map and sid in video_map:
+                source = (
+                    f'<a href="#" class="timecode" '
+                    f'data-participant="{_esc(session.participant_id)}" '
+                    f'data-seconds="0" data-end-seconds="0">'
+                    f'{source_name}</a>'
+                )
+            else:
+                file_uri = session.files[0].path.resolve().as_uri()
+                source = f'<a href="{file_uri}">{source_name}</a>'
+        else:
+            source = "&mdash;"
+        codes = session_codes.get(sid, [session.participant_id])
+        speaker_spans = []
+        for code in codes:
+            name = _resolve_speaker_name(code, people, display_names)
+            speaker_spans.append(
+                f'<span class="speaker-code" '
+                f'data-participant="{_esc(code)}">'
+                f"{_esc(name)}</span>"
+            )
+        rows.append({
+            "sid": sid_esc, "num": _esc(session_num),
+            "speakers": ", ".join(speaker_spans),
+            "start": start, "duration": duration, "source": source,
+        })
+    return rows
+
+
+# Sentiment polarity buckets for diversity mixing.
+_POSITIVE_SENTIMENTS = frozenset({
+    Sentiment.SATISFACTION, Sentiment.DELIGHT, Sentiment.CONFIDENCE,
+})
+_NEGATIVE_SENTIMENTS = frozenset({
+    Sentiment.FRUSTRATION, Sentiment.CONFUSION, Sentiment.DOUBT,
+})
+
+
+def _pick_featured_quotes(
+    all_quotes: list[ExtractedQuote],
+    n: int = 3,
+) -> list[ExtractedQuote]:
+    """Select the N most interesting quotes for the dashboard.
+
+    Scoring algorithm
+    ─────────────────
+    Each quote gets a numeric score based on available server-side data:
+
+      • Intensity:  +3 strong (intensity=3), +2 moderate (2), +1 mild (1)
+      • Sentiment:  +2 for friction sentiments (frustration, confusion, doubt)
+                    +2 for delight or surprise
+                    +1 for satisfaction or confidence
+      • Context:    +1 if researcher_context is present (editorial enrichment)
+      • Length:     +1 per 10 words above 12-word minimum (capped at +3)
+
+    After scoring, the top candidates are diversified:
+      1. Must be from different participants (rotate through participants).
+      2. Prefer a mix of sentiment polarities (positive / negative / surprise).
+      3. If fewer than 3 qualify after filters, return whatever we have.
+
+    Client-side JS will further adjust: boost starred quotes, swap out hidden
+    ones for the next-best alternative.
+    """
+    if not all_quotes:
+        return []
+
+    # Filter: prefer quotes between 12–33 words (concise, readable in a card).
+    candidates = [q for q in all_quotes if 12 <= len(q.text.split()) <= 33]
+    if not candidates:
+        # Relax: accept any quote ≥ 12 words.
+        candidates = [q for q in all_quotes if len(q.text.split()) >= 12]
+    if not candidates:
+        candidates = list(all_quotes)  # fall back to all if none qualify
+
+    def _score(q: ExtractedQuote) -> float:
+        s = 0.0
+        # Intensity bonus.
+        s += min(q.intensity, 3)
+        # Sentiment bonus.
+        if q.sentiment in _NEGATIVE_SENTIMENTS:
+            s += 2
+        elif q.sentiment == Sentiment.SURPRISE:
+            s += 2
+        elif q.sentiment == Sentiment.DELIGHT:
+            s += 2
+        elif q.sentiment in _POSITIVE_SENTIMENTS:
+            s += 1
+        # Researcher context.
+        if q.researcher_context:
+            s += 1
+        # Length: sweet spot is 12–33 words; penalise longer quotes.
+        word_count = len(q.text.split())
+        if word_count > 33:
+            s -= min((word_count - 33) / 10, 2.0)
+        return s
+
+    # Sort by score descending, then by timecode for stability.
+    scored = sorted(
+        candidates,
+        key=lambda q: (-_score(q), q.start_timecode),
+    )
+
+    # Diversify: pick from different participants and sentiment polarities.
+    picked: list[ExtractedQuote] = []
+    used_pids: set[str] = set()
+    used_polarities: set[str] = set()  # "positive", "negative", "surprise"
+
+    def _polarity(q: ExtractedQuote) -> str:
+        if q.sentiment in _POSITIVE_SENTIMENTS:
+            return "positive"
+        if q.sentiment in _NEGATIVE_SENTIMENTS:
+            return "negative"
+        if q.sentiment == Sentiment.SURPRISE:
+            return "surprise"
+        return "neutral"
+
+    # Pass 1: pick one quote per participant, preferring different polarities.
+    for q in scored:
+        if len(picked) >= n:
+            break
+        pid = q.participant_id
+        pol = _polarity(q)
+        if pid not in used_pids and pol not in used_polarities:
+            picked.append(q)
+            used_pids.add(pid)
+            used_polarities.add(pol)
+
+    # Pass 2: relax polarity constraint — still require different participants.
+    if len(picked) < n:
+        for q in scored:
+            if len(picked) >= n:
+                break
+            if q in picked:
+                continue
+            if q.participant_id not in used_pids:
+                picked.append(q)
+                used_pids.add(q.participant_id)
+
+    # Pass 3: relax all constraints — just pick highest-scoring remaining.
+    if len(picked) < n:
+        for q in scored:
+            if len(picked) >= n:
+                break
+            if q not in picked:
+                picked.append(q)
+
+    return picked[:n]
+
+
+def _render_featured_quote(
+    quote: ExtractedQuote,
+    video_map: dict[str, str] | None,
+    display_names: dict[str, str] | None,
+    people: PeopleFile | None,
+    rank: int,
+) -> str:
+    """Render a single featured quote card for the dashboard."""
+    quote_id = f"q-{quote.participant_id}-{int(quote.start_timecode)}"
+    tc = format_timecode(quote.start_timecode)
+
+    # Timecode link.
+    if video_map and quote.participant_id in video_map:
+        tc_html = (
+            f'<a href="#" class="timecode" '
+            f'data-participant="{_esc(quote.participant_id)}" '
+            f'data-seconds="{quote.start_timecode}" '
+            f'data-end-seconds="{quote.end_timecode}">{_tc_brackets(tc)}</a>'
+        )
+    else:
+        tc_html = f'<span class="timecode">{_tc_brackets(tc)}</span>'
+
+    # Speaker name.
+    speaker_name = _resolve_speaker_name(
+        quote.participant_id, people, display_names,
+    )
+
+    # Speaker link → navigates to Sessions tab.
+    pid_esc = _esc(quote.participant_id)
+    sid_esc = _esc(quote.session_id) if quote.session_id else pid_esc
+    anchor = f"t-{int(quote.start_timecode)}"
+    speaker_link = (
+        f'<a href="#" class="speaker-link" data-nav-session="{sid_esc}"'
+        f' data-nav-anchor="{anchor}">{_esc(speaker_name)}</a>'
+    )
+
+    # AI badge (sentiment only — lightweight).
+    badge_html = ""
+    if quote.sentiment is not None:
+        css_class = f"badge badge-ai badge-{quote.sentiment.value}"
+        badge_html = (
+            f'<span class="{css_class}" data-badge-type="ai">'
+            f"{_esc(quote.sentiment.value)}</span>"
+        )
+
+    # Context prefix.
+    ctx = ""
+    if quote.researcher_context:
+        ctx = f'<span class="context">[{_esc(quote.researcher_context)}]</span>'
+
+    hidden = ' style="display:none"' if rank >= 3 else ""
+    return (
+        f'<div class="bn-featured-quote" data-quote-id="{quote_id}"'
+        f' data-rank="{rank}"{hidden}>'
+        f"{ctx}"
+        f'<span class="quote-text">\u201c{_esc(quote.text)}\u201d</span>'
+        f'<div class="bn-featured-footer">'
+        f"{tc_html}"
+        f'<span class="speaker">&mdash;&nbsp;{speaker_link}</span>'
+        f"{badge_html}"
+        f"</div>"
+        f"</div>"
+    )
+
+
+def _render_project_tab(
+    project_name: str,
+    sessions: list[InputSession],
+    screen_clusters: list[ScreenCluster],
+    theme_groups: list[ThemeGroup],
+    all_quotes: list[ExtractedQuote] | None,
+    people: PeopleFile | None,
+    display_names: dict[str, str] | None,
+    video_map: dict[str, str] | None,
+    transcripts: list[FullTranscript] | None,
+    now: datetime,
+) -> str:
+    """Render the Project tab as a dashboard with tessellated panes."""
+    parts: list[str] = []
+    _w = parts.append
+
+    # --- Compute dashboard metrics ---
+    n_quotes = len(all_quotes) if all_quotes else 0
+    n_sections = len(screen_clusters)
+    n_themes = len(theme_groups)
+
+    # Total duration (seconds) across all sessions.
+    total_duration_s = 0.0
+    if people and people.participants:
+        # Use max duration per session (avoids double-counting multi-speaker).
+        _dur_by_session: dict[str, float] = {}
+        for entry in people.participants.values():
+            sid = entry.computed.session_id
+            if sid and entry.computed.duration_seconds > 0:
+                _dur_by_session[sid] = max(
+                    _dur_by_session.get(sid, 0), entry.computed.duration_seconds,
+                )
+        total_duration_s = sum(_dur_by_session.values())
+    if total_duration_s == 0:
+        for s in sessions:
+            for f in s.files:
+                if f.duration_seconds is not None:
+                    total_duration_s += f.duration_seconds
+
+    # Total words across all participants.
+    total_words = 0
+    if people and people.participants:
+        total_words = sum(
+            e.computed.words_spoken for e in people.participants.values()
+        )
+
+    # AI-tagged quotes (quotes with a non-null sentiment).
+    n_ai_tagged = 0
+    if all_quotes:
+        n_ai_tagged = sum(1 for q in all_quotes if q.sentiment is not None)
+
+    # Coverage percentage.
+    coverage_pct: int | None = None
+    if transcripts and all_quotes:
+        coverage = calculate_coverage(transcripts, all_quotes)
+        coverage_pct = coverage.pct_in_report
+
+    # Pick up to 9 featured-quote candidates so JS can swap hidden/unstarred.
+    featured_pool = _pick_featured_quotes(all_quotes or [], n=9)
+
+    _w('<div class="bn-dashboard">')
+
+    # --- 1. Stats row (full width) ---
+    _w('<div class="bn-dashboard-pane bn-dashboard-full">')
+    _w('<div class="bn-project-stats">')
+
+    # Duration + words.
+    if total_duration_s > 0:
+        _w(f'<div class="bn-project-stat">'
+           f'<span class="bn-project-stat-value">'
+           f'{format_timecode(total_duration_s)}</span>'
+           f'<span class="bn-project-stat-label">of audio</span></div>')
+    if total_words > 0:
+        _w(f'<div class="bn-project-stat">'
+           f'<span class="bn-project-stat-value">'
+           f'{total_words:,}</span>'
+           f'<span class="bn-project-stat-label">words</span></div>')
+
+    # Quotes, sections, themes — separate cards.
+    _w(f'<div class="bn-project-stat">'
+       f'<span class="bn-project-stat-value">{n_quotes}</span>'
+       f'<span class="bn-project-stat-label">'
+       f"quote{'s' if n_quotes != 1 else ''}"
+       f'</span></div>')
+    if n_sections:
+        _w(f'<div class="bn-project-stat">'
+           f'<span class="bn-project-stat-value">{n_sections}</span>'
+           f'<span class="bn-project-stat-label">'
+           f"section{'s' if n_sections != 1 else ''}"
+           f'</span></div>')
+    if n_themes:
+        _w(f'<div class="bn-project-stat">'
+           f'<span class="bn-project-stat-value">{n_themes}</span>'
+           f'<span class="bn-project-stat-label">'
+           f"theme{'s' if n_themes != 1 else ''}"
+           f'</span></div>')
+
+    # AI-tagged.
+    if n_ai_tagged:
+        _w(f'<div class="bn-project-stat">'
+           f'<span class="bn-project-stat-value">{n_ai_tagged}</span>'
+           f'<span class="bn-project-stat-label">AI\u2011tagged</span></div>')
+
+    # User tags — JS-populated from localStorage.
+    _w('<div class="bn-project-stat" id="dashboard-user-tags-stat" style="display:none">')
+    _w('<span class="bn-project-stat-value" id="dashboard-user-tags-value"></span>')
+    _w('<span class="bn-project-stat-label" id="dashboard-user-tags-label"></span>')
+    _w("</div>")
+
+    # Coverage.
+    if coverage_pct is not None:
+        _w(f'<div class="bn-project-stat">'
+           f'<span class="bn-project-stat-value">{coverage_pct}%</span>'
+           f'<span class="bn-project-stat-label">coverage</span></div>')
+
+    _w("</div>")  # .bn-project-stats
+    _w("</div>")  # .bn-dashboard-pane (stats)
+
+    # --- 2. Sessions (full width) ---
+    if sessions:
+        session_rows = _build_session_rows(
+            sessions, people, display_names, video_map, now,
+        )
+        _w('<div class="bn-dashboard-pane bn-dashboard-full">')
+        _w(_jinja_env.get_template("session_table.html").render(
+            rows=session_rows,
+        ).rstrip("\n"))
+        _w("</div>")
+
+    # --- 3. Featured quotes (3 × 1/3 width) ---
+    if featured_pool:
+        _w('<div class="bn-featured-row bn-dashboard-full"'
+           ' data-visible-count="3">')
+        for rank, fq in enumerate(featured_pool):
+            _w(_render_featured_quote(
+                fq, video_map, display_names, people, rank,
+            ))
+        _w("</div>")
+
+    # --- 4. Sections + Themes row (1/2 + 1/2) ---
+    if screen_clusters:
+        _w('<div class="bn-dashboard-pane">')
+        _w("<h3>Sections</h3>")
+        _w('<table class="bn-dashboard-list">')
+        _w("<thead><tr><th>Section</th><th>Quotes</th></tr></thead>")
+        _w("<tbody>")
+        for cluster in screen_clusters:
+            _w(f"<tr><td>{_esc(cluster.screen_label)}</td>"
+               f"<td>{len(cluster.quotes)}</td></tr>")
+        _w("</tbody></table>")
+        _w("</div>")
+
+    if theme_groups:
+        _w('<div class="bn-dashboard-pane">')
+        _w("<h3>Themes</h3>")
+        _w('<table class="bn-dashboard-list">')
+        _w("<thead><tr><th>Theme</th><th>Quotes</th></tr></thead>")
+        _w("<tbody>")
+        for theme in theme_groups:
+            _w(f"<tr><td>{_esc(theme.theme_label)}</td>"
+               f"<td>{len(theme.quotes)}</td></tr>")
+        _w("</tbody></table>")
+        _w("</div>")
+
+    # --- 5. Sentiment ---
+    if all_quotes:
+        sentiment_html = _build_sentiment_html(all_quotes)
+        if sentiment_html:
+            _w('<div class="bn-dashboard-pane bn-dashboard-full">')
+            _w("<h3>Sentiment</h3>")
+            _w(sentiment_html)
+            _w("</div>")
+
+    _w("</div>")  # .bn-dashboard
+
+    return "\n".join(parts)
 
 
 # Keyed by session_id, contains list of annotations for that session.

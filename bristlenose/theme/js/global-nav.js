@@ -61,6 +61,9 @@ function initGlobalNav() {
 
   // --- Speaker links (navigate to Sessions tab + drill into session) ---
   _initSpeakerLinks();
+
+  // --- Featured quotes reshuffle based on stars/hidden ---
+  _reshuffleFeaturedQuotes();
 }
 
 /**
@@ -178,4 +181,62 @@ function _showGrid() {
   for (var i = 0; i < _sessPages.length; i++) {
     _sessPages[i].style.display = 'none';
   }
+}
+
+/**
+ * Reshuffle featured quotes on the Project tab based on localStorage state.
+ *
+ * Server-side rendering picks the top 3 quotes by score and renders up to 9
+ * backup candidates (hidden via inline display:none).  This function:
+ *   1. Boosts starred quotes (moves them to the front).
+ *   2. Removes hidden quotes and promotes the next backup.
+ *   3. Ensures only 3 cards are visible at a time.
+ */
+function _reshuffleFeaturedQuotes() {
+  var row = document.querySelector('.bn-featured-row');
+  if (!row) return;
+
+  var cards = row.querySelectorAll('.bn-featured-quote');
+  if (!cards.length) return;
+
+  var starred = {};
+  var hidden = {};
+  try { starred = JSON.parse(localStorage.getItem('bristlenose-starred') || '{}'); } catch (_e) { /* empty */ }
+  try { hidden = JSON.parse(localStorage.getItem('bristlenose-hidden') || '{}'); } catch (_e) { /* empty */ }
+
+  // Build ordered list: starred first (by original rank), then unstarred.
+  var starredCards = [];
+  var normalCards = [];
+  var hiddenCards = [];
+
+  for (var i = 0; i < cards.length; i++) {
+    var qid = cards[i].getAttribute('data-quote-id');
+    if (hidden[qid]) {
+      hiddenCards.push(cards[i]);
+    } else if (starred[qid]) {
+      starredCards.push(cards[i]);
+    } else {
+      normalCards.push(cards[i]);
+    }
+  }
+
+  // Merge: starred first, then normal (hidden excluded).
+  var ordered = starredCards.concat(normalCards);
+
+  // Show top 3, hide the rest.
+  var visibleCount = parseInt(row.getAttribute('data-visible-count'), 10) || 3;
+  for (var j = 0; j < ordered.length; j++) {
+    ordered[j].style.display = j < visibleCount ? '' : 'none';
+  }
+  for (var k = 0; k < hiddenCards.length; k++) {
+    hiddenCards[k].style.display = 'none';
+  }
+
+  // If nothing is visible, hide the entire row.
+  var anyVisible = false;
+  for (var m = 0; m < ordered.length && m < visibleCount; m++) {
+    anyVisible = true;
+    break;
+  }
+  row.style.display = anyVisible ? '' : 'none';
 }

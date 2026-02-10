@@ -235,6 +235,7 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 **Started:** 9 Feb 2026
 **Worktree:** `/Users/cassio/Code/bristlenose_branch navigation/`
 **Remote:** `origin/navigation`
+**Merge plan:** `docs/merge-plan-navigation.md`
 
 **What it does:** Global tab bar navigation for the HTML report. 7 tabs (Project, Sessions, Quotes, Codebook, Analysis, Settings, About). Sessions tab has grid → inline transcript drill-down. All existing report content moved into Quotes tab. Speaker links in quote cards cross-navigate to Sessions → session → timecode. Full ARIA/accessibility, CSS with responsive horizontal scroll.
 

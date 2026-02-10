@@ -54,6 +54,41 @@ function persistUserTags(tags) {
   // Re-apply tag filter to account for added/removed tags.
   if (typeof _applyTagFilter === 'function') _applyTagFilter();
   if (typeof _updateTagFilterButton === 'function') _updateTagFilterButton();
+  // Update dashboard stat card.
+  _updateDashboardTagsStat();
+}
+
+/**
+ * Update the "user tags in N groups" stat card on the Project dashboard.
+ * Reads the live userTags map and codebook group count.
+ */
+function _updateDashboardTagsStat() {
+  var el = document.getElementById('dashboard-user-tags-stat');
+  if (!el) return;
+  var valEl = document.getElementById('dashboard-user-tags-value');
+  var lblEl = document.getElementById('dashboard-user-tags-label');
+  if (!valEl || !lblEl) return;
+
+  // Count distinct tag names across all quotes.
+  var tagSet = {};
+  Object.keys(userTags).forEach(function (qid) {
+    (userTags[qid] || []).forEach(function (t) { tagSet[t] = true; });
+  });
+  var nTags = Object.keys(tagSet).length;
+  if (nTags === 0) { el.style.display = 'none'; return; }
+
+  // Count codebook groups (if codebook module loaded).
+  var nGroups = 0;
+  if (typeof codebook !== 'undefined' && codebook.groups) {
+    nGroups = codebook.groups.length;
+  }
+  var groupLine = nGroups > 0
+    ? '<br>' + nGroups + '\u00a0group' + (nGroups !== 1 ? 's' : '')
+    : '';
+
+  valEl.textContent = nTags;
+  lblEl.innerHTML = 'user tag' + (nTags !== 1 ? 's' : '') + groupLine;
+  el.style.display = '';
 }
 
 /**
@@ -595,4 +630,7 @@ function initTags() {
       closeTagInput(false);
     }
   });
+
+  // Populate dashboard stat card on initial load.
+  _updateDashboardTagsStat();
 }

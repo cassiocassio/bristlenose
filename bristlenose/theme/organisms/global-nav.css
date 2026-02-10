@@ -93,7 +93,113 @@
     color: var(--bn-colour-text);
 }
 
-/* Responsive: horizontal scroll on narrow viewports */
+/* Project tab: dashboard grid */
+.bn-dashboard {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--bn-space-lg);
+}
+
+.bn-dashboard-pane {
+    border: 1px solid var(--bn-colour-border);
+    border-radius: var(--bn-radius-lg);
+    padding: var(--bn-space-lg);
+    min-width: 0; /* prevent grid blowout from wide tables */
+    overflow-x: auto;
+}
+
+.bn-dashboard-pane h3 {
+    margin-top: 0;
+}
+
+/* Full-width pane spans both columns */
+.bn-dashboard-full {
+    grid-column: 1 / -1;
+}
+
+/* Compact list tables (sections/themes) — no row borders */
+.bn-dashboard-list td {
+    border-bottom: none;
+    padding: 0.3rem var(--bn-space-md);
+}
+
+/* Stat cards inside the stats pane */
+.bn-project-stats {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--bn-space-md);
+}
+
+.bn-project-stat {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: var(--bn-space-md) var(--bn-space-lg);
+    border: 1px solid var(--bn-colour-border);
+    border-radius: var(--bn-radius-md);
+    min-width: 5.5rem;
+}
+
+.bn-project-stat-value {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--bn-colour-text);
+    line-height: 1.2;
+}
+
+.bn-project-stat-label {
+    font-size: 0.8rem;
+    color: var(--bn-colour-muted);
+    margin-top: 0.15rem;
+    text-align: center;
+}
+
+/* Featured quotes row — 3 cards across the top of the dashboard */
+.bn-featured-row {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--bn-space-md);
+}
+
+.bn-featured-quote {
+    border: 1px solid var(--bn-colour-border);
+    border-radius: var(--bn-radius-lg);
+    padding: var(--bn-space-md) var(--bn-space-lg);
+    min-width: 0;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+.bn-featured-quote .quote-text {
+    font-size: 0.92rem;
+    line-height: 1.55;
+    flex: 1;
+}
+
+.bn-featured-quote .context {
+    display: block;
+    font-size: 0.8rem;
+    color: var(--bn-colour-muted);
+    margin-bottom: var(--bn-space-xs);
+}
+
+/* Footer: timecode — speaker, with optional badge */
+.bn-featured-footer {
+    display: flex;
+    align-items: center;
+    gap: var(--bn-space-sm);
+    margin-top: var(--bn-space-sm);
+    font-size: 0.82rem;
+    color: var(--bn-colour-muted);
+    flex-wrap: wrap;
+}
+
+.bn-featured-footer .speaker {
+    white-space: nowrap;
+}
+
+/* Responsive: collapse dashboard to single column, scroll nav */
 @media (max-width: 600px) {
     .bn-global-nav {
         overflow-x: auto;
@@ -103,5 +209,13 @@
     .bn-tab {
         font-size: 0.82rem;
         padding: 0.5rem 0.75rem;
+    }
+
+    .bn-dashboard {
+        grid-template-columns: 1fr;
+    }
+
+    .bn-featured-row {
+        grid-template-columns: 1fr;
     }
 }

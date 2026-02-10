@@ -7,6 +7,15 @@
  * @module global-nav
  */
 
+/* Module-level references for session drill-down (set by _initSessionDrillDown). */
+var _sessGrid = null;
+var _sessSubnav = null;
+var _sessLabel = null;
+var _sessPages = null;
+
+/** Currently displayed session ID, or null if showing the grid. */
+var _currentSessionId = null;
+
 /**
  * Switch to a specific tab by name.
  * Exported for use by other modules (e.g. focus.js "?" key → About tab).
@@ -27,6 +36,11 @@ function switchToTab(tabName) {
   for (var j = 0; j < panels.length; j++) {
     panels[j].classList.toggle('active', panels[j].getAttribute('data-tab') === tabName);
   }
+
+  // Restore session drill-down state when returning to the Sessions tab
+  if (tabName === 'sessions' && _currentSessionId && _sessGrid) {
+    _showSession(_currentSessionId);
+  }
 }
 
 /**
@@ -44,6 +58,9 @@ function initGlobalNav() {
 
   // --- Session drill-down ---
   _initSessionDrillDown();
+
+  // --- Speaker links (navigate to Sessions tab + drill into session) ---
+  _initSpeakerLinks();
 }
 
 /**
@@ -54,16 +71,16 @@ function _initSessionDrillDown() {
   var sessionsPanel = document.querySelector('.bn-tab-panel[data-tab="sessions"]');
   if (!sessionsPanel) return;
 
-  var grid = sessionsPanel.querySelector('.bn-session-grid');
-  var subnav = sessionsPanel.querySelector('.bn-session-subnav');
+  _sessGrid = sessionsPanel.querySelector('.bn-session-grid');
+  _sessSubnav = sessionsPanel.querySelector('.bn-session-subnav');
   var backBtn = sessionsPanel.querySelector('.bn-session-back');
-  var sessionLabel = sessionsPanel.querySelector('.bn-session-label');
-  var pages = sessionsPanel.querySelectorAll('.bn-session-page');
+  _sessLabel = sessionsPanel.querySelector('.bn-session-label');
+  _sessPages = sessionsPanel.querySelectorAll('.bn-session-page');
 
-  if (!grid || !subnav || !backBtn || pages.length === 0) return;
+  if (!_sessGrid || !_sessSubnav || !backBtn || !_sessPages.length) return;
 
   // Click handler on session table rows
-  var rows = grid.querySelectorAll('tr[data-session]');
+  var rows = _sessGrid.querySelectorAll('tr[data-session]');
   for (var i = 0; i < rows.length; i++) {
     rows[i].style.cursor = 'pointer';
     rows[i].addEventListener('click', function (e) {
@@ -71,52 +88,94 @@ function _initSessionDrillDown() {
       if (e.target.closest('a')) return;
 
       var sid = this.getAttribute('data-session');
-      _showSession(sid, grid, subnav, sessionLabel, pages);
+      _showSession(sid);
     });
   }
 
   // Also intercept the session number link clicks
-  var sessionLinks = grid.querySelectorAll('a[data-session-link]');
+  var sessionLinks = _sessGrid.querySelectorAll('a[data-session-link]');
   for (var j = 0; j < sessionLinks.length; j++) {
     sessionLinks[j].addEventListener('click', function (e) {
       e.preventDefault();
       var sid = this.getAttribute('data-session-link');
-      _showSession(sid, grid, subnav, sessionLabel, pages);
+      _showSession(sid);
     });
   }
 
   // Back button
   backBtn.addEventListener('click', function () {
-    _showGrid(grid, subnav, pages);
+    _showGrid();
   });
 }
 
-/** Show a specific session transcript and hide the grid. */
-function _showSession(sid, grid, subnav, sessionLabel, pages) {
-  grid.style.display = 'none';
-  subnav.style.display = '';
+/**
+ * Set up click handlers on speaker links (data-nav-session) in quote cards.
+ * Navigates to Sessions tab → drills into the session → scrolls to anchor.
+ */
+function _initSpeakerLinks() {
+  var links = document.querySelectorAll('a[data-nav-session]');
+  for (var i = 0; i < links.length; i++) {
+    links[i].addEventListener('click', function (e) {
+      e.preventDefault();
+      var sid = this.getAttribute('data-nav-session');
+      var anchor = this.getAttribute('data-nav-anchor');
+      if (!sid || !_sessGrid) return;
 
-  for (var i = 0; i < pages.length; i++) {
-    if (pages[i].getAttribute('data-session') === sid) {
-      pages[i].style.display = '';
+      switchToTab('sessions');
+      _showSession(sid);
+
+      // Scroll to the specific timecode anchor after layout settles
+      if (anchor) {
+        requestAnimationFrame(function () {
+          var target = document.getElementById(anchor);
+          if (target) {
+            target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }
+        });
+      }
+    });
+  }
+}
+
+/** Show a specific session transcript and hide the grid. */
+function _showSession(sid) {
+  if (!_sessGrid || !_sessSubnav || !_sessPages) return;
+
+  _currentSessionId = sid;
+  _sessGrid.style.display = 'none';
+  _sessSubnav.style.display = '';
+
+  for (var i = 0; i < _sessPages.length; i++) {
+    if (_sessPages[i].getAttribute('data-session') === sid) {
+      _sessPages[i].style.display = '';
       // Update the sub-nav label from the page's data attribute
-      var label = pages[i].getAttribute('data-session-label') || sid;
-      if (sessionLabel) sessionLabel.textContent = label;
+      var label = _sessPages[i].getAttribute('data-session-label') || sid;
+      if (_sessLabel) _sessLabel.textContent = label;
     } else {
-      pages[i].style.display = 'none';
+      _sessPages[i].style.display = 'none';
     }
   }
 
   // Scroll to top of sessions panel
-  subnav.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  _sessSubnav.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+  // Re-render transcript annotations (span bars need layout measurements)
+  if (typeof _renderAllAnnotations === 'function') {
+    requestAnimationFrame(function () {
+      _renderAllAnnotations();
+    });
+  }
 }
 
 /** Return to the session grid and hide all transcript pages. */
-function _showGrid(grid, subnav, pages) {
-  grid.style.display = '';
-  subnav.style.display = 'none';
+function _showGrid() {
+  if (!_sessGrid || !_sessSubnav || !_sessPages) return;
 
-  for (var i = 0; i < pages.length; i++) {
-    pages[i].style.display = 'none';
+  _currentSessionId = null;
+  _sessGrid.style.display = '';
+  _sessSubnav.style.display = 'none';
+
+  for (var i = 0; i < _sessPages.length; i++) {
+    _sessPages[i].style.display = 'none';
   }
 }

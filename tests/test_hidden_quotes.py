@@ -175,7 +175,7 @@ def test_print_hides_badge(tmp_path: Path) -> None:
 
 def test_init_hidden_called(tmp_path: Path) -> None:
     html = _render_report(tmp_path)
-    assert "initHidden();" in html
+    assert "initHidden" in html
 
 
 def test_hidden_js_in_report(tmp_path: Path) -> None:

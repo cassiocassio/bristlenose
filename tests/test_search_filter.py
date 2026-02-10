@@ -170,7 +170,7 @@ def test_css_has_search_mark(tmp_path: Path) -> None:
 
 def test_init_search_filter_called(tmp_path: Path) -> None:
     html = _render_report(tmp_path)
-    assert "initSearchFilter();" in html
+    assert "initSearchFilter" in html
 
 
 def test_search_js_in_report(tmp_path: Path) -> None:

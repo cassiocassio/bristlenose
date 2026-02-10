@@ -36,21 +36,27 @@
 
 // ── Boot sequence ─────────────────────────────────────────────────────────
 
-initPlayer();
-initStarred();
-initEditing();
-initInlineEditing();
-initTags();
-initCodebook();
-renderUserTagsChart();
-initCsvExport();
-initViewSwitcher();
-initSearchFilter();
-initTagFilter();
-initHidden();
-initNames();
-initFocus();
-initFeedback();
-initGlobalNav();
-if (typeof initTranscriptNames === 'function') initTranscriptNames();
-if (typeof initTranscriptAnnotations === 'function' && typeof BRISTLENOSE_QUOTE_MAP !== 'undefined') initTranscriptAnnotations();
+var _bootFns = [
+  ['initPlayer', initPlayer],
+  ['initStarred', initStarred],
+  ['initEditing', initEditing],
+  ['initInlineEditing', initInlineEditing],
+  ['initTags', initTags],
+  ['initCodebook', initCodebook],
+  ['renderUserTagsChart', renderUserTagsChart],
+  ['initCsvExport', initCsvExport],
+  ['initViewSwitcher', initViewSwitcher],
+  ['initSearchFilter', initSearchFilter],
+  ['initTagFilter', initTagFilter],
+  ['initHidden', initHidden],
+  ['initNames', initNames],
+  ['initFocus', initFocus],
+  ['initFeedback', initFeedback],
+  ['initGlobalNav', initGlobalNav],
+];
+for (var _bi = 0; _bi < _bootFns.length; _bi++) {
+  try { _bootFns[_bi][1](); }
+  catch (e) { console.error('BOOT FAIL: ' + _bootFns[_bi][0], e); }
+}
+if (typeof initTranscriptNames === 'function') { try { initTranscriptNames(); } catch(e) { console.error('BOOT FAIL: initTranscriptNames', e); } }
+if (typeof initTranscriptAnnotations === 'function' && typeof BRISTLENOSE_QUOTE_MAP !== 'undefined') { try { initTranscriptAnnotations(); } catch(e) { console.error('BOOT FAIL: initTranscriptAnnotations', e); } }

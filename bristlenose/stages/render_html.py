@@ -267,7 +267,7 @@ def render_html(
         has_logo=paths.logo_file.exists(),
         has_dark_logo=paths.logo_dark_file.exists(),
         project_name=_esc(project_name),
-        doc_title="",
+        doc_title="Research Report",
         meta_right=meta_right,
     ))
 
@@ -275,13 +275,13 @@ def render_html(
     _w(_jinja_env.get_template("global_nav.html").render())
 
     # --- Project tab (placeholder) ---
-    _w('<div class="bn-tab-panel active" data-tab="project" role="tabpanel">')
+    _w('<div class="bn-tab-panel active" data-tab="project" id="panel-project" role="tabpanel" aria-label="Project">')
     _w("<h2>Project</h2>")
     _w('<p class="description">Project summary coming soon.</p>')
     _w("</div>")
 
     # --- Sessions tab ---
-    _w('<div class="bn-tab-panel" data-tab="sessions" role="tabpanel">')
+    _w('<div class="bn-tab-panel" data-tab="sessions" id="panel-sessions" role="tabpanel" aria-label="Sessions">')
     _w('<div class="bn-session-subnav" style="display:none">')
     _w('<button class="bn-session-back">&larr; All sessions</button>')
     _w('<span class="bn-session-label"></span>')
@@ -367,7 +367,7 @@ def render_html(
     _w("</div>")  # .bn-tab-panel[sessions]
 
     # --- Quotes tab ---
-    _w('<div class="bn-tab-panel" data-tab="quotes" role="tabpanel">')
+    _w('<div class="bn-tab-panel" data-tab="quotes" id="panel-quotes" role="tabpanel" aria-label="Quotes">')
 
     # --- Toolbar ---
     _w(_jinja_env.get_template("toolbar.html").render())
@@ -482,7 +482,7 @@ def render_html(
     _w("</div>")  # .bn-tab-panel[quotes]
 
     # --- Codebook tab ---
-    _w('<div class="bn-tab-panel" data-tab="codebook" role="tabpanel">')
+    _w('<div class="bn-tab-panel" data-tab="codebook" id="panel-codebook" role="tabpanel" aria-label="Codebook">')
     _w('<h1>Codebook</h1>')
     _w('<p class="codebook-description">Drag tags between groups to '
        "reorganise. Click a tag to rename it. Changes are saved automatically "
@@ -491,20 +491,20 @@ def render_html(
     _w("</div>")  # .bn-tab-panel[codebook]
 
     # --- Analysis tab (placeholder) ---
-    _w('<div class="bn-tab-panel" data-tab="analysis" role="tabpanel">')
+    _w('<div class="bn-tab-panel" data-tab="analysis" id="panel-analysis" role="tabpanel" aria-label="Analysis">')
     _w("<h2>Analysis</h2>")
     _w('<p class="description">Analysis features coming soon.</p>')
     _w("</div>")  # .bn-tab-panel[analysis]
 
     # --- Settings tab (placeholder) ---
-    _w('<div class="bn-tab-panel" data-tab="settings" role="tabpanel">')
+    _w('<div class="bn-tab-panel" data-tab="settings" id="panel-settings" role="tabpanel" aria-label="Settings">')
     _w("<h2>Settings</h2>")
     _w('<p class="description">Report settings coming soon.</p>')
     _w("</div>")  # .bn-tab-panel[settings]
 
     # --- About tab ---
     from bristlenose import __version__ as _ver
-    _w('<div class="bn-tab-panel" data-tab="about" role="tabpanel">')
+    _w('<div class="bn-tab-panel" data-tab="about" id="panel-about" role="tabpanel" aria-label="About">')
     _w('<div class="bn-about">')
     _w("<h2>About Bristlenose</h2>")
     _w(f'<p>Version {_esc(_ver)} &middot; '
@@ -1493,12 +1493,13 @@ def _format_quote_html(
     else:
         tc_html = f'<span class="timecode">{_tc_brackets(tc)}</span>'
 
-    # Speaker link targets the transcript page
+    # Speaker link navigates to Sessions tab → session drill-down → timecode
     pid_esc = _esc(quote.participant_id)
     sid_esc = _esc(quote.session_id) if quote.session_id else pid_esc
     anchor = f"t-{int(quote.start_timecode)}"
     speaker_link = (
-        f'<a href="sessions/transcript_{sid_esc}.html#{anchor}" class="speaker-link">{pid_esc}</a>'
+        f'<a href="#" class="speaker-link" data-nav-session="{sid_esc}"'
+        f' data-nav-anchor="{anchor}">{pid_esc}</a>'
     )
 
     tmpl = _jinja_env.get_template("quote_card.html")

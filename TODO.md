@@ -1,6 +1,6 @@
 # Bristlenose — Where I Left Off
 
-Last updated: 9 Feb 2026 (issue tracker consolidation + TODO restructure)
+Last updated: 10 Feb 2026 (analysis phase 3 QA — 58 integration tests added)
 
 ## Next session reminder
 
@@ -68,8 +68,10 @@ This file contains: session reminders, feature groupings with context, items too
 | ~~Signal concentration: Phase 1 — static mockup~~ | — | done |
 | ~~Signal concentration: Phase 2 — Python math module~~ | — | done |
 | ~~Signal concentration: Phase 3 — pipeline integration + toolbar button~~ | — | done |
-| Signal concentration: Phase 4 — JS interactivity + visual polish | — | medium |
+| ~~Signal concentration: Phase 3 QA — integration tests (58 tests)~~ | — | done |
+| Signal concentration: Phase 4 — two-pane layout, grid-as-selector | — | medium |
 | Signal concentration: Phase 5 — LLM narration of signal cards | — | small |
+| Signal concentration: user-tag × group grid (new design needed) | — | medium |
 | Moderator Phase 2: cross-session linking | #25 | medium |
 | Speaker diarisation improvements | #26 | medium |
 | Batch processing dashboard | #27 | medium |

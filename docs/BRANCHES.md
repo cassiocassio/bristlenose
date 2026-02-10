@@ -101,18 +101,69 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 
 ### `analysis`
 
-**Status:** Phase 1 mockup complete (static HTML, fake data, no pipeline connection)
+**Status:** Phases 1–3 complete with comprehensive test coverage (97 tests across 4 files)
 **Started:** 10 Feb 2026
 **Worktree:** `/Users/cassio/Code/bristlenose_branch analysis/`
 **Remote:** `origin/analysis`
 **Design doc:** `docs/private/signal-concentration.md`
 
-**What it does:** Analysis page mockup — signal cards ranked by composite score (concentration × agreement × intensity), screen × sentiment heatmap with adjusted standardised residuals, dark mode toggle. Self-contained HTML with inline CSS/JS computing all metrics client-side from a fake dataset of ~150 quotes across 8 screen clusters and 10 participants.
+**What it does:** Analysis page — signal cards ranked by composite score (concentration × agreement × intensity), section × sentiment and theme × sentiment heatmaps with adjusted standardised residuals, dark mode support. Full pipeline integration: Python math module computes metrics, renderer produces standalone `analysis.html` with injected JSON, client-side JS builds the UI.
+
+**Phase 1 — Static mockup (`docs/mockups/mockup-analysis.html`):**
+- Signal cards: two-column layout (identity left, metrics right), expandable quote list with timecodes, speaker links, per-quote intensity dots aligned under mean intensity dots
+- Metrics panel: signal strength, concentration (bar, 0–8× absolute scale), agreement/N_eff (bar, 0–N scale), mean intensity (SVG half-fill dots)
+- Confidence classification (Strong/Moderate/Emerging): computed but **hidden from UI** — misleading next to signal strength number. CSS + JS preserved with TODOs for future restoration
+- Heatmap: section × sentiment and theme × sentiment tables with residual-driven cell colouring, click-to-highlight linking to signal cards
+- Quotes: sorted by participant then timecode, hanging-indent quote-row layout (timecode → quote body → intensity dots), timecode links to player, speaker links to transcript pages
+
+**Phase 2 — Python math module (`bristlenose/analysis/`):**
+- `metrics.py` — 5 pure functions: `concentration_ratio`, `simpsons_neff`, `mean_intensity`, `composite_signal`, `adjusted_residual`
+- `models.py` — plain dataclasses: `MatrixCell`, `Matrix`, `SignalQuote`, `Signal`, `AnalysisResult`
+- `matrix.py` — `build_section_matrix()`, `build_theme_matrix()` from grouped quotes
+- `signals.py` — `detect_signals()` with MIN_QUOTES_PER_CELL=2, DEFAULT_TOP_N=12, confidence classification
+
+**Phase 3 — Pipeline integration + HTML rendering:**
+- `pipeline.py` — `_compute_analysis()` glue function, lazy import, participant counting (sessions or quote fallback, moderator exclusion via `startswith("p")`)
+- `render_html.py` — `_render_analysis_page()`, `_serialize_analysis()`, `_serialize_matrix()`, JSON injection into IIFE-wrapped `<script>`, toolbar "Analysis" button
+- `analysis.html` template — 12-line skeleton with div containers, JS populates all content
+- `analysis.js` (423 lines) — `renderSignalCards()`, `renderHeatmap()`, OKLCH colour interpolation, theme-responsive via MutationObserver, cell-click-to-card linking
+- `analysis.css` (336 lines) — signal cards, heatmaps, `light-dark()` for theme, expansion animation
+
+**Test coverage (97 tests across 4 files):**
+- `test_analysis_metrics.py` (39 tests) — all 5 metrics with edge cases (zeros, empty, boundary)
+- `test_analysis_matrix.py` (13 tests) — section/theme matrix building, None sentiment exclusion, ordering
+- `test_analysis_signals.py` (14 tests) — signal detection, confidence classification, quote ordering, top-N
+- `test_analysis_integration.py` (58 tests) — `_compute_analysis`, serialization round-trip, HTML render end-to-end, confidence boundaries, quote-lookup consistency, edge cases (pipe in labels, non-ASCII, zero participants, single participant, natural PID sorting)
 
 **Files this branch touches:**
-- `docs/mockups/mockup-analysis.html` — **new** (the only file)
+- `bristlenose/analysis/__init__.py` — **new** package
+- `bristlenose/analysis/models.py` — **new** data structures
+- `bristlenose/analysis/metrics.py` — **new** pure math functions
+- `bristlenose/analysis/matrix.py` — **new** matrix builder
+- `bristlenose/analysis/signals.py` — **new** signal detector
+- `bristlenose/pipeline.py` — `_compute_analysis()` added, called from `run()`, `run_analysis_only()`, `run_render_only()`
+- `bristlenose/stages/render_html.py` — `_render_analysis_page()`, serialization, analysis JS list, toolbar button
+- `bristlenose/output_paths.py` — `analysis_file` property
+- `bristlenose/theme/templates/analysis.html` — **new** template skeleton
+- `bristlenose/theme/js/analysis.js` — **new** client-side rendering
+- `bristlenose/theme/organisms/analysis.css` — **new** styles
+- `docs/mockups/mockup-analysis.html` — **new** original prototype
+- `tests/test_analysis_metrics.py` — **new**
+- `tests/test_analysis_matrix.py` — **new**
+- `tests/test_analysis_signals.py` — **new**
+- `tests/test_analysis_integration.py` — **new**
 
-**Potential conflicts with other branches:** None — mockup-only, no pipeline or theme files modified.
+**Potential conflicts with other branches:**
+- `render_html.py` — always hot; adds `_render_analysis_page()` and serialization helpers
+- `pipeline.py` — adds `_compute_analysis()` and calls from three pipeline methods
+- `output_paths.py` — adds `analysis_file` property
+
+**Next phases:** (see `docs/design-analysis-future.md` for full design thinking)
+- **Explore first** — use on 2–3 real studies before adding interactivity
+- Phase 4: two-pane layout — grids as interactive selectors (cell/row/column toggles) controlling signal cards in right pane
+- Phase 5: LLM narration — natural-language insight summaries on signal cards
+- User-tag × group grid — new design needed, different from sentiment grids
+- Future: sentiment trajectory detection (Jensen-Shannon divergence), participant sparkline grid, embeddings for cross-boundary discovery
 
 ---
 

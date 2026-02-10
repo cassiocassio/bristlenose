@@ -32,6 +32,8 @@ LLM providers: Claude, ChatGPT, Azure OpenAI, Gemini, Local (Ollama). See `brist
 
 Quote exclusivity: **every quote appears in exactly one report section.** See `bristlenose/stages/CLAUDE.md` for the three-level enforcement design (quote type separation → within-cluster → within-theme). This matches researcher expectations — each quote appears once, suitable for handoff to non-researchers.
 
+Analysis page: `bristlenose/analysis/` computes signal concentration metrics from grouped quotes — no LLM calls, pure math. `_compute_analysis()` in `pipeline.py` is the glue (lazy import, called from all three pipeline methods). Renderer produces standalone `analysis.html` with JSON data injected into an IIFE. Client-side JS (`analysis.js`) builds signal cards and heatmaps. Confidence thresholds use strict `>` (not `>=`): strong requires conc > 2, moderate requires conc > 1.5. Cell keys use `"label|sentiment"` format — pipe characters in labels would create ambiguous keys (documented, not currently guarded). 97 tests across 4 files cover metrics, matrix building, signal detection, serialization, and HTML rendering end-to-end.
+
 LLM prompts: All prompt templates live in `bristlenose/llm/prompts.py`. When iterating on prompts, archive the old version to `bristlenose/llm/prompts-archive/` with naming convention `prompts_YYYY-MM-DD_description.py` (e.g., `prompts_2026-02-04_original-14-tags.py`). This folder is ignored by the application but tracked in git for easy comparison without digging through commit history. Future goal: allow users to customise prompts via config.
 
 Report JavaScript — 17 modules in `bristlenose/theme/js/`, concatenated in dependency order into a single `<script>` block by `render_html.py` (`_JS_FILES`). Transcript pages and codebook page use separate JS lists. See `bristlenose/theme/js/MODULES.md` for per-module API docs.
@@ -110,6 +112,7 @@ This is especially common when:
 - For LLM/provider gotchas (Azure, Ollama, provider registry), see `bristlenose/llm/CLAUDE.md`
 - For JS/CSS/report gotchas (load order, modals, hidden quotes, toolbar), see `bristlenose/theme/CLAUDE.md`; for per-module JS docs see `bristlenose/theme/js/MODULES.md`; for per-component CSS docs see `bristlenose/theme/CSS-REFERENCE.md`
 - For stage/pipeline gotchas (topic maps, transcripts, coverage), see `bristlenose/stages/CLAUDE.md`
+- **Analysis module**: `bristlenose/analysis/` uses plain dataclasses (not Pydantic) — ephemeral computation, never persisted. `_compute_analysis()` in `pipeline.py` returns `object | None` (typed as `object` to avoid import at module level, lazy import inside the function). `_serialize_analysis()` in `render_html.py` uses `# type: ignore[attr-defined]` for the same reason. Cell key format `"label|sentiment"` — pipe in labels is a known limitation (documented in tests, not guarded)
 
 ## Reference docs (read when working in these areas)
 
@@ -132,6 +135,8 @@ This is especially common when:
 - **Performance audit / optimisation decisions**: `docs/design-performance.md`
 - **Research methodology** (quote selection, sentiment taxonomy, clustering/theming rationale): `docs/design-research-methodology.md` — single source of truth for analytical decisions. **Read this before changing prompts or analysis logic.**
 - **Academic sources for analysis categories**: `docs/academic-sources.html` — theoretical foundations (emotion science, UX research, trust/credibility) behind quote tagging and sentiment analysis. **Update this file when investigating theories behind any Bristlenose features.**
+- **Analysis page** (signal concentration, metrics, rendering): `docs/BRANCHES.md` → `analysis` section — architecture, design decisions, file list, test coverage
+- **Analysis page future** (two-pane vision, grid-as-selector, user-tag grid, backlog): `docs/design-analysis-future.md`
 - **Installation guide**: `INSTALL.md` — detailed per-platform install instructions for non-technical users
 
 ## Working preferences

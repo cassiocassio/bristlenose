@@ -1,6 +1,6 @@
 # JS Module Reference
 
-18 standalone files in `js/` concatenated at render time (same pattern as CSS): storage, badge-utils, modal, codebook, player, starred, editing, tags, histogram, csv-export, view-switcher, search, tag-filter, hidden, names, focus, feedback, main. Transcript pages use `storage.js` + `badge-utils.js` + `player.js` + `transcript-names.js` + `transcript-annotations.js`. Codebook page uses `storage.js` + `badge-utils.js` + `modal.js` + `codebook.js`. `transcript-names.js` only updates heading speaker names (preserving code prefix: `"m1 Sarah Chen"`); segment speaker labels stay as raw codes (`p1:`, `m1:`) and are not overridden by JS.
+19 standalone files in `js/` concatenated at render time (same pattern as CSS): storage, badge-utils, modal, codebook, player, starred, editing, tags, histogram, csv-export, view-switcher, search, tag-filter, hidden, names, focus, feedback, global-nav, main. Transcript pages use `storage.js` + `badge-utils.js` + `player.js` + `transcript-names.js` + `transcript-annotations.js`. Codebook page uses `storage.js` + `badge-utils.js` + `modal.js` + `codebook.js`. `transcript-names.js` only updates heading speaker names (preserving code prefix: `"m1 Sarah Chen"`); segment speaker labels stay as raw codes (`p1:`, `m1:`) and are not overridden by JS.
 
 ## storage.js
 
@@ -149,6 +149,20 @@ Codebook data model, colour assignment, and interactive panel UI. Manages the re
 - **Tag name collection**: `_allTagNames()` merges tags from both `bristlenose-tags` (user tags with quotes) AND `codebook.tags` (tags assigned to groups but possibly with 0 quotes)
 - **Dependencies**: `storage.js` (for `createStore`, `escapeHtml`), `badge-utils.js` (for `createUserTagBadge`, `getTagColour`), `modal.js` (for `createModal`, `showConfirmModal`, `closeTopmostModal` — on codebook page only)
 
+## global-nav.js
+
+Top-level tab bar for report navigation. Manages switching between tab panels (Project, Sessions, Quotes, Codebook, Analysis, Settings, About) and the Sessions tab drill-down sub-navigation.
+
+- **`switchToTab(tabName)`** — switch to a named tab. Updates `aria-selected` on tab buttons, toggles `.active` on panels. Exported for cross-module use (e.g. speaker links navigating to Sessions tab)
+- **`initGlobalNav()`** — wires tab click handlers, initialises session drill-down and speaker link navigation
+- **`_initSessionDrillDown()`** — click handlers on session table rows (`tr[data-session]`) and session number links (`a[data-session-link]`) to drill into inline transcript views; back button returns to grid
+- **`_initSpeakerLinks()`** — click handlers on `a[data-nav-session]` links in quote cards. Navigates: switch to Sessions tab → drill into session → scroll to `data-nav-anchor` timecode
+- **`_showSession(sid)`** — hides session grid, shows the matching `.bn-session-page`, updates sub-nav label, re-renders transcript annotations (span bars need layout measurements). Stores `_currentSessionId` so returning to the Sessions tab restores drill-down state
+- **`_showGrid()`** — returns to the session grid, hides all transcript pages, clears `_currentSessionId`
+- **Module state**: `_sessGrid`, `_sessSubnav`, `_sessLabel`, `_sessPages`, `_currentSessionId` — cached DOM references and current drill-down state
+- **Dependencies**: must load after `focus.js` and `feedback.js`; before `transcript-names.js` and `transcript-annotations.js` (transcript pages embedded in Sessions tab need annotation rendering). Calls `_renderAllAnnotations()` from `transcript-annotations.js` if available
+- **CSS**: `organisms/global-nav.css` — tab bar, tab buttons, panels, session grid, session sub-nav, responsive horizontal scroll
+
 ## Codebook page
 
 Standalone HTML page (`codebook.html`) at the output root, opened in a new window by the toolbar Codebook button. Rendered by `_render_codebook_page()` in `render_html.py`. Features:
@@ -160,6 +174,6 @@ Standalone HTML page (`codebook.html`) at the output root, opened in a new windo
 - **Cross-window sync**: localStorage `storage` event — changes in the codebook page propagate to the report (badge colours update), and vice versa (new user tags appear)
 
 Three page types in the output:
-1. **Report** (`bristlenose-{slug}-report.html`) — main window, full JS suite (18 modules)
+1. **Report** (`bristlenose-{slug}-report.html`) — main window, full JS suite (19 modules)
 2. **Transcript** (`sessions/transcript_{id}.html`) — separate pages, `storage.js` + `badge-utils.js` + `player.js` + `transcript-names.js` + `transcript-annotations.js`
 3. **Codebook** (`codebook.html`) — new window, `storage.js` + `badge-utils.js` + `modal.js` + `codebook.js`

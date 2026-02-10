@@ -52,6 +52,7 @@ var _bootFns = [
   ['initNames', initNames],
   ['initFocus', initFocus],
   ['initFeedback', initFeedback],
+  ['initAnalysis', initAnalysis],
   ['initGlobalNav', initGlobalNav],
 ];
 for (var _bi = 0; _bi < _bootFns.length; _bi++) {

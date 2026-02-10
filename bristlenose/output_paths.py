@@ -87,6 +87,11 @@ class OutputPaths:
         """Codebook page: codebook.html (same level as report)"""
         return self.output_dir / "codebook.html"
 
+    @property
+    def analysis_file(self) -> Path:
+        """Analysis page: analysis.html (same level as report)"""
+        return self.output_dir / "analysis.html"
+
     # --- Asset directory ---
 
     @property

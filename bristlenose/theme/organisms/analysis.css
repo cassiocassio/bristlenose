@@ -1,0 +1,335 @@
+/* ── Analysis page — signal cards + heatmap ─────────────────── */
+
+/* Signal card list */
+.signal-cards {
+    display: flex;
+    flex-direction: column;
+    gap: var(--bn-space-md);
+}
+
+.signal-card {
+    border: 1px solid var(--bn-colour-border);
+    border-radius: var(--bn-radius-sm);
+    padding: var(--bn-space-lg);
+    background: var(--bn-colour-bg);
+    transition: box-shadow var(--bn-transition-fast);
+    position: relative;
+}
+
+.signal-card:hover {
+    box-shadow: 0 2px 8px var(--bn-colour-shadow);
+}
+
+/* Left accent bar — colour set by inline --card-accent */
+.signal-card::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: var(--bn-span-bar-width);
+    border-radius: var(--bn-span-bar-radius) 0 0 var(--bn-span-bar-radius);
+    background: var(--card-accent, var(--bn-colour-muted));
+}
+
+/* Two-column top: identity left, metrics right */
+.signal-card-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: var(--bn-space-lg);
+    margin-bottom: var(--bn-space-sm);
+}
+
+.signal-card-identity {
+    flex: 1;
+    min-width: 0;
+}
+
+.signal-card-source {
+    display: block;
+    font-size: 0.7rem;
+    font-weight: 400;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--bn-colour-muted);
+    margin-bottom: 0.1rem;
+}
+
+.signal-card-location {
+    font-size: 1.05rem;
+    font-weight: 600;
+    margin-bottom: var(--bn-space-sm);
+}
+
+.signal-card-location-link {
+    color: inherit;
+    text-decoration: none;
+    transition: color var(--bn-transition-fast);
+}
+
+.signal-card-location-link:hover {
+    color: var(--bn-colour-accent);
+}
+
+/* Metrics grid (label | value | viz) */
+.signal-card-metrics {
+    flex-shrink: 0;
+    display: grid;
+    grid-template-columns: auto auto auto;
+    gap: 0.2rem 0.6rem;
+    align-items: center;
+    font-size: 0.8rem;
+    white-space: nowrap;
+}
+
+.metric-label {
+    color: var(--bn-colour-muted);
+    text-align: right;
+    cursor: help;
+}
+
+.metric-value {
+    font-family: var(--bn-font-mono);
+    font-size: 0.8rem;
+    color: var(--bn-colour-text);
+    text-align: right;
+}
+
+.metric-viz {
+    display: flex;
+    align-items: center;
+}
+
+/* Concentration bar */
+.conc-bar-track {
+    display: block;
+    width: 96px;
+    height: 6px;
+    background: var(--bn-colour-border);
+    border-radius: var(--bn-radius-sm);
+    overflow: hidden;
+}
+
+.conc-bar-fill {
+    display: block;
+    height: 100%;
+    border-radius: var(--bn-radius-sm);
+    background: var(--bn-colour-text);
+    opacity: 0.45;
+    transition: width 0.3s ease;
+}
+
+/* Intensity dots (SVG) */
+.intensity-dots-svg {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    width: 46px;
+}
+
+/* Quote list inside signal card */
+.signal-card-quotes {
+    background: var(--bn-colour-quote-bg);
+    border-radius: var(--bn-radius-md);
+    margin: var(--bn-space-md) 0;
+    padding: var(--bn-space-sm) 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    overflow: hidden;
+}
+
+.signal-card-quotes blockquote {
+    background: transparent;
+    border-left: 1px solid var(--bn-colour-border);
+    margin: 0 var(--bn-space-md);
+    padding: var(--bn-space-sm) 1rem;
+    border-radius: 0 var(--bn-radius-md) var(--bn-radius-md) 0;
+}
+
+.signal-card-quotes blockquote .speaker {
+    color: var(--bn-colour-muted);
+    font-size: 0.9rem;
+}
+
+/* Hanging-indent: timecode | body | dots */
+.signal-card-quotes blockquote .quote-row {
+    display: flex;
+    gap: 0.5rem;
+    align-items: baseline;
+}
+
+.signal-card-quotes blockquote .quote-row .timecode {
+    flex-shrink: 0;
+}
+
+.signal-card-quotes blockquote .quote-body {
+    flex: 1;
+    min-width: 0;
+}
+
+.signal-card-quotes blockquote .intensity-dots {
+    flex-shrink: 0;
+    width: 46px;
+    align-self: center;
+    cursor: help;
+    margin-right: 22px;
+    --dot-colour: var(--bn-colour-muted);
+}
+
+/* Expansion animation */
+.signal-card-expansion {
+    max-height: 0;
+    opacity: 0;
+    overflow: hidden;
+    transition: max-height 0.35s ease, opacity 0.25s ease;
+}
+
+.signal-card.expanded .signal-card-expansion {
+    opacity: 1;
+    /* max-height set by JS */
+}
+
+.signal-card-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.8rem;
+    color: var(--bn-colour-muted);
+}
+
+/* Participant presence grid */
+.participant-grid {
+    display: flex;
+    gap: 3px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.participant-grid .p-box {
+    display: inline-block;
+    font-family: var(--bn-font-mono);
+    font-size: 0.72rem;
+    padding: var(--bn-space-xs) 0.45rem;
+    border-radius: var(--bn-radius-sm);
+    line-height: 1;
+    background: var(--bn-colour-border);
+    color: var(--bn-colour-muted);
+    opacity: 0.6;
+}
+
+.participant-grid .participant-count {
+    font-size: 0.72rem;
+    color: var(--bn-colour-muted);
+    margin-right: 0.2rem;
+    white-space: nowrap;
+}
+
+.participant-grid .p-box.p-present {
+    background: color-mix(in srgb, var(--card-accent, var(--bn-colour-muted)) 12%, var(--bn-colour-bg));
+    color: var(--card-accent, var(--bn-colour-muted));
+    opacity: 1;
+}
+
+.signal-card-link {
+    color: var(--bn-colour-accent);
+    text-decoration: none;
+    font-weight: 400;
+}
+
+.signal-card-link:hover { text-decoration: underline; }
+
+/* Confidence badge — hidden from UI, preserved for future */
+.confidence-badge {
+    display: inline-block;
+    font-size: 0.65rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    padding: 0.15rem 0.5rem;
+    border-radius: var(--bn-radius-sm);
+}
+
+.confidence-strong  { background: light-dark(#9ca3af, #9ca3af); color: light-dark(#fff, #111); }
+.confidence-moderate { background: light-dark(#c9cdd3, #6b7280); color: light-dark(var(--bn-colour-badge-text), var(--bn-colour-text)); }
+.confidence-emerging { background: light-dark(var(--bn-colour-border), #4b5563); color: var(--bn-colour-muted); }
+
+/* ── Heatmap ──────────────────────────────────────────────── */
+
+.analysis-heatmap {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.82rem;
+    margin-bottom: var(--bn-space-xl);
+}
+
+.analysis-heatmap th {
+    text-align: center;
+    padding: 0.5rem 0.3rem;
+    font-weight: 600;
+    font-size: 0.75rem;
+    color: var(--bn-colour-muted);
+    border-bottom: 2px solid var(--bn-colour-border);
+    white-space: nowrap;
+}
+
+.analysis-heatmap th .badge { font-weight: 500; }
+
+.analysis-heatmap th:first-child {
+    text-align: left;
+    min-width: 140px;
+}
+
+.analysis-heatmap td {
+    text-align: center;
+    padding: 0.45rem 0.4rem;
+    border-bottom: 1px solid var(--bn-colour-border);
+    transition: background 0.15s;
+}
+
+.analysis-heatmap td:first-child {
+    text-align: left;
+    font-weight: 500;
+    font-size: 0.85rem;
+    padding-right: var(--bn-space-md);
+}
+
+/* Cell colouring — inline oklch background set by JS */
+.heatmap-cell {
+    font-family: var(--bn-font-mono);
+    font-size: 0.8rem;
+    font-weight: 500;
+    border-radius: var(--bn-radius-sm);
+    min-width: 36px;
+    position: relative;
+    cursor: pointer;
+    transition: background 0.15s, outline 0.1s;
+}
+
+.heatmap-cell:hover {
+    outline: 2px solid var(--bn-colour-accent);
+    outline-offset: -1px;
+}
+
+.heatmap-cell[data-count="0"] {
+    color: var(--bn-colour-border);
+    cursor: default;
+}
+
+.heatmap-cell[data-count="0"]:hover { outline: none; }
+
+.heatmap-cell.heat-strong { color: light-dark(#fff, #111); }
+
+.heatmap-total {
+    font-weight: 600;
+    color: var(--bn-colour-muted);
+    background: transparent !important;
+    cursor: default;
+}
+
+.heatmap-total:hover { outline: none; }
+
+.heatmap-cell.has-card { cursor: pointer; }
+.heatmap-cell:not(.has-card) { cursor: default; }
+.heatmap-cell:not(.has-card):hover { outline: none; }

@@ -74,6 +74,7 @@ _THEME_FILES: list[str] = [
     "organisms/toc.css",
     "organisms/global-nav.css",
     "organisms/codebook-panel.css",
+    "organisms/analysis.css",
     "templates/report.css",
     "molecules/transcript-annotations.css",
     "templates/transcript.css",
@@ -135,6 +136,7 @@ _JS_FILES: list[str] = [
     "js/global-nav.js",
     "js/transcript-names.js",
     "js/transcript-annotations.js",
+    "js/analysis.js",
     "js/main.js",
 ]
 
@@ -191,6 +193,7 @@ def render_html(
     display_names: dict[str, str] | None = None,
     people: PeopleFile | None = None,
     transcripts: list[FullTranscript] | None = None,
+    analysis: object | None = None,
 ) -> Path:
     """Generate the HTML research report with external CSS stylesheet.
 
@@ -592,6 +595,15 @@ def render_html(
         output_dir=output_dir,
         color_scheme=color_scheme,
     )
+
+    # --- Generate analysis page ---
+    if analysis is not None:
+        _render_analysis_page(
+            project_name=project_name,
+            output_dir=output_dir,
+            analysis=analysis,
+            color_scheme=color_scheme,
+        )
 
     return html_path
 
@@ -1536,6 +1548,167 @@ def _render_codebook_page(
     page_path = paths.codebook_file
     page_path.write_text("\n".join(parts), encoding="utf-8")
     logger.info("Wrote codebook page: %s", page_path)
+    return page_path
+
+
+# ---------------------------------------------------------------------------
+# Analysis page
+# ---------------------------------------------------------------------------
+
+_ANALYSIS_JS_FILES: list[str] = [
+    "js/storage.js",
+    "js/badge-utils.js",
+    "js/analysis.js",
+]
+
+
+def _load_analysis_js() -> str:
+    """Read and concatenate only the JS modules needed for the analysis page."""
+    parts: list[str] = []
+    for name in _ANALYSIS_JS_FILES:
+        path = _THEME_DIR / name
+        parts.append(f"// --- {name} ---\n")
+        parts.append(path.read_text(encoding="utf-8").strip())
+        parts.append("\n\n")
+    return "".join(parts)
+
+
+_analysis_js_cache: str | None = None
+
+
+def _get_analysis_js() -> str:
+    global _analysis_js_cache  # noqa: PLW0603
+    if _analysis_js_cache is None:
+        _analysis_js_cache = _load_analysis_js()
+    return _analysis_js_cache
+
+
+def _serialize_matrix(matrix: object) -> dict:
+    """Convert a Matrix dataclass to a JSON-friendly dict."""
+    cells_dict: dict[str, dict] = {}
+    for key, cell in matrix.cells.items():  # type: ignore[attr-defined]
+        cells_dict[key] = {
+            "count": cell.count,
+            "participants": cell.participants,
+            "intensities": cell.intensities,
+        }
+    return {
+        "cells": cells_dict,
+        "rowTotals": matrix.row_totals,  # type: ignore[attr-defined]
+        "colTotals": matrix.col_totals,  # type: ignore[attr-defined]
+        "grandTotal": matrix.grand_total,  # type: ignore[attr-defined]
+        "rowLabels": matrix.row_labels,  # type: ignore[attr-defined]
+    }
+
+
+def _serialize_analysis(analysis: object) -> str:
+    """Serialize AnalysisResult for JS injection."""
+    # Collect all participant IDs across all signals
+    all_pids: set[str] = set()
+    for s in analysis.signals:  # type: ignore[attr-defined]
+        all_pids.update(s.participants)
+    # Sort participant IDs naturally (p1, p2, ..., p10)
+    sorted_pids = sorted(all_pids, key=lambda p: (p[0], int(p[1:]) if p[1:].isdigit() else 0))
+
+    data = {
+        "signals": [
+            {
+                "location": s.location,
+                "sourceType": s.source_type,
+                "sentiment": s.sentiment,
+                "count": s.count,
+                "participants": s.participants,
+                "nEff": round(s.n_eff, 2),
+                "meanIntensity": round(s.mean_intensity, 2),
+                "concentration": round(s.concentration, 2),
+                "compositeSignal": round(s.composite_signal, 4),
+                "confidence": s.confidence,
+                "quotes": [
+                    {
+                        "text": q.text,
+                        "pid": q.participant_id,
+                        "sessionId": q.session_id,
+                        "startSeconds": q.start_seconds,
+                        "intensity": q.intensity,
+                    }
+                    for q in s.quotes
+                ],
+            }
+            for s in analysis.signals  # type: ignore[attr-defined]
+        ],
+        "sectionMatrix": _serialize_matrix(analysis.section_matrix),  # type: ignore[attr-defined]
+        "themeMatrix": _serialize_matrix(analysis.theme_matrix),  # type: ignore[attr-defined]
+        "totalParticipants": analysis.total_participants,  # type: ignore[attr-defined]
+        "sentiments": analysis.sentiments,  # type: ignore[attr-defined]
+        "participantIds": sorted_pids,
+    }
+    return json.dumps(data, separators=(",", ":"))
+
+
+def _render_analysis_page(
+    project_name: str,
+    output_dir: Path,
+    analysis: object,
+    color_scheme: str = "auto",
+) -> Path:
+    """Render the analysis page as a standalone HTML file.
+
+    The analysis page sits at the output root (same level as the report),
+    opened in a new window via the toolbar Analysis button.
+    """
+    from bristlenose.output_paths import OutputPaths
+    from bristlenose.utils.text import slugify
+
+    paths = OutputPaths(output_dir, project_name)
+    slug = slugify(project_name)
+
+    parts: list[str] = []
+    _w = parts.append
+
+    _w(_document_shell_open(
+        title=f"Analysis \u2014 {_esc(project_name)}",
+        css_href="assets/bristlenose-theme.css",
+        color_scheme=color_scheme,
+    ))
+
+    _w(_report_header_html(
+        assets_prefix="assets",
+        has_logo=paths.logo_file.exists(),
+        has_dark_logo=paths.logo_dark_file.exists(),
+        project_name=_esc(project_name),
+        doc_title="Analysis",
+    ))
+
+    # Back link to report
+    report_filename = f"bristlenose-{slug}-report.html"
+    _w('<nav class="transcript-back">')
+    _w(f'<a href="{report_filename}">')
+    _w(f"&larr; {_esc(project_name)} Research Report</a>")
+    _w("</nav>")
+
+    # Template body
+    _w(_jinja_env.get_template("analysis.html").render())
+
+    _w("</article>")
+    _w(_footer_html())
+
+    # JavaScript with injected data
+    _w("<script>")
+    _w("(function() {")
+    _w(f"var BRISTLENOSE_ANALYSIS = {_serialize_analysis(analysis)};")
+    report_fn_js = report_filename.replace("'", "\\'")
+    _w(f"var BRISTLENOSE_REPORT_FILENAME = '{report_fn_js}';")
+    _w(_get_analysis_js())
+    _w("initAnalysis();")
+    _w("})();")
+    _w("</script>")
+
+    _w("</body>")
+    _w("</html>")
+
+    page_path = paths.analysis_file
+    page_path.write_text("\n".join(parts), encoding="utf-8")
+    logger.info("Wrote analysis page: %s", page_path)
     return page_path
 
 

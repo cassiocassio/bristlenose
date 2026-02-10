@@ -52,6 +52,20 @@
     --bn-sentiment-confidence: #2563eb;
     --bn-sentiment-confidence-bg: #eff6ff;
 
+    /* Analysis heatmap — OKLCH colour ramp tokens */
+    --bn-heat-frustration-h: 55;
+    --bn-heat-confusion-h: 30;
+    --bn-heat-doubt-h: 295;
+    --bn-heat-surprise-h: 75;
+    --bn-heat-satisfaction-h: 155;
+    --bn-heat-delight-h: 170;
+    --bn-heat-confidence-h: 260;
+    --bn-heat-chroma: 0.12;
+    --bn-heat-l-min: 95%;
+    --bn-heat-l-max: 45%;
+    --bn-heat-depleted-h: 75;
+    --bn-heat-depleted-chroma: 0.08;
+
     /* Codebook user-tag colours — OKLCH v5 pentadic palette.
        5 sets at ~72° hue anchors, ±25° per set, ~12° steps.
        Light mode: washed (pale bg, dark text).
@@ -253,6 +267,12 @@
         --bn-sentiment-delight-bg:       light-dark(#ecfdf5, #0d261c);
         --bn-sentiment-confidence:       light-dark(#2563eb, #60a5fa);
         --bn-sentiment-confidence-bg:    light-dark(#eff6ff, #111d2e);
+
+        /* Analysis heatmap — dark mode overrides */
+        --bn-heat-chroma: light-dark(0.12, 0.10);
+        --bn-heat-l-min: light-dark(95%, 30%);
+        --bn-heat-l-max: light-dark(45%, 75%);
+        --bn-heat-depleted-chroma: light-dark(0.08, 0.06);
 
         /* Codebook user-tag colours — dark mode: saturated bg, white text */
         --bn-ux-1-bg: light-dark(oklch(94% 0.03 225), oklch(50% 0.12 225));

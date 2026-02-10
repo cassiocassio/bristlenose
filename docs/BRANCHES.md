@@ -16,7 +16,7 @@ Each active feature branch gets its own **git worktree** — a full working copy
 |-----------|--------|---------|
 | `bristlenose/` | `main` | Main repo, releases, hotfixes |
 | `bristlenose_branch analysis/` | `analysis` | Analysis feature |
-| `bristlenose_branch navigation/` | `navigation` | Global navigation prototype |
+| `bristlenose_branch navigation/` | `navigation` | Global navigation tabs |
 | `bristlenose_branch codebook-tag-filter/` | `codebook-tag-filter` | Codebook-styled tag filter |
 
 **Creating a new feature branch worktree:**
@@ -226,6 +226,36 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 - `main.js` — both branches add new init calls
 
 **Resolution strategy:** Keyboard navigation merges first (more complete). Export-sharing rebases on main after keyboard merge.
+
+---
+
+### `navigation`
+
+**Status:** Core infrastructure complete, placeholder tabs pending content
+**Started:** 9 Feb 2026
+**Worktree:** `/Users/cassio/Code/bristlenose_branch navigation/`
+**Remote:** `origin/navigation`
+
+**What it does:** Global tab bar navigation for the HTML report. 7 tabs (Project, Sessions, Quotes, Codebook, Analysis, Settings, About). Sessions tab has grid → inline transcript drill-down. All existing report content moved into Quotes tab. Speaker links in quote cards cross-navigate to Sessions → session → timecode. Full ARIA/accessibility, CSS with responsive horizontal scroll.
+
+**Files this branch touches:**
+- `bristlenose/stages/render_html.py` — tab bar HTML, session grid, inline transcript embedding, speaker link `data-nav-*` attributes
+- `bristlenose/theme/js/global-nav.js` — **new** tab switching and session drill-down module
+- `bristlenose/theme/organisms/global-nav.css` — **new** tab bar and panel styles
+- `bristlenose/theme/js/main.js` — boot sequence (adds `initGlobalNav()`)
+- `bristlenose/theme/js/focus.js` — keyboard integration
+- `bristlenose/theme/js/transcript-annotations.js` — supports multiple visible `.transcript-body` elements
+- `tests/test_navigation.py` — **new** 12 tests
+
+**Potential conflicts with other branches:**
+- `render_html.py` — heavily modified (tab structure wraps all content)
+- `main.js` — boot sequence modified
+
+**Remaining work:**
+- Project tab — populate with project metadata
+- Analysis tab — populate or remove
+- Settings tab — populate or remove
+- Standalone transcript pages — decide: keep generating or stop?
 
 ---
 

@@ -456,10 +456,14 @@ def render_html(
     _w('<div class="codebook-grid" id="codebook-grid"></div>')
     _w("</div>")  # .bn-tab-panel[codebook]
 
-    # --- Analysis tab (placeholder) ---
+    # --- Analysis tab ---
     _w('<div class="bn-tab-panel" data-tab="analysis" id="panel-analysis" role="tabpanel" aria-label="Analysis">')
-    _w("<h2>Analysis</h2>")
-    _w('<p class="description">Analysis features coming soon.</p>')
+    if analysis is not None:
+        _w(_jinja_env.get_template("analysis.html").render())
+    else:
+        _w("<h2>Analysis</h2>")
+        _w('<p class="description">No analysis data available.'
+           " Run the full pipeline to generate analysis.</p>")
     _w("</div>")  # .bn-tab-panel[analysis]
 
     # --- Settings tab (placeholder) ---
@@ -560,6 +564,11 @@ def render_html(
             }
     _w(f"var BRISTLENOSE_QUOTE_MAP = {json.dumps(_combined_qmap)};")
     _w("var BRISTLENOSE_REPORT_URL = '';")
+
+    # Analysis data for inline rendering in the Analysis tab.
+    if analysis is not None:
+        _w(f"var BRISTLENOSE_ANALYSIS = {_serialize_analysis(analysis)};")
+        _w(f"var BRISTLENOSE_REPORT_FILENAME = '{paths.html_report.name}';")
 
     # Player popup URL.
     _w("var BRISTLENOSE_PLAYER_URL = 'assets/bristlenose-player.html';")

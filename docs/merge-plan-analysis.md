@@ -1,8 +1,10 @@
 # Merge Plan: `analysis` → `main`
 
+> **Status:** Merged 11 Feb 2026. This plan is kept for historical reference.
+
 **Written:** 10 Feb 2026
-**Branch:** `analysis` (5 commits ahead of main)
-**Tests:** 858 passed (97 analysis-specific), lint clean
+**Branch:** `analysis` (6 commits, fast-forward merged after rebase)
+**Tests:** 894 passed (113 analysis-specific), lint clean
 **Prerequisite:** Navigation branch merges first
 
 ---

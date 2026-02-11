@@ -1005,6 +1005,19 @@ def _render_project_tab(
         coverage = calculate_coverage(transcripts, all_quotes)
         coverage_pct = coverage.pct_in_report
 
+    # Moderator and observer names (by speaker-code prefix).
+    moderator_names: list[str] = []
+    observer_names: list[str] = []
+    if people and people.participants:
+        for code, entry in people.participants.items():
+            name = _display_name(code, display_names)
+            if code.startswith("m"):
+                if name not in moderator_names:
+                    moderator_names.append(name)
+            elif code.startswith("o"):
+                if name not in observer_names:
+                    observer_names.append(name)
+
     # Pick up to 9 featured-quote candidates so JS can swap hidden/unstarred.
     featured_pool = _pick_featured_quotes(all_quotes or [], n=9)
 
@@ -1062,6 +1075,22 @@ def _render_project_tab(
         _w(f'<div class="bn-project-stat">'
            f'<span class="bn-project-stat-value">{coverage_pct}%</span>'
            f'<span class="bn-project-stat-label">coverage</span></div>')
+
+    # Moderators.
+    if moderator_names:
+        label = "Moderator" if len(moderator_names) == 1 else "Moderators"
+        _w(f'<div class="bn-project-stat bn-project-stat--text">'
+           f'<span class="bn-project-stat-label">{label}:</span> '
+           f'{_esc(_oxford_list(moderator_names))}'
+           f'</div>')
+
+    # Observers (only if present).
+    if observer_names:
+        label = "Observer" if len(observer_names) == 1 else "Observers"
+        _w(f'<div class="bn-project-stat bn-project-stat--text">'
+           f'<span class="bn-project-stat-label">{label}:</span> '
+           f'{_esc(_oxford_list(observer_names))}'
+           f'</div>')
 
     _w("</div>")  # .bn-project-stats
     _w("</div>")  # .bn-dashboard-pane (stats)
@@ -2018,6 +2047,15 @@ def _display_name(
     if display_names and pid in display_names:
         return display_names[pid]
     return pid
+
+
+def _oxford_list(names: list[str]) -> str:
+    """Join names with Oxford commas: 'A', 'A and B', 'A, B, and C'."""
+    if len(names) <= 1:
+        return names[0] if names else ""
+    if len(names) == 2:
+        return f"{names[0]} and {names[1]}"
+    return ", ".join(names[:-1]) + f", and {names[-1]}"
 
 
 def _participant_range(sessions: list[InputSession]) -> str:

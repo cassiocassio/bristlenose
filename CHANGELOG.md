@@ -2,6 +2,11 @@
 
 All notable changes to Bristlenose are documented here. See also the [README](README.md) for the latest releases.
 
+**0.9.1** — _11 Feb 2026_
+
+- Moderator and observer names shown in Project tab stats row (Oxford comma lists, observer box only when observers exist)
+- Fix: clicking [+] to add a tag on a quote now tags that quote, not the previously-focused quote
+
 **0.9.0** — _11 Feb 2026_
 
 - Tab navigation — tabs remember their position across page reloads via URL hash (`#codebook`, `#analysis`, etc.); browser back/forward navigates between tabs; deep-linkable tab URLs

@@ -261,8 +261,8 @@ When the user signals end of session, **proactively offer to run this checklist*
 9. **Clean up branches** — delete merged feature branches
 10. **Verify CI** — check latest push passes CI
 
-## Current status (v0.8.2, Feb 2026)
+## Current status (v0.9.0, Feb 2026)
 
-Core pipeline complete and published to PyPI + Homebrew. Snap packaging implemented and tested locally (arm64); CI builds amd64 on every push. Latest: **Gemini provider** — budget option (~$0.20/study), `_flatten_schema_for_gemini()` for native structured output, platform-specific credential labels (Keychain/Secret Service). Prior: Hidden quotes + Codebook, Azure OpenAI provider, install smoke tests, chart layout + histogram delete, multi-select and tag filter, tag taxonomy redesign (7 research-backed sentiments), keychain credential storage, Ollama local LLM support, output inside input folder, transcript coverage, multi-participant sessions. See git log for full history.
+Core pipeline complete and published to PyPI + Homebrew. Snap packaging implemented and tested locally (arm64); CI builds amd64 on every push. Latest: **Tab navigation with hash persistence** — Analysis and Codebook tabs render inline content (no longer placeholders), URL hash tracks active tab across reloads with back/forward support. Prior: Gemini provider (~$0.20/study), transcript annotations, Hidden quotes + Codebook, Azure OpenAI provider, install smoke tests, chart layout + histogram delete, multi-select and tag filter, tag taxonomy redesign (7 research-backed sentiments), keychain credential storage, Ollama local LLM support, output inside input folder, transcript coverage, multi-participant sessions. See git log for full history.
 
 **Next up:** Phase 2 cross-session moderator linking; snap store publishing; tag definitions page in report UI. See `TODO.md` for full task list.

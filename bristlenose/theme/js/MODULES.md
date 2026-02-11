@@ -145,18 +145,17 @@ Feedback modal logic, gated behind `BRISTLENOSE_FEEDBACK` JS constant. `initFeed
 
 ## codebook.js
 
-Codebook data model, colour assignment, and interactive panel UI. Manages the researcher's tag taxonomy: named groups of tags with colours from the OKLCH pentadic palette. On the report page, provides colour lookups and the toolbar button. On `codebook.html`, renders the full interactive panel with drag-and-drop, inline editing, and group CRUD.
+Codebook data model, colour assignment, and interactive panel UI. Manages the researcher's tag taxonomy: named groups of tags with colours from the OKLCH pentadic palette. On the report page, provides colour lookups. On the codebook tab (or standalone `codebook.html`), renders the full interactive panel with drag-and-drop, inline editing, and group CRUD.
 
 - **Store**: `createStore('bristlenose-codebook')` — shape `{ groups: [], tags: {}, aiTagsVisible: true }`
 - **Colour sets**: 5 pentadic sets (UX blue, Emotion red-pink, Task green-teal, Trust purple, Opportunity amber), each with 5–6 slots. `COLOUR_SETS` includes `bgVar`, `groupBg`, `barVar` properties for panel rendering
 - **`getTagColourVar(tagName)`** — returns CSS `var()` reference for a tag's background colour; `var(--bn-custom-bg)` for ungrouped tags. Delegates to shared `getTagColour()` from `badge-utils.js` and adds the ungrouped fallback
 - **`assignTagToGroup(tagName, groupId)`** — assigns tag with auto-picked colour index
 - **`createCodebookGroup(name, colourSet)`** — creates a group with auto-assigned colour set if not specified
-- **`initCodebook()`** — restores AI tag visibility, applies codebook colours to badges, wires Codebook toolbar button. On codebook page, calls `_initCodebookPanel()` to render the interactive grid
-- **Codebook button**: opens `codebook.html` via `window.open()` with `'bristlenose-codebook'` window name
+- **`initCodebook()`** — restores AI tag visibility, applies codebook colours to badges. On codebook tab or codebook page, calls `_initCodebookPanel()` to render the interactive grid
 - **AI tag toggle**: code commented out (removed from toolbar — TODO: relocate to future settings panel). Functions `isAiTagsVisible()`, `toggleAiTags()`, `_applyAiTagVisibility()` remain available
 - **Cross-window sync**: `storage` event listener reloads codebook state and re-renders panel (or re-applies colours on report page) when the other window writes
-- **Panel rendering** (codebook page only):
+- **Panel rendering** (codebook tab and standalone codebook page):
   - `_initCodebookPanel(grid)` — renders grid, wires `?` key for help modal and `Escape` for `closeTopmostModal()`
   - `_renderCodebookGrid(grid)` — builds ungrouped column, group columns, and "+ New group" placeholder
   - `_renderGroupColumn()` — header (title, subtitle, close button), tag list with micro bars, add-tag row
@@ -172,19 +171,20 @@ Codebook data model, colour assignment, and interactive panel UI. Manages the re
 
 Top-level tab bar for report navigation. Manages switching between tab panels (Project, Sessions, Quotes, Codebook, Analysis, Settings, About) and the Sessions tab drill-down sub-navigation.
 
-- **`switchToTab(tabName)`** — switch to a named tab. Updates `aria-selected` on tab buttons, toggles `.active` on panels. Exported for cross-module use (e.g. speaker links navigating to Sessions tab)
-- **`initGlobalNav()`** — wires tab click handlers, initialises session drill-down and speaker link navigation
+- **`switchToTab(tabName, pushHash)`** — switch to a named tab. Updates `aria-selected` on tab buttons, toggles `.active` on panels, pushes URL hash (`#codebook`, `#analysis`, etc.) for reload persistence and back/forward navigation. Pass `pushHash=false` to skip hash update (used by `popstate` handler and initial load). Exported for cross-module use (e.g. speaker links navigating to Sessions tab)
+- **`initGlobalNav()`** — wires tab click handlers, restores active tab from URL hash on load, listens for `popstate` (back/forward), initialises session drill-down and speaker link navigation
 - **`_initSessionDrillDown()`** — click handlers on session table rows (`tr[data-session]`) and session number links (`a[data-session-link]`) to drill into inline transcript views; back button returns to grid
 - **`_initSpeakerLinks()`** — click handlers on `a[data-nav-session]` links in quote cards. Navigates: switch to Sessions tab → drill into session → scroll to `data-nav-anchor` timecode
 - **`_showSession(sid)`** — hides session grid, shows the matching `.bn-session-page`, updates sub-nav label, re-renders transcript annotations (span bars need layout measurements). Stores `_currentSessionId` so returning to the Sessions tab restores drill-down state
 - **`_showGrid()`** — returns to the session grid, hides all transcript pages, clears `_currentSessionId`
-- **Module state**: `_sessGrid`, `_sessSubnav`, `_sessLabel`, `_sessPages`, `_currentSessionId` — cached DOM references and current drill-down state
+- **Hash-based tab persistence**: `_validTabs` whitelist; `history.pushState` on tab switch; `popstate` listener for back/forward; hash read on init for reload. Invalid/missing hash falls back to Project tab (server-rendered default)
+- **Module state**: `_validTabs`, `_sessGrid`, `_sessSubnav`, `_sessLabel`, `_sessPages`, `_currentSessionId` — valid tab names, cached DOM references, and current drill-down state
 - **Dependencies**: must load after `focus.js` and `feedback.js`; before `transcript-names.js` and `transcript-annotations.js` (transcript pages embedded in Sessions tab need annotation rendering). Calls `_renderAllAnnotations()` from `transcript-annotations.js` if available
 - **CSS**: `organisms/global-nav.css` — tab bar, tab buttons, panels, session grid, session sub-nav, responsive horizontal scroll
 
 ## Codebook page
 
-Standalone HTML page (`codebook.html`) at the output root, opened in a new window by the toolbar Codebook button. Rendered by `_render_codebook_page()` in `render_html.py`. Features:
+Standalone HTML page (`codebook.html`) at the output root. Rendered by `_render_codebook_page()` in `render_html.py`. Same content is also rendered inline in the report's Codebook tab. Features:
 
 - **Layout**: CSS columns masonry grid (`columns: 240px`, `organisms/codebook-panel.css`) with colour-coded group cards
 - **Content**: description text + `<div class="codebook-grid" id="codebook-grid">` container populated by `_initCodebookPanel()` from `codebook.js`
@@ -194,28 +194,28 @@ Standalone HTML page (`codebook.html`) at the output root, opened in a new windo
 
 ## analysis.js
 
-Analysis page: signal cards, heatmaps, and interactive features. On the report page, wires the toolbar Analysis button. On `analysis.html`, renders the full analysis content from injected JSON data.
+Analysis rendering: signal cards, heatmaps, and interactive features. Renders analysis content from `BRISTLENOSE_ANALYSIS` JSON data both in the report's Analysis tab and on standalone `analysis.html`.
 
 - **Data source**: `BRISTLENOSE_ANALYSIS` global — JSON object injected by `render_html.py` containing `signals`, `sectionMatrix`, `themeMatrix`, `totalParticipants`, `sentiments`, `participantIds`, `reportFilename`
-- **`initAnalysis()`** — detects page type: report page (wires toolbar button to open `analysis.html` in new window) vs analysis page (renders signal cards + heatmaps)
+- **`initAnalysis()`** — if `#signal-cards` container and `BRISTLENOSE_ANALYSIS` data exist, renders signal cards + heatmaps; otherwise returns early
 - **`renderSignalCards()`** — builds signal card list from `data.signals`. Each card has: accent bar (sentiment colour), location/sentiment header, metrics grid (concentration bar, Neff, intensity dots), expandable quote list, participant presence grid, link back to report section
 - **`renderHeatmap(matrix, containerId, rowHeader, sourceType)`** — builds contingency table with OKLCH-coloured cells. Computes adjusted residuals client-side for theme-responsive colouring. Cells with matching signals are clickable (smooth-scroll to card with highlight flash)
 - **`adjustedResidual(observed, rowTotal, colTotal, grandTotal)`** — client-side duplicate of Python `adjusted_residual()` from `metrics.py`, needed for theme-responsive heatmap colours (recomputed on dark mode toggle)
 - **`heatCellColour(heat, hue, chroma, isDark)`** — OKLCH colour ramp: lightness interpolated between `lMin` and `lMax` based on normalised heat value
 - **`intensityDotsSvg(intensity, size, colour)`** — renders 1–5 filled/empty dots as inline SVG
 - **Dark mode**: `MutationObserver` on `<html>` attribute changes re-renders heatmaps when theme toggles (OKLCH lightness direction inverts). Uses `THEME_ATTR = "data-" + "theme"` constant to avoid literal string in embedded HTML (dark mode tests assert absence)
-- **Dependencies**: none (self-contained). Loaded on both report page (`_JS_FILES`, for toolbar button) and analysis page (`_ANALYSIS_JS_FILES`, for content rendering)
+- **Dependencies**: none (self-contained). Loaded on both report page (`_JS_FILES`, for inline Analysis tab) and standalone analysis page (`_ANALYSIS_JS_FILES`)
 - **CSS**: `organisms/analysis.css` (signal cards, heatmap table, confidence badges, expansion animation)
 
 ## Analysis page
 
-Standalone HTML page (`analysis.html`) at the output root, opened in a new window by the toolbar Analysis button. Rendered by `_render_analysis_page()` in `render_html.py`. Features:
+Standalone HTML page (`analysis.html`) at the output root. Rendered by `_render_analysis_page()` in `render_html.py`. Same content also renders inline in the report's Analysis tab. Features:
 
 - **Layout**: signal cards list + two heatmap tables (Section×Sentiment, Theme×Sentiment)
 - **JS files**: `_ANALYSIS_JS_FILES` = `storage.js` + `analysis.js`. Boot calls `initAnalysis()` which detects `#signal-cards` element and renders content
-- **Data injection**: `BRISTLENOSE_ANALYSIS` JSON global with serialised matrices and signals
+- **Data injection**: `BRISTLENOSE_ANALYSIS` JSON global with serialised matrices and signals (injected into both main report and standalone page)
 - **Interactive features**: expandable quote lists per signal card, heatmap cell click → scroll to signal card, dark mode toggle re-renders heatmaps
-- **Cross-page**: toolbar button on report page opens analysis in new window; signal card links point back to report sections
+- **Cross-page**: signal card links point back to report sections
 
 Four page types in the output:
 1. **Report** (`bristlenose-{slug}-report.html`) — main window, full JS suite (19 modules)

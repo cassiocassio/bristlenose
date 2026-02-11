@@ -374,6 +374,12 @@ Edit `bristlenose/__init__.py` (the single source of truth for version), commit,
 
 ## Changelog
 
+**0.9.0** — _11 Feb 2026_
+
+- Tab navigation remembers position across reloads via URL hash; browser back/forward navigates between tabs
+- Analysis tab — inline signal cards and heatmaps in the main report (no longer just a placeholder)
+- Codebook tab — fixed empty grid bug caused by JS function name collision in the concatenated bundle
+
 **0.8.2** — _9 Feb 2026_
 
 - Transcript annotations — transcript pages highlight selected quotes with margin labels, sentiment colours, span bars, and playback-synced glow

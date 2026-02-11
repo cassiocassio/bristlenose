@@ -16,14 +16,19 @@ var _sessPages = null;
 /** Currently displayed session ID, or null if showing the grid. */
 var _currentSessionId = null;
 
+/** Valid tab names for hash-based navigation. */
+var _validTabs = ['project', 'sessions', 'quotes', 'codebook', 'analysis', 'settings', 'about'];
+
 /**
  * Switch to a specific tab by name.
  * Exported for use by other modules (e.g. focus.js "?" key → About tab).
  *
- * @param {string} tabName  One of "project", "sessions", "quotes", "codebook",
- *                          "analysis", "settings", "about".
+ * @param {string} tabName     One of "project", "sessions", "quotes", "codebook",
+ *                             "analysis", "settings", "about".
+ * @param {boolean} [pushHash] If false, skip updating the URL hash (used by
+ *                             popstate handler to avoid re-pushing state).
  */
-function switchToTab(tabName) {
+function switchToTab(tabName, pushHash) {
   var tabs = document.querySelectorAll('.bn-tab');
   var panels = document.querySelectorAll('.bn-tab-panel');
 
@@ -35,6 +40,11 @@ function switchToTab(tabName) {
 
   for (var j = 0; j < panels.length; j++) {
     panels[j].classList.toggle('active', panels[j].getAttribute('data-tab') === tabName);
+  }
+
+  // Update URL hash so reload returns to this tab.
+  if (pushHash !== false) {
+    history.pushState(null, '', '#' + tabName);
   }
 
   // Restore session drill-down state when returning to the Sessions tab
@@ -55,6 +65,20 @@ function initGlobalNav() {
       switchToTab(target);
     });
   }
+
+  // --- Restore tab from URL hash (survives reload) ---
+  var hash = window.location.hash.replace('#', '');
+  if (hash && _validTabs.indexOf(hash) !== -1) {
+    switchToTab(hash, false);
+  }
+
+  // --- Back/forward button support ---
+  window.addEventListener('popstate', function () {
+    var h = window.location.hash.replace('#', '');
+    if (h && _validTabs.indexOf(h) !== -1) {
+      switchToTab(h, false);
+    }
+  });
 
   // --- Session drill-down ---
   _initSessionDrillDown();

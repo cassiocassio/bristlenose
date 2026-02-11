@@ -608,11 +608,13 @@ function initTags() {
     e.preventDefault();
     var bq = addBtnEl.closest('blockquote');
     if (!bq || !bq.id) return;
-    // Check for multi-select from focus.js
+    // Use multi-select only if the clicked quote is part of the selection.
+    // Otherwise tag only the clicked quote — don't leak the selection from
+    // a previously-focused quote (the user explicitly clicked [+] on this one).
     var targetIds = null;
     if (typeof getSelectedQuoteIds === 'function') {
       var selected = getSelectedQuoteIds();
-      if (selected && selected.size > 0) {
+      if (selected && selected.size > 0 && selected.has(bq.id)) {
         targetIds = Array.from(selected);
       }
     }

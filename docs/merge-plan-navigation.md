@@ -1,8 +1,10 @@
 # Merge Plan: `navigation` → `main`
 
+> **Status:** Merged 11 Feb 2026. This plan is kept for historical reference.
+
 **Written:** 10 Feb 2026
 **Updated:** 11 Feb 2026
-**Branch:** `navigation` (7 commits ahead of main)
+**Branch:** `navigation` (8 commits, fast-forward merged)
 **Tests:** 781 passed, lint clean
 
 ---

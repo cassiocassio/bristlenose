@@ -2,7 +2,7 @@
 
 This document tracks active feature branches to help multiple Claude sessions coordinate without conflicts.
 
-**Updated:** 10 Feb 2026
+**Updated:** 11 Feb 2026
 
 ---
 
@@ -16,7 +16,6 @@ Each active feature branch gets its own **git worktree** — a full working copy
 |-----------|--------|---------|
 | `bristlenose/` | `main` | Main repo, releases, hotfixes |
 | `bristlenose_branch analysis/` | `analysis` | Analysis feature |
-| `bristlenose_branch navigation/` | `navigation` | Global navigation tabs |
 | `bristlenose_branch codebook-tag-filter/` | `codebook-tag-filter` | Codebook-styled tag filter |
 
 **Creating a new feature branch worktree:**
@@ -96,7 +95,6 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 |--------|---------------|---------------|
 | `main` | `bristlenose/` | `origin/main` (push via `origin/main:wip` until release time) |
 | `analysis` | `bristlenose_branch analysis/` | `origin/analysis` |
-| `navigation` | `bristlenose_branch navigation/` | `origin/navigation` |
 | `codebook-tag-filter` | `bristlenose_branch codebook-tag-filter/` | `origin/codebook-tag-filter` |
 
 ---
@@ -117,20 +115,6 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 - `bristlenose/analysis/__init__.py` — **new** package init
 - `bristlenose/analysis/metrics.py` — **new** five math functions (concentration ratio, Simpson's N_eff, mean intensity, composite signal, adjusted standardised residual)
 - `tests/test_analysis_metrics.py` — **new** 32 tests
-
----
-
-### `navigation`
-
-**Status:** New, not started
-**Started:** 10 Feb 2026
-**Worktree:** `/Users/cassio/Code/bristlenose_branch navigation/`
-**Remote:** `origin/navigation`
-
-**What it does:** Global navigation prototype — cross-page nav (report, transcripts, codebook, analysis).
-
-**Files this branch touches:**
-- TBD
 
 ---
 
@@ -229,38 +213,11 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 
 ---
 
-### `navigation`
-
-**Status:** Core infrastructure complete, placeholder tabs pending content
-**Started:** 9 Feb 2026
-**Worktree:** `/Users/cassio/Code/bristlenose_branch navigation/`
-**Remote:** `origin/navigation`
-**Merge plan:** `docs/merge-plan-navigation.md`
-
-**What it does:** Global tab bar navigation for the HTML report. 7 tabs (Project, Sessions, Quotes, Codebook, Analysis, Settings, About). Sessions tab has grid → inline transcript drill-down. All existing report content moved into Quotes tab. Speaker links in quote cards cross-navigate to Sessions → session → timecode. Full ARIA/accessibility, CSS with responsive horizontal scroll.
-
-**Files this branch touches:**
-- `bristlenose/stages/render_html.py` — tab bar HTML, session grid, inline transcript embedding, speaker link `data-nav-*` attributes
-- `bristlenose/theme/js/global-nav.js` — **new** tab switching and session drill-down module
-- `bristlenose/theme/organisms/global-nav.css` — **new** tab bar and panel styles
-- `bristlenose/theme/js/main.js` — boot sequence (adds `initGlobalNav()`)
-- `bristlenose/theme/js/focus.js` — keyboard integration
-- `bristlenose/theme/js/transcript-annotations.js` — supports multiple visible `.transcript-body` elements
-- `tests/test_navigation.py` — **new** 12 tests
-
-**Potential conflicts with other branches:**
-- `render_html.py` — heavily modified (tab structure wraps all content)
-- `main.js` — boot sequence modified
-
-**Remaining work:**
-- Project tab — populate with project metadata
-- Analysis tab — populate or remove
-- Settings tab — populate or remove
-- Standalone transcript pages — decide: keep generating or stop?
-
----
-
 ## Completed Branches (for reference)
+
+### `navigation` — merged 11 Feb 2026
+
+Global tab bar navigation for the HTML report. 7 tabs (Project, Sessions, Quotes, Codebook, Analysis, Settings, About). Sessions tab with grid → inline transcript drill-down. Project tab dashboard with stats, featured quotes, sections/themes tables, sentiment chart. Speaker cross-navigation from quote cards to session timecodes. Full ARIA/accessibility. `global-nav.js`, `global-nav.css`, `global_nav.html`, `session_table.html` added; `render_html.py` extended with ~800 lines; `main.js` boot refactored to `_bootFns` array.
 
 ### `jinja2-migration` — merged 9 Feb 2026
 

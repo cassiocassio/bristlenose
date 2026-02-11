@@ -16,7 +16,6 @@ Each active feature branch gets its own **git worktree** — a full working copy
 |-----------|--------|---------|
 | `bristlenose/` | `main` | Main repo, releases, hotfixes |
 | `bristlenose_branch analysis/` | `analysis` | Analysis feature |
-| `bristlenose_branch codebook-tag-filter/` | `codebook-tag-filter` | Codebook-styled tag filter |
 
 **Creating a new feature branch worktree:**
 
@@ -95,7 +94,6 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 |--------|---------------|---------------|
 | `main` | `bristlenose/` | `origin/main` (push via `origin/main:wip` until release time) |
 | `analysis` | `bristlenose_branch analysis/` | `origin/analysis` |
-| `codebook-tag-filter` | `bristlenose_branch codebook-tag-filter/` | `origin/codebook-tag-filter` |
 
 ---
 
@@ -115,30 +113,6 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 - `bristlenose/analysis/__init__.py` — **new** package init
 - `bristlenose/analysis/metrics.py` — **new** five math functions (concentration ratio, Simpson's N_eff, mean intensity, composite signal, adjusted standardised residual)
 - `tests/test_analysis_metrics.py` — **new** 32 tests
-
----
-
-### `codebook-tag-filter`
-
-**Status:** Complete, ready to merge (after navigation)
-**Started:** 10 Feb 2026
-**Worktree:** `/Users/cassio/Code/bristlenose_branch codebook-tag-filter/`
-**Remote:** `origin/codebook-tag-filter`
-**Merge order:** After `navigation`, before `analysis`
-
-**What it does:** Tag filter dropdown in the report toolbar uses codebook colours and hierarchy. Tags grouped into tinted sections matching codebook page. Badge-styled labels via `createReadOnlyBadge()`. Search matches both tag names and group names.
-
-**Files this branch touches:**
-- `bristlenose/theme/js/tag-filter.js` — codebook grouping, badge rendering, group-name search
-- `bristlenose/theme/js/badge-utils.js` — **new** `createReadOnlyBadge()` factory
-- `bristlenose/theme/molecules/tag-filter.css` — group containers, badge styling
-- `bristlenose/theme/js/MODULES.md` — new tag-filter.js section, updated badge-utils entry
-- `bristlenose/theme/CSS-REFERENCE.md` — updated tag-filter docs
-- `bristlenose/theme/CLAUDE.md` — new tag-filter gotchas
-
-**Potential conflicts with other branches:**
-- `bristlenose/theme/js/badge-utils.js` — new function added (append-only, low risk)
-- `bristlenose/theme/CLAUDE.md` — gotchas added (append-only, low risk)
 
 ---
 
@@ -214,6 +188,10 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 ---
 
 ## Completed Branches (for reference)
+
+### `codebook-tag-filter` — merged 11 Feb 2026
+
+Tag filter dropdown uses codebook colours and hierarchy. Tags grouped into tinted sections matching codebook page. Badge-styled labels via `createReadOnlyBadge()` in `badge-utils.js`. Search matches both tag names and group names.
 
 ### `navigation` — merged 11 Feb 2026
 

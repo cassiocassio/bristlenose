@@ -154,6 +154,18 @@
     text-align: center;
 }
 
+/* Text-style stat card (e.g. "Moderator: Name, Name, and Name") */
+.bn-project-stat--text {
+    flex-direction: row;
+    font-size: 0.85rem;
+    color: var(--bn-colour-text);
+}
+.bn-project-stat--text .bn-project-stat-label {
+    font-size: inherit;
+    margin-top: 0;
+    white-space: nowrap;
+}
+
 /* Featured quotes row — 3 cards across the top of the dashboard */
 .bn-featured-row {
     display: grid;

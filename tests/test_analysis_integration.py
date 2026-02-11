@@ -734,10 +734,11 @@ class TestRenderAnalysisPage:
         assert "<title>" in analysis_html
         assert "QA Test" in analysis_html
 
-    def test_report_has_analysis_button_js(self, tmp_path: Path) -> None:
-        """The main report page includes the analysis button handler."""
+    def test_report_has_inline_analysis(self, tmp_path: Path) -> None:
+        """The main report embeds analysis data and containers inline."""
         report_html, _ = self._render_with_analysis(tmp_path)
-        assert "analysis-btn" in report_html
+        assert "BRISTLENOSE_ANALYSIS" in report_html
+        assert 'id="signal-cards"' in report_html
 
     def test_analysis_data_matches_computation(self, tmp_path: Path) -> None:
         """The JSON injected in HTML matches what _compute_analysis produced."""

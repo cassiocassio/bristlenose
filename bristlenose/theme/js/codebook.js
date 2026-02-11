@@ -273,17 +273,7 @@ function initCodebook() {
   _applyAiTagVisibility();
   applyCodebookColours();
 
-  // Codebook button — opens codebook.html in a new window.
-  var codebookBtn = document.getElementById('codebook-btn');
-  if (codebookBtn) {
-    codebookBtn.addEventListener('click', function () {
-      var href = 'codebook.html';
-      window.open(href, 'bristlenose-codebook',
-        'width=960,height=700,menubar=no,toolbar=no,status=no');
-    });
-  }
-
-  // If we're on the codebook page, render the interactive panel.
+  // If we're on the codebook page or the report codebook tab, render the panel.
   var grid = document.getElementById('codebook-grid');
   if (grid) {
     _initCodebookPanel(grid);
@@ -327,8 +317,8 @@ function _getUserTags() {
   return store.get({});
 }
 
-/** Count quotes per tag name across all quotes. */
-function _countQuotesPerTag() {
+/** Count quotes per tag name across all quotes (from localStorage). */
+function _cbCountQuotesPerTag() {
   var userTags = _getUserTags();
   var counts = {};
   Object.keys(userTags).forEach(function (quoteId) {
@@ -471,7 +461,7 @@ function _initCodebookPanel(grid) {
 
 function _renderCodebookGrid(grid) {
   grid.innerHTML = '';
-  var counts = _countQuotesPerTag();
+  var counts = _cbCountQuotesPerTag();
   var allTags = _allTagNames();
   var mc = _maxTagCount(counts);
   var maxBarW = 48;
@@ -769,7 +759,7 @@ function _confirmMergeTags(dragName, dragGroupId, targetName, targetGroupId, gri
   var targetBg = getTagColourVar(targetName);
 
   // Count quotes for each
-  var counts = _countQuotesPerTag();
+  var counts = _cbCountQuotesPerTag();
   var dragCount = counts[dragName] || 0;
   var targetCount = counts[targetName] || 0;
   var total = dragCount + targetCount;

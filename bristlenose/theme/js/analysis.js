@@ -21,19 +21,7 @@ function initAnalysis() {
     // the full document for absence of the string when color_scheme is "auto").
     var THEME_ATTR = "data-" + "theme";
 
-    // ── Toolbar button (runs on report page) ─────────────────
-    var analysisBtn = document.getElementById("analysis-btn");
-    if (analysisBtn) {
-        analysisBtn.addEventListener("click", function () {
-            window.open(
-                "analysis.html",
-                "bristlenose-analysis",
-                "width=960,height=700,menubar=no,toolbar=no,status=no"
-            );
-        });
-    }
-
-    // ── Analysis page rendering ──────────────────────────────
+    // ── Analysis rendering ──────────────────────────────────
     var container = document.getElementById("signal-cards");
     if (!container || typeof BRISTLENOSE_ANALYSIS === "undefined") return;
 

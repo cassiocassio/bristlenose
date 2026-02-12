@@ -1,6 +1,6 @@
 # Bristlenose — Where I Left Off
 
-Last updated: 10 Feb 2026 (analysis phase 3 QA — 58 integration tests added)
+Last updated: 12 Feb 2026 (session table redesign, appearance toggle, user journeys)
 
 ## Next session reminder
 

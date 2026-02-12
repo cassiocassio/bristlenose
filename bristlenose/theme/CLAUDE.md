@@ -27,6 +27,8 @@ Add both light and dark values in the `light-dark()` call inside the `@supports`
 
 The `<picture>` element swaps between `bristlenose-logo.png` (light) and `bristlenose-logo-dark.png` (dark) using `<source media="(prefers-color-scheme: dark)">`. Both are in `assets/` directory. Dark logo is currently a placeholder (inverted version) — needs replacing with a proper albino bristlenose pleco image.
 
+**Logo + appearance toggle gotcha**: `<picture>` `<source>` media queries only respond to the OS-level `prefers-color-scheme`, not the page-level `data-theme`/`colorScheme` override set by the Settings toggle. Setting `img.src` inside a `<picture>` has no effect when a matching `<source>` exists. Workaround in `settings.js` (`_updateLogo`): physically removes the `<source>` element when the user forces light/dark, stashes it, and restores it when switching back to auto. Messy but unavoidable without duplicating the logo as two `<img>` elements toggled by CSS classes.
+
 **Logo click**: wrapped in `<a class="report-logo-link" href="#project" onclick="switchToTab('project');return false;">`. Clicking the fish logo navigates to the Project tab (home). CSS in `atoms/logo.css`: `.report-logo-link` removes underline and sets `line-height: 0` to prevent extra vertical space around the image.
 
 ### No JS theme toggle

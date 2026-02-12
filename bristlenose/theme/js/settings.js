@@ -26,6 +26,55 @@ function _applyAppearance(value) {
     root.removeAttribute(_settingsThemeAttr);
     root.style.colorScheme = "light dark";
   }
+  _updateLogo(value);
+}
+
+// Logo dark/light swap — ugly but necessary.
+//
+// The header logo uses <picture><source media="(prefers-color-scheme: dark)">
+// which works perfectly for "auto" mode. But when the user forces light or
+// dark via the Settings toggle, we set the theme attr and colorScheme on
+// <html> — the browser respects that for CSS, but <picture> <source> media
+// queries ONLY respond to the OS-level prefers-color-scheme, not the
+// page-level override. Setting img.src inside a <picture> has no effect
+// when a <source> media query matches.
+//
+// Workaround: physically remove the <source> element when forcing light/dark
+// (so the <img> src wins), stash it, and restore it when switching back to
+// auto. Not pretty, but it's the only way without duplicating the logo as
+// two <img> elements toggled by CSS classes.
+//
+// NOTE: this comment must not contain the literal "data" + "-theme" string
+// — dark mode tests assert its absence in auto-mode HTML output.
+var _logoSource = null;
+
+function _updateLogo(value) {
+  var img = document.querySelector(".report-logo");
+  if (!img) return;
+  var picture = img.parentElement;
+  if (!picture || picture.tagName !== "PICTURE") return;
+  var src = img.getAttribute("src") || "";
+  var darkSrc = src.replace("bristlenose-logo.png", "bristlenose-logo-dark.png");
+  var lightSrc = src.replace("bristlenose-logo-dark.png", "bristlenose-logo.png");
+
+  // Stash the <source> on first call so we can restore it later.
+  if (!_logoSource) {
+    _logoSource = picture.querySelector("source");
+  }
+
+  if (value === "light" || value === "dark") {
+    // Remove <source> so <img> src takes effect.
+    var existing = picture.querySelector("source");
+    if (existing) existing.remove();
+    img.src = value === "dark" ? darkSrc : lightSrc;
+  } else {
+    // Auto — restore <source> and let browser media query decide.
+    if (_logoSource && !picture.querySelector("source")) {
+      picture.insertBefore(_logoSource, img);
+    }
+    var isDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+    img.src = isDark ? darkSrc : lightSrc;
+  }
 }
 
 function initSettings() {

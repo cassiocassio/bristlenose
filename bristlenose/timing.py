@@ -99,11 +99,15 @@ class Estimate:
     total_seconds: float
     stddev_seconds: float
     breakdown: dict[str, float] = field(default_factory=dict)
+    show_range: bool = True
 
     @property
     def range_str(self) -> str:
-        """Format as '~8 min (±2 min)' or '~45 sec (±10 sec)'."""
-        return f"~{_fmt(self.total_seconds)} (±{_fmt(self.stddev_seconds)})"
+        """Format as '~8 min (±2 min)' or '~8 min' (no range when data is thin)."""
+        base = f"~{_fmt(self.total_seconds)}"
+        if self.show_range:
+            return f"{base} (±{_fmt(self.stddev_seconds)})"
+        return base
 
 
 def _fmt(seconds: float) -> str:
@@ -252,9 +256,19 @@ class TimingEstimator:
         size = self._input_size_for(stage)
         return stat.mean * size, stat.stddev * size
 
+    # Minimum observations before showing an estimate at all.
+    _MIN_N_ESTIMATE = 4
+    # Minimum observations before showing the ±range (below this the variance
+    # is too noisy to be useful — just show the point estimate).
+    _MIN_N_RANGE = 8
+
     def has_history(self) -> bool:
-        """True if we have at least one historical run for this profile."""
-        return any(s.n > 0 for s in self._profile.values())
+        """True if we have enough historical runs to show an estimate."""
+        return any(s.n >= self._MIN_N_ESTIMATE for s in self._profile.values())
+
+    def _has_enough_for_range(self) -> bool:
+        """True if we have enough data to show a meaningful ±range."""
+        return any(s.n >= self._MIN_N_RANGE for s in self._profile.values())
 
     def initial_estimate(
         self,
@@ -289,6 +303,7 @@ class TimingEstimator:
             total_seconds=total,
             stddev_seconds=var_total ** 0.5,
             breakdown=breakdown,
+            show_range=self._has_enough_for_range(),
         )
 
     def stage_completed(self, stage: str, elapsed: float) -> Estimate | None:
@@ -320,6 +335,7 @@ class TimingEstimator:
             total_seconds=remaining_total,
             stddev_seconds=remaining_var ** 0.5,
             breakdown=breakdown,
+            show_range=self._has_enough_for_range(),
         )
 
     def record_run(self, actuals: dict[str, StageActual]) -> None:

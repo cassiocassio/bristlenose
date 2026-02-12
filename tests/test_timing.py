@@ -109,6 +109,12 @@ class TestEstimate:
         e = Estimate(total_seconds=300.0, stddev_seconds=0.4)
         assert "±1 sec" in e.range_str
 
+    def test_range_str_without_range(self) -> None:
+        """When show_range=False, only the point estimate is shown."""
+        e = Estimate(total_seconds=480.0, stddev_seconds=120.0, show_range=False)
+        assert e.range_str == "~8 min"
+        assert "±" not in e.range_str
+
 
 class TestFmt:
     def test_minutes(self) -> None:
@@ -258,7 +264,6 @@ class TestTimingEstimator:
 
         # Reload and check it was saved.
         est2 = TimingEstimator(key, tmp_path)
-        assert est2.has_history()
         profile = est2._profile
         assert profile[STAGE_TRANSCRIBE].mean == pytest.approx(4.0)
         assert profile[STAGE_TRANSCRIBE].n == 1
@@ -288,12 +293,40 @@ class TestTimingEstimator:
         key = "test-hw"
         est = TimingEstimator(key, tmp_path)
         assert not est.has_history()
-        est.record_run({
-            STAGE_TRANSCRIBE: StageActual(elapsed=40.0, input_size=10.0),
+
+        # Need MIN_N_ESTIMATE (4) runs before has_history() is True.
+        for i in range(3):
+            e = TimingEstimator(key, tmp_path)
+            e.record_run({
+                STAGE_TRANSCRIBE: StageActual(elapsed=40.0 + i, input_size=10.0),
+            })
+        assert not TimingEstimator(key, tmp_path).has_history()
+
+        # Fourth run crosses the threshold.
+        e = TimingEstimator(key, tmp_path)
+        e.record_run({
+            STAGE_TRANSCRIBE: StageActual(elapsed=44.0, input_size=10.0),
         })
-        # Need to reload to see persisted data.
+        assert TimingEstimator(key, tmp_path).has_history()
+
+    def test_show_range_requires_enough_data(self, tmp_path: Path) -> None:
+        """Estimate hides ±range until n >= MIN_N_RANGE (8)."""
+        key = "test-hw"
+        # n=5: enough for an estimate, not enough for ±range.
+        _seed_profile(tmp_path, key, n=5)
+        est = TimingEstimator(key, tmp_path)
+        result = est.initial_estimate(10.0, 5)
+        assert result is not None
+        assert result.show_range is False
+        assert "±" not in result.range_str
+
+        # n=8: range should now appear.
+        _seed_profile(tmp_path, key, n=8)
         est2 = TimingEstimator(key, tmp_path)
-        assert est2.has_history()
+        result2 = est2.initial_estimate(10.0, 5)
+        assert result2 is not None
+        assert result2.show_range is True
+        assert "±" in result2.range_str
 
     def test_estimate_breakdown_keys(self, tmp_path: Path) -> None:
         key = "test-hw"

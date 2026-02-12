@@ -606,19 +606,12 @@ def _build_estimator(settings: object) -> tuple[object, object]:
     except Exception:
         return None, None
 
-    _last_estimate_secs: list[float] = [0.0]  # mutable container for closure
-
     def _on_event(event: PipelineEvent) -> None:
         if event.kind == "estimate" and event.estimate is not None:
-            console.print(f"\n  [dim]Estimated time: {event.estimate.range_str}[/dim]\n")
-            _last_estimate_secs[0] = event.estimate.total_seconds
-        elif event.kind == "remaining" and event.estimate is not None:
-            est = event.estimate
-            # Only print if the remaining time is meaningful and differs
-            # enough from the last printed estimate to be worth showing.
-            if est.total_seconds > 30 and abs(est.total_seconds - _last_estimate_secs[0]) > 15:
-                console.print(f"  [dim]Remaining: {est.range_str}[/dim]")
-                _last_estimate_secs[0] = est.total_seconds
+            console.print(f"\n   [dim]Estimated time: {event.estimate.range_str}[/dim]\n")
+        # "remaining" events are still emitted (for future progress-bar UI)
+        # but not printed to the CLI — the per-stage recalculation adds
+        # visual noise without enough accuracy to be useful as text.
 
     return estimator, _on_event
 

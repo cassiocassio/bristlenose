@@ -97,7 +97,25 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 
 ## Active Branches
 
-_No active feature branches._
+### `symbology` — experimental, in progress
+
+**Worktree:** `/Users/cassio/Code/bristlenose_branch symbology`
+
+**What:** Prefix symbols (§ Section, ¶ Quote, ❋ Theme) as hanging punctuation in the HTML report. Visual wayfinding — subtle, decorative, not functional.
+
+**Status:** Mockup iteration only (`docs/mockups/mockup-symbology.html`). No production code changes. The idea might go nowhere.
+
+**Design doc:** `docs/design-symbology.md` — CSS method rationale, colour choice, integration plan (7 phases), file list, gotchas.
+
+**Key decisions made:**
+- CSS method: `position: absolute` with no `padding-left` (v2 — heading text stays flush with siblings)
+- Colour: `--bn-colour-icon-idle` (#c9ccd1 light / #595959 dark)
+- Token: `--bn-sym-gutter: 1.5ch`
+- 4 classes: `.sym-hang`, `.sym`, `.sym-inline`, `.sym-faded`
+
+**Files touched so far:** `docs/mockups/mockup-symbology.html`, `docs/design-symbology.md` only.
+
+**Next:** Rolling integration into production, a few atoms at a time (see phase plan in design doc).
 
 ---
 

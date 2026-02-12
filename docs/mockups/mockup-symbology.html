@@ -163,6 +163,7 @@
     --bn-transition-normal: 0.2s ease;
 
     --bn-colour-border-hover: #d1d5db;
+    --bn-colour-icon-idle: #c9ccd1;
     --bn-hover-bg: rgba(0, 0, 0, 0.04);
 
     /* Symbology gutter width */
@@ -192,6 +193,7 @@
     --bn-sentiment-confidence-bg: #111d2e;
 
     --bn-colour-border-hover: #4b5563;
+    --bn-colour-icon-idle: #595959;
     --bn-hover-bg: rgba(255, 255, 255, 0.06);
 }
 
@@ -281,8 +283,8 @@ body {
 
    .sym         — goes on the <span> wrapping the symbol character.
                   Absolutely positioned at left: -1.5ch — hangs LEFT
-                  of the parent's content edge. Mid-grey from
-                  --bn-colour-muted.
+                  of the parent's content edge. Subtle grey from
+                  --bn-colour-icon-idle (#c9ccd1 light / #595959 dark).
 
    .sym-inline  — flat variant for cramped contexts (tabs, stat
                   card labels, signal card source labels, tooltips).
@@ -329,12 +331,12 @@ body {
     left: calc(-1 * var(--bn-sym-gutter));
     width: var(--bn-sym-gutter);
     text-align: center;
-    color: var(--bn-colour-muted);
+    color: var(--bn-colour-icon-idle);
 }
 
 /* Inline variant: no hang, just colour */
 .sym-inline {
-    color: var(--bn-colour-muted);
+    color: var(--bn-colour-icon-idle);
 }
 
 /* Half-opacity: when parent text is already muted */
@@ -786,6 +788,64 @@ td {
     font-weight: 400;
 }
 
+/* ── Grey swatch comparison ────────────────────────────────── */
+
+.swatch-grid {
+    display: grid;
+    grid-template-columns: auto repeat(7, 1fr);
+    gap: 0;
+    font-size: 0.82rem;
+    border: 1px solid var(--bn-colour-border);
+    border-radius: var(--bn-radius-md);
+    overflow: hidden;
+}
+
+.swatch-grid > * {
+    padding: 0.5rem 0.6rem;
+    border-bottom: 1px solid var(--bn-colour-border);
+    border-right: 1px solid var(--bn-colour-border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.swatch-grid > *:nth-child(8n) {
+    border-right: none;
+}
+
+.swatch-header {
+    background: var(--bn-colour-badge-bg);
+    font-weight: 600;
+    font-size: 0.72rem;
+    text-align: center;
+    white-space: nowrap;
+}
+
+.swatch-row-label {
+    justify-content: flex-start !important;
+    font-family: var(--bn-font-mono);
+    font-size: 0.7rem;
+    white-space: nowrap;
+    color: var(--bn-colour-muted);
+    background: var(--bn-colour-quote-bg);
+    min-width: 7rem;
+}
+
+.swatch-cell {
+    font-size: inherit;
+    gap: 0.4rem;
+}
+
+.swatch-cell span {
+    display: inline-flex;
+    gap: 0.25ch;
+}
+
+/* last row has no bottom border */
+.swatch-grid > *:nth-last-child(-n+8) {
+    border-bottom: none;
+}
+
 /* ── Markdown preview ──────────────────────────────────────── */
 
 .markdown-demo {
@@ -812,6 +872,107 @@ td {
     <br>
     <strong>Rules:</strong> hanging punctuation &mdash; symbols live in the margin, outside the content flow &middot; mid-grey from tokens &middot; text aligns as if the symbol isn&rsquo;t there
 </p>
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<!-- GREY SWATCH COMPARISON                                      -->
+<!-- ═══════════════════════════════════════════════════════════ -->
+
+<section class="demo">
+    <p class="demo-title">Grey swatch — all symbols at all sizes</p>
+    <p class="demo-context">Rows = font sizes where symbols appear in the report. Columns = available greys from the design system. Pick the column that looks right across all rows.</p>
+
+    <div class="swatch-grid">
+        <!-- Header row -->
+        <div class="swatch-header">Size / Context</div>
+        <div class="swatch-header">text<br><span style="font-weight:400;opacity:0.7">#1a1a1a</span></div>
+        <div class="swatch-header">badge-text<br><span style="font-weight:400;opacity:0.7">#374151</span></div>
+        <div class="swatch-header">user-tag<br><span style="font-weight:400;opacity:0.7">#4b5563</span></div>
+        <div class="swatch-header">muted ★<br><span style="font-weight:400;opacity:0.7">#6b7280</span></div>
+        <div class="swatch-header">starred<br><span style="font-weight:400;opacity:0.7">#999</span></div>
+        <div class="swatch-header">icon-idle<br><span style="font-weight:400;opacity:0.7">#c9ccd1</span></div>
+        <div class="swatch-header">border-hover<br><span style="font-weight:400;opacity:0.7">#d1d5db</span></div>
+
+        <!-- 1.35rem — content h2 (demos 3–4) -->
+        <div class="swatch-row-label">1.35rem<br>Content h2</div>
+        <div class="swatch-cell" style="font-size:1.35rem"><span style="color:#1a1a1a">§</span> <span style="color:#1a1a1a">¶</span> <span style="color:#1a1a1a">❋</span></div>
+        <div class="swatch-cell" style="font-size:1.35rem"><span style="color:#374151">§</span> <span style="color:#374151">¶</span> <span style="color:#374151">❋</span></div>
+        <div class="swatch-cell" style="font-size:1.35rem"><span style="color:#4b5563">§</span> <span style="color:#4b5563">¶</span> <span style="color:#4b5563">❋</span></div>
+        <div class="swatch-cell" style="font-size:1.35rem"><span style="color:#6b7280">§</span> <span style="color:#6b7280">¶</span> <span style="color:#6b7280">❋</span></div>
+        <div class="swatch-cell" style="font-size:1.35rem"><span style="color:#999">§</span> <span style="color:#999">¶</span> <span style="color:#999">❋</span></div>
+        <div class="swatch-cell" style="font-size:1.35rem"><span style="color:#c9ccd1">§</span> <span style="color:#c9ccd1">¶</span> <span style="color:#c9ccd1">❋</span></div>
+        <div class="swatch-cell" style="font-size:1.35rem"><span style="color:#d1d5db">§</span> <span style="color:#d1d5db">¶</span> <span style="color:#d1d5db">❋</span></div>
+
+        <!-- 1.1rem — TOC h2, dashboard h3, analysis heading (demos 2, 6–8) -->
+        <div class="swatch-row-label">1.1rem<br>TOC / analysis h2</div>
+        <div class="swatch-cell" style="font-size:1.1rem"><span style="color:#1a1a1a">§</span> <span style="color:#1a1a1a">¶</span> <span style="color:#1a1a1a">❋</span></div>
+        <div class="swatch-cell" style="font-size:1.1rem"><span style="color:#374151">§</span> <span style="color:#374151">¶</span> <span style="color:#374151">❋</span></div>
+        <div class="swatch-cell" style="font-size:1.1rem"><span style="color:#4b5563">§</span> <span style="color:#4b5563">¶</span> <span style="color:#4b5563">❋</span></div>
+        <div class="swatch-cell" style="font-size:1.1rem"><span style="color:#6b7280">§</span> <span style="color:#6b7280">¶</span> <span style="color:#6b7280">❋</span></div>
+        <div class="swatch-cell" style="font-size:1.1rem"><span style="color:#999">§</span> <span style="color:#999">¶</span> <span style="color:#999">❋</span></div>
+        <div class="swatch-cell" style="font-size:1.1rem"><span style="color:#c9ccd1">§</span> <span style="color:#c9ccd1">¶</span> <span style="color:#c9ccd1">❋</span></div>
+        <div class="swatch-cell" style="font-size:1.1rem"><span style="color:#d1d5db">§</span> <span style="color:#d1d5db">¶</span> <span style="color:#d1d5db">❋</span></div>
+
+        <!-- 0.9rem — table th/body (demos 6–7) -->
+        <div class="swatch-row-label">0.9rem<br>Table th / body</div>
+        <div class="swatch-cell" style="font-size:0.9rem"><span style="color:#1a1a1a">§</span> <span style="color:#1a1a1a">¶</span> <span style="color:#1a1a1a">❋</span></div>
+        <div class="swatch-cell" style="font-size:0.9rem"><span style="color:#374151">§</span> <span style="color:#374151">¶</span> <span style="color:#374151">❋</span></div>
+        <div class="swatch-cell" style="font-size:0.9rem"><span style="color:#4b5563">§</span> <span style="color:#4b5563">¶</span> <span style="color:#4b5563">❋</span></div>
+        <div class="swatch-cell" style="font-size:0.9rem"><span style="color:#6b7280">§</span> <span style="color:#6b7280">¶</span> <span style="color:#6b7280">❋</span></div>
+        <div class="swatch-cell" style="font-size:0.9rem"><span style="color:#999">§</span> <span style="color:#999">¶</span> <span style="color:#999">❋</span></div>
+        <div class="swatch-cell" style="font-size:0.9rem"><span style="color:#c9ccd1">§</span> <span style="color:#c9ccd1">¶</span> <span style="color:#c9ccd1">❋</span></div>
+        <div class="swatch-cell" style="font-size:0.9rem"><span style="color:#d1d5db">§</span> <span style="color:#d1d5db">¶</span> <span style="color:#d1d5db">❋</span></div>
+
+        <!-- 0.88rem — tab bar (demo 1) -->
+        <div class="swatch-row-label">0.88rem<br>Tab bar</div>
+        <div class="swatch-cell" style="font-size:0.88rem"><span style="color:#1a1a1a">§</span> <span style="color:#1a1a1a">¶</span> <span style="color:#1a1a1a">❋</span></div>
+        <div class="swatch-cell" style="font-size:0.88rem"><span style="color:#374151">§</span> <span style="color:#374151">¶</span> <span style="color:#374151">❋</span></div>
+        <div class="swatch-cell" style="font-size:0.88rem"><span style="color:#4b5563">§</span> <span style="color:#4b5563">¶</span> <span style="color:#4b5563">❋</span></div>
+        <div class="swatch-cell" style="font-size:0.88rem"><span style="color:#6b7280">§</span> <span style="color:#6b7280">¶</span> <span style="color:#6b7280">❋</span></div>
+        <div class="swatch-cell" style="font-size:0.88rem"><span style="color:#999">§</span> <span style="color:#999">¶</span> <span style="color:#999">❋</span></div>
+        <div class="swatch-cell" style="font-size:0.88rem"><span style="color:#c9ccd1">§</span> <span style="color:#c9ccd1">¶</span> <span style="color:#c9ccd1">❋</span></div>
+        <div class="swatch-cell" style="font-size:0.88rem"><span style="color:#d1d5db">§</span> <span style="color:#d1d5db">¶</span> <span style="color:#d1d5db">❋</span></div>
+
+        <!-- 0.82rem — heatmap th (demo 10) -->
+        <div class="swatch-row-label">0.82rem<br>Heatmap th</div>
+        <div class="swatch-cell" style="font-size:0.82rem"><span style="color:#1a1a1a">§</span> <span style="color:#1a1a1a">¶</span> <span style="color:#1a1a1a">❋</span></div>
+        <div class="swatch-cell" style="font-size:0.82rem"><span style="color:#374151">§</span> <span style="color:#374151">¶</span> <span style="color:#374151">❋</span></div>
+        <div class="swatch-cell" style="font-size:0.82rem"><span style="color:#4b5563">§</span> <span style="color:#4b5563">¶</span> <span style="color:#4b5563">❋</span></div>
+        <div class="swatch-cell" style="font-size:0.82rem"><span style="color:#6b7280">§</span> <span style="color:#6b7280">¶</span> <span style="color:#6b7280">❋</span></div>
+        <div class="swatch-cell" style="font-size:0.82rem"><span style="color:#999">§</span> <span style="color:#999">¶</span> <span style="color:#999">❋</span></div>
+        <div class="swatch-cell" style="font-size:0.82rem"><span style="color:#c9ccd1">§</span> <span style="color:#c9ccd1">¶</span> <span style="color:#c9ccd1">❋</span></div>
+        <div class="swatch-cell" style="font-size:0.82rem"><span style="color:#d1d5db">§</span> <span style="color:#d1d5db">¶</span> <span style="color:#d1d5db">❋</span></div>
+
+        <!-- 0.8rem — stat card labels (demo 5) -->
+        <div class="swatch-row-label">0.8rem<br>Stat card label</div>
+        <div class="swatch-cell" style="font-size:0.8rem"><span style="color:#1a1a1a">§</span> <span style="color:#1a1a1a">¶</span> <span style="color:#1a1a1a">❋</span></div>
+        <div class="swatch-cell" style="font-size:0.8rem"><span style="color:#374151">§</span> <span style="color:#374151">¶</span> <span style="color:#374151">❋</span></div>
+        <div class="swatch-cell" style="font-size:0.8rem"><span style="color:#4b5563">§</span> <span style="color:#4b5563">¶</span> <span style="color:#4b5563">❋</span></div>
+        <div class="swatch-cell" style="font-size:0.8rem"><span style="color:#6b7280">§</span> <span style="color:#6b7280">¶</span> <span style="color:#6b7280">❋</span></div>
+        <div class="swatch-cell" style="font-size:0.8rem"><span style="color:#999">§</span> <span style="color:#999">¶</span> <span style="color:#999">❋</span></div>
+        <div class="swatch-cell" style="font-size:0.8rem"><span style="color:#c9ccd1">§</span> <span style="color:#c9ccd1">¶</span> <span style="color:#c9ccd1">❋</span></div>
+        <div class="swatch-cell" style="font-size:0.8rem"><span style="color:#d1d5db">§</span> <span style="color:#d1d5db">¶</span> <span style="color:#d1d5db">❋</span></div>
+
+        <!-- 0.75rem — heatmap small, tooltips (demos 10–12) -->
+        <div class="swatch-row-label">0.75rem<br>Tooltip / small</div>
+        <div class="swatch-cell" style="font-size:0.75rem"><span style="color:#1a1a1a">§</span> <span style="color:#1a1a1a">¶</span> <span style="color:#1a1a1a">❋</span></div>
+        <div class="swatch-cell" style="font-size:0.75rem"><span style="color:#374151">§</span> <span style="color:#374151">¶</span> <span style="color:#374151">❋</span></div>
+        <div class="swatch-cell" style="font-size:0.75rem"><span style="color:#4b5563">§</span> <span style="color:#4b5563">¶</span> <span style="color:#4b5563">❋</span></div>
+        <div class="swatch-cell" style="font-size:0.75rem"><span style="color:#6b7280">§</span> <span style="color:#6b7280">¶</span> <span style="color:#6b7280">❋</span></div>
+        <div class="swatch-cell" style="font-size:0.75rem"><span style="color:#999">§</span> <span style="color:#999">¶</span> <span style="color:#999">❋</span></div>
+        <div class="swatch-cell" style="font-size:0.75rem"><span style="color:#c9ccd1">§</span> <span style="color:#c9ccd1">¶</span> <span style="color:#c9ccd1">❋</span></div>
+        <div class="swatch-cell" style="font-size:0.75rem"><span style="color:#d1d5db">§</span> <span style="color:#d1d5db">¶</span> <span style="color:#d1d5db">❋</span></div>
+
+        <!-- 0.7rem — signal card source (demo 9) -->
+        <div class="swatch-row-label">0.7rem<br>Signal card src</div>
+        <div class="swatch-cell" style="font-size:0.7rem"><span style="color:#1a1a1a">§</span> <span style="color:#1a1a1a">¶</span> <span style="color:#1a1a1a">❋</span></div>
+        <div class="swatch-cell" style="font-size:0.7rem"><span style="color:#374151">§</span> <span style="color:#374151">¶</span> <span style="color:#374151">❋</span></div>
+        <div class="swatch-cell" style="font-size:0.7rem"><span style="color:#4b5563">§</span> <span style="color:#4b5563">¶</span> <span style="color:#4b5563">❋</span></div>
+        <div class="swatch-cell" style="font-size:0.7rem"><span style="color:#6b7280">§</span> <span style="color:#6b7280">¶</span> <span style="color:#6b7280">❋</span></div>
+        <div class="swatch-cell" style="font-size:0.7rem"><span style="color:#999">§</span> <span style="color:#999">¶</span> <span style="color:#999">❋</span></div>
+        <div class="swatch-cell" style="font-size:0.7rem"><span style="color:#c9ccd1">§</span> <span style="color:#c9ccd1">¶</span> <span style="color:#c9ccd1">❋</span></div>
+        <div class="swatch-cell" style="font-size:0.7rem"><span style="color:#d1d5db">§</span> <span style="color:#d1d5db">¶</span> <span style="color:#d1d5db">❋</span></div>
+    </div>
+</section>
 
 <!-- ═══════════════════════════════════════════════════════════ -->
 <!-- 1. GLOBAL NAV TAB BAR                                      -->

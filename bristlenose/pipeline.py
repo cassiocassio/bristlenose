@@ -136,9 +136,20 @@ def _compute_analysis(
 class Pipeline:
     """Orchestrates the full Bristlenose processing pipeline."""
 
-    def __init__(self, settings: BristlenoseSettings, verbose: bool = False) -> None:
+    def __init__(
+        self,
+        settings: BristlenoseSettings,
+        verbose: bool = False,
+        on_event: object | None = None,
+        estimator: object | None = None,
+    ) -> None:
         self.settings = settings
         self.verbose = verbose
+        # Callable[[PipelineEvent], None] — typed as object to avoid
+        # importing timing at module level (lazy import pattern).
+        self._on_event = on_event
+        # TimingEstimator — typed as object for the same reason.
+        self._estimator = estimator
 
         # Configure logging: suppress at default verbosity, show at -v
         log_level = logging.DEBUG if verbose else logging.WARNING
@@ -150,6 +161,24 @@ class Pipeline:
         # Always suppress noisy third-party loggers, even with -v
         for name in ("httpx", "presidio-analyzer", "presidio_analyzer", "faster_whisper"):
             logging.getLogger(name).setLevel(logging.WARNING)
+
+    def _emit(self, event: object) -> None:
+        """Fire a PipelineEvent to the registered callback (if any)."""
+        if self._on_event is not None:
+            self._on_event(event)  # type: ignore[operator]
+
+    def _emit_remaining(self, stage: str, elapsed: float) -> None:
+        """Emit a revised remaining-time estimate after a stage completes."""
+        if self._estimator is None:
+            return
+        from bristlenose.timing import PipelineEvent
+
+        remaining = self._estimator.stage_completed(stage, elapsed)  # type: ignore[union-attr]
+        if remaining is not None:
+            self._emit(PipelineEvent(
+                kind="remaining", stage=stage, elapsed=elapsed,
+                estimate=remaining,
+            ))
 
     async def run(self, input_dir: Path, output_dir: Path) -> PipelineResult:
         """Run the full pipeline: ingest → transcribe → analyse → output.
@@ -225,6 +254,35 @@ class Pipeline:
                 ingest_elapsed,
             )
 
+            # ── Time estimate ────────────────────────────────────────
+            from bristlenose.timing import (
+                STAGE_CLUSTER,
+                STAGE_QUOTES,
+                STAGE_RENDER,
+                STAGE_SPEAKERS,
+                STAGE_TOPICS,
+                STAGE_TRANSCRIBE,
+                PipelineEvent,
+                StageActual,
+            )
+
+            total_audio_mins = sum(
+                (f.duration_seconds or 0) for s in sessions for f in s.files
+            ) / 60.0
+
+            if self._estimator is not None:
+                _est = self._estimator.initial_estimate(
+                    total_audio_mins, len(sessions),
+                    skip_transcription=self.settings.skip_transcription,
+                )
+                if _est is not None:
+                    self._emit(PipelineEvent(
+                        kind="estimate", estimate=_est,
+                    ))
+
+            _stage_actuals: dict[str, StageActual] = {}
+            _n_sessions = float(len(sessions))
+
             # ── Stage 2: Extract audio from video ────────────────────
             status.update("[dim]Extracting audio...[/dim]")
             t0 = time.perf_counter()
@@ -256,7 +314,23 @@ class Pipeline:
             if audio_str:
                 msg += f", {audio_str} audio"
             msg += ")"
-            _print_step(msg, time.perf_counter() - t0)
+            _transcribe_elapsed = time.perf_counter() - t0
+            _print_step(msg, _transcribe_elapsed)
+            _stage_actuals[STAGE_TRANSCRIBE] = StageActual(
+                elapsed=_transcribe_elapsed, input_size=total_audio_mins,
+            )
+            self._emit_remaining(STAGE_TRANSCRIBE, _transcribe_elapsed)
+
+            # ── Cost estimate before LLM stages ──────────────────────
+            from bristlenose.llm.pricing import estimate_pipeline_cost
+
+            est = estimate_pipeline_cost(self.settings.llm_model, len(sessions))
+            if est is not None:
+                console.print(
+                    f"  [dim]Estimated LLM cost: ~${est:.2f}"
+                    f" for {len(sessions)} sessions"
+                    f" ({self.settings.llm_model})[/dim]\n"
+                )
 
             # ── Stage 5b: Speaker role identification ────────────────
             status.update("[dim]Identifying speakers...[/dim]")
@@ -304,7 +378,12 @@ class Pipeline:
                     session.participant_id = p_codes[0]
                     session.participant_number = int(p_codes[0][1:])
 
-            _print_step("Identified speakers", time.perf_counter() - t0)
+            _speakers_elapsed = time.perf_counter() - t0
+            _print_step("Identified speakers", _speakers_elapsed)
+            _stage_actuals[STAGE_SPEAKERS] = StageActual(
+                elapsed=_speakers_elapsed, input_size=_n_sessions,
+            )
+            self._emit_remaining(STAGE_SPEAKERS, _speakers_elapsed)
             if _speaker_errors:
                 _print_warn(*_short_reason(_speaker_errors, self.settings.llm_provider))
 
@@ -360,10 +439,15 @@ class Pipeline:
                     self.settings.project_name,
                 )
             total_boundaries = sum(len(m.boundaries) for m in topic_maps)
+            _topics_elapsed = time.perf_counter() - t0
             _print_step(
                 f"Segmented {total_boundaries} topic boundaries",
-                time.perf_counter() - t0,
+                _topics_elapsed,
             )
+            _stage_actuals[STAGE_TOPICS] = StageActual(
+                elapsed=_topics_elapsed, input_size=_n_sessions,
+            )
+            self._emit_remaining(STAGE_TOPICS, _topics_elapsed)
             if _seg_errors:
                 _print_warn(*_short_reason(_seg_errors, self.settings.llm_provider))
 
@@ -384,10 +468,15 @@ class Pipeline:
                     all_quotes, "extracted_quotes.json", output_dir,
                     self.settings.project_name,
                 )
+            _quotes_elapsed = time.perf_counter() - t0
             _print_step(
                 f"Extracted {len(all_quotes)} quotes",
-                time.perf_counter() - t0,
+                _quotes_elapsed,
             )
+            _stage_actuals[STAGE_QUOTES] = StageActual(
+                elapsed=_quotes_elapsed, input_size=_n_sessions,
+            )
+            self._emit_remaining(STAGE_QUOTES, _quotes_elapsed)
             if _quote_errors:
                 _print_warn(*_short_reason(_quote_errors, self.settings.llm_provider))
 
@@ -407,11 +496,16 @@ class Pipeline:
                     theme_groups, "theme_groups.json", output_dir,
                     self.settings.project_name,
                 )
+            _cluster_elapsed = time.perf_counter() - t0
             _print_step(
                 f"Clustered {len(screen_clusters)} screens"
                 f" · Grouped {len(theme_groups)} themes",
-                time.perf_counter() - t0,
+                _cluster_elapsed,
             )
+            _stage_actuals[STAGE_CLUSTER] = StageActual(
+                elapsed=_cluster_elapsed, input_size=_n_sessions,
+            )
+            self._emit_remaining(STAGE_CLUSTER, _cluster_elapsed)
 
             # ── People file ───────────────────────────────────────────
             status.update("[dim]Updating people file...[/dim]")
@@ -478,9 +572,17 @@ class Pipeline:
                 transcripts=transcripts,
                 analysis=analysis,
             )
-            _print_step("Rendered report", time.perf_counter() - t0)
+            _render_elapsed = time.perf_counter() - t0
+            _print_step("Rendered report", _render_elapsed)
+            _stage_actuals[STAGE_RENDER] = StageActual(
+                elapsed=_render_elapsed, input_size=_n_sessions,
+            )
 
         elapsed = time.perf_counter() - pipeline_start
+
+        # Record actuals for future estimates.
+        if self._estimator is not None:
+            self._estimator.record_run(_stage_actuals)  # type: ignore[union-attr]
 
         return PipelineResult(
             project_name=self.settings.project_name,
@@ -669,8 +771,22 @@ class Pipeline:
 
         console.print(
             f"[dim]{len(clean_transcripts)} transcripts in"
-            f" {transcripts_dir.name}/[/dim]\n",
+            f" {transcripts_dir.name}/[/dim]",
         )
+
+        from bristlenose.llm.pricing import estimate_pipeline_cost
+
+        est = estimate_pipeline_cost(
+            self.settings.llm_model, len(clean_transcripts),
+        )
+        if est is not None:
+            console.print(
+                f"  [dim]Estimated LLM cost: ~${est:.2f}"
+                f" for {len(clean_transcripts)} sessions"
+                f" ({self.settings.llm_model})[/dim]\n"
+            )
+        else:
+            console.print()  # blank line before stages
 
         with console.status("", spinner="dots") as status:
             status.renderable.frames = [" " + f for f in status.renderable.frames]

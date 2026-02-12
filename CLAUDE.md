@@ -71,18 +71,9 @@ Pipeline output uses clean checkmark lines with per-stage timing. `console.statu
 
 ## Gotchas
 
-### Ruff auto-removes unused imports (F401)
+### Ruff F401 (unused imports) — reports only, won't auto-fix
 
-Ruff `--fix` removes unused imports. When making multi-step edits:
-
-1. **Add imports and their usage in the same edit** — don't add imports in one edit and the code that uses them in a later edit
-2. **If editing a large file incrementally**, add imports last (after the code that uses them is already in place), or add them together with at least one usage
-3. **If an import keeps disappearing**, check whether the code that uses it is actually in place — the linter is telling you the import genuinely isn't used yet
-
-This is especially common when:
-- Planning to add a function call but editing the import section first
-- Copy-pasting code that needs new imports but forgetting to verify the imports landed
-- Making changes across multiple files where one file's import depends on another file's changes
+F401 is marked `unfixable` in `pyproject.toml` so `ruff check --fix` (and the PostToolUse hook) won't delete imports during incremental edits. Ruff still *reports* unused imports — remove them manually when they're genuinely unused.
 
 ### Other gotchas
 

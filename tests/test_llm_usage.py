@@ -3,7 +3,11 @@
 from __future__ import annotations
 
 from bristlenose.llm.client import LLMUsageTracker
-from bristlenose.llm.pricing import PRICING, PRICING_URLS, estimate_cost
+from bristlenose.llm.pricing import (
+    PRICING,
+    PRICING_URLS,
+    estimate_cost,
+)
 
 # ---------------------------------------------------------------------------
 # LLMUsageTracker
@@ -75,3 +79,44 @@ class TestEstimateCost:
         assert "anthropic" in PRICING_URLS
         assert "openai" in PRICING_URLS
         assert "google" in PRICING_URLS
+
+
+# ---------------------------------------------------------------------------
+# Pipeline cost estimate
+# ---------------------------------------------------------------------------
+
+
+class TestEstimatePipelineCost:
+    def test_known_model_returns_float(self) -> None:
+        from bristlenose.llm.pricing import estimate_pipeline_cost
+
+        cost = estimate_pipeline_cost("claude-sonnet-4-20250514", 10)
+        assert cost is not None
+        assert cost > 0
+
+    def test_scales_with_sessions(self) -> None:
+        from bristlenose.llm.pricing import estimate_pipeline_cost
+
+        cost_10 = estimate_pipeline_cost("claude-sonnet-4-20250514", 10)
+        cost_20 = estimate_pipeline_cost("claude-sonnet-4-20250514", 20)
+        assert cost_10 is not None
+        assert cost_20 is not None
+        assert abs(cost_20 - cost_10 * 2) < 0.001
+
+    def test_unknown_model_returns_none(self) -> None:
+        from bristlenose.llm.pricing import estimate_pipeline_cost
+
+        assert estimate_pipeline_cost("unknown-model-v99", 10) is None
+
+    def test_zero_sessions_returns_none(self) -> None:
+        from bristlenose.llm.pricing import estimate_pipeline_cost
+
+        assert estimate_pipeline_cost("claude-sonnet-4-20250514", 0) is None
+
+    def test_reasonable_cost_for_20_sessions(self) -> None:
+        """Sanity check: 20 sessions with Sonnet should cost roughly $2-$10."""
+        from bristlenose.llm.pricing import estimate_pipeline_cost
+
+        cost = estimate_pipeline_cost("claude-sonnet-4-20250514", 20)
+        assert cost is not None
+        assert 1.0 < cost < 20.0

@@ -19,6 +19,9 @@ from bristlenose.utils.timecodes import parse_timecode
 logger = logging.getLogger(__name__)
 
 
+_FAIL_THRESHOLD = 3  # Stop stage after this many consecutive LLM failures
+
+
 async def segment_topics(
     transcripts: list[PiiCleanTranscript],
     llm_client: LLMClient,
@@ -37,9 +40,22 @@ async def segment_topics(
         List of SessionTopicMap objects, one per transcript.
     """
     semaphore = asyncio.Semaphore(concurrency)
+    stop = asyncio.Event()
+    consecutive_failures = 0
 
     async def _process(transcript: PiiCleanTranscript) -> SessionTopicMap:
+        nonlocal consecutive_failures
+
+        empty = SessionTopicMap(
+            session_id=transcript.session_id,
+            participant_id=transcript.participant_id,
+            boundaries=[],
+        )
+
         async with semaphore:
+            if stop.is_set():
+                return empty
+
             logger.info(
                 "%s: Segmenting topics (duration=%.0fs)",
                 transcript.session_id,
@@ -47,6 +63,7 @@ async def segment_topics(
             )
             try:
                 topic_map = await _segment_single(transcript, llm_client)
+                consecutive_failures = 0
                 logger.info(
                     "%s: Found %d topic boundaries",
                     transcript.session_id,
@@ -61,11 +78,14 @@ async def segment_topics(
                 )
                 if errors is not None:
                     errors.append(str(exc))
-                return SessionTopicMap(
-                    session_id=transcript.session_id,
-                    participant_id=transcript.participant_id,
-                    boundaries=[],
-                )
+                consecutive_failures += 1
+                if consecutive_failures >= _FAIL_THRESHOLD:
+                    logger.warning(
+                        "Stopping topic segmentation early — %d consecutive failures",
+                        consecutive_failures,
+                    )
+                    stop.set()
+                return empty
 
     return list(await asyncio.gather(*(_process(t) for t in transcripts)))
 

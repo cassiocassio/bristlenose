@@ -25,6 +25,9 @@ from bristlenose.utils.timecodes import parse_timecode
 logger = logging.getLogger(__name__)
 
 
+_FAIL_THRESHOLD = 3  # Stop stage after this many consecutive LLM failures
+
+
 async def extract_quotes(
     transcripts: list[PiiCleanTranscript],
     topic_maps: list[SessionTopicMap],
@@ -52,11 +55,18 @@ async def extract_quotes(
     }
 
     semaphore = asyncio.Semaphore(concurrency)
+    stop = asyncio.Event()
+    consecutive_failures = 0
 
     async def _process(
         transcript: PiiCleanTranscript,
     ) -> list[ExtractedQuote]:
+        nonlocal consecutive_failures
+
         async with semaphore:
+            if stop.is_set():
+                return []
+
             logger.info(
                 "%s: Extracting quotes",
                 transcript.session_id,
@@ -66,6 +76,7 @@ async def extract_quotes(
                 quotes = await _extract_single(
                     transcript, topic_map, llm_client, min_quote_words
                 )
+                consecutive_failures = 0
                 logger.info(
                     "%s: Extracted %d quotes",
                     transcript.session_id,
@@ -80,6 +91,13 @@ async def extract_quotes(
                 )
                 if errors is not None:
                     errors.append(str(exc))
+                consecutive_failures += 1
+                if consecutive_failures >= _FAIL_THRESHOLD:
+                    logger.warning(
+                        "Stopping quote extraction early — %d consecutive failures",
+                        consecutive_failures,
+                    )
+                    stop.set()
                 return []
 
     results = await asyncio.gather(*(_process(t) for t in transcripts))

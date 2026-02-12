@@ -261,6 +261,137 @@ class TestQuoteExtractionConcurrency:
 # Timing: concurrency=3 faster than concurrency=1
 # ---------------------------------------------------------------------------
 
+class TestTopicSegmentationEarlyTermination:
+    """Verify that segment_topics stops early after consecutive failures."""
+
+    @pytest.mark.asyncio
+    async def test_stops_after_consecutive_failures(self) -> None:
+        """After 3 consecutive failures, remaining sessions are skipped."""
+        from bristlenose.stages.topic_segmentation import segment_topics
+
+        call_count = 0
+
+        async def mock_analyze(system_prompt, user_prompt, response_model, **kw):
+            nonlocal call_count
+            call_count += 1
+            raise RuntimeError("API credits exhausted")
+
+        transcripts = [_make_transcript(f"p{i}") for i in range(1, 11)]
+        mock_client = AsyncMock()
+        mock_client.analyze = mock_analyze
+        errors: list[str] = []
+
+        result = await segment_topics(
+            transcripts, mock_client, concurrency=1, errors=errors,
+        )
+
+        assert len(result) == 10  # all get a result (empty boundaries)
+        # With concurrency=1, only 3 calls should be made before stopping
+        assert call_count == 3
+        assert len(errors) == 3
+
+    @pytest.mark.asyncio
+    async def test_resets_on_success(self) -> None:
+        """A successful call resets the consecutive failure counter."""
+        from bristlenose.stages.topic_segmentation import segment_topics
+
+        call_count = 0
+        fail_on_calls = {2, 3}  # fail on 2nd and 3rd calls (non-consecutive)
+
+        async def mock_analyze(system_prompt, user_prompt, response_model, **kw):
+            nonlocal call_count
+            call_count += 1
+            if call_count in fail_on_calls:
+                raise RuntimeError("Transient failure")
+            from bristlenose.llm.structured import TopicSegmentationResult
+            return TopicSegmentationResult(boundaries=[])
+
+        transcripts = [_make_transcript(f"p{i}") for i in range(1, 6)]
+        mock_client = AsyncMock()
+        mock_client.analyze = mock_analyze
+        errors: list[str] = []
+
+        await segment_topics(
+            transcripts, mock_client, concurrency=1, errors=errors,
+        )
+
+        # All 5 should be attempted because failures aren't consecutive
+        # (call 1 succeeds, calls 2-3 fail, call 4 succeeds, call 5 succeeds)
+        assert call_count == 5
+        assert len(errors) == 2
+
+
+class TestQuoteExtractionEarlyTermination:
+    """Verify that extract_quotes stops early after consecutive failures."""
+
+    @pytest.mark.asyncio
+    async def test_stops_after_consecutive_failures(self) -> None:
+        """After 3 consecutive failures, remaining sessions are skipped."""
+        from bristlenose.stages.quote_extraction import extract_quotes
+
+        call_count = 0
+
+        async def mock_analyze(system_prompt, user_prompt, response_model, **kw):
+            nonlocal call_count
+            call_count += 1
+            raise RuntimeError("API credits exhausted")
+
+        transcripts = [_make_transcript(f"p{i}") for i in range(1, 11)]
+        topic_maps = [
+            SessionTopicMap(participant_id=f"p{i}", session_id=f"s-p{i}", boundaries=[])
+            for i in range(1, 11)
+        ]
+        mock_client = AsyncMock()
+        mock_client.analyze = mock_analyze
+        errors: list[str] = []
+
+        result = await extract_quotes(
+            transcripts, topic_maps, mock_client, concurrency=1, errors=errors,
+        )
+
+        assert isinstance(result, list)
+        assert len(result) == 0
+        # With concurrency=1, only 3 calls before stopping
+        assert call_count == 3
+        assert len(errors) == 3
+
+    @pytest.mark.asyncio
+    async def test_resets_on_success(self) -> None:
+        """A successful call resets the consecutive failure counter."""
+        from bristlenose.stages.quote_extraction import extract_quotes
+
+        call_count = 0
+        fail_on_calls = {2, 3}  # fail on 2nd and 3rd calls (non-consecutive)
+
+        async def mock_analyze(system_prompt, user_prompt, response_model, **kw):
+            nonlocal call_count
+            call_count += 1
+            if call_count in fail_on_calls:
+                raise RuntimeError("Transient failure")
+            from bristlenose.llm.structured import QuoteExtractionResult
+            return QuoteExtractionResult(quotes=[])
+
+        transcripts = [_make_transcript(f"p{i}") for i in range(1, 6)]
+        topic_maps = [
+            SessionTopicMap(participant_id=f"p{i}", session_id=f"s-p{i}", boundaries=[])
+            for i in range(1, 6)
+        ]
+        mock_client = AsyncMock()
+        mock_client.analyze = mock_analyze
+        errors: list[str] = []
+
+        await extract_quotes(
+            transcripts, topic_maps, mock_client, concurrency=1, errors=errors,
+        )
+
+        assert call_count == 5
+        assert len(errors) == 2
+
+
+# ---------------------------------------------------------------------------
+# Timing: concurrency=3 faster than concurrency=1
+# ---------------------------------------------------------------------------
+
 class TestConcurrencySpeedup:
     """Measure wall-time improvement from concurrency."""
 

@@ -1,0 +1,35 @@
+<section class="bn-session-table">
+{%- if moderator_header %}
+<p class="bn-session-moderators">{{ moderator_header }}</p>
+{%- endif %}
+<table>
+<thead><tr>
+<th>ID</th>
+<th>Participants</th>
+<th>Start</th>
+<th class="bn-session-duration">Duration</th>
+{%- if rows and rows[0].source_folder_uri %}
+<th><a class="bn-interviews-link" href="{{ rows[0].source_folder_uri }}"><svg class="bn-folder-icon" width="14" height="12" viewBox="0 0 14 12" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M1.5 2.5a1 1 0 0 1 1-1h2.6l1.4 1.5h5a1 1 0 0 1 1 1v6a1 1 0 0 1-1 1h-9a1 1 0 0 1-1-1z"/></svg> Interviews</a></th>
+{%- else %}
+<th>Interviews</th>
+{%- endif %}
+</tr></thead>
+<tbody>
+{%- for row in rows %}
+<tr data-session="{{ row.sid }}">
+<td class="bn-session-id"><a href="sessions/transcript_{{ row.sid }}.html" data-session-link="{{ row.sid }}">#{{ row.num }}</a></td>
+<td class="bn-session-speakers">
+{%- for sp in row.speakers_list %}
+<div class="bn-person-id"><span class="badge">{{ sp.code }}</span> <span class="bn-person-id-name">{{ sp.name }}</span></div>
+{%- endfor %}
+</td>
+<td class="bn-session-meta">
+<div>{{ row.start }}</div>
+</td>
+<td class="bn-session-duration">{{ row.duration }}</td>
+<td>{{ row.source }}</td>
+</tr>
+{%- endfor %}
+</tbody>
+</table>
+</section>

@@ -30,18 +30,20 @@
    ── The pattern ─────────────────────────────────────────────
 
    The PARENT element (heading, th, container) gets:
-     position: relative;
-     padding-left: 1.5ch;    ← reserves a gutter for the symbol
+     position: relative;     ← positioning context only
+                              NO padding-left — text stays flush
 
    The SYMBOL span inside gets:
      position: absolute;
-     left: 0;                ← sits in the reserved gutter
-     width: 1.5ch;           ← same as the gutter
+     left: -1.5ch;           ← hangs LEFT of the content edge
+     width: 1.5ch;           ← gutter width
      text-align: center;     ← centres the glyph in the gutter
 
-   The symbol is positioned relative to the parent's padding box.
-   Parent flex, grid, or table-cell context is irrelevant — it
-   creates a self-contained positioning context.
+   The key insight: the symbol hangs outside the element's content
+   edge. The heading text stays exactly where it would be without
+   the symbol — perfectly aligned with sibling h3, p, td, etc.
+   An ancestor (page body, .demo wrapper, table cell padding)
+   provides the space for the symbol to be visible.
 
    ── Why not the other four? ─────────────────────────────────
 
@@ -76,13 +78,35 @@
      no overflow clipping, no whitespace quirks.
 
    • Composable: add .sym-hang to any element. The only requirement
-     is that the element can accept position: relative and
-     padding-left. Both are properties of the element itself,
-     not its parent — so changing the parent's layout doesn't
-     break the hang.
+     is that the element can accept position: relative. That's a
+     property of the element itself, not its parent — so changing
+     the parent's layout doesn't break the hang.
 
    • The symbol stays in HTML (not ::before) because it's
      data-driven — different elements get §, ¶, or ❋.
+
+   ── Evolution: padding-left vs. no padding-left ───────────
+
+   v1 (padding-left approach — abandoned):
+     .sym-hang had padding-left: var(--bn-sym-gutter) to "reserve"
+     a gutter, and .sym sat at left: 0 inside that gutter.
+     Problem: the padding shifted the heading TEXT rightward by
+     1.5ch relative to sibling elements (h3, p, description text).
+     In tables this was less visible because each cell manages
+     its own padding independently. But in block contexts (TOC,
+     content headings, analysis headings), "Section" started
+     1.5ch to the right of "Onboarding" below it — breaking the
+     core rule: "text aligns as if the symbol isn't there."
+
+   v2 (no padding — current):
+     .sym-hang has position: relative ONLY — no padding-left.
+     .sym uses left: calc(-1 * var(--bn-sym-gutter)) to hang
+     the symbol LEFT of the natural content edge. The heading
+     text stays exactly where it would be without the symbol.
+     The space for the symbol comes from ancestor padding (page
+     body, .demo wrapper, table cell padding) — not from the
+     element itself. This means changing container padding or
+     layout doesn't misalign the text.
 
    Sources:
    - Ahmad Shadeed: ishadeed.com/article/unusual-use-cases-pseudo-elements/
@@ -252,14 +276,13 @@ body {
    Three classes, one pattern:
 
    .sym-hang    — goes on the PARENT element (h2, th, h3, etc.).
-                  Reserves a gutter via padding-left and establishes
-                  a positioning context with position: relative.
-                  The symbol span inside is then absolutely placed
-                  into that gutter.
+                  Establishes a positioning context (position: relative)
+                  but adds NO padding. Text stays flush with siblings.
 
    .sym         — goes on the <span> wrapping the symbol character.
-                  Absolutely positioned at left: 0, centred in the
-                  gutter. Mid-grey from --bn-colour-muted.
+                  Absolutely positioned at left: -1.5ch — hangs LEFT
+                  of the parent's content edge. Mid-grey from
+                  --bn-colour-muted.
 
    .sym-inline  — flat variant for cramped contexts (tabs, stat
                   card labels, signal card source labels, tooltips).
@@ -274,50 +297,68 @@ body {
      <button class="bn-tab"><span class="sym-inline">¶</span> Quotes</button>
    ══════════════════════════════════════════════════════════════ */
 
-/* Parent: reserves the gutter, establishes positioning context */
+/* Parent: establishes positioning context only.
+   NO padding-left — the text stays exactly where it would be
+   without the symbol, so it aligns flush with sibling elements
+   (h3, p, td, etc.). The symbol hangs LEFT of the natural
+   content edge via negative absolute positioning. */
 .sym-hang {
     position: relative;
-    padding-left: var(--bn-sym-gutter);
     /* outline: 1px dashed red; /* DEBUG: shows the element's border box */ */
 }
 
-/* Symbol: absolutely placed in the padding gutter.
+/* Symbol: absolutely positioned LEFT of the parent's content edge.
 
-   The parent (.sym-hang) has:
-     position: relative;
-     padding-left: var(--bn-sym-gutter);   (1.5ch)
-
-   For position: absolute, the containing block is the parent's
-   PADDING BOX. left: 0 = the padding edge, which is where
-   content starts (the INNER edge of the padding, not the outer).
-   To place the symbol in the padding gutter (LEFT of the content),
-   we offset by the negative gutter width.
+   The parent (.sym-hang) has position: relative but NO padding-left.
+   The containing block is the parent's padding box, so left: 0
+   means the content edge (since there's no padding). We offset
+   by negative gutter width to hang the symbol to the left.
 
    This negative left is safe because .sym is position: absolute —
    removed from flow entirely. It cannot affect flex/grid sizing,
-   overflow, or sibling layout. The concerns from our research
-   about negative margins apply only to IN-FLOW elements (flex
-   items, inline-blocks). Absolutely-positioned elements are
-   exempt — they don't participate in the parent's layout at all. */
+   overflow, or sibling layout. Absolutely-positioned elements
+   don't participate in the parent's layout at all.
+
+   IMPORTANT: the parent (or an ancestor) needs enough margin or
+   padding on its left side for the symbol to be visible. In most
+   report contexts, the .demo wrapper or page body provides this.
+   If the symbol is clipped, add margin-left or padding-left to
+   a CONTAINER ancestor, not to .sym-hang itself. */
 .sym {
     position: absolute;
     left: calc(-1 * var(--bn-sym-gutter));
     width: var(--bn-sym-gutter);
     text-align: center;
     color: var(--bn-colour-muted);
-    background: #39ff14; /* DEBUG: neon green to visualise gutter */
 }
 
 /* Inline variant: no hang, just colour */
 .sym-inline {
     color: var(--bn-colour-muted);
-    background: #39ff14; /* DEBUG */
 }
 
 /* Half-opacity: when parent text is already muted */
 .sym-faded {
     opacity: 0.5;
-    background: #39ff14; /* DEBUG */
+}
+
+/* DEBUG: thin red line at the content edge of each demo box.
+   Content (headings, body text, table data) should align to this line.
+   Symbols should sit LEFT of this line, in the padding area. */
+.demo {
+    position: relative;
+}
+.demo::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: var(--bn-space-lg);  /* = padding-left of .demo */
+    width: 1px;
+    background: red;
+    opacity: 0.4;
+    pointer-events: none;
+    z-index: 10;
 }
 
 /* ── 1. Global nav tab bar (from organisms/global-nav.css) ── */

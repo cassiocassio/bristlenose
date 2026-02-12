@@ -1,5 +1,10 @@
 /* Atom: logo — report header with logo, logotype, project name, doc title */
 
+.report-logo-link {
+    text-decoration: none;
+    line-height: 0;
+}
+
 .report-header {
     display: flex;
     align-items: baseline;

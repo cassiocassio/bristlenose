@@ -16,6 +16,7 @@ Each active feature branch gets its own **git worktree** — a full working copy
 |-----------|--------|---------|
 | `bristlenose/` | `main` | Main repo, releases, hotfixes |
 | `bristlenose_branch project-dashboard/` | `project-dashboard` | At-a-glance project dashboard (non-scrolling) |
+| `bristlenose_branch symbology/` | `symbology` | § ¶ ❋ Unicode prefix symbols for sections, quotes, themes |
 
 **Creating a new feature branch worktree:**
 
@@ -94,6 +95,7 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 |--------|---------------|---------------|
 | `main` | `bristlenose/` | `origin/main` (push via `origin/main:wip` until release time) |
 | `project-dashboard` | `bristlenose_branch project-dashboard/` | `origin/project-dashboard` |
+| `symbology` | `bristlenose_branch symbology/` | `origin/symbology` |
 
 ---
 
@@ -110,6 +112,22 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 - `bristlenose/theme/templates/report.css` — Dashboard layout styles
 - `bristlenose/theme/js/` — Any dashboard-specific JS
 - New CSS files in `bristlenose/theme/molecules/` or `bristlenose/theme/organisms/`
+
+### `symbology` — started 12 Feb 2026
+
+**Worktree:** `/Users/cassio/Code/bristlenose_branch symbology`
+
+**Goal:** Add consistent Unicode prefix symbols (§ Section, ¶ Quote, ❋ Theme) across all user-facing surfaces — navigation, headings, dashboards, analysis, tooltips, and text output.
+
+**Files likely to touch:**
+- `bristlenose/stages/render_html.py` — dashboard stats, pane headings, template params
+- `bristlenose/stages/render_output.py` — markdown heading call sites
+- `bristlenose/theme/templates/toc.html` — TOC headings
+- `bristlenose/theme/templates/global_nav.html` — tab labels
+- `bristlenose/theme/templates/analysis.html` — analysis page headings
+- `bristlenose/theme/js/analysis.js` — signal cards, heatmap headers
+- `bristlenose/theme/js/transcript-annotations.js` — margin label tooltips
+- `bristlenose/theme/js/codebook.js` — quote count tooltips
 
 ---
 

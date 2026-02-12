@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sentiment Sparkline — Design Exploration</title>
+<style>
+/* ── Tokens (from bristlenose tokens.css) ── */
+:root {
+    color-scheme: light dark;
+    --bg: light-dark(#ffffff, #111111);
+    --text: light-dark(#1a1a1a, #e5e7eb);
+    --muted: light-dark(#6b7280, #9ca3af);
+    --border: light-dark(#e5e7eb, #2d2d2d);
+    --surface: light-dark(#f9fafb, #1a1a1a);
+
+    /* Sentiment colours — identical to tokens.css */
+    --s-satisfaction:  light-dark(#16a34a, #4ade80);
+    --s-delight:       light-dark(#059669, #34d399);
+    --s-confidence:    light-dark(#2563eb, #60a5fa);
+    --s-surprise:      light-dark(#d97706, #fbbf24);
+    --s-doubt:         light-dark(#7c3aed, #a78bfa);
+    --s-confusion:     light-dark(#dc2626, #f87171);
+    --s-frustration:   light-dark(#ea580c, #fb923c);
+
+    --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+[data-theme="light"] { color-scheme: light; }
+[data-theme="dark"]  { color-scheme: dark; }
+
+body {
+    font-family: var(--font);
+    font-size: 14px;
+    line-height: 1.5;
+    color: var(--text);
+    background: var(--bg);
+    margin: 2rem;
+}
+h1 { font-size: 1.5rem; margin: 0 0 0.5rem; }
+h2 { font-size: 1.1rem; margin: 2rem 0 0.75rem; color: var(--muted); font-weight: 500; }
+h3 { font-size: 0.95rem; margin: 1.5rem 0 0.5rem; }
+p.note { color: var(--muted); font-size: 0.85rem; margin: 0 0 1.5rem; }
+
+/* Theme toggle */
+.theme-toggle {
+    position: fixed; top: 1rem; right: 1.5rem;
+    display: flex; gap: 0.5rem; z-index: 10;
+}
+.theme-toggle button {
+    font: inherit; font-size: 0.8rem;
+    padding: 0.3rem 0.7rem;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    background: var(--surface);
+    color: var(--text);
+    cursor: pointer;
+}
+.theme-toggle button.active {
+    background: var(--text);
+    color: var(--bg);
+}
+
+/* Variation grid */
+.var-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(600px, 1fr));
+    gap: 1.5rem;
+}
+.var-card {
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 1rem;
+    background: var(--surface);
+}
+.var-card h4 {
+    font-size: 0.85rem;
+    margin: 0 0 0.5rem;
+    font-weight: 600;
+}
+.var-card .params {
+    font-size: 0.75rem;
+    color: var(--muted);
+    margin: 0 0 0.75rem;
+    font-family: "SF Mono", Menlo, monospace;
+}
+
+/* Session table mock */
+.session-mock {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.85rem;
+}
+.session-mock th {
+    text-align: left;
+    font-weight: 600;
+    padding: 0.4rem 0.6rem;
+    border-bottom: 1px solid var(--border);
+    white-space: nowrap;
+}
+.session-mock th:last-child {
+    text-align: center;
+}
+.session-mock td {
+    padding: 0.4rem 0.6rem;
+    border-bottom: 1px solid var(--border);
+    vertical-align: middle;
+}
+.session-mock tr:last-child td {
+    border-bottom: none;
+}
+.session-mock .sid { white-space: nowrap; color: var(--muted); }
+.session-mock .profile-label {
+    font-size: 0.75rem;
+    color: var(--muted);
+}
+.session-mock .friction {
+    text-align: right;
+    white-space: nowrap;
+}
+.session-mock .sentiment-cell {
+    text-align: center;
+    white-space: nowrap;
+}
+
+/* ── Sparkline base ── */
+.bn-sparkline {
+    display: inline-flex;
+    align-items: flex-end;
+}
+
+/* Legend */
+.legend {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+    margin: 0.5rem 0 1.5rem;
+    font-size: 0.75rem;
+}
+.legend-item {
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+}
+.legend-swatch {
+    width: 10px;
+    height: 10px;
+    border-radius: 2px;
+}
+</style>
+</head>
+<body>
+
+<div class="theme-toggle">
+    <button onclick="setTheme('light')">Light</button>
+    <button onclick="setTheme('auto')" class="active">Auto</button>
+    <button onclick="setTheme('dark')">Dark</button>
+</div>
+
+<h1>Sentiment Sparkline — Design Exploration</h1>
+<p class="note">
+    Tiny vertical bar charts summarising the sentiment distribution of each interview session.
+    Bar order (L→R): satisfaction, delight, confidence, surprise, doubt, confusion, frustration.
+</p>
+
+<div class="legend" id="legend"></div>
+
+<h2>Variation Matrix</h2>
+<p class="note">Each card shows one parameter combination across all data profiles.</p>
+
+<div class="var-grid" id="grid"></div>
+
+<script>
+// ── Theme toggle ──
+function setTheme(t) {
+    if (t === 'auto') document.documentElement.removeAttribute('data-theme');
+    else document.documentElement.setAttribute('data-theme', t);
+    document.querySelectorAll('.theme-toggle button').forEach(b => {
+        b.classList.toggle('active', b.textContent.toLowerCase() === t);
+    });
+}
+
+// ── Sentiment definitions ──
+const SENTIMENTS = [
+    { key: 'satisfaction', label: 'Satisfaction', css: 'var(--s-satisfaction)', hex: '#16a34a' },
+    { key: 'delight',     label: 'Delight',      css: 'var(--s-delight)',      hex: '#059669' },
+    { key: 'confidence',  label: 'Confidence',    css: 'var(--s-confidence)',   hex: '#2563eb' },
+    { key: 'surprise',    label: 'Surprise',      css: 'var(--s-surprise)',     hex: '#d97706' },
+    { key: 'doubt',       label: 'Doubt',         css: 'var(--s-doubt)',        hex: '#7c3aed' },
+    { key: 'confusion',   label: 'Confusion',     css: 'var(--s-confusion)',    hex: '#dc2626' },
+    { key: 'frustration', label: 'Frustration',   css: 'var(--s-frustration)',  hex: '#ea580c' },
+];
+
+// ── Data profiles ──
+const PROFILES = [
+    { name: 'Balanced',        desc: 'Typical mixed session',    data: { satisfaction:4, delight:2, confidence:3, surprise:1, doubt:2, confusion:1, frustration:3 }},
+    { name: 'Very frustrated',  desc: 'Angry user',              data: { satisfaction:0, delight:0, confidence:0, surprise:1, doubt:4, confusion:6, frustration:8 }},
+    { name: 'Very happy',       desc: 'Delighted user',          data: { satisfaction:6, delight:5, confidence:4, surprise:1, doubt:0, confusion:0, frustration:0 }},
+    { name: 'Flat',             desc: 'Low-signal session',      data: { satisfaction:1, delight:1, confidence:1, surprise:1, doubt:1, confusion:1, frustration:1 }},
+    { name: 'Single spike',     desc: 'One dominant sentiment',  data: { satisfaction:0, delight:0, confidence:0, surprise:0, doubt:0, confusion:0, frustration:12 }},
+    { name: 'Sparse',           desc: 'Few quotes',              data: { satisfaction:1, delight:0, confidence:0, surprise:0, doubt:0, confusion:0, frustration:1 }},
+    { name: 'Empty',            desc: 'No sentiment data',       data: { satisfaction:0, delight:0, confidence:0, surprise:0, doubt:0, confusion:0, frustration:0 }},
+];
+
+// ── Sparkline renderer ──
+function renderSparkline(data, opts) {
+    const { barW, gap, radius, minH, maxH, opacity } = opts;
+    const counts = SENTIMENTS.map(s => data[s.key] || 0);
+    const maxVal = Math.max(...counts);
+    if (maxVal === 0) return '<span style="color:var(--muted)">&mdash;</span>';
+
+    let html = `<div class="bn-sparkline" style="height:${maxH}px;gap:${gap}px">`;
+    for (let i = 0; i < SENTIMENTS.length; i++) {
+        const c = counts[i];
+        let h = 0;
+        if (c > 0) {
+            h = Math.max(Math.round((c / maxVal) * maxH), minH);
+        }
+        const bg = SENTIMENTS[i].css;
+        const r = radius === 'full' ? `${barW / 2}px` : `${radius}px ${radius}px 0 0`;
+        const op = opacity < 1 ? `opacity:${opacity};` : '';
+        html += `<span style="width:${barW}px;height:${h}px;background:${bg};border-radius:${r};${op}"></span>`;
+    }
+    html += '</div>';
+    return html;
+}
+
+// Fake session data for context
+function frictionFromData(data) {
+    return (data.doubt || 0) + (data.confusion || 0) + (data.frustration || 0);
+}
+
+// ── Build a variation card ──
+function buildCard(opts, label) {
+    const { barW, gap, radius, minH, maxH, opacity } = opts;
+    const radiusLabel = radius === 'full' ? 'full' : radius + 'px';
+    const opLabel = opacity < 1 ? `, opacity ${opacity}` : '';
+
+    let html = `<div class="var-card">`;
+    html += `<h4>${label}</h4>`;
+    html += `<div class="params">bar ${barW}px · gap ${gap}px · radius ${radiusLabel} · min-h ${minH}px · height ${maxH}px${opLabel}</div>`;
+    html += `<table class="session-mock">`;
+    html += `<thead><tr><th>ID</th><th>Speaker</th><th>Duration</th><th>Friction</th><th>Sentiment</th></tr></thead>`;
+    html += `<tbody>`;
+
+    PROFILES.forEach((p, i) => {
+        const friction = frictionFromData(p.data);
+        const sparkline = renderSparkline(p.data, opts);
+        html += `<tr>`;
+        html += `<td class="sid">#${i + 1}</td>`;
+        html += `<td><span class="profile-label">${p.name}</span></td>`;
+        html += `<td>30 min</td>`;
+        html += `<td class="friction">${friction || '&mdash;'}</td>`;
+        html += `<td class="sentiment-cell">${sparkline}</td>`;
+        html += `</tr>`;
+    });
+
+    html += `</tbody></table></div>`;
+    return html;
+}
+
+// ── Generate all variations ──
+function generateAll() {
+    const grid = document.getElementById('grid');
+    let cards = '';
+
+    // Group 1: Bar width exploration (fixed gap=2, radius=1, minH=2, maxH=20)
+    for (const barW of [4, 5, 6, 7, 8]) {
+        cards += buildCard(
+            { barW, gap: 2, radius: 1, minH: 2, maxH: 20, opacity: 1 },
+            `Bar width: ${barW}px`
+        );
+    }
+
+    // Group 2: Gap exploration (fixed barW=6, radius=1, minH=2, maxH=20)
+    for (const gap of [0, 1, 2, 3]) {
+        cards += buildCard(
+            { barW: 6, gap, radius: 1, minH: 2, maxH: 20, opacity: 1 },
+            `Gap: ${gap}px`
+        );
+    }
+
+    // Group 2b: Zero-gap variations across bar widths and radii
+    for (const barW of [4, 5, 6, 7, 8]) {
+        cards += buildCard(
+            { barW, gap: 0, radius: 0, minH: 2, maxH: 20, opacity: 1 },
+            `Zero gap, ${barW}px bars, sharp`
+        );
+    }
+    for (const barW of [4, 5, 6, 7, 8]) {
+        cards += buildCard(
+            { barW, gap: 0, radius: 1, minH: 2, maxH: 20, opacity: 1 },
+            `Zero gap, ${barW}px bars, 1px radius`
+        );
+    }
+    // Zero-gap at different heights
+    for (const maxH of [14, 16, 20, 24]) {
+        cards += buildCard(
+            { barW: 5, gap: 0, radius: 0, minH: 2, maxH, opacity: 1 },
+            `Zero gap, 5px bars, height ${maxH}px`
+        );
+    }
+    // Zero-gap with opacity
+    for (const opacity of [1, 0.8, 0.6]) {
+        cards += buildCard(
+            { barW: 5, gap: 0, radius: 0, minH: 2, maxH: 20, opacity },
+            `Zero gap, 5px bars, opacity ${Math.round(opacity * 100)}%`
+        );
+    }
+
+    // Group 3: Corner radius (fixed barW=6, gap=2, minH=2, maxH=20)
+    for (const radius of [0, 1, 2, 'full']) {
+        cards += buildCard(
+            { barW: 6, gap: 2, radius, minH: 2, maxH: 20, opacity: 1 },
+            `Radius: ${radius === 'full' ? 'full round' : radius + 'px'}`
+        );
+    }
+
+    // Group 4: Min non-zero height (fixed barW=6, gap=2, radius=1, maxH=20)
+    for (const minH of [1, 2, 3]) {
+        cards += buildCard(
+            { barW: 6, gap: 2, radius: 1, minH, maxH: 20, opacity: 1 },
+            `Min non-zero height: ${minH}px`
+        );
+    }
+
+    // Group 5: Total height (fixed barW=6, gap=2, radius=1, minH=2)
+    for (const maxH of [14, 16, 20, 24]) {
+        cards += buildCard(
+            { barW: 6, gap: 2, radius: 1, minH: 2, maxH, opacity: 1 },
+            `Total height: ${maxH}px`
+        );
+    }
+
+    // Group 6: Colour intensity / opacity (fixed barW=6, gap=2, radius=1, minH=2, maxH=20)
+    for (const opacity of [1, 0.8, 0.6]) {
+        cards += buildCard(
+            { barW: 6, gap: 2, radius: 1, minH: 2, maxH: 20, opacity },
+            `Opacity: ${Math.round(opacity * 100)}%`
+        );
+    }
+
+    // Group 7: Curated "best candidates"
+    cards += buildCard(
+        { barW: 5, gap: 1, radius: 1, minH: 2, maxH: 16, opacity: 1 },
+        'Candidate A — compact'
+    );
+    cards += buildCard(
+        { barW: 6, gap: 2, radius: 1, minH: 2, maxH: 20, opacity: 1 },
+        'Candidate B — balanced'
+    );
+    cards += buildCard(
+        { barW: 7, gap: 2, radius: 2, minH: 2, maxH: 20, opacity: 1 },
+        'Candidate C — slightly rounder'
+    );
+    cards += buildCard(
+        { barW: 5, gap: 2, radius: 1, minH: 2, maxH: 20, opacity: 0.8 },
+        'Candidate D — softer colours'
+    );
+    cards += buildCard(
+        { barW: 5, gap: 0, radius: 0, minH: 2, maxH: 18, opacity: 1 },
+        'Candidate E — zero gap, compact solid'
+    );
+    cards += buildCard(
+        { barW: 6, gap: 0, radius: 0, minH: 2, maxH: 20, opacity: 1 },
+        'Candidate F — zero gap, wider bars'
+    );
+    cards += buildCard(
+        { barW: 5, gap: 0, radius: 0, minH: 2, maxH: 20, opacity: 0.8 },
+        'Candidate G — zero gap, softer'
+    );
+    cards += buildCard(
+        { barW: 4, gap: 0, radius: 0, minH: 2, maxH: 16, opacity: 1 },
+        'Candidate H — zero gap, tiny'
+    );
+
+    // Group 8: Thumbnail-sized (96×54px = 7×12px bars + 6×2px gaps, height 54px)
+    for (const radius of [0, 1, 2, 3, 'full']) {
+        cards += buildCard(
+            { barW: 12, gap: 2, radius, minH: 3, maxH: 54, opacity: 0.85 },
+            `Thumbnail 96×54 — radius ${radius === 'full' ? 'full' : radius + 'px'}`
+        );
+    }
+
+    grid.innerHTML = cards;
+}
+
+// ── Legend ──
+function buildLegend() {
+    const el = document.getElementById('legend');
+    el.innerHTML = SENTIMENTS.map(s =>
+        `<span class="legend-item"><span class="legend-swatch" style="background:${s.css}"></span>${s.label}</span>`
+    ).join('');
+}
+
+buildLegend();
+generateAll();
+</script>
+</body>
+</html>

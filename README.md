@@ -374,6 +374,10 @@ Edit `bristlenose/__init__.py` (the single source of truth for version), commit,
 
 ## Changelog
 
+**0.9.2** — _12 Feb 2026_
+
+- Fix: sentiment sparkline bars now align with video thumbnail baseline
+
 **0.9.1** — _11 Feb 2026_
 
 - Moderator and observer names shown in Project tab stats row (Oxford comma lists, observer box only when observers exist)

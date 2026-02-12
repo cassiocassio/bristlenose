@@ -26,6 +26,7 @@ from bristlenose.utils.markdown import (
     format_cooked_segment_md,
     format_cooked_segment_txt,
     format_finder_date,
+    format_finder_filename,
     format_friction_item,
     format_participant_range,
     format_quote_block,
@@ -368,3 +369,44 @@ def test_format_finder_date_two_days_ago_not_yesterday() -> None:
     now = datetime(2026, 2, 3, 10, 0, 0)
     dt = datetime(2026, 2, 1, 16, 54, 0)
     assert format_finder_date(dt, now=now) == "1 Feb 2026 at 16:54"
+
+
+# ---------------------------------------------------------------------------
+# 9. format_finder_filename
+# ---------------------------------------------------------------------------
+
+
+def test_format_finder_filename_short_unchanged() -> None:
+    assert format_finder_filename("report.html") == "report.html"
+
+
+def test_format_finder_filename_exact_max_len() -> None:
+    name = "a" * 20 + ".vtt"  # 24 chars
+    assert format_finder_filename(name, max_len=24) == name
+
+
+def test_format_finder_filename_truncates_long() -> None:
+    result = format_finder_filename("Fishkeeping Research S3.vtt", max_len=24)
+    assert len(result) <= 24
+    assert result.endswith(".vtt")
+    assert "\u2026" in result
+
+
+def test_format_finder_filename_preserves_extension() -> None:
+    result = format_finder_filename("very_long_filename_here.mp4", max_len=20)
+    assert result.endswith(".mp4")
+    assert "\u2026" in result
+
+
+def test_format_finder_filename_no_extension() -> None:
+    result = format_finder_filename("a" * 30, max_len=20)
+    assert len(result) <= 20
+    assert result.endswith("\u2026")
+
+
+def test_format_finder_filename_keeps_front_and_back() -> None:
+    result = format_finder_filename("Fishkeeping Research S3.vtt", max_len=24)
+    # Front portion of stem preserved
+    assert result.startswith("Fishkeeping")
+    # Back portion of stem + extension preserved
+    assert result.endswith("S3.vtt") or result.endswith(".vtt")

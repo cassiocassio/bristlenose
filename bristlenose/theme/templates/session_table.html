@@ -1,20 +1,48 @@
-<section>
-<h2>Sessions</h2>
+<section class="bn-session-table">
+{%- if moderator_header %}
+<p class="bn-session-moderators">{{ moderator_header }}</p>
+{%- endif %}
 <table>
 <thead><tr>
-<th>Session</th><th>Speakers</th><th>Start</th><th>Duration</th><th>Source file</th>
+<th>ID</th>
+<th>Speakers</th>
+<th>Start</th>
+<th class="bn-session-duration">Duration</th>
+{%- if rows and rows[0].source_folder_uri %}
+<th><a class="bn-interviews-link" href="{{ rows[0].source_folder_uri }}"><svg class="bn-folder-icon" width="14" height="12" viewBox="0 0 14 12" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M1.5 2.5a1 1 0 0 1 1-1h2.6l1.4 1.5h5a1 1 0 0 1 1 1v6a1 1 0 0 1-1 1h-9a1 1 0 0 1-1-1z"/></svg> Interviews</a></th>
+{%- else %}
+<th>Interviews</th>
+{%- endif %}
+<th></th>
+<th>Friction</th>
+<th>Sentiment</th>
 </tr></thead>
 <tbody>
 {%- for row in rows %}
 <tr data-session="{{ row.sid }}">
-<td><a href="sessions/transcript_{{ row.sid }}.html" data-session-link="{{ row.sid }}">{{ row.num }}</a></td>
-<td>{{ row.speakers }}</td>
-<td>{{ row.start }}</td>
-<td>{{ row.duration }}</td>
+<td class="bn-session-id"><a href="sessions/transcript_{{ row.sid }}.html" data-session-link="{{ row.sid }}">#{{ row.num }}</a></td>
+<td class="bn-session-speakers">
+{%- for sp in row.speakers_list %}
+<div class="bn-person-id"><span class="badge">{{ sp.code }}</span> <span class="bn-person-id-name">{{ sp.name }}</span></div>
+{%- endfor %}
+</td>
+<td class="bn-session-meta">
+<div>{{ row.start }}</div>
+{%- if row.journey %}
+<div class="bn-session-journey">{{ row.journey }}</div>
+{%- endif %}
+</td>
+<td class="bn-session-duration">{{ row.duration }}</td>
 <td>{{ row.source }}</td>
+<td class="bn-session-thumb">
+{%- if row.has_media %}
+<div class="bn-video-thumb"><span class="bn-play-icon">&#9654;</span></div>
+{%- endif %}
+</td>
+<td class="bn-session-friction">{{ row.friction if row.friction else "&mdash;" }}</td>
+<td class="bn-session-sentiment">{{ row.sentiment_sparkline }}</td>
 </tr>
 {%- endfor %}
 </tbody>
 </table>
 </section>
-<hr>

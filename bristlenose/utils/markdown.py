@@ -504,3 +504,53 @@ def format_finder_date(dt: datetime, *, now: datetime | None = None) -> str:
 
     month = _MONTH_ABBR[dt.month]
     return f"{dt.day} {month} {dt.year} at {time_part}"
+
+
+def format_finder_filename(name: str, *, max_len: int = 24) -> str:
+    """Truncate a filename in macOS Finder style, keeping the extension.
+
+    Finder shows the start of the stem, an ellipsis, then the extension:
+    ``Fishkeeping Rese\u2026S3.vtt``.
+
+    When the name fits within *max_len* it is returned unchanged.  The
+    extension (including the dot) is always preserved in full.  If the stem
+    alone exceeds the budget, the middle is replaced with ``\u2026``
+    (horizontal ellipsis).
+
+    Args:
+        name: Filename (just the name part, no directory components).
+        max_len: Maximum character length including ellipsis and extension.
+            Defaults to 24.
+
+    Returns:
+        Truncated filename string.
+
+    Examples:
+        >>> format_finder_filename("report.html")
+        'report.html'
+        >>> format_finder_filename("Fishkeeping Research S3.vtt", max_len=24)
+        'Fishkeeping Rese\u2026S3.vtt'
+    """
+    if len(name) <= max_len:
+        return name
+
+    dot = name.rfind(".")
+    if dot == -1:
+        # No extension — truncate the whole name.
+        return name[: max_len - 1] + "\u2026"
+
+    ext = name[dot:]  # ".vtt", ".mp4", etc.
+    stem = name[:dot]
+
+    # Budget for the stem part: max_len minus extension minus ellipsis.
+    budget = max_len - len(ext) - 1
+    if budget <= 0:
+        # Extension alone fills the budget — just truncate.
+        return name[: max_len - 1] + "\u2026"
+
+    # Split budget: more at the front, less at the back.
+    front = budget * 2 // 3
+    back = budget - front
+    if back > 0:
+        return stem[:front] + "\u2026" + stem[-back:] + ext
+    return stem[:front] + "\u2026" + ext

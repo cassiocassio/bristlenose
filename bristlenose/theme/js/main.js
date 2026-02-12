@@ -23,6 +23,7 @@
  *   names.js        → initNames()            (depends on csv-export.js)
  *   focus.js        → initFocus(), setFocus(), isEditing()
  *   feedback.js     → initFeedback(), showFeedbackModal()
+ *   settings.js     → initSettings()               (depends on storage.js)
  *   global-nav.js   → initGlobalNav(), switchToTab()
  *   transcript-names.js → initTranscriptNames()
  *   transcript-annotations.js → initTranscriptAnnotations()
@@ -54,6 +55,7 @@ var _bootFns = [
   ['initFeedback', initFeedback],
   ['initJourneySort', initJourneySort],
   ['initAnalysis', initAnalysis],
+  ['initSettings', initSettings],
   ['initGlobalNav', initGlobalNav],
 ];
 for (var _bi = 0; _bi < _bootFns.length; _bi++) {

@@ -73,6 +73,7 @@ _THEME_FILES: list[str] = [
     "organisms/global-nav.css",
     "organisms/codebook-panel.css",
     "organisms/analysis.css",
+    "organisms/settings.css",
     "templates/report.css",
     "molecules/transcript-annotations.css",
     "templates/transcript.css",
@@ -136,6 +137,7 @@ _JS_FILES: list[str] = [
     "js/transcript-annotations.js",
     "js/journey-sort.js",
     "js/analysis.js",
+    "js/settings.js",
     "js/main.js",
 ]
 
@@ -463,10 +465,22 @@ def render_html(
            " Run the full pipeline to generate analysis.</p>")
     _w("</div>")  # .bn-tab-panel[analysis]
 
-    # --- Settings tab (placeholder) ---
-    _w('<div class="bn-tab-panel" data-tab="settings" id="panel-settings" role="tabpanel" aria-label="Settings">')
+    # --- Settings tab ---
+    _w('<div class="bn-tab-panel" data-tab="settings" id="panel-settings"'
+       ' role="tabpanel" aria-label="Settings">')
     _w("<h2>Settings</h2>")
-    _w('<p class="description">Report settings coming soon.</p>')
+    _w('<fieldset class="bn-setting-group">')
+    _w("<legend>Application appearance</legend>")
+    _w('<label class="bn-radio-label">'
+       '<input type="radio" name="bn-appearance" value="auto" checked> '
+       "Use system appearance</label>")
+    _w('<label class="bn-radio-label">'
+       '<input type="radio" name="bn-appearance" value="light"> '
+       "Light</label>")
+    _w('<label class="bn-radio-label">'
+       '<input type="radio" name="bn-appearance" value="dark"> '
+       "Dark</label>")
+    _w("</fieldset>")
     _w("</div>")  # .bn-tab-panel[settings]
 
     # --- About tab ---

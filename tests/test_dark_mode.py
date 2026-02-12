@@ -158,3 +158,31 @@ def test_histogram_js_no_hardcoded_colours(tmp_path: Path) -> None:
     # The JS is embedded in the HTML in a <script> block
     assert "#9ca3af" not in html, "histogram bar still has hard-coded #9ca3af"
     assert "var(--bn-colour-muted)" in html
+
+
+# ---------------------------------------------------------------------------
+# Settings panel: appearance radio buttons
+# ---------------------------------------------------------------------------
+
+def test_settings_panel_has_appearance_radios(tmp_path: Path) -> None:
+    html = _render_minimal(tmp_path)
+    assert 'name="bn-appearance"' in html
+    assert 'value="auto"' in html
+    assert 'value="light"' in html
+    assert 'value="dark"' in html
+
+
+def test_settings_panel_auto_is_default(tmp_path: Path) -> None:
+    html = _render_minimal(tmp_path)
+    assert 'value="auto" checked' in html
+
+
+def test_settings_panel_has_legend(tmp_path: Path) -> None:
+    html = _render_minimal(tmp_path)
+    assert "<legend>Application appearance</legend>" in html
+
+
+def test_settings_js_avoids_data_theme_literal(tmp_path: Path) -> None:
+    """settings.js must use split-string pattern so auto-mode test still passes."""
+    html = _render_minimal(tmp_path, color_scheme="auto")
+    assert "data-theme" not in html

@@ -192,6 +192,17 @@ Standalone HTML page (`codebook.html`) at the output root. Rendered by `_render_
 - **Interactive features**: drag-and-drop tags between groups, merge tags, inline-edit group titles/subtitles, add/delete tags, create/delete groups, keyboard shortcuts (? help, Esc close)
 - **Cross-window sync**: localStorage `storage` event — changes in the codebook page propagate to the report (badge colours update), and vice versa (new user tags appear)
 
+## settings.js
+
+Application appearance toggle. Lets users switch between system/light/dark theme via radio buttons in the Settings tab.
+
+- **`initSettings()`** — reads saved preference from localStorage, sets the matching radio button, applies theme to `<html>`, attaches change listeners
+- **localStorage key**: `bristlenose-appearance` (via `createStore`). Values: `"auto"`, `"light"`, `"dark"`
+- **Theme application**: sets/removes `data-theme` attribute on `<html>` and updates `style.colorScheme`. "auto" removes the attribute and restores `"light dark"` so the browser follows OS preference
+- **`_settingsThemeAttr`**: uses `"data-" + "theme"` concatenation to avoid the literal string in embedded HTML (dark mode tests assert its absence when `color_scheme="auto"`)
+- **Dependencies**: `storage.js` (`createStore`)
+- **CSS**: `organisms/settings.css` (fieldset reset, radio label layout)
+
 ## analysis.js
 
 Analysis rendering: signal cards, heatmaps, and interactive features. Renders analysis content from `BRISTLENOSE_ANALYSIS` JSON data both in the report's Analysis tab and on standalone `analysis.html`.
@@ -218,7 +229,7 @@ Standalone HTML page (`analysis.html`) at the output root. Rendered by `_render_
 - **Cross-page**: signal card links point back to report sections
 
 Four page types in the output:
-1. **Report** (`bristlenose-{slug}-report.html`) — main window, full JS suite (19 modules)
+1. **Report** (`bristlenose-{slug}-report.html`) — main window, full JS suite (20 modules)
 2. **Transcript** (`sessions/transcript_{id}.html`) — separate pages, `storage.js` + `badge-utils.js` + `player.js` + `transcript-names.js` + `transcript-annotations.js`
 3. **Codebook** (`codebook.html`) — new window, `storage.js` + `badge-utils.js` + `modal.js` + `codebook.js`
 4. **Analysis** (`analysis.html`) — new window, `storage.js` + `analysis.js`

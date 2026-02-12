@@ -1,6 +1,7 @@
 <div class="report-header">
 <div class="header-left">
 {%- if has_logo %}
+<a href="#project" class="report-logo-link" onclick="switchToTab('project');return false;">
 {%- if has_dark_logo %}
 <picture>
 <source srcset="{{ assets_prefix }}/bristlenose-logo-dark.png" media="(prefers-color-scheme: dark)">
@@ -9,6 +10,7 @@
 {%- else %}
 <img class="report-logo" src="{{ assets_prefix }}/bristlenose-logo.png" alt="Bristlenose logo">
 {%- endif %}
+</a>
 {%- endif %}
 <span class="header-title"><span class="header-logotype">Bristlenose</span> <span class="header-project">{{ project_name }}</span></span>
 </div>

@@ -13,9 +13,82 @@
    look in one place.
 
    Two rules:
-   1. Symbols are 50% lighter than the text they accompany
-   2. Symbols are outdented so the word aligns with surrounding content
-      (exceptions: tabs, stat cards, signal card labels, tooltips)
+   1. Symbols are mid-grey from the design tokens (--bn-colour-muted)
+   2. Hanging punctuation — the symbol lives in the margin, outside
+      the content flow. Text aligns as if the symbol isn't there.
+      (Exceptions: tabs, stat cards, signal card labels, tooltips)
+   ================================================================ */
+
+/* ================================================================
+   IMPLEMENTATION METHOD: position: absolute in reserved padding
+   ================================================================
+
+   We evaluated five approaches to hanging punctuation in CSS.
+   The absolute-positioning method was chosen for robustness
+   across all layout contexts (flex, grid, table, block).
+
+   ── The pattern ─────────────────────────────────────────────
+
+   The PARENT element (heading, th, container) gets:
+     position: relative;
+     padding-left: 1.5ch;    ← reserves a gutter for the symbol
+
+   The SYMBOL span inside gets:
+     position: absolute;
+     left: 0;                ← sits in the reserved gutter
+     width: 1.5ch;           ← same as the gutter
+     text-align: center;     ← centres the glyph in the gutter
+
+   The symbol is positioned relative to the parent's padding box.
+   Parent flex, grid, or table-cell context is irrelevant — it
+   creates a self-contained positioning context.
+
+   ── Why not the other four? ─────────────────────────────────
+
+   1. CSS hanging-punctuation property
+      Safari-only (~14% of users). Chrome/Firefox never shipped it.
+      Only covers standard typographic punctuation (quotes, periods)
+      — not arbitrary symbols like §, ¶, ❋. Unusable.
+
+   2. text-indent: -Xch
+      Only affects the first line of a block. Doesn't work on flex
+      items (they establish a new formatting context). Requires
+      magic numbers tied to font metrics — 'ch' only reliable for
+      monospace. Chris Coyier acknowledges the magic number problem.
+
+   3. Negative margin on inline-block (our previous approach)
+      FRAGILE IN FLEX/GRID. Negative margin-left on a flex item
+      doesn't just shift visually — it changes the item's sizing
+      and can expand the parent. Also clipped by overflow: hidden
+      on any ancestor. This broke when we changed container padding.
+
+   4. Two-column grid
+      Forces HTML restructuring — can't just add a class to an <h2>.
+      Overkill for a single symbol. Poor composability.
+
+   ── Why absolute positioning wins ───────────────────────────
+
+   • Layout-context-independent: position: relative + absolute
+     creates a self-contained coordinate system. Doesn't matter
+     if the parent is a flex item, grid cell, table header, or block.
+
+   • No negative margins: no interaction with flex item sizing,
+     no overflow clipping, no whitespace quirks.
+
+   • Composable: add .sym-hang to any element. The only requirement
+     is that the element can accept position: relative and
+     padding-left. Both are properties of the element itself,
+     not its parent — so changing the parent's layout doesn't
+     break the hang.
+
+   • The symbol stays in HTML (not ::before) because it's
+     data-driven — different elements get §, ¶, or ❋.
+
+   Sources:
+   - Ahmad Shadeed: ishadeed.com/article/unusual-use-cases-pseudo-elements/
+   - Ctrl blog: ctrl.blog/entry/css-negative-text-indent.html
+   - Chris Coyier: chriscoyier.net/2023/11/27/the-hanging-punctuation-property-in-css/
+   - Can I Use: caniuse.com/css-hanging-punctuation (Safari only)
    ================================================================ */
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -67,6 +140,9 @@
 
     --bn-colour-border-hover: #d1d5db;
     --bn-hover-bg: rgba(0, 0, 0, 0.04);
+
+    /* Symbology gutter width */
+    --bn-sym-gutter: 1.5ch;
 }
 
 /* ── Dark mode ─────────────────────────────────────────────── */
@@ -170,36 +246,78 @@ body {
 }
 
 /* ══════════════════════════════════════════════════════════════
-   SYMBOLOGY ATOMS — .sym and .sym-muted
+   HANGING SYMBOL ATOMS
    ══════════════════════════════════════════════════════════════
 
-   .sym         — outdented symbol (hangs left, word aligns with content).
-                  Used in headings, table headers, and other block-level text.
-                  Colour: --bn-colour-muted (lighter than heading text).
+   Three classes, one pattern:
 
-   .sym-inline  — non-outdented symbol (tabs, stat cards, signal labels, tooltips).
-                  Colour: --bn-colour-muted when parent text is full colour.
-                  opacity: 0.5 when parent text is already muted.
+   .sym-hang    — goes on the PARENT element (h2, th, h3, etc.).
+                  Reserves a gutter via padding-left and establishes
+                  a positioning context with position: relative.
+                  The symbol span inside is then absolutely placed
+                  into that gutter.
+
+   .sym         — goes on the <span> wrapping the symbol character.
+                  Absolutely positioned at left: 0, centred in the
+                  gutter. Mid-grey from --bn-colour-muted.
+
+   .sym-inline  — flat variant for cramped contexts (tabs, stat
+                  card labels, signal card source labels, tooltips).
+                  No hang — just colour. No position changes.
+
+   .sym-faded   — modifier that halves opacity. Stacks with
+                  .sym-inline for contexts where the parent text
+                  is already muted (e.g. stat card labels).
+
+   Usage in HTML:
+     <h2 class="sym-hang"><span class="sym">§</span> Sections</h2>
+     <button class="bn-tab"><span class="sym-inline">¶</span> Quotes</button>
    ══════════════════════════════════════════════════════════════ */
 
-.sym {
-    color: var(--bn-colour-muted);
-    margin-left: -1.5ch;
-    display: inline-block;
-    width: 1.5ch;
-    background: #39ff14; /* DEBUG: neon green to visualise outdent zone */
+/* Parent: reserves the gutter, establishes positioning context */
+.sym-hang {
+    position: relative;
+    padding-left: var(--bn-sym-gutter);
+    /* outline: 1px dashed red; /* DEBUG: shows the element's border box */ */
 }
 
-/* Inline variant: no outdent, just colour */
+/* Symbol: absolutely placed in the padding gutter.
+
+   The parent (.sym-hang) has:
+     position: relative;
+     padding-left: var(--bn-sym-gutter);   (1.5ch)
+
+   For position: absolute, the containing block is the parent's
+   PADDING BOX. left: 0 = the padding edge, which is where
+   content starts (the INNER edge of the padding, not the outer).
+   To place the symbol in the padding gutter (LEFT of the content),
+   we offset by the negative gutter width.
+
+   This negative left is safe because .sym is position: absolute —
+   removed from flow entirely. It cannot affect flex/grid sizing,
+   overflow, or sibling layout. The concerns from our research
+   about negative margins apply only to IN-FLOW elements (flex
+   items, inline-blocks). Absolutely-positioned elements are
+   exempt — they don't participate in the parent's layout at all. */
+.sym {
+    position: absolute;
+    left: calc(-1 * var(--bn-sym-gutter));
+    width: var(--bn-sym-gutter);
+    text-align: center;
+    color: var(--bn-colour-muted);
+    background: #39ff14; /* DEBUG: neon green to visualise gutter */
+}
+
+/* Inline variant: no hang, just colour */
 .sym-inline {
     color: var(--bn-colour-muted);
-    background: #39ff14; /* DEBUG: neon green */
+    background: #39ff14; /* DEBUG */
 }
 
-/* Extra-faded: when parent text is already muted */
+/* Half-opacity: when parent text is already muted */
 .sym-faded {
     opacity: 0.5;
-    background: #39ff14; /* DEBUG: neon green */
+    background: #39ff14; /* DEBUG */
 }
 
 /* ── 1. Global nav tab bar (from organisms/global-nav.css) ── */
@@ -258,7 +376,6 @@ body {
     font-size: 1.1rem;
     font-weight: 600;
     margin-bottom: 0.5rem;
-    padding-left: 1.5ch; /* make room for the outdented symbol */
 }
 
 .toc ul {
@@ -300,7 +417,6 @@ body {
     margin: 0 0 1rem;
     padding-bottom: 0.4rem;
     border-bottom: 2px solid var(--bn-colour-border);
-    padding-left: 1.5ch; /* make room for the outdented symbol */
 }
 
 .content-demo h3 {
@@ -361,7 +477,6 @@ body {
     font-size: 1.1rem;
     font-weight: 600;
     margin: 0 0 0.6rem;
-    padding-left: 1.5ch; /* room for outdented symbol */
 }
 
 table {
@@ -377,11 +492,6 @@ th {
     padding: 0.6rem var(--bn-space-md);
     border-bottom: 2px solid var(--bn-colour-border);
     white-space: nowrap;
-}
-
-/* First column th gets extra left padding for outdented symbol */
-.bn-dashboard-list th:first-child {
-    padding-left: calc(var(--bn-space-md) + 1.5ch);
 }
 
 td {
@@ -402,7 +512,6 @@ td {
     margin: 0 0 var(--bn-space-md) 0;
     padding-bottom: 0.4rem;
     border-bottom: 1px solid var(--bn-colour-border);
-    padding-left: 1.5ch; /* room for outdented symbol */
 }
 
 .section-heading + .section-heading { margin-top: var(--bn-space-xl); }
@@ -512,7 +621,6 @@ td {
 .analysis-heatmap th:first-child {
     text-align: left;
     min-width: 140px;
-    padding-left: calc(0.3rem + 1.5ch); /* room for outdented symbol */
 }
 
 .analysis-heatmap td {
@@ -661,7 +769,7 @@ td {
     <code>¶</code> Quote &middot;
     <code>❋</code> Theme
     <br>
-    <strong>Rules:</strong> symbols at 50% darkness of their text &middot; outdented so the word aligns with content
+    <strong>Rules:</strong> hanging punctuation &mdash; symbols live in the margin, outside the content flow &middot; mid-grey from tokens &middot; text aligns as if the symbol isn&rsquo;t there
 </p>
 
 <!-- ═══════════════════════════════════════════════════════════ -->
@@ -670,7 +778,7 @@ td {
 
 <section class="demo">
     <p class="demo-title">1. Global nav tab bar</p>
-    <p class="demo-context">Exception: no outdent (tabs are centred in padding). Symbol is muted even when tab is active.</p>
+    <p class="demo-context">Exception: no hang (tabs are centred in padding). Symbol is .sym-inline — muted even when tab is active.</p>
 
     <nav class="bn-global-nav" role="tablist">
         <button class="bn-tab">Project</button>
@@ -687,11 +795,11 @@ td {
 
 <section class="demo">
     <p class="demo-title">2. Table of contents</p>
-    <p class="demo-context">Outdented: &ldquo;Sections&rdquo; aligns with the list items below.</p>
+    <p class="demo-context">Hanging: .sym-hang on h2. &ldquo;Sections&rdquo; aligns with list items below.</p>
 
     <div class="toc-row">
         <nav class="toc">
-            <h2><span class="sym">§</span> Sections</h2>
+            <h2 class="sym-hang"><span class="sym">§</span> Sections</h2>
             <ul>
                 <li><a href="#">Onboarding</a> <button class="edit-pencil">&#9998;</button></li>
                 <li><a href="#">Dashboard</a> <button class="edit-pencil">&#9998;</button></li>
@@ -699,7 +807,7 @@ td {
             </ul>
         </nav>
         <nav class="toc">
-            <h2><span class="sym">❋</span> Themes</h2>
+            <h2 class="sym-hang"><span class="sym">❋</span> Themes</h2>
             <ul>
                 <li><a href="#">Trust &amp; credibility</a> <button class="edit-pencil">&#9998;</button></li>
                 <li><a href="#">Learning curve</a> <button class="edit-pencil">&#9998;</button></li>
@@ -714,10 +822,10 @@ td {
 
 <section class="demo">
     <p class="demo-title">3. Content heading — Sections</p>
-    <p class="demo-context">Outdented: &ldquo;Sections&rdquo; aligns with the h3 and body text below.</p>
+    <p class="demo-context">Hanging: .sym-hang on h2. &ldquo;Sections&rdquo; aligns with h3 and body text — no container padding needed.</p>
 
     <div class="content-demo">
-        <h2><span class="sym">§</span> Sections</h2>
+        <h2 class="sym-hang"><span class="sym">§</span> Sections</h2>
         <h3>Onboarding <button class="edit-pencil">&#9998;</button></h3>
         <p style="color: var(--bn-colour-muted); font-size: 0.9rem; font-style: italic;">Participants found the first-run flow confusing.</p>
     </div>
@@ -725,10 +833,10 @@ td {
 
 <section class="demo">
     <p class="demo-title">4. Content heading — Themes</p>
-    <p class="demo-context">Outdented: &ldquo;Themes&rdquo; aligns with the h3 and body text below.</p>
+    <p class="demo-context">Hanging: .sym-hang on h2. &ldquo;Themes&rdquo; aligns with h3 and body text.</p>
 
     <div class="content-demo">
-        <h2><span class="sym">❋</span> Themes</h2>
+        <h2 class="sym-hang"><span class="sym">❋</span> Themes</h2>
         <h3>Trust &amp; credibility <button class="edit-pencil">&#9998;</button></h3>
         <p style="color: var(--bn-colour-muted); font-size: 0.9rem; font-style: italic;">Recurring pattern around data privacy and perceived reliability.</p>
     </div>
@@ -740,20 +848,20 @@ td {
 
 <section class="demo">
     <p class="demo-title">5. Dashboard stat cards</p>
-    <p class="demo-context">Exception: no outdent (centre-aligned cards). Symbol at half opacity because the label text is already muted.</p>
+    <p class="demo-context">Exception: no hang (centre-aligned cards). .sym-inline.sym-faded — half opacity because label text is already muted.</p>
 
     <div class="bn-project-stats">
         <div class="bn-project-stat">
             <span class="bn-project-stat-value">42</span>
-            <span class="bn-project-stat-label"><span class="sym-faded">¶</span> quotes</span>
+            <span class="bn-project-stat-label"><span class="sym-inline sym-faded">¶</span> quotes</span>
         </div>
         <div class="bn-project-stat">
             <span class="bn-project-stat-value">6</span>
-            <span class="bn-project-stat-label"><span class="sym-faded">§</span> sections</span>
+            <span class="bn-project-stat-label"><span class="sym-inline sym-faded">§</span> sections</span>
         </div>
         <div class="bn-project-stat">
             <span class="bn-project-stat-value">4</span>
-            <span class="bn-project-stat-label"><span class="sym-faded">❋</span> themes</span>
+            <span class="bn-project-stat-label"><span class="sym-inline sym-faded">❋</span> themes</span>
         </div>
         <div class="bn-project-stat">
             <span class="bn-project-stat-value">38</span>
@@ -768,13 +876,13 @@ td {
 
 <section class="demo">
     <p class="demo-title">6–7. Dashboard pane tables</p>
-    <p class="demo-context">Outdented: h3 and first-column th. &ldquo;¶ Quotes&rdquo; column header is not outdented (narrow, right-aligned context).</p>
+    <p class="demo-context">Hanging: .sym-hang on h3 and th. &ldquo;Section&rdquo; aligns with row data, &ldquo;Quotes&rdquo; aligns with numbers.</p>
 
     <div class="bn-dashboard-row">
         <div class="bn-dashboard-pane">
-            <h3><span class="sym">§</span> Sections</h3>
+            <h3 class="sym-hang"><span class="sym">§</span> Sections</h3>
             <table class="bn-dashboard-list">
-                <thead><tr><th><span class="sym">§</span> Section</th><th><span class="sym-inline">¶</span> Quotes</th></tr></thead>
+                <thead><tr><th class="sym-hang"><span class="sym">§</span> Section</th><th class="sym-hang"><span class="sym">¶</span> Quotes</th></tr></thead>
                 <tbody>
                     <tr><td>Onboarding</td><td>12</td></tr>
                     <tr><td>Dashboard</td><td>18</td></tr>
@@ -783,9 +891,9 @@ td {
             </table>
         </div>
         <div class="bn-dashboard-pane">
-            <h3><span class="sym">❋</span> Themes</h3>
+            <h3 class="sym-hang"><span class="sym">❋</span> Themes</h3>
             <table class="bn-dashboard-list">
-                <thead><tr><th><span class="sym">❋</span> Theme</th><th><span class="sym-inline">¶</span> Quotes</th></tr></thead>
+                <thead><tr><th class="sym-hang"><span class="sym">❋</span> Theme</th><th class="sym-hang"><span class="sym">¶</span> Quotes</th></tr></thead>
                 <tbody>
                     <tr><td>Trust &amp; credibility</td><td>9</td></tr>
                     <tr><td>Learning curve</td><td>14</td></tr>
@@ -802,12 +910,12 @@ td {
 
 <section class="demo">
     <p class="demo-title">8. Analysis page headings</p>
-    <p class="demo-context">Outdented: &ldquo;Section&rdquo; and &ldquo;Theme&rdquo; align with the description text below.</p>
+    <p class="demo-context">Hanging: .sym-hang on h2. Description text aligns with &ldquo;Section&rdquo;, not the symbol.</p>
 
-    <h2 class="section-heading"><span class="sym">§</span> Section &times; Sentiment</h2>
+    <h2 class="section-heading sym-hang"><span class="sym">§</span> Section &times; Sentiment</h2>
     <p class="section-desc">Quote counts per report section and sentiment. Coloured cells show where a sentiment is more or less concentrated than expected.</p>
 
-    <h2 class="section-heading" style="margin-top: var(--bn-space-xl);"><span class="sym">❋</span> Theme &times; Sentiment</h2>
+    <h2 class="section-heading sym-hang" style="margin-top: var(--bn-space-xl);"><span class="sym">❋</span> Theme &times; Sentiment</h2>
     <p class="section-desc">The same view grouped by cross-cutting themes instead of sections. Themes span multiple sections &mdash; a pattern here means the sentiment recurs across different parts of the product.</p>
 </section>
 
@@ -817,13 +925,13 @@ td {
 
 <section class="demo">
     <p class="demo-title">9. Signal cards</p>
-    <p class="demo-context">Exception: no outdent (small label inside a card). Symbol at half opacity because the label text is already muted.</p>
+    <p class="demo-context">Exception: no hang (small label inside card). .sym-inline.sym-faded — half opacity because label text is already muted.</p>
 
     <div class="signal-cards">
         <div class="signal-card" style="--card-accent: var(--bn-sentiment-frustration);">
             <div class="signal-card-top">
                 <div class="signal-card-identity">
-                    <span class="signal-card-source"><span class="sym-faded">§</span> Section</span>
+                    <span class="signal-card-source"><span class="sym-inline sym-faded">§</span> Section</span>
                     <div class="signal-card-location">Onboarding</div>
                     <span class="badge badge-frustration">frustration</span>
                 </div>
@@ -841,7 +949,7 @@ td {
         <div class="signal-card" style="--card-accent: var(--bn-sentiment-satisfaction);">
             <div class="signal-card-top">
                 <div class="signal-card-identity">
-                    <span class="signal-card-source"><span class="sym-faded">❋</span> Theme</span>
+                    <span class="signal-card-source"><span class="sym-inline sym-faded">❋</span> Theme</span>
                     <div class="signal-card-location">Trust &amp; credibility</div>
                     <span class="badge badge-satisfaction">satisfaction</span>
                 </div>
@@ -864,12 +972,12 @@ td {
 
 <section class="demo">
     <p class="demo-title">10. Heatmap tables</p>
-    <p class="demo-context">Outdented: first-column header. Row label data aligns with the word, not the symbol.</p>
+    <p class="demo-context">Hanging: .sym-hang on first-column th. Row labels align with the word, not the symbol.</p>
 
     <table class="analysis-heatmap">
         <thead>
             <tr>
-                <th><span class="sym">§</span> Section</th>
+                <th class="sym-hang"><span class="sym">§</span> Section</th>
                 <th><span class="badge badge-frustration">frustration</span></th>
                 <th><span class="badge badge-satisfaction">satisfaction</span></th>
                 <th><span class="badge badge-confidence">confidence</span></th>
@@ -885,7 +993,7 @@ td {
     <table class="analysis-heatmap">
         <thead>
             <tr>
-                <th><span class="sym">❋</span> Theme</th>
+                <th class="sym-hang"><span class="sym">❋</span> Theme</th>
                 <th><span class="badge badge-frustration">frustration</span></th>
                 <th><span class="badge badge-satisfaction">satisfaction</span></th>
                 <th><span class="badge badge-confidence">confidence</span></th>
@@ -905,7 +1013,7 @@ td {
 
 <section class="demo">
     <p class="demo-title">11. Transcript margin annotations</p>
-    <p class="demo-context">Exception: no outdent (tooltip text). Symbol shown in tooltip preview below.</p>
+    <p class="demo-context">Exception: no hang (tooltip text). .sym-inline.sym-faded in tooltip preview.</p>
 
     <div class="transcript-demo">
         <div class="transcript-segment">
@@ -916,14 +1024,14 @@ td {
         <div class="segment-margin">
             <div class="margin-annotation">
                 <a class="margin-label" href="#">Onboarding</a>
-                <p class="tooltip-preview">tooltip: &ldquo;<span class="sym-faded">§</span> Section: Onboarding&rdquo;</p>
+                <p class="tooltip-preview">tooltip: &ldquo;<span class="sym-inline sym-faded">§</span> Section: Onboarding&rdquo;</p>
                 <div class="margin-tags">
                     <span class="badge badge-frustration" style="font-size:0.65rem; padding:1px 4px; line-height:1.4;">frustration</span>
                 </div>
             </div>
             <div class="margin-annotation" style="margin-top: var(--bn-space-md);">
                 <a class="margin-label" href="#">Learning curve</a>
-                <p class="tooltip-preview">tooltip: &ldquo;<span class="sym-faded">❋</span> Theme: Learning curve&rdquo;</p>
+                <p class="tooltip-preview">tooltip: &ldquo;<span class="sym-inline sym-faded">❋</span> Theme: Learning curve&rdquo;</p>
                 <div class="margin-tags">
                     <span class="badge badge-satisfaction" style="font-size:0.65rem; padding:1px 4px; line-height:1.4;">satisfaction</span>
                 </div>
@@ -938,20 +1046,20 @@ td {
 
 <section class="demo">
     <p class="demo-title">12. Codebook tooltips</p>
-    <p class="demo-context">Exception: no outdent (tooltip text). Symbol at half opacity in tooltip preview.</p>
+    <p class="demo-context">Exception: no hang (tooltip text). .sym-inline.sym-faded in tooltip preview.</p>
 
     <div class="codebook-demo">
         <div class="codebook-item">
             <span class="badge badge-user">usability</span>
-            <p class="tooltip-preview">tooltip: &ldquo;usability &mdash; 3 <span class="sym-faded">¶</span> quotes&rdquo;</p>
+            <p class="tooltip-preview">tooltip: &ldquo;usability &mdash; 3 <span class="sym-inline sym-faded">¶</span> quotes&rdquo;</p>
         </div>
         <div class="codebook-item">
             <span class="badge badge-user">navigation</span>
-            <p class="tooltip-preview">tooltip: &ldquo;navigation &mdash; 7 <span class="sym-faded">¶</span> quotes&rdquo;</p>
+            <p class="tooltip-preview">tooltip: &ldquo;navigation &mdash; 7 <span class="sym-inline sym-faded">¶</span> quotes&rdquo;</p>
         </div>
         <div class="codebook-item">
             <span style="font-size: 0.8rem; color: var(--bn-colour-text); font-weight: 600;">10</span>
-            <p class="tooltip-preview">tooltip: &ldquo;10 <span class="sym-faded">¶</span> quotes&rdquo; (group total)</p>
+            <p class="tooltip-preview">tooltip: &ldquo;10 <span class="sym-inline sym-faded">¶</span> quotes&rdquo; (group total)</p>
         </div>
     </div>
 </section>
@@ -962,7 +1070,7 @@ td {
 
 <section class="demo">
     <p class="demo-title">13. Markdown / text output</p>
-    <p class="demo-context">Plain text — no colour or outdent possible. Symbol is just a character.</p>
+    <p class="demo-context">Plain text — no colour or hang possible. Symbol is just a character prefix.</p>
 
     <div class="markdown-demo">## § Sections
 

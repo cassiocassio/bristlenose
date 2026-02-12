@@ -112,6 +112,18 @@
     margin-top: 0;
 }
 
+/* Paired pane — two halves side-by-side, shared border, no divider */
+.bn-dashboard-pane--pair {
+    display: flex;
+    gap: 0;
+    padding: 0;
+}
+.bn-dashboard-pane--pair-half {
+    flex: 1;
+    padding: var(--bn-space-lg);
+    min-width: 0;
+}
+
 /* Full-width pane spans both columns */
 .bn-dashboard-full {
     grid-column: 1 / -1;
@@ -138,6 +150,11 @@
     border: 1px solid var(--bn-colour-border);
     border-radius: var(--bn-radius-md);
     min-width: 5.5rem;
+    cursor: pointer;
+    transition: background-color 0.15s ease;
+}
+.bn-project-stat:hover {
+    background-color: var(--bn-colour-hover, #e8f0fe);
 }
 
 .bn-project-stat-value {
@@ -152,6 +169,29 @@
     color: var(--bn-colour-muted);
     margin-top: 0.15rem;
     text-align: center;
+}
+
+/* Paired stat card — two value/label stacks side-by-side, shared border */
+.bn-project-stat--pair {
+    flex-direction: row;
+    padding: 0;
+    gap: 0;
+    cursor: default;
+}
+.bn-project-stat--pair:hover {
+    background-color: transparent;
+}
+.bn-project-stat--pair-half {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: var(--bn-space-md) var(--bn-space-lg);
+    cursor: pointer;
+    transition: background-color 0.15s ease;
+    border-radius: var(--bn-radius-md);
+}
+.bn-project-stat--pair-half:hover {
+    background-color: var(--bn-colour-hover, #e8f0fe);
 }
 
 /* Text-style stat card (e.g. "Moderator: Name, Name, and Name") */

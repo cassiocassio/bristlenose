@@ -77,17 +77,8 @@ function _updateDashboardTagsStat() {
   var nTags = Object.keys(tagSet).length;
   if (nTags === 0) { el.style.display = 'none'; return; }
 
-  // Count codebook groups (if codebook module loaded).
-  var nGroups = 0;
-  if (typeof codebook !== 'undefined' && codebook.groups) {
-    nGroups = codebook.groups.length;
-  }
-  var groupLine = nGroups > 0
-    ? '<br>' + nGroups + '\u00a0group' + (nGroups !== 1 ? 's' : '')
-    : '';
-
   valEl.textContent = nTags;
-  lblEl.innerHTML = 'user tag' + (nTags !== 1 ? 's' : '') + groupLine;
+  lblEl.textContent = 'user tags';
   el.style.display = '';
 }
 

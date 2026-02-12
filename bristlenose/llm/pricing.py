@@ -36,3 +36,20 @@ def estimate_cost(
         return None
     inp_rate, out_rate = PRICING[model]
     return (input_tokens * inp_rate + output_tokens * out_rate) / 1_000_000
+
+
+# Empirical per-session token estimates (input, output) across all LLM stages
+# (speaker ID + segmentation + extraction + share of clustering/theming).
+# Based on ~30-60 min interview transcripts with Sonnet-class models.
+_TOKENS_PER_SESSION: tuple[int, int] = (17_000, 10_000)
+
+
+def estimate_pipeline_cost(model: str, n_sessions: int) -> float | None:
+    """Estimate total LLM cost for a pipeline run before it starts.
+
+    Returns estimated USD, or None if the model isn't in the pricing table.
+    """
+    if n_sessions <= 0:
+        return None
+    inp_per_session, out_per_session = _TOKENS_PER_SESSION
+    return estimate_cost(model, inp_per_session * n_sessions, out_per_session * n_sessions)

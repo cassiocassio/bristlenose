@@ -571,10 +571,56 @@ def _print_pipeline_summary(result: object) -> None:
 
     # Done line — always last
     elapsed = getattr(result, "elapsed_seconds", 0.0)
-    if elapsed:
+    llm_ran = getattr(result, "llm_calls", 0) > 0
+    no_quotes = getattr(result, "total_quotes", 0) == 0
+    has_errors = llm_ran and no_quotes
+
+    if has_errors:
+        time_str = f" in {_format_duration(elapsed)}" if elapsed else ""
+        console.print(
+            f"\n  [red]Finished with errors[/red]{time_str}"
+            " — 0 quotes extracted (check API credits or logs)"
+        )
+    elif elapsed:
         console.print(f"\n  [green]Done[/green] in {_format_duration(elapsed)}")
     else:
         console.print("\n  [green]Done.[/green]")
+
+
+# ---------------------------------------------------------------------------
+# Time estimation
+# ---------------------------------------------------------------------------
+
+
+def _build_estimator(settings: object) -> tuple[object, object]:
+    """Build a TimingEstimator and an event callback for printing estimates.
+
+    Returns (estimator, on_event) — both may be None if something goes wrong.
+    """
+    from bristlenose.timing import PipelineEvent, TimingEstimator, build_hardware_key
+
+    try:
+        hw_key = build_hardware_key(settings)  # type: ignore[arg-type]
+        config_dir = _doctor_sentinel_dir()
+        estimator = TimingEstimator(hw_key, config_dir)
+    except Exception:
+        return None, None
+
+    _last_estimate_secs: list[float] = [0.0]  # mutable container for closure
+
+    def _on_event(event: PipelineEvent) -> None:
+        if event.kind == "estimate" and event.estimate is not None:
+            console.print(f"\n  [dim]Estimated time: {event.estimate.range_str}[/dim]\n")
+            _last_estimate_secs[0] = event.estimate.total_seconds
+        elif event.kind == "remaining" and event.estimate is not None:
+            est = event.estimate
+            # Only print if the remaining time is meaningful and differs
+            # enough from the last printed estimate to be worth showing.
+            if est.total_seconds > 30 and abs(est.total_seconds - _last_estimate_secs[0]) > 15:
+                console.print(f"  [dim]Remaining: {est.range_str}[/dim]")
+                _last_estimate_secs[0] = est.total_seconds
+
+    return estimator, _on_event
 
 
 # ---------------------------------------------------------------------------
@@ -696,7 +742,8 @@ def run(
 
     from bristlenose.pipeline import Pipeline
 
-    pipeline = Pipeline(settings, verbose=verbose)
+    estimator, on_event = _build_estimator(settings)
+    pipeline = Pipeline(settings, verbose=verbose, on_event=on_event, estimator=estimator)
     result = asyncio.run(pipeline.run(input_dir, output_dir))
 
     _print_pipeline_summary(result)
@@ -810,7 +857,8 @@ def analyze(
 
     from bristlenose.pipeline import Pipeline
 
-    pipeline = Pipeline(settings, verbose=verbose)
+    estimator, on_event = _build_estimator(settings)
+    pipeline = Pipeline(settings, verbose=verbose, on_event=on_event, estimator=estimator)
     result = asyncio.run(pipeline.run_analysis_only(transcripts_dir, output_dir))
 
     _print_pipeline_summary(result)

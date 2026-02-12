@@ -157,6 +157,10 @@ function _initSpeakerLinks() {
           var target = document.getElementById(anchor);
           if (target) {
             target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            // Yellow flash highlight (same animation as standalone transcript pages)
+            target.classList.remove('anchor-highlight');
+            void target.offsetWidth; // force reflow to restart animation
+            target.classList.add('anchor-highlight');
           }
         });
       }

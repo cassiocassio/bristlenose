@@ -5,7 +5,6 @@ from __future__ import annotations
 import json
 import logging
 import shutil
-from collections import Counter
 from datetime import datetime
 from html import escape
 from pathlib import Path
@@ -19,7 +18,6 @@ from bristlenose.models import (
     FileType,
     FullTranscript,
     InputSession,
-    JourneyStage,
     PeopleFile,
     QuoteIntent,
     ScreenCluster,
@@ -136,6 +134,7 @@ _JS_FILES: list[str] = [
     "js/global-nav.js",
     "js/transcript-names.js",
     "js/transcript-annotations.js",
+    "js/journey-sort.js",
     "js/analysis.js",
     "js/main.js",
 ]
@@ -353,9 +352,7 @@ def render_html(
     if all_quotes:
         chart_toc.append(("sentiment", "Sentiment"))
         chart_toc.append(("user-tags-chart", "Tags"))
-    if all_quotes and _has_rewatch_quotes(all_quotes):
-        chart_toc.append(("friction-points", "Friction points"))
-    if all_quotes and sessions:
+    if screen_clusters:
         chart_toc.append(("user-journeys", "User journeys"))
     if transcripts and all_quotes:
         chart_toc.append(("transcript-coverage", "Transcript coverage"))
@@ -405,36 +402,36 @@ def render_html(
             heading="Themes", item_type="theme", groups=groups,
         ).rstrip("\n"))
 
-    # --- Sentiment ---
+    # --- Sentiment (includes friction points) ---
     if all_quotes:
         sentiment_html = _build_sentiment_html(all_quotes)
-        if sentiment_html:
+        rewatch = _build_rewatch_html(all_quotes, video_map)
+        if sentiment_html or rewatch:
             _w("<section>")
             _w('<h2 id="sentiment">Sentiment</h2>')
-            _w(sentiment_html)
-            _w("</section>")
-            _w("<hr>")
-
-    # --- Friction Points ---
-    if all_quotes:
-        rewatch = _build_rewatch_html(all_quotes, video_map)
-        if rewatch:
-            _w("<section>")
-            _w('<h2 id="friction-points">Friction points</h2>')
             _w(
-                '<p class="description">Moments flagged for researcher review '
-                "&mdash; confusion, frustration, or error-recovery detected.</p>"
+                '<p class="description">Joy, frustration, surprise or doubt '
+                "detected.</p>"
             )
-            _w(rewatch)
+            if sentiment_html:
+                _w(sentiment_html)
+            if rewatch:
+                _w(rewatch)
             _w("</section>")
             _w("<hr>")
 
     # --- User Journeys ---
-    if all_quotes and sessions:
-        task_html = _build_task_outcome_html(all_quotes, sessions)
+    if screen_clusters:
+        task_html = _build_task_outcome_html(
+            screen_clusters, all_quotes or [], display_names,
+        )
         if task_html:
             _w("<section>")
             _w('<h2 id="user-journeys">User journeys</h2>')
+            _w(
+                '<p class="description">Each participant\u2019s path through the product '
+                "&mdash; which report sections contain their quotes, in logical order.</p>"
+            )
             _w(task_html)
             _w("</section>")
             _w("<hr>")
@@ -913,7 +910,7 @@ def _render_featured_quote(
     # Speaker link → navigates to Sessions tab.
     pid_esc = _esc(quote.participant_id)
     sid_esc = _esc(quote.session_id) if quote.session_id else pid_esc
-    anchor = f"t-{int(quote.start_timecode)}"
+    anchor = f"t-{sid_esc}-{int(quote.start_timecode)}"
     speaker_link = (
         f'<a href="#" class="speaker-link" data-nav-session="{sid_esc}"'
         f' data-nav-anchor="{anchor}">{_esc(speaker_name)}</a>'
@@ -2107,7 +2104,7 @@ def _format_quote_html(
     # Speaker link navigates to Sessions tab → session drill-down → timecode
     pid_esc = _esc(quote.participant_id)
     sid_esc = _esc(quote.session_id) if quote.session_id else pid_esc
-    anchor = f"t-{int(quote.start_timecode)}"
+    anchor = f"t-{sid_esc}-{int(quote.start_timecode)}"
     speaker_link = (
         f'<a href="#" class="speaker-link" data-nav-session="{sid_esc}"'
         f' data-nav-anchor="{anchor}">{pid_esc}</a>'
@@ -2317,8 +2314,6 @@ def _has_rewatch_quotes(quotes: list[ExtractedQuote]) -> bool:
             return True
         if q.emotion in (EmotionalTone.FRUSTRATED, EmotionalTone.CONFUSED):
             return True
-        if q.journey_stage == JourneyStage.ERROR_RECOVERY:
-            return True
         if q.intensity >= 3:
             return True
     return False
@@ -2341,7 +2336,6 @@ def _build_rewatch_html(
         is_rewatch = (
             q.intent in (QuoteIntent.CONFUSION, QuoteIntent.FRUSTRATION)
             or q.emotion in (EmotionalTone.FRUSTRATED, EmotionalTone.CONFUSED)
-            or q.journey_stage == JourneyStage.ERROR_RECOVERY
             or q.intensity >= 3
         )
         if is_rewatch:
@@ -2350,7 +2344,7 @@ def _build_rewatch_html(
     if not flagged:
         return ""
 
-    flagged.sort(key=lambda q: (q.participant_id, q.start_timecode))
+    flagged.sort(key=lambda q: (_session_sort_key(q.session_id), q.start_timecode))
 
     # Group items by participant_id for template rendering
     groups: list[dict[str, object]] = []
@@ -2370,7 +2364,7 @@ def _build_rewatch_html(
             reason = q.intent.value
         else:
             reason = q.emotion.value
-        snippet = q.text[:80] + ("..." if len(q.text) > 80 else "")
+        snippet = q.text[:80] + ("\u2026" if len(q.text) > 80 else "")
 
         if video_map and q.participant_id in video_map:
             tc_html = (
@@ -2382,8 +2376,18 @@ def _build_rewatch_html(
         else:
             tc_html = f'<span class="timecode">{_tc_brackets(tc)}</span>'
 
+        # Snippet links to transcript page with yellow flash highlight
+        sid_esc = _esc(q.session_id) if q.session_id else _esc(q.participant_id)
+        anchor = f"t-{sid_esc}-{int(q.start_timecode)}"
+        snippet_html = (
+            f'<a href="#" class="speaker-link" '
+            f'data-nav-session="{sid_esc}" '
+            f'data-nav-anchor="{anchor}">'
+            f'&ldquo;{_esc(snippet)}&rdquo;</a>'
+        )
+
         current_items.append({
-            "tc_html": tc_html, "reason": _esc(reason), "snippet": _esc(snippet),
+            "tc_html": tc_html, "reason": reason, "snippet_html": snippet_html,
         })
     if current_pid:
         groups.append({"pid": _esc(current_pid), "entries": current_items})
@@ -2421,43 +2425,86 @@ def _write_player_html(assets_dir: Path, player_path: Path) -> Path:
     return player_path
 
 
+def _is_friction_quote(q: ExtractedQuote) -> bool:
+    """Return True if the quote signals friction (confusion, frustration, doubt)."""
+    # New sentiment field (v0.7+)
+    if q.sentiment in (Sentiment.FRUSTRATION, Sentiment.CONFUSION, Sentiment.DOUBT):
+        return True
+    # Backward compat: deprecated fields
+    if q.intent in (QuoteIntent.CONFUSION, QuoteIntent.FRUSTRATION):
+        return True
+    if q.emotion in (EmotionalTone.FRUSTRATED, EmotionalTone.CONFUSED):
+        return True
+    return False
+
+
+def _session_sort_key(sid: str) -> tuple[int, str]:
+    """Sort key that orders session IDs numerically (s1 < s2 < s10)."""
+    import re
+
+    m = re.search(r"\d+", sid)
+    return (int(m.group()) if m else 0, sid)
+
+
 def _build_task_outcome_html(
-    quotes: list[ExtractedQuote],
-    sessions: list[InputSession],
+    screen_clusters: list[ScreenCluster],
+    all_quotes: list[ExtractedQuote],
+    display_names: dict[str, str] | None = None,
 ) -> str:
-    """Build the task outcome summary as an HTML table."""
-    stage_order = [
-        JourneyStage.LANDING,
-        JourneyStage.BROWSE,
-        JourneyStage.SEARCH,
-        JourneyStage.PRODUCT_DETAIL,
-        JourneyStage.CART,
-        JourneyStage.CHECKOUT,
-    ]
+    """Build the user journey summary as an HTML table.
 
-    by_participant: dict[str, list[ExtractedQuote]] = {}
-    for q in quotes:
-        by_participant.setdefault(q.participant_id, []).append(q)
-
-    if not by_participant:
+    Derives each participant's journey from screen cluster membership —
+    which report sections contain their quotes, ordered by the product's
+    logical flow (display_order).  Default sort is by session number.
+    """
+    if not screen_clusters:
         return ""
 
+    ordered = sorted(screen_clusters, key=lambda c: c.display_order)
+
+    # participant -> list of screen labels (in display_order)
+    participant_screens: dict[str, list[str]] = {}
+    # participant -> session_id (first seen)
+    participant_session: dict[str, str] = {}
+    for cluster in ordered:
+        for q in cluster.quotes:
+            pid = q.participant_id
+            if pid not in participant_screens:
+                participant_screens[pid] = []
+            if pid not in participant_session:
+                participant_session[pid] = q.session_id
+        pids_in_cluster = {q.participant_id for q in cluster.quotes}
+        for pid in pids_in_cluster:
+            if cluster.screen_label not in participant_screens[pid]:
+                participant_screens[pid].append(cluster.screen_label)
+
+    if not participant_screens:
+        return ""
+
+    # Friction counts from all quotes (screen-specific + general)
+    friction_counts: dict[str, int] = {}
+    for q in all_quotes:
+        if _is_friction_quote(q):
+            friction_counts[q.participant_id] = friction_counts.get(q.participant_id, 0) + 1
+
+    # Sort by session number (default)
+    sorted_pids = sorted(
+        participant_screens.keys(),
+        key=lambda pid: _session_sort_key(participant_session.get(pid, "")),
+    )
+
     row_data: list[dict[str, str | int]] = []
-    for pid in sorted(by_participant.keys()):
-        pq = by_participant[pid]
-        stage_counts = Counter(q.journey_stage for q in pq)
-
-        observed = [s for s in stage_order if stage_counts.get(s, 0) > 0]
-        observed_str = " &rarr; ".join(s.value for s in observed) if observed else "other"
-
-        friction = sum(
-            1
-            for q in pq
-            if q.intent in (QuoteIntent.CONFUSION, QuoteIntent.FRUSTRATION)
-            or q.emotion in (EmotionalTone.FRUSTRATED, EmotionalTone.CONFUSED)
-        )
+    for pid in sorted_pids:
+        name = display_names.get(pid, pid) if display_names else pid
+        sid = participant_session.get(pid, "")
+        # Display session number without "s" prefix (e.g. "s1" -> "1")
+        session_num = sid[1:] if sid.startswith("s") else sid
+        journey_str = " &rarr; ".join(participant_screens[pid])
         row_data.append({
-            "pid": _esc(pid), "stages": observed_str, "friction": friction,
+            "session": _esc(session_num),
+            "pid": _esc(name),
+            "stages": journey_str,
+            "friction": friction_counts.get(pid, 0),
         })
 
     tmpl = _jinja_env.get_template("user_journeys.html")

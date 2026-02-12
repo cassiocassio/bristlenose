@@ -52,6 +52,7 @@ var _bootFns = [
   ['initNames', initNames],
   ['initFocus', initFocus],
   ['initFeedback', initFeedback],
+  ['initJourneySort', initJourneySort],
   ['initAnalysis', initAnalysis],
   ['initGlobalNav', initGlobalNav],
 ];

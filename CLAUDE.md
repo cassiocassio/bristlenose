@@ -257,7 +257,7 @@ When the user signals end of session, **proactively offer to run this checklist*
 9. **Clean up branches** — delete merged feature branches
 10. **Verify CI** — check latest push passes CI
 
-## Current status (v0.9.1, Feb 2026)
+## Current status (v0.9.2, Feb 2026)
 
 Core pipeline complete and published to PyPI + Homebrew. Snap packaging implemented and tested locally (arm64); CI builds amd64 on every push. Latest: **Sessions table redesign** — speaker code badges with semibold names, user journey paths, video thumbnail placeholders, per-session sentiment sparklines (aligned with thumbnail baseline), moderator header, logo click → Project tab, Finder-style filename truncation. Friction column removed (redundant with sentiment sparkline). Prior: appearance toggle (system/light/dark), user journeys table, tab navigation with hash persistence, Gemini provider (~$0.20/study), transcript annotations, Hidden quotes + Codebook, Azure OpenAI provider, install smoke tests, chart layout + histogram delete, multi-select and tag filter, tag taxonomy redesign (7 research-backed sentiments), keychain credential storage, Ollama local LLM support, output inside input folder, transcript coverage, multi-participant sessions. See git log for full history.
 

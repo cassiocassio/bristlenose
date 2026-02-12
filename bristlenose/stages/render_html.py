@@ -758,7 +758,6 @@ def _render_sentiment_sparkline(counts: dict[str, int]) -> str:
         )
     return (
         f'<div class="bn-sparkline" style="'
-        f"height:{_SPARKLINE_MAX_H}px;"
         f"gap:{_SPARKLINE_GAP}px"
         f'">'
         + "".join(bars)

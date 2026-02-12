@@ -2,6 +2,10 @@
 
 All notable changes to Bristlenose are documented here. See also the [README](README.md) for the latest releases.
 
+**0.9.2** — _12 Feb 2026_
+
+- Fix: sentiment sparkline bars now align with video thumbnail baseline (removed inline height override that capped sparkline container at 20px instead of the intended 54px)
+
 **0.9.1** — _11 Feb 2026_
 
 - Moderator and observer names shown in Project tab stats row (Oxford comma lists, observer box only when observers exist)

@@ -100,7 +100,7 @@ Session table styles in `templates/report.css`. The session table renders in bot
 - **`.bn-session-duration`** — `text-align: right` on both `<th>` and `<td>`
 - **`.bn-video-thumb`** — 96×54px placeholder (16:9 HD aspect ratio), grey background, centred play icon
 - **`.bn-play-icon`** — play triangle (▶) inside thumbnail
-- **`.bn-sparkline` / `.bn-sparkline-bar`** — per-session sentiment mini-bar chart. Bar heights set inline, colours via `--bn-sentiment-{name}` tokens
+- **`.bn-sparkline` / `.bn-sparkline-bar`** — per-session sentiment mini-bar chart. Container height: 54px (matches thumbnail) so baselines align. Bar heights set inline, colours via `--bn-sentiment-{name}` tokens
 - **`.bn-interviews-link`** — folder header link (opens input folder via `file://` URI)
 - **`.bn-folder-icon`** — inline SVG folder icon in header link
 

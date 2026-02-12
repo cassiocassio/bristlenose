@@ -171,7 +171,7 @@ Codebook data model, colour assignment, and interactive panel UI. Manages the re
 
 Top-level tab bar for report navigation. Manages switching between tab panels (Project, Sessions, Quotes, Codebook, Analysis, Settings, About) and the Sessions tab drill-down sub-navigation.
 
-- **`switchToTab(tabName, pushHash)`** — switch to a named tab. Updates `aria-selected` on tab buttons, toggles `.active` on panels, pushes URL hash (`#codebook`, `#analysis`, etc.) for reload persistence and back/forward navigation. Pass `pushHash=false` to skip hash update (used by `popstate` handler and initial load). Exported for cross-module use (e.g. speaker links navigating to Sessions tab)
+- **`switchToTab(tabName, pushHash)`** — switch to a named tab. Updates `aria-selected` on tab buttons, toggles `.active` on panels, pushes URL hash (`#codebook`, `#analysis`, etc.) for reload persistence and back/forward navigation. Pass `pushHash=false` to skip hash update (used by `popstate` handler and initial load). Exported for cross-module use (e.g. speaker links navigating to Sessions tab, logo click → Project tab via inline `onclick` in `report_header.html`)
 - **`initGlobalNav()`** — wires tab click handlers, restores active tab from URL hash on load, listens for `popstate` (back/forward), initialises session drill-down and speaker link navigation
 - **`_initSessionDrillDown()`** — click handlers on session table rows (`tr[data-session]`) and session number links (`a[data-session-link]`) to drill into inline transcript views; back button returns to grid
 - **`_initSpeakerLinks()`** — click handlers on `a[data-nav-session]` links in quote cards. Navigates: switch to Sessions tab → drill into session → scroll to `data-nav-anchor` timecode

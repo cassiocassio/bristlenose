@@ -168,6 +168,16 @@ These are documented to prevent re-exploration of dead ends:
 - **Transcript files named by `session_id`** (`s1.txt` in `transcripts-raw/`, not `p1_raw.txt`) — a single file contains segments from all speakers in that session (`[m1]`, `[p1]`, `[p2]`, `[o1]`)
 - **`assign_speaker_codes()` signature is `(session_id, next_participant_number, segments)`** — returns `(dict[str, str], int)` (label→code map, updated next number). The `next_participant_number` counter enables global p-code numbering across sessions
 
+## Session table helpers (render_html.py)
+
+- **`_derive_journeys(screen_clusters, all_quotes)`** — extracts per-participant journey paths from screen clusters. Returns `(journeys_by_pid, journey_strs, friction_counts)`. Shared by the session table and user journeys table — extracted from `_build_task_outcome_html()` to avoid duplication
+- **`_oxford_list_html(*items)`** — joins pre-escaped HTML fragments with Oxford commas ("A", "A and B", "A, B, and C"). Different from the plain-text `_oxford_list()` helper — this one does NOT escape its arguments (caller must pre-escape). Used for moderator header with badge markup
+- **`_build_session_rows()` return type** — returns `tuple[list[dict[str, object]], str]` (row dicts + moderator header HTML). The second element is empty string when no moderators. Both Sessions tab (~line 311) and Project tab (~line 1195) destructure this tuple
+- **`_render_sentiment_sparkline(counts)`** — generates an inline bar chart (div with per-sentiment spans) from a `dict[str, int]` of sentiment counts. Bar heights are normalised to `_SPARKLINE_MAX_H` (20px). Uses `--bn-sentiment-{name}` CSS custom properties for colours. Returns `"&mdash;"` when all counts are zero
+- **`_FAKE_THUMBNAILS` feature flag** — `os.environ.get("BRISTLENOSE_FAKE_THUMBNAILS", "") == "1"`. When enabled, all sessions with files show thumbnail placeholders (even VTT-only projects). Used for layout testing. The shipped version retains real `video_map` logic — only the env var override is added
+- **`format_finder_filename(name, *, max_len=24)`** in `utils/markdown.py` — Finder-style middle-ellipsis filename truncation. Preserves extension, splits stem budget 2/3 front + 1/3 back. Returns unchanged if within `max_len`. Used by `_build_session_rows()` for the Interviews column with `title` attr for full name on hover
+- **Moderator display logic** — 1 moderator globally → shown in header only, omitted from row speaker lists. 2+ moderators → header AND in each row's speaker list. Header uses `_oxford_list_html()` with `bn-person-id` molecule markup (regular-weight names, not semibold)
+
 ## Other gotchas
 
 - **`segment_topics()` returns `list[SessionTopicMap]`, NOT a dict** — use `sum(len(m.boundaries) for m in topic_maps)`, not `topic_maps.values()`. This was a bug that took two attempts to find because `_gather_all_segments()` returns `dict[str, list[TranscriptSegment]]` (which does have `.values()`), creating a misleading pattern

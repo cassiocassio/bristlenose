@@ -27,6 +27,8 @@ Add both light and dark values in the `light-dark()` call inside the `@supports`
 
 The `<picture>` element swaps between `bristlenose-logo.png` (light) and `bristlenose-logo-dark.png` (dark) using `<source media="(prefers-color-scheme: dark)">`. Both are in `assets/` directory. Dark logo is currently a placeholder (inverted version) — needs replacing with a proper albino bristlenose pleco image.
 
+**Logo click**: wrapped in `<a class="report-logo-link" href="#project" onclick="switchToTab('project');return false;">`. Clicking the fish logo navigates to the Project tab (home). CSS in `atoms/logo.css`: `.report-logo-link` removes underline and sets `line-height: 0` to prevent extra vertical space around the image.
+
 ### No JS theme toggle
 
 Dark mode is CSS-only. No localStorage, no toggle button, no JS involved.
@@ -76,6 +78,33 @@ Each user tag label has a hover `×` button (`.histogram-bar-delete` in `atoms/b
 - `molecules/bar-group.css` — `.sentiment-bar-group` (`display: contents`)
 - `organisms/sentiment-chart.css` — `.sentiment-row`, `.sentiment-chart`, `.sentiment-chart-title`
 
+## Person-id molecule
+
+`molecules/person-id.css` — reusable badge + name pattern for speaker identification in the session table. Combines the `.badge` atom with a named span.
+
+- **`.bn-person-id`** — `inline-flex`, `align-items: center`, `gap: 0.4rem`, `white-space: nowrap`. Contains a `.badge` and a `.bn-person-id-name`
+- **`.bn-person-id .badge`** — `flex-shrink: 0` (badge never truncates)
+- **`.bn-person-id-name`** — `font-weight: 600` (semibold). In the moderator header, names use regular weight (no `.bn-person-id-name` class)
+- **Usage**: session table speaker cells (semibold names) and moderator header (regular weight names). The molecule is included in `_THEME_FILES` in `render_html.py`
+
+## Session table CSS
+
+Session table styles in `templates/report.css`. The session table renders in both the Sessions tab and the Project tab.
+
+- **`.bn-session-table`** — wrapper section, resets margin
+- **`.bn-session-table tr`** — `border-bottom` on `<tr>` not `<td>` (ensures full-width horizontal rules even with varying cell heights)
+- **`.bn-session-moderators`** — header sentence above table ("Sessions moderated by [m1] Rachel")
+- **`.bn-session-speakers`** — flex column for vertically stacked speaker entries
+- **`.bn-session-journey`** — muted colour, smaller text, wraps below start date
+- **`.bn-session-id`** — `#N` format session number, compact column
+- **`.bn-session-duration`** — `text-align: right` on both `<th>` and `<td>`
+- **`.bn-video-thumb`** — 96×54px placeholder (16:9 HD aspect ratio), grey background, centred play icon
+- **`.bn-play-icon`** — play triangle (▶) inside thumbnail
+- **`.bn-session-friction`** — friction count, right-aligned
+- **`.bn-sparkline` / `.bn-sparkline-bar`** — per-session sentiment mini-bar chart. Bar heights set inline, colours via `--bn-sentiment-{name}` tokens
+- **`.bn-interviews-link`** — folder header link (opens input folder via `file://` URI)
+- **`.bn-folder-icon`** — inline SVG folder icon in header link
+
 ## Span bar atom
 
 Reusable vertical extent indicator for showing how far a range (e.g. a quote) extends across a list of items. Positioned absolutely by JS; visual properties come from `--bn-span-bar-*` tokens.
@@ -116,7 +145,7 @@ Per-component CSS docs in `CSS-REFERENCE.md`. Key patterns: toolbar dual-class (
 | `footer.html` | `version`, `assets_prefix` | Report, transcript, codebook |
 | `quote_card.html` | `q` (quote context dict) | Report |
 | `toolbar.html` | (none — static) | Report |
-| `session_table.html` | `rows` (list of dicts) | Report |
+| `session_table.html` | `rows` (list of dicts), `moderator_header` (str) | Report |
 | `toc.html` | `section_toc`, `theme_toc`, `chart_toc` | Report |
 | `content_section.html` | `heading`, `item_type`, `groups` | Report (sections + themes) |
 | `sentiment_chart.html` | `max_count`, `pos_bars`, `surprise_bar`, `neg_bars` | Report |

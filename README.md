@@ -376,6 +376,12 @@ Edit `bristlenose/__init__.py` (the single source of truth for version), commit,
 
 **0.9.2** — _12 Feb 2026_
 
+- Sessions table redesign — speaker badges, user journey paths, video thumbnails, per-session sentiment sparklines
+- Appearance toggle — system/light/dark mode in settings tab
+- User journeys — derived from screen clusters, shown in sessions table and sortable journeys table
+- Time estimates — upfront pipeline duration estimate after ingest, recalculated as stages complete
+- Clickable logo — navigates to project tab
+- Fix: `llm_max_tokens` truncation causing silent 0-quote extraction
 - Fix: sentiment sparkline bars now align with video thumbnail baseline
 
 **0.9.1** — _11 Feb 2026_

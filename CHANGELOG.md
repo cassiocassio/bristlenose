@@ -4,6 +4,12 @@ All notable changes to Bristlenose are documented here. See also the [README](RE
 
 **0.9.2** — _12 Feb 2026_
 
+- Sessions table redesign — speaker badges with colour-coded IDs, user journey paths below start dates, video thumbnail placeholders (96×54px, 16:9), per-session sentiment sparkline mini-bar charts
+- Appearance toggle — system/light/dark mode switcher in settings tab
+- User journeys — derived from topic-segmentation screen clusters, shown in sessions table and sortable journeys table
+- Time estimates — upfront pipeline duration estimate after ingest (`~8 min (±2 min)`), recalculated remaining time after each stage, Welford's online algorithm for per-metric running stats, hardware+config keyed profiles persisted to `~/.config/bristlenose/timing.json`
+- Clickable logo — Bristlenose logo in report header navigates to project tab
+- Fix: `llm_max_tokens` truncation causing silent 0-quote extraction — providers now detect truncation via `stop_reason`/`finish_reason` and raise `RuntimeError` with actionable `.env` fix
 - Fix: sentiment sparkline bars now align with video thumbnail baseline (removed inline height override that capped sparkline container at 20px instead of the intended 54px)
 
 **0.9.1** — _11 Feb 2026_

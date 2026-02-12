@@ -150,12 +150,13 @@ def _render_report_with_people(tmp_path: Path) -> str:
             ),
         ),
     })
+    quotes = [_make_quote("p1", "s1"), _make_quote("p2", "s2")]
     render_html(
         screen_clusters=[
             ScreenCluster(
                 screen_label="Homepage", description="Landing page",
                 display_order=1,
-                quotes=[_make_quote("p1", "s1"), _make_quote("p2", "s2")],
+                quotes=quotes,
             ),
         ],
         theme_groups=[],
@@ -163,6 +164,7 @@ def _render_report_with_people(tmp_path: Path) -> str:
         project_name="People Test",
         output_dir=tmp_path,
         people=people,
+        all_quotes=quotes,
     )
     return (tmp_path / "bristlenose-people-test-report.html").read_text(encoding="utf-8")
 
@@ -337,7 +339,42 @@ def test_dashboard_themes_table(tmp_path: Path) -> None:
 def test_dashboard_with_people_has_session_table(tmp_path: Path) -> None:
     """When sessions exist, dashboard includes a full-width session table."""
     html = _render_report_with_people(tmp_path)
-    assert "Sessions</h2>" in html
+    assert "bn-session-table" in html
+    # Single moderator → shown in header, not in rows.
+    assert "Sessions moderated by" in html
+    assert "Mod" in html  # moderator short_name
+
+
+def test_session_table_has_speaker_badges(tmp_path: Path) -> None:
+    """Session table renders speaker code badges for each participant."""
+    html = _render_report_with_people(tmp_path)
+    assert '<span class="badge">p1</span>' in html
+    assert '<span class="badge">p2</span>' in html
+
+
+def test_session_table_single_moderator_omitted_from_rows(tmp_path: Path) -> None:
+    """With only one moderator, moderator codes don't appear in row speaker lists."""
+    html = _render_report_with_people(tmp_path)
+    # m1 should be in the header but not as a row badge.
+    assert "Sessions moderated by" in html
+    # The session table is rendered twice (Sessions tab + Project tab dashboard),
+    # so m1 badge appears twice (once per header). But it should not appear in
+    # bn-person-id divs (row speaker lists).
+    assert '<div class="bn-person-id"><span class="badge">m1</span>' not in html
+
+
+def test_session_table_has_journey(tmp_path: Path) -> None:
+    """Session table shows journey paths derived from screen clusters."""
+    html = _render_report_with_people(tmp_path)
+    assert "bn-session-journey" in html
+    assert "Homepage" in html
+
+
+def test_session_table_has_id_with_hash(tmp_path: Path) -> None:
+    """Session IDs render with # prefix."""
+    html = _render_report_with_people(tmp_path)
+    assert "#1</a>" in html
+    assert "#2</a>" in html
 
 
 def test_dashboard_with_people_shows_duration(tmp_path: Path) -> None:

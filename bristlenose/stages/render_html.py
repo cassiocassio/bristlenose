@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 import shutil
 from datetime import datetime
 from html import escape
@@ -25,7 +26,7 @@ from bristlenose.models import (
     ThemeGroup,
     format_timecode,
 )
-from bristlenose.utils.markdown import format_finder_date
+from bristlenose.utils.markdown import format_finder_date, format_finder_filename
 
 logger = logging.getLogger(__name__)
 
@@ -34,6 +35,10 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 
 _CSS_VERSION = "bristlenose-theme v6"
+
+# Feature flag: show thumbnail placeholders for all sessions (even VTT-only).
+# Set BRISTLENOSE_FAKE_THUMBNAILS=1 to enable — useful for layout testing.
+_FAKE_THUMBNAILS = os.environ.get("BRISTLENOSE_FAKE_THUMBNAILS", "") == "1"
 
 _THEME_DIR = Path(__file__).resolve().parent.parent / "theme"
 _LOGO_PATH = _THEME_DIR / "images" / "bristlenose.png"
@@ -55,6 +60,7 @@ _THEME_FILES: list[str] = [
     "atoms/interactive.css",
     "atoms/span-bar.css",
     "atoms/modal.css",
+    "molecules/person-id.css",
     "molecules/badge-row.css",
     "molecules/bar-group.css",
     "molecules/quote-actions.css",
@@ -305,11 +311,14 @@ def render_html(
 
     # --- Session Summary (at top for quick reference) ---
     if sessions:
-        session_rows = _build_session_rows(
+        session_rows, moderator_header = _build_session_rows(
             sessions, people, display_names, video_map, now,
+            screen_clusters=screen_clusters,
+            all_quotes=all_quotes,
         )
         _w(_jinja_env.get_template("session_table.html").render(
             rows=session_rows,
+            moderator_header=moderator_header,
         ).rstrip("\n"))
 
     # Close session grid
@@ -714,64 +723,208 @@ class _QuoteAnnotation:
 # ---------------------------------------------------------------------------
 
 
+# Sparkline bar order: positive → neutral → negative (left to right).
+_SPARKLINE_ORDER = [
+    "satisfaction", "delight", "confidence",
+    "surprise",
+    "doubt", "confusion", "frustration",
+]
+_SPARKLINE_MAX_H = 20  # px
+_SPARKLINE_MIN_H = 2   # px — non-zero counts are always visible
+_SPARKLINE_BAR_W = 5   # px
+_SPARKLINE_GAP = 2     # px
+_SPARKLINE_RADIUS = 1  # px (top corners only)
+_SPARKLINE_OPACITY = 0.8
+
+
+def _render_sentiment_sparkline(counts: dict[str, int]) -> str:
+    """Return HTML for a tiny sentiment bar chart, or &mdash; if empty."""
+    max_val = max((counts.get(s, 0) for s in _SPARKLINE_ORDER), default=0)
+    if max_val == 0:
+        return "&mdash;"
+    bars: list[str] = []
+    for s in _SPARKLINE_ORDER:
+        c = counts.get(s, 0)
+        if c > 0:
+            h = max(round(c / max_val * _SPARKLINE_MAX_H), _SPARKLINE_MIN_H)
+        else:
+            h = 0
+        bars.append(
+            f'<span class="bn-sparkline-bar" style="'
+            f"height:{h}px;"
+            f"background:var(--bn-sentiment-{s});"
+            f'opacity:{_SPARKLINE_OPACITY}">'
+            f"</span>"
+        )
+    return (
+        f'<div class="bn-sparkline" style="'
+        f"height:{_SPARKLINE_MAX_H}px;"
+        f"gap:{_SPARKLINE_GAP}px"
+        f'">'
+        + "".join(bars)
+        + "</div>"
+    )
+
+
 def _build_session_rows(
     sessions: list[InputSession],
     people: PeopleFile | None,
     display_names: dict[str, str] | None,
     video_map: dict[str, str] | None,
     now: datetime,
-) -> list[dict[str, str]]:
-    """Build session-table row dicts (reused by Sessions tab and Project tab)."""
+    screen_clusters: list[ScreenCluster] | None = None,
+    all_quotes: list[ExtractedQuote] | None = None,
+) -> tuple[list[dict[str, object]], str]:
+    """Build session-table row dicts and moderator header HTML.
+
+    Returns (rows, moderator_header_html).
+    """
     # Build session_id → sorted speaker codes from people entries.
     session_codes: dict[str, list[str]] = {}
+    all_moderator_codes: list[str] = []
     if people and people.participants:
         for code, entry in people.participants.items():
             sid_key = entry.computed.session_id
             if sid_key:
                 session_codes.setdefault(sid_key, []).append(code)
+            if code.startswith("m") and code not in all_moderator_codes:
+                all_moderator_codes.append(code)
         prefix_order = {"m": 0, "p": 1, "o": 2}
         for codes in session_codes.values():
             codes.sort(key=lambda c: (
                 prefix_order.get(c[0], 3) if c else 3,
                 int(c[1:]) if len(c) > 1 and c[1:].isdigit() else 0,
             ))
+    # Sort moderator codes naturally.
+    all_moderator_codes.sort(key=lambda c: (
+        int(c[1:]) if len(c) > 1 and c[1:].isdigit() else 0,
+    ))
 
-    rows: list[dict[str, str]] = []
+    # If only 1 moderator, omit from per-row speaker lists (shown in header).
+    omit_moderators_from_rows = len(all_moderator_codes) == 1
+
+    # Build moderator header HTML.
+    moderator_parts: list[str] = []
+    for code in all_moderator_codes:
+        name = _resolve_speaker_name(code, people, display_names)
+        moderator_parts.append(
+            f'<span class="bn-person-id">'
+            f'<span class="badge">{_esc(code)}</span> {_esc(name)}'
+            f'</span>'
+        )
+    if moderator_parts:
+        moderator_header = "Sessions moderated by " + _oxford_list_html(moderator_parts)
+    else:
+        moderator_header = ""
+
+    # Derive journey + friction data from screen clusters.
+    participant_screens: dict[str, list[str]] = {}
+    friction_by_session: dict[str, int] = {}
+    if screen_clusters and all_quotes:
+        participant_screens_raw, _, friction_counts = _derive_journeys(
+            screen_clusters, all_quotes,
+        )
+        participant_screens = participant_screens_raw
+        # Aggregate friction counts by session_id.
+        for q in all_quotes or []:
+            if _is_friction_quote(q):
+                friction_by_session[q.session_id] = (
+                    friction_by_session.get(q.session_id, 0) + 1
+                )
+
+    # Aggregate sentiment counts by session_id for sparklines.
+    sentiment_by_session: dict[str, dict[str, int]] = {}
+    for q in all_quotes or []:
+        if q.sentiment is not None:
+            sid_key = q.session_id
+            if sid_key not in sentiment_by_session:
+                sentiment_by_session[sid_key] = {}
+            val = q.sentiment.value
+            sentiment_by_session[sid_key][val] = (
+                sentiment_by_session[sid_key].get(val, 0) + 1
+            )
+
+    # Compute source folder URI (from first session's first file).
+    source_folder_uri = ""
+    for session in sessions:
+        if session.files:
+            source_folder_uri = session.files[0].path.resolve().parent.as_uri()
+            break
+
+    rows: list[dict[str, object]] = []
     for session in sessions:
         duration = _session_duration(session, people)
         sid = session.session_id
         sid_esc = _esc(sid)
         session_num = sid[1:] if len(sid) > 1 and sid[1:].isdigit() else sid
         start = _esc(format_finder_date(session.session_date, now=now))
+
+        # Source file link.
+        has_media = bool(_FAKE_THUMBNAILS and session.files)
         if session.files:
-            source_name = _esc(session.files[0].path.name)
+            full_name = session.files[0].path.name
+            display_fname = format_finder_filename(full_name)
+            title_attr = f' title="{_esc(full_name)}"' if display_fname != full_name else ""
+            esc_display = _esc(display_fname)
             if video_map and sid in video_map:
+                has_media = True
                 source = (
                     f'<a href="#" class="timecode" '
                     f'data-participant="{_esc(session.participant_id)}" '
-                    f'data-seconds="0" data-end-seconds="0">'
-                    f'{source_name}</a>'
+                    f'data-seconds="0" data-end-seconds="0"'
+                    f'{title_attr}>'
+                    f'{esc_display}</a>'
                 )
             else:
                 file_uri = session.files[0].path.resolve().as_uri()
-                source = f'<a href="{file_uri}">{source_name}</a>'
+                source = f'<a href="{file_uri}"{title_attr}>{esc_display}</a>'
         else:
             source = "&mdash;"
+
+        # Speaker list (structured for template iteration).
         codes = session_codes.get(sid, [session.participant_id])
-        speaker_spans = []
+        speakers_list: list[dict[str, str]] = []
         for code in codes:
+            if omit_moderators_from_rows and code.startswith("m"):
+                continue
             name = _resolve_speaker_name(code, people, display_names)
-            speaker_spans.append(
-                f'<span class="speaker-code" '
-                f'data-participant="{_esc(code)}">'
-                f"{_esc(name)}</span>"
-            )
+            speakers_list.append({"code": _esc(code), "name": _esc(name)})
+
+        # Journey: merge all participants' screen labels for this session.
+        session_pids = [c for c in codes if c.startswith("p")]
+        journey_labels: list[str] = []
+        for pid in session_pids:
+            for label in participant_screens.get(pid, []):
+                if label not in journey_labels:
+                    journey_labels.append(label)
+        journey = " &rarr; ".join(journey_labels) if journey_labels else ""
+
+        friction = friction_by_session.get(sid, 0)
+        sparkline = _render_sentiment_sparkline(sentiment_by_session.get(sid, {}))
+
         rows.append({
-            "sid": sid_esc, "num": _esc(session_num),
-            "speakers": ", ".join(speaker_spans),
-            "start": start, "duration": duration, "source": source,
+            "sid": sid_esc,
+            "num": _esc(session_num),
+            "speakers_list": speakers_list,
+            "start": start,
+            "duration": duration,
+            "source": source,
+            "journey": journey,
+            "friction": friction,
+            "sentiment_sparkline": sparkline,
+            "has_media": has_media,
+            "source_folder_uri": source_folder_uri,
         })
-    return rows
+    return rows, moderator_header
+
+
+def _oxford_list_html(parts: list[str]) -> str:
+    """Join HTML fragments with Oxford commas (no escaping — parts are pre-escaped)."""
+    if len(parts) <= 1:
+        return parts[0] if parts else ""
+    if len(parts) == 2:
+        return f"{parts[0]} and {parts[1]}"
+    return ", ".join(parts[:-1]) + f", and {parts[-1]}"
 
 
 # Sentiment polarity buckets for diversity mixing.
@@ -1108,12 +1261,15 @@ def _render_project_tab(
 
     # --- 2. Sessions (full width) ---
     if sessions:
-        session_rows = _build_session_rows(
+        session_rows, moderator_header = _build_session_rows(
             sessions, people, display_names, video_map, now,
+            screen_clusters=screen_clusters,
+            all_quotes=all_quotes,
         )
         _w('<div class="bn-dashboard-pane bn-dashboard-full">')
         _w(_jinja_env.get_template("session_table.html").render(
             rows=session_rows,
+            moderator_header=moderator_header,
         ).rstrip("\n"))
         _w("</div>")
 
@@ -2460,6 +2616,44 @@ def _session_sort_key(sid: str) -> tuple[int, str]:
     return (int(m.group()) if m else 0, sid)
 
 
+def _derive_journeys(
+    screen_clusters: list[ScreenCluster],
+    all_quotes: list[ExtractedQuote],
+) -> tuple[dict[str, list[str]], dict[str, str], dict[str, int]]:
+    """Derive per-participant journey and friction data from screen clusters.
+
+    Returns:
+        (participant_screens, participant_session, friction_counts) where
+        participant_screens maps pid → ordered list of screen labels,
+        participant_session maps pid → session_id (first seen),
+        friction_counts maps pid → number of friction quotes.
+    """
+    ordered = sorted(screen_clusters, key=lambda c: c.display_order)
+
+    participant_screens: dict[str, list[str]] = {}
+    participant_session: dict[str, str] = {}
+    for cluster in ordered:
+        for q in cluster.quotes:
+            pid = q.participant_id
+            if pid not in participant_screens:
+                participant_screens[pid] = []
+            if pid not in participant_session:
+                participant_session[pid] = q.session_id
+        pids_in_cluster = {q.participant_id for q in cluster.quotes}
+        for pid in pids_in_cluster:
+            if cluster.screen_label not in participant_screens[pid]:
+                participant_screens[pid].append(cluster.screen_label)
+
+    friction_counts: dict[str, int] = {}
+    for q in all_quotes:
+        if _is_friction_quote(q):
+            friction_counts[q.participant_id] = (
+                friction_counts.get(q.participant_id, 0) + 1
+            )
+
+    return participant_screens, participant_session, friction_counts
+
+
 def _build_task_outcome_html(
     screen_clusters: list[ScreenCluster],
     all_quotes: list[ExtractedQuote],
@@ -2474,32 +2668,12 @@ def _build_task_outcome_html(
     if not screen_clusters:
         return ""
 
-    ordered = sorted(screen_clusters, key=lambda c: c.display_order)
-
-    # participant -> list of screen labels (in display_order)
-    participant_screens: dict[str, list[str]] = {}
-    # participant -> session_id (first seen)
-    participant_session: dict[str, str] = {}
-    for cluster in ordered:
-        for q in cluster.quotes:
-            pid = q.participant_id
-            if pid not in participant_screens:
-                participant_screens[pid] = []
-            if pid not in participant_session:
-                participant_session[pid] = q.session_id
-        pids_in_cluster = {q.participant_id for q in cluster.quotes}
-        for pid in pids_in_cluster:
-            if cluster.screen_label not in participant_screens[pid]:
-                participant_screens[pid].append(cluster.screen_label)
+    participant_screens, participant_session, friction_counts = _derive_journeys(
+        screen_clusters, all_quotes,
+    )
 
     if not participant_screens:
         return ""
-
-    # Friction counts from all quotes (screen-specific + general)
-    friction_counts: dict[str, int] = {}
-    for q in all_quotes:
-        if _is_friction_quote(q):
-            friction_counts[q.participant_id] = friction_counts.get(q.participant_id, 0) + 1
 
     # Sort by session number (default)
     sorted_pids = sorted(

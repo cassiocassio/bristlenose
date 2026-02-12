@@ -817,20 +817,13 @@ def _build_session_rows(
     else:
         moderator_header = ""
 
-    # Derive journey + friction data from screen clusters.
+    # Derive journey data from screen clusters.
     participant_screens: dict[str, list[str]] = {}
-    friction_by_session: dict[str, int] = {}
     if screen_clusters and all_quotes:
-        participant_screens_raw, _, friction_counts = _derive_journeys(
+        participant_screens_raw, _ = _derive_journeys(
             screen_clusters, all_quotes,
         )
         participant_screens = participant_screens_raw
-        # Aggregate friction counts by session_id.
-        for q in all_quotes or []:
-            if _is_friction_quote(q):
-                friction_by_session[q.session_id] = (
-                    friction_by_session.get(q.session_id, 0) + 1
-                )
 
     # Aggregate sentiment counts by session_id for sparklines.
     sentiment_by_session: dict[str, dict[str, int]] = {}
@@ -899,7 +892,6 @@ def _build_session_rows(
                     journey_labels.append(label)
         journey = " &rarr; ".join(journey_labels) if journey_labels else ""
 
-        friction = friction_by_session.get(sid, 0)
         sparkline = _render_sentiment_sparkline(sentiment_by_session.get(sid, {}))
 
         rows.append({
@@ -910,7 +902,6 @@ def _build_session_rows(
             "duration": duration,
             "source": source,
             "journey": journey,
-            "friction": friction,
             "sentiment_sparkline": sparkline,
             "has_media": has_media,
             "source_folder_uri": source_folder_uri,
@@ -2595,19 +2586,6 @@ def _write_player_html(assets_dir: Path, player_path: Path) -> Path:
     return player_path
 
 
-def _is_friction_quote(q: ExtractedQuote) -> bool:
-    """Return True if the quote signals friction (confusion, frustration, doubt)."""
-    # New sentiment field (v0.7+)
-    if q.sentiment in (Sentiment.FRUSTRATION, Sentiment.CONFUSION, Sentiment.DOUBT):
-        return True
-    # Backward compat: deprecated fields
-    if q.intent in (QuoteIntent.CONFUSION, QuoteIntent.FRUSTRATION):
-        return True
-    if q.emotion in (EmotionalTone.FRUSTRATED, EmotionalTone.CONFUSED):
-        return True
-    return False
-
-
 def _session_sort_key(sid: str) -> tuple[int, str]:
     """Sort key that orders session IDs numerically (s1 < s2 < s10)."""
     import re
@@ -2619,14 +2597,13 @@ def _session_sort_key(sid: str) -> tuple[int, str]:
 def _derive_journeys(
     screen_clusters: list[ScreenCluster],
     all_quotes: list[ExtractedQuote],
-) -> tuple[dict[str, list[str]], dict[str, str], dict[str, int]]:
-    """Derive per-participant journey and friction data from screen clusters.
+) -> tuple[dict[str, list[str]], dict[str, str]]:
+    """Derive per-participant journey data from screen clusters.
 
     Returns:
-        (participant_screens, participant_session, friction_counts) where
+        (participant_screens, participant_session) where
         participant_screens maps pid → ordered list of screen labels,
-        participant_session maps pid → session_id (first seen),
-        friction_counts maps pid → number of friction quotes.
+        participant_session maps pid → session_id (first seen).
     """
     ordered = sorted(screen_clusters, key=lambda c: c.display_order)
 
@@ -2644,14 +2621,7 @@ def _derive_journeys(
             if cluster.screen_label not in participant_screens[pid]:
                 participant_screens[pid].append(cluster.screen_label)
 
-    friction_counts: dict[str, int] = {}
-    for q in all_quotes:
-        if _is_friction_quote(q):
-            friction_counts[q.participant_id] = (
-                friction_counts.get(q.participant_id, 0) + 1
-            )
-
-    return participant_screens, participant_session, friction_counts
+    return participant_screens, participant_session
 
 
 def _build_task_outcome_html(
@@ -2668,7 +2638,7 @@ def _build_task_outcome_html(
     if not screen_clusters:
         return ""
 
-    participant_screens, participant_session, friction_counts = _derive_journeys(
+    participant_screens, participant_session = _derive_journeys(
         screen_clusters, all_quotes,
     )
 
@@ -2681,7 +2651,7 @@ def _build_task_outcome_html(
         key=lambda pid: _session_sort_key(participant_session.get(pid, "")),
     )
 
-    row_data: list[dict[str, str | int]] = []
+    row_data: list[dict[str, str]] = []
     for pid in sorted_pids:
         name = display_names.get(pid, pid) if display_names else pid
         sid = participant_session.get(pid, "")
@@ -2692,7 +2662,6 @@ def _build_task_outcome_html(
             "session": _esc(session_num),
             "pid": _esc(name),
             "stages": journey_str,
-            "friction": friction_counts.get(pid, 0),
         })
 
     tmpl = _jinja_env.get_template("user_journeys.html")

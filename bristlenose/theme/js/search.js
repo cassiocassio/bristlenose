@@ -322,7 +322,7 @@ function _restoreViewMode() {
  * Hide sections where ALL child blockquotes are display:none.
  * Also hide the preceding <hr> sibling of hidden sections.
  * Only processes sections that contain .quote-group (not Participants,
- * Sentiment, Friction, or Journeys).
+ * Sentiment or Journeys).
  *
  * Sections with hidden-quotes badges remain visible even if all
  * blockquotes are hidden — the badge is the evidence indicator.

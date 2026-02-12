@@ -10,10 +10,7 @@ from bristlenose.models import (
     ScreenCluster,
     Sentiment,
 )
-from bristlenose.stages.render_html import (
-    _build_task_outcome_html,
-    _is_friction_quote,
-)
+from bristlenose.stages.render_html import _build_task_outcome_html
 from bristlenose.stages.render_output import _build_task_outcome_summary
 
 # ---------------------------------------------------------------------------
@@ -104,35 +101,6 @@ class TestBuildTaskOutcomeHtml:
 
         assert "Homepage &rarr; Cart &rarr; Checkout" in html
 
-    def test_friction_uses_sentiment(self) -> None:
-        """Friction count picks up modern sentiment field."""
-        q_frust = _quote("p1", sentiment=Sentiment.FRUSTRATION)
-        q_conf = _quote("p1", sentiment=Sentiment.CONFUSION)
-        q_happy = _quote("p1", sentiment=Sentiment.DELIGHT)
-
-        clusters = [_cluster("Page A", 1, [q_frust, q_conf, q_happy])]
-        all_quotes = [q_frust, q_conf, q_happy]
-
-        html = _build_task_outcome_html(clusters, all_quotes)
-
-        # 2 friction quotes (frustration + confusion), not 3
-        assert "<td>2</td>" in html
-
-    def test_friction_backward_compat(self) -> None:
-        """Old intent/emotion fields still counted as friction."""
-        q_old = _quote(
-            "p1",
-            sentiment=None,
-            intent=QuoteIntent.CONFUSION,
-            emotion=EmotionalTone.CONFUSED,
-        )
-
-        clusters = [_cluster("Page A", 1, [q_old])]
-
-        html = _build_task_outcome_html(clusters, [q_old])
-
-        assert "<td>1</td>" in html
-
     def test_empty_clusters_returns_empty(self) -> None:
         """No screen clusters means no table."""
         assert _build_task_outcome_html([], []) == ""
@@ -204,7 +172,7 @@ class TestBuildTaskOutcomeHtml:
         assert idx_s1 < idx_s2 < idx_s10
 
     def test_sortable_header_classes(self) -> None:
-        """Session and Friction headers have sortable CSS classes."""
+        """Session header has sortable CSS classes."""
         q = _quote("p1")
         clusters = [_cluster("Page A", 1, [q])]
 
@@ -241,16 +209,6 @@ class TestBuildTaskOutcomeSummary:
     def test_empty_clusters_returns_empty_list(self) -> None:
         assert _build_task_outcome_summary([], []) == []
 
-    def test_friction_in_markdown(self) -> None:
-        """Friction count works in markdown output."""
-        q = _quote("p1", sentiment=Sentiment.DOUBT)
-        clusters = [_cluster("Page A", 1, [q])]
-
-        lines = _build_task_outcome_summary(clusters, [q])
-        joined = "\n".join(lines)
-
-        assert "| 1 |" in joined
-
     def test_display_names_markdown(self) -> None:
         q = _quote("p1")
         clusters = [_cluster("Page A", 1, [q])]
@@ -285,40 +243,3 @@ class TestBuildTaskOutcomeSummary:
 
         # s1 (p2) should appear before s3 (p1)
         assert joined.index("p2") < joined.index("p1")
-
-
-# ---------------------------------------------------------------------------
-# _is_friction_quote
-# ---------------------------------------------------------------------------
-
-
-class TestIsFrictionQuote:
-    """Tests for the friction detection helper."""
-
-    def test_frustration(self) -> None:
-        assert _is_friction_quote(_quote(sentiment=Sentiment.FRUSTRATION))
-
-    def test_confusion(self) -> None:
-        assert _is_friction_quote(_quote(sentiment=Sentiment.CONFUSION))
-
-    def test_doubt(self) -> None:
-        assert _is_friction_quote(_quote(sentiment=Sentiment.DOUBT))
-
-    def test_delight_not_friction(self) -> None:
-        assert not _is_friction_quote(_quote(sentiment=Sentiment.DELIGHT))
-
-    def test_satisfaction_not_friction(self) -> None:
-        assert not _is_friction_quote(_quote(sentiment=Sentiment.SATISFACTION))
-
-    def test_null_sentiment_not_friction(self) -> None:
-        assert not _is_friction_quote(_quote(sentiment=None))
-
-    def test_backward_compat_intent(self) -> None:
-        assert _is_friction_quote(
-            _quote(sentiment=None, intent=QuoteIntent.FRUSTRATION)
-        )
-
-    def test_backward_compat_emotion(self) -> None:
-        assert _is_friction_quote(
-            _quote(sentiment=None, emotion=EmotionalTone.CONFUSED)
-        )

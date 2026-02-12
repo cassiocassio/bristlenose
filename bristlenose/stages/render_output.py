@@ -393,8 +393,6 @@ def _build_task_outcome_summary(
     which report sections contain their quotes, ordered by the product's
     logical flow (display_order).
     """
-    from bristlenose.models import Sentiment
-
     if not screen_clusters:
         return []
 
@@ -419,33 +417,21 @@ def _build_task_outcome_summary(
     if not participant_screens:
         return []
 
-    # Friction counts from all quotes (screen-specific + general)
-    friction_counts: dict[str, int] = {}
-    for q in all_quotes:
-        if q.sentiment in (Sentiment.FRUSTRATION, Sentiment.CONFUSION, Sentiment.DOUBT):
-            friction_counts[q.participant_id] = friction_counts.get(q.participant_id, 0) + 1
-        elif (
-            q.intent in (QuoteIntent.CONFUSION, QuoteIntent.FRUSTRATION)
-            or q.emotion in (EmotionalTone.FRUSTRATED, EmotionalTone.CONFUSED)
-        ):
-            friction_counts[q.participant_id] = friction_counts.get(q.participant_id, 0) + 1
-
     sorted_pids = sorted(
         participant_screens.keys(),
         key=lambda pid: _session_sort_key(participant_session.get(pid, "")),
     )
 
     lines: list[str] = []
-    lines.append("| Session | Participant | Journey | Friction |")
-    lines.append("|---------|------------|----------------------|----------|")
+    lines.append("| Session | Participant | Journey |")
+    lines.append("|---------|------------|----------------------|")
 
     for pid in sorted_pids:
         sid = participant_session.get(pid, "")
         session_num = sid[1:] if sid.startswith("s") else sid
         journey_str = " \u2192 ".join(participant_screens[pid])
-        friction = friction_counts.get(pid, 0)
         lines.append(
-            f"| {session_num} | {_dn(pid, display_names)} | {journey_str} | {friction} |"
+            f"| {session_num} | {_dn(pid, display_names)} | {journey_str} |"
         )
 
     return lines

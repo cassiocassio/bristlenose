@@ -170,7 +170,7 @@ These are documented to prevent re-exploration of dead ends:
 
 ## Session table helpers (render_html.py)
 
-- **`_derive_journeys(screen_clusters, all_quotes)`** — extracts per-participant journey paths from screen clusters. Returns `(journeys_by_pid, journey_strs, friction_counts)`. Shared by the session table and user journeys table — extracted from `_build_task_outcome_html()` to avoid duplication
+- **`_derive_journeys(screen_clusters, all_quotes)`** — extracts per-participant journey paths from screen clusters. Returns `(participant_screens, participant_session)`. Shared by the session table and user journeys table — extracted from `_build_task_outcome_html()` to avoid duplication
 - **`_oxford_list_html(*items)`** — joins pre-escaped HTML fragments with Oxford commas ("A", "A and B", "A, B, and C"). Different from the plain-text `_oxford_list()` helper — this one does NOT escape its arguments (caller must pre-escape). Used for moderator header with badge markup
 - **`_build_session_rows()` return type** — returns `tuple[list[dict[str, object]], str]` (row dicts + moderator header HTML). The second element is empty string when no moderators. Both Sessions tab (~line 311) and Project tab (~line 1195) destructure this tuple
 - **`_render_sentiment_sparkline(counts)`** — generates an inline bar chart (div with per-sentiment spans) from a `dict[str, int]` of sentiment counts. Bar heights are normalised to `_SPARKLINE_MAX_H` (20px). Uses `--bn-sentiment-{name}` CSS custom properties for colours. Returns `"&mdash;"` when all counts are zero

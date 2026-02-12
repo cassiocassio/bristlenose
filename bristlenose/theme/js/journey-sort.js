@@ -1,13 +1,8 @@
 /**
  * journey-sort.js — Sortable columns for the user journeys table.
  *
- * Adds click-to-sort on Session and Friction columns.
- * Default sort: Session ascending.  Click Friction to
- * sort by severity (descending).  Click again to toggle direction.
- *
- * Both sortable headers always show an arrow — the active column's
- * arrow is solid, the inactive column's arrow is a pale ghost.
- * This prevents layout shift when switching sort columns.
+ * Adds click-to-sort on the Session column.
+ * Default sort: Session ascending.  Click to toggle direction.
  *
  * @module journey-sort
  */
@@ -27,19 +22,9 @@ function initJourneySort() {
       var arrow = h.querySelector('.bn-sort-arrow');
       if (!arrow) continue;
 
-      var isActive = h.classList.contains('bn-sorted-asc') ||
-                     h.classList.contains('bn-sorted-desc');
       arrow.textContent = h.classList.contains('bn-sorted-asc') ? '\u25B2' :
                           h.classList.contains('bn-sorted-desc') ? '\u25BC' :
                           arrow.textContent;
-
-      if (isActive) {
-        arrow.classList.add('bn-sort-active');
-        arrow.classList.remove('bn-sort-ghost');
-      } else {
-        arrow.classList.remove('bn-sort-active');
-        arrow.classList.add('bn-sort-ghost');
-      }
     }
   }
 
@@ -48,16 +33,8 @@ function initJourneySort() {
     var rows = Array.prototype.slice.call(tbody.querySelectorAll('tr'));
     var colIdx = Array.prototype.indexOf.call(th.parentNode.children, th);
     var isAsc = th.classList.contains('bn-sorted-asc');
-    var isDesc = th.classList.contains('bn-sorted-desc');
 
-    // Determine new direction: if already sorted on this column, toggle.
-    // If switching to a new column, default to desc for friction, asc for session.
-    var newAsc;
-    if (isAsc || isDesc) {
-      newAsc = !isAsc;
-    } else {
-      newAsc = (colIdx === 0); // session defaults asc, friction defaults desc
-    }
+    var newAsc = !isAsc;
 
     rows.sort(function(a, b) {
       var aVal = parseFloat(a.children[colIdx].textContent) || 0;
@@ -79,7 +56,7 @@ function initJourneySort() {
     updateArrows();
   }
 
-  // Initial state — mark ghost arrows on inactive headers
+  // Initial state
   updateArrows();
 
   for (var i = 0; i < headers.length; i++) {

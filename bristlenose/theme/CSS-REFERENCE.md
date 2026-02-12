@@ -90,7 +90,7 @@ Uses CSS columns masonry (`columns: 240px`) for space-efficient tiling with `bre
 
 ## Session table (report.css + molecules/person-id.css)
 
-The sessions table in both the Sessions tab and Project tab. Shows per-session metadata: speaker badges, user journey paths, video thumbnails, friction counts, and sentiment sparklines. Styled primarily in `templates/report.css` with the `bn-person-id` molecule from `molecules/person-id.css`.
+The sessions table in both the Sessions tab and Project tab. Shows per-session metadata: speaker badges, user journey paths, video thumbnails, and sentiment sparklines. Styled primarily in `templates/report.css` with the `bn-person-id` molecule from `molecules/person-id.css`.
 
 ### Structure
 
@@ -109,7 +109,6 @@ The sessions table in both the Sessions tab and Project tab. Shows per-session m
 - **`.bn-session-duration`** — `text-align: right` on both `<th>` and `<td>`. Format: `MM:SS` or `HH:MM:SS`
 - **Interviews column** — source filename. Header uses `.bn-interviews-link` (accent-coloured `<a>` to `file://` input folder with `.bn-folder-icon` SVG). Cell shows truncated filename (via `format_finder_filename()`) with `title` for full name on hover
 - **`.bn-session-thumb`** — thumbnail cell. `.bn-video-thumb`: `width: 96px; height: 54px` (16:9 HD), `background: var(--bn-colour-border)`, `border-radius: var(--bn-radius-sm)`, flex-centred `.bn-play-icon` (▶ triangle, 1.2rem, muted)
-- **`.bn-session-friction`** — friction count, `text-align: right`. Shows integer or `&mdash;` for zero
 - **`.bn-session-sentiment`** — sentiment sparkline cell. `.bn-sparkline` container: `display: inline-flex; align-items: flex-end`. `.bn-sparkline-bar` spans: height set inline (normalised), colour via `--bn-sentiment-{name}` tokens, `border-radius` on top corners
 
 ### Feature flag

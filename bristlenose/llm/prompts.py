@@ -151,7 +151,10 @@ same screen or task differently.
 
 Your task:
 1. Identify the distinct screens or tasks discussed across all interviews
-2. Normalise the screen labels — give each screen a clear, consistent name
+2. Normalise the screen labels — give each screen a clear, consistent name. \
+Keep labels short (2-4 words). Drop filler words like "Section", "Page", "Screen", "Area" \
+unless needed to distinguish two screens (e.g. keep "Settings Page" only if there is also a \
+"Settings Modal")
 3. Assign each quote to exactly one screen cluster
 4. Order the screen clusters in the logical flow of the product/prototype being tested \
 (i.e. the order a user would encounter them)

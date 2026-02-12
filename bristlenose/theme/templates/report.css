@@ -83,6 +83,29 @@ tr:last-child td {
     border-bottom: none;
 }
 
+th.bn-sortable {
+    cursor: pointer;
+    user-select: none;
+}
+
+th.bn-sortable:hover {
+    color: var(--bn-colour-accent);
+}
+
+.bn-sort-arrow {
+    font-size: 0.65em;
+    margin-left: 0.25em;
+    vertical-align: middle;
+}
+
+.bn-sort-ghost {
+    opacity: 0.2;
+}
+
+.bn-sort-active {
+    opacity: 0.6;
+}
+
 td a {
     color: var(--bn-colour-accent);
     text-decoration: none;

@@ -34,6 +34,14 @@ from bristlenose.utils.markdown import (
 logger = logging.getLogger(__name__)
 
 
+def _session_sort_key(sid: str) -> tuple[int, str]:
+    """Sort key that orders session IDs numerically (s1 < s2 < s10)."""
+    import re
+
+    m = re.search(r"\d+", sid)
+    return (int(m.group()) if m else 0, sid)
+
+
 def render_markdown(
     screen_clusters: list[ScreenCluster],
     theme_groups: list[ThemeGroup],
@@ -150,9 +158,9 @@ def render_markdown(
             lines.append("")
 
     # User Journeys
-    if all_quotes and sessions:
+    if screen_clusters:
         task_summary = _build_task_outcome_summary(
-            all_quotes, sessions, display_names=display_names,
+            screen_clusters, all_quotes or [], display_names=display_names,
         )
         if task_summary:
             lines.append(HEADING_2.format(title="User journeys"))
@@ -338,17 +346,14 @@ def _build_rewatch_list(
 ) -> list[str]:
     """Build a list of timestamps worth rewatching.
 
-    Flags moments where participants showed confusion, frustration,
-    or were in error-recovery — these are high-value for researchers.
+    Flags moments where participants showed confusion or frustration
+    — these are high-value for researchers.
     """
-    from bristlenose.models import JourneyStage
-
     flagged: list[ExtractedQuote] = []
     for q in quotes:
         is_rewatch = (
             q.intent in (QuoteIntent.CONFUSION, QuoteIntent.FRUSTRATION)
             or q.emotion in (EmotionalTone.FRUSTRATED, EmotionalTone.CONFUSED)
-            or q.journey_stage == JourneyStage.ERROR_RECOVERY
             or q.intensity >= 3
         )
         if is_rewatch:
@@ -357,8 +362,8 @@ def _build_rewatch_list(
     if not flagged:
         return []
 
-    # Sort by participant then timecode
-    flagged.sort(key=lambda q: (q.participant_id, q.start_timecode))
+    # Sort by session number then timecode
+    flagged.sort(key=lambda q: (_session_sort_key(q.session_id), q.start_timecode))
 
     lines: list[str] = []
     current_pid = ""
@@ -378,56 +383,69 @@ def _build_rewatch_list(
 
 
 def _build_task_outcome_summary(
-    quotes: list[ExtractedQuote],
-    sessions: list[InputSession],
+    screen_clusters: list[ScreenCluster],
+    all_quotes: list[ExtractedQuote],
     display_names: dict[str, str] | None = None,
 ) -> list[str]:
-    """Build a per-participant summary of journey stages observed.
+    """Build a per-participant summary of user journey through screen clusters.
 
-    This gives researchers a quick overview of how far each participant
-    progressed through the user journey.
+    Derives each participant's journey from screen cluster membership —
+    which report sections contain their quotes, ordered by the product's
+    logical flow (display_order).
     """
-    from collections import Counter
+    from bristlenose.models import Sentiment
 
-    from bristlenose.models import JourneyStage
+    if not screen_clusters:
+        return []
 
-    # Ordered stages representing a typical e-commerce flow
-    stage_order = [
-        JourneyStage.LANDING,
-        JourneyStage.BROWSE,
-        JourneyStage.SEARCH,
-        JourneyStage.PRODUCT_DETAIL,
-        JourneyStage.CART,
-        JourneyStage.CHECKOUT,
-    ]
+    ordered = sorted(screen_clusters, key=lambda c: c.display_order)
 
-    # Group quotes by participant
-    by_participant: dict[str, list[ExtractedQuote]] = {}
-    for q in quotes:
-        by_participant.setdefault(q.participant_id, []).append(q)
+    # participant -> list of screen labels (in display_order)
+    participant_screens: dict[str, list[str]] = {}
+    # participant -> session_id (first seen)
+    participant_session: dict[str, str] = {}
+    for cluster in ordered:
+        for q in cluster.quotes:
+            pid = q.participant_id
+            if pid not in participant_screens:
+                participant_screens[pid] = []
+            if pid not in participant_session:
+                participant_session[pid] = q.session_id
+        pids_in_cluster = {q.participant_id for q in cluster.quotes}
+        for pid in pids_in_cluster:
+            if cluster.screen_label not in participant_screens[pid]:
+                participant_screens[pid].append(cluster.screen_label)
+
+    if not participant_screens:
+        return []
+
+    # Friction counts from all quotes (screen-specific + general)
+    friction_counts: dict[str, int] = {}
+    for q in all_quotes:
+        if q.sentiment in (Sentiment.FRUSTRATION, Sentiment.CONFUSION, Sentiment.DOUBT):
+            friction_counts[q.participant_id] = friction_counts.get(q.participant_id, 0) + 1
+        elif (
+            q.intent in (QuoteIntent.CONFUSION, QuoteIntent.FRUSTRATION)
+            or q.emotion in (EmotionalTone.FRUSTRATED, EmotionalTone.CONFUSED)
+        ):
+            friction_counts[q.participant_id] = friction_counts.get(q.participant_id, 0) + 1
+
+    sorted_pids = sorted(
+        participant_screens.keys(),
+        key=lambda pid: _session_sort_key(participant_session.get(pid, "")),
+    )
 
     lines: list[str] = []
-    lines.append("| Participant | Stages | Friction points |")
-    lines.append("|------------|----------------------|-----------------|")
+    lines.append("| Session | Participant | Journey | Friction |")
+    lines.append("|---------|------------|----------------------|----------|")
 
-    pids = sorted(by_participant.keys())
-    for pid in pids:
-        pq = by_participant[pid]
-        stage_counts = Counter(q.journey_stage for q in pq)
-
-        # Stages observed (exclude OTHER)
-        observed = [s for s in stage_order if stage_counts.get(s, 0) > 0]
-        observed_str = (
-            " \u2192 ".join(s.value for s in observed) if observed else "other"
+    for pid in sorted_pids:
+        sid = participant_session.get(pid, "")
+        session_num = sid[1:] if sid.startswith("s") else sid
+        journey_str = " \u2192 ".join(participant_screens[pid])
+        friction = friction_counts.get(pid, 0)
+        lines.append(
+            f"| {session_num} | {_dn(pid, display_names)} | {journey_str} | {friction} |"
         )
-
-        # Count friction points (confusion + frustration)
-        friction = sum(
-            1 for q in pq
-            if q.intent in (QuoteIntent.CONFUSION, QuoteIntent.FRUSTRATION)
-            or q.emotion in (EmotionalTone.FRUSTRATED, EmotionalTone.CONFUSED)
-        )
-
-        lines.append(f"| {_dn(pid, display_names)} | {observed_str} | {friction} |")
 
     return lines

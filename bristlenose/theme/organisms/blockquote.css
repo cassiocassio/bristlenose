@@ -86,9 +86,10 @@ blockquote.quote-active {
     color: var(--bn-colour-accent);
 }
 
-.rewatch-item .reason {
-    font-style: italic;
-    color: var(--bn-colour-frustration);
+.bn-reason-col {
+    display: inline-block;
+    width: 6.8rem;
+    text-align: left;
 }
 
 .rewatch-item a.timecode {
@@ -96,5 +97,14 @@ blockquote.quote-active {
 }
 
 .rewatch-item a.timecode:hover {
+    color: var(--bn-colour-accent);
+}
+
+.rewatch-item .speaker-link {
+    color: var(--bn-colour-text);
+    text-decoration: none;
+}
+
+.rewatch-item .speaker-link:hover {
     color: var(--bn-colour-accent);
 }

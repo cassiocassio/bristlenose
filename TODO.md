@@ -80,7 +80,7 @@ This file contains: session reminders, feature groupings with context, items too
 
 | Item | Issue | Effort |
 |------|-------|--------|
-| Time estimate warning for long jobs | #39 | trivial |
+| ~~Time estimate warning for long jobs~~ | #39 | ~~trivial~~ ✅ |
 | Britannification pass | #40 | trivial |
 | `--prefetch-model` flag for Whisper | #41 | trivial |
 

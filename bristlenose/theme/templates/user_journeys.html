@@ -3,7 +3,6 @@
 <th data-sort="num" class="bn-sortable bn-sorted-asc">Session <span class="bn-sort-arrow">▲</span></th>
 <th>Participant</th>
 <th>Journey</th>
-<th data-sort="num" class="bn-sortable">Friction <span class="bn-sort-arrow">▼</span></th>
 </tr></thead>
 <tbody>
 {%- for row in rows %}
@@ -11,7 +10,6 @@
 <td>{{ row.session }}</td>
 <td>{{ row.pid }}</td>
 <td>{{ row.stages }}</td>
-<td>{{ row.friction }}</td>
 </tr>
 {%- endfor %}
 </tbody>

@@ -14,7 +14,6 @@
 <th>Interviews</th>
 {%- endif %}
 <th></th>
-<th>Friction</th>
 <th>Sentiment</th>
 </tr></thead>
 <tbody>
@@ -39,7 +38,6 @@
 <div class="bn-video-thumb"><span class="bn-play-icon">&#9654;</span></div>
 {%- endif %}
 </td>
-<td class="bn-session-friction">{{ row.friction if row.friction else "&mdash;" }}</td>
 <td class="bn-session-sentiment">{{ row.sentiment_sparkline }}</td>
 </tr>
 {%- endfor %}

@@ -83,7 +83,7 @@ Search-as-you-type filtering for report quotes. Collapsed magnifying glass icon 
 - **`_setNonQuoteVisibility(display)`** — hides/shows `.toc-row` and Participants section during active search
 - **`_overrideViewLabel(label)` / `_restoreViewLabel()`** — temporarily sets the view-switcher button text to the match count ("7 matching quotes") during active search. Saves/restores original label via `_savedViewLabel` module variable
 - **`_restoreViewMode()`** — when query is cleared or < 3 chars, restores the view-switcher's visibility state (respects starred mode), restores ToC/Participants, restores view-switcher label
-- **`_hideEmptySections()`** — hides `<section>` elements (and preceding `<hr>`) when all child blockquotes are hidden. Only targets sections with `.quote-group` (skips Participants, Sentiment, Friction, Journeys)
+- **`_hideEmptySections()`** — hides `<section>` elements (and preceding `<hr>`) when all child blockquotes are hidden. Only targets sections with `.quote-group` (skips Participants, Sentiment, Journeys)
 - **`_hideEmptySubsections()`** — hides individual h3+description+quote-group clusters within a section when all their quotes are hidden
 - **`_onViewModeChange()`** — called by `view-switcher.js` after view mode changes. Hides search in participants mode (no quotes to search), re-applies filter or restores view mode otherwise
 - **Dependencies**: must load after `csv-export.js` (reads `currentViewMode` global) and after `view-switcher.js` (which calls `_onViewModeChange()`); before `names.js` and `main.js`

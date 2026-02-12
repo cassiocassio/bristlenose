@@ -238,11 +238,21 @@ class LLMClient:
             messages=[{"role": "user", "content": user_prompt}],
             tools=[tool],
             tool_choice={"type": "tool", "name": tool_name},
+            # Explicit timeout bypasses the SDK's heuristic that rejects
+            # non-streaming requests when max_tokens is high (>~21K).
+            timeout=600.0,
         )
 
         # Track token usage
         if hasattr(response, "usage") and response.usage:
             self.tracker.record(response.usage.input_tokens, response.usage.output_tokens)
+
+        # Detect truncated response — the tool use JSON is incomplete
+        if response.stop_reason == "max_tokens":
+            raise RuntimeError(
+                f"LLM response was truncated (hit max_tokens={max_tokens}). "
+                f"Set BRISTLENOSE_LLM_MAX_TOKENS=65536 in your .env file."
+            )
 
         # Extract the tool use result
         for block in response.content:
@@ -292,6 +302,13 @@ class LLMClient:
         if hasattr(response, "usage") and response.usage:
             self.tracker.record(
                 response.usage.prompt_tokens, response.usage.completion_tokens
+            )
+
+        # Detect truncated response — the JSON is incomplete
+        if response.choices[0].finish_reason == "length":
+            raise RuntimeError(
+                f"LLM response was truncated (hit max_tokens={max_tokens}). "
+                f"Set BRISTLENOSE_LLM_MAX_TOKENS=65536 in your .env file."
             )
 
         content = response.choices[0].message.content
@@ -348,6 +365,13 @@ class LLMClient:
                 response.usage.prompt_tokens, response.usage.completion_tokens
             )
 
+        # Detect truncated response — the JSON is incomplete
+        if response.choices[0].finish_reason == "length":
+            raise RuntimeError(
+                f"LLM response was truncated (hit max_tokens={max_tokens}). "
+                f"Set BRISTLENOSE_LLM_MAX_TOKENS=65536 in your .env file."
+            )
+
         content = response.choices[0].message.content
         if content is None:
             raise RuntimeError("Empty response from Azure OpenAI")
@@ -394,6 +418,17 @@ class LLMClient:
             self.tracker.record(
                 response.usage_metadata.prompt_token_count or 0,
                 response.usage_metadata.candidates_token_count or 0,
+            )
+
+        # Detect truncated response — Gemini uses "MAX_TOKENS" finish reason
+        if (
+            response.candidates
+            and response.candidates[0].finish_reason
+            and str(response.candidates[0].finish_reason) in ("MAX_TOKENS", "2")
+        ):
+            raise RuntimeError(
+                f"LLM response was truncated (hit max_tokens={max_tokens}). "
+                f"Set BRISTLENOSE_LLM_MAX_TOKENS=65536 in your .env file."
             )
 
         if not response.text:
@@ -459,6 +494,13 @@ class LLMClient:
                     self.tracker.record(
                         response.usage.prompt_tokens or 0,
                         response.usage.completion_tokens or 0,
+                    )
+
+                # Detect truncated response
+                if response.choices[0].finish_reason == "length":
+                    raise RuntimeError(
+                        f"LLM response was truncated (hit max_tokens={max_tokens}). "
+                        f"Set BRISTLENOSE_LLM_MAX_TOKENS=65536 in your .env file."
                     )
 
                 content = response.choices[0].message.content

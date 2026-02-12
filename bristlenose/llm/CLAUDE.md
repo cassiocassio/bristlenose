@@ -47,8 +47,19 @@ Per-participant LLM calls (stages 5b, 8, 9) run concurrently, bounded by `llm_co
 - **Ordering**: `asyncio.gather()` returns results in input order — quote ordering by participant is preserved
 - **Dependency chain**: stage 8 must complete before stage 9 (topic maps feed quote extraction). Stages 10+11 depend on stage 9 output. Concurrency is within-stage only, not cross-stage
 
+## max_tokens and truncation detection
+
+Default `llm_max_tokens` is **32768** (set in `config.py`). This is the output token ceiling per LLM call — users only pay for tokens actually generated, not the limit. All 5 providers detect when the response is truncated and raise `RuntimeError` with an actionable message pointing to `BRISTLENOSE_LLM_MAX_TOKENS` in `.env`.
+
+- **Anthropic**: checks `response.stop_reason == "max_tokens"`
+- **OpenAI / Azure / Local**: checks `response.choices[0].finish_reason == "length"`
+- **Gemini**: checks `response.candidates[0].finish_reason` for `"MAX_TOKENS"` or `"2"`
+
+If the default is too low for a workload (very long transcripts with many quotes), the error message tells the user exactly what to set and where. Quote extraction is the most output-heavy stage — a 1-hour transcript can produce 80-100 quotes at ~150 tokens each. Tests in `tests/test_llm_truncation.py`.
+
 ## Gotchas
 
+- **Anthropic SDK timeout heuristic** — the SDK (v0.77+) rejects non-streaming requests when `max_tokens > ~21K` with `ValueError: "Streaming is required for operations that may take longer than 10 minutes"`. The heuristic is `3600 * max_tokens / 128000 > 600`. Fix: pass `timeout=600.0` to `client.messages.create()`, which bypasses the check. This is already done in `_analyze_anthropic()`. If you ever remove the explicit timeout, the SDK will start rejecting quote extraction calls
 - **Provider registry** — `bristlenose/providers.py` is the single source of truth for provider metadata (names, aliases, default models, SDK modules). `resolve_provider()` handles alias normalisation (claude→anthropic, azure-openai→azure, ollama→local). `load_settings()` in `config.py` calls the registry to normalise aliases
 - **Azure OpenAI uses `AsyncAzureOpenAI`** — same OpenAI SDK, different client class. Key differences from regular OpenAI: needs `azure_endpoint` and `api_version` on client init, uses deployment name (not model name) as the `model` parameter. `configure azure` stores only the API key in keychain — endpoint and deployment are non-secret, go in env vars or `.env`
 - **Azure cost estimation returns None** — deployment names are user-defined strings, not model names, so `estimate_cost()` can't look up pricing. The pricing URL is still shown

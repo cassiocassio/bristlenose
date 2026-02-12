@@ -69,6 +69,8 @@ Man page: canonical location `bristlenose/data/bristlenose.1`, symlinked from `m
 
 Pipeline output uses clean checkmark lines with per-stage timing. `console.status()` spinner during work → `_print_step()` checkmark when done. Width capped at 80. Minimal colour: green checkmarks, dim timing/header/stats. `_format_duration` and `_print_step` are module-level in `pipeline.py`. `LLMUsageTracker` in `llm/client.py` accumulates tokens; `estimate_cost()` in `llm/pricing.py` uses hardcoded pricing table. Stage failure warnings via `_print_warn()` with dedup and credit-balance URL detection.
 
+**Time estimation** (`bristlenose/timing.py`): After ingest, the pipeline prints an upfront time estimate (`~8 min (±2 min)`) and recalculates the remaining time as each stage completes. Uses **Welford's online algorithm** — stores running mean, variance, and count per rate-based metric (e.g. seconds per audio minute for transcription, seconds per session for LLM stages). Profiles are keyed by hardware+config combo (`"chip | backend | model | provider | llm_model"`) and persisted to `~/.config/bristlenose/timing.json`. First run has no estimate (cold start); the ± range tightens over subsequent runs. `Pipeline.__init__` accepts `on_event` callback and `estimator` (both typed as `object` to avoid module-level imports). `PipelineEvent` dataclass supports future visual UI (progress bars) via `kind` field: `"estimate"`, `"remaining"`, `"stage_start"`, `"stage_complete"`, `"progress"`. 27 tests in `tests/test_timing.py`.
+
 ## Gotchas
 
 ### Ruff F401 (unused imports) — reports only, won't auto-fix

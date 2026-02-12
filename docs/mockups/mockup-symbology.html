@@ -1,0 +1,994 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Symbology — § ¶ ❋ Style Guide</title>
+<style>
+/* ================================================================
+   SYMBOLOGY STYLE GUIDE — Visual audit of § ¶ ❋ prefix symbols
+   ================================================================
+   Self-contained mockup. Every UI element that uses the symbology
+   system is shown here with its real CSS, so you can judge the
+   look in one place.
+
+   Two rules:
+   1. Symbols are 50% lighter than the text they accompany
+   2. Symbols are outdented so the word aligns with surrounding content
+      (exceptions: tabs, stat cards, signal card labels, tooltips)
+   ================================================================ */
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+/* ── Design tokens (from tokens.css) ────────────────────────── */
+
+:root {
+    --bn-font-body: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
+    --bn-font-mono: "SF Mono", "Fira Code", "Consolas", monospace;
+
+    --bn-colour-bg: #ffffff;
+    --bn-colour-text: #1a1a1a;
+    --bn-colour-muted: #6b7280;
+    --bn-colour-border: #e5e7eb;
+    --bn-colour-accent: #2563eb;
+
+    --bn-colour-quote-bg: #f9fafb;
+    --bn-colour-badge-bg: #f3f4f6;
+    --bn-colour-badge-text: #374151;
+    --bn-colour-user-tag-bg: #f3f4f6;
+    --bn-colour-user-tag-text: #4b5563;
+    --bn-colour-shadow: rgba(0, 0, 0, 0.08);
+
+    --bn-sentiment-frustration: #ea580c;
+    --bn-sentiment-frustration-bg: #fff7ed;
+    --bn-sentiment-satisfaction: #16a34a;
+    --bn-sentiment-satisfaction-bg: #f0fdf4;
+    --bn-sentiment-confidence: #2563eb;
+    --bn-sentiment-confidence-bg: #eff6ff;
+
+    --bn-max-width: 52rem;
+
+    --bn-space-xs: 0.15rem;
+    --bn-space-sm: 0.35rem;
+    --bn-space-md: 0.75rem;
+    --bn-space-lg: 1.5rem;
+    --bn-space-xl: 2rem;
+
+    --bn-radius-sm: 3px;
+    --bn-radius-md: 6px;
+    --bn-radius-lg: 8px;
+    --bn-radius-pill: 999px;
+
+    --bn-span-bar-width: 2px;
+    --bn-span-bar-radius: 1px;
+
+    --bn-transition-fast: 0.15s ease;
+    --bn-transition-normal: 0.2s ease;
+
+    --bn-colour-border-hover: #d1d5db;
+    --bn-hover-bg: rgba(0, 0, 0, 0.04);
+}
+
+/* ── Dark mode ─────────────────────────────────────────────── */
+
+[data-theme="dark"] {
+    --bn-colour-bg: #111111;
+    --bn-colour-text: #e5e7eb;
+    --bn-colour-muted: #9ca3af;
+    --bn-colour-border: #2d2d2d;
+    --bn-colour-accent: #60a5fa;
+    --bn-colour-quote-bg: #1a1a1a;
+    --bn-colour-badge-bg: #252525;
+    --bn-colour-badge-text: #d1d5db;
+    --bn-colour-user-tag-bg: #252525;
+    --bn-colour-user-tag-text: #d1d5db;
+    --bn-colour-shadow: rgba(0, 0, 0, 0.4);
+
+    --bn-sentiment-frustration: #fb923c;
+    --bn-sentiment-frustration-bg: #2d1d0e;
+    --bn-sentiment-satisfaction: #4ade80;
+    --bn-sentiment-satisfaction-bg: #0f2918;
+    --bn-sentiment-confidence: #60a5fa;
+    --bn-sentiment-confidence-bg: #111d2e;
+
+    --bn-colour-border-hover: #4b5563;
+    --bn-hover-bg: rgba(255, 255, 255, 0.06);
+}
+
+/* ── Page chrome ───────────────────────────────────────────── */
+
+body {
+    font-family: var(--bn-font-body);
+    color: var(--bn-colour-text);
+    background: var(--bn-colour-bg);
+    line-height: 1.6;
+    padding: 2rem;
+    max-width: 60rem;
+    margin: 0 auto;
+}
+
+.page-title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+}
+
+.page-subtitle {
+    font-size: 0.95rem;
+    color: var(--bn-colour-muted);
+    margin-bottom: 2rem;
+}
+
+.page-subtitle code {
+    font-family: var(--bn-font-mono);
+    font-size: 0.85rem;
+    background: var(--bn-colour-badge-bg);
+    padding: 0.1em 0.35em;
+    border-radius: var(--bn-radius-sm);
+}
+
+/* Theme toggle */
+.theme-toggle {
+    position: fixed;
+    top: 1rem;
+    right: 1rem;
+    font-family: var(--bn-font-body);
+    font-size: 0.8rem;
+    padding: 0.4rem 0.8rem;
+    background: var(--bn-colour-badge-bg);
+    color: var(--bn-colour-text);
+    border: 1px solid var(--bn-colour-border);
+    border-radius: var(--bn-radius-md);
+    cursor: pointer;
+    z-index: 100;
+}
+
+.theme-toggle:hover { border-color: var(--bn-colour-accent); }
+
+/* Demo section wrapper */
+.demo {
+    margin-bottom: 2.5rem;
+    border: 1px dashed var(--bn-colour-border);
+    border-radius: var(--bn-radius-lg);
+    padding: var(--bn-space-lg);
+}
+
+.demo-title {
+    font-size: 0.85rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--bn-colour-muted);
+    margin-bottom: 0.25rem;
+}
+
+.demo-context {
+    font-size: 0.8rem;
+    color: var(--bn-colour-muted);
+    margin-bottom: var(--bn-space-lg);
+    font-style: italic;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   SYMBOLOGY ATOMS — .sym and .sym-muted
+   ══════════════════════════════════════════════════════════════
+
+   .sym         — outdented symbol (hangs left, word aligns with content).
+                  Used in headings, table headers, and other block-level text.
+                  Colour: --bn-colour-muted (lighter than heading text).
+
+   .sym-inline  — non-outdented symbol (tabs, stat cards, signal labels, tooltips).
+                  Colour: --bn-colour-muted when parent text is full colour.
+                  opacity: 0.5 when parent text is already muted.
+   ══════════════════════════════════════════════════════════════ */
+
+.sym {
+    color: var(--bn-colour-muted);
+    margin-left: -1.5ch;
+    display: inline-block;
+    width: 1.5ch;
+    background: #39ff14; /* DEBUG: neon green to visualise outdent zone */
+}
+
+/* Inline variant: no outdent, just colour */
+.sym-inline {
+    color: var(--bn-colour-muted);
+    background: #39ff14; /* DEBUG: neon green */
+}
+
+/* Extra-faded: when parent text is already muted */
+.sym-faded {
+    opacity: 0.5;
+    background: #39ff14; /* DEBUG: neon green */
+}
+
+/* ── 1. Global nav tab bar (from organisms/global-nav.css) ── */
+
+.bn-global-nav {
+    display: flex;
+    align-items: stretch;
+    gap: 0;
+    border-bottom: 1px solid var(--bn-colour-border);
+}
+
+.bn-tab {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--bn-space-sm);
+    padding: 0.6rem 1rem;
+    background: none;
+    border: none;
+    border-bottom: 3px solid transparent;
+    font-family: var(--bn-font-body);
+    font-size: 0.88rem;
+    font-weight: 500;
+    color: var(--bn-colour-muted);
+    cursor: pointer;
+    transition: color var(--bn-transition-fast), border-color var(--bn-transition-fast);
+    white-space: nowrap;
+}
+
+.bn-tab:hover { color: var(--bn-colour-text); }
+
+.bn-tab.active {
+    color: var(--bn-colour-accent);
+    border-bottom-color: var(--bn-colour-accent);
+}
+
+/* In active tab, the symbol should be lighter than the accent colour */
+.bn-tab.active .sym-inline { color: var(--bn-colour-muted); }
+
+.bn-tab-spacer { flex: 1; }
+
+/* ── 2. TOC (from organisms/toc.css + report.css h2) ──────── */
+
+.toc-row {
+    display: flex;
+    gap: 3rem;
+    flex-wrap: wrap;
+}
+
+.toc-row > nav {
+    flex: 1;
+    min-width: 12rem;
+}
+
+.toc h2 {
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+    padding-left: 1.5ch; /* make room for the outdented symbol */
+}
+
+.toc ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.toc li {
+    margin: 0.2rem 0;
+    font-size: 0.9rem;
+    break-inside: avoid;
+}
+
+.toc a {
+    color: var(--bn-colour-accent);
+    text-decoration: none;
+}
+
+.toc a:hover { text-decoration: underline; }
+
+.edit-pencil {
+    background: none;
+    border: none;
+    font-size: 0.75rem;
+    color: var(--bn-colour-muted);
+    cursor: pointer;
+    opacity: 0.4;
+    transition: opacity var(--bn-transition-fast);
+}
+
+.edit-pencil:hover { opacity: 1; }
+
+/* ── 3–4. Content headings (from report.css) ───────────────── */
+
+.content-demo h2 {
+    font-size: 1.35rem;
+    font-weight: 600;
+    margin: 0 0 1rem;
+    padding-bottom: 0.4rem;
+    border-bottom: 2px solid var(--bn-colour-border);
+    padding-left: 1.5ch; /* make room for the outdented symbol */
+}
+
+.content-demo h3 {
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin: 0 0 0.6rem;
+}
+
+/* ── 5. Dashboard stat cards (from organisms/global-nav.css) ─ */
+
+.bn-project-stats {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--bn-space-md);
+}
+
+.bn-project-stat {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: var(--bn-space-md) var(--bn-space-lg);
+    border: 1px solid var(--bn-colour-border);
+    border-radius: var(--bn-radius-md);
+    min-width: 5.5rem;
+}
+
+.bn-project-stat-value {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--bn-colour-text);
+    line-height: 1.2;
+}
+
+.bn-project-stat-label {
+    font-size: 0.8rem;
+    color: var(--bn-colour-muted);
+    margin-top: 0.15rem;
+    text-align: center;
+}
+
+/* ── 6–7. Dashboard pane tables ────────────────────────────── */
+
+.bn-dashboard-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--bn-space-lg);
+}
+
+.bn-dashboard-pane {
+    border: 1px solid var(--bn-colour-border);
+    border-radius: var(--bn-radius-lg);
+    padding: var(--bn-space-lg);
+    min-width: 0;
+    overflow-x: auto;
+}
+
+.bn-dashboard-pane h3 {
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin: 0 0 0.6rem;
+    padding-left: 1.5ch; /* room for outdented symbol */
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.9rem;
+    margin: 0;
+}
+
+th {
+    text-align: left;
+    font-weight: 600;
+    padding: 0.6rem var(--bn-space-md);
+    border-bottom: 2px solid var(--bn-colour-border);
+    white-space: nowrap;
+}
+
+/* First column th gets extra left padding for outdented symbol */
+.bn-dashboard-list th:first-child {
+    padding-left: calc(var(--bn-space-md) + 1.5ch);
+}
+
+td {
+    padding: 0.5rem var(--bn-space-md);
+    vertical-align: top;
+}
+
+.bn-dashboard-list td {
+    border-bottom: none;
+    padding: 0.3rem var(--bn-space-md);
+}
+
+/* ── 8. Analysis page headings ─────────────────────────────── */
+
+.section-heading {
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin: 0 0 var(--bn-space-md) 0;
+    padding-bottom: 0.4rem;
+    border-bottom: 1px solid var(--bn-colour-border);
+    padding-left: 1.5ch; /* room for outdented symbol */
+}
+
+.section-heading + .section-heading { margin-top: var(--bn-space-xl); }
+
+.section-desc {
+    color: var(--bn-colour-muted);
+    font-size: 0.88rem;
+    margin-bottom: var(--bn-space-lg);
+}
+
+/* ── 9. Signal cards (from organisms/analysis.css) ─────────── */
+
+.signal-cards {
+    display: flex;
+    flex-direction: column;
+    gap: var(--bn-space-md);
+}
+
+.signal-card {
+    border: 1px solid var(--bn-colour-border);
+    border-radius: var(--bn-radius-sm);
+    padding: var(--bn-space-lg);
+    background: var(--bn-colour-bg);
+    position: relative;
+    transition: box-shadow var(--bn-transition-fast);
+}
+
+.signal-card:hover {
+    box-shadow: 0 2px 8px var(--bn-colour-shadow);
+}
+
+.signal-card::before {
+    content: "";
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: var(--bn-span-bar-width);
+    border-radius: var(--bn-span-bar-radius) 0 0 var(--bn-span-bar-radius);
+    background: var(--card-accent, var(--bn-colour-muted));
+}
+
+.signal-card-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: var(--bn-space-lg);
+}
+
+.signal-card-identity { flex: 1; min-width: 0; }
+
+.signal-card-source {
+    display: block;
+    font-size: 0.7rem;
+    font-weight: 400;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--bn-colour-muted);
+    margin-bottom: 0.1rem;
+}
+
+.signal-card-location {
+    font-size: 1.05rem;
+    font-weight: 600;
+    margin-bottom: var(--bn-space-sm);
+}
+
+.signal-card-metrics {
+    flex-shrink: 0;
+    display: grid;
+    grid-template-columns: auto auto;
+    gap: 0.2rem 0.6rem;
+    align-items: center;
+    font-size: 0.8rem;
+    white-space: nowrap;
+}
+
+.metric-label {
+    color: var(--bn-colour-muted);
+    text-align: right;
+}
+
+.metric-value {
+    font-family: var(--bn-font-mono);
+    font-size: 0.8rem;
+    color: var(--bn-colour-text);
+    text-align: right;
+}
+
+/* ── 10. Heatmap (from organisms/analysis.css) ─────────────── */
+
+.analysis-heatmap {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.82rem;
+    margin-bottom: var(--bn-space-lg);
+}
+
+.analysis-heatmap th {
+    text-align: center;
+    padding: 0.5rem 0.3rem;
+    font-weight: 600;
+    font-size: 0.75rem;
+    color: var(--bn-colour-muted);
+    border-bottom: 2px solid var(--bn-colour-border);
+    white-space: nowrap;
+}
+
+.analysis-heatmap th:first-child {
+    text-align: left;
+    min-width: 140px;
+    padding-left: calc(0.3rem + 1.5ch); /* room for outdented symbol */
+}
+
+.analysis-heatmap td {
+    text-align: center;
+    padding: 0.45rem 0.4rem;
+    border-bottom: 1px solid var(--bn-colour-border);
+}
+
+.analysis-heatmap td:first-child {
+    text-align: left;
+    font-weight: 500;
+    font-size: 0.85rem;
+    padding-right: var(--bn-space-md);
+}
+
+/* ── 11. Transcript margin annotations ─────────────────────── */
+
+.transcript-demo {
+    display: flex;
+    gap: 2rem;
+    align-items: flex-start;
+}
+
+.transcript-segment {
+    flex: 1;
+    font-size: 0.9rem;
+    line-height: 1.6;
+    padding: var(--bn-space-md);
+    background: var(--bn-colour-quote-bg);
+    border-radius: var(--bn-radius-md);
+}
+
+.timecode {
+    font-family: var(--bn-font-mono);
+    font-size: 0.8rem;
+    color: var(--bn-colour-muted);
+}
+
+.speaker-code {
+    font-weight: 600;
+}
+
+.segment-margin {
+    width: 12.5rem;
+    font-size: 0.75rem;
+    line-height: 1.4;
+    display: flex;
+    flex-direction: column;
+    gap: var(--bn-space-md);
+}
+
+.margin-annotation {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.margin-label {
+    color: var(--bn-colour-accent);
+    font-weight: 500;
+    text-decoration: none;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+}
+
+.margin-label:hover { color: var(--bn-colour-text); }
+
+.margin-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+}
+
+.margin-tags .badge {
+    font-size: 0.65rem;
+    padding: 1px 4px;
+    line-height: 1.4;
+}
+
+.tooltip-preview {
+    font-size: 0.75rem;
+    color: var(--bn-colour-muted);
+    font-style: italic;
+    margin-top: 2px;
+}
+
+/* ── 12. Codebook tooltip previews ─────────────────────────── */
+
+.codebook-demo {
+    display: flex;
+    gap: var(--bn-space-lg);
+    align-items: flex-start;
+}
+
+.codebook-item {
+    display: flex;
+    flex-direction: column;
+    gap: var(--bn-space-sm);
+}
+
+/* ── Badge (from atoms/badge.css) ──────────────────────────── */
+
+.badge {
+    display: inline-block;
+    font-family: var(--bn-font-mono);
+    font-size: 0.72rem;
+    padding: var(--bn-space-xs) 0.45rem;
+    border-radius: var(--bn-radius-sm);
+    background: var(--bn-colour-badge-bg);
+    color: var(--bn-colour-badge-text);
+}
+
+.badge-frustration { background: var(--bn-sentiment-frustration-bg); color: var(--bn-sentiment-frustration); }
+.badge-satisfaction { background: var(--bn-sentiment-satisfaction-bg); color: var(--bn-sentiment-satisfaction); }
+.badge-confidence { background: var(--bn-sentiment-confidence-bg); color: var(--bn-sentiment-confidence); }
+
+.badge-user {
+    background: var(--bn-colour-user-tag-bg);
+    color: var(--bn-colour-text);
+    font-weight: 400;
+}
+
+/* ── Markdown preview ──────────────────────────────────────── */
+
+.markdown-demo {
+    font-family: var(--bn-font-mono);
+    font-size: 0.85rem;
+    background: var(--bn-colour-quote-bg);
+    padding: var(--bn-space-lg);
+    border-radius: var(--bn-radius-md);
+    white-space: pre-wrap;
+    line-height: 1.6;
+}
+</style>
+</head>
+<body>
+
+<button class="theme-toggle" onclick="toggleTheme()">Toggle dark mode</button>
+
+<h1 class="page-title">Symbology — § ¶ ❋ Style Guide</h1>
+<p class="page-subtitle">
+    Every UI element that uses the prefix symbology system:
+    <code>§</code> Section &middot;
+    <code>¶</code> Quote &middot;
+    <code>❋</code> Theme
+    <br>
+    <strong>Rules:</strong> symbols at 50% darkness of their text &middot; outdented so the word aligns with content
+</p>
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<!-- 1. GLOBAL NAV TAB BAR                                      -->
+<!-- ═══════════════════════════════════════════════════════════ -->
+
+<section class="demo">
+    <p class="demo-title">1. Global nav tab bar</p>
+    <p class="demo-context">Exception: no outdent (tabs are centred in padding). Symbol is muted even when tab is active.</p>
+
+    <nav class="bn-global-nav" role="tablist">
+        <button class="bn-tab">Project</button>
+        <button class="bn-tab">Sessions</button>
+        <button class="bn-tab active"><span class="sym-inline">¶</span> Quotes</button>
+        <button class="bn-tab">Codebook</button>
+        <button class="bn-tab">Analysis</button>
+    </nav>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<!-- 2. TABLE OF CONTENTS ROW                                   -->
+<!-- ═══════════════════════════════════════════════════════════ -->
+
+<section class="demo">
+    <p class="demo-title">2. Table of contents</p>
+    <p class="demo-context">Outdented: &ldquo;Sections&rdquo; aligns with the list items below.</p>
+
+    <div class="toc-row">
+        <nav class="toc">
+            <h2><span class="sym">§</span> Sections</h2>
+            <ul>
+                <li><a href="#">Onboarding</a> <button class="edit-pencil">&#9998;</button></li>
+                <li><a href="#">Dashboard</a> <button class="edit-pencil">&#9998;</button></li>
+                <li><a href="#">Settings &amp; Preferences</a> <button class="edit-pencil">&#9998;</button></li>
+            </ul>
+        </nav>
+        <nav class="toc">
+            <h2><span class="sym">❋</span> Themes</h2>
+            <ul>
+                <li><a href="#">Trust &amp; credibility</a> <button class="edit-pencil">&#9998;</button></li>
+                <li><a href="#">Learning curve</a> <button class="edit-pencil">&#9998;</button></li>
+            </ul>
+        </nav>
+    </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<!-- 3–4. CONTENT SECTION HEADINGS                              -->
+<!-- ═══════════════════════════════════════════════════════════ -->
+
+<section class="demo">
+    <p class="demo-title">3. Content heading — Sections</p>
+    <p class="demo-context">Outdented: &ldquo;Sections&rdquo; aligns with the h3 and body text below.</p>
+
+    <div class="content-demo">
+        <h2><span class="sym">§</span> Sections</h2>
+        <h3>Onboarding <button class="edit-pencil">&#9998;</button></h3>
+        <p style="color: var(--bn-colour-muted); font-size: 0.9rem; font-style: italic;">Participants found the first-run flow confusing.</p>
+    </div>
+</section>
+
+<section class="demo">
+    <p class="demo-title">4. Content heading — Themes</p>
+    <p class="demo-context">Outdented: &ldquo;Themes&rdquo; aligns with the h3 and body text below.</p>
+
+    <div class="content-demo">
+        <h2><span class="sym">❋</span> Themes</h2>
+        <h3>Trust &amp; credibility <button class="edit-pencil">&#9998;</button></h3>
+        <p style="color: var(--bn-colour-muted); font-size: 0.9rem; font-style: italic;">Recurring pattern around data privacy and perceived reliability.</p>
+    </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<!-- 5. DASHBOARD STAT CARDS                                    -->
+<!-- ═══════════════════════════════════════════════════════════ -->
+
+<section class="demo">
+    <p class="demo-title">5. Dashboard stat cards</p>
+    <p class="demo-context">Exception: no outdent (centre-aligned cards). Symbol at half opacity because the label text is already muted.</p>
+
+    <div class="bn-project-stats">
+        <div class="bn-project-stat">
+            <span class="bn-project-stat-value">42</span>
+            <span class="bn-project-stat-label"><span class="sym-faded">¶</span> quotes</span>
+        </div>
+        <div class="bn-project-stat">
+            <span class="bn-project-stat-value">6</span>
+            <span class="bn-project-stat-label"><span class="sym-faded">§</span> sections</span>
+        </div>
+        <div class="bn-project-stat">
+            <span class="bn-project-stat-value">4</span>
+            <span class="bn-project-stat-label"><span class="sym-faded">❋</span> themes</span>
+        </div>
+        <div class="bn-project-stat">
+            <span class="bn-project-stat-value">38</span>
+            <span class="bn-project-stat-label">AI&#x2011;tagged</span>
+        </div>
+    </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<!-- 6–7. DASHBOARD PANE TABLES                                 -->
+<!-- ═══════════════════════════════════════════════════════════ -->
+
+<section class="demo">
+    <p class="demo-title">6–7. Dashboard pane tables</p>
+    <p class="demo-context">Outdented: h3 and first-column th. &ldquo;¶ Quotes&rdquo; column header is not outdented (narrow, right-aligned context).</p>
+
+    <div class="bn-dashboard-row">
+        <div class="bn-dashboard-pane">
+            <h3><span class="sym">§</span> Sections</h3>
+            <table class="bn-dashboard-list">
+                <thead><tr><th><span class="sym">§</span> Section</th><th><span class="sym-inline">¶</span> Quotes</th></tr></thead>
+                <tbody>
+                    <tr><td>Onboarding</td><td>12</td></tr>
+                    <tr><td>Dashboard</td><td>18</td></tr>
+                    <tr><td>Settings &amp; Preferences</td><td>12</td></tr>
+                </tbody>
+            </table>
+        </div>
+        <div class="bn-dashboard-pane">
+            <h3><span class="sym">❋</span> Themes</h3>
+            <table class="bn-dashboard-list">
+                <thead><tr><th><span class="sym">❋</span> Theme</th><th><span class="sym-inline">¶</span> Quotes</th></tr></thead>
+                <tbody>
+                    <tr><td>Trust &amp; credibility</td><td>9</td></tr>
+                    <tr><td>Learning curve</td><td>14</td></tr>
+                    <tr><td>Feature discovery</td><td>7</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<!-- 8. ANALYSIS PAGE HEADINGS                                  -->
+<!-- ═══════════════════════════════════════════════════════════ -->
+
+<section class="demo">
+    <p class="demo-title">8. Analysis page headings</p>
+    <p class="demo-context">Outdented: &ldquo;Section&rdquo; and &ldquo;Theme&rdquo; align with the description text below.</p>
+
+    <h2 class="section-heading"><span class="sym">§</span> Section &times; Sentiment</h2>
+    <p class="section-desc">Quote counts per report section and sentiment. Coloured cells show where a sentiment is more or less concentrated than expected.</p>
+
+    <h2 class="section-heading" style="margin-top: var(--bn-space-xl);"><span class="sym">❋</span> Theme &times; Sentiment</h2>
+    <p class="section-desc">The same view grouped by cross-cutting themes instead of sections. Themes span multiple sections &mdash; a pattern here means the sentiment recurs across different parts of the product.</p>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<!-- 9. SIGNAL CARDS                                            -->
+<!-- ═══════════════════════════════════════════════════════════ -->
+
+<section class="demo">
+    <p class="demo-title">9. Signal cards</p>
+    <p class="demo-context">Exception: no outdent (small label inside a card). Symbol at half opacity because the label text is already muted.</p>
+
+    <div class="signal-cards">
+        <div class="signal-card" style="--card-accent: var(--bn-sentiment-frustration);">
+            <div class="signal-card-top">
+                <div class="signal-card-identity">
+                    <span class="signal-card-source"><span class="sym-faded">§</span> Section</span>
+                    <div class="signal-card-location">Onboarding</div>
+                    <span class="badge badge-frustration">frustration</span>
+                </div>
+                <div class="signal-card-metrics">
+                    <span class="metric-label">Signal:</span>
+                    <span class="metric-value">4.20</span>
+                    <span class="metric-label">Concentration:</span>
+                    <span class="metric-value">2.1&times;</span>
+                    <span class="metric-label">Agreement:</span>
+                    <span class="metric-value">85%</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="signal-card" style="--card-accent: var(--bn-sentiment-satisfaction);">
+            <div class="signal-card-top">
+                <div class="signal-card-identity">
+                    <span class="signal-card-source"><span class="sym-faded">❋</span> Theme</span>
+                    <div class="signal-card-location">Trust &amp; credibility</div>
+                    <span class="badge badge-satisfaction">satisfaction</span>
+                </div>
+                <div class="signal-card-metrics">
+                    <span class="metric-label">Signal:</span>
+                    <span class="metric-value">3.15</span>
+                    <span class="metric-label">Concentration:</span>
+                    <span class="metric-value">1.8&times;</span>
+                    <span class="metric-label">Agreement:</span>
+                    <span class="metric-value">72%</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<!-- 10. HEATMAP HEADER ROWS                                    -->
+<!-- ═══════════════════════════════════════════════════════════ -->
+
+<section class="demo">
+    <p class="demo-title">10. Heatmap tables</p>
+    <p class="demo-context">Outdented: first-column header. Row label data aligns with the word, not the symbol.</p>
+
+    <table class="analysis-heatmap">
+        <thead>
+            <tr>
+                <th><span class="sym">§</span> Section</th>
+                <th><span class="badge badge-frustration">frustration</span></th>
+                <th><span class="badge badge-satisfaction">satisfaction</span></th>
+                <th><span class="badge badge-confidence">confidence</span></th>
+                <th>Total</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr><td>Onboarding</td><td>8</td><td>2</td><td>1</td><td>11</td></tr>
+            <tr><td>Dashboard</td><td>3</td><td>7</td><td>4</td><td>14</td></tr>
+        </tbody>
+    </table>
+
+    <table class="analysis-heatmap">
+        <thead>
+            <tr>
+                <th><span class="sym">❋</span> Theme</th>
+                <th><span class="badge badge-frustration">frustration</span></th>
+                <th><span class="badge badge-satisfaction">satisfaction</span></th>
+                <th><span class="badge badge-confidence">confidence</span></th>
+                <th>Total</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr><td>Trust &amp; credibility</td><td>2</td><td>5</td><td>3</td><td>10</td></tr>
+            <tr><td>Learning curve</td><td>6</td><td>1</td><td>2</td><td>9</td></tr>
+        </tbody>
+    </table>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<!-- 11. TRANSCRIPT MARGIN ANNOTATIONS                          -->
+<!-- ═══════════════════════════════════════════════════════════ -->
+
+<section class="demo">
+    <p class="demo-title">11. Transcript margin annotations</p>
+    <p class="demo-context">Exception: no outdent (tooltip text). Symbol shown in tooltip preview below.</p>
+
+    <div class="transcript-demo">
+        <div class="transcript-segment">
+            <span class="timecode">[02:34]</span>
+            <span class="speaker-code">p1:</span>
+            I had no idea where to click. The whole first-time experience was just&hellip; I kept going back and forth between pages trying to figure out what to do next.
+        </div>
+        <div class="segment-margin">
+            <div class="margin-annotation">
+                <a class="margin-label" href="#">Onboarding</a>
+                <p class="tooltip-preview">tooltip: &ldquo;<span class="sym-faded">§</span> Section: Onboarding&rdquo;</p>
+                <div class="margin-tags">
+                    <span class="badge badge-frustration" style="font-size:0.65rem; padding:1px 4px; line-height:1.4;">frustration</span>
+                </div>
+            </div>
+            <div class="margin-annotation" style="margin-top: var(--bn-space-md);">
+                <a class="margin-label" href="#">Learning curve</a>
+                <p class="tooltip-preview">tooltip: &ldquo;<span class="sym-faded">❋</span> Theme: Learning curve&rdquo;</p>
+                <div class="margin-tags">
+                    <span class="badge badge-satisfaction" style="font-size:0.65rem; padding:1px 4px; line-height:1.4;">satisfaction</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<!-- 12. CODEBOOK TOOLTIPS                                      -->
+<!-- ═══════════════════════════════════════════════════════════ -->
+
+<section class="demo">
+    <p class="demo-title">12. Codebook tooltips</p>
+    <p class="demo-context">Exception: no outdent (tooltip text). Symbol at half opacity in tooltip preview.</p>
+
+    <div class="codebook-demo">
+        <div class="codebook-item">
+            <span class="badge badge-user">usability</span>
+            <p class="tooltip-preview">tooltip: &ldquo;usability &mdash; 3 <span class="sym-faded">¶</span> quotes&rdquo;</p>
+        </div>
+        <div class="codebook-item">
+            <span class="badge badge-user">navigation</span>
+            <p class="tooltip-preview">tooltip: &ldquo;navigation &mdash; 7 <span class="sym-faded">¶</span> quotes&rdquo;</p>
+        </div>
+        <div class="codebook-item">
+            <span style="font-size: 0.8rem; color: var(--bn-colour-text); font-weight: 600;">10</span>
+            <p class="tooltip-preview">tooltip: &ldquo;10 <span class="sym-faded">¶</span> quotes&rdquo; (group total)</p>
+        </div>
+    </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<!-- 13. MARKDOWN OUTPUT                                        -->
+<!-- ═══════════════════════════════════════════════════════════ -->
+
+<section class="demo">
+    <p class="demo-title">13. Markdown / text output</p>
+    <p class="demo-context">Plain text — no colour or outdent possible. Symbol is just a character.</p>
+
+    <div class="markdown-demo">## § Sections
+
+### Onboarding
+
+_Participants found the first-run flow confusing._
+
+> [02:34] &ldquo;I had no idea where to click&rdquo; &mdash; p1
+
+---
+
+## ❋ Themes
+
+### Trust &amp; credibility
+
+_Recurring pattern around data privacy and perceived reliability._
+
+> [14:02] &ldquo;I wouldn&rsquo;t put my real email in here&rdquo; &mdash; p3</div>
+</section>
+
+<script>
+function toggleTheme() {
+    var h = document.documentElement;
+    h.setAttribute('data-theme', h.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
+}
+</script>
+
+</body>
+</html>

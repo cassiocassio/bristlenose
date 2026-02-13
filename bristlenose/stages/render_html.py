@@ -27,6 +27,7 @@ from bristlenose.models import (
     format_timecode,
 )
 from bristlenose.utils.markdown import format_finder_date, format_finder_filename
+from bristlenose.utils.timecodes import format_duration_human
 
 logger = logging.getLogger(__name__)
 
@@ -311,7 +312,7 @@ def render_html(
 
     # --- Session Summary (at top for quick reference) ---
     if sessions:
-        session_rows, moderator_header = _build_session_rows(
+        session_rows, moderator_header, observer_header = _build_session_rows(
             sessions, people, display_names, video_map, now,
             screen_clusters=screen_clusters,
             all_quotes=all_quotes,
@@ -319,6 +320,7 @@ def render_html(
         _w(_jinja_env.get_template("session_table.html").render(
             rows=session_rows,
             moderator_header=moderator_header,
+            observer_header=observer_header,
         ).rstrip("\n"))
 
     # Close session grid
@@ -773,14 +775,15 @@ def _build_session_rows(
     now: datetime,
     screen_clusters: list[ScreenCluster] | None = None,
     all_quotes: list[ExtractedQuote] | None = None,
-) -> tuple[list[dict[str, object]], str]:
-    """Build session-table row dicts and moderator header HTML.
+) -> tuple[list[dict[str, object]], str, str]:
+    """Build session-table row dicts, moderator header HTML, and observer header HTML.
 
-    Returns (rows, moderator_header_html).
+    Returns (rows, moderator_header_html, observer_header_html).
     """
     # Build session_id → sorted speaker codes from people entries.
     session_codes: dict[str, list[str]] = {}
     all_moderator_codes: list[str] = []
+    all_observer_codes: list[str] = []
     if people and people.participants:
         for code, entry in people.participants.items():
             sid_key = entry.computed.session_id
@@ -788,14 +791,19 @@ def _build_session_rows(
                 session_codes.setdefault(sid_key, []).append(code)
             if code.startswith("m") and code not in all_moderator_codes:
                 all_moderator_codes.append(code)
+            elif code.startswith("o") and code not in all_observer_codes:
+                all_observer_codes.append(code)
         prefix_order = {"m": 0, "p": 1, "o": 2}
         for codes in session_codes.values():
             codes.sort(key=lambda c: (
                 prefix_order.get(c[0], 3) if c else 3,
                 int(c[1:]) if len(c) > 1 and c[1:].isdigit() else 0,
             ))
-    # Sort moderator codes naturally.
+    # Sort moderator and observer codes naturally.
     all_moderator_codes.sort(key=lambda c: (
+        int(c[1:]) if len(c) > 1 and c[1:].isdigit() else 0,
+    ))
+    all_observer_codes.sort(key=lambda c: (
         int(c[1:]) if len(c) > 1 and c[1:].isdigit() else 0,
     ))
 
@@ -806,15 +814,32 @@ def _build_session_rows(
     moderator_parts: list[str] = []
     for code in all_moderator_codes:
         name = _resolve_speaker_name(code, people, display_names)
+        name_html = f" {_esc(name)}" if name != code else ""
         moderator_parts.append(
             f'<span class="bn-person-id">'
-            f'<span class="badge">{_esc(code)}</span> {_esc(name)}'
+            f'<span class="badge">{_esc(code)}</span>{name_html}'
             f'</span>'
         )
     if moderator_parts:
-        moderator_header = "Sessions moderated by " + _oxford_list_html(moderator_parts)
+        moderator_header = "Moderated by " + _oxford_list_html(moderator_parts)
     else:
         moderator_header = ""
+
+    # Build observer header HTML (only if observers present).
+    observer_parts: list[str] = []
+    for code in all_observer_codes:
+        name = _resolve_speaker_name(code, people, display_names)
+        name_html = f" {_esc(name)}" if name != code else ""
+        observer_parts.append(
+            f'<span class="bn-person-id">'
+            f'<span class="badge">{_esc(code)}</span>{name_html}'
+            f'</span>'
+        )
+    if observer_parts:
+        noun = "Observer" if len(observer_parts) == 1 else "Observers"
+        observer_header = f"{noun}: " + _oxford_list_html(observer_parts)
+    else:
+        observer_header = ""
 
     # Derive journey data from screen clusters.
     participant_screens: dict[str, list[str]] = {}
@@ -880,7 +905,8 @@ def _build_session_rows(
             if omit_moderators_from_rows and code.startswith("m"):
                 continue
             name = _resolve_speaker_name(code, people, display_names)
-            speakers_list.append({"code": _esc(code), "name": _esc(name)})
+            display = _esc(name) if name != code else ""
+            speakers_list.append({"code": _esc(code), "name": display})
 
         # Journey: merge all participants' screen labels for this session.
         session_pids = [c for c in codes if c.startswith("p")]
@@ -905,7 +931,7 @@ def _build_session_rows(
             "has_media": has_media,
             "source_folder_uri": source_folder_uri,
         })
-    return rows, moderator_header
+    return rows, moderator_header, observer_header
 
 
 def _oxford_list_html(parts: list[str]) -> str:
@@ -955,10 +981,16 @@ def _pick_featured_quotes(
         return []
 
     # Filter: prefer quotes between 12–33 words (concise, readable in a card).
-    candidates = [q for q in all_quotes if 12 <= len(q.text.split()) <= 33]
-    if not candidates:
-        # Relax: accept any quote ≥ 12 words.
-        candidates = [q for q in all_quotes if len(q.text.split()) >= 12]
+    # If fewer than n match the preferred range, pad with longer quotes so we
+    # always have enough candidates to fill the requested slots.
+    preferred = [q for q in all_quotes if 12 <= len(q.text.split()) <= 33]
+    if len(preferred) >= n:
+        candidates = preferred
+    else:
+        # Pad with ≥ 12-word quotes not already in the preferred set.
+        longer = [q for q in all_quotes
+                  if len(q.text.split()) >= 12 and q not in preferred]
+        candidates = preferred + longer
     if not candidates:
         candidates = list(all_quotes)  # fall back to all if none qualify
 
@@ -1135,19 +1167,6 @@ def _render_project_tab(
     if all_quotes:
         n_ai_tagged = sum(1 for q in all_quotes if q.sentiment is not None)
 
-    # Moderator and observer names (by speaker-code prefix).
-    moderator_names: list[str] = []
-    observer_names: list[str] = []
-    if people and people.participants:
-        for code, entry in people.participants.items():
-            name = _display_name(code, display_names)
-            if code.startswith("m"):
-                if name not in moderator_names:
-                    moderator_names.append(name)
-            elif code.startswith("o"):
-                if name not in observer_names:
-                    observer_names.append(name)
-
     # Pick up to 9 featured-quote candidates so JS can swap hidden/unstarred.
     featured_pool = _pick_featured_quotes(all_quotes or [], n=9)
 
@@ -1157,14 +1176,39 @@ def _render_project_tab(
     _w('<div class="bn-dashboard-full">')
     _w('<div class="bn-project-stats">')
 
+    # Session count — first stat card.
+    n_sessions = len(sessions)
+    _w(f'<div class="bn-project-stat" data-stat-link="sessions">'
+       f'<span class="bn-project-stat-value">{n_sessions}</span>'
+       f'<span class="bn-project-stat-label">'
+       f"session{'s' if n_sessions != 1 else ''}"
+       f'</span></div>')
+
+    # Determine input-type label: "of video", "of audio", "of transcripts",
+    # or "of sessions" when the project mixes source types.
+    _has_video = any(s.has_video for s in sessions)
+    _has_audio = any(s.has_audio and not s.has_video for s in sessions)
+    _has_transcript = any(
+        not s.has_video and not s.has_audio for s in sessions
+    )
+    _kind_count = sum([_has_video, _has_audio, _has_transcript])
+    if _kind_count > 1:
+        _duration_label = "of sessions"
+    elif _has_video:
+        _duration_label = "of video"
+    elif _has_audio:
+        _duration_label = "of audio"
+    else:
+        _duration_label = "of transcripts"
+
     # Duration + words — combined borderless pair.
     if total_duration_s > 0 or total_words > 0:
         _w('<div class="bn-project-stat bn-project-stat--pair">')
         if total_duration_s > 0:
             _w(f'<div class="bn-project-stat--pair-half" data-stat-link="sessions">'
                f'<span class="bn-project-stat-value">'
-               f'{format_timecode(total_duration_s)}</span>'
-               f'<span class="bn-project-stat-label">of audio</span></div>')
+               f'{format_duration_human(total_duration_s)}</span>'
+               f'<span class="bn-project-stat-label">{_duration_label}</span></div>')
         if total_words > 0:
             _w(f'<div class="bn-project-stat--pair-half" data-stat-link="sessions">'
                f'<span class="bn-project-stat-value">'
@@ -1172,29 +1216,28 @@ def _render_project_tab(
                f'<span class="bn-project-stat-label">words</span></div>')
         _w('</div>')
 
-    # Quotes, sections, themes — separate cards.
-    _w(f'<div class="bn-project-stat" data-stat-link="quotes">'
+    # Quotes + themes — paired card.
+    _w('<div class="bn-project-stat bn-project-stat--pair">')
+    _w(f'<div class="bn-project-stat--pair-half" data-stat-link="quotes">'
        f'<span class="bn-project-stat-value">{n_quotes}</span>'
        f'<span class="bn-project-stat-label">'
        f"quote{'s' if n_quotes != 1 else ''}"
        f'</span></div>')
-    if n_sections or n_themes:
-        _w('<div class="bn-project-stat bn-project-stat--pair">')
-        if n_sections:
-            _w(f'<div class="bn-project-stat--pair-half"'
-               f' data-stat-link="quotes:sections">'
-               f'<span class="bn-project-stat-value">{n_sections}</span>'
-               f'<span class="bn-project-stat-label">'
-               f"section{'s' if n_sections != 1 else ''}"
-               f'</span></div>')
-        if n_themes:
-            _w(f'<div class="bn-project-stat--pair-half"'
-               f' data-stat-link="quotes:themes">'
-               f'<span class="bn-project-stat-value">{n_themes}</span>'
-               f'<span class="bn-project-stat-label">'
-               f"theme{'s' if n_themes != 1 else ''}"
-               f'</span></div>')
-        _w('</div>')
+    if n_themes:
+        _w(f'<div class="bn-project-stat--pair-half"'
+           f' data-stat-link="quotes:themes">'
+           f'<span class="bn-project-stat-value">{n_themes}</span>'
+           f'<span class="bn-project-stat-label">'
+           f"theme{'s' if n_themes != 1 else ''}"
+           f'</span></div>')
+    _w('</div>')
+    # Sections — standalone card (only if present).
+    if n_sections:
+        _w(f'<div class="bn-project-stat" data-stat-link="quotes:sections">'
+           f'<span class="bn-project-stat-value">{n_sections}</span>'
+           f'<span class="bn-project-stat-label">'
+           f"section{'s' if n_sections != 1 else ''}"
+           f'</span></div>')
 
     # AI-tagged + user tags — paired card.
     _w('<div class="bn-project-stat bn-project-stat--pair">')
@@ -1211,28 +1254,12 @@ def _render_project_tab(
     _w("</div>")
     _w("</div>")
 
-    # Moderators.
-    if moderator_names:
-        label = "Moderator" if len(moderator_names) == 1 else "Moderators"
-        _w(f'<div class="bn-project-stat bn-project-stat--text">'
-           f'<span class="bn-project-stat-label">{label}:</span> '
-           f'{_esc(_oxford_list(moderator_names))}'
-           f'</div>')
-
-    # Observers (only if present).
-    if observer_names:
-        label = "Observer" if len(observer_names) == 1 else "Observers"
-        _w(f'<div class="bn-project-stat bn-project-stat--text">'
-           f'<span class="bn-project-stat-label">{label}:</span> '
-           f'{_esc(_oxford_list(observer_names))}'
-           f'</div>')
-
     _w("</div>")  # .bn-project-stats
     _w("</div>")  # .bn-dashboard-pane (stats)
 
     # --- 2. Sessions (full width) ---
     if sessions:
-        session_rows, moderator_header = _build_session_rows(
+        session_rows, moderator_header, observer_header = _build_session_rows(
             sessions, people, display_names, video_map, now,
             screen_clusters=screen_clusters,
             all_quotes=all_quotes,
@@ -1241,6 +1268,7 @@ def _render_project_tab(
         _w(_jinja_env.get_template("dashboard_session_table.html").render(
             rows=session_rows,
             moderator_header=moderator_header,
+            observer_header=observer_header,
         ).rstrip("\n"))
         _w("</div>")
 
@@ -1257,26 +1285,26 @@ def _render_project_tab(
     # --- 4. Sections + Themes row (1/2 + 1/2) ---
     if screen_clusters:
         _w('<div class="bn-dashboard-pane">')
-        _w('<table class="bn-dashboard-list">')
-        _w("<thead><tr><th>Section</th></tr></thead>")
-        _w("<tbody>")
+        _w('<nav class="bn-dashboard-nav">')
+        _w("<h3>Sections</h3>")
+        _w("<ul>")
         for cluster in screen_clusters:
             anchor = f"section-{cluster.screen_label.lower().replace(' ', '-')}"
-            _w(f'<tr><td><a href="#{_esc(anchor)}">'
-               f'{_esc(cluster.screen_label)}</a></td></tr>')
-        _w("</tbody></table>")
+            _w(f'<li><a href="#{_esc(anchor)}">'
+               f'{_esc(cluster.screen_label)}</a></li>')
+        _w("</ul></nav>")
         _w("</div>")
 
     if theme_groups:
         _w('<div class="bn-dashboard-pane">')
-        _w('<table class="bn-dashboard-list">')
-        _w("<thead><tr><th>Theme</th></tr></thead>")
-        _w("<tbody>")
+        _w('<nav class="bn-dashboard-nav">')
+        _w("<h3>Themes</h3>")
+        _w("<ul>")
         for theme in theme_groups:
             anchor = f"theme-{theme.theme_label.lower().replace(' ', '-')}"
-            _w(f'<tr><td><a href="#{_esc(anchor)}">'
-               f'{_esc(theme.theme_label)}</a></td></tr>')
-        _w("</tbody></table>")
+            _w(f'<li><a href="#{_esc(anchor)}">'
+               f'{_esc(theme.theme_label)}</a></li>')
+        _w("</ul></nav>")
         _w("</div>")
 
     _w("</div>")  # .bn-dashboard

@@ -187,7 +187,7 @@ function initGlobalNav() {
   }
 
   // --- Dashboard section/theme list links — switch to Quotes tab + scroll ---
-  var dashListLinks = document.querySelectorAll('.bn-dashboard-list a[href^="#"]');
+  var dashListLinks = document.querySelectorAll('.bn-dashboard-nav a[href^="#"]');
   for (var ll = 0; ll < dashListLinks.length; ll++) {
     dashListLinks[ll].addEventListener('click', function (e) {
       e.preventDefault();

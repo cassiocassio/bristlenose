@@ -134,10 +134,22 @@
     margin: 0;
 }
 
-/* Compact list tables (sections/themes) — no row borders */
-.bn-dashboard-list td {
-    border-bottom: none;
-    padding: 0.3rem var(--bn-space-md);
+/* Compact nav lists (sections/themes) — mirrors .toc pattern */
+.bn-dashboard-nav ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+.bn-dashboard-nav li {
+    margin: var(--bn-space-xs) 0;
+    font-size: 0.9rem;
+}
+.bn-dashboard-nav a {
+    color: var(--bn-colour-accent);
+    text-decoration: none;
+}
+.bn-dashboard-nav a:hover {
+    text-decoration: underline;
 }
 
 /* Stat cards inside the stats pane */

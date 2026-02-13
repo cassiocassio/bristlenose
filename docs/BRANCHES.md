@@ -2,7 +2,7 @@
 
 This document tracks active feature branches to help multiple Claude sessions coordinate without conflicts.
 
-**Updated:** 12 Feb 2026
+**Updated:** 13 Feb 2026
 
 ---
 
@@ -15,7 +15,6 @@ Each active feature branch gets its own **git worktree** — a full working copy
 | Directory | Branch | Purpose |
 |-----------|--------|---------|
 | `bristlenose/` | `main` | Main repo, releases, hotfixes |
-| `bristlenose_branch project-dashboard/` | `project-dashboard` | At-a-glance project dashboard (non-scrolling) |
 | `bristlenose_branch symbology/` | `symbology` | § ¶ ❋ Unicode prefix symbols for sections, quotes, themes |
 
 **Creating a new feature branch worktree:**
@@ -94,24 +93,11 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 | Branch | Local worktree | GitHub remote |
 |--------|---------------|---------------|
 | `main` | `bristlenose/` | `origin/main` (push via `origin/main:wip` until release time) |
-| `project-dashboard` | `bristlenose_branch project-dashboard/` | `origin/project-dashboard` |
 | `symbology` | `bristlenose_branch symbology/` | `origin/symbology` |
 
 ---
 
 ## Active Branches
-
-### `project-dashboard` — started 12 Feb 2026
-
-**Worktree:** `/Users/cassio/Code/bristlenose_branch project-dashboard`
-
-**Goal:** Redesign the Project tab as a non-scrolling, at-a-glance dashboard. Minify elements (stats, sections, themes, sentiment) to fit within a single viewport.
-
-**Files likely to touch:**
-- `bristlenose/stages/render_html.py` — Project tab HTML generation
-- `bristlenose/theme/templates/report.css` — Dashboard layout styles
-- `bristlenose/theme/js/` — Any dashboard-specific JS
-- New CSS files in `bristlenose/theme/molecules/` or `bristlenose/theme/organisms/`
 
 ### `symbology` — started 12 Feb 2026
 
@@ -132,6 +118,10 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 ---
 
 ## Completed Branches (for reference)
+
+### `project-dashboard` — merged 13 Feb 2026
+
+At-a-glance project dashboard redesign. Clickable stats, featured quotes, session rows, cross-tab navigation. Compact layout with paired stats, slim session table, linked sections/themes. Non-scrolling single-viewport design for the Project tab.
 
 ### `analysis` — merged 11 Feb 2026
 

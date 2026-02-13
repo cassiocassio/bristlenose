@@ -958,6 +958,13 @@ def _pick_featured_quotes(
 ) -> list[ExtractedQuote]:
     """Select the N most interesting quotes for the dashboard.
 
+    Word-count filtering
+    ────────────────────
+    Quotes between 12–33 words are preferred (concise, readable in a card).
+    When fewer than *n* match the preferred range, the pool is padded with
+    longer (≥ 12-word) quotes so we always have enough candidates.  Falls
+    back to all quotes only if nothing reaches 12 words.
+
     Scoring algorithm
     ─────────────────
     Each quote gets a numeric score based on available server-side data:
@@ -967,12 +974,12 @@ def _pick_featured_quotes(
                     +2 for delight or surprise
                     +1 for satisfaction or confidence
       • Context:    +1 if researcher_context is present (editorial enrichment)
-      • Length:     +1 per 10 words above 12-word minimum (capped at +3)
+      • Length:     penalty for quotes > 33 words (up to −2)
 
     After scoring, the top candidates are diversified:
       1. Must be from different participants (rotate through participants).
       2. Prefer a mix of sentiment polarities (positive / negative / surprise).
-      3. If fewer than 3 qualify after filters, return whatever we have.
+      3. If fewer than n qualify after filters, return whatever we have.
 
     Client-side JS will further adjust: boost starred quotes, swap out hidden
     ones for the next-best alternative.

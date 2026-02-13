@@ -323,16 +323,16 @@ def test_dashboard_stats_pane_full_width(tmp_path: Path) -> None:
 
 
 def test_dashboard_sections_table(tmp_path: Path) -> None:
-    """Dashboard includes a sections table with names and quote counts."""
+    """Dashboard includes a sections table with linked names."""
     html = _render_report(tmp_path)
-    assert "Sections</h3>" in html
+    assert "<th>Section</th>" in html
     assert "Homepage" in html
 
 
 def test_dashboard_themes_table(tmp_path: Path) -> None:
-    """Dashboard includes a themes table with names and quote counts."""
+    """Dashboard includes a themes table with linked names."""
     html = _render_report(tmp_path)
-    assert "Themes</h3>" in html
+    assert "<th>Theme</th>" in html
     assert "Brand perception" in html
 
 

@@ -1046,31 +1046,13 @@ def _render_featured_quote(
 ) -> str:
     """Render a single featured quote card for the dashboard."""
     quote_id = f"q-{quote.participant_id}-{int(quote.start_timecode)}"
-    tc = format_timecode(quote.start_timecode)
+    tc_html = _timecode_html(quote, video_map)
 
-    # Timecode link.
-    if video_map and quote.participant_id in video_map:
-        tc_html = (
-            f'<a href="#" class="timecode" '
-            f'data-participant="{_esc(quote.participant_id)}" '
-            f'data-seconds="{quote.start_timecode}" '
-            f'data-end-seconds="{quote.end_timecode}">{_tc_brackets(tc)}</a>'
-        )
-    else:
-        tc_html = f'<span class="timecode">{_tc_brackets(tc)}</span>'
-
-    # Speaker name.
-    speaker_name = _resolve_speaker_name(
-        quote.participant_id, people, display_names,
-    )
-
-    # Speaker link → navigates to Sessions tab.
-    pid_esc = _esc(quote.participant_id)
-    sid_esc = _esc(quote.session_id) if quote.session_id else pid_esc
-    anchor = f"t-{sid_esc}-{int(quote.start_timecode)}"
-    speaker_link = (
-        f'<a href="#" class="speaker-link" data-nav-session="{sid_esc}"'
-        f' data-nav-anchor="{anchor}">{_esc(speaker_name)}</a>'
+    # Speaker code lozenge → navigates to Sessions tab on card click.
+    pid_esc, sid_esc, anchor = _session_anchor(quote)
+    speaker_badge = (
+        f'<a href="#" class="badge speaker-link" data-nav-session="{sid_esc}"'
+        f' data-nav-anchor="{anchor}">{pid_esc}</a>'
     )
 
     # AI badge (sentiment only — lightweight).
@@ -1095,7 +1077,7 @@ def _render_featured_quote(
         f'<span class="quote-text">\u201c{_esc(quote.text)}\u201d</span>'
         f'<div class="bn-featured-footer">'
         f"{tc_html}"
-        f'<span class="speaker">&mdash;&nbsp;{speaker_link}</span>'
+        f"{speaker_badge}"
         f"{badge_html}"
         f"</div>"
         f"</div>"
@@ -1153,12 +1135,6 @@ def _render_project_tab(
     if all_quotes:
         n_ai_tagged = sum(1 for q in all_quotes if q.sentiment is not None)
 
-    # Coverage percentage.
-    coverage_pct: int | None = None
-    if transcripts and all_quotes:
-        coverage = calculate_coverage(transcripts, all_quotes)
-        coverage_pct = coverage.pct_in_report
-
     # Moderator and observer names (by speaker-code prefix).
     moderator_names: list[str] = []
     observer_names: list[str] = []
@@ -1178,57 +1154,62 @@ def _render_project_tab(
     _w('<div class="bn-dashboard">')
 
     # --- 1. Stats row (full width) ---
-    _w('<div class="bn-dashboard-pane bn-dashboard-full">')
+    _w('<div class="bn-dashboard-full">')
     _w('<div class="bn-project-stats">')
 
-    # Duration + words.
-    if total_duration_s > 0:
-        _w(f'<div class="bn-project-stat">'
-           f'<span class="bn-project-stat-value">'
-           f'{format_timecode(total_duration_s)}</span>'
-           f'<span class="bn-project-stat-label">of audio</span></div>')
-    if total_words > 0:
-        _w(f'<div class="bn-project-stat">'
-           f'<span class="bn-project-stat-value">'
-           f'{total_words:,}</span>'
-           f'<span class="bn-project-stat-label">words</span></div>')
+    # Duration + words — combined borderless pair.
+    if total_duration_s > 0 or total_words > 0:
+        _w('<div class="bn-project-stat bn-project-stat--pair">')
+        if total_duration_s > 0:
+            _w(f'<div class="bn-project-stat--pair-half" data-stat-link="sessions">'
+               f'<span class="bn-project-stat-value">'
+               f'{format_timecode(total_duration_s)}</span>'
+               f'<span class="bn-project-stat-label">of audio</span></div>')
+        if total_words > 0:
+            _w(f'<div class="bn-project-stat--pair-half" data-stat-link="sessions">'
+               f'<span class="bn-project-stat-value">'
+               f'{total_words:,}</span>'
+               f'<span class="bn-project-stat-label">words</span></div>')
+        _w('</div>')
 
     # Quotes, sections, themes — separate cards.
-    _w(f'<div class="bn-project-stat">'
+    _w(f'<div class="bn-project-stat" data-stat-link="quotes">'
        f'<span class="bn-project-stat-value">{n_quotes}</span>'
        f'<span class="bn-project-stat-label">'
        f"quote{'s' if n_quotes != 1 else ''}"
        f'</span></div>')
-    if n_sections:
-        _w(f'<div class="bn-project-stat">'
-           f'<span class="bn-project-stat-value">{n_sections}</span>'
-           f'<span class="bn-project-stat-label">'
-           f"section{'s' if n_sections != 1 else ''}"
-           f'</span></div>')
-    if n_themes:
-        _w(f'<div class="bn-project-stat">'
-           f'<span class="bn-project-stat-value">{n_themes}</span>'
-           f'<span class="bn-project-stat-label">'
-           f"theme{'s' if n_themes != 1 else ''}"
-           f'</span></div>')
+    if n_sections or n_themes:
+        _w('<div class="bn-project-stat bn-project-stat--pair">')
+        if n_sections:
+            _w(f'<div class="bn-project-stat--pair-half"'
+               f' data-stat-link="quotes:sections">'
+               f'<span class="bn-project-stat-value">{n_sections}</span>'
+               f'<span class="bn-project-stat-label">'
+               f"section{'s' if n_sections != 1 else ''}"
+               f'</span></div>')
+        if n_themes:
+            _w(f'<div class="bn-project-stat--pair-half"'
+               f' data-stat-link="quotes:themes">'
+               f'<span class="bn-project-stat-value">{n_themes}</span>'
+               f'<span class="bn-project-stat-label">'
+               f"theme{'s' if n_themes != 1 else ''}"
+               f'</span></div>')
+        _w('</div>')
 
-    # AI-tagged.
+    # AI-tagged + user tags — paired card.
+    _w('<div class="bn-project-stat bn-project-stat--pair">')
     if n_ai_tagged:
-        _w(f'<div class="bn-project-stat">'
+        _w(f'<div class="bn-project-stat--pair-half"'
+           f' data-stat-link="analysis:section-x-sentiment">'
            f'<span class="bn-project-stat-value">{n_ai_tagged}</span>'
-           f'<span class="bn-project-stat-label">AI\u2011tagged</span></div>')
-
+           f'<span class="bn-project-stat-label">AI tags</span></div>')
     # User tags — JS-populated from localStorage.
-    _w('<div class="bn-project-stat" id="dashboard-user-tags-stat" style="display:none">')
+    _w('<div class="bn-project-stat--pair-half" id="dashboard-user-tags-stat"'
+       ' data-stat-link="codebook" style="display:none">')
     _w('<span class="bn-project-stat-value" id="dashboard-user-tags-value"></span>')
     _w('<span class="bn-project-stat-label" id="dashboard-user-tags-label"></span>')
     _w("</div>")
-
-    # Coverage.
-    if coverage_pct is not None:
-        _w(f'<div class="bn-project-stat">'
-           f'<span class="bn-project-stat-value">{coverage_pct}%</span>'
-           f'<span class="bn-project-stat-label">coverage</span></div>')
+    _w("</div>")
 
     # Moderators.
     if moderator_names:
@@ -1257,7 +1238,7 @@ def _render_project_tab(
             all_quotes=all_quotes,
         )
         _w('<div class="bn-dashboard-pane bn-dashboard-full">')
-        _w(_jinja_env.get_template("session_table.html").render(
+        _w(_jinja_env.get_template("dashboard_session_table.html").render(
             rows=session_rows,
             moderator_header=moderator_header,
         ).rstrip("\n"))
@@ -1276,36 +1257,27 @@ def _render_project_tab(
     # --- 4. Sections + Themes row (1/2 + 1/2) ---
     if screen_clusters:
         _w('<div class="bn-dashboard-pane">')
-        _w("<h3>Sections</h3>")
         _w('<table class="bn-dashboard-list">')
-        _w("<thead><tr><th>Section</th><th>Quotes</th></tr></thead>")
+        _w("<thead><tr><th>Section</th></tr></thead>")
         _w("<tbody>")
         for cluster in screen_clusters:
-            _w(f"<tr><td>{_esc(cluster.screen_label)}</td>"
-               f"<td>{len(cluster.quotes)}</td></tr>")
+            anchor = f"section-{cluster.screen_label.lower().replace(' ', '-')}"
+            _w(f'<tr><td><a href="#{_esc(anchor)}">'
+               f'{_esc(cluster.screen_label)}</a></td></tr>')
         _w("</tbody></table>")
         _w("</div>")
 
     if theme_groups:
         _w('<div class="bn-dashboard-pane">')
-        _w("<h3>Themes</h3>")
         _w('<table class="bn-dashboard-list">')
-        _w("<thead><tr><th>Theme</th><th>Quotes</th></tr></thead>")
+        _w("<thead><tr><th>Theme</th></tr></thead>")
         _w("<tbody>")
         for theme in theme_groups:
-            _w(f"<tr><td>{_esc(theme.theme_label)}</td>"
-               f"<td>{len(theme.quotes)}</td></tr>")
+            anchor = f"theme-{theme.theme_label.lower().replace(' ', '-')}"
+            _w(f'<tr><td><a href="#{_esc(anchor)}">'
+               f'{_esc(theme.theme_label)}</a></td></tr>')
         _w("</tbody></table>")
         _w("</div>")
-
-    # --- 5. Sentiment ---
-    if all_quotes:
-        sentiment_html = _build_sentiment_html(all_quotes)
-        if sentiment_html:
-            _w('<div class="bn-dashboard-pane bn-dashboard-full">')
-            _w("<h3>Sentiment</h3>")
-            _w(sentiment_html)
-            _w("</div>")
 
     _w("</div>")  # .bn-dashboard
 
@@ -2197,6 +2169,30 @@ def _tc_brackets(tc: str) -> str:
     return f'<span class="timecode-bracket">[</span>{tc}<span class="timecode-bracket">]</span>'
 
 
+def _timecode_html(
+    quote: ExtractedQuote,
+    video_map: dict[str, str] | None,
+) -> str:
+    """Build timecode HTML — clickable link if video exists, plain span otherwise."""
+    tc = format_timecode(quote.start_timecode)
+    if video_map and quote.participant_id in video_map:
+        return (
+            f'<a href="#" class="timecode" '
+            f'data-participant="{_esc(quote.participant_id)}" '
+            f'data-seconds="{quote.start_timecode}" '
+            f'data-end-seconds="{quote.end_timecode}">{_tc_brackets(tc)}</a>'
+        )
+    return f'<span class="timecode">{_tc_brackets(tc)}</span>'
+
+
+def _session_anchor(quote: ExtractedQuote) -> tuple[str, str, str]:
+    """Return (pid_esc, sid_esc, anchor) for a quote's session navigation."""
+    pid_esc = _esc(quote.participant_id)
+    sid_esc = _esc(quote.session_id) if quote.session_id else pid_esc
+    anchor = f"t-{sid_esc}-{int(quote.start_timecode)}"
+    return pid_esc, sid_esc, anchor
+
+
 def _display_name(
     pid: str, display_names: dict[str, str] | None
 ) -> str:
@@ -2247,24 +2243,12 @@ def _format_quote_html(
     video_map: dict[str, str] | None = None,
 ) -> str:
     """Render a single quote as an HTML blockquote."""
-    tc = format_timecode(quote.start_timecode)
     quote_id = f"q-{quote.participant_id}-{int(quote.start_timecode)}"
-
-    # Build timecode HTML — clickable link if video exists, plain span otherwise
-    if video_map and quote.participant_id in video_map:
-        tc_html = (
-            f'<a href="#" class="timecode" '
-            f'data-participant="{_esc(quote.participant_id)}" '
-            f'data-seconds="{quote.start_timecode}" '
-            f'data-end-seconds="{quote.end_timecode}">{_tc_brackets(tc)}</a>'
-        )
-    else:
-        tc_html = f'<span class="timecode">{_tc_brackets(tc)}</span>'
+    tc_html = _timecode_html(quote, video_map)
+    tc = format_timecode(quote.start_timecode)
 
     # Speaker link navigates to Sessions tab → session drill-down → timecode
-    pid_esc = _esc(quote.participant_id)
-    sid_esc = _esc(quote.session_id) if quote.session_id else pid_esc
-    anchor = f"t-{sid_esc}-{int(quote.start_timecode)}"
+    pid_esc, sid_esc, anchor = _session_anchor(quote)
     speaker_link = (
         f'<a href="#" class="speaker-link" data-nav-session="{sid_esc}"'
         f' data-nav-anchor="{anchor}">{pid_esc}</a>'

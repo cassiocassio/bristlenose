@@ -112,9 +112,26 @@
     margin-top: 0;
 }
 
+/* Paired pane — two halves side-by-side, shared border, no divider */
+.bn-dashboard-pane--pair {
+    display: flex;
+    gap: 0;
+    padding: 0;
+}
+.bn-dashboard-pane--pair-half {
+    flex: 1;
+    padding: var(--bn-space-lg);
+    min-width: 0;
+}
+
 /* Full-width pane spans both columns */
 .bn-dashboard-full {
     grid-column: 1 / -1;
+}
+
+/* Tables inside dashboard panes — kill base table margin (1rem 0) */
+.bn-dashboard-pane table {
+    margin: 0;
 }
 
 /* Compact list tables (sections/themes) — no row borders */
@@ -138,20 +155,48 @@
     border: 1px solid var(--bn-colour-border);
     border-radius: var(--bn-radius-md);
     min-width: 5.5rem;
+    cursor: pointer;
+    transition: background-color 0.15s ease;
+}
+.bn-project-stat:hover {
+    background-color: var(--bn-colour-hover);
 }
 
 .bn-project-stat-value {
     font-size: 1.5rem;
-    font-weight: 700;
+    font-weight: 400;
     color: var(--bn-colour-text);
     line-height: 1.2;
 }
 
 .bn-project-stat-label {
     font-size: 0.8rem;
-    color: var(--bn-colour-muted);
+    color: var(--bn-colour-text);
     margin-top: 0.15rem;
     text-align: center;
+}
+
+/* Paired stat card — two value/label stacks side-by-side, shared border */
+.bn-project-stat--pair {
+    flex-direction: row;
+    padding: 0;
+    gap: 0;
+    cursor: default;
+}
+.bn-project-stat--pair:hover {
+    background-color: transparent;
+}
+.bn-project-stat--pair-half {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: var(--bn-space-md) var(--bn-space-lg);
+    cursor: pointer;
+    transition: background-color 0.15s ease;
+    border-radius: var(--bn-radius-md);
+}
+.bn-project-stat--pair-half:hover {
+    background-color: var(--bn-colour-hover);
 }
 
 /* Text-style stat card (e.g. "Moderator: Name, Name, and Name") */
@@ -181,6 +226,11 @@
     overflow: hidden;
     display: flex;
     flex-direction: column;
+    cursor: pointer;
+    transition: background-color 0.15s ease;
+}
+.bn-featured-quote:hover {
+    background-color: var(--bn-colour-hover);
 }
 
 .bn-featured-quote .quote-text {
@@ -196,19 +246,19 @@
     margin-bottom: var(--bn-space-xs);
 }
 
-/* Footer: timecode — speaker, with optional badge */
+/* Footer: timecode + speaker badge, with optional sentiment badge */
 .bn-featured-footer {
     display: flex;
     align-items: center;
-    gap: var(--bn-space-sm);
+    gap: 1rem;
     margin-top: var(--bn-space-sm);
     font-size: 0.82rem;
     color: var(--bn-colour-muted);
     flex-wrap: wrap;
 }
-
-.bn-featured-footer .speaker {
-    white-space: nowrap;
+.bn-featured-footer a.badge {
+    text-decoration: none;
+    color: var(--bn-colour-badge-text);
 }
 
 /* Responsive: collapse dashboard to single column, scroll nav */

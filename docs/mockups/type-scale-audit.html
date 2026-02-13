@@ -1,0 +1,958 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Type Scale Audit — Bristlenose</title>
+<style>
+:root {
+    --bn-font-body: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
+    --bn-font-mono: "SF Mono", "Fira Code", "Consolas", monospace;
+    --bn-colour-bg: #ffffff;
+    --bn-colour-text: #1a1a1a;
+    --bn-colour-muted: #6b7280;
+    --bn-colour-border: #e5e7eb;
+    --bn-colour-accent: #2563eb;
+    --bn-colour-badge-bg: #f3f4f6;
+    --bn-colour-badge-text: #374151;
+    --bn-colour-icon-idle: #c9ccd1;
+    --bn-space-xs: 0.15rem;
+    --bn-space-sm: 0.35rem;
+    --bn-space-md: 0.75rem;
+    --bn-space-lg: 1.5rem;
+}
+body {
+    font-family: var(--bn-font-body);
+    color: var(--bn-colour-text);
+    background: var(--bn-colour-bg);
+    line-height: 1.6;
+    margin: 2rem auto;
+    max-width: 64rem;
+    padding: 0 1.5rem;
+}
+h1.page-title { font-size: 1.5rem; font-weight: 600; margin-bottom: 0.5rem; }
+.subtitle { font-size: 0.85rem; color: var(--bn-colour-muted); margin-bottom: 2rem; }
+
+/* Audit table */
+.audit-group { margin-bottom: 2.5rem; }
+.audit-group-title {
+    font-size: 0.7rem; font-weight: 600; text-transform: uppercase;
+    letter-spacing: 0.05em; color: var(--bn-colour-muted);
+    border-bottom: 1px solid var(--bn-colour-border);
+    padding-bottom: 0.3rem; margin-bottom: 1rem;
+}
+.audit-row {
+    display: grid;
+    grid-template-columns: 20rem 1fr 14rem;
+    gap: 1rem;
+    align-items: baseline;
+    padding: 0.4rem 0;
+    border-bottom: 1px solid #f3f4f6;
+}
+.audit-row:last-child { border-bottom: none; }
+.audit-meta {
+    font-size: 0.72rem; font-family: var(--bn-font-mono);
+    color: var(--bn-colour-muted); line-height: 1.4;
+}
+.audit-meta .file { color: #9ca3af; }
+.audit-meta .props { color: var(--bn-colour-text); }
+.audit-sample { min-width: 0; }
+
+/* Flag markers */
+.flag {
+    display: inline-block; font-size: 0.6rem; font-weight: 600;
+    text-transform: uppercase; letter-spacing: 0.03em;
+    padding: 0.1rem 0.35rem; border-radius: 3px;
+    vertical-align: middle; margin-left: 0.4rem;
+}
+.flag-dup { background: #fef3c7; color: #92400e; }
+.flag-em { background: #fce7f3; color: #9d174d; }
+
+/* Responsive */
+@media (max-width: 700px) {
+    .audit-row { grid-template-columns: 1fr; gap: 0.3rem; }
+}
+</style>
+</head>
+<body>
+
+<h1 class="page-title">Type Scale Audit</h1>
+<p class="subtitle">
+    Every font-size declaration in the Bristlenose report CSS, rendered at actual size.
+    <span class="flag flag-dup">~DUP</span> = near-duplicate of another size.
+    <span class="flag flag-em">em</span> = relative unit (scales with parent).
+</p>
+
+<!-- ============================================================ -->
+<div class="audit-group">
+<div class="audit-group-title">1.75rem — Page title</div>
+
+<div class="audit-row">
+    <div class="audit-meta">
+        <span class="props">h1</span><br>
+        <span class="file">report.css · 700 · ls -0.01em</span>
+    </div>
+    <div class="audit-sample" style="font-size:1.75rem; font-weight:700; letter-spacing:-0.01em;">
+        Climbing Research Study
+    </div>
+    <div class="audit-meta">1.75rem = 28px</div>
+</div>
+</div>
+
+<!-- ============================================================ -->
+<div class="audit-group">
+<div class="audit-group-title">1.5rem — Stat card values</div>
+
+<div class="audit-row">
+    <div class="audit-meta">
+        <span class="props">.bn-project-stat-value</span><br>
+        <span class="file">global-nav.css · 400 · lh 1.2</span>
+    </div>
+    <div class="audit-sample" style="font-size:1.5rem; font-weight:400; line-height:1.2;">
+        42
+    </div>
+    <div class="audit-meta">1.5rem = 24px</div>
+</div>
+</div>
+
+<!-- ============================================================ -->
+<div class="audit-group">
+<div class="audit-group-title">1.35rem — Section headings / Header</div>
+
+<div class="audit-row">
+    <div class="audit-meta">
+        <span class="props">h2</span><br>
+        <span class="file">report.css · 600</span>
+    </div>
+    <div class="audit-sample" style="font-size:1.35rem; font-weight:600;">
+        Community and Social Connection
+    </div>
+    <div class="audit-meta">1.35rem = 21.6px</div>
+</div>
+
+<div class="audit-row">
+    <div class="audit-meta">
+        <span class="props">.header-logotype</span><br>
+        <span class="file">logo.css · 600 · ls -0.01em</span>
+    </div>
+    <div class="audit-sample" style="font-size:1.35rem; font-weight:600; letter-spacing:-0.01em;">
+        bristlenose
+    </div>
+    <div class="audit-meta">1.35rem = 21.6px</div>
+</div>
+
+<div class="audit-row">
+    <div class="audit-meta">
+        <span class="props">.header-project</span><br>
+        <span class="file">logo.css · 400 · ls -0.01em</span>
+    </div>
+    <div class="audit-sample" style="font-size:1.35rem; font-weight:400; letter-spacing:-0.01em;">
+        Climbing Research Study
+    </div>
+    <div class="audit-meta">1.35rem = 21.6px</div>
+</div>
+</div>
+
+<!-- ============================================================ -->
+<div class="audit-group">
+<div class="audit-group-title">1.25rem — Modal title (help only)</div>
+
+<div class="audit-row">
+    <div class="audit-meta">
+        <span class="props">.help-modal h2</span><br>
+        <span class="file">help-overlay.css</span>
+    </div>
+    <div class="audit-sample" style="font-size:1.25rem; font-weight:600;">
+        Keyboard Shortcuts
+    </div>
+    <div class="audit-meta">1.25rem = 20px <span class="flag flag-dup">~DUP</span></div>
+</div>
+</div>
+
+<!-- ============================================================ -->
+<div class="audit-group">
+<div class="audit-group-title">1.1rem — Subsection headings</div>
+
+<div class="audit-row">
+    <div class="audit-meta">
+        <span class="props">h3</span><br>
+        <span class="file">report.css · 600</span>
+    </div>
+    <div class="audit-sample" style="font-size:1.1rem; font-weight:600;">
+        Learning Journey and Skill Development
+    </div>
+    <div class="audit-meta">1.1rem = 17.6px</div>
+</div>
+
+<div class="audit-row">
+    <div class="audit-meta">
+        <span class="props">.toc h2</span><br>
+        <span class="file">toc.css · 1.1rem</span>
+    </div>
+    <div class="audit-sample" style="font-size:1.1rem; font-weight:600;">
+        Themes
+    </div>
+    <div class="audit-meta">1.1rem = 17.6px</div>
+</div>
+
+<div class="audit-row">
+    <div class="audit-meta">
+        <span class="props">.header-doc-title</span><br>
+        <span class="file">logo.css · 400</span>
+    </div>
+    <div class="audit-sample" style="font-size:1.1rem; font-weight:400;">
+        User Research Report
+    </div>
+    <div class="audit-meta">1.1rem = 17.6px</div>
+</div>
+
+<div class="audit-row">
+    <div class="audit-meta">
+        <span class="props">.feedback-modal h2</span><br>
+        <span class="file">feedback.css · 1.1rem</span>
+    </div>
+    <div class="audit-sample" style="font-size:1.1rem; font-weight:600;">
+        Share Feedback
+    </div>
+    <div class="audit-meta">1.1rem = 17.6px</div>
+</div>
+</div>
+
+<!-- ============================================================ -->
+<div class="audit-group">
+<div class="audit-group-title">1.05rem — Signal card location</div>
+
+<div class="audit-row">
+    <div class="audit-meta">
+        <span class="props">.signal-card-location</span><br>
+        <span class="file">analysis.css · 600</span>
+    </div>
+    <div class="audit-sample" style="font-size:1.05rem; font-weight:600;">
+        Risk Management and Safety Culture
+    </div>
+    <div class="audit-meta">1.05rem = 16.8px <span class="flag flag-dup">~DUP</span></div>
+</div>
+</div>
+
+<!-- ============================================================ -->
+<div class="audit-group">
+<div class="audit-group-title">0.95rem — Moderator header</div>
+
+<div class="audit-row">
+    <div class="audit-meta">
+        <span class="props">.bn-session-moderators</span><br>
+        <span class="file">report.css</span>
+    </div>
+    <div class="audit-sample" style="font-size:0.95rem;">
+        Sessions moderated by Alex Chen
+    </div>
+    <div class="audit-meta">0.95rem = 15.2px</div>
+</div>
+
+<div class="audit-row">
+    <div class="audit-meta">
+        <span class="props">.toolbar-btn .toolbar-icon</span><br>
+        <span class="file">button.css · 0.95rem</span>
+    </div>
+    <div class="audit-sample" style="font-size:0.95rem;">
+        🔍 ⬇ ⭐
+    </div>
+    <div class="audit-meta">0.95rem = 15.2px</div>
+</div>
+</div>
+
+<!-- ============================================================ -->
+<div class="audit-group">
+<div class="audit-group-title">0.92rem — Featured quote text</div>
+
+<div class="audit-row">
+    <div class="audit-meta">
+        <span class="props">.bn-featured-quote .quote-text</span><br>
+        <span class="file">global-nav.css · lh 1.55</span>
+    </div>
+    <div class="audit-sample" style="font-size:0.92rem; line-height:1.55;">
+        "I started maybe six years ago at a local indoor gym. A friend dragged me along and I was honestly terrible at first."
+    </div>
+    <div class="audit-meta">0.92rem = 14.7px <span class="flag flag-dup">~DUP</span></div>
+</div>
+</div>
+
+<!-- ============================================================ -->
+<div class="audit-group">
+<div class="audit-group-title">0.9rem — Standard UI text</div>
+
+<div class="audit-row">
+    <div class="audit-meta">
+        <span class="props">table (base)</span><br>
+        <span class="file">report.css</span>
+    </div>
+    <div class="audit-sample" style="font-size:0.9rem;">
+        Table cell content at base size
+    </div>
+    <div class="audit-meta">0.9rem = 14.4px</div>
+</div>
+
+<div class="audit-row">
+    <div class="audit-meta">
+        <span class="props">.toc li / .bn-dashboard-nav li</span><br>
+        <span class="file">toc.css / global-nav.css</span>
+    </div>
+    <div class="audit-sample" style="font-size:0.9rem;">
+        <a href="#" style="color:var(--bn-colour-accent); text-decoration:none;">Community and Social Connection</a>
+    </div>
+    <div class="audit-meta">0.9rem = 14.4px</div>
+</div>
+
+<div class="audit-row">
+    <div class="audit-meta">
+        <span class="props">.speaker</span><br>
+        <span class="file">blockquote.css</span>
+    </div>
+    <div class="audit-sample" style="font-size:0.9rem; color:var(--bn-colour-muted);">
+        — p1 (Alex Chen)
+    </div>
+    <div class="audit-meta">0.9rem = 14.4px</div>
+</div>
+
+<div class="audit-row">
+    <div class="audit-meta">
+        <span class="props">.bn-radio-label</span><br>
+        <span class="file">settings.css</span>
+    </div>
+    <div class="audit-sample" style="font-size:0.9rem;">
+        System (follow OS preference)
+    </div>
+    <div class="audit-meta">0.9rem = 14.4px</div>
+</div>
+</div>
+
+<!-- ============================================================ -->
+<div class="audit-group">
+<div class="audit-group-title">0.88rem — Nav tabs / session labels</div>
+
+<div class="audit-row">
+    <div class="audit-meta">
+        <span class="props">.bn-tab</span><br>
+        <span class="file">global-nav.css · 500</span>
+    </div>
+    <div class="audit-sample" style="font-size:0.88rem; font-weight:500; color:var(--bn-colour-muted);">
+        Project &nbsp;&nbsp; Quotes &nbsp;&nbsp; Sessions &nbsp;&nbsp; Analysis
+    </div>
+    <div class="audit-meta">0.88rem = 14.1px <span class="flag flag-dup">~DUP</span></div>
+</div>
+
+<div class="audit-row">
+    <div class="audit-meta">
+        <span class="props">.bn-session-label</span><br>
+        <span class="file">global-nav.css · 600</span>
+    </div>
+    <div class="audit-sample" style="font-size:0.88rem; font-weight:600;">
+        Interview with Alex Chen
+    </div>
+    <div class="audit-meta">0.88rem = 14.1px</div>
+</div>
+</div>
+
+<!-- ============================================================ -->
+<div class="audit-group">
+<div class="audit-group-title">0.875rem — Search / help descriptions</div>
+
+<div class="audit-row">
+    <div class="audit-meta">
+        <span class="props">.search-input</span><br>
+        <span class="file">search.css</span>
+    </div>
+    <div class="audit-sample" style="font-size:0.875rem;">
+        Search quotes…
+    </div>
+    <div class="audit-meta">0.875rem = 14px <span class="flag flag-dup">~DUP</span></div>
+</div>
+
+<div class="audit-row">
+    <div class="audit-meta">
+        <span class="props">.help-section dd</span><br>
+        <span class="file">help-overlay.css</span>
+    </div>
+    <div class="audit-sample" style="font-size:0.875rem;">
+        Focus next quote in the list
+    </div>
+    <div class="audit-meta">0.875rem = 14px</div>
+</div>
+</div>
+
+<!-- ============================================================ -->
+<div class="audit-group">
+<div class="audit-group-title">0.85rem — Meta text / context / descriptions</div>
+
+<div class="audit-row">
+    <div class="audit-meta">
+        <span class="props">.context</span><br>
+        <span class="file">blockquote.css</span>
+    </div>
+    <div class="audit-sample" style="font-size:0.85rem; color:var(--bn-colour-muted);">
+        Context: Discussing their first experience at the climbing gym
+    </div>
+    <div class="audit-meta">0.85rem = 13.6px</div>
+</div>
+
+<div class="audit-row">
+    <div class="audit-meta">
+        <span class="props">.transcript-meta</span><br>
+        <span class="file">transcript.css</span>
+    </div>
+    <div class="audit-sample" style="font-size:0.85rem; color:var(--bn-colour-muted);">
+        Duration: 45:32 · Transcribed with Whisper
+    </div>
+    <div class="audit-meta">0.85rem = 13.6px</div>
+</div>
+
+<div class="audit-row">
+    <div class="audit-meta">
+        <span class="props">.codebook-description</span><br>
+        <span class="file">codebook-panel.css</span>
+    </div>
+    <div class="audit-sample" style="font-size:0.85rem; color:var(--bn-colour-muted);">
+        Tags applied during analysis, grouped by research domain
+    </div>
+    <div class="audit-meta">0.85rem = 13.6px</div>
+</div>
+
+<div class="audit-row">
+    <div class="audit-meta">
+        <span class="props">.clipboard-toast</span><br>
+        <span class="file">toast.css</span>
+    </div>
+    <div class="audit-sample" style="font-size:0.85rem;">
+        Copied to clipboard
+    </div>
+    <div class="audit-meta">0.85rem = 13.6px</div>
+</div>
+
+<div class="audit-row">
+    <div class="audit-meta">
+        <span class="props">.bn-project-stat--text</span><br>
+        <span class="file">global-nav.css</span>
+    </div>
+    <div class="audit-sample" style="font-size:0.85rem;">
+        Moderator: Alex Chen
+    </div>
+    <div class="audit-meta">0.85rem = 13.6px</div>
+</div>
+</div>
+
+<!-- ============================================================ -->
+<div class="audit-group">
+<div class="audit-group-title">0.82rem — Toolbar / filters / forms / featured footer</div>
+
+<div class="audit-row">
+    <div class="audit-meta">
+        <span class="props">.toolbar-btn</span><br>
+        <span class="file">button.css</span>
+    </div>
+    <div class="audit-sample" style="font-size:0.82rem;">
+        Export CSV ▾
+    </div>
+    <div class="audit-meta">0.82rem = 13.1px</div>
+</div>
+
+<div class="audit-row">
+    <div class="audit-meta">
+        <span class="props">.tag-filter-item</span><br>
+        <span class="file">tag-filter.css</span>
+    </div>
+    <div class="audit-sample" style="font-size:0.82rem;">
+        ☑ frustration &nbsp; ☑ delight &nbsp; ☐ confidence
+    </div>
+    <div class="audit-meta">0.82rem = 13.1px</div>
+</div>
+
+<div class="audit-row">
+    <div class="audit-meta">
+        <span class="props">.bn-featured-footer</span><br>
+        <span class="file">global-nav.css</span>
+    </div>
+    <div class="audit-sample" style="font-size:0.82rem; color:var(--bn-colour-muted);">
+        00:09 &nbsp; p1 &nbsp; satisfaction
+    </div>
+    <div class="audit-meta">0.82rem = 13.1px</div>
+</div>
+
+<div class="audit-row">
+    <div class="audit-meta">
+        <span class="props">.bn-session-journey</span><br>
+        <span class="file">report.css</span>
+    </div>
+    <div class="audit-sample" style="font-size:0.82rem; color:var(--bn-colour-muted);">
+        Enthusiastic → Frustrated → Resolved
+    </div>
+    <div class="audit-meta">0.82rem = 13.1px</div>
+</div>
+
+<div class="audit-row">
+    <div class="audit-meta">
+        <span class="props">.header-meta</span><br>
+        <span class="file">logo.css</span>
+    </div>
+    <div class="audit-sample" style="font-size:0.82rem; color:var(--bn-colour-muted);">
+        Generated 13 Feb 2026
+    </div>
+    <div class="audit-meta">0.82rem = 13.1px</div>
+</div>
+
+<div class="audit-row">
+    <div class="audit-meta">
+        <span class="props">.feedback-label</span><br>
+        <span class="file">feedback.css · 600</span>
+    </div>
+    <div class="audit-sample" style="font-size:0.82rem; font-weight:600;">
+        How useful was this report?
+    </div>
+    <div class="audit-meta">0.82rem = 13.1px</div>
+</div>
+
+<div class="audit-row">
+    <div class="audit-meta">
+        <span class="props">.analysis-heatmap (base)</span><br>
+        <span class="file">analysis.css</span>
+    </div>
+    <div class="audit-sample" style="font-size:0.82rem;">
+        Heatmap table base size
+    </div>
+    <div class="audit-meta">0.82rem = 13.1px</div>
+</div>
+
+<div class="audit-row">
+    <div class="audit-meta">
+        <span class="props">.new-group-label</span><br>
+        <span class="file">codebook-panel.css</span>
+    </div>
+    <div class="audit-sample" style="font-size:0.82rem; color:var(--bn-colour-muted);">
+        + New group…
+    </div>
+    <div class="audit-meta">0.82rem = 13.1px</div>
+</div>
+</div>
+
+<!-- ============================================================ -->
+<div class="audit-group">
+<div class="audit-group-title">0.8rem — Stat labels / timecodes / icons / heatmap cells</div>
+
+<div class="audit-row">
+    <div class="audit-meta">
+        <span class="props">.bn-project-stat-label</span><br>
+        <span class="file">global-nav.css</span>
+    </div>
+    <div class="audit-sample" style="font-size:0.8rem;">
+        Quotes
+    </div>
+    <div class="audit-meta">0.8rem = 12.8px <span class="flag flag-dup">~DUP</span></div>
+</div>
+
+<div class="audit-row">
+    <div class="audit-meta">
+        <span class="props">.bn-featured-quote .context</span><br>
+        <span class="file">global-nav.css</span>
+    </div>
+    <div class="audit-sample" style="font-size:0.8rem; color:var(--bn-colour-muted);">
+        Context: Discussing risk management
+    </div>
+    <div class="audit-meta">0.8rem = 12.8px</div>
+</div>
+
+<div class="audit-row">
+    <div class="audit-meta">
+        <span class="props">a.timecode / span.timecode</span><br>
+        <span class="file">timecode.css · mono</span>
+    </div>
+    <div class="audit-sample" style="font-size:0.8rem; font-family:var(--bn-font-mono); color:var(--bn-colour-accent);">
+        [00:09]
+    </div>
+    <div class="audit-meta">0.8rem = 12.8px</div>
+</div>
+
+<div class="audit-row">
+    <div class="audit-meta">
+        <span class="props">.star-btn / .edit-pencil</span><br>
+        <span class="file">button.css · lh 1</span>
+    </div>
+    <div class="audit-sample" style="font-size:0.8rem; line-height:1; color:var(--bn-colour-icon-idle);">
+        ✎ &nbsp; ☆
+    </div>
+    <div class="audit-meta">0.8rem = 12.8px</div>
+</div>
+
+<div class="audit-row">
+    <div class="audit-meta">
+        <span class="props">.heatmap-cell (data)</span><br>
+        <span class="file">analysis.css · 500 · mono</span>
+    </div>
+    <div class="audit-sample" style="font-size:0.8rem; font-weight:500; font-family:var(--bn-font-mono);">
+        2.4
+    </div>
+    <div class="audit-meta">0.8rem = 12.8px</div>
+</div>
+
+<div class="audit-row">
+    <div class="audit-meta">
+        <span class="props">.signal-card-footer</span><br>
+        <span class="file">analysis.css</span>
+    </div>
+    <div class="audit-sample" style="font-size:0.8rem; color:var(--bn-colour-muted);">
+        4 of 6 participants · Strong signal
+    </div>
+    <div class="audit-meta">0.8rem = 12.8px</div>
+</div>
+</div>
+
+<!-- ============================================================ -->
+<div class="audit-group">
+<div class="audit-group-title">0.78rem — Filter actions / codebook subtitles</div>
+
+<div class="audit-row">
+    <div class="audit-meta">
+        <span class="props">.tag-filter-action</span><br>
+        <span class="file">tag-filter.css</span>
+    </div>
+    <div class="audit-sample" style="font-size:0.78rem; color:var(--bn-colour-accent);">
+        Select all &nbsp;|&nbsp; Clear
+    </div>
+    <div class="audit-meta">0.78rem = 12.5px</div>
+</div>
+
+<div class="audit-row">
+    <div class="audit-meta">
+        <span class="props">.group-subtitle</span><br>
+        <span class="file">codebook-panel.css · lh 1.4</span>
+    </div>
+    <div class="audit-sample" style="font-size:0.78rem; line-height:1.4; color:var(--bn-colour-muted);">
+        Usability &amp; interaction patterns
+    </div>
+    <div class="audit-meta">0.78rem = 12.5px</div>
+</div>
+</div>
+
+<!-- ============================================================ -->
+<div class="audit-group">
+<div class="audit-group-title">0.75rem — Column headers / counts / kbd / modal footer</div>
+
+<div class="audit-row">
+    <div class="audit-meta">
+        <span class="props">.analysis-heatmap th</span><br>
+        <span class="file">analysis.css · 600</span>
+    </div>
+    <div class="audit-sample" style="font-size:0.75rem; font-weight:600; color:var(--bn-colour-muted);">
+        FRUSTRATION &nbsp; CONFUSION &nbsp; DELIGHT
+    </div>
+    <div class="audit-meta">0.75rem = 12px</div>
+</div>
+
+<div class="audit-row">
+    <div class="audit-meta">
+        <span class="props">.sentiment-bar-count</span><br>
+        <span class="file">bar.css · 600</span>
+    </div>
+    <div class="audit-sample" style="font-size:0.75rem; font-weight:600;">
+        12
+    </div>
+    <div class="audit-meta">0.75rem = 12px</div>
+</div>
+
+<div class="audit-row">
+    <div class="audit-meta">
+        <span class="props">.tag-count / .group-total-count</span><br>
+        <span class="file">codebook-panel.css</span>
+    </div>
+    <div class="audit-sample" style="font-size:0.75rem; color:var(--bn-colour-muted);">
+        (7) &nbsp;&nbsp; Total: 24
+    </div>
+    <div class="audit-meta">0.75rem = 12px</div>
+</div>
+
+<div class="audit-row">
+    <div class="audit-meta">
+        <span class="props">.help-modal kbd</span><br>
+        <span class="file">help-overlay.css · mono · lh 1</span>
+    </div>
+    <div class="audit-sample" style="font-size:0.75rem; font-family:var(--bn-font-mono); line-height:1; background:var(--bn-colour-badge-bg); padding:0.15rem 0.35rem; border-radius:3px;">
+        ⌘K
+    </div>
+    <div class="audit-meta">0.75rem = 12px</div>
+</div>
+
+<div class="audit-row">
+    <div class="audit-meta">
+        <span class="props">.bn-modal-footer</span><br>
+        <span class="file">modal.css</span>
+    </div>
+    <div class="audit-sample" style="font-size:0.75rem; color:var(--bn-colour-muted);">
+        Press Escape to close
+    </div>
+    <div class="audit-meta">0.75rem = 12px</div>
+</div>
+
+<div class="audit-row">
+    <div class="audit-meta">
+        <span class="props">.segment-margin</span><br>
+        <span class="file">transcript-annotations.css · lh 1.4</span>
+    </div>
+    <div class="audit-sample" style="font-size:0.75rem; line-height:1.4;">
+        Margin annotation container
+    </div>
+    <div class="audit-meta">0.75rem = 12px</div>
+</div>
+
+<div class="audit-row">
+    <div class="audit-meta">
+        <span class="props">.help-section h3</span><br>
+        <span class="file">help-overlay.css · 600 · ls 0.05em · UC</span>
+    </div>
+    <div class="audit-sample" style="font-size:0.75rem; font-weight:600; letter-spacing:0.05em; text-transform:uppercase; color:var(--bn-colour-muted);">
+        NAVIGATION
+    </div>
+    <div class="audit-meta">0.75rem = 12px</div>
+</div>
+</div>
+
+<!-- ============================================================ -->
+<div class="audit-group">
+<div class="audit-group-title">0.72rem — Badges / footer / mono UI</div>
+
+<div class="audit-row">
+    <div class="audit-meta">
+        <span class="props">.badge</span><br>
+        <span class="file">badge.css · mono</span>
+    </div>
+    <div class="audit-sample">
+        <span style="font-size:0.72rem; font-family:var(--bn-font-mono); background:var(--bn-colour-badge-bg); color:var(--bn-colour-badge-text); padding:0.15rem 0.5rem; border-radius:999px;">frustration</span>
+        &nbsp;
+        <span style="font-size:0.72rem; font-family:var(--bn-font-mono); background:var(--bn-colour-badge-bg); color:var(--bn-colour-badge-text); padding:0.15rem 0.5rem; border-radius:999px;">p1</span>
+    </div>
+    <div class="audit-meta">0.72rem = 11.5px</div>
+</div>
+
+<div class="audit-row">
+    <div class="audit-meta">
+        <span class="props">.report-footer</span><br>
+        <span class="file">footer.css</span>
+    </div>
+    <div class="audit-sample" style="font-size:0.72rem; color:var(--bn-colour-muted);">
+        Generated by Bristlenose v0.9.3
+    </div>
+    <div class="audit-meta">0.72rem = 11.5px</div>
+</div>
+
+<div class="audit-row">
+    <div class="audit-meta">
+        <span class="props">.tag-suggest-item</span><br>
+        <span class="file">tag-input.css · mono</span>
+    </div>
+    <div class="audit-sample" style="font-size:0.72rem; font-family:var(--bn-font-mono);">
+        onboarding-friction &nbsp; trust-signal
+    </div>
+    <div class="audit-meta">0.72rem = 11.5px</div>
+</div>
+
+<div class="audit-row">
+    <div class="audit-meta">
+        <span class="props">.tag-filter-count</span><br>
+        <span class="file">tag-filter.css · mono</span>
+    </div>
+    <div class="audit-sample" style="font-size:0.72rem; font-family:var(--bn-font-mono); color:var(--bn-colour-muted);">
+        (12)
+    </div>
+    <div class="audit-meta">0.72rem = 11.5px</div>
+</div>
+
+<div class="audit-row">
+    <div class="audit-meta">
+        <span class="props">.participant-grid .p-box</span><br>
+        <span class="file">analysis.css · mono · lh 1</span>
+    </div>
+    <div class="audit-sample" style="font-size:0.72rem; font-family:var(--bn-font-mono); line-height:1; color:var(--bn-colour-muted);">
+        p1 p2 p3 p4
+    </div>
+    <div class="audit-meta">0.72rem = 11.5px</div>
+</div>
+</div>
+
+<!-- ============================================================ -->
+<div class="audit-group">
+<div class="audit-group-title">0.7rem — Uppercase micro-labels</div>
+
+<div class="audit-row">
+    <div class="audit-meta">
+        <span class="props">.signal-card-source</span><br>
+        <span class="file">analysis.css · 400 · ls 0.04em · UC</span>
+    </div>
+    <div class="audit-sample" style="font-size:0.7rem; font-weight:400; letter-spacing:0.04em; text-transform:uppercase; color:var(--bn-colour-muted);">
+        SECTION
+    </div>
+    <div class="audit-meta">0.7rem = 11.2px</div>
+</div>
+
+<div class="audit-row">
+    <div class="audit-meta">
+        <span class="props">.group-total-label</span><br>
+        <span class="file">codebook-panel.css · ls 0.04em · UC</span>
+    </div>
+    <div class="audit-sample" style="font-size:0.7rem; letter-spacing:0.04em; text-transform:uppercase; color:var(--bn-colour-muted);">
+        TOTAL
+    </div>
+    <div class="audit-meta">0.7rem = 11.2px</div>
+</div>
+
+<div class="audit-row">
+    <div class="audit-meta">
+        <span class="props">.tag-filter-group-header</span><br>
+        <span class="file">tag-filter.css · 600 · ls 0.03em · UC</span>
+    </div>
+    <div class="audit-sample" style="font-size:0.7rem; font-weight:600; letter-spacing:0.03em; text-transform:uppercase; color:var(--bn-colour-muted);">
+        SENTIMENTS
+    </div>
+    <div class="audit-meta">0.7rem = 11.2px</div>
+</div>
+
+<div class="audit-row">
+    <div class="audit-meta">
+        <span class="props">.bn-play-icon</span><br>
+        <span class="file">report.css</span>
+    </div>
+    <div class="audit-sample" style="font-size:0.7rem; color:var(--bn-colour-muted);">
+        ▶
+    </div>
+    <div class="audit-meta">0.7rem = 11.2px</div>
+</div>
+</div>
+
+<!-- ============================================================ -->
+<div class="audit-group">
+<div class="audit-group-title">0.65rem — Micro badges / confidence / delete buttons</div>
+
+<div class="audit-row">
+    <div class="audit-meta">
+        <span class="props">.confidence-badge</span><br>
+        <span class="file">analysis.css · 600 · ls 0.04em · UC</span>
+    </div>
+    <div class="audit-sample" style="font-size:0.65rem; font-weight:600; letter-spacing:0.04em; text-transform:uppercase;">
+        STRONG
+    </div>
+    <div class="audit-meta">0.65rem = 10.4px</div>
+</div>
+
+<div class="audit-row">
+    <div class="audit-meta">
+        <span class="props">.margin-tags .badge</span><br>
+        <span class="file">transcript-annotations.css · lh 1.4</span>
+    </div>
+    <div class="audit-sample">
+        <span style="font-size:0.65rem; font-family:var(--bn-font-mono); background:var(--bn-colour-badge-bg); color:var(--bn-colour-badge-text); padding:0.1rem 0.4rem; border-radius:999px; line-height:1.4;">frustration</span>
+    </div>
+    <div class="audit-meta">0.65rem = 10.4px</div>
+</div>
+
+<div class="audit-row">
+    <div class="audit-meta">
+        <span class="props">.feedback-sentiment-label</span><br>
+        <span class="file">feedback.css</span>
+    </div>
+    <div class="audit-sample" style="font-size:0.65rem; color:var(--bn-colour-muted);">
+        Not useful &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Very useful
+    </div>
+    <div class="audit-meta">0.65rem = 10.4px</div>
+</div>
+</div>
+
+<!-- ============================================================ -->
+<div class="audit-group">
+<div class="audit-group-title">0.6rem — Delete × buttons</div>
+
+<div class="audit-row">
+    <div class="audit-meta">
+        <span class="props">.badge-delete / .badge-ai::after</span><br>
+        <span class="file">badge.css · 700 · lh 1</span>
+    </div>
+    <div class="audit-sample" style="font-size:0.6rem; font-weight:700; line-height:1; color:var(--bn-colour-muted);">
+        ×
+    </div>
+    <div class="audit-meta">0.6rem = 9.6px</div>
+</div>
+</div>
+
+<!-- ============================================================ -->
+<div class="audit-group">
+<div class="audit-group-title">Relative units (em) — scale with parent</div>
+
+<div class="audit-row">
+    <div class="audit-meta">
+        <span class="props">.edit-pencil-inline</span><br>
+        <span class="file">button.css · 0.75em</span>
+    </div>
+    <div class="audit-sample" style="font-size:0.9rem;">
+        Theme Name <span style="font-size:0.75em; color:var(--bn-colour-icon-idle);">✎</span>
+    </div>
+    <div class="audit-meta">0.75em <span class="flag flag-em">em</span></div>
+</div>
+
+<div class="audit-row">
+    <div class="audit-meta">
+        <span class="props">.coverage-segment .timecode</span><br>
+        <span class="file">coverage.css · 0.85em · mono</span>
+    </div>
+    <div class="audit-sample" style="font-size:0.9rem;">
+        <span style="font-size:0.85em; font-family:var(--bn-font-mono); color:var(--bn-colour-accent);">[12:34]</span>
+    </div>
+    <div class="audit-meta">0.85em <span class="flag flag-em">em</span></div>
+</div>
+
+<div class="audit-row">
+    <div class="audit-meta">
+        <span class="props">.bn-sort-arrow</span><br>
+        <span class="file">report.css · 0.65em</span>
+    </div>
+    <div class="audit-sample" style="font-size:0.9rem;">
+        Name <span style="font-size:0.65em;">▼</span>
+    </div>
+    <div class="audit-meta">0.65em <span class="flag flag-em">em</span></div>
+</div>
+
+<div class="audit-row">
+    <div class="audit-meta">
+        <span class="props">.footer-keyboard-hint kbd</span><br>
+        <span class="file">footer.css · 0.85em · mono</span>
+    </div>
+    <div class="audit-sample" style="font-size:0.72rem;">
+        <span style="font-size:0.85em; font-family:var(--bn-font-mono); background:var(--bn-colour-badge-bg); padding:0.1rem 0.3rem; border-radius:3px;">?</span>
+    </div>
+    <div class="audit-meta">0.85em <span class="flag flag-em">em</span></div>
+</div>
+</div>
+
+<!-- ============================================================ -->
+<div class="audit-group" style="margin-top: 3rem;">
+<div class="audit-group-title" style="color: #92400e;">Near-duplicate sizes (candidates for consolidation)</div>
+
+<div style="font-size: 0.85rem; line-height: 1.8; color: var(--bn-colour-text);">
+
+<p><strong>0.88rem vs 0.875rem</strong> (0.08px difference) — nav tabs vs search input / help text.<br>
+Could unify to <strong>0.875rem</strong> (14px, a clean pixel value).</p>
+
+<p><strong>0.82rem vs 0.8rem</strong> (0.32px difference) — toolbar/filters/forms vs stat labels/timecodes/icons.<br>
+Could unify to <strong>0.8rem</strong> (12.8px). Currently 14 selectors at 0.82, 8 at 0.8.</p>
+
+<p><strong>0.92rem</strong> (featured quote text) — one-off between 0.9rem and 0.95rem.<br>
+Could round to <strong>0.9rem</strong> to match standard UI text.</p>
+
+<p><strong>1.05rem</strong> (signal card location) — one-off near h3 (1.1rem).<br>
+Could unify to <strong>1.1rem</strong>.</p>
+
+<p><strong>1.25rem</strong> (help modal h2) — one-off between h2 (1.35rem) and h3 (1.1rem).<br>
+Could use <strong>1.1rem</strong> to match other modal h2 (feedback).</p>
+
+<p><strong>0.78rem</strong> (filter actions, codebook subtitle) — one-off between 0.75rem and 0.8rem.<br>
+Could merge into <strong>0.75rem</strong>.</p>
+
+</div>
+</div>
+
+</body>
+</html>

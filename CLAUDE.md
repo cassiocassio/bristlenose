@@ -133,6 +133,7 @@ F401 is marked `unfixable` in `pyproject.toml` so `ruff check --fix` (and the Po
 - **Academic sources for analysis categories**: `docs/academic-sources.html` — theoretical foundations (emotion science, UX research, trust/credibility) behind quote tagging and sentiment analysis. **Update this file when investigating theories behind any Bristlenose features.**
 - **Analysis page** (signal concentration, metrics, rendering): `docs/BRANCHES.md` → `analysis` section — architecture, design decisions, file list, test coverage
 - **Analysis page future** (two-pane vision, grid-as-selector, user-tag grid, backlog): `docs/design-analysis-future.md`
+- **Dashboard stats** (inventory of unused pipeline data, improvement priorities): `docs/design-dashboard-stats.md`
 - **Installation guide**: `INSTALL.md` — detailed per-platform install instructions for non-technical users
 
 ## Working preferences

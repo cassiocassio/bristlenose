@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dashboard Theme List — Stress Test</title>
+<style>
+/* === Design tokens (subset from tokens.css) === */
+:root {
+    --bn-font-body: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
+    --bn-colour-bg: #ffffff;
+    --bn-colour-text: #1a1a1a;
+    --bn-colour-muted: #6b7280;
+    --bn-colour-border: #e5e7eb;
+    --bn-colour-accent: #2563eb;
+    --bn-colour-hover: #e8f0fe;
+    --bn-space-xs: 0.15rem;
+    --bn-space-sm: 0.35rem;
+    --bn-space-md: 0.75rem;
+    --bn-space-lg: 1.5rem;
+    --bn-radius-lg: 8px;
+}
+
+body {
+    font-family: var(--bn-font-body);
+    color: var(--bn-colour-text);
+    background: var(--bn-colour-bg);
+    line-height: 1.6;
+    margin: 2rem auto;
+    max-width: 52rem;
+    padding: 0 1rem;
+}
+
+h1 { font-size: 1.3rem; font-weight: 600; }
+h2 { font-size: 1rem; font-weight: 600; color: var(--bn-colour-muted); margin-top: 2.5rem; }
+
+/* === Dashboard pane (from global-nav.css) === */
+.bn-dashboard-pane {
+    border: 1px solid var(--bn-colour-border);
+    border-radius: var(--bn-radius-lg);
+    padding: var(--bn-space-lg);
+    min-width: 0;
+    overflow-x: auto;
+}
+
+/* Compact nav lists — mirrors .toc pattern (from global-nav.css) */
+.bn-dashboard-nav ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+.bn-dashboard-nav li {
+    margin: var(--bn-space-xs) 0;
+    font-size: 0.9rem;
+}
+.bn-dashboard-nav a {
+    color: var(--bn-colour-accent);
+    text-decoration: none;
+}
+.bn-dashboard-nav a:hover {
+    text-decoration: underline;
+}
+
+/* ToC (from toc.css) */
+.toc ul { list-style: none; padding: 0; margin: 0; }
+.toc li { margin: var(--bn-space-xs) 0; font-size: 0.9rem; }
+.toc h3 { font-size: 1.1rem; margin-bottom: 0.5rem; }
+.toc a { color: var(--bn-colour-accent); text-decoration: none; }
+.toc a:hover { text-decoration: underline; }
+
+/* Side-by-side layout */
+.compare { display: grid; grid-template-columns: 1fr 1fr; gap: var(--bn-space-lg); margin-bottom: 2rem; }
+@media (max-width: 600px) { .compare { grid-template-columns: 1fr; } }
+
+.label { font-size: 0.75rem; color: var(--bn-colour-muted); margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 0.05em; }
+</style>
+</head>
+<body>
+
+<h1>Dashboard Theme List — Stress Test</h1>
+<p style="color: var(--bn-colour-muted); font-size: 0.85rem;">
+    Both lists now use <code>&lt;nav&gt;&lt;ul&gt;&lt;li&gt;</code> markup and
+    <code>--bn-space-xs</code> (0.15rem) for vertical spacing.
+    Dashboard uses <code>.bn-dashboard-nav</code>; Quotes page uses <code>.toc</code>.
+</p>
+
+<!-- ====== Normal themes (your climbing study) ====== -->
+<h2>Normal — Your climbing study</h2>
+<div class="compare">
+    <div>
+        <div class="label">Dashboard</div>
+        <div class="bn-dashboard-pane">
+            <nav class="bn-dashboard-nav">
+                <h3>Themes</h3>
+                <ul>
+                    <li><a href="#">Community and Social Connection</a></li>
+                    <li><a href="#">Learning Journey and Skill Development</a></li>
+                    <li><a href="#">Indoor vs Outdoor Climbing Transition</a></li>
+                    <li><a href="#">Risk Management and Safety Culture</a></li>
+                    <li><a href="#">Training and Performance Optimization</a></li>
+                    <li><a href="#">Mental Game and Fear Management</a></li>
+                    <li><a href="#">Injury Prevention and Recovery</a></li>
+                    <li><a href="#">Equipment and Gear Preferences</a></li>
+                    <li><a href="#">Climbing Disciplines and Style Preferences</a></li>
+                    <li><a href="#">Accessibility and Inclusion Challenges</a></li>
+                    <li><a href="#">Goals and Aspirations</a></li>
+                    <li><a href="#">Climbing Origins and Discovery</a></li>
+                    <li><a href="#">Uncategorised observations</a></li>
+                </ul>
+            </nav>
+        </div>
+    </div>
+    <div>
+        <div class="label">Quotes page</div>
+        <div class="bn-dashboard-pane">
+            <nav class="toc">
+                <h3>Themes</h3>
+                <ul>
+                    <li><a href="#">Community and Social Connection</a></li>
+                    <li><a href="#">Learning Journey and Skill Development</a></li>
+                    <li><a href="#">Indoor vs Outdoor Climbing Transition</a></li>
+                    <li><a href="#">Risk Management and Safety Culture</a></li>
+                    <li><a href="#">Training and Performance Optimization</a></li>
+                    <li><a href="#">Mental Game and Fear Management</a></li>
+                    <li><a href="#">Injury Prevention and Recovery</a></li>
+                    <li><a href="#">Equipment and Gear Preferences</a></li>
+                    <li><a href="#">Climbing Disciplines and Style Preferences</a></li>
+                    <li><a href="#">Accessibility and Inclusion Challenges</a></li>
+                    <li><a href="#">Goals and Aspirations</a></li>
+                    <li><a href="#">Climbing Origins and Discovery</a></li>
+                    <li><a href="#">Uncategorised observations</a></li>
+                </ul>
+            </nav>
+        </div>
+    </div>
+</div>
+
+<!-- ====== Very short themes ====== -->
+<h2>Stress test — Very short theme names (3 themes)</h2>
+<div class="compare">
+    <div>
+        <div class="label">Dashboard</div>
+        <div class="bn-dashboard-pane">
+            <nav class="bn-dashboard-nav">
+                <h3>Themes</h3>
+                <ul>
+                    <li><a href="#">Pricing</a></li>
+                    <li><a href="#">UX</a></li>
+                    <li><a href="#">Trust</a></li>
+                </ul>
+            </nav>
+        </div>
+    </div>
+    <div>
+        <div class="label">Quotes page</div>
+        <div class="bn-dashboard-pane">
+            <nav class="toc">
+                <h3>Themes</h3>
+                <ul>
+                    <li><a href="#">Pricing</a></li>
+                    <li><a href="#">UX</a></li>
+                    <li><a href="#">Trust</a></li>
+                </ul>
+            </nav>
+        </div>
+    </div>
+</div>
+
+<!-- ====== Very long themes ====== -->
+<h2>Stress test — Very long theme names</h2>
+<div class="compare">
+    <div>
+        <div class="label">Dashboard</div>
+        <div class="bn-dashboard-pane">
+            <nav class="bn-dashboard-nav">
+                <h3>Themes</h3>
+                <ul>
+                    <li><a href="#">Participant Experiences with Onboarding Friction and First-Time Setup Challenges Across Multiple Platforms</a></li>
+                    <li><a href="#">Long-Term Customer Retention Strategies and the Role of Personalised Communication in Reducing Churn</a></li>
+                    <li><a href="#">Cross-Cultural Differences in Trust Perception, Brand Loyalty, and Willingness to Recommend to Peers</a></li>
+                    <li><a href="#">Emotional Responses to Pricing Changes and Subscription Model Transitions from Free to Paid Tiers</a></li>
+                    <li><a href="#">Accessibility Barriers for Users with Disabilities Including Screen Reader Compatibility and Colour Contrast Issues</a></li>
+                </ul>
+            </nav>
+        </div>
+    </div>
+    <div>
+        <div class="label">Quotes page</div>
+        <div class="bn-dashboard-pane">
+            <nav class="toc">
+                <h3>Themes</h3>
+                <ul>
+                    <li><a href="#">Participant Experiences with Onboarding Friction and First-Time Setup Challenges Across Multiple Platforms</a></li>
+                    <li><a href="#">Long-Term Customer Retention Strategies and the Role of Personalised Communication in Reducing Churn</a></li>
+                    <li><a href="#">Cross-Cultural Differences in Trust Perception, Brand Loyalty, and Willingness to Recommend to Peers</a></li>
+                    <li><a href="#">Emotional Responses to Pricing Changes and Subscription Model Transitions from Free to Paid Tiers</a></li>
+                    <li><a href="#">Accessibility Barriers for Users with Disabilities Including Screen Reader Compatibility and Colour Contrast Issues</a></li>
+                </ul>
+            </nav>
+        </div>
+    </div>
+</div>
+
+<!-- ====== Many themes ====== -->
+<h2>Stress test — 20 themes (quantity)</h2>
+<div class="compare">
+    <div>
+        <div class="label">Dashboard</div>
+        <div class="bn-dashboard-pane">
+            <nav class="bn-dashboard-nav">
+                <h3>Themes</h3>
+                <ul>
+                    <li><a href="#">Onboarding Experience</a></li>
+                    <li><a href="#">Navigation and Wayfinding</a></li>
+                    <li><a href="#">Search Functionality</a></li>
+                    <li><a href="#">Payment and Checkout</a></li>
+                    <li><a href="#">Account Management</a></li>
+                    <li><a href="#">Notification Preferences</a></li>
+                    <li><a href="#">Content Quality</a></li>
+                    <li><a href="#">Mobile vs Desktop</a></li>
+                    <li><a href="#">Performance and Speed</a></li>
+                    <li><a href="#">Accessibility</a></li>
+                    <li><a href="#">Customer Support</a></li>
+                    <li><a href="#">Privacy Concerns</a></li>
+                    <li><a href="#">Feature Requests</a></li>
+                    <li><a href="#">Pricing Perception</a></li>
+                    <li><a href="#">Brand Trust</a></li>
+                    <li><a href="#">Competitor Comparisons</a></li>
+                    <li><a href="#">Social Features</a></li>
+                    <li><a href="#">Customisation Options</a></li>
+                    <li><a href="#">Error Handling</a></li>
+                    <li><a href="#">Uncategorised observations</a></li>
+                </ul>
+            </nav>
+        </div>
+    </div>
+    <div>
+        <div class="label">Quotes page</div>
+        <div class="bn-dashboard-pane">
+            <nav class="toc">
+                <h3>Themes</h3>
+                <ul>
+                    <li><a href="#">Onboarding Experience</a></li>
+                    <li><a href="#">Navigation and Wayfinding</a></li>
+                    <li><a href="#">Search Functionality</a></li>
+                    <li><a href="#">Payment and Checkout</a></li>
+                    <li><a href="#">Account Management</a></li>
+                    <li><a href="#">Notification Preferences</a></li>
+                    <li><a href="#">Content Quality</a></li>
+                    <li><a href="#">Mobile vs Desktop</a></li>
+                    <li><a href="#">Performance and Speed</a></li>
+                    <li><a href="#">Accessibility</a></li>
+                    <li><a href="#">Customer Support</a></li>
+                    <li><a href="#">Privacy Concerns</a></li>
+                    <li><a href="#">Feature Requests</a></li>
+                    <li><a href="#">Pricing Perception</a></li>
+                    <li><a href="#">Brand Trust</a></li>
+                    <li><a href="#">Competitor Comparisons</a></li>
+                    <li><a href="#">Social Features</a></li>
+                    <li><a href="#">Customisation Options</a></li>
+                    <li><a href="#">Error Handling</a></li>
+                    <li><a href="#">Uncategorised observations</a></li>
+                </ul>
+            </nav>
+        </div>
+    </div>
+</div>
+
+<!-- ====== Mixed lengths ====== -->
+<h2>Stress test — Mixed short and long</h2>
+<div class="compare">
+    <div>
+        <div class="label">Dashboard</div>
+        <div class="bn-dashboard-pane">
+            <nav class="bn-dashboard-nav">
+                <h3>Themes</h3>
+                <ul>
+                    <li><a href="#">UX</a></li>
+                    <li><a href="#">Participant Frustrations with Multi-Step Authentication Flows and Password Recovery Across Mobile and Desktop</a></li>
+                    <li><a href="#">Trust</a></li>
+                    <li><a href="#">Onboarding</a></li>
+                    <li><a href="#">Long-Term Engagement Patterns and How Habitual Use Develops Over the First Six Months of Product Adoption</a></li>
+                    <li><a href="#">Pricing</a></li>
+                    <li><a href="#">Uncategorised observations</a></li>
+                </ul>
+            </nav>
+        </div>
+    </div>
+    <div>
+        <div class="label">Quotes page</div>
+        <div class="bn-dashboard-pane">
+            <nav class="toc">
+                <h3>Themes</h3>
+                <ul>
+                    <li><a href="#">UX</a></li>
+                    <li><a href="#">Participant Frustrations with Multi-Step Authentication Flows and Password Recovery Across Mobile and Desktop</a></li>
+                    <li><a href="#">Trust</a></li>
+                    <li><a href="#">Onboarding</a></li>
+                    <li><a href="#">Long-Term Engagement Patterns and How Habitual Use Develops Over the First Six Months of Product Adoption</a></li>
+                    <li><a href="#">Pricing</a></li>
+                    <li><a href="#">Uncategorised observations</a></li>
+                </ul>
+            </nav>
+        </div>
+    </div>
+</div>
+
+</body>
+</html>

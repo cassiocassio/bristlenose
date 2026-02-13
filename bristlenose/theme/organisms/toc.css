@@ -23,7 +23,7 @@
 }
 
 .toc li {
-    margin: 0.2rem 0;
+    margin: var(--bn-space-xs) 0;
     font-size: 0.9rem;
     break-inside: avoid;
 }

@@ -31,6 +31,7 @@ This file contains: session reminders, feature groupings with context, items too
 
 | Item | Issue | Effort |
 |------|-------|--------|
+| Dashboard: increase stats coverage | — | medium |
 | Dark mode: selection highlight visibility | #52 | trivial |
 | Logo: increase size from 80px to ~100px | #6 | trivial |
 | Show day of week in session Start column | #11 | small |
@@ -132,6 +133,7 @@ These are too small for issues or are internal-only concerns.
 - [ ] **Tag definitions page** — also tracked as #53
 - [ ] **Custom prompts** — user-defined tag categories via `bristlenose.toml` or `prompts.toml`
 - [ ] **Pass transcript data to renderer** — avoid redundant disk I/O in `render_html.py`
+- [ ] **People.yaml web UI** — in-report UI to update `people.yaml` for unidentified participants/observers/moderators (currently only have speaker codes, no display names). Part of Moderator Phase 2 (#25)
 
 ### Transcript page interactions
 
@@ -148,6 +150,7 @@ Ideas from 9 Feb 2026 session, roughly in order of effort:
 
 Low-priority improvements to pick up when working in these areas — not blockers.
 
+- [ ] **Typography and icon audit** — 16 distinct font-sizes across the report CSS where ~10 would suffice. Near-duplicates: 0.88/0.875rem, 0.82/0.8rem, one-offs at 0.92/1.05/1.25/0.78rem. See `docs/mockups/type-scale-audit.html` for full rendered inventory. Action: consolidate near-duplicates, consider introducing `--bn-font-size-*` design tokens. Also audit icon sizes (star, pencil, delete ×, toolbar emoji) for consistency
 - [ ] **Tag-count aggregation (3 implementations)** — `histogram.js`, `tag-filter.js`, `codebook.js` each count user tags independently. Shared `countUserTags()` would eliminate duplication
 - [ ] **Shared user-tags data layer** — `tags.js` owns the map; `codebook.js` reads storage directly. Extract shared `userTagStore` if write access needed from codebook
 - [ ] **isEditing() guard deduplication** — `editing.js` + `names.js` have separate booleans. Shared `EditGuard` class when a third editing context is added
@@ -251,6 +254,7 @@ Bristlenose has ~30 direct + transitive deps across Python, ML, LLM SDKs, and NL
 | `docs/design-codebook.md` | Codebook editor |
 | `docs/design-keychain.md` | Keychain credential storage |
 | `docs/design-keyboard-navigation.md` | Keyboard shortcuts |
+| `docs/design-dashboard-stats.md` | Dashboard stats inventory and improvement priorities |
 
 ---
 

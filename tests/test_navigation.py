@@ -322,17 +322,18 @@ def test_dashboard_stats_pane_full_width(tmp_path: Path) -> None:
     assert "bn-dashboard-full" in html
 
 
-def test_dashboard_sections_table(tmp_path: Path) -> None:
-    """Dashboard includes a sections table with linked names."""
+def test_dashboard_sections_list(tmp_path: Path) -> None:
+    """Dashboard includes a sections nav list with linked names."""
     html = _render_report(tmp_path)
-    assert "<th>Section</th>" in html
+    assert "bn-dashboard-nav" in html
+    assert ">Sections</h3>" in html
     assert "Homepage" in html
 
 
-def test_dashboard_themes_table(tmp_path: Path) -> None:
-    """Dashboard includes a themes table with linked names."""
+def test_dashboard_themes_list(tmp_path: Path) -> None:
+    """Dashboard includes a themes nav list with linked names."""
     html = _render_report(tmp_path)
-    assert "<th>Theme</th>" in html
+    assert ">Themes</h3>" in html
     assert "Brand perception" in html
 
 
@@ -341,7 +342,7 @@ def test_dashboard_with_people_has_session_table(tmp_path: Path) -> None:
     html = _render_report_with_people(tmp_path)
     assert "bn-session-table" in html
     # Single moderator → shown in header, not in rows.
-    assert "Sessions moderated by" in html
+    assert "Moderated by" in html
     assert "Mod" in html  # moderator short_name
 
 
@@ -356,7 +357,7 @@ def test_session_table_single_moderator_omitted_from_rows(tmp_path: Path) -> Non
     """With only one moderator, moderator codes don't appear in row speaker lists."""
     html = _render_report_with_people(tmp_path)
     # m1 should be in the header but not as a row badge.
-    assert "Sessions moderated by" in html
+    assert "Moderated by" in html
     # The session table is rendered twice (Sessions tab + Project tab dashboard),
     # so m1 badge appears twice (once per header). But it should not appear in
     # bn-person-id divs (row speaker lists).
@@ -380,8 +381,8 @@ def test_session_table_has_id_with_hash(tmp_path: Path) -> None:
 def test_dashboard_with_people_shows_duration(tmp_path: Path) -> None:
     """Dashboard stats show total duration when people data is available."""
     html = _render_report_with_people(tmp_path)
-    # 2400 seconds = 40:00 (max of the two sessions)
-    assert "of audio" in html
+    # Test sessions use .mp4 files → label is "of video".
+    assert "of video" in html
 
 
 def test_dashboard_with_people_shows_words(tmp_path: Path) -> None:

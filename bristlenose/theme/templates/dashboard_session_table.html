@@ -2,6 +2,9 @@
 {%- if moderator_header %}
 <p class="bn-session-moderators">{{ moderator_header }}</p>
 {%- endif %}
+{%- if observer_header %}
+<p class="bn-session-moderators">{{ observer_header }}</p>
+{%- endif %}
 <table>
 <thead><tr>
 <th>ID</th>
@@ -20,7 +23,7 @@
 <td class="bn-session-id"><a href="sessions/transcript_{{ row.sid }}.html" data-session-link="{{ row.sid }}">#{{ row.num }}</a></td>
 <td class="bn-session-speakers">
 {%- for sp in row.speakers_list %}
-<div class="bn-person-id"><span class="badge">{{ sp.code }}</span> <span class="bn-person-id-name">{{ sp.name }}</span></div>
+<div class="bn-person-id"><span class="badge">{{ sp.code }}</span>{% if sp.name %} <span class="bn-person-id-name">{{ sp.name }}</span>{% endif %}</div>
 {%- endfor %}
 </td>
 <td class="bn-session-meta">

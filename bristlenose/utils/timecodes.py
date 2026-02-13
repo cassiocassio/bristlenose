@@ -35,6 +35,26 @@ def format_timecode_ms(seconds: float) -> str:
     return f"{h:02d}:{m:02d}:{s:06.3f}"
 
 
+def format_duration_human(seconds: float) -> str:
+    """Format seconds as a compact human-readable duration.
+
+    Examples: ``14 min``, ``1 h 23 min``, ``2 h 0 min``.
+    Seconds are dropped — this is for summary display, not precision.
+    """
+    total = max(0, int(seconds))
+    h = total // 3600
+    m = (total % 3600) // 60
+    # Round up if there are leftover seconds and minutes is 0.
+    leftover_s = total % 60
+    if leftover_s and m == 0 and h == 0:
+        m = 1  # avoid showing "0 min" for e.g. 45 seconds
+    elif leftover_s and h == 0:
+        pass  # keep exact minute count — "14 min" not "15 min" for 14:01
+    if h:
+        return f"{h} h {m} min"
+    return f"{m} min"
+
+
 def parse_timecode(tc: str) -> float:
     """Parse a timecode string into seconds.
 

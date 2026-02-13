@@ -193,7 +193,7 @@ Top-level tab bar for report navigation. Manages switching between tab panels (P
 - **Stat card links** — elements with `data-stat-link="tab"` or `data-stat-link="tab:anchorId"` navigate to the target tab and optionally scroll to an anchor. Uses `switchToTab()` + `scrollToAnchor()`. Python renderer adds these attributes to dashboard stat cards in `render_html.py`
 - **Featured quote cards** — clicking a `.bn-featured-quote` card body (not its internal links) either opens the video player via `seekTo()` (if a video-enabled timecode link exists) or falls back to `navigateToSession()` for transcript navigation
 - **Dashboard session table rows** — rows in the Project tab's session table navigate via `navigateToSession()`. The `#N` session-link clicks are also intercepted. Filename links (video/file) pass through unhandled
-- **Section/theme list links** — `.bn-dashboard-list a[href^="#"]` links switch to the Quotes tab and scroll to the target section/theme anchor via `scrollToAnchor()`
+- **Section/theme list links** — `.bn-dashboard-nav a[href^="#"]` links switch to the Quotes tab and scroll to the target section/theme anchor via `scrollToAnchor()`
 
 ### Module state and dependencies
 

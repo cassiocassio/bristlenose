@@ -374,6 +374,11 @@ Edit `bristlenose/__init__.py` (the single source of truth for version), commit,
 
 ## Changelog
 
+**0.9.3** — _13 Feb 2026_
+
+- Interactive dashboard — clickable stat cards, featured quotes with video playback, session row drill-down, cross-tab navigation
+- Fix: logo dark/light swap on appearance toggle
+
 **0.9.2** — _12 Feb 2026_
 
 - Sessions table redesign — speaker badges, user journey paths, video thumbnails, per-session sentiment sparklines

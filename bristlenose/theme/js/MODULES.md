@@ -169,18 +169,38 @@ Codebook data model, colour assignment, and interactive panel UI. Manages the re
 
 ## global-nav.js
 
-Top-level tab bar for report navigation. Manages switching between tab panels (Project, Sessions, Quotes, Codebook, Analysis, Settings, About) and the Sessions tab drill-down sub-navigation.
+Top-level tab bar for report navigation. Manages switching between tab panels (Project, Sessions, Quotes, Codebook, Analysis, Settings, About), the Sessions tab drill-down sub-navigation, and all cross-tab navigation from the Project dashboard.
+
+### Reusable navigation helpers
+
+- **`scrollToAnchor(anchorId, opts)`** — waits one rAF, finds element by ID, smooth-scrolls to it. Options: `{ block: 'start'|'center', highlight: true|false }`. When `highlight` is true, triggers the yellow-flash `anchor-highlight` CSS animation (same as standalone transcript pages). Use this whenever you need to scroll to an element after a tab switch or layout change
+- **`navigateToSession(sid, anchorId)`** — switches to Sessions tab, drills into the session, and optionally scrolls to a timecode anchor with highlight. Null-safe (returns early if `sid` is falsy or `_sessGrid` is uninitialised). Use this from any module that needs to deep-link into a session transcript
+
+### Tab switching
 
 - **`switchToTab(tabName, pushHash)`** — switch to a named tab. Updates `aria-selected` on tab buttons, toggles `.active` on panels, pushes URL hash (`#codebook`, `#analysis`, etc.) for reload persistence and back/forward navigation. Pass `pushHash=false` to skip hash update (used by `popstate` handler and initial load). Exported for cross-module use (e.g. speaker links navigating to Sessions tab, logo click → Project tab via inline `onclick` in `report_header.html`)
-- **`initGlobalNav()`** — wires tab click handlers, restores active tab from URL hash on load, listens for `popstate` (back/forward), initialises session drill-down and speaker link navigation
-- **`_initSessionDrillDown()`** — click handlers on session table rows (`tr[data-session]`) and session number links (`a[data-session-link]`) to drill into inline transcript views; back button returns to grid
-- **`_initSpeakerLinks()`** — click handlers on `a[data-nav-session]` links in quote cards. Navigates: switch to Sessions tab → drill into session → scroll to `data-nav-anchor` timecode
+- **Hash-based tab persistence**: `_validTabs` whitelist; `history.pushState` on tab switch; `popstate` listener for back/forward; hash read on init for reload. Invalid/missing hash falls back to Project tab (server-rendered default)
+
+### Session drill-down (Sessions tab)
+
+- **`_initSessionDrillDown()`** — click handlers on session table rows (`tr[data-session]`) and session number links (`a[data-session-link]`) in the Sessions tab grid to drill into inline transcript views; back button returns to grid
 - **`_showSession(sid)`** — hides session grid, shows the matching `.bn-session-page`, updates sub-nav label, re-renders transcript annotations (span bars need layout measurements). Stores `_currentSessionId` so returning to the Sessions tab restores drill-down state
 - **`_showGrid()`** — returns to the session grid, hides all transcript pages, clears `_currentSessionId`
-- **Hash-based tab persistence**: `_validTabs` whitelist; `history.pushState` on tab switch; `popstate` listener for back/forward; hash read on init for reload. Invalid/missing hash falls back to Project tab (server-rendered default)
+
+### Cross-tab navigation (Project dashboard)
+
+- **`_initSpeakerLinks()`** — click handlers on `a[data-nav-session]` links in quote cards. Delegates to `navigateToSession()`
+- **Stat card links** — elements with `data-stat-link="tab"` or `data-stat-link="tab:anchorId"` navigate to the target tab and optionally scroll to an anchor. Uses `switchToTab()` + `scrollToAnchor()`. Python renderer adds these attributes to dashboard stat cards in `render_html.py`
+- **Featured quote cards** — clicking a `.bn-featured-quote` card body (not its internal links) either opens the video player via `seekTo()` (if a video-enabled timecode link exists) or falls back to `navigateToSession()` for transcript navigation
+- **Dashboard session table rows** — rows in the Project tab's session table navigate via `navigateToSession()`. The `#N` session-link clicks are also intercepted. Filename links (video/file) pass through unhandled
+- **Section/theme list links** — `.bn-dashboard-list a[href^="#"]` links switch to the Quotes tab and scroll to the target section/theme anchor via `scrollToAnchor()`
+
+### Module state and dependencies
+
 - **Module state**: `_validTabs`, `_sessGrid`, `_sessSubnav`, `_sessLabel`, `_sessPages`, `_currentSessionId` — valid tab names, cached DOM references, and current drill-down state
+- **`initGlobalNav()`** — wires all of the above: tab click handlers, hash restore, popstate, session drill-down, speaker links, stat cards, featured quotes, dashboard table rows, section/theme list links, featured quotes reshuffle
 - **Dependencies**: must load after `focus.js` and `feedback.js`; before `transcript-names.js` and `transcript-annotations.js` (transcript pages embedded in Sessions tab need annotation rendering). Calls `_renderAllAnnotations()` from `transcript-annotations.js` if available
-- **CSS**: `organisms/global-nav.css` — tab bar, tab buttons, panels, session grid, session sub-nav, responsive horizontal scroll
+- **CSS**: `organisms/global-nav.css` — tab bar, tab buttons, panels, session grid, session sub-nav, dashboard stats/featured/list panes, responsive horizontal scroll
 
 ## Codebook page
 

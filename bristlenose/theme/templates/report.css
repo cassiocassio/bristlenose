@@ -132,6 +132,14 @@ td a:hover {
     border-bottom: none;
 }
 
+.bn-session-table tbody tr[data-session] {
+    cursor: pointer;
+    transition: background-color 0.15s ease;
+}
+.bn-session-table tbody tr[data-session]:hover {
+    background-color: var(--bn-colour-hover);
+}
+
 .bn-session-moderators {
     font-size: 0.95rem;
     margin: 0 0 0.5rem;

@@ -37,7 +37,7 @@ Dark mode is CSS-only. No localStorage, no toggle button, no JS involved.
 
 ## Template CSS files
 
-Template-level CSS in `templates/`: `report.css` (main report layout), `transcript.css` (per-session transcript pages — back button, segment layout, meta styling, citation highlight, anchor highlight animation), `print.css` (print overrides, hides interactive elements — includes `.feedback-links`, `.feedback-overlay`, `.footer-logo-picture`). Quote attribution links styled via `.speaker-link` in `organisms/blockquote.css` (inherits muted colour from `.speaker`, accent on hover).
+Template-level CSS in `templates/`: `report.css` (main report layout), `transcript.css` (per-session transcript pages — back button, segment layout, meta styling, citation highlight, anchor highlight animation), `print.css` (print overrides, hides interactive elements — includes `.feedback-links`, `.feedback-overlay`, `.footer-logo-picture`). Quote attribution links styled via `.speaker-link` in `organisms/blockquote.css` (inherits muted colour from `.speaker`, accent on hover). Dashboard stat cards, featured quotes, and session table rows all use `var(--bn-colour-hover)` for interactive hover — see "Dashboard cross-tab navigation" section below.
 
 ### Inline citation highlight (bn-cited)
 
@@ -105,6 +105,7 @@ Session table styles in `templates/report.css`. The session table renders in bot
 - **`.bn-sparkline` / `.bn-sparkline-bar`** — per-session sentiment mini-bar chart. Container height: 54px (matches thumbnail) so baselines align. Bar heights set inline, colours via `--bn-sentiment-{name}` tokens
 - **`.bn-interviews-link`** — folder header link (opens input folder via `file://` URI)
 - **`.bn-folder-icon`** — inline SVG folder icon in header link
+- **Clickable rows** — `tbody tr[data-session]` gets `cursor: pointer` and `var(--bn-colour-hover)` on hover (in `report.css`). JS click handler in `global-nav.js` calls `navigateToSession()`. Dashboard table rows (`_initGlobalNav`) and Sessions tab rows (`_initSessionDrillDown`) both use this pattern. Clicks on `<a>` elements within rows (filenames, session links) are not intercepted
 
 ## Span bar atom
 
@@ -148,13 +149,53 @@ Per-component CSS docs in `CSS-REFERENCE.md`. Key patterns: toolbar dual-class (
 | `toolbar.html` | (none — static) | Report |
 | `session_table.html` | `rows` (list of dicts), `moderator_header` (str) | Report |
 | `toc.html` | `section_toc`, `theme_toc`, `chart_toc` | Report |
-| `content_section.html` | `heading`, `item_type`, `groups` | Report (sections + themes) |
+| `content_section.html` | `heading`, `item_type`, `groups` | Report (sections + themes). `h2` has `id="{{ heading | lower }}"` for anchor navigation from dashboard |
 | `sentiment_chart.html` | `max_count`, `pos_bars`, `surprise_bar`, `neg_bars` | Report |
 | `friction_points.html` | `groups` (list of dicts with `pid`, `entries`) | Report |
 | `user_journeys.html` | `rows` (list of dicts) | Report |
 | `coverage.html` | `summary`, `pct_omitted`, `sessions` | Report |
 | `player.html` | (none — static) | Separate player file |
-| `analysis.html` | (none — structural only, JS populates) | Analysis page |
+| `analysis.html` | (none — structural only, JS populates) | Analysis page. `h2` has `id="section-x-sentiment"` for anchor navigation from dashboard |
+
+## Dashboard cross-tab navigation
+
+The Project tab dashboard is fully interactive — stat cards, featured quotes, session table rows, and section/theme lists all navigate to other tabs.
+
+### `data-stat-link` convention
+
+Stat cards use `data-stat-link="tab"` or `data-stat-link="tab:anchorId"` attributes. JS in `global-nav.js` handles the click: calls `switchToTab(tab)` then `scrollToAnchor(anchorId)` if present. Current mappings:
+
+| Stat | Target |
+|------|--------|
+| Audio/video duration | `sessions` |
+| Word count | `sessions` |
+| Quote count | `quotes` |
+| Section count | `quotes:sections` |
+| Theme count | `quotes:themes` |
+| AI tag count | `analysis:section-x-sentiment` |
+| User tag count | `codebook` |
+
+The anchor IDs `sections` and `themes` come from `content_section.html` (`id="{{ heading | lower }}"`). The `section-x-sentiment` anchor is on the h2 in `analysis.html`.
+
+### `--bn-colour-hover` token
+
+Interactive hover background for clickable rows and cards: `light-dark(#e8f0fe, #1e293b)`. Used by stat cards, featured quotes, and session table rows. Dark mode value is a dark blue-grey so white text stays readable (not a light blue which would require black text).
+
+### Featured quote attribution
+
+Featured quote footer shows a speaker code lozenge (`<a class="badge speaker-link">`) instead of the display name. The lozenge links to the session transcript via `data-nav-session` / `data-nav-anchor`. Clicking the card body tries the video player first (`seekTo`), falls back to transcript navigation.
+
+### Python render helpers
+
+Two helpers in `render_html.py` reduce duplication across quote rendering:
+
+- **`_timecode_html(quote, video_map)`** — returns `<a class="timecode" ...>` if video exists for the participant, otherwise `<span class="timecode">`. Used by `_format_quote_html()` and `_render_featured_quote()`
+- **`_session_anchor(quote)`** — returns `(pid_esc, sid_esc, anchor)` tuple for session navigation attributes. The anchor format is `t-{sid}-{start_seconds}`
+
+### JS navigation helpers (global-nav.js)
+
+- **`scrollToAnchor(anchorId, opts)`** — rAF + `getElementById` + `scrollIntoView`. Options: `block` (`'start'`/`'center'`), `highlight` (adds `anchor-highlight` class for yellow flash)
+- **`navigateToSession(sid, anchorId)`** — `switchToTab('sessions')` + `_showSession(sid)` + optional `scrollToAnchor` with highlight. Used by speaker links, featured quotes, and dashboard table rows
 
 ## Gotchas
 

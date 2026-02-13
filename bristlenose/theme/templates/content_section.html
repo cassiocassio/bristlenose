@@ -1,5 +1,5 @@
 <section>
-<h2>{{ heading }}</h2>
+<h2 id="{{ heading | lower }}">{{ heading }}</h2>
 {%- for group in groups %}
 <h3 id="{{ group.anchor }}"><span class="editable-text" data-edit-key="{{ group.anchor }}:title" data-original="{{ group.label }}">{{ group.label }}</span> <button class="edit-pencil edit-pencil-inline" aria-label="Edit {{ item_type }} title">&#9998;</button></h3>
 {%- if group.description %}

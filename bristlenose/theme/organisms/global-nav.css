@@ -129,6 +129,11 @@
     grid-column: 1 / -1;
 }
 
+/* Tables inside dashboard panes — kill base table margin (1rem 0) */
+.bn-dashboard-pane table {
+    margin: 0;
+}
+
 /* Compact list tables (sections/themes) — no row borders */
 .bn-dashboard-list td {
     border-bottom: none;
@@ -154,19 +159,19 @@
     transition: background-color 0.15s ease;
 }
 .bn-project-stat:hover {
-    background-color: var(--bn-colour-hover, #e8f0fe);
+    background-color: var(--bn-colour-hover);
 }
 
 .bn-project-stat-value {
     font-size: 1.5rem;
-    font-weight: 700;
+    font-weight: 400;
     color: var(--bn-colour-text);
     line-height: 1.2;
 }
 
 .bn-project-stat-label {
     font-size: 0.8rem;
-    color: var(--bn-colour-muted);
+    color: var(--bn-colour-text);
     margin-top: 0.15rem;
     text-align: center;
 }
@@ -191,7 +196,7 @@
     border-radius: var(--bn-radius-md);
 }
 .bn-project-stat--pair-half:hover {
-    background-color: var(--bn-colour-hover, #e8f0fe);
+    background-color: var(--bn-colour-hover);
 }
 
 /* Text-style stat card (e.g. "Moderator: Name, Name, and Name") */
@@ -221,6 +226,11 @@
     overflow: hidden;
     display: flex;
     flex-direction: column;
+    cursor: pointer;
+    transition: background-color 0.15s ease;
+}
+.bn-featured-quote:hover {
+    background-color: var(--bn-colour-hover);
 }
 
 .bn-featured-quote .quote-text {
@@ -236,19 +246,19 @@
     margin-bottom: var(--bn-space-xs);
 }
 
-/* Footer: timecode — speaker, with optional badge */
+/* Footer: timecode + speaker badge, with optional sentiment badge */
 .bn-featured-footer {
     display: flex;
     align-items: center;
-    gap: var(--bn-space-sm);
+    gap: 1rem;
     margin-top: var(--bn-space-sm);
     font-size: 0.82rem;
     color: var(--bn-colour-muted);
     flex-wrap: wrap;
 }
-
-.bn-featured-footer .speaker {
-    white-space: nowrap;
+.bn-featured-footer a.badge {
+    text-decoration: none;
+    color: var(--bn-colour-badge-text);
 }
 
 /* Responsive: collapse dashboard to single column, scroll nav */

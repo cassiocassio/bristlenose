@@ -12,6 +12,7 @@
     --bn-colour-muted: #6b7280;
     --bn-colour-border: #e5e7eb;
     --bn-colour-accent: #2563eb;
+    --bn-colour-hover: #e8f0fe;
 
     /* Semantic surfaces */
     --bn-colour-quote-bg: #f9fafb;
@@ -235,6 +236,7 @@
         --bn-colour-muted:            light-dark(#6b7280, #9ca3af);
         --bn-colour-border:           light-dark(#e5e7eb, #2d2d2d);
         --bn-colour-accent:           light-dark(#2563eb, #60a5fa);
+        --bn-colour-hover:            light-dark(#e8f0fe, #1e293b);
 
         /* Semantic surfaces */
         --bn-colour-quote-bg:         light-dark(#f9fafb, #1a1a1a);

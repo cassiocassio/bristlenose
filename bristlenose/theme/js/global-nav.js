@@ -20,6 +20,44 @@ var _currentSessionId = null;
 var _validTabs = ['project', 'sessions', 'quotes', 'codebook', 'analysis', 'settings', 'about'];
 
 /**
+ * Scroll to an element by ID after the next frame settles.
+ * Optionally applies a yellow flash highlight (for transcript timecodes).
+ *
+ * @param {string} anchorId   The element ID to scroll to.
+ * @param {object} [opts]     Options: { block: 'start'|'center', highlight: true|false }
+ */
+function scrollToAnchor(anchorId, opts) {
+  var block = (opts && opts.block) || 'start';
+  var highlight = opts && opts.highlight;
+  requestAnimationFrame(function () {
+    var el = document.getElementById(anchorId);
+    if (!el) return;
+    el.scrollIntoView({ behavior: 'smooth', block: block });
+    if (highlight) {
+      el.classList.remove('anchor-highlight');
+      void el.offsetWidth;
+      el.classList.add('anchor-highlight');
+    }
+  });
+}
+
+/**
+ * Navigate to a session transcript in the Sessions tab.
+ * Switches tab, drills into the session, and optionally scrolls to an anchor.
+ *
+ * @param {string} sid          Session ID (e.g. "s1").
+ * @param {string} [anchorId]   Optional anchor to scroll to after drill-down.
+ */
+function navigateToSession(sid, anchorId) {
+  if (!sid || !_sessGrid) return;
+  switchToTab('sessions');
+  _showSession(sid);
+  if (anchorId) {
+    scrollToAnchor(anchorId, { block: 'center', highlight: true });
+  }
+}
+
+/**
  * Switch to a specific tab by name.
  * Exported for use by other modules (e.g. focus.js "?" key → About tab).
  *
@@ -86,6 +124,78 @@ function initGlobalNav() {
   // --- Speaker links (navigate to Sessions tab + drill into session) ---
   _initSpeakerLinks();
 
+  // --- Stat card links (dashboard → other tabs) ---
+  var statLinks = document.querySelectorAll('[data-stat-link]');
+  for (var s = 0; s < statLinks.length; s++) {
+    statLinks[s].addEventListener('click', function () {
+      var link = this.getAttribute('data-stat-link');
+      var parts = link.split(':');
+      var tab = parts[0];
+      var anchor = parts[1] || null;
+      switchToTab(tab);
+      if (anchor) scrollToAnchor(anchor);
+    });
+  }
+
+  // --- Featured quote cards — click to open video player or transcript ---
+  var featuredCards = document.querySelectorAll('.bn-featured-quote');
+  for (var f = 0; f < featuredCards.length; f++) {
+    featuredCards[f].addEventListener('click', function (e) {
+      // Don't intercept clicks on links within the card (timecodes, speaker links)
+      if (e.target.closest('a')) return;
+
+      // Try video player first (timecode link with data-participant)
+      var tcLink = this.querySelector('a.timecode[data-participant]');
+      if (tcLink && typeof seekTo === 'function') {
+        var pid = tcLink.getAttribute('data-participant');
+        var seconds = parseFloat(tcLink.getAttribute('data-seconds'));
+        if (pid && !isNaN(seconds)) {
+          seekTo(pid, seconds);
+          return;
+        }
+      }
+
+      // Fall back to transcript navigation (speaker link)
+      var spLink = this.querySelector('a[data-nav-session]');
+      if (spLink) {
+        navigateToSession(
+          spLink.getAttribute('data-nav-session'),
+          spLink.getAttribute('data-nav-anchor')
+        );
+      }
+    });
+  }
+
+  // --- Dashboard session table rows — click to drill into Sessions tab ---
+  var dashTable = document.querySelector('.bn-tab-panel[data-tab="project"] .bn-session-table');
+  if (dashTable) {
+    var dashRows = dashTable.querySelectorAll('tr[data-session]');
+    for (var d = 0; d < dashRows.length; d++) {
+      dashRows[d].addEventListener('click', function (e) {
+        if (e.target.closest('a')) return;
+        navigateToSession(this.getAttribute('data-session'));
+      });
+    }
+    // Intercept #N session-link clicks in the dashboard table too
+    var dashSessionLinks = dashTable.querySelectorAll('a[data-session-link]');
+    for (var dl = 0; dl < dashSessionLinks.length; dl++) {
+      dashSessionLinks[dl].addEventListener('click', function (e) {
+        e.preventDefault();
+        navigateToSession(this.getAttribute('data-session-link'));
+      });
+    }
+  }
+
+  // --- Dashboard section/theme list links — switch to Quotes tab + scroll ---
+  var dashListLinks = document.querySelectorAll('.bn-dashboard-list a[href^="#"]');
+  for (var ll = 0; ll < dashListLinks.length; ll++) {
+    dashListLinks[ll].addEventListener('click', function (e) {
+      e.preventDefault();
+      switchToTab('quotes');
+      scrollToAnchor(this.getAttribute('href').slice(1));
+    });
+  }
+
   // --- Featured quotes reshuffle based on stars/hidden ---
   _reshuffleFeaturedQuotes();
 }
@@ -144,26 +254,10 @@ function _initSpeakerLinks() {
   for (var i = 0; i < links.length; i++) {
     links[i].addEventListener('click', function (e) {
       e.preventDefault();
-      var sid = this.getAttribute('data-nav-session');
-      var anchor = this.getAttribute('data-nav-anchor');
-      if (!sid || !_sessGrid) return;
-
-      switchToTab('sessions');
-      _showSession(sid);
-
-      // Scroll to the specific timecode anchor after layout settles
-      if (anchor) {
-        requestAnimationFrame(function () {
-          var target = document.getElementById(anchor);
-          if (target) {
-            target.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            // Yellow flash highlight (same animation as standalone transcript pages)
-            target.classList.remove('anchor-highlight');
-            void target.offsetWidth; // force reflow to restart animation
-            target.classList.add('anchor-highlight');
-          }
-        });
-      }
+      navigateToSession(
+        this.getAttribute('data-nav-session'),
+        this.getAttribute('data-nav-anchor')
+      );
     });
   }
 }

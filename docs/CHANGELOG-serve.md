@@ -4,7 +4,23 @@ Development log for the `bristlenose serve` feature branch. Tracks milestones, a
 
 ---
 
-## Milestone 1 — Sessions Table as React Island (in progress)
+## Milestone 1 — Sessions Table as React Island (complete)
+
+### 14 Feb 2026 — Steps 4-5 complete (milestone done)
+
+**Mount point and React component.** `render_html.py` gains `serve_mode` flag; `SessionsTable.tsx` replaces the Jinja2 sessions table as a React island.
+
+**What shipped:**
+
+- `serve_mode: bool = False` parameter on `render_html()`. When True, the Sessions tab renders `<div id="bn-sessions-table-root" data-project-id="1">` instead of the Jinja2 `session_table.html` template. Dashboard compact table stays static. Static export path unchanged.
+
+- JS audit: only `global-nav.js` binds to session table DOM (`tr[data-session]`, `a[data-session-link]`). React replaces that DOM in serve mode; the JS queries return empty NodeLists gracefully.
+
+- `SessionsTable.tsx` — full-parity React component. Reads project ID from mount point, fetches `GET /api/projects/{id}/sessions`, renders the identical table structure with all CSS classes. All columns: ID with transcript link, speaker badges, Finder-style relative dates with journey arrows, duration, filename with middle-ellipsis, thumbnail play icon, sentiment sparkline bars, moderator/observer header. Loading and error states included.
+
+- `main.tsx` updated with island pattern: finds `#bn-sessions-table-root`, reads `data-project-id`, mounts `<SessionsTable>`.
+
+**What's next:** Milestone 2 planning — likely the quotes/codebook workspace.
 
 ### 14 Feb 2026 — Steps 1-3 complete
 

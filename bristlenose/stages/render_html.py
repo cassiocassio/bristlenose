@@ -202,8 +202,16 @@ def render_html(
     people: PeopleFile | None = None,
     transcripts: list[FullTranscript] | None = None,
     analysis: object | None = None,
+    serve_mode: bool = False,
 ) -> Path:
     """Generate the HTML research report with external CSS stylesheet.
+
+    Args:
+        serve_mode: When True, render React island mount points instead of
+            Jinja2 session tables. The Sessions tab gets
+            ``<div id="bn-sessions-table-root" data-project-id="1">``
+            and the React SessionsTable component takes over rendering.
+            The static export path (serve_mode=False) stays unchanged.
 
     Output layout (v2):
         output/
@@ -311,7 +319,10 @@ def render_html(
     _w('<div class="bn-session-grid">')
 
     # --- Session Summary (at top for quick reference) ---
-    if sessions:
+    if serve_mode:
+        # React island mount point — SessionsTable component will render here
+        _w('<div id="bn-sessions-table-root" data-project-id="1"></div>')
+    elif sessions:
         session_rows, moderator_header, observer_header = _build_session_rows(
             sessions, people, display_names, video_map, now,
             screen_clusters=screen_clusters,

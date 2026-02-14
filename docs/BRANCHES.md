@@ -16,6 +16,7 @@ Each active feature branch gets its own **git worktree** — a full working copy
 |-----------|--------|---------|
 | `bristlenose/` | `main` | Main repo, releases, hotfixes |
 | `bristlenose_branch symbology/` | `symbology` | § ¶ ❋ Unicode prefix symbols for sections, quotes, themes |
+| `bristlenose_branch serve/` | `serve` | FastAPI + React + SQLite served version |
 
 **Creating a new feature branch worktree:**
 
@@ -94,6 +95,7 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 |--------|---------------|---------------|
 | `main` | `bristlenose/` | `origin/main` (push via `origin/main:wip` until release time) |
 | `symbology` | `bristlenose_branch symbology/` | `origin/symbology` |
+| `serve` | `bristlenose_branch serve/` | (local only) |
 
 ---
 
@@ -114,6 +116,21 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 - `bristlenose/theme/js/analysis.js` — signal cards, heatmap headers
 - `bristlenose/theme/js/transcript-annotations.js` — margin label tooltips
 - `bristlenose/theme/js/codebook.js` — quote count tooltips
+
+### `serve` — started 13 Feb 2026
+
+**Worktree:** `/Users/cassio/Code/bristlenose_branch serve`
+
+**Goal:** Add `bristlenose serve` command — FastAPI server + React frontend + SQLite database. Islands migration pattern: serve the existing HTML report over HTTP, then replace vanilla JS components with React islands one at a time.
+
+**Files likely to touch:**
+- `bristlenose/server/` — new FastAPI application (app.py, db.py, models.py, routes/)
+- `bristlenose/cli.py` — new `serve` command
+- `bristlenose/stages/render_html.py` — `<div id="bn-react-root">` mount point
+- `frontend/` — new React app (Vite + TypeScript)
+- `pyproject.toml` — `[serve]` optional dependency group
+
+**Design doc:** `docs/design-serve-migration.md`
 
 ---
 

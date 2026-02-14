@@ -14,7 +14,9 @@ from bristlenose import __version__
 from bristlenose.config import load_settings
 
 # Known commands — used by _maybe_inject_run() to detect bare directory arguments
-_COMMANDS = {"run", "transcribe", "analyze", "analyse", "render", "doctor", "help", "configure"}
+_COMMANDS = {
+    "run", "transcribe", "analyze", "analyse", "render", "doctor", "help", "configure", "serve",
+}
 
 
 def _maybe_inject_run() -> None:
@@ -996,6 +998,62 @@ def render(
     result = pipeline.run_render_only(output_dir, input_dir)
 
     _print_pipeline_summary(result)
+
+
+# ---------------------------------------------------------------------------
+# Serve command (FastAPI web server)
+# ---------------------------------------------------------------------------
+
+
+@app.command()
+def serve(
+    project_dir: Annotated[
+        Path | None,
+        typer.Argument(
+            help="Directory containing bristlenose-output/ from a previous run.",
+        ),
+    ] = None,
+    port: Annotated[
+        int,
+        typer.Option("--port", "-p", help="Port to serve on."),
+    ] = 8150,
+    dev: Annotated[
+        bool,
+        typer.Option("--dev", help="Development mode: auto-reload on Python changes."),
+    ] = False,
+) -> None:
+    """Launch the Bristlenose web server to browse reports interactively."""
+    try:
+        import uvicorn  # noqa: F401 — test that serve deps are installed
+    except ImportError:
+        console.print("[red]Server dependencies not installed.[/red]")
+        console.print("Install with: [bold]pip install bristlenose[serve][/bold]")
+        raise typer.Exit(1)
+
+    from bristlenose.server.app import create_app
+
+    app_instance = create_app(project_dir=project_dir, dev=dev)
+
+    import threading
+    import webbrowser
+
+    def _open_browser() -> None:
+        import time
+
+        time.sleep(1.0)
+        webbrowser.open(f"http://localhost:{port}")
+
+    if not dev:
+        threading.Thread(target=_open_browser, daemon=True).start()
+
+    uvicorn.run(
+        app_instance if not dev else "bristlenose.server.app:create_app",
+        host="127.0.0.1",
+        port=port,
+        reload=dev,
+        factory=dev,
+        log_level="info" if dev else "warning",
+    )
 
 
 # ---------------------------------------------------------------------------

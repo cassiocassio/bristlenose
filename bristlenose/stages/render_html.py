@@ -599,6 +599,10 @@ def render_html(
     _w("})();")
     _w("</script>")
 
+    # React islands mount point — empty and invisible when no React bundle is loaded.
+    # When bristlenose serve is running, the React app mounts components here.
+    _w('<div id="bn-react-root"></div>')
+
     _w("</body>")
     _w("</html>")
 

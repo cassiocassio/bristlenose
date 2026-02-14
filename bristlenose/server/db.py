@@ -1,0 +1,64 @@
+"""SQLAlchemy database setup — SQLite for now, Postgres later."""
+
+from __future__ import annotations
+
+from collections.abc import Generator
+from pathlib import Path
+
+from sqlalchemy import create_engine, event
+from sqlalchemy.engine import Engine
+from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
+
+_CONFIG_DIR = Path("~/.config/bristlenose").expanduser()
+_DB_PATH = _CONFIG_DIR / "bristlenose.db"
+
+
+class Base(DeclarativeBase):
+    """Declarative base for all ORM models."""
+
+
+def _default_db_url() -> str:
+    _CONFIG_DIR.mkdir(parents=True, exist_ok=True)
+    return f"sqlite:///{_DB_PATH}"
+
+
+def get_engine(db_url: str | None = None) -> Engine:
+    """Create a SQLAlchemy engine.
+
+    Args:
+        db_url: Database URL. Defaults to the standard SQLite path.
+                Pass "sqlite://" for an in-memory database (tests).
+    """
+    url = db_url or _default_db_url()
+    return create_engine(url, connect_args={"check_same_thread": False})
+
+
+@event.listens_for(Engine, "connect")
+def _set_sqlite_pragma(dbapi_connection, connection_record):  # type: ignore[no-untyped-def]
+    """Enable WAL mode and foreign keys for SQLite connections."""
+    cursor = dbapi_connection.cursor()
+    cursor.execute("PRAGMA journal_mode=WAL")
+    cursor.execute("PRAGMA foreign_keys=ON")
+    cursor.close()
+
+
+def create_session_factory(engine: Engine) -> sessionmaker[Session]:
+    """Create a sessionmaker bound to the given engine."""
+    return sessionmaker(bind=engine)
+
+
+def init_db(engine: Engine) -> None:
+    """Create all tables. Safe to call repeatedly (CREATE IF NOT EXISTS)."""
+    from bristlenose.server.models import Project  # noqa: F401 — registers table
+
+    Base.metadata.create_all(bind=engine)
+
+
+def get_db(engine: Engine) -> Generator[Session, None, None]:
+    """Dependency that yields a database session and closes it after use."""
+    session_factory = create_session_factory(engine)
+    db = session_factory()
+    try:
+        yield db
+    finally:
+        db.close()

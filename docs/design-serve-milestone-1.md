@@ -588,8 +588,21 @@ Assuming: full domain schema, import on startup, full visual parity, islands on 
 - `app.py`: registers sessions router, stores DB factory in app state, auto-imports on startup
 - All 1050 existing tests pass, lint clean
 
-### Next
+**Step 4 — Mount point in existing HTML** (`bristlenose/stages/render_html.py`)
+- `render_html()` gains `serve_mode: bool = False` parameter
+- When `serve_mode=True`, Sessions tab renders `<div id="bn-sessions-table-root" data-project-id="1">` instead of Jinja2 table
+- Dashboard compact table stays static (no React replacement needed)
+- Audit confirmed: only `global-nav.js` binds to session table DOM (`tr[data-session]`, `a[data-session-link]` in both dashboard and sessions grid). React replaces the sessions grid DOM; the JS is null-safe (queries return empty NodeLists when mount point is empty)
 
-**Step 3 — Mount point in existing HTML.** `render_html.py` gains `serve_mode` flag. In serve mode, sessions table section renders `<div id="bn-sessions-table-root" data-project-id="...">` instead of Jinja2 table. Audit which vanilla JS modules bind to session table DOM.
+**Step 5 — React SessionsTable component** (`frontend/src/islands/SessionsTable.tsx`)
+- Full visual parity with Jinja2 `session_table.html`
+- Reads `data-project-id` from mount point, fetches `GET /api/projects/{id}/sessions`
+- All columns: ID with transcript link, speakers with badges (`.bn-person-id`, `.badge`), Finder-style relative dates, journey arrow chains, duration (MM:SS or HH:MM:SS), filename with middle-ellipsis, thumbnail play icon, sentiment sparkline bars (7 sentiments with coloured bars)
+- Moderator/observer header above the table
+- Loading and error states
+- `main.tsx` updated to mount SessionsTable into `#bn-sessions-table-root`
+- TypeScript compiles clean, Vite build succeeds
 
-**Step 4 — React SessionsTable component.** Full visual parity with existing Jinja2 table. Same HTML structure + CSS classes. All columns: ID, speakers with badges, Finder-style dates, journey arrows, duration, filename with middle-ellipsis, thumbnail, sentiment sparkline, moderator/observer header.
+### Milestone 1 complete
+
+All 5 steps done. 72 new tests (38 schema + 17 import + 17 API), full suite (1050) passing, lint clean. The served sessions table is now a React island backed by a real API reading from SQLite.

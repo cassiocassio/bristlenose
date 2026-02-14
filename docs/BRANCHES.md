@@ -123,7 +123,7 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 
 **Goal:** Add `bristlenose serve` command — FastAPI server + React frontend + SQLite database. Islands migration pattern: serve the existing HTML report over HTTP, then replace vanilla JS components with React islands one at a time.
 
-**Current status:** Milestone 0 complete (FastAPI + React tooling + HelloIsland). Milestone 1 in progress — steps 1-3 of 5 done (full 22-table domain schema, pipeline importer, sessions API endpoint with 72 new tests all passing). Next: mount point in HTML (serve_mode flag) and React SessionsTable component.
+**Current status:** Milestones 0 and 1 complete. The sessions table is now a React island backed by a real API reading from SQLite. 72 new tests, full suite (1050) passing.
 
 **Files added/modified:**
 - `bristlenose/server/models.py` — full 22-table domain schema (was single Project table)
@@ -131,16 +131,14 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 - `bristlenose/server/routes/sessions.py` — sessions API endpoint
 - `bristlenose/server/app.py` — sessions router, DB dependency injection, auto-import on startup
 - `bristlenose/server/db.py` — StaticPool for in-memory testing, all-models init
+- `bristlenose/stages/render_html.py` — `serve_mode` flag for React mount point
+- `frontend/src/islands/SessionsTable.tsx` — React sessions table component
+- `frontend/src/main.tsx` — mount SessionsTable into `#bn-sessions-table-root`
 - `docs/design-serve-milestone-1.md` — full design doc with domain model, decisions, status
+- `docs/CHANGELOG-serve.md` — development log with design rationale
 - `tests/test_serve_models.py` — 38 schema tests
 - `tests/test_serve_importer.py` — 17 import tests
 - `tests/test_serve_sessions_api.py` — 17 API tests
-
-**Files still to touch:**
-- `bristlenose/stages/render_html.py` — `serve_mode` flag for mount point div
-- `bristlenose/theme/templates/session_table.html` — conditional mount point
-- `frontend/src/islands/SessionsTable.tsx` — React sessions table component
-- `frontend/src/main.tsx` — mount SessionsTable into `#bn-sessions-table-root`
 
 **Design docs:** `docs/design-serve-migration.md`, `docs/design-serve-milestone-1.md`
 

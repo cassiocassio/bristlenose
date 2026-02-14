@@ -2,13 +2,17 @@
 
 from __future__ import annotations
 
+import logging
 from pathlib import Path
 
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 
-from bristlenose.server.db import get_engine, init_db
+from bristlenose.server.db import create_session_factory, get_engine, init_db
 from bristlenose.server.routes.health import router as health_router
+from bristlenose.server.routes.sessions import router as sessions_router
+
+logger = logging.getLogger(__name__)
 
 _STATIC_DIR = Path(__file__).parent / "static"
 
@@ -30,8 +34,17 @@ def create_app(
 
     engine = get_engine(db_url)
     init_db(engine)
+    session_factory = create_session_factory(engine)
+
+    # Store session factory in app state for dependency injection
+    app.state.db_factory = session_factory
 
     app.include_router(health_router)
+    app.include_router(sessions_router)
+
+    # Import project data into SQLite on startup
+    if project_dir is not None:
+        _import_on_startup(session_factory, project_dir)
 
     # Serve the React islands bundle (built by Vite)
     if not dev and _STATIC_DIR.is_dir():
@@ -46,3 +59,19 @@ def create_app(
             app.mount("/report", StaticFiles(directory=output_dir, html=True), name="report")
 
     return app
+
+
+def _import_on_startup(
+    session_factory: object,
+    project_dir: Path,
+) -> None:
+    """Import project data into SQLite during app startup."""
+    from bristlenose.server.importer import import_project
+
+    db = session_factory()  # type: ignore[operator]
+    try:
+        import_project(db, project_dir)
+    except Exception:
+        logger.exception("Failed to import project from %s", project_dir)
+    finally:
+        db.close()

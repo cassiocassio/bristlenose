@@ -77,6 +77,51 @@ At every milestone, the report works. Never broken.
 
 4. **Pipeline is the product.** The 12-stage analysis pipeline doesn't change. The server reads its output. The React app displays it.
 
+## Dev setup
+
+**Prerequisites:** Node.js (for frontend dev only — not needed by end users)
+
+```bash
+# One-time setup (after creating the serve worktree)
+cd "/Users/cassio/Code/bristlenose_branch serve"
+.venv/bin/pip install -e '.[dev,serve]'
+cd frontend && npm install && cd ..
+```
+
+**Running in dev mode (two terminals):**
+
+```bash
+# Terminal 1 — Python API server (auto-reloads on .py changes)
+.venv/bin/bristlenose serve --dev
+
+# Terminal 2 — React dev server (hot-reloads on .tsx changes)
+cd frontend && npm run dev
+```
+
+- Visit `http://localhost:5173` — Vite serves the React app, proxies `/api/*` to FastAPI on :8150
+- Visit `http://localhost:8150/api/health` — FastAPI health check (JSON)
+- Visit `http://localhost:8150/api/docs` — auto-generated API documentation
+
+**Production build:**
+
+```bash
+cd frontend && npm run build   # compiles React → bristlenose/server/static/
+bristlenose serve               # serves React + API on :8150 (single port)
+```
+
+**Serving a project report:**
+
+```bash
+bristlenose serve ./my-interviews    # serves bristlenose-output/ from that dir at /report/
+```
+
+**Running tests:**
+
+```bash
+.venv/bin/python -m pytest tests/test_serve.py -v   # server tests only
+.venv/bin/python -m pytest tests/                     # full suite (978 tests)
+```
+
 ## Supersedes
 
 - `docs/design-reactive-ui.md` — framework comparison (still relevant for rationale, but migration strategy is replaced by this doc)

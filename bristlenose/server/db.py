@@ -8,6 +8,7 @@ from pathlib import Path
 from sqlalchemy import create_engine, event
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
+from sqlalchemy.pool import StaticPool
 
 _CONFIG_DIR = Path("~/.config/bristlenose").expanduser()
 _DB_PATH = _CONFIG_DIR / "bristlenose.db"
@@ -30,6 +31,14 @@ def get_engine(db_url: str | None = None) -> Engine:
                 Pass "sqlite://" for an in-memory database (tests).
     """
     url = db_url or _default_db_url()
+    # In-memory SQLite needs StaticPool so all connections share the
+    # same database (otherwise each connection gets its own empty DB).
+    if url == "sqlite://":
+        return create_engine(
+            url,
+            connect_args={"check_same_thread": False},
+            poolclass=StaticPool,
+        )
     return create_engine(url, connect_args={"check_same_thread": False})
 
 
@@ -49,7 +58,7 @@ def create_session_factory(engine: Engine) -> sessionmaker[Session]:
 
 def init_db(engine: Engine) -> None:
     """Create all tables. Safe to call repeatedly (CREATE IF NOT EXISTS)."""
-    from bristlenose.server.models import Project  # noqa: F401 — registers table
+    from bristlenose.server import models  # noqa: F401 — registers all tables
 
     Base.metadata.create_all(bind=engine)
 

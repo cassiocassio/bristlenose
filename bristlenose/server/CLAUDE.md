@@ -114,9 +114,9 @@ The factory is stored on `app.state` during `create_app()`.  Each route creates 
 
 In dev mode (`bristlenose serve --dev`), the server **live-reloads JS on every request**.  You can edit any `.js` file in `bristlenose/theme/js/`, refresh the browser, and see the change immediately — no `bristlenose render` step needed.
 
-How it works: `serve_report_html()` reads the baked-in HTML from disk, finds the `/* bristlenose report.js */` marker, and replaces everything from there to `</script>` with freshly-read source files via `_load_live_js()` (which imports `_JS_FILES` from `render_html.py` for the canonical dependency order).
+How it works: `serve_report_html()` reads the baked-in HTML from disk, finds the `/* bristlenose report.js */` marker, and replaces everything from there to the IIFE closing `})();` with freshly-read source files via `_load_live_js()` (which imports `_JS_FILES` from `render_html.py` for the canonical dependency order).  The IIFE wrapper `(function() { ... })();` is part of the Jinja2 template — the replacement must preserve the closing or **all JS init functions silently fail to run** (no console error, just a dead page).
 
-**What still requires re-render:** changes to the Jinja2 HTML template itself (not JS), changes to CSS files, changes to data variables (quote map, analysis data). JS changes are live.
+**What still requires re-render:** changes to the Jinja2 HTML template itself (not JS), changes to CSS files, changes to data variables (quote map, analysis data).  JS changes are live.
 
 **Python changes** are handled by uvicorn's `--reload` (WatchFiles) — editing `data.py`, `app.py`, etc. triggers an automatic server restart.
 
@@ -131,6 +131,9 @@ How it works: `serve_report_html()` reads the baked-in HTML from disk, finds the
 - **Offline graceful degradation** — static HTML files (opened from disk, not served) have no `BRISTLENOSE_API_BASE` global.  `isServeMode()` returns false, all API calls skip silently, localStorage works as before
 - **No `await` on API calls** — the JS modules fire `apiPut()` without awaiting.  This means rapid clicks send multiple overlapping PUTs.  The server handles this safely because each PUT replaces the full state (last writer wins)
 - **Ruff ignores JS files** — `ruff check .` skips `.js` files.  Don't pass JS files to ruff directly (it tries to parse them as Python and generates hundreds of false errors)
+- **IIFE wrapper around the script block** — `render_html.py` wraps data variables + concatenated JS in `(function() { ... })();`.  The live JS reload (`_replace_baked_js`) must use `rfind("})();")` to preserve the closing.  If you break the IIFE, every init function silently fails — tabs stop working, stars don't toggle, nothing interactive works, but there's **no console error** because the JS simply never executes
+- **Baked HTML requires re-render to pick up new JS** — the static HTML report on disk contains a snapshot of the JS from the last `bristlenose render`.  In production (no `--dev`), editing `.js` source files has no effect until you re-render.  The live reload only works in `--dev` mode.  If something works in dev but not in the static file, the static file is stale
+- **`pip install -e .` and render are separate steps** — an editable install makes Python changes visible immediately, but the rendered HTML is a separate artifact.  Adding a new JS file to `_JS_FILES` requires both `pip install -e .` (so Python sees the new list) and `bristlenose render` (so the static HTML includes it).  In dev mode, only a server restart is needed (uvicorn picks up the Python change, live reload reads the new file)
 
 ## Tests
 

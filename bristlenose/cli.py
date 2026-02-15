@@ -1041,6 +1041,8 @@ def serve(
 
         if project_dir is not None:
             os.environ["_BRISTLENOSE_PROJECT_DIR"] = str(project_dir.resolve())
+        os.environ["_BRISTLENOSE_DEV"] = "1"
+        os.environ["_BRISTLENOSE_PORT"] = str(port)
 
         uvicorn.run(
             "bristlenose.server.app:create_app",

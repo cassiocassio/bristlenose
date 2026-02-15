@@ -551,6 +551,7 @@ def render_html(
     _w("<h3>Feedback</h3>")
     _w('<p><a href="https://github.com/cassiocassio/bristlenose/issues/new" '
        'target="_blank" rel="noopener">Report a bug</a></p>')
+    _w("<!-- /bn-about -->")
     _w("</div>")  # .bn-about
     _w("</div>")  # .bn-tab-panel[about]
 

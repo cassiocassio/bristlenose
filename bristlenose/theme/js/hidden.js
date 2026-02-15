@@ -25,7 +25,7 @@
  * @module hidden
  */
 
-/* global createStore, showToast, currentViewMode */
+/* global createStore, showToast, currentViewMode, isServeMode, apiPut, BRISTLENOSE_API_BASE */
 
 var hiddenStore = createStore('bristlenose-hidden');
 var hiddenQuotes = hiddenStore.get({});
@@ -106,6 +106,7 @@ function hideQuote(quoteId) {
   // Update state immediately.
   hiddenQuotes[quoteId] = true;
   hiddenStore.set(hiddenQuotes);
+  if (isServeMode()) apiPut(BRISTLENOSE_API_BASE + '/hidden', hiddenQuotes);
 
   // Build the badge now so we have a target to animate toward.
   if (group) _updateBadgeForGroup(group);
@@ -189,6 +190,7 @@ function unhideQuote(quoteId) {
   bq.classList.remove('bn-hidden');
   delete hiddenQuotes[quoteId];
   hiddenStore.set(hiddenQuotes);
+  if (isServeMode()) apiPut(BRISTLENOSE_API_BASE + '/hidden', hiddenQuotes);
 
   // Determine visibility based on current view mode.
   var shouldShow = true;
@@ -283,6 +285,7 @@ function bulkHideSelected() {
   });
 
   hiddenStore.set(hiddenQuotes);
+  if (isServeMode()) apiPut(BRISTLENOSE_API_BASE + '/hidden', hiddenQuotes);
 
   groups.forEach(function (g) {
     _updateBadgeForGroup(g);

@@ -12,6 +12,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 
 from bristlenose.server.db import create_session_factory, get_engine, init_db
+from bristlenose.server.routes.data import router as data_router
 from bristlenose.server.routes.health import router as health_router
 from bristlenose.server.routes.sessions import router as sessions_router
 
@@ -63,6 +64,7 @@ def create_app(
 
     app.include_router(health_router)
     app.include_router(sessions_router)
+    app.include_router(data_router)
 
     if dev:
         from bristlenose.server.routes.dev import router as dev_router
@@ -465,8 +467,14 @@ def _mount_dev_report(app: FastAPI, output_dir: Path) -> None:
         )
         # Inject developer section before the closing .bn-about marker
         html = html.replace("<!-- /bn-about -->", f"{dev_html}<!-- /bn-about -->")
+        # Inject API base URL so vanilla JS modules can sync to the server
+        api_base_script = (
+            "<script>window.BRISTLENOSE_API_BASE = '/api/projects/1';</script>\n"
+        )
         # Inject renderer overlay + Vite dev scripts before </body>
-        html = html.replace("</body>", f"{overlay_html}{vite_scripts}</body>")
+        html = html.replace(
+            "</body>", f"{api_base_script}{overlay_html}{vite_scripts}</body>"
+        )
         return HTMLResponse(html)
 
     @app.get("/report")

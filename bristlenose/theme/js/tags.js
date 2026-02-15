@@ -29,7 +29,7 @@
  * @module tags
  */
 
-/* global createStore, createUserTagBadge, animateBadgeRemoval, renderUserTagsChart, getTagColourVar */
+/* global createStore, createUserTagBadge, animateBadgeRemoval, renderUserTagsChart, getTagColourVar, isServeMode, apiPut, BRISTLENOSE_API_BASE */
 
 var tagsStore = createStore('bristlenose-tags');
 var deletedBadgesStore = createStore('bristlenose-deleted-badges');
@@ -49,6 +49,7 @@ var deletedBadges = deletedBadgesStore.get({});
  */
 function persistUserTags(tags) {
   tagsStore.set(tags);
+  if (isServeMode()) apiPut(BRISTLENOSE_API_BASE + '/tags', userTags);
   // Re-render the user-tags histogram if available (defined in histogram.js).
   if (typeof renderUserTagsChart === 'function') renderUserTagsChart();
   // Re-apply tag filter to account for added/removed tags.
@@ -533,6 +534,7 @@ function initTags() {
       deletedBadges[id].push(badgeLabel);
     }
     deletedBadgesStore.set(deletedBadges);
+    if (isServeMode()) apiPut(BRISTLENOSE_API_BASE + '/deleted-badges', deletedBadges);
     updateRestoreButton(bq);
   });
 
@@ -561,6 +563,7 @@ function initTags() {
 
     delete deletedBadges[bq.id];
     deletedBadgesStore.set(deletedBadges);
+    if (isServeMode()) apiPut(BRISTLENOSE_API_BASE + '/deleted-badges', deletedBadges);
     updateRestoreButton(bq);
   });
 

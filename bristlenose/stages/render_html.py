@@ -123,6 +123,7 @@ def _get_default_css() -> str:
 # globals defined by earlier ones).
 _JS_FILES: list[str] = [
     "js/storage.js",
+    "js/api-client.js",
     "js/badge-utils.js",
     "js/modal.js",
     "js/codebook.js",

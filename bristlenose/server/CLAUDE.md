@@ -110,6 +110,16 @@ def _get_db(request: Request) -> Session:
 
 The factory is stored on `app.state` during `create_app()`.  Each route creates its own session and **must close it** in a `finally` block.
 
+## Dev loop (live JS reload)
+
+In dev mode (`bristlenose serve --dev`), the server **live-reloads JS on every request**.  You can edit any `.js` file in `bristlenose/theme/js/`, refresh the browser, and see the change immediately — no `bristlenose render` step needed.
+
+How it works: `serve_report_html()` reads the baked-in HTML from disk, finds the `/* bristlenose report.js */` marker, and replaces everything from there to `</script>` with freshly-read source files via `_load_live_js()` (which imports `_JS_FILES` from `render_html.py` for the canonical dependency order).
+
+**What still requires re-render:** changes to the Jinja2 HTML template itself (not JS), changes to CSS files, changes to data variables (quote map, analysis data). JS changes are live.
+
+**Python changes** are handled by uvicorn's `--reload` (WatchFiles) — editing `data.py`, `app.py`, etc. triggers an automatic server restart.
+
 ## Gotchas
 
 - **Quote timecode range match** — DOM ID uses `int(start_timecode)` which truncates.  A quote at 123.45s becomes `q-p1-123`.  The resolver queries `start_timecode >= 123 AND start_timecode < 124` to handle this
@@ -124,9 +134,11 @@ The factory is stored on `app.state` during `create_app()`.  Each route creates 
 
 ## Tests
 
-37 tests in `tests/test_serve_data_api.py`.  Uses the smoke-test fixture at `tests/fixtures/smoke-test/input/` which provides:
+37 happy-path tests in `tests/test_serve_data_api.py`, 57 stress tests in `tests/test_serve_data_api_stress.py`.  Both use the smoke-test fixture at `tests/fixtures/smoke-test/input/` which provides:
 - 1 project, 1 session (`s1`), 2 speakers (`m1`, `p1`)
 - 4 quotes: `q-p1-10` (Dashboard/confusion), `q-p1-26` (Dashboard/frustration), `q-p1-46` (Search/delight), `q-p1-66` (Onboarding/frustration)
+
+Stress tests cover: Unicode (emoji, CJK, RTL, combining chars), large payloads (10 KB edits, 50 tags), rapid sequential PUTs (fast clicking), empty/whitespace values, malformed DOM IDs, duplicate tags and badges (unique constraint dedup), cross-endpoint interactions, and idempotency
 
 ## Reference docs
 

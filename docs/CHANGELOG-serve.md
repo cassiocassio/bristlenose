@@ -6,7 +6,29 @@ Development log for the `bristlenose serve` feature branch. Tracks milestones, a
 
 ## Backlog
 
-- **Jinja2 vs React overlay toggle.** Dev-only feature: a toggle at the top of the report that tints Jinja2-rendered regions and React island regions with distinct pale pastel backgrounds (e.g. pale blue for Jinja2, pale green for React). Shows at a glance which parts of the report are still static HTML and which have been migrated to React islands. Implementation: inject a small inline `<script>` + `<style>` block in dev mode that adds `[data-source="jinja2"]` / `[data-source="react"]` data attributes and a toggle button. The pipeline renderer (`render_html.py`) would tag its wrapper `<div>`s with `data-source="jinja2"`; React islands add `data-source="react"` to their mount points. The toggle applies the pastel tints via CSS `[data-source] { background: ... }`. Off by default, toggled via a button or keyboard shortcut.
+- **Serve-mode mount point injection.** `_mount_dev_report()` currently serves the static pipeline report as-is — all Jinja2. To see React islands (green in the renderer overlay), the Sessions tab needs its Jinja2 `<section class="bn-session-table">` replaced with `<div id="bn-sessions-table-root" data-project-id="1">`. This can't be a simple HTML string replacement in `app.py` because without Vite running there's no JS to render the React component (the tab goes blank). Options: (a) do the replacement only when Vite is detected (probe `localhost:5173`), (b) add a `--vite` flag alongside `--dev`, (c) inject both the mount point and a `<script type="module" src="http://localhost:5173/src/main.tsx">` tag so Vite HMR connects automatically. Option (c) is the cleanest — it's the standard Vite backend-integration pattern. Until then, the overlay correctly shows everything as Jinja2 (blue) and vanilla JS (amber); the green React selectors are wired up and will light up once mount points appear.
+
+---
+
+## Renderer overlay (15 Feb 2026)
+
+**Dev-only renderer overlay toggle.** A floating button (top-right, `D` keyboard shortcut) that tints report regions by renderer origin: pale blue for Jinja2 static HTML, pale green for React islands, pale amber for vanilla JS rendered content. Shows at a glance which parts of the report come from which renderer.
+
+**Implementation:** Self-contained `<style>` + `<div>` + `<script>` block injected before `</body>` by `_mount_dev_report()` in `app.py` — same pattern as the About tab developer section injection. Toggles `body.bn-dev-overlay` CSS class. Off by default. Three CSS rule groups target existing classes/IDs:
+
+- **Jinja2 (blue `#eef4fe`):** `.bn-tab-panel`, `.bn-dashboard`, `.bn-session-grid`, `.toolbar`, `.toc`, `section`, `.bn-about`, `.report-header`, `.bn-global-nav`, `.footer`
+- **React (green `#e8fce8`):** `#bn-sessions-table-root`, `#bn-about-developer-root`
+- **Vanilla JS (amber `#fef6e0`):** `#codebook-grid`, `#signal-cards`, `#heatmap-section-container`, `#heatmap-theme-container`
+
+ID selectors have higher specificity than class selectors, so React/vanilla JS tints override the parent Jinja2 blue without needing extra specificity hacks.
+
+**Learnings during implementation:**
+- Transparent tints (`rgba(..., 0.15)`) are invisible on elements that inherit an opaque body `background: #fff` — the tint blends into white with no visible boundary. Opaque pastels (`#eef4fe` etc.) make the regions unmistakable.
+- Tab panels (`.bn-tab-panel`) needed to be in the Jinja2 selector list — without them, switching tabs showed no tint because the child elements have no explicit background.
+- The dashboard compact session table and the Sessions tab full table both use `.bn-session-table` — the `bn-session-grid` parent wrapper distinguishes them (relevant for future serve-mode mount point injection).
+
+**What shipped:**
+- `bristlenose/server/app.py` — `_build_renderer_overlay_html()` function, injection in `_mount_dev_report()`
 
 ---
 

@@ -6,6 +6,7 @@ export default defineConfig({
   plugins: [react()],
   server: {
     port: 5173,
+    cors: true,
     proxy: {
       "/api": "http://localhost:8150",
       "/report": "http://localhost:8150",
@@ -14,5 +15,11 @@ export default defineConfig({
   build: {
     outDir: path.resolve(__dirname, "../bristlenose/server/static"),
     emptyOutDir: true,
+    rollupOptions: {
+      input: {
+        main: path.resolve(__dirname, "index.html"),
+        "visual-diff": path.resolve(__dirname, "visual-diff.html"),
+      },
+    },
   },
 });

@@ -1,0 +1,167 @@
+/* Visual diff page — dev-only styles */
+
+.vd-page {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  margin: 0;
+  padding: 0;
+  min-height: 100vh;
+  background: #f5f5f5;
+}
+
+/* Toolbar */
+.vd-toolbar {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.5rem 1rem;
+  background: #1a1a2e;
+  color: #e0e0e0;
+  font-size: 0.85rem;
+  border-bottom: 2px solid #16213e;
+}
+
+.vd-toolbar h1 {
+  font-size: 0.95rem;
+  font-weight: 600;
+  margin: 0;
+  color: #fff;
+  white-space: nowrap;
+}
+
+.vd-toolbar-group {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.vd-toolbar button {
+  padding: 0.3rem 0.7rem;
+  border: 1px solid #444;
+  border-radius: 4px;
+  background: #2a2a4a;
+  color: #ccc;
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.vd-toolbar button:hover {
+  background: #3a3a6a;
+  border-color: #666;
+}
+
+.vd-toolbar button.active {
+  background: #4a6fa5;
+  border-color: #6a8fc5;
+  color: #fff;
+}
+
+.vd-toolbar label {
+  font-size: 0.8rem;
+  color: #aaa;
+}
+
+.vd-toolbar input[type="range"] {
+  width: 120px;
+  accent-color: #4a6fa5;
+}
+
+.vd-toolbar kbd {
+  display: inline-block;
+  padding: 0.1rem 0.35rem;
+  border: 1px solid #555;
+  border-radius: 3px;
+  background: #333;
+  font-size: 0.7rem;
+  font-family: inherit;
+  color: #aaa;
+}
+
+.vd-toolbar .vd-hint {
+  margin-left: auto;
+  font-size: 0.75rem;
+  color: #888;
+}
+
+/* Side-by-side layout */
+.vd-side-by-side {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2px;
+  background: #ddd;
+}
+
+.vd-pane {
+  background: #fff;
+  overflow-x: auto;
+}
+
+.vd-pane-label {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  padding: 0.3rem 0.7rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.vd-pane-label.jinja {
+  background: #e3f2fd;
+  color: #1565c0;
+}
+
+.vd-pane-label.react {
+  background: #fce4ec;
+  color: #c62828;
+}
+
+/* Overlay layout */
+.vd-overlay-container {
+  position: relative;
+  background: #fff;
+}
+
+.vd-overlay-layer {
+  width: 100%;
+}
+
+.vd-overlay-layer.jinja {
+  position: relative;
+}
+
+.vd-overlay-layer.react {
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+
+/* Toggle layout */
+.vd-toggle-container {
+  background: #fff;
+}
+
+.vd-toggle-container .vd-pane-label {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+/* Loading / error */
+.vd-loading {
+  padding: 2rem;
+  text-align: center;
+  color: #666;
+  font-size: 0.9rem;
+}
+
+.vd-error {
+  padding: 2rem;
+  text-align: center;
+  color: #c00;
+  font-size: 0.9rem;
+}

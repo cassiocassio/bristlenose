@@ -47,6 +47,7 @@ serve = [
     "fastapi>=0.115",
     "uvicorn[standard]>=0.32",
     "sqlalchemy>=2.0",
+    "sqladmin>=0.20",
 ]
 
 [project.scripts]

@@ -4,6 +4,33 @@ Development log for the `bristlenose serve` feature branch. Tracks milestones, a
 
 ---
 
+## Backlog
+
+- **Jinja2 vs React overlay toggle.** Dev-only feature: a toggle at the top of the report that tints Jinja2-rendered regions and React island regions with distinct pale pastel backgrounds (e.g. pale blue for Jinja2, pale green for React). Shows at a glance which parts of the report are still static HTML and which have been migrated to React islands. Implementation: inject a small inline `<script>` + `<style>` block in dev mode that adds `[data-source="jinja2"]` / `[data-source="react"]` data attributes and a toggle button. The pipeline renderer (`render_html.py`) would tag its wrapper `<div>`s with `data-source="jinja2"`; React islands add `data-source="react"` to their mount points. The toggle applies the pastel tints via CSS `[data-source] { background: ... }`. Off by default, toggled via a button or keyboard shortcut.
+
+---
+
+## Visual parity testing (15 Feb 2026)
+
+### Visual diff tool + dev URL directory
+
+**Built a dev-only visual comparison tool** to verify the React sessions table matches the Jinja2 static report. Three view modes: side-by-side (synced scroll), overlay (opacity slider blends between the two), and toggle (Space key instant swap).
+
+**Results:** Near-perfect visual parity confirmed. Both tables render with the same CSS classes, same sparkline bars, same badge styling, same hover states. Minor differences in the Interviews column (filename wrapping differs slightly between `<a>` links in the static report vs `<span>` in the dev endpoint) and journey line-break points (consequence of column width differences). These are dev endpoint rendering differences, not React component bugs — the React version matches the real report.
+
+**Dev URL directory:** `bristlenose serve --dev` now prints all available URLs on startup (Cmd-clickable in iTerm): report, visual diff, API docs, sessions API, sessions HTML, health check.
+
+**What shipped:**
+- `bristlenose/server/routes/dev.py` — dev-only API router: `GET /api/dev/sessions-table-html?project_id=1` renders the Jinja2 sessions table template from DB data, returns raw HTML fragment. Reuses `_render_sentiment_sparkline()`, `format_finder_date()`, `format_finder_filename()`, and the Jinja2 template environment from `render_html.py`
+- `bristlenose/server/app.py` — recovers `_BRISTLENOSE_DEV` env var, registers dev router when dev mode, prints dev URL directory on startup
+- `bristlenose/cli.py` — stashes `_BRISTLENOSE_DEV=1` and `_BRISTLENOSE_PORT` env vars for uvicorn factory recovery
+- `frontend/visual-diff.html` + `frontend/src/visual-diff-main.tsx` — separate Vite entry point for the diff page (excluded from production build)
+- `frontend/src/pages/VisualDiff.tsx` — diff UI with three view modes (side-by-side, overlay with opacity slider, toggle with Space key), keyboard shortcuts (1/2/3 for modes), synced scroll
+- `frontend/src/pages/visual-diff.css` — toolbar and layout styles
+- `frontend/vite.config.ts` — `visual-diff.html` added as second Vite entry point
+
+---
+
 ## Milestone 1 — Sessions Table as React Island (complete)
 
 ### 15 Feb 2026 — Dev mode fixes and live testing

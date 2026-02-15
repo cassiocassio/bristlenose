@@ -21,6 +21,14 @@ logger = logging.getLogger(__name__)
 _STATIC_DIR = Path(__file__).parent / "static"
 # Repo root — two levels up from bristlenose/server/app.py
 _REPO_ROOT = Path(__file__).resolve().parent.parent.parent
+# JS source directory — for live-reloading in dev mode
+_THEME_DIR = _REPO_ROOT / "bristlenose" / "theme"
+
+# Marker that render_html.py writes at the start of the concatenated JS block.
+# In dev mode we replace everything from this marker to </script> with fresh
+# JS read from the source files — so editing a .js file and refreshing the
+# browser picks up the change instantly, no re-render needed.
+_JS_MARKER = "/* bristlenose report.js — auto-generated from bristlenose/theme/js/ */"
 # React mount point injected in place of the Jinja2 session table at serve time
 _REACT_SESSIONS_MOUNT = (
     "<!-- bn-session-table -->"
@@ -438,6 +446,41 @@ def _build_vite_dev_scripts() -> str:
     )
 
 
+def _load_live_js() -> str:
+    """Read JS source files from disk — called on every request in dev mode.
+
+    Imports ``_JS_FILES`` from ``render_html`` (the canonical dependency-order
+    list) and concatenates the raw files.  No caching — edits are picked up
+    instantly on browser refresh.
+    """
+    from bristlenose.stages.render_html import _JS_FILES
+
+    parts: list[str] = [_JS_MARKER + "\n\n"]
+    for name in _JS_FILES:
+        path = _THEME_DIR / name
+        parts.append(f"// --- {name} ---\n")
+        parts.append(path.read_text(encoding="utf-8").strip())
+        parts.append("\n\n")
+    return "".join(parts)
+
+
+def _replace_baked_js(html: str) -> str:
+    """Replace the baked-in JS block with freshly-read source files.
+
+    Finds the marker written by ``render_html.py`` and replaces everything
+    from there to the closing ``</script>`` with live JS.
+    """
+    marker_idx = html.find(_JS_MARKER)
+    if marker_idx < 0:
+        return html  # no marker found — report rendered without JS (shouldn't happen)
+    # Find the </script> that closes the block containing the marker
+    end_script = html.find("</script>", marker_idx)
+    if end_script < 0:
+        return html
+    live_js = _load_live_js()
+    return html[:marker_idx] + live_js + "\n" + html[end_script:]
+
+
 def _mount_dev_report(app: FastAPI, output_dir: Path) -> None:
     """Mount the report with developer section injected into the About tab.
 
@@ -456,6 +499,10 @@ def _mount_dev_report(app: FastAPI, output_dir: Path) -> None:
     @app.get("/report/")
     def serve_report_html() -> HTMLResponse:
         html = report_html.read_text(encoding="utf-8")
+        # Live-reload JS: replace baked-in JS with fresh source files so
+        # editing a .js file and refreshing the browser picks up changes
+        # instantly — no `bristlenose render` step needed during development.
+        html = _replace_baked_js(html)
         # Swap the Jinja2 session table for the React mount point.
         # The markers are rendered by render_html.py around the session table.
 

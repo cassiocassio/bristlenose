@@ -119,6 +119,7 @@ See `docs/design-reactive-ui.md` for framework comparison, risk assessment, and 
 Tracked as issue #29 (large effort).
 
 - [ ] **Serve-mode mount point injection via Vite backend-integration** — inject `<script type="module" src="http://localhost:5173/src/main.tsx">` alongside the mount point so React islands render without a separate Vite proxy step. Uses Vite's [backend integration](https://vite.dev/guide/backend-integration) pattern
+- [ ] **Playwright E2E tests** — first task after React migration completes. Headless browser tests (Playwright + pytest) covering all 11 user actions that write to the DB: star, hide, unhide, bulk hide, edit quote, edit heading, add tag, remove tag, delete badge, restore badge, edit name. Covers the JS → API → DB gap that API-only tests can't reach. Deferred until post-React because E2E tests target DOM selectors which all change during migration. **Convention: React components must emit `data-testid` attributes from day one** to make E2E selectors stable. See `docs/design-reactive-ui.md` "Testing strategy" section
 
 ---
 
@@ -135,7 +136,7 @@ These are too small for issues or are internal-only concerns.
 - [ ] **Tag definitions page** — also tracked as #53
 - [ ] **Custom prompts** — user-defined tag categories via `bristlenose.toml` or `prompts.toml`
 - [ ] **Pass transcript data to renderer** — avoid redundant disk I/O in `render_html.py`
-- [ ] **People.yaml web UI** — in-report UI to update `people.yaml` for unidentified participants/observers/moderators (currently only have speaker codes, no display names). Part of Moderator Phase 2 (#25)
+- [ ] **People.yaml web UI** — in-report UI to update `people.yaml` for unidentified participants/observers/moderators (currently only have speaker codes, no display names). Part of Moderator Phase 2 (#25). **Tricky UX**: need to distinguish full name vs display name (researcher types "Sarah" — is that `full_name` or `short_name`?). May need explicit fields or a disambiguation prompt. Also PII concern: names in SQLite DB vs localStorage-only. Research how Dovetail handles naming. API endpoint (`PUT /people`) already exists and works — the missing piece is the HTML renderer (`.name-pencil` buttons not emitted) and the UX design. May defer or simplify
 
 ### Transcript page interactions
 

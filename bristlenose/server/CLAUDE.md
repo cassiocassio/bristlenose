@@ -143,6 +143,10 @@ How it works: `serve_report_html()` reads the baked-in HTML from disk, finds the
 
 Stress tests cover: Unicode (emoji, CJK, RTL, combining chars), large payloads (10 KB edits, 50 tags), rapid sequential PUTs (fast clicking), empty/whitespace values, malformed DOM IDs, duplicate tags and badges (unique constraint dedup), cross-endpoint interactions, and idempotency
 
+### Future: Playwright E2E tests (post-React migration)
+
+After the React migration, Playwright E2E tests will cover the full browser → JS → API → DB path. Currently deferred because E2E tests target DOM selectors which all change during migration. The React components will emit `data-testid` attributes from day one to provide stable selectors. See `docs/design-reactive-ui.md` "Testing strategy" section for the full plan.
+
 ## Reference docs
 
 - **Domain model rationale**: `docs/design-serve-milestone-1.md`

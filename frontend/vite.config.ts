@@ -8,6 +8,7 @@ export default defineConfig({
     port: 5173,
     proxy: {
       "/api": "http://localhost:8150",
+      "/report": "http://localhost:8150",
     },
   },
   build: {

@@ -603,6 +603,12 @@ Assuming: full domain schema, import on startup, full visual parity, islands on 
 - `main.tsx` updated to mount SessionsTable into `#bn-sessions-table-root`
 - TypeScript compiles clean, Vite build succeeds
 
+**Dev mode fixes** (15 Feb — found during live testing with `trial-runs/project-ikea`)
+- `cli.py`: separated dev/non-dev code paths. Dev mode stashes `project_dir` in `_BRISTLENOSE_PROJECT_DIR` env var and passes string factory to uvicorn (needed for reload). Non-dev mode creates app instance directly and opens browser
+- `app.py`: recovers `project_dir` from env var when called with no args by uvicorn's reloader. `_ensure_index_symlink()` creates `index.html → *-report.html` symlink so `StaticFiles(html=True)` can serve `/report/`
+- `vite.config.ts`: added `/report` proxy to forward report requests to FastAPI backend
+- `docs/windows-tech-debt.md`: new file tracking platform assumptions that will need attention for Windows support (symlinks, config dirs, path separators, FFmpeg install, etc.)
+
 ### Milestone 1 complete
 
-All 5 steps done. 72 new tests (38 schema + 17 import + 17 API), full suite (1050) passing, lint clean. The served sessions table is now a React island backed by a real API reading from SQLite.
+All 5 steps done. 72 new tests (38 schema + 17 import + 17 API), full suite (1050) passing, lint clean. The served sessions table is now a React island backed by a real API reading from SQLite. Live-tested with real project data (15 Feb).

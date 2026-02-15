@@ -468,15 +468,25 @@ def _replace_baked_js(html: str) -> str:
     """Replace the baked-in JS block with freshly-read source files.
 
     Finds the marker written by ``render_html.py`` and replaces everything
-    from there to the closing ``</script>`` with live JS.
+    from there to the IIFE closing ``})();`` with live JS.  The IIFE wrapper
+    ``(function() { ... })();`` is part of the Jinja2 template, not the JS
+    files, so we must preserve the closing.
     """
     marker_idx = html.find(_JS_MARKER)
     if marker_idx < 0:
         return html  # no marker found — report rendered without JS (shouldn't happen)
-    # Find the </script> that closes the block containing the marker
+    # Find the IIFE closing })(); before </script>.  The template wraps
+    # both data variables and JS modules in (function() { ... })();
     end_script = html.find("</script>", marker_idx)
     if end_script < 0:
         return html
+    # Look for })(); just before </script> — that's the IIFE close
+    iife_close = html.rfind("})();", marker_idx, end_script)
+    if iife_close > 0:
+        # Replace marker..iife_close with live JS, keeping })();\n</script>
+        live_js = _load_live_js()
+        return html[:marker_idx] + live_js + "\n" + html[iife_close:]
+    # Fallback: no IIFE wrapper (shouldn't happen with current renderer)
     live_js = _load_live_js()
     return html[:marker_idx] + live_js + "\n" + html[end_script:]
 

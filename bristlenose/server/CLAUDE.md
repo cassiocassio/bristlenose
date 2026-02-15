@@ -97,9 +97,9 @@ All calls are **fire-and-forget promises**.  The JS modules don't `await` them.
 
 ### Adding a new JS module that syncs state
 
-1. Add `isServeMode, apiPut, BRISTLENOSE_API_BASE` to the `/* global ... */` comment
-2. After every `yourStore.set(data)` call, add: `if (isServeMode()) apiPut(BRISTLENOSE_API_BASE + '/your-endpoint', data);`
-3. That's it.  localStorage is still the primary store; the API call is a one-liner addition
+1. Add `isServeMode, apiPut` to the `/* global ... */` comment
+2. After every `yourStore.set(data)` call, add: `if (isServeMode()) apiPut('/your-endpoint', data);`
+3. That's it.  `apiPut` prepends `BRISTLENOSE_API_BASE` internally — **never** add the base URL at the call site (double-prefix bug)
 
 ### DB dependency injection
 

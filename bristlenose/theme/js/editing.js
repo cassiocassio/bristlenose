@@ -25,7 +25,7 @@
  * @module editing
  */
 
-/* global createStore, isServeMode, apiPut, BRISTLENOSE_API_BASE */
+/* global createStore, isServeMode, apiPut */
 
 var editsStore = createStore('bristlenose-edits');
 var edits = editsStore.get({});
@@ -100,7 +100,7 @@ function acceptEdit() {
     edits[ae.bq.id] = newText;
     ae.span.classList.add('edited');
     editsStore.set(edits);
-    if (isServeMode()) apiPut(BRISTLENOSE_API_BASE + '/edits', edits);
+    if (isServeMode()) apiPut('/edits', edits);
   }
 }
 
@@ -239,7 +239,7 @@ function acceptInlineEdit() {
     edits[ae.editKey] = newText;
     ae.span.classList.add('edited');
     editsStore.set(edits);
-    if (isServeMode()) apiPut(BRISTLENOSE_API_BASE + '/edits', edits);
+    if (isServeMode()) apiPut('/edits', edits);
     _syncSiblings(ae.editKey, newText, ae.span);
   }
 }

@@ -22,7 +22,7 @@
  * @module starred
  */
 
-/* global createStore, getPref, isServeMode, apiPut, BRISTLENOSE_API_BASE */
+/* global createStore, getPref, isServeMode, apiPut */
 
 // Migrate from old localStorage key if present (one-time migration).
 var _oldStarredData = localStorage.getItem('bristlenose-favourites');
@@ -123,7 +123,7 @@ function toggleStar(quoteId) {
     delete starred[quoteId];
   }
   starStore.set(starred);
-  if (isServeMode()) apiPut(BRISTLENOSE_API_BASE + '/starred', starred);
+  if (isServeMode()) apiPut('/starred', starred);
 
   var group = bq.closest('.quote-group');
   if (group) {

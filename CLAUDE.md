@@ -135,6 +135,7 @@ F401 is marked `unfixable` in `pyproject.toml` so `ruff check --fix` (and the Po
 - **Analysis page future** (two-pane vision, grid-as-selector, user-tag grid, backlog): `docs/design-analysis-future.md`
 - **Dashboard stats** (inventory of unused pipeline data, improvement priorities): `docs/design-dashboard-stats.md`
 - **Server / data API / serve mode**: `bristlenose/server/CLAUDE.md`
+- **Testing & CI strategy** (gap audit, Playwright plan, visual regression, `data-testid` convention): `docs/design-test-strategy.md`
 - **Installation guide**: `INSTALL.md` — detailed per-platform install instructions for non-technical users
 
 ## Working preferences

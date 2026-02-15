@@ -91,6 +91,7 @@ For each module:
 3. Wire it up in `main.tsx`
 4. Remove the corresponding vanilla JS module from the concatenation list in `render_html.py`
 5. The renderer overlay (D key) shows the component as green (React) instead of amber (vanilla JS)
+6. Add `data-testid` attributes on all interactive elements (convention: `data-testid="bn-{feature}-{element}"`) — these are the stable selectors for Playwright E2E tests post-migration
 
 ### What's tricky
 - **contenteditable** — React's reconciler wants to own the DOM. Editable text needs `useRef` + uncontrolled mode + `dangerouslySetInnerHTML` for initial render, with manual DOM reads on blur/change. This is the known "price" of choosing React over Svelte
@@ -138,6 +139,7 @@ This is the **prerequisite for the sharing/export story**. Once the React app ca
 - **Bundle size** — the full React app + all components need to be small enough for a standalone HTML file. Code splitting helps for served mode but not for export. May need to revisit Preact at this point (same API, ~3 KB vs ~42 KB)
 - **SSR/hydration** — for the standalone file, the HTML needs to be pre-rendered (not just a blank `<div id="root">`). Either server-side render in Python (via a Node subprocess or a Python JSX renderer) or ship the app as a client-only SPA with a loading state
 - **Backward compatibility** — existing reports (static HTML files) should still work. The pipeline version that generated them predates the React app. These files are self-contained and will continue to work as-is
+- **E2E testing** — once the full SPA stabilises, add Playwright E2E tests covering all 11 DB-mutating user actions. The `data-testid` attributes added during Phase 2 component migrations make this straightforward. See `docs/design-reactive-ui.md` "Testing strategy" section
 
 ---
 

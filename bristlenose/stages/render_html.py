@@ -319,6 +319,9 @@ def render_html(
     _w('<div class="bn-session-grid">')
 
     # --- Session Summary (at top for quick reference) ---
+    # Comment markers let the serve command swap the Jinja2 table for a React
+    # mount point without re-running the full render pipeline.
+    _w("<!-- bn-session-table -->")
     if serve_mode:
         # React island mount point — SessionsTable component will render here
         _w('<div id="bn-sessions-table-root" data-project-id="1"></div>')
@@ -333,6 +336,7 @@ def render_html(
             moderator_header=moderator_header,
             observer_header=observer_header,
         ).rstrip("\n"))
+    _w("<!-- /bn-session-table -->")
 
     # Close session grid
     _w("</div>")  # .bn-session-grid

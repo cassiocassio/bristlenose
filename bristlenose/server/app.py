@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 import os
+import re
 from pathlib import Path
 
 from fastapi import FastAPI
@@ -19,6 +20,12 @@ logger = logging.getLogger(__name__)
 _STATIC_DIR = Path(__file__).parent / "static"
 # Repo root — two levels up from bristlenose/server/app.py
 _REPO_ROOT = Path(__file__).resolve().parent.parent.parent
+# React mount point injected in place of the Jinja2 session table at serve time
+_REACT_SESSIONS_MOUNT = (
+    "<!-- bn-session-table -->"
+    '<div id="bn-sessions-table-root" data-project-id="1"></div>'
+    "<!-- /bn-session-table -->"
+)
 
 
 def create_app(
@@ -187,6 +194,10 @@ def _build_dev_section_html() -> str:
         "<dl>\n"
         f"<dt>Database</dt><dd><code>{_DB_PATH}</code></dd>\n"
         f"<dt>Schema</dt><dd>{table_count} tables</dd>\n"
+        "<dt>Renderer overlay</dt>"
+        "<dd>Press <kbd>D</kbd> to colour-code regions by renderer "
+        "(blue&nbsp;=&nbsp;Jinja2, green&nbsp;=&nbsp;React, "
+        "amber&nbsp;=&nbsp;Vanilla&nbsp;JS)</dd>\n"
         "</dl>\n"
         "<h3>Developer Tools</h3>\n"
         f"<ul>{dev_li}</ul>\n"
@@ -214,7 +225,15 @@ def _build_renderer_overlay_html() -> str:
     return """\
 <style>
 /* --- Renderer overlay tints (dev-only) --- */
-/* Jinja2 (static pipeline HTML) — pale blue */
+/* Uses ::after pseudo-elements to paint a translucent colour overlay.
+   This avoids clobbering child backgrounds (sparklines, thumbnails, etc.)
+   which a `background !important` approach would destroy.
+
+   Key trick: Jinja2 containers that *directly hold* a React or Vanilla JS
+   region suppress their own ::after (via :not(:has(...))) so the nested
+   region's colour isn't hidden under a blue overlay. */
+
+/* All tinted regions need position:relative for the ::after to anchor to */
 body.bn-dev-overlay .bn-tab-panel,
 body.bn-dev-overlay .bn-dashboard,
 body.bn-dev-overlay .bn-session-grid,
@@ -224,17 +243,102 @@ body.bn-dev-overlay section,
 body.bn-dev-overlay .bn-about,
 body.bn-dev-overlay .report-header,
 body.bn-dev-overlay .bn-global-nav,
-body.bn-dev-overlay .footer { background: #eef4fe !important; }
-
-/* React islands — pale green (higher specificity wins over parent blue) */
+body.bn-dev-overlay .footer,
 body.bn-dev-overlay #bn-sessions-table-root,
-body.bn-dev-overlay #bn-about-developer-root { background: #e8fce8 !important; }
-
-/* Vanilla JS rendered — pale amber (higher specificity wins over parent blue) */
+body.bn-dev-overlay #bn-about-developer-root,
 body.bn-dev-overlay #codebook-grid,
 body.bn-dev-overlay #signal-cards,
 body.bn-dev-overlay #heatmap-section-container,
-body.bn-dev-overlay #heatmap-theme-container { background: #fef6e0 !important; }
+body.bn-dev-overlay #heatmap-theme-container { position: relative; }
+
+/* Jinja2 (static pipeline HTML) — pale blue overlay + outline.
+   :not(:has(#bn-...)) suppresses the overlay on containers that hold
+   React/Vanilla JS regions so those regions' own colour shows through.
+   Elements *inside* React mount points are also excluded — React renders
+   <section>, <table>, etc. that would otherwise match generic selectors. */
+body.bn-dev-overlay .bn-tab-panel:not(:has(#bn-sessions-table-root, #bn-about-developer-root, #codebook-grid, #signal-cards, #heatmap-section-container, #heatmap-theme-container)),
+body.bn-dev-overlay .bn-dashboard,
+body.bn-dev-overlay .bn-session-grid:not(:has(#bn-sessions-table-root)),
+body.bn-dev-overlay .toolbar,
+body.bn-dev-overlay .toc,
+body.bn-dev-overlay .bn-about:not(:has(#bn-about-developer-root)),
+body.bn-dev-overlay .report-header,
+body.bn-dev-overlay .bn-global-nav,
+body.bn-dev-overlay .footer {
+  outline: 3px solid rgba(147, 197, 253, 0.5);  /* blue outline — Jinja2 */
+  outline-offset: -3px;
+}
+body.bn-dev-overlay .bn-tab-panel:not(:has(#bn-sessions-table-root, #bn-about-developer-root, #codebook-grid, #signal-cards, #heatmap-section-container, #heatmap-theme-container))::after,
+body.bn-dev-overlay .bn-dashboard::after,
+body.bn-dev-overlay .bn-session-grid:not(:has(#bn-sessions-table-root))::after,
+body.bn-dev-overlay .toolbar::after,
+body.bn-dev-overlay .toc::after,
+body.bn-dev-overlay section:not(:has(#bn-sessions-table-root, #bn-about-developer-root, #codebook-grid, #signal-cards, #heatmap-section-container, #heatmap-theme-container))::after,
+body.bn-dev-overlay .bn-about:not(:has(#bn-about-developer-root))::after,
+body.bn-dev-overlay .report-header::after,
+body.bn-dev-overlay .bn-global-nav::after,
+body.bn-dev-overlay .footer::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: rgba(147, 197, 253, 0.15);  /* pale blue — Jinja2 */
+  pointer-events: none;
+  z-index: 9999;
+}
+
+/* Cancel Jinja2 tint on elements INSIDE React/Vanilla JS mount points.
+   React renders <section class="bn-session-table"> etc. that would match
+   generic Jinja2 selectors above.  Override those descendants' ::after
+   with display:none so no blue leaks through.  Uses ID selectors (high
+   specificity) to beat the class-based Jinja2 rules above. */
+body.bn-dev-overlay #bn-sessions-table-root section::after,
+body.bn-dev-overlay #bn-about-developer-root section::after,
+body.bn-dev-overlay #codebook-grid section::after,
+body.bn-dev-overlay #signal-cards section::after,
+body.bn-dev-overlay #heatmap-section-container section::after,
+body.bn-dev-overlay #heatmap-theme-container section::after {
+  display: none;
+}
+
+/* React islands — pale green overlay + outline.
+   Uses both ::after tint AND outline for visibility — the outline is
+   always visible even if ::after is occluded by content stacking. */
+body.bn-dev-overlay #bn-sessions-table-root,
+body.bn-dev-overlay #bn-about-developer-root {
+  outline: 3px solid rgba(34, 197, 94, 0.6);  /* green outline */
+  outline-offset: -3px;
+  background: rgba(134, 239, 172, 0.08) !important;  /* subtle green wash */
+}
+body.bn-dev-overlay #bn-sessions-table-root::after,
+body.bn-dev-overlay #bn-about-developer-root::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: rgba(134, 239, 172, 0.15);  /* pale green — React */
+  pointer-events: none;
+  z-index: 9999;
+}
+
+/* Vanilla JS rendered — pale amber overlay + outline */
+body.bn-dev-overlay #codebook-grid,
+body.bn-dev-overlay #signal-cards,
+body.bn-dev-overlay #heatmap-section-container,
+body.bn-dev-overlay #heatmap-theme-container {
+  outline: 3px solid rgba(234, 179, 8, 0.6);  /* amber outline */
+  outline-offset: -3px;
+  background: rgba(253, 230, 138, 0.08) !important;  /* subtle amber wash */
+}
+body.bn-dev-overlay #codebook-grid::after,
+body.bn-dev-overlay #signal-cards::after,
+body.bn-dev-overlay #heatmap-section-container::after,
+body.bn-dev-overlay #heatmap-theme-container::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: rgba(253, 230, 138, 0.15);  /* pale amber — Vanilla JS */
+  pointer-events: none;
+  z-index: 9999;
+}
 
 #bn-dev-overlay-toggle {
   position: fixed;
@@ -307,6 +411,31 @@ body.bn-dev-overlay #heatmap-theme-container { background: #fef6e0 !important; }
 """
 
 
+def _build_vite_dev_scripts() -> str:
+    """Vite backend-integration scripts for dev-mode React HMR.
+
+    Injects three blocks so React islands mount and hot-reload when browsing
+    the report at localhost:8150/report/ (served by FastAPI, not the Vite
+    dev server):
+
+    1. React Fast Refresh preamble (required by @vitejs/plugin-react)
+    2. Vite HMR client (websocket, error overlay)
+    3. App entry point (src/main.tsx — mounts islands into existing DOM)
+    """
+    vite = "http://localhost:5173"
+    return (
+        '<script type="module">\n'
+        f"  import RefreshRuntime from '{vite}/@react-refresh'\n"
+        "  RefreshRuntime.injectIntoGlobalHook(window)\n"
+        "  window.$RefreshReg$ = () => {}\n"
+        "  window.$RefreshSig$ = () => (type) => type\n"
+        "  window.__vite_plugin_react_preamble_installed__ = true\n"
+        "</script>\n"
+        f'<script type="module" src="{vite}/@vite/client"></script>\n'
+        f'<script type="module" src="{vite}/src/main.tsx"></script>\n'
+    )
+
+
 def _mount_dev_report(app: FastAPI, output_dir: Path) -> None:
     """Mount the report with developer section injected into the About tab.
 
@@ -320,14 +449,24 @@ def _mount_dev_report(app: FastAPI, output_dir: Path) -> None:
 
     dev_html = _build_dev_section_html()
     overlay_html = _build_renderer_overlay_html()
+    vite_scripts = _build_vite_dev_scripts()
 
     @app.get("/report/")
     def serve_report_html() -> HTMLResponse:
         html = report_html.read_text(encoding="utf-8")
+        # Swap the Jinja2 session table for the React mount point.
+        # The markers are rendered by render_html.py around the session table.
+
+        html = re.sub(
+            r"<!-- bn-session-table -->.*?<!-- /bn-session-table -->",
+            _REACT_SESSIONS_MOUNT,
+            html,
+            flags=re.DOTALL,
+        )
         # Inject developer section before the closing .bn-about marker
         html = html.replace("<!-- /bn-about -->", f"{dev_html}<!-- /bn-about -->")
-        # Inject renderer overlay toggle before </body>
-        html = html.replace("</body>", f"{overlay_html}</body>")
+        # Inject renderer overlay + Vite dev scripts before </body>
+        html = html.replace("</body>", f"{overlay_html}{vite_scripts}</body>")
         return HTMLResponse(html)
 
     @app.get("/report")

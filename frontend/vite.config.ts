@@ -7,6 +7,7 @@ export default defineConfig({
   server: {
     port: 5173,
     cors: true,
+    origin: "http://localhost:5173",
     proxy: {
       "/api": "http://localhost:8150",
       "/report": "http://localhost:8150",

@@ -2,6 +2,14 @@
 
 All notable changes to Bristlenose are documented here. See also the [README](README.md) for the latest releases.
 
+**Unreleased** — _serve branch_
+
+- `bristlenose serve` command — FastAPI local dev server with SQLite database, Vite + React 19 HMR, SQLAdmin database browser
+- React islands architecture — SessionsTable and AboutDeveloper mount into static HTML via `createRoot()` on `<div>` mount points
+- Renderer overlay (dev-only, press **D**) — colour-codes report regions by origin: blue for Jinja2, green for React, amber for Vanilla JS
+- Session table comment markers (`<!-- bn-session-table -->`) — serve command swaps Jinja2 table for React mount point at runtime via `re.sub`
+- Visual diff page — side-by-side comparison of Jinja2 vs React sessions table
+
 **0.9.3** — _13 Feb 2026_
 
 - Interactive dashboard — Project tab stat cards are clickable links to their target tabs (audio→Sessions, quotes→Quotes, sections/themes→Quotes anchors, AI tags→Analysis, user tags→Codebook); featured quote cards open video player or fall back to transcript; session table rows drill into Sessions tab; section/theme names switch to Quotes tab and scroll to the anchor

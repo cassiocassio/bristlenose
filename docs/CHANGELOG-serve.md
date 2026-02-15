@@ -6,6 +6,23 @@ Development log for the `bristlenose serve` feature branch. Tracks milestones, a
 
 ## Milestone 1 — Sessions Table as React Island (complete)
 
+### 15 Feb 2026 — Dev mode fixes and live testing
+
+**Live-tested `bristlenose serve trial-runs/project-ikea --dev` end-to-end.** Three bugs found and fixed during hands-on testing:
+
+1. **`--dev` mode lost `project_dir` on reload.** Uvicorn's `factory=True` + `reload=True` calls `create_app()` with no arguments on child process spawn — the `project_dir` arg from the CLI was lost. Fix: CLI stashes `project_dir` in `_BRISTLENOSE_PROJECT_DIR` env var; `create_app()` recovers it. Also separated dev and non-dev code paths in `cli.py` — dev mode never calls `create_app()` directly (only uvicorn's factory does), non-dev mode creates the app instance directly and opens the browser.
+
+2. **`/report/` returned 404.** `StaticFiles(html=True)` expects `index.html` but the report file is `bristlenose-project-ikea-report.html` (includes project slug). Fix: `_ensure_index_symlink()` creates a relative `index.html → *-report.html` symlink at serve startup. Idempotent, portable. Noted in `docs/windows-tech-debt.md` — symlinks need admin/Developer Mode on Windows.
+
+3. **Vite proxy missing `/report` route.** `vite.config.ts` only proxied `/api` to the backend. Added `/report` proxy so the Vite dev server forwards report requests to FastAPI.
+
+**What shipped:**
+- `bristlenose/cli.py` — separated dev/non-dev serve paths, env var passthrough
+- `bristlenose/server/app.py` — env var recovery, `_ensure_index_symlink()`, warning on missing output dir
+- `frontend/vite.config.ts` — `/report` proxy
+- `docs/windows-tech-debt.md` — new file tracking platform assumptions (symlinks, config dirs, FFmpeg, etc.)
+- `.gitignore` — font files in mockups directory
+
 ### 14 Feb 2026 — Steps 4-5 complete (milestone done)
 
 **Mount point and React component.** `render_html.py` gains `serve_mode` flag; `SessionsTable.tsx` replaces the Jinja2 sessions table as a React island.

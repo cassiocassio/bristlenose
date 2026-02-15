@@ -1030,30 +1030,45 @@ def serve(
         console.print("Install with: [bold]pip install bristlenose[serve][/bold]")
         raise typer.Exit(1)
 
-    from bristlenose.server.app import create_app
-
-    app_instance = create_app(project_dir=project_dir, dev=dev)
-
     import threading
     import webbrowser
 
-    def _open_browser() -> None:
-        import time
+    if dev:
+        # In dev mode uvicorn uses a string factory and calls create_app()
+        # itself (needed for reload). Stash project_dir in the environment
+        # so the factory can recover it.
+        import os
 
-        time.sleep(1.0)
-        webbrowser.open(f"http://localhost:{port}")
+        if project_dir is not None:
+            os.environ["_BRISTLENOSE_PROJECT_DIR"] = str(project_dir.resolve())
 
-    if not dev:
+        uvicorn.run(
+            "bristlenose.server.app:create_app",
+            host="127.0.0.1",
+            port=port,
+            reload=True,
+            factory=True,
+            log_level="info",
+        )
+    else:
+        from bristlenose.server.app import create_app
+
+        app_instance = create_app(project_dir=project_dir)
+
+        def _open_browser() -> None:
+            import time
+
+            time.sleep(1.0)
+            webbrowser.open(f"http://localhost:{port}")
+
         threading.Thread(target=_open_browser, daemon=True).start()
 
-    uvicorn.run(
-        app_instance if not dev else "bristlenose.server.app:create_app",
-        host="127.0.0.1",
-        port=port,
-        reload=dev,
-        factory=dev,
-        log_level="info" if dev else "warning",
-    )
+        uvicorn.run(
+            app_instance,
+            host="127.0.0.1",
+            port=port,
+            log_level="warning",
+        )
 
 
 # ---------------------------------------------------------------------------

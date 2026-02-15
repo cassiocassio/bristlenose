@@ -609,6 +609,12 @@ Assuming: full domain schema, import on startup, full visual parity, islands on 
 - `vite.config.ts`: added `/report` proxy to forward report requests to FastAPI backend
 - `docs/windows-tech-debt.md`: new file tracking platform assumptions that will need attention for Windows support (symlinks, config dirs, path separators, FFmpeg install, etc.)
 
+**Visual parity testing** (15 Feb)
+- Dev-only visual diff tool: `http://localhost:5173/visual-diff.html` renders both Jinja2 and React tables side-by-side with overlay/toggle modes
+- Dev API endpoint `GET /api/dev/sessions-table-html?project_id=1` renders the Jinja2 template from DB data for comparison
+- Dev URL directory printed on `--dev` startup (Cmd-clickable in iTerm)
+- **Result: near-perfect parity.** Same CSS classes, sparkline bars, badge styling, hover states. Minor differences in Interviews column filename wrapping (dev endpoint uses `<span>`, real report uses `<a>` links) and journey line-break points (column width consequence). React component matches the real report accurately
+
 ### Milestone 1 complete
 
-All 5 steps done. 72 new tests (38 schema + 17 import + 17 API), full suite (1050) passing, lint clean. The served sessions table is now a React island backed by a real API reading from SQLite. Live-tested with real project data (15 Feb).
+All 5 steps done. 72 new tests (38 schema + 17 import + 17 API), full suite (1050) passing, lint clean. The served sessions table is now a React island backed by a real API reading from SQLite. Live-tested with real project data (15 Feb). Visual parity confirmed via dev diff tool (15 Feb).

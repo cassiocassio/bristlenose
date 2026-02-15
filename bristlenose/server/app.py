@@ -205,6 +205,108 @@ def _label_from_filename(name: str) -> str:
     return stem.replace("-", " ").capitalize()
 
 
+def _build_renderer_overlay_html() -> str:
+    """Build the renderer overlay toggle: inline <style> + <script>.
+
+    Dev-only feature. Injects a floating button that toggles pastel background
+    tints on report regions by renderer origin (Jinja2 / React / vanilla JS).
+    """
+    return """\
+<style>
+/* --- Renderer overlay tints (dev-only) --- */
+/* Jinja2 (static pipeline HTML) — pale blue */
+body.bn-dev-overlay .bn-tab-panel,
+body.bn-dev-overlay .bn-dashboard,
+body.bn-dev-overlay .bn-session-grid,
+body.bn-dev-overlay .toolbar,
+body.bn-dev-overlay .toc,
+body.bn-dev-overlay section,
+body.bn-dev-overlay .bn-about,
+body.bn-dev-overlay .report-header,
+body.bn-dev-overlay .bn-global-nav,
+body.bn-dev-overlay .footer { background: #eef4fe !important; }
+
+/* React islands — pale green (higher specificity wins over parent blue) */
+body.bn-dev-overlay #bn-sessions-table-root,
+body.bn-dev-overlay #bn-about-developer-root { background: #e8fce8 !important; }
+
+/* Vanilla JS rendered — pale amber (higher specificity wins over parent blue) */
+body.bn-dev-overlay #codebook-grid,
+body.bn-dev-overlay #signal-cards,
+body.bn-dev-overlay #heatmap-section-container,
+body.bn-dev-overlay #heatmap-theme-container { background: #fef6e0 !important; }
+
+#bn-dev-overlay-toggle {
+  position: fixed;
+  top: 12px;
+  right: 12px;
+  z-index: 100000;
+  font-family: system-ui, -apple-system, sans-serif;
+  font-size: 12px;
+  background: #1e293b;
+  color: #e2e8f0;
+  border: 1px solid #475569;
+  border-radius: 8px;
+  padding: 8px 12px;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+  user-select: none;
+}
+#bn-dev-overlay-toggle:hover { background: #334155; }
+#bn-dev-overlay-toggle .bn-overlay-label { font-weight: 600; }
+#bn-dev-overlay-toggle .bn-overlay-legend {
+  display: none;
+  gap: 4px;
+  flex-direction: column;
+  font-size: 11px;
+  margin-top: 4px;
+  padding-top: 4px;
+  border-top: 1px solid #475569;
+}
+#bn-dev-overlay-toggle.active .bn-overlay-legend { display: flex; }
+#bn-dev-overlay-toggle .bn-overlay-swatch {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  margin-right: 4px;
+  vertical-align: middle;
+}
+</style>
+<div id="bn-dev-overlay-toggle" title="Toggle renderer overlay (D)">
+  <span class="bn-overlay-label">Renderers: off</span>
+  <div class="bn-overlay-legend">
+    <span><span class="bn-overlay-swatch" style="background:#93c5fd"></span>Jinja2</span>
+    <span><span class="bn-overlay-swatch" style="background:#86efac"></span>React</span>
+    <span><span class="bn-overlay-swatch" style="background:#fde68a"></span>Vanilla JS</span>
+  </div>
+</div>
+<script>
+(function() {
+  var btn = document.getElementById('bn-dev-overlay-toggle');
+  var label = btn.querySelector('.bn-overlay-label');
+  function toggle() {
+    document.body.classList.toggle('bn-dev-overlay');
+    var on = document.body.classList.contains('bn-dev-overlay');
+    label.textContent = 'Renderers: ' + (on ? 'on' : 'off');
+    btn.classList.toggle('active', on);
+  }
+  btn.addEventListener('click', toggle);
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'd' && !e.ctrlKey && !e.metaKey && !e.altKey) {
+      var tag = (e.target.tagName || '').toLowerCase();
+      if (tag === 'input' || tag === 'textarea' || e.target.isContentEditable) return;
+      toggle();
+    }
+  });
+})();
+</script>
+"""
+
+
 def _mount_dev_report(app: FastAPI, output_dir: Path) -> None:
     """Mount the report with developer section injected into the About tab.
 
@@ -217,12 +319,15 @@ def _mount_dev_report(app: FastAPI, output_dir: Path) -> None:
         report_html = output_dir / os.readlink(report_html)
 
     dev_html = _build_dev_section_html()
+    overlay_html = _build_renderer_overlay_html()
 
     @app.get("/report/")
     def serve_report_html() -> HTMLResponse:
         html = report_html.read_text(encoding="utf-8")
         # Inject developer section before the closing .bn-about marker
         html = html.replace("<!-- /bn-about -->", f"{dev_html}<!-- /bn-about -->")
+        # Inject renderer overlay toggle before </body>
+        html = html.replace("</body>", f"{overlay_html}</body>")
         return HTMLResponse(html)
 
     @app.get("/report")

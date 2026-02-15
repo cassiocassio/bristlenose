@@ -118,6 +118,8 @@ See `docs/design-reactive-ui.md` for framework comparison, risk assessment, and 
 
 Tracked as issue #29 (large effort).
 
+- [ ] **Serve-mode mount point injection via Vite backend-integration** — inject `<script type="module" src="http://localhost:5173/src/main.tsx">` alongside the mount point so React islands render without a separate Vite proxy step. Uses Vite's [backend integration](https://vite.dev/guide/backend-integration) pattern
+
 ---
 
 ## Items only tracked here (not in issues)

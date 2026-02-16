@@ -172,7 +172,8 @@ function hideQuote(quoteId) {
  * and tag filter.
  *
  * The quote expands from the badge position into its slot while sibling
- * quotes slide down to make room.
+ * quotes slide down to make room.  No scroll — the badge/section stays
+ * put and only content below shifts down.
  *
  * @param {string} quoteId
  */
@@ -225,7 +226,6 @@ function unhideQuote(quoteId) {
 
     if (badgeRect) {
       var dy = badgeRect.top - bqRect.top;
-      var scaleX = badgeRect.width / Math.max(bqRect.width, 1);
       bq.style.transform = 'translateY(' + dy + 'px) scaleY(0.01)';
       bq.style.transformOrigin = 'top right';
       bq.style.opacity = '0';
@@ -246,9 +246,6 @@ function unhideQuote(quoteId) {
         bq.style.opacity = '';
       }, _HIDE_DURATION + 50);
     }
-
-    // Scroll to the restored quote.
-    bq.scrollIntoView({ behavior: 'smooth', block: 'center' });
   }
 }
 

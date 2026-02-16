@@ -178,7 +178,7 @@ def sessions_table_html(
                     name = _resolve_name(sp)
                     name_html = f" {_esc(name)}" if name else ""
                     parts.append(
-                        f'<span class="bn-person-id">'
+                        f'<span class="bn-person-badge">'
                         f'<span class="badge">{_esc(code)}</span>{name_html}'
                         f"</span>"
                     )
@@ -198,7 +198,7 @@ def sessions_table_html(
                     name = _resolve_name(sp)
                     name_html = f" {_esc(name)}" if name else ""
                     parts.append(
-                        f'<span class="bn-person-id">'
+                        f'<span class="bn-person-badge">'
                         f'<span class="badge">{_esc(code)}</span>{name_html}'
                         f"</span>"
                     )

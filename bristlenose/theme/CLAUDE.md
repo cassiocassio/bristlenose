@@ -80,14 +80,14 @@ Each user tag label has a hover `×` button (`.histogram-bar-delete` in `atoms/b
 - `molecules/bar-group.css` — `.sentiment-bar-group` (`display: contents`)
 - `organisms/sentiment-chart.css` — `.sentiment-row`, `.sentiment-chart`, `.sentiment-chart-title`
 
-## Person-id molecule
+## PersonBadge molecule
 
-`molecules/person-id.css` — reusable badge + name pattern for speaker identification in the session table. Combines the `.badge` atom with a named span.
+`molecules/person-badge.css` — reusable badge + name pattern for speaker identification in the session table. Combines the `.badge` atom with a named span.
 
-- **`.bn-person-id`** — `inline-flex`, `align-items: center`, `gap: 0.4rem`, `white-space: nowrap`. Contains a `.badge` and a `.bn-person-id-name`
-- **`.bn-person-id .badge`** — `flex-shrink: 0` (badge never truncates)
-- **`.bn-person-id-name`** — `font-weight: 600` (semibold). In the moderator header, names use regular weight (no `.bn-person-id-name` class)
-- **Usage**: session table speaker cells (semibold names) and moderator header (regular weight names). The molecule is included in `_THEME_FILES` in `render_html.py`
+- **`.bn-person-badge`** — `inline-flex`, `align-items: center`, `gap: 0.4rem`, `white-space: nowrap`. Contains a `.badge` and a `.bn-person-badge-name`
+- **`.bn-person-badge .badge`** — `flex-shrink: 0` (badge never truncates)
+- **`.bn-person-badge-name`** — `font-weight: 600` (semibold). In the moderator header, names use regular weight (no `.bn-person-badge-name` class)
+- **Usage**: session table speaker cells (semibold names) and moderator header (regular weight names). The molecule is included in `_THEME_FILES` in `render_html.py`. React equivalent: `PersonBadge` component in `frontend/src/components/PersonBadge.tsx`
 
 ## Session table CSS
 

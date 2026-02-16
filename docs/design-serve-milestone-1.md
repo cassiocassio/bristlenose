@@ -597,7 +597,7 @@ Assuming: full domain schema, import on startup, full visual parity, islands on 
 **Step 5 — React SessionsTable component** (`frontend/src/islands/SessionsTable.tsx`)
 - Full visual parity with Jinja2 `session_table.html`
 - Reads `data-project-id` from mount point, fetches `GET /api/projects/{id}/sessions`
-- All columns: ID with transcript link, speakers with badges (`.bn-person-id`, `.badge`), Finder-style relative dates, journey arrow chains, duration (MM:SS or HH:MM:SS), filename with middle-ellipsis, thumbnail play icon, sentiment sparkline bars (7 sentiments with coloured bars)
+- All columns: ID with transcript link, speakers with badges (`.bn-person-badge`, `.badge`), Finder-style relative dates, journey arrow chains, duration (MM:SS or HH:MM:SS), filename with middle-ellipsis, thumbnail play icon, sentiment sparkline bars (7 sentiments with coloured bars)
 - Moderator/observer header above the table
 - Loading and error states
 - `main.tsx` updated to mount SessionsTable into `#bn-sessions-table-root`

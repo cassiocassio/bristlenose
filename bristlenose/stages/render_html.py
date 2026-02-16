@@ -61,7 +61,7 @@ _THEME_FILES: list[str] = [
     "atoms/interactive.css",
     "atoms/span-bar.css",
     "atoms/modal.css",
-    "molecules/person-id.css",
+    "molecules/person-badge.css",
     "molecules/badge-row.css",
     "molecules/bar-group.css",
     "molecules/quote-actions.css",
@@ -837,7 +837,7 @@ def _build_session_rows(
         name = _resolve_speaker_name(code, people, display_names)
         name_html = f" {_esc(name)}" if name != code else ""
         moderator_parts.append(
-            f'<span class="bn-person-id">'
+            f'<span class="bn-person-badge">'
             f'<span class="badge">{_esc(code)}</span>{name_html}'
             f'</span>'
         )
@@ -852,7 +852,7 @@ def _build_session_rows(
         name = _resolve_speaker_name(code, people, display_names)
         name_html = f" {_esc(name)}" if name != code else ""
         observer_parts.append(
-            f'<span class="bn-person-id">'
+            f'<span class="bn-person-badge">'
             f'<span class="badge">{_esc(code)}</span>{name_html}'
             f'</span>'
         )

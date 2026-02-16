@@ -25,7 +25,7 @@
 <td class="bn-session-id"><a href="sessions/transcript_{{ row.sid }}.html" data-session-link="{{ row.sid }}">#{{ row.num }}</a></td>
 <td class="bn-session-speakers">
 {%- for sp in row.speakers_list %}
-<div class="bn-person-id"><span class="badge">{{ sp.code }}</span>{% if sp.name %} <span class="bn-person-id-name">{{ sp.name }}</span>{% endif %}</div>
+<div class="bn-person-badge"><span class="badge">{{ sp.code }}</span>{% if sp.name %} <span class="bn-person-badge-name">{{ sp.name }}</span>{% endif %}</div>
 {%- endfor %}
 </td>
 <td class="bn-session-meta">

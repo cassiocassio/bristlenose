@@ -88,22 +88,22 @@ Uses CSS columns masonry (`columns: 240px`) for space-efficient tiling with `bre
 - **`.drag-ghost`** — fixed-position ghost element during drag
 - **`.tag-preview`** — inline badge in merge confirmation modal
 
-## Session table (report.css + molecules/person-id.css)
+## Session table (report.css + molecules/person-badge.css)
 
-The sessions table in both the Sessions tab and Project tab. Shows per-session metadata: speaker badges, user journey paths, video thumbnails, and sentiment sparklines. Styled primarily in `templates/report.css` with the `bn-person-id` molecule from `molecules/person-id.css`.
+The sessions table in both the Sessions tab and Project tab. Shows per-session metadata: speaker badges, user journey paths, video thumbnails, and sentiment sparklines. Styled primarily in `templates/report.css` with the `bn-person-badge` molecule from `molecules/person-badge.css`.
 
 ### Structure
 
 - **`.bn-session-table`** — `<section>` wrapper. Contains optional moderator header paragraph + `<table>`
-- **`.bn-session-moderators`** — paragraph above table: "Sessions moderated by [m1] Rachel and [m2] Kerry". Uses `.bn-person-id` molecule for badge+name pairs. Names are regular weight (not semibold) in the header
+- **`.bn-session-moderators`** — paragraph above table: "Sessions moderated by [m1] Rachel and [m2] Kerry". Uses `.bn-person-badge` molecule for badge+name pairs. Names are regular weight (not semibold) in the header
 - **`.bn-session-table tr`** — `border-bottom: 1px solid var(--bn-colour-border)`. Applied to `<tr>` rather than `<td>` to ensure full-width horizontal rules (avoids gaps from varying cell heights)
 - **`.bn-session-table td`** — `border-bottom: none` (overrides default, since the border is on `<tr>`)
 
 ### Columns
 
 - **`.bn-session-id`** — `#N` link, accent colour, `white-space: nowrap`. Links to inline transcript via `data-session-link`
-- **`.bn-session-speakers`** — `display: flex; flex-direction: column; gap: 0.35rem`. Contains one `.bn-person-id` per speaker (vertically stacked)
-- **`.bn-person-id`** (molecule) — `inline-flex, align-items: center, gap: 0.4rem, white-space: nowrap`. Contains `.badge` (flex-shrink: 0) + `.bn-person-id-name` (font-weight: 600 / semibold)
+- **`.bn-session-speakers`** — `display: flex; flex-direction: column; gap: 0.35rem`. Contains one `.bn-person-badge` per speaker (vertically stacked)
+- **`.bn-person-badge`** (molecule) — `inline-flex, align-items: center, gap: 0.4rem, white-space: nowrap`. Contains `.badge` (flex-shrink: 0) + `.bn-person-badge-name` (font-weight: 600 / semibold)
 - **`.bn-session-meta`** — Start date cell, contains date div + optional `.bn-session-journey`
 - **`.bn-session-journey`** — user journey path below start date. `font-size: 0.82rem`, `color: var(--bn-colour-muted)`, `white-space: normal` (wraps). Content: "Homepage → Tropical Fish → Equipment → …"
 - **`.bn-session-duration`** — `text-align: right` on both `<th>` and `<td>`. Format: `MM:SS` or `HH:MM:SS`

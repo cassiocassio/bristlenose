@@ -144,10 +144,10 @@ function formatFinderFilename(name: string, maxLen: number = 24): string {
 
 function SpeakerBadge({ speaker }: { speaker: SpeakerResponse }) {
   return (
-    <div className="bn-person-id">
+    <div className="bn-person-badge">
       <span className="badge">{speaker.speaker_code}</span>
       {speaker.name && (
-        <span className="bn-person-id-name">{speaker.name}</span>
+        <span className="bn-person-badge-name">{speaker.name}</span>
       )}
     </div>
   );

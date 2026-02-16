@@ -4,9 +4,13 @@ Development log for the `bristlenose serve` feature branch. Tracks milestones, a
 
 ---
 
-## Backlog
+## Serve-mode mount point injection (16 Feb 2026)
 
-- **Serve-mode mount point injection.** `_mount_dev_report()` currently serves the static pipeline report as-is — all Jinja2. To see React islands (green in the renderer overlay), the Sessions tab needs its Jinja2 `<section class="bn-session-table">` replaced with `<div id="bn-sessions-table-root" data-project-id="1">`. This can't be a simple HTML string replacement in `app.py` because without Vite running there's no JS to render the React component (the tab goes blank). Options: (a) do the replacement only when Vite is detected (probe `localhost:5173`), (b) add a `--vite` flag alongside `--dev`, (c) inject both the mount point and a `<script type="module" src="http://localhost:5173/src/main.tsx">` tag so Vite HMR connects automatically. Option (c) is the cleanest — it's the standard Vite backend-integration pattern. Until then, the overlay correctly shows everything as Jinja2 (blue) and vanilla JS (amber); the green React selectors are wired up and will light up once mount points appear.
+**Vite backend-integration for one-command React dev workflow.** `_mount_dev_report()` now injects the React mount point (`<div id="bn-sessions-table-root">`) and three Vite HMR scripts (React Fast Refresh preamble, `@vite/client`, `src/main.tsx`) so React islands render automatically when Vite is running alongside `bristlenose serve --dev`. This is Option (c) from the original backlog — the standard Vite backend-integration pattern.
+
+Key implementation in `bristlenose/server/app.py`:
+- `_build_vite_dev_scripts()` — generates the three `<script type="module">` tags pointing to `localhost:5173`
+- `_mount_dev_report()` — regex-replaces `<!-- bn-session-table -->` markers with React mount point, injects Vite scripts before `</body>`
 
 ---
 

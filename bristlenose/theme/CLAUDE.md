@@ -4,6 +4,8 @@
 
 Tokens → Atoms → Molecules → Organisms → Templates. All visual values via `--bn-*` custom properties in `tokens.css`, never hard-coded. `render_html.py` concatenates files in order defined by `_THEME_FILES`.
 
+**CSS ↔ React mapping:** CSS file boundaries are being aligned to match React component boundaries. See `docs/design-react-component-library.md` (CSS ↔ React alignment section) for the full mapping table and per-round refactoring schedule. When renaming or restructuring CSS files, check the mapping table first.
+
 ## Dark mode
 
 Uses CSS `light-dark()` function (supported in all major browsers since mid-2024, ~87%+ global). No JS involved. The cascade:

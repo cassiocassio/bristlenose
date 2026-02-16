@@ -268,3 +268,46 @@ The primitive-first approach means Milestone 2 produces more than a quote card �
 - **Testing:** each primitive gets a Vitest unit test file. `data-testid` attributes on every interactive element from day one (convention: `data-testid="bn-{component}-{element}"`)
 - **CSS:** reuse existing atomic CSS classes from `bristlenose/theme/`. React components emit the same class names as the vanilla JS they replace — no new styling needed for visual parity
 - **State:** primitives are controlled components. State ownership lives in the composition (QuoteCard, CodebookGroup, etc.) or in a React context for cross-cutting concerns (focus/selection)
+
+---
+
+## CSS ↔ React alignment
+
+**Naming rule:** React component name wins. CSS files and classes are renamed to match the React primitive name using the `bn-{component-name}` pattern.
+
+| CSS File | React Primitive | Alignment | Status |
+|----------|----------------|-----------|--------|
+| `atoms/badge.css` | Badge | 1:1 | Done (Round 1) |
+| `molecules/person-badge.css` | PersonBadge | 1:1 (renamed from `person-id.css`) | Done (Round 1) |
+| `atoms/timecode.css` | TimecodeLink | 1:1 | Done (Round 1) |
+| `atoms/button.css` | Toggle | Partial — star/hide/toolbar split across `button.css` + `hidden-quotes.css` | Round 2 |
+| `molecules/quote-actions.css` + `molecules/name-edit.css` | EditableText | States scattered | Round 2 |
+| `molecules/tag-input.css` | TagInput | 1:1 | Round 2 |
+| `organisms/blockquote.css` | (composition: QuoteCard) | N/A — composition, not primitive | Round 2 |
+| `templates/report.css` (sparkline section) | Sparkline | Buried in template CSS | Round 3 |
+| `templates/report.css` (journey section) | JourneyChain | Buried in template CSS | Round 4 |
+| `organisms/analysis.css` | Metric | Buried in organism CSS | Round 4 |
+| `templates/report.css` (thumbnail section) | Thumbnail | Buried in template CSS | Round 4 |
+| `atoms/modal.css` | Modal | 1:1 | Round 4 |
+| `atoms/toast.css` | Toast | 1:1 | Round 4 |
+
+---
+
+## Per-round CSS refactoring schedule
+
+### Round 1 (done)
+- Renamed `molecules/person-id.css` → `molecules/person-badge.css` (`.bn-person-id` → `.bn-person-badge`)
+- No other CSS changes needed — Badge and TimecodeLink are already 1:1
+
+### Round 2
+- Create `atoms/toggle.css` — extract star/hide toggle states from `button.css` and `hidden-quotes.css`
+- Consolidate editing states from `quote-actions.css` + `name-edit.css` into a coherent EditableText pattern
+
+### Round 3
+- Create `molecules/sparkline.css` — extract sparkline bar styles from `templates/report.css`
+- Create `molecules/annotation.css` if transcript annotations need their own file (currently in `molecules/transcript-annotations.css` — may be 1:1 already)
+
+### Round 4
+- Extract `atoms/metric.css` from `organisms/analysis.css`
+- Create `molecules/journey-chain.css` from `templates/report.css`
+- Create `atoms/thumbnail.css` from `templates/report.css`

@@ -59,13 +59,15 @@ All choices are cross-platform. Electron desktop app is possible later. Node.js 
 |-----------|------|----------|
 | **0** | Serve existing report + React tooling ready | `<div id="bn-react-root">` + HelloIsland proof of concept |
 | **1** | Sessions table as React island | React component replaces `<table>` in existing HTML |
-| **2** | Quote cards as React islands | React components replace `.bn-quote-card` |
-| **3** | API endpoints replace localStorage | Tags, edits, hidden quotes persist to SQLite |
-| **4** | Dashboard stats as React island | React replaces dashboard JS |
-| **5+** | Codebook, analysis, toolbar... | One component at a time |
+| **2** | Component library + quote cards | Build 14 reusable primitives, compose into QuoteCard island |
+| **3** | API endpoints replace localStorage | Already done (6 data API endpoints, 94 tests) |
+| **4** | Dashboard stats as React island | Reuses primitives from milestone 2 + Metric |
+| **5+** | Codebook, analysis, toolbar... | New compositions from existing primitives |
 | **N** | Drop vanilla JS shell | Full React SPA |
 
 At every milestone, the report works. Never broken.
+
+**Milestone 2 builds primitives, not pages.** The quote card's interactive elements (star, edit, tag badge, tag suggest) all reappear on other surfaces (codebook, analysis, transcripts). Building them as reusable components means milestones 4+ are compositions, not rewrites. See `docs/design-react-component-library.md` for the 14-primitive dictionary, 4-round build sequence, and coverage matrix.
 
 ## Key principles
 

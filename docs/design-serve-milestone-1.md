@@ -618,3 +618,7 @@ Assuming: full domain schema, import on startup, full visual parity, islands on 
 ### Milestone 1 complete
 
 All 5 steps done. 72 new tests (38 schema + 17 import + 17 API), full suite (1050) passing, lint clean. The served sessions table is now a React island backed by a real API reading from SQLite. Live-tested with real project data (15 Feb). Visual parity confirmed via dev diff tool (15 Feb).
+
+### What's next — Milestone 2
+
+Milestone 2 builds a **reusable component library** (14 primitives), then composes the quote card from it. See `docs/design-react-component-library.md` for the full dictionary, build sequence (4 rounds), and coverage matrix showing how 7 primitives cover 80% of the app.

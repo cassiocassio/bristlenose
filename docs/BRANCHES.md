@@ -140,7 +140,7 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 - `tests/test_serve_importer.py` — 17 import tests
 - `tests/test_serve_sessions_api.py` — 17 API tests
 
-**Design docs:** `docs/design-serve-migration.md`, `docs/design-serve-milestone-1.md`
+**Design docs:** `docs/design-serve-migration.md`, `docs/design-serve-milestone-1.md`, `docs/design-react-component-library.md`
 
 ---
 

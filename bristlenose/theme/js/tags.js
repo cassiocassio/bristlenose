@@ -37,6 +37,9 @@ var deletedBadgesStore = createStore('bristlenose-deleted-badges');
 var userTags = tagsStore.get({});
 var deletedBadges = deletedBadgesStore.get({});
 
+/** Sentiment names reserved by the AI — users cannot create tags with these names. */
+var _RESERVED_SENTIMENTS = ['frustration', 'confusion', 'doubt', 'surprise', 'satisfaction', 'delight', 'confidence'];
+
 // ── Shared helpers ────────────────────────────────────────────────────────
 
 /**
@@ -185,7 +188,9 @@ function buildSuggest(input, wrap) {
   }
 
   var names = allTagNames().filter(function (n) {
-    return n.toLowerCase().indexOf(val) !== -1 && n.toLowerCase() !== val && existing.indexOf(n.toLowerCase()) === -1;
+    var nLower = n.toLowerCase();
+    return nLower.indexOf(val) !== -1 && nLower !== val && existing.indexOf(nLower) === -1 &&
+           _RESERVED_SENTIMENTS.indexOf(nLower) === -1;
   });
 
   // Find best prefix match for ghost text (must start with typed text).
@@ -272,13 +277,25 @@ function closeTagInput(commit, reopenAfterCommit) {
   var didCommit = false;
 
   if (commit && val) {
-    // Determine target quote IDs: bulk mode or single quote
-    var targetIds = ati.targetIds && ati.targetIds.length > 0 ? ati.targetIds : [ati.bq.id];
+    // Block tags that collide with AI sentiment names.
+    if (_RESERVED_SENTIMENTS.indexOf(val.toLowerCase()) !== -1) {
+      showToast('\u2018' + val + '\u2019 is a reserved sentiment tag');
+    } else {
+      // Determine target quote IDs: bulk mode or single quote
+      var targetIds = ati.targetIds && ati.targetIds.length > 0 ? ati.targetIds : [ati.bq.id];
+      var duplicateSkipped = false;
 
-    targetIds.forEach(function(qid) {
-      if (!userTags[qid]) userTags[qid] = [];
-      // Avoid duplicates per quote
-      if (userTags[qid].indexOf(val) === -1) {
+      targetIds.forEach(function(qid) {
+        if (!userTags[qid]) userTags[qid] = [];
+        // Avoid duplicates per quote (case-insensitive)
+        var valLower = val.toLowerCase();
+        var isDup = userTags[qid].some(function(t) {
+          return t.toLowerCase() === valLower;
+        });
+        if (isDup) {
+          duplicateSkipped = true;
+          return;
+        }
         userTags[qid].push(val);
         // Insert DOM element for this quote
         var bq = document.getElementById(qid);
@@ -290,11 +307,42 @@ function closeTagInput(commit, reopenAfterCommit) {
           }
         }
         didCommit = true;
-      }
-    });
+      });
 
-    if (didCommit) {
-      persistUserTags(userTags);
+      if (duplicateSkipped && !didCommit) {
+        showToast('Tags are not case-sensitive');
+      }
+
+      if (didCommit) {
+        persistUserTags(userTags);
+
+        // Bulk mode: flash badges and show toast for off-screen quotes.
+        if (targetIds.length > 1) {
+          var escapedVal = val.replace(/"/g, '\\"');
+          targetIds.forEach(function(qid) {
+            var bq = document.getElementById(qid);
+            if (!bq) return;
+            var badges = bq.querySelectorAll('.badge-user[data-tag-name="' + escapedVal + '"]');
+            var badge = badges.length ? badges[badges.length - 1] : null;
+            if (badge) {
+              badge.classList.add('badge-bulk-flash');
+              badge.addEventListener('animationend', function() {
+                badge.classList.remove('badge-bulk-flash');
+              }, { once: true });
+            }
+          });
+
+          var anyOffScreen = targetIds.some(function(qid) {
+            var bq = document.getElementById(qid);
+            if (!bq) return true;
+            var rect = bq.getBoundingClientRect();
+            return rect.top > window.innerHeight || rect.bottom < 0;
+          });
+          if (anyOffScreen) {
+            showToast('Tag \u2018' + val + '\u2019 applied to ' + targetIds.length + ' quotes');
+          }
+        }
+      }
     }
   }
 

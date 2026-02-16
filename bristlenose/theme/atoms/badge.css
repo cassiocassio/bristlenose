@@ -164,3 +164,15 @@ body.hide-ai-tags .badge-ai { display: none; }
 .badge-appearing {
     animation: badge-fade-in 0.15s ease-out;
 }
+
+/* Bulk-tag flash — asymmetric highlight (0.2s in, 0.6s hold+out).
+   Uses box-shadow spread to avoid overriding codebook background colour. */
+@keyframes badge-bulk-flash {
+    0%   { box-shadow: 0 0 0 0 var(--bn-selection-border); }
+    25%  { box-shadow: 0 0 0 3px var(--bn-selection-border); }
+    100% { box-shadow: 0 0 0 0 var(--bn-selection-border); }
+}
+
+.badge-bulk-flash {
+    animation: badge-bulk-flash 0.8s ease-out;
+}

@@ -408,8 +408,9 @@ function tagFocusedQuote() {
   if (!bq) return;
   var addTagBtn = bq.querySelector('.badge-add');
   if (addTagBtn) {
-    // If we have a selection, open tag input with bulk targetIds
-    if (selectedQuoteIds.size > 0 && typeof openTagInput === 'function') {
+    // Bulk mode only if focused quote is part of the selection.
+    // If focus is on a non-selected quote, tag only that quote.
+    if (selectedQuoteIds.size > 0 && selectedQuoteIds.has(focusedQuoteId) && typeof openTagInput === 'function') {
       openTagInput(addTagBtn, bq, Array.from(selectedQuoteIds));
     } else {
       addTagBtn.click();

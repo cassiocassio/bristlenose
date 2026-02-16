@@ -46,6 +46,7 @@ This file contains: session reminders, feature groupings with context, items too
 | .docx export | #20 | small |
 | Edit writeback to transcript files | #21 | small |
 | Tag definitions page | #53 | small |
+| Undo bulk tag (Cmd+Z for last tag action) | — | medium |
 | Multi-page report (tabs or linked pages) | #51 | large |
 | Project setup UI for new projects | #49 | large |
 

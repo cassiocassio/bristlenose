@@ -129,6 +129,13 @@ function hideQuote(quoteId) {
   bq.classList.add('bn-hidden');
   bq.style.display = 'none';
 
+  // Remove from selection if selected.
+  bq.classList.remove('bn-selected');
+  if (typeof selectedQuoteIds !== 'undefined') {
+    selectedQuoteIds.delete(quoteId);
+    if (typeof updateSelectionCount === 'function') updateSelectionCount();
+  }
+
   // Animate siblings sliding up.
   _animateSiblings(siblings);
 

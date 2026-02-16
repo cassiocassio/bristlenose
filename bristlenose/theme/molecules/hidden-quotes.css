@@ -6,35 +6,7 @@ blockquote.bn-hidden {
     display: none !important;
 }
 
-/* ── Hide button on blockquote ──────────────────────────────────────────── */
-
-.hide-btn {
-    position: absolute;
-    top: 0.65rem;
-    right: 2rem;
-    background: none;
-    border: none;
-    font-size: 0.8rem;
-    color: var(--bn-colour-icon-idle);
-    cursor: pointer;
-    padding: var(--bn-space-xs);
-    line-height: 1;
-    transition: color var(--bn-transition-normal), opacity var(--bn-transition-normal);
-    opacity: 0;
-}
-
-blockquote:hover .hide-btn,
-blockquote.bn-focused .hide-btn {
-    opacity: 1;
-}
-
-.hide-btn:hover {
-    color: var(--bn-colour-accent);
-}
-
-.hide-btn svg {
-    display: block;
-}
+/* (hide-btn rules moved to atoms/toggle.css) */
 
 /* ── Badge container ────────────────────────────────────────────────────── */
 

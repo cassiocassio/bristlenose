@@ -1,22 +1,5 @@
-/* Atom: button — star-btn, edit-pencil, badge-restore, toolbar-btn */
-
-.star-btn {
-    position: absolute;
-    top: 0.65rem;
-    right: 0.65rem;
-    background: none;
-    border: none;
-    font-size: 0.8rem;
-    color: var(--bn-colour-icon-idle);
-    cursor: pointer;
-    padding: var(--bn-space-xs);
-    line-height: 1;
-    transition: color var(--bn-transition-normal);
-}
-
-.star-btn:hover {
-    color: var(--bn-colour-accent);
-}
+/* Atom: button — edit-pencil, badge-restore, toolbar-btn
+   (star-btn, hide-btn, toolbar-btn-toggle moved to atoms/toggle.css) */
 
 .edit-pencil {
     position: absolute;
@@ -106,19 +89,4 @@
     vertical-align: -0.05em;
     flex-shrink: 0;
     margin-left: -0.1rem;
-}
-
-/* Toggle variant — pressed/active state for AI tag toggle etc. */
-.toolbar-btn-toggle {
-    user-select: none;
-}
-
-.toolbar-btn-toggle.active {
-    background: var(--bn-colour-quote-bg);
-    border-color: var(--bn-colour-accent);
-    color: var(--bn-colour-accent);
-}
-
-.toolbar-btn-toggle:not(.active) {
-    color: var(--bn-colour-muted);
 }

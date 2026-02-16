@@ -123,7 +123,7 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 
 **Goal:** Add `bristlenose serve` command — FastAPI server + React frontend + SQLite database. Islands migration pattern: serve the existing HTML report over HTTP, then replace vanilla JS components with React islands one at a time.
 
-**Current status:** Milestones 0 and 1 complete. The sessions table is now a React island backed by a real API reading from SQLite. 72 new tests, full suite (1050) passing.
+**Current status:** Milestones 0 and 1 complete. React component library Round 1 done (Badge, PersonBadge, TimecodeLink) with Vitest + ESLint tooling, 19 component tests, CSS rename `.bn-person-id` → `.bn-person-badge`. SessionsTable refactored to use PersonBadge. Full suite (1144 Python + 19 Vitest) passing.
 
 **Files added/modified:**
 - `bristlenose/server/models.py` — full 22-table domain schema (was single Project table)

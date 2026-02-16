@@ -120,7 +120,7 @@ See `docs/design-react-component-library.md` for the **14-primitive component li
 Tracked as issue #29 (large effort).
 
 **Component library build sequence** (primitives, not pages):
-- [ ] **Round 1: Badge, PersonBadge, TimecodeLink** — stateless render primitives appearing on 3–4 surfaces each. Unlocks static skeletons of all major compositions
+- [x] **Round 1: Badge, PersonBadge, TimecodeLink** — stateless render primitives appearing on 3–4 surfaces each. Unlocks static skeletons of all major compositions. Done: 3 components, 19 Vitest tests, CSS rename `.bn-person-id` → `.bn-person-badge`, SessionsTable refactored to use PersonBadge
 - [ ] **Round 2: EditableText, Toggle** (+Modal, Toast as infra) — unlocks fully interactive quote card (minus tags), editable headings everywhere
 - [ ] **Round 3: TagInput, Sparkline** — unlocks complete quote card, complete codebook group, sessions table sentiment
 - [ ] **Round 4: Metric, Annotation, Counter, Thumbnail, JourneyChain** — one-surface-each primitives, build as needed

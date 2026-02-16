@@ -10,6 +10,48 @@ Development log for the `bristlenose serve` feature branch. Tracks milestones, a
 
 ---
 
+## React component library — Round 1 (16 Feb 2026)
+
+**CSS rename + frontend tooling + 3 primitives + SessionsTable refactor.**
+
+### CSS rename: `.bn-person-id` → `.bn-person-badge`
+
+The only Round 1 naming mismatch. "person-id" described data; "person-badge" describes the UI element. Establishes the rule: React component name wins, CSS is renamed to match. 12 files changed across CSS, Python renderers, Jinja templates, React TSX, tests, and docs.
+
+### Frontend tooling infrastructure
+
+- **Vitest + React Testing Library** — `jsdom` environment, globals enabled, `test-setup.ts` imports `@testing-library/jest-dom`
+- **ESLint** — flat config with `typescript-eslint` + `react-hooks` rules
+- **TypeScript** — `types: ["vitest/globals", "@testing-library/jest-dom"]` in tsconfig
+- **Scripts** — `npm test`, `npm run lint`, `npm run typecheck` added alongside existing `build`/`dev`
+
+### Badge component (`frontend/src/components/Badge.tsx`)
+
+1:1 mapping with `atoms/badge.css`. Three variants: `ai` (click-to-delete), `user` (× button), `readonly`. Props: `text`, `variant`, `sentiment`, `colour`, `onDelete`, `className`, `data-testid`. 8 tests.
+
+### PersonBadge component (`frontend/src/components/PersonBadge.tsx`)
+
+1:1 mapping with `molecules/person-badge.css` (after rename). Props: `code`, `role`, `name`, `highlighted`, `href` (wraps in `<a>`), `data-testid`. 5 tests.
+
+### TimecodeLink component (`frontend/src/components/TimecodeLink.tsx`)
+
+1:1 mapping with `atoms/timecode.css`. Auto-formats seconds to `[MM:SS]` or `[H:MM:SS]`. Emits `data-participant`, `data-seconds`, `data-end-seconds` attributes for `player.js` interop. Props: `seconds`, `endSeconds`, `participantId`, `formatted`, `data-testid`. 6 tests.
+
+### SessionsTable refactor
+
+- Extracted `formatDuration`, `formatFinderDate`, `formatFinderFilename` → `frontend/src/utils/format.ts`
+- Replaced inline `SpeakerBadge` with `PersonBadge` from the component library
+- Barrel export at `frontend/src/components/index.ts`
+
+### Documentation
+
+- CSS ↔ React alignment table appended to `docs/design-react-component-library.md` — full mapping of 13 CSS files to 14 primitives, naming convention, per-round refactoring schedule
+- Cross-reference from `bristlenose/theme/CLAUDE.md` to the mapping table
+
+**What shipped:** 3 component files, 3 test files (19 tests), barrel export, format utils, eslint config, test setup, refactored SessionsTable. 1144 Python tests + 19 Vitest tests all passing.
+
+---
+
 ## Renderer overlay (15 Feb 2026)
 
 **Dev-only renderer overlay toggle.** A floating button (top-right, `D` keyboard shortcut) that tints report regions by renderer origin: pale blue for Jinja2 static HTML, pale green for React islands, pale amber for vanilla JS rendered content. Shows at a glance which parts of the report come from which renderer.

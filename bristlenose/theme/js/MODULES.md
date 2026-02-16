@@ -121,9 +121,9 @@ Section titles, descriptions, theme titles, and theme descriptions use `.editabl
 Hide/unhide quotes with per-group badge and dropdown. ~350 lines.
 
 - **Store**: `createStore('bristlenose-hidden')` — shape `{ "q-p1-42": true }` (same pattern as starred)
-- **`hideQuote(quoteId)`** — adds `.bn-hidden` + `display: none`, persists, updates badge, shows toast, animates (ghost clone shrinks toward badge + FLIP siblings slide up, 300ms)
-- **`unhideQuote(quoteId)`** — removes `.bn-hidden`, restores display (respects `currentViewMode` starred filter and tag filter), persists, updates badge, scrolls to quote with highlight, animates (expand from badge + FLIP siblings slide down)
-- **`bulkHideSelected()`** — hide all selected quotes (called by `focus.js` for multi-select `h`)
+- **`hideQuote(quoteId)`** — adds `.bn-hidden` + `display: none`, removes from `selectedQuoteIds` + strips `.bn-selected` (hidden quotes always lose selection), persists, updates badge, shows toast, animates (ghost clone shrinks toward badge + FLIP siblings slide up, 300ms)
+- **`unhideQuote(quoteId)`** — removes `.bn-hidden`, restores display (respects `currentViewMode` starred filter and tag filter), persists, updates badge, scrolls to quote with highlight, animates (expand from badge + FLIP siblings slide down). Unhidden quotes are always unselected
+- **`bulkHideSelected()`** — hide all selected quotes then `clearSelection()` (called by `focus.js` for multi-select `h`)
 - **`isHidden(quoteId)`** — check if quote is hidden (called by other modules)
 - **`_updateBadgeForGroup(group)`** — create/update/remove badge as first child of `.quote-group`
 - **`initHidden()`** — restore from localStorage, prune stale IDs, build all badges, wire event delegation

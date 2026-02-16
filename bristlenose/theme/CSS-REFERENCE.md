@@ -27,6 +27,19 @@ Dropdown filter for quotes by user tag. Lets researchers focus on specific tags 
 
 `.tag-filter` (relative wrapper). The tag filter button uses dual classes `toolbar-btn tag-filter-btn` — shared round-rect from `atoms/button.css`, dropdown-specific overrides in this file. SVG icons use `.toolbar-icon-svg` and `.toolbar-arrow` (shared toolbar classes). `.tag-filter-label` (inline-block, text-align right, min-width set by JS for layout stability). `.tag-filter-menu` (absolute dropdown, right-aligned, `z-index: 200`, `max-height: 32rem`, width locked by JS on open). `.tag-filter-actions` (Select all · Clear row), `.tag-filter-search` / `.tag-filter-search-input` (search field, only shown for 8+ tags, placeholder "Search tags and groups…"). `.tag-filter-group` (tinted background container for codebook groups, `border-radius: var(--bn-radius-sm)`, background set inline via `var(--bn-group-{set})`). `.tag-filter-group-header` (uppercase group name label inside tinted container). `.tag-filter-item` (flex row: checkbox + badge + count), `.tag-filter-badge` (design-system `.badge .badge-user` with ellipsis truncation at `max-width: 16rem`, codebook colour applied inline), `.tag-filter-item-muted` (italic for "(No tags)"), `.tag-filter-count` (right-aligned, muted, tabular-nums). `.tag-filter-divider` between "(No tags)" and user tags. Ungrouped tags appear first as flat items; codebook groups follow with tinted containers. Search matches both tag names and group names.
 
+## badge.css (atom)
+
+Badge base, sentiment variants, AI/user badge variants, animations.
+
+- **`.badge`** — base: inline-block, mono font, small padding, neutral background
+- **Sentiment variants** (`.badge-frustration` … `.badge-confidence`) — 7 research-backed sentiments with distinct bg/text colours from tokens
+- **`.badge-ai`** — AI-assigned badges. Hover reveals `::after` delete circle (white chip with `×`). `body.hide-ai-tags .badge-ai { display: none }`
+- **`.badge-user`** — user tags. Dark-on-light (light mode), white-on-saturated (dark mode). Codebook colour via inline style. `.badge-delete` positioned same as AI `::after`
+- **`.badge-add`** — dashed ghost button for adding tags. Accent on hover
+- **`.badge-removing`** — fade-out + scale-down (0.15s). Used by `animateBadgeRemoval()` in `badge-utils.js`
+- **`.badge-appearing`** — fade-in + scale-up (0.15s). Opt-in by callers
+- **`.badge-bulk-flash`** — blue `box-shadow` ring pulse (0.8s, asymmetric: 0.2s in / 0.6s out). Applied by `closeTagInput()` in `tags.js` during bulk tag commit. Uses `--bn-selection-border` token for consistent selection-associated colour in both themes
+
 ## toggle.css (atom)
 
 On/off icon buttons extracted from `button.css` and `hidden-quotes.css` (Round 2 CSS refactoring). Groups all toggle-style buttons together — star, hide, and toolbar toggle.

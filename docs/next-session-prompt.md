@@ -16,13 +16,7 @@ See `docs/CHANGELOG-serve.md` for the full Round 1 entry. See `docs/design-react
 
 **Choose one of these based on what's most useful right now:**
 
-### Option A: Serve-mode mount point injection (unblocks visual testing)
-
-The backlog item in `CHANGELOG-serve.md` at the top. Currently `bristlenose serve --dev` serves the static Jinja2 HTML — React islands don't render unless Vite is running separately. Fix: inject `<script type="module" src="http://localhost:5173/src/main.tsx">` alongside the React mount point `<div id="bn-sessions-table-root">` when dev mode is on and Vite is detected. This is the standard Vite backend-integration pattern. Would make `bristlenose serve --dev` a one-command workflow (backend + React, just start Vite in another terminal).
-
-Key files: `bristlenose/server/app.py` (`_mount_dev_report()`), the `<!-- bn-session-table -->` markers in the HTML.
-
-### Option B: Round 2 planning (EditableText + Toggle)
+### Option A: Round 2 planning (EditableText + Toggle)
 
 Plan the next round of primitives. EditableText is the most reused within a single surface (6+ instances in quote cards alone — quote text, section headings, theme headings, theme descriptions, participant names, roles). Toggle covers star and hide (the two most common researcher actions). Together they unlock a fully interactive quote card minus tagging.
 
@@ -34,7 +28,7 @@ This needs:
 5. Design the component API (props, state, events)
 6. Write a plan doc like the Round 1 plan
 
-### Option C: Quotes API endpoint
+### Option B: Quotes API endpoint
 
 The sessions API (`/api/projects/{id}/sessions`) already exists. The next data API needed for the quote card island would be `/api/projects/{id}/quotes` — quotes grouped by section and theme, with sentiment badges, timecodes, speaker info, and star/hide state. This would be Milestone 2's data layer (equivalent to what sessions API was for Milestone 1).
 

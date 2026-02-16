@@ -151,5 +151,6 @@ After the React migration, Playwright E2E tests will cover the full browser → 
 
 - **Domain model rationale**: `docs/design-serve-milestone-1.md`
 - **Migration architecture**: `docs/design-serve-migration.md`
+- **React component library** (14 primitives, build sequence, coverage matrix): `docs/design-react-component-library.md` — **read this before building any React component**
 - **React migration plan**: `docs/design-reactive-ui.md`
 - **Phase-by-phase walkthrough**: `docs/react-migration-walkthrough.md`

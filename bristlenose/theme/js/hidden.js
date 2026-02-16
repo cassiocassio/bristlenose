@@ -108,14 +108,7 @@ function hideQuote(quoteId) {
   hiddenStore.set(hiddenQuotes);
   if (isServeMode()) apiPut('/hidden', hiddenQuotes);
 
-  // Build the badge now so we have a target to animate toward.
-  if (group) _updateBadgeForGroup(group);
-  var badge = group ? group.querySelector('.bn-hidden-badge') : null;
-
-  // Compute the target rect (badge position) for the shrink.
-  var targetRect = badge ? badge.getBoundingClientRect() : null;
-
-  // Create a ghost clone for the shrink animation.
+  // Create a ghost clone BEFORE hiding (needs visible content + dimensions).
   var ghost = bq.cloneNode(true);
   ghost.style.position = 'fixed';
   ghost.style.left = bqRect.left + 'px';
@@ -132,12 +125,20 @@ function hideQuote(quoteId) {
   ghost.removeAttribute('id');
   document.body.appendChild(ghost);
 
-  // Hide the real quote immediately so siblings can fill the gap.
+  // Hide the real quote so siblings can fill the gap.
   bq.classList.add('bn-hidden');
   bq.style.display = 'none';
 
   // Animate siblings sliding up.
   _animateSiblings(siblings);
+
+  // Build the badge AFTER adding .bn-hidden so the count is correct.
+  // (Previously built before — caused off-by-one: first hide showed no badge.)
+  if (group) _updateBadgeForGroup(group);
+  var badge = group ? group.querySelector('.bn-hidden-badge') : null;
+
+  // Compute the target rect (badge position) for the shrink.
+  var targetRect = badge ? badge.getBoundingClientRect() : null;
 
   // Animate the ghost shrinking toward the badge.
   if (targetRect) {

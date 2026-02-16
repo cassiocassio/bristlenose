@@ -14,6 +14,7 @@ from fastapi.staticfiles import StaticFiles
 from bristlenose.server.db import create_session_factory, get_engine, init_db
 from bristlenose.server.routes.data import router as data_router
 from bristlenose.server.routes.health import router as health_router
+from bristlenose.server.routes.quotes import router as quotes_router
 from bristlenose.server.routes.sessions import router as sessions_router
 
 logger = logging.getLogger(__name__)
@@ -72,6 +73,7 @@ def create_app(
 
     app.include_router(health_router)
     app.include_router(sessions_router)
+    app.include_router(quotes_router)
     app.include_router(data_router)
 
     if dev:

@@ -16,6 +16,7 @@ bristlenose/server/
   routes/
     health.py     — GET /api/health
     sessions.py   — GET /api/projects/{id}/sessions (React sessions table)
+    quotes.py     — GET /api/projects/{id}/quotes (quotes grouped by section/theme)
     data.py       — 12 data API endpoints (Phase 1 researcher state sync)
     dev.py        — Dev-only endpoints (visual diff, system info)
   static/         — Vite build output (React islands bundle)
@@ -137,7 +138,7 @@ How it works: `serve_report_html()` reads the baked-in HTML from disk, finds the
 
 ## Tests
 
-37 happy-path tests in `tests/test_serve_data_api.py`, 57 stress tests in `tests/test_serve_data_api_stress.py`.  Both use the smoke-test fixture at `tests/fixtures/smoke-test/input/` which provides:
+48 tests in `tests/test_serve_quotes_api.py` (response shape, grouping, field values, researcher state round-trips via data PUT endpoints, speaker name resolution, error handling).  37 happy-path tests in `tests/test_serve_data_api.py`, 57 stress tests in `tests/test_serve_data_api_stress.py`.  All use the smoke-test fixture at `tests/fixtures/smoke-test/input/` which provides:
 - 1 project, 1 session (`s1`), 2 speakers (`m1`, `p1`)
 - 4 quotes: `q-p1-10` (Dashboard/confusion), `q-p1-26` (Dashboard/frustration), `q-p1-46` (Search/delight), `q-p1-66` (Onboarding/frustration)
 

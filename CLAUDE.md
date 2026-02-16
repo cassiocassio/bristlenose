@@ -182,6 +182,7 @@ See `docs/BRANCHES.md` for active branches, worktree paths, what files they touc
 
 - Keep changes minimal and focused — don't refactor or add features beyond what's asked
 - Commit messages: short, descriptive, lowercase (e.g., "fix tag suggest offering tags the quote already has")
+- **Human QA after each task**: when you finish a task, suggest only the checks a human needs to do that automated tests can't cover (visual regression, browser interaction, UX feel). Skip this for pure data/logic work where unit tests are sufficient. Include copy-pasteable commands to make it easy (e.g. server start command, URL to open). Don't duplicate what pytest already covers
 
 ### Release timing (evening releases)
 

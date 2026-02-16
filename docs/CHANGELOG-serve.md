@@ -4,6 +4,27 @@ Development log for the `bristlenose serve` feature branch. Tracks milestones, a
 
 ---
 
+## Quotes API endpoint (16 Feb 2026)
+
+**`GET /api/projects/{id}/quotes` — quotes grouped by section and theme, with researcher state.**
+
+Data layer for the future QuoteCard React island. Returns all quotes for a project organized by report structure: `sections` (screen clusters ordered by `display_order`) and `themes` (theme groups), each containing fully-hydrated quote objects.
+
+### Response shape
+
+`QuotesListResponse` with `sections: SectionResponse[]`, `themes: ThemeResponse[]`, summary counts (`total_quotes`, `total_hidden`, `total_starred`). Each `QuoteResponse` includes: `dom_id`, `text`, `verbatim_excerpt`, `participant_id`, `session_id`, `speaker_name` (resolved from Person table, falls back to speaker code), `start_timecode`, `end_timecode`, `sentiment`, `intensity`, `researcher_context`, `quote_type`, `topic_label`, `is_starred`, `is_hidden`, `edited_text`, `tags` (with codebook group info), `deleted_badges`.
+
+### Implementation
+
+- Bulk-loads all quotes, joins, and researcher state in ~8 queries, assembles in-memory (same pattern as sessions endpoint)
+- Speaker names resolved server-side via Session → SessionSpeaker → Person join
+- Tags returned as `TagResponse` objects (name + codebook_group) — richer than data.py's bare strings, avoids extra API call from the React island
+- Quotes ordered by `start_timecode` within sections, by `(session_id, start_timecode)` within themes
+
+**What shipped:** `bristlenose/server/routes/quotes.py` (new), 2-line registration in `app.py`, 48 tests in `tests/test_serve_quotes_api.py`. 1192 Python tests + 59 Vitest tests all passing.
+
+---
+
 ## React component library — Round 2 (16 Feb 2026)
 
 **CSS refactoring + 2 interactive primitives: EditableText and Toggle.**

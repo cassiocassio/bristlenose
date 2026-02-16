@@ -4,6 +4,32 @@ Development log for the `bristlenose serve` feature branch. Tracks milestones, a
 
 ---
 
+## React component library — Round 3 (16 Feb 2026)
+
+**2 new primitives: Sparkline and TagInput. CSS extraction. SessionsTable refactored.**
+
+### Sparkline component (`frontend/src/components/Sparkline.tsx`)
+
+Generic category-based mini-bar chart. Accepts `items: SparklineItem[]` where each item has `key`, `count`, and `colour`. Renders bottom-aligned bars in a `<div className="bn-sparkline">`. Empty state (all zero counts) shows an em-dash or custom `emptyContent`. Configurable `maxHeight`, `minHeight`, `gap`, `opacity` — defaults match the previous inline constants exactly.
+
+Extracted from the inline `SentimentSparkline` in `SessionsTable.tsx`. CSS extracted from `templates/report.css` into `molecules/sparkline.css`.
+
+### TagInput component (`frontend/src/components/TagInput.tsx`)
+
+Text input with keyboard-navigable auto-suggest dropdown and ghost text completion. Replicates the behaviour from `tags.js` (470 lines of vanilla JS) as a controlled React component.
+
+Props: `vocabulary`, `exclude`, `onCommit`, `onCancel`, `onCommitAndReopen`, `placeholder`, `maxSuggestions`, `className`, `data-testid`. Always "open" when mounted — consumer controls visibility. Auto-focuses on mount. Ghost text shows best prefix-match suffix (fish-shell style, accepted with ArrowRight). Arrow keys navigate suggestions, Enter/Tab commit, Escape cancels. Tab fires `onCommitAndReopen` for rapid multi-tag entry. Blur commits non-empty, cancels empty (150ms delay matching vanilla JS).
+
+CSS already existed in `atoms/input.css` + `molecules/tag-input.css` — no extraction needed.
+
+### SessionsTable refactor
+
+Replaced inline `SentimentSparkline` sub-component and 5 sparkline constants with the new `Sparkline` primitive. Added `sentimentToSparklineItems()` helper to map `Record<string, number>` to `SparklineItem[]`.
+
+**What shipped:** 2 component files, 2 test files (35 new tests → 82 total), 1 new CSS file, `templates/report.css` trimmed, `SessionsTable.tsx` refactored, barrel exports updated, `_THEME_FILES` updated, design doc marked Round 3 done. 1192 Python tests + 82 Vitest tests all passing.
+
+---
+
 ## Quotes API endpoint (16 Feb 2026)
 
 **`GET /api/projects/{id}/quotes` — quotes grouped by section and theme, with researcher state.**

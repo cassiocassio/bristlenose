@@ -282,9 +282,9 @@ The primitive-first approach means Milestone 2 produces more than a quote card �
 | `atoms/timecode.css` | TimecodeLink | 1:1 | Done (Round 1) |
 | `atoms/toggle.css` (from `button.css` + `hidden-quotes.css`) | Toggle | 1:1 | Done (Round 2) |
 | `molecules/editable-text.css` (from `quote-actions.css` + `name-edit.css`) | EditableText | 1:1 | Done (Round 2) |
-| `molecules/tag-input.css` | TagInput | 1:1 | Round 2 |
+| `atoms/input.css` + `molecules/tag-input.css` | TagInput | 1:1 | Done (Round 3) |
 | `organisms/blockquote.css` | (composition: QuoteCard) | N/A — composition, not primitive | Round 2 |
-| `templates/report.css` (sparkline section) | Sparkline | Buried in template CSS | Round 3 |
+| `molecules/sparkline.css` (extracted from `templates/report.css`) | Sparkline | 1:1 | Done (Round 3) |
 | `templates/report.css` (journey section) | JourneyChain | Buried in template CSS | Round 4 |
 | `organisms/analysis.css` | Metric | Buried in organism CSS | Round 4 |
 | `templates/report.css` (thumbnail section) | Thumbnail | Buried in template CSS | Round 4 |
@@ -305,9 +305,12 @@ The primitive-first approach means Milestone 2 produces more than a quote card �
 - EditableText component: two trigger modes (`"external"` for pencil-controlled, `"click"` for click-to-edit)
 - Toggle component: controlled on/off button with `activeClassName` support
 
-### Round 3
-- Create `molecules/sparkline.css` — extract sparkline bar styles from `templates/report.css`
-- Create `molecules/annotation.css` if transcript annotations need their own file (currently in `molecules/transcript-annotations.css` — may be 1:1 already)
+### Round 3 (done)
+- Created `molecules/sparkline.css` — extracted sparkline bar styles from `templates/report.css`
+- Sparkline component: generic category-based mini-bar chart, accepts items array with key/count/colour
+- TagInput component: text input with keyboard-navigable auto-suggest, ghost text completion, controlled commit/cancel lifecycle
+- SessionsTable refactored to use Sparkline primitive (removed inline SentimentSparkline sub-component)
+- TagInput CSS was already 1:1 aligned (`atoms/input.css` + `molecules/tag-input.css`)
 
 ### Round 4
 - Extract `atoms/metric.css` from `organisms/analysis.css`

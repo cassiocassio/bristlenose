@@ -192,17 +192,6 @@ td a:hover {
     padding-left: 2px;
 }
 
-.bn-sparkline {
-    display: inline-flex;
-    align-items: flex-end;
-    height: 54px;
-}
-
-.bn-sparkline-bar {
-    width: 5px;
-    border-radius: 1px 1px 0 0;
-}
-
 .bn-interviews-link {
     color: var(--bn-colour-accent);
     text-decoration: none;

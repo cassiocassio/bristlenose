@@ -9,7 +9,8 @@
  */
 
 import { useEffect, useState } from "react";
-import { PersonBadge } from "../components";
+import { PersonBadge, Sparkline } from "../components";
+import type { SparklineItem } from "../components/Sparkline";
 import { formatDuration, formatFinderDate, formatFinderFilename } from "../utils/format";
 
 // ---------------------------------------------------------------------------
@@ -48,10 +49,10 @@ interface SessionsListResponse {
 }
 
 // ---------------------------------------------------------------------------
-// Constants (matching render_html.py sparkline config)
+// Sentiment → Sparkline mapping
 // ---------------------------------------------------------------------------
 
-const SPARKLINE_ORDER = [
+const SENTIMENT_ORDER = [
   "satisfaction",
   "delight",
   "confidence",
@@ -61,55 +62,19 @@ const SPARKLINE_ORDER = [
   "frustration",
 ];
 
-const SPARKLINE_MAX_H = 20; // px
-const SPARKLINE_MIN_H = 2; // px — non-zero counts always visible
-const SPARKLINE_GAP = 2; // px
-const SPARKLINE_OPACITY = 0.8;
+function sentimentToSparklineItems(
+  counts: Record<string, number>,
+): SparklineItem[] {
+  return SENTIMENT_ORDER.map((sentiment) => ({
+    key: sentiment,
+    count: counts[sentiment] || 0,
+    colour: `var(--bn-sentiment-${sentiment})`,
+  }));
+}
 
 // ---------------------------------------------------------------------------
 // Sub-components
 // ---------------------------------------------------------------------------
-
-function SentimentSparkline({
-  counts,
-}: {
-  counts: Record<string, number>;
-}) {
-  const maxVal = Math.max(
-    ...SPARKLINE_ORDER.map((s) => counts[s] || 0),
-    0,
-  );
-  if (maxVal === 0) return <>{"\u2014"}</>;
-
-  return (
-    <div
-      className="bn-sparkline"
-      style={{ gap: `${SPARKLINE_GAP}px` }}
-    >
-      {SPARKLINE_ORDER.map((sentiment) => {
-        const c = counts[sentiment] || 0;
-        const h =
-          c > 0
-            ? Math.max(
-                Math.round((c / maxVal) * SPARKLINE_MAX_H),
-                SPARKLINE_MIN_H,
-              )
-            : 0;
-        return (
-          <span
-            key={sentiment}
-            className="bn-sparkline-bar"
-            style={{
-              height: `${h}px`,
-              background: `var(--bn-sentiment-${sentiment})`,
-              opacity: SPARKLINE_OPACITY,
-            }}
-          />
-        );
-      })}
-    </div>
-  );
-}
 
 function ModeratorHeader({
   moderatorNames,
@@ -273,7 +238,7 @@ function SessionRow({ session }: { session: SessionResponse }) {
         )}
       </td>
       <td className="bn-session-sentiment">
-        <SentimentSparkline counts={sentiment_counts} />
+        <Sparkline items={sentimentToSparklineItems(sentiment_counts)} />
       </td>
     </tr>
   );

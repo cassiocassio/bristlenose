@@ -280,8 +280,8 @@ The primitive-first approach means Milestone 2 produces more than a quote card �
 | `atoms/badge.css` | Badge | 1:1 | Done (Round 1) |
 | `molecules/person-badge.css` | PersonBadge | 1:1 (renamed from `person-id.css`) | Done (Round 1) |
 | `atoms/timecode.css` | TimecodeLink | 1:1 | Done (Round 1) |
-| `atoms/button.css` | Toggle | Partial — star/hide/toolbar split across `button.css` + `hidden-quotes.css` | Round 2 |
-| `molecules/quote-actions.css` + `molecules/name-edit.css` | EditableText | States scattered | Round 2 |
+| `atoms/toggle.css` (from `button.css` + `hidden-quotes.css`) | Toggle | 1:1 | Done (Round 2) |
+| `molecules/editable-text.css` (from `quote-actions.css` + `name-edit.css`) | EditableText | 1:1 | Done (Round 2) |
 | `molecules/tag-input.css` | TagInput | 1:1 | Round 2 |
 | `organisms/blockquote.css` | (composition: QuoteCard) | N/A — composition, not primitive | Round 2 |
 | `templates/report.css` (sparkline section) | Sparkline | Buried in template CSS | Round 3 |
@@ -299,9 +299,11 @@ The primitive-first approach means Milestone 2 produces more than a quote card �
 - Renamed `molecules/person-id.css` → `molecules/person-badge.css` (`.bn-person-id` → `.bn-person-badge`)
 - No other CSS changes needed — Badge and TimecodeLink are already 1:1
 
-### Round 2
-- Create `atoms/toggle.css` — extract star/hide toggle states from `button.css` and `hidden-quotes.css`
-- Consolidate editing states from `quote-actions.css` + `name-edit.css` into a coherent EditableText pattern
+### Round 2 (done)
+- Created `atoms/toggle.css` — extracted star-btn, hide-btn, toolbar-btn-toggle from `button.css` + `hidden-quotes.css`
+- Created `molecules/editable-text.css` — extracted editing/edited states from `quote-actions.css` + `name-edit.css`
+- EditableText component: two trigger modes (`"external"` for pencil-controlled, `"click"` for click-to-edit)
+- Toggle component: controlled on/off button with `activeClassName` support
 
 ### Round 3
 - Create `molecules/sparkline.css` — extract sparkline bar styles from `templates/report.css`

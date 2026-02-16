@@ -27,12 +27,28 @@ Dropdown filter for quotes by user tag. Lets researchers focus on specific tags 
 
 `.tag-filter` (relative wrapper). The tag filter button uses dual classes `toolbar-btn tag-filter-btn` — shared round-rect from `atoms/button.css`, dropdown-specific overrides in this file. SVG icons use `.toolbar-icon-svg` and `.toolbar-arrow` (shared toolbar classes). `.tag-filter-label` (inline-block, text-align right, min-width set by JS for layout stability). `.tag-filter-menu` (absolute dropdown, right-aligned, `z-index: 200`, `max-height: 32rem`, width locked by JS on open). `.tag-filter-actions` (Select all · Clear row), `.tag-filter-search` / `.tag-filter-search-input` (search field, only shown for 8+ tags, placeholder "Search tags and groups…"). `.tag-filter-group` (tinted background container for codebook groups, `border-radius: var(--bn-radius-sm)`, background set inline via `var(--bn-group-{set})`). `.tag-filter-group-header` (uppercase group name label inside tinted container). `.tag-filter-item` (flex row: checkbox + badge + count), `.tag-filter-badge` (design-system `.badge .badge-user` with ellipsis truncation at `max-width: 16rem`, codebook colour applied inline), `.tag-filter-item-muted` (italic for "(No tags)"), `.tag-filter-count` (right-aligned, muted, tabular-nums). `.tag-filter-divider` between "(No tags)" and user tags. Ungrouped tags appear first as flat items; codebook groups follow with tinted containers. Search matches both tag names and group names.
 
+## toggle.css (atom)
+
+On/off icon buttons extracted from `button.css` and `hidden-quotes.css` (Round 2 CSS refactoring). Groups all toggle-style buttons together — star, hide, and toolbar toggle.
+
+- **`.star-btn`** — absolute positioned (top-right, `right: 0.65rem`), icon-idle colour, accent on hover. React: `Toggle` component with `className="star-btn"`
+- **`.hide-btn`** — absolute positioned at `right: 2rem` (between star at `0.65rem` and pencil at `3.35rem`), eye-slash SVG icon, `opacity: 0` by default → 1 on `blockquote:hover` / `.bn-focused`. React: `Toggle` component with `className="hide-btn"`
+- **`.toolbar-btn-toggle`** — binary active/inactive state for toolbar buttons (AI tag visibility). `.active` class adds accent border + colour; `:not(.active)` shows muted. React: `Toggle` component with `className="toolbar-btn toolbar-btn-toggle"` and `activeClassName="active"`
+
+## editable-text.css (molecule)
+
+Shared editing and committed states for inline contenteditable fields. Extracted from `quote-actions.css` and `name-edit.css` (Round 2 CSS refactoring). Groups all editing visual patterns together.
+
+- **Editing state** — yellow background (`--bn-colour-editing-bg`) + outline (`--bn-colour-editing-border`) + `border-radius: sm` + cursor: text. Applied to `blockquote.editing .quote-text`, `.editable-text.editing`, `.name-cell.editing .name-text`, `.role-cell.editing .role-text`
+- **`blockquote.editing .edit-pencil`** — pencil turns accent colour during edit
+- **Committed state** — dashed underline indicating text was edited. `.quote-text.edited` and `.editable-text.edited` use `--bn-colour-muted`; `.name-text.edited` and `.role-text.edited` use `--bn-colour-accent`
+- **React**: `EditableText` component with `committedClassName="edited"` (default)
+
 ## hidden-quotes.css (molecule)
 
-Styles for hidden quotes feature. Researchers often encounter "volume quotes" — repetitive or low-value quotes that clutter the report. The hide feature lets them suppress these while keeping them recoverable via per-subsection badges with dropdown previews.
+Styles for hidden quotes feature. Researchers often encounter "volume quotes" — repetitive or low-value quotes that clutter the report. The hide feature lets them suppress these while keeping them recoverable via per-subsection badges with dropdown previews. (`.hide-btn` rules moved to `atoms/toggle.css` in Round 2.)
 
 - **`blockquote.bn-hidden`** — `display: none !important` (defence-in-depth; JS also sets `style.display = 'none'`)
-- **`.hide-btn`** — absolute positioned at `right: 2rem` (between star at `0.65rem` and pencil at `3.35rem`), eye-slash SVG icon, opacity 0 by default → 1 on `blockquote:hover` / `.bn-focused`
 - **`.bn-hidden-badge`** — right-aligned in `.quote-group` via `align-self: flex-end`, contains toggle button + dropdown
 - **`.bn-hidden-toggle`** — accent-coloured text button ("3 hidden quotes ▾"), underline on hover
 - **`.bn-hidden-dropdown`** — absolute below badge, `z-index: 200`, card styling (border, shadow, radius), scrollable
@@ -51,9 +67,9 @@ Feedback modal content styles, extends `.bn-modal` from `modal.css`. `.feedback-
 
 ## name-edit.css (molecule)
 
-Styles for participant name inline editing. Researchers need to assign real names to anonymised participant codes (p1, p2) — this editing UI appears in the participant table and follows the same contenteditable pattern as quote editing.
+Styles for participant name inline editing layout. Researchers need to assign real names to anonymised participant codes (p1, p2) — this editing UI appears in the participant table. (Editing/edited state rules moved to `molecules/editable-text.css` in Round 2.)
 
-`.name-cell` / `.role-cell` positioning, `.name-pencil` (opacity 0 → 1 on row hover), editing state background, `.edited` dashed-underline indicator, `.unnamed` muted italic placeholder. Print-hidden.
+`.name-cell` / `.role-cell` positioning (relative, padding-right for pencil), `.name-pencil` (absolute, opacity 0 → 1 on row hover, accent on hover), `.unnamed` muted italic placeholder. Print-hidden.
 
 ## coverage.css (organism)
 

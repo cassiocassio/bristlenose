@@ -4,6 +4,36 @@ Development log for the `bristlenose serve` feature branch. Tracks milestones, a
 
 ---
 
+## React component library — Round 2 (16 Feb 2026)
+
+**CSS refactoring + 2 interactive primitives: EditableText and Toggle.**
+
+### CSS refactoring
+
+Extracted toggle and editing rules into dedicated files to align CSS architecture with React component boundaries. No class names changed — same rules, different source files.
+
+- Created `atoms/toggle.css` — star-btn, hide-btn, toolbar-btn-toggle rules (from `button.css` + `hidden-quotes.css`)
+- Created `molecules/editable-text.css` — editing/edited state rules for quotes, headings, and names (from `quote-actions.css` + `name-edit.css`)
+
+### EditableText component (`frontend/src/components/EditableText.tsx`)
+
+Contenteditable inline text editing primitive. Two trigger modes:
+
+- `trigger="external"` (default) — parent controls `isEditing` prop, provides pencil button
+- `trigger="click"` — clicking the text itself enters edit mode, with `cursor: text` hover hint
+
+Props: `value`, `originalValue`, `isEditing`, `committed`, `onCommit`, `onCancel`, `trigger`, `as` (span/p), `className`, `committedClassName`, `data-testid`, `data-edit-key`. Commit on Enter/blur, cancel on Escape. Strips whitespace. Shows `.edited` dashed underline when committed. Context-specific effects (smart-quote wrapping, ToC sync, name propagation) are `onCommit` callbacks — not part of the component.
+
+### Toggle component (`frontend/src/components/Toggle.tsx`)
+
+Controlled on/off button primitive. Parent composes with icon, positioning, and side effects.
+
+Props: `active`, `onToggle`, `children`, `className`, `activeClassName`, `aria-label`, `data-testid`. Renders `<button>` with `aria-pressed`. Star/hide animations are composition-level effects in `onToggle`, not inside Toggle.
+
+**What shipped:** 2 component files, 2 test files, 2 new CSS files, 4 CSS files trimmed, barrel export updated, `_THEME_FILES` updated. Python tests + Vitest all passing.
+
+---
+
 ## Serve-mode mount point injection (16 Feb 2026)
 
 **Vite backend-integration for one-command React dev workflow.** `_mount_dev_report()` now injects the React mount point (`<div id="bn-sessions-table-root">`) and three Vite HMR scripts (React Fast Refresh preamble, `@vite/client`, `src/main.tsx`) so React islands render automatically when Vite is running alongside `bristlenose serve --dev`. This is Option (c) from the original backlog — the standard Vite backend-integration pattern.

@@ -1,0 +1,48 @@
+/* Molecule: editable-text — shared editing and committed states for
+   inline contenteditable fields (quotes, headings, names) */
+
+/* ── Editing state ──────────────────────────────────────────────────────── */
+
+blockquote.editing .edit-pencil {
+    color: var(--bn-colour-accent);
+}
+
+blockquote.editing .quote-text {
+    background: var(--bn-colour-editing-bg);
+    outline: 1px solid var(--bn-colour-editing-border);
+    border-radius: var(--bn-radius-sm);
+    padding: var(--bn-space-xs) 0.3rem;
+    min-width: 10rem;
+    cursor: text;
+}
+
+.editable-text.editing {
+    background: var(--bn-colour-editing-bg);
+    outline: 1px solid var(--bn-colour-editing-border);
+    border-radius: var(--bn-radius-sm);
+    padding: var(--bn-space-xs) 0.3rem;
+    cursor: text;
+}
+
+.name-cell.editing .name-text,
+.role-cell.editing .role-text {
+    background: var(--bn-colour-editing-bg);
+    outline: 1px solid var(--bn-colour-editing-border);
+    border-radius: var(--bn-radius-sm);
+    padding: 0.1rem 0.3rem;
+}
+
+/* ── Committed state (dashed underline indicates edit was made) ─────────── */
+
+.quote-text.edited {
+    border-bottom: 1px dashed var(--bn-colour-muted);
+}
+
+.editable-text.edited {
+    border-bottom: 1px dashed var(--bn-colour-muted);
+}
+
+.name-text.edited,
+.role-text.edited {
+    border-bottom: 1px dashed var(--bn-colour-accent);
+}

@@ -4,6 +4,28 @@ Development log for the `bristlenose serve` feature branch. Tracks milestones, a
 
 ---
 
+## React component library — Round 4 partial (17 Feb 2026)
+
+**2 new primitives: Metric and JourneyChain. 10 of 14 primitives now complete.**
+
+### Metric component (`frontend/src/components/Metric.tsx`)
+
+Render-only metric display for analysis signal cards. Renders a label + formatted value + visualization in the existing 3-column `.signal-card-metrics` CSS grid. Three viz types: `bar` (percentage fill using `.conc-bar-track`/`.conc-bar-fill`), `dots` (SVG intensity dots with full/half/empty states matching `analysis.js`), and `none` (empty). Uses React `useId()` for stable SVG clip-path IDs instead of `Math.random()`. Reuses all existing CSS classes — no extraction needed.
+
+### JourneyChain component (`frontend/src/components/JourneyChain.tsx`)
+
+Ordered list of screen labels joined by arrow separators. Renders into `.bn-session-journey` container. Each label wrapped in `.bn-journey-label`, separators in `.bn-journey-sep` with `aria-hidden`. Custom separator prop (defaults to ` → `). Returns null for empty labels.
+
+Wired into `SessionsTable.tsx`, replacing the inline `journey_labels.join(" → ")`.
+
+### Migration status update
+
+Added "React migration status" section to `bristlenose/server/CLAUDE.md` — tracks all 14 primitives, 6 islands, backend API status, and CSS alignment in one place. Future sessions can check this for current state.
+
+**What shipped:** 2 component files, 2 test files (21 new tests → 117 total), `SessionsTable.tsx` refactored, barrel exports updated, design doc and server CLAUDE.md updated. 1192 Python tests + 117 Vitest tests all passing.
+
+---
+
 ## React component library — Round 3 (16 Feb 2026)
 
 **2 new primitives: Sparkline and TagInput. CSS extraction. SessionsTable refactored.**

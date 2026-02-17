@@ -400,7 +400,10 @@ def render_html(
         ).rstrip("\n"))
 
     # --- Sections (screen-specific findings) ---
+    # Comment markers let the serve command swap the Jinja2 content for a
+    # React mount point without re-running the full render pipeline.
     _content_tmpl = _jinja_env.get_template("content_section.html")
+    _w("<!-- bn-quote-sections -->")
     if screen_clusters:
         groups = []
         for cluster in screen_clusters:
@@ -416,8 +419,10 @@ def render_html(
         _w(_content_tmpl.render(
             heading="Sections", item_type="section", groups=groups,
         ).rstrip("\n"))
+    _w("<!-- /bn-quote-sections -->")
 
     # --- Themes ---
+    _w("<!-- bn-quote-themes -->")
     if theme_groups:
         groups = []
         for theme in theme_groups:
@@ -433,6 +438,7 @@ def render_html(
         _w(_content_tmpl.render(
             heading="Themes", item_type="theme", groups=groups,
         ).rstrip("\n"))
+    _w("<!-- /bn-quote-themes -->")
 
     # --- Sentiment (includes friction points) ---
     if all_quotes:

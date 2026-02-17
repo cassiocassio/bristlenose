@@ -62,11 +62,23 @@ Shared editing and committed states for inline contenteditable fields. Extracted
 Styles for hidden quotes feature. Researchers often encounter "volume quotes" — repetitive or low-value quotes that clutter the report. The hide feature lets them suppress these while keeping them recoverable via per-subsection badges with dropdown previews. (`.hide-btn` rules moved to `atoms/toggle.css` in Round 2.)
 
 - **`blockquote.bn-hidden`** — `display: none !important` (defence-in-depth; JS also sets `style.display = 'none'`)
+- **`blockquote.bn-hiding`** — CSS collapse transition for React hide animation: `max-height: 0`, `opacity: 0`, zero margins/padding/border, `transition: all 300ms ease`. Applied by React `QuoteGroup` during the 300ms before setting `isHidden: true`
 - **`.bn-hidden-badge`** — right-aligned in `.quote-group` via `align-self: flex-end`, contains toggle button + dropdown
 - **`.bn-hidden-toggle`** — accent-coloured text button ("3 hidden quotes ▾"), underline on hover
 - **`.bn-hidden-dropdown`** — absolute below badge, `z-index: 200`, card styling (border, shadow, radius), scrollable
+- **`.bn-hidden-header`** — flex row: "Unhide:" label + "Unhide all" link (when 2+ hidden). `justify-content: space-between`
+- **`.bn-unhide-all`** — accent link in dropdown header, underline on hover
 - **`.bn-hidden-item`** — flex row: timecode | preview (ellipsis-truncated) | participant code, border-bottom separator
 - **`.bn-hidden-preview`** — clickable text to unhide, cursor pointer, underline on hover, `title="Unhide"`
+
+## quote-actions.css (molecule) — bulk preview classes
+
+Hover preview feedback for selection-aware bulk star/hide operations. Applied by `starred.js` and `hidden.js` when hovering action buttons on a selected quote with 2+ quotes in the selection.
+
+- **`blockquote.bn-preview-star .star-btn`** — accent colour at `opacity: 0.6`, signals "will be starred"
+- **`blockquote.bn-preview-unstar .star-btn`** — accent colour at `opacity: 0.35`, signals "will be unstarred". Overrides `.starred` star colour
+- **`blockquote.bn-preview-hide`** — `opacity: 0.85` with fast transition, signals "will be hidden"
+- **`blockquote.bn-preview-hide .hide-btn`** — forced `opacity: 1` + accent colour (makes eye icon visible even without hover)
 
 ## modal.css (atom)
 

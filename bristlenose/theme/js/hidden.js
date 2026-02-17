@@ -25,7 +25,7 @@
  * @module hidden
  */
 
-/* global createStore, showToast, currentViewMode, isServeMode, apiPut */
+/* global createStore, showToast, currentViewMode, isServeMode, apiPut, selectedQuoteIds */
 
 var hiddenStore = createStore('bristlenose-hidden');
 var hiddenQuotes = hiddenStore.get({});
@@ -362,7 +362,16 @@ function _updateBadgeForGroup(group) {
 
   var header = document.createElement('div');
   header.className = 'bn-hidden-header';
-  header.textContent = 'Unhide:';
+  var headerLabel = document.createElement('span');
+  headerLabel.textContent = 'Unhide:';
+  header.appendChild(headerLabel);
+  if (count > 1) {
+    var unhideAll = document.createElement('a');
+    unhideAll.href = '#';
+    unhideAll.className = 'bn-unhide-all';
+    unhideAll.textContent = 'Unhide all';
+    header.appendChild(unhideAll);
+  }
   dropdown.appendChild(header);
 
   var list = document.createElement('div');
@@ -468,12 +477,19 @@ function initHidden() {
   // ── Event delegation ──
 
   document.addEventListener('click', function (e) {
-    // Hide button on quote card.
+    // Hide button on quote card — selection-aware bulk when clicking a selected quote.
     var hideBtn = e.target.closest('.hide-btn');
     if (hideBtn) {
       e.preventDefault();
       var bq = hideBtn.closest('blockquote');
-      if (bq && bq.id) hideQuote(bq.id);
+      if (!bq || !bq.id) return;
+
+      if (typeof selectedQuoteIds !== 'undefined' && selectedQuoteIds.size > 0 && selectedQuoteIds.has(bq.id)) {
+        _clearHidePreview();
+        bulkHideSelected();
+      } else {
+        hideQuote(bq.id);
+      }
       return;
     }
 
@@ -511,6 +527,20 @@ function initHidden() {
       return;
     }
 
+    // Unhide all quotes in a group via header link.
+    var unhideAllLink = e.target.closest('.bn-unhide-all');
+    if (unhideAllLink) {
+      e.preventDefault();
+      var group = unhideAllLink.closest('.quote-group');
+      if (group) {
+        var hiddenBqs = group.querySelectorAll('blockquote.bn-hidden');
+        for (var k = 0; k < hiddenBqs.length; k++) {
+          unhideQuote(hiddenBqs[k].id);
+        }
+      }
+      return;
+    }
+
     // Unhide via preview text click.
     var preview = e.target.closest('.bn-hidden-preview');
     if (preview) {
@@ -536,4 +566,36 @@ function initHidden() {
       }
     }
   });
+
+  // Hover preview — fade all selected quotes when hovering a hide button.
+  document.addEventListener('mouseover', function (e) {
+    var hideBtn = e.target.closest('.hide-btn');
+    if (!hideBtn) return;
+    var bq = hideBtn.closest('blockquote');
+    if (!bq || !bq.id) return;
+    if (typeof selectedQuoteIds === 'undefined' || selectedQuoteIds.size < 2 || !selectedQuoteIds.has(bq.id)) return;
+
+    selectedQuoteIds.forEach(function (id) {
+      var target = document.getElementById(id);
+      if (target) target.classList.add('bn-preview-hide');
+    });
+  });
+
+  document.addEventListener('mouseout', function (e) {
+    var hideBtn = e.target.closest('.hide-btn');
+    if (!hideBtn) return;
+    var related = e.relatedTarget;
+    if (related && hideBtn.contains(related)) return;
+    _clearHidePreview();
+  });
+}
+
+/**
+ * Remove all hide preview classes from the DOM.
+ */
+function _clearHidePreview() {
+  var els = document.querySelectorAll('.bn-preview-hide');
+  for (var i = 0; i < els.length; i++) {
+    els[i].classList.remove('bn-preview-hide');
+  }
 }

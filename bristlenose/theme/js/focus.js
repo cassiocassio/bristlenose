@@ -369,30 +369,35 @@ function starFocusedQuote() {
 
 /**
  * Bulk star/unstar all selected quotes.
- * If any selected quote is unstarred, star all. Otherwise unstar all.
+ * Follows the focused quote's state: if the focused quote is starred, unstar
+ * all selected; if unstarred, star all selected.  Falls back to the "any
+ * unstarred → star all" heuristic when the focused quote isn't in the selection.
  */
 function bulkStarSelected() {
   if (selectedQuoteIds.size === 0) return;
 
-  // Check if any selected quote is unstarred
-  var anyUnstarred = false;
-  selectedQuoteIds.forEach(function(id) {
-    var bq = document.getElementById(id);
-    if (bq && !bq.classList.contains('starred')) {
-      anyUnstarred = true;
-    }
-  });
+  // Determine direction from the focused quote (keyboard anchor).
+  var willStar;
+  var anchor = focusedQuoteId ? document.getElementById(focusedQuoteId) : null;
+  if (anchor && selectedQuoteIds.has(focusedQuoteId)) {
+    willStar = !anchor.classList.contains('starred');
+  } else {
+    // Fallback: if focused quote isn't selected, use old heuristic.
+    var anyUnstarred = false;
+    selectedQuoteIds.forEach(function (id) {
+      var bq = document.getElementById(id);
+      if (bq && !bq.classList.contains('starred')) anyUnstarred = true;
+    });
+    willStar = anyUnstarred;
+  }
 
-  // Star or unstar all based on anyUnstarred
-  selectedQuoteIds.forEach(function(id) {
+  selectedQuoteIds.forEach(function (id) {
     var bq = document.getElementById(id);
     if (!bq) return;
     var isStarred = bq.classList.contains('starred');
-    // If anyUnstarred, we want to star all unstarred ones
-    // If !anyUnstarred (all starred), we want to unstar all
-    if (anyUnstarred && !isStarred) {
+    if (willStar && !isStarred) {
       if (typeof toggleStar === 'function') toggleStar(id);
-    } else if (!anyUnstarred && isStarred) {
+    } else if (!willStar && isStarred) {
       if (typeof toggleStar === 'function') toggleStar(id);
     }
   });

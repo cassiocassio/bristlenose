@@ -22,7 +22,7 @@
  * @module starred
  */
 
-/* global createStore, getPref, isServeMode, apiPut */
+/* global createStore, getPref, isServeMode, apiPut, selectedQuoteIds */
 
 // Migrate from old localStorage key if present (one-time migration).
 var _oldStarredData = localStorage.getItem('bristlenose-favourites');
@@ -162,7 +162,7 @@ function initStarred() {
     reorderGroup(groups[i], false);
   }
 
-  // Delegate star clicks.
+  // Delegate star clicks — selection-aware bulk when clicking a selected quote.
   document.addEventListener('click', function (e) {
     var star = e.target.closest('.star-btn');
     if (!star) return;
@@ -170,6 +170,53 @@ function initStarred() {
     var bq = star.closest('blockquote');
     if (!bq || !bq.id) return;
 
-    toggleStar(bq.id);
+    if (typeof selectedQuoteIds !== 'undefined' && selectedQuoteIds.size > 0 && selectedQuoteIds.has(bq.id)) {
+      // Bulk: follow the clicked quote's state.
+      _clearStarPreview();
+      var willStar = !bq.classList.contains('starred');
+      selectedQuoteIds.forEach(function (id) {
+        var target = document.getElementById(id);
+        if (!target) return;
+        var targetIsStarred = target.classList.contains('starred');
+        if (willStar && !targetIsStarred) toggleStar(id);
+        else if (!willStar && targetIsStarred) toggleStar(id);
+      });
+    } else {
+      toggleStar(bq.id);
+    }
   });
+
+  // Hover preview — show directional tint on all selected quotes' stars.
+  document.addEventListener('mouseover', function (e) {
+    var star = e.target.closest('.star-btn');
+    if (!star) return;
+    var bq = star.closest('blockquote');
+    if (!bq || !bq.id) return;
+    if (typeof selectedQuoteIds === 'undefined' || selectedQuoteIds.size < 2 || !selectedQuoteIds.has(bq.id)) return;
+
+    var willStar = !bq.classList.contains('starred');
+    var cls = willStar ? 'bn-preview-star' : 'bn-preview-unstar';
+    selectedQuoteIds.forEach(function (id) {
+      var target = document.getElementById(id);
+      if (target) target.classList.add(cls);
+    });
+  });
+
+  document.addEventListener('mouseout', function (e) {
+    var star = e.target.closest('.star-btn');
+    if (!star) return;
+    var related = e.relatedTarget;
+    if (related && star.contains(related)) return;
+    _clearStarPreview();
+  });
+}
+
+/**
+ * Remove all star preview classes from the DOM.
+ */
+function _clearStarPreview() {
+  var els = document.querySelectorAll('.bn-preview-star, .bn-preview-unstar');
+  for (var i = 0; i < els.length; i++) {
+    els[i].classList.remove('bn-preview-star', 'bn-preview-unstar');
+  }
 }

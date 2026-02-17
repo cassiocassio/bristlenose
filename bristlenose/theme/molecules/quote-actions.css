@@ -22,3 +22,34 @@ blockquote.star-animating {
     transition: transform var(--bn-transition-normal);
     z-index: 1;
 }
+
+/* ── Bulk-action hover preview ─────────────────────────────────────────── */
+
+/* Will-be-starred: star shifts toward filled state + accent blue tint */
+blockquote.bn-preview-star .star-btn {
+    color: var(--bn-colour-accent);
+    opacity: 0.6;
+}
+
+/* Will-be-unstarred: star shifts toward idle state + pale blue wash */
+blockquote.bn-preview-unstar .star-btn {
+    color: var(--bn-colour-accent);
+    opacity: 0.35;
+}
+
+/* Override starred quote's own star colour during unstar preview */
+blockquote.starred.bn-preview-unstar .star-btn {
+    color: var(--bn-colour-accent);
+    opacity: 0.35;
+}
+
+/* Will-be-hidden: force hide buttons visible + accent blue, fade quote slightly */
+blockquote.bn-preview-hide {
+    opacity: 0.85;
+    transition: opacity var(--bn-transition-fast);
+}
+
+blockquote.bn-preview-hide .hide-btn {
+    opacity: 1;
+    color: var(--bn-colour-accent);
+}

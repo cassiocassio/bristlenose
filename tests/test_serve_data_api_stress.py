@@ -480,11 +480,11 @@ class TestTagEdgeCases:
         for qid in ["q-p1-10", "q-p1-26", "q-p1-46", "q-p1-66"]:
             assert data[qid] == ["shared-tag"]
 
-    def test_ungrouped_codebook_group_reused(self, client: TestClient) -> None:
-        """Adding tags in two separate PUTs should reuse the same Ungrouped group."""
+    def test_uncategorised_codebook_group_reused(self, client: TestClient) -> None:
+        """Adding tags in two separate PUTs should reuse the same Uncategorised group."""
         client.put("/api/projects/1/tags", json={"q-p1-10": ["tag-a"]})
         client.put("/api/projects/1/tags", json={"q-p1-10": ["tag-b"]})
-        # If _get_or_create_ungrouped works correctly, no duplicate group error
+        # If _get_or_create_uncategorised works correctly, no duplicate group error
         resp = client.get("/api/projects/1/tags")
         assert resp.status_code == 200
 

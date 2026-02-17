@@ -4,6 +4,64 @@ Development log for the `bristlenose serve` feature branch. Tracks milestones, a
 
 ---
 
+## Milestone 5 — Codebook as React island (17 Feb 2026)
+
+**The Codebook tab is now a React island with full CRUD.** Groups, tags, drag-and-drop, inline editing, merge, and delete — all backed by API endpoints. Two new primitives built for this milestone.
+
+### New primitives
+
+- **MicroBar** (`frontend/src/components/MicroBar.tsx`) — horizontal proportional bar, value 0–1. Two modes: trackless (codebook tag frequency) and tracked (analysis concentration bars). Reusable in both contexts. 12 tests.
+- **ConfirmDialog** (`frontend/src/components/ConfirmDialog.tsx`) — contextual inline confirmation card positioned near the affected element (not a centred modal). Enter=confirm, Escape=cancel, optional colour tint. 13 tests.
+
+### Codebook API endpoints
+
+`bristlenose/server/routes/codebook.py` — 9 endpoints:
+
+- `GET /api/projects/{id}/codebook` — groups with tags, quote counts (deduplicated), ungrouped tags, all tag names
+- `POST /codebook/groups` — create group (auto colour set selection)
+- `PATCH /codebook/groups/{id}` — rename, change subtitle/colour/order
+- `DELETE /codebook/groups/{id}` — delete group, move tags to Ungrouped
+- `POST /codebook/tags` — create tag (case-insensitive duplicate guard)
+- `PATCH /codebook/tags/{id}` — rename or move tag between groups
+- `DELETE /codebook/tags/{id}` — delete tag + QuoteTag associations
+- `POST /codebook/merge-tags` — merge source into target (reassign QuoteTags, delete source)
+
+36 tests in `tests/test_serve_codebook_api.py`.
+
+### CodebookPanel React island
+
+`frontend/src/islands/CodebookPanel.tsx` — composition using Badge, EditableText, TagInput, MicroBar, ConfirmDialog:
+
+- **CSS columns masonry layout** — reuses existing `.codebook-grid` CSS
+- **Inline editing** — group titles and subtitles via EditableText with `trigger="click"`
+- **Tag management** — add (TagInput, duplicate guard), delete (ConfirmDialog), rename
+- **Drag and drop** — native HTML5 drag API, three gestures: move to group, merge (with confirmation), create new group from drag
+- **Pentadic colour system** — 5 colour sets (ux, emo, task, trust, opp) with CSS variable-based palette
+- **Tab-visibility re-fetch** — MutationObserver on the parent `.bn-tab-panel` re-fetches codebook data when the tab gains `.active`, fixing stale counts from the localStorage `PUT /tags` race (vanilla JS tags sync may not have finished when the panel first mounts)
+
+20 island tests in `frontend/src/islands/CodebookPanel.test.tsx`.
+
+### CSS cleanup
+
+7 changes to `codebook-panel.css`:
+- Tokenised hardcoded spacing (12px→`--bn-space-md`, 4px→`--bn-space-xs`, 6px→`--bn-space-sm`)
+- Fixed merge-target dark mode colour (hardcoded rgba → `color-mix()` with accent token)
+- Fixed placeholder border (1.5px sub-pixel → 1px)
+- Added `.codebook-group .tag-input` font-size override (0.82rem)
+- Retired `.group-title-input`/`.group-subtitle-input` rules (replaced by EditableText)
+- Added `.confirm-dialog` styles
+
+### TypeScript API helpers
+
+Extended `frontend/src/utils/api.ts` with generic `apiGet`, `apiPost`, `apiPatch`, `apiDelete` helpers and named codebook CRUD functions. Extended `types.ts` with `CodebookResponse`, `CodebookGroupResponse`, `CodebookTagResponse`.
+
+### Test counts
+
+- 182 Vitest tests (was 136 → +46: 12 MicroBar + 14 ConfirmDialog + 20 CodebookPanel)
+- 1271 Python tests (was 1235 → +36 codebook API tests)
+
+---
+
 ## Milestone 4 — Dashboard (Project tab) as React island (17 Feb 2026)
 
 **The Project tab is now a React island.** Stat cards, compact sessions table, featured quotes, and section/theme navigation — all rendered by React from a new API endpoint. First composition built entirely from existing primitives (no new components needed).

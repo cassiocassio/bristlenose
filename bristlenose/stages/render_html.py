@@ -484,6 +484,7 @@ def render_html(
     _w("</div>")  # .bn-tab-panel[quotes]
 
     # --- Codebook tab ---
+    _w("<!-- bn-codebook -->")
     _w('<div class="bn-tab-panel" data-tab="codebook" id="panel-codebook" role="tabpanel" aria-label="Codebook">')
     _w('<h1>Codebook</h1>')
     _w('<p class="codebook-description">Drag tags between groups to '
@@ -491,6 +492,7 @@ def render_html(
        "and sync across all open windows.</p>")
     _w('<div class="codebook-grid" id="codebook-grid"></div>')
     _w("</div>")  # .bn-tab-panel[codebook]
+    _w("<!-- /bn-codebook -->")
 
     # --- Analysis tab ---
     _w('<div class="bn-tab-panel" data-tab="analysis" id="panel-analysis" role="tabpanel" aria-label="Analysis">')

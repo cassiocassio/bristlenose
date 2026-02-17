@@ -8,6 +8,7 @@
  */
 
 import { useEffect, useState, useMemo } from "react";
+import { getCodebook } from "../utils/api";
 import type { QuotesListResponse } from "../utils/types";
 import { QuoteGroup } from "./QuoteGroup";
 
@@ -18,6 +19,7 @@ interface QuoteSectionsProps {
 export function QuoteSections({ projectId }: QuoteSectionsProps) {
   const [data, setData] = useState<QuotesListResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [codebookTagNames, setCodebookTagNames] = useState<string[]>([]);
 
   useEffect(() => {
     fetch(`/api/projects/${projectId}/quotes`)
@@ -27,28 +29,33 @@ export function QuoteSections({ projectId }: QuoteSectionsProps) {
       })
       .then((json: QuotesListResponse) => setData(json))
       .catch((err: Error) => setError(err.message));
+    // Also fetch codebook tag names for auto-suggest vocabulary
+    getCodebook()
+      .then((cb) => setCodebookTagNames(cb.all_tag_names))
+      .catch(() => {}); // Non-critical — silently ignore
   }, [projectId]);
 
-  // Collect all tag names across all sections for the vocabulary.
+  // Collect all tag names across all quotes + codebook for the vocabulary.
   const tagVocabulary = useMemo(() => {
-    if (!data) return [];
-    const names = new Set<string>();
-    for (const section of data.sections) {
-      for (const q of section.quotes) {
-        for (const t of q.tags) {
-          names.add(t.name);
+    const names = new Set<string>(codebookTagNames);
+    if (data) {
+      for (const section of data.sections) {
+        for (const q of section.quotes) {
+          for (const t of q.tags) {
+            names.add(t.name);
+          }
         }
       }
-    }
-    for (const theme of data.themes) {
-      for (const q of theme.quotes) {
-        for (const t of q.tags) {
-          names.add(t.name);
+      for (const theme of data.themes) {
+        for (const q of theme.quotes) {
+          for (const t of q.tags) {
+            names.add(t.name);
+          }
         }
       }
     }
     return Array.from(names).sort();
-  }, [data]);
+  }, [data, codebookTagNames]);
 
   // Detect media availability — if any quote has a video timecode link
   // in the original report, we assume media is available.

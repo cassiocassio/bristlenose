@@ -184,10 +184,11 @@ How it works: `serve_report_html()` reads the baked-in HTML from disk, finds the
 - **IIFE wrapper around the script block** — `render_html.py` wraps data variables + concatenated JS in `(function() { ... })();`.  The live JS reload (`_replace_baked_js`) must use `rfind("})();")` to preserve the closing.  If you break the IIFE, every init function silently fails — tabs stop working, stars don't toggle, nothing interactive works, but there's **no console error** because the JS simply never executes
 - **Baked HTML requires re-render to pick up new JS** — the static HTML report on disk contains a snapshot of the JS from the last `bristlenose render`.  In production (no `--dev`), editing `.js` source files has no effect until you re-render.  The live reload only works in `--dev` mode.  If something works in dev but not in the static file, the static file is stale
 - **`pip install -e .` and render are separate steps** — an editable install makes Python changes visible immediately, but the rendered HTML is a separate artifact.  Adding a new JS file to `_JS_FILES` requires both `pip install -e .` (so Python sees the new list) and `bristlenose render` (so the static HTML includes it).  In dev mode, only a server restart is needed (uvicorn picks up the Python change, live reload reads the new file)
+- **Codebook tab stale counts on initial load** — the CodebookPanel re-fetches via MutationObserver when its parent `.bn-tab-panel` gains `.active`.  This covers the race where vanilla JS `PUT /tags` hasn't finished when the panel first mounts.  Will be unnecessary once tag writes move from localStorage PUT to React CRUD
 
 ## Tests
 
-48 tests in `tests/test_serve_quotes_api.py` (response shape, grouping, field values, researcher state round-trips via data PUT endpoints, speaker name resolution, error handling).  37 happy-path tests in `tests/test_serve_data_api.py`, 57 stress tests in `tests/test_serve_data_api_stress.py`.  All use the smoke-test fixture at `tests/fixtures/smoke-test/input/` which provides:
+48 tests in `tests/test_serve_quotes_api.py` (response shape, grouping, field values, researcher state round-trips via data PUT endpoints, speaker name resolution, error handling).  37 happy-path tests in `tests/test_serve_data_api.py`, 57 stress tests in `tests/test_serve_data_api_stress.py`, 43 dashboard tests in `tests/test_serve_dashboard_api.py`, 36 codebook CRUD tests in `tests/test_serve_codebook_api.py`.  All use the smoke-test fixture at `tests/fixtures/smoke-test/input/` which provides:
 - 1 project, 1 session (`s1`), 2 speakers (`m1`, `p1`)
 - 4 quotes: `q-p1-10` (Dashboard/confusion), `q-p1-26` (Dashboard/frustration), `q-p1-46` (Search/delight), `q-p1-66` (Onboarding/frustration)
 
@@ -215,10 +216,12 @@ After the React migration, Playwright E2E tests will cover the full browser → 
 | 10 | JourneyChain | R4 done | 8 | Arrow-separated labels, wired into SessionsTable |
 | 11 | Annotation | R4 done | 14 | Transcript page margin labels, composes Badge |
 | 12 | Thumbnail | R4 done | 5 | Sessions table media preview, CSS extracted to atom |
-| 13 | Modal | Infra | — | Infrastructure (build when needed for delete confirmations) |
-| 14 | Toast | Infra | — | Infrastructure (build when needed for feedback notifications) |
+| 13 | MicroBar | M5 done | 12 | Horizontal proportional bar (codebook + analysis) |
+| 14 | ConfirmDialog | M5 done | 13 | Contextual inline confirmation, Enter/Escape |
+| 15 | Modal | Infra | — | Infrastructure (build when needed for viewport-level dialogs) |
+| 16 | Toast | Infra | — | Infrastructure (build when needed for feedback notifications) |
 
-**All 4 rounds complete (12 primitives + 2 infrastructure, 136 Vitest tests).** Modal and Toast are infrastructure — build when first consumer needs them.
+**All 4 rounds + M5 complete (14 primitives + 2 infrastructure, 182 Vitest tests).** Modal and Toast are infrastructure — build when first consumer needs them. ConfirmDialog covers the inline confirmation need that Modal was originally earmarked for.
 
 ### Islands (`frontend/src/islands/`)
 
@@ -229,28 +232,27 @@ After the React migration, Playwright E2E tests will cover the full browser → 
 | QuoteThemes | Shipped | `#bn-quote-themes-root` | `GET /quotes` |
 | QuoteCard | Built (internal) | — | (composed into above) |
 | QuoteGroup | Built (internal) | — | (composed into above) |
+| Dashboard | Shipped (M4) | `#bn-dashboard-root` | `GET /dashboard` |
+| CodebookPanel | Shipped (M5) | `#bn-codebook-root` | `GET /codebook` + CRUD |
 | AboutDeveloper | Built (dev-only) | `#bn-about-developer-root` | `GET /dev/info` |
 
 ### Backend APIs — complete
 
-6 data endpoints (hidden, starred, tags, edits, people, deleted-badges) + sessions + quotes. 223+ Python serve tests across 4 files.
+6 data endpoints (hidden, starred, tags, edits, people, deleted-badges) + sessions + quotes + dashboard + 9 codebook CRUD endpoints. 330+ Python serve tests across 8 files.
 
-### CSS alignment — done through Round 4 (no new extractions needed)
+### CSS alignment — done through M5
 
-Extracted (R1–R3): `toggle.css`, `editable-text.css`, `sparkline.css`. Renamed: `person-id.css` → `person-badge.css`. Metric reuses existing classes from `organisms/analysis.css`. JourneyChain reuses `.bn-session-journey`. Thumbnail extraction pending.
+Extracted (R1–R3): `toggle.css`, `editable-text.css`, `sparkline.css`. Renamed: `person-id.css` → `person-badge.css`. Metric reuses existing classes from `organisms/analysis.css`. JourneyChain reuses `.bn-session-journey`. Thumbnail extracted to `atoms/thumbnail.css`. M5 tokenised `codebook-panel.css` (spacing, dark mode merge-target via `color-mix()`, sub-pixel border fix). Added `.confirm-dialog` styles to `codebook-panel.css`.
 
 ### What's next
 
-4 remaining primitives — build each when its target surface migrates to React:
-- **Thumbnail** — sessions table media preview (render-only)
-- **Annotation** — transcript page margin labels (needs transcript island)
-- **Modal** — infrastructure, defer until first delete-confirmation need
-- **Toast** — infrastructure, defer until first feedback need
+1 remaining infrastructure primitive: **Toast** (build when first feedback notification need arises). Modal is deferred — ConfirmDialog covers inline confirmations. Next islands: transcript page, analysis page.
 
 ## Reference docs
 
 - **Domain model rationale**: `docs/design-serve-milestone-1.md`
 - **Migration architecture**: `docs/design-serve-migration.md`
-- **React component library** (14 primitives, build sequence, coverage matrix): `docs/design-react-component-library.md` — **read this before building any React component**
+- **React component library** (16 primitives, build sequence, coverage matrix): `docs/design-react-component-library.md` — **read this before building any React component**
+- **Codebook island design** (audit, decisions, CSS cleanup): `docs/design-codebook-island.md`
 - **React migration plan**: `docs/design-reactive-ui.md`
 - **Phase-by-phase walkthrough**: `docs/react-migration-walkthrough.md`

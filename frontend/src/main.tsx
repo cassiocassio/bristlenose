@@ -1,5 +1,6 @@
 import { createRoot } from "react-dom/client";
 import { AboutDeveloper } from "./islands/AboutDeveloper";
+import { CodebookPanel } from "./islands/CodebookPanel";
 import { Dashboard } from "./islands/Dashboard";
 import { HelloIsland } from "./islands/HelloIsland";
 import { QuoteSections } from "./islands/QuoteSections";
@@ -38,6 +39,13 @@ const themesRoot = document.getElementById("bn-quote-themes-root");
 if (themesRoot) {
   const projectId = themesRoot.getAttribute("data-project-id") || "1";
   createRoot(themesRoot).render(<QuoteThemes projectId={projectId} />);
+}
+
+// Mount CodebookPanel into the codebook tab
+const codebookRoot = document.getElementById("bn-codebook-root");
+if (codebookRoot) {
+  const projectId = codebookRoot.getAttribute("data-project-id") || "1";
+  createRoot(codebookRoot).render(<CodebookPanel projectId={projectId} />);
 }
 
 // Mount AboutDeveloper into the about tab — creates its own mount point

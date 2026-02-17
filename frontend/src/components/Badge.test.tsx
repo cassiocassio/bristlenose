@@ -28,7 +28,7 @@ describe("Badge", () => {
   it("user badge: x button appears and click fires onDelete", async () => {
     const onDelete = vi.fn();
     render(<Badge text="my-tag" variant="user" onDelete={onDelete} />);
-    const btn = screen.getByRole("button", { name: /remove my-tag/i });
+    const btn = screen.getByRole("button", { name: /delete my-tag/i });
     expect(btn).toBeInTheDocument();
     await userEvent.click(btn);
     expect(onDelete).toHaveBeenCalledOnce();

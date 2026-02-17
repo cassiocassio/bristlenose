@@ -301,7 +301,7 @@ class TestQuoteResearcherState:
         # Tags should have codebook_group info
         for tag in q["tags"]:
             assert "codebook_group" in tag
-            assert tag["codebook_group"] == "Ungrouped"
+            assert tag["codebook_group"] == "Uncategorised"
 
     def test_deleted_badges_reflected(self, client: TestClient) -> None:
         """Delete a badge via data API, then verify it appears in quotes GET."""

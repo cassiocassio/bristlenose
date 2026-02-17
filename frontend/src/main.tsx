@@ -1,5 +1,6 @@
 import { createRoot } from "react-dom/client";
 import { AboutDeveloper } from "./islands/AboutDeveloper";
+import { Dashboard } from "./islands/Dashboard";
 import { HelloIsland } from "./islands/HelloIsland";
 import { QuoteSections } from "./islands/QuoteSections";
 import { QuoteThemes } from "./islands/QuoteThemes";
@@ -9,6 +10,13 @@ import { SessionsTable } from "./islands/SessionsTable";
 const helloRoot = document.getElementById("bn-react-root");
 if (helloRoot) {
   createRoot(helloRoot).render(<HelloIsland />);
+}
+
+// Mount Dashboard into the project tab
+const dashboardRoot = document.getElementById("bn-dashboard-root");
+if (dashboardRoot) {
+  const projectId = dashboardRoot.getAttribute("data-project-id") || "1";
+  createRoot(dashboardRoot).render(<Dashboard projectId={projectId} />);
 }
 
 // Mount SessionsTable into the sessions tab mount point

@@ -1208,6 +1208,7 @@ def _render_project_tab(
     # Pick up to 9 featured-quote candidates so JS can swap hidden/unstarred.
     featured_pool = _pick_featured_quotes(all_quotes or [], n=9)
 
+    _w('<!-- bn-dashboard -->')
     _w('<div class="bn-dashboard">')
 
     # --- 1. Stats row (full width) ---
@@ -1346,6 +1347,7 @@ def _render_project_tab(
         _w("</div>")
 
     _w("</div>")  # .bn-dashboard
+    _w('<!-- /bn-dashboard -->')
 
     return "\n".join(parts)
 

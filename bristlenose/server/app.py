@@ -12,6 +12,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 
 from bristlenose.server.db import create_session_factory, get_engine, init_db
+from bristlenose.server.routes.dashboard import router as dashboard_router
 from bristlenose.server.routes.data import router as data_router
 from bristlenose.server.routes.health import router as health_router
 from bristlenose.server.routes.quotes import router as quotes_router
@@ -35,6 +36,12 @@ _REACT_SESSIONS_MOUNT = (
     "<!-- bn-session-table -->"
     '<div id="bn-sessions-table-root" data-project-id="1"></div>'
     "<!-- /bn-session-table -->"
+)
+# React mount point for dashboard (Project tab)
+_REACT_DASHBOARD_MOUNT = (
+    "<!-- bn-dashboard -->"
+    '<div id="bn-dashboard-root" data-project-id="1"></div>'
+    "<!-- /bn-dashboard -->"
 )
 # React mount points for quote sections and themes
 _REACT_QUOTE_SECTIONS_MOUNT = (
@@ -83,6 +90,7 @@ def create_app(
     app.state.db_factory = session_factory
 
     app.include_router(health_router)
+    app.include_router(dashboard_router)
     app.include_router(sessions_router)
     app.include_router(quotes_router)
     app.include_router(data_router)
@@ -267,6 +275,7 @@ body.bn-dev-overlay .bn-about,
 body.bn-dev-overlay .report-header,
 body.bn-dev-overlay .bn-global-nav,
 body.bn-dev-overlay .footer,
+body.bn-dev-overlay #bn-dashboard-root,
 body.bn-dev-overlay #bn-sessions-table-root,
 body.bn-dev-overlay #bn-about-developer-root,
 body.bn-dev-overlay #bn-quote-sections-root,
@@ -281,8 +290,8 @@ body.bn-dev-overlay #heatmap-theme-container { position: relative; }
    React/Vanilla JS regions so those regions' own colour shows through.
    Elements *inside* React mount points are also excluded — React renders
    <section>, <table>, etc. that would otherwise match generic selectors. */
-body.bn-dev-overlay .bn-tab-panel:not(:has(#bn-sessions-table-root, #bn-about-developer-root, #bn-quote-sections-root, #bn-quote-themes-root, #codebook-grid, #signal-cards, #heatmap-section-container, #heatmap-theme-container)),
-body.bn-dev-overlay .bn-dashboard,
+body.bn-dev-overlay .bn-tab-panel:not(:has(#bn-dashboard-root, #bn-sessions-table-root, #bn-about-developer-root, #bn-quote-sections-root, #bn-quote-themes-root, #codebook-grid, #signal-cards, #heatmap-section-container, #heatmap-theme-container)),
+body.bn-dev-overlay .bn-dashboard:not(:has(#bn-dashboard-root)),
 body.bn-dev-overlay .bn-session-grid:not(:has(#bn-sessions-table-root)),
 body.bn-dev-overlay .toolbar,
 body.bn-dev-overlay .toc,
@@ -293,12 +302,12 @@ body.bn-dev-overlay .footer {
   outline: 3px solid rgba(147, 197, 253, 0.5);  /* blue outline — Jinja2 */
   outline-offset: -3px;
 }
-body.bn-dev-overlay .bn-tab-panel:not(:has(#bn-sessions-table-root, #bn-about-developer-root, #bn-quote-sections-root, #bn-quote-themes-root, #codebook-grid, #signal-cards, #heatmap-section-container, #heatmap-theme-container))::after,
-body.bn-dev-overlay .bn-dashboard::after,
+body.bn-dev-overlay .bn-tab-panel:not(:has(#bn-dashboard-root, #bn-sessions-table-root, #bn-about-developer-root, #bn-quote-sections-root, #bn-quote-themes-root, #codebook-grid, #signal-cards, #heatmap-section-container, #heatmap-theme-container))::after,
+body.bn-dev-overlay .bn-dashboard:not(:has(#bn-dashboard-root))::after,
 body.bn-dev-overlay .bn-session-grid:not(:has(#bn-sessions-table-root))::after,
 body.bn-dev-overlay .toolbar::after,
 body.bn-dev-overlay .toc::after,
-body.bn-dev-overlay section:not(:has(#bn-sessions-table-root, #bn-about-developer-root, #bn-quote-sections-root, #bn-quote-themes-root, #codebook-grid, #signal-cards, #heatmap-section-container, #heatmap-theme-container))::after,
+body.bn-dev-overlay section:not(:has(#bn-dashboard-root, #bn-sessions-table-root, #bn-about-developer-root, #bn-quote-sections-root, #bn-quote-themes-root, #codebook-grid, #signal-cards, #heatmap-section-container, #heatmap-theme-container))::after,
 body.bn-dev-overlay .bn-about:not(:has(#bn-about-developer-root))::after,
 body.bn-dev-overlay .report-header::after,
 body.bn-dev-overlay .bn-global-nav::after,
@@ -316,6 +325,8 @@ body.bn-dev-overlay .footer::after {
    generic Jinja2 selectors above.  Override those descendants' ::after
    with display:none so no blue leaks through.  Uses ID selectors (high
    specificity) to beat the class-based Jinja2 rules above. */
+body.bn-dev-overlay #bn-dashboard-root section::after,
+body.bn-dev-overlay #bn-dashboard-root .bn-dashboard::after,
 body.bn-dev-overlay #bn-sessions-table-root section::after,
 body.bn-dev-overlay #bn-about-developer-root section::after,
 body.bn-dev-overlay #bn-quote-sections-root section::after,
@@ -326,10 +337,24 @@ body.bn-dev-overlay #heatmap-section-container section::after,
 body.bn-dev-overlay #heatmap-theme-container section::after {
   display: none;
 }
+/* Cancel Jinja2 tint on the Project tab panel itself.
+   Unlike Sessions (which has .bn-session-grid as intermediate wrapper),
+   #bn-dashboard-root sits directly inside #panel-project — target by ID. */
+body.bn-dev-overlay #panel-project {
+  outline: none;
+}
+body.bn-dev-overlay #panel-project::after {
+  display: none;
+}
+/* Cancel Jinja2 outline on .bn-dashboard rendered by React inside mount point */
+body.bn-dev-overlay #bn-dashboard-root .bn-dashboard {
+  outline: none;
+}
 
 /* React islands — pale green overlay + outline.
    Uses both ::after tint AND outline for visibility — the outline is
    always visible even if ::after is occluded by content stacking. */
+body.bn-dev-overlay #bn-dashboard-root,
 body.bn-dev-overlay #bn-sessions-table-root,
 body.bn-dev-overlay #bn-about-developer-root,
 body.bn-dev-overlay #bn-quote-sections-root,
@@ -338,6 +363,7 @@ body.bn-dev-overlay #bn-quote-themes-root {
   outline-offset: -3px;
   background: rgba(134, 239, 172, 0.08) !important;  /* subtle green wash */
 }
+body.bn-dev-overlay #bn-dashboard-root::after,
 body.bn-dev-overlay #bn-sessions-table-root::after,
 body.bn-dev-overlay #bn-about-developer-root::after,
 body.bn-dev-overlay #bn-quote-sections-root::after,
@@ -534,9 +560,14 @@ def _mount_dev_report(app: FastAPI, output_dir: Path) -> None:
         # editing a .js file and refreshing the browser picks up changes
         # instantly — no `bristlenose render` step needed during development.
         html = _replace_baked_js(html)
-        # Swap the Jinja2 session table for the React mount point.
-        # The markers are rendered by render_html.py around the session table.
-
+        # Swap Jinja2 regions for React mount points.
+        # Markers are rendered by render_html.py around each replaceable region.
+        html = re.sub(
+            r"<!-- bn-dashboard -->.*?<!-- /bn-dashboard -->",
+            _REACT_DASHBOARD_MOUNT,
+            html,
+            flags=re.DOTALL,
+        )
         html = re.sub(
             r"<!-- bn-session-table -->.*?<!-- /bn-session-table -->",
             _REACT_SESSIONS_MOUNT,

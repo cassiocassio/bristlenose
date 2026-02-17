@@ -57,13 +57,13 @@ All choices are cross-platform. Electron desktop app is possible later. Node.js 
 
 | Milestone | What | Approach |
 |-----------|------|----------|
-| **0** | Serve existing report + React tooling ready | `<div id="bn-react-root">` + HelloIsland proof of concept |
-| **1** | Sessions table as React island | React component replaces `<table>` in existing HTML |
-| **2** | Component library + quote cards | Build 14 reusable primitives, compose into QuoteCard island |
-| **3** | API endpoints replace localStorage | Already done (6 data API endpoints, 94 tests) |
-| **4** | Dashboard stats as React island | Reuses primitives from milestone 2 + Metric |
-| **5+** | Codebook, analysis, toolbar... | New compositions from existing primitives |
-| **N** | Drop vanilla JS shell | Full React SPA |
+| **0** | Serve existing report + React tooling ready | `<div id="bn-react-root">` + HelloIsland proof of concept | Done |
+| **1** | Sessions table as React island | React component replaces `<table>` in existing HTML | Done |
+| **2** | Component library + quote cards | Build 14 reusable primitives, compose into QuoteCard island | Done (14 primitives, 136 tests) |
+| **3** | API endpoints replace localStorage | 7 data API endpoints, 137 tests | Done |
+| **4** | Dashboard stats as React island | Reuses primitives from milestone 2 + Metric | Done (43 API tests) |
+| **5+** | Codebook, analysis, toolbar... | New compositions from existing primitives | Next |
+| **N** | Drop vanilla JS shell | Full React SPA | |
 
 At every milestone, the report works. Never broken.
 
@@ -100,9 +100,10 @@ cd frontend && npm install && cd ..
 cd frontend && npm run dev
 ```
 
-- Visit `http://localhost:5173` — Vite serves the React app, proxies `/api/*` to FastAPI on :8150
-- Visit `http://localhost:8150/api/health` — FastAPI health check (JSON)
-- Visit `http://localhost:8150/api/docs` — auto-generated API documentation
+- `serve` auto-renders the report, opens the browser, and prints the clickable URL
+- Visit `http://127.0.0.1:8150/report/` — the full report with React islands
+- Visit `http://127.0.0.1:8150/api/docs` — auto-generated API documentation
+- Use `--no-open` to suppress the browser auto-open
 
 **Production build:**
 

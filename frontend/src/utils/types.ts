@@ -1,4 +1,74 @@
-/** TypeScript interfaces mirroring the quotes API response models. */
+/** TypeScript interfaces mirroring API response models. */
+
+// ---------------------------------------------------------------------------
+// Dashboard API
+// ---------------------------------------------------------------------------
+
+export interface StatsResponse {
+  session_count: number;
+  total_duration_seconds: number;
+  total_duration_human: string;
+  total_words: number;
+  quotes_count: number;
+  sections_count: number;
+  themes_count: number;
+  ai_tags_count: number;
+  user_tags_count: number;
+}
+
+export interface DashboardSpeakerResponse {
+  speaker_code: string;
+  name: string;
+  role: string;
+}
+
+export interface DashboardSessionResponse {
+  session_id: string;
+  session_number: number;
+  session_date: string | null;
+  duration_seconds: number;
+  duration_human: string;
+  speakers: DashboardSpeakerResponse[];
+  source_filename: string;
+  has_media: boolean;
+  sentiment_counts: Record<string, number>;
+}
+
+export interface FeaturedQuoteResponse {
+  dom_id: string;
+  text: string;
+  participant_id: string;
+  session_id: string;
+  speaker_name: string;
+  start_timecode: number;
+  end_timecode: number;
+  sentiment: string | null;
+  intensity: number;
+  researcher_context: string | null;
+  rank: number;
+  has_media: boolean;
+  is_starred: boolean;
+  is_hidden: boolean;
+}
+
+export interface NavItem {
+  label: string;
+  anchor: string;
+}
+
+export interface DashboardResponse {
+  stats: StatsResponse;
+  sessions: DashboardSessionResponse[];
+  featured_quotes: FeaturedQuoteResponse[];
+  sections: NavItem[];
+  themes: NavItem[];
+  moderator_header: string;
+  observer_header: string;
+}
+
+// ---------------------------------------------------------------------------
+// Quotes API
+// ---------------------------------------------------------------------------
 
 export interface TagResponse {
   name: string;

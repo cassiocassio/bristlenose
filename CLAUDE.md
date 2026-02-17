@@ -138,6 +138,7 @@ F401 is marked `unfixable` in `pyproject.toml` so `ruff check --fix` (and the Po
 - **React component library** (14 primitives, build sequence, coverage matrix): `docs/design-react-component-library.md` — **read this before building any React component.** Defines the reusable primitives (Badge, EditableText, TagInput, etc.) and the 4-round build order
 - **Testing & CI strategy** (gap audit, Playwright plan, visual regression, `data-testid` convention): `docs/design-test-strategy.md`
 - **Installation guide**: `INSTALL.md` — detailed per-platform install instructions for non-technical users
+- **Desktop app** (macOS, SwiftUI, PyInstaller sidecar, .dmg distribution): `docs/design-desktop-app.md` — vision, PRD, stack rationale, user flow, open questions. **Read this before working in `desktop/`**
 
 ## Working preferences
 

@@ -47,7 +47,7 @@ Key helpers: `OutputPaths` in `output_paths.py` (consistent path construction), 
 ## Boundaries
 
 - **Safe to edit**: `bristlenose/`, `tests/`
-- **Design artifacts** (tracked, not shipped): `docs/mockups/`, `docs/design-system/`, `experiments/` — HTML mockups, style guides, throwaway prototypes. These are working materials for contributors, kept in the tree for backup and collaboration. Users never navigate to them. Add new mockups to `docs/mockups/`, not the repo root
+- **Design artifacts** (tracked, not shipped): `docs/mockups/`, `docs/design-system/`, `experiments/` — HTML mockups, style guides, throwaway prototypes. These are working materials for contributors, kept in the tree for backup and collaboration. Users never navigate to them. Add new mockups to `docs/mockups/`, not the repo root. **Serve mode auto-discovery**: `bristlenose serve --dev` mounts all three directories and auto-discovers `*.html` files for the Design section in the About tab (`_build_dev_section_html()` in `app.py`). New HTML files added to these directories appear automatically — no code changes needed
 - **Never touch**: `.env`, output directories, `bristlenose/theme/images/`
 - **Gitignored (private)**: `docs/private/`, `trial-runs/` — contain names, contacts, and value judgements not suitable for a public repo
 
@@ -134,7 +134,11 @@ F401 is marked `unfixable` in `pyproject.toml` so `ruff check --fix` (and the Po
 - **Analysis page** (signal concentration, metrics, rendering): `docs/BRANCHES.md` → `analysis` section — architecture, design decisions, file list, test coverage
 - **Analysis page future** (two-pane vision, grid-as-selector, user-tag grid, backlog): `docs/design-analysis-future.md`
 - **Dashboard stats** (inventory of unused pipeline data, improvement priorities): `docs/design-dashboard-stats.md`
+- **Server / data API / serve mode**: `bristlenose/server/CLAUDE.md`
+- **React component library** (14 primitives, build sequence, coverage matrix): `docs/design-react-component-library.md` — **read this before building any React component.** Defines the reusable primitives (Badge, EditableText, TagInput, etc.) and the 4-round build order
+- **Testing & CI strategy** (gap audit, Playwright plan, visual regression, `data-testid` convention): `docs/design-test-strategy.md`
 - **Installation guide**: `INSTALL.md` — detailed per-platform install instructions for non-technical users
+- **Desktop app** (macOS, SwiftUI, PyInstaller sidecar, .dmg distribution): `docs/design-desktop-app.md` — vision, PRD, stack rationale, user flow, open questions. **Read this before working in `desktop/`**
 
 ## Working preferences
 
@@ -179,6 +183,7 @@ See `docs/BRANCHES.md` for active branches, worktree paths, what files they touc
 
 - Keep changes minimal and focused — don't refactor or add features beyond what's asked
 - Commit messages: short, descriptive, lowercase (e.g., "fix tag suggest offering tags the quote already has")
+- **Human QA after each task**: when you finish a task, suggest only the checks a human needs to do that automated tests can't cover (visual regression, browser interaction, UX feel). Skip this for pure data/logic work where unit tests are sufficient. Include copy-pasteable commands to make it easy (e.g. server start command, URL to open). Don't duplicate what pytest already covers
 
 ### Release timing (evening releases)
 
@@ -260,6 +265,6 @@ When the user signals end of session, **proactively offer to run this checklist*
 
 ## Current status (v0.9.3, Feb 2026)
 
-Core pipeline complete and published to PyPI + Homebrew. Snap packaging implemented and tested locally (arm64); CI builds amd64 on every push. Latest: **Interactive dashboard** — Project tab stat cards are clickable links to target tabs, featured quote cards open video player or fall back to transcript, session rows drill into Sessions tab, section/theme names navigate to Quotes anchors, `--bn-colour-hover` design token, speaker code lozenges on featured quotes, reusable JS/Python navigation helpers. Prior: sessions table redesign (speaker badges, sparklines, thumbnails), appearance toggle (system/light/dark), user journeys table, tab navigation with hash persistence, Gemini provider (~$0.20/study), transcript annotations, Hidden quotes + Codebook, Azure OpenAI provider, install smoke tests, chart layout + histogram delete, multi-select and tag filter, tag taxonomy redesign (7 research-backed sentiments), keychain credential storage, Ollama local LLM support, output inside input folder, transcript coverage, multi-participant sessions. See git log for full history.
+Core pipeline complete and published to PyPI + Homebrew. Snap packaging implemented and tested locally (arm64); CI builds amd64 on every push. Latest: **Serve mode + Codebook React island** — `bristlenose serve` command with FastAPI + SQLite + React islands, 22-table domain schema, 6 data sync endpoints, sessions/quotes/dashboard/codebook APIs, 5 React islands (SessionsTable, Dashboard, QuoteSections, QuoteThemes, CodebookPanel), 16 React primitives (182 Vitest tests), full codebook CRUD with drag-and-drop, inline editing, merge, delete. Prior: interactive dashboard (clickable stats, featured quotes, cross-tab navigation), sessions table redesign (speaker badges, sparklines, thumbnails), appearance toggle (system/light/dark), user journeys table, tab navigation with hash persistence, Gemini provider (~$0.20/study), transcript annotations, Hidden quotes + Codebook, Azure OpenAI provider, install smoke tests, chart layout + histogram delete, multi-select and tag filter, tag taxonomy redesign (7 research-backed sentiments), keychain credential storage, Ollama local LLM support, output inside input folder, transcript coverage, multi-participant sessions. See git log for full history.
 
-**Next up:** Phase 2 cross-session moderator linking; snap store publishing; tag definitions page in report UI. See `TODO.md` for full task list.
+**Next up:** Phase 2 cross-session moderator linking; snap store publishing; transcript page React island; analysis page React island. See `TODO.md` for full task list.

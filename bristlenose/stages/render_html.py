@@ -52,6 +52,7 @@ _THEME_FILES: list[str] = [
     "tokens.css",
     "atoms/badge.css",
     "atoms/button.css",
+    "atoms/toggle.css",
     "atoms/input.css",
     "atoms/toast.css",
     "atoms/timecode.css",
@@ -61,11 +62,14 @@ _THEME_FILES: list[str] = [
     "atoms/interactive.css",
     "atoms/span-bar.css",
     "atoms/modal.css",
-    "molecules/person-id.css",
+    "atoms/thumbnail.css",
+    "molecules/person-badge.css",
     "molecules/badge-row.css",
     "molecules/bar-group.css",
+    "molecules/editable-text.css",
     "molecules/quote-actions.css",
     "molecules/tag-input.css",
+    "molecules/sparkline.css",
     "molecules/name-edit.css",
     "molecules/search.css",
     "molecules/tag-filter.css",
@@ -123,6 +127,7 @@ def _get_default_css() -> str:
 # globals defined by earlier ones).
 _JS_FILES: list[str] = [
     "js/storage.js",
+    "js/api-client.js",
     "js/badge-utils.js",
     "js/modal.js",
     "js/codebook.js",
@@ -202,8 +207,16 @@ def render_html(
     people: PeopleFile | None = None,
     transcripts: list[FullTranscript] | None = None,
     analysis: object | None = None,
+    serve_mode: bool = False,
 ) -> Path:
     """Generate the HTML research report with external CSS stylesheet.
+
+    Args:
+        serve_mode: When True, render React island mount points instead of
+            Jinja2 session tables. The Sessions tab gets
+            ``<div id="bn-sessions-table-root" data-project-id="1">``
+            and the React SessionsTable component takes over rendering.
+            The static export path (serve_mode=False) stays unchanged.
 
     Output layout (v2):
         output/
@@ -311,7 +324,13 @@ def render_html(
     _w('<div class="bn-session-grid">')
 
     # --- Session Summary (at top for quick reference) ---
-    if sessions:
+    # Comment markers let the serve command swap the Jinja2 table for a React
+    # mount point without re-running the full render pipeline.
+    _w("<!-- bn-session-table -->")
+    if serve_mode:
+        # React island mount point — SessionsTable component will render here
+        _w('<div id="bn-sessions-table-root" data-project-id="1"></div>')
+    elif sessions:
         session_rows, moderator_header, observer_header = _build_session_rows(
             sessions, people, display_names, video_map, now,
             screen_clusters=screen_clusters,
@@ -322,6 +341,7 @@ def render_html(
             moderator_header=moderator_header,
             observer_header=observer_header,
         ).rstrip("\n"))
+    _w("<!-- /bn-session-table -->")
 
     # Close session grid
     _w("</div>")  # .bn-session-grid
@@ -381,7 +401,10 @@ def render_html(
         ).rstrip("\n"))
 
     # --- Sections (screen-specific findings) ---
+    # Comment markers let the serve command swap the Jinja2 content for a
+    # React mount point without re-running the full render pipeline.
     _content_tmpl = _jinja_env.get_template("content_section.html")
+    _w("<!-- bn-quote-sections -->")
     if screen_clusters:
         groups = []
         for cluster in screen_clusters:
@@ -397,8 +420,10 @@ def render_html(
         _w(_content_tmpl.render(
             heading="Sections", item_type="section", groups=groups,
         ).rstrip("\n"))
+    _w("<!-- /bn-quote-sections -->")
 
     # --- Themes ---
+    _w("<!-- bn-quote-themes -->")
     if theme_groups:
         groups = []
         for theme in theme_groups:
@@ -414,6 +439,7 @@ def render_html(
         _w(_content_tmpl.render(
             heading="Themes", item_type="theme", groups=groups,
         ).rstrip("\n"))
+    _w("<!-- /bn-quote-themes -->")
 
     # --- Sentiment (includes friction points) ---
     if all_quotes:
@@ -458,6 +484,7 @@ def render_html(
     _w("</div>")  # .bn-tab-panel[quotes]
 
     # --- Codebook tab ---
+    _w("<!-- bn-codebook -->")
     _w('<div class="bn-tab-panel" data-tab="codebook" id="panel-codebook" role="tabpanel" aria-label="Codebook">')
     _w('<h1>Codebook</h1>')
     _w('<p class="codebook-description">Drag tags between groups to '
@@ -465,6 +492,7 @@ def render_html(
        "and sync across all open windows.</p>")
     _w('<div class="codebook-grid" id="codebook-grid"></div>')
     _w("</div>")  # .bn-tab-panel[codebook]
+    _w("<!-- /bn-codebook -->")
 
     # --- Analysis tab ---
     _w('<div class="bn-tab-panel" data-tab="analysis" id="panel-analysis" role="tabpanel" aria-label="Analysis">')
@@ -540,6 +568,7 @@ def render_html(
     _w("<h3>Feedback</h3>")
     _w('<p><a href="https://github.com/cassiocassio/bristlenose/issues/new" '
        'target="_blank" rel="noopener">Report a bug</a></p>')
+    _w("<!-- /bn-about -->")
     _w("</div>")  # .bn-about
     _w("</div>")  # .bn-tab-panel[about]
 
@@ -598,6 +627,10 @@ def render_html(
     _w(_get_report_js())
     _w("})();")
     _w("</script>")
+
+    # React islands mount point — empty and invisible when no React bundle is loaded.
+    # When bristlenose serve is running, the React app mounts components here.
+    _w('<div id="bn-react-root"></div>')
 
     _w("</body>")
     _w("</html>")
@@ -816,7 +849,7 @@ def _build_session_rows(
         name = _resolve_speaker_name(code, people, display_names)
         name_html = f" {_esc(name)}" if name != code else ""
         moderator_parts.append(
-            f'<span class="bn-person-id">'
+            f'<span class="bn-person-badge">'
             f'<span class="badge">{_esc(code)}</span>{name_html}'
             f'</span>'
         )
@@ -831,7 +864,7 @@ def _build_session_rows(
         name = _resolve_speaker_name(code, people, display_names)
         name_html = f" {_esc(name)}" if name != code else ""
         observer_parts.append(
-            f'<span class="bn-person-id">'
+            f'<span class="bn-person-badge">'
             f'<span class="badge">{_esc(code)}</span>{name_html}'
             f'</span>'
         )
@@ -1177,6 +1210,7 @@ def _render_project_tab(
     # Pick up to 9 featured-quote candidates so JS can swap hidden/unstarred.
     featured_pool = _pick_featured_quotes(all_quotes or [], n=9)
 
+    _w('<!-- bn-dashboard -->')
     _w('<div class="bn-dashboard">')
 
     # --- 1. Stats row (full width) ---
@@ -1315,6 +1349,7 @@ def _render_project_tab(
         _w("</div>")
 
     _w("</div>")  # .bn-dashboard
+    _w('<!-- /bn-dashboard -->')
 
     return "\n".join(parts)
 

@@ -1,0 +1,1004 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Typography Comparison — Bristlenose</title>
+
+<!-- Google Fonts: premium options (variable fonts, all weights in one request) -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400..700&family=IBM+Plex+Sans:wght@400..700&family=Inter:wght@400..700&family=Nunito+Sans:opsz,wght@6..12,400..700&family=Source+Sans+3:wght@400..700&display=swap" rel="stylesheet">
+
+<style>
+/* ── Local font files (platform fonts that aren't on this machine) ── */
+
+/* Segoe UI — place .ttf/.woff2 files in fonts/ directory.
+   Try multiple common filenames; browser uses whichever it finds. */
+@font-face {
+    font-family: "Segoe UI Local";
+    src: url("fonts/segoeui.woff2") format("woff2"),
+         url("fonts/SegoeUI.woff2") format("woff2"),
+         url("fonts/segoeui.ttf") format("truetype"),
+         url("fonts/SegoeUI.ttf") format("truetype"),
+         url("fonts/SegoeUI-VF.ttf") format("truetype");
+    font-weight: 100 900;
+    font-display: swap;
+}
+@font-face {
+    font-family: "Segoe UI Local";
+    src: url("fonts/segoeuib.woff2") format("woff2"),
+         url("fonts/SegoeUI-Bold.woff2") format("woff2"),
+         url("fonts/segoeuib.ttf") format("truetype"),
+         url("fonts/SegoeUI-Bold.ttf") format("truetype");
+    font-weight: 700;
+    font-display: swap;
+}
+@font-face {
+    font-family: "Segoe UI Local";
+    src: url("fonts/segoeuisl.woff2") format("woff2"),
+         url("fonts/SegoeUI-SemiLight.woff2") format("woff2"),
+         url("fonts/segoeuisl.ttf") format("truetype"),
+         url("fonts/SegoeUI-Semilight.ttf") format("truetype");
+    font-weight: 300;
+    font-display: swap;
+}
+@font-face {
+    font-family: "Segoe UI Local";
+    src: url("fonts/seguisb.woff2") format("woff2"),
+         url("fonts/SegoeUI-Semibold.woff2") format("woff2"),
+         url("fonts/seguisb.ttf") format("truetype"),
+         url("fonts/SegoeUI-Semibold.ttf") format("truetype");
+    font-weight: 600;
+    font-display: swap;
+}
+
+/* Ubuntu Sans — download variable TTF from https://design.ubuntu.com/font */
+@font-face {
+    font-family: "Ubuntu Sans Local";
+    src: url("fonts/UbuntuSans-VariableFont_wdth,wght.ttf") format("truetype"),
+         url("fonts/UbuntuSans[wdth,wght].ttf") format("truetype"),
+         url("fonts/Ubuntu-Regular.ttf") format("truetype"),
+         url("fonts/UbuntuSans-Regular.woff2") format("woff2"),
+         url("fonts/UbuntuSans-Regular.ttf") format("truetype");
+    font-weight: 100 900;
+    font-display: swap;
+}
+@font-face {
+    font-family: "Ubuntu Sans Local";
+    src: url("fonts/Ubuntu-Bold.ttf") format("truetype"),
+         url("fonts/UbuntuSans-Bold.woff2") format("woff2"),
+         url("fonts/UbuntuSans-Bold.ttf") format("truetype");
+    font-weight: 700;
+    font-display: swap;
+}
+
+/* ── Design tokens (from bristlenose/theme/tokens.css) ── */
+
+:root {
+    --bn-font-body: "Inter", sans-serif;
+    --bn-font-mono: "SF Mono", "Fira Code", "Consolas", monospace;
+
+    --bn-colour-bg: #ffffff;
+    --bn-colour-text: #1a1a1a;
+    --bn-colour-muted: #6b7280;
+    --bn-colour-border: #e5e7eb;
+    --bn-colour-accent: #2563eb;
+    --bn-colour-hover: #e8f0fe;
+    --bn-colour-quote-bg: #f9fafb;
+    --bn-colour-badge-bg: #f3f4f6;
+    --bn-colour-badge-text: #374151;
+    --bn-colour-border-hover: #d1d5db;
+    --bn-colour-icon-idle: #c9ccd1;
+    --bn-colour-shadow: rgba(0, 0, 0, 0.1);
+
+    --bn-sentiment-frustration: #ea580c;
+    --bn-sentiment-satisfaction: #16a34a;
+    --bn-sentiment-confidence: #2563eb;
+    --bn-sentiment-confusion: #dc2626;
+    --bn-sentiment-delight: #059669;
+    --bn-sentiment-doubt: #7c3aed;
+    --bn-sentiment-surprise: #d97706;
+
+    --bn-space-xs: 0.15rem;
+    --bn-space-sm: 0.35rem;
+    --bn-space-md: 0.75rem;
+    --bn-space-lg: 1.5rem;
+    --bn-space-xl: 2rem;
+
+    --bn-radius-sm: 3px;
+    --bn-radius-md: 6px;
+    --bn-radius-lg: 8px;
+    --bn-radius-pill: 999px;
+
+    --bn-transition-fast: 0.15s ease;
+    --bn-transition-normal: 0.2s ease;
+}
+
+/* Dark mode */
+@supports (color: light-dark(#000, #fff)) {
+    :root {
+        color-scheme: light dark;
+        --bn-colour-bg:           light-dark(#ffffff, #111111);
+        --bn-colour-text:         light-dark(#1a1a1a, #e5e7eb);
+        --bn-colour-muted:        light-dark(#6b7280, #9ca3af);
+        --bn-colour-border:       light-dark(#e5e7eb, #2d2d2d);
+        --bn-colour-accent:       light-dark(#2563eb, #60a5fa);
+        --bn-colour-hover:        light-dark(#e8f0fe, #1e293b);
+        --bn-colour-quote-bg:     light-dark(#f9fafb, #1a1a1a);
+        --bn-colour-badge-bg:     light-dark(#f3f4f6, #252525);
+        --bn-colour-badge-text:   light-dark(#374151, #d1d5db);
+        --bn-colour-border-hover: light-dark(#d1d5db, #4b5563);
+        --bn-colour-icon-idle:    light-dark(#c9ccd1, #595959);
+        --bn-colour-shadow:       light-dark(rgba(0,0,0,0.1), rgba(0,0,0,0.4));
+
+        --bn-sentiment-frustration:  light-dark(#ea580c, #fb923c);
+        --bn-sentiment-satisfaction: light-dark(#16a34a, #4ade80);
+        --bn-sentiment-confidence:   light-dark(#2563eb, #60a5fa);
+        --bn-sentiment-confusion:    light-dark(#dc2626, #f87171);
+        --bn-sentiment-delight:      light-dark(#059669, #34d399);
+        --bn-sentiment-doubt:        light-dark(#7c3aed, #a78bfa);
+        --bn-sentiment-surprise:     light-dark(#d97706, #fbbf24);
+    }
+    [data-theme="light"]:root { color-scheme: light; }
+    [data-theme="dark"]:root  { color-scheme: dark; }
+}
+
+/* ── Page layout ── */
+
+* { box-sizing: border-box; }
+
+body {
+    font-family: var(--bn-font-body);
+    color: var(--bn-colour-text);
+    background: var(--bn-colour-bg);
+    line-height: 1.6;
+    margin: 0;
+    padding: 0;
+}
+
+/* ── Control bar ── */
+
+.controls {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: var(--bn-colour-bg);
+    border-bottom: 1px solid var(--bn-colour-border);
+    padding: 0.75rem 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+.controls-row {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+}
+.controls-label {
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--bn-colour-muted);
+    min-width: 4rem;
+}
+.controls-group {
+    display: flex;
+    gap: 0.25rem;
+    flex-wrap: wrap;
+}
+
+.btn {
+    font-family: var(--bn-font-body);
+    font-size: 0.78rem;
+    padding: 0.3rem 0.65rem;
+    border: 1px solid var(--bn-colour-border);
+    border-radius: var(--bn-radius-md);
+    background: var(--bn-colour-bg);
+    color: var(--bn-colour-text);
+    cursor: pointer;
+    transition: all var(--bn-transition-fast);
+    white-space: nowrap;
+}
+.btn:hover {
+    border-color: var(--bn-colour-border-hover);
+    background: var(--bn-colour-quote-bg);
+}
+.btn.active {
+    border-color: var(--bn-colour-accent);
+    color: var(--bn-colour-accent);
+    background: var(--bn-colour-hover);
+}
+.btn-system {
+    border-style: dashed;
+}
+
+.font-info {
+    font-size: 0.78rem;
+    color: var(--bn-colour-muted);
+    padding: 0.2rem 0;
+    line-height: 1.4;
+}
+.font-info strong { color: var(--bn-colour-text); font-weight: 500; }
+
+.platform-notice {
+    font-size: 0.72rem;
+    color: var(--bn-colour-muted);
+    background: var(--bn-colour-quote-bg);
+    padding: 0.4rem 0.75rem;
+    border-radius: var(--bn-radius-md);
+    line-height: 1.5;
+}
+
+/* ── View modes ── */
+
+.content { padding: 1.5rem; }
+
+/* Single view */
+.content.single-view {
+    max-width: 64rem;
+    margin: 0 auto;
+}
+
+/* Side-by-side view */
+.content.sidebyside-view {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+    gap: 1.5rem;
+    max-width: 100%;
+}
+.sidebyside-column {
+    border: 1px solid var(--bn-colour-border);
+    border-radius: var(--bn-radius-lg);
+    padding: 1rem 1.25rem;
+    overflow: hidden;
+}
+.column-header {
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--bn-colour-accent);
+    border-bottom: 1px solid var(--bn-colour-border);
+    padding-bottom: 0.5rem;
+    margin-bottom: 1rem;
+}
+.column-header .col-category {
+    font-size: 0.65rem;
+    font-weight: 400;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--bn-colour-muted);
+    margin-left: 0.5rem;
+}
+
+/* ── Specimen components ── */
+
+.specimen { margin-bottom: 0.5rem; }
+
+.specimen-label {
+    font-size: 0.65rem;
+    font-family: var(--bn-font-mono);
+    color: var(--bn-colour-icon-idle);
+    margin-bottom: 0.2rem;
+    letter-spacing: 0.02em;
+}
+
+.spec-page-title {
+    font-size: 1.75rem;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    line-height: 1.2;
+}
+.spec-section-heading {
+    font-size: 1.35rem;
+    font-weight: 600;
+    line-height: 1.3;
+}
+.spec-subsection-heading {
+    font-size: 1.1rem;
+    font-weight: 600;
+    line-height: 1.3;
+}
+
+.spec-quote-block {
+    border-left: 3px solid var(--bn-colour-accent);
+    background: var(--bn-colour-quote-bg);
+    padding: 0.75rem 1rem;
+    border-radius: 0 var(--bn-radius-md) var(--bn-radius-md) 0;
+}
+.spec-quote-text {
+    font-size: 0.92rem;
+    line-height: 1.55;
+    margin: 0;
+}
+.spec-quote-speaker {
+    font-size: 0.9rem;
+    color: var(--bn-colour-muted);
+    margin-top: 0.4rem;
+}
+
+.spec-body-text {
+    font-size: 1rem;
+    line-height: 1.6;
+}
+
+.spec-nav-tabs {
+    display: flex;
+    gap: 1.25rem;
+    font-size: 0.88rem;
+    font-weight: 500;
+    color: var(--bn-colour-muted);
+    border-bottom: 1px solid var(--bn-colour-border);
+    padding-bottom: 0.4rem;
+}
+.spec-nav-tabs span:first-child {
+    color: var(--bn-colour-accent);
+    border-bottom: 2px solid var(--bn-colour-accent);
+    padding-bottom: calc(0.4rem - 1px);
+    margin-bottom: -1px;
+}
+
+.spec-toolbar {
+    display: flex;
+    gap: 0.5rem;
+    font-size: 0.82rem;
+}
+.spec-toolbar-btn {
+    padding: 0.3rem 0.6rem;
+    border: 1px solid var(--bn-colour-border);
+    border-radius: var(--bn-radius-md);
+    color: var(--bn-colour-text);
+}
+
+.spec-stat-card {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    border: 1px solid var(--bn-colour-border);
+    border-radius: var(--bn-radius-lg);
+    padding: 0.75rem 1.25rem;
+    gap: 0.15rem;
+}
+.spec-stat-value {
+    font-size: 1.5rem;
+    font-weight: 400;
+    line-height: 1.2;
+}
+.spec-stat-label {
+    font-size: 0.8rem;
+    color: var(--bn-colour-muted);
+}
+
+.spec-badge-row {
+    display: flex;
+    gap: 0.4rem;
+    flex-wrap: wrap;
+}
+.spec-badge {
+    font-size: 0.72rem;
+    font-family: var(--bn-font-mono);
+    background: var(--bn-colour-badge-bg);
+    color: var(--bn-colour-badge-text);
+    padding: 0.15rem 0.5rem;
+    border-radius: var(--bn-radius-pill);
+}
+
+.spec-context {
+    font-size: 0.85rem;
+    color: var(--bn-colour-muted);
+    line-height: 1.5;
+}
+
+.spec-timecodes {
+    display: flex;
+    gap: 1rem;
+    font-size: 0.8rem;
+    font-family: var(--bn-font-mono);
+    color: var(--bn-colour-accent);
+}
+
+.spec-session-table {
+    font-size: 0.82rem;
+    width: 100%;
+    border-collapse: collapse;
+}
+.spec-session-table th {
+    font-size: 0.72rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--bn-colour-muted);
+    text-align: left;
+    padding: 0.4rem 0.5rem;
+    border-bottom: 1px solid var(--bn-colour-border);
+}
+.spec-session-table td {
+    padding: 0.5rem;
+    border-bottom: 1px solid var(--bn-colour-border);
+    vertical-align: middle;
+}
+.spec-session-table .mono {
+    font-family: var(--bn-font-mono);
+    font-size: 0.78rem;
+}
+.spec-session-table .name {
+    font-weight: 500;
+    font-size: 0.88rem;
+}
+.spec-session-table .journey {
+    color: var(--bn-colour-muted);
+    font-size: 0.78rem;
+}
+.spec-session-table .mini-badge {
+    font-size: 0.65rem;
+    font-family: var(--bn-font-mono);
+    background: var(--bn-colour-badge-bg);
+    color: var(--bn-colour-badge-text);
+    padding: 0.1rem 0.35rem;
+    border-radius: var(--bn-radius-pill);
+}
+
+.spec-divider {
+    border: none;
+    border-top: 1px solid var(--bn-colour-border);
+    margin: 0.75rem 0;
+}
+
+/* ── Reference section ── */
+
+.reference-section {
+    max-width: 64rem;
+    margin: 3rem auto 2rem;
+    padding: 0 1.5rem 2rem;
+    border-top: 2px solid var(--bn-colour-border);
+}
+.reference-section h2 {
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin-top: 1.5rem;
+}
+.reference-section h3 {
+    font-size: 0.95rem;
+    font-weight: 600;
+    margin-top: 1.25rem;
+    margin-bottom: 0.5rem;
+}
+.reference-section p, .reference-section li {
+    font-size: 0.85rem;
+    line-height: 1.6;
+}
+.reference-section code {
+    font-family: var(--bn-font-mono);
+    font-size: 0.78rem;
+    background: var(--bn-colour-badge-bg);
+    padding: 0.1rem 0.35rem;
+    border-radius: var(--bn-radius-sm);
+}
+.reference-section pre {
+    font-family: var(--bn-font-mono);
+    font-size: 0.72rem;
+    background: var(--bn-colour-quote-bg);
+    border: 1px solid var(--bn-colour-border);
+    border-radius: var(--bn-radius-md);
+    padding: 0.75rem 1rem;
+    overflow-x: auto;
+    line-height: 1.5;
+}
+.ref-table {
+    width: 100%;
+    font-size: 0.82rem;
+    border-collapse: collapse;
+    margin: 0.75rem 0;
+}
+.ref-table th {
+    font-size: 0.72rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--bn-colour-muted);
+    text-align: left;
+    padding: 0.4rem 0.5rem;
+    border-bottom: 2px solid var(--bn-colour-border);
+}
+.ref-table td {
+    padding: 0.4rem 0.5rem;
+    border-bottom: 1px solid var(--bn-colour-border);
+}
+.ref-table .mono { font-family: var(--bn-font-mono); font-size: 0.78rem; }
+
+/* Responsive */
+@media (max-width: 600px) {
+    .controls { padding: 0.5rem 0.75rem; }
+    .content { padding: 0.75rem; }
+    .content.sidebyside-view { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+
+<!-- ── Controls ── -->
+<div class="controls">
+    <div class="controls-row">
+        <span class="controls-label">Font</span>
+        <div class="controls-group" id="font-buttons"></div>
+    </div>
+    <div class="controls-row">
+        <span class="controls-label">View</span>
+        <div class="controls-group">
+            <button class="btn active" onclick="setView('single')" id="view-single">Single</button>
+            <button class="btn" onclick="setView('sidebyside')" id="view-sidebyside">Side by side</button>
+        </div>
+        <span class="controls-label" style="margin-left: 0.5rem;">Theme</span>
+        <div class="controls-group">
+            <button class="btn" onclick="setTheme('light')">Light</button>
+            <button class="btn active" onclick="setTheme('auto')">Auto</button>
+            <button class="btn" onclick="setTheme('dark')">Dark</button>
+        </div>
+    </div>
+    <div class="font-info" id="font-info"></div>
+    <div class="platform-notice" id="platform-notice"></div>
+</div>
+
+<!-- ── Content area (populated by JS) ── -->
+<div class="content single-view" id="content"></div>
+
+<!-- ── Loading strategy reference ── -->
+<div class="reference-section">
+    <h2>Loading Strategy Reference</h2>
+
+    <p>All premium fonts below are <strong>SIL OFL 1.1</strong> — free for any use (commercial, bundled, web-served).
+    System fonts are proprietary to their platform but available on every device running that OS.</p>
+
+    <h3>Bundle size comparison</h3>
+    <table class="ref-table">
+        <thead>
+            <tr>
+                <th>Font</th>
+                <th>Variable WOFF2 (latin)</th>
+                <th>Weight range</th>
+                <th>Optical sizing</th>
+                <th>Tabular numerals</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr><td>Inter</td><td class="mono">~96 KB</td><td class="mono">100–900</td><td>Yes</td><td>Yes</td></tr>
+            <tr><td>IBM Plex Sans</td><td class="mono">~80 KB</td><td class="mono">100–700</td><td>No</td><td>Yes</td></tr>
+            <tr><td>Source Sans 3</td><td class="mono">~75 KB</td><td class="mono">200–900</td><td>No</td><td>Yes (<code>font-feature-settings: "tnum"</code>)</td></tr>
+            <tr><td>Nunito Sans</td><td class="mono">~70 KB</td><td class="mono">200–1000</td><td>No</td><td>No</td></tr>
+            <tr><td>DM Sans</td><td class="mono">~65 KB</td><td class="mono">100–1000</td><td>No</td><td>No</td></tr>
+        </tbody>
+    </table>
+
+    <h3>Google Fonts CDN (web serving)</h3>
+    <p>Single <code>&lt;link&gt;</code> tag loads one font with all weights needed by Bristlenose (400, 500, 600, 700):</p>
+    <pre>&lt;link rel="preconnect" href="https://fonts.googleapis.com"&gt;
+&lt;link rel="preconnect" href="https://fonts.gstatic.com" crossorigin&gt;
+
+&lt;!-- Pick one: --&gt;
+&lt;link href="https://fonts.googleapis.com/css2?family=Inter:wght@400..700&amp;display=swap" rel="stylesheet"&gt;
+&lt;link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400..700&amp;display=swap" rel="stylesheet"&gt;
+&lt;link href="https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@400..700&amp;display=swap" rel="stylesheet"&gt;
+&lt;link href="https://fonts.googleapis.com/css2?family=Nunito+Sans:opsz,wght@6..12,400..700&amp;display=swap" rel="stylesheet"&gt;
+&lt;link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400..700&amp;display=swap" rel="stylesheet"&gt;</pre>
+
+    <h3>Self-hosted / Electron bundling</h3>
+    <p>Download the variable WOFF2 from <a href="https://github.com/google/fonts">google/fonts</a> on GitHub (or
+    the "Download family" button on Google Fonts). Place in your <code>assets/fonts/</code> directory and declare:</p>
+    <pre>@font-face {
+    font-family: "Inter";
+    src: url("./fonts/Inter-VariableFont_opsz,wght.woff2") format("woff2");
+    font-weight: 100 900;
+    font-display: swap;
+    font-optical-sizing: auto;
+}</pre>
+    <p>For <strong>Electron</strong>: reference fonts with a relative path from your HTML entry point.
+    The WOFF2 file ships inside your <code>.asar</code> package. No CDN dependency, no network latency.
+    Total overhead: <strong>65–96 KB</strong> for one variable font covering all weights.</p>
+
+    <h3>Recommended loading strategy</h3>
+    <ul>
+        <li><strong><code>font-display: swap</code></strong> — shows system fallback instantly, swaps when loaded. Avoids flash of invisible text.</li>
+        <li><strong>Preload the primary font</strong> for above-the-fold content:
+            <code>&lt;link rel="preload" href="fonts/Inter.woff2" as="font" type="font/woff2" crossorigin&gt;</code></li>
+        <li><strong>Variable fonts</strong> — one file covers all weights (400–700+). Fewer HTTP requests, smaller total size than separate static files.</li>
+        <li><strong>Latin subset is sufficient</strong> for English-language research tools.</li>
+        <li><strong>Fallback stack</strong> — always include system fonts after the web font: <code>"Inter", -apple-system, "Segoe UI", system-ui, sans-serif</code></li>
+    </ul>
+
+    <h3>Ubuntu Sans download</h3>
+    <p>For the Linux system font comparison in this mockup, download Ubuntu Sans from
+    <a href="https://design.ubuntu.com/font">design.ubuntu.com/font</a>.
+    Place the variable <code>.ttf</code> in <code>docs/mockups/fonts/</code>.</p>
+</div>
+
+<script>
+// ── Font definitions ──
+
+const FONTS = [
+    {
+        id: "sf",
+        name: "San Francisco",
+        family: '-apple-system, BlinkMacSystemFont, system-ui, sans-serif',
+        category: "system",
+        note: "macOS/iOS native. Renders via -apple-system keyword — no font file needed on Mac.",
+        licence: "Apple proprietary (bundled with macOS)",
+        size: "—",
+    },
+    {
+        id: "segoe",
+        name: "Segoe UI",
+        family: '"Segoe UI Local", "Segoe UI", sans-serif',
+        category: "system",
+        note: "Windows native. Loaded from fonts/ directory via @font-face so it renders on macOS too.",
+        licence: "Microsoft proprietary",
+        size: "~500 KB (4 static weights)",
+    },
+    {
+        id: "ubuntu",
+        name: "Ubuntu Sans",
+        family: '"Ubuntu Sans Local", "Ubuntu", "Cantarell", "Noto Sans", sans-serif',
+        category: "system",
+        note: "Linux default (Ubuntu, GNOME). Loaded from fonts/ directory. Download from design.ubuntu.com/font.",
+        licence: "Ubuntu Font Licence 1.0",
+        size: "~200 KB (variable TTF)",
+    },
+    {
+        id: "inter",
+        name: "Inter",
+        family: '"Inter", sans-serif',
+        category: "premium",
+        note: "Current Bristlenose primary. Designed for screens, variable font, optical sizing. By Rasmus Andersson.",
+        licence: "SIL OFL 1.1",
+        size: "~96 KB WOFF2",
+    },
+    {
+        id: "ibm-plex",
+        name: "IBM Plex Sans",
+        family: '"IBM Plex Sans", sans-serif',
+        category: "premium",
+        note: "Enterprise/professional feel. Clean, neutral, excellent for research tools. IBM's corporate typeface.",
+        licence: "SIL OFL 1.1",
+        size: "~80 KB WOFF2",
+    },
+    {
+        id: "source-sans",
+        name: "Source Sans 3",
+        family: '"Source Sans 3", sans-serif',
+        category: "premium",
+        note: "Adobe quality. Tabular + proportional numerals — excellent for data tables and stats.",
+        licence: "SIL OFL 1.1",
+        size: "~75 KB WOFF2",
+    },
+    {
+        id: "nunito",
+        name: "Nunito Sans",
+        family: '"Nunito Sans", sans-serif',
+        category: "premium",
+        note: "Slightly rounded, friendly. Good for user-facing tools that want warmth without losing professionalism.",
+        licence: "SIL OFL 1.1",
+        size: "~70 KB WOFF2",
+    },
+    {
+        id: "dm-sans",
+        name: "DM Sans",
+        family: '"DM Sans", sans-serif',
+        category: "premium",
+        note: "Geometric, modern, minimalist. Clean at small sizes. Used by Google Material Design examples.",
+        licence: "SIL OFL 1.1",
+        size: "~65 KB WOFF2",
+    },
+];
+
+// ── State ──
+
+let currentFont = "inter";
+let currentView = "single";
+let selectedFonts = new Set(["inter", "ibm-plex", "source-sans"]);
+
+// ── Platform detection ──
+
+function detectPlatform() {
+    const p = navigator.platform || "";
+    const ua = navigator.userAgent || "";
+    if (p.startsWith("Mac") || /Macintosh/.test(ua)) return "macOS";
+    if (p.startsWith("Win") || /Windows/.test(ua)) return "Windows";
+    return "Linux";
+}
+
+// ── Specimen HTML ──
+
+function specimenHTML() {
+    return `
+<div class="specimen">
+    <div class="specimen-label">1.75rem · 700 · page title</div>
+    <div class="spec-page-title">Climbing Research Study</div>
+</div>
+<hr class="spec-divider">
+
+<div class="specimen">
+    <div class="specimen-label">1.35rem · 600 · section heading</div>
+    <div class="spec-section-heading">Community and Social Connection</div>
+</div>
+<hr class="spec-divider">
+
+<div class="specimen">
+    <div class="specimen-label">1.1rem · 600 · subsection heading</div>
+    <div class="spec-subsection-heading">Learning Journey and Skill Development</div>
+</div>
+<hr class="spec-divider">
+
+<div class="specimen">
+    <div class="specimen-label">0.92rem · 400 · quote block</div>
+    <div class="spec-quote-block">
+        <p class="spec-quote-text">"I started maybe six years ago at a local indoor gym. A friend dragged me along and I was honestly terrible at first, but there was something about the problem-solving aspect that really hooked me."</p>
+        <div class="spec-quote-speaker">— p1 (Alex Chen)</div>
+    </div>
+</div>
+<hr class="spec-divider">
+
+<div class="specimen">
+    <div class="specimen-label">1rem · 400 · body paragraph</div>
+    <p class="spec-body-text">This section examines how participants described their initial entry into climbing communities, including the role of social connections in sustaining their engagement with the sport over time. Several recurring patterns emerged across interviews.</p>
+</div>
+<hr class="spec-divider">
+
+<div class="specimen">
+    <div class="specimen-label">0.88rem · 500 · nav tabs</div>
+    <div class="spec-nav-tabs">
+        <span>Project</span>
+        <span>Quotes</span>
+        <span>Sessions</span>
+        <span>Analysis</span>
+    </div>
+</div>
+<hr class="spec-divider">
+
+<div class="specimen">
+    <div class="specimen-label">0.82rem · toolbar buttons</div>
+    <div class="spec-toolbar">
+        <span class="spec-toolbar-btn">Export CSV</span>
+        <span class="spec-toolbar-btn">Search</span>
+        <span class="spec-toolbar-btn">Hidden (3)</span>
+        <span class="spec-toolbar-btn">Starred</span>
+    </div>
+</div>
+<hr class="spec-divider">
+
+<div class="specimen" style="display: flex; gap: 1.5rem; align-items: start; flex-wrap: wrap;">
+    <div>
+        <div class="specimen-label">1.5rem / 0.8rem · stat card</div>
+        <div class="spec-stat-card">
+            <span class="spec-stat-value">42</span>
+            <span class="spec-stat-label">Quotes</span>
+        </div>
+    </div>
+    <div>
+        <div class="specimen-label">&nbsp;</div>
+        <div class="spec-stat-card">
+            <span class="spec-stat-value">6</span>
+            <span class="spec-stat-label">Sessions</span>
+        </div>
+    </div>
+    <div>
+        <div class="specimen-label">&nbsp;</div>
+        <div class="spec-stat-card">
+            <span class="spec-stat-value">4:12:08</span>
+            <span class="spec-stat-label">Total duration</span>
+        </div>
+    </div>
+</div>
+<hr class="spec-divider">
+
+<div class="specimen">
+    <div class="specimen-label">0.72rem · mono · badges</div>
+    <div class="spec-badge-row">
+        <span class="spec-badge" style="background: #fff7ed; color: #ea580c;">frustration</span>
+        <span class="spec-badge">p1</span>
+        <span class="spec-badge" style="background: #f0fdf4; color: #16a34a;">satisfaction</span>
+        <span class="spec-badge" style="background: #f5f3ff; color: #7c3aed;">doubt</span>
+        <span class="spec-badge">p3</span>
+        <span class="spec-badge" style="background: #eff6ff; color: #2563eb;">confidence</span>
+    </div>
+</div>
+<hr class="spec-divider">
+
+<div class="specimen">
+    <div class="specimen-label">0.85rem · muted · context text</div>
+    <div class="spec-context">
+        Context: Discussing their first experience at the climbing gym<br>
+        Duration: 45:32 · Transcribed with Whisper · 7 Feb 2026
+    </div>
+</div>
+<hr class="spec-divider">
+
+<div class="specimen">
+    <div class="specimen-label">0.8rem · mono · timecodes</div>
+    <div class="spec-timecodes">
+        <span>[00:09]</span>
+        <span>[12:34]</span>
+        <span>[1:05:22]</span>
+    </div>
+</div>
+<hr class="spec-divider">
+
+<div class="specimen">
+    <div class="specimen-label">session table row (mixed sizes)</div>
+    <table class="spec-session-table">
+        <thead>
+            <tr>
+                <th style="width:3rem">#</th>
+                <th>Participant</th>
+                <th>Speakers</th>
+                <th>Duration</th>
+                <th>Journey</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td class="mono">1</td>
+                <td class="name">Alex Chen</td>
+                <td><span class="mini-badge">p1</span> <span class="mini-badge">m1</span></td>
+                <td class="mono">45:32</td>
+                <td class="journey">Enthusiastic → Frustrated → Resolved</td>
+            </tr>
+            <tr>
+                <td class="mono">2</td>
+                <td class="name">Jordan Rivera</td>
+                <td><span class="mini-badge">p2</span> <span class="mini-badge">m1</span></td>
+                <td class="mono">38:15</td>
+                <td class="journey">Cautious → Curious → Confident</td>
+            </tr>
+            <tr>
+                <td class="mono">3</td>
+                <td class="name">Sam Okafor</td>
+                <td><span class="mini-badge">p3</span> <span class="mini-badge">m1</span> <span class="mini-badge">o1</span></td>
+                <td class="mono">1:02:41</td>
+                <td class="journey">Sceptical → Engaged → Advocate</td>
+            </tr>
+        </tbody>
+    </table>
+</div>`;
+}
+
+// ── Rendering ──
+
+function renderSingleView() {
+    const el = document.getElementById("content");
+    el.className = "content single-view";
+
+    const font = FONTS.find(f => f.id === currentFont);
+    el.style.fontFamily = font.family;
+    el.innerHTML = specimenHTML();
+}
+
+function renderSideBySide() {
+    const el = document.getElementById("content");
+    el.className = "content sidebyside-view";
+    el.style.fontFamily = "";
+
+    const fonts = FONTS.filter(f => selectedFonts.has(f.id));
+    if (fonts.length === 0) {
+        el.innerHTML = '<p style="color:var(--bn-colour-muted);grid-column:1/-1;">Select fonts above to compare.</p>';
+        return;
+    }
+
+    el.innerHTML = fonts.map(f => `
+        <div class="sidebyside-column" style="font-family: ${f.family};">
+            <div class="column-header">
+                ${f.name}
+                <span class="col-category">${f.category}</span>
+            </div>
+            ${specimenHTML()}
+        </div>
+    `).join("");
+}
+
+function render() {
+    if (currentView === "single") renderSingleView();
+    else renderSideBySide();
+}
+
+// ── Font info ──
+
+function updateFontInfo() {
+    const el = document.getElementById("font-info");
+    if (currentView === "single") {
+        const font = FONTS.find(f => f.id === currentFont);
+        el.innerHTML = `<strong>${font.name}</strong> · ${font.licence} · ${font.size}<br>${font.note}`;
+    } else {
+        const names = FONTS.filter(f => selectedFonts.has(f.id)).map(f => f.name);
+        el.innerHTML = `Comparing: <strong>${names.join("</strong>, <strong>")}</strong>`;
+    }
+}
+
+// ── Controls ──
+
+function buildFontButtons() {
+    const container = document.getElementById("font-buttons");
+    container.innerHTML = FONTS.map(f => {
+        const cls = f.category === "system" ? "btn btn-system" : "btn";
+        return `<button class="${cls}" data-font="${f.id}">${f.name}</button>`;
+    }).join("");
+
+    container.addEventListener("click", (e) => {
+        const btn = e.target.closest("[data-font]");
+        if (!btn) return;
+        const id = btn.dataset.font;
+
+        if (currentView === "single") {
+            currentFont = id;
+        } else {
+            if (selectedFonts.has(id)) selectedFonts.delete(id);
+            else selectedFonts.add(id);
+        }
+
+        updateButtonStates();
+        updateFontInfo();
+        render();
+    });
+
+    updateButtonStates();
+}
+
+function updateButtonStates() {
+    document.querySelectorAll("#font-buttons [data-font]").forEach(btn => {
+        const id = btn.dataset.font;
+        if (currentView === "single") {
+            btn.classList.toggle("active", id === currentFont);
+        } else {
+            btn.classList.toggle("active", selectedFonts.has(id));
+        }
+    });
+}
+
+function setView(mode) {
+    currentView = mode;
+    document.getElementById("view-single").classList.toggle("active", mode === "single");
+    document.getElementById("view-sidebyside").classList.toggle("active", mode === "sidebyside");
+    updateButtonStates();
+    updateFontInfo();
+    render();
+}
+
+function setTheme(t) {
+    if (t === "auto") document.documentElement.removeAttribute("data-theme");
+    else document.documentElement.setAttribute("data-theme", t);
+
+    document.querySelectorAll(".controls-group").forEach(group => {
+        group.querySelectorAll(".btn").forEach(btn => {
+            const text = btn.textContent.trim().toLowerCase();
+            if (text === "light" || text === "auto" || text === "dark") {
+                btn.classList.toggle("active", text === t);
+            }
+        });
+    });
+}
+
+// ── Init ──
+
+function init() {
+    const platform = detectPlatform();
+    const notice = document.getElementById("platform-notice");
+    if (platform === "macOS") {
+        notice.innerHTML = `You are on <strong>macOS</strong>. San Francisco renders natively. ` +
+            `Segoe UI and Ubuntu Sans render from local font files in <code>fonts/</code> — ` +
+            `if they appear as the system sans-serif instead, the font files may not be in place yet.`;
+    } else if (platform === "Windows") {
+        notice.innerHTML = `You are on <strong>Windows</strong>. Segoe UI renders natively. ` +
+            `San Francisco will fall through to your system default. ` +
+            `Ubuntu Sans renders from local font files if present.`;
+    } else {
+        notice.innerHTML = `You are on <strong>Linux</strong>. Your system default renders natively. ` +
+            `San Francisco and Segoe UI will fall through unless font files are in <code>fonts/</code>.`;
+    }
+
+    buildFontButtons();
+    updateFontInfo();
+    render();
+}
+
+init();
+</script>
+</body>
+</html>

@@ -1,16 +1,16 @@
-/* Molecule: person-id — speaker code lozenge + display name */
+/* Molecule: person-badge — speaker code lozenge + display name */
 
-.bn-person-id {
+.bn-person-badge {
     display: inline-flex;
     align-items: center;
     gap: 0.4rem;
     white-space: nowrap;
 }
 
-.bn-person-id .badge {
+.bn-person-badge .badge {
     flex-shrink: 0;
 }
 
-.bn-person-id-name {
+.bn-person-badge-name {
     font-weight: 600;
 }

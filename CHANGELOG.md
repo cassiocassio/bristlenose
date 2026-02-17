@@ -2,6 +2,17 @@
 
 All notable changes to Bristlenose are documented here. See also the [README](README.md) for the latest releases.
 
+**Unreleased** — _serve branch_
+
+- `bristlenose serve` command — FastAPI local dev server that serves the HTML report over HTTP with SQLite persistence, React islands, and live JS reload in dev mode. Auto-renders before serving, auto-opens browser, prints clickable report URL
+- React islands architecture — 5 islands (SessionsTable, Dashboard, QuoteSections, QuoteThemes, CodebookPanel) mount into static HTML via comment markers and `re.sub` at serve time; 16 reusable React primitives (Badge, PersonBadge, TimecodeLink, EditableText, Toggle, TagInput, Sparkline, Counter, Metric, JourneyChain, Annotation, Thumbnail, MicroBar, ConfirmDialog); 182 Vitest component tests
+- Codebook CRUD — React island replaces vanilla JS codebook: drag-and-drop tags between groups, inline editing of group titles and subtitles, tag merge with confirmation, create/delete groups and tags, pentadic colour system, MicroBar frequency bars, ConfirmDialog for destructive actions. 9 API endpoints, 36 Python tests
+- Dashboard island — Project tab as React composition: 8 clickable stat cards, compact sessions table, featured quotes with reshuffle, section/theme navigation with cross-tab anchor links. 43 API tests
+- Data API — 6 fire-and-forget PUT endpoints sync researcher state (hidden, starred, tags, edits, people, deleted-badges) from localStorage to SQLite. 94 tests (37 happy-path + 57 stress)
+- 22-table SQLAlchemy domain schema with instance-scoped people/codebook and project-scoped sessions/quotes/themes; `assigned_by` tracks pipeline vs researcher authorship; idempotent upsert importer
+- Renderer overlay (dev-only, press **D**) — colour-codes report regions by origin: blue for Jinja2, green for React, amber for vanilla JS
+- Visual diff page (dev-only) — side-by-side, overlay, and toggle comparison of Jinja2 vs React sessions table
+
 **0.9.3** — _13 Feb 2026_
 
 - Interactive dashboard — Project tab stat cards are clickable links to their target tabs (audio→Sessions, quotes→Quotes, sections/themes→Quotes anchors, AI tags→Analysis, user tags→Codebook); featured quote cards open video player or fall back to transcript; session table rows drill into Sessions tab; section/theme names switch to Quotes tab and scroll to the anchor

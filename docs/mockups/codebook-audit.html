@@ -1,0 +1,958 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Codebook Migration Audit — Vanilla JS vs React Primitives</title>
+<style>
+  :root {
+    --bg: #fafafa;
+    --fg: #1a1a1a;
+    --card: #fff;
+    --border: #e0e0e0;
+    --accent: #2563eb;
+    --green: #16a34a;
+    --green-bg: #dcfce7;
+    --amber: #d97706;
+    --amber-bg: #fef3c7;
+    --red: #dc2626;
+    --red-bg: #fee2e2;
+    --blue: #2563eb;
+    --blue-bg: #dbeafe;
+    --muted: #666;
+    --code-bg: #f4f4f4;
+    --font: system-ui, -apple-system, sans-serif;
+    --mono: "SF Mono", "Cascadia Code", "JetBrains Mono", monospace;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #111;
+      --fg: #e0e0e0;
+      --card: #1a1a1a;
+      --border: #333;
+      --green-bg: #052e16;
+      --amber-bg: #422006;
+      --red-bg: #450a0a;
+      --blue-bg: #172554;
+      --muted: #999;
+      --code-bg: #222;
+    }
+  }
+
+  * { box-sizing: border-box; margin: 0; }
+  body { font-family: var(--font); background: var(--bg); color: var(--fg); padding: 2rem; line-height: 1.6; }
+  h1 { font-size: 1.5rem; font-weight: 700; margin-bottom: 0.5rem; }
+  h2 { font-size: 1.15rem; font-weight: 600; margin: 2rem 0 0.75rem; border-bottom: 1px solid var(--border); padding-bottom: 0.4rem; }
+  h3 { font-size: 1rem; font-weight: 600; margin: 1.5rem 0 0.5rem; }
+  .subtitle { font-size: 0.88rem; color: var(--muted); margin-bottom: 1.5rem; }
+  p { margin: 0.5rem 0; font-size: 0.88rem; }
+
+  /* Tabs */
+  .tabs { display: flex; gap: 0; border-bottom: 1px solid var(--border); margin-bottom: 1.5rem; }
+  .tab { padding: 0.5rem 1rem; font-size: 0.85rem; font-weight: 500; cursor: pointer; border-bottom: 3px solid transparent; color: var(--muted); background: none; border-top: none; border-left: none; border-right: none; }
+  .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+
+  /* Summary stats */
+  .stats { display: flex; gap: 1rem; margin-bottom: 1.5rem; flex-wrap: wrap; }
+  .stat { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 0.75rem 1rem; min-width: 120px; }
+  .stat-value { font-size: 1.3rem; font-weight: 700; }
+  .stat-label { font-size: 0.72rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; }
+  .stat-green .stat-value { color: var(--green); }
+  .stat-amber .stat-value { color: var(--amber); }
+  .stat-red .stat-value { color: var(--red); }
+
+  /* Table */
+  table { width: 100%; border-collapse: collapse; font-size: 0.82rem; margin-bottom: 1.5rem; }
+  th { text-align: left; font-weight: 600; padding: 0.5rem 0.75rem; border-bottom: 2px solid var(--border); white-space: nowrap; }
+  td { padding: 0.5rem 0.75rem; border-bottom: 1px solid var(--border); vertical-align: top; }
+  tr:hover { background: color-mix(in srgb, var(--accent) 4%, transparent); }
+
+  /* Tags / pills */
+  .pill { display: inline-block; font-size: 0.7rem; padding: 0.15rem 0.45rem; border-radius: 4px; font-weight: 500; white-space: nowrap; }
+  .pill-same { background: var(--green-bg); color: var(--green); }
+  .pill-different { background: var(--amber-bg); color: var(--amber); }
+  .pill-problem { background: var(--red-bg); color: var(--red); }
+  .pill-opportunity { background: var(--blue-bg); color: var(--blue); }
+  .pill-ok { background: var(--green-bg); color: var(--green); }
+
+  /* Code */
+  code { font-family: var(--mono); font-size: 0.78rem; background: var(--code-bg); padding: 0.1rem 0.3rem; border-radius: 3px; }
+
+  /* Filter buttons */
+  .filters { display: flex; gap: 0.5rem; margin-bottom: 1rem; flex-wrap: wrap; }
+  .filter-btn { font-size: 0.78rem; padding: 0.3rem 0.6rem; border: 1px solid var(--border); border-radius: 6px; background: var(--card); cursor: pointer; font-family: var(--font); color: var(--fg); }
+  .filter-btn.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+  /* Decision column */
+  .decision-cell { min-width: 140px; }
+  .decision-select { font-size: 0.78rem; padding: 0.25rem 0.4rem; border: 1px solid var(--border); border-radius: 4px; background: var(--card); font-family: var(--font); color: var(--fg); width: 100%; }
+
+  /* Detail accordion */
+  details { margin: 0.5rem 0; }
+  details summary { font-size: 0.82rem; font-weight: 500; cursor: pointer; padding: 0.3rem 0; }
+  details .detail-content { padding: 0.5rem 0 0.5rem 1rem; font-size: 0.82rem; border-left: 2px solid var(--border); margin-top: 0.3rem; }
+
+  /* Comparison blocks */
+  .compare { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin: 0.75rem 0; }
+  .compare-block { background: var(--card); border: 1px solid var(--border); border-radius: 6px; padding: 0.75rem; }
+  .compare-label { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); margin-bottom: 0.4rem; font-weight: 600; }
+  .compare-code { font-family: var(--mono); font-size: 0.75rem; white-space: pre-wrap; line-height: 1.5; }
+
+  /* Visual diff highlights */
+  .diff-highlight { background: var(--amber-bg); padding: 0.05rem 0.2rem; border-radius: 2px; }
+  .diff-new { background: var(--green-bg); padding: 0.05rem 0.2rem; border-radius: 2px; }
+
+  @media (max-width: 768px) {
+    body { padding: 1rem; }
+    .compare { grid-template-columns: 1fr; }
+    .stats { flex-direction: column; }
+  }
+</style>
+</head>
+<body>
+
+<h1>Codebook Migration Audit</h1>
+<p class="subtitle">Vanilla JS components vs React primitives — inconsistencies and decisions for Milestone 5</p>
+
+<!-- Summary Stats -->
+<div class="stats">
+  <div class="stat stat-green">
+    <div class="stat-value" id="count-same">13</div>
+    <div class="stat-label">Same / aligned</div>
+  </div>
+  <div class="stat stat-amber">
+    <div class="stat-value" id="count-different">9</div>
+    <div class="stat-label">Different</div>
+  </div>
+  <div class="stat stat-red">
+    <div class="stat-value" id="count-problem">4</div>
+    <div class="stat-label">Problems to fix</div>
+  </div>
+  <div class="stat">
+    <div class="stat-value" id="count-opportunity">5</div>
+    <div class="stat-label">Opportunities</div>
+  </div>
+</div>
+
+<!-- Tabs -->
+<div class="tabs" role="tablist">
+  <button class="tab active" data-tab="overview" role="tab">Overview table</button>
+  <button class="tab" data-tab="badge" role="tab">Badge</button>
+  <button class="tab" data-tab="editing" role="tab">EditableText</button>
+  <button class="tab" data-tab="taginput" role="tab">TagInput</button>
+  <button class="tab" data-tab="sparkline" role="tab">Sparkline vs MicroBar</button>
+  <button class="tab" data-tab="layout" role="tab">Layout & spacing</button>
+  <button class="tab" data-tab="decisions" role="tab">Decision tracker</button>
+</div>
+
+<!-- ═══════════════════════ TAB: Overview ═══════════════════════ -->
+<div class="tab-panel active" id="panel-overview">
+
+<div class="filters">
+  <button class="filter-btn active" data-filter="all">All</button>
+  <button class="filter-btn" data-filter="same">Same</button>
+  <button class="filter-btn" data-filter="different">Different</button>
+  <button class="filter-btn" data-filter="problem">Problem</button>
+  <button class="filter-btn" data-filter="opportunity">Opportunity</button>
+</div>
+
+<table id="audit-table">
+<thead>
+<tr>
+  <th>Component / Area</th>
+  <th>Aspect</th>
+  <th>Vanilla JS (codebook.js)</th>
+  <th>React primitive</th>
+  <th>Status</th>
+  <th>Notes</th>
+</tr>
+</thead>
+<tbody>
+
+<!-- ─── BADGE ──────────────────────────────────────── -->
+<tr data-status="different">
+  <td rowspan="5"><strong>Badge</strong></td>
+  <td>Base font size</td>
+  <td><code>0.72rem</code> (badge.css)</td>
+  <td><code>0.72rem</code> (same CSS)</td>
+  <td><span class="pill pill-same">Same</span></td>
+  <td>React reuses exact same CSS</td>
+</tr>
+<tr data-status="different">
+  <td>Codebook override size</td>
+  <td><code>0.82rem</code> + <code>0.2rem 0.5rem</code> pad<br>(codebook-panel.css <code>.codebook-group .badge</code>)</td>
+  <td>No equivalent — Badge has no <code>size</code> prop</td>
+  <td><span class="pill pill-different">Different</span></td>
+  <td>Codebook bumps badges to 0.82rem via CSS scope. React Badge will inherit this if wrapped in <code>.codebook-group</code>, but if the React island doesn't use that class, badges will be small</td>
+</tr>
+<tr data-status="same">
+  <td>Delete button (user badge)</td>
+  <td><code>&lt;button class="badge-delete"&gt;x&lt;/button&gt;</code><br>via <code>createUserTagBadge()</code></td>
+  <td><code>&lt;button class="badge-delete"&gt;&amp;times;&lt;/button&gt;</code></td>
+  <td><span class="pill pill-same">Same</span></td>
+  <td>Identical structure. React uses <code>&amp;times;</code> entity, vanilla uses literal <code>x</code> — renders identically</td>
+</tr>
+<tr data-status="same">
+  <td>AI badge delete (::after pseudo)</td>
+  <td>CSS <code>::after</code> with <code>\00d7</code> content</td>
+  <td>React <code>Badge variant="ai"</code> — same CSS, no ::after override</td>
+  <td><span class="pill pill-same">Same</span></td>
+  <td>Both rely on the CSS pseudo-element for the delete chip</td>
+</tr>
+<tr data-status="different">
+  <td>Data attributes</td>
+  <td><code>data-badge-type</code>, <code>data-tag-name</code></td>
+  <td>Neither attribute emitted</td>
+  <td><span class="pill pill-different">Different</span></td>
+  <td>Vanilla JS modules (tag-filter, transcript-annotations) query <code>[data-badge-type]</code> and <code>[data-tag-name]</code>. React Badge doesn't emit these. Not a problem if those modules are also migrated, but a problem during coexistence</td>
+</tr>
+
+<!-- ─── EDITABLE TEXT ──────────────────────────────── -->
+<tr data-status="same">
+  <td rowspan="5"><strong>EditableText</strong></td>
+  <td>Editing mechanism</td>
+  <td><code>contentEditable</code> on span</td>
+  <td><code>contentEditable</code> on span/p</td>
+  <td><span class="pill pill-same">Same</span></td>
+  <td>Both use contentEditable. React adds <code>suppressContentEditableWarning</code></td>
+</tr>
+<tr data-status="different">
+  <td>Codebook title editing</td>
+  <td>Uses <code>&lt;input class="group-title-input"&gt;</code> — <em>not</em> contentEditable</td>
+  <td>Uses <code>contentEditable</code> span</td>
+  <td><span class="pill pill-different">Different</span></td>
+  <td>Codebook uses traditional <code>&lt;input&gt;</code> elements for group title/subtitle editing, while React EditableText uses contentEditable. Different UX: input has native border/focus ring, contentEditable blends into text flow</td>
+</tr>
+<tr data-status="different">
+  <td>CSS editing state</td>
+  <td><code>.group-title-input</code> — has visible border, <code>font-family: var(--bn-font-body)</code>, inherits size/weight</td>
+  <td><code>.editing</code> class — uses <code>--bn-colour-editing-bg</code> + outline, no border</td>
+  <td><span class="pill pill-different">Different</span></td>
+  <td>Codebook inputs look like form fields (border). Quote/heading editing looks like highlighted text (background+outline). The React way is more subtle and modern</td>
+</tr>
+<tr data-status="same">
+  <td>Keyboard handling</td>
+  <td>Enter = commit, Escape = cancel, blur = commit</td>
+  <td>Enter (no shift) = commit, Escape = cancel, blur = commit</td>
+  <td><span class="pill pill-same">Same</span></td>
+  <td>Identical behaviour</td>
+</tr>
+<tr data-status="same">
+  <td>Committed indicator</td>
+  <td><code>.edited</code> class (dashed underline)</td>
+  <td><code>committedClassName="edited"</code> (same CSS)</td>
+  <td><span class="pill pill-same">Same</span></td>
+  <td>Same visual</td>
+</tr>
+
+<!-- ─── TAG INPUT ──────────────────────────────────── -->
+<tr data-status="different">
+  <td rowspan="4"><strong>TagInput</strong></td>
+  <td>Codebook add-tag mechanism</td>
+  <td>Plain <code>&lt;input class="tag-add-input"&gt;</code> — no autocomplete, no ghost text, max 40 chars</td>
+  <td>Full autocomplete with ghost text, suggestion dropdown, auto-resize</td>
+  <td><span class="pill pill-different">Different</span></td>
+  <td>Codebook's tag input is primitive compared to the React TagInput. The React version is a significant upgrade</td>
+</tr>
+<tr data-status="opportunity">
+  <td>Auto-suggest in codebook</td>
+  <td>No autocomplete — just a plain text input</td>
+  <td>Full vocabulary-based autocomplete with prefix matching</td>
+  <td><span class="pill pill-opportunity">Opportunity</span></td>
+  <td>Switching to React TagInput gives codebook free autocomplete. Vocabulary = all existing tags from the project</td>
+</tr>
+<tr data-status="same">
+  <td>Font/size for tag input</td>
+  <td><code>0.82rem</code>, <code>var(--bn-font-mono)</code></td>
+  <td>Inherits via <code>.tag-input</code> class in tag-input.css — <code>0.72rem</code>, <code>var(--bn-font-mono)</code></td>
+  <td><span class="pill pill-different">Different</span></td>
+  <td>Codebook's <code>.tag-add-input</code> is 0.82rem (matching upscaled badges). React TagInput's <code>.tag-input</code> class would be 0.72rem. Need a CSS scope override or size prop</td>
+</tr>
+<tr data-status="same">
+  <td>Commit behaviour</td>
+  <td>Enter/blur = commit, Escape = cancel</td>
+  <td>Enter/blur = commit, Escape = cancel, Tab = commit+reopen</td>
+  <td><span class="pill pill-same">Same</span></td>
+  <td>React adds Tab-to-reopen for rapid tagging — a bonus feature</td>
+</tr>
+
+<!-- ─── SPARKLINE / MICRO BAR ──────────────────────── -->
+<tr data-status="different">
+  <td rowspan="3"><strong>Sparkline vs Micro Bar</strong></td>
+  <td>Visualization type</td>
+  <td>Single horizontal bar per tag (<code>.tag-micro-bar</code>), width proportional to count</td>
+  <td>Vertical stacked bars (<code>Sparkline</code>), height proportional to count</td>
+  <td><span class="pill pill-different">Different</span></td>
+  <td>Completely different visualisations. Codebook uses horizontal micro-bars (frequency indicators), sessions table uses vertical sparklines (sentiment distribution). Different data, different purpose — both are correct for their context</td>
+</tr>
+<tr data-status="problem">
+  <td>Reuse for codebook?</td>
+  <td>Horizontal bar: width 2-48px, colour from codebook palette, single value</td>
+  <td>Sparkline: vertical bars, multiple values, generic colours</td>
+  <td><span class="pill pill-problem">Problem</span></td>
+  <td>React Sparkline doesn't fit the codebook use case. Codebook needs a simple horizontal frequency bar, not a multi-bar chart. Options: (a) build MicroBar as a new primitive, (b) just use a styled div with inline width, (c) make Sparkline support horizontal mode</td>
+</tr>
+<tr data-status="same">
+  <td>Bar colour system</td>
+  <td>Uses <code>var(--bn-bar-{set})</code> tokens from pentadic palette</td>
+  <td>Accepts <code>colour</code> string prop — consumer passes the token</td>
+  <td><span class="pill pill-same">Same</span></td>
+  <td>Both are token-driven, just at different abstraction levels</td>
+</tr>
+
+<!-- ─── LAYOUT ─────────────────────────────────────── -->
+<tr data-status="same">
+  <td rowspan="4"><strong>Layout</strong></td>
+  <td>Grid system</td>
+  <td>CSS <code>columns: 240px</code> (masonry)</td>
+  <td>N/A — no codebook composition yet</td>
+  <td><span class="pill pill-same">Same</span></td>
+  <td>Will reuse existing <code>codebook-panel.css</code></td>
+</tr>
+<tr data-status="problem">
+  <td>Hardcoded spacing</td>
+  <td><code>padding: 12px</code>, <code>margin-bottom: 6px</code>, <code>gap: 4px</code>, <code>gap: 6px</code>, <code>padding: 3px 4px</code></td>
+  <td>React components use tokens or let CSS handle it</td>
+  <td><span class="pill pill-problem">Problem</span></td>
+  <td>codebook-panel.css uses hardcoded px values where the design system has tokens. <code>12px</code> should be <code>var(--bn-space-md)</code>, <code>6px</code> could be <code>var(--bn-space-sm)</code>. Not blocking but worth cleaning up during migration</td>
+</tr>
+<tr data-status="problem">
+  <td>Merge target colour</td>
+  <td><code>rgba(37, 99, 235, 0.06)</code> — hardcoded blue</td>
+  <td>N/A</td>
+  <td><span class="pill pill-problem">Problem</span></td>
+  <td>Should use <code>color-mix(in srgb, var(--bn-colour-accent) 6%, transparent)</code> or a token. Will look wrong in dark mode</td>
+</tr>
+<tr data-status="same">
+  <td>Border radius</td>
+  <td><code>var(--bn-radius-lg)</code> (group), <code>var(--bn-radius-sm)</code> (tags, inputs)</td>
+  <td>Same tokens via CSS</td>
+  <td><span class="pill pill-same">Same</span></td>
+  <td>Fully aligned</td>
+</tr>
+
+<!-- ─── COLOUR SYSTEM ──────────────────────────────── -->
+<tr data-status="same">
+  <td rowspan="2"><strong>Colour system</strong></td>
+  <td>Pentadic palette tokens</td>
+  <td>5 colour sets, each with slots: <code>--bn-{set}-{N}-bg</code>, <code>--bn-group-{set}</code>, <code>--bn-bar-{set}</code></td>
+  <td>React Badge accepts <code>colour</code> prop — consumer passes the resolved <code>var(--bn-ux-2-bg)</code></td>
+  <td><span class="pill pill-same">Same</span></td>
+  <td>The colour resolution happens in the codebook data layer, not in the component. Both worlds pass the resolved CSS var as a string</td>
+</tr>
+<tr data-status="same">
+  <td>Dark mode support</td>
+  <td>Tokens have light/dark values in <code>tokens.css</code></td>
+  <td>Same tokens — React doesn't override</td>
+  <td><span class="pill pill-same">Same</span></td>
+  <td>Fully aligned. <code>light-dark()</code> function in tokens.css handles both</td>
+</tr>
+
+<!-- ─── INTERACTIONS ───────────────────────────────── -->
+<tr data-status="opportunity">
+  <td rowspan="4"><strong>Interactions</strong></td>
+  <td>Drag and drop</td>
+  <td>Native HTML5 drag API (<code>draggable="true"</code>, dragstart/dragover/drop)</td>
+  <td>No drag support in any React primitive</td>
+  <td><span class="pill pill-opportunity">Opportunity</span></td>
+  <td>Need to implement drag-and-drop in the React Codebook island. Options: (a) native HTML5 drag API (like vanilla), (b) @dnd-kit, (c) custom pointer events. Native is simplest and matches existing behaviour</td>
+</tr>
+<tr data-status="opportunity">
+  <td>Tag merge (drag onto tag)</td>
+  <td>Drag tag onto another tag = merge confirmation modal</td>
+  <td>No equivalent</td>
+  <td><span class="pill pill-opportunity">Opportunity</span></td>
+  <td>Unique to codebook. The merge flow (highlight target, confirmation modal, combine quote counts) needs to be built from scratch in React</td>
+</tr>
+<tr data-status="same">
+  <td>Modal system</td>
+  <td><code>createModal()</code> / <code>showConfirmModal()</code> from modal.js</td>
+  <td>No React modal primitive yet</td>
+  <td><span class="pill pill-different">Different</span></td>
+  <td>Codebook uses the vanilla JS modal system (modal.js). React has no modal component. Options: (a) call vanilla modal from React (bridge), (b) build React modal, (c) use <code>&lt;dialog&gt;</code> element directly</td>
+</tr>
+<tr data-status="opportunity">
+  <td>Cross-window sync</td>
+  <td><code>window.addEventListener('storage', ...)</code> re-renders on external changes</td>
+  <td>No equivalent</td>
+  <td><span class="pill pill-opportunity">Opportunity</span></td>
+  <td>In serve mode, the API is the source of truth — no localStorage needed. Cross-tab sync becomes server-push (websocket or polling) rather than storage events. This is a genuine improvement</td>
+</tr>
+
+<!-- ─── TOGGLE ─────────────────────────────────────── -->
+<tr data-status="same">
+  <td><strong>Toggle</strong></td>
+  <td>AI tag visibility</td>
+  <td><code>body.hide-ai-tags</code> class toggle — hides all <code>.badge-ai</code> via CSS</td>
+  <td>React Toggle component + CSS class on body</td>
+  <td><span class="pill pill-same">Same</span></td>
+  <td>Both approaches work. In React codebook, the toggle state would be local React state, but could also toggle the body class for backward compat with non-React badge rendering</td>
+</tr>
+
+<!-- ─── CODEBOOK-SPECIFIC ──────────────────────────── -->
+<tr data-status="problem">
+  <td rowspan="2"><strong>Codebook-specific</strong></td>
+  <td>New group placeholder border</td>
+  <td><code>border: 1.5px dashed</code> — non-standard sub-pixel width</td>
+  <td>N/A</td>
+  <td><span class="pill pill-problem">Problem</span></td>
+  <td>1.5px is rendered as 2px on 1x screens, 1.5px on retina. Should be <code>1px</code> or <code>2px</code> for consistency. Minor but worth fixing</td>
+</tr>
+<tr data-status="opportunity">
+  <td>Colour set selector</td>
+  <td>Auto-assigned (round-robin through COLOUR_SET_ORDER)</td>
+  <td>No manual colour picker UI</td>
+  <td><span class="pill pill-ok">OK</span></td>
+  <td>Auto-assignment is fine for now. Manual colour picker is a future enhancement</td>
+</tr>
+
+</tbody>
+</table>
+
+</div>
+
+<!-- ═══════════════════════ TAB: Badge ═══════════════════════ -->
+<div class="tab-panel" id="panel-badge">
+<h2>Badge: Vanilla JS vs React</h2>
+
+<h3>Structure comparison</h3>
+<div class="compare">
+  <div class="compare-block">
+    <div class="compare-label">Vanilla JS (badge-utils.js)</div>
+    <div class="compare-code">&lt;span class="badge badge-user"
+      <span class="diff-highlight">data-badge-type="user"</span>
+      <span class="diff-highlight">data-tag-name="confusion"</span>
+      style="background: var(--bn-emo-1-bg)"&gt;
+  confusion
+  &lt;button class="badge-delete"
+    aria-label="Delete tag"&gt;x&lt;/button&gt;
+&lt;/span&gt;</div>
+  </div>
+  <div class="compare-block">
+    <div class="compare-label">React (Badge.tsx)</div>
+    <div class="compare-code">&lt;span class="badge badge-user"
+      style="backgroundColor: var(--bn-emo-1-bg)"&gt;
+  confusion
+  &lt;button class="badge-delete"
+    <span class="diff-new">aria-label="Remove confusion"</span>&gt;
+    &amp;times;
+  &lt;/button&gt;
+&lt;/span&gt;</div>
+  </div>
+</div>
+
+<h3>Key differences</h3>
+<table>
+<tr><th>Aspect</th><th>Vanilla</th><th>React</th><th>Winner</th></tr>
+<tr>
+  <td><code>data-badge-type</code></td>
+  <td>Always present</td>
+  <td>Not emitted</td>
+  <td><strong>Vanilla</strong> — needed during coexistence with tag-filter.js which queries <code>[data-badge-type="user"]</code></td>
+</tr>
+<tr>
+  <td><code>data-tag-name</code></td>
+  <td>Always present on user badges</td>
+  <td>Not emitted</td>
+  <td><strong>Vanilla</strong> — needed by <code>applyCodebookColours()</code> in codebook.js which updates badge colours by querying <code>[data-tag-name]</code></td>
+</tr>
+<tr>
+  <td><code>aria-label</code> on delete</td>
+  <td>Generic: "Delete tag"</td>
+  <td>Specific: "Remove {name}"</td>
+  <td><strong>React</strong> — more accessible, screen readers know which tag is being removed</td>
+</tr>
+<tr>
+  <td>Delete character</td>
+  <td>Literal <code>x</code></td>
+  <td><code>&amp;times;</code> (multiplication sign)</td>
+  <td><strong>React</strong> — <code>&times;</code> is semantically correct and looks better at small sizes</td>
+</tr>
+</table>
+
+<details>
+  <summary>Recommendation</summary>
+  <div class="detail-content">
+    <p><strong>Add <code>data-badge-type</code> and <code>data-tag-name</code> to React Badge</strong> during the coexistence period. These are cheap to add and prevent breakage of vanilla JS modules that query for them. Can be removed once tag-filter and codebook are both React.</p>
+    <p><strong>Keep the React improvements</strong> (specific aria-label, &times; character) — they're strictly better.</p>
+  </div>
+</details>
+</div>
+
+<!-- ═══════════════════════ TAB: Editing ═══════════════════════ -->
+<div class="tab-panel" id="panel-editing">
+<h2>EditableText: Codebook &lt;input&gt; vs React contentEditable</h2>
+
+<h3>Codebook group title editing (vanilla)</h3>
+<div class="compare">
+  <div class="compare-block">
+    <div class="compare-label">Vanilla: &lt;input&gt; replaces text</div>
+    <div class="compare-code">// codebook.js: _editGroupTitle()
+span.style.display = 'none';     // hide text
+const inp = document.createElement('input');
+inp.className = 'group-title-input';
+inp.value = currentTitle;
+// CSS: border, bg, width: 100%, outline: none
+// focus ring on :focus</div>
+  </div>
+  <div class="compare-block">
+    <div class="compare-label">React: contentEditable on same element</div>
+    <div class="compare-code">// EditableText.tsx
+&lt;span
+  contentEditable={isEditing}
+  className="group-title-text"
+&gt;
+  {isEditing ? undefined : value}
+&lt;/span&gt;
+// CSS: editing-bg + outline (no border)
+// text stays in flow, no layout shift</div>
+  </div>
+</div>
+
+<h3>Visual difference</h3>
+<table>
+<tr><th>Aspect</th><th>Codebook &lt;input&gt;</th><th>React contentEditable</th><th>Recommendation</th></tr>
+<tr>
+  <td>Visual treatment</td>
+  <td>Form field: visible border, <code>--bn-colour-bg</code> background, full-width</td>
+  <td>Inline highlight: <code>--bn-colour-editing-bg</code> (subtle tint), 1px outline</td>
+  <td><strong>React</strong> — more refined, less disruptive. The form field look is dated</td>
+</tr>
+<tr>
+  <td>Layout shift</td>
+  <td>Yes — text element hidden, input element shown at full width</td>
+  <td>No — same element becomes editable, dimensions unchanged</td>
+  <td><strong>React</strong> — zero layout shift is strictly better UX</td>
+</tr>
+<tr>
+  <td>Font inheritance</td>
+  <td><code>font: inherit</code> on input — generally works but input elements have quirks</td>
+  <td>Same element, same font — no inheritance issues</td>
+  <td><strong>React</strong> — more reliable</td>
+</tr>
+<tr>
+  <td>Select-all on focus</td>
+  <td>No (just focuses input, cursor at end)</td>
+  <td>Yes — selects all text on edit start</td>
+  <td><strong>React</strong> — faster to replace, can also just position cursor</td>
+</tr>
+<tr>
+  <td>Multi-line editing</td>
+  <td>Not possible (input is single-line)</td>
+  <td>Possible with Shift+Enter (contentEditable)</td>
+  <td><strong>React</strong> — useful for subtitle descriptions</td>
+</tr>
+</table>
+
+<details>
+  <summary>Recommendation</summary>
+  <div class="detail-content">
+    <p><strong>Use React EditableText for codebook titles and subtitles.</strong> The contentEditable approach is superior: no layout shift, no font inheritance quirks, select-all on focus. The <code>.group-title-input</code> / <code>.group-subtitle-input</code> CSS can be retired.</p>
+    <p>For codebook, use <code>trigger="click"</code> so titles become editable on click (matching current behaviour).</p>
+  </div>
+</details>
+</div>
+
+<!-- ═══════════════════════ TAB: TagInput ═══════════════════════ -->
+<div class="tab-panel" id="panel-taginput">
+<h2>TagInput: Codebook plain input vs React autocomplete</h2>
+
+<h3>Feature comparison</h3>
+<table>
+<tr><th>Feature</th><th>Codebook (vanilla)</th><th>React TagInput</th></tr>
+<tr>
+  <td>Autocomplete</td>
+  <td>None</td>
+  <td>Prefix-match dropdown with ghost text</td>
+</tr>
+<tr>
+  <td>Max length</td>
+  <td><code>maxLength=40</code></td>
+  <td>No limit</td>
+</tr>
+<tr>
+  <td>Auto-resize</td>
+  <td>No — fixed <code>max-width: 160px</code></td>
+  <td>Yes — resizes to content + ghost text, min 48px</td>
+</tr>
+<tr>
+  <td>Suggestion dropdown</td>
+  <td>None</td>
+  <td>Up to 8 suggestions, keyboard navigable</td>
+</tr>
+<tr>
+  <td>Tab behaviour</td>
+  <td>Default (moves to next focusable)</td>
+  <td><code>onCommitAndReopen</code> — commit then reopen for rapid multi-tag entry</td>
+</tr>
+<tr>
+  <td>Ghost text</td>
+  <td>None</td>
+  <td>Grey suffix showing best prefix match, accept with ArrowRight</td>
+</tr>
+<tr>
+  <td>Duplicate prevention</td>
+  <td>Manual check in JS</td>
+  <td><code>exclude</code> prop filters out already-applied tags</td>
+</tr>
+<tr>
+  <td>Font size</td>
+  <td><code>0.82rem</code> (codebook scale)</td>
+  <td><code>0.72rem</code> (default badge scale)</td>
+</tr>
+</table>
+
+<details>
+  <summary>Font size gap</summary>
+  <div class="detail-content">
+    <p>The codebook upscales all badges and inputs to <code>0.82rem</code> via <code>.codebook-group .badge</code>. The React TagInput would render at <code>0.72rem</code> by default.</p>
+    <p><strong>Fix:</strong> Either add a <code>.codebook-group .tag-input</code> CSS override (like the badge override), or add a <code>size</code> prop to TagInput. The CSS override is simpler and follows the existing pattern.</p>
+  </div>
+</details>
+
+<details>
+  <summary>Recommendation</summary>
+  <div class="detail-content">
+    <p><strong>Use React TagInput.</strong> It's a strict superset of the vanilla input — every feature is preserved, plus autocomplete, ghost text, and rapid-entry Tab flow.</p>
+    <p><strong>Add CSS scope override</strong> for the codebook context: <code>.codebook-group .tag-input { font-size: 0.82rem; }</code></p>
+    <p><strong>Set vocabulary</strong> to all known tags from the project (from API response).</p>
+    <p><strong>Consider maxLength.</strong> The vanilla input had maxLength=40, which is a reasonable guard. Could add this to TagInput as an optional prop, or just let it be — 40 chars is generous enough that it rarely triggers.</p>
+  </div>
+</details>
+</div>
+
+<!-- ═══════════════════════ TAB: Sparkline ═══════════════════════ -->
+<div class="tab-panel" id="panel-sparkline">
+<h2>Sparkline (React) vs Micro Bar (Codebook vanilla)</h2>
+
+<p>These are fundamentally different visualisations serving different purposes.</p>
+
+<h3>Side-by-side</h3>
+<div class="compare">
+  <div class="compare-block">
+    <div class="compare-label">Codebook: Micro Bar</div>
+    <div class="compare-code">Purpose: Per-tag frequency indicator
+Direction: Horizontal (left to right)
+Data: Single value (quote count per tag)
+Width: 2px to 48px proportional
+Height: 0.6rem (fixed)
+Colour: Group palette bar colour
+  var(--bn-bar-{set}) or var(--bn-bar-none)
+Corner: rounded right side only
+  0 var(--bn-radius-sm) var(--bn-radius-sm) 0
+Count label: right-aligned, tabular-nums</div>
+  </div>
+  <div class="compare-block">
+    <div class="compare-label">Sessions Table: Sparkline</div>
+    <div class="compare-code">Purpose: Sentiment distribution per session
+Direction: Vertical (bottom to top)
+Data: Multiple values (7 sentiments)
+Height: 2px to 20px proportional
+Width: 5px per bar (fixed)
+Colour: Sentiment palette
+  var(--bn-sentiment-{name})
+Corner: rounded top only (1px 1px 0 0)
+Container: 54px tall, inline-flex</div>
+  </div>
+</div>
+
+<h3>Can Sparkline be reused for codebook?</h3>
+<table>
+<tr><th>Option</th><th>Effort</th><th>Quality</th><th>Notes</th></tr>
+<tr>
+  <td>A. Keep micro-bar as plain CSS/div</td>
+  <td>Low</td>
+  <td>Fine</td>
+  <td>A simple <code>&lt;div style="width: Npx; background: var(...)"&gt;</code> inside the React component. No primitive needed for a single proportional bar</td>
+</tr>
+<tr>
+  <td>B. Build MicroBar primitive</td>
+  <td>Medium</td>
+  <td>Good</td>
+  <td>Reusable horizontal bar with <code>value</code>, <code>max</code>, <code>colour</code> props. Clean but maybe over-engineering for one use case</td>
+</tr>
+<tr>
+  <td>C. Make Sparkline support horizontal mode</td>
+  <td>High</td>
+  <td>Confusing</td>
+  <td>Would conflate two different visualisations under one component. Sparklines are conventionally vertical</td>
+</tr>
+</table>
+
+<details>
+  <summary>Recommendation</summary>
+  <div class="detail-content">
+    <p><strong>Option A: Inline div.</strong> The micro-bar is a single styled <code>&lt;div&gt;</code> with proportional width. It doesn't need a primitive — it's 3 lines of JSX. If it's used in multiple places later, extract it then.</p>
+    <p>The existing <code>.tag-micro-bar</code> CSS class handles height, border-radius, and transition. Just apply it.</p>
+  </div>
+</details>
+</div>
+
+<!-- ═══════════════════════ TAB: Layout ═══════════════════════ -->
+<div class="tab-panel" id="panel-layout">
+<h2>Layout & Spacing Inconsistencies</h2>
+
+<h3>Hardcoded values in codebook-panel.css</h3>
+<table>
+<tr><th>Selector</th><th>Property</th><th>Current value</th><th>Token equivalent</th><th>Should change?</th></tr>
+<tr>
+  <td><code>.codebook-group</code></td>
+  <td><code>padding</code></td>
+  <td><code>12px</code></td>
+  <td><code>var(--bn-space-md)</code> (12px)</td>
+  <td><span class="pill pill-ok">Match</span> — same value, but should use token for consistency</td>
+</tr>
+<tr>
+  <td><code>.group-header</code></td>
+  <td><code>margin-bottom</code></td>
+  <td><code>6px</code></td>
+  <td><code>var(--bn-space-sm)</code> (8px)</td>
+  <td><span class="pill pill-different">Different</span> — 6px is between xs (4px) and sm (8px). Intentional?</td>
+</tr>
+<tr>
+  <td><code>.group-header</code></td>
+  <td><code>gap</code></td>
+  <td><code>4px</code></td>
+  <td><code>var(--bn-space-xs)</code> (4px)</td>
+  <td><span class="pill pill-ok">Match</span> — use token</td>
+</tr>
+<tr>
+  <td><code>.tag-row</code></td>
+  <td><code>gap</code></td>
+  <td><code>6px</code></td>
+  <td><code>var(--bn-space-sm)</code> (8px)</td>
+  <td><span class="pill pill-different">Different</span> — same 6px oddity</td>
+</tr>
+<tr>
+  <td><code>.tag-row</code></td>
+  <td><code>padding</code></td>
+  <td><code>3px 4px</code></td>
+  <td>No exact token</td>
+  <td><span class="pill pill-ok">OK</span> — tight spacing is intentional for dense tag lists</td>
+</tr>
+<tr>
+  <td><code>.tag-list</code></td>
+  <td><code>gap</code></td>
+  <td><code>2px</code></td>
+  <td>No token (smallest is <code>--bn-space-xs</code> = 4px)</td>
+  <td><span class="pill pill-ok">OK</span> — tighter than the scale, but needed for compact tag lists</td>
+</tr>
+<tr>
+  <td><code>.group-total-row</code></td>
+  <td><code>gap</code></td>
+  <td><code>6px</code></td>
+  <td><code>var(--bn-space-sm)</code> (8px)</td>
+  <td><span class="pill pill-different">Different</span></td>
+</tr>
+<tr>
+  <td><code>.tag-bar-area</code></td>
+  <td><code>gap</code></td>
+  <td><code>4px</code></td>
+  <td><code>var(--bn-space-xs)</code> (4px)</td>
+  <td><span class="pill pill-ok">Match</span></td>
+</tr>
+<tr>
+  <td><code>.new-group-placeholder</code></td>
+  <td><code>border</code></td>
+  <td><code>1.5px dashed</code></td>
+  <td>Standard: <code>1px</code> or <code>2px</code></td>
+  <td><span class="pill pill-problem">Problem</span> — sub-pixel renders inconsistently</td>
+</tr>
+<tr>
+  <td><code>.tag-row.merge-target</code></td>
+  <td><code>background</code></td>
+  <td><code>rgba(37, 99, 235, 0.06)</code></td>
+  <td><code>color-mix(in srgb, var(--bn-colour-accent) 6%, transparent)</code></td>
+  <td><span class="pill pill-problem">Problem</span> — hardcoded blue, wrong in dark mode</td>
+</tr>
+<tr>
+  <td><code>.codebook-grid</code></td>
+  <td><code>columns</code></td>
+  <td><code>240px</code></td>
+  <td>N/A (layout-specific)</td>
+  <td><span class="pill pill-ok">OK</span> — layout values don't need tokens</td>
+</tr>
+<tr>
+  <td><code>.codebook-grid</code></td>
+  <td><code>max-width</code></td>
+  <td><code>1200px</code></td>
+  <td>N/A (layout-specific)</td>
+  <td><span class="pill pill-ok">OK</span></td>
+</tr>
+</table>
+
+<details>
+  <summary>The 6px question</summary>
+  <div class="detail-content">
+    <p>Three places use <code>6px</code> for gap/margin. The design system scale is: 4px (xs), 8px (sm), 12px (md), 16px (lg), 24px (xl). There's no 6px token.</p>
+    <p><strong>Options:</strong></p>
+    <ul>
+      <li><strong>Round up to 8px (--bn-space-sm)</strong> — slightly more spacious, fully on-scale</li>
+      <li><strong>Round down to 4px (--bn-space-xs)</strong> — tighter, may feel cramped</li>
+      <li><strong>Keep 6px</strong> — hardcoded but visually tuned for this specific context</li>
+    </ul>
+    <p><strong>Verdict:</strong> The codebook is a dense information display. 6px was likely chosen by eye to balance density with readability. Round to <code>var(--bn-space-sm)</code> (8px) — the 2px difference is imperceptible but puts us on-scale.</p>
+  </div>
+</details>
+</div>
+
+<!-- ═══════════════════════ TAB: Decisions ═══════════════════════ -->
+<div class="tab-panel" id="panel-decisions">
+<h2>Decision Tracker</h2>
+<p>Use the dropdowns to record decisions. These will inform the Codebook React island implementation.</p>
+
+<table id="decision-table">
+<thead>
+<tr>
+  <th>#</th>
+  <th>Decision</th>
+  <th>Options</th>
+  <th class="decision-cell">Choice</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>1</td>
+  <td>Badge <code>data-badge-type</code> / <code>data-tag-name</code></td>
+  <td>A. Add to React Badge now<br>B. Skip (not needed in serve mode)<br>C. Add only during coexistence phase</td>
+  <td class="decision-cell"><select class="decision-select" data-decision="1"><option value="">--</option><option value="a">A. Add now</option><option value="b">B. Skip</option><option value="c">C. Coexistence only</option></select></td>
+</tr>
+<tr>
+  <td>2</td>
+  <td>Codebook editing: &lt;input&gt; vs contentEditable</td>
+  <td>A. Use React EditableText (contentEditable)<br>B. Keep &lt;input&gt; pattern (build new component)<br>C. Mix: titles=contentEditable, subtitles=input</td>
+  <td class="decision-cell"><select class="decision-select" data-decision="2"><option value="">--</option><option value="a">A. EditableText (contentEditable)</option><option value="b">B. Keep &lt;input&gt;</option><option value="c">C. Mixed</option></select></td>
+</tr>
+<tr>
+  <td>3</td>
+  <td>TagInput for codebook add-tag</td>
+  <td>A. Use React TagInput (with autocomplete)<br>B. Keep plain input (match current UX)<br>C. Use TagInput but disable autocomplete initially</td>
+  <td class="decision-cell"><select class="decision-select" data-decision="3"><option value="">--</option><option value="a">A. React TagInput + autocomplete</option><option value="b">B. Plain input</option><option value="c">C. TagInput, no autocomplete</option></select></td>
+</tr>
+<tr>
+  <td>4</td>
+  <td>Micro bar visualisation</td>
+  <td>A. Inline div (simplest)<br>B. New MicroBar primitive<br>C. Extend Sparkline with horizontal mode</td>
+  <td class="decision-cell"><select class="decision-select" data-decision="4"><option value="">--</option><option value="a">A. Inline div</option><option value="b">B. MicroBar primitive</option><option value="c">C. Extend Sparkline</option></select></td>
+</tr>
+<tr>
+  <td>5</td>
+  <td>6px spacing: tokenise or keep?</td>
+  <td>A. Round to 8px (--bn-space-sm)<br>B. Round to 4px (--bn-space-xs)<br>C. Keep 6px hardcoded</td>
+  <td class="decision-cell"><select class="decision-select" data-decision="5"><option value="">--</option><option value="a">A. Round to 8px</option><option value="b">B. Round to 4px</option><option value="c">C. Keep 6px</option></select></td>
+</tr>
+<tr>
+  <td>6</td>
+  <td>Merge target background colour</td>
+  <td>A. Use <code>color-mix()</code> with accent token<br>B. Use a new token <code>--bn-colour-accent-bg</code><br>C. Keep hardcoded rgba</td>
+  <td class="decision-cell"><select class="decision-select" data-decision="6"><option value="">--</option><option value="a">A. color-mix()</option><option value="b">B. New token</option><option value="c">C. Keep rgba</option></select></td>
+</tr>
+<tr>
+  <td>7</td>
+  <td>New group placeholder border width</td>
+  <td>A. Change to 1px<br>B. Change to 2px<br>C. Keep 1.5px</td>
+  <td class="decision-cell"><select class="decision-select" data-decision="7"><option value="">--</option><option value="a">A. 1px</option><option value="b">B. 2px</option><option value="c">C. Keep 1.5px</option></select></td>
+</tr>
+<tr>
+  <td>8</td>
+  <td>Modal system for codebook confirmations</td>
+  <td>A. Bridge to vanilla modal.js<br>B. Build React modal component<br>C. Use native &lt;dialog&gt; element</td>
+  <td class="decision-cell"><select class="decision-select" data-decision="8"><option value="">--</option><option value="a">A. Bridge to vanilla</option><option value="b">B. React modal</option><option value="c">C. Native &lt;dialog&gt;</option></select></td>
+</tr>
+<tr>
+  <td>9</td>
+  <td>Drag and drop implementation</td>
+  <td>A. Native HTML5 drag API<br>B. @dnd-kit library<br>C. Custom pointer events</td>
+  <td class="decision-cell"><select class="decision-select" data-decision="9"><option value="">--</option><option value="a">A. Native HTML5 drag</option><option value="b">B. @dnd-kit</option><option value="c">C. Custom pointer</option></select></td>
+</tr>
+<tr>
+  <td>10</td>
+  <td>Read-only first or interactive?</td>
+  <td>A. Read-only first, mutations later<br>B. Interactive from the start</td>
+  <td class="decision-cell"><select class="decision-select" data-decision="10"><option value="">--</option><option value="a">A. Read-only first</option><option value="b">B. Interactive from start</option></select></td>
+</tr>
+</tbody>
+</table>
+
+<div id="decision-summary" style="margin-top: 1.5rem; padding: 1rem; background: var(--card); border: 1px solid var(--border); border-radius: 8px; display: none;">
+  <h3 style="margin-bottom: 0.5rem;">Decision summary</h3>
+  <pre id="decision-output" style="font-family: var(--mono); font-size: 0.78rem; white-space: pre-wrap;"></pre>
+</div>
+
+</div>
+
+<!-- ═══════════════════════ SCRIPTS ═══════════════════════ -->
+<script>
+// Tab switching
+document.querySelectorAll('.tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    tab.classList.add('active');
+    document.getElementById('panel-' + tab.dataset.tab).classList.add('active');
+  });
+});
+
+// Filter buttons
+document.querySelectorAll('.filter-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    const filter = btn.dataset.filter;
+    document.querySelectorAll('#audit-table tbody tr').forEach(row => {
+      if (filter === 'all') {
+        row.style.display = '';
+      } else {
+        const status = row.dataset.status;
+        // Handle rowspan: rows without data-status inherit from parent
+        row.style.display = (!status || status === filter) ? '' : 'none';
+      }
+    });
+  });
+});
+
+// Decision tracker
+const decisions = {};
+document.querySelectorAll('.decision-select').forEach(sel => {
+  sel.addEventListener('change', () => {
+    decisions[sel.dataset.decision] = sel.value;
+    updateDecisionSummary();
+  });
+});
+
+function updateDecisionSummary() {
+  const summary = document.getElementById('decision-summary');
+  const output = document.getElementById('decision-output');
+  const entries = Object.entries(decisions).filter(([,v]) => v);
+  if (entries.length === 0) {
+    summary.style.display = 'none';
+    return;
+  }
+  summary.style.display = 'block';
+  const labels = {
+    '1': 'Badge data attrs',
+    '2': 'Codebook editing',
+    '3': 'TagInput for codebook',
+    '4': 'Micro bar viz',
+    '5': '6px spacing',
+    '6': 'Merge target colour',
+    '7': 'Placeholder border',
+    '8': 'Modal system',
+    '9': 'Drag and drop',
+    '10': 'Read-only vs interactive',
+  };
+  output.textContent = entries
+    .sort(([a], [b]) => +a - +b)
+    .map(([k, v]) => {
+      const opt = document.querySelector(`.decision-select[data-decision="${k}"] option[value="${v}"]`);
+      return `${labels[k]}: ${opt ? opt.textContent.trim() : v}`;
+    })
+    .join('\n');
+}
+</script>
+
+</body>
+</html>

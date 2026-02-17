@@ -168,41 +168,6 @@ td a:hover {
     white-space: nowrap;
 }
 
-.bn-video-thumb {
-    width: 96px;
-    height: 54px;
-    background: var(--bn-colour-border);
-    border-radius: var(--bn-radius-sm);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-}
-
-.bn-play-icon {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 28px;
-    height: 28px;
-    border-radius: 50%;
-    border: 2px solid var(--bn-colour-muted);
-    color: var(--bn-colour-muted);
-    font-size: 0.7rem;
-    padding-left: 2px;
-}
-
-.bn-sparkline {
-    display: inline-flex;
-    align-items: flex-end;
-    height: 54px;
-}
-
-.bn-sparkline-bar {
-    width: 5px;
-    border-radius: 1px 1px 0 0;
-}
-
 .bn-interviews-link {
     color: var(--bn-colour-accent);
     text-decoration: none;

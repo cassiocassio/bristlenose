@@ -25,7 +25,7 @@
  * @module hidden
  */
 
-/* global createStore, showToast, currentViewMode */
+/* global createStore, showToast, currentViewMode, isServeMode, apiPut, selectedQuoteIds */
 
 var hiddenStore = createStore('bristlenose-hidden');
 var hiddenQuotes = hiddenStore.get({});
@@ -106,15 +106,9 @@ function hideQuote(quoteId) {
   // Update state immediately.
   hiddenQuotes[quoteId] = true;
   hiddenStore.set(hiddenQuotes);
+  if (isServeMode()) apiPut('/hidden', hiddenQuotes);
 
-  // Build the badge now so we have a target to animate toward.
-  if (group) _updateBadgeForGroup(group);
-  var badge = group ? group.querySelector('.bn-hidden-badge') : null;
-
-  // Compute the target rect (badge position) for the shrink.
-  var targetRect = badge ? badge.getBoundingClientRect() : null;
-
-  // Create a ghost clone for the shrink animation.
+  // Create a ghost clone BEFORE hiding (needs visible content + dimensions).
   var ghost = bq.cloneNode(true);
   ghost.style.position = 'fixed';
   ghost.style.left = bqRect.left + 'px';
@@ -131,12 +125,27 @@ function hideQuote(quoteId) {
   ghost.removeAttribute('id');
   document.body.appendChild(ghost);
 
-  // Hide the real quote immediately so siblings can fill the gap.
+  // Hide the real quote so siblings can fill the gap.
   bq.classList.add('bn-hidden');
   bq.style.display = 'none';
 
+  // Remove from selection if selected.
+  bq.classList.remove('bn-selected');
+  if (typeof selectedQuoteIds !== 'undefined') {
+    selectedQuoteIds.delete(quoteId);
+    if (typeof updateSelectionCount === 'function') updateSelectionCount();
+  }
+
   // Animate siblings sliding up.
   _animateSiblings(siblings);
+
+  // Build the badge AFTER adding .bn-hidden so the count is correct.
+  // (Previously built before — caused off-by-one: first hide showed no badge.)
+  if (group) _updateBadgeForGroup(group);
+  var badge = group ? group.querySelector('.bn-hidden-badge') : null;
+
+  // Compute the target rect (badge position) for the shrink.
+  var targetRect = badge ? badge.getBoundingClientRect() : null;
 
   // Animate the ghost shrinking toward the badge.
   if (targetRect) {
@@ -170,7 +179,8 @@ function hideQuote(quoteId) {
  * and tag filter.
  *
  * The quote expands from the badge position into its slot while sibling
- * quotes slide down to make room.
+ * quotes slide down to make room.  No scroll — the badge/section stays
+ * put and only content below shifts down.
  *
  * @param {string} quoteId
  */
@@ -189,6 +199,7 @@ function unhideQuote(quoteId) {
   bq.classList.remove('bn-hidden');
   delete hiddenQuotes[quoteId];
   hiddenStore.set(hiddenQuotes);
+  if (isServeMode()) apiPut('/hidden', hiddenQuotes);
 
   // Determine visibility based on current view mode.
   var shouldShow = true;
@@ -222,7 +233,6 @@ function unhideQuote(quoteId) {
 
     if (badgeRect) {
       var dy = badgeRect.top - bqRect.top;
-      var scaleX = badgeRect.width / Math.max(bqRect.width, 1);
       bq.style.transform = 'translateY(' + dy + 'px) scaleY(0.01)';
       bq.style.transformOrigin = 'top right';
       bq.style.opacity = '0';
@@ -243,9 +253,6 @@ function unhideQuote(quoteId) {
         bq.style.opacity = '';
       }, _HIDE_DURATION + 50);
     }
-
-    // Scroll to the restored quote.
-    bq.scrollIntoView({ behavior: 'smooth', block: 'center' });
   }
 }
 
@@ -283,6 +290,7 @@ function bulkHideSelected() {
   });
 
   hiddenStore.set(hiddenQuotes);
+  if (isServeMode()) apiPut('/hidden', hiddenQuotes);
 
   groups.forEach(function (g) {
     _updateBadgeForGroup(g);
@@ -354,7 +362,16 @@ function _updateBadgeForGroup(group) {
 
   var header = document.createElement('div');
   header.className = 'bn-hidden-header';
-  header.textContent = 'Unhide:';
+  var headerLabel = document.createElement('span');
+  headerLabel.textContent = 'Unhide:';
+  header.appendChild(headerLabel);
+  if (count > 1) {
+    var unhideAll = document.createElement('a');
+    unhideAll.href = '#';
+    unhideAll.className = 'bn-unhide-all';
+    unhideAll.textContent = 'Unhide all';
+    header.appendChild(unhideAll);
+  }
   dropdown.appendChild(header);
 
   var list = document.createElement('div');
@@ -460,12 +477,19 @@ function initHidden() {
   // ── Event delegation ──
 
   document.addEventListener('click', function (e) {
-    // Hide button on quote card.
+    // Hide button on quote card — selection-aware bulk when clicking a selected quote.
     var hideBtn = e.target.closest('.hide-btn');
     if (hideBtn) {
       e.preventDefault();
       var bq = hideBtn.closest('blockquote');
-      if (bq && bq.id) hideQuote(bq.id);
+      if (!bq || !bq.id) return;
+
+      if (typeof selectedQuoteIds !== 'undefined' && selectedQuoteIds.size > 0 && selectedQuoteIds.has(bq.id)) {
+        _clearHidePreview();
+        bulkHideSelected();
+      } else {
+        hideQuote(bq.id);
+      }
       return;
     }
 
@@ -503,6 +527,20 @@ function initHidden() {
       return;
     }
 
+    // Unhide all quotes in a group via header link.
+    var unhideAllLink = e.target.closest('.bn-unhide-all');
+    if (unhideAllLink) {
+      e.preventDefault();
+      var group = unhideAllLink.closest('.quote-group');
+      if (group) {
+        var hiddenBqs = group.querySelectorAll('blockquote.bn-hidden');
+        for (var k = 0; k < hiddenBqs.length; k++) {
+          unhideQuote(hiddenBqs[k].id);
+        }
+      }
+      return;
+    }
+
     // Unhide via preview text click.
     var preview = e.target.closest('.bn-hidden-preview');
     if (preview) {
@@ -528,4 +566,36 @@ function initHidden() {
       }
     }
   });
+
+  // Hover preview — fade all selected quotes when hovering a hide button.
+  document.addEventListener('mouseover', function (e) {
+    var hideBtn = e.target.closest('.hide-btn');
+    if (!hideBtn) return;
+    var bq = hideBtn.closest('blockquote');
+    if (!bq || !bq.id) return;
+    if (typeof selectedQuoteIds === 'undefined' || selectedQuoteIds.size < 2 || !selectedQuoteIds.has(bq.id)) return;
+
+    selectedQuoteIds.forEach(function (id) {
+      var target = document.getElementById(id);
+      if (target) target.classList.add('bn-preview-hide');
+    });
+  });
+
+  document.addEventListener('mouseout', function (e) {
+    var hideBtn = e.target.closest('.hide-btn');
+    if (!hideBtn) return;
+    var related = e.relatedTarget;
+    if (related && hideBtn.contains(related)) return;
+    _clearHidePreview();
+  });
+}
+
+/**
+ * Remove all hide preview classes from the DOM.
+ */
+function _clearHidePreview() {
+  var els = document.querySelectorAll('.bn-preview-hide');
+  for (var i = 0; i < els.length; i++) {
+    els[i].classList.remove('bn-preview-hide');
+  }
 }

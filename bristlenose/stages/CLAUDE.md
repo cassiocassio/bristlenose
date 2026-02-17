@@ -176,7 +176,7 @@ These are documented to prevent re-exploration of dead ends:
 - **`_render_sentiment_sparkline(counts)`** — generates an inline bar chart (div with per-sentiment spans) from a `dict[str, int]` of sentiment counts. Bar heights are normalised to `_SPARKLINE_MAX_H` (20px). Uses `--bn-sentiment-{name}` CSS custom properties for colours. Returns `"&mdash;"` when all counts are zero
 - **`_FAKE_THUMBNAILS` feature flag** — `os.environ.get("BRISTLENOSE_FAKE_THUMBNAILS", "") == "1"`. When enabled, all sessions with files show thumbnail placeholders (even VTT-only projects). Used for layout testing. The shipped version retains real `video_map` logic — only the env var override is added
 - **`format_finder_filename(name, *, max_len=24)`** in `utils/markdown.py` — Finder-style middle-ellipsis filename truncation. Preserves extension, splits stem budget 2/3 front + 1/3 back. Returns unchanged if within `max_len`. Used by `_build_session_rows()` for the Interviews column with `title` attr for full name on hover
-- **Moderator display logic** — 1 moderator globally → shown in header only, omitted from row speaker lists. 2+ moderators → header AND in each row's speaker list. Header uses `_oxford_list_html()` with `bn-person-id` molecule markup (regular-weight names, not semibold)
+- **Moderator display logic** — 1 moderator globally → shown in header only, omitted from row speaker lists. 2+ moderators → header AND in each row's speaker list. Header uses `_oxford_list_html()` with `bn-person-badge` molecule markup (regular-weight names, not semibold)
 
 ## Other gotchas
 

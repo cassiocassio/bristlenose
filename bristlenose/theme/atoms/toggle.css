@@ -1,0 +1,65 @@
+/* Atom: toggle — on/off icon buttons (star, hide, toolbar toggle) */
+
+.star-btn {
+    position: absolute;
+    top: 0.65rem;
+    right: 0.65rem;
+    background: none;
+    border: none;
+    font-size: 0.8rem;
+    color: var(--bn-colour-icon-idle);
+    cursor: pointer;
+    padding: var(--bn-space-xs);
+    line-height: 1;
+    transition: color var(--bn-transition-normal);
+}
+
+.star-btn:hover {
+    color: var(--bn-colour-accent);
+}
+
+/* ── Hide button on blockquote ──────────────────────────────────────────── */
+
+.hide-btn {
+    position: absolute;
+    top: 0.65rem;
+    right: 2rem;
+    background: none;
+    border: none;
+    font-size: 0.8rem;
+    color: var(--bn-colour-icon-idle);
+    cursor: pointer;
+    padding: var(--bn-space-xs);
+    line-height: 1;
+    transition: color var(--bn-transition-normal), opacity var(--bn-transition-normal);
+    opacity: 0;
+}
+
+blockquote:hover .hide-btn,
+blockquote.bn-focused .hide-btn {
+    opacity: 1;
+}
+
+.hide-btn:hover {
+    color: var(--bn-colour-accent);
+}
+
+.hide-btn svg {
+    display: block;
+}
+
+/* ── Toolbar toggle variant ─────────────────────────────────────────────── */
+
+.toolbar-btn-toggle {
+    user-select: none;
+}
+
+.toolbar-btn-toggle.active {
+    background: var(--bn-colour-quote-bg);
+    border-color: var(--bn-colour-accent);
+    color: var(--bn-colour-accent);
+}
+
+.toolbar-btn-toggle:not(.active) {
+    color: var(--bn-colour-muted);
+}

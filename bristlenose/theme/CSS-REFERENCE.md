@@ -27,17 +27,58 @@ Dropdown filter for quotes by user tag. Lets researchers focus on specific tags 
 
 `.tag-filter` (relative wrapper). The tag filter button uses dual classes `toolbar-btn tag-filter-btn` — shared round-rect from `atoms/button.css`, dropdown-specific overrides in this file. SVG icons use `.toolbar-icon-svg` and `.toolbar-arrow` (shared toolbar classes). `.tag-filter-label` (inline-block, text-align right, min-width set by JS for layout stability). `.tag-filter-menu` (absolute dropdown, right-aligned, `z-index: 200`, `max-height: 32rem`, width locked by JS on open). `.tag-filter-actions` (Select all · Clear row), `.tag-filter-search` / `.tag-filter-search-input` (search field, only shown for 8+ tags, placeholder "Search tags and groups…"). `.tag-filter-group` (tinted background container for codebook groups, `border-radius: var(--bn-radius-sm)`, background set inline via `var(--bn-group-{set})`). `.tag-filter-group-header` (uppercase group name label inside tinted container). `.tag-filter-item` (flex row: checkbox + badge + count), `.tag-filter-badge` (design-system `.badge .badge-user` with ellipsis truncation at `max-width: 16rem`, codebook colour applied inline), `.tag-filter-item-muted` (italic for "(No tags)"), `.tag-filter-count` (right-aligned, muted, tabular-nums). `.tag-filter-divider` between "(No tags)" and user tags. Ungrouped tags appear first as flat items; codebook groups follow with tinted containers. Search matches both tag names and group names.
 
+## badge.css (atom)
+
+Badge base, sentiment variants, AI/user badge variants, animations.
+
+- **`.badge`** — base: inline-block, mono font, small padding, neutral background
+- **Sentiment variants** (`.badge-frustration` … `.badge-confidence`) — 7 research-backed sentiments with distinct bg/text colours from tokens
+- **`.badge-ai`** — AI-assigned badges. Hover reveals `::after` delete circle (white chip with `×`). `body.hide-ai-tags .badge-ai { display: none }`
+- **`.badge-user`** — user tags. Dark-on-light (light mode), white-on-saturated (dark mode). Codebook colour via inline style. `.badge-delete` positioned same as AI `::after`
+- **`.badge-add`** — dashed ghost button for adding tags. Accent on hover
+- **`.badge-removing`** — fade-out + scale-down (0.15s). Used by `animateBadgeRemoval()` in `badge-utils.js`
+- **`.badge-appearing`** — fade-in + scale-up (0.15s). Opt-in by callers
+- **`.badge-bulk-flash`** — blue `box-shadow` ring pulse (0.8s, asymmetric: 0.2s in / 0.6s out). Applied by `closeTagInput()` in `tags.js` during bulk tag commit. Uses `--bn-selection-border` token for consistent selection-associated colour in both themes
+
+## toggle.css (atom)
+
+On/off icon buttons extracted from `button.css` and `hidden-quotes.css` (Round 2 CSS refactoring). Groups all toggle-style buttons together — star, hide, and toolbar toggle.
+
+- **`.star-btn`** — absolute positioned (top-right, `right: 0.65rem`), icon-idle colour, accent on hover. React: `Toggle` component with `className="star-btn"`
+- **`.hide-btn`** — absolute positioned at `right: 2rem` (between star at `0.65rem` and pencil at `3.35rem`), eye-slash SVG icon, `opacity: 0` by default → 1 on `blockquote:hover` / `.bn-focused`. React: `Toggle` component with `className="hide-btn"`
+- **`.toolbar-btn-toggle`** — binary active/inactive state for toolbar buttons (AI tag visibility). `.active` class adds accent border + colour; `:not(.active)` shows muted. React: `Toggle` component with `className="toolbar-btn toolbar-btn-toggle"` and `activeClassName="active"`
+
+## editable-text.css (molecule)
+
+Shared editing and committed states for inline contenteditable fields. Extracted from `quote-actions.css` and `name-edit.css` (Round 2 CSS refactoring). Groups all editing visual patterns together.
+
+- **Editing state** — yellow background (`--bn-colour-editing-bg`) + outline (`--bn-colour-editing-border`) + `border-radius: sm` + cursor: text. Applied to `blockquote.editing .quote-text`, `.editable-text.editing`, `.name-cell.editing .name-text`, `.role-cell.editing .role-text`
+- **`blockquote.editing .edit-pencil`** — pencil turns accent colour during edit
+- **Committed state** — dashed underline indicating text was edited. `.quote-text.edited` and `.editable-text.edited` use `--bn-colour-muted`; `.name-text.edited` and `.role-text.edited` use `--bn-colour-accent`
+- **React**: `EditableText` component with `committedClassName="edited"` (default)
+
 ## hidden-quotes.css (molecule)
 
-Styles for hidden quotes feature. Researchers often encounter "volume quotes" — repetitive or low-value quotes that clutter the report. The hide feature lets them suppress these while keeping them recoverable via per-subsection badges with dropdown previews.
+Styles for hidden quotes feature. Researchers often encounter "volume quotes" — repetitive or low-value quotes that clutter the report. The hide feature lets them suppress these while keeping them recoverable via per-subsection badges with dropdown previews. (`.hide-btn` rules moved to `atoms/toggle.css` in Round 2.)
 
 - **`blockquote.bn-hidden`** — `display: none !important` (defence-in-depth; JS also sets `style.display = 'none'`)
-- **`.hide-btn`** — absolute positioned at `right: 2rem` (between star at `0.65rem` and pencil at `3.35rem`), eye-slash SVG icon, opacity 0 by default → 1 on `blockquote:hover` / `.bn-focused`
+- **`blockquote.bn-hiding`** — CSS collapse transition for React hide animation: `max-height: 0`, `opacity: 0`, zero margins/padding/border, `transition: all 300ms ease`. Applied by React `QuoteGroup` during the 300ms before setting `isHidden: true`
 - **`.bn-hidden-badge`** — right-aligned in `.quote-group` via `align-self: flex-end`, contains toggle button + dropdown
 - **`.bn-hidden-toggle`** — accent-coloured text button ("3 hidden quotes ▾"), underline on hover
 - **`.bn-hidden-dropdown`** — absolute below badge, `z-index: 200`, card styling (border, shadow, radius), scrollable
+- **`.bn-hidden-header`** — flex row: "Unhide:" label + "Unhide all" link (when 2+ hidden). `justify-content: space-between`
+- **`.bn-unhide-all`** — accent link in dropdown header, underline on hover
 - **`.bn-hidden-item`** — flex row: timecode | preview (ellipsis-truncated) | participant code, border-bottom separator
 - **`.bn-hidden-preview`** — clickable text to unhide, cursor pointer, underline on hover, `title="Unhide"`
+
+## quote-actions.css (molecule) — bulk preview classes
+
+Hover preview feedback for selection-aware bulk star/hide operations. Applied by `starred.js` and `hidden.js` when hovering action buttons on a selected quote with 2+ quotes in the selection.
+
+- **`blockquote.bn-preview-star .star-btn`** — accent colour at `opacity: 0.6`, signals "will be starred"
+- **`blockquote.bn-preview-unstar .star-btn`** — accent colour at `opacity: 0.35`, signals "will be unstarred". Overrides `.starred` star colour
+- **`blockquote.bn-preview-hide`** — `opacity: 0.85` with fast transition, signals "will be hidden"
+- **`blockquote.bn-preview-hide .hide-btn`** — forced `opacity: 1` + accent colour (makes eye icon visible even without hover)
 
 ## modal.css (atom)
 
@@ -51,9 +92,9 @@ Feedback modal content styles, extends `.bn-modal` from `modal.css`. `.feedback-
 
 ## name-edit.css (molecule)
 
-Styles for participant name inline editing. Researchers need to assign real names to anonymised participant codes (p1, p2) — this editing UI appears in the participant table and follows the same contenteditable pattern as quote editing.
+Styles for participant name inline editing layout. Researchers need to assign real names to anonymised participant codes (p1, p2) — this editing UI appears in the participant table. (Editing/edited state rules moved to `molecules/editable-text.css` in Round 2.)
 
-`.name-cell` / `.role-cell` positioning, `.name-pencil` (opacity 0 → 1 on row hover), editing state background, `.edited` dashed-underline indicator, `.unnamed` muted italic placeholder. Print-hidden.
+`.name-cell` / `.role-cell` positioning (relative, padding-right for pencil), `.name-pencil` (absolute, opacity 0 → 1 on row hover, accent on hover), `.unnamed` muted italic placeholder. Print-hidden.
 
 ## coverage.css (organism)
 
@@ -88,22 +129,22 @@ Uses CSS columns masonry (`columns: 240px`) for space-efficient tiling with `bre
 - **`.drag-ghost`** — fixed-position ghost element during drag
 - **`.tag-preview`** — inline badge in merge confirmation modal
 
-## Session table (report.css + molecules/person-id.css)
+## Session table (report.css + molecules/person-badge.css)
 
-The sessions table in both the Sessions tab and Project tab. Shows per-session metadata: speaker badges, user journey paths, video thumbnails, and sentiment sparklines. Styled primarily in `templates/report.css` with the `bn-person-id` molecule from `molecules/person-id.css`.
+The sessions table in both the Sessions tab and Project tab. Shows per-session metadata: speaker badges, user journey paths, video thumbnails, and sentiment sparklines. Styled primarily in `templates/report.css` with the `bn-person-badge` molecule from `molecules/person-badge.css`.
 
 ### Structure
 
 - **`.bn-session-table`** — `<section>` wrapper. Contains optional moderator header paragraph + `<table>`
-- **`.bn-session-moderators`** — paragraph above table: "Sessions moderated by [m1] Rachel and [m2] Kerry". Uses `.bn-person-id` molecule for badge+name pairs. Names are regular weight (not semibold) in the header
+- **`.bn-session-moderators`** — paragraph above table: "Sessions moderated by [m1] Rachel and [m2] Kerry". Uses `.bn-person-badge` molecule for badge+name pairs. Names are regular weight (not semibold) in the header
 - **`.bn-session-table tr`** — `border-bottom: 1px solid var(--bn-colour-border)`. Applied to `<tr>` rather than `<td>` to ensure full-width horizontal rules (avoids gaps from varying cell heights)
 - **`.bn-session-table td`** — `border-bottom: none` (overrides default, since the border is on `<tr>`)
 
 ### Columns
 
 - **`.bn-session-id`** — `#N` link, accent colour, `white-space: nowrap`. Links to inline transcript via `data-session-link`
-- **`.bn-session-speakers`** — `display: flex; flex-direction: column; gap: 0.35rem`. Contains one `.bn-person-id` per speaker (vertically stacked)
-- **`.bn-person-id`** (molecule) — `inline-flex, align-items: center, gap: 0.4rem, white-space: nowrap`. Contains `.badge` (flex-shrink: 0) + `.bn-person-id-name` (font-weight: 600 / semibold)
+- **`.bn-session-speakers`** — `display: flex; flex-direction: column; gap: 0.35rem`. Contains one `.bn-person-badge` per speaker (vertically stacked)
+- **`.bn-person-badge`** (molecule) — `inline-flex, align-items: center, gap: 0.4rem, white-space: nowrap`. Contains `.badge` (flex-shrink: 0) + `.bn-person-badge-name` (font-weight: 600 / semibold)
 - **`.bn-session-meta`** — Start date cell, contains date div + optional `.bn-session-journey`
 - **`.bn-session-journey`** — user journey path below start date. `font-size: 0.82rem`, `color: var(--bn-colour-muted)`, `white-space: normal` (wraps). Content: "Homepage → Tropical Fish → Equipment → …"
 - **`.bn-session-duration`** — `text-align: right` on both `<th>` and `<td>`. Format: `MM:SS` or `HH:MM:SS`

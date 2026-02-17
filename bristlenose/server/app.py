@@ -36,6 +36,17 @@ _REACT_SESSIONS_MOUNT = (
     '<div id="bn-sessions-table-root" data-project-id="1"></div>'
     "<!-- /bn-session-table -->"
 )
+# React mount points for quote sections and themes
+_REACT_QUOTE_SECTIONS_MOUNT = (
+    "<!-- bn-quote-sections -->"
+    '<div id="bn-quote-sections-root" data-project-id="1"></div>'
+    "<!-- /bn-quote-sections -->"
+)
+_REACT_QUOTE_THEMES_MOUNT = (
+    "<!-- bn-quote-themes -->"
+    '<div id="bn-quote-themes-root" data-project-id="1"></div>'
+    "<!-- /bn-quote-themes -->"
+)
 
 
 def create_app(
@@ -258,6 +269,8 @@ body.bn-dev-overlay .bn-global-nav,
 body.bn-dev-overlay .footer,
 body.bn-dev-overlay #bn-sessions-table-root,
 body.bn-dev-overlay #bn-about-developer-root,
+body.bn-dev-overlay #bn-quote-sections-root,
+body.bn-dev-overlay #bn-quote-themes-root,
 body.bn-dev-overlay #codebook-grid,
 body.bn-dev-overlay #signal-cards,
 body.bn-dev-overlay #heatmap-section-container,
@@ -268,7 +281,7 @@ body.bn-dev-overlay #heatmap-theme-container { position: relative; }
    React/Vanilla JS regions so those regions' own colour shows through.
    Elements *inside* React mount points are also excluded — React renders
    <section>, <table>, etc. that would otherwise match generic selectors. */
-body.bn-dev-overlay .bn-tab-panel:not(:has(#bn-sessions-table-root, #bn-about-developer-root, #codebook-grid, #signal-cards, #heatmap-section-container, #heatmap-theme-container)),
+body.bn-dev-overlay .bn-tab-panel:not(:has(#bn-sessions-table-root, #bn-about-developer-root, #bn-quote-sections-root, #bn-quote-themes-root, #codebook-grid, #signal-cards, #heatmap-section-container, #heatmap-theme-container)),
 body.bn-dev-overlay .bn-dashboard,
 body.bn-dev-overlay .bn-session-grid:not(:has(#bn-sessions-table-root)),
 body.bn-dev-overlay .toolbar,
@@ -280,12 +293,12 @@ body.bn-dev-overlay .footer {
   outline: 3px solid rgba(147, 197, 253, 0.5);  /* blue outline — Jinja2 */
   outline-offset: -3px;
 }
-body.bn-dev-overlay .bn-tab-panel:not(:has(#bn-sessions-table-root, #bn-about-developer-root, #codebook-grid, #signal-cards, #heatmap-section-container, #heatmap-theme-container))::after,
+body.bn-dev-overlay .bn-tab-panel:not(:has(#bn-sessions-table-root, #bn-about-developer-root, #bn-quote-sections-root, #bn-quote-themes-root, #codebook-grid, #signal-cards, #heatmap-section-container, #heatmap-theme-container))::after,
 body.bn-dev-overlay .bn-dashboard::after,
 body.bn-dev-overlay .bn-session-grid:not(:has(#bn-sessions-table-root))::after,
 body.bn-dev-overlay .toolbar::after,
 body.bn-dev-overlay .toc::after,
-body.bn-dev-overlay section:not(:has(#bn-sessions-table-root, #bn-about-developer-root, #codebook-grid, #signal-cards, #heatmap-section-container, #heatmap-theme-container))::after,
+body.bn-dev-overlay section:not(:has(#bn-sessions-table-root, #bn-about-developer-root, #bn-quote-sections-root, #bn-quote-themes-root, #codebook-grid, #signal-cards, #heatmap-section-container, #heatmap-theme-container))::after,
 body.bn-dev-overlay .bn-about:not(:has(#bn-about-developer-root))::after,
 body.bn-dev-overlay .report-header::after,
 body.bn-dev-overlay .bn-global-nav::after,
@@ -305,6 +318,8 @@ body.bn-dev-overlay .footer::after {
    specificity) to beat the class-based Jinja2 rules above. */
 body.bn-dev-overlay #bn-sessions-table-root section::after,
 body.bn-dev-overlay #bn-about-developer-root section::after,
+body.bn-dev-overlay #bn-quote-sections-root section::after,
+body.bn-dev-overlay #bn-quote-themes-root section::after,
 body.bn-dev-overlay #codebook-grid section::after,
 body.bn-dev-overlay #signal-cards section::after,
 body.bn-dev-overlay #heatmap-section-container section::after,
@@ -316,13 +331,17 @@ body.bn-dev-overlay #heatmap-theme-container section::after {
    Uses both ::after tint AND outline for visibility — the outline is
    always visible even if ::after is occluded by content stacking. */
 body.bn-dev-overlay #bn-sessions-table-root,
-body.bn-dev-overlay #bn-about-developer-root {
+body.bn-dev-overlay #bn-about-developer-root,
+body.bn-dev-overlay #bn-quote-sections-root,
+body.bn-dev-overlay #bn-quote-themes-root {
   outline: 3px solid rgba(34, 197, 94, 0.6);  /* green outline */
   outline-offset: -3px;
   background: rgba(134, 239, 172, 0.08) !important;  /* subtle green wash */
 }
 body.bn-dev-overlay #bn-sessions-table-root::after,
-body.bn-dev-overlay #bn-about-developer-root::after {
+body.bn-dev-overlay #bn-about-developer-root::after,
+body.bn-dev-overlay #bn-quote-sections-root::after,
+body.bn-dev-overlay #bn-quote-themes-root::after {
   content: '';
   position: absolute;
   inset: 0;
@@ -521,6 +540,20 @@ def _mount_dev_report(app: FastAPI, output_dir: Path) -> None:
         html = re.sub(
             r"<!-- bn-session-table -->.*?<!-- /bn-session-table -->",
             _REACT_SESSIONS_MOUNT,
+            html,
+            flags=re.DOTALL,
+        )
+        # Swap the Jinja2 quote sections for the React mount point.
+        html = re.sub(
+            r"<!-- bn-quote-sections -->.*?<!-- /bn-quote-sections -->",
+            _REACT_QUOTE_SECTIONS_MOUNT,
+            html,
+            flags=re.DOTALL,
+        )
+        # Swap the Jinja2 quote themes for the React mount point.
+        html = re.sub(
+            r"<!-- bn-quote-themes -->.*?<!-- /bn-quote-themes -->",
+            _REACT_QUOTE_THEMES_MOUNT,
             html,
             flags=re.DOTALL,
         )

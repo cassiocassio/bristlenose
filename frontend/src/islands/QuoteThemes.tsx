@@ -1,0 +1,96 @@
+/**
+ * QuoteThemes — React island for the "Themes" content area.
+ *
+ * Fetches quote data from the API and renders each theme as a
+ * QuoteGroup with editable headings, descriptions, and interactive
+ * quote cards.
+ */
+
+import { useEffect, useState, useMemo } from "react";
+import type { QuotesListResponse } from "../utils/types";
+import { QuoteGroup } from "./QuoteGroup";
+
+interface QuoteThemesProps {
+  projectId: string;
+}
+
+export function QuoteThemes({ projectId }: QuoteThemesProps) {
+  const [data, setData] = useState<QuotesListResponse | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetch(`/api/projects/${projectId}/quotes`)
+      .then((res) => {
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        return res.json();
+      })
+      .then((json: QuotesListResponse) => setData(json))
+      .catch((err: Error) => setError(err.message));
+  }, [projectId]);
+
+  // Collect all tag names across all sections and themes for the vocabulary.
+  const tagVocabulary = useMemo(() => {
+    if (!data) return [];
+    const names = new Set<string>();
+    for (const section of data.sections) {
+      for (const q of section.quotes) {
+        for (const t of q.tags) {
+          names.add(t.name);
+        }
+      }
+    }
+    for (const theme of data.themes) {
+      for (const q of theme.quotes) {
+        for (const t of q.tags) {
+          names.add(t.name);
+        }
+      }
+    }
+    return Array.from(names).sort();
+  }, [data]);
+
+  const hasMedia = true;
+
+  if (error) {
+    return (
+      <section>
+        <h2 id="themes">Themes</h2>
+        <p style={{ color: "var(--bn-colour-danger, #c00)", padding: "1rem" }}>
+          Failed to load quotes: {error}
+        </p>
+      </section>
+    );
+  }
+
+  if (!data) {
+    return (
+      <section>
+        <h2 id="themes">Themes</h2>
+        <p style={{ opacity: 0.5, padding: "1rem" }}>Loading quotes&hellip;</p>
+      </section>
+    );
+  }
+
+  if (data.themes.length === 0) return null;
+
+  return (
+    <section>
+      <h2 id="themes">Themes</h2>
+      {data.themes.map((theme) => {
+        const anchor = `theme-${theme.theme_label.toLowerCase().replace(/ /g, "-")}`;
+        return (
+          <QuoteGroup
+            key={theme.theme_id}
+            anchor={anchor}
+            label={theme.theme_label}
+            description={theme.description}
+            itemType="theme"
+            quotes={theme.quotes}
+            tagVocabulary={tagVocabulary}
+            hasMedia={hasMedia}
+          />
+        );
+      })}
+    </section>
+  );
+}

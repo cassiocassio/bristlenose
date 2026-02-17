@@ -213,22 +213,22 @@ Each unlocks one surface. Order within round 4 driven by what you're building ne
 
 Which primitives are needed by which compositions:
 
-| Primitive | QuoteCard | SessionsRow | Transcript | Codebook | SignalCard |
-|-----------|:---------:|:-----------:|:----------:|:--------:|:----------:|
-| Badge | x | | x | x | x |
-| PersonBadge | x | x | x | | x |
-| TimecodeLink | x | | x | | x |
-| EditableText | x | | | x | x |
-| Toggle | x | | | | |
-| TagInput | x | | | x | |
-| Sparkline | | x | | x | |
-| Metric | | | | | x |
-| JourneyChain | | x | | | |
-| Annotation | | | x | | |
-| Counter | x | | | | |
-| Thumbnail | | x | | | |
-| Modal | (infra) | | | (infra) | |
-| Toast | (infra) | | | | |
+| Primitive | QuoteCard | SessionsRow | Dashboard | Transcript | Codebook | SignalCard |
+|-----------|:---------:|:-----------:|:---------:|:----------:|:--------:|:----------:|
+| Badge | x | | x | x | x | x |
+| PersonBadge | x | x | x | x | | x |
+| TimecodeLink | x | | x | x | | x |
+| EditableText | x | | | | x | x |
+| Toggle | x | | | | | |
+| TagInput | x | | | | x | |
+| Sparkline | | x | | | x | |
+| Metric | | | | | | x |
+| JourneyChain | | x | | | | |
+| Annotation | | | | x | | |
+| Counter | x | | | | | |
+| Thumbnail | | x | | | | |
+| Modal | (infra) | | | | (infra) | |
+| Toast | (infra) | | | | | |
 
 **7 primitives** cover 80% of the app. The remaining 5 are one-surface-each.
 
@@ -240,6 +240,7 @@ How the primitives assemble into page-level components:
 
 - **Quote card** = Toggle(star) + Toggle(hide) + EditableText + Badge(AI) × N + Badge(user) × N + TagInput + PersonBadge + TimecodeLink + Counter(hidden, at group level)
 - **Sessions table row** = PersonBadge × N + JourneyChain + Thumbnail + Sparkline + TimecodeLink (implicit via row click)
+- **Dashboard** (shipped) = Badge(sentiment) × N + PersonBadge × N + TimecodeLink × N + stat cards + compact sessions table + featured quotes + section/theme nav. Read-only — no Toggle, EditableText, or TagInput needed
 - **Transcript segment** = TimecodeLink + PersonBadge + text + Annotation × N
 - **Codebook group** = EditableText(title) + EditableText(description) + Badge(draggable) × N + Sparkline(mini) + TagInput
 - **Signal card** = Badge(sentiment) + Metric × 4 + TimecodeLink + EditableText(title, future) + PersonBadge × N

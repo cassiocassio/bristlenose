@@ -4,6 +4,60 @@ Development log for the `bristlenose serve` feature branch. Tracks milestones, a
 
 ---
 
+## Milestone 4 — Dashboard (Project tab) as React island (17 Feb 2026)
+
+**The Project tab is now a React island.** Stat cards, compact sessions table, featured quotes, and section/theme navigation — all rendered by React from a new API endpoint. First composition built entirely from existing primitives (no new components needed).
+
+### Dashboard API endpoint
+
+`GET /api/projects/{id}/dashboard` — single endpoint returning everything the Project tab needs:
+
+- **Stats:** session count, total duration (human-readable), total words, quote count, theme count, section count, AI tag count, user tag count
+- **Sessions:** compact rows with ID, participant badges, start date, duration, source filename
+- **Featured quotes:** up to 9 quotes selected by the existing "best quotes" algorithm (starred first, then highest-intensity, sentiment-diverse). Respects hidden/starred state
+- **Nav items:** section and theme lists with anchor IDs for cross-tab navigation
+- **Headers:** moderator/observer names for display
+
+Implementation: `bristlenose/server/routes/dashboard.py`. 43 tests in `tests/test_serve_dashboard_api.py` covering stats, sessions, featured quotes (including starred/hidden reflection), nav items, headers, error handling.
+
+### Dashboard React island
+
+`frontend/src/islands/Dashboard.tsx` — composition of existing primitives:
+
+- **Stat cards** = 8 × clickable cards (navigate to Sessions, Quotes, Analysis, Codebook tabs)
+- **Compact sessions table** = PersonBadge + formatted dates/durations + source filenames
+- **Featured quotes** = quote text + TimecodeLink + PersonBadge + Badge(sentiment), with reshuffle button
+- **Section/theme nav** = anchor links that switch to Quotes tab and scroll to target
+
+All navigation delegates to vanilla JS globals (`switchToTab`, `scrollToAnchor`, `navigateToSession`) via `window.*` interop — same pattern as the Sessions table island.
+
+### Renderer overlay fix
+
+The dashboard region now shows green (React) in the dev overlay. Required targeting `#panel-project` by ID instead of relying on `:has(#bn-dashboard-root)` — the `:has()` approach failed because the tab panel's blue `::after` painted over the child's green at the same z-index.
+
+### Serve DX improvements
+
+Three quality-of-life improvements to `bristlenose serve`:
+
+1. **Auto-render before serving.** `serve` now calls `Pipeline.run_render_only()` before starting uvicorn. Eliminates stale-HTML bugs (e.g. missing mount-point markers after code changes). Fast — <0.1s.
+2. **Clickable report URL.** Prints `Report: http://127.0.0.1:8150/report/` before uvicorn starts — Cmd-clickable in iTerm.
+3. **Auto-open browser.** Opens the report URL in the default browser on startup. `--no-open` flag to suppress.
+
+### What shipped
+
+- `bristlenose/server/routes/dashboard.py` (new) — dashboard API endpoint
+- `frontend/src/islands/Dashboard.tsx` (new) — dashboard React island
+- `tests/test_serve_dashboard_api.py` (new) — 43 API tests
+- `frontend/src/utils/types.ts` — dashboard TypeScript interfaces
+- `frontend/src/main.tsx` — dashboard island mount
+- `bristlenose/server/app.py` — router registration, mount point constant, regex swap, overlay CSS
+- `bristlenose/stages/render_html.py` — `<!-- bn-dashboard -->` markers
+- `bristlenose/cli.py` — auto-render, clickable URL, auto-open browser, `--no-open` flag
+
+1235 Python tests + 136 Vitest tests all passing.
+
+---
+
 ## React component library — Round 4 complete (17 Feb 2026)
 
 **All 14 primitives complete. 12 component files, 136 tests across 12 test files.**

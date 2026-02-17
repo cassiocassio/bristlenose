@@ -1005,6 +1005,47 @@ def render(
 # ---------------------------------------------------------------------------
 
 
+def _auto_render(project_dir: Path) -> None:
+    """Re-render the HTML report from intermediate data before serving.
+
+    Fast (<0.1s) and ensures the served HTML always matches the current
+    render_html.py code — no stale mount-point markers or missing CSS.
+    """
+    output_dir = project_dir / "bristlenose-output"
+    if not output_dir.is_dir():
+        output_dir = project_dir
+    intermediate = output_dir / ".bristlenose" / "intermediate"
+    if not intermediate.is_dir():
+        intermediate = output_dir / "intermediate"
+    if not intermediate.is_dir():
+        return  # No intermediate data — nothing to render
+
+    # Resolve input_dir (for video linking) — same heuristic as render command
+    if output_dir.name == "bristlenose-output":
+        input_dir = output_dir.resolve().parent
+    else:
+        input_dir = output_dir.resolve().parent
+
+    # Recover project name from pipeline metadata
+    from bristlenose.stages.render_output import read_pipeline_metadata
+
+    meta = read_pipeline_metadata(output_dir)
+    project_name = meta.get("project_name")
+    if project_name is None:
+        if output_dir.name in ("bristlenose-output", "output"):
+            project_name = output_dir.resolve().parent.name
+        else:
+            project_name = output_dir.resolve().name
+
+    settings = load_settings(output_dir=output_dir, project_name=project_name)
+
+    from bristlenose.pipeline import Pipeline
+
+    pipeline = Pipeline(settings, verbose=False)
+    result = pipeline.run_render_only(output_dir, input_dir)
+    console.print(f" [dim]✓ Rendered report[/dim]  {result.total_quotes} quotes")
+
+
 @app.command()
 def serve(
     project_dir: Annotated[
@@ -1021,6 +1062,10 @@ def serve(
         bool,
         typer.Option("--dev", help="Development mode: auto-reload on Python changes."),
     ] = False,
+    open_browser: Annotated[
+        bool,
+        typer.Option("--open/--no-open", help="Open the report in the default browser."),
+    ] = True,
 ) -> None:
     """Launch the Bristlenose web server to browse reports interactively."""
     try:
@@ -1032,6 +1077,27 @@ def serve(
 
     import threading
     import webbrowser
+
+    # Re-render the HTML report before serving so it always matches the
+    # current code (templates, CSS, JS).  This is fast (<0.1s) and avoids
+    # stale-HTML surprises (e.g. missing mount-point markers).
+    if project_dir is not None:
+        _auto_render(project_dir)
+
+    report_url = f"http://127.0.0.1:{port}/report/"
+    console.print(f"\n  Report: [bold cyan]{report_url}[/bold cyan]\n")
+
+    # Open the report in the default browser after a short delay so the
+    # server has time to start.  If the tab is already open the browser
+    # will refresh it (on macOS at least).
+    def _open_browser() -> None:
+        import time
+
+        time.sleep(1.0)
+        webbrowser.open(report_url)
+
+    if open_browser:
+        threading.Thread(target=_open_browser, daemon=True).start()
 
     if dev:
         # In dev mode uvicorn uses a string factory and calls create_app()
@@ -1056,14 +1122,6 @@ def serve(
         from bristlenose.server.app import create_app
 
         app_instance = create_app(project_dir=project_dir)
-
-        def _open_browser() -> None:
-            import time
-
-            time.sleep(1.0)
-            webbrowser.open(f"http://localhost:{port}")
-
-        threading.Thread(target=_open_browser, daemon=True).start()
 
         uvicorn.run(
             app_instance,

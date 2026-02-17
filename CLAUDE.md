@@ -26,7 +26,13 @@ Bristlenose is a local-first user-research analysis tool. It takes a folder of i
 
 12-stage pipeline: ingest → extract audio → parse subtitles → parse docx → transcribe → identify speakers → merge transcript → PII removal → topic segmentation → quote extraction → quote clustering → thematic grouping → render HTML + output files.
 
-CLI commands: `run` (full pipeline), `transcribe-only`, `analyze` (skip transcription), `render` (re-render from JSON, no LLM calls), `doctor` (dependency health checks). **Default command**: `bristlenose <folder>` is shorthand for `bristlenose run <folder>` — if the first argument is an existing directory (not a known command), `run` is injected automatically.
+CLI commands: `run` (full pipeline), `transcribe-only`, `analyze` (skip transcription), `render` (re-render from JSON, no LLM calls), `serve` (local dev server), `doctor` (dependency health checks). **Default command**: `bristlenose <folder>` is shorthand for `bristlenose run <folder>` — if the first argument is an existing directory (not a known command), `run` is injected automatically.
+
+Serve mode: `bristlenose serve <folder>` — FastAPI server + SQLite + React islands. Auto-renders, serves HTML report over HTTP, replaces vanilla JS components with React islands via comment-marker injection (`re.sub` at serve time). 22-table SQLAlchemy domain schema, 6 data sync endpoints, sessions/quotes/dashboard/codebook APIs. `--dev` enables renderer overlay, live JS reload, SQLAdmin browser. See `bristlenose/server/CLAUDE.md` for architecture.
+
+Desktop app: `desktop/` — SwiftUI macOS shell wrapping the CLI as a PyInstaller sidecar. Two build targets from one monorepo (CLI + desktop). Self-contained directory, depends on but does not modify the CLI codebase. See `docs/design-desktop-app.md` for PRD and architecture.
+
+Frontend: `frontend/` — Vite + React + TypeScript. 16 reusable primitives in `frontend/src/components/`, 5 islands in `frontend/src/islands/`, mounted into static HTML by serve mode. 182 Vitest tests. `npm run dev` proxies to FastAPI; `npm run build` outputs to `frontend/dist/`. See `docs/design-react-component-library.md` for build sequence.
 
 LLM providers: Claude, ChatGPT, Azure OpenAI, Gemini, Local (Ollama). See `bristlenose/llm/CLAUDE.md` for credentials, config, and provider details.
 
@@ -46,7 +52,7 @@ Key helpers: `OutputPaths` in `output_paths.py` (consistent path construction), 
 
 ## Boundaries
 
-- **Safe to edit**: `bristlenose/`, `tests/`
+- **Safe to edit**: `bristlenose/`, `tests/`, `frontend/`, `desktop/`
 - **Design artifacts** (tracked, not shipped): `docs/mockups/`, `docs/design-system/`, `experiments/` — HTML mockups, style guides, throwaway prototypes. These are working materials for contributors, kept in the tree for backup and collaboration. Users never navigate to them. Add new mockups to `docs/mockups/`, not the repo root. **Serve mode auto-discovery**: `bristlenose serve --dev` mounts all three directories and auto-discovers `*.html` files for the Design section in the About tab (`_build_dev_section_html()` in `app.py`). New HTML files added to these directories appear automatically — no code changes needed
 - **Never touch**: `.env`, output directories, `bristlenose/theme/images/`
 - **Gitignored (private)**: `docs/private/`, `trial-runs/` — contain names, contacts, and value judgements not suitable for a public repo
@@ -139,6 +145,9 @@ F401 is marked `unfixable` in `pyproject.toml` so `ruff check --fix` (and the Po
 - **Testing & CI strategy** (gap audit, Playwright plan, visual regression, `data-testid` convention): `docs/design-test-strategy.md`
 - **Installation guide**: `INSTALL.md` — detailed per-platform install instructions for non-technical users
 - **Desktop app** (macOS, SwiftUI, PyInstaller sidecar, .dmg distribution): `docs/design-desktop-app.md` — vision, PRD, stack rationale, user flow, open questions. **Read this before working in `desktop/`**
+- **Serve mode milestone 1** (domain schema, importer, sessions API): `docs/design-serve-milestone-1.md`
+- **Codebook island** (migration audit, API design, drag-drop decisions): `docs/design-codebook-island.md`
+- **Product roadmap**: `docs/ROADMAP.md`
 
 ## Working preferences
 
@@ -263,8 +272,8 @@ When the user signals end of session, **proactively offer to run this checklist*
 9. **Clean up branches** — delete merged feature branches
 10. **Verify CI** — check latest push passes CI
 
-## Current status (v0.9.3, Feb 2026)
+## Current status (v0.9.4, Feb 2026)
 
-Core pipeline complete and published to PyPI + Homebrew. Snap packaging implemented and tested locally (arm64); CI builds amd64 on every push. Latest: **Serve mode + Codebook React island** — `bristlenose serve` command with FastAPI + SQLite + React islands, 22-table domain schema, 6 data sync endpoints, sessions/quotes/dashboard/codebook APIs, 5 React islands (SessionsTable, Dashboard, QuoteSections, QuoteThemes, CodebookPanel), 16 React primitives (182 Vitest tests), full codebook CRUD with drag-and-drop, inline editing, merge, delete. Prior: interactive dashboard (clickable stats, featured quotes, cross-tab navigation), sessions table redesign (speaker badges, sparklines, thumbnails), appearance toggle (system/light/dark), user journeys table, tab navigation with hash persistence, Gemini provider (~$0.20/study), transcript annotations, Hidden quotes + Codebook, Azure OpenAI provider, install smoke tests, chart layout + histogram delete, multi-select and tag filter, tag taxonomy redesign (7 research-backed sentiments), keychain credential storage, Ollama local LLM support, output inside input folder, transcript coverage, multi-participant sessions. See git log for full history.
+Core pipeline complete and published to PyPI + Homebrew. Snap packaging implemented and tested locally (arm64); CI builds amd64 on every push. Latest: **Serve mode merged to main** — `bristlenose serve` with FastAPI + SQLite + React islands (5 islands, 16 primitives, 182 Vitest tests, 330+ Python serve tests), full codebook CRUD, data sync API, desktop app scaffold. Prior: interactive dashboard, sessions table redesign, appearance toggle, user journeys, tab navigation, Gemini provider, transcript annotations, hidden quotes + codebook, Azure OpenAI, Ollama, transcript coverage, multi-participant sessions. See git log for full history.
 
-**Next up:** Phase 2 cross-session moderator linking; snap store publishing; transcript page React island; analysis page React island. See `TODO.md` for full task list.
+**Next up:** Desktop app v0.1 (.dmg); transcript page React island; analysis page React island; cross-session moderator linking; snap store publishing. See `TODO.md` for full task list.

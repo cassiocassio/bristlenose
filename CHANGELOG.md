@@ -2,7 +2,7 @@
 
 All notable changes to Bristlenose are documented here. See also the [README](README.md) for the latest releases.
 
-**Unreleased** — _serve branch_
+**0.9.4** — _17 Feb 2026_
 
 - `bristlenose serve` command — FastAPI local dev server that serves the HTML report over HTTP with SQLite persistence, React islands, and live JS reload in dev mode. Auto-renders before serving, auto-opens browser, prints clickable report URL
 - React islands architecture — 5 islands (SessionsTable, Dashboard, QuoteSections, QuoteThemes, CodebookPanel) mount into static HTML via comment markers and `re.sub` at serve time; 16 reusable React primitives (Badge, PersonBadge, TimecodeLink, EditableText, Toggle, TagInput, Sparkline, Counter, Metric, JourneyChain, Annotation, Thumbnail, MicroBar, ConfirmDialog); 182 Vitest component tests
@@ -10,6 +10,7 @@ All notable changes to Bristlenose are documented here. See also the [README](RE
 - Dashboard island — Project tab as React composition: 8 clickable stat cards, compact sessions table, featured quotes with reshuffle, section/theme navigation with cross-tab anchor links. 43 API tests
 - Data API — 6 fire-and-forget PUT endpoints sync researcher state (hidden, starred, tags, edits, people, deleted-badges) from localStorage to SQLite. 94 tests (37 happy-path + 57 stress)
 - 22-table SQLAlchemy domain schema with instance-scoped people/codebook and project-scoped sessions/quotes/themes; `assigned_by` tracks pipeline vs researcher authorship; idempotent upsert importer
+- Desktop app scaffold — SwiftUI macOS shell with folder picker, pipeline runner, sidecar architecture (self-contained in `desktop/`)
 - Renderer overlay (dev-only, press **D**) — colour-codes report regions by origin: blue for Jinja2, green for React, amber for vanilla JS
 - Visual diff page (dev-only) — side-by-side, overlay, and toggle comparison of Jinja2 vs React sessions table
 

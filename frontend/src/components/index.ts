@@ -1,3 +1,4 @@
+export { Annotation } from "./Annotation";
 export { Badge } from "./Badge";
 export { Counter } from "./Counter";
 export { EditableText } from "./EditableText";
@@ -6,5 +7,6 @@ export { Metric } from "./Metric";
 export { PersonBadge } from "./PersonBadge";
 export { Sparkline } from "./Sparkline";
 export { TagInput } from "./TagInput";
+export { Thumbnail } from "./Thumbnail";
 export { TimecodeLink } from "./TimecodeLink";
 export { Toggle } from "./Toggle";

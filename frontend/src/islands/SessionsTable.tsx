@@ -9,7 +9,7 @@
  */
 
 import { useEffect, useState } from "react";
-import { JourneyChain, PersonBadge, Sparkline } from "../components";
+import { JourneyChain, PersonBadge, Sparkline, Thumbnail } from "../components";
 import type { SparklineItem } from "../components/Sparkline";
 import { formatDuration, formatFinderDate, formatFinderFilename } from "../utils/format";
 
@@ -228,11 +228,7 @@ function SessionRow({ session }: { session: SessionResponse }) {
       </td>
       <td>{sourceEl}</td>
       <td className="bn-session-thumb">
-        {has_media && (
-          <div className="bn-video-thumb">
-            <span className="bn-play-icon">&#9654;</span>
-          </div>
-        )}
+        <Thumbnail hasMedia={has_media} />
       </td>
       <td className="bn-session-sentiment">
         <Sparkline items={sentimentToSparklineItems(sentiment_counts)} />

@@ -312,7 +312,7 @@ The primitive-first approach means Milestone 2 produces more than a quote card �
 - SessionsTable refactored to use Sparkline primitive (removed inline SentimentSparkline sub-component)
 - TagInput CSS was already 1:1 aligned (`atoms/input.css` + `molecules/tag-input.css`)
 
-### Round 4
-- Extract `atoms/metric.css` from `organisms/analysis.css`
-- Create `molecules/journey-chain.css` from `templates/report.css`
-- Create `atoms/thumbnail.css` from `templates/report.css`
+### Round 4 (in progress)
+- Metric: reuses existing `.metric-label`, `.metric-value`, `.metric-viz`, `.conc-bar-*`, `.intensity-dots-svg` classes from `organisms/analysis.css` — no extraction needed (CSS already 1:1)
+- JourneyChain: reuses existing `.bn-session-journey` class — added `.bn-journey-sep` and `.bn-journey-label` spans for future styling hooks. Wired into SessionsTable (replaces inline join)
+- TODO: Create `atoms/thumbnail.css` from `templates/report.css`

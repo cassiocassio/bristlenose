@@ -1,6 +1,8 @@
 export { Badge } from "./Badge";
 export { Counter } from "./Counter";
 export { EditableText } from "./EditableText";
+export { JourneyChain } from "./JourneyChain";
+export { Metric } from "./Metric";
 export { PersonBadge } from "./PersonBadge";
 export { Sparkline } from "./Sparkline";
 export { TagInput } from "./TagInput";

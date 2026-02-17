@@ -197,6 +197,52 @@ Stress tests cover: Unicode (emoji, CJK, RTL, combining chars), large payloads (
 
 After the React migration, Playwright E2E tests will cover the full browser → JS → API → DB path. Currently deferred because E2E tests target DOM selectors which all change during migration. The React components will emit `data-testid` attributes from day one to provide stable selectors. See `docs/design-reactive-ui.md` "Testing strategy" section for the full plan.
 
+## React migration status (updated 17 Feb 2026)
+
+### Primitives (`frontend/src/components/`)
+
+| # | Primitive | Round | Tests | Notes |
+|---|-----------|-------|-------|-------|
+| 1 | Badge | R1 done | 8 | Sentiment/tag labels, deletable variant |
+| 2 | PersonBadge | R1 done | 5 | Speaker code lozenges (p1/m1/o1) |
+| 3 | TimecodeLink | R1 done | 6 | Clickable timecodes, player integration |
+| 4 | EditableText | R2 done | 19 | Click-to-edit + external trigger modes |
+| 5 | Toggle | R2 done | 9 | Star/hide buttons |
+| 6 | TagInput | R3 done | 23 | Auto-suggest, ghost text, rapid entry |
+| 7 | Sparkline | R3 done | 12 | Mini stacked bars (sentiment distribution) |
+| 8 | Counter | R3 done | 14 | Hidden-quotes dropdown (pulled from R4) |
+| 9 | Metric | R4 done | 13 | Bar fill + SVG intensity dots, for analysis signal cards |
+| 10 | JourneyChain | R4 done | 8 | Arrow-separated labels, wired into SessionsTable |
+| 11 | Annotation | R4 todo | — | Transcript page margin labels |
+| 12 | Thumbnail | R4 todo | — | Sessions table media preview |
+| 13 | Modal | R4 todo | — | Infrastructure (delete confirmations) |
+| 14 | Toast | R4 todo | — | Infrastructure (feedback notifications) |
+
+**Rounds 1–3 complete, Round 4 in progress (10/14 primitives, 117 Vitest tests).** Remaining 4 are specialty — each unlocks one surface.
+
+### Islands (`frontend/src/islands/`)
+
+| Island | Status | Mount point | API |
+|--------|--------|-------------|-----|
+| SessionsTable | Shipped (M1) | `#bn-sessions-table-root` | `GET /sessions` |
+| QuoteSections | Shipped | `#bn-quote-sections-root` | `GET /quotes` |
+| QuoteThemes | Shipped | `#bn-quote-themes-root` | `GET /quotes` |
+| QuoteCard | Built (internal) | — | (composed into above) |
+| QuoteGroup | Built (internal) | — | (composed into above) |
+| AboutDeveloper | Built (dev-only) | `#bn-about-developer-root` | `GET /dev/info` |
+
+### Backend APIs — complete
+
+6 data endpoints (hidden, starred, tags, edits, people, deleted-badges) + sessions + quotes. 223+ Python serve tests across 4 files.
+
+### CSS alignment — done through Round 3
+
+Extracted: `toggle.css`, `editable-text.css`, `sparkline.css`. Renamed: `person-id.css` → `person-badge.css`. Round 4 extractions pending (metric, journey-chain, thumbnail).
+
+### What's next
+
+Round 4 primitives are not blocking — build each when its target surface migrates to React. Likely order: Metric (analysis page), JourneyChain + Thumbnail (sessions table parity), Modal + Toast (infrastructure, defer until first need), Annotation (transcript page, furthest out).
+
 ## Reference docs
 
 - **Domain model rationale**: `docs/design-serve-milestone-1.md`

@@ -9,7 +9,7 @@
  */
 
 import { useEffect, useState } from "react";
-import { PersonBadge, Sparkline } from "../components";
+import { JourneyChain, PersonBadge, Sparkline } from "../components";
 import type { SparklineItem } from "../components/Sparkline";
 import { formatDuration, formatFinderDate, formatFinderFilename } from "../utils/format";
 
@@ -184,9 +184,8 @@ function SessionRow({ session }: { session: SessionResponse }) {
     source_files,
   } = session;
 
-  // Journey arrow chain
-  const journey =
-    journey_labels.length > 0 ? journey_labels.join(" \u2192 ") : "";
+  // Journey arrow chain (now uses JourneyChain primitive)
+  const hasJourney = journey_labels.length > 0;
 
   // Source file display
   let sourceEl: React.ReactNode = "\u2014";
@@ -222,9 +221,7 @@ function SessionRow({ session }: { session: SessionResponse }) {
       </td>
       <td className="bn-session-meta">
         <div>{formatFinderDate(session_date)}</div>
-        {journey && (
-          <div className="bn-session-journey">{journey}</div>
-        )}
+        {hasJourney && <JourneyChain labels={journey_labels} />}
       </td>
       <td className="bn-session-duration">
         {formatDuration(duration_seconds)}

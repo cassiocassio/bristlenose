@@ -374,6 +374,14 @@ Edit `bristlenose/__init__.py` (the single source of truth for version), commit,
 
 ## Changelog
 
+**0.9.4** — _17 Feb 2026_
+
+- `bristlenose serve` — local dev server with SQLite persistence, React islands, live JS reload
+- 5 React islands (SessionsTable, Dashboard, QuoteSections, QuoteThemes, CodebookPanel) + 16 reusable primitives (182 Vitest tests)
+- Codebook CRUD — drag-and-drop, inline editing, tag merge, pentadic colours, MicroBar frequency bars
+- Data API — 6 endpoints sync researcher state from localStorage to SQLite (94 tests)
+- Desktop app scaffold — SwiftUI macOS shell with sidecar architecture
+
 **0.9.3** — _13 Feb 2026_
 
 - Interactive dashboard — clickable stat cards, featured quotes with video playback, session row drill-down, cross-tab navigation

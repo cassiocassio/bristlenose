@@ -2,7 +2,7 @@
 
 This document tracks active feature branches to help multiple Claude sessions coordinate without conflicts.
 
-**Updated:** 13 Feb 2026
+**Updated:** 17 Feb 2026 (serve merged)
 
 ---
 
@@ -128,9 +128,11 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 - `bristlenose/theme/js/transcript-annotations.js` — margin label tooltips
 - `bristlenose/theme/js/codebook.js` — quote count tooltips
 
----
-
 ## Completed Branches (for reference)
+
+### `serve` — merged 17 Feb 2026
+
+`bristlenose serve` command — FastAPI + SQLite + React islands architecture. 22-table domain schema, data sync API, sessions/quotes/dashboard/codebook endpoints. 16 React primitives (182 Vitest tests), 5 React islands (SessionsTable, Dashboard, QuoteSections, QuoteThemes, CodebookPanel). Full codebook CRUD with drag-and-drop, inline editing, merge, delete. Desktop app scaffold (SwiftUI macOS shell, sidecar architecture). 330+ Python serve tests across 8 files.
 
 ### `project-dashboard` — merged 13 Feb 2026
 

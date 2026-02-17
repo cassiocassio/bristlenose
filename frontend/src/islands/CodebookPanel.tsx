@@ -1,0 +1,699 @@
+import { useCallback, useEffect, useRef, useState } from "react";
+import { Badge, ConfirmDialog, EditableText, MicroBar, TagInput } from "../components";
+import {
+  createCodebookGroup,
+  createCodebookTag,
+  deleteCodebookGroup,
+  deleteCodebookTag,
+  getCodebook,
+  mergeCodebookTags,
+  updateCodebookGroup,
+  updateCodebookTag,
+} from "../utils/api";
+import type {
+  CodebookGroupResponse,
+  CodebookResponse,
+  CodebookTagResponse,
+} from "../utils/types";
+
+// ---------------------------------------------------------------------------
+// Colour helpers — mirror COLOUR_SETS from codebook.js
+// ---------------------------------------------------------------------------
+
+const COLOUR_SETS: Record<string, { slots: number; groupBg: string; barVar: string; bgVar: string }> = {
+  ux:    { slots: 5, groupBg: "--bn-group-ux",    barVar: "--bn-bar-ux",    bgVar: "--bn-ux-" },
+  emo:   { slots: 6, groupBg: "--bn-group-emo",   barVar: "--bn-bar-emo",   bgVar: "--bn-emo-" },
+  task:  { slots: 5, groupBg: "--bn-group-task",   barVar: "--bn-bar-task",  bgVar: "--bn-task-" },
+  trust: { slots: 5, groupBg: "--bn-group-trust",  barVar: "--bn-bar-trust", bgVar: "--bn-trust-" },
+  opp:   { slots: 5, groupBg: "--bn-group-opp",    barVar: "--bn-bar-opp",   bgVar: "--bn-opp-" },
+};
+
+function getGroupBg(colourSet: string): string {
+  const set = COLOUR_SETS[colourSet];
+  return set ? `var(${set.groupBg})` : "var(--bn-group-none)";
+}
+
+function getBarColour(colourSet: string): string {
+  const set = COLOUR_SETS[colourSet];
+  return set ? `var(${set.barVar})` : "var(--bn-bar-none)";
+}
+
+function getTagBg(colourSet: string, index: number): string {
+  const set = COLOUR_SETS[colourSet];
+  if (!set) return "var(--bn-custom-bg)";
+  return `var(${set.bgVar}${(index % set.slots) + 1}-bg)`;
+}
+
+// ---------------------------------------------------------------------------
+// Sub-components
+// ---------------------------------------------------------------------------
+
+interface TagRowProps {
+  tag: CodebookTagResponse;
+  maxCount: number;
+  colourSet: string;
+  groupId: number;
+  onRequestDelete: (tag: CodebookTagResponse) => void;
+  onRenameTag: (tag: CodebookTagResponse, newName: string) => void;
+  onDragStart: (tag: CodebookTagResponse, groupId: number) => void;
+  onDragEnd: () => void;
+  onMergeDrop: (targetTag: CodebookTagResponse) => void;
+}
+
+function TagRow({
+  tag,
+  maxCount,
+  colourSet,
+  groupId,
+  onRequestDelete,
+  onRenameTag,
+  onDragStart,
+  onDragEnd,
+  onMergeDrop,
+}: TagRowProps) {
+  const [isMergeTarget, setIsMergeTarget] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const dragOverCount = useRef(0);
+
+  const handleDragStart = useCallback(
+    (e: React.DragEvent) => {
+      e.dataTransfer.effectAllowed = "move";
+      e.dataTransfer.setData("text/plain", String(tag.id));
+      // Create a custom drag ghost from the badge only (not the whole row)
+      const badge = (e.currentTarget as HTMLElement).querySelector(".badge");
+      if (badge) {
+        const ghost = badge.cloneNode(true) as HTMLElement;
+        ghost.classList.add("drag-ghost");
+        ghost.style.position = "fixed";
+        ghost.style.top = "-1000px";
+        document.body.appendChild(ghost);
+        e.dataTransfer.setDragImage(ghost, ghost.offsetWidth / 2, ghost.offsetHeight / 2);
+        // Clean up the clone after a frame
+        requestAnimationFrame(() => document.body.removeChild(ghost));
+      }
+      onDragStart(tag, groupId);
+    },
+    [tag, groupId, onDragStart],
+  );
+
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+  }, []);
+
+  const handleDragEnter = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    dragOverCount.current++;
+    setIsMergeTarget(true);
+  }, []);
+
+  const handleDragLeave = useCallback(() => {
+    dragOverCount.current--;
+    if (dragOverCount.current <= 0) {
+      dragOverCount.current = 0;
+      setIsMergeTarget(false);
+    }
+  }, []);
+
+  const handleDrop = useCallback(
+    (e: React.DragEvent) => {
+      e.preventDefault();
+      dragOverCount.current = 0;
+      setIsMergeTarget(false);
+      onMergeDrop(tag);
+    },
+    [tag, onMergeDrop],
+  );
+
+  const barValue = maxCount > 0 ? tag.count / maxCount : 0;
+
+  const classes = [
+    "tag-row",
+    isMergeTarget ? "merge-target" : null,
+  ].filter(Boolean).join(" ");
+
+  return (
+    <div
+      className={classes}
+      draggable={!isEditing}
+      onDragStart={handleDragStart}
+      onDragEnd={onDragEnd}
+      onDragOver={handleDragOver}
+      onDragEnter={handleDragEnter}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
+    >
+      <div className="tag-name-area">
+        {isEditing ? (
+          <EditableText
+            as="span"
+            value={tag.name}
+            isEditing={true}
+            trigger="external"
+            className="badge tag-edit-inline"
+            onCommit={(newName) => {
+              setIsEditing(false);
+              if (newName && newName !== tag.name) onRenameTag(tag, newName);
+            }}
+            onCancel={() => setIsEditing(false)}
+          />
+        ) : (
+          <Badge
+            text={tag.name}
+            variant="deletable"
+            colour={getTagBg(colourSet, tag.colour_index)}
+            onClick={() => setIsEditing(true)}
+            onDelete={() => onRequestDelete(tag)}
+          />
+        )}
+      </div>
+      <div className="tag-bar-area">
+        {tag.count > 0 && (
+          <MicroBar value={barValue} colour={getBarColour(colourSet)} />
+        )}
+        <span className="tag-count">{tag.count}</span>
+      </div>
+    </div>
+  );
+}
+
+interface CodebookGroupColumnProps {
+  group: CodebookGroupResponse;
+  allTagNames: string[];
+  onUpdateGroup: (groupId: number, fields: { name?: string; subtitle?: string }) => void;
+  onDeleteGroup: (group: CodebookGroupResponse) => void;
+  onCreateTag: (name: string, groupId: number) => void;
+  onDeleteTag: (tag: CodebookTagResponse) => void;
+  onRenameTag: (tag: CodebookTagResponse, newName: string) => void;
+  onDragStart: (tag: CodebookTagResponse, groupId: number) => void;
+  onDragEnd: () => void;
+  onDropTag: (groupId: number) => void;
+  onMergeDrop: (targetTag: CodebookTagResponse) => void;
+}
+
+/** Placeholder text shown when a group has no subtitle. */
+const SUBTITLE_PLACEHOLDER = "Add subtitle…";
+
+/**
+ * Group subtitle with placeholder support.
+ *
+ * When the subtitle is empty, shows italic placeholder text.
+ * On click-to-edit, immediately switches to normal text style
+ * (removes placeholder class) and shows an empty field instead
+ * of the placeholder hint. Uses external editing control so
+ * we can track the editing state and adjust styling/value.
+ */
+function GroupSubtitle({
+  subtitle,
+  onCommit,
+}: {
+  subtitle: string;
+  onCommit: (text: string) => void;
+}) {
+  const isEmpty = !subtitle;
+  const [isEditing, setIsEditing] = useState(false);
+
+  // When empty and not editing: show placeholder text with placeholder style.
+  // When editing: show the actual subtitle (empty string if none) with normal style.
+  const displayValue = isEmpty && !isEditing ? SUBTITLE_PLACEHOLDER : subtitle;
+  const className = `group-subtitle${isEmpty && !isEditing ? " placeholder" : ""}`;
+
+  return (
+    // eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions
+    <div onClick={() => { if (!isEditing) setIsEditing(true); }}>
+      <EditableText
+        as="p"
+        value={displayValue}
+        isEditing={isEditing}
+        trigger="external"
+        className={className}
+        onCommit={(text) => {
+          setIsEditing(false);
+          onCommit(text);
+        }}
+        onCancel={() => setIsEditing(false)}
+      />
+    </div>
+  );
+}
+
+function CodebookGroupColumn({
+  group,
+  allTagNames,
+  onUpdateGroup,
+  onDeleteGroup,
+  onCreateTag,
+  onDeleteTag,
+  onRenameTag,
+  onDragStart,
+  onDragEnd,
+  onDropTag,
+  onMergeDrop,
+}: CodebookGroupColumnProps) {
+  const [isDragOver, setIsDragOver] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [confirmingTag, setConfirmingTag] = useState<CodebookTagResponse | null>(null);
+  const [isAddingTag, setIsAddingTag] = useState(false);
+  const tagInputKey = useRef(0);
+  const dragOverCount = useRef(0);
+
+  const maxCount = Math.max(1, ...group.tags.map((t) => t.count));
+
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+  }, []);
+
+  const handleDragEnter = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    dragOverCount.current++;
+    setIsDragOver(true);
+  }, []);
+
+  const handleDragLeave = useCallback(() => {
+    dragOverCount.current--;
+    if (dragOverCount.current <= 0) {
+      dragOverCount.current = 0;
+      setIsDragOver(false);
+    }
+  }, []);
+
+  const handleDrop = useCallback(
+    (e: React.DragEvent) => {
+      e.preventDefault();
+      dragOverCount.current = 0;
+      setIsDragOver(false);
+      onDropTag(group.id);
+    },
+    [group.id, onDropTag],
+  );
+
+  const handleTagCommit = useCallback(
+    (name: string) => {
+      setIsAddingTag(false);
+      if (name.trim()) onCreateTag(name.trim(), group.id);
+    },
+    [group.id, onCreateTag],
+  );
+
+  const handleTagCommitAndReopen = useCallback(
+    (name: string) => {
+      if (name.trim()) onCreateTag(name.trim(), group.id);
+      // Increment key to force TagInput remount (fresh empty input)
+      tagInputKey.current++;
+      setIsAddingTag(true);
+    },
+    [group.id, onCreateTag],
+  );
+
+  const handleRequestDeleteTag = useCallback((tag: CodebookTagResponse) => {
+    if (tag.count === 0) {
+      // No quotes affected — skip confirmation
+      onDeleteTag(tag);
+    } else {
+      setConfirmingTag(tag);
+    }
+  }, [onDeleteTag]);
+
+  const classes = [
+    "codebook-group",
+    isDragOver ? "drag-over" : null,
+  ].filter(Boolean).join(" ");
+
+  const isDefault = group.is_default;
+
+  return (
+    <div
+      className={classes}
+      style={{ backgroundColor: getGroupBg(group.colour_set) }}
+      onDragOver={handleDragOver}
+      onDragEnter={handleDragEnter}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
+    >
+      <div className="group-header">
+        <div className="group-title-area">
+          <div className="group-title">
+            {isDefault ? (
+              <span className="group-title-text">{group.name}</span>
+            ) : (
+              <EditableText
+                as="span"
+                value={group.name}
+                trigger="click"
+                className="group-title-text"
+                onCommit={(text) => onUpdateGroup(group.id, { name: text })}
+                onCancel={() => {}}
+              />
+            )}
+          </div>
+          {isDefault ? (
+            <p className="group-subtitle">{group.subtitle}</p>
+          ) : (
+            <GroupSubtitle
+              subtitle={group.subtitle}
+              onCommit={(text) => onUpdateGroup(group.id, { subtitle: text })}
+            />
+          )}
+        </div>
+        {!isDefault && (
+          <button
+            className="group-close"
+            onClick={() => setShowDeleteConfirm(true)}
+            aria-label={`Delete group ${group.name}`}
+          >
+            &times;
+          </button>
+        )}
+      </div>
+
+      <div className="tag-list">
+        {group.tags.map((tag) => (
+          <TagRow
+            key={tag.id}
+            tag={tag}
+            maxCount={maxCount}
+            colourSet={group.colour_set}
+            groupId={group.id}
+            onRequestDelete={handleRequestDeleteTag}
+            onRenameTag={onRenameTag}
+            onDragStart={onDragStart}
+            onDragEnd={onDragEnd}
+            onMergeDrop={onMergeDrop}
+          />
+        ))}
+      </div>
+
+      {group.total_quotes > 0 && (
+        <div className="group-total-row">
+          <span className="group-total-label">Total</span>
+          <span className="group-total-count">{group.total_quotes}</span>
+        </div>
+      )}
+
+      {isAddingTag ? (
+        <div className="tag-add-row">
+          <TagInput
+            key={tagInputKey.current}
+            vocabulary={[]}
+            exclude={allTagNames}
+            onCommit={handleTagCommit}
+            onCommitAndReopen={handleTagCommitAndReopen}
+            onCancel={() => setIsAddingTag(false)}
+          />
+        </div>
+      ) : (
+        <div className="tag-add-row" onClick={() => setIsAddingTag(true)}>
+          <span className="tag-add-badge">+ tag</span>
+        </div>
+      )}
+
+      {/* Tag-delete confirmation — rendered at group level for correct positioning */}
+      {confirmingTag && (
+        <ConfirmDialog
+          title={`Delete "${confirmingTag.name}"?`}
+          body={
+            confirmingTag.count > 0
+              ? <span>This tag is on {confirmingTag.count} quote{confirmingTag.count !== 1 ? "s" : ""}.</span>
+              : undefined
+          }
+          confirmLabel="Delete"
+          variant="danger"
+          accentColour={getBarColour(group.colour_set)}
+          onConfirm={() => {
+            const tag = confirmingTag;
+            setConfirmingTag(null);
+            onDeleteTag(tag);
+          }}
+          onCancel={() => setConfirmingTag(null)}
+        />
+      )}
+
+      {/* Group-delete confirmation */}
+      {showDeleteConfirm && !isDefault && (
+        <ConfirmDialog
+          title={`Delete "${group.name}"?`}
+          body={
+            group.tags.length > 0
+              ? <span>{group.tags.length} tag{group.tags.length !== 1 ? "s" : ""} will move to Uncategorised.</span>
+              : undefined
+          }
+          confirmLabel="Delete group"
+          variant="danger"
+          accentColour={getBarColour(group.colour_set)}
+          onConfirm={() => {
+            setShowDeleteConfirm(false);
+            onDeleteGroup(group);
+          }}
+          onCancel={() => setShowDeleteConfirm(false)}
+        />
+      )}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Main island
+// ---------------------------------------------------------------------------
+
+interface CodebookPanelProps {
+  projectId: string;
+}
+
+export function CodebookPanel({ projectId }: CodebookPanelProps) {
+  const [data, setData] = useState<CodebookResponse | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const dragTagRef = useRef<{ tag: CodebookTagResponse; fromGroupId: number } | null>(null);
+  const [mergeConfirm, setMergeConfirm] = useState<{
+    source: CodebookTagResponse;
+    target: CodebookTagResponse;
+  } | null>(null);
+
+  // Fetch codebook data
+  const fetchData = useCallback(() => {
+    getCodebook()
+      .then(setData)
+      .catch((err) => setError(String(err)));
+  }, []);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData, projectId]);
+
+  // Re-fetch when the codebook tab becomes visible (covers the race where
+  // vanilla JS PUT /tags hasn't finished when the panel first mounts).
+  useEffect(() => {
+    const panel = document.getElementById("bn-codebook-root")?.closest(".bn-tab-panel");
+    if (!panel) return;
+    const observer = new MutationObserver(() => {
+      if (panel.classList.contains("active")) fetchData();
+    });
+    observer.observe(panel, { attributes: true, attributeFilter: ["class"] });
+    return () => observer.disconnect();
+  }, [fetchData]);
+
+  // --- Group mutations ---
+
+  const handleUpdateGroup = useCallback(
+    (groupId: number, fields: { name?: string; subtitle?: string }) => {
+      updateCodebookGroup(groupId, fields)
+        .then(fetchData)
+        .catch((err) => console.error("Update group failed:", err));
+    },
+    [fetchData],
+  );
+
+  const handleDeleteGroup = useCallback(
+    (group: CodebookGroupResponse) => {
+      deleteCodebookGroup(group.id)
+        .then(fetchData)
+        .catch((err) => console.error("Delete group failed:", err));
+    },
+    [fetchData],
+  );
+
+  const handleCreateGroup = useCallback(() => {
+    const COLOUR_SET_ORDER = ["ux", "emo", "task", "trust", "opp"];
+    const usedSets = new Set(data?.groups.map((g) => g.colour_set) ?? []);
+    const nextSet = COLOUR_SET_ORDER.find((s) => !usedSets.has(s)) ?? "ux";
+    createCodebookGroup("New group", nextSet)
+      .then(fetchData)
+      .catch((err) => console.error("Create group failed:", err));
+  }, [data, fetchData]);
+
+  // --- Tag mutations ---
+
+  const handleCreateTag = useCallback(
+    (name: string, groupId: number) => {
+      createCodebookTag(name, groupId)
+        .then(fetchData)
+        .catch((err) => console.error("Create tag failed:", err));
+    },
+    [fetchData],
+  );
+
+  const handleDeleteTag = useCallback(
+    (tag: CodebookTagResponse) => {
+      deleteCodebookTag(tag.id)
+        .then(fetchData)
+        .catch((err) => console.error("Delete tag failed:", err));
+    },
+    [fetchData],
+  );
+
+  const handleRenameTag = useCallback(
+    (tag: CodebookTagResponse, newName: string) => {
+      updateCodebookTag(tag.id, { name: newName })
+        .then(fetchData)
+        .catch((err) => console.error("Rename tag failed:", err));
+    },
+    [fetchData],
+  );
+
+  // --- Drag and drop ---
+
+  const handleDragStart = useCallback(
+    (tag: CodebookTagResponse, fromGroupId: number) => {
+      dragTagRef.current = { tag, fromGroupId };
+    },
+    [],
+  );
+
+  const handleDragEnd = useCallback(() => {
+    dragTagRef.current = null;
+  }, []);
+
+  const handleDropTag = useCallback(
+    (targetGroupId: number) => {
+      const dragInfo = dragTagRef.current;
+      if (!dragInfo) return;
+      if (dragInfo.fromGroupId === targetGroupId) return;
+      dragTagRef.current = null;
+      updateCodebookTag(dragInfo.tag.id, { group_id: targetGroupId })
+        .then(fetchData)
+        .catch((err) => console.error("Move tag failed:", err));
+    },
+    [fetchData],
+  );
+
+  const handleMergeDrop = useCallback(
+    (targetTag: CodebookTagResponse) => {
+      const dragInfo = dragTagRef.current;
+      if (!dragInfo) return;
+      if (dragInfo.tag.id === targetTag.id) return;
+      dragTagRef.current = null;
+      setMergeConfirm({ source: dragInfo.tag, target: targetTag });
+    },
+    [],
+  );
+
+  const handleMergeConfirm = useCallback(() => {
+    if (!mergeConfirm) return;
+    mergeCodebookTags(mergeConfirm.source.id, mergeConfirm.target.id)
+      .then(fetchData)
+      .catch((err) => console.error("Merge tags failed:", err));
+    setMergeConfirm(null);
+  }, [mergeConfirm, fetchData]);
+
+  const handleDropNewGroup = useCallback(
+    (e: React.DragEvent) => {
+      e.preventDefault();
+      const dragInfo = dragTagRef.current;
+      if (!dragInfo) return;
+      dragTagRef.current = null;
+      const COLOUR_SET_ORDER = ["ux", "emo", "task", "trust", "opp"];
+      const usedSets = new Set(data?.groups.map((g) => g.colour_set) ?? []);
+      const nextSet = COLOUR_SET_ORDER.find((s) => !usedSets.has(s)) ?? "ux";
+      createCodebookGroup("New group", nextSet)
+        .then((newGroup) => {
+          return updateCodebookTag(dragInfo.tag.id, { group_id: newGroup.id });
+        })
+        .then(fetchData)
+        .catch((err) => console.error("Create group from drag failed:", err));
+    },
+    [data, fetchData],
+  );
+
+  // --- Render ---
+
+  if (error) {
+    return (
+      <>
+        <h1>Codebook</h1>
+        <p className="codebook-description">Error loading codebook: {error}</p>
+      </>
+    );
+  }
+
+  if (!data) {
+    return (
+      <>
+        <h1>Codebook</h1>
+        <p className="codebook-description">Loading…</p>
+      </>
+    );
+  }
+
+  return (
+    <>
+      <h1>Codebook</h1>
+      <p className="codebook-description">
+        Drag tags between groups to reorganise. Click a tag or title to rename it.
+        Drop a tag on another to merge.
+      </p>
+
+      <div className="codebook-grid" id="codebook-grid">
+        {[...data.groups].sort((a, b) => {
+          // Default group (Uncategorised) always first
+          if (a.is_default !== b.is_default) return a.is_default ? -1 : 1;
+          return a.order - b.order;
+        }).map((group) => (
+          <CodebookGroupColumn
+            key={group.id}
+            group={group}
+            allTagNames={data.all_tag_names}
+            onUpdateGroup={handleUpdateGroup}
+            onDeleteGroup={handleDeleteGroup}
+            onCreateTag={handleCreateTag}
+            onDeleteTag={handleDeleteTag}
+            onRenameTag={handleRenameTag}
+            onDragStart={handleDragStart}
+            onDragEnd={handleDragEnd}
+            onDropTag={handleDropTag}
+            onMergeDrop={handleMergeDrop}
+          />
+        ))}
+
+        {/* New group placeholder */}
+        <div
+          className="codebook-group new-group-placeholder"
+          onClick={handleCreateGroup}
+          onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = "move"; }}
+          onDrop={handleDropNewGroup}
+        >
+          <span className="new-group-icon">+</span>
+          <span className="new-group-label">New group</span>
+        </div>
+      </div>
+
+      {/* Merge confirmation — centred overlay */}
+      {mergeConfirm && (
+        <div className="merge-overlay">
+          <ConfirmDialog
+            title={`Merge "${mergeConfirm.source.name}" into "${mergeConfirm.target.name}"?`}
+            body={
+              <span>
+                All quotes tagged <strong>{mergeConfirm.source.name}</strong> will be
+                retagged <strong>{mergeConfirm.target.name}</strong>. This cannot be undone.
+              </span>
+            }
+            confirmLabel="Merge"
+            variant="primary"
+            onConfirm={handleMergeConfirm}
+            onCancel={() => setMergeConfirm(null)}
+          />
+        </div>
+      )}
+    </>
+  );
+}

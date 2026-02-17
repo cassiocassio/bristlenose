@@ -22,7 +22,7 @@
  * @module names
  */
 
-/* global createStore, copyToClipboard, showToast, BN_PARTICIPANTS */
+/* global createStore, copyToClipboard, showToast, BN_PARTICIPANTS, isServeMode, apiPut */
 
 var namesStore = createStore('bristlenose-names');
 var nameEdits = namesStore.get({});
@@ -206,6 +206,7 @@ function acceptNameEdit() {
   }
 
   namesStore.set(nameEdits);
+  if (isServeMode()) apiPut('/people', nameEdits);
   updateAllReferences(ae.pid);
 }
 

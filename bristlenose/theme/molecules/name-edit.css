@@ -31,18 +31,7 @@ tr:hover .name-pencil,
     color: var(--bn-colour-accent);
 }
 
-.name-cell.editing .name-text,
-.role-cell.editing .role-text {
-    background: var(--bn-colour-editing-bg);
-    outline: 1px solid var(--bn-colour-editing-border);
-    border-radius: var(--bn-radius-sm);
-    padding: 0.1rem 0.3rem;
-}
-
-.name-text.edited,
-.role-text.edited {
-    border-bottom: 1px dashed var(--bn-colour-accent);
-}
+/* (editing/edited rules moved to molecules/editable-text.css) */
 
 .unnamed {
     color: var(--bn-colour-muted);

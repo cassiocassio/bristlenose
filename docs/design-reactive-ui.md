@@ -123,3 +123,34 @@ Step 1 alone would fix the immediate pain (cross-page state, file writes) withou
 The export-sharing feature (see `docs/design-export-sharing.md`) was originally designed for the vanilla JS + static HTML stack, using browser-side DOM cloning and a zip library (fflate). Analysis in Feb 2026 concluded: **build export once, after React, not twice.** The React app can hydrate from either a server API or an embedded JSON blob, so export falls out naturally as "snapshot the project data, embed in the React app shell, output a standalone file." Building it on vanilla JS first would create plumbing that the migration replaces, and maintaining two export paths during the hybrid phase adds friction to every component migration. See the "Dependency on React migration" section in `docs/design-export-sharing.md`.
 
 This makes the reactive UI migration not just a developer experience improvement but a **prerequisite for the sharing story** — the feature that makes Bristlenose useful beyond the solo researcher. The near-term sharing mechanism is CSV/Miro export (see `docs/private/design-miro-bridge.md`); the long-term mechanism is the rich interactive report itself as a shareable artefact, which requires this migration.
+
+## Testing strategy
+
+### Current state (Phase 1)
+
+94 pytest tests cover the data API: 37 happy-path + 57 stress tests using FastAPI TestClient. These test the HTTP → DB path but skip the browser JS entirely.
+
+### Post-React: Playwright E2E tests
+
+After the React migration completes, add Playwright E2E tests (`pip install pytest-playwright`) that exercise the full browser → API → DB path. These tests will:
+
+1. Start the server with smoke-test data
+2. Open headless Chrome at the report URL
+3. Click interactive elements (star, tag, edit, hide)
+4. Assert the DB reflects the change (Python has direct SQLite access in the same test process)
+
+**Why wait:** E2E tests target DOM selectors. The React migration rewrites every DOM element, so tests written now would all break. Post-React, the component structure stabilises and selectors stop changing.
+
+**Why Playwright over alternatives:** Python-native (same `pytest` runner, same CI), fast (headless Chrome in ~200ms), can intercept network requests, no Node.js toolchain required. Cypress is JS-only; Selenium is heavier and flakier.
+
+### Convention: `data-testid` attributes
+
+**Every React component must emit `data-testid` attributes on interactive elements from day one.** This makes E2E selectors stable across refactors (CSS class changes, DOM restructuring don't break tests).
+
+Naming convention: `data-testid="bn-{component}-{element}"`, e.g.:
+- `data-testid="bn-quote-star"` — star toggle on a quote card
+- `data-testid="bn-quote-hide"` — hide button
+- `data-testid="bn-tag-input"` — tag input field
+- `data-testid="bn-tag-badge"` — a tag badge (with additional `data-tag-name` for specificity)
+
+These attributes are stripped in production builds if bundle size is a concern (Vite plugin), but should remain in dev/test builds.

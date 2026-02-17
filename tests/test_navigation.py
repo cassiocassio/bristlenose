@@ -360,8 +360,8 @@ def test_session_table_single_moderator_omitted_from_rows(tmp_path: Path) -> Non
     assert "Moderated by" in html
     # The session table is rendered twice (Sessions tab + Project tab dashboard),
     # so m1 badge appears twice (once per header). But it should not appear in
-    # bn-person-id divs (row speaker lists).
-    assert '<div class="bn-person-id"><span class="badge">m1</span>' not in html
+    # bn-person-badge divs (row speaker lists).
+    assert '<div class="bn-person-badge"><span class="badge">m1</span>' not in html
 
 
 def test_session_table_has_journey(tmp_path: Path) -> None:

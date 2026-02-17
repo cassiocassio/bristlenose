@@ -116,19 +116,33 @@ Section titles, descriptions, theme titles, and theme descriptions use `.editabl
 - **`.editable-text.edited`** in `molecules/quote-actions.css` — dashed underline indicator for changed text
 - **Bidirectional ToC sync** — ToC entries and section headings share the same `data-edit-key`; `_syncSiblings()` keeps all matching spans in sync on edit
 
+## starred.js
+
+Star/unstar quotes for the "Starred" view filter. ~210 lines.
+
+- **Store**: `createStore('bristlenose-starred')` — shape `{ "q-p1-42": true }`
+- **`toggleStar(quoteId)`** — toggles `.starred` class, persists to store + API, reorders within group (starred first)
+- **`reorderGroup(group, animate)`** — sorts blockquotes: starred first (preserving relative order), unstarred after. Optional FLIP animation
+- **`initStarred()`** — restore from localStorage (migrates from old `bristlenose-favourites` key), reorder all groups, wire event delegation
+- **Selection-aware star**: clicking the star button on a selected quote stars/unstars all selected quotes. Direction follows the clicked quote: if unstarred → star all, if starred → unstar all
+- **Hover preview**: hovering the star button on a selected quote adds `.bn-preview-star` (will be starred) or `.bn-preview-unstar` (will be unstarred) to all selected quotes. Accent-coloured star icons show the intended direction. Only activates when selection has 2+ quotes and the hovered quote is in the selection. Cleared on mouseout via `_clearStarPreview()`
+- **Dependencies**: `storage.js`, `api-client.js` (`isServeMode`, `apiPut`); reads `selectedQuoteIds` from `focus.js`; exposes `toggleStar()` called by `focus.js`
+
 ## hidden.js
 
-Hide/unhide quotes with per-group badge and dropdown. ~350 lines.
+Hide/unhide quotes with per-group badge and dropdown. ~400 lines.
 
 - **Store**: `createStore('bristlenose-hidden')` — shape `{ "q-p1-42": true }` (same pattern as starred)
-- **`hideQuote(quoteId)`** — adds `.bn-hidden` + `display: none`, persists, updates badge, shows toast, animates (ghost clone shrinks toward badge + FLIP siblings slide up, 300ms)
-- **`unhideQuote(quoteId)`** — removes `.bn-hidden`, restores display (respects `currentViewMode` starred filter and tag filter), persists, updates badge, scrolls to quote with highlight, animates (expand from badge + FLIP siblings slide down)
-- **`bulkHideSelected()`** — hide all selected quotes (called by `focus.js` for multi-select `h`)
+- **`hideQuote(quoteId)`** — adds `.bn-hidden` + `display: none`, removes from `selectedQuoteIds` + strips `.bn-selected` (hidden quotes always lose selection), persists, updates badge, shows toast, animates (ghost clone shrinks toward badge + FLIP siblings slide up, 300ms)
+- **`unhideQuote(quoteId)`** — removes `.bn-hidden`, restores display (respects `currentViewMode` starred filter and tag filter), persists, updates badge, scrolls to quote with highlight, animates (expand from badge + FLIP siblings slide down). Unhidden quotes are always unselected
+- **`bulkHideSelected()`** — hide all selected quotes then `clearSelection()` (called by `focus.js` for multi-select `h`)
 - **`isHidden(quoteId)`** — check if quote is hidden (called by other modules)
 - **`_updateBadgeForGroup(group)`** — create/update/remove badge as first child of `.quote-group`
 - **`initHidden()`** — restore from localStorage, prune stale IDs, build all badges, wire event delegation
-- **Dropdown**: click badge → toggle, click outside / Escape → close, click `.bn-hidden-preview` → unhide, timecode/participant links navigate normally
-- **Dependencies**: loads after `tag-filter.js` (reads `currentViewMode`, `_isTagFilterActive`, `_applyTagFilter`, `_hideEmptySections`); exposes `hideQuote()`, `bulkHideSelected()`, `isHidden()` called by `focus.js`
+- **Dropdown**: click badge → toggle, click outside / Escape → close, click `.bn-hidden-preview` → unhide, timecode/participant links navigate normally. "Unhide all" link appears in dropdown header when 2+ quotes are hidden — unhides all hidden quotes in that group
+- **Selection-aware hide**: clicking the hide button on a selected quote hides all selected quotes (delegates to `bulkHideSelected()`). Clicking on an unselected quote hides only that quote
+- **Hover preview**: hovering the hide button on a selected quote adds `.bn-preview-hide` to all selected quotes (fades them to `opacity: 0.85` + forces eye icon visible). Only activates when selection has 2+ quotes and the hovered quote is in the selection. Cleared on mouseout via `_clearHidePreview()`
+- **Dependencies**: loads after `tag-filter.js` (reads `currentViewMode`, `_isTagFilterActive`, `_applyTagFilter`, `_hideEmptySections`); reads `selectedQuoteIds` from `focus.js`; exposes `hideQuote()`, `bulkHideSelected()`, `isHidden()` called by `focus.js`
 
 ## modal.js
 

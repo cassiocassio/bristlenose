@@ -1,0 +1,12 @@
+/* Molecule: sparkline — miniature stacked bar chart */
+
+.bn-sparkline {
+    display: inline-flex;
+    align-items: flex-end;
+    height: 54px;
+}
+
+.bn-sparkline-bar {
+    width: 5px;
+    border-radius: 1px 1px 0 0;
+}

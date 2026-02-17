@@ -235,13 +235,17 @@ After the React migration, Playwright E2E tests will cover the full browser → 
 
 6 data endpoints (hidden, starred, tags, edits, people, deleted-badges) + sessions + quotes. 223+ Python serve tests across 4 files.
 
-### CSS alignment — done through Round 3
+### CSS alignment — done through Round 4 (no new extractions needed)
 
-Extracted: `toggle.css`, `editable-text.css`, `sparkline.css`. Renamed: `person-id.css` → `person-badge.css`. Round 4 extractions pending (metric, journey-chain, thumbnail).
+Extracted (R1–R3): `toggle.css`, `editable-text.css`, `sparkline.css`. Renamed: `person-id.css` → `person-badge.css`. Metric reuses existing classes from `organisms/analysis.css`. JourneyChain reuses `.bn-session-journey`. Thumbnail extraction pending.
 
 ### What's next
 
-Round 4 primitives are not blocking — build each when its target surface migrates to React. Likely order: Metric (analysis page), JourneyChain + Thumbnail (sessions table parity), Modal + Toast (infrastructure, defer until first need), Annotation (transcript page, furthest out).
+4 remaining primitives — build each when its target surface migrates to React:
+- **Thumbnail** — sessions table media preview (render-only)
+- **Annotation** — transcript page margin labels (needs transcript island)
+- **Modal** — infrastructure, defer until first delete-confirmation need
+- **Toast** — infrastructure, defer until first feedback need
 
 ## Reference docs
 

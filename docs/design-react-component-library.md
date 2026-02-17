@@ -285,11 +285,12 @@ The primitive-first approach means Milestone 2 produces more than a quote card â
 | `atoms/input.css` + `molecules/tag-input.css` | TagInput | 1:1 | Done (Round 3) |
 | `organisms/blockquote.css` | (composition: QuoteCard) | N/A â€” composition, not primitive | Round 2 |
 | `molecules/sparkline.css` (extracted from `templates/report.css`) | Sparkline | 1:1 | Done (Round 3) |
-| `templates/report.css` (journey section) | JourneyChain | Buried in template CSS | Round 4 |
-| `organisms/analysis.css` | Metric | Buried in organism CSS | Round 4 |
-| `templates/report.css` (thumbnail section) | Thumbnail | Buried in template CSS | Round 4 |
-| `atoms/modal.css` | Modal | 1:1 | Round 4 |
-| `atoms/toast.css` | Toast | 1:1 | Round 4 |
+| `templates/report.css` (journey section) | JourneyChain | 1:1 (`.bn-session-journey` + added `.bn-journey-sep`, `.bn-journey-label`) | Done (Round 4) |
+| `organisms/analysis.css` | Metric | 1:1 (reuses existing `.metric-*`, `.conc-bar-*`, `.intensity-dots-svg`) | Done (Round 4) |
+| `atoms/thumbnail.css` (extracted from `templates/report.css`) | Thumbnail | 1:1 | Done (Round 4) |
+| `molecules/transcript-annotations.css` | Annotation | 1:1 (reuses `.margin-annotation`, `.margin-label`, `.margin-tags`) | Done (Round 4) |
+| `atoms/modal.css` | Modal | 1:1 | Infrastructure (build when needed) |
+| `atoms/toast.css` | Toast | 1:1 | Infrastructure (build when needed) |
 
 ---
 
@@ -312,7 +313,11 @@ The primitive-first approach means Milestone 2 produces more than a quote card â
 - SessionsTable refactored to use Sparkline primitive (removed inline SentimentSparkline sub-component)
 - TagInput CSS was already 1:1 aligned (`atoms/input.css` + `molecules/tag-input.css`)
 
-### Round 4 (in progress)
+### Round 4 (done)
 - Metric: reuses existing `.metric-label`, `.metric-value`, `.metric-viz`, `.conc-bar-*`, `.intensity-dots-svg` classes from `organisms/analysis.css` â€” no extraction needed (CSS already 1:1)
 - JourneyChain: reuses existing `.bn-session-journey` class â€” added `.bn-journey-sep` and `.bn-journey-label` spans for future styling hooks. Wired into SessionsTable (replaces inline join)
-- TODO: Create `atoms/thumbnail.css` from `templates/report.css`
+- Counter: reuses existing `molecules/hidden-quotes.css` classes (`.bn-hidden-badge`, `.bn-hidden-toggle`, `.bn-hidden-dropdown`). Expandable badge with preview dropdown and unhide actions
+- Thumbnail: extracted `.bn-video-thumb` and `.bn-play-icon` from `templates/report.css` into `atoms/thumbnail.css`. Wired into SessionsTable (replaces inline markup)
+- Annotation: reuses existing `molecules/transcript-annotations.css` classes (`.margin-annotation`, `.margin-label`, `.margin-tags`). Composes Badge for sentiment and user tag badges. Render-only with delete callbacks
+
+**All 14 primitives complete.** 12 component files, 136 tests across 12 test files.

@@ -4,25 +4,30 @@ Development log for the `bristlenose serve` feature branch. Tracks milestones, a
 
 ---
 
-## React component library — Round 4 partial (17 Feb 2026)
+## React component library — Round 4 complete (17 Feb 2026)
 
-**2 new primitives: Metric and JourneyChain. 10 of 14 primitives now complete.**
+**All 14 primitives complete. 12 component files, 136 tests across 12 test files.**
 
-### Metric component (`frontend/src/components/Metric.tsx`)
+### Round 4 primitives (5 components)
 
-Render-only metric display for analysis signal cards. Renders a label + formatted value + visualization in the existing 3-column `.signal-card-metrics` CSS grid. Three viz types: `bar` (percentage fill using `.conc-bar-track`/`.conc-bar-fill`), `dots` (SVG intensity dots with full/half/empty states matching `analysis.js`), and `none` (empty). Uses React `useId()` for stable SVG clip-path IDs instead of `Math.random()`. Reuses all existing CSS classes — no extraction needed.
+**Metric** (`frontend/src/components/Metric.tsx`) — Render-only metric display for analysis signal cards. Three viz types: `bar` (percentage fill), `dots` (SVG intensity), `none`. Uses `useId()` for stable SVG clip-path IDs. Reuses all existing CSS from `organisms/analysis.css`.
 
-### JourneyChain component (`frontend/src/components/JourneyChain.tsx`)
+**JourneyChain** (`frontend/src/components/JourneyChain.tsx`) — Ordered screen labels joined by arrow separators. Wired into `SessionsTable.tsx`, replacing inline join.
 
-Ordered list of screen labels joined by arrow separators. Renders into `.bn-session-journey` container. Each label wrapped in `.bn-journey-label`, separators in `.bn-journey-sep` with `aria-hidden`. Custom separator prop (defaults to ` → `). Returns null for empty labels.
+**Counter** (`frontend/src/components/Counter.tsx`) — Hidden-quotes badge with expandable preview dropdown and unhide actions. Reuses `molecules/hidden-quotes.css`.
 
-Wired into `SessionsTable.tsx`, replacing the inline `journey_labels.join(" → ")`.
+**Thumbnail** (`frontend/src/components/Thumbnail.tsx`) — Media preview placeholder (96×54px) with play icon. CSS extracted from `templates/report.css` into `atoms/thumbnail.css`. Wired into `SessionsTable.tsx`, replacing inline markup.
 
-### Migration status update
+**Annotation** (`frontend/src/components/Annotation.tsx`) — Transcript margin annotation: section/theme label link + sentiment badge + user tag badges. Composes Badge component. Reuses `molecules/transcript-annotations.css`. Render-only with delete callbacks for badges and tags.
 
-Added "React migration status" section to `bristlenose/server/CLAUDE.md` — tracks all 14 primitives, 6 islands, backend API status, and CSS alignment in one place. Future sessions can check this for current state.
+### CSS extraction
 
-**What shipped:** 2 component files, 2 test files (21 new tests → 117 total), `SessionsTable.tsx` refactored, barrel exports updated, design doc and server CLAUDE.md updated. 1192 Python tests + 117 Vitest tests all passing.
+- Created `atoms/thumbnail.css` — extracted `.bn-video-thumb` and `.bn-play-icon` from `templates/report.css`
+- Added to `_THEME_FILES` in `render_html.py`
+
+### What shipped
+
+5 component files, 5 test files (19 new tests in this session → 136 total), `SessionsTable.tsx` refactored to use Thumbnail, barrel exports updated, design doc marked Round 4 complete.
 
 ---
 

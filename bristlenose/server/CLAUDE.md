@@ -213,12 +213,12 @@ After the React migration, Playwright E2E tests will cover the full browser → 
 | 8 | Counter | R3 done | 14 | Hidden-quotes dropdown (pulled from R4) |
 | 9 | Metric | R4 done | 13 | Bar fill + SVG intensity dots, for analysis signal cards |
 | 10 | JourneyChain | R4 done | 8 | Arrow-separated labels, wired into SessionsTable |
-| 11 | Annotation | R4 todo | — | Transcript page margin labels |
-| 12 | Thumbnail | R4 todo | — | Sessions table media preview |
-| 13 | Modal | R4 todo | — | Infrastructure (delete confirmations) |
-| 14 | Toast | R4 todo | — | Infrastructure (feedback notifications) |
+| 11 | Annotation | R4 done | 14 | Transcript page margin labels, composes Badge |
+| 12 | Thumbnail | R4 done | 5 | Sessions table media preview, CSS extracted to atom |
+| 13 | Modal | Infra | — | Infrastructure (build when needed for delete confirmations) |
+| 14 | Toast | Infra | — | Infrastructure (build when needed for feedback notifications) |
 
-**Rounds 1–3 complete, Round 4 in progress (10/14 primitives, 117 Vitest tests).** Remaining 4 are specialty — each unlocks one surface.
+**All 4 rounds complete (12 primitives + 2 infrastructure, 136 Vitest tests).** Modal and Toast are infrastructure — build when first consumer needs them.
 
 ### Islands (`frontend/src/islands/`)
 

@@ -16,6 +16,7 @@ Each active feature branch gets its own **git worktree** — a full working copy
 |-----------|--------|---------|
 | `bristlenose/` | `main` | Main repo, releases, hotfixes |
 | `bristlenose_branch symbology/` | `symbology` | § ¶ ❋ Unicode prefix symbols for sections, quotes, themes |
+| `bristlenose_branch highlighter/` | `highlighter` | Highlighter feature |
 
 **Creating a new feature branch worktree:**
 
@@ -94,10 +95,22 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 |--------|---------------|---------------|
 | `main` | `bristlenose/` | `origin/main` (push via `origin/main:wip` until release time) |
 | `symbology` | `bristlenose_branch symbology/` | `origin/symbology` |
+| `highlighter` | `bristlenose_branch highlighter/` | `origin/highlighter` |
 
 ---
 
 ## Active Branches
+
+### `highlighter` — started 13 Feb 2026
+
+**Worktree:** `/Users/cassio/Code/bristlenose_branch highlighter`
+
+**Goal:** Highlighter feature (TBD — to be detailed when scope is defined).
+
+**Files likely to touch:**
+- TBD
+
+---
 
 ### `symbology` — started 12 Feb 2026
 

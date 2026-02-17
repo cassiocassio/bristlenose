@@ -232,7 +232,7 @@ export function QuoteGroup({
     (domId: string, tagName: string) => {
       updateQuote(domId, (s) => ({
         ...s,
-        tags: [...s.tags, { name: tagName, codebook_group: "Ungrouped" }],
+        tags: [...s.tags, { name: tagName, codebook_group: "Uncategorised" }],
       }));
     },
     [updateQuote],

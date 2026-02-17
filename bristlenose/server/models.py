@@ -16,6 +16,19 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from bristlenose.server.db import Base
 
 # ---------------------------------------------------------------------------
+# Constants
+# ---------------------------------------------------------------------------
+
+#: Sentinel name for the default "Uncategorised" codebook group.
+#: Tags created from the quotes tab land here by default. The group is
+#: always visible, non-editable, and non-deletable.
+UNCATEGORISED_GROUP_NAME = "Uncategorised"
+UNCATEGORISED_GROUP_SUBTITLE = "Tags not yet assigned to any group"
+
+#: Legacy name — used for DB migration from older databases.
+_LEGACY_UNGROUPED_NAME = "Ungrouped"
+
+# ---------------------------------------------------------------------------
 # Instance-scoped (no project_id) — shared across projects
 # ---------------------------------------------------------------------------
 

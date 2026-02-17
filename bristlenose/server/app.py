@@ -12,6 +12,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 
 from bristlenose.server.db import create_session_factory, get_engine, init_db
+from bristlenose.server.routes.codebook import router as codebook_router
 from bristlenose.server.routes.dashboard import router as dashboard_router
 from bristlenose.server.routes.data import router as data_router
 from bristlenose.server.routes.health import router as health_router
@@ -54,6 +55,16 @@ _REACT_QUOTE_THEMES_MOUNT = (
     '<div id="bn-quote-themes-root" data-project-id="1"></div>'
     "<!-- /bn-quote-themes -->"
 )
+# React mount point for codebook panel (Codebook tab).
+# Must preserve the .bn-tab-panel wrapper so vanilla JS tab switching can find it.
+_REACT_CODEBOOK_MOUNT = (
+    "<!-- bn-codebook -->"
+    '<div class="bn-tab-panel" data-tab="codebook" id="panel-codebook"'
+    ' role="tabpanel" aria-label="Codebook">'
+    '<div id="bn-codebook-root" data-project-id="1"></div>'
+    "</div>"
+    "<!-- /bn-codebook -->"
+)
 
 
 def create_app(
@@ -90,6 +101,7 @@ def create_app(
     app.state.db_factory = session_factory
 
     app.include_router(health_router)
+    app.include_router(codebook_router)
     app.include_router(dashboard_router)
     app.include_router(sessions_router)
     app.include_router(quotes_router)
@@ -280,6 +292,7 @@ body.bn-dev-overlay #bn-sessions-table-root,
 body.bn-dev-overlay #bn-about-developer-root,
 body.bn-dev-overlay #bn-quote-sections-root,
 body.bn-dev-overlay #bn-quote-themes-root,
+body.bn-dev-overlay #bn-codebook-root,
 body.bn-dev-overlay #codebook-grid,
 body.bn-dev-overlay #signal-cards,
 body.bn-dev-overlay #heatmap-section-container,
@@ -290,7 +303,7 @@ body.bn-dev-overlay #heatmap-theme-container { position: relative; }
    React/Vanilla JS regions so those regions' own colour shows through.
    Elements *inside* React mount points are also excluded — React renders
    <section>, <table>, etc. that would otherwise match generic selectors. */
-body.bn-dev-overlay .bn-tab-panel:not(:has(#bn-dashboard-root, #bn-sessions-table-root, #bn-about-developer-root, #bn-quote-sections-root, #bn-quote-themes-root, #codebook-grid, #signal-cards, #heatmap-section-container, #heatmap-theme-container)),
+body.bn-dev-overlay .bn-tab-panel:not(:has(#bn-dashboard-root, #bn-sessions-table-root, #bn-about-developer-root, #bn-quote-sections-root, #bn-quote-themes-root, #bn-codebook-root, #codebook-grid, #signal-cards, #heatmap-section-container, #heatmap-theme-container)),
 body.bn-dev-overlay .bn-dashboard:not(:has(#bn-dashboard-root)),
 body.bn-dev-overlay .bn-session-grid:not(:has(#bn-sessions-table-root)),
 body.bn-dev-overlay .toolbar,
@@ -302,12 +315,12 @@ body.bn-dev-overlay .footer {
   outline: 3px solid rgba(147, 197, 253, 0.5);  /* blue outline — Jinja2 */
   outline-offset: -3px;
 }
-body.bn-dev-overlay .bn-tab-panel:not(:has(#bn-dashboard-root, #bn-sessions-table-root, #bn-about-developer-root, #bn-quote-sections-root, #bn-quote-themes-root, #codebook-grid, #signal-cards, #heatmap-section-container, #heatmap-theme-container))::after,
+body.bn-dev-overlay .bn-tab-panel:not(:has(#bn-dashboard-root, #bn-sessions-table-root, #bn-about-developer-root, #bn-quote-sections-root, #bn-quote-themes-root, #bn-codebook-root, #codebook-grid, #signal-cards, #heatmap-section-container, #heatmap-theme-container))::after,
 body.bn-dev-overlay .bn-dashboard:not(:has(#bn-dashboard-root))::after,
 body.bn-dev-overlay .bn-session-grid:not(:has(#bn-sessions-table-root))::after,
 body.bn-dev-overlay .toolbar::after,
 body.bn-dev-overlay .toc::after,
-body.bn-dev-overlay section:not(:has(#bn-dashboard-root, #bn-sessions-table-root, #bn-about-developer-root, #bn-quote-sections-root, #bn-quote-themes-root, #codebook-grid, #signal-cards, #heatmap-section-container, #heatmap-theme-container))::after,
+body.bn-dev-overlay section:not(:has(#bn-dashboard-root, #bn-sessions-table-root, #bn-about-developer-root, #bn-quote-sections-root, #bn-quote-themes-root, #bn-codebook-root, #codebook-grid, #signal-cards, #heatmap-section-container, #heatmap-theme-container))::after,
 body.bn-dev-overlay .bn-about:not(:has(#bn-about-developer-root))::after,
 body.bn-dev-overlay .report-header::after,
 body.bn-dev-overlay .bn-global-nav::after,
@@ -331,6 +344,7 @@ body.bn-dev-overlay #bn-sessions-table-root section::after,
 body.bn-dev-overlay #bn-about-developer-root section::after,
 body.bn-dev-overlay #bn-quote-sections-root section::after,
 body.bn-dev-overlay #bn-quote-themes-root section::after,
+body.bn-dev-overlay #bn-codebook-root section::after,
 body.bn-dev-overlay #codebook-grid section::after,
 body.bn-dev-overlay #signal-cards section::after,
 body.bn-dev-overlay #heatmap-section-container section::after,
@@ -358,7 +372,8 @@ body.bn-dev-overlay #bn-dashboard-root,
 body.bn-dev-overlay #bn-sessions-table-root,
 body.bn-dev-overlay #bn-about-developer-root,
 body.bn-dev-overlay #bn-quote-sections-root,
-body.bn-dev-overlay #bn-quote-themes-root {
+body.bn-dev-overlay #bn-quote-themes-root,
+body.bn-dev-overlay #bn-codebook-root {
   outline: 3px solid rgba(34, 197, 94, 0.6);  /* green outline */
   outline-offset: -3px;
   background: rgba(134, 239, 172, 0.08) !important;  /* subtle green wash */
@@ -367,7 +382,8 @@ body.bn-dev-overlay #bn-dashboard-root::after,
 body.bn-dev-overlay #bn-sessions-table-root::after,
 body.bn-dev-overlay #bn-about-developer-root::after,
 body.bn-dev-overlay #bn-quote-sections-root::after,
-body.bn-dev-overlay #bn-quote-themes-root::after {
+body.bn-dev-overlay #bn-quote-themes-root::after,
+body.bn-dev-overlay #bn-codebook-root::after {
   content: '';
   position: absolute;
   inset: 0;
@@ -585,6 +601,13 @@ def _mount_dev_report(app: FastAPI, output_dir: Path) -> None:
         html = re.sub(
             r"<!-- bn-quote-themes -->.*?<!-- /bn-quote-themes -->",
             _REACT_QUOTE_THEMES_MOUNT,
+            html,
+            flags=re.DOTALL,
+        )
+        # Swap the Jinja2 codebook for the React mount point.
+        html = re.sub(
+            r"<!-- bn-codebook -->.*?<!-- /bn-codebook -->",
+            _REACT_CODEBOOK_MOUNT,
             html,
             flags=re.DOTALL,
         )

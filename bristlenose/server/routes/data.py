@@ -14,6 +14,9 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from bristlenose.server.models import (
+    _LEGACY_UNGROUPED_NAME,
+    UNCATEGORISED_GROUP_NAME,
+    UNCATEGORISED_GROUP_SUBTITLE,
     CodebookGroup,
     DeletedBadge,
     HeadingEdit,
@@ -124,16 +127,29 @@ def _quote_ids_for_project(db: Session, project_id: int) -> list[int]:
     return [q.id for q in db.query(Quote).filter_by(project_id=project_id).all()]
 
 
-def _get_or_create_ungrouped(db: Session) -> CodebookGroup:
-    """Return the 'Ungrouped' codebook group, creating it if needed.
+def _get_or_create_uncategorised(db: Session) -> CodebookGroup:
+    """Return the default 'Uncategorised' codebook group, creating if needed.
 
+    Also migrates the legacy 'Ungrouped' name from older databases.
     User-defined tags that don't belong to a codebook group are assigned here.
     """
-    group = db.query(CodebookGroup).filter_by(name="Ungrouped").first()
-    if not group:
-        group = CodebookGroup(name="Ungrouped", subtitle="Auto-created for unassigned tags")
-        db.add(group)
+    group = db.query(CodebookGroup).filter_by(name=UNCATEGORISED_GROUP_NAME).first()
+    if group:
+        return group
+    # Migrate legacy "Ungrouped" → "Uncategorised"
+    legacy = db.query(CodebookGroup).filter_by(name=_LEGACY_UNGROUPED_NAME).first()
+    if legacy:
+        legacy.name = UNCATEGORISED_GROUP_NAME
+        legacy.subtitle = UNCATEGORISED_GROUP_SUBTITLE
         db.flush()
+        return legacy
+    group = CodebookGroup(
+        name=UNCATEGORISED_GROUP_NAME,
+        subtitle=UNCATEGORISED_GROUP_SUBTITLE,
+        colour_set="",
+    )
+    db.add(group)
+    db.flush()
     return group
 
 
@@ -341,7 +357,7 @@ def put_tags(
                 synchronize_session=False
             )
 
-        ungrouped: CodebookGroup | None = None
+        uncategorised: CodebookGroup | None = None
 
         for dom_id, tag_names in data.items():
             quote = _resolve_quote(db, project_id, dom_id)
@@ -351,9 +367,9 @@ def put_tags(
             for tag_name in tag_names:
                 td_id = tag_defs.get(tag_name.lower())
                 if td_id is None:
-                    if ungrouped is None:
-                        ungrouped = _get_or_create_ungrouped(db)
-                    td = TagDefinition(name=tag_name, codebook_group_id=ungrouped.id)
+                    if uncategorised is None:
+                        uncategorised = _get_or_create_uncategorised(db)
+                    td = TagDefinition(name=tag_name, codebook_group_id=uncategorised.id)
                     db.add(td)
                     db.flush()
                     td_id = td.id

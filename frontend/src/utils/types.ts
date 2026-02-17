@@ -118,3 +118,31 @@ export interface QuotesListResponse {
   total_hidden: number;
   total_starred: number;
 }
+
+// ---------------------------------------------------------------------------
+// Codebook API
+// ---------------------------------------------------------------------------
+
+export interface CodebookTagResponse {
+  id: number;
+  name: string;
+  count: number;
+  colour_index: number;
+}
+
+export interface CodebookGroupResponse {
+  id: number;
+  name: string;
+  subtitle: string;
+  colour_set: string;
+  order: number;
+  tags: CodebookTagResponse[];
+  total_quotes: number;
+  is_default: boolean;
+}
+
+export interface CodebookResponse {
+  groups: CodebookGroupResponse[];
+  ungrouped: CodebookTagResponse[];
+  all_tag_names: string[];
+}

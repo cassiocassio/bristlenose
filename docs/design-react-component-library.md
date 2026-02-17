@@ -165,6 +165,29 @@ A transient notification.
 - **Current surfaces:** hide feedback, clipboard copy, API error feedback
 - **Note:** infrastructure primitive — build when first needed (likely round 2)
 
+### 15. MicroBar
+
+A horizontal proportional bar.
+
+- **Qualities:** value (0–1 fraction), colour (CSS variable or literal), mode (bare or tracked)
+- **States:** render-only
+- **Behaviours:** none — render-only
+- **Variations by context:** bare mode (codebook tag frequency — no track background), tracked mode (analysis concentration — shows background track)
+- **Current surfaces:** codebook panel tag frequency bars, analysis signal card concentration/breadth bars (via Metric)
+- **CSS reuse:** bare mode uses `.tag-micro-bar` from `organisms/codebook-panel.css`, tracked mode uses `.conc-bar-track`/`.conc-bar-fill` from `organisms/analysis.css`
+
+### 16. ConfirmDialog
+
+A contextual inline confirmation card.
+
+- **Qualities:** title, optional body, confirm label, variant (danger/primary), optional accent colour
+- **States:** mounted (visible, auto-focused), dismissed (unmounted by parent)
+- **Behaviours:** Enter confirms, Escape cancels, confirm button auto-focused on mount
+- **Not a Modal:** positioned near the affected element (CSS absolute within parent), not centred viewport overlay. Keeps researcher's eyes on the codebook grid
+- **Current surfaces:** codebook tag delete, codebook group delete, codebook tag merge
+- **Future surfaces:** any inline confirmation (histogram delete, quote bulk operations)
+- **CSS:** `.confirm-dialog` styles in `organisms/codebook-panel.css`
+
 ---
 
 ## Build sequence
@@ -229,8 +252,10 @@ Which primitives are needed by which compositions:
 | Thumbnail | | x | | | | |
 | Modal | (infra) | | | | (infra) | |
 | Toast | (infra) | | | | | |
+| MicroBar | | | | | x | x |
+| ConfirmDialog | | | | | x | |
 
-**7 primitives** cover 80% of the app. The remaining 5 are one-surface-each.
+**7 primitives** cover 80% of the app. The remaining 7 are one-or-two-surface-each.
 
 ---
 
@@ -292,6 +317,9 @@ The primitive-first approach means Milestone 2 produces more than a quote card �
 | `molecules/transcript-annotations.css` | Annotation | 1:1 (reuses `.margin-annotation`, `.margin-label`, `.margin-tags`) | Done (Round 4) |
 | `atoms/modal.css` | Modal | 1:1 | Infrastructure (build when needed) |
 | `atoms/toast.css` | Toast | 1:1 | Infrastructure (build when needed) |
+| `organisms/codebook-panel.css` (`.tag-micro-bar`) | MicroBar (bare mode) | reuse | Done (M5) |
+| `organisms/analysis.css` (`.conc-bar-*`) | MicroBar (tracked mode) | reuse | Done (M5) |
+| `organisms/codebook-panel.css` (`.confirm-dialog`) | ConfirmDialog | 1:1 | Done (M5) |
 
 ---
 
@@ -321,4 +349,13 @@ The primitive-first approach means Milestone 2 produces more than a quote card �
 - Thumbnail: extracted `.bn-video-thumb` and `.bn-play-icon` from `templates/report.css` into `atoms/thumbnail.css`. Wired into SessionsTable (replaces inline markup)
 - Annotation: reuses existing `molecules/transcript-annotations.css` classes (`.margin-annotation`, `.margin-label`, `.margin-tags`). Composes Badge for sentiment and user tag badges. Render-only with delete callbacks
 
-**All 14 primitives complete.** 12 component files, 136 tests across 12 test files.
+### Milestone 5 (done)
+- Tokenised `codebook-panel.css` spacing: `12px` → `var(--bn-space-md)`, `4px` → `var(--bn-space-xs)`, three `6px` → `var(--bn-space-sm)`
+- Fixed merge-target dark mode colour: hardcoded `rgba(37, 99, 235, 0.06)` → `color-mix(in srgb, var(--bn-colour-accent) 6%, transparent)`
+- Fixed placeholder border: `1.5px dashed` → `1px dashed`
+- Added `.codebook-group .tag-input { font-size: 0.82rem }` (match upscaled badges)
+- Retired `.group-title-input` / `.group-subtitle-input` rules (replaced by EditableText)
+- Added `.confirm-dialog`, `.confirm-dialog-title`, `.confirm-dialog-body`, `.confirm-dialog-actions`, `.confirm-dialog-btn`, `.confirm-dialog-btn--danger`, `.confirm-dialog-btn--primary`, `.confirm-dialog-btn--cancel` to `codebook-panel.css`
+- MicroBar reuses existing CSS (`.tag-micro-bar`, `.conc-bar-track`/`.conc-bar-fill`) — no new files
+
+**All 16 primitives complete.** 14 component files, 182 tests across 14 test files.

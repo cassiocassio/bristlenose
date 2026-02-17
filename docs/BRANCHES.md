@@ -2,7 +2,7 @@
 
 This document tracks active feature branches to help multiple Claude sessions coordinate without conflicts.
 
-**Updated:** 13 Feb 2026
+**Updated:** 17 Feb 2026
 
 ---
 
@@ -123,24 +123,40 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 
 **Goal:** Add `bristlenose serve` command — FastAPI server + React frontend + SQLite database. Islands migration pattern: serve the existing HTML report over HTTP, then replace vanilla JS components with React islands one at a time.
 
-**Current status:** Milestones 0 and 1 complete. React component library all 4 rounds done — 12 primitives built (Badge, PersonBadge, TimecodeLink, EditableText, Toggle, TagInput, Sparkline, Metric, JourneyChain, Counter, Thumbnail, Annotation) + 2 infrastructure (Modal, Toast — built when needed). 136 Vitest component tests. SessionsTable uses PersonBadge, JourneyChain, Sparkline, Thumbnail primitives.
+**Current status:** Milestones 0–5 complete. React component library: 14 primitives built (Badge, PersonBadge, TimecodeLink, EditableText, Toggle, TagInput, Sparkline, Metric, JourneyChain, Counter, Thumbnail, Annotation, MicroBar, ConfirmDialog) + 2 infrastructure (Modal, Toast — built when needed). 182 Vitest tests. 5 React islands: SessionsTable, Dashboard, QuoteSections, QuoteThemes, CodebookPanel. 330+ Python serve tests across 8 files.
 
 **Files added/modified:**
-- `bristlenose/server/models.py` — full 22-table domain schema (was single Project table)
+- `bristlenose/server/models.py` — full 22-table domain schema
 - `bristlenose/server/importer.py` — pipeline output → SQLite importer
 - `bristlenose/server/routes/sessions.py` — sessions API endpoint
-- `bristlenose/server/app.py` — sessions router, DB dependency injection, auto-import on startup
+- `bristlenose/server/routes/quotes.py` — quotes API endpoint
+- `bristlenose/server/routes/dashboard.py` — dashboard API endpoint
+- `bristlenose/server/routes/codebook.py` — 9 codebook CRUD endpoints
+- `bristlenose/server/routes/data.py` — 6 data sync endpoints
+- `bristlenose/server/routes/dev.py` — dev-only endpoints
+- `bristlenose/server/app.py` — FastAPI factory, mount point substitution, renderer overlay
 - `bristlenose/server/db.py` — StaticPool for in-memory testing, all-models init
-- `bristlenose/stages/render_html.py` — `serve_mode` flag for React mount point
-- `frontend/src/islands/SessionsTable.tsx` — React sessions table component
-- `frontend/src/main.tsx` — mount SessionsTable into `#bn-sessions-table-root`
-- `docs/design-serve-milestone-1.md` — full design doc with domain model, decisions, status
-- `docs/CHANGELOG-serve.md` — development log with design rationale
+- `bristlenose/stages/render_html.py` — `serve_mode` flag, React mount point markers
+- `frontend/src/islands/SessionsTable.tsx` — React sessions table island
+- `frontend/src/islands/Dashboard.tsx` — React dashboard island
+- `frontend/src/islands/CodebookPanel.tsx` — React codebook island with full CRUD
+- `frontend/src/islands/QuoteSections.tsx`, `QuoteThemes.tsx` — React quote islands
+- `frontend/src/components/MicroBar.tsx` — horizontal proportional bar primitive
+- `frontend/src/components/ConfirmDialog.tsx` — contextual inline confirmation primitive
+- `frontend/src/main.tsx` — mount all islands
+- `tests/test_serve_codebook_api.py` — 36 codebook CRUD tests
+- `tests/test_serve_dashboard_api.py` — 43 dashboard API tests
+- `tests/test_serve_quotes_api.py` — 48 quotes API tests
+- `tests/test_serve_data_api.py` — 37 data API tests
+- `tests/test_serve_data_api_stress.py` — 57 stress tests
+- `tests/test_serve_sessions_api.py` — 17 sessions API tests
 - `tests/test_serve_models.py` — 38 schema tests
 - `tests/test_serve_importer.py` — 17 import tests
-- `tests/test_serve_sessions_api.py` — 17 API tests
+- `docs/CHANGELOG-serve.md` — development log with design rationale
+- `docs/design-serve-milestone-1.md` — domain model and architecture
+- `docs/design-codebook-island.md` — codebook migration audit and decisions
 
-**Design docs:** `docs/design-serve-migration.md`, `docs/design-serve-milestone-1.md`, `docs/design-react-component-library.md`
+**Design docs:** `docs/design-serve-migration.md`, `docs/design-serve-milestone-1.md`, `docs/design-react-component-library.md`, `docs/design-codebook-island.md`
 
 ---
 

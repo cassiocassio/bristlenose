@@ -4,6 +4,7 @@ import AppKit
 struct DoneView: View {
     let reportPath: String?
     @ObservedObject var runner: ProcessRunner
+    var onRunAgain: () -> Void
     var onStartOver: () -> Void
 
     var body: some View {
@@ -63,13 +64,21 @@ struct DoneView: View {
                 .foregroundStyle(.orange)
             }
 
-            // Start over
-            Button(action: onStartOver) {
-                Label("Start over", systemImage: "arrow.uturn.backward")
+            // Navigation
+            HStack(spacing: 16) {
+                Button(action: onRunAgain) {
+                    Label("Back to folder", systemImage: "arrow.uturn.backward")
+                }
+                .buttonStyle(.bordered)
+                .controlSize(.regular)
+
+                Button(action: onStartOver) {
+                    Label("New folder", systemImage: "folder.badge.plus")
+                }
+                .buttonStyle(.plain)
+                .foregroundStyle(.secondary)
+                .font(.callout)
             }
-            .buttonStyle(.plain)
-            .foregroundStyle(.secondary)
-            .font(.callout)
         }
     }
 

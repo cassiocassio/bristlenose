@@ -13,6 +13,7 @@ import { Counter, EditableText } from "../components";
 import type { CounterItem } from "../components/Counter";
 import type { QuoteResponse, TagResponse } from "../utils/types";
 import { putHidden, putStarred, putEdits, putTags, putDeletedBadges } from "../utils/api";
+import { formatTimecode, stripSmartQuotes } from "../utils/format";
 import { QuoteCard } from "./QuoteCard";
 
 // ── Animation constants ─────────────────────────────────────────────────
@@ -37,23 +38,6 @@ function initialState(q: QuoteResponse): QuoteLocalState {
     tags: [...q.tags],
     deletedBadges: [...q.deleted_badges],
   };
-}
-
-// ── Timecode formatting (for Counter previews) ──────────────────────────
-
-function formatTc(seconds: number): string {
-  const h = Math.floor(seconds / 3600);
-  const m = Math.floor((seconds % 3600) / 60);
-  const s = Math.floor(seconds % 60);
-  const mm = String(m).padStart(2, "0");
-  const ss = String(s).padStart(2, "0");
-  return h > 0 ? `${h}:${mm}:${ss}` : `${mm}:${ss}`;
-}
-
-// ── Smart-quote helper (for Counter preview truncation) ─────────────────
-
-function stripSmartQuotes(text: string): string {
-  return text.replace(/^[\u201c\u201d"]+|[\u201c\u201d"]+$/g, "").trim();
 }
 
 // ── Props ───────────────────────────────────────────────────────────────
@@ -131,7 +115,7 @@ export function QuoteGroup({
     () =>
       hiddenQuotes.map((q) => ({
         domId: q.dom_id,
-        timecode: formatTc(q.start_timecode),
+        timecode: formatTimecode(q.start_timecode),
         seconds: q.start_timecode,
         endSeconds: q.end_timecode,
         participantId: q.participant_id,

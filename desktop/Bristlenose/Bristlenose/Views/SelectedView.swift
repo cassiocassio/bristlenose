@@ -15,7 +15,7 @@ struct SelectedView: View {
             // Folder info
             HStack(spacing: 8) {
                 Image(systemName: "folder.fill")
-                    .foregroundStyle(.accent)
+                    .foregroundStyle(.tint)
                     .font(.title2)
                 Text(folder.abbreviatingWithTildeInPath)
                     .font(.headline)

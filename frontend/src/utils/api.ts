@@ -9,6 +9,7 @@ import type {
   CodebookGroupResponse,
   CodebookResponse,
   CodebookTagResponse,
+  TranscriptPageResponse,
 } from "./types";
 
 function apiBase(): string {
@@ -143,4 +144,12 @@ export function mergeCodebookTags(
     source_id: sourceId,
     target_id: targetId,
   });
+}
+
+// ---------------------------------------------------------------------------
+// Transcript page helpers
+// ---------------------------------------------------------------------------
+
+export function getTranscript(sessionId: string): Promise<TranscriptPageResponse> {
+  return apiGet<TranscriptPageResponse>(`/transcripts/${sessionId}`);
 }

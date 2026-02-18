@@ -49,10 +49,19 @@ struct ReadyView: View {
                     .strokeBorder(
                         style: StrokeStyle(lineWidth: 2, dash: [8])
                     )
-                    .foregroundStyle(isDropTargeted ? .accent : .quaternary)
+                    .foregroundColor(isDropTargeted ? .accentColor : .gray.opacity(0.3))
             )
-            .onDrop(of: [.fileURL], isTargeted: $isDropTargeted) { providers in
-                handleDrop(providers: providers)
+            .dropDestination(for: URL.self) { urls, _ in
+                guard let url = urls.first else { return false }
+                var isDir: ObjCBool = false
+                guard FileManager.default.fileExists(
+                    atPath: url.path,
+                    isDirectory: &isDir
+                ), isDir.boolValue else { return false }
+                onFolderSelected(url)
+                return true
+            } isTargeted: { targeted in
+                isDropTargeted = targeted
             }
 
             // Supported formats
@@ -81,35 +90,5 @@ struct ReadyView: View {
 
         let response = panel.runModal()
         return response == .OK ? panel.url : nil
-    }
-
-    // MARK: - Drag and drop
-
-    private func handleDrop(providers: [NSItemProvider]) -> Bool {
-        guard let provider = providers.first else { return false }
-
-        provider.loadItem(
-            forTypeIdentifier: UTType.fileURL.identifier,
-            options: nil
-        ) { data, _ in
-            guard let data = data as? Data,
-                let url = URL(
-                    dataRepresentation: data,
-                    relativeTo: nil,
-                    isAbsolute: true
-                )
-            else { return }
-
-            var isDir: ObjCBool = false
-            guard FileManager.default.fileExists(
-                atPath: url.path,
-                isDirectory: &isDir
-            ), isDir.boolValue else { return }
-
-            DispatchQueue.main.async {
-                onFolderSelected(url)
-            }
-        }
-        return true
     }
 }

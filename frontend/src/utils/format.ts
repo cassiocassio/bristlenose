@@ -47,6 +47,21 @@ export function formatFinderDate(isoDate: string | null): string {
   return `${dt.getDate()} ${month} ${dt.getFullYear()} at ${timePart}`;
 }
 
+/** Format seconds as a timecode string (MM:SS or HH:MM:SS). Unlike formatDuration, always returns a timecode — never an em-dash. */
+export function formatTimecode(seconds: number): string {
+  const h = Math.floor(seconds / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  const s = Math.floor(seconds % 60);
+  const mm = String(m).padStart(2, "0");
+  const ss = String(s).padStart(2, "0");
+  return h > 0 ? `${h}:${mm}:${ss}` : `${mm}:${ss}`;
+}
+
+/** Strip leading/trailing smart quotes and straight quotes from text. */
+export function stripSmartQuotes(text: string): string {
+  return text.replace(/^[\u201c\u201d"]+|[\u201c\u201d"]+$/g, "").trim();
+}
+
 /** Truncate a filename Finder-style with middle ellipsis. */
 export function formatFinderFilename(name: string, maxLen: number = 24): string {
   if (name.length <= maxLen) return name;

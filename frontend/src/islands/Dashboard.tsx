@@ -11,7 +11,7 @@
 
 import { useEffect, useState, useMemo } from "react";
 import { Badge, PersonBadge, TimecodeLink } from "../components";
-import { formatDuration, formatFinderDate, formatFinderFilename } from "../utils/format";
+import { formatDuration, formatFinderDate, formatFinderFilename, formatTimecode } from "../utils/format";
 import type {
   DashboardResponse,
   DashboardSessionResponse,
@@ -46,17 +46,6 @@ function navigateToSession(sid: string, anchorId?: string) {
 
 function seekTo(pid: string, seconds: number) {
   window.seekTo?.(pid, seconds);
-}
-
-// ── Timecode formatting ─────────────────────────────────────────────────
-
-function formatTc(seconds: number): string {
-  const h = Math.floor(seconds / 3600);
-  const m = Math.floor((seconds % 3600) / 60);
-  const s = Math.floor(seconds % 60);
-  const mm = String(m).padStart(2, "0");
-  const ss = String(s).padStart(2, "0");
-  return h > 0 ? `${h}:${mm}:${ss}` : `${mm}:${ss}`;
 }
 
 // ── Stat link handler ───────────────────────────────────────────────────
@@ -331,7 +320,7 @@ function CompactSessionsTable({
 // ---------- Featured quotes ----------
 
 function FeaturedQuote({ quote }: { quote: FeaturedQuoteResponse }) {
-  const timecodeStr = formatTc(quote.start_timecode);
+  const timecodeStr = formatTimecode(quote.start_timecode);
 
   const handleCardClick = (e: React.MouseEvent) => {
     // If the click originated on a link/button, let it handle itself.

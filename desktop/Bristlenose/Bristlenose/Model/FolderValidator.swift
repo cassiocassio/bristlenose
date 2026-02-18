@@ -30,7 +30,7 @@ enum FolderValidator {
         if let enumerator = fm.enumerator(
             at: folder,
             includingPropertiesForKeys: [.isRegularFileKey],
-            options: [.skipsHiddenFiles, .skipsSubdirectoryDescendants]
+            options: [.skipsHiddenFiles]
         ) {
             for case let fileURL as URL in enumerator {
                 let ext = fileURL.pathExtension.lowercased()

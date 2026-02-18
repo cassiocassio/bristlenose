@@ -6,6 +6,7 @@ import { HelloIsland } from "./islands/HelloIsland";
 import { QuoteSections } from "./islands/QuoteSections";
 import { QuoteThemes } from "./islands/QuoteThemes";
 import { SessionsTable } from "./islands/SessionsTable";
+import { TranscriptPage } from "./islands/TranscriptPage";
 
 // Mount HelloIsland (proof of concept — will be removed later)
 const helloRoot = document.getElementById("bn-react-root");
@@ -46,6 +47,16 @@ const codebookRoot = document.getElementById("bn-codebook-root");
 if (codebookRoot) {
   const projectId = codebookRoot.getAttribute("data-project-id") || "1";
   createRoot(codebookRoot).render(<CodebookPanel projectId={projectId} />);
+}
+
+// Mount TranscriptPage into transcript pages (standalone session pages)
+const transcriptRoot = document.getElementById("bn-transcript-page-root");
+if (transcriptRoot) {
+  const projectId = transcriptRoot.getAttribute("data-project-id") || "1";
+  const sessionId = transcriptRoot.getAttribute("data-session-id") || "";
+  createRoot(transcriptRoot).render(
+    <TranscriptPage projectId={projectId} sessionId={sessionId} />
+  );
 }
 
 // Mount AboutDeveloper into the about tab — creates its own mount point

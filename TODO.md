@@ -85,6 +85,7 @@ This file contains: session reminders, feature groupings with context, items too
 | ~~Time estimate warning for long jobs~~ | #39 | ~~trivial~~ ✅ |
 | Britannification pass | #40 | trivial |
 | `--prefetch-model` flag for Whisper | #41 | trivial |
+| Doctor: serve-mode checks + Vite auto-discovery (see below) | — | medium |
 
 ### Packaging
 
@@ -229,7 +230,7 @@ Bristlenose has ~30 direct + transitive deps across Python, ML, LLM SDKs, and NL
 | `bristlenose/theme/js/` | Report JavaScript modules — concatenated at render time |
 | `bristlenose/llm/prompts.py` | LLM prompt templates |
 | `bristlenose/utils/hardware.py` | GPU/CPU auto-detection |
-| `bristlenose/doctor.py` | Doctor check logic (pure, no UI) — 7 checks, `run_all()`, `run_preflight()` |
+| `bristlenose/doctor.py` | Doctor check logic (pure, no UI) — 7 checks (+ serve-mode checks planned), `run_all()`, `run_preflight()` |
 | `bristlenose/doctor_fixes.py` | Install-method-aware fix instructions |
 | `.github/workflows/ci.yml` | CI: ruff, mypy, pytest on push/PR |
 | `.github/workflows/release.yml` | Release pipeline: build → PyPI → GitHub Release → Homebrew dispatch |
@@ -250,6 +251,14 @@ Bristlenose has ~30 direct + transitive deps across Python, ML, LLM SDKs, and NL
 
 ---
 
+## Doctor: serve-mode checks + Vite auto-discovery
+
+See `docs/design-serve-doctor.md` for full design including Vite endpoint discovery algorithm, proposed checks, and integration plan.
+
+**Summary:** 4 new doctor checks (`check_serve_deps`, `check_node_modules`, `check_vite_dev_server`, `check_database`), Vite auto-discovery via `/__vite_ping` (scan ports 5173–5180, fingerprint by `<title>Bristlenose</title>`), replace hardcoded port in `app.py`
+
+---
+
 ## Design docs
 
 | Document | Covers |
@@ -261,6 +270,7 @@ Bristlenose has ~30 direct + transitive deps across Python, ML, LLM SDKs, and NL
 | `docs/design-cli-improvements.md` | CLI warts, fixes, LLM provider implementation records |
 | `docs/design-html-report.md` | HTML report, people file, transcript pages |
 | `docs/design-doctor-and-snap.md` | Doctor command, snap packaging |
+| `docs/design-serve-doctor.md` | Serve-mode doctor checks, Vite auto-discovery |
 | `docs/design-research-methodology.md` | Quote selection, sentiment taxonomy, clustering rationale |
 | `docs/design-platform-transcripts.md` | Platform transcript ingestion |
 | `docs/design-transcript-coverage.md` | Transcript coverage feature |

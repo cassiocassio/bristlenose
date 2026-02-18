@@ -7,7 +7,7 @@ import os
 import re
 from pathlib import Path
 
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 
@@ -18,6 +18,7 @@ from bristlenose.server.routes.data import router as data_router
 from bristlenose.server.routes.health import router as health_router
 from bristlenose.server.routes.quotes import router as quotes_router
 from bristlenose.server.routes.sessions import router as sessions_router
+from bristlenose.server.routes.transcript import router as transcript_router
 
 logger = logging.getLogger(__name__)
 
@@ -65,6 +66,14 @@ _REACT_CODEBOOK_MOUNT = (
     "</div>"
     "<!-- /bn-codebook -->"
 )
+# React mount point for transcript page (replaces back link + heading + transcript body).
+# The {session_id} placeholder is filled at serve time from the filename.
+_REACT_TRANSCRIPT_MOUNT = (
+    "<!-- bn-transcript-page -->"
+    '<div id="bn-transcript-page-root" data-project-id="1"'
+    ' data-session-id="{session_id}"></div>'
+    "<!-- /bn-transcript-page -->"
+)
 
 
 def create_app(
@@ -105,6 +114,7 @@ def create_app(
     app.include_router(dashboard_router)
     app.include_router(sessions_router)
     app.include_router(quotes_router)
+    app.include_router(transcript_router)
     app.include_router(data_router)
 
     if dev:
@@ -293,6 +303,7 @@ body.bn-dev-overlay #bn-about-developer-root,
 body.bn-dev-overlay #bn-quote-sections-root,
 body.bn-dev-overlay #bn-quote-themes-root,
 body.bn-dev-overlay #bn-codebook-root,
+body.bn-dev-overlay #bn-transcript-page-root,
 body.bn-dev-overlay #codebook-grid,
 body.bn-dev-overlay #signal-cards,
 body.bn-dev-overlay #heatmap-section-container,
@@ -345,6 +356,7 @@ body.bn-dev-overlay #bn-about-developer-root section::after,
 body.bn-dev-overlay #bn-quote-sections-root section::after,
 body.bn-dev-overlay #bn-quote-themes-root section::after,
 body.bn-dev-overlay #bn-codebook-root section::after,
+body.bn-dev-overlay #bn-transcript-page-root section::after,
 body.bn-dev-overlay #codebook-grid section::after,
 body.bn-dev-overlay #signal-cards section::after,
 body.bn-dev-overlay #heatmap-section-container section::after,
@@ -373,7 +385,8 @@ body.bn-dev-overlay #bn-sessions-table-root,
 body.bn-dev-overlay #bn-about-developer-root,
 body.bn-dev-overlay #bn-quote-sections-root,
 body.bn-dev-overlay #bn-quote-themes-root,
-body.bn-dev-overlay #bn-codebook-root {
+body.bn-dev-overlay #bn-codebook-root,
+body.bn-dev-overlay #bn-transcript-page-root {
   outline: 3px solid rgba(34, 197, 94, 0.6);  /* green outline */
   outline-offset: -3px;
   background: rgba(134, 239, 172, 0.08) !important;  /* subtle green wash */
@@ -383,7 +396,8 @@ body.bn-dev-overlay #bn-sessions-table-root::after,
 body.bn-dev-overlay #bn-about-developer-root::after,
 body.bn-dev-overlay #bn-quote-sections-root::after,
 body.bn-dev-overlay #bn-quote-themes-root::after,
-body.bn-dev-overlay #bn-codebook-root::after {
+body.bn-dev-overlay #bn-codebook-root::after,
+body.bn-dev-overlay #bn-transcript-page-root::after {
   content: '';
   position: absolute;
   inset: 0;
@@ -626,6 +640,48 @@ def _mount_dev_report(app: FastAPI, output_dir: Path) -> None:
     @app.get("/report")
     def redirect_report_to_slash() -> RedirectResponse:
         return RedirectResponse("/report/", status_code=301)
+
+    @app.get("/report/sessions/{filename}")
+    def serve_transcript_html(filename: str) -> HTMLResponse:
+        """Serve transcript pages with React island injection.
+
+        Only intercepts transcript_*.html files — other session assets
+        (if any) fall through to StaticFiles.
+        """
+        if not filename.startswith("transcript_") or not filename.endswith(".html"):
+            # Not a transcript page — let StaticFiles handle it
+            from starlette.exceptions import HTTPException as StarletteHTTPException
+
+            raise StarletteHTTPException(status_code=404)
+
+        sessions_dir = output_dir / "sessions"
+        page_path = sessions_dir / filename
+        if not page_path.is_file():
+            raise HTTPException(status_code=404, detail="Transcript page not found")
+
+        # Extract session_id from filename: transcript_s1.html → s1
+        sid = filename.removeprefix("transcript_").removesuffix(".html")
+
+        page_html = page_path.read_text(encoding="utf-8")
+
+        # Replace comment markers with React mount div (leave IIFE untouched)
+        mount_html = _REACT_TRANSCRIPT_MOUNT.replace("{session_id}", sid)
+        page_html = re.sub(
+            r"<!-- bn-transcript-page -->.*?<!-- /bn-transcript-page -->",
+            mount_html,
+            page_html,
+            flags=re.DOTALL,
+        )
+
+        # Inject API base URL + overlay + Vite dev scripts before </body>
+        api_base_script = (
+            "<script>window.BRISTLENOSE_API_BASE = '/api/projects/1';</script>\n"
+        )
+        page_html = page_html.replace(
+            "</body>",
+            f"{api_base_script}{overlay_html}{vite_scripts}</body>",
+        )
+        return HTMLResponse(page_html)
 
     # Non-HTML assets (CSS, images, JS from the pipeline) still served normally
     app.mount("/report", StaticFiles(directory=output_dir), name="report")

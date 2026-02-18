@@ -1565,6 +1565,7 @@ def _render_transcript_page(
     ))
 
     # Back link + participant heading — report is at ../bristlenose-{slug}-report.html
+    _w("<!-- bn-transcript-page -->")
     _w('<nav class="transcript-back">')
     report_filename = f"bristlenose-{slug}-report.html"
     _w(
@@ -1639,6 +1640,7 @@ def _render_transcript_page(
 
         _w("</div></div>")
     _w("</section>")
+    _w("<!-- /bn-transcript-page -->")
 
     _w("</article>")
     _w(_footer_html(assets_prefix="../assets"))

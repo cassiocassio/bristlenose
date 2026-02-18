@@ -19,6 +19,7 @@ import {
   Toggle,
 } from "../components";
 import type { QuoteResponse } from "../utils/types";
+import { formatTimecode, stripSmartQuotes } from "../utils/format";
 
 // ── SVG icon for the hide button (eye-slash) ────────────────────────────
 
@@ -38,14 +39,10 @@ const HideIcon = (
   </svg>
 );
 
-// ── Smart-quote helpers ─────────────────────────────────────────────────
+// ── Smart-quote helper ──────────────────────────────────────────────────
 
 function addSmartQuotes(text: string): string {
   return `\u201c${text}\u201d`;
-}
-
-function stripSmartQuotes(text: string): string {
-  return text.replace(/^[\u201c\u201d"]+|[\u201c\u201d"]+$/g, "").trim();
 }
 
 // ── Props ───────────────────────────────────────────────────────────────
@@ -162,17 +159,7 @@ export function QuoteCard({
   // Existing tag names for exclusion in TagInput.
   const existingTagNames = userTags.map((t) => t.name);
 
-  // Formatted timecode for data attribute.
-  const formatTc = (seconds: number): string => {
-    const h = Math.floor(seconds / 3600);
-    const m = Math.floor((seconds % 3600) / 60);
-    const s = Math.floor(seconds % 60);
-    const mm = String(m).padStart(2, "0");
-    const ss = String(s).padStart(2, "0");
-    return h > 0 ? `${h}:${mm}:${ss}` : `${mm}:${ss}`;
-  };
-
-  const timecodeStr = formatTc(quote.start_timecode);
+  const timecodeStr = formatTimecode(quote.start_timecode);
 
   return (
     <blockquote

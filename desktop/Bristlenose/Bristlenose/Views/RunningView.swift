@@ -9,7 +9,7 @@ struct RunningView: View {
             // Header
             HStack(spacing: 8) {
                 Image(systemName: "folder.fill")
-                    .foregroundStyle(.accent)
+                    .foregroundStyle(.tint)
                 Text(folder.lastPathComponent)
                     .font(.headline)
                 Text("— Analysing\u{2026}")

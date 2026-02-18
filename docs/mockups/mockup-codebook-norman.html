@@ -1,0 +1,1100 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Codebook Picker Mockup — Don Norman</title>
+<style>
+/* ================================================================
+   CODEBOOK PICKER MOCKUP — Don Norman: The Design of Everyday Things
+   ================================================================
+   Three switchable views:
+   1. Codebook Picker — card grid to browse available codebooks
+   2. Preview — full codebook detail with author info
+   3. Codebook Tab — post-import view with researcher + framework groups
+   ================================================================ */
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+/* ── Design tokens (from tokens.css) ────────────────────────── */
+
+:root {
+    --bn-font-body: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
+    --bn-font-mono: "SF Mono", "Fira Code", "Consolas", monospace;
+
+    --bn-colour-bg: #ffffff;
+    --bn-colour-text: #1a1a1a;
+    --bn-colour-muted: #6b7280;
+    --bn-colour-border: #e5e7eb;
+    --bn-colour-accent: #2563eb;
+    --bn-colour-quote-bg: #f9fafb;
+    --bn-colour-badge-bg: #f3f4f6;
+    --bn-colour-badge-text: #374151;
+    --bn-colour-user-tag-bg: #f3f4f6;
+    --bn-colour-user-tag-text: #4b5563;
+    --bn-colour-icon-idle: #c9ccd1;
+    --bn-colour-shadow: rgba(0, 0, 0, 0.1);
+
+    --bn-space-xs: 0.15rem;
+    --bn-space-sm: 0.35rem;
+    --bn-space-md: 0.75rem;
+    --bn-space-lg: 1.5rem;
+    --bn-space-xl: 2rem;
+
+    --bn-radius-sm: 3px;
+    --bn-radius-md: 6px;
+    --bn-radius-lg: 8px;
+    --bn-radius-pill: 999px;
+
+    --bn-transition-fast: 0.15s ease;
+    --bn-transition-normal: 0.2s ease;
+
+    /* Group background tints */
+    --bn-group-ux:    oklch(97% 0.015 250);
+    --bn-group-emo:   oklch(97% 0.015 10);
+    --bn-group-task:  oklch(97% 0.015 155);
+    --bn-group-trust: oklch(97% 0.015 300);
+    --bn-group-opp:   oklch(97% 0.015 75);
+    --bn-group-none:  #f9fafb;
+
+    /* Tag badge bg — washed (light mode) */
+    --bn-ux-1-bg: oklch(94% 0.03 225);
+    --bn-ux-2-bg: oklch(94% 0.03 237);
+    --bn-ux-3-bg: oklch(94% 0.03 250);
+    --bn-ux-4-bg: oklch(94% 0.03 263);
+    --bn-ux-5-bg: oklch(94% 0.03 275);
+    --bn-emo-1-bg: oklch(94% 0.03 340);
+    --bn-emo-2-bg: oklch(94% 0.03 352);
+    --bn-emo-3-bg: oklch(94% 0.03 4);
+    --bn-emo-4-bg: oklch(94% 0.03 16);
+    --bn-emo-5-bg: oklch(94% 0.03 28);
+    --bn-emo-6-bg: oklch(94% 0.03 40);
+    --bn-task-1-bg: oklch(94% 0.03 130);
+    --bn-task-2-bg: oklch(94% 0.03 142);
+    --bn-task-3-bg: oklch(94% 0.03 155);
+    --bn-task-4-bg: oklch(94% 0.03 168);
+    --bn-task-5-bg: oklch(94% 0.03 180);
+    --bn-trust-1-bg: oklch(94% 0.03 275);
+    --bn-trust-2-bg: oklch(94% 0.03 287);
+    --bn-trust-3-bg: oklch(94% 0.03 300);
+    --bn-trust-4-bg: oklch(94% 0.03 313);
+    --bn-trust-5-bg: oklch(94% 0.03 325);
+    --bn-opp-1-bg: oklch(94% 0.03 50);
+    --bn-opp-2-bg: oklch(94% 0.03 62);
+    --bn-opp-3-bg: oklch(94% 0.03 75);
+    --bn-opp-4-bg: oklch(94% 0.03 88);
+    --bn-opp-5-bg: oklch(94% 0.03 100);
+    --bn-custom-bg: oklch(94% 0.005 260);
+
+    /* Bar colours */
+    --bn-bar-ux:    oklch(70% 0.08 250);
+    --bn-bar-emo:   oklch(70% 0.08 10);
+    --bn-bar-task:  oklch(70% 0.06 155);
+    --bn-bar-trust: oklch(70% 0.07 300);
+    --bn-bar-opp:   oklch(72% 0.07 75);
+    --bn-bar-none:  #d1d5db;
+
+    --bn-hover-bg: rgba(0,0,0,0.04);
+    --bn-hover-bg-subtle: rgba(0,0,0,0.03);
+    --bn-focus-ring: 0 0 0 2px rgba(37, 99, 235, 0.12);
+}
+
+body {
+    font-family: var(--bn-font-body);
+    color: var(--bn-colour-text);
+    background: var(--bn-colour-bg);
+    line-height: 1.5;
+    padding: 2rem;
+    padding-bottom: 3rem;
+}
+
+/* ── View switcher tabs ─────────────────────────────────────── */
+
+.view-tabs {
+    display: flex;
+    gap: 0;
+    border-bottom: 1px solid var(--bn-colour-border);
+    margin-bottom: 1.5rem;
+    max-width: 1200px;
+}
+.view-tab {
+    padding: 0.5rem 1rem;
+    font-size: 0.85rem;
+    font-weight: 500;
+    cursor: pointer;
+    color: var(--bn-colour-muted);
+    background: none;
+    border: none;
+    border-bottom: 3px solid transparent;
+    font-family: var(--bn-font-body);
+    transition: color var(--bn-transition-fast), border-color var(--bn-transition-fast);
+}
+.view-tab:hover { color: var(--bn-colour-text); }
+.view-tab.active {
+    color: var(--bn-colour-accent);
+    border-bottom-color: var(--bn-colour-accent);
+}
+.view-panel { display: none; max-width: 1200px; }
+.view-panel.active { display: block; }
+
+/* ── Picker card grid (View 1) ──────────────────────────────── */
+
+.picker-section-title {
+    font-size: 0.78rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--bn-colour-muted);
+    margin: var(--bn-space-xl) 0 var(--bn-space-md);
+    font-weight: 600;
+}
+.picker-section-title:first-child { margin-top: 0; }
+
+.picker-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: var(--bn-space-lg);
+}
+
+.picker-card {
+    background: var(--bn-colour-bg);
+    border: 1px solid var(--bn-colour-border);
+    border-radius: var(--bn-radius-lg);
+    padding: var(--bn-space-lg);
+    cursor: pointer;
+    transition: border-color var(--bn-transition-fast), box-shadow var(--bn-transition-fast);
+}
+.picker-card:hover {
+    border-color: var(--bn-colour-accent);
+    box-shadow: 0 2px 8px var(--bn-colour-shadow);
+}
+.picker-card.featured {
+    border-left: 3px solid var(--bn-colour-accent);
+}
+.picker-card.disabled {
+    opacity: 0.45;
+    cursor: default;
+    pointer-events: none;
+}
+.picker-card-title {
+    font-size: 0.95rem;
+    font-weight: 600;
+    margin-bottom: 0.25rem;
+}
+.picker-card-author {
+    font-size: 0.78rem;
+    color: var(--bn-colour-muted);
+    margin-bottom: 0.5rem;
+    font-style: italic;
+}
+.picker-card-desc {
+    font-size: 0.82rem;
+    color: var(--bn-colour-muted);
+    margin-bottom: var(--bn-space-md);
+    line-height: 1.5;
+}
+.picker-card-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+}
+.picker-card-coming {
+    font-size: 0.72rem;
+    color: var(--bn-colour-muted);
+    font-style: italic;
+    margin-top: 4px;
+}
+
+.picker-card-create {
+    border: 1px dashed var(--bn-colour-border);
+    background: transparent;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 140px;
+    gap: var(--bn-space-sm);
+}
+.picker-card-create:hover {
+    border-color: var(--bn-colour-muted);
+    background: var(--bn-hover-bg-subtle);
+}
+.picker-card-create .new-icon {
+    font-size: 1.2rem;
+    color: var(--bn-colour-muted);
+}
+.picker-card-create .new-label {
+    font-size: 0.82rem;
+    color: var(--bn-colour-muted);
+}
+
+/* ── Preview / detail (View 2) ──────────────────────────────── */
+
+.preview-back {
+    font-size: 0.82rem;
+    color: var(--bn-colour-muted);
+    cursor: pointer;
+    background: none;
+    border: none;
+    font-family: var(--bn-font-body);
+    margin-bottom: var(--bn-space-lg);
+    padding: 0;
+}
+.preview-back:hover { color: var(--bn-colour-accent); }
+
+.preview-header { margin-bottom: var(--bn-space-xl); }
+.preview-title {
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+}
+.preview-desc {
+    font-size: 0.88rem;
+    color: var(--bn-colour-muted);
+    line-height: 1.6;
+    max-width: 40rem;
+    margin-bottom: var(--bn-space-lg);
+}
+
+.preview-author {
+    background: var(--bn-colour-quote-bg);
+    border-radius: var(--bn-radius-lg);
+    padding: var(--bn-space-lg);
+    margin-bottom: var(--bn-space-xl);
+    max-width: 40rem;
+}
+.preview-author-name {
+    font-weight: 600;
+    font-size: 0.95rem;
+    margin-bottom: 0.25rem;
+}
+.preview-author-bio {
+    font-size: 0.82rem;
+    color: var(--bn-colour-muted);
+    margin-bottom: var(--bn-space-md);
+    line-height: 1.5;
+}
+.preview-author-links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--bn-space-lg);
+    font-size: 0.82rem;
+}
+.preview-author-links a {
+    color: var(--bn-colour-accent);
+    text-decoration: none;
+}
+.preview-author-links a:hover { text-decoration: underline; }
+
+.preview-section-label {
+    font-size: 0.78rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--bn-colour-muted);
+    font-weight: 600;
+    margin-bottom: var(--bn-space-md);
+}
+
+.preview-groups {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: var(--bn-space-lg);
+    margin-bottom: var(--bn-space-xl);
+    align-items: start;
+}
+
+.preview-cta {
+    display: flex;
+    align-items: center;
+    gap: var(--bn-space-md);
+}
+.preview-cta-help {
+    font-size: 0.82rem;
+    color: var(--bn-colour-muted);
+}
+
+/* ── Button styles ──────────────────────────────────────────── */
+
+.bn-btn {
+    font-family: var(--bn-font-body);
+    font-size: 0.85rem;
+    font-weight: 500;
+    padding: 0.5rem 1.2rem;
+    border-radius: var(--bn-radius-sm);
+    border: 1px solid var(--bn-colour-border);
+    cursor: pointer;
+    transition: background var(--bn-transition-fast), color var(--bn-transition-fast);
+}
+.bn-btn-primary {
+    background: var(--bn-colour-accent);
+    color: #fff;
+    border-color: var(--bn-colour-accent);
+}
+.bn-btn-primary:hover { filter: brightness(0.9); }
+
+/* ── Badge styles (from badge.css) ──────────────────────────── */
+
+.badge {
+    display: inline-block;
+    font-family: var(--bn-font-mono);
+    font-size: 0.72rem;
+    padding: var(--bn-space-xs) 0.45rem;
+    border-radius: var(--bn-radius-sm);
+    background: var(--bn-colour-badge-bg);
+    color: var(--bn-colour-badge-text);
+    white-space: nowrap;
+}
+.badge-lg {
+    font-size: 0.82rem;
+    padding: 0.2rem 0.5rem;
+}
+
+/* ── Codebook grid (View 3) ─────────────────────────────────── */
+
+.codebook-description {
+    font-size: 0.85rem;
+    color: var(--bn-colour-muted);
+    margin-bottom: var(--bn-space-lg);
+}
+
+.codebook-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: var(--bn-space-lg);
+    max-width: 1200px;
+    align-items: start;
+}
+
+.codebook-group {
+    border-radius: var(--bn-radius-lg);
+    padding: 12px;
+    min-height: 80px;
+    position: relative;
+    border: 1px solid transparent;
+}
+
+.group-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    margin-bottom: 6px;
+    gap: 4px;
+}
+.group-title-area { flex: 1; min-width: 0; }
+.group-title {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--bn-colour-text);
+    line-height: 1.3;
+}
+.group-subtitle {
+    font-size: 0.78rem;
+    color: var(--bn-colour-muted);
+    margin-top: 1px;
+    line-height: 1.4;
+}
+.group-subtitle.placeholder {
+    font-style: italic;
+    opacity: 0.45;
+}
+
+.group-total-row {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: center;
+    gap: 6px;
+    padding: 0 4px 4px;
+}
+.group-total-label {
+    font-size: 0.7rem;
+    color: var(--bn-colour-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+.group-total-count {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--bn-colour-muted);
+    font-variant-numeric: tabular-nums;
+    min-width: 16px;
+    text-align: right;
+}
+
+.tag-list {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.tag-row {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: center;
+    gap: 6px;
+    padding: 3px 4px;
+    border-radius: var(--bn-radius-sm);
+}
+.tag-row:hover { background: var(--bn-hover-bg-subtle); }
+
+.tag-name-area {
+    display: flex;
+    align-items: center;
+    min-width: 0;
+}
+
+.tag-bar-area {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    min-width: 50px;
+    justify-content: flex-end;
+}
+.tag-micro-bar {
+    height: 0.6rem;
+    border-radius: 0 var(--bn-radius-sm) var(--bn-radius-sm) 0;
+    min-width: 2px;
+    transition: width 0.2s ease;
+}
+.tag-count {
+    font-size: 0.75rem;
+    color: var(--bn-colour-muted);
+    min-width: 16px;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+}
+
+/* Framework separator */
+.framework-separator {
+    grid-column: 1 / -1;
+    display: flex;
+    align-items: center;
+    gap: var(--bn-space-md);
+    margin: var(--bn-space-sm) 0;
+}
+.framework-separator-line {
+    flex: 1;
+    height: 1px;
+    background: var(--bn-colour-border);
+}
+.framework-separator-label {
+    font-size: 0.78rem;
+    color: var(--bn-colour-muted);
+    white-space: nowrap;
+    font-style: italic;
+}
+
+/* New group placeholder */
+.codebook-group.new-group-placeholder {
+    border: 1px dashed var(--bn-colour-border);
+    background: transparent;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 120px;
+    cursor: pointer;
+    gap: 6px;
+}
+.codebook-group.new-group-placeholder:hover {
+    border-color: var(--bn-colour-muted);
+    background: var(--bn-hover-bg-subtle);
+}
+.new-group-icon { font-size: 1.2rem; color: var(--bn-colour-muted); line-height: 1; }
+.new-group-label { font-size: 0.82rem; color: var(--bn-colour-muted); }
+
+/* ── Status bar ─────────────────────────────────────────────── */
+
+.status-bar {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding: 6px 16px;
+    background: #1a1a1a;
+    color: #9ca3af;
+    font-size: 0.7rem;
+    font-family: var(--bn-font-mono);
+    z-index: 50;
+    display: flex;
+    gap: 16px;
+}
+.status-bar span { color: #e5e7eb; }
+
+/* ── Theme toggle ───────────────────────────────────────────── */
+
+.theme-toggle {
+    position: fixed;
+    top: 12px;
+    right: 12px;
+    padding: 4px 10px;
+    border-radius: var(--bn-radius-pill);
+    border: 1px solid var(--bn-colour-border);
+    background: var(--bn-colour-bg);
+    color: var(--bn-colour-muted);
+    font-size: 0.7rem;
+    cursor: pointer;
+    font-family: var(--bn-font-body);
+    z-index: 50;
+}
+
+/* ── Dark mode ──────────────────────────────────────────────── */
+
+[data-theme="dark"] {
+    --bn-colour-bg: #111111;
+    --bn-colour-text: #e5e7eb;
+    --bn-colour-muted: #9ca3af;
+    --bn-colour-border: #2d2d2d;
+    --bn-colour-accent: #60a5fa;
+    --bn-colour-quote-bg: #1a1a1a;
+    --bn-colour-badge-bg: #252525;
+    --bn-colour-badge-text: #d1d5db;
+    --bn-colour-user-tag-bg: #252525;
+    --bn-colour-icon-idle: #595959;
+    --bn-colour-shadow: rgba(0, 0, 0, 0.3);
+
+    --bn-group-ux:    oklch(22% 0.025 250);
+    --bn-group-emo:   oklch(22% 0.025 10);
+    --bn-group-task:  oklch(22% 0.020 155);
+    --bn-group-trust: oklch(22% 0.025 300);
+    --bn-group-opp:   oklch(22% 0.022 75);
+    --bn-group-none:  #1e1e1e;
+
+    --bn-ux-1-bg: oklch(50% 0.12 225);
+    --bn-ux-2-bg: oklch(48% 0.11 237);
+    --bn-ux-3-bg: oklch(53% 0.12 250);
+    --bn-ux-4-bg: oklch(55% 0.10 263);
+    --bn-ux-5-bg: oklch(49% 0.11 275);
+    --bn-emo-1-bg: oklch(50% 0.12 340);
+    --bn-emo-2-bg: oklch(48% 0.11 352);
+    --bn-emo-3-bg: oklch(53% 0.10 4);
+    --bn-emo-4-bg: oklch(49% 0.12 16);
+    --bn-emo-5-bg: oklch(55% 0.10 28);
+    --bn-emo-6-bg: oklch(51% 0.11 40);
+    --bn-task-1-bg: oklch(50% 0.10 130);
+    --bn-task-2-bg: oklch(48% 0.09 142);
+    --bn-task-3-bg: oklch(53% 0.09 155);
+    --bn-task-4-bg: oklch(49% 0.10 168);
+    --bn-task-5-bg: oklch(51% 0.09 180);
+    --bn-trust-1-bg: oklch(50% 0.11 275);
+    --bn-trust-2-bg: oklch(48% 0.10 287);
+    --bn-trust-3-bg: oklch(53% 0.10 300);
+    --bn-trust-4-bg: oklch(49% 0.11 313);
+    --bn-trust-5-bg: oklch(51% 0.10 325);
+    --bn-opp-1-bg: oklch(52% 0.11 50);
+    --bn-opp-2-bg: oklch(50% 0.10 62);
+    --bn-opp-3-bg: oklch(54% 0.12 75);
+    --bn-opp-4-bg: oklch(48% 0.10 88);
+    --bn-opp-5-bg: oklch(51% 0.11 100);
+    --bn-custom-bg: oklch(52% 0.02 260);
+
+    --bn-bar-ux:    oklch(55% 0.08 250);
+    --bn-bar-emo:   oklch(55% 0.08 10);
+    --bn-bar-task:  oklch(55% 0.06 155);
+    --bn-bar-trust: oklch(55% 0.07 300);
+    --bn-bar-opp:   oklch(57% 0.07 75);
+    --bn-bar-none:  #4b5563;
+
+    --bn-hover-bg: rgba(255,255,255,0.06);
+    --bn-hover-bg-subtle: rgba(255,255,255,0.04);
+}
+
+[data-theme="dark"] .badge {
+    color: #ffffff;
+    font-weight: 500;
+}
+</style>
+</head>
+<body>
+
+<button class="theme-toggle" onclick="toggleTheme()">Toggle dark mode</button>
+
+<!-- ── View switcher ────────────────────────────────────────── -->
+<div class="view-tabs">
+    <button class="view-tab active" data-view="picker">1. Codebook Picker</button>
+    <button class="view-tab" data-view="preview">2. Preview</button>
+    <button class="view-tab" data-view="codebook">3. Codebook Tab</button>
+</div>
+
+<!-- View panels -->
+<div class="view-panel active" id="panel-picker"></div>
+<div class="view-panel" id="panel-preview"></div>
+<div class="view-panel" id="panel-codebook"></div>
+
+<!-- ── Status bar ───────────────────────────────────────────── -->
+<div class="status-bar">
+    <div>Mockup: <span>Codebook Picker — Don Norman</span></div>
+    <div>Framework groups: <span>7</span></div>
+    <div>Framework tags: <span>28</span></div>
+</div>
+
+<script>
+// ================================================================
+//  COLOUR HELPERS
+// ================================================================
+
+var COLOUR_SETS = {
+    ux:    { slots: 5, bgVar: '--bn-ux-',    groupBg: '--bn-group-ux',    barVar: '--bn-bar-ux' },
+    emo:   { slots: 6, bgVar: '--bn-emo-',   groupBg: '--bn-group-emo',   barVar: '--bn-bar-emo' },
+    task:  { slots: 5, bgVar: '--bn-task-',  groupBg: '--bn-group-task',  barVar: '--bn-bar-task' },
+    trust: { slots: 5, bgVar: '--bn-trust-', groupBg: '--bn-group-trust', barVar: '--bn-bar-trust' },
+    opp:   { slots: 5, bgVar: '--bn-opp-',   groupBg: '--bn-group-opp',   barVar: '--bn-bar-opp' }
+};
+
+function getTagBg(colourSet, index) {
+    if (!colourSet) return 'var(--bn-custom-bg)';
+    var set = COLOUR_SETS[colourSet];
+    if (!set) return 'var(--bn-custom-bg)';
+    return 'var(' + set.bgVar + ((index % set.slots) + 1) + '-bg)';
+}
+
+function getBarColour(colourSet) {
+    if (!colourSet) return 'var(--bn-bar-none)';
+    var set = COLOUR_SETS[colourSet];
+    return set ? 'var(' + set.barVar + ')' : 'var(--bn-bar-none)';
+}
+
+function getGroupBg(colourSet) {
+    if (!colourSet) return 'var(--bn-group-none)';
+    var set = COLOUR_SETS[colourSet];
+    return set ? 'var(' + set.groupBg + ')' : 'var(--bn-group-none)';
+}
+
+function esc(s) { return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+
+// ================================================================
+//  DATA
+// ================================================================
+
+// Researcher's existing groups (fishkeeping study)
+var researcherGroups = [
+    {
+        name: 'Uncategorised', subtitle: 'New tags appear here until assigned to a group',
+        colourSet: null, isDefault: true, tags: [
+            { name: 'interesting', count: 14 },
+            { name: 'follow-up', count: 9 },
+            { name: 'compare with v1', count: 3 },
+            { name: 'revisit', count: 2 }
+        ]
+    },
+    {
+        name: 'Friction', subtitle: 'Pain points and blockers',
+        colourSet: 'emo', tags: [
+            { name: 'confusion', count: 18 },
+            { name: 'dead end', count: 12 },
+            { name: 'error recovery', count: 9 },
+            { name: 'cognitive load', count: 7 },
+            { name: 'workaround', count: 5 }
+        ]
+    },
+    {
+        name: 'Navigation', subtitle: 'Wayfinding and information architecture',
+        colourSet: 'ux', tags: [
+            { name: 'lost', count: 11 },
+            { name: 'breadcrumbs', count: 8 },
+            { name: 'search failure', count: 6 },
+            { name: 'deep linking', count: 4 }
+        ]
+    },
+    {
+        name: 'Trust signals', subtitle: '',
+        colourSet: 'trust', tags: [
+            { name: 'credibility concern', count: 15 },
+            { name: 'social proof', count: 10 },
+            { name: 'privacy worry', count: 7 },
+            { name: 'data ownership', count: 4 },
+            { name: 'transparency', count: 3 }
+        ]
+    },
+    {
+        name: 'Opportunities', subtitle: 'Feature requests and unmet needs',
+        colourSet: 'opp', tags: [
+            { name: 'feature request', count: 21 },
+            { name: 'unmet need', count: 13 },
+            { name: 'competitor mention', count: 8 },
+            { name: 'willingness to pay', count: 5 }
+        ]
+    }
+];
+
+// Framework: Don Norman — The Design of Everyday Things
+var frameworkMeta = {
+    title: 'Don Norman \u2014 The Design of Everyday Things',
+    shortTitle: 'Design of Everyday Things',
+    description: 'Seven fundamental principles of interaction design that explain why products are easy or hard to use. A bottom-up framework for diagnosing why interactions succeed or fail \u2014 from whether users can discover what\u2019s possible (Discoverability) to whether the system communicates what happened (Feedback) to whether errors are slips or mistakes.',
+    cardDesc: 'Seven fundamental design principles for usable products. A bottom-up framework for diagnosing why interactions succeed or fail.',
+    authorName: 'Don Norman',
+    authorBio: 'Director of the Design Lab at UC San Diego. Former VP of Apple\u2019s Advanced Technology Group. Coined the term \u201cuser experience\u201d in the 1990s. Author of \u201cThe Design of Everyday Things\u201d (originally published as \u201cThe Psychology of Everyday Things\u201d, 1988; revised and expanded edition 2013).',
+    authorLinks: [
+        { label: 'jnd.org', url: 'https://jnd.org' },
+        { label: 'Amazon US', url: 'https://www.amazon.com/dp/0465050654' },
+        { label: 'Amazon UK', url: 'https://www.amazon.co.uk/dp/0465050654' }
+    ]
+};
+
+var frameworkLabel = 'Don Norman \u2014 The Design of Everyday Things';
+
+var frameworkGroups = [
+    {
+        name: 'Discoverability', subtitle: 'Can the user figure out what actions are possible?',
+        colourSet: 'ux', tags: [
+            { name: 'visible action', count: 0 },
+            { name: 'hidden feature', count: 0 },
+            { name: 'exploration', count: 0 },
+            { name: 'first-time use', count: 0 }
+        ]
+    },
+    {
+        name: 'Feedback', subtitle: 'Does the system communicate results clearly?',
+        colourSet: 'emo', tags: [
+            { name: 'system response', count: 0 },
+            { name: 'delayed feedback', count: 0 },
+            { name: 'ambiguous feedback', count: 0 },
+            { name: 'confirmation', count: 0 }
+        ]
+    },
+    {
+        name: 'Conceptual model', subtitle: 'Does user understanding match reality?',
+        colourSet: 'task', tags: [
+            { name: 'user mental model', count: 0 },
+            { name: 'system model', count: 0 },
+            { name: 'model mismatch', count: 0 },
+            { name: 'learned behaviour', count: 0 }
+        ]
+    },
+    {
+        name: 'Signifiers', subtitle: 'Do visual cues correctly indicate how to interact?',
+        colourSet: 'trust', tags: [
+            { name: 'affordance', count: 0 },
+            { name: 'perceived affordance', count: 0 },
+            { name: 'false signifier', count: 0 },
+            { name: 'missing signifier', count: 0 }
+        ]
+    },
+    {
+        name: 'Mapping', subtitle: 'Does the relationship between controls and outcomes feel natural?',
+        colourSet: 'opp', tags: [
+            { name: 'natural mapping', count: 0 },
+            { name: 'arbitrary mapping', count: 0 },
+            { name: 'spatial correspondence', count: 0 },
+            { name: 'logical layout', count: 0 }
+        ]
+    },
+    {
+        name: 'Constraints', subtitle: 'Do designed limitations guide users toward correct actions?',
+        colourSet: 'ux', tags: [
+            { name: 'physical constraint', count: 0 },
+            { name: 'cultural constraint', count: 0 },
+            { name: 'semantic constraint', count: 0 },
+            { name: 'logical constraint', count: 0 }
+        ]
+    },
+    {
+        name: 'Slips vs Mistakes', subtitle: 'Was the error execution-based or goal-based?',
+        colourSet: 'emo', tags: [
+            { name: 'action slip', count: 0 },
+            { name: 'memory lapse', count: 0 },
+            { name: 'rule-based mistake', count: 0 },
+            { name: 'knowledge-based mistake', count: 0 }
+        ]
+    }
+];
+
+// Picker card data
+var pickerCards = [
+    {
+        id: 'default',
+        title: 'Default UXR Codebook',
+        author: '',
+        desc: 'A domain-agnostic codebook for any user research study. Ten theme categories that emerge bottom-up from behavioural observation, emotional response, and contextual analysis.',
+        sampleTags: [
+            { name: 'behavioural pattern', set: 'ux', idx: 0 },
+            { name: 'pain point', set: 'emo', idx: 0 },
+            { name: 'unmet need', set: 'emo', idx: 1 },
+            { name: 'mental model', set: 'task', idx: 0 },
+            { name: 'motivation', set: 'task', idx: 1 },
+            { name: 'trust', set: 'trust', idx: 0 },
+            { name: 'environmental', set: 'trust', idx: 1 }
+        ],
+        enabled: true,
+        featured: false
+    },
+    {
+        id: 'garrett',
+        title: 'Jesse James Garrett \u2014 The Elements of User Experience',
+        author: 'Jesse James Garrett',
+        desc: 'Five mutually exclusive planes from abstract strategy to concrete surface design. A top-down framework for placing findings in the UX decision hierarchy.',
+        sampleTags: [
+            { name: 'strategy', set: 'ux', idx: 0 },
+            { name: 'scope', set: 'emo', idx: 0 },
+            { name: 'structure', set: 'task', idx: 0 },
+            { name: 'skeleton', set: 'trust', idx: 0 },
+            { name: 'surface', set: 'opp', idx: 0 }
+        ],
+        enabled: false,
+        featured: false
+    },
+    {
+        id: 'norman',
+        title: 'Don Norman \u2014 The Design of Everyday Things',
+        author: 'Don Norman',
+        desc: 'Seven fundamental design principles for usable products. A bottom-up framework for diagnosing why interactions succeed or fail.',
+        sampleTags: [
+            { name: 'discoverability', set: 'ux', idx: 0 },
+            { name: 'feedback', set: 'emo', idx: 0 },
+            { name: 'conceptual model', set: 'task', idx: 0 },
+            { name: 'signifier', set: 'trust', idx: 0 },
+            { name: 'constraint', set: 'opp', idx: 0 }
+        ],
+        enabled: true,
+        featured: true
+    },
+    {
+        id: 'morville',
+        title: 'Peter Morville \u2014 The User Experience Honeycomb',
+        author: 'Peter Morville',
+        desc: 'Seven facets of a complete user experience: useful, usable, desirable, findable, accessible, credible, valuable.',
+        sampleTags: [
+            { name: 'useful', set: 'ux', idx: 0 },
+            { name: 'usable', set: 'ux', idx: 1 },
+            { name: 'credible', set: 'trust', idx: 0 },
+            { name: 'findable', set: 'task', idx: 0 },
+            { name: 'desirable', set: 'emo', idx: 0 }
+        ],
+        enabled: false,
+        featured: false
+    }
+];
+
+// ================================================================
+//  VIEW 1: CODEBOOK PICKER
+// ================================================================
+
+function renderPicker() {
+    var panel = document.getElementById('panel-picker');
+    var html = '';
+
+    html += '<div class="picker-section-title">Codebook frameworks</div>';
+    html += '<div class="picker-grid">';
+
+    pickerCards.forEach(function(card) {
+        var classes = 'picker-card';
+        if (card.featured) classes += ' featured';
+        if (!card.enabled) classes += ' disabled';
+
+        html += '<div class="' + classes + '" data-card="' + card.id + '">';
+        html += '<div class="picker-card-title">' + esc(card.title) + '</div>';
+        if (card.author) {
+            html += '<div class="picker-card-author">' + esc(card.author) + '</div>';
+        }
+        html += '<div class="picker-card-desc">' + esc(card.desc) + '</div>';
+        html += '<div class="picker-card-tags">';
+        card.sampleTags.forEach(function(tag) {
+            html += '<span class="badge" style="background:' + getTagBg(tag.set, tag.idx) + '">' + esc(tag.name) + '</span>';
+        });
+        html += '</div>';
+        if (!card.enabled) {
+            html += '<div class="picker-card-coming">Coming soon</div>';
+        }
+        html += '</div>';
+    });
+
+    html += '</div>';
+
+    html += '<div class="picker-section-title">Your codebooks</div>';
+    html += '<div class="picker-grid">';
+    html += '<div class="picker-card picker-card-create">';
+    html += '<span class="new-icon">+</span>';
+    html += '<span class="new-label">Create codebook</span>';
+    html += '</div>';
+    html += '</div>';
+
+    panel.innerHTML = html;
+
+    panel.querySelectorAll('.picker-card:not(.disabled):not(.picker-card-create)').forEach(function(el) {
+        el.addEventListener('click', function() {
+            switchToView('preview');
+        });
+    });
+}
+
+// ================================================================
+//  VIEW 2: PREVIEW
+// ================================================================
+
+function renderPreview() {
+    var panel = document.getElementById('panel-preview');
+    var html = '';
+
+    html += '<button class="preview-back" onclick="switchToView(\'picker\')">\u2190 Back to codebook picker</button>';
+
+    html += '<div class="preview-header">';
+    html += '<div class="preview-title">' + esc(frameworkMeta.title) + '</div>';
+    html += '<div class="preview-desc">' + esc(frameworkMeta.description) + '</div>';
+    html += '</div>';
+
+    // Author section
+    html += '<div class="preview-author">';
+    html += '<div class="preview-author-name">' + esc(frameworkMeta.authorName) + '</div>';
+    html += '<div class="preview-author-bio">' + esc(frameworkMeta.authorBio) + '</div>';
+    html += '<div class="preview-author-links">';
+    frameworkMeta.authorLinks.forEach(function(link) {
+        html += '<a href="' + esc(link.url) + '" target="_blank">' + esc(link.label) + ' \u2197</a>';
+    });
+    html += '</div>';
+    html += '</div>';
+
+    // Tag groups preview
+    html += '<div class="preview-section-label">Tag groups</div>';
+    html += '<div class="preview-groups">';
+    frameworkGroups.forEach(function(group) {
+        html += '<div class="codebook-group" style="background:' + getGroupBg(group.colourSet) + '">';
+        html += '<div class="group-header"><div class="group-title-area">';
+        html += '<div class="group-title">' + esc(group.name) + '</div>';
+        if (group.subtitle) {
+            html += '<div class="group-subtitle">' + esc(group.subtitle) + '</div>';
+        }
+        html += '</div></div>';
+        html += '<div class="tag-list">';
+        group.tags.forEach(function(tag, idx) {
+            html += '<div class="tag-row"><div class="tag-name-area">';
+            html += '<span class="badge badge-lg" style="background:' + getTagBg(group.colourSet, idx) + '">' + esc(tag.name) + '</span>';
+            html += '</div></div>';
+        });
+        html += '</div>';
+        html += '</div>';
+    });
+    html += '</div>';
+
+    // CTA
+    html += '<div class="preview-cta">';
+    html += '<button class="bn-btn bn-btn-primary" onclick="switchToView(\'codebook\')">Open codebook</button>';
+    html += '<span class="preview-cta-help">Adds to existing tags and tag-groups</span>';
+    html += '</div>';
+
+    panel.innerHTML = html;
+}
+
+// ================================================================
+//  VIEW 3: CODEBOOK TAB
+// ================================================================
+
+function renderCodebookTab() {
+    var panel = document.getElementById('panel-codebook');
+    var html = '';
+
+    html += '<h1 style="font-size:1.25rem; font-weight:600; margin-bottom:0.25rem;">Codebook</h1>';
+    html += '<p class="codebook-description">Drag tags between groups to reorganise. Click a tag or title to rename it. Drop a tag on another to merge.</p>';
+
+    var allGroups = researcherGroups.concat(frameworkGroups);
+    var mc = 1;
+    allGroups.forEach(function(g) {
+        g.tags.forEach(function(t) { if (t.count > mc) mc = t.count; });
+    });
+    var maxBarW = 48;
+
+    html += '<div class="codebook-grid">';
+
+    researcherGroups.forEach(function(group) {
+        html += renderGroup(group, mc, maxBarW);
+    });
+
+    html += '<div class="framework-separator">';
+    html += '<div class="framework-separator-line"></div>';
+    html += '<div class="framework-separator-label">' + esc(frameworkLabel) + '</div>';
+    html += '<div class="framework-separator-line"></div>';
+    html += '</div>';
+
+    frameworkGroups.forEach(function(group) {
+        html += renderGroup(group, mc, maxBarW);
+    });
+
+    html += '<div class="codebook-group new-group-placeholder">';
+    html += '<span class="new-group-icon">+</span>';
+    html += '<span class="new-group-label">New group</span>';
+    html += '</div>';
+
+    html += '</div>';
+
+    panel.innerHTML = html;
+}
+
+function renderGroup(group, mc, maxBarW) {
+    var html = '';
+
+    html += '<div class="codebook-group" style="background:' + getGroupBg(group.colourSet) + '">';
+
+    html += '<div class="group-header"><div class="group-title-area">';
+    html += '<div class="group-title">' + esc(group.name) + '</div>';
+    if (group.subtitle) {
+        html += '<div class="group-subtitle">' + esc(group.subtitle) + '</div>';
+    } else if (!group.isDefault) {
+        html += '<div class="group-subtitle placeholder">Add subtitle\u2026</div>';
+    }
+    html += '</div></div>';
+
+    html += '<div class="tag-list">';
+
+    var totalQuotes = group.tags.reduce(function(s, t) { return s + t.count; }, 0);
+    if (totalQuotes > 0) {
+        html += '<div class="group-total-row">';
+        html += '<span class="group-total-label">' + group.tags.length + ' tags</span>';
+        html += '<span class="group-total-count">' + totalQuotes + '</span>';
+        html += '</div>';
+    }
+
+    group.tags.forEach(function(tag, idx) {
+        html += '<div class="tag-row">';
+        html += '<div class="tag-name-area">';
+        html += '<span class="badge badge-lg" style="background:' + getTagBg(group.colourSet, idx) + '">' + esc(tag.name) + '</span>';
+        html += '</div>';
+        html += '<div class="tag-bar-area">';
+        if (tag.count > 0) {
+            var barW = Math.max(2, Math.round((tag.count / mc) * maxBarW));
+            html += '<div class="tag-micro-bar" style="width:' + barW + 'px; background:' + getBarColour(group.colourSet) + '"></div>';
+        }
+        html += '<span class="tag-count">' + tag.count + '</span>';
+        html += '</div>';
+        html += '</div>';
+    });
+
+    html += '</div>';
+    html += '</div>';
+
+    return html;
+}
+
+// ================================================================
+//  VIEW SWITCHING
+// ================================================================
+
+function switchToView(viewName) {
+    document.querySelectorAll('.view-tab').forEach(function(t) { t.classList.remove('active'); });
+    document.querySelectorAll('.view-panel').forEach(function(p) { p.classList.remove('active'); });
+    document.querySelector('[data-view="' + viewName + '"]').classList.add('active');
+    document.getElementById('panel-' + viewName).classList.add('active');
+}
+
+document.querySelectorAll('.view-tab').forEach(function(tab) {
+    tab.addEventListener('click', function() {
+        switchToView(tab.dataset.view);
+    });
+});
+
+// ================================================================
+//  THEME TOGGLE
+// ================================================================
+
+function toggleTheme() {
+    var h = document.documentElement;
+    h.setAttribute('data-theme', h.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
+}
+
+// ================================================================
+//  BOOT
+// ================================================================
+
+renderPicker();
+renderPreview();
+renderCodebookTab();
+</script>
+</body>
+</html>

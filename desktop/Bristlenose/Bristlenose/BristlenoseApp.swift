@@ -6,6 +6,7 @@ struct BristlenoseApp: App {
         WindowGroup {
             ContentView()
         }
-        .defaultSize(width: 600, height: 500)
+        .windowStyle(.titleBar)
+        .defaultSize(width: 520, height: 480)
     }
 }

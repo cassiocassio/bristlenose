@@ -146,3 +146,48 @@ export interface CodebookResponse {
   ungrouped: CodebookTagResponse[];
   all_tag_names: string[];
 }
+
+// ---------------------------------------------------------------------------
+// Transcript page API
+// ---------------------------------------------------------------------------
+
+export interface TranscriptSpeakerResponse {
+  code: string;
+  name: string;
+  role: string;
+}
+
+export interface TranscriptSegmentResponse {
+  speaker_code: string;
+  start_time: number;
+  end_time: number;
+  text: string;
+  html_text: string | null;
+  is_moderator: boolean;
+  is_quoted: boolean;
+  quote_ids: string[];
+}
+
+export interface QuoteAnnotationResponse {
+  label: string;
+  label_type: string;
+  sentiment: string;
+  participant_id: string;
+  start_timecode: number;
+  end_timecode: number;
+  verbatim_excerpt: string;
+  tags: TagResponse[];
+  deleted_badges: string[];
+}
+
+export interface TranscriptPageResponse {
+  session_id: string;
+  session_number: number;
+  duration_seconds: number;
+  has_media: boolean;
+  project_name: string;
+  report_filename: string;
+  speakers: TranscriptSpeakerResponse[];
+  segments: TranscriptSegmentResponse[];
+  annotations: Record<string, QuoteAnnotationResponse>;
+}

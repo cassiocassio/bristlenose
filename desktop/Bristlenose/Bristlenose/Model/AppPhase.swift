@@ -1,7 +1,7 @@
 import Foundation
 
 /// The four states of the launcher UI.
-enum AppPhase {
+enum AppPhase: Equatable {
     case ready
     case selected(folder: URL, fileCount: Int, hasExistingOutput: Bool)
     case running(folder: URL, mode: RunMode)

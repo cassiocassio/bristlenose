@@ -374,6 +374,11 @@ Edit `bristlenose/__init__.py` (the single source of truth for version), commit,
 
 ## Changelog
 
+**0.9.5** — _18 Feb 2026_
+
+- Desktop app v0.1 — SwiftUI macOS launcher with folder picker, drag-and-drop, pipeline streaming, View Report in browser
+- Xcode 26 project with 4-state UI (ready → selected → running → done), ANSI stripping, report path detection
+
 **0.9.4** — _17 Feb 2026_
 
 - `bristlenose serve` — local dev server with SQLite persistence, React islands, live JS reload

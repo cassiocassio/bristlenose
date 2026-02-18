@@ -46,3 +46,6 @@ desktop/Bristlenose/Resources/ffmpeg
 desktop/Bristlenose/Resources/models/
 desktop/build/
 desktop/DerivedData/
+# Xcode user data (per-developer state, not shared)
+**/xcuserdata/
+**/*.xcuserstate

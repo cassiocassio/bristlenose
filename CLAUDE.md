@@ -272,8 +272,8 @@ When the user signals end of session, **proactively offer to run this checklist*
 9. **Clean up branches** — delete merged feature branches
 10. **Verify CI** — check latest push passes CI
 
-## Current status (v0.9.4, Feb 2026)
+## Current status (v0.9.5, Feb 2026)
 
-Core pipeline complete and published to PyPI + Homebrew. Snap packaging implemented and tested locally (arm64); CI builds amd64 on every push. Latest: **Serve mode merged to main** — `bristlenose serve` with FastAPI + SQLite + React islands (5 islands, 16 primitives, 182 Vitest tests, 330+ Python serve tests), full codebook CRUD, data sync API, desktop app scaffold. Prior: interactive dashboard, sessions table redesign, appearance toggle, user journeys, tab navigation, Gemini provider, transcript annotations, hidden quotes + codebook, Azure OpenAI, Ollama, transcript coverage, multi-participant sessions. See git log for full history.
+Core pipeline complete and published to PyPI + Homebrew. Snap packaging implemented and tested locally (arm64); CI builds amd64 on every push. Latest: **Desktop app v0.1** — SwiftUI macOS app (`desktop/Bristlenose/`) with 4-state launcher (ready → selected → running → done), folder picker + drag-and-drop, ProcessRunner streaming CLI output, report path detection, View Report opening in browser. Builds with Xcode 26, 840 KB .app. Prior: serve mode (FastAPI + SQLite + React islands), interactive dashboard, sessions table redesign, appearance toggle, user journeys, tab navigation, Gemini provider, transcript annotations, hidden quotes + codebook, Azure OpenAI, Ollama, transcript coverage, multi-participant sessions. See git log for full history.
 
-**Next up:** Desktop app v0.1 (.dmg); transcript page React island; analysis page React island; cross-session moderator linking; snap store publishing. See `TODO.md` for full task list.
+**Next up:** Desktop app serve mode integration (open report via `bristlenose serve` instead of `file://`); transcript page React island; analysis page React island; .dmg packaging; cross-session moderator linking; snap store publishing. See `TODO.md` for full task list.

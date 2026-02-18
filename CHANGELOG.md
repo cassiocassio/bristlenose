@@ -2,6 +2,13 @@
 
 All notable changes to Bristlenose are documented here. See also the [README](README.md) for the latest releases.
 
+**0.9.5** — _18 Feb 2026_
+
+- Desktop app v0.1 — SwiftUI macOS launcher (`desktop/Bristlenose/`) with folder picker, drag-and-drop, pipeline output streaming, View Report in browser. 4-state UI (ready → selected → running → done), ANSI escape stripping, report path detection from both OSC 8 hyperlinks and `Report:` text fallback. Xcode 26 project, 840 KB .app, macOS 14+ deployment target
+- ProcessRunner — `@MainActor` ObservableObject that spawns `Process()`, reads stdout via `Task.detached`, streams lines to SwiftUI, extracts report file path
+- FolderValidator — scans directories recursively for processable file extensions (mirrors `models.py` extension lists)
+- Back-to-folder navigation on Done screen — re-validates folder state for re-render/re-analyse without starting over
+
 **0.9.4** — _17 Feb 2026_
 
 - `bristlenose serve` command — FastAPI local dev server that serves the HTML report over HTTP with SQLite persistence, React islands, and live JS reload in dev mode. Auto-renders before serving, auto-opens browser, prints clickable report URL

@@ -28,7 +28,8 @@ export function HelloIsland() {
     <div
       style={{
         padding: "0.75rem 1rem",
-        background: "var(--bn-colour-surface-alt, #f0f0f0)",
+        background: "var(--bn-colour-badge-bg)",
+        color: "var(--bn-colour-text)",
         borderRadius: "6px",
         fontSize: "0.85rem",
         marginTop: "1rem",

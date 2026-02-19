@@ -41,8 +41,9 @@ bristlenose/server/static/
 *.tsbuildinfo
 
 # Desktop app — bundled binaries and Xcode build artifacts
-desktop/Bristlenose/Resources/bristlenose-cli
+desktop/Bristlenose/Resources/bristlenose-sidecar/
 desktop/Bristlenose/Resources/ffmpeg
+desktop/Bristlenose/Resources/ffprobe
 desktop/Bristlenose/Resources/models/
 desktop/build/
 desktop/DerivedData/

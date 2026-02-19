@@ -47,6 +47,23 @@
 		};
 /* End PBXGroup section */
 
+/* Begin PBXShellScriptBuildPhase section */
+		DFF545202F466A4A00A539C4 /* Copy Sidecar Resources */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputPaths = (
+			);
+			name = "Copy Sidecar Resources";
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/bash;
+			shellScript = "# Copy pre-built sidecar, FFmpeg, and Whisper model into the app bundle.\n# These are large binaries built by scripts in desktop/scripts/ and\n# placed in desktop/Bristlenose/Resources/. Xcode's file sync does not\n# pick them up automatically, so we copy them in a build phase.\n\nRESOURCES_SRC=\"${PROJECT_DIR}/Resources\"\nRESOURCES_DST=\"${BUILT_PRODUCTS_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}\"\n\n# Sidecar (PyInstaller --onedir output)\nif [ -d \"${RESOURCES_SRC}/bristlenose-sidecar\" ]; then\n    rsync -a --delete \"${RESOURCES_SRC}/bristlenose-sidecar\" \"${RESOURCES_DST}/\"\n    echo \"Copied bristlenose-sidecar\"\nfi\n\n# FFmpeg + ffprobe\nfor bin in ffmpeg ffprobe; do\n    if [ -x \"${RESOURCES_SRC}/${bin}\" ]; then\n        cp -p \"${RESOURCES_SRC}/${bin}\" \"${RESOURCES_DST}/${bin}\"\n        echo \"Copied ${bin}\"\n    fi\ndone\n\n# Whisper model\nif [ -d \"${RESOURCES_SRC}/models\" ]; then\n    rsync -a --delete \"${RESOURCES_SRC}/models\" \"${RESOURCES_DST}/\"\n    echo \"Copied models\"\nfi\n";
+		};
+/* End PBXShellScriptBuildPhase section */
+
 /* Begin PBXNativeTarget section */
 		DFF545032F466A4A00A539C4 /* Bristlenose */ = {
 			isa = PBXNativeTarget;
@@ -55,6 +72,7 @@
 				DFF545002F466A4A00A539C4 /* Sources */,
 				DFF545012F466A4A00A539C4 /* Frameworks */,
 				DFF545022F466A4A00A539C4 /* Resources */,
+				DFF545202F466A4A00A539C4 /* Copy Sidecar Resources */,
 			);
 			buildRules = (
 			);
@@ -162,7 +180,7 @@
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
-				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				GCC_C_LANGUAGE_STANDARD = gnu17;
 				GCC_DYNAMIC_NO_PIC = NO;
 				GCC_NO_COMMON_BLOCKS = YES;
@@ -225,7 +243,7 @@
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
-				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				GCC_C_LANGUAGE_STANDARD = gnu17;
 				GCC_NO_COMMON_BLOCKS = YES;
 				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;

@@ -27,13 +27,29 @@ No terminal. No `brew install`. No API key signup. No Python.
 
 ---
 
+## Compatibility target
+
+**macOS 15 Sequoia + Apple Silicon (M1+).** Decided Feb 2026 based on market data.
+
+**Rationale:** Professional Mac users (UX researchers in agencies/consultancies) upgrade aggressively — managed fleets hit 80-90% adoption within months of a new macOS release. By late 2026 launch, Tahoe will be current and Sequoia will be n-1, covering ~90% of our audience. Intel Macs are ~5-10% of the professional installed base and falling. Targeting Sequoia+ avoids SwiftUI contortion for older APIs.
+
+**Chip floor evolution:** M1+ for v1 launch. Bump to M2+ when local model inference features arrive (Neural Engine improvements, unified memory bandwidth). M1 is still ~28% of Apple Silicon base — don't gate v1 on it.
+
+| Choice | Coverage (professional Mac users) | Left behind |
+|--------|-----------------------------------|-------------|
+| macOS 15 Sequoia + M1+ (chosen) | ~90% | ~10% (Sonoma or older, Intel) |
+| macOS 14 Sonoma + M1+ | ~95-97% | ~3-5% |
+| macOS 26 Tahoe only | ~55% | Too aggressive for 2026 |
+
+---
+
 ## PRD
 
 ### Must have (v0.1)
 
 | # | Requirement | Notes |
 |---|-------------|-------|
-| 1 | macOS `.dmg` with drag-to-Applications | Ad-hoc signed, Apple Silicon only |
+| 1 | macOS `.dmg` with drag-to-Applications | Ad-hoc signed, Apple Silicon (M1+), macOS 15 Sequoia+ |
 | 2 | Launcher screen with folder picker + drag target | Native NSOpenPanel + SwiftUI drag-and-drop |
 | 3 | Folder validation | Count processable files, warn if none found |
 | 4 | "Analyse" button (primary) | Runs `bristlenose run <folder>` via bundled sidecar |
@@ -61,7 +77,7 @@ No terminal. No `brew install`. No API key signup. No Python.
 | # | Requirement | Notes |
 |---|-------------|-------|
 | 18 | In-app report viewing (WKWebView) | v0.1 uses default browser |
-| 19 | Intel x86_64 / universal binary | arm64 only for pub testing |
+| 19 | Intel x86_64 / universal binary | Not planned — Intel is ~5-10% of professional base and falling. Revisit only if demand appears |
 | 20 | Onboarding wizard (doctor checks as UI) | Doctor module's `CheckResult` is ready for this |
 | 21 | In-app serve mode | Pipeline → serve → WKWebView, all in one window |
 | 22 | Auto-update | Not needed for 5-friend distribution |
@@ -322,7 +338,7 @@ Priority chain (no code changes needed — `load_settings()` + `_populate_keys_f
 | macOS Sequoia Gatekeeper friction — must use System Settings > Privacy & Security > Open Anyway | Medium | Send one-paragraph instructions with the .dmg. After first launch, works forever |
 | PyInstaller `--onefile` startup time — 2-4s extraction | Low | Acceptable for v0.1. Move to `--onedir` later |
 | Whisper `base.en` lower quality than `large-v3-turbo` | Low | Good enough for report UX feedback (the goal) |
-| arm64 only — Intel Mac users excluded | Low | All five friends have Apple Silicon |
+| arm64 only — Intel Mac users excluded | Low | ~5-10% of professional Mac users. All five friends have Apple Silicon. Not planned for v1 |
 
 ### Unresolved questions
 

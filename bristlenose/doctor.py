@@ -210,9 +210,29 @@ def check_backend() -> CheckResult:
 
 def check_whisper_model(settings: BristlenoseSettings) -> CheckResult:
     """Check whether the configured Whisper model is already cached."""
+    import os
+
     from bristlenose.stages.transcribe import _mlx_model_name
 
     model_name = settings.whisper_model
+
+    # Check bundled model directory first (desktop app sets BRISTLENOSE_WHISPER_MODEL_DIR)
+    model_dir = os.environ.get("BRISTLENOSE_WHISPER_MODEL_DIR")
+    if model_dir:
+        candidate = os.path.join(model_dir, model_name)
+        if os.path.isdir(candidate):
+            # Count total size of the bundled model directory
+            total_bytes = sum(
+                os.path.getsize(os.path.join(dirpath, f))
+                for dirpath, _dirnames, filenames in os.walk(candidate)
+                for f in filenames
+            )
+            size_gb = total_bytes / (1024**3)
+            return CheckResult(
+                status=CheckStatus.OK,
+                label="Whisper model",
+                detail=f"{model_name} bundled ({size_gb:.1f} GB)",
+            )
 
     # Build list of possible repo IDs to check — depends on which backend will be used
     # MLX models: mlx-community/whisper-{model} (via _mlx_model_name mapping)

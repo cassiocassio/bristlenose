@@ -269,6 +269,8 @@ def _init_faster_whisper_backend(
     Returns:
         A function(audio_path, settings) -> list[TranscriptSegment]
     """
+    import os
+
     from faster_whisper import WhisperModel
 
     # Choose device and compute type based on hardware
@@ -281,10 +283,28 @@ def _init_faster_whisper_backend(
         compute_type = settings.whisper_compute_type  # default: int8
         logger.info("faster-whisper: using CPU (%s)", compute_type)
 
+    # Support bundled model directory (desktop app sets BRISTLENOSE_WHISPER_MODEL_DIR)
+    model_dir = os.environ.get("BRISTLENOSE_WHISPER_MODEL_DIR")
+    model_id: str = settings.whisper_model
+    local_only = False
+    if model_dir:
+        candidate = os.path.join(model_dir, settings.whisper_model)
+        if os.path.isdir(candidate):
+            model_id = candidate
+            local_only = True
+            logger.info("Using bundled Whisper model: %s", candidate)
+        else:
+            logger.warning(
+                "BRISTLENOSE_WHISPER_MODEL_DIR set but model not found at %s, "
+                "falling back to download",
+                candidate,
+            )
+
     model = WhisperModel(
-        settings.whisper_model,
+        model_id,
         device=device,
         compute_type=compute_type,
+        local_files_only=local_only,
     )
 
     def transcribe_faster_whisper(

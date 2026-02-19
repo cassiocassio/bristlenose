@@ -30,7 +30,7 @@ CLI commands: `run` (full pipeline), `transcribe-only`, `analyze` (skip transcri
 
 Serve mode: `bristlenose serve <folder>` — FastAPI server + SQLite + React islands. Auto-renders, serves HTML report over HTTP, replaces vanilla JS components with React islands via comment-marker injection (`re.sub` at serve time). 22-table SQLAlchemy domain schema, 6 data sync endpoints, sessions/quotes/dashboard/codebook APIs. `--dev` enables renderer overlay, live JS reload, SQLAdmin browser. See `bristlenose/server/CLAUDE.md` for architecture.
 
-Desktop app: `desktop/` — SwiftUI macOS shell wrapping the CLI as a PyInstaller sidecar. Two build targets from one monorepo (CLI + desktop). Self-contained directory, depends on but does not modify the CLI codebase. See `docs/design-desktop-app.md` for PRD and architecture.
+Desktop app: `desktop/` — SwiftUI macOS shell wrapping the CLI as a PyInstaller sidecar. Two build targets from one monorepo (CLI + desktop). Self-contained directory, depends on but does not modify the CLI codebase. **Compatibility target: macOS 15 Sequoia + Apple Silicon (M1+).** Covers ~90% of professional Mac users. Bump chip floor to M2+ when local inference features arrive. See `docs/design-desktop-app.md` for PRD, architecture, and compatibility rationale.
 
 Frontend: `frontend/` — Vite + React + TypeScript. 16 reusable primitives in `frontend/src/components/`, 5 islands in `frontend/src/islands/`, mounted into static HTML by serve mode. 182 Vitest tests. `npm run dev` proxies to FastAPI; `npm run build` outputs to `frontend/dist/`. See `docs/design-react-component-library.md` for build sequence.
 

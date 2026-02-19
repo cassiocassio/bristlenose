@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
-# Build the bristlenose CLI as a PyInstaller one-file binary for bundling
+# Build the bristlenose CLI as a PyInstaller --onedir bundle for embedding
 # inside the macOS .app.
 #
 # Prerequisites:
 #   - Python 3.10+ with bristlenose installed (editable or regular)
 #   - pip install pyinstaller
 #
-# Output: desktop/Bristlenose/Resources/bristlenose-cli
+# Output: desktop/Bristlenose/Resources/bristlenose-sidecar/
 
 set -euo pipefail
 
@@ -34,16 +34,14 @@ if ! "$PYTHON" -m PyInstaller --version >/dev/null 2>&1; then
     exit 1
 fi
 
-# Build the one-file binary
+# Build using the spec file (--onedir mode with hidden imports and data files)
 "$PYTHON" -m PyInstaller \
-    --onefile \
-    --name bristlenose-cli \
     --distpath "$RESOURCES_DIR" \
     --workpath "$DESKTOP_DIR/build/pyinstaller" \
-    --specpath "$DESKTOP_DIR/build" \
     --clean \
     --noconfirm \
-    "$PROJECT_ROOT/bristlenose/__main__.py"
+    "$DESKTOP_DIR/bristlenose-sidecar.spec"
 
-echo "==> Sidecar built: $RESOURCES_DIR/bristlenose-cli"
-ls -lh "$RESOURCES_DIR/bristlenose-cli"
+echo "==> Sidecar built: $RESOURCES_DIR/bristlenose-sidecar/"
+ls -lh "$RESOURCES_DIR/bristlenose-sidecar/bristlenose-sidecar"
+du -sh "$RESOURCES_DIR/bristlenose-sidecar/"

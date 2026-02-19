@@ -643,21 +643,21 @@ def run(
         typer.Option("--project", "-p", help="Name of the research project (defaults to input folder name)."),
     ] = None,
     whisper_backend: Annotated[
-        str,
+        str | None,
         typer.Option(
             "--whisper-backend",
             "-b",
-            help="Transcription backend: auto (detect hardware), mlx (Apple Silicon GPU), faster-whisper (CUDA/CPU).",
+            help="Transcription backend: auto (detect hardware), mlx (Apple Silicon GPU), faster-whisper (CUDA/CPU). [default: auto]",
         ),
-    ] = "auto",
+    ] = None,
     whisper_model: Annotated[
-        str,
+        str | None,
         typer.Option(
             "--whisper-model",
             "-w",
-            help="Whisper model size: tiny, base, small, medium, large-v3, large-v3-turbo.",
+            help="Whisper model size: tiny, base, small, medium, large-v3, large-v3-turbo. [default: large-v3-turbo]",
         ),
-    ] = "large-v3-turbo",
+    ] = None,
     llm_provider: Annotated[
         str,
         typer.Option("--llm", "-l", help="LLM provider: claude, chatgpt, azure, gemini, local."),
@@ -708,16 +708,22 @@ def run(
     if project_name is None:
         project_name = input_dir.resolve().name
 
-    settings = load_settings(
-        input_dir=input_dir,
-        output_dir=output_dir,
-        project_name=project_name,
-        whisper_backend=whisper_backend,
-        whisper_model=whisper_model,
-        llm_provider=llm_provider,
-        skip_transcription=skip_transcription,
-        pii_enabled=redact_pii,
-    )
+    settings_kwargs: dict[str, object] = {
+        "input_dir": input_dir,
+        "output_dir": output_dir,
+        "project_name": project_name,
+        "llm_provider": llm_provider,
+        "skip_transcription": skip_transcription,
+        "pii_enabled": redact_pii,
+    }
+    # Only pass whisper options if explicitly set on the CLI — otherwise let
+    # env vars (BRISTLENOSE_WHISPER_MODEL, BRISTLENOSE_WHISPER_BACKEND) or
+    # config-file defaults take effect.
+    if whisper_backend is not None:
+        settings_kwargs["whisper_backend"] = whisper_backend
+    if whisper_model is not None:
+        settings_kwargs["whisper_model"] = whisper_model
+    settings = load_settings(**settings_kwargs)
 
     # Offer provider selection if no API key / local provider is not ready
     settings = _maybe_prompt_for_provider(settings)
@@ -760,9 +766,9 @@ def transcribe(
         typer.Option("--output", "-o", help="Output directory (default: bristlenose-output/ inside input folder)."),
     ] = None,
     whisper_model: Annotated[
-        str,
-        typer.Option("--whisper-model", "-w", help="Whisper model size."),
-    ] = "large-v3-turbo",
+        str | None,
+        typer.Option("--whisper-model", "-w", help="Whisper model size. [default: large-v3-turbo]"),
+    ] = None,
     verbose: Annotated[
         bool,
         typer.Option("--verbose", "-v", help="Enable verbose logging."),
@@ -773,11 +779,13 @@ def transcribe(
     if output_dir is None:
         output_dir = input_dir / "bristlenose-output"
 
-    settings = load_settings(
-        output_dir=output_dir,
-        whisper_model=whisper_model,
-        skip_transcription=False,
-    )
+    settings_kwargs: dict[str, object] = {
+        "output_dir": output_dir,
+        "skip_transcription": False,
+    }
+    if whisper_model is not None:
+        settings_kwargs["whisper_model"] = whisper_model
+    settings = load_settings(**settings_kwargs)
 
     _print_header(settings, show_provider=False)
 

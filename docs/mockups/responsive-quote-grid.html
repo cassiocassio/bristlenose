@@ -1,0 +1,944 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Responsive Quote Grid — Layout Mockup</title>
+<style>
+/* === Design tokens (from tokens.css) === */
+:root {
+    --bn-font-body: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
+    --bn-font-mono: "SF Mono", "Fira Code", "Consolas", monospace;
+    --bn-colour-bg: #ffffff;
+    --bn-colour-text: #1a1a1a;
+    --bn-colour-muted: #6b7280;
+    --bn-colour-border: #e5e7eb;
+    --bn-colour-accent: #2563eb;
+    --bn-colour-hover: #e8f0fe;
+    --bn-colour-quote-bg: #f9fafb;
+    --bn-colour-badge-bg: #f3f4f6;
+    --bn-colour-badge-text: #374151;
+    --bn-colour-icon-idle: #c9ccd1;
+    --bn-colour-starred: #999;
+    --bn-space-xs: 0.15rem;
+    --bn-space-sm: 0.35rem;
+    --bn-space-md: 0.75rem;
+    --bn-space-lg: 1.5rem;
+    --bn-space-xl: 2rem;
+    --bn-radius-sm: 3px;
+    --bn-radius-md: 6px;
+    --bn-radius-lg: 8px;
+    --bn-transition-fast: 0.15s ease;
+    --bn-transition-normal: 0.2s ease;
+
+    /* Sentiment colours */
+    --bn-sentiment-frustration: #ea580c;
+    --bn-sentiment-frustration-bg: #fff7ed;
+    --bn-sentiment-confusion: #dc2626;
+    --bn-sentiment-confusion-bg: #fef2f2;
+    --bn-sentiment-doubt: #7c3aed;
+    --bn-sentiment-doubt-bg: #f5f3ff;
+    --bn-sentiment-surprise: #d97706;
+    --bn-sentiment-surprise-bg: #fffbeb;
+    --bn-sentiment-satisfaction: #16a34a;
+    --bn-sentiment-satisfaction-bg: #f0fdf4;
+    --bn-sentiment-delight: #059669;
+    --bn-sentiment-delight-bg: #ecfdf5;
+    --bn-sentiment-confidence: #2563eb;
+    --bn-sentiment-confidence-bg: #eff6ff;
+
+    /* === Responsive layout tokens === */
+    --bn-quote-max-width: 23rem;    /* ~368px — compact scanning width */
+    --bn-grid-gap: 1.25rem;         /* gap between columns */
+}
+
+/* === Report template base (from report.css) === */
+*, *::before, *::after { box-sizing: border-box; }
+html { font-size: 16px; -webkit-font-smoothing: antialiased; }
+
+body {
+    font-family: var(--bn-font-body);
+    color: var(--bn-colour-text);
+    background: var(--bn-colour-bg);
+    line-height: 1.6;
+    margin: 0;
+    padding: var(--bn-space-xl) var(--bn-space-lg);
+}
+
+/* In grid mode, article is full-width (no max-width).
+   In single-column mode, article uses the classic 52rem cap. */
+article {
+    margin: 0 auto;
+    transition: max-width 0.3s ease;
+}
+
+body.mode-single article {
+    max-width: 52rem;
+}
+
+body.mode-grid article {
+    max-width: none;
+    padding: 0 var(--bn-space-lg);
+}
+
+
+h1 { font-size: 1.75rem; font-weight: 700; margin: 0 0 0.5rem; letter-spacing: -0.01em; }
+h2 {
+    font-size: 1.35rem;
+    font-weight: 600;
+    margin: 2.5rem 0 1rem;
+    padding-bottom: 0.4rem;
+    border-bottom: 2px solid var(--bn-colour-border);
+}
+h3 { font-size: 1.1rem; font-weight: 600; margin: 1.8rem 0 0.6rem; }
+.description { color: var(--bn-colour-muted); margin-bottom: 1rem; }
+
+/* === Quote card (from blockquote.css) === */
+blockquote {
+    background: var(--bn-colour-quote-bg);
+    border-left: 1px solid var(--bn-colour-border);
+    margin: 0.8rem 0;
+    padding: var(--bn-space-md) 1rem;
+    border-radius: 0 var(--bn-radius-md) var(--bn-radius-md) 0;
+    position: relative;
+    padding-right: 4.5rem;
+    break-inside: avoid;          /* prevent card splitting across columns */
+}
+
+blockquote .context {
+    display: block;
+    color: var(--bn-colour-muted);
+    font-size: 0.85rem;
+    margin-bottom: 0.3rem;
+}
+
+blockquote .quote-row {
+    display: flex;
+    gap: 0.5rem;
+    align-items: baseline;
+}
+
+blockquote .quote-row .timecode { flex-shrink: 0; }
+
+blockquote .quote-body {
+    flex: 1;
+    min-width: 0;
+}
+
+blockquote .timecode {
+    color: var(--bn-colour-accent);
+    font-family: var(--bn-font-mono);
+    font-size: 0.8rem;
+}
+
+blockquote .speaker {
+    color: var(--bn-colour-muted);
+    font-size: 0.9rem;
+}
+
+/* === Badges (from badge.css + badge-row.css) === */
+.badge {
+    display: inline-block;
+    font-family: var(--bn-font-mono);
+    font-size: 0.72rem;
+    padding: var(--bn-space-xs) 0.45rem;
+    border-radius: var(--bn-radius-sm);
+    background: var(--bn-colour-badge-bg);
+    color: var(--bn-colour-badge-text);
+}
+
+.badge-frustration { background: var(--bn-sentiment-frustration-bg); color: var(--bn-sentiment-frustration); }
+.badge-confusion { background: var(--bn-sentiment-confusion-bg); color: var(--bn-sentiment-confusion); }
+.badge-doubt { background: var(--bn-sentiment-doubt-bg); color: var(--bn-sentiment-doubt); }
+.badge-surprise { background: var(--bn-sentiment-surprise-bg); color: var(--bn-sentiment-surprise); }
+.badge-satisfaction { background: var(--bn-sentiment-satisfaction-bg); color: var(--bn-sentiment-satisfaction); }
+.badge-delight { background: var(--bn-sentiment-delight-bg); color: var(--bn-sentiment-delight); }
+.badge-confidence { background: var(--bn-sentiment-confidence-bg); color: var(--bn-sentiment-confidence); }
+
+blockquote .badges {
+    display: flex;
+    gap: var(--bn-space-sm);
+    margin-top: 0.4rem;
+    flex-wrap: wrap;
+    opacity: 0.9;
+    transition: opacity var(--bn-transition-fast);
+}
+
+blockquote:hover .badges { opacity: 1; }
+
+/* === Action buttons (from toggle.css) === */
+.star-btn {
+    position: absolute;
+    top: 0.65rem;
+    right: 0.65rem;
+    background: none;
+    border: none;
+    font-size: 0.8rem;
+    color: var(--bn-colour-icon-idle);
+    cursor: pointer;
+    padding: var(--bn-space-xs);
+    line-height: 1;
+    transition: color var(--bn-transition-normal);
+}
+.star-btn:hover { color: var(--bn-colour-accent); }
+
+blockquote.starred .star-btn { color: var(--bn-colour-starred); }
+blockquote.starred { font-weight: 600; border-left-color: var(--bn-colour-starred); }
+blockquote.starred .context,
+blockquote.starred .timecode,
+blockquote.starred .speaker,
+blockquote.starred .badges { font-weight: 400; }
+
+.hide-btn {
+    position: absolute;
+    top: 0.65rem;
+    right: 2rem;
+    background: none;
+    border: none;
+    font-size: 0.8rem;
+    color: var(--bn-colour-icon-idle);
+    cursor: pointer;
+    padding: var(--bn-space-xs);
+    line-height: 1;
+    opacity: 0;
+    transition: color var(--bn-transition-normal), opacity var(--bn-transition-normal);
+}
+blockquote:hover .hide-btn { opacity: 1; }
+.hide-btn:hover { color: var(--bn-colour-accent); }
+
+/* === COMPACT: narrow-window adaptations === */
+
+/* At narrow widths, tighten card padding and shrink chrome */
+@media (max-width: 600px) {
+    blockquote {
+        padding: var(--bn-space-sm) 0.6rem;
+        padding-right: 2.5rem;    /* less room for action btns */
+    }
+
+    .star-btn {
+        top: 0.4rem;
+        right: 0.3rem;
+        font-size: 0.7rem;
+    }
+
+    .hide-btn {
+        top: 0.4rem;
+        right: 1.4rem;
+        font-size: 0.7rem;
+    }
+
+    blockquote .context {
+        font-size: 0.78rem;
+        margin-bottom: 0.15rem;
+    }
+
+    blockquote .timecode {
+        font-size: 0.72rem;
+    }
+
+    h2 { font-size: 1.15rem; margin: 1.8rem 0 0.6rem; }
+    h3 { font-size: 0.95rem; }
+
+    body {
+        padding: var(--bn-space-lg) var(--bn-space-md);
+    }
+}
+
+/* === RESPONSIVE: Quote group as CSS grid === */
+.quote-group {
+    display: flex;
+    flex-direction: column;
+}
+
+/* Grid mode: quote-group becomes a multi-column grid */
+body.mode-grid .quote-group {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(var(--bn-quote-max-width), 100%), 1fr));
+    gap: 0 var(--bn-grid-gap);
+    align-items: start;
+}
+
+/* In grid mode, quotes don't need vertical margin — gap handles it */
+body.mode-grid .quote-group blockquote {
+    margin: 0 0 var(--bn-grid-gap) 0;
+}
+
+/* Section headings span the full grid */
+body.mode-grid h2,
+body.mode-grid h3,
+body.mode-grid .description {
+    grid-column: 1 / -1;
+}
+
+/* === Viewport indicator (floating HUD) === */
+.viewport-hud {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    background: #1a1a1a;
+    color: #e5e7eb;
+    font-family: var(--bn-font-mono);
+    font-size: 0.75rem;
+    padding: 0.5rem 1rem;
+    display: flex;
+    gap: 2rem;
+    align-items: center;
+    z-index: 1000;
+    flex-wrap: wrap;
+}
+
+.viewport-hud span { white-space: nowrap; }
+.viewport-hud .label { color: #9ca3af; }
+.viewport-hud .value { color: #60a5fa; font-weight: 600; }
+.viewport-hud .device { color: #34d399; }
+
+/* Mode toggle buttons */
+.mode-toggle {
+    display: flex;
+    gap: 0.25rem;
+    margin-left: auto;
+}
+
+.mode-toggle button {
+    font-family: var(--bn-font-mono);
+    font-size: 0.72rem;
+    padding: 0.25rem 0.75rem;
+    border: 1px solid #374151;
+    border-radius: var(--bn-radius-sm);
+    background: transparent;
+    color: #9ca3af;
+    cursor: pointer;
+    transition: all var(--bn-transition-fast);
+}
+
+.mode-toggle button.active {
+    background: #2563eb;
+    border-color: #2563eb;
+    color: white;
+}
+
+.mode-toggle button:hover:not(.active) {
+    border-color: #6b7280;
+    color: #e5e7eb;
+}
+
+/* Card width slider */
+.width-slider {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.width-slider input[type="range"] {
+    width: 100px;
+    accent-color: #2563eb;
+}
+
+/* Push body down to clear the HUD */
+body { padding-top: 3.5rem; }
+
+/* === Breakpoint indicator bars === */
+.breakpoint-markers {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    z-index: 1000;
+    display: flex;
+}
+
+.bp-segment {
+    height: 100%;
+    transition: opacity 0.2s;
+}
+
+.bp-compact  { background: #ef4444; } /* red: < 600px */
+.bp-default  { background: #f59e0b; } /* amber: 600–880px */
+.bp-reading  { background: #22c55e; } /* green: 880–1400px */
+.bp-wide     { background: #3b82f6; } /* blue: 1400–2100px */
+.bp-ultra    { background: #8b5cf6; } /* purple: 2100px+ */
+
+/* Dark mode support */
+@supports (color: light-dark(#000, #fff)) {
+    :root {
+        color-scheme: light dark;
+        --bn-colour-bg:        light-dark(#ffffff, #111111);
+        --bn-colour-text:      light-dark(#1a1a1a, #e5e7eb);
+        --bn-colour-muted:     light-dark(#6b7280, #9ca3af);
+        --bn-colour-border:    light-dark(#e5e7eb, #2d2d2d);
+        --bn-colour-accent:    light-dark(#2563eb, #60a5fa);
+        --bn-colour-quote-bg:  light-dark(#f9fafb, #1a1a1a);
+        --bn-colour-badge-bg:  light-dark(#f3f4f6, #252525);
+        --bn-colour-badge-text: light-dark(#374151, #d1d5db);
+        --bn-colour-icon-idle: light-dark(#c9ccd1, #595959);
+
+        --bn-sentiment-frustration:    light-dark(#ea580c, #fb923c);
+        --bn-sentiment-frustration-bg: light-dark(#fff7ed, #2d1d0e);
+        --bn-sentiment-confusion:      light-dark(#dc2626, #f87171);
+        --bn-sentiment-confusion-bg:   light-dark(#fef2f2, #2d1515);
+        --bn-sentiment-doubt:          light-dark(#7c3aed, #a78bfa);
+        --bn-sentiment-doubt-bg:       light-dark(#f5f3ff, #1e1533);
+        --bn-sentiment-surprise:       light-dark(#d97706, #fbbf24);
+        --bn-sentiment-surprise-bg:    light-dark(#fffbeb, #2d2305);
+        --bn-sentiment-satisfaction:   light-dark(#16a34a, #4ade80);
+        --bn-sentiment-satisfaction-bg: light-dark(#f0fdf4, #0f2918);
+        --bn-sentiment-delight:        light-dark(#059669, #34d399);
+        --bn-sentiment-delight-bg:     light-dark(#ecfdf5, #0d261c);
+        --bn-sentiment-confidence:     light-dark(#2563eb, #60a5fa);
+        --bn-sentiment-confidence-bg:  light-dark(#eff6ff, #111d2e);
+    }
+    [data-theme="light"]:root { color-scheme: light; }
+    [data-theme="dark"]:root  { color-scheme: dark; }
+}
+</style>
+</head>
+<body class="mode-grid">
+
+<!-- Viewport HUD -->
+<div class="viewport-hud">
+    <span><span class="label">Viewport:</span> <span class="value" id="vp-width">—</span><span class="label">px</span></span>
+    <span><span class="label">CSS cols:</span> <span class="value" id="vp-cols">—</span></span>
+    <span><span class="label">Card width:</span> <span class="value" id="vp-card-w">—</span><span class="label">px</span></span>
+    <span><span class="label">~Words/line:</span> <span class="value" id="vp-wpl">—</span></span>
+    <span class="device" id="vp-device">—</span>
+    <div class="width-slider">
+        <span class="label">Card max:</span>
+        <input type="range" id="card-width-slider" min="18" max="44" value="23" step="1">
+        <span class="value" id="card-width-label">23rem</span>
+    </div>
+    <div class="mode-toggle">
+        <button id="btn-grid" class="active" onclick="setMode('grid')">Grid</button>
+        <button id="btn-single" onclick="setMode('single')">Single col</button>
+    </div>
+</div>
+
+<article>
+
+<h1>Onboarding Experience</h1>
+<p class="description">Theme: First-run friction and setup challenges across 8 interview sessions</p>
+
+<h2>Getting Started</h2>
+<h3>First impressions of the setup flow</h3>
+
+<div class="quote-group" id="qg1">
+
+<blockquote>
+    <span class="context">Onboarding &rsaquo; Setup flow</span>
+    <div class="quote-row">
+        <span class="timecode">02:14</span>
+        <div class="quote-body">
+            <span class="quote-text">&ldquo;I opened the app and immediately felt lost. There was no indication of what I should do first, just a blank screen with a menu bar.&rdquo;</span>
+            <div class="speaker">— P03, Sarah Chen</div>
+        </div>
+    </div>
+    <div class="badges">
+        <span class="badge badge-confusion">confusion</span>
+        <span class="badge badge-frustration">frustration</span>
+    </div>
+    <button class="star-btn" aria-label="Star">&#9734;</button>
+    <button class="hide-btn" aria-label="Hide">&#128065;</button>
+</blockquote>
+
+<blockquote class="starred">
+    <span class="context">Onboarding &rsaquo; First run</span>
+    <div class="quote-row">
+        <span class="timecode">05:31</span>
+        <div class="quote-body">
+            <span class="quote-text">&ldquo;The API key thing threw me. I didn&rsquo;t know what an API key was or where to get one.&rdquo;</span>
+            <div class="speaker">— P07, James Rivera</div>
+        </div>
+    </div>
+    <div class="badges">
+        <span class="badge badge-confusion">confusion</span>
+    </div>
+    <button class="star-btn" aria-label="Star">&#9733;</button>
+    <button class="hide-btn" aria-label="Hide">&#128065;</button>
+</blockquote>
+
+<blockquote>
+    <span class="context">Onboarding &rsaquo; Documentation</span>
+    <div class="quote-row">
+        <span class="timecode">08:47</span>
+        <div class="quote-body">
+            <span class="quote-text">&ldquo;I eventually found the README and it explained everything clearly. But I had to go looking for it — the app should have pointed me there.&rdquo;</span>
+            <div class="speaker">— P01, Emma Thompson</div>
+        </div>
+    </div>
+    <div class="badges">
+        <span class="badge badge-satisfaction">satisfaction</span>
+        <span class="badge badge-frustration">frustration</span>
+    </div>
+    <button class="star-btn" aria-label="Star">&#9734;</button>
+    <button class="hide-btn" aria-label="Hide">&#128065;</button>
+</blockquote>
+
+<blockquote>
+    <span class="context">Onboarding &rsaquo; Setup flow</span>
+    <div class="quote-row">
+        <span class="timecode">03:22</span>
+        <div class="quote-body">
+            <span class="quote-text">&ldquo;Honestly the install was fine. Brew install, done.&rdquo;</span>
+            <div class="speaker">— P12, Alex Kumar</div>
+        </div>
+    </div>
+    <div class="badges">
+        <span class="badge badge-satisfaction">satisfaction</span>
+    </div>
+    <button class="star-btn" aria-label="Star">&#9734;</button>
+    <button class="hide-btn" aria-label="Hide">&#128065;</button>
+</blockquote>
+
+<blockquote>
+    <span class="context">Onboarding &rsaquo; Expectations</span>
+    <div class="quote-row">
+        <span class="timecode">11:05</span>
+        <div class="quote-body">
+            <span class="quote-text">&ldquo;I expected it to work like Dovetail. Drag files in, wait, get a report. The command-line thing was a surprise — not a bad one, just unexpected.&rdquo;</span>
+            <div class="speaker">— P05, Maria Santos</div>
+        </div>
+    </div>
+    <div class="badges">
+        <span class="badge badge-surprise">surprise</span>
+    </div>
+    <button class="star-btn" aria-label="Star">&#9734;</button>
+    <button class="hide-btn" aria-label="Hide">&#128065;</button>
+</blockquote>
+
+<blockquote>
+    <span class="context">Onboarding &rsaquo; Learning curve</span>
+    <div class="quote-row">
+        <span class="timecode">14:38</span>
+        <div class="quote-body">
+            <span class="quote-text">&ldquo;Once I got past the first five minutes, everything clicked. The output is genuinely useful. But those first five minutes were rough.&rdquo;</span>
+            <div class="speaker">— P09, David Park</div>
+        </div>
+    </div>
+    <div class="badges">
+        <span class="badge badge-delight">delight</span>
+        <span class="badge badge-frustration">frustration</span>
+    </div>
+    <button class="star-btn" aria-label="Star">&#9734;</button>
+    <button class="hide-btn" aria-label="Hide">&#128065;</button>
+</blockquote>
+
+<blockquote>
+    <span class="context">Onboarding &rsaquo; Mental model</span>
+    <div class="quote-row">
+        <span class="timecode">06:52</span>
+        <div class="quote-body">
+            <span class="quote-text">&ldquo;I didn&rsquo;t understand what &lsquo;pipeline&rsquo; meant in this context. Is it processing my files through stages? What stages?&rdquo;</span>
+            <div class="speaker">— P02, Lisa Okafor</div>
+        </div>
+    </div>
+    <div class="badges">
+        <span class="badge badge-confusion">confusion</span>
+    </div>
+    <button class="star-btn" aria-label="Star">&#9734;</button>
+    <button class="hide-btn" aria-label="Hide">&#128065;</button>
+</blockquote>
+
+<blockquote>
+    <span class="context">Onboarding &rsaquo; Trust</span>
+    <div class="quote-row">
+        <span class="timecode">09:15</span>
+        <div class="quote-body">
+            <span class="quote-text">&ldquo;The local-first thing is what sold me. I can&rsquo;t upload client recordings to a cloud service. That&rsquo;s a non-starter for our compliance team.&rdquo;</span>
+            <div class="speaker">— P04, Rachel Kim</div>
+        </div>
+    </div>
+    <div class="badges">
+        <span class="badge badge-confidence">confidence</span>
+    </div>
+    <button class="star-btn" aria-label="Star">&#9734;</button>
+    <button class="hide-btn" aria-label="Hide">&#128065;</button>
+</blockquote>
+
+</div><!-- /quote-group -->
+
+<h2>Analysis Quality</h2>
+<h3>Accuracy of extracted themes and sentiments</h3>
+
+<div class="quote-group" id="qg2">
+
+<blockquote class="starred">
+    <span class="context">Analysis &rsaquo; Theme accuracy</span>
+    <div class="quote-row">
+        <span class="timecode">22:10</span>
+        <div class="quote-body">
+            <span class="quote-text">&ldquo;The themes it extracted were actually pretty close to what I would have done manually. Maybe 80% overlap. The 20% it got wrong were edge cases.&rdquo;</span>
+            <div class="speaker">— P01, Emma Thompson</div>
+        </div>
+    </div>
+    <div class="badges">
+        <span class="badge badge-satisfaction">satisfaction</span>
+    </div>
+    <button class="star-btn" aria-label="Star">&#9733;</button>
+    <button class="hide-btn" aria-label="Hide">&#128065;</button>
+</blockquote>
+
+<blockquote>
+    <span class="context">Analysis &rsaquo; Sentiment</span>
+    <div class="quote-row">
+        <span class="timecode">18:33</span>
+        <div class="quote-body">
+            <span class="quote-text">&ldquo;It tagged a clearly sarcastic comment as &lsquo;delight&rsquo;. That&rsquo;s... not great.&rdquo;</span>
+            <div class="speaker">— P06, Tom Williams</div>
+        </div>
+    </div>
+    <div class="badges">
+        <span class="badge badge-doubt">doubt</span>
+    </div>
+    <button class="star-btn" aria-label="Star">&#9734;</button>
+    <button class="hide-btn" aria-label="Hide">&#128065;</button>
+</blockquote>
+
+<blockquote>
+    <span class="context">Analysis &rsaquo; Quote selection</span>
+    <div class="quote-row">
+        <span class="timecode">25:44</span>
+        <div class="quote-body">
+            <span class="quote-text">&ldquo;Some of the quotes it pulled were really good — ones I might have missed on a first pass through the transcript. That&rsquo;s the real value.&rdquo;</span>
+            <div class="speaker">— P03, Sarah Chen</div>
+        </div>
+    </div>
+    <div class="badges">
+        <span class="badge badge-delight">delight</span>
+    </div>
+    <button class="star-btn" aria-label="Star">&#9734;</button>
+    <button class="hide-btn" aria-label="Hide">&#128065;</button>
+</blockquote>
+
+<blockquote>
+    <span class="context">Analysis &rsaquo; Coverage</span>
+    <div class="quote-row">
+        <span class="timecode">30:02</span>
+        <div class="quote-body">
+            <span class="quote-text">&ldquo;It completely missed the accessibility discussion. We spent ten minutes on it and there&rsquo;s not a single quote from that section.&rdquo;</span>
+            <div class="speaker">— P08, Nina Patel</div>
+        </div>
+    </div>
+    <div class="badges">
+        <span class="badge badge-frustration">frustration</span>
+    </div>
+    <button class="star-btn" aria-label="Star">&#9734;</button>
+    <button class="hide-btn" aria-label="Hide">&#128065;</button>
+</blockquote>
+
+<blockquote>
+    <span class="context">Analysis &rsaquo; Clustering</span>
+    <div class="quote-row">
+        <span class="timecode">27:18</span>
+        <div class="quote-body">
+            <span class="quote-text">&ldquo;The groupings make sense. Like, it put all the navigation complaints together and all the performance complaints together. That&rsquo;s what I would have done.&rdquo;</span>
+            <div class="speaker">— P11, Chris Taylor</div>
+        </div>
+    </div>
+    <div class="badges">
+        <span class="badge badge-satisfaction">satisfaction</span>
+    </div>
+    <button class="star-btn" aria-label="Star">&#9734;</button>
+    <button class="hide-btn" aria-label="Hide">&#128065;</button>
+</blockquote>
+
+<blockquote>
+    <span class="context">Analysis &rsaquo; Speed</span>
+    <div class="quote-row">
+        <span class="timecode">15:09</span>
+        <div class="quote-body">
+            <span class="quote-text">&ldquo;Eight interviews in forty minutes. That would have taken me two full days.&rdquo;</span>
+            <div class="speaker">— P05, Maria Santos</div>
+        </div>
+    </div>
+    <div class="badges">
+        <span class="badge badge-delight">delight</span>
+    </div>
+    <button class="star-btn" aria-label="Star">&#9734;</button>
+    <button class="hide-btn" aria-label="Hide">&#128065;</button>
+</blockquote>
+
+<blockquote>
+    <span class="context">Analysis &rsaquo; Handoff</span>
+    <div class="quote-row">
+        <span class="timecode">35:20</span>
+        <div class="quote-body">
+            <span class="quote-text">&ldquo;I sent the report to my PM and she immediately understood the key findings. Usually I have to walk people through my analysis. This time the report did the work for me.&rdquo;</span>
+            <div class="speaker">— P09, David Park</div>
+        </div>
+    </div>
+    <div class="badges">
+        <span class="badge badge-delight">delight</span>
+        <span class="badge badge-confidence">confidence</span>
+    </div>
+    <button class="star-btn" aria-label="Star">&#9734;</button>
+    <button class="hide-btn" aria-label="Hide">&#128065;</button>
+</blockquote>
+
+<blockquote>
+    <span class="context">Analysis &rsaquo; Friction points</span>
+    <div class="quote-row">
+        <span class="timecode">20:45</span>
+        <div class="quote-body">
+            <span class="quote-text">&ldquo;The friction points section is gold. It surfaces the pain without me having to hunt for it.&rdquo;</span>
+            <div class="speaker">— P10, Aisha Johnson</div>
+        </div>
+    </div>
+    <div class="badges">
+        <span class="badge badge-satisfaction">satisfaction</span>
+    </div>
+    <button class="star-btn" aria-label="Star">&#9734;</button>
+    <button class="hide-btn" aria-label="Hide">&#128065;</button>
+</blockquote>
+
+<blockquote>
+    <span class="context">Analysis &rsaquo; Repeat patterns</span>
+    <div class="quote-row">
+        <span class="timecode">32:11</span>
+        <div class="quote-body">
+            <span class="quote-text">&ldquo;Three different participants said almost the same thing about the navigation, and it grouped them together. That&rsquo;s strong signal.&rdquo;</span>
+            <div class="speaker">— P01, Emma Thompson</div>
+        </div>
+    </div>
+    <div class="badges">
+        <span class="badge badge-confidence">confidence</span>
+    </div>
+    <button class="star-btn" aria-label="Star">&#9734;</button>
+    <button class="hide-btn" aria-label="Hide">&#128065;</button>
+</blockquote>
+
+<blockquote>
+    <span class="context">Analysis &rsaquo; Edge cases</span>
+    <div class="quote-row">
+        <span class="timecode">28:55</span>
+        <div class="quote-body">
+            <span class="quote-text">&ldquo;It struggled with the bilingual participant. Half the quotes were in Spanish and it just... ignored them.&rdquo;</span>
+            <div class="speaker">— P07, James Rivera</div>
+        </div>
+    </div>
+    <div class="badges">
+        <span class="badge badge-frustration">frustration</span>
+        <span class="badge badge-doubt">doubt</span>
+    </div>
+    <button class="star-btn" aria-label="Star">&#9734;</button>
+    <button class="hide-btn" aria-label="Hide">&#128065;</button>
+</blockquote>
+
+</div><!-- /quote-group -->
+
+<h2>Report Output</h2>
+<h3>Presentation and usability of the generated report</h3>
+
+<div class="quote-group" id="qg3">
+
+<blockquote>
+    <span class="context">Report &rsaquo; Visual design</span>
+    <div class="quote-row">
+        <span class="timecode">40:12</span>
+        <div class="quote-body">
+            <span class="quote-text">&ldquo;It looks professional. I could show this to a client without being embarrassed.&rdquo;</span>
+            <div class="speaker">— P04, Rachel Kim</div>
+        </div>
+    </div>
+    <div class="badges">
+        <span class="badge badge-satisfaction">satisfaction</span>
+    </div>
+    <button class="star-btn" aria-label="Star">&#9734;</button>
+    <button class="hide-btn" aria-label="Hide">&#128065;</button>
+</blockquote>
+
+<blockquote>
+    <span class="context">Report &rsaquo; Editing</span>
+    <div class="quote-row">
+        <span class="timecode">42:30</span>
+        <div class="quote-body">
+            <span class="quote-text">&ldquo;Being able to edit the quotes inline is brilliant. I can clean up the ums and you-knows without leaving the report.&rdquo;</span>
+            <div class="speaker">— P03, Sarah Chen</div>
+        </div>
+    </div>
+    <div class="badges">
+        <span class="badge badge-delight">delight</span>
+    </div>
+    <button class="star-btn" aria-label="Star">&#9734;</button>
+    <button class="hide-btn" aria-label="Hide">&#128065;</button>
+</blockquote>
+
+<blockquote>
+    <span class="context">Report &rsaquo; Navigation</span>
+    <div class="quote-row">
+        <span class="timecode">38:05</span>
+        <div class="quote-body">
+            <span class="quote-text">&ldquo;With thirty-plus themes, the report gets long. I need a way to collapse sections I&rsquo;m not interested in right now.&rdquo;</span>
+            <div class="speaker">— P11, Chris Taylor</div>
+        </div>
+    </div>
+    <div class="badges">
+        <span class="badge badge-frustration">frustration</span>
+    </div>
+    <button class="star-btn" aria-label="Star">&#9734;</button>
+    <button class="hide-btn" aria-label="Hide">&#128065;</button>
+</blockquote>
+
+<blockquote>
+    <span class="context">Report &rsaquo; Search</span>
+    <div class="quote-row">
+        <span class="timecode">44:18</span>
+        <div class="quote-body">
+            <span class="quote-text">&ldquo;The search works well. I typed a participant&rsquo;s name and it highlighted all their quotes across every theme.&rdquo;</span>
+            <div class="speaker">— P10, Aisha Johnson</div>
+        </div>
+    </div>
+    <div class="badges">
+        <span class="badge badge-satisfaction">satisfaction</span>
+    </div>
+    <button class="star-btn" aria-label="Star">&#9734;</button>
+    <button class="hide-btn" aria-label="Hide">&#128065;</button>
+</blockquote>
+
+<blockquote>
+    <span class="context">Report &rsaquo; Dark mode</span>
+    <div class="quote-row">
+        <span class="timecode">46:02</span>
+        <div class="quote-body">
+            <span class="quote-text">&ldquo;Dark mode just works. Thank you.&rdquo;</span>
+            <div class="speaker">— P12, Alex Kumar</div>
+        </div>
+    </div>
+    <div class="badges">
+        <span class="badge badge-delight">delight</span>
+    </div>
+    <button class="star-btn" aria-label="Star">&#9734;</button>
+    <button class="hide-btn" aria-label="Hide">&#128065;</button>
+</blockquote>
+
+<blockquote>
+    <span class="context">Report &rsaquo; Export</span>
+    <div class="quote-row">
+        <span class="timecode">48:33</span>
+        <div class="quote-body">
+            <span class="quote-text">&ldquo;I wanted to pull quotes into a Keynote deck but the CSV export doesn&rsquo;t include the theme headings. I had to manually track which theme each quote belonged to.&rdquo;</span>
+            <div class="speaker">— P06, Tom Williams</div>
+        </div>
+    </div>
+    <div class="badges">
+        <span class="badge badge-frustration">frustration</span>
+    </div>
+    <button class="star-btn" aria-label="Star">&#9734;</button>
+    <button class="hide-btn" aria-label="Hide">&#128065;</button>
+</blockquote>
+
+</div><!-- /quote-group -->
+
+</article>
+
+<!-- Breakpoint indicator -->
+<div class="breakpoint-markers">
+    <div class="bp-segment bp-compact" id="bp-c"></div>
+    <div class="bp-segment bp-default" id="bp-d"></div>
+    <div class="bp-segment bp-reading" id="bp-r"></div>
+    <div class="bp-segment bp-wide"    id="bp-w"></div>
+    <div class="bp-segment bp-ultra"   id="bp-u"></div>
+</div>
+
+<script>
+// Device lookup by CSS pixel width
+const DEVICES = [
+    [600,  'Compact (phone)'],
+    [880,  'Narrow window'],
+    [1470, 'MacBook Air 13"'],
+    [1512, 'MacBook Pro 14"'],
+    [1728, 'MacBook Pro 16"'],
+    [2240, 'iMac 24" (4.5K)'],
+    [2560, 'Studio Display 27" (5K)'],
+    [3008, 'Pro Display XDR 32" (6K)'],
+];
+
+// Breakpoint thresholds
+const BP = { compact: 600, default: 880, wide: 1400, ultra: 2100 };
+
+function getDevice(w) {
+    // Find the closest device at or below this width
+    let best = DEVICES[0];
+    for (const d of DEVICES) {
+        if (d[0] <= w) best = d;
+    }
+    // If wider than the widest known device, still show the widest
+    if (w >= DEVICES[DEVICES.length - 1][0]) best = DEVICES[DEVICES.length - 1];
+    return best[1];
+}
+
+function getBreakpoint(w) {
+    if (w < BP.compact)  return 'compact';
+    if (w < BP.default)  return 'default';
+    if (w < BP.wide)     return 'reading';
+    if (w < BP.ultra)    return 'wide';
+    return 'ultra';
+}
+
+function updateHUD() {
+    const w = window.innerWidth;
+    document.getElementById('vp-width').textContent = w;
+    document.getElementById('vp-device').textContent = getDevice(w);
+
+    // Count actual rendered columns by checking quote-group grid
+    const qg = document.getElementById('qg1');
+    if (qg) {
+        const style = getComputedStyle(qg);
+        const isGrid = document.body.classList.contains('mode-grid');
+        let cols = 1;
+        if (isGrid && style.display === 'grid') {
+            cols = style.gridTemplateColumns.split(/\s+/).filter(Boolean).length;
+        }
+        document.getElementById('vp-cols').textContent = cols;
+
+        // Measure actual card width
+        const firstCard = qg.querySelector('blockquote');
+        if (firstCard) {
+            const cardW = Math.round(firstCard.getBoundingClientRect().width);
+            document.getElementById('vp-card-w').textContent = cardW;
+            // Estimate words per line (Inter at 16px ~7.5px/char, ~5.2 chars/word+space)
+            const textW = cardW - 16 - 16 - 50 - 72; // padding-left, padding-right, timecode, action-btns
+            const charsPerLine = textW / 7.5;
+            const wordsPerLine = Math.round(charsPerLine / 6.2);
+            document.getElementById('vp-wpl').textContent = '~' + wordsPerLine;
+        }
+    }
+
+    // Update breakpoint bar
+    const bp = getBreakpoint(w);
+    const segments = { compact: 'bp-c', default: 'bp-d', reading: 'bp-r', wide: 'bp-w', ultra: 'bp-u' };
+    const order = ['compact', 'default', 'reading', 'wide', 'ultra'];
+    const activeIdx = order.indexOf(bp);
+    for (let i = 0; i < order.length; i++) {
+        const el = document.getElementById(segments[order[i]]);
+        el.style.flex = i <= activeIdx ? '1' : '0';
+        el.style.opacity = i <= activeIdx ? '1' : '0.15';
+    }
+}
+
+function setMode(mode) {
+    document.body.className = 'mode-' + mode;
+    document.getElementById('btn-grid').className = mode === 'grid' ? 'active' : '';
+    document.getElementById('btn-single').className = mode === 'single' ? 'active' : '';
+    // Re-measure after layout settles
+    requestAnimationFrame(updateHUD);
+}
+
+// Card width slider
+const slider = document.getElementById('card-width-slider');
+const sliderLabel = document.getElementById('card-width-label');
+slider.addEventListener('input', function() {
+    const rem = parseInt(this.value);
+    document.documentElement.style.setProperty('--bn-quote-max-width', rem + 'rem');
+    sliderLabel.textContent = rem + 'rem';
+    requestAnimationFrame(updateHUD);
+});
+
+// Update on resize
+window.addEventListener('resize', updateHUD);
+// Initial
+requestAnimationFrame(updateHUD);
+</script>
+
+</body>
+</html>

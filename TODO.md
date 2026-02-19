@@ -50,6 +50,41 @@ This file contains: session reminders, feature groupings with context, items too
 | Undo bulk tag (Cmd+Z for last tag action) | — | medium |
 | Multi-page report (tabs or linked pages) | #51 | large |
 | Project setup UI for new projects | #49 | large |
+| Responsive quote grid layout | — | medium |
+| Content density setting (Compact / Normal / Generous) | — | small |
+
+### Content density setting
+
+Three-way toggle (Compact / Normal / Generous) that scales content without touching chrome (nav, toolbar, logo). All spacing tokens are `rem`-based, so a single `font-size` change on `<article>` cascades to quote text, badges, timecodes, headings, and padding.
+
+| Setting | `article` font-size | Use case |
+|---------|---------------------|----------|
+| Compact | 14px (0.875rem) | Dense scanning, big datasets, small screens |
+| Normal | 16px (1rem) | Default — current look |
+| Generous | 18px (1.125rem) | Screen-sharing, calls, accessibility, large monitors |
+
+Implementation: add `--bn-content-scale` token (`0.875` / `1` / `1.125`), set `font-size: calc(var(--bn-content-scale) * 1rem)` on `<article>`. Toggle in toolbar or settings. Persist via `preferences.js` (same pattern as appearance toggle). Interacts with responsive grid — Generous + wide screen = fewer but more readable columns.
+
+### Responsive layout
+
+Multi-column quote grid using CSS `auto-fill`. Card max-width `23rem` (368px) keeps ~5 words/line for fast scanning. Columns add automatically as viewport widens — no JS. Mockup: `docs/mockups/responsive-quote-grid.html`.
+
+**Column count by display:**
+
+| Display | Columns |
+|---------|---------|
+| Skinny window (Miro) | 1 |
+| 13–14" MacBook | 2 |
+| 16" MacBook Pro | 4 |
+| 27" / 4K | 4–5 |
+| Pro Display XDR 6K | 7 |
+
+**Implementation phases:**
+
+1. **Quote grid** (CSS-only) — change `--bn-max-width` to fluid, add `--bn-quote-max-width: 23rem` token, `.quote-group` gets `display: grid; grid-template-columns: repeat(auto-fill, minmax(23rem, 1fr))`. Section headings span full width (`grid-column: 1 / -1`). Files: `tokens.css`, `blockquote.css`, `report.css`
+2. **Toolbar and nav bar** — make toolbar, search, tag filter, and global nav compress for narrow viewports (<600px). Prerequisite for the Miro-beside-quotes workflow
+3. **Dashboard grid** — dashboard panes reflow with the same responsive approach
+4. **Transcript pages** — already have the 1100px annotation breakpoint; verify it works with the wider article
 
 ### Report JavaScript
 

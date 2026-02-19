@@ -24,6 +24,8 @@ class ProcessRunner: ObservableObject {
 
     private var process: Process?
     private var serveProcess: Process?
+    private var pipelineReadTask: Task<Void, Never>?
+    private var serveReadTask: Task<Void, Never>?
 
     /// Launch a bundled executable with the given arguments and environment.
     func run(
@@ -58,7 +60,7 @@ class ProcessRunner: ObservableObject {
         // Use a dedicated Task to read from the pipe on a background thread,
         // then dispatch lines back to MainActor. This avoids the
         // readabilityHandler Sendable/actor-isolation issues in Swift 6.
-        let readTask = Task.detached { [weak self] in
+        pipelineReadTask = Task.detached { [weak self] in
             let fileHandle = handle
             while true {
                 let data = fileHandle.availableData
@@ -72,7 +74,6 @@ class ProcessRunner: ObservableObject {
                 }
             }
         }
-        _ = readTask  // suppress unused variable warning
 
         proc.terminationHandler = { [weak self] p in
             let status = p.terminationStatus
@@ -117,7 +118,7 @@ class ProcessRunner: ObservableObject {
 
         let handle = pipe.fileHandleForReading
 
-        let readTask = Task.detached { [weak self] in
+        serveReadTask = Task.detached { [weak self] in
             let fileHandle = handle
             while true {
                 let data = fileHandle.availableData
@@ -131,7 +132,6 @@ class ProcessRunner: ObservableObject {
                 }
             }
         }
-        _ = readTask
 
         proc.terminationHandler = { [weak self] _ in
             Task { @MainActor in
@@ -152,6 +152,7 @@ class ProcessRunner: ObservableObject {
         if let proc = serveProcess, proc.isRunning {
             proc.terminate()
         }
+        serveReadTask?.cancel()
         serveProcess = nil
         isServing = false
         serveURL = nil
@@ -159,6 +160,7 @@ class ProcessRunner: ObservableObject {
 
     func cancel() {
         process?.terminate()
+        pipelineReadTask?.cancel()
     }
 
     // MARK: - Private

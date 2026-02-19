@@ -43,8 +43,8 @@ struct ContentView: View {
                     }
                 )
 
-            case .running(let folder, _):
-                RunningView(folder: folder, runner: runner)
+            case .running(let folder, let mode):
+                RunningView(folder: folder, mode: mode, runner: runner)
 
             case .serving(let folder, let reportURL, _):
                 DoneView(

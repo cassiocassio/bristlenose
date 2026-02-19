@@ -53,8 +53,18 @@ The report includes:
 
 For LLM analysis, you can use **Claude**, **ChatGPT**, **Azure OpenAI**, **Gemini**, or **Local AI** (free, via [Ollama](https://ollama.ai)) — see [Getting an API key](#getting-an-api-key) below.
 
+### macOS (desktop app) — easiest
+
+Download **[Bristlenose.dmg](https://github.com/cassiocassio/bristlenose/releases/latest)**, drag to Applications, open it. The app prompts for your Claude API key on first launch and bundles everything else (Python, FFmpeg, Whisper). No terminal needed.
+
+First launch: macOS will block it — go to **System Settings → Privacy & Security**, scroll down, click **"Open Anyway"**. One time only.
+
+Requires macOS 15 Sequoia, Apple Silicon (M1+).
+
+### macOS (Homebrew), Linux, Windows
+
 ```bash
-# macOS (Homebrew) -- recommended, handles ffmpeg + Python for you
+# macOS (Homebrew) -- handles ffmpeg + Python for you
 brew install cassiocassio/bristlenose/bristlenose
 
 # Windows (pipx) -- requires Python, see install guide for details

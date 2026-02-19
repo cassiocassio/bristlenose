@@ -9,7 +9,7 @@
    CODEBOOK PICKER MOCKUP — Default UXR Codebook (Domain-Agnostic)
    ================================================================
    Three switchable views:
-   1. Codebook Picker — card grid to browse available codebooks
+   1. Codebook Picker — horizontal scrolling card rows
    2. Preview — full codebook detail
    3. Codebook Tab — post-import view with researcher + framework groups
    ================================================================ */
@@ -49,7 +49,6 @@
     --bn-transition-fast: 0.15s ease;
     --bn-transition-normal: 0.2s ease;
 
-    /* Group background tints */
     --bn-group-ux:    oklch(97% 0.015 250);
     --bn-group-emo:   oklch(97% 0.015 10);
     --bn-group-task:  oklch(97% 0.015 155);
@@ -57,7 +56,6 @@
     --bn-group-opp:   oklch(97% 0.015 75);
     --bn-group-none:  #f9fafb;
 
-    /* Tag badge bg — washed (light mode) */
     --bn-ux-1-bg: oklch(94% 0.03 225);
     --bn-ux-2-bg: oklch(94% 0.03 237);
     --bn-ux-3-bg: oklch(94% 0.03 250);
@@ -86,7 +84,6 @@
     --bn-opp-5-bg: oklch(94% 0.03 100);
     --bn-custom-bg: oklch(94% 0.005 260);
 
-    /* Bar colours */
     --bn-bar-ux:    oklch(70% 0.08 250);
     --bn-bar-emo:   oklch(70% 0.08 10);
     --bn-bar-task:  oklch(70% 0.06 155);
@@ -137,23 +134,40 @@ body {
 .view-panel { display: none; max-width: 1200px; }
 .view-panel.active { display: block; }
 
-/* ── Picker card grid (View 1) ──────────────────────────────── */
+/* ── Picker: horizontal scrolling rows (View 1) ────────────── */
 
+.picker-section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin: var(--bn-space-xl) 0 var(--bn-space-md);
+}
+.picker-section-header:first-child { margin-top: 0; }
 .picker-section-title {
     font-size: 0.78rem;
     text-transform: uppercase;
     letter-spacing: 0.04em;
     color: var(--bn-colour-muted);
-    margin: var(--bn-space-xl) 0 var(--bn-space-md);
     font-weight: 600;
 }
-.picker-section-title:first-child { margin-top: 0; }
-
-.picker-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-    gap: var(--bn-space-lg);
+.picker-section-link {
+    font-size: 0.78rem;
+    color: var(--bn-colour-muted);
+    cursor: pointer;
+    text-decoration: none;
 }
+.picker-section-link:hover { color: var(--bn-colour-accent); }
+
+.picker-row {
+    display: flex;
+    gap: var(--bn-space-lg);
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    padding-bottom: var(--bn-space-sm);
+    -webkit-overflow-scrolling: touch;
+}
+.picker-row::-webkit-scrollbar { height: 6px; }
+.picker-row::-webkit-scrollbar-thumb { background: var(--bn-colour-border); border-radius: 3px; }
 
 .picker-card {
     background: var(--bn-colour-bg);
@@ -162,6 +176,10 @@ body {
     padding: var(--bn-space-lg);
     cursor: pointer;
     transition: border-color var(--bn-transition-fast), box-shadow var(--bn-transition-fast);
+    width: 260px;
+    min-width: 260px;
+    flex-shrink: 0;
+    scroll-snap-align: start;
 }
 .picker-card:hover {
     border-color: var(--bn-colour-accent);
@@ -178,24 +196,24 @@ body {
 .picker-card-title {
     font-size: 0.95rem;
     font-weight: 600;
-    margin-bottom: 0.25rem;
+    margin-bottom: 0.15rem;
 }
 .picker-card-author {
-    font-size: 0.78rem;
+    font-size: 0.82rem;
     color: var(--bn-colour-muted);
     margin-bottom: 0.5rem;
-    font-style: italic;
 }
 .picker-card-desc {
     font-size: 0.82rem;
     color: var(--bn-colour-muted);
-    margin-bottom: var(--bn-space-md);
+    margin-bottom: 0;
     line-height: 1.5;
 }
 .picker-card-tags {
     display: flex;
     flex-wrap: wrap;
     gap: 4px;
+    margin-top: var(--bn-space-md);
 }
 .picker-card-coming {
     font-size: 0.72rem;
@@ -241,26 +259,62 @@ body {
 }
 .preview-back:hover { color: var(--bn-colour-accent); }
 
-.preview-header { margin-bottom: var(--bn-space-xl); }
+.preview-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: var(--bn-space-xl);
+    margin-bottom: var(--bn-space-lg);
+    position: sticky;
+    top: 0;
+    background: var(--bn-colour-bg);
+    padding: var(--bn-space-md) 0;
+    z-index: 10;
+    border-bottom: 1px solid var(--bn-colour-border);
+}
+.preview-header-left { flex: 1; min-width: 0; }
+.preview-header-right { flex-shrink: 0; text-align: right; }
+
 .preview-title {
     font-size: 1.25rem;
     font-weight: 600;
-    margin-bottom: 0.5rem;
+    margin-bottom: 0.25rem;
+}
+.preview-subtitle {
+    font-size: 0.95rem;
+    color: var(--bn-colour-muted);
+    font-weight: 400;
 }
 .preview-desc {
     font-size: 0.88rem;
     color: var(--bn-colour-muted);
     line-height: 1.6;
-    max-width: 40rem;
     margin-bottom: var(--bn-space-lg);
+}
+
+.preview-cta-help {
+    font-size: 0.78rem;
+    color: var(--bn-colour-muted);
+    margin-top: 0.35rem;
+}
+
+.preview-body {
+    display: flex;
+    gap: var(--bn-space-xl);
+    align-items: flex-start;
+}
+.preview-body-main { flex: 1; min-width: 0; }
+.preview-body-sidebar {
+    width: 280px;
+    flex-shrink: 0;
+    position: sticky;
+    top: 5rem;
 }
 
 .preview-builtin {
     background: var(--bn-colour-quote-bg);
     border-radius: var(--bn-radius-lg);
     padding: var(--bn-space-lg);
-    margin-bottom: var(--bn-space-xl);
-    max-width: 40rem;
 }
 .preview-builtin-label {
     font-weight: 600;
@@ -288,16 +342,6 @@ body {
     gap: var(--bn-space-lg);
     margin-bottom: var(--bn-space-xl);
     align-items: start;
-}
-
-.preview-cta {
-    display: flex;
-    align-items: center;
-    gap: var(--bn-space-md);
-}
-.preview-cta-help {
-    font-size: 0.82rem;
-    color: var(--bn-colour-muted);
 }
 
 /* ── Button styles ──────────────────────────────────────────── */
@@ -385,6 +429,59 @@ body {
     opacity: 0.45;
 }
 
+/* Group close/delete button */
+.group-close {
+    background: none;
+    border: none;
+    font-size: 1rem;
+    line-height: 1;
+    color: var(--bn-colour-muted);
+    cursor: pointer;
+    padding: 0.15rem 0.3rem;
+    border-radius: var(--bn-radius-sm);
+    opacity: 0;
+    transition: opacity var(--bn-transition-fast),
+                color var(--bn-transition-fast),
+                background var(--bn-transition-fast);
+    flex-shrink: 0;
+    margin-top: -2px;
+    margin-right: -4px;
+}
+.codebook-group:hover .group-close {
+    opacity: 0.5;
+}
+.group-close:hover {
+    opacity: 1 !important;
+    color: var(--bn-colour-text);
+    background: var(--bn-colour-quote-bg);
+}
+
+.new-group-placeholder {
+    border: 1px dashed var(--bn-colour-border);
+    border-radius: var(--bn-radius-lg);
+    padding: var(--bn-space-lg);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 120px;
+    gap: var(--bn-space-sm);
+    cursor: pointer;
+    transition: border-color var(--bn-transition-fast), background var(--bn-transition-fast);
+}
+.new-group-placeholder:hover {
+    border-color: var(--bn-colour-muted);
+    background: var(--bn-hover-bg-subtle);
+}
+.new-group-placeholder .new-icon {
+    font-size: 1.2rem;
+    color: var(--bn-colour-muted);
+}
+.new-group-placeholder .new-label {
+    font-size: 0.82rem;
+    color: var(--bn-colour-muted);
+}
+
 .group-total-row {
     display: grid;
     grid-template-columns: 1fr auto;
@@ -469,25 +566,6 @@ body {
     white-space: nowrap;
     font-style: italic;
 }
-
-/* New group placeholder */
-.codebook-group.new-group-placeholder {
-    border: 1px dashed var(--bn-colour-border);
-    background: transparent;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    min-height: 120px;
-    cursor: pointer;
-    gap: 6px;
-}
-.codebook-group.new-group-placeholder:hover {
-    border-color: var(--bn-colour-muted);
-    background: var(--bn-hover-bg-subtle);
-}
-.new-group-icon { font-size: 1.2rem; color: var(--bn-colour-muted); line-height: 1; }
-.new-group-label { font-size: 0.82rem; color: var(--bn-colour-muted); }
 
 /* ── Status bar ─────────────────────────────────────────────── */
 
@@ -595,21 +673,18 @@ body {
 
 <button class="theme-toggle" onclick="toggleTheme()">Toggle dark mode</button>
 
-<!-- ── View switcher ────────────────────────────────────────── -->
 <div class="view-tabs">
     <button class="view-tab active" data-view="picker">1. Codebook Picker</button>
     <button class="view-tab" data-view="preview">2. Preview</button>
     <button class="view-tab" data-view="codebook">3. Codebook Tab</button>
 </div>
 
-<!-- View panels -->
 <div class="view-panel active" id="panel-picker"></div>
 <div class="view-panel" id="panel-preview"></div>
 <div class="view-panel" id="panel-codebook"></div>
 
-<!-- ── Status bar ───────────────────────────────────────────── -->
 <div class="status-bar">
-    <div>Mockup: <span>Codebook Picker — Default UXR</span></div>
+    <div>Mockup: <span>Codebook Picker \u2014 Default UXR</span></div>
     <div>Framework groups: <span>10</span></div>
     <div>Framework tags: <span>44</span></div>
 </div>
@@ -627,36 +702,32 @@ var COLOUR_SETS = {
     opp:   { slots: 5, bgVar: '--bn-opp-',   groupBg: '--bn-group-opp',   barVar: '--bn-bar-opp' }
 };
 
-function getTagBg(colourSet, index) {
-    if (!colourSet) return 'var(--bn-custom-bg)';
-    var set = COLOUR_SETS[colourSet];
-    if (!set) return 'var(--bn-custom-bg)';
-    return 'var(' + set.bgVar + ((index % set.slots) + 1) + '-bg)';
+function getTagBg(cs, i) {
+    if (!cs) return 'var(--bn-custom-bg)';
+    var s = COLOUR_SETS[cs];
+    if (!s) return 'var(--bn-custom-bg)';
+    return 'var(' + s.bgVar + ((i % s.slots) + 1) + '-bg)';
 }
-
-function getBarColour(colourSet) {
-    if (!colourSet) return 'var(--bn-bar-none)';
-    var set = COLOUR_SETS[colourSet];
-    return set ? 'var(' + set.barVar + ')' : 'var(--bn-bar-none)';
+function getBarColour(cs) {
+    if (!cs) return 'var(--bn-bar-none)';
+    var s = COLOUR_SETS[cs];
+    return s ? 'var(' + s.barVar + ')' : 'var(--bn-bar-none)';
 }
-
-function getGroupBg(colourSet) {
-    if (!colourSet) return 'var(--bn-group-none)';
-    var set = COLOUR_SETS[colourSet];
-    return set ? 'var(' + set.groupBg + ')' : 'var(--bn-group-none)';
+function getGroupBg(cs) {
+    if (!cs) return 'var(--bn-group-none)';
+    var s = COLOUR_SETS[cs];
+    return s ? 'var(' + s.groupBg + ')' : 'var(--bn-group-none)';
 }
-
-function esc(s) { return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+function esc(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
 // ================================================================
 //  DATA
 // ================================================================
 
-// Researcher's existing groups (fishkeeping study)
 var researcherGroups = [
     {
         name: 'Uncategorised', subtitle: 'New tags appear here until assigned to a group',
-        colourSet: null, isDefault: true, tags: [
+        colourSet: null, isDefault: true, closable: false, tags: [
             { name: 'interesting', count: 14 },
             { name: 'follow-up', count: 9 },
             { name: 'compare with v1', count: 3 },
@@ -665,7 +736,7 @@ var researcherGroups = [
     },
     {
         name: 'Friction', subtitle: 'Pain points and blockers',
-        colourSet: 'emo', tags: [
+        colourSet: 'emo', closable: true, tags: [
             { name: 'confusion', count: 18 },
             { name: 'dead end', count: 12 },
             { name: 'error recovery', count: 9 },
@@ -675,7 +746,7 @@ var researcherGroups = [
     },
     {
         name: 'Navigation', subtitle: 'Wayfinding and information architecture',
-        colourSet: 'ux', tags: [
+        colourSet: 'ux', closable: true, tags: [
             { name: 'lost', count: 11 },
             { name: 'breadcrumbs', count: 8 },
             { name: 'search failure', count: 6 },
@@ -684,7 +755,7 @@ var researcherGroups = [
     },
     {
         name: 'Trust signals', subtitle: '',
-        colourSet: 'trust', tags: [
+        colourSet: 'trust', closable: true, tags: [
             { name: 'credibility concern', count: 15 },
             { name: 'social proof', count: 10 },
             { name: 'privacy worry', count: 7 },
@@ -694,7 +765,7 @@ var researcherGroups = [
     },
     {
         name: 'Opportunities', subtitle: 'Feature requests and unmet needs',
-        colourSet: 'opp', tags: [
+        colourSet: 'opp', closable: true, tags: [
             { name: 'feature request', count: 21 },
             { name: 'unmet need', count: 13 },
             { name: 'competitor mention', count: 8 },
@@ -703,178 +774,121 @@ var researcherGroups = [
     }
 ];
 
-// Framework: Default UXR Codebook (domain-agnostic)
 var frameworkMeta = {
-    title: 'Default UXR Codebook',
-    shortTitle: 'Default UXR',
+    bookTitle: 'Bristlenose UXR Codebook',
+    authorName: '',
     description: 'A domain-agnostic codebook for any user research study. Ten theme categories that emerge bottom-up from behavioural observation, emotional response, and contextual analysis. Works equally well whether the research is about fishkeeping, rock climbing, poodle grooming, or product evaluation \u2014 these are universal patterns of human experience, motivation, and interaction.',
-    cardDesc: 'A domain-agnostic codebook for any user research study. Ten theme categories that emerge bottom-up from behavioural observation, emotional response, and contextual analysis.',
     builtinLabel: 'Built for Bristlenose',
     builtinDesc: 'This is the default codebook \u2014 it provides a general-purpose qualitative coding framework that applies to any domain. Unlike the Research Leaders codebooks (Garrett, Norman, Morville), which focus on designed artefacts and UX-specific concepts, these ten categories capture the full range of human experience themes that emerge in qualitative research.'
 };
 
-var frameworkLabel = 'Default UXR Codebook';
+var frameworkLabel = 'Bristlenose UXR Codebook';
 
 var frameworkGroups = [
-    {
-        name: 'Behavioural patterns', subtitle: 'What users do vs what they say',
-        colourSet: 'ux', tags: [
-            { name: 'workaround', count: 0 },
-            { name: 'say-do gap', count: 0 },
-            { name: 'error recovery', count: 0 },
-            { name: 'habit', count: 0 },
-            { name: 'avoidance', count: 0 }
-        ]
-    },
-    {
-        name: 'Pain points and friction', subtitle: 'Confusion, hesitation, abandonment',
-        colourSet: 'emo', tags: [
-            { name: 'confusion', count: 0 },
-            { name: 'hesitation', count: 0 },
-            { name: 'abandonment', count: 0 },
-            { name: 'dead end', count: 0 },
-            { name: 'frustration trigger', count: 0 }
-        ]
-    },
-    {
-        name: 'Unmet needs and latent desires', subtitle: 'Not explicitly requested but emerged from behaviour',
-        colourSet: 'emo', tags: [
-            { name: 'latent need', count: 0 },
-            { name: 'compensatory behaviour', count: 0 },
-            { name: 'feature gap', count: 0 },
-            { name: 'desire path', count: 0 }
-        ]
-    },
-    {
-        name: 'Expectations and mental models', subtitle: 'How users conceptualise the system or domain',
-        colourSet: 'task', tags: [
-            { name: 'mental model', count: 0 },
-            { name: 'assumption', count: 0 },
-            { name: 'prior experience', count: 0 },
-            { name: 'conceptual mismatch', count: 0 }
-        ]
-    },
-    {
-        name: 'Motivations and goals', subtitle: 'Underlying jobs-to-be-done',
-        colourSet: 'task', tags: [
-            { name: 'primary goal', count: 0 },
-            { name: 'secondary goal', count: 0 },
-            { name: 'job-to-be-done', count: 0 },
-            { name: 'trigger', count: 0 },
-            { name: 'barrier', count: 0 }
-        ]
-    },
-    {
-        name: 'Trust, confidence, and emotional response', subtitle: 'Feelings at key decision points',
-        colourSet: 'trust', tags: [
-            { name: 'trust signal', count: 0 },
-            { name: 'anxiety moment', count: 0 },
-            { name: 'confidence builder', count: 0 },
-            { name: 'emotional peak', count: 0 }
-        ]
-    },
-    {
-        name: 'Environmental and contextual factors', subtitle: 'Interruptions, device switching, social influence',
-        colourSet: 'trust', tags: [
-            { name: 'interruption', count: 0 },
-            { name: 'device switch', count: 0 },
-            { name: 'social influence', count: 0 },
-            { name: 'time pressure', count: 0 }
-        ]
-    },
-    {
-        name: 'Learning and skill acquisition', subtitle: 'How people build competence',
-        colourSet: 'opp', tags: [
-            { name: 'learning curve', count: 0 },
-            { name: 'aha moment', count: 0 },
-            { name: 'skill plateau', count: 0 },
-            { name: 'self-teaching', count: 0 }
-        ]
-    },
-    {
-        name: 'Community and social dynamics', subtitle: 'Knowledge sharing, identity through domain',
-        colourSet: 'opp', tags: [
-            { name: 'knowledge sharing', count: 0 },
-            { name: 'peer influence', count: 0 },
-            { name: 'community norm', count: 0 },
-            { name: 'identity signal', count: 0 }
-        ]
-    },
-    {
-        name: 'Identity and self-concept', subtitle: 'How the activity relates to self-perception',
-        colourSet: 'ux', tags: [
-            { name: 'self-perception', count: 0 },
-            { name: 'aspiration', count: 0 },
-            { name: 'expertise identity', count: 0 },
-            { name: 'beginner mindset', count: 0 }
-        ]
-    }
+    { name: 'Behavioural patterns', subtitle: 'What users do vs what they say',
+      colourSet: 'ux', closable: false, tags: [
+        { name: 'workaround', count: 0 }, { name: 'say-do gap', count: 0 },
+        { name: 'error recovery', count: 0 }, { name: 'habit', count: 0 },
+        { name: 'avoidance', count: 0 }
+    ]},
+    { name: 'Pain points and friction', subtitle: 'Confusion, hesitation, abandonment',
+      colourSet: 'emo', closable: false, tags: [
+        { name: 'confusion', count: 0 }, { name: 'hesitation', count: 0 },
+        { name: 'abandonment', count: 0 }, { name: 'dead end', count: 0 },
+        { name: 'frustration trigger', count: 0 }
+    ]},
+    { name: 'Unmet needs and latent desires', subtitle: 'Not explicitly requested but emerged from behaviour',
+      colourSet: 'emo', closable: false, tags: [
+        { name: 'latent need', count: 0 }, { name: 'compensatory behaviour', count: 0 },
+        { name: 'feature gap', count: 0 }, { name: 'desire path', count: 0 }
+    ]},
+    { name: 'Expectations and mental models', subtitle: 'How users conceptualise the system or domain',
+      colourSet: 'task', closable: false, tags: [
+        { name: 'mental model', count: 0 }, { name: 'assumption', count: 0 },
+        { name: 'prior experience', count: 0 }, { name: 'conceptual mismatch', count: 0 }
+    ]},
+    { name: 'Motivations and goals', subtitle: 'Underlying jobs-to-be-done',
+      colourSet: 'task', closable: false, tags: [
+        { name: 'primary goal', count: 0 }, { name: 'secondary goal', count: 0 },
+        { name: 'job-to-be-done', count: 0 }, { name: 'trigger', count: 0 },
+        { name: 'barrier', count: 0 }
+    ]},
+    { name: 'Trust, confidence, and emotional response', subtitle: 'Feelings at key decision points',
+      colourSet: 'trust', closable: false, tags: [
+        { name: 'trust signal', count: 0 }, { name: 'anxiety moment', count: 0 },
+        { name: 'confidence builder', count: 0 }, { name: 'emotional peak', count: 0 }
+    ]},
+    { name: 'Environmental and contextual factors', subtitle: 'Interruptions, device switching, social influence',
+      colourSet: 'trust', closable: false, tags: [
+        { name: 'interruption', count: 0 }, { name: 'device switch', count: 0 },
+        { name: 'social influence', count: 0 }, { name: 'time pressure', count: 0 }
+    ]},
+    { name: 'Learning and skill acquisition', subtitle: 'How people build competence',
+      colourSet: 'opp', closable: false, tags: [
+        { name: 'learning curve', count: 0 }, { name: 'aha moment', count: 0 },
+        { name: 'skill plateau', count: 0 }, { name: 'self-teaching', count: 0 }
+    ]},
+    { name: 'Community and social dynamics', subtitle: 'Knowledge sharing, identity through domain',
+      colourSet: 'opp', closable: false, tags: [
+        { name: 'knowledge sharing', count: 0 }, { name: 'peer influence', count: 0 },
+        { name: 'community norm', count: 0 }, { name: 'identity signal', count: 0 }
+    ]},
+    { name: 'Identity and self-concept', subtitle: 'How the activity relates to self-perception',
+      colourSet: 'ux', closable: false, tags: [
+        { name: 'self-perception', count: 0 }, { name: 'aspiration', count: 0 },
+        { name: 'expertise identity', count: 0 }, { name: 'beginner mindset', count: 0 }
+    ]}
 ];
 
-// Picker card data
+// Picker cards — framework row
 var pickerCards = [
-    {
-        id: 'default',
-        title: 'Default UXR Codebook',
-        author: '',
-        desc: 'A domain-agnostic codebook for any user research study. Ten theme categories that emerge bottom-up from behavioural observation, emotional response, and contextual analysis.',
-        sampleTags: [
-            { name: 'behavioural pattern', set: 'ux', idx: 0 },
-            { name: 'pain point', set: 'emo', idx: 0 },
-            { name: 'unmet need', set: 'emo', idx: 1 },
-            { name: 'mental model', set: 'task', idx: 0 },
-            { name: 'motivation', set: 'task', idx: 1 },
-            { name: 'trust', set: 'trust', idx: 0 },
-            { name: 'environmental', set: 'trust', idx: 1 }
-        ],
-        enabled: true,
-        featured: true
-    },
-    {
-        id: 'garrett',
-        title: 'Jesse James Garrett \u2014 The Elements of User Experience',
-        author: 'Jesse James Garrett',
-        desc: 'Five mutually exclusive planes from abstract strategy to concrete surface design. A top-down framework for placing findings in the UX decision hierarchy.',
-        sampleTags: [
-            { name: 'strategy', set: 'ux', idx: 0 },
-            { name: 'scope', set: 'emo', idx: 0 },
-            { name: 'structure', set: 'task', idx: 0 },
-            { name: 'skeleton', set: 'trust', idx: 0 },
-            { name: 'surface', set: 'opp', idx: 0 }
-        ],
-        enabled: false,
-        featured: false
-    },
-    {
-        id: 'norman',
-        title: 'Don Norman \u2014 The Design of Everyday Things',
-        author: 'Don Norman',
-        desc: 'Seven fundamental design principles for usable products. A bottom-up framework for diagnosing why interactions succeed or fail.',
-        sampleTags: [
-            { name: 'discoverability', set: 'ux', idx: 0 },
-            { name: 'feedback', set: 'emo', idx: 0 },
-            { name: 'conceptual model', set: 'task', idx: 0 },
-            { name: 'signifier', set: 'trust', idx: 0 },
-            { name: 'constraint', set: 'opp', idx: 0 }
-        ],
-        enabled: false,
-        featured: false
-    },
-    {
-        id: 'morville',
-        title: 'Peter Morville \u2014 The User Experience Honeycomb',
-        author: 'Peter Morville',
-        desc: 'Seven facets of a complete user experience: useful, usable, desirable, findable, accessible, credible, valuable.',
-        sampleTags: [
-            { name: 'useful', set: 'ux', idx: 0 },
-            { name: 'usable', set: 'ux', idx: 1 },
-            { name: 'credible', set: 'trust', idx: 0 },
-            { name: 'findable', set: 'task', idx: 0 },
-            { name: 'desirable', set: 'emo', idx: 0 }
-        ],
-        enabled: false,
-        featured: false
-    }
+    { id: 'default', title: 'Bristlenose UXR Codebook', author: '',
+      desc: 'Domain-agnostic codebook for any user research study. Ten theme categories covering behaviour, emotion, and context.',
+      sampleTags: [
+        { name: 'behavioural pattern', set: 'ux', idx: 0 }, { name: 'pain point', set: 'emo', idx: 0 },
+        { name: 'unmet need', set: 'emo', idx: 1 }, { name: 'mental model', set: 'task', idx: 0 },
+        { name: 'motivation', set: 'task', idx: 1 }, { name: 'trust', set: 'trust', idx: 0 }
+      ], enabled: true, featured: true },
+    { id: 'garrett', title: 'The Elements of User Experience', author: 'Jesse James Garrett',
+      desc: 'Five mutually exclusive planes from abstract strategy to concrete surface design.',
+      sampleTags: [
+        { name: 'strategy', set: 'ux', idx: 0 }, { name: 'scope', set: 'emo', idx: 0 },
+        { name: 'structure', set: 'task', idx: 0 }, { name: 'skeleton', set: 'trust', idx: 0 },
+        { name: 'surface', set: 'opp', idx: 0 }
+      ], enabled: false, featured: false },
+    { id: 'norman', title: 'The Design of Everyday Things', author: 'Don Norman',
+      desc: 'Seven fundamental design principles for diagnosing why interactions succeed or fail.',
+      sampleTags: [
+        { name: 'discoverability', set: 'ux', idx: 0 }, { name: 'feedback', set: 'emo', idx: 0 },
+        { name: 'conceptual model', set: 'task', idx: 0 }, { name: 'signifier', set: 'trust', idx: 0 },
+        { name: 'constraint', set: 'opp', idx: 0 }
+      ], enabled: false, featured: false },
+    { id: 'morville', title: 'The User Experience Honeycomb', author: 'Peter Morville',
+      desc: 'Seven facets of UX quality: useful, usable, desirable, findable, accessible, credible, valuable.',
+      sampleTags: [
+        { name: 'useful', set: 'ux', idx: 0 }, { name: 'usable', set: 'ux', idx: 1 },
+        { name: 'credible', set: 'trust', idx: 0 }, { name: 'findable', set: 'task', idx: 0 },
+        { name: 'desirable', set: 'emo', idx: 0 }
+      ], enabled: false, featured: false }
+];
+
+// Picker cards — user codebooks row
+var userCodebooks = [
+    { id: 'ikea', title: 'Project Ikea',
+      sampleTags: [
+        { name: 'customer journey', set: 'ux', idx: 0 }, { name: 'assembly', set: 'task', idx: 0 },
+        { name: 'wayfinding', set: 'ux', idx: 1 }
+    ]},
+    { id: 'fish', title: 'Fishkeeping',
+      sampleTags: [
+        { name: 'species knowledge', set: 'task', idx: 0 }, { name: 'equipment', set: 'opp', idx: 0 },
+        { name: 'maintenance', set: 'emo', idx: 0 }
+    ]},
+    { id: 'climb', title: 'Rock climbing',
+      sampleTags: [
+        { name: 'technique', set: 'task', idx: 0 }, { name: 'fear management', set: 'emo', idx: 0 },
+        { name: 'progression', set: 'opp', idx: 0 }
+    ]}
 ];
 
 // ================================================================
@@ -885,47 +899,58 @@ function renderPicker() {
     var panel = document.getElementById('panel-picker');
     var html = '';
 
-    html += '<div class="picker-section-title">Codebook frameworks</div>';
-    html += '<div class="picker-grid">';
-
+    // Row 1: Codebook Frameworks
+    html += '<div class="picker-section-header">';
+    html += '<span class="picker-section-title">Codebook frameworks</span>';
+    html += '</div>';
+    html += '<div class="picker-row">';
     pickerCards.forEach(function(card) {
-        var classes = 'picker-card';
-        if (card.featured) classes += ' featured';
-        if (!card.enabled) classes += ' disabled';
-
-        html += '<div class="' + classes + '" data-card="' + card.id + '">';
+        var cls = 'picker-card';
+        if (card.featured) cls += ' featured';
+        if (!card.enabled) cls += ' disabled';
+        html += '<div class="' + cls + '" data-card="' + card.id + '">';
         html += '<div class="picker-card-title">' + esc(card.title) + '</div>';
-        if (card.author) {
-            html += '<div class="picker-card-author">' + esc(card.author) + '</div>';
-        }
+        if (card.author) html += '<div class="picker-card-author">' + esc(card.author) + '</div>';
         html += '<div class="picker-card-desc">' + esc(card.desc) + '</div>';
         html += '<div class="picker-card-tags">';
-        card.sampleTags.forEach(function(tag) {
-            html += '<span class="badge" style="background:' + getTagBg(tag.set, tag.idx) + '">' + esc(tag.name) + '</span>';
+        card.sampleTags.forEach(function(t) {
+            html += '<span class="badge" style="background:' + getTagBg(t.set, t.idx) + '">' + esc(t.name) + '</span>';
         });
         html += '</div>';
-        if (!card.enabled) {
-            html += '<div class="picker-card-coming">Coming soon</div>';
-        }
+        if (!card.enabled) html += '<div class="picker-card-coming">Coming soon</div>';
         html += '</div>';
     });
-
     html += '</div>';
 
-    html += '<div class="picker-section-title">Your codebooks</div>';
-    html += '<div class="picker-grid">';
+    // Row 2: Your Codebooks
+    html += '<div class="picker-section-header">';
+    html += '<span class="picker-section-title">Your codebooks</span>';
+    html += '<a class="picker-section-link" href="#">show all \u2192</a>';
+    html += '</div>';
+    html += '<div class="picker-row">';
+    // Create new card
     html += '<div class="picker-card picker-card-create">';
     html += '<span class="new-icon">+</span>';
-    html += '<span class="new-label">Create codebook</span>';
+    html += '<span class="new-label">Create new codebook</span>';
     html += '</div>';
+    // User codebooks
+    userCodebooks.forEach(function(cb) {
+        html += '<div class="picker-card" data-card="' + cb.id + '">';
+        html += '<div class="picker-card-title">' + esc(cb.title) + '</div>';
+        html += '<div class="picker-card-tags">';
+        cb.sampleTags.forEach(function(t) {
+            html += '<span class="badge" style="background:' + getTagBg(t.set, t.idx) + '">' + esc(t.name) + '</span>';
+        });
+        html += '</div>';
+        html += '</div>';
+    });
     html += '</div>';
 
     panel.innerHTML = html;
 
+    // Card click → preview
     panel.querySelectorAll('.picker-card:not(.disabled):not(.picker-card-create)').forEach(function(el) {
-        el.addEventListener('click', function() {
-            switchToView('preview');
-        });
+        el.addEventListener('click', function() { switchToView('preview'); });
     });
 }
 
@@ -939,27 +964,33 @@ function renderPreview() {
 
     html += '<button class="preview-back" onclick="switchToView(\'picker\')">\u2190 Back to codebook picker</button>';
 
+    // Header: title + CTA inline
     html += '<div class="preview-header">';
-    html += '<div class="preview-title">' + esc(frameworkMeta.title) + '</div>';
+    html += '<div class="preview-header-left">';
+    html += '<div class="preview-title">' + esc(frameworkMeta.bookTitle) + '</div>';
+    if (frameworkMeta.authorName) {
+        html += '<div class="preview-subtitle">' + esc(frameworkMeta.authorName) + '</div>';
+    }
+    html += '</div>';
+    html += '<div class="preview-header-right">';
+    html += '<button class="bn-btn bn-btn-primary" onclick="switchToView(\'codebook\')">Open codebook</button>';
+    html += '<div class="preview-cta-help">Adds to existing tags and tag-groups</div>';
+    html += '</div>';
+    html += '</div>';
+
+    // Two-column body: main (desc + tag groups) | sidebar (built-in info)
+    html += '<div class="preview-body">';
+
+    // Main column
+    html += '<div class="preview-body-main">';
     html += '<div class="preview-desc">' + esc(frameworkMeta.description) + '</div>';
-    html += '</div>';
-
-    // Built-in section (replaces author for default codebook)
-    html += '<div class="preview-builtin">';
-    html += '<div class="preview-builtin-label">' + esc(frameworkMeta.builtinLabel) + '</div>';
-    html += '<div class="preview-builtin-desc">' + esc(frameworkMeta.builtinDesc) + '</div>';
-    html += '</div>';
-
-    // Tag groups preview
     html += '<div class="preview-section-label">Tag groups</div>';
     html += '<div class="preview-groups">';
     frameworkGroups.forEach(function(group) {
         html += '<div class="codebook-group" style="background:' + getGroupBg(group.colourSet) + '">';
         html += '<div class="group-header"><div class="group-title-area">';
         html += '<div class="group-title">' + esc(group.name) + '</div>';
-        if (group.subtitle) {
-            html += '<div class="group-subtitle">' + esc(group.subtitle) + '</div>';
-        }
+        if (group.subtitle) html += '<div class="group-subtitle">' + esc(group.subtitle) + '</div>';
         html += '</div></div>';
         html += '<div class="tag-list">';
         group.tags.forEach(function(tag, idx) {
@@ -967,16 +998,20 @@ function renderPreview() {
             html += '<span class="badge badge-lg" style="background:' + getTagBg(group.colourSet, idx) + '">' + esc(tag.name) + '</span>';
             html += '</div></div>';
         });
-        html += '</div>';
-        html += '</div>';
+        html += '</div></div>';
     });
     html += '</div>';
-
-    // CTA
-    html += '<div class="preview-cta">';
-    html += '<button class="bn-btn bn-btn-primary" onclick="switchToView(\'codebook\')">Open codebook</button>';
-    html += '<span class="preview-cta-help">Adds to existing tags and tag-groups</span>';
     html += '</div>';
+
+    // Sidebar: built-in info
+    html += '<div class="preview-body-sidebar">';
+    html += '<div class="preview-builtin">';
+    html += '<div class="preview-builtin-label">' + esc(frameworkMeta.builtinLabel) + '</div>';
+    html += '<div class="preview-builtin-desc">' + esc(frameworkMeta.builtinDesc) + '</div>';
+    html += '</div>';
+    html += '</div>';
+
+    html += '</div>'; // end preview-body
 
     panel.innerHTML = html;
 }
@@ -989,7 +1024,7 @@ function renderCodebookTab() {
     var panel = document.getElementById('panel-codebook');
     var html = '';
 
-    html += '<h1 style="font-size:1.25rem; font-weight:600; margin-bottom:0.25rem;">Codebook</h1>';
+    html += '<h1 style="font-size:1.25rem; font-weight:600; margin-bottom:0.25rem;">Project Ikea codebook</h1>';
     html += '<p class="codebook-description">Drag tags between groups to reorganise. Click a tag or title to rename it. Drop a tag on another to merge.</p>';
 
     var allGroups = researcherGroups.concat(frameworkGroups);
@@ -1001,24 +1036,28 @@ function renderCodebookTab() {
 
     html += '<div class="codebook-grid">';
 
+    // Researcher groups
     researcherGroups.forEach(function(group) {
         html += renderGroup(group, mc, maxBarW);
     });
 
+    // New group placeholder
+    html += '<div class="new-group-placeholder">';
+    html += '<span class="new-icon">+</span>';
+    html += '<span class="new-label">New group</span>';
+    html += '</div>';
+
+    // Framework separator
     html += '<div class="framework-separator">';
     html += '<div class="framework-separator-line"></div>';
     html += '<div class="framework-separator-label">' + esc(frameworkLabel) + '</div>';
     html += '<div class="framework-separator-line"></div>';
     html += '</div>';
 
+    // Framework groups
     frameworkGroups.forEach(function(group) {
         html += renderGroup(group, mc, maxBarW);
     });
-
-    html += '<div class="codebook-group new-group-placeholder">';
-    html += '<span class="new-group-icon">+</span>';
-    html += '<span class="new-group-label">New group</span>';
-    html += '</div>';
 
     html += '</div>';
 
@@ -1027,7 +1066,6 @@ function renderCodebookTab() {
 
 function renderGroup(group, mc, maxBarW) {
     var html = '';
-
     html += '<div class="codebook-group" style="background:' + getGroupBg(group.colourSet) + '">';
 
     html += '<div class="group-header"><div class="group-title-area">';
@@ -1037,10 +1075,13 @@ function renderGroup(group, mc, maxBarW) {
     } else if (!group.isDefault) {
         html += '<div class="group-subtitle placeholder">Add subtitle\u2026</div>';
     }
-    html += '</div></div>';
+    html += '</div>';
+    if (group.closable) {
+        html += '<button class="group-close" title="Delete group">&times;</button>';
+    }
+    html += '</div>';
 
     html += '<div class="tag-list">';
-
     var totalQuotes = group.tags.reduce(function(s, t) { return s + t.count; }, 0);
     if (totalQuotes > 0) {
         html += '<div class="group-total-row">';
@@ -1048,7 +1089,6 @@ function renderGroup(group, mc, maxBarW) {
         html += '<span class="group-total-count">' + totalQuotes + '</span>';
         html += '</div>';
     }
-
     group.tags.forEach(function(tag, idx) {
         html += '<div class="tag-row">';
         html += '<div class="tag-name-area">';
@@ -1060,12 +1100,9 @@ function renderGroup(group, mc, maxBarW) {
             html += '<div class="tag-micro-bar" style="width:' + barW + 'px; background:' + getBarColour(group.colourSet) + '"></div>';
         }
         html += '<span class="tag-count">' + tag.count + '</span>';
-        html += '</div>';
-        html += '</div>';
+        html += '</div></div>';
     });
-
-    html += '</div>';
-    html += '</div>';
+    html += '</div></div>';
 
     return html;
 }
@@ -1074,32 +1111,23 @@ function renderGroup(group, mc, maxBarW) {
 //  VIEW SWITCHING
 // ================================================================
 
-function switchToView(viewName) {
+function switchToView(v) {
     document.querySelectorAll('.view-tab').forEach(function(t) { t.classList.remove('active'); });
     document.querySelectorAll('.view-panel').forEach(function(p) { p.classList.remove('active'); });
-    document.querySelector('[data-view="' + viewName + '"]').classList.add('active');
-    document.getElementById('panel-' + viewName).classList.add('active');
+    document.querySelector('[data-view="' + v + '"]').classList.add('active');
+    document.getElementById('panel-' + v).classList.add('active');
 }
 
 document.querySelectorAll('.view-tab').forEach(function(tab) {
-    tab.addEventListener('click', function() {
-        switchToView(tab.dataset.view);
-    });
+    tab.addEventListener('click', function() { switchToView(tab.dataset.view); });
 });
-
-// ================================================================
-//  THEME TOGGLE
-// ================================================================
 
 function toggleTheme() {
     var h = document.documentElement;
     h.setAttribute('data-theme', h.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
 }
 
-// ================================================================
-//  BOOT
-// ================================================================
-
+// Boot
 renderPicker();
 renderPreview();
 renderCodebookTab();

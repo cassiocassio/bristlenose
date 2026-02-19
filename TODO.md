@@ -1,10 +1,11 @@
 # Bristlenose — Where I Left Off
 
-Last updated: 12 Feb 2026 (session table redesign, appearance toggle, user journeys)
+Last updated: 19 Feb 2026 (AutoCode lifecycle mockup refinements)
 
 ## Next session reminder
 
 - [ ] **Deploy feedback endpoint to Dreamhost** — `server/feedback.php` is written and ready. See `server/README.md` for full deployment steps. Then flip `BRISTLENOSE_FEEDBACK` to `true` in `render_html.py` and set the URL. Also: split "Report a bug" link out of the feature flag so it's always visible
+- [ ] **AutoCode lifecycle mockup is done** — `docs/mockups/mockup-autocode-lifecycle.html` — 9-step interactive walkthrough, all design-system refinements applied (Rounds 1+2). Plan at `/Users/cassio/.claude/plans/swift-juggling-eich.md`. Next steps: (1) build Phase 1 codebook import (picker → preview → import as React island), (2) write sub-tag discrimination prompts for Garrett (20 sub-tags), (3) build AutoCode backend. **Parked**: framework acronym prefixes (`JJG`, `DN` etc) — CSS exists, rendering removed until visual pattern finalised
 
 ---
 
@@ -146,6 +147,7 @@ These are too small for issues or are internal-only concerns.
 - [ ] **Miro bridge** — Miro-shaped CSV export → API integration → layout engine. See `docs/private/design-miro-bridge.md`
 - [ ] **Tag definitions page** — also tracked as #53
 - [ ] **Custom prompts** — user-defined tag categories via `bristlenose.toml` or `prompts.toml`
+- [ ] **Framework acronym prefixes on badges** — small-caps 2–3 letter author prefix (e.g. `JJG`, `DN`, `PM`) on framework codebook tags. CSS class `.badge-framework-prefix` exists in `mockup-autocode-lifecycle.html`, typography spec in plan (`/Users/cassio/.claude/plans/swift-juggling-eich.md` → "Author acronym prefix"). Parked until we're ready to commit to the visual pattern
 - [ ] **Pass transcript data to renderer** — avoid redundant disk I/O in `render_html.py`
 - [ ] **People.yaml web UI** — in-report UI to update `people.yaml` for unidentified participants/observers/moderators (currently only have speaker codes, no display names). Part of Moderator Phase 2 (#25). **Tricky UX**: need to distinguish full name vs display name (researcher types "Sarah" — is that `full_name` or `short_name`?). May need explicit fields or a disambiguation prompt. Also PII concern: names in SQLite DB vs localStorage-only. Research how Dovetail handles naming. API endpoint (`PUT /people`) already exists and works — the missing piece is the HTML renderer (`.name-pencil` buttons not emitted) and the UX design. May defer or simplify
 

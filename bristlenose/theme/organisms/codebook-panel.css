@@ -436,25 +436,42 @@
     margin-bottom: var(--bn-space-sm);
 }
 
-/* ── Framework separator ─────────────────────────────────────────────── */
+/* ── Framework section header (title + author + border-bottom) ────── */
+/* Mirrors .codebook-modal-header / .preview-header pattern:
+   title + subtitle stacked left, action button right, 1px border-bottom. */
 
-.framework-separator {
+.framework-section-header {
     grid-column: 1 / -1;
     display: flex;
-    align-items: center;
-    gap: var(--bn-space-md);
-    margin: var(--bn-space-sm) 0;
+    justify-content: space-between;
+    align-items: flex-start;
+    padding-bottom: var(--bn-space-md);
+    border-bottom: 1px solid var(--bn-colour-border);
+    margin: var(--bn-space-md) 0 var(--bn-space-sm);
 }
-.framework-separator-line {
-    flex: 1;
-    height: 1px;
-    background: var(--bn-colour-border);
-}
-.framework-separator-label {
-    font-size: 0.88rem;
+.framework-section-title {
+    font-size: 1.1rem;
     font-weight: 600;
     color: var(--bn-colour-text);
-    white-space: nowrap;
+    line-height: 1.3;
+}
+.framework-section-author {
+    font-size: 0.82rem;
+    color: var(--bn-colour-muted);
+    margin-top: 0.15rem;
+}
+.framework-remove-btn {
+    font-size: 0.78rem;
+    color: var(--bn-colour-muted);
+    border-color: var(--bn-colour-border);
+    background: var(--bn-colour-bg);
+    flex-shrink: 0;
+    margin-left: var(--bn-space-lg);
+    margin-top: 0.2rem;
+}
+.framework-remove-btn:hover {
+    color: var(--bn-colour-negative);
+    border-color: var(--bn-colour-negative);
 }
 
 /* ── Codebook picker modal ───────────────────────────────────────────── */

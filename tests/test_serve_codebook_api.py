@@ -588,3 +588,221 @@ class TestImportTemplate:
         )
         assert resp.status_code == 400
         assert "framework" in resp.json()["detail"].lower()
+
+
+# ---------------------------------------------------------------------------
+# DELETE /codebook/remove-framework/{framework_id}
+# ---------------------------------------------------------------------------
+
+
+class TestRemoveFramework:
+    def test_remove_framework_deletes_groups(self, client: TestClient) -> None:
+        """Removing a framework should delete all its groups."""
+        client.post(
+            "/api/projects/1/codebook/import-template",
+            json={"template_id": "garrett"},
+        )
+        data = client.get("/api/projects/1/codebook").json()
+        garrett_groups = [g for g in data["groups"] if g["framework_id"] == "garrett"]
+        assert len(garrett_groups) == 5
+
+        resp = client.delete("/api/projects/1/codebook/remove-framework/garrett")
+        assert resp.status_code == 200
+        data = resp.json()
+        garrett_groups = [g for g in data["groups"] if g["framework_id"] == "garrett"]
+        assert len(garrett_groups) == 0
+
+    def test_remove_framework_deletes_tags(self, client: TestClient) -> None:
+        """Tags from the framework should be fully deleted, not moved."""
+        client.post(
+            "/api/projects/1/codebook/import-template",
+            json={"template_id": "garrett"},
+        )
+        data = client.get("/api/projects/1/codebook").json()
+        # Collect all tag names from garrett groups
+        garrett_tag_names = set()
+        for g in data["groups"]:
+            if g["framework_id"] == "garrett":
+                for t in g["tags"]:
+                    garrett_tag_names.add(t["name"])
+        assert len(garrett_tag_names) > 0
+
+        client.delete("/api/projects/1/codebook/remove-framework/garrett")
+        data = client.get("/api/projects/1/codebook").json()
+        # Tags should NOT appear in Uncategorised or anywhere else
+        remaining_names = set(data["all_tag_names"])
+        assert garrett_tag_names.isdisjoint(remaining_names)
+
+    def test_remove_framework_deletes_quote_tags(self, client: TestClient) -> None:
+        """QuoteTag associations for framework tags should be cleaned up."""
+        app = create_app(project_dir=_FIXTURE_DIR, dev=True, db_url="sqlite://")
+        tc = TestClient(app)
+        # Import template
+        tc.post(
+            "/api/projects/1/codebook/import-template",
+            json={"template_id": "garrett"},
+        )
+        # Manually add some QuoteTags to framework tags
+        db = app.state.db_factory()
+        try:
+            quotes = db.query(Quote).filter_by(project_id=1).all()
+            garrett_groups = (
+                db.query(CodebookGroup)
+                .filter_by(framework_id="garrett")
+                .all()
+            )
+            tag_defs = (
+                db.query(TagDefinition)
+                .filter(
+                    TagDefinition.codebook_group_id.in_([g.id for g in garrett_groups]),
+                )
+                .all()
+            )
+            assert len(tag_defs) > 0
+            if quotes:
+                db.add(QuoteTag(quote_id=quotes[0].id, tag_definition_id=tag_defs[0].id))
+                db.commit()
+                # Verify QuoteTag exists
+                qt_count = db.query(QuoteTag).filter_by(
+                    tag_definition_id=tag_defs[0].id,
+                ).count()
+                assert qt_count == 1
+        finally:
+            db.close()
+
+        # Remove framework
+        tc.delete("/api/projects/1/codebook/remove-framework/garrett")
+
+        # Verify QuoteTags are gone
+        db = app.state.db_factory()
+        try:
+            qt_count = db.query(QuoteTag).filter_by(
+                tag_definition_id=tag_defs[0].id,
+            ).count()
+            assert qt_count == 0
+        finally:
+            db.close()
+
+    def test_remove_framework_preserves_user_groups(self, client: TestClient) -> None:
+        """User-created groups should not be affected by framework removal."""
+        # Create a user group first
+        client.post(
+            "/api/projects/1/codebook/groups",
+            json={"name": "My Group", "colour_set": "emo"},
+        )
+        client.post(
+            "/api/projects/1/codebook/import-template",
+            json={"template_id": "garrett"},
+        )
+        client.delete("/api/projects/1/codebook/remove-framework/garrett")
+        data = client.get("/api/projects/1/codebook").json()
+        assert any(g["name"] == "My Group" for g in data["groups"])
+        assert any(g["name"] == "Uncategorised" for g in data["groups"])
+
+    def test_remove_framework_allows_reimport(self, client: TestClient) -> None:
+        """After removal, the framework should be re-importable."""
+        client.post(
+            "/api/projects/1/codebook/import-template",
+            json={"template_id": "garrett"},
+        )
+        client.delete("/api/projects/1/codebook/remove-framework/garrett")
+        # Template should no longer show as imported
+        templates = client.get("/api/projects/1/codebook/templates").json()
+        garrett = next(t for t in templates["templates"] if t["id"] == "garrett")
+        assert garrett["imported"] is False
+        # Re-import should succeed
+        resp = client.post(
+            "/api/projects/1/codebook/import-template",
+            json={"template_id": "garrett"},
+        )
+        assert resp.status_code == 200
+        data = resp.json()
+        garrett_groups = [g for g in data["groups"] if g["framework_id"] == "garrett"]
+        assert len(garrett_groups) == 5
+
+    def test_remove_framework_not_found(self, client: TestClient) -> None:
+        resp = client.delete("/api/projects/1/codebook/remove-framework/nonexistent")
+        assert resp.status_code == 404
+
+    def test_remove_framework_only_removes_specified(self, client: TestClient) -> None:
+        """Importing two frameworks and removing one should keep the other."""
+        client.post(
+            "/api/projects/1/codebook/import-template",
+            json={"template_id": "garrett"},
+        )
+        client.post(
+            "/api/projects/1/codebook/import-template",
+            json={"template_id": "uxr"},
+        )
+        client.delete("/api/projects/1/codebook/remove-framework/garrett")
+        data = client.get("/api/projects/1/codebook").json()
+        # Garrett should be gone
+        assert not any(g["framework_id"] == "garrett" for g in data["groups"])
+        # UXR should still be there
+        uxr_groups = [g for g in data["groups"] if g["framework_id"] == "uxr"]
+        assert len(uxr_groups) > 0
+
+
+# ---------------------------------------------------------------------------
+# GET /codebook/remove-framework/{framework_id}/impact
+# ---------------------------------------------------------------------------
+
+
+class TestRemoveFrameworkImpact:
+    def test_impact_returns_tag_count(self, client: TestClient) -> None:
+        client.post(
+            "/api/projects/1/codebook/import-template",
+            json={"template_id": "garrett"},
+        )
+        resp = client.get("/api/projects/1/codebook/remove-framework/garrett/impact")
+        assert resp.status_code == 200
+        data = resp.json()
+        # Garrett has 5 groups with varying tag counts
+        assert data["tag_count"] > 0
+        # No quotes tagged yet so quote_count should be 0
+        assert data["quote_count"] == 0
+
+    def test_impact_returns_quote_count(self, client: TestClient) -> None:
+        """Impact should count distinct quotes across all framework tags."""
+        app = create_app(project_dir=_FIXTURE_DIR, dev=True, db_url="sqlite://")
+        tc = TestClient(app)
+        tc.post(
+            "/api/projects/1/codebook/import-template",
+            json={"template_id": "garrett"},
+        )
+        # Tag some quotes
+        db = app.state.db_factory()
+        try:
+            quotes = db.query(Quote).filter_by(project_id=1).all()
+            garrett_groups = (
+                db.query(CodebookGroup)
+                .filter_by(framework_id="garrett")
+                .all()
+            )
+            tag_defs = (
+                db.query(TagDefinition)
+                .filter(
+                    TagDefinition.codebook_group_id.in_([g.id for g in garrett_groups]),
+                )
+                .all()
+            )
+            if len(quotes) >= 2 and len(tag_defs) >= 2:
+                db.add(QuoteTag(quote_id=quotes[0].id, tag_definition_id=tag_defs[0].id))
+                db.add(QuoteTag(quote_id=quotes[1].id, tag_definition_id=tag_defs[0].id))
+                # Same quote tagged with second tag — should count as 1 distinct
+                db.add(QuoteTag(quote_id=quotes[0].id, tag_definition_id=tag_defs[1].id))
+                db.commit()
+        finally:
+            db.close()
+
+        resp = tc.get("/api/projects/1/codebook/remove-framework/garrett/impact")
+        data = resp.json()
+        assert data["quote_count"] == 2  # 2 distinct quotes
+
+    def test_impact_nonexistent_framework(self, client: TestClient) -> None:
+        """Non-existent framework should return zeros (no 404)."""
+        resp = client.get("/api/projects/1/codebook/remove-framework/nonexistent/impact")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["tag_count"] == 0
+        assert data["quote_count"] == 0

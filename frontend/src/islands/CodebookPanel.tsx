@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { Fragment, useCallback, useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { Badge, ConfirmDialog, EditableText, MicroBar, TagInput } from "../components";
 import {
   createCodebookGroup,
@@ -7,8 +8,10 @@ import {
   deleteCodebookTag,
   getCodebook,
   getCodebookTemplates,
+  getRemoveFrameworkImpact,
   importCodebookTemplate,
   mergeCodebookTags,
+  removeCodebookFramework,
   updateCodebookGroup,
   updateCodebookTag,
 } from "../utils/api";
@@ -16,6 +19,7 @@ import type {
   CodebookGroupResponse,
   CodebookResponse,
   CodebookTagResponse,
+  RemoveFrameworkInfo,
   TemplateOut,
 } from "../utils/types";
 
@@ -495,6 +499,11 @@ export function CodebookPanel({ projectId }: CodebookPanelProps) {
   const [templates, setTemplates] = useState<TemplateOut[] | null>(null);
   const [selectedTemplate, setSelectedTemplate] = useState<TemplateOut | null>(null);
   const [importing, setImporting] = useState(false);
+  const [removeConfirm, setRemoveConfirm] = useState<{
+    frameworkId: string;
+    label: string;
+    impact: RemoveFrameworkInfo | null;
+  } | null>(null);
 
   // Fetch codebook data
   const fetchData = useCallback(() => {
@@ -677,6 +686,28 @@ export function CodebookPanel({ projectId }: CodebookPanelProps) {
     setSelectedTemplate(null);
   }, []);
 
+  // --- Remove framework handlers ---
+
+  const handleAskRemoveFramework = useCallback((frameworkId: string, label: string) => {
+    setRemoveConfirm({ frameworkId, label, impact: null });
+    getRemoveFrameworkImpact(frameworkId)
+      .then((info) => setRemoveConfirm((prev) => prev ? { ...prev, impact: info } : null))
+      .catch(() => {});
+  }, []);
+
+  const handleConfirmRemoveFramework = useCallback(() => {
+    if (!removeConfirm) return;
+    removeCodebookFramework(removeConfirm.frameworkId)
+      .then((codebook) => {
+        setData(codebook);
+        setRemoveConfirm(null);
+        getCodebookTemplates()
+          .then((resp) => setTemplates(resp.templates))
+          .catch(() => {});
+      })
+      .catch((err) => console.error("Remove framework failed:", err));
+  }, [removeConfirm]);
+
   // --- Render ---
 
   if (error) {
@@ -705,28 +736,25 @@ export function CodebookPanel({ projectId }: CodebookPanelProps) {
   const researcherGroups = sortedGroups.filter((g) => g.framework_id == null);
   const frameworkGroups = sortedGroups.filter((g) => g.framework_id != null);
 
-  // Build framework separator labels (e.g. "Jesse James Garrett — Elements of UX")
-  const frameworkLabels: string[] = [];
-  if (templates && frameworkGroups.length > 0) {
-    const importedIds = new Set(frameworkGroups.map((g) => g.framework_id));
-    for (const t of templates) {
-      if (importedIds.has(t.id)) {
-        frameworkLabels.push(t.author ? `${t.author} — ${t.title}` : t.title);
-      }
-    }
+  // Group framework groups by framework_id for per-framework sections
+  const frameworkById = new Map<string, CodebookGroupResponse[]>();
+  for (const g of frameworkGroups) {
+    const fid = g.framework_id!;
+    if (!frameworkById.has(fid)) frameworkById.set(fid, []);
+    frameworkById.get(fid)!.push(g);
   }
 
   return (
     <>
       <div className="codebook-header">
-        <div>
+        <div style={{ flex: 1, minWidth: 0 }}>
           <h1>Codebook</h1>
           <p className="codebook-description">
             Drag tags between groups to reorganise. Click a tag or title to rename it.
             Drop a tag on another to merge.
           </p>
         </div>
-        <button className="bn-btn-primary" onClick={handleOpenPicker}>
+        <button className="bn-btn bn-btn-primary" onClick={handleOpenPicker} style={{ flexShrink: 0 }}>
           Browse codebooks
         </button>
       </div>
@@ -760,34 +788,45 @@ export function CodebookPanel({ projectId }: CodebookPanelProps) {
           <span className="new-group-label">New group</span>
         </div>
 
-        {/* Framework separator + framework groups */}
-        {frameworkGroups.length > 0 && (
-          <>
-            <div className="framework-separator">
-              <div className="framework-separator-line" />
-              <span className="framework-separator-label">
-                {frameworkLabels.length > 0 ? frameworkLabels.join(" · ") : "Codebook framework"}
-              </span>
-              <div className="framework-separator-line" />
-            </div>
-            {frameworkGroups.map((group) => (
-              <CodebookGroupColumn
-                key={group.id}
-                group={group}
-                allTagNames={data.all_tag_names}
-                onUpdateGroup={handleUpdateGroup}
-                onDeleteGroup={handleDeleteGroup}
-                onCreateTag={handleCreateTag}
-                onDeleteTag={handleDeleteTag}
-                onRenameTag={handleRenameTag}
-                onDragStart={handleDragStart}
-                onDragEnd={handleDragEnd}
-                onDropTag={handleDropTag}
-                onMergeDrop={handleMergeDrop}
-              />
-            ))}
-          </>
-        )}
+        {/* Per-framework sections — each imported framework gets its own header + remove button */}
+        {Array.from(frameworkById.entries()).map(([fid, fwGroups]) => {
+          const tmpl = templates?.find((t) => t.id === fid);
+          const title = tmpl?.title ?? "Codebook framework";
+          const author = tmpl?.author ?? "";
+          const label = author ? `${author} — ${title}` : title;
+          return (
+            <Fragment key={fid}>
+              <div className="framework-section-header">
+                <div>
+                  <div className="framework-section-title">{title}</div>
+                  {author && <div className="framework-section-author">{author}</div>}
+                </div>
+                <button
+                  className="bn-btn framework-remove-btn"
+                  onClick={() => handleAskRemoveFramework(fid, label)}
+                >
+                  Remove from Codebook
+                </button>
+              </div>
+              {fwGroups.map((group) => (
+                <CodebookGroupColumn
+                  key={group.id}
+                  group={group}
+                  allTagNames={data.all_tag_names}
+                  onUpdateGroup={handleUpdateGroup}
+                  onDeleteGroup={handleDeleteGroup}
+                  onCreateTag={handleCreateTag}
+                  onDeleteTag={handleDeleteTag}
+                  onRenameTag={handleRenameTag}
+                  onDragStart={handleDragStart}
+                  onDragEnd={handleDragEnd}
+                  onDropTag={handleDropTag}
+                  onMergeDrop={handleMergeDrop}
+                />
+              ))}
+            </Fragment>
+          );
+        })}
       </div>
 
       {/* Merge confirmation — centred overlay */}
@@ -809,8 +848,35 @@ export function CodebookPanel({ projectId }: CodebookPanelProps) {
         </div>
       )}
 
-      {/* Browse codebooks modal — picker and preview views */}
-      {modalView !== "closed" && (
+      {/* Remove framework confirmation */}
+      {removeConfirm && (
+        <div className="merge-overlay">
+          <ConfirmDialog
+            title={`Remove "${removeConfirm.label}"?`}
+            body={
+              <span>
+                {removeConfirm.impact
+                  ? `${removeConfirm.impact.tag_count} tags`
+                    + (removeConfirm.impact.quote_count > 0
+                      ? ` across ${removeConfirm.impact.quote_count} quotes`
+                      : "")
+                    + " will be removed."
+                  : "Loading impact…"}
+                {" "}You can re-import this framework any time from Browse Codebooks.
+              </span>
+            }
+            confirmLabel="Remove"
+            variant="danger"
+            onConfirm={handleConfirmRemoveFramework}
+            onCancel={() => setRemoveConfirm(null)}
+          />
+        </div>
+      )}
+
+      {/* Browse codebooks modal — picker and preview views.
+         Portal to document.body so position:fixed escapes any ancestor
+         stacking context (tab panels, dev overlay, etc.). */}
+      {modalView !== "closed" && createPortal(
         // eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions
         <div className="codebook-modal-overlay" onClick={handleCloseModal}>
           {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions */}
@@ -896,7 +962,7 @@ export function CodebookPanel({ projectId }: CodebookPanelProps) {
                   <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", flexShrink: 0 }}>
                     <div style={{ textAlign: "right" }}>
                       <button
-                        className="bn-btn-primary"
+                        className="bn-btn bn-btn-primary"
                         onClick={handleImportTemplate}
                         disabled={importing}
                       >
@@ -971,7 +1037,8 @@ export function CodebookPanel({ projectId }: CodebookPanelProps) {
               </>
             )}
           </div>
-        </div>
+        </div>,
+        document.body,
       )}
     </>
   );

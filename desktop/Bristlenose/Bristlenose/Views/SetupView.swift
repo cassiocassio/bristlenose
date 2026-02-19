@@ -87,13 +87,18 @@ struct SetupView: View {
         errorMessage = nil
         isSaving = true
 
-        let success = KeychainHelper.set(provider: "anthropic", value: trimmed)
-        isSaving = false
-
-        if success {
-            onComplete()
-        } else {
-            errorMessage = "Failed to save to Keychain. Check System Settings > Privacy & Security."
+        // Run on a background thread so SwiftUI can render the spinner.
+        // KeychainHelper.set is synchronous (shells out to /usr/bin/security).
+        Task.detached {
+            let success = KeychainHelper.set(provider: "anthropic", value: trimmed)
+            await MainActor.run {
+                isSaving = false
+                if success {
+                    onComplete()
+                } else {
+                    errorMessage = "Failed to save to Keychain. Check System Settings > Privacy & Security."
+                }
+            }
         }
     }
 }

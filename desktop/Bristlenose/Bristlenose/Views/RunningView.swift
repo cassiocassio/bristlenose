@@ -2,7 +2,15 @@ import SwiftUI
 
 struct RunningView: View {
     let folder: URL
+    let mode: RunMode
     @ObservedObject var runner: ProcessRunner
+
+    private var statusText: String {
+        switch mode {
+        case .analyse: "Analysing\u{2026}"
+        case .rerender: "Re-rendering\u{2026}"
+        }
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -12,7 +20,7 @@ struct RunningView: View {
                     .foregroundStyle(.tint)
                 Text(folder.lastPathComponent)
                     .font(.headline)
-                Text("— Analysing\u{2026}")
+                Text("— \(statusText)")
                     .foregroundStyle(.secondary)
 
                 Spacer()

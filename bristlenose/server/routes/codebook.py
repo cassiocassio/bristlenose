@@ -1,4 +1,4 @@
-"""Codebook API endpoints — CRUD for codebook groups, tags, and merge."""
+"""Codebook API endpoints — CRUD for codebook groups, tags, merge, and templates."""
 
 from __future__ import annotations
 
@@ -7,6 +7,7 @@ from pydantic import BaseModel
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
+from bristlenose.server.codebook_templates import CODEBOOK_TEMPLATES, get_template
 from bristlenose.server.models import (
     _LEGACY_UNGROUPED_NAME,
     UNCATEGORISED_GROUP_NAME,
@@ -42,6 +43,7 @@ class CodebookGroupOut(BaseModel):
     tags: list[CodebookTagOut]
     total_quotes: int
     is_default: bool = False
+    framework_id: str | None = None
 
 
 class CodebookResponse(BaseModel):
@@ -222,6 +224,7 @@ def get_codebook(project_id: int, request: Request) -> CodebookResponse:
                 tags=tags_out,
                 total_quotes=len(seen_quotes),
                 is_default=is_default,
+                framework_id=g.framework_id,
             )
 
         # User-created groups first
@@ -308,6 +311,13 @@ def update_group(
                     status_code=400,
                     detail="Cannot rename the Uncategorised group",
                 )
+        # Block editing name/subtitle of framework groups
+        if group.framework_id is not None:
+            if body.name is not None or body.subtitle is not None:
+                raise HTTPException(
+                    status_code=400,
+                    detail="Cannot rename framework codebook groups",
+                )
         if body.name is not None:
             group.name = body.name
         if body.subtitle is not None:
@@ -343,6 +353,11 @@ def delete_group(
             raise HTTPException(
                 status_code=400,
                 detail="Cannot delete the Uncategorised group",
+            )
+        if group.framework_id is not None:
+            raise HTTPException(
+                status_code=400,
+                detail="Cannot delete framework codebook groups",
             )
         # Move tags to Uncategorised — must flush before deleting the group
         # so SQLAlchemy doesn't try to null-cascade via the relationship.
@@ -519,5 +534,180 @@ def merge_tags(
         db.delete(source)
         db.commit()
         return {"status": "ok"}
+    finally:
+        db.close()
+
+
+# ---------------------------------------------------------------------------
+# Codebook templates
+# ---------------------------------------------------------------------------
+
+
+class TemplateTagOut(BaseModel):
+    name: str
+    colour_set: str
+    colour_index: int
+
+
+class TemplateGroupOut(BaseModel):
+    name: str
+    subtitle: str
+    colour_set: str
+    tags: list[TemplateTagOut]
+
+
+class TemplateOut(BaseModel):
+    id: str
+    title: str
+    author: str
+    description: str
+    author_bio: str
+    author_links: list[dict[str, str]]
+    groups: list[TemplateGroupOut]
+    enabled: bool
+    imported: bool
+
+
+class TemplateListResponse(BaseModel):
+    templates: list[TemplateOut]
+
+
+class ImportTemplateRequest(BaseModel):
+    template_id: str
+
+
+def _template_to_out(
+    tmpl: object, *, imported: bool,
+) -> TemplateOut:
+    """Convert a CodebookTemplate dataclass to a TemplateOut response."""
+    from bristlenose.server.codebook_templates import CodebookTemplate
+
+    t: CodebookTemplate = tmpl  # type: ignore[assignment]
+    groups_out: list[TemplateGroupOut] = []
+    for g in t.groups:
+        tags_out = [
+            TemplateTagOut(name=tag.name, colour_set=g.colour_set, colour_index=i)
+            for i, tag in enumerate(g.tags)
+        ]
+        groups_out.append(TemplateGroupOut(
+            name=g.name, subtitle=g.subtitle, colour_set=g.colour_set, tags=tags_out,
+        ))
+    return TemplateOut(
+        id=t.id,
+        title=t.title,
+        author=t.author,
+        description=t.description,
+        author_bio=t.author_bio,
+        author_links=[{"label": lbl, "url": url} for lbl, url in t.author_links],
+        groups=groups_out,
+        enabled=t.enabled,
+        imported=imported,
+    )
+
+
+@router.get("/projects/{project_id}/codebook/templates")
+def list_templates(
+    project_id: int, request: Request,
+) -> TemplateListResponse:
+    """Return available codebook templates with imported status."""
+    db = _get_db(request)
+    try:
+        _check_project(db, project_id)
+
+        # Find which framework IDs are already imported for this project
+        pcg_rows = (
+            db.query(ProjectCodebookGroup)
+            .filter_by(project_id=project_id)
+            .all()
+        )
+        group_ids = [pcg.codebook_group_id for pcg in pcg_rows]
+        imported_ids: set[str] = set()
+        if group_ids:
+            fw_rows = (
+                db.query(CodebookGroup.framework_id)
+                .filter(
+                    CodebookGroup.id.in_(group_ids),
+                    CodebookGroup.framework_id.isnot(None),
+                )
+                .distinct()
+                .all()
+            )
+            imported_ids = {r[0] for r in fw_rows}
+
+        templates_out = [
+            _template_to_out(t, imported=t.id in imported_ids)
+            for t in CODEBOOK_TEMPLATES
+        ]
+        return TemplateListResponse(templates=templates_out)
+    finally:
+        db.close()
+
+
+@router.post("/projects/{project_id}/codebook/import-template")
+def import_template(
+    project_id: int, request: Request, body: ImportTemplateRequest,
+) -> CodebookResponse:
+    """Import a codebook template into the project."""
+    db = _get_db(request)
+    try:
+        _check_project(db, project_id)
+
+        tmpl = get_template(body.template_id)
+        if not tmpl:
+            raise HTTPException(status_code=404, detail="Template not found")
+        if not tmpl.enabled:
+            raise HTTPException(status_code=400, detail="Template is not yet available")
+
+        # Check if already imported
+        pcg_rows = (
+            db.query(ProjectCodebookGroup)
+            .filter_by(project_id=project_id)
+            .all()
+        )
+        group_ids = [pcg.codebook_group_id for pcg in pcg_rows]
+        if group_ids:
+            existing = (
+                db.query(CodebookGroup)
+                .filter(
+                    CodebookGroup.id.in_(group_ids),
+                    CodebookGroup.framework_id == body.template_id,
+                )
+                .first()
+            )
+            if existing:
+                raise HTTPException(
+                    status_code=409,
+                    detail="Template already imported",
+                )
+
+        # Get max sort order for framework groups (place after researcher groups)
+        max_order = (
+            db.query(func.max(ProjectCodebookGroup.sort_order))
+            .filter_by(project_id=project_id)
+            .scalar()
+        ) or 0
+
+        # Create groups and tags
+        for i, tg in enumerate(tmpl.groups):
+            group = CodebookGroup(
+                name=tg.name,
+                subtitle=tg.subtitle,
+                colour_set=tg.colour_set,
+                sort_order=max_order + 1 + i,
+                framework_id=tmpl.id,
+            )
+            db.add(group)
+            db.flush()
+            for tt in tg.tags:
+                db.add(TagDefinition(name=tt.name, codebook_group_id=group.id))
+            db.add(ProjectCodebookGroup(
+                project_id=project_id,
+                codebook_group_id=group.id,
+                sort_order=max_order + 1 + i,
+            ))
+        db.commit()
+
+        # Return updated codebook
+        return get_codebook(project_id, request)
     finally:
         db.close()

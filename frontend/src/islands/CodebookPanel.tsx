@@ -6,6 +6,8 @@ import {
   deleteCodebookGroup,
   deleteCodebookTag,
   getCodebook,
+  getCodebookTemplates,
+  importCodebookTemplate,
   mergeCodebookTags,
   updateCodebookGroup,
   updateCodebookTag,
@@ -14,6 +16,7 @@ import type {
   CodebookGroupResponse,
   CodebookResponse,
   CodebookTagResponse,
+  TemplateOut,
 } from "../utils/types";
 
 // ---------------------------------------------------------------------------
@@ -321,6 +324,8 @@ function CodebookGroupColumn({
   ].filter(Boolean).join(" ");
 
   const isDefault = group.is_default;
+  const isFramework = group.framework_id != null;
+  const isReadOnly = isDefault || isFramework;
 
   return (
     <div
@@ -334,7 +339,7 @@ function CodebookGroupColumn({
       <div className="group-header">
         <div className="group-title-area">
           <div className="group-title">
-            {isDefault ? (
+            {isReadOnly ? (
               <span className="group-title-text">{group.name}</span>
             ) : (
               <EditableText
@@ -347,7 +352,7 @@ function CodebookGroupColumn({
               />
             )}
           </div>
-          {isDefault ? (
+          {isReadOnly ? (
             <p className="group-subtitle">{group.subtitle}</p>
           ) : (
             <GroupSubtitle
@@ -356,7 +361,7 @@ function CodebookGroupColumn({
             />
           )}
         </div>
-        {!isDefault && (
+        {!isReadOnly && (
           <button
             className="group-close"
             onClick={() => setShowDeleteConfirm(true)}
@@ -369,18 +374,36 @@ function CodebookGroupColumn({
 
       <div className="tag-list">
         {group.tags.map((tag) => (
-          <TagRow
-            key={tag.id}
-            tag={tag}
-            maxCount={maxCount}
-            colourSet={group.colour_set}
-            groupId={group.id}
-            onRequestDelete={handleRequestDeleteTag}
-            onRenameTag={onRenameTag}
-            onDragStart={onDragStart}
-            onDragEnd={onDragEnd}
-            onMergeDrop={onMergeDrop}
-          />
+          isFramework ? (
+            <div key={tag.id} className="tag-row">
+              <div className="tag-name-area">
+                <Badge
+                  text={tag.name}
+                  variant="readonly"
+                  colour={getTagBg(group.colour_set, tag.colour_index)}
+                />
+              </div>
+              <div className="tag-bar-area">
+                {tag.count > 0 && (
+                  <MicroBar value={maxCount > 0 ? tag.count / maxCount : 0} colour={getBarColour(group.colour_set)} />
+                )}
+                <span className="tag-count">{tag.count}</span>
+              </div>
+            </div>
+          ) : (
+            <TagRow
+              key={tag.id}
+              tag={tag}
+              maxCount={maxCount}
+              colourSet={group.colour_set}
+              groupId={group.id}
+              onRequestDelete={handleRequestDeleteTag}
+              onRenameTag={onRenameTag}
+              onDragStart={onDragStart}
+              onDragEnd={onDragEnd}
+              onMergeDrop={onMergeDrop}
+            />
+          )
         ))}
       </div>
 
@@ -391,7 +414,7 @@ function CodebookGroupColumn({
         </div>
       )}
 
-      {isAddingTag ? (
+      {!isFramework && (isAddingTag ? (
         <div className="tag-add-row">
           <TagInput
             key={tagInputKey.current}
@@ -406,7 +429,7 @@ function CodebookGroupColumn({
         <div className="tag-add-row" onClick={() => setIsAddingTag(true)}>
           <span className="tag-add-badge">+ tag</span>
         </div>
-      )}
+      ))}
 
       {/* Tag-delete confirmation — rendered at group level for correct positioning */}
       {confirmingTag && (
@@ -430,7 +453,7 @@ function CodebookGroupColumn({
       )}
 
       {/* Group-delete confirmation */}
-      {showDeleteConfirm && !isDefault && (
+      {showDeleteConfirm && !isReadOnly && (
         <ConfirmDialog
           title={`Delete "${group.name}"?`}
           body={
@@ -468,6 +491,10 @@ export function CodebookPanel({ projectId }: CodebookPanelProps) {
     source: CodebookTagResponse;
     target: CodebookTagResponse;
   } | null>(null);
+  const [modalView, setModalView] = useState<"closed" | "picker" | "preview">("closed");
+  const [templates, setTemplates] = useState<TemplateOut[] | null>(null);
+  const [selectedTemplate, setSelectedTemplate] = useState<TemplateOut | null>(null);
+  const [importing, setImporting] = useState(false);
 
   // Fetch codebook data
   const fetchData = useCallback(() => {
@@ -614,6 +641,42 @@ export function CodebookPanel({ projectId }: CodebookPanelProps) {
     [data, fetchData],
   );
 
+  // --- Browse / import handlers ---
+
+  const handleOpenPicker = useCallback(() => {
+    setModalView("picker");
+    getCodebookTemplates()
+      .then((resp) => setTemplates(resp.templates))
+      .catch((err) => console.error("Fetch templates failed:", err));
+  }, []);
+
+  const handleSelectTemplate = useCallback((t: TemplateOut) => {
+    setSelectedTemplate(t);
+    setModalView("preview");
+  }, []);
+
+  const handleImportTemplate = useCallback(() => {
+    if (!selectedTemplate || importing) return;
+    setImporting(true);
+    importCodebookTemplate(selectedTemplate.id)
+      .then((codebook) => {
+        setData(codebook);
+        setModalView("closed");
+        setSelectedTemplate(null);
+        // Re-fetch templates to update imported flags
+        getCodebookTemplates()
+          .then((resp) => setTemplates(resp.templates))
+          .catch(() => {});
+      })
+      .catch((err) => console.error("Import template failed:", err))
+      .finally(() => setImporting(false));
+  }, [selectedTemplate, importing]);
+
+  const handleCloseModal = useCallback(() => {
+    setModalView("closed");
+    setSelectedTemplate(null);
+  }, []);
+
   // --- Render ---
 
   if (error) {
@@ -634,20 +697,42 @@ export function CodebookPanel({ projectId }: CodebookPanelProps) {
     );
   }
 
+  // Split groups into researcher vs framework
+  const sortedGroups = [...data.groups].sort((a, b) => {
+    if (a.is_default !== b.is_default) return a.is_default ? -1 : 1;
+    return a.order - b.order;
+  });
+  const researcherGroups = sortedGroups.filter((g) => g.framework_id == null);
+  const frameworkGroups = sortedGroups.filter((g) => g.framework_id != null);
+
+  // Build framework separator labels (e.g. "Jesse James Garrett — Elements of UX")
+  const frameworkLabels: string[] = [];
+  if (templates && frameworkGroups.length > 0) {
+    const importedIds = new Set(frameworkGroups.map((g) => g.framework_id));
+    for (const t of templates) {
+      if (importedIds.has(t.id)) {
+        frameworkLabels.push(t.author ? `${t.author} — ${t.title}` : t.title);
+      }
+    }
+  }
+
   return (
     <>
-      <h1>Codebook</h1>
-      <p className="codebook-description">
-        Drag tags between groups to reorganise. Click a tag or title to rename it.
-        Drop a tag on another to merge.
-      </p>
+      <div className="codebook-header">
+        <div>
+          <h1>Codebook</h1>
+          <p className="codebook-description">
+            Drag tags between groups to reorganise. Click a tag or title to rename it.
+            Drop a tag on another to merge.
+          </p>
+        </div>
+        <button className="bn-btn-primary" onClick={handleOpenPicker}>
+          Browse codebooks
+        </button>
+      </div>
 
       <div className="codebook-grid" id="codebook-grid">
-        {[...data.groups].sort((a, b) => {
-          // Default group (Uncategorised) always first
-          if (a.is_default !== b.is_default) return a.is_default ? -1 : 1;
-          return a.order - b.order;
-        }).map((group) => (
+        {researcherGroups.map((group) => (
           <CodebookGroupColumn
             key={group.id}
             group={group}
@@ -674,6 +759,35 @@ export function CodebookPanel({ projectId }: CodebookPanelProps) {
           <span className="new-group-icon">+</span>
           <span className="new-group-label">New group</span>
         </div>
+
+        {/* Framework separator + framework groups */}
+        {frameworkGroups.length > 0 && (
+          <>
+            <div className="framework-separator">
+              <div className="framework-separator-line" />
+              <span className="framework-separator-label">
+                {frameworkLabels.length > 0 ? frameworkLabels.join(" · ") : "Codebook framework"}
+              </span>
+              <div className="framework-separator-line" />
+            </div>
+            {frameworkGroups.map((group) => (
+              <CodebookGroupColumn
+                key={group.id}
+                group={group}
+                allTagNames={data.all_tag_names}
+                onUpdateGroup={handleUpdateGroup}
+                onDeleteGroup={handleDeleteGroup}
+                onCreateTag={handleCreateTag}
+                onDeleteTag={handleDeleteTag}
+                onRenameTag={handleRenameTag}
+                onDragStart={handleDragStart}
+                onDragEnd={handleDragEnd}
+                onDropTag={handleDropTag}
+                onMergeDrop={handleMergeDrop}
+              />
+            ))}
+          </>
+        )}
       </div>
 
       {/* Merge confirmation — centred overlay */}
@@ -692,6 +806,171 @@ export function CodebookPanel({ projectId }: CodebookPanelProps) {
             onConfirm={handleMergeConfirm}
             onCancel={() => setMergeConfirm(null)}
           />
+        </div>
+      )}
+
+      {/* Browse codebooks modal — picker and preview views */}
+      {modalView !== "closed" && (
+        // eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions
+        <div className="codebook-modal-overlay" onClick={handleCloseModal}>
+          {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions */}
+          <div className="codebook-modal" onClick={(e) => e.stopPropagation()}>
+            {modalView === "picker" && (
+              <>
+                <div className="codebook-modal-header">
+                  <div>
+                    <div className="codebook-modal-title">Browse codebooks</div>
+                    <div className="codebook-modal-subtitle">Import a framework codebook or create your own</div>
+                  </div>
+                  <button
+                    className="codebook-modal-close"
+                    onClick={handleCloseModal}
+                    aria-label="Close"
+                  >
+                    &times;
+                  </button>
+                </div>
+                <div className="codebook-modal-body">
+                  {!templates ? (
+                    <p>Loading…</p>
+                  ) : (
+                    <>
+                      <div className="picker-section-header">
+                        <span className="picker-section-title">Codebook frameworks</span>
+                      </div>
+                      <div className="picker-row">
+                        {templates.map((t) => (
+                          // eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions
+                          <div
+                            key={t.id}
+                            className={`picker-card${t.imported ? " imported" : ""}${!t.enabled ? " disabled" : ""}`}
+                            onClick={() => t.enabled && !t.imported && handleSelectTemplate(t)}
+                          >
+                            <div className="picker-card-title">{t.title}</div>
+                            {t.author && (
+                              <div className="picker-card-author">{t.author}</div>
+                            )}
+                            <div className="picker-card-desc">{t.description}</div>
+                            <div className="picker-card-tags">
+                              {t.groups.slice(0, 3).flatMap((g) =>
+                                g.tags.slice(0, 2).map((tag) => (
+                                  <span
+                                    key={`${g.name}-${tag.name}`}
+                                    className="badge readonly"
+                                    style={{ backgroundColor: getTagBg(tag.colour_set, tag.colour_index) }}
+                                  >
+                                    {tag.name}
+                                  </span>
+                                )),
+                              )}
+                            </div>
+                            {!t.enabled && (
+                              <div className="picker-card-coming">Coming soon</div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+
+                      <div className="picker-section-header">
+                        <span className="picker-section-title">Your codebooks</span>
+                      </div>
+                      <div className="picker-row">
+                        <div className="picker-card picker-card-create" onClick={handleCloseModal}>
+                          <span className="new-icon">+</span>
+                          <span className="new-label">Create new codebook</span>
+                        </div>
+                      </div>
+                    </>
+                  )}
+                </div>
+              </>
+            )}
+
+            {modalView === "preview" && selectedTemplate && (
+              <>
+                <div className="codebook-modal-header">
+                  <div>
+                    <div className="codebook-modal-title">{selectedTemplate.title}</div>
+                    <div className="codebook-modal-subtitle">{selectedTemplate.author}</div>
+                  </div>
+                  <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", flexShrink: 0 }}>
+                    <div style={{ textAlign: "right" }}>
+                      <button
+                        className="bn-btn-primary"
+                        onClick={handleImportTemplate}
+                        disabled={importing}
+                      >
+                        {importing ? "Importing…" : "Import codebook"}
+                      </button>
+                      <div className="preview-cta-help">Adds to existing tags and tag-groups</div>
+                    </div>
+                    <button
+                      className="codebook-modal-close"
+                      onClick={handleCloseModal}
+                      aria-label="Close"
+                    >
+                      &times;
+                    </button>
+                  </div>
+                </div>
+                <div className="codebook-modal-body">
+                  <div className="preview-body">
+                    <div className="preview-body-main">
+                      <div className="preview-desc">{selectedTemplate.description}</div>
+                      <div className="preview-section-label">Tag groups</div>
+                      <div className="preview-groups">
+                        {selectedTemplate.groups.map((g) => (
+                          <div
+                            key={g.name}
+                            className="codebook-group"
+                            style={{ backgroundColor: getGroupBg(g.colour_set) }}
+                          >
+                            <div className="group-header">
+                              <div className="group-title-area">
+                                <div className="group-title">{g.name}</div>
+                                <div className="group-subtitle">{g.subtitle}</div>
+                              </div>
+                            </div>
+                            <div className="tag-list">
+                              {g.tags.map((tag) => (
+                                <div key={tag.name} className="tag-row">
+                                  <div className="tag-name-area">
+                                    <span
+                                      className="badge readonly"
+                                      style={{ backgroundColor: getTagBg(tag.colour_set, tag.colour_index) }}
+                                    >
+                                      {tag.name}
+                                    </span>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                    {selectedTemplate.author_bio && (
+                      <div className="preview-body-sidebar">
+                        <div className="preview-author">
+                          <div className="preview-author-name">{selectedTemplate.author}</div>
+                          <div className="preview-author-bio">{selectedTemplate.author_bio}</div>
+                          {selectedTemplate.author_links.length > 0 && (
+                            <div className="preview-author-links">
+                              {selectedTemplate.author_links.map((link) => (
+                                <a key={link.url} href={link.url} target="_blank" rel="noopener noreferrer">
+                                  {link.label} &#x2197;
+                                </a>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
         </div>
       )}
     </>

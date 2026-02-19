@@ -2,19 +2,26 @@ import SwiftUI
 
 struct ContentView: View {
     @State private var phase: AppPhase = .ready
+    @State private var needsSetup = false
     @StateObject private var runner = ProcessRunner()
 
     var body: some View {
         VStack {
             switch phase {
             case .ready:
-                ReadyView { url in
-                    let result = FolderValidator.check(folder: url)
-                    phase = .selected(
-                        folder: url,
-                        fileCount: result.fileCount,
-                        hasExistingOutput: result.hasExistingOutput
-                    )
+                if needsSetup {
+                    SetupView {
+                        needsSetup = false
+                    }
+                } else {
+                    ReadyView { url in
+                        let result = FolderValidator.check(folder: url)
+                        phase = .selected(
+                            folder: url,
+                            fileCount: result.fileCount,
+                            hasExistingOutput: result.hasExistingOutput
+                        )
+                    }
                 }
 
             case .selected(let folder, let fileCount, let hasExistingOutput):
@@ -79,6 +86,9 @@ struct ContentView: View {
         }
         .frame(minWidth: 480, minHeight: 400)
         .padding()
+        .onAppear {
+            needsSetup = !KeychainHelper.hasAnyAPIKey()
+        }
         .onChange(of: runner.isRunning) { wasRunning, isNowRunning in
             // When the pipeline finishes, launch serve mode
             if wasRunning && !isNowRunning {

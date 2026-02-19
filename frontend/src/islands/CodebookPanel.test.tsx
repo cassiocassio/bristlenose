@@ -17,6 +17,7 @@ const MOCK_CODEBOOK: CodebookResponse = {
       ],
       total_quotes: 7,
       is_default: false,
+      framework_id: null,
     },
     {
       id: 2,
@@ -29,6 +30,7 @@ const MOCK_CODEBOOK: CodebookResponse = {
       ],
       total_quotes: 2,
       is_default: false,
+      framework_id: null,
     },
     {
       id: 99,
@@ -41,6 +43,7 @@ const MOCK_CODEBOOK: CodebookResponse = {
       ],
       total_quotes: 1,
       is_default: true,
+      framework_id: null,
     },
   ],
   ungrouped: [],

@@ -9,6 +9,7 @@ import type {
   CodebookGroupResponse,
   CodebookResponse,
   CodebookTagResponse,
+  TemplateListResponse,
   TranscriptPageResponse,
 } from "./types";
 
@@ -143,6 +144,20 @@ export function mergeCodebookTags(
   return apiPost("/codebook/merge-tags", {
     source_id: sourceId,
     target_id: targetId,
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Codebook template helpers
+// ---------------------------------------------------------------------------
+
+export function getCodebookTemplates(): Promise<TemplateListResponse> {
+  return apiGet<TemplateListResponse>("/codebook/templates");
+}
+
+export function importCodebookTemplate(templateId: string): Promise<CodebookResponse> {
+  return apiPost<CodebookResponse>("/codebook/import-template", {
+    template_id: templateId,
   });
 }
 

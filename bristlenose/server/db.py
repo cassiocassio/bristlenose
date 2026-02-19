@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections.abc import Generator
 from pathlib import Path
 
-from sqlalchemy import create_engine, event
+from sqlalchemy import create_engine, event, inspect, text
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
 from sqlalchemy.pool import StaticPool
@@ -56,11 +56,32 @@ def create_session_factory(engine: Engine) -> sessionmaker[Session]:
     return sessionmaker(bind=engine)
 
 
+def _migrate_schema(engine: Engine) -> None:
+    """Add columns introduced after initial schema creation.
+
+    SQLAlchemy's ``create_all`` only creates *new* tables — it never alters
+    existing ones.  This helper inspects the live schema and issues ALTER TABLE
+    statements for any missing columns so that existing databases pick up new
+    fields without requiring a full Alembic migration stack.
+    """
+    insp = inspect(engine)
+
+    # v0.10.x — CodebookGroup gains framework_id (VARCHAR 50, nullable)
+    if "codebook_groups" in insp.get_table_names():
+        cols = {c["name"] for c in insp.get_columns("codebook_groups")}
+        if "framework_id" not in cols:
+            with engine.begin() as conn:
+                conn.execute(
+                    text("ALTER TABLE codebook_groups ADD COLUMN framework_id VARCHAR(50)")
+                )
+
+
 def init_db(engine: Engine) -> None:
     """Create all tables. Safe to call repeatedly (CREATE IF NOT EXISTS)."""
     from bristlenose.server import models  # noqa: F401 — registers all tables
 
     Base.metadata.create_all(bind=engine)
+    _migrate_schema(engine)
 
 
 def get_db(engine: Engine) -> Generator[Session, None, None]:

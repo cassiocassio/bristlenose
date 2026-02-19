@@ -2,6 +2,14 @@
 
 All notable changes to Bristlenose are documented here. See also the [README](README.md) for the latest releases.
 
+**0.10.1** — _19 Feb 2026_
+
+- Desktop app API key onboarding — first-run setup screen prompts for Claude API key, stores in macOS Keychain via `security` CLI, sidecar picks it up automatically via `_populate_keys_from_keychain()`. Settings panel (⌘,) for viewing, changing, or deleting the key
+- `.dmg` packaging — `build-dmg.sh` archives via xcodebuild with ad-hoc signing, packages with hdiutil (or `create-dmg` for drag-to-Applications). `build-all.sh` chains sidecar + ffmpeg + whisper + dmg into one command
+- Serve mode after pipeline — desktop app auto-launches `bristlenose serve` after pipeline completes, opens report at `http://127.0.0.1:8150/report/` with full React islands
+- Deployment target updated to macOS 15 Sequoia (was 14 Sonoma)
+- Codebook tag templates — pre-built tag sets via new API endpoints and UI
+
 **0.10.0** — _18 Feb 2026_
 
 - Desktop app v0.1 — SwiftUI macOS launcher (`desktop/Bristlenose/`) with folder picker, drag-and-drop, pipeline output streaming, View Report in browser. 4-state UI (ready → selected → running → done), ANSI escape stripping, report path detection from both OSC 8 hyperlinks and `Report:` text fallback. Xcode 26 project, 840 KB .app, macOS 14+ deployment target

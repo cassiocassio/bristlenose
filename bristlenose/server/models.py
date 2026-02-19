@@ -60,6 +60,11 @@ class CodebookGroup(Base):
     Instance-scoped: groups live in a shared library. Projects activate
     them via project_codebook_group. colour_set is a string (not an enum)
     so new colour sets don't require schema changes.
+
+    framework_id links to a codebook template ID ("garrett", "norman", "uxr")
+    when the group was imported from a pre-built framework. Null for
+    researcher-created groups. Framework groups are non-deletable and
+    non-editable.
     """
 
     __tablename__ = "codebook_groups"
@@ -69,6 +74,7 @@ class CodebookGroup(Base):
     subtitle: Mapped[str] = mapped_column(String(500), default="")
     colour_set: Mapped[str] = mapped_column(String(50), default="ux")
     sort_order: Mapped[int] = mapped_column(default=0)
+    framework_id: Mapped[str | None] = mapped_column(String(50), default=None)
     created_at: Mapped[datetime] = mapped_column(default=func.now())
 
     tag_definitions: Mapped[list[TagDefinition]] = relationship(back_populates="codebook_group")

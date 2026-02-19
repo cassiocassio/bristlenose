@@ -374,6 +374,13 @@ Edit `bristlenose/__init__.py` (the single source of truth for version), commit,
 
 ## Changelog
 
+**0.10.1** — _19 Feb 2026_
+
+- Desktop app API key onboarding — first-run setup screen, Keychain storage, Settings panel (⌘,)
+- `.dmg` packaging — ad-hoc signed, drag-to-Applications, one-command build via `build-all.sh`
+- Serve mode after pipeline — auto-launches `bristlenose serve`, report at `http://127.0.0.1:8150/report/`
+- Deployment target updated to macOS 15 Sequoia
+
 **0.10.0** — _18 Feb 2026_
 
 - Desktop app v0.1 — SwiftUI macOS launcher with folder picker, drag-and-drop, pipeline streaming, View Report in browser

@@ -8,5 +8,9 @@ struct BristlenoseApp: App {
         }
         .windowStyle(.titleBar)
         .defaultSize(width: 520, height: 480)
+
+        Settings {
+            SettingsView()
+        }
     }
 }

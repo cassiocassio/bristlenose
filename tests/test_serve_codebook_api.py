@@ -442,3 +442,149 @@ class TestMergeTags:
             json={"source_id": tid, "target_id": 999},
         )
         assert resp.status_code == 404
+
+
+# ---------------------------------------------------------------------------
+# GET /codebook/templates
+# ---------------------------------------------------------------------------
+
+
+class TestListTemplates:
+    def test_returns_200(self, client: TestClient) -> None:
+        resp = client.get("/api/projects/1/codebook/templates")
+        assert resp.status_code == 200
+
+    def test_returns_all_templates(self, client: TestClient) -> None:
+        data = client.get("/api/projects/1/codebook/templates").json()
+        assert len(data["templates"]) == 3
+        ids = [t["id"] for t in data["templates"]]
+        assert "garrett" in ids
+        assert "norman" in ids
+        assert "uxr" in ids
+
+    def test_template_has_expected_shape(self, client: TestClient) -> None:
+        data = client.get("/api/projects/1/codebook/templates").json()
+        garrett = next(t for t in data["templates"] if t["id"] == "garrett")
+        assert garrett["title"] == "The Elements of User Experience"
+        assert garrett["author"] == "Jesse James Garrett"
+        assert garrett["enabled"] is True
+        assert garrett["imported"] is False
+        assert len(garrett["groups"]) == 5
+        assert len(garrett["author_links"]) == 3
+        # Check first group has tags
+        strategy = garrett["groups"][0]
+        assert strategy["name"] == "Strategy"
+        assert strategy["colour_set"] == "ux"
+        assert len(strategy["tags"]) == 4
+
+    def test_disabled_template(self, client: TestClient) -> None:
+        data = client.get("/api/projects/1/codebook/templates").json()
+        norman = next(t for t in data["templates"] if t["id"] == "norman")
+        assert norman["enabled"] is False
+
+    def test_imported_flag_false_initially(self, client: TestClient) -> None:
+        data = client.get("/api/projects/1/codebook/templates").json()
+        for t in data["templates"]:
+            assert t["imported"] is False
+
+
+# ---------------------------------------------------------------------------
+# POST /codebook/import-template
+# ---------------------------------------------------------------------------
+
+
+class TestImportTemplate:
+    def test_import_garrett(self, client: TestClient) -> None:
+        resp = client.post(
+            "/api/projects/1/codebook/import-template",
+            json={"template_id": "garrett"},
+        )
+        assert resp.status_code == 200
+        data = resp.json()
+        # Should have Uncategorised + 5 Garrett groups
+        assert len(data["groups"]) == 6
+        garrett_groups = [g for g in data["groups"] if g["framework_id"] == "garrett"]
+        assert len(garrett_groups) == 5
+
+    def test_imported_groups_have_correct_tags(self, client: TestClient) -> None:
+        client.post(
+            "/api/projects/1/codebook/import-template",
+            json={"template_id": "garrett"},
+        )
+        data = client.get("/api/projects/1/codebook").json()
+        strategy = next(g for g in data["groups"] if g["name"] == "Strategy")
+        tag_names = [t["name"] for t in strategy["tags"]]
+        assert "user need" in tag_names
+        assert "business objective" in tag_names
+        assert len(tag_names) == 4
+
+    def test_imported_groups_have_framework_id(self, client: TestClient) -> None:
+        client.post(
+            "/api/projects/1/codebook/import-template",
+            json={"template_id": "garrett"},
+        )
+        data = client.get("/api/projects/1/codebook").json()
+        strategy = next(g for g in data["groups"] if g["name"] == "Strategy")
+        assert strategy["framework_id"] == "garrett"
+
+    def test_import_shows_imported_in_template_list(self, client: TestClient) -> None:
+        client.post(
+            "/api/projects/1/codebook/import-template",
+            json={"template_id": "garrett"},
+        )
+        data = client.get("/api/projects/1/codebook/templates").json()
+        garrett = next(t for t in data["templates"] if t["id"] == "garrett")
+        assert garrett["imported"] is True
+        # UXR should still not be imported
+        uxr = next(t for t in data["templates"] if t["id"] == "uxr")
+        assert uxr["imported"] is False
+
+    def test_import_duplicate_returns_409(self, client: TestClient) -> None:
+        client.post(
+            "/api/projects/1/codebook/import-template",
+            json={"template_id": "garrett"},
+        )
+        resp = client.post(
+            "/api/projects/1/codebook/import-template",
+            json={"template_id": "garrett"},
+        )
+        assert resp.status_code == 409
+
+    def test_import_disabled_template_returns_400(self, client: TestClient) -> None:
+        resp = client.post(
+            "/api/projects/1/codebook/import-template",
+            json={"template_id": "norman"},
+        )
+        assert resp.status_code == 400
+
+    def test_import_unknown_template_returns_404(self, client: TestClient) -> None:
+        resp = client.post(
+            "/api/projects/1/codebook/import-template",
+            json={"template_id": "nonexistent"},
+        )
+        assert resp.status_code == 404
+
+    def test_cannot_delete_framework_group(self, client: TestClient) -> None:
+        client.post(
+            "/api/projects/1/codebook/import-template",
+            json={"template_id": "garrett"},
+        )
+        data = client.get("/api/projects/1/codebook").json()
+        strategy = next(g for g in data["groups"] if g["name"] == "Strategy")
+        resp = client.delete(f"/api/projects/1/codebook/groups/{strategy['id']}")
+        assert resp.status_code == 400
+        assert "framework" in resp.json()["detail"].lower()
+
+    def test_cannot_rename_framework_group(self, client: TestClient) -> None:
+        client.post(
+            "/api/projects/1/codebook/import-template",
+            json={"template_id": "garrett"},
+        )
+        data = client.get("/api/projects/1/codebook").json()
+        strategy = next(g for g in data["groups"] if g["name"] == "Strategy")
+        resp = client.patch(
+            f"/api/projects/1/codebook/groups/{strategy['id']}",
+            json={"name": "Renamed"},
+        )
+        assert resp.status_code == 400
+        assert "framework" in resp.json()["detail"].lower()

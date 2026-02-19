@@ -3,7 +3,7 @@
 #
 # Prerequisites:
 #   - Xcode 14+ with command-line tools
-#   - The Xcode project exists at desktop/Bristlenose.xcodeproj
+#   - The Xcode project exists at desktop/Bristlenose/Bristlenose.xcodeproj
 #   - Sidecar + resources built (run build-sidecar.sh, fetch-ffmpeg.sh,
 #     fetch-whisper-model.sh first)
 #   - Optional: brew install create-dmg (for pretty .dmg with drag-to-Applications)
@@ -49,7 +49,7 @@ mkdir -p "$BUILD_DIR"
 echo "==> Building Bristlenose.app..."
 
 # Archive the app
-xcodebuild -project "$DESKTOP_DIR/Bristlenose.xcodeproj" \
+xcodebuild -project "$DESKTOP_DIR/Bristlenose/Bristlenose.xcodeproj" \
            -scheme Bristlenose \
            -configuration Release \
            -archivePath "$BUILD_DIR/Bristlenose.xcarchive" \

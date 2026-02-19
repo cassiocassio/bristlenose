@@ -139,12 +139,42 @@ export interface CodebookGroupResponse {
   tags: CodebookTagResponse[];
   total_quotes: number;
   is_default: boolean;
+  framework_id: string | null;
 }
 
 export interface CodebookResponse {
   groups: CodebookGroupResponse[];
   ungrouped: CodebookTagResponse[];
   all_tag_names: string[];
+}
+
+export interface TemplateTagOut {
+  name: string;
+  colour_set: string;
+  colour_index: number;
+}
+
+export interface TemplateGroupOut {
+  name: string;
+  subtitle: string;
+  colour_set: string;
+  tags: TemplateTagOut[];
+}
+
+export interface TemplateOut {
+  id: string;
+  title: string;
+  author: string;
+  description: string;
+  author_bio: string;
+  author_links: { label: string; url: string }[];
+  groups: TemplateGroupOut[];
+  enabled: boolean;
+  imported: boolean;
+}
+
+export interface TemplateListResponse {
+  templates: TemplateOut[];
 }
 
 // ---------------------------------------------------------------------------

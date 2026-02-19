@@ -1,0 +1,103 @@
+id: norman
+title: The Design of Everyday Things
+author: Don Norman
+enabled: false
+
+description: >
+  Seven fundamental principles of interaction design that explain why
+  products are easy or hard to use. A bottom-up framework for diagnosing
+  why interactions succeed or fail — from whether users can discover
+  what's possible (Discoverability) to whether the system communicates
+  what happened (Feedback) to whether errors are slips or mistakes.
+
+author_bio: >
+  Director of the Design Lab at UC San Diego. Former VP of Apple's
+  Advanced Technology Group. Coined the term "user experience" in the
+  1990s. Author of "The Design of Everyday Things" (originally published
+  as "The Psychology of Everyday Things", 1988; revised and expanded
+  edition 2013).
+
+author_links:
+  - label: jnd.org
+    url: https://jnd.org
+  - label: Amazon US
+    url: https://www.amazon.com/dp/0465050654
+  - label: Amazon UK
+    url: https://www.amazon.co.uk/dp/0465050654
+
+preamble: >
+  The following tags describe principles of interaction design. They
+  describe the relationship between a person and a designed thing — how
+  the design communicates what's possible, what's happening, and what
+  went wrong. These tags apply to designed products, interfaces, and
+  services. If the participant is describing personal experiences,
+  physical activities, domain expertise, or life context without
+  reference to a designed artefact, do not apply any tag from this
+  codebook. Do not stretch these concepts metaphorically — "feedback"
+  means a designed system communicating the result of an action, not any
+  situation where a person learns something from their environment.
+
+groups:
+  - name: Discoverability
+    subtitle: Can the user figure out what actions are possible?
+    colour_set: ux
+    tags:
+      - name: visible action
+      - name: hidden feature
+      - name: exploration
+      - name: first-time use
+
+  - name: Feedback
+    subtitle: Does the system communicate results clearly?
+    colour_set: emo
+    tags:
+      - name: system response
+      - name: delayed feedback
+      - name: ambiguous feedback
+      - name: confirmation
+
+  - name: Conceptual model
+    subtitle: Does user understanding match reality?
+    colour_set: task
+    tags:
+      - name: user mental model
+      - name: system model
+      - name: model mismatch
+      - name: learned behaviour
+
+  - name: Signifiers
+    subtitle: Do visual cues correctly indicate how to interact?
+    colour_set: trust
+    tags:
+      - name: affordance
+      - name: perceived affordance
+      - name: false signifier
+      - name: missing signifier
+
+  - name: Mapping
+    subtitle: >
+      Does the relationship between controls and outcomes feel natural?
+    colour_set: opp
+    tags:
+      - name: natural mapping
+      - name: arbitrary mapping
+      - name: spatial correspondence
+      - name: logical layout
+
+  - name: Constraints
+    subtitle: Do designed limitations guide users toward correct actions?
+    colour_set: ux
+    tags:
+      - name: physical constraint
+      - name: cultural constraint
+      - name: semantic constraint
+      - name: logical constraint
+
+  - name: Slips vs Mistakes
+    subtitle: Was the error execution-based or goal-based?
+    colour_set: emo
+    tags:
+      - name: action slip
+      - name: memory lapse
+      - name: rule-based mistake
+      - name: knowledge-based mistake

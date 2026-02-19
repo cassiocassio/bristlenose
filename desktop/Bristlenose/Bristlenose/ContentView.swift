@@ -31,6 +31,7 @@ struct ContentView: View {
                         launchPipeline(command: "render", folder: folder)
                     },
                     onChangeFolder: {
+                        runner.stopServe()
                         phase = .ready
                     }
                 )
@@ -38,9 +39,29 @@ struct ContentView: View {
             case .running(let folder, _):
                 RunningView(folder: folder, runner: runner)
 
-            case .done(let folder, let reportPath, _):
+            case .serving(let folder, let reportURL, _):
                 DoneView(
-                    reportPath: reportPath,
+                    reportURL: reportURL,
+                    runner: runner,
+                    onRunAgain: {
+                        runner.stopServe()
+                        let result = FolderValidator.check(folder: folder)
+                        phase = .selected(
+                            folder: folder,
+                            fileCount: result.fileCount,
+                            hasExistingOutput: result.hasExistingOutput
+                        )
+                    },
+                    onStartOver: {
+                        runner.stopServe()
+                        phase = .ready
+                    }
+                )
+
+            case .done(let folder, let reportPath, _):
+                // Fallback — only reached if serve fails to start
+                DoneView(
+                    reportURL: reportPath.map { "file://\($0)" },
                     runner: runner,
                     onRunAgain: {
                         let result = FolderValidator.check(folder: folder)
@@ -59,15 +80,43 @@ struct ContentView: View {
         .frame(minWidth: 480, minHeight: 400)
         .padding()
         .onChange(of: runner.isRunning) { wasRunning, isNowRunning in
-            // When the process finishes, transition to done
+            // When the pipeline finishes, launch serve mode
             if wasRunning && !isNowRunning {
                 if case .running(let folder, _) = phase {
-                    phase = .done(
-                        folder: folder,
-                        reportPath: runner.reportPath,
-                        lines: runner.outputLines
-                    )
+                    if runner.exitCode == 0 {
+                        launchServe(folder: folder)
+
+                        // Fallback: if serve doesn't produce a URL within 5s,
+                        // fall back to file:// report path
+                        Task {
+                            try? await Task.sleep(for: .seconds(5))
+                            if case .running(let f, _) = phase {
+                                phase = .done(
+                                    folder: f,
+                                    reportPath: runner.reportPath,
+                                    lines: runner.outputLines
+                                )
+                            }
+                        }
+                    } else {
+                        // Pipeline failed — show done state with error
+                        phase = .done(
+                            folder: folder,
+                            reportPath: runner.reportPath,
+                            lines: runner.outputLines
+                        )
+                    }
                 }
+            }
+        }
+        .onChange(of: runner.serveURL) { _, newURL in
+            // When serve detects its URL, transition to serving state
+            if let url = newURL, case .running(let folder, _) = phase {
+                phase = .serving(
+                    folder: folder,
+                    reportURL: url,
+                    lines: runner.outputLines
+                )
             }
         }
     }
@@ -76,9 +125,30 @@ struct ContentView: View {
 
     /// Locate the bundled sidecar binary and launch it.
     private func launchPipeline(command: String, folder: URL, extraArgs: [String] = []) {
-        // For release: use the bundled sidecar from the app's Resources.
-        // For development: search common install locations.
-        let sidecarURL: URL
+        let (sidecarURL, env) = Self.resolveSidecar()
+
+        runner.run(
+            executableURL: sidecarURL,
+            arguments: [command] + extraArgs + [folder.path],
+            environment: env
+        )
+    }
+
+    /// Launch `bristlenose serve` in the background after the pipeline completes.
+    private func launchServe(folder: URL) {
+        let (sidecarURL, env) = Self.resolveSidecar()
+
+        runner.startServe(
+            executableURL: sidecarURL,
+            arguments: ["serve", "--no-open", folder.path],
+            environment: env
+        )
+    }
+
+    // MARK: - Sidecar resolution
+
+    /// Find the sidecar binary and build the environment for it.
+    private static func resolveSidecar() -> (URL, [String: String]) {
         var env: [String: String] = [:]
 
         if let resourcePath = Bundle.main.resourcePath {
@@ -86,7 +156,7 @@ struct ContentView: View {
                 .appendingPathComponent("bristlenose-sidecar")
                 .appending("/bristlenose-sidecar")
             if FileManager.default.isExecutableFile(atPath: sidecarPath) {
-                sidecarURL = URL(fileURLWithPath: sidecarPath)
+                let sidecarURL = URL(fileURLWithPath: sidecarPath)
 
                 // Prepend Resources dir to PATH so bundled ffmpeg/ffprobe are found
                 let currentPath = ProcessInfo.processInfo.environment["PATH"] ?? "/usr/bin:/bin"
@@ -97,20 +167,12 @@ struct ContentView: View {
                 env["BRISTLENOSE_WHISPER_MODEL_DIR"] = modelsPath
                 env["BRISTLENOSE_WHISPER_MODEL"] = "small.en"
                 env["BRISTLENOSE_WHISPER_BACKEND"] = "faster-whisper"
-            } else {
-                sidecarURL = Self.findDevBinary()
+
+                return (sidecarURL, env)
             }
-        } else {
-            sidecarURL = Self.findDevBinary()
         }
 
-        // TODO: Add ANTHROPIC_API_KEY from Keychain or bundled fallback
-
-        runner.run(
-            executableURL: sidecarURL,
-            arguments: [command] + extraArgs + [folder.path],
-            environment: env
-        )
+        return (findDevBinary(), env)
     }
 
     /// Search common locations for the bristlenose CLI binary (dev mode only).

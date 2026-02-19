@@ -2,7 +2,7 @@ import SwiftUI
 import AppKit
 
 struct DoneView: View {
-    let reportPath: String?
+    let reportURL: String?
     @ObservedObject var runner: ProcessRunner
     var onRunAgain: () -> Void
     var onStartOver: () -> Void
@@ -16,6 +16,23 @@ struct DoneView: View {
                     .font(.title2)
                 Text("Analysis complete")
                     .font(.headline)
+            }
+
+            // Server status
+            if runner.isServing {
+                HStack(spacing: 6) {
+                    Circle()
+                        .fill(.green)
+                        .frame(width: 8, height: 8)
+                    Text("Serving report")
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
+                    if let url = reportURL {
+                        Text(url)
+                            .font(.system(.caption, design: .monospaced))
+                            .foregroundStyle(.tertiary)
+                    }
+                }
             }
 
             // Log area (collapsed, scrollable)
@@ -42,23 +59,17 @@ struct DoneView: View {
             )
 
             // View Report button
-            if let path = reportPath {
+            if let urlString = reportURL {
                 HStack(spacing: 12) {
-                    Button(action: { openReport(path: path) }) {
+                    Button(action: { openReport(urlString: urlString) }) {
                         Label("View Report", systemImage: "safari")
                     }
                     .buttonStyle(.borderedProminent)
                     .controlSize(.large)
-
-                    Text(URL(fileURLWithPath: path).lastPathComponent)
-                        .font(.callout)
-                        .foregroundStyle(.secondary)
-                        .lineLimit(1)
-                        .truncationMode(.middle)
                 }
             } else {
                 Label(
-                    "Report file not found — check the output folder",
+                    "Report not available — check the output folder",
                     systemImage: "exclamationmark.triangle"
                 )
                 .foregroundStyle(.orange)
@@ -82,8 +93,9 @@ struct DoneView: View {
         }
     }
 
-    private func openReport(path: String) {
-        let url = URL(fileURLWithPath: path)
-        NSWorkspace.shared.open(url)
+    private func openReport(urlString: String) {
+        if let url = URL(string: urlString) {
+            NSWorkspace.shared.open(url)
+        }
     }
 }

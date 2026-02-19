@@ -1,6 +1,10 @@
 import Foundation
 
 /// Spawns a bundled CLI binary and streams stdout line-by-line to the UI.
+///
+/// Manages two processes:
+/// - The **pipeline** process (`run` / `render`) — runs to completion.
+/// - The **serve** process (`serve`) — runs in the background until stopped.
 @MainActor
 class ProcessRunner: ObservableObject {
     @Published var outputLines: [String] = []
@@ -11,7 +15,15 @@ class ProcessRunner: ObservableObject {
     /// contains a `file://` URL.
     @Published var reportPath: String?
 
+    /// The serve mode URL (e.g. "http://127.0.0.1:8150/report/"), detected
+    /// from the serve process output.
+    @Published var serveURL: String?
+
+    /// Whether the serve process is currently running.
+    @Published var isServing = false
+
     private var process: Process?
+    private var serveProcess: Process?
 
     /// Launch a bundled executable with the given arguments and environment.
     func run(
@@ -78,6 +90,73 @@ class ProcessRunner: ObservableObject {
         }
     }
 
+    /// Launch the serve process in the background. Runs until explicitly
+    /// stopped via `stopServe()` or app termination.
+    func startServe(
+        executableURL: URL,
+        arguments: [String],
+        environment: [String: String] = [:]
+    ) {
+        stopServe()  // kill any existing serve process
+        serveURL = nil
+
+        let proc = Process()
+        self.serveProcess = proc
+        proc.executableURL = executableURL
+        proc.arguments = arguments
+
+        var env = ProcessInfo.processInfo.environment
+        for (key, value) in environment {
+            env[key] = value
+        }
+        proc.environment = env
+
+        let pipe = Pipe()
+        proc.standardOutput = pipe
+        proc.standardError = pipe
+
+        let handle = pipe.fileHandleForReading
+
+        let readTask = Task.detached { [weak self] in
+            let fileHandle = handle
+            while true {
+                let data = fileHandle.availableData
+                if data.isEmpty { break }
+
+                if let chunk = String(data: data, encoding: .utf8) {
+                    let lines = chunk.components(separatedBy: "\n")
+                    for line in lines where !line.isEmpty {
+                        await self?.handleServeLine(line)
+                    }
+                }
+            }
+        }
+        _ = readTask
+
+        proc.terminationHandler = { [weak self] _ in
+            Task { @MainActor in
+                self?.isServing = false
+            }
+        }
+
+        do {
+            try proc.run()
+            isServing = true
+        } catch {
+            outputLines.append("Failed to launch serve: \(error.localizedDescription)")
+        }
+    }
+
+    /// Stop the background serve process.
+    func stopServe() {
+        if let proc = serveProcess, proc.isRunning {
+            proc.terminate()
+        }
+        serveProcess = nil
+        isServing = false
+        serveURL = nil
+    }
+
     func cancel() {
         process?.terminate()
     }
@@ -121,6 +200,24 @@ class ProcessRunner: ObservableObject {
                 if FileManager.default.fileExists(atPath: candidate.path) {
                     reportPath = candidate.path
                 }
+            }
+        }
+    }
+
+    /// Parse serve process output to detect the report URL.
+    /// The CLI prints: "  Report: http://127.0.0.1:8150/report/"
+    private func handleServeLine(_ line: String) {
+        let cleanLine = line.replacingOccurrences(
+            of: "\\e\\[[0-9;]*m|\\e\\]8;;[^\\e]*\\e\\\\",
+            with: "",
+            options: .regularExpression
+        )
+
+        // Detect "Report: http://..." from serve output
+        if serveURL == nil, cleanLine.contains("Report:") {
+            if let range = cleanLine.range(of: "http://[^\\s]+",
+                                           options: .regularExpression) {
+                serveURL = String(cleanLine[range])
             }
         }
     }

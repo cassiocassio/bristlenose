@@ -6,7 +6,7 @@ import json
 import logging
 
 from bristlenose.llm.client import LLMClient
-from bristlenose.llm.prompts import QUOTE_CLUSTERING_PROMPT
+from bristlenose.llm.prompts import get_prompt
 from bristlenose.llm.structured import ScreenClusteringResult
 from bristlenose.models import ExtractedQuote, QuoteType, ScreenCluster
 from bristlenose.utils.timecodes import format_timecode
@@ -53,16 +53,12 @@ async def cluster_by_screen(
 
     quotes_json = json.dumps(quotes_for_llm, ensure_ascii=False, separators=(",", ":"))
 
-    prompt = QUOTE_CLUSTERING_PROMPT.format(quotes_json=quotes_json)
+    _prompt = get_prompt("quote-clustering")
 
     try:
         result = await llm_client.analyze(
-            system_prompt=(
-                "You are an expert user-research analyst. "
-                "You organise quotes from research sessions into coherent "
-                "screen-by-screen clusters."
-            ),
-            user_prompt=prompt,
+            system_prompt=_prompt.system,
+            user_prompt=_prompt.user.format(quotes_json=quotes_json),
             response_model=ScreenClusteringResult,
         )
     except Exception as exc:

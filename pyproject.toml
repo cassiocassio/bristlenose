@@ -57,7 +57,7 @@ bristlenose = "bristlenose.cli:app"
 packages = ["bristlenose"]
 
 [tool.hatch.build]
-artifacts = ["bristlenose/theme/**/*.css", "bristlenose/theme/**/*.js", "bristlenose/theme/**/*.png", "bristlenose/theme/**/*.html", "bristlenose/data/*", "bristlenose/server/static/**"]
+artifacts = ["bristlenose/theme/**/*.css", "bristlenose/theme/**/*.js", "bristlenose/theme/**/*.png", "bristlenose/theme/**/*.html", "bristlenose/data/*", "bristlenose/server/static/**", "bristlenose/llm/prompts/*.md"]
 
 [tool.hatch.version]
 path = "bristlenose/__init__.py"

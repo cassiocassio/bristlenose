@@ -153,7 +153,21 @@ Report quotes use a flexbox hanging-indent layout: timecodes sit in a left gutte
 
 ## Quote attribution and anonymisation boundary
 
-Quote attributions in the main report intentionally show **raw participant IDs** (`— p1`, `— p2`) instead of display names. This is the anonymisation boundary: when researchers copy quotes to external tools (Miro, presentations, etc.), the IDs protect participant identity.
+### Why speaker codes, not names
+
+The report uses two tiers of identity. **Speaker codes** (p1, p2) are the public-facing identity — they appear in quote attributions, CSV export, and clipboard copy. **Display names** (first names like "Mary") are a working tool for the research team.
+
+This separation exists for three reasons:
+
+1. **Stakeholder bias** — when findings are presented to product teams and executives, participant identity should not influence how feedback is received. A C-level decision about pricing strategy should be evaluated on the insight, not dismissed because of who said it. Speaker codes prevent stakeholders from forming judgements based on a participant's name, perceived gender, or ethnicity.
+
+2. **Participant protection** — team members with access to the report should not be able to look up participants on LinkedIn, contact them directly, or form inappropriate relationships. Codes create a practical barrier.
+
+3. **Research team workflow** — researchers, moderators, and observers who were on the call need names to recall who's who during analysis ("p3 — Mary — remember, she didn't like the pricing"). Display names serve this need without leaking into exported artifacts.
+
+The **export boundary** is where anonymisation matters most. CSV export and clipboard copy are how quotes end up in PowerPoint, Miro, and stakeholder presentations. These outputs use codes only. The planned share/export feature will strip display names from the HTML by default, making it safe for wider distribution. The HTML report file itself currently contains display names (in the session table and embedded `BN_PARTICIPANTS` JSON) — this is acceptable for the research team's working copy but means the `.html` file should not be shared externally without the upcoming anonymise-on-export feature.
+
+### Implementation
 
 - **Report quotes**: `_format_quote_html()` uses `pid_esc` for the `.speaker-link` text. `names.js` `updateAllReferences()` does NOT update `.speaker-link` text. Attribution uses `&nbsp;` around the em-dash (`"…text"&nbsp;—&nbsp;p1`) to prevent widowing at line breaks
 - **Transcript page headings**: show code prefix + display name (`m1 Sarah Chen`, `p5 Maya`) since headings are private to the researcher. Segment labels show raw codes (`p1:`)

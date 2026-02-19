@@ -6,7 +6,7 @@ import asyncio
 import logging
 
 from bristlenose.llm.client import LLMClient
-from bristlenose.llm.prompts import TOPIC_SEGMENTATION_PROMPT
+from bristlenose.llm.prompts import get_prompt
 from bristlenose.llm.structured import TopicSegmentationResult
 from bristlenose.models import (
     PiiCleanTranscript,
@@ -97,16 +97,11 @@ async def _segment_single(
     """Segment topics for a single transcript."""
     transcript_text = transcript.full_text()
 
-    prompt = TOPIC_SEGMENTATION_PROMPT.format(
-        transcript_text=transcript_text,
-    )
+    _prompt = get_prompt("topic-segmentation")
 
     result = await llm_client.analyze(
-        system_prompt=(
-            "You are an expert user-research analyst. "
-            "You identify topic and screen transitions in research interview transcripts."
-        ),
-        user_prompt=prompt,
+        system_prompt=_prompt.system,
+        user_prompt=_prompt.user.format(transcript_text=transcript_text),
         response_model=TopicSegmentationResult,
     )
 

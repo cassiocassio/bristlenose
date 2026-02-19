@@ -133,6 +133,15 @@ Multi-column quote grid using CSS `auto-fill`. Card max-width `23rem` (368px) ke
 | Snap store publishing | #45 | small |
 | Windows installer (winget) | #44 | medium |
 
+### Desktop app (macOS)
+
+| Item | Issue | Effort |
+|------|-------|--------|
+| Keychain: migrate from `security` CLI to native Security framework (SecItemAdd/SecItemCopyMatching/SecItemDelete) | — | small |
+| ReadyView: replace `NSOpenPanel.runModal()` with SwiftUI `.fileImporter(isPresented:)` | — | trivial |
+| ProcessRunner: replace `availableData` polling with `AsyncBytes` or `readabilityHandler` | — | small |
+| `hasAnyAPIKey()` only checks Anthropic — rename or extend to cover all providers | — | trivial |
+
 ### Performance
 
 See `docs/design-performance.md` for full audit, done items, and "not worth optimising" rationale.
@@ -187,6 +196,7 @@ These are too small for issues or are internal-only concerns.
 - [ ] **Framework acronym prefixes on badges** — small-caps 2–3 letter author prefix (e.g. `JJG`, `DN`, `PM`) on framework codebook tags. CSS class `.badge-framework-prefix` exists in `mockup-autocode-lifecycle.html`, typography spec in plan (`/Users/cassio/.claude/plans/swift-juggling-eich.md` → "Author acronym prefix"). Parked until we're ready to commit to the visual pattern
 - [ ] **Pass transcript data to renderer** — avoid redundant disk I/O in `render_html.py`
 - [ ] **People.yaml web UI** — in-report UI to update `people.yaml` for unidentified participants/observers/moderators (currently only have speaker codes, no display names). Part of Moderator Phase 2 (#25). **Tricky UX**: need to distinguish full name vs display name (researcher types "Sarah" — is that `full_name` or `short_name`?). May need explicit fields or a disambiguation prompt. Also PII concern: names in SQLite DB vs localStorage-only. Research how Dovetail handles naming. API endpoint (`PUT /people`) already exists and works — the missing piece is the HTML renderer (`.name-pencil` buttons not emitted) and the UX design. May defer or simplify
+- [ ] **Post-analysis review panel** — non-modal, dismissable panel shown after pipeline completes in serve mode. The GUI equivalent of dropping into `people.yaml` to fix things up, surfaced at the natural moment. Contents: sessions table with LLM-extracted names (full name, display name) for quick correction, token/cost summary, theme and coverage overview. Not a gate — researcher can dismiss and go straight to the report. Design as an expandable section on the dashboard or a top-of-page banner that appears once after the first run. Key insight: the researcher has context fresh in their head right after analysis; this is the best moment to review names, not later when they've forgotten who "Speaker B" was
 
 ### Transcript page interactions
 
@@ -267,7 +277,7 @@ Bristlenose has ~30 direct + transitive deps across Python, ML, LLM SDKs, and NL
 | `bristlenose/stages/render_html.py` | HTML report renderer — loads CSS + JS from theme/, all interactive features |
 | `bristlenose/theme/` | Atomic CSS design system (tokens, atoms, molecules, organisms, templates) |
 | `bristlenose/theme/js/` | Report JavaScript modules — concatenated at render time |
-| `bristlenose/llm/prompts.py` | LLM prompt templates |
+| `bristlenose/llm/prompts/` | LLM prompt templates (Markdown files + loader in `__init__.py`) |
 | `bristlenose/utils/hardware.py` | GPU/CPU auto-detection |
 | `bristlenose/doctor.py` | Doctor check logic (pure, no UI) — 7 checks (+ serve-mode checks planned), `run_all()`, `run_preflight()` |
 | `bristlenose/doctor_fixes.py` | Install-method-aware fix instructions |

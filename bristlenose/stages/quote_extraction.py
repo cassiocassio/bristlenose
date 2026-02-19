@@ -6,7 +6,7 @@ import asyncio
 import logging
 
 from bristlenose.llm.client import LLMClient
-from bristlenose.llm.prompts import QUOTE_EXTRACTION_PROMPT
+from bristlenose.llm.prompts import get_prompt
 from bristlenose.llm.structured import QuoteExtractionResult
 from bristlenose.models import (
     EmotionalTone,
@@ -129,19 +129,14 @@ async def _extract_single(
     # so the LLM understands context, but it must only extract participant quotes)
     transcript_text = transcript.full_text()
 
-    prompt = QUOTE_EXTRACTION_PROMPT.format(
-        topic_boundaries=boundaries_text,
-        transcript_text=transcript_text,
-    )
+    _prompt = get_prompt("quote-extraction")
 
     result = await llm_client.analyze(
-        system_prompt=(
-            "You are an expert user-research analyst extracting verbatim quotes. "
-            "You follow the editorial policy precisely: preserve authentic human "
-            "expression, remove filler with ellipsis, insert [clarifying words] "
-            "in square brackets, and never paraphrase or sanitise."
+        system_prompt=_prompt.system,
+        user_prompt=_prompt.user.format(
+            topic_boundaries=boundaries_text,
+            transcript_text=transcript_text,
         ),
-        user_prompt=prompt,
         response_model=QuoteExtractionResult,
     )
 

@@ -40,7 +40,7 @@ Quote exclusivity: **every quote appears in exactly one report section.** See `b
 
 Analysis page: `bristlenose/analysis/` computes signal concentration metrics from grouped quotes — no LLM calls, pure math. `_compute_analysis()` in `pipeline.py` is the glue (lazy import, called from all three pipeline methods). Renderer produces standalone `analysis.html` with JSON data injected into an IIFE. Client-side JS (`analysis.js`) builds signal cards and heatmaps. Confidence thresholds use strict `>` (not `>=`): strong requires conc > 2, moderate requires conc > 1.5. Cell keys use `"label|sentiment"` format — pipe characters in labels would create ambiguous keys (documented, not currently guarded). 97 tests across 4 files cover metrics, matrix building, signal detection, serialization, and HTML rendering end-to-end.
 
-LLM prompts: All prompt templates live in `bristlenose/llm/prompts.py`. When iterating on prompts, archive the old version to `bristlenose/llm/prompts-archive/` with naming convention `prompts_YYYY-MM-DD_description.py` (e.g., `prompts_2026-02-04_original-14-tags.py`). This folder is ignored by the application but tracked in git for easy comparison without digging through commit history. Future goal: allow users to customise prompts via config.
+LLM prompts: Each pipeline stage has a Markdown file in `bristlenose/llm/prompts/` (e.g. `topic-segmentation.md`, `quote-extraction.md`) containing both the system prompt and user prompt template, separated by `## System` and `## User` headings. The loader in `bristlenose/llm/prompts/__init__.py` reads these files, caches them, and exposes `get_prompt(name)` (returns `PromptPair` with `.system` and `.user`) plus backward-compatible string constants. When iterating on prompts, archive the old version to `bristlenose/llm/prompts-archive/` with naming convention `prompts_YYYY-MM-DD_description.md` (e.g., `prompts_2026-02-18_v1-topic-segmentation.md`). This folder is ignored by the application but tracked in git for easy comparison without digging through commit history. Future goal: allow users to customise prompts via config.
 
 Report JavaScript — 17 modules in `bristlenose/theme/js/`, concatenated in dependency order into a single `<script>` block by `render_html.py` (`_JS_FILES`). Transcript pages and codebook page use separate JS lists. See `bristlenose/theme/js/MODULES.md` for per-module API docs.
 
@@ -123,6 +123,7 @@ F401 is marked `unfixable` in `pyproject.toml` so `ruff check --fix` (and the Po
 - **Theme / dark mode / CSS conventions / gotchas**: `bristlenose/theme/CLAUDE.md`
 - **JS module API reference**: `bristlenose/theme/js/MODULES.md`
 - **CSS component reference**: `bristlenose/theme/CSS-REFERENCE.md`
+- **Responsive layout** (quote grid, density setting, breakpoints): `docs/design-responsive-layout.md`
 - **Pipeline stages / transcript format / output structure**: `bristlenose/stages/CLAUDE.md`
 - **LLM providers / credentials / concurrency**: `bristlenose/llm/CLAUDE.md`
 - **File map** (what lives where): `docs/file-map.md`
@@ -147,6 +148,7 @@ F401 is marked `unfixable` in `pyproject.toml` so `ruff check --fix` (and the Po
 - **Desktop app** (macOS, SwiftUI, PyInstaller sidecar, .dmg distribution): `docs/design-desktop-app.md` — vision, PRD, stack rationale, user flow, open questions. **Read this before working in `desktop/`**
 - **Serve mode milestone 1** (domain schema, importer, sessions API): `docs/design-serve-milestone-1.md`
 - **Codebook island** (migration audit, API design, drag-drop decisions): `docs/design-codebook-island.md`
+- **Security & privacy**: `SECURITY.md` — local-first design, credential storage, PII redaction, anonymisation boundary, vulnerability reporting
 - **Product roadmap**: `docs/ROADMAP.md`
 
 ## Working preferences

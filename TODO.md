@@ -93,6 +93,7 @@ This file contains: session reminders, feature groupings with context, items too
 | Item | Issue | Effort |
 |------|-------|--------|
 | CI: automate `.dmg` build on push (xcodebuild + PyInstaller in GitHub Actions, attach to release) | — | medium |
+| `.dmg` README: include "Open Anyway" instructions inside the disk image (visible when mounted) | — | trivial |
 | Homebrew formula: post_install for spaCy model | #42 | trivial |
 | Snap store publishing | #45 | small |
 | Windows installer (winget) | #44 | medium |

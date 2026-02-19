@@ -6,7 +6,7 @@ import json
 import logging
 
 from bristlenose.llm.client import LLMClient
-from bristlenose.llm.prompts import THEMATIC_GROUPING_PROMPT
+from bristlenose.llm.prompts import get_prompt
 from bristlenose.llm.structured import ThematicGroupingResult
 from bristlenose.models import ExtractedQuote, QuoteType, ThemeGroup
 from bristlenose.utils.timecodes import format_timecode
@@ -52,16 +52,12 @@ async def group_by_theme(
 
     quotes_json = json.dumps(quotes_for_llm, ensure_ascii=False, separators=(",", ":"))
 
-    prompt = THEMATIC_GROUPING_PROMPT.format(quotes_json=quotes_json)
+    _prompt = get_prompt("thematic-grouping")
 
     try:
         result = await llm_client.analyze(
-            system_prompt=(
-                "You are an expert user-research analyst. "
-                "You identify emergent themes across participant quotes "
-                "about their broader context, workflows, and experiences."
-            ),
-            user_prompt=prompt,
+            system_prompt=_prompt.system,
+            user_prompt=_prompt.user.format(quotes_json=quotes_json),
             response_model=ThematicGroupingResult,
         )
     except Exception as exc:

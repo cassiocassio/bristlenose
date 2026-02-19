@@ -166,7 +166,7 @@ async def identify_speaker_roles_llm(
         an empty list if the LLM call fails.
     """
     from bristlenose.llm.client import LLMClient
-    from bristlenose.llm.prompts import SPEAKER_IDENTIFICATION_PROMPT
+    from bristlenose.llm.prompts import get_prompt
 
     client: LLMClient = llm_client  # type: ignore[assignment]
 
@@ -188,16 +188,16 @@ async def identify_speaker_roles_llm(
         seg.speaker_label or "Unknown" for seg in segments
     ))
 
-    prompt = SPEAKER_IDENTIFICATION_PROMPT.format(
-        transcript_sample=sample_text,
-        speaker_list=", ".join(unique_speakers),
-    )
+    _prompt = get_prompt("speaker-identification")
 
     try:
         from bristlenose.llm.structured import SpeakerRoleAssignment
         result = await client.analyze(
-            system_prompt="You are an expert at analysing user-research interview transcripts.",
-            user_prompt=prompt,
+            system_prompt=_prompt.system,
+            user_prompt=_prompt.user.format(
+                transcript_sample=sample_text,
+                speaker_list=", ".join(unique_speakers),
+            ),
             response_model=SpeakerRoleAssignment,
         )
 

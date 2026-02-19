@@ -1,0 +1,386 @@
+id: garrett
+title: The Elements of User Experience
+author: Jesse James Garrett
+enabled: true
+
+description: >
+  Five mutually exclusive planes from abstract strategy to concrete surface
+  design. A top-down framework for placing findings in the UX decision
+  hierarchy. Each plane describes a different layer of product decisions —
+  from why we build it (Strategy) to what it looks like (Surface).
+
+author_bio: >
+  Co-founder of Adaptive Path. Coined the term "Ajax" and created the
+  five-plane model that became foundational to UX practice. Author of
+  "The Elements of User Experience: User-Centered Design for the Web
+  and Beyond" (2002, 2nd edition 2010).
+
+author_links:
+  - label: jjg.net
+    url: https://jjg.net
+  - label: Amazon US
+    url: https://www.amazon.com/dp/0321683684
+  - label: Amazon UK
+    url: https://www.amazon.co.uk/dp/0321683684
+
+preamble: >
+  The following tags describe five layers of a designed product or interface,
+  from abstract to concrete. The layers are mutually exclusive — a finding
+  belongs on one plane, not multiple. When a quote could arguably sit on two
+  planes, choose the one that best describes what the participant is reacting
+  to: the conceptual organisation, or the specific interface element. If the
+  participant is not discussing a designed product, interface, or service, do
+  not apply any tag from this codebook.
+
+groups:
+  # -------------------------------------------------------------------
+  # Strategy — why we build it
+  # -------------------------------------------------------------------
+  - name: Strategy
+    subtitle: Is the product solving the right problem for the right users?
+    colour_set: ux
+    tags:
+      - name: user need
+        definition: >
+          A core problem or desire the participant brings to the product —
+          the reason they showed up in the first place.
+        apply_when: >
+          The participant describes what they came to do, what problem they
+          need solved, or what outcome they are trying to achieve at a
+          fundamental level. Look for "I need," "I'm looking for," "what I
+          really want is."
+        not_this: >
+          If they name a specific absent feature or content type, that's
+          feature requirement or content requirement (Scope). User need is
+          the underlying motivation, not a particular solution to it.
+
+      - name: business objective
+        definition: >
+          Evidence of what the organisation behind the product is optimising
+          for — revenue, retention, conversion, brand positioning.
+        apply_when: >
+          The participant notices or reacts to a design decision that appears
+          to serve the business rather than the user, or comments on the
+          commercial intent behind a feature. Look for "they obviously want
+          me to," "this feels like a sales thing," "I can tell they're
+          trying to."
+        not_this: >
+          If the participant is questioning whether the product's overall
+          offering matches their needs, that's value proposition. Business
+          objective is about the organisation's goals being visible in the
+          design, not the participant's own goals.
+
+      - name: success metric
+        definition: >
+          How the participant judges whether the product delivered on its
+          promise — their personal criteria for success or failure.
+        apply_when: >
+          The participant states criteria for evaluating the product,
+          compares against a personal benchmark, or describes what "good"
+          would look like. Look for "if it could just," "the test for me
+          is," "what matters is whether."
+        not_this: >
+          If the participant is describing what they came to do rather than
+          how they judge success, that's user need. If they are weighing
+          whether the trade-off is worth it, that's value proposition.
+
+      - name: value proposition
+        definition: >
+          The participant's assessment of whether the product's overall
+          offering is worth their time, money, or attention — the
+          cost-benefit equation.
+        apply_when: >
+          The participant weighs the product against alternatives, questions
+          whether it's worth the effort, or evaluates the whole proposition.
+          Look for "why would I use this instead of," "it's not worth,"
+          "the appeal is."
+        not_this: >
+          If the participant is describing a specific unmet need, that's
+          user need. If they notice the business trying to push a behaviour,
+          that's business objective. Value proposition is the overall "is
+          this for me?" judgement.
+
+  # -------------------------------------------------------------------
+  # Scope — what it includes and excludes
+  # -------------------------------------------------------------------
+  - name: Scope
+    subtitle: What features and content are included or excluded?
+    colour_set: emo
+    tags:
+      - name: feature requirement
+        definition: >
+          A functional capability that the participant expects, requests,
+          or notes is missing — a tool, action, or interactive behaviour.
+        apply_when: >
+          The participant says they want to do something the product
+          doesn't let them do, or praises a feature that exists. The gap
+          is functional: a filter, a sort, a comparison, a save. Look for
+          "can I," "there's no way to," "it would be useful if."
+        not_this: >
+          If the gap is informational rather than functional — missing
+          text, specs, images, descriptions — that's content requirement.
+          If the participant questions whether the feature should exist at
+          all given the product's purpose, that's scope creep.
+
+      - name: content requirement
+        definition: >
+          Information, media, or editorial content that the participant
+          expects to find — text, specifications, images, guides,
+          descriptions.
+        apply_when: >
+          The participant notes that information is absent, insufficient,
+          or poorly written. The gap is informational, not functional.
+          Look for "they don't have any," "there's no info about," "I'd
+          want to see [data/specs/photos]."
+        not_this: >
+          If the participant wants to do something (filter, sort, compare)
+          rather than read something, that's feature requirement. If the
+          content exists but is in the wrong place, that's information
+          architecture (Structure).
+
+      - name: priority
+        definition: >
+          The participant's judgement about what matters most or least —
+          which features or content deserve more or less attention.
+        apply_when: >
+          The participant ranks, compares, or triages features or content
+          areas by importance. Look for "the most important thing is," "I
+          don't care about X but Y is essential," "if I had to choose."
+        not_this: >
+          If the participant is simply noting that something is missing,
+          that's feature requirement or content requirement. Priority is
+          about relative importance between things, not about the presence
+          or absence of a single thing.
+
+      - name: scope creep
+        definition: >
+          The product tries to do too much, includes unnecessary features,
+          or has strayed from its core purpose.
+        apply_when: >
+          The participant feels the product is bloated, unfocused, or
+          includes things that don't belong. Look for "why does it have,"
+          "this is trying to do too much," "I don't need all this."
+        not_this: >
+          If the participant is questioning the overall purpose rather
+          than noting excess, that's value proposition (Strategy). Scope
+          creep is about the product overreaching, not about whether its
+          core proposition is right.
+
+  # -------------------------------------------------------------------
+  # Structure — conceptual organisation
+  # -------------------------------------------------------------------
+  - name: Structure
+    subtitle: How is information organised conceptually?
+    colour_set: task
+    tags:
+      - name: interaction design
+        definition: >
+          How the product defines the behaviour of interactive elements in
+          response to user actions — the rules of what happens when you do
+          things.
+        apply_when: >
+          The participant comments on how the system responds to actions at
+          a conceptual level: state changes, transitions, rules governing
+          behaviour. Look for "when I do X it does Y," "I expected it to
+          behave like," "the way it handles."
+        not_this: >
+          If the participant is talking about where content lives in a
+          category hierarchy, that's information architecture. If they're
+          describing a specific sequence of steps to complete a goal,
+          that's task flow. Interaction design is about the behavioural
+          rules of individual elements.
+
+      - name: information architecture
+        definition: >
+          How content is categorised, labelled, and related — the
+          conceptual structure of where things belong and how they connect.
+        apply_when: >
+          The participant expresses confusion or satisfaction about how
+          content is grouped, where a category boundary falls, or what
+          belongs together. Look for "I would have expected X to be under
+          Y," "why is this here," "the way they've organised."
+        not_this: >
+          If the participant is commenting on specific navigation controls
+          (menus, links, breadcrumbs), that's navigation pattern. If
+          they're reacting to the visual position of an element on screen,
+          that's interface layout (Skeleton). Information architecture is
+          about the conceptual model of where things belong, not the UI
+          that exposes it.
+
+      - name: navigation pattern
+        definition: >
+          The conceptual approach to moving through the product — how
+          paths, links, and wayfinding structures are designed as a system.
+        apply_when: >
+          The participant describes how they move between areas, whether
+          routes feel logical, or how wayfinding works as a system. Look
+          for "I keep having to go back to," "there's no way to get from
+          X to Y," "the navigation makes sense."
+        not_this: >
+          If the participant is talking about where a specific menu or
+          link sits on the page, that's component placement (Skeleton).
+          If they're describing the category structure rather than the
+          paths between areas, that's information architecture. Navigation
+          pattern is about the system of paths, not individual controls
+          or category groupings.
+
+      - name: task flow
+        definition: >
+          The sequence of steps required to accomplish a goal — whether
+          the path from intent to completion is logical, efficient, and
+          predictable.
+        apply_when: >
+          The participant describes a multi-step process, comments on step
+          ordering, or notes friction in a sequence of actions toward a
+          goal. Look for "first I had to X, then Y," "why do I have to do
+          this before that," "the process is."
+        not_this: >
+          If the participant is commenting on how a single element
+          behaves, that's interaction design. If they're describing
+          wayfinding between areas rather than steps in a process, that's
+          navigation pattern. Task flow is about the end-to-end sequence
+          toward a goal.
+
+  # -------------------------------------------------------------------
+  # Skeleton — element arrangement
+  # -------------------------------------------------------------------
+  - name: Skeleton
+    subtitle: How are interface elements arranged?
+    colour_set: trust
+    tags:
+      - name: interface layout
+        definition: >
+          The overall spatial arrangement of a page or screen — how
+          regions, columns, whitespace, and content blocks are distributed.
+        apply_when: >
+          The participant reacts to the overall page structure: crowded or
+          spacious, balanced or lopsided, scannable or overwhelming. Look
+          for "this page feels," "there's too much going on," "the layout
+          is clean."
+        not_this: >
+          If the participant is commenting on where a specific element
+          sits rather than the overall layout, that's component placement.
+          If they're reacting to visual aesthetics (colours, fonts,
+          imagery), that's Surface. Interface layout is about spatial
+          structure, not the identity of individual elements or their
+          visual treatment.
+
+      - name: wireframe issue
+        definition: >
+          A problem with the structural skeleton of the interface that
+          would be visible even without visual styling — content
+          hierarchy, element sizing, reading order.
+        apply_when: >
+          The participant notes that something important is de-emphasised,
+          something minor is too prominent, or the visual hierarchy
+          doesn't match importance. Look for "this should be bigger," "I
+          almost missed," "why is this so prominent."
+        not_this: >
+          If the problem is about where an element is positioned, that's
+          component placement. If it's about the overall page density,
+          that's interface layout. Wireframe issue is about content
+          hierarchy and emphasis — the relative visual weight of elements.
+
+      - name: convention
+        definition: >
+          Whether the interface follows or breaks established UI
+          conventions that users bring from other products.
+        apply_when: >
+          The participant expects an element to behave or appear the way
+          it does on other sites, or is surprised when a standard pattern
+          is absent. Look for "usually you can," "on other sites," "I'd
+          expect this to work like."
+        not_this: >
+          If the participant is describing conceptual organisation rather
+          than interface conventions, that's information architecture
+          (Structure). If the comment is about visual styling norms,
+          that's brand alignment (Surface). Convention is about
+          behavioural and layout patterns users expect from prior product
+          experience.
+
+      - name: component placement
+        definition: >
+          Where a specific interface element (button, link, menu, form
+          field) is positioned on the page and whether that position is
+          findable and logical.
+        apply_when: >
+          The participant comments on where a particular control or
+          element sits: easy to find, buried, in the wrong place, or
+          perfectly positioned. Look for "I can't find the," "this should
+          be up here," "the button is right where I expected."
+        not_this: >
+          If the participant is describing the overall page composition,
+          that's interface layout. If they're talking about paths between
+          pages rather than the position of a control on one page, that's
+          navigation pattern (Structure). Component placement is about one
+          specific element's location.
+
+  # -------------------------------------------------------------------
+  # Surface — visual treatment
+  # -------------------------------------------------------------------
+  - name: Surface
+    subtitle: What is the visual treatment?
+    colour_set: opp
+    tags:
+      - name: visual design
+        definition: >
+          The quality and effectiveness of the visual presentation —
+          colour, typography, imagery, iconography, and graphic treatment.
+        apply_when: >
+          The participant comments on specific visual elements: photos,
+          colours, fonts, icons, graphics. Look for "the photos are," "I
+          like the colours," "the icons are," "the font is."
+        not_this: >
+          If the participant is describing an overall emotional or sensory
+          impression rather than specific visual elements, that's sensory
+          experience. If they're judging whether the visuals match the
+          brand's identity, that's brand alignment. Visual design is about
+          the craft of individual visual elements.
+
+      - name: sensory experience
+        definition: >
+          The overall feel, mood, or atmosphere the product creates
+          through its combined visual, motion, and auditory design.
+        apply_when: >
+          The participant describes an overall impression or emotional
+          response to how the product looks and feels as a whole, rather
+          than specific elements. Look for "it feels premium," "this
+          looks cheap," "the whole vibe is," "it gives me a sense of."
+        not_this: >
+          If the participant points to a specific visual element (a photo,
+          a colour, an icon), that's visual design. If they're judging
+          authenticity or trustworthiness rather than atmosphere, that's
+          brand alignment. Sensory experience is the holistic feel, not
+          individual elements or brand judgements.
+
+      - name: brand alignment
+        definition: >
+          Whether the visual presentation communicates the right identity,
+          credibility, and market positioning for the brand.
+        apply_when: >
+          The participant judges whether the product looks like it belongs
+          to its category, appears trustworthy, or matches expectations
+          for the kind of business it is. Look for "it looks
+          professional," "this doesn't look like a real shop," "it feels
+          like a proper [specialist/retailer/brand]."
+        not_this: >
+          If the participant is reacting to the general mood or
+          atmosphere, that's sensory experience. If they're commenting on
+          specific visual elements, that's visual design. Brand alignment
+          is about what the visuals communicate about the organisation's
+          identity and credibility.
+
+      - name: aesthetic reaction
+        definition: >
+          The participant's immediate, subjective response to visual
+          beauty or ugliness — pure taste rather than analysis.
+        apply_when: >
+          The participant expresses a gut reaction to visual appeal
+          without analysing why: they simply like or dislike how it looks.
+          Look for "that's nice," "ugh," "I love this," "that's ugly," or
+          non-verbal reactions to visual elements.
+        not_this: >
+          If the participant explains what specifically they like or
+          dislike (photos, colours, fonts), that's visual design. If they
+          describe an overall mood, that's sensory experience. Aesthetic
+          reaction is the unanalysed gut response — taste, not critique.

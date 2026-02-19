@@ -1,0 +1,118 @@
+id: uxr
+title: Bristlenose UXR Codebook
+author: ""
+enabled: true
+
+description: >
+  A domain-agnostic codebook for any user research study. Ten theme
+  categories that emerge bottom-up from behavioural observation,
+  emotional response, and contextual analysis. Works equally well
+  whether the research is about fishkeeping, rock climbing, poodle
+  grooming, or product evaluation — these are universal patterns of
+  human experience, motivation, and interaction.
+
+author_bio: >
+  This is the default codebook — it provides a general-purpose
+  qualitative coding framework that applies to any domain. Unlike the
+  Research Leaders codebooks (Garrett, Norman, Morville), which focus
+  on designed artefacts and UX-specific concepts, these ten categories
+  capture the full range of human experience themes that emerge in
+  qualitative research.
+
+author_links: []
+
+preamble: ""
+
+groups:
+  - name: Behavioural patterns
+    subtitle: What users do vs what they say
+    colour_set: ux
+    tags:
+      - name: workaround
+      - name: say-do gap
+      - name: error recovery
+      - name: habit
+      - name: avoidance
+
+  - name: Pain points and friction
+    subtitle: Confusion, hesitation, abandonment
+    colour_set: emo
+    tags:
+      - name: confusion
+      - name: hesitation
+      - name: abandonment
+      - name: dead end
+      - name: frustration trigger
+
+  - name: Unmet needs and latent desires
+    subtitle: Not explicitly requested but emerged from behaviour
+    colour_set: emo
+    tags:
+      - name: latent need
+      - name: compensatory behaviour
+      - name: feature gap
+      - name: desire path
+
+  - name: Expectations and mental models
+    subtitle: How users conceptualise the system or domain
+    colour_set: task
+    tags:
+      - name: mental model
+      - name: assumption
+      - name: prior experience
+      - name: conceptual mismatch
+
+  - name: Motivations and goals
+    subtitle: Underlying jobs-to-be-done
+    colour_set: task
+    tags:
+      - name: primary goal
+      - name: secondary goal
+      - name: job-to-be-done
+      - name: trigger
+      - name: barrier
+
+  - name: Trust, confidence, and emotional response
+    subtitle: Feelings at key decision points
+    colour_set: trust
+    tags:
+      - name: trust signal
+      - name: anxiety moment
+      - name: confidence builder
+      - name: emotional peak
+
+  - name: Environmental and contextual factors
+    subtitle: Interruptions, device switching, social influence
+    colour_set: trust
+    tags:
+      - name: interruption
+      - name: device switch
+      - name: social influence
+      - name: time pressure
+
+  - name: Learning and skill acquisition
+    subtitle: How people build competence
+    colour_set: opp
+    tags:
+      - name: learning curve
+      - name: aha moment
+      - name: skill plateau
+      - name: self-teaching
+
+  - name: Community and social dynamics
+    subtitle: Knowledge sharing, identity through domain
+    colour_set: opp
+    tags:
+      - name: knowledge sharing
+      - name: peer influence
+      - name: community norm
+      - name: identity signal
+
+  - name: Identity and self-concept
+    subtitle: How the activity relates to self-perception
+    colour_set: ux
+    tags:
+      - name: self-perception
+      - name: aspiration
+      - name: expertise identity
+      - name: beginner mindset

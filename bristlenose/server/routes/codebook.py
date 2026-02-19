@@ -7,7 +7,7 @@ from pydantic import BaseModel
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
-from bristlenose.server.codebook_templates import CODEBOOK_TEMPLATES, get_template
+from bristlenose.server.codebook import CODEBOOK_TEMPLATES, get_template
 from bristlenose.server.models import (
     _LEGACY_UNGROUPED_NAME,
     UNCATEGORISED_GROUP_NAME,
@@ -580,7 +580,7 @@ def _template_to_out(
     tmpl: object, *, imported: bool,
 ) -> TemplateOut:
     """Convert a CodebookTemplate dataclass to a TemplateOut response."""
-    from bristlenose.server.codebook_templates import CodebookTemplate
+    from bristlenose.server.codebook import CodebookTemplate
 
     t: CodebookTemplate = tmpl  # type: ignore[assignment]
     groups_out: list[TemplateGroupOut] = []

@@ -9,6 +9,7 @@ import type {
   CodebookGroupResponse,
   CodebookResponse,
   CodebookTagResponse,
+  RemoveFrameworkInfo,
   TemplateListResponse,
   TranscriptPageResponse,
 } from "./types";
@@ -51,6 +52,12 @@ async function apiPatch(path: string, body: unknown): Promise<void> {
 async function apiDelete(path: string): Promise<void> {
   const resp = await fetch(`${apiBase()}${path}`, { method: "DELETE" });
   if (!resp.ok) throw new Error(`DELETE ${path} ${resp.status}`);
+}
+
+async function apiDeleteJson<T>(path: string): Promise<T> {
+  const resp = await fetch(`${apiBase()}${path}`, { method: "DELETE" });
+  if (!resp.ok) throw new Error(`DELETE ${path} ${resp.status}`);
+  return resp.json() as Promise<T>;
 }
 
 function firePut(path: string, body: unknown): void {
@@ -159,6 +166,14 @@ export function importCodebookTemplate(templateId: string): Promise<CodebookResp
   return apiPost<CodebookResponse>("/codebook/import-template", {
     template_id: templateId,
   });
+}
+
+export function removeCodebookFramework(frameworkId: string): Promise<CodebookResponse> {
+  return apiDeleteJson<CodebookResponse>(`/codebook/remove-framework/${frameworkId}`);
+}
+
+export function getRemoveFrameworkImpact(frameworkId: string): Promise<RemoveFrameworkInfo> {
+  return apiGet<RemoveFrameworkInfo>(`/codebook/remove-framework/${frameworkId}/impact`);
 }
 
 // ---------------------------------------------------------------------------

@@ -177,6 +177,11 @@ export interface TemplateListResponse {
   templates: TemplateOut[];
 }
 
+export interface RemoveFrameworkInfo {
+  tag_count: number;
+  quote_count: number;
+}
+
 // ---------------------------------------------------------------------------
 // Transcript page API
 // ---------------------------------------------------------------------------

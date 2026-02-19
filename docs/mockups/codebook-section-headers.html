@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Codebook Section Headers — Style Audit</title>
+<style>
+/* ── Design tokens (subset from tokens.css) ──────────────────────────── */
+:root {
+    --bn-font-body: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
+    --bn-colour-bg: #ffffff;
+    --bn-colour-text: #1a1a1a;
+    --bn-colour-muted: #6b7280;
+    --bn-colour-border: #e5e7eb;
+    --bn-colour-accent: #2563eb;
+    --bn-colour-quote-bg: #f9fafb;
+    --bn-colour-negative: #dc2626;
+    --bn-colour-border-hover: #d1d5db;
+    --bn-hover-bg: rgba(0, 0, 0, 0.04);
+    --bn-hover-bg-subtle: rgba(0, 0, 0, 0.03);
+    --bn-space-xs: 0.15rem;
+    --bn-space-sm: 0.35rem;
+    --bn-space-md: 0.75rem;
+    --bn-space-lg: 1.5rem;
+    --bn-space-xl: 2rem;
+    --bn-radius-sm: 3px;
+    --bn-radius-md: 6px;
+    --bn-radius-lg: 8px;
+    --bn-transition-fast: 0.15s ease;
+    --bn-group-ux: oklch(97% 0.015 250);
+}
+
+/* ── Page layout ─────────────────────────────────────────────────────── */
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+    font-family: var(--bn-font-body);
+    color: var(--bn-colour-text);
+    background: var(--bn-colour-bg);
+    padding: 2rem 3rem;
+    max-width: 64rem;
+    line-height: 1.5;
+}
+.page-title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+}
+.page-desc {
+    font-size: 0.9rem;
+    color: var(--bn-colour-muted);
+    margin-bottom: 2.5rem;
+    max-width: 48rem;
+    line-height: 1.6;
+}
+.option {
+    margin-bottom: 3rem;
+    border: 1px solid var(--bn-colour-border);
+    border-radius: var(--bn-radius-lg);
+    padding: 1.5rem;
+}
+.option-header {
+    display: flex;
+    align-items: baseline;
+    gap: 0.75rem;
+    margin-bottom: 0.25rem;
+}
+.option-name {
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--bn-colour-accent);
+}
+.option-used-in {
+    font-size: 0.78rem;
+    color: var(--bn-colour-muted);
+    font-style: italic;
+}
+.option-desc {
+    font-size: 0.82rem;
+    color: var(--bn-colour-muted);
+    margin-bottom: 1.25rem;
+    line-height: 1.5;
+}
+.option-meta {
+    font-size: 0.72rem;
+    color: var(--bn-colour-muted);
+    margin-top: 1rem;
+    padding-top: 0.75rem;
+    border-top: 1px solid var(--bn-colour-border);
+    line-height: 1.6;
+}
+.option-meta code {
+    background: var(--bn-colour-quote-bg);
+    padding: 0.1em 0.35em;
+    border-radius: var(--bn-radius-sm);
+    font-size: 0.9em;
+}
+
+/* ── Demo content (fake group cards) ─────────────────────────────────── */
+.demo {
+    background: var(--bn-colour-quote-bg);
+    border-radius: var(--bn-radius-md);
+    padding: 1.25rem;
+}
+.demo-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--bn-space-lg);
+    align-items: start;
+}
+.demo-card {
+    background: var(--bn-group-ux);
+    border-radius: var(--bn-radius-lg);
+    padding: var(--bn-space-md);
+    min-height: 80px;
+}
+.demo-card-title {
+    font-size: 0.95rem;
+    font-weight: 600;
+}
+.demo-card-sub {
+    font-size: 0.78rem;
+    color: var(--bn-colour-muted);
+}
+.demo-tag {
+    display: inline-block;
+    font-size: 0.78rem;
+    padding: 0.15rem 0.4rem;
+    border-radius: var(--bn-radius-sm);
+    background: oklch(94% 0.03 250);
+    margin-top: 0.5rem;
+    margin-right: 0.25rem;
+}
+.demo-btn {
+    font-size: 0.78rem;
+    color: var(--bn-colour-muted);
+    background: var(--bn-colour-bg);
+    border: 1px solid var(--bn-colour-border);
+    border-radius: var(--bn-radius-sm);
+    padding: 0.3rem 0.8rem;
+    cursor: pointer;
+}
+.demo-btn:hover {
+    color: var(--bn-colour-negative);
+    border-color: var(--bn-colour-negative);
+}
+
+/* Shared full-span for grid children */
+.full-span { grid-column: 1 / -1; }
+</style>
+</head>
+<body>
+
+<div class="page-title">Codebook Framework Section Headers</div>
+<p class="page-desc">
+    The current <code>.framework-separator</code> is a custom one-off that doesn't match
+    anything else in the design system. Below are six alternatives built from existing
+    system styles. Each shows how it would look above a framework's group cards
+    (e.g. "Jesse James Garrett — The Elements of User Experience") with the
+    "Remove from Codebook" action button.
+</p>
+
+<!-- ─────────────────────────────────────────────────────────────────────── -->
+<!-- OPTION A -->
+<!-- ─────────────────────────────────────────────────────────────────────── -->
+<div class="option">
+    <div class="option-header">
+        <span class="option-name">A. Report &lt;h2&gt; — underline heading</span>
+        <span class="option-used-in">Used in: report sections ("Positive Findings", "Friction Points", etc.)</span>
+    </div>
+    <p class="option-desc">
+        The primary section divider in the HTML report. <code>&lt;h2&gt;</code> with a 2 px solid bottom border.
+        The button sits right-aligned on the same baseline row. Strong, clear hierarchy — the most
+        "native" option since it's how every other major section is introduced.
+    </p>
+
+    <div class="demo">
+        <div class="demo-grid">
+            <div class="full-span" style="
+                display: flex;
+                justify-content: space-between;
+                align-items: baseline;
+                border-bottom: 2px solid var(--bn-colour-border);
+                padding-bottom: 0.4rem;
+                margin-bottom: var(--bn-space-sm);
+            ">
+                <span style="font-size: 1.35rem; font-weight: 600;">Jesse James Garrett — The Elements of User Experience</span>
+                <button class="demo-btn" style="flex-shrink: 0; margin-left: 1rem;">Remove from Codebook</button>
+            </div>
+
+            <div class="demo-card">
+                <div class="demo-card-title">Strategy</div>
+                <div class="demo-card-sub">Goals and objectives</div>
+                <span class="demo-tag">user need</span>
+                <span class="demo-tag">business objective</span>
+            </div>
+            <div class="demo-card">
+                <div class="demo-card-title">Scope</div>
+                <div class="demo-card-sub">Features and content</div>
+                <span class="demo-tag">feature request</span>
+            </div>
+            <div class="demo-card">
+                <div class="demo-card-title">Structure</div>
+                <div class="demo-card-sub">Interaction design</div>
+                <span class="demo-tag">navigation</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="option-meta">
+        <strong>CSS:</strong> <code>h2 { font-size: 1.35rem; font-weight: 600; border-bottom: 2px solid var(--bn-colour-border); padding-bottom: 0.4rem; }</code><br>
+        <strong>Where it's used:</strong> report.css <code>h2</code> — every major report section (Positive Findings, Friction Points, Themes, etc.)<br>
+        <strong>Pros:</strong> Instantly recognised as a top-level section. Strong visual weight matches how frameworks are a "big structural thing."<br>
+        <strong>Cons:</strong> Might feel too heavy for content that lives inside the codebook grid — the codebook is already a section, these are sub-sections within it.
+    </div>
+</div>
+
+
+<!-- ─────────────────────────────────────────────────────────────────────── -->
+<!-- OPTION B -->
+<!-- ─────────────────────────────────────────────────────────────────────── -->
+<div class="option">
+    <div class="option-header">
+        <span class="option-name">B. Uppercase label + &lt;hr&gt; — overline pattern</span>
+        <span class="option-used-in">Used in: picker-section-title, group-total-label, signal-card-source, preview-section-label</span>
+    </div>
+    <p class="option-desc">
+        The small-caps "overline" label used in picker headers ("CODEBOOK FRAMEWORKS"),
+        codebook group totals ("TOTAL"), analysis signal cards ("SECTION · THEME"), and
+        template preview ("TAG GROUPS"). Paired with a standard <code>&lt;hr&gt;</code> above it
+        for visual separation. This is the most-reused label style in the system — using it for
+        framework section heads would be consistent.
+    </p>
+
+    <div class="demo">
+        <div class="demo-grid">
+            <div class="full-span">
+                <hr style="border: none; border-top: 1px solid var(--bn-colour-border); margin: 0 0 var(--bn-space-md);">
+                <div style="
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    margin-bottom: var(--bn-space-md);
+                ">
+                    <span style="font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--bn-colour-muted); font-weight: 600;">Jesse James Garrett — The Elements of User Experience</span>
+                    <button class="demo-btn" style="flex-shrink: 0; margin-left: 1rem;">Remove from Codebook</button>
+                </div>
+            </div>
+
+            <div class="demo-card">
+                <div class="demo-card-title">Strategy</div>
+                <div class="demo-card-sub">Goals and objectives</div>
+                <span class="demo-tag">user need</span>
+                <span class="demo-tag">business objective</span>
+            </div>
+            <div class="demo-card">
+                <div class="demo-card-title">Scope</div>
+                <div class="demo-card-sub">Features and content</div>
+                <span class="demo-tag">feature request</span>
+            </div>
+            <div class="demo-card">
+                <div class="demo-card-title">Structure</div>
+                <div class="demo-card-sub">Interaction design</div>
+                <span class="demo-tag">navigation</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="option-meta">
+        <strong>CSS:</strong> <code>.picker-section-title { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--bn-colour-muted); font-weight: 600; }</code> + <code>hr { border-top: 1px solid var(--bn-colour-border); }</code><br>
+        <strong>Where it's used:</strong>
+        <code>.picker-section-title</code> (codebook picker modal: "Codebook frameworks", "Your codebooks"),
+        <code>.group-total-label</code> (codebook panel: "TOTAL"),
+        <code>.signal-card-source</code> (analysis page: "SECTION · THEME"),
+        <code>.preview-section-label</code> (template preview: "TAG GROUPS")<br>
+        <strong>Pros:</strong> Most system-consistent option — reuses the exact token recipe that appears in 4+ places. Clearly subordinate to the main "Codebook" h1. The hr gives clear separation.<br>
+        <strong>Cons:</strong> Uppercase at small size might feel too subtle for author names, especially long ones like "Jesse James Garrett." Framework names lose their prestige.
+    </div>
+</div>
+
+
+<!-- ─────────────────────────────────────────────────────────────────────── -->
+<!-- OPTION C -->
+<!-- ─────────────────────────────────────────────────────────────────────── -->
+<div class="option">
+    <div class="option-header">
+        <span class="option-name">C. Muted &lt;h3&gt; — subsection heading</span>
+        <span class="option-used-in">Used in: report sub-sections (theme names, individual section titles)</span>
+    </div>
+    <p class="option-desc">
+        <code>&lt;h3&gt;</code> from the report (1.1rem, 600 weight, no border) but in muted colour.
+        Sits at the right hierarchy level: frameworks are subsections of the codebook page, not
+        top-level report sections. The <code>&lt;hr&gt;</code> above gives the structural break,
+        the heading below names the content. Button on the same line.
+    </p>
+
+    <div class="demo">
+        <div class="demo-grid">
+            <div class="full-span">
+                <hr style="border: none; border-top: 1px solid var(--bn-colour-border); margin: 0 0 var(--bn-space-md);">
+                <div style="
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    margin-bottom: var(--bn-space-sm);
+                ">
+                    <span style="font-size: 1.1rem; font-weight: 600; color: var(--bn-colour-muted);">Jesse James Garrett — The Elements of User Experience</span>
+                    <button class="demo-btn" style="flex-shrink: 0; margin-left: 1rem;">Remove from Codebook</button>
+                </div>
+            </div>
+
+            <div class="demo-card">
+                <div class="demo-card-title">Strategy</div>
+                <div class="demo-card-sub">Goals and objectives</div>
+                <span class="demo-tag">user need</span>
+                <span class="demo-tag">business objective</span>
+            </div>
+            <div class="demo-card">
+                <div class="demo-card-title">Scope</div>
+                <div class="demo-card-sub">Features and content</div>
+                <span class="demo-tag">feature request</span>
+            </div>
+            <div class="demo-card">
+                <div class="demo-card-title">Structure</div>
+                <div class="demo-card-sub">Interaction design</div>
+                <span class="demo-tag">navigation</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="option-meta">
+        <strong>CSS:</strong> <code>h3 { font-size: 1.1rem; font-weight: 600; }</code> + muted colour + <code>hr</code> above<br>
+        <strong>Where it's used:</strong> report.css <code>h3</code> — individual theme names, section sub-headings within the report<br>
+        <strong>Pros:</strong> Correct hierarchy (h3 under h1). Readable at normal size — respects the author name. Muted colour keeps it subordinate to group titles. hr provides clean separation.<br>
+        <strong>Cons:</strong> h3 has no border of its own, so relies on the hr above for visual weight.
+    </div>
+</div>
+
+
+<!-- ─────────────────────────────────────────────────────────────────────── -->
+<!-- OPTION D -->
+<!-- ─────────────────────────────────────────────────────────────────────── -->
+<div class="option">
+    <div class="option-header">
+        <span class="option-name">D. Modal header bar — border-bottom with subtitle</span>
+        <span class="option-used-in">Used in: codebook-modal-header, preview-header</span>
+    </div>
+    <p class="option-desc">
+        Borrows the modal/preview header pattern: title + subtitle stacked, with a 1px bottom border.
+        Button sits right-aligned. This is already used in the codebook modal itself, so it creates
+        a visual echo. Two-line format lets us split author from title.
+    </p>
+
+    <div class="demo">
+        <div class="demo-grid">
+            <div class="full-span" style="
+                display: flex;
+                justify-content: space-between;
+                align-items: flex-start;
+                padding-bottom: var(--bn-space-md);
+                border-bottom: 1px solid var(--bn-colour-border);
+                margin-bottom: var(--bn-space-md);
+            ">
+                <div>
+                    <div style="font-size: 1.1rem; font-weight: 600;">The Elements of User Experience</div>
+                    <div style="font-size: 0.82rem; color: var(--bn-colour-muted); margin-top: 0.15rem;">Jesse James Garrett</div>
+                </div>
+                <button class="demo-btn" style="flex-shrink: 0; margin-left: 1rem; margin-top: 0.2rem;">Remove from Codebook</button>
+            </div>
+
+            <div class="demo-card">
+                <div class="demo-card-title">Strategy</div>
+                <div class="demo-card-sub">Goals and objectives</div>
+                <span class="demo-tag">user need</span>
+                <span class="demo-tag">business objective</span>
+            </div>
+            <div class="demo-card">
+                <div class="demo-card-title">Scope</div>
+                <div class="demo-card-sub">Features and content</div>
+                <span class="demo-tag">feature request</span>
+            </div>
+            <div class="demo-card">
+                <div class="demo-card-title">Structure</div>
+                <div class="demo-card-sub">Interaction design</div>
+                <span class="demo-tag">navigation</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="option-meta">
+        <strong>CSS:</strong> <code>.codebook-modal-header { border-bottom: 1px solid var(--bn-colour-border); }</code> with <code>.codebook-modal-title { font-size: 1.1rem; font-weight: 600; }</code> + <code>.codebook-modal-subtitle { font-size: 0.82rem; color: var(--bn-colour-muted); }</code><br>
+        <strong>Where it's used:</strong>
+        <code>.codebook-modal-header</code> (Browse Codebooks modal title bar),
+        <code>.preview-header</code> (template preview: title + author + import button + 1px bottom border)<br>
+        <strong>Pros:</strong> Already used in the codebook flow — the import preview has exactly this layout. Splitting title/author into two lines is natural. The 1px border is lighter than h2's 2px.<br>
+        <strong>Cons:</strong> Could feel overly "modal-like" when it's inline content, not a contained dialog. More vertical space than Options B/C.
+    </div>
+</div>
+
+
+<!-- ─────────────────────────────────────────────────────────────────────── -->
+<!-- OPTION E -->
+<!-- ─────────────────────────────────────────────────────────────────────── -->
+<div class="option">
+    <div class="option-header">
+        <span class="option-name">E. Uppercase label only — no rule</span>
+        <span class="option-used-in">Used in: picker-section-title, preview-section-label</span>
+    </div>
+    <p class="option-desc">
+        Same uppercase label as Option B, but without the <code>&lt;hr&gt;</code>.
+        Relies on the grid gap alone for visual separation. This is how picker section
+        titles ("CODEBOOK FRAMEWORKS") and preview section labels ("TAG GROUPS") work —
+        they're labels within a flow, not hard dividers.
+    </p>
+
+    <div class="demo">
+        <div class="demo-grid">
+            <div class="full-span" style="
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                margin-top: var(--bn-space-sm);
+            ">
+                <span style="font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--bn-colour-muted); font-weight: 600;">Jesse James Garrett — The Elements of User Experience</span>
+                <button class="demo-btn" style="flex-shrink: 0; margin-left: 1rem;">Remove from Codebook</button>
+            </div>
+
+            <div class="demo-card">
+                <div class="demo-card-title">Strategy</div>
+                <div class="demo-card-sub">Goals and objectives</div>
+                <span class="demo-tag">user need</span>
+                <span class="demo-tag">business objective</span>
+            </div>
+            <div class="demo-card">
+                <div class="demo-card-title">Scope</div>
+                <div class="demo-card-sub">Features and content</div>
+                <span class="demo-tag">feature request</span>
+            </div>
+            <div class="demo-card">
+                <div class="demo-card-title">Structure</div>
+                <div class="demo-card-sub">Interaction design</div>
+                <span class="demo-tag">navigation</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="option-meta">
+        <strong>CSS:</strong> <code>.picker-section-title { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--bn-colour-muted); font-weight: 600; }</code><br>
+        <strong>Where it's used:</strong>
+        <code>.picker-section-title</code> (codebook picker modal),
+        <code>.preview-section-label</code> (template preview)<br>
+        <strong>Pros:</strong> Lightest touch — minimal visual noise. Works if frameworks are frequent and you don't want heavy dividers. Smallest vertical footprint.<br>
+        <strong>Cons:</strong> May not provide enough separation between researcher groups and framework groups. Long author names in all-caps can be hard to scan.
+    </div>
+</div>
+
+
+<!-- ─────────────────────────────────────────────────────────────────────── -->
+<!-- OPTION F -->
+<!-- ─────────────────────────────────────────────────────────────────────── -->
+<div class="option">
+    <div class="option-header">
+        <span class="option-name">F. Current custom — centred label with flanking lines</span>
+        <span class="option-used-in">Used in: codebook panel only (custom, not reused)</span>
+    </div>
+    <p class="option-desc">
+        The current <code>.framework-separator</code>: a centred label flanked by two flex-grown
+        1px lines. This is the one-off that prompted this audit — it exists nowhere else in the system.
+        Shown here for comparison.
+    </p>
+
+    <div class="demo">
+        <div class="demo-grid">
+            <div class="full-span" style="
+                display: flex;
+                align-items: center;
+                gap: var(--bn-space-md);
+                margin: var(--bn-space-sm) 0;
+            ">
+                <div style="flex: 1; height: 1px; background: var(--bn-colour-border);"></div>
+                <span style="font-size: 0.88rem; font-weight: 600; color: var(--bn-colour-text); white-space: nowrap;">Jesse James Garrett — The Elements of User Experience</span>
+                <div style="flex: 1; height: 1px; background: var(--bn-colour-border);"></div>
+            </div>
+            <div class="full-span" style="
+                display: flex;
+                justify-content: flex-end;
+                margin-bottom: var(--bn-space-sm);
+            ">
+                <button class="demo-btn">Remove from Codebook</button>
+            </div>
+
+            <div class="demo-card">
+                <div class="demo-card-title">Strategy</div>
+                <div class="demo-card-sub">Goals and objectives</div>
+                <span class="demo-tag">user need</span>
+                <span class="demo-tag">business objective</span>
+            </div>
+            <div class="demo-card">
+                <div class="demo-card-title">Scope</div>
+                <div class="demo-card-sub">Features and content</div>
+                <span class="demo-tag">feature request</span>
+            </div>
+            <div class="demo-card">
+                <div class="demo-card-title">Structure</div>
+                <div class="demo-card-sub">Interaction design</div>
+                <span class="demo-tag">navigation</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="option-meta">
+        <strong>CSS:</strong> <code>.framework-separator { display: flex; align-items: center; gap: var(--bn-space-md); }</code> + <code>.framework-separator-line { flex: 1; height: 1px; background: var(--bn-colour-border); }</code> + <code>.framework-separator-label { font-size: 0.88rem; font-weight: 600; }</code><br>
+        <strong>Where it's used:</strong> <code>codebook-panel.css</code> only — not reused anywhere else in the system<br>
+        <strong>Pros:</strong> Visually centred, decorative. Clear "here's a new section" signal.<br>
+        <strong>Cons:</strong> One-off pattern. Centred text + flanking lines is not used in any other Bristlenose surface. The button sits on a separate line, adding vertical space. The centred label doesn't accommodate a right-aligned action cleanly.
+    </div>
+</div>
+
+</body>
+</html>

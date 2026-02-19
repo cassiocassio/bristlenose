@@ -711,3 +711,141 @@ def import_template(
         return get_codebook(project_id, request)
     finally:
         db.close()
+
+
+# ---------------------------------------------------------------------------
+# Remove a framework
+# ---------------------------------------------------------------------------
+
+
+class RemoveFrameworkInfo(BaseModel):
+    """Impact stats returned before/during framework removal."""
+
+    tag_count: int
+    quote_count: int
+
+
+@router.delete("/projects/{project_id}/codebook/remove-framework/{framework_id}")
+def remove_framework(
+    project_id: int, framework_id: str, request: Request,
+) -> CodebookResponse:
+    """Remove all groups belonging to a framework from the project.
+
+    Deletes framework groups, their tag definitions, and any quote-tag
+    associations.  The framework can be re-imported afterwards.
+    """
+    db = _get_db(request)
+    try:
+        _check_project(db, project_id)
+
+        # Find all groups for this framework in this project
+        pcg_rows = (
+            db.query(ProjectCodebookGroup)
+            .filter_by(project_id=project_id)
+            .all()
+        )
+        group_ids = [pcg.codebook_group_id for pcg in pcg_rows]
+        if not group_ids:
+            raise HTTPException(status_code=404, detail="Framework not found")
+
+        fw_groups = (
+            db.query(CodebookGroup)
+            .filter(
+                CodebookGroup.id.in_(group_ids),
+                CodebookGroup.framework_id == framework_id,
+            )
+            .all()
+        )
+        if not fw_groups:
+            raise HTTPException(status_code=404, detail="Framework not found")
+
+        fw_group_ids = [g.id for g in fw_groups]
+
+        # Collect tag definition IDs
+        tag_defs = (
+            db.query(TagDefinition)
+            .filter(TagDefinition.codebook_group_id.in_(fw_group_ids))
+            .all()
+        )
+        tag_def_ids = [td.id for td in tag_defs]
+
+        # Delete quote-tag associations
+        if tag_def_ids:
+            db.query(QuoteTag).filter(
+                QuoteTag.tag_definition_id.in_(tag_def_ids),
+            ).delete(synchronize_session=False)
+
+        # Delete tag definitions
+        if tag_def_ids:
+            db.query(TagDefinition).filter(
+                TagDefinition.id.in_(tag_def_ids),
+            ).delete(synchronize_session=False)
+
+        # Remove project links
+        db.query(ProjectCodebookGroup).filter(
+            ProjectCodebookGroup.project_id == project_id,
+            ProjectCodebookGroup.codebook_group_id.in_(fw_group_ids),
+        ).delete(synchronize_session=False)
+
+        # Delete groups
+        db.query(CodebookGroup).filter(
+            CodebookGroup.id.in_(fw_group_ids),
+        ).delete(synchronize_session=False)
+
+        db.commit()
+        return get_codebook(project_id, request)
+    finally:
+        db.close()
+
+
+@router.get(
+    "/projects/{project_id}/codebook/remove-framework/{framework_id}/impact",
+)
+def remove_framework_impact(
+    project_id: int, framework_id: str, request: Request,
+) -> RemoveFrameworkInfo:
+    """Return impact stats for removing a framework (tag and quote counts)."""
+    db = _get_db(request)
+    try:
+        _check_project(db, project_id)
+
+        pcg_rows = (
+            db.query(ProjectCodebookGroup)
+            .filter_by(project_id=project_id)
+            .all()
+        )
+        group_ids = [pcg.codebook_group_id for pcg in pcg_rows]
+        if not group_ids:
+            return RemoveFrameworkInfo(tag_count=0, quote_count=0)
+
+        fw_groups = (
+            db.query(CodebookGroup)
+            .filter(
+                CodebookGroup.id.in_(group_ids),
+                CodebookGroup.framework_id == framework_id,
+            )
+            .all()
+        )
+        fw_group_ids = [g.id for g in fw_groups]
+        if not fw_group_ids:
+            return RemoveFrameworkInfo(tag_count=0, quote_count=0)
+
+        tag_defs = (
+            db.query(TagDefinition)
+            .filter(TagDefinition.codebook_group_id.in_(fw_group_ids))
+            .all()
+        )
+        tag_def_ids = [td.id for td in tag_defs]
+        tag_count = len(tag_def_ids)
+
+        quote_count = 0
+        if tag_def_ids:
+            quote_count = (
+                db.query(func.count(func.distinct(QuoteTag.quote_id)))
+                .filter(QuoteTag.tag_definition_id.in_(tag_def_ids))
+                .scalar()
+            ) or 0
+
+        return RemoveFrameworkInfo(tag_count=tag_count, quote_count=quote_count)
+    finally:
+        db.close()

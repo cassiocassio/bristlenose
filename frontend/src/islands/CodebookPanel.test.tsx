@@ -309,3 +309,190 @@ describe("CodebookPanel", () => {
     expect(calls[1][1]?.method).toBe("POST");
   });
 });
+
+// ---------------------------------------------------------------------------
+// Per-framework sections
+// ---------------------------------------------------------------------------
+
+const MOCK_WITH_FRAMEWORKS: CodebookResponse = {
+  groups: [
+    {
+      id: 99,
+      name: "Uncategorised",
+      subtitle: "Tags not yet assigned to any group",
+      colour_set: "",
+      order: 9999,
+      tags: [],
+      total_quotes: 0,
+      is_default: true,
+      framework_id: null,
+    },
+    {
+      id: 10,
+      name: "Strategy",
+      subtitle: "Goals and objectives",
+      colour_set: "ux",
+      order: 1,
+      tags: [
+        { id: 100, name: "user need", count: 3, colour_index: 0 },
+        { id: 101, name: "business objective", count: 1, colour_index: 1 },
+      ],
+      total_quotes: 3,
+      is_default: false,
+      framework_id: "garrett",
+    },
+    {
+      id: 11,
+      name: "Scope",
+      subtitle: "Features and content",
+      colour_set: "ux",
+      order: 2,
+      tags: [
+        { id: 102, name: "feature request", count: 2, colour_index: 0 },
+      ],
+      total_quotes: 2,
+      is_default: false,
+      framework_id: "garrett",
+    },
+    {
+      id: 20,
+      name: "Usability",
+      subtitle: "Ease of use",
+      colour_set: "task",
+      order: 3,
+      tags: [
+        { id: 200, name: "learnability", count: 0, colour_index: 0 },
+      ],
+      total_quotes: 0,
+      is_default: false,
+      framework_id: "uxr",
+    },
+  ],
+  ungrouped: [],
+  all_tag_names: ["business objective", "feature request", "learnability", "user need"],
+};
+
+const MOCK_TEMPLATES = {
+  templates: [
+    {
+      id: "garrett",
+      title: "The Elements of User Experience",
+      author: "Jesse James Garrett",
+      description: "A framework for UX design",
+      author_bio: "",
+      author_links: [],
+      groups: [],
+      enabled: true,
+      imported: true,
+    },
+    {
+      id: "uxr",
+      title: "Bristlenose UXR Codebook",
+      author: "",
+      description: "A general UX research codebook",
+      author_bio: "",
+      author_links: [],
+      groups: [],
+      enabled: true,
+      imported: true,
+    },
+  ],
+};
+
+describe("CodebookPanel — per-framework sections", () => {
+  it("renders separate separator per framework", async () => {
+    // First call: codebook, second: templates (fetched on mount for labels)
+    mockFetchOk(MOCK_WITH_FRAMEWORKS);
+    render(<CodebookPanel projectId="1" />);
+    await waitFor(() => {
+      expect(screen.getByText("Strategy")).toBeInTheDocument();
+    });
+    // Framework groups should be rendered
+    expect(screen.getByText("Scope")).toBeInTheDocument();
+    expect(screen.getByText("Usability")).toBeInTheDocument();
+  });
+
+  it("renders Remove from Codebook button per framework section", async () => {
+    mockFetchOk(MOCK_WITH_FRAMEWORKS);
+    render(<CodebookPanel projectId="1" />);
+    await waitFor(() => {
+      expect(screen.getByText("Strategy")).toBeInTheDocument();
+    });
+    // There should be 2 Remove buttons — one for garrett, one for uxr
+    const removeButtons = screen.getAllByText("Remove from Codebook");
+    expect(removeButtons).toHaveLength(2);
+  });
+
+  it("framework groups have no delete/close button", async () => {
+    mockFetchOk(MOCK_WITH_FRAMEWORKS);
+    render(<CodebookPanel projectId="1" />);
+    await waitFor(() => {
+      expect(screen.getByText("Strategy")).toBeInTheDocument();
+    });
+    expect(screen.queryByLabelText("Delete group Strategy")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Delete group Scope")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Delete group Usability")).not.toBeInTheDocument();
+  });
+
+  it("framework tags are readonly (no delete badge button)", async () => {
+    mockFetchOk(MOCK_WITH_FRAMEWORKS);
+    render(<CodebookPanel projectId="1" />);
+    await waitFor(() => {
+      expect(screen.getByText("user need")).toBeInTheDocument();
+    });
+    // Framework tags should not have delete buttons
+    expect(screen.queryByLabelText("Delete user need")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Delete business objective")).not.toBeInTheDocument();
+  });
+
+  it("clicking Remove opens confirmation dialog with impact stats", async () => {
+    const impactResp = { tag_count: 7, quote_count: 4 };
+    mockFetchSequence(MOCK_WITH_FRAMEWORKS, impactResp);
+    render(<CodebookPanel projectId="1" />);
+    await waitFor(() => {
+      expect(screen.getByText("Strategy")).toBeInTheDocument();
+    });
+    const removeButtons = screen.getAllByText("Remove from Codebook");
+    await userEvent.click(removeButtons[0]);
+    await waitFor(() => {
+      expect(screen.getByText(/7 tags across 4 quotes will be removed/)).toBeInTheDocument();
+    });
+  });
+
+  it("confirming Remove calls DELETE API and refreshes", async () => {
+    const codebookAfterRemove: CodebookResponse = {
+      groups: [MOCK_WITH_FRAMEWORKS.groups[0], MOCK_WITH_FRAMEWORKS.groups[3]],
+      ungrouped: [],
+      all_tag_names: ["learnability"],
+    };
+    const impactResp = { tag_count: 3, quote_count: 2 };
+    // Sequence: initial codebook, impact, DELETE response, templates refresh
+    mockFetchSequence(
+      MOCK_WITH_FRAMEWORKS,
+      impactResp,
+      codebookAfterRemove,
+      MOCK_TEMPLATES,
+    );
+    render(<CodebookPanel projectId="1" />);
+    await waitFor(() => {
+      expect(screen.getByText("Strategy")).toBeInTheDocument();
+    });
+    const removeButtons = screen.getAllByText("Remove from Codebook");
+    await userEvent.click(removeButtons[0]);
+    await waitFor(() => {
+      expect(screen.getByText(/will be removed/)).toBeInTheDocument();
+    });
+    await userEvent.click(screen.getByRole("button", { name: "Remove" }));
+    await waitFor(() => {
+      // The DELETE call should have been made
+      const calls = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls;
+      const deleteCall = calls.find(
+        (c: unknown[]) =>
+          typeof c[0] === "string"
+          && (c[0] as string).includes("/remove-framework/")
+          && (c[1] as { method?: string })?.method === "DELETE",
+      );
+      expect(deleteCall).toBeDefined();
+    });
+  });
+});

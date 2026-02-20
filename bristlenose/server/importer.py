@@ -81,6 +81,36 @@ def _parse_date(date_str: str) -> datetime | None:
 
 
 # ---------------------------------------------------------------------------
+# Transcript discovery
+# ---------------------------------------------------------------------------
+
+
+def _find_transcripts_dir(project_dir: Path, output_dir: Path) -> Path:
+    """Find the best transcript directory from several candidate locations.
+
+    Search order:
+        1. ``output_dir/transcripts-cooked`` — PII-redacted (preferred)
+        2. ``output_dir/transcripts-raw``     — standard pipeline output
+        3. ``project_dir/transcripts-raw``    — input-dir layout
+        4. ``project_dir/transcripts``        — manual/non-standard layout
+
+    Returns the first directory that exists **and** contains ``.txt`` files.
+    Falls back to ``output_dir/transcripts-raw`` (may not exist — downstream
+    code already handles missing dirs gracefully).
+    """
+    candidates = [
+        output_dir / "transcripts-cooked",
+        output_dir / "transcripts-raw",
+        project_dir / "transcripts-raw",
+        project_dir / "transcripts",
+    ]
+    for candidate in candidates:
+        if candidate.is_dir() and any(candidate.glob("*.txt")):
+            return candidate
+    return output_dir / "transcripts-raw"
+
+
+# ---------------------------------------------------------------------------
 # Import logic
 # ---------------------------------------------------------------------------
 
@@ -150,7 +180,7 @@ def import_project(db: Session, project_dir: Path) -> Project:
         theme_groups_data = json.loads(tg_path.read_text(encoding="utf-8"))
 
     # --- Parse transcripts for session metadata --------------------------
-    transcripts_dir = output_dir / "transcripts-raw"
+    transcripts_dir = _find_transcripts_dir(project_dir, output_dir)
     session_meta = _parse_transcript_headers(transcripts_dir)
 
     # --- Build sessions from all data sources ----------------------------

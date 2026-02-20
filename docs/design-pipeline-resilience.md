@@ -444,7 +444,7 @@ Verified: `run_analysis_only()` already writes all 4 intermediate files (topic_b
 
 Verified: `write_intermediate: bool = True` in `config.py` line 89.
 
-#### 0c. Make the SQLite DB per-project instead of global
+#### ~~0c. Make the SQLite DB per-project instead of global~~ ✓ Already done
 
 **What's wrong**: The serve-mode DB lives at `~/.config/bristlenose/bristlenose.db` — one DB for all projects. If you serve project A, then serve project B, project A's data is still in the DB. Stale sessions, stale quotes, stale everything.
 
@@ -462,7 +462,7 @@ Verified: `write_intermediate: bool = True` in `config.py` line 89.
 
 This is the foundational change. Everything else builds on it.
 
-#### 1a. Define the manifest model
+#### ~~1a. Define the manifest model~~ ✓ Done
 
 **What it is**: A Pydantic model for `pipeline-manifest.json`. Just the data structure — no pipeline changes yet.
 
@@ -495,7 +495,7 @@ class PipelineManifest(BaseModel):
 
 **Risk**: None. Just defines a model. No behavior change.
 
-#### 1b. Write manifest after each stage
+#### ~~1b. Write manifest after each stage~~ ✓ Done
 
 **What it is**: After each stage completes in `pipeline.py`, write the manifest to disk. This is the "journal" — a record of what's done.
 
@@ -891,9 +891,9 @@ The key insight: **each sub-step is a single PR-sized change**. None of them req
 |------|------|-----------|---------------|
 | ~~**0a** Fix analyze intermediate writes~~ | ✓ Done | — | — |
 | ~~**0b** write_intermediate defaults True~~ | ✓ Done | — | — |
-| **0c** Per-project SQLite DB | Small (20 lines) | Nothing | Anything |
-| **1a** Manifest model | Small (new file) | Nothing | Anything |
-| **1b** Write manifest after stages | Medium (30 lines in pipeline.py) | 1a | Nothing breaking |
+| ~~**0c** Per-project SQLite DB~~ | ✓ Done | — | — |
+| ~~**1a** Manifest model~~ | ✓ Done | — | — |
+| ~~**1b** Write manifest after stages~~ | ✓ Done | 1a | — |
 | **1c** Skip completed stages on resume | Medium-large (100 lines) | 1b | Core feature work |
 | **1d** Per-session tracking | Medium (50 lines) | 1c | Core feature work |
 | **1e** Status report + --resume flag | Small (CLI only) | 1c | Core feature work |

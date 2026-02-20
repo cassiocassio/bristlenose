@@ -1,0 +1,879 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bristlenose Pleco — Proof of Fish</title>
+<style>
+/* ── Reset & page ───────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  color-scheme: light dark;
+  --bg: #f5f3ef;
+  --fg: #2c2c2c;
+  --muted: #888;
+  --accent: #5a8f5a;
+  --panel: #ffffff;
+  --border: #ddd;
+
+  /* Fish: common bristlenose (light mode) */
+  --fish-body: #6b5b4f;
+  --fish-body-dark: #5a4a3e;
+  --fish-spots: #4a3b2f;
+  --fish-belly: #8b7b6f;
+  --fish-fin: #7b6b5f;
+  --fish-fin-membrane: rgba(123, 107, 95, 0.4);
+  --fish-whisker: #5b4b3f;
+  --fish-eye-pupil: #1a1a1a;
+  --fish-eye-sclera: #e8e4d8;
+  --fish-eye-iris: #4a3520;
+  --fish-plate-stroke: rgba(91, 75, 63, 0.25);
+  --fish-mouth: #8b6b5f;
+  --fish-mouth-inner: #5a3a2f;
+}
+
+[data-theme="dark"] {
+  --bg: #1a1a1e;
+  --fg: #e0ddd8;
+  --muted: #777;
+  --accent: #7ab87a;
+  --panel: #242428;
+  --border: #3a3a3e;
+
+  /* Fish: albino bristlenose (dark mode) */
+  --fish-body: #f0dcc0;
+  --fish-body-dark: #e5d0b0;
+  --fish-spots: #efe0c4;
+  --fish-belly: #faf0dc;
+  --fish-fin: #f0dbb8;
+  --fish-fin-membrane: rgba(240, 219, 184, 0.35);
+  --fish-whisker: #e8d4b0;
+  --fish-eye-pupil: #cc3333;
+  --fish-eye-sclera: #ffe0e0;
+  --fish-eye-iris: #dd6644;
+  --fish-plate-stroke: rgba(245, 230, 200, 0.15);
+  --fish-mouth: #e8c8a8;
+  --fish-mouth-inner: #d4a888;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+  background: var(--bg);
+  color: var(--fg);
+  min-height: 100vh;
+  overflow: hidden;
+  transition: background 0.5s, color 0.5s;
+}
+
+/* ── Controls ───────────────────────────────────────────── */
+.controls {
+  position: fixed;
+  top: 16px;
+  left: 16px;
+  z-index: 10000;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 13px;
+}
+
+.controls button {
+  padding: 6px 14px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--panel);
+  color: var(--fg);
+  cursor: pointer;
+  font-size: 13px;
+  transition: background 0.2s, border-color 0.2s;
+}
+.controls button:hover { border-color: var(--accent); }
+
+.status {
+  position: fixed;
+  bottom: 16px;
+  left: 16px;
+  z-index: 10000;
+  font-size: 12px;
+  color: var(--muted);
+  font-family: "SF Mono", Monaco, monospace;
+}
+
+.title {
+  position: fixed;
+  top: 16px;
+  right: 16px;
+  z-index: 10000;
+  text-align: right;
+  font-size: 13px;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+/* ── Fish tank (overlay) ────────────────────────────────── */
+#fish-tank {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 9000;
+  overflow: hidden;
+}
+
+#fish-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+#fish-container {
+  position: absolute;
+  pointer-events: auto;
+  cursor: pointer;
+  /* Position set by JS */
+}
+
+/* ── SVG fish styling ───────────────────────────────────── */
+.fish-body { fill: var(--fish-body); transition: fill 1.5s ease; }
+.fish-body-shadow { fill: var(--fish-body-dark); transition: fill 1.5s ease; }
+.fish-belly { fill: var(--fish-belly); transition: fill 1.5s ease; }
+.fish-spots { fill: var(--fish-spots); opacity: 0.5; transition: fill 1.5s ease, opacity 1.5s ease; }
+[data-theme="dark"] .fish-spots { opacity: 0.25; }
+.fish-plate { stroke: var(--fish-plate-stroke); fill: none; stroke-width: 0.4; transition: stroke 1.5s ease; }
+.fish-fin { fill: var(--fish-fin); transition: fill 1.5s ease; }
+.fish-fin-membrane { fill: var(--fish-fin-membrane); transition: fill 1.5s ease; }
+.fish-whisker { stroke: var(--fish-whisker); fill: none; stroke-width: 0.7; stroke-linecap: round; transition: stroke 1.5s ease; }
+.fish-mouth-outer { fill: var(--fish-mouth); transition: fill 1.5s ease; }
+.fish-mouth-inner { fill: var(--fish-mouth-inner); transition: fill 1.5s ease; }
+.fish-eye-sclera { fill: var(--fish-eye-sclera); transition: fill 1.5s ease; }
+.fish-eye-iris { fill: var(--fish-eye-iris); transition: fill 1.5s ease; }
+.fish-eye-pupil { fill: var(--fish-eye-pupil); transition: fill 1.5s ease; }
+.fish-eye-highlight { fill: #ffffff; opacity: 0.7; }
+
+/* ── Eyelids ────────────────────────────────────────────── */
+.fish-eyelid-top, .fish-eyelid-bottom {
+  fill: var(--fish-body);
+  transition: fill 1.5s ease, transform 0.15s ease;
+}
+.fish-eyelid-top { transform-origin: center bottom; transform: scaleY(0); }
+.fish-eyelid-bottom { transform-origin: center top; transform: scaleY(0); }
+
+#fish-svg.blink .fish-eyelid-top,
+#fish-svg.blink .fish-eyelid-bottom {
+  transform: scaleY(1);
+}
+
+#fish-svg.sleeping .fish-eyelid-top { transform: scaleY(1); transition: transform 2s ease; }
+#fish-svg.sleeping .fish-eyelid-bottom { transform: scaleY(1); transition: transform 2s ease; }
+
+#fish-svg.eyes-wide .fish-eye-sclera { transform: scale(1.15); transform-origin: center; }
+#fish-svg.eyes-wide .fish-eye-iris { transform: scale(1.1); transform-origin: center; }
+
+/* ── Breathing ──────────────────────────────────────────── */
+@keyframes fish-breathe {
+  0%, 100% { transform: scaleY(1); }
+  50% { transform: scaleY(1.015); }
+}
+.fish-body-group {
+  animation: fish-breathe 3.5s ease-in-out infinite;
+  transform-origin: center center;
+}
+#fish-svg.sleeping .fish-body-group {
+  animation-duration: 6s;
+}
+
+/* ── Fin flutter ────────────────────────────────────────── */
+@keyframes dorsal-flutter {
+  0%, 100% { transform: rotate(0deg); }
+  50% { transform: rotate(1.5deg); }
+}
+@keyframes pectoral-flutter {
+  0%, 100% { transform: rotate(0deg); }
+  30% { transform: rotate(3deg); }
+  70% { transform: rotate(-2deg); }
+}
+@keyframes tail-idle {
+  0%, 100% { transform: rotate(0deg); }
+  35% { transform: rotate(3deg); }
+  65% { transform: rotate(-3deg); }
+}
+.fish-dorsal {
+  animation: dorsal-flutter 2.8s ease-in-out infinite;
+  transform-origin: bottom center;
+}
+.fish-pectoral-l {
+  animation: pectoral-flutter 2.2s ease-in-out infinite;
+  transform-origin: right center;
+}
+.fish-pectoral-r {
+  animation: pectoral-flutter 2.2s ease-in-out 0.3s infinite;
+  transform-origin: right center;
+}
+.fish-tail-group {
+  animation: tail-idle 2.5s ease-in-out infinite;
+  transform-origin: left center;
+}
+
+#fish-svg.sleeping .fish-dorsal,
+#fish-svg.sleeping .fish-pectoral-l,
+#fish-svg.sleeping .fish-pectoral-r,
+#fish-svg.sleeping .fish-tail-group {
+  animation-play-state: paused;
+}
+
+/* ── Whisker wiggle ─────────────────────────────────────── */
+@keyframes whisker-wiggle {
+  0%, 100% { transform: rotate(0deg); }
+  33% { transform: rotate(1.5deg); }
+  66% { transform: rotate(-1.5deg); }
+}
+.fish-whisker-group {
+  animation: whisker-wiggle 3s ease-in-out infinite;
+  transform-origin: right center;
+}
+
+/* ── Surprised ──────────────────────────────────────────── */
+@keyframes surprised-jump {
+  0% { transform: translateY(0); }
+  30% { transform: translateY(-12px); }
+  60% { transform: translateY(-2px); }
+  100% { transform: translateY(0); }
+}
+#fish-svg.surprised {
+  animation: surprised-jump 0.5s ease-out;
+}
+
+/* ── Barrel roll ────────────────────────────────────────── */
+@keyframes barrel-roll {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+#fish-container.barrel-roll {
+  animation: barrel-roll 0.8s ease-in-out;
+}
+
+/* ── Reduced motion ─────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  #fish-svg, #fish-svg *, #fish-container {
+    animation: none !important;
+    transition-duration: 0s !important;
+  }
+}
+
+/* ── Print ──────────────────────────────────────────────── */
+@media print {
+  #fish-tank { display: none; }
+}
+</style>
+</head>
+<body>
+
+<!-- Controls -->
+<div class="controls">
+  <button id="btn-theme">Toggle dark mode</button>
+  <button id="btn-wake">Wake the fish</button>
+  <button id="btn-sleep">Put to sleep</button>
+</div>
+
+<div class="title">
+  Bristlenose Pleco<br>
+  <em>Proof of Fish</em><br>
+  <small>click anywhere &bull; hover to track &bull; click fish for tricks</small>
+</div>
+
+<div class="status" id="status">state: idle</div>
+
+<!-- Fish tank overlay -->
+<div id="fish-tank">
+  <canvas id="fish-canvas"></canvas>
+  <div id="fish-container">
+    <svg id="fish-svg" viewBox="0 0 120 70" width="160" height="93" aria-hidden="true">
+      <defs>
+        <radialGradient id="eye-grad" cx="40%" cy="40%" r="50%">
+          <stop offset="0%" stop-color="var(--fish-eye-iris)" stop-opacity="0.3" />
+          <stop offset="100%" stop-color="var(--fish-eye-iris)" />
+        </radialGradient>
+      </defs>
+
+      <g class="fish-body-group">
+        <!-- Tail -->
+        <g class="fish-tail-group">
+          <path class="fish-fin" d="M98 35 Q108 20 115 18 Q110 28 108 35 Q110 42 115 52 Q108 50 98 35Z" />
+          <path class="fish-fin-membrane" d="M100 35 Q107 25 112 22 Q109 30 107 35 Q109 40 112 48 Q107 45 100 35Z" />
+        </g>
+
+        <!-- Body main shape -->
+        <ellipse class="fish-body" cx="55" cy="35" rx="42" ry="18" />
+
+        <!-- Belly (lighter underside) -->
+        <path class="fish-belly" d="M20 40 Q35 52 55 53 Q75 52 90 40 Q75 48 55 49 Q35 48 20 40Z" />
+
+        <!-- Body shadow (top) -->
+        <path class="fish-body-shadow" d="M20 30 Q35 18 55 17 Q75 18 90 30 Q75 22 55 21 Q35 22 20 30Z" opacity="0.3" />
+
+        <!-- Armored plates -->
+        <path class="fish-plate" d="M30 25 Q40 22 50 25" />
+        <path class="fish-plate" d="M45 23 Q55 20 65 23" />
+        <path class="fish-plate" d="M60 24 Q70 21 80 25" />
+        <path class="fish-plate" d="M35 30 Q45 27 55 30" />
+        <path class="fish-plate" d="M50 28 Q60 25 70 29" />
+        <path class="fish-plate" d="M65 30 Q75 27 85 32" />
+        <path class="fish-plate" d="M28 36 Q38 33 48 36" />
+        <path class="fish-plate" d="M55 34 Q65 31 75 35" />
+
+        <!-- Spots -->
+        <circle class="fish-spots" cx="35" cy="30" r="2.5" />
+        <circle class="fish-spots" cx="48" cy="27" r="2" />
+        <circle class="fish-spots" cx="62" cy="29" r="2.8" />
+        <circle class="fish-spots" cx="72" cy="33" r="2" />
+        <circle class="fish-spots" cx="42" cy="38" r="1.8" />
+        <circle class="fish-spots" cx="58" cy="40" r="2.2" />
+        <circle class="fish-spots" cx="80" cy="30" r="1.5" />
+
+        <!-- Dorsal fin -->
+        <g class="fish-dorsal">
+          <path class="fish-fin" d="M40 17 Q45 6 55 8 Q60 6 65 10 Q60 14 55 17Z" />
+          <path class="fish-fin-membrane" d="M43 16 Q47 9 55 10 Q58 9 62 12 Q58 14 55 16Z" />
+        </g>
+
+        <!-- Pectoral fins -->
+        <g class="fish-pectoral-l">
+          <path class="fish-fin" d="M35 45 Q28 52 22 55 Q25 48 30 44Z" />
+          <path class="fish-fin-membrane" d="M33 45 Q28 50 25 52 Q27 47 31 44Z" />
+        </g>
+        <g class="fish-pectoral-r">
+          <path class="fish-fin" d="M65 45 Q72 52 78 55 Q75 48 70 44Z" />
+          <path class="fish-fin-membrane" d="M67 45 Q72 50 75 52 Q73 47 69 44Z" />
+        </g>
+
+        <!-- Anal fin (small, under belly) -->
+        <path class="fish-fin" d="M55 51 Q60 56 65 53 Q60 52 55 51Z" />
+
+        <!-- Sucker mouth -->
+        <g class="fish-mouth-group">
+          <ellipse class="fish-mouth-outer" cx="16" cy="37" rx="6" ry="5" />
+          <ellipse class="fish-mouth-inner" cx="16" cy="37" rx="3.5" ry="3" />
+          <!-- Lip ridges -->
+          <line class="fish-whisker" x1="16" y1="32" x2="16" y2="33.5" style="stroke-width: 0.3" />
+          <line class="fish-whisker" x1="20" y1="33" x2="19" y2="34.5" style="stroke-width: 0.3" />
+          <line class="fish-whisker" x1="21" y1="37" x2="19.5" y2="37" style="stroke-width: 0.3" />
+          <line class="fish-whisker" x1="20" y1="41" x2="19" y2="39.5" style="stroke-width: 0.3" />
+          <line class="fish-whisker" x1="16" y1="42" x2="16" y2="40.5" style="stroke-width: 0.3" />
+          <line class="fish-whisker" x1="12" y1="41" x2="13" y2="39.5" style="stroke-width: 0.3" />
+          <line class="fish-whisker" x1="11" y1="37" x2="12.5" y2="37" style="stroke-width: 0.3" />
+          <line class="fish-whisker" x1="12" y1="33" x2="13" y2="34.5" style="stroke-width: 0.3" />
+        </g>
+
+        <!-- Whiskers / odontodes (the "bristlenose") -->
+        <g class="fish-whisker-group">
+          <path class="fish-whisker" d="M14 32 Q8 24 5 20" />
+          <path class="fish-whisker" d="M12 34 Q5 28 2 26" />
+          <path class="fish-whisker" d="M12 40 Q5 46 2 48" />
+          <path class="fish-whisker" d="M14 42 Q8 50 5 54" />
+          <!-- Shorter bristles -->
+          <path class="fish-whisker" d="M16 31 Q13 26 11 23" style="stroke-width: 0.5" />
+          <path class="fish-whisker" d="M16 43 Q13 48 11 51" style="stroke-width: 0.5" />
+        </g>
+
+        <!-- Eyes -->
+        <g class="fish-eyes">
+          <!-- Left eye (top, since fish faces left) -->
+          <g class="fish-eye" data-eye="top">
+            <ellipse class="fish-eye-sclera" cx="30" cy="28" rx="5" ry="4.5" />
+            <circle class="fish-eye-iris" cx="29" cy="28" r="3" fill="url(#eye-grad)" />
+            <circle class="fish-eye-pupil pupil" cx="28.5" cy="27.5" r="1.8"
+                    data-base-cx="28.5" data-base-cy="27.5" />
+            <circle class="fish-eye-highlight" cx="27" cy="26.5" r="0.8" />
+            <!-- Eyelids -->
+            <rect class="fish-eyelid-top" x="24.5" y="22" width="11" height="6" rx="2" />
+            <rect class="fish-eyelid-bottom" x="24.5" y="28" width="11" height="5" rx="2" />
+          </g>
+        </g>
+      </g>
+    </svg>
+  </div>
+</div>
+
+<script>
+(function() {
+  'use strict';
+
+  // ── State ─────────────────────────────────────────────
+  var fish = {
+    x: 0, y: 0,                // position (bottom-right offset initially)
+    bobPhase: 0,               // radians, for idle bob
+    state: 'IDLE',             // IDLE | SURPRISED | SLEEPING | WAKING | BARREL_ROLL
+    stateTimer: 0,
+    idleTimer: 0,              // ms since last interaction
+    blinkTimer: 0,             // ms until next blink
+    pupilX: 0, pupilY: 0,     // eye tracking offset
+    breathPhase: 0,
+    isDark: false,
+  };
+
+  var mouseX = 0, mouseY = 0;
+  var _lastTime = 0;
+  var _raf = 0;
+  var _particles = [];
+  var MAX_PARTICLES = 60;
+  var _canvas, _ctx;
+  var _container, _svg;
+  var _statusEl;
+
+  // ── Init ──────────────────────────────────────────────
+  function init() {
+    _container = document.getElementById('fish-container');
+    _svg = document.getElementById('fish-svg');
+    _canvas = document.getElementById('fish-canvas');
+    _ctx = _canvas.getContext('2d');
+    _statusEl = document.getElementById('status');
+
+    resizeCanvas();
+    window.addEventListener('resize', resizeCanvas);
+
+    // Initial position: bottom-right
+    fish.x = window.innerWidth - 200;
+    fish.y = window.innerHeight - 120;
+    fish.blinkTimer = randomBetween(2000, 6000);
+
+    // Event listeners
+    document.addEventListener('mousemove', onMouseMove);
+    document.addEventListener('click', onClick);
+    document.addEventListener('keydown', onKeyDown);
+    _container.addEventListener('click', onFishClick);
+    _container.addEventListener('dblclick', onFishDblClick);
+    _container.addEventListener('contextmenu', onFishRightClick);
+
+    // Controls
+    document.getElementById('btn-theme').addEventListener('click', toggleTheme);
+    document.getElementById('btn-wake').addEventListener('click', function() {
+      if (fish.state === 'SLEEPING') wakeUp();
+    });
+    document.getElementById('btn-sleep').addEventListener('click', function() {
+      if (fish.state === 'IDLE') goToSleep();
+    });
+
+    // Start loop
+    _lastTime = performance.now();
+    _raf = requestAnimationFrame(loop);
+  }
+
+  function resizeCanvas() {
+    _canvas.width = window.innerWidth;
+    _canvas.height = window.innerHeight;
+  }
+
+  // ── Main loop ─────────────────────────────────────────
+  function loop(timestamp) {
+    var dt = timestamp - _lastTime;
+    _lastTime = timestamp;
+    if (dt > 100) dt = 100; // cap after tab background
+
+    tick(dt);
+    render();
+    _raf = requestAnimationFrame(loop);
+  }
+
+  function tick(dt) {
+    fish.idleTimer += dt;
+    fish.bobPhase += dt * 0.0015;
+
+    // State machine
+    switch (fish.state) {
+      case 'IDLE':
+        tickIdle(dt);
+        break;
+      case 'SURPRISED':
+        fish.stateTimer -= dt;
+        if (fish.stateTimer <= 0) transition('IDLE');
+        break;
+      case 'SLEEPING':
+        tickSleeping(dt);
+        break;
+      case 'WAKING':
+        fish.stateTimer -= dt;
+        if (fish.stateTimer <= 0) transition('IDLE');
+        break;
+      case 'BARREL_ROLL':
+        fish.stateTimer -= dt;
+        if (fish.stateTimer <= 0) transition('IDLE');
+        break;
+    }
+
+    // Blink timer
+    if (fish.state !== 'SLEEPING') {
+      fish.blinkTimer -= dt;
+      if (fish.blinkTimer <= 0) {
+        doBlink();
+        fish.blinkTimer = randomBetween(3000, 8000);
+      }
+    }
+
+    // Eye tracking
+    updateEyes(dt);
+
+    // Particles
+    tickParticles(dt);
+
+    // Status
+    _statusEl.textContent = 'state: ' + fish.state.toLowerCase() +
+      '  idle: ' + Math.floor(fish.idleTimer / 1000) + 's' +
+      '  particles: ' + _particles.length;
+  }
+
+  // ── Idle ──────────────────────────────────────────────
+  function tickIdle(dt) {
+    // Yawn at 20s (shortened for demo)
+    if (fish.idleTimer > 20000 && fish.idleTimer < 20200) {
+      doYawn();
+    }
+    // Sleep at 30s (shortened for demo)
+    if (fish.idleTimer > 30000) {
+      goToSleep();
+    }
+  }
+
+  // ── Sleeping ──────────────────────────────────────────
+  var _sleepZTimer = 0;
+  var _sleepDriftTimer = 0;
+
+  function tickSleeping(dt) {
+    _sleepZTimer += dt;
+    _sleepDriftTimer += dt;
+
+    // Emit z's
+    if (_sleepZTimer > 3500) {
+      _sleepZTimer = 0;
+      var rect = _container.getBoundingClientRect();
+      emitSleepZ(rect.left + rect.width * 0.3, rect.top);
+    }
+
+    // Tiny random drift
+    if (_sleepDriftTimer > randomBetween(8000, 15000)) {
+      _sleepDriftTimer = 0;
+      fish.x += randomBetween(-3, 3);
+      fish.y += randomBetween(-2, 2);
+    }
+  }
+
+  // ── Transitions ───────────────────────────────────────
+  function transition(newState) {
+    var oldState = fish.state;
+    fish.state = newState;
+    fish.stateTimer = 0;
+
+    // Remove old state classes
+    _svg.classList.remove('surprised', 'sleeping', 'eyes-wide');
+    _container.classList.remove('barrel-roll');
+
+    switch (newState) {
+      case 'IDLE':
+        break;
+      case 'SURPRISED':
+        _svg.classList.add('surprised', 'eyes-wide');
+        fish.stateTimer = 500;
+        var rect = _container.getBoundingClientRect();
+        emitBubble(rect.left + 20, rect.top + rect.height / 2);
+        break;
+      case 'SLEEPING':
+        _svg.classList.add('sleeping');
+        _sleepZTimer = 0;
+        _sleepDriftTimer = 0;
+        break;
+      case 'WAKING':
+        _svg.classList.add('eyes-wide');
+        fish.stateTimer = 1500;
+        var r = _container.getBoundingClientRect();
+        emitBubble(r.left + 20, r.top + r.height / 2);
+        break;
+      case 'BARREL_ROLL':
+        _container.classList.add('barrel-roll');
+        fish.stateTimer = 900;
+        var r2 = _container.getBoundingClientRect();
+        emitSparkles(r2.left + r2.width / 2, r2.top + r2.height / 2, 5);
+        break;
+    }
+  }
+
+  function goToSleep() {
+    transition('SLEEPING');
+  }
+
+  function wakeUp() {
+    fish.idleTimer = 0;
+    transition('WAKING');
+  }
+
+  // ── Blink ─────────────────────────────────────────────
+  function doBlink() {
+    _svg.classList.add('blink');
+    setTimeout(function() { _svg.classList.remove('blink'); }, 180);
+  }
+
+  // ── Yawn ──────────────────────────────────────────────
+  function doYawn() {
+    // Scale mouth open briefly
+    var mouth = _svg.querySelector('.fish-mouth-inner');
+    if (mouth) {
+      mouth.setAttribute('ry', '4.5');
+      mouth.setAttribute('rx', '5');
+      setTimeout(function() {
+        mouth.setAttribute('ry', '3');
+        mouth.setAttribute('rx', '3.5');
+      }, 1500);
+    }
+  }
+
+  // ── Eye tracking ──────────────────────────────────────
+  function updateEyes(dt) {
+    if (fish.state === 'SLEEPING') return;
+
+    var rect = _container.getBoundingClientRect();
+    var cx = rect.left + rect.width * 0.25; // eye is roughly at 25% of fish width
+    var cy = rect.top + rect.height * 0.4;
+    var dx = mouseX - cx;
+    var dy = mouseY - cy;
+    var dist = Math.sqrt(dx * dx + dy * dy) || 1;
+    var norm = Math.min(dist / 300, 1);
+    var maxOff = 2;
+
+    // Damped spring toward target
+    var targetX = (dx / dist) * norm * maxOff;
+    var targetY = (dy / dist) * norm * maxOff;
+    fish.pupilX += (targetX - fish.pupilX) * 0.08;
+    fish.pupilY += (targetY - fish.pupilY) * 0.08;
+
+    var pupils = _svg.querySelectorAll('.pupil');
+    for (var i = 0; i < pupils.length; i++) {
+      var bx = parseFloat(pupils[i].getAttribute('data-base-cx'));
+      var by = parseFloat(pupils[i].getAttribute('data-base-cy'));
+      pupils[i].setAttribute('cx', bx + fish.pupilX);
+      pupils[i].setAttribute('cy', by + fish.pupilY);
+    }
+  }
+
+  // ── Rendering ─────────────────────────────────────────
+  function render() {
+    // Position the fish container
+    var bobY = Math.sin(fish.bobPhase) * 3;
+    var bobX = Math.sin(fish.bobPhase * 0.7) * 1.5;
+    _container.style.left = (fish.x + bobX) + 'px';
+    _container.style.top = (fish.y + bobY) + 'px';
+
+    // Draw particles
+    renderParticles();
+  }
+
+  // ── Events ────────────────────────────────────────────
+  function onMouseMove(e) {
+    mouseX = e.clientX;
+    mouseY = e.clientY;
+    resetIdle();
+  }
+
+  function onClick(e) {
+    // Don't startle if clicking controls or fish itself
+    if (e.target.closest('.controls') || e.target.closest('#fish-container')) return;
+    resetIdle();
+    if (fish.state === 'SLEEPING') {
+      wakeUp();
+      return;
+    }
+    if (fish.state === 'IDLE') {
+      transition('SURPRISED');
+    }
+  }
+
+  function onKeyDown(e) {
+    resetIdle();
+    if (fish.state === 'SLEEPING') {
+      wakeUp();
+    }
+  }
+
+  function onFishClick(e) {
+    e.stopPropagation();
+    resetIdle();
+    if (fish.state === 'SLEEPING') {
+      wakeUp();
+      return;
+    }
+    if (fish.state !== 'BARREL_ROLL') {
+      transition('BARREL_ROLL');
+    }
+  }
+
+  function onFishDblClick(e) {
+    e.stopPropagation();
+    resetIdle();
+    // Big bubble
+    var rect = _container.getBoundingClientRect();
+    emitBigBubble(rect.left + 20, rect.top + rect.height * 0.5);
+  }
+
+  function onFishRightClick(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    // Play dead: freeze briefly
+    _svg.style.opacity = '0.6';
+    setTimeout(function() { _svg.style.opacity = '1'; }, 600);
+  }
+
+  function resetIdle() {
+    fish.idleTimer = 0;
+    if (fish.state === 'SLEEPING') return; // handled by wake
+  }
+
+  // ── Theme ─────────────────────────────────────────────
+  function toggleTheme() {
+    fish.isDark = !fish.isDark;
+    document.documentElement.setAttribute('data-theme', fish.isDark ? 'dark' : 'light');
+    // Metamorphosis sparkles
+    var rect = _container.getBoundingClientRect();
+    emitSparkles(rect.left + rect.width / 2, rect.top + rect.height / 2, 4);
+    emitBubble(rect.left + 20, rect.top + rect.height / 2);
+    emitBubble(rect.left + 30, rect.top + rect.height * 0.3);
+  }
+
+  // ── Particles ─────────────────────────────────────────
+  function emitBubble(x, y) {
+    if (_particles.length >= MAX_PARTICLES) return;
+    _particles.push({
+      type: 'bubble', x: x, y: y,
+      vx: (Math.random() - 0.5) * 0.3,
+      vy: -0.6 - Math.random() * 0.4,
+      radius: 2 + Math.random() * 3,
+      opacity: 0.5,
+      life: 2500, maxLife: 2500,
+    });
+  }
+
+  function emitBigBubble(x, y) {
+    if (_particles.length >= MAX_PARTICLES) return;
+    _particles.push({
+      type: 'bubble', x: x, y: y,
+      vx: (Math.random() - 0.5) * 0.15,
+      vy: -0.25 - Math.random() * 0.15,
+      radius: 8 + Math.random() * 4,
+      opacity: 0.4,
+      life: 5000, maxLife: 5000,
+      wobble: 0, wobbleSpeed: 0.003 + Math.random() * 0.002,
+    });
+  }
+
+  function emitSparkles(x, y, count) {
+    for (var i = 0; i < count && _particles.length < MAX_PARTICLES; i++) {
+      var angle = (Math.PI * 2 / count) * i + Math.random() * 0.5;
+      var speed = 1 + Math.random() * 1.5;
+      _particles.push({
+        type: 'sparkle', x: x, y: y,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed,
+        radius: 1.5 + Math.random() * 2,
+        opacity: 1,
+        life: 700, maxLife: 700,
+        hue: fish.isDark ? 40 : 30, // gold tint
+      });
+    }
+  }
+
+  function emitSleepZ(x, y) {
+    if (_particles.length >= MAX_PARTICLES) return;
+    _particles.push({
+      type: 'z', x: x, y: y,
+      vx: -0.15 - Math.random() * 0.1,
+      vy: -0.4 - Math.random() * 0.2,
+      opacity: 0.7,
+      life: 2500, maxLife: 2500,
+      size: 10 + Math.random() * 6,
+    });
+  }
+
+  function tickParticles(dt) {
+    for (var i = _particles.length - 1; i >= 0; i--) {
+      var p = _particles[i];
+      p.life -= dt;
+      if (p.life <= 0) {
+        _particles.splice(i, 1);
+        continue;
+      }
+      p.x += p.vx * dt * 0.06;
+      p.y += p.vy * dt * 0.06;
+      p.opacity = (p.life / p.maxLife) * (p.type === 'sparkle' ? 1 : 0.6);
+
+      // Bubble wobble
+      if (p.type === 'bubble' && p.wobble !== undefined) {
+        p.wobble += (p.wobbleSpeed || 0) * dt;
+        p.x += Math.sin(p.wobble) * 0.3;
+      }
+
+      // Sparkle deceleration
+      if (p.type === 'sparkle') {
+        p.vx *= 0.97;
+        p.vy *= 0.97;
+      }
+    }
+  }
+
+  function renderParticles() {
+    _ctx.clearRect(0, 0, _canvas.width, _canvas.height);
+
+    var isDark = fish.isDark;
+
+    for (var i = 0; i < _particles.length; i++) {
+      var p = _particles[i];
+
+      if (p.type === 'bubble') {
+        _ctx.beginPath();
+        _ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+        _ctx.strokeStyle = isDark
+          ? 'rgba(200, 220, 255, ' + (p.opacity * 0.6) + ')'
+          : 'rgba(100, 140, 180, ' + (p.opacity * 0.5) + ')';
+        _ctx.lineWidth = 1;
+        _ctx.stroke();
+        // Highlight
+        _ctx.beginPath();
+        _ctx.arc(p.x - p.radius * 0.25, p.y - p.radius * 0.3, p.radius * 0.3, 0, Math.PI * 2);
+        _ctx.fillStyle = 'rgba(255, 255, 255, ' + (p.opacity * 0.4) + ')';
+        _ctx.fill();
+      }
+
+      else if (p.type === 'sparkle') {
+        var hue = p.hue || 45;
+        _ctx.beginPath();
+        _ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+        _ctx.fillStyle = 'hsla(' + hue + ', 80%, ' + (isDark ? '75%' : '60%') + ', ' + p.opacity + ')';
+        _ctx.fill();
+        // Glow
+        _ctx.beginPath();
+        _ctx.arc(p.x, p.y, p.radius * 2, 0, Math.PI * 2);
+        _ctx.fillStyle = 'hsla(' + hue + ', 80%, 70%, ' + (p.opacity * 0.15) + ')';
+        _ctx.fill();
+      }
+
+      else if (p.type === 'z') {
+        _ctx.font = Math.round(p.size) + 'px -apple-system, sans-serif';
+        _ctx.fillStyle = isDark
+          ? 'rgba(180, 200, 220, ' + p.opacity + ')'
+          : 'rgba(100, 120, 140, ' + p.opacity + ')';
+        _ctx.fillText('z', p.x, p.y);
+      }
+    }
+  }
+
+  // ── Helpers ───────────────────────────────────────────
+  function randomBetween(min, max) {
+    return min + Math.random() * (max - min);
+  }
+
+  // ── Boot ──────────────────────────────────────────────
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+})();
+</script>
+</body>
+</html>

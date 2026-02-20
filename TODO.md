@@ -1,11 +1,12 @@
 # Bristlenose — Where I Left Off
 
-Last updated: 19 Feb 2026 (AutoCode lifecycle mockup refinements)
+Last updated: 19 Feb 2026 (Phase 1 codebook import done)
 
 ## Next session reminder
 
-- [ ] **Deploy feedback endpoint to Dreamhost** — `server/feedback.php` is written and ready. See `server/README.md` for full deployment steps. Then flip `BRISTLENOSE_FEEDBACK` to `true` in `render_html.py` and set the URL. Also: split "Report a bug" link out of the feature flag so it's always visible
-- [ ] **AutoCode lifecycle mockup is done** — `docs/mockups/mockup-autocode-lifecycle.html` — 9-step interactive walkthrough, all design-system refinements applied (Rounds 1+2). Plan at `/Users/cassio/.claude/plans/swift-juggling-eich.md`. Next steps: (1) build Phase 1 codebook import (picker → preview → import as React island), (2) write sub-tag discrimination prompts for Garrett (20 sub-tags), (3) build AutoCode backend. **Parked**: framework acronym prefixes (`JJG`, `DN` etc) — CSS exists, rendering removed until visual pattern finalised
+- [x] **Deploy feedback endpoint to Dreamhost** — `server/feedback.php` is written and ready. See `server/README.md` for full deployment steps. Then flip `BRISTLENOSE_FEEDBACK` to `true` in `render_html.py` and set the URL. Also: split "Report a bug" link out of the feature flag so it's always visible
+- [x] **Phase 1 codebook import** — picker → preview → import as React island. Per-framework sections with Option D header (title/author/border-bottom), "Remove from Codebook" with confirm dialog + impact stats. Backend: `DELETE /codebook/remove-framework/{framework_id}` + `/impact` endpoints. 10 Python tests, 7 Vitest tests. Style audit mockup at `docs/mockups/codebook-section-headers.html`
+- [ ] **AutoCode next steps** — (1) write sub-tag discrimination prompts for Garrett (20 sub-tags), (2) build AutoCode backend. Lifecycle mockup at `docs/mockups/mockup-autocode-lifecycle.html`. Plan at `/Users/cassio/.claude/plans/swift-juggling-eich.md`. **Parked**: framework acronym prefixes (`JJG`, `DN` etc) — CSS exists, rendering removed until visual pattern finalised
 
 ---
 
@@ -110,9 +111,15 @@ Multi-column quote grid using CSS `auto-fill`. Card max-width `23rem` (368px) ke
 | Signal concentration: Phase 4 — two-pane layout, grid-as-selector | — | medium |
 | Signal concentration: Phase 5 — LLM narration of signal cards | — | small |
 | Signal concentration: user-tag × group grid (new design needed) | — | medium |
+| ~~Re-import on serve startup (stale data from removed sessions)~~ | — | ~~done~~ ✅ |
+| Session enable/disable toggle (temporary exclusion from analysis) | — | medium |
+| Delete/quarantine session from UI (`.bristlenose-ignore`) | — | medium |
+| Re-run pipeline from serve mode (background, with progress) | — | large |
 | Moderator Phase 2: cross-session linking | #25 | medium |
 | Speaker diarisation improvements | #26 | medium |
 | Batch processing dashboard | #27 | medium |
+
+Session management design doc: `docs/design-session-management.md`
 
 ### CLI
 
@@ -187,7 +194,7 @@ These are too small for issues or are internal-only concerns.
 
 - [ ] **SVG icon set** — replace all × character glyphs (delete circles, modal close, search clear) with SVG icons. Candidates: Lucide, Heroicons, Phosphor, Tabler. See `docs/design-system/icon-catalog.html` for current inventory
 - [ ] **Relocate AI tag toggle** — removed from toolbar (too crowded with Codebook button); needs a new home. Code commented out in `render_html.py` and `codebook.js`/`tags.js`
-- [ ] **Feedback endpoint** — deploy `server/feedback.php` to Dreamhost. See `server/README.md`
+- [x] **Feedback endpoint** — deploy `server/feedback.php` to Dreamhost. See `server/README.md`
 - [ ] **User research panel opt-in** — optional email field in feedback modal
 - [ ] **Export and sharing** — deferred until after React migration (see `docs/design-export-sharing.md`, "Dependency on React migration" section)
 - [ ] **Miro bridge** — Miro-shaped CSV export → API integration → layout engine. See `docs/private/design-miro-bridge.md`

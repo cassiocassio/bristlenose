@@ -146,6 +146,7 @@ F401 is marked `unfixable` in `pyproject.toml` so `ruff check --fix` (and the Po
 - **Testing & CI strategy** (gap audit, Playwright plan, visual regression, `data-testid` convention): `docs/design-test-strategy.md`
 - **Installation guide**: `INSTALL.md` — detailed per-platform install instructions for non-technical users
 - **Desktop app** (macOS, SwiftUI, PyInstaller sidecar, .dmg distribution): `docs/design-desktop-app.md` — vision, PRD, stack rationale, user flow, open questions. **Read this before working in `desktop/`**
+- **Session management** (re-import, session enable/disable, quarantine, pipeline re-run): `docs/design-session-management.md`
 - **Serve mode milestone 1** (domain schema, importer, sessions API): `docs/design-serve-milestone-1.md`
 - **Codebook island** (migration audit, API design, drag-drop decisions): `docs/design-codebook-island.md`
 - **Security & privacy**: `SECURITY.md` — local-first design, credential storage, PII redaction, anonymisation boundary, vulnerability reporting

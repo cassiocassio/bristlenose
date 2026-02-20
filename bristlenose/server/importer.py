@@ -4,8 +4,10 @@ Reads intermediate JSON files from the pipeline output directory and
 populates all project-scoped tables.  Built as upsert from day one —
 matched by stable key, researcher state never overwritten.
 
-Called on ``bristlenose serve`` startup.  Skips re-import if
-``project.imported_at`` is already set (restart the server to re-import).
+Called on ``bristlenose serve`` startup.  Always re-imports to pick up
+pipeline re-runs (added/removed sessions).  Stale data from deleted
+sessions is cleaned up; researcher state (starred, hidden, tags, edits,
+deleted badges) is preserved for quotes that survive the re-import.
 """
 
 from __future__ import annotations
@@ -20,9 +22,13 @@ from sqlalchemy.orm import Session
 
 from bristlenose.server.models import (
     ClusterQuote,
+    DeletedBadge,
     Person,
     Project,
     Quote,
+    QuoteEdit,
+    QuoteState,
+    QuoteTag,
     ScreenCluster,
     SessionSpeaker,
     SourceFile,
@@ -82,6 +88,11 @@ def _parse_date(date_str: str) -> datetime | None:
 def import_project(db: Session, project_dir: Path) -> Project:
     """Import pipeline output into the database.
 
+    Always re-imports to pick up pipeline re-runs (added/removed sessions).
+    Stale data from deleted sessions is cleaned up; researcher state
+    (starred, hidden, tags, edits, deleted badges) is preserved for quotes
+    that survive the re-import.
+
     Args:
         db: SQLAlchemy database session.
         project_dir: Path to the project's input directory.
@@ -110,9 +121,6 @@ def import_project(db: Session, project_dir: Path) -> Project:
         .filter_by(input_dir=str(project_dir), output_dir=str(output_dir))
         .first()
     )
-    if project and project.imported_at is not None:
-        logger.info("Project '%s' already imported, skipping.", project_name)
-        return project
 
     if project is None:
         project = Project(
@@ -123,6 +131,12 @@ def import_project(db: Session, project_dir: Path) -> Project:
         )
         db.add(project)
         db.flush()  # get project.id
+
+    # --- Import timestamp ------------------------------------------------
+    # Every entity touched during this import gets this timestamp.
+    # After import, anything with an older last_imported_at is stale
+    # (from a previous pipeline run with sessions that no longer exist).
+    now = datetime.now(timezone.utc)
 
     # --- Read intermediate JSON ------------------------------------------
     screen_clusters_data: list[dict] = []
@@ -186,16 +200,23 @@ def import_project(db: Session, project_dir: Path) -> Project:
     _import_speakers(db, session_map, transcripts_dir)
 
     # --- Import quotes, clusters, themes ---------------------------------
-    quote_map = _import_quotes_from_clusters(db, project, session_map, screen_clusters_data)
-    _import_quotes_from_themes(db, project, session_map, theme_groups_data, quote_map)
+    quote_map = _import_quotes_from_clusters(
+        db, project, session_map, screen_clusters_data, now,
+    )
+    _import_quotes_from_themes(
+        db, project, session_map, theme_groups_data, quote_map, now,
+    )
 
     # --- Import topic boundaries (if available) --------------------------
     tb_path = intermediate / "topic_boundaries.json"
     if tb_path.exists():
         _import_topic_boundaries(db, session_map, tb_path)
 
+    # --- Clean up stale data from previous pipeline runs -----------------
+    _cleanup_stale_data(db, project, session_ids, now)
+
     # --- Mark project as imported ----------------------------------------
-    project.imported_at = datetime.now(timezone.utc)
+    project.imported_at = now
     db.commit()
 
     logger.info(
@@ -475,13 +496,13 @@ def _import_quotes_from_clusters(
     project: Project,
     session_map: dict[str, SessionModel],
     screen_clusters_data: list[dict],
+    now: datetime,
 ) -> dict[tuple, Quote]:
     """Import screen clusters and their quotes.
 
     Returns a quote_map keyed by (session_id, participant_id, start_timecode)
     for deduplication when the same quote appears in themes.
     """
-    now = datetime.now(timezone.utc)
     quote_map: dict[tuple, Quote] = {}
 
     for i, cluster_data in enumerate(screen_clusters_data):
@@ -537,12 +558,12 @@ def _import_quotes_from_themes(
     session_map: dict[str, SessionModel],
     theme_groups_data: list[dict],
     quote_map: dict[tuple, Quote],
+    now: datetime,
 ) -> None:
     """Import theme groups and their quotes.
 
     Reuses quotes from quote_map if they already exist (from clusters).
     """
-    now = datetime.now(timezone.utc)
 
     for i, theme_data in enumerate(theme_groups_data):
         label = theme_data.get("theme_label", f"Theme {i + 1}")
@@ -607,3 +628,206 @@ def _import_topic_boundaries(
             confidence=float(item.get("confidence", 0.0)),
         )
         db.add(tb)
+
+
+def _cleanup_stale_data(
+    db: Session,
+    project: Project,
+    current_session_ids: set[str],
+    now: datetime,
+) -> None:
+    """Remove data from previous pipeline runs that no longer exists.
+
+    After a re-run where videos were added or removed, the intermediate
+    JSON reflects the new state.  Entities touched during *this* import
+    have ``last_imported_at == now``.  Anything older is stale.
+
+    Researcher state (QuoteState, QuoteTag, QuoteEdit, DeletedBadge)
+    is preserved for surviving quotes and deleted for stale quotes —
+    a quote from a removed session is gone, so its tags are meaningless.
+    """
+    # --- Stale quotes (not touched in this import) -----------------------
+    stale_quotes = (
+        db.query(Quote)
+        .filter(
+            Quote.project_id == project.id,
+            (Quote.last_imported_at < now) | (Quote.last_imported_at.is_(None)),
+        )
+        .all()
+    )
+    if stale_quotes:
+        stale_quote_ids = [q.id for q in stale_quotes]
+        logger.info(
+            "Removing %d stale quotes from previous pipeline run.",
+            len(stale_quote_ids),
+        )
+
+        # Delete researcher state for stale quotes
+        db.query(QuoteState).filter(
+            QuoteState.quote_id.in_(stale_quote_ids)
+        ).delete(synchronize_session="fetch")
+        db.query(QuoteTag).filter(
+            QuoteTag.quote_id.in_(stale_quote_ids)
+        ).delete(synchronize_session="fetch")
+        db.query(QuoteEdit).filter(
+            QuoteEdit.quote_id.in_(stale_quote_ids)
+        ).delete(synchronize_session="fetch")
+        db.query(DeletedBadge).filter(
+            DeletedBadge.quote_id.in_(stale_quote_ids)
+        ).delete(synchronize_session="fetch")
+
+        # Delete join rows
+        db.query(ClusterQuote).filter(
+            ClusterQuote.quote_id.in_(stale_quote_ids)
+        ).delete(synchronize_session="fetch")
+        db.query(ThemeQuote).filter(
+            ThemeQuote.quote_id.in_(stale_quote_ids)
+        ).delete(synchronize_session="fetch")
+
+        # Delete the quotes themselves
+        db.query(Quote).filter(
+            Quote.id.in_(stale_quote_ids)
+        ).delete(synchronize_session="fetch")
+
+    # --- Stale pipeline-created clusters ---------------------------------
+    stale_clusters = (
+        db.query(ScreenCluster)
+        .filter(
+            ScreenCluster.project_id == project.id,
+            ScreenCluster.created_by == "pipeline",
+            (ScreenCluster.last_imported_at < now)
+            | (ScreenCluster.last_imported_at.is_(None)),
+        )
+        .all()
+    )
+    if stale_clusters:
+        stale_cluster_ids = [c.id for c in stale_clusters]
+        logger.info(
+            "Removing %d stale clusters from previous pipeline run.",
+            len(stale_cluster_ids),
+        )
+        db.query(ClusterQuote).filter(
+            ClusterQuote.cluster_id.in_(stale_cluster_ids)
+        ).delete(synchronize_session="fetch")
+        db.query(ScreenCluster).filter(
+            ScreenCluster.id.in_(stale_cluster_ids)
+        ).delete(synchronize_session="fetch")
+
+    # --- Stale pipeline-created themes -----------------------------------
+    stale_themes = (
+        db.query(ThemeGroup)
+        .filter(
+            ThemeGroup.project_id == project.id,
+            ThemeGroup.created_by == "pipeline",
+            (ThemeGroup.last_imported_at < now)
+            | (ThemeGroup.last_imported_at.is_(None)),
+        )
+        .all()
+    )
+    if stale_themes:
+        stale_theme_ids = [t.id for t in stale_themes]
+        logger.info(
+            "Removing %d stale themes from previous pipeline run.",
+            len(stale_theme_ids),
+        )
+        db.query(ThemeQuote).filter(
+            ThemeQuote.theme_id.in_(stale_theme_ids)
+        ).delete(synchronize_session="fetch")
+        db.query(ThemeGroup).filter(
+            ThemeGroup.id.in_(stale_theme_ids)
+        ).delete(synchronize_session="fetch")
+
+    # --- Stale sessions --------------------------------------------------
+    # Sessions that exist in the DB but not in the current pipeline output
+    all_db_sessions = (
+        db.query(SessionModel)
+        .filter_by(project_id=project.id)
+        .all()
+    )
+    stale_sessions = [s for s in all_db_sessions if s.session_id not in current_session_ids]
+    if stale_sessions:
+        stale_session_db_ids = [s.id for s in stale_sessions]
+        stale_session_str_ids = [s.session_id for s in stale_sessions]
+        logger.info(
+            "Removing %d stale sessions: %s",
+            len(stale_sessions),
+            ", ".join(stale_session_str_ids),
+        )
+        # Delete child rows
+        db.query(SourceFile).filter(
+            SourceFile.session_id.in_(stale_session_db_ids)
+        ).delete(synchronize_session="fetch")
+        db.query(TranscriptSegment).filter(
+            TranscriptSegment.session_id.in_(stale_session_db_ids)
+        ).delete(synchronize_session="fetch")
+        db.query(TopicBoundary).filter(
+            TopicBoundary.session_id.in_(stale_session_db_ids)
+        ).delete(synchronize_session="fetch")
+
+        # SessionSpeaker + orphaned Person rows
+        stale_speakers = (
+            db.query(SessionSpeaker)
+            .filter(SessionSpeaker.session_id.in_(stale_session_db_ids))
+            .all()
+        )
+        stale_person_ids = [sp.person_id for sp in stale_speakers]
+        db.query(SessionSpeaker).filter(
+            SessionSpeaker.session_id.in_(stale_session_db_ids)
+        ).delete(synchronize_session="fetch")
+
+        # Only delete persons not referenced by other sessions
+        if stale_person_ids:
+            still_used = (
+                db.query(SessionSpeaker.person_id)
+                .filter(SessionSpeaker.person_id.in_(stale_person_ids))
+                .all()
+            )
+            still_used_ids = {row[0] for row in still_used}
+            orphan_ids = [pid for pid in stale_person_ids if pid not in still_used_ids]
+            if orphan_ids:
+                db.query(Person).filter(
+                    Person.id.in_(orphan_ids)
+                ).delete(synchronize_session="fetch")
+
+        # Delete the sessions
+        db.query(SessionModel).filter(
+            SessionModel.id.in_(stale_session_db_ids)
+        ).delete(synchronize_session="fetch")
+
+    # --- Clean stale pipeline join rows ----------------------------------
+    # If the pipeline reassigned a quote to a different cluster/theme,
+    # old pipeline-assigned joins for surviving clusters may be stale.
+    # Get all surviving pipeline clusters and their expected quote IDs.
+    surviving_clusters = (
+        db.query(ScreenCluster)
+        .filter_by(project_id=project.id, created_by="pipeline")
+        .all()
+    )
+    for cluster in surviving_clusters:
+        # Get all pipeline-assigned joins for this cluster
+        pipeline_cqs = (
+            db.query(ClusterQuote)
+            .filter_by(cluster_id=cluster.id, assigned_by="pipeline")
+            .all()
+        )
+        for cq in pipeline_cqs:
+            # If the quote no longer exists, remove the join
+            quote = db.get(Quote, cq.quote_id)
+            if not quote:
+                db.delete(cq)
+
+    surviving_themes = (
+        db.query(ThemeGroup)
+        .filter_by(project_id=project.id, created_by="pipeline")
+        .all()
+    )
+    for theme in surviving_themes:
+        pipeline_tqs = (
+            db.query(ThemeQuote)
+            .filter_by(theme_id=theme.id, assigned_by="pipeline")
+            .all()
+        )
+        for tq in pipeline_tqs:
+            quote = db.get(Quote, tq.quote_id)
+            if not quote:
+                db.delete(tq)

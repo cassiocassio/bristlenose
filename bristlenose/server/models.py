@@ -232,10 +232,10 @@ class TranscriptSegment(Base):
 class Quote(Base):
     """A single verbatim quote extracted from participant speech.
 
-    last_imported_at is null for researcher-created quotes or quotes
-    that have become stale (present in a previous pipeline run but not
-    the current one). Stale quotes are kept, not deleted — the researcher
-    may have tagged them.
+    last_imported_at tracks when this quote was last seen in pipeline
+    output.  On re-import, quotes not touched (last_imported_at < now)
+    are deleted along with their researcher state — they belong to
+    sessions that were removed between pipeline runs.
     """
 
     __tablename__ = "quotes"
@@ -498,3 +498,68 @@ class ImportConflict(Base):
     description: Mapped[str] = mapped_column(Text, default="")
     resolved: Mapped[bool] = mapped_column(default=False)
     resolved_at: Mapped[datetime | None] = mapped_column(default=None)
+
+
+# ---------------------------------------------------------------------------
+# AutoCode — LLM-assisted codebook tag application
+# ---------------------------------------------------------------------------
+
+
+class AutoCodeJob(Base):
+    """An AutoCode run — one framework applied to one project's quotes.
+
+    The unique constraint on (project_id, framework_id) enforces "no re-run"
+    at the database level. One AutoCode pass per framework per project.
+    """
+
+    __tablename__ = "autocode_jobs"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    project_id: Mapped[int] = mapped_column(ForeignKey("projects.id"), index=True)
+    framework_id: Mapped[str] = mapped_column(String(50))  # "garrett", "norman", "uxr"
+    status: Mapped[str] = mapped_column(String(20))  # running, completed, failed
+    total_quotes: Mapped[int] = mapped_column(default=0)
+    processed_quotes: Mapped[int] = mapped_column(default=0)
+    proposed_count: Mapped[int] = mapped_column(default=0)
+    error_message: Mapped[str] = mapped_column(Text, default="")
+    llm_provider: Mapped[str] = mapped_column(String(50), default="")
+    llm_model: Mapped[str] = mapped_column(String(100), default="")
+    input_tokens: Mapped[int] = mapped_column(default=0)
+    output_tokens: Mapped[int] = mapped_column(default=0)
+    started_at: Mapped[datetime] = mapped_column(default=func.now())
+    completed_at: Mapped[datetime | None] = mapped_column(default=None)
+
+    proposed_tags: Mapped[list[ProposedTag]] = relationship(back_populates="job")
+
+    __table_args__ = (
+        UniqueConstraint(
+            "project_id", "framework_id", name="uq_autocode_project_framework"
+        ),
+    )
+
+
+class ProposedTag(Base):
+    """An LLM-proposed tag assignment, pending researcher review.
+
+    Every quote gets a ProposedTag row — including low-confidence
+    assignments. The API filters by min_confidence to control what
+    the researcher sees. Denied rows stay for telemetry (analysing
+    which tags the LLM consistently gets wrong).
+    """
+
+    __tablename__ = "proposed_tags"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    job_id: Mapped[int] = mapped_column(ForeignKey("autocode_jobs.id"), index=True)
+    quote_id: Mapped[int] = mapped_column(ForeignKey("quotes.id"), index=True)
+    tag_definition_id: Mapped[int] = mapped_column(ForeignKey("tag_definitions.id"))
+    confidence: Mapped[float] = mapped_column(Float, default=0.0)
+    rationale: Mapped[str] = mapped_column(Text, default="")
+    status: Mapped[str] = mapped_column(String(20), default="pending")  # pending, accepted, denied
+    reviewed_at: Mapped[datetime | None] = mapped_column(default=None)
+
+    job: Mapped[AutoCodeJob] = relationship(back_populates="proposed_tags")
+
+    __table_args__ = (
+        UniqueConstraint("job_id", "quote_id", name="uq_proposed_tag_job_quote"),
+    )

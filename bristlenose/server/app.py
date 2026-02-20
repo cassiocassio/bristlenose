@@ -12,6 +12,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 
 from bristlenose.server.db import create_session_factory, get_engine, init_db
+from bristlenose.server.routes.autocode import router as autocode_router
 from bristlenose.server.routes.codebook import router as codebook_router
 from bristlenose.server.routes.dashboard import router as dashboard_router
 from bristlenose.server.routes.data import router as data_router
@@ -76,6 +77,78 @@ _REACT_TRANSCRIPT_MOUNT = (
 )
 
 
+def _extract_bundle_tags() -> str:
+    """Extract <script> and <link> tags from the Vite-built index.html.
+
+    Returns the tags with paths rewritten from ``/assets/`` to
+    ``/static/assets/`` for injection into report pages served by FastAPI.
+    Returns an empty string if the build output doesn't exist.
+    """
+    index_path = _STATIC_DIR / "index.html"
+    if not index_path.is_file():
+        return ""
+    html = index_path.read_text(encoding="utf-8")
+    tags: list[str] = []
+    for match in re.finditer(r"<script[^>]*\ssrc=\"(/assets/[^\"]+)\"[^>]*></script>", html):
+        tags.append(match.group(0).replace(match.group(1), "/static" + match.group(1)))
+    for match in re.finditer(r"<link[^>]*\shref=\"(/assets/[^\"]+)\"[^>]*>", html):
+        tags.append(match.group(0).replace(match.group(1), "/static" + match.group(1)))
+    return "\n".join(tags)
+
+
+def _transform_report_html(html: str, project_dir: Path | None) -> str:
+    """Apply shared HTML transformations for serve mode (dev and production).
+
+    Rewrites video URIs, swaps Jinja2 comment markers for React mount divs,
+    and injects the API base URL script.
+    """
+    if project_dir is not None:
+        html = _rewrite_video_map_uris(html, project_dir)
+    html = re.sub(
+        r"<!-- bn-dashboard -->.*?<!-- /bn-dashboard -->",
+        _REACT_DASHBOARD_MOUNT, html, flags=re.DOTALL,
+    )
+    html = re.sub(
+        r"<!-- bn-session-table -->.*?<!-- /bn-session-table -->",
+        _REACT_SESSIONS_MOUNT, html, flags=re.DOTALL,
+    )
+    html = re.sub(
+        r"<!-- bn-quote-sections -->.*?<!-- /bn-quote-sections -->",
+        _REACT_QUOTE_SECTIONS_MOUNT, html, flags=re.DOTALL,
+    )
+    html = re.sub(
+        r"<!-- bn-quote-themes -->.*?<!-- /bn-quote-themes -->",
+        _REACT_QUOTE_THEMES_MOUNT, html, flags=re.DOTALL,
+    )
+    html = re.sub(
+        r"<!-- bn-codebook -->.*?<!-- /bn-codebook -->",
+        _REACT_CODEBOOK_MOUNT, html, flags=re.DOTALL,
+    )
+    api_base_script = (
+        "<script>window.BRISTLENOSE_API_BASE = '/api/projects/1';</script>\n"
+    )
+    html = html.replace("</body>", f"{api_base_script}</body>")
+    return html
+
+
+def _transform_transcript_html(
+    html: str, session_id: str, project_dir: Path | None,
+) -> str:
+    """Apply shared HTML transformations for transcript pages."""
+    if project_dir is not None:
+        html = _rewrite_video_map_uris(html, project_dir)
+    mount_html = _REACT_TRANSCRIPT_MOUNT.replace("{session_id}", session_id)
+    html = re.sub(
+        r"<!-- bn-transcript-page -->.*?<!-- /bn-transcript-page -->",
+        mount_html, html, flags=re.DOTALL,
+    )
+    api_base_script = (
+        "<script>window.BRISTLENOSE_API_BASE = '/api/projects/1';</script>\n"
+    )
+    html = html.replace("</body>", f"{api_base_script}</body>")
+    return html
+
+
 def create_app(
     project_dir: Path | None = None,
     dev: bool = False,
@@ -110,6 +183,7 @@ def create_app(
     app.state.db_factory = session_factory
 
     app.include_router(health_router)
+    app.include_router(autocode_router)
     app.include_router(codebook_router)
     app.include_router(dashboard_router)
     app.include_router(sessions_router)
@@ -138,6 +212,11 @@ def create_app(
     if not dev and _STATIC_DIR.is_dir():
         app.mount("/static", StaticFiles(directory=_STATIC_DIR), name="static")
 
+    # Serve media files (video/audio) from the project input directory so the
+    # popout player can load them over HTTP instead of file:// URIs.
+    if project_dir is not None:
+        app.mount("/media", StaticFiles(directory=project_dir), name="media")
+
     # Serve the existing HTML report and assets from the project output dir
     if project_dir is not None:
         output_dir = project_dir / "bristlenose-output"
@@ -154,11 +233,9 @@ def create_app(
                 # React islands (AboutDeveloper, SessionsTable, etc.) mount
                 # into the static report page.  Non-HTML assets (CSS, images,
                 # JS) are still served by StaticFiles.
-                _mount_dev_report(app, output_dir)
+                _mount_dev_report(app, output_dir, project_dir)
             else:
-                app.mount(
-                    "/report", StaticFiles(directory=output_dir, html=True), name="report"
-                )
+                _mount_prod_report(app, output_dir, project_dir)
         else:
             logger.warning("report mount skipped — %s does not exist", output_dir)
 
@@ -568,12 +645,51 @@ def _replace_baked_js(html: str) -> str:
     return html[:marker_idx] + live_js + "\n" + html[end_script:]
 
 
-def _mount_dev_report(app: FastAPI, output_dir: Path) -> None:
-    """Mount the report with developer section injected into the About tab.
+def _rewrite_video_map_uris(html: str, project_dir: Path) -> str:
+    """Rewrite file:// URIs in BRISTLENOSE_VIDEO_MAP to /media/ HTTP paths.
 
-    In dev mode, the About tab gets a Developer section with links to the
-    database browser, API docs, and other dev tools.  Rendered as plain HTML
-    — no React or Vite dev server required.
+    The renderer bakes ``file://`` URIs into the video map which work when
+    the report is opened directly from disk.  In serve mode the page is
+    loaded over HTTP, so browsers block ``file://`` access.  This function
+    converts those URIs to ``/media/`` paths served by StaticFiles.
+    """
+    import json
+    from urllib.parse import quote, unquote
+
+    # Match the JS variable assignment
+    pattern = r"(var BRISTLENOSE_VIDEO_MAP\s*=\s*)(\{[^}]*\})(;)"
+    match = re.search(pattern, html)
+    if not match:
+        return html
+
+    try:
+        video_map = json.loads(match.group(2))
+    except json.JSONDecodeError:
+        return html
+
+    prefix = project_dir.resolve().as_uri()  # file:///abs/path/to/project
+    rewritten = {}
+    for key, uri in video_map.items():
+        if uri.startswith(prefix):
+            # Strip file:// prefix and project dir, URL-decode then re-encode
+            rel = unquote(uri[len(prefix):].lstrip("/"))
+            rewritten[key] = "/media/" + quote(rel, safe="/")
+        else:
+            rewritten[key] = uri
+
+    return html[:match.start()] + (
+        match.group(1) + json.dumps(rewritten) + match.group(3)
+    ) + html[match.end():]
+
+
+def _mount_dev_report(
+    app: FastAPI, output_dir: Path, project_dir: Path | None = None,
+) -> None:
+    """Mount the report with dev-mode features injected.
+
+    Layers dev-only features (live JS reload, renderer overlay, Vite HMR,
+    developer section) on top of the shared HTML transformations that are
+    common to both dev and production serve.
     """
     report_html = output_dir / "index.html"
     if report_html.is_symlink():
@@ -586,55 +702,14 @@ def _mount_dev_report(app: FastAPI, output_dir: Path) -> None:
     @app.get("/report/")
     def serve_report_html() -> HTMLResponse:
         html = report_html.read_text(encoding="utf-8")
-        # Live-reload JS: replace baked-in JS with fresh source files so
-        # editing a .js file and refreshing the browser picks up changes
-        # instantly — no `bristlenose render` step needed during development.
+        # Dev-only: live-reload JS from source files
         html = _replace_baked_js(html)
-        # Swap Jinja2 regions for React mount points.
-        # Markers are rendered by render_html.py around each replaceable region.
-        html = re.sub(
-            r"<!-- bn-dashboard -->.*?<!-- /bn-dashboard -->",
-            _REACT_DASHBOARD_MOUNT,
-            html,
-            flags=re.DOTALL,
-        )
-        html = re.sub(
-            r"<!-- bn-session-table -->.*?<!-- /bn-session-table -->",
-            _REACT_SESSIONS_MOUNT,
-            html,
-            flags=re.DOTALL,
-        )
-        # Swap the Jinja2 quote sections for the React mount point.
-        html = re.sub(
-            r"<!-- bn-quote-sections -->.*?<!-- /bn-quote-sections -->",
-            _REACT_QUOTE_SECTIONS_MOUNT,
-            html,
-            flags=re.DOTALL,
-        )
-        # Swap the Jinja2 quote themes for the React mount point.
-        html = re.sub(
-            r"<!-- bn-quote-themes -->.*?<!-- /bn-quote-themes -->",
-            _REACT_QUOTE_THEMES_MOUNT,
-            html,
-            flags=re.DOTALL,
-        )
-        # Swap the Jinja2 codebook for the React mount point.
-        html = re.sub(
-            r"<!-- bn-codebook -->.*?<!-- /bn-codebook -->",
-            _REACT_CODEBOOK_MOUNT,
-            html,
-            flags=re.DOTALL,
-        )
-        # Inject developer section before the closing .bn-about marker
+        # Shared: video URI rewrite, React mount points, API base URL
+        html = _transform_report_html(html, project_dir)
+        # Dev-only: inject developer section before the closing .bn-about marker
         html = html.replace("<!-- /bn-about -->", f"{dev_html}<!-- /bn-about -->")
-        # Inject API base URL so vanilla JS modules can sync to the server
-        api_base_script = (
-            "<script>window.BRISTLENOSE_API_BASE = '/api/projects/1';</script>\n"
-        )
-        # Inject renderer overlay + Vite dev scripts before </body>
-        html = html.replace(
-            "</body>", f"{api_base_script}{overlay_html}{vite_scripts}</body>"
-        )
+        # Dev-only: inject renderer overlay + Vite dev scripts before </body>
+        html = html.replace("</body>", f"{overlay_html}{vite_scripts}</body>")
         return HTMLResponse(html)
 
     @app.get("/report")
@@ -649,7 +724,6 @@ def _mount_dev_report(app: FastAPI, output_dir: Path) -> None:
         (if any) fall through to StaticFiles.
         """
         if not filename.startswith("transcript_") or not filename.endswith(".html"):
-            # Not a transcript page — let StaticFiles handle it
             from starlette.exceptions import HTTPException as StarletteHTTPException
 
             raise StarletteHTTPException(status_code=404)
@@ -659,27 +733,13 @@ def _mount_dev_report(app: FastAPI, output_dir: Path) -> None:
         if not page_path.is_file():
             raise HTTPException(status_code=404, detail="Transcript page not found")
 
-        # Extract session_id from filename: transcript_s1.html → s1
         sid = filename.removeprefix("transcript_").removesuffix(".html")
-
         page_html = page_path.read_text(encoding="utf-8")
-
-        # Replace comment markers with React mount div (leave IIFE untouched)
-        mount_html = _REACT_TRANSCRIPT_MOUNT.replace("{session_id}", sid)
-        page_html = re.sub(
-            r"<!-- bn-transcript-page -->.*?<!-- /bn-transcript-page -->",
-            mount_html,
-            page_html,
-            flags=re.DOTALL,
-        )
-
-        # Inject API base URL + overlay + Vite dev scripts before </body>
-        api_base_script = (
-            "<script>window.BRISTLENOSE_API_BASE = '/api/projects/1';</script>\n"
-        )
+        # Shared: video URI rewrite, React mount point, API base URL
+        page_html = _transform_transcript_html(page_html, sid, project_dir)
+        # Dev-only: inject renderer overlay + Vite dev scripts before </body>
         page_html = page_html.replace(
-            "</body>",
-            f"{api_base_script}{overlay_html}{vite_scripts}</body>",
+            "</body>", f"{overlay_html}{vite_scripts}</body>"
         )
         return HTMLResponse(page_html)
 
@@ -695,6 +755,67 @@ def _mount_dev_report(app: FastAPI, output_dir: Path) -> None:
     for url_path, dir_path in design_mounts:
         if dir_path.is_dir():
             app.mount(url_path, StaticFiles(directory=dir_path, html=True), name=url_path[1:])
+
+
+def _mount_prod_report(
+    app: FastAPI, output_dir: Path, project_dir: Path | None = None,
+) -> None:
+    """Mount the report with React islands in production serve mode.
+
+    Like ``_mount_dev_report`` but without dev-only features (Vite HMR,
+    renderer overlay, live JS reload, developer section).  Injects the
+    pre-built React bundle from ``server/static/assets/``.
+
+    Falls back to plain ``StaticFiles`` if no React bundle is found.
+    """
+    bundle_tags = _extract_bundle_tags()
+    if not bundle_tags:
+        logger.warning(
+            "React bundle not found at %s — serving static HTML without React "
+            "islands. Run 'npm run build' in frontend/ to build the bundle.",
+            _STATIC_DIR,
+        )
+        app.mount(
+            "/report", StaticFiles(directory=output_dir, html=True), name="report"
+        )
+        return
+
+    report_html_path = output_dir / "index.html"
+    if report_html_path.is_symlink():
+        report_html_path = output_dir / os.readlink(report_html_path)
+
+    @app.get("/report/")
+    def serve_report_html_prod() -> HTMLResponse:
+        html = report_html_path.read_text(encoding="utf-8")
+        html = _transform_report_html(html, project_dir)
+        html = html.replace("</head>", f"{bundle_tags}\n</head>")
+        return HTMLResponse(html)
+
+    @app.get("/report")
+    def redirect_report_to_slash_prod() -> RedirectResponse:
+        return RedirectResponse("/report/", status_code=301)
+
+    @app.get("/report/sessions/{filename}")
+    def serve_transcript_html_prod(filename: str) -> HTMLResponse:
+        """Serve transcript pages with React island injection (production)."""
+        if not filename.startswith("transcript_") or not filename.endswith(".html"):
+            from starlette.exceptions import HTTPException as StarletteHTTPException
+
+            raise StarletteHTTPException(status_code=404)
+
+        sessions_dir = output_dir / "sessions"
+        page_path = sessions_dir / filename
+        if not page_path.is_file():
+            raise HTTPException(status_code=404, detail="Transcript page not found")
+
+        sid = filename.removeprefix("transcript_").removesuffix(".html")
+        page_html = page_path.read_text(encoding="utf-8")
+        page_html = _transform_transcript_html(page_html, sid, project_dir)
+        page_html = page_html.replace("</head>", f"{bundle_tags}\n</head>")
+        return HTMLResponse(page_html)
+
+    # Non-HTML assets (CSS, images, JS from the pipeline) still served normally
+    app.mount("/report", StaticFiles(directory=output_dir), name="report")
 
 
 def _ensure_index_symlink(output_dir: Path) -> None:

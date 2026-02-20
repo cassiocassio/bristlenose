@@ -23,22 +23,36 @@ var _validTabs = ['project', 'sessions', 'quotes', 'codebook', 'analysis', 'sett
  * Scroll to an element by ID after the next frame settles.
  * Optionally applies a yellow flash highlight (for transcript timecodes).
  *
+ * If the target element is not yet in the DOM (e.g. React islands still
+ * loading data from the API), retries every 100 ms for up to 2 seconds.
+ *
  * @param {string} anchorId   The element ID to scroll to.
  * @param {object} [opts]     Options: { block: 'start'|'center', highlight: true|false }
  */
 function scrollToAnchor(anchorId, opts) {
   var block = (opts && opts.block) || 'start';
   var highlight = opts && opts.highlight;
-  requestAnimationFrame(function () {
+  var maxRetries = 20;  // 20 × 100 ms = 2 s
+  var attempt = 0;
+
+  function tryScroll() {
     var el = document.getElementById(anchorId);
-    if (!el) return;
-    el.scrollIntoView({ behavior: 'smooth', block: block });
-    if (highlight) {
-      el.classList.remove('anchor-highlight');
-      void el.offsetWidth;
-      el.classList.add('anchor-highlight');
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: block });
+      if (highlight) {
+        el.classList.remove('anchor-highlight');
+        void el.offsetWidth;
+        el.classList.add('anchor-highlight');
+      }
+      return;
     }
-  });
+    attempt++;
+    if (attempt < maxRetries) {
+      setTimeout(tryScroll, 100);
+    }
+  }
+
+  requestAnimationFrame(tryScroll);
 }
 
 /**
@@ -193,6 +207,19 @@ function initGlobalNav() {
       e.preventDefault();
       switchToTab('quotes');
       scrollToAnchor(this.getAttribute('href').slice(1));
+    });
+  }
+
+  // --- TOC links — intercept to use retry-aware scrollToAnchor ---
+  // The TOC is static Jinja2 HTML, but the target headings are rendered by
+  // React islands after an async API fetch.  Native anchor scrolling fails
+  // if the target doesn't exist yet; scrollToAnchor retries until it does.
+  var tocLinks = document.querySelectorAll('.toc a[href^="#"]');
+  for (var tl = 0; tl < tocLinks.length; tl++) {
+    tocLinks[tl].addEventListener('click', function (e) {
+      e.preventDefault();
+      var anchor = this.getAttribute('href').slice(1);
+      scrollToAnchor(anchor);
     });
   }
 
@@ -362,3 +389,8 @@ function _reshuffleFeaturedQuotes() {
   }
   row.style.display = anyVisible ? '' : 'none';
 }
+
+// ── Expose to window for React island interop ────────────────────────────
+window.switchToTab = switchToTab;
+window.scrollToAnchor = scrollToAnchor;
+window.navigateToSession = navigateToSession;

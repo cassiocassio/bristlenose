@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 import pytest
@@ -11,8 +12,12 @@ from bristlenose.server.db import create_session_factory, get_engine, init_db
 from bristlenose.server.importer import import_project
 from bristlenose.server.models import (
     ClusterQuote,
+    DeletedBadge,
     Person,
     Quote,
+    QuoteEdit,
+    QuoteState,
+    QuoteTag,
     ScreenCluster,
     SessionSpeaker,
     SourceFile,
@@ -159,8 +164,8 @@ class TestImportProject:
 class TestImportIdempotent:
     """Verify re-importing doesn't duplicate data."""
 
-    def test_second_import_skips(self, db: Session) -> None:
-        """Second import should be a no-op (imported_at already set)."""
+    def test_second_import_no_duplicates(self, db: Session) -> None:
+        """Second import should re-import without duplicating data."""
         project1 = import_project(db, _FIXTURE_DIR)
         project2 = import_project(db, _FIXTURE_DIR)
         assert project1.id == project2.id
@@ -168,17 +173,17 @@ class TestImportIdempotent:
         # Should still be 1 session, 4 quotes, etc.
         assert db.query(SessionModel).count() == 1
         assert db.query(Quote).count() == 4
+        assert db.query(ScreenCluster).count() == 2
+        assert db.query(ThemeGroup).count() == 1
 
-    def test_forced_reimport_after_clear(self, db: Session) -> None:
-        """If we clear imported_at, re-import should update data."""
+    def test_reimport_updates_imported_at(self, db: Session) -> None:
+        """Re-import should update imported_at timestamp."""
         project = import_project(db, _FIXTURE_DIR)
-
-        # Clear imported_at to force re-import
-        project.imported_at = None
-        db.commit()
+        first_imported = project.imported_at
 
         project = import_project(db, _FIXTURE_DIR)
         assert project.imported_at is not None
+        assert project.imported_at >= first_imported
         # Data should still be consistent (upsert, no duplicates)
         assert db.query(SessionModel).count() == 1
         assert db.query(Quote).count() == 4
@@ -210,3 +215,581 @@ class TestImportMissing:
         project = import_project(db, tmp_path)
         assert project.name == "My Project"
         assert project.slug == "my-project"
+
+
+# ---------------------------------------------------------------------------
+# Helpers for re-import tests
+# ---------------------------------------------------------------------------
+
+
+def _write_pipeline_output(
+    tmp_path: Path,
+    clusters: list[dict],
+    themes: list[dict],
+    project_name: str = "Reimport Test",
+) -> Path:
+    """Write intermediate JSON files for a synthetic project.
+
+    Returns the project input directory (parent of bristlenose-output).
+    """
+    out = tmp_path / "bristlenose-output"
+    out.mkdir(exist_ok=True)
+    intermediate = out / ".bristlenose" / "intermediate"
+    intermediate.mkdir(parents=True, exist_ok=True)
+    (intermediate / "metadata.json").write_text(
+        json.dumps({"project_name": project_name})
+    )
+    (intermediate / "screen_clusters.json").write_text(json.dumps(clusters))
+    (intermediate / "theme_groups.json").write_text(json.dumps(themes))
+    return tmp_path
+
+
+def _make_quote(
+    session_id: str,
+    participant_id: str,
+    start: float,
+    text: str,
+    sentiment: str = "neutral",
+) -> dict:
+    """Build a quote dict matching the intermediate JSON format."""
+    return {
+        "session_id": session_id,
+        "participant_id": participant_id,
+        "start_timecode": start,
+        "end_timecode": start + 10.0,
+        "text": text,
+        "verbatim_excerpt": text[:40],
+        "topic_label": "Test",
+        "quote_type": "screen_specific",
+        "researcher_context": None,
+        "sentiment": sentiment,
+        "intensity": 1,
+    }
+
+
+# ---------------------------------------------------------------------------
+# Re-import with session changes
+# ---------------------------------------------------------------------------
+
+
+class TestReimportRemovedSession:
+    """When a session is removed between pipeline runs, its data should vanish."""
+
+    def test_removed_session_quotes_deleted(self, db: Session, tmp_path: Path) -> None:
+        """Quotes from a removed session disappear on re-import."""
+        # Run 1: two sessions (s1, s2)
+        clusters_v1 = [
+            {
+                "screen_label": "Login",
+                "description": "Login screen",
+                "display_order": 1,
+                "quotes": [
+                    _make_quote("s1", "p1", 10.0, "Login was easy"),
+                    _make_quote("s2", "p1", 15.0, "Login was confusing"),
+                ],
+            },
+        ]
+        themes_v1 = [
+            {
+                "theme_label": "First impressions",
+                "description": "First time using the app",
+                "quotes": [
+                    _make_quote("s2", "p1", 30.0, "It looked modern"),
+                ],
+            },
+        ]
+        _write_pipeline_output(tmp_path, clusters_v1, themes_v1)
+        import_project(db, tmp_path)
+
+        assert db.query(Quote).count() == 3
+        assert db.query(SessionModel).count() == 2
+
+        # Run 2: removed s2 (bad interview)
+        clusters_v2 = [
+            {
+                "screen_label": "Login",
+                "description": "Login screen",
+                "display_order": 1,
+                "quotes": [
+                    _make_quote("s1", "p1", 10.0, "Login was easy"),
+                ],
+            },
+        ]
+        themes_v2: list[dict] = []
+        _write_pipeline_output(tmp_path, clusters_v2, themes_v2)
+        import_project(db, tmp_path)
+
+        # s2 quotes should be gone
+        assert db.query(Quote).count() == 1
+        remaining = db.query(Quote).first()
+        assert remaining is not None
+        assert remaining.session_id == "s1"
+
+        # s2 session should be gone
+        assert db.query(SessionModel).count() == 1
+        assert db.query(SessionModel).first().session_id == "s1"
+
+        # Stale theme should be gone
+        assert db.query(ThemeGroup).count() == 0
+
+    def test_removed_session_cleans_join_rows(
+        self, db: Session, tmp_path: Path,
+    ) -> None:
+        """ClusterQuote and ThemeQuote joins for removed quotes are cleaned."""
+        clusters_v1 = [
+            {
+                "screen_label": "Dashboard",
+                "description": "",
+                "display_order": 1,
+                "quotes": [
+                    _make_quote("s1", "p1", 5.0, "Dashboard quote s1"),
+                    _make_quote("s2", "p1", 5.0, "Dashboard quote s2"),
+                ],
+            },
+        ]
+        themes_v1 = [
+            {
+                "theme_label": "Theme A",
+                "description": "",
+                "quotes": [
+                    _make_quote("s2", "p1", 20.0, "Theme quote s2"),
+                ],
+            },
+        ]
+        _write_pipeline_output(tmp_path, clusters_v1, themes_v1)
+        import_project(db, tmp_path)
+
+        assert db.query(ClusterQuote).count() == 2
+        assert db.query(ThemeQuote).count() == 1
+
+        # Remove s2
+        clusters_v2 = [
+            {
+                "screen_label": "Dashboard",
+                "description": "",
+                "display_order": 1,
+                "quotes": [
+                    _make_quote("s1", "p1", 5.0, "Dashboard quote s1"),
+                ],
+            },
+        ]
+        _write_pipeline_output(tmp_path, clusters_v2, [])
+        import_project(db, tmp_path)
+
+        assert db.query(ClusterQuote).count() == 1
+        assert db.query(ThemeQuote).count() == 0
+
+
+class TestReimportPreservesResearcherState:
+    """Researcher state on surviving quotes must be preserved."""
+
+    def test_starred_survives_reimport(self, db: Session, tmp_path: Path) -> None:
+        """A starred quote keeps its star after re-import."""
+        clusters = [
+            {
+                "screen_label": "Login",
+                "description": "",
+                "display_order": 1,
+                "quotes": [
+                    _make_quote("s1", "p1", 10.0, "Login was easy"),
+                ],
+            },
+        ]
+        _write_pipeline_output(tmp_path, clusters, [])
+        import_project(db, tmp_path)
+
+        # Researcher stars the quote
+        quote = db.query(Quote).first()
+        state = QuoteState(quote_id=quote.id, is_starred=True)
+        db.add(state)
+        db.commit()
+
+        # Re-import with same data
+        import_project(db, tmp_path)
+
+        # Star should survive
+        states = db.query(QuoteState).all()
+        assert len(states) == 1
+        assert states[0].is_starred is True
+
+    def test_hidden_survives_reimport(self, db: Session, tmp_path: Path) -> None:
+        """A hidden quote keeps its hidden state after re-import."""
+        clusters = [
+            {
+                "screen_label": "Login",
+                "description": "",
+                "display_order": 1,
+                "quotes": [
+                    _make_quote("s1", "p1", 10.0, "Login was easy"),
+                ],
+            },
+        ]
+        _write_pipeline_output(tmp_path, clusters, [])
+        import_project(db, tmp_path)
+
+        # Researcher hides the quote
+        quote = db.query(Quote).first()
+        state = QuoteState(quote_id=quote.id, is_hidden=True)
+        db.add(state)
+        db.commit()
+
+        # Re-import
+        import_project(db, tmp_path)
+
+        states = db.query(QuoteState).all()
+        assert len(states) == 1
+        assert states[0].is_hidden is True
+
+    def test_tags_survive_reimport(self, db: Session, tmp_path: Path) -> None:
+        """User-applied tags on surviving quotes are preserved."""
+        from bristlenose.server.models import CodebookGroup, TagDefinition
+
+        clusters = [
+            {
+                "screen_label": "Login",
+                "description": "",
+                "display_order": 1,
+                "quotes": [
+                    _make_quote("s1", "p1", 10.0, "Login was easy"),
+                ],
+            },
+        ]
+        _write_pipeline_output(tmp_path, clusters, [])
+        import_project(db, tmp_path)
+
+        # Create a tag and apply it
+        group = CodebookGroup(name="UX", colour_set="ux")
+        db.add(group)
+        db.flush()
+        tag_def = TagDefinition(codebook_group_id=group.id, name="Usability")
+        db.add(tag_def)
+        db.flush()
+        quote = db.query(Quote).first()
+        qt = QuoteTag(quote_id=quote.id, tag_definition_id=tag_def.id)
+        db.add(qt)
+        db.commit()
+
+        # Re-import
+        import_project(db, tmp_path)
+
+        tags = db.query(QuoteTag).all()
+        assert len(tags) == 1
+        assert tags[0].tag_definition_id == tag_def.id
+
+    def test_edits_survive_reimport(self, db: Session, tmp_path: Path) -> None:
+        """Researcher text edits on surviving quotes are preserved."""
+        clusters = [
+            {
+                "screen_label": "Login",
+                "description": "",
+                "display_order": 1,
+                "quotes": [
+                    _make_quote("s1", "p1", 10.0, "Login was easy"),
+                ],
+            },
+        ]
+        _write_pipeline_output(tmp_path, clusters, [])
+        import_project(db, tmp_path)
+
+        # Edit a quote
+        quote = db.query(Quote).first()
+        edit = QuoteEdit(quote_id=quote.id, edited_text="Login was very easy")
+        db.add(edit)
+        db.commit()
+
+        # Re-import
+        import_project(db, tmp_path)
+
+        edits = db.query(QuoteEdit).all()
+        assert len(edits) == 1
+        assert edits[0].edited_text == "Login was very easy"
+
+    def test_deleted_badges_survive_reimport(
+        self, db: Session, tmp_path: Path,
+    ) -> None:
+        """Deleted badge markers on surviving quotes are preserved."""
+        clusters = [
+            {
+                "screen_label": "Login",
+                "description": "",
+                "display_order": 1,
+                "quotes": [
+                    _make_quote("s1", "p1", 10.0, "Login was easy"),
+                ],
+            },
+        ]
+        _write_pipeline_output(tmp_path, clusters, [])
+        import_project(db, tmp_path)
+
+        # Delete a badge
+        quote = db.query(Quote).first()
+        badge = DeletedBadge(quote_id=quote.id, sentiment="confusion")
+        db.add(badge)
+        db.commit()
+
+        # Re-import
+        import_project(db, tmp_path)
+
+        badges = db.query(DeletedBadge).all()
+        assert len(badges) == 1
+        assert badges[0].sentiment == "confusion"
+
+
+class TestReimportCleansRemovedSessionState:
+    """Researcher state on quotes from removed sessions gets cleaned up."""
+
+    def test_state_cleaned_for_removed_quotes(
+        self, db: Session, tmp_path: Path,
+    ) -> None:
+        """Stars/hidden/tags/edits/badges on removed quotes are deleted."""
+        from bristlenose.server.models import CodebookGroup, TagDefinition
+
+        clusters_v1 = [
+            {
+                "screen_label": "Login",
+                "description": "",
+                "display_order": 1,
+                "quotes": [
+                    _make_quote("s1", "p1", 10.0, "Keep this"),
+                    _make_quote("s2", "p1", 10.0, "Remove this"),
+                ],
+            },
+        ]
+        _write_pipeline_output(tmp_path, clusters_v1, [])
+        import_project(db, tmp_path)
+
+        # Apply researcher state to both quotes
+        q_keep = db.query(Quote).filter_by(session_id="s1").first()
+        q_remove = db.query(Quote).filter_by(session_id="s2").first()
+
+        # Star both
+        db.add(QuoteState(quote_id=q_keep.id, is_starred=True))
+        db.add(QuoteState(quote_id=q_remove.id, is_starred=True))
+
+        # Tag both
+        group = CodebookGroup(name="UX", colour_set="ux")
+        db.add(group)
+        db.flush()
+        tag_def = TagDefinition(codebook_group_id=group.id, name="Usability")
+        db.add(tag_def)
+        db.flush()
+        db.add(QuoteTag(quote_id=q_keep.id, tag_definition_id=tag_def.id))
+        db.add(QuoteTag(quote_id=q_remove.id, tag_definition_id=tag_def.id))
+
+        # Edit both
+        db.add(QuoteEdit(quote_id=q_keep.id, edited_text="Keep edited"))
+        db.add(QuoteEdit(quote_id=q_remove.id, edited_text="Remove edited"))
+
+        # Badge both
+        db.add(DeletedBadge(quote_id=q_keep.id, sentiment="frustration"))
+        db.add(DeletedBadge(quote_id=q_remove.id, sentiment="frustration"))
+        db.commit()
+
+        # Re-import without s2
+        clusters_v2 = [
+            {
+                "screen_label": "Login",
+                "description": "",
+                "display_order": 1,
+                "quotes": [
+                    _make_quote("s1", "p1", 10.0, "Keep this"),
+                ],
+            },
+        ]
+        _write_pipeline_output(tmp_path, clusters_v2, [])
+        import_project(db, tmp_path)
+
+        # s1 state preserved
+        assert db.query(QuoteState).count() == 1
+        assert db.query(QuoteState).first().quote_id == q_keep.id
+        assert db.query(QuoteTag).count() == 1
+        assert db.query(QuoteEdit).count() == 1
+        assert db.query(QuoteEdit).first().edited_text == "Keep edited"
+        assert db.query(DeletedBadge).count() == 1
+
+        # s2 everything gone
+        assert db.query(Quote).filter_by(session_id="s2").count() == 0
+
+
+class TestReimportAddedSession:
+    """When a new session is added between pipeline runs."""
+
+    def test_new_session_quotes_appear(self, db: Session, tmp_path: Path) -> None:
+        """Quotes from a newly added session appear on re-import."""
+        # Run 1: just s1
+        clusters_v1 = [
+            {
+                "screen_label": "Login",
+                "description": "",
+                "display_order": 1,
+                "quotes": [
+                    _make_quote("s1", "p1", 10.0, "Login was easy"),
+                ],
+            },
+        ]
+        _write_pipeline_output(tmp_path, clusters_v1, [])
+        import_project(db, tmp_path)
+
+        assert db.query(Quote).count() == 1
+        assert db.query(SessionModel).count() == 1
+
+        # Run 2: added s2 with new quotes
+        clusters_v2 = [
+            {
+                "screen_label": "Login",
+                "description": "Updated description",
+                "display_order": 1,
+                "quotes": [
+                    _make_quote("s1", "p1", 10.0, "Login was easy"),
+                    _make_quote("s2", "p1", 12.0, "Login needs work"),
+                ],
+            },
+        ]
+        themes_v2 = [
+            {
+                "theme_label": "New theme",
+                "description": "Emerged from new data",
+                "quotes": [
+                    _make_quote("s2", "p1", 25.0, "New insight"),
+                ],
+            },
+        ]
+        _write_pipeline_output(tmp_path, clusters_v2, themes_v2)
+        import_project(db, tmp_path)
+
+        assert db.query(Quote).count() == 3
+        assert db.query(SessionModel).count() == 2
+        assert db.query(ThemeGroup).count() == 1
+        assert db.query(ThemeGroup).first().theme_label == "New theme"
+
+    def test_existing_researcher_state_preserved_on_add(
+        self, db: Session, tmp_path: Path,
+    ) -> None:
+        """Adding a session doesn't lose state on existing quotes."""
+        clusters_v1 = [
+            {
+                "screen_label": "Login",
+                "description": "",
+                "display_order": 1,
+                "quotes": [
+                    _make_quote("s1", "p1", 10.0, "Login was easy"),
+                ],
+            },
+        ]
+        _write_pipeline_output(tmp_path, clusters_v1, [])
+        import_project(db, tmp_path)
+
+        # Star the existing quote
+        quote = db.query(Quote).first()
+        db.add(QuoteState(quote_id=quote.id, is_starred=True))
+        db.commit()
+
+        # Add s2
+        clusters_v2 = [
+            {
+                "screen_label": "Login",
+                "description": "",
+                "display_order": 1,
+                "quotes": [
+                    _make_quote("s1", "p1", 10.0, "Login was easy"),
+                    _make_quote("s2", "p1", 12.0, "Login needs work"),
+                ],
+            },
+        ]
+        _write_pipeline_output(tmp_path, clusters_v2, [])
+        import_project(db, tmp_path)
+
+        # Original quote's star preserved
+        assert db.query(QuoteState).count() == 1
+        assert db.query(QuoteState).first().is_starred is True
+        assert db.query(Quote).count() == 2
+
+
+class TestReimportStaleClusters:
+    """Clusters/themes that no longer appear in pipeline output are removed."""
+
+    def test_removed_cluster_cleaned(self, db: Session, tmp_path: Path) -> None:
+        """A cluster that vanishes from the JSON is deleted on re-import."""
+        clusters_v1 = [
+            {
+                "screen_label": "Dashboard",
+                "description": "",
+                "display_order": 1,
+                "quotes": [
+                    _make_quote("s1", "p1", 10.0, "Dashboard quote"),
+                ],
+            },
+            {
+                "screen_label": "Settings",
+                "description": "",
+                "display_order": 2,
+                "quotes": [
+                    _make_quote("s1", "p1", 30.0, "Settings quote"),
+                ],
+            },
+        ]
+        _write_pipeline_output(tmp_path, clusters_v1, [])
+        import_project(db, tmp_path)
+
+        assert db.query(ScreenCluster).count() == 2
+
+        # Merge happened: Settings cluster removed, quote moved to Dashboard
+        clusters_v2 = [
+            {
+                "screen_label": "Dashboard",
+                "description": "Updated",
+                "display_order": 1,
+                "quotes": [
+                    _make_quote("s1", "p1", 10.0, "Dashboard quote"),
+                    _make_quote("s1", "p1", 30.0, "Settings quote"),
+                ],
+            },
+        ]
+        _write_pipeline_output(tmp_path, clusters_v2, [])
+        import_project(db, tmp_path)
+
+        assert db.query(ScreenCluster).count() == 1
+        assert db.query(ScreenCluster).first().screen_label == "Dashboard"
+        assert db.query(Quote).count() == 2  # both quotes survive
+        assert db.query(ClusterQuote).count() == 2  # both in Dashboard now
+
+    def test_removed_theme_cleaned(self, db: Session, tmp_path: Path) -> None:
+        """A theme that vanishes from the JSON is deleted on re-import."""
+        themes_v1 = [
+            {
+                "theme_label": "Theme A",
+                "description": "",
+                "quotes": [
+                    _make_quote("s1", "p1", 10.0, "Theme A quote"),
+                ],
+            },
+            {
+                "theme_label": "Theme B",
+                "description": "",
+                "quotes": [
+                    _make_quote("s1", "p1", 20.0, "Theme B quote"),
+                ],
+            },
+        ]
+        _write_pipeline_output(tmp_path, [], themes_v1)
+        import_project(db, tmp_path)
+
+        assert db.query(ThemeGroup).count() == 2
+
+        # Re-run merged themes: only Theme A remains
+        themes_v2 = [
+            {
+                "theme_label": "Theme A",
+                "description": "Updated",
+                "quotes": [
+                    _make_quote("s1", "p1", 10.0, "Theme A quote"),
+                    _make_quote("s1", "p1", 20.0, "Theme B quote"),
+                ],
+            },
+        ]
+        _write_pipeline_output(tmp_path, [], themes_v2)
+        import_project(db, tmp_path)
+
+        assert db.query(ThemeGroup).count() == 1
+        assert db.query(ThemeGroup).first().theme_label == "Theme A"
+        assert db.query(Quote).count() == 2  # both quotes survive

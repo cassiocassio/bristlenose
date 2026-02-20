@@ -14,7 +14,24 @@ from rich.console import Console
 _os.environ.setdefault("TQDM_DISABLE", "1")
 _os.environ.setdefault("HF_HUB_DISABLE_PROGRESS_BARS", "1")
 
+from bristlenose import __version__
 from bristlenose.config import BristlenoseSettings
+from bristlenose.manifest import (
+    STAGE_CLUSTER_AND_GROUP,
+    STAGE_EXTRACT_AUDIO,
+    STAGE_IDENTIFY_SPEAKERS,
+    STAGE_INGEST,
+    STAGE_MERGE_TRANSCRIPT,
+    STAGE_PII_REMOVAL,
+    STAGE_QUOTE_EXTRACTION,
+    STAGE_TOPIC_SEGMENTATION,
+    create_manifest,
+    mark_stage_complete,
+    mark_stage_running,
+    write_manifest,
+)
+from bristlenose.manifest import STAGE_RENDER as _M_STAGE_RENDER
+from bristlenose.manifest import STAGE_TRANSCRIBE as _M_STAGE_TRANSCRIBE
 from bristlenose.models import (
     ExtractedQuote,
     FileType,
@@ -228,11 +245,15 @@ class Pipeline:
         output_dir.mkdir(parents=True, exist_ok=True)
         write_pipeline_metadata(output_dir, self.settings.project_name)
 
+        # ── Manifest tracking ────────────────────────────────────
+        manifest = create_manifest(self.settings.project_name, __version__)
+
         with console.status("", spinner="dots") as status:
             status.renderable.frames = [" " + f for f in status.renderable.frames]
 
             # ── Stage 1: Ingest ──────────────────────────────────────
             status.update("[dim]Ingesting files...[/dim]")
+            mark_stage_running(manifest, STAGE_INGEST)
             t0 = time.perf_counter()
             sessions = ingest(input_dir)
             if not sessions:
@@ -253,6 +274,8 @@ class Pipeline:
                 f"Ingested {len(sessions)} sessions ({', '.join(type_parts)})",
                 ingest_elapsed,
             )
+            mark_stage_complete(manifest, STAGE_INGEST)
+            write_manifest(manifest, output_dir)
 
             # ── Time estimate ────────────────────────────────────────
             from bristlenose.timing import (
@@ -284,6 +307,7 @@ class Pipeline:
             _n_sessions = float(len(sessions))
 
             # ── Stage 2: Extract audio from video ────────────────────
+            mark_stage_running(manifest, STAGE_EXTRACT_AUDIO)
             status.update("[dim]Extracting audio...[/dim]")
             t0 = time.perf_counter()
             # Temp files go in .bristlenose/temp/
@@ -294,8 +318,11 @@ class Pipeline:
                 f"Extracted audio from {len(sessions)} sessions",
                 time.perf_counter() - t0,
             )
+            mark_stage_complete(manifest, STAGE_EXTRACT_AUDIO)
+            write_manifest(manifest, output_dir)
 
             # ── Stages 3-5: Parse existing transcripts + Transcribe ──
+            mark_stage_running(manifest, _M_STAGE_TRANSCRIBE)
             status.update("[dim]Transcribing...[/dim]")
             t0 = time.perf_counter()
 
@@ -320,6 +347,8 @@ class Pipeline:
                 elapsed=_transcribe_elapsed, input_size=total_audio_mins,
             )
             self._emit_remaining(STAGE_TRANSCRIBE, _transcribe_elapsed)
+            mark_stage_complete(manifest, _M_STAGE_TRANSCRIBE)
+            write_manifest(manifest, output_dir)
 
             # ── Cost estimate before LLM stages ──────────────────────
             from bristlenose.llm.pricing import estimate_pipeline_cost
@@ -333,6 +362,7 @@ class Pipeline:
                 )
 
             # ── Stage 5b: Speaker role identification ────────────────
+            mark_stage_running(manifest, STAGE_IDENTIFY_SPEAKERS)
             status.update("[dim]Identifying speakers...[/dim]")
             t0 = time.perf_counter()
             llm_client = LLMClient(self.settings)
@@ -386,8 +416,11 @@ class Pipeline:
             self._emit_remaining(STAGE_SPEAKERS, _speakers_elapsed)
             if _speaker_errors:
                 _print_warn(*_short_reason(_speaker_errors, self.settings.llm_provider))
+            mark_stage_complete(manifest, STAGE_IDENTIFY_SPEAKERS)
+            write_manifest(manifest, output_dir)
 
             # ── Stage 6: Merge and write raw transcripts ─────────────
+            mark_stage_running(manifest, STAGE_MERGE_TRANSCRIPT)
             status.update("[dim]Merging transcripts...[/dim]")
             t0 = time.perf_counter()
             transcripts = merge_transcripts(sessions, session_segments)
@@ -395,9 +428,12 @@ class Pipeline:
             write_raw_transcripts(transcripts, raw_dir)
             write_raw_transcripts_md(transcripts, raw_dir)
             _print_step("Merged transcripts", time.perf_counter() - t0)
+            mark_stage_complete(manifest, STAGE_MERGE_TRANSCRIPT)
+            write_manifest(manifest, output_dir)
 
             # ── Stage 7: PII removal ────────────────────────────────
             if self.settings.pii_enabled:
+                mark_stage_running(manifest, STAGE_PII_REMOVAL)
                 status.update("[dim]Removing PII...[/dim]")
                 t0 = time.perf_counter()
                 clean_transcripts, pii_redactions = remove_pii(
@@ -411,6 +447,8 @@ class Pipeline:
                     f"Redacted PII ({len(pii_redactions)} entities)",
                     time.perf_counter() - t0,
                 )
+                mark_stage_complete(manifest, STAGE_PII_REMOVAL)
+                write_manifest(manifest, output_dir)
             else:
                 # Pass through without PII removal
                 clean_transcripts = [
@@ -426,6 +464,7 @@ class Pipeline:
                 ]
 
             # ── Stage 8: Topic segmentation ──────────────────────────
+            mark_stage_running(manifest, STAGE_TOPIC_SEGMENTATION)
             status.update("[dim]Segmenting topics...[/dim]")
             t0 = time.perf_counter()
             _seg_errors: list[str] = []
@@ -450,8 +489,11 @@ class Pipeline:
             self._emit_remaining(STAGE_TOPICS, _topics_elapsed)
             if _seg_errors:
                 _print_warn(*_short_reason(_seg_errors, self.settings.llm_provider))
+            mark_stage_complete(manifest, STAGE_TOPIC_SEGMENTATION)
+            write_manifest(manifest, output_dir)
 
             # ── Stage 9: Quote extraction ────────────────────────────
+            mark_stage_running(manifest, STAGE_QUOTE_EXTRACTION)
             status.update("[dim]Extracting quotes...[/dim]")
             t0 = time.perf_counter()
             _quote_errors: list[str] = []
@@ -479,8 +521,11 @@ class Pipeline:
             self._emit_remaining(STAGE_QUOTES, _quotes_elapsed)
             if _quote_errors:
                 _print_warn(*_short_reason(_quote_errors, self.settings.llm_provider))
+            mark_stage_complete(manifest, STAGE_QUOTE_EXTRACTION)
+            write_manifest(manifest, output_dir)
 
             # ── Stages 10+11: Cluster by screen + thematic grouping ──
+            mark_stage_running(manifest, STAGE_CLUSTER_AND_GROUP)
             status.update("[dim]Clustering and grouping...[/dim]")
             t0 = time.perf_counter()
             screen_clusters, theme_groups = await asyncio.gather(
@@ -506,6 +551,8 @@ class Pipeline:
                 elapsed=_cluster_elapsed, input_size=_n_sessions,
             )
             self._emit_remaining(STAGE_CLUSTER, _cluster_elapsed)
+            mark_stage_complete(manifest, STAGE_CLUSTER_AND_GROUP)
+            write_manifest(manifest, output_dir)
 
             # ── People file ───────────────────────────────────────────
             status.update("[dim]Updating people file...[/dim]")
@@ -544,6 +591,7 @@ class Pipeline:
             display_names = build_display_name_map(people)
 
             # ── Stage 12: Render output ──────────────────────────────
+            mark_stage_running(manifest, _M_STAGE_RENDER)
             status.update("[dim]Rendering output...[/dim]")
             t0 = time.perf_counter()
             analysis = _compute_analysis(
@@ -577,6 +625,8 @@ class Pipeline:
             _stage_actuals[STAGE_RENDER] = StageActual(
                 elapsed=_render_elapsed, input_size=_n_sessions,
             )
+            mark_stage_complete(manifest, _M_STAGE_RENDER)
+            write_manifest(manifest, output_dir)
 
         elapsed = time.perf_counter() - pipeline_start
 

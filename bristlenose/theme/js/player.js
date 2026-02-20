@@ -246,3 +246,6 @@ function initPlayer() {
     }
   }, 1000);
 }
+
+// ── Expose to window for React island interop ────────────────────────────
+window.seekTo = seekTo;

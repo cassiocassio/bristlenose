@@ -1,12 +1,13 @@
 # Bristlenose — Where I Left Off
 
-Last updated: 19 Feb 2026 (Phase 1 codebook import done)
+Last updated: 20 Feb 2026 (AutoCode backend done)
 
 ## Next session reminder
 
 - [x] **Deploy feedback endpoint to Dreamhost** — `server/feedback.php` is written and ready. See `server/README.md` for full deployment steps. Then flip `BRISTLENOSE_FEEDBACK` to `true` in `render_html.py` and set the URL. Also: split "Report a bug" link out of the feature flag so it's always visible
 - [x] **Phase 1 codebook import** — picker → preview → import as React island. Per-framework sections with Option D header (title/author/border-bottom), "Remove from Codebook" with confirm dialog + impact stats. Backend: `DELETE /codebook/remove-framework/{framework_id}` + `/impact` endpoints. 10 Python tests, 7 Vitest tests. Style audit mockup at `docs/mockups/codebook-section-headers.html`
-- [ ] **AutoCode next steps** — (1) write sub-tag discrimination prompts for Garrett (20 sub-tags), (2) build AutoCode backend. Lifecycle mockup at `docs/mockups/mockup-autocode-lifecycle.html`. Plan at `/Users/cassio/.claude/plans/swift-juggling-eich.md`. **Parked**: framework acronym prefixes (`JJG`, `DN` etc) — CSS exists, rendering removed until visual pattern finalised
+- [x] **AutoCode backend** — engine, 7 API endpoints, Norman prompts (28 sub-tags), plato template, 96 tests. Garrett + Norman fully specified with discrimination prompts. Live LLM eval harness (golden dataset, ≥80% accuracy threshold)
+- [ ] **AutoCode frontend** — ✦ AutoCode button on framework separator, progress toast, report modal (triage table), proposed badges on quotes (pulsating, accept/deny), disclosure triangle for full quote. Mockup: `docs/mockups/mockup-autocode-lifecycle.html`. Plan: `/Users/cassio/.claude/plans/autocode-frontend.md`. **Parked**: framework acronym prefixes (`JJG`, `DN` etc) — CSS exists, rendering removed until visual pattern finalised
 
 ---
 

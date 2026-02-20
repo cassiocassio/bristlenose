@@ -81,3 +81,6 @@ strict = true
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 asyncio_mode = "auto"
+markers = [
+    "slow: marks tests that call real LLMs (deselect with '-m \"not slow\"')",
+]

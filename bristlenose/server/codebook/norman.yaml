@@ -1,7 +1,7 @@
 id: norman
 title: The Design of Everyday Things
 author: Don Norman
-enabled: false
+enabled: true
 
 description: >
   Seven fundamental principles of interaction design that explain why
@@ -38,66 +38,565 @@ preamble: >
   situation where a person learns something from their environment.
 
 groups:
+  # -------------------------------------------------------------------
+  # Discoverability — can the user figure out what to do?
+  # -------------------------------------------------------------------
   - name: Discoverability
     subtitle: Can the user figure out what actions are possible?
     colour_set: ux
     tags:
       - name: visible action
-      - name: hidden feature
-      - name: exploration
-      - name: first-time use
+        definition: >
+          An action or feature that the participant can see and
+          understand is available — the interface makes its possibilities
+          obvious without requiring exploration or prior knowledge.
+        apply_when: >
+          The participant immediately finds what they're looking for,
+          notes that a feature is prominently placed, or comments on the
+          clarity of available options. Look for "I can see that I can,"
+          "oh there it is," "it's obvious what to do."
+        not_this: >
+          If the participant is commenting on the visual cue that
+          indicates how to interact (a button shape, an underline),
+          that's affordance or perceived affordance (Signifiers). Visible
+          action is about knowing the action exists, not about how the
+          control communicates its interaction mechanism.
 
+      - name: hidden feature
+        definition: >
+          A useful action or feature that exists but the participant
+          cannot find — it is buried, obscured, or requires prior
+          knowledge to discover.
+        apply_when: >
+          The participant misses something that's actually there, is
+          surprised to find a feature, or asks "can I...?" about
+          something the product already supports. Look for "I didn't
+          know you could," "where's the option to," "oh it was hiding
+          there all along."
+        not_this: >
+          If the participant wants something that genuinely doesn't exist
+          in the product, that's not a hidden feature — it's outside this
+          codebook's scope. If the participant can see the control but
+          doesn't understand what it does, that's missing signifier
+          (Signifiers), not hidden feature.
+
+      - name: exploration
+        definition: >
+          The participant's strategy for discovering what the product
+          can do — trying things, poking around, navigating without a
+          clear goal, testing the boundaries of the system.
+        apply_when: >
+          The participant is actively experimenting: clicking things to
+          see what happens, exploring menus, or narrating a trial-and-error
+          strategy. Look for "let me try," "what happens if I," "I'll just
+          poke around," "I'm clicking this to see."
+        not_this: >
+          If the participant is performing a known action with a clear
+          goal, that's not exploration. If they are stuck and unable to
+          proceed, look at hidden feature or missing signifier instead.
+          Exploration implies active, deliberate investigation.
+
+      - name: first-time use
+        definition: >
+          The participant's experience of encountering the product or a
+          feature for the first time — the initial learning curve, first
+          impressions, and onboarding experience.
+        apply_when: >
+          The participant indicates this is their first time using
+          something, describes initial confusion that resolved, or
+          comments on the learning curve. Look for "first time I used
+          this," "when I started," "I had to figure out," "once you
+          learn it."
+        not_this: >
+          If the participant is currently exploring (trial and error),
+          that's exploration. If they already know the product and are
+          describing a feature they can't find, that's hidden feature.
+          First-time use is specifically about the initial encounter and
+          learning threshold.
+
+  # -------------------------------------------------------------------
+  # Feedback — does the system communicate results?
+  # -------------------------------------------------------------------
   - name: Feedback
     subtitle: Does the system communicate results clearly?
     colour_set: emo
     tags:
       - name: system response
-      - name: delayed feedback
-      - name: ambiguous feedback
-      - name: confirmation
+        definition: >
+          The system communicates the result of a user action clearly
+          and immediately — the participant knows what happened and
+          that their action was registered.
+        apply_when: >
+          The participant notes that the system responded to their
+          action, comments on a status message, animation, or visual
+          change that confirms what happened. Look for "it showed me,"
+          "I can see it updated," "the system told me," "good, it
+          changed."
+        not_this: >
+          If the response came too late, that's delayed feedback. If the
+          response was unclear or ambiguous, that's ambiguous feedback.
+          System response is the positive case — clear, timely
+          communication from the system.
 
+      - name: delayed feedback
+        definition: >
+          The system takes too long to respond to the participant's
+          action, leaving them uncertain whether it worked or is still
+          processing.
+        apply_when: >
+          The participant waits for a response, wonders if their click
+          registered, or comments on slowness. Look for "is it loading,"
+          "did that work," "it's taking a while," "nothing happened...
+          oh wait."
+        not_this: >
+          If the system responded quickly but the response was unclear,
+          that's ambiguous feedback. If there was no response at all
+          and the participant doesn't know if their action was received,
+          that's also ambiguous feedback (not delayed). Delayed feedback
+          specifically involves a noticeable wait.
+
+      - name: ambiguous feedback
+        definition: >
+          The system responded to the participant's action but the
+          response is unclear, confusing, or open to multiple
+          interpretations — the participant isn't sure what happened.
+        apply_when: >
+          The participant sees a response but doesn't understand it,
+          sees a cryptic error message, or is unsure whether their
+          action succeeded. Look for "what does that mean," "did it
+          save," "I'm not sure if that worked," "this message is
+          confusing."
+        not_this: >
+          If the participant didn't receive any response at all, that's
+          delayed feedback (waiting) or missing signifier (no
+          indication). If the response was clear but the participant
+          disagrees with the outcome, that's model mismatch (Conceptual
+          model). Ambiguous feedback is about unclear communication, not
+          wrong outcomes.
+
+      - name: confirmation
+        definition: >
+          A deliberate checkpoint where the system asks the participant
+          to verify before proceeding — "are you sure?" dialogs,
+          preview screens, review steps before submission.
+        apply_when: >
+          The participant encounters or wishes for a confirmation step,
+          comments on a review/summary screen, or worries about
+          irreversible actions. Look for "it asked me to confirm," "I
+          wish it had asked me first," "good that it double-checked,"
+          "what if I accidentally."
+        not_this: >
+          If the participant is talking about the system acknowledging
+          that an action completed, that's system response. Confirmation
+          is specifically about the system pausing to ask "are you sure?"
+          before an action, not confirming after.
+
+  # -------------------------------------------------------------------
+  # Conceptual model — does understanding match reality?
+  # -------------------------------------------------------------------
   - name: Conceptual model
     subtitle: Does user understanding match reality?
     colour_set: task
     tags:
       - name: user mental model
-      - name: system model
-      - name: model mismatch
-      - name: learned behaviour
+        definition: >
+          The participant reveals their internal understanding of how the
+          system works — their theory of its structure, behaviour, or
+          logic, whether accurate or not.
+        apply_when: >
+          The participant explains how they think the system works,
+          predicts what will happen, or reveals assumptions about the
+          underlying logic. Look for "I assumed it would," "I think it
+          works by," "my understanding is," "so this is like a."
+        not_this: >
+          If the participant's understanding is demonstrably wrong and
+          leads to confusion, that's model mismatch. If they are
+          describing the system's actual behaviour (not their theory),
+          that's system model. User mental model is the participant's
+          theory, regardless of whether it's correct.
 
+      - name: system model
+        definition: >
+          The participant describes or reacts to how the system actually
+          behaves — its real logic, structure, or rules, as revealed
+          through interaction.
+        apply_when: >
+          The participant discovers how the system actually works,
+          narrates the system's real behaviour, or comments on the
+          underlying structure. Look for "oh, so it actually does," "I
+          see, it works by," "the system organises things by," "it
+          turns out it."
+        not_this: >
+          If the participant is speculating about how it works (not
+          observing), that's user mental model. If the system's actual
+          behaviour contradicts expectations, that's model mismatch.
+          System model is factual discovery of real behaviour, not
+          prediction.
+
+      - name: model mismatch
+        definition: >
+          A gap between what the participant expected and what the
+          system actually did — their mental model didn't match the
+          system model, leading to confusion or surprise.
+        apply_when: >
+          The participant is surprised by the system's behaviour,
+          expected something different, or discovers their assumptions
+          were wrong. Look for "that's not what I expected," "why did
+          it do that," "I thought it would," "wait, that's wrong."
+        not_this: >
+          If the participant is pleasantly surprised, consider whether
+          the mismatch is about the conceptual model or about visual
+          design exceeding expectations. If the participant makes an
+          error because they misunderstood the system, also consider
+          rule-based mistake (Slips vs Mistakes). Model mismatch is
+          about the gap in understanding, not the error that results.
+
+      - name: learned behaviour
+        definition: >
+          The participant applies knowledge from past experience — habits,
+          conventions, or patterns learned from other products — to the
+          current product.
+        apply_when: >
+          The participant references other products, expects conventions
+          to be followed, or applies habits from elsewhere. Look for "in
+          [other product] you can," "I'm used to," "normally you'd,"
+          "every other app does it this way," "I expected the standard."
+        not_this: >
+          If the participant is building a new mental model of this
+          specific product, that's user mental model. If a learned
+          convention is violated and causes confusion, that's model
+          mismatch (the mismatch is the primary event, learned behaviour
+          is the cause). If the participant applies cultural or social
+          conventions (not product-learned), that's cultural constraint
+          (Constraints).
+
+  # -------------------------------------------------------------------
+  # Signifiers — do visual cues indicate how to interact?
+  # -------------------------------------------------------------------
   - name: Signifiers
     subtitle: Do visual cues correctly indicate how to interact?
     colour_set: trust
     tags:
       - name: affordance
-      - name: perceived affordance
-      - name: false signifier
-      - name: missing signifier
+        definition: >
+          A real, physical or interactive property of an element that
+          determines what can actually be done with it — the true
+          possibilities for action, regardless of whether the user
+          perceives them.
+        apply_when: >
+          The participant interacts with something correctly because its
+          form communicates its function — a button that looks pressable,
+          a slider that looks draggable, a text field that looks typeable.
+          Look for "I can click this," "it looks like I can drag it,"
+          "this is clearly a button."
+        not_this: >
+          If the participant perceives an interaction possibility that
+          doesn't actually exist, that's false signifier. If they fail to
+          perceive a real affordance, that's missing signifier. The subtle
+          distinction: affordance is about what IS possible; perceived
+          affordance is about what the user BELIEVES is possible.
 
+      - name: perceived affordance
+        definition: >
+          What the participant believes they can do with an interface
+          element, based on visual cues — which may or may not match
+          the actual affordance.
+        apply_when: >
+          The participant describes what they think an element does
+          based on its appearance, interprets a visual cue, or states
+          their expectation of how to interact. Look for "this looks
+          like I should," "I think I can click this," "it seems like
+          this would."
+        not_this: >
+          If the participant's perception is correct and they
+          successfully interact, that's affordance (the real thing
+          matches the perception). If the perception is wrong (they try
+          to click something that isn't clickable), that's false
+          signifier. Perceived affordance is the in-between — the
+          participant's stated belief about what's possible.
+
+      - name: false signifier
+        definition: >
+          A visual cue that incorrectly suggests an interaction is
+          possible — the participant tries to interact with something
+          that doesn't respond as expected because the design misleads.
+        apply_when: >
+          The participant clicks something that isn't clickable, tries
+          to interact with a decoration, or is misled by visual styling.
+          Look for "I tried to click it but nothing happened," "this
+          looks like a link but it's not," "I thought I could tap this."
+        not_this: >
+          If the interaction exists but the participant can't find it,
+          that's hidden feature (Discoverability) or missing signifier.
+          If the participant expected a different outcome from a real
+          control, that's model mismatch (Conceptual model). False
+          signifier is specifically about non-interactive elements that
+          look interactive.
+
+      - name: missing signifier
+        definition: >
+          An interactive element that lacks the visual cues needed to
+          communicate that interaction is possible — the participant
+          doesn't realise they can interact with it.
+        apply_when: >
+          The participant overlooks a control, doesn't realise something
+          is interactive, or discovers a hidden interaction by accident.
+          Look for "I didn't realise I could click that," "there's no
+          indication that," "how was I supposed to know," "oh, that's
+          a button?"
+        not_this: >
+          If the element is completely hidden (not visible at all),
+          that's hidden feature (Discoverability). If the element is
+          visible but styled to suggest the wrong interaction, that's
+          false signifier. Missing signifier is about visible elements
+          that don't look interactive enough.
+
+  # -------------------------------------------------------------------
+  # Mapping — controls to outcomes
+  # -------------------------------------------------------------------
   - name: Mapping
     subtitle: >
       Does the relationship between controls and outcomes feel natural?
     colour_set: opp
     tags:
       - name: natural mapping
-      - name: arbitrary mapping
-      - name: spatial correspondence
-      - name: logical layout
+        definition: >
+          The relationship between a control and its effect feels
+          intuitive and obvious — the participant doesn't need to think
+          about which control affects which outcome.
+        apply_when: >
+          The participant uses a control correctly without thinking,
+          notes that the layout "makes sense," or comments on the
+          intuitive arrangement. Look for "obviously this controls
+          that," "it's laid out logically," "makes sense that this
+          is here."
+        not_this: >
+          If the participant is commenting on the visual appearance of
+          controls (they look clickable), that's affordance (Signifiers).
+          If the spatial arrangement of elements is good but the
+          comment is about position rather than control-outcome
+          relationship, that's spatial correspondence. Natural mapping
+          is about the logical link between action and result.
 
+      - name: arbitrary mapping
+        definition: >
+          The relationship between a control and its effect is not
+          intuitive — the participant has to learn or memorise which
+          control does what because the mapping isn't self-evident.
+        apply_when: >
+          The participant uses the wrong control, can't predict which
+          button does what, or notes that the arrangement is confusing.
+          Look for "which one of these," "I keep pressing the wrong
+          one," "why is this here and not there," "I always forget
+          which is which."
+        not_this: >
+          If the participant can't find the control at all, that's
+          hidden feature (Discoverability). If the control looks like
+          it should do something else (wrong visual cue), that's false
+          signifier (Signifiers). Arbitrary mapping is about
+          unintuitive control-outcome relationships that do exist but
+          aren't self-explanatory.
+
+      - name: spatial correspondence
+        definition: >
+          The physical or visual arrangement of controls matches the
+          arrangement of the things they affect — position communicates
+          function.
+        apply_when: >
+          The participant comments on how the position of controls
+          relates to the position of their effects, notes that layout
+          matches physical reality, or expects controls to be near what
+          they control. Look for "this slider is next to the thing it
+          changes," "the buttons are in the same order as the tabs."
+        not_this: >
+          If the participant is commenting on the overall layout being
+          logical without reference to a control-outcome spatial
+          relationship, that's logical layout. If the comment is about
+          a control being intuitive to use (not its position), that's
+          natural mapping. Spatial correspondence is specifically about
+          position-based relationships.
+
+      - name: logical layout
+        definition: >
+          The overall organisation of the interface follows a logical
+          structure that helps the participant understand and navigate —
+          grouping, ordering, and hierarchy make sense.
+        apply_when: >
+          The participant comments on the grouping, ordering, or
+          overall structure of the interface. Look for "it's organised
+          well," "these are grouped logically," "the order makes sense,"
+          "I'd expect these together."
+        not_this: >
+          If the participant is commenting on a specific control-outcome
+          relationship, that's natural mapping or arbitrary mapping. If
+          the comment is about controls being positioned near what they
+          control, that's spatial correspondence. Logical layout is about
+          the broader organisational structure, not specific control
+          mappings.
+
+  # -------------------------------------------------------------------
+  # Constraints — designed limitations
+  # -------------------------------------------------------------------
   - name: Constraints
     subtitle: Do designed limitations guide users toward correct actions?
     colour_set: ux
     tags:
       - name: physical constraint
-      - name: cultural constraint
-      - name: semantic constraint
-      - name: logical constraint
+        definition: >
+          A physical property of the design that prevents incorrect
+          actions — something that simply can't be done wrong because
+          the physical form doesn't allow it.
+        apply_when: >
+          The participant encounters something that physically prevents
+          a wrong action: a disabled button, a greyed-out option, a
+          form field that only accepts numbers. Look for "it won't let
+          me," "the button is greyed out," "I can't type letters here."
+        not_this: >
+          If the constraint is about social norms (e.g. not wanting to
+          click something labelled "admin"), that's cultural constraint.
+          If the constraint is about what makes logical sense given the
+          context, that's semantic or logical constraint. Physical
+          constraint is about the literal inability to perform an action.
 
+      - name: cultural constraint
+        definition: >
+          A convention or social norm that guides the participant's
+          behaviour — they do (or avoid) something because of learned
+          cultural expectations, not because the system enforces it.
+        apply_when: >
+          The participant follows or references social conventions,
+          expectations from their culture, or norms about how things
+          should work. Look for "you're supposed to," "it's rude to,"
+          "normally you would," "people expect," "in my country."
+        not_this: >
+          If the participant is applying learned behaviour from other
+          products (not cultural norms), that's learned behaviour
+          (Conceptual model). If the system physically prevents the
+          action, that's physical constraint. Cultural constraint is
+          about social/cultural expectations, not product conventions
+          or system enforcement.
+
+      - name: semantic constraint
+        definition: >
+          The meaning of a situation constrains what actions make sense —
+          the participant knows what to do because the context gives
+          meaning to the available options.
+        apply_when: >
+          The participant uses contextual meaning to guide their
+          actions: they know which field is for the address because of
+          the label, or they know the red button is for deletion because
+          red means danger. Look for "obviously this is for," "it makes
+          sense that this means," "the label tells me."
+        not_this: >
+          If the participant is commenting on a visual signifier
+          (underline = link, button shape = clickable), that's
+          affordance or perceived affordance (Signifiers). If the
+          constraint comes from the logical structure of the task
+          (step 1 before step 2), that's logical constraint. Semantic
+          constraint is about meaning-based guidance, not visual cues
+          or sequential logic.
+
+      - name: logical constraint
+        definition: >
+          The logical structure of the task or the system makes certain
+          actions the only reasonable option — the participant is guided
+          by elimination or sequential logic.
+        apply_when: >
+          The participant follows a logical sequence, eliminates options
+          through reasoning, or notes that the flow enforces an order.
+          Look for "the only option left is," "I have to do this
+          before that," "it makes me go step by step," "process of
+          elimination."
+        not_this: >
+          If the system physically prevents out-of-order actions, that's
+          physical constraint. If the participant uses the meaning of
+          labels to guide their choice, that's semantic constraint.
+          Logical constraint is about reasoning-based guidance — the
+          participant figures out the right action through logic, not
+          because the system blocks alternatives or because labels
+          explain what to do.
+
+  # -------------------------------------------------------------------
+  # Slips vs Mistakes — error classification
+  # -------------------------------------------------------------------
   - name: Slips vs Mistakes
     subtitle: Was the error execution-based or goal-based?
     colour_set: emo
     tags:
       - name: action slip
+        definition: >
+          The participant intended the right action but executed it
+          wrong — a motor error, a misclick, selecting the adjacent
+          item, or a slip of the finger on a touch target.
+        apply_when: >
+          The participant makes a mechanical error: clicks the wrong
+          button, taps the wrong item, types a typo, or performs the
+          right action on the wrong object. They immediately recognise
+          the error. Look for "oops, wrong one," "I meant to click
+          that one," "my finger slipped," "I didn't mean to do that."
+        not_this: >
+          If the participant forgot to do something, that's memory
+          lapse. If they deliberately chose the wrong action because
+          they misunderstood the system, that's rule-based mistake or
+          knowledge-based mistake. Action slip is about correct
+          intention, incorrect execution — the participant knows what
+          they wanted to do.
+
       - name: memory lapse
+        definition: >
+          The participant forgot to do something, lost track of where
+          they were, or failed to remember a step in a process — a
+          failure of working memory, not of understanding.
+        apply_when: >
+          The participant forgets a step, loses their place, can't
+          remember what they were doing, or has to go back because they
+          missed something. Look for "I forgot to," "wait, where was I,"
+          "I need to go back because I missed," "what was I supposed
+          to do next."
+        not_this: >
+          If the participant doesn't know the step exists (never learned
+          it), that's a knowledge-based mistake, not a memory lapse.
+          If they remember the goal but executed wrong (misclick), that's
+          action slip. Memory lapse is specifically about forgetting
+          something previously known or currently in working memory.
+
       - name: rule-based mistake
+        definition: >
+          The participant applied a known rule or convention incorrectly —
+          they had a plan but chose the wrong one because they
+          misidentified the situation or applied the wrong procedure.
+        apply_when: >
+          The participant follows a procedure that doesn't work because
+          it's the wrong procedure for this situation, or applies a
+          rule from another context that doesn't apply here. Look for
+          "I thought you had to," "usually you do it this way," "that's
+          how it works in [other product]," "I followed the same steps
+          but it didn't work."
+        not_this: >
+          If the participant has no relevant prior knowledge and is
+          guessing, that's knowledge-based mistake. If they applied the
+          right rule but misexecuted it (pressed wrong button), that's
+          action slip. If they're describing expectations from other
+          products without making an error, that's learned behaviour
+          (Conceptual model). Rule-based mistake requires the
+          participant to apply a known-but-wrong procedure.
+
       - name: knowledge-based mistake
+        definition: >
+          The participant lacks the knowledge needed to accomplish their
+          goal — they don't understand the system well enough to form a
+          correct plan, so they reason from incomplete information.
+        apply_when: >
+          The participant is clearly guessing, trying random things
+          without understanding, or reveals fundamental
+          misunderstanding of the system. Look for "I have no idea how
+          to," "I'm just guessing," "I don't understand what this is,"
+          "I don't know what any of these mean."
+        not_this: >
+          If the participant has a plan but it's the wrong plan (wrong
+          rule), that's rule-based mistake. If they are deliberately
+          exploring to learn, that's exploration (Discoverability), not
+          an error. If they understand the system but forgot a step,
+          that's memory lapse. Knowledge-based mistake is about
+          fundamental lack of understanding, not forgotten knowledge or
+          wrong application of known rules.

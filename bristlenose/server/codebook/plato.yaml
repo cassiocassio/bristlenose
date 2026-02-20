@@ -1,0 +1,600 @@
+id: plato
+title: Platonic Ontology & Epistemology
+author: Composite — Vlastos, Fine, Kraut, Sedley
+enabled: true
+
+description: >
+  A scholarly codebook for analysing Plato's dialogues through the lens of his
+  ontology (Theory of Forms, cosmology, soul) and epistemology (knowledge vs
+  opinion, dialectic, recollection). Tags are grounded in the major themes
+  identified by leading Plato scholars: Gregory Vlastos, Gail Fine, Richard
+  Kraut, David Sedley, and Terence Irwin. Designed for tagging philosophical
+  arguments, not product interfaces — expect passages about justice, beauty,
+  and the nature of reality rather than buttons and navigation.
+
+author_bio: >
+  Composite framework drawing on Gregory Vlastos (Socratic elenchus, irony),
+  Gail Fine (epistemology, Forms), Richard Kraut (ethics, Republic), David
+  Sedley (cosmology, Theaetetus), and Terence Irwin (Plato's ethics and moral
+  psychology). These scholars represent the dominant Anglo-American tradition
+  of Plato interpretation from the late 20th century onward.
+
+author_links:
+  - label: SEP — Plato
+    url: https://plato.stanford.edu/entries/plato/
+  - label: SEP — Plato's Ethics
+    url: https://plato.stanford.edu/entries/plato-ethics/
+
+preamble: >
+  The following tags describe concepts from Plato's philosophical system as
+  identified by major Plato scholars. These are dialogues, not product
+  interviews — the "quotes" are philosophical arguments, questions, and
+  positions. When a passage could fit multiple tags, choose the tag that best
+  describes the primary philosophical move being made. If a passage is purely
+  dramatic or scene-setting with no philosophical content, assign the closest
+  tag with low confidence. Plato's dialogues are layered — a single passage
+  may demonstrate dialectic method while also advancing a claim about Forms.
+  Prefer the substantive philosophical claim over the methodological wrapper.
+
+groups:
+  # -------------------------------------------------------------------
+  # Theory of Forms — Plato's central ontological doctrine
+  # -------------------------------------------------------------------
+  - name: Theory of Forms
+    subtitle: How does Plato's ontology of abstract, perfect entities work?
+    colour_set: ux
+    tags:
+      - name: participation
+        definition: >
+          How particulars relate to Forms — the metaphysical connection
+          (methexis, "sharing in") by which sensible things derive their
+          properties from the Forms they instantiate.
+        apply_when: >
+          The speaker discusses how a particular thing is beautiful, just, or
+          equal by virtue of its relationship to a Form. Look for "partakes
+          of," "shares in," "by virtue of the beautiful itself," or any claim
+          that a particular has a property because of its relation to an
+          abstract entity.
+        not_this: >
+          If the speaker is arguing that Forms exist independently of
+          particulars without discussing the relation, that is separation.
+          If the speaker is discussing the Form's own properties, that is
+          self-predication. Participation is specifically about the bridge
+          between the sensible and intelligible worlds.
+
+      - name: separation
+        definition: >
+          The claim that Forms exist independently of the physical world
+          (chorismos) — they are not in things, not mental concepts, but
+          self-subsisting realities in an intelligible realm.
+        apply_when: >
+          The speaker asserts or implies that Forms exist apart from sensible
+          things, that they are "themselves by themselves," or that the
+          intelligible realm is distinct from the visible. Look for "the
+          beautiful itself," "apart from," "in another place," "separate
+          from the things that partake."
+        not_this: >
+          If the speaker is discussing how particulars connect to Forms,
+          that is participation. If they are comparing knowledge of Forms
+          to opinion about sensibles, that is objects of knowledge.
+          Separation is the ontological independence claim, not the
+          epistemic or relational one.
+
+      - name: self-predication
+        definition: >
+          The claim that the Form of F is itself F — the Form of Beauty
+          is beautiful, the Form of Largeness is large. A key assumption
+          in Plato's metaphysics that generates the Third Man problem.
+        apply_when: >
+          The speaker attributes to a Form the very property it is the
+          Form of. Look for "the beautiful is beautiful," "justice itself
+          is just," or passages where a Form is described as a perfect
+          exemplar of the property it represents.
+        not_this: >
+          If the speaker is discussing the regress problem that arises
+          from self-predication, that is third man argument. If they are
+          discussing the Form as a cause of properties in particulars,
+          that is participation. Self-predication is about the Form's
+          own nature, not its causal role or logical consequences.
+
+      - name: third man argument
+        definition: >
+          The infinite regress objection to the Theory of Forms — if large
+          things are large by partaking in the Form of Largeness, and the
+          Form of Largeness is itself large, then a further Form is needed
+          to explain what the original things and the Form have in common,
+          and so on ad infinitum.
+        apply_when: >
+          The speaker raises or responds to an infinite regress in the
+          Theory of Forms, or argues that the relation between Forms and
+          particulars generates an unacceptable multiplication of entities.
+          This argument appears explicitly in the Parmenides.
+        not_this: >
+          If the speaker simply asserts that Forms are self-predicating
+          without raising the regress, that is self-predication. If they
+          are discussing other objections to Forms (e.g. the extent
+          problem), look at the specific argument structure — Third Man
+          is specifically the infinite regress.
+
+      - name: form of the good
+        definition: >
+          The supreme Form in Plato's ontological hierarchy — the Form
+          of the Good gives being, intelligibility, and truth to all
+          other Forms, as the sun gives light and life to the visible
+          world. Central to Republic Books 6–7.
+        apply_when: >
+          The speaker discusses a highest principle that grounds all
+          reality and knowledge, the sun analogy, the Divided Line's
+          uppermost segment, or the philosopher's ascent to knowledge
+          of the Good. Look for "the good itself," "beyond being,"
+          "the cause of knowledge and truth," "the sun analogy."
+        not_this: >
+          If the speaker is discussing what is good for a person (virtue,
+          happiness), that is ethics and virtue territory. If they discuss
+          the philosopher's special access to this knowledge, that is
+          philosopher's knowledge. Form of the Good is about the
+          metaphysical summit, not practical ethics.
+
+  # -------------------------------------------------------------------
+  # Knowledge & Opinion — Plato's epistemology
+  # -------------------------------------------------------------------
+  - name: Knowledge & Opinion
+    subtitle: What can be known, how, and what falls short of knowledge?
+    colour_set: trust
+    tags:
+      - name: episteme vs doxa
+        definition: >
+          The fundamental distinction between knowledge (episteme) and
+          mere belief or opinion (doxa). Knowledge is stable, justified,
+          and directed at what truly is; opinion is unstable, unjustified,
+          and directed at the changeable sensible world.
+        apply_when: >
+          The speaker contrasts knowledge with belief, argues that
+          perception or opinion falls short of genuine understanding,
+          or asserts that most people have opinions but not knowledge.
+          Look for "know vs think," "knowledge vs opinion," "true
+          knowledge," "mere belief."
+        not_this: >
+          If the speaker is specifically defining knowledge as true
+          belief with an account, that is justified true belief. If
+          they are discussing what objects knowledge is directed at
+          (Forms vs sensibles), that is objects of knowledge. Episteme
+          vs doxa is the general distinction, not the specific analysis.
+
+      - name: justified true belief
+        definition: >
+          The analysis of knowledge as true opinion accompanied by a
+          rational account (logos). Explored and ultimately problematised
+          in the Theaetetus and Meno — can an account of what makes
+          true belief into knowledge actually be given?
+        apply_when: >
+          The speaker defines, analyses, or critiques the claim that
+          knowledge is true belief plus an account. Look for "true
+          opinion with an account," "logos," "what makes belief into
+          knowledge," or the Theaetetus's final definition attempts.
+        not_this: >
+          If the speaker simply contrasts knowledge and opinion without
+          analysing the conditions, that is episteme vs doxa. If they
+          argue knowledge comes from recollecting innate truths, that
+          is recollection. JTB is the analytical project of specifying
+          necessary and sufficient conditions for knowledge.
+
+      - name: recollection
+        definition: >
+          The doctrine of anamnesis — learning is not acquiring new
+          information but recovering knowledge the soul possessed before
+          birth. The soul, having existed before embodiment, has seen
+          the Forms and needs only the right prompting to remember them.
+        apply_when: >
+          The speaker argues that learning is remembering, that the
+          soul has prior knowledge, or demonstrates this through
+          eliciting correct answers from someone who has not been
+          taught (the slave boy in the Meno). Look for "recollection,"
+          "the soul is immortal and has learned everything," "we do
+          not learn but remember."
+        not_this: >
+          If the speaker argues the soul is immortal without connecting
+          this to learning, that is immortality of soul. If they discuss
+          the soul's prenatal vision of Forms as part of transmigration
+          rather than epistemology, that is transmigration. Recollection
+          is specifically about the epistemic consequence — we already
+          know, we just need to be reminded.
+
+      - name: objects of knowledge
+        definition: >
+          What knowledge and opinion are directed at — Forms are the
+          objects of knowledge (stable, eternal, fully real), while
+          sensible particulars are objects of opinion (changing, partly
+          real). Grounded in the ontological distinction between the
+          intelligible and visible realms.
+        apply_when: >
+          The speaker argues that only Forms can be truly known, that
+          the sensible world is merely opined, or draws the Divided
+          Line distinction between levels of reality and corresponding
+          cognitive states. Look for "visible vs intelligible," "what
+          fully is vs what both is and is not," "the Divided Line."
+        not_this: >
+          If the speaker is discussing the general knowledge/opinion
+          contrast without specifying objects, that is episteme vs doxa.
+          If they are discussing the Form of the Good as the supreme
+          knowable, that is form of the good. Objects of knowledge
+          is about the correlation between ontological status and
+          epistemic access.
+
+      - name: philosopher's knowledge
+        definition: >
+          The unique cognitive access that philosophers (and especially
+          the philosopher-king) have to reality — through dialectic,
+          they ascend from shadows to Forms, achieving a vision of
+          truth unavailable to non-philosophers.
+        apply_when: >
+          The speaker argues that philosophers alone can know reality,
+          that philosophical training (the educational programme of
+          the Republic) is necessary for genuine knowledge, or that
+          rulers must be philosophers because only they see the truth.
+          Look for "philosophers see," "the cave," "those who love
+          wisdom," "ascending to the good."
+        not_this: >
+          If the speaker is describing the ascent as a metaphor for
+          the ontological structure (Divided Line), that is objects
+          of knowledge. If they are discussing the dialectical method
+          itself, that is elenchus or hypothesis method. Philosopher's
+          knowledge is about the person and their privilege, not the
+          method or the ontology.
+
+  # -------------------------------------------------------------------
+  # Dialectic Method — how Socratic/Platonic philosophy proceeds
+  # -------------------------------------------------------------------
+  - name: Dialectic Method
+    subtitle: What philosophical methods does Socrates employ?
+    colour_set: task
+    tags:
+      - name: elenchus
+        definition: >
+          The Socratic method of cross-examination — Socrates elicits
+          a thesis from his interlocutor, then shows through questioning
+          that it leads to contradiction. The goal is to expose false
+          beliefs and clear the way for genuine inquiry.
+        apply_when: >
+          The speaker tests a claim by drawing out its logical
+          consequences and showing they contradict the original thesis
+          or other beliefs the interlocutor holds. Look for "do you
+          agree that," "but you also said," "then it follows," or
+          any passage where Socrates leads someone to contradict
+          themselves through a chain of agreed premises.
+        not_this: >
+          If the speaker posits a hypothesis and explores its
+          consequences without targeting a specific interlocutor's
+          belief, that is hypothesis method. If the result is a
+          deliberate reduction to absurdity of someone else's position,
+          that is reductio ad absurdum. Elenchus is the interactive,
+          person-directed refutation through agreed premises.
+
+      - name: hypothesis method
+        definition: >
+          The method of positing a conditional premise ("if X, then Y")
+          and exploring its consequences — testing whether the
+          hypothesis is consistent with known truths and with other
+          hypotheses. Used in the Meno, Phaedo, and Republic.
+        apply_when: >
+          The speaker explicitly proposes a hypothesis to test, works
+          out its implications, or evaluates it by checking consistency
+          with other accepted beliefs. Look for "let us assume," "if
+          virtue is knowledge, then," "hypothesising that," or passages
+          where a conditional framework structures the argument.
+        not_this: >
+          If the speaker is directly refuting an interlocutor's stated
+          belief, that is elenchus. If they are using an analogy or
+          myth to explain rather than test, that is myth and analogy.
+          Hypothesis method is the conditional, systematic exploration
+          of what follows if something is true.
+
+      - name: collection and division
+        definition: >
+          The later Platonic method (diairesis) of defining a concept
+          by first collecting instances under a genus, then dividing
+          the genus into species by successive binary distinctions
+          until the target concept is isolated. Central to the
+          Sophist, Statesman, and Phaedrus.
+        apply_when: >
+          The speaker classifies, groups, or divides concepts into
+          kinds, or argues that correct definition requires systematic
+          division of a genus. Look for "dividing at the natural
+          joints," "two kinds of," "what genus does X fall under,"
+          or any systematic taxonomy of concepts.
+        not_this: >
+          If the speaker is testing a definition through refutation,
+          that is elenchus. If they use a model or analogy to
+          illuminate rather than classify, that is myth and analogy.
+          Collection and division is the taxonomic method of definition
+          through systematic classification.
+
+      - name: myth and analogy
+        definition: >
+          Non-argumentative modes of philosophical explanation — myths
+          (the allegory of the cave, the chariot of the soul, the
+          eschatological myths), analogies (the sun, the divided line,
+          the allegory of the allegory), and thought experiments used
+          to make abstract claims vivid and accessible.
+        apply_when: >
+          The speaker tells a story, draws an extended comparison,
+          or constructs a vivid image to convey a philosophical
+          point rather than arguing for it deductively. Look for "let
+          me tell you a story," "imagine," "it is like," "allegory,"
+          "allegory," or any passage that is clearly figurative rather
+          than literal philosophical argument.
+        not_this: >
+          If the speaker uses a brief comparison within a deductive
+          argument, that is part of whatever argument is being made.
+          If the myth specifically concerns the soul's journey after
+          death, consider transmigration. Myth and analogy is about
+          the mode of expression — philosophy through image rather
+          than through syllogism.
+
+  # -------------------------------------------------------------------
+  # Soul & Psychology — Plato's theory of the soul
+  # -------------------------------------------------------------------
+  - name: Soul & Psychology
+    subtitle: What is the soul, what are its parts, and what is its fate?
+    colour_set: emo
+    tags:
+      - name: immortality of soul
+        definition: >
+          Arguments that the soul (psyche) survives the death of the
+          body — it existed before birth and will exist after death.
+          Multiple arguments are given across the dialogues: the
+          argument from opposites, the affinity argument, the argument
+          from recollection, and the final argument in the Phaedo.
+        apply_when: >
+          The speaker argues for or discusses the soul's survival of
+          bodily death, its pre-existence, or its indestructibility.
+          Look for "the soul does not perish," "before we were born,"
+          "the soul is akin to the eternal," or any argument that
+          death is not the end of the soul.
+        not_this: >
+          If the discussion of the soul's pre-existence is specifically
+          about how it grounds learning, that is recollection. If the
+          soul's journey through multiple lives is the focus, that is
+          transmigration. Immortality of soul is the bare survival
+          claim and the arguments for it.
+
+      - name: tripartite soul
+        definition: >
+          The division of the soul into three parts: reason (logistikon),
+          spirit (thumoeides), and appetite (epithumetikon). Each part
+          has its own desires and motivations. Central to Republic
+          Book 4 and the Phaedrus chariot image.
+        apply_when: >
+          The speaker distinguishes parts or aspects of the soul,
+          discusses conflict between reason and desire, or argues
+          that different psychological drives correspond to different
+          soul-parts. Look for "the rational part," "spirit," "the
+          desiring part," "the soul has three parts," or the chariot
+          analogy (charioteer, noble horse, base horse).
+        not_this: >
+          If the speaker discusses the proper ordering of these parts
+          as justice, that is psychic harmony. If they discuss the
+          soul's survival rather than its structure, that is immortality
+          of soul. Tripartite soul is the structural claim about
+          psychological complexity.
+
+      - name: psychic harmony
+        definition: >
+          Justice in the individual as the proper ordering of the
+          soul's parts — reason rules, spirit supports reason, and
+          appetite obeys. Each part performs its own function and
+          does not interfere with the others. The psychological
+          analogue of justice in the city.
+        apply_when: >
+          The speaker defines justice or virtue as a state of the
+          soul in which each part performs its proper function, or
+          argues that happiness requires inner harmony. Look for "each
+          part doing its own," "reason ruling," "the just soul," or
+          the city-soul analogy applied to individual psychology.
+        not_this: >
+          If the speaker is identifying the three parts without
+          discussing their ordering, that is tripartite soul. If
+          they are discussing political justice (the city) rather
+          than psychological justice, that is closer to piety and
+          justice. Psychic harmony is the normative claim about how
+          the soul should be ordered.
+
+      - name: transmigration
+        definition: >
+          The soul's journey through multiple incarnations — after
+          death, the soul is judged and reborn in a new body (human,
+          animal, or divine) according to the life it has lived.
+          Described in myths in the Phaedo, Phaedrus, and Republic.
+        apply_when: >
+          The speaker describes the soul's journey after death, its
+          judgement, its rebirth in a new form, or the cosmic cycle
+          of incarnation. Look for "choosing a new life," "born
+          again," "the soul descends," or eschatological myth
+          passages.
+        not_this: >
+          If the speaker is arguing for bare survival after death
+          without the reincarnation narrative, that is immortality
+          of soul. If the soul's prior existence is invoked to explain
+          knowledge, that is recollection. Transmigration is the
+          narrative of the soul's cosmic journey through lives.
+
+  # -------------------------------------------------------------------
+  # Ethics & Virtue — Plato's moral philosophy
+  # -------------------------------------------------------------------
+  - name: Ethics & Virtue
+    subtitle: What is virtue, how is it acquired, and how should one live?
+    colour_set: opp
+    tags:
+      - name: unity of virtue
+        definition: >
+          The Socratic thesis that the virtues (courage, temperance,
+          justice, piety, wisdom) are all one — either identical or
+          so closely connected that possessing one requires possessing
+          all. Explored in the Protagoras, Laches, and Meno.
+        apply_when: >
+          The speaker argues that the virtues are identical, inseparable,
+          or reducible to knowledge, or asks whether one can have one
+          virtue without the others. Look for "are the virtues one or
+          many," "courage is wisdom," "all virtue is knowledge," or
+          discussions of how the specific virtues relate.
+        not_this: >
+          If the speaker is arguing specifically that virtue is
+          knowledge (the identification with knowledge rather than the
+          unity claim), that is virtue as knowledge. If they are
+          defining a specific virtue (piety, justice) rather than
+          discussing their unity, that is piety and justice. Unity
+          of virtue is about the structural claim that the virtues
+          form a system.
+
+      - name: virtue as knowledge
+        definition: >
+          The Socratic intellectualist thesis that virtue is a form of
+          knowledge — no one does wrong willingly, because to know the
+          good is to do the good. Vice is always ignorance. This
+          entails the denial of akrasia (weakness of will).
+        apply_when: >
+          The speaker argues that wrongdoing is involuntary, that
+          virtue is teachable (because it is knowledge), or that no
+          one errs knowingly. Look for "no one does wrong willingly,"
+          "virtue is teachable," "if he knew the good he would do it,"
+          or discussions of whether akrasia is possible.
+        not_this: >
+          If the speaker is discussing the unity of the virtues as a
+          system rather than their identity with knowledge, that is
+          unity of virtue. If they are discussing the philosopher's
+          special knowledge of the Good, that is philosopher's
+          knowledge. Virtue as knowledge is the motivational thesis
+          that knowing automatically produces doing.
+
+      - name: the examined life
+        definition: >
+          Socrates' famous dictum that "the unexamined life is not
+          worth living" — the claim that philosophical self-scrutiny
+          is essential to a good human life, and that most people
+          live unexamined, unreflective lives.
+        apply_when: >
+          The speaker argues for the importance of self-examination,
+          philosophical inquiry as a way of life, or criticises those
+          who live without questioning their beliefs and values. Look
+          for "the unexamined life," "I must continue to question,"
+          "testing myself and others," or defenses of the philosophical
+          life.
+        not_this: >
+          If the speaker is conducting an elenchus (actually examining
+          someone), that is elenchus. If they are arguing for the
+          philosopher's political authority, that is philosopher's
+          knowledge. The examined life is the value claim about
+          philosophical reflection as essential to human flourishing.
+
+      - name: piety and justice
+        definition: >
+          The relationship between religious obligation (piety, to
+          hosion) and moral obligation (justice, to dikaion) — is
+          what is pious loved by the gods because it is pious, or
+          pious because it is loved by the gods? Central to the
+          Euthyphro dilemma and to the Republic's redefinition of
+          justice.
+        apply_when: >
+          The speaker discusses the nature of piety, its relation to
+          justice, the Euthyphro dilemma (divine command vs independent
+          moral truth), or definitions of justice at either the
+          individual or political level. Look for "what is piety,"
+          "what is justice," "god-loved," "doing one's own," or
+          attempts to define these central moral concepts.
+        not_this: >
+          If the speaker is discussing inner psychological harmony as
+          justice, that is psychic harmony. If they are discussing
+          the soul's moral development across lives, that is
+          transmigration. Piety and justice is about the definitional
+          and conceptual analysis of these moral terms.
+
+  # -------------------------------------------------------------------
+  # Argumentation & Irony — how Socrates conducts himself
+  # -------------------------------------------------------------------
+  - name: Argumentation & Irony
+    subtitle: What rhetorical and argumentative moves does Socrates make?
+    colour_set: task
+    tags:
+      - name: socratic irony
+        definition: >
+          Socrates' characteristic stance of professing ignorance while
+          being the wisest person in the room — he claims to know
+          nothing while systematically demolishing the knowledge claims
+          of others. Vlastos's "complex irony": Socrates means and
+          does not mean what he says simultaneously.
+        apply_when: >
+          The speaker professes ignorance, disclaims expertise, or
+          inverts the expected teacher-student dynamic while clearly
+          guiding the conversation toward philosophical truth. Look
+          for "I know that I know nothing," "you are the wise one,"
+          "teach me," "I am only asking," or any passage where
+          Socrates' modesty is clearly strategic.
+        not_this: >
+          If the speaker is genuinely puzzled (not strategically
+          modest), the passage may end in aporia rather than irony.
+          If the speaker is conducting a refutation, that is elenchus.
+          Socratic irony is the persona — the stance of performed
+          ignorance — not the argumentative method itself.
+
+      - name: reductio ad absurdum
+        definition: >
+          Showing that a position is false by deriving an absurd or
+          contradictory consequence from it — if your thesis leads
+          to impossibility, the thesis must be rejected. A core
+          tool of Socratic argumentation.
+        apply_when: >
+          The speaker takes an opponent's premise and systematically
+          derives a conclusion that is obviously false, contradictory,
+          or unacceptable, thereby refuting the premise. Look for
+          "but then it would follow that," "which is absurd," "which
+          contradicts what you said," or chains of reasoning that
+          end in manifest impossibility.
+        not_this: >
+          If the refutation proceeds by showing inconsistency among
+          the interlocutor's own beliefs (rather than deriving an
+          independent absurdity), that is elenchus. If the passage
+          ends in irresolution rather than refutation, that is aporia.
+          Reductio is the specific logical move of deriving absurdity
+          from a premise.
+
+      - name: aporia
+        definition: >
+          The productive impasse — a dialogue ending (or reaching a
+          turning point) where the interlocutors acknowledge that they
+          cannot answer the question they set out to investigate.
+          Characteristic of the early "Socratic" dialogues (Euthyphro,
+          Laches, Charmides). Vlastos argues aporia is itself a
+          philosophical achievement, not a failure.
+        apply_when: >
+          The speakers acknowledge that the inquiry has reached an
+          impasse, that the question remains unanswered, or that all
+          proposed definitions have failed. Look for "we are no
+          further than when we began," "I am at a loss," "we must
+          start again," or endings where no conclusion is reached.
+        not_this: >
+          If the speaker merely professes ignorance as a stance, that
+          is socratic irony. If the argument successfully refutes a
+          position (not leaving an impasse but establishing a
+          negative result), that is reductio ad absurdum or elenchus.
+          Aporia is the state of genuine puzzlement after inquiry.
+
+      - name: interlocutor concession
+        definition: >
+          A moment where the respondent is led to agree with a
+          proposition that contradicts or undermines their original
+          position — the conversational mechanism by which Socratic
+          arguments advance. Each concession becomes a new premise.
+        apply_when: >
+          The respondent explicitly agrees ("yes," "it must be so,"
+          "I suppose"), especially when the agreement moves them away
+          from their initial thesis. Look for reluctant or surprised
+          agreement, acknowledgements that follow Socratic questioning,
+          or passages where the interlocutor is clearly being guided
+          step by step to a conclusion they did not anticipate.
+        not_this: >
+          If the agreement is enthusiastic and the interlocutor
+          already holds the view, it is not a concession but a shared
+          premise. If the passage describes the final impasse rather
+          than a step-by-step progression, that is aporia. Interlocutor
+          concession is the micro-level agreement that drives the
+          argument forward.

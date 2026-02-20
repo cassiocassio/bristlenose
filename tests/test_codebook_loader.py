@@ -21,7 +21,7 @@ class TestLoadAllTemplates:
     def test_loads_all_three(self) -> None:
         templates = load_all_templates()
         ids = {t.id for t in templates}
-        assert ids == {"garrett", "norman", "uxr"}
+        assert {"garrett", "norman", "uxr"} <= ids
 
     def test_returns_codebook_template_instances(self) -> None:
         templates = load_all_templates()
@@ -171,8 +171,8 @@ class TestNormanStructure:
         assert t is not None
         return t
 
-    def test_disabled(self, norman: CodebookTemplate) -> None:
-        assert norman.enabled is False
+    def test_enabled(self, norman: CodebookTemplate) -> None:
+        assert norman.enabled is True
 
     def test_seven_groups(self, norman: CodebookTemplate) -> None:
         assert len(norman.groups) == 7
@@ -181,13 +181,13 @@ class TestNormanStructure:
         total = sum(len(g.tags) for g in norman.groups)
         assert total == 28
 
-    def test_tags_have_empty_prompts(self, norman: CodebookTemplate) -> None:
-        """Norman tags don't have discrimination prompts yet."""
+    def test_tags_have_full_prompts(self, norman: CodebookTemplate) -> None:
+        """Norman tags have discrimination prompts."""
         for g in norman.groups:
             for tag in g.tags:
-                assert tag.definition == ""
-                assert tag.apply_when == ""
-                assert tag.not_this == ""
+                assert tag.definition, f"{tag.name} missing definition"
+                assert tag.apply_when, f"{tag.name} missing apply_when"
+                assert tag.not_this, f"{tag.name} missing not_this"
 
     def test_preamble_present(self, norman: CodebookTemplate) -> None:
         assert norman.preamble

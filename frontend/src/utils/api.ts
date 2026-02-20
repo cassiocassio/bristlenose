@@ -6,9 +6,11 @@
  */
 
 import type {
+  AutoCodeJobStatus,
   CodebookGroupResponse,
   CodebookResponse,
   CodebookTagResponse,
+  ProposalsListResponse,
   RemoveFrameworkInfo,
   TemplateListResponse,
   TranscriptPageResponse,
@@ -182,4 +184,50 @@ export function getRemoveFrameworkImpact(frameworkId: string): Promise<RemoveFra
 
 export function getTranscript(sessionId: string): Promise<TranscriptPageResponse> {
   return apiGet<TranscriptPageResponse>(`/transcripts/${sessionId}`);
+}
+
+// ---------------------------------------------------------------------------
+// AutoCode helpers
+// ---------------------------------------------------------------------------
+
+export function startAutoCode(frameworkId: string): Promise<AutoCodeJobStatus> {
+  return apiPost<AutoCodeJobStatus>(`/autocode/${frameworkId}`, {});
+}
+
+export function getAutoCodeStatus(frameworkId: string): Promise<AutoCodeJobStatus> {
+  return apiGet<AutoCodeJobStatus>(`/autocode/${frameworkId}/status`);
+}
+
+export function getAutoCodeProposals(
+  frameworkId: string,
+  minConfidence?: number,
+): Promise<ProposalsListResponse> {
+  const qs = minConfidence != null ? `?min_confidence=${minConfidence}` : "";
+  return apiGet<ProposalsListResponse>(`/autocode/${frameworkId}/proposals${qs}`);
+}
+
+export function acceptProposal(proposalId: number): Promise<void> {
+  return apiPost(`/autocode/proposals/${proposalId}/accept`, {});
+}
+
+export function denyProposal(proposalId: number): Promise<void> {
+  return apiPost(`/autocode/proposals/${proposalId}/deny`, {});
+}
+
+export function acceptAllProposals(
+  frameworkId: string,
+  minConfidence?: number,
+): Promise<{ accepted: number }> {
+  return apiPost<{ accepted: number }>(`/autocode/${frameworkId}/accept-all`, {
+    min_confidence: minConfidence ?? 0.5,
+  });
+}
+
+export function denyAllProposals(
+  frameworkId: string,
+  maxConfidence?: number,
+): Promise<{ denied: number }> {
+  return apiPost<{ denied: number }>(`/autocode/${frameworkId}/deny-all`, {
+    ...(maxConfidence != null ? { max_confidence: maxConfidence } : {}),
+  });
 }

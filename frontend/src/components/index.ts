@@ -1,4 +1,6 @@
 export { Annotation } from "./Annotation";
+export { AutoCodeReportModal } from "./AutoCodeReportModal";
+export { AutoCodeToast } from "./AutoCodeToast";
 export { Badge } from "./Badge";
 export { ConfirmDialog } from "./ConfirmDialog";
 export { Counter } from "./Counter";

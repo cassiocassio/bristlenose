@@ -52,10 +52,16 @@ class AutoCodeJobOut(BaseModel):
 class ProposedTagOut(BaseModel):
     id: int
     quote_id: int
+    dom_id: str
+    session_id: str
+    speaker_code: str
+    start_timecode: float
     quote_text: str
     tag_definition_id: int
     tag_name: str
     group_name: str
+    colour_set: str
+    colour_index: int
     confidence: float
     rationale: str
     status: str
@@ -69,6 +75,7 @@ class ProposalsResponse(BaseModel):
 class BulkActionRequest(BaseModel):
     group_id: int | None = None
     min_confidence: float = 0.5
+    max_confidence: float | None = None
 
 
 # ---------------------------------------------------------------------------
@@ -136,7 +143,7 @@ def _has_api_key(settings: object) -> bool:
 
 
 @router.post("/projects/{project_id}/autocode/{framework_id}")
-def start_autocode_job(
+async def start_autocode_job(
     project_id: int,
     framework_id: str,
     request: Request,
@@ -268,7 +275,18 @@ def get_proposals(
 
         # Query proposals above threshold, joined with quote text and tag info
         proposals = (
-            db.query(ProposedTag, Quote.text, TagDefinition.name, CodebookGroup.name)
+            db.query(
+                ProposedTag,
+                Quote.text,
+                Quote.participant_id,
+                Quote.session_id,
+                Quote.start_timecode,
+                TagDefinition.name,
+                TagDefinition.id,
+                TagDefinition.codebook_group_id,
+                CodebookGroup.name,
+                CodebookGroup.colour_set,
+            )
             .join(Quote, ProposedTag.quote_id == Quote.id)
             .join(TagDefinition, ProposedTag.tag_definition_id == TagDefinition.id)
             .join(
@@ -283,19 +301,42 @@ def get_proposals(
             .all()
         )
 
+        # Build colour_index lookup: position of each tag within its group
+        group_ids = {row[7] for row in proposals}  # codebook_group_id
+        group_td_order: dict[int, list[int]] = {}
+        for gid in group_ids:
+            tds = (
+                db.query(TagDefinition.id)
+                .filter_by(codebook_group_id=gid)
+                .order_by(TagDefinition.id)
+                .all()
+            )
+            group_td_order[gid] = [td_id for (td_id,) in tds]
+
         items = [
             ProposedTagOut(
                 id=p.id,
                 quote_id=p.quote_id,
+                dom_id=f"q-{participant_id}-{int(start_tc)}",
+                session_id=session_id,
+                speaker_code=participant_id,
+                start_timecode=start_tc,
                 quote_text=quote_text,
                 tag_definition_id=p.tag_definition_id,
                 tag_name=tag_name,
                 group_name=group_name,
+                colour_set=colour_set,
+                colour_index=(
+                    group_td_order.get(cg_id, []).index(td_id)
+                    if td_id in group_td_order.get(cg_id, [])
+                    else 0
+                ),
                 confidence=p.confidence,
                 rationale=p.rationale,
                 status=p.status,
             )
-            for p, quote_text, tag_name, group_name in proposals
+            for p, quote_text, participant_id, session_id, start_tc,
+                tag_name, td_id, cg_id, group_name, colour_set in proposals
         ]
 
         return ProposalsResponse(proposals=items, total=len(items))
@@ -485,16 +526,20 @@ def deny_all_proposals(
         job = _get_job(db, project_id, framework_id)
 
         min_conf = body.min_confidence if body else 0.0
+        max_conf = body.max_confidence if body else None
         group_filter_id = body.group_id if body else None
 
-        query = (
-            db.query(ProposedTag)
-            .filter(
-                ProposedTag.job_id == job.id,
-                ProposedTag.status == "pending",
-                ProposedTag.confidence >= min_conf,
-            )
+        query = db.query(ProposedTag).filter(
+            ProposedTag.job_id == job.id,
+            ProposedTag.status == "pending",
         )
+
+        if max_conf is not None:
+            # "deny everything below X" — used by threshold review dialog
+            query = query.filter(ProposedTag.confidence < max_conf)
+        else:
+            # Original behaviour: deny everything at or above min_confidence
+            query = query.filter(ProposedTag.confidence >= min_conf)
 
         if group_filter_id is not None:
             tag_ids = [

@@ -11,7 +11,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 
-from bristlenose.server.db import create_session_factory, get_engine, init_db
+from bristlenose.server.db import create_session_factory, db_url_for_project, get_engine, init_db
 from bristlenose.server.routes.autocode import router as autocode_router
 from bristlenose.server.routes.codebook import router as codebook_router
 from bristlenose.server.routes.dashboard import router as dashboard_router
@@ -175,12 +175,17 @@ def create_app(
         dev = True
     app = FastAPI(title="Bristlenose", docs_url="/api/docs", redoc_url=None)
 
+    # Per-project DB: derive path from project_dir unless explicitly overridden
+    if db_url is None and project_dir is not None:
+        db_url = db_url_for_project(project_dir)
+
     engine = get_engine(db_url)
     init_db(engine)
     session_factory = create_session_factory(engine)
 
-    # Store session factory in app state for dependency injection
+    # Store session factory and DB URL in app state for dependency injection
     app.state.db_factory = session_factory
+    app.state.db_url = db_url or ""
 
     app.include_router(health_router)
     app.include_router(autocode_router)
@@ -272,12 +277,15 @@ def _print_dev_urls() -> None:
     )
 
 
-def _build_dev_section_html() -> str:
+def _build_dev_section_html(db_url: str) -> str:
     """Build the Developer + Design sections for injection into the About tab."""
-    from bristlenose.server.db import _DB_PATH, Base
+    from bristlenose.server.db import Base
 
     port = int(os.environ.get("_BRISTLENOSE_PORT", "8150"))
     base = f"http://localhost:{port}"
+
+    # Extract path from sqlite:///... URL for display
+    db_display = db_url.removeprefix("sqlite:///") if db_url else "(in-memory)"
 
     # --- Developer section ---
     dev_links = [
@@ -322,7 +330,7 @@ def _build_dev_section_html() -> str:
         "<hr>\n"
         "<h3>Developer</h3>\n"
         "<dl>\n"
-        f"<dt>Database</dt><dd><code>{_DB_PATH}</code></dd>\n"
+        f"<dt>Database</dt><dd><code>{db_display}</code></dd>\n"
         f"<dt>Schema</dt><dd>{table_count} tables</dd>\n"
         "<dt>Renderer overlay</dt>"
         "<dd>Press <kbd>D</kbd> to colour-code regions by renderer "
@@ -695,7 +703,7 @@ def _mount_dev_report(
     if report_html.is_symlink():
         report_html = output_dir / os.readlink(report_html)
 
-    dev_html = _build_dev_section_html()
+    dev_html = _build_dev_section_html(app.state.db_url)
     overlay_html = _build_renderer_overlay_html()
     vite_scripts = _build_vite_dev_scripts()
 

@@ -11,7 +11,6 @@ from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
 from sqlalchemy.pool import StaticPool
 
 _CONFIG_DIR = Path("~/.config/bristlenose").expanduser()
-_DB_PATH = _CONFIG_DIR / "bristlenose.db"
 
 
 class Base(DeclarativeBase):
@@ -19,8 +18,24 @@ class Base(DeclarativeBase):
 
 
 def _default_db_url() -> str:
+    """Fallback DB URL when no project directory is available."""
     _CONFIG_DIR.mkdir(parents=True, exist_ok=True)
-    return f"sqlite:///{_DB_PATH}"
+    db_path = _CONFIG_DIR / "bristlenose.db"
+    return f"sqlite:///{db_path}"
+
+
+def db_url_for_project(project_dir: Path) -> str:
+    """Return the SQLite URL for a per-project database.
+
+    The DB lives at ``<output_dir>/.bristlenose/bristlenose.db`` so each
+    project gets its own database with no cross-project contamination.
+    """
+    output_dir = project_dir / "bristlenose-output"
+    if not output_dir.is_dir():
+        output_dir = project_dir  # caller already pointed at the output dir
+    db_path = output_dir / ".bristlenose" / "bristlenose.db"
+    db_path.parent.mkdir(parents=True, exist_ok=True)
+    return f"sqlite:///{db_path}"
 
 
 def get_engine(db_url: str | None = None) -> Engine:

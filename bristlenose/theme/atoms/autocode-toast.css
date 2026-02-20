@@ -1,0 +1,90 @@
+/* Atom: autocode-toast — floating progress chip for AutoCode jobs */
+
+.autocode-toast {
+    position: fixed;
+    bottom: 48px;
+    right: 24px;
+    background: var(--bn-colour-text);
+    color: var(--bn-colour-bg);
+    padding: 0.6rem 1rem;
+    border-radius: var(--bn-radius-lg);
+    font-size: 0.82rem;
+    z-index: 200;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+    font-family: var(--bn-font-body);
+}
+
+.toast-spinner {
+    width: 14px;
+    height: 14px;
+    border: 2px solid rgba(255, 255, 255, 0.2);
+    border-top-color: #60a5fa;
+    border-radius: 50%;
+    animation: autocode-spin 0.8s linear infinite;
+}
+
+@keyframes autocode-spin { to { transform: rotate(360deg); } }
+
+.toast-check {
+    color: var(--bn-colour-success);
+    font-weight: 700;
+}
+
+.toast-error {
+    color: var(--bn-colour-danger);
+    font-weight: 700;
+}
+
+.toast-link {
+    color: #60a5fa;
+    text-decoration: none;
+    font-weight: 500;
+    margin-left: 0.3rem;
+    cursor: pointer;
+}
+
+.toast-link:hover { text-decoration: underline; }
+
+.toast-close {
+    background: none;
+    border: none;
+    color: rgba(255, 255, 255, 0.4);
+    cursor: pointer;
+    font-size: 0.9rem;
+    padding: 0 0.2rem;
+    margin-left: 0.3rem;
+}
+
+.toast-close:hover { color: rgba(255, 255, 255, 0.8); }
+
+/* Dark mode — inverted toast (light bg on dark theme) */
+@supports (color: light-dark(#000, #fff)) {
+    [data-theme="dark"] .autocode-toast {
+        background: #e5e7eb;
+        color: #111;
+    }
+    [data-theme="dark"] .autocode-toast .toast-link { color: #2563eb; }
+    [data-theme="dark"] .autocode-toast .toast-close { color: rgba(0, 0, 0, 0.3); }
+    [data-theme="dark"] .autocode-toast .toast-close:hover { color: rgba(0, 0, 0, 0.7); }
+    [data-theme="dark"] .autocode-toast .toast-spinner {
+        border-color: rgba(0, 0, 0, 0.15);
+        border-top-color: #2563eb;
+    }
+
+    @media (prefers-color-scheme: dark) {
+        :root:not([data-theme="light"]) .autocode-toast {
+            background: #e5e7eb;
+            color: #111;
+        }
+        :root:not([data-theme="light"]) .autocode-toast .toast-link { color: #2563eb; }
+        :root:not([data-theme="light"]) .autocode-toast .toast-close { color: rgba(0, 0, 0, 0.3); }
+        :root:not([data-theme="light"]) .autocode-toast .toast-close:hover { color: rgba(0, 0, 0, 0.7); }
+        :root:not([data-theme="light"]) .autocode-toast .toast-spinner {
+            border-color: rgba(0, 0, 0, 0.15);
+            border-top-color: #2563eb;
+        }
+    }
+}

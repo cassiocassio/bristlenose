@@ -841,6 +841,15 @@ class Pipeline:
                 cluster_by_screen(all_quotes, llm_client),
                 group_by_theme(all_quotes, llm_client),
             )
+            if self.settings.write_intermediate:
+                write_intermediate_json(
+                    screen_clusters, "screen_clusters.json", output_dir,
+                    self.settings.project_name,
+                )
+                write_intermediate_json(
+                    theme_groups, "theme_groups.json", output_dir,
+                    self.settings.project_name,
+                )
             _print_step(
                 f"Clustered {len(screen_clusters)} screens"
                 f" · Grouped {len(theme_groups)} themes",

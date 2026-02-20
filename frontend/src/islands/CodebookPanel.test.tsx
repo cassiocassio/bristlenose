@@ -51,21 +51,31 @@ const MOCK_CODEBOOK: CodebookResponse = {
 };
 
 function mockFetchOk(data: unknown): void {
-  globalThis.fetch = vi.fn().mockResolvedValue({
-    ok: true,
-    json: () => Promise.resolve(data),
+  globalThis.fetch = vi.fn().mockImplementation((url: string) => {
+    // AutoCode status calls return 404 (no job) by default.
+    if (typeof url === "string" && url.includes("/autocode/")) {
+      return Promise.resolve({ ok: false, status: 404, json: () => Promise.resolve({}) });
+    }
+    return Promise.resolve({
+      ok: true,
+      json: () => Promise.resolve(data),
+    });
   });
 }
 
 function mockFetchSequence(...responses: unknown[]): void {
-  const fn = vi.fn();
-  for (const data of responses) {
-    fn.mockResolvedValueOnce({
+  const queue = [...responses];
+  globalThis.fetch = vi.fn().mockImplementation((url: string) => {
+    // AutoCode status calls return 404 (no job) by default.
+    if (typeof url === "string" && url.includes("/autocode/")) {
+      return Promise.resolve({ ok: false, status: 404, json: () => Promise.resolve({}) });
+    }
+    const data = queue.shift();
+    return Promise.resolve({
       ok: true,
       json: () => Promise.resolve(data),
     });
-  }
-  globalThis.fetch = fn;
+  });
 }
 
 beforeEach(() => {

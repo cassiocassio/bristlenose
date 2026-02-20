@@ -1,21 +1,32 @@
 import { Fragment, useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { Badge, ConfirmDialog, EditableText, MicroBar, TagInput } from "../components";
+import {
+  AutoCodeReportModal,
+  AutoCodeToast,
+  Badge,
+  ConfirmDialog,
+  EditableText,
+  MicroBar,
+  TagInput,
+} from "../components";
 import {
   createCodebookGroup,
   createCodebookTag,
   deleteCodebookGroup,
   deleteCodebookTag,
+  getAutoCodeStatus,
   getCodebook,
   getCodebookTemplates,
   getRemoveFrameworkImpact,
   importCodebookTemplate,
   mergeCodebookTags,
   removeCodebookFramework,
+  startAutoCode,
   updateCodebookGroup,
   updateCodebookTag,
 } from "../utils/api";
 import type {
+  AutoCodeJobStatus,
   CodebookGroupResponse,
   CodebookResponse,
   CodebookTagResponse,
@@ -24,32 +35,10 @@ import type {
 } from "../utils/types";
 
 // ---------------------------------------------------------------------------
-// Colour helpers — mirror COLOUR_SETS from codebook.js
+// Colour helpers — shared module (see utils/colours.ts)
 // ---------------------------------------------------------------------------
 
-const COLOUR_SETS: Record<string, { slots: number; groupBg: string; barVar: string; bgVar: string }> = {
-  ux:    { slots: 5, groupBg: "--bn-group-ux",    barVar: "--bn-bar-ux",    bgVar: "--bn-ux-" },
-  emo:   { slots: 6, groupBg: "--bn-group-emo",   barVar: "--bn-bar-emo",   bgVar: "--bn-emo-" },
-  task:  { slots: 5, groupBg: "--bn-group-task",   barVar: "--bn-bar-task",  bgVar: "--bn-task-" },
-  trust: { slots: 5, groupBg: "--bn-group-trust",  barVar: "--bn-bar-trust", bgVar: "--bn-trust-" },
-  opp:   { slots: 5, groupBg: "--bn-group-opp",    barVar: "--bn-bar-opp",   bgVar: "--bn-opp-" },
-};
-
-function getGroupBg(colourSet: string): string {
-  const set = COLOUR_SETS[colourSet];
-  return set ? `var(${set.groupBg})` : "var(--bn-group-none)";
-}
-
-function getBarColour(colourSet: string): string {
-  const set = COLOUR_SETS[colourSet];
-  return set ? `var(${set.barVar})` : "var(--bn-bar-none)";
-}
-
-function getTagBg(colourSet: string, index: number): string {
-  const set = COLOUR_SETS[colourSet];
-  if (!set) return "var(--bn-custom-bg)";
-  return `var(${set.bgVar}${(index % set.slots) + 1}-bg)`;
-}
+import { getGroupBg, getBarColour, getTagBg } from "../utils/colours";
 
 // ---------------------------------------------------------------------------
 // Sub-components
@@ -505,6 +494,11 @@ export function CodebookPanel({ projectId }: CodebookPanelProps) {
     impact: RemoveFrameworkInfo | null;
   } | null>(null);
 
+  // --- AutoCode state ---
+  const [autoCodeStatus, setAutoCodeStatus] = useState<Record<string, AutoCodeJobStatus | null>>({});
+  const [toastState, setToastState] = useState<{ frameworkId: string; frameworkTitle: string } | null>(null);
+  const [reportModal, setReportModal] = useState<{ frameworkId: string; frameworkTitle: string } | null>(null);
+
   // Fetch codebook data
   const fetchData = useCallback(() => {
     getCodebook()
@@ -527,6 +521,30 @@ export function CodebookPanel({ projectId }: CodebookPanelProps) {
     observer.observe(panel, { attributes: true, attributeFilter: ["class"] });
     return () => observer.disconnect();
   }, [fetchData]);
+
+  // Poll autocode status for each imported framework on mount.
+  useEffect(() => {
+    if (!data) return;
+    const frameworkIds = new Set<string>();
+    for (const g of data.groups) {
+      if (g.framework_id) frameworkIds.add(g.framework_id);
+    }
+    for (const fid of frameworkIds) {
+      getAutoCodeStatus(fid)
+        .then((status) => {
+          setAutoCodeStatus((prev) => ({ ...prev, [fid]: status }));
+          // If a job is running, show the toast automatically.
+          if (status.status === "running") {
+            const tmpl = templates?.find((t) => t.id === fid);
+            setToastState({ frameworkId: fid, frameworkTitle: tmpl?.title ?? fid });
+          }
+        })
+        .catch(() => {
+          // 404 = no job yet, button should be enabled.
+          setAutoCodeStatus((prev) => ({ ...prev, [fid]: null }));
+        });
+    }
+  }, [data, templates]);
 
   // --- Group mutations ---
 
@@ -686,6 +704,47 @@ export function CodebookPanel({ projectId }: CodebookPanelProps) {
     setSelectedTemplate(null);
   }, []);
 
+  // --- AutoCode handlers ---
+
+  const handleStartAutoCode = useCallback(
+    (frameworkId: string, frameworkTitle: string) => {
+      startAutoCode(frameworkId)
+        .then((status) => {
+          setAutoCodeStatus((prev) => ({ ...prev, [frameworkId]: status }));
+          setToastState({ frameworkId, frameworkTitle });
+        })
+        .catch((err) => console.error("Start AutoCode failed:", err));
+    },
+    [],
+  );
+
+  const handleAutoCodeComplete = useCallback(
+    (frameworkId: string) => {
+      // Refresh autocode status and codebook counts.
+      getAutoCodeStatus(frameworkId)
+        .then((status) => setAutoCodeStatus((prev) => ({ ...prev, [frameworkId]: status })))
+        .catch(() => {});
+      fetchData();
+    },
+    [fetchData],
+  );
+
+  const handleOpenReport = useCallback(
+    (frameworkId: string, frameworkTitle: string) => {
+      setReportModal({ frameworkId, frameworkTitle });
+    },
+    [],
+  );
+
+  const handleReportAcceptAll = useCallback(() => {
+    setReportModal(null);
+    fetchData();
+  }, [fetchData]);
+
+  const handleReportTagTentatively = useCallback(() => {
+    setReportModal(null);
+  }, []);
+
   // --- Remove framework handlers ---
 
   const handleAskRemoveFramework = useCallback((frameworkId: string, label: string) => {
@@ -794,6 +853,9 @@ export function CodebookPanel({ projectId }: CodebookPanelProps) {
           const title = tmpl?.title ?? "Codebook framework";
           const author = tmpl?.author ?? "";
           const label = author ? `${author} — ${title}` : title;
+          const acStatus = autoCodeStatus[fid];
+          const acDisabled = acStatus?.status === "running" || acStatus?.status === "completed";
+          const proposedCount = acStatus?.proposed_count ?? 0;
           return (
             <Fragment key={fid}>
               <div className="framework-section-header">
@@ -801,12 +863,34 @@ export function CodebookPanel({ projectId }: CodebookPanelProps) {
                   <div className="framework-section-title">{title}</div>
                   {author && <div className="framework-section-author">{author}</div>}
                 </div>
-                <button
-                  className="bn-btn framework-remove-btn"
-                  onClick={() => handleAskRemoveFramework(fid, label)}
-                >
-                  Remove from Codebook
-                </button>
+                <div className="framework-section-actions">
+                  <button
+                    className="autocode-btn"
+                    disabled={acDisabled}
+                    onClick={() => handleStartAutoCode(fid, title)}
+                    data-testid={`bn-autocode-btn-${fid}`}
+                  >
+                    &#x2726; AutoCode quotes
+                    {proposedCount > 0 && (
+                      <span
+                        className="proposed-count"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleOpenReport(fid, title);
+                        }}
+                        data-testid={`bn-autocode-count-${fid}`}
+                      >
+                        {proposedCount}
+                      </span>
+                    )}
+                  </button>
+                  <button
+                    className="bn-btn framework-remove-btn"
+                    onClick={() => handleAskRemoveFramework(fid, label)}
+                  >
+                    Remove from Codebook
+                  </button>
+                </div>
               </div>
               {fwGroups.map((group) => (
                 <CodebookGroupColumn
@@ -871,6 +955,29 @@ export function CodebookPanel({ projectId }: CodebookPanelProps) {
             onCancel={() => setRemoveConfirm(null)}
           />
         </div>
+      )}
+
+      {/* AutoCode toast — persistent across tabs */}
+      {toastState && (
+        <AutoCodeToast
+          frameworkId={toastState.frameworkId}
+          onComplete={() => handleAutoCodeComplete(toastState.frameworkId)}
+          onOpenReport={() => {
+            handleOpenReport(toastState.frameworkId, toastState.frameworkTitle);
+          }}
+          onDismiss={() => setToastState(null)}
+        />
+      )}
+
+      {/* AutoCode report modal */}
+      {reportModal && (
+        <AutoCodeReportModal
+          frameworkId={reportModal.frameworkId}
+          frameworkTitle={reportModal.frameworkTitle}
+          onClose={() => setReportModal(null)}
+          onAcceptAll={handleReportAcceptAll}
+          onTagTentatively={handleReportTagTentatively}
+        />
       )}
 
       {/* Browse codebooks modal — picker and preview views.

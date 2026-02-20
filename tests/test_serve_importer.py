@@ -9,7 +9,7 @@ import pytest
 from sqlalchemy.orm import Session
 
 from bristlenose.server.db import create_session_factory, get_engine, init_db
-from bristlenose.server.importer import import_project
+from bristlenose.server.importer import _find_transcripts_dir, import_project
 from bristlenose.server.models import (
     ClusterQuote,
     DeletedBadge,
@@ -793,3 +793,81 @@ class TestReimportStaleClusters:
         assert db.query(ThemeGroup).count() == 1
         assert db.query(ThemeGroup).first().theme_label == "Theme A"
         assert db.query(Quote).count() == 2  # both quotes survive
+
+
+# ---------------------------------------------------------------------------
+# Transcript discovery fallback
+# ---------------------------------------------------------------------------
+
+
+class TestFindTranscriptsDir:
+    """_find_transcripts_dir tries multiple candidate locations."""
+
+    def test_prefers_cooked_over_raw(self, tmp_path: Path) -> None:
+        """transcripts-cooked wins if both exist in output_dir."""
+        output = tmp_path / "output"
+        output.mkdir()
+        cooked = output / "transcripts-cooked"
+        cooked.mkdir()
+        (cooked / "s1.txt").write_text("# Transcript: s1\n")
+        raw = output / "transcripts-raw"
+        raw.mkdir()
+        (raw / "s1.txt").write_text("# Transcript: s1\n")
+
+        result = _find_transcripts_dir(tmp_path, output)
+        assert result == cooked
+
+    def test_finds_raw_in_output(self, tmp_path: Path) -> None:
+        """Standard pipeline layout: transcripts-raw in output dir."""
+        output = tmp_path / "output"
+        output.mkdir()
+        raw = output / "transcripts-raw"
+        raw.mkdir()
+        (raw / "s1.txt").write_text("# Transcript: s1\n")
+
+        result = _find_transcripts_dir(tmp_path, output)
+        assert result == raw
+
+    def test_falls_back_to_project_transcripts(self, tmp_path: Path) -> None:
+        """Non-standard layout: transcripts/ in project dir (Plato case)."""
+        output = tmp_path / "output"
+        output.mkdir()
+        transcripts = tmp_path / "transcripts"
+        transcripts.mkdir()
+        (transcripts / "s1.txt").write_text("# Transcript: s1\n")
+
+        result = _find_transcripts_dir(tmp_path, output)
+        assert result == transcripts
+
+    def test_falls_back_to_project_transcripts_raw(self, tmp_path: Path) -> None:
+        """Input-dir layout: transcripts-raw/ in project dir."""
+        output = tmp_path / "output"
+        output.mkdir()
+        raw = tmp_path / "transcripts-raw"
+        raw.mkdir()
+        (raw / "s1.txt").write_text("# Transcript: s1\n")
+
+        result = _find_transcripts_dir(tmp_path, output)
+        assert result == raw
+
+    def test_returns_default_when_none_found(self, tmp_path: Path) -> None:
+        """Returns output_dir/transcripts-raw when no candidates match."""
+        output = tmp_path / "output"
+        output.mkdir()
+
+        result = _find_transcripts_dir(tmp_path, output)
+        assert result == output / "transcripts-raw"
+
+    def test_ignores_empty_directories(self, tmp_path: Path) -> None:
+        """A candidate dir must contain .txt files to match."""
+        output = tmp_path / "output"
+        output.mkdir()
+        raw = output / "transcripts-raw"
+        raw.mkdir()  # exists but empty
+
+        transcripts = tmp_path / "transcripts"
+        transcripts.mkdir()
+        (transcripts / "s1.txt").write_text("# Transcript: s1\n")
+
+        result = _find_transcripts_dir(tmp_path, output)
+        assert result == transcripts

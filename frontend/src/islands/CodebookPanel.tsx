@@ -1,13 +1,13 @@
 import { Fragment, useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import {
-  AutoCodeReportModal,
   AutoCodeToast,
   Badge,
   ConfirmDialog,
   EditableText,
   MicroBar,
   TagInput,
+  ThresholdReviewModal,
 } from "../components";
 import {
   createCodebookGroup,
@@ -736,14 +736,10 @@ export function CodebookPanel({ projectId }: CodebookPanelProps) {
     [],
   );
 
-  const handleReportAcceptAll = useCallback(() => {
+  const handleReportApply = useCallback(() => {
     setReportModal(null);
     fetchData();
   }, [fetchData]);
-
-  const handleReportTagTentatively = useCallback(() => {
-    setReportModal(null);
-  }, []);
 
   // --- Remove framework handlers ---
 
@@ -969,14 +965,13 @@ export function CodebookPanel({ projectId }: CodebookPanelProps) {
         />
       )}
 
-      {/* AutoCode report modal */}
+      {/* AutoCode threshold review modal */}
       {reportModal && (
-        <AutoCodeReportModal
+        <ThresholdReviewModal
           frameworkId={reportModal.frameworkId}
           frameworkTitle={reportModal.frameworkTitle}
           onClose={() => setReportModal(null)}
-          onAcceptAll={handleReportAcceptAll}
-          onTagTentatively={handleReportTagTentatively}
+          onApply={handleReportApply}
         />
       )}
 

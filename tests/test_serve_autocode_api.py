@@ -632,6 +632,53 @@ class TestDenyAllProposals:
         assert resp.status_code == 200
         assert resp.json()["denied"] == N_QUOTES - 1
 
+    def test_deny_below_max_confidence(
+        self, client_with_completed_job: TestClient
+    ) -> None:
+        """Deny-all with max_confidence denies only proposals below the threshold.
+
+        Fixture creates proposals with confidences 0.5, 0.6, 0.7, 0.8.
+        max_confidence=0.65 should deny only the 0.5 and 0.6 proposals.
+        """
+        resp = client_with_completed_job.post(
+            "/api/projects/1/autocode/garrett/deny-all",
+            json={"max_confidence": 0.65},
+        )
+        assert resp.status_code == 200
+        assert resp.json()["denied"] == 2
+
+        # Verify the correct proposals were denied (0.5, 0.6) and others untouched
+        db = client_with_completed_job.app.state.db_factory()  # type: ignore[union-attr]
+        try:
+            denied = db.query(ProposedTag).filter_by(status="denied").count()
+            assert denied == 2
+            pending = db.query(ProposedTag).filter_by(status="pending").count()
+            assert pending == 2
+        finally:
+            db.close()
+
+    def test_deny_below_zero_denies_nothing(
+        self, client_with_completed_job: TestClient
+    ) -> None:
+        """max_confidence=0.0 means nothing is below the threshold."""
+        resp = client_with_completed_job.post(
+            "/api/projects/1/autocode/garrett/deny-all",
+            json={"max_confidence": 0.0},
+        )
+        assert resp.status_code == 200
+        assert resp.json()["denied"] == 0
+
+    def test_deny_below_one_denies_all(
+        self, client_with_completed_job: TestClient
+    ) -> None:
+        """max_confidence=1.0 denies everything below 1.0 (all proposals)."""
+        resp = client_with_completed_job.post(
+            "/api/projects/1/autocode/garrett/deny-all",
+            json={"max_confidence": 1.0},
+        )
+        assert resp.status_code == 200
+        assert resp.json()["denied"] == N_QUOTES
+
     def test_deny_all_404_no_job(self, client: TestClient) -> None:
         resp = client.post("/api/projects/1/autocode/garrett/deny-all")
         assert resp.status_code == 404

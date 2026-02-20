@@ -177,28 +177,71 @@ body.hide-ai-tags .badge-ai { display: none; }
 }
 
 .badge-action-accept {
-    color: var(--bn-colour-success);
-    font-size: 0.85em;
+    color: var(--bn-colour-success, #16a34a);
+    font-size: 0.95em;
     font-weight: 700;
     cursor: pointer;
     padding: 1px 3px;
     border-radius: 2px;
-    transition: background var(--bn-transition-fast);
+    transition: background var(--bn-transition-fast), color var(--bn-transition-fast),
+                transform var(--bn-transition-fast);
 }
 
-.badge-action-accept:hover { background: rgba(22, 163, 74, 0.1); }
+.badge-action-accept:hover {
+    background: rgba(22, 163, 74, 0.18);
+    color: #15803d;
+    transform: scale(1.15);
+}
 
 .badge-action-deny {
-    color: var(--bn-colour-danger);
-    font-size: 0.85em;
+    color: var(--bn-colour-danger, #dc2626);
+    font-size: 0.95em;
     font-weight: 700;
     cursor: pointer;
     padding: 1px 3px;
     border-radius: 2px;
-    transition: background var(--bn-transition-fast);
+    transition: background var(--bn-transition-fast), color var(--bn-transition-fast),
+                transform var(--bn-transition-fast);
 }
 
-.badge-action-deny:hover { background: rgba(220, 38, 38, 0.1); }
+.badge-action-deny:hover {
+    background: rgba(220, 38, 38, 0.18);
+    color: #b91c1c;
+    transform: scale(1.15);
+}
+
+/* Dark mode: brighter hover for action icons */
+@supports (color: light-dark(#000, #fff)) {
+    [data-theme="dark"] .badge-action-accept:hover {
+        background: rgba(22, 163, 74, 0.25);
+        color: #4ade80;
+    }
+    [data-theme="dark"] .badge-action-deny:hover {
+        background: rgba(220, 38, 38, 0.25);
+        color: #f87171;
+    }
+    @media (prefers-color-scheme: dark) {
+        :root:not([data-theme="light"]) .badge-action-accept:hover {
+            background: rgba(22, 163, 74, 0.25);
+            color: #4ade80;
+        }
+        :root:not([data-theme="light"]) .badge-action-deny:hover {
+            background: rgba(220, 38, 38, 0.25);
+            color: #f87171;
+        }
+    }
+}
+
+/* Accept flash — brief brightness burst when a proposed tag is accepted.
+   Applied by React (QuoteCard) on the new user badge for ~400ms. */
+@keyframes badge-accept-flash {
+    0%   { filter: brightness(1.35); }
+    100% { filter: brightness(1); }
+}
+
+.badge-accept-flash {
+    animation: badge-accept-flash 0.4s ease-out;
+}
 
 /* Badge animations */
 @keyframes badge-fade-out {

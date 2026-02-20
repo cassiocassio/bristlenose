@@ -114,6 +114,10 @@ export function QuoteGroup({
   const [hidingIds, setHidingIds] = useState<Set<string>>(new Set());
   const hideTimers = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
 
+  // Track recently-accepted tags for the accept flash animation.
+  // Key: `${domId}:${tagName}`, auto-clears after 500ms.
+  const [flashingTags, setFlashingTags] = useState<Set<string>>(new Set());
+
   // ── Derived ───────────────────────────────────────────────────────────
 
   const hiddenQuotes = useMemo(
@@ -308,6 +312,16 @@ export function QuoteGroup({
           ],
         };
       });
+      // Trigger accept flash animation on the new badge.
+      const flashKey = `${domId}:${tagName}`;
+      setFlashingTags((prev) => new Set(prev).add(flashKey));
+      setTimeout(() => {
+        setFlashingTags((prev) => {
+          const next = new Set(prev);
+          next.delete(flashKey);
+          return next;
+        });
+      }, 500);
       acceptProposal(proposalId).catch((err) =>
         console.error("Accept proposal failed:", err),
       );
@@ -461,6 +475,7 @@ export function QuoteGroup({
               sessionId={q.session_id}
               hasMedia={hasMedia}
               proposedTags={state.proposedTags}
+              flashingTags={flashingTags}
               onToggleStar={handleToggleStar}
               onToggleHide={handleToggleHide}
               onEditCommit={handleEditCommit}

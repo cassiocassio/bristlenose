@@ -68,6 +68,8 @@ interface QuoteCardProps {
   hasMedia: boolean;
   /** Pending AutoCode proposals for this quote. */
   proposedTags: ProposedTagBrief[];
+  /** Tags currently playing the accept flash animation. Keys: `${domId}:${tagName}`. */
+  flashingTags: Set<string>;
 
   onToggleStar: (domId: string, newState: boolean) => void;
   onToggleHide: (domId: string, newState: boolean) => void;
@@ -92,6 +94,7 @@ export function QuoteCard({
   sessionId,
   hasMedia,
   proposedTags,
+  flashingTags,
   onToggleStar,
   onToggleHide,
   onEditCommit,
@@ -235,6 +238,7 @@ export function QuoteCard({
                 text={tag.name}
                 variant="user"
                 colour={tag.colour_set ? getTagBg(tag.colour_set, tag.colour_index) : undefined}
+                className={flashingTags.has(`${domId}:${tag.name}`) ? "badge-accept-flash" : undefined}
                 onDelete={() => onTagRemove(domId, tag.name)}
                 data-testid={`bn-quote-${domId}-badge-${tag.name}`}
               />

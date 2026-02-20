@@ -302,25 +302,13 @@ Phases 2-4 are bigger and may need branches, but by then Phase 1 has established
 
 These are bugs and config mistakes found during the Plato run. Zero risk, immediate value.
 
-#### 0a. Fix `analyze` to write intermediate JSON
+#### ~~0a. Fix `analyze` to write intermediate JSON~~ ✓ Already done
 
-**What's wrong**: `run()` writes `screen_clusters.json` and `theme_groups.json` to `.bristlenose/intermediate/`. The `analyze` command doesn't — it was just missing the same `write_intermediate_json()` calls. This means `bristlenose render` fails after `bristlenose analyze` because the files it needs don't exist.
+Verified: `run_analysis_only()` already writes all 4 intermediate files (topic_boundaries, extracted_quotes, screen_clusters, theme_groups) with the same `write_intermediate_json()` calls as `run()`.
 
-**The fix**: Add the same 4 lines to `run_analysis_only()` that `run()` already has. Copy-paste.
+#### ~~0b. Make `write_intermediate` default to `True`~~ ✓ Already done
 
-**What it touches**: `pipeline.py` only.
-
-**Risk**: None. Just writes files that should have been written already.
-
-#### 0b. Make `write_intermediate` default to `True`
-
-**What's wrong**: The setting defaults to `False`, meaning intermediate JSON is never written unless the user sets it. This means `render` (which is free — no LLM cost) fails because there's nothing to render from.
-
-**The fix**: Change the default in `config.py` from `False` to `True`.
-
-**What it touches**: `config.py` only.
-
-**Risk**: Writes a few extra JSON files to `.bristlenose/intermediate/`. They're small (KB to low MB). No downside.
+Verified: `write_intermediate: bool = True` in `config.py` line 89.
 
 #### 0c. Make the SQLite DB per-project instead of global
 
@@ -649,8 +637,8 @@ The key insight: **each sub-step is a single PR-sized change**. None of them req
 
 | Step | Size | Depends on | Can ship with |
 |------|------|-----------|---------------|
-| **0a** Fix analyze intermediate writes | Tiny (4 lines) | Nothing | Anything |
-| **0b** write_intermediate defaults True | Tiny (1 line) | Nothing | Anything |
+| ~~**0a** Fix analyze intermediate writes~~ | ✓ Done | — | — |
+| ~~**0b** write_intermediate defaults True~~ | ✓ Done | — | — |
 | **0c** Per-project SQLite DB | Small (20 lines) | Nothing | Anything |
 | **1a** Manifest model | Small (new file) | Nothing | Anything |
 | **1b** Write manifest after stages | Medium (30 lines in pipeline.py) | 1a | Nothing breaking |
@@ -666,7 +654,7 @@ The key insight: **each sub-step is a single PR-sized change**. None of them req
 | **5a-d** Incremental sessions | Large (new subsystem) | 2c, 4b | Needs design |
 
 **Recommended order**:
-1. Ship 0a + 0b + 0c first (bugs and config — do in the next session, 30 minutes)
+1. Ship 0c (per-project DB — next session, 30 minutes; 0a and 0b already done)
 2. Ship 1a + 1b together (manifest foundation — one session, 2 hours)
 3. Ship 1c (resume from completed stages — one session, 3-4 hours, the biggest single step)
 4. Ship 1d + 1e together (per-session tracking + UI — one session, 2-3 hours)

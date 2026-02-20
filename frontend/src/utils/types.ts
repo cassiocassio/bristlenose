@@ -73,6 +73,18 @@ export interface DashboardResponse {
 export interface TagResponse {
   name: string;
   codebook_group: string;
+  colour_set: string;
+  colour_index: number;
+}
+
+export interface ProposedTagBrief {
+  id: number;
+  tag_name: string;
+  group_name: string;
+  colour_set: string;
+  colour_index: number;
+  confidence: number;
+  rationale: string;
 }
 
 export interface QuoteResponse {
@@ -94,6 +106,7 @@ export interface QuoteResponse {
   edited_text: string | null;
   tags: TagResponse[];
   deleted_badges: string[];
+  proposed_tags: ProposedTagBrief[];
 }
 
 export interface SectionResponse {
@@ -225,4 +238,47 @@ export interface TranscriptPageResponse {
   speakers: TranscriptSpeakerResponse[];
   segments: TranscriptSegmentResponse[];
   annotations: Record<string, QuoteAnnotationResponse>;
+}
+
+// ---------------------------------------------------------------------------
+// AutoCode API
+// ---------------------------------------------------------------------------
+
+export interface AutoCodeJobStatus {
+  id: number;
+  framework_id: string;
+  status: "pending" | "running" | "completed" | "failed";
+  total_quotes: number;
+  processed_quotes: number;
+  proposed_count: number;
+  error_message: string;
+  llm_provider: string;
+  llm_model: string;
+  input_tokens: number;
+  output_tokens: number;
+  started_at: string;
+  completed_at: string | null;
+}
+
+export interface ProposedTagResponse {
+  id: number;
+  quote_id: number;
+  dom_id: string;
+  session_id: string;
+  speaker_code: string;
+  start_timecode: number;
+  quote_text: string;
+  tag_definition_id: number;
+  tag_name: string;
+  group_name: string;
+  colour_set: string;
+  colour_index: number;
+  confidence: number;
+  rationale: string;
+  status: "pending" | "accepted" | "denied";
+}
+
+export interface ProposalsListResponse {
+  proposals: ProposedTagResponse[];
+  total: number;
 }

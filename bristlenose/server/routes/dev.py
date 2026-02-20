@@ -281,12 +281,15 @@ def sessions_table_html(
 
 
 @router.get("/info")
-def dev_info() -> dict[str, object]:
+def dev_info(request: Request) -> dict[str, object]:
     """System info for the About tab developer section."""
-    from bristlenose.server.db import _DB_PATH, Base
+    from bristlenose.server.db import Base
+
+    db_url: str = getattr(request.app.state, "db_url", "")
+    db_path = db_url.removeprefix("sqlite:///") if db_url else "(in-memory)"
 
     return {
-        "db_path": str(_DB_PATH),
+        "db_path": db_path,
         "table_count": len(Base.metadata.tables),
         "endpoints": [
             {

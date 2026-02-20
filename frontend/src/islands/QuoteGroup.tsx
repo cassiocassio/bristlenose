@@ -11,8 +11,16 @@
 import { useState, useCallback, useRef, useMemo } from "react";
 import { Counter, EditableText } from "../components";
 import type { CounterItem } from "../components/Counter";
-import type { QuoteResponse, TagResponse } from "../utils/types";
-import { putHidden, putStarred, putEdits, putTags, putDeletedBadges } from "../utils/api";
+import type { ProposedTagBrief, QuoteResponse, TagResponse } from "../utils/types";
+import {
+  acceptProposal,
+  denyProposal,
+  putHidden,
+  putStarred,
+  putEdits,
+  putTags,
+  putDeletedBadges,
+} from "../utils/api";
 import { formatTimecode, stripSmartQuotes } from "../utils/format";
 import { QuoteCard } from "./QuoteCard";
 
@@ -28,6 +36,7 @@ interface QuoteLocalState {
   editedText: string | null;
   tags: TagResponse[];
   deletedBadges: string[];
+  proposedTags: ProposedTagBrief[];
 }
 
 function initialState(q: QuoteResponse): QuoteLocalState {
@@ -37,6 +46,7 @@ function initialState(q: QuoteResponse): QuoteLocalState {
     editedText: q.edited_text,
     tags: [...q.tags],
     deletedBadges: [...q.deleted_badges],
+    proposedTags: [...q.proposed_tags],
   };
 }
 
@@ -127,6 +137,24 @@ export function QuoteGroup({
     [hiddenQuotes, stateMap, hasMedia],
   );
 
+  // Tag name → colour lookup from existing quote data (for manual tag add).
+  const tagColourMap = useMemo(() => {
+    const map: Record<string, { colour_set: string; colour_index: number }> = {};
+    for (const q of quotes) {
+      for (const t of q.tags) {
+        if (t.colour_set && !map[t.name]) {
+          map[t.name] = { colour_set: t.colour_set, colour_index: t.colour_index };
+        }
+      }
+      for (const pt of q.proposed_tags) {
+        if (pt.colour_set && !map[pt.tag_name]) {
+          map[pt.tag_name] = { colour_set: pt.colour_set, colour_index: pt.colour_index };
+        }
+      }
+    }
+    return map;
+  }, [quotes]);
+
   // ── State sync helper ─────────────────────────────────────────────────
 
   const syncToServer = useCallback(
@@ -214,12 +242,21 @@ export function QuoteGroup({
 
   const handleTagAdd = useCallback(
     (domId: string, tagName: string) => {
+      const ci = tagColourMap[tagName];
       updateQuote(domId, (s) => ({
         ...s,
-        tags: [...s.tags, { name: tagName, codebook_group: "Uncategorised" }],
+        tags: [
+          ...s.tags,
+          {
+            name: tagName,
+            codebook_group: "Uncategorised",
+            colour_set: ci?.colour_set ?? "",
+            colour_index: ci?.colour_index ?? 0,
+          },
+        ],
       }));
     },
-    [updateQuote],
+    [updateQuote, tagColourMap],
   );
 
   const handleTagRemove = useCallback(
@@ -245,6 +282,48 @@ export function QuoteGroup({
   const handleBadgeRestore = useCallback(
     (domId: string) => {
       updateQuote(domId, (s) => ({ ...s, deletedBadges: [] }));
+    },
+    [updateQuote],
+  );
+
+  // ── Proposed tag handlers ─────────────────────────────────────────────
+
+  const handleProposedAccept = useCallback(
+    (domId: string, proposalId: number, tagName: string) => {
+      // Optimistically: remove proposed badge, add regular user tag.
+      // Carry colour from the proposal so the accepted tag keeps its colour.
+      updateQuote(domId, (s) => {
+        const pt = s.proposedTags.find((p) => p.id === proposalId);
+        return {
+          ...s,
+          proposedTags: s.proposedTags.filter((p) => p.id !== proposalId),
+          tags: [
+            ...s.tags,
+            {
+              name: tagName,
+              codebook_group: pt?.group_name ?? "Uncategorised",
+              colour_set: pt?.colour_set ?? "",
+              colour_index: pt?.colour_index ?? 0,
+            },
+          ],
+        };
+      });
+      acceptProposal(proposalId).catch((err) =>
+        console.error("Accept proposal failed:", err),
+      );
+    },
+    [updateQuote],
+  );
+
+  const handleProposedDeny = useCallback(
+    (domId: string, proposalId: number) => {
+      updateQuote(domId, (s) => ({
+        ...s,
+        proposedTags: s.proposedTags.filter((pt) => pt.id !== proposalId),
+      }));
+      denyProposal(proposalId).catch((err) =>
+        console.error("Deny proposal failed:", err),
+      );
     },
     [updateQuote],
   );
@@ -381,6 +460,7 @@ export function QuoteGroup({
               tagVocabulary={tagVocabulary}
               sessionId={q.session_id}
               hasMedia={hasMedia}
+              proposedTags={state.proposedTags}
               onToggleStar={handleToggleStar}
               onToggleHide={handleToggleHide}
               onEditCommit={handleEditCommit}
@@ -388,6 +468,12 @@ export function QuoteGroup({
               onTagRemove={handleTagRemove}
               onBadgeDelete={handleBadgeDelete}
               onBadgeRestore={handleBadgeRestore}
+              onProposedAccept={(proposalId, tagName) =>
+                handleProposedAccept(q.dom_id, proposalId, tagName)
+              }
+              onProposedDeny={(proposalId) =>
+                handleProposedDeny(q.dom_id, proposalId)
+              }
             />
           );
         })}

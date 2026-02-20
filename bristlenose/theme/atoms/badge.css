@@ -146,6 +146,60 @@ body.hide-ai-tags .badge-ai { display: none; }
     color: var(--bn-colour-accent);
 }
 
+/* Proposed badge — pulsating dashed border (AutoCode) */
+@keyframes bn-proposed-pulse {
+    0%   { opacity: 0.50; }
+    50%  { opacity: 0.78; }
+    100% { opacity: 0.50; }
+}
+
+.badge-proposed {
+    animation: bn-proposed-pulse 3s ease-in-out infinite;
+    border: 1px dashed currentColor;
+    cursor: pointer;
+    position: relative;
+}
+
+.badge-proposed:hover {
+    animation: none;
+    opacity: 1 !important;
+}
+
+.badge-proposed-actions {
+    display: none;
+    gap: 0.3em;
+    margin-left: 0.4em;
+    align-items: center;
+}
+
+.badge-proposed:hover .badge-proposed-actions {
+    display: inline-flex;
+}
+
+.badge-action-accept {
+    color: var(--bn-colour-success);
+    font-size: 0.85em;
+    font-weight: 700;
+    cursor: pointer;
+    padding: 1px 3px;
+    border-radius: 2px;
+    transition: background var(--bn-transition-fast);
+}
+
+.badge-action-accept:hover { background: rgba(22, 163, 74, 0.1); }
+
+.badge-action-deny {
+    color: var(--bn-colour-danger);
+    font-size: 0.85em;
+    font-weight: 700;
+    cursor: pointer;
+    padding: 1px 3px;
+    border-radius: 2px;
+    transition: background var(--bn-transition-fast);
+}
+
+.badge-action-deny:hover { background: rgba(220, 38, 38, 0.1); }
+
 /* Badge animations */
 @keyframes badge-fade-out {
     to { opacity: 0; transform: scale(0.8); }

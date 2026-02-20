@@ -49,4 +49,54 @@ describe("Badge", () => {
     render(<Badge text="x" variant="readonly" data-testid="my-badge" />);
     expect(screen.getByTestId("my-badge")).toBeInTheDocument();
   });
+
+  // ── Proposed variant ──────────────────────────────────────────────────
+
+  it("proposed: renders badge with dashed-border class", () => {
+    render(<Badge text="Frustration" variant="proposed" data-testid="p" />);
+    expect(screen.getByTestId("p")).toHaveClass("badge-proposed");
+  });
+
+  it("proposed: shows accept and deny actions", () => {
+    render(
+      <Badge text="Frustration" variant="proposed" data-testid="p" />,
+    );
+    expect(screen.getByTitle("Accept")).toBeInTheDocument();
+    expect(screen.getByTitle("Deny")).toBeInTheDocument();
+  });
+
+  it("proposed: accept click fires onAccept", async () => {
+    const onAccept = vi.fn();
+    render(
+      <Badge text="Frustration" variant="proposed" onAccept={onAccept} data-testid="p" />,
+    );
+    await userEvent.click(screen.getByTestId("p-accept"));
+    expect(onAccept).toHaveBeenCalledOnce();
+  });
+
+  it("proposed: deny click fires onDeny", async () => {
+    const onDeny = vi.fn();
+    render(
+      <Badge text="Frustration" variant="proposed" onDeny={onDeny} data-testid="p" />,
+    );
+    await userEvent.click(screen.getByTestId("p-deny"));
+    expect(onDeny).toHaveBeenCalledOnce();
+  });
+
+  it("proposed: shows rationale tooltip", () => {
+    render(
+      <Badge
+        text="Frustration"
+        variant="proposed"
+        rationale="Speaker expressed dissatisfaction"
+        data-testid="p"
+      />,
+    );
+    expect(screen.getByText("Speaker expressed dissatisfaction")).toBeInTheDocument();
+  });
+
+  it("proposed: has tooltip class for hover", () => {
+    render(<Badge text="Frustration" variant="proposed" data-testid="p" />);
+    expect(screen.getByTestId("p")).toHaveClass("has-tooltip");
+  });
 });

@@ -1,7 +1,7 @@
 # Pipeline Resilience & Data Integrity
 
 > **Status**: Design research — not yet implemented
-> **Scope**: Big-picture architecture for crash recovery, incremental re-runs, provenance tracking, and human/LLM merge
+> **Scope**: Big-picture architecture for crash recovery, incremental re-runs, provenance tracking, human/LLM merge, source material change detection, mid-run provider switching, and analytical context preservation
 > **Trigger**: Plato stress test (Feb 2026) — pipeline ran out of API credits mid-run, stale SQLite data from previous project leaked into serve mode, intermediate JSON files weren't written by `analyze` command, recovery required re-spending $3.50 on LLM calls already made
 
 ## The problem
@@ -16,10 +16,14 @@ The current pipeline has **no checkpointing, no resume, no integrity verificatio
 - **Data integrity**: know what's trustworthy and what's incomplete/corrupt
 - **Status reporting**: tell the user what state their data is in before and during a run
 - **Incremental re-runs**: only redo what's stale, reuse everything that's still valid
+- **Mid-run provider tolerance**: if the user switches from Claude to Gemini after 7 of 10 sessions, don't discard the 7 completed sessions — track which provider processed each session and resume with the new provider
 
 ### What we need in the future
 
 - **Add/remove interviews**: merge new findings without breaking existing data
+- **Source material change detection**: when a user edits a video (trims the last 20 minutes) or edits a transcript (removes personal chat), detect the content change via file hashing, invalidate downstream stages for that session, and re-extract — quotes from removed content vanish automatically, other sessions stay cached
+- **Incremental session addition**: when new interview recordings appear in the input directory, transcribe and analyse only the new material, then re-cluster and re-theme with the combined quote pool (old + new)
+- **Analytical context preservation**: remember the researcher's codebook choices (which framework, what confidence threshold, which tags they accepted/denied) and suggest reapplying those same settings when new quotes arrive from new sessions
 - **Provenance**: know the source of every quote, tag, label — which LLM, which prompt version, which human edit
 - **Edit history**: track human overrides (hidden tags, renamed themes, section reordering, merged/renamed tags)
 - **Human/LLM merge**: re-run analysis without losing human edits to the report
@@ -131,6 +135,14 @@ Merge rules:
 - Human deleted items → keep them deleted (unless the user asks for "full refresh")
 
 Full CRDTs are overkill for a single-user tool. Event sourcing gives us the merge for free — replay human events on top of new LLM outputs.
+
+**Source content removal and quote vanishing**: When the user edits source material (trims a video, deletes personal chat from a transcript), the merge has a special case: quotes that existed in the old output but don't exist in the new output — because the source content was removed.
+
+The merge rule: **if the pipeline didn't produce a quote in the new run, and the reason is that the source content no longer exists (hash changed for that session), the quote vanishes.** Any researcher state attached to that quote (stars, tags, text edits) vanishes with it. This is the correct behaviour: the researcher trimmed the video precisely because they wanted that content gone. Preserving stars on quotes from deleted content would be confusing — "why is there a starred quote from content I removed?"
+
+**Contrast with "human hidden"**: If the researcher hid a quote (`QuoteState.is_hidden=True`) and the pipeline re-runs _without_ source changes, the quote is still extracted by the LLM but the hidden state is preserved. The quote exists in the output but is marked hidden. This is different from source removal — the content is still there, the researcher just chose not to surface it.
+
+**Re-clustering after source changes**: When quotes vanish due to source editing, clustering and theming must re-run on the reduced pool. Clusters that lose all their quotes may vanish entirely. Themes may consolidate. HeadingEdits (renamed sections/themes) are matched by `screen_label` or `theme_name` — if the cluster no longer exists, the rename is orphaned but harmlessly ignored (no cluster to apply it to).
 
 ## Architecture: what to build
 
@@ -274,6 +286,128 @@ Every intermediate JSON file includes a schema version:
 
 Loaders check the version and apply migrations if needed. Migrations are forward-only (no downgrade). Each migration is a pure function: `data_v1 → data_v2`.
 
+### Analytical context as project state
+
+The manifest tracks pipeline execution state: which stages ran, what inputs they had, what outputs they produced. But there's a second category of state that the pipeline must respect: **the researcher's analytical choices**.
+
+Resilience isn't just about the pipeline surviving crashes. It's about respecting all the choices the user has made, and having situational awareness — doing the right thing when the source material changes.
+
+**What counts as analytical context**:
+
+| Choice | Where it lives today | How the pipeline should use it |
+|--------|---------------------|-------------------------------|
+| Active codebook frameworks | `ProjectCodebookGroup` rows | Suggest same frameworks for new quotes |
+| AutoCode confidence threshold | Derivable from `min(ProposedTag.confidence WHERE status='accepted')` | Pre-fill threshold for new runs |
+| Accept/deny decisions | `ProposedTag.status` | Training signal: "You denied 'Visibility of System Status' on navigation quotes 4 times — exclude navigation quotes from that tag?" |
+| Manual tags | `QuoteTag` rows | Preserved on surviving quotes; inform AutoCode about the researcher's vocabulary |
+| Starred quotes | `QuoteState.is_starred` | Survive re-import; new quotes start unstarred |
+| Hidden quotes | `QuoteState.is_hidden` | Survive re-runs unless source content was removed |
+| Text corrections | `QuoteEdit` rows | If a quote is re-extracted with slightly different text (model change), the correction may still apply — fuzzy match on timecode range |
+| Section/theme renames | `HeadingEdit` rows | If clustering produces the same screen label, the rename is reapplied |
+
+**The key insight**: this is not a new data store — the SQLite database already contains all of this. What's missing is:
+
+1. A **query layer** that aggregates analytical context into a project summary: "This project uses Garrett (78% acceptance rate, 0.6 threshold) and Norman (62% acceptance rate, 0.5 threshold). The researcher has starred 23 quotes, hidden 7, and applied 89 manual tags."
+2. A **suggestion engine** that, when new quotes arrive, proposes: "Run AutoCode on 15 new quotes using Garrett at 0.6?" — with the researcher's previous stats as context.
+3. A **re-application pass** in the importer that, when clustering produces a screen label that matches a HeadingEdit key, reapplies the rename. (The importer already preserves researcher state on surviving quotes — this extends that to structural edits.)
+
+**Academic context**: this is a form of **user modelling** (Fischer, 2001, _"User Modeling in Human-Computer Interaction"_) applied to analytical tools. The system builds an implicit model of the researcher's preferences from their actions, then uses it to reduce manual effort on subsequent runs. The key constraint: **the model is transparent** — the researcher can see exactly what settings are being suggested and why, and override any of them. No black-box adaptation.
+
+## Scenarios: what users expect
+
+These are the real-world situations that the architecture above must handle. Each scenario describes what the user does, what they expect to happen, and which phases deliver that behaviour.
+
+### Scenario A: Credit exhaustion and provider switch
+
+**What happens**: A researcher is running Bristlenose on 10 sessions. Quote extraction completes for sessions s1–s7, then Claude's API returns "credit balance too low." The researcher tops up their Gemini credits instead (cheaper, available now) and sets `BRISTLENOSE_LLM_PROVIDER=google` in `.env`.
+
+**What the user expects**: "I re-run the same command. It picks up where it left off. Sessions s1–s7 keep their Claude-extracted quotes. Sessions s8–s10 get Gemini-extracted quotes. The tool doesn't throw away $1.80 of completed work just because I changed providers."
+
+**What the pipeline must do**:
+- The manifest records `provider: "anthropic"` and `model: "claude-sonnet-4-20250514"` on each completed SessionRecord (Phase 1d)
+- On re-run, input change detection (Phase 2c) sees that sessions s1–s7 have completed output with valid hashes. The provider/model change is recorded as a *session-level input*, not a *stage-level input*. Completed sessions are not invalidated by a global config change
+- Sessions s8–s10 are processed with the new provider. Their SessionRecords record `provider: "google"`, `model: "gemini-2.5-flash"`
+- Cross-session stages (clustering, theming) always re-run because the quote pool is now complete
+- The provenance trail (Phase 4c) records that quotes from s1–s7 came from Claude and quotes from s8–s10 came from Gemini — visible in `bristlenose status` and in the event log
+
+**Phases involved**: 1d (per-session tracking with provider/model), 2c (input change detection at session level), 4c (provenance metadata)
+
+### Scenario B: Editing source material
+
+**What happens**: After reviewing the report, the researcher:
+1. Opens a Teams transcript file and deletes 5 minutes of "how are your kids" personal chat
+2. Opens the video in iMovie, trims the last 20 minutes (where they accidentally bad-mouthed the CEO on camera), and exports a shorter version
+
+**What the user expects**: "I re-run Bristlenose. The quotes about kids and the CEO vanish. Everything else stays. I don't pay to re-transcribe the other 9 interviews."
+
+**What the pipeline must do**:
+- Ingest hashes all source files (Phase 2c). The edited transcript file has a new hash. The replaced video file has a new hash
+- For the session with the edited transcript: topic segmentation and quote extraction are invalidated (transcript changed). Transcription is NOT invalidated if the transcript came from a platform VTT (the VTT itself changed, so re-parse — but no Whisper call needed). If the video was the transcription source, the shorter video triggers re-transcription (audio hash changed)
+- For the session with the trimmed video: the audio extraction output changes → transcription re-runs → everything downstream re-runs for that session
+- Other sessions: untouched. Their hashes match. Cached
+- Cross-session stages (clustering, theming): must re-run because the quote pool changed. But they're cheap — one LLM call for all quotes
+- Quotes that came from deleted content simply don't appear in the new extraction. They vanish from the report, the clusters, and the themes. No explicit "delete quote" action needed — they were never extracted in the first place
+
+**Cascade logic**:
+```
+source file hash changed
+  → ingest (re-run for this session — file metadata may have changed)
+    → transcription (re-run if this was the audio source)
+      → merge transcript (re-run)
+        → PII removal (re-run if enabled)
+          → topic segmentation (re-run)
+            → quote extraction (re-run)
+              → [cross-session: always re-run when any session's quotes change]
+              → clustering (re-run)
+                → theming (re-run)
+                  → report (re-render)
+```
+
+**Phases involved**: 2c (input change detection via file hashing), 5b (per-session incremental processing), 5c (re-cluster with merged data)
+
+### Scenario C: Adding new interviews
+
+**What happens**: A researcher ran Bristlenose on 8 interviews. Two weeks later, they record 2 more interviews and drop the files into the same input directory.
+
+**What the user expects**: "I re-run. It transcribes only the 2 new recordings. It extracts quotes from only those 2. Then it re-clusters everything (old + new) and gives me an updated report. The stars and tags I put on quotes from the first 8 sessions are still there."
+
+**What the pipeline must do**:
+- Ingest discovers 10 sessions. The manifest records 8 completed sessions. 2 are new (no manifest entry) — Phase 5a
+- Transcription runs only for the 2 new sessions
+- Topic segmentation runs only for the 2 new sessions
+- Quote extraction runs only for the 2 new sessions
+- Clustering and theming re-run on the full quote pool (old 8 + new 2) — these are cross-session stages and must see the complete picture
+- The report is re-rendered with the updated clusters and themes
+- In serve mode: the importer detects new quotes (new session_ids), preserves researcher state (stars, tags, edits) on surviving quotes from old sessions, and adds new quotes from the 2 new sessions to the database
+
+**The autocode opportunity**: If the researcher previously ran AutoCode with the Garrett framework at 0.6 confidence and accepted 47 of 60 proposals, the pipeline can suggest: "You have 15 new quotes from 2 new sessions. Run AutoCode (Garrett, 0.6 confidence) on the new quotes? Your previous acceptance rate was 78%." This is Scenario D.
+
+**Phases involved**: 5a (detect new sessions), 5b (per-session incremental processing), 5c (re-cluster with merged data), merge strategy (human curation preserved)
+
+### Scenario D: Preserving and reapplying analytical choices
+
+**What happens**: After Scenario C completes, the researcher has 15 new quotes from 2 new sessions. They had previously used the Garrett codebook with a 0.6 confidence threshold and reviewed every proposal. Now they want the same treatment for the new quotes.
+
+**What the user expects**: "Bristlenose remembers what I did last time and offers to do the same thing for the new quotes. I don't have to re-configure everything."
+
+**What the pipeline must do**:
+- The `AutoCodeJob` table already records: `framework_id="garrett"`, `llm_provider`, `llm_model`, `total_quotes`, `proposed_count`
+- `ProposedTag` rows record per-quote: confidence, status (accepted/denied), `reviewed_at`
+- From this we can derive: effective confidence threshold (the min confidence of any accepted proposal), acceptance rate, denial patterns by tag
+- On re-run with new quotes: the system detects quotes that have no `ProposedTag` rows (they're from the new sessions). It suggests running AutoCode on just those quotes, using the same framework and displaying the researcher's historical acceptance stats
+- Previously accepted tags on surviving quotes are `QuoteTag` rows — preserved by the importer. Previously denied proposals are `ProposedTag` rows with `status="denied"` — preserved for telemetry
+
+**What "user choices as project state" means in practice**:
+- **Codebook selection**: which frameworks are active (`ProjectCodebookGroup` rows)
+- **Confidence threshold**: derivable from the lowest-confidence accepted `ProposedTag`
+- **Accept/deny decisions**: `ProposedTag.status` — forms a training signal for future suggestions
+- **Tag additions/removals**: `QuoteTag` rows (manual tags), `DeletedBadge` rows (dismissed sentiments)
+- **Curation state**: `QuoteState` (starred, hidden), `QuoteEdit` (corrected text), `HeadingEdit` (renamed sections)
+
+All of this is already in the database. The missing piece is the *workflow* — the pipeline doesn't yet know how to query this state and use it to pre-configure new runs.
+
+**Phases involved**: 4b (record human edits as events), 4d (three-way merge), Phase 5 (incremental sessions), new concept: analytical context preservation
+
 ## Why this matters (the trust problem)
 
 A researcher runs Bristlenose on 15 hours of interview recordings. It costs them $8 in LLM fees and 45 minutes of wall time. Then their laptop sleeps, or Claude runs out of credits, or they force-quit because they need to get on a Zoom call.
@@ -416,6 +550,8 @@ class SessionRecord(BaseModel):
     status: StageStatus
     session_id: str
     completed_at: str | None = None
+    provider: str | None = None       # "anthropic", "google", etc.
+    model: str | None = None          # "claude-sonnet-4-20250514", "gemini-2.5-flash"
 
 class StageRecord(BaseModel):
     # ... existing fields ...
@@ -423,6 +559,12 @@ class StageRecord(BaseModel):
 ```
 
 Each per-session stage writes its results incrementally — after processing each session, update the manifest. On resume, only sessions marked incomplete are re-processed.
+
+**Provider/model tracking**: Each SessionRecord captures the provider and model that processed it. This enables mid-run provider switching (Scenario A). When the user changes `BRISTLENOSE_LLM_PROVIDER` between runs, completed sessions retain their original provider metadata. The input change detection logic (Phase 2c) treats provider/model as a *per-session* attribute, not a *per-stage* attribute. A global config change from Claude to Gemini does NOT invalidate sessions already completed by Claude — those sessions have valid output regardless of which model produced it.
+
+**Why per-session, not per-stage**: If provider were a stage-level input, changing from Claude to Gemini would invalidate ALL quote extraction (all 10 sessions), forcing re-extraction of the 7 already-completed sessions. This wastes money and contradicts user expectations. The correct granularity is: "session s3 was extracted by `claude-sonnet-4-20250514` and its output hash is valid. Don't re-extract it just because the config now says Gemini."
+
+**Exception**: If the user *wants* to re-extract with a different model (e.g. testing whether Gemini produces better quotes), they can use `bristlenose reset --stage quote_extraction --session s3` (from Phase 3a) to selectively invalidate specific sessions.
 
 **What it touches**: `pipeline.py` (the LLM-calling loops in topic segmentation and quote extraction), `manifest.py` (the session-level model). The stage functions themselves (`topic_segmentation.py`, `quote_extraction.py`) don't change — they already return per-session results. The change is in how `pipeline.py` calls them and saves results.
 
@@ -492,6 +634,28 @@ Phase 1 trusts the manifest blindly — "it says complete, so it must be fine." 
 **What it touches**: `manifest.py` (input hash fields), `pipeline.py` (compute input hashes before each stage, compare against manifest).
 
 **Risk**: Medium. The tricky part is defining "inputs" correctly for each stage. Transcription inputs = audio file hashes. Quote extraction inputs = transcript hashes + prompt hash + model name. Get this wrong and you either skip stages that should re-run (dangerous) or re-run stages unnecessarily (annoying but safe). Err on the side of re-running.
+
+**Source material changes (Scenario B)**: The most impactful input changes are edits to source files — the researcher trims a video, edits a transcript, or corrects a VTT file. The cascade logic:
+
+| What changed | Hash that changes | Stages invalidated |
+|-------------|-------------------|-------------------|
+| Audio/video file replaced or trimmed | Source file content hash | Extract audio → transcribe → all downstream |
+| Platform transcript (VTT/SRT/DOCX) edited | Source file content hash | Parse subtitles/DOCX → merge transcript → all downstream |
+| Transcript text file edited manually | Transcript output hash | Topic segmentation → quote extraction → clustering → theming → report |
+| Config: model changed | Model name in session input hash | All LLM stages for uncompleted sessions (see Phase 1d — completed sessions are not invalidated) |
+| Config: prompt changed | Prompt content hash | The specific stage + everything downstream |
+| Config: `min_quote_words` changed | Config hash | Quote extraction + downstream |
+
+**File hash computation**: Hash the raw bytes of each source file (SHA-256). For audio/video, this means re-hashing a potentially large file on each run. Two optimisations:
+
+1. **Size+mtime fast path**: if `(file_size, mtime)` match the manifest record, skip the full hash. Only compute SHA-256 when size or mtime differ. This is the rsync/Make optimisation (Tridgell & Mackerras, 1996) — not cryptographically reliable (mtime can be spoofed) but sufficient for a local-first tool where the user is not adversarial.
+2. **Partial hash for large files**: for files over 100 MB, hash the first 1 MB + last 1 MB + file size. This catches trims, appends, and re-encodes without reading the entire file. A full hash can be triggered with `--verify` for paranoid mode.
+
+**The "quotes vanish" mechanism**: When a trimmed video produces a shorter transcript, or an edited transcript file has personal chat removed, quote extraction simply doesn't find quotes in the removed content. There's no explicit "delete old quotes" step. The old quotes existed because the old transcript contained that content; the new transcript doesn't, so they're never extracted. The manifest records the new output hash, and cross-session stages re-run on the reduced quote pool.
+
+In serve mode, the importer handles the database side: quotes with `last_imported_at < now` are cleaned up (existing behaviour in `importer.py`). Researcher state (stars, tags, edits) on surviving quotes is preserved; state on vanished quotes is deleted along with the quote rows.
+
+**Per-session vs. global invalidation**: Source file changes invalidate only the affected session's per-session stages. Other sessions keep their cached results. Cross-session stages (clustering, theming) always re-run when any session's quotes change — but this is by design. Clustering and theming are cheap: one LLM call for all quotes combined, typically ~$0.10.
 
 #### 2d. `bristlenose status` command
 
@@ -611,23 +775,111 @@ This is the hardest piece. It needs:
 
 ### Phase 5: Incremental sessions (future)
 
-**Goal**: Add or remove interviews from an existing project without starting over.
+**Goal**: Add or remove interviews from an existing project without starting over. Detect changes to existing source material and refresh only what's affected. This is where the pipeline becomes truly situationally aware — it understands what changed in the source material and does the right thing.
 
-#### 5a. Detect new/removed sessions
+#### 5a. Detect new/removed/changed sessions
 
-**What it is**: On re-run, compare the current set of input files against the manifest's recorded sessions. Identify added, removed, and unchanged sessions.
+**What it is**: On re-run, compare the current set of input files against the manifest's recorded sessions. Classify each session as unchanged, changed, new, or removed.
+
+**How it works**:
+1. `ingest()` scans the input directory and returns the current session list
+2. Compare against manifest's `stages.ingest.sessions_discovered`
+3. Classify each session:
+   - **Unchanged**: same session_id, same source file hash(es) — fully cached
+   - **Changed**: same session_id, different source file hash — re-process from first changed stage (Scenario B)
+   - **New**: session_id not in manifest — process from scratch (Scenario C)
+   - **Removed**: session_id in manifest but not in current scan — mark as excluded
+
+**What it touches**: `pipeline.py` (comparison logic after ingest), `manifest.py` (session classification model).
+
+**What the user sees**:
+```
+$ bristlenose run interviews/    # 2 new recordings added, 1 transcript edited
+
+Project status:
+  ✓ 7 sessions cached (all valid)
+  ✎ 1 session changed (s3 — transcript edited, quotes will be re-extracted)
+  ★ 2 new sessions detected (interview_09.mp4, interview_10.mp4)
+
+Plan:
+  • Re-extract quotes for s3 (transcript changed)
+  • Transcribe 2 new sessions (~4 min)
+  • Segment + extract quotes for 2 new sessions
+  • Re-cluster all quotes (quote pool changed)
+  • Re-theme all quotes (quote pool changed)
+  • Render report
+
+Estimated cost: ~$0.90 (1 changed + 2 new sessions + clustering + theming)
+Continue? [Y/n]
+```
 
 #### 5b. Per-session incremental processing
 
-**What it is**: Only transcribe, segment, and extract quotes for new sessions. Keep existing sessions' data.
+**What it is**: Only transcribe, segment, and extract quotes for new or changed sessions. Keep existing sessions' data intact.
+
+**How it works**: For each per-session stage (transcription, topic segmentation, quote extraction):
+1. Check the manifest for each session in the current scan
+2. If the session has a completed record with a valid output hash and unchanged input hash: skip, load from cache
+3. If the session is new or its source file hash changed: run the stage for that session
+4. Merge results: cached sessions' output + newly computed output
+
+**The merge is simple**: per-session stages produce independent output per session. Merging is concatenation — transcripts for s1–s8 from cache + transcripts for s9–s10 from fresh processing. The pipeline already collects results into lists; the only change is that some items come from cache and some from live computation.
+
+**What it touches**: `pipeline.py` (the per-session stage loops), loading code for each stage's intermediate JSON. The stage functions themselves don't change — they already operate per-session.
+
+**Risk**: Medium. The merge of cached + fresh results must produce the same data structure as a full run. But this is structurally the same as the Phase 1d resume merge (cached sessions s1–s7 + fresh sessions s8–s10).
 
 #### 5c. Re-cluster and re-theme with merged data
 
-**What it is**: After extracting quotes for new sessions, re-run clustering and theming on the full set (old + new quotes). These stages are cross-session and relatively cheap (one LLM call each).
+**What it is**: After extracting quotes for new or changed sessions, re-run clustering and theming on the full set (old + new quotes). These stages are cross-session and must see the complete picture.
+
+**Why not incremental clustering?** Clustering assigns quotes to screens/features. A new quote might belong to an existing cluster, or it might create a new cluster. The LLM needs to see all quotes to make coherent assignments. Since clustering is a single LLM call (all quotes, one prompt), the cost is low (~$0.10) compared to per-session quote extraction (~$0.30 per session).
+
+**Same for theming**: themes emerge from the full quote pool. Adding 15 new quotes might surface a new theme or strengthen an existing one. The LLM re-themes from scratch on the combined pool.
+
+**What it touches**: No changes to the stage functions. The pipeline just feeds them the combined quote list (cached + fresh). The re-run is triggered whenever any session's quotes change.
 
 #### 5d. Handle removed sessions
 
-**What it is**: When a session is removed, exclude its quotes from clustering/theming and re-run those stages. Don't delete the transcript — mark it as excluded in the manifest.
+**What it is**: When a session is removed (file deleted from input directory, or added to `.bristlenose-ignore` — see `docs/design-session-management.md`), exclude its quotes from clustering/theming and re-run those stages.
+
+**How it works**:
+1. The manifest marks the session as "removed" (not deleted — the record stays for audit)
+2. Per-session cached data for the removed session is retained on disk but excluded from stage inputs
+3. Clustering and theming re-run on the reduced quote pool
+4. The report is re-rendered without quotes from the removed session
+
+**In serve mode**: the importer already handles this. Sessions not in the current pipeline output get their child rows deleted (SourceFile, TranscriptSegment, TopicBoundary, SessionSpeaker), then the session itself. Researcher state on quotes from removed sessions is deleted. This is existing behaviour (`importer.py`, tested in `test_serve_importer.py`).
+
+**What it touches**: `pipeline.py` (session exclusion logic), `manifest.py` (removed session state). The `.bristlenose-ignore` mechanism (from session management design) provides the input; Phase 5d provides the pipeline response.
+
+#### 5e. Suggest autotagging for new quotes
+
+**What it is**: When new sessions produce new quotes, and the project has prior AutoCode history, suggest re-running AutoCode on just the new quotes with the same settings.
+
+**How it works**:
+1. After incremental processing, the pipeline knows which quotes are new (from new/changed sessions)
+2. Query the `AutoCodeJob` table for this project — any completed jobs?
+3. For each completed job: count accepted/denied `ProposedTag` rows, derive effective confidence threshold (min confidence of any accepted proposal)
+4. Present a suggestion to the researcher:
+
+```
+AutoCode history:
+  • Garrett framework: 47 accepted, 12 denied (78% acceptance rate, threshold ≥0.6)
+  • Norman framework: 31 accepted, 19 denied (62% acceptance rate, threshold ≥0.5)
+
+15 new quotes from 2 new sessions are untagged.
+Suggest AutoCode with Garrett at 0.6 confidence? [Y/n]
+```
+
+5. If accepted, run `run_autocode_job()` scoped to only the new quote IDs
+6. Present proposals using the same review UI the researcher used before
+
+**What it touches**: New helper in `autocode.py` (query historical acceptance stats, scope to specific quote IDs). New logic in `cli.py` or serve-mode UI (display suggestion after incremental run). The actual AutoCode execution reuses the existing `run_autocode_job()` infrastructure.
+
+**Key implementation detail**: `run_autocode_job()` currently processes all quotes in the project. It needs a `quote_ids: list[int] | None` filter parameter — when set, only batch and tag the specified quotes. The rest of the machinery (batch building, LLM calls, proposal storage) stays the same.
+
+**Risk**: Medium. The main complexity is scoping AutoCode to "only new quotes" and presenting the suggestion at the right moment in the workflow. The suggestion UX must be non-intrusive — the researcher might not want autotagging at all.
 
 ---
 
@@ -651,7 +903,10 @@ The key insight: **each sub-step is a single PR-sized change**. None of them req
 | **2d** `bristlenose status` command | Small (CLI only) | 1b | Anything |
 | **3a** `bristlenose reset` command | Small-medium | 0c, 1b | Anything |
 | **4a-d** Event log + provenance | Large (new subsystem) | 1b | Needs design |
-| **5a-d** Incremental sessions | Large (new subsystem) | 2c, 4b | Needs design |
+| **5a-d** Incremental sessions + change detection | Large (new subsystem) | 2c, 4b | Needs design |
+| **5e** Suggest autotagging for new quotes | Medium (50 lines) | 5a, AutoCode | Anything |
+| **6a** Analytical context query layer | Small (new helper) | AutoCode tables | Anything |
+| **6b** Suggestion engine for re-runs | Medium | 6a, 5a | Core feature work |
 
 **Recommended order**:
 1. Ship 0c (per-project DB — next session, 30 minutes; 0a and 0b already done)
@@ -662,10 +917,14 @@ The key insight: **each sub-step is a single PR-sized change**. None of them req
 6. Ship 2c (input change detection — one session, 2 hours)
 7. Ship 3a (reset command — one session, 1-2 hours)
 8. Phases 4-5: design and schedule when Phases 1-3 are stable
+9. Ship 5a-5d (incremental sessions + source change detection — needs Phases 1-3 as foundation)
+10. Ship 5e + 6a-6b (analytical context preservation — depends on AutoCode being used in the wild; need real accept/deny data to make suggestions meaningful)
 
 After steps 1-4, users have crash recovery. After steps 1-7, users have crash recovery + integrity verification + clean re-runs. That's "I can trust this tool with real work" level.
 
 Phases 4-5 (event log, provenance, incremental sessions) are "I can build a long-lived research practice on this tool" level. Important, but the trust foundation comes first.
+
+Phase 6 (analytical context preservation) is "the tool knows me and adapts to my workflow" level. It requires AutoCode to be shipping and researchers to be generating accept/deny data. The infrastructure is already there (SQLite tables) — what's missing is the query/suggestion layer on top.
 
 ## References
 
@@ -702,3 +961,13 @@ Phases 4-5 (event log, provenance, incremental sessions) are "I can build a long
 - Zaharia et al. (2012), _"Resilient Distributed Datasets"_ (Spark), NSDI
 - dbt documentation (docs.getdbt.com)
 - DVC documentation (dvc.org)
+
+**User modelling**
+- Fischer (2001), _"User Modeling in Human-Computer Interaction"_, User Modeling and User-Adapted Interaction, Springer
+
+**Incremental computation**
+- Acar et al. (2006), _"Adaptive Functional Programming"_, ACM TOPLAS — self-adjusting computation where outputs update incrementally when inputs change
+- Hammer et al. (2014), _"Adapton"_, ACM OOPSLA — demand-driven incremental computation with precise dependency tracking
+
+**Change detection**
+- Tridgell & Mackerras (1996), _"The rsync algorithm"_, Australian National University — the size+mtime fast path optimisation for file change detection

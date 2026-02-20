@@ -1,0 +1,117 @@
+/* Molecule: autocode-report — triage table for AutoCode proposals */
+
+.report-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.report-session-header {
+    font-size: 0.88rem;
+    color: var(--bn-colour-muted);
+    padding: 0.8rem 0 0.4rem;
+    font-weight: 600;
+    border-bottom: none;
+}
+
+.report-row {
+    border-bottom: 1px solid var(--bn-colour-border);
+    transition: background var(--bn-transition-fast),
+                opacity var(--bn-transition-fast),
+                max-height 0.2s ease;
+}
+
+.report-row:hover { background: var(--bn-hover-bg-subtle); }
+
+.report-row td {
+    padding: 0.5rem 0.5rem;
+    vertical-align: baseline;
+    font-size: 0.85rem;
+}
+
+.report-row td:first-child { padding-left: 0; }
+
+.report-timecode {
+    font-family: var(--bn-font-mono);
+    font-size: 0.78rem;
+    white-space: nowrap;
+    width: 60px;
+}
+
+.report-timecode a {
+    color: var(--bn-colour-accent);
+    text-decoration: none;
+}
+
+.report-timecode a:hover { text-decoration: underline; }
+
+.report-speaker {
+    white-space: nowrap;
+    color: var(--bn-colour-muted);
+    font-size: 0.78rem;
+    width: 60px;
+}
+
+.report-quote {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 350px;
+    color: var(--bn-colour-text);
+}
+
+.report-tag { width: auto; }
+
+.report-deny { width: 32px; text-align: center; }
+
+.report-deny-btn {
+    background: none;
+    border: none;
+    color: var(--bn-colour-muted);
+    cursor: pointer;
+    font-size: 0.9rem;
+    padding: 2px 4px;
+    border-radius: var(--bn-radius-sm);
+    transition: color var(--bn-transition-fast), background var(--bn-transition-fast);
+}
+
+.report-deny-btn:hover {
+    color: var(--bn-colour-danger);
+    background: rgba(220, 38, 38, 0.06);
+}
+
+/* Row removal animation */
+.report-row.removing {
+    opacity: 0;
+    max-height: 0;
+    overflow: hidden;
+    border: none;
+}
+
+.report-row.removing td { padding-top: 0; padding-bottom: 0; }
+
+/* Rationale tooltip (shared with proposed badges) */
+.has-tooltip {
+    position: relative;
+}
+
+.has-tooltip .tooltip {
+    display: none;
+    position: absolute;
+    bottom: calc(100% + 4px);
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--bn-colour-text);
+    color: var(--bn-colour-bg);
+    font-size: 0.72rem;
+    padding: 0.4rem 0.6rem;
+    border-radius: var(--bn-radius-sm);
+    white-space: normal;
+    width: max-content;
+    max-width: 280px;
+    z-index: 300;
+    line-height: 1.4;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    font-family: var(--bn-font-body);
+}
+
+.has-tooltip:hover .tooltip { display: block; }

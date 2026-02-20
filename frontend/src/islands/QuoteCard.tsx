@@ -18,8 +18,9 @@ import {
   TimecodeLink,
   Toggle,
 } from "../components";
-import type { QuoteResponse } from "../utils/types";
+import type { ProposedTagBrief, QuoteResponse } from "../utils/types";
 import { formatTimecode, stripSmartQuotes } from "../utils/format";
+import { getTagBg } from "../utils/colours";
 
 // ── SVG icon for the hide button (eye-slash) ────────────────────────────
 
@@ -54,7 +55,7 @@ interface QuoteCardProps {
   isStarred: boolean;
   isHidden: boolean;
   /** Tags currently on this quote (user-added). */
-  userTags: { name: string; codebook_group: string }[];
+  userTags: { name: string; codebook_group: string; colour_set: string; colour_index: number }[];
   /** AI sentiment badges that have been deleted. */
   deletedBadges: string[];
   /** Whether the quote text has been edited. */
@@ -65,6 +66,8 @@ interface QuoteCardProps {
   sessionId: string;
   /** Whether video is available for this quote. */
   hasMedia: boolean;
+  /** Pending AutoCode proposals for this quote. */
+  proposedTags: ProposedTagBrief[];
 
   onToggleStar: (domId: string, newState: boolean) => void;
   onToggleHide: (domId: string, newState: boolean) => void;
@@ -73,6 +76,8 @@ interface QuoteCardProps {
   onTagRemove: (domId: string, tagName: string) => void;
   onBadgeDelete: (domId: string, sentiment: string) => void;
   onBadgeRestore: (domId: string) => void;
+  onProposedAccept: (proposalId: number, tagName: string) => void;
+  onProposedDeny: (proposalId: number) => void;
 }
 
 export function QuoteCard({
@@ -86,6 +91,7 @@ export function QuoteCard({
   tagVocabulary,
   sessionId,
   hasMedia,
+  proposedTags,
   onToggleStar,
   onToggleHide,
   onEditCommit,
@@ -93,6 +99,8 @@ export function QuoteCard({
   onTagRemove,
   onBadgeDelete,
   onBadgeRestore,
+  onProposedAccept,
+  onProposedDeny,
 }: QuoteCardProps) {
   const [isEditingText, setIsEditingText] = useState(false);
   const [isTagInputOpen, setIsTagInputOpen] = useState(false);
@@ -226,8 +234,21 @@ export function QuoteCard({
                 key={tag.name}
                 text={tag.name}
                 variant="user"
+                colour={tag.colour_set ? getTagBg(tag.colour_set, tag.colour_index) : undefined}
                 onDelete={() => onTagRemove(domId, tag.name)}
                 data-testid={`bn-quote-${domId}-badge-${tag.name}`}
+              />
+            ))}
+            {proposedTags.map((pt) => (
+              <Badge
+                key={`proposed-${pt.id}`}
+                text={pt.tag_name}
+                variant="proposed"
+                colour={getTagBg(pt.colour_set, pt.colour_index)}
+                rationale={pt.rationale}
+                onAccept={() => onProposedAccept(pt.id, pt.tag_name)}
+                onDeny={() => onProposedDeny(pt.id)}
+                data-testid={`bn-quote-${domId}-proposed-${pt.id}`}
               />
             ))}
             {isTagInputOpen ? (

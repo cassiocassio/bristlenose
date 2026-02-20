@@ -37,6 +37,8 @@ router = APIRouter(prefix="/api")
 class TagResponse(BaseModel):
     name: str
     codebook_group: str
+    colour_set: str
+    colour_index: int
 
 
 class TranscriptSpeakerResponse(BaseModel):
@@ -247,7 +249,14 @@ def get_transcript(
         badges_map: dict[int, list[str]] = {}
         if quote_ids:
             tag_rows = (
-                db.query(QuoteTag, TagDefinition, CodebookGroup)
+                db.query(
+                    QuoteTag,
+                    TagDefinition.name,
+                    TagDefinition.id,
+                    TagDefinition.codebook_group_id,
+                    CodebookGroup.name,
+                    CodebookGroup.colour_set,
+                )
                 .join(TagDefinition, QuoteTag.tag_definition_id == TagDefinition.id)
                 .join(
                     CodebookGroup,
@@ -256,9 +265,28 @@ def get_transcript(
                 .filter(QuoteTag.quote_id.in_(quote_ids))
                 .all()
             )
-            for qt, td, cg in tag_rows:
+            # Build colour_index lookup
+            t_group_ids = {row[3] for row in tag_rows}
+            t_group_td_order: dict[int, list[int]] = {}
+            for gid in t_group_ids:
+                tds = (
+                    db.query(TagDefinition.id)
+                    .filter_by(codebook_group_id=gid)
+                    .order_by(TagDefinition.id)
+                    .all()
+                )
+                t_group_td_order[gid] = [td_id for (td_id,) in tds]
+
+            for qt, tag_name, td_id, group_id, group_name, colour_set in tag_rows:
+                td_ids = t_group_td_order.get(group_id, [])
+                cidx = td_ids.index(td_id) if td_id in td_ids else 0
                 tags_map.setdefault(qt.quote_id, []).append(
-                    TagResponse(name=td.name, codebook_group=cg.name)
+                    TagResponse(
+                        name=tag_name,
+                        codebook_group=group_name,
+                        colour_set=colour_set,
+                        colour_index=cidx,
+                    )
                 )
 
             badge_rows = (

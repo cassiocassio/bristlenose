@@ -81,7 +81,7 @@ const mockData: TranscriptPageResponse = {
       start_timecode: 10.0,
       end_timecode: 19.0,
       verbatim_excerpt: "I found the dashboard pretty confusing.",
-      tags: [{ name: "usability", codebook_group: "UX" }],
+      tags: [{ name: "usability", codebook_group: "UX", colour_set: "ux", colour_index: 0 }],
       deleted_badges: [],
     },
     "q-p1-26": {

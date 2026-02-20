@@ -474,6 +474,53 @@
     border-color: var(--bn-colour-negative);
 }
 
+/* ── AutoCode button + proposed count ─────────────────────────────────── */
+
+.framework-section-actions {
+    display: flex;
+    align-items: center;
+    gap: var(--bn-space-sm);
+    flex-shrink: 0;
+    margin-left: var(--bn-space-lg);
+    margin-top: 0.2rem;
+}
+
+.autocode-btn {
+    font-family: var(--bn-font-body);
+    font-size: 0.78rem;
+    font-weight: 500;
+    padding: 0.3rem 0.7rem;
+    border-radius: var(--bn-radius-sm);
+    border: 1px solid var(--bn-colour-accent);
+    background: var(--bn-colour-accent);
+    color: #fff;
+    cursor: pointer;
+    transition: opacity var(--bn-transition-fast);
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3em;
+    white-space: nowrap;
+}
+
+.autocode-btn:hover { opacity: 0.85; }
+
+.autocode-btn:disabled {
+    opacity: 0.5;
+    pointer-events: none;
+}
+
+.autocode-btn .sparkle { font-size: 0.85em; }
+
+.proposed-count {
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: var(--bn-colour-accent);
+    background: rgba(37, 99, 235, 0.08);
+    padding: 0.15rem 0.5rem;
+    border-radius: var(--bn-radius-pill);
+    white-space: nowrap;
+}
+
 /* ── Codebook picker modal ───────────────────────────────────────────── */
 
 .codebook-modal-overlay {

@@ -353,9 +353,15 @@ class TestGetProposals:
         p = data["proposals"][0]
         assert "id" in p
         assert "quote_id" in p
+        assert "dom_id" in p
+        assert "session_id" in p
+        assert "speaker_code" in p
+        assert "start_timecode" in p
         assert "quote_text" in p
         assert "tag_name" in p
         assert "group_name" in p
+        assert "colour_set" in p
+        assert "colour_index" in p
         assert "confidence" in p
         assert "rationale" in p
         assert "status" in p

@@ -7,11 +7,13 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from bristlenose.server.models import (
+    AutoCodeJob,
     ClusterQuote,
     CodebookGroup,
     DeletedBadge,
     Person,
     Project,
+    ProposedTag,
     Quote,
     QuoteEdit,
     QuoteState,
@@ -37,6 +39,20 @@ class TagResponse(BaseModel):
 
     name: str
     codebook_group: str
+    colour_set: str
+    colour_index: int
+
+
+class ProposedTagBrief(BaseModel):
+    """A pending AutoCode tag proposal on a quote."""
+
+    id: int
+    tag_name: str
+    group_name: str
+    colour_set: str
+    colour_index: int
+    confidence: float
+    rationale: str
 
 
 class QuoteResponse(BaseModel):
@@ -60,6 +76,7 @@ class QuoteResponse(BaseModel):
     edited_text: str | None
     tags: list[TagResponse]
     deleted_badges: list[str]
+    proposed_tags: list[ProposedTagBrief]
 
 
 class SectionResponse(BaseModel):
@@ -137,19 +154,20 @@ def _resolve_speaker_names(
 
 
 def _load_researcher_state(
-    db: Session, quote_ids: list[int],
+    db: Session, project_id: int, quote_ids: list[int],
 ) -> tuple[
     dict[int, QuoteState],
     dict[int, str],
     dict[int, list[TagResponse]],
     dict[int, list[str]],
+    dict[int, list[ProposedTagBrief]],
 ]:
     """Load all researcher state for the given quote IDs.
 
-    Returns (state_map, edit_map, tags_map, badges_map).
+    Returns (state_map, edit_map, tags_map, badges_map, proposed_map).
     """
     if not quote_ids:
-        return {}, {}, {}, {}
+        return {}, {}, {}, {}, {}
 
     # QuoteState (hidden/starred)
     states = db.query(QuoteState).filter(QuoteState.quote_id.in_(quote_ids)).all()
@@ -164,16 +182,42 @@ def _load_researcher_state(
 
     # QuoteTag + TagDefinition + CodebookGroup
     tag_rows = (
-        db.query(QuoteTag, TagDefinition, CodebookGroup)
+        db.query(
+            QuoteTag,
+            TagDefinition.name,
+            TagDefinition.id,
+            TagDefinition.codebook_group_id,
+            CodebookGroup.name,
+            CodebookGroup.colour_set,
+        )
         .join(TagDefinition, QuoteTag.tag_definition_id == TagDefinition.id)
         .join(CodebookGroup, TagDefinition.codebook_group_id == CodebookGroup.id)
         .filter(QuoteTag.quote_id.in_(quote_ids))
         .all()
     )
+    # Build colour_index lookup: position of each tag within its group
+    tag_group_ids = {row[3] for row in tag_rows}  # codebook_group_id
+    tag_group_td_order: dict[int, list[int]] = {}
+    for gid in tag_group_ids:
+        tds = (
+            db.query(TagDefinition.id)
+            .filter_by(codebook_group_id=gid)
+            .order_by(TagDefinition.id)
+            .all()
+        )
+        tag_group_td_order[gid] = [td_id for (td_id,) in tds]
+
     tags_map: dict[int, list[TagResponse]] = {}
-    for qt, td, cg in tag_rows:
+    for qt, tag_name, td_id, group_id, group_name, colour_set in tag_rows:
+        td_ids = tag_group_td_order.get(group_id, [])
+        cidx = td_ids.index(td_id) if td_id in td_ids else 0
         tags_map.setdefault(qt.quote_id, []).append(
-            TagResponse(name=td.name, codebook_group=cg.name)
+            TagResponse(
+                name=tag_name,
+                codebook_group=group_name,
+                colour_set=colour_set,
+                colour_index=cidx,
+            )
         )
 
     # DeletedBadge
@@ -184,7 +228,64 @@ def _load_researcher_state(
     for b in badges:
         badges_map.setdefault(b.quote_id, []).append(b.sentiment)
 
-    return state_map, edit_map, tags_map, badges_map
+    # ProposedTag — pending proposals from completed AutoCode jobs
+    proposed_map: dict[int, list[ProposedTagBrief]] = {}
+    completed_jobs = (
+        db.query(AutoCodeJob)
+        .filter_by(project_id=project_id, status="completed")
+        .all()
+    )
+    if completed_jobs:
+        job_ids = [j.id for j in completed_jobs]
+        proposed_rows = (
+            db.query(
+                ProposedTag,
+                TagDefinition.name,
+                TagDefinition.id,
+                TagDefinition.codebook_group_id,
+                CodebookGroup.name,
+                CodebookGroup.colour_set,
+            )
+            .join(TagDefinition, ProposedTag.tag_definition_id == TagDefinition.id)
+            .join(
+                CodebookGroup,
+                TagDefinition.codebook_group_id == CodebookGroup.id,
+            )
+            .filter(
+                ProposedTag.job_id.in_(job_ids),
+                ProposedTag.quote_id.in_(quote_ids),
+                ProposedTag.status == "pending",
+            )
+            .all()
+        )
+        # Build colour_index lookup: position of each tag within its group
+        group_ids = {row[3] for row in proposed_rows}  # codebook_group_id
+        group_td_order: dict[int, list[int]] = {}
+        for gid in group_ids:
+            tds = (
+                db.query(TagDefinition.id)
+                .filter_by(codebook_group_id=gid)
+                .order_by(TagDefinition.id)
+                .all()
+            )
+            group_td_order[gid] = [td_id for (td_id,) in tds]
+
+        for pt, tag_name, td_id, group_id, group_name, colour_set in proposed_rows:
+            td_ids = group_td_order.get(group_id, [])
+            cidx = td_ids.index(td_id) if td_id in td_ids else 0
+            proposed_map.setdefault(pt.quote_id, []).append(
+                ProposedTagBrief(
+                    id=pt.id,
+                    tag_name=tag_name,
+                    group_name=group_name,
+                    colour_set=colour_set,
+                    colour_index=cidx,
+                    confidence=pt.confidence,
+                    rationale=pt.rationale,
+                )
+            )
+
+    return state_map, edit_map, tags_map, badges_map, proposed_map
 
 
 def _build_quote_response(
@@ -193,6 +294,7 @@ def _build_quote_response(
     edit_map: dict[int, str],
     tags_map: dict[int, list[TagResponse]],
     badges_map: dict[int, list[str]],
+    proposed_map: dict[int, list[ProposedTagBrief]],
     speaker_map: dict[tuple[str, str], str],
 ) -> QuoteResponse:
     """Build a QuoteResponse from a Quote row and pre-loaded state maps."""
@@ -218,6 +320,7 @@ def _build_quote_response(
         edited_text=edit_map.get(quote.id),
         tags=tags_map.get(quote.id, []),
         deleted_badges=badges_map.get(quote.id, []),
+        proposed_tags=proposed_map.get(quote.id, []),
     )
 
 
@@ -259,8 +362,8 @@ def get_quotes(
             theme_to_quotes.setdefault(tq.theme_id, []).append(tq.quote_id)
 
         # Load researcher state
-        state_map, edit_map, tags_map, badges_map = _load_researcher_state(
-            db, quote_ids,
+        state_map, edit_map, tags_map, badges_map, proposed_map = (
+            _load_researcher_state(db, project_id, quote_ids)
         )
 
         # Resolve speaker names
@@ -285,7 +388,8 @@ def get_quotes(
                 display_order=cluster.display_order,
                 quotes=[
                     _build_quote_response(
-                        q, state_map, edit_map, tags_map, badges_map, speaker_map,
+                        q, state_map, edit_map, tags_map, badges_map,
+                        proposed_map, speaker_map,
                     )
                     for q in quotes
                 ],
@@ -306,7 +410,8 @@ def get_quotes(
                 description=theme.description,
                 quotes=[
                     _build_quote_response(
-                        q, state_map, edit_map, tags_map, badges_map, speaker_map,
+                        q, state_map, edit_map, tags_map, badges_map,
+                        proposed_map, speaker_map,
                     )
                     for q in quotes
                 ],

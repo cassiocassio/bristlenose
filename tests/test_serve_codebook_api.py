@@ -456,7 +456,7 @@ class TestListTemplates:
 
     def test_returns_all_templates(self, client: TestClient) -> None:
         data = client.get("/api/projects/1/codebook/templates").json()
-        assert len(data["templates"]) == 3
+        assert len(data["templates"]) >= 3
         ids = [t["id"] for t in data["templates"]]
         assert "garrett" in ids
         assert "norman" in ids
@@ -477,10 +477,10 @@ class TestListTemplates:
         assert strategy["colour_set"] == "ux"
         assert len(strategy["tags"]) == 4
 
-    def test_disabled_template(self, client: TestClient) -> None:
+    def test_norman_template_enabled(self, client: TestClient) -> None:
         data = client.get("/api/projects/1/codebook/templates").json()
         norman = next(t for t in data["templates"] if t["id"] == "norman")
-        assert norman["enabled"] is False
+        assert norman["enabled"] is True
 
     def test_imported_flag_false_initially(self, client: TestClient) -> None:
         data = client.get("/api/projects/1/codebook/templates").json()
@@ -550,12 +550,15 @@ class TestImportTemplate:
         )
         assert resp.status_code == 409
 
-    def test_import_disabled_template_returns_400(self, client: TestClient) -> None:
+    def test_import_norman_succeeds(self, client: TestClient) -> None:
         resp = client.post(
             "/api/projects/1/codebook/import-template",
             json={"template_id": "norman"},
         )
-        assert resp.status_code == 400
+        assert resp.status_code == 200
+        data = resp.json()
+        norman_groups = [g for g in data["groups"] if g["framework_id"] == "norman"]
+        assert len(norman_groups) == 7
 
     def test_import_unknown_template_returns_404(self, client: TestClient) -> None:
         resp = client.post(

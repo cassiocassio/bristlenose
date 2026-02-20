@@ -189,3 +189,41 @@ class ThematicGroupingResult(BaseModel):
     themes: list[ThemeGroupItem] = Field(
         description="Emergent themes identified across all contextual quotes"
     )
+
+
+# ---------------------------------------------------------------------------
+# AutoCode — codebook tag application (serve mode)
+# ---------------------------------------------------------------------------
+
+
+class AutoCodeTagAssignment(BaseModel):
+    """A single tag assignment for one quote in an AutoCode batch."""
+
+    quote_index: int = Field(description="0-based index of the quote in the batch")
+    tag_name: str = Field(
+        description=(
+            "The codebook tag name that best matches this quote. "
+            "Always return the single best-matching tag — use a low "
+            "confidence score (0.1-0.3) when the match is weak."
+        )
+    )
+    confidence: float = Field(
+        description="Confidence score 0.0-1.0 for this assignment",
+        ge=0.0,
+        le=1.0,
+    )
+    rationale: str = Field(
+        description=(
+            "Brief 1-sentence explanation for why this tag was chosen, "
+            "referencing specific words in the quote and explaining why "
+            "adjacent tags were ruled out"
+        )
+    )
+
+
+class AutoCodeBatchResult(BaseModel):
+    """LLM output for a batch of quote-to-tag assignments."""
+
+    assignments: list[AutoCodeTagAssignment] = Field(
+        description="Tag assignment for each quote in the batch"
+    )

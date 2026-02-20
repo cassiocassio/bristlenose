@@ -92,6 +92,8 @@ class TestTableCreation:
         "deleted_badges",
         "dismissed_signals",
         "import_conflicts",
+        "autocode_jobs",
+        "proposed_tags",
     }
 
     def test_all_tables_exist(self, engine) -> None:  # type: ignore[no-untyped-def]

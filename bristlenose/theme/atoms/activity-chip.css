@@ -74,6 +74,23 @@
 
 .chip-close:hover { color: rgba(255, 255, 255, 0.8); }
 
+/* Cancel button (shown while running) */
+
+.chip-cancel {
+    background: none;
+    border: none;
+    color: rgba(255, 255, 255, 0.5);
+    cursor: pointer;
+    font-size: 0.82rem;
+    padding: 0 0.2rem;
+    margin-left: auto;
+}
+
+.chip-cancel:hover {
+    color: rgba(255, 255, 255, 0.9);
+    text-decoration: underline;
+}
+
 /* Summary chip (collapsed multi-job view) */
 
 .activity-chip-summary {
@@ -112,6 +129,8 @@
     [data-theme="dark"] .activity-chip .chip-close:hover { color: rgba(0, 0, 0, 0.7); }
     [data-theme="dark"] .activity-chip .chip-toggle { color: rgba(0, 0, 0, 0.3); }
     [data-theme="dark"] .activity-chip .chip-toggle:hover { color: rgba(0, 0, 0, 0.7); }
+    [data-theme="dark"] .activity-chip .chip-cancel { color: rgba(0, 0, 0, 0.4); }
+    [data-theme="dark"] .activity-chip .chip-cancel:hover { color: rgba(0, 0, 0, 0.8); }
     [data-theme="dark"] .activity-chip .chip-spinner {
         border-color: rgba(0, 0, 0, 0.15);
         border-top-color: #2563eb;
@@ -127,6 +146,8 @@
         :root:not([data-theme="light"]) .activity-chip .chip-close:hover { color: rgba(0, 0, 0, 0.7); }
         :root:not([data-theme="light"]) .activity-chip .chip-toggle { color: rgba(0, 0, 0, 0.3); }
         :root:not([data-theme="light"]) .activity-chip .chip-toggle:hover { color: rgba(0, 0, 0, 0.7); }
+        :root:not([data-theme="light"]) .activity-chip .chip-cancel { color: rgba(0, 0, 0, 0.4); }
+        :root:not([data-theme="light"]) .activity-chip .chip-cancel:hover { color: rgba(0, 0, 0, 0.8); }
         :root:not([data-theme="light"]) .activity-chip .chip-spinner {
             border-color: rgba(0, 0, 0, 0.15);
             border-top-color: #2563eb;

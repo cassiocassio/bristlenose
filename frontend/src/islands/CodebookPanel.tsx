@@ -22,6 +22,7 @@ import {
   importCodebookTemplate,
   mergeCodebookTags,
   removeCodebookFramework,
+  cancelAutoCode,
   startAutoCode,
   updateCodebookGroup,
   updateCodebookTag,
@@ -739,6 +740,17 @@ export function CodebookPanel({ projectId }: CodebookPanelProps) {
     [fetchData],
   );
 
+  const handleCancelAutoCode = useCallback(
+    (frameworkId: string) => {
+      cancelAutoCode(frameworkId)
+        .then((status) => {
+          setAutoCodeStatus((prev) => ({ ...prev, [frameworkId]: status }));
+        })
+        .catch((err) => console.error("Cancel AutoCode failed:", err));
+    },
+    [],
+  );
+
   const handleOpenReport = useCallback(
     (frameworkId: string, frameworkTitle: string) => {
       setReportModal({ frameworkId, frameworkTitle });
@@ -972,6 +984,7 @@ export function CodebookPanel({ projectId }: CodebookPanelProps) {
           onComplete: () => handleAutoCodeComplete(j.frameworkId),
           onAction: () => handleOpenReport(j.frameworkId, j.frameworkTitle),
           actionLabel: "Report",
+          onCancel: () => handleCancelAutoCode(j.frameworkId),
         }))}
         onDismiss={(jobId) => {
           setActiveJobs((prev) => {

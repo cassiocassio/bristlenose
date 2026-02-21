@@ -157,6 +157,21 @@ def _transform_transcript_html(
         r"<!-- bn-transcript-page -->.*?<!-- /bn-transcript-page -->",
         mount_html, html, flags=re.DOTALL,
     )
+    # Rewrite all links that point to the static report file so they stay
+    # within serve mode (e.g. ../bristlenose-slug-report.html#tab → /report/#tab).
+    # Covers: nav tab <a> hrefs and any other HTML links.
+    html = re.sub(
+        r'href="\.\./bristlenose-[^"]*-report\.html(#[^"]*)"',
+        r'href="/report/\1"',
+        html,
+    )
+    # Also rewrite the JS variable used by transcript-annotations.js for
+    # margin label links back to the report.
+    html = re.sub(
+        r"var BRISTLENOSE_REPORT_URL = '\.\./bristlenose-[^']*-report\.html';",
+        "var BRISTLENOSE_REPORT_URL = '/report/';",
+        html,
+    )
     api_base_script = (
         "<script>window.BRISTLENOSE_API_BASE = '/api/projects/1';</script>\n"
     )

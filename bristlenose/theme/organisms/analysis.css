@@ -530,3 +530,35 @@
     background: var(--bn-colour-hover);
     transition: background var(--bn-transition-fast);
 }
+
+/* ── Quote sequences ───────────────────────────────────── */
+
+.signal-card-quotes blockquote.seq-middle,
+.signal-card-quotes blockquote.seq-last {
+    padding-top: 0;
+    margin-top: calc(-1 * var(--bn-space-xs));
+}
+
+.signal-card-quotes blockquote.seq-middle .timecode,
+.signal-card-quotes blockquote.seq-last .timecode {
+    opacity: 0.6;
+}
+
+.signal-card-quotes blockquote.seq-first {
+    border-left-color: var(--card-accent, var(--bn-colour-muted));
+    border-left-width: 2px;
+    border-top-left-radius: var(--bn-radius-sm);
+}
+
+.signal-card-quotes blockquote.seq-middle {
+    border-left-color: var(--card-accent, var(--bn-colour-muted));
+    border-left-width: 2px;
+    border-radius: 0;
+}
+
+.signal-card-quotes blockquote.seq-last {
+    border-left-color: var(--card-accent, var(--bn-colour-muted));
+    border-left-width: 2px;
+    border-bottom-left-radius: var(--bn-radius-sm);
+    border-top-left-radius: 0;
+}

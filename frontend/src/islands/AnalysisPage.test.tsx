@@ -434,6 +434,190 @@ describe("AnalysisPage", () => {
     expect(card.classList.contains("expanded")).toBe(true);
   });
 
+  // --- Quote sequence rendering ---
+
+  it("suppresses PersonBadge on continuation quotes in a sequence", async () => {
+    // Build mock data with 3 quotes from same pid/session within threshold
+    const seqCbData: CodebookAnalysisListResponse = {
+      codebooks: [{
+        codebook_id: "seq-test",
+        codebook_name: "Sequence Test",
+        colour_set: "ux",
+        signals: [{
+          location: "Onboarding",
+          source_type: "section",
+          group_name: "Pain points",
+          colour_set: "ux",
+          count: 3,
+          participants: ["p1"],
+          n_eff: 1.0,
+          mean_intensity: 2.0,
+          concentration: 2.0,
+          composite_signal: 0.5,
+          confidence: "strong",
+          quotes: [
+            { text: "First thing I noticed", participant_id: "p1", session_id: "s1", start_seconds: 12, intensity: 2, tag_names: [], segment_index: 0 },
+            { text: "And then it got worse", participant_id: "p1", session_id: "s1", start_seconds: 19, intensity: 2, tag_names: [], segment_index: 1 },
+            { text: "But eventually it worked", participant_id: "p1", session_id: "s1", start_seconds: 31, intensity: 1, tag_names: [], segment_index: 3 },
+          ],
+        }],
+        section_matrix: { cells: {}, row_totals: {}, col_totals: {}, grand_total: 0, row_labels: [] },
+        theme_matrix: { cells: {}, row_totals: {}, col_totals: {}, grand_total: 0, row_labels: [] },
+        columns: ["Pain points"],
+        participant_ids: ["p1"],
+        source_breakdown: { accepted: 3, pending: 0, total: 3 },
+        tag_colour_indices: {},
+      }],
+      total_participants: 1,
+      trade_off_note: "",
+    };
+    mockFetchCodebookAnalysis(seqCbData);
+    render(<AnalysisPage projectId="1" />);
+
+    await waitFor(() => {
+      expect(screen.getAllByTestId("bn-signal-card")).toHaveLength(1);
+    });
+
+    // Expand to see all quotes
+    const toggle = screen.getByTestId("bn-signal-toggle");
+    fireEvent.click(toggle);
+
+    const card = screen.getAllByTestId("bn-signal-card")[0];
+    const blockquotes = card.querySelectorAll("blockquote");
+    expect(blockquotes.length).toBe(3);
+
+    // First quote (seq-first) should have a PersonBadge
+    expect(blockquotes[0].querySelector(".bn-person-badge")).toBeTruthy();
+    // Continuation quotes (seq-middle, seq-last) should NOT
+    expect(blockquotes[1].querySelector(".bn-person-badge")).toBeNull();
+    expect(blockquotes[2].querySelector(".bn-person-badge")).toBeNull();
+  });
+
+  it("applies seq-first/middle/last classes to sequence blockquotes", async () => {
+    const seqCbData: CodebookAnalysisListResponse = {
+      codebooks: [{
+        codebook_id: "seq-test",
+        codebook_name: "Sequence Test",
+        colour_set: "ux",
+        signals: [{
+          location: "Onboarding",
+          source_type: "section",
+          group_name: "Flow",
+          colour_set: "ux",
+          count: 3,
+          participants: ["p1"],
+          n_eff: 1.0,
+          mean_intensity: 2.0,
+          concentration: 2.0,
+          composite_signal: 0.5,
+          confidence: "strong",
+          quotes: [
+            { text: "Quote A", participant_id: "p1", session_id: "s1", start_seconds: 10, intensity: 2, tag_names: [], segment_index: 0 },
+            { text: "Quote B", participant_id: "p1", session_id: "s1", start_seconds: 20, intensity: 2, tag_names: [], segment_index: 1 },
+            { text: "Quote C", participant_id: "p1", session_id: "s1", start_seconds: 30, intensity: 2, tag_names: [], segment_index: 2 },
+          ],
+        }],
+        section_matrix: { cells: {}, row_totals: {}, col_totals: {}, grand_total: 0, row_labels: [] },
+        theme_matrix: { cells: {}, row_totals: {}, col_totals: {}, grand_total: 0, row_labels: [] },
+        columns: ["Flow"],
+        participant_ids: ["p1"],
+        source_breakdown: { accepted: 3, pending: 0, total: 3 },
+        tag_colour_indices: {},
+      }],
+      total_participants: 1,
+      trade_off_note: "",
+    };
+    mockFetchCodebookAnalysis(seqCbData);
+    render(<AnalysisPage projectId="1" />);
+
+    await waitFor(() => {
+      expect(screen.getAllByTestId("bn-signal-card")).toHaveLength(1);
+    });
+
+    const toggle = screen.getByTestId("bn-signal-toggle");
+    fireEvent.click(toggle);
+
+    const card = screen.getAllByTestId("bn-signal-card")[0];
+    const blockquotes = card.querySelectorAll("blockquote");
+    expect(blockquotes[0].classList.contains("seq-first")).toBe(true);
+    expect(blockquotes[1].classList.contains("seq-middle")).toBe(true);
+    expect(blockquotes[2].classList.contains("seq-last")).toBe(true);
+  });
+
+  it("does not apply seq-* classes to solo quotes", async () => {
+    // Use existing mockCbData — quotes from different pids, won't form sequences
+    mockFetchCodebookAnalysis(mockCbData);
+    render(<AnalysisPage projectId="1" />);
+
+    await waitFor(() => {
+      expect(screen.getAllByTestId("bn-signal-card")).toHaveLength(2);
+    });
+
+    // Expand first card to see both quotes
+    const toggle = screen.getAllByTestId("bn-signal-toggle")[0];
+    fireEvent.click(toggle);
+
+    const card = screen.getAllByTestId("bn-signal-card")[0];
+    const blockquotes = card.querySelectorAll("blockquote");
+    for (const bq of blockquotes) {
+      expect(bq.classList.contains("seq-first")).toBe(false);
+      expect(bq.classList.contains("seq-middle")).toBe(false);
+      expect(bq.classList.contains("seq-last")).toBe(false);
+    }
+  });
+
+  it("does not form sequences from zero-timecode quotes", async () => {
+    const zeroCbData: CodebookAnalysisListResponse = {
+      codebooks: [{
+        codebook_id: "zero-test",
+        codebook_name: "Zero TC Test",
+        colour_set: "ux",
+        signals: [{
+          location: "Section",
+          source_type: "section",
+          group_name: "Group",
+          colour_set: "ux",
+          count: 2,
+          participants: ["p1"],
+          n_eff: 1.0,
+          mean_intensity: 1.0,
+          concentration: 1.5,
+          composite_signal: 0.3,
+          confidence: "moderate",
+          quotes: [
+            { text: "No timecode A", participant_id: "p1", session_id: "s1", start_seconds: 0, intensity: 1, tag_names: [], segment_index: 0 },
+            { text: "No timecode B", participant_id: "p1", session_id: "s1", start_seconds: 0, intensity: 1, tag_names: [], segment_index: 1 },
+          ],
+        }],
+        section_matrix: { cells: {}, row_totals: {}, col_totals: {}, grand_total: 0, row_labels: [] },
+        theme_matrix: { cells: {}, row_totals: {}, col_totals: {}, grand_total: 0, row_labels: [] },
+        columns: ["Group"],
+        participant_ids: ["p1"],
+        source_breakdown: { accepted: 2, pending: 0, total: 2 },
+        tag_colour_indices: {},
+      }],
+      total_participants: 1,
+      trade_off_note: "",
+    };
+    mockFetchCodebookAnalysis(zeroCbData);
+    render(<AnalysisPage projectId="1" />);
+
+    await waitFor(() => {
+      expect(screen.getAllByTestId("bn-signal-card")).toHaveLength(1);
+    });
+
+    const toggle = screen.getByTestId("bn-signal-toggle");
+    fireEvent.click(toggle);
+
+    const card = screen.getAllByTestId("bn-signal-card")[0];
+    const blockquotes = card.querySelectorAll("blockquote");
+    // Both should be solo — PersonBadge on both
+    for (const bq of blockquotes) {
+      expect(bq.querySelector(".bn-person-badge")).toBeTruthy();
+      expect(bq.classList.contains("seq-first")).toBe(false);
+    }
+  });
+
   it("heatmap cells with count=1 get data-count attribute", async () => {
     mockFetchCodebookAnalysis(mockCbData);
     render(<AnalysisPage projectId="1" />);

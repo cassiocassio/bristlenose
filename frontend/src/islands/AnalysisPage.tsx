@@ -17,6 +17,7 @@ import { Badge, Metric, PersonBadge } from "../components";
 import { getCodebookAnalysis } from "../utils/api";
 import { getGroupBg, getTagBg } from "../utils/colours";
 import { formatTimecode } from "../utils/format";
+import { detectSequences, type SequenceMeta } from "../utils/sequences";
 import type {
   AnalysisMatrix,
   CodebookAnalysisListResponse,
@@ -330,6 +331,11 @@ function SignalCard({
     ? Math.min(100, (signal.nEff / allPids.length) * 100)
     : 0;
 
+  const sequenceMetas = useMemo(
+    () => detectSequences(signal.quotes),
+    [signal.quotes],
+  );
+
   const visibleQuotes = signal.quotes.slice(0, 1);
   const hiddenQuotes = signal.quotes.slice(1);
 
@@ -408,7 +414,7 @@ function SignalCard({
 
       <div className="signal-card-quotes">
         {visibleQuotes.map((q, i) => (
-          <QuoteBlock key={i} quote={q} isSentiment={isSentiment} />
+          <QuoteBlock key={i} quote={q} isSentiment={isSentiment} sequenceMeta={sequenceMetas[i]} />
         ))}
         <div
           className="signal-card-expansion"
@@ -416,7 +422,12 @@ function SignalCard({
           style={{ maxHeight: expanded ? undefined : 0 }}
         >
           {hiddenQuotes.map((q, i) => (
-            <QuoteBlock key={i + 1} quote={q} isSentiment={isSentiment} />
+            <QuoteBlock
+              key={i + 1}
+              quote={q}
+              isSentiment={isSentiment}
+              sequenceMeta={sequenceMetas[i + visibleQuotes.length]}
+            />
           ))}
         </div>
       </div>
@@ -448,15 +459,21 @@ function SignalCard({
 function QuoteBlock({
   quote,
   isSentiment,
+  sequenceMeta,
 }: {
   quote: UnifiedQuote;
   isSentiment: boolean;
+  sequenceMeta?: SequenceMeta;
 }) {
   const tc = formatTimecode(quote.startSeconds);
   const tcHref = `sessions/transcript_${quote.sessionId}.html#t-${Math.floor(quote.startSeconds)}`;
 
+  const seqPos = sequenceMeta?.position ?? "solo";
+  const isContinuation = seqPos === "middle" || seqPos === "last";
+  const seqClass = seqPos !== "solo" ? ` seq-${seqPos}` : "";
+
   return (
-    <blockquote>
+    <blockquote className={seqClass ? seqClass.trimStart() : undefined}>
       <div className="quote-row">
         <a className="timecode" href={tcHref}>
           <span className="timecode-bracket">[</span>
@@ -464,9 +481,11 @@ function QuoteBlock({
           <span className="timecode-bracket">]</span>
         </a>
         <span className="quote-body">
-          <span className="speaker">
-            <PersonBadge code={quote.pid} role="participant" />
-          </span>{" "}
+          {!isContinuation && (
+            <><span className="speaker">
+              <PersonBadge code={quote.pid} role="participant" />
+            </span>{" "}</>
+          )}
           <span className="quote-text">{quote.text}</span>
           {!isSentiment && quote.tagNames.length > 0 && quote.tagNames.map((tag) => (
             <Badge

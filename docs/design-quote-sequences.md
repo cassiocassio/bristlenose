@@ -139,13 +139,62 @@ Default value is `-1` throughout (Pydantic defaults, SQLite column defaults, Typ
 
 ---
 
-## Future: visual treatment
+## Visual treatment (implemented)
 
-Out of scope for the initial `segment_index` plumbing, but the intended direction:
+The React analysis page island (`AnalysisPage.tsx`) detects and renders quote sequences within signal cards. The detection runs entirely in the frontend — it's a view concern, not a data concern.
 
-Within a signal card or quote group, quotes that form a detected run should be visually connected — perhaps a continuous left border, reduced vertical spacing, or a subtle "sequence" indicator. The reader should perceive them as chapters of the same story rather than independent observations.
+### Detection algorithm
 
-The run detection algorithm will live in the frontend (it's a view concern, not a data concern) and will use both proximity methods with configurable thresholds.
+`detectSequences()` in `frontend/src/utils/sequences.ts` — O(n) single pass over the pre-sorted quote array (backend sorts by `(pid, startSeconds)`). Two consecutive quotes form a continuation when:
+
+- Same `pid` AND same `sessionId`
+- Both have `startSeconds > 0` (timecoded)
+- Time gap ≤ `SEQUENCE_GAP_SECONDS` (17.5s)
+
+Runs shorter than 2 quotes are marked `"solo"` (no visual treatment). Otherwise: `"first"` / `"middle"` / `"last"`.
+
+Non-timecoded quotes (`startSeconds === 0`) never form sequences in this version — ordinal-based detection is deferred.
+
+### Visual rules
+
+| Position | Timecode | Speaker badge | Left border | Spacing |
+|----------|----------|---------------|-------------|---------|
+| `solo` | normal | shown | default (1px grey) | normal |
+| `first` | normal | shown | 2px `--card-accent`, rounded top | normal |
+| `middle` | 60% opacity | hidden | 2px `--card-accent`, square | tighter |
+| `last` | 60% opacity | hidden | 2px `--card-accent`, rounded bottom | tighter |
+
+Design decisions:
+- **No text modification** (no ellipsis) — research integrity requires verbatim quote text
+- **Dim entire timecode** (60% opacity) — the timecode is one primitive; clicking a continuation timecode is a <1% action; making the block read as contiguous is the priority
+- **Keep intensity dots on every quote** — real per-quote data, speaker can escalate within a narrative
+- **Left border uses `--card-accent`** — already set per signal card, zero new CSS tokens
+
+### CSS
+
+Sequence rules live in `bristlenose/theme/organisms/analysis.css` — organism-level contextual overrides scoped to `.signal-card-quotes blockquote.seq-*`. No changes to atoms, molecules, or tokens.
+
+### Files
+
+- `frontend/src/utils/sequences.ts` — detection utility + types
+- `frontend/src/utils/sequences.test.ts` — 12 unit tests
+- `frontend/src/islands/AnalysisPage.tsx` — `SignalCard` computes metas, `QuoteBlock` consumes them
+- `frontend/src/islands/AnalysisPage.test.tsx` — 4 rendering tests
+- `bristlenose/theme/organisms/analysis.css` — `seq-first` / `seq-middle` / `seq-last` rules
+
+---
+
+## Open questions (future work)
+
+1. **Segment ordinal threshold** — 17.5s is set for timecodes but the ordinal gap default is undetermined. Need a fresh pipeline run (with the new code) to populate `segment_index`, then re-run the experiment script to see the ordinal distribution. Starting hypothesis: gap of 2.
+
+2. **Non-timecoded transcript addressing** — need a "verse numbering" system for plain-text transcripts (like line numbers in Shakespeare or verses in the Bible) so sequence detection works for non-timecoded sources (e.g. Plato projects). Current `_resolve_segment_index()` returns `-1` for these.
+
+3. **Multi-participant sequences** — current design groups by `(session_id, participant_id)`. In co-discovery sessions, two participants might tell the same story in alternating turns. Single-speaker runs only for now.
+
+4. **Scope: signal cards vs quote lists** — currently analysis-page signal cards only. Could extend to the main report's quote sections/themes with the same treatment.
+
+5. **Threshold configurability** — `SEQUENCE_GAP_SECONDS` is a frontend constant (mirrored from Python). Eventually per-project config.
 
 ---
 

@@ -12,6 +12,7 @@ import type {
   CodebookTagResponse,
   ProposalsListResponse,
   RemoveFrameworkInfo,
+  CodebookAnalysisListResponse,
   TagAnalysisResponse,
   TemplateListResponse,
   TranscriptPageResponse,
@@ -244,4 +245,8 @@ export function denyAllProposals(
 export function getTagAnalysis(groups?: string): Promise<TagAnalysisResponse> {
   const qs = groups ? `?groups=${groups}` : "";
   return apiGet<TagAnalysisResponse>(`/analysis/tags${qs}`);
+}
+
+export function getCodebookAnalysis(): Promise<CodebookAnalysisListResponse> {
+  return apiGet<CodebookAnalysisListResponse>("/analysis/codebooks");
 }

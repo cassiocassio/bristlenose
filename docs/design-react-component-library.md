@@ -1,5 +1,7 @@
 # React Component Library — Primitive Dictionary & Build Sequence
 
+> **Complete (Feb 2026).** All 16 primitives shipped. 182 tests. CSS alignment done through M5. This document remains the reference for the primitive dictionary, coverage matrix, and CSS alignment schedule. The next phase (vanilla JS shell migration) is planned in [`docs/design-react-migration.md`](design-react-migration.md).
+
 The React migration (Milestone 2+) builds a library of reusable primitives, not page-specific islands. Every composition in the app (quote card, sessions table row, codebook group, signal card, transcript segment) is assembled from the same small set of components. This document defines the primitives, their qualities, and the build order.
 
 ## Why primitives, not pages

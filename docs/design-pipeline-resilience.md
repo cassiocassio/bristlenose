@@ -1,6 +1,6 @@
 # Pipeline Resilience & Data Integrity
 
-> **Status**: Phase 1a–1d-ext implemented; Phase 1e+ not yet implemented
+> **Status**: Phase 0–1e implemented (crash recovery, per-session caching, `bristlenose status` command, pre-run resume summary); Phase 2 (hashing + integrity) next
 > **Scope**: Big-picture architecture for crash recovery, incremental re-runs, provenance tracking, human/LLM merge, source material change detection, mid-run provider switching, and analytical context preservation
 > **Trigger**: Plato stress test (Feb 2026) — pipeline ran out of API credits mid-run, stale SQLite data from previous project leaked into serve mode, intermediate JSON files weren't written by `analyze` command, recovery required re-spending $3.50 on LLM calls already made
 
@@ -600,29 +600,40 @@ Caching transcription alone would cut resume time from 1m 48s to ~52s (52% reduc
 
 **Status**: ✓ Done. Transcription caches `session_segments.json`, speaker ID caches `speaker-info/{sid}.json`. 10 tests. Audio extraction not cached (marginal gain).
 
-#### 1e. Status report and `--resume` flag
+#### ~~1e. Status report and pre-run summary~~ ✓ Done
 
-**What it is**: Before running anything, print a status report showing what's cached and what needs doing. Add a `--resume` flag that's on by default (and `--clean` becomes "delete everything and start fresh").
+**What it is**: `bristlenose status <folder>` — standalone read-only command that prints project state from the manifest. Plus a one-line pre-run summary when `bristlenose run` resumes.
 
-**How it works**: Read the manifest, validate file existence, print a summary. If there's nothing to resume from, run normally. If there is, show the plan and ask for confirmation.
+**Implementation**: `bristlenose/status.py` (pure logic — `get_project_status()`, `format_resume_summary()`), `bristlenose/cli.py` (status command + `_resolve_output_dir()` + `_print_project_status()`). 14 tests in `tests/test_status.py`.
 
-**What it touches**: `cli.py` (flag handling, status display), `manifest.py` (validation helper).
-
-**Risk**: Low. It's just printing and flag parsing. The actual resume logic is already in place from 1c/1d.
+**Design decisions**:
+- Resume is automatic (no `--resume` flag) — if a manifest exists, the run command resumes and prints a summary. `--clean` deletes everything and starts fresh. This matches the existing Phase 1c behaviour.
+- Status command accepts input dir or output dir (auto-detects via `_resolve_output_dir()`)
+- `-v` flag shows per-session detail with provider/model info
+- Shows 7 display stages (skips extract_audio, merge_transcript, pii_removal — trivial/fast)
+- Validates intermediate file existence for completed stages, warns if missing
+- Enriches detail from intermediate JSON (counts quotes, boundaries, clusters, themes)
 
 **What the user sees**:
 ```
+$ bristlenose status interviews/
+
+  usability-study-feb-2026
+  Pipeline v0.10.2
+  Last run: 20 Feb 2026 14:32
+
+  ✓ Ingest                10 sessions
+  ✓ Transcribe            10 sessions
+  ✓ Speakers              10 sessions
+  ✓ Topics                87 boundaries
+  ⚠ Quotes                7/10 sessions (3 incomplete)
+  ✗ Clusters & themes
+  ✗ Report
+
 $ bristlenose run interviews/
-
-Project status:
-  ✓ 10 sessions ingested
-  ✓ 10 transcripts (all valid)
-  ✓ 10 topic maps
-  ⚠ 7/10 sessions have quotes (3 failed — credit exhaustion)
-  ✗ Clusters and themes not generated yet
-
-Resuming from quote extraction (3 sessions remaining).
-Estimated cost: ~$0.45
+Resuming: 7/10 sessions have quotes, 3 remaining.
+ ✓ Ingested 10 sessions                    (cached)
+ ...
 ```
 
 ---
@@ -924,9 +935,10 @@ The key insight: **each sub-step is a single PR-sized change**. None of them req
 | ~~**0c** Per-project SQLite DB~~ | ✓ Done | — | — |
 | ~~**1a** Manifest model~~ | ✓ Done | — | — |
 | ~~**1b** Write manifest after stages~~ | ✓ Done | 1a | — |
-| **1c** Skip completed stages on resume | Medium-large (100 lines) | 1b | Core feature work |
-| **1d** Per-session tracking | Medium (50 lines) | 1c | Core feature work |
-| **1e** Status report + --resume flag | Small (CLI only) | 1c | Core feature work |
+| ~~**1c** Skip completed stages on resume~~ | ✓ Done | 1b | — |
+| ~~**1d** Per-session tracking~~ | ✓ Done | 1c | — |
+| ~~**1d-ext** Per-session caching (transcription + speaker ID)~~ | ✓ Done | 1d | — |
+| ~~**1e** Status report + pre-run summary~~ | ✓ Done | 1c | — |
 | **2a** Content hashes on outputs | Small (10 lines) | 1b | Core feature work |
 | **2b** Verify hashes on load | Small (20 lines) | 2a, 1c | Core feature work |
 | **2c** Input change detection | Medium (50 lines) | 2a | Core feature work |
@@ -939,16 +951,17 @@ The key insight: **each sub-step is a single PR-sized change**. None of them req
 | **6b** Suggestion engine for re-runs | Medium | 6a, 5a | Core feature work |
 
 **Recommended order**:
-1. Ship 0c (per-project DB — next session, 30 minutes; 0a and 0b already done)
-2. Ship 1a + 1b together (manifest foundation — one session, 2 hours)
-3. Ship 1c (resume from completed stages — one session, 3-4 hours, the biggest single step)
-4. Ship 1d + 1e together (per-session tracking + UI — one session, 2-3 hours)
-5. Ship 2a + 2b + 2d (hashing + status command — one session, 2 hours)
-6. Ship 2c (input change detection — one session, 2 hours)
-7. Ship 3a (reset command — one session, 1-2 hours)
-8. Phases 4-5: design and schedule when Phases 1-3 are stable
-9. Ship 5a-5d (incremental sessions + source change detection — needs Phases 1-3 as foundation)
-10. Ship 5e + 6a-6b (analytical context preservation — depends on AutoCode being used in the wild; need real accept/deny data to make suggestions meaningful)
+1. ~~Ship 0c (per-project DB)~~ ✓ Done
+2. ~~Ship 1a + 1b together (manifest foundation)~~ ✓ Done
+3. ~~Ship 1c (resume from completed stages)~~ ✓ Done
+4. ~~Ship 1d + 1d-ext (per-session tracking for all stages)~~ ✓ Done
+5. ~~Ship 1e (status report + pre-run summary)~~ ✓ Done
+6. Ship 2a + 2b + 2d (hashing + verification — one session, 2 hours)
+7. Ship 2c (input change detection — one session, 2 hours)
+8. Ship 3a (reset command — one session, 1-2 hours)
+9. Phases 4-5: design and schedule when Phases 1-3 are stable
+10. Ship 5a-5d (incremental sessions + source change detection — needs Phases 1-3 as foundation)
+11. Ship 5e + 6a-6b (analytical context preservation — depends on AutoCode being used in the wild; need real accept/deny data to make suggestions meaningful)
 
 After steps 1-4, users have crash recovery. After steps 1-7, users have crash recovery + integrity verification + clean re-runs. That's "I can trust this tool with real work" level.
 

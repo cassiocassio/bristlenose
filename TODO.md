@@ -1,6 +1,6 @@
 # Bristlenose — Where I Left Off
 
-Last updated: 20 Feb 2026 (AutoCode frontend done, threshold review next)
+Last updated: 21 Feb 2026 (Phase 1e status command done, threshold review needs real-data QA)
 
 ## Next session reminder
 
@@ -8,7 +8,8 @@ Last updated: 20 Feb 2026 (AutoCode frontend done, threshold review next)
 - [x] **Phase 1 codebook import** — picker → preview → import as React island. Per-framework sections with Option D header (title/author/border-bottom), "Remove from Codebook" with confirm dialog + impact stats. Backend: `DELETE /codebook/remove-framework/{framework_id}` + `/impact` endpoints. 10 Python tests, 7 Vitest tests. Style audit mockup at `docs/mockups/codebook-section-headers.html`
 - [x] **AutoCode backend** — engine, 7 API endpoints, Norman prompts (28 sub-tags), plato template, 96 tests. Garrett + Norman fully specified with discrimination prompts. Live LLM eval harness (golden dataset, ≥80% accuracy threshold)
 - [x] **AutoCode frontend** — ✦ button, progress toast, report modal (triage table), proposed badges on quotes (pulsating, accept/deny with colour), tag colour pipeline (TagResponse, ProposedTagBrief, ProposedTagOut all carry colour_set + colour_index), shared `utils/colours.ts`. Plan: `/Users/cassio/.claude/plans/piped-gathering-sundae.md`. **Parked**: framework acronym prefixes (`JJG`, `DN` etc) — CSS exists, rendering removed until visual pattern finalised
-- [ ] **AutoCode threshold review dialog** — confidence histogram with dual threshold slider, three zones (accept/tentative/exclude), per-row override, Apply commits bulk actions. Replaces flat triage table. Design: `docs/design-autocode-threshold-review.md`. Prompted by Plato stress test (280 quotes, 26 tags) — weak matches at 0.10 erode trust
+- [x] **AutoCode threshold review dialog** — confidence histogram with dual threshold slider, three zones (accept/tentative/exclude), per-row override, Apply commits bulk actions. Replaces flat triage table. Design: `docs/design-autocode-threshold-review.md`. Prompted by Plato stress test (280 quotes, 26 tags) — weak matches at 0.10 erode trust
+- [ ] **QA: threshold review dialog on real data** — run AutoCode against real interview projects and evaluate how well the confidence histogram + dual slider helps researchers eliminate false positives. Does the distribution shape make thresholds obvious? Are the zone boundaries intuitive? Does the tentative zone surface the right edge cases? Qualitative assessment, not automated
 
 ---
 
@@ -120,6 +121,9 @@ Multi-column quote grid using CSS `auto-fill`. Card max-width `23rem` (368px) ke
 | Moderator Phase 2: cross-session linking | #25 | medium |
 | Speaker diarisation improvements | #26 | medium |
 | Batch processing dashboard | #27 | medium |
+| Quote sequences: ordinal-based detection for non-timecoded transcripts | — | medium |
+| Quote sequences: "verse numbering" for plain-text transcripts (Plato-style projects) | — | medium |
+| Quote sequences: per-project threshold configurability | — | small |
 
 Session management design doc: `docs/design-session-management.md`
 

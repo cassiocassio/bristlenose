@@ -16,6 +16,7 @@ from bristlenose.config import load_settings
 # Known commands — used by _maybe_inject_run() to detect bare directory arguments
 _COMMANDS = {
     "run", "transcribe", "analyze", "analyse", "render", "doctor", "help", "configure", "serve",
+    "status",
 }
 
 
@@ -704,7 +705,15 @@ def run(
                 f"Use [bold]--clean[/bold] to delete it and re-run."
             )
             raise typer.Exit(1)
-        console.print("[dim]Resuming from previous run...[/dim]")
+
+        # Print a one-line resume summary from the manifest (Phase 1e)
+        from bristlenose.status import format_resume_summary, get_project_status
+
+        _status = get_project_status(output_dir)
+        if _status is not None:
+            console.print(f"[dim]{format_resume_summary(_status)}[/dim]")
+        else:
+            console.print("[dim]Resuming from previous run...[/dim]")
 
     if redact_pii and retain_pii:
         console.print("[red]Cannot use both --redact-pii and --retain-pii.[/red]")
@@ -1148,6 +1157,133 @@ def serve(
             port=port,
             log_level="info" if verbose else "warning",
         )
+
+
+# ---------------------------------------------------------------------------
+# Status command
+# ---------------------------------------------------------------------------
+
+
+@app.command()
+def status(
+    project_dir: Annotated[
+        Path,
+        typer.Argument(help="Input directory (or output directory) from a previous run."),
+    ],
+    verbose: Annotated[
+        bool,
+        typer.Option("-v", "--verbose", help="Show per-session detail."),
+    ] = False,
+) -> None:
+    """Show pipeline status for a project (read-only, no LLM calls)."""
+    from bristlenose.status import get_project_status
+
+    # Resolve output directory — accept either input dir or output dir
+    output_dir = _resolve_output_dir(project_dir)
+    if output_dir is None:
+        console.print(
+            f"No pipeline data found in [bold]{project_dir}[/bold].\n"
+            f"Run [bold]bristlenose run {project_dir}[/bold] to start."
+        )
+        raise typer.Exit(1)
+
+    project_status = get_project_status(output_dir)
+    if project_status is None:
+        console.print(
+            f"No pipeline manifest in [bold]{output_dir}[/bold].\n"
+            f"Run [bold]bristlenose run {project_dir}[/bold] to start."
+        )
+        raise typer.Exit(1)
+
+    _print_project_status(project_status, output_dir=output_dir, verbose=verbose)
+
+
+def _resolve_output_dir(project_dir: Path) -> Path | None:
+    """Find the output directory from an input dir or output dir path.
+
+    Returns the output directory (the one containing ``.bristlenose/``),
+    or None if no pipeline data is found.
+    """
+    # Direct: project_dir is the output dir
+    if (project_dir / ".bristlenose").is_dir():
+        return project_dir
+
+    # Standard layout: input_dir/bristlenose-output/
+    nested = project_dir / "bristlenose-output"
+    if (nested / ".bristlenose").is_dir():
+        return nested
+
+    # Legacy layout: output/ directory
+    legacy = project_dir / "output"
+    if (legacy / ".bristlenose").is_dir():
+        return legacy
+
+    return None
+
+
+def _print_project_status(
+    project_status: ProjectStatus,  # noqa: F821 — lazy import
+    *,
+    output_dir: Path | None = None,
+    verbose: bool = False,
+) -> None:
+    """Print formatted project status to the console."""
+    from datetime import datetime
+
+    from bristlenose.manifest import StageStatus
+
+    # Header
+    console.print(f"\n  [bold]{project_status.project_name}[/bold]")
+    console.print(f"  [dim]Pipeline v{project_status.pipeline_version}[/dim]")
+
+    # Format last run timestamp
+    try:
+        dt = datetime.fromisoformat(project_status.last_run)
+        last_run_str = dt.strftime("%-d %b %Y %H:%M")
+    except (ValueError, TypeError):
+        last_run_str = project_status.last_run
+    console.print(f"  [dim]Last run: {last_run_str}[/dim]\n")
+
+    # Stages
+    for info in project_status.stages:
+        if info.status == StageStatus.COMPLETE:
+            icon = "[green]✓[/green]"
+        elif info.status in (StageStatus.PARTIAL, StageStatus.RUNNING):
+            icon = "[yellow]⚠[/yellow]"
+        else:
+            icon = "[dim]✗[/dim]"
+
+        detail = f"  [dim]{info.detail}[/dim]" if info.detail else ""
+        name_padded = info.name.ljust(20)
+        console.print(f"  {icon} {name_padded}{detail}")
+
+        if not info.file_exists:
+            console.print(f"    [dim yellow]{info.file_missing_warning}[/dim yellow]")
+
+        # Per-session detail in verbose mode
+        if verbose and output_dir and info.session_total and info.status != StageStatus.PENDING:
+            from bristlenose.manifest import load_manifest
+
+            manifest = load_manifest(output_dir)
+            if manifest:
+                record = manifest.stages.get(info.stage_key)
+                if record and record.sessions:
+                    for sid, sr in sorted(record.sessions.items()):
+                        s_icon = (
+                            "[green]✓[/green]"
+                            if sr.status == StageStatus.COMPLETE
+                            else "[dim]✗[/dim]"
+                        )
+                        provider_str = f"  [dim]({sr.model})[/dim]" if sr.model else ""
+                        console.print(f"      {s_icon} {sid}{provider_str}")
+
+    # Cost
+    if project_status.total_cost_usd > 0:
+        console.print(
+            f"\n  [dim]Cost so far: ${project_status.total_cost_usd:.2f}[/dim]"
+        )
+
+    console.print()
 
 
 # ---------------------------------------------------------------------------

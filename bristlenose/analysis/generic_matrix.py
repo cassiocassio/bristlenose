@@ -25,13 +25,15 @@ class QuoteContribution:
     """One quote's contribution to a single cell of a matrix.
 
     The caller creates one instance per (row, column) combination the quote
-    participates in.
+    participates in.  ``weight`` defaults to 1.0 for confirmed tags; pending
+    proposed tags use the LLM confidence score (0.0–1.0).
     """
 
     row_label: str
     col_label: str
     participant_id: str
     intensity: int
+    weight: float = 1.0
 
 
 def build_matrix_from_contributions(
@@ -60,6 +62,7 @@ def build_matrix_from_contributions(
         if cell is None:
             continue
         cell.count += 1
+        cell.weighted_count += c.weight
         cell.participants[c.participant_id] = (
             cell.participants.get(c.participant_id, 0) + 1
         )

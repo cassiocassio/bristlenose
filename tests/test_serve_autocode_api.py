@@ -311,6 +311,113 @@ class TestGetAutoCodeStatus:
 
 
 # ---------------------------------------------------------------------------
+# POST /autocode/{framework_id}/cancel — cancel running job
+# ---------------------------------------------------------------------------
+
+
+class TestCancelAutoCodeJob:
+    def test_cancel_running_job(
+        self, client_with_garrett: TestClient
+    ) -> None:
+        """Cancelling a running job sets status to cancelled."""
+        db = client_with_garrett.app.state.db_factory()  # type: ignore[union-attr]
+        try:
+            db.add(AutoCodeJob(
+                project_id=1, framework_id="garrett", status="running"
+            ))
+            db.commit()
+        finally:
+            db.close()
+
+        resp = client_with_garrett.post(
+            "/api/projects/1/autocode/garrett/cancel"
+        )
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["status"] == "cancelled"
+        assert data["completed_at"] is not None
+
+    def test_cancel_pending_job(
+        self, client_with_garrett: TestClient
+    ) -> None:
+        """Cancelling a pending job (not yet started) works."""
+        db = client_with_garrett.app.state.db_factory()  # type: ignore[union-attr]
+        try:
+            db.add(AutoCodeJob(
+                project_id=1, framework_id="garrett", status="pending"
+            ))
+            db.commit()
+        finally:
+            db.close()
+
+        resp = client_with_garrett.post(
+            "/api/projects/1/autocode/garrett/cancel"
+        )
+        assert resp.status_code == 200
+        assert resp.json()["status"] == "cancelled"
+
+    def test_cancel_completed_job_returns_409(
+        self, client_with_completed_job: TestClient
+    ) -> None:
+        """Cannot cancel a completed job."""
+        resp = client_with_completed_job.post(
+            "/api/projects/1/autocode/garrett/cancel"
+        )
+        assert resp.status_code == 409
+        assert "cannot be cancelled" in resp.json()["detail"].lower()
+
+    def test_cancel_failed_job_returns_409(
+        self, client_with_garrett: TestClient
+    ) -> None:
+        """Cannot cancel a failed job."""
+        db = client_with_garrett.app.state.db_factory()  # type: ignore[union-attr]
+        try:
+            db.add(AutoCodeJob(
+                project_id=1, framework_id="garrett", status="failed",
+                error_message="some error"
+            ))
+            db.commit()
+        finally:
+            db.close()
+
+        resp = client_with_garrett.post(
+            "/api/projects/1/autocode/garrett/cancel"
+        )
+        assert resp.status_code == 409
+
+    def test_cancel_already_cancelled_returns_409(
+        self, client_with_garrett: TestClient
+    ) -> None:
+        """Cannot cancel an already-cancelled job."""
+        db = client_with_garrett.app.state.db_factory()  # type: ignore[union-attr]
+        try:
+            db.add(AutoCodeJob(
+                project_id=1, framework_id="garrett", status="cancelled"
+            ))
+            db.commit()
+        finally:
+            db.close()
+
+        resp = client_with_garrett.post(
+            "/api/projects/1/autocode/garrett/cancel"
+        )
+        assert resp.status_code == 409
+
+    def test_cancel_404_no_job(
+        self, client_with_garrett: TestClient
+    ) -> None:
+        """404 when no job exists."""
+        resp = client_with_garrett.post(
+            "/api/projects/1/autocode/garrett/cancel"
+        )
+        assert resp.status_code == 404
+
+    def test_cancel_404_wrong_project(self, client: TestClient) -> None:
+        resp = client.post("/api/projects/999/autocode/garrett/cancel")
+        assert resp.status_code == 404
+
+
+# ---------------------------------------------------------------------------
 # GET /autocode/{framework_id}/proposals — list proposals
 # ---------------------------------------------------------------------------
 

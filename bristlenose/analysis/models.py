@@ -16,6 +16,7 @@ class MatrixCell:
     count: int = 0
     participants: dict[str, int] = field(default_factory=dict)  # pid -> count
     intensities: list[int] = field(default_factory=list)
+    weighted_count: float = 0.0  # confidence-weighted count (tag analysis only)
 
 
 @dataclass

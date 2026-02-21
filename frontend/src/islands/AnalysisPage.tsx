@@ -2,8 +2,11 @@
  * AnalysisPage — React island for the Analysis tab.
  *
  * Shows signal concentration cards and heatmaps for both:
- * - **Sentiment signals** (baked into HTML as `BRISTLENOSE_ANALYSIS` global)
+ * - **Sentiment signals** (baked into HTML as `window.BRISTLENOSE_ANALYSIS`)
  * - **Tag signals** (fetched per-codebook from `/api/projects/{id}/analysis/codebooks`)
+ *
+ * Both views render simultaneously — sentiment cards first (typically stronger
+ * signals), then tag cards, then heatmaps for each.
  *
  * Reuses existing CSS from analysis.css — emits the same class names as
  * the vanilla JS analysis.js so all styling carries over.
@@ -16,12 +19,10 @@ import { getGroupBg, getTagBg } from "../utils/colours";
 import { formatTimecode } from "../utils/format";
 import type {
   AnalysisMatrix,
-  CodebookAnalysis,
   CodebookAnalysisListResponse,
   SentimentAnalysisData,
   SentimentSignal,
   SourceBreakdown,
-  TagSignal,
   TagSignalQuote,
 } from "../utils/types";
 
@@ -35,9 +36,12 @@ declare global {
   }
 }
 
-// ── Types ──────────────────────────────────────────────────────────────
+// ── Constants ─────────────────────────────────────────────────────────
 
-type ViewMode = "sentiment" | "tags";
+/** Maximum signal cards shown per type (sentiment / tags). */
+const MAX_SIGNALS = 6;
+
+// ── Types ──────────────────────────────────────────────────────────────
 
 /** Unified signal shape for rendering — adapts both sentiment and tag signals. */
 interface UnifiedSignal {
@@ -66,6 +70,7 @@ interface UnifiedQuote {
   tagNames: string[];
   colourSet: string;
   tagColourIndices: Record<string, number>;
+  segmentIndex: number;
 }
 
 function adaptSentimentSignals(data: SentimentAnalysisData): UnifiedSignal[] {
@@ -92,6 +97,7 @@ function adaptSentimentSignals(data: SentimentAnalysisData): UnifiedSignal[] {
       tagNames: [],
       colourSet: "",
       tagColourIndices: {},
+      segmentIndex: q.segmentIndex ?? -1,
     })),
   }));
 }
@@ -123,6 +129,7 @@ function adaptCodebookSignals(data: CodebookAnalysisListResponse): UnifiedSignal
           tagNames: q.tag_names || [],
           colourSet: s.colour_set || cb.colour_set,
           tagColourIndices: cb.tag_colour_indices || {},
+          segmentIndex: q.segment_index ?? -1,
         })),
       });
     }
@@ -158,8 +165,11 @@ function heatCellStyle(
   const r = adjustedResidual(count, rowTotal, colTotal, grandTotal);
   const absR = Math.abs(r);
   const maxR = 4;
-  const heat = Math.min(1, absR / maxR);
+  let heat = Math.min(1, absR / maxR);
   if (heat < 0.05) return {};
+
+  // Fade single-occurrence cells to ~30% heat — background noise, not clickable
+  if (count === 1) heat *= 0.3;
 
   const hue = r > 0 ? 150 : 20;
   const chroma = 0.12 * heat;
@@ -474,7 +484,9 @@ function Heatmap({
               )}
             </th>
           ))}
-          <th>Total</th>
+          <th className={isSentiment ? undefined : "heatmap-col-header"}>
+            {isSentiment ? "Total" : <span className="heatmap-col-label">Total</span>}
+          </th>
         </tr>
       </thead>
       <tbody>
@@ -561,65 +573,6 @@ function adaptSentimentMatrix(m: {
   };
 }
 
-// ── View Toggle ────────────────────────────────────────────────────────
-
-function ViewToggle({
-  mode,
-  onToggle,
-  hasSentiment,
-  hasTags,
-}: {
-  mode: ViewMode;
-  onToggle: (m: ViewMode) => void;
-  hasSentiment: boolean;
-  hasTags: boolean;
-}) {
-  if (!hasSentiment || !hasTags) return null;
-  return (
-    <div
-      style={{
-        display: "flex",
-        gap: "var(--bn-space-sm)",
-        marginBottom: "var(--bn-space-lg)",
-      }}
-      data-testid="bn-analysis-toggle"
-    >
-      <button
-        className={`bn-radio-label${mode === "sentiment" ? " active" : ""}`}
-        onClick={() => onToggle("sentiment")}
-        style={{
-          background: mode === "sentiment" ? "var(--bn-colour-accent)" : "var(--bn-colour-bg)",
-          color: mode === "sentiment" ? "#fff" : "var(--bn-colour-text)",
-          border: "1px solid var(--bn-colour-border)",
-          borderRadius: "var(--bn-radius-sm)",
-          padding: "0.35rem 0.8rem",
-          fontSize: "0.82rem",
-          fontWeight: 500,
-          cursor: "pointer",
-        }}
-      >
-        Sentiment signals
-      </button>
-      <button
-        className={`bn-radio-label${mode === "tags" ? " active" : ""}`}
-        onClick={() => onToggle("tags")}
-        style={{
-          background: mode === "tags" ? "var(--bn-colour-accent)" : "var(--bn-colour-bg)",
-          color: mode === "tags" ? "#fff" : "var(--bn-colour-text)",
-          border: "1px solid var(--bn-colour-border)",
-          borderRadius: "var(--bn-radius-sm)",
-          padding: "0.35rem 0.8rem",
-          fontSize: "0.82rem",
-          fontWeight: 500,
-          cursor: "pointer",
-        }}
-      >
-        Tag signals
-      </button>
-    </div>
-  );
-}
-
 // ── Main Component ─────────────────────────────────────────────────────
 
 interface AnalysisPageProps {
@@ -630,7 +583,6 @@ export function AnalysisPage({ projectId }: AnalysisPageProps) {
   const [cbData, setCbData] = useState<CodebookAnalysisListResponse | null>(null);
   const [tagError, setTagError] = useState<string | null>(null);
   const [tagLoaded, setTagLoaded] = useState(false);
-  const [mode, setMode] = useState<ViewMode>("tags");
 
   // Theme detection for heatmap colouring
   const [isDark, setIsDark] = useState(
@@ -661,21 +613,18 @@ export function AnalysisPage({ projectId }: AnalysisPageProps) {
   const hasSentiment = sentimentData !== null && sentimentData.signals.length > 0;
   const hasTags = cbData !== null && cbData.codebooks.some((cb) => cb.signals.length > 0);
 
-  // Default to whichever view has data
-  useEffect(() => {
-    if (hasTags && !hasSentiment) setMode("tags");
-    else if (hasSentiment && !hasTags) setMode("sentiment");
-    else if (hasTags) setMode("tags"); // prefer tags when both exist
-  }, [hasSentiment, hasTags]);
+  // Build separate signal arrays for each type, capped to strongest N
+  const sentimentSignals = useMemo<UnifiedSignal[]>(() => {
+    if (!sentimentData) return [];
+    return adaptSentimentSignals(sentimentData).slice(0, MAX_SIGNALS);
+  }, [sentimentData]);
 
-  // Build unified signal cards for current mode
-  const signals = useMemo<UnifiedSignal[]>(() => {
-    if (mode === "sentiment" && sentimentData) return adaptSentimentSignals(sentimentData);
-    if (mode === "tags" && cbData) return adaptCodebookSignals(cbData);
-    return [];
-  }, [mode, sentimentData, cbData]);
+  const tagSignals = useMemo<UnifiedSignal[]>(() => {
+    if (!cbData) return [];
+    return adaptCodebookSignals(cbData).slice(0, MAX_SIGNALS);
+  }, [cbData]);
 
-  // Sentiment-mode data (flat, single matrix)
+  // Sentiment data (flat, single matrix)
   const sentimentColumns = useMemo<string[]>(
     () => (sentimentData ? sentimentData.sentiments : []),
     [sentimentData],
@@ -693,7 +642,7 @@ export function AnalysisPage({ projectId }: AnalysisPageProps) {
     [sentimentData],
   );
 
-  // Tag-mode: collect all participant IDs across codebooks for signal cards
+  // Tag data: collect all participant IDs across codebooks
   const tagAllPids = useMemo<string[]>(() => {
     if (!cbData) return [];
     const pids = new Set<string>();
@@ -709,11 +658,9 @@ export function AnalysisPage({ projectId }: AnalysisPageProps) {
     );
   }, [cbData]);
 
-  const allPids = mode === "sentiment" ? sentimentPids : tagAllPids;
-
   // Aggregate source breakdown across codebooks
   const sourceBreakdown = useMemo<SourceBreakdown | null>(() => {
-    if (mode !== "tags" || !cbData) return null;
+    if (!cbData) return null;
     const total = { accepted: 0, pending: 0, total: 0 };
     for (const cb of cbData.codebooks) {
       total.accepted += cb.source_breakdown.accepted;
@@ -721,11 +668,12 @@ export function AnalysisPage({ projectId }: AnalysisPageProps) {
       total.total += cb.source_breakdown.total;
     }
     return total.total > 0 ? total : null;
-  }, [mode, cbData]);
+  }, [cbData]);
 
+  // Combined signal keys from both types (for heatmap cell → card scrolling)
   const signalKeys = useMemo(
-    () => new Set(signals.map((s) => s.key)),
-    [signals],
+    () => new Set([...sentimentSignals, ...tagSignals].map((s) => s.key)),
+    [sentimentSignals, tagSignals],
   );
 
   // Card refs for scroll-to from heatmap cells
@@ -770,58 +718,71 @@ export function AnalysisPage({ projectId }: AnalysisPageProps) {
     );
   }
 
-  const isSentiment = mode === "sentiment";
-  const totalParticipants = isSentiment
-    ? (sentimentData?.totalParticipants ?? 0)
-    : (cbData?.total_participants ?? 0);
+  const sentimentTotalP = sentimentData?.totalParticipants ?? 0;
+  const tagTotalP = cbData?.total_participants ?? 0;
 
   return (
     <div data-testid="bn-analysis-page">
-      <ViewToggle
-        mode={mode}
-        onToggle={setMode}
-        hasSentiment={hasSentiment}
-        hasTags={hasTags}
-      />
-
-      {sourceBreakdown && <SourceBanner breakdown={sourceBreakdown} />}
-
-      <h2 className="section-heading">Key findings</h2>
-      <p className="section-desc">
-        Patterns ranked by signal strength — where {isSentiment ? "sentiments" : "codebook tags"} concentrate
-        more than expected given the study average.
-      </p>
-
-      {signals.length === 0 ? (
-        <p className="description" style={{ opacity: 0.6 }}>
-          No notable patterns detected.
-        </p>
-      ) : (
-        <div className="signal-cards" id="signal-cards">
-          {signals.map((s) => (
-            <SignalCard
-              key={s.key}
-              signal={s}
-              allPids={allPids}
-              isSentiment={isSentiment}
-              cardRef={(el: HTMLDivElement | null) => {
-                if (el) cardRefs.current.set(s.key, el);
-                else cardRefs.current.delete(s.key);
-              }}
-            />
-          ))}
-        </div>
+      {/* ── Sentiment signal cards ─────────────────────────────── */}
+      {hasSentiment && sentimentSignals.length > 0 && (
+        <>
+          <h2 className="section-heading">Sentiment signals</h2>
+          <p className="section-desc">
+            Patterns ranked by signal strength — where sentiments concentrate
+            more than expected given the study average.
+          </p>
+          <div className="signal-cards" id="signal-cards-sentiment">
+            {sentimentSignals.map((s) => (
+              <SignalCard
+                key={s.key}
+                signal={s}
+                allPids={sentimentPids}
+                isSentiment={true}
+                cardRef={(el: HTMLDivElement | null) => {
+                  if (el) cardRefs.current.set(s.key, el);
+                  else cardRefs.current.delete(s.key);
+                }}
+              />
+            ))}
+          </div>
+        </>
       )}
 
-      {/* Sentiment mode: single section/theme heatmap */}
-      {isSentiment && sentimentSectionMatrix && (
+      {/* ── Tag signal cards ───────────────────────────────────── */}
+      {hasTags && tagSignals.length > 0 && (
+        <>
+          {sourceBreakdown && <SourceBanner breakdown={sourceBreakdown} />}
+          <h2 className="section-heading">Tag signals</h2>
+          <p className="section-desc">
+            Patterns ranked by signal strength — where codebook tags concentrate
+            more than expected given the study average.
+          </p>
+          <div className="signal-cards" id="signal-cards-tags">
+            {tagSignals.map((s) => (
+              <SignalCard
+                key={s.key}
+                signal={s}
+                allPids={tagAllPids}
+                isSentiment={false}
+                cardRef={(el: HTMLDivElement | null) => {
+                  if (el) cardRefs.current.set(s.key, el);
+                  else cardRefs.current.delete(s.key);
+                }}
+              />
+            ))}
+          </div>
+        </>
+      )}
+
+      {/* ── Sentiment heatmaps ─────────────────────────────────── */}
+      {hasSentiment && sentimentSectionMatrix && (
         <>
           <h2 className="section-heading" id="section-x-sentiment">
             Section × Sentiment
           </h2>
           <p className="section-desc">
             Quote counts per report section and sentiment.
-            {totalParticipants > 0 && ` ${totalParticipants} participants total.`}
+            {sentimentTotalP > 0 && ` ${sentimentTotalP} participants total.`}
           </p>
           <Heatmap
             matrix={sentimentSectionMatrix}
@@ -834,7 +795,7 @@ export function AnalysisPage({ projectId }: AnalysisPageProps) {
           />
         </>
       )}
-      {isSentiment && sentimentThemeMatrix && (
+      {hasSentiment && sentimentThemeMatrix && (
         <>
           <h2 className="section-heading">Theme × Sentiment</h2>
           <p className="section-desc">The same view grouped by cross-cutting themes.</p>
@@ -850,15 +811,15 @@ export function AnalysisPage({ projectId }: AnalysisPageProps) {
         </>
       )}
 
-      {/* Tag mode: separate heatmaps per codebook */}
-      {!isSentiment && cbData && cbData.codebooks.map((cb) => (
+      {/* ── Per-codebook tag heatmaps ──────────────────────────── */}
+      {hasTags && cbData && cbData.codebooks.map((cb) => (
         <div key={cb.codebook_id} className="analysis-codebook-section">
           <h3 className="analysis-codebook-heading">{cb.codebook_name}</h3>
           {cb.section_matrix.grand_total > 0 && (
             <>
               <p className="analysis-heatmap-label">
                 Section × {cb.codebook_name}
-                {totalParticipants > 0 && ` · ${totalParticipants} participants`}
+                {tagTotalP > 0 && ` · ${tagTotalP} participants`}
               </p>
               <Heatmap
                 matrix={cb.section_matrix}

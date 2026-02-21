@@ -32,6 +32,7 @@ class QuoteRecord:
     start_seconds: float
     intensity: int
     tag_names: list[str] | None = None  # specific tags from the group (passthrough)
+    segment_index: int = -1  # 0-based ordinal in the session transcript (-1 = unknown)
 
 
 def detect_signals_generic(
@@ -111,6 +112,7 @@ def _compute_signals(
                     start_seconds=q.start_seconds,
                     intensity=q.intensity,
                     tag_names=list(q.tag_names) if q.tag_names else [],
+                    segment_index=q.segment_index,
                 )
                 for q in raw_quotes_sorted
             ]

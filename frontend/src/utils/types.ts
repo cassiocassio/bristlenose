@@ -107,6 +107,7 @@ export interface QuoteResponse {
   tags: TagResponse[];
   deleted_badges: string[];
   proposed_tags: ProposedTagBrief[];
+  segment_index: number;
 }
 
 export interface SectionResponse {
@@ -214,6 +215,7 @@ export interface TranscriptSegmentResponse {
   is_moderator: boolean;
   is_quoted: boolean;
   quote_ids: string[];
+  segment_index: number;
 }
 
 export interface QuoteAnnotationResponse {
@@ -294,6 +296,7 @@ export interface TagSignalQuote {
   start_seconds: number;
   intensity: number;
   tag_names: string[];
+  segment_index: number;
 }
 
 export interface TagSignal {
@@ -376,6 +379,7 @@ export interface SentimentSignalQuote {
   sessionId: string;
   startSeconds: number;
   intensity: number;
+  segmentIndex: number;
 }
 
 export interface SentimentSignal {

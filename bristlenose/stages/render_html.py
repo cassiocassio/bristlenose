@@ -623,7 +623,7 @@ def render_html(
 
     # Analysis data for inline rendering in the Analysis tab.
     if analysis is not None:
-        _w(f"var BRISTLENOSE_ANALYSIS = {_serialize_analysis(analysis)};")
+        _w(f"window.BRISTLENOSE_ANALYSIS = {_serialize_analysis(analysis)};")
         _w(f"var BRISTLENOSE_REPORT_FILENAME = '{paths.html_report.name}';")
 
     # Player popup URL.
@@ -1876,6 +1876,7 @@ def _serialize_analysis(analysis: object) -> str:
                         "sessionId": q.session_id,
                         "startSeconds": q.start_seconds,
                         "intensity": q.intensity,
+                        "segmentIndex": q.segment_index,
                     }
                     for q in s.quotes
                 ],

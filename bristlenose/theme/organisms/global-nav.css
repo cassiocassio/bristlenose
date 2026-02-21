@@ -22,6 +22,7 @@
     font-weight: 500;
     color: var(--bn-colour-muted);
     cursor: pointer;
+    text-decoration: none;
     transition: color var(--bn-transition-fast), border-color var(--bn-transition-fast);
     white-space: nowrap;
 }

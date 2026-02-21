@@ -293,12 +293,14 @@ export interface TagSignalQuote {
   session_id: string;
   start_seconds: number;
   intensity: number;
+  tag_names: string[];
 }
 
 export interface TagSignal {
   location: string;
   source_type: "section" | "theme";
   group_name: string;
+  colour_set: string;
   count: number;
   participants: string[];
   n_eff: number;
@@ -338,6 +340,29 @@ export interface TagAnalysisResponse {
   columns: string[];
   participant_ids: string[];
   source_breakdown: SourceBreakdown;
+  trade_off_note: string;
+}
+
+// ---------------------------------------------------------------------------
+// Per-codebook analysis API
+// ---------------------------------------------------------------------------
+
+export interface CodebookAnalysis {
+  codebook_id: string;
+  codebook_name: string;
+  colour_set: string;
+  signals: TagSignal[];
+  section_matrix: AnalysisMatrix;
+  theme_matrix: AnalysisMatrix;
+  columns: string[];
+  participant_ids: string[];
+  source_breakdown: SourceBreakdown;
+  tag_colour_indices: Record<string, number>;
+}
+
+export interface CodebookAnalysisListResponse {
+  codebooks: CodebookAnalysis[];
+  total_participants: number;
   trade_off_note: string;
 }
 

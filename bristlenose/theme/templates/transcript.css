@@ -24,28 +24,35 @@
 
 .transcript-body {
     margin-top: var(--bn-space-lg);
+    display: grid;
+    /* Timecode: ~4.5rem for [HH:MM:SS] in monospace.
+       Badge: right-aligned in a 2.2rem slot (fits p1–p99, m1–m99).
+       Body: remaining space for text. */
+    grid-template-columns: 4.5rem 2.2rem 1fr;
+    gap: 0 0.5rem;
 }
 
 .transcript-segment {
-    display: flex;
-    gap: 0.5rem;
+    display: grid;
+    grid-template-columns: subgrid;
+    grid-column: 1 / -1;
     align-items: baseline;
     margin: 0.5rem 0;
     line-height: 1.7;
 }
 
 .transcript-segment .timecode {
-    flex-shrink: 0;
+    white-space: nowrap;
+    justify-self: start;
 }
 
 .transcript-segment .segment-body {
-    flex: 1;
     min-width: 0;
 }
 
 .transcript-segment .segment-speaker {
-    font-weight: 600;
-    font-size: 0.85rem;
+    white-space: nowrap;
+    justify-self: end;
 }
 
 /* Moderator segments are visually receded so participant answers stand out */
@@ -53,8 +60,8 @@
     color: var(--bn-colour-muted);
 }
 
-.segment-moderator .segment-speaker {
-    color: var(--bn-colour-muted);
+.segment-moderator .segment-speaker .badge {
+    opacity: 0.55;
 }
 
 /* Quoted segments — non-quoted participant text knocked back */

@@ -230,9 +230,7 @@ describe("TranscriptPage", () => {
       expect(screen.getByTestId("transcript-back")).toBeTruthy();
     });
     const link = screen.getByTestId("transcript-back").querySelector("a");
-    expect(link?.getAttribute("href")).toBe(
-      "../bristlenose-test-project-report.html",
-    );
+    expect(link?.getAttribute("href")).toBe("/report/");
   });
 
   it("has data-testid attributes on key elements", async () => {

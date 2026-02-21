@@ -1,0 +1,135 @@
+/* Atom: activity-chip — non-dismissable floating progress chips for background jobs */
+
+.activity-chip-stack {
+    position: fixed;
+    bottom: 48px;
+    right: 24px;
+    z-index: 200;
+    display: flex;
+    flex-direction: column-reverse;
+    gap: 6px;
+    font-family: var(--bn-font-body);
+    pointer-events: none;
+}
+
+.activity-chip {
+    background: var(--bn-colour-text);
+    color: var(--bn-colour-bg);
+    padding: 0.6rem 1rem;
+    border-radius: var(--bn-radius-lg);
+    font-size: 0.82rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+    pointer-events: auto;
+    animation: chip-slide-in 0.2s ease-out;
+}
+
+@keyframes chip-slide-in {
+    from { opacity: 0; transform: translateY(0.5rem); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+.chip-spinner {
+    width: 14px;
+    height: 14px;
+    border: 2px solid rgba(255, 255, 255, 0.2);
+    border-top-color: #60a5fa;
+    border-radius: 50%;
+    animation: chip-spin 0.8s linear infinite;
+}
+
+@keyframes chip-spin { to { transform: rotate(360deg); } }
+
+.chip-check {
+    color: var(--bn-colour-success);
+    font-weight: 700;
+}
+
+.chip-error {
+    color: var(--bn-colour-danger);
+    font-weight: 700;
+}
+
+.chip-link {
+    color: #60a5fa;
+    text-decoration: none;
+    font-weight: 500;
+    margin-left: 0.3rem;
+    cursor: pointer;
+}
+
+.chip-link:hover { text-decoration: underline; }
+
+.chip-close {
+    background: none;
+    border: none;
+    color: rgba(255, 255, 255, 0.4);
+    cursor: pointer;
+    font-size: 0.9rem;
+    padding: 0 0.2rem;
+    margin-left: 0.3rem;
+}
+
+.chip-close:hover { color: rgba(255, 255, 255, 0.8); }
+
+/* Summary chip (collapsed multi-job view) */
+
+.activity-chip-summary {
+    cursor: pointer;
+}
+
+.chip-toggle {
+    background: none;
+    border: none;
+    color: rgba(255, 255, 255, 0.4);
+    cursor: pointer;
+    font-size: 0.7rem;
+    padding: 0 0.2rem;
+    margin-left: auto;
+}
+
+.chip-toggle:hover { color: rgba(255, 255, 255, 0.8); }
+
+/* Collapse button (shown at bottom of expanded stack) */
+
+.activity-chip-collapse {
+    justify-content: center;
+    padding: 0.3rem 1rem;
+    cursor: pointer;
+    border: none;
+}
+
+/* Dark mode — inverted chip (light bg on dark theme) */
+@supports (color: light-dark(#000, #fff)) {
+    [data-theme="dark"] .activity-chip {
+        background: #e5e7eb;
+        color: #111;
+    }
+    [data-theme="dark"] .activity-chip .chip-link { color: #2563eb; }
+    [data-theme="dark"] .activity-chip .chip-close { color: rgba(0, 0, 0, 0.3); }
+    [data-theme="dark"] .activity-chip .chip-close:hover { color: rgba(0, 0, 0, 0.7); }
+    [data-theme="dark"] .activity-chip .chip-toggle { color: rgba(0, 0, 0, 0.3); }
+    [data-theme="dark"] .activity-chip .chip-toggle:hover { color: rgba(0, 0, 0, 0.7); }
+    [data-theme="dark"] .activity-chip .chip-spinner {
+        border-color: rgba(0, 0, 0, 0.15);
+        border-top-color: #2563eb;
+    }
+
+    @media (prefers-color-scheme: dark) {
+        :root:not([data-theme="light"]) .activity-chip {
+            background: #e5e7eb;
+            color: #111;
+        }
+        :root:not([data-theme="light"]) .activity-chip .chip-link { color: #2563eb; }
+        :root:not([data-theme="light"]) .activity-chip .chip-close { color: rgba(0, 0, 0, 0.3); }
+        :root:not([data-theme="light"]) .activity-chip .chip-close:hover { color: rgba(0, 0, 0, 0.7); }
+        :root:not([data-theme="light"]) .activity-chip .chip-toggle { color: rgba(0, 0, 0, 0.3); }
+        :root:not([data-theme="light"]) .activity-chip .chip-toggle:hover { color: rgba(0, 0, 0, 0.7); }
+        :root:not([data-theme="light"]) .activity-chip .chip-spinner {
+            border-color: rgba(0, 0, 0, 0.15);
+            border-top-color: #2563eb;
+        }
+    }
+}

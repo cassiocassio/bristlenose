@@ -187,8 +187,8 @@ def test_transcript_page_speaker_name(tmp_path: Path) -> None:
         people=people,
     )
     html = (tmp_path / "sessions" / "transcript_s1.html").read_text(encoding="utf-8")
-    # Segment labels show speaker code, not resolved name
-    assert "p1:" in html
+    # Segment labels show speaker code as person badge, not resolved name
+    assert '<span class="badge">p1</span>' in html
 
 
 def test_transcript_page_segment_text(tmp_path: Path) -> None:

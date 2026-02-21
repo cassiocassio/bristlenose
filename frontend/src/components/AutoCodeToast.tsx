@@ -26,6 +26,12 @@ function formatDuration(startedAt: string, completedAt: string): string {
   return min > 0 ? `${min}:${String(sec).padStart(2, "0")}` : `${sec}s`;
 }
 
+function formatElapsed(secs: number): string {
+  const min = Math.floor(secs / 60);
+  const sec = secs % 60;
+  return min > 0 ? `${min}:${String(sec).padStart(2, "0")}` : `${sec}s`;
+}
+
 export function AutoCodeToast({
   frameworkId,
   onComplete,
@@ -33,8 +39,10 @@ export function AutoCodeToast({
   onDismiss,
 }: AutoCodeToastProps) {
   const [job, setJob] = useState<AutoCodeJobStatus | null>(null);
+  const [elapsed, setElapsed] = useState(0);
   const completeFired = useRef(false);
   const dismissTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const elapsedTimer = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const poll = useCallback(() => {
     getAutoCodeStatus(frameworkId)
@@ -50,6 +58,19 @@ export function AutoCodeToast({
     const id = setInterval(poll, 2000);
     return () => clearInterval(id);
   }, [poll]);
+
+  // Elapsed timer — ticks every second while running.
+  useEffect(() => {
+    if (job?.status === "running" && job.started_at) {
+      const start = new Date(job.started_at).getTime();
+      const tick = () => setElapsed(Math.round((Date.now() - start) / 1000));
+      tick();
+      elapsedTimer.current = setInterval(tick, 1000);
+      return () => {
+        if (elapsedTimer.current) clearInterval(elapsedTimer.current);
+      };
+    }
+  }, [job?.status, job?.started_at]);
 
   // Fire onComplete once when the job finishes.
   useEffect(() => {
@@ -70,23 +91,40 @@ export function AutoCodeToast({
     }
   }, [job?.status, onDismiss]);
 
+  const pct =
+    job && job.total_quotes > 0
+      ? Math.round((job.processed_quotes / job.total_quotes) * 100)
+      : 0;
+
   const toast = (
     <div className="autocode-toast" data-testid="bn-autocode-toast">
       {(!job || job.status === "pending" || job.status === "running") && (
         <>
           <div className="toast-spinner" />
-          <span>
-            &#x2726; AutoCoding{" "}
-            {job ? `${job.processed_quotes}/${job.total_quotes}` : "…"}{" "}
-            transcripts…
-          </span>
+          <div className="toast-content">
+            <span>
+              &#x2726; AutoCoding{" "}
+              {job ? `${job.processed_quotes}/${job.total_quotes}` : "…"} quotes…
+              {job?.status === "running" && (
+                <span className="toast-elapsed">{formatElapsed(elapsed)}</span>
+              )}
+            </span>
+            {job && job.total_quotes > 0 && (
+              <div className="toast-progress-track" data-testid="bn-autocode-progress">
+                <div
+                  className="toast-progress-fill"
+                  style={{ width: `${pct}%` }}
+                />
+              </div>
+            )}
+          </div>
         </>
       )}
       {job?.status === "completed" && (
         <>
           <span className="toast-check">&#x2713;</span>
           <span>
-            &#x2726; AutoCoded {job.total_quotes} transcripts
+            &#x2726; AutoCoded {job.total_quotes} quotes
             {job.completed_at && job.started_at
               ? ` in ${formatDuration(job.started_at, job.completed_at)}`
               : ""}

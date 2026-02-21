@@ -63,7 +63,7 @@ _THEME_FILES: list[str] = [
     "atoms/span-bar.css",
     "atoms/modal.css",
     "atoms/thumbnail.css",
-    "atoms/autocode-toast.css",
+    "atoms/activity-chip.css",
     "molecules/person-badge.css",
     "molecules/badge-row.css",
     "molecules/bar-group.css",
@@ -762,6 +762,8 @@ class _QuoteAnnotation:
 
 
 # Sparkline bar order: positive → neutral → negative (left to right).
+# NOTE: React version (SessionsTable.tsx) uses negative → positive order.
+# This file is legacy — design updates go to React only. See CLAUDE.md.
 _SPARKLINE_ORDER = [
     "satisfaction", "delight", "confidence",
     "surprise",
@@ -1627,19 +1629,19 @@ def _render_transcript_page(
             )
         else:
             _w(f'<span class="timecode">{_tc_brackets(tc)}</span>')
-        _w('<div class="segment-body">')
         _w(
-            f'<span class="segment-speaker" data-participant="{_esc(code)}">'
-            f"{_esc(code)}:</span>"
+            f'<span class="segment-speaker bn-person-badge" data-participant="{_esc(code)}">'
+            f'<span class="badge">{_esc(code)}</span></span>'
         )
+        _w('<div class="segment-body">')
 
         # Render segment text with inline quote highlights
         seg_text = seg.text
         if is_quoted:
             seg_text = _highlight_quoted_text(seg_text, seg_quotes)
-            _w(f" {seg_text}")  # already HTML-escaped inside _highlight_quoted_text
+            _w(seg_text)  # already HTML-escaped inside _highlight_quoted_text
         else:
-            _w(f" {_esc(seg_text)}")
+            _w(_esc(seg_text))
 
         _w("</div></div>")
     _w("</section>")
@@ -2165,18 +2167,18 @@ def _render_inline_transcript(
             )
         else:
             w(f'<span class="timecode">{_tc_brackets(tc)}</span>')
-        w('<div class="segment-body">')
         w(
-            f'<span class="segment-speaker" data-participant="{_esc(code)}">'
-            f"{_esc(code)}:</span>"
+            f'<span class="segment-speaker bn-person-badge" data-participant="{_esc(code)}">'
+            f'<span class="badge">{_esc(code)}</span></span>'
         )
+        w('<div class="segment-body">')
 
         seg_text = seg.text
         if is_quoted:
             seg_text = _highlight_quoted_text(seg_text, seg_quotes)
-            w(f" {seg_text}")
+            w(seg_text)
         else:
-            w(f" {_esc(seg_text)}")
+            w(_esc(seg_text))
 
         w("</div></div>")
 

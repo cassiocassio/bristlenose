@@ -81,7 +81,7 @@ describe("AutoCodeToast", () => {
 
     await act(async () => {});
 
-    expect(screen.getByText(/AutoCoded 10 transcripts/)).toBeInTheDocument();
+    expect(screen.getByText(/AutoCoded 10 quotes/)).toBeInTheDocument();
     expect(screen.getByTestId("bn-autocode-toast-report")).toBeInTheDocument();
     expect(onComplete).toHaveBeenCalledOnce();
   });
@@ -172,6 +172,53 @@ describe("AutoCodeToast", () => {
       vi.advanceTimersByTime(2000);
     });
     expect(mockGetStatus).toHaveBeenCalledTimes(3);
+  });
+
+  it("renders progress bar with correct width when running", async () => {
+    mockGetStatus.mockResolvedValue(
+      makeStatus({ processed_quotes: 5, total_quotes: 10 }),
+    );
+
+    render(
+      <AutoCodeToast
+        frameworkId="garrett"
+        onComplete={vi.fn()}
+        onOpenReport={vi.fn()}
+        onDismiss={vi.fn()}
+      />,
+    );
+
+    await act(async () => {});
+
+    const progress = screen.getByTestId("bn-autocode-progress");
+    expect(progress).toBeInTheDocument();
+    const fill = progress.querySelector(".toast-progress-fill") as HTMLElement;
+    expect(fill).toBeTruthy();
+    expect(fill.style.width).toBe("50%");
+  });
+
+  it("shows elapsed time while running", async () => {
+    const now = Date.now();
+    vi.setSystemTime(now);
+    mockGetStatus.mockResolvedValue(
+      makeStatus({
+        status: "running",
+        started_at: new Date(now - 15_000).toISOString(),
+      }),
+    );
+
+    render(
+      <AutoCodeToast
+        frameworkId="garrett"
+        onComplete={vi.fn()}
+        onOpenReport={vi.fn()}
+        onDismiss={vi.fn()}
+      />,
+    );
+
+    await act(async () => {});
+
+    expect(screen.getByText(/15s/)).toBeInTheDocument();
   });
 
   it("fires onComplete only once", async () => {

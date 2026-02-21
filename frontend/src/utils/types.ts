@@ -247,7 +247,7 @@ export interface TranscriptPageResponse {
 export interface AutoCodeJobStatus {
   id: number;
   framework_id: string;
-  status: "pending" | "running" | "completed" | "failed";
+  status: "pending" | "running" | "completed" | "failed" | "cancelled";
   total_quotes: number;
   processed_quotes: number;
   proposed_count: number;

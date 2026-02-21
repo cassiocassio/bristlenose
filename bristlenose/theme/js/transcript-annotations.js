@@ -159,13 +159,14 @@ function _renderAllAnnotations() {
     }
   }
 
-  // Track which labels have been shown (for first-occurrence dedup)
-  var seenLabels = {};
+  // Track last-shown label+sentiment to suppress repetition (show on change).
+  // Mutable context object passed by reference through the render loop.
+  var ctx = { lastLabel: '', lastSentiment: '' };
 
   // Pass 2: For each segment, render margin annotations
   for (var i = 0; i < segments.length; i++) {
     _renderSegmentAnnotations(
-      segments[i], quoteSegments, seenLabels, codebook
+      segments[i], quoteSegments, ctx, codebook
     );
   }
 
@@ -183,12 +184,16 @@ function _renderAllAnnotations() {
 /**
  * Render margin annotations for a single segment.
  *
+ * Labels and sentiment badges are shown only when they change from the
+ * previous annotation (topic-change dedup).  Span bars provide visual
+ * continuity for consecutive quotes in the same section.
+ *
  * @param {Element} segment        The .transcript-segment element.
  * @param {Object}  quoteSegments  Map of qid → [segments].
- * @param {Object}  seenLabels     Set of labels already shown.
+ * @param {Object}  ctx            Mutable context: { lastLabel, lastSentiment }.
  * @param {Object}  codebook       Codebook data from localStorage.
  */
-function _renderSegmentAnnotations(segment, quoteSegments, seenLabels, codebook) {
+function _renderSegmentAnnotations(segment, quoteSegments, ctx, codebook) {
   var quoteIds = (segment.getAttribute('data-quote-ids') || '').split(' ');
   if (!quoteIds.length || !quoteIds[0]) return;
 
@@ -208,28 +213,33 @@ function _renderSegmentAnnotations(segment, quoteSegments, seenLabels, codebook)
     ann.className = 'margin-annotation';
     ann.setAttribute('data-quote-id', qid);
 
-    // Section/theme label — only on first occurrence of this label text
-    if (mapping.label) {
-      var labelKey = mapping.type + ':' + mapping.label;
-      if (!seenLabels[labelKey]) {
-        seenLabels[labelKey] = true;
-        var labelEl = document.createElement('a');
-        labelEl.className = 'margin-label';
-        var labelPrefix = mapping.type === 'section' ? 'Section' : 'Theme';
-        labelEl.title = labelPrefix + ': ' + mapping.label;
-        labelEl.textContent = mapping.label;
-        labelEl.href = BRISTLENOSE_REPORT_URL + '#' + qid;
-        ann.appendChild(labelEl);
-      }
+    // Section/theme label — show only when the topic changes
+    var labelKey = mapping.label ? (mapping.type + ':' + mapping.label) : '';
+    var showLabel = labelKey && labelKey !== ctx.lastLabel;
+    if (showLabel) {
+      ctx.lastLabel = labelKey;
+      var labelEl = document.createElement('a');
+      labelEl.className = 'margin-label';
+      var labelPrefix = mapping.type === 'section' ? 'Section' : 'Theme';
+      labelEl.title = labelPrefix + ': ' + mapping.label;
+      labelEl.textContent = mapping.label;
+      labelEl.href = BRISTLENOSE_REPORT_URL + '#' + qid;
+      ann.appendChild(labelEl);
     }
 
     // Tags row: sentiment + user tags
     var tagsRow = document.createElement('div');
     tagsRow.className = 'margin-tags';
 
-    // AI sentiment badge (skip if already deleted)
+    // AI sentiment badge — show only when label or sentiment changes
+    var showSentiment = showLabel || mapping.sentiment !== ctx.lastSentiment;
     var deletedList = _deletedBadges[qid] || [];
-    if (mapping.sentiment && deletedList.indexOf(mapping.sentiment) === -1) {
+    if (
+      showSentiment &&
+      mapping.sentiment &&
+      deletedList.indexOf(mapping.sentiment) === -1
+    ) {
+      ctx.lastSentiment = mapping.sentiment;
       var sentBadge = document.createElement('span');
       sentBadge.className = 'badge badge-ai badge-' + mapping.sentiment;
       sentBadge.setAttribute('data-badge-type', 'ai');

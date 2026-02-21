@@ -1,3 +1,5 @@
+export { ActivityChip } from "./ActivityChip";
+export { ActivityChipStack } from "./ActivityChipStack";
 export { Annotation } from "./Annotation";
 export { AutoCodeReportModal } from "./AutoCodeReportModal";
 export { AutoCodeToast } from "./AutoCodeToast";

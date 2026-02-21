@@ -33,10 +33,10 @@
     }
 }
 
-/* Narrow viewports: inline below the segment text */
+/* Narrow viewports: inline below the segment text, aligned with body column */
 @media (max-width: 1099px) {
     .segment-margin {
-        margin-left: 3.5rem; /* align past the timecode column */
+        grid-column: 3 / -1; /* align with text body column */
         margin-top: var(--bn-space-xs);
         margin-bottom: var(--bn-space-xs);
     }

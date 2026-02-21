@@ -2,7 +2,7 @@
 
 .clipboard-toast {
     position: fixed;
-    bottom: var(--bn-space-lg);
+    bottom: 90px;
     right: var(--bn-space-lg);
     background: var(--bn-colour-text);
     color: var(--bn-colour-bg);

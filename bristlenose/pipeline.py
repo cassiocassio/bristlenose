@@ -25,7 +25,10 @@ from bristlenose.manifest import (
     STAGE_PII_REMOVAL,
     STAGE_QUOTE_EXTRACTION,
     STAGE_TOPIC_SEGMENTATION,
+    PipelineManifest,
+    StageStatus,
     create_manifest,
+    load_manifest,
     mark_stage_complete,
     mark_stage_running,
     write_manifest,
@@ -39,6 +42,7 @@ from bristlenose.models import (
     PiiCleanTranscript,
     PipelineResult,
     ScreenCluster,
+    SessionTopicMap,
     SpeakerRole,
     ThemeGroup,
     TranscriptSegment,
@@ -66,6 +70,20 @@ def _print_step(message: str, elapsed: float) -> None:
     time_str = _format_duration(elapsed)
     padding = max(1, 58 - len(message))
     console.print(f" [green]✓[/green] {message}{' ' * padding}[dim]{time_str}[/dim]")
+
+
+def _print_cached_step(message: str) -> None:
+    """Print a cached pipeline step with green ✓ and right-aligned '(cached)'."""
+    padding = max(1, 58 - len(message))
+    console.print(f" [green]✓[/green] {message}{' ' * padding}[dim](cached)[/dim]")
+
+
+def _is_stage_cached(manifest: PipelineManifest | None, stage: str) -> bool:
+    """Return True if *stage* is marked complete in an existing manifest."""
+    if manifest is None:
+        return False
+    record = manifest.stages.get(stage)
+    return record is not None and record.status == StageStatus.COMPLETE
 
 
 _printed_warnings: set[str] = set()
@@ -246,6 +264,8 @@ class Pipeline:
         write_pipeline_metadata(output_dir, self.settings.project_name)
 
         # ── Manifest tracking ────────────────────────────────────
+        # Load existing manifest for resume, or create fresh.
+        _prev_manifest = load_manifest(output_dir) if output_dir.exists() else None
         manifest = create_manifest(self.settings.project_name, __version__)
 
         with console.status("", spinner="dots") as status:
@@ -463,94 +483,148 @@ class Pipeline:
                     for t in transcripts
                 ]
 
+            # ── Intermediate directory for cached JSON ────────────────
+            intermediate = output_dir / ".bristlenose" / "intermediate"
+
             # ── Stage 8: Topic segmentation ──────────────────────────
-            mark_stage_running(manifest, STAGE_TOPIC_SEGMENTATION)
-            status.update("[dim]Segmenting topics...[/dim]")
-            t0 = time.perf_counter()
-            _seg_errors: list[str] = []
-            topic_maps = await segment_topics(
-                clean_transcripts, llm_client, concurrency=concurrency,
-                errors=_seg_errors,
-            )
-            if self.settings.write_intermediate:
-                write_intermediate_json(
-                    topic_maps, "topic_boundaries.json", output_dir,
-                    self.settings.project_name,
+            _tb_path = intermediate / "topic_boundaries.json"
+            if (
+                _is_stage_cached(_prev_manifest, STAGE_TOPIC_SEGMENTATION)
+                and _tb_path.exists()
+            ):
+                import json as _json
+
+                topic_maps = [
+                    SessionTopicMap.model_validate(obj)
+                    for obj in _json.loads(_tb_path.read_text(encoding="utf-8"))
+                ]
+                total_boundaries = sum(len(m.boundaries) for m in topic_maps)
+                _print_cached_step(
+                    f"Segmented {total_boundaries} topic boundaries",
                 )
-            total_boundaries = sum(len(m.boundaries) for m in topic_maps)
-            _topics_elapsed = time.perf_counter() - t0
-            _print_step(
-                f"Segmented {total_boundaries} topic boundaries",
-                _topics_elapsed,
-            )
-            _stage_actuals[STAGE_TOPICS] = StageActual(
-                elapsed=_topics_elapsed, input_size=_n_sessions,
-            )
-            self._emit_remaining(STAGE_TOPICS, _topics_elapsed)
-            if _seg_errors:
-                _print_warn(*_short_reason(_seg_errors, self.settings.llm_provider))
+            else:
+                mark_stage_running(manifest, STAGE_TOPIC_SEGMENTATION)
+                status.update("[dim]Segmenting topics...[/dim]")
+                t0 = time.perf_counter()
+                _seg_errors: list[str] = []
+                topic_maps = await segment_topics(
+                    clean_transcripts, llm_client, concurrency=concurrency,
+                    errors=_seg_errors,
+                )
+                if self.settings.write_intermediate:
+                    write_intermediate_json(
+                        topic_maps, "topic_boundaries.json", output_dir,
+                        self.settings.project_name,
+                    )
+                total_boundaries = sum(len(m.boundaries) for m in topic_maps)
+                _topics_elapsed = time.perf_counter() - t0
+                _print_step(
+                    f"Segmented {total_boundaries} topic boundaries",
+                    _topics_elapsed,
+                )
+                _stage_actuals[STAGE_TOPICS] = StageActual(
+                    elapsed=_topics_elapsed, input_size=_n_sessions,
+                )
+                self._emit_remaining(STAGE_TOPICS, _topics_elapsed)
+                if _seg_errors:
+                    _print_warn(*_short_reason(_seg_errors, self.settings.llm_provider))
             mark_stage_complete(manifest, STAGE_TOPIC_SEGMENTATION)
             write_manifest(manifest, output_dir)
 
             # ── Stage 9: Quote extraction ────────────────────────────
-            mark_stage_running(manifest, STAGE_QUOTE_EXTRACTION)
-            status.update("[dim]Extracting quotes...[/dim]")
-            t0 = time.perf_counter()
-            _quote_errors: list[str] = []
-            all_quotes = await extract_quotes(
-                clean_transcripts,
-                topic_maps,
-                llm_client,
-                min_quote_words=self.settings.min_quote_words,
-                concurrency=concurrency,
-                errors=_quote_errors,
-            )
-            if self.settings.write_intermediate:
-                write_intermediate_json(
-                    all_quotes, "extracted_quotes.json", output_dir,
-                    self.settings.project_name,
+            _eq_path = intermediate / "extracted_quotes.json"
+            if (
+                _is_stage_cached(_prev_manifest, STAGE_QUOTE_EXTRACTION)
+                and _eq_path.exists()
+            ):
+                import json as _json
+
+                all_quotes = [
+                    ExtractedQuote.model_validate(obj)
+                    for obj in _json.loads(_eq_path.read_text(encoding="utf-8"))
+                ]
+                _print_cached_step(f"Extracted {len(all_quotes)} quotes")
+            else:
+                mark_stage_running(manifest, STAGE_QUOTE_EXTRACTION)
+                status.update("[dim]Extracting quotes...[/dim]")
+                t0 = time.perf_counter()
+                _quote_errors: list[str] = []
+                all_quotes = await extract_quotes(
+                    clean_transcripts,
+                    topic_maps,
+                    llm_client,
+                    min_quote_words=self.settings.min_quote_words,
+                    concurrency=concurrency,
+                    errors=_quote_errors,
                 )
-            _quotes_elapsed = time.perf_counter() - t0
-            _print_step(
-                f"Extracted {len(all_quotes)} quotes",
-                _quotes_elapsed,
-            )
-            _stage_actuals[STAGE_QUOTES] = StageActual(
-                elapsed=_quotes_elapsed, input_size=_n_sessions,
-            )
-            self._emit_remaining(STAGE_QUOTES, _quotes_elapsed)
-            if _quote_errors:
-                _print_warn(*_short_reason(_quote_errors, self.settings.llm_provider))
+                if self.settings.write_intermediate:
+                    write_intermediate_json(
+                        all_quotes, "extracted_quotes.json", output_dir,
+                        self.settings.project_name,
+                    )
+                _quotes_elapsed = time.perf_counter() - t0
+                _print_step(
+                    f"Extracted {len(all_quotes)} quotes",
+                    _quotes_elapsed,
+                )
+                _stage_actuals[STAGE_QUOTES] = StageActual(
+                    elapsed=_quotes_elapsed, input_size=_n_sessions,
+                )
+                self._emit_remaining(STAGE_QUOTES, _quotes_elapsed)
+                if _quote_errors:
+                    _print_warn(*_short_reason(_quote_errors, self.settings.llm_provider))
             mark_stage_complete(manifest, STAGE_QUOTE_EXTRACTION)
             write_manifest(manifest, output_dir)
 
             # ── Stages 10+11: Cluster by screen + thematic grouping ──
-            mark_stage_running(manifest, STAGE_CLUSTER_AND_GROUP)
-            status.update("[dim]Clustering and grouping...[/dim]")
-            t0 = time.perf_counter()
-            screen_clusters, theme_groups = await asyncio.gather(
-                cluster_by_screen(all_quotes, llm_client),
-                group_by_theme(all_quotes, llm_client),
-            )
-            if self.settings.write_intermediate:
-                write_intermediate_json(
-                    screen_clusters, "screen_clusters.json", output_dir,
-                    self.settings.project_name,
+            _sc_path = intermediate / "screen_clusters.json"
+            _tg_path = intermediate / "theme_groups.json"
+            if (
+                _is_stage_cached(_prev_manifest, STAGE_CLUSTER_AND_GROUP)
+                and _sc_path.exists()
+                and _tg_path.exists()
+            ):
+                import json as _json
+
+                screen_clusters = [
+                    ScreenCluster.model_validate(obj)
+                    for obj in _json.loads(_sc_path.read_text(encoding="utf-8"))
+                ]
+                theme_groups = [
+                    ThemeGroup.model_validate(obj)
+                    for obj in _json.loads(_tg_path.read_text(encoding="utf-8"))
+                ]
+                _print_cached_step(
+                    f"Clustered {len(screen_clusters)} screens"
+                    f" · Grouped {len(theme_groups)} themes",
                 )
-                write_intermediate_json(
-                    theme_groups, "theme_groups.json", output_dir,
-                    self.settings.project_name,
+            else:
+                mark_stage_running(manifest, STAGE_CLUSTER_AND_GROUP)
+                status.update("[dim]Clustering and grouping...[/dim]")
+                t0 = time.perf_counter()
+                screen_clusters, theme_groups = await asyncio.gather(
+                    cluster_by_screen(all_quotes, llm_client),
+                    group_by_theme(all_quotes, llm_client),
                 )
-            _cluster_elapsed = time.perf_counter() - t0
-            _print_step(
-                f"Clustered {len(screen_clusters)} screens"
-                f" · Grouped {len(theme_groups)} themes",
-                _cluster_elapsed,
-            )
-            _stage_actuals[STAGE_CLUSTER] = StageActual(
-                elapsed=_cluster_elapsed, input_size=_n_sessions,
-            )
-            self._emit_remaining(STAGE_CLUSTER, _cluster_elapsed)
+                if self.settings.write_intermediate:
+                    write_intermediate_json(
+                        screen_clusters, "screen_clusters.json", output_dir,
+                        self.settings.project_name,
+                    )
+                    write_intermediate_json(
+                        theme_groups, "theme_groups.json", output_dir,
+                        self.settings.project_name,
+                    )
+                _cluster_elapsed = time.perf_counter() - t0
+                _print_step(
+                    f"Clustered {len(screen_clusters)} screens"
+                    f" · Grouped {len(theme_groups)} themes",
+                    _cluster_elapsed,
+                )
+                _stage_actuals[STAGE_CLUSTER] = StageActual(
+                    elapsed=_cluster_elapsed, input_size=_n_sessions,
+                )
+                self._emit_remaining(STAGE_CLUSTER, _cluster_elapsed)
             mark_stage_complete(manifest, STAGE_CLUSTER_AND_GROUP)
             write_manifest(manifest, output_dir)
 

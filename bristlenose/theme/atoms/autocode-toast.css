@@ -60,6 +60,36 @@
 
 .toast-close:hover { color: rgba(255, 255, 255, 0.8); }
 
+/* Content wrapper — stacks text + progress bar vertically */
+.toast-content {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+    flex: 1;
+    min-width: 0;
+}
+
+.toast-progress-track {
+    width: 100%;
+    height: 3px;
+    background: rgba(255, 255, 255, 0.15);
+    border-radius: 2px;
+    overflow: hidden;
+}
+
+.toast-progress-fill {
+    height: 100%;
+    background: #60a5fa;
+    border-radius: 2px;
+    transition: width 0.4s ease-out;
+}
+
+.toast-elapsed {
+    opacity: 0.5;
+    font-variant-numeric: tabular-nums;
+    margin-left: 0.3rem;
+}
+
 /* Dark mode — inverted toast (light bg on dark theme) */
 @supports (color: light-dark(#000, #fff)) {
     [data-theme="dark"] .autocode-toast {
@@ -73,6 +103,12 @@
         border-color: rgba(0, 0, 0, 0.15);
         border-top-color: #2563eb;
     }
+    [data-theme="dark"] .autocode-toast .toast-progress-track {
+        background: rgba(0, 0, 0, 0.15);
+    }
+    [data-theme="dark"] .autocode-toast .toast-progress-fill {
+        background: #2563eb;
+    }
 
     @media (prefers-color-scheme: dark) {
         :root:not([data-theme="light"]) .autocode-toast {
@@ -85,6 +121,12 @@
         :root:not([data-theme="light"]) .autocode-toast .toast-spinner {
             border-color: rgba(0, 0, 0, 0.15);
             border-top-color: #2563eb;
+        }
+        :root:not([data-theme="light"]) .autocode-toast .toast-progress-track {
+            background: rgba(0, 0, 0, 0.15);
+        }
+        :root:not([data-theme="light"]) .autocode-toast .toast-progress-fill {
+            background: #2563eb;
         }
     }
 }

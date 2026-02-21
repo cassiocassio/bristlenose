@@ -44,7 +44,7 @@ function useSpanBars(
   annotations: Record<string, QuoteAnnotationResponse>,
 ) {
   const [bars, setBars] = useState<
-    { top: number; height: number; quoteId: string; label: string }[]
+    { top: number; height: number; left: number; quoteId: string; label: string }[]
   >([]);
 
   useLayoutEffect(() => {
@@ -52,7 +52,23 @@ function useSpanBars(
 
     const container = containerRef.current;
     const containerRect = container.getBoundingClientRect();
-    const newBars: typeof bars = [];
+
+    // Read layout tokens from CSS custom properties
+    const rootStyle = getComputedStyle(document.documentElement);
+    const barGap = parseFloat(rootStyle.getPropertyValue("--bn-span-bar-gap")) || 6;
+    const barInset =
+      parseFloat(rootStyle.getPropertyValue("--bn-span-bar-offset")) || 8;
+
+    // Find margin column left edge for bar placement
+    const firstMargin = container.querySelector<HTMLElement>(".segment-margin");
+    let marginLeft: number;
+    if (firstMargin) {
+      marginLeft = firstMargin.getBoundingClientRect().left - containerRect.left;
+    } else {
+      marginLeft =
+        containerRect.width -
+        parseFloat(getComputedStyle(container).paddingRight);
+    }
 
     // Group segments by quote ID to find contiguous ranges
     const quoteSegments = new Map<string, HTMLElement[]>();
@@ -68,15 +84,50 @@ function useSpanBars(
       }
     }
 
+    // Build spans with vertical extents
+    const spans: { qid: string; top: number; bottom: number; slot: number }[] = [];
     for (const [qid, els] of quoteSegments) {
       if (els.length === 0) continue;
       const firstRect = els[0].getBoundingClientRect();
       const lastRect = els[els.length - 1].getBoundingClientRect();
       const top = firstRect.top - containerRect.top;
-      const height = lastRect.bottom - firstRect.top;
-      const ann = annotations[qid];
+      const bottom = lastRect.bottom - containerRect.top;
+      spans.push({ qid, top, bottom, slot: 0 });
+    }
+
+    // Sort by top position for consistent slot assignment
+    spans.sort((a, b) => a.top - b.top);
+
+    // Greedy slot layout — each bar gets the leftmost slot that doesn't
+    // overlap vertically with another bar already in that slot.
+    const slots: { top: number; bottom: number }[][] = [];
+    for (const span of spans) {
+      let assigned = false;
+      for (let s = 0; s < slots.length; s++) {
+        const overlaps = slots[s].some(
+          (r) => span.top < r.bottom && span.bottom > r.top,
+        );
+        if (!overlaps) {
+          slots[s].push({ top: span.top, bottom: span.bottom });
+          span.slot = s;
+          assigned = true;
+          break;
+        }
+      }
+      if (!assigned) {
+        span.slot = slots.length;
+        slots.push([{ top: span.top, bottom: span.bottom }]);
+      }
+    }
+
+    // Build final bars with horizontal position
+    const newBars: typeof bars = [];
+    for (const span of spans) {
+      const height = Math.max(span.bottom - span.top, 8);
+      const left = marginLeft - barInset - span.slot * barGap;
+      const ann = annotations[span.qid];
       const label = ann?.label ?? "";
-      newBars.push({ top, height, quoteId: qid, label });
+      newBars.push({ top: span.top, height, left, quoteId: span.qid, label });
     }
 
     setBars(newBars);
@@ -184,19 +235,22 @@ export function TranscriptPage({ projectId: _projectId, sessionId }: TranscriptP
     );
   }
 
-  const { segments, speakers, annotations, report_filename } = data;
+  const { segments, speakers, annotations } = data;
   const sessionNum = sessionId.length > 1 && "sp".includes(sessionId[0]) && /^\d+$/.test(sessionId.slice(1))
     ? sessionId.slice(1)
     : sessionId;
 
-  // Track which labels have been rendered (dedup: first segment per quote only)
-  const seenLabels = new Set<string>();
+  // Track which quote IDs have been rendered (first segment per quote only)
+  const seenQuoteIds = new Set<string>();
+  // Track last-shown label+sentiment to suppress repetition — show only on change
+  let lastShownLabel = "";
+  let lastShownSentiment = "";
 
   return (
     <>
       {/* Back link */}
       <nav className="transcript-back" data-testid="transcript-back">
-        <a href={`../${report_filename}`}>
+        <a href="/report/">
           &larr; {data.project_name} Research Report
         </a>
       </nav>
@@ -241,18 +295,32 @@ export function TranscriptPage({ projectId: _projectId, sessionId }: TranscriptP
             .filter(Boolean)
             .join(" ");
 
-          // Annotations: render only on first segment per quote
+          // Annotations: render only on first segment per quote, and
+          // suppress repeated label+sentiment (show only when topic changes).
           const segAnnotations: {
             quoteId: string;
             ann: QuoteAnnotationResponse;
+            showLabel: boolean;
+            showSentiment: boolean;
           }[] = [];
           if (seg.is_quoted) {
             for (const qid of seg.quote_ids) {
-              if (!seenLabels.has(qid)) {
-                seenLabels.add(qid);
+              if (!seenQuoteIds.has(qid)) {
+                seenQuoteIds.add(qid);
                 const ann = annotations[qid];
                 if (ann) {
-                  segAnnotations.push({ quoteId: qid, ann });
+                  const labelKey = `${ann.label_type}:${ann.label}`;
+                  const showLabel = labelKey !== lastShownLabel;
+                  const showSentiment =
+                    showLabel || ann.sentiment !== lastShownSentiment;
+                  if (ann.label) lastShownLabel = labelKey;
+                  if (ann.sentiment) lastShownSentiment = ann.sentiment;
+                  segAnnotations.push({
+                    quoteId: qid,
+                    ann,
+                    showLabel,
+                    showSentiment,
+                  });
                 }
               }
             }
@@ -284,26 +352,28 @@ export function TranscriptPage({ projectId: _projectId, sessionId }: TranscriptP
                   <span className="timecode-bracket">]</span>
                 </span>
               )}
+              <span
+                className="segment-speaker bn-person-badge"
+                data-participant={seg.speaker_code}
+              >
+                <span className="badge">{seg.speaker_code}</span>
+              </span>
               <div className="segment-body">
-                <span
-                  className="segment-speaker"
-                  data-participant={seg.speaker_code}
-                >
-                  {seg.speaker_code}:
-                </span>
                 {seg.html_text ? (
-                  <span dangerouslySetInnerHTML={{ __html: ` ${seg.html_text}` }} />
+                  <span dangerouslySetInnerHTML={{ __html: seg.html_text }} />
                 ) : (
-                  <> {seg.text}</>
+                  <>{seg.text}</>
                 )}
               </div>
 
               {/* Margin annotations */}
               {segAnnotations.length > 0 && (
                 <div className="segment-margin">
-                  {segAnnotations.map(({ quoteId, ann }) => {
+                  {segAnnotations.map(({ quoteId, ann, showLabel, showSentiment }) => {
                     const sentimentBadge =
-                      ann.sentiment && !ann.deleted_badges.includes(ann.sentiment)
+                      showSentiment &&
+                      ann.sentiment &&
+                      !ann.deleted_badges.includes(ann.sentiment)
                         ? {
                             text: ann.sentiment,
                             sentiment: ann.sentiment,
@@ -320,7 +390,7 @@ export function TranscriptPage({ projectId: _projectId, sessionId }: TranscriptP
                       <Annotation
                         key={quoteId}
                         quoteId={quoteId}
-                        label={ann.label || undefined}
+                        label={showLabel ? (ann.label || undefined) : undefined}
                         sentiment={sentimentBadge}
                         tags={tags.length > 0 ? tags : undefined}
                         onTagDelete={(name) => handleDeleteTag(quoteId, name)}
@@ -343,6 +413,7 @@ export function TranscriptPage({ projectId: _projectId, sessionId }: TranscriptP
               position: "absolute",
               top: `${bar.top}px`,
               height: `${bar.height}px`,
+              left: `${bar.left}px`,
             }}
             data-testid={`span-bar-${bar.quoteId}`}
           />

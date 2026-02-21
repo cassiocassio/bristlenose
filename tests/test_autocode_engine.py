@@ -484,6 +484,85 @@ class TestRunAutoCodeJob:
         assert job.processed_quotes == 10
         db.close()
 
+    def test_progress_visible_mid_job(self, db_session: SASession) -> None:
+        """Per-batch progress commits are visible to separate DB sessions mid-job.
+
+        This is the core test for the progress-reporting fix: a polling query
+        (like GET /status) must see non-zero processed_quotes before the job
+        finishes.
+        """
+        db = db_session
+        project = Project(
+            name="Progress", slug="progress", input_dir="/tmp", output_dir="/tmp"
+        )
+        db.add(project)
+        db.flush()
+
+        template = get_template("garrett")
+        assert template is not None
+        for group_tmpl in template.groups:
+            group = CodebookGroup(
+                name=group_tmpl.name, subtitle=group_tmpl.subtitle,
+                colour_set=group_tmpl.colour_set, framework_id="garrett",
+            )
+            db.add(group)
+            db.flush()
+            for tag_tmpl in group_tmpl.tags:
+                db.add(TagDefinition(name=tag_tmpl.name, codebook_group_id=group.id))
+
+        # 50 quotes = 2 batches of 25
+        for i in range(50):
+            db.add(Quote(
+                project_id=project.id, session_id="s1",
+                participant_id="p1", start_timecode=float(i * 10),
+                end_timecode=float(i * 10 + 5),
+                text=f"Quote {i}", quote_type="screen_specific",
+            ))
+
+        job = AutoCodeJob(
+            project_id=project.id, framework_id="garrett", status="pending"
+        )
+        db.add(job)
+        db.commit()
+
+        session_cls = sessionmaker(bind=db.get_bind())
+
+        # Capture progress snapshots from a separate DB session after each batch
+        progress_snapshots: list[int] = []
+        call_count = 0
+
+        async def tracking_analyze(system_prompt, user_prompt, response_model, **kw):
+            nonlocal call_count
+            import re
+            n = len(re.findall(r"^\d+\. \[", user_prompt, re.MULTILINE))
+            call_count += 1
+            result = _make_batch_result(n, "user need", 0.8)
+            # After the first batch, yield control so the progress commit runs,
+            # then read progress from a fresh session (simulating a poll).
+            if call_count == 2:
+                await asyncio.sleep(0)  # Yield to event loop
+                poll_db = session_cls()
+                poll_job = poll_db.query(AutoCodeJob).filter_by(
+                    project_id=project.id, framework_id="garrett"
+                ).first()
+                if poll_job:
+                    progress_snapshots.append(poll_job.processed_quotes)
+                poll_db.close()
+            return result
+
+        settings = _mock_settings()
+        settings.llm_concurrency = 1  # Sequential batches for deterministic ordering
+
+        with _patch_llm(AsyncMock(side_effect=tracking_analyze)):
+            asyncio.run(
+                run_autocode_job(session_cls, project.id, "garrett", settings)
+            )
+
+        # The snapshot taken during the second batch should show the first
+        # batch's 25 quotes already committed.
+        assert len(progress_snapshots) == 1
+        assert progress_snapshots[0] == 25
+
 
 class TestBatching:
     """Tests for the batching behaviour within the job runner."""

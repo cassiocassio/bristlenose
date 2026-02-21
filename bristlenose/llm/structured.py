@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
-from pydantic import BaseModel, Field
+import json
+
+from pydantic import BaseModel, Field, field_validator
 
 # ---------------------------------------------------------------------------
 # Speaker identification (Stage 5b)
@@ -227,3 +229,11 @@ class AutoCodeBatchResult(BaseModel):
     assignments: list[AutoCodeTagAssignment] = Field(
         description="Tag assignment for each quote in the batch"
     )
+
+    @field_validator("assignments", mode="before")
+    @classmethod
+    def _parse_stringified_json(cls, v: object) -> object:
+        """Some LLM providers double-serialize nested arrays as JSON strings."""
+        if isinstance(v, str):
+            return json.loads(v)
+        return v

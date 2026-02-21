@@ -155,6 +155,19 @@ class TestAutoCodeBatchResult:
         assert parsed.assignments[0].tag_name == "information architecture"
         assert parsed.assignments[0].confidence == 0.77
 
+    def test_stringified_assignments_parsed(self) -> None:
+        """Some LLM providers double-serialize assignments as a JSON string."""
+        import json
+
+        assignments_list = [
+            {"quote_index": 0, "tag_name": "user need", "confidence": 0.8, "rationale": "r"}
+        ]
+        result = AutoCodeBatchResult.model_validate(
+            {"assignments": json.dumps(assignments_list)}
+        )
+        assert len(result.assignments) == 1
+        assert result.assignments[0].tag_name == "user need"
+
 
 # ---------------------------------------------------------------------------
 # ORM table creation (smoke test)

@@ -1,7 +1,6 @@
 import { Fragment, useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import {
-  AutoCodeToast,
   Badge,
   ConfirmDialog,
   EditableText,
@@ -9,6 +8,8 @@ import {
   TagInput,
   ThresholdReviewModal,
 } from "../components";
+import { ActivityChipStack } from "../components/ActivityChipStack";
+import type { ActivityJob } from "../components/ActivityChipStack";
 import {
   createCodebookGroup,
   createCodebookTag,
@@ -496,7 +497,7 @@ export function CodebookPanel({ projectId }: CodebookPanelProps) {
 
   // --- AutoCode state ---
   const [autoCodeStatus, setAutoCodeStatus] = useState<Record<string, AutoCodeJobStatus | null>>({});
-  const [toastState, setToastState] = useState<{ frameworkId: string; frameworkTitle: string } | null>(null);
+  const [activeJobs, setActiveJobs] = useState<Map<string, { frameworkId: string; frameworkTitle: string }>>(new Map());
   const [reportModal, setReportModal] = useState<{ frameworkId: string; frameworkTitle: string } | null>(null);
 
   // Fetch codebook data
@@ -533,10 +534,15 @@ export function CodebookPanel({ projectId }: CodebookPanelProps) {
       getAutoCodeStatus(fid)
         .then((status) => {
           setAutoCodeStatus((prev) => ({ ...prev, [fid]: status }));
-          // If a job is running, show the toast automatically.
+          // If a job is running, add it to active jobs for the chip stack.
           if (status.status === "running") {
             const tmpl = templates?.find((t) => t.id === fid);
-            setToastState({ frameworkId: fid, frameworkTitle: tmpl?.title ?? fid });
+            const title = tmpl?.title ?? fid;
+            setActiveJobs((prev) => {
+              const next = new Map(prev);
+              next.set(`autocode:${fid}`, { frameworkId: fid, frameworkTitle: title });
+              return next;
+            });
           }
         })
         .catch(() => {
@@ -711,7 +717,11 @@ export function CodebookPanel({ projectId }: CodebookPanelProps) {
       startAutoCode(frameworkId)
         .then((status) => {
           setAutoCodeStatus((prev) => ({ ...prev, [frameworkId]: status }));
-          setToastState({ frameworkId, frameworkTitle });
+          setActiveJobs((prev) => {
+            const next = new Map(prev);
+            next.set(`autocode:${frameworkId}`, { frameworkId, frameworkTitle });
+            return next;
+          });
         })
         .catch((err) => console.error("Start AutoCode failed:", err));
     },
@@ -953,17 +963,24 @@ export function CodebookPanel({ projectId }: CodebookPanelProps) {
         </div>
       )}
 
-      {/* AutoCode toast — persistent across tabs */}
-      {toastState && (
-        <AutoCodeToast
-          frameworkId={toastState.frameworkId}
-          onComplete={() => handleAutoCodeComplete(toastState.frameworkId)}
-          onOpenReport={() => {
-            handleOpenReport(toastState.frameworkId, toastState.frameworkTitle);
-          }}
-          onDismiss={() => setToastState(null)}
-        />
-      )}
+      {/* Activity chip stack — non-dismissable while running, persistent across tabs */}
+      <ActivityChipStack
+        jobs={Array.from(activeJobs.entries()).map(([id, j]): ActivityJob => ({
+          id,
+          label: `\u2726 AutoCoding ${j.frameworkTitle}`,
+          frameworkId: j.frameworkId,
+          onComplete: () => handleAutoCodeComplete(j.frameworkId),
+          onAction: () => handleOpenReport(j.frameworkId, j.frameworkTitle),
+          actionLabel: "Report",
+        }))}
+        onDismiss={(jobId) => {
+          setActiveJobs((prev) => {
+            const next = new Map(prev);
+            next.delete(jobId);
+            return next;
+          });
+        }}
+      />
 
       {/* AutoCode threshold review modal */}
       {reportModal && (

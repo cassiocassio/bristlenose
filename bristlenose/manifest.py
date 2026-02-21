@@ -2,10 +2,13 @@
 
 The manifest lives at `<output_dir>/.bristlenose/pipeline-manifest.json`.
 It is written after each stage completes so that interrupted runs can
-resume from the last completed stage (Phase 1c, not yet implemented).
+resume from the last completed stage.
 
-For now the manifest is write-only: the pipeline writes it but does not
-read it back on startup.  Phase 1c will add the read/skip logic.
+On startup, ``run()`` loads an existing manifest and skips stages marked
+complete — loading cached intermediate JSON from disk instead of
+re-computing.  Stages 1–7 always re-run (fast, no intermediate JSON).
+Stages 8–11 are skippable when ``write_intermediate`` was True on the
+original run.  Stage 12 (render) always re-runs.
 """
 
 from __future__ import annotations

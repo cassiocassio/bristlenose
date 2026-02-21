@@ -53,13 +53,13 @@ interface SessionsListResponse {
 // ---------------------------------------------------------------------------
 
 const SENTIMENT_ORDER = [
-  "satisfaction",
-  "delight",
-  "confidence",
-  "surprise",
-  "doubt",
-  "confusion",
   "frustration",
+  "confusion",
+  "doubt",
+  "surprise",
+  "confidence",
+  "delight",
+  "satisfaction",
 ];
 
 function sentimentToSparklineItems(

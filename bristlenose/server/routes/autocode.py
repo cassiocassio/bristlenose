@@ -256,6 +256,47 @@ def get_autocode_status(
 
 
 # ---------------------------------------------------------------------------
+# POST /projects/{id}/autocode/{framework_id}/cancel — cancel running job
+# ---------------------------------------------------------------------------
+
+
+@router.post("/projects/{project_id}/autocode/{framework_id}/cancel")
+def cancel_autocode_job(
+    project_id: int,
+    framework_id: str,
+    request: Request,
+) -> AutoCodeJobOut:
+    """Cancel a running AutoCode job.
+
+    Sets the job status to "cancelled".  The background job runner checks
+    this between batches and stops gracefully — in-progress LLM calls
+    complete, but no further batches are started.
+
+    Guards:
+    - 404 if project or job not found
+    - 409 if job is not in a cancellable state (already completed/failed/cancelled)
+    """
+    db = _get_db(request)
+    try:
+        _check_project(db, project_id)
+        job = _get_job(db, project_id, framework_id)
+
+        if job.status not in ("pending", "running"):
+            raise HTTPException(
+                status_code=409,
+                detail=f"Job cannot be cancelled (status: {job.status})",
+            )
+
+        job.status = "cancelled"
+        job.completed_at = datetime.now(timezone.utc)
+        db.commit()
+        return _job_to_out(job)
+
+    finally:
+        db.close()
+
+
+# ---------------------------------------------------------------------------
 # GET /projects/{id}/autocode/{framework_id}/proposals — list proposals
 # ---------------------------------------------------------------------------
 

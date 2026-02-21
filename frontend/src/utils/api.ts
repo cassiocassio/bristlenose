@@ -198,6 +198,10 @@ export function getAutoCodeStatus(frameworkId: string): Promise<AutoCodeJobStatu
   return apiGet<AutoCodeJobStatus>(`/autocode/${frameworkId}/status`);
 }
 
+export function cancelAutoCode(frameworkId: string): Promise<AutoCodeJobStatus> {
+  return apiPost<AutoCodeJobStatus>(`/autocode/${frameworkId}/cancel`, {});
+}
+
 export function getAutoCodeProposals(
   frameworkId: string,
   minConfidence?: number,

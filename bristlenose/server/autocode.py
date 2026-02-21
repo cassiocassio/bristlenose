@@ -206,6 +206,10 @@ async def run_autocode_job(
             logger.error("AutoCodeJob not found: project=%d framework=%s", project_id, framework_id)
             return
 
+        # If cancelled before the async task started, exit immediately.
+        if job.status == "cancelled":
+            return
+
         job.status = "running"
         db.commit()
 
@@ -278,10 +282,24 @@ async def run_autocode_job(
         semaphore = asyncio.Semaphore(settings.llm_concurrency)
         proposed_count = 0
         processed_count = 0
+        progress_lock = asyncio.Lock()
 
         async def _process_batch(batch: list[QuoteBatchItem]) -> list[ProposedTag]:
             nonlocal processed_count
             async with semaphore:
+                # Cancellation checkpoint — check DB before starting LLM call.
+                cancel_db = db_factory()
+                try:
+                    cancel_job = (
+                        cancel_db.query(AutoCodeJob)
+                        .filter_by(project_id=project_id, framework_id=framework_id)
+                        .first()
+                    )
+                    if cancel_job and cancel_job.status == "cancelled":
+                        return []
+                finally:
+                    cancel_db.close()
+
                 quote_text = build_quote_batch(batch)
                 user_prompt = prompt_pair.user.format(
                     codebook_title=template.title,
@@ -318,6 +336,24 @@ async def run_autocode_job(
                         )
                     )
                 processed_count += len(batch)
+                # Commit progress via a separate short-lived session so the
+                # status endpoint sees incremental updates (the main session
+                # holds the proposals transaction until all batches finish).
+                async with progress_lock:
+                    progress_db = db_factory()
+                    try:
+                        progress_job = (
+                            progress_db.query(AutoCodeJob)
+                            .filter_by(
+                                project_id=project_id, framework_id=framework_id
+                            )
+                            .first()
+                        )
+                        if progress_job:
+                            progress_job.processed_quotes = processed_count
+                            progress_db.commit()
+                    finally:
+                        progress_db.close()
                 return proposals
 
         # Gather all batches
@@ -334,6 +370,17 @@ async def run_autocode_job(
             for proposal in batch_result:
                 db.add(proposal)
                 proposed_count += 1
+
+        # Re-read job status — it may have been cancelled during processing.
+        db.expire(job)
+        if job.status == "cancelled":
+            # Keep "cancelled" status but save any partial results.
+            job.processed_quotes = processed_count
+            job.proposed_count = proposed_count
+            job.input_tokens = llm_client.tracker.input_tokens
+            job.output_tokens = llm_client.tracker.output_tokens
+            db.commit()
+            return
 
         job.status = "completed"
         job.processed_quotes = processed_count
@@ -352,7 +399,7 @@ async def run_autocode_job(
                 .filter_by(project_id=project_id, framework_id=framework_id)
                 .first()
             )
-            if job:
+            if job and job.status != "cancelled":
                 job.status = "failed"
                 job.error_message = str(exc)
                 db.commit()

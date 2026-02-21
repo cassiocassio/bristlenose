@@ -21,6 +21,7 @@ Bristlenose is a local-first user-research analysis tool. It takes a folder of i
 - **Licence**: AGPL-3.0 with CLA
 - **Provider naming**: user-facing text says "Claude", "ChatGPT", and "Azure OpenAI" (product names), not "Anthropic" and "OpenAI" (company names). Researchers know the products, not the companies. Internal code uses `"anthropic"` / `"openai"` / `"azure"` as config values — that's fine, only human-readable strings need product names
 - **Changelog version/date format**: `**X.Y.Z** — _D Mon YYYY_` (e.g. `**0.8.1** — _7 Feb 2026_`). Bold version, em dash, italic date. No hyphens in dates, no leading zero on day. Used in both `CHANGELOG.md` and the changelog section of `README.md`
+- **React is the primary rendering path (Feb 2026).** All visual/design work targets the React serve version (`bristlenose serve`). The static HTML renderer (`render_html.py`) is legacy — it ships correct data but does not receive design updates. Rules: (1) New features and design changes: React only. (2) CSS in `bristlenose/theme/` is shared — CSS changes apply to both paths automatically. (3) Vanilla JS in `bristlenose/theme/js/` is frozen — data-integrity fixes only, no feature work. (4) When a section becomes a React island, its Jinja2 equivalent becomes dead code — stop maintaining it. (5) The `bristlenose render` CLI command continues to work for users who want offline HTML, but it's the "frozen snapshot" format, not the actively developed experience
 
 ## Architecture
 
@@ -33,6 +34,8 @@ Serve mode: `bristlenose serve <folder>` — FastAPI server + SQLite + React isl
 Desktop app: `desktop/` — SwiftUI macOS shell wrapping the CLI as a PyInstaller sidecar. Two build targets from one monorepo (CLI + desktop). Self-contained directory, depends on but does not modify the CLI codebase. **Compatibility target: macOS 15 Sequoia + Apple Silicon (M1+).** Covers ~90% of professional Mac users. Bump chip floor to M2+ when local inference features arrive. See `docs/design-desktop-app.md` for PRD, architecture, and compatibility rationale.
 
 Frontend: `frontend/` — Vite + React + TypeScript. 16 reusable primitives in `frontend/src/components/`, 5 islands in `frontend/src/islands/`, mounted into static HTML by serve mode. 182 Vitest tests. `npm run dev` proxies to FastAPI; `npm run build` outputs to `frontend/dist/`. See `docs/design-react-component-library.md` for build sequence.
+
+Export strategy: The served React app is the canonical experience. Standalone export will be implemented as a DOM snapshot from serve mode (embed state as JSON, inline CSS, download as self-contained HTML). `render_html.py` is not the export path — it's a legacy offline fallback.
 
 LLM providers: Claude, ChatGPT, Azure OpenAI, Gemini, Local (Ollama). See `bristlenose/llm/CLAUDE.md` for credentials, config, and provider details.
 

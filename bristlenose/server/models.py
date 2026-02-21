@@ -517,7 +517,7 @@ class AutoCodeJob(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     project_id: Mapped[int] = mapped_column(ForeignKey("projects.id"), index=True)
     framework_id: Mapped[str] = mapped_column(String(50))  # "garrett", "norman", "uxr"
-    status: Mapped[str] = mapped_column(String(20))  # running, completed, failed
+    status: Mapped[str] = mapped_column(String(20))  # pending, running, completed, failed, cancelled
     total_quotes: Mapped[int] = mapped_column(default=0)
     processed_quotes: Mapped[int] = mapped_column(default=0)
     proposed_count: Mapped[int] = mapped_column(default=0)

@@ -116,8 +116,9 @@ def test_transcript_page_back_button(tmp_path: Path) -> None:
         sessions=[], project_name="Test Project", output_dir=tmp_path,
     )
     html = (tmp_path / "sessions" / "transcript_s1.html").read_text(encoding="utf-8")
-    assert 'href="../bristlenose-test-project-report.html"' in html
-    assert "&larr; Test Project Research Report" in html
+    # Global nav links back to the main report with tab anchors
+    assert 'href="../bristlenose-test-project-report.html#sessions"' in html
+    assert "bn-global-nav" in html
 
 
 def test_transcript_page_heading_with_name(tmp_path: Path) -> None:

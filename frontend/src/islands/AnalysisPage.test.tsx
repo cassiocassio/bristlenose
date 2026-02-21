@@ -242,7 +242,9 @@ describe("AnalysisPage", () => {
     });
 
     // Default is tags view — "Pain points" appears in card and heatmap
-    expect(screen.getAllByText("Pain points").length).toBeGreaterThanOrEqual(1);
+    await waitFor(() => {
+      expect(screen.getAllByText("Pain points").length).toBeGreaterThanOrEqual(1);
+    });
 
     // Click sentiment toggle
     fireEvent.click(screen.getByText("Sentiment signals"));

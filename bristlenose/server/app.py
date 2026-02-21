@@ -68,6 +68,16 @@ _REACT_CODEBOOK_MOUNT = (
     "</div>"
     "<!-- /bn-codebook -->"
 )
+# React mount point for analysis page.
+# Must preserve the .bn-tab-panel wrapper so vanilla JS tab switching can find it.
+_REACT_ANALYSIS_MOUNT = (
+    "<!-- bn-analysis -->"
+    '<div class="bn-tab-panel" data-tab="analysis" id="panel-analysis"'
+    ' role="tabpanel" aria-label="Analysis">'
+    '<div id="bn-analysis-root" data-project-id="1"></div>'
+    "</div>"
+    "<!-- /bn-analysis -->"
+)
 # React mount point for transcript page (replaces back link + heading + transcript body).
 # The {session_id} placeholder is filled at serve time from the filename.
 _REACT_TRANSCRIPT_MOUNT = (
@@ -124,6 +134,10 @@ def _transform_report_html(html: str, project_dir: Path | None) -> str:
     html = re.sub(
         r"<!-- bn-codebook -->.*?<!-- /bn-codebook -->",
         _REACT_CODEBOOK_MOUNT, html, flags=re.DOTALL,
+    )
+    html = re.sub(
+        r"<!-- bn-analysis -->.*?<!-- /bn-analysis -->",
+        _REACT_ANALYSIS_MOUNT, html, flags=re.DOTALL,
     )
     api_base_script = (
         "<script>window.BRISTLENOSE_API_BASE = '/api/projects/1';</script>\n"

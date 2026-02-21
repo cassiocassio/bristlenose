@@ -114,7 +114,7 @@ function SessionRows({ sessionId, items, zone, removing, onAccept, onDeny }: Ses
     <>
       <tr>
         <td colSpan={6} className="report-session-header">
-          {sessionId}
+          {/^s\d+$/.test(sessionId) ? `Session ${sessionId.slice(1)}` : sessionId}
         </td>
       </tr>
       {visibleItems.map((p) => (

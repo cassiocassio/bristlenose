@@ -10,9 +10,11 @@ from fastapi.testclient import TestClient
 from bristlenose.server.app import create_app
 from bristlenose.server.models import (
     UNCATEGORISED_GROUP_NAME,
+    AutoCodeJob,
     ClusterQuote,
     CodebookGroup,
     ProjectCodebookGroup,
+    ProposedTag,
     Quote,
     QuoteTag,
     ScreenCluster,
@@ -150,19 +152,23 @@ class TestGetTagAnalysis:
         assert set(data.keys()) == {
             "signals", "section_matrix", "theme_matrix",
             "total_participants", "columns", "participant_ids",
-            "trade_off_note",
+            "source_breakdown", "trade_off_note",
         }
         assert isinstance(data["signals"], list)
         assert isinstance(data["columns"], list)
         assert isinstance(data["participant_ids"], list)
         assert isinstance(data["total_participants"], int)
         assert isinstance(data["trade_off_note"], str)
+        sb = data["source_breakdown"]
+        assert set(sb.keys()) == {"accepted", "pending", "total"}
+        assert sb["total"] == sb["accepted"] + sb["pending"]
 
     def test_empty_when_no_tags(self, client: TestClient) -> None:
         data = client.get("/api/projects/1/analysis/tags").json()
         assert data["signals"] == []
         assert data["columns"] == []
         assert data["total_participants"] == 0
+        assert data["source_breakdown"] == {"accepted": 0, "pending": 0, "total": 0}
 
     def test_columns_are_group_names(self, tagged_client: TestClient) -> None:
         data = tagged_client.get("/api/projects/1/analysis/tags").json()
@@ -197,6 +203,10 @@ class TestGetTagAnalysis:
         assert set(sm.keys()) == {"cells", "row_totals", "col_totals", "grand_total", "row_labels"}
         assert isinstance(sm["cells"], dict)
         assert isinstance(sm["grand_total"], int)
+        # Cells should include weighted_count
+        if sm["cells"]:
+            cell = next(iter(sm["cells"].values()))
+            assert "weighted_count" in cell
 
     def test_project_not_found(self, client: TestClient) -> None:
         resp = client.get("/api/projects/999/analysis/tags")
@@ -247,3 +257,150 @@ class TestGetTagAnalysis:
             # p1 should come before p2, p2 before p10
             for pid in pids:
                 assert pid[0] == "p"
+
+    def test_source_breakdown_accepted_only(self, tagged_client: TestClient) -> None:
+        """When only accepted tags exist, pending count should be 0."""
+        data = tagged_client.get("/api/projects/1/analysis/tags").json()
+        sb = data["source_breakdown"]
+        assert sb["accepted"] > 0
+        assert sb["pending"] == 0
+        assert sb["total"] == sb["accepted"]
+
+
+# ---------------------------------------------------------------------------
+# ProposedTag weighting
+# ---------------------------------------------------------------------------
+
+
+def _create_proposed_tag_project() -> TestClient:
+    """Create a test client with both accepted and pending proposed tags."""
+    app = create_app(project_dir=_FIXTURE_DIR, dev=True, db_url="sqlite://")
+    db = app.state.db_factory()
+    try:
+        cluster = db.query(ScreenCluster).filter_by(project_id=1).first()
+        theme = db.query(ThemeGroup).filter_by(project_id=1).first()
+        assert cluster is not None
+        assert theme is not None
+
+        # Add extra quotes
+        extra_quotes = []
+        for pid in ["p2", "p3", "p4"]:
+            for i in range(2):
+                q = Quote(
+                    project_id=1, session_id="s1", participant_id=pid,
+                    start_timecode=100.0 * i + float(hash(pid) % 50),
+                    end_timecode=100.0 * i + 10.0,
+                    text=f"Proposed tag quote from {pid} #{i}",
+                    quote_type="screen_specific", sentiment="frustration", intensity=2,
+                )
+                db.add(q)
+                extra_quotes.append(q)
+        db.flush()
+
+        for q in extra_quotes:
+            db.add(ClusterQuote(cluster_id=cluster.id, quote_id=q.id))
+            db.add(ThemeQuote(theme_id=theme.id, quote_id=q.id))
+        db.flush()
+
+        # Codebook group + tag definition
+        g = CodebookGroup(name="Pain points", subtitle="", colour_set="emo", sort_order=0)
+        db.add(g)
+        db.flush()
+        db.add(ProjectCodebookGroup(project_id=1, codebook_group_id=g.id, sort_order=0))
+
+        td = TagDefinition(name="frustration", codebook_group_id=g.id)
+        db.add(td)
+        db.flush()
+
+        # Create an AutoCode job
+        job = AutoCodeJob(
+            project_id=1, framework_id="uxr", status="completed", proposed_count=6,
+        )
+        db.add(job)
+        db.flush()
+
+        all_quotes = db.query(Quote).filter_by(project_id=1).all()
+
+        # First 2 quotes: accepted (have QuoteTag)
+        for q in all_quotes[:2]:
+            db.add(QuoteTag(quote_id=q.id, tag_definition_id=td.id))
+
+        # Quotes 2–4: pending proposed (no QuoteTag, status=pending)
+        for q in all_quotes[2:5]:
+            db.add(ProposedTag(
+                job_id=job.id, quote_id=q.id, tag_definition_id=td.id,
+                confidence=0.8, rationale="test", status="pending",
+            ))
+
+        # Quote 5: denied proposed (should be excluded)
+        if len(all_quotes) > 5:
+            db.add(ProposedTag(
+                job_id=job.id, quote_id=all_quotes[5].id, tag_definition_id=td.id,
+                confidence=0.9, rationale="test denied", status="denied",
+            ))
+
+        # Quote 0: both accepted AND has a pending proposal (should not double-count)
+        db.add(ProposedTag(
+            job_id=job.id, quote_id=all_quotes[0].id, tag_definition_id=td.id,
+            confidence=0.95, rationale="test dup", status="pending",
+        ))
+
+        db.commit()
+    finally:
+        db.close()
+    return TestClient(app)
+
+
+@pytest.fixture()
+def proposed_client() -> TestClient:
+    return _create_proposed_tag_project()
+
+
+class TestProposedTagWeighting:
+
+    def test_pending_tags_included(self, proposed_client: TestClient) -> None:
+        """Pending proposed tags should appear in the analysis."""
+        data = proposed_client.get("/api/projects/1/analysis/tags").json()
+        sb = data["source_breakdown"]
+        assert sb["pending"] > 0
+        assert sb["accepted"] > 0
+
+    def test_denied_tags_excluded(self, proposed_client: TestClient) -> None:
+        """Denied proposed tags should not contribute to analysis."""
+        data = proposed_client.get("/api/projects/1/analysis/tags").json()
+        sb = data["source_breakdown"]
+        # We created 1 denied tag — total should be accepted + pending only
+        assert sb["total"] == sb["accepted"] + sb["pending"]
+
+    def test_no_double_counting_accepted_proposals(
+        self, proposed_client: TestClient,
+    ) -> None:
+        """A quote with both QuoteTag and pending ProposedTag should count once."""
+        data = proposed_client.get("/api/projects/1/analysis/tags").json()
+        sb = data["source_breakdown"]
+        # 2 accepted + 3 pending (minus 1 dup that was skipped) = 4 pending
+        # Actually: quote 0 has both QuoteTag and ProposedTag, so the proposal is skipped
+        # So: 2 accepted, 3 pending (from quotes 2-4) = 5 total
+        assert sb["accepted"] == 2
+        assert sb["pending"] == 3  # quotes 2, 3, 4 (quote 0 proposal skipped)
+        assert sb["total"] == 5
+
+    def test_weighted_count_in_cells(self, proposed_client: TestClient) -> None:
+        """Cells should have weighted_count reflecting confidence weighting."""
+        data = proposed_client.get("/api/projects/1/analysis/tags").json()
+        sm = data["section_matrix"]
+        if sm["cells"]:
+            # At least one cell should have weighted_count < count
+            # (because pending tags have weight 0.8, not 1.0)
+            has_fractional = any(
+                cell["weighted_count"] < cell["count"]
+                for cell in sm["cells"].values()
+                if cell["count"] > 0
+            )
+            assert has_fractional, "Expected at least one cell with weighted < unweighted"
+
+    def test_source_breakdown_shape(self, proposed_client: TestClient) -> None:
+        data = proposed_client.get("/api/projects/1/analysis/tags").json()
+        sb = data["source_breakdown"]
+        assert set(sb.keys()) == {"accepted", "pending", "total"}
+        assert all(isinstance(v, int) for v in sb.values())

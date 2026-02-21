@@ -282,3 +282,108 @@ export interface ProposalsListResponse {
   proposals: ProposedTagResponse[];
   total: number;
 }
+
+// ---------------------------------------------------------------------------
+// Tag-based analysis API
+// ---------------------------------------------------------------------------
+
+export interface TagSignalQuote {
+  text: string;
+  participant_id: string;
+  session_id: string;
+  start_seconds: number;
+  intensity: number;
+}
+
+export interface TagSignal {
+  location: string;
+  source_type: "section" | "theme";
+  group_name: string;
+  count: number;
+  participants: string[];
+  n_eff: number;
+  mean_intensity: number;
+  concentration: number;
+  composite_signal: number;
+  confidence: "strong" | "moderate" | "emerging";
+  quotes: TagSignalQuote[];
+}
+
+export interface AnalysisMatrixCell {
+  count: number;
+  weighted_count: number;
+  participants: Record<string, number>;
+  intensities: number[];
+}
+
+export interface AnalysisMatrix {
+  cells: Record<string, AnalysisMatrixCell>;
+  row_totals: Record<string, number>;
+  col_totals: Record<string, number>;
+  grand_total: number;
+  row_labels: string[];
+}
+
+export interface SourceBreakdown {
+  accepted: number;
+  pending: number;
+  total: number;
+}
+
+export interface TagAnalysisResponse {
+  signals: TagSignal[];
+  section_matrix: AnalysisMatrix;
+  theme_matrix: AnalysisMatrix;
+  total_participants: number;
+  columns: string[];
+  participant_ids: string[];
+  source_breakdown: SourceBreakdown;
+  trade_off_note: string;
+}
+
+// ---------------------------------------------------------------------------
+// Sentiment analysis (baked into HTML as BRISTLENOSE_ANALYSIS global)
+// ---------------------------------------------------------------------------
+
+export interface SentimentSignalQuote {
+  text: string;
+  pid: string;
+  sessionId: string;
+  startSeconds: number;
+  intensity: number;
+}
+
+export interface SentimentSignal {
+  location: string;
+  sourceType: "section" | "theme";
+  sentiment: string;
+  count: number;
+  participants: string[];
+  nEff: number;
+  meanIntensity: number;
+  concentration: number;
+  compositeSignal: number;
+  confidence: "strong" | "moderate" | "emerging";
+  quotes: SentimentSignalQuote[];
+}
+
+export interface SentimentMatrixCell {
+  count: number;
+}
+
+export interface SentimentMatrix {
+  cells: Record<string, SentimentMatrixCell>;
+  rowTotals: Record<string, number>;
+  colTotals: Record<string, number>;
+  grandTotal: number;
+  rowLabels: string[];
+}
+
+export interface SentimentAnalysisData {
+  signals: SentimentSignal[];
+  sectionMatrix: SentimentMatrix;
+  themeMatrix: SentimentMatrix;
+  totalParticipants: number;
+  sentiments: string[];
+  participantIds: string[];
+}

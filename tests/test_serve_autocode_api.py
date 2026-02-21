@@ -1,7 +1,7 @@
 """Tests for the AutoCode API endpoints.
 
-Exercises all seven endpoints: start, status, proposals, accept, deny,
-accept-all, deny-all.  Uses in-memory SQLite with smoke-test data.
+Exercises all eight endpoints: start, status, cancel, proposals, accept,
+deny, accept-all, deny-all.  Uses in-memory SQLite with smoke-test data.
 No real LLM calls — the background job is mocked.
 
 The smoke-test fixture has 4 quotes, so all proposal counts use N_QUOTES=4.

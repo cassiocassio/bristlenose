@@ -12,6 +12,7 @@ import type {
   CodebookTagResponse,
   ProposalsListResponse,
   RemoveFrameworkInfo,
+  TagAnalysisResponse,
   TemplateListResponse,
   TranscriptPageResponse,
 } from "./types";
@@ -234,4 +235,13 @@ export function denyAllProposals(
   return apiPost<{ denied: number }>(`/autocode/${frameworkId}/deny-all`, {
     ...(maxConfidence != null ? { max_confidence: maxConfidence } : {}),
   });
+}
+
+// ---------------------------------------------------------------------------
+// Tag-based analysis helpers
+// ---------------------------------------------------------------------------
+
+export function getTagAnalysis(groups?: string): Promise<TagAnalysisResponse> {
+  const qs = groups ? `?groups=${groups}` : "";
+  return apiGet<TagAnalysisResponse>(`/analysis/tags${qs}`);
 }

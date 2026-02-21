@@ -24,6 +24,7 @@
 
 .transcript-body {
     margin-top: var(--bn-space-lg);
+    position: relative;
     display: grid;
     /* Timecode: ~4.5rem for [HH:MM:SS] in monospace.
        Badge: right-aligned in a 2.2rem slot (fits p1–p99, m1–m99).

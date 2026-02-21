@@ -1,5 +1,6 @@
 import { createRoot } from "react-dom/client";
 import { AboutDeveloper } from "./islands/AboutDeveloper";
+import { AnalysisPage } from "./islands/AnalysisPage";
 import { CodebookPanel } from "./islands/CodebookPanel";
 import { Dashboard } from "./islands/Dashboard";
 import { HelloIsland } from "./islands/HelloIsland";
@@ -40,6 +41,13 @@ const themesRoot = document.getElementById("bn-quote-themes-root");
 if (themesRoot) {
   const projectId = themesRoot.getAttribute("data-project-id") || "1";
   createRoot(themesRoot).render(<QuoteThemes projectId={projectId} />);
+}
+
+// Mount AnalysisPage into the analysis tab
+const analysisRoot = document.getElementById("bn-analysis-root");
+if (analysisRoot) {
+  const projectId = analysisRoot.getAttribute("data-project-id") || "1";
+  createRoot(analysisRoot).render(<AnalysisPage projectId={projectId} />);
 }
 
 // Mount CodebookPanel into the codebook tab

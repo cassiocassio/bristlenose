@@ -209,8 +209,8 @@ class TestUxrStructure:
     def test_enabled(self, uxr: CodebookTemplate) -> None:
         assert uxr.enabled is True
 
-    def test_ten_groups(self, uxr: CodebookTemplate) -> None:
-        assert len(uxr.groups) == 10
+    def test_eight_groups(self, uxr: CodebookTemplate) -> None:
+        assert len(uxr.groups) == 8
 
     def test_empty_author(self, uxr: CodebookTemplate) -> None:
         assert uxr.author == ""
@@ -218,11 +218,13 @@ class TestUxrStructure:
     def test_no_author_links(self, uxr: CodebookTemplate) -> None:
         assert uxr.author_links == []
 
-    def test_tags_have_empty_prompts(self, uxr: CodebookTemplate) -> None:
-        """UXR tags don't have discrimination prompts yet."""
+    def test_tags_have_discrimination_prompts(self, uxr: CodebookTemplate) -> None:
+        """UXR v2 tags have full discrimination prompts."""
         for g in uxr.groups:
             for tag in g.tags:
-                assert tag.definition == ""
+                assert tag.definition, f"{g.name} > {tag.name}: missing definition"
+                assert tag.apply_when, f"{g.name} > {tag.name}: missing apply_when"
+                assert tag.not_this, f"{g.name} > {tag.name}: missing not_this"
 
 
 # ---------------------------------------------------------------------------

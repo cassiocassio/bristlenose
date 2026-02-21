@@ -1,0 +1,5 @@
+# Archived versions of codebook templates for easy comparison.
+# These are not used by the application — just for reference during iteration.
+#
+# Naming convention: {codebook-id}_YYYY-MM-DD_description.yaml
+# e.g., uxr_2026-02-21_v1-original-39-tags.yaml

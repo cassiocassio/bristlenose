@@ -1,118 +1,633 @@
 id: uxr
+version: "2.0"
 title: Bristlenose UXR Codebook
 author: ""
 enabled: true
 
 description: >
-  A domain-agnostic codebook for any user research study. Ten theme
-  categories that emerge bottom-up from behavioural observation,
-  emotional response, and contextual analysis. Works equally well
-  whether the research is about fishkeeping, rock climbing, poodle
-  grooming, or product evaluation — these are universal patterns of
-  human experience, motivation, and interaction.
+  A practitioner-oriented codebook for any user research study. Eight
+  theme groups covering behaviour, pain points, needs, mental models,
+  motivation, emotion, context, and learning. Domain-agnostic — works
+  equally well for fishkeeping, fintech, healthcare, or rock climbing.
+  These are universal patterns of human experience that emerge in
+  qualitative research across any domain.
 
 author_bio: >
   This is the default codebook — it provides a general-purpose
   qualitative coding framework that applies to any domain. Unlike the
-  Research Leaders codebooks (Garrett, Norman, Morville), which focus
-  on designed artefacts and UX-specific concepts, these ten categories
-  capture the full range of human experience themes that emerge in
-  qualitative research.
+  Research Leaders codebooks (Garrett, Norman), which focus on designed
+  artefacts and specific interaction-design theories, these tags
+  reflect the practical vocabulary used by working UX researchers on
+  sticky notes, in Dovetail, and in affinity diagrams.
 
 author_links: []
 
-preamble: ""
+preamble: >
+  These tags describe patterns of human experience, behaviour, and
+  interaction that emerge in qualitative research across any domain.
+  They are not tied to a specific design framework or theory — they
+  reflect the practical vocabulary used by working researchers.
+  Apply tags based on what the participant says and does in the quote.
+  If no tag fits naturally, assign nothing — an untagged quote is
+  better than a forced tag. When two tags could apply, choose the
+  one that best describes the primary thing happening in the quote.
 
 groups:
-  - name: Behavioural patterns
-    subtitle: What users do vs what they say
+  - name: Behaviour
+    subtitle: What people actually do
     colour_set: ux
     tags:
       - name: workaround
-      - name: say-do gap
-      - name: error recovery
-      - name: habit
-      - name: avoidance
+        definition: >
+          The participant has invented their own solution because the
+          intended path doesn't work for them — a self-made fix,
+          shortcut, or alternative route.
+        apply_when: >
+          The participant describes doing something "the wrong way" or
+          a non-obvious way because the designed path failed them.
+          Look for "what I actually do is," "I just use X instead,"
+          "my trick is," "I figured out that if you."
+        not_this: >
+          If the participant simply avoids the feature entirely, that's
+          avoidance. If they describe difficulty but haven't invented a
+          solution, that's friction. Workaround requires a creative
+          alternative, not just struggle.
 
-  - name: Pain points and friction
-    subtitle: Confusion, hesitation, abandonment
+      - name: habit
+        definition: >
+          The participant does something automatically, without
+          deliberate thought — ingrained routine behaviour that
+          persists even when better options exist.
+        apply_when: >
+          The participant describes something they "always" do, do
+          "without thinking," or have done "for years." Look for
+          "I just automatically," "out of habit," "I always," "that's
+          just what I do," "I don't even think about it."
+        not_this: >
+          If the participant is deliberately choosing to do something
+          (conscious decision), that's not habit — consider goal or
+          workaround. Habit is unconscious repetition, not deliberate
+          strategy.
+
+      - name: avoidance
+        definition: >
+          The participant deliberately steers away from a feature,
+          area, or action — they know it exists but choose not to
+          engage.
+        apply_when: >
+          The participant describes something they refuse to use, skip
+          over, ignore, or go out of their way to avoid. Look for
+          "I never touch that," "I skip," "I don't bother with,"
+          "I stay away from," "I refuse to."
+        not_this: >
+          If the participant doesn't know the feature exists, that's
+          not avoidance — consider confusion or tag nothing. If they've
+          built an alternative route, that's workaround. Avoidance is
+          conscious non-engagement.
+
+      - name: say-do gap
+        definition: >
+          What the participant says they do contradicts what they
+          actually do — stated behaviour differs from observed
+          behaviour.
+        apply_when: >
+          The participant's stated behaviour contradicts evidence from
+          observation, other quotes, or their own earlier statements.
+          Look for "I usually do X" when observation shows Y, or
+          self-contradictions within the interview.
+        not_this: >
+          This tag requires evidence of a gap — the participant must
+          both state something AND the data must show something
+          different. A single statement without contradicting evidence
+          isn't a say-do gap — it's just a statement.
+
+      - name: error recovery
+        definition: >
+          How the participant recovers (or fails to recover) after
+          making a mistake — the moment after something goes wrong.
+        apply_when: >
+          The participant describes what happened after an error —
+          hitting undo, starting over, calling support, giving up, or
+          finding their own fix. Look for "so then I had to,"
+          "I couldn't figure out how to go back," "I hit undo,"
+          "I just started over."
+        not_this: >
+          If the participant hasn't made an error but is simply
+          confused, that's confusion. If they gave up entirely, that's
+          abandonment. Error recovery is specifically the response to
+          a mistake, not the confusion that preceded it.
+
+  - name: Pain points
+    subtitle: Where things break down
     colour_set: emo
     tags:
       - name: confusion
-      - name: hesitation
-      - name: abandonment
-      - name: dead end
-      - name: frustration trigger
+        definition: >
+          The participant doesn't understand what's happening, what
+          something means, or what to do next — a cognitive "I'm lost"
+          moment.
+        apply_when: >
+          The participant expresses uncertainty about meaning, state,
+          or next steps. Look for "I don't understand," "what does this
+          mean," "I'm not sure what," "where am I," "wait, what,"
+          "huh?"
+        not_this: >
+          If the participant understands but finds the process slow or
+          effortful, that's friction. If they have a wrong
+          understanding (but feel confident), that's misconception.
+          Confusion is the felt experience of not knowing.
 
-  - name: Unmet needs and latent desires
-    subtitle: Not explicitly requested but emerged from behaviour
+      - name: frustration
+        definition: >
+          The participant expresses annoyance, anger, or exasperation —
+          an emotional response to something that isn't working well.
+        apply_when: >
+          The participant shows visible or verbal signs of annoyance.
+          Look for tone markers (sighing, swearing, emphatic language),
+          "this is ridiculous," "why can't I just," "that's so
+          annoying," "I hate when," "are you kidding me."
+        not_this: >
+          Frustration is an emotional state, not a usability
+          observation. If the participant is calm but the process is
+          slow, that's friction. If they're confused but not angry,
+          that's confusion. Frustration requires emotional escalation.
+
+      - name: friction
+        definition: >
+          Something slows the participant down, adds unnecessary steps,
+          or requires more effort than it should — the "this is harder
+          than it needs to be" feeling.
+        apply_when: >
+          The participant describes unnecessary steps, excessive
+          effort, slow processes, or things that should be easier.
+          Look for "it takes too long," "too many steps," "why do I
+          have to," "it should just," "every time I need to."
+        not_this: >
+          If the participant is emotionally escalated, that's
+          frustration (friction is the observation, frustration is the
+          emotional response to it). If they can't proceed at all,
+          that's dead end. Friction means progress is possible but
+          unnecessarily hard.
+
+      - name: dead end
+        definition: >
+          The participant hits a wall with no obvious way forward —
+          stuck, blocked, can't proceed.
+        apply_when: >
+          The participant reaches a point where they literally cannot
+          continue. Look for "I can't," "there's no way to," "it won't
+          let me," "I'm stuck," "now what," "nothing happens."
+        not_this: >
+          If the participant can proceed but it's slow or hard, that's
+          friction. If they choose to give up, that's abandonment.
+          Dead end is the moment of being blocked — what happens next
+          (abandon, workaround, error recovery) is a separate tag.
+
+      - name: abandonment
+        definition: >
+          The participant gives up on a task or goal entirely — they
+          stop trying.
+        apply_when: >
+          The participant describes quitting, leaving, giving up, or
+          walking away. Look for "I just gave up," "I left,"
+          "I stopped trying," "I moved on," "I went somewhere else,"
+          "forget it."
+        not_this: >
+          If the participant is still trying but blocked, that's dead
+          end. If they found an alternative route, that's workaround.
+          Abandonment means they stopped pursuing the goal entirely —
+          no fallback, no retry, just done.
+
+  - name: Needs and desires
+    subtitle: What people want
     colour_set: emo
     tags:
-      - name: latent need
-      - name: compensatory behaviour
-      - name: feature gap
-      - name: desire path
+      - name: unmet need
+        definition: >
+          Something the participant wants or needs that isn't being
+          addressed — a gap between what they have and what they
+          require.
+        apply_when: >
+          The participant describes something missing from their
+          experience — not a specific feature, but an underlying need
+          or desire. Look for "I wish," "what I really need is,"
+          "there's nothing that," "if only," "the problem is there's
+          no way to."
+        not_this: >
+          If the participant asks for a specific feature or capability
+          by name, that's feature request. Unmet need is the
+          underlying problem; feature request is a proposed solution.
+          "I need better organisation" = unmet need. "I want a folder
+          system" = feature request.
 
-  - name: Expectations and mental models
-    subtitle: How users conceptualise the system or domain
+      - name: feature request
+        definition: >
+          The participant explicitly asks for a specific capability,
+          feature, or improvement — a concrete "build this" statement.
+        apply_when: >
+          The participant names a specific thing they want built,
+          added, or changed. Look for "you should add," "it would be
+          great if," "I want a button that," "can you make it so,"
+          "why isn't there a."
+        not_this: >
+          If the participant describes an underlying problem without
+          proposing a solution, that's unmet need. Feature request is
+          the participant's proposed solution — they may be right about
+          the need but wrong about the solution. Tag the request, not
+          just the need behind it.
+
+      - name: desire path
+        definition: >
+          The participant's natural behaviour reveals a need the
+          designer didn't anticipate — they've worn a path through the
+          grass where no pavement exists.
+        apply_when: >
+          The participant describes using something in an unintended
+          way that reveals what they actually want. Look for "I use X
+          for Y" (where Y isn't what X was designed for),
+          cobbled-together workflows, spreadsheets used as databases,
+          emails used as to-do lists.
+        not_this: >
+          If the participant has a deliberate fix for a known problem,
+          that's workaround (conscious). Desire path is often
+          unselfconscious — the participant may not even realise
+          they're revealing a need. The distinction: workaround =
+          "I know this is wrong but"; desire path = "this is just how
+          I do it."
+
+      - name: expectation mismatch
+        definition: >
+          What the participant expected to happen differs from what
+          actually happened — surprise, disappointment, or confusion
+          caused by a gap between mental model and reality.
+        apply_when: >
+          The participant describes something that didn't behave as
+          they expected. Look for "I thought it would," "I expected,"
+          "I assumed," "that's not what I thought would happen,"
+          "I was surprised that," "why did it."
+        not_this: >
+          If the participant reveals their overall understanding of a
+          system, that's mental model (neutral). If they have a
+          factually wrong belief, that's misconception. Expectation
+          mismatch is specifically about a moment of surprise when
+          prediction meets reality.
+
+  - name: Mental models
+    subtitle: How people think it works
     colour_set: task
     tags:
       - name: mental model
-      - name: assumption
-      - name: prior experience
-      - name: conceptual mismatch
+        definition: >
+          The participant reveals how they conceptualise a system,
+          process, or domain — their internal map of how things work
+          or are organised.
+        apply_when: >
+          The participant explains their understanding of how something
+          is structured, categorised, or operates. Look for "the way
+          I think about it is," "I see it as," "in my mind," "it's
+          like," analogies, or descriptions of how they believe a
+          process works.
+        not_this: >
+          If the participant's model is factually wrong, that's
+          misconception (a subset). If they're comparing to past
+          experience, that's prior experience. Mental model is the
+          neutral act of revealing how they think — right or wrong.
 
-  - name: Motivations and goals
-    subtitle: Underlying jobs-to-be-done
+      - name: assumption
+        definition: >
+          The participant takes something for granted that may or may
+          not be true — an unexamined belief that shapes their
+          behaviour.
+        apply_when: >
+          The participant acts on or states an unverified belief. Look
+          for "I assumed," "I figured," "I thought it was obvious
+          that," "of course it would," "everyone knows that,"
+          "surely."
+        not_this: >
+          If the assumption is definitively wrong, consider
+          misconception. If the participant is actively comparing to
+          past experience, that's prior experience. Assumption is
+          about unstated, often unconscious premises.
+
+      - name: prior experience
+        definition: >
+          The participant references a previous experience — with
+          another product, system, or context — that shapes their
+          current expectations.
+        apply_when: >
+          The participant explicitly references another product, a
+          previous version, a competitor, or a past situation. Look
+          for "at my old job," "on [other product]," "last time I,"
+          "the way [competitor] does it," "I'm used to."
+        not_this: >
+          If the participant reveals an internal model without
+          referencing a specific past experience, that's mental model.
+          Prior experience requires an explicit reference to a concrete
+          past situation, product, or context.
+
+      - name: misconception
+        definition: >
+          The participant has a factually incorrect understanding that
+          they believe to be true — a wrong mental model they're
+          acting on.
+        apply_when: >
+          The participant states or acts on something that is
+          demonstrably wrong. Look for confident statements that
+          contradict how the system actually works, incorrect
+          explanations of cause and effect, or wrong beliefs about
+          what will happen.
+        not_this: >
+          If the participant is uncertain (knows they don't know),
+          that's confusion. If their model is simply different but not
+          wrong, that's mental model. Misconception requires the
+          participant to be wrong and confident — they think they know.
+
+  - name: Motivation
+    subtitle: Why people bother
     colour_set: task
     tags:
-      - name: primary goal
-      - name: secondary goal
-      - name: job-to-be-done
-      - name: trigger
-      - name: barrier
+      - name: goal
+        definition: >
+          What the participant is trying to achieve — the outcome
+          they're working toward in this moment or overall.
+        apply_when: >
+          The participant describes what they want to accomplish. Look
+          for "I'm trying to," "my goal is," "I want to," "I need to
+          get," "the whole point is."
+        not_this: >
+          If the participant describes what prompted them to start,
+          that's trigger. If they describe what's stopping them, that's
+          barrier. Goal is the destination; trigger is what got them
+          moving; barrier is what's in the way.
 
-  - name: Trust, confidence, and emotional response
-    subtitle: Feelings at key decision points
+      - name: trigger
+        definition: >
+          What prompted the participant to take action — the event,
+          realisation, or external push that started the journey.
+        apply_when: >
+          The participant describes the moment or event that made them
+          act. Look for "that's when I decided," "what made me start
+          was," "the last straw was," "I saw an ad," "someone
+          recommended," "I finally."
+        not_this: >
+          If the participant describes an ongoing goal rather than the
+          moment that initiated action, that's goal. Trigger is about
+          the precipitating event, not the underlying motivation.
+
+      - name: barrier
+        definition: >
+          Something preventing the participant from reaching their
+          goal — an obstacle, constraint, or blocker that sits between
+          them and the outcome they want.
+        apply_when: >
+          The participant describes what's stopping them or making
+          progress difficult. Look for "the problem is," "I can't
+          because," "what holds me back is," "the thing that stops
+          me," "if it weren't for."
+        not_this: >
+          If the obstacle is a specific usability issue, consider
+          friction or dead end (those describe the experience of
+          hitting the barrier). Barrier is the structural or
+          contextual constraint itself — cost, time, access,
+          knowledge, regulations.
+
+      - name: job-to-be-done
+        definition: >
+          The underlying job the participant is "hiring" a product or
+          process to accomplish — the deeper motivation beneath the
+          surface goal, incorporating functional, social, and
+          emotional dimensions.
+        apply_when: >
+          The participant reveals the deeper purpose behind their
+          actions — the "why behind the why." Look for statements
+          that reveal functional needs ("I need to get this done"),
+          social needs ("I want to look professional"), or emotional
+          needs ("I want to feel in control").
+        not_this: >
+          If the participant describes a specific, immediate task,
+          that's goal (tactical). Job-to-be-done is strategic — it's
+          the enduring life need that exists independent of any
+          particular product. "Find a restaurant" = goal. "Feed my
+          family reliably without stress" = job-to-be-done.
+
+  - name: Emotion and trust
+    subtitle: How people feel
     colour_set: trust
     tags:
-      - name: trust signal
-      - name: anxiety moment
-      - name: confidence builder
-      - name: emotional peak
+      - name: delight
+        definition: >
+          The participant expresses genuine pleasure, joy, or positive
+          surprise — a moment that exceeds expectations.
+        apply_when: >
+          The participant shows or states positive emotion — genuine
+          pleasure, not mere satisfaction. Look for "I love," "that's
+          amazing," "oh cool," "this is great," laughing with
+          pleasure, "I didn't expect that" (positively).
+        not_this: >
+          If the participant is satisfied but not emotionally moved,
+          don't tag — delight requires elevated positive emotion. If
+          the surprise is negative, that's surprise (neutral tag).
+          Delight is specifically positive emotional response beyond
+          basic satisfaction.
 
-  - name: Environmental and contextual factors
-    subtitle: Interruptions, device switching, social influence
+      - name: anxiety
+        definition: >
+          The participant feels uncertain, worried, or nervous about
+          an outcome — anticipatory stress about what might go wrong.
+        apply_when: >
+          The participant expresses worry about a future outcome or
+          current uncertainty. Look for "I'm worried that," "what if,"
+          "I'm not sure this will," "I hope it doesn't," "I'm nervous
+          about," hesitation before committing.
+        not_this: >
+          If the participant lacks trust in a specific entity, that's
+          distrust. If they're confused about what's happening, that's
+          confusion. Anxiety is forward-looking emotional unease —
+          worry about what might happen, not confusion about what is
+          happening.
+
+      - name: trust
+        definition: >
+          The participant expresses confidence, belief, or reliance on
+          a system, person, brand, or process — a positive judgement
+          of reliability or credibility.
+        apply_when: >
+          The participant signals confidence or positive reliance.
+          Look for "I trust," "I know they'll," "I feel safe,"
+          "they're reliable," "I believe," "I'm confident that,"
+          "I don't worry about."
+        not_this: >
+          If the participant has a generic positive emotional response,
+          that's delight. Trust is specifically about credibility,
+          reliability, and confidence in outcomes — a cognitive
+          judgement, not just a feeling.
+
+      - name: distrust
+        definition: >
+          The participant expresses suspicion, scepticism, or lack of
+          confidence — a negative judgement about reliability, honesty,
+          or competence.
+        apply_when: >
+          The participant signals suspicion or active disbelief. Look
+          for "I don't trust," "that seems dodgy," "I'm suspicious,"
+          "are they going to," "I bet they," "that feels like a scam,"
+          "why do they need my."
+        not_this: >
+          If the participant is worried about a future outcome, that's
+          anxiety (forward-looking). Distrust is a judgement about an
+          entity's character or reliability — "they can't be trusted"
+          vs "I'm worried about what might happen."
+
+      - name: surprise
+        definition: >
+          Something unexpected happened — could be positive, negative,
+          or neutral. The participant's expectations were violated.
+        apply_when: >
+          The participant encounters something they didn't expect. Look
+          for "oh!," "I didn't expect," "I was surprised," "really?,"
+          "wait, what?," "that's weird," "huh, I didn't know."
+        not_this: >
+          If the surprise is clearly positive and emotionally elevated,
+          that's delight. If the surprise reveals a gap between
+          expectation and reality, that's expectation mismatch. Use
+          surprise when the emotional valence is unclear or mixed, or
+          the reaction is brief.
+
+  - name: Context
+    subtitle: The world around the task
     colour_set: trust
     tags:
       - name: interruption
-      - name: device switch
-      - name: social influence
+        definition: >
+          External factors pull the participant away from their task —
+          the context intrudes on the experience.
+        apply_when: >
+          The participant describes being pulled away, distracted, or
+          having their flow broken by something external. Look for
+          "then my phone rang," "the kids needed me," "I got pulled
+          into a meeting," "I had to stop because," "I lost my place."
+        not_this: >
+          If the participant is under time pressure but not
+          interrupted, that's time pressure. If other people are
+          influencing their decision (not interrupting), that's social
+          influence. Interruption is a disruption event, not an ongoing
+          condition.
+
       - name: time pressure
+        definition: >
+          The participant is constrained by urgency, deadlines, or
+          limited time — the clock is a factor in their experience.
+        apply_when: >
+          The participant mentions deadlines, rushing, or time as a
+          limiting factor. Look for "I was in a rush," "I didn't have
+          time to," "the deadline was," "I needed it fast," "I
+          couldn't wait," "right now."
+        not_this: >
+          If the participant is blocked (can't proceed at all), that's
+          dead end — different from being time-constrained but able to
+          proceed. Time pressure is about pace and urgency, not about
+          being stuck.
 
-  - name: Learning and skill acquisition
-    subtitle: How people build competence
+      - name: social influence
+        definition: >
+          Other people — peers, family, experts, communities, or
+          cultural norms — shape the participant's behaviour,
+          decisions, or opinions.
+        apply_when: >
+          The participant references other people's opinions,
+          recommendations, or behaviour as a factor. Look for "my
+          friend told me," "everyone uses," "the reviews said,"
+          "people will think," "my partner wants," "the community
+          recommends."
+        not_this: >
+          If other people are physically interrupting the task, that's
+          interruption. Social influence is about other people shaping
+          the decision, not disrupting the process.
+
+      - name: device/channel
+        definition: >
+          The participant references switching between devices,
+          platforms, or communication channels — multi-device or
+          omnichannel behaviour.
+        apply_when: >
+          The participant describes moving between devices, platforms,
+          or channels. Look for "on my phone," "then I switched to my
+          laptop," "I called them instead," "I went to the store,"
+          "the app vs the website."
+        not_this: >
+          This is a context observation, not a pain point. If
+          switching devices causes frustration, also tag friction or
+          frustration. Device/channel captures the behaviour of moving
+          between touchpoints.
+
+  - name: Learning
+    subtitle: How people figure things out
     colour_set: opp
     tags:
-      - name: learning curve
       - name: aha moment
-      - name: skill plateau
-      - name: self-teaching
+        definition: >
+          The participant has a sudden insight or breakthrough
+          understanding — the penny drops and something clicks into
+          place.
+        apply_when: >
+          The participant describes a moment of sudden understanding.
+          Look for "oh! that's how it works," "now I get it,"
+          "I finally figured out," "it suddenly made sense," "the
+          lightbulb went on," "so THAT'S what."
+        not_this: >
+          If understanding came gradually through effort, that's
+          learning curve (process), not aha moment (event). If the
+          participant is just surprised without gaining understanding,
+          that's surprise. Aha moment requires a cognitive shift — new
+          understanding, not just new information.
 
-  - name: Community and social dynamics
-    subtitle: Knowledge sharing, identity through domain
-    colour_set: opp
-    tags:
-      - name: knowledge sharing
-      - name: peer influence
-      - name: community norm
-      - name: identity signal
+      - name: learning curve
+        definition: >
+          The participant describes the process of building
+          competence — the difficulty (or ease) of getting up to speed
+          with something.
+        apply_when: >
+          The participant describes the process of learning over time.
+          Look for "it took me a while to," "at first I couldn't,"
+          "once you learn," "the hardest part was figuring out,"
+          "after a few tries," "it's not intuitive but."
+        not_this: >
+          If the participant has a sudden insight, that's aha moment
+          (event). If they're currently confused and haven't yet
+          learned, that's confusion (state). Learning curve is
+          retrospective — looking back at the process of building
+          competence.
 
-  - name: Identity and self-concept
-    subtitle: How the activity relates to self-perception
-    colour_set: ux
-    tags:
-      - name: self-perception
-      - name: aspiration
-      - name: expertise identity
-      - name: beginner mindset
+      - name: self-taught
+        definition: >
+          The participant figured something out on their own — without
+          formal training, documentation, or external help.
+        apply_when: >
+          The participant describes learning through trial and error,
+          exploration, or improvisation. Look for "I taught myself,"
+          "I just played around until," "I figured it out by,"
+          "nobody showed me," "I watched YouTube videos," "I googled
+          it."
+        not_this: >
+          If other people helped, consider social influence. If formal
+          training was involved, this tag doesn't apply. Self-taught
+          is specifically about autonomous learning — the participant
+          as their own teacher.
+
+      - name: expertise
+        definition: >
+          The participant demonstrates or references deep domain
+          knowledge — they know this area well and their competence
+          is evident.
+        apply_when: >
+          The participant shows mastery, uses domain-specific jargon
+          fluently, makes nuanced distinctions, or references deep
+          experience. Look for technical vocabulary used confidently,
+          "in my experience," corrections of the interviewer,
+          comparisons between subtle alternatives.
+        not_this: >
+          If the participant is learning (not yet expert), that's
+          learning curve or self-taught. If they reference experience
+          but aren't showing mastery, that's prior experience.
+          Expertise is about demonstrated competence, not just time
+          spent.

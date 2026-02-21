@@ -48,8 +48,8 @@ function formatDuration(startedAt: string, completedAt: string): string {
 
 function toChipJob(job: ActivityJob, status: AutoCodeJobStatus | null): ActivityChipJob {
   const s = status?.status ?? "running";
-  const effectiveStatus: "running" | "completed" | "failed" =
-    s === "pending" ? "running" : (s as "running" | "completed" | "failed");
+  const effectiveStatus: "running" | "completed" | "failed" | "cancelled" =
+    s === "pending" ? "running" : (s as "running" | "completed" | "failed" | "cancelled");
 
   let progressLabel: string | null = null;
   if (effectiveStatus === "running" && status) {
@@ -103,9 +103,9 @@ export function ActivityChipStack({ jobs, onDismiss }: ActivityChipStackProps) {
 
     const id = setInterval(() => {
       for (const job of jobs) {
-        // Don't poll completed/failed jobs.
+        // Don't poll terminal jobs.
         const s = statusesRef.current[job.id]?.status;
-        if (s === "completed" || s === "failed") continue;
+        if (s === "completed" || s === "failed" || s === "cancelled") continue;
         pollJob(job);
       }
     }, POLL_INTERVAL);
@@ -118,7 +118,7 @@ export function ActivityChipStack({ jobs, onDismiss }: ActivityChipStackProps) {
   useEffect(() => {
     for (const job of jobs) {
       const s = statuses[job.id]?.status;
-      if ((s === "completed" || s === "failed") && !completeFired.current.has(job.id)) {
+      if ((s === "completed" || s === "failed" || s === "cancelled") && !completeFired.current.has(job.id)) {
         completeFired.current.add(job.id);
         job.onComplete?.();
       }
@@ -166,6 +166,7 @@ export function ActivityChipStack({ jobs, onDismiss }: ActivityChipStackProps) {
             onAction={chip.status === "completed" ? job.onAction : undefined}
             actionLabel={job.actionLabel}
             onDismiss={() => onDismiss(job.id)}
+            onCancel={chip.status === "running" ? job.onCancel : undefined}
           />
         ))}
       {showSummary && expanded && (

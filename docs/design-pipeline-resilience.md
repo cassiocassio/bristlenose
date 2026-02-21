@@ -1,6 +1,6 @@
 # Pipeline Resilience & Data Integrity
 
-> **Status**: Phase 1a–1d implemented; Phase 1e+ not yet implemented
+> **Status**: Phase 1a–1d-ext implemented; Phase 1e+ not yet implemented
 > **Scope**: Big-picture architecture for crash recovery, incremental re-runs, provenance tracking, human/LLM merge, source material change detection, mid-run provider switching, and analytical context preservation
 > **Trigger**: Plato stress test (Feb 2026) — pipeline ran out of API credits mid-run, stale SQLite data from previous project leaked into serve mode, intermediate JSON files weren't written by `analyze` command, recovery required re-spending $3.50 on LLM calls already made
 
@@ -539,7 +539,7 @@ $ bristlenose run interviews/    # second run — resumes
 ✓ Rendered report                          0.1s
 ```
 
-#### 1d. Per-session tracking for expensive stages
+#### ~~1d. Per-session tracking for expensive stages~~ ✓ Done
 
 **What it is**: Steps 1a-1c track at the stage level: "quote extraction is complete" or "quote extraction is incomplete." But quote extraction processes sessions independently — if 7 of 10 sessions succeeded, we should save those 7 and only re-run 3.
 
@@ -570,7 +570,7 @@ Each per-session stage writes its results incrementally — after processing eac
 
 **Risk**: Medium. Need to handle the merge of old cached results + new results for the same stage. But it's straightforward — load existing quotes for sessions s1-s7, extract new quotes for s8-s10, concatenate.
 
-#### 1d-ext. Per-session caching for stages 1–7 (idea — needs detailed planning)
+#### ~~1d-ext. Per-session caching for stages 1–7~~ ✓ Done
 
 **What it is**: Extend per-session caching to stages that currently always re-run on resume. Transcription is the biggest win; speaker identification also saves LLM money.
 
@@ -598,7 +598,7 @@ Caching transcription alone would cut resume time from 1m 48s to ~52s (52% reduc
 
 **Open questions**: (1) Should audio extraction (stage 2) also be cached per-session? It's fast but not free. (2) How does this interact with speaker identification (stage 4) and transcript merging (stage 5), which are downstream of transcription? (3) What about subtitle parsing and docx parsing — are those per-session too?
 
-**Status**: Idea only. Needs a detailed next-session prompt before implementation.
+**Status**: ✓ Done. Transcription caches `session_segments.json`, speaker ID caches `speaker-info/{sid}.json`. 10 tests. Audio extraction not cached (marginal gain).
 
 #### 1e. Status report and `--resume` flag
 

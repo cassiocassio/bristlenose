@@ -247,4 +247,59 @@ describe("ActivityChipStack", () => {
     fireEvent.click(link);
     expect(onAction).toHaveBeenCalledOnce();
   });
+
+  it("stops polling cancelled jobs", async () => {
+    mockGetStatus.mockResolvedValue(
+      makeStatus({ status: "cancelled" }),
+    );
+
+    render(
+      <ActivityChipStack
+        jobs={[makeJob()]}
+        onDismiss={vi.fn()}
+      />,
+    );
+
+    await act(async () => {});
+    expect(mockGetStatus).toHaveBeenCalledTimes(1);
+
+    // Should not poll again — job is cancelled.
+    await act(async () => {
+      vi.advanceTimersByTime(2000);
+    });
+    expect(mockGetStatus).toHaveBeenCalledTimes(1);
+  });
+
+  it("fires onComplete for cancelled jobs", async () => {
+    const onComplete = vi.fn();
+    mockGetStatus.mockResolvedValue(
+      makeStatus({ status: "cancelled" }),
+    );
+
+    render(
+      <ActivityChipStack
+        jobs={[makeJob({ onComplete })]}
+        onDismiss={vi.fn()}
+      />,
+    );
+
+    await act(async () => {});
+    expect(onComplete).toHaveBeenCalledTimes(1);
+  });
+
+  it("shows close button on cancelled chip", async () => {
+    mockGetStatus.mockResolvedValue(
+      makeStatus({ status: "cancelled" }),
+    );
+
+    render(
+      <ActivityChipStack
+        jobs={[makeJob()]}
+        onDismiss={vi.fn()}
+      />,
+    );
+
+    await act(async () => {});
+    expect(screen.getByTestId("bn-activity-chip-close")).toBeInTheDocument();
+  });
 });

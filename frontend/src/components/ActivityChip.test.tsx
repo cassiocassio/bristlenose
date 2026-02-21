@@ -126,4 +126,45 @@ describe("ActivityChip", () => {
 
     expect(screen.queryByTestId("bn-activity-chip-action")).not.toBeInTheDocument();
   });
+
+  it("renders cancel button while running when onCancel provided", () => {
+    const onCancel = vi.fn();
+    render(<ActivityChip job={makeJob()} onCancel={onCancel} />);
+
+    const btn = screen.getByTestId("bn-activity-chip-cancel");
+    expect(btn).toBeInTheDocument();
+    expect(btn).toHaveTextContent("Cancel");
+    fireEvent.click(btn);
+    expect(onCancel).toHaveBeenCalledOnce();
+  });
+
+  it("does not render cancel button when onCancel not provided", () => {
+    render(<ActivityChip job={makeJob()} />);
+    expect(screen.queryByTestId("bn-activity-chip-cancel")).not.toBeInTheDocument();
+  });
+
+  it("does not render cancel button when completed", () => {
+    render(
+      <ActivityChip
+        job={makeJob({ status: "completed", durationLabel: "1:23" })}
+        onCancel={vi.fn()}
+      />,
+    );
+    expect(screen.queryByTestId("bn-activity-chip-cancel")).not.toBeInTheDocument();
+  });
+
+  it("renders cancelled state with close button", () => {
+    const onDismiss = vi.fn();
+    render(
+      <ActivityChip
+        job={makeJob({ status: "cancelled", progressLabel: null })}
+        onDismiss={onDismiss}
+      />,
+    );
+
+    const chip = screen.getByTestId("bn-activity-chip");
+    expect(chip).toHaveAttribute("data-status", "cancelled");
+    expect(screen.getByText(/cancelled/)).toBeInTheDocument();
+    expect(screen.getByTestId("bn-activity-chip-close")).toBeInTheDocument();
+  });
 });

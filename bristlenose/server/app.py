@@ -168,6 +168,7 @@ def create_app(
     project_dir: Path | None = None,
     dev: bool = False,
     db_url: str | None = None,
+    verbose: bool = False,
 ) -> FastAPI:
     """Create and configure the FastAPI application.
 
@@ -176,18 +177,34 @@ def create_app(
                      When provided, serves the report files.
         dev: When True, skip mounting static files (Vite dev server handles them).
         db_url: Override database URL (e.g. "sqlite://" for in-memory tests).
+        verbose: When True, terminal handler shows DEBUG-level messages.
 
     In ``--dev`` mode uvicorn calls this factory with no arguments on reload.
     The CLI stashes ``project_dir`` in ``_BRISTLENOSE_PROJECT_DIR`` so the
     factory can recover it.
     """
-    # Recover project_dir and dev flag from env when called by uvicorn reload
+    # Recover project_dir, dev, and verbose flags from env when called by uvicorn reload
     if project_dir is None:
         env_dir = os.environ.get("_BRISTLENOSE_PROJECT_DIR")
         if env_dir:
             project_dir = Path(env_dir)
     if not dev and os.environ.get("_BRISTLENOSE_DEV") == "1":
         dev = True
+    if not verbose and os.environ.get("_BRISTLENOSE_VERBOSE") == "1":
+        verbose = True
+
+    # Persistent log file — writes to <output_dir>/.bristlenose/bristlenose.log
+    # alongside the per-project SQLite DB.  Controlled by BRISTLENOSE_LOG_LEVEL
+    # (default INFO).  Terminal verbosity is separate (-v on the CLI).
+    if project_dir is not None:
+        _output_dir = project_dir / "bristlenose-output"
+        if not _output_dir.is_dir():
+            _output_dir = project_dir  # Already pointing at the output dir
+        if _output_dir.is_dir():
+            from bristlenose.logging import setup_logging
+
+            setup_logging(output_dir=_output_dir, verbose=verbose)
+
     app = FastAPI(title="Bristlenose", docs_url="/api/docs", redoc_url=None)
 
     # Per-project DB: derive path from project_dir unless explicitly overridden

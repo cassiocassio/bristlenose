@@ -188,16 +188,20 @@ class Pipeline:
         # TimingEstimator — typed as object for the same reason.
         self._estimator = estimator
 
-        # Configure logging: suppress at default verbosity, show at -v
-        log_level = logging.DEBUG if verbose else logging.WARNING
-        logging.basicConfig(
-            level=log_level,
-            format="%(levelname)s | %(name)s | %(message)s",
-            force=True,
-        )
-        # Always suppress noisy third-party loggers, even with -v
-        for name in ("httpx", "presidio-analyzer", "presidio_analyzer", "faster_whisper"):
-            logging.getLogger(name).setLevel(logging.WARNING)
+        # Logging is configured later (once output_dir is known) via
+        # _configure_logging().  Pipeline methods call it at the top of
+        # run() / run_analysis_only() / run_transcription_only() /
+        # run_render_only() where output_dir is available.
+        self._logging_configured = False
+
+    def _configure_logging(self, output_dir: Path) -> None:
+        """Set up terminal + log file handlers (idempotent)."""
+        if self._logging_configured:
+            return
+        from bristlenose.logging import setup_logging
+
+        setup_logging(output_dir=output_dir, verbose=self.verbose)
+        self._logging_configured = True
 
     def _emit(self, event: object) -> None:
         """Fire a PipelineEvent to the registered callback (if any)."""
@@ -263,6 +267,7 @@ class Pipeline:
         pipeline_start = time.perf_counter()
         _printed_warnings.clear()
         output_dir.mkdir(parents=True, exist_ok=True)
+        self._configure_logging(output_dir)
         write_pipeline_metadata(output_dir, self.settings.project_name)
 
         # ── Manifest tracking ────────────────────────────────────
@@ -869,6 +874,7 @@ class Pipeline:
 
         pipeline_start = time.perf_counter()
         output_dir.mkdir(parents=True, exist_ok=True)
+        self._configure_logging(output_dir)
 
         with console.status("", spinner="dots") as status:
             status.renderable.frames = [" " + f for f in status.renderable.frames]
@@ -1003,6 +1009,7 @@ class Pipeline:
         pipeline_start = time.perf_counter()
         _printed_warnings.clear()
         output_dir.mkdir(parents=True, exist_ok=True)
+        self._configure_logging(output_dir)
         write_pipeline_metadata(output_dir, self.settings.project_name)
 
         # Load existing transcripts from text files
@@ -1262,6 +1269,8 @@ class Pipeline:
         from bristlenose.models import ExtractedQuote, ScreenCluster, ThemeGroup
         from bristlenose.stages.render_html import render_html
         from bristlenose.stages.render_output import render_markdown
+
+        self._configure_logging(output_dir)
 
         # Try new layout first (.bristlenose/intermediate/), fall back to legacy (intermediate/)
         intermediate = output_dir / ".bristlenose" / "intermediate"

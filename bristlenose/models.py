@@ -186,6 +186,7 @@ class TranscriptSegment(BaseModel):
     speaker_code: str = ""  # "p1", "m1", "m2", "o1" — per-segment speaker identity
     words: list[Word] = Field(default_factory=list)
     source: str = ""  # "whisper", "srt", "vtt", "docx"
+    segment_index: int = -1  # 0-based ordinal within the session transcript
 
 
 class FullTranscript(BaseModel):
@@ -276,6 +277,9 @@ class ExtractedQuote(BaseModel):
     # New sentiment field (v0.7+)
     sentiment: Sentiment | None = None  # Single dominant sentiment, or None if descriptive
     intensity: int = 1  # 1=mild, 2=moderate, 3=strong — kept for future use
+
+    # Segment ordinal — position of the source segment in the transcript (see design-quote-sequences.md)
+    segment_index: int = -1  # -1 = unknown (backward compat with pre-v0.11 data)
 
     # Deprecated fields — kept for backward compatibility with existing intermediate JSON
     intent: QuoteIntent = QuoteIntent.NARRATION

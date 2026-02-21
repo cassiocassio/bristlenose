@@ -46,6 +46,10 @@ def merge_transcripts(
         # Merge overlapping same-speaker segments
         merged = _merge_same_speaker(segments)
 
+        # Assign canonical segment ordinals (see design-quote-sequences.md)
+        for i, seg in enumerate(merged):
+            seg.segment_index = i
+
         # Compute duration
         duration = 0.0
         if merged:

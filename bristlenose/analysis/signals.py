@@ -102,6 +102,7 @@ def _compute_signals(
                     session_id=q.session_id,
                     start_seconds=q.start_timecode,
                     intensity=q.intensity,
+                    segment_index=q.segment_index,
                 )
                 for q in raw_quotes_sorted
             ]

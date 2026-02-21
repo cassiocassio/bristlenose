@@ -9,8 +9,10 @@ from fastapi.testclient import TestClient
 
 from bristlenose.server.app import create_app
 from bristlenose.server.models import (
+    AutoCodeJob,
     CodebookGroup,
     ProjectCodebookGroup,
+    ProposedTag,
     Quote,
     QuoteTag,
     TagDefinition,
@@ -744,6 +746,70 @@ class TestRemoveFramework:
         # UXR should still be there
         uxr_groups = [g for g in data["groups"] if g["framework_id"] == "uxr"]
         assert len(uxr_groups) > 0
+
+    def test_remove_framework_with_autocode_data(self) -> None:
+        """Removing a framework with AutoCode jobs and proposals should not fail."""
+        app = create_app(project_dir=_FIXTURE_DIR, dev=True, db_url="sqlite://")
+        tc = TestClient(app)
+        tc.post(
+            "/api/projects/1/codebook/import-template",
+            json={"template_id": "garrett"},
+        )
+        # Manually create an AutoCodeJob and ProposedTag for the framework
+        db = app.state.db_factory()
+        try:
+            garrett_groups = (
+                db.query(CodebookGroup)
+                .filter_by(framework_id="garrett")
+                .all()
+            )
+            tag_defs = (
+                db.query(TagDefinition)
+                .filter(
+                    TagDefinition.codebook_group_id.in_([g.id for g in garrett_groups]),
+                )
+                .all()
+            )
+            assert len(tag_defs) > 0
+            quotes = db.query(Quote).filter_by(project_id=1).all()
+            assert len(quotes) > 0
+
+            job = AutoCodeJob(
+                project_id=1,
+                framework_id="garrett",
+                status="completed",
+                total_quotes=len(quotes),
+                processed_quotes=len(quotes),
+                proposed_count=1,
+            )
+            db.add(job)
+            db.flush()
+            db.add(ProposedTag(
+                job_id=job.id,
+                quote_id=quotes[0].id,
+                tag_definition_id=tag_defs[0].id,
+                confidence=0.85,
+                rationale="test",
+                status="pending",
+            ))
+            db.commit()
+            # Verify the data exists
+            assert db.query(ProposedTag).count() == 1
+            assert db.query(AutoCodeJob).count() == 1
+        finally:
+            db.close()
+
+        # Remove framework — this should not fail with FK constraint
+        resp = tc.delete("/api/projects/1/codebook/remove-framework/garrett")
+        assert resp.status_code == 200
+
+        # Verify cleanup
+        db = app.state.db_factory()
+        try:
+            assert db.query(ProposedTag).count() == 0
+            assert db.query(AutoCodeJob).filter_by(framework_id="garrett").count() == 0
+        finally:
+            db.close()
 
 
 # ---------------------------------------------------------------------------

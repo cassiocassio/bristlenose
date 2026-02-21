@@ -399,6 +399,7 @@ def _import_transcript_segments(
                 end_time=end,
                 text=text.strip(),
                 source="transcript",
+                segment_index=i,
             )
             db.add(seg)
 
@@ -497,6 +498,7 @@ def _get_or_create_quote(
         )
         existing.sentiment = quote_data.get("sentiment", existing.sentiment)
         existing.intensity = int(quote_data.get("intensity", existing.intensity))
+        existing.segment_index = int(quote_data.get("segment_index", existing.segment_index))
         existing.last_imported_at = now
         return existing
 
@@ -514,6 +516,7 @@ def _get_or_create_quote(
         researcher_context=quote_data.get("researcher_context"),
         sentiment=quote_data.get("sentiment"),
         intensity=int(quote_data.get("intensity", 1)),
+        segment_index=int(quote_data.get("segment_index", -1)),
         last_imported_at=now,
     )
     db.add(q)

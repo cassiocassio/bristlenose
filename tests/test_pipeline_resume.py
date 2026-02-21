@@ -1,4 +1,4 @@
-"""Tests for pipeline resume — skip completed stages on re-run (Phase 1c)."""
+"""Tests for pipeline resume — skip completed stages on re-run (Phase 1c+1d)."""
 
 from __future__ import annotations
 
@@ -11,6 +11,8 @@ from bristlenose.manifest import (
     STAGE_TOPIC_SEGMENTATION,
     StageStatus,
     create_manifest,
+    get_completed_session_ids,
+    mark_session_complete,
     mark_stage_complete,
     mark_stage_running,
     write_manifest,
@@ -312,3 +314,218 @@ def test_cache_skip_fails_when_no_manifest(tmp_path: Path):
     prev = load_manifest(tmp_path)
     assert prev is None
     assert _is_stage_cached(prev, STAGE_TOPIC_SEGMENTATION) is False
+
+
+# ---------------------------------------------------------------------------
+# Phase 1d — per-session resume
+# ---------------------------------------------------------------------------
+
+
+def _make_multi_session_topic_boundaries() -> list[SessionTopicMap]:
+    """Topic maps for 3 sessions."""
+    return [
+        SessionTopicMap(
+            session_id=f"s{i}",
+            participant_id=f"p{i}",
+            boundaries=[
+                TopicBoundary(
+                    timecode_seconds=0.0,
+                    topic_label=f"Topic A (s{i})",
+                    transition_type=TransitionType.SCREEN_CHANGE,
+                ),
+            ],
+        )
+        for i in range(1, 4)
+    ]
+
+
+def _make_multi_session_quotes() -> list[ExtractedQuote]:
+    """Quotes for 3 sessions (2 quotes each)."""
+    quotes = []
+    for i in range(1, 4):
+        quotes.append(
+            ExtractedQuote(
+                session_id=f"s{i}",
+                participant_id=f"p{i}",
+                start_timecode=10.0,
+                end_timecode=20.0,
+                text=f"Quote A from session {i}",
+                topic_label=f"Topic A (s{i})",
+                quote_type=QuoteType.SCREEN_SPECIFIC,
+            )
+        )
+        quotes.append(
+            ExtractedQuote(
+                session_id=f"s{i}",
+                participant_id=f"p{i}",
+                start_timecode=30.0,
+                end_timecode=40.0,
+                text=f"Quote B from session {i}",
+                topic_label=f"Topic A (s{i})",
+                quote_type=QuoteType.GENERAL_CONTEXT,
+            )
+        )
+    return quotes
+
+
+def _write_manifest_with_session_records(
+    output_dir: Path,
+    stage: str,
+    completed_session_ids: list[str],
+) -> None:
+    """Write a manifest with per-session records for one stage."""
+    m = create_manifest("test-project", "0.10.1")
+    mark_stage_running(m, stage)
+    for sid in completed_session_ids:
+        mark_session_complete(m, stage, sid, provider="anthropic", model="sonnet")
+    write_manifest(m, output_dir)
+
+
+def test_per_session_topic_partial_resume(tmp_path: Path):
+    """Only s1 is cached in topic segmentation; s2 and s3 need processing."""
+    # Write manifest with s1 complete
+    _write_manifest_with_session_records(
+        tmp_path, STAGE_TOPIC_SEGMENTATION, ["s1"],
+    )
+    # Write intermediate JSON with all 3 sessions (simulating a crash after s1)
+    all_maps = _make_multi_session_topic_boundaries()
+    _write_intermediate(all_maps, "topic_boundaries.json", tmp_path)
+
+    from bristlenose.manifest import load_manifest
+
+    prev = load_manifest(tmp_path)
+
+    # Stage should NOT be fully cached (PARTIAL, not COMPLETE)
+    assert _is_stage_cached(prev, STAGE_TOPIC_SEGMENTATION) is False
+
+    # But s1 should be identified as a completed session
+    completed = get_completed_session_ids(prev, STAGE_TOPIC_SEGMENTATION)
+    assert completed == {"s1"}
+
+
+def test_per_session_topic_filter_cached_from_json(tmp_path: Path):
+    """Cached topic maps are correctly filtered by session_id."""
+    all_maps = _make_multi_session_topic_boundaries()
+    _write_intermediate(all_maps, "topic_boundaries.json", tmp_path)
+
+    tb_path = tmp_path / ".bristlenose" / "intermediate" / "topic_boundaries.json"
+    cached_sids = {"s1", "s3"}
+    cached_maps = [
+        SessionTopicMap.model_validate(obj)
+        for obj in json.loads(tb_path.read_text(encoding="utf-8"))
+        if obj.get("session_id") in cached_sids
+    ]
+    assert len(cached_maps) == 2
+    assert {m.session_id for m in cached_maps} == {"s1", "s3"}
+
+
+def test_per_session_quote_filter_cached_from_json(tmp_path: Path):
+    """Cached quotes are correctly filtered by session_id."""
+    all_quotes = _make_multi_session_quotes()
+    _write_intermediate(all_quotes, "extracted_quotes.json", tmp_path)
+
+    eq_path = tmp_path / ".bristlenose" / "intermediate" / "extracted_quotes.json"
+    cached_sids = {"s1", "s2"}
+    cached_quotes = [
+        ExtractedQuote.model_validate(obj)
+        for obj in json.loads(eq_path.read_text(encoding="utf-8"))
+        if obj.get("session_id") in cached_sids
+    ]
+    assert len(cached_quotes) == 4  # 2 quotes per session × 2 sessions
+    assert all(q.session_id in cached_sids for q in cached_quotes)
+
+
+def test_per_session_quote_partial_resume(tmp_path: Path):
+    """Only s1 and s2 are cached in quote extraction; s3 needs processing."""
+    _write_manifest_with_session_records(
+        tmp_path, STAGE_QUOTE_EXTRACTION, ["s1", "s2"],
+    )
+    all_quotes = _make_multi_session_quotes()
+    _write_intermediate(all_quotes, "extracted_quotes.json", tmp_path)
+
+    from bristlenose.manifest import load_manifest
+
+    prev = load_manifest(tmp_path)
+
+    # Stage is PARTIAL (s3 missing)
+    assert _is_stage_cached(prev, STAGE_QUOTE_EXTRACTION) is False
+
+    completed = get_completed_session_ids(prev, STAGE_QUOTE_EXTRACTION)
+    assert completed == {"s1", "s2"}
+
+
+def test_per_session_all_complete_is_fully_cached(tmp_path: Path):
+    """When all sessions are complete and stage is marked complete, fully cached."""
+    # Build a manifest where all sessions finished AND mark_stage_complete was called
+    m = create_manifest("test-project", "0.10.1")
+    mark_stage_running(m, STAGE_TOPIC_SEGMENTATION)
+    for sid in ["s1", "s2", "s3"]:
+        mark_session_complete(m, STAGE_TOPIC_SEGMENTATION, sid)
+    mark_stage_complete(m, STAGE_TOPIC_SEGMENTATION)
+    write_manifest(m, tmp_path)
+
+    from bristlenose.manifest import load_manifest
+
+    prev = load_manifest(tmp_path)
+    # Stage is COMPLETE → fully cached (Phase 1c all-or-nothing path)
+    assert _is_stage_cached(prev, STAGE_TOPIC_SEGMENTATION) is True
+
+
+def test_per_session_not_cached_when_stage_still_running(tmp_path: Path):
+    """Stage with session records but no mark_stage_complete is NOT cached."""
+    _write_manifest_with_session_records(
+        tmp_path, STAGE_TOPIC_SEGMENTATION, ["s1", "s2", "s3"],
+    )
+    from bristlenose.manifest import load_manifest
+
+    prev = load_manifest(tmp_path)
+    # Stage status is RUNNING (crash before mark_stage_complete) → not cached
+    assert _is_stage_cached(prev, STAGE_TOPIC_SEGMENTATION) is False
+    # But all 3 sessions are individually complete
+    completed = get_completed_session_ids(prev, STAGE_TOPIC_SEGMENTATION)
+    assert completed == {"s1", "s2", "s3"}
+
+
+def test_per_session_merge_cached_and_fresh_topic_maps():
+    """Merging cached + fresh topic maps produces the full set."""
+    all_maps = _make_multi_session_topic_boundaries()
+    cached = [m for m in all_maps if m.session_id in {"s1", "s2"}]
+    fresh = [m for m in all_maps if m.session_id == "s3"]
+    merged = cached + fresh
+    assert len(merged) == 3
+    assert {m.session_id for m in merged} == {"s1", "s2", "s3"}
+
+
+def test_per_session_merge_cached_and_fresh_quotes():
+    """Merging cached + fresh quotes produces the full set."""
+    all_quotes = _make_multi_session_quotes()
+    cached_sids = {"s1"}
+    cached = [q for q in all_quotes if q.session_id in cached_sids]
+    fresh = [q for q in all_quotes if q.session_id not in cached_sids]
+    merged = cached + fresh
+    assert len(merged) == 6
+    assert {q.session_id for q in merged} == {"s1", "s2", "s3"}
+
+
+def test_per_session_provider_model_recorded(tmp_path: Path):
+    """Provider and model are recorded on each session record."""
+    m = create_manifest("p", "1.0")
+    mark_stage_running(m, STAGE_QUOTE_EXTRACTION)
+    mark_session_complete(
+        m, STAGE_QUOTE_EXTRACTION, "s1", provider="anthropic", model="sonnet",
+    )
+    mark_session_complete(
+        m, STAGE_QUOTE_EXTRACTION, "s2", provider="google", model="gemini-flash",
+    )
+    write_manifest(m, tmp_path)
+
+    from bristlenose.manifest import load_manifest
+
+    loaded = load_manifest(tmp_path)
+    assert loaded is not None
+    sessions = loaded.stages[STAGE_QUOTE_EXTRACTION].sessions
+    assert sessions is not None
+    assert sessions["s1"].provider == "anthropic"
+    assert sessions["s1"].model == "sonnet"
+    assert sessions["s2"].provider == "google"
+    assert sessions["s2"].model == "gemini-flash"

@@ -19,6 +19,26 @@ class SpeakerInfo:
 
 logger = logging.getLogger(__name__)
 
+
+def speaker_info_to_dict(info: SpeakerInfo) -> dict:
+    """Serialize a SpeakerInfo to a JSON-compatible dict."""
+    return {
+        "speaker_label": info.speaker_label,
+        "role": info.role.value,
+        "person_name": info.person_name,
+        "job_title": info.job_title,
+    }
+
+
+def speaker_info_from_dict(d: dict) -> SpeakerInfo:
+    """Deserialize a SpeakerInfo from a dict."""
+    return SpeakerInfo(
+        speaker_label=d["speaker_label"],
+        role=SpeakerRole(d["role"]),
+        person_name=d.get("person_name", ""),
+        job_title=d.get("job_title", ""),
+    )
+
 # Keywords suggesting a researcher/interviewer role
 _RESEARCHER_PHRASES = [
     "can you tell me",

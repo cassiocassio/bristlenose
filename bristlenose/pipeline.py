@@ -238,8 +238,11 @@ class Pipeline:
         from bristlenose.stages.extract_audio import extract_audio_for_sessions
         from bristlenose.stages.identify_speakers import (
             SpeakerInfo,
+            assign_speaker_codes,
             identify_speaker_roles_heuristic,
             identify_speaker_roles_llm,
+            speaker_info_from_dict,
+            speaker_info_to_dict,
         )
         from bristlenose.stages.ingest import ingest
         from bristlenose.stages.merge_transcript import (
@@ -348,32 +351,135 @@ class Pipeline:
             mark_stage_complete(manifest, STAGE_EXTRACT_AUDIO)
             write_manifest(manifest, output_dir)
 
+            # ── Intermediate directory for cached JSON ────────────────
+            intermediate = output_dir / ".bristlenose" / "intermediate"
+
             # ── Stages 3-5: Parse existing transcripts + Transcribe ──
-            mark_stage_running(manifest, _M_STAGE_TRANSCRIBE)
-            status.update("[dim]Transcribing...[/dim]")
-            t0 = time.perf_counter()
+            _ss_path = intermediate / "session_segments.json"
+            if (
+                _is_stage_cached(_prev_manifest, _M_STAGE_TRANSCRIBE)
+                and _ss_path.exists()
+            ):
+                import json as _json
 
-            def _on_transcribe_progress(current: int, total: int) -> None:
-                status.update(f"[dim]Transcribing... ({current}/{total} files)[/dim]")
+                _ss_raw = _json.loads(_ss_path.read_text(encoding="utf-8"))
+                session_segments = {
+                    sid: [TranscriptSegment.model_validate(s) for s in segs]
+                    for sid, segs in _ss_raw.items()
+                }
+                total_segments = sum(len(s) for s in session_segments.values())
+                _print_cached_step(
+                    f"Transcribed {len(sessions)} sessions"
+                    f" ({total_segments} segments)",
+                )
+            else:
+                import json as _json
 
-            session_segments = await self._gather_all_segments(
-                sessions, on_progress=_on_transcribe_progress
-            )
-            total_segments = sum(len(s) for s in session_segments.values())
-            total_audio = sum(
-                f.duration_seconds or 0 for s in sessions for f in s.files
-            )
-            audio_str = _format_duration(total_audio) if total_audio else ""
-            msg = f"Transcribed {len(sessions)} sessions ({total_segments} segments"
-            if audio_str:
-                msg += f", {audio_str} audio"
-            msg += ")"
-            _transcribe_elapsed = time.perf_counter() - t0
-            _print_step(msg, _transcribe_elapsed)
-            _stage_actuals[STAGE_TRANSCRIBE] = StageActual(
-                elapsed=_transcribe_elapsed, input_size=total_audio_mins,
-            )
-            self._emit_remaining(STAGE_TRANSCRIBE, _transcribe_elapsed)
+                # Per-session resume: load cached segments for completed
+                # sessions and only transcribe the remaining ones.
+                _cached_tx_sids = get_completed_session_ids(
+                    _prev_manifest, _M_STAGE_TRANSCRIBE,
+                )
+                _cached_segments: dict[str, list[TranscriptSegment]] = {}
+                if _cached_tx_sids and _ss_path.exists():
+                    _ss_raw = _json.loads(
+                        _ss_path.read_text(encoding="utf-8"),
+                    )
+                    _cached_segments = {
+                        sid: [
+                            TranscriptSegment.model_validate(s) for s in segs
+                        ]
+                        for sid, segs in _ss_raw.items()
+                        if sid in _cached_tx_sids
+                    }
+
+                _remaining_sessions = [
+                    s for s in sessions
+                    if s.session_id not in _cached_tx_sids
+                ]
+
+                mark_stage_running(manifest, _M_STAGE_TRANSCRIBE)
+                # Carry forward session records from previous manifest
+                if _cached_tx_sids and _prev_manifest is not None:
+                    _prev_tx_rec = _prev_manifest.stages.get(
+                        _M_STAGE_TRANSCRIBE,
+                    )
+                    if _prev_tx_rec and _prev_tx_rec.sessions:
+                        rec_tx = manifest.stages[_M_STAGE_TRANSCRIBE]
+                        rec_tx.sessions = {
+                            sid: sr
+                            for sid, sr in _prev_tx_rec.sessions.items()
+                            if sr.status == StageStatus.COMPLETE
+                        }
+
+                status.update("[dim]Transcribing...[/dim]")
+                t0 = time.perf_counter()
+
+                if _remaining_sessions:
+                    def _on_transcribe_progress(
+                        current: int, total: int,
+                    ) -> None:
+                        status.update(
+                            f"[dim]Transcribing..."
+                            f" ({current}/{total} files)[/dim]"
+                        )
+
+                    _fresh_segments = await self._gather_all_segments(
+                        _remaining_sessions,
+                        on_progress=_on_transcribe_progress,
+                    )
+                    for sid in _fresh_segments:
+                        mark_session_complete(
+                            manifest, _M_STAGE_TRANSCRIBE, sid,
+                        )
+                else:
+                    _fresh_segments = {}
+
+                session_segments = {**_cached_segments, **_fresh_segments}
+
+                # Write intermediate JSON for resume
+                if self.settings.write_intermediate:
+                    intermediate.mkdir(parents=True, exist_ok=True)
+                    _ss_data = {
+                        sid: [seg.model_dump(mode="json") for seg in segs]
+                        for sid, segs in session_segments.items()
+                    }
+                    _ss_path.write_text(
+                        _json.dumps(_ss_data, indent=2), encoding="utf-8",
+                    )
+
+                total_segments = sum(
+                    len(s) for s in session_segments.values()
+                )
+                total_audio = sum(
+                    f.duration_seconds or 0
+                    for s in sessions for f in s.files
+                )
+                audio_str = (
+                    _format_duration(total_audio) if total_audio else ""
+                )
+                _n_new_tx = len(_remaining_sessions)
+                if _cached_segments and _n_new_tx:
+                    msg = (
+                        f"Transcribed {len(sessions)} sessions"
+                        f" ({total_segments} segments,"
+                        f" {_n_new_tx} new sessions)"
+                    )
+                else:
+                    msg = (
+                        f"Transcribed {len(sessions)} sessions"
+                        f" ({total_segments} segments"
+                    )
+                    if audio_str:
+                        msg += f", {audio_str} audio"
+                    msg += ")"
+                _transcribe_elapsed = time.perf_counter() - t0
+                _print_step(msg, _transcribe_elapsed)
+                _stage_actuals[STAGE_TRANSCRIBE] = StageActual(
+                    elapsed=_transcribe_elapsed,
+                    input_size=total_audio_mins,
+                )
+                self._emit_remaining(STAGE_TRANSCRIBE, _transcribe_elapsed)
             mark_stage_complete(manifest, _M_STAGE_TRANSCRIBE)
             write_manifest(manifest, output_dir)
 
@@ -389,37 +495,160 @@ class Pipeline:
                 )
 
             # ── Stage 5b: Speaker role identification ────────────────
-            mark_stage_running(manifest, STAGE_IDENTIFY_SPEAKERS)
-            status.update("[dim]Identifying speakers...[/dim]")
-            t0 = time.perf_counter()
-            llm_client = LLMClient(self.settings)
-            concurrency = self.settings.llm_concurrency
+            import json as _json
 
-            # Heuristic pass (synchronous) for all sessions first
-            for segments in session_segments.values():
-                identify_speaker_roles_heuristic(segments)
+            _si_dir = intermediate / "speaker-info"
 
-            # LLM refinement concurrently (bounded by llm_concurrency)
-            _sem_5b = asyncio.Semaphore(concurrency)
-            _speaker_errors: list[str] = []
-
-            async def _identify(
-                sid: str, segments: list[TranscriptSegment],
-            ) -> tuple[str, list]:
-                async with _sem_5b:
-                    infos = await identify_speaker_roles_llm(
-                        segments, llm_client, errors=_speaker_errors,
+            # Check for fully cached speaker ID stage
+            if (
+                _is_stage_cached(_prev_manifest, STAGE_IDENTIFY_SPEAKERS)
+                and _si_dir.is_dir()
+                and all(
+                    (_si_dir / f"{s.session_id}.json").exists()
+                    for s in sessions
+                    if s.session_id in session_segments
+                )
+            ):
+                # Load all cached speaker info + segments with roles
+                all_speaker_infos: dict[str, list] = {}
+                for s in sessions:
+                    sid = s.session_id
+                    if sid not in session_segments:
+                        continue
+                    _si_data = _json.loads(
+                        (_si_dir / f"{sid}.json").read_text(encoding="utf-8")
                     )
-                    return sid, infos
+                    all_speaker_infos[sid] = [
+                        speaker_info_from_dict(d)
+                        for d in _si_data["speaker_infos"]
+                    ]
+                    # Restore segments with speaker roles
+                    session_segments[sid] = [
+                        TranscriptSegment.model_validate(seg)
+                        for seg in _si_data["segments_with_roles"]
+                    ]
+                _print_cached_step("Identified speakers")
+            else:
+                # Per-session resume: load cached speaker info for completed
+                # sessions and only run LLM on the remaining ones.
+                _cached_si_sids = get_completed_session_ids(
+                    _prev_manifest, STAGE_IDENTIFY_SPEAKERS,
+                )
+                all_speaker_infos = {}
+                if _cached_si_sids and _si_dir.is_dir():
+                    for sid in _cached_si_sids:
+                        _si_file = _si_dir / f"{sid}.json"
+                        if _si_file.exists():
+                            _si_data = _json.loads(
+                                _si_file.read_text(encoding="utf-8"),
+                            )
+                            all_speaker_infos[sid] = [
+                                speaker_info_from_dict(d)
+                                for d in _si_data["speaker_infos"]
+                            ]
+                            # Restore segments with speaker roles
+                            session_segments[sid] = [
+                                TranscriptSegment.model_validate(seg)
+                                for seg in _si_data["segments_with_roles"]
+                            ]
 
-            _results_5b = await asyncio.gather(
-                *(_identify(s, segs) for s, segs in session_segments.items())
-            )
-            all_speaker_infos: dict[str, list] = dict(_results_5b)
+                _remaining_si_sids = {
+                    sid for sid in session_segments
+                    if sid not in _cached_si_sids
+                }
 
-            # Assign per-segment speaker codes with global participant numbering
-            from bristlenose.stages.identify_speakers import assign_speaker_codes
+                mark_stage_running(manifest, STAGE_IDENTIFY_SPEAKERS)
+                # Carry forward session records from previous manifest
+                if _cached_si_sids and _prev_manifest is not None:
+                    _prev_si_rec = _prev_manifest.stages.get(
+                        STAGE_IDENTIFY_SPEAKERS,
+                    )
+                    if _prev_si_rec and _prev_si_rec.sessions:
+                        rec_si = manifest.stages[STAGE_IDENTIFY_SPEAKERS]
+                        rec_si.sessions = {
+                            sid: sr
+                            for sid, sr in _prev_si_rec.sessions.items()
+                            if sr.status == StageStatus.COMPLETE
+                        }
 
+                status.update("[dim]Identifying speakers...[/dim]")
+                t0 = time.perf_counter()
+                llm_client = LLMClient(self.settings)
+                concurrency = self.settings.llm_concurrency
+                _speaker_errors: list[str] = []
+
+                if _remaining_si_sids:
+                    # Heuristic pass for remaining sessions
+                    for sid in _remaining_si_sids:
+                        identify_speaker_roles_heuristic(
+                            session_segments[sid],
+                        )
+
+                    # LLM refinement concurrently
+                    _sem_5b = asyncio.Semaphore(concurrency)
+
+                    async def _identify(
+                        sid: str, segments: list[TranscriptSegment],
+                    ) -> tuple[str, list]:
+                        async with _sem_5b:
+                            infos = await identify_speaker_roles_llm(
+                                segments, llm_client,
+                                errors=_speaker_errors,
+                            )
+                            return sid, infos
+
+                    _results_5b = await asyncio.gather(*(
+                        _identify(sid, session_segments[sid])
+                        for sid in _remaining_si_sids
+                    ))
+                    for sid, infos in _results_5b:
+                        all_speaker_infos[sid] = infos
+                        mark_session_complete(
+                            manifest, STAGE_IDENTIFY_SPEAKERS, sid,
+                            provider=self.settings.llm_provider,
+                            model=self.settings.llm_model,
+                        )
+
+                    # Write speaker info cache for fresh sessions
+                    if self.settings.write_intermediate:
+                        _si_dir.mkdir(parents=True, exist_ok=True)
+                        for sid in _remaining_si_sids:
+                            _si_data = {
+                                "speaker_infos": [
+                                    speaker_info_to_dict(info)
+                                    for info in all_speaker_infos.get(sid, [])
+                                ],
+                                "segments_with_roles": [
+                                    seg.model_dump(mode="json")
+                                    for seg in session_segments[sid]
+                                ],
+                            }
+                            (_si_dir / f"{sid}.json").write_text(
+                                _json.dumps(_si_data, indent=2),
+                                encoding="utf-8",
+                            )
+
+                _speakers_elapsed = time.perf_counter() - t0
+                _n_new_si = len(_remaining_si_sids)
+                if _cached_si_sids and _n_new_si:
+                    _print_step(
+                        f"Identified speakers ({_n_new_si} new sessions)",
+                        _speakers_elapsed,
+                    )
+                else:
+                    _print_step("Identified speakers", _speakers_elapsed)
+                _stage_actuals[STAGE_SPEAKERS] = StageActual(
+                    elapsed=_speakers_elapsed, input_size=_n_sessions,
+                )
+                self._emit_remaining(STAGE_SPEAKERS, _speakers_elapsed)
+                if _speaker_errors:
+                    _print_warn(
+                        *_short_reason(
+                            _speaker_errors, self.settings.llm_provider,
+                        )
+                    )
+
+            # assign_speaker_codes() always re-runs — global numbering
             all_label_code_maps: dict[str, dict[str, str]] = {}
             next_pnum = 1
             for session in sessions:
@@ -427,22 +656,18 @@ class Pipeline:
                 segments = session_segments.get(sid, [])
                 if not segments:
                     continue
-                label_map, next_pnum = assign_speaker_codes(next_pnum, segments)
+                label_map, next_pnum = assign_speaker_codes(
+                    next_pnum, segments,
+                )
                 all_label_code_maps[sid] = label_map
                 # Update session's participant_id from assigned codes
-                p_codes = [c for c in label_map.values() if c.startswith("p")]
+                p_codes = [
+                    c for c in label_map.values() if c.startswith("p")
+                ]
                 if p_codes:
                     session.participant_id = p_codes[0]
                     session.participant_number = int(p_codes[0][1:])
 
-            _speakers_elapsed = time.perf_counter() - t0
-            _print_step("Identified speakers", _speakers_elapsed)
-            _stage_actuals[STAGE_SPEAKERS] = StageActual(
-                elapsed=_speakers_elapsed, input_size=_n_sessions,
-            )
-            self._emit_remaining(STAGE_SPEAKERS, _speakers_elapsed)
-            if _speaker_errors:
-                _print_warn(*_short_reason(_speaker_errors, self.settings.llm_provider))
             mark_stage_complete(manifest, STAGE_IDENTIFY_SPEAKERS)
             write_manifest(manifest, output_dir)
 
@@ -489,9 +714,6 @@ class Pipeline:
                     )
                     for t in transcripts
                 ]
-
-            # ── Intermediate directory for cached JSON ────────────────
-            intermediate = output_dir / ".bristlenose" / "intermediate"
 
             # ── Stage 8: Topic segmentation ──────────────────────────
             _tb_path = intermediate / "topic_boundaries.json"

@@ -1079,6 +1079,10 @@ def serve(
         bool,
         typer.Option("--open/--no-open", help="Open the report in the default browser."),
     ] = True,
+    verbose: Annotated[
+        bool,
+        typer.Option("--verbose", "-v", help="Enable verbose logging."),
+    ] = False,
 ) -> None:
     """Launch the Bristlenose web server to browse reports interactively."""
     try:
@@ -1122,6 +1126,8 @@ def serve(
             os.environ["_BRISTLENOSE_PROJECT_DIR"] = str(project_dir.resolve())
         os.environ["_BRISTLENOSE_DEV"] = "1"
         os.environ["_BRISTLENOSE_PORT"] = str(port)
+        if verbose:
+            os.environ["_BRISTLENOSE_VERBOSE"] = "1"
 
         uvicorn.run(
             "bristlenose.server.app:create_app",
@@ -1129,18 +1135,18 @@ def serve(
             port=port,
             reload=True,
             factory=True,
-            log_level="info",
+            log_level="info" if verbose else "warning",
         )
     else:
         from bristlenose.server.app import create_app
 
-        app_instance = create_app(project_dir=project_dir)
+        app_instance = create_app(project_dir=project_dir, verbose=verbose)
 
         uvicorn.run(
             app_instance,
             host="127.0.0.1",
             port=port,
-            log_level="warning",
+            log_level="info" if verbose else "warning",
         )
 
 

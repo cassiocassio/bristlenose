@@ -30,6 +30,10 @@ git-cheatsheet.md
 docs/private/
 _comparison/
 
+# Bristlenose log files (created by pipeline runs and serve mode)
+bristlenose.log
+bristlenose.log.*
+
 # Local font files for typography mockups (proprietary/large, not committed)
 docs/mockups/fonts/*.ttf
 docs/mockups/fonts/*.woff2

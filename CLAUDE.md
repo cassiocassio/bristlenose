@@ -120,6 +120,7 @@ F401 is marked `unfixable` in `pyproject.toml` so `ruff check --fix` (and the Po
 - For JS/CSS/report gotchas (load order, modals, hidden quotes, toolbar), see `bristlenose/theme/CLAUDE.md`; for per-module JS docs see `bristlenose/theme/js/MODULES.md`; for per-component CSS docs see `bristlenose/theme/CSS-REFERENCE.md`
 - For stage/pipeline gotchas (topic maps, transcripts, coverage), see `bristlenose/stages/CLAUDE.md`
 - **Analysis module**: `bristlenose/analysis/` uses plain dataclasses (not Pydantic) — ephemeral computation, never persisted. `_compute_analysis()` in `pipeline.py` returns `object | None` (typed as `object` to avoid import at module level, lazy import inside the function). `_serialize_analysis()` in `render_html.py` uses `# type: ignore[attr-defined]` for the same reason. Cell key format `"label|sentiment"` — pipe in labels is a known limitation (documented in tests, not guarded)
+- **Logging**: two independent knobs — `-v` controls terminal (WARNING/DEBUG), `BRISTLENOSE_LOG_LEVEL` env var controls log file (default INFO). Log file at `<output_dir>/.bristlenose/bristlenose.log`, rotating at 5 MB, 2 backups. `setup_logging()` in `bristlenose/logging.py` is called by `Pipeline._configure_logging()` (deferred until output_dir is known) and by `create_app()` in serve mode. `bristlenose serve` accepts `-v`. See `docs/design-logging.md` for architecture and instrumentation tiers
 
 ## Reference docs (read when working in these areas)
 
@@ -145,7 +146,9 @@ F401 is marked `unfixable` in `pyproject.toml` so `ruff check --fix` (and the Po
 - **Academic sources for analysis categories**: `docs/academic-sources.html` — theoretical foundations (emotion science, UX research, trust/credibility) behind quote tagging and sentiment analysis. **Update this file when investigating theories behind any Bristlenose features.**
 - **Analysis page** (signal concentration, metrics, rendering): `docs/BRANCHES.md` → `analysis` section — architecture, design decisions, file list, test coverage
 - **Analysis page future** (two-pane vision, grid-as-selector, user-tag grid, backlog): `docs/design-analysis-future.md`
+- **Quote sequences** (consecutive quote detection, segment ordinals, threshold tuning): `docs/design-quote-sequences.md`
 - **Dashboard stats** (inventory of unused pipeline data, improvement priorities): `docs/design-dashboard-stats.md`
+- **Logging** (persistent log file, two-knob system, instrumentation tiers): `docs/design-logging.md` — architecture, tier 1 implementation plan, backlog. **Read this before adding log lines**
 - **Pipeline resilience / crash recovery / data integrity**: `docs/design-pipeline-resilience.md` — manifest, event sourcing, incremental re-runs, provenance. **Read this before working on pipeline state tracking, resume, or data validation**
 - **Server / data API / serve mode**: `bristlenose/server/CLAUDE.md`
 - **React component library** (14 primitives, build sequence, coverage matrix): `docs/design-react-component-library.md` — **read this before building any React component.** Defines the reusable primitives (Badge, EditableText, TagInput, etc.) and the 4-round build order

@@ -39,6 +39,7 @@ class SignalQuote:
     session_id: str
     start_seconds: float
     intensity: int
+    tag_names: list[str] = field(default_factory=list)  # specific tags from the group
 
 
 @dataclass

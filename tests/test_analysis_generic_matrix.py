@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import pytest
+
 from bristlenose.analysis.generic_matrix import QuoteContribution, build_matrix_from_contributions
 
 
@@ -10,8 +12,12 @@ def _contrib(
     col: str = "Friction",
     pid: str = "p1",
     intensity: int = 2,
+    weight: float = 1.0,
 ) -> QuoteContribution:
-    return QuoteContribution(row_label=row, col_label=col, participant_id=pid, intensity=intensity)
+    return QuoteContribution(
+        row_label=row, col_label=col, participant_id=pid,
+        intensity=intensity, weight=weight,
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -113,3 +119,44 @@ class TestBuildMatrixFromContributions:
     def test_row_labels_preserved(self) -> None:
         m = build_matrix_from_contributions([], ["Zebra", "Alpha"], ["X"])
         assert m.row_labels == ["Zebra", "Alpha"]
+
+    def test_weighted_count_default(self) -> None:
+        """Default weight=1.0 means weighted_count equals count."""
+        contribs = [_contrib("A", "X", "p1"), _contrib("A", "X", "p2")]
+        m = build_matrix_from_contributions(contribs, ["A"], ["X"])
+        cell = m.cells["A|X"]
+        assert cell.count == 2
+        assert cell.weighted_count == pytest.approx(2.0)
+
+    def test_weighted_count_fractional(self) -> None:
+        """Proposed tags with low confidence contribute less weighted mass."""
+        contribs = [
+            _contrib("A", "X", "p1", weight=1.0),     # accepted
+            _contrib("A", "X", "p2", weight=0.7),     # pending, 70% confidence
+            _contrib("A", "X", "p3", weight=0.3),     # pending, 30% confidence
+        ]
+        m = build_matrix_from_contributions(contribs, ["A"], ["X"])
+        cell = m.cells["A|X"]
+        assert cell.count == 3          # unweighted: 3 tag associations
+        assert cell.weighted_count == pytest.approx(2.0)  # 1.0 + 0.7 + 0.3
+
+    def test_weighted_count_zero_weight(self) -> None:
+        """Zero-weight contributions still count but add nothing to weighted_count."""
+        contribs = [_contrib("A", "X", "p1", weight=0.0)]
+        m = build_matrix_from_contributions(contribs, ["A"], ["X"])
+        cell = m.cells["A|X"]
+        assert cell.count == 1
+        assert cell.weighted_count == pytest.approx(0.0)
+
+    def test_weighted_count_across_cells(self) -> None:
+        """Weighted counts accumulate independently per cell."""
+        contribs = [
+            _contrib("A", "X", "p1", weight=0.5),
+            _contrib("A", "Y", "p1", weight=0.9),
+            _contrib("B", "X", "p2", weight=1.0),
+        ]
+        m = build_matrix_from_contributions(contribs, ["A", "B"], ["X", "Y"])
+        assert m.cells["A|X"].weighted_count == pytest.approx(0.5)
+        assert m.cells["A|Y"].weighted_count == pytest.approx(0.9)
+        assert m.cells["B|X"].weighted_count == pytest.approx(1.0)
+        assert m.cells["B|Y"].weighted_count == pytest.approx(0.0)

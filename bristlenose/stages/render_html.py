@@ -498,6 +498,7 @@ def render_html(
     _w("<!-- /bn-codebook -->")
 
     # --- Analysis tab ---
+    _w("<!-- bn-analysis -->")
     _w('<div class="bn-tab-panel" data-tab="analysis" id="panel-analysis" role="tabpanel" aria-label="Analysis">')
     if analysis is not None:
         _w(_jinja_env.get_template("analysis.html").render())
@@ -506,6 +507,7 @@ def render_html(
         _w('<p class="description">No analysis data available.'
            " Run the full pipeline to generate analysis.</p>")
     _w("</div>")  # .bn-tab-panel[analysis]
+    _w("<!-- /bn-analysis -->")
 
     # --- Settings tab ---
     _w('<div class="bn-tab-panel" data-tab="settings" id="panel-settings"'
@@ -1569,15 +1571,15 @@ def _render_transcript_page(
         meta_right=t_meta_right,
     ))
 
-    # Back link + participant heading — report is at ../bristlenose-{slug}-report.html
-    _w("<!-- bn-transcript-page -->")
-    _w('<nav class="transcript-back">')
+    # Global navigation — tabs link back to the report at the correct hash
     report_filename = f"bristlenose-{slug}-report.html"
-    _w(
-        f'<a href="../{report_filename}">'
-        f"&larr; {_esc(project_name)} Research Report</a>"
-    )
-    _w("</nav>")
+    _w(_jinja_env.get_template("global_nav.html").render(
+        report_url=f"../{report_filename}",
+        active_tab="sessions",
+    ))
+
+    # Participant heading
+    _w("<!-- bn-transcript-page -->")
     heading_html = f"Session {_esc(session_num)}: {', '.join(code_spans)}"
     _w(f"<h1>{heading_html}</h1>")
 

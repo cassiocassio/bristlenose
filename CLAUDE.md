@@ -281,7 +281,7 @@ When the user signals end of session, **proactively offer to run this checklist*
 9. **Clean up branches** — delete merged feature branches
 10. **Verify CI** — check latest push passes CI
 
-## Current status (v0.10.1, Feb 2026)
+## Current status (v0.10.2, Feb 2026)
 
 Core pipeline complete and published to PyPI + Homebrew. Snap packaging implemented and tested locally (arm64); CI builds amd64 on every push. Latest: **AutoCode backend** — LLM-assisted codebook tag application engine, 7 API endpoints, Norman discrimination prompts (28 sub-tags), live LLM eval harness, 96 tests. Codebook templates (Garrett, Norman, UXR, Plato) as YAML with full discrimination prompts. Prior: API key onboarding + .dmg packaging, desktop app serve mode, 5-state launcher, self-contained sidecar with bundled FFmpeg/ffprobe/Whisper model, serve mode (FastAPI + SQLite + React islands), interactive dashboard, sessions table redesign, appearance toggle, user journeys, tab navigation, Gemini provider, transcript annotations, hidden quotes + codebook, Azure OpenAI, Ollama, transcript coverage, multi-participant sessions. See git log for full history.
 

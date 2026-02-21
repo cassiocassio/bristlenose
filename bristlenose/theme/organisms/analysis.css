@@ -333,3 +333,59 @@
 .heatmap-cell.has-card { cursor: pointer; }
 .heatmap-cell:not(.has-card) { cursor: default; }
 .heatmap-cell:not(.has-card):hover { outline: none; }
+
+/* ── Fixed-width columns for tag heatmaps (rotated headers) ── */
+
+.analysis-heatmap th.heatmap-col-header {
+    width: 56px;
+    min-width: 56px;
+    max-width: 56px;
+    height: 6rem;
+    vertical-align: bottom;
+    padding: 0 0.2rem 0.3rem;
+    overflow: visible;
+}
+
+.heatmap-col-label {
+    display: inline-block;
+    transform: rotate(-30deg);
+    transform-origin: left bottom;
+    white-space: nowrap;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--bn-colour-muted);
+}
+
+/* ── Signal card badge styles ──────────────────────────────── */
+
+.signal-group-badge {
+    font-weight: 600;
+}
+
+.signal-quote-tag {
+    margin-left: 0.4rem;
+    font-size: 0.72rem;
+    vertical-align: middle;
+}
+
+/* ── Per-codebook section heading ─────────────────────────── */
+
+.analysis-codebook-section {
+    margin-bottom: var(--bn-space-xl);
+}
+
+.analysis-codebook-heading {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--bn-colour-text);
+    margin: var(--bn-space-lg) 0 var(--bn-space-sm);
+    padding-bottom: var(--bn-space-xs);
+    border-bottom: 1px solid var(--bn-colour-border);
+}
+
+.analysis-heatmap-label {
+    font-size: 0.82rem;
+    font-weight: 500;
+    color: var(--bn-colour-muted);
+    margin: var(--bn-space-md) 0 var(--bn-space-xs);
+}

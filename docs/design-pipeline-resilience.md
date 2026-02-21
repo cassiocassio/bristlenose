@@ -1,6 +1,6 @@
 # Pipeline Resilience & Data Integrity
 
-> **Status**: Design research — not yet implemented
+> **Status**: Phase 1a–1c implemented; Phase 1d+ not yet implemented
 > **Scope**: Big-picture architecture for crash recovery, incremental re-runs, provenance tracking, human/LLM merge, source material change detection, mid-run provider switching, and analytical context preservation
 > **Trigger**: Plato stress test (Feb 2026) — pipeline ran out of API credits mid-run, stale SQLite data from previous project leaked into serve mode, intermediate JSON files weren't written by `analyze` command, recovery required re-spending $3.50 on LLM calls already made
 
@@ -507,7 +507,7 @@ class PipelineManifest(BaseModel):
 
 **Backward compatibility**: Projects without a manifest still work exactly as before. The manifest is created on the next run.
 
-#### 1c. Read manifest on startup and skip completed stages
+#### ~~1c. Read manifest on startup and skip completed stages~~ ✓ Done
 
 **What it is**: This is where resume actually works. At the start of `run()`, check for an existing manifest. For each stage marked "complete," check that the output file still exists on disk. If it does, skip the stage and load the data from the file.
 

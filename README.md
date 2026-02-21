@@ -255,6 +255,8 @@ bristlenose run ./interviews/ -p "Q1 Usability Study"    # name the project
 bristlenose transcribe ./interviews/                     # transcribe, no LLM
 bristlenose analyze ./interviews/bristlenose-output/     # skip transcription, run LLM analysis
 bristlenose render ./interviews/bristlenose-output/      # re-render from JSON, no LLM calls
+bristlenose serve ./interviews/                          # browse the report interactively
+bristlenose status ./interviews/                         # check project status (read-only)
 bristlenose doctor                                       # check dependencies
 ```
 
@@ -391,6 +393,12 @@ Edit `bristlenose/__init__.py` (the single source of truth for version), commit,
 - Resilient transcript discovery — serve-mode importer searches four locations instead of one
 - Generic analysis matrix and signals API for serve mode
 - Fix: transcript back link no longer escapes from serve mode to raw static HTML
+
+**0.10.3** — _21 Feb 2026_
+
+- `bristlenose status` command — read-only project status from the manifest with session counts, intermediate file validation, and `-v` per-session detail
+- Pre-run resume summary — one-line status message when resuming an interrupted pipeline run
+- Man page and docs updated for `status` and `serve` commands
 
 **0.10.2** — _21 Feb 2026_
 

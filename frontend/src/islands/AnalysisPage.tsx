@@ -3,22 +3,24 @@
  *
  * Shows signal concentration cards and heatmaps for both:
  * - **Sentiment signals** (baked into HTML as `BRISTLENOSE_ANALYSIS` global)
- * - **Tag signals** (fetched from `/api/projects/{id}/analysis/tags`)
+ * - **Tag signals** (fetched per-codebook from `/api/projects/{id}/analysis/codebooks`)
  *
  * Reuses existing CSS from analysis.css — emits the same class names as
  * the vanilla JS analysis.js so all styling carries over.
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Badge, Metric } from "../components";
-import { getTagAnalysis } from "../utils/api";
+import { Badge, Metric, PersonBadge } from "../components";
+import { getCodebookAnalysis } from "../utils/api";
+import { getGroupBg, getTagBg } from "../utils/colours";
 import { formatTimecode } from "../utils/format";
 import type {
   AnalysisMatrix,
+  CodebookAnalysis,
+  CodebookAnalysisListResponse,
   SentimentAnalysisData,
   SentimentSignal,
   SourceBreakdown,
-  TagAnalysisResponse,
   TagSignal,
   TagSignalQuote,
 } from "../utils/types";
@@ -43,6 +45,8 @@ interface UnifiedSignal {
   location: string;
   sourceType: "section" | "theme";
   columnLabel: string; // sentiment name or group name
+  colourSet: string; // codebook group colour_set (empty for sentiment)
+  codebookName: string; // display name of the codebook
   count: number;
   participants: string[];
   nEff: number;
@@ -50,7 +54,18 @@ interface UnifiedSignal {
   concentration: number;
   compositeSignal: number;
   confidence: "strong" | "moderate" | "emerging";
-  quotes: { text: string; pid: string; sessionId: string; startSeconds: number; intensity: number }[];
+  quotes: UnifiedQuote[];
+}
+
+interface UnifiedQuote {
+  text: string;
+  pid: string;
+  sessionId: string;
+  startSeconds: number;
+  intensity: number;
+  tagNames: string[];
+  colourSet: string;
+  tagColourIndices: Record<string, number>;
 }
 
 function adaptSentimentSignals(data: SentimentAnalysisData): UnifiedSignal[] {
@@ -59,6 +74,8 @@ function adaptSentimentSignals(data: SentimentAnalysisData): UnifiedSignal[] {
     location: s.location,
     sourceType: s.sourceType,
     columnLabel: s.sentiment,
+    colourSet: "",
+    codebookName: "",
     count: s.count,
     participants: s.participants,
     nEff: s.nEff,
@@ -72,31 +89,45 @@ function adaptSentimentSignals(data: SentimentAnalysisData): UnifiedSignal[] {
       sessionId: q.sessionId,
       startSeconds: q.startSeconds,
       intensity: q.intensity,
+      tagNames: [],
+      colourSet: "",
+      tagColourIndices: {},
     })),
   }));
 }
 
-function adaptTagSignals(data: TagAnalysisResponse): UnifiedSignal[] {
-  return data.signals.map((s: TagSignal) => ({
-    key: `${s.source_type}|${s.location}|${s.group_name}`,
-    location: s.location,
-    sourceType: s.source_type,
-    columnLabel: s.group_name,
-    count: s.count,
-    participants: s.participants,
-    nEff: s.n_eff,
-    meanIntensity: s.mean_intensity,
-    concentration: s.concentration,
-    compositeSignal: s.composite_signal,
-    confidence: s.confidence,
-    quotes: s.quotes.map((q: TagSignalQuote) => ({
-      text: q.text,
-      pid: q.participant_id,
-      sessionId: q.session_id,
-      startSeconds: q.start_seconds,
-      intensity: q.intensity,
-    })),
-  }));
+function adaptCodebookSignals(data: CodebookAnalysisListResponse): UnifiedSignal[] {
+  const all: UnifiedSignal[] = [];
+  for (const cb of data.codebooks) {
+    for (const s of cb.signals) {
+      all.push({
+        key: `${s.source_type}|${s.location}|${s.group_name}`,
+        location: s.location,
+        sourceType: s.source_type,
+        columnLabel: s.group_name,
+        colourSet: s.colour_set || cb.colour_set,
+        codebookName: cb.codebook_name,
+        count: s.count,
+        participants: s.participants,
+        nEff: s.n_eff,
+        meanIntensity: s.mean_intensity,
+        concentration: s.concentration,
+        compositeSignal: s.composite_signal,
+        confidence: s.confidence,
+        quotes: s.quotes.map((q: TagSignalQuote) => ({
+          text: q.text,
+          pid: q.participant_id,
+          sessionId: q.session_id,
+          startSeconds: q.start_seconds,
+          intensity: q.intensity,
+          tagNames: q.tag_names || [],
+          colourSet: s.colour_set || cb.colour_set,
+          tagColourIndices: cb.tag_colour_indices || {},
+        })),
+      });
+    }
+  }
+  return all.sort((a, b) => b.compositeSignal - a.compositeSignal);
 }
 
 // ── Heatmap maths ──────────────────────────────────────────────────────
@@ -202,7 +233,9 @@ function SignalCard({
 
   const accentVar = isSentiment
     ? `var(--bn-sentiment-${signal.columnLabel})`
-    : "var(--bn-colour-accent)";
+    : signal.colourSet
+      ? getGroupBg(signal.colourSet)
+      : "var(--bn-colour-accent)";
 
   const anchorPrefix = signal.sourceType === "section" ? "section-" : "theme-";
   const slug = signal.location.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "");
@@ -222,17 +255,18 @@ function SignalCard({
   const visibleQuotes = signal.quotes.slice(0, 1);
   const hiddenQuotes = signal.quotes.slice(1);
 
-  const toggleExpand = useCallback(() => {
-    setExpanded((prev) => {
-      const next = !prev;
-      if (next && expansionRef.current) {
-        expansionRef.current.style.maxHeight = `${expansionRef.current.scrollHeight}px`;
-      } else if (expansionRef.current) {
-        expansionRef.current.style.maxHeight = "0";
-      }
-      return next;
-    });
-  }, []);
+  // Fix: useEffect ensures expanded class is applied before maxHeight is set,
+  // so both opacity and maxHeight transitions work together.
+  useEffect(() => {
+    if (!expansionRef.current) return;
+    if (expanded) {
+      expansionRef.current.style.maxHeight = `${expansionRef.current.scrollHeight}px`;
+    } else {
+      expansionRef.current.style.maxHeight = "0";
+    }
+  }, [expanded]);
+
+  const toggleExpand = useCallback(() => setExpanded((prev) => !prev), []);
 
   return (
     <div
@@ -258,7 +292,12 @@ function SignalCard({
           {isSentiment ? (
             <Badge text={signal.columnLabel} variant="ai" sentiment={signal.columnLabel} />
           ) : (
-            <Badge text={signal.columnLabel} variant="readonly" />
+            <Badge
+              text={signal.columnLabel}
+              variant="readonly"
+              colour={signal.colourSet ? getGroupBg(signal.colourSet) : undefined}
+              className="signal-group-badge"
+            />
           )}
         </div>
         <div className="signal-card-metrics">
@@ -291,7 +330,7 @@ function SignalCard({
 
       <div className="signal-card-quotes">
         {visibleQuotes.map((q, i) => (
-          <QuoteBlock key={i} quote={q} />
+          <QuoteBlock key={i} quote={q} isSentiment={isSentiment} />
         ))}
         <div
           className="signal-card-expansion"
@@ -299,7 +338,7 @@ function SignalCard({
           style={{ maxHeight: expanded ? undefined : 0 }}
         >
           {hiddenQuotes.map((q, i) => (
-            <QuoteBlock key={i + 1} quote={q} />
+            <QuoteBlock key={i + 1} quote={q} isSentiment={isSentiment} />
           ))}
         </div>
       </div>
@@ -330,8 +369,10 @@ function SignalCard({
 
 function QuoteBlock({
   quote,
+  isSentiment,
 }: {
-  quote: { text: string; pid: string; sessionId: string; startSeconds: number; intensity: number };
+  quote: UnifiedQuote;
+  isSentiment: boolean;
 }) {
   const tc = formatTimecode(quote.startSeconds);
   const tcHref = `sessions/transcript_${quote.sessionId}.html#t-${Math.floor(quote.startSeconds)}`;
@@ -345,8 +386,23 @@ function QuoteBlock({
           <span className="timecode-bracket">]</span>
         </a>
         <span className="quote-body">
-          <span className="speaker">{quote.pid}</span>{" "}
+          <span className="speaker">
+            <PersonBadge code={quote.pid} role="participant" />
+          </span>{" "}
           <span className="quote-text">{quote.text}</span>
+          {!isSentiment && quote.tagNames.length > 0 && quote.tagNames.map((tag) => (
+            <Badge
+              key={tag}
+              text={tag}
+              variant="readonly"
+              colour={
+                quote.colourSet
+                  ? getTagBg(quote.colourSet, quote.tagColourIndices[tag] ?? 0)
+                  : undefined
+              }
+              className="signal-quote-tag"
+            />
+          ))}
         </span>
         <span className="intensity-dots" title={`Intensity ${quote.intensity}/3`}>
           <IntensityDotsSvg value={quote.intensity} />
@@ -410,11 +466,11 @@ function Heatmap({
         <tr>
           <th>{rowHeader}</th>
           {columnLabels.map((col) => (
-            <th key={col}>
+            <th key={col} className={isSentiment ? undefined : "heatmap-col-header"}>
               {isSentiment ? (
                 <Badge text={col} variant="ai" sentiment={col} />
               ) : (
-                col
+                <span className="heatmap-col-label">{col}</span>
               )}
             </th>
           ))}
@@ -439,7 +495,6 @@ function Heatmap({
                 const classes = [
                   "heatmap-cell",
                   hasCard ? "has-card" : "",
-                  count > 0 ? "" : "",
                 ].filter(Boolean).join(" ");
 
                 const ar = adjustedResidual(count, rowTotal, colTotal, grandTotal);
@@ -572,7 +627,7 @@ interface AnalysisPageProps {
 }
 
 export function AnalysisPage({ projectId }: AnalysisPageProps) {
-  const [tagData, setTagData] = useState<TagAnalysisResponse | null>(null);
+  const [cbData, setCbData] = useState<CodebookAnalysisListResponse | null>(null);
   const [tagError, setTagError] = useState<string | null>(null);
   const [tagLoaded, setTagLoaded] = useState(false);
   const [mode, setMode] = useState<ViewMode>("tags");
@@ -596,15 +651,15 @@ export function AnalysisPage({ projectId }: AnalysisPageProps) {
   // Read baked sentiment data
   const sentimentData = useMemo(() => window.BRISTLENOSE_ANALYSIS ?? null, []);
 
-  // Fetch tag analysis from API
+  // Fetch per-codebook tag analysis from API
   useEffect(() => {
-    getTagAnalysis()
-      .then((data) => { setTagData(data); setTagLoaded(true); })
+    getCodebookAnalysis()
+      .then((data) => { setCbData(data); setTagLoaded(true); })
       .catch((err: Error) => { setTagError(err.message); setTagLoaded(true); });
   }, [projectId]);
 
   const hasSentiment = sentimentData !== null && sentimentData.signals.length > 0;
-  const hasTags = tagData !== null && tagData.signals.length > 0;
+  const hasTags = cbData !== null && cbData.codebooks.some((cb) => cb.signals.length > 0);
 
   // Default to whichever view has data
   useEffect(() => {
@@ -613,42 +668,60 @@ export function AnalysisPage({ projectId }: AnalysisPageProps) {
     else if (hasTags) setMode("tags"); // prefer tags when both exist
   }, [hasSentiment, hasTags]);
 
-  // Build unified data for current mode
+  // Build unified signal cards for current mode
   const signals = useMemo<UnifiedSignal[]>(() => {
     if (mode === "sentiment" && sentimentData) return adaptSentimentSignals(sentimentData);
-    if (mode === "tags" && tagData) return adaptTagSignals(tagData);
+    if (mode === "tags" && cbData) return adaptCodebookSignals(cbData);
     return [];
-  }, [mode, sentimentData, tagData]);
+  }, [mode, sentimentData, cbData]);
 
-  const columnLabels = useMemo<string[]>(() => {
-    if (mode === "sentiment" && sentimentData) return sentimentData.sentiments;
-    if (mode === "tags" && tagData) return tagData.columns;
-    return [];
-  }, [mode, sentimentData, tagData]);
+  // Sentiment-mode data (flat, single matrix)
+  const sentimentColumns = useMemo<string[]>(
+    () => (sentimentData ? sentimentData.sentiments : []),
+    [sentimentData],
+  );
+  const sentimentPids = useMemo<string[]>(
+    () => (sentimentData ? sentimentData.participantIds : []),
+    [sentimentData],
+  );
+  const sentimentSectionMatrix = useMemo(
+    () => (sentimentData ? adaptSentimentMatrix(sentimentData.sectionMatrix) : null),
+    [sentimentData],
+  );
+  const sentimentThemeMatrix = useMemo(
+    () => (sentimentData ? adaptSentimentMatrix(sentimentData.themeMatrix) : null),
+    [sentimentData],
+  );
 
-  const allPids = useMemo<string[]>(() => {
-    if (mode === "sentiment" && sentimentData) return sentimentData.participantIds;
-    if (mode === "tags" && tagData) return tagData.participant_ids;
-    return [];
-  }, [mode, sentimentData, tagData]);
+  // Tag-mode: collect all participant IDs across codebooks for signal cards
+  const tagAllPids = useMemo<string[]>(() => {
+    if (!cbData) return [];
+    const pids = new Set<string>();
+    for (const cb of cbData.codebooks) {
+      for (const pid of cb.participant_ids) pids.add(pid);
+    }
+    return Array.from(pids).sort(
+      (a, b) => {
+        const na = parseInt(a.slice(1), 10) || 0;
+        const nb = parseInt(b.slice(1), 10) || 0;
+        return na - nb;
+      },
+    );
+  }, [cbData]);
 
-  const totalParticipants = useMemo<number>(() => {
-    if (mode === "sentiment" && sentimentData) return sentimentData.totalParticipants;
-    if (mode === "tags" && tagData) return tagData.total_participants;
-    return 0;
-  }, [mode, sentimentData, tagData]);
+  const allPids = mode === "sentiment" ? sentimentPids : tagAllPids;
 
-  const sectionMatrix = useMemo(() => {
-    if (mode === "sentiment" && sentimentData) return adaptSentimentMatrix(sentimentData.sectionMatrix);
-    if (mode === "tags" && tagData) return tagData.section_matrix;
-    return null;
-  }, [mode, sentimentData, tagData]);
-
-  const themeMatrix = useMemo(() => {
-    if (mode === "sentiment" && sentimentData) return adaptSentimentMatrix(sentimentData.themeMatrix);
-    if (mode === "tags" && tagData) return tagData.theme_matrix;
-    return null;
-  }, [mode, sentimentData, tagData]);
+  // Aggregate source breakdown across codebooks
+  const sourceBreakdown = useMemo<SourceBreakdown | null>(() => {
+    if (mode !== "tags" || !cbData) return null;
+    const total = { accepted: 0, pending: 0, total: 0 };
+    for (const cb of cbData.codebooks) {
+      total.accepted += cb.source_breakdown.accepted;
+      total.pending += cb.source_breakdown.pending;
+      total.total += cb.source_breakdown.total;
+    }
+    return total.total > 0 ? total : null;
+  }, [mode, cbData]);
 
   const signalKeys = useMemo(
     () => new Set(signals.map((s) => s.key)),
@@ -698,7 +771,9 @@ export function AnalysisPage({ projectId }: AnalysisPageProps) {
   }
 
   const isSentiment = mode === "sentiment";
-  const sourceBreakdown = mode === "tags" && tagData ? tagData.source_breakdown : null;
+  const totalParticipants = isSentiment
+    ? (sentimentData?.totalParticipants ?? 0)
+    : (cbData?.total_participants ?? 0);
 
   return (
     <div data-testid="bn-analysis-page">
@@ -738,20 +813,36 @@ export function AnalysisPage({ projectId }: AnalysisPageProps) {
         </div>
       )}
 
-      {sectionMatrix && (
+      {/* Sentiment mode: single section/theme heatmap */}
+      {isSentiment && sentimentSectionMatrix && (
         <>
           <h2 className="section-heading" id="section-x-sentiment">
-            Section × {isSentiment ? "Sentiment" : "Tags"}
+            Section × Sentiment
           </h2>
           <p className="section-desc">
-            Quote counts per report section and {isSentiment ? "sentiment" : "codebook group"}.
+            Quote counts per report section and sentiment.
             {totalParticipants > 0 && ` ${totalParticipants} participants total.`}
           </p>
           <Heatmap
-            matrix={sectionMatrix}
-            columnLabels={columnLabels}
+            matrix={sentimentSectionMatrix}
+            columnLabels={sentimentColumns}
             rowHeader="Section"
-            isSentiment={isSentiment}
+            isSentiment={true}
+            signalKeys={signalKeys}
+            onCellClick={handleCellClick}
+            isDark={isDark}
+          />
+        </>
+      )}
+      {isSentiment && sentimentThemeMatrix && (
+        <>
+          <h2 className="section-heading">Theme × Sentiment</h2>
+          <p className="section-desc">The same view grouped by cross-cutting themes.</p>
+          <Heatmap
+            matrix={sentimentThemeMatrix}
+            columnLabels={sentimentColumns}
+            rowHeader="Theme"
+            isSentiment={true}
             signalKeys={signalKeys}
             onCellClick={handleCellClick}
             isDark={isDark}
@@ -759,25 +850,45 @@ export function AnalysisPage({ projectId }: AnalysisPageProps) {
         </>
       )}
 
-      {themeMatrix && (
-        <>
-          <h2 className="section-heading">
-            Theme × {isSentiment ? "Sentiment" : "Tags"}
-          </h2>
-          <p className="section-desc">
-            The same view grouped by cross-cutting themes.
-          </p>
-          <Heatmap
-            matrix={themeMatrix}
-            columnLabels={columnLabels}
-            rowHeader="Theme"
-            isSentiment={isSentiment}
-            signalKeys={signalKeys}
-            onCellClick={handleCellClick}
-            isDark={isDark}
-          />
-        </>
-      )}
+      {/* Tag mode: separate heatmaps per codebook */}
+      {!isSentiment && cbData && cbData.codebooks.map((cb) => (
+        <div key={cb.codebook_id} className="analysis-codebook-section">
+          <h3 className="analysis-codebook-heading">{cb.codebook_name}</h3>
+          {cb.section_matrix.grand_total > 0 && (
+            <>
+              <p className="analysis-heatmap-label">
+                Section × {cb.codebook_name}
+                {totalParticipants > 0 && ` · ${totalParticipants} participants`}
+              </p>
+              <Heatmap
+                matrix={cb.section_matrix}
+                columnLabels={cb.columns}
+                rowHeader="Section"
+                isSentiment={false}
+                signalKeys={signalKeys}
+                onCellClick={handleCellClick}
+                isDark={isDark}
+              />
+            </>
+          )}
+          {cb.theme_matrix.grand_total > 0 && (
+            <>
+              <p className="analysis-heatmap-label">
+                Theme × {cb.codebook_name}
+              </p>
+              <Heatmap
+                matrix={cb.theme_matrix}
+                columnLabels={cb.columns}
+                rowHeader="Theme"
+                isSentiment={false}
+                signalKeys={signalKeys}
+                onCellClick={handleCellClick}
+                isDark={isDark}
+              />
+            </>
+          )}
+        </div>
+      ))}
     </div>
   );
 }

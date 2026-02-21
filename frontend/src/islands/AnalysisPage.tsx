@@ -180,6 +180,74 @@ function heatCellStyle(
   return { background: `oklch(${lightness} ${chroma} ${hue})` };
 }
 
+// ── Cell tooltip (context-only micro variant 5b) ──────────────────────
+
+/** Tooltip position relative to the hovered cell. */
+interface TooltipPos {
+  top: number;
+  left: number;
+}
+
+function CellTooltip({
+  signal,
+  allPids,
+  pos,
+}: {
+  signal: UnifiedSignal;
+  allPids: string[];
+  pos: TooltipPos;
+}) {
+  const accentVar = signal.colourSet
+    ? getGroupBg(signal.colourSet)
+    : `var(--bn-sentiment-${signal.columnLabel})`;
+  const presentSet = new Set(signal.participants);
+  const quotes = signal.quotes.slice(0, 2);
+  const remaining = signal.quotes.length - quotes.length;
+
+  return (
+    <div
+      className="cell-tooltip"
+      style={{
+        "--tip-accent": accentVar,
+        top: pos.top,
+        left: pos.left,
+      } as React.CSSProperties}
+      data-testid="bn-cell-tooltip"
+    >
+      <div className="cell-tooltip-body">
+        <div className="cell-tooltip-metrics">
+          <span>
+            <span className="cell-tooltip-val">{signal.concentration.toFixed(1)}&times;</span> conc
+          </span>
+          <span>
+            <span className="cell-tooltip-val">{signal.participants.length}</span>
+            {signal.participants.length === 1 ? " voice" : " voices"}
+          </span>
+          <span className="cell-tooltip-pips">
+            {allPids.map((pid) => (
+              <span
+                key={pid}
+                className={`cell-tooltip-pip${presentSet.has(pid) ? "" : " absent"}`}
+              />
+            ))}
+          </span>
+        </div>
+        <div className="cell-tooltip-quotes">
+          {quotes.map((q, i) => (
+            <div key={i} className="cell-tooltip-quote">
+              <span className="cell-tooltip-quote-text">{q.text}</span>
+              <span className="cell-tooltip-speaker">{q.pid}</span>
+            </div>
+          ))}
+        </div>
+        {remaining > 0 && (
+          <div className="cell-tooltip-footer">+{remaining} more</div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ── Sub-components ─────────────────────────────────────────────────────
 
 function SourceBanner({ breakdown }: { breakdown: SourceBreakdown }) {
@@ -456,6 +524,8 @@ function Heatmap({
   rowHeader,
   isSentiment,
   signalKeys,
+  signalMap,
+  allPids,
   onCellClick,
   isDark,
 }: {
@@ -464,26 +534,81 @@ function Heatmap({
   rowHeader: string;
   isSentiment: boolean;
   signalKeys: Set<string>;
+  signalMap: Map<string, UnifiedSignal>;
+  allPids: string[];
   onCellClick: (key: string) => void;
   isDark: boolean;
 }) {
   const grandTotal = matrix.grand_total;
   if (grandTotal === 0 || matrix.row_labels.length === 0) return null;
 
+  // Tooltip hover state
+  const [hoveredKey, setHoveredKey] = useState<string | null>(null);
+  const [tooltipPos, setTooltipPos] = useState<TooltipPos>({ top: 0, left: 0 });
+  const enterTimer = useRef<ReturnType<typeof setTimeout>>(null);
+  const leaveTimer = useRef<ReturnType<typeof setTimeout>>(null);
+  const wrapperRef = useRef<HTMLDivElement>(null);
+
+  // Track which row/col is highlighted for header tinting
+  const [highlightRow, setHighlightRow] = useState<string | null>(null);
+  const [highlightCol, setHighlightCol] = useState<string | null>(null);
+
+  const handleCellEnter = useCallback(
+    (e: React.MouseEvent<HTMLTableCellElement>, signalKey: string, row: string, col: string) => {
+      if (leaveTimer.current) clearTimeout(leaveTimer.current);
+      // Capture rects before the timeout — React nulls e.currentTarget after the handler returns
+      const cellRect = e.currentTarget.getBoundingClientRect();
+      enterTimer.current = setTimeout(() => {
+        if (!wrapperRef.current) return;
+        const wrapperRect = wrapperRef.current.getBoundingClientRect();
+        // Position below the cell, centred horizontally
+        const top = cellRect.bottom - wrapperRect.top + 6;
+        let left = cellRect.left - wrapperRect.left + cellRect.width / 2;
+        // Clamp so tooltip doesn't overflow wrapper right edge
+        const wrapperWidth = wrapperRect.width;
+        const tipWidth = 270; // approximate max-width of micro tooltip
+        if (left + tipWidth / 2 > wrapperWidth) left = wrapperWidth - tipWidth / 2 - 8;
+        if (left - tipWidth / 2 < 0) left = tipWidth / 2 + 8;
+        setTooltipPos({ top, left });
+        setHoveredKey(signalKey);
+        setHighlightRow(row);
+        setHighlightCol(col);
+      }, 150);
+    },
+    [],
+  );
+
+  const handleCellLeave = useCallback(() => {
+    if (enterTimer.current) clearTimeout(enterTimer.current);
+    leaveTimer.current = setTimeout(() => {
+      setHoveredKey(null);
+      setHighlightRow(null);
+      setHighlightCol(null);
+    }, 100);
+  }, []);
+
+  const hoveredSignal = hoveredKey ? signalMap.get(hoveredKey) ?? null : null;
+
   return (
+    <div ref={wrapperRef} style={{ position: "relative" }}>
     <table className="analysis-heatmap" data-testid="bn-heatmap">
       <thead>
         <tr>
           <th>{rowHeader}</th>
-          {columnLabels.map((col) => (
-            <th key={col} className={isSentiment ? undefined : "heatmap-col-header"}>
-              {isSentiment ? (
-                <Badge text={col} variant="ai" sentiment={col} />
-              ) : (
-                <span className="heatmap-col-label">{col}</span>
-              )}
-            </th>
-          ))}
+          {columnLabels.map((col) => {
+            const isHl = col === highlightCol;
+            const baseClass = isSentiment ? undefined : "heatmap-col-header";
+            const hlClass = isHl ? (baseClass ? `${baseClass} heatmap-header-hl` : "heatmap-header-hl") : baseClass;
+            return (
+              <th key={col} className={hlClass || undefined}>
+                {isSentiment ? (
+                  <Badge text={col} variant="ai" sentiment={col} />
+                ) : (
+                  <span className="heatmap-col-label">{col}</span>
+                )}
+              </th>
+            );
+          })}
           <th className={isSentiment ? undefined : "heatmap-col-header"}>
             {isSentiment ? "Total" : <span className="heatmap-col-label">Total</span>}
           </th>
@@ -492,9 +617,10 @@ function Heatmap({
       <tbody>
         {matrix.row_labels.map((row) => {
           const rowTotal = matrix.row_totals[row] || 0;
+          const isRowHl = row === highlightRow;
           return (
             <tr key={row}>
-              <td>{row}</td>
+              <td className={isRowHl ? "heatmap-row-hl" : undefined}>{row}</td>
               {columnLabels.map((col) => {
                 const cellKey = `${row}|${col}`;
                 const cell = matrix.cells[cellKey];
@@ -525,6 +651,8 @@ function Heatmap({
                     data-sentiment={col}
                     style={style}
                     onClick={hasCard ? () => onCellClick(signalKey) : undefined}
+                    onMouseEnter={hasCard ? (e) => handleCellEnter(e, signalKey, row, col) : undefined}
+                    onMouseLeave={hasCard ? handleCellLeave : undefined}
                   >
                     {count}
                   </td>
@@ -545,6 +673,10 @@ function Heatmap({
         </tr>
       </tbody>
     </table>
+    {hoveredSignal && (
+      <CellTooltip signal={hoveredSignal} allPids={allPids} pos={tooltipPos} />
+    )}
+    </div>
   );
 }
 
@@ -613,16 +745,20 @@ export function AnalysisPage({ projectId }: AnalysisPageProps) {
   const hasSentiment = sentimentData !== null && sentimentData.signals.length > 0;
   const hasTags = cbData !== null && cbData.codebooks.some((cb) => cb.signals.length > 0);
 
-  // Build separate signal arrays for each type, capped to strongest N
-  const sentimentSignals = useMemo<UnifiedSignal[]>(() => {
+  // Build full signal arrays (uncapped — used by tooltip lookups)
+  const allSentimentSignals = useMemo<UnifiedSignal[]>(() => {
     if (!sentimentData) return [];
-    return adaptSentimentSignals(sentimentData).slice(0, MAX_SIGNALS);
+    return adaptSentimentSignals(sentimentData);
   }, [sentimentData]);
 
-  const tagSignals = useMemo<UnifiedSignal[]>(() => {
+  const allTagSignals = useMemo<UnifiedSignal[]>(() => {
     if (!cbData) return [];
-    return adaptCodebookSignals(cbData).slice(0, MAX_SIGNALS);
+    return adaptCodebookSignals(cbData);
   }, [cbData]);
+
+  // Capped to strongest N for card display
+  const sentimentSignals = useMemo(() => allSentimentSignals.slice(0, MAX_SIGNALS), [allSentimentSignals]);
+  const tagSignals = useMemo(() => allTagSignals.slice(0, MAX_SIGNALS), [allTagSignals]);
 
   // Sentiment data (flat, single matrix)
   const sentimentColumns = useMemo<string[]>(
@@ -670,11 +806,19 @@ export function AnalysisPage({ projectId }: AnalysisPageProps) {
     return total.total > 0 ? total : null;
   }, [cbData]);
 
-  // Combined signal keys from both types (for heatmap cell → card scrolling)
+  // Combined signal keys from both types (all signals, not just displayed cards)
   const signalKeys = useMemo(
-    () => new Set([...sentimentSignals, ...tagSignals].map((s) => s.key)),
-    [sentimentSignals, tagSignals],
+    () => new Set([...allSentimentSignals, ...allTagSignals].map((s) => s.key)),
+    [allSentimentSignals, allTagSignals],
   );
+
+  // Signal lookup map for tooltip (key → signal)
+  const signalMap = useMemo(() => {
+    const m = new Map<string, UnifiedSignal>();
+    for (const s of allSentimentSignals) m.set(s.key, s);
+    for (const s of allTagSignals) m.set(s.key, s);
+    return m;
+  }, [allSentimentSignals, allTagSignals]);
 
   // Card refs for scroll-to from heatmap cells
   const cardRefs = useRef<Map<string, HTMLDivElement>>(new Map());
@@ -790,6 +934,8 @@ export function AnalysisPage({ projectId }: AnalysisPageProps) {
             rowHeader="Section"
             isSentiment={true}
             signalKeys={signalKeys}
+            signalMap={signalMap}
+            allPids={sentimentPids}
             onCellClick={handleCellClick}
             isDark={isDark}
           />
@@ -805,6 +951,8 @@ export function AnalysisPage({ projectId }: AnalysisPageProps) {
             rowHeader="Theme"
             isSentiment={true}
             signalKeys={signalKeys}
+            signalMap={signalMap}
+            allPids={sentimentPids}
             onCellClick={handleCellClick}
             isDark={isDark}
           />
@@ -827,6 +975,8 @@ export function AnalysisPage({ projectId }: AnalysisPageProps) {
                 rowHeader="Section"
                 isSentiment={false}
                 signalKeys={signalKeys}
+                signalMap={signalMap}
+                allPids={tagAllPids}
                 onCellClick={handleCellClick}
                 isDark={isDark}
               />
@@ -843,6 +993,8 @@ export function AnalysisPage({ projectId }: AnalysisPageProps) {
                 rowHeader="Theme"
                 isSentiment={false}
                 signalKeys={signalKeys}
+                signalMap={signalMap}
+                allPids={tagAllPids}
                 onCellClick={handleCellClick}
                 isDark={isDark}
               />

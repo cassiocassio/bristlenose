@@ -1,0 +1,1135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cell Hover Tooltip — Design Explorations</title>
+<style>
+/* ── Design tokens (from bristlenose/theme/tokens.css) ─────── */
+:root {
+    --bn-font-body: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
+    --bn-font-mono: "SF Mono", "Fira Code", "Consolas", monospace;
+    --bn-colour-bg: #ffffff;
+    --bn-colour-text: #1a1a1a;
+    --bn-colour-muted: #6b7280;
+    --bn-colour-border: #e5e7eb;
+    --bn-colour-accent: #2563eb;
+    --bn-colour-hover: #e8f0fe;
+    --bn-colour-quote-bg: #f9fafb;
+    --bn-colour-badge-bg: #f3f4f6;
+    --bn-colour-badge-text: #374151;
+    --bn-colour-shadow: rgba(0,0,0,0.1);
+    --bn-space-xs: 0.15rem;
+    --bn-space-sm: 0.35rem;
+    --bn-space-md: 0.75rem;
+    --bn-space-lg: 1.5rem;
+    --bn-space-xl: 2rem;
+    --bn-radius-sm: 3px;
+    --bn-radius-md: 6px;
+    --bn-radius-lg: 8px;
+    --bn-transition-fast: 0.15s ease;
+    --bn-transition-normal: 0.2s ease;
+    --bn-sentiment-frustration: #ea580c;
+    --bn-sentiment-frustration-bg: #fff7ed;
+    --bn-sentiment-confusion: #dc2626;
+    --bn-sentiment-confusion-bg: #fef2f2;
+    --bn-sentiment-satisfaction: #16a34a;
+    --bn-sentiment-satisfaction-bg: #f0fdf4;
+    --bn-sentiment-delight: #059669;
+    --bn-sentiment-delight-bg: #ecfdf5;
+    --bn-sentiment-confidence: #2563eb;
+    --bn-sentiment-confidence-bg: #eff6ff;
+    --bn-sentiment-surprise: #d97706;
+    --bn-sentiment-surprise-bg: #fffbeb;
+    --bn-sentiment-doubt: #7c3aed;
+    --bn-sentiment-doubt-bg: #f5f3ff;
+    --bn-span-bar-width: 2px;
+    --bn-span-bar-radius: 1px;
+}
+
+/* ── Page layout ─────────────────────────────────────────────── */
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+    font-family: var(--bn-font-body);
+    font-size: 1rem;
+    color: var(--bn-colour-text);
+    background: var(--bn-colour-bg);
+    line-height: 1.5;
+    padding: 2rem 3rem 6rem;
+    max-width: 1100px;
+}
+
+h1 { font-size: 1.5rem; font-weight: 600; margin-bottom: 0.3rem; }
+h2 { font-size: 1.15rem; font-weight: 600; margin: 3rem 0 0.5rem; border-bottom: 1px solid var(--bn-colour-border); padding-bottom: 0.4rem; }
+h3 { font-size: 0.95rem; font-weight: 600; margin: 1.8rem 0 0.4rem; color: var(--bn-colour-muted); text-transform: uppercase; letter-spacing: 0.04em; }
+.subtitle { color: var(--bn-colour-muted); font-size: 0.9rem; margin-bottom: 2rem; }
+.note { font-size: 0.82rem; color: var(--bn-colour-muted); margin-top: 0.5rem; line-height: 1.4; max-width: 44rem; }
+.note em { font-style: italic; }
+.note strong { font-weight: 600; color: var(--bn-colour-text); }
+.comparison { display: flex; gap: 2rem; flex-wrap: wrap; align-items: flex-start; }
+.comparison > * { flex: 1; min-width: 280px; }
+
+/* ── Badge (from atoms/badge.css) ────────────────────────────── */
+.badge {
+    display: inline-block;
+    font-family: var(--bn-font-mono);
+    font-size: 0.72rem;
+    padding: var(--bn-space-xs) 0.45rem;
+    border-radius: var(--bn-radius-sm);
+    background: var(--bn-colour-badge-bg);
+    color: var(--bn-colour-badge-text);
+    white-space: nowrap;
+}
+.badge-frustration { background: var(--bn-sentiment-frustration-bg); color: var(--bn-sentiment-frustration); }
+.badge-confusion { background: var(--bn-sentiment-confusion-bg); color: var(--bn-sentiment-confusion); }
+.badge-satisfaction { background: var(--bn-sentiment-satisfaction-bg); color: var(--bn-sentiment-satisfaction); }
+.badge-delight { background: var(--bn-sentiment-delight-bg); color: var(--bn-sentiment-delight); }
+.badge-confidence { background: var(--bn-sentiment-confidence-bg); color: var(--bn-sentiment-confidence); }
+.badge-surprise { background: var(--bn-sentiment-surprise-bg); color: var(--bn-sentiment-surprise); }
+.badge-doubt { background: var(--bn-sentiment-doubt-bg); color: var(--bn-sentiment-doubt); }
+
+/* ── Tooltip shell (shared across all variants) ──────────────── */
+.tip {
+    background: var(--bn-colour-bg);
+    border: 1px solid var(--bn-colour-border);
+    border-radius: var(--bn-radius-md);
+    box-shadow: 0 4px 16px rgba(0,0,0,0.10), 0 1px 4px rgba(0,0,0,0.06);
+    position: relative;
+    overflow: hidden;
+    width: max-content;
+    max-width: 340px;
+}
+
+/* Accent bar (left edge, matches signal card) */
+.tip::before {
+    content: "";
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: var(--bn-span-bar-width);
+    border-radius: var(--bn-span-bar-radius) 0 0 var(--bn-span-bar-radius);
+    background: var(--tip-accent, var(--bn-colour-muted));
+}
+
+.tip-body {
+    padding: 0.6rem 0.75rem 0.6rem 0.85rem;
+}
+
+/* Header row: section label + stats */
+.tip-header {
+    display: flex;
+    align-items: baseline;
+    gap: 0.4rem;
+    margin-bottom: 0.3rem;
+}
+.tip-location {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--bn-colour-text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 180px;
+}
+.tip-stats {
+    font-family: var(--bn-font-mono);
+    font-size: 0.72rem;
+    color: var(--bn-colour-muted);
+    white-space: nowrap;
+}
+
+/* Quotes */
+.tip-quotes {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+.tip-quote {
+    font-size: 0.8rem;
+    color: var(--bn-colour-text);
+    line-height: 1.35;
+    display: flex;
+    gap: 0.35rem;
+}
+.tip-quote::before {
+    content: "\201C";
+    color: var(--bn-colour-muted);
+    font-size: 0.9rem;
+    line-height: 1;
+    flex-shrink: 0;
+    margin-top: 0.05rem;
+}
+.tip-quote-text {
+    flex: 1;
+    min-width: 0;
+}
+.tip-quote-text em {
+    font-style: normal;
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+}
+/* Truncation classes */
+.trunc-2 em { -webkit-line-clamp: 2; }
+.trunc-1 em { -webkit-line-clamp: 1; }
+.trunc-none em { -webkit-line-clamp: none; }
+.tip-speaker {
+    font-family: var(--bn-font-mono);
+    font-size: 0.7rem;
+    color: var(--bn-colour-muted);
+    white-space: nowrap;
+    flex-shrink: 0;
+    align-self: flex-end;
+}
+
+/* Footer */
+.tip-footer {
+    font-size: 0.72rem;
+    color: var(--bn-colour-muted);
+    margin-top: 0.35rem;
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+}
+.tip-footer a {
+    color: var(--bn-colour-accent);
+    text-decoration: none;
+    font-size: 0.72rem;
+}
+
+/* Metrics row (for stats-at-top and stats-at-bottom variants) */
+.tip-metrics {
+    display: flex;
+    gap: 0.75rem;
+    font-family: var(--bn-font-mono);
+    font-size: 0.72rem;
+    color: var(--bn-colour-muted);
+}
+.tip-metric-value {
+    color: var(--bn-colour-text);
+    font-weight: 500;
+}
+
+/* Participant dots */
+.tip-pips {
+    display: flex;
+    gap: 3px;
+    align-items: center;
+}
+.tip-pip {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--tip-accent, var(--bn-colour-accent));
+    opacity: 0.7;
+}
+.tip-pip.absent {
+    background: var(--bn-colour-border);
+    opacity: 0.4;
+}
+
+/* ── Divider ────────────────────────────────────────────────── */
+.tip-divider {
+    height: 1px;
+    background: var(--bn-colour-border);
+    margin: 0.35rem 0;
+}
+
+/* ── Micro variant (one size down everywhere) ────────────────── */
+.tip-micro .tip-body { padding: 0.45rem 0.6rem 0.45rem 0.7rem; }
+.tip-micro .tip-location { font-size: 0.75rem; }
+.tip-micro .tip-stats { font-size: 0.65rem; }
+.tip-micro .tip-quote { font-size: 0.72rem; }
+.tip-micro .tip-quote::before { font-size: 0.8rem; }
+.tip-micro .tip-speaker { font-size: 0.62rem; }
+.tip-micro .tip-footer { font-size: 0.65rem; }
+.tip-micro .tip-footer a { font-size: 0.65rem; }
+.tip-micro .tip-metrics { font-size: 0.65rem; }
+.tip-micro .badge { font-size: 0.62rem; padding: 0.1rem 0.35rem; }
+.tip-micro .tip-pip { width: 5px; height: 5px; }
+
+/* ── Context-only variant (no section/sentiment label) ────── */
+.tip-context-only .tip-body { padding: 0.5rem 0.65rem 0.5rem 0.75rem; }
+
+/* ── Heatmap cell mock (for the "highlighted headers" variant) ── */
+.mock-grid {
+    display: grid;
+    grid-template-columns: 140px repeat(3, 70px);
+    gap: 0;
+    font-size: 0.82rem;
+    border: 1px solid var(--bn-colour-border);
+    border-radius: var(--bn-radius-sm);
+    width: max-content;
+}
+.mock-grid > * {
+    padding: 0.3rem 0.5rem;
+    border-bottom: 1px solid var(--bn-colour-border);
+    border-right: 1px solid var(--bn-colour-border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.mock-grid > *:nth-child(4n) { border-right: none; }
+.mock-grid > *:nth-last-child(-n+4) { border-bottom: none; }
+.mock-header {
+    font-weight: 600;
+    font-size: 0.75rem;
+    color: var(--bn-colour-muted);
+    text-transform: none;
+}
+.mock-header.row-label {
+    justify-content: flex-start;
+    font-size: 0.82rem;
+    color: var(--bn-colour-text);
+}
+.mock-cell {
+    font-family: var(--bn-font-mono);
+    font-size: 0.8rem;
+    min-height: 36px;
+    color: var(--bn-colour-muted);
+    cursor: default;
+}
+.mock-cell.active {
+    font-weight: 500;
+    color: var(--bn-colour-text);
+}
+/* Highlight pulse on row/column headers */
+.mock-header.highlight {
+    background: var(--bn-sentiment-frustration-bg);
+    color: var(--bn-sentiment-frustration);
+    font-weight: 600;
+    border-radius: 2px;
+    transition: all 0.2s ease;
+}
+.mock-cell.highlight-cell {
+    outline: 2px solid var(--bn-sentiment-frustration);
+    outline-offset: -2px;
+    border-radius: 2px;
+}
+
+/* ── Sparkline bar (tiny conc. visualisation) ────────────────── */
+.tip-conc-bar {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    margin-left: 0.15rem;
+}
+.tip-conc-bar-track {
+    width: 32px;
+    height: 4px;
+    border-radius: 2px;
+    background: var(--bn-colour-border);
+    overflow: hidden;
+}
+.tip-conc-bar-fill {
+    height: 100%;
+    border-radius: 2px;
+    background: var(--tip-accent, var(--bn-colour-accent));
+}
+
+/* ── Section anchors ─────────────────────────────────────────── */
+.variant-label {
+    display: inline-block;
+    font-family: var(--bn-font-mono);
+    font-size: 0.72rem;
+    padding: 0.1rem 0.45rem;
+    background: var(--bn-colour-badge-bg);
+    color: var(--bn-colour-badge-text);
+    border-radius: var(--bn-radius-sm);
+    margin-bottom: 0.5rem;
+}
+
+/* Intensity dots (from signal card) */
+.tip-intensity {
+    display: inline-flex;
+    gap: 2px;
+}
+.tip-intensity-dot {
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+}
+.tip-intensity-dot.filled { background: var(--tip-accent, var(--bn-colour-muted)); }
+.tip-intensity-dot.empty { background: var(--bn-colour-border); }
+</style>
+</head>
+<body>
+
+<h1>Cell Hover Tooltip — Design Explorations</h1>
+<p class="subtitle">Variant E (Quote Stack) as baseline, with size, layout, truncation, and concept variations.</p>
+
+
+<!-- ============================================================ -->
+<h2>1. Standard — Stats Top (baseline)</h2>
+<p class="note">
+    The metrics line sits above the quotes. Researcher scans: badge + concentration first, then reads quotes.
+    This mirrors the signal card layout (identity + metrics top, quotes below).
+</p>
+
+<h3>1a. 2 quotes, 2-line truncation</h3>
+<div class="tip" style="--tip-accent: var(--bn-sentiment-frustration);">
+    <div class="tip-body">
+        <div class="tip-header">
+            <span class="badge badge-frustration">frustration</span>
+            <span class="tip-stats">3.2&times; conc &middot; 2 voices</span>
+        </div>
+        <div class="tip-quotes">
+            <div class="tip-quote trunc-2">
+                <span class="tip-quote-text"><em>I couldn't find the search bar at all, it was completely hidden under that banner thing at the top</em></span>
+                <span class="tip-speaker">P2</span>
+            </div>
+            <div class="tip-quote trunc-2">
+                <span class="tip-quote-text"><em>Why is the menu completely different from what I saw last time? I feel like they keep moving everything around</em></span>
+                <span class="tip-speaker">P4</span>
+            </div>
+        </div>
+        <div class="tip-footer">
+            <a href="#">View signal &rarr;</a>
+        </div>
+    </div>
+</div>
+
+<h3>1b. 1 quote (single-quote cell) — no "view signal" needed</h3>
+<div class="tip" style="--tip-accent: var(--bn-sentiment-satisfaction);">
+    <div class="tip-body">
+        <div class="tip-header">
+            <span class="badge badge-satisfaction">satisfaction</span>
+            <span class="tip-stats">1.8&times; conc &middot; 1 voice</span>
+        </div>
+        <div class="tip-quotes">
+            <div class="tip-quote trunc-2">
+                <span class="tip-quote-text"><em>Oh nice, the price updated straight away when I changed the quantity, that's good</em></span>
+                <span class="tip-speaker">P3</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<h3>1c. 4-quote cell — shows 2, hints at rest</h3>
+<div class="tip" style="--tip-accent: var(--bn-sentiment-satisfaction);">
+    <div class="tip-body">
+        <div class="tip-header">
+            <span class="badge badge-satisfaction">satisfaction</span>
+            <span class="tip-stats">2.4&times; conc &middot; 3 voices</span>
+        </div>
+        <div class="tip-quotes">
+            <div class="tip-quote trunc-2">
+                <span class="tip-quote-text"><em>The checkout flow was really smooth, I didn't have to think about anything</em></span>
+                <span class="tip-speaker">P1</span>
+            </div>
+            <div class="tip-quote trunc-2">
+                <span class="tip-quote-text"><em>Yeah I liked that it remembered my card from last time, that saved me like two minutes of typing</em></span>
+                <span class="tip-speaker">P2</span>
+            </div>
+        </div>
+        <div class="tip-footer">
+            <span>+2 more</span>
+            <span>&middot;</span>
+            <a href="#">View signal &rarr;</a>
+        </div>
+    </div>
+</div>
+
+
+<!-- ============================================================ -->
+<h2>2. Standard — Stats Bottom</h2>
+<p class="note">
+    Quotes come first — the researcher reads what was said before seeing the numbers.
+    Better for "should I care about this?" decisions where the content matters more than the metric.
+</p>
+
+<h3>2a. 2 quotes, 2-line truncation</h3>
+<div class="tip" style="--tip-accent: var(--bn-sentiment-frustration);">
+    <div class="tip-body">
+        <div style="margin-bottom: 0.25rem;">
+            <span class="badge badge-frustration">frustration</span>
+        </div>
+        <div class="tip-quotes">
+            <div class="tip-quote trunc-2">
+                <span class="tip-quote-text"><em>I couldn't find the search bar at all, it was completely hidden under that banner thing at the top</em></span>
+                <span class="tip-speaker">P2</span>
+            </div>
+            <div class="tip-quote trunc-2">
+                <span class="tip-quote-text"><em>Why is the menu completely different from what I saw last time? I feel like they keep moving everything around</em></span>
+                <span class="tip-speaker">P4</span>
+            </div>
+        </div>
+        <div class="tip-divider"></div>
+        <div class="tip-metrics">
+            <span><span class="tip-metric-value">3.2&times;</span> conc</span>
+            <span><span class="tip-metric-value">2</span> voices</span>
+            <span style="flex: 1;"></span>
+            <a href="#" style="color: var(--bn-colour-accent); text-decoration: none; font-size: 0.72rem; font-family: var(--bn-font-mono);">View &rarr;</a>
+        </div>
+    </div>
+</div>
+
+<h3>2b. 4-quote cell — shows 2</h3>
+<div class="tip" style="--tip-accent: var(--bn-sentiment-satisfaction);">
+    <div class="tip-body">
+        <div style="margin-bottom: 0.25rem;">
+            <span class="badge badge-satisfaction">satisfaction</span>
+        </div>
+        <div class="tip-quotes">
+            <div class="tip-quote trunc-2">
+                <span class="tip-quote-text"><em>The checkout flow was really smooth, I didn't have to think about anything</em></span>
+                <span class="tip-speaker">P1</span>
+            </div>
+            <div class="tip-quote trunc-2">
+                <span class="tip-quote-text"><em>Yeah I liked that it remembered my card from last time, that saved me like two minutes</em></span>
+                <span class="tip-speaker">P2</span>
+            </div>
+        </div>
+        <div class="tip-divider"></div>
+        <div class="tip-metrics">
+            <span><span class="tip-metric-value">2.4&times;</span> conc</span>
+            <span><span class="tip-metric-value">3</span> voices</span>
+            <span>+2 more</span>
+            <span style="flex: 1;"></span>
+            <a href="#" style="color: var(--bn-colour-accent); text-decoration: none; font-size: 0.72rem; font-family: var(--bn-font-mono);">View &rarr;</a>
+        </div>
+    </div>
+</div>
+
+
+<!-- ============================================================ -->
+<h2>3. Micro Variant (one size down)</h2>
+<p class="note">
+    Every font size dropped one step on the scale. Badge shrinks to 0.62rem, quotes to 0.72rem, stats to 0.65rem.
+    Fits tighter to the cell — less visual weight, better for dense grids.
+</p>
+
+<h3>3a. Micro — stats top</h3>
+<div class="tip tip-micro" style="--tip-accent: var(--bn-sentiment-frustration); max-width: 290px;">
+    <div class="tip-body">
+        <div class="tip-header">
+            <span class="badge badge-frustration">frustration</span>
+            <span class="tip-stats">3.2&times; conc &middot; 2 voices</span>
+        </div>
+        <div class="tip-quotes">
+            <div class="tip-quote trunc-2">
+                <span class="tip-quote-text"><em>I couldn't find the search bar at all, it was completely hidden under that banner thing at the top</em></span>
+                <span class="tip-speaker">P2</span>
+            </div>
+            <div class="tip-quote trunc-2">
+                <span class="tip-quote-text"><em>Why is the menu completely different from what I saw last time? I feel like they keep moving everything around</em></span>
+                <span class="tip-speaker">P4</span>
+            </div>
+        </div>
+        <div class="tip-footer">
+            <a href="#">View signal &rarr;</a>
+        </div>
+    </div>
+</div>
+
+<h3>3b. Micro — stats bottom, 4 quotes (shows 2)</h3>
+<div class="tip tip-micro" style="--tip-accent: var(--bn-sentiment-confusion); max-width: 290px;">
+    <div class="tip-body">
+        <div style="margin-bottom: 0.2rem;">
+            <span class="badge badge-confusion">confusion</span>
+        </div>
+        <div class="tip-quotes">
+            <div class="tip-quote trunc-2">
+                <span class="tip-quote-text"><em>Wait, is this the same product? The name is different but it looks identical</em></span>
+                <span class="tip-speaker">P1</span>
+            </div>
+            <div class="tip-quote trunc-2">
+                <span class="tip-quote-text"><em>I don't understand why there are two add-to-bag buttons, which one should I press?</em></span>
+                <span class="tip-speaker">P3</span>
+            </div>
+        </div>
+        <div class="tip-divider"></div>
+        <div class="tip-metrics">
+            <span><span class="tip-metric-value">2.8&times;</span> conc</span>
+            <span><span class="tip-metric-value">2</span> voices</span>
+            <span>+1 more</span>
+            <span style="flex: 1;"></span>
+            <a href="#" style="color: var(--bn-colour-accent); text-decoration: none;">View &rarr;</a>
+        </div>
+    </div>
+</div>
+
+<h3>3c. Micro — single quote cell</h3>
+<div class="tip tip-micro" style="--tip-accent: var(--bn-sentiment-delight); max-width: 290px;">
+    <div class="tip-body">
+        <div class="tip-header">
+            <span class="badge badge-delight">delight</span>
+            <span class="tip-stats">1.5&times; conc &middot; 1 voice</span>
+        </div>
+        <div class="tip-quotes">
+            <div class="tip-quote trunc-2">
+                <span class="tip-quote-text"><em>Oh that's lovely, it shows you exactly what the room would look like with the bed in it</em></span>
+                <span class="tip-speaker">P3</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<!-- ============================================================ -->
+<h2>4. Truncation Length Comparison</h2>
+<p class="note">
+    How much of a quote do you need to decide if you want to click?
+    Same quote rendered at 1-line, 2-line, and full length.
+    Typical interview quotes run 15–40 words.
+</p>
+
+<h3>4a. 1-line clamp (~40 chars visible)</h3>
+<div class="tip" style="--tip-accent: var(--bn-sentiment-frustration); max-width: 320px;">
+    <div class="tip-body">
+        <div class="tip-header">
+            <span class="badge badge-frustration">frustration</span>
+            <span class="tip-stats">3.2&times; &middot; 2 voices</span>
+        </div>
+        <div class="tip-quotes">
+            <div class="tip-quote trunc-1">
+                <span class="tip-quote-text"><em>I couldn't find the search bar at all, it was completely hidden under that banner thing at the top</em></span>
+                <span class="tip-speaker">P2</span>
+            </div>
+            <div class="tip-quote trunc-1">
+                <span class="tip-quote-text"><em>Why is the menu completely different from what I saw last time? I feel like they keep moving everything around</em></span>
+                <span class="tip-speaker">P4</span>
+            </div>
+        </div>
+    </div>
+</div>
+<p class="note"><strong>Verdict:</strong> You get the topic but lose the nuance. "couldn't find the search bar" is enough;
+"menu completely different" works. Good for rapid scanning. Loses "why it matters" detail.</p>
+
+<h3>4b. 2-line clamp (~80 chars visible)</h3>
+<div class="tip" style="--tip-accent: var(--bn-sentiment-frustration); max-width: 320px;">
+    <div class="tip-body">
+        <div class="tip-header">
+            <span class="badge badge-frustration">frustration</span>
+            <span class="tip-stats">3.2&times; &middot; 2 voices</span>
+        </div>
+        <div class="tip-quotes">
+            <div class="tip-quote trunc-2">
+                <span class="tip-quote-text"><em>I couldn't find the search bar at all, it was completely hidden under that banner thing at the top</em></span>
+                <span class="tip-speaker">P2</span>
+            </div>
+            <div class="tip-quote trunc-2">
+                <span class="tip-quote-text"><em>Why is the menu completely different from what I saw last time? I feel like they keep moving everything around</em></span>
+                <span class="tip-speaker">P4</span>
+            </div>
+        </div>
+    </div>
+</div>
+<p class="note"><strong>Verdict:</strong> Sweet spot. You get both the observation <em>and</em> the emotional framing.
+Most interview quotes (15–25 words) fit entirely in 2 lines at this width.</p>
+
+<h3>4c. Full quote (no truncation)</h3>
+<div class="tip" style="--tip-accent: var(--bn-sentiment-frustration); max-width: 320px;">
+    <div class="tip-body">
+        <div class="tip-header">
+            <span class="badge badge-frustration">frustration</span>
+            <span class="tip-stats">3.2&times; &middot; 2 voices</span>
+        </div>
+        <div class="tip-quotes">
+            <div class="tip-quote trunc-none">
+                <span class="tip-quote-text"><em>I couldn't find the search bar at all, it was completely hidden under that banner thing at the top</em></span>
+                <span class="tip-speaker">P2</span>
+            </div>
+            <div class="tip-quote trunc-none">
+                <span class="tip-quote-text"><em>Why is the menu completely different from what I saw last time? I feel like they keep moving everything around</em></span>
+                <span class="tip-speaker">P4</span>
+            </div>
+        </div>
+    </div>
+</div>
+<p class="note"><strong>Verdict:</strong> Not much taller than 2-line for typical quotes.
+But a long rambly quote (40+ words) would blow out the tooltip height. Risky without a max-height.</p>
+
+<h3>4d. Long quotes — stress test (2-line clamp saves you)</h3>
+<div class="tip" style="--tip-accent: var(--bn-sentiment-confusion); max-width: 320px;">
+    <div class="tip-body">
+        <div class="tip-header">
+            <span class="badge badge-confusion">confusion</span>
+            <span class="tip-stats">1.9&times; &middot; 2 voices</span>
+        </div>
+        <div class="tip-quotes">
+            <div class="tip-quote trunc-2">
+                <span class="tip-quote-text"><em>So I went to the bedroom section and there were like three different categories that all seemed to have the same products in them, and I couldn't tell if bedframes were supposed to be under beds or under bedroom furniture, and then when I clicked on one of them it took me to a completely different page that didn't even match</em></span>
+                <span class="tip-speaker">P1</span>
+            </div>
+            <div class="tip-quote trunc-2">
+                <span class="tip-quote-text"><em>Wait, is this page showing me results for the whole store or just this department? Because some of these things definitely aren't beds</em></span>
+                <span class="tip-speaker">P4</span>
+            </div>
+        </div>
+        <div class="tip-footer">
+            <a href="#">View signal &rarr;</a>
+        </div>
+    </div>
+</div>
+<p class="note"><strong>Verdict:</strong> 2-line clamp gracefully handles even 60-word quotes. The opening clause
+is almost always enough to know what the participant is talking about.</p>
+
+
+<!-- ============================================================ -->
+<h2>5. Context-Only (no redundant labels)</h2>
+<p class="note">
+    You're hovering over a cell that's already at the intersection of "IKEA Homepage" (row) and "frustration" (column).
+    Repeating those labels in the tooltip wastes space. Instead, the tooltip shows <strong>only new information</strong>:
+    quotes, stats, and participant IDs. The grid itself highlights the row and column headers
+    to reinforce which cell you're looking at.
+</p>
+
+<h3>5a. Context-only tooltip + highlighted headers (simulated)</h3>
+
+<div style="display: flex; gap: 2rem; align-items: flex-start; flex-wrap: wrap;">
+    <!-- Mock grid with highlighted headers -->
+    <div>
+        <div class="mock-grid">
+            <div class="mock-header">&nbsp;</div>
+            <div class="mock-header highlight">frustration</div>
+            <div class="mock-header">confusion</div>
+            <div class="mock-header">satisfaction</div>
+
+            <div class="mock-header row-label">Surgery Info</div>
+            <div class="mock-cell">0</div>
+            <div class="mock-cell">0</div>
+            <div class="mock-cell active" style="background: #f0fdf4;">4</div>
+
+            <div class="mock-header row-label highlight">IKEA Homepage</div>
+            <div class="mock-cell active highlight-cell" style="background: #fff7ed;">2</div>
+            <div class="mock-cell active" style="background: #fef2f2;">1</div>
+            <div class="mock-cell active" style="background: #f0fdf4;">2</div>
+
+            <div class="mock-header row-label">Main Shopping</div>
+            <div class="mock-cell">0</div>
+            <div class="mock-cell active" style="background: #fef2f2;">1</div>
+            <div class="mock-cell">0</div>
+        </div>
+    </div>
+
+    <!-- Tooltip without redundant labels -->
+    <div class="tip tip-context-only" style="--tip-accent: var(--bn-sentiment-frustration); max-width: 300px;">
+        <div class="tip-body">
+            <div class="tip-metrics" style="margin-bottom: 0.3rem;">
+                <span><span class="tip-metric-value">3.2&times;</span> conc</span>
+                <span><span class="tip-metric-value">2</span> voices</span>
+                <span class="tip-pips" style="margin-left: auto;">
+                    <span class="tip-pip"></span>
+                    <span class="tip-pip absent"></span>
+                    <span class="tip-pip"></span>
+                    <span class="tip-pip absent"></span>
+                </span>
+            </div>
+            <div class="tip-quotes">
+                <div class="tip-quote trunc-2">
+                    <span class="tip-quote-text"><em>I couldn't find the search bar at all, it was completely hidden under that banner thing</em></span>
+                    <span class="tip-speaker">P2</span>
+                </div>
+                <div class="tip-quote trunc-2">
+                    <span class="tip-quote-text"><em>Why is the menu completely different from what I saw last time?</em></span>
+                    <span class="tip-speaker">P4</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<p class="note"><strong>Key idea:</strong> The row header "IKEA Homepage" gets the frustration-orange background tint,
+and the column header "frustration" gets highlighted too. The cell itself gets an outline.
+The tooltip can skip both labels entirely — it's pure content.</p>
+
+<h3>5b. Context-only, micro size</h3>
+<div class="tip tip-micro tip-context-only" style="--tip-accent: var(--bn-sentiment-confusion); max-width: 270px;">
+    <div class="tip-body">
+        <div class="tip-metrics" style="margin-bottom: 0.25rem;">
+            <span><span class="tip-metric-value">2.8&times;</span> conc</span>
+            <span><span class="tip-metric-value">2</span> voices</span>
+            <span class="tip-pips" style="margin-left: auto;">
+                <span class="tip-pip" style="background: var(--bn-sentiment-confusion);"></span>
+                <span class="tip-pip absent"></span>
+                <span class="tip-pip" style="background: var(--bn-sentiment-confusion);"></span>
+                <span class="tip-pip absent"></span>
+            </span>
+        </div>
+        <div class="tip-quotes">
+            <div class="tip-quote trunc-2">
+                <span class="tip-quote-text"><em>Wait, is this the same product? The name is different but it looks identical</em></span>
+                <span class="tip-speaker">P1</span>
+            </div>
+            <div class="tip-quote trunc-2">
+                <span class="tip-quote-text"><em>I don't understand why there are two add-to-bag buttons</em></span>
+                <span class="tip-speaker">P3</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<!-- ============================================================ -->
+<h2>6. Additional Explorations</h2>
+
+<h3>6a. Participant Voice Map — "who said what" focus</h3>
+<p class="note">
+    For studies with 6+ participants, the key question isn't just "what was said" but "who's represented?"
+    This variant leads with participant presence, showing which voices contributed.
+</p>
+<div class="tip" style="--tip-accent: var(--bn-sentiment-satisfaction); max-width: 320px;">
+    <div class="tip-body">
+        <div style="display: flex; align-items: center; gap: 0.4rem; margin-bottom: 0.35rem;">
+            <span class="badge badge-satisfaction">satisfaction</span>
+            <span class="tip-pips" style="margin-left: auto;">
+                <span class="tip-pip"></span>
+                <span class="tip-pip"></span>
+                <span class="tip-pip"></span>
+                <span class="tip-pip absent"></span>
+            </span>
+            <span style="font-family: var(--bn-font-mono); font-size: 0.65rem; color: var(--bn-colour-muted);">3 of 4</span>
+        </div>
+        <div class="tip-quotes">
+            <div class="tip-quote trunc-1">
+                <span class="tip-speaker" style="align-self: flex-start;">P1</span>
+                <span class="tip-quote-text"><em>The checkout flow was really smooth, I didn't have to think about anything</em></span>
+            </div>
+            <div class="tip-quote trunc-1">
+                <span class="tip-speaker" style="align-self: flex-start;">P2</span>
+                <span class="tip-quote-text"><em>It remembered my card from last time, that saved me two minutes</em></span>
+            </div>
+        </div>
+        <div class="tip-footer">
+            <span>+2 more</span>
+            <span>&middot;</span>
+            <a href="#">View signal &rarr;</a>
+        </div>
+    </div>
+</div>
+<p class="note">Speaker ID leads each quote line — inverts the standard layout. Good when
+the analyst cares about breadth of agreement, not just content.</p>
+
+
+<h3>6b. Sparkline + Concentration Bar</h3>
+<p class="note">
+    A tiny inline bar visualises concentration relative to the study baseline.
+    Makes the number feel tangible — "how far above average is this?"
+</p>
+<div class="tip" style="--tip-accent: var(--bn-sentiment-frustration); max-width: 320px;">
+    <div class="tip-body">
+        <div class="tip-header">
+            <span class="badge badge-frustration">frustration</span>
+            <span class="tip-stats">
+                3.2&times;
+                <span class="tip-conc-bar">
+                    <span class="tip-conc-bar-track"><span class="tip-conc-bar-fill" style="width: 80%;"></span></span>
+                </span>
+                &middot; 2 voices
+            </span>
+        </div>
+        <div class="tip-quotes">
+            <div class="tip-quote trunc-2">
+                <span class="tip-quote-text"><em>I couldn't find the search bar at all, it was completely hidden under that banner</em></span>
+                <span class="tip-speaker">P2</span>
+            </div>
+            <div class="tip-quote trunc-2">
+                <span class="tip-quote-text"><em>Why is the menu completely different from what I saw last time?</em></span>
+                <span class="tip-speaker">P4</span>
+            </div>
+        </div>
+        <div class="tip-footer">
+            <a href="#">View signal &rarr;</a>
+        </div>
+    </div>
+</div>
+
+
+<h3>6c. Intensity Peek — show emotional weight</h3>
+<p class="note">
+    Dot-based intensity indicator (0–3 scale, matching signal card). Answers:
+    "are these mild observations or strong reactions?"
+</p>
+<div class="tip" style="--tip-accent: var(--bn-sentiment-frustration); max-width: 320px;">
+    <div class="tip-body">
+        <div class="tip-header">
+            <span class="badge badge-frustration">frustration</span>
+            <span class="tip-stats">
+                3.2&times; conc &middot;
+                <span class="tip-intensity">
+                    <span class="tip-intensity-dot filled"></span>
+                    <span class="tip-intensity-dot filled"></span>
+                    <span class="tip-intensity-dot empty"></span>
+                </span>
+            </span>
+        </div>
+        <div class="tip-quotes">
+            <div class="tip-quote trunc-2">
+                <span class="tip-quote-text"><em>I couldn't find the search bar at all, it was completely hidden under that banner</em></span>
+                <span class="tip-speaker">P2</span>
+            </div>
+            <div class="tip-quote trunc-2">
+                <span class="tip-quote-text"><em>Why is the menu completely different from what I saw last time?</em></span>
+                <span class="tip-speaker">P4</span>
+            </div>
+        </div>
+        <div class="tip-footer">
+            <a href="#">View signal &rarr;</a>
+        </div>
+    </div>
+</div>
+
+
+<h3>6d. "No Signal" state — cell with count but below threshold</h3>
+<p class="note">
+    Cells with quotes but no signal card still benefit from a tooltip.
+    Shows the quotes exist but didn't reach signal threshold.
+</p>
+<div class="tip" style="--tip-accent: var(--bn-colour-muted); max-width: 300px;">
+    <div class="tip-body">
+        <div class="tip-header">
+            <span class="badge">confusion</span>
+            <span class="tip-stats">1 quote &middot; 1 voice</span>
+        </div>
+        <div class="tip-quotes">
+            <div class="tip-quote trunc-2">
+                <span class="tip-quote-text"><em>I wasn't sure if that was the right button but I just clicked it anyway</em></span>
+                <span class="tip-speaker">P3</span>
+            </div>
+        </div>
+        <div class="tip-footer" style="color: var(--bn-colour-muted); font-style: italic;">
+            Below signal threshold
+        </div>
+    </div>
+</div>
+
+
+<h3>6e. Compact Confidence Chip — strong/moderate/emerging as visual weight</h3>
+<p class="note">
+    The confidence level (strong/moderate/emerging) is one of the most actionable data points.
+    This variant makes it prominent via a coloured chip, replacing the text-only concentration display.
+</p>
+<div class="tip" style="--tip-accent: var(--bn-sentiment-frustration); max-width: 320px;">
+    <div class="tip-body">
+        <div class="tip-header" style="gap: 0.3rem;">
+            <span class="badge badge-frustration">frustration</span>
+            <span class="badge" style="background: var(--bn-sentiment-frustration-bg); color: var(--bn-sentiment-frustration); font-size: 0.62rem; font-weight: 500;">strong</span>
+            <span class="tip-stats" style="margin-left: auto;">2 voices</span>
+        </div>
+        <div class="tip-quotes">
+            <div class="tip-quote trunc-2">
+                <span class="tip-quote-text"><em>I couldn't find the search bar at all, it was completely hidden under that banner thing</em></span>
+                <span class="tip-speaker">P2</span>
+            </div>
+            <div class="tip-quote trunc-2">
+                <span class="tip-quote-text"><em>Why is the menu completely different from what I saw last time?</em></span>
+                <span class="tip-speaker">P4</span>
+            </div>
+        </div>
+        <div class="tip-footer">
+            <a href="#">View signal &rarr;</a>
+        </div>
+    </div>
+</div>
+
+<div style="margin-top: 0.5rem;"></div>
+
+<!-- Moderate example -->
+<div class="tip" style="--tip-accent: var(--bn-sentiment-satisfaction); max-width: 320px;">
+    <div class="tip-body">
+        <div class="tip-header" style="gap: 0.3rem;">
+            <span class="badge badge-satisfaction">satisfaction</span>
+            <span class="badge" style="background: var(--bn-sentiment-satisfaction-bg); color: var(--bn-sentiment-satisfaction); font-size: 0.62rem; font-weight: 500;">moderate</span>
+            <span class="tip-stats" style="margin-left: auto;">3 voices</span>
+        </div>
+        <div class="tip-quotes">
+            <div class="tip-quote trunc-2">
+                <span class="tip-quote-text"><em>The checkout flow was really smooth, I didn't have to think about anything</em></span>
+                <span class="tip-speaker">P1</span>
+            </div>
+            <div class="tip-quote trunc-2">
+                <span class="tip-quote-text"><em>It remembered my card from last time</em></span>
+                <span class="tip-speaker">P2</span>
+            </div>
+        </div>
+        <div class="tip-footer">
+            <span>+2 more</span>
+            <span>&middot;</span>
+            <a href="#">View signal &rarr;</a>
+        </div>
+    </div>
+</div>
+
+
+<h3>6f. Sentence Fragment — first N words only</h3>
+<p class="note">
+    Instead of CSS line clamping, truncate at the <strong>word level</strong> with an ellipsis.
+    Feels more intentional than a mid-word CSS cutoff. Shows ~8–12 words per quote.
+</p>
+<div class="tip" style="--tip-accent: var(--bn-sentiment-frustration); max-width: 300px;">
+    <div class="tip-body">
+        <div class="tip-header">
+            <span class="badge badge-frustration">frustration</span>
+            <span class="tip-stats">3.2&times; &middot; 2 voices</span>
+        </div>
+        <div class="tip-quotes">
+            <div class="tip-quote">
+                <span class="tip-quote-text"><em>I couldn't find the search bar at all, it was&hellip;</em></span>
+                <span class="tip-speaker">P2</span>
+            </div>
+            <div class="tip-quote">
+                <span class="tip-quote-text"><em>Why is the menu completely different from what I&hellip;</em></span>
+                <span class="tip-speaker">P4</span>
+            </div>
+        </div>
+        <div class="tip-footer">
+            <a href="#">View signal &rarr;</a>
+        </div>
+    </div>
+</div>
+<p class="note">~10 words per quote. More predictable height than CSS clamp — every quote takes exactly one line.
+Trade-off: need JS to compute the word boundary instead of pure CSS.</p>
+
+
+<!-- ============================================================ -->
+<h2>7. Side-by-Side: Stats Top vs. Stats Bottom vs. Context-Only</h2>
+<p class="note">Same data, three layouts for direct comparison.</p>
+
+<div class="comparison">
+    <div>
+        <div class="variant-label">stats top</div>
+        <div class="tip" style="--tip-accent: var(--bn-sentiment-frustration);">
+            <div class="tip-body">
+                <div class="tip-header">
+                    <span class="badge badge-frustration">frustration</span>
+                    <span class="tip-stats">3.2&times; conc &middot; 2 voices</span>
+                </div>
+                <div class="tip-quotes">
+                    <div class="tip-quote trunc-2">
+                        <span class="tip-quote-text"><em>I couldn't find the search bar at all, it was completely hidden</em></span>
+                        <span class="tip-speaker">P2</span>
+                    </div>
+                    <div class="tip-quote trunc-2">
+                        <span class="tip-quote-text"><em>Why is the menu completely different from last time?</em></span>
+                        <span class="tip-speaker">P4</span>
+                    </div>
+                </div>
+                <div class="tip-footer">
+                    <a href="#">View signal &rarr;</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div>
+        <div class="variant-label">stats bottom</div>
+        <div class="tip" style="--tip-accent: var(--bn-sentiment-frustration);">
+            <div class="tip-body">
+                <div style="margin-bottom: 0.25rem;">
+                    <span class="badge badge-frustration">frustration</span>
+                </div>
+                <div class="tip-quotes">
+                    <div class="tip-quote trunc-2">
+                        <span class="tip-quote-text"><em>I couldn't find the search bar at all, it was completely hidden</em></span>
+                        <span class="tip-speaker">P2</span>
+                    </div>
+                    <div class="tip-quote trunc-2">
+                        <span class="tip-quote-text"><em>Why is the menu completely different from last time?</em></span>
+                        <span class="tip-speaker">P4</span>
+                    </div>
+                </div>
+                <div class="tip-divider"></div>
+                <div class="tip-metrics">
+                    <span><span class="tip-metric-value">3.2&times;</span> conc</span>
+                    <span><span class="tip-metric-value">2</span> voices</span>
+                    <span style="flex: 1;"></span>
+                    <a href="#" style="color: var(--bn-colour-accent); text-decoration: none; font-size: 0.72rem; font-family: var(--bn-font-mono);">View &rarr;</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div>
+        <div class="variant-label">context-only</div>
+        <div class="tip tip-context-only" style="--tip-accent: var(--bn-sentiment-frustration); max-width: 300px;">
+            <div class="tip-body">
+                <div class="tip-metrics" style="margin-bottom: 0.3rem;">
+                    <span><span class="tip-metric-value">3.2&times;</span> conc</span>
+                    <span><span class="tip-metric-value">2</span> voices</span>
+                    <span class="tip-pips" style="margin-left: auto;">
+                        <span class="tip-pip"></span>
+                        <span class="tip-pip absent"></span>
+                        <span class="tip-pip"></span>
+                        <span class="tip-pip absent"></span>
+                    </span>
+                </div>
+                <div class="tip-quotes">
+                    <div class="tip-quote trunc-2">
+                        <span class="tip-quote-text"><em>I couldn't find the search bar at all, it was completely hidden</em></span>
+                        <span class="tip-speaker">P2</span>
+                    </div>
+                    <div class="tip-quote trunc-2">
+                        <span class="tip-quote-text"><em>Why is the menu completely different from last time?</em></span>
+                        <span class="tip-speaker">P4</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<!-- ============================================================ -->
+<h2>8. Recommendation Matrix</h2>
+
+<table style="border-collapse: collapse; font-size: 0.82rem; margin-top: 1rem; width: 100%;">
+<thead>
+<tr style="border-bottom: 2px solid var(--bn-colour-border);">
+    <th style="text-align: left; padding: 0.4rem 0.6rem; font-weight: 600;">Variant</th>
+    <th style="text-align: center; padding: 0.4rem 0.6rem; font-weight: 600;">Height</th>
+    <th style="text-align: center; padding: 0.4rem 0.6rem; font-weight: 600;">Info density</th>
+    <th style="text-align: center; padding: 0.4rem 0.6rem; font-weight: 600;">New info?</th>
+    <th style="text-align: left; padding: 0.4rem 0.6rem; font-weight: 600;">Best for</th>
+</tr>
+</thead>
+<tbody>
+<tr style="border-bottom: 1px solid var(--bn-colour-border);">
+    <td style="padding: 0.4rem 0.6rem;">1. Stats top</td>
+    <td style="padding: 0.4rem 0.6rem; text-align: center;">~110px</td>
+    <td style="padding: 0.4rem 0.6rem; text-align: center;">High</td>
+    <td style="padding: 0.4rem 0.6rem; text-align: center;">Quotes + metrics</td>
+    <td style="padding: 0.4rem 0.6rem;">Familiar pattern (mirrors signal card)</td>
+</tr>
+<tr style="border-bottom: 1px solid var(--bn-colour-border);">
+    <td style="padding: 0.4rem 0.6rem;">2. Stats bottom</td>
+    <td style="padding: 0.4rem 0.6rem; text-align: center;">~120px</td>
+    <td style="padding: 0.4rem 0.6rem; text-align: center;">High</td>
+    <td style="padding: 0.4rem 0.6rem; text-align: center;">Quotes + metrics</td>
+    <td style="padding: 0.4rem 0.6rem;">Content-first researchers</td>
+</tr>
+<tr style="border-bottom: 1px solid var(--bn-colour-border);">
+    <td style="padding: 0.4rem 0.6rem;">3. Micro</td>
+    <td style="padding: 0.4rem 0.6rem; text-align: center;">~90px</td>
+    <td style="padding: 0.4rem 0.6rem; text-align: center;">Medium</td>
+    <td style="padding: 0.4rem 0.6rem; text-align: center;">Quotes + metrics</td>
+    <td style="padding: 0.4rem 0.6rem;">Dense grids, many rows</td>
+</tr>
+<tr style="border-bottom: 1px solid var(--bn-colour-border);">
+    <td style="padding: 0.4rem 0.6rem; font-weight: 600;">5. Context-only *</td>
+    <td style="padding: 0.4rem 0.6rem; text-align: center;">~85px</td>
+    <td style="padding: 0.4rem 0.6rem; text-align: center;">Maximum</td>
+    <td style="padding: 0.4rem 0.6rem; text-align: center;">100% new</td>
+    <td style="padding: 0.4rem 0.6rem; font-weight: 600;">Highest signal-to-noise</td>
+</tr>
+<tr style="border-bottom: 1px solid var(--bn-colour-border);">
+    <td style="padding: 0.4rem 0.6rem;">6e. Confidence chip</td>
+    <td style="padding: 0.4rem 0.6rem; text-align: center;">~110px</td>
+    <td style="padding: 0.4rem 0.6rem; text-align: center;">High</td>
+    <td style="padding: 0.4rem 0.6rem; text-align: center;">Quotes + confidence</td>
+    <td style="padding: 0.4rem 0.6rem;">Quick triage (strong vs emerging)</td>
+</tr>
+</tbody>
+</table>
+
+<p class="note" style="margin-top: 1rem;">
+    <strong>* My recommendation: 5 + 3 = Context-only at micro size.</strong><br>
+    The tooltip shouldn't repeat what the grid already shows. The grid gives you section + sentiment.
+    The tooltip's job is to answer one question: <em>"what did people actually say here?"</em>
+    Context-only at micro size does this in the smallest possible footprint, with participant pips
+    and concentration as a bonus. Combine with row/column header highlighting for spatial reinforcement.
+    <br><br>
+    Truncation: <strong>2-line CSS clamp</strong> at 320px max-width. Most interview quotes (15–25 words) fit
+    entirely. Long ramblers get gracefully cut. The opening clause almost always carries the key insight.
+</p>
+
+</body>
+</html>

@@ -1,5 +1,4 @@
 import { render, screen, within, act, fireEvent } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
 import { AutoCodeReportModal } from "./AutoCodeReportModal";
 import type { ProposedTagResponse } from "../utils/types";
 

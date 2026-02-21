@@ -396,3 +396,137 @@
     color: var(--bn-colour-muted);
     margin: var(--bn-space-md) 0 var(--bn-space-xs);
 }
+
+/* ── Cell tooltip (context-only micro) ───────────────────── */
+
+.cell-tooltip {
+    position: absolute;
+    z-index: 10;
+    transform: translateX(-50%);
+    pointer-events: none;
+    max-width: 270px;
+    width: max-content;
+    background: var(--bn-colour-bg);
+    border: 1px solid var(--bn-colour-border);
+    border-radius: var(--bn-radius-md);
+    box-shadow: 0 4px 16px rgba(0,0,0,0.10), 0 1px 4px rgba(0,0,0,0.06);
+    overflow: hidden;
+    animation: cell-tooltip-in 0.12s ease-out;
+}
+
+@keyframes cell-tooltip-in {
+    from { opacity: 0; transform: translateX(-50%) translateY(4px); }
+    to   { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+
+/* Left accent bar */
+.cell-tooltip::before {
+    content: "";
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: var(--bn-span-bar-width);
+    border-radius: var(--bn-span-bar-radius) 0 0 var(--bn-span-bar-radius);
+    background: var(--tip-accent, var(--bn-colour-muted));
+}
+
+.cell-tooltip-body {
+    padding: 0.45rem 0.6rem 0.45rem 0.7rem;
+}
+
+/* Metrics row */
+.cell-tooltip-metrics {
+    display: flex;
+    gap: 0.6rem;
+    align-items: center;
+    font-family: var(--bn-font-mono);
+    font-size: 0.65rem;
+    color: var(--bn-colour-muted);
+    margin-bottom: 0.25rem;
+}
+
+.cell-tooltip-val {
+    color: var(--bn-colour-text);
+    font-weight: 500;
+}
+
+/* Participant pips */
+.cell-tooltip-pips {
+    display: flex;
+    gap: 3px;
+    align-items: center;
+    margin-left: auto;
+}
+
+.cell-tooltip-pip {
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: var(--tip-accent, var(--bn-colour-accent));
+    opacity: 0.7;
+}
+
+.cell-tooltip-pip.absent {
+    background: var(--bn-colour-border);
+    opacity: 0.4;
+}
+
+/* Quotes */
+.cell-tooltip-quotes {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+}
+
+.cell-tooltip-quote {
+    font-size: 0.72rem;
+    line-height: 1.35;
+    display: flex;
+    gap: 0.3rem;
+    align-items: flex-start;
+}
+
+.cell-tooltip-quote::before {
+    content: "\201C";
+    color: var(--bn-colour-muted);
+    font-size: 0.8rem;
+    line-height: 1;
+    flex-shrink: 0;
+}
+
+.cell-tooltip-quote-text {
+    flex: 1;
+    min-width: 0;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    color: var(--bn-colour-text);
+}
+
+.cell-tooltip-speaker {
+    font-family: var(--bn-font-mono);
+    font-size: 0.62rem;
+    color: var(--bn-colour-muted);
+    white-space: nowrap;
+    flex-shrink: 0;
+    align-self: flex-end;
+}
+
+.cell-tooltip-footer {
+    font-family: var(--bn-font-mono);
+    font-size: 0.62rem;
+    color: var(--bn-colour-muted);
+    margin-top: 0.2rem;
+}
+
+/* ── Header highlighting on cell hover ───────────────────── */
+
+.heatmap-header-hl {
+    background: var(--bn-colour-hover);
+    transition: background var(--bn-transition-fast);
+}
+
+.heatmap-row-hl {
+    background: var(--bn-colour-hover);
+    transition: background var(--bn-transition-fast);
+}

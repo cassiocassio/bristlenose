@@ -28,6 +28,7 @@ const mockData: TranscriptPageResponse = {
       is_moderator: true,
       is_quoted: false,
       quote_ids: [],
+      segment_index: 0,
     },
     {
       speaker_code: "p1",
@@ -39,6 +40,7 @@ const mockData: TranscriptPageResponse = {
       is_moderator: false,
       is_quoted: true,
       quote_ids: ["q-p1-10"],
+      segment_index: 1,
     },
     {
       speaker_code: "m1",
@@ -49,6 +51,7 @@ const mockData: TranscriptPageResponse = {
       is_moderator: true,
       is_quoted: false,
       quote_ids: [],
+      segment_index: 2,
     },
     {
       speaker_code: "p1",
@@ -60,6 +63,7 @@ const mockData: TranscriptPageResponse = {
       is_moderator: false,
       is_quoted: true,
       quote_ids: ["q-p1-26"],
+      segment_index: 3,
     },
     {
       speaker_code: "p1",
@@ -70,6 +74,7 @@ const mockData: TranscriptPageResponse = {
       is_moderator: false,
       is_quoted: false,
       quote_ids: [],
+      segment_index: 4,
     },
   ],
   annotations: {

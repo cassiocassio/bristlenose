@@ -164,6 +164,21 @@ See `docs/design-performance.md` for full audit, done items, and "not worth opti
 | LLM response cache | #34 | medium |
 | Word timestamp pruning after merge stage | #35 | small |
 
+### Logging instrumentation
+
+See `docs/design-logging.md` for architecture and full tier breakdown. Infrastructure (log file, two-knob system) is done. These are the `logger.info()` / `logger.debug()` calls to add.
+
+| Item | Tier | Effort |
+|------|------|--------|
+| Cache hit/miss decisions in `_is_stage_cached()` | 2 | trivial |
+| Importer per-entity sync stats (projects, sessions, quotes, etc.) | 2 | trivial |
+| Promote model name from DEBUG to INFO in all `_analyze_*` methods | 2 | trivial |
+| Concurrency queue depth at semaphore creation (quote extraction, topics, audio) | 3 | trivial |
+| PII entity type breakdown per session | 3 | small |
+| FFmpeg command and return code on audio extraction failure | 3 | trivial |
+| Keychain resolution: which store, which keys found/missing | 3 | trivial |
+| Manifest load/save: schema version, stage summary, previous run date | 3 | trivial |
+
 ### Internal refactoring
 
 | Item | Issue | Effort |

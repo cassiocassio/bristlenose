@@ -498,6 +498,8 @@ class Pipeline:
             import json as _json
 
             _si_dir = intermediate / "speaker-info"
+            llm_client: LLMClient | None = None
+            concurrency = self.settings.llm_concurrency
 
             # Check for fully cached speaker ID stage
             if (
@@ -574,7 +576,6 @@ class Pipeline:
                 status.update("[dim]Identifying speakers...[/dim]")
                 t0 = time.perf_counter()
                 llm_client = LLMClient(self.settings)
-                concurrency = self.settings.llm_concurrency
                 _speaker_errors: list[str] = []
 
                 if _remaining_si_sids:
@@ -1067,9 +1068,9 @@ class Pipeline:
             report_path=report_path,
             people=people,
             elapsed_seconds=elapsed,
-            llm_input_tokens=llm_client.tracker.input_tokens,
-            llm_output_tokens=llm_client.tracker.output_tokens,
-            llm_calls=llm_client.tracker.calls,
+            llm_input_tokens=llm_client.tracker.input_tokens if llm_client else 0,
+            llm_output_tokens=llm_client.tracker.output_tokens if llm_client else 0,
+            llm_calls=llm_client.tracker.calls if llm_client else 0,
             llm_model=self.settings.llm_model,
             llm_provider=self.settings.llm_provider,
             total_quotes=len(all_quotes),

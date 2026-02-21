@@ -153,6 +153,38 @@ describe("ActivityChip", () => {
     expect(screen.queryByTestId("bn-activity-chip-cancel")).not.toBeInTheDocument();
   });
 
+  it("uses completedLabel when completed", () => {
+    render(
+      <ActivityChip
+        job={makeJob({
+          status: "completed",
+          label: "\u2726 AutoCoding Garrett",
+          completedLabel: "\u2726 AutoCoded Garrett",
+          durationLabel: "36s",
+          progressLabel: null,
+        })}
+      />,
+    );
+
+    expect(screen.getByText(/AutoCoded Garrett/)).toBeInTheDocument();
+    expect(screen.queryByText(/AutoCoding/)).not.toBeInTheDocument();
+  });
+
+  it("falls back to label when completedLabel not set", () => {
+    render(
+      <ActivityChip
+        job={makeJob({
+          status: "completed",
+          label: "\u2726 AutoCoding Garrett",
+          durationLabel: "36s",
+          progressLabel: null,
+        })}
+      />,
+    );
+
+    expect(screen.getByText(/AutoCoding Garrett/)).toBeInTheDocument();
+  });
+
   it("renders cancelled state with close button", () => {
     const onDismiss = vi.fn();
     render(

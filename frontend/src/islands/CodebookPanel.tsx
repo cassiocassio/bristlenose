@@ -980,6 +980,7 @@ export function CodebookPanel({ projectId }: CodebookPanelProps) {
         jobs={Array.from(activeJobs.entries()).map(([id, j]): ActivityJob => ({
           id,
           label: `\u2726 AutoCoding ${j.frameworkTitle}`,
+          completedLabel: `\u2726 AutoCoded ${j.frameworkTitle}`,
           frameworkId: j.frameworkId,
           onComplete: () => handleAutoCodeComplete(j.frameworkId),
           onAction: () => handleOpenReport(j.frameworkId, j.frameworkTitle),

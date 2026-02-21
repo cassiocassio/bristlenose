@@ -18,6 +18,8 @@ export interface ActivityJob {
   id: string;
   /** Human-readable label, e.g. "AutoCoding Garrett". */
   label: string;
+  /** Label shown in completed state (falls back to label if not set). */
+  completedLabel?: string;
   /** Framework ID for the status API. */
   frameworkId: string;
   /** Called once when job transitions to completed/failed/cancelled. */
@@ -64,6 +66,7 @@ function toChipJob(job: ActivityJob, status: AutoCodeJobStatus | null): Activity
   return {
     id: job.id,
     label: job.label,
+    completedLabel: job.completedLabel,
     status: effectiveStatus,
     progressLabel,
     durationLabel,

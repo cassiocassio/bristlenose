@@ -77,6 +77,7 @@ class QuoteResponse(BaseModel):
     tags: list[TagResponse]
     deleted_badges: list[str]
     proposed_tags: list[ProposedTagBrief]
+    segment_index: int = -1
 
 
 class SectionResponse(BaseModel):
@@ -321,6 +322,7 @@ def _build_quote_response(
         tags=tags_map.get(quote.id, []),
         deleted_badges=badges_map.get(quote.id, []),
         proposed_tags=proposed_map.get(quote.id, []),
+        segment_index=quote.segment_index,
     )
 
 

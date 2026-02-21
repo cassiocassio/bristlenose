@@ -17,6 +17,7 @@ from bristlenose.models import (
     QuoteType,
     Sentiment,
     SessionTopicMap,
+    TranscriptSegment,
     format_timecode,
 )
 from bristlenose.utils.text import apply_smart_quotes
@@ -26,6 +27,48 @@ logger = logging.getLogger(__name__)
 
 
 _FAIL_THRESHOLD = 3  # Stop stage after this many consecutive LLM failures
+
+
+def _resolve_segment_index(
+    start_timecode: float,
+    segments: list[TranscriptSegment],
+) -> int:
+    """Find the segment ordinal that best matches a quote's start timecode.
+
+    For timecoded transcripts, returns the ``segment_index`` of the last
+    segment whose ``start_time`` is at or before the quote start, provided
+    the quote falls within the segment's time range (with a small tolerance).
+
+    For non-timecoded transcripts (all ``start_time == 0.0``), returns -1
+    because timecode matching is meaningless — sequence detection for these
+    sources uses ordinal proximity via the ORM transcript segments.
+
+    See ``docs/design-quote-sequences.md`` for rationale.
+    """
+    if not segments:
+        return -1
+
+    # Non-timecoded transcripts: all segments start at 0.0
+    if all(s.start_time == 0.0 for s in segments):
+        return -1
+
+    # Binary-ish scan: find last segment whose start_time <= start_timecode
+    best_idx = -1
+    for i, seg in enumerate(segments):
+        if seg.start_time <= start_timecode:
+            best_idx = i
+        else:
+            break
+
+    if best_idx < 0:
+        return -1
+
+    # Verify the quote falls within or very close to the segment
+    seg = segments[best_idx]
+    if start_timecode <= seg.end_time + 5.0:
+        return seg.segment_index
+
+    return -1
 
 
 async def extract_quotes(
@@ -153,6 +196,9 @@ async def _extract_single(
         except ValueError:
             end_tc = start_tc
 
+        # Resolve segment ordinal (see design-quote-sequences.md)
+        seg_idx = _resolve_segment_index(start_tc, transcript.segments)
+
         # Parse quote type
         try:
             quote_type = QuoteType(item.quote_type)
@@ -208,6 +254,7 @@ async def _extract_single(
                 researcher_context=item.researcher_context,
                 sentiment=sentiment,
                 intensity=intensity,
+                segment_index=seg_idx,
                 # Deprecated fields (backward compat)
                 intent=intent,
                 emotion=emotion,

@@ -220,6 +220,7 @@ class TranscriptSegment(Base):
     end_time: Mapped[float] = mapped_column(Float)
     text: Mapped[str] = mapped_column(Text)
     source: Mapped[str] = mapped_column(String(50), default="")  # whisper, srt, vtt, docx
+    segment_index: Mapped[int] = mapped_column(Integer, default=-1)
 
     session: Mapped[Session] = relationship(back_populates="transcript_segments")
 
@@ -253,6 +254,7 @@ class Quote(Base):
     researcher_context: Mapped[str | None] = mapped_column(Text, default=None)
     sentiment: Mapped[str | None] = mapped_column(String(50), default=None)
     intensity: Mapped[int] = mapped_column(Integer, default=1)
+    segment_index: Mapped[int] = mapped_column(Integer, default=-1)
     last_imported_at: Mapped[datetime | None] = mapped_column(default=None)
 
     project: Mapped[Project] = relationship(back_populates="quotes")

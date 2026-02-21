@@ -539,7 +539,7 @@ class TestSerializeAnalysis:
         # Find a signal with quotes
         signal_with_quotes = next(s for s in data["signals"] if len(s["quotes"]) > 0)
         quote = signal_with_quotes["quotes"][0]
-        expected_keys = {"text", "pid", "sessionId", "startSeconds", "intensity"}
+        expected_keys = {"text", "pid", "sessionId", "startSeconds", "intensity", "segmentIndex"}
         assert set(quote.keys()) == expected_keys
 
     def test_float_rounding(self) -> None:

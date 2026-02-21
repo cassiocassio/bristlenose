@@ -12,9 +12,11 @@ from bristlenose.server.models import (
     _LEGACY_UNGROUPED_NAME,
     UNCATEGORISED_GROUP_NAME,
     UNCATEGORISED_GROUP_SUBTITLE,
+    AutoCodeJob,
     CodebookGroup,
     Project,
     ProjectCodebookGroup,
+    ProposedTag,
     QuoteTag,
     TagDefinition,
 )
@@ -768,6 +770,18 @@ def remove_framework(
             .all()
         )
         tag_def_ids = [td.id for td in tag_defs]
+
+        # Delete AutoCode proposals referencing these tags
+        if tag_def_ids:
+            db.query(ProposedTag).filter(
+                ProposedTag.tag_definition_id.in_(tag_def_ids),
+            ).delete(synchronize_session=False)
+
+        # Delete AutoCode jobs for this framework
+        db.query(AutoCodeJob).filter(
+            AutoCodeJob.project_id == project_id,
+            AutoCodeJob.framework_id == framework_id,
+        ).delete(synchronize_session=False)
 
         # Delete quote-tag associations
         if tag_def_ids:

@@ -8,6 +8,10 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
+# Empirical threshold from IKEA usability study (Feb 2026): 77% of consecutive
+# quote pairs fall within 15–20s; 17.5s splits the plateau.
+SEQUENCE_GAP_SECONDS = 17.5
+
 
 @dataclass
 class MatrixCell:

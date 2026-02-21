@@ -56,6 +56,7 @@ class TranscriptSegmentResponse(BaseModel):
     is_moderator: bool
     is_quoted: bool
     quote_ids: list[str]
+    segment_index: int = -1
 
 
 class QuoteAnnotationResponse(BaseModel):
@@ -351,6 +352,7 @@ def get_transcript(
                 is_moderator=is_moderator,
                 is_quoted=is_quoted,
                 quote_ids=qids,
+                segment_index=seg.segment_index,
             ))
 
         # Report filename for back link

@@ -90,6 +90,25 @@ def _migrate_schema(engine: Engine) -> None:
                     text("ALTER TABLE codebook_groups ADD COLUMN framework_id VARCHAR(50)")
                 )
 
+    # v0.11.x — Quote and TranscriptSegment gain segment_index (INTEGER, default -1)
+    if "quotes" in insp.get_table_names():
+        cols = {c["name"] for c in insp.get_columns("quotes")}
+        if "segment_index" not in cols:
+            with engine.begin() as conn:
+                conn.execute(
+                    text("ALTER TABLE quotes ADD COLUMN segment_index INTEGER DEFAULT -1")
+                )
+    if "transcript_segments" in insp.get_table_names():
+        cols = {c["name"] for c in insp.get_columns("transcript_segments")}
+        if "segment_index" not in cols:
+            with engine.begin() as conn:
+                conn.execute(
+                    text(
+                        "ALTER TABLE transcript_segments"
+                        " ADD COLUMN segment_index INTEGER DEFAULT -1"
+                    )
+                )
+
 
 def init_db(engine: Engine) -> None:
     """Create all tables. Safe to call repeatedly (CREATE IF NOT EXISTS)."""

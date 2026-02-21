@@ -1,8 +1,10 @@
 # Reactive UI Architecture
 
+> **Partially superseded (Feb 2026).** The migration strategy, milestones, and incremental plan sections are replaced by [`docs/design-react-migration.md`](design-react-migration.md). Framework choice, business risk assessment, file:// audit, server options, and testing strategy sections below remain valid reference.
+
 Local dev server + framework migration for the HTML report.
 
-**Status:** Not started. Tracked as GitHub issue #29.
+**Status:** Server shipped (FastAPI + SQLite). React islands shipped (7/7 content panels). Vanilla JS shell migration planned — see [`docs/design-react-migration.md`](design-react-migration.md).
 
 ---
 

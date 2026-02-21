@@ -179,10 +179,10 @@ let fetchMock: ReturnType<typeof vi.fn>;
 
 beforeEach(() => {
   fetchMock = vi.fn();
-  global.fetch = fetchMock;
+  globalThis.fetch = fetchMock;
   // Reset window globals
-  (window as Record<string, unknown>).BRISTLENOSE_ANALYSIS = undefined;
-  (window as Record<string, unknown>).BRISTLENOSE_API_BASE = "/api/projects/1";
+  (window as unknown as Record<string, unknown>).BRISTLENOSE_ANALYSIS = undefined;
+  (window as unknown as Record<string, unknown>).BRISTLENOSE_API_BASE = "/api/projects/1";
 });
 
 afterEach(() => {
@@ -244,7 +244,7 @@ describe("AnalysisPage", () => {
   });
 
   it("shows sentiment signals when baked data exists", async () => {
-    (window as Record<string, unknown>).BRISTLENOSE_ANALYSIS = mockSentimentData;
+    (window as unknown as Record<string, unknown>).BRISTLENOSE_ANALYSIS = mockSentimentData;
     mockFetchCodebookAnalysis(emptyCbData);
     render(<AnalysisPage projectId="1" />);
 
@@ -255,7 +255,7 @@ describe("AnalysisPage", () => {
   });
 
   it("shows both sentiment and tag cards when both data exist", async () => {
-    (window as Record<string, unknown>).BRISTLENOSE_ANALYSIS = mockSentimentData;
+    (window as unknown as Record<string, unknown>).BRISTLENOSE_ANALYSIS = mockSentimentData;
     mockFetchCodebookAnalysis(mockCbData);
     render(<AnalysisPage projectId="1" />);
 
@@ -270,7 +270,7 @@ describe("AnalysisPage", () => {
   });
 
   it("shows separate headings for sentiment and tag signals", async () => {
-    (window as Record<string, unknown>).BRISTLENOSE_ANALYSIS = mockSentimentData;
+    (window as unknown as Record<string, unknown>).BRISTLENOSE_ANALYSIS = mockSentimentData;
     mockFetchCodebookAnalysis(mockCbData);
     render(<AnalysisPage projectId="1" />);
 
@@ -298,7 +298,7 @@ describe("AnalysisPage", () => {
   });
 
   it("does not show source banner when only sentiment data", async () => {
-    (window as Record<string, unknown>).BRISTLENOSE_ANALYSIS = mockSentimentData;
+    (window as unknown as Record<string, unknown>).BRISTLENOSE_ANALYSIS = mockSentimentData;
     mockFetchCodebookAnalysis(emptyCbData);
     render(<AnalysisPage projectId="1" />);
 

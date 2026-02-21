@@ -1,6 +1,6 @@
 .\" Man page for bristlenose
 .\" Generated from cli.py help text
-.TH BRISTLENOSE 1 "February 2026" "bristlenose 0.10.2" "User Commands"
+.TH BRISTLENOSE 1 "February 2026" "bristlenose 0.10.3" "User Commands"
 .SH NAME
 bristlenose \- user-research transcription and quote extraction engine
 .SH SYNOPSIS
@@ -31,6 +31,16 @@ bristlenose \- user-research transcription and quote extraction engine
 .B bristlenose render
 .RI [ output-dir ]
 .RI [ options ]
+.br
+.B bristlenose serve
+.RI [ project-dir ]
+.RB [ \-\-port
+.IR PORT ]
+.RB [ \-\-dev ]
+.br
+.B bristlenose status
+.I project-dir
+.RB [ \-v ]
 .br
 .B bristlenose doctor
 .br
@@ -75,6 +85,18 @@ British English alias for \fBanalyze\fR.
 .B render
 Re-render reports from existing intermediate JSON data. No transcription, no LLM
 calls, no API key needed. Useful after CSS or JavaScript changes.
+.TP
+.B serve \fR[\fIproject-dir\fR]
+Launch a local web server to browse reports interactively. Auto-renders the
+report before serving so it always matches the current code. Opens the report
+in the default browser. Requires server dependencies (\fBpip install
+bristlenose[serve]\fR).
+.TP
+.B status \fIproject-dir\fR
+Show pipeline status for a project. Reads the manifest and prints which stages
+are complete, partial, or pending, with session counts and intermediate file
+validation. Accepts either the input directory or the output directory.
+No LLM calls, no network — purely offline. Use \fB\-v\fR for per-session detail.
 .TP
 .B doctor
 Check runtime dependencies and show tailored fix instructions. Tests FFmpeg,
@@ -183,6 +205,24 @@ intermediate data).
 .TP
 .BR \-v ", " \-\-verbose
 Enable verbose logging.
+.SS Options for \fBserve\fR
+.TP
+.BR \-p ", " \-\-port " " \fIPORT\fR
+Port to serve on. Default: \fB8150\fR.
+.TP
+.BR \-\-dev
+Development mode: auto-reload on Python changes, live JS reload, design
+artifact browser.
+.TP
+.BR \-\-open " / " \-\-no\-open
+Open the report in the default browser (default: \fB\-\-open\fR).
+.TP
+.BR \-v ", " \-\-verbose
+Enable verbose logging.
+.SS Options for \fBstatus\fR
+.TP
+.BR \-v ", " \-\-verbose
+Show per-session detail with completion status.
 .SS Options for \fBconfigure\fR
 .TP
 .BR \-k ", " \-\-key " " \fIKEY\fR
@@ -404,6 +444,23 @@ Re-render after CSS changes (no API key needed):
 cd ./interviews/ && bristlenose render
 # Or specify explicitly:
 bristlenose render ./interviews/bristlenose-output/
+.fi
+.RE
+.PP
+Browse the report interactively:
+.PP
+.RS
+.nf
+bristlenose serve ./interviews/
+.fi
+.RE
+.PP
+Check project status (read-only):
+.PP
+.RS
+.nf
+bristlenose status ./interviews/
+bristlenose status ./interviews/ -v    # per-session detail
 .fi
 .RE
 .PP

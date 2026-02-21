@@ -13,6 +13,12 @@ All notable changes to Bristlenose are documented here. See also the [README](RE
 - Generic analysis matrix and signals — reusable computation engine for cross-tabulating any labelled data (not just quotes), with API routes for serve mode
 - CLAUDE.md: document React as primary rendering path with rules for new feature work, frozen vanilla JS, and legacy renderer policy
 
+**0.10.3** — _21 Feb 2026_
+
+- `bristlenose status` command — read-only project status from the manifest, shows stage completion with session counts, intermediate file validation, and `-v` per-session detail
+- Pre-run resume summary — one-line status message before pipeline output when resuming an interrupted run (e.g. "Resuming: 7/10 sessions have quotes, 3 remaining.")
+- Man page and docs updated for `status` and `serve` commands
+
 **0.10.2** — _21 Feb 2026_
 
 - Pipeline crash recovery — interrupted runs resume where they left off instead of starting over. Kill mid-analysis, re-run the same command, and only the unfinished sessions get LLM calls. Completed sessions are loaded from cache in milliseconds

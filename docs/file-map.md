@@ -14,6 +14,7 @@ Quick reference for finding things in the bristlenose codebase.
 | `bristlenose/people.py` | People file: load, compute, merge, write, display names, name extraction, short name heuristic |
 | `bristlenose/__main__.py` | `python -m bristlenose` entry point |
 | `bristlenose/output_paths.py` | Output directory structure and path helpers (`OutputPaths` dataclass) |
+| `bristlenose/status.py` | Project status: read manifest, validate cached artifacts, format resume summary |
 
 ## Analysis (`bristlenose/analysis/`)
 
@@ -91,6 +92,7 @@ All 12 stages of the pipeline, from ingest to render.
 | `tests/test_analysis_metrics.py` | Analysis math: concentration ratio, Simpson's Neff, mean intensity, composite signal, adjusted residual (32 tests) |
 | `tests/test_analysis_matrix.py` | Analysis matrix builder: empty/single/multi clusters, sentiment filtering, participant counting (12 tests) |
 | `tests/test_analysis_signals.py` | Signal detection: thresholds, sorting, top-n limiting, confidence classification, quote ordering (11 tests) |
+| `tests/test_status.py` | Project status: manifest reading, stage detail, file validation, resume summary (14 tests) |
 
 ## Man page
 

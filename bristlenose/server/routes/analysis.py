@@ -9,6 +9,14 @@ Quotes tagged in multiple groups count in each group column — this
 inflates ``grand_total`` relative to the number of unique quotes.  The
 trade-off is documented in the response and the signal maths remains
 internally consistent.
+
+Tag sources and weighting:
+- **Accepted tags** (``QuoteTag`` rows): weight 1.0
+- **Pending proposed tags** (``ProposedTag`` with status="pending"):
+  weight = LLM confidence (0.0–1.0)
+- **Denied proposed tags**: excluded entirely
+- Accepted proposals already have a ``QuoteTag`` row — the endpoint
+  de-duplicates to avoid double-counting.
 """
 
 from __future__ import annotations
@@ -25,6 +33,7 @@ from bristlenose.server.models import (
     CodebookGroup,
     Project,
     ProjectCodebookGroup,
+    ProposedTag,
     Quote,
     QuoteTag,
     ScreenCluster,
@@ -78,6 +87,7 @@ class MatrixCellOut(BaseModel):
     """A single cell in the contingency table."""
 
     count: int
+    weighted_count: float
     participants: dict[str, int]
     intensities: list[int]
 
@@ -92,6 +102,14 @@ class MatrixOut(BaseModel):
     row_labels: list[str]
 
 
+class SourceBreakdown(BaseModel):
+    """How many tag associations come from each source."""
+
+    accepted: int
+    pending: int
+    total: int
+
+
 class TagAnalysisResponse(BaseModel):
     """Full tag-based analysis result."""
 
@@ -101,6 +119,7 @@ class TagAnalysisResponse(BaseModel):
     total_participants: int
     columns: list[str]
     participant_ids: list[str]
+    source_breakdown: SourceBreakdown
     trade_off_note: str
 
 
@@ -136,6 +155,7 @@ def _serialize_matrix(matrix: object) -> MatrixOut:
     for key, cell in matrix.cells.items():
         cells_out[key] = MatrixCellOut(
             count=cell.count,
+            weighted_count=round(cell.weighted_count, 2),
             participants=dict(cell.participants),
             intensities=list(cell.intensities),
         )
@@ -146,6 +166,9 @@ def _serialize_matrix(matrix: object) -> MatrixOut:
         grand_total=matrix.grand_total,
         row_labels=list(matrix.row_labels),
     )
+
+
+_EMPTY_BREAKDOWN = SourceBreakdown(accepted=0, pending=0, total=0)
 
 
 # ---------------------------------------------------------------------------
@@ -167,6 +190,8 @@ def get_tag_analysis(
 
     Builds section × group and theme × group contingency matrices, then
     runs signal detection using the same maths as sentiment analysis.
+    Includes both accepted tags (weight 1.0) and pending proposed tags
+    (weight = LLM confidence).
     """
     db = _get_db(request)
     try:
@@ -214,7 +239,7 @@ def get_tag_analysis(
 
         quote_by_id: dict[int, Quote] = {q.id: q for q in all_quotes}
 
-        # 3. Build quote → group-names map -----------------------------------
+        # 3. Build quote → group-names map with weights ----------------------
         tag_defs = (
             db.query(TagDefinition)
             .filter(TagDefinition.codebook_group_id.in_(group_id_to_name.keys()))
@@ -224,21 +249,61 @@ def get_tag_analysis(
             td.id: group_id_to_name[td.codebook_group_id] for td in tag_defs
         }
 
-        quote_tags = (
+        if not tag_def_to_group:
+            return _empty_response()
+
+        # 3a. Accepted tags (QuoteTag) — weight 1.0
+        accepted_tags = (
             db.query(QuoteTag)
             .filter(QuoteTag.tag_definition_id.in_(tag_def_to_group.keys()))
             .all()
-        ) if tag_def_to_group else []
+        )
 
-        # quote_id -> set of group names
-        quote_groups: dict[int, set[str]] = {}
-        for qt in quote_tags:
+        # quote_id -> {group_name: weight} — highest weight wins per group
+        quote_group_weights: dict[int, dict[str, float]] = {}
+        accepted_count = 0
+        for qt in accepted_tags:
             gname = tag_def_to_group.get(qt.tag_definition_id)
             if gname:
-                quote_groups.setdefault(qt.quote_id, set()).add(gname)
+                weights = quote_group_weights.setdefault(qt.quote_id, {})
+                weights[gname] = max(weights.get(gname, 0.0), 1.0)
+                accepted_count += 1
 
-        if not quote_groups:
+        # 3b. Pending proposed tags — weight = confidence
+        # Track which (quote_id, tag_def_id) combos are already accepted
+        accepted_pairs: set[tuple[int, int]] = {
+            (qt.quote_id, qt.tag_definition_id) for qt in accepted_tags
+        }
+
+        pending_proposals = (
+            db.query(ProposedTag)
+            .filter(
+                ProposedTag.tag_definition_id.in_(tag_def_to_group.keys()),
+                ProposedTag.status == "pending",
+            )
+            .all()
+        )
+
+        pending_count = 0
+        for pt in pending_proposals:
+            # Skip if already accepted (has a QuoteTag row)
+            if (pt.quote_id, pt.tag_definition_id) in accepted_pairs:
+                continue
+            gname = tag_def_to_group.get(pt.tag_definition_id)
+            if gname and pt.confidence > 0:
+                weights = quote_group_weights.setdefault(pt.quote_id, {})
+                # Keep highest confidence if multiple proposals for same group
+                weights[gname] = max(weights.get(gname, 0.0), pt.confidence)
+                pending_count += 1
+
+        if not quote_group_weights:
             return _empty_response()
+
+        source_breakdown = SourceBreakdown(
+            accepted=accepted_count,
+            pending=pending_count,
+            total=accepted_count + pending_count,
+        )
 
         # 4. Build quote → section and quote → theme maps --------------------
         clusters = (
@@ -278,7 +343,7 @@ def get_tag_analysis(
         section_quote_lookup: dict[str, list[QuoteRecord]] = {}
         theme_quote_lookup: dict[str, list[QuoteRecord]] = {}
 
-        for qid, group_names in quote_groups.items():
+        for qid, group_weights in quote_group_weights.items():
             q = quote_by_id.get(qid)
             if q is None:
                 continue
@@ -294,7 +359,7 @@ def get_tag_analysis(
             section_label = quote_section.get(qid)
             theme_label = quote_theme.get(qid)
 
-            for gname in group_names:
+            for gname, weight in group_weights.items():
                 if section_label:
                     section_contributions.append(
                         QuoteContribution(
@@ -302,9 +367,12 @@ def get_tag_analysis(
                             col_label=gname,
                             participant_id=q.participant_id,
                             intensity=q.intensity,
+                            weight=weight,
                         )
                     )
-                    section_quote_lookup.setdefault(f"{section_label}|{gname}", []).append(qr)
+                    section_quote_lookup.setdefault(
+                        f"{section_label}|{gname}", [],
+                    ).append(qr)
 
                 if theme_label:
                     theme_contributions.append(
@@ -313,9 +381,12 @@ def get_tag_analysis(
                             col_label=gname,
                             participant_id=q.participant_id,
                             intensity=q.intensity,
+                            weight=weight,
                         )
                     )
-                    theme_quote_lookup.setdefault(f"{theme_label}|{gname}", []).append(qr)
+                    theme_quote_lookup.setdefault(
+                        f"{theme_label}|{gname}", [],
+                    ).append(qr)
 
         # 6. Build matrices --------------------------------------------------
         section_matrix = build_matrix_from_contributions(
@@ -380,6 +451,7 @@ def get_tag_analysis(
             total_participants=total_participants,
             columns=col_labels,
             participant_ids=_natural_sort_pids(signal_pids),
+            source_breakdown=source_breakdown,
             trade_off_note=_TRADE_OFF_NOTE,
         )
     finally:
@@ -399,5 +471,6 @@ def _empty_response() -> TagAnalysisResponse:
         total_participants=0,
         columns=[],
         participant_ids=[],
+        source_breakdown=_EMPTY_BREAKDOWN,
         trade_off_note=_TRADE_OFF_NOTE,
     )

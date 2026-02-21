@@ -9,11 +9,16 @@ All notable changes to Bristlenose are documented here. See also the [README](RE
 - Activity chip and chip stack components — lightweight status indicators for background jobs with multi-stage progress, cancel button, and auto-dismiss on completion
 - Transcript page improvements — greedy slot layout for annotation span bars (no overlapping when multiple quotes span the same region), suppress repeated label+sentiment annotations (show only on topic change), speaker badges use `bn-person-badge` styling consistent with sessions table
 - Fix: serve-mode navigation escape — transcript page back link pointed to `/report/{filename}.html` (raw static HTML without React islands) instead of `/report/` (serve-mode route with React injection). Clicking "← Research Report" from a transcript now stays in serve mode
-- Pipeline manifest — `PipelineManifest` Pydantic model tracks stage completion status per run, written atomically to `.bristlenose/pipeline-manifest.json` after each stage completes. Foundation for crash recovery and incremental re-runs
 - Resilient transcript discovery — serve-mode importer now searches four locations in priority order (cooked → raw/output → raw/project → transcripts/project) instead of only `transcripts-raw/`, fixing empty transcript pages when pointing serve at non-standard output layouts
 - Generic analysis matrix and signals — reusable computation engine for cross-tabulating any labelled data (not just quotes), with API routes for serve mode
-- Pipeline resilience design doc — CS foundations research (build systems, event sourcing, WAL, CAS, sagas) and phased implementation plan for crash recovery, data integrity, and incremental re-runs
 - CLAUDE.md: document React as primary rendering path with rules for new feature work, frozen vanilla JS, and legacy renderer policy
+
+**0.10.2** — _21 Feb 2026_
+
+- Pipeline crash recovery — interrupted runs resume where they left off instead of starting over. Kill mid-analysis, re-run the same command, and only the unfinished sessions get LLM calls. Completed sessions are loaded from cache in milliseconds
+- Per-session tracking for topic segmentation and quote extraction — the manifest records which sessions finished within each stage, so a crash after 7 of 10 sessions only re-processes the remaining 3. Cached + fresh results are merged transparently
+- CLI resume guard — re-running into an existing output directory now detects the pipeline manifest and resumes automatically. No `--clean` needed, no "output directory already exists" error. `--clean` still available for full re-runs
+- Pipeline resilience design doc — CS foundations research (build systems, event sourcing, WAL, CAS, sagas) and phased implementation plan for crash recovery, data integrity, and incremental re-runs
 
 **0.10.1** — _19 Feb 2026_
 

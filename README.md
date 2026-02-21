@@ -384,6 +384,15 @@ Edit `bristlenose/__init__.py` (the single source of truth for version), commit,
 
 ## Changelog
 
+**Unreleased**
+
+- AutoCode frontend — ✦ button triggers LLM tag application, progress toast, confidence-aware threshold review dialog, proposed badges on quotes with accept/deny
+- Transcript page — non-overlapping span bars, topic-change label dedup, speaker badge styling, back link stays in serve mode
+- Pipeline manifest — stage completion tracking for future crash recovery
+- Resilient transcript discovery — serve-mode importer searches four locations instead of one
+- Generic analysis matrix and signals API for serve mode
+- Fix: transcript back link no longer escapes from serve mode to raw static HTML
+
 **0.10.1** — _19 Feb 2026_
 
 - Desktop app API key onboarding — first-run setup screen, Keychain storage, Settings panel (⌘,)

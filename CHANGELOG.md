@@ -2,6 +2,19 @@
 
 All notable changes to Bristlenose are documented here. See also the [README](README.md) for the latest releases.
 
+**Unreleased**
+
+- AutoCode frontend — complete lifecycle for LLM-assisted tag application: ✦ button on framework codebook sections triggers AutoCode run, progress toast with 2s polling and cancel support, threshold review dialog with confidence histogram and dual-threshold slider (accept/tentative/exclude zones), per-row override, proposed badges on quotes (pulsating dashed border, hover accept/deny with brightness flash animation). Tag colour pipeline carries `colour_set` + `colour_index` from CodebookGroup through to accepted user tags
+- Threshold review dialog — confidence-aware triage: 20-bin histogram with tag colours, three proposal zones, bulk accept/deny with max_confidence filter, per-quote override before committing
+- Activity chip and chip stack components — lightweight status indicators for background jobs with multi-stage progress, cancel button, and auto-dismiss on completion
+- Transcript page improvements — greedy slot layout for annotation span bars (no overlapping when multiple quotes span the same region), suppress repeated label+sentiment annotations (show only on topic change), speaker badges use `bn-person-badge` styling consistent with sessions table
+- Fix: serve-mode navigation escape — transcript page back link pointed to `/report/{filename}.html` (raw static HTML without React islands) instead of `/report/` (serve-mode route with React injection). Clicking "← Research Report" from a transcript now stays in serve mode
+- Pipeline manifest — `PipelineManifest` Pydantic model tracks stage completion status per run, written atomically to `.bristlenose/pipeline-manifest.json` after each stage completes. Foundation for crash recovery and incremental re-runs
+- Resilient transcript discovery — serve-mode importer now searches four locations in priority order (cooked → raw/output → raw/project → transcripts/project) instead of only `transcripts-raw/`, fixing empty transcript pages when pointing serve at non-standard output layouts
+- Generic analysis matrix and signals — reusable computation engine for cross-tabulating any labelled data (not just quotes), with API routes for serve mode
+- Pipeline resilience design doc — CS foundations research (build systems, event sourcing, WAL, CAS, sagas) and phased implementation plan for crash recovery, data integrity, and incremental re-runs
+- CLAUDE.md: document React as primary rendering path with rules for new feature work, frozen vanilla JS, and legacy renderer policy
+
 **0.10.1** — _19 Feb 2026_
 
 - Desktop app API key onboarding — first-run setup screen prompts for Claude API key, stores in macOS Keychain via `security` CLI, sidecar picks it up automatically via `_populate_keys_from_keychain()`. Settings panel (⌘,) for viewing, changing, or deleting the key

@@ -248,13 +248,6 @@ export function TranscriptPage({ projectId: _projectId, sessionId }: TranscriptP
 
   return (
     <>
-      {/* Back link */}
-      <nav className="transcript-back" data-testid="transcript-back">
-        <a href="/report/">
-          &larr; {data.project_name} Research Report
-        </a>
-      </nav>
-
       {/* Heading with speaker badges */}
       <h1 data-testid="transcript-heading">
         Session {sessionNum}:{" "}

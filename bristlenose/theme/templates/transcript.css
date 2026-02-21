@@ -1,21 +1,5 @@
 /* Template: transcript — per-participant transcript page layout */
 
-.transcript-back {
-    margin-bottom: var(--bn-space-lg);
-}
-
-.transcript-back a {
-    color: var(--bn-colour-muted);
-    text-decoration: none;
-    font-size: 0.9rem;
-    font-weight: 500;
-    transition: color var(--bn-transition-fast);
-}
-
-.transcript-back a:hover {
-    color: var(--bn-colour-accent);
-}
-
 .transcript-meta {
     color: var(--bn-colour-muted);
     font-size: 0.85rem;

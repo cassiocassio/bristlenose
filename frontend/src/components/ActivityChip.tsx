@@ -9,6 +9,8 @@
 export interface ActivityChipJob {
   id: string;
   label: string;
+  /** Label shown in completed state (falls back to label if not set). */
+  completedLabel?: string;
   status: "running" | "completed" | "failed" | "cancelled";
   progressLabel: string | null;
   durationLabel: string | null;
@@ -60,7 +62,7 @@ export function ActivityChip({ job, onAction, actionLabel, onDismiss, onCancel }
         <>
           <span className="chip-check">&#x2713;</span>
           <span>
-            {job.label}
+            {job.completedLabel ?? job.label}
             {job.durationLabel ? ` in ${job.durationLabel}` : ""}
             .
           </span>

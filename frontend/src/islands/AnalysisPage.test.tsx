@@ -34,6 +34,7 @@ const mockCbData: CodebookAnalysisListResponse = {
               start_seconds: 120.5,
               intensity: 3,
               tag_names: ["Latency"],
+              segment_index: 12,
             },
             {
               text: "I had to wait for ages",
@@ -42,6 +43,7 @@ const mockCbData: CodebookAnalysisListResponse = {
               start_seconds: 200.0,
               intensity: 2,
               tag_names: ["Latency"],
+              segment_index: 20,
             },
           ],
         },
@@ -93,6 +95,7 @@ const mockCbData: CodebookAnalysisListResponse = {
               start_seconds: 50.0,
               intensity: 2,
               tag_names: ["Conceptual model"],
+              segment_index: 5,
             },
           ],
         },
@@ -139,7 +142,7 @@ const mockSentimentData: SentimentAnalysisData = {
       compositeSignal: 0.5123,
       confidence: "strong",
       quotes: [
-        { text: "This is so frustrating", pid: "p1", sessionId: "s1", startSeconds: 100, intensity: 3 },
+        { text: "This is so frustrating", pid: "p1", sessionId: "s1", startSeconds: 100, intensity: 3, segmentIndex: 10 },
       ],
     },
   ],
@@ -206,7 +209,6 @@ describe("AnalysisPage", () => {
       expect(screen.getAllByTestId("bn-signal-card")).toHaveLength(2);
     });
 
-    // "Checkout" appears in signal card
     expect(screen.getAllByText("Checkout").length).toBeGreaterThanOrEqual(1);
     expect(screen.getAllByText("Pain points").length).toBeGreaterThanOrEqual(1);
   });
@@ -249,42 +251,35 @@ describe("AnalysisPage", () => {
     await waitFor(() => {
       expect(screen.getAllByTestId("bn-signal-card")).toHaveLength(1);
     });
-    // "frustration" may appear in both signal card badge and heatmap
     expect(screen.getAllByText("frustration").length).toBeGreaterThanOrEqual(1);
   });
 
-  it("shows toggle when both sentiment and tag data exist", async () => {
+  it("shows both sentiment and tag cards when both data exist", async () => {
     (window as Record<string, unknown>).BRISTLENOSE_ANALYSIS = mockSentimentData;
     mockFetchCodebookAnalysis(mockCbData);
     render(<AnalysisPage projectId="1" />);
 
     await waitFor(() => {
-      expect(screen.getByTestId("bn-analysis-toggle")).toBeTruthy();
+      // 1 sentiment + 2 tag = 3 cards total
+      expect(screen.getAllByTestId("bn-signal-card")).toHaveLength(3);
     });
-    expect(screen.getByText("Sentiment signals")).toBeTruthy();
-    expect(screen.getByText("Tag signals")).toBeTruthy();
+
+    // Both types visible simultaneously — no toggle needed
+    expect(screen.getAllByText("frustration").length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText("Pain points").length).toBeGreaterThanOrEqual(1);
   });
 
-  it("switches between views on toggle click", async () => {
+  it("shows separate headings for sentiment and tag signals", async () => {
     (window as Record<string, unknown>).BRISTLENOSE_ANALYSIS = mockSentimentData;
     mockFetchCodebookAnalysis(mockCbData);
     render(<AnalysisPage projectId="1" />);
 
     await waitFor(() => {
-      expect(screen.getByTestId("bn-analysis-toggle")).toBeTruthy();
+      expect(screen.getAllByTestId("bn-signal-card")).toHaveLength(3);
     });
 
-    // Default is tags view — "Pain points" appears in card and heatmap
-    await waitFor(() => {
-      expect(screen.getAllByText("Pain points").length).toBeGreaterThanOrEqual(1);
-    });
-
-    // Click sentiment toggle
-    fireEvent.click(screen.getByText("Sentiment signals"));
-
-    await waitFor(() => {
-      expect(screen.getAllByText("frustration").length).toBeGreaterThanOrEqual(1);
-    });
+    expect(screen.getByText("Sentiment signals")).toBeTruthy();
+    expect(screen.getByText("Tag signals")).toBeTruthy();
   });
 
   it("expands signal card quotes on toggle click", async () => {
@@ -322,7 +317,6 @@ describe("AnalysisPage", () => {
       expect(screen.getAllByTestId("bn-signal-card")).toHaveLength(2);
     });
 
-    // Should contain metric values from the first signal (highest composite)
     expect(screen.getByText("0.4567")).toBeTruthy(); // composite signal
     expect(screen.getByText("2.5×")).toBeTruthy();   // concentration
   });
@@ -335,12 +329,11 @@ describe("AnalysisPage", () => {
       expect(screen.getAllByTestId("bn-signal-card")).toHaveLength(2);
     });
 
-    // Should show participant count
     const grids = document.querySelectorAll(".participant-grid");
     expect(grids.length).toBeGreaterThan(0);
   });
 
-  // --- New tests for per-codebook features ---
+  // --- Per-codebook features ---
 
   it("renders separate heatmaps per codebook", async () => {
     mockFetchCodebookAnalysis(mockCbData);
@@ -350,11 +343,9 @@ describe("AnalysisPage", () => {
       expect(screen.getAllByTestId("bn-signal-card")).toHaveLength(2);
     });
 
-    // Each codebook gets its own section heading
     expect(screen.getByText("UX Research")).toBeTruthy();
     expect(screen.getByText("Norman Usability")).toBeTruthy();
 
-    // Each codebook gets its own heatmap(s)
     const codebookSections = document.querySelectorAll(".analysis-codebook-section");
     expect(codebookSections.length).toBe(2);
   });
@@ -368,7 +359,6 @@ describe("AnalysisPage", () => {
     });
 
     const cards = screen.getAllByTestId("bn-signal-card");
-    // First card should be "Pain points" (0.4567), second "Mental models" (0.2345)
     expect(cards[0].textContent).toContain("Pain points");
     expect(cards[1].textContent).toContain("Mental models");
   });
@@ -381,7 +371,6 @@ describe("AnalysisPage", () => {
       expect(screen.getAllByTestId("bn-signal-card")).toHaveLength(2);
     });
 
-    // PersonBadge renders with bn-person-badge class
     const badges = document.querySelectorAll(".bn-person-badge");
     expect(badges.length).toBeGreaterThan(0);
   });
@@ -394,11 +383,8 @@ describe("AnalysisPage", () => {
       expect(screen.getAllByTestId("bn-signal-card")).toHaveLength(2);
     });
 
-    // First card quotes have tag_names: ["Latency"]
     const tagBadges = document.querySelectorAll(".signal-quote-tag");
     expect(tagBadges.length).toBeGreaterThan(0);
-
-    // "Latency" tag should appear
     expect(screen.getAllByText("Latency").length).toBeGreaterThanOrEqual(1);
   });
 
@@ -410,9 +396,8 @@ describe("AnalysisPage", () => {
       expect(screen.getAllByTestId("bn-signal-card")).toHaveLength(2);
     });
 
-    // Group heading badges should have signal-group-badge class (bold)
     const groupBadges = document.querySelectorAll(".signal-group-badge");
-    expect(groupBadges.length).toBe(2); // one per signal card
+    expect(groupBadges.length).toBe(2);
   });
 
   it("heatmap has rotated column headers for tag mode", async () => {
@@ -423,11 +408,9 @@ describe("AnalysisPage", () => {
       expect(screen.getAllByTestId("bn-heatmap").length).toBeGreaterThan(0);
     });
 
-    // Tag heatmap headers use heatmap-col-header class
     const rotatedHeaders = document.querySelectorAll(".heatmap-col-header");
     expect(rotatedHeaders.length).toBeGreaterThan(0);
 
-    // Inside them, labels use heatmap-col-label class
     const rotatedLabels = document.querySelectorAll(".heatmap-col-label");
     expect(rotatedLabels.length).toBeGreaterThan(0);
   });
@@ -440,19 +423,27 @@ describe("AnalysisPage", () => {
       expect(screen.getAllByTestId("bn-signal-card")).toHaveLength(2);
     });
 
-    // First card has 2 quotes: 1 visible, 1 hidden
     const card = screen.getAllByTestId("bn-signal-card")[0];
     const expansion = card.querySelector(".signal-card-expansion") as HTMLElement;
     expect(expansion).toBeTruthy();
-
-    // Before expanding: maxHeight should be 0 or "0"
     expect(expansion.style.maxHeight).toBe("0");
 
-    // Click expand
     const toggle = screen.getAllByTestId("bn-signal-toggle")[0];
     fireEvent.click(toggle);
 
-    // After expanding: card should have expanded class
     expect(card.classList.contains("expanded")).toBe(true);
+  });
+
+  it("heatmap cells with count=1 get data-count attribute", async () => {
+    mockFetchCodebookAnalysis(mockCbData);
+    render(<AnalysisPage projectId="1" />);
+
+    await waitFor(() => {
+      expect(screen.getAllByTestId("bn-heatmap").length).toBeGreaterThan(0);
+    });
+
+    // "Search|Pain points" has count=1 in the UXR section matrix
+    const cells = document.querySelectorAll('.heatmap-cell[data-count="1"]');
+    expect(cells.length).toBeGreaterThan(0);
   });
 });

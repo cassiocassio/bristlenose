@@ -73,6 +73,7 @@ class TagSignalQuote(BaseModel):
     start_seconds: float
     intensity: int
     tag_names: list[str] = []
+    segment_index: int = -1
 
 
 class TagSignal(BaseModel):
@@ -235,6 +236,7 @@ def _serialize_signal(
                 start_seconds=q.start_seconds,
                 intensity=q.intensity,
                 tag_names=list(q.tag_names),
+                segment_index=q.segment_index,
             )
             for q in s.quotes
         ],

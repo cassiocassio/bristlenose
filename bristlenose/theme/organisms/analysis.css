@@ -319,6 +319,13 @@
 
 .heatmap-cell[data-count="0"]:hover { outline: none; }
 
+.heatmap-cell[data-count="1"] {
+    color: light-dark(#c9cdd3, #555);
+    cursor: default;
+}
+
+.heatmap-cell[data-count="1"]:hover { outline: none; }
+
 .heatmap-cell.heat-strong { color: light-dark(#fff, #111); }
 
 .heatmap-total {

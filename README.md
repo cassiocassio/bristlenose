@@ -386,19 +386,16 @@ Edit `bristlenose/__init__.py` (the single source of truth for version), commit,
 
 ## Changelog
 
-**Unreleased**
-
-- AutoCode frontend — ✦ button triggers LLM tag application, progress toast, confidence-aware threshold review dialog, proposed badges on quotes with accept/deny
-- Transcript page — non-overlapping span bars, topic-change label dedup, speaker badge styling, back link stays in serve mode
-- Resilient transcript discovery — serve-mode importer searches four locations instead of one
-- Generic analysis matrix and signals API for serve mode
-- Fix: transcript back link no longer escapes from serve mode to raw static HTML
-
 **0.10.3** — _21 Feb 2026_
 
 - `bristlenose status` command — read-only project status from the manifest with session counts, intermediate file validation, and `-v` per-session detail
 - Pre-run resume summary — one-line status message when resuming an interrupted pipeline run
+- AutoCode frontend — ✦ button triggers LLM tag application, progress toast, confidence-aware threshold review dialog, proposed badges on quotes with accept/deny
+- Transcript page — non-overlapping span bars, topic-change label dedup, speaker badge styling, back link stays in serve mode
+- Resilient transcript discovery — serve-mode importer searches four locations instead of one
+- Generic analysis matrix and signals API for serve mode
 - Man page and docs updated for `status` and `serve` commands
+- Fix: transcript back link no longer escapes from serve mode to raw static HTML
 
 **0.10.2** — _21 Feb 2026_
 

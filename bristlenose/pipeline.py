@@ -28,7 +28,9 @@ from bristlenose.manifest import (
     PipelineManifest,
     StageStatus,
     create_manifest,
+    get_completed_session_ids,
     load_manifest,
+    mark_session_complete,
     mark_stage_complete,
     mark_stage_running,
     write_manifest,
@@ -503,14 +505,64 @@ class Pipeline:
                     f"Segmented {total_boundaries} topic boundaries",
                 )
             else:
+                # Per-session resume: load cached topic maps for completed
+                # sessions and only run LLM on the remaining ones.
+                import json as _json
+
+                _cached_topic_sids = get_completed_session_ids(
+                    _prev_manifest, STAGE_TOPIC_SEGMENTATION,
+                )
+                _cached_topic_maps: list[SessionTopicMap] = []
+                if _cached_topic_sids and _tb_path.exists():
+                    _cached_topic_maps = [
+                        SessionTopicMap.model_validate(obj)
+                        for obj in _json.loads(
+                            _tb_path.read_text(encoding="utf-8")
+                        )
+                        if obj.get("session_id") in _cached_topic_sids
+                    ]
+
+                _remaining_transcripts = [
+                    t for t in clean_transcripts
+                    if t.session_id not in _cached_topic_sids
+                ]
+
                 mark_stage_running(manifest, STAGE_TOPIC_SEGMENTATION)
+                # Carry forward session records from previous manifest
+                if _cached_topic_sids and _prev_manifest is not None:
+                    _prev_rec = _prev_manifest.stages.get(
+                        STAGE_TOPIC_SEGMENTATION,
+                    )
+                    if _prev_rec and _prev_rec.sessions:
+                        rec = manifest.stages[STAGE_TOPIC_SEGMENTATION]
+                        rec.sessions = {
+                            sid: sr
+                            for sid, sr in _prev_rec.sessions.items()
+                            if sr.status == StageStatus.COMPLETE
+                        }
+
                 status.update("[dim]Segmenting topics...[/dim]")
                 t0 = time.perf_counter()
                 _seg_errors: list[str] = []
-                topic_maps = await segment_topics(
-                    clean_transcripts, llm_client, concurrency=concurrency,
-                    errors=_seg_errors,
-                )
+
+                if _remaining_transcripts:
+                    _fresh_topic_maps = await segment_topics(
+                        _remaining_transcripts, llm_client,
+                        concurrency=concurrency, errors=_seg_errors,
+                    )
+                    # Record per-session completion
+                    for tm in _fresh_topic_maps:
+                        mark_session_complete(
+                            manifest, STAGE_TOPIC_SEGMENTATION,
+                            tm.session_id,
+                            provider=self.settings.llm_provider,
+                            model=self.settings.llm_model,
+                        )
+                else:
+                    _fresh_topic_maps = []
+
+                topic_maps = _cached_topic_maps + _fresh_topic_maps
+
                 if self.settings.write_intermediate:
                     write_intermediate_json(
                         topic_maps, "topic_boundaries.json", output_dir,
@@ -518,10 +570,17 @@ class Pipeline:
                     )
                 total_boundaries = sum(len(m.boundaries) for m in topic_maps)
                 _topics_elapsed = time.perf_counter() - t0
-                _print_step(
-                    f"Segmented {total_boundaries} topic boundaries",
-                    _topics_elapsed,
-                )
+
+                _n_new = len(_remaining_transcripts)
+                if _cached_topic_maps and _n_new:
+                    _msg_8 = (
+                        f"Segmented {total_boundaries} topic boundaries"
+                        f" ({_n_new} new sessions)"
+                    )
+                else:
+                    _msg_8 = f"Segmented {total_boundaries} topic boundaries"
+                _print_step(_msg_8, _topics_elapsed)
+
                 _stage_actuals[STAGE_TOPICS] = StageActual(
                     elapsed=_topics_elapsed, input_size=_n_sessions,
                 )
@@ -545,28 +604,90 @@ class Pipeline:
                 ]
                 _print_cached_step(f"Extracted {len(all_quotes)} quotes")
             else:
+                # Per-session resume: load cached quotes for completed
+                # sessions and only run LLM on the remaining ones.
+                import json as _json
+
+                _cached_quote_sids = get_completed_session_ids(
+                    _prev_manifest, STAGE_QUOTE_EXTRACTION,
+                )
+                _cached_quotes: list[ExtractedQuote] = []
+                if _cached_quote_sids and _eq_path.exists():
+                    _cached_quotes = [
+                        ExtractedQuote.model_validate(obj)
+                        for obj in _json.loads(
+                            _eq_path.read_text(encoding="utf-8")
+                        )
+                        if obj.get("session_id") in _cached_quote_sids
+                    ]
+
+                _remaining_transcripts_q = [
+                    t for t in clean_transcripts
+                    if t.session_id not in _cached_quote_sids
+                ]
+                _remaining_topic_maps = [
+                    tm for tm in topic_maps
+                    if tm.session_id not in _cached_quote_sids
+                ]
+
                 mark_stage_running(manifest, STAGE_QUOTE_EXTRACTION)
+                # Carry forward session records from previous manifest
+                if _cached_quote_sids and _prev_manifest is not None:
+                    _prev_rec_q = _prev_manifest.stages.get(
+                        STAGE_QUOTE_EXTRACTION,
+                    )
+                    if _prev_rec_q and _prev_rec_q.sessions:
+                        rec_q = manifest.stages[STAGE_QUOTE_EXTRACTION]
+                        rec_q.sessions = {
+                            sid: sr
+                            for sid, sr in _prev_rec_q.sessions.items()
+                            if sr.status == StageStatus.COMPLETE
+                        }
+
                 status.update("[dim]Extracting quotes...[/dim]")
                 t0 = time.perf_counter()
                 _quote_errors: list[str] = []
-                all_quotes = await extract_quotes(
-                    clean_transcripts,
-                    topic_maps,
-                    llm_client,
-                    min_quote_words=self.settings.min_quote_words,
-                    concurrency=concurrency,
-                    errors=_quote_errors,
-                )
+
+                if _remaining_transcripts_q:
+                    _fresh_quotes = await extract_quotes(
+                        _remaining_transcripts_q,
+                        _remaining_topic_maps,
+                        llm_client,
+                        min_quote_words=self.settings.min_quote_words,
+                        concurrency=concurrency,
+                        errors=_quote_errors,
+                    )
+                    # Record per-session completion — derive session_ids
+                    # from the transcripts that were processed.
+                    for t in _remaining_transcripts_q:
+                        mark_session_complete(
+                            manifest, STAGE_QUOTE_EXTRACTION,
+                            t.session_id,
+                            provider=self.settings.llm_provider,
+                            model=self.settings.llm_model,
+                        )
+                else:
+                    _fresh_quotes = []
+
+                all_quotes = _cached_quotes + _fresh_quotes
+
                 if self.settings.write_intermediate:
                     write_intermediate_json(
                         all_quotes, "extracted_quotes.json", output_dir,
                         self.settings.project_name,
                     )
                 _quotes_elapsed = time.perf_counter() - t0
-                _print_step(
-                    f"Extracted {len(all_quotes)} quotes",
-                    _quotes_elapsed,
-                )
+
+                _n_new_q = len(_remaining_transcripts_q)
+                if _cached_quotes and _n_new_q:
+                    _msg_9 = (
+                        f"Extracted {len(all_quotes)} quotes"
+                        f" ({_n_new_q} new sessions)"
+                    )
+                else:
+                    _msg_9 = f"Extracted {len(all_quotes)} quotes"
+                _print_step(_msg_9, _quotes_elapsed)
+
                 _stage_actuals[STAGE_QUOTES] = StageActual(
                     elapsed=_quotes_elapsed, input_size=_n_sessions,
                 )

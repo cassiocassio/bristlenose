@@ -692,14 +692,19 @@ def run(
     if output_dir is None:
         output_dir = input_dir / "bristlenose-output"
 
-    # Fail early if output exists and --clean not given
+    # Fail early if output exists and --clean not given — but allow resume
+    # when a pipeline manifest exists (Phase 1c/1d crash recovery).
     output_exists = output_dir.exists() and any(output_dir.iterdir())
     if output_exists and not clean:
-        console.print(
-            f"[red]Output directory already exists: {output_dir}[/red]\n"
-            f"Use [bold]--clean[/bold] to delete it and re-run."
-        )
-        raise typer.Exit(1)
+        from bristlenose.manifest import load_manifest
+
+        if load_manifest(output_dir) is None:
+            console.print(
+                f"[red]Output directory already exists: {output_dir}[/red]\n"
+                f"Use [bold]--clean[/bold] to delete it and re-run."
+            )
+            raise typer.Exit(1)
+        console.print("[dim]Resuming from previous run...[/dim]")
 
     if redact_pii and retain_pii:
         console.print("[red]Cannot use both --redact-pii and --retain-pii.[/red]")

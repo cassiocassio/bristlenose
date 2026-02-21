@@ -30,6 +30,16 @@ class StageStatus(str, Enum):
     FAILED = "failed"
 
 
+class SessionRecord(BaseModel):
+    """Completion record for one session within a per-session stage."""
+
+    status: StageStatus
+    session_id: str
+    completed_at: str | None = None
+    provider: str | None = None  # "anthropic", "google", etc.
+    model: str | None = None  # "claude-sonnet-4-20250514", etc.
+
+
 class StageRecord(BaseModel):
     """Record for one pipeline stage."""
 
@@ -37,6 +47,7 @@ class StageRecord(BaseModel):
     started_at: str | None = None
     completed_at: str | None = None
     error: str | None = None
+    sessions: dict[str, SessionRecord] | None = None  # only for per-session stages
 
 
 class PipelineManifest(BaseModel):
@@ -149,3 +160,65 @@ def mark_stage_complete(manifest: PipelineManifest, stage: str) -> None:
     record.completed_at = _now_iso()
     manifest.stages[stage] = record
     manifest.updated_at = _now_iso()
+
+
+def mark_session_complete(
+    manifest: PipelineManifest,
+    stage: str,
+    session_id: str,
+    provider: str | None = None,
+    model: str | None = None,
+) -> None:
+    """Mark a single session as complete within a per-session stage.
+
+    The overall stage status stays RUNNING — call ``mark_stage_complete()``
+    after all sessions are done.  If the pipeline crashes before that call,
+    the stage is left as RUNNING and ``_is_stage_cached()`` returns False,
+    which triggers the per-session resume path on the next run.
+    """
+    record = manifest.stages.get(stage)
+    if record is None:
+        record = StageRecord(status=StageStatus.RUNNING, started_at=_now_iso())
+        manifest.stages[stage] = record
+    if record.sessions is None:
+        record.sessions = {}
+    record.sessions[session_id] = SessionRecord(
+        status=StageStatus.COMPLETE,
+        session_id=session_id,
+        completed_at=_now_iso(),
+        provider=provider,
+        model=model,
+    )
+    manifest.updated_at = _now_iso()
+
+
+def _derive_stage_status(record: StageRecord) -> StageStatus:
+    """Derive overall stage status from session-level records.
+
+    If there are no session records, returns the current status unchanged.
+    """
+    if record.sessions is None:
+        return record.status
+    statuses = {s.status for s in record.sessions.values()}
+    if all(s == StageStatus.COMPLETE for s in statuses):
+        return StageStatus.COMPLETE
+    if any(s == StageStatus.COMPLETE for s in statuses):
+        return StageStatus.PARTIAL
+    return StageStatus.PENDING
+
+
+def get_completed_session_ids(
+    manifest: PipelineManifest | None,
+    stage: str,
+) -> set[str]:
+    """Return session_ids marked complete in a per-session stage."""
+    if manifest is None:
+        return set()
+    record = manifest.stages.get(stage)
+    if record is None or record.sessions is None:
+        return set()
+    return {
+        sid
+        for sid, sr in record.sessions.items()
+        if sr.status == StageStatus.COMPLETE
+    }

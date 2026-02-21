@@ -1,6 +1,6 @@
 # Pipeline Resilience & Data Integrity
 
-> **Status**: Phase 1a–1c implemented; Phase 1d+ not yet implemented
+> **Status**: Phase 1a–1d implemented; Phase 1e+ not yet implemented
 > **Scope**: Big-picture architecture for crash recovery, incremental re-runs, provenance tracking, human/LLM merge, source material change detection, mid-run provider switching, and analytical context preservation
 > **Trigger**: Plato stress test (Feb 2026) — pipeline ran out of API credits mid-run, stale SQLite data from previous project leaked into serve mode, intermediate JSON files weren't written by `analyze` command, recovery required re-spending $3.50 on LLM calls already made
 
@@ -569,6 +569,36 @@ Each per-session stage writes its results incrementally — after processing eac
 **What it touches**: `pipeline.py` (the LLM-calling loops in topic segmentation and quote extraction), `manifest.py` (the session-level model). The stage functions themselves (`topic_segmentation.py`, `quote_extraction.py`) don't change — they already return per-session results. The change is in how `pipeline.py` calls them and saves results.
 
 **Risk**: Medium. Need to handle the merge of old cached results + new results for the same stage. But it's straightforward — load existing quotes for sessions s1-s7, extract new quotes for s8-s10, concatenate.
+
+#### 1d-ext. Per-session caching for stages 1–7 (idea — needs detailed planning)
+
+**What it is**: Extend per-session caching to stages that currently always re-run on resume. Transcription is the biggest win; speaker identification also saves LLM money.
+
+**Measured data (project-ikea, 4 sessions, Apple M2 Max, Feb 2026):**
+
+| Stage | Time | % of resume | LLM cost | Cacheable? |
+|---|---|---|---|---|
+| Ingest | 0.4s | <1% | — | No (fast, always re-run) |
+| Extract audio | 0.5s | <1% | — | Easy (`.wav` on disk) |
+| **Transcribe** | **56s** | **52%** | — | **Yes — biggest win** |
+| **Identify speakers** | **7.5s** | **7%** | **~$0.02** | **Yes — saves time + money** |
+| Merge transcripts | 0.0s | <1% | — | No (instant) |
+| Topic segmentation | (cached) | 0% | $0 | Done (Phase 1d) |
+| Quote extraction | 34.5s | 32% | ~$0.22 | Done (Phase 1d) |
+| Cluster + group | 8.9s | 8% | ~$0.02 | Phase 1c stage-level |
+
+Caching transcription alone would cut resume time from 1m 48s to ~52s (52% reduction). For a 20-session project (~4 min transcription), the savings scale linearly.
+
+**How it differs from stages 8–9**: Transcription produces one file per session in `transcripts-raw/` (not a single merged JSON). The caching check is file-existence-based rather than JSON-filtering-based — check which session transcript files already exist on disk. `load_transcripts_from_dir()` already reloads them. The infrastructure exists; the wiring in `pipeline.py` does not.
+
+**Priority order:**
+1. Transcription — biggest time win by far
+2. Speaker identification — saves both time and LLM money
+3. Audio extraction — marginal gain, probably not worth the complexity
+
+**Open questions**: (1) Should audio extraction (stage 2) also be cached per-session? It's fast but not free. (2) How does this interact with speaker identification (stage 4) and transcript merging (stage 5), which are downstream of transcription? (3) What about subtitle parsing and docx parsing — are those per-session too?
+
+**Status**: Idea only. Needs a detailed next-session prompt before implementation.
 
 #### 1e. Status report and `--resume` flag
 

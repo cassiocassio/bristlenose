@@ -191,7 +191,7 @@ class TestGetTagAnalysis:
         if data["signals"]:
             sig = data["signals"][0]
             expected_keys = {
-                "location", "source_type", "group_name", "count",
+                "location", "source_type", "group_name", "colour_set", "count",
                 "participants", "n_eff", "mean_intensity", "concentration",
                 "composite_signal", "confidence", "quotes",
             }
@@ -404,3 +404,195 @@ class TestProposedTagWeighting:
         sb = data["source_breakdown"]
         assert set(sb.keys()) == {"accepted", "pending", "total"}
         assert all(isinstance(v, int) for v in sb.values())
+
+
+# ---------------------------------------------------------------------------
+# GET /api/projects/{project_id}/analysis/codebooks
+# ---------------------------------------------------------------------------
+
+
+def _create_multi_codebook_project() -> TestClient:
+    """Create a project with groups from two different frameworks + user-created."""
+    app = create_app(project_dir=_FIXTURE_DIR, dev=True, db_url="sqlite://")
+    db = app.state.db_factory()
+    try:
+        cluster = db.query(ScreenCluster).filter_by(project_id=1).first()
+        theme = db.query(ThemeGroup).filter_by(project_id=1).first()
+        assert cluster is not None
+        assert theme is not None
+
+        # Add extra quotes
+        extra_quotes = []
+        for pid in ["p2", "p3", "p4"]:
+            for i in range(2):
+                q = Quote(
+                    project_id=1, session_id="s1", participant_id=pid,
+                    start_timecode=100.0 * i + float(hash(pid) % 50),
+                    end_timecode=100.0 * i + 10.0,
+                    text=f"Multi-codebook quote from {pid} #{i}",
+                    quote_type="screen_specific", sentiment="frustration", intensity=2,
+                )
+                db.add(q)
+                extra_quotes.append(q)
+        db.flush()
+
+        for q in extra_quotes:
+            db.add(ClusterQuote(cluster_id=cluster.id, quote_id=q.id))
+            db.add(ThemeQuote(theme_id=theme.id, quote_id=q.id))
+        db.flush()
+
+        # Framework "norman" groups
+        g_discover = CodebookGroup(
+            name="Discoverability", subtitle="", colour_set="ux",
+            sort_order=0, framework_id="norman",
+        )
+        g_mapping = CodebookGroup(
+            name="Mapping", subtitle="", colour_set="ux",
+            sort_order=1, framework_id="norman",
+        )
+        # Framework "uxr" group
+        g_pain = CodebookGroup(
+            name="Pain points", subtitle="", colour_set="emo",
+            sort_order=2, framework_id="uxr",
+        )
+        # User-created group (no framework)
+        g_custom = CodebookGroup(
+            name="My tags", subtitle="", colour_set="task",
+            sort_order=3, framework_id=None,
+        )
+        db.add_all([g_discover, g_mapping, g_pain, g_custom])
+        db.flush()
+
+        for g in [g_discover, g_mapping, g_pain, g_custom]:
+            db.add(ProjectCodebookGroup(
+                project_id=1, codebook_group_id=g.id, sort_order=g.sort_order,
+            ))
+
+        # Tags
+        td_disc = TagDefinition(name="hidden", codebook_group_id=g_discover.id)
+        td_map = TagDefinition(name="unnatural", codebook_group_id=g_mapping.id)
+        td_pain = TagDefinition(name="frustration", codebook_group_id=g_pain.id)
+        td_custom = TagDefinition(name="interesting", codebook_group_id=g_custom.id)
+        db.add_all([td_disc, td_map, td_pain, td_custom])
+        db.flush()
+
+        all_quotes = db.query(Quote).filter_by(project_id=1).all()
+
+        # Tag quotes across all groups
+        for q in all_quotes[:4]:
+            db.add(QuoteTag(quote_id=q.id, tag_definition_id=td_disc.id))
+        for q in all_quotes[:3]:
+            db.add(QuoteTag(quote_id=q.id, tag_definition_id=td_map.id))
+        for q in all_quotes[:4]:
+            db.add(QuoteTag(quote_id=q.id, tag_definition_id=td_pain.id))
+        for q in all_quotes[:3]:
+            db.add(QuoteTag(quote_id=q.id, tag_definition_id=td_custom.id))
+
+        db.commit()
+    finally:
+        db.close()
+    return TestClient(app)
+
+
+@pytest.fixture()
+def multi_cb_client() -> TestClient:
+    return _create_multi_codebook_project()
+
+
+class TestGetCodebookAnalysis:
+
+    def test_returns_200(self, multi_cb_client: TestClient) -> None:
+        resp = multi_cb_client.get("/api/projects/1/analysis/codebooks")
+        assert resp.status_code == 200
+
+    def test_response_shape(self, multi_cb_client: TestClient) -> None:
+        data = multi_cb_client.get("/api/projects/1/analysis/codebooks").json()
+        assert set(data.keys()) == {"codebooks", "total_participants", "trade_off_note"}
+        assert isinstance(data["codebooks"], list)
+        assert isinstance(data["total_participants"], int)
+
+    def test_codebooks_separated_by_framework(
+        self, multi_cb_client: TestClient,
+    ) -> None:
+        """Groups with different framework_id should appear as separate codebooks."""
+        data = multi_cb_client.get("/api/projects/1/analysis/codebooks").json()
+        cb_ids = [cb["codebook_id"] for cb in data["codebooks"]]
+        # Should have norman, uxr, and custom
+        assert "norman" in cb_ids
+        assert "uxr" in cb_ids
+        assert "custom" in cb_ids
+
+    def test_each_codebook_has_own_columns(
+        self, multi_cb_client: TestClient,
+    ) -> None:
+        """Columns should be scoped to that codebook's groups."""
+        data = multi_cb_client.get("/api/projects/1/analysis/codebooks").json()
+        for cb in data["codebooks"]:
+            if cb["codebook_id"] == "norman":
+                assert "Discoverability" in cb["columns"]
+                assert "Mapping" in cb["columns"]
+                assert "Pain points" not in cb["columns"]
+            elif cb["codebook_id"] == "uxr":
+                assert "Pain points" in cb["columns"]
+                assert "Discoverability" not in cb["columns"]
+            elif cb["codebook_id"] == "custom":
+                assert "My tags" in cb["columns"]
+
+    def test_codebook_has_colour_set(self, multi_cb_client: TestClient) -> None:
+        data = multi_cb_client.get("/api/projects/1/analysis/codebooks").json()
+        for cb in data["codebooks"]:
+            assert "colour_set" in cb
+            assert isinstance(cb["colour_set"], str)
+            assert len(cb["colour_set"]) > 0
+
+    def test_codebook_has_name(self, multi_cb_client: TestClient) -> None:
+        data = multi_cb_client.get("/api/projects/1/analysis/codebooks").json()
+        for cb in data["codebooks"]:
+            assert "codebook_name" in cb
+            assert isinstance(cb["codebook_name"], str)
+        custom_cbs = [cb for cb in data["codebooks"] if cb["codebook_id"] == "custom"]
+        if custom_cbs:
+            assert custom_cbs[0]["codebook_name"] == "Custom"
+
+    def test_each_codebook_has_matrices(self, multi_cb_client: TestClient) -> None:
+        data = multi_cb_client.get("/api/projects/1/analysis/codebooks").json()
+        for cb in data["codebooks"]:
+            assert "section_matrix" in cb
+            assert "theme_matrix" in cb
+            sm = cb["section_matrix"]
+            assert set(sm.keys()) == {
+                "cells", "row_totals", "col_totals", "grand_total", "row_labels",
+            }
+
+    def test_tag_colour_indices_present(self, multi_cb_client: TestClient) -> None:
+        data = multi_cb_client.get("/api/projects/1/analysis/codebooks").json()
+        for cb in data["codebooks"]:
+            assert "tag_colour_indices" in cb
+            tci = cb["tag_colour_indices"]
+            assert isinstance(tci, dict)
+            # All values should be non-negative integers
+            for idx in tci.values():
+                assert isinstance(idx, int)
+                assert idx >= 0
+
+    def test_signal_quotes_have_tag_names(
+        self, multi_cb_client: TestClient,
+    ) -> None:
+        """Each quote in a signal should include the specific tag names."""
+        data = multi_cb_client.get("/api/projects/1/analysis/codebooks").json()
+        found_tag_names = False
+        for cb in data["codebooks"]:
+            for sig in cb["signals"]:
+                for q in sig["quotes"]:
+                    assert "tag_names" in q
+                    if q["tag_names"]:
+                        found_tag_names = True
+        assert found_tag_names, "Expected at least one quote with tag_names"
+
+    def test_empty_when_no_tags(self, client: TestClient) -> None:
+        data = client.get("/api/projects/1/analysis/codebooks").json()
+        assert data["codebooks"] == []
+
+    def test_project_not_found(self, client: TestClient) -> None:
+        resp = client.get("/api/projects/999/analysis/codebooks")
+        assert resp.status_code == 404

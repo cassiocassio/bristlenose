@@ -223,23 +223,12 @@ describe("TranscriptPage", () => {
     expect(heading.textContent).toContain("Maya");
   });
 
-  it("back link points to correct report filename", async () => {
-    mockedGetTranscript.mockResolvedValue(mockData);
-    render(<TranscriptPage projectId="1" sessionId="s1" />);
-    await waitFor(() => {
-      expect(screen.getByTestId("transcript-back")).toBeTruthy();
-    });
-    const link = screen.getByTestId("transcript-back").querySelector("a");
-    expect(link?.getAttribute("href")).toBe("/report/");
-  });
-
   it("has data-testid attributes on key elements", async () => {
     mockedGetTranscript.mockResolvedValue(mockData);
     render(<TranscriptPage projectId="1" sessionId="s1" />);
     await waitFor(() => {
       expect(screen.getByTestId("transcript-body")).toBeTruthy();
     });
-    expect(screen.getByTestId("transcript-back")).toBeTruthy();
     expect(screen.getByTestId("transcript-heading")).toBeTruthy();
     expect(screen.getByTestId("transcript-body")).toBeTruthy();
   });

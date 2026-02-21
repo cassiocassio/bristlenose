@@ -1,4 +1,4 @@
-"""Tests for pipeline resume — skip completed stages on re-run (Phase 1c+1d)."""
+"""Tests for pipeline resume — skip completed stages on re-run (Phase 1c+1d+1d-ext)."""
 
 from __future__ import annotations
 
@@ -7,8 +7,10 @@ from pathlib import Path
 
 from bristlenose.manifest import (
     STAGE_CLUSTER_AND_GROUP,
+    STAGE_IDENTIFY_SPEAKERS,
     STAGE_QUOTE_EXTRACTION,
     STAGE_TOPIC_SEGMENTATION,
+    STAGE_TRANSCRIBE,
     StageStatus,
     create_manifest,
     get_completed_session_ids,
@@ -22,8 +24,10 @@ from bristlenose.models import (
     QuoteType,
     ScreenCluster,
     SessionTopicMap,
+    SpeakerRole,
     ThemeGroup,
     TopicBoundary,
+    TranscriptSegment,
     TransitionType,
 )
 from bristlenose.pipeline import _is_stage_cached, _print_cached_step
@@ -529,3 +533,326 @@ def test_per_session_provider_model_recorded(tmp_path: Path):
     assert sessions["s1"].model == "sonnet"
     assert sessions["s2"].provider == "google"
     assert sessions["s2"].model == "gemini-flash"
+
+
+# ---------------------------------------------------------------------------
+# Phase 1d-ext — transcription per-session caching
+# ---------------------------------------------------------------------------
+
+
+def _make_session_segments() -> dict[str, list[TranscriptSegment]]:
+    """Transcript segments for 3 sessions."""
+    result = {}
+    for i in range(1, 4):
+        result[f"s{i}"] = [
+            TranscriptSegment(
+                start_time=0.0,
+                end_time=10.0,
+                text=f"Hello from session {i}",
+                speaker_label="Speaker A",
+                speaker_role=SpeakerRole.RESEARCHER,
+                source="whisper",
+            ),
+            TranscriptSegment(
+                start_time=10.0,
+                end_time=25.0,
+                text=f"Response from session {i}",
+                speaker_label="Speaker B",
+                speaker_role=SpeakerRole.PARTICIPANT,
+                source="whisper",
+            ),
+        ]
+    return result
+
+
+def _write_session_segments_json(
+    data: dict[str, list[TranscriptSegment]],
+    output_dir: Path,
+) -> Path:
+    """Write session_segments.json to the intermediate directory."""
+    intermediate = output_dir / ".bristlenose" / "intermediate"
+    intermediate.mkdir(parents=True, exist_ok=True)
+    path = intermediate / "session_segments.json"
+    json_data = {
+        sid: [seg.model_dump(mode="json") for seg in segs]
+        for sid, segs in data.items()
+    }
+    path.write_text(json.dumps(json_data, indent=2), encoding="utf-8")
+    return path
+
+
+def test_transcription_segments_json_roundtrip(tmp_path: Path):
+    """session_segments.json can be written and loaded back identically."""
+    originals = _make_session_segments()
+    _write_session_segments_json(originals, tmp_path)
+
+    path = tmp_path / ".bristlenose" / "intermediate" / "session_segments.json"
+    loaded_raw = json.loads(path.read_text(encoding="utf-8"))
+    loaded = {
+        sid: [TranscriptSegment.model_validate(s) for s in segs]
+        for sid, segs in loaded_raw.items()
+    }
+    assert set(loaded.keys()) == {"s1", "s2", "s3"}
+    for sid in loaded:
+        assert len(loaded[sid]) == 2
+        assert loaded[sid][0].speaker_label == "Speaker A"
+        assert loaded[sid][0].source == "whisper"
+        assert loaded[sid][1].end_time == 25.0
+
+
+def test_transcription_cache_skip_when_complete(tmp_path: Path):
+    """Transcription is fully cached when stage is COMPLETE and JSON exists."""
+    _write_manifest_with_stages(tmp_path, [STAGE_TRANSCRIBE])
+    _write_session_segments_json(_make_session_segments(), tmp_path)
+
+    from bristlenose.manifest import load_manifest
+
+    prev = load_manifest(tmp_path)
+    ss_path = tmp_path / ".bristlenose" / "intermediate" / "session_segments.json"
+
+    assert _is_stage_cached(prev, STAGE_TRANSCRIBE) is True
+    assert ss_path.exists()
+
+
+def test_transcription_per_session_partial_resume(tmp_path: Path):
+    """Only s1 is cached in transcription; s2 and s3 need processing."""
+    _write_manifest_with_session_records(
+        tmp_path, STAGE_TRANSCRIBE, ["s1"],
+    )
+    _write_session_segments_json(_make_session_segments(), tmp_path)
+
+    from bristlenose.manifest import load_manifest
+
+    prev = load_manifest(tmp_path)
+
+    # Stage is NOT fully cached (RUNNING, not COMPLETE)
+    assert _is_stage_cached(prev, STAGE_TRANSCRIBE) is False
+
+    # But s1 is individually complete
+    completed = get_completed_session_ids(prev, STAGE_TRANSCRIBE)
+    assert completed == {"s1"}
+
+    # Filter remaining sessions
+    all_sids = {"s1", "s2", "s3"}
+    remaining = all_sids - completed
+    assert remaining == {"s2", "s3"}
+
+
+def test_transcription_filter_cached_from_json(tmp_path: Path):
+    """Cached segments are correctly filtered by session_id."""
+    _write_session_segments_json(_make_session_segments(), tmp_path)
+
+    ss_path = tmp_path / ".bristlenose" / "intermediate" / "session_segments.json"
+    raw = json.loads(ss_path.read_text(encoding="utf-8"))
+
+    cached_sids = {"s1", "s3"}
+    cached_segments = {
+        sid: [TranscriptSegment.model_validate(s) for s in segs]
+        for sid, segs in raw.items()
+        if sid in cached_sids
+    }
+    assert set(cached_segments.keys()) == {"s1", "s3"}
+    assert "s2" not in cached_segments
+
+
+def test_transcription_merge_cached_and_fresh():
+    """Merging cached + fresh segments produces the full set."""
+    all_segments = _make_session_segments()
+    cached = {sid: segs for sid, segs in all_segments.items() if sid in {"s1"}}
+    fresh = {sid: segs for sid, segs in all_segments.items() if sid not in {"s1"}}
+    merged = {**cached, **fresh}
+    assert set(merged.keys()) == {"s1", "s2", "s3"}
+
+
+# ---------------------------------------------------------------------------
+# Phase 1d-ext — speaker identification per-session caching
+# ---------------------------------------------------------------------------
+
+
+def _write_speaker_info_json(
+    output_dir: Path,
+    session_id: str,
+    speaker_infos: list[dict],
+    segments: list[TranscriptSegment],
+) -> Path:
+    """Write a speaker-info/{session_id}.json cache file."""
+    si_dir = output_dir / ".bristlenose" / "intermediate" / "speaker-info"
+    si_dir.mkdir(parents=True, exist_ok=True)
+    path = si_dir / f"{session_id}.json"
+    data = {
+        "speaker_infos": speaker_infos,
+        "segments_with_roles": [seg.model_dump(mode="json") for seg in segments],
+    }
+    path.write_text(json.dumps(data, indent=2), encoding="utf-8")
+    return path
+
+
+def test_speaker_info_json_roundtrip(tmp_path: Path):
+    """SpeakerInfo serialization round-trips correctly."""
+    from bristlenose.stages.identify_speakers import (
+        SpeakerInfo,
+        speaker_info_from_dict,
+        speaker_info_to_dict,
+    )
+
+    info = SpeakerInfo(
+        speaker_label="Speaker A",
+        role=SpeakerRole.RESEARCHER,
+        person_name="Jane",
+        job_title="UX Researcher",
+    )
+    d = speaker_info_to_dict(info)
+    assert d == {
+        "speaker_label": "Speaker A",
+        "role": "researcher",
+        "person_name": "Jane",
+        "job_title": "UX Researcher",
+    }
+    restored = speaker_info_from_dict(d)
+    assert restored.speaker_label == info.speaker_label
+    assert restored.role == info.role
+    assert restored.person_name == info.person_name
+    assert restored.job_title == info.job_title
+
+
+def test_speaker_id_cache_skip_when_complete(tmp_path: Path):
+    """Speaker ID is fully cached when stage is COMPLETE and files exist."""
+    _write_manifest_with_stages(tmp_path, [STAGE_IDENTIFY_SPEAKERS])
+
+    segments = _make_session_segments()
+    for sid in ["s1", "s2", "s3"]:
+        _write_speaker_info_json(
+            tmp_path,
+            sid,
+            speaker_infos=[
+                {"speaker_label": "Speaker A", "role": "researcher",
+                 "person_name": "", "job_title": ""},
+                {"speaker_label": "Speaker B", "role": "participant",
+                 "person_name": "", "job_title": ""},
+            ],
+            segments=segments[sid],
+        )
+
+    from bristlenose.manifest import load_manifest
+
+    prev = load_manifest(tmp_path)
+    assert _is_stage_cached(prev, STAGE_IDENTIFY_SPEAKERS) is True
+
+    si_dir = tmp_path / ".bristlenose" / "intermediate" / "speaker-info"
+    assert (si_dir / "s1.json").exists()
+    assert (si_dir / "s2.json").exists()
+    assert (si_dir / "s3.json").exists()
+
+
+def test_speaker_id_per_session_partial_resume(tmp_path: Path):
+    """Only s1 cached in speaker ID; s2 and s3 need LLM calls."""
+    _write_manifest_with_session_records(
+        tmp_path, STAGE_IDENTIFY_SPEAKERS, ["s1"],
+    )
+    segments = _make_session_segments()
+    _write_speaker_info_json(
+        tmp_path,
+        "s1",
+        speaker_infos=[
+            {"speaker_label": "Speaker A", "role": "researcher",
+             "person_name": "", "job_title": ""},
+        ],
+        segments=segments["s1"],
+    )
+
+    from bristlenose.manifest import load_manifest
+
+    prev = load_manifest(tmp_path)
+
+    assert _is_stage_cached(prev, STAGE_IDENTIFY_SPEAKERS) is False
+    completed = get_completed_session_ids(prev, STAGE_IDENTIFY_SPEAKERS)
+    assert completed == {"s1"}
+
+
+def test_speaker_info_segments_restored_from_cache(tmp_path: Path):
+    """Cached segments have speaker_role preserved on reload."""
+    segments = [
+        TranscriptSegment(
+            start_time=0.0,
+            end_time=10.0,
+            text="Let me show you the prototype.",
+            speaker_label="Speaker A",
+            speaker_role=SpeakerRole.RESEARCHER,
+            source="whisper",
+        ),
+        TranscriptSegment(
+            start_time=10.0,
+            end_time=30.0,
+            text="That looks great!",
+            speaker_label="Speaker B",
+            speaker_role=SpeakerRole.PARTICIPANT,
+            source="whisper",
+        ),
+    ]
+    _write_speaker_info_json(
+        tmp_path,
+        "s1",
+        speaker_infos=[
+            {"speaker_label": "Speaker A", "role": "researcher",
+             "person_name": "Jane", "job_title": ""},
+            {"speaker_label": "Speaker B", "role": "participant",
+             "person_name": "Tom", "job_title": "PM"},
+        ],
+        segments=segments,
+    )
+
+    si_path = (
+        tmp_path / ".bristlenose" / "intermediate" / "speaker-info" / "s1.json"
+    )
+    data = json.loads(si_path.read_text(encoding="utf-8"))
+
+    restored_segments = [
+        TranscriptSegment.model_validate(seg)
+        for seg in data["segments_with_roles"]
+    ]
+    assert restored_segments[0].speaker_role == SpeakerRole.RESEARCHER
+    assert restored_segments[1].speaker_role == SpeakerRole.PARTICIPANT
+    assert restored_segments[0].source == "whisper"
+
+
+def test_assign_speaker_codes_always_reruns():
+    """assign_speaker_codes runs on all sessions for consistent global numbering."""
+    from bristlenose.stages.identify_speakers import assign_speaker_codes
+
+    # Session 1: one researcher, one participant
+    segs_s1 = [
+        TranscriptSegment(
+            start_time=0.0, end_time=5.0, text="Hello",
+            speaker_label="Speaker A", speaker_role=SpeakerRole.RESEARCHER,
+        ),
+        TranscriptSegment(
+            start_time=5.0, end_time=10.0, text="Hi",
+            speaker_label="Speaker B", speaker_role=SpeakerRole.PARTICIPANT,
+        ),
+    ]
+    # Session 2: one researcher, one participant
+    segs_s2 = [
+        TranscriptSegment(
+            start_time=0.0, end_time=5.0, text="Welcome",
+            speaker_label="Speaker C", speaker_role=SpeakerRole.RESEARCHER,
+        ),
+        TranscriptSegment(
+            start_time=5.0, end_time=10.0, text="Thanks",
+            speaker_label="Speaker D", speaker_role=SpeakerRole.PARTICIPANT,
+        ),
+    ]
+
+    # Run assign_speaker_codes with global numbering
+    label_map_1, next_pnum = assign_speaker_codes(1, segs_s1)
+    label_map_2, next_pnum = assign_speaker_codes(next_pnum, segs_s2)
+
+    # Session 1: m1 for researcher, p1 for participant
+    assert label_map_1["Speaker A"] == "m1"
+    assert label_map_1["Speaker B"] == "p1"
+
+    # Session 2: m1 for researcher (per-session), p2 for participant (global)
+    assert label_map_2["Speaker C"] == "m1"
+    assert label_map_2["Speaker D"] == "p2"
+
+    # Global numbering continues
+    assert next_pnum == 3

@@ -64,6 +64,14 @@ blockquote .speaker-link:hover {
     transition: background var(--bn-transition-slow), border-left-color var(--bn-transition-slow);
 }
 
+/* Group header — heading + hidden-quotes badge on the same line */
+.bn-group-header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--bn-space-sm);
+}
+
 .quote-group {
     display: flex;
     flex-direction: column;

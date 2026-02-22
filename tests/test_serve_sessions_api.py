@@ -36,6 +36,7 @@ class TestSessionsEndpoint:
         assert "sessions" in data
         assert "moderator_names" in data
         assert "observer_names" in data
+        assert "source_folder_uri" in data
 
     def test_session_count(self, client: TestClient) -> None:
         data = client.get("/api/projects/1/sessions").json()
@@ -109,6 +110,12 @@ class TestSessionsEndpoint:
         # VTT files don't set has_media
         assert session["has_media"] is False
         assert session["has_video"] is False
+
+    def test_source_folder_uri(self, client: TestClient) -> None:
+        data = client.get("/api/projects/1/sessions").json()
+        uri = data["source_folder_uri"]
+        assert uri.startswith("file:///")
+        assert "smoke-test" in uri or "input" in uri
 
 
 class TestSessionsErrors:

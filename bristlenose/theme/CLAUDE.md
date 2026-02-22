@@ -10,15 +10,16 @@ Tokens → Atoms → Molecules → Organisms → Templates. All visual values vi
 
 **Font:** Inter Variable loaded from Google Fonts CDN (`display=swap`). Fallback stack: `"Inter", "Segoe UI Variable", "Segoe UI", system-ui, -apple-system, sans-serif`. Both `document_shell_open.html` (static render) and `frontend/index.html` (serve mode) include preconnect + stylesheet links.
 
-**Font-weight tokens** — three tiers, all via CSS custom properties:
+**Font-weight tokens** — four tiers, all via CSS custom properties:
 
 | Token | Value | Usage |
 |-------|-------|-------|
 | `--bn-weight-normal` | 420 | Body text, descriptions, quote content, secondary labels |
-| `--bn-weight-emphasis` | 490 | Headings, section titles, labels, starred quotes, badge text |
+| `--bn-weight-emphasis` | 490 | Headings, section titles, labels, badge text |
+| `--bn-weight-starred` | 520 | Starred quote body text (pops above emphasis, below strong) |
 | `--bn-weight-strong` | 700 | Page title h1, delete × glyphs, accept/deny ✓/✗, bar counts |
 
-**Rules:** Never hardcode `font-weight` values in CSS — always use the tokens. The only exceptions are inline JS styles in `analysis.js` (heatmap total/grand-total rows) which use numeric literals because they construct `style` strings.
+**Rules:** Never hardcode `font-weight` values in CSS — always use the tokens.
 
 **Known limitation (Windows 10):** Static Segoe UI (pre-Variable) snaps 420→400 and 490→400 when offline (no Google Fonts). Structural cues (font-size, whitespace, borders) still carry hierarchy. Documented as acceptable degradation.
 
@@ -121,7 +122,7 @@ Session table styles in `templates/report.css`. The session table renders in bot
 - **`.bn-video-thumb`** — 96×54px placeholder (16:9 HD aspect ratio), grey background, centred play icon
 - **`.bn-play-icon`** — play triangle (▶) inside thumbnail
 - **`.bn-sparkline` / `.bn-sparkline-bar`** — per-session sentiment mini-bar chart. Container height: 54px (matches thumbnail) so baselines align. Bar heights set inline, colours via `--bn-sentiment-{name}` tokens
-- **`.bn-interviews-link`** — folder header link (opens input folder via `file://` URI)
+- **`.bn-interviews-link`** — folder header link. Legacy HTML: opens input folder via `file://` URI. React island: copies `file://` URI to clipboard (browsers block `file://` navigation from `http://` pages). Future: desktop app custom URL scheme (`bristlenose://open-folder?path=...`) for native Finder integration
 - **`.bn-folder-icon`** — inline SVG folder icon in header link
 - **Clickable rows** — `tbody tr[data-session]` gets `cursor: pointer` and `var(--bn-colour-hover)` on hover (in `report.css`). JS click handler in `global-nav.js` calls `navigateToSession()`. Dashboard table rows (`_initGlobalNav`) and Sessions tab rows (`_initSessionDrillDown`) both use this pattern. Clicks on `<a>` elements within rows (filenames, session links) are not intercepted
 
@@ -322,4 +323,4 @@ Two helpers in `render_html.py` reduce duplication across quote rendering:
 - **`serve_mode` vs runtime replacement** — `render_html.py` has a `serve_mode` param that renders React mount points instead of Jinja2 content. But `bristlenose serve` doesn't call `render_html()` — it reads the existing HTML (rendered with `serve_mode=False`) and does string replacement at serve time. Running `bristlenose render` before `bristlenose serve` is expected workflow — the markers make the replacement work. Don't assume #bn-sessions-table-root exists in the static HTML file on disk
 - **Delete circles are red, not grey** — `badge-ai::after` and `.badge-user .badge-delete` use `var(--bn-colour-danger)` (red), not `var(--bn-colour-muted)` (grey). Changed to unify delete/deny colour across all badge types (sentiment delete, user tag delete, proposed badge deny pill). If adding a new deletable badge variant, use `--bn-colour-danger` for the `×`
 - **`--bn-colour-danger` and `--bn-colour-success` are not in `tokens.css`** — badge CSS uses `var(--bn-colour-danger, #dc2626)` and `var(--bn-colour-success, #16a34a)` with hardcoded fallbacks. The tokens file defines `--bn-colour-negative` instead. The fallback values work but don't adapt in dark mode (delete circles stay `#dc2626` on dark backgrounds). The pill's dark mode overrides in `badge.css` handle this for the pill only. Future: add `--bn-colour-danger` / `--bn-colour-success` as proper `light-dark()` tokens
-- **Font-weight tokens** — all CSS uses `var(--bn-weight-normal)` (420), `var(--bn-weight-emphasis)` (490), `var(--bn-weight-strong)` (700). JS inline styles use raw numeric values (e.g. `490`) since `var()` in concatenated HTML strings is less reliable. Inter variable font loaded from Google Fonts in `document_shell_open.html` and `frontend/index.html`. Static fonts (Win 10 Segoe UI) degrade 420→400, 490→400 — acceptable
+- **Font-weight tokens** — four tiers: `var(--bn-weight-normal)` (420), `var(--bn-weight-emphasis)` (490), `var(--bn-weight-starred)` (520), `var(--bn-weight-strong)` (700). Starred quotes get 520 to pop above headings/labels (490) without reaching bold (700). Inter variable font loaded from Google Fonts (`wght@400..700`) in `document_shell_open.html` and `frontend/index.html`. Static fonts (Win 10 Segoe UI) degrade 420→400 and 490→400 — acceptable

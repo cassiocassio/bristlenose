@@ -16,7 +16,7 @@ bristlenose/server/
   autocode.py     — AutoCode engine (taxonomy, batching, async job runner)
   routes/
     health.py     — GET /api/health
-    sessions.py   — GET /api/projects/{id}/sessions (React sessions table)
+    sessions.py   — GET /api/projects/{id}/sessions (React sessions table, includes source_folder_uri)
     quotes.py     — GET /api/projects/{id}/quotes (quotes grouped by section/theme)
     data.py       — 12 data API endpoints (Phase 1 researcher state sync)
     autocode.py   — 7 AutoCode endpoints (start, status, proposals, accept/deny)

@@ -761,6 +761,8 @@ export function CodebookPanel({ projectId }: CodebookPanelProps) {
   const handleReportApply = useCallback(() => {
     setReportModal(null);
     fetchData();
+    // Notify other islands (QuoteSections) that tags changed via bulk apply.
+    document.dispatchEvent(new CustomEvent("bn:tags-changed"));
   }, [fetchData]);
 
   // --- Remove framework handlers ---

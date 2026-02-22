@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dashboard Coverage Box — Mockup</title>
+<style>
+/* ── Design tokens (from bristlenose/theme/tokens.css) ─────── */
+:root {
+    --bn-font-body: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
+    --bn-font-mono: "SF Mono", "Fira Code", "Consolas", monospace;
+    --bn-colour-bg: #ffffff;
+    --bn-colour-text: #1a1a1a;
+    --bn-colour-muted: #6b7280;
+    --bn-colour-border: #e5e7eb;
+    --bn-colour-accent: #2563eb;
+    --bn-colour-hover: #e8f0fe;
+    --bn-colour-quote-bg: #f9fafb;
+    --bn-colour-badge-bg: #f3f4f6;
+    --bn-colour-badge-text: #374151;
+    --bn-colour-shadow: rgba(0,0,0,0.1);
+    --bn-space-xs: 0.15rem;
+    --bn-space-sm: 0.35rem;
+    --bn-space-md: 0.75rem;
+    --bn-space-lg: 1.5rem;
+    --bn-space-xl: 2rem;
+    --bn-radius-sm: 3px;
+    --bn-radius-md: 6px;
+    --bn-radius-lg: 8px;
+    --bn-transition-fast: 0.15s ease;
+    --bn-transition-normal: 0.2s ease;
+    --bn-weight-body: 380;
+    --bn-weight-emphasis: 490;
+    --bn-weight-heading: 590;
+
+    --bn-sentiment-satisfaction: #16a34a;
+    --bn-sentiment-satisfaction-bg: #f0fdf4;
+    --bn-sentiment-frustration: #ea580c;
+    --bn-sentiment-frustration-bg: #fff7ed;
+}
+
+/* ── Page layout ─────────────────────────────────────────────── */
+body {
+    font-family: var(--bn-font-body);
+    font-weight: var(--bn-weight-body);
+    color: var(--bn-colour-text);
+    background: var(--bn-colour-bg);
+    max-width: 800px;
+    margin: 2rem auto;
+    padding: 0 1rem;
+    line-height: 1.5;
+}
+
+h1 { font-weight: var(--bn-weight-heading); font-size: 1.2rem; margin-bottom: 0.5rem; }
+h2 { font-weight: var(--bn-weight-heading); font-size: 1rem; color: var(--bn-colour-muted); margin-bottom: 2rem; }
+
+/* ── Simulate dashboard grid ────────────────────────────────── */
+.bn-dashboard {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--bn-space-lg);
+}
+
+.bn-dashboard-full {
+    grid-column: 1 / -1;
+}
+
+.bn-dashboard-pane {
+    border: 1px solid var(--bn-colour-border);
+    border-radius: var(--bn-radius-lg);
+    padding: var(--bn-space-lg);
+    min-width: 0;
+    overflow-x: auto;
+}
+
+/* ── Placeholder cards (simulating stat row etc.) ───────────── */
+.placeholder {
+    background: var(--bn-colour-quote-bg);
+    border: 1px dashed var(--bn-colour-border);
+    border-radius: var(--bn-radius-lg);
+    padding: var(--bn-space-lg);
+    color: var(--bn-colour-muted);
+    font-size: 0.85rem;
+    text-align: center;
+}
+
+/* ── Nav list placeholders ──────────────────────────────────── */
+.nav-placeholder {
+    border: 1px solid var(--bn-colour-border);
+    border-radius: var(--bn-radius-lg);
+    padding: var(--bn-space-lg);
+    color: var(--bn-colour-muted);
+    font-size: 0.85rem;
+}
+.nav-placeholder h3 {
+    margin: 0 0 var(--bn-space-sm) 0;
+    font-weight: var(--bn-weight-emphasis);
+    font-size: 0.9rem;
+    color: var(--bn-colour-text);
+}
+.nav-placeholder ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+.nav-placeholder li {
+    padding: var(--bn-space-xs) 0;
+    color: var(--bn-colour-accent);
+}
+
+/* ── Coverage box ═════════════════════════════════════════════ */
+.bn-coverage-box {
+    border: 1px solid var(--bn-colour-border);
+    border-radius: var(--bn-radius-lg);
+    padding: var(--bn-space-lg);
+}
+
+.bn-coverage-box h3 {
+    margin: 0 0 var(--bn-space-md) 0;
+    font-weight: var(--bn-weight-emphasis);
+    font-size: 0.9rem;
+}
+
+/* ── Stacked bar ────────────────────────────────────────────── */
+.bn-coverage-bar {
+    display: flex;
+    height: 8px;
+    border-radius: 4px;
+    overflow: hidden;
+    margin-bottom: var(--bn-space-md);
+}
+
+.bn-coverage-bar-segment {
+    transition: width var(--bn-transition-normal);
+}
+
+.bn-coverage-bar-segment--report {
+    background: #93b4f4;  /* accent blue toned back ~50% toward white */
+}
+
+.bn-coverage-bar-segment--moderator {
+    background: #d97706;  /* warm amber (--bn-sentiment-surprise) */
+}
+
+.bn-coverage-bar-segment--omitted {
+    background: #d1d5db;  /* gray-300 — two notches up from badge-bg */
+}
+
+/* ── Legend row ──────────────────────────────────────────────── */
+.bn-coverage-legend {
+    display: flex;
+    gap: var(--bn-space-lg);
+    font-size: 0.82rem;
+    color: var(--bn-colour-muted);
+}
+
+.bn-coverage-legend-item {
+    display: flex;
+    align-items: center;
+    gap: var(--bn-space-sm);
+}
+
+.bn-coverage-legend-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.bn-coverage-legend-dot--report { background: #93b4f4; }
+.bn-coverage-legend-dot--moderator { background: #d97706; }
+.bn-coverage-legend-dot--omitted { background: #d1d5db; }
+
+.bn-coverage-legend-value {
+    font-weight: var(--bn-weight-emphasis);
+    color: var(--bn-colour-text);
+}
+
+/* ── Disclosure for omitted segments ────────────────────────── */
+.bn-coverage-box details {
+    margin-top: var(--bn-space-md);
+}
+
+.bn-coverage-box details summary {
+    cursor: pointer;
+    font-weight: var(--bn-weight-emphasis);
+    font-size: 0.82rem;
+    color: var(--bn-colour-muted);
+    list-style: none;
+}
+
+.bn-coverage-box details summary::-webkit-details-marker { display: none; }
+
+.bn-coverage-box details summary::before {
+    content: "\25B6\00a0";
+    font-size: 0.65em;
+    vertical-align: middle;
+}
+
+.bn-coverage-box details[open] summary::before {
+    content: "\25BC\00a0";
+}
+
+.bn-coverage-session-title {
+    font-weight: var(--bn-weight-emphasis);
+    font-size: 0.82rem;
+    margin: var(--bn-space-md) 0 var(--bn-space-xs) 0;
+}
+
+.bn-coverage-session-title:first-child {
+    margin-top: var(--bn-space-sm);
+}
+
+.bn-coverage-segment {
+    color: var(--bn-colour-muted);
+    font-size: 0.82rem;
+    margin: var(--bn-space-xs) 0;
+    padding-left: var(--bn-space-md);
+    line-height: 1.6;
+}
+
+.bn-coverage-segment .timecode {
+    font-family: var(--bn-font-mono);
+    font-size: 0.85em;
+    color: var(--bn-colour-accent);
+    text-decoration: none;
+}
+
+.bn-coverage-fragments {
+    color: var(--bn-colour-muted);
+    font-size: 0.82rem;
+    padding-left: var(--bn-space-md);
+    margin-top: var(--bn-space-sm);
+}
+
+.bn-coverage-fragments .label {
+    font-style: italic;
+}
+
+.bn-coverage-fragments .verbatim {
+    font-style: normal;
+}
+
+/* ── Responsive ─────────────────────────────────────────────── */
+@media (max-width: 600px) {
+    .bn-dashboard {
+        grid-template-columns: 1fr;
+    }
+    .bn-coverage-legend {
+        flex-wrap: wrap;
+        gap: var(--bn-space-md);
+    }
+}
+
+/* ── Mockup annotations ─────────────────────────────────────── */
+.annotation {
+    background: #fffbeb;
+    border: 1px solid #fbbf24;
+    border-radius: var(--bn-radius-md);
+    padding: var(--bn-space-md) var(--bn-space-lg);
+    margin: var(--bn-space-lg) 0;
+    font-size: 0.82rem;
+    color: #92400e;
+    line-height: 1.6;
+}
+.annotation strong { font-weight: var(--bn-weight-emphasis); }
+
+hr.section { border: none; border-top: 2px dashed var(--bn-colour-border); margin: 3rem 0 2rem; }
+</style>
+</head>
+<body>
+
+<h1>Transcript coverage on Dashboard</h1>
+<h2>Move from bottom of Quotes page to bottom of Project dashboard</h2>
+
+<!-- ── ANNOTATION ───────────────────────────────────────────── -->
+<div class="annotation">
+    <strong>Context:</strong> The transcript coverage feature currently sits at the very end of the
+    Quotes page. It's project-level metadata (how much of the raw transcript ended up in the report)
+    — not a quote-browsing feature. It belongs on the Project dashboard alongside session stats,
+    featured quotes, and section/theme nav lists.
+</div>
+
+<!-- ════════════════════════════════════════════════════════════ -->
+<!-- VARIANT A — Stacked bar with legend                        -->
+<!-- ════════════════════════════════════════════════════════════ -->
+
+<hr class="section">
+<h1>Full dashboard context</h1>
+
+<div class="bn-dashboard">
+
+    <!-- Stat cards (placeholder) -->
+    <div class="bn-dashboard-full">
+        <div class="placeholder">Stat cards — 8 sessions · 4h 12m · 47,201 words · 189 quotes · 6 themes · 4 sections</div>
+    </div>
+
+    <!-- Sessions table (placeholder) -->
+    <div class="bn-dashboard-pane bn-dashboard-full">
+        <div class="placeholder" style="border:none;background:none;">Sessions table — #1 through #8</div>
+    </div>
+
+    <!-- Featured quotes (placeholder) -->
+    <div class="bn-dashboard-full">
+        <div class="placeholder">Featured quotes — 3 cards</div>
+    </div>
+
+    <!-- Nav lists (placeholder) -->
+    <div class="nav-placeholder">
+        <h3>Sections</h3>
+        <ul>
+            <li>Onboarding Experience</li>
+            <li>Daily Usage</li>
+            <li>Pain Points</li>
+            <li>Feature Requests</li>
+        </ul>
+    </div>
+    <div class="nav-placeholder">
+        <h3>Themes</h3>
+        <ul>
+            <li>Trust & Transparency</li>
+            <li>Speed Matters</li>
+            <li>Support Channels</li>
+        </ul>
+    </div>
+
+    <!-- ═══ COVERAGE BOX (new) ═══════════════════════════════ -->
+    <div class="bn-coverage-box bn-dashboard-full">
+        <h3>Transcript coverage</h3>
+
+        <!-- Stacked bar -->
+        <div class="bn-coverage-bar">
+            <div class="bn-coverage-bar-segment bn-coverage-bar-segment--report" style="width: 86%"></div>
+            <div class="bn-coverage-bar-segment bn-coverage-bar-segment--moderator" style="width: 4%"></div>
+            <div class="bn-coverage-bar-segment bn-coverage-bar-segment--omitted" style="width: 10%"></div>
+        </div>
+
+        <!-- Legend -->
+        <div class="bn-coverage-legend">
+            <span class="bn-coverage-legend-item">
+                <span class="bn-coverage-legend-dot bn-coverage-legend-dot--report"></span>
+                <span class="bn-coverage-legend-value">86%</span> in report
+            </span>
+            <span class="bn-coverage-legend-item">
+                <span class="bn-coverage-legend-dot bn-coverage-legend-dot--moderator"></span>
+                <span class="bn-coverage-legend-value">4%</span> moderator
+            </span>
+            <span class="bn-coverage-legend-item">
+                <span class="bn-coverage-legend-dot bn-coverage-legend-dot--omitted"></span>
+                <span class="bn-coverage-legend-value">10%</span> omitted
+            </span>
+        </div>
+
+        <!-- Collapsible omitted segments -->
+        <details>
+            <summary>Show omitted quotes</summary>
+            <div>
+                <p class="bn-coverage-session-title">Session 1</p>
+                <p class="bn-coverage-segment">
+                    <a href="#" class="timecode">[p1 02:01]</a>
+                    No, for the hernia. For the hernia. Okay. Because it didn't heal properly and they had to...
+                </p>
+                <p class="bn-coverage-segment">
+                    <a href="#" class="timecode">[p1 03:35]</a>
+                    So, I've got a series of messages that would all come together at some point.
+                </p>
+                <p class="bn-coverage-fragments">
+                    <span class="label">Also omitted: </span>
+                    <span class="verbatim">Okay.</span> (4×),
+                    <span class="verbatim">Yeah.</span> (2×)
+                </p>
+
+                <p class="bn-coverage-session-title">Session 3</p>
+                <p class="bn-coverage-fragments">
+                    <span class="verbatim">Okay.</span> (6×),
+                    <span class="verbatim">Reload.</span>
+                </p>
+
+                <p class="bn-coverage-session-title">Session 5</p>
+                <p class="bn-coverage-segment">
+                    <a href="#" class="timecode">[p2 11:42]</a>
+                    I don't know, I just thought it was a bit weird.
+                </p>
+            </div>
+        </details>
+    </div>
+
+</div>
+
+<!-- ════════════════════════════════════════════════════════════ -->
+<!-- VARIANT B — 100% coverage (no omitted)                     -->
+<!-- ════════════════════════════════════════════════════════════ -->
+
+<hr class="section">
+<h1>100% coverage variant</h1>
+
+<div class="bn-dashboard" style="max-width: 700px;">
+    <div class="bn-coverage-box bn-dashboard-full">
+        <h3>Transcript coverage</h3>
+        <div class="bn-coverage-bar">
+            <div class="bn-coverage-bar-segment bn-coverage-bar-segment--report" style="width: 92%"></div>
+            <div class="bn-coverage-bar-segment bn-coverage-bar-segment--moderator" style="width: 8%"></div>
+        </div>
+        <div class="bn-coverage-legend">
+            <span class="bn-coverage-legend-item">
+                <span class="bn-coverage-legend-dot bn-coverage-legend-dot--report"></span>
+                <span class="bn-coverage-legend-value">92%</span> in report
+            </span>
+            <span class="bn-coverage-legend-item">
+                <span class="bn-coverage-legend-dot bn-coverage-legend-dot--moderator"></span>
+                <span class="bn-coverage-legend-value">8%</span> moderator
+            </span>
+        </div>
+        <p style="margin: var(--bn-space-md) 0 0; font-size: 0.82rem; color: var(--bn-colour-muted); font-style: italic;">
+            Nothing omitted — all participant speech is in the report.
+        </p>
+    </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════ -->
+<!-- VARIANT C — No moderator, high omitted                     -->
+<!-- ════════════════════════════════════════════════════════════ -->
+
+<hr class="section">
+<h1>High omission variant (no moderator identified)</h1>
+
+<div class="bn-dashboard" style="max-width: 700px;">
+    <div class="bn-coverage-box bn-dashboard-full">
+        <h3>Transcript coverage</h3>
+        <div class="bn-coverage-bar">
+            <div class="bn-coverage-bar-segment bn-coverage-bar-segment--report" style="width: 62%"></div>
+            <div class="bn-coverage-bar-segment bn-coverage-bar-segment--omitted" style="width: 38%"></div>
+        </div>
+        <div class="bn-coverage-legend">
+            <span class="bn-coverage-legend-item">
+                <span class="bn-coverage-legend-dot bn-coverage-legend-dot--report"></span>
+                <span class="bn-coverage-legend-value">62%</span> in report
+            </span>
+            <span class="bn-coverage-legend-item">
+                <span class="bn-coverage-legend-dot bn-coverage-legend-dot--moderator"></span>
+                <span class="bn-coverage-legend-value">0%</span> moderator
+            </span>
+            <span class="bn-coverage-legend-item">
+                <span class="bn-coverage-legend-dot bn-coverage-legend-dot--omitted"></span>
+                <span class="bn-coverage-legend-value">38%</span> omitted
+            </span>
+        </div>
+        <details>
+            <summary>Show omitted quotes</summary>
+            <div>
+                <p class="bn-coverage-session-title">Session 1</p>
+                <p class="bn-coverage-segment">
+                    <a href="#" class="timecode">[p1 00:15]</a>
+                    Well, I think the thing is that everyone has a different view on this...
+                </p>
+                <p class="bn-coverage-segment">
+                    <a href="#" class="timecode">[p1 01:48]</a>
+                    And then the second time I tried it, same thing happened.
+                </p>
+                <p class="bn-coverage-fragments">
+                    <span class="label">Also omitted: </span>
+                    <span class="verbatim">Right.</span> (8×),
+                    <span class="verbatim">Mm-hmm.</span> (5×),
+                    <span class="verbatim">Yeah.</span> (3×)
+                </p>
+            </div>
+        </details>
+    </div>
+</div>
+
+<hr class="section">
+
+<div class="annotation">
+    <strong>Design notes:</strong><br>
+    • The stacked bar gives an instant visual read on coverage health — 86% blue feels solid, 62% raises a flag.<br>
+    • Legend uses dot + bold percentage + label — matches existing stat card pattern (value + label).<br>
+    • The disclosure triangle and omitted segment format are identical to the current Quotes-page version — no new patterns needed.<br>
+    • Full-width at bottom of dashboard (below Sections/Themes nav lists) — uses existing <code>.bn-dashboard-full</code> grid span.<br>
+    • The box uses <code>.bn-dashboard-pane</code>-like border/radius but is its own class so the bar styling doesn't leak.
+</div>
+
+</body>
+</html>

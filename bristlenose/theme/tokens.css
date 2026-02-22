@@ -10,7 +10,8 @@
     /* Font weight scale — tuned for variable fonts (Inter, SF Pro, Segoe UI Variable).
        On static fonts (Win 10 Segoe UI), 420→400 and 490→400 — acceptable degradation. */
     --bn-weight-normal: 420;     /* body text, descriptions, quote content */
-    --bn-weight-emphasis: 490;   /* headings, labels, starred quotes, section titles */
+    --bn-weight-emphasis: 490;   /* headings, labels, section titles */
+    --bn-weight-starred: 520;    /* starred quotes — pop above emphasis, below strong */
     --bn-weight-strong: 700;     /* delete buttons, page title, action glyphs */
 
     /* Colour palette */
@@ -62,6 +63,11 @@
     --bn-sentiment-delight-bg: #ecfdf5;
     --bn-sentiment-confidence: #2563eb;
     --bn-sentiment-confidence-bg: #eff6ff;
+
+    /* Transcript coverage bar */
+    --bn-coverage-report: #93b4f4;
+    --bn-coverage-moderator: #d97706;
+    --bn-coverage-omitted: #d1d5db;
 
     /* Analysis heatmap — OKLCH colour ramp tokens */
     --bn-heat-frustration-h: 55;
@@ -280,6 +286,11 @@
         --bn-sentiment-delight-bg:       light-dark(#ecfdf5, #0d261c);
         --bn-sentiment-confidence:       light-dark(#2563eb, #60a5fa);
         --bn-sentiment-confidence-bg:    light-dark(#eff6ff, #111d2e);
+
+        /* Transcript coverage bar */
+        --bn-coverage-report:    light-dark(#93b4f4, #4a7ecf);
+        --bn-coverage-moderator: light-dark(#d97706, #fbbf24);
+        --bn-coverage-omitted:   light-dark(#d1d5db, #4b5563);
 
         /* Analysis heatmap — dark mode overrides */
         --bn-heat-chroma: light-dark(0.12, 0.10);

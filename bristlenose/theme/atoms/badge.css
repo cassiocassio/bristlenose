@@ -57,10 +57,10 @@
     justify-content: center;
     padding: 0;
     background: var(--bn-colour-bg);
-    color: var(--bn-colour-muted);
+    color: var(--bn-colour-danger, #dc2626);
     border-radius: 50%;
     font-size: 0.6rem;
-    font-weight: 700;
+    font-weight: var(--bn-weight-strong);
     line-height: 1;
     opacity: 0;
     transition: opacity var(--bn-transition-fast);
@@ -80,7 +80,7 @@
 .badge-user {
     background: var(--bn-colour-user-tag-bg);
     color: var(--bn-colour-text);
-    font-weight: 400;
+    font-weight: var(--bn-weight-normal);
     cursor: default;
     position: relative;
 }
@@ -89,12 +89,12 @@
 @supports (color: light-dark(#000, #fff)) {
     [data-theme="dark"] .badge-user {
         color: #ffffff;
-        font-weight: 500;
+        font-weight: var(--bn-weight-emphasis);
     }
     @media (prefers-color-scheme: dark) {
         :root:not([data-theme="light"]) .badge-user {
             color: #ffffff;
-            font-weight: 500;
+            font-weight: var(--bn-weight-emphasis);
         }
     }
 }
@@ -111,9 +111,9 @@ body.hide-ai-tags .badge-ai { display: none; }
     background: var(--bn-colour-bg);
     border: none;
     border-radius: 50%;
-    color: var(--bn-colour-muted);
+    color: var(--bn-colour-danger, #dc2626);
     font-size: 0.6rem;
-    font-weight: 700;
+    font-weight: var(--bn-weight-strong);
     line-height: 1;
     cursor: pointer;
     opacity: 0;
@@ -165,69 +165,82 @@ body.hide-ai-tags .badge-ai { display: none; }
     opacity: 1 !important;
 }
 
-.badge-proposed-actions {
-    display: none;
-    gap: 0.3em;
-    margin-left: 0.4em;
-    align-items: center;
+/* Action pill — floating [✗ | ✓] bar at badge top-right.
+   ✗ (deny) anchored at delete-circle position, ✓ (accept) hangs right.
+   16px compartments, pill-shaped, appears on hover. */
+.badge-action-pill {
+    position: absolute;
+    top: calc(-0.3rem - 1px);              /* same vertical as delete × */
+    right: calc(-0.3rem - 1px - 1rem);     /* ✗ aligns with delete × position,
+                                              ✓ extends past badge right edge */
+    display: flex;
+    gap: 0;
+    background: var(--bn-colour-bg);
+    border-radius: 8px;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.16), 0 0 1px rgba(0, 0, 0, 0.06);
+    opacity: 0;
+    transition: opacity var(--bn-transition-fast);
+    pointer-events: none;
+    overflow: hidden;
 }
 
-.badge-proposed:hover .badge-proposed-actions {
-    display: inline-flex;
+.badge-proposed:hover .badge-action-pill {
+    opacity: 1;
+    pointer-events: auto;
 }
 
+.badge-action-deny,
 .badge-action-accept {
-    color: var(--bn-colour-success, #16a34a);
-    font-size: 0.95em;
-    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 1rem;       /* 16px */
+    height: 1rem;
+    font-size: 0.65rem;
+    font-weight: var(--bn-weight-strong);
     cursor: pointer;
-    padding: 1px 3px;
-    border-radius: 2px;
-    transition: background var(--bn-transition-fast), color var(--bn-transition-fast),
-                transform var(--bn-transition-fast);
-}
-
-.badge-action-accept:hover {
-    background: rgba(22, 163, 74, 0.18);
-    color: #15803d;
-    transform: scale(1.15);
+    border: none;
+    background: transparent;
+    padding: 0;
+    transition: background var(--bn-transition-fast);
 }
 
 .badge-action-deny {
     color: var(--bn-colour-danger, #dc2626);
-    font-size: 0.95em;
-    font-weight: 700;
-    cursor: pointer;
-    padding: 1px 3px;
-    border-radius: 2px;
-    transition: background var(--bn-transition-fast), color var(--bn-transition-fast),
-                transform var(--bn-transition-fast);
 }
 
-.badge-action-deny:hover {
-    background: rgba(220, 38, 38, 0.18);
-    color: #b91c1c;
-    transform: scale(1.15);
+.badge-action-accept {
+    color: var(--bn-colour-success, #16a34a);
+    border-left: 1px solid var(--bn-colour-border);
 }
 
-/* Dark mode: brighter hover for action icons */
+.badge-action-deny:hover { background: #fef2f2; }
+.badge-action-accept:hover { background: #dcfce7; }
+
+/* Dark mode: pill and action compartments */
 @supports (color: light-dark(#000, #fff)) {
-    [data-theme="dark"] .badge-action-accept:hover {
-        background: rgba(22, 163, 74, 0.25);
-        color: #4ade80;
+    [data-theme="dark"] .badge-action-pill {
+        background: var(--bn-colour-bg);
     }
     [data-theme="dark"] .badge-action-deny:hover {
         background: rgba(220, 38, 38, 0.25);
         color: #f87171;
     }
+    [data-theme="dark"] .badge-action-accept:hover {
+        background: rgba(22, 163, 74, 0.25);
+        color: #4ade80;
+    }
     @media (prefers-color-scheme: dark) {
-        :root:not([data-theme="light"]) .badge-action-accept:hover {
-            background: rgba(22, 163, 74, 0.25);
-            color: #4ade80;
+        :root:not([data-theme="light"]) .badge-action-pill {
+            background: var(--bn-colour-bg);
         }
         :root:not([data-theme="light"]) .badge-action-deny:hover {
             background: rgba(220, 38, 38, 0.25);
             color: #f87171;
+        }
+        :root:not([data-theme="light"]) .badge-action-accept:hover {
+            background: rgba(22, 163, 74, 0.25);
+            color: #4ade80;
         }
     }
 }

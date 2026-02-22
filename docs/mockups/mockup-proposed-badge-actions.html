@@ -606,10 +606,61 @@ h1 { font-size: 1.5rem; font-weight: 600; margin-bottom: 0.5rem; }
     pointer-events: auto;
 }
 
+/* ═══════════════════════════════════════════════════════════════
+   VARIATION G: Pill bar at delete-circle position, ✓ hangs right
+   Combines E's pill concept + D's 16px sizing + A's positioning.
+   ✗ (left compartment) anchored at badge top-right (where delete ×
+   normally sits). ✓ (right compartment) extends past the badge edge.
+   ═══════════════════════════════════════════════════════════════ */
+
+.var-g .badge-action-pill {
+    position: absolute;
+    top: calc(-0.3rem - 1px);              /* same vertical as delete × */
+    right: calc(-0.3rem - 1px - 1rem);     /* ✗ compartment aligns with delete ×,
+                                              ✓ hangs off to the right */
+    display: flex;
+    gap: 0;
+    background: var(--bn-colour-bg);
+    border-radius: 8px;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.16), 0 0 1px rgba(0, 0, 0, 0.06);
+    opacity: 0;
+    transition: opacity var(--bn-transition-fast);
+    pointer-events: none;
+    overflow: hidden;
+}
+.var-g .badge-proposed:hover .badge-action-pill {
+    opacity: 1;
+    pointer-events: auto;
+}
+.var-g .badge-action-pill .pill-deny,
+.var-g .badge-action-pill .pill-accept {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 1rem;       /* 16px — matching Var D */
+    height: 1rem;
+    font-size: 0.65rem;
+    font-weight: 700;
+    cursor: pointer;
+    border: none;
+    background: transparent;
+    transition: background var(--bn-transition-fast);
+}
+.var-g .pill-deny {
+    color: var(--bn-colour-danger);
+}
+.var-g .pill-accept {
+    color: var(--bn-colour-success);
+    border-left: 1px solid var(--bn-colour-border);
+}
+.var-g .pill-deny:hover { background: #fef2f2; }
+.var-g .pill-accept:hover { background: #dcfce7; }
+
 /* ══════════ Always-visible mode (for mockup inspection) ═══════ */
 .show-actions .badge-accept,
 .show-actions .badge-deny,
 .show-actions .badge-action-bar,
+.show-actions .badge-action-pill,
 .show-actions .badge-delete {
     opacity: 1 !important;
     pointer-events: auto !important;
@@ -708,7 +759,7 @@ h1 { font-size: 1.5rem; font-weight: 600; margin-bottom: 0.5rem; }
 <!-- Var A: Top-right pair -->
 <div class="card var-a show-actions">
     <span class="card-number">A</span>
-    <div class="card-title">Two circles, top-right pair <span class="rec">recommended</span></div>
+    <div class="card-title">Two circles, top-right pair</div>
     <div class="card-meta">
         &#x2713; at top-right (same position as delete &#x00d7;)<br>
         &#x2717; immediately left of &#x2713; (3px gap)<br>
@@ -881,6 +932,39 @@ h1 { font-size: 1.5rem; font-weight: 600; margin-bottom: 0.5rem; }
     </div>
 </div>
 
+<!-- Var G: Pill at delete position, ✓ hangs right -->
+<div class="card var-g show-actions">
+    <span class="card-number">G</span>
+    <div class="card-title">Pill at delete position, &#x2713; hangs right <span class="rec">recommended</span></div>
+    <div class="card-meta">
+        Pill-shaped bar: &#x2717; left, &#x2713; right, 16px compartments<br>
+        &#x2717; anchored at top-right (same position as delete &#x00d7;)<br>
+        &#x2713; extends past badge's right edge<br>
+        Consistent red &#x2717; colour across delete and deny actions
+    </div>
+    <div class="quote-card">
+        <div class="quote-text">"I kept clicking the back button but nothing happened, so I just gave up and closed the tab."</div>
+        <div class="quote-meta">[p3] &mdash; Sarah, 2:45</div>
+        <div class="badges">
+            <span class="badge badge-ai">frustration<button class="badge-delete">&times;</button></span>
+            <span class="badge badge-user badge-ux-blue">navigation<button class="badge-delete">&times;</button></span>
+            <span class="badge badge-proposed badge-task-teal">error recovery
+                <span class="badge-action-pill">
+                    <button class="pill-deny">&times;</button>
+                    <button class="pill-accept">&#x2713;</button>
+                </span>
+            </span>
+            <span class="badge badge-proposed badge-emo-warm">abandonment
+                <span class="badge-action-pill">
+                    <button class="pill-deny">&times;</button>
+                    <button class="pill-accept">&#x2713;</button>
+                </span>
+            </span>
+            <span class="badge badge-add">+</span>
+        </div>
+    </div>
+</div>
+
 </div><!-- .grid -->
 
 <!-- ── Design notes ──────────────────────────────────────────── -->
@@ -890,7 +974,7 @@ h1 { font-size: 1.5rem; font-weight: 600; margin-bottom: 0.5rem; }
         <li><strong>Layout shift:</strong> All variations (A&ndash;F) use absolute positioning, so zero layout shift on hover. The + add-tag button stays put. This alone is a major improvement over the current inline approach.</li>
         <li><strong>Consistency:</strong> Variations A, B, C, D extend the existing floating-circle vocabulary. E introduces a new "pill bar" element. F reduces to a single circle (most consistent with the delete pattern but sacrifices explicit accept affordance).</li>
         <li><strong>Two-circle spacing:</strong> With 8px badge gap in flexbox, two 14.5px circles side-by-side above a badge extend ~17px to the left &mdash; this can overlap with an adjacent badge's circles. The 8px gap between badges is the limiting factor. Var B (diagonal) makes this worse by putting circles on both sides.</li>
-        <li><strong>Recommendation:</strong> <strong>Var A</strong> is the most natural extension of the existing pattern. The &#x2717; (deny) circle uses the same &#x00d7; glyph and position as the existing delete, so deny "looks like delete" &mdash; which it semantically is. The &#x2713; (accept) uses a green tinted circle in the same position, making the binary choice obvious. Keyboard shortcuts (Challenge B) will complement mouse use.</li>
+        <li><strong>Recommendation:</strong> <strong>Var G</strong> combines the best of D (16px targets) and E (pill bar) with A's positioning. The &#x2717; occupies the exact same position as the existing delete &#x00d7;, so deny "looks like delete" &mdash; which it semantically is. The &#x2713; hangs right, giving both actions equal hit-target area without overlapping adjacent badges. Pill shape groups the binary choice into one element. Using red &#x2717; consistently across all badge delete/deny actions unifies the interaction vocabulary.</li>
         <li><strong>Rationale tooltip:</strong> The tooltip (hovering over the badge text for LLM explanation) still works with all floating-circle variants since the circles are at the top edge and the tooltip appears above via absolute positioning. May need z-index coordination if tooltip and circles overlap.</li>
         <li><strong>Dark mode:</strong> The tinted circle backgrounds (#dcfce7, #fef2f2) need dark-mode equivalents. The existing badge.css already has dark-mode overrides for the action colours; the same pattern applies to circle backgrounds.</li>
     </ul>

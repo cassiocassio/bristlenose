@@ -141,6 +141,46 @@ All custom content tooltips use a consistent pattern: **soft surface, 300ms hove
 
 `docs/mockups/tooltip-gallery.html` — 6 variants (A–F) with interactive comparison and dark mode toggle. Variant D was chosen.
 
+## Badge action pill (proposed badges)
+
+Floating `[✗ | ✓]` pill bar on autocode-proposed badges. Replaces the old inline `✓/✗` approach that caused layout shift (badge width grew on hover, pushing the `+` button).
+
+### Design decision
+
+7 variations explored in `docs/mockups/mockup-proposed-badge-actions.html` (A–G). **Var G chosen** — combines E's pill concept, D's 16px hit targets, and A's positioning at the existing delete-circle location.
+
+### Spec
+
+| Property | Value | Notes |
+|---|---|---|
+| position (vertical) | `top: calc(-0.3rem - 1px)` | Same as delete `×` circles |
+| position (horizontal) | `right: calc(-0.3rem - 1px - 1rem)` | `✗` aligns with delete `×`, `✓` hangs right |
+| compartment size | `1rem × 1rem` (16px) | Larger than delete circles (14.5px) for better Fitts' law |
+| border-radius | `8px` | Pill shape |
+| shadow | `0 1px 4px rgba(0,0,0,0.16), 0 0 1px rgba(0,0,0,0.06)` | Matches delete circles |
+| `✗` colour | `var(--bn-colour-danger)` / `#fef2f2` bg on hover | Same red as all delete/deny actions |
+| `✓` colour | `var(--bn-colour-success)` / `#dcfce7` bg on hover | Green accept |
+| divider | `1px solid var(--bn-colour-border)` | Between compartments |
+
+### CSS classes
+
+- **`.badge-action-pill`** — absolute-positioned pill container, `opacity: 0` → `1` on `.badge-proposed:hover`
+- **`.badge-action-deny`** — left compartment (`✗`), red
+- **`.badge-action-accept`** — right compartment (`✓`), green, `border-left` divider
+
+### React
+
+`Badge.tsx` proposed variant: DOM order is deny-then-accept (left-to-right in pill). Click handlers via `onAccept` / `onDeny` props.
+
+### Colour unification
+
+All delete/deny actions across badge types use `var(--bn-colour-danger)` (red):
+- Sentiment badge `::after` delete circle
+- User tag `.badge-delete` circle
+- Proposed badge pill `.badge-action-deny` compartment
+
+This replaced the previous grey `var(--bn-colour-muted)` on delete circles. Rationale: delete IS deny ("I don't want this tag"), so the colour should be consistent.
+
 ## Span bar atom
 
 Reusable vertical extent indicator for showing how far a range (e.g. a quote) extends across a list of items. Positioned absolutely by JS; visual properties come from `--bn-span-bar-*` tokens.
@@ -264,3 +304,4 @@ Two helpers in `render_html.py` reduce duplication across quote rendering:
 - **Renderer overlay (dev-only)** — `_build_renderer_overlay_html()` in `server/app.py` injects a floating toggle (press **D** or click the button) that colour-codes report regions by renderer origin: blue outline+wash for Jinja2, green for React islands, amber for Vanilla JS. Uses `::after` pseudo-elements with `pointer-events: none` for the translucent wash, plus `outline` for an always-visible border. Key CSS patterns: (1) Jinja2 containers that hold React/Vanilla JS mount points suppress their own `::after` via `:not(:has(#bn-...))` so the child colour shows through; (2) elements *inside* React mount points (e.g. React-rendered `<section>`) get their `::after` cancelled with `display: none` to prevent blue bleed; (3) the `body.bn-dev-overlay` class gates all overlay styles. If you add a new React island or Vanilla JS mount point, add its ID to the relevant CSS selector groups in `_build_renderer_overlay_html()`
 - **`<!-- bn-session-table -->` markers** — `render_html.py` wraps the Jinja2 session table (inside `.bn-session-grid`) with `<!-- bn-session-table -->` / `<!-- /bn-session-table -->` comment markers. The serve command's `serve_report_html()` uses `re.sub` to replace everything between these markers with the React mount point `<div id="bn-sessions-table-root">`. This avoids re-running the full render pipeline with `serve_mode=True`. If you add new React islands that replace Jinja2 content, follow the same marker pattern
 - **`serve_mode` vs runtime replacement** — `render_html.py` has a `serve_mode` param that renders React mount points instead of Jinja2 content. But `bristlenose serve` doesn't call `render_html()` — it reads the existing HTML (rendered with `serve_mode=False`) and does string replacement at serve time. Running `bristlenose render` before `bristlenose serve` is expected workflow — the markers make the replacement work. Don't assume #bn-sessions-table-root exists in the static HTML file on disk
+- **Delete circles are red, not grey** — `badge-ai::after` and `.badge-user .badge-delete` use `var(--bn-colour-danger)` (red), not `var(--bn-colour-muted)` (grey). Changed to unify delete/deny colour across all badge types (sentiment delete, user tag delete, proposed badge deny pill). If adding a new deletable badge variant, use `--bn-colour-danger` for the `×`

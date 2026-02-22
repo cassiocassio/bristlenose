@@ -6,6 +6,22 @@ Tokens → Atoms → Molecules → Organisms → Templates. All visual values vi
 
 **CSS ↔ React mapping:** CSS file boundaries are being aligned to match React component boundaries. See `docs/design-react-component-library.md` (CSS ↔ React alignment section) for the full mapping table and per-round refactoring schedule. When renaming or restructuring CSS files, check the mapping table first.
 
+## Typography
+
+**Font:** Inter Variable loaded from Google Fonts CDN (`display=swap`). Fallback stack: `"Inter", "Segoe UI Variable", "Segoe UI", system-ui, -apple-system, sans-serif`. Both `document_shell_open.html` (static render) and `frontend/index.html` (serve mode) include preconnect + stylesheet links.
+
+**Font-weight tokens** — three tiers, all via CSS custom properties:
+
+| Token | Value | Usage |
+|-------|-------|-------|
+| `--bn-weight-normal` | 420 | Body text, descriptions, quote content, secondary labels |
+| `--bn-weight-emphasis` | 490 | Headings, section titles, labels, starred quotes, badge text |
+| `--bn-weight-strong` | 700 | Page title h1, delete × glyphs, accept/deny ✓/✗, bar counts |
+
+**Rules:** Never hardcode `font-weight` values in CSS — always use the tokens. The only exceptions are inline JS styles in `analysis.js` (heatmap total/grand-total rows) which use numeric literals because they construct `style` strings.
+
+**Known limitation (Windows 10):** Static Segoe UI (pre-Variable) snaps 420→400 and 490→400 when offline (no Google Fonts). Structural cues (font-size, whitespace, borders) still carry hierarchy. Documented as acceptable degradation.
+
 ## Dark mode
 
 Uses CSS `light-dark()` function (supported in all major browsers since mid-2024, ~87%+ global). No JS involved. The cascade:
@@ -88,7 +104,7 @@ Each user tag label has a hover `×` button (`.histogram-bar-delete` in `atoms/b
 
 - **`.bn-person-badge`** — `inline-flex`, `align-items: center`, `gap: 0.4rem`, `white-space: nowrap`. Contains a `.badge` and a `.bn-person-badge-name`
 - **`.bn-person-badge .badge`** — `flex-shrink: 0` (badge never truncates)
-- **`.bn-person-badge-name`** — `font-weight: 600` (semibold). In the moderator header, names use regular weight (no `.bn-person-badge-name` class)
+- **`.bn-person-badge-name`** — `font-weight: var(--bn-weight-emphasis)` (490). In the moderator header, names use normal weight (no `.bn-person-badge-name` class)
 - **Usage**: session table speaker cells (semibold names) and moderator header (regular weight names). The molecule is included in `_THEME_FILES` in `render_html.py`. React equivalent: `PersonBadge` component in `frontend/src/components/PersonBadge.tsx`
 
 ## Session table CSS

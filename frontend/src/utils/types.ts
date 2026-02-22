@@ -185,6 +185,7 @@ export interface TemplateOut {
   groups: TemplateGroupOut[];
   enabled: boolean;
   imported: boolean;
+  restorable: boolean;
 }
 
 export interface TemplateListResponse {
@@ -194,6 +195,7 @@ export interface TemplateListResponse {
 export interface RemoveFrameworkInfo {
   tag_count: number;
   quote_count: number;
+  has_autocode: boolean;
 }
 
 // ---------------------------------------------------------------------------

@@ -568,6 +568,7 @@ class TemplateOut(BaseModel):
     groups: list[TemplateGroupOut]
     enabled: bool
     imported: bool
+    restorable: bool = False
 
 
 class TemplateListResponse(BaseModel):
@@ -579,7 +580,7 @@ class ImportTemplateRequest(BaseModel):
 
 
 def _template_to_out(
-    tmpl: object, *, imported: bool,
+    tmpl: object, *, imported: bool, restorable: bool = False,
 ) -> TemplateOut:
     """Convert a CodebookTemplate dataclass to a TemplateOut response."""
     from bristlenose.server.codebook import CodebookTemplate
@@ -604,6 +605,7 @@ def _template_to_out(
         groups=groups_out,
         enabled=t.enabled,
         imported=imported,
+        restorable=restorable,
     )
 
 
@@ -611,12 +613,12 @@ def _template_to_out(
 def list_templates(
     project_id: int, request: Request,
 ) -> TemplateListResponse:
-    """Return available codebook templates with imported status."""
+    """Return available codebook templates with imported/restorable status."""
     db = _get_db(request)
     try:
         _check_project(db, project_id)
 
-        # Find which framework IDs are already imported for this project
+        # Find which framework IDs are actively imported (have PCG links)
         pcg_rows = (
             db.query(ProjectCodebookGroup)
             .filter_by(project_id=project_id)
@@ -636,8 +638,23 @@ def list_templates(
             )
             imported_ids = {r[0] for r in fw_rows}
 
+        # Detect restorable frameworks: groups exist in DB but have no PCG link
+        # (previously imported then removed — data preserved for instant restore)
+        all_fw_rows = (
+            db.query(CodebookGroup.framework_id)
+            .filter(CodebookGroup.framework_id.isnot(None))
+            .distinct()
+            .all()
+        )
+        all_fw_ids = {r[0] for r in all_fw_rows}
+        restorable_ids = all_fw_ids - imported_ids
+
         templates_out = [
-            _template_to_out(t, imported=t.id in imported_ids)
+            _template_to_out(
+                t,
+                imported=t.id in imported_ids,
+                restorable=t.id in restorable_ids,
+            )
             for t in CODEBOOK_TEMPLATES
         ]
         return TemplateListResponse(templates=templates_out)
@@ -649,7 +666,13 @@ def list_templates(
 def import_template(
     project_id: int, request: Request, body: ImportTemplateRequest,
 ) -> CodebookResponse:
-    """Import a codebook template into the project."""
+    """Import or restore a codebook template into the project.
+
+    If the framework was previously imported and removed, orphaned groups
+    are detected and re-linked (instant restore).  Previously-accepted
+    proposals are reset to ``pending`` so the researcher can review them
+    again (the corresponding QuoteTags were deleted on remove).
+    """
     db = _get_db(request)
     try:
         _check_project(db, project_id)
@@ -660,13 +683,13 @@ def import_template(
         if not tmpl.enabled:
             raise HTTPException(status_code=400, detail="Template is not yet available")
 
-        # Check if already imported
+        # Check if already actively imported
         pcg_rows = (
             db.query(ProjectCodebookGroup)
             .filter_by(project_id=project_id)
             .all()
         )
-        group_ids = [pcg.codebook_group_id for pcg in pcg_rows]
+        group_ids = {pcg.codebook_group_id for pcg in pcg_rows}
         if group_ids:
             existing = (
                 db.query(CodebookGroup)
@@ -682,14 +705,57 @@ def import_template(
                     detail="Template already imported",
                 )
 
-        # Get max sort order for framework groups (place after researcher groups)
+        # Check for orphaned groups (previously removed — restorable)
+        orphaned_groups = (
+            db.query(CodebookGroup)
+            .filter(CodebookGroup.framework_id == body.template_id)
+            .all()
+        )
+        orphaned = [g for g in orphaned_groups if g.id not in group_ids]
+
+        if orphaned:
+            # ── Restore path ────────────────────────────────────────
+            max_order = (
+                db.query(func.max(ProjectCodebookGroup.sort_order))
+                .filter_by(project_id=project_id)
+                .scalar()
+            ) or 0
+
+            for i, g in enumerate(orphaned):
+                db.add(ProjectCodebookGroup(
+                    project_id=project_id,
+                    codebook_group_id=g.id,
+                    sort_order=max_order + 1 + i,
+                ))
+
+            # Reset accepted proposals to pending — QuoteTags were deleted on
+            # remove, so "accepted" would be misleading (tag not on quote).
+            orphaned_ids = [g.id for g in orphaned]
+            tag_def_ids = [
+                td.id
+                for td in db.query(TagDefinition)
+                .filter(TagDefinition.codebook_group_id.in_(orphaned_ids))
+                .all()
+            ]
+            if tag_def_ids:
+                db.query(ProposedTag).filter(
+                    ProposedTag.tag_definition_id.in_(tag_def_ids),
+                    ProposedTag.status == "accepted",
+                ).update(
+                    {"status": "pending", "reviewed_at": None},
+                    synchronize_session=False,
+                )
+
+            db.commit()
+            return get_codebook(project_id, request)
+
+        # ── Fresh import path (unchanged) ───────────────────────────
         max_order = (
             db.query(func.max(ProjectCodebookGroup.sort_order))
             .filter_by(project_id=project_id)
             .scalar()
         ) or 0
 
-        # Create groups and tags
         for i, tg in enumerate(tmpl.groups):
             group = CodebookGroup(
                 name=tg.name,
@@ -725,16 +791,19 @@ class RemoveFrameworkInfo(BaseModel):
 
     tag_count: int
     quote_count: int
+    has_autocode: bool = False
 
 
 @router.delete("/projects/{project_id}/codebook/remove-framework/{framework_id}")
 def remove_framework(
     project_id: int, framework_id: str, request: Request,
 ) -> CodebookResponse:
-    """Remove all groups belonging to a framework from the project.
+    """Hide a framework from the project, preserving AutoCode data for restore.
 
-    Deletes framework groups, their tag definitions, and any quote-tag
-    associations.  The framework can be re-imported afterwards.
+    Deletes quote-tag associations (tags visually removed from quotes) and
+    project links (framework hidden from codebook).  Groups, tag definitions,
+    AutoCode jobs, and proposed tags are preserved so the framework can be
+    restored instantly via re-import without re-running the LLM.
     """
     db = _get_db(request)
     try:
@@ -771,40 +840,20 @@ def remove_framework(
         )
         tag_def_ids = [td.id for td in tag_defs]
 
-        # Delete AutoCode proposals referencing these tags
-        if tag_def_ids:
-            db.query(ProposedTag).filter(
-                ProposedTag.tag_definition_id.in_(tag_def_ids),
-            ).delete(synchronize_session=False)
-
-        # Delete AutoCode jobs for this framework
-        db.query(AutoCodeJob).filter(
-            AutoCodeJob.project_id == project_id,
-            AutoCodeJob.framework_id == framework_id,
-        ).delete(synchronize_session=False)
-
-        # Delete quote-tag associations
+        # Delete quote-tag associations (tags removed from quotes as expected)
         if tag_def_ids:
             db.query(QuoteTag).filter(
                 QuoteTag.tag_definition_id.in_(tag_def_ids),
             ).delete(synchronize_session=False)
 
-        # Delete tag definitions
-        if tag_def_ids:
-            db.query(TagDefinition).filter(
-                TagDefinition.id.in_(tag_def_ids),
-            ).delete(synchronize_session=False)
-
-        # Remove project links
+        # Remove project links (hides framework from codebook view)
         db.query(ProjectCodebookGroup).filter(
             ProjectCodebookGroup.project_id == project_id,
             ProjectCodebookGroup.codebook_group_id.in_(fw_group_ids),
         ).delete(synchronize_session=False)
 
-        # Delete groups
-        db.query(CodebookGroup).filter(
-            CodebookGroup.id.in_(fw_group_ids),
-        ).delete(synchronize_session=False)
+        # PRESERVED: CodebookGroup, TagDefinition, AutoCodeJob, ProposedTag
+        # — enables instant restore on re-import without re-running LLM.
 
         db.commit()
         return get_codebook(project_id, request)
@@ -860,6 +909,14 @@ def remove_framework_impact(
                 .scalar()
             ) or 0
 
-        return RemoveFrameworkInfo(tag_count=tag_count, quote_count=quote_count)
+        has_autocode = (
+            db.query(AutoCodeJob)
+            .filter_by(project_id=project_id, framework_id=framework_id)
+            .first()
+        ) is not None
+
+        return RemoveFrameworkInfo(
+            tag_count=tag_count, quote_count=quote_count, has_autocode=has_autocode,
+        )
     finally:
         db.close()

@@ -202,6 +202,23 @@ The dialog can be re-opened any time from the proposed count badge on the ✦ Au
 - Slider thresholds reset to defaults (not persisted)
 - If zero pending: disabled state, "All proposals reviewed"
 
+### Always-visible entry point
+
+The proposed count badge currently renders only when `proposedCount > 0` (`CodebookPanel.tsx:906`). This means once the researcher accepts/denies all proposals — or bulk-applies thresholds — the entry point vanishes. But revisiting threshold boundaries is natural: the researcher forms an idea from the histogram and the dense list, then spends time with the actual quotes, then wants to come back and adjust.
+
+**Design:** When autocode has been run for a framework (job status is `completed`), always show a re-entry affordance on the ✦ AutoCode button, even when pending count is zero:
+
+- **Pending > 0:** Show the current count badge (e.g. `42`), clicking opens the review modal — unchanged
+- **Pending = 0, but autocode was run:** Show a "Review" text link or a `✓ done` badge in the same position. Clicking opens the modal in its zero-pending state: empty histogram, "All proposals reviewed" subtitle, but the three zone lists still show the final dispositions (accepted/denied breakdown). The researcher can override individual decisions (accept a previously denied proposal, deny a previously accepted one) without re-running the job
+- **Autocode never run:** No badge, no link — unchanged
+
+This requires the frontend to know whether autocode has been run for a framework. The `proposedCount` fetch already implies this (it comes from a completed job). An alternative: check `acStatus === "completed"` which is already tracked per-framework in `CodebookPanel` state.
+
+**Files to modify:**
+- `frontend/src/islands/CodebookPanel.tsx` — conditional rendering at line 906: replace `proposedCount > 0` with `acStatus === "completed"`, show count when > 0, show "Review" when = 0
+- `bristlenose/theme/organisms/codebook-panel.css` — style for the zero-pending "Review" affordance (muted, non-pulsating)
+- `frontend/src/components/ThresholdReviewModal.tsx` — the zero-pending path already works per the spec above; no changes needed
+
 ## Edge cases
 
 | Case | Behaviour |

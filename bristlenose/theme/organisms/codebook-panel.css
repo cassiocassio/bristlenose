@@ -682,6 +682,15 @@
     font-style: italic;
     margin-top: 4px;
 }
+.picker-card.restorable {
+    border-color: var(--bn-colour-accent);
+}
+.picker-card-restore {
+    font-size: 0.72rem;
+    color: var(--bn-colour-accent);
+    margin-top: var(--bn-space-sm);
+    font-style: italic;
+}
 
 /* Create new codebook card */
 .picker-card-create {

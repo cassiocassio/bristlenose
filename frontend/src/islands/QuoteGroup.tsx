@@ -456,7 +456,7 @@ export function QuoteGroup({
               <blockquote
                 key={q.dom_id}
                 id={q.dom_id}
-                className="bn-hiding"
+                className="quote-card bn-hiding"
               />
             );
           }

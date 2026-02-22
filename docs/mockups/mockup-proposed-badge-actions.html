@@ -1,0 +1,912 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Proposed Badge Actions — Design Exploration</title>
+<style>
+/*
+ * DESIGN RATIONALE
+ *
+ * Accept/deny are "commentary from outside" — external judgement on a
+ * machine suggestion — not content belonging to the tag itself. The
+ * current inline ✓/✗ approach (display:none → inline-flex on hover)
+ * contradicts this: it grows the badge width on hover, bounces the
+ * + add-tag button, and uses a different interaction pattern from the
+ * floating-circle delete button on AI and user badges.
+ *
+ * This mockup explores moving to the same floating-circle pattern,
+ * extended to two circles (green ✓, red ✗). Key constraints:
+ *   - Zero layout shift on hover (absolute positioning, no width change)
+ *   - Adequate click targets (at least 14.5px circle, Fitts' law friendly)
+ *   - Visual consistency with the existing badge-delete circle
+ *   - Two actions instead of one (accept + deny)
+ *   - Must not obscure the badge text
+ *   - Must work on both light and dark backgrounds
+ */
+
+/* ── Bristlenose design tokens (subset) ──────────────────────── */
+:root {
+    --bn-font-body: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
+    --bn-font-mono: "SF Mono", "Fira Code", "Consolas", monospace;
+    --bn-colour-bg: #ffffff;
+    --bn-colour-text: #1a1a1a;
+    --bn-colour-muted: #6b7280;
+    --bn-colour-border: #e5e7eb;
+    --bn-colour-border-hover: #d1d5db;
+    --bn-colour-accent: #2563eb;
+    --bn-colour-quote-bg: #f9fafb;
+    --bn-colour-badge-bg: #f3f4f6;
+    --bn-colour-badge-text: #374151;
+    --bn-colour-user-tag-bg: #f3f4f6;
+    --bn-colour-shadow: rgba(0, 0, 0, 0.1);
+    --bn-colour-success: #16a34a;
+    --bn-colour-danger: #dc2626;
+    --bn-radius-sm: 3px;
+    --bn-radius-md: 6px;
+    --bn-space-xs: 0.15rem;
+    --bn-space-sm: 0.35rem;
+    --bn-transition-fast: 0.15s ease;
+    --bn-sentiment-frustration: #ea580c;
+    --bn-sentiment-frustration-bg: #fff7ed;
+    --bn-sentiment-satisfaction: #16a34a;
+    --bn-sentiment-satisfaction-bg: #f0fdf4;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+    font-family: var(--bn-font-body);
+    color: var(--bn-colour-text);
+    background: var(--bn-colour-bg);
+    padding: 2rem 3rem;
+    line-height: 1.5;
+}
+
+h1 { font-size: 1.5rem; font-weight: 600; margin-bottom: 0.5rem; }
+
+.subtitle {
+    color: var(--bn-colour-muted);
+    font-size: 0.9rem;
+    margin-bottom: 2rem;
+    max-width: 72ch;
+}
+
+.section-title {
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin-top: 2.5rem;
+    margin-bottom: 1rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid var(--bn-colour-border);
+}
+
+.grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+    gap: 2rem;
+}
+
+.card {
+    border: 1px solid var(--bn-colour-border);
+    border-radius: var(--bn-radius-md);
+    padding: 1.5rem;
+    position: relative;
+}
+
+.card-title { font-size: 0.85rem; font-weight: 600; margin-bottom: 0.25rem; }
+
+.card-meta {
+    font-size: 0.72rem;
+    color: var(--bn-colour-muted);
+    font-family: var(--bn-font-mono);
+    margin-bottom: 1rem;
+    line-height: 1.6;
+}
+
+.card-meta code {
+    background: var(--bn-colour-badge-bg);
+    padding: 1px 4px;
+    border-radius: 2px;
+}
+
+.card-number {
+    position: absolute;
+    top: 0.75rem;
+    right: 0.75rem;
+    font-size: 0.65rem;
+    font-weight: 700;
+    color: var(--bn-colour-border-hover);
+}
+
+.rec {
+    display: inline-block;
+    font-size: 0.6rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    background: #f0fdf4;
+    color: #16a34a;
+    padding: 1px 6px;
+    border-radius: 3px;
+    margin-left: 6px;
+    vertical-align: middle;
+}
+
+/* ── Quote card context ──────────────────────────────────────── */
+.quote-card {
+    background: var(--bn-colour-quote-bg);
+    border-radius: var(--bn-radius-md);
+    padding: 0.75rem 1rem;
+    margin-top: 0.5rem;
+    border-left: 2px solid var(--bn-colour-border);
+}
+
+.quote-text {
+    font-size: 0.82rem;
+    color: var(--bn-colour-text);
+    line-height: 1.6;
+    margin-bottom: 0.5rem;
+    font-style: italic;
+}
+
+.quote-meta {
+    font-size: 0.68rem;
+    color: var(--bn-colour-muted);
+    margin-bottom: 0.4rem;
+}
+
+/* ── Badge row (same as production) ──────────────────────────── */
+.badges {
+    display: flex;
+    gap: 8px;
+    margin-top: 0.4rem;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    padding-top: 6px;  /* room for floating circles above */
+}
+
+/* ── Base badge ──────────────────────────────────────────────── */
+.badge {
+    display: inline-block;
+    font-family: var(--bn-font-mono);
+    font-size: 0.72rem;
+    padding: var(--bn-space-xs) 0.45rem;
+    border-radius: var(--bn-radius-sm);
+    background: var(--bn-colour-badge-bg);
+    color: var(--bn-colour-badge-text);
+    position: relative;
+    cursor: default;
+}
+
+/* Sentiment badge */
+.badge-ai {
+    background: #fff7ed;
+    color: #ea580c;
+    cursor: pointer;
+    position: relative;
+}
+
+/* Existing delete circle on AI badge (for reference) */
+.badge-ai .badge-delete {
+    position: absolute;
+    top: calc(-0.3rem - 1px);
+    right: calc(-0.3rem - 1px);
+    width: calc(0.875rem + 0.5px);
+    height: calc(0.875rem + 0.5px);
+    background: var(--bn-colour-bg);
+    color: var(--bn-colour-muted);
+    border: none;
+    border-radius: 50%;
+    font-size: 0.6rem;
+    font-weight: 700;
+    line-height: 1;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.16), 0 0 1px rgba(0, 0, 0, 0.06);
+    opacity: 0;
+    transition: opacity var(--bn-transition-fast);
+    pointer-events: none;
+}
+.badge-ai:hover .badge-delete {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+/* User tag */
+.badge-user {
+    background: var(--bn-colour-user-tag-bg);
+    color: var(--bn-colour-text);
+    font-weight: 400;
+    position: relative;
+}
+
+.badge-user .badge-delete {
+    position: absolute;
+    top: calc(-0.3rem - 1px);
+    right: calc(-0.3rem - 1px);
+    width: calc(0.875rem + 0.5px);
+    height: calc(0.875rem + 0.5px);
+    background: var(--bn-colour-bg);
+    color: var(--bn-colour-muted);
+    border: none;
+    border-radius: 50%;
+    font-size: 0.6rem;
+    font-weight: 700;
+    line-height: 1;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.16), 0 0 1px rgba(0, 0, 0, 0.06);
+    opacity: 0;
+    transition: opacity var(--bn-transition-fast);
+    pointer-events: none;
+}
+.badge-user:hover .badge-delete {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+/* Codebook colour tints */
+.badge-ux-blue { background: oklch(94% 0.03 250); }
+.badge-ux-pink { background: oklch(94% 0.03 340); }
+.badge-ux-green { background: oklch(94% 0.03 155); }
+.badge-emo-warm { background: oklch(94% 0.03 60); }
+.badge-task-teal { background: oklch(94% 0.03 190); }
+
+/* Add-tag ghost button */
+.badge-add {
+    border: 1px dashed var(--bn-colour-border);
+    background: transparent;
+    color: var(--bn-colour-muted);
+    cursor: pointer;
+    user-select: none;
+}
+
+/* ── Proposed badge — base (shared across all variations) ────── */
+.badge-proposed {
+    animation: bn-proposed-pulse 3s ease-in-out infinite;
+    border: 1px dashed currentColor;
+    cursor: pointer;
+    position: relative;
+}
+
+@keyframes bn-proposed-pulse {
+    0%   { opacity: 0.50; }
+    50%  { opacity: 0.78; }
+    100% { opacity: 0.50; }
+}
+
+.badge-proposed:hover {
+    animation: none;
+    opacity: 1 !important;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   CURRENT (inline ✓/✗ — for comparison)
+   ═══════════════════════════════════════════════════════════════ */
+
+.var-current .badge-proposed-actions {
+    display: none;
+    gap: 0.3em;
+    margin-left: 0.4em;
+    align-items: center;
+}
+.var-current .badge-proposed:hover .badge-proposed-actions {
+    display: inline-flex;
+}
+.var-current .badge-action-accept {
+    color: var(--bn-colour-success);
+    font-size: 0.95em;
+    font-weight: 700;
+    cursor: pointer;
+    padding: 1px 3px;
+    border-radius: 2px;
+}
+.var-current .badge-action-deny {
+    color: var(--bn-colour-danger);
+    font-size: 0.95em;
+    font-weight: 700;
+    cursor: pointer;
+    padding: 1px 3px;
+    border-radius: 2px;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   VARIATION A: Two floating circles, top-right stacked
+   ✓ at far right, ✗ next to it (left of ✓)
+   Same circle style as existing badge-delete
+   ═══════════════════════════════════════════════════════════════ */
+
+.var-a .badge-accept,
+.var-a .badge-deny {
+    position: absolute;
+    top: calc(-0.3rem - 1px);
+    width: calc(0.875rem + 0.5px);
+    height: calc(0.875rem + 0.5px);
+    border: none;
+    border-radius: 50%;
+    font-size: 0.6rem;
+    font-weight: 700;
+    line-height: 1;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.16), 0 0 1px rgba(0, 0, 0, 0.06);
+    opacity: 0;
+    transition: opacity var(--bn-transition-fast);
+    pointer-events: none;
+}
+.var-a .badge-accept {
+    right: calc(-0.3rem - 1px);
+    background: #dcfce7;
+    color: var(--bn-colour-success);
+}
+.var-a .badge-deny {
+    right: calc(-0.3rem - 1px + 0.875rem + 3px);  /* circle width + 3px gap */
+    background: #fef2f2;
+    color: var(--bn-colour-danger);
+}
+.var-a .badge-proposed:hover .badge-accept,
+.var-a .badge-proposed:hover .badge-deny {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   VARIATION B: Two floating circles, diagonal
+   ✓ at top-right, ✗ at top-left
+   Mirrors the "this or that" decision spatially
+   ═══════════════════════════════════════════════════════════════ */
+
+.var-b .badge-accept,
+.var-b .badge-deny {
+    position: absolute;
+    top: calc(-0.3rem - 1px);
+    width: calc(0.875rem + 0.5px);
+    height: calc(0.875rem + 0.5px);
+    border: none;
+    border-radius: 50%;
+    font-size: 0.6rem;
+    font-weight: 700;
+    line-height: 1;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.16), 0 0 1px rgba(0, 0, 0, 0.06);
+    opacity: 0;
+    transition: opacity var(--bn-transition-fast);
+    pointer-events: none;
+}
+.var-b .badge-accept {
+    right: calc(-0.3rem - 1px);
+    background: #dcfce7;
+    color: var(--bn-colour-success);
+}
+.var-b .badge-deny {
+    left: calc(-0.3rem - 1px);
+    background: #fef2f2;
+    color: var(--bn-colour-danger);
+}
+.var-b .badge-proposed:hover .badge-accept,
+.var-b .badge-proposed:hover .badge-deny {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   VARIATION C: ✓ at top-right (matching delete position), ✗
+   revealed on ✓ hover or long-press — single circle, progressive
+   disclosure (accept is 90% of the action)
+   For mockup: ✓ always visible, ✗ shows as secondary
+   ═══════════════════════════════════════════════════════════════ */
+
+.var-c .badge-accept {
+    position: absolute;
+    top: calc(-0.3rem - 1px);
+    right: calc(-0.3rem - 1px);
+    width: calc(0.875rem + 0.5px);
+    height: calc(0.875rem + 0.5px);
+    border: none;
+    border-radius: 50%;
+    font-size: 0.6rem;
+    font-weight: 700;
+    line-height: 1;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    background: #dcfce7;
+    color: var(--bn-colour-success);
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.16), 0 0 1px rgba(0, 0, 0, 0.06);
+    opacity: 0;
+    transition: opacity var(--bn-transition-fast);
+    pointer-events: none;
+}
+.var-c .badge-deny {
+    position: absolute;
+    top: calc(-0.3rem - 1px);
+    right: calc(-0.3rem - 1px + 0.875rem + 3px);
+    width: calc(0.875rem + 0.5px);
+    height: calc(0.875rem + 0.5px);
+    border: none;
+    border-radius: 50%;
+    font-size: 0.5rem;
+    font-weight: 700;
+    line-height: 1;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    background: var(--bn-colour-bg);
+    color: var(--bn-colour-muted);
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.16), 0 0 1px rgba(0, 0, 0, 0.06);
+    opacity: 0;
+    transition: opacity var(--bn-transition-fast);
+    pointer-events: none;
+}
+/* Accept shows on badge hover; deny shows on accept hover */
+.var-c .badge-proposed:hover .badge-accept {
+    opacity: 1;
+    pointer-events: auto;
+}
+.var-c .badge-proposed:hover .badge-deny {
+    opacity: 0.4;
+    pointer-events: auto;
+}
+.var-c .badge-proposed:hover .badge-deny:hover {
+    opacity: 1;
+    background: #fef2f2;
+    color: var(--bn-colour-danger);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   VARIATION D: Larger circles (16px), tinted backgrounds
+   Same top-right pair layout as A but bigger hit targets
+   ═══════════════════════════════════════════════════════════════ */
+
+.var-d .badge-accept,
+.var-d .badge-deny {
+    position: absolute;
+    top: calc(-0.35rem - 1px);
+    width: 1rem;     /* 16px — larger hit target */
+    height: 1rem;
+    border: none;
+    border-radius: 50%;
+    font-size: 0.65rem;
+    font-weight: 700;
+    line-height: 1;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.16), 0 0 1px rgba(0, 0, 0, 0.06);
+    opacity: 0;
+    transition: opacity var(--bn-transition-fast), transform var(--bn-transition-fast);
+    pointer-events: none;
+}
+.var-d .badge-accept {
+    right: calc(-0.35rem - 1px);
+    background: #dcfce7;
+    color: var(--bn-colour-success);
+}
+.var-d .badge-deny {
+    right: calc(-0.35rem - 1px + 1rem + 3px);
+    background: #fef2f2;
+    color: var(--bn-colour-danger);
+}
+.var-d .badge-proposed:hover .badge-accept,
+.var-d .badge-proposed:hover .badge-deny {
+    opacity: 1;
+    pointer-events: auto;
+}
+.var-d .badge-accept:hover,
+.var-d .badge-deny:hover {
+    transform: scale(1.15);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   VARIATION E: Pill-shaped action bar above badge
+   Single floating element with ✓ | ✗ inside, centred above
+   ═══════════════════════════════════════════════════════════════ */
+
+.var-e .badge-action-bar {
+    position: absolute;
+    top: calc(-0.9rem - 4px);
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 0;
+    background: var(--bn-colour-bg);
+    border-radius: 8px;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.16), 0 0 1px rgba(0, 0, 0, 0.06);
+    opacity: 0;
+    transition: opacity var(--bn-transition-fast);
+    pointer-events: none;
+    overflow: hidden;
+}
+.var-e .badge-proposed:hover .badge-action-bar {
+    opacity: 1;
+    pointer-events: auto;
+}
+.var-e .badge-action-bar .bar-accept,
+.var-e .badge-action-bar .bar-deny {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.2rem;
+    height: 0.9rem;
+    font-size: 0.6rem;
+    font-weight: 700;
+    cursor: pointer;
+    border: none;
+    background: transparent;
+    transition: background var(--bn-transition-fast);
+}
+.var-e .bar-accept {
+    color: var(--bn-colour-success);
+}
+.var-e .bar-deny {
+    color: var(--bn-colour-danger);
+    border-left: 1px solid var(--bn-colour-border);
+}
+.var-e .bar-accept:hover { background: #dcfce7; }
+.var-e .bar-deny:hover { background: #fef2f2; }
+
+/* ═══════════════════════════════════════════════════════════════
+   VARIATION F: Click badge to accept (primary), ✗ circle to deny
+   One circle (deny) at top-right, clicking the badge itself accepts
+   Simplest possible: badge click = accept, circle = deny
+   ═══════════════════════════════════════════════════════════════ */
+
+.var-f .badge-proposed {
+    cursor: pointer;
+}
+.var-f .badge-proposed:hover {
+    outline: 2px solid var(--bn-colour-success);
+    outline-offset: -1px;
+}
+.var-f .badge-deny {
+    position: absolute;
+    top: calc(-0.3rem - 1px);
+    right: calc(-0.3rem - 1px);
+    width: calc(0.875rem + 0.5px);
+    height: calc(0.875rem + 0.5px);
+    border: none;
+    border-radius: 50%;
+    font-size: 0.6rem;
+    font-weight: 700;
+    line-height: 1;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    background: #fef2f2;
+    color: var(--bn-colour-danger);
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.16), 0 0 1px rgba(0, 0, 0, 0.06);
+    opacity: 0;
+    transition: opacity var(--bn-transition-fast);
+    pointer-events: none;
+}
+.var-f .badge-proposed:hover .badge-deny {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+/* ══════════ Always-visible mode (for mockup inspection) ═══════ */
+.show-actions .badge-accept,
+.show-actions .badge-deny,
+.show-actions .badge-action-bar,
+.show-actions .badge-delete {
+    opacity: 1 !important;
+    pointer-events: auto !important;
+}
+.show-actions .badge-proposed {
+    animation: none !important;
+    opacity: 1 !important;
+}
+
+/* ── Page controls ───────────────────────────────────────────── */
+.controls {
+    position: sticky;
+    top: 0;
+    background: var(--bn-colour-bg);
+    padding: 0.75rem 0;
+    margin-bottom: 1rem;
+    z-index: 100;
+    border-bottom: 1px solid var(--bn-colour-border);
+}
+.controls label {
+    font-size: 0.8rem;
+    cursor: pointer;
+    user-select: none;
+}
+
+/* ── Notes ───────────────────────────────────────────────────── */
+.notes {
+    font-size: 0.8rem;
+    color: var(--bn-colour-muted);
+    margin-top: 2rem;
+    max-width: 72ch;
+    line-height: 1.7;
+}
+.notes strong { color: var(--bn-colour-text); }
+.notes li { margin-bottom: 0.25rem; }
+</style>
+</head>
+<body>
+
+<h1>Proposed Badge Actions — Design Exploration</h1>
+<p class="subtitle">
+    How should accept/deny affordances appear on autocode-proposed badges?
+    The current inline &#x2713;/&#x2717; grows badge width on hover, bounces siblings, and
+    uses a different pattern from the floating-circle delete on other badges. These
+    variations explore floating circles as external commentary, not inline content.
+</p>
+
+<div class="controls">
+    <label>
+        <input type="checkbox" id="toggleActions" checked>
+        Show actions always (uncheck to see hover behaviour)
+    </label>
+</div>
+
+<!-- ── CURRENT (for comparison) ──────────────────────────────── -->
+<h2 class="section-title">Current (production) &mdash; inline &#x2713;/&#x2717;</h2>
+
+<div class="grid">
+<div class="card var-current">
+    <span class="card-number">REF</span>
+    <div class="card-title">Current: inline actions grow badge width</div>
+    <div class="card-meta">
+        &#x2713;/&#x2717; are <code>display: inline-flex</code> on hover<br>
+        Badge width grows ~20px, pushing siblings right<br>
+        Not consistent with floating-circle pattern on other badges
+    </div>
+    <div class="quote-card">
+        <div class="quote-text">"I kept clicking the back button but nothing happened, so I just gave up and closed the tab."</div>
+        <div class="quote-meta">[p3] &mdash; Sarah, 2:45</div>
+        <div class="badges">
+            <span class="badge badge-ai">frustration<button class="badge-delete">&times;</button></span>
+            <span class="badge badge-user badge-ux-blue">navigation<button class="badge-delete">&times;</button></span>
+            <span class="badge badge-proposed badge-task-teal">error recovery
+                <span class="badge-proposed-actions">
+                    <span class="badge-action-accept">&#x2713;</span>
+                    <span class="badge-action-deny">&#x2717;</span>
+                </span>
+            </span>
+            <span class="badge badge-proposed badge-emo-warm">abandonment
+                <span class="badge-proposed-actions">
+                    <span class="badge-action-accept">&#x2713;</span>
+                    <span class="badge-action-deny">&#x2717;</span>
+                </span>
+            </span>
+            <span class="badge badge-add">+</span>
+        </div>
+    </div>
+</div>
+</div>
+
+<!-- ── VARIATIONS ─────────────────────────────────────────────── -->
+<h2 class="section-title">Variations</h2>
+
+<div class="grid">
+
+<!-- Var A: Top-right pair -->
+<div class="card var-a show-actions">
+    <span class="card-number">A</span>
+    <div class="card-title">Two circles, top-right pair <span class="rec">recommended</span></div>
+    <div class="card-meta">
+        &#x2713; at top-right (same position as delete &#x00d7;)<br>
+        &#x2717; immediately left of &#x2713; (3px gap)<br>
+        Tinted backgrounds: green (#dcfce7), red (#fef2f2)<br>
+        Same 14.5px circle size as existing badge-delete
+    </div>
+    <div class="quote-card">
+        <div class="quote-text">"I kept clicking the back button but nothing happened, so I just gave up and closed the tab."</div>
+        <div class="quote-meta">[p3] &mdash; Sarah, 2:45</div>
+        <div class="badges">
+            <span class="badge badge-ai">frustration<button class="badge-delete">&times;</button></span>
+            <span class="badge badge-user badge-ux-blue">navigation<button class="badge-delete">&times;</button></span>
+            <span class="badge badge-proposed badge-task-teal">error recovery
+                <button class="badge-deny">&times;</button>
+                <button class="badge-accept">&#x2713;</button>
+            </span>
+            <span class="badge badge-proposed badge-emo-warm">abandonment
+                <button class="badge-deny">&times;</button>
+                <button class="badge-accept">&#x2713;</button>
+            </span>
+            <span class="badge badge-add">+</span>
+        </div>
+    </div>
+</div>
+
+<!-- Var B: Diagonal (✓ right, ✗ left) -->
+<div class="card var-b show-actions">
+    <span class="card-number">B</span>
+    <div class="card-title">Diagonal: &#x2713; top-right, &#x2717; top-left</div>
+    <div class="card-meta">
+        Mirrors left/right spatial decision<br>
+        Risk: &#x2717; on left may overlap adjacent badge's &#x2713;<br>
+        when badges are closely spaced in the row
+    </div>
+    <div class="quote-card">
+        <div class="quote-text">"I kept clicking the back button but nothing happened, so I just gave up and closed the tab."</div>
+        <div class="quote-meta">[p3] &mdash; Sarah, 2:45</div>
+        <div class="badges">
+            <span class="badge badge-ai">frustration<button class="badge-delete">&times;</button></span>
+            <span class="badge badge-user badge-ux-blue">navigation<button class="badge-delete">&times;</button></span>
+            <span class="badge badge-proposed badge-task-teal">error recovery
+                <button class="badge-deny">&times;</button>
+                <button class="badge-accept">&#x2713;</button>
+            </span>
+            <span class="badge badge-proposed badge-emo-warm">abandonment
+                <button class="badge-deny">&times;</button>
+                <button class="badge-accept">&#x2713;</button>
+            </span>
+            <span class="badge badge-add">+</span>
+        </div>
+    </div>
+</div>
+
+<!-- Var C: Primary accept, secondary deny -->
+<div class="card var-c show-actions">
+    <span class="card-number">C</span>
+    <div class="card-title">Progressive: &#x2713; prominent, &#x2717; faded</div>
+    <div class="card-meta">
+        Accept (&#x2713;) is the primary action &mdash; green circle<br>
+        Deny (&#x2717;) is muted (40% opacity), reveals on &#x2713; hover<br>
+        Assumes accept is the 80-90% action for good proposals<br>
+        Deny becomes vivid red on its own hover
+    </div>
+    <div class="quote-card">
+        <div class="quote-text">"I kept clicking the back button but nothing happened, so I just gave up and closed the tab."</div>
+        <div class="quote-meta">[p3] &mdash; Sarah, 2:45</div>
+        <div class="badges">
+            <span class="badge badge-ai">frustration<button class="badge-delete">&times;</button></span>
+            <span class="badge badge-user badge-ux-blue">navigation<button class="badge-delete">&times;</button></span>
+            <span class="badge badge-proposed badge-task-teal">error recovery
+                <button class="badge-deny">&times;</button>
+                <button class="badge-accept">&#x2713;</button>
+            </span>
+            <span class="badge badge-proposed badge-emo-warm">abandonment
+                <button class="badge-deny">&times;</button>
+                <button class="badge-accept">&#x2713;</button>
+            </span>
+            <span class="badge badge-add">+</span>
+        </div>
+    </div>
+</div>
+
+<!-- Var D: Larger circles -->
+<div class="card var-d show-actions">
+    <span class="card-number">D</span>
+    <div class="card-title">Larger circles (16px), scale on hover</div>
+    <div class="card-meta">
+        16px diameter (vs 14.5px production delete circles)<br>
+        Better Fitts' law compliance, easier touch targets<br>
+        <code>transform: scale(1.15)</code> on hover for feedback<br>
+        Risk: may feel oversized relative to 0.72rem badge text
+    </div>
+    <div class="quote-card">
+        <div class="quote-text">"I kept clicking the back button but nothing happened, so I just gave up and closed the tab."</div>
+        <div class="quote-meta">[p3] &mdash; Sarah, 2:45</div>
+        <div class="badges">
+            <span class="badge badge-ai">frustration<button class="badge-delete">&times;</button></span>
+            <span class="badge badge-user badge-ux-blue">navigation<button class="badge-delete">&times;</button></span>
+            <span class="badge badge-proposed badge-task-teal">error recovery
+                <button class="badge-deny">&times;</button>
+                <button class="badge-accept">&#x2713;</button>
+            </span>
+            <span class="badge badge-proposed badge-emo-warm">abandonment
+                <button class="badge-deny">&times;</button>
+                <button class="badge-accept">&#x2713;</button>
+            </span>
+            <span class="badge badge-add">+</span>
+        </div>
+    </div>
+</div>
+
+<!-- Var E: Pill bar above -->
+<div class="card var-e show-actions">
+    <span class="card-number">E</span>
+    <div class="card-title">Floating pill bar above badge</div>
+    <div class="card-meta">
+        Single pill-shaped element centred above badge<br>
+        Two compartments: &#x2713; left, &#x2717; right, divided by line<br>
+        Visually distinct from the floating circle pattern<br>
+        Good: clear "toolbar" feel. Risk: feels like a different UI
+    </div>
+    <div class="quote-card">
+        <div class="quote-text">"I kept clicking the back button but nothing happened, so I just gave up and closed the tab."</div>
+        <div class="quote-meta">[p3] &mdash; Sarah, 2:45</div>
+        <div class="badges">
+            <span class="badge badge-ai">frustration<button class="badge-delete">&times;</button></span>
+            <span class="badge badge-user badge-ux-blue">navigation<button class="badge-delete">&times;</button></span>
+            <span class="badge badge-proposed badge-task-teal">error recovery
+                <span class="badge-action-bar">
+                    <button class="bar-accept">&#x2713;</button>
+                    <button class="bar-deny">&times;</button>
+                </span>
+            </span>
+            <span class="badge badge-proposed badge-emo-warm">abandonment
+                <span class="badge-action-bar">
+                    <button class="bar-accept">&#x2713;</button>
+                    <button class="bar-deny">&times;</button>
+                </span>
+            </span>
+            <span class="badge badge-add">+</span>
+        </div>
+    </div>
+</div>
+
+<!-- Var F: Click to accept, circle to deny -->
+<div class="card var-f show-actions">
+    <span class="card-number">F</span>
+    <div class="card-title">Click badge = accept, &#x2717; circle = deny</div>
+    <div class="card-meta">
+        Clicking the badge itself accepts (green outline on hover)<br>
+        Only one floating circle needed (red &#x2717; for deny)<br>
+        Simplest affordance: matches "click to keep" mental model<br>
+        Risk: no visible accept button &mdash; discoverability depends<br>
+        on the green outline being understood as "click me"
+    </div>
+    <div class="quote-card">
+        <div class="quote-text">"I kept clicking the back button but nothing happened, so I just gave up and closed the tab."</div>
+        <div class="quote-meta">[p3] &mdash; Sarah, 2:45</div>
+        <div class="badges">
+            <span class="badge badge-ai">frustration<button class="badge-delete">&times;</button></span>
+            <span class="badge badge-user badge-ux-blue">navigation<button class="badge-delete">&times;</button></span>
+            <span class="badge badge-proposed badge-task-teal">error recovery
+                <button class="badge-deny">&times;</button>
+            </span>
+            <span class="badge badge-proposed badge-emo-warm">abandonment
+                <button class="badge-deny">&times;</button>
+            </span>
+            <span class="badge badge-add">+</span>
+        </div>
+    </div>
+</div>
+
+</div><!-- .grid -->
+
+<!-- ── Design notes ──────────────────────────────────────────── -->
+<div class="notes">
+    <h3 style="font-size: 0.9rem; margin-bottom: 0.5rem;">Analysis</h3>
+    <ul>
+        <li><strong>Layout shift:</strong> All variations (A&ndash;F) use absolute positioning, so zero layout shift on hover. The + add-tag button stays put. This alone is a major improvement over the current inline approach.</li>
+        <li><strong>Consistency:</strong> Variations A, B, C, D extend the existing floating-circle vocabulary. E introduces a new "pill bar" element. F reduces to a single circle (most consistent with the delete pattern but sacrifices explicit accept affordance).</li>
+        <li><strong>Two-circle spacing:</strong> With 8px badge gap in flexbox, two 14.5px circles side-by-side above a badge extend ~17px to the left &mdash; this can overlap with an adjacent badge's circles. The 8px gap between badges is the limiting factor. Var B (diagonal) makes this worse by putting circles on both sides.</li>
+        <li><strong>Recommendation:</strong> <strong>Var A</strong> is the most natural extension of the existing pattern. The &#x2717; (deny) circle uses the same &#x00d7; glyph and position as the existing delete, so deny "looks like delete" &mdash; which it semantically is. The &#x2713; (accept) uses a green tinted circle in the same position, making the binary choice obvious. Keyboard shortcuts (Challenge B) will complement mouse use.</li>
+        <li><strong>Rationale tooltip:</strong> The tooltip (hovering over the badge text for LLM explanation) still works with all floating-circle variants since the circles are at the top edge and the tooltip appears above via absolute positioning. May need z-index coordination if tooltip and circles overlap.</li>
+        <li><strong>Dark mode:</strong> The tinted circle backgrounds (#dcfce7, #fef2f2) need dark-mode equivalents. The existing badge.css already has dark-mode overrides for the action colours; the same pattern applies to circle backgrounds.</li>
+    </ul>
+</div>
+
+<script>
+// Toggle between always-visible and hover-only mode
+const toggle = document.getElementById('toggleActions');
+toggle.addEventListener('change', () => {
+    document.querySelectorAll('.card:not(.var-current)').forEach(card => {
+        card.classList.toggle('show-actions', toggle.checked);
+    });
+});
+</script>
+
+</body>
+</html>
+</content>
+</invoke>

@@ -119,7 +119,7 @@ def test_hide_button_has_svg(tmp_path: Path) -> None:
 def test_css_has_bn_hidden_class(tmp_path: Path) -> None:
     _render_report(tmp_path)
     css = (tmp_path / "assets" / "bristlenose-theme.css").read_text(encoding="utf-8")
-    assert "blockquote.bn-hidden" in css
+    assert ".quote-card.bn-hidden" in css
 
 
 def test_css_has_hide_btn(tmp_path: Path) -> None:

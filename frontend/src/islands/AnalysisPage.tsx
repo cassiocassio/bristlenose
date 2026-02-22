@@ -592,7 +592,7 @@ function Heatmap({
         setHoveredKey(signalKey);
         setHighlightRow(row);
         setHighlightCol(col);
-      }, 150);
+      }, 300);
     },
     [],
   );

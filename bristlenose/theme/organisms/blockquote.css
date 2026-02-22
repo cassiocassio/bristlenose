@@ -1,6 +1,12 @@
-/* Organism: blockquote — the full quote card */
+/* Organism: blockquote — base quote layout (embeddable anywhere) */
 
 blockquote {
+    margin: 0;
+    padding: var(--bn-space-sm) 1rem;
+}
+
+/* Quote card — standalone quote on the quotes page */
+blockquote.quote-card {
     background: var(--bn-colour-quote-bg);
     border-left: 1px solid var(--bn-colour-border);
     margin: 0.8rem 0;
@@ -52,7 +58,7 @@ blockquote .speaker-link:hover {
     color: var(--bn-colour-accent);
 }
 
-blockquote.quote-active {
+.quote-card.quote-active {
     border-left-color: var(--bn-colour-delight);
     background: var(--bn-colour-active-bg);
     transition: background var(--bn-transition-slow), border-left-color var(--bn-transition-slow);
@@ -63,7 +69,7 @@ blockquote.quote-active {
     flex-direction: column;
 }
 
-.quote-group blockquote {
+.quote-group .quote-card {
     position: relative;
     padding-right: 4.5rem;
 }

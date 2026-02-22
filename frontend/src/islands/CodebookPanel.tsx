@@ -524,6 +524,18 @@ export function CodebookPanel({ projectId }: CodebookPanelProps) {
     return () => observer.disconnect();
   }, [fetchData]);
 
+  // Eagerly fetch templates when codebook data has framework groups,
+  // so framework title/author are available for section headers immediately.
+  useEffect(() => {
+    if (!data) return;
+    const hasFrameworks = data.groups.some((g) => g.framework_id != null);
+    if (hasFrameworks && !templates) {
+      getCodebookTemplates()
+        .then((resp) => setTemplates(resp.templates))
+        .catch(() => {});
+    }
+  }, [data, templates]);
+
   // Poll autocode status for each imported framework on mount.
   useEffect(() => {
     if (!data) return;
@@ -956,20 +968,20 @@ export function CodebookPanel({ projectId }: CodebookPanelProps) {
       {removeConfirm && (
         <div className="merge-overlay">
           <ConfirmDialog
-            title={`Remove "${removeConfirm.label}"?`}
+            title={`Hide "${removeConfirm.label}"?`}
             body={
               <span>
                 {removeConfirm.impact
-                  ? `${removeConfirm.impact.tag_count} tags`
-                    + (removeConfirm.impact.quote_count > 0
-                      ? ` across ${removeConfirm.impact.quote_count} quotes`
-                      : "")
-                    + " will be removed."
+                  ? (removeConfirm.impact.quote_count > 0
+                    ? `Tags will be removed from ${removeConfirm.impact.quote_count} quote${removeConfirm.impact.quote_count !== 1 ? "s" : ""}.`
+                    : "No quotes are currently tagged.")
                   : "Loading impact…"}
-                {" "}You can re-import this framework any time from Browse Codebooks.
+                {removeConfirm.impact?.has_autocode
+                  ? " AutoCode results are preserved — restore instantly from Browse Codebooks."
+                  : " Restore any time from Browse Codebooks."}
               </span>
             }
-            confirmLabel="Remove"
+            confirmLabel="Hide"
             variant="danger"
             onConfirm={handleConfirmRemoveFramework}
             onCancel={() => setRemoveConfirm(null)}
@@ -1040,36 +1052,48 @@ export function CodebookPanel({ projectId }: CodebookPanelProps) {
                         <span className="picker-section-title">Codebook frameworks</span>
                       </div>
                       <div className="picker-row">
-                        {templates.map((t) => (
-                          // eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions
-                          <div
-                            key={t.id}
-                            className={`picker-card${t.imported ? " imported" : ""}${!t.enabled ? " disabled" : ""}`}
-                            onClick={() => t.enabled && !t.imported && handleSelectTemplate(t)}
-                          >
-                            <div className="picker-card-title">{t.title}</div>
-                            {t.author && (
-                              <div className="picker-card-author">{t.author}</div>
-                            )}
-                            <div className="picker-card-desc">{t.description}</div>
-                            <div className="picker-card-tags">
-                              {t.groups.slice(0, 3).flatMap((g) =>
-                                g.tags.slice(0, 2).map((tag) => (
-                                  <span
-                                    key={`${g.name}-${tag.name}`}
-                                    className="badge readonly"
-                                    style={{ backgroundColor: getTagBg(tag.colour_set, tag.colour_index) }}
-                                  >
-                                    {tag.name}
-                                  </span>
-                                )),
+                        {templates.map((t) => {
+                          const isClickable = t.enabled && !t.imported;
+                          const cardClass = [
+                            "picker-card",
+                            t.imported ? "imported" : null,
+                            !t.enabled ? "disabled" : null,
+                            t.restorable && !t.imported ? "restorable" : null,
+                          ].filter(Boolean).join(" ");
+                          return (
+                            // eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions
+                            <div
+                              key={t.id}
+                              className={cardClass}
+                              onClick={() => isClickable && handleSelectTemplate(t)}
+                            >
+                              <div className="picker-card-title">{t.title}</div>
+                              {t.author && (
+                                <div className="picker-card-author">{t.author}</div>
+                              )}
+                              <div className="picker-card-desc">{t.description}</div>
+                              <div className="picker-card-tags">
+                                {t.groups.slice(0, 3).flatMap((g) =>
+                                  g.tags.slice(0, 2).map((tag) => (
+                                    <span
+                                      key={`${g.name}-${tag.name}`}
+                                      className="badge readonly"
+                                      style={{ backgroundColor: getTagBg(tag.colour_set, tag.colour_index) }}
+                                    >
+                                      {tag.name}
+                                    </span>
+                                  )),
+                                )}
+                              </div>
+                              {!t.enabled && (
+                                <div className="picker-card-coming">Coming soon</div>
+                              )}
+                              {t.restorable && !t.imported && (
+                                <div className="picker-card-restore">Previously imported — restore instantly</div>
                               )}
                             </div>
-                            {!t.enabled && (
-                              <div className="picker-card-coming">Coming soon</div>
-                            )}
-                          </div>
-                        ))}
+                          );
+                        })}
                       </div>
 
                       <div className="picker-section-header">
@@ -1101,9 +1125,15 @@ export function CodebookPanel({ projectId }: CodebookPanelProps) {
                         onClick={handleImportTemplate}
                         disabled={importing}
                       >
-                        {importing ? "Importing…" : "Import codebook"}
+                        {importing
+                          ? (selectedTemplate.restorable ? "Restoring…" : "Importing…")
+                          : (selectedTemplate.restorable ? "Restore codebook" : "Import codebook")}
                       </button>
-                      <div className="preview-cta-help">Adds to existing tags and tag-groups</div>
+                      <div className="preview-cta-help">
+                        {selectedTemplate.restorable
+                          ? "Restores previous tags and AutoCode results"
+                          : "Adds to existing tags and tag-groups"}
+                      </div>
                     </div>
                     <button
                       className="codebook-modal-close"

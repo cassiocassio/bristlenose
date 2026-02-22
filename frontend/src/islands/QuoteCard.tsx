@@ -177,7 +177,7 @@ export function QuoteCard({
       id={domId}
       data-timecode={timecodeStr}
       data-participant={quote.participant_id}
-      className={isStarred ? "starred" : undefined}
+      className={`quote-card${isStarred ? " starred" : ""}`}
     >
       {quote.researcher_context && (
         <span className="context">[{quote.researcher_context}]</span>

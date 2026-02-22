@@ -141,32 +141,7 @@
 }
 
 .signal-card-quotes blockquote {
-    background: transparent;
-    border-left: 1px solid var(--bn-colour-border);
     margin: 0 var(--bn-space-md);
-    padding: var(--bn-space-sm) 1rem;
-    border-radius: 0 var(--bn-radius-md) var(--bn-radius-md) 0;
-}
-
-.signal-card-quotes blockquote .speaker {
-    color: var(--bn-colour-muted);
-    font-size: 0.9rem;
-}
-
-/* Hanging-indent: timecode | body | dots */
-.signal-card-quotes blockquote .quote-row {
-    display: flex;
-    gap: 0.5rem;
-    align-items: baseline;
-}
-
-.signal-card-quotes blockquote .quote-row .timecode {
-    flex-shrink: 0;
-}
-
-.signal-card-quotes blockquote .quote-body {
-    flex: 1;
-    min-width: 0;
 }
 
 .signal-card-quotes blockquote .intensity-dots {
@@ -544,21 +519,21 @@
     opacity: 0.6;
 }
 
+.signal-card-quotes blockquote.seq-first,
+.signal-card-quotes blockquote.seq-middle,
+.signal-card-quotes blockquote.seq-last {
+    border-left: 2px solid var(--card-accent, var(--bn-colour-muted));
+}
+
 .signal-card-quotes blockquote.seq-first {
-    border-left-color: var(--card-accent, var(--bn-colour-muted));
-    border-left-width: 2px;
     border-top-left-radius: var(--bn-radius-sm);
 }
 
 .signal-card-quotes blockquote.seq-middle {
-    border-left-color: var(--card-accent, var(--bn-colour-muted));
-    border-left-width: 2px;
     border-radius: 0;
 }
 
 .signal-card-quotes blockquote.seq-last {
-    border-left-color: var(--card-accent, var(--bn-colour-muted));
-    border-left-width: 2px;
     border-bottom-left-radius: var(--bn-radius-sm);
     border-top-left-radius: 0;
 }

@@ -1114,35 +1114,33 @@ export function CodebookPanel({ projectId }: CodebookPanelProps) {
             {modalView === "preview" && selectedTemplate && (
               <>
                 <div className="codebook-modal-header">
-                  <div>
+                  <div style={{ flex: 1 }}>
                     <div className="codebook-modal-title">{selectedTemplate.title}</div>
                     <div className="codebook-modal-subtitle">{selectedTemplate.author}</div>
                   </div>
-                  <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", flexShrink: 0 }}>
-                    <div style={{ textAlign: "right" }}>
-                      <button
-                        className="bn-btn bn-btn-primary"
-                        onClick={handleImportTemplate}
-                        disabled={importing}
-                      >
-                        {importing
-                          ? (selectedTemplate.restorable ? "Restoring…" : "Importing…")
-                          : (selectedTemplate.restorable ? "Restore codebook" : "Import codebook")}
-                      </button>
-                      <div className="preview-cta-help">
-                        {selectedTemplate.restorable
-                          ? "Restores previous tags and AutoCode results"
-                          : "Adds to existing tags and tag-groups"}
-                      </div>
-                    </div>
+                  <div style={{ textAlign: "right", flexShrink: 0 }}>
                     <button
-                      className="codebook-modal-close"
-                      onClick={handleCloseModal}
-                      aria-label="Close"
+                      className="bn-btn bn-btn-primary"
+                      onClick={handleImportTemplate}
+                      disabled={importing}
                     >
-                      &times;
+                      {importing
+                        ? (selectedTemplate.restorable ? "Restoring…" : "Importing…")
+                        : (selectedTemplate.restorable ? "Restore codebook" : "Import codebook")}
                     </button>
+                    <div className="preview-cta-help">
+                      {selectedTemplate.restorable
+                        ? "Restores previous tags and AutoCode results"
+                        : "Adds to existing tags and tag-groups"}
+                    </div>
                   </div>
+                  <button
+                    className="codebook-modal-close"
+                    onClick={handleCloseModal}
+                    aria-label="Close"
+                  >
+                    &times;
+                  </button>
                 </div>
                 <div className="codebook-modal-body">
                   <div className="preview-body">

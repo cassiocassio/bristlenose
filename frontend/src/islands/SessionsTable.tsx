@@ -36,6 +36,7 @@ interface SessionResponse {
   duration_seconds: number;
   has_media: boolean;
   has_video: boolean;
+  thumbnail_url: string | null;
   speakers: SpeakerResponse[];
   journey_labels: string[];
   sentiment_counts: Record<string, number>;
@@ -213,6 +214,7 @@ function SessionRow({ session }: { session: SessionResponse }) {
     session_date,
     duration_seconds,
     has_media,
+    thumbnail_url,
     speakers,
     journey_labels,
     sentiment_counts,
@@ -280,7 +282,7 @@ function SessionRow({ session }: { session: SessionResponse }) {
       </td>
       <td>{sourceEl}</td>
       <td className="bn-session-thumb">
-        <Thumbnail hasMedia={has_media} />
+        <Thumbnail hasMedia={has_media} thumbnailUrl={thumbnail_url ?? undefined} />
       </td>
       <td className="bn-session-sentiment">
         <Sparkline items={sentimentToSparklineItems(sentiment_counts)} />

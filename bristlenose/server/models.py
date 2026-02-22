@@ -145,6 +145,7 @@ class Session(Base):
     duration_seconds: Mapped[float] = mapped_column(Float, default=0.0)
     has_media: Mapped[bool] = mapped_column(default=False)
     has_video: Mapped[bool] = mapped_column(default=False)
+    thumbnail_path: Mapped[str | None] = mapped_column(String(500), default=None)
 
     project: Mapped[Project] = relationship(back_populates="sessions")
     source_files: Mapped[list[SourceFile]] = relationship(back_populates="session")

@@ -1,11 +1,13 @@
 interface ThumbnailProps {
   hasMedia: boolean;
+  thumbnailUrl?: string;
   className?: string;
   "data-testid"?: string;
 }
 
 export function Thumbnail({
   hasMedia,
+  thumbnailUrl,
   className,
   "data-testid": testId,
 }: ThumbnailProps) {
@@ -15,7 +17,11 @@ export function Thumbnail({
 
   return (
     <div className={classes} data-testid={testId}>
-      <span className="bn-play-icon">&#9654;</span>
+      {thumbnailUrl ? (
+        <img src={thumbnailUrl} alt="" loading="lazy" />
+      ) : (
+        <span className="bn-play-icon">&#9654;</span>
+      )}
     </div>
   );
 }

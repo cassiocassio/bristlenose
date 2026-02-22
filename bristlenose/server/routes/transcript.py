@@ -9,6 +9,7 @@ from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
+from bristlenose.server.journey import derive_journeys
 from bristlenose.server.models import (
     ClusterQuote,
     CodebookGroup,
@@ -81,6 +82,7 @@ class TranscriptPageResponse(BaseModel):
     speakers: list[TranscriptSpeakerResponse]
     segments: list[TranscriptSegmentResponse]
     annotations: dict[str, QuoteAnnotationResponse]
+    journey_labels: list[str]
 
 
 # ---------------------------------------------------------------------------
@@ -355,6 +357,18 @@ def get_transcript(
                 segment_index=seg.segment_index,
             ))
 
+        # Journey labels for this session
+        participant_screens = derive_journeys(db, project_id)
+        session_pids = [
+            sp.speaker_code for sp, _ in sp_rows
+            if sp.speaker_code.startswith("p")
+        ]
+        journey_labels: list[str] = []
+        for pid in session_pids:
+            for label in participant_screens.get(pid, []):
+                if label not in journey_labels:
+                    journey_labels.append(label)
+
         # Report filename for back link
         slug = re.sub(r"[^a-z0-9]+", "-", project.name.lower()).strip("-")[:50]
         report_filename = f"bristlenose-{slug}-report.html"
@@ -369,6 +383,7 @@ def get_transcript(
             speakers=speakers,
             segments=seg_responses,
             annotations=annotations,
+            journey_labels=journey_labels,
         )
     finally:
         db.close()

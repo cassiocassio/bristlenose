@@ -8,12 +8,11 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
+from bristlenose.server.journey import derive_journeys
 from bristlenose.server.models import (
-    ClusterQuote,
     Person,
     Project,
     Quote,
-    ScreenCluster,
     SessionSpeaker,
 )
 from bristlenose.server.models import (
@@ -65,6 +64,7 @@ class SessionsListResponse(BaseModel):
     sessions: list[SessionResponse]
     moderator_names: list[str]
     observer_names: list[str]
+    source_folder_uri: str
 
 
 # ---------------------------------------------------------------------------
@@ -101,7 +101,7 @@ def get_sessions(
         )
 
         # --- Build journey labels per participant ---
-        participant_screens = _derive_journeys(db, project_id)
+        participant_screens = derive_journeys(db, project_id)
 
         # --- Build sentiment counts per session ---
         sentiment_by_session = _aggregate_sentiments(db, project_id)
@@ -179,10 +179,18 @@ def get_sessions(
                 )
             )
 
+        # Source folder URI (from first session's first source file).
+        source_folder_uri = ""
+        for sess in sessions:
+            if sess.source_files:
+                source_folder_uri = _Path(sess.source_files[0].path).parent.as_uri()
+                break
+
         return SessionsListResponse(
             sessions=rows,
             moderator_names=all_moderator_names,
             observer_names=all_observer_names,
+            source_folder_uri=source_folder_uri,
         )
     finally:
         db.close()
@@ -202,39 +210,6 @@ def _speaker_sort_key(sp: SessionSpeaker) -> tuple[int, int]:
     return (prefix, num)
 
 
-def _derive_journeys(
-    db: Session,
-    project_id: int,
-) -> dict[str, list[str]]:
-    """Derive per-participant journey labels from screen clusters.
-
-    Returns participant_id → ordered list of screen labels.
-    """
-    clusters = (
-        db.query(ScreenCluster)
-        .filter_by(project_id=project_id)
-        .order_by(ScreenCluster.display_order)
-        .all()
-    )
-
-    participant_screens: dict[str, list[str]] = {}
-    for cluster in clusters:
-        # Get all quotes in this cluster
-        cqs = db.query(ClusterQuote).filter_by(cluster_id=cluster.id).all()
-        quote_ids = [cq.quote_id for cq in cqs]
-        if not quote_ids:
-            continue
-
-        quotes = db.query(Quote).filter(Quote.id.in_(quote_ids)).all()
-        pids_in_cluster = {q.participant_id for q in quotes}
-
-        for pid in pids_in_cluster:
-            if pid not in participant_screens:
-                participant_screens[pid] = []
-            if cluster.screen_label not in participant_screens[pid]:
-                participant_screens[pid].append(cluster.screen_label)
-
-    return participant_screens
 
 
 def _aggregate_sentiments(

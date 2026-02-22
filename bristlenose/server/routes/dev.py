@@ -13,12 +13,11 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from fastapi.responses import HTMLResponse
 from sqlalchemy.orm import Session
 
+from bristlenose.server.journey import derive_journeys
 from bristlenose.server.models import (
-    ClusterQuote,
     Person,
     Project,
     Quote,
-    ScreenCluster,
     SessionSpeaker,
 )
 from bristlenose.server.models import (
@@ -53,30 +52,6 @@ def _speaker_sort_key(sp: SessionSpeaker) -> tuple[int, int]:
     return (prefix, num)
 
 
-def _derive_journeys(
-    db: Session,
-    project_id: int,
-) -> dict[str, list[str]]:
-    clusters = (
-        db.query(ScreenCluster)
-        .filter_by(project_id=project_id)
-        .order_by(ScreenCluster.display_order)
-        .all()
-    )
-    participant_screens: dict[str, list[str]] = {}
-    for cluster in clusters:
-        cqs = db.query(ClusterQuote).filter_by(cluster_id=cluster.id).all()
-        quote_ids = [cq.quote_id for cq in cqs]
-        if not quote_ids:
-            continue
-        quotes = db.query(Quote).filter(Quote.id.in_(quote_ids)).all()
-        for q in quotes:
-            pid = q.participant_id
-            if pid not in participant_screens:
-                participant_screens[pid] = []
-            if cluster.screen_label not in participant_screens[pid]:
-                participant_screens[pid].append(cluster.screen_label)
-    return participant_screens
 
 
 def _aggregate_sentiments(
@@ -135,7 +110,7 @@ def sessions_table_html(
             .all()
         )
 
-        participant_screens = _derive_journeys(db, project_id)
+        participant_screens = derive_journeys(db, project_id)
         sentiment_by_session = _aggregate_sentiments(db, project_id)
 
         # Collect all moderator/observer codes across all sessions.

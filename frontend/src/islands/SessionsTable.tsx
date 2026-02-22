@@ -46,6 +46,7 @@ interface SessionsListResponse {
   sessions: SessionResponse[];
   moderator_names: string[];
   observer_names: string[];
+  source_folder_uri: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -97,6 +98,24 @@ function ObserverHeader({
   return <p className="bn-session-moderators">{label}</p>;
 }
 
+function FolderIcon() {
+  return (
+    <svg
+      className="bn-folder-icon"
+      width="14"
+      height="12"
+      viewBox="0 0 14 12"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.3"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M1.5 2.5a1 1 0 0 1 1-1h2.6l1.4 1.5h5a1 1 0 0 1 1 1v6a1 1 0 0 1-1 1h-9a1 1 0 0 1-1-1z" />
+    </svg>
+  );
+}
+
 function oxfordList(items: string[]): string {
   if (items.length <= 1) return items.join("");
   if (items.length === 2) return `${items[0]} and ${items[1]}`;
@@ -143,7 +162,23 @@ export function SessionsTable({
     );
   }
 
-  const { sessions, moderator_names, observer_names } = data;
+  const { sessions, moderator_names, observer_names, source_folder_uri } = data;
+
+  const interviewsHeader = source_folder_uri ? (
+    <a
+      className="bn-interviews-link"
+      href="#"
+      onClick={(e: React.MouseEvent) => {
+        e.preventDefault();
+        navigator.clipboard.writeText(source_folder_uri);
+      }}
+      title="Copy folder path"
+    >
+      <FolderIcon /> Interviews
+    </a>
+  ) : (
+    "Interviews"
+  );
 
   return (
     <section className="bn-session-table">
@@ -156,7 +191,7 @@ export function SessionsTable({
             <th>Speakers</th>
             <th>Start</th>
             <th className="bn-session-duration">Duration</th>
-            <th>Interviews</th>
+            <th>{interviewsHeader}</th>
             <th></th>
             <th>Sentiment</th>
           </tr>
@@ -187,16 +222,33 @@ function SessionRow({ session }: { session: SessionResponse }) {
   // Journey arrow chain (now uses JourneyChain primitive)
   const hasJourney = journey_labels.length > 0;
 
-  // Source file display
+  // Source file display — media files link to the popout player; others are
+  // plain text.  The <a class="timecode"> is picked up by player.js event
+  // delegation (no additional JS wiring needed).
   let sourceEl: React.ReactNode = "\u2014";
   if (source_files.length > 0) {
     const sf = source_files[0];
     const displayName = formatFinderFilename(sf.filename);
     const titleAttr =
       displayName !== sf.filename ? sf.filename : undefined;
-    sourceEl = (
-      <span title={titleAttr}>{displayName}</span>
-    );
+    if (has_media) {
+      sourceEl = (
+        <a
+          href="#"
+          className="timecode"
+          data-participant={session_id}
+          data-seconds={0}
+          data-end-seconds={0}
+          title={titleAttr}
+        >
+          {displayName}
+        </a>
+      );
+    } else {
+      sourceEl = (
+        <span title={titleAttr}>{displayName}</span>
+      );
+    }
   }
 
   return (

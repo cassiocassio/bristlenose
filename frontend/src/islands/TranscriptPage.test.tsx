@@ -77,6 +77,7 @@ const mockData: TranscriptPageResponse = {
       segment_index: 4,
     },
   ],
+  journey_labels: ["Dashboard", "Search"],
   annotations: {
     "q-p1-10": {
       label: "Dashboard",
@@ -109,6 +110,7 @@ const mockData: TranscriptPageResponse = {
 
 vi.mock("../utils/api", () => ({
   getTranscript: vi.fn(),
+  getSessionList: vi.fn().mockResolvedValue([]),
   putDeletedBadges: vi.fn(),
   putTags: vi.fn(),
 }));
@@ -217,24 +219,12 @@ describe("TranscriptPage", () => {
     expect(timecodeSpans.length).toBeGreaterThan(0);
   });
 
-  it("speaker names appear in heading", async () => {
-    mockedGetTranscript.mockResolvedValue(mockData);
-    render(<TranscriptPage projectId="1" sessionId="s1" />);
-    await waitFor(() => {
-      expect(screen.getByTestId("transcript-heading")).toBeTruthy();
-    });
-    const heading = screen.getByTestId("transcript-heading");
-    expect(heading.textContent).toContain("Sarah");
-    expect(heading.textContent).toContain("Maya");
-  });
-
   it("has data-testid attributes on key elements", async () => {
     mockedGetTranscript.mockResolvedValue(mockData);
     render(<TranscriptPage projectId="1" sessionId="s1" />);
     await waitFor(() => {
       expect(screen.getByTestId("transcript-body")).toBeTruthy();
     });
-    expect(screen.getByTestId("transcript-heading")).toBeTruthy();
     expect(screen.getByTestId("transcript-body")).toBeTruthy();
   });
 
@@ -248,5 +238,158 @@ describe("TranscriptPage", () => {
     expect(seg.getAttribute("data-participant")).toBe("p1");
     expect(seg.getAttribute("data-start-seconds")).toBe("10");
     expect(seg.getAttribute("data-end-seconds")).toBe("19");
+  });
+
+  it("renders journey header when journey_labels is non-empty", async () => {
+    mockedGetTranscript.mockResolvedValue(mockData);
+    render(<TranscriptPage projectId="1" sessionId="s1" />);
+    await waitFor(() => {
+      expect(screen.getByTestId("transcript-journey-header")).toBeTruthy();
+    });
+    const chain = screen.getByTestId("transcript-journey-chain");
+    expect(chain.textContent).toContain("Dashboard");
+    expect(chain.textContent).toContain("Search");
+  });
+
+  it("hides journey header when journey_labels is empty", async () => {
+    mockedGetTranscript.mockResolvedValue({
+      ...mockData,
+      journey_labels: [],
+    });
+    render(<TranscriptPage projectId="1" sessionId="s1" />);
+    await waitFor(() => {
+      expect(screen.getByTestId("transcript-body")).toBeTruthy();
+    });
+    expect(screen.queryByTestId("transcript-journey-header")).toBeNull();
+  });
+
+  // ── Session roles line ──────────────────────────────────────────────
+
+  it("renders moderator in roles line", async () => {
+    mockedGetTranscript.mockResolvedValue(mockData);
+    render(<TranscriptPage projectId="1" sessionId="s1" />);
+    await waitFor(() => {
+      expect(screen.getByTestId("transcript-roles")).toBeTruthy();
+    });
+    const roles = screen.getByTestId("transcript-roles");
+    expect(roles.textContent).toContain("Moderator");
+    expect(roles.textContent).toContain("m1");
+    expect(roles.textContent).toContain("Sarah");
+  });
+
+  it("does not render roles line when only participants", async () => {
+    const participantsOnly: TranscriptPageResponse = {
+      ...mockData,
+      speakers: [
+        { code: "p1", name: "Maya", role: "participant" },
+        { code: "p2", name: "Alex", role: "participant" },
+      ],
+    };
+    mockedGetTranscript.mockResolvedValue(participantsOnly);
+    render(<TranscriptPage projectId="1" sessionId="s1" />);
+    await waitFor(() => {
+      expect(screen.getByTestId("transcript-body")).toBeTruthy();
+    });
+    expect(screen.queryByTestId("transcript-roles")).toBeNull();
+  });
+
+  it("renders moderator and observer together", async () => {
+    const withObserver: TranscriptPageResponse = {
+      ...mockData,
+      speakers: [
+        { code: "m1", name: "Sarah", role: "researcher" },
+        { code: "p1", name: "Maya", role: "participant" },
+        { code: "o1", name: "Peter", role: "observer" },
+      ],
+    };
+    mockedGetTranscript.mockResolvedValue(withObserver);
+    render(<TranscriptPage projectId="1" sessionId="s1" />);
+    await waitFor(() => {
+      expect(screen.getByTestId("transcript-roles")).toBeTruthy();
+    });
+    const text = screen.getByTestId("transcript-roles").textContent ?? "";
+    expect(text).toContain("Moderator");
+    expect(text).toContain("Sarah");
+    expect(text).toContain("observer");
+    expect(text).toContain("Peter");
+    // "observer" should be lowercase (not first group)
+    expect(text).not.toMatch(/Observer/);
+  });
+
+  it("pluralises Moderators and observers", async () => {
+    const multi: TranscriptPageResponse = {
+      ...mockData,
+      speakers: [
+        { code: "m1", name: "Sarah", role: "researcher" },
+        { code: "m2", name: "James", role: "researcher" },
+        { code: "p1", name: "Maya", role: "participant" },
+        { code: "o1", name: "Peter", role: "observer" },
+        { code: "o2", name: "Alex", role: "observer" },
+      ],
+    };
+    mockedGetTranscript.mockResolvedValue(multi);
+    render(<TranscriptPage projectId="1" sessionId="s1" />);
+    await waitFor(() => {
+      expect(screen.getByTestId("transcript-roles")).toBeTruthy();
+    });
+    const text = screen.getByTestId("transcript-roles").textContent ?? "";
+    expect(text).toContain("Moderators");
+    expect(text).toContain("observers");
+  });
+
+  it("capitalises Observer when no moderator present", async () => {
+    const observerOnly: TranscriptPageResponse = {
+      ...mockData,
+      speakers: [
+        { code: "p1", name: "Maya", role: "participant" },
+        { code: "o1", name: "Peter", role: "observer" },
+      ],
+    };
+    mockedGetTranscript.mockResolvedValue(observerOnly);
+    render(<TranscriptPage projectId="1" sessionId="s1" />);
+    await waitFor(() => {
+      expect(screen.getByTestId("transcript-roles")).toBeTruthy();
+    });
+    const text = screen.getByTestId("transcript-roles").textContent ?? "";
+    expect(text).toMatch(/^Observer/);
+  });
+
+  it("uses Oxford comma with 3+ in a group", async () => {
+    const threeObs: TranscriptPageResponse = {
+      ...mockData,
+      speakers: [
+        { code: "p1", name: "Maya", role: "participant" },
+        { code: "o1", name: "A", role: "observer" },
+        { code: "o2", name: "B", role: "observer" },
+        { code: "o3", name: "C", role: "observer" },
+      ],
+    };
+    mockedGetTranscript.mockResolvedValue(threeObs);
+    render(<TranscriptPage projectId="1" sessionId="s1" />);
+    await waitFor(() => {
+      expect(screen.getByTestId("transcript-roles")).toBeTruthy();
+    });
+    const text = screen.getByTestId("transcript-roles").textContent ?? "";
+    // Should have Oxford comma: "A, B, and C"
+    expect(text).toContain(", and");
+  });
+
+  it("shows badge only when speaker has no name", async () => {
+    const noName: TranscriptPageResponse = {
+      ...mockData,
+      speakers: [
+        { code: "m1", name: "m1", role: "researcher" },
+        { code: "p1", name: "Maya", role: "participant" },
+      ],
+    };
+    mockedGetTranscript.mockResolvedValue(noName);
+    render(<TranscriptPage projectId="1" sessionId="s1" />);
+    await waitFor(() => {
+      expect(screen.getByTestId("transcript-roles")).toBeTruthy();
+    });
+    const roles = screen.getByTestId("transcript-roles");
+    // Should NOT have a separate name span when name === code
+    const nameSpans = roles.querySelectorAll(".bn-transcript-roles__name");
+    expect(nameSpans).toHaveLength(0);
   });
 });

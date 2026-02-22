@@ -6,6 +6,184 @@
     margin-bottom: var(--bn-space-md);
 }
 
+/* ── Sticky journey header ────────────────────────────────────────────── */
+
+.bn-transcript-journey-header {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background: var(--bn-colour-bg);
+    box-shadow: 0 4px 12px var(--bn-colour-shadow);
+    padding: var(--bn-space-xs) var(--bn-space-md) var(--bn-space-xs) 0;
+    display: flex;
+    align-items: center;
+    gap: var(--bn-space-md);
+}
+
+/* Journey chain: horizontal scroll mode on transcript pages */
+.bn-session-journey--overflow {
+    overflow-x: auto;
+    white-space: nowrap;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    flex: 1;
+    min-width: 0;
+}
+
+.bn-session-journey--overflow::-webkit-scrollbar {
+    display: none;
+}
+
+/* Fade masks for overflow edges */
+.bn-journey--fade-right {
+    mask-image: linear-gradient(to right, black 0, black calc(100% - 2rem), transparent 100%);
+    -webkit-mask-image: linear-gradient(to right, black 0, black calc(100% - 2rem), transparent 100%);
+}
+
+.bn-journey--fade-left {
+    mask-image: linear-gradient(to right, transparent 0, black 2rem, black 100%);
+    -webkit-mask-image: linear-gradient(to right, transparent 0, black 2rem, black 100%);
+}
+
+.bn-journey--fade-both {
+    mask-image: linear-gradient(to right, transparent 0, black 2rem, black calc(100% - 2rem), transparent 100%);
+    -webkit-mask-image: linear-gradient(to right, transparent 0, black 2rem, black calc(100% - 2rem), transparent 100%);
+}
+
+/* Interactive labels: clickable buttons styled as inline text */
+button.bn-journey-label--interactive {
+    all: unset;
+    cursor: pointer;
+    font: inherit;
+    color: inherit;
+    border-radius: 2px;
+    padding: 0.1rem 0.3rem;
+    transition: color 0.15s, text-decoration-color 0.15s;
+}
+
+button.bn-journey-label--interactive:hover {
+    color: var(--bn-colour-accent);
+    text-decoration: underline;
+    text-decoration-color: var(--bn-colour-muted);
+    text-underline-offset: 0.25em;
+}
+
+button.bn-journey-label--interactive:focus-visible {
+    outline: 2px solid var(--bn-colour-accent);
+    outline-offset: 2px;
+}
+
+/* Active journey step — weight only, no colour/underline */
+.bn-journey-label--active {
+    font-weight: 600;
+}
+
+/* Selector — reusable dropdown primitive (bn-selector) */
+.bn-selector {
+    position: relative;
+    flex-shrink: 0;
+}
+
+.bn-selector__trigger {
+    all: unset;
+    font: inherit;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: inherit;
+    cursor: pointer;
+    white-space: nowrap;
+    padding: 0;
+    border: none;
+    border-radius: 0;
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+}
+
+.bn-selector__trigger:hover {
+    color: var(--bn-colour-accent);
+}
+
+.bn-selector__trigger:focus-visible {
+    outline: 2px solid var(--bn-colour-accent);
+    outline-offset: 2px;
+}
+
+.bn-selector__caret {
+    font-size: 0.7rem;
+    opacity: 0.6;
+}
+
+.bn-selector__menu {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: -0.75rem;  /* outdent by item padding so menu text aligns with trigger */
+    z-index: 20;
+    background: var(--bn-colour-bg);
+    border: 1px solid var(--bn-colour-border);
+    border-radius: var(--bn-radius-sm);
+    box-shadow: 0 4px 12px rgb(0 0 0 / 0.12);
+    list-style: none;
+    margin: 0;
+    padding: 0.25rem 0;
+    max-height: 20rem;
+    overflow-y: auto;
+}
+
+.bn-selector__item {
+    all: unset;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.4rem 0.75rem;
+    color: inherit;
+    text-decoration: none;
+    font-size: 0.85rem;
+    line-height: 1.4;
+    cursor: pointer;
+    white-space: nowrap;
+    box-sizing: border-box;
+}
+
+.bn-selector__item:hover {
+    background: var(--bn-colour-hover, #f0f0f0);
+}
+
+.bn-selector__item--active {
+    color: var(--bn-colour-accent);
+}
+
+/* Session-specific: secondary detail line (date) */
+.bn-selector__detail {
+    font-size: 0.78rem;
+    font-weight: 400;
+    color: var(--bn-colour-muted);
+}
+
+/* Segments need scroll-margin to not hide behind sticky header */
+.bn-transcript-journey-header ~ .transcript-body .transcript-segment[id] {
+    scroll-margin-top: var(--bn-journey-header-height, 3rem);
+}
+
+/* ── Session roles (moderator/observer line) ────────────────────────── */
+
+.bn-transcript-roles {
+    color: var(--bn-colour-muted);
+    font-size: 0.85rem;
+    margin: var(--bn-space-xs) 0 0;
+    line-height: 1.5;
+}
+
+.bn-transcript-roles__person {
+    white-space: nowrap;
+}
+
+.bn-transcript-roles__name {
+    margin-left: 0.25rem;
+}
+
+/* ── Transcript body ─────────────────────────────────────────────────── */
+
 .transcript-body {
     margin-top: var(--bn-space-lg);
     position: relative;

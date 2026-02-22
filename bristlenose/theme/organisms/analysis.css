@@ -312,6 +312,10 @@
 
 .heatmap-total:hover { outline: none; }
 
+.heatmap-grand-total {
+    font-weight: var(--bn-weight-strong);
+}
+
 .heatmap-cell.has-card { cursor: pointer; }
 .heatmap-cell:not(.has-card) { cursor: default; }
 .heatmap-cell:not(.has-card):hover { outline: none; }

@@ -166,6 +166,8 @@ function initStarred() {
   document.addEventListener('click', function (e) {
     var star = e.target.closest('.star-btn');
     if (!star) return;
+    // React Toggle sets aria-pressed — skip if React owns this button.
+    if (star.hasAttribute('aria-pressed')) return;
     e.preventDefault();
     var bq = star.closest('blockquote');
     if (!bq || !bq.id) return;
@@ -190,6 +192,7 @@ function initStarred() {
   document.addEventListener('mouseover', function (e) {
     var star = e.target.closest('.star-btn');
     if (!star) return;
+    if (star.hasAttribute('aria-pressed')) return;
     var bq = star.closest('blockquote');
     if (!bq || !bq.id) return;
     if (typeof selectedQuoteIds === 'undefined' || selectedQuoteIds.size < 2 || !selectedQuoteIds.has(bq.id)) return;
@@ -205,6 +208,7 @@ function initStarred() {
   document.addEventListener('mouseout', function (e) {
     var star = e.target.closest('.star-btn');
     if (!star) return;
+    if (star.hasAttribute('aria-pressed')) return;
     var related = e.relatedTarget;
     if (related && star.contains(related)) return;
     _clearStarPreview();

@@ -5,7 +5,7 @@
 }
 
 .quote-card.starred {
-    font-weight: var(--bn-weight-emphasis);
+    font-weight: var(--bn-weight-starred);
     border-left-color: var(--bn-colour-starred);
 }
 

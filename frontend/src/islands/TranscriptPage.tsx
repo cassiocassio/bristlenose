@@ -13,14 +13,22 @@
  */
 
 import { useEffect, useState, useRef, useLayoutEffect, useCallback } from "react";
-import { PersonBadge, TimecodeLink } from "../components";
+import { JourneyChain, PersonBadge, TimecodeLink } from "../components";
 import { Annotation } from "../components/Annotation";
 import type { AnnotationTag } from "../components/Annotation";
-import { getTranscript, putDeletedBadges, putTags } from "../utils/api";
-import { formatTimecode } from "../utils/format";
+import { Selector } from "../components/Selector";
+import {
+  getTranscript,
+  getSessionList,
+  putDeletedBadges,
+  putTags,
+} from "../utils/api";
+import type { SessionListItem } from "../utils/api";
+import { formatFinderDate, formatTimecode } from "../utils/format";
 import type {
   TranscriptPageResponse,
   TranscriptSegmentResponse,
+  TranscriptSpeakerResponse,
   QuoteAnnotationResponse,
 } from "../utils/types";
 
@@ -137,6 +145,217 @@ function useSpanBars(
 }
 
 // ---------------------------------------------------------------------------
+// Journey scroll sync hook
+// ---------------------------------------------------------------------------
+
+interface JourneyWaypoint {
+  anchorId: string;
+  label: string;
+}
+
+/**
+ * Build a mapping from journey label → first segment anchor ID, and an
+ * ordered list of section waypoints for scroll tracking.
+ */
+function buildJourneyMaps(
+  segments: TranscriptSegmentResponse[],
+  annotations: Record<string, QuoteAnnotationResponse>,
+): { labelToAnchor: Map<string, string>; waypoints: JourneyWaypoint[] } {
+  const labelToAnchor = new Map<string, string>();
+  const waypoints: JourneyWaypoint[] = [];
+  let lastLabel = "";
+
+  for (const seg of segments) {
+    if (!seg.is_quoted) continue;
+    for (const qid of seg.quote_ids) {
+      const ann = annotations[qid];
+      if (!ann || ann.label_type !== "section" || !ann.label) continue;
+
+      const anchorId = `t-${Math.floor(seg.start_time)}`;
+
+      // First occurrence of this label → record in labelToAnchor
+      if (!labelToAnchor.has(ann.label)) {
+        labelToAnchor.set(ann.label, anchorId);
+      }
+
+      // New section boundary → record waypoint
+      if (ann.label !== lastLabel) {
+        waypoints.push({ anchorId, label: ann.label });
+        lastLabel = ann.label;
+      }
+      break; // Only need first annotation per segment for section mapping
+    }
+  }
+
+  return { labelToAnchor, waypoints };
+}
+
+function useJourneyScrollSync(
+  segments: TranscriptSegmentResponse[],
+  annotations: Record<string, QuoteAnnotationResponse>,
+  journeyLabels: string[],
+  headerRef: React.RefObject<HTMLElement | null>,
+) {
+  const [activeLabel, setActiveLabel] = useState<string | null>(
+    journeyLabels.length > 0 ? journeyLabels[0] : null,
+  );
+  const isUserScrolling = useRef(true);
+  const scrollLockTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Build maps once from data
+  const mapsRef = useRef<ReturnType<typeof buildJourneyMaps> | null>(null);
+  if (!mapsRef.current && segments.length > 0) {
+    mapsRef.current = buildJourneyMaps(segments, annotations);
+  }
+
+  // Scroll event handler — find which section is at the top of viewport
+  useEffect(() => {
+    if (journeyLabels.length === 0) return;
+    const maps = mapsRef.current;
+    if (!maps || maps.waypoints.length === 0) return;
+
+    let rafId = 0;
+
+    function onScroll() {
+      if (!isUserScrolling.current) return;
+      cancelAnimationFrame(rafId);
+      rafId = requestAnimationFrame(() => {
+        const header = headerRef.current;
+        const threshold = header
+          ? header.getBoundingClientRect().bottom + 8
+          : 60;
+
+        let currentLabel = maps!.waypoints[0].label;
+        for (const wp of maps!.waypoints) {
+          const el = document.getElementById(wp.anchorId);
+          if (!el) continue;
+          const rect = el.getBoundingClientRect();
+          if (rect.top <= threshold) {
+            currentLabel = wp.label;
+          } else {
+            break;
+          }
+        }
+
+        setActiveLabel(currentLabel);
+      });
+    }
+
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      cancelAnimationFrame(rafId);
+    };
+  }, [journeyLabels, headerRef]);
+
+  const handleLabelClick = useCallback(
+    (label: string) => {
+      const maps = mapsRef.current;
+      if (!maps) return;
+      const anchorId = maps.labelToAnchor.get(label);
+      if (!anchorId) return;
+
+      // Suppress scroll observer during programmatic scroll
+      isUserScrolling.current = false;
+      setActiveLabel(label);
+
+      const el = document.getElementById(anchorId);
+      if (el) {
+        el.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
+
+      // Re-enable scroll tracking after animation
+      if (scrollLockTimer.current) clearTimeout(scrollLockTimer.current);
+      scrollLockTimer.current = setTimeout(() => {
+        isUserScrolling.current = true;
+      }, 600);
+    },
+    [],
+  );
+
+  return { activeLabel, handleLabelClick };
+}
+
+// ---------------------------------------------------------------------------
+// Session selector helpers
+// ---------------------------------------------------------------------------
+
+function renderSessionItem(s: SessionListItem): React.ReactNode {
+  const participants = s.speakers.filter((sp) => sp.role === "participant");
+  return (
+    <>
+      <strong>Session {s.session_number}</strong>
+      {s.session_date && (
+        <span className="bn-selector__detail">{formatFinderDate(s.session_date)}</span>
+      )}
+      {participants.map((sp) => (
+        <PersonBadge
+          key={sp.speaker_code}
+          code={sp.speaker_code}
+          role="participant"
+          name={sp.name && sp.name !== sp.speaker_code ? sp.name : undefined}
+        />
+      ))}
+    </>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Session roles helpers (moderator/observer line below sticky header)
+// ---------------------------------------------------------------------------
+
+/** Render a list of speakers as badge + name fragments with Oxford-comma joining. */
+function oxfordJoin(people: TranscriptSpeakerResponse[]): React.ReactNode[] {
+  return people.map((sp, i) => {
+    const showName = sp.name !== sp.code;
+    const badgeRole = sp.code.startsWith("m")
+      ? "moderator" as const
+      : "observer" as const;
+    const person = (
+      <span key={sp.code} className="bn-transcript-roles__person">
+        <PersonBadge code={sp.code} role={badgeRole} />
+        {showName && <span className="bn-transcript-roles__name">{sp.name}</span>}
+      </span>
+    );
+    if (i === 0) return person;
+    if (i === people.length - 1) {
+      const sep = people.length > 2 ? ", and " : " and ";
+      return <span key={sp.code}>{sep}{person}</span>;
+    }
+    return <span key={sp.code}>, {person}</span>;
+  });
+}
+
+/** Render the session roles line (moderators + observers). Returns null if none. */
+function renderSessionRoles(
+  speakers: TranscriptSpeakerResponse[],
+): React.ReactNode | null {
+  const moderators = speakers.filter((s) => s.role === "researcher");
+  const observers = speakers.filter((s) => s.role === "observer");
+  if (moderators.length === 0 && observers.length === 0) return null;
+
+  return (
+    <div className="bn-transcript-roles" data-testid="transcript-roles">
+      {moderators.length > 0 && (
+        <span>
+          {moderators.length === 1 ? "Moderator " : "Moderators "}
+          {oxfordJoin(moderators)}
+        </span>
+      )}
+      {moderators.length > 0 && observers.length > 0 && ", "}
+      {observers.length > 0 && (
+        <span>
+          {moderators.length > 0
+            ? (observers.length === 1 ? "observer " : "observers ")
+            : (observers.length === 1 ? "Observer " : "Observers ")}
+          {oxfordJoin(observers)}
+        </span>
+      )}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
 
@@ -145,7 +364,9 @@ export function TranscriptPage({ projectId: _projectId, sessionId }: TranscriptP
   const [data, setData] = useState<TranscriptPageResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [sessionList, setSessionList] = useState<SessionListItem[]>([]);
   const bodyRef = useRef<HTMLElement | null>(null);
+  const headerRef = useRef<HTMLDivElement | null>(null);
 
   // Fetch transcript data
   useEffect(() => {
@@ -160,6 +381,13 @@ export function TranscriptPage({ projectId: _projectId, sessionId }: TranscriptP
       })
       .finally(() => setLoading(false));
   }, [sessionId]);
+
+  // Fetch session list for dropdown
+  useEffect(() => {
+    getSessionList()
+      .then(setSessionList)
+      .catch(() => {}); // Non-critical — dropdown just won't show
+  }, []);
 
   // Anchor highlight after render
   useEffect(() => {
@@ -177,8 +405,27 @@ export function TranscriptPage({ projectId: _projectId, sessionId }: TranscriptP
     });
   }, [data, loading]);
 
+  // Measure sticky header height for scroll-margin-top
+  useLayoutEffect(() => {
+    if (headerRef.current) {
+      const height = headerRef.current.offsetHeight;
+      document.documentElement.style.setProperty(
+        "--bn-journey-header-height",
+        `${height}px`,
+      );
+    }
+  }, [data?.journey_labels]);
+
   // Span bars
   const bars = useSpanBars(bodyRef, data?.segments ?? [], data?.annotations ?? {});
+
+  // Journey scroll sync
+  const { activeLabel, handleLabelClick } = useJourneyScrollSync(
+    data?.segments ?? [],
+    data?.annotations ?? {},
+    data?.journey_labels ?? [],
+    headerRef,
+  );
 
   // Deleted badge / tag callbacks
   const handleDeleteBadge = useCallback(
@@ -235,10 +482,12 @@ export function TranscriptPage({ projectId: _projectId, sessionId }: TranscriptP
     );
   }
 
-  const { segments, speakers, annotations } = data;
+  const { segments, speakers, annotations, journey_labels } = data;
   const sessionNum = sessionId.length > 1 && "sp".includes(sessionId[0]) && /^\d+$/.test(sessionId.slice(1))
     ? sessionId.slice(1)
     : sessionId;
+
+  const hasJourney = journey_labels.length > 0;
 
   // Track which quote IDs have been rendered (first segment per quote only)
   const seenQuoteIds = new Set<string>();
@@ -248,29 +497,37 @@ export function TranscriptPage({ projectId: _projectId, sessionId }: TranscriptP
 
   return (
     <>
-      {/* Heading with speaker badges */}
-      <h1 data-testid="transcript-heading">
-        Session {sessionNum}:{" "}
-        {speakers.map((sp, i) => {
-          const badgeRole = sp.code.startsWith("m")
-            ? "moderator" as const
-            : sp.code.startsWith("o")
-              ? "observer" as const
-              : "participant" as const;
-          return (
-            <span key={sp.code}>
-              {i > 0 && ", "}
-              <span className="heading-speaker" data-participant={sp.code}>
-                <PersonBadge
-                  code={sp.code}
-                  role={badgeRole}
-                  name={sp.name !== sp.code ? sp.name : undefined}
-                />
-              </span>
-            </span>
-          );
-        })}
-      </h1>
+      {/* Sticky journey header with session selector */}
+      {hasJourney && (
+        <div
+          className="bn-transcript-journey-header"
+          ref={headerRef}
+          data-testid="transcript-journey-header"
+        >
+          {sessionList.length > 1 && (
+            <Selector<SessionListItem>
+              label={`Session ${sessionNum}`}
+              items={sessionList}
+              itemKey={(s) => s.session_id}
+              renderItem={renderSessionItem}
+              activeKey={sessionId}
+              itemHref={(s) => `transcript_${s.session_id}.html`}
+              className="bn-session-selector"
+              data-testid="session-selector"
+            />
+          )}
+          <JourneyChain
+            labels={journey_labels}
+            activeLabel={activeLabel}
+            onLabelClick={handleLabelClick}
+            stickyOverflow
+            data-testid="transcript-journey-chain"
+          />
+        </div>
+      )}
+
+      {/* Session roles — moderator/observer line (scrolls away naturally) */}
+      {renderSessionRoles(speakers)}
 
       {/* Transcript body */}
       <section

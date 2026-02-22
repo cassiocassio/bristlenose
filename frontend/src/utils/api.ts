@@ -188,6 +188,25 @@ export function getTranscript(sessionId: string): Promise<TranscriptPageResponse
   return apiGet<TranscriptPageResponse>(`/transcripts/${sessionId}`);
 }
 
+/** Lightweight session list for the transcript session selector. */
+export interface SessionListSpeaker {
+  speaker_code: string;
+  name: string;
+  role: string;
+}
+
+export interface SessionListItem {
+  session_id: string;
+  session_number: number;
+  session_date: string | null;
+  speakers: SessionListSpeaker[];
+}
+
+export async function getSessionList(): Promise<SessionListItem[]> {
+  const data = await apiGet<{ sessions: SessionListItem[] }>("/sessions");
+  return data.sessions;
+}
+
 // ---------------------------------------------------------------------------
 // AutoCode helpers
 // ---------------------------------------------------------------------------

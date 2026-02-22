@@ -361,11 +361,11 @@ function initAnalysis() {
 
         // Column totals
         html += "<tr>";
-        html += '<td class="heatmap-total" style="font-weight:490">Total</td>';
+        html += '<td class="heatmap-total">Total</td>';
         sentiments.forEach(function (sent) {
             html += '<td class="heatmap-total">' + (colTotals[sent] || 0) + "</td>";
         });
-        html += '<td class="heatmap-total" style="font-weight:700">' + grandTotal + "</td>";
+        html += '<td class="heatmap-total heatmap-grand-total">' + grandTotal + "</td>";
         html += "</tr>";
 
         html += "</tbody></table>";

@@ -223,6 +223,9 @@ def import_project(db: Session, project_dir: Path) -> Project:
     # --- Import source files ---------------------------------------------
     _import_source_files(db, session_map, session_meta, project_dir)
 
+    # --- Scan for video thumbnails ---------------------------------------
+    _import_thumbnails(session_map, output_dir)
+
     # --- Import transcript segments --------------------------------------
     _import_transcript_segments(db, session_map, transcripts_dir)
 
@@ -339,6 +342,20 @@ def _import_source_files(
             verified_at=datetime.now(timezone.utc) if source_path.exists() else None,
         )
         db.add(sf)
+
+
+def _import_thumbnails(
+    session_map: dict[str, SessionModel],
+    output_dir: Path,
+) -> None:
+    """Set thumbnail_path on sessions that have a generated thumbnail on disk."""
+    thumbnails_dir = output_dir / "assets" / "thumbnails"
+    if not thumbnails_dir.is_dir():
+        return
+    for sid, sess in session_map.items():
+        thumb_path = thumbnails_dir / f"{sid}.jpg"
+        if thumb_path.exists():
+            sess.thumbnail_path = f"assets/thumbnails/{sid}.jpg"
 
 
 def _guess_file_type(filename: str) -> str:

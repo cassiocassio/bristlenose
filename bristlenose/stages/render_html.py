@@ -1326,7 +1326,6 @@ def _render_project_tab(
             sessions, people, display_names, video_map, now,
             screen_clusters=screen_clusters,
             all_quotes=all_quotes,
-            thumbnail_map=thumbnail_map,
         )
         _w('<div class="bn-dashboard-pane bn-dashboard-full">')
         _w(_jinja_env.get_template("dashboard_session_table.html").render(

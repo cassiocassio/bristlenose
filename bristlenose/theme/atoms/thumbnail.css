@@ -11,6 +11,13 @@
     cursor: pointer;
 }
 
+.bn-video-thumb img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: var(--bn-radius-sm);
+}
+
 .bn-play-icon {
     display: flex;
     align-items: center;

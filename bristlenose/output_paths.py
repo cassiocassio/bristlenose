@@ -12,7 +12,10 @@ Layout (v2):
     │   ├── bristlenose-theme.css
     │   ├── bristlenose-logo.png
     │   ├── bristlenose-logo-dark.png
-    │   └── bristlenose-player.html
+    │   ├── bristlenose-player.html
+    │   └── thumbnails/                    # Video keyframe thumbnails
+    │       ├── s1.jpg
+    │       └── ...
     ├── sessions/                          # Per-session transcript pages
     │   ├── transcript_s1.html
     │   └── ...
@@ -118,6 +121,15 @@ class OutputPaths:
     def player_file(self) -> Path:
         """Video player page: assets/bristlenose-player.html"""
         return self.assets_dir / "bristlenose-player.html"
+
+    @property
+    def thumbnails_dir(self) -> Path:
+        """Video thumbnails: assets/thumbnails/"""
+        return self.assets_dir / "thumbnails"
+
+    def thumbnail(self, session_id: str) -> Path:
+        """Thumbnail for a session: assets/thumbnails/{session_id}.jpg"""
+        return self.thumbnails_dir / f"{session_id}.jpg"
 
     # --- Sessions directory ---
 

@@ -37,7 +37,9 @@
 <td class="bn-session-duration">{{ row.duration }}</td>
 <td>{{ row.source }}</td>
 <td class="bn-session-thumb">
-{%- if row.has_media %}
+{%- if row.thumbnail_url %}
+<div class="bn-video-thumb"><img src="{{ row.thumbnail_url }}" alt="" loading="lazy"></div>
+{%- elif row.has_media %}
 <div class="bn-video-thumb"><span class="bn-play-icon">&#9654;</span></div>
 {%- endif %}
 </td>

@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Journey Chain Stress Test — 15 Sections</title>
+<link rel="stylesheet" href="../../bristlenose/theme/tokens.css">
+<link rel="stylesheet" href="../../bristlenose/theme/templates/transcript.css">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: var(--bn-font-body);
+    font-weight: var(--bn-weight-normal);
+    color: var(--bn-colour-text);
+    background: var(--bn-colour-bg);
+    line-height: 1.6;
+  }
+
+  /* Simulated sticky header — mirrors TranscriptPage layout */
+  .bn-transcript-journey-header {
+    max-width: 60rem;
+    margin: 0 auto;
+  }
+
+  .mock-body {
+    max-width: 60rem;
+    margin: 0 auto;
+    padding: 0 var(--bn-space-md);
+  }
+
+  .mock-section {
+    padding: var(--bn-space-lg) 0;
+    border-bottom: 1px solid var(--bn-colour-border);
+    min-height: 50vh;
+  }
+
+  .mock-section h2 {
+    font-weight: var(--bn-weight-emphasis);
+    font-size: 1.2rem;
+    margin-bottom: var(--bn-space-md);
+    color: var(--bn-colour-text);
+  }
+
+  .mock-section p {
+    color: var(--bn-colour-muted);
+    font-size: 0.9rem;
+    max-width: 40rem;
+    margin-bottom: var(--bn-space-md);
+  }
+
+  .mock-quote {
+    background: var(--bn-colour-quote-bg);
+    border-left: 3px solid var(--bn-colour-border);
+    padding: var(--bn-space-md);
+    margin: var(--bn-space-md) 0;
+    font-style: italic;
+    font-size: 0.9rem;
+    border-radius: 0 var(--bn-radius-sm) var(--bn-radius-sm) 0;
+  }
+
+  .mock-badge {
+    display: inline-block;
+    font-size: 0.75rem;
+    font-weight: var(--bn-weight-emphasis);
+    background: var(--bn-colour-badge-bg);
+    color: var(--bn-colour-badge-text);
+    padding: 0.1rem 0.4rem;
+    border-radius: var(--bn-radius-sm);
+    margin-right: 0.3rem;
+  }
+
+  .mock-info {
+    position: fixed;
+    bottom: 1rem;
+    right: 1rem;
+    background: var(--bn-colour-quote-bg);
+    border: 1px solid var(--bn-colour-border);
+    border-radius: var(--bn-radius-md);
+    padding: var(--bn-space-md);
+    font-size: 0.8rem;
+    color: var(--bn-colour-muted);
+    z-index: 20;
+    max-width: 14rem;
+    box-shadow: 0 4px 12px var(--bn-colour-shadow);
+  }
+
+  .mock-info strong {
+    color: var(--bn-colour-text);
+    display: block;
+    margin-bottom: 0.3rem;
+  }
+
+  /* Scroll margin for section headings behind sticky header */
+  .mock-section[id] {
+    scroll-margin-top: var(--bn-journey-header-height, 3rem);
+  }
+</style>
+</head>
+<body>
+
+<!-- Sticky journey header -->
+<div class="bn-transcript-journey-header" id="journey-header">
+  <div class="bn-session-journey bn-session-journey--overflow" id="journey-chain">
+    <!-- Labels injected by JS -->
+  </div>
+</div>
+
+<!-- Content sections -->
+<div class="mock-body" id="sections-container">
+  <!-- Sections injected by JS -->
+</div>
+
+<!-- Debug info panel -->
+<div class="mock-info" id="debug-info">
+  <strong>Scroll Sync Debug</strong>
+  Active: <span id="debug-label">—</span><br>
+  Threshold: <span id="debug-threshold">—</span>px
+</div>
+
+<script>
+(function () {
+  // ── Section data ──────────────────────────────────────────────────
+  var sections = [
+    { label: "Home", desc: "Landing page with hero banner, featured categories, and promotional offers. Users typically spend 8-12 seconds scanning before navigating." },
+    { label: "Login", desc: "Authentication screen with email/password, SSO options, and password recovery. Several participants struggled with the SSO button placement." },
+    { label: "Dashboard", desc: "Personalised overview showing recent orders, saved items, and recommended products based on browsing history." },
+    { label: "Product Catalogue", desc: "Grid view of products with filtering by category, price range, brand, and availability. Supports list and grid view toggle." },
+    { label: "Product Detail", desc: "Individual product page with images, description, specifications, reviews summary, and add-to-cart action." },
+    { label: "Size Guide", desc: "Modal overlay with size charts, measurement instructions, and fit recommendations. Triggered from product detail page." },
+    { label: "Reviews", desc: "Full reviews section with star distribution, verified purchase badges, photo reviews, and helpful vote sorting." },
+    { label: "Add to Cart", desc: "Cart addition confirmation with quantity selector, variant options, and cross-sell suggestions. Brief interaction point." },
+    { label: "Cart", desc: "Shopping cart summary with line items, quantity adjustments, promo code input, and estimated totals. Key decision point." },
+    { label: "Checkout", desc: "Multi-step checkout: shipping address, delivery options, and order review. Progressive disclosure pattern." },
+    { label: "Payment", desc: "Payment method selection with saved cards, new card entry, and alternative payment options (PayPal, Apple Pay)." },
+    { label: "Order Confirmation", desc: "Post-purchase confirmation with order number, estimated delivery, and next-steps guidance. Often where satisfaction peaks." },
+    { label: "Account Settings", desc: "Profile management: personal details, saved addresses, payment methods, notification preferences, and data export." },
+    { label: "Help Centre", desc: "Support hub with FAQ accordion, contact options, live chat widget, and ticket submission form." },
+    { label: "Footer", desc: "Site-wide footer navigation with legal links, social media, newsletter signup, and app download badges." },
+  ];
+
+  var quotes = [
+    "I wasn't sure where to click first, there's a lot going on.",
+    "The login kept redirecting me back here, which was frustrating.",
+    "Oh nice, it remembers what I was looking at last time.",
+    "There are way too many filters, I just want to see dresses.",
+    "The photos are good but I wish I could see it on a real person.",
+    "This is helpful actually, I never know my size in UK vs US.",
+    "I trust the reviews more when they have photos attached.",
+    "Wait, did it add two? I only wanted one.",
+    "I didn't expect shipping to cost that much for next day.",
+    "Why do I have to enter my address again? I just did that.",
+    "Apple Pay is so much easier than typing card numbers.",
+    "Great, so it'll arrive Thursday. That works perfectly.",
+    "I can never find where to change my email address.",
+    "The chatbot wasn't helpful, I had to wait for a real person.",
+    "I almost missed the unsubscribe link, it's tiny.",
+  ];
+
+  var sentiments = [
+    "confusion", "frustration", "delight", "frustration", "satisfaction",
+    "satisfaction", "confidence", "confusion", "surprise", "frustration",
+    "delight", "satisfaction", "confusion", "frustration", "frustration",
+  ];
+
+  // ── Build DOM ─────────────────────────────────────────────────────
+  var chain = document.getElementById("journey-chain");
+  var container = document.getElementById("sections-container");
+  var anchors = [];
+
+  sections.forEach(function (sec, i) {
+    // Journey label
+    if (i > 0) {
+      var sep = document.createElement("span");
+      sep.className = "bn-journey-sep";
+      sep.setAttribute("aria-hidden", "true");
+      sep.textContent = " \u2192 ";
+      chain.appendChild(sep);
+    }
+
+    var btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "bn-journey-label bn-journey-label--interactive";
+    if (i === 0) btn.className += " bn-journey-label--active";
+    btn.textContent = sec.label;
+    btn.setAttribute("data-index", i);
+    chain.appendChild(btn);
+
+    // Content section
+    var slug = sec.label.toLowerCase().replace(/\s+/g, "-");
+    var div = document.createElement("div");
+    div.className = "mock-section";
+    div.id = "section-" + slug;
+
+    div.innerHTML =
+      '<h2>' + sec.label + '</h2>' +
+      '<p>' + sec.desc + '</p>' +
+      '<div class="mock-quote">' +
+        '<span class="mock-badge">' + sentiments[i] + '</span> ' +
+        '"' + quotes[i] + '"' +
+      '</div>' +
+      '<p>Additional context: participant navigated here from ' +
+      (i > 0 ? sections[i - 1].label : 'external link') +
+      '. Time on screen: ' + (15 + Math.floor(Math.random() * 45)) + 's. ' +
+      'Task completion: ' + (i % 3 === 0 ? 'completed' : i % 3 === 1 ? 'abandoned' : 'partial') + '.</p>' +
+      '<p style="color: var(--bn-colour-border);">— end of ' + sec.label + ' section —</p>';
+
+    container.appendChild(div);
+    anchors.push({ label: sec.label, el: div });
+  });
+
+  // ── Measure header ────────────────────────────────────────────────
+  var header = document.getElementById("journey-header");
+  var headerHeight = header.offsetHeight;
+  document.documentElement.style.setProperty(
+    "--bn-journey-header-height",
+    headerHeight + "px"
+  );
+
+  // ── Scroll sync ───────────────────────────────────────────────────
+  var labels = chain.querySelectorAll(".bn-journey-label");
+  var debugLabel = document.getElementById("debug-label");
+  var debugThreshold = document.getElementById("debug-threshold");
+  var isUserScrolling = true;
+  var scrollLockTimer = null;
+  var rafId = 0;
+
+  function updateActiveLabel() {
+    if (!isUserScrolling) return;
+
+    var threshold = header.getBoundingClientRect().bottom + 8;
+    debugThreshold.textContent = Math.round(threshold);
+
+    var currentIndex = 0;
+    for (var i = 0; i < anchors.length; i++) {
+      var rect = anchors[i].el.getBoundingClientRect();
+      if (rect.top <= threshold) {
+        currentIndex = i;
+      } else {
+        break;
+      }
+    }
+
+    debugLabel.textContent = anchors[currentIndex].label;
+
+    labels.forEach(function (lbl, idx) {
+      if (idx === currentIndex) {
+        lbl.classList.add("bn-journey-label--active");
+      } else {
+        lbl.classList.remove("bn-journey-label--active");
+      }
+    });
+
+    // Auto-scroll active label into view in the chain
+    labels[currentIndex].scrollIntoView({
+      inline: "center",
+      behavior: "smooth",
+      block: "nearest",
+    });
+
+    // Update fade masks
+    updateFadeMasks();
+  }
+
+  function onScroll() {
+    cancelAnimationFrame(rafId);
+    rafId = requestAnimationFrame(updateActiveLabel);
+  }
+
+  window.addEventListener("scroll", onScroll, { passive: true });
+
+  // ── Click to scroll ───────────────────────────────────────────────
+  chain.addEventListener("click", function (e) {
+    var btn = e.target.closest(".bn-journey-label");
+    if (!btn) return;
+
+    var idx = parseInt(btn.getAttribute("data-index"), 10);
+    if (isNaN(idx)) return;
+
+    // Suppress scroll tracking during animation
+    isUserScrolling = false;
+
+    // Update active immediately
+    labels.forEach(function (lbl, i) {
+      if (i === idx) {
+        lbl.classList.add("bn-journey-label--active");
+      } else {
+        lbl.classList.remove("bn-journey-label--active");
+      }
+    });
+    debugLabel.textContent = anchors[idx].label;
+
+    // Scroll to section
+    anchors[idx].el.scrollIntoView({ behavior: "smooth", block: "start" });
+
+    // Re-enable after animation
+    if (scrollLockTimer) clearTimeout(scrollLockTimer);
+    scrollLockTimer = setTimeout(function () {
+      isUserScrolling = true;
+    }, 600);
+  });
+
+  // ── Fade masks ────────────────────────────────────────────────────
+  function updateFadeMasks() {
+    var el = chain;
+    var canLeft = el.scrollLeft > 1;
+    var canRight = el.scrollLeft + el.clientWidth < el.scrollWidth - 1;
+
+    el.classList.remove("bn-journey--fade-left", "bn-journey--fade-right", "bn-journey--fade-both");
+    if (canLeft && canRight) {
+      el.classList.add("bn-journey--fade-both");
+    } else if (canLeft) {
+      el.classList.add("bn-journey--fade-left");
+    } else if (canRight) {
+      el.classList.add("bn-journey--fade-right");
+    }
+  }
+
+  chain.addEventListener("scroll", updateFadeMasks, { passive: true });
+
+  // Initial state
+  updateFadeMasks();
+  updateActiveLabel();
+})();
+</script>
+</body>
+</html>

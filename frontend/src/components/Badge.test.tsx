@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, fireEvent } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { Badge } from "./Badge";
 
@@ -61,8 +61,8 @@ describe("Badge", () => {
     render(
       <Badge text="Frustration" variant="proposed" data-testid="p" />,
     );
-    expect(screen.getByTitle("Accept")).toBeInTheDocument();
-    expect(screen.getByTitle("Deny")).toBeInTheDocument();
+    expect(screen.getByTitle("Accept (a)")).toBeInTheDocument();
+    expect(screen.getByTitle("Deny (d)")).toBeInTheDocument();
   });
 
   it("proposed: accept click fires onAccept", async () => {
@@ -98,5 +98,53 @@ describe("Badge", () => {
   it("proposed: has tooltip class for hover", () => {
     render(<Badge text="Frustration" variant="proposed" data-testid="p" />);
     expect(screen.getByTestId("p")).toHaveClass("has-tooltip");
+  });
+
+  // ── Keyboard shortcuts (A to accept, D to deny while hovered) ──────
+
+  it("proposed: A key fires onAccept when hovered", () => {
+    const onAccept = vi.fn();
+    render(<Badge text="Tag" variant="proposed" onAccept={onAccept} data-testid="p" />);
+    fireEvent.mouseEnter(screen.getByTestId("p"));
+    fireEvent.keyDown(document, { key: "a" });
+    expect(onAccept).toHaveBeenCalledOnce();
+  });
+
+  it("proposed: D key fires onDeny when hovered", () => {
+    const onDeny = vi.fn();
+    render(<Badge text="Tag" variant="proposed" onDeny={onDeny} data-testid="p" />);
+    fireEvent.mouseEnter(screen.getByTestId("p"));
+    fireEvent.keyDown(document, { key: "d" });
+    expect(onDeny).toHaveBeenCalledOnce();
+  });
+
+  it("proposed: A/D keys do nothing when not hovered", () => {
+    const onAccept = vi.fn();
+    const onDeny = vi.fn();
+    render(<Badge text="Tag" variant="proposed" onAccept={onAccept} onDeny={onDeny} data-testid="p" />);
+    // No mouseEnter — badge is not hovered.
+    fireEvent.keyDown(document, { key: "a" });
+    fireEvent.keyDown(document, { key: "d" });
+    expect(onAccept).not.toHaveBeenCalled();
+    expect(onDeny).not.toHaveBeenCalled();
+  });
+
+  it("proposed: A/D keys do nothing when focus is in an input", () => {
+    const onAccept = vi.fn();
+    const onDeny = vi.fn();
+    render(
+      <div>
+        <Badge text="Tag" variant="proposed" onAccept={onAccept} onDeny={onDeny} data-testid="p" />
+        <input data-testid="text-input" />
+      </div>,
+    );
+    fireEvent.mouseEnter(screen.getByTestId("p"));
+    const input = screen.getByTestId("text-input");
+    input.focus();
+    // Dispatch keydown on the input (simulates typing in a text field).
+    fireEvent.keyDown(input, { key: "a" });
+    fireEvent.keyDown(input, { key: "d" });
+    expect(onAccept).not.toHaveBeenCalled();
+    expect(onDeny).not.toHaveBeenCalled();
   });
 });

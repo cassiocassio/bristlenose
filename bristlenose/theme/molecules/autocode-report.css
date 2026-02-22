@@ -90,14 +90,15 @@
 .report-row.removing td { padding-top: 0; padding-bottom: 0; }
 
 /* Rationale tooltip (shared with proposed badges).
-   Soft surface, 300ms hover delay, float-down-from-above animation. */
+   Soft surface, 300ms hover delay, float-up-from-below animation.
+   Positioned below the tag so the quote text stays readable. */
 .has-tooltip {
     position: relative;
 }
 
 .has-tooltip .tooltip {
     position: absolute;
-    bottom: calc(100% + 6px);
+    top: calc(100% + 6px);
     left: 50%;
     background: var(--bn-colour-bg);
     color: var(--bn-colour-text);
@@ -112,9 +113,9 @@
     line-height: 1.4;
     box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08), 0 1px 4px rgba(0, 0, 0, 0.04);
     font-family: var(--bn-font-body);
-    /* Float-down animation: starts 8px above, settles into place */
+    /* Float-up animation: starts 8px below, settles into place */
     opacity: 0;
-    transform: translateX(-50%) translateY(-8px);
+    transform: translateX(-50%) translateY(8px);
     transition: opacity 0.2s ease-out, transform 0.2s ease-out;
     pointer-events: none;
     transition-delay: 0s; /* instant exit on mouse-out */

@@ -109,6 +109,38 @@ Session table styles in `templates/report.css`. The session table renders in bot
 - **`.bn-folder-icon`** — inline SVG folder icon in header link
 - **Clickable rows** — `tbody tr[data-session]` gets `cursor: pointer` and `var(--bn-colour-hover)` on hover (in `report.css`). JS click handler in `global-nav.js` calls `navigateToSession()`. Dashboard table rows (`_initGlobalNav`) and Sessions tab rows (`_initSessionDrillDown`) both use this pattern. Clicks on `<a>` elements within rows (filenames, session links) are not intercepted
 
+## Tooltip pattern (system-wide)
+
+All custom content tooltips use a consistent pattern: **soft surface, 300ms hover delay, float-down-from-above animation**. This applies to rationale tooltips on proposed badges, analysis cell tooltips, and any future hover-reveal content.
+
+### Spec
+
+| Property | Value | Token/Note |
+|---|---|---|
+| background | `var(--bn-colour-bg)` | page-coloured — adapts to light/dark |
+| color | `var(--bn-colour-text)` | primary text colour |
+| border | `1px solid var(--bn-colour-border)` | standard border |
+| border-radius | `var(--bn-radius-md)` | 6px |
+| box-shadow | `0 4px 16px rgba(0,0,0,0.08), 0 1px 4px rgba(0,0,0,0.04)` | subtle depth |
+| hover delay | 300ms in, 0ms out | `transition-delay: 0.3s` on hover, `0s` on base |
+| animation | `translateY(-8px)` → `translateY(0)` + opacity 0→1 | float down + fade |
+| duration | `0.2s ease-out` | decelerates into final position |
+| exit | instant | no delay, CSS transition reversal |
+
+### Two implementations
+
+1. **CSS-only** (`.has-tooltip .tooltip` in `molecules/autocode-report.css`) — used for rationale tooltips on proposed badges and in the AutoCode report modal. Uses `transition-delay` for the 300ms hover delay.
+2. **JS-controlled** (`CellTooltip` in `frontend/src/islands/AnalysisPage.tsx`) — used for analysis heatmap cell tooltips. Uses `setTimeout(300)` in `handleCellEnter` for the delay, CSS `@keyframes cell-tooltip-in` for the animation.
+
+### When to use custom tooltips vs native `title`
+
+- **Custom tooltip**: for content — rationale text, quote previews, metric breakdowns. Use when you need to control timing, styling, and multi-line layout
+- **Native `title` attribute**: for simple one-word icon labels (toolbar buttons, action hints like "Accept", "Deny"). Leave these as browser defaults
+
+### Design exploration
+
+`docs/mockups/tooltip-gallery.html` — 6 variants (A–F) with interactive comparison and dark mode toggle. Variant D was chosen.
+
 ## Span bar atom
 
 Reusable vertical extent indicator for showing how far a range (e.g. a quote) extends across a list of items. Positioned absolutely by JS; visual properties come from `--bn-span-bar-*` tokens.

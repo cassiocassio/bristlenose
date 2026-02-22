@@ -85,7 +85,6 @@ export function QuoteGroup({
   quotes,
   tagVocabulary,
   hasMedia,
-  onStateChange,
 }: QuoteGroupProps) {
   // ── State ─────────────────────────────────────────────────────────────
 
@@ -98,6 +97,11 @@ export function QuoteGroup({
       return map;
     },
   );
+
+  // Ref mirrors stateMap so handlers (including setTimeout closures)
+  // always see the latest state without stale-closure issues.
+  const stateRef = useRef(stateMap);
+  stateRef.current = stateMap;
 
   // Heading/description edit state.
   const [headingText, setHeadingText] = useState(label);
@@ -159,57 +163,28 @@ export function QuoteGroup({
     return map;
   }, [quotes]);
 
-  // ── State sync helper ─────────────────────────────────────────────────
+  // ── Mutation helpers ──────────────────────────────────────────────────
 
-  const syncToServer = useCallback(
-    (newMap: Record<string, QuoteLocalState>) => {
-      // Build full state maps for the server.
-      const hidden: Record<string, boolean> = {};
-      const starred: Record<string, boolean> = {};
-      const edits: Record<string, string> = {};
-      const tags: Record<string, string[]> = {};
-      const badges: Record<string, string[]> = {};
-
-      for (const [domId, state] of Object.entries(newMap)) {
-        if (state.isHidden) hidden[domId] = true;
-        if (state.isStarred) starred[domId] = true;
-        if (state.editedText) edits[domId] = state.editedText;
-        if (state.tags.length > 0) tags[domId] = state.tags.map((t) => t.name);
-        if (state.deletedBadges.length > 0)
-          badges[domId] = state.deletedBadges;
-      }
-
-      // Fire-and-forget PUT calls.
-      putHidden(hidden);
-      putStarred(starred);
-      putEdits(edits);
-      putTags(tags);
-      putDeletedBadges(badges);
-
-      onStateChange?.({ hidden, starred, edits, tags, deletedBadges: badges });
-    },
-    [onStateChange],
-  );
-
-  // ── Mutation handlers ─────────────────────────────────────────────────
-
+  /** Update one quote's local state (no API call). */
   const updateQuote = useCallback(
     (
       domId: string,
       updater: (prev: QuoteLocalState) => QuoteLocalState,
     ) => {
-      setStateMap((prev) => {
-        const updated = { ...prev, [domId]: updater(prev[domId]) };
-        syncToServer(updated);
-        return updated;
-      });
+      setStateMap((prev) => ({ ...prev, [domId]: updater(prev[domId]) }));
     },
-    [syncToServer],
+    [],
   );
 
   const handleToggleStar = useCallback(
     (domId: string, newState: boolean) => {
       updateQuote(domId, (s) => ({ ...s, isStarred: newState }));
+      const starred: Record<string, boolean> = {};
+      for (const [id, s] of Object.entries(stateRef.current)) {
+        const val = id === domId ? newState : s.isStarred;
+        if (val) starred[id] = true;
+      }
+      putStarred(starred);
     },
     [updateQuote],
   );
@@ -226,12 +201,25 @@ export function QuoteGroup({
             return next;
           });
           updateQuote(domId, (s) => ({ ...s, isHidden: true }));
+          // Fire putHidden using stateRef (always current) + known mutation.
+          const hidden: Record<string, boolean> = {};
+          for (const [id, s] of Object.entries(stateRef.current)) {
+            const val = id === domId ? true : s.isHidden;
+            if (val) hidden[id] = true;
+          }
+          putHidden(hidden);
           hideTimers.current.delete(domId);
         }, HIDE_DURATION);
         hideTimers.current.set(domId, timer);
       } else {
         // Unhide immediately.
         updateQuote(domId, (s) => ({ ...s, isHidden: false }));
+        const hidden: Record<string, boolean> = {};
+        for (const [id, s] of Object.entries(stateRef.current)) {
+          const val = id === domId ? false : s.isHidden;
+          if (val) hidden[id] = true;
+        }
+        putHidden(hidden);
       }
     },
     [updateQuote],
@@ -240,6 +228,12 @@ export function QuoteGroup({
   const handleEditCommit = useCallback(
     (domId: string, newText: string) => {
       updateQuote(domId, (s) => ({ ...s, editedText: newText }));
+      const edits: Record<string, string> = {};
+      for (const [id, s] of Object.entries(stateRef.current)) {
+        const text = id === domId ? newText : s.editedText;
+        if (text) edits[id] = text;
+      }
+      putEdits(edits);
     },
     [updateQuote],
   );
@@ -259,6 +253,15 @@ export function QuoteGroup({
           },
         ],
       }));
+      const tags: Record<string, string[]> = {};
+      for (const [id, s] of Object.entries(stateRef.current)) {
+        const names =
+          id === domId
+            ? [...s.tags.map((t) => t.name), tagName]
+            : s.tags.map((t) => t.name);
+        if (names.length > 0) tags[id] = names;
+      }
+      putTags(tags);
     },
     [updateQuote, tagColourMap],
   );
@@ -269,6 +272,15 @@ export function QuoteGroup({
         ...s,
         tags: s.tags.filter((t) => t.name !== tagName),
       }));
+      const tags: Record<string, string[]> = {};
+      for (const [id, s] of Object.entries(stateRef.current)) {
+        const names =
+          id === domId
+            ? s.tags.filter((t) => t.name !== tagName).map((t) => t.name)
+            : s.tags.map((t) => t.name);
+        if (names.length > 0) tags[id] = names;
+      }
+      putTags(tags);
     },
     [updateQuote],
   );
@@ -279,6 +291,13 @@ export function QuoteGroup({
         ...s,
         deletedBadges: [...s.deletedBadges, sentiment],
       }));
+      const badges: Record<string, string[]> = {};
+      for (const [id, s] of Object.entries(stateRef.current)) {
+        const db =
+          id === domId ? [...s.deletedBadges, sentiment] : s.deletedBadges;
+        if (db.length > 0) badges[id] = db;
+      }
+      putDeletedBadges(badges);
     },
     [updateQuote],
   );
@@ -286,6 +305,12 @@ export function QuoteGroup({
   const handleBadgeRestore = useCallback(
     (domId: string) => {
       updateQuote(domId, (s) => ({ ...s, deletedBadges: [] }));
+      const badges: Record<string, string[]> = {};
+      for (const [id, s] of Object.entries(stateRef.current)) {
+        const db = id === domId ? [] : s.deletedBadges;
+        if (db.length > 0) badges[id] = db;
+      }
+      putDeletedBadges(badges);
     },
     [updateQuote],
   );
@@ -322,6 +347,7 @@ export function QuoteGroup({
           return next;
         });
       }, 500);
+      // acceptProposal handles server-side tag creation — no putTags needed.
       acceptProposal(proposalId).catch((err) =>
         console.error("Accept proposal failed:", err),
       );

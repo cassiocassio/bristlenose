@@ -14,6 +14,7 @@ export { Metric } from "./Metric";
 export { MicroBar } from "./MicroBar";
 export { PersonBadge } from "./PersonBadge";
 export { ProposalZoneList } from "./ProposalZoneList";
+export { Selector } from "./Selector";
 export { Sparkline } from "./Sparkline";
 export { TagInput } from "./TagInput";
 export { ThresholdReviewModal } from "./ThresholdReviewModal";

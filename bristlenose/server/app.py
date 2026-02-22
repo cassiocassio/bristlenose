@@ -139,6 +139,11 @@ def _transform_report_html(html: str, project_dir: Path | None) -> str:
         r"<!-- bn-analysis -->.*?<!-- /bn-analysis -->",
         _REACT_ANALYSIS_MOUNT, html, flags=re.DOTALL,
     )
+    # User Journeys section is replaced by sticky header on transcript pages
+    html = re.sub(
+        r"<!-- bn-user-journeys -->.*?<!-- /bn-user-journeys -->",
+        "", html, flags=re.DOTALL,
+    )
     api_base_script = (
         "<script>window.BRISTLENOSE_API_BASE = '/api/projects/1';</script>\n"
     )
@@ -381,7 +386,7 @@ def _build_dev_section_html(db_url: str) -> str:
         f"<dt>Database</dt><dd><code>{db_display}</code></dd>\n"
         f"<dt>Schema</dt><dd>{table_count} tables</dd>\n"
         "<dt>Renderer overlay</dt>"
-        "<dd>Press <kbd>D</kbd> to colour-code regions by renderer "
+        "<dd>Press <kbd>§</kbd> to colour-code regions by renderer "
         "(blue&nbsp;=&nbsp;Jinja2, green&nbsp;=&nbsp;React, "
         "amber&nbsp;=&nbsp;Vanilla&nbsp;JS)</dd>\n"
         "</dl>\n"
@@ -600,7 +605,7 @@ body.bn-dev-overlay #heatmap-theme-container::after {
   vertical-align: middle;
 }
 </style>
-<div id="bn-dev-overlay-toggle" title="Toggle renderer overlay (D)">
+<div id="bn-dev-overlay-toggle" title="Toggle renderer overlay (§)">
   <span class="bn-overlay-label">Renderers: off</span>
   <div class="bn-overlay-legend">
     <span><span class="bn-overlay-swatch" style="background:#93c5fd"></span>Jinja2</span>
@@ -620,7 +625,7 @@ body.bn-dev-overlay #heatmap-theme-container::after {
   }
   btn.addEventListener('click', toggle);
   document.addEventListener('keydown', function(e) {
-    if (e.key === 'd' && !e.ctrlKey && !e.metaKey && !e.altKey) {
+    if (e.key === '§' && !e.ctrlKey && !e.metaKey && !e.altKey) {
       var tag = (e.target.tagName || '').toLowerCase();
       if (tag === 'input' || tag === 'textarea' || e.target.isContentEditable) return;
       toggle();

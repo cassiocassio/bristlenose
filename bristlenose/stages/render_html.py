@@ -468,6 +468,7 @@ def render_html(
             screen_clusters, all_quotes or [], display_names,
         )
         if task_html:
+            _w("<!-- bn-user-journeys -->")
             _w("<section>")
             _w('<h2 id="user-journeys">User journeys</h2>')
             _w(
@@ -477,6 +478,7 @@ def render_html(
             _w(task_html)
             _w("</section>")
             _w("<hr>")
+            _w("<!-- /bn-user-journeys -->")
 
     # --- Coverage ---
     if transcripts and all_quotes:

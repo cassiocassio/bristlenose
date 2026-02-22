@@ -480,6 +480,8 @@ function initHidden() {
     // Hide button on quote card — selection-aware bulk when clicking a selected quote.
     var hideBtn = e.target.closest('.hide-btn');
     if (hideBtn) {
+      // React Toggle sets aria-pressed — skip if React owns this button.
+      if (hideBtn.hasAttribute('aria-pressed')) return;
       e.preventDefault();
       var bq = hideBtn.closest('blockquote');
       if (!bq || !bq.id) return;
@@ -571,6 +573,7 @@ function initHidden() {
   document.addEventListener('mouseover', function (e) {
     var hideBtn = e.target.closest('.hide-btn');
     if (!hideBtn) return;
+    if (hideBtn.hasAttribute('aria-pressed')) return;
     var bq = hideBtn.closest('blockquote');
     if (!bq || !bq.id) return;
     if (typeof selectedQuoteIds === 'undefined' || selectedQuoteIds.size < 2 || !selectedQuoteIds.has(bq.id)) return;
@@ -584,6 +587,7 @@ function initHidden() {
   document.addEventListener('mouseout', function (e) {
     var hideBtn = e.target.closest('.hide-btn');
     if (!hideBtn) return;
+    if (hideBtn.hasAttribute('aria-pressed')) return;
     var related = e.relatedTarget;
     if (related && hideBtn.contains(related)) return;
     _clearHidePreview();

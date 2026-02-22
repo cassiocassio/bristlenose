@@ -58,7 +58,7 @@ button.bn-journey-label--interactive {
     color: inherit;
     border-radius: 2px;
     padding: 0.1rem 0.3rem;
-    transition: color 0.15s, text-decoration-color 0.15s;
+    transition: color 0.15s, text-decoration-color 0.15s, background 0.15s;
 }
 
 button.bn-journey-label--interactive:hover {
@@ -73,9 +73,11 @@ button.bn-journey-label--interactive:focus-visible {
     outline-offset: 2px;
 }
 
-/* Active journey step — weight only, no colour/underline */
+/* Active journey step — DEBUG: bright green to verify scroll sync */
 .bn-journey-label--active {
     font-weight: 600;
+    background: #00ff00;
+    border-radius: var(--bn-radius-sm);
 }
 
 /* Selector — reusable dropdown primitive (bn-selector) */

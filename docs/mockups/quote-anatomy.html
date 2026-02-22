@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Quote Anatomy — Bristlenose Design System</title>
 <style>
-/* ── Tokens (subset from bristlenose/theme/tokens.css) ── */
+/* ── Tokens (from bristlenose/theme/tokens.css) ── */
 :root {
     --bn-font-body: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
     --bn-font-mono: "SF Mono", "Fira Code", "Consolas", monospace;
@@ -17,6 +17,7 @@
     --bn-colour-quote-bg: #f9fafb;
     --bn-colour-badge-bg: #f3f4f6;
     --bn-colour-badge-text: #374151;
+    --bn-colour-user-tag-bg: #f3f4f6;
     --bn-colour-icon-idle: #c9ccd1;
     --bn-colour-starred: #999;
     --bn-colour-shadow: rgba(0, 0, 0, 0.1);
@@ -30,13 +31,50 @@
     --bn-span-bar-radius: 1px;
     --bn-transition-fast: 0.15s ease;
     --bn-transition-normal: 0.2s ease;
+    /* Sentiment colours */
     --bn-sentiment-frustration: #ea580c;
     --bn-sentiment-frustration-bg: #fff7ed;
+    --bn-sentiment-confusion: #dc2626;
+    --bn-sentiment-confusion-bg: #fef2f2;
+    --bn-sentiment-doubt: #7c3aed;
+    --bn-sentiment-doubt-bg: #f5f3ff;
+    --bn-sentiment-surprise: #d97706;
+    --bn-sentiment-surprise-bg: #fffbeb;
     --bn-sentiment-satisfaction: #16a34a;
     --bn-sentiment-satisfaction-bg: #f0fdf4;
+    --bn-sentiment-delight: #059669;
+    --bn-sentiment-delight-bg: #ecfdf5;
     --bn-sentiment-confidence: #2563eb;
     --bn-sentiment-confidence-bg: #eff6ff;
+    /* Codebook tag colours (light mode: washed) */
+    --bn-ux-1-bg: oklch(94% 0.03 225);
+    --bn-ux-2-bg: oklch(94% 0.03 237);
     --bn-ux-3-bg: oklch(94% 0.03 250);
+    --bn-ux-4-bg: oklch(94% 0.03 263);
+    --bn-ux-5-bg: oklch(94% 0.03 275);
+    --bn-emo-1-bg: oklch(94% 0.03 340);
+    --bn-emo-2-bg: oklch(94% 0.03 352);
+    --bn-emo-3-bg: oklch(94% 0.03 4);
+    --bn-emo-4-bg: oklch(94% 0.03 16);
+    --bn-emo-5-bg: oklch(94% 0.03 28);
+    --bn-emo-6-bg: oklch(94% 0.03 40);
+    --bn-task-1-bg: oklch(94% 0.03 130);
+    --bn-task-2-bg: oklch(94% 0.03 142);
+    --bn-task-3-bg: oklch(94% 0.03 155);
+    --bn-task-4-bg: oklch(94% 0.03 168);
+    --bn-task-5-bg: oklch(94% 0.03 180);
+    --bn-trust-1-bg: oklch(94% 0.03 275);
+    --bn-trust-2-bg: oklch(94% 0.03 287);
+    --bn-trust-3-bg: oklch(94% 0.03 300);
+    --bn-trust-4-bg: oklch(94% 0.03 313);
+    --bn-trust-5-bg: oklch(94% 0.03 325);
+    --bn-opp-1-bg: oklch(94% 0.03 50);
+    --bn-opp-2-bg: oklch(94% 0.03 62);
+    --bn-opp-3-bg: oklch(94% 0.03 75);
+    --bn-opp-4-bg: oklch(94% 0.03 88);
+    --bn-opp-5-bg: oklch(94% 0.03 100);
+    --bn-custom-bg: oklch(94% 0.005 260);
+    --bn-selection-border: #2563eb;
 }
 
 @supports (color: light-dark(#000, #fff)) {
@@ -50,14 +88,52 @@
         --bn-colour-quote-bg: light-dark(#f9fafb, #1a1a1a);
         --bn-colour-badge-bg: light-dark(#f3f4f6, #252525);
         --bn-colour-badge-text: light-dark(#374151, #d1d5db);
+        --bn-colour-user-tag-bg: light-dark(#f3f4f6, #252525);
         --bn-colour-shadow: light-dark(rgba(0,0,0,0.1), rgba(0,0,0,0.3));
         --bn-colour-icon-idle: light-dark(#c9ccd1, #555);
+        /* Sentiment colours — dark mode */
         --bn-sentiment-frustration: light-dark(#ea580c, #fb923c);
         --bn-sentiment-frustration-bg: light-dark(#fff7ed, #2d1d0e);
+        --bn-sentiment-confusion: light-dark(#dc2626, #f87171);
+        --bn-sentiment-confusion-bg: light-dark(#fef2f2, #2d1515);
+        --bn-sentiment-doubt: light-dark(#7c3aed, #a78bfa);
+        --bn-sentiment-doubt-bg: light-dark(#f5f3ff, #1e1533);
+        --bn-sentiment-surprise: light-dark(#d97706, #fbbf24);
+        --bn-sentiment-surprise-bg: light-dark(#fffbeb, #2d2305);
         --bn-sentiment-satisfaction: light-dark(#16a34a, #4ade80);
         --bn-sentiment-satisfaction-bg: light-dark(#f0fdf4, #0f2918);
+        --bn-sentiment-delight: light-dark(#059669, #34d399);
+        --bn-sentiment-delight-bg: light-dark(#ecfdf5, #0d261c);
         --bn-sentiment-confidence: light-dark(#2563eb, #60a5fa);
         --bn-sentiment-confidence-bg: light-dark(#eff6ff, #111d2e);
+        /* Codebook tag colours — dark mode: saturated */
+        --bn-ux-1-bg: light-dark(oklch(94% 0.03 225), oklch(50% 0.12 225));
+        --bn-ux-2-bg: light-dark(oklch(94% 0.03 237), oklch(48% 0.11 237));
+        --bn-ux-3-bg: light-dark(oklch(94% 0.03 250), oklch(53% 0.12 250));
+        --bn-ux-4-bg: light-dark(oklch(94% 0.03 263), oklch(55% 0.10 263));
+        --bn-ux-5-bg: light-dark(oklch(94% 0.03 275), oklch(49% 0.11 275));
+        --bn-emo-1-bg: light-dark(oklch(94% 0.03 340), oklch(50% 0.12 340));
+        --bn-emo-2-bg: light-dark(oklch(94% 0.03 352), oklch(48% 0.11 352));
+        --bn-emo-3-bg: light-dark(oklch(94% 0.03 4), oklch(53% 0.10 4));
+        --bn-emo-4-bg: light-dark(oklch(94% 0.03 16), oklch(49% 0.12 16));
+        --bn-emo-5-bg: light-dark(oklch(94% 0.03 28), oklch(55% 0.10 28));
+        --bn-emo-6-bg: light-dark(oklch(94% 0.03 40), oklch(51% 0.11 40));
+        --bn-task-1-bg: light-dark(oklch(94% 0.03 130), oklch(50% 0.10 130));
+        --bn-task-2-bg: light-dark(oklch(94% 0.03 142), oklch(48% 0.09 142));
+        --bn-task-3-bg: light-dark(oklch(94% 0.03 155), oklch(53% 0.09 155));
+        --bn-task-4-bg: light-dark(oklch(94% 0.03 168), oklch(49% 0.10 168));
+        --bn-task-5-bg: light-dark(oklch(94% 0.03 180), oklch(51% 0.09 180));
+        --bn-trust-1-bg: light-dark(oklch(94% 0.03 275), oklch(50% 0.11 275));
+        --bn-trust-2-bg: light-dark(oklch(94% 0.03 287), oklch(48% 0.10 287));
+        --bn-trust-3-bg: light-dark(oklch(94% 0.03 300), oklch(53% 0.10 300));
+        --bn-trust-4-bg: light-dark(oklch(94% 0.03 313), oklch(49% 0.11 313));
+        --bn-trust-5-bg: light-dark(oklch(94% 0.03 325), oklch(51% 0.10 325));
+        --bn-opp-1-bg: light-dark(oklch(94% 0.03 50), oklch(52% 0.11 50));
+        --bn-opp-2-bg: light-dark(oklch(94% 0.03 62), oklch(50% 0.10 62));
+        --bn-opp-3-bg: light-dark(oklch(94% 0.03 75), oklch(54% 0.12 75));
+        --bn-opp-4-bg: light-dark(oklch(94% 0.03 88), oklch(48% 0.10 88));
+        --bn-opp-5-bg: light-dark(oklch(94% 0.03 100), oklch(51% 0.11 100));
+        --bn-custom-bg: light-dark(oklch(94% 0.005 260), oklch(52% 0.02 260));
     }
 }
 
@@ -144,9 +220,23 @@ h3 {
     color: var(--bn-colour-text);
 }
 
+/* ── Palette row ── */
+.palette-row {
+    display: flex; align-items: center; gap: 0.5rem;
+    margin-bottom: 0.5rem;
+}
+.palette-label {
+    font-family: var(--bn-font-mono);
+    font-size: 0.68rem;
+    color: var(--bn-colour-muted);
+    width: 5.5rem;
+    flex-shrink: 0;
+    text-align: right;
+}
+
 /* ── Reproduced atoms (from real theme CSS) ── */
 
-/* Timecode atom — from atoms/timecode.css */
+/* Timecode atom */
 a.timecode, span.timecode {
     color: var(--bn-colour-accent);
     font-family: var(--bn-font-mono);
@@ -155,7 +245,7 @@ a.timecode, span.timecode {
 }
 .timecode-bracket { color: var(--bn-colour-muted); }
 
-/* Badge atom — from atoms/badge.css */
+/* Badge atom — base */
 .badge {
     display: inline-block;
     font-family: var(--bn-font-mono);
@@ -167,20 +257,179 @@ a.timecode, span.timecode {
     line-height: 1.4;
     white-space: nowrap;
 }
-.badge-ai { cursor: default; }
+
+/* Sentiment variants */
 .badge-frustration { background: var(--bn-sentiment-frustration-bg); color: var(--bn-sentiment-frustration); }
+.badge-confusion   { background: var(--bn-sentiment-confusion-bg);   color: var(--bn-sentiment-confusion); }
+.badge-doubt       { background: var(--bn-sentiment-doubt-bg);       color: var(--bn-sentiment-doubt); }
+.badge-surprise    { background: var(--bn-sentiment-surprise-bg);    color: var(--bn-sentiment-surprise); }
 .badge-satisfaction { background: var(--bn-sentiment-satisfaction-bg); color: var(--bn-sentiment-satisfaction); }
-.badge-confidence { background: var(--bn-sentiment-confidence-bg); color: var(--bn-sentiment-confidence); }
-.badge-readonly { cursor: default; }
-.badge-user { cursor: default; }
+.badge-delight     { background: var(--bn-sentiment-delight-bg);     color: var(--bn-sentiment-delight); }
+.badge-confidence  { background: var(--bn-sentiment-confidence-bg);  color: var(--bn-sentiment-confidence); }
+
+/* AI badge — deletable on hover */
+.badge-ai {
+    cursor: pointer;
+    position: relative;
+    transition: opacity var(--bn-transition-fast);
+}
+.badge-ai:hover { opacity: 0.8; }
+.badge-ai::after {
+    content: "\00d7";
+    position: absolute;
+    top: calc(-0.3rem - 1px);
+    right: calc(-0.3rem - 1px);
+    width: calc(0.875rem + 0.5px);
+    height: calc(0.875rem + 0.5px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    background: var(--bn-colour-bg);
+    color: var(--bn-colour-muted);
+    border-radius: 50%;
+    font-size: 0.6rem;
+    font-weight: 700;
+    line-height: 1;
+    opacity: 0;
+    transition: opacity var(--bn-transition-fast);
+    pointer-events: none;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.16), 0 0 1px rgba(0, 0, 0, 0.06);
+}
+.badge-ai:hover::after { opacity: 1; }
+
+/* User tag */
+.badge-user {
+    background: var(--bn-colour-user-tag-bg);
+    color: var(--bn-colour-text);
+    font-weight: 400;
+    cursor: default;
+    position: relative;
+}
+@supports (color: light-dark(#000, #fff)) {
+    @media (prefers-color-scheme: dark) {
+        .badge-user { color: #ffffff; font-weight: 500; }
+    }
+}
+.badge-user .badge-delete {
+    position: absolute;
+    top: calc(-0.3rem - 1px);
+    right: calc(-0.3rem - 1px);
+    width: calc(0.875rem + 0.5px);
+    height: calc(0.875rem + 0.5px);
+    background: var(--bn-colour-bg);
+    border: none;
+    border-radius: 50%;
+    color: var(--bn-colour-muted);
+    font-size: 0.6rem;
+    font-weight: 700;
+    line-height: 1;
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity var(--bn-transition-fast);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    pointer-events: none;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.16), 0 0 1px rgba(0, 0, 0, 0.06);
+}
+.badge-user:hover .badge-delete {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+/* Add-tag ghost button */
 .badge-add {
     border: 1px dashed var(--bn-colour-border);
     background: transparent;
     color: var(--bn-colour-muted);
     cursor: pointer;
+    transition: border-color var(--bn-transition-fast), color var(--bn-transition-fast);
+    user-select: none;
+}
+.badge-add:hover {
+    border-color: var(--bn-colour-accent);
+    color: var(--bn-colour-accent);
 }
 
-/* Person badge molecule — from molecules/person-badge.css */
+/* Proposed badge — pulsating (AutoCode) */
+@keyframes bn-proposed-pulse {
+    0%   { opacity: 0.50; }
+    50%  { opacity: 0.78; }
+    100% { opacity: 0.50; }
+}
+.badge-proposed {
+    animation: bn-proposed-pulse 3s ease-in-out infinite;
+    border: 1px dashed currentColor;
+    cursor: pointer;
+    position: relative;
+}
+.badge-proposed:hover {
+    animation: none;
+    opacity: 1 !important;
+}
+.badge-proposed-actions {
+    display: none;
+    gap: 0.3em;
+    margin-left: 0.4em;
+    align-items: center;
+}
+.badge-proposed:hover .badge-proposed-actions {
+    display: inline-flex;
+}
+.badge-action-accept {
+    color: #16a34a;
+    font-size: 0.95em;
+    font-weight: 700;
+    cursor: pointer;
+    padding: 1px 3px;
+    border-radius: 2px;
+    transition: background var(--bn-transition-fast), color var(--bn-transition-fast),
+                transform var(--bn-transition-fast);
+}
+.badge-action-accept:hover {
+    background: rgba(22, 163, 74, 0.18);
+    color: #15803d;
+    transform: scale(1.15);
+}
+.badge-action-deny {
+    color: #dc2626;
+    font-size: 0.95em;
+    font-weight: 700;
+    cursor: pointer;
+    padding: 1px 3px;
+    border-radius: 2px;
+    transition: background var(--bn-transition-fast), color var(--bn-transition-fast),
+                transform var(--bn-transition-fast);
+}
+.badge-action-deny:hover {
+    background: rgba(220, 38, 38, 0.18);
+    color: #b91c1c;
+    transform: scale(1.15);
+}
+@supports (color: light-dark(#000, #fff)) {
+    @media (prefers-color-scheme: dark) {
+        .badge-action-accept:hover { background: rgba(22, 163, 74, 0.25); color: #4ade80; }
+        .badge-action-deny:hover { background: rgba(220, 38, 38, 0.25); color: #f87171; }
+    }
+}
+
+/* Readonly badge */
+.badge-readonly { cursor: default; }
+
+/* Badge row container */
+.quote-card .badges {
+    display: flex;
+    gap: var(--bn-space-sm);
+    margin-top: 0.4rem;
+    flex-wrap: wrap;
+    opacity: 0.9;
+    transition: opacity var(--bn-transition-fast);
+}
+.quote-card:hover .badges { opacity: 1; }
+
+/* Person badge molecule */
 .bn-person-badge {
     display: inline-flex;
     align-items: center;
@@ -191,13 +440,11 @@ a.timecode, span.timecode {
 /* Intensity dots */
 .intensity-dots-svg { display: flex; align-items: center; gap: 2px; width: 46px; }
 
-/* Base blockquote — from organisms/blockquote.css (NEW: layout only) */
+/* Base blockquote — layout only */
 blockquote {
     margin: 0;
     padding: var(--bn-space-sm) 1rem;
 }
-
-/* Quote-row layout — from organisms/blockquote.css */
 blockquote .quote-row {
     display: flex;
     gap: 0.5rem;
@@ -207,7 +454,7 @@ blockquote .quote-row .timecode { flex-shrink: 0; }
 blockquote .quote-body { flex: 1; min-width: 0; }
 blockquote .speaker { color: var(--bn-colour-muted); font-size: 0.9rem; }
 
-/* Quote card organism — from organisms/blockquote.css (quotes page) */
+/* Quote card organism */
 blockquote.quote-card {
     background: var(--bn-colour-quote-bg);
     border-left: 1px solid var(--bn-colour-border);
@@ -215,9 +462,10 @@ blockquote.quote-card {
     padding: var(--bn-space-md) 1rem;
     border-radius: 0 var(--bn-radius-md) var(--bn-radius-md) 0;
     position: relative;
+    padding-right: 4.5rem;
 }
 
-/* Signal card — from organisms/analysis.css */
+/* Signal card */
 .signal-card {
     border: 1px solid var(--bn-colour-border);
     border-radius: var(--bn-radius-sm);
@@ -249,30 +497,24 @@ blockquote.quote-card {
     display: flex; flex-direction: column; gap: 0;
     overflow: hidden;
 }
-.signal-card-quotes blockquote {
-    margin: 0 var(--bn-space-md);
-}
+.signal-card-quotes blockquote { margin: 0 var(--bn-space-md); }
 
-/* Sequence borders — only in signal cards */
+/* Sequence borders */
 .signal-card-quotes blockquote.seq-first,
 .signal-card-quotes blockquote.seq-middle,
 .signal-card-quotes blockquote.seq-last {
     border-left: 2px solid var(--card-accent, var(--bn-colour-muted));
 }
-.signal-card-quotes blockquote.seq-first {
-    border-top-left-radius: var(--bn-radius-sm);
-}
+.signal-card-quotes blockquote.seq-first { border-top-left-radius: var(--bn-radius-sm); }
 .signal-card-quotes blockquote.seq-middle { border-radius: 0; }
 .signal-card-quotes blockquote.seq-last {
     border-bottom-left-radius: var(--bn-radius-sm);
     border-top-left-radius: 0;
 }
 .signal-card-quotes blockquote.seq-middle,
-.signal-card-quotes blockquote.seq-last {
-    padding-top: 0;
-}
+.signal-card-quotes blockquote.seq-last { padding-top: 0; }
 
-/* Cell tooltip micro — from organisms/analysis.css */
+/* Cell tooltip */
 .cell-tooltip {
     position: relative;
     max-width: 270px;
@@ -368,7 +610,7 @@ blockquote.quote-card {
     border-top: 1px solid var(--bn-colour-border);
 }
 
-/* Action buttons (simplified for demo) */
+/* Action buttons */
 .star-btn, .hide-btn {
     position: absolute;
     background: none; border: none;
@@ -380,6 +622,21 @@ blockquote.quote-card {
 .star-btn { top: 0.65rem; right: 0.65rem; }
 .hide-btn { top: 0.65rem; right: 2rem; opacity: 0; transition: opacity var(--bn-transition-normal); }
 .quote-card:hover .hide-btn { opacity: 1; }
+
+/* Edit pencil */
+.edit-pencil {
+    position: absolute;
+    top: 0.65rem;
+    right: 3.35rem;
+    background: none; border: none;
+    font-size: 0.8rem;
+    color: var(--bn-colour-icon-idle);
+    cursor: pointer; padding: var(--bn-space-xs);
+    line-height: 1;
+    opacity: 0;
+    transition: opacity var(--bn-transition-normal);
+}
+.quote-card:hover .edit-pencil { opacity: 1; }
 
 /* Layer diagram */
 .layer-stack {
@@ -414,17 +671,6 @@ blockquote.quote-card {
 .layer-content .tag { color: var(--bn-sentiment-confidence); }
 .layer-content .cls { color: var(--bn-sentiment-satisfaction); }
 .layer-content .prop { color: var(--bn-sentiment-frustration); }
-
-.wireframe-label {
-    display: inline-block;
-    font-size: 0.65rem;
-    font-family: var(--bn-font-mono);
-    color: white;
-    background: var(--bn-colour-muted);
-    padding: 0.1rem 0.35rem;
-    border-radius: 2px;
-    margin-bottom: 0.25rem;
-}
 </style>
 </head>
 <body>
@@ -461,13 +707,9 @@ blockquote.quote-card {
     <div class="atom-card">
         <div class="atom-card-label">Person Badge</div>
         <div class="atom-card-specimen">
-            <span class="bn-person-badge">
-                <span class="badge">p1</span>
-            </span>
+            <span class="bn-person-badge"><span class="badge">p1</span></span>
             &nbsp;&nbsp;
-            <span class="bn-person-badge">
-                <span class="badge">m1</span>
-            </span>
+            <span class="bn-person-badge"><span class="badge">m1</span></span>
         </div>
         <div class="atom-card-code">
             <span class="css-ref">CSS</span> molecules/person-badge.css<br>
@@ -475,42 +717,21 @@ blockquote.quote-card {
         </div>
     </div>
 
-    <!-- Badge — sentiment (AI) -->
-    <div class="atom-card">
-        <div class="atom-card-label">Badge — Sentiment (AI)</div>
-        <div class="atom-card-specimen">
+    <!-- Badge — all 7 sentiments -->
+    <div class="atom-card" style="grid-column: span 2;">
+        <div class="atom-card-label">Badge — All 7 Sentiments (AI)</div>
+        <div class="atom-card-specimen" style="display: flex; gap: 0.4rem; flex-wrap: wrap;">
             <span class="badge badge-ai badge-frustration">frustration</span>
+            <span class="badge badge-ai badge-confusion">confusion</span>
+            <span class="badge badge-ai badge-doubt">doubt</span>
+            <span class="badge badge-ai badge-surprise">surprise</span>
             <span class="badge badge-ai badge-satisfaction">satisfaction</span>
+            <span class="badge badge-ai badge-delight">delight</span>
             <span class="badge badge-ai badge-confidence">confidence</span>
         </div>
         <div class="atom-card-code">
-            <span class="css-ref">CSS</span> atoms/badge.css (.badge-ai)<br>
-            <span class="react-ref">React</span> components/Badge.tsx variant="ai"
-        </div>
-    </div>
-
-    <!-- Badge — user tag -->
-    <div class="atom-card">
-        <div class="atom-card-label">Badge — User Tag</div>
-        <div class="atom-card-specimen">
-            <span class="badge badge-user" style="background: var(--bn-ux-3-bg);">interaction design</span>
-            <span class="badge badge-add">+</span>
-        </div>
-        <div class="atom-card-code">
-            <span class="css-ref">CSS</span> atoms/badge.css (.badge-user, .badge-add)<br>
-            <span class="react-ref">React</span> components/Badge.tsx variant="user"
-        </div>
-    </div>
-
-    <!-- Badge — readonly -->
-    <div class="atom-card">
-        <div class="atom-card-label">Badge — Readonly (signal cards)</div>
-        <div class="atom-card-specimen">
-            <span class="badge badge-readonly" style="background: var(--bn-ux-3-bg);">wireframe issue</span>
-        </div>
-        <div class="atom-card-code">
-            <span class="css-ref">CSS</span> atoms/badge.css (.badge-readonly)<br>
-            <span class="react-ref">React</span> components/Badge.tsx variant="readonly"
+            <span class="css-ref">CSS</span> atoms/badge.css (.badge-ai .badge-{sentiment})<br>
+            <span class="react-ref">React</span> components/Badge.tsx variant="ai" sentiment="..."
         </div>
     </div>
 
@@ -532,7 +753,7 @@ blockquote.quote-card {
     </div>
 
     <!-- Quote Row layout -->
-    <div class="atom-card" style="grid-column: span 2;">
+    <div class="atom-card">
         <div class="atom-card-label">Quote Row (layout molecule)</div>
         <div class="atom-card-specimen">
             <blockquote>
@@ -540,14 +761,140 @@ blockquote.quote-card {
                     <a class="timecode" href="#"><span class="timecode-bracket">[</span>02:08<span class="timecode-bracket">]</span></a>
                     <span class="quote-body">
                         <span class="speaker"><span class="bn-person-badge"><span class="badge">p1</span></span></span>&nbsp;
-                        <span class="quote-text">The raw content layout — timecode, speaker, text in a flex row.</span>
+                        <span class="quote-text">The raw content layout.</span>
                     </span>
                 </div>
             </blockquote>
         </div>
         <div class="atom-card-code">
-            <span class="css-ref">CSS</span> organisms/blockquote.css (.quote-row, .quote-body, .speaker)<br>
-            <span class="react-ref">React</span> Shared by QuoteCard.tsx + AnalysisPage.tsx &rarr; QuoteBlock
+            <span class="css-ref">CSS</span> organisms/blockquote.css<br>
+            <span class="react-ref">React</span> Shared layout
+        </div>
+    </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<h2>1b. Codebook Colour Palette</h2>
+<p style="font-size: 0.85rem; color: var(--bn-colour-muted); margin-bottom: 1rem;">
+    26 tag colours from 5 framework codebook sets. Toggle system dark mode to see saturated variants.
+</p>
+
+<div class="palette-row">
+    <span class="palette-label">UX (blue)</span>
+    <span class="badge badge-user" style="background: var(--bn-ux-1-bg);">ux-1</span>
+    <span class="badge badge-user" style="background: var(--bn-ux-2-bg);">ux-2</span>
+    <span class="badge badge-user" style="background: var(--bn-ux-3-bg);">ux-3</span>
+    <span class="badge badge-user" style="background: var(--bn-ux-4-bg);">ux-4</span>
+    <span class="badge badge-user" style="background: var(--bn-ux-5-bg);">ux-5</span>
+</div>
+<div class="palette-row">
+    <span class="palette-label">Emotion (pink)</span>
+    <span class="badge badge-user" style="background: var(--bn-emo-1-bg);">emo-1</span>
+    <span class="badge badge-user" style="background: var(--bn-emo-2-bg);">emo-2</span>
+    <span class="badge badge-user" style="background: var(--bn-emo-3-bg);">emo-3</span>
+    <span class="badge badge-user" style="background: var(--bn-emo-4-bg);">emo-4</span>
+    <span class="badge badge-user" style="background: var(--bn-emo-5-bg);">emo-5</span>
+    <span class="badge badge-user" style="background: var(--bn-emo-6-bg);">emo-6</span>
+</div>
+<div class="palette-row">
+    <span class="palette-label">Task (green)</span>
+    <span class="badge badge-user" style="background: var(--bn-task-1-bg);">task-1</span>
+    <span class="badge badge-user" style="background: var(--bn-task-2-bg);">task-2</span>
+    <span class="badge badge-user" style="background: var(--bn-task-3-bg);">task-3</span>
+    <span class="badge badge-user" style="background: var(--bn-task-4-bg);">task-4</span>
+    <span class="badge badge-user" style="background: var(--bn-task-5-bg);">task-5</span>
+</div>
+<div class="palette-row">
+    <span class="palette-label">Trust (purple)</span>
+    <span class="badge badge-user" style="background: var(--bn-trust-1-bg);">trust-1</span>
+    <span class="badge badge-user" style="background: var(--bn-trust-2-bg);">trust-2</span>
+    <span class="badge badge-user" style="background: var(--bn-trust-3-bg);">trust-3</span>
+    <span class="badge badge-user" style="background: var(--bn-trust-4-bg);">trust-4</span>
+    <span class="badge badge-user" style="background: var(--bn-trust-5-bg);">trust-5</span>
+</div>
+<div class="palette-row">
+    <span class="palette-label">Opportunity (amber)</span>
+    <span class="badge badge-user" style="background: var(--bn-opp-1-bg);">opp-1</span>
+    <span class="badge badge-user" style="background: var(--bn-opp-2-bg);">opp-2</span>
+    <span class="badge badge-user" style="background: var(--bn-opp-3-bg);">opp-3</span>
+    <span class="badge badge-user" style="background: var(--bn-opp-4-bg);">opp-4</span>
+    <span class="badge badge-user" style="background: var(--bn-opp-5-bg);">opp-5</span>
+</div>
+<div class="palette-row">
+    <span class="palette-label">Custom</span>
+    <span class="badge badge-user" style="background: var(--bn-custom-bg);">ungrouped</span>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<h2>1c. Interactive Badge States</h2>
+<p style="font-size: 0.85rem; color: var(--bn-colour-muted); margin-bottom: 1rem;">
+    Hover each badge to see the interaction. All pure CSS — no JS needed.
+</p>
+
+<div class="atom-grid">
+
+    <!-- AI badge with delete circle -->
+    <div class="atom-card">
+        <div class="atom-card-label">AI Badge — hover to delete</div>
+        <div class="atom-card-specimen" style="padding: 0.5rem 0.5rem 0.5rem 0.3rem;">
+            <span class="badge badge-ai badge-satisfaction">satisfaction</span>
+            &nbsp;&nbsp;
+            <span class="badge badge-ai badge-frustration">frustration</span>
+        </div>
+        <div class="atom-card-code">
+            Hover &rarr; dims to 0.8, floating &times; circle fades in
+        </div>
+    </div>
+
+    <!-- User tag with delete button -->
+    <div class="atom-card">
+        <div class="atom-card-label">User Tag — hover to delete</div>
+        <div class="atom-card-specimen" style="padding: 0.5rem 0.5rem 0.5rem 0.3rem;">
+            <span class="badge badge-user" style="background: var(--bn-ux-3-bg);">interaction design<button class="badge-delete">&times;</button></span>
+            &nbsp;&nbsp;
+            <span class="badge badge-user" style="background: var(--bn-task-2-bg);">onboarding flow<button class="badge-delete">&times;</button></span>
+        </div>
+        <div class="atom-card-code">
+            Hover &rarr; &times; button fades in (same visual as AI)
+        </div>
+    </div>
+
+    <!-- Proposed badge with accept/deny -->
+    <div class="atom-card" style="grid-column: span 2;">
+        <div class="atom-card-label">Proposed Badge (AutoCode) — hover to accept/deny</div>
+        <div class="atom-card-specimen" style="padding: 0.5rem 0.5rem 0.5rem 0.3rem;">
+            <span class="badge badge-proposed" style="background: var(--bn-opp-1-bg); color: var(--bn-colour-text);">wireframe issue<span class="badge-proposed-actions"><span class="badge-action-accept" title="Accept">&#x2713;</span><span class="badge-action-deny" title="Deny">&#x2717;</span></span></span>
+            &nbsp;&nbsp;
+            <span class="badge badge-proposed" style="background: var(--bn-trust-3-bg); color: var(--bn-colour-text);">credibility concern<span class="badge-proposed-actions"><span class="badge-action-accept" title="Accept">&#x2713;</span><span class="badge-action-deny" title="Deny">&#x2717;</span></span></span>
+            &nbsp;&nbsp;
+            <span class="badge badge-proposed" style="background: var(--bn-emo-2-bg); color: var(--bn-colour-text);">anxiety trigger<span class="badge-proposed-actions"><span class="badge-action-accept" title="Accept">&#x2713;</span><span class="badge-action-deny" title="Deny">&#x2717;</span></span></span>
+        </div>
+        <div class="atom-card-code">
+            Pulsates 0.50&ndash;0.78 opacity (3s). Hover &rarr; freezes at 1.0, reveals <span style="color: #16a34a;">&#x2713;</span> accept / <span style="color: #dc2626;">&#x2717;</span> deny
+        </div>
+    </div>
+
+    <!-- Add ghost button -->
+    <div class="atom-card">
+        <div class="atom-card-label">Add Tag Ghost — hover for blue</div>
+        <div class="atom-card-specimen" style="padding: 0.5rem;">
+            <span class="badge badge-add">+</span>
+        </div>
+        <div class="atom-card-code">
+            Hover &rarr; dashed border + text turn accent blue
+        </div>
+    </div>
+
+    <!-- Readonly badge (signal cards) -->
+    <div class="atom-card">
+        <div class="atom-card-label">Readonly Badge (signal cards)</div>
+        <div class="atom-card-specimen" style="padding: 0.5rem;">
+            <span class="badge badge-readonly" style="background: var(--bn-ux-3-bg);">interaction design</span>
+            &nbsp;
+            <span class="badge badge-readonly" style="background: var(--bn-task-4-bg);">navigation</span>
+        </div>
+        <div class="atom-card-code">
+            No interaction — display only. Used in signal card quotes
         </div>
     </div>
 </div>
@@ -559,10 +906,10 @@ blockquote.quote-card {
     Each organism adds its own chrome; the quote content is identical underneath.
 </p>
 
-<!-- 2a. Quote Card (quotes page) -->
+<!-- 2a. Quote Card with full badge row -->
 <div class="organism-row">
     <div class="organism-header">
-        <span class="organism-title">Quote Card — Quotes page</span>
+        <span class="organism-title">Quote Card — Quotes page (full badge row)</span>
         <span class="organism-context">QuoteCard.tsx &rarr; blockquote.quote-card</span>
     </div>
     <div class="organism-specimen">
@@ -572,23 +919,31 @@ blockquote.quote-card {
                 <span class="quote-body">
                     <span class="quote-text">"Ah, it worked that time. Okay, and then beds."</span>&nbsp;&mdash;&nbsp;
                     <span class="speaker"><span class="bn-person-badge"><span class="badge">p2</span></span></span>
+                    <div class="badges">
+                        <span class="badge badge-ai badge-satisfaction">satisfaction</span>
+                        <span class="badge badge-user" style="background: var(--bn-ux-3-bg);">interaction design<button class="badge-delete">&times;</button></span>
+                        <span class="badge badge-user" style="background: var(--bn-task-2-bg);">onboarding flow<button class="badge-delete">&times;</button></span>
+                        <span class="badge badge-proposed" style="background: var(--bn-opp-1-bg); color: var(--bn-colour-text);">wireframe issue<span class="badge-proposed-actions"><span class="badge-action-accept" title="Accept">&#x2713;</span><span class="badge-action-deny" title="Deny">&#x2717;</span></span></span>
+                        <span class="badge badge-add">+</span>
+                    </div>
                 </span>
             </div>
-            <button class="hide-btn" aria-label="Hide">&#x1F6AB;</button>
+            <button class="edit-pencil" aria-label="Edit">&#9998;</button>
+            <button class="hide-btn" aria-label="Hide">&#128683;</button>
             <button class="star-btn" aria-label="Star">&#9733;</button>
         </blockquote>
     </div>
     <div class="organism-annotation">
         <table>
-            <tr><th>Chrome</th><td>background, left border, margin, radius, action buttons (star, hide, edit)</td></tr>
-            <tr><th>CSS</th><td>organisms/blockquote.css &rarr; .quote-card</td></tr>
-            <tr><th>Molecules</th><td>quote-actions.css, badge-row.css, editable-text.css, hidden-quotes.css</td></tr>
-            <tr><th>React</th><td>islands/QuoteCard.tsx</td></tr>
+            <tr><th>Chrome</th><td>background, left border, margin, radius, action buttons (edit, hide, star)</td></tr>
+            <tr><th>Badge row</th><td>AI sentiment + user tags (2 codebook sets) + proposed pulsating + add ghost</td></tr>
+            <tr><th>Interactions</th><td>Hover card &rarr; badges 0.9&rarr;1.0, hide/edit visible. Hover badges &rarr; delete/accept/deny</td></tr>
+            <tr><th>CSS</th><td>organisms/blockquote.css (.quote-card) + molecules/{badge-row,quote-actions}.css</td></tr>
         </table>
     </div>
 </div>
 
-<!-- 2b. Signal card quote (analysis page) -->
+<!-- 2b. Signal card quote -->
 <div class="organism-row">
     <div class="organism-header">
         <span class="organism-title">Signal Card Quote — Analysis page</span>
@@ -614,10 +969,9 @@ blockquote.quote-card {
     </div>
     <div class="organism-annotation">
         <table>
-            <tr><th>Chrome</th><td>None on blockquote — parent .signal-card-quotes panel provides containment</td></tr>
-            <tr><th>CSS</th><td>organisms/blockquote.css (base only) + organisms/analysis.css (margin override)</td></tr>
+            <tr><th>Chrome</th><td>None on blockquote &mdash; parent .signal-card-quotes panel provides containment</td></tr>
             <tr><th>No left border</th><td>Card accent bar (::before) is the only colour signal</td></tr>
-            <tr><th>React</th><td>islands/AnalysisPage.tsx &rarr; SignalCard &rarr; QuoteBlock</td></tr>
+            <tr><th>CSS</th><td>organisms/blockquote.css (base only) + organisms/analysis.css (margin override)</td></tr>
         </table>
     </div>
 </div>
@@ -667,7 +1021,6 @@ blockquote.quote-card {
             <tr><th>Sequence border</th><td>2px accent left border spans the group; solo quotes have no border</td></tr>
             <tr><th>Speaker</th><td>Shown on seq-first only; middle/last are continuations</td></tr>
             <tr><th>Timecode</th><td>Faded to 60% opacity on continuations</td></tr>
-            <tr><th>CSS</th><td>organisms/analysis.css (.seq-first, .seq-middle, .seq-last)</td></tr>
         </table>
     </div>
 </div>
@@ -696,19 +1049,17 @@ blockquote.quote-card {
     </div>
     <div class="organism-annotation">
         <table>
-            <tr><th>Chrome</th><td>Minimal card with shadow, accent bar, no shared atoms (quote text + pid only)</td></tr>
-            <tr><th>No atoms used</th><td>Renders raw text — no Timecode, no PersonBadge, no Badge</td></tr>
-            <tr><th>CSS</th><td>organisms/analysis.css (.cell-tooltip-*)</td></tr>
+            <tr><th>Chrome</th><td>Minimal card with shadow, accent bar, no shared atoms</td></tr>
             <tr><th>Opportunity</th><td>Could reuse Timecode + PersonBadge atoms in future</td></tr>
         </table>
     </div>
 </div>
 
-<!-- 2e. Canvas sticky (future wireframe) -->
+<!-- 2e. Canvas sticky -->
 <div class="organism-row">
     <div class="organism-header">
         <span class="organism-title">Canvas Sticky — future Miro-style drag surface</span>
-        <span class="organism-context">Not yet implemented — wireframe placeholder</span>
+        <span class="organism-context">Not yet implemented &mdash; wireframe placeholder</span>
     </div>
     <div class="organism-specimen" style="padding: 2rem; display: flex; gap: 1rem; flex-wrap: wrap;">
         <div class="canvas-sticky" style="border-top: 3px solid var(--bn-sentiment-frustration);">
@@ -735,9 +1086,8 @@ blockquote.quote-card {
     <div class="organism-annotation">
         <table>
             <tr><th>Chrome</th><td>Square card, top accent bar, grip strip (drag handle), shadow</td></tr>
-            <tr><th>Atoms reused</th><td>Timecode, PersonBadge, quote text — same atoms, different container</td></tr>
-            <tr><th>Unique</th><td>Grip strip, aspect ratio, text clamp, snap-to-grid, lasso select</td></tr>
-            <tr><th>Validates</th><td>Composition &gt; flags — completely different chrome, same inner atoms</td></tr>
+            <tr><th>Atoms reused</th><td>Timecode, PersonBadge, quote text &mdash; same atoms, different container</td></tr>
+            <tr><th>Validates</th><td>Composition &gt; flags &mdash; completely different chrome, same inner atoms</td></tr>
         </table>
     </div>
 </div>
@@ -754,7 +1104,7 @@ blockquote.quote-card {
         <div class="layer-label">Data (API)</div>
         <div class="layer-content">
             <span class="prop">quote.text</span> <span class="prop">quote.start_timecode</span> <span class="prop">quote.participant_id</span><br>
-            <span class="prop">quote.sentiment</span> <span class="prop">quote.tags[]</span> <span class="prop">quote.is_starred</span> <span class="prop">quote.is_hidden</span>
+            <span class="prop">quote.sentiment</span> <span class="prop">quote.tags[]</span> <span class="prop">quote.proposed_tags[]</span> <span class="prop">quote.is_starred</span>
         </div>
     </div>
     <div class="layer-row">
@@ -764,8 +1114,9 @@ blockquote.quote-card {
             &nbsp;&nbsp;<span class="tag">&lt;TimecodeLink</span> <span class="prop">seconds</span> /&gt;<br>
             &nbsp;&nbsp;<span class="tag">&lt;PersonBadge</span> <span class="prop">code</span> <span class="prop">role</span> /&gt;<br>
             &nbsp;&nbsp;<span class="tag">&lt;EditableText</span> <span class="prop">text</span> /&gt;<br>
-            &nbsp;&nbsp;<span class="tag">&lt;Badge</span> <span class="prop">variant</span>=<span class="cls">"ai"</span> <span class="prop">sentiment</span> /&gt; &times; N<br>
-            &nbsp;&nbsp;<span class="tag">&lt;Badge</span> <span class="prop">variant</span>=<span class="cls">"user"</span> <span class="prop">colour</span> /&gt; &times; N<br>
+            &nbsp;&nbsp;<span class="tag">&lt;Badge</span> <span class="prop">variant</span>=<span class="cls">"ai"</span> <span class="prop">sentiment</span> /&gt;<br>
+            &nbsp;&nbsp;<span class="tag">&lt;Badge</span> <span class="prop">variant</span>=<span class="cls">"user"</span> <span class="prop">colour</span>=<span class="cls">"getTagBg(set,idx)"</span> /&gt; &times; N<br>
+            &nbsp;&nbsp;<span class="tag">&lt;Badge</span> <span class="prop">variant</span>=<span class="cls">"proposed"</span> <span class="prop">rationale</span> <span class="prop">onAccept</span> <span class="prop">onDeny</span> /&gt; &times; N<br>
             &nbsp;&nbsp;<span class="tag">&lt;Toggle</span> <span class="prop">type</span>=<span class="cls">"star"</span> /&gt; <span class="tag">&lt;Toggle</span> <span class="prop">type</span>=<span class="cls">"hide"</span> /&gt;
         </div>
     </div>
@@ -775,9 +1126,8 @@ blockquote.quote-card {
             <span class="cls">.quote-card</span> &larr; organisms/blockquote.css (bg, border, radius)<br>
             <span class="cls">.quote-row</span> <span class="cls">.quote-body</span> &larr; organisms/blockquote.css (flex layout)<br>
             <span class="cls">.timecode</span> &larr; atoms/timecode.css<br>
-            <span class="cls">.bn-person-badge</span> &larr; molecules/person-badge.css<br>
-            <span class="cls">.badge</span> <span class="cls">.badge-ai</span> &larr; atoms/badge.css<br>
-            <span class="cls">.badges</span> &larr; molecules/badge-row.css<br>
+            <span class="cls">.badge-ai</span> <span class="cls">.badge-user</span> <span class="cls">.badge-proposed</span> &larr; atoms/badge.css<br>
+            <span class="cls">.badges</span> &larr; molecules/badge-row.css (flex row, opacity)<br>
             <span class="cls">.star-btn</span> <span class="cls">.hide-btn</span> &larr; atoms/toggle.css<br>
             <span class="cls">.starred</span> &larr; molecules/quote-actions.css
         </div>
@@ -810,10 +1160,7 @@ blockquote.quote-card {
             <span class="cls">blockquote</span> &larr; organisms/blockquote.css (base: margin + padding only)<br>
             <span class="cls">.signal-card-quotes blockquote</span> &larr; organisms/analysis.css (margin override)<br>
             <span class="cls">.quote-row</span> <span class="cls">.quote-body</span> &larr; organisms/blockquote.css (flex layout)<br>
-            <span class="cls">.timecode</span> &larr; atoms/timecode.css<br>
-            <span class="cls">.bn-person-badge</span> &larr; molecules/person-badge.css<br>
-            <span class="cls">.badge</span> <span class="cls">.badge-readonly</span> &larr; atoms/badge.css<br>
-            <span class="cls">.intensity-dots</span> &larr; organisms/analysis.css<br>
+            <span class="cls">.badge-readonly</span> &larr; atoms/badge.css<br>
             <span class="cls">.seq-*</span> &larr; organisms/analysis.css (sequence borders)
         </div>
     </div>

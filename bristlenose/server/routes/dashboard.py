@@ -1,13 +1,14 @@
-"""Dashboard API endpoint — stats, featured quotes, nav lists."""
+"""Dashboard API endpoint — stats, featured quotes, nav lists, coverage."""
 
 from __future__ import annotations
+
+from collections import Counter
 
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from bristlenose.server.models import (
-    ClusterQuote,
     Person,
     Project,
     Quote,
@@ -16,6 +17,7 @@ from bristlenose.server.models import (
     ScreenCluster,
     SessionSpeaker,
     ThemeGroup,
+    TranscriptSegment,
 )
 from bristlenose.server.models import Session as SessionModel
 
@@ -103,6 +105,33 @@ class NavItem(BaseModel):
     anchor: str
 
 
+class OmittedSegmentResponse(BaseModel):
+    """A transcript segment that wasn't extracted as a quote."""
+
+    speaker_code: str
+    start_time: float
+    text: str
+    session_id: str  # string session ID for navigateToSession()
+
+
+class SessionOmittedResponse(BaseModel):
+    """Omitted content for one session."""
+
+    session_number: int
+    session_id: str
+    full_segments: list[OmittedSegmentResponse]
+    fragments_html: str  # pre-formatted "Okay. (4×), Yeah. (2×)"
+
+
+class CoverageResponse(BaseModel):
+    """Transcript coverage statistics for the dashboard."""
+
+    pct_in_report: int
+    pct_moderator: int
+    pct_omitted: int
+    omitted_by_session: list[SessionOmittedResponse]
+
+
 class DashboardResponse(BaseModel):
     """Full response for the dashboard endpoint."""
 
@@ -113,6 +142,7 @@ class DashboardResponse(BaseModel):
     themes: list[NavItem]
     moderator_header: str
     observer_header: str
+    coverage: CoverageResponse | None
 
 
 # ---------------------------------------------------------------------------
@@ -156,37 +186,6 @@ def _speaker_sort_key(sp: SessionSpeaker) -> tuple[int, int]:
     prefix = prefix_order.get(code[0], 3) if code else 3
     num = int(code[1:]) if len(code) > 1 and code[1:].isdigit() else 0
     return (prefix, num)
-
-
-def _derive_journeys(
-    db: Session,
-    project_id: int,
-) -> dict[str, list[str]]:
-    """Derive per-participant journey labels from screen clusters."""
-    clusters = (
-        db.query(ScreenCluster)
-        .filter_by(project_id=project_id)
-        .order_by(ScreenCluster.display_order)
-        .all()
-    )
-
-    participant_screens: dict[str, list[str]] = {}
-    for cluster in clusters:
-        cqs = db.query(ClusterQuote).filter_by(cluster_id=cluster.id).all()
-        quote_ids = [cq.quote_id for cq in cqs]
-        if not quote_ids:
-            continue
-
-        quotes = db.query(Quote).filter(Quote.id.in_(quote_ids)).all()
-        pids_in_cluster = {q.participant_id for q in quotes}
-
-        for pid in pids_in_cluster:
-            if pid not in participant_screens:
-                participant_screens[pid] = []
-            if cluster.screen_label not in participant_screens[pid]:
-                participant_screens[pid].append(cluster.screen_label)
-
-    return participant_screens
 
 
 def _aggregate_sentiments(
@@ -318,6 +317,190 @@ def _pick_featured_quotes(
                 picked.append(q)
 
     return picked[:n]
+
+
+# ---------------------------------------------------------------------------
+# Coverage calculation
+# ---------------------------------------------------------------------------
+
+# Segments with this many words or fewer are collapsed into fragment summaries.
+# Matches FRAGMENT_THRESHOLD in bristlenose/coverage.py.
+_FRAGMENT_THRESHOLD = 3
+
+
+def _is_moderator_code(code: str) -> bool:
+    """Check if a speaker code is moderator or observer (not participant)."""
+    return code.startswith("m") or code.startswith("o")
+
+
+def _format_fragments_html(fragment_counts: list[tuple[str, int]]) -> str:
+    """Format fragment counts as HTML for the frontend.
+
+    Returns e.g. '<span class="label">Also omitted: </span><span class="verbatim">Okay.</span>
+    (4×), <span class="verbatim">Yeah.</span> (2×)'
+    """
+    if not fragment_counts:
+        return ""
+    parts: list[str] = []
+    for text, count in fragment_counts:
+        escaped = text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+        if count > 1:
+            parts.append(f'<span class="verbatim">{escaped}</span> ({count}×)')
+        else:
+            parts.append(f'<span class="verbatim">{escaped}</span>')
+    joined = ", ".join(parts)
+    return f'<span class="label">Also omitted: </span>{joined}'
+
+
+def _calculate_coverage(
+    db: Session,
+    project_id: int,
+    sessions: list[SessionModel],
+) -> CoverageResponse | None:
+    """Calculate transcript coverage from the database.
+
+    Mirrors the algorithm in bristlenose/coverage.py but operates on
+    SQLAlchemy models instead of pipeline dataclasses.
+    """
+    if not sessions:
+        return None
+
+    # Build session lookup: int PK → (string session_id, session_number)
+    session_map: dict[int, tuple[str, int]] = {
+        s.id: (s.session_id, s.session_number) for s in sessions
+    }
+    session_pks = list(session_map.keys())
+
+    # Load all transcript segments for this project
+    segments = (
+        db.query(TranscriptSegment)
+        .filter(TranscriptSegment.session_id.in_(session_pks))
+        .order_by(TranscriptSegment.session_id, TranscriptSegment.start_time)
+        .all()
+    )
+    if not segments:
+        return None
+
+    # Load all quotes and build coverage ranges: string_session_id → [(start, end)]
+    quotes = db.query(Quote).filter_by(project_id=project_id).all()
+    quote_ranges: dict[str, list[tuple[float, float]]] = {}
+    for q in quotes:
+        quote_ranges.setdefault(q.session_id, []).append(
+            (q.start_timecode, q.end_timecode)
+        )
+
+    # Walk segments
+    participant_words_total = 0
+    participant_words_in_quotes = 0
+    moderator_words_total = 0
+    # string_session_id → list of (speaker_code, start_time, text, word_count)
+    omitted_raw: dict[str, list[tuple[str, float, str, int]]] = {}
+
+    for seg in segments:
+        info = session_map.get(seg.session_id)
+        if not info:
+            continue
+        str_sid = info[0]
+        code = seg.speaker_code
+        text = seg.text
+        wc = len(text.split())
+
+        if _is_moderator_code(code):
+            moderator_words_total += wc
+        else:
+            # Participant (or unknown code — treat as participant)
+            participant_words_total += wc
+            ranges = quote_ranges.get(str_sid, [])
+            is_covered = any(
+                start <= seg.start_time <= end for start, end in ranges
+            )
+            if is_covered:
+                participant_words_in_quotes += wc
+            else:
+                omitted_raw.setdefault(str_sid, []).append(
+                    (code, seg.start_time, text, wc)
+                )
+
+    # Percentages
+    total_words = participant_words_total + moderator_words_total
+    if total_words > 0:
+        pct_in_report = round(100 * participant_words_in_quotes / total_words)
+        pct_moderator = round(100 * moderator_words_total / total_words)
+        pct_omitted = round(
+            100 * (participant_words_total - participant_words_in_quotes) / total_words
+        )
+    else:
+        pct_in_report = 0
+        pct_moderator = 0
+        pct_omitted = 0
+
+    # Build per-session omitted with fragment collapsing
+    # Sort by session number for stable output
+    str_sid_to_num: dict[str, int] = {
+        s.session_id: s.session_number for s in sessions
+    }
+    sorted_sids = sorted(
+        omitted_raw.keys(),
+        key=lambda sid: str_sid_to_num.get(sid, 0),
+    )
+
+    omitted_sessions: list[SessionOmittedResponse] = []
+    for str_sid in sorted_sids:
+        raw = omitted_raw[str_sid]
+        full_segs: list[OmittedSegmentResponse] = []
+        fragments: list[str] = []
+
+        for code, start_time, text, wc in raw:
+            if wc > _FRAGMENT_THRESHOLD:
+                full_segs.append(OmittedSegmentResponse(
+                    speaker_code=code,
+                    start_time=start_time,
+                    text=text,
+                    session_id=str_sid,
+                ))
+            else:
+                fragments.append(text)
+
+        fragment_counts = Counter(fragments).most_common()
+        frags_html = _format_fragments_html(fragment_counts)
+
+        # Skip sessions with nothing omitted
+        if not full_segs and not fragment_counts:
+            continue
+
+        # Prepend "Also omitted:" label only when there are full segments above
+        if full_segs and fragment_counts:
+            pass  # _format_fragments_html already includes the label
+        elif not full_segs and fragment_counts:
+            # Fragments only — no "Also omitted:" prefix, just the verbatim list
+            parts: list[str] = []
+            for text_frag, count in fragment_counts:
+                escaped = (
+                    text_frag.replace("&", "&amp;")
+                    .replace("<", "&lt;")
+                    .replace(">", "&gt;")
+                )
+                if count > 1:
+                    parts.append(
+                        f'<span class="verbatim">{escaped}</span> ({count}×)'
+                    )
+                else:
+                    parts.append(f'<span class="verbatim">{escaped}</span>')
+            frags_html = ", ".join(parts)
+
+        omitted_sessions.append(SessionOmittedResponse(
+            session_number=str_sid_to_num.get(str_sid, 0),
+            session_id=str_sid,
+            full_segments=full_segs,
+            fragments_html=frags_html,
+        ))
+
+    return CoverageResponse(
+        pct_in_report=pct_in_report,
+        pct_moderator=pct_moderator,
+        pct_omitted=pct_omitted,
+        omitted_by_session=omitted_sessions,
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -502,6 +685,9 @@ def get_dashboard(
             label = "Observer" if len(all_observer_names) == 1 else "Observers"
             obs_header = f"{label}: {names_str}"
 
+        # --- Coverage ---
+        coverage = _calculate_coverage(db, project_id, sessions)
+
         return DashboardResponse(
             stats=StatsResponse(
                 session_count=len(sessions),
@@ -520,6 +706,7 @@ def get_dashboard(
             themes=themes,
             moderator_header=mod_header,
             observer_header=obs_header,
+            coverage=coverage,
         )
     finally:
         db.close()

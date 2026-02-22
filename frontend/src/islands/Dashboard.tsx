@@ -13,10 +13,12 @@ import { useEffect, useState, useMemo } from "react";
 import { Badge, PersonBadge, TimecodeLink } from "../components";
 import { formatDuration, formatFinderDate, formatFinderFilename, formatTimecode } from "../utils/format";
 import type {
+  CoverageResponse,
   DashboardResponse,
   DashboardSessionResponse,
   FeaturedQuoteResponse,
   NavItem,
+  SessionOmittedResponse,
   StatsResponse,
 } from "../utils/types";
 
@@ -459,6 +461,109 @@ function NavList({
   );
 }
 
+// ---------- Coverage box ----------
+
+function OmittedSession({
+  session,
+}: {
+  session: SessionOmittedResponse;
+}) {
+  return (
+    <div>
+      <p className="bn-coverage-session-title">Session {session.session_number}</p>
+      {session.full_segments.map((seg, i) => (
+        <div className="bn-coverage-segment" key={i}>
+          <TimecodeLink
+            seconds={seg.start_time}
+            participantId={seg.speaker_code}
+          />
+          <PersonBadge
+            code={seg.speaker_code}
+            role="participant"
+          />
+          <span>{seg.text}</span>
+        </div>
+      ))}
+      {session.fragments_html && (
+        <p
+          className="bn-coverage-fragments"
+          dangerouslySetInnerHTML={{ __html: session.fragments_html }}
+        />
+      )}
+    </div>
+  );
+}
+
+function CoverageBox({
+  coverage,
+}: {
+  coverage: CoverageResponse;
+}) {
+  const { pct_in_report, pct_moderator, pct_omitted, omitted_by_session } = coverage;
+
+  return (
+    <div className="bn-coverage-box bn-dashboard-full">
+      <h3>Transcript coverage</h3>
+
+      {/* Stacked bar */}
+      <div className="bn-coverage-bar">
+        <div
+          className="bn-coverage-bar-segment bn-coverage-bar-segment--report"
+          style={{ width: `${pct_in_report}%` }}
+        />
+        {pct_moderator > 0 && (
+          <div
+            className="bn-coverage-bar-segment bn-coverage-bar-segment--moderator"
+            style={{ width: `${pct_moderator}%` }}
+          />
+        )}
+        {pct_omitted > 0 && (
+          <div
+            className="bn-coverage-bar-segment bn-coverage-bar-segment--omitted"
+            style={{ width: `${pct_omitted}%` }}
+          />
+        )}
+      </div>
+
+      {/* Legend */}
+      <div className="bn-coverage-legend">
+        <span className="bn-coverage-legend-item">
+          <span className="bn-coverage-legend-dot bn-coverage-legend-dot--report" />
+          <span className="bn-coverage-legend-value">{pct_in_report}%</span> in report
+        </span>
+        {pct_moderator > 0 && (
+          <span className="bn-coverage-legend-item">
+            <span className="bn-coverage-legend-dot bn-coverage-legend-dot--moderator" />
+            <span className="bn-coverage-legend-value">{pct_moderator}%</span> moderator
+          </span>
+        )}
+        {pct_omitted > 0 && (
+          <span className="bn-coverage-legend-item">
+            <span className="bn-coverage-legend-dot bn-coverage-legend-dot--omitted" />
+            <span className="bn-coverage-legend-value">{pct_omitted}%</span> omitted
+          </span>
+        )}
+      </div>
+
+      {/* Omitted segments disclosure */}
+      {pct_omitted === 0 ? (
+        <p className="bn-coverage-empty">
+          Nothing omitted &mdash; all participant speech is in the report.
+        </p>
+      ) : omitted_by_session.length > 0 ? (
+        <details>
+          <summary>Show omitted quotes</summary>
+          <div>
+            {omitted_by_session.map((sess) => (
+              <OmittedSession key={sess.session_id} session={sess} />
+            ))}
+          </div>
+        </details>
+      ) : null}
+    </div>
+  );
+}
+
 // ── Main component ──────────────────────────────────────────────────────
 
 interface DashboardProps {
@@ -511,6 +616,8 @@ export function Dashboard({ projectId }: DashboardProps) {
 
       <NavList heading="Sections" items={data.sections} tabTarget="quotes" />
       <NavList heading="Themes" items={data.themes} tabTarget="quotes" />
+
+      {data.coverage && <CoverageBox coverage={data.coverage} />}
     </div>
   );
 }

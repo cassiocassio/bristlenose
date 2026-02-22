@@ -45,6 +45,7 @@ class TestDashboardEndpoint:
         expected = {
             "stats", "sessions", "featured_quotes",
             "sections", "themes", "moderator_header", "observer_header",
+            "coverage",
         }
         assert set(data.keys()) == expected
 
@@ -330,3 +331,67 @@ class TestDashboardErrors:
     def test_404_on_empty_db(self, client_empty: TestClient) -> None:
         resp = client_empty.get("/api/projects/1/dashboard")
         assert resp.status_code == 404
+
+
+# ---------------------------------------------------------------------------
+# Coverage
+# ---------------------------------------------------------------------------
+
+
+class TestDashboardCoverage:
+    def test_coverage_present_in_response(self, client: TestClient) -> None:
+        data = client.get("/api/projects/1/dashboard").json()
+        # Smoke-test fixture has transcript segments, so coverage should exist.
+        assert "coverage" in data
+
+    def test_coverage_has_all_fields(self, client: TestClient) -> None:
+        data = client.get("/api/projects/1/dashboard").json()
+        cov = data["coverage"]
+        if cov is None:
+            pytest.skip("No transcript segments in fixture")
+        expected = {"pct_in_report", "pct_moderator", "pct_omitted", "omitted_by_session"}
+        assert set(cov.keys()) == expected
+
+    def test_coverage_percentages_are_integers(self, client: TestClient) -> None:
+        data = client.get("/api/projects/1/dashboard").json()
+        cov = data["coverage"]
+        if cov is None:
+            pytest.skip("No transcript segments in fixture")
+        assert isinstance(cov["pct_in_report"], int)
+        assert isinstance(cov["pct_moderator"], int)
+        assert isinstance(cov["pct_omitted"], int)
+
+    def test_coverage_percentages_sum_roughly_to_100(self, client: TestClient) -> None:
+        data = client.get("/api/projects/1/dashboard").json()
+        cov = data["coverage"]
+        if cov is None:
+            pytest.skip("No transcript segments in fixture")
+        total = cov["pct_in_report"] + cov["pct_moderator"] + cov["pct_omitted"]
+        # Rounding can cause ±1 deviation.
+        assert 98 <= total <= 102
+
+    def test_coverage_omitted_sessions_are_list(self, client: TestClient) -> None:
+        data = client.get("/api/projects/1/dashboard").json()
+        cov = data["coverage"]
+        if cov is None:
+            pytest.skip("No transcript segments in fixture")
+        assert isinstance(cov["omitted_by_session"], list)
+
+    def test_omitted_session_has_all_fields(self, client: TestClient) -> None:
+        data = client.get("/api/projects/1/dashboard").json()
+        cov = data["coverage"]
+        if cov is None or not cov["omitted_by_session"]:
+            pytest.skip("No omitted sessions in fixture")
+        sess = cov["omitted_by_session"][0]
+        expected = {"session_number", "session_id", "full_segments", "fragments_html"}
+        assert set(sess.keys()) == expected
+
+    def test_omitted_segment_has_all_fields(self, client: TestClient) -> None:
+        data = client.get("/api/projects/1/dashboard").json()
+        cov = data["coverage"]
+        if cov is None:
+            pytest.skip("No transcript segments in fixture")
+        for sess in cov["omitted_by_session"]:
+            for seg in sess["full_segments"]:
+                expected = {"speaker_code", "start_time", "text", "session_id"}
+                assert set(seg.keys()) == expected

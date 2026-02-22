@@ -56,6 +56,27 @@ export interface NavItem {
   anchor: string;
 }
 
+export interface OmittedSegmentResponse {
+  speaker_code: string;
+  start_time: number;
+  text: string;
+  session_id: string;
+}
+
+export interface SessionOmittedResponse {
+  session_number: number;
+  session_id: string;
+  full_segments: OmittedSegmentResponse[];
+  fragments_html: string;
+}
+
+export interface CoverageResponse {
+  pct_in_report: number;
+  pct_moderator: number;
+  pct_omitted: number;
+  omitted_by_session: SessionOmittedResponse[];
+}
+
 export interface DashboardResponse {
   stats: StatsResponse;
   sessions: DashboardSessionResponse[];
@@ -64,6 +85,7 @@ export interface DashboardResponse {
   themes: NavItem[];
   moderator_header: string;
   observer_header: string;
+  coverage: CoverageResponse | null;
 }
 
 // ---------------------------------------------------------------------------
@@ -242,6 +264,7 @@ export interface TranscriptPageResponse {
   speakers: TranscriptSpeakerResponse[];
   segments: TranscriptSegmentResponse[];
   annotations: Record<string, QuoteAnnotationResponse>;
+  journey_labels: string[];
 }
 
 // ---------------------------------------------------------------------------

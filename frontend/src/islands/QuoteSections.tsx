@@ -7,7 +7,7 @@
  * quote cards.
  */
 
-import { useEffect, useState, useMemo } from "react";
+import { useCallback, useEffect, useState, useMemo } from "react";
 import { getCodebook } from "../utils/api";
 import type { QuotesListResponse } from "../utils/types";
 import { QuoteGroup } from "./QuoteGroup";
@@ -20,20 +20,35 @@ export function QuoteSections({ projectId }: QuoteSectionsProps) {
   const [data, setData] = useState<QuotesListResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [codebookTagNames, setCodebookTagNames] = useState<string[]>([]);
+  // Incremented on each re-fetch to force QuoteGroup remount (resets local state).
+  const [dataVersion, setDataVersion] = useState(0);
 
-  useEffect(() => {
+  const fetchQuotes = useCallback(() => {
     fetch(`/api/projects/${projectId}/quotes`)
       .then((res) => {
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         return res.json();
       })
-      .then((json: QuotesListResponse) => setData(json))
+      .then((json: QuotesListResponse) => {
+        setData(json);
+        setDataVersion((v) => v + 1);
+      })
       .catch((err: Error) => setError(err.message));
-    // Also fetch codebook tag names for auto-suggest vocabulary
     getCodebook()
       .then((cb) => setCodebookTagNames(cb.all_tag_names))
-      .catch(() => {}); // Non-critical — silently ignore
+      .catch(() => {});
   }, [projectId]);
+
+  useEffect(() => {
+    fetchQuotes();
+  }, [fetchQuotes]);
+
+  // Re-fetch when another island (CodebookPanel) applies bulk autocode tags.
+  useEffect(() => {
+    const handler = () => fetchQuotes();
+    document.addEventListener("bn:tags-changed", handler);
+    return () => document.removeEventListener("bn:tags-changed", handler);
+  }, [fetchQuotes]);
 
   // Collect all tag names across all quotes + codebook for the vocabulary.
   const tagVocabulary = useMemo(() => {
@@ -91,7 +106,7 @@ export function QuoteSections({ projectId }: QuoteSectionsProps) {
         const anchor = `section-${section.screen_label.toLowerCase().replace(/ /g, "-")}`;
         return (
           <QuoteGroup
-            key={section.cluster_id}
+            key={`${section.cluster_id}-v${dataVersion}`}
             anchor={anchor}
             label={section.screen_label}
             description={section.description}

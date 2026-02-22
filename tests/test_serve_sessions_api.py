@@ -141,6 +141,7 @@ class TestSessionsResponseShape:
             "duration_seconds",
             "has_media",
             "has_video",
+            "thumbnail_url",
             "speakers",
             "journey_labels",
             "sentiment_counts",

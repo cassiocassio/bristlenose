@@ -1,24 +1,24 @@
-/* Molecule: quote-actions — edit and starred state styles on blockquotes */
+/* Molecule: quote-actions — edit and starred state styles on .quote-card */
 
-blockquote.starred .star-btn {
+.quote-card.starred .star-btn {
     color: var(--bn-colour-starred);
 }
 
-blockquote.starred {
+.quote-card.starred {
     font-weight: 600;
     border-left-color: var(--bn-colour-starred);
 }
 
-blockquote.starred .context,
-blockquote.starred .timecode,
-blockquote.starred .speaker,
-blockquote.starred .badges {
+.quote-card.starred .context,
+.quote-card.starred .timecode,
+.quote-card.starred .speaker,
+.quote-card.starred .badges {
     font-weight: 400;
 }
 
 /* (editing/edited rules moved to molecules/editable-text.css) */
 
-blockquote.star-animating {
+.quote-card.star-animating {
     transition: transform var(--bn-transition-normal);
     z-index: 1;
 }
@@ -26,30 +26,30 @@ blockquote.star-animating {
 /* ── Bulk-action hover preview ─────────────────────────────────────────── */
 
 /* Will-be-starred: star shifts toward filled state + accent blue tint */
-blockquote.bn-preview-star .star-btn {
+.quote-card.bn-preview-star .star-btn {
     color: var(--bn-colour-accent);
     opacity: 0.6;
 }
 
 /* Will-be-unstarred: star shifts toward idle state + pale blue wash */
-blockquote.bn-preview-unstar .star-btn {
+.quote-card.bn-preview-unstar .star-btn {
     color: var(--bn-colour-accent);
     opacity: 0.35;
 }
 
 /* Override starred quote's own star colour during unstar preview */
-blockquote.starred.bn-preview-unstar .star-btn {
+.quote-card.starred.bn-preview-unstar .star-btn {
     color: var(--bn-colour-accent);
     opacity: 0.35;
 }
 
 /* Will-be-hidden: force hide buttons visible + accent blue, fade quote slightly */
-blockquote.bn-preview-hide {
+.quote-card.bn-preview-hide {
     opacity: 0.85;
     transition: opacity var(--bn-transition-fast);
 }
 
-blockquote.bn-preview-hide .hide-btn {
+.quote-card.bn-preview-hide .hide-btn {
     opacity: 1;
     color: var(--bn-colour-accent);
 }

@@ -89,29 +89,39 @@
 
 .report-row.removing td { padding-top: 0; padding-bottom: 0; }
 
-/* Rationale tooltip (shared with proposed badges) */
+/* Rationale tooltip (shared with proposed badges).
+   Soft surface, 300ms hover delay, float-down-from-above animation. */
 .has-tooltip {
     position: relative;
 }
 
 .has-tooltip .tooltip {
-    display: none;
     position: absolute;
-    bottom: calc(100% + 4px);
+    bottom: calc(100% + 6px);
     left: 50%;
-    transform: translateX(-50%);
-    background: var(--bn-colour-text);
-    color: var(--bn-colour-bg);
+    background: var(--bn-colour-bg);
+    color: var(--bn-colour-text);
+    border: 1px solid var(--bn-colour-border);
     font-size: 0.72rem;
-    padding: 0.4rem 0.6rem;
-    border-radius: var(--bn-radius-sm);
+    padding: 0.45rem 0.65rem;
+    border-radius: var(--bn-radius-md);
     white-space: normal;
     width: max-content;
-    max-width: 280px;
+    max-width: 260px;
     z-index: 300;
     line-height: 1.4;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08), 0 1px 4px rgba(0, 0, 0, 0.04);
     font-family: var(--bn-font-body);
+    /* Float-down animation: starts 8px above, settles into place */
+    opacity: 0;
+    transform: translateX(-50%) translateY(-8px);
+    transition: opacity 0.2s ease-out, transform 0.2s ease-out;
+    pointer-events: none;
+    transition-delay: 0s; /* instant exit on mouse-out */
 }
 
-.has-tooltip:hover .tooltip { display: block; }
+.has-tooltip:hover .tooltip {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+    transition-delay: 0.3s; /* 300ms hover delay before appearing */
+}

@@ -18,7 +18,7 @@
     color: var(--bn-colour-accent);
 }
 
-/* ── Hide button on blockquote ──────────────────────────────────────────── */
+/* ── Hide button on quote card ─────────────────────────────────────────── */
 
 .hide-btn {
     position: absolute;
@@ -35,8 +35,8 @@
     opacity: 0;
 }
 
-blockquote:hover .hide-btn,
-blockquote.bn-focused .hide-btn {
+.quote-card:hover .hide-btn,
+.quote-card.bn-focused .hide-btn {
     opacity: 1;
 }
 

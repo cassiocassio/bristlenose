@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tooltip Gallery — Design Explorations</title>
+<style>
+/* ── Design tokens (from bristlenose/theme/tokens.css) ─────── */
+:root {
+    --bn-font-body: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
+    --bn-font-mono: "SF Mono", "Fira Code", "Consolas", monospace;
+    --bn-colour-bg: #ffffff;
+    --bn-colour-text: #1a1a1a;
+    --bn-colour-muted: #6b7280;
+    --bn-colour-border: #e5e7eb;
+    --bn-colour-accent: #2563eb;
+    --bn-colour-hover: #e8f0fe;
+    --bn-colour-quote-bg: #f9fafb;
+    --bn-colour-badge-bg: #f3f4f6;
+    --bn-colour-badge-text: #374151;
+    --bn-colour-shadow: rgba(0,0,0,0.1);
+    --bn-radius-sm: 3px;
+    --bn-radius-md: 6px;
+    --bn-radius-lg: 8px;
+    --bn-transition-fast: 0.15s ease;
+    --bn-transition-normal: 0.2s ease;
+    --bn-transition-slow: 0.3s ease;
+    --bn-sentiment-confusion: #dc2626;
+    --bn-sentiment-confusion-bg: #fef2f2;
+    --bn-sentiment-satisfaction: #16a34a;
+    --bn-sentiment-satisfaction-bg: #f0fdf4;
+}
+
+/* ── Dark mode ───────────────────────────────────────────── */
+[data-theme="dark"] {
+    --bn-colour-bg: #111111;
+    --bn-colour-text: #e5e7eb;
+    --bn-colour-muted: #9ca3af;
+    --bn-colour-border: #2d2d2d;
+    --bn-colour-accent: #60a5fa;
+    --bn-colour-hover: #1e293b;
+    --bn-colour-quote-bg: #1a1a1a;
+    --bn-colour-badge-bg: #252525;
+    --bn-colour-badge-text: #d1d5db;
+    --bn-colour-shadow: rgba(0,0,0,0.4);
+    --bn-sentiment-confusion: #f87171;
+    --bn-sentiment-confusion-bg: #2d1515;
+    --bn-sentiment-satisfaction: #4ade80;
+    --bn-sentiment-satisfaction-bg: #0f2918;
+}
+
+/* ── Page layout ─────────────────────────────────────────── */
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+    font-family: var(--bn-font-body);
+    font-size: 1rem;
+    color: var(--bn-colour-text);
+    background: var(--bn-colour-bg);
+    line-height: 1.5;
+    padding: 2rem 3rem 6rem;
+    max-width: 1100px;
+}
+
+h1 { font-size: 1.5rem; font-weight: 600; margin-bottom: 0.3rem; }
+h2 { font-size: 1.15rem; font-weight: 600; margin: 3rem 0 0.5rem; border-bottom: 1px solid var(--bn-colour-border); padding-bottom: 0.4rem; }
+h3 { font-size: 0.95rem; font-weight: 600; margin: 1.8rem 0 0.4rem; color: var(--bn-colour-muted); text-transform: uppercase; letter-spacing: 0.04em; }
+.subtitle { color: var(--bn-colour-muted); font-size: 0.9rem; margin-bottom: 2rem; }
+.note { font-size: 0.82rem; color: var(--bn-colour-muted); margin-top: 0.5rem; line-height: 1.4; max-width: 44rem; }
+.note em { font-style: italic; }
+.note strong { font-weight: 600; color: var(--bn-colour-text); }
+.comparison { display: flex; gap: 2.5rem; flex-wrap: wrap; align-items: flex-start; margin: 1rem 0; }
+.comparison > * { flex: 1; min-width: 300px; }
+
+.theme-toggle {
+    position: fixed; top: 1rem; right: 1rem;
+    background: var(--bn-colour-badge-bg); border: 1px solid var(--bn-colour-border);
+    border-radius: var(--bn-radius-md); padding: 0.4rem 0.8rem;
+    font-family: var(--bn-font-body); font-size: 0.8rem; cursor: pointer;
+    color: var(--bn-colour-text);
+}
+
+/* ── Shared badge styles ─────────────────────────────────── */
+.badge {
+    display: inline-block;
+    font-family: var(--bn-font-mono);
+    font-size: 0.72rem;
+    padding: 0.15rem 0.45rem;
+    border-radius: var(--bn-radius-sm);
+    background: var(--bn-colour-badge-bg);
+    color: var(--bn-colour-badge-text);
+    white-space: nowrap;
+    cursor: default;
+}
+.badge-confusion { background: var(--bn-sentiment-confusion-bg); color: var(--bn-sentiment-confusion); }
+.badge-satisfaction { background: var(--bn-sentiment-satisfaction-bg); color: var(--bn-sentiment-satisfaction); }
+
+/* Proposed badge (dashed border) */
+.badge-proposed {
+    border: 1px dashed currentColor;
+    position: relative;
+    cursor: pointer;
+    background: oklch(94% 0.03 155);
+    color: #374151;
+}
+
+/* ── Demo quote card ─────────────────────────────────────── */
+.demo-card {
+    background: var(--bn-colour-quote-bg);
+    border-radius: var(--bn-radius-md);
+    padding: 1rem 1.2rem;
+    margin: 0.8rem 0;
+    position: relative;
+    border-left: 3px solid transparent;
+}
+.demo-card-text {
+    font-size: 0.9rem;
+    line-height: 1.5;
+    color: var(--bn-colour-text);
+    margin-bottom: 0.5rem;
+}
+.demo-card-meta {
+    font-size: 0.78rem;
+    color: var(--bn-colour-muted);
+    margin-bottom: 0.6rem;
+}
+.demo-card-badges {
+    display: flex;
+    gap: 0.4rem;
+    flex-wrap: wrap;
+    align-items: center;
+}
+
+/* ── VARIANT A: Current (inverted high-contrast) ─────────── */
+.tooltip-a {
+    position: relative;
+}
+.tooltip-a .tip {
+    display: none;
+    position: absolute;
+    bottom: calc(100% + 4px);
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--bn-colour-text);
+    color: var(--bn-colour-bg);
+    font-size: 0.72rem;
+    padding: 0.4rem 0.6rem;
+    border-radius: var(--bn-radius-sm);
+    white-space: normal;
+    width: max-content;
+    max-width: 280px;
+    z-index: 300;
+    line-height: 1.4;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    font-family: var(--bn-font-body);
+}
+.tooltip-a:hover .tip { display: block; }
+
+/* ── VARIANT B: Soft surface (matches cell-tooltip) ──────── */
+.tooltip-b {
+    position: relative;
+}
+.tooltip-b .tip {
+    position: absolute;
+    bottom: calc(100% + 6px);
+    left: 50%;
+    background: var(--bn-colour-bg);
+    color: var(--bn-colour-text);
+    border: 1px solid var(--bn-colour-border);
+    font-size: 0.72rem;
+    padding: 0.45rem 0.65rem;
+    border-radius: var(--bn-radius-md);
+    white-space: normal;
+    width: max-content;
+    max-width: 260px;
+    z-index: 300;
+    line-height: 1.4;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.08), 0 1px 4px rgba(0,0,0,0.04);
+    font-family: var(--bn-font-body);
+    /* Animation: delay + float-down */
+    opacity: 0;
+    transform: translateX(-50%) translateY(-4px);
+    transition: opacity 0.18s ease, transform 0.18s ease;
+    pointer-events: none;
+    transition-delay: 0s;
+}
+.tooltip-b:hover .tip {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+    transition-delay: 0.3s;
+}
+
+/* ── VARIANT C: Soft surface + longer delay (0.5s) ───────── */
+.tooltip-c {
+    position: relative;
+}
+.tooltip-c .tip {
+    position: absolute;
+    bottom: calc(100% + 6px);
+    left: 50%;
+    background: var(--bn-colour-bg);
+    color: var(--bn-colour-text);
+    border: 1px solid var(--bn-colour-border);
+    font-size: 0.72rem;
+    padding: 0.45rem 0.65rem;
+    border-radius: var(--bn-radius-md);
+    white-space: normal;
+    width: max-content;
+    max-width: 260px;
+    z-index: 300;
+    line-height: 1.4;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.08), 0 1px 4px rgba(0,0,0,0.04);
+    font-family: var(--bn-font-body);
+    opacity: 0;
+    transform: translateX(-50%) translateY(-4px);
+    transition: opacity 0.18s ease, transform 0.18s ease;
+    pointer-events: none;
+    transition-delay: 0s;
+}
+.tooltip-c:hover .tip {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+    transition-delay: 0.5s;
+}
+
+/* ── VARIANT D: Soft + float-down-from-above (200ms anim, 300ms delay) ── */
+.tooltip-d {
+    position: relative;
+}
+.tooltip-d .tip {
+    position: absolute;
+    bottom: calc(100% + 6px);
+    left: 50%;
+    background: var(--bn-colour-bg);
+    color: var(--bn-colour-text);
+    border: 1px solid var(--bn-colour-border);
+    font-size: 0.72rem;
+    padding: 0.45rem 0.65rem;
+    border-radius: var(--bn-radius-md);
+    white-space: normal;
+    width: max-content;
+    max-width: 260px;
+    z-index: 300;
+    line-height: 1.4;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.08), 0 1px 4px rgba(0,0,0,0.04);
+    font-family: var(--bn-font-body);
+    opacity: 0;
+    transform: translateX(-50%) translateY(-8px);
+    transition: opacity 0.2s ease-out, transform 0.2s ease-out;
+    pointer-events: none;
+    transition-delay: 0s;
+}
+.tooltip-d:hover .tip {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+    transition-delay: 0.3s;
+}
+
+/* ── VARIANT E: Same as D but with muted text colour ─────── */
+.tooltip-e {
+    position: relative;
+}
+.tooltip-e .tip {
+    position: absolute;
+    bottom: calc(100% + 6px);
+    left: 50%;
+    background: var(--bn-colour-bg);
+    color: var(--bn-colour-muted);
+    border: 1px solid var(--bn-colour-border);
+    font-size: 0.72rem;
+    padding: 0.45rem 0.65rem;
+    border-radius: var(--bn-radius-md);
+    white-space: normal;
+    width: max-content;
+    max-width: 260px;
+    z-index: 300;
+    line-height: 1.4;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.08), 0 1px 4px rgba(0,0,0,0.04);
+    font-family: var(--bn-font-body);
+    opacity: 0;
+    transform: translateX(-50%) translateY(-8px);
+    transition: opacity 0.2s ease-out, transform 0.2s ease-out;
+    pointer-events: none;
+    transition-delay: 0s;
+}
+.tooltip-e:hover .tip {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+    transition-delay: 0.3s;
+}
+
+/* ── VARIANT F: Frosted glass (backdrop-filter) ──────────── */
+.tooltip-f {
+    position: relative;
+}
+.tooltip-f .tip {
+    position: absolute;
+    bottom: calc(100% + 6px);
+    left: 50%;
+    background: color-mix(in srgb, var(--bn-colour-bg) 80%, transparent);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    color: var(--bn-colour-text);
+    border: 1px solid color-mix(in srgb, var(--bn-colour-border) 60%, transparent);
+    font-size: 0.72rem;
+    padding: 0.45rem 0.65rem;
+    border-radius: var(--bn-radius-md);
+    white-space: normal;
+    width: max-content;
+    max-width: 260px;
+    z-index: 300;
+    line-height: 1.4;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.06), 0 1px 4px rgba(0,0,0,0.03);
+    font-family: var(--bn-font-body);
+    opacity: 0;
+    transform: translateX(-50%) translateY(-8px);
+    transition: opacity 0.2s ease-out, transform 0.2s ease-out;
+    pointer-events: none;
+    transition-delay: 0s;
+}
+.tooltip-f:hover .tip {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+    transition-delay: 0.3s;
+}
+
+/* ── Labels ──────────────────────────────────────────────── */
+.variant-label {
+    font-family: var(--bn-font-mono);
+    font-size: 0.7rem;
+    color: var(--bn-colour-muted);
+    margin-bottom: 0.3rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+.variant-desc {
+    font-size: 0.82rem;
+    color: var(--bn-colour-muted);
+    line-height: 1.4;
+    margin-top: 0.3rem;
+    max-width: 320px;
+}
+.winner {
+    display: inline-block;
+    background: var(--bn-sentiment-satisfaction-bg);
+    color: var(--bn-sentiment-satisfaction);
+    font-family: var(--bn-font-mono);
+    font-size: 0.65rem;
+    padding: 0.1rem 0.4rem;
+    border-radius: var(--bn-radius-sm);
+    margin-left: 0.4rem;
+    vertical-align: middle;
+}
+
+/* ── Static tooltip preview (always visible) ─────────────── */
+.static-preview {
+    padding: 2.5rem 1.5rem 1rem;
+    position: relative;
+    min-height: 100px;
+}
+</style>
+</head>
+<body>
+
+<button class="theme-toggle" onclick="document.documentElement.dataset.theme = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark'">Toggle dark mode</button>
+
+<h1>Tooltip Gallery</h1>
+<p class="subtitle">Design explorations for a system-wide tooltip pattern. Hover each badge to compare.</p>
+
+<!-- ────────────────────────────────────────────────────────── -->
+<h2>The Problem</h2>
+
+<p class="note">The rationale tooltip on proposed AutoCode badges uses <strong>inverted colours</strong> (solid black/white) that feel heavy and intrusive. It appears <strong>instantly</strong> with no delay or animation, which means the user doesn't get a chance to register the hover state on the badge before the tooltip fires. This gallery explores softer alternatives with deliberate timing.</p>
+
+<p class="note" style="margin-top: 0.8rem">The goal is to pick <strong>one tooltip pattern</strong> that works system-wide: rationale tooltips on proposed badges, analysis cell tooltips, metric label hints, and any future tooltips.</p>
+
+<!-- ────────────────────────────────────────────────────────── -->
+<h2>Variants</h2>
+
+<h3>A — Current (inverted, instant)</h3>
+<div class="comparison">
+    <div>
+        <div class="demo-card">
+            <div class="demo-card-text">"Maybe I want to go back to... Products. Rooms. The bedroom. Ideas. What's the way to the bed section again."</div>
+            <div class="demo-card-meta">[01:32] — p4</div>
+            <div class="demo-card-badges">
+                <span class="badge badge-confusion">confusion</span>
+                <span class="badge badge-proposed tooltip-a">
+                    navigation pattern
+                    <span class="tip">The participant describes their path through different areas ('Products. Rooms. The bedroom') and notes they've 'flung my way to the bed section again', commenting on the navigation system.</span>
+                </span>
+            </div>
+        </div>
+        <p class="variant-desc">High-contrast inverted box. No delay, no animation. Appears instantly on hover — blocks the quote text.</p>
+    </div>
+</div>
+
+<h3>B — Soft surface, 300ms delay, fade + settle</h3>
+<div class="comparison">
+    <div>
+        <div class="demo-card">
+            <div class="demo-card-text">"Maybe I want to go back to... Products. Rooms. The bedroom. Ideas. What's the way to the bed section again."</div>
+            <div class="demo-card-meta">[01:32] — p4</div>
+            <div class="demo-card-badges">
+                <span class="badge badge-confusion">confusion</span>
+                <span class="badge badge-proposed tooltip-b">
+                    navigation pattern
+                    <span class="tip">The participant describes their path through different areas ('Products. Rooms. The bedroom') and notes they've 'flung my way to the bed section again', commenting on the navigation system.</span>
+                </span>
+            </div>
+        </div>
+        <p class="variant-desc">Page-coloured surface with border + shadow (matches cell-tooltip). <strong>300ms delay</strong> before appearing. <strong>4px settle</strong> — fades in while floating down into position (180ms ease).</p>
+    </div>
+</div>
+
+<h3>C — Soft surface, 500ms delay (Material-style)</h3>
+<div class="comparison">
+    <div>
+        <div class="demo-card">
+            <div class="demo-card-text">"Maybe I want to go back to... Products. Rooms. The bedroom. Ideas. What's the way to the bed section again."</div>
+            <div class="demo-card-meta">[01:32] — p4</div>
+            <div class="demo-card-badges">
+                <span class="badge badge-confusion">confusion</span>
+                <span class="badge badge-proposed tooltip-c">
+                    navigation pattern
+                    <span class="tip">The participant describes their path through different areas ('Products. Rooms. The bedroom') and notes they've 'flung my way to the bed section again', commenting on the navigation system.</span>
+                </span>
+            </div>
+        </div>
+        <p class="variant-desc">Same soft surface but with <strong>500ms delay</strong> (Material Design recommendation). Prevents accidental triggers during fast mouse movement. Same 4px settle animation.</p>
+    </div>
+</div>
+
+<h3>D — Soft surface, float-down-from-above (8px travel, 300ms delay) <span class="winner">recommended</span></h3>
+<div class="comparison">
+    <div>
+        <div class="demo-card">
+            <div class="demo-card-text">"Maybe I want to go back to... Products. Rooms. The bedroom. Ideas. What's the way to the bed section again."</div>
+            <div class="demo-card-meta">[01:32] — p4</div>
+            <div class="demo-card-badges">
+                <span class="badge badge-confusion">confusion</span>
+                <span class="badge badge-proposed tooltip-d">
+                    navigation pattern
+                    <span class="tip">The participant describes their path through different areas ('Products. Rooms. The bedroom') and notes they've 'flung my way to the bed section again', commenting on the navigation system.</span>
+                </span>
+            </div>
+        </div>
+        <p class="variant-desc">The "floats down from heaven" pattern — tooltip starts <strong>8px above</strong> final position, <strong>eases down</strong> over 200ms with fade. <strong>300ms hover delay</strong> lets the user register the badge hover state first. Feels like Teams/Figma/macOS popovers.</p>
+    </div>
+</div>
+
+<h3>E — Same as D, muted text colour</h3>
+<div class="comparison">
+    <div>
+        <div class="demo-card">
+            <div class="demo-card-text">"Maybe I want to go back to... Products. Rooms. The bedroom. Ideas. What's the way to the bed section again."</div>
+            <div class="demo-card-meta">[01:32] — p4</div>
+            <div class="demo-card-badges">
+                <span class="badge badge-confusion">confusion</span>
+                <span class="badge badge-proposed tooltip-e">
+                    navigation pattern
+                    <span class="tip">The participant describes their path through different areas ('Products. Rooms. The bedroom') and notes they've 'flung my way to the bed section again', commenting on the navigation system.</span>
+                </span>
+            </div>
+        </div>
+        <p class="variant-desc">Same animation as D but tooltip text uses <strong>muted grey</strong> instead of primary text colour. Quieter — the rationale is secondary information, doesn't compete with quote text.</p>
+    </div>
+</div>
+
+<h3>F — Frosted glass (backdrop-filter)</h3>
+<div class="comparison">
+    <div>
+        <div class="demo-card">
+            <div class="demo-card-text">"Maybe I want to go back to... Products. Rooms. The bedroom. Ideas. What's the way to the bed section again."</div>
+            <div class="demo-card-meta">[01:32] — p4</div>
+            <div class="demo-card-badges">
+                <span class="badge badge-confusion">confusion</span>
+                <span class="badge badge-proposed tooltip-f">
+                    navigation pattern
+                    <span class="tip">The participant describes their path through different areas ('Products. Rooms. The bedroom') and notes they've 'flung my way to the bed section again', commenting on the navigation system.</span>
+                </span>
+            </div>
+        </div>
+        <p class="variant-desc">Translucent background with <strong>backdrop blur</strong>. Same float-down animation as D. Elegant but may feel out of place in the current design system. Uses <code>color-mix()</code> + <code>backdrop-filter</code>.</p>
+    </div>
+</div>
+
+<!-- ────────────────────────────────────────────────────────── -->
+<h2>Timing Reference</h2>
+<table style="font-size: 0.82rem; border-collapse: collapse; width: 100%; max-width: 600px; margin-top: 0.5rem;">
+<thead>
+<tr style="border-bottom: 2px solid var(--bn-colour-border); text-align: left;">
+    <th style="padding: 0.4rem 0.6rem;">Property</th>
+    <th style="padding: 0.4rem 0.6rem;">Value</th>
+    <th style="padding: 0.4rem 0.6rem;">Rationale</th>
+</tr>
+</thead>
+<tbody>
+<tr style="border-bottom: 1px solid var(--bn-colour-border);">
+    <td style="padding: 0.4rem 0.6rem; font-family: var(--bn-font-mono); font-size: 0.75rem;">hover delay</td>
+    <td style="padding: 0.4rem 0.6rem;">300ms</td>
+    <td style="padding: 0.4rem 0.6rem; color: var(--bn-colour-muted);">Lets user register badge hover state before tooltip fires. Browser title attrs use ~500ms; 300ms is deliberate but not sluggish.</td>
+</tr>
+<tr style="border-bottom: 1px solid var(--bn-colour-border);">
+    <td style="padding: 0.4rem 0.6rem; font-family: var(--bn-font-mono); font-size: 0.75rem;">animation duration</td>
+    <td style="padding: 0.4rem 0.6rem;">200ms</td>
+    <td style="padding: 0.4rem 0.6rem; color: var(--bn-colour-muted);">Industry standard for micro-animations. Perceptible but doesn't feel slow.</td>
+</tr>
+<tr style="border-bottom: 1px solid var(--bn-colour-border);">
+    <td style="padding: 0.4rem 0.6rem; font-family: var(--bn-font-mono); font-size: 0.75rem;">travel distance</td>
+    <td style="padding: 0.4rem 0.6rem;">8px</td>
+    <td style="padding: 0.4rem 0.6rem; color: var(--bn-colour-muted);">Enough to read as "descending into position" without being distracting. 4px feels static; 12px feels bouncy.</td>
+</tr>
+<tr style="border-bottom: 1px solid var(--bn-colour-border);">
+    <td style="padding: 0.4rem 0.6rem; font-family: var(--bn-font-mono); font-size: 0.75rem;">easing</td>
+    <td style="padding: 0.4rem 0.6rem;">ease-out</td>
+    <td style="padding: 0.4rem 0.6rem; color: var(--bn-colour-muted);">Decelerates into final position — feels like gravity/settling.</td>
+</tr>
+<tr>
+    <td style="padding: 0.4rem 0.6rem; font-family: var(--bn-font-mono); font-size: 0.75rem;">exit</td>
+    <td style="padding: 0.4rem 0.6rem;">instant (0s delay)</td>
+    <td style="padding: 0.4rem 0.6rem; color: var(--bn-colour-muted);">No delay on mouse-out — tooltip should disappear immediately. The <code>transition-delay: 0s</code> on the base state handles this.</td>
+</tr>
+</tbody>
+</table>
+
+<!-- ────────────────────────────────────────────────────────── -->
+<h2>System-Wide Audit</h2>
+<p class="note">All tooltip-like elements in the app that should adopt the chosen pattern:</p>
+
+<table style="font-size: 0.82rem; border-collapse: collapse; width: 100%; max-width: 700px; margin-top: 0.5rem;">
+<thead>
+<tr style="border-bottom: 2px solid var(--bn-colour-border); text-align: left;">
+    <th style="padding: 0.4rem 0.6rem;">Element</th>
+    <th style="padding: 0.4rem 0.6rem;">Current Style</th>
+    <th style="padding: 0.4rem 0.6rem;">Needs Update?</th>
+</tr>
+</thead>
+<tbody>
+<tr style="border-bottom: 1px solid var(--bn-colour-border);">
+    <td style="padding: 0.4rem 0.6rem;"><strong>Rationale tooltip</strong> (proposed badges)</td>
+    <td style="padding: 0.4rem 0.6rem; color: var(--bn-colour-muted);">Inverted, instant, no animation</td>
+    <td style="padding: 0.4rem 0.6rem;">Yes — primary target</td>
+</tr>
+<tr style="border-bottom: 1px solid var(--bn-colour-border);">
+    <td style="padding: 0.4rem 0.6rem;"><strong>Cell tooltip</strong> (analysis heatmap)</td>
+    <td style="padding: 0.4rem 0.6rem; color: var(--bn-colour-muted);">Soft surface, 120ms fade+slide, no delay</td>
+    <td style="padding: 0.4rem 0.6rem;">Add 300ms delay + align animation</td>
+</tr>
+<tr style="border-bottom: 1px solid var(--bn-colour-border);">
+    <td style="padding: 0.4rem 0.6rem;"><strong>Title attributes</strong> (toolbar, metrics, etc.)</td>
+    <td style="padding: 0.4rem 0.6rem; color: var(--bn-colour-muted);">Native browser tooltip</td>
+    <td style="padding: 0.4rem 0.6rem;">No — leave native for simple labels</td>
+</tr>
+<tr>
+    <td style="padding: 0.4rem 0.6rem;"><strong>Hidden quotes dropdown</strong></td>
+    <td style="padding: 0.4rem 0.6rem; color: var(--bn-colour-muted);">Click-triggered, no animation</td>
+    <td style="padding: 0.4rem 0.6rem;">No — click menus are different from hover tips</td>
+</tr>
+</tbody>
+</table>
+
+<p class="note" style="margin-top: 1rem"><strong>Design decision:</strong> Native <code>title</code> attributes stay for simple icon labels (one or two words). Custom tooltips are for <em>content</em> — rationale text, quote previews, metric details — where we control timing and styling.</p>
+
+</body>
+</html>

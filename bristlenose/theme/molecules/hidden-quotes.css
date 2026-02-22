@@ -2,7 +2,7 @@
 
 /* ── Hidden quote state ─────────────────────────────────────────────────── */
 
-blockquote.bn-hidden {
+.quote-card.bn-hidden {
     display: none !important;
 }
 
@@ -13,7 +13,7 @@ blockquote.bn-hidden {
  *   animate siblings (FLIP) → build badge → animate ghost shrink
  * can be reconstructed in React via useLayoutEffect + refs + flushSync.
  * For now, this CSS collapse is a simpler alternative. */
-blockquote.bn-hiding {
+.quote-card.bn-hiding {
     max-height: 0 !important;
     opacity: 0;
     overflow: hidden;

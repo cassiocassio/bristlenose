@@ -1,0 +1,830 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Quote Anatomy — Bristlenose Design System</title>
+<style>
+/* ── Tokens (subset from bristlenose/theme/tokens.css) ── */
+:root {
+    --bn-font-body: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
+    --bn-font-mono: "SF Mono", "Fira Code", "Consolas", monospace;
+    --bn-colour-bg: #ffffff;
+    --bn-colour-text: #1a1a1a;
+    --bn-colour-muted: #6b7280;
+    --bn-colour-border: #e5e7eb;
+    --bn-colour-accent: #2563eb;
+    --bn-colour-quote-bg: #f9fafb;
+    --bn-colour-badge-bg: #f3f4f6;
+    --bn-colour-badge-text: #374151;
+    --bn-colour-icon-idle: #c9ccd1;
+    --bn-colour-starred: #999;
+    --bn-colour-shadow: rgba(0, 0, 0, 0.1);
+    --bn-space-xs: 0.15rem;
+    --bn-space-sm: 0.35rem;
+    --bn-space-md: 0.75rem;
+    --bn-space-lg: 1.5rem;
+    --bn-radius-sm: 3px;
+    --bn-radius-md: 6px;
+    --bn-span-bar-width: 2px;
+    --bn-span-bar-radius: 1px;
+    --bn-transition-fast: 0.15s ease;
+    --bn-transition-normal: 0.2s ease;
+    --bn-sentiment-frustration: #ea580c;
+    --bn-sentiment-frustration-bg: #fff7ed;
+    --bn-sentiment-satisfaction: #16a34a;
+    --bn-sentiment-satisfaction-bg: #f0fdf4;
+    --bn-sentiment-confidence: #2563eb;
+    --bn-sentiment-confidence-bg: #eff6ff;
+    --bn-ux-3-bg: oklch(94% 0.03 250);
+}
+
+@supports (color: light-dark(#000, #fff)) {
+    :root {
+        color-scheme: light dark;
+        --bn-colour-bg: light-dark(#ffffff, #111111);
+        --bn-colour-text: light-dark(#1a1a1a, #e5e7eb);
+        --bn-colour-muted: light-dark(#6b7280, #9ca3af);
+        --bn-colour-border: light-dark(#e5e7eb, #2d2d2d);
+        --bn-colour-accent: light-dark(#2563eb, #60a5fa);
+        --bn-colour-quote-bg: light-dark(#f9fafb, #1a1a1a);
+        --bn-colour-badge-bg: light-dark(#f3f4f6, #252525);
+        --bn-colour-badge-text: light-dark(#374151, #d1d5db);
+        --bn-colour-shadow: light-dark(rgba(0,0,0,0.1), rgba(0,0,0,0.3));
+        --bn-colour-icon-idle: light-dark(#c9ccd1, #555);
+        --bn-sentiment-frustration: light-dark(#ea580c, #fb923c);
+        --bn-sentiment-frustration-bg: light-dark(#fff7ed, #2d1d0e);
+        --bn-sentiment-satisfaction: light-dark(#16a34a, #4ade80);
+        --bn-sentiment-satisfaction-bg: light-dark(#f0fdf4, #0f2918);
+        --bn-sentiment-confidence: light-dark(#2563eb, #60a5fa);
+        --bn-sentiment-confidence-bg: light-dark(#eff6ff, #111d2e);
+    }
+}
+
+/* ── Page layout ── */
+body {
+    font-family: var(--bn-font-body);
+    color: var(--bn-colour-text);
+    background: var(--bn-colour-bg);
+    line-height: 1.6;
+    margin: 2rem auto;
+    max-width: 64rem;
+    padding: 0 1.5rem;
+}
+h1 { font-size: 1.5rem; font-weight: 600; margin-bottom: 0.25rem; }
+.subtitle { font-size: 0.85rem; color: var(--bn-colour-muted); margin-bottom: 2.5rem; }
+h2 {
+    font-size: 1.1rem; font-weight: 600;
+    border-bottom: 1px solid var(--bn-colour-border);
+    padding-bottom: 0.3rem; margin: 2.5rem 0 1.2rem;
+}
+h3 {
+    font-size: 0.85rem; font-weight: 600; text-transform: uppercase;
+    letter-spacing: 0.04em; color: var(--bn-colour-muted);
+    margin: 1.5rem 0 0.5rem;
+}
+
+/* ── Anatomy containers ── */
+.atom-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+.atom-card {
+    border: 1px solid var(--bn-colour-border);
+    border-radius: var(--bn-radius-md);
+    padding: 1rem;
+}
+.atom-card-label {
+    font-size: 0.7rem; font-weight: 600; text-transform: uppercase;
+    letter-spacing: 0.04em; color: var(--bn-colour-muted);
+    margin-bottom: 0.5rem;
+}
+.atom-card-specimen { margin-bottom: 0.8rem; }
+.atom-card-code {
+    font-family: var(--bn-font-mono);
+    font-size: 0.68rem;
+    color: var(--bn-colour-muted);
+    line-height: 1.5;
+}
+.atom-card-code .css-ref { color: var(--bn-sentiment-confidence); }
+.atom-card-code .react-ref { color: var(--bn-sentiment-satisfaction); }
+
+.organism-row {
+    margin-bottom: 2rem;
+    border: 1px solid var(--bn-colour-border);
+    border-radius: var(--bn-radius-md);
+    overflow: hidden;
+}
+.organism-header {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 0.6rem 1rem;
+    background: var(--bn-colour-badge-bg);
+    border-bottom: 1px solid var(--bn-colour-border);
+}
+.organism-title { font-size: 0.85rem; font-weight: 600; }
+.organism-context { font-size: 0.72rem; color: var(--bn-colour-muted); font-family: var(--bn-font-mono); }
+.organism-specimen { padding: 1.2rem; }
+.organism-annotation {
+    padding: 0.8rem 1rem;
+    border-top: 1px solid var(--bn-colour-border);
+    background: var(--bn-colour-badge-bg);
+}
+.organism-annotation table {
+    width: 100%; font-size: 0.72rem; border-collapse: collapse;
+}
+.organism-annotation th {
+    text-align: left; font-weight: 600; color: var(--bn-colour-muted);
+    padding: 0.15rem 0.5rem 0.15rem 0;
+    white-space: nowrap; vertical-align: top;
+}
+.organism-annotation td {
+    font-family: var(--bn-font-mono); padding: 0.15rem 0;
+    color: var(--bn-colour-text);
+}
+
+/* ── Reproduced atoms (from real theme CSS) ── */
+
+/* Timecode atom — from atoms/timecode.css */
+a.timecode, span.timecode {
+    color: var(--bn-colour-accent);
+    font-family: var(--bn-font-mono);
+    font-size: 0.8rem;
+    text-decoration: none;
+}
+.timecode-bracket { color: var(--bn-colour-muted); }
+
+/* Badge atom — from atoms/badge.css */
+.badge {
+    display: inline-block;
+    font-family: var(--bn-font-mono);
+    font-size: 0.72rem;
+    padding: var(--bn-space-xs) 0.45rem;
+    border-radius: var(--bn-radius-sm);
+    background: var(--bn-colour-badge-bg);
+    color: var(--bn-colour-badge-text);
+    line-height: 1.4;
+    white-space: nowrap;
+}
+.badge-ai { cursor: default; }
+.badge-frustration { background: var(--bn-sentiment-frustration-bg); color: var(--bn-sentiment-frustration); }
+.badge-satisfaction { background: var(--bn-sentiment-satisfaction-bg); color: var(--bn-sentiment-satisfaction); }
+.badge-confidence { background: var(--bn-sentiment-confidence-bg); color: var(--bn-sentiment-confidence); }
+.badge-readonly { cursor: default; }
+.badge-user { cursor: default; }
+.badge-add {
+    border: 1px dashed var(--bn-colour-border);
+    background: transparent;
+    color: var(--bn-colour-muted);
+    cursor: pointer;
+}
+
+/* Person badge molecule — from molecules/person-badge.css */
+.bn-person-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    white-space: nowrap;
+}
+
+/* Intensity dots */
+.intensity-dots-svg { display: flex; align-items: center; gap: 2px; width: 46px; }
+
+/* Base blockquote — from organisms/blockquote.css (NEW: layout only) */
+blockquote {
+    margin: 0;
+    padding: var(--bn-space-sm) 1rem;
+}
+
+/* Quote-row layout — from organisms/blockquote.css */
+blockquote .quote-row {
+    display: flex;
+    gap: 0.5rem;
+    align-items: baseline;
+}
+blockquote .quote-row .timecode { flex-shrink: 0; }
+blockquote .quote-body { flex: 1; min-width: 0; }
+blockquote .speaker { color: var(--bn-colour-muted); font-size: 0.9rem; }
+
+/* Quote card organism — from organisms/blockquote.css (quotes page) */
+blockquote.quote-card {
+    background: var(--bn-colour-quote-bg);
+    border-left: 1px solid var(--bn-colour-border);
+    margin: 0.8rem 0;
+    padding: var(--bn-space-md) 1rem;
+    border-radius: 0 var(--bn-radius-md) var(--bn-radius-md) 0;
+    position: relative;
+}
+
+/* Signal card — from organisms/analysis.css */
+.signal-card {
+    border: 1px solid var(--bn-colour-border);
+    border-radius: var(--bn-radius-sm);
+    padding: var(--bn-space-lg);
+    background: var(--bn-colour-bg);
+    position: relative;
+}
+.signal-card::before {
+    content: "";
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: var(--bn-span-bar-width);
+    border-radius: var(--bn-span-bar-radius) 0 0 var(--bn-span-bar-radius);
+    background: var(--card-accent, var(--bn-colour-muted));
+}
+.signal-card-source {
+    display: block;
+    font-size: 0.7rem; font-weight: 400;
+    text-transform: uppercase; letter-spacing: 0.04em;
+    color: var(--bn-colour-muted);
+    margin-bottom: 0.1rem;
+}
+.signal-card-location { font-size: 1.05rem; font-weight: 600; margin-bottom: var(--bn-space-sm); }
+.signal-card-quotes {
+    background: var(--bn-colour-quote-bg);
+    border-radius: var(--bn-radius-md);
+    margin: var(--bn-space-md) 0 0;
+    padding: var(--bn-space-sm) 0;
+    display: flex; flex-direction: column; gap: 0;
+    overflow: hidden;
+}
+.signal-card-quotes blockquote {
+    margin: 0 var(--bn-space-md);
+}
+
+/* Sequence borders — only in signal cards */
+.signal-card-quotes blockquote.seq-first,
+.signal-card-quotes blockquote.seq-middle,
+.signal-card-quotes blockquote.seq-last {
+    border-left: 2px solid var(--card-accent, var(--bn-colour-muted));
+}
+.signal-card-quotes blockquote.seq-first {
+    border-top-left-radius: var(--bn-radius-sm);
+}
+.signal-card-quotes blockquote.seq-middle { border-radius: 0; }
+.signal-card-quotes blockquote.seq-last {
+    border-bottom-left-radius: var(--bn-radius-sm);
+    border-top-left-radius: 0;
+}
+.signal-card-quotes blockquote.seq-middle,
+.signal-card-quotes blockquote.seq-last {
+    padding-top: 0;
+}
+
+/* Cell tooltip micro — from organisms/analysis.css */
+.cell-tooltip {
+    position: relative;
+    max-width: 270px;
+    width: max-content;
+    background: var(--bn-colour-bg);
+    border: 1px solid var(--bn-colour-border);
+    border-radius: var(--bn-radius-md);
+    box-shadow: 0 4px 16px rgba(0,0,0,0.10), 0 1px 4px rgba(0,0,0,0.06);
+    overflow: hidden;
+}
+.cell-tooltip::before {
+    content: "";
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: var(--bn-span-bar-width);
+    border-radius: var(--bn-span-bar-radius) 0 0 var(--bn-span-bar-radius);
+    background: var(--tip-accent, var(--bn-colour-muted));
+}
+.cell-tooltip-body { padding: 0.45rem 0.6rem 0.45rem 0.7rem; }
+.cell-tooltip-quotes { display: flex; flex-direction: column; gap: 0.2rem; }
+.cell-tooltip-quote {
+    font-size: 0.72rem; line-height: 1.35;
+    display: flex; gap: 0.3rem; align-items: flex-start;
+}
+.cell-tooltip-quote::before {
+    content: "\201C";
+    color: var(--bn-colour-muted);
+    font-size: 0.8rem; line-height: 1; flex-shrink: 0;
+}
+.cell-tooltip-quote-text {
+    flex: 1; min-width: 0;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    color: var(--bn-colour-text);
+}
+.cell-tooltip-speaker {
+    font-family: var(--bn-font-mono);
+    font-size: 0.62rem;
+    color: var(--bn-colour-muted);
+    white-space: nowrap; flex-shrink: 0;
+    align-self: flex-end;
+}
+
+/* Canvas sticky wireframe */
+.canvas-sticky {
+    width: 200px;
+    aspect-ratio: 1 / 1;
+    border: 1px solid var(--bn-colour-border);
+    border-radius: var(--bn-radius-md);
+    background: var(--bn-colour-quote-bg);
+    padding: 0.6rem;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    position: relative;
+    box-shadow: 0 2px 8px var(--bn-colour-shadow);
+}
+.canvas-sticky-grip {
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: 6px;
+    background: repeating-linear-gradient(
+        180deg,
+        var(--bn-colour-border) 0px,
+        var(--bn-colour-border) 2px,
+        transparent 2px,
+        transparent 5px
+    );
+    border-radius: var(--bn-radius-md) 0 0 var(--bn-radius-md);
+    cursor: grab;
+    opacity: 0.5;
+}
+.canvas-sticky:hover .canvas-sticky-grip { opacity: 1; }
+.canvas-sticky-body {
+    flex: 1;
+    font-size: 0.78rem;
+    line-height: 1.4;
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-line-clamp: 5;
+    -webkit-box-orient: vertical;
+    padding-left: 0.4rem;
+}
+.canvas-sticky-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: auto;
+    padding-top: 0.4rem;
+    padding-left: 0.4rem;
+    border-top: 1px solid var(--bn-colour-border);
+}
+
+/* Action buttons (simplified for demo) */
+.star-btn, .hide-btn {
+    position: absolute;
+    background: none; border: none;
+    font-size: 0.8rem;
+    color: var(--bn-colour-icon-idle);
+    cursor: pointer; padding: var(--bn-space-xs);
+    line-height: 1;
+}
+.star-btn { top: 0.65rem; right: 0.65rem; }
+.hide-btn { top: 0.65rem; right: 2rem; opacity: 0; transition: opacity var(--bn-transition-normal); }
+.quote-card:hover .hide-btn { opacity: 1; }
+
+/* Layer diagram */
+.layer-stack {
+    display: flex; flex-direction: column; gap: 0;
+    border: 1px solid var(--bn-colour-border);
+    border-radius: var(--bn-radius-md);
+    overflow: hidden;
+    font-size: 0.75rem;
+}
+.layer-row {
+    display: grid;
+    grid-template-columns: 6rem 1fr;
+    border-bottom: 1px solid var(--bn-colour-border);
+}
+.layer-row:last-child { border-bottom: none; }
+.layer-label {
+    padding: 0.5rem 0.7rem;
+    font-weight: 600;
+    font-size: 0.68rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--bn-colour-muted);
+    border-right: 1px solid var(--bn-colour-border);
+    display: flex; align-items: center;
+}
+.layer-content {
+    padding: 0.5rem 0.7rem;
+    font-family: var(--bn-font-mono);
+    font-size: 0.68rem;
+    line-height: 1.6;
+}
+.layer-content .tag { color: var(--bn-sentiment-confidence); }
+.layer-content .cls { color: var(--bn-sentiment-satisfaction); }
+.layer-content .prop { color: var(--bn-sentiment-frustration); }
+
+.wireframe-label {
+    display: inline-block;
+    font-size: 0.65rem;
+    font-family: var(--bn-font-mono);
+    color: white;
+    background: var(--bn-colour-muted);
+    padding: 0.1rem 0.35rem;
+    border-radius: 2px;
+    margin-bottom: 0.25rem;
+}
+</style>
+</head>
+<body>
+
+<h1>Quote Anatomy</h1>
+<p class="subtitle">
+    Composable atoms, molecules, and organisms that render quotes across Bristlenose.
+    This is a living reference — if the design system changes, this page should be updated to match.
+</p>
+
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<h2>1. Atoms</h2>
+<p style="font-size: 0.85rem; color: var(--bn-colour-muted); margin-bottom: 1rem;">
+    Smallest reusable pieces. Each atom has a CSS file and a React component.
+</p>
+
+<div class="atom-grid">
+
+    <!-- Timecode -->
+    <div class="atom-card">
+        <div class="atom-card-label">Timecode</div>
+        <div class="atom-card-specimen">
+            <a class="timecode" href="#">
+                <span class="timecode-bracket">[</span>02:08<span class="timecode-bracket">]</span>
+            </a>
+        </div>
+        <div class="atom-card-code">
+            <span class="css-ref">CSS</span> atoms/timecode.css<br>
+            <span class="react-ref">React</span> components/TimecodeLink.tsx
+        </div>
+    </div>
+
+    <!-- Person Badge -->
+    <div class="atom-card">
+        <div class="atom-card-label">Person Badge</div>
+        <div class="atom-card-specimen">
+            <span class="bn-person-badge">
+                <span class="badge">p1</span>
+            </span>
+            &nbsp;&nbsp;
+            <span class="bn-person-badge">
+                <span class="badge">m1</span>
+            </span>
+        </div>
+        <div class="atom-card-code">
+            <span class="css-ref">CSS</span> molecules/person-badge.css<br>
+            <span class="react-ref">React</span> components/PersonBadge.tsx
+        </div>
+    </div>
+
+    <!-- Badge — sentiment (AI) -->
+    <div class="atom-card">
+        <div class="atom-card-label">Badge — Sentiment (AI)</div>
+        <div class="atom-card-specimen">
+            <span class="badge badge-ai badge-frustration">frustration</span>
+            <span class="badge badge-ai badge-satisfaction">satisfaction</span>
+            <span class="badge badge-ai badge-confidence">confidence</span>
+        </div>
+        <div class="atom-card-code">
+            <span class="css-ref">CSS</span> atoms/badge.css (.badge-ai)<br>
+            <span class="react-ref">React</span> components/Badge.tsx variant="ai"
+        </div>
+    </div>
+
+    <!-- Badge — user tag -->
+    <div class="atom-card">
+        <div class="atom-card-label">Badge — User Tag</div>
+        <div class="atom-card-specimen">
+            <span class="badge badge-user" style="background: var(--bn-ux-3-bg);">interaction design</span>
+            <span class="badge badge-add">+</span>
+        </div>
+        <div class="atom-card-code">
+            <span class="css-ref">CSS</span> atoms/badge.css (.badge-user, .badge-add)<br>
+            <span class="react-ref">React</span> components/Badge.tsx variant="user"
+        </div>
+    </div>
+
+    <!-- Badge — readonly -->
+    <div class="atom-card">
+        <div class="atom-card-label">Badge — Readonly (signal cards)</div>
+        <div class="atom-card-specimen">
+            <span class="badge badge-readonly" style="background: var(--bn-ux-3-bg);">wireframe issue</span>
+        </div>
+        <div class="atom-card-code">
+            <span class="css-ref">CSS</span> atoms/badge.css (.badge-readonly)<br>
+            <span class="react-ref">React</span> components/Badge.tsx variant="readonly"
+        </div>
+    </div>
+
+    <!-- Intensity Dots -->
+    <div class="atom-card">
+        <div class="atom-card-label">Intensity Dots</div>
+        <div class="atom-card-specimen">
+            <svg class="intensity-dots-svg" viewBox="0 0 46 12" width="46" height="12">
+                <circle cx="6" cy="6" r="5" fill="var(--bn-colour-muted)" opacity="0.7"/>
+                <circle cx="22" cy="6" r="5" fill="var(--bn-colour-muted)" opacity="0.7"/>
+                <circle cx="38" cy="6" r="5" fill="none" stroke="var(--bn-colour-muted)" stroke-width="1" opacity="0.35"/>
+            </svg>
+            <span style="font-size: 0.72rem; color: var(--bn-colour-muted); margin-left: 0.5rem;">2/3</span>
+        </div>
+        <div class="atom-card-code">
+            <span class="css-ref">CSS</span> organisms/analysis.css (.intensity-dots-svg)<br>
+            <span class="react-ref">React</span> AnalysisPage.tsx &rarr; IntensityDotsSvg
+        </div>
+    </div>
+
+    <!-- Quote Row layout -->
+    <div class="atom-card" style="grid-column: span 2;">
+        <div class="atom-card-label">Quote Row (layout molecule)</div>
+        <div class="atom-card-specimen">
+            <blockquote>
+                <div class="quote-row">
+                    <a class="timecode" href="#"><span class="timecode-bracket">[</span>02:08<span class="timecode-bracket">]</span></a>
+                    <span class="quote-body">
+                        <span class="speaker"><span class="bn-person-badge"><span class="badge">p1</span></span></span>&nbsp;
+                        <span class="quote-text">The raw content layout — timecode, speaker, text in a flex row.</span>
+                    </span>
+                </div>
+            </blockquote>
+        </div>
+        <div class="atom-card-code">
+            <span class="css-ref">CSS</span> organisms/blockquote.css (.quote-row, .quote-body, .speaker)<br>
+            <span class="react-ref">React</span> Shared by QuoteCard.tsx + AnalysisPage.tsx &rarr; QuoteBlock
+        </div>
+    </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<h2>2. Composed Organisms</h2>
+<p style="font-size: 0.85rem; color: var(--bn-colour-muted); margin-bottom: 1rem;">
+    The same atoms composed in different containers for different contexts.
+    Each organism adds its own chrome; the quote content is identical underneath.
+</p>
+
+<!-- 2a. Quote Card (quotes page) -->
+<div class="organism-row">
+    <div class="organism-header">
+        <span class="organism-title">Quote Card — Quotes page</span>
+        <span class="organism-context">QuoteCard.tsx &rarr; blockquote.quote-card</span>
+    </div>
+    <div class="organism-specimen">
+        <blockquote class="quote-card">
+            <div class="quote-row">
+                <a class="timecode" href="#"><span class="timecode-bracket">[</span>00:35<span class="timecode-bracket">]</span></a>
+                <span class="quote-body">
+                    <span class="quote-text">"Ah, it worked that time. Okay, and then beds."</span>&nbsp;&mdash;&nbsp;
+                    <span class="speaker"><span class="bn-person-badge"><span class="badge">p2</span></span></span>
+                </span>
+            </div>
+            <button class="hide-btn" aria-label="Hide">&#x1F6AB;</button>
+            <button class="star-btn" aria-label="Star">&#9733;</button>
+        </blockquote>
+    </div>
+    <div class="organism-annotation">
+        <table>
+            <tr><th>Chrome</th><td>background, left border, margin, radius, action buttons (star, hide, edit)</td></tr>
+            <tr><th>CSS</th><td>organisms/blockquote.css &rarr; .quote-card</td></tr>
+            <tr><th>Molecules</th><td>quote-actions.css, badge-row.css, editable-text.css, hidden-quotes.css</td></tr>
+            <tr><th>React</th><td>islands/QuoteCard.tsx</td></tr>
+        </table>
+    </div>
+</div>
+
+<!-- 2b. Signal card quote (analysis page) -->
+<div class="organism-row">
+    <div class="organism-header">
+        <span class="organism-title">Signal Card Quote — Analysis page</span>
+        <span class="organism-context">AnalysisPage.tsx &rarr; QuoteBlock &rarr; bare blockquote</span>
+    </div>
+    <div class="organism-specimen">
+        <div class="signal-card" style="--card-accent: var(--bn-sentiment-frustration);">
+            <span class="signal-card-source">Theme</span>
+            <div class="signal-card-location">Healthcare system navigation challenges</div>
+            <span class="badge badge-ai badge-frustration">frustration</span>
+            <div class="signal-card-quotes">
+                <blockquote>
+                    <div class="quote-row">
+                        <a class="timecode" href="#"><span class="timecode-bracket">[</span>02:08<span class="timecode-bracket">]</span></a>
+                        <span class="quote-body">
+                            <span class="speaker"><span class="bn-person-badge"><span class="badge">p1</span></span></span>&nbsp;
+                            <span class="quote-text">Because I thought the way I was treated wasn't right. That I wasn't able to see the surgeon again.</span>
+                        </span>
+                    </div>
+                </blockquote>
+            </div>
+        </div>
+    </div>
+    <div class="organism-annotation">
+        <table>
+            <tr><th>Chrome</th><td>None on blockquote — parent .signal-card-quotes panel provides containment</td></tr>
+            <tr><th>CSS</th><td>organisms/blockquote.css (base only) + organisms/analysis.css (margin override)</td></tr>
+            <tr><th>No left border</th><td>Card accent bar (::before) is the only colour signal</td></tr>
+            <tr><th>React</th><td>islands/AnalysisPage.tsx &rarr; SignalCard &rarr; QuoteBlock</td></tr>
+        </table>
+    </div>
+</div>
+
+<!-- 2c. Sequence quotes -->
+<div class="organism-row">
+    <div class="organism-header">
+        <span class="organism-title">Sequence Quotes — consecutive quotes from same speaker</span>
+        <span class="organism-context">AnalysisPage.tsx &rarr; QuoteBlock + seq-first/middle/last</span>
+    </div>
+    <div class="organism-specimen">
+        <div class="signal-card" style="--card-accent: var(--bn-sentiment-satisfaction);">
+            <span class="signal-card-source">Theme</span>
+            <div class="signal-card-location">Positive onboarding experience</div>
+            <span class="badge badge-ai badge-satisfaction">satisfaction</span>
+            <div class="signal-card-quotes">
+                <blockquote class="seq-first">
+                    <div class="quote-row">
+                        <a class="timecode" href="#"><span class="timecode-bracket">[</span>01:22<span class="timecode-bracket">]</span></a>
+                        <span class="quote-body">
+                            <span class="speaker"><span class="bn-person-badge"><span class="badge">p3</span></span></span>&nbsp;
+                            <span class="quote-text">The setup was really straightforward.</span>
+                        </span>
+                    </div>
+                </blockquote>
+                <blockquote class="seq-middle">
+                    <div class="quote-row">
+                        <a class="timecode" href="#" style="opacity: 0.6;"><span class="timecode-bracket">[</span>01:25<span class="timecode-bracket">]</span></a>
+                        <span class="quote-body">
+                            <span class="quote-text">I didn't need to look anything up.</span>
+                        </span>
+                    </div>
+                </blockquote>
+                <blockquote class="seq-last">
+                    <div class="quote-row">
+                        <a class="timecode" href="#" style="opacity: 0.6;"><span class="timecode-bracket">[</span>01:28<span class="timecode-bracket">]</span></a>
+                        <span class="quote-body">
+                            <span class="quote-text">It just worked, which was refreshing.</span>
+                        </span>
+                    </div>
+                </blockquote>
+            </div>
+        </div>
+    </div>
+    <div class="organism-annotation">
+        <table>
+            <tr><th>Sequence border</th><td>2px accent left border spans the group; solo quotes have no border</td></tr>
+            <tr><th>Speaker</th><td>Shown on seq-first only; middle/last are continuations</td></tr>
+            <tr><th>Timecode</th><td>Faded to 60% opacity on continuations</td></tr>
+            <tr><th>CSS</th><td>organisms/analysis.css (.seq-first, .seq-middle, .seq-last)</td></tr>
+        </table>
+    </div>
+</div>
+
+<!-- 2d. Cell tooltip -->
+<div class="organism-row">
+    <div class="organism-header">
+        <span class="organism-title">Cell Tooltip — heatmap hover</span>
+        <span class="organism-context">AnalysisPage.tsx &rarr; CellTooltip (separate implementation)</span>
+    </div>
+    <div class="organism-specimen" style="padding: 2rem;">
+        <div class="cell-tooltip" style="--tip-accent: var(--bn-sentiment-frustration);">
+            <div class="cell-tooltip-body">
+                <div class="cell-tooltip-quotes">
+                    <div class="cell-tooltip-quote">
+                        <span class="cell-tooltip-quote-text">Because I thought the way I was treated wasn't right. That I wasn't able to see the surgeon again.</span>
+                        <span class="cell-tooltip-speaker">p1</span>
+                    </div>
+                    <div class="cell-tooltip-quote">
+                        <span class="cell-tooltip-quote-text">The waiting time was unacceptable. Nobody told me what was happening.</span>
+                        <span class="cell-tooltip-speaker">p3</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="organism-annotation">
+        <table>
+            <tr><th>Chrome</th><td>Minimal card with shadow, accent bar, no shared atoms (quote text + pid only)</td></tr>
+            <tr><th>No atoms used</th><td>Renders raw text — no Timecode, no PersonBadge, no Badge</td></tr>
+            <tr><th>CSS</th><td>organisms/analysis.css (.cell-tooltip-*)</td></tr>
+            <tr><th>Opportunity</th><td>Could reuse Timecode + PersonBadge atoms in future</td></tr>
+        </table>
+    </div>
+</div>
+
+<!-- 2e. Canvas sticky (future wireframe) -->
+<div class="organism-row">
+    <div class="organism-header">
+        <span class="organism-title">Canvas Sticky — future Miro-style drag surface</span>
+        <span class="organism-context">Not yet implemented — wireframe placeholder</span>
+    </div>
+    <div class="organism-specimen" style="padding: 2rem; display: flex; gap: 1rem; flex-wrap: wrap;">
+        <div class="canvas-sticky" style="border-top: 3px solid var(--bn-sentiment-frustration);">
+            <div class="canvas-sticky-grip"></div>
+            <div class="canvas-sticky-body">
+                Because I thought the way I was treated wasn't right. That I wasn't able to see the surgeon again unless I was having another hernia operation.
+            </div>
+            <div class="canvas-sticky-footer">
+                <span class="timecode" style="font-size: 0.68rem;"><span class="timecode-bracket">[</span>02:08<span class="timecode-bracket">]</span></span>
+                <span class="bn-person-badge"><span class="badge" style="font-size: 0.62rem; padding: 0.1rem 0.3rem;">p1</span></span>
+            </div>
+        </div>
+        <div class="canvas-sticky" style="border-top: 3px solid var(--bn-sentiment-satisfaction);">
+            <div class="canvas-sticky-grip"></div>
+            <div class="canvas-sticky-body">
+                The setup was really straightforward. I didn't need to look anything up.
+            </div>
+            <div class="canvas-sticky-footer">
+                <span class="timecode" style="font-size: 0.68rem;"><span class="timecode-bracket">[</span>01:22<span class="timecode-bracket">]</span></span>
+                <span class="bn-person-badge"><span class="badge" style="font-size: 0.62rem; padding: 0.1rem 0.3rem;">p3</span></span>
+            </div>
+        </div>
+    </div>
+    <div class="organism-annotation">
+        <table>
+            <tr><th>Chrome</th><td>Square card, top accent bar, grip strip (drag handle), shadow</td></tr>
+            <tr><th>Atoms reused</th><td>Timecode, PersonBadge, quote text — same atoms, different container</td></tr>
+            <tr><th>Unique</th><td>Grip strip, aspect ratio, text clamp, snap-to-grid, lasso select</td></tr>
+            <tr><th>Validates</th><td>Composition &gt; flags — completely different chrome, same inner atoms</td></tr>
+        </table>
+    </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<h2>3. Layer Diagram</h2>
+<p style="font-size: 0.85rem; color: var(--bn-colour-muted); margin-bottom: 1rem;">
+    Three layers of a single Quote Card, showing how CSS, React, and data map to each other.
+</p>
+
+<h3>Quote Card (quotes page)</h3>
+<div class="layer-stack">
+    <div class="layer-row">
+        <div class="layer-label">Data (API)</div>
+        <div class="layer-content">
+            <span class="prop">quote.text</span> <span class="prop">quote.start_timecode</span> <span class="prop">quote.participant_id</span><br>
+            <span class="prop">quote.sentiment</span> <span class="prop">quote.tags[]</span> <span class="prop">quote.is_starred</span> <span class="prop">quote.is_hidden</span>
+        </div>
+    </div>
+    <div class="layer-row">
+        <div class="layer-label">React</div>
+        <div class="layer-content">
+            <span class="tag">&lt;blockquote&gt;</span> className=<span class="cls">"quote-card"</span><br>
+            &nbsp;&nbsp;<span class="tag">&lt;TimecodeLink</span> <span class="prop">seconds</span> /&gt;<br>
+            &nbsp;&nbsp;<span class="tag">&lt;PersonBadge</span> <span class="prop">code</span> <span class="prop">role</span> /&gt;<br>
+            &nbsp;&nbsp;<span class="tag">&lt;EditableText</span> <span class="prop">text</span> /&gt;<br>
+            &nbsp;&nbsp;<span class="tag">&lt;Badge</span> <span class="prop">variant</span>=<span class="cls">"ai"</span> <span class="prop">sentiment</span> /&gt; &times; N<br>
+            &nbsp;&nbsp;<span class="tag">&lt;Badge</span> <span class="prop">variant</span>=<span class="cls">"user"</span> <span class="prop">colour</span> /&gt; &times; N<br>
+            &nbsp;&nbsp;<span class="tag">&lt;Toggle</span> <span class="prop">type</span>=<span class="cls">"star"</span> /&gt; <span class="tag">&lt;Toggle</span> <span class="prop">type</span>=<span class="cls">"hide"</span> /&gt;
+        </div>
+    </div>
+    <div class="layer-row">
+        <div class="layer-label">CSS</div>
+        <div class="layer-content">
+            <span class="cls">.quote-card</span> &larr; organisms/blockquote.css (bg, border, radius)<br>
+            <span class="cls">.quote-row</span> <span class="cls">.quote-body</span> &larr; organisms/blockquote.css (flex layout)<br>
+            <span class="cls">.timecode</span> &larr; atoms/timecode.css<br>
+            <span class="cls">.bn-person-badge</span> &larr; molecules/person-badge.css<br>
+            <span class="cls">.badge</span> <span class="cls">.badge-ai</span> &larr; atoms/badge.css<br>
+            <span class="cls">.badges</span> &larr; molecules/badge-row.css<br>
+            <span class="cls">.star-btn</span> <span class="cls">.hide-btn</span> &larr; atoms/toggle.css<br>
+            <span class="cls">.starred</span> &larr; molecules/quote-actions.css
+        </div>
+    </div>
+</div>
+
+<h3 style="margin-top: 1.5rem;">Signal Card Quote (analysis page)</h3>
+<div class="layer-stack">
+    <div class="layer-row">
+        <div class="layer-label">Data (API)</div>
+        <div class="layer-content">
+            <span class="prop">quote.text</span> <span class="prop">quote.startSeconds</span> <span class="prop">quote.pid</span><br>
+            <span class="prop">quote.intensity</span> <span class="prop">quote.tagNames[]</span> <span class="prop">quote.sessionId</span>
+        </div>
+    </div>
+    <div class="layer-row">
+        <div class="layer-label">React</div>
+        <div class="layer-content">
+            <span class="tag">&lt;blockquote&gt;</span> className=<span class="cls">"{seq-*}"</span> (or none)<br>
+            &nbsp;&nbsp;<span class="tag">&lt;a</span> className=<span class="cls">"timecode"</span>&gt;<br>
+            &nbsp;&nbsp;<span class="tag">&lt;PersonBadge</span> <span class="prop">code</span> /&gt;<br>
+            &nbsp;&nbsp;<span class="tag">&lt;span</span> className=<span class="cls">"quote-text"</span>&gt;<br>
+            &nbsp;&nbsp;<span class="tag">&lt;Badge</span> <span class="prop">variant</span>=<span class="cls">"readonly"</span> /&gt; &times; N (tag signals only)<br>
+            &nbsp;&nbsp;<span class="tag">&lt;IntensityDotsSvg</span> <span class="prop">value</span> /&gt;
+        </div>
+    </div>
+    <div class="layer-row">
+        <div class="layer-label">CSS</div>
+        <div class="layer-content">
+            <span class="cls">blockquote</span> &larr; organisms/blockquote.css (base: margin + padding only)<br>
+            <span class="cls">.signal-card-quotes blockquote</span> &larr; organisms/analysis.css (margin override)<br>
+            <span class="cls">.quote-row</span> <span class="cls">.quote-body</span> &larr; organisms/blockquote.css (flex layout)<br>
+            <span class="cls">.timecode</span> &larr; atoms/timecode.css<br>
+            <span class="cls">.bn-person-badge</span> &larr; molecules/person-badge.css<br>
+            <span class="cls">.badge</span> <span class="cls">.badge-readonly</span> &larr; atoms/badge.css<br>
+            <span class="cls">.intensity-dots</span> &larr; organisms/analysis.css<br>
+            <span class="cls">.seq-*</span> &larr; organisms/analysis.css (sequence borders)
+        </div>
+    </div>
+</div>
+
+<p style="font-size: 0.78rem; color: var(--bn-colour-muted); margin-top: 3rem; border-top: 1px solid var(--bn-colour-border); padding-top: 1rem;">
+    Source: <code>docs/mockups/quote-anatomy.html</code> &mdash;
+    CSS atoms from <code>bristlenose/theme/</code>,
+    React components from <code>frontend/src/</code>.
+    Last updated with the blockquote &rarr; .quote-card refactor (Feb 2026).
+</p>
+
+</body>
+</html>

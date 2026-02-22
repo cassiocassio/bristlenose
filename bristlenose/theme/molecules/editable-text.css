@@ -3,11 +3,11 @@
 
 /* ── Editing state ──────────────────────────────────────────────────────── */
 
-blockquote.editing .edit-pencil {
+.quote-card.editing .edit-pencil {
     color: var(--bn-colour-accent);
 }
 
-blockquote.editing .quote-text {
+.quote-card.editing .quote-text {
     background: var(--bn-colour-editing-bg);
     outline: 1px solid var(--bn-colour-editing-border);
     border-radius: var(--bn-radius-sm);

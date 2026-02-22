@@ -1,4 +1,4 @@
-<blockquote id="{{ quote_id }}" data-timecode="{{ timecode }}" data-participant="{{ participant_id }}" data-emotion="{{ emotion }}" data-intent="{{ intent }}">
+<blockquote class="quote-card" id="{{ quote_id }}" data-timecode="{{ timecode }}" data-participant="{{ participant_id }}" data-emotion="{{ emotion }}" data-intent="{{ intent }}">
 {%- if researcher_context %}
 <span class="context">[{{ researcher_context }}]</span>{%- endif %}
 <div class="quote-row">{{ tc_html }}<div class="quote-body"><span class="quote-text">“{{ quote_text }}”</span>&nbsp;<span class="speaker">&mdash;&nbsp;{{ speaker_link }}</span><div class="badges">{{ badges }} <span class="badge badge-add" aria-label="Add tag">+</span> <button class="badge-restore" aria-label="Restore tags" title="Restore tags" style="display:none">&#x21A9;</button></div></div></div>

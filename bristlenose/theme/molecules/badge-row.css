@@ -1,6 +1,6 @@
-/* Molecule: badge-row — badges container inside a blockquote */
+/* Molecule: badge-row — badges container inside a quote card */
 
-blockquote .badges {
+.quote-card .badges {
     display: flex;
     gap: var(--bn-space-sm);
     margin-top: 0.4rem;
@@ -9,6 +9,6 @@ blockquote .badges {
     transition: opacity var(--bn-transition-fast);
 }
 
-blockquote:hover .badges {
+.quote-card:hover .badges {
     opacity: 1;
 }

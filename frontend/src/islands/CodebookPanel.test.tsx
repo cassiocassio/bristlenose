@@ -50,11 +50,18 @@ const MOCK_CODEBOOK: CodebookResponse = {
   all_tag_names: ["confusion", "frustration", "joy", "misc"],
 };
 
-function mockFetchOk(data: unknown): void {
+function mockFetchOk(data: unknown, opts?: { templates?: unknown }): void {
   globalThis.fetch = vi.fn().mockImplementation((url: string) => {
     // AutoCode status calls return 404 (no job) by default.
     if (typeof url === "string" && url.includes("/autocode/")) {
       return Promise.resolve({ ok: false, status: 404, json: () => Promise.resolve({}) });
+    }
+    // Templates endpoint returns dedicated response when provided.
+    if (typeof url === "string" && url.includes("/codebook/templates") && opts?.templates) {
+      return Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve(opts.templates),
+      });
     }
     return Promise.resolve({
       ok: true,
@@ -69,6 +76,14 @@ function mockFetchSequence(...responses: unknown[]): void {
     // AutoCode status calls return 404 (no job) by default.
     if (typeof url === "string" && url.includes("/autocode/")) {
       return Promise.resolve({ ok: false, status: 404, json: () => Promise.resolve({}) });
+    }
+    // Templates endpoint always returns MOCK_TEMPLATES when available —
+    // avoids sequence-order sensitivity from the eager templates fetch.
+    if (typeof url === "string" && url.includes("/codebook/templates")) {
+      return Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve(MOCK_TEMPLATES),
+      });
     }
     const data = queue.shift();
     return Promise.resolve({
@@ -394,6 +409,7 @@ const MOCK_TEMPLATES = {
       groups: [],
       enabled: true,
       imported: true,
+      restorable: false,
     },
     {
       id: "uxr",
@@ -405,6 +421,7 @@ const MOCK_TEMPLATES = {
       groups: [],
       enabled: true,
       imported: true,
+      restorable: false,
     },
   ],
 };
@@ -456,7 +473,7 @@ describe("CodebookPanel — per-framework sections", () => {
   });
 
   it("clicking Remove opens confirmation dialog with impact stats", async () => {
-    const impactResp = { tag_count: 7, quote_count: 4 };
+    const impactResp = { tag_count: 7, quote_count: 4, has_autocode: false };
     mockFetchSequence(MOCK_WITH_FRAMEWORKS, impactResp);
     render(<CodebookPanel projectId="1" />);
     await waitFor(() => {
@@ -465,23 +482,23 @@ describe("CodebookPanel — per-framework sections", () => {
     const removeButtons = screen.getAllByText("Remove from Codebook");
     await userEvent.click(removeButtons[0]);
     await waitFor(() => {
-      expect(screen.getByText(/7 tags across 4 quotes will be removed/)).toBeInTheDocument();
+      expect(screen.getByText(/Tags will be removed from 4 quotes/)).toBeInTheDocument();
     });
   });
 
-  it("confirming Remove calls DELETE API and refreshes", async () => {
+  it("confirming Hide calls DELETE API and refreshes", async () => {
     const codebookAfterRemove: CodebookResponse = {
       groups: [MOCK_WITH_FRAMEWORKS.groups[0], MOCK_WITH_FRAMEWORKS.groups[3]],
       ungrouped: [],
       all_tag_names: ["learnability"],
     };
-    const impactResp = { tag_count: 3, quote_count: 2 };
-    // Sequence: initial codebook, impact, DELETE response, templates refresh
+    const impactResp = { tag_count: 3, quote_count: 2, has_autocode: false };
+    // Sequence: initial codebook, impact, DELETE response
+    // (templates are handled by mockFetchSequence's URL-aware routing)
     mockFetchSequence(
       MOCK_WITH_FRAMEWORKS,
       impactResp,
       codebookAfterRemove,
-      MOCK_TEMPLATES,
     );
     render(<CodebookPanel projectId="1" />);
     await waitFor(() => {
@@ -490,9 +507,9 @@ describe("CodebookPanel — per-framework sections", () => {
     const removeButtons = screen.getAllByText("Remove from Codebook");
     await userEvent.click(removeButtons[0]);
     await waitFor(() => {
-      expect(screen.getByText(/will be removed/)).toBeInTheDocument();
+      expect(screen.getByText(/Tags will be removed from 2 quotes/)).toBeInTheDocument();
     });
-    await userEvent.click(screen.getByRole("button", { name: "Remove" }));
+    await userEvent.click(screen.getByRole("button", { name: "Hide" }));
     await waitFor(() => {
       // The DELETE call should have been made
       const calls = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls;
@@ -503,6 +520,34 @@ describe("CodebookPanel — per-framework sections", () => {
           && (c[1] as { method?: string })?.method === "DELETE",
       );
       expect(deleteCall).toBeDefined();
+    });
+  });
+
+  it("hide dialog mentions preserved AutoCode results when has_autocode is true", async () => {
+    const impactResp = { tag_count: 5, quote_count: 3, has_autocode: true };
+    mockFetchSequence(MOCK_WITH_FRAMEWORKS, impactResp);
+    render(<CodebookPanel projectId="1" />);
+    await waitFor(() => {
+      expect(screen.getByText("Strategy")).toBeInTheDocument();
+    });
+    const removeButtons = screen.getAllByText("Remove from Codebook");
+    await userEvent.click(removeButtons[0]);
+    await waitFor(() => {
+      expect(screen.getByText(/AutoCode results are preserved/)).toBeInTheDocument();
+    });
+  });
+
+  it("hide dialog says 'Restore any time' when has_autocode is false", async () => {
+    const impactResp = { tag_count: 5, quote_count: 0, has_autocode: false };
+    mockFetchSequence(MOCK_WITH_FRAMEWORKS, impactResp);
+    render(<CodebookPanel projectId="1" />);
+    await waitFor(() => {
+      expect(screen.getByText("Strategy")).toBeInTheDocument();
+    });
+    const removeButtons = screen.getAllByText("Remove from Codebook");
+    await userEvent.click(removeButtons[0]);
+    await waitFor(() => {
+      expect(screen.getByText(/Restore any time from Browse Codebooks/)).toBeInTheDocument();
     });
   });
 });

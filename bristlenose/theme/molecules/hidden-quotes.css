@@ -80,13 +80,13 @@
     justify-content: space-between;
     align-items: center;
     font-size: 0.82rem;
-    font-weight: 600;
+    font-weight: var(--bn-weight-emphasis);
     color: var(--bn-colour-muted);
     margin-bottom: var(--bn-space-sm);
 }
 
 .bn-unhide-all {
-    font-weight: 400;
+    font-weight: var(--bn-weight-normal);
     font-size: 0.8rem;
     color: var(--bn-colour-accent);
     text-decoration: none;

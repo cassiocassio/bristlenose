@@ -27,14 +27,14 @@ article {
 
 h1 {
     font-size: 1.75rem;
-    font-weight: 700;
+    font-weight: var(--bn-weight-strong);
     margin: 0 0 0.5rem;
     letter-spacing: -0.01em;
 }
 
 h2 {
     font-size: 1.35rem;
-    font-weight: 600;
+    font-weight: var(--bn-weight-emphasis);
     margin: 2.5rem 0 1rem;
     padding-bottom: 0.4rem;
     border-bottom: 2px solid var(--bn-colour-border);
@@ -42,7 +42,7 @@ h2 {
 
 h3 {
     font-size: 1.1rem;
-    font-weight: 600;
+    font-weight: var(--bn-weight-emphasis);
     margin: 1.8rem 0 0.6rem;
 }
 
@@ -67,7 +67,7 @@ table {
 
 th {
     text-align: left;
-    font-weight: 600;
+    font-weight: var(--bn-weight-emphasis);
     padding: 0.6rem var(--bn-space-md);
     border-bottom: 2px solid var(--bn-colour-border);
     white-space: nowrap;

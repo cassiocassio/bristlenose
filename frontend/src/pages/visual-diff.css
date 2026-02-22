@@ -25,7 +25,7 @@
 
 .vd-toolbar h1 {
   font-size: 0.95rem;
-  font-weight: 600;
+  font-weight: var(--bn-weight-emphasis);
   margin: 0;
   color: #fff;
   white-space: nowrap;
@@ -105,7 +105,7 @@
   z-index: 10;
   padding: 0.3rem 0.7rem;
   font-size: 0.75rem;
-  font-weight: 600;
+  font-weight: var(--bn-weight-emphasis);
   letter-spacing: 0.05em;
   text-transform: uppercase;
 }

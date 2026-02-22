@@ -49,7 +49,7 @@
 .signal-card-source {
     display: block;
     font-size: 0.7rem;
-    font-weight: 400;
+    font-weight: var(--bn-weight-normal);
     text-transform: uppercase;
     letter-spacing: 0.04em;
     color: var(--bn-colour-muted);
@@ -58,7 +58,7 @@
 
 .signal-card-location {
     font-size: 1.05rem;
-    font-weight: 600;
+    font-weight: var(--bn-weight-emphasis);
     margin-bottom: var(--bn-space-sm);
 }
 
@@ -210,7 +210,7 @@
 .signal-card-link {
     color: var(--bn-colour-accent);
     text-decoration: none;
-    font-weight: 400;
+    font-weight: var(--bn-weight-normal);
 }
 
 .signal-card-link:hover { text-decoration: underline; }
@@ -219,7 +219,7 @@
 .confidence-badge {
     display: inline-block;
     font-size: 0.65rem;
-    font-weight: 600;
+    font-weight: var(--bn-weight-emphasis);
     text-transform: uppercase;
     letter-spacing: 0.04em;
     padding: 0.15rem 0.5rem;
@@ -242,14 +242,14 @@
 .analysis-heatmap th {
     text-align: center;
     padding: 0.5rem 0.3rem;
-    font-weight: 600;
+    font-weight: var(--bn-weight-emphasis);
     font-size: 0.75rem;
     color: var(--bn-colour-muted);
     border-bottom: 2px solid var(--bn-colour-border);
     white-space: nowrap;
 }
 
-.analysis-heatmap th .badge { font-weight: 500; }
+.analysis-heatmap th .badge { font-weight: var(--bn-weight-emphasis); }
 
 .analysis-heatmap th:first-child {
     text-align: left;
@@ -265,7 +265,7 @@
 
 .analysis-heatmap td:first-child {
     text-align: left;
-    font-weight: 500;
+    font-weight: var(--bn-weight-emphasis);
     font-size: 0.85rem;
     padding-right: var(--bn-space-md);
 }
@@ -274,7 +274,7 @@
 .heatmap-cell {
     font-family: var(--bn-font-mono);
     font-size: 0.8rem;
-    font-weight: 500;
+    font-weight: var(--bn-weight-emphasis);
     border-radius: var(--bn-radius-sm);
     min-width: 36px;
     position: relative;
@@ -304,7 +304,7 @@
 .heatmap-cell.heat-strong { color: light-dark(#fff, #111); }
 
 .heatmap-total {
-    font-weight: 600;
+    font-weight: var(--bn-weight-emphasis);
     color: var(--bn-colour-muted);
     background: transparent !important;
     cursor: default;
@@ -334,14 +334,14 @@
     transform-origin: left bottom;
     white-space: nowrap;
     font-size: 0.75rem;
-    font-weight: 600;
+    font-weight: var(--bn-weight-emphasis);
     color: var(--bn-colour-muted);
 }
 
 /* ── Signal card badge styles ──────────────────────────────── */
 
 .signal-group-badge {
-    font-weight: 600;
+    font-weight: var(--bn-weight-emphasis);
 }
 
 .signal-quote-tag {
@@ -358,7 +358,7 @@
 
 .analysis-codebook-heading {
     font-size: 0.95rem;
-    font-weight: 600;
+    font-weight: var(--bn-weight-emphasis);
     color: var(--bn-colour-text);
     margin: var(--bn-space-lg) 0 var(--bn-space-sm);
     padding-bottom: var(--bn-space-xs);
@@ -367,7 +367,7 @@
 
 .analysis-heatmap-label {
     font-size: 0.82rem;
-    font-weight: 500;
+    font-weight: var(--bn-weight-emphasis);
     color: var(--bn-colour-muted);
     margin: var(--bn-space-md) 0 var(--bn-space-xs);
 }
@@ -421,7 +421,7 @@
 
 .cell-tooltip-val {
     color: var(--bn-colour-text);
-    font-weight: 500;
+    font-weight: var(--bn-weight-emphasis);
 }
 
 /* Participant pips */

@@ -26,7 +26,7 @@
 .help-section h3 {
     margin: 0 0 var(--bn-space-sm) 0;
     font-size: 0.75rem;
-    font-weight: 600;
+    font-weight: var(--bn-weight-emphasis);
     text-transform: uppercase;
     letter-spacing: 0.05em;
     color: var(--bn-colour-muted);

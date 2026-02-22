@@ -52,7 +52,7 @@
 /* Section/theme label */
 .margin-label {
     color: var(--bn-colour-accent);
-    font-weight: 500;
+    font-weight: var(--bn-weight-emphasis);
     text-decoration: none;
     white-space: nowrap;
     overflow: hidden;

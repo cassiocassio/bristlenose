@@ -198,6 +198,7 @@ Two helpers in `render_html.py` reduce duplication across quote rendering:
 
 - **`scrollToAnchor(anchorId, opts)`** — rAF + `getElementById` + `scrollIntoView`. Options: `block` (`'start'`/`'center'`), `highlight` (adds `anchor-highlight` class for yellow flash)
 - **`navigateToSession(sid, anchorId)`** — `switchToTab('sessions')` + `_showSession(sid)` + optional `scrollToAnchor` with highlight. Used by speaker links, featured quotes, and dashboard table rows
+- **Sticky toolbar scroll offset** — `--bn-toolbar-height` CSS variable (default `3rem` in `tokens.css`, measured at runtime on first tab switch in `global-nav.js`). `toolbar.css` applies `scroll-margin-top` to `h2[id]`/`h3[id]` inside any `.bn-tab-panel:has(.toolbar)`. This prevents anchor links from scrolling headings behind the sticky toolbar. If the toolbar height changes (new buttons, typography), the JS measurement auto-adapts
 
 ## Gotchas
 

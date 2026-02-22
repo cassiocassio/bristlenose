@@ -1,0 +1,788 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Font Weight Tuner — Quote Pop vs UI Chrome</title>
+
+<!-- Google Fonts: Inter (variable, full range) -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap" rel="stylesheet">
+
+<style>
+/* ── Local font files (platform fonts for cross-platform preview) ── */
+
+@font-face {
+    font-family: "Segoe UI Local";
+    src: url("fonts/segoeui.woff2") format("woff2"),
+         url("fonts/SegoeUI.woff2") format("woff2"),
+         url("fonts/segoeui.ttf") format("truetype"),
+         url("fonts/SegoeUI.ttf") format("truetype"),
+         url("fonts/SegoeUI-VF.ttf") format("truetype");
+    font-weight: 100 900;
+    font-display: swap;
+}
+@font-face {
+    font-family: "Segoe UI Local";
+    src: url("fonts/segoeuib.woff2") format("woff2"),
+         url("fonts/SegoeUI-Bold.woff2") format("woff2"),
+         url("fonts/segoeuib.ttf") format("truetype"),
+         url("fonts/SegoeUI-Bold.ttf") format("truetype");
+    font-weight: 700;
+    font-display: swap;
+}
+@font-face {
+    font-family: "Segoe UI Local";
+    src: url("fonts/seguisb.woff2") format("woff2"),
+         url("fonts/SegoeUI-Semibold.woff2") format("woff2"),
+         url("fonts/seguisb.ttf") format("truetype"),
+         url("fonts/SegoeUI-Semibold.ttf") format("truetype");
+    font-weight: 600;
+    font-display: swap;
+}
+
+/* ── Design tokens (from bristlenose/theme/tokens.css) ── */
+
+:root {
+    --bn-font-body: "Inter", sans-serif;
+    --bn-font-mono: "SF Mono", "Fira Code", "Consolas", monospace;
+
+    --bn-colour-bg: #ffffff;
+    --bn-colour-text: #1a1a1a;
+    --bn-colour-muted: #6b7280;
+    --bn-colour-border: #e5e7eb;
+    --bn-colour-accent: #2563eb;
+    --bn-colour-hover: #e8f0fe;
+    --bn-colour-quote-bg: #f9fafb;
+    --bn-colour-badge-bg: #f3f4f6;
+    --bn-colour-badge-text: #374151;
+    --bn-colour-border-hover: #d1d5db;
+    --bn-colour-icon-idle: #c9ccd1;
+    --bn-colour-starred: #999;
+    --bn-colour-shadow: rgba(0, 0, 0, 0.1);
+
+    --bn-sentiment-frustration: #ea580c;
+    --bn-sentiment-frustration-bg: #fff7ed;
+    --bn-sentiment-satisfaction: #16a34a;
+    --bn-sentiment-satisfaction-bg: #f0fdf4;
+    --bn-sentiment-confidence: #2563eb;
+    --bn-sentiment-confidence-bg: #eff6ff;
+    --bn-sentiment-confusion: #dc2626;
+    --bn-sentiment-confusion-bg: #fef2f2;
+    --bn-sentiment-delight: #059669;
+    --bn-sentiment-delight-bg: #ecfdf5;
+    --bn-sentiment-doubt: #7c3aed;
+    --bn-sentiment-doubt-bg: #f5f3ff;
+    --bn-sentiment-surprise: #d97706;
+    --bn-sentiment-surprise-bg: #fffbeb;
+
+    --bn-space-xs: 0.15rem;
+    --bn-space-sm: 0.35rem;
+    --bn-space-md: 0.75rem;
+    --bn-space-lg: 1.5rem;
+
+    --bn-radius-sm: 3px;
+    --bn-radius-md: 6px;
+    --bn-radius-lg: 8px;
+    --bn-radius-pill: 999px;
+
+    --bn-transition-fast: 0.15s ease;
+    --bn-transition-normal: 0.2s ease;
+}
+
+/* Dark mode */
+@supports (color: light-dark(#000, #fff)) {
+    :root {
+        color-scheme: light dark;
+        --bn-colour-bg:           light-dark(#ffffff, #111111);
+        --bn-colour-text:         light-dark(#1a1a1a, #e5e7eb);
+        --bn-colour-muted:        light-dark(#6b7280, #9ca3af);
+        --bn-colour-border:       light-dark(#e5e7eb, #2d2d2d);
+        --bn-colour-accent:       light-dark(#2563eb, #60a5fa);
+        --bn-colour-hover:        light-dark(#e8f0fe, #1e293b);
+        --bn-colour-quote-bg:     light-dark(#f9fafb, #1a1a1a);
+        --bn-colour-badge-bg:     light-dark(#f3f4f6, #252525);
+        --bn-colour-badge-text:   light-dark(#374151, #d1d5db);
+        --bn-colour-border-hover: light-dark(#d1d5db, #4b5563);
+        --bn-colour-icon-idle:    light-dark(#c9ccd1, #595959);
+        --bn-colour-starred:      light-dark(#999, #ccc);
+        --bn-colour-shadow:       light-dark(rgba(0,0,0,0.1), rgba(0,0,0,0.4));
+
+        --bn-sentiment-frustration:    light-dark(#ea580c, #fb923c);
+        --bn-sentiment-frustration-bg: light-dark(#fff7ed, #2d1d0e);
+        --bn-sentiment-satisfaction:   light-dark(#16a34a, #4ade80);
+        --bn-sentiment-satisfaction-bg:light-dark(#f0fdf4, #0f2918);
+        --bn-sentiment-confidence:     light-dark(#2563eb, #60a5fa);
+        --bn-sentiment-confidence-bg:  light-dark(#eff6ff, #111d2e);
+        --bn-sentiment-confusion:      light-dark(#dc2626, #f87171);
+        --bn-sentiment-confusion-bg:   light-dark(#fef2f2, #2d1515);
+        --bn-sentiment-delight:        light-dark(#059669, #34d399);
+        --bn-sentiment-delight-bg:     light-dark(#ecfdf5, #0d261c);
+        --bn-sentiment-doubt:          light-dark(#7c3aed, #a78bfa);
+        --bn-sentiment-doubt-bg:       light-dark(#f5f3ff, #1e1533);
+        --bn-sentiment-surprise:       light-dark(#d97706, #fbbf24);
+        --bn-sentiment-surprise-bg:    light-dark(#fffbeb, #2d2305);
+    }
+    [data-theme="light"]:root { color-scheme: light; }
+    [data-theme="dark"]:root  { color-scheme: dark; }
+}
+
+/* ── Page layout ── */
+
+* { box-sizing: border-box; }
+
+body {
+    font-family: var(--bn-font-body);
+    color: var(--bn-colour-text);
+    background: var(--bn-colour-bg);
+    line-height: 1.6;
+    margin: 0;
+    padding: 0;
+}
+
+/* ── Control panel ── */
+
+.control-panel {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: var(--bn-colour-bg);
+    border-bottom: 1px solid var(--bn-colour-border);
+    padding: 0.75rem 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.control-row {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+}
+
+.control-label {
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--bn-colour-muted);
+    min-width: 5.5rem;
+}
+
+.control-group {
+    display: flex;
+    gap: 0.25rem;
+    flex-wrap: wrap;
+    align-items: center;
+}
+
+.btn {
+    font-family: var(--bn-font-body);
+    font-size: 0.78rem;
+    padding: 0.3rem 0.65rem;
+    border: 1px solid var(--bn-colour-border);
+    border-radius: var(--bn-radius-md);
+    background: var(--bn-colour-bg);
+    color: var(--bn-colour-text);
+    cursor: pointer;
+    transition: all var(--bn-transition-fast);
+    white-space: nowrap;
+}
+.btn:hover {
+    border-color: var(--bn-colour-border-hover);
+    background: var(--bn-colour-quote-bg);
+}
+.btn.active {
+    border-color: var(--bn-colour-accent);
+    color: var(--bn-colour-accent);
+    background: var(--bn-colour-hover);
+}
+
+/* Slider styling */
+.slider-wrap {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex: 1;
+    min-width: 200px;
+    max-width: 400px;
+}
+
+.slider-wrap input[type="range"] {
+    flex: 1;
+    accent-color: var(--bn-colour-accent);
+    height: 4px;
+}
+
+.slider-value {
+    font-family: var(--bn-font-mono);
+    font-size: 0.82rem;
+    min-width: 2.5rem;
+    text-align: right;
+    color: var(--bn-colour-text);
+    font-weight: 600;
+}
+
+.slider-name {
+    font-size: 0.78rem;
+    color: var(--bn-colour-text);
+    min-width: 4.5rem;
+}
+
+/* Weight presets row */
+.presets {
+    display: flex;
+    gap: 0.35rem;
+    flex-wrap: wrap;
+}
+
+.preset-btn {
+    font-family: var(--bn-font-mono);
+    font-size: 0.68rem;
+    padding: 0.2rem 0.5rem;
+    border: 1px solid var(--bn-colour-border);
+    border-radius: var(--bn-radius-pill);
+    background: var(--bn-colour-bg);
+    color: var(--bn-colour-muted);
+    cursor: pointer;
+    transition: all var(--bn-transition-fast);
+}
+.preset-btn:hover {
+    border-color: var(--bn-colour-accent);
+    color: var(--bn-colour-accent);
+}
+.preset-btn.active {
+    border-color: var(--bn-colour-accent);
+    background: var(--bn-colour-hover);
+    color: var(--bn-colour-accent);
+}
+
+.hint {
+    font-size: 0.72rem;
+    color: var(--bn-colour-muted);
+    line-height: 1.4;
+    max-width: 60rem;
+}
+
+/* ── Font grid ── */
+
+.font-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(420px, 1fr));
+    gap: 1.5rem;
+    padding: 1.5rem;
+    max-width: 100%;
+}
+
+.font-column {
+    border: 1px solid var(--bn-colour-border);
+    border-radius: var(--bn-radius-lg);
+    padding: 1rem 1.25rem;
+    overflow: hidden;
+}
+
+.font-column-header {
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--bn-colour-accent);
+    border-bottom: 1px solid var(--bn-colour-border);
+    padding-bottom: 0.5rem;
+    margin-bottom: 1rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+}
+.font-column-header .meta {
+    font-size: 0.65rem;
+    font-weight: 400;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--bn-colour-muted);
+}
+
+/* ── Quote card (realistic reproduction) ── */
+
+.demo-section-heading {
+    font-size: 1.35rem;
+    font-weight: 600;
+    line-height: 1.3;
+    margin: 0.5rem 0 0.75rem;
+}
+
+.demo-quote-card {
+    background: var(--bn-colour-quote-bg);
+    border-left: 1px solid var(--bn-colour-border);
+    margin: 0.6rem 0;
+    padding: var(--bn-space-md) 1rem;
+    border-radius: 0 var(--bn-radius-md) var(--bn-radius-md) 0;
+    position: relative;
+}
+
+.demo-quote-card.starred {
+    border-left-color: var(--bn-colour-starred);
+}
+
+.demo-quote-card .context {
+    display: block;
+    color: var(--bn-colour-muted);
+    font-size: 0.85rem;
+    margin-bottom: 0.3rem;
+    font-weight: 400 !important;
+}
+
+.demo-quote-card .quote-row {
+    display: flex;
+    gap: 0.5rem;
+    align-items: baseline;
+}
+
+.demo-quote-card .timecode {
+    flex-shrink: 0;
+    color: var(--bn-colour-accent);
+    font-family: var(--bn-font-mono);
+    font-size: 0.8rem;
+    font-weight: 400 !important;
+}
+
+.demo-quote-card .quote-body {
+    flex: 1;
+    min-width: 0;
+}
+
+.demo-quote-card .quote-text {
+    font-size: 0.92rem;
+    line-height: 1.55;
+    margin: 0;
+    /* font-weight is set dynamically */
+}
+
+.demo-quote-card .speaker {
+    color: var(--bn-colour-muted);
+    font-size: 0.9rem;
+    font-weight: 400 !important;
+}
+
+.demo-quote-card .badges {
+    display: flex;
+    gap: 0.3rem;
+    flex-wrap: wrap;
+    margin-top: 0.35rem;
+    font-weight: 400 !important;
+}
+
+.demo-badge {
+    font-size: 0.72rem;
+    font-family: var(--bn-font-mono);
+    padding: 0.1rem 0.4rem;
+    border-radius: var(--bn-radius-pill);
+}
+
+.demo-badge.sentiment {
+    background: var(--bg);
+    color: var(--fg);
+}
+
+.demo-badge.tag {
+    background: var(--bn-colour-badge-bg);
+    color: var(--bn-colour-badge-text);
+}
+
+.demo-badge.person {
+    background: var(--bn-colour-badge-bg);
+    color: var(--bn-colour-badge-text);
+    font-weight: 600;
+}
+
+/* Star icon (decorative) */
+.star-icon {
+    position: absolute;
+    top: 0.5rem;
+    right: 0.6rem;
+    font-size: 0.85rem;
+    color: var(--bn-colour-icon-idle);
+    cursor: default;
+}
+.starred .star-icon {
+    color: var(--bn-colour-starred);
+}
+
+/* ── Toolbar specimen (context: what surrounds quotes) ── */
+
+.demo-toolbar {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 0.75rem;
+    font-size: 0.82rem;
+}
+.demo-toolbar-btn {
+    padding: 0.3rem 0.6rem;
+    border: 1px solid var(--bn-colour-border);
+    border-radius: var(--bn-radius-md);
+    color: var(--bn-colour-text);
+    font-size: 0.82rem;
+}
+
+/* Nav tabs specimen */
+.demo-nav-tabs {
+    display: flex;
+    gap: 1.25rem;
+    font-size: 0.88rem;
+    font-weight: 500;
+    color: var(--bn-colour-muted);
+    border-bottom: 1px solid var(--bn-colour-border);
+    padding-bottom: 0.4rem;
+    margin-bottom: 0.75rem;
+}
+.demo-nav-tabs span:first-child {
+    color: var(--bn-colour-accent);
+    border-bottom: 2px solid var(--bn-colour-accent);
+    padding-bottom: calc(0.4rem - 1px);
+    margin-bottom: -1px;
+}
+
+/* ── Comparison helper ── */
+.weight-label {
+    font-family: var(--bn-font-mono);
+    font-size: 0.6rem;
+    color: var(--bn-colour-icon-idle);
+    margin-bottom: 0.15rem;
+    letter-spacing: 0.02em;
+}
+
+/* ── Copy-values bar ── */
+.copy-bar {
+    background: var(--bn-colour-quote-bg);
+    border: 1px solid var(--bn-colour-border);
+    border-radius: var(--bn-radius-md);
+    padding: 0.5rem 0.75rem;
+    font-family: var(--bn-font-mono);
+    font-size: 0.72rem;
+    color: var(--bn-colour-muted);
+    line-height: 1.5;
+    margin-top: 0.5rem;
+    user-select: all;
+}
+
+/* Responsive */
+@media (max-width: 600px) {
+    .control-panel { padding: 0.5rem 0.75rem; }
+    .font-grid { padding: 0.75rem; grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+
+<!-- ── Control panel ── -->
+<div class="control-panel">
+    <div class="control-row">
+        <span class="control-label">Quote weight</span>
+        <div class="slider-wrap">
+            <span class="slider-name">Regular</span>
+            <input type="range" id="weight-regular" min="300" max="700" step="10" value="400">
+            <span class="slider-value" id="val-regular">400</span>
+        </div>
+        <div class="slider-wrap">
+            <span class="slider-name">Starred</span>
+            <input type="range" id="weight-starred" min="300" max="700" step="10" value="600">
+            <span class="slider-value" id="val-starred">600</span>
+        </div>
+    </div>
+
+    <div class="control-row">
+        <span class="control-label">Presets</span>
+        <div class="presets" id="presets">
+            <button class="preset-btn active" data-regular="400" data-starred="600">Current (400/600)</button>
+            <button class="preset-btn" data-regular="420" data-starred="600">420/600</button>
+            <button class="preset-btn" data-regular="440" data-starred="620">440/620</button>
+            <button class="preset-btn" data-regular="450" data-starred="600">450/600</button>
+            <button class="preset-btn" data-regular="450" data-starred="650">450/650</button>
+            <button class="preset-btn" data-regular="460" data-starred="640">460/640</button>
+            <button class="preset-btn" data-regular="480" data-starred="650">480/650</button>
+            <button class="preset-btn" data-regular="500" data-starred="650">500/650</button>
+            <button class="preset-btn" data-regular="500" data-starred="700">500/700</button>
+        </div>
+    </div>
+
+    <div class="control-row">
+        <span class="control-label">Theme</span>
+        <div class="control-group">
+            <button class="btn active" onclick="setTheme('light')" id="theme-light">Light</button>
+            <button class="btn" onclick="setTheme('auto')" id="theme-auto">Auto</button>
+            <button class="btn" onclick="setTheme('dark')" id="theme-dark">Dark</button>
+        </div>
+        <span class="control-label" style="margin-left: 0.5rem;">Show</span>
+        <div class="control-group">
+            <button class="btn active" onclick="toggleFont('all')" id="show-all">All fonts</button>
+            <button class="btn" onclick="toggleFont('inter')" id="show-inter">Inter</button>
+            <button class="btn" onclick="toggleFont('sf')" id="show-sf">SF</button>
+            <button class="btn" onclick="toggleFont('segoe')" id="show-segoe">Segoe</button>
+        </div>
+    </div>
+
+    <div class="hint">
+        Tune the sliders to find the "pop" point where quote text stands above the UI chrome
+        (badges, timecodes, speaker names, toolbar) without feeling heavy. The gap between regular
+        and starred should preserve the "this one matters" signal. Variable fonts (Inter, SF) support
+        any integer weight; Segoe has fixed stops (300, 400, 600, 700) so intermediate values snap.
+    </div>
+
+    <div class="copy-bar" id="copy-bar">
+        /* Current: */ --bn-quote-weight: 400; --bn-quote-starred-weight: 600;
+    </div>
+</div>
+
+<!-- ── Font comparison grid ── -->
+<div class="font-grid" id="font-grid"></div>
+
+<script>
+// ── Font definitions ──
+
+const FONTS = [
+    {
+        id: "inter",
+        name: "Inter",
+        family: '"Inter", sans-serif',
+        category: "Primary (shipped)",
+        variable: true,
+        note: "Variable font, 100–900 continuous. Current Bristlenose primary.",
+    },
+    {
+        id: "sf",
+        name: "San Francisco",
+        family: '-apple-system, BlinkMacSystemFont, system-ui, sans-serif',
+        category: "macOS system",
+        variable: true,
+        note: "Variable font on macOS. Renders via -apple-system.",
+    },
+    {
+        id: "segoe",
+        name: "Segoe UI",
+        family: '"Segoe UI Local", "Segoe UI", sans-serif',
+        category: "Windows system",
+        variable: false,
+        note: "Fixed weight stops: 300 (Semilight), 400 (Regular), 600 (Semibold), 700 (Bold). Intermediate values snap to nearest.",
+    },
+];
+
+// ── State ──
+
+let weightRegular = 400;
+let weightStarred = 600;
+let visibleFonts = "all";
+
+// ── Quote card HTML ──
+
+function quoteCardHTML(text, speaker, timecode, sentiment, sentimentLabel, tags, isStarred, contextText) {
+    const starredClass = isStarred ? " starred" : "";
+    const starIcon = isStarred ? "&#9733;" : "&#9734;";
+    const weightStyle = isStarred
+        ? `font-weight: ${weightStarred}`
+        : `font-weight: ${weightRegular}`;
+
+    const badgesHTML = [];
+    if (sentiment) {
+        badgesHTML.push(`<span class="demo-badge sentiment" style="--bg: var(--bn-sentiment-${sentiment}-bg); --fg: var(--bn-sentiment-${sentiment});">${sentimentLabel}</span>`);
+    }
+    for (const tag of (tags || [])) {
+        badgesHTML.push(`<span class="demo-badge tag">${tag}</span>`);
+    }
+
+    return `
+    <div class="demo-quote-card${starredClass}">
+        <span class="star-icon">${starIcon}</span>
+        ${contextText ? `<span class="context">${contextText}</span>` : ""}
+        <div class="quote-row">
+            <a class="timecode">${timecode}</a>
+            <div class="quote-body">
+                <p class="quote-text" style="${weightStyle}">${text}</p>
+            </div>
+        </div>
+        <span class="speaker">— ${speaker}</span>
+        <div class="badges">${badgesHTML.join("")}</div>
+    </div>`;
+}
+
+// ── Specimen HTML for one font ──
+
+function specimenHTML(font) {
+    return `
+    <div class="demo-nav-tabs">
+        <span>Quotes</span>
+        <span>Sessions</span>
+        <span>Codebook</span>
+        <span>Analysis</span>
+    </div>
+
+    <div class="demo-toolbar">
+        <span class="demo-toolbar-btn">Export CSV</span>
+        <span class="demo-toolbar-btn">Search</span>
+        <span class="demo-toolbar-btn">Hidden (2)</span>
+        <span class="demo-toolbar-btn">Starred</span>
+    </div>
+
+    <div class="demo-section-heading">Community and Social Connection</div>
+
+    <div class="weight-label">regular · weight ${weightRegular}</div>
+    ${quoteCardHTML(
+        '"I started maybe six years ago at a local indoor gym. A friend dragged me along and I was honestly terrible at first, but there was something about the problem-solving aspect that really hooked me."',
+        "p1 (Alex Chen)",
+        "[03:22]",
+        "satisfaction",
+        "satisfaction",
+        ["onboarding", "motivation"],
+        false,
+        "Discussing first climbing experience"
+    )}
+
+    ${quoteCardHTML(
+        '"The community aspect was huge for me. Like, you\'re all working on the same problem together, sharing beta, and there\'s no judgment when you fall — everyone does."',
+        "p3 (Sam Okafor)",
+        "[12:45]",
+        "delight",
+        "delight",
+        ["community", "peer-support"],
+        false,
+        null
+    )}
+
+    <div class="weight-label">starred · weight ${weightStarred}</div>
+    ${quoteCardHTML(
+        '"I think what keeps me coming back is that every session feels different. Even if I\'m projecting the same route, my body feels different, the conditions change, and I have to solve it fresh each time."',
+        "p2 (Jordan Rivera)",
+        "[08:17]",
+        "confidence",
+        "confidence",
+        ["retention", "intrinsic-motivation"],
+        true,
+        "On long-term engagement"
+    )}
+
+    ${quoteCardHTML(
+        '"There was a point about two years in where I nearly quit. The grades weren\'t going up, my fingers hurt all the time, and I just felt stuck. What got me through was switching gyms."',
+        "p1 (Alex Chen)",
+        "[18:34]",
+        "frustration",
+        "frustration",
+        ["plateau", "churn-risk"],
+        false,
+        null
+    )}
+
+    ${quoteCardHTML(
+        '"Honestly, the app notifications are useless. I get pinged about weather at crags I\'ve never been to. It\'s noise. I turned them off after a week."',
+        "p4 (Mei Lin)",
+        "[25:01]",
+        "confusion",
+        "confusion",
+        ["notifications", "relevance"],
+        false,
+        "Discussing app experience"
+    )}
+
+    <div class="weight-label">starred · weight ${weightStarred}</div>
+    ${quoteCardHTML(
+        '"When I finally sent my first V7, I literally screamed in the gym. Everyone was cheering. That moment — months of work for ten seconds of climbing — that\'s why I do this."',
+        "p3 (Sam Okafor)",
+        "[31:12]",
+        "delight",
+        "delight",
+        ["milestone", "emotional-peak"],
+        true,
+        "Discussing breakthrough moments"
+    )}`;
+}
+
+// ── Rendering ──
+
+function render() {
+    const grid = document.getElementById("font-grid");
+    const fontsToShow = visibleFonts === "all" ? FONTS : FONTS.filter(f => f.id === visibleFonts);
+
+    grid.innerHTML = fontsToShow.map(font => `
+        <div class="font-column" style="font-family: ${font.family};">
+            <div class="font-column-header">
+                ${font.name}
+                <span class="meta">${font.category}</span>
+            </div>
+            ${specimenHTML(font)}
+        </div>
+    `).join("");
+
+    // Update copy bar
+    document.getElementById("copy-bar").textContent =
+        `/* Tuned: */ .quote-card .quote-text { font-weight: ${weightRegular}; }  .quote-card.starred .quote-text { font-weight: ${weightStarred}; }`;
+}
+
+// ── Slider handlers ──
+
+const sliderRegular = document.getElementById("weight-regular");
+const sliderStarred = document.getElementById("weight-starred");
+const valRegular = document.getElementById("val-regular");
+const valStarred = document.getElementById("val-starred");
+
+function updateFromSliders() {
+    weightRegular = parseInt(sliderRegular.value);
+    weightStarred = parseInt(sliderStarred.value);
+    valRegular.textContent = weightRegular;
+    valStarred.textContent = weightStarred;
+    updatePresetHighlight();
+    render();
+}
+
+sliderRegular.addEventListener("input", updateFromSliders);
+sliderStarred.addEventListener("input", updateFromSliders);
+
+// ── Presets ──
+
+function updatePresetHighlight() {
+    document.querySelectorAll(".preset-btn").forEach(btn => {
+        const r = parseInt(btn.dataset.regular);
+        const s = parseInt(btn.dataset.starred);
+        btn.classList.toggle("active", r === weightRegular && s === weightStarred);
+    });
+}
+
+document.getElementById("presets").addEventListener("click", (e) => {
+    const btn = e.target.closest(".preset-btn");
+    if (!btn) return;
+    weightRegular = parseInt(btn.dataset.regular);
+    weightStarred = parseInt(btn.dataset.starred);
+    sliderRegular.value = weightRegular;
+    sliderStarred.value = weightStarred;
+    valRegular.textContent = weightRegular;
+    valStarred.textContent = weightStarred;
+    updatePresetHighlight();
+    render();
+});
+
+// ── Theme toggle ──
+
+function setTheme(t) {
+    if (t === "auto") document.documentElement.removeAttribute("data-theme");
+    else document.documentElement.setAttribute("data-theme", t);
+
+    ["light", "auto", "dark"].forEach(id => {
+        document.getElementById("theme-" + id).classList.toggle("active", id === t);
+    });
+}
+
+// ── Font filter ──
+
+function toggleFont(id) {
+    visibleFonts = id;
+    ["all", "inter", "sf", "segoe"].forEach(fid => {
+        document.getElementById("show-" + fid).classList.toggle("active", fid === id);
+    });
+    render();
+}
+
+// ── Init ──
+
+// Start in light mode to show the problem
+setTheme("light");
+render();
+</script>
+</body>
+</html>

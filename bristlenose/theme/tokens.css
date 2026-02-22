@@ -2,9 +2,16 @@
    Override these custom properties to create a custom theme. */
 
 :root {
-    /* Typography */
-    --bn-font-body: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
+    /* Typography — Inter Variable loaded from Google Fonts (see document_shell_open.html).
+       Fallback chain: Segoe UI Variable (Win 11), Segoe UI (Win 10), system-ui, SF Pro (macOS). */
+    --bn-font-body: "Inter", "Segoe UI Variable", "Segoe UI", system-ui, -apple-system, sans-serif;
     --bn-font-mono: "SF Mono", "Fira Code", "Consolas", monospace;
+
+    /* Font weight scale — tuned for variable fonts (Inter, SF Pro, Segoe UI Variable).
+       On static fonts (Win 10 Segoe UI), 420→400 and 490→400 — acceptable degradation. */
+    --bn-weight-normal: 420;     /* body text, descriptions, quote content */
+    --bn-weight-emphasis: 490;   /* headings, labels, starred quotes, section titles */
+    --bn-weight-strong: 700;     /* delete buttons, page title, action glyphs */
 
     /* Colour palette */
     --bn-colour-bg: #ffffff;

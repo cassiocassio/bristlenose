@@ -170,7 +170,7 @@ button.bn-journey-label--interactive:focus-visible {
 .bn-transcript-roles {
     color: var(--bn-colour-muted);
     font-size: 0.85rem;
-    margin: var(--bn-space-xs) 0 0;
+    margin: var(--bn-space-lg) 0 0;
     line-height: 1.5;
 }
 

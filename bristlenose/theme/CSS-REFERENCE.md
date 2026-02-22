@@ -33,12 +33,18 @@ Badge base, sentiment variants, AI/user badge variants, animations.
 
 - **`.badge`** — base: inline-block, mono font, small padding, neutral background
 - **Sentiment variants** (`.badge-frustration` … `.badge-confidence`) — 7 research-backed sentiments with distinct bg/text colours from tokens
-- **`.badge-ai`** — AI-assigned badges. Hover reveals `::after` delete circle (white chip with `×`). `body.hide-ai-tags .badge-ai { display: none }`
-- **`.badge-user`** — user tags. Dark-on-light (light mode), white-on-saturated (dark mode). Codebook colour via inline style. `.badge-delete` positioned same as AI `::after`
+- **`.badge-ai`** — AI-assigned badges. Hover reveals `::after` delete circle (red `×` on white chip, `var(--bn-colour-danger)`). `body.hide-ai-tags .badge-ai { display: none }`
+- **`.badge-user`** — user tags. Dark-on-light (light mode), white-on-saturated (dark mode). Codebook colour via inline style. `.badge-delete` positioned same as AI `::after`, red `×` (`var(--bn-colour-danger)`)
 - **`.badge-add`** — dashed ghost button for adding tags. Accent on hover
+- **`.badge-proposed`** — autocode-proposed tags. Pulsating dashed border (`bn-proposed-pulse`, 3s, opacity 50–78%). Animation pauses on hover. `position: relative` for pill positioning
+- **`.badge-action-pill`** — floating `[✗ | ✓]` pill above proposed badge. Absolute positioned at delete-circle location (`top: calc(-0.3rem - 1px)`), `✗` aligns with delete `×`, `✓` hangs right past badge edge. 16px compartments, `border-radius: 8px`. `opacity: 0` → `1` on badge hover. Shadow matches delete circles
+- **`.badge-action-deny`** — pill left compartment (`✗`). Red (`var(--bn-colour-danger)`), `#fef2f2` bg on hover
+- **`.badge-action-accept`** — pill right compartment (`✓`). Green (`var(--bn-colour-success)`), `#dcfce7` bg on hover, `border-left` divider
+- **`.badge-accept-flash`** — 0.4s brightness burst (`filter: brightness(1.35)` → `1`) on newly accepted badge. Applied by React `QuoteCard`
 - **`.badge-removing`** — fade-out + scale-down (0.15s). Used by `animateBadgeRemoval()` in `badge-utils.js`
 - **`.badge-appearing`** — fade-in + scale-up (0.15s). Opt-in by callers
 - **`.badge-bulk-flash`** — blue `box-shadow` ring pulse (0.8s, asymmetric: 0.2s in / 0.6s out). Applied by `closeTagInput()` in `tags.js` during bulk tag commit. Uses `--bn-selection-border` token for consistent selection-associated colour in both themes
+- **Colour unification** — all delete/deny `×` circles use `var(--bn-colour-danger)` (red). This applies to `.badge-ai::after`, `.badge-user .badge-delete`, and `.badge-action-deny`. Previously delete circles were grey (`--bn-colour-muted`)
 
 ## toggle.css (atom)
 

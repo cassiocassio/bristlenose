@@ -43,7 +43,15 @@ export function Badge({
     return (
       <span className={classes} style={style} data-testid={testId}>
         {text}
-        <span className="badge-proposed-actions">
+        <span className="badge-action-pill">
+          <span
+            className="badge-action-deny"
+            onClick={(e) => { e.stopPropagation(); onDeny?.(); }}
+            title="Deny"
+            data-testid={testId ? `${testId}-deny` : undefined}
+          >
+            &times;
+          </span>
           <span
             className="badge-action-accept"
             onClick={(e) => { e.stopPropagation(); onAccept?.(); }}
@@ -51,14 +59,6 @@ export function Badge({
             data-testid={testId ? `${testId}-accept` : undefined}
           >
             &#x2713;
-          </span>
-          <span
-            className="badge-action-deny"
-            onClick={(e) => { e.stopPropagation(); onDeny?.(); }}
-            title="Deny"
-            data-testid={testId ? `${testId}-deny` : undefined}
-          >
-            &#x2717;
           </span>
         </span>
         {rationale && <span className="tooltip">{rationale}</span>}

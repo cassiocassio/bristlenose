@@ -16,6 +16,9 @@ var _sessPages = null;
 /** Currently displayed session ID, or null if showing the grid. */
 var _currentSessionId = null;
 
+/** Whether the toolbar height has been measured (deferred until visible). */
+var _toolbarMeasured = false;
+
 /** Valid tab names for hash-based navigation. */
 var _validTabs = ['project', 'sessions', 'quotes', 'codebook', 'analysis', 'settings', 'about'];
 
@@ -97,6 +100,18 @@ function switchToTab(tabName, pushHash) {
   // Update URL hash so reload returns to this tab.
   if (pushHash !== false) {
     history.pushState(null, '', '#' + tabName);
+  }
+
+  // Measure toolbar height once (deferred until the panel is visible,
+  // because offsetHeight returns 0 on display:none elements).
+  if (!_toolbarMeasured) {
+    var tb = document.querySelector('.toolbar');
+    if (tb && tb.offsetHeight > 0) {
+      document.documentElement.style.setProperty(
+        '--bn-toolbar-height', (tb.offsetHeight + 8) + 'px'
+      );
+      _toolbarMeasured = true;
+    }
   }
 
   // Restore session drill-down state when returning to the Sessions tab

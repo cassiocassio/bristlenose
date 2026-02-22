@@ -183,7 +183,8 @@ def get_sessions(
         source_folder_uri = ""
         for sess in sessions:
             if sess.source_files:
-                source_folder_uri = _Path(sess.source_files[0].path).parent.as_uri()
+                p = _Path(sess.source_files[0].path).parent.resolve()
+                source_folder_uri = p.as_uri()
                 break
 
         return SessionsListResponse(

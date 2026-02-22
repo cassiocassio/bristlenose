@@ -30,9 +30,8 @@
 /* ── Badge container ────────────────────────────────────────────────────── */
 
 .bn-hidden-badge {
-    align-self: flex-end;
-    margin-bottom: var(--bn-space-xs);
     position: relative;
+    flex-shrink: 0;
 }
 
 /* ── Badge toggle button ────────────────────────────────────────────────── */

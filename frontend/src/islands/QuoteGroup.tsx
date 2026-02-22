@@ -8,7 +8,7 @@
  * calls sync to the server.
  */
 
-import { useState, useCallback, useRef, useMemo } from "react";
+import { useState, useCallback, useRef, useMemo, useLayoutEffect, useEffect } from "react";
 import { Counter, EditableText } from "../components";
 import type { CounterItem } from "../components/Counter";
 import type { ProposedTagBrief, QuoteResponse, TagResponse } from "../utils/types";
@@ -122,6 +122,15 @@ export function QuoteGroup({
   // Key: `${domId}:${tagName}`, auto-clears after 500ms.
   const [flashingTags, setFlashingTags] = useState<Set<string>>(new Set());
 
+  // DOM refs for fly-up/fly-down animation.
+  const headerRef = useRef<HTMLDivElement>(null);
+  const groupRef = useRef<HTMLDivElement>(null);
+
+  // Unhide fly-down animation: ref holds domIds awaiting animation,
+  // version counter triggers the useLayoutEffect.
+  const pendingUnhides = useRef<Set<string>>(new Set());
+  const [unhideVersion, setUnhideVersion] = useState(0);
+
   // ── Derived ───────────────────────────────────────────────────────────
 
   const hiddenQuotes = useMemo(
@@ -192,8 +201,55 @@ export function QuoteGroup({
   const handleToggleHide = useCallback(
     (domId: string, newState: boolean) => {
       if (newState) {
-        // Start hide animation.
+        // ── Hide: fly-up ghost + CSS collapse ───────────────────────────
+        // Capture rects before any state changes.
+        const quoteEl = groupRef.current?.querySelector(`#${CSS.escape(domId)}`);
+        const quoteRect = quoteEl?.getBoundingClientRect() ?? null;
+        const badgeEl = headerRef.current?.querySelector(".bn-hidden-badge");
+        const badgeRect = badgeEl?.getBoundingClientRect() ?? null;
+
+        // Start CSS collapse (existing .bn-hiding for sibling slide-up).
         setHidingIds((prev) => new Set(prev).add(domId));
+
+        // Create ghost overlay at the quote's position.
+        if (quoteRect) {
+          const ghost = document.createElement("div");
+          ghost.className = "bn-hide-ghost";
+          ghost.style.cssText = [
+            "position: fixed",
+            `left: ${quoteRect.left}px`,
+            `top: ${quoteRect.top}px`,
+            `width: ${quoteRect.width}px`,
+            `height: ${quoteRect.height}px`,
+            "background: var(--bn-colour-quote-bg)",
+            "border-left: 1px solid var(--bn-colour-border)",
+            "border-radius: 0 var(--bn-radius-md) var(--bn-radius-md) 0",
+            "z-index: 500",
+            "pointer-events: none",
+            "opacity: 0.7",
+            "overflow: hidden",
+          ].join("; ");
+          document.body.appendChild(ghost);
+
+          requestAnimationFrame(() => {
+            if (badgeRect) {
+              ghost.style.transition = `all ${HIDE_DURATION}ms ease`;
+              ghost.style.left = `${badgeRect.left}px`;
+              ghost.style.top = `${badgeRect.top}px`;
+              ghost.style.width = `${badgeRect.width}px`;
+              ghost.style.height = "0px";
+              ghost.style.opacity = "0";
+            } else {
+              // No badge yet (first hide) — simple fade.
+              ghost.style.transition = `opacity ${HIDE_DURATION}ms ease`;
+              ghost.style.opacity = "0";
+            }
+          });
+
+          setTimeout(() => ghost.remove(), HIDE_DURATION + 50);
+        }
+
+        // After animation, finalise hidden state.
         const timer = setTimeout(() => {
           setHidingIds((prev) => {
             const next = new Set(prev);
@@ -201,7 +257,6 @@ export function QuoteGroup({
             return next;
           });
           updateQuote(domId, (s) => ({ ...s, isHidden: true }));
-          // Fire putHidden using stateRef (always current) + known mutation.
           const hidden: Record<string, boolean> = {};
           for (const [id, s] of Object.entries(stateRef.current)) {
             const val = id === domId ? true : s.isHidden;
@@ -212,8 +267,10 @@ export function QuoteGroup({
         }, HIDE_DURATION);
         hideTimers.current.set(domId, timer);
       } else {
-        // Unhide immediately.
+        // ── Unhide: fly-down from badge ─────────────────────────────────
+        pendingUnhides.current.add(domId);
         updateQuote(domId, (s) => ({ ...s, isHidden: false }));
+        setUnhideVersion((v) => v + 1);
         const hidden: Record<string, boolean> = {};
         for (const [id, s] of Object.entries(stateRef.current)) {
           const val = id === domId ? false : s.isHidden;
@@ -224,6 +281,57 @@ export function QuoteGroup({
     },
     [updateQuote],
   );
+
+  // Fly-down animation: runs after unhidden quotes enter the DOM.
+  // useLayoutEffect fires before paint, so the user never sees a flash.
+  useLayoutEffect(() => {
+    if (pendingUnhides.current.size === 0) return;
+    const ids = new Set(pendingUnhides.current);
+    pendingUnhides.current.clear();
+
+    const badgeEl = headerRef.current?.querySelector(".bn-hidden-badge");
+    const badgeRect = badgeEl?.getBoundingClientRect() ?? null;
+
+    ids.forEach((domId) => {
+      const quoteEl = groupRef.current?.querySelector(
+        `#${CSS.escape(domId)}`,
+      ) as HTMLElement | null;
+      if (!quoteEl) return;
+
+      const quoteRect = quoteEl.getBoundingClientRect();
+
+      if (badgeRect) {
+        const dy = badgeRect.top - quoteRect.top;
+        quoteEl.style.transform = `translateY(${dy}px) scaleY(0.01)`;
+        quoteEl.style.transformOrigin = "top right";
+        quoteEl.style.opacity = "0";
+        quoteEl.style.transition = "none";
+
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => {
+            quoteEl.style.transition = `all ${HIDE_DURATION}ms ease`;
+            quoteEl.style.transform = "";
+            quoteEl.style.opacity = "1";
+          });
+        });
+
+        setTimeout(() => {
+          quoteEl.style.transition = "";
+          quoteEl.style.transform = "";
+          quoteEl.style.transformOrigin = "";
+          quoteEl.style.opacity = "";
+        }, HIDE_DURATION + 50);
+      }
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [unhideVersion]);
+
+  // Cleanup: remove orphaned ghost divs on unmount.
+  useEffect(() => {
+    return () => {
+      document.querySelectorAll(".bn-hide-ghost").forEach((el) => el.remove());
+    };
+  }, []);
 
   const handleEditCommit = useCallback(
     (domId: string, newText: string) => {
@@ -416,28 +524,39 @@ export function QuoteGroup({
 
   return (
     <>
-      <h3 id={anchor}>
-        <EditableText
-          value={headingText}
-          originalValue={label}
-          isEditing={isEditingHeading}
-          committed={headingEdited}
-          onCommit={handleHeadingCommit}
-          onCancel={() => setIsEditingHeading(false)}
-          trigger="external"
-          className="editable-text"
-          data-testid={`bn-group-${anchor}-title`}
-          data-edit-key={`${anchor}:title`}
+      <div className="bn-group-header" ref={headerRef}>
+        <h3 id={anchor}>
+          <EditableText
+            value={headingText}
+            originalValue={label}
+            isEditing={isEditingHeading}
+            committed={headingEdited}
+            onCommit={handleHeadingCommit}
+            onCancel={() => setIsEditingHeading(false)}
+            trigger="external"
+            className="editable-text"
+            data-testid={`bn-group-${anchor}-title`}
+            data-edit-key={`${anchor}:title`}
+          />
+          {" "}
+          <button
+            className="edit-pencil edit-pencil-inline"
+            aria-label={`Edit ${itemType} title`}
+            onClick={() => setIsEditingHeading(!isEditingHeading)}
+          >
+            &#9998;
+          </button>
+        </h3>
+        <Counter
+          count={hiddenQuotes.length}
+          items={counterItems}
+          isOpen={isCounterOpen}
+          onToggle={handleCounterToggle}
+          onUnhide={handleUnhide}
+          onUnhideAll={handleUnhideAll}
+          data-testid={`bn-counter-${anchor}`}
         />
-        {" "}
-        <button
-          className="edit-pencil edit-pencil-inline"
-          aria-label={`Edit ${itemType} title`}
-          onClick={() => setIsEditingHeading(!isEditingHeading)}
-        >
-          &#9998;
-        </button>
-      </h3>
+      </div>
       {description && (
         <p className="description">
           <EditableText
@@ -462,16 +581,7 @@ export function QuoteGroup({
           </button>
         </p>
       )}
-      <div className="quote-group">
-        <Counter
-          count={hiddenQuotes.length}
-          items={counterItems}
-          isOpen={isCounterOpen}
-          onToggle={handleCounterToggle}
-          onUnhide={handleUnhide}
-          onUnhideAll={handleUnhideAll}
-          data-testid={`bn-counter-${anchor}`}
-        />
+      <div className="quote-group" ref={groupRef}>
         {quotes.map((q) => {
           const state = stateMap[q.dom_id];
           if (!state) return null;

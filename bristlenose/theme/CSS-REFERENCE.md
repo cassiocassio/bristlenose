@@ -69,7 +69,7 @@ Styles for hidden quotes feature. Researchers often encounter "volume quotes" �
 
 - **`blockquote.bn-hidden`** — `display: none !important` (defence-in-depth; JS also sets `style.display = 'none'`)
 - **`blockquote.bn-hiding`** — CSS collapse transition for React hide animation: `max-height: 0`, `opacity: 0`, zero margins/padding/border, `transition: all 300ms ease`. Applied by React `QuoteGroup` during the 300ms before setting `isHidden: true`
-- **`.bn-hidden-badge`** — right-aligned in `.quote-group` via `align-self: flex-end`, contains toggle button + dropdown
+- **`.bn-hidden-badge`** — lives inside `.bn-group-header` (flex row alongside the h3 heading), right-aligned via `justify-content: space-between` on the parent. Contains toggle button + dropdown
 - **`.bn-hidden-toggle`** — accent-coloured text button ("3 hidden quotes ▾"), underline on hover
 - **`.bn-hidden-dropdown`** — absolute below badge, `z-index: 200`, card styling (border, shadow, radius), scrollable
 - **`.bn-hidden-header`** — flex row: "Unhide:" label + "Unhide all" link (when 2+ hidden). `justify-content: space-between`
@@ -169,14 +169,13 @@ Analysis page signal cards and heatmap table. The analysis page presents statist
 ### Signal cards
 
 - **`.signal-cards`** — flex column container for all cards
-- **`.signal-card`** — bordered card with left accent bar (colour set by inline `--card-accent` custom property, maps to sentiment colour). Hover adds box-shadow. `.expanded` class triggers quote list expansion
-- **`.signal-card::before`** — accent bar using `var(--card-accent)`, same span-bar border-radius
+- **`.signal-card`** — bordered card. `--card-accent` custom property set inline (maps to sentiment colour), used by participant grid highlight. Hover adds box-shadow. `.expanded` class triggers quote list expansion
 - **`.signal-card-top`** — flex row: identity (location + sentiment) left, metrics right
 - **`.signal-card-identity`** — location name, source type label (section/theme), sentiment badge
 - **`.signal-card-metrics`** — 3-column grid: label | value | visualisation (concentration bar, Neff, intensity dots)
 - **`.conc-bar-track`** / **`.conc-bar-fill`** — horizontal bar showing concentration ratio (0–100% of track width)
 - **`.intensity-dots-svg`** — inline container for 1–5 dot SVGs
-- **`.signal-card-quotes`** — expandable quote list with `--bn-colour-quote-bg` background. Blockquotes have left border, hanging-indent layout (timecode | body | intensity dots)
+- **`.signal-card-quotes`** — expandable quote list with `--bn-colour-quote-bg` background. Blockquotes use hanging-indent layout (timecode | body | intensity dots). Consecutive quotes from the same session get `.seq-first`/`.seq-middle`/`.seq-last` classes (tighter spacing, dimmed timecodes)
 - **`.signal-card-expansion`** — max-height/opacity transition for expand/collapse animation (max-height set by JS)
 - **`.signal-card-footer`** — participant count + link back to report section
 - **`.participant-grid`** — flex-wrap row of `.p-box` participant code chips. `.p-present` gets accent-tinted background via `color-mix()`

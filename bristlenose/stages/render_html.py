@@ -258,6 +258,15 @@ def render_html(
     video_map = _build_video_map(sessions)
     has_media = bool(video_map)
 
+    # Extract video thumbnails (skips cached, audio-only, and failed).
+    thumbnail_map: dict[str, str] = {}
+    if has_media and transcripts:
+        from bristlenose.utils.video import extract_thumbnails
+
+        thumb_paths = extract_thumbnails(sessions, transcripts, paths.thumbnails_dir)
+        for sid in thumb_paths:
+            thumbnail_map[sid] = f"assets/thumbnails/{sid}.jpg"
+
     # Write popout player page when media files exist
     if has_media:
         _write_player_html(paths.assets_dir, paths.player_file)
@@ -338,6 +347,7 @@ def render_html(
             sessions, people, display_names, video_map, now,
             screen_clusters=screen_clusters,
             all_quotes=all_quotes,
+            thumbnail_map=thumbnail_map,
         )
         _w(_jinja_env.get_template("session_table.html").render(
             rows=session_rows,
@@ -689,6 +699,7 @@ _TRANSCRIPT_JS_FILES: list[str] = [
     "js/player.js",
     "js/transcript-names.js",
     "js/transcript-annotations.js",
+    "js/settings.js",
 ]
 
 
@@ -817,6 +828,7 @@ def _build_session_rows(
     now: datetime,
     screen_clusters: list[ScreenCluster] | None = None,
     all_quotes: list[ExtractedQuote] | None = None,
+    thumbnail_map: dict[str, str] | None = None,
 ) -> tuple[list[dict[str, object]], str, str]:
     """Build session-table row dicts, moderator header HTML, and observer header HTML.
 
@@ -971,6 +983,7 @@ def _build_session_rows(
             "journey": journey,
             "sentiment_sparkline": sparkline,
             "has_media": has_media,
+            "thumbnail_url": (thumbnail_map or {}).get(sid, ""),
             "source_folder_uri": source_folder_uri,
         })
     return rows, moderator_header, observer_header
@@ -1313,6 +1326,7 @@ def _render_project_tab(
             sessions, people, display_names, video_map, now,
             screen_clusters=screen_clusters,
             all_quotes=all_quotes,
+            thumbnail_map=thumbnail_map,
         )
         _w('<div class="bn-dashboard-pane bn-dashboard-full">')
         _w(_jinja_env.get_template("dashboard_session_table.html").render(
@@ -1684,6 +1698,7 @@ def _render_transcript_page(
     _w("initTranscriptNames();")
     if session_annotations:
         _w("initTranscriptAnnotations();")
+    _w('_applyAppearance(_settingsStore.get("auto"));')
     _w("})();")
     _w("</script>")
 

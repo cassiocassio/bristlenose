@@ -52,6 +52,7 @@ class SessionResponse(BaseModel):
     duration_seconds: float
     has_media: bool
     has_video: bool
+    thumbnail_url: str | None = None
     speakers: list[SpeakerResponse]
     journey_labels: list[str]
     sentiment_counts: dict[str, int]
@@ -162,6 +163,11 @@ def get_sessions(
             # Sentiment counts
             sentiment_counts = sentiment_by_session.get(sess.session_id, {})
 
+            # Thumbnail URL (relative path served by StaticFiles mount).
+            thumbnail_url: str | None = None
+            if sess.thumbnail_path:
+                thumbnail_url = f"/report/{sess.thumbnail_path}"
+
             rows.append(
                 SessionResponse(
                     session_id=sess.session_id,
@@ -172,6 +178,7 @@ def get_sessions(
                     duration_seconds=sess.duration_seconds,
                     has_media=sess.has_media,
                     has_video=sess.has_video,
+                    thumbnail_url=thumbnail_url,
                     speakers=speakers_data,
                     journey_labels=journey_labels,
                     sentiment_counts=sentiment_counts,

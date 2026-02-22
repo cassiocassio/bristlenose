@@ -7,7 +7,7 @@
 }
 
 .bn-setting-group legend {
-    font-weight: 600;
+    font-weight: var(--bn-weight-emphasis);
     font-size: 0.95rem;
     color: var(--bn-colour-text);
     margin-bottom: var(--bn-space-sm);

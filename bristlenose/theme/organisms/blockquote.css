@@ -76,7 +76,7 @@ blockquote .speaker-link:hover {
 
 /* Rewatch items inside quotes / friction points */
 .rewatch-participant {
-    font-weight: 600;
+    font-weight: var(--bn-weight-emphasis);
     margin-top: 1rem;
     margin-bottom: 0.25rem;
 }

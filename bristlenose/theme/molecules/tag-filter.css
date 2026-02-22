@@ -106,7 +106,7 @@
 .tag-filter-group-header {
     padding: 0.3rem 0.5rem 0.15rem;
     font-size: 0.7rem;
-    font-weight: 600;
+    font-weight: var(--bn-weight-emphasis);
     color: var(--bn-colour-muted);
     text-transform: uppercase;
     letter-spacing: 0.03em;

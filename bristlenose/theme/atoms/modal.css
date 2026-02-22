@@ -37,7 +37,7 @@
 /* Modal heading */
 .bn-modal h2 {
     margin: 0 0 var(--bn-space-lg) 0;
-    font-weight: 600;
+    font-weight: var(--bn-weight-emphasis);
     color: var(--bn-colour-text);
 }
 

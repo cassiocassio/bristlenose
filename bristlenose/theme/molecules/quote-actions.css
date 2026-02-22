@@ -5,7 +5,7 @@
 }
 
 .quote-card.starred {
-    font-weight: 600;
+    font-weight: var(--bn-weight-emphasis);
     border-left-color: var(--bn-colour-starred);
 }
 
@@ -13,7 +13,7 @@
 .quote-card.starred .timecode,
 .quote-card.starred .speaker,
 .quote-card.starred .badges {
-    font-weight: 400;
+    font-weight: var(--bn-weight-normal);
 }
 
 /* (editing/edited rules moved to molecules/editable-text.css) */

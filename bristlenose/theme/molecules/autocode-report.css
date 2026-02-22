@@ -9,7 +9,7 @@
     font-size: 0.88rem;
     color: var(--bn-colour-muted);
     padding: 0.8rem 0 0.4rem;
-    font-weight: 600;
+    font-weight: var(--bn-weight-emphasis);
     border-bottom: none;
 }
 

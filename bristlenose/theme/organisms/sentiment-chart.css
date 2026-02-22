@@ -15,7 +15,7 @@
 
 .sentiment-chart-title {
     font-size: 0.85rem;
-    font-weight: 600;
+    font-weight: var(--bn-weight-emphasis);
     color: var(--bn-colour-text);
     margin-bottom: 0.6rem;
     grid-column: 1 / -1;

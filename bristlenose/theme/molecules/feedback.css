@@ -57,7 +57,7 @@
 .feedback-label {
     display: block;
     font-size: 0.82rem;
-    font-weight: 600;
+    font-weight: var(--bn-weight-emphasis);
     color: var(--bn-colour-text);
     margin-bottom: var(--bn-space-sm);
 }

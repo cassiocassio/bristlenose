@@ -13,7 +13,7 @@
 }
 
 .footer-logotype {
-    font-weight: 600;
+    font-weight: var(--bn-weight-emphasis);
 }
 
 .footer-version {

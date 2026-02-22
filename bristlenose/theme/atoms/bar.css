@@ -8,7 +8,7 @@
 
 .sentiment-bar-count {
     font-size: 0.75rem;
-    font-weight: 600;
+    font-weight: var(--bn-weight-emphasis);
     flex-shrink: 0;
 }
 
@@ -43,7 +43,7 @@
     border-radius: 50%;
     color: var(--bn-colour-muted);
     font-size: 0.6rem;
-    font-weight: 700;
+    font-weight: var(--bn-weight-strong);
     line-height: 1;
     cursor: pointer;
     opacity: 0;

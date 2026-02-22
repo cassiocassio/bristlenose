@@ -12,5 +12,5 @@
 }
 
 .bn-person-badge-name {
-    font-weight: 600;
+    font-weight: var(--bn-weight-emphasis);
 }

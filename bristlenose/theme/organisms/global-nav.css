@@ -19,7 +19,7 @@
     border-bottom: 3px solid transparent;
     font-family: var(--bn-font-body);
     font-size: 0.88rem;
-    font-weight: 500;
+    font-weight: var(--bn-weight-emphasis);
     color: var(--bn-colour-muted);
     cursor: pointer;
     text-decoration: none;
@@ -90,7 +90,7 @@
 
 .bn-session-label {
     font-size: 0.88rem;
-    font-weight: 600;
+    font-weight: var(--bn-weight-emphasis);
     color: var(--bn-colour-text);
 }
 
@@ -177,7 +177,7 @@
 
 .bn-project-stat-value {
     font-size: 1.5rem;
-    font-weight: 400;
+    font-weight: var(--bn-weight-normal);
     color: var(--bn-colour-text);
     line-height: 1.2;
 }

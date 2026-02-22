@@ -9,7 +9,7 @@
 /* Disclosure for session details */
 .coverage-details summary {
     cursor: pointer;
-    font-weight: 500;
+    font-weight: var(--bn-weight-emphasis);
     color: var(--bn-colour-muted);
     list-style: none;
 }
@@ -41,7 +41,7 @@
 }
 
 .coverage-session-title {
-    font-weight: 600;
+    font-weight: var(--bn-weight-emphasis);
     margin-bottom: var(--bn-space-xs);
 }
 

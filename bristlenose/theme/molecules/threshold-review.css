@@ -162,7 +162,7 @@
 
 .threshold-zone-counter-count {
     font-family: var(--bn-font-mono);
-    font-weight: 600;
+    font-weight: var(--bn-weight-emphasis);
 }
 
 /* ── Zone list (collapsible sections) ──────────────────────── */
@@ -178,7 +178,7 @@
     padding: 0.5rem 0;
     cursor: pointer;
     font-size: 0.88rem;
-    font-weight: 600;
+    font-weight: var(--bn-weight-emphasis);
     color: var(--bn-colour-text);
     user-select: none;
     border-bottom: 1px solid var(--bn-colour-border);
@@ -196,7 +196,7 @@
 .threshold-zone-list-chevron--open { transform: rotate(90deg); }
 
 .threshold-zone-list-count {
-    font-weight: 400;
+    font-weight: var(--bn-weight-normal);
     color: var(--bn-colour-muted);
     font-size: 0.82rem;
 }

@@ -44,18 +44,18 @@
 
 .chip-check {
     color: var(--bn-colour-success);
-    font-weight: 700;
+    font-weight: var(--bn-weight-strong);
 }
 
 .chip-error {
     color: var(--bn-colour-danger);
-    font-weight: 700;
+    font-weight: var(--bn-weight-strong);
 }
 
 .chip-link {
     color: #60a5fa;
     text-decoration: none;
-    font-weight: 500;
+    font-weight: var(--bn-weight-emphasis);
     margin-left: 0.3rem;
     cursor: pointer;
 }

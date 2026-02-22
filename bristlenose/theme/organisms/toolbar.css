@@ -1,5 +1,17 @@
 /* Organism: toolbar — sticky bar with view switcher and export buttons */
 
+/* Offset anchor scroll targets so the sticky toolbar doesn't hide them.
+   scroll-margin-top on targets: respected by scrollIntoView() and #hash nav.
+   Uses :has(.toolbar) so only panels with a toolbar get the offset —
+   currently Quotes, but future-proof if other panels gain one.
+   The var fallback (3rem) covers the static render path where JS
+   hasn't measured the actual toolbar height. */
+.bn-tab-panel:has(.toolbar) h2[id],
+.bn-tab-panel:has(.toolbar) h3[id],
+.bn-tab-panel:has(.toolbar) div[id="user-tags-chart"] {
+    scroll-margin-top: var(--bn-toolbar-height, 3rem);
+}
+
 .toolbar {
     position: sticky;
     top: 0;

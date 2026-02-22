@@ -150,6 +150,7 @@
 
     /* Layout */
     --bn-max-width: 52rem;
+    --bn-toolbar-height: 3rem;
 
     /* Spacing scale */
     --bn-space-xs: 0.15rem;

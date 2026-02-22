@@ -1,3 +1,5 @@
+import { useRef, useEffect, useCallback } from "react";
+
 interface BadgeProps {
   text: string;
   variant: "ai" | "user" | "readonly" | "deletable" | "proposed";
@@ -10,6 +12,85 @@ interface BadgeProps {
   rationale?: string;
   className?: string;
   "data-testid"?: string;
+}
+
+/** Returns true if the event target is a text-entry element (input, textarea, contenteditable). */
+function isTypingTarget(target: EventTarget | null): boolean {
+  if (!(target instanceof HTMLElement)) return false;
+  const tag = target.tagName;
+  return tag === "INPUT" || tag === "TEXTAREA" || target.isContentEditable;
+}
+
+function ProposedBadge({
+  classes,
+  style,
+  testId,
+  text,
+  rationale,
+  onAccept,
+  onDeny,
+}: {
+  classes: string;
+  style: React.CSSProperties | undefined;
+  testId: string | undefined;
+  text: string;
+  rationale: string | undefined;
+  onAccept: (() => void) | undefined;
+  onDeny: (() => void) | undefined;
+}) {
+  const hoveredRef = useRef(false);
+
+  const handleKeyDown = useCallback(
+    (e: KeyboardEvent) => {
+      if (!hoveredRef.current) return;
+      if (isTypingTarget(e.target)) return;
+      const key = e.key.toLowerCase();
+      if (key === "a") {
+        e.preventDefault();
+        onAccept?.();
+      } else if (key === "d") {
+        e.preventDefault();
+        onDeny?.();
+      }
+    },
+    [onAccept, onDeny],
+  );
+
+  useEffect(() => {
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [handleKeyDown]);
+
+  return (
+    <span
+      className={classes}
+      style={style}
+      data-testid={testId}
+      onMouseEnter={() => { hoveredRef.current = true; }}
+      onMouseLeave={() => { hoveredRef.current = false; }}
+    >
+      {text}
+      <span className="badge-action-pill">
+        <span
+          className="badge-action-deny"
+          onClick={(e) => { e.stopPropagation(); onDeny?.(); }}
+          title="Deny (d)"
+          data-testid={testId ? `${testId}-deny` : undefined}
+        >
+          &times;
+        </span>
+        <span
+          className="badge-action-accept"
+          onClick={(e) => { e.stopPropagation(); onAccept?.(); }}
+          title="Accept (a)"
+          data-testid={testId ? `${testId}-accept` : undefined}
+        >
+          &#x2713;
+        </span>
+      </span>
+      {rationale && <span className="tooltip">{rationale}</span>}
+    </span>
+  );
 }
 
 export function Badge({
@@ -41,28 +122,15 @@ export function Badge({
 
   if (variant === "proposed") {
     return (
-      <span className={classes} style={style} data-testid={testId}>
-        {text}
-        <span className="badge-action-pill">
-          <span
-            className="badge-action-deny"
-            onClick={(e) => { e.stopPropagation(); onDeny?.(); }}
-            title="Deny"
-            data-testid={testId ? `${testId}-deny` : undefined}
-          >
-            &times;
-          </span>
-          <span
-            className="badge-action-accept"
-            onClick={(e) => { e.stopPropagation(); onAccept?.(); }}
-            title="Accept"
-            data-testid={testId ? `${testId}-accept` : undefined}
-          >
-            &#x2713;
-          </span>
-        </span>
-        {rationale && <span className="tooltip">{rationale}</span>}
-      </span>
+      <ProposedBadge
+        classes={classes}
+        style={style}
+        testId={testId}
+        text={text}
+        rationale={rationale}
+        onAccept={onAccept}
+        onDeny={onDeny}
+      />
     );
   }
 

@@ -20,18 +20,6 @@
     box-shadow: 0 2px 8px var(--bn-colour-shadow);
 }
 
-/* Left accent bar — colour set by inline --card-accent */
-.signal-card::before {
-    content: "";
-    position: absolute;
-    left: 0;
-    top: 0;
-    bottom: 0;
-    width: var(--bn-span-bar-width);
-    border-radius: var(--bn-span-bar-radius) 0 0 var(--bn-span-bar-radius);
-    background: var(--card-accent, var(--bn-colour-muted));
-}
-
 /* Two-column top: identity left, metrics right */
 .signal-card-top {
     display: flex;
@@ -523,21 +511,3 @@
     opacity: 0.6;
 }
 
-.signal-card-quotes blockquote.seq-first,
-.signal-card-quotes blockquote.seq-middle,
-.signal-card-quotes blockquote.seq-last {
-    border-left: 2px solid var(--card-accent, var(--bn-colour-muted));
-}
-
-.signal-card-quotes blockquote.seq-first {
-    border-top-left-radius: var(--bn-radius-sm);
-}
-
-.signal-card-quotes blockquote.seq-middle {
-    border-radius: 0;
-}
-
-.signal-card-quotes blockquote.seq-last {
-    border-bottom-left-radius: var(--bn-radius-sm);
-    border-top-left-radius: 0;
-}

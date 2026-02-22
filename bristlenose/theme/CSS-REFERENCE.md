@@ -111,7 +111,7 @@ Styles for the transcript coverage section at the end of the report. This sectio
 - **`.coverage-details summary`** — clickable "Show omitted segments" text, styled with custom list-style-none and `::before` for arrow
 - **`.coverage-body`** — inner content wrapper
 - **`.coverage-session`** — per-session group
-- **`.coverage-session-title`** — "Session 1" heading (semibold)
+- **`.coverage-session-title`** — "Session 1" heading (emphasis weight)
 - **`.coverage-segment`** — omitted segment text (muted colour, left padding); timecode links to transcript page
 - **`.coverage-fragments`** — summary line for short fragments (`.label` italic, `.verbatim` roman)
 - **`.coverage-empty`** — "Nothing omitted" message (muted, italic)
@@ -150,7 +150,7 @@ The sessions table in both the Sessions tab and Project tab. Shows per-session m
 
 - **`.bn-session-id`** — `#N` link, accent colour, `white-space: nowrap`. Links to inline transcript via `data-session-link`
 - **`.bn-session-speakers`** — `display: flex; flex-direction: column; gap: 0.35rem`. Contains one `.bn-person-badge` per speaker (vertically stacked)
-- **`.bn-person-badge`** (molecule) — `inline-flex, align-items: center, gap: 0.4rem, white-space: nowrap`. Contains `.badge` (flex-shrink: 0) + `.bn-person-badge-name` (font-weight: 600 / semibold)
+- **`.bn-person-badge`** (molecule) — `inline-flex, align-items: center, gap: 0.4rem, white-space: nowrap`. Contains `.badge` (flex-shrink: 0) + `.bn-person-badge-name` (font-weight: var(--bn-weight-emphasis) / 490)
 - **`.bn-session-meta`** — Start date cell, contains date div + optional `.bn-session-journey`
 - **`.bn-session-journey`** — user journey path below start date. `font-size: 0.82rem`, `color: var(--bn-colour-muted)`, `white-space: normal` (wraps). Content: "Homepage → Tropical Fish → Equipment → …"
 - **`.bn-session-duration`** — `text-align: right` on both `<th>` and `<td>`. Format: `MM:SS` or `HH:MM:SS`

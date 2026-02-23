@@ -164,6 +164,7 @@ F401 is marked `unfixable` in `pyproject.toml` so `ruff check --fix` (and the Po
 - **Session management** (re-import, session enable/disable, quarantine, pipeline re-run): `docs/design-session-management.md`
 - **Serve mode milestone 1** (domain schema, importer, sessions API): `docs/design-serve-milestone-1.md`
 - **Codebook island** (migration audit, API design, drag-drop decisions): `docs/design-codebook-island.md`
+- **Moderator question pill** (hover-triggered context reveal, interaction design, file map): `docs/design-moderator-question-pill.md`
 - **Security & privacy**: `SECURITY.md` — local-first design, credential storage, PII redaction, anonymisation boundary, vulnerability reporting
 - **Product roadmap**: `docs/ROADMAP.md`
 

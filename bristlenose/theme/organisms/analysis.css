@@ -511,3 +511,56 @@
     opacity: 0.6;
 }
 
+/* ── Quote context expansion ──────────────────────────── */
+
+.context-segment {
+    color: var(--bn-colour-muted);
+    padding: var(--bn-space-xs) var(--bn-space-sm);
+}
+
+.context-segment .quote-row {
+    gap: var(--bn-space-xs);
+}
+
+.timecode-expandable {
+    position: relative;
+    flex-shrink: 0;
+    padding-top: 0.75rem;
+    padding-bottom: 0.75rem;
+    margin-top: -0.75rem;
+    margin-bottom: -0.75rem;
+}
+
+.expand-arrow {
+    display: none;
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    background: none;
+    border: none;
+    color: var(--bn-colour-muted);
+    font-size: 10px;
+    cursor: pointer;
+    opacity: 0.4;
+    transition: opacity 150ms;
+    z-index: 1;
+    padding: 0 8px;
+    line-height: 1;
+}
+
+.expand-arrow:hover {
+    opacity: 1;
+}
+
+.expand-arrow--above {
+    top: -12px;
+}
+
+.expand-arrow--below {
+    bottom: -12px;
+}
+
+.timecode-expandable:hover .expand-arrow {
+    display: block;
+}
+

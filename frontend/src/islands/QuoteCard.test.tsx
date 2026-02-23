@@ -155,7 +155,7 @@ describe("QuoteCard — moderator question", () => {
     expect(screen.queryByTestId("bn-quote-q-p1-26-mod-q-block")).not.toBeInTheDocument();
   });
 
-  it("shows ...more button for multi-sentence moderator text", () => {
+  it("shows more… button for multi-sentence moderator text", () => {
     const longQuestion: ModeratorQuestionResponse = {
       ...MOD_QUESTION,
       text: "First sentence here. And then a second sentence with more detail.",
@@ -164,11 +164,11 @@ describe("QuoteCard — moderator question", () => {
       { segment_index: 3 },
       { isQuestionOpen: true, moderatorQuestion: longQuestion },
     );
-    expect(screen.getByText("...more")).toBeInTheDocument();
+    expect(screen.getByText("more\u2026")).toBeInTheDocument();
     expect(screen.getByText(/First sentence here\./)).toBeInTheDocument();
   });
 
-  it("clicking ...more shows full text", () => {
+  it("clicking more… shows full text", () => {
     const longQuestion: ModeratorQuestionResponse = {
       ...MOD_QUESTION,
       text: "First sentence here. And then a second sentence with more detail.",
@@ -177,17 +177,17 @@ describe("QuoteCard — moderator question", () => {
       { segment_index: 3 },
       { isQuestionOpen: true, moderatorQuestion: longQuestion },
     );
-    fireEvent.click(screen.getByText("...more"));
+    fireEvent.click(screen.getByText("more\u2026"));
     expect(screen.getByText(/And then a second sentence/)).toBeInTheDocument();
-    expect(screen.queryByText("...more")).not.toBeInTheDocument();
+    expect(screen.queryByText("more\u2026")).not.toBeInTheDocument();
   });
 
-  it("single-sentence text shows no ...more button", () => {
+  it("single-sentence text shows no more… button", () => {
     renderCard(
       { segment_index: 3 },
       { isQuestionOpen: true, moderatorQuestion: MOD_QUESTION },
     );
-    expect(screen.queryByText("...more")).not.toBeInTheDocument();
+    expect(screen.queryByText("more\u2026")).not.toBeInTheDocument();
   });
 
   it("hover zone has cursor:help class when segment_index > 0", () => {
@@ -199,5 +199,45 @@ describe("QuoteCard — moderator question", () => {
   it("no hover zone when segment_index <= 0", () => {
     renderCard({ segment_index: -1 });
     expect(document.querySelector(".quote-hover-zone")).not.toBeInTheDocument();
+  });
+
+  it("no hover zone when question is open (dismiss via × instead)", () => {
+    renderCard(
+      { segment_index: 3 },
+      { isQuestionOpen: true, moderatorQuestion: MOD_QUESTION },
+    );
+    expect(document.querySelector(".quote-hover-zone")).not.toBeInTheDocument();
+  });
+
+  it("hides researcher_context when segment_index > 0", () => {
+    renderCard({ segment_index: 3, researcher_context: "When asked about the dashboard" });
+    expect(screen.queryByText(/When asked about the dashboard/)).not.toBeInTheDocument();
+  });
+
+  it("shows researcher_context when segment_index <= 0", () => {
+    renderCard({ segment_index: -1, researcher_context: "When asked about the dashboard" });
+    expect(screen.getByText(/When asked about the dashboard/)).toBeInTheDocument();
+  });
+
+  it("dismiss button calls onToggleQuestion", () => {
+    const onToggle = vi.fn();
+    renderCard(
+      { segment_index: 3 },
+      { isQuestionOpen: true, moderatorQuestion: MOD_QUESTION, onToggleQuestion: onToggle },
+    );
+    fireEvent.click(screen.getByTestId("bn-quote-q-p1-26-mod-q-dismiss"));
+    expect(onToggle).toHaveBeenCalledWith("q-p1-26");
+  });
+
+  it("moderator question row is above the quote-row (context sits above the quote)", () => {
+    renderCard(
+      { segment_index: 3 },
+      { isQuestionOpen: true, moderatorQuestion: MOD_QUESTION },
+    );
+    const row = screen.getByTestId("bn-quote-q-p1-26-mod-q-block");
+    // The moderator row's parent should be the blockquote (quote-card).
+    expect(row.parentElement?.tagName).toBe("BLOCKQUOTE");
+    // It should be a .quote-row for alignment.
+    expect(row.className).toContain("quote-row");
   });
 });

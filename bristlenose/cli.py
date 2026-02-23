@@ -525,6 +525,39 @@ def _print_header(settings: object, *, show_provider: bool = True, show_hardware
     console.print(f"\nBristlenose [dim]{' · '.join(parts)}[/dim]\n")
 
 
+def _named_participant_summary(people: object, n_participants: int) -> str:
+    """Build a short summary of named participants for the stats line.
+
+    Returns the short names joined by comma (e.g. "Martin, Sarah, Fred, Fritz")
+    when all participants are named, or "3 of 5 named" when partial, or ""
+    when no names exist.  Only considers participant codes (p1, p2, ...)
+    — moderators and observers are excluded.
+    """
+    if people is None:
+        return ""
+    participants = getattr(people, "participants", None)
+    if not participants:
+        return ""
+
+    named: list[str] = []
+    total = 0
+    for pid, entry in participants.items():
+        if not pid.startswith("p"):
+            continue
+        total += 1
+        ed = getattr(entry, "editable", None)
+        if ed:
+            short = getattr(ed, "short_name", "") or getattr(ed, "full_name", "")
+            if short:
+                named.append(short)
+
+    if not named:
+        return ""
+    if len(named) == total and total <= 8:
+        return ", ".join(named)
+    return f"{len(named)} of {total} named"
+
+
 def _print_pipeline_summary(result: object) -> None:
     """Print a clean summary after any pipeline command.
 
@@ -537,7 +570,12 @@ def _print_pipeline_summary(result: object) -> None:
     parts: list[str] = []
     participants = getattr(result, "participants", [])
     if participants:
-        parts.append(f"{len(participants)} participants")
+        people = getattr(result, "people", None)
+        named = _named_participant_summary(people, len(participants))
+        if named:
+            parts.append(f"{len(participants)} participants ({named})")
+        else:
+            parts.append(f"{len(participants)} participants")
     screen_clusters = getattr(result, "screen_clusters", [])
     if screen_clusters:
         parts.append(f"{len(screen_clusters)} screens")
@@ -1295,7 +1333,7 @@ def _print_project_status(
 def configure(
     provider: Annotated[
         str,
-        typer.Argument(help="Provider to configure: claude, chatgpt, gemini, or azure."),
+        typer.Argument(help="Provider to configure: claude, chatgpt, gemini, azure, or miro."),
     ],
     key: Annotated[
         str | None,
@@ -1325,11 +1363,12 @@ def configure(
         "azure-openai": "azure",
         "google": "google",
         "gemini": "google",
+        "miro": "miro",
     }
     canonical = provider_map.get(provider)
     if canonical is None:
         console.print(f"[red]Unknown provider: {provider}[/red]")
-        console.print("Available: claude, chatgpt, gemini, azure")
+        console.print("Available: claude, chatgpt, gemini, azure, miro")
         raise typer.Exit(1)
 
     display_names = {
@@ -1337,13 +1376,19 @@ def configure(
         "openai": "ChatGPT",
         "azure": "Azure OpenAI",
         "google": "Gemini",
+        "miro": "Miro",
     }
     display_name = display_names.get(canonical, canonical.title())
 
     # Get key from option or prompt
     if key is None:
         console.print()
-        key = typer.prompt(f"Enter your {display_name} API key", hide_input=True)
+        prompt_label = (
+            f"Enter your {display_name} access token"
+            if canonical == "miro"
+            else f"Enter your {display_name} API key"
+        )
+        key = typer.prompt(prompt_label, hide_input=True)
 
     if not key.strip():
         console.print("[red]No key entered[/red]")
@@ -1361,6 +1406,10 @@ def configure(
         from bristlenose.doctor import _validate_google_key
 
         is_valid, error = _validate_google_key(key)
+    elif canonical == "miro":
+        from bristlenose.miro_client import validate_miro_token
+
+        is_valid, error = validate_miro_token(key)
     else:
         # Azure needs endpoint+deployment to validate fully; skip for now
         is_valid, error = None, "needs endpoint and deployment to validate"
@@ -1386,7 +1435,11 @@ def configure(
             from bristlenose.credentials import get_credential_store_label
 
             store_label = get_credential_store_label()
-            service_name = f"Bristlenose {display_name} API Key"
+            service_name = (
+                f"Bristlenose {display_name} Access Token"
+                if canonical == "miro"
+                else f"Bristlenose {display_name} API Key"
+            )
             console.print(f'[green]Stored in {store_label} as "{service_name}"[/green]')
     except NotImplementedError:
         # EnvCredentialStore — can't persist
@@ -1399,6 +1452,7 @@ def configure(
             "openai": "OPENAI_API_KEY",
             "azure": "AZURE_API_KEY",
             "google": "GOOGLE_API_KEY",
+            "miro": "MIRO_ACCESS_TOKEN",
         }
         env_var = env_vars.get(canonical, f"{canonical.upper()}_API_KEY")
         console.print(f"  export BRISTLENOSE_{env_var}={key}")
@@ -1416,7 +1470,10 @@ def configure(
         console.print("  BRISTLENOSE_AZURE_DEPLOYMENT=your-deployment-name")
 
     console.print()
-    console.print("You can now run: [bold]bristlenose run ./interviews[/bold]")
+    if canonical == "miro":
+        console.print("You can now export to Miro from: [bold]bristlenose serve[/bold]")
+    else:
+        console.print("You can now run: [bold]bristlenose run ./interviews[/bold]")
 
 
 @app.command()

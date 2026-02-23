@@ -230,7 +230,7 @@ def import_project(db: Session, project_dir: Path) -> Project:
     _import_transcript_segments(db, session_map, transcripts_dir)
 
     # --- Import persons + session_speakers from transcript segments ------
-    _import_speakers(db, session_map, transcripts_dir)
+    _import_speakers(db, session_map, transcripts_dir, output_dir)
 
     # --- Import quotes, clusters, themes ---------------------------------
     quote_map = _import_quotes_from_clusters(
@@ -421,17 +421,61 @@ def _import_transcript_segments(
             db.add(seg)
 
 
+def _load_people_for_import(output_dir: Path) -> dict[str, dict[str, str]] | None:
+    """Load ``people.yaml`` and return a flat mapping for the importer.
+
+    Returns ``{speaker_code: {full_name, short_name, role, persona, notes}}``
+    or ``None`` if no file exists.
+    """
+    people_path = output_dir / "people.yaml"
+    if not people_path.exists():
+        return None
+    try:
+        import yaml
+
+        raw = yaml.safe_load(people_path.read_text(encoding="utf-8"))
+        if not raw or "participants" not in raw:
+            return None
+        result: dict[str, dict[str, str]] = {}
+        for pid, entry in raw["participants"].items():
+            ed = entry.get("editable", {})
+            result[pid] = {
+                "full_name": ed.get("full_name", ""),
+                "short_name": ed.get("short_name", ""),
+                "role": ed.get("role", ""),
+                "persona": ed.get("persona", ""),
+                "notes": ed.get("notes", ""),
+            }
+        return result
+    except Exception:
+        logger.warning("Could not load people.yaml for import", exc_info=True)
+        return None
+
+
 def _import_speakers(
     db: Session,
     session_map: dict[str, SessionModel],
     transcripts_dir: Path,
+    output_dir: Path,
 ) -> None:
     """Import speakers from transcript segments.
 
-    Creates Person rows and SessionSpeaker join rows.
+    Creates Person rows and SessionSpeaker join rows.  When a
+    ``people.yaml`` exists in the output directory, populates
+    Person fields (full_name, short_name, role_title, persona, notes)
+    from the human-editable entries — so serve mode shows the same
+    names as the pipeline/HTML report.
+
+    On re-import, existing speakers are not duplicated, but their
+    Person rows are updated from ``people.yaml`` if the YAML has data
+    and the Person row is still empty (pipeline names fill empty fields
+    only — never overwrite researcher edits made via the UI).
     """
     if not transcripts_dir.is_dir():
         return
+
+    # Load people.yaml once for all sessions.
+    people = _load_people_for_import(output_dir)
 
     for txt_file in sorted(transcripts_dir.glob("*.txt")):
         sid = txt_file.stem
@@ -439,11 +483,15 @@ def _import_speakers(
         if not sess:
             continue
 
-        # Skip if speakers already imported
-        existing_count = (
-            db.query(SessionSpeaker).filter_by(session_id=sess.id).count()
+        # Check if speakers already imported
+        existing_speakers = (
+            db.query(SessionSpeaker).filter_by(session_id=sess.id).all()
         )
-        if existing_count > 0:
+        if existing_speakers:
+            # Speakers exist — update Person rows from people.yaml
+            # (fill empty fields only, never overwrite).
+            if people:
+                _update_persons_from_people(db, existing_speakers, people)
             continue
 
         content = txt_file.read_text(encoding="utf-8")
@@ -464,8 +512,26 @@ def _import_speakers(
             else:
                 role = "participant"
 
-            # Create a Person row for each speaker
-            person = Person(full_name="", short_name="")
+            # Populate from people.yaml if available
+            full_name = ""
+            short_name = ""
+            role_title = ""
+            persona = ""
+            notes = ""
+            if people and code in people:
+                full_name = people[code].get("full_name", "")
+                short_name = people[code].get("short_name", "")
+                role_title = people[code].get("role", "")
+                persona = people[code].get("persona", "")
+                notes = people[code].get("notes", "")
+
+            person = Person(
+                full_name=full_name,
+                short_name=short_name,
+                role_title=role_title,
+                persona=persona,
+                notes=notes,
+            )
             db.add(person)
             db.flush()
 
@@ -476,6 +542,35 @@ def _import_speakers(
                 speaker_role=role,
             )
             db.add(sp)
+
+
+def _update_persons_from_people(
+    db: Session,
+    speakers: list[SessionSpeaker],
+    people: dict[str, dict[str, str]],
+) -> None:
+    """Update existing Person rows from ``people.yaml`` (fill empty only).
+
+    Never overwrites non-empty fields — researcher edits made via the
+    browser UI take priority over pipeline-generated names.
+    """
+    for sp in speakers:
+        yaml_data = people.get(sp.speaker_code)
+        if not yaml_data:
+            continue
+        person = db.get(Person, sp.person_id)
+        if not person:
+            continue
+        if not person.full_name and yaml_data.get("full_name"):
+            person.full_name = yaml_data["full_name"]
+        if not person.short_name and yaml_data.get("short_name"):
+            person.short_name = yaml_data["short_name"]
+        if not person.role_title and yaml_data.get("role"):
+            person.role_title = yaml_data["role"]
+        if not person.persona and yaml_data.get("persona"):
+            person.persona = yaml_data["persona"]
+        if not person.notes and yaml_data.get("notes"):
+            person.notes = yaml_data["notes"]
 
 
 def _get_or_create_quote(

@@ -153,6 +153,85 @@ def _get_or_create_uncategorised(db: Session) -> CodebookGroup:
     return group
 
 
+def _write_through_people_yaml(
+    output_dir_str: str,
+    edits: dict[str, PersonData],
+) -> None:
+    """Write name edits back to ``people.yaml`` (best-effort).
+
+    Loads the existing file, updates only the editable fields that were
+    changed, and writes atomically (temp file + rename).  If the file
+    doesn't exist or the write fails, logs a warning but doesn't raise —
+    the DB write already succeeded, so the UI update is not lost.
+    """
+    import logging
+    import tempfile
+    from pathlib import Path
+
+    import yaml
+
+    logger = logging.getLogger(__name__)
+    output_dir = Path(output_dir_str)
+    people_path = output_dir / "people.yaml"
+    if not people_path.exists():
+        return
+
+    try:
+        raw = yaml.safe_load(people_path.read_text(encoding="utf-8"))
+        if not raw or "participants" not in raw:
+            return
+
+        changed = False
+        for speaker_code, person_data in edits.items():
+            entry = raw["participants"].get(speaker_code)
+            if not entry:
+                continue
+            ed = entry.setdefault("editable", {})
+            if (
+                ed.get("full_name", "") != person_data.full_name
+                or ed.get("short_name", "") != person_data.short_name
+                or ed.get("role", "") != person_data.role
+            ):
+                ed["full_name"] = person_data.full_name
+                ed["short_name"] = person_data.short_name
+                ed["role"] = person_data.role
+                changed = True
+
+        if not changed:
+            return
+
+        # Preserve the header comment from the original file.
+        original_text = people_path.read_text(encoding="utf-8")
+        header_lines: list[str] = []
+        for line in original_text.splitlines(keepends=True):
+            if line.startswith("#") or line.strip() == "":
+                header_lines.append(line)
+            else:
+                break
+        header = "".join(header_lines)
+
+        yaml_content = yaml.dump(
+            raw,
+            default_flow_style=False,
+            sort_keys=False,
+            allow_unicode=True,
+        )
+
+        # Atomic write: temp file + rename.
+        fd, tmp_path = tempfile.mkstemp(
+            dir=str(output_dir), prefix=".people-", suffix=".yaml",
+        )
+        try:
+            with open(fd, "w", encoding="utf-8") as f:
+                f.write(header + yaml_content)
+            Path(tmp_path).replace(people_path)
+        except Exception:
+            Path(tmp_path).unlink(missing_ok=True)
+            raise
+    except Exception:
+        logger.warning("Could not write-through to people.yaml", exc_info=True)
+
+
 # ---------------------------------------------------------------------------
 # People (names.js)
 # ---------------------------------------------------------------------------
@@ -192,10 +271,14 @@ def put_people(
     request: Request,
     data: dict[str, PersonData],
 ) -> dict[str, str]:
-    """Write people edits (speaker_code -> name/role)."""
+    """Write people edits (speaker_code -> name/role).
+
+    Updates both the DB (immediate, for UI responsiveness) and
+    ``people.yaml`` (write-through, so pipeline re-runs see edits).
+    """
     db = _get_db(request)
     try:
-        _check_project(db, project_id)
+        project = _check_project(db, project_id)
         session_ids = _session_ids_for_project(db, project_id)
         for speaker_code, person_data in data.items():
             sp = (
@@ -215,6 +298,10 @@ def put_people(
             person.short_name = person_data.short_name
             person.role_title = person_data.role
         db.commit()
+
+        # Write-through: update people.yaml so pipeline re-runs see edits.
+        _write_through_people_yaml(project.output_dir, data)
+
         return {"status": "ok"}
     finally:
         db.close()

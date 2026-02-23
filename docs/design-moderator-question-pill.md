@@ -113,3 +113,6 @@ These decisions were reached through iterative design review on the rendered moc
 7. **Badge not italic.** First attempt had `font-style: italic` on `.moderator-question` — made the PersonBadge italic too. Fix: move italic to `.moderator-question-text` only
 8. **Dismiss via × on badge, not click-pill-again.** Reuses the `.badge-delete` pattern from tag badges — familiar affordance, no teaching needed
 9. **`more…` not `...more`.** Real ellipsis character (U+2026) after the word, not ASCII dots before it
+10. **Hover zone extends above quote text.** First attempt had `top: 0; height: 1.6em` — mouse left the zone before reaching the pill (1rem gap). Fix: extend zone upward to `top: calc(-1.1rem - 1px - 4px)` covering the pill position. Pill at `z-index: 2` stays clickable on top of zone at `z-index: 1`
+11. **Pill hover keeps it alive.** Belt-and-suspenders: `onMouseEnter`/`onMouseLeave` on the pill itself set `pillVisibleFor` immediately (no 300ms delay) so hovering the pill keeps it visible
+12. **Pill hidden when question expanded.** First attempt kept the pill visible with an `.active` class — clashed visually with the moderator question row above. Fix: remove pill from DOM entirely when `isQuestionOpen` is true; dismiss × on the badge handles closing

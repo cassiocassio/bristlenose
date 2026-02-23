@@ -283,6 +283,9 @@ export function getTagAnalysis(groups?: string): Promise<TagAnalysisResponse> {
   return apiGet<TagAnalysisResponse>(`/analysis/tags${qs}`);
 }
 
-export function getCodebookAnalysis(): Promise<CodebookAnalysisListResponse> {
-  return apiGet<CodebookAnalysisListResponse>("/analysis/codebooks");
+export function getCodebookAnalysis(
+  elaborate?: boolean,
+): Promise<CodebookAnalysisListResponse> {
+  const qs = elaborate ? "?elaborate=true" : "";
+  return apiGet<CodebookAnalysisListResponse>(`/analysis/codebooks${qs}`);
 }

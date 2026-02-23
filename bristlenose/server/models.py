@@ -483,6 +483,33 @@ class DismissedSignal(Base):
     )
 
 
+class ElaborationCache(Base):
+    """Cached LLM-generated signal elaboration.
+
+    Keyed by (project_id, signal_key) where signal_key encodes
+    source_type, location, and group_name.  content_hash is a SHA-256
+    of the signal's quote texts and tag names — when the underlying
+    data changes the hash changes and a new elaboration is generated.
+    """
+
+    __tablename__ = "elaboration_caches"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    project_id: Mapped[int] = mapped_column(Integer, index=True)
+    signal_key: Mapped[str] = mapped_column(String(500))
+    content_hash: Mapped[str] = mapped_column(String(64))
+    signal_name: Mapped[str] = mapped_column(String(200))
+    pattern: Mapped[str] = mapped_column(String(20))
+    elaboration: Mapped[str] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(default=func.now())
+
+    __table_args__ = (
+        UniqueConstraint(
+            "project_id", "signal_key", name="uq_elaboration_project_signal"
+        ),
+    )
+
+
 class ImportConflict(Base):
     """Pipeline wanted to change something the researcher touched.
 

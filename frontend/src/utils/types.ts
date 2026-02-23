@@ -345,6 +345,9 @@ export interface TagSignal {
   composite_signal: number;
   confidence: "strong" | "moderate" | "emerging";
   quotes: TagSignalQuote[];
+  signal_name?: string | null;
+  pattern?: string | null;
+  elaboration?: string | null;
 }
 
 export interface AnalysisMatrixCell {

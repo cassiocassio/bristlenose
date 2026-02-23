@@ -570,6 +570,18 @@ export function QuoteGroup({
     }
   }, []);
 
+  const handlePillHoverEnter = useCallback((domId: string) => {
+    // Pill is already visible — keep it alive immediately (no 300ms delay).
+    if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current);
+    setPillVisibleFor(domId);
+  }, []);
+
+  const handlePillHoverLeave = useCallback((domId: string) => {
+    if (!openQuestionsRef.current.has(domId)) {
+      setPillVisibleFor((prev) => (prev === domId ? null : prev));
+    }
+  }, []);
+
   const handleToggleQuestion = useCallback((domId: string) => {
     setOpenQuestions((prev) => {
       const next = new Set(prev);
@@ -751,6 +763,8 @@ export function QuoteGroup({
               onToggleQuestion={handleToggleQuestion}
               onQuoteHoverEnter={handleQuoteHoverEnter}
               onQuoteHoverLeave={handleQuoteHoverLeave}
+              onPillHoverEnter={handlePillHoverEnter}
+              onPillHoverLeave={handlePillHoverLeave}
             />
           );
         })}

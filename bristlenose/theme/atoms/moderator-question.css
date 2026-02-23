@@ -6,10 +6,10 @@
 .quote-body { position: relative; }
 .quote-hover-zone {
     position: absolute;
-    top: 0;
+    top: calc(-1.1rem - 1px - 4px);
     left: 0;
     width: 14em;
-    height: 1.6em;
+    height: calc(1.6em + 1.1rem + 1px + 4px);
     cursor: help;
     z-index: 1;
 }
@@ -57,7 +57,7 @@
 
 /* Moderator question row — sits above the quote's .quote-row, uses the same
    flex layout with a hidden timecode spacer so text aligns with the quote body. */
-.moderator-question-row { margin-bottom: 0; }
+.moderator-question-row { margin-bottom: 0.25rem; }
 
 /* Expanded moderator question block — block layout so long text wraps to the
    left margin, not indented past the badge. flex: 1 fills the quote-row. */

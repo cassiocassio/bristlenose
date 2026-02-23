@@ -96,6 +96,8 @@ interface QuoteCardProps {
   onToggleQuestion: (domId: string) => void;
   onQuoteHoverEnter: (domId: string) => void;
   onQuoteHoverLeave: (domId: string) => void;
+  onPillHoverEnter: (domId: string) => void;
+  onPillHoverLeave: (domId: string) => void;
 }
 
 export function QuoteCard({
@@ -126,6 +128,8 @@ export function QuoteCard({
   onToggleQuestion,
   onQuoteHoverEnter,
   onQuoteHoverLeave,
+  onPillHoverEnter,
+  onPillHoverLeave,
 }: QuoteCardProps) {
   const [isEditingText, setIsEditingText] = useState(false);
   const [isTagInputOpen, setIsTagInputOpen] = useState(false);
@@ -255,10 +259,12 @@ export function QuoteCard({
           <span className="timecode">[{timecodeStr}]</span>
         )}
         <div className="quote-body">
-          {hasModeratorContext && (
+          {hasModeratorContext && !isQuestionOpen && (
             <button
-              className={`moderator-pill${isPillVisible || isQuestionOpen ? " visible" : ""}${isQuestionOpen ? " moderator-pill-active" : ""}`}
+              className={`moderator-pill${isPillVisible ? " visible" : ""}`}
               onClick={() => onToggleQuestion(domId)}
+              onMouseEnter={() => onPillHoverEnter(domId)}
+              onMouseLeave={() => onPillHoverLeave(domId)}
               aria-label="Show moderator question"
               data-testid={`bn-quote-${domId}-mod-q`}
             >

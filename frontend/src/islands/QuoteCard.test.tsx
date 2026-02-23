@@ -77,6 +77,8 @@ function renderCard(
       onToggleQuestion={extra.onToggleQuestion ?? NOOP}
       onQuoteHoverEnter={NOOP}
       onQuoteHoverLeave={NOOP}
+      onPillHoverEnter={NOOP}
+      onPillHoverLeave={NOOP}
     />,
   );
 }
@@ -110,13 +112,12 @@ describe("QuoteCard — moderator question", () => {
     expect(pill.className).not.toContain("visible");
   });
 
-  it("pill has active class when isQuestionOpen is true", () => {
+  it("pill is hidden when isQuestionOpen is true", () => {
     renderCard(
       { segment_index: 3 },
       { isPillVisible: true, isQuestionOpen: true, moderatorQuestion: MOD_QUESTION },
     );
-    const pill = screen.getByTestId("bn-quote-q-p1-26-mod-q");
-    expect(pill.className).toContain("moderator-pill-active");
+    expect(screen.queryByTestId("bn-quote-q-p1-26-mod-q")).toBeNull();
   });
 
   it("clicking pill calls onToggleQuestion", async () => {

@@ -17,6 +17,7 @@ Each active feature branch gets its own **git worktree** — a full working copy
 | `bristlenose/` | `main` | Main repo, releases, hotfixes |
 | `bristlenose_branch symbology/` | `symbology` | § ¶ ❋ Unicode prefix symbols for sections, quotes, themes |
 | `bristlenose_branch highlighter/` | `highlighter` | Highlighter feature |
+| `bristlenose_branch context-expansion/` | `context-expansion` | Quote context expansion on quotes page |
 
 **Creating a new feature branch worktree:**
 
@@ -96,6 +97,7 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 | `main` | `bristlenose/` | `origin/main` (push via `origin/main:wip` until release time) |
 | `symbology` | `bristlenose_branch symbology/` | `origin/symbology` |
 | `highlighter` | `bristlenose_branch highlighter/` | `origin/highlighter` |
+| `context-expansion` | `bristlenose_branch context-expansion/` | `origin/context-expansion` |
 
 ---
 
@@ -127,6 +129,27 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 - `bristlenose/theme/js/analysis.js` — signal cards, heatmap headers
 - `bristlenose/theme/js/transcript-annotations.js` — margin label tooltips
 - `bristlenose/theme/js/codebook.js` — quote count tooltips
+
+### `context-expansion` — started 23 Feb 2026
+
+**Worktree:** `/Users/cassio/Code/bristlenose_branch context-expansion`
+
+**Goal:** Quote context expansion — hover over a quote's timecode on the quotes page to see chevron arrows, click to reveal surrounding transcript segments inline. Progressive disclosure of conversational context without leaving the quotes tab.
+
+**Background:** Prototyped on analysis page signal cards first, but user testing showed the quotes page is the better home (researchers spend more time there). Signal card prototype reverted from main; code preserved in `useTranscriptCache` hook and feature branch history.
+
+**Files likely to touch:**
+- `frontend/src/islands/QuoteCard.tsx` — add optional expansion props, wrap timecode
+- `frontend/src/islands/QuoteGroup.tsx` — expansion state, context segment rendering
+- `frontend/src/islands/QuoteSections.tsx` — pass transcript cache
+- `frontend/src/islands/QuoteThemes.tsx` — pass transcript cache
+- `frontend/src/components/ContextSegment.tsx` — new shared component
+- `frontend/src/components/ExpandableTimecode.tsx` — new shared component
+- `frontend/src/hooks/useTranscriptCache.ts` — already exists on main
+- `bristlenose/theme/atoms/context-expansion.css` — new CSS atom
+- `bristlenose/stages/render_html.py` — add CSS to theme files list
+
+---
 
 ## Completed Branches (for reference)
 

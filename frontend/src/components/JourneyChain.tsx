@@ -11,6 +11,11 @@ interface JourneyChainProps {
   onLabelClick?: (label: string) => void;
   /** Enable horizontal scroll with hidden scrollbar and edge fade masks. */
   stickyOverflow?: boolean;
+  /** Index-based active tracking — takes precedence over activeLabel.
+   *  Use when labels contain duplicates (e.g. revisited sections). */
+  activeIndex?: number | null;
+  /** Index-based click handler — takes precedence over onLabelClick. */
+  onIndexClick?: (index: number) => void;
 }
 
 export function JourneyChain({
@@ -21,15 +26,17 @@ export function JourneyChain({
   activeLabel,
   onLabelClick,
   stickyOverflow,
+  activeIndex,
+  onIndexClick,
 }: JourneyChainProps) {
   if (labels.length === 0) return null;
 
   const scrollRef = useRef<HTMLDivElement | null>(null);
-  const labelRefs = useRef<Map<string, HTMLElement>>(new Map());
+  const labelRefs = useRef<Map<number, HTMLElement>>(new Map());
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(false);
 
-  const isInteractive = !!onLabelClick;
+  const isInteractive = !!(onLabelClick || onIndexClick);
 
   // Track overflow state for fade masks
   const updateOverflow = useCallback(() => {
@@ -61,12 +68,16 @@ export function JourneyChain({
 
   // Auto-scroll active label into view
   useEffect(() => {
-    if (!stickyOverflow || !activeLabel) return;
-    const labelEl = labelRefs.current.get(activeLabel);
+    if (!stickyOverflow) return;
+    const resolvedIndex = activeIndex ?? (activeLabel != null
+      ? labels.indexOf(activeLabel)
+      : null);
+    if (resolvedIndex == null || resolvedIndex < 0) return;
+    const labelEl = labelRefs.current.get(resolvedIndex);
     if (labelEl) {
       labelEl.scrollIntoView({ inline: "center", behavior: "smooth", block: "nearest" });
     }
-  }, [activeLabel, stickyOverflow]);
+  }, [activeIndex, activeLabel, stickyOverflow, labels]);
 
   // Build container classes
   const containerClasses = [
@@ -80,11 +91,11 @@ export function JourneyChain({
     .filter(Boolean)
     .join(" ");
 
-  const setLabelRef = (label: string, el: HTMLElement | null) => {
+  const setLabelRef = (index: number, el: HTMLElement | null) => {
     if (el) {
-      labelRefs.current.set(label, el);
+      labelRefs.current.set(index, el);
     } else {
-      labelRefs.current.delete(label);
+      labelRefs.current.delete(index);
     }
   };
 
@@ -95,7 +106,9 @@ export function JourneyChain({
       ref={stickyOverflow ? scrollRef : undefined}
     >
       {labels.map((label, i) => {
-        const isActive = activeLabel === label;
+        const isActive = activeIndex != null
+          ? i === activeIndex
+          : activeLabel === label;
         const labelClasses = [
           "bn-journey-label",
           isInteractive && "bn-journey-label--interactive",
@@ -115,8 +128,14 @@ export function JourneyChain({
               <button
                 type="button"
                 className={labelClasses}
-                onClick={() => onLabelClick!(label)}
-                ref={(el) => setLabelRef(label, el)}
+                onClick={() => {
+                  if (onIndexClick) {
+                    onIndexClick(i);
+                  } else {
+                    onLabelClick!(label);
+                  }
+                }}
+                ref={(el) => setLabelRef(i, el)}
                 aria-current={isActive ? "step" : undefined}
                 data-testid={testId ? `${testId}-label-${i}` : undefined}
               >
@@ -125,7 +144,7 @@ export function JourneyChain({
             ) : (
               <span
                 className={labelClasses}
-                ref={(el) => setLabelRef(label, el)}
+                ref={(el) => setLabelRef(i, el)}
                 data-testid={testId ? `${testId}-label-${i}` : undefined}
               >
                 {label}

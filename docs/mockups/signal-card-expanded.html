@@ -1,0 +1,1132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Signal Card — Expanded View (Design Spec)</title>
+<style>
+/* ================================================================
+   SIGNAL CARD — EXPANDED VIEW (DESIGN SPEC)
+   ================================================================
+   Production-accurate mockup using the exact design system tokens,
+   class names, and HTML structure from the Bristlenose codebase.
+
+   CSS sourced from:
+     - bristlenose/theme/tokens.css (design tokens)
+     - bristlenose/theme/atoms/badge.css (.badge, variants)
+     - bristlenose/theme/organisms/analysis.css (signal cards)
+     - bristlenose/theme/organisms/blockquote.css (quotes)
+     - bristlenose/theme/molecules/sparkline.css (bar chart)
+     - bristlenose/theme/templates/report.css (page layout)
+
+   New classes for signal elaboration (to be added to analysis.css):
+     - .signal-card-right (replaces .signal-card-metrics for richer layout)
+     - .signal-card-badges (group + pattern badge row)
+     - .signal-rank (counter "#2")
+     - .signal-sparkbars / .signal-sparkbar (chart inside metric-viz cell)
+     - .signal-elaboration (one-sentence finding)
+     - .pattern-label / .pattern-{type} (pattern badge)
+   ================================================================ */
+
+/* ── EXACT COPY: tokens.css (light mode root) ──────────────────── */
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html { font-size: 16px; -webkit-font-smoothing: antialiased; }
+
+:root {
+    --bn-font-body: "Inter", "Segoe UI Variable", "Segoe UI", system-ui, -apple-system, sans-serif;
+    --bn-font-mono: "SF Mono", "Fira Code", "Consolas", monospace;
+
+    --bn-weight-normal: 420;
+    --bn-weight-emphasis: 490;
+    --bn-weight-starred: 520;
+    --bn-weight-strong: 700;
+
+    --bn-colour-bg: #ffffff;
+    --bn-colour-text: #1a1a1a;
+    --bn-colour-muted: #6b7280;
+    --bn-colour-border: #e5e7eb;
+    --bn-colour-accent: #2563eb;
+    --bn-colour-hover: #e8f0fe;
+
+    --bn-colour-quote-bg: #f9fafb;
+    --bn-colour-badge-bg: #f3f4f6;
+    --bn-colour-badge-text: #374151;
+    --bn-colour-user-tag-bg: #f3f4f6;
+    --bn-colour-shadow: rgba(0, 0, 0, 0.1);
+
+    --bn-space-xs: 0.15rem;
+    --bn-space-sm: 0.35rem;
+    --bn-space-md: 0.75rem;
+    --bn-space-lg: 1.5rem;
+    --bn-space-xl: 2rem;
+
+    --bn-radius-sm: 3px;
+    --bn-radius-md: 6px;
+    --bn-radius-lg: 8px;
+
+    --bn-max-width: 52rem;
+
+    --bn-span-bar-width: 2px;
+    --bn-span-bar-radius: 1px;
+
+    --bn-transition-fast: 0.15s ease;
+    --bn-transition-normal: 0.2s ease;
+
+    /* Codebook group background tints */
+    --bn-group-ux:    oklch(97% 0.015 250);
+    --bn-group-emo:   oklch(97% 0.015 10);
+
+    /* Codebook tag colours */
+    --bn-ux-1-bg: oklch(94% 0.03 225);
+    --bn-emo-1-bg: oklch(94% 0.03 340);
+}
+
+/* ── EXACT COPY: dark mode override ────────────────────────────── */
+
+@supports (color: light-dark(#000, #fff)) {
+    :root {
+        color-scheme: light dark;
+
+        --bn-colour-bg:           light-dark(#ffffff, #111111);
+        --bn-colour-text:         light-dark(#1a1a1a, #e5e7eb);
+        --bn-colour-muted:        light-dark(#6b7280, #9ca3af);
+        --bn-colour-border:       light-dark(#e5e7eb, #2d2d2d);
+        --bn-colour-accent:       light-dark(#2563eb, #60a5fa);
+        --bn-colour-hover:        light-dark(#e8f0fe, #1e293b);
+        --bn-colour-quote-bg:     light-dark(#f9fafb, #1a1a1a);
+        --bn-colour-badge-bg:     light-dark(#f3f4f6, #252525);
+        --bn-colour-badge-text:   light-dark(#374151, #d1d5db);
+        --bn-colour-shadow:       light-dark(rgba(0,0,0,0.1), rgba(0,0,0,0.4));
+
+        --bn-group-ux:    light-dark(oklch(97% 0.015 250), oklch(22% 0.025 250));
+        --bn-group-emo:   light-dark(oklch(97% 0.015 10),  oklch(22% 0.025 10));
+        --bn-ux-1-bg:     light-dark(oklch(94% 0.03 225),  oklch(50% 0.12 225));
+        --bn-emo-1-bg:    light-dark(oklch(94% 0.03 340),  oklch(50% 0.12 340));
+    }
+
+    [data-theme="light"]:root { color-scheme: light; }
+    [data-theme="dark"]:root  { color-scheme: dark; }
+}
+
+/* ── EXACT COPY: templates/report.css (page layout) ────────────── */
+
+body {
+    font-family: var(--bn-font-body);
+    color: var(--bn-colour-text);
+    background: var(--bn-colour-bg);
+    line-height: 1.6;
+    margin: 0;
+    padding: var(--bn-space-xl) var(--bn-space-lg);
+}
+
+article {
+    max-width: var(--bn-max-width);
+    margin: 0 auto;
+}
+
+h1 {
+    font-size: 1.75rem;
+    font-weight: var(--bn-weight-strong);
+    margin: 0 0 0.5rem;
+    letter-spacing: -0.01em;
+}
+
+hr {
+    border: none;
+    border-top: 1px solid var(--bn-colour-border);
+    margin: var(--bn-space-xl) 0;
+}
+
+.description {
+    color: var(--bn-colour-muted);
+    margin-bottom: 1rem;
+}
+
+/* ── Theme toggle (mockup utility) ─────────────────────────────── */
+
+.theme-toggle {
+    position: fixed;
+    top: 1rem;
+    right: 1rem;
+    background: var(--bn-colour-quote-bg);
+    border: 1px solid var(--bn-colour-border);
+    border-radius: var(--bn-radius-md);
+    padding: 0.4rem 0.8rem;
+    font-size: 0.8rem;
+    cursor: pointer;
+    color: var(--bn-colour-muted);
+    z-index: 100;
+}
+
+.theme-toggle:hover { border-color: var(--bn-colour-accent); }
+
+/* ── EXACT COPY: atoms/badge.css (.badge base) ─────────────────── */
+
+.badge {
+    display: inline-block;
+    font-family: var(--bn-font-mono);
+    font-size: 0.72rem;
+    padding: var(--bn-space-xs) 0.45rem;
+    border-radius: var(--bn-radius-sm);
+    background: var(--bn-colour-badge-bg);
+    color: var(--bn-colour-badge-text);
+}
+
+.badge-user {
+    background: var(--bn-colour-user-tag-bg);
+    color: var(--bn-colour-text);
+    font-weight: var(--bn-weight-normal);
+}
+
+/* ── EXACT COPY: organisms/analysis.css (signal cards) ─────────── */
+
+.signal-cards {
+    display: flex;
+    flex-direction: column;
+    gap: var(--bn-space-md);
+}
+
+.signal-card {
+    border: 1px solid var(--bn-colour-border);
+    border-radius: var(--bn-radius-sm);
+    padding: var(--bn-space-lg);
+    background: var(--bn-colour-bg);
+    transition: box-shadow var(--bn-transition-fast);
+    position: relative;
+}
+
+.signal-card:hover {
+    box-shadow: 0 2px 8px var(--bn-colour-shadow);
+}
+
+.signal-card-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: var(--bn-space-lg);
+    margin-bottom: var(--bn-space-sm);
+}
+
+.signal-card-identity {
+    flex: 1;
+    min-width: 0;
+}
+
+.signal-card-source {
+    display: block;
+    font-size: 0.7rem;
+    font-weight: var(--bn-weight-normal);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--bn-colour-muted);
+    margin-bottom: 0.1rem;
+}
+
+.signal-card-location {
+    font-size: 1.05rem;
+    font-weight: var(--bn-weight-emphasis);
+    margin-bottom: var(--bn-space-sm);
+}
+
+.signal-card-location-link {
+    color: inherit;
+    text-decoration: none;
+    transition: color var(--bn-transition-fast);
+}
+
+.signal-card-location-link:hover {
+    color: var(--bn-colour-accent);
+}
+
+/* Metrics grid (label | value | viz) */
+.signal-card-metrics {
+    flex-shrink: 0;
+    display: grid;
+    grid-template-columns: auto auto auto;
+    gap: 0.2rem 0.6rem;
+    align-items: center;
+    font-size: 0.8rem;
+    white-space: nowrap;
+}
+
+.metric-label {
+    color: var(--bn-colour-muted);
+    text-align: right;
+    cursor: help;
+}
+
+.metric-value {
+    font-family: var(--bn-font-mono);
+    font-size: 0.8rem;
+    color: var(--bn-colour-text);
+    text-align: right;
+}
+
+.metric-viz {
+    display: flex;
+    align-items: flex-end;
+}
+
+.conc-bar-track {
+    display: block;
+    width: 96px;
+    height: 6px;
+    background: var(--bn-colour-border);
+    border-radius: var(--bn-radius-sm);
+    overflow: hidden;
+}
+
+.conc-bar-fill {
+    display: block;
+    height: 100%;
+    border-radius: var(--bn-radius-sm);
+    background: var(--bn-colour-text);
+    opacity: 0.45;
+    transition: width 0.3s ease;
+}
+
+.intensity-dots-svg {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    width: 46px;
+}
+
+/* Quote list inside signal card */
+.signal-card-quotes {
+    background: var(--bn-colour-quote-bg);
+    border-radius: var(--bn-radius-md);
+    margin: var(--bn-space-md) 0;
+    padding: var(--bn-space-sm) 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    overflow: hidden;
+}
+
+.signal-card-quotes blockquote {
+    margin: 0 var(--bn-space-md);
+}
+
+.signal-card-quotes blockquote .intensity-dots {
+    flex-shrink: 0;
+    width: 46px;
+    align-self: center;
+    cursor: help;
+    margin-right: 22px;
+    --dot-colour: var(--bn-colour-muted);
+}
+
+.signal-card-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.8rem;
+    color: var(--bn-colour-muted);
+}
+
+.signal-card-link {
+    color: var(--bn-colour-accent);
+    text-decoration: none;
+    font-weight: var(--bn-weight-normal);
+}
+
+.signal-card-link:hover { text-decoration: underline; }
+
+/* Signal group badge override */
+.signal-group-badge {
+    font-weight: var(--bn-weight-emphasis);
+}
+
+/* Signal quote tag */
+.signal-quote-tag {
+    margin-left: 0.4rem;
+    font-size: 0.72rem;
+    vertical-align: middle;
+}
+
+/* Participant grid */
+.participant-grid {
+    display: flex;
+    gap: 3px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.participant-grid .participant-count {
+    font-size: 0.72rem;
+    color: var(--bn-colour-muted);
+    margin-right: 0.2rem;
+    white-space: nowrap;
+}
+
+.participant-grid .p-box {
+    display: inline-block;
+    font-family: var(--bn-font-mono);
+    font-size: 0.72rem;
+    padding: var(--bn-space-xs) 0.45rem;
+    border-radius: var(--bn-radius-sm);
+    line-height: 1;
+    background: var(--bn-colour-border);
+    color: var(--bn-colour-muted);
+    opacity: 0.6;
+}
+
+.participant-grid .p-box.p-present {
+    background: color-mix(in srgb, var(--card-accent, var(--bn-colour-muted)) 12%, var(--bn-colour-bg));
+    color: var(--card-accent, var(--bn-colour-muted));
+    opacity: 1;
+}
+
+/* ── EXACT COPY: organisms/blockquote.css (quote layout) ───────── */
+
+blockquote {
+    margin: 0;
+    padding: var(--bn-space-sm) 1rem;
+}
+
+blockquote .quote-row {
+    display: flex;
+    gap: 0.5rem;
+    align-items: baseline;
+}
+
+blockquote .quote-row .timecode {
+    flex-shrink: 0;
+}
+
+blockquote .quote-body {
+    flex: 1;
+    min-width: 0;
+}
+
+blockquote .timecode {
+    color: var(--bn-colour-accent);
+    font-family: var(--bn-font-mono);
+    font-size: 0.8rem;
+    text-decoration: none;
+}
+
+blockquote .speaker {
+    color: var(--bn-colour-muted);
+    font-size: 0.9rem;
+}
+
+/* ── EXACT COPY: molecules/sparkline.css ───────────────────────── */
+
+.bn-sparkline {
+    display: inline-flex;
+    align-items: flex-end;
+    height: 54px;
+}
+
+.bn-sparkline-bar {
+    width: 5px;
+    border-radius: 1px 1px 0 0;
+}
+
+/* ================================================================
+   NEW CLASSES FOR SIGNAL ELABORATION
+   (To be added to organisms/analysis.css when implemented)
+   ================================================================ */
+
+/* Right-side column: badges, rank, sparkbars, metrics.
+   Replaces the flat .signal-card-metrics when elaboration is present. */
+.signal-card-right {
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: var(--bn-space-sm);
+}
+
+/* Badge row: group name + pattern type */
+.signal-card-badges {
+    display: flex;
+    gap: 0.35rem;
+    align-items: center;
+}
+
+/* Pattern badge — coloured allcaps label.
+   Same box height as .badge (matching padding + explicit line-height).
+   Opacity 0.9 knocks text back 10% — heavy weight + allcaps reads
+   darker than it is, so pulling back keeps visual weight balanced. */
+.pattern-label {
+    display: inline-block;
+    font-family: var(--bn-font-mono);
+    font-size: 0.72rem;                 /* same as .badge — allcaps reads smaller */
+    font-weight: var(--bn-weight-starred);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    padding: var(--bn-space-xs) 0.45rem;
+    border-radius: var(--bn-radius-sm);
+    opacity: 0.9;
+}
+
+.pattern-success  { background: light-dark(#dcfce7, #14532d); color: light-dark(#166534, #86efac); }
+.pattern-tension  { background: light-dark(#fef3c7, #451a03); color: light-dark(#92400e, #fcd34d); }
+.pattern-gap      { background: light-dark(#fee2e2, #450a0a); color: light-dark(#991b1b, #fca5a5); }
+.pattern-recovery { background: light-dark(#e0f2fe, #0c4a6e); color: light-dark(#075985, #7dd3fc); }
+
+/* Signal rank counter: "#2" */
+.signal-rank {
+    font-family: var(--bn-font-mono);
+    font-size: 1.15rem;
+    font-weight: var(--bn-weight-emphasis);
+    color: var(--bn-colour-muted);
+    line-height: 1;
+}
+
+/* Mini sparkbar chart — inline in the Signal metric row.
+   Width matches conc-bar-track (96px). Bar count = signal card count.
+   Current card's bar uses var(--card-accent); all others grey.
+   For 7 bars: (96 - 6×2) / 7 = 12px per bar. */
+.signal-sparkbars {
+    display: inline-flex;
+    align-items: flex-end;
+    gap: 2px;
+    height: 28px;
+    width: 96px;
+}
+
+.signal-sparkbar {
+    width: 12px;            /* (96 - (N-1)*2) / N — hardcoded for N=7 */
+    border-radius: 1px 1px 0 0;
+    min-height: 2px;
+}
+
+/* Signal elaboration — one-sentence finding below the signal name.
+   Step 5 structure: <strong> wraps the core assertion (first clause),
+   ending at the first natural break (em dash, comma before dependent
+   clause, or parenthetical). Regular weight for evidence/nuance after. */
+.signal-elaboration {
+    font-size: 0.88rem;
+    color: var(--bn-colour-text);
+    line-height: 1.55;
+    margin-bottom: var(--bn-space-sm);
+    font-weight: var(--bn-weight-normal);
+}
+
+.signal-elaboration strong {
+    font-weight: var(--bn-weight-starred);
+}
+
+/* ── Annotation note (mockup only, not production) ─────────────── */
+
+.mockup-note {
+    font-size: 0.82rem;
+    color: var(--bn-colour-muted);
+    background: var(--bn-colour-quote-bg);
+    border: 1px solid var(--bn-colour-border);
+    border-radius: var(--bn-radius-md);
+    padding: var(--bn-space-md);
+    margin-top: var(--bn-space-lg);
+    line-height: 1.55;
+}
+
+.mockup-note strong {
+    color: var(--bn-colour-text);
+    font-weight: var(--bn-weight-emphasis);
+}
+</style>
+</head>
+<body>
+
+<button class="theme-toggle" onclick="
+    const t = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark';
+    document.documentElement.dataset.theme = t;
+    this.textContent = t === 'dark' ? '\u2600 Light' : '\u263e Dark';
+">&#x263e; Dark</button>
+
+<article>
+
+<h1>Signal Card &mdash; Expanded View</h1>
+<p class="description">
+    Production-accurate design spec for elaborated signal cards. Uses exact design system classes, tokens, and HTML structure.
+    New elements marked in the notes below.
+</p>
+
+<hr>
+
+<!-- ════════════════════════════════════════════════════════════════
+     CARD #2 — Filter discoverability (SUCCESS)
+     Section: Product Listing × Group: Discoverability
+     ════════════════════════════════════════════════════════════════ -->
+
+<div class="signal-cards">
+
+<div class="signal-card" style="--card-accent: #71DAFF;">
+    <div class="signal-card-top">
+        <!-- LEFT: Source, Signal name heading, Elaboration -->
+        <div class="signal-card-identity">
+            <span class="signal-card-source">Product listing</span>
+            <div class="signal-card-location">Filter discoverability</div>
+            <div class="signal-elaboration">
+                <strong>Product listing filters and sort options are easy to find and use</strong> &mdash; participants confidently narrow results by price, material, size, and style without guidance.
+            </div>
+        </div>
+
+        <!-- RIGHT: Badges, Rank, Sparkbars, Metrics -->
+        <div class="signal-card-right">
+            <div class="signal-card-badges">
+                <span class="badge signal-group-badge" style="background: var(--bn-ux-1-bg);">Discoverability</span>
+                <span class="pattern-label pattern-success">SUCCESS</span>
+            </div>
+
+            <div class="signal-rank">#2</div>
+
+            <!-- Metrics grid — exact production structure -->
+            <div class="signal-card-metrics">
+                <span class="metric-label" title="Composite signal strength">Signal</span>
+                <span class="metric-value">0.49</span>
+                <span class="metric-viz">
+                    <!-- Sparkbar: 7 bars = 7 signal cards, heights from real values
+                         normalised to max (0.49). Bar index 1 = this card (coloured). -->
+                    <div class="signal-sparkbars">
+                        <div class="signal-sparkbar" style="height: 28px; background: var(--bn-colour-text); opacity: 0.45;"></div>
+                        <div class="signal-sparkbar" style="height: 26px; background: var(--card-accent); opacity: 1;"></div>
+                        <div class="signal-sparkbar" style="height: 23px; background: var(--bn-colour-text); opacity: 0.38;"></div>
+                        <div class="signal-sparkbar" style="height: 18px; background: var(--bn-colour-text); opacity: 0.29;"></div>
+                        <div class="signal-sparkbar" style="height: 14px; background: var(--bn-colour-text); opacity: 0.23;"></div>
+                        <div class="signal-sparkbar" style="height: 10px; background: var(--bn-colour-text); opacity: 0.16;"></div>
+                        <div class="signal-sparkbar" style="height: 6px; background: var(--bn-colour-text); opacity: 0.09;"></div>
+                    </div>
+                </span>
+
+                <span class="metric-label" title="Concentration ratio">Concentration</span>
+                <span class="metric-value">1.6&times;</span>
+                <span class="metric-viz">
+                    <span class="conc-bar-track">
+                        <span class="conc-bar-fill" style="width: 80%;"></span>
+                    </span>
+                </span>
+
+                <span class="metric-label" title="Effective agreement (voices)">Agreement</span>
+                <span class="metric-value">3.0</span>
+                <span class="metric-viz">
+                    <span class="conc-bar-track">
+                        <span class="conc-bar-fill" style="width: 100%;"></span>
+                    </span>
+                </span>
+
+                <span class="metric-label" title="Mean intensity (1-3 scale)">Intensity</span>
+                <span class="metric-value">1.3</span>
+                <span class="metric-viz">
+                    <!-- Exact SVG from Metric.tsx IntensityDots: r=5, cx0=7, gap=16, w=41, h=12 -->
+                    <svg class="intensity-dots-svg" width="41" height="12" viewBox="0 0 41 12">
+                        <circle cx="7" cy="6" r="5" fill="var(--bn-colour-muted)" opacity="0.7" />
+                        <!-- 1.3 rounds to 1.5 → half-filled second dot -->
+                        <clipPath id="c2-l"><rect x="18" y="1" width="5" height="10" /></clipPath>
+                        <clipPath id="c2-r"><rect x="23" y="1" width="5" height="10" /></clipPath>
+                        <circle cx="23" cy="6" r="5" fill="var(--bn-colour-muted)" opacity="0.7" clip-path="url(#c2-l)" />
+                        <circle cx="23" cy="6" r="5" fill="none" stroke="var(--bn-colour-muted)" stroke-width="1.2" opacity="0.35" clip-path="url(#c2-r)" />
+                        <circle cx="23" cy="6" r="5" fill="none" stroke="var(--bn-colour-muted)" stroke-width="1.2" opacity="0.35" />
+                        <circle cx="39" cy="6" r="5" fill="none" stroke="var(--bn-colour-muted)" stroke-width="1.2" opacity="0.35" />
+                    </svg>
+                </span>
+            </div>
+        </div>
+    </div>
+
+    <!-- QUOTES — exact blockquote structure from AnalysisPage.tsx -->
+    <div class="signal-card-quotes">
+        <blockquote>
+            <div class="quote-row">
+                <a class="timecode"><span style="color: var(--bn-colour-muted)">[</span>01:00<span style="color: var(--bn-colour-muted)">]</span></a>
+                <span class="quote-body">
+                    <span class="speaker">p3</span>
+                    Strongest stand 179 that&rsquo;s quite cheap a stobie bow frame with soft profilages and high legs the classic shape that will last for many years
+                    <span class="badge signal-quote-tag" style="background: var(--bn-emo-1-bg);">system response</span>
+                </span>
+                <span class="intensity-dots" title="Intensity 1/3">
+                    <svg class="intensity-dots-svg" width="41" height="12" viewBox="0 0 41 12" style="--dot-colour: var(--bn-colour-muted);">
+                        <circle cx="7" cy="6" r="5" fill="var(--dot-colour, var(--bn-colour-muted))" opacity="0.7" />
+                        <circle cx="23" cy="6" r="5" fill="none" stroke="var(--dot-colour, var(--bn-colour-muted))" stroke-width="1.2" opacity="0.35" />
+                        <circle cx="39" cy="6" r="5" fill="none" stroke="var(--dot-colour, var(--bn-colour-muted))" stroke-width="1.2" opacity="0.35" />
+                    </svg>
+                </span>
+            </div>
+        </blockquote>
+
+        <blockquote>
+            <div class="quote-row">
+                <a class="timecode"><span style="color: var(--bn-colour-muted)">[</span>03:12<span style="color: var(--bn-colour-muted)">]</span></a>
+                <span class="quote-body">
+                    <span class="speaker">p3</span>
+                    Oh i like that hi it asked you to log in and says a greeting in swedish&hellip; i like the way ikea&rsquo;s kept a pretty bit soul
+                    <span class="badge signal-quote-tag" style="background: var(--bn-emo-1-bg);">system response</span>
+                </span>
+                <span class="intensity-dots" title="Intensity 2/3">
+                    <svg class="intensity-dots-svg" width="41" height="12" viewBox="0 0 41 12" style="--dot-colour: var(--bn-colour-muted);">
+                        <circle cx="7" cy="6" r="5" fill="var(--dot-colour, var(--bn-colour-muted))" opacity="0.7" />
+                        <circle cx="23" cy="6" r="5" fill="var(--dot-colour, var(--bn-colour-muted))" opacity="0.7" />
+                        <circle cx="39" cy="6" r="5" fill="none" stroke="var(--dot-colour, var(--bn-colour-muted))" stroke-width="1.2" opacity="0.35" />
+                    </svg>
+                </span>
+            </div>
+        </blockquote>
+
+        <blockquote>
+            <div class="quote-row">
+                <a class="timecode"><span style="color: var(--bn-colour-muted)">[</span>01:20<span style="color: var(--bn-colour-muted)">]</span></a>
+                <span class="quote-body">
+                    <span class="speaker">p4</span>
+                    Choose. Right. Add [to] shopping bag. &hellip; Oh, yes. Right. The pillow to go with it. That is reasonable. Add the pillow.
+                    <span class="badge signal-quote-tag" style="background: var(--bn-emo-1-bg);">system response</span>
+                </span>
+                <span class="intensity-dots" title="Intensity 1/3">
+                    <svg class="intensity-dots-svg" width="41" height="12" viewBox="0 0 41 12" style="--dot-colour: var(--bn-colour-muted);">
+                        <circle cx="7" cy="6" r="5" fill="var(--dot-colour, var(--bn-colour-muted))" opacity="0.7" />
+                        <circle cx="23" cy="6" r="5" fill="none" stroke="var(--dot-colour, var(--bn-colour-muted))" stroke-width="1.2" opacity="0.35" />
+                        <circle cx="39" cy="6" r="5" fill="none" stroke="var(--dot-colour, var(--bn-colour-muted))" stroke-width="1.2" opacity="0.35" />
+                    </svg>
+                </span>
+            </div>
+        </blockquote>
+
+        <blockquote>
+            <div class="quote-row">
+                <a class="timecode"><span style="color: var(--bn-colour-muted)">[</span>02:38<span style="color: var(--bn-colour-muted)">]</span></a>
+                <span class="quote-body">
+                    <span class="speaker">p4</span>
+                    Add to shopping bag. And I&rsquo;ve spent &pound;947.
+                    <span class="badge signal-quote-tag" style="background: var(--bn-emo-1-bg);">system response</span>
+                </span>
+                <span class="intensity-dots" title="Intensity 1/3">
+                    <svg class="intensity-dots-svg" width="41" height="12" viewBox="0 0 41 12" style="--dot-colour: var(--bn-colour-muted);">
+                        <circle cx="7" cy="6" r="5" fill="var(--dot-colour, var(--bn-colour-muted))" opacity="0.7" />
+                        <circle cx="23" cy="6" r="5" fill="none" stroke="var(--dot-colour, var(--bn-colour-muted))" stroke-width="1.2" opacity="0.35" />
+                        <circle cx="39" cy="6" r="5" fill="none" stroke="var(--dot-colour, var(--bn-colour-muted))" stroke-width="1.2" opacity="0.35" />
+                    </svg>
+                </span>
+            </div>
+        </blockquote>
+    </div>
+
+    <!-- FOOTER — exact production structure -->
+    <div class="signal-card-footer">
+        <a class="signal-card-link signal-card-toggle" href="#">Hide</a>
+        <span class="participant-grid">
+            <span class="participant-count">2/4</span>
+            <span class="p-box">p1</span>
+            <span class="p-box">p2</span>
+            <span class="p-box p-present">p3</span>
+            <span class="p-box p-present">p4</span>
+        </span>
+    </div>
+</div>
+
+</div><!-- /.signal-cards -->
+
+<hr>
+
+<!-- ════════════════════════════════════════════════════════════════
+     CARD #4 — Discoverability tension (TENSION)
+     Section: Homepage × Group: Discoverability
+     ════════════════════════════════════════════════════════════════ -->
+
+<div class="signal-cards">
+
+<div class="signal-card" style="--card-accent: #71DAFF;">
+    <div class="signal-card-top">
+        <div class="signal-card-identity">
+            <span class="signal-card-source">Homepage</span>
+            <div class="signal-card-location">Discoverability tension</div>
+            <div class="signal-elaboration">
+                <strong>The top navigation makes product categories easy to find, but editorial content on the homepage body competes with the shopping entry point,</strong> forcing some first-time visitors to scan past it.
+            </div>
+        </div>
+
+        <div class="signal-card-right">
+            <div class="signal-card-badges">
+                <span class="badge signal-group-badge" style="background: var(--bn-ux-1-bg);">Discoverability</span>
+                <span class="pattern-label pattern-tension">TENSION</span>
+            </div>
+
+            <div class="signal-rank">#4</div>
+
+            <div class="signal-card-metrics">
+                <span class="metric-label" title="Composite signal strength">Signal</span>
+                <span class="metric-value">0.32</span>
+                <span class="metric-viz">
+                    <div class="signal-sparkbars">
+                        <div class="signal-sparkbar" style="height: 28px; background: var(--bn-colour-text); opacity: 0.45;"></div>
+                        <div class="signal-sparkbar" style="height: 26px; background: var(--bn-colour-text); opacity: 0.41;"></div>
+                        <div class="signal-sparkbar" style="height: 23px; background: var(--bn-colour-text); opacity: 0.38;"></div>
+                        <div class="signal-sparkbar" style="height: 18px; background: var(--card-accent); opacity: 1;"></div>
+                        <div class="signal-sparkbar" style="height: 14px; background: var(--bn-colour-text); opacity: 0.23;"></div>
+                        <div class="signal-sparkbar" style="height: 10px; background: var(--bn-colour-text); opacity: 0.16;"></div>
+                        <div class="signal-sparkbar" style="height: 6px; background: var(--bn-colour-text); opacity: 0.09;"></div>
+                    </div>
+                </span>
+
+                <span class="metric-label" title="Concentration ratio">Concentration</span>
+                <span class="metric-value">1.3&times;</span>
+                <span class="metric-viz">
+                    <span class="conc-bar-track"><span class="conc-bar-fill" style="width: 65%;"></span></span>
+                </span>
+
+                <span class="metric-label" title="Effective agreement">Agreement</span>
+                <span class="metric-value">3.0</span>
+                <span class="metric-viz">
+                    <span class="conc-bar-track"><span class="conc-bar-fill" style="width: 100%;"></span></span>
+                </span>
+
+                <span class="metric-label" title="Mean intensity">Intensity</span>
+                <span class="metric-value">1.0</span>
+                <span class="metric-viz">
+                    <svg class="intensity-dots-svg" width="41" height="12" viewBox="0 0 41 12">
+                        <circle cx="7" cy="6" r="5" fill="var(--bn-colour-muted)" opacity="0.7" />
+                        <circle cx="23" cy="6" r="5" fill="none" stroke="var(--bn-colour-muted)" stroke-width="1.2" opacity="0.35" />
+                        <circle cx="39" cy="6" r="5" fill="none" stroke="var(--bn-colour-muted)" stroke-width="1.2" opacity="0.35" />
+                    </svg>
+                </span>
+            </div>
+        </div>
+    </div>
+
+    <div class="signal-card-quotes">
+        <blockquote>
+            <div class="quote-row">
+                <a class="timecode"><span style="color: var(--bn-colour-muted)">[</span>00:00<span style="color: var(--bn-colour-muted)">]</span></a>
+                <span class="quote-body">
+                    <span class="speaker">p2</span>
+                    This is my test file. I&rsquo;m going to go looking for a bed at IKEA. I&rsquo;m at ikea.com, which I found through Google.
+                    <span class="badge signal-quote-tag">first-time use</span>
+                </span>
+                <span class="intensity-dots" title="Intensity 1/3">
+                    <svg class="intensity-dots-svg" width="41" height="12" viewBox="0 0 41 12" style="--dot-colour: var(--bn-colour-muted);">
+                        <circle cx="7" cy="6" r="5" fill="var(--dot-colour)" opacity="0.7" />
+                        <circle cx="23" cy="6" r="5" fill="none" stroke="var(--dot-colour)" stroke-width="1.2" opacity="0.35" />
+                        <circle cx="39" cy="6" r="5" fill="none" stroke="var(--dot-colour)" stroke-width="1.2" opacity="0.35" />
+                    </svg>
+                </span>
+            </div>
+        </blockquote>
+
+        <blockquote>
+            <div class="quote-row">
+                <a class="timecode"><span style="color: var(--bn-colour-muted)">[</span>00:12<span style="color: var(--bn-colour-muted)">]</span></a>
+                <span class="quote-body">
+                    <span class="speaker">p2</span>
+                    &hellip; I don&rsquo;t need that. Beds and mattresses. That&rsquo;s easy. That&rsquo;s in the top navigation.
+                    <span class="badge signal-quote-tag">visible action</span>
+                </span>
+                <span class="intensity-dots" title="Intensity 1/3">
+                    <svg class="intensity-dots-svg" width="41" height="12" viewBox="0 0 41 12" style="--dot-colour: var(--bn-colour-muted);">
+                        <circle cx="7" cy="6" r="5" fill="var(--dot-colour)" opacity="0.7" />
+                        <circle cx="23" cy="6" r="5" fill="none" stroke="var(--dot-colour)" stroke-width="1.2" opacity="0.35" />
+                        <circle cx="39" cy="6" r="5" fill="none" stroke="var(--dot-colour)" stroke-width="1.2" opacity="0.35" />
+                    </svg>
+                </span>
+            </div>
+        </blockquote>
+
+        <blockquote>
+            <div class="quote-row">
+                <a class="timecode"><span style="color: var(--bn-colour-muted)">[</span>00:30<span style="color: var(--bn-colour-muted)">]</span></a>
+                <span class="quote-body">
+                    <span class="speaker">p3</span>
+                    Fresh folkloric style the on jangie collection okay okay that&rsquo;s&hellip; ikea stories but we just want to go shopping which at least is wealth it&rsquo;s a big yellow sign okay i&rsquo;m going to do that
+                    <span class="badge signal-quote-tag">visible action</span>
+                </span>
+                <span class="intensity-dots" title="Intensity 1/3">
+                    <svg class="intensity-dots-svg" width="41" height="12" viewBox="0 0 41 12" style="--dot-colour: var(--bn-colour-muted);">
+                        <circle cx="7" cy="6" r="5" fill="var(--dot-colour)" opacity="0.7" />
+                        <circle cx="23" cy="6" r="5" fill="none" stroke="var(--dot-colour)" stroke-width="1.2" opacity="0.35" />
+                        <circle cx="39" cy="6" r="5" fill="none" stroke="var(--dot-colour)" stroke-width="1.2" opacity="0.35" />
+                    </svg>
+                </span>
+            </div>
+        </blockquote>
+    </div>
+
+    <div class="signal-card-footer">
+        <a class="signal-card-link signal-card-toggle" href="#">Hide</a>
+        <span class="participant-grid">
+            <span class="participant-count">2/4</span>
+            <span class="p-box">p1</span>
+            <span class="p-box p-present">p2</span>
+            <span class="p-box p-present">p3</span>
+            <span class="p-box">p4</span>
+        </span>
+    </div>
+</div>
+
+</div>
+
+<hr>
+
+<!-- ════════════════════════════════════════════════════════════════
+     CARD #5 — Discoverability gap (GAP)
+     Section: Category Navigation × Group: Discoverability
+     ════════════════════════════════════════════════════════════════ -->
+
+<div class="signal-cards">
+
+<div class="signal-card" style="--card-accent: #71DAFF;">
+    <div class="signal-card-top">
+        <div class="signal-card-identity">
+            <span class="signal-card-source">Category navigation</span>
+            <div class="signal-card-location">Discoverability gap</div>
+            <div class="signal-elaboration">
+                <strong>The category navigation structure hides specific product attributes</strong> (like bed sizes) and forces participants to explore multiple paths &mdash; Products, Rooms, Ideas &mdash; before reaching their target.
+            </div>
+        </div>
+
+        <div class="signal-card-right">
+            <div class="signal-card-badges">
+                <span class="badge signal-group-badge" style="background: var(--bn-ux-1-bg);">Discoverability</span>
+                <span class="pattern-label pattern-gap">GAP</span>
+            </div>
+
+            <div class="signal-rank">#5</div>
+
+            <div class="signal-card-metrics">
+                <span class="metric-label">Signal</span>
+                <span class="metric-value">0.25</span>
+                <span class="metric-viz">
+                    <div class="signal-sparkbars">
+                        <div class="signal-sparkbar" style="height: 28px; background: var(--bn-colour-text); opacity: 0.45;"></div>
+                        <div class="signal-sparkbar" style="height: 26px; background: var(--bn-colour-text); opacity: 0.41;"></div>
+                        <div class="signal-sparkbar" style="height: 23px; background: var(--bn-colour-text); opacity: 0.38;"></div>
+                        <div class="signal-sparkbar" style="height: 18px; background: var(--bn-colour-text); opacity: 0.29;"></div>
+                        <div class="signal-sparkbar" style="height: 14px; background: var(--card-accent); opacity: 1;"></div>
+                        <div class="signal-sparkbar" style="height: 10px; background: var(--bn-colour-text); opacity: 0.16;"></div>
+                        <div class="signal-sparkbar" style="height: 6px; background: var(--bn-colour-text); opacity: 0.09;"></div>
+                    </div>
+                </span>
+
+                <span class="metric-label">Concentration</span>
+                <span class="metric-value">1.5&times;</span>
+                <span class="metric-viz"><span class="conc-bar-track"><span class="conc-bar-fill" style="width: 75%;"></span></span></span>
+
+                <span class="metric-label">Agreement</span>
+                <span class="metric-value">2.0</span>
+                <span class="metric-viz"><span class="conc-bar-track"><span class="conc-bar-fill" style="width: 67%;"></span></span></span>
+
+                <span class="metric-label">Intensity</span>
+                <span class="metric-value">1.0</span>
+                <span class="metric-viz">
+                    <svg class="intensity-dots-svg" width="41" height="12" viewBox="0 0 41 12">
+                        <circle cx="7" cy="6" r="5" fill="var(--bn-colour-muted)" opacity="0.7" />
+                        <circle cx="23" cy="6" r="5" fill="none" stroke="var(--bn-colour-muted)" stroke-width="1.2" opacity="0.35" />
+                        <circle cx="39" cy="6" r="5" fill="none" stroke="var(--bn-colour-muted)" stroke-width="1.2" opacity="0.35" />
+                    </svg>
+                </span>
+            </div>
+        </div>
+    </div>
+
+    <div class="signal-card-quotes">
+        <blockquote>
+            <div class="quote-row">
+                <a class="timecode"><span style="color: var(--bn-colour-muted)">[</span>00:45<span style="color: var(--bn-colour-muted)">]</span></a>
+                <span class="quote-body">
+                    <span class="speaker">p3</span>
+                    I&rsquo;m looking for a bed&hellip; beds and mattresses. Beds double beds but i don&rsquo;t see king size
+                    <span class="badge signal-quote-tag">hidden feature</span>
+                </span>
+                <span class="intensity-dots" title="Intensity 1/3">
+                    <svg class="intensity-dots-svg" width="41" height="12" viewBox="0 0 41 12" style="--dot-colour: var(--bn-colour-muted);">
+                        <circle cx="7" cy="6" r="5" fill="var(--dot-colour)" opacity="0.7" />
+                        <circle cx="23" cy="6" r="5" fill="none" stroke="var(--dot-colour)" stroke-width="1.2" opacity="0.35" />
+                        <circle cx="39" cy="6" r="5" fill="none" stroke="var(--dot-colour)" stroke-width="1.2" opacity="0.35" />
+                    </svg>
+                </span>
+            </div>
+        </blockquote>
+
+        <blockquote>
+            <div class="quote-row">
+                <a class="timecode"><span style="color: var(--bn-colour-muted)">[</span>01:49<span style="color: var(--bn-colour-muted)">]</span></a>
+                <span class="quote-body">
+                    <span class="speaker">p4</span>
+                    So now I need the bed. Let&rsquo;s go back to&hellip; Products. Rooms. The bedroom. Ideas. What&rsquo;s new? &hellip; I&rsquo;ve flung my way to the bed section again.
+                    <span class="badge signal-quote-tag">exploration</span>
+                </span>
+                <span class="intensity-dots" title="Intensity 1/3">
+                    <svg class="intensity-dots-svg" width="41" height="12" viewBox="0 0 41 12" style="--dot-colour: var(--bn-colour-muted);">
+                        <circle cx="7" cy="6" r="5" fill="var(--dot-colour)" opacity="0.7" />
+                        <circle cx="23" cy="6" r="5" fill="none" stroke="var(--dot-colour)" stroke-width="1.2" opacity="0.35" />
+                        <circle cx="39" cy="6" r="5" fill="none" stroke="var(--dot-colour)" stroke-width="1.2" opacity="0.35" />
+                    </svg>
+                </span>
+            </div>
+        </blockquote>
+    </div>
+
+    <div class="signal-card-footer">
+        <a class="signal-card-link signal-card-toggle" href="#">Hide</a>
+        <span class="participant-grid">
+            <span class="participant-count">2/4</span>
+            <span class="p-box">p1</span>
+            <span class="p-box">p2</span>
+            <span class="p-box p-present">p3</span>
+            <span class="p-box p-present">p4</span>
+        </span>
+    </div>
+</div>
+
+</div>
+
+<hr>
+
+<!-- ════════════════════════════════════════════════════════════════
+     CARD #7 — Response delay (RECOVERY)
+     Section: Homepage × Group: Feedback
+     ════════════════════════════════════════════════════════════════ -->
+
+<div class="signal-cards">
+
+<div class="signal-card" style="--card-accent: #FF8FAB;">
+    <div class="signal-card-top">
+        <div class="signal-card-identity">
+            <span class="signal-card-source">Homepage</span>
+            <div class="signal-card-location">Response delay</div>
+            <div class="signal-elaboration">
+                <strong>The homepage fails to acknowledge clicks immediately</strong> &mdash; the participant had to click multiple times before the navigation responded, creating uncertainty about whether the interface was working.
+            </div>
+        </div>
+
+        <div class="signal-card-right">
+            <div class="signal-card-badges">
+                <span class="badge signal-group-badge" style="background: var(--bn-emo-1-bg);">Feedback</span>
+                <span class="pattern-label pattern-recovery">RECOVERY</span>
+            </div>
+
+            <div class="signal-rank">#7</div>
+
+            <div class="signal-card-metrics">
+                <span class="metric-label">Signal</span>
+                <span class="metric-value">0.10</span>
+                <span class="metric-viz">
+                    <div class="signal-sparkbars">
+                        <div class="signal-sparkbar" style="height: 28px; background: var(--bn-colour-text); opacity: 0.45;"></div>
+                        <div class="signal-sparkbar" style="height: 26px; background: var(--bn-colour-text); opacity: 0.41;"></div>
+                        <div class="signal-sparkbar" style="height: 23px; background: var(--bn-colour-text); opacity: 0.38;"></div>
+                        <div class="signal-sparkbar" style="height: 18px; background: var(--bn-colour-text); opacity: 0.29;"></div>
+                        <div class="signal-sparkbar" style="height: 14px; background: var(--bn-colour-text); opacity: 0.23;"></div>
+                        <div class="signal-sparkbar" style="height: 10px; background: var(--bn-colour-text); opacity: 0.16;"></div>
+                        <div class="signal-sparkbar" style="height: 6px; background: var(--card-accent); opacity: 1;"></div>
+                    </div>
+                </span>
+
+                <span class="metric-label">Concentration</span>
+                <span class="metric-value">0.8&times;</span>
+                <span class="metric-viz"><span class="conc-bar-track"><span class="conc-bar-fill" style="width: 40%;"></span></span></span>
+
+                <span class="metric-label">Agreement</span>
+                <span class="metric-value">1.0</span>
+                <span class="metric-viz"><span class="conc-bar-track"><span class="conc-bar-fill" style="width: 33%;"></span></span></span>
+
+                <span class="metric-label">Intensity</span>
+                <span class="metric-value">1.5</span>
+                <span class="metric-viz">
+                    <svg class="intensity-dots-svg" width="41" height="12" viewBox="0 0 41 12">
+                        <circle cx="7" cy="6" r="5" fill="var(--bn-colour-muted)" opacity="0.7" />
+                        <!-- 1.5 → half-filled second dot -->
+                        <clipPath id="r2-l"><rect x="18" y="1" width="5" height="10" /></clipPath>
+                        <clipPath id="r2-r"><rect x="23" y="1" width="5" height="10" /></clipPath>
+                        <circle cx="23" cy="6" r="5" fill="var(--bn-colour-muted)" opacity="0.7" clip-path="url(#r2-l)" />
+                        <circle cx="23" cy="6" r="5" fill="none" stroke="var(--bn-colour-muted)" stroke-width="1.2" opacity="0.35" clip-path="url(#r2-r)" />
+                        <circle cx="23" cy="6" r="5" fill="none" stroke="var(--bn-colour-muted)" stroke-width="1.2" opacity="0.35" />
+                        <circle cx="39" cy="6" r="5" fill="none" stroke="var(--bn-colour-muted)" stroke-width="1.2" opacity="0.35" />
+                    </svg>
+                </span>
+            </div>
+        </div>
+    </div>
+
+    <div class="signal-card-quotes">
+        <blockquote>
+            <div class="quote-row">
+                <a class="timecode"><span style="color: var(--bn-colour-muted)">[</span>00:19<span style="color: var(--bn-colour-muted)">]</span></a>
+                <span class="quote-body">
+                    <span class="speaker">p2</span>
+                    And I&rsquo;m clicking. Why is that not working?
+                    <span class="badge signal-quote-tag">delayed feedback</span>
+                </span>
+                <span class="intensity-dots" title="Intensity 2/3">
+                    <svg class="intensity-dots-svg" width="41" height="12" viewBox="0 0 41 12" style="--dot-colour: var(--bn-colour-muted);">
+                        <circle cx="7" cy="6" r="5" fill="var(--dot-colour)" opacity="0.7" />
+                        <circle cx="23" cy="6" r="5" fill="var(--dot-colour)" opacity="0.7" />
+                        <circle cx="39" cy="6" r="5" fill="none" stroke="var(--dot-colour)" stroke-width="1.2" opacity="0.35" />
+                    </svg>
+                </span>
+            </div>
+        </blockquote>
+
+        <blockquote>
+            <div class="quote-row">
+                <a class="timecode"><span style="color: var(--bn-colour-muted)">[</span>00:35<span style="color: var(--bn-colour-muted)">]</span></a>
+                <span class="quote-body">
+                    <span class="speaker">p2</span>
+                    &hellip; Ah, it worked that time. Okay, and then beds.
+                    <span class="badge signal-quote-tag" style="background: var(--bn-emo-1-bg);">system response</span>
+                </span>
+                <span class="intensity-dots" title="Intensity 1/3">
+                    <svg class="intensity-dots-svg" width="41" height="12" viewBox="0 0 41 12" style="--dot-colour: var(--bn-colour-muted);">
+                        <circle cx="7" cy="6" r="5" fill="var(--dot-colour)" opacity="0.7" />
+                        <circle cx="23" cy="6" r="5" fill="none" stroke="var(--dot-colour)" stroke-width="1.2" opacity="0.35" />
+                        <circle cx="39" cy="6" r="5" fill="none" stroke="var(--dot-colour)" stroke-width="1.2" opacity="0.35" />
+                    </svg>
+                </span>
+            </div>
+        </blockquote>
+    </div>
+
+    <div class="signal-card-footer">
+        <a class="signal-card-link signal-card-toggle" href="#">Hide</a>
+        <span class="participant-grid">
+            <span class="participant-count">1/4</span>
+            <span class="p-box">p1</span>
+            <span class="p-box p-present">p2</span>
+            <span class="p-box">p3</span>
+            <span class="p-box">p4</span>
+        </span>
+    </div>
+</div>
+
+</div>
+
+<hr>
+
+<div class="mockup-note">
+    <strong>Design spec notes &mdash; what&rsquo;s production code vs. new</strong>
+    <br><br>
+    <strong>Existing (exact copy from analysis.css, badge.css, blockquote.css, tokens.css):</strong>
+    <br>&bull; <code>.signal-card</code>, <code>.signal-card-top</code>, <code>.signal-card-identity</code>, <code>.signal-card-source</code> &mdash; card shell
+    <br>&bull; <code>.signal-card-location</code> &mdash; heading (reused as the signal name)
+    <br>&bull; <code>.signal-card-metrics</code> with <code>.metric-label</code> / <code>.metric-value</code> / <code>.metric-viz</code> &mdash; 3-column metrics grid
+    <br>&bull; <code>.conc-bar-track</code> / <code>.conc-bar-fill</code> &mdash; 96px &times; 6px bar with 0.45 opacity fill
+    <br>&bull; <code>.intensity-dots-svg</code> &mdash; exact SVG from <code>Metric.tsx IntensityDots()</code> (r=5, cx0=7, gap=16, clipPath halves)
+    <br>&bull; <code>.badge</code> with <code>var(--bn-radius-sm)</code> (3px) &mdash; not 9999px pills
+    <br>&bull; <code>.signal-group-badge</code> &mdash; <code>font-weight: var(--bn-weight-emphasis)</code>
+    <br>&bull; <code>.signal-quote-tag</code> &mdash; tag badge in quotes
+    <br>&bull; <code>blockquote .quote-row .timecode .quote-body .speaker</code> &mdash; exact quote structure
+    <br>&bull; <code>.signal-card-quotes</code> with <code>.signal-card-footer</code> &mdash; quote container + footer
+    <br>&bull; <code>.participant-grid .p-box .p-present .participant-count</code> &mdash; participant mini-badges with <code>color-mix()</code>
+    <br>&bull; <code>.signal-card-link .signal-card-toggle</code> &mdash; footer link
+    <br>&bull; All tokens: <code>--bn-weight-*</code>, <code>--bn-colour-*</code>, <code>--bn-space-*</code>, <code>--bn-radius-*</code>, <code>--bn-group-*</code>, <code>--bn-ux-*-bg</code>, <code>--bn-emo-*-bg</code>
+    <br>&bull; Dark mode via <code>light-dark()</code> with <code>color-scheme</code> &mdash; exact production pattern
+    <br><br>
+    <strong>New (to be added to analysis.css):</strong>
+    <br>&bull; <code>.signal-card-right</code> &mdash; flex column wrapper replacing flat <code>.signal-card-metrics</code> on the right side
+    <br>&bull; <code>.signal-card-badges</code> &mdash; row of group badge + pattern badge
+    <br>&bull; <code>.pattern-label</code> + <code>.pattern-success|tension|gap|recovery</code> &mdash; coloured allcaps pattern type badge
+    <br>&bull; <code>.signal-rank</code> &mdash; <code>#N</code> counter in muted mono
+    <br>&bull; <code>.signal-sparkbars</code> / <code>.signal-sparkbar</code> &mdash; mini bar chart inside the Signal row&rsquo;s <code>.metric-viz</code> cell. N bars for N signal cards. Width = 96px (matches <code>.conc-bar-track</code>). Grey bars at max 0.45 opacity; current card&rsquo;s bar uses <code>var(--card-accent)</code> at full opacity. Heights and opacities proportional to real signal values, normalised to max
+    <br>&bull; <code>.signal-elaboration</code> &mdash; one-sentence finding. <code>&lt;strong&gt;</code> wraps the core assertion (roughly the first third), ending at the first natural punctuation break (em dash, comma before dependent clause, or parenthetical). Regular weight for evidence/nuance/specifics after the break
+    <br><br>
+    <strong>Badge colour:</strong> uses <code>var(--bn-ux-1-bg)</code> / <code>var(--bn-emo-1-bg)</code> &mdash; the OKLCH codebook tag colours from <code>tokens.css</code>, not custom colour sets
+    <br><br>
+    <strong>Card accent:</strong> <code>--card-accent</code> is a vivid, light version of the codebook group hue &mdash; bright enough to pop at small bar scale against grey context. UX set: <code>#71DAFF</code> (cyan-blue), emo set: <code>#FF8FAB</code> (pink). In production, derive from the codebook OKLCH hue with high lightness + chroma. Present participant badges reuse the same variable via <code>color-mix(in srgb, var(--card-accent) 12%, var(--bn-colour-bg))</code>
+</div>
+
+</article>
+
+</body>
+</html>

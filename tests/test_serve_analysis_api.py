@@ -194,6 +194,7 @@ class TestGetTagAnalysis:
                 "location", "source_type", "group_name", "colour_set", "count",
                 "participants", "n_eff", "mean_intensity", "concentration",
                 "composite_signal", "confidence", "quotes",
+                "signal_name", "pattern", "elaboration",
             }
             assert expected_keys == set(sig.keys())
 
@@ -596,3 +597,52 @@ class TestGetCodebookAnalysis:
     def test_project_not_found(self, client: TestClient) -> None:
         resp = client.get("/api/projects/999/analysis/codebooks")
         assert resp.status_code == 404
+
+    def test_elaborate_false_returns_null_fields(
+        self, multi_cb_client: TestClient,
+    ) -> None:
+        """Without elaborate=true, elaboration fields should be null."""
+        data = multi_cb_client.get("/api/projects/1/analysis/codebooks").json()
+        for cb in data["codebooks"]:
+            for sig in cb["signals"]:
+                assert sig["signal_name"] is None
+                assert sig["pattern"] is None
+                assert sig["elaboration"] is None
+
+    def test_elaborate_true_populates_fields(
+        self, multi_cb_client: TestClient,
+    ) -> None:
+        """With elaborate=true and mocked elaboration, fields are populated."""
+        from unittest.mock import patch
+
+        from bristlenose.server.elaboration import ElaborationResult, compute_signal_key
+
+        async def mock_generate(signals, codebook_id, settings, db, project_id):
+            results = {}
+            for sig in signals:
+                key = compute_signal_key(
+                    sig.source_type, sig.location, sig.group_name,
+                )
+                results[key] = ElaborationResult(
+                    signal_name=f"{sig.group_name} insight",
+                    pattern="success",
+                    elaboration="Finding is clear || with evidence.",
+                )
+            return results
+
+        with patch(
+            "bristlenose.server.elaboration.generate_elaborations",
+            new=mock_generate,
+        ):
+            data = multi_cb_client.get(
+                "/api/projects/1/analysis/codebooks?elaborate=true",
+            ).json()
+
+        found_elaborated = False
+        for cb in data["codebooks"]:
+            for sig in cb["signals"]:
+                if sig["signal_name"] is not None:
+                    found_elaborated = True
+                    assert sig["pattern"] == "success"
+                    assert "||" in sig["elaboration"]
+        assert found_elaborated, "Expected at least one elaborated signal"

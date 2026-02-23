@@ -392,6 +392,7 @@ Edit `bristlenose/__init__.py` (the single source of truth for version), commit,
 - Pre-run resume summary — one-line status message when resuming an interrupted pipeline run
 - AutoCode frontend — ✦ button triggers LLM tag application, progress toast, confidence-aware threshold review dialog, proposed badges on quotes with accept/deny
 - Transcript page — non-overlapping span bars, topic-change label dedup, speaker badge styling, back link stays in serve mode
+- Journey chain — sticky header shows full journey with revisits, active step highlighted with hover-tint pill, index-based click-to-jump
 - Resilient transcript discovery — serve-mode importer searches four locations instead of one
 - Generic analysis matrix and signals API for serve mode
 - Man page and docs updated for `status` and `serve` commands

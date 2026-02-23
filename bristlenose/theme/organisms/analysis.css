@@ -553,11 +553,11 @@
 }
 
 .expand-arrow--above {
-    top: -12px;
+    top: 0;
 }
 
 .expand-arrow--below {
-    bottom: -12px;
+    bottom: 0;
 }
 
 .timecode-expandable:hover .expand-arrow {

@@ -1,0 +1,919 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Signal Elaboration Mockup — Bristlenose</title>
+<style>
+/* ================================================================
+   SIGNAL ELABORATION MOCKUP
+   ================================================================
+   Shows framework signal cards with auto-generated signal names
+   and one-sentence elaborations, using real IKEA project data.
+   ================================================================ */
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+    --bn-font-body: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
+    --bn-font-mono: "SF Mono", "Fira Code", "Consolas", monospace;
+
+    --bn-colour-bg: #ffffff;
+    --bn-colour-text: #1a1a1a;
+    --bn-colour-muted: #6b7280;
+    --bn-colour-border: #e5e7eb;
+    --bn-colour-accent: #2563eb;
+    --bn-colour-quote-bg: #f9fafb;
+    --bn-colour-shadow: rgba(0, 0, 0, 0.08);
+
+    --bn-space-xs: 0.15rem;
+    --bn-space-sm: 0.35rem;
+    --bn-space-md: 0.75rem;
+    --bn-space-lg: 1.5rem;
+    --bn-space-xl: 2rem;
+
+    --bn-radius-sm: 3px;
+    --bn-radius-md: 6px;
+
+    --bn-transition-fast: 0.15s ease;
+
+    --bn-span-bar-width: 2px;
+    --bn-span-bar-radius: 1px;
+
+    /* Colour-set accent colours (from codebook groups) */
+    --bn-cs-ux: #2563eb;
+    --bn-cs-ux-bg: #eff6ff;
+    --bn-cs-emo: #7c3aed;
+    --bn-cs-emo-bg: #f5f3ff;
+    --bn-cs-task: #ea580c;
+    --bn-cs-task-bg: #fff7ed;
+    --bn-cs-trust: #059669;
+    --bn-cs-trust-bg: #ecfdf5;
+    --bn-cs-opp: #d97706;
+    --bn-cs-opp-bg: #fffbeb;
+}
+
+[data-theme="dark"] {
+    --bn-colour-bg: #111113;
+    --bn-colour-text: #e5e7eb;
+    --bn-colour-muted: #9ca3af;
+    --bn-colour-border: #2d2d30;
+    --bn-colour-accent: #60a5fa;
+    --bn-colour-quote-bg: #1a1a1e;
+    --bn-colour-shadow: rgba(0, 0, 0, 0.3);
+
+    --bn-cs-ux: #60a5fa;
+    --bn-cs-ux-bg: #111d2e;
+    --bn-cs-emo: #a78bfa;
+    --bn-cs-emo-bg: #1e1533;
+    --bn-cs-task: #fb923c;
+    --bn-cs-task-bg: #2d1d0e;
+    --bn-cs-trust: #34d399;
+    --bn-cs-trust-bg: #0d261c;
+    --bn-cs-opp: #fbbf24;
+    --bn-cs-opp-bg: #2d2305;
+}
+
+body {
+    font-family: var(--bn-font-body);
+    background: var(--bn-colour-bg);
+    color: var(--bn-colour-text);
+    line-height: 1.6;
+    transition: background 0.2s, color 0.2s;
+}
+
+article {
+    max-width: 960px;
+    margin: 0 auto;
+    padding: var(--bn-space-xl) var(--bn-space-lg);
+}
+
+/* ── Theme toggle ─────────────────────────────────────────────── */
+
+.theme-toggle {
+    position: fixed;
+    top: 1rem;
+    right: 1rem;
+    background: var(--bn-colour-quote-bg);
+    border: 1px solid var(--bn-colour-border);
+    border-radius: var(--bn-radius-md);
+    padding: 0.4rem 0.8rem;
+    font-size: 0.8rem;
+    cursor: pointer;
+    color: var(--bn-colour-muted);
+    z-index: 100;
+}
+
+.theme-toggle:hover { border-color: var(--bn-colour-accent); }
+
+/* ── Page header ──────────────────────────────────────────────── */
+
+.page-header {
+    margin-bottom: var(--bn-space-xl);
+}
+
+.page-header h1 {
+    font-size: 1.5rem;
+    font-weight: 600;
+    margin-bottom: 0.25rem;
+}
+
+.page-header .subtitle {
+    color: var(--bn-colour-muted);
+    font-size: 0.9rem;
+}
+
+.section-heading {
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin: var(--bn-space-xl) 0 var(--bn-space-md) 0;
+    padding-bottom: 0.4rem;
+    border-bottom: 1px solid var(--bn-colour-border);
+}
+
+.section-desc {
+    color: var(--bn-colour-muted);
+    font-size: 0.85rem;
+    margin-bottom: var(--bn-space-lg);
+}
+
+/* ── Signal cards ─────────────────────────────────────────────── */
+
+.signal-cards {
+    display: flex;
+    flex-direction: column;
+    gap: var(--bn-space-md);
+}
+
+.signal-card {
+    border: 1px solid var(--bn-colour-border);
+    border-radius: var(--bn-radius-sm);
+    padding: var(--bn-space-lg);
+    background: var(--bn-colour-bg);
+    transition: box-shadow var(--bn-transition-fast);
+    position: relative;
+}
+
+.signal-card:hover {
+    box-shadow: 0 2px 8px var(--bn-colour-shadow);
+}
+
+.signal-card::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: var(--bn-span-bar-width);
+    border-radius: var(--bn-span-bar-radius) 0 0 var(--bn-span-bar-radius);
+    background: var(--card-accent, var(--bn-colour-muted));
+}
+
+/* ── Card header: section, signal name, elaboration ───────────── */
+
+.signal-card-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: var(--bn-space-lg);
+    margin-bottom: var(--bn-space-sm);
+}
+
+.signal-card-identity {
+    flex: 1;
+    min-width: 0;
+}
+
+/* Section label (e.g. "SECTION · PRODUCT DETAILS") */
+.signal-card-source {
+    display: block;
+    font-size: 0.7rem;
+    font-weight: 400;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--bn-colour-muted);
+    margin-bottom: 0.15rem;
+}
+
+/* Signal name — the 2-4 word interpretive label */
+.signal-name {
+    font-size: 1.05rem;
+    font-weight: 600;
+    margin-bottom: 0.3rem;
+    line-height: 1.3;
+}
+
+/* One-sentence elaboration */
+.signal-elaboration {
+    font-size: 0.85rem;
+    color: var(--bn-colour-muted);
+    line-height: 1.5;
+    margin-bottom: var(--bn-space-sm);
+}
+
+/* Group badge (e.g. "Feedback") */
+.signal-group-badge {
+    display: inline-block;
+    font-size: 0.7rem;
+    font-weight: 500;
+    padding: 0.1rem 0.45rem;
+    border-radius: 9999px;
+    background: var(--badge-bg, var(--bn-colour-quote-bg));
+    color: var(--badge-fg, var(--bn-colour-muted));
+    margin-top: 0.2rem;
+}
+
+/* ── Metrics (right side) ─────────────────────────────────────── */
+
+.signal-card-metrics {
+    flex-shrink: 0;
+    display: grid;
+    grid-template-columns: auto auto;
+    gap: 0.15rem 0.5rem;
+    align-items: center;
+    font-size: 0.75rem;
+    white-space: nowrap;
+}
+
+.metric-label {
+    color: var(--bn-colour-muted);
+    text-align: right;
+}
+
+.metric-value {
+    font-family: var(--bn-font-mono);
+    font-size: 0.75rem;
+    color: var(--bn-colour-text);
+    text-align: right;
+}
+
+/* ── Quotes ───────────────────────────────────────────────────── */
+
+.signal-quotes {
+    display: flex;
+    flex-direction: column;
+    gap: var(--bn-space-sm);
+    margin-top: var(--bn-space-md);
+}
+
+.signal-quote {
+    display: flex;
+    gap: var(--bn-space-md);
+    padding: var(--bn-space-sm) var(--bn-space-md);
+    background: var(--bn-colour-quote-bg);
+    border-radius: var(--bn-radius-sm);
+    font-size: 0.85rem;
+    line-height: 1.5;
+    align-items: baseline;
+}
+
+.signal-quote-meta {
+    flex-shrink: 0;
+    display: flex;
+    gap: 0.4rem;
+    align-items: baseline;
+    white-space: nowrap;
+}
+
+.signal-quote-timecode {
+    font-family: var(--bn-font-mono);
+    font-size: 0.7rem;
+    color: var(--bn-colour-muted);
+}
+
+.signal-quote-pid {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--bn-colour-muted);
+}
+
+.signal-quote-text {
+    flex: 1;
+    min-width: 0;
+}
+
+.signal-quote-tag {
+    flex-shrink: 0;
+    font-size: 0.65rem;
+    font-weight: 500;
+    color: var(--bn-colour-muted);
+    padding: 0.05rem 0.35rem;
+    border: 1px solid var(--bn-colour-border);
+    border-radius: 9999px;
+    white-space: nowrap;
+    align-self: center;
+}
+
+/* ── Comparison: before/after ─────────────────────────────────── */
+
+.comparison {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--bn-space-xl);
+    margin: var(--bn-space-xl) 0;
+}
+
+.comparison-col h3 {
+    font-size: 0.85rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--bn-colour-muted);
+    margin-bottom: var(--bn-space-md);
+    padding-bottom: 0.3rem;
+    border-bottom: 1px solid var(--bn-colour-border);
+}
+
+@media (max-width: 700px) {
+    .comparison {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* ── Algorithm annotation ─────────────────────────────────────── */
+
+.algo-note {
+    font-size: 0.8rem;
+    color: var(--bn-colour-muted);
+    background: var(--bn-colour-quote-bg);
+    border: 1px solid var(--bn-colour-border);
+    border-radius: var(--bn-radius-md);
+    padding: var(--bn-space-md);
+    margin-top: var(--bn-space-sm);
+    line-height: 1.5;
+}
+
+.algo-note strong {
+    color: var(--bn-colour-text);
+    font-weight: 600;
+}
+
+.algo-note .step {
+    display: block;
+    margin-top: 0.2rem;
+}
+
+/* Pattern type label */
+.pattern-label {
+    display: inline-block;
+    font-size: 0.65rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    padding: 0.1rem 0.4rem;
+    border-radius: var(--bn-radius-sm);
+    margin-left: 0.4rem;
+    vertical-align: middle;
+}
+
+.pattern-success {
+    background: #dcfce7;
+    color: #166534;
+}
+
+[data-theme="dark"] .pattern-success {
+    background: #14532d;
+    color: #86efac;
+}
+
+.pattern-tension {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+[data-theme="dark"] .pattern-tension {
+    background: #451a03;
+    color: #fcd34d;
+}
+
+.pattern-gap {
+    background: #fee2e2;
+    color: #991b1b;
+}
+
+[data-theme="dark"] .pattern-gap {
+    background: #450a0a;
+    color: #fca5a5;
+}
+
+.pattern-recovery {
+    background: #e0f2fe;
+    color: #075985;
+}
+
+[data-theme="dark"] .pattern-recovery {
+    background: #0c4a6e;
+    color: #7dd3fc;
+}
+
+/* ── Divider ──────────────────────────────────────────────────── */
+
+hr {
+    border: none;
+    border-top: 1px solid var(--bn-colour-border);
+    margin: var(--bn-space-xl) 0;
+}
+</style>
+</head>
+<body>
+
+<button class="theme-toggle" onclick="
+    const t = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark';
+    document.documentElement.dataset.theme = t;
+    this.textContent = t === 'dark' ? '☀ Light' : '☾ Dark';
+">☾ Dark</button>
+
+<article>
+
+<div class="page-header">
+    <h1>Signal Elaboration — Framework Cards</h1>
+    <div class="subtitle">IKEA usability study · Norman codebook · 7 signals from 4 participants</div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════════
+     BEFORE / AFTER COMPARISON
+     ════════════════════════════════════════════════════════════════ -->
+
+<h2 class="section-heading">Before / After</h2>
+<p class="section-desc">
+    The same card — current state (left) vs. with signal elaboration (right).
+    The elaboration tells you <em>what the signal means</em>, not just that it exists.
+</p>
+
+<div class="comparison">
+    <!-- BEFORE -->
+    <div class="comparison-col">
+        <h3>Current</h3>
+        <div class="signal-card" style="--card-accent: var(--bn-cs-ux);">
+            <div class="signal-card-top">
+                <div class="signal-card-identity">
+                    <span class="signal-card-source">section</span>
+                    <div class="signal-name">Homepage</div>
+                    <span class="signal-group-badge" style="--badge-bg: var(--bn-cs-ux-bg); --badge-fg: var(--bn-cs-ux);">Discoverability</span>
+                </div>
+                <div class="signal-card-metrics">
+                    <span class="metric-label">Signal</span>
+                    <span class="metric-value">0.32</span>
+                    <span class="metric-label">Conc.</span>
+                    <span class="metric-value">1.3&times;</span>
+                    <span class="metric-label">Agree.</span>
+                    <span class="metric-value">3.0</span>
+                    <span class="metric-label">Intensity</span>
+                    <span class="metric-value">1.0</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- AFTER -->
+    <div class="comparison-col">
+        <h3>With elaboration</h3>
+        <div class="signal-card" style="--card-accent: var(--bn-cs-ux);">
+            <div class="signal-card-top">
+                <div class="signal-card-identity">
+                    <span class="signal-card-source">section · Homepage</span>
+                    <div class="signal-name">Discoverability tension <span class="pattern-label pattern-tension">tension</span></div>
+                    <div class="signal-elaboration">The top navigation makes product categories easy to find, but editorial content on the homepage body competes with the shopping entry point, forcing some first-time visitors to scan past it.</div>
+                </div>
+                <div class="signal-card-metrics">
+                    <span class="metric-label">Signal</span>
+                    <span class="metric-value">0.32</span>
+                    <span class="metric-label">Conc.</span>
+                    <span class="metric-value">1.3&times;</span>
+                    <span class="metric-label">Agree.</span>
+                    <span class="metric-value">3.0</span>
+                    <span class="metric-label">Intensity</span>
+                    <span class="metric-value">1.0</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<hr>
+
+<!-- ════════════════════════════════════════════════════════════════
+     ALL 7 SIGNAL CARDS WITH ELABORATION
+     ════════════════════════════════════════════════════════════════ -->
+
+<h2 class="section-heading">All Framework Signals</h2>
+<p class="section-desc">
+    7 Norman codebook signals ranked by composite score.
+    Each card has a 2–4 word <strong>signal name</strong> and a one-sentence <strong>elaboration</strong>
+    generated by interpreting quotes through the codebook tag definitions.
+</p>
+
+<div class="signal-cards">
+
+    <!-- ── 1. Product Details + Feedback ──────────────────────────── -->
+    <div class="signal-card" style="--card-accent: var(--bn-cs-emo);">
+        <div class="signal-card-top">
+            <div class="signal-card-identity">
+                <span class="signal-card-source">section · Product Details</span>
+                <div class="signal-name">Feedback strength <span class="pattern-label pattern-success">success</span></div>
+                <div class="signal-elaboration">Product detail pages communicate well — participants read descriptions with confidence, respond positively to the Swedish login greeting, and get clear confirmation when adding items to bag.</div>
+                <span class="signal-group-badge" style="--badge-bg: var(--bn-cs-emo-bg); --badge-fg: var(--bn-cs-emo);">Feedback</span>
+            </div>
+            <div class="signal-card-metrics">
+                <span class="metric-label">Signal</span>
+                <span class="metric-value">0.49</span>
+                <span class="metric-label">Conc.</span>
+                <span class="metric-value">1.6&times;</span>
+                <span class="metric-label">Agree.</span>
+                <span class="metric-value">3.0</span>
+                <span class="metric-label">Intensity</span>
+                <span class="metric-value">1.3</span>
+            </div>
+        </div>
+        <div class="signal-quotes">
+            <div class="signal-quote">
+                <div class="signal-quote-meta">
+                    <span class="signal-quote-timecode">[01:00]</span>
+                    <span class="signal-quote-pid">p3</span>
+                </div>
+                <div class="signal-quote-text">Strongest stand 179 that&rsquo;s quite cheap a stobie bow frame with soft profilages and high legs the classic shape that will last for many years</div>
+                <span class="signal-quote-tag">system response</span>
+            </div>
+            <div class="signal-quote">
+                <div class="signal-quote-meta">
+                    <span class="signal-quote-timecode">[03:12]</span>
+                    <span class="signal-quote-pid">p3</span>
+                </div>
+                <div class="signal-quote-text">Oh i like that hi it asked you to log in and says a greeting in swedish... i like the way ikea&rsquo;s kept a pretty bit soul</div>
+                <span class="signal-quote-tag">system response</span>
+            </div>
+            <div class="signal-quote">
+                <div class="signal-quote-meta">
+                    <span class="signal-quote-timecode">[01:20]</span>
+                    <span class="signal-quote-pid">p4</span>
+                </div>
+                <div class="signal-quote-text">Choose. Right. Add [to] shopping bag. &hellip; Oh, yes. Right. The pillow to go with it. That is reasonable. Add the pillow.</div>
+                <span class="signal-quote-tag">system response</span>
+            </div>
+            <div class="signal-quote">
+                <div class="signal-quote-meta">
+                    <span class="signal-quote-timecode">[02:38]</span>
+                    <span class="signal-quote-pid">p4</span>
+                </div>
+                <div class="signal-quote-text">Add to shopping bag. And I&rsquo;ve spent &pound;947.</div>
+                <span class="signal-quote-tag">system response</span>
+            </div>
+        </div>
+        <div class="algo-note">
+            <strong>Algorithm trace:</strong>
+            <span class="step"><strong>Lens:</strong> &ldquo;Does the system communicate results clearly?&rdquo;</span>
+            <span class="step"><strong>Tag definition:</strong> system response = &ldquo;the system communicates the result of a user action clearly and immediately&rdquo;</span>
+            <span class="step"><strong>Valence:</strong> all 4 quotes positive &mdash; participants confirm actions are acknowledged</span>
+            <span class="step"><strong>Pattern:</strong> uniform success &rarr; &ldquo;strength&rdquo;</span>
+        </div>
+    </div>
+
+    <!-- ── 2. Product Listing + Discoverability ───────────────────── -->
+    <div class="signal-card" style="--card-accent: var(--bn-cs-ux);">
+        <div class="signal-card-top">
+            <div class="signal-card-identity">
+                <span class="signal-card-source">section · Product Listing</span>
+                <div class="signal-name">Filter discoverability <span class="pattern-label pattern-success">success</span></div>
+                <div class="signal-elaboration">Product listing filters and sort options are easy to find and use — participants confidently narrow results by price, material, size, and style without guidance.</div>
+                <span class="signal-group-badge" style="--badge-bg: var(--bn-cs-ux-bg); --badge-fg: var(--bn-cs-ux);">Discoverability</span>
+            </div>
+            <div class="signal-card-metrics">
+                <span class="metric-label">Signal</span>
+                <span class="metric-value">0.45</span>
+                <span class="metric-label">Conc.</span>
+                <span class="metric-value">1.8&times;</span>
+                <span class="metric-label">Agree.</span>
+                <span class="metric-value">3.0</span>
+                <span class="metric-label">Intensity</span>
+                <span class="metric-value">1.0</span>
+            </div>
+        </div>
+        <div class="signal-quotes">
+            <div class="signal-quote">
+                <div class="signal-quote-meta">
+                    <span class="signal-quote-timecode">[02:38]</span>
+                    <span class="signal-quote-pid">p3</span>
+                </div>
+                <div class="signal-quote-text">Sort by highest yes fanciest first... those are like sets of things including beds and other stuff what&rsquo;s the single most expensive bed</div>
+                <span class="signal-quote-tag">exploration</span>
+            </div>
+            <div class="signal-quote">
+                <div class="signal-quote-meta">
+                    <span class="signal-quote-timecode">[00:48]</span>
+                    <span class="signal-quote-pid">p4</span>
+                </div>
+                <div class="signal-quote-text">What&rsquo;s the fluffiest duvet I can get? Down and feather. &hellip; King size. King size. King size. Temperature. The warmest. Warm. Extra warm. And clean material. Down.</div>
+                <span class="signal-quote-tag">exploration</span>
+            </div>
+            <div class="signal-quote">
+                <div class="signal-quote-meta">
+                    <span class="signal-quote-timecode">[02:18]</span>
+                    <span class="signal-quote-pid">p4</span>
+                </div>
+                <div class="signal-quote-text">&hellip; I want an L-shaped one. I want a white L-shaped drug dealer. &hellip; Best seller. &hellip; Light grey. It&rsquo;s not drug dealer enough, is it? Oh, maybe brown and orange. I could be a bit 70s, couldn&rsquo;t I?</div>
+                <span class="signal-quote-tag">exploration</span>
+            </div>
+        </div>
+        <div class="algo-note">
+            <strong>Algorithm trace:</strong>
+            <span class="step"><strong>Lens:</strong> &ldquo;Can the user figure out what actions are possible?&rdquo;</span>
+            <span class="step"><strong>Tag definition:</strong> exploration = &ldquo;trying things, poking around, testing the boundaries of the system&rdquo;</span>
+            <span class="step"><strong>Valence:</strong> all 3 positive &mdash; exploration is productive, participants find filters and use them fluently</span>
+            <span class="step"><strong>Pattern:</strong> uniform success &rarr; &ldquo;discoverability&rdquo; (elaboration specifies &ldquo;filter&rdquo; from quote content)</span>
+        </div>
+    </div>
+
+    <!-- ── 3. Text Notifications + Feedback ───────────────────────── -->
+    <div class="signal-card" style="--card-accent: var(--bn-cs-emo);">
+        <div class="signal-card-top">
+            <div class="signal-card-identity">
+                <span class="signal-card-source">section · Text Notifications</span>
+                <div class="signal-name">Notification clarity <span class="pattern-label pattern-success">success</span></div>
+                <div class="signal-elaboration">Text notifications communicate the right information at the right time — the participant strongly valued recovery guidance, appointment confirmations, and pre-operative health checks delivered via SMS.</div>
+                <span class="signal-group-badge" style="--badge-bg: var(--bn-cs-emo-bg); --badge-fg: var(--bn-cs-emo);">Feedback</span>
+            </div>
+            <div class="signal-card-metrics">
+                <span class="metric-label">Signal</span>
+                <span class="metric-value">0.41</span>
+                <span class="metric-label">Conc.</span>
+                <span class="metric-value">2.2&times;</span>
+                <span class="metric-label">Agree.</span>
+                <span class="metric-value">1.0</span>
+                <span class="metric-label">Intensity</span>
+                <span class="metric-value">2.3</span>
+            </div>
+        </div>
+        <div class="signal-quotes">
+            <div class="signal-quote">
+                <div class="signal-quote-meta">
+                    <span class="signal-quote-timecode">[03:43]</span>
+                    <span class="signal-quote-pid">p1</span>
+                </div>
+                <div class="signal-quote-text">Yeah, these are good ideas because it tells you about the surgery, your appointment, then confirmation of surgery.</div>
+                <span class="signal-quote-tag">system response</span>
+            </div>
+            <div class="signal-quote">
+                <div class="signal-quote-meta">
+                    <span class="signal-quote-timecode">[03:51]</span>
+                    <span class="signal-quote-pid">p1</span>
+                </div>
+                <div class="signal-quote-text">You&rsquo;ve had one week ago, you should be able to walk. Yes, it is really good. I really like it.</div>
+                <span class="signal-quote-tag">system response</span>
+            </div>
+            <div class="signal-quote">
+                <div class="signal-quote-meta">
+                    <span class="signal-quote-timecode">[03:56]</span>
+                    <span class="signal-quote-pid">p1</span>
+                </div>
+                <div class="signal-quote-text">Especially&hellip; I especially like this one. You know, you should be able to walk around with some pain, but take care not to lift. That is nice to actually say that. Send that to someone. I think that&rsquo;s really nice.</div>
+                <span class="signal-quote-tag">system response</span>
+            </div>
+            <div class="signal-quote">
+                <div class="signal-quote-meta">
+                    <span class="signal-quote-timecode">[04:10]</span>
+                    <span class="signal-quote-pid">p1</span>
+                </div>
+                <div class="signal-quote-text">If you recently had a cough, fever, diarrhea, similar text, check. If you&rsquo;ve been fine, just text ready. That&rsquo;s good. Because it might be just before your operation, you are ill. So, that&rsquo;s good.</div>
+                <span class="signal-quote-tag">system response</span>
+            </div>
+        </div>
+        <div class="algo-note">
+            <strong>Algorithm trace:</strong>
+            <span class="step"><strong>Lens:</strong> &ldquo;Does the system communicate results clearly?&rdquo;</span>
+            <span class="step"><strong>Tag definition:</strong> system response = &ldquo;the system communicates the result of a user action clearly and immediately&rdquo;</span>
+            <span class="step"><strong>Valence:</strong> all 4 strongly positive (intensity 2.3) &mdash; participant praises content and timing</span>
+            <span class="step"><strong>Pattern:</strong> uniform success &rarr; &ldquo;clarity&rdquo; (elaboration specifies notification content from quotes)</span>
+            <span class="step"><strong>Note:</strong> single participant (n_eff=1.0) limits generalisability &mdash; strong within-person signal, not cross-participant agreement</span>
+        </div>
+    </div>
+
+    <!-- ── 4. Homepage + Discoverability ──────────────────────────── -->
+    <div class="signal-card" style="--card-accent: var(--bn-cs-ux);">
+        <div class="signal-card-top">
+            <div class="signal-card-identity">
+                <span class="signal-card-source">section · Homepage</span>
+                <div class="signal-name">Discoverability tension <span class="pattern-label pattern-tension">tension</span></div>
+                <div class="signal-elaboration">The top navigation makes product categories easy to find, but editorial content on the homepage body competes with the shopping entry point, forcing some first-time visitors to scan past it.</div>
+                <span class="signal-group-badge" style="--badge-bg: var(--bn-cs-ux-bg); --badge-fg: var(--bn-cs-ux);">Discoverability</span>
+            </div>
+            <div class="signal-card-metrics">
+                <span class="metric-label">Signal</span>
+                <span class="metric-value">0.32</span>
+                <span class="metric-label">Conc.</span>
+                <span class="metric-value">1.3&times;</span>
+                <span class="metric-label">Agree.</span>
+                <span class="metric-value">3.0</span>
+                <span class="metric-label">Intensity</span>
+                <span class="metric-value">1.0</span>
+            </div>
+        </div>
+        <div class="signal-quotes">
+            <div class="signal-quote">
+                <div class="signal-quote-meta">
+                    <span class="signal-quote-timecode">[00:00]</span>
+                    <span class="signal-quote-pid">p2</span>
+                </div>
+                <div class="signal-quote-text">This is my test file. I&rsquo;m going to go looking for a bed at IKEA. I&rsquo;m at ikea.com, which I found through Google.</div>
+                <span class="signal-quote-tag">first-time use</span>
+            </div>
+            <div class="signal-quote">
+                <div class="signal-quote-meta">
+                    <span class="signal-quote-timecode">[00:12]</span>
+                    <span class="signal-quote-pid">p2</span>
+                </div>
+                <div class="signal-quote-text">&hellip; I don&rsquo;t need that. Beds and mattresses. That&rsquo;s easy. That&rsquo;s in the top navigation.</div>
+                <span class="signal-quote-tag">visible action</span>
+            </div>
+            <div class="signal-quote">
+                <div class="signal-quote-meta">
+                    <span class="signal-quote-timecode">[00:30]</span>
+                    <span class="signal-quote-pid">p3</span>
+                </div>
+                <div class="signal-quote-text">Fresh folkloric style the on jangie collection okay okay that&rsquo;s&hellip; ikea stories but we just want to go shopping which at least is wealth it&rsquo;s a big yellow sign okay i&rsquo;m going to do that</div>
+                <span class="signal-quote-tag">visible action</span>
+            </div>
+        </div>
+        <div class="algo-note">
+            <strong>Algorithm trace:</strong>
+            <span class="step"><strong>Lens:</strong> &ldquo;Can the user figure out what actions are possible?&rdquo;</span>
+            <span class="step"><strong>Tag definitions:</strong> first-time use = &ldquo;initial encounter and learning threshold&rdquo;; visible action = &ldquo;interface makes possibilities obvious&rdquo;</span>
+            <span class="step"><strong>Valence:</strong> P2 positive (nav works), P3 negative-then-recovery (editorial obscures path)</span>
+            <span class="step"><strong>Pattern:</strong> mixed &rarr; &ldquo;tension&rdquo;</span>
+        </div>
+    </div>
+
+    <!-- ── 5. Category Navigation + Discoverability ───────────────── -->
+    <div class="signal-card" style="--card-accent: var(--bn-cs-ux);">
+        <div class="signal-card-top">
+            <div class="signal-card-identity">
+                <span class="signal-card-source">section · Category Navigation</span>
+                <div class="signal-name">Discoverability gap <span class="pattern-label pattern-gap">gap</span></div>
+                <div class="signal-elaboration">The category navigation structure hides specific product attributes (like bed sizes) and forces participants to explore multiple paths — Products, Rooms, Ideas — before reaching their target.</div>
+                <span class="signal-group-badge" style="--badge-bg: var(--bn-cs-ux-bg); --badge-fg: var(--bn-cs-ux);">Discoverability</span>
+            </div>
+            <div class="signal-card-metrics">
+                <span class="metric-label">Signal</span>
+                <span class="metric-value">0.25</span>
+                <span class="metric-label">Conc.</span>
+                <span class="metric-value">1.5&times;</span>
+                <span class="metric-label">Agree.</span>
+                <span class="metric-value">2.0</span>
+                <span class="metric-label">Intensity</span>
+                <span class="metric-value">1.0</span>
+            </div>
+        </div>
+        <div class="signal-quotes">
+            <div class="signal-quote">
+                <div class="signal-quote-meta">
+                    <span class="signal-quote-timecode">[00:45]</span>
+                    <span class="signal-quote-pid">p3</span>
+                </div>
+                <div class="signal-quote-text">I&rsquo;m looking for a bed&hellip; beds and mattresses. Beds double beds but i don&rsquo;t see king size</div>
+                <span class="signal-quote-tag">hidden feature</span>
+            </div>
+            <div class="signal-quote">
+                <div class="signal-quote-meta">
+                    <span class="signal-quote-timecode">[01:49]</span>
+                    <span class="signal-quote-pid">p4</span>
+                </div>
+                <div class="signal-quote-text">So now I need the bed. Let&rsquo;s go back to&hellip; Products. Rooms. The bedroom. Ideas. What&rsquo;s new? &hellip; I&rsquo;ve flung my way to the bed section again.</div>
+                <span class="signal-quote-tag">exploration</span>
+            </div>
+        </div>
+        <div class="algo-note">
+            <strong>Algorithm trace:</strong>
+            <span class="step"><strong>Lens:</strong> &ldquo;Can the user figure out what actions are possible?&rdquo;</span>
+            <span class="step"><strong>Tag definitions:</strong> hidden feature = &ldquo;useful action exists but participant cannot find it&rdquo;; exploration = &ldquo;trying things, testing boundaries&rdquo;</span>
+            <span class="step"><strong>Valence:</strong> both negative &mdash; P3 can&rsquo;t find king size, P4 has to try multiple nav paths</span>
+            <span class="step"><strong>Pattern:</strong> uniform failure &rarr; &ldquo;gap&rdquo;</span>
+        </div>
+    </div>
+
+    <!-- ── 6. Product Details + Conceptual Model ──────────────────── -->
+    <div class="signal-card" style="--card-accent: var(--bn-cs-task);">
+        <div class="signal-card-top">
+            <div class="signal-card-identity">
+                <span class="signal-card-source">section · Product Details</span>
+                <div class="signal-name">Expectation mismatch <span class="pattern-label pattern-gap">gap</span></div>
+                <div class="signal-elaboration">Product detail pages break participant expectations with irrelevant recommendations (chest of drawers while shopping for beds) and desktop-inappropriate CTAs (app download link leading to a QR code).</div>
+                <span class="signal-group-badge" style="--badge-bg: var(--bn-cs-task-bg); --badge-fg: var(--bn-cs-task);">Conceptual model</span>
+            </div>
+            <div class="signal-card-metrics">
+                <span class="metric-label">Signal</span>
+                <span class="metric-value">0.17</span>
+                <span class="metric-label">Conc.</span>
+                <span class="metric-value">1.4&times;</span>
+                <span class="metric-label">Agree.</span>
+                <span class="metric-value">1.0</span>
+                <span class="metric-label">Intensity</span>
+                <span class="metric-value">1.5</span>
+            </div>
+        </div>
+        <div class="signal-quotes">
+            <div class="signal-quote">
+                <div class="signal-quote-meta">
+                    <span class="signal-quote-timecode">[01:39]</span>
+                    <span class="signal-quote-pid">p3</span>
+                </div>
+                <div class="signal-quote-text">Chest of drawers&hellip; that&rsquo;s completely random i don&rsquo;t need that</div>
+                <span class="signal-quote-tag">model mismatch</span>
+            </div>
+            <div class="signal-quote">
+                <div class="signal-quote-meta">
+                    <span class="signal-quote-timecode">[03:30]</span>
+                    <span class="signal-quote-pid">p3</span>
+                </div>
+                <div class="signal-quote-text">Then load the ikea app&hellip; i&rsquo;m on a desktop what will it do&hellip; that takes me to a QR code</div>
+                <span class="signal-quote-tag">model mismatch</span>
+            </div>
+        </div>
+        <div class="algo-note">
+            <strong>Algorithm trace:</strong>
+            <span class="step"><strong>Lens:</strong> &ldquo;Does user understanding match reality?&rdquo;</span>
+            <span class="step"><strong>Tag definition:</strong> model mismatch = &ldquo;a gap between what the participant expected and what the system actually did&rdquo;</span>
+            <span class="step"><strong>Valence:</strong> both negative &mdash; recommendations don&rsquo;t match browsing context, CTA doesn&rsquo;t match platform</span>
+            <span class="step"><strong>Pattern:</strong> uniform failure &rarr; &ldquo;mismatch&rdquo; (more specific than generic &ldquo;gap&rdquo;, using the tag&rsquo;s own vocabulary)</span>
+        </div>
+    </div>
+
+    <!-- ── 7. Homepage + Feedback ─────────────────────────────────── -->
+    <div class="signal-card" style="--card-accent: var(--bn-cs-emo);">
+        <div class="signal-card-top">
+            <div class="signal-card-identity">
+                <span class="signal-card-source">section · Homepage</span>
+                <div class="signal-name">Response delay <span class="pattern-label pattern-recovery">recovery</span></div>
+                <div class="signal-elaboration">The homepage fails to acknowledge clicks immediately — the participant had to click multiple times before the navigation responded, creating uncertainty about whether the interface was working.</div>
+                <span class="signal-group-badge" style="--badge-bg: var(--bn-cs-emo-bg); --badge-fg: var(--bn-cs-emo);">Feedback</span>
+            </div>
+            <div class="signal-card-metrics">
+                <span class="metric-label">Signal</span>
+                <span class="metric-value">0.10</span>
+                <span class="metric-label">Conc.</span>
+                <span class="metric-value">0.8&times;</span>
+                <span class="metric-label">Agree.</span>
+                <span class="metric-value">1.0</span>
+                <span class="metric-label">Intensity</span>
+                <span class="metric-value">1.5</span>
+            </div>
+        </div>
+        <div class="signal-quotes">
+            <div class="signal-quote">
+                <div class="signal-quote-meta">
+                    <span class="signal-quote-timecode">[00:19]</span>
+                    <span class="signal-quote-pid">p2</span>
+                </div>
+                <div class="signal-quote-text">And I&rsquo;m clicking. Why is that not working?</div>
+                <span class="signal-quote-tag">delayed feedback</span>
+            </div>
+            <div class="signal-quote">
+                <div class="signal-quote-meta">
+                    <span class="signal-quote-timecode">[00:35]</span>
+                    <span class="signal-quote-pid">p2</span>
+                </div>
+                <div class="signal-quote-text">&hellip; Ah, it worked that time. Okay, and then beds.</div>
+                <span class="signal-quote-tag">system response</span>
+            </div>
+        </div>
+        <div class="algo-note">
+            <strong>Algorithm trace:</strong>
+            <span class="step"><strong>Lens:</strong> &ldquo;Does the system communicate results clearly?&rdquo;</span>
+            <span class="step"><strong>Tag definitions:</strong> delayed feedback = &ldquo;system takes too long to respond, leaving them uncertain&rdquo;; system response = &ldquo;communicates result clearly&rdquo;</span>
+            <span class="step"><strong>Valence:</strong> Q1 negative (no response), Q2 positive (eventually works)</span>
+            <span class="step"><strong>Pattern:</strong> failure &rarr; recovery &mdash; the system eventually responds but the delay creates doubt</span>
+        </div>
+    </div>
+
+</div>
+
+<hr>
+
+<!-- ════════════════════════════════════════════════════════════════
+     ALGORITHM SUMMARY
+     ════════════════════════════════════════════════════════════════ -->
+
+<h2 class="section-heading">Generation Algorithm</h2>
+<p class="section-desc">
+    How each signal name and elaboration was produced. This is the prompt template
+    an LLM would follow to generate these for any signal card.
+</p>
+
+<div class="algo-note" style="margin-bottom: var(--bn-space-lg);">
+    <strong>Input:</strong> group name + subtitle + tag definitions (from codebook YAML) + quotes with tags<br><br>
+    <strong>Step 1 — Lens:</strong> Read the group subtitle as the question this signal answers.<br>
+    <strong>Step 2 — Evidence:</strong> For each quote, interpret it through its tag definition. Determine <em>valence</em>: does the quote show the definition being satisfied (+) or violated (&minus;)?<br>
+    <strong>Step 3 — Pattern:</strong> Classify the overall pattern across quotes:
+    <table style="margin: 0.5rem 0 0.5rem 1rem; border-collapse: collapse; font-size: 0.8rem;">
+        <tr><td style="padding: 0.15rem 0.8rem 0.15rem 0;"><span class="pattern-label pattern-success">success</span></td><td>All quotes positive</td><td style="padding-left: 1rem; color: var(--bn-colour-muted);">&rarr; &ldquo;[Group] strength&rdquo; or &ldquo;[specific] clarity&rdquo;</td></tr>
+        <tr><td style="padding: 0.15rem 0.8rem 0.15rem 0;"><span class="pattern-label pattern-gap">gap</span></td><td>All quotes negative</td><td style="padding-left: 1rem; color: var(--bn-colour-muted);">&rarr; &ldquo;[Group] gap&rdquo; or &ldquo;[specific] mismatch&rdquo;</td></tr>
+        <tr><td style="padding: 0.15rem 0.8rem 0.15rem 0;"><span class="pattern-label pattern-tension">tension</span></td><td>Mixed positive &amp; negative</td><td style="padding-left: 1rem; color: var(--bn-colour-muted);">&rarr; &ldquo;[Group] tension&rdquo;</td></tr>
+        <tr><td style="padding: 0.15rem 0.8rem 0.15rem 0;"><span class="pattern-label pattern-recovery">recovery</span></td><td>Negative &rarr; positive sequence</td><td style="padding-left: 1rem; color: var(--bn-colour-muted);">&rarr; &ldquo;[specific] delay&rdquo; or &ldquo;[Group] recovery&rdquo;</td></tr>
+    </table>
+    <strong>Step 4 — Signal name:</strong> 2&ndash;4 words. Pattern type + specificity from quote content. Use the group&rsquo;s vocabulary, not raw quote words.<br>
+    <strong>Step 5 — Elaboration:</strong> One sentence. [Context/who] + [finding] + [tension/nuance if any]. Vocabulary from the group subtitle, not the quotes.<br><br>
+    <strong>Output:</strong> <code>{ "signal_name": "...", "pattern": "success|gap|tension|recovery", "elaboration": "..." }</code>
+</div>
+
+</article>
+
+</body>
+</html>

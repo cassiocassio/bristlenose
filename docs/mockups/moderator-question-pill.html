@@ -72,7 +72,7 @@ blockquote .context {
 }
 blockquote .quote-row { display: flex; gap: 0.5rem; align-items: baseline; }
 blockquote .quote-row .timecode { flex-shrink: 0; }
-blockquote .quote-body { flex: 1; min-width: 0; }
+blockquote .quote-body { flex: 1; min-width: 0; position: relative; }
 blockquote .timecode {
     color: var(--bn-colour-accent);
     font-family: var(--bn-font-mono);
@@ -97,20 +97,23 @@ blockquote .speaker { color: var(--bn-colour-muted); font-size: 0.9rem; }
 .badges { display: flex; gap: 0.3rem; flex-wrap: wrap; margin-top: 0.25rem; }
 
 /* ── Person badge (from molecules/person-badge.css) ─────────────── */
-.person-badge {
-    font-family: var(--bn-font-mono);
-    font-size: 0.8rem;
-    color: var(--bn-colour-muted);
+.bn-person-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    white-space: nowrap;
 }
+.bn-person-badge .badge { flex-shrink: 0; }
+.bn-person-badge-name { font-weight: var(--bn-weight-emphasis); }
 
-/* ── Hover zone ─────────────────────────────────────────────────── */
+/* ── Hover zone (from atoms/moderator-question.css) ───────────────── */
 .quote-hover-zone { cursor: help; }
 
 /* ── Moderator pill (from atoms/moderator-question.css) ─────────── */
 .moderator-pill {
     position: absolute;
-    top: calc(-0.1rem - 1px);
-    left: 1rem;
+    top: calc(-1.1rem - 1px);
+    left: 0;
     display: inline-block;
     font-family: var(--bn-font-mono);
     font-size: 0.65rem;
@@ -143,19 +146,62 @@ blockquote .speaker { color: var(--bn-colour-muted); font-size: 0.9rem; }
     color: var(--bn-colour-accent);
 }
 
-/* ── Expanded moderator question ────────────────────────────────── */
+/* Moderator question row — same flex layout as quote-row, hidden timecode spacer */
+.moderator-question-row { margin-bottom: 0; }
+
+/* ── Expanded moderator question (from atoms/moderator-question.css) */
 .moderator-question {
-    display: flex;
-    align-items: baseline;
-    gap: 0.4rem;
+    display: block;
+    flex: 1;
+    min-width: 0;
     font-size: 0.85rem;
-    font-style: italic;
     color: var(--bn-colour-muted);
-    margin-bottom: 0.3rem;
+    margin-bottom: 0;
     padding-left: 0;
     animation: mod-q-reveal 0.2s ease-out;
 }
-.moderator-question-text { flex: 1; min-width: 0; }
+
+/* Badge wrapper — positions the dismiss x relative to the PersonBadge */
+.moderator-question-badge {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    flex-shrink: 0;
+    margin-right: 0.4rem;
+    vertical-align: baseline;
+}
+
+/* Dismiss x button — reuses badge-delete pattern from atoms/badge.css */
+.moderator-question-dismiss {
+    position: absolute;
+    top: calc(-0.3rem - 1px);
+    right: calc(-0.3rem - 1px);
+    width: calc(0.875rem + 0.5px);
+    height: calc(0.875rem + 0.5px);
+    background: var(--bn-colour-bg);
+    border: none;
+    border-radius: 50%;
+    color: var(--bn-colour-danger, #dc2626);
+    font-size: 0.6rem;
+    font-weight: var(--bn-weight-strong);
+    line-height: 1;
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity var(--bn-transition-fast);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    pointer-events: none;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.16), 0 0 1px rgba(0, 0, 0, 0.06);
+}
+
+.moderator-question:hover .moderator-question-dismiss {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.moderator-question-text { font-style: italic; }
 .moderator-question-more {
     font-style: normal;
     font-size: 0.75rem;
@@ -200,8 +246,8 @@ blockquote .speaker { color: var(--bn-colour-muted); font-size: 0.9rem; }
 
 <h1>Moderator Question Pill — Interactive Mockup</h1>
 <p class="note">
-    Hover the quote text (cursor changes to <code style="font-family:var(--bn-font-mono)">?</code>) for 400ms → "Question?" pill drops in from above.<br>
-    Click the pill to reveal/hide the preceding moderator utterance.
+    Hover the quote text (cursor changes to <code style="font-family:var(--bn-font-mono)">?</code>) for 300ms &rarr; "Question?" pill drops in from above.<br>
+    Click the pill to reveal/hide the preceding moderator utterance. Hover the moderator badge to show &times; dismiss button.
 </p>
 
 <div class="demo-controls">
@@ -212,23 +258,28 @@ blockquote .speaker { color: var(--bn-colour-muted); font-size: 0.9rem; }
 </div>
 
 <!-- ── State 1: At rest (no pill, no question) ────────────────────── -->
-<h2>Quote card — at rest</h2>
+<h2>Quote card — at rest (no researcher_context when segment_index &gt; 0)</h2>
 
 <blockquote class="quote-card" id="card1">
-    <span class="context">[When asked about the dashboard]</span>
-    <button class="moderator-pill" id="pill1">Question?</button>
-    <div class="moderator-question" id="modq1" style="display: none;">
-        <span class="person-badge">m1</span>
-        <span class="moderator-question-text" id="modq1-text">What specifically was confusing about it?</span>
+    <div class="quote-row moderator-question-row" id="modq1" style="display: none;">
+        <span class="timecode" style="visibility: hidden;">[00:26]</span>
+        <div class="moderator-question">
+            <span class="moderator-question-badge">
+                <span class="bn-person-badge"><span class="badge">m1</span></span>
+                <button class="moderator-question-dismiss" onclick="toggleQuestion()" title="Dismiss">&times;</button>
+            </span>
+            <span class="moderator-question-text" id="modq1-text">What specifically was confusing about it?</span>
+        </div>
     </div>
     <div class="quote-row">
         <span class="timecode">[00:26]</span>
         <div class="quote-body">
+            <button class="moderator-pill" id="pill1">Question?</button>
             <span class="quote-hover-zone">
                 <span class="quote-text">&ldquo;The navigation was hidden behind a hamburger menu. I kept looking for a sidebar but there wasn&rsquo;t one. Once I found it though, it made sense.&rdquo;</span>
             </span>
             &nbsp;
-            <span class="speaker">&mdash;&nbsp;<span class="person-badge">p1</span> Rachel</span>
+            <span class="speaker">&mdash;&nbsp;<span class="bn-person-badge"><span class="badge">p1</span> <span class="bn-person-badge-name">Rachel</span></span></span>
             <div class="badges">
                 <span class="badge badge-ai badge-frustration">frustration</span>
             </div>
@@ -237,19 +288,18 @@ blockquote .speaker { color: var(--bn-colour-muted); font-size: 0.9rem; }
 </blockquote>
 
 <!-- ── State 2: Pill visible, question closed ─────────────────────── -->
-<h2>Quote card — pill visible (after 400ms hover)</h2>
+<h2>Quote card — pill visible (after 300ms hover)</h2>
 
 <blockquote class="quote-card">
-    <span class="context">[When asked about the search feature]</span>
-    <button class="moderator-pill visible">Question?</button>
     <div class="quote-row">
         <span class="timecode">[00:46]</span>
         <div class="quote-body">
+            <button class="moderator-pill visible">Question?</button>
             <span class="quote-hover-zone">
                 <span class="quote-text">&ldquo;Oh, the search was great actually. It was fast and the results were really relevant. That was probably the best part of the whole thing.&rdquo;</span>
             </span>
             &nbsp;
-            <span class="speaker">&mdash;&nbsp;<span class="person-badge">p1</span> Rachel</span>
+            <span class="speaker">&mdash;&nbsp;<span class="bn-person-badge"><span class="badge">p1</span> <span class="bn-person-badge-name">Rachel</span></span></span>
             <div class="badges">
                 <span class="badge badge-ai badge-delight">delight</span>
             </div>
@@ -261,20 +311,25 @@ blockquote .speaker { color: var(--bn-colour-muted); font-size: 0.9rem; }
 <h2>Quote card — question expanded</h2>
 
 <blockquote class="quote-card">
-    <span class="context">[When asked about onboarding]</span>
-    <button class="moderator-pill visible moderator-pill-active">Question?</button>
-    <div class="moderator-question">
-        <span class="person-badge">m1</span>
-        <span class="moderator-question-text">Good to hear. Any other thoughts on the overall experience?</span>
+    <div class="quote-row moderator-question-row">
+        <span class="timecode" style="visibility: hidden;">[01:06]</span>
+        <div class="moderator-question">
+            <span class="moderator-question-badge">
+                <span class="bn-person-badge"><span class="badge">m1</span></span>
+                <button class="moderator-question-dismiss" title="Dismiss">&times;</button>
+            </span>
+            <span class="moderator-question-text">Good to hear. Any other thoughts on the overall experience?</span>
+        </div>
     </div>
     <div class="quote-row">
         <span class="timecode">[01:06]</span>
         <div class="quote-body">
+            <button class="moderator-pill visible moderator-pill-active">Question?</button>
             <span class="quote-hover-zone">
                 <span class="quote-text">&ldquo;I think the onboarding could be better. When I first signed up I had no idea what to do. A quick tutorial or walkthrough would have helped a lot.&rdquo;</span>
             </span>
             &nbsp;
-            <span class="speaker">&mdash;&nbsp;<span class="person-badge">p1</span> Rachel</span>
+            <span class="speaker">&mdash;&nbsp;<span class="bn-person-badge"><span class="badge">p1</span> <span class="bn-person-badge-name">Rachel</span></span></span>
             <div class="badges">
                 <span class="badge badge-ai badge-frustration">frustration</span>
             </div>
@@ -282,26 +337,32 @@ blockquote .speaker { color: var(--bn-colour-muted); font-size: 0.9rem; }
     </div>
 </blockquote>
 
-<!-- ── State 4: Long question with "...more" ──────────────────────── -->
-<h2>Quote card — long moderator utterance (first sentence + ...more)</h2>
+<!-- ── State 4: Long question with "more…" ───────────────────────── -->
+<h2>Quote card — long moderator utterance (first sentence + more&hellip;)</h2>
 
 <blockquote class="quote-card">
-    <button class="moderator-pill visible moderator-pill-active">Question?</button>
-    <div class="moderator-question">
-        <span class="person-badge">m1</span>
-        <span class="moderator-question-text">
-            So I want to understand your experience with the notification settings specifically.
-            <button class="moderator-question-more">...more</button>
-        </span>
+    <div class="quote-row moderator-question-row">
+        <span class="timecode" style="visibility: hidden;">[02:34]</span>
+        <div class="moderator-question">
+            <span class="moderator-question-badge">
+                <span class="bn-person-badge"><span class="badge">m1</span></span>
+                <button class="moderator-question-dismiss" title="Dismiss">&times;</button>
+            </span>
+            <span class="moderator-question-text">
+                So I want to understand your experience with the notification settings specifically.
+                <button class="moderator-question-more">more&hellip;</button>
+            </span>
+        </div>
     </div>
     <div class="quote-row">
         <span class="timecode">[02:34]</span>
         <div class="quote-body">
+            <button class="moderator-pill visible moderator-pill-active">Question?</button>
             <span class="quote-hover-zone">
                 <span class="quote-text">&ldquo;I couldn&rsquo;t find the notification settings at all. I looked in my profile, in the hamburger menu, everywhere. Eventually I found them in a completely different section.&rdquo;</span>
             </span>
             &nbsp;
-            <span class="speaker">&mdash;&nbsp;<span class="person-badge">p2</span> Ben</span>
+            <span class="speaker">&mdash;&nbsp;<span class="bn-person-badge"><span class="badge">p2</span> <span class="bn-person-badge-name">Ben</span></span></span>
             <div class="badges">
                 <span class="badge badge-ai badge-confusion">confusion</span>
             </div>
@@ -310,24 +371,48 @@ blockquote .speaker { color: var(--bn-colour-muted); font-size: 0.9rem; }
 </blockquote>
 
 <!-- ── State 5: No researcher_context, pill only ──────────────────── -->
-<h2>Quote card — no researcher_context (pill appears alone)</h2>
+<h2>Quote card — question expanded (no researcher_context)</h2>
 
 <blockquote class="quote-card">
-    <button class="moderator-pill visible moderator-pill-active">Question?</button>
-    <div class="moderator-question">
-        <span class="person-badge">m1</span>
-        <span class="moderator-question-text">Can you tell me about your experience with the dashboard?</span>
+    <div class="quote-row moderator-question-row">
+        <span class="timecode" style="visibility: hidden;">[00:10]</span>
+        <div class="moderator-question">
+            <span class="moderator-question-badge">
+                <span class="bn-person-badge"><span class="badge">m1</span></span>
+                <button class="moderator-question-dismiss" title="Dismiss">&times;</button>
+            </span>
+            <span class="moderator-question-text">Can you tell me about your experience with the dashboard?</span>
+        </div>
     </div>
     <div class="quote-row">
         <span class="timecode">[00:10]</span>
         <div class="quote-body">
+            <button class="moderator-pill visible moderator-pill-active">Question?</button>
             <span class="quote-hover-zone">
                 <span class="quote-text">&ldquo;Sure. I found the dashboard pretty confusing at first. I couldn&rsquo;t figure out where my settings were.&rdquo;</span>
             </span>
             &nbsp;
-            <span class="speaker">&mdash;&nbsp;<span class="person-badge">p1</span> Rachel</span>
+            <span class="speaker">&mdash;&nbsp;<span class="bn-person-badge"><span class="badge">p1</span> <span class="bn-person-badge-name">Rachel</span></span></span>
             <div class="badges">
                 <span class="badge badge-ai badge-confusion">confusion</span>
+            </div>
+        </div>
+    </div>
+</blockquote>
+
+<!-- ── State 6: Legacy quote with researcher_context (segment_index <= 0) -->
+<h2>Quote card — legacy quote (segment_index &le; 0, researcher_context shown)</h2>
+
+<blockquote class="quote-card">
+    <span class="context">[When asked about the dashboard]</span>
+    <div class="quote-row">
+        <span class="timecode">[00:26]</span>
+        <div class="quote-body">
+            <span class="quote-text">&ldquo;The navigation was hidden behind a hamburger menu. I kept looking for a sidebar but there wasn&rsquo;t one.&rdquo;</span>
+            &nbsp;
+            <span class="speaker">&mdash;&nbsp;<span class="bn-person-badge"><span class="badge">p1</span> <span class="bn-person-badge-name">Rachel</span></span></span>
+            <div class="badges">
+                <span class="badge badge-ai badge-frustration">frustration</span>
             </div>
         </div>
     </div>
@@ -340,7 +425,7 @@ let questionOpen = false;
 let longMode = false;
 
 const shortText = 'What specifically was confusing about it?';
-const longText = 'So I want to understand your experience with the navigation specifically. We&rsquo;ve been getting mixed feedback from different user groups and I want to make sure we&rsquo;re capturing the full picture of what&rsquo;s working and what isn&rsquo;t.';
+const longText = 'So I want to understand your experience with the navigation specifically. We\u2019ve been getting mixed feedback from different user groups and I want to make sure we\u2019re capturing the full picture of what\u2019s working and what isn\u2019t.';
 
 function togglePill() {
     pillVisible = !pillVisible;
@@ -360,7 +445,7 @@ function toggleLong() {
     longMode = !longMode;
     const el = document.getElementById('modq1-text');
     if (longMode) {
-        el.innerHTML = 'So I want to understand your experience with the navigation specifically. <button class="moderator-question-more" onclick="event.stopPropagation(); this.parentElement.innerHTML = \'' + longText + '\'">...more</button>';
+        el.innerHTML = 'So I want to understand your experience with the navigation specifically. <button class="moderator-question-more" onclick="event.stopPropagation(); this.parentElement.innerHTML = \'' + longText + '\'">more\u2026</button>';
     } else {
         el.textContent = shortText;
     }
@@ -369,7 +454,7 @@ function toggleLong() {
 
 // Auto-hover demo: cursor:help on hover zones
 document.querySelectorAll('.quote-hover-zone').forEach(zone => {
-    zone.title = 'Hover here for 400ms to see the "Question?" pill';
+    zone.title = 'Hover here for 300ms to see the "Question?" pill';
 });
 </script>
 

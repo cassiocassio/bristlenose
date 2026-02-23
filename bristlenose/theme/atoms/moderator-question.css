@@ -1,16 +1,24 @@
 /* Atom: moderator-question — hover-triggered pill and expanded moderator utterance */
 
-/* Hover zone — first ~3 words of the quote text.
-   cursor: help (native browser ? cursor) signals "hover here for info". */
+/* Hover zone — invisible overlay covering the first ~3 words of the quote text.
+   cursor: help (native browser ? cursor) signals "hover here for info".
+   Positioned absolutely relative to .quote-body. */
+.quote-body { position: relative; }
 .quote-hover-zone {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 14em;
+    height: 1.6em;
     cursor: help;
+    z-index: 1;
 }
 
 /* "Question?" pill — drops in from above on hover, pins when clicked */
 .moderator-pill {
     position: absolute;
-    top: calc(-0.1rem - 1px);
-    left: 1rem;
+    top: calc(-1.1rem - 1px);
+    left: 0;
     display: inline-block;
     font-family: var(--bn-font-mono);
     font-size: 0.65rem;
@@ -47,22 +55,65 @@
     color: var(--bn-colour-accent);
 }
 
-/* Expanded moderator question block */
+/* Moderator question row — sits above the quote's .quote-row, uses the same
+   flex layout with a hidden timecode spacer so text aligns with the quote body. */
+.moderator-question-row { margin-bottom: 0; }
+
+/* Expanded moderator question block — block layout so long text wraps to the
+   left margin, not indented past the badge. flex: 1 fills the quote-row. */
 .moderator-question {
-    display: flex;
-    align-items: baseline;
-    gap: 0.4rem;
+    display: block;
+    flex: 1;
+    min-width: 0;
     font-size: 0.85rem;
-    font-style: italic;
     color: var(--bn-colour-muted);
-    margin-bottom: 0.3rem;
+    margin-bottom: 0;
     padding-left: 0;
     animation: mod-q-reveal 0.2s ease-out;
 }
 
+/* Badge wrapper — positions the dismiss × relative to the PersonBadge */
+.moderator-question-badge {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    flex-shrink: 0;
+    margin-right: 0.4rem;
+    vertical-align: baseline;
+}
+
+/* Dismiss × button — reuses the badge-delete pattern from atoms/badge.css */
+.moderator-question-dismiss {
+    position: absolute;
+    top: calc(-0.3rem - 1px);
+    right: calc(-0.3rem - 1px);
+    width: calc(0.875rem + 0.5px);   /* ~14.5px */
+    height: calc(0.875rem + 0.5px);
+    background: var(--bn-colour-bg);
+    border: none;
+    border-radius: 50%;
+    color: var(--bn-colour-danger, #dc2626);
+    font-size: 0.6rem;
+    font-weight: var(--bn-weight-strong);
+    line-height: 1;
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity var(--bn-transition-fast);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    pointer-events: none;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.16), 0 0 1px rgba(0, 0, 0, 0.06);
+}
+
+.moderator-question:hover .moderator-question-dismiss {
+    opacity: 1;
+    pointer-events: auto;
+}
+
 .moderator-question-text {
-    flex: 1;
-    min-width: 0;
+    font-style: italic;
 }
 
 .moderator-question-more {

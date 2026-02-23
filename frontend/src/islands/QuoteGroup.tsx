@@ -160,7 +160,7 @@ export function QuoteGroup({
   // Which quote is currently showing the hover pill (only one at a time).
   const [pillVisibleFor, setPillVisibleFor] = useState<string | null>(null);
 
-  // Timer for the 400ms hover delay.
+  // Timer for the 300ms hover delay.
   const hoverTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Ref mirrors openQuestions so hover-leave handler can read latest state.
@@ -556,7 +556,7 @@ export function QuoteGroup({
     hoverTimerRef.current = setTimeout(() => {
       setPillVisibleFor(domId);
       hoverTimerRef.current = null;
-    }, 400);
+    }, 300);
   }, []);
 
   const handleQuoteHoverLeave = useCallback((domId: string) => {

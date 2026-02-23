@@ -203,40 +203,43 @@ export function QuoteCard({
       data-participant={quote.participant_id}
       className={`quote-card${isStarred ? " starred" : ""}`}
     >
-      {quote.researcher_context && (
+      {quote.researcher_context && !hasModeratorContext && (
         <span className="context">[{quote.researcher_context}]</span>
-      )}
-      {hasModeratorContext && (
-        <button
-          className={`moderator-pill${isPillVisible || isQuestionOpen ? " visible" : ""}${isQuestionOpen ? " moderator-pill-active" : ""}`}
-          onClick={() => onToggleQuestion(domId)}
-          aria-label="Show moderator question"
-          data-testid={`bn-quote-${domId}-mod-q`}
-        >
-          Question?
-        </button>
       )}
       {isQuestionOpen && moderatorQuestion && (() => {
         const { first, rest } = splitFirstSentence(moderatorQuestion.text);
         return (
-          <div className="moderator-question" data-testid={`bn-quote-${domId}-mod-q-block`}>
-            <PersonBadge
-              code={moderatorQuestion.speaker_code}
-              role="moderator"
-            />
-            <span className="moderator-question-text">
-              {showFullModQ || !rest ? moderatorQuestion.text : (
-                <>
-                  {first}
-                  <button
-                    className="moderator-question-more"
-                    onClick={() => setShowFullModQ(true)}
-                  >
-                    ...more
-                  </button>
-                </>
-              )}
-            </span>
+          <div className="quote-row moderator-question-row" data-testid={`bn-quote-${domId}-mod-q-block`}>
+            <span className="timecode" aria-hidden="true" style={{ visibility: "hidden" }}>[{timecodeStr}]</span>
+            <div className="moderator-question">
+              <span className="moderator-question-badge">
+                <PersonBadge
+                  code={moderatorQuestion.speaker_code}
+                  role="moderator"
+                />
+                <button
+                  className="moderator-question-dismiss"
+                  onClick={() => onToggleQuestion(domId)}
+                  aria-label="Dismiss moderator question"
+                  data-testid={`bn-quote-${domId}-mod-q-dismiss`}
+                >
+                  &times;
+                </button>
+              </span>
+              <span className="moderator-question-text">
+                {showFullModQ || !rest ? moderatorQuestion.text : (
+                  <>
+                    {first}
+                    <button
+                      className="moderator-question-more"
+                      onClick={() => setShowFullModQ(true)}
+                    >
+                      more&hellip;
+                    </button>
+                  </>
+                )}
+              </span>
+            </div>
           </div>
         );
       })()}
@@ -252,25 +255,37 @@ export function QuoteCard({
           <span className="timecode">[{timecodeStr}]</span>
         )}
         <div className="quote-body">
-          <span
-            className={hasModeratorContext ? "quote-hover-zone" : undefined}
-            onMouseEnter={hasModeratorContext ? () => onQuoteHoverEnter(domId) : undefined}
-            onMouseLeave={hasModeratorContext ? () => onQuoteHoverLeave(domId) : undefined}
-          >
-            <EditableText
-              value={addSmartQuotes(displayText)}
-              originalValue={addSmartQuotes(quote.text)}
-              isEditing={isEditingText}
-              committed={isEdited}
-              onCommit={handleEditCommit}
-              onCancel={handleEditCancel}
-              trigger="external"
-              className="quote-text"
-              committedClassName="edited"
-              data-testid={`bn-quote-${domId}-text`}
-              data-edit-key={`${domId}:text`}
+          {hasModeratorContext && (
+            <button
+              className={`moderator-pill${isPillVisible || isQuestionOpen ? " visible" : ""}${isQuestionOpen ? " moderator-pill-active" : ""}`}
+              onClick={() => onToggleQuestion(domId)}
+              aria-label="Show moderator question"
+              data-testid={`bn-quote-${domId}-mod-q`}
+            >
+              Question?
+            </button>
+          )}
+          {hasModeratorContext && !isQuestionOpen && (
+            <span
+              className="quote-hover-zone"
+              onMouseEnter={() => onQuoteHoverEnter(domId)}
+              onMouseLeave={() => onQuoteHoverLeave(domId)}
+              aria-hidden="true"
             />
-          </span>
+          )}
+          <EditableText
+            value={addSmartQuotes(displayText)}
+            originalValue={addSmartQuotes(quote.text)}
+            isEditing={isEditingText}
+            committed={isEdited}
+            onCommit={handleEditCommit}
+            onCancel={handleEditCancel}
+            trigger="external"
+            className="quote-text"
+            committedClassName="edited"
+            data-testid={`bn-quote-${domId}-text`}
+            data-edit-key={`${domId}:text`}
+          />
           &nbsp;
           <span className="speaker">
             &mdash;&nbsp;

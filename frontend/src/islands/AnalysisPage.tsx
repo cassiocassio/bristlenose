@@ -12,8 +12,9 @@
  * the vanilla JS analysis.js so all styling carries over.
  */
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
 import { Badge, Metric, PersonBadge } from "../components";
+import { useTranscriptCache } from "../hooks/useTranscriptCache";
 import { getCodebookAnalysis } from "../utils/api";
 import { getGroupBg, getTagBg } from "../utils/colours";
 import { formatTimecode } from "../utils/format";
@@ -25,6 +26,7 @@ import type {
   SentimentSignal,
   SourceBreakdown,
   TagSignalQuote,
+  TranscriptSegmentResponse,
 } from "../utils/types";
 
 // ── Vanilla JS interop ─────────────────────────────────────────────────
@@ -41,6 +43,37 @@ declare global {
 
 /** Maximum signal cards shown per type (sentiment / tags). */
 const MAX_SIGNALS = 6;
+
+// ── Quote context expansion ───────────────────────────────────────────
+
+/** How many segments a user has expanded above/below a quote. */
+interface QuoteExpansion {
+  above: number;
+  below: number;
+}
+
+type ExpansionAction =
+  | { type: "expand_above"; quoteKey: string }
+  | { type: "expand_below"; quoteKey: string };
+
+function expansionReducer(
+  state: Map<string, QuoteExpansion>,
+  action: ExpansionAction,
+): Map<string, QuoteExpansion> {
+  const next = new Map(state);
+  const prev = next.get(action.quoteKey) ?? { above: 0, below: 0 };
+  if (action.type === "expand_above") {
+    next.set(action.quoteKey, { ...prev, above: prev.above + 1 });
+  } else {
+    next.set(action.quoteKey, { ...prev, below: prev.below + 1 });
+  }
+  return next;
+}
+
+/** Stable key for a quote within the expansion state. */
+function quoteKey(q: { sessionId: string; pid: string; startSeconds: number }): string {
+  return `${q.sessionId}-${q.pid}-${q.startSeconds}`;
+}
 
 // ── Types ──────────────────────────────────────────────────────────────
 
@@ -301,14 +334,26 @@ function SignalCard({
   allPids,
   isSentiment,
   cardRef,
+  transcriptCache,
 }: {
   signal: UnifiedSignal;
   allPids: string[];
   isSentiment: boolean;
   cardRef?: (el: HTMLDivElement | null) => void;
+  transcriptCache: ReturnType<typeof useTranscriptCache>;
 }) {
   const [expanded, setExpanded] = useState(false);
   const expansionRef = useRef<HTMLDivElement>(null);
+
+  // Context expansion state
+  const [expansionState, dispatchExpansion] = useReducer(
+    expansionReducer,
+    new Map<string, QuoteExpansion>(),
+  );
+  // Resolved context segments (keyed by quoteKey, then "above"/"below")
+  const [contextSegments, setContextSegments] = useState<
+    Map<string, { above: TranscriptSegmentResponse[]; below: TranscriptSegmentResponse[] }>
+  >(new Map());
 
   const accentVar = isSentiment
     ? `var(--bn-sentiment-${signal.columnLabel})`
@@ -336,6 +381,99 @@ function SignalCard({
     [signal.quotes],
   );
 
+  // Determine which quotes get expand arrows (only sequence edges + solo quotes)
+  const quoteExpandability = useMemo(() => {
+    return signal.quotes.map((q, i) => {
+      const meta = sequenceMetas[i];
+      const pos = meta?.position ?? "solo";
+      // Can expand above: only if first-in-sequence or solo, and has timecodes
+      const canAbove = (pos === "solo" || pos === "first") && q.startSeconds > 0;
+      // Can expand below: only if last-in-sequence or solo, and has timecodes
+      const canBelow = (pos === "solo" || pos === "last") && q.startSeconds > 0;
+      return { canAbove, canBelow };
+    });
+  }, [signal.quotes, sequenceMetas]);
+
+  // Fetch context segments when expansion state changes
+  useEffect(() => {
+    let cancelled = false;
+    const promises: Promise<void>[] = [];
+
+    for (const [qk, exp] of expansionState) {
+      const q = signal.quotes.find((qq) => quoteKey(qq) === qk);
+      if (!q) continue;
+
+      if (q.segmentIndex >= 0) {
+        // Segment-index path: precise lookup by ordinal
+        const qIdx = signal.quotes.indexOf(q);
+        const meta = sequenceMetas[qIdx];
+        const pos = meta?.position ?? "solo";
+
+        let earliestIdx = q.segmentIndex;
+        let latestIdx = q.segmentIndex;
+        if (pos === "first" || pos === "middle") {
+          for (let i = qIdx + 1; i < signal.quotes.length; i++) {
+            const m = sequenceMetas[i];
+            if (m?.position === "middle" || m?.position === "last") {
+              latestIdx = Math.max(latestIdx, signal.quotes[i].segmentIndex);
+              if (m.position === "last") break;
+            } else break;
+          }
+        }
+        if (pos === "last" || pos === "middle") {
+          for (let i = qIdx - 1; i >= 0; i--) {
+            const m = sequenceMetas[i];
+            if (m?.position === "middle" || m?.position === "first") {
+              earliestIdx = Math.min(earliestIdx, signal.quotes[i].segmentIndex);
+              if (m.position === "first") break;
+            } else break;
+          }
+        }
+
+        if (exp.above > 0) {
+          promises.push(
+            transcriptCache.getSegmentRange(q.sessionId, earliestIdx - exp.above, earliestIdx - 1).then((segs) => {
+              if (cancelled) return;
+              setContextSegments((prev) => {
+                const next = new Map(prev);
+                const existing = next.get(qk) ?? { above: [], below: [] };
+                next.set(qk, { ...existing, above: segs });
+                return next;
+              });
+            }),
+          );
+        }
+        if (exp.below > 0) {
+          promises.push(
+            transcriptCache.getSegmentRange(q.sessionId, latestIdx + 1, latestIdx + exp.below).then((segs) => {
+              if (cancelled) return;
+              setContextSegments((prev) => {
+                const next = new Map(prev);
+                const existing = next.get(qk) ?? { above: [], below: [] };
+                next.set(qk, { ...existing, below: segs });
+                return next;
+              });
+            }),
+          );
+        }
+      } else {
+        // Timecode fallback: find segment by startSeconds, return neighbours
+        promises.push(
+          transcriptCache.getContextByTimecode(q.sessionId, q.startSeconds, exp.above, exp.below).then((ctx) => {
+            if (cancelled) return;
+            setContextSegments((prev) => {
+              const next = new Map(prev);
+              next.set(qk, ctx);
+              return next;
+            });
+          }),
+        );
+      }
+    }
+
+    return () => { cancelled = true; };
+  }, [expansionState, signal.quotes, sequenceMetas, transcriptCache]);
+
   const visibleQuotes = signal.quotes.slice(0, 1);
   const hiddenQuotes = signal.quotes.slice(1);
 
@@ -348,9 +486,33 @@ function SignalCard({
     } else {
       expansionRef.current.style.maxHeight = "0";
     }
-  }, [expanded]);
+  }, [expanded, contextSegments]);
 
   const toggleExpand = useCallback(() => setExpanded((prev) => !prev), []);
+
+  const renderQuoteBlock = (q: UnifiedQuote, i: number) => {
+    const qk = quoteKey(q);
+    const exp = quoteExpandability[i];
+    const ctx = contextSegments.get(qk);
+    const expState = expansionState.get(qk);
+    // Disable arrow if no more segments returned than requested
+    const aboveExhausted = expState && ctx ? ctx.above.length < expState.above : false;
+    const belowExhausted = expState && ctx ? ctx.below.length < expState.below : false;
+    return (
+      <QuoteBlock
+        key={i}
+        quote={q}
+        isSentiment={isSentiment}
+        sequenceMeta={sequenceMetas[i]}
+        contextAbove={ctx?.above}
+        contextBelow={ctx?.below}
+        canExpandAbove={exp.canAbove && !aboveExhausted}
+        canExpandBelow={exp.canBelow && !belowExhausted}
+        onExpandAbove={() => dispatchExpansion({ type: "expand_above", quoteKey: qk })}
+        onExpandBelow={() => dispatchExpansion({ type: "expand_below", quoteKey: qk })}
+      />
+    );
+  };
 
   return (
     <div
@@ -413,22 +575,13 @@ function SignalCard({
       </div>
 
       <div className="signal-card-quotes">
-        {visibleQuotes.map((q, i) => (
-          <QuoteBlock key={i} quote={q} isSentiment={isSentiment} sequenceMeta={sequenceMetas[i]} />
-        ))}
+        {visibleQuotes.map((q, i) => renderQuoteBlock(q, i))}
         <div
           className="signal-card-expansion"
           ref={expansionRef}
           style={{ maxHeight: expanded ? undefined : 0 }}
         >
-          {hiddenQuotes.map((q, i) => (
-            <QuoteBlock
-              key={i + 1}
-              quote={q}
-              isSentiment={isSentiment}
-              sequenceMeta={sequenceMetas[i + visibleQuotes.length]}
-            />
-          ))}
+          {hiddenQuotes.map((q, i) => renderQuoteBlock(q, i + visibleQuotes.length))}
         </div>
       </div>
 
@@ -456,14 +609,48 @@ function SignalCard({
   );
 }
 
+function ContextSegment({ segment }: { segment: TranscriptSegmentResponse }) {
+  const tc = formatTimecode(segment.start_time);
+  const role = segment.is_moderator ? "moderator" as const : "participant" as const;
+  return (
+    <div className="context-segment">
+      <div className="quote-row">
+        <span className="timecode" style={{ opacity: 0.5 }}>
+          <span className="timecode-bracket">[</span>
+          {tc}
+          <span className="timecode-bracket">]</span>
+        </span>
+        <span className="quote-body">
+          <span className="speaker">
+            <PersonBadge code={segment.speaker_code} role={role} />
+          </span>{" "}
+          <span className="context-text">{segment.text}</span>
+        </span>
+      </div>
+    </div>
+  );
+}
+
 function QuoteBlock({
   quote,
   isSentiment,
   sequenceMeta,
+  contextAbove,
+  contextBelow,
+  canExpandAbove,
+  canExpandBelow,
+  onExpandAbove,
+  onExpandBelow,
 }: {
   quote: UnifiedQuote;
   isSentiment: boolean;
   sequenceMeta?: SequenceMeta;
+  contextAbove?: TranscriptSegmentResponse[];
+  contextBelow?: TranscriptSegmentResponse[];
+  canExpandAbove?: boolean;
+  canExpandBelow?: boolean;
+  onExpandAbove?: () => void;
+  onExpandBelow?: () => void;
 }) {
   const tc = formatTimecode(quote.startSeconds);
   const tcHref = `sessions/transcript_${quote.sessionId}.html#t-${Math.floor(quote.startSeconds)}`;
@@ -472,40 +659,86 @@ function QuoteBlock({
   const isContinuation = seqPos === "middle" || seqPos === "last";
   const seqClass = seqPos !== "solo" ? ` seq-${seqPos}` : "";
 
+  const showAboveArrow = canExpandAbove && onExpandAbove;
+  const showBelowArrow = canExpandBelow && onExpandBelow;
+  const hasArrows = showAboveArrow || showBelowArrow;
+
+  const timecodeEl = hasArrows ? (
+    <span className="timecode-expandable">
+      {showAboveArrow && (
+        <button
+          className="expand-arrow expand-arrow--above"
+          onClick={(e) => { e.preventDefault(); e.stopPropagation(); onExpandAbove(); }}
+          title="Show earlier context"
+          aria-label="Show earlier transcript segment"
+        >
+          &#x25B4;
+        </button>
+      )}
+      <a className="timecode" href={tcHref}>
+        <span className="timecode-bracket">[</span>
+        {tc}
+        <span className="timecode-bracket">]</span>
+      </a>
+      {showBelowArrow && (
+        <button
+          className="expand-arrow expand-arrow--below"
+          onClick={(e) => { e.preventDefault(); e.stopPropagation(); onExpandBelow(); }}
+          title="Show later context"
+          aria-label="Show later transcript segment"
+        >
+          &#x25BE;
+        </button>
+      )}
+    </span>
+  ) : (
+    <a className="timecode" href={tcHref}>
+      <span className="timecode-bracket">[</span>
+      {tc}
+      <span className="timecode-bracket">]</span>
+    </a>
+  );
+
   return (
-    <blockquote className={seqClass ? seqClass.trimStart() : undefined}>
-      <div className="quote-row">
-        <a className="timecode" href={tcHref}>
-          <span className="timecode-bracket">[</span>
-          {tc}
-          <span className="timecode-bracket">]</span>
-        </a>
-        <span className="quote-body">
-          {!isContinuation && (
-            <><span className="speaker">
-              <PersonBadge code={quote.pid} role="participant" />
-            </span>{" "}</>
-          )}
-          <span className="quote-text">{quote.text}</span>
-          {!isSentiment && quote.tagNames.length > 0 && quote.tagNames.map((tag) => (
-            <Badge
-              key={tag}
-              text={tag}
-              variant="readonly"
-              colour={
-                quote.colourSet
-                  ? getTagBg(quote.colourSet, quote.tagColourIndices[tag] ?? 0)
-                  : undefined
-              }
-              className="signal-quote-tag"
-            />
-          ))}
-        </span>
-        <span className="intensity-dots" title={`Intensity ${quote.intensity}/3`}>
-          <IntensityDotsSvg value={quote.intensity} />
-        </span>
-      </div>
-    </blockquote>
+    <div>
+      {contextAbove?.map((seg, i) => (
+        <ContextSegment key={`above-${i}`} segment={seg} />
+      ))}
+
+      <blockquote className={seqClass ? seqClass.trimStart() : undefined}>
+        <div className="quote-row">
+          {timecodeEl}
+          <span className="quote-body">
+            {!isContinuation && (
+              <><span className="speaker">
+                <PersonBadge code={quote.pid} role="participant" />
+              </span>{" "}</>
+            )}
+            <span className="quote-text">{quote.text}</span>
+            {!isSentiment && quote.tagNames.length > 0 && quote.tagNames.map((tag) => (
+              <Badge
+                key={tag}
+                text={tag}
+                variant="readonly"
+                colour={
+                  quote.colourSet
+                    ? getTagBg(quote.colourSet, quote.tagColourIndices[tag] ?? 0)
+                    : undefined
+                }
+                className="signal-quote-tag"
+              />
+            ))}
+          </span>
+          <span className="intensity-dots" title={`Intensity ${quote.intensity}/3`}>
+            <IntensityDotsSvg value={quote.intensity} />
+          </span>
+        </div>
+      </blockquote>
+
+      {contextBelow?.map((seg, i) => (
+        <ContextSegment key={`below-${i}`} segment={seg} />
+      ))}
+    </div>
   );
 }
 
@@ -735,6 +968,9 @@ export function AnalysisPage({ projectId }: AnalysisPageProps) {
   const [tagError, setTagError] = useState<string | null>(null);
   const [tagLoaded, setTagLoaded] = useState(false);
 
+  // Transcript cache for quote context expansion (shared across all signal cards)
+  const transcriptCache = useTranscriptCache();
+
   // Theme detection for heatmap colouring
   const [isDark, setIsDark] = useState(
     document.documentElement.getAttribute("data-theme") === "dark",
@@ -901,6 +1137,7 @@ export function AnalysisPage({ projectId }: AnalysisPageProps) {
                 signal={s}
                 allPids={sentimentPids}
                 isSentiment={true}
+                transcriptCache={transcriptCache}
                 cardRef={(el: HTMLDivElement | null) => {
                   if (el) cardRefs.current.set(s.key, el);
                   else cardRefs.current.delete(s.key);
@@ -927,6 +1164,7 @@ export function AnalysisPage({ projectId }: AnalysisPageProps) {
                 signal={s}
                 allPids={tagAllPids}
                 isSentiment={false}
+                transcriptCache={transcriptCache}
                 cardRef={(el: HTMLDivElement | null) => {
                   if (el) cardRefs.current.set(s.key, el);
                   else cardRefs.current.delete(s.key);

@@ -109,6 +109,15 @@ def _migrate_schema(engine: Engine) -> None:
                     )
                 )
 
+    # v0.10.3 — Session gains thumbnail_path (VARCHAR 500, nullable)
+    if "sessions" in insp.get_table_names():
+        cols = {c["name"] for c in insp.get_columns("sessions")}
+        if "thumbnail_path" not in cols:
+            with engine.begin() as conn:
+                conn.execute(
+                    text("ALTER TABLE sessions ADD COLUMN thumbnail_path VARCHAR(500)")
+                )
+
 
 def init_db(engine: Engine) -> None:
     """Create all tables. Safe to call repeatedly (CREATE IF NOT EXISTS)."""

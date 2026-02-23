@@ -18,7 +18,7 @@ import {
   TimecodeLink,
   Toggle,
 } from "../components";
-import type { ProposedTagBrief, QuoteResponse } from "../utils/types";
+import type { ModeratorQuestionResponse, ProposedTagBrief, QuoteResponse } from "../utils/types";
 import { formatTimecode, stripSmartQuotes } from "../utils/format";
 import { getTagBg } from "../utils/colours";
 
@@ -46,6 +46,13 @@ function addSmartQuotes(text: string): string {
   return `\u201c${text}\u201d`;
 }
 
+/** Split text into first sentence + remainder (if any). */
+function splitFirstSentence(text: string): { first: string; rest: string } {
+  const match = text.match(/^(.*?[.?!])\s+(.+)$/s);
+  if (!match) return { first: text, rest: "" };
+  return { first: match[1], rest: match[2] };
+}
+
 // ── Props ───────────────────────────────────────────────────────────────
 
 interface QuoteCardProps {
@@ -70,6 +77,12 @@ interface QuoteCardProps {
   proposedTags: ProposedTagBrief[];
   /** Tags currently playing the accept flash animation. Keys: `${domId}:${tagName}`. */
   flashingTags: Set<string>;
+  /** Cached moderator question data (null = not yet fetched or none found). */
+  moderatorQuestion: ModeratorQuestionResponse | null;
+  /** Whether the moderator question is expanded (pinned open). */
+  isQuestionOpen: boolean;
+  /** Whether the "Question?" pill is visible (from hover timer). */
+  isPillVisible: boolean;
 
   onToggleStar: (domId: string, newState: boolean) => void;
   onToggleHide: (domId: string, newState: boolean) => void;
@@ -80,6 +93,9 @@ interface QuoteCardProps {
   onBadgeRestore: (domId: string) => void;
   onProposedAccept: (proposalId: number, tagName: string) => void;
   onProposedDeny: (proposalId: number) => void;
+  onToggleQuestion: (domId: string) => void;
+  onQuoteHoverEnter: (domId: string) => void;
+  onQuoteHoverLeave: (domId: string) => void;
 }
 
 export function QuoteCard({
@@ -104,11 +120,19 @@ export function QuoteCard({
   onBadgeRestore,
   onProposedAccept,
   onProposedDeny,
+  moderatorQuestion,
+  isQuestionOpen,
+  isPillVisible,
+  onToggleQuestion,
+  onQuoteHoverEnter,
+  onQuoteHoverLeave,
 }: QuoteCardProps) {
   const [isEditingText, setIsEditingText] = useState(false);
   const [isTagInputOpen, setIsTagInputOpen] = useState(false);
+  const [showFullModQ, setShowFullModQ] = useState(false);
 
   const domId = quote.dom_id;
+  const hasModeratorContext = quote.segment_index > 0;
 
   // ── Edit handlers ───────────────────────────────────────────────────
 
@@ -182,6 +206,40 @@ export function QuoteCard({
       {quote.researcher_context && (
         <span className="context">[{quote.researcher_context}]</span>
       )}
+      {hasModeratorContext && (
+        <button
+          className={`moderator-pill${isPillVisible || isQuestionOpen ? " visible" : ""}${isQuestionOpen ? " moderator-pill-active" : ""}`}
+          onClick={() => onToggleQuestion(domId)}
+          aria-label="Show moderator question"
+          data-testid={`bn-quote-${domId}-mod-q`}
+        >
+          Question?
+        </button>
+      )}
+      {isQuestionOpen && moderatorQuestion && (() => {
+        const { first, rest } = splitFirstSentence(moderatorQuestion.text);
+        return (
+          <div className="moderator-question" data-testid={`bn-quote-${domId}-mod-q-block`}>
+            <PersonBadge
+              code={moderatorQuestion.speaker_code}
+              role="moderator"
+            />
+            <span className="moderator-question-text">
+              {showFullModQ || !rest ? moderatorQuestion.text : (
+                <>
+                  {first}
+                  <button
+                    className="moderator-question-more"
+                    onClick={() => setShowFullModQ(true)}
+                  >
+                    ...more
+                  </button>
+                </>
+              )}
+            </span>
+          </div>
+        );
+      })()}
       <div className="quote-row">
         {hasMedia ? (
           <TimecodeLink
@@ -194,19 +252,25 @@ export function QuoteCard({
           <span className="timecode">[{timecodeStr}]</span>
         )}
         <div className="quote-body">
-          <EditableText
-            value={addSmartQuotes(displayText)}
-            originalValue={addSmartQuotes(quote.text)}
-            isEditing={isEditingText}
-            committed={isEdited}
-            onCommit={handleEditCommit}
-            onCancel={handleEditCancel}
-            trigger="external"
-            className="quote-text"
-            committedClassName="edited"
-            data-testid={`bn-quote-${domId}-text`}
-            data-edit-key={`${domId}:text`}
-          />
+          <span
+            className={hasModeratorContext ? "quote-hover-zone" : undefined}
+            onMouseEnter={hasModeratorContext ? () => onQuoteHoverEnter(domId) : undefined}
+            onMouseLeave={hasModeratorContext ? () => onQuoteHoverLeave(domId) : undefined}
+          >
+            <EditableText
+              value={addSmartQuotes(displayText)}
+              originalValue={addSmartQuotes(quote.text)}
+              isEditing={isEditingText}
+              committed={isEdited}
+              onCommit={handleEditCommit}
+              onCancel={handleEditCancel}
+              trigger="external"
+              className="quote-text"
+              committedClassName="edited"
+              data-testid={`bn-quote-${domId}-text`}
+              data-edit-key={`${domId}:text`}
+            />
+          </span>
           &nbsp;
           <span className="speaker">
             &mdash;&nbsp;

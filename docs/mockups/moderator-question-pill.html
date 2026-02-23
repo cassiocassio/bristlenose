@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mockup: Moderator Question Pill</title>
+<style>
+/* ── Tokens (subset) ──────────────────────────────────────────────── */
+:root {
+    --bn-font-body: "Inter", "Segoe UI Variable", "Segoe UI", system-ui, -apple-system, sans-serif;
+    --bn-font-mono: "SF Mono", "Fira Code", "Consolas", monospace;
+    --bn-weight-normal: 420;
+    --bn-weight-emphasis: 490;
+    --bn-weight-strong: 700;
+    --bn-colour-bg: #ffffff;
+    --bn-colour-text: #1a1a1a;
+    --bn-colour-muted: #6b7280;
+    --bn-colour-border: #e5e7eb;
+    --bn-colour-accent: #2563eb;
+    --bn-colour-hover: #e8f0fe;
+    --bn-colour-quote-bg: #f9fafb;
+    --bn-colour-badge-bg: #f3f4f6;
+    --bn-colour-badge-text: #374151;
+    --bn-colour-danger: #dc2626;
+    --bn-colour-success: #16a34a;
+    --bn-radius-sm: 4px;
+    --bn-radius-md: 6px;
+    --bn-space-sm: 0.35rem;
+    --bn-space-md: 0.75rem;
+    --bn-space-xs: 0.2rem;
+    --bn-transition-fast: 0.12s ease;
+    --bn-sentiment-confusion-bg: #fef2f2;
+    --bn-sentiment-confusion: #dc2626;
+    --bn-sentiment-frustration-bg: #fff7ed;
+    --bn-sentiment-frustration: #ea580c;
+    --bn-sentiment-delight-bg: #ecfdf5;
+    --bn-sentiment-delight: #059669;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+    font-family: var(--bn-font-body);
+    font-weight: var(--bn-weight-normal);
+    color: var(--bn-colour-text);
+    background: var(--bn-colour-bg);
+    padding: 2rem;
+    max-width: 800px;
+    margin: 0 auto;
+    line-height: 1.6;
+}
+
+h1 { font-size: 1.3rem; font-weight: var(--bn-weight-emphasis); margin-bottom: 0.5rem; }
+h2 { font-size: 1rem; font-weight: var(--bn-weight-emphasis); margin: 2rem 0 0.5rem; color: var(--bn-colour-muted); }
+p.note { font-size: 0.85rem; color: var(--bn-colour-muted); margin-bottom: 1.5rem; }
+
+/* ── Blockquote (from organisms/blockquote.css) ─────────────────── */
+blockquote { margin: 0; padding: var(--bn-space-sm) 1rem; }
+blockquote.quote-card {
+    background: var(--bn-colour-quote-bg);
+    border-left: 1px solid var(--bn-colour-border);
+    margin: 0.8rem 0;
+    padding: var(--bn-space-md) 1rem;
+    border-radius: 0 var(--bn-radius-md) var(--bn-radius-md) 0;
+    position: relative;
+    padding-right: 4.5rem;
+}
+blockquote .context {
+    display: block;
+    color: var(--bn-colour-muted);
+    font-size: 0.85rem;
+    margin-bottom: 0.3rem;
+}
+blockquote .quote-row { display: flex; gap: 0.5rem; align-items: baseline; }
+blockquote .quote-row .timecode { flex-shrink: 0; }
+blockquote .quote-body { flex: 1; min-width: 0; }
+blockquote .timecode {
+    color: var(--bn-colour-accent);
+    font-family: var(--bn-font-mono);
+    font-size: 0.8rem;
+}
+blockquote .speaker { color: var(--bn-colour-muted); font-size: 0.9rem; }
+
+/* ── Badge (from atoms/badge.css) ───────────────────────────────── */
+.badge {
+    display: inline-block;
+    font-family: var(--bn-font-mono);
+    font-size: 0.72rem;
+    padding: var(--bn-space-xs) 0.45rem;
+    border-radius: var(--bn-radius-sm);
+    background: var(--bn-colour-badge-bg);
+    color: var(--bn-colour-badge-text);
+}
+.badge-ai { cursor: pointer; position: relative; transition: opacity var(--bn-transition-fast); }
+.badge-confusion { background: var(--bn-sentiment-confusion-bg); color: var(--bn-sentiment-confusion); }
+.badge-frustration { background: var(--bn-sentiment-frustration-bg); color: var(--bn-sentiment-frustration); }
+.badge-delight { background: var(--bn-sentiment-delight-bg); color: var(--bn-sentiment-delight); }
+.badges { display: flex; gap: 0.3rem; flex-wrap: wrap; margin-top: 0.25rem; }
+
+/* ── Person badge (from molecules/person-badge.css) ─────────────── */
+.person-badge {
+    font-family: var(--bn-font-mono);
+    font-size: 0.8rem;
+    color: var(--bn-colour-muted);
+}
+
+/* ── Hover zone ─────────────────────────────────────────────────── */
+.quote-hover-zone { cursor: help; }
+
+/* ── Moderator pill (from atoms/moderator-question.css) ─────────── */
+.moderator-pill {
+    position: absolute;
+    top: calc(-0.1rem - 1px);
+    left: 1rem;
+    display: inline-block;
+    font-family: var(--bn-font-mono);
+    font-size: 0.65rem;
+    padding: 2px 6px;
+    border-radius: var(--bn-radius-sm);
+    border: none;
+    background: var(--bn-colour-badge-bg);
+    color: var(--bn-colour-muted);
+    cursor: pointer;
+    white-space: nowrap;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.08), 0 1px 4px rgba(0,0,0,0.04);
+    z-index: 2;
+    opacity: 0;
+    transform: translateY(-8px);
+    transition: opacity 0.2s ease-out, transform 0.2s ease-out,
+                background var(--bn-transition-fast), color var(--bn-transition-fast);
+    pointer-events: none;
+}
+.moderator-pill.visible {
+    opacity: 1;
+    transform: translateY(0);
+    pointer-events: auto;
+}
+.moderator-pill:hover {
+    background: var(--bn-colour-hover);
+    color: var(--bn-colour-accent);
+}
+.moderator-pill.moderator-pill-active {
+    background: color-mix(in srgb, var(--bn-colour-accent) 15%, transparent);
+    color: var(--bn-colour-accent);
+}
+
+/* ── Expanded moderator question ────────────────────────────────── */
+.moderator-question {
+    display: flex;
+    align-items: baseline;
+    gap: 0.4rem;
+    font-size: 0.85rem;
+    font-style: italic;
+    color: var(--bn-colour-muted);
+    margin-bottom: 0.3rem;
+    padding-left: 0;
+    animation: mod-q-reveal 0.2s ease-out;
+}
+.moderator-question-text { flex: 1; min-width: 0; }
+.moderator-question-more {
+    font-style: normal;
+    font-size: 0.75rem;
+    color: var(--bn-colour-accent);
+    cursor: pointer;
+    margin-left: 0.3rem;
+    border: none;
+    background: none;
+    padding: 0;
+    font-family: var(--bn-font-mono);
+}
+.moderator-question-more:hover { text-decoration: underline; }
+@keyframes mod-q-reveal { from { opacity: 0; } to { opacity: 1; } }
+
+/* ── Demo controls ──────────────────────────────────────────────── */
+.demo-controls {
+    background: #f0f4ff;
+    padding: 0.75rem 1rem;
+    border-radius: var(--bn-radius-md);
+    margin-bottom: 1rem;
+    font-size: 0.85rem;
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+}
+.demo-controls button {
+    font-family: var(--bn-font-mono);
+    font-size: 0.75rem;
+    padding: 4px 10px;
+    border: 1px solid var(--bn-colour-border);
+    border-radius: var(--bn-radius-sm);
+    background: white;
+    cursor: pointer;
+}
+.demo-controls button:hover { background: var(--bn-colour-hover); }
+.demo-controls button.active { background: var(--bn-colour-accent); color: white; border-color: var(--bn-colour-accent); }
+
+.state-label { font-family: var(--bn-font-mono); font-size: 0.72rem; color: var(--bn-colour-muted); }
+</style>
+</head>
+<body>
+
+<h1>Moderator Question Pill — Interactive Mockup</h1>
+<p class="note">
+    Hover the quote text (cursor changes to <code style="font-family:var(--bn-font-mono)">?</code>) for 400ms → "Question?" pill drops in from above.<br>
+    Click the pill to reveal/hide the preceding moderator utterance.
+</p>
+
+<div class="demo-controls">
+    <span class="state-label">Toggle states:</span>
+    <button id="btn-pill" onclick="togglePill()">Show pill</button>
+    <button id="btn-question" onclick="toggleQuestion()">Expand question</button>
+    <button id="btn-long" onclick="toggleLong()">Long question</button>
+</div>
+
+<!-- ── State 1: At rest (no pill, no question) ────────────────────── -->
+<h2>Quote card — at rest</h2>
+
+<blockquote class="quote-card" id="card1">
+    <span class="context">[When asked about the dashboard]</span>
+    <button class="moderator-pill" id="pill1">Question?</button>
+    <div class="moderator-question" id="modq1" style="display: none;">
+        <span class="person-badge">m1</span>
+        <span class="moderator-question-text" id="modq1-text">What specifically was confusing about it?</span>
+    </div>
+    <div class="quote-row">
+        <span class="timecode">[00:26]</span>
+        <div class="quote-body">
+            <span class="quote-hover-zone">
+                <span class="quote-text">&ldquo;The navigation was hidden behind a hamburger menu. I kept looking for a sidebar but there wasn&rsquo;t one. Once I found it though, it made sense.&rdquo;</span>
+            </span>
+            &nbsp;
+            <span class="speaker">&mdash;&nbsp;<span class="person-badge">p1</span> Rachel</span>
+            <div class="badges">
+                <span class="badge badge-ai badge-frustration">frustration</span>
+            </div>
+        </div>
+    </div>
+</blockquote>
+
+<!-- ── State 2: Pill visible, question closed ─────────────────────── -->
+<h2>Quote card — pill visible (after 400ms hover)</h2>
+
+<blockquote class="quote-card">
+    <span class="context">[When asked about the search feature]</span>
+    <button class="moderator-pill visible">Question?</button>
+    <div class="quote-row">
+        <span class="timecode">[00:46]</span>
+        <div class="quote-body">
+            <span class="quote-hover-zone">
+                <span class="quote-text">&ldquo;Oh, the search was great actually. It was fast and the results were really relevant. That was probably the best part of the whole thing.&rdquo;</span>
+            </span>
+            &nbsp;
+            <span class="speaker">&mdash;&nbsp;<span class="person-badge">p1</span> Rachel</span>
+            <div class="badges">
+                <span class="badge badge-ai badge-delight">delight</span>
+            </div>
+        </div>
+    </div>
+</blockquote>
+
+<!-- ── State 3: Question expanded (pinned) ────────────────────────── -->
+<h2>Quote card — question expanded</h2>
+
+<blockquote class="quote-card">
+    <span class="context">[When asked about onboarding]</span>
+    <button class="moderator-pill visible moderator-pill-active">Question?</button>
+    <div class="moderator-question">
+        <span class="person-badge">m1</span>
+        <span class="moderator-question-text">Good to hear. Any other thoughts on the overall experience?</span>
+    </div>
+    <div class="quote-row">
+        <span class="timecode">[01:06]</span>
+        <div class="quote-body">
+            <span class="quote-hover-zone">
+                <span class="quote-text">&ldquo;I think the onboarding could be better. When I first signed up I had no idea what to do. A quick tutorial or walkthrough would have helped a lot.&rdquo;</span>
+            </span>
+            &nbsp;
+            <span class="speaker">&mdash;&nbsp;<span class="person-badge">p1</span> Rachel</span>
+            <div class="badges">
+                <span class="badge badge-ai badge-frustration">frustration</span>
+            </div>
+        </div>
+    </div>
+</blockquote>
+
+<!-- ── State 4: Long question with "...more" ──────────────────────── -->
+<h2>Quote card — long moderator utterance (first sentence + ...more)</h2>
+
+<blockquote class="quote-card">
+    <button class="moderator-pill visible moderator-pill-active">Question?</button>
+    <div class="moderator-question">
+        <span class="person-badge">m1</span>
+        <span class="moderator-question-text">
+            So I want to understand your experience with the notification settings specifically.
+            <button class="moderator-question-more">...more</button>
+        </span>
+    </div>
+    <div class="quote-row">
+        <span class="timecode">[02:34]</span>
+        <div class="quote-body">
+            <span class="quote-hover-zone">
+                <span class="quote-text">&ldquo;I couldn&rsquo;t find the notification settings at all. I looked in my profile, in the hamburger menu, everywhere. Eventually I found them in a completely different section.&rdquo;</span>
+            </span>
+            &nbsp;
+            <span class="speaker">&mdash;&nbsp;<span class="person-badge">p2</span> Ben</span>
+            <div class="badges">
+                <span class="badge badge-ai badge-confusion">confusion</span>
+            </div>
+        </div>
+    </div>
+</blockquote>
+
+<!-- ── State 5: No researcher_context, pill only ──────────────────── -->
+<h2>Quote card — no researcher_context (pill appears alone)</h2>
+
+<blockquote class="quote-card">
+    <button class="moderator-pill visible moderator-pill-active">Question?</button>
+    <div class="moderator-question">
+        <span class="person-badge">m1</span>
+        <span class="moderator-question-text">Can you tell me about your experience with the dashboard?</span>
+    </div>
+    <div class="quote-row">
+        <span class="timecode">[00:10]</span>
+        <div class="quote-body">
+            <span class="quote-hover-zone">
+                <span class="quote-text">&ldquo;Sure. I found the dashboard pretty confusing at first. I couldn&rsquo;t figure out where my settings were.&rdquo;</span>
+            </span>
+            &nbsp;
+            <span class="speaker">&mdash;&nbsp;<span class="person-badge">p1</span> Rachel</span>
+            <div class="badges">
+                <span class="badge badge-ai badge-confusion">confusion</span>
+            </div>
+        </div>
+    </div>
+</blockquote>
+
+<script>
+// Interactive demo for the first card
+let pillVisible = false;
+let questionOpen = false;
+let longMode = false;
+
+const shortText = 'What specifically was confusing about it?';
+const longText = 'So I want to understand your experience with the navigation specifically. We&rsquo;ve been getting mixed feedback from different user groups and I want to make sure we&rsquo;re capturing the full picture of what&rsquo;s working and what isn&rsquo;t.';
+
+function togglePill() {
+    pillVisible = !pillVisible;
+    document.getElementById('pill1').classList.toggle('visible', pillVisible || questionOpen);
+    document.getElementById('btn-pill').classList.toggle('active', pillVisible);
+}
+
+function toggleQuestion() {
+    questionOpen = !questionOpen;
+    document.getElementById('modq1').style.display = questionOpen ? 'flex' : 'none';
+    document.getElementById('pill1').classList.toggle('moderator-pill-active', questionOpen);
+    document.getElementById('pill1').classList.toggle('visible', pillVisible || questionOpen);
+    document.getElementById('btn-question').classList.toggle('active', questionOpen);
+}
+
+function toggleLong() {
+    longMode = !longMode;
+    const el = document.getElementById('modq1-text');
+    if (longMode) {
+        el.innerHTML = 'So I want to understand your experience with the navigation specifically. <button class="moderator-question-more" onclick="event.stopPropagation(); this.parentElement.innerHTML = \'' + longText + '\'">...more</button>';
+    } else {
+        el.textContent = shortText;
+    }
+    document.getElementById('btn-long').classList.toggle('active', longMode);
+}
+
+// Auto-hover demo: cursor:help on hover zones
+document.querySelectorAll('.quote-hover-zone').forEach(zone => {
+    zone.title = 'Hover here for 400ms to see the "Question?" pill';
+});
+</script>
+
+</body>
+</html>

@@ -132,6 +132,14 @@ export interface QuoteResponse {
   segment_index: number;
 }
 
+export interface ModeratorQuestionResponse {
+  text: string;
+  speaker_code: string;
+  start_time: number;
+  end_time: number;
+  segment_index: number;
+}
+
 export interface SectionResponse {
   cluster_id: number;
   screen_label: string;

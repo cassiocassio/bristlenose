@@ -10,6 +10,7 @@ import type {
   CodebookGroupResponse,
   CodebookResponse,
   CodebookTagResponse,
+  ModeratorQuestionResponse,
   ProposalsListResponse,
   RemoveFrameworkInfo,
   CodebookAnalysisListResponse,
@@ -96,6 +97,22 @@ export function putTags(data: Record<string, string[]>): void {
 
 export function putDeletedBadges(data: Record<string, string[]>): void {
   firePut("/deleted-badges", data);
+}
+
+// ---------------------------------------------------------------------------
+// Moderator question helper
+// ---------------------------------------------------------------------------
+
+/** Fetch the preceding moderator utterance for a quote. Returns null on 404. */
+export async function getModeratorQuestion(
+  domId: string,
+): Promise<ModeratorQuestionResponse | null> {
+  const resp = await globalThis.fetch(
+    `${apiBase()}/quotes/${encodeURIComponent(domId)}/moderator-question`,
+  );
+  if (resp.status === 404) return null;
+  if (!resp.ok) throw new Error(`GET moderator-question ${resp.status}`);
+  return resp.json() as Promise<ModeratorQuestionResponse>;
 }
 
 // ---------------------------------------------------------------------------

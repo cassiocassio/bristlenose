@@ -1,0 +1,87 @@
+/* Atom: moderator-question — hover-triggered pill and expanded moderator utterance */
+
+/* Hover zone — first ~3 words of the quote text.
+   cursor: help (native browser ? cursor) signals "hover here for info". */
+.quote-hover-zone {
+    cursor: help;
+}
+
+/* "Question?" pill — drops in from above on hover, pins when clicked */
+.moderator-pill {
+    position: absolute;
+    top: calc(-0.1rem - 1px);
+    left: 1rem;
+    display: inline-block;
+    font-family: var(--bn-font-mono);
+    font-size: 0.65rem;
+    padding: 2px 6px;
+    border-radius: var(--bn-radius-sm);
+    border: none;
+    background: var(--bn-colour-badge-bg);
+    color: var(--bn-colour-muted);
+    cursor: pointer;
+    white-space: nowrap;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08), 0 1px 4px rgba(0, 0, 0, 0.04);
+    z-index: 2;
+    /* Float-down entrance (matching tooltip system) */
+    opacity: 0;
+    transform: translateY(-8px);
+    transition: opacity 0.2s ease-out, transform 0.2s ease-out,
+                background var(--bn-transition-fast), color var(--bn-transition-fast);
+    pointer-events: none;
+}
+
+.moderator-pill.visible {
+    opacity: 1;
+    transform: translateY(0);
+    pointer-events: auto;
+}
+
+.moderator-pill:hover {
+    background: var(--bn-colour-hover);
+    color: var(--bn-colour-accent);
+}
+
+.moderator-pill.moderator-pill-active {
+    background: color-mix(in srgb, var(--bn-colour-accent) 15%, transparent);
+    color: var(--bn-colour-accent);
+}
+
+/* Expanded moderator question block */
+.moderator-question {
+    display: flex;
+    align-items: baseline;
+    gap: 0.4rem;
+    font-size: 0.85rem;
+    font-style: italic;
+    color: var(--bn-colour-muted);
+    margin-bottom: 0.3rem;
+    padding-left: 0;
+    animation: mod-q-reveal 0.2s ease-out;
+}
+
+.moderator-question-text {
+    flex: 1;
+    min-width: 0;
+}
+
+.moderator-question-more {
+    font-style: normal;
+    font-size: 0.75rem;
+    color: var(--bn-colour-accent);
+    cursor: pointer;
+    margin-left: 0.3rem;
+    border: none;
+    background: none;
+    padding: 0;
+    font-family: var(--bn-font-mono);
+}
+
+.moderator-question-more:hover {
+    text-decoration: underline;
+}
+
+@keyframes mod-q-reveal {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+}

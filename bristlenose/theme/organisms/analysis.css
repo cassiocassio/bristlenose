@@ -511,56 +511,83 @@
     opacity: 0.6;
 }
 
-/* ── Quote context expansion ──────────────────────────── */
+/* ── Signal elaboration ──────────────────────────────────────── */
 
-.context-segment {
-    color: var(--bn-colour-muted);
-    padding: var(--bn-space-xs) var(--bn-space-sm);
-}
-
-.context-segment .quote-row {
-    gap: var(--bn-space-xs);
-}
-
-.timecode-expandable {
-    position: relative;
+/* Right-side column: badges, rank, sparkbars, metrics.
+   Replaces the flat .signal-card-metrics when elaboration is present. */
+.signal-card-right {
     flex-shrink: 0;
-    padding-top: 0.75rem;
-    padding-bottom: 0.75rem;
-    margin-top: -0.75rem;
-    margin-bottom: -0.75rem;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: var(--bn-space-sm);
 }
 
-.expand-arrow {
-    display: none;
-    position: absolute;
-    left: 50%;
-    transform: translateX(-50%);
-    background: none;
-    border: none;
+/* Badge row: group name + pattern type */
+.signal-card-badges {
+    display: flex;
+    gap: 0.35rem;
+    align-items: center;
+}
+
+/* Pattern badge — coloured allcaps label.
+   Opacity 0.9 knocks text back 10% — heavy weight + allcaps reads
+   darker than it is, so pulling back keeps visual weight balanced. */
+.pattern-label {
+    display: inline-block;
+    font-family: var(--bn-font-mono);
+    font-size: 0.72rem;
+    font-weight: var(--bn-weight-starred);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    padding: var(--bn-space-xs) 0.45rem;
+    border-radius: var(--bn-radius-sm);
+    opacity: 0.9;
+}
+
+.pattern-success  { background: light-dark(#dcfce7, #14532d); color: light-dark(#166534, #86efac); }
+.pattern-tension  { background: light-dark(#fef3c7, #451a03); color: light-dark(#92400e, #fcd34d); }
+.pattern-gap      { background: light-dark(#fee2e2, #450a0a); color: light-dark(#991b1b, #fca5a5); }
+.pattern-recovery { background: light-dark(#e0f2fe, #0c4a6e); color: light-dark(#075985, #7dd3fc); }
+
+/* Signal rank counter: "#2" */
+.signal-rank {
+    font-family: var(--bn-font-mono);
+    font-size: 1.15rem;
+    font-weight: var(--bn-weight-emphasis);
     color: var(--bn-colour-muted);
-    font-size: 10px;
-    cursor: pointer;
-    opacity: 0.4;
-    transition: opacity 150ms;
-    z-index: 1;
-    padding: 0 8px;
     line-height: 1;
 }
 
-.expand-arrow:hover {
-    opacity: 1;
+/* Mini sparkbar chart — inline in the Signal metric row.
+   Width matches conc-bar-track (96px). Bar count = signal card count.
+   Current card's bar uses var(--card-accent); all others grey. */
+.signal-sparkbars {
+    display: inline-flex;
+    align-items: flex-end;
+    gap: 2px;
+    height: 28px;
+    width: 96px;
 }
 
-.expand-arrow--above {
-    top: 0;
+.signal-sparkbar {
+    width: 12px;
+    border-radius: 1px 1px 0 0;
+    min-height: 2px;
 }
 
-.expand-arrow--below {
-    bottom: 0;
+/* Signal elaboration — one-sentence finding below the signal name.
+   <strong> wraps the core assertion (first clause), ending at the
+   first natural break. Regular weight for evidence/nuance after. */
+.signal-elaboration {
+    font-size: 0.88rem;
+    color: var(--bn-colour-text);
+    line-height: 1.55;
+    margin-bottom: var(--bn-space-sm);
+    font-weight: var(--bn-weight-normal);
 }
 
-.timecode-expandable:hover .expand-arrow {
-    display: block;
+.signal-elaboration strong {
+    font-weight: var(--bn-weight-starred);
 }
 

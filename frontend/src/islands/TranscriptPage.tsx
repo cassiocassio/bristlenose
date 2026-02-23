@@ -154,14 +154,14 @@ interface JourneyWaypoint {
 }
 
 /**
- * Build a mapping from journey label → first segment anchor ID, and an
- * ordered list of section waypoints for scroll tracking.
+ * Build an ordered list of section waypoints for scroll tracking.
+ * Includes revisits — if a user navigates Dashboard → Search → Dashboard,
+ * three waypoints are returned, not two.
  */
-function buildJourneyMaps(
+function buildWaypoints(
   segments: TranscriptSegmentResponse[],
   annotations: Record<string, QuoteAnnotationResponse>,
-): { labelToAnchor: Map<string, string>; waypoints: JourneyWaypoint[] } {
-  const labelToAnchor = new Map<string, string>();
+): JourneyWaypoint[] {
   const waypoints: JourneyWaypoint[] = [];
   let lastLabel = "";
 
@@ -171,15 +171,9 @@ function buildJourneyMaps(
       const ann = annotations[qid];
       if (!ann || ann.label_type !== "section" || !ann.label) continue;
 
-      const anchorId = `t-${Math.floor(seg.start_time)}`;
-
-      // First occurrence of this label → record in labelToAnchor
-      if (!labelToAnchor.has(ann.label)) {
-        labelToAnchor.set(ann.label, anchorId);
-      }
-
       // New section boundary → record waypoint
       if (ann.label !== lastLabel) {
+        const anchorId = `t-${Math.floor(seg.start_time)}`;
         waypoints.push({ anchorId, label: ann.label });
         lastLabel = ann.label;
       }
@@ -187,32 +181,33 @@ function buildJourneyMaps(
     }
   }
 
-  return { labelToAnchor, waypoints };
+  return waypoints;
 }
 
 function useJourneyScrollSync(
   segments: TranscriptSegmentResponse[],
   annotations: Record<string, QuoteAnnotationResponse>,
-  journeyLabels: string[],
   headerRef: React.RefObject<HTMLElement | null>,
 ) {
-  const [activeLabel, setActiveLabel] = useState<string | null>(
-    journeyLabels.length > 0 ? journeyLabels[0] : null,
+  // Build waypoints once from data (full sequence including revisits)
+  const waypointsRef = useRef<JourneyWaypoint[] | null>(null);
+  if (!waypointsRef.current && segments.length > 0) {
+    waypointsRef.current = buildWaypoints(segments, annotations);
+  }
+  const waypoints = waypointsRef.current ?? [];
+
+  const [activeIndex, setActiveIndex] = useState<number | null>(
+    waypoints.length > 0 ? 0 : null,
   );
   const isUserScrolling = useRef(true);
   const scrollLockTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Build maps once from data
-  const mapsRef = useRef<ReturnType<typeof buildJourneyMaps> | null>(null);
-  if (!mapsRef.current && segments.length > 0) {
-    mapsRef.current = buildJourneyMaps(segments, annotations);
-  }
+  // Labels derived from waypoints — the full sequence with revisits
+  const journeyLabels = waypoints.map((wp) => wp.label);
 
-  // Scroll event handler — find which section is at the top of viewport
+  // Scroll event handler — find which waypoint index is at the top of viewport
   useEffect(() => {
-    if (journeyLabels.length === 0) return;
-    const maps = mapsRef.current;
-    if (!maps || maps.waypoints.length === 0) return;
+    if (waypoints.length === 0) return;
 
     let rafId = 0;
 
@@ -225,19 +220,19 @@ function useJourneyScrollSync(
           ? header.getBoundingClientRect().bottom + 8
           : 60;
 
-        let currentLabel = maps!.waypoints[0].label;
-        for (const wp of maps!.waypoints) {
-          const el = document.getElementById(wp.anchorId);
+        let currentIndex = 0;
+        for (let i = 0; i < waypoints.length; i++) {
+          const el = document.getElementById(waypoints[i].anchorId);
           if (!el) continue;
           const rect = el.getBoundingClientRect();
           if (rect.top <= threshold) {
-            currentLabel = wp.label;
+            currentIndex = i;
           } else {
             break;
           }
         }
 
-        setActiveLabel(currentLabel);
+        setActiveIndex(currentIndex);
       });
     }
 
@@ -246,18 +241,16 @@ function useJourneyScrollSync(
       window.removeEventListener("scroll", onScroll);
       cancelAnimationFrame(rafId);
     };
-  }, [journeyLabels, headerRef]);
+  }, [waypoints, headerRef]);
 
-  const handleLabelClick = useCallback(
-    (label: string) => {
-      const maps = mapsRef.current;
-      if (!maps) return;
-      const anchorId = maps.labelToAnchor.get(label);
-      if (!anchorId) return;
+  const handleIndexClick = useCallback(
+    (index: number) => {
+      if (index < 0 || index >= waypoints.length) return;
+      const anchorId = waypoints[index].anchorId;
 
       // Suppress scroll observer during programmatic scroll
       isUserScrolling.current = false;
-      setActiveLabel(label);
+      setActiveIndex(index);
 
       const el = document.getElementById(anchorId);
       if (el) {
@@ -270,10 +263,10 @@ function useJourneyScrollSync(
         isUserScrolling.current = true;
       }, 600);
     },
-    [],
+    [waypoints],
   );
 
-  return { activeLabel, handleLabelClick };
+  return { activeIndex, handleIndexClick, journeyLabels };
 }
 
 // ---------------------------------------------------------------------------
@@ -405,6 +398,16 @@ export function TranscriptPage({ projectId: _projectId, sessionId }: TranscriptP
     });
   }, [data, loading]);
 
+  // Span bars
+  const bars = useSpanBars(bodyRef, data?.segments ?? [], data?.annotations ?? {});
+
+  // Journey scroll sync (derives full label sequence from waypoints)
+  const { activeIndex, handleIndexClick, journeyLabels } = useJourneyScrollSync(
+    data?.segments ?? [],
+    data?.annotations ?? {},
+    headerRef,
+  );
+
   // Measure sticky header height for scroll-margin-top
   useLayoutEffect(() => {
     if (headerRef.current) {
@@ -414,18 +417,7 @@ export function TranscriptPage({ projectId: _projectId, sessionId }: TranscriptP
         `${height}px`,
       );
     }
-  }, [data?.journey_labels]);
-
-  // Span bars
-  const bars = useSpanBars(bodyRef, data?.segments ?? [], data?.annotations ?? {});
-
-  // Journey scroll sync
-  const { activeLabel, handleLabelClick } = useJourneyScrollSync(
-    data?.segments ?? [],
-    data?.annotations ?? {},
-    data?.journey_labels ?? [],
-    headerRef,
-  );
+  }, [journeyLabels]);
 
   // Deleted badge / tag callbacks
   const handleDeleteBadge = useCallback(
@@ -482,12 +474,12 @@ export function TranscriptPage({ projectId: _projectId, sessionId }: TranscriptP
     );
   }
 
-  const { segments, speakers, annotations, journey_labels } = data;
+  const { segments, speakers, annotations } = data;
   const sessionNum = sessionId.length > 1 && "sp".includes(sessionId[0]) && /^\d+$/.test(sessionId.slice(1))
     ? sessionId.slice(1)
     : sessionId;
 
-  const hasJourney = journey_labels.length > 0;
+  const hasJourney = journeyLabels.length > 0;
 
   // Track which quote IDs have been rendered (first segment per quote only)
   const seenQuoteIds = new Set<string>();
@@ -517,9 +509,9 @@ export function TranscriptPage({ projectId: _projectId, sessionId }: TranscriptP
             />
           )}
           <JourneyChain
-            labels={journey_labels}
-            activeLabel={activeLabel}
-            onLabelClick={handleLabelClick}
+            labels={journeyLabels}
+            activeIndex={activeIndex}
+            onIndexClick={handleIndexClick}
             stickyOverflow
             data-testid="transcript-journey-chain"
           />

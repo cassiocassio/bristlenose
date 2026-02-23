@@ -148,4 +148,62 @@ describe("JourneyChain", () => {
     expect(buttons[0].getAttribute("aria-current")).toBe("step");
     expect(buttons[1].getAttribute("aria-current")).toBeNull();
   });
+
+  // --- Index-based props (for repeated labels / revisits) ---
+
+  it("activeIndex highlights only the matching index, not same-string labels", () => {
+    render(
+      <JourneyChain
+        labels={["A", "B", "A"]}
+        activeIndex={2}
+        data-testid="jc"
+      />,
+    );
+    const labels = screen.getByTestId("jc").querySelectorAll(".bn-journey-label");
+    expect(labels[0].classList.contains("bn-journey-label--active")).toBe(false);
+    expect(labels[1].classList.contains("bn-journey-label--active")).toBe(false);
+    expect(labels[2].classList.contains("bn-journey-label--active")).toBe(true);
+  });
+
+  it("activeIndex takes precedence over activeLabel", () => {
+    render(
+      <JourneyChain
+        labels={["A", "B", "C"]}
+        activeLabel="A"
+        activeIndex={1}
+        data-testid="jc"
+      />,
+    );
+    const labels = screen.getByTestId("jc").querySelectorAll(".bn-journey-label");
+    expect(labels[0].classList.contains("bn-journey-label--active")).toBe(false);
+    expect(labels[1].classList.contains("bn-journey-label--active")).toBe(true);
+    expect(labels[2].classList.contains("bn-journey-label--active")).toBe(false);
+  });
+
+  it("onIndexClick fires with correct index for repeated labels", () => {
+    const onClick = vi.fn();
+    render(
+      <JourneyChain
+        labels={["Home", "Search", "Home"]}
+        onIndexClick={onClick}
+        data-testid="jc"
+      />,
+    );
+    const buttons = screen.getByTestId("jc").querySelectorAll("button");
+    fireEvent.click(buttons[2]);
+    expect(onClick).toHaveBeenCalledWith(2);
+  });
+
+  it("renders buttons when onIndexClick is provided", () => {
+    render(
+      <JourneyChain
+        labels={["A", "B"]}
+        onIndexClick={vi.fn()}
+        data-testid="jc"
+      />,
+    );
+    const buttons = screen.getByTestId("jc").querySelectorAll("button");
+    expect(buttons).toHaveLength(2);
+    expect(buttons[0].classList.contains("bn-journey-label--interactive")).toBe(true);
+  });
 });

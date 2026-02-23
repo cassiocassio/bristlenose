@@ -70,10 +70,11 @@ const mockData: TranscriptPageResponse = {
       start_time: 46.0,
       end_time: 56.0,
       text: "The search was great actually.",
-      html_text: null,
+      html_text:
+        '<mark class="bn-cited" data-quote-id="q-p1-46">The search was great actually.</mark>',
       is_moderator: false,
-      is_quoted: false,
-      quote_ids: [],
+      is_quoted: true,
+      quote_ids: ["q-p1-46"],
       segment_index: 4,
     },
   ],
@@ -98,6 +99,17 @@ const mockData: TranscriptPageResponse = {
       start_timecode: 26.0,
       end_timecode: 39.0,
       verbatim_excerpt: "The navigation was hidden behind a hamburger menu.",
+      tags: [],
+      deleted_badges: [],
+    },
+    "q-p1-46": {
+      label: "Search",
+      label_type: "section",
+      sentiment: "satisfaction",
+      participant_id: "p1",
+      start_timecode: 46.0,
+      end_timecode: 56.0,
+      verbatim_excerpt: "The search was great actually.",
       tags: [],
       deleted_badges: [],
     },
@@ -251,10 +263,16 @@ describe("TranscriptPage", () => {
     expect(chain.textContent).toContain("Search");
   });
 
-  it("hides journey header when journey_labels is empty", async () => {
+  it("hides journey header when no section annotations exist", async () => {
     mockedGetTranscript.mockResolvedValue({
       ...mockData,
       journey_labels: [],
+      annotations: {},
+      segments: mockData.segments.map((s) => ({
+        ...s,
+        is_quoted: false,
+        quote_ids: [],
+      })),
     });
     render(<TranscriptPage projectId="1" sessionId="s1" />);
     await waitFor(() => {
@@ -372,6 +390,65 @@ describe("TranscriptPage", () => {
     const text = screen.getByTestId("transcript-roles").textContent ?? "";
     // Should have Oxford comma: "A, B, and C"
     expect(text).toContain(", and");
+  });
+
+  it("renders full journey with revisits (not deduplicated)", async () => {
+    const revisitData: TranscriptPageResponse = {
+      ...mockData,
+      journey_labels: ["Dashboard", "Search"],
+      segments: [
+        {
+          speaker_code: "p1", start_time: 10.0, end_time: 19.0,
+          text: "The dashboard is confusing.",
+          html_text: null, is_moderator: false, is_quoted: true,
+          quote_ids: ["q-p1-10"], segment_index: 0,
+        },
+        {
+          speaker_code: "p1", start_time: 30.0, end_time: 39.0,
+          text: "Search works well.",
+          html_text: null, is_moderator: false, is_quoted: true,
+          quote_ids: ["q-p1-30"], segment_index: 1,
+        },
+        {
+          speaker_code: "p1", start_time: 50.0, end_time: 59.0,
+          text: "Back to the dashboard, still confused.",
+          html_text: null, is_moderator: false, is_quoted: true,
+          quote_ids: ["q-p1-50"], segment_index: 2,
+        },
+      ],
+      annotations: {
+        "q-p1-10": {
+          label: "Dashboard", label_type: "section", sentiment: "confusion",
+          participant_id: "p1", start_timecode: 10.0, end_timecode: 19.0,
+          verbatim_excerpt: "The dashboard is confusing.",
+          tags: [], deleted_badges: [],
+        },
+        "q-p1-30": {
+          label: "Search", label_type: "section", sentiment: "satisfaction",
+          participant_id: "p1", start_timecode: 30.0, end_timecode: 39.0,
+          verbatim_excerpt: "Search works well.",
+          tags: [], deleted_badges: [],
+        },
+        "q-p1-50": {
+          label: "Dashboard", label_type: "section", sentiment: "confusion",
+          participant_id: "p1", start_timecode: 50.0, end_timecode: 59.0,
+          verbatim_excerpt: "Back to the dashboard, still confused.",
+          tags: [], deleted_badges: [],
+        },
+      },
+    };
+    mockedGetTranscript.mockResolvedValue(revisitData);
+    render(<TranscriptPage projectId="1" sessionId="s1" />);
+    await waitFor(() => {
+      expect(screen.getByTestId("transcript-journey-chain")).toBeTruthy();
+    });
+    const chain = screen.getByTestId("transcript-journey-chain");
+    const labels = chain.querySelectorAll(".bn-journey-label");
+    // Should be 3 labels (Dashboard → Search → Dashboard), not 2
+    expect(labels).toHaveLength(3);
+    expect(labels[0].textContent).toBe("Dashboard");
+    expect(labels[1].textContent).toBe("Search");
+    expect(labels[2].textContent).toBe("Dashboard");
   });
 
   it("shows badge only when speaker has no name", async () => {

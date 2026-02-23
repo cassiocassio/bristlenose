@@ -50,36 +50,6 @@
     -webkit-mask-image: linear-gradient(to right, transparent 0, black 2rem, black calc(100% - 2rem), transparent 100%);
 }
 
-/* Interactive labels: clickable buttons styled as inline text */
-button.bn-journey-label--interactive {
-    all: unset;
-    cursor: pointer;
-    font: inherit;
-    color: inherit;
-    border-radius: 2px;
-    padding: 0.1rem 0.3rem;
-    transition: color 0.15s, text-decoration-color 0.15s, background 0.15s;
-}
-
-button.bn-journey-label--interactive:hover {
-    color: var(--bn-colour-accent);
-    text-decoration: underline;
-    text-decoration-color: var(--bn-colour-muted);
-    text-underline-offset: 0.25em;
-}
-
-button.bn-journey-label--interactive:focus-visible {
-    outline: 2px solid var(--bn-colour-accent);
-    outline-offset: 2px;
-}
-
-/* Active journey step — DEBUG: bright green to verify scroll sync */
-.bn-journey-label--active {
-    font-weight: 600;
-    background: #00ff00;
-    border-radius: var(--bn-radius-sm);
-}
-
 /* Selector — reusable dropdown primitive (bn-selector) */
 .bn-selector {
     position: relative;

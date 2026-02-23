@@ -23,6 +23,7 @@ from bristlenose.server.models import (
     TagDefinition,
     ThemeGroup,
     ThemeQuote,
+    TranscriptSegment,
 )
 from bristlenose.server.models import Session as SessionModel
 
@@ -433,6 +434,91 @@ def get_quotes(
             total_quotes=len(all_quotes),
             total_hidden=total_hidden,
             total_starred=total_starred,
+        )
+    finally:
+        db.close()
+
+
+# ---------------------------------------------------------------------------
+# Moderator question endpoint
+# ---------------------------------------------------------------------------
+
+
+class ModeratorQuestionResponse(BaseModel):
+    """The preceding moderator utterance for a quote."""
+
+    text: str
+    speaker_code: str
+    start_time: float
+    end_time: float
+    segment_index: int
+
+
+@router.get(
+    "/projects/{project_id}/quotes/{dom_id}/moderator-question",
+    response_model=ModeratorQuestionResponse,
+)
+def get_moderator_question(
+    project_id: int,
+    dom_id: str,
+    request: Request,
+) -> ModeratorQuestionResponse:
+    """Return the preceding moderator utterance for a quote.
+
+    Finds the last transcript segment spoken by a moderator (speaker_code
+    starting with "m") before the quote's segment_index in the same session.
+    """
+    db = _get_db(request)
+    try:
+        _check_project(db, project_id)
+
+        # Find the quote by dom_id (format: "q-{participant_id}-{int(start_timecode)}")
+        all_quotes = db.query(Quote).filter_by(project_id=project_id).all()
+        quote = next(
+            (q for q in all_quotes if _quote_dom_id(q) == dom_id),
+            None,
+        )
+        if not quote:
+            raise HTTPException(status_code=404, detail="Quote not found")
+
+        if quote.segment_index < 1:
+            raise HTTPException(
+                status_code=404,
+                detail="No segment index available for this quote",
+            )
+
+        # Find the session's DB row to get its primary key.
+        session = (
+            db.query(SessionModel)
+            .filter_by(project_id=project_id, session_id=quote.session_id)
+            .first()
+        )
+        if not session:
+            raise HTTPException(status_code=404, detail="Session not found")
+
+        # Find the last moderator segment before this quote's segment.
+        segment = (
+            db.query(TranscriptSegment)
+            .filter(
+                TranscriptSegment.session_id == session.id,
+                TranscriptSegment.speaker_code.like("m%"),
+                TranscriptSegment.segment_index < quote.segment_index,
+            )
+            .order_by(TranscriptSegment.segment_index.desc())
+            .first()
+        )
+        if not segment:
+            raise HTTPException(
+                status_code=404,
+                detail="No preceding moderator segment found",
+            )
+
+        return ModeratorQuestionResponse(
+            text=segment.text,
+            speaker_code=segment.speaker_code,
+            start_time=segment.start_time,
+            end_time=segment.end_time,
+            segment_index=segment.segment_index,
         )
     finally:
         db.close()

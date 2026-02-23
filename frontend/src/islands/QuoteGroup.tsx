@@ -11,10 +11,16 @@
 import { useState, useCallback, useRef, useMemo, useLayoutEffect, useEffect } from "react";
 import { Counter, EditableText } from "../components";
 import type { CounterItem } from "../components/Counter";
-import type { ProposedTagBrief, QuoteResponse, TagResponse } from "../utils/types";
+import type {
+  ModeratorQuestionResponse,
+  ProposedTagBrief,
+  QuoteResponse,
+  TagResponse,
+} from "../utils/types";
 import {
   acceptProposal,
   denyProposal,
+  getModeratorQuestion,
   putHidden,
   putStarred,
   putEdits,
@@ -131,6 +137,55 @@ export function QuoteGroup({
   const pendingUnhides = useRef<Set<string>>(new Set());
   const [unhideVersion, setUnhideVersion] = useState(0);
 
+  // ── Moderator question state ───────────────────────────────────────────
+
+  const LS_KEY = "bristlenose-mod-questions";
+
+  // Which quotes have the moderator question pinned open.
+  const [openQuestions, setOpenQuestions] = useState<Set<string>>(() => {
+    try {
+      const raw = localStorage.getItem(LS_KEY);
+      return raw ? new Set(JSON.parse(raw) as string[]) : new Set();
+    } catch {
+      return new Set();
+    }
+  });
+
+  // Cache of fetched moderator question data per quote dom_id.
+  // undefined = not yet fetched, null = fetched but none found.
+  const [modQuestionCache, setModQuestionCache] = useState<
+    Record<string, ModeratorQuestionResponse | null>
+  >({});
+
+  // Which quote is currently showing the hover pill (only one at a time).
+  const [pillVisibleFor, setPillVisibleFor] = useState<string | null>(null);
+
+  // Timer for the 400ms hover delay.
+  const hoverTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Ref mirrors openQuestions so hover-leave handler can read latest state.
+  const openQuestionsRef = useRef(openQuestions);
+  openQuestionsRef.current = openQuestions;
+
+  // On mount, batch-fetch moderator questions for previously-open quotes.
+  useEffect(() => {
+    const domIds = quotes
+      .filter((q) => openQuestions.has(q.dom_id) && q.segment_index > 0)
+      .map((q) => q.dom_id);
+    for (const domId of domIds) {
+      if (modQuestionCache[domId] !== undefined) continue;
+      getModeratorQuestion(domId)
+        .then((data) => {
+          setModQuestionCache((prev) => ({ ...prev, [domId]: data }));
+        })
+        .catch(() => {
+          setModQuestionCache((prev) => ({ ...prev, [domId]: null }));
+        });
+    }
+    // Only run on mount.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // ── Derived ───────────────────────────────────────────────────────────
 
   const hiddenQuotes = useMemo(
@@ -206,27 +261,33 @@ export function QuoteGroup({
         const quoteEl = groupRef.current?.querySelector(`#${CSS.escape(domId)}`);
         const quoteRect = quoteEl?.getBoundingClientRect() ?? null;
         const badgeEl = headerRef.current?.querySelector(".bn-hidden-badge");
-        const badgeRect = badgeEl?.getBoundingClientRect() ?? null;
+        let badgeRect = badgeEl?.getBoundingClientRect() ?? null;
+        // First hide in group: badge doesn't exist yet (Counter returns null).
+        // Use the header's top-right corner as the fly target — that's where
+        // the badge will materialise once the hide completes.
+        if (!badgeRect && headerRef.current) {
+          const hr = headerRef.current.getBoundingClientRect();
+          badgeRect = { left: hr.right - 60, top: hr.top, width: 60, height: hr.height } as DOMRect;
+        }
 
         // Start CSS collapse (existing .bn-hiding for sibling slide-up).
         setHidingIds((prev) => new Set(prev).add(domId));
 
-        // Create ghost overlay at the quote's position.
-        if (quoteRect) {
-          const ghost = document.createElement("div");
+        // Clone the quote card as a ghost overlay (before React re-renders).
+        if (quoteRect && quoteEl) {
+          const ghost = quoteEl.cloneNode(true) as HTMLElement;
           ghost.className = "bn-hide-ghost";
+          ghost.removeAttribute("id");
           ghost.style.cssText = [
             "position: fixed",
             `left: ${quoteRect.left}px`,
             `top: ${quoteRect.top}px`,
             `width: ${quoteRect.width}px`,
             `height: ${quoteRect.height}px`,
-            "background: var(--bn-colour-quote-bg)",
-            "border-left: 1px solid var(--bn-colour-border)",
-            "border-radius: 0 var(--bn-radius-md) var(--bn-radius-md) 0",
+            "margin: 0",
             "z-index: 500",
             "pointer-events: none",
-            "opacity: 0.7",
+            "opacity: 1",
             "overflow: hidden",
           ].join("; ");
           document.body.appendChild(ghost);
@@ -290,8 +351,17 @@ export function QuoteGroup({
     pendingUnhides.current.clear();
 
     const badgeEl = headerRef.current?.querySelector(".bn-hidden-badge");
-    const badgeRect = badgeEl?.getBoundingClientRect() ?? null;
+    let badgeRect = badgeEl?.getBoundingClientRect() ?? null;
+    // Unhide-all: badge vanishes (count → 0) before this effect runs.
+    // Fall back to the header's right edge — same pattern as hide path.
+    if (!badgeRect && headerRef.current) {
+      const hr = headerRef.current.getBoundingClientRect();
+      badgeRect = { left: hr.right - 60, top: hr.top, width: 60, height: hr.height } as DOMRect;
+    }
 
+    // Stagger: 150ms between each quote for unhide-all cascade.
+    // Single unhide: stagger = 0, no delay.
+    let index = 0;
     ids.forEach((domId) => {
       const quoteEl = groupRef.current?.querySelector(
         `#${CSS.escape(domId)}`,
@@ -302,26 +372,29 @@ export function QuoteGroup({
 
       if (badgeRect) {
         const dy = badgeRect.top - quoteRect.top;
+        const stagger = index * 150;
+
         quoteEl.style.transform = `translateY(${dy}px) scaleY(0.01)`;
         quoteEl.style.transformOrigin = "top right";
         quoteEl.style.opacity = "0";
         quoteEl.style.transition = "none";
 
-        requestAnimationFrame(() => {
+        setTimeout(() => {
           requestAnimationFrame(() => {
             quoteEl.style.transition = `all ${HIDE_DURATION}ms ease`;
             quoteEl.style.transform = "";
             quoteEl.style.opacity = "1";
           });
-        });
+        }, stagger);
 
         setTimeout(() => {
           quoteEl.style.transition = "";
           quoteEl.style.transform = "";
           quoteEl.style.transformOrigin = "";
           quoteEl.style.opacity = "";
-        }, HIDE_DURATION + 50);
+        }, stagger + HIDE_DURATION + 50);
       }
+      index++;
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [unhideVersion]);
@@ -476,6 +549,53 @@ export function QuoteGroup({
     [updateQuote],
   );
 
+  // ── Moderator question handlers ──────────────────────────────────────
+
+  const handleQuoteHoverEnter = useCallback((domId: string) => {
+    if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current);
+    hoverTimerRef.current = setTimeout(() => {
+      setPillVisibleFor(domId);
+      hoverTimerRef.current = null;
+    }, 400);
+  }, []);
+
+  const handleQuoteHoverLeave = useCallback((domId: string) => {
+    if (hoverTimerRef.current) {
+      clearTimeout(hoverTimerRef.current);
+      hoverTimerRef.current = null;
+    }
+    // Don't hide pill if the question is pinned open.
+    if (!openQuestionsRef.current.has(domId)) {
+      setPillVisibleFor((prev) => (prev === domId ? null : prev));
+    }
+  }, []);
+
+  const handleToggleQuestion = useCallback((domId: string) => {
+    setOpenQuestions((prev) => {
+      const next = new Set(prev);
+      if (next.has(domId)) {
+        next.delete(domId);
+      } else {
+        next.add(domId);
+        // Fetch if not cached.
+        if (modQuestionCache[domId] === undefined) {
+          getModeratorQuestion(domId)
+            .then((data) => {
+              setModQuestionCache((c) => ({ ...c, [domId]: data }));
+            })
+            .catch(() => {
+              setModQuestionCache((c) => ({ ...c, [domId]: null }));
+            });
+        }
+      }
+      // Persist to localStorage.
+      try {
+        localStorage.setItem(LS_KEY, JSON.stringify([...next]));
+      } catch { /* quota exceeded — ignore */ }
+      return next;
+    });
+  }, [modQuestionCache]);
+
   // ── Counter handlers ──────────────────────────────────────────────────
 
   const handleCounterToggle = useCallback(() => {
@@ -612,6 +732,9 @@ export function QuoteGroup({
               hasMedia={hasMedia}
               proposedTags={state.proposedTags}
               flashingTags={flashingTags}
+              moderatorQuestion={modQuestionCache[q.dom_id] ?? null}
+              isQuestionOpen={openQuestions.has(q.dom_id)}
+              isPillVisible={pillVisibleFor === q.dom_id}
               onToggleStar={handleToggleStar}
               onToggleHide={handleToggleHide}
               onEditCommit={handleEditCommit}
@@ -625,6 +748,9 @@ export function QuoteGroup({
               onProposedDeny={(proposalId) =>
                 handleProposedDeny(q.dom_id, proposalId)
               }
+              onToggleQuestion={handleToggleQuestion}
+              onQuoteHoverEnter={handleQuoteHoverEnter}
+              onQuoteHoverLeave={handleQuoteHoverLeave}
             />
           );
         })}

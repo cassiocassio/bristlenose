@@ -243,9 +243,11 @@ export function QuoteCard({
       if (crop.mode !== "crop") return;
       if (e.key === "Enter") {
         e.preventDefault();
+        e.stopPropagation();
         crop.commitEdit();
       } else if (e.key === "Escape") {
         e.preventDefault();
+        e.stopPropagation();
         crop.cancelEdit();
       }
     },
@@ -278,10 +280,12 @@ export function QuoteCard({
     (e: React.KeyboardEvent) => {
       if (e.key === "Enter" && !e.shiftKey) {
         e.preventDefault();
+        e.stopPropagation();
         const editableEl = textSpanRef.current?.querySelector(".crop-editable") as HTMLElement | null;
         crop.commitEdit(editableEl);
       } else if (e.key === "Escape") {
         e.preventDefault();
+        e.stopPropagation();
         crop.cancelEdit();
       }
     },

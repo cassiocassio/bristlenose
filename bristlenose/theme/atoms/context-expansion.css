@@ -65,22 +65,22 @@
  */
 .context-segment {
     color: var(--bn-colour-muted);
-    font-size: 0.9rem;
-    padding: var(--bn-space-xs) 1rem;
+    padding: var(--bn-space-xs) 0;
 }
 
 .context-segment .quote-row {
     display: flex;
     gap: 0.5rem;
+    align-items: baseline;
 }
 
 .context-segment .timecode {
     flex-shrink: 0;
-    opacity: 0.6;
 }
 
 .context-segment .context-text {
     flex: 1;
+    min-width: 0;
 }
 
 .context-segment .context-speaker {

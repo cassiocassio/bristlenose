@@ -725,6 +725,10 @@ def run(
         bool,
         typer.Option("--verbose", "-v", help="Enable verbose logging."),
     ] = False,
+    yes: Annotated[
+        bool,
+        typer.Option("--yes", "-y", help="Skip confirmation for large session counts."),
+    ] = False,
 ) -> None:
     """Process a folder of user-research recordings into themed, timestamped quotes."""
     # Default output location: inside the input folder
@@ -796,7 +800,10 @@ def run(
     from bristlenose.pipeline import Pipeline
 
     estimator, on_event = _build_estimator(settings)
-    pipeline = Pipeline(settings, verbose=verbose, on_event=on_event, estimator=estimator)
+    pipeline = Pipeline(
+        settings, verbose=verbose, on_event=on_event,
+        estimator=estimator, skip_confirm=yes,
+    )
     result = asyncio.run(pipeline.run(input_dir, output_dir))
 
     _print_pipeline_summary(result)
@@ -825,6 +832,10 @@ def transcribe(
         bool,
         typer.Option("--verbose", "-v", help="Enable verbose logging."),
     ] = False,
+    yes: Annotated[
+        bool,
+        typer.Option("--yes", "-y", help="Skip confirmation for large session counts."),
+    ] = False,
 ) -> None:
     """Only run transcription (no LLM analysis). Produces raw transcripts."""
     # Default output location: inside the input folder
@@ -846,7 +857,7 @@ def transcribe(
 
     from bristlenose.pipeline import Pipeline
 
-    pipeline = Pipeline(settings, verbose=verbose)
+    pipeline = Pipeline(settings, verbose=verbose, skip_confirm=yes)
     result = asyncio.run(pipeline.run_transcription_only(input_dir, output_dir))
 
     _print_pipeline_summary(result)
@@ -883,6 +894,10 @@ def analyze(
         bool,
         typer.Option("--verbose", "-v", help="Enable verbose logging."),
     ] = False,
+    yes: Annotated[
+        bool,
+        typer.Option("--yes", "-y", help="Skip confirmation for large session counts."),
+    ] = False,
 ) -> None:
     """Run LLM analysis on existing transcripts (skip ingestion and transcription)."""
     # Default output location: if transcripts_dir is transcripts-raw/ inside a bristlenose-output,
@@ -913,7 +928,10 @@ def analyze(
     from bristlenose.pipeline import Pipeline
 
     estimator, on_event = _build_estimator(settings)
-    pipeline = Pipeline(settings, verbose=verbose, on_event=on_event, estimator=estimator)
+    pipeline = Pipeline(
+        settings, verbose=verbose, on_event=on_event,
+        estimator=estimator, skip_confirm=yes,
+    )
     result = asyncio.run(pipeline.run_analysis_only(transcripts_dir, output_dir))
 
     _print_pipeline_summary(result)

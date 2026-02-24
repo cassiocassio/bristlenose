@@ -8,9 +8,6 @@
 }
 
 .quote-card.editing .quote-text {
-    background: var(--bn-colour-editing-bg);
-    outline: 1px solid var(--bn-colour-editing-border);
-    border-radius: var(--bn-radius-sm);
     padding: var(--bn-space-xs) 0.3rem;
     min-width: 10rem;
     cursor: text;
@@ -132,8 +129,8 @@
     right: 3.35rem;
     background: none;
     border: none;
-    padding: 0;
-    font-size: 0.85rem;
+    padding: var(--bn-space-xs);
+    font-size: 0.8rem;
     cursor: pointer;
     color: var(--bn-colour-muted);
     line-height: 1;

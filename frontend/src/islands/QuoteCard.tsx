@@ -177,6 +177,29 @@ export function QuoteCard({
     }
   }, [crop.mode]);
 
+  // ── Attach drag handlers to crop-mode brackets ────────────────────
+  // In crop mode (mode 3), brackets are rendered via dangerouslySetInnerHTML
+  // so they have no React event handlers. We attach pointerdown listeners
+  // imperatively after each render. This mirrors the mockup's
+  // attachHandleDrag() pattern (called after every innerHTML= rebuild).
+
+  useEffect(() => {
+    if (crop.mode !== "crop" || !textSpanRef.current) return;
+    const handles = textSpanRef.current.querySelectorAll(".crop-handle");
+    const listeners: Array<[Element, (e: Event) => void]> = [];
+    handles.forEach((handle) => {
+      const side = handle.getAttribute("data-handle") as "start" | "end";
+      const listener = (e: Event) => {
+        crop.handleBracketPointerDown(side, e as unknown as React.PointerEvent, textSpanRef.current!);
+      };
+      handle.addEventListener("pointerdown", listener);
+      listeners.push([handle, listener]);
+    });
+    return () => {
+      listeners.forEach(([el, fn]) => el.removeEventListener("pointerdown", fn));
+    };
+  }, [crop.mode, crop.cropStart, crop.cropEnd, crop.handleBracketPointerDown]);
+
   // ── Click-outside → commit ──────────────────────────────────────────
 
   useEffect(() => {
@@ -484,7 +507,7 @@ export function QuoteCard({
           <span className="timecode">[{timecodeStr}]</span>
         )}
         <div className="quote-body">
-          {hasModeratorContext && !isQuestionOpen && (
+          {hasModeratorContext && !isQuestionOpen && !isActive && (
             <button
               className={`moderator-pill${isPillVisible ? " visible" : ""}`}
               onClick={() => onToggleQuestion(domId)}
@@ -496,9 +519,10 @@ export function QuoteCard({
               Question?
             </button>
           )}
-          {hasModeratorContext && !isQuestionOpen && (
+          {hasModeratorContext && !isQuestionOpen && !isActive && (
             <span
               className="quote-hover-zone"
+              onClick={handleQuoteTextClick}
               onMouseEnter={() => onQuoteHoverEnter(domId)}
               onMouseLeave={() => onQuoteHoverLeave(domId)}
               aria-hidden="true"

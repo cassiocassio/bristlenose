@@ -53,6 +53,8 @@ from bristlenose.models import (
 logger = logging.getLogger(__name__)
 console = Console(width=min(80, Console().width))
 
+_MAX_SESSIONS_NO_CONFIRM = 16
+
 
 # ---------------------------------------------------------------------------
 # CLI output helpers
@@ -179,6 +181,7 @@ class Pipeline:
         verbose: bool = False,
         on_event: object | None = None,
         estimator: object | None = None,
+        skip_confirm: bool = False,
     ) -> None:
         self.settings = settings
         self.verbose = verbose
@@ -187,6 +190,7 @@ class Pipeline:
         self._on_event = on_event
         # TimingEstimator — typed as object for the same reason.
         self._estimator = estimator
+        self._skip_confirm = skip_confirm
 
         # Logging is configured later (once output_dir is known) via
         # _configure_logging().  Pipeline methods call it at the top of
@@ -220,6 +224,18 @@ class Pipeline:
                 kind="remaining", stage=stage, elapsed=elapsed,
                 estimate=remaining,
             ))
+
+    def _confirm_large_session_count(self, count: int, source_dir: Path) -> bool:
+        """Prompt for confirmation when session count exceeds threshold.
+
+        Returns True to proceed, False to abort.
+        """
+        from rich.prompt import Confirm
+
+        console.print(
+            f"\n[yellow]Found {count} sessions in {source_dir.name}/.[/yellow]"
+        )
+        return Confirm.ask("Continue?", default=True)
 
     async def run(self, input_dir: Path, output_dir: Path) -> PipelineResult:
         """Run the full pipeline: ingest → transcribe → analyse → output.
@@ -278,34 +294,40 @@ class Pipeline:
         _prev_manifest = load_manifest(output_dir) if output_dir.exists() else None
         manifest = create_manifest(self.settings.project_name, __version__)
 
-        with console.status("", spinner="dots") as status:
-            status.renderable.frames = [" " + f for f in status.renderable.frames]
+        # ── Stage 1: Ingest ──────────────────────────────────────
+        # Runs before the spinner — ingest is fast (directory scan) and
+        # the session-count guard needs terminal input if triggered.
+        mark_stage_running(manifest, STAGE_INGEST)
+        t0 = time.perf_counter()
+        sessions = ingest(input_dir)
+        if not sessions:
+            console.print("[red]No supported files found.[/red]")
+            return self._empty_result(output_dir)
 
-            # ── Stage 1: Ingest ──────────────────────────────────────
-            status.update("[dim]Ingesting files...[/dim]")
-            mark_stage_running(manifest, STAGE_INGEST)
-            t0 = time.perf_counter()
-            sessions = ingest(input_dir)
-            if not sessions:
-                console.print("[red]No supported files found.[/red]")
+        ingest_elapsed = time.perf_counter() - t0
+
+        # ── Session-count guard ───────────────────────────────────
+        if len(sessions) > _MAX_SESSIONS_NO_CONFIRM and not self._skip_confirm:
+            if not self._confirm_large_session_count(len(sessions), input_dir):
                 return self._empty_result(output_dir)
 
-            ingest_elapsed = time.perf_counter() - t0
+        # ── Print found-sessions line, then ingest checkmark ──
+        console.print(
+            f"[dim]{len(sessions)} sessions in {input_dir.name}/[/dim]\n",
+        )
+        type_counts = Counter(
+            f.file_type.value for s in sessions for f in s.files
+        )
+        type_parts = [f"{n} {t}" for t, n in type_counts.most_common()]
+        _print_step(
+            f"Ingested {len(sessions)} sessions ({', '.join(type_parts)})",
+            ingest_elapsed,
+        )
+        mark_stage_complete(manifest, STAGE_INGEST)
+        write_manifest(manifest, output_dir)
 
-            # ── Print found-sessions line, then ingest checkmark ──
-            console.print(
-                f"[dim]{len(sessions)} sessions in {input_dir.name}/[/dim]\n",
-            )
-            type_counts = Counter(
-                f.file_type.value for s in sessions for f in s.files
-            )
-            type_parts = [f"{n} {t}" for t, n in type_counts.most_common()]
-            _print_step(
-                f"Ingested {len(sessions)} sessions ({', '.join(type_parts)})",
-                ingest_elapsed,
-            )
-            mark_stage_complete(manifest, STAGE_INGEST)
-            write_manifest(manifest, output_dir)
+        with console.status("", spinner="dots") as status:
+            status.renderable.frames = [" " + f for f in status.renderable.frames]
 
             # ── Time estimate ────────────────────────────────────────
             from bristlenose.timing import (
@@ -1099,31 +1121,35 @@ class Pipeline:
         output_dir.mkdir(parents=True, exist_ok=True)
         self._configure_logging(output_dir)
 
-        with console.status("", spinner="dots") as status:
-            status.renderable.frames = [" " + f for f in status.renderable.frames]
+        # ── Stage 1: Ingest ──
+        t0 = time.perf_counter()
+        sessions = ingest(input_dir)
+        if not sessions:
+            console.print("[red]No supported files found.[/red]")
+            return self._empty_result(output_dir)
 
-            # ── Stage 1: Ingest ──
-            status.update("[dim]Ingesting files...[/dim]")
-            t0 = time.perf_counter()
-            sessions = ingest(input_dir)
-            if not sessions:
-                console.print("[red]No supported files found.[/red]")
+        ingest_elapsed = time.perf_counter() - t0
+
+        # ── Session-count guard ───────────────────────────────────
+        if len(sessions) > _MAX_SESSIONS_NO_CONFIRM and not self._skip_confirm:
+            if not self._confirm_large_session_count(len(sessions), input_dir):
                 return self._empty_result(output_dir)
 
-            ingest_elapsed = time.perf_counter() - t0
+        # ── Print found-sessions line, then ingest checkmark ──
+        console.print(
+            f"[dim]{len(sessions)} sessions in {input_dir.name}/[/dim]\n",
+        )
+        type_counts = Counter(
+            f.file_type.value for s in sessions for f in s.files
+        )
+        type_parts = [f"{n} {t}" for t, n in type_counts.most_common()]
+        _print_step(
+            f"Ingested {len(sessions)} sessions ({', '.join(type_parts)})",
+            ingest_elapsed,
+        )
 
-            # ── Print found-sessions line, then ingest checkmark ──
-            console.print(
-                f"[dim]{len(sessions)} sessions in {input_dir.name}/[/dim]\n",
-            )
-            type_counts = Counter(
-                f.file_type.value for s in sessions for f in s.files
-            )
-            type_parts = [f"{n} {t}" for t, n in type_counts.most_common()]
-            _print_step(
-                f"Ingested {len(sessions)} sessions ({', '.join(type_parts)})",
-                ingest_elapsed,
-            )
+        with console.status("", spinner="dots") as status:
+            status.renderable.frames = [" " + f for f in status.renderable.frames]
 
             # ── Stage 2: Extract audio ──
             status.update("[dim]Extracting audio...[/dim]")
@@ -1240,6 +1266,13 @@ class Pipeline:
         if not clean_transcripts:
             console.print("[red]No transcript files found.[/red]")
             return self._empty_result(output_dir)
+
+        # ── Session-count guard ───────────────────────────────────
+        if len(clean_transcripts) > _MAX_SESSIONS_NO_CONFIRM and not self._skip_confirm:
+            if not self._confirm_large_session_count(
+                len(clean_transcripts), transcripts_dir
+            ):
+                return self._empty_result(output_dir)
 
         llm_client = LLMClient(self.settings)
         concurrency = self.settings.llm_concurrency

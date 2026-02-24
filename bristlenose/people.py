@@ -369,40 +369,74 @@ def auto_populate_names(
 # ---------------------------------------------------------------------------
 
 
+def _extract_given_name(full_name: str) -> str:
+    """Extract the likely given name from a full name.
+
+    Handles three special cases using pre-loaded data files:
+
+    1. **CJK ideographic names** (Chinese/Japanese/Korean characters without
+       spaces) — the full name is already short enough, returned as-is.
+    2. **Honorific prefixes** ("Dr.", "Prof.", etc.) — stripped before
+       extracting the first token.
+    3. **Family-name-first cultures** (Chinese, Korean, Vietnamese, Japanese,
+       Hungarian) — when the first token matches a known family name, the
+       *second* token is returned instead.
+
+    Falls back to the first whitespace-delimited token for all other names.
+    """
+    # CJK names without spaces are already short — use as-is.
+    if _CJK_RE.search(full_name) and " " not in full_name:
+        return full_name
+
+    # Strip honorific prefix ("Dr. Sarah Jones" → "Sarah Jones").
+    stripped = _strip_honorific(full_name)
+    parts = stripped.split()
+    if not parts:
+        return full_name
+
+    # Family-name-first detection: if the first token is a known family
+    # name from a family-first culture, take the second token (the given
+    # name) instead.
+    if len(parts) >= 2 and parts[0].lower() in _FAMILY_FIRST_SURNAMES:
+        return parts[1]
+
+    return parts[0]
+
+
 def suggest_short_names(people: PeopleFile) -> None:
     """Auto-suggest ``short_name`` for participants missing one.
 
-    Uses the first token of ``full_name``.  When two participants share a
-    first name, disambiguates with the last-name initial
+    Extracts the likely given name from ``full_name``, handling honorifics,
+    CJK names, and family-name-first conventions.  When two participants
+    share a given name, disambiguates with the last-name initial
     (e.g. "Sarah J." vs "Sarah K.").
 
     Only sets ``short_name`` on entries where it is currently empty.
     Mutates *people* in place.
     """
     # Collect candidates: entries that have full_name but no short_name.
-    candidates: dict[str, str] = {}  # pid -> first_name
+    candidates: dict[str, str] = {}  # pid -> given_name
     for pid, entry in people.participants.items():
         if entry.editable.full_name and not entry.editable.short_name:
-            first = entry.editable.full_name.split()[0]
-            candidates[pid] = first
+            candidates[pid] = _extract_given_name(entry.editable.full_name)
 
     if not candidates:
         return
 
-    # Detect first-name collisions.
+    # Detect given-name collisions.
     first_counts: dict[str, int] = {}
-    for first in candidates.values():
-        first_counts[first] = first_counts.get(first, 0) + 1
+    for given in candidates.values():
+        first_counts[given] = first_counts.get(given, 0) + 1
 
     # Assign short names.
-    for pid, first in candidates.items():
-        if first_counts[first] > 1:
+    for pid, given in candidates.items():
+        if first_counts[given] > 1:
             # Disambiguate: append last-name initial if available.
             parts = people.participants[pid].editable.full_name.split()
             if len(parts) >= 2:
-                short = f"{first} {parts[-1][0]}."
+                short = f"{given} {parts[-1][0]}."
             else:
-                short = first
+                short = given
         else:
-            short = first
+            short = given
         people.participants[pid].editable.short_name = short

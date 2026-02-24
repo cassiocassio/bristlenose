@@ -483,29 +483,30 @@ class TestSuggestShortNames:
     # address them informally.  But we accept this limitation.
 
     def test_chinese_romanised_family_first(self) -> None:
-        """Zhang Wei → short name 'Zhang' (family name, not given)."""
+        """Zhang Wei → short name 'Wei' (given name, family-first detected)."""
         people = _people_with_names({"p1": "Zhang Wei"})
         suggest_short_names(people)
-        # This is "wrong" culturally but structurally consistent
-        assert people.participants["p1"].editable.short_name == "Zhang"
+        assert people.participants["p1"].editable.short_name == "Wei"
 
     def test_japanese_romanised(self) -> None:
-        """Tanaka Yuki → short name 'Tanaka' (family name)."""
+        """Tanaka Yuki → short name 'Yuki' (given name, family-first detected)."""
         people = _people_with_names({"p1": "Tanaka Yuki"})
         suggest_short_names(people)
-        assert people.participants["p1"].editable.short_name == "Tanaka"
+        assert people.participants["p1"].editable.short_name == "Yuki"
 
     def test_korean_romanised(self) -> None:
-        """Park Ji-hyun → 'Park' (family name)."""
+        """Park Ji-hyun → 'Ji-hyun' (given name, family-first detected)."""
         people = _people_with_names({"p1": "Park Ji-hyun"})
         suggest_short_names(people)
-        assert people.participants["p1"].editable.short_name == "Park"
+        assert people.participants["p1"].editable.short_name == "Ji-hyun"
 
     def test_chinese_western_order(self) -> None:
-        """Wei Zhang (westernised) → 'Wei' (given name). Correct."""
+        """Wei Zhang (westernised) → 'Zhang'. False positive: 'Wei' is
+        a known Chinese surname so the heuristic flips it.  Acceptable —
+        the researcher can correct to 'Wei' via inline editing."""
         people = _people_with_names({"p1": "Wei Zhang"})
         suggest_short_names(people)
-        assert people.participants["p1"].editable.short_name == "Wei"
+        assert people.participants["p1"].editable.short_name == "Zhang"
 
     # -- Name particles (the heuristic grabs the particle, not the name) ----
 
@@ -533,11 +534,10 @@ class TestSuggestShortNames:
         """Two Zhangs: 'Zhang Wei' and 'Zhang Fang'."""
         people = _people_with_names({"p1": "Zhang Wei", "p2": "Zhang Fang"})
         suggest_short_names(people)
-        # Disambiguates with last-name initial — but "Wei" and "Fang" are
-        # given names, not family names.  The result is correct structurally
-        # but the semantics are inverted.
-        assert people.participants["p1"].editable.short_name == "Zhang W."
-        assert people.participants["p2"].editable.short_name == "Zhang F."
+        # Family-first detection extracts given names "Wei" and "Fang".
+        # No collision → no disambiguation needed.
+        assert people.participants["p1"].editable.short_name == "Wei"
+        assert people.participants["p2"].editable.short_name == "Fang"
 
     # -- Russian patronymic names -------------------------------------------
 
@@ -584,13 +584,11 @@ class TestSuggestShortNames:
 
     # -- Titles and honorifics as part of the name --------------------------
 
-    def test_title_as_first_token(self) -> None:
-        """'Dr. Sarah Jones' → short name 'Dr.' — the title, not the name.
-        This is the 'first token' heuristic failing."""
+    def test_honorific_stripped(self) -> None:
+        """'Dr. Sarah Jones' → short name 'Sarah' (honorific stripped)."""
         people = _people_with_names({"p1": "Dr. Sarah Jones"})
         suggest_short_names(people)
-        # Structural behaviour: first token is "Dr."
-        assert people.participants["p1"].editable.short_name == "Dr."
+        assert people.participants["p1"].editable.short_name == "Sarah"
 
     # -- Names with non-Latin scripts ---------------------------------------
 

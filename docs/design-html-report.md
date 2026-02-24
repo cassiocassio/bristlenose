@@ -16,6 +16,8 @@ Reference doc for the generated HTML report and per-participant transcript pages
   - User edits `short_name` / `full_name` in `people.yaml` → `bristlenose render` → report uses new names
   - User edits name in HTML report → localStorage → "Export names" → paste YAML into `people.yaml` → `bristlenose render`
   - Full pipeline run auto-extracts names from LLM + speaker label metadata → auto-populates empty fields
+  - **Serve mode** (new): User edits name in browser → `PUT /people` → DB + write-through to `people.yaml` → pipeline re-run sees edits. Importer reads `people.yaml` on startup to populate `Person` rows. Re-import fills empty fields from YAML without overwriting browser edits
+- **YAML as canonical source**: `people.yaml` is the single source of truth. The SQLite `Person` table is a materialized view. Browser edits write-through to both DB and YAML atomically. See `bristlenose/server/CLAUDE.md` "Names architecture" for full lifecycle
 - **YAML comments**: inline comments added by users are lost on re-write (PyYAML limitation, documented in file header)
 
 ### Auto name/role extraction
@@ -25,7 +27,7 @@ Stage 5b (speaker identification) extracts participant names and job titles alon
 - **LLM extraction**: `SpeakerRoleItem` in `bristlenose/llm/structured.py` has optional `person_name` and `job_title` fields (default `""`). The Stage 5b prompt in `prompts.py` asks the LLM to extract these from self-introductions. `identify_speaker_roles_llm()` in `identify_speakers.py` returns `list[SpeakerInfo]` (dataclass: `speaker_label`, `role`, `person_name`, `job_title`)
 - **Metadata extraction**: `extract_names_from_labels()` in `people.py` harvests real names from `speaker_label` on `TranscriptSegment` — works for Teams/DOCX/VTT sources where labels are real names (e.g. "Sarah Jones"), skips generic labels ("Speaker A", "SPEAKER_00", "Unknown")
 - **Auto-populate**: `auto_populate_names()` fills empty `full_name` (LLM > label metadata) and `role` (LLM only). Never overwrites user edits
-- **Short name suggestion**: `suggest_short_names()` auto-fills `short_name` from first token of `full_name`. Disambiguates collisions: "Sarah J." vs "Sarah K." when two participants share a first name
+- **Short name suggestion**: `suggest_short_names()` auto-fills `short_name` using `_extract_given_name()` — handles CJK (full name), honorific stripping, and family-first name detection (337 surnames). Disambiguates collisions: "Sarah J." vs "Sarah K." when two participants share a first name
 - **Pipeline wiring**: `run()` collects `SpeakerInfo` from Stage 5b → calls `extract_names_from_labels()` + `auto_populate_names()` + `suggest_short_names()` after `merge_people()` and before `write_people_file()`. `run_transcription_only()` uses label extraction only (no LLM)
 
 ### Moderator identification and speaker codes

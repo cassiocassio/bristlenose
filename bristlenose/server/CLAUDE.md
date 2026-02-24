@@ -173,6 +173,40 @@ How it works: `serve_report_html()` reads the baked-in HTML from disk, finds the
 
 **Python changes** are handled by uvicorn's `--reload` (WatchFiles) — editing `data.py`, `app.py`, etc. triggers an automatic server restart.
 
+## Names architecture (YAML canonical, DB materialized)
+
+`people.yaml` is the single source of truth for participant names. The SQLite `Person` table is a materialized view, populated from YAML on import and kept in sync via write-through.
+
+### Import path (YAML → DB)
+
+`_import_speakers()` in `importer.py` reads `people.yaml` via `_load_people_for_import()` and populates `Person.full_name`, `short_name`, `role_title`, `persona`, `notes` from matching entries. On re-import (server restart), `_update_persons_from_people()` fills empty Person fields from YAML without overwriting non-empty values — so browser edits (via `PUT /people`) always win over YAML.
+
+### Write-through path (DB → YAML)
+
+`PUT /people` in `routes/data.py` writes to DB first (for UI responsiveness), then calls `_write_through_people_yaml()` which atomically updates `people.yaml` (tempfile + rename). This means pipeline re-runs see browser edits. Write-through is best-effort — if it fails, a warning is logged but the API still succeeds.
+
+### Lifecycle
+
+```
+Pipeline run → people.yaml (names from LLM/labels/manual edit)
+                    ↓
+bristlenose serve → importer reads YAML → Person rows in DB
+                    ↓
+Browser edit → PUT /people → DB (immediate) + YAML (atomic write-through)
+                    ↓
+Pipeline re-run → reads YAML → sees browser edits → preserves them
+```
+
+### International names (`_extract_given_name` in people.py)
+
+`suggest_short_names()` uses `_extract_given_name()` which handles:
+- **CJK ideographic** (田中由紀) — uses full name as short name (no splitting)
+- **Honorific prefixes** (Dr., Prof.) — strips via `_strip_honorific()` before taking first token
+- **Family-first names** (Tanaka Yuki, Park Ji-hyun) — checks first token against `_FAMILY_FIRST_SURNAMES` (337 entries), takes second token if matched
+- Everything else — first token heuristic (works for Western, Spanish double surname, Russian patronymic, Arabic, mononym)
+
+Known false positive: westernized order "Wei Zhang" (where "Wei" is also in `_FAMILY_FIRST_SURNAMES`) flips incorrectly. Acceptable — researcher corrects via inline edit.
+
 ## Gotchas
 
 - **Quote timecode range match** — DOM ID uses `int(start_timecode)` which truncates.  A quote at 123.45s becomes `q-p1-123`.  The resolver queries `start_timecode >= 123 AND start_timecode < 124` to handle this
@@ -187,6 +221,8 @@ How it works: `serve_report_html()` reads the baked-in HTML from disk, finds the
 - **IIFE wrapper around the script block** — `render_html.py` wraps data variables + concatenated JS in `(function() { ... })();`.  The live JS reload (`_replace_baked_js`) must use `rfind("})();")` to preserve the closing.  If you break the IIFE, every init function silently fails — tabs stop working, stars don't toggle, nothing interactive works, but there's **no console error** because the JS simply never executes
 - **Baked HTML requires re-render to pick up new JS** — the static HTML report on disk contains a snapshot of the JS from the last `bristlenose render`.  In production (no `--dev`), editing `.js` source files has no effect until you re-render.  The live reload only works in `--dev` mode.  If something works in dev but not in the static file, the static file is stale
 - **`pip install -e .` and render are separate steps** — an editable install makes Python changes visible immediately, but the rendered HTML is a separate artifact.  Adding a new JS file to `_JS_FILES` requires both `pip install -e .` (so Python sees the new list) and `bristlenose render` (so the static HTML includes it).  In dev mode, only a server restart is needed (uvicorn picks up the Python change, live reload reads the new file)
+- **Importer reads people.yaml** — `_import_speakers()` requires `output_dir` parameter to find `people.yaml`. On re-import, `_update_persons_from_people()` only fills empty Person fields — never overwrites non-empty values. This means browser edits survive server restarts
+- **Write-through is best-effort** — `_write_through_people_yaml()` in `routes/data.py` logs a warning on failure but doesn't fail the API request. The DB is always updated; YAML update is secondary
 - **Codebook tab stale counts on initial load** — the CodebookPanel re-fetches via MutationObserver when its parent `.bn-tab-panel` gains `.active`.  This covers the race where vanilla JS `PUT /tags` hasn't finished when the panel first mounts.  Will be unnecessary once tag writes move from localStorage PUT to React CRUD
 
 ## Tests

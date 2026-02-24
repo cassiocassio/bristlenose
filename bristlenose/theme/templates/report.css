@@ -43,7 +43,7 @@ h2 {
 h3 {
     font-size: 1.1rem;
     font-weight: var(--bn-weight-emphasis);
-    margin: 1.8rem 0 0.6rem;
+    margin: 1.8rem 0 0.25rem;
 }
 
 hr {
@@ -54,6 +54,7 @@ hr {
 
 .description {
     color: var(--bn-colour-muted);
+    margin-top: 0;
     margin-bottom: 1rem;
 }
 

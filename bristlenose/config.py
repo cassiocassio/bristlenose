@@ -81,6 +81,9 @@ class BristlenoseSettings(BaseSettings):
     pii_llm_pass: bool = False
     pii_custom_names: list[str] = Field(default_factory=list)
 
+    # Miro
+    miro_access_token: str = ""
+
     # Theme
     color_scheme: str = "auto"  # "auto", "light", or "dark"
 
@@ -154,6 +157,11 @@ def _populate_keys_from_keychain(settings: BristlenoseSettings) -> BristlenoseSe
         key = store.get("google")
         if key:
             updates["google_api_key"] = key
+
+    if not settings.miro_access_token:
+        key = store.get("miro")
+        if key:
+            updates["miro_access_token"] = key
 
     if not updates:
         return settings

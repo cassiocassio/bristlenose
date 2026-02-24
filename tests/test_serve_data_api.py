@@ -85,6 +85,114 @@ class TestPeoplePut:
         assert resp.status_code == 404
 
 
+class TestPeoplePutWriteThrough:
+    """PUT /people should write-through to people.yaml on disk."""
+
+    def test_updates_people_yaml(self, tmp_path: Path) -> None:
+        """Name edits via API are written back to people.yaml."""
+        import yaml
+
+        # Set up a synthetic project with people.yaml
+        out = tmp_path / "bristlenose-output"
+        out.mkdir()
+        intermediate = out / ".bristlenose" / "intermediate"
+        intermediate.mkdir(parents=True)
+        (intermediate / "metadata.json").write_text('{"project_name": "Writethrough"}')
+        (intermediate / "screen_clusters.json").write_text("[]")
+        (intermediate / "theme_groups.json").write_text("[]")
+
+        raw = out / "transcripts-raw"
+        raw.mkdir()
+        (raw / "s1.txt").write_text(
+            "# Transcript: s1\n# Date: 2026-02-20\n# Duration: 00:01:00\n\n"
+            "[00:02] [m1] Welcome.\n[00:10] [p1] Thanks.\n"
+        )
+
+        people_data = {
+            "generated_by": "bristlenose",
+            "last_updated": "2026-02-23T10:00:00Z",
+            "participants": {
+                "p1": {
+                    "computed": {
+                        "participant_id": "p1",
+                        "session_id": "s1",
+                        "duration_seconds": 60.0,
+                        "words_spoken": 100,
+                        "pct_words": 50.0,
+                        "pct_time_speaking": 50.0,
+                        "source_file": "test.vtt",
+                    },
+                    "editable": {
+                        "full_name": "Frederick Thompson",
+                        "short_name": "Frederick",
+                        "role": "",
+                        "persona": "",
+                        "notes": "",
+                    },
+                },
+                "m1": {
+                    "computed": {
+                        "participant_id": "m1",
+                        "session_id": "s1",
+                        "duration_seconds": 60.0,
+                        "words_spoken": 50,
+                        "pct_words": 25.0,
+                        "pct_time_speaking": 25.0,
+                        "source_file": "test.vtt",
+                    },
+                    "editable": {
+                        "full_name": "",
+                        "short_name": "",
+                        "role": "",
+                        "persona": "",
+                        "notes": "",
+                    },
+                },
+            },
+        }
+        people_path = out / "people.yaml"
+        people_path.write_text(yaml.dump(people_data, default_flow_style=False))
+
+        app = create_app(project_dir=tmp_path, dev=True, db_url="sqlite://")
+        client = TestClient(app)
+
+        # Verify names were imported from people.yaml
+        data = client.get("/api/projects/1/people").json()
+        assert data["p1"]["full_name"] == "Frederick Thompson"
+
+        # Edit p1's name via API
+        resp = client.put(
+            "/api/projects/1/people",
+            json={"p1": {"full_name": "Fred Thompson", "short_name": "Fred", "role": "CEO"}},
+        )
+        assert resp.status_code == 200
+
+        # Verify DB was updated
+        data = client.get("/api/projects/1/people").json()
+        assert data["p1"]["full_name"] == "Fred Thompson"
+        assert data["p1"]["short_name"] == "Fred"
+        assert data["p1"]["role"] == "CEO"
+
+        # Verify people.yaml was updated on disk
+        raw_yaml = yaml.safe_load(people_path.read_text(encoding="utf-8"))
+        p1_ed = raw_yaml["participants"]["p1"]["editable"]
+        assert p1_ed["full_name"] == "Fred Thompson"
+        assert p1_ed["short_name"] == "Fred"
+        assert p1_ed["role"] == "CEO"
+
+        # m1 should be unchanged
+        m1_ed = raw_yaml["participants"]["m1"]["editable"]
+        assert m1_ed["full_name"] == ""
+
+    def test_no_people_yaml_does_not_error(self, client: TestClient) -> None:
+        """PUT /people without a people.yaml file should not raise."""
+        resp = client.put(
+            "/api/projects/1/people",
+            json={"p1": {"full_name": "Test", "short_name": "T", "role": ""}},
+        )
+        assert resp.status_code == 200
+
+
 # ---------------------------------------------------------------------------
 # Edits
 # ---------------------------------------------------------------------------

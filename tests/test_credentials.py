@@ -68,6 +68,18 @@ class TestEnvCredentialStore:
         store = EnvCredentialStore()
         assert store.get("azure") == "az-prefixed"
 
+    def test_get_miro(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Miro token should work."""
+        monkeypatch.setenv("MIRO_ACCESS_TOKEN", "miro-test")
+        store = EnvCredentialStore()
+        assert store.get("miro") == "miro-test"
+
+    def test_get_miro_with_prefix(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Prefixed Miro token should work."""
+        monkeypatch.setenv("BRISTLENOSE_MIRO_ACCESS_TOKEN", "miro-prefixed")
+        store = EnvCredentialStore()
+        assert store.get("miro") == "miro-prefixed"
+
     def test_set_raises(self) -> None:
         """Cannot store to env — should raise."""
         store = EnvCredentialStore()
@@ -176,6 +188,10 @@ class TestMacOSCredentialStore:
     def test_service_name_openai(self, store) -> None:
         """Should use human-readable service name for OpenAI."""
         assert store._service_name("openai") == "Bristlenose OpenAI API Key"
+
+    def test_service_name_miro(self, store) -> None:
+        """Miro should use 'Access Token' not 'API Key'."""
+        assert store._service_name("miro") == "Bristlenose Miro Access Token"
 
     def test_service_name_unknown(self, store) -> None:
         """Unknown provider should get a generic service name."""

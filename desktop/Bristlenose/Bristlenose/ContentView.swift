@@ -1,5 +1,11 @@
 import SwiftUI
 
+// When _demoShoal is true in RunningView, block phase transitions so the
+// shoal demo can run uninterrupted. Debug builds only.
+#if DEBUG
+let _demoShoalBlockTransition = true  // keep in sync with _demoShoal in RunningView
+#endif
+
 struct ContentView: View {
     @State private var phase: AppPhase = .ready
     @State private var needsSetup = false
@@ -91,6 +97,9 @@ struct ContentView: View {
         }
         .onChange(of: runner.isRunning) { wasRunning, isNowRunning in
             // When the pipeline finishes, launch serve mode
+            #if DEBUG
+            if _demoShoalBlockTransition { return }
+            #endif
             if wasRunning && !isNowRunning {
                 if case .running(let folder, _) = phase {
                     if runner.exitCode == 0 {

@@ -1,5 +1,5 @@
 import { createRoot } from "react-dom/client";
-import { AboutDeveloper } from "./islands/AboutDeveloper";
+import { AboutPanel } from "./islands/AboutPanel";
 import { AnalysisPage } from "./islands/AnalysisPage";
 import { CodebookPanel } from "./islands/CodebookPanel";
 import { Dashboard } from "./islands/Dashboard";
@@ -7,6 +7,7 @@ import { HelloIsland } from "./islands/HelloIsland";
 import { QuoteSections } from "./islands/QuoteSections";
 import { QuoteThemes } from "./islands/QuoteThemes";
 import { SessionsTable } from "./islands/SessionsTable";
+import { SettingsPanel } from "./islands/SettingsPanel";
 import { TranscriptPage } from "./islands/TranscriptPage";
 
 // Mount HelloIsland (proof of concept — will be removed later)
@@ -67,14 +68,14 @@ if (transcriptRoot) {
   );
 }
 
-// Mount AboutDeveloper into the about tab — creates its own mount point
-// since the static HTML doesn't include one (serve_mode isn't passed to the
-// pipeline renderer). The component silently renders nothing if /api/dev/info
-// isn't available (non-dev mode).
-const aboutContainer = document.querySelector(".bn-about");
-if (aboutContainer) {
-  const aboutDevRoot = document.createElement("div");
-  aboutDevRoot.id = "bn-about-developer-root";
-  aboutContainer.appendChild(aboutDevRoot);
-  createRoot(aboutDevRoot).render(<AboutDeveloper />);
+// Mount SettingsPanel into the settings tab
+const settingsRoot = document.getElementById("bn-settings-root");
+if (settingsRoot) {
+  createRoot(settingsRoot).render(<SettingsPanel />);
+}
+
+// Mount AboutPanel into the about tab (absorbs AboutDeveloper)
+const aboutRoot = document.getElementById("bn-about-root");
+if (aboutRoot) {
+  createRoot(aboutRoot).render(<AboutPanel />);
 }

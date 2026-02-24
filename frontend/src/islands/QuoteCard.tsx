@@ -80,8 +80,8 @@ interface QuoteCardProps {
   proposedTags: ProposedTagBrief[];
   /** Tags currently playing the accept flash animation. Keys: `${domId}:${tagName}`. */
   flashingTags: Set<string>;
-  /** Cached moderator question data (null = not yet fetched or none found). */
-  moderatorQuestion: ModeratorQuestionResponse | null;
+  /** Cached moderator question data (undefined = loading, null = not found). */
+  moderatorQuestion: ModeratorQuestionResponse | null | undefined;
   /** Whether the moderator question is expanded (pinned open). */
   isQuestionOpen: boolean;
   /** Whether the "Question?" pill is visible (from hover timer). */
@@ -222,9 +222,11 @@ export function QuoteCard({
       if (crop.mode !== "crop") return;
       if (e.key === "Enter") {
         e.preventDefault();
+        e.stopPropagation();
         crop.commitEdit();
       } else if (e.key === "Escape") {
         e.preventDefault();
+        e.stopPropagation();
         crop.cancelEdit();
       }
     },
@@ -257,10 +259,12 @@ export function QuoteCard({
     (e: React.KeyboardEvent) => {
       if (e.key === "Enter" && !e.shiftKey) {
         e.preventDefault();
+        e.stopPropagation();
         const editableEl = textSpanRef.current?.querySelector(".crop-editable") as HTMLElement | null;
         crop.commitEdit(editableEl);
       } else if (e.key === "Escape") {
         e.preventDefault();
+        e.stopPropagation();
         crop.cancelEdit();
       }
     },
@@ -457,6 +461,36 @@ export function QuoteCard({
     >
       {quote.researcher_context && !hasModeratorContext && (
         <span className="context">[{quote.researcher_context}]</span>
+      )}
+      {isQuestionOpen && moderatorQuestion === null && (
+        <div className="quote-row moderator-question-row" data-testid={`bn-quote-${domId}-mod-q-empty`}>
+          <span className="timecode" aria-hidden="true" style={{ visibility: "hidden" }}>[{timecodeStr}]</span>
+          <div className="moderator-question">
+            <span className="moderator-question-badge">
+              <button
+                className="moderator-question-dismiss"
+                onClick={() => onToggleQuestion(domId)}
+                aria-label="Dismiss"
+                data-testid={`bn-quote-${domId}-mod-q-dismiss`}
+              >
+                &times;
+              </button>
+            </span>
+            <span className="moderator-question-text" style={{ opacity: 0.5 }}>
+              No preceding moderator question found.
+            </span>
+          </div>
+        </div>
+      )}
+      {isQuestionOpen && moderatorQuestion === undefined && (
+        <div className="quote-row moderator-question-row" data-testid={`bn-quote-${domId}-mod-q-loading`}>
+          <span className="timecode" aria-hidden="true" style={{ visibility: "hidden" }}>[{timecodeStr}]</span>
+          <div className="moderator-question">
+            <span className="moderator-question-text" style={{ opacity: 0.5 }}>
+              Loading&hellip;
+            </span>
+          </div>
+        </div>
       )}
       {isQuestionOpen && moderatorQuestion && (() => {
         const { first, rest } = splitFirstSentence(moderatorQuestion.text);

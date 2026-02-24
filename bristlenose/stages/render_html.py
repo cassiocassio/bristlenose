@@ -524,6 +524,7 @@ def render_html(
     _w("<!-- /bn-analysis -->")
 
     # --- Settings tab ---
+    _w("<!-- bn-settings -->")
     _w('<div class="bn-tab-panel" data-tab="settings" id="panel-settings"'
        ' role="tabpanel" aria-label="Settings">')
     _w("<h2>Settings</h2>")
@@ -540,9 +541,11 @@ def render_html(
        "Dark</label>")
     _w("</fieldset>")
     _w("</div>")  # .bn-tab-panel[settings]
+    _w("<!-- /bn-settings -->")
 
     # --- About tab ---
     from bristlenose import __version__ as _ver
+    _w("<!-- bn-about -->")
     _w('<div class="bn-tab-panel" data-tab="about" id="panel-about" role="tabpanel" aria-label="About">')
     _w('<div class="bn-about">')
     _w("<h2>About Bristlenose</h2>")
@@ -587,9 +590,9 @@ def render_html(
     _w("<h3>Feedback</h3>")
     _w('<p><a href="https://github.com/cassiocassio/bristlenose/issues/new" '
        'target="_blank" rel="noopener">Report a bug</a></p>')
-    _w("<!-- /bn-about -->")
     _w("</div>")  # .bn-about
     _w("</div>")  # .bn-tab-panel[about]
+    _w("<!-- /bn-about -->")
 
     # --- Close ---
     _w("</article>")

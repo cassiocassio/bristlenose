@@ -1,6 +1,6 @@
 import { render, screen, fireEvent } from "@testing-library/react";
 import { QuoteCard } from "./QuoteCard";
-import type { QuoteResponse, ModeratorQuestionResponse } from "../utils/types";
+import type { QuoteResponse, ModeratorQuestionResponse, TranscriptSegmentResponse } from "../utils/types";
 
 const NOOP = () => {};
 
@@ -51,6 +51,8 @@ function renderCard(
     onExpandBelow?: () => void;
     exhaustedAbove?: boolean;
     exhaustedBelow?: boolean;
+    contextAbove?: TranscriptSegmentResponse[];
+    contextBelow?: TranscriptSegmentResponse[];
   } = {},
 ) {
   const quote = makeQuote(overrides);
@@ -77,6 +79,8 @@ function renderCard(
       onExpandBelow={extra.onExpandBelow}
       exhaustedAbove={extra.exhaustedAbove}
       exhaustedBelow={extra.exhaustedBelow}
+      contextAbove={extra.contextAbove}
+      contextBelow={extra.contextBelow}
       onToggleStar={NOOP}
       onToggleHide={NOOP}
       onEditCommit={NOOP}
@@ -316,5 +320,59 @@ describe("QuoteCard — context expansion", () => {
     expect(row.parentElement?.tagName).toBe("BLOCKQUOTE");
     // It should be a .quote-row for alignment.
     expect(row.className).toContain("quote-row");
+  });
+});
+
+describe("QuoteCard — context segments inside blockquote", () => {
+  const makeSeg = (overrides: Partial<TranscriptSegmentResponse> = {}): TranscriptSegmentResponse => ({
+    speaker_code: "p1",
+    start_time: 20,
+    end_time: 25,
+    text: "Some context",
+    html_text: null,
+    is_moderator: false,
+    is_quoted: false,
+    quote_ids: [],
+    segment_index: 2,
+    ...overrides,
+  });
+
+  it("renders context segments above and below inside the blockquote", () => {
+    renderCard({}, {
+      contextAbove: [makeSeg({ text: "Before the quote", segment_index: 2, start_time: 20 })],
+      contextBelow: [makeSeg({ text: "After the quote", segment_index: 4, start_time: 40 })],
+    });
+    const above = screen.getByTestId("bn-quote-q-p1-26-ctx-above-0");
+    const below = screen.getByTestId("bn-quote-q-p1-26-ctx-below-0");
+    // Both should be inside the blockquote.
+    expect(above.closest("blockquote")).toBeTruthy();
+    expect(below.closest("blockquote")).toBeTruthy();
+    expect(screen.getByText("Before the quote")).toBeInTheDocument();
+    expect(screen.getByText("After the quote")).toBeInTheDocument();
+  });
+
+  it("hides speaker badge when context segment speaker matches quote participant", () => {
+    const { container } = renderCard({}, {
+      contextBelow: [makeSeg({ speaker_code: "p1", text: "Same speaker" })],
+    });
+    const ctxSegment = screen.getByTestId("bn-quote-q-p1-26-ctx-below-0");
+    expect(ctxSegment.querySelector(".bn-person-badge")).not.toBeInTheDocument();
+    // But the quote's own speaker badge should still be there.
+    expect(container.querySelector(".speaker .bn-person-badge")).toBeInTheDocument();
+  });
+
+  it("shows speaker badge when context segment is a different speaker", () => {
+    renderCard({}, {
+      contextBelow: [makeSeg({ speaker_code: "m1", is_moderator: true, text: "Moderator question" })],
+    });
+    const ctxSegment = screen.getByTestId("bn-quote-q-p1-26-ctx-below-0");
+    expect(ctxSegment.querySelector(".bn-person-badge")).toBeInTheDocument();
+    expect(ctxSegment.querySelector(".bn-person-badge")?.textContent).toContain("m1");
+  });
+
+  it("renders no context segments when arrays are empty", () => {
+    renderCard({}, { contextAbove: [], contextBelow: [] });
+    expect(screen.queryByTestId("bn-quote-q-p1-26-ctx-above-0")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("bn-quote-q-p1-26-ctx-below-0")).not.toBeInTheDocument();
   });
 });

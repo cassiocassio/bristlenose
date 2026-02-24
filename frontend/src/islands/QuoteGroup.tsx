@@ -9,7 +9,7 @@
  */
 
 import { useState, useCallback, useRef, useMemo, useReducer, useLayoutEffect, useEffect } from "react";
-import { ContextSegment, Counter, EditableText } from "../components";
+import { Counter, EditableText } from "../components";
 import type { CounterItem } from "../components/Counter";
 import type {
   ModeratorQuestionResponse,
@@ -856,7 +856,7 @@ export function QuoteGroup({
           const exp = expansion[key];
           const ctx = contextSegments[key];
 
-          const quoteCard = (
+          return (
             <QuoteCard
               key={q.dom_id}
               quote={q}
@@ -880,6 +880,8 @@ export function QuoteGroup({
               onExpandBelow={canExpand ? () => dispatchExpansion({ type: "expand_below", key }) : undefined}
               exhaustedAbove={exp?.exhaustedAbove}
               exhaustedBelow={exp?.exhaustedBelow}
+              contextAbove={ctx?.above}
+              contextBelow={ctx?.below}
               onToggleStar={handleToggleStar}
               onToggleHide={handleToggleHide}
               onEditCommit={handleEditCommit}
@@ -900,37 +902,6 @@ export function QuoteGroup({
               onPillHoverLeave={handlePillHoverLeave}
             />
           );
-
-          // Wrap with context segments if any are loaded.
-          if (ctx && (ctx.above.length > 0 || ctx.below.length > 0)) {
-            return (
-              <div key={q.dom_id} data-testid={`bn-quote-${q.dom_id}-context-wrap`}>
-                {ctx.above.map((seg, i) => (
-                  <ContextSegment
-                    key={`above-${seg.segment_index}-${i}`}
-                    speakerCode={seg.speaker_code}
-                    isModerator={seg.is_moderator}
-                    startTime={seg.start_time}
-                    text={seg.text}
-                    data-testid={`bn-quote-${q.dom_id}-ctx-above-${i}`}
-                  />
-                ))}
-                {quoteCard}
-                {ctx.below.map((seg, i) => (
-                  <ContextSegment
-                    key={`below-${seg.segment_index}-${i}`}
-                    speakerCode={seg.speaker_code}
-                    isModerator={seg.is_moderator}
-                    startTime={seg.start_time}
-                    text={seg.text}
-                    data-testid={`bn-quote-${q.dom_id}-ctx-below-${i}`}
-                  />
-                ))}
-              </div>
-            );
-          }
-
-          return quoteCard;
         })}
       </div>
     </>

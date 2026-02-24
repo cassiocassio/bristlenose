@@ -14,6 +14,8 @@ interface ContextSegmentProps {
   isModerator: boolean;
   startTime: number;
   text: string;
+  /** The quote's participant ID — badge is hidden when speaker matches. */
+  quoteParticipantId?: string;
   "data-testid"?: string;
 }
 
@@ -22,19 +24,24 @@ export function ContextSegment({
   isModerator,
   startTime,
   text,
+  quoteParticipantId,
   "data-testid": testId,
 }: ContextSegmentProps) {
+  const showBadge = !quoteParticipantId || speakerCode !== quoteParticipantId;
+
   return (
     <div className="context-segment" data-testid={testId}>
       <div className="quote-row">
         <span className="timecode">[{formatTimecode(startTime)}]</span>
         <span className="context-text">
-          <span className="context-speaker">
-            <PersonBadge
-              code={speakerCode}
-              role={isModerator ? "moderator" : "participant"}
-            />
-          </span>
+          {showBadge && (
+            <span className="context-speaker">
+              <PersonBadge
+                code={speakerCode}
+                role={isModerator ? "moderator" : "participant"}
+              />
+            </span>
+          )}
           {text}
         </span>
       </div>

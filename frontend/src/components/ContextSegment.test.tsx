@@ -69,4 +69,44 @@ describe("ContextSegment", () => {
     expect(container.querySelector(".context-segment")).toBeInTheDocument();
     expect(container.querySelector(".context-segment .quote-row")).toBeInTheDocument();
   });
+
+  it("hides badge when speaker matches quoteParticipantId", () => {
+    const { container } = render(
+      <ContextSegment
+        speakerCode="p1"
+        isModerator={false}
+        startTime={30}
+        text="Same speaker text"
+        quoteParticipantId="p1"
+      />,
+    );
+    expect(container.querySelector(".bn-person-badge")).not.toBeInTheDocument();
+  });
+
+  it("shows badge when speaker differs from quoteParticipantId", () => {
+    const { container } = render(
+      <ContextSegment
+        speakerCode="m1"
+        isModerator={true}
+        startTime={25}
+        text="Different speaker"
+        quoteParticipantId="p1"
+      />,
+    );
+    const badge = container.querySelector(".bn-person-badge");
+    expect(badge).toBeInTheDocument();
+    expect(badge?.textContent).toContain("m1");
+  });
+
+  it("shows badge when quoteParticipantId is not provided", () => {
+    const { container } = render(
+      <ContextSegment
+        speakerCode="p2"
+        isModerator={false}
+        startTime={40}
+        text="No participant id"
+      />,
+    );
+    expect(container.querySelector(".bn-person-badge")).toBeInTheDocument();
+  });
 });

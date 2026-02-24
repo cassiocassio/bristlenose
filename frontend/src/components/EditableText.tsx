@@ -13,6 +13,8 @@ interface EditableTextProps {
   committedClassName?: string;
   "data-testid"?: string;
   "data-edit-key"?: string;
+  /** When true (set synchronously by a parent), blur is suppressed. */
+  suppressBlurRef?: React.RefObject<boolean>;
 }
 
 export function EditableText({
@@ -28,9 +30,11 @@ export function EditableText({
   committedClassName = "edited",
   "data-testid": testId,
   "data-edit-key": editKey,
+  suppressBlurRef,
 }: EditableTextProps) {
   const ref = useRef<HTMLElement>(null);
   const [internalEditing, setInternalEditing] = useState(false);
+  const clickCoordsRef = useRef<{ x: number; y: number } | null>(null);
 
   const isEditing = trigger === "click" ? internalEditing : (isEditingProp ?? false);
 
@@ -48,18 +52,48 @@ export function EditableText({
     [trigger, baseline, onCommit, onCancel],
   );
 
-  // When entering edit mode: focus, set text content, select all.
+  // When entering edit mode: focus, set text content, place caret.
   useEffect(() => {
     if (!isEditing || !ref.current) return;
     const el = ref.current;
     el.textContent = value;
     el.focus();
-    const range = document.createRange();
-    range.selectNodeContents(el);
-    const sel = window.getSelection();
-    if (sel) {
-      sel.removeAllRanges();
-      sel.addRange(range);
+
+    // If we have click coordinates, place caret at the click position.
+    // Otherwise (external trigger), select all text.
+    const coords = clickCoordsRef.current;
+    if (coords) {
+      clickCoordsRef.current = null;
+      try {
+        let range: Range | null = null;
+        if (document.caretRangeFromPoint) {
+          range = document.caretRangeFromPoint(coords.x, coords.y);
+        } else if ("caretPositionFromPoint" in document) {
+          const pos = (document as unknown as { caretPositionFromPoint: (x: number, y: number) => { offsetNode: Node; offset: number } }).caretPositionFromPoint(coords.x, coords.y);
+          if (pos) {
+            range = document.createRange();
+            range.setStart(pos.offsetNode, pos.offset);
+            range.collapse(true);
+          }
+        }
+        if (range) {
+          const sel = window.getSelection();
+          if (sel) {
+            sel.removeAllRanges();
+            sel.addRange(range);
+          }
+        }
+      } catch {
+        // Fallback: caret at end (focus already placed above)
+      }
+    } else {
+      const range = document.createRange();
+      range.selectNodeContents(el);
+      const sel = window.getSelection();
+      if (sel) {
+        sel.removeAllRanges();
+        sel.addRange(range);
+      }
     }
     // Only run when isEditing flips — not when value changes during editing.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -83,15 +117,20 @@ export function EditableText({
 
   const handleBlur = useCallback(() => {
     if (!isEditing) return;
+    if (suppressBlurRef?.current) return;
     const newText = ref.current?.textContent?.trim() ?? "";
     finishEdit(newText);
-  }, [isEditing, finishEdit]);
+  }, [isEditing, finishEdit, suppressBlurRef]);
 
-  const handleClick = useCallback(() => {
-    if (trigger === "click" && !internalEditing) {
-      setInternalEditing(true);
-    }
-  }, [trigger, internalEditing]);
+  const handleClick = useCallback(
+    (e: React.MouseEvent) => {
+      if (trigger === "click" && !internalEditing) {
+        clickCoordsRef.current = { x: e.clientX, y: e.clientY };
+        setInternalEditing(true);
+      }
+    },
+    [trigger, internalEditing],
+  );
 
   const classes = [className, committed && committedClassName]
     .filter(Boolean)

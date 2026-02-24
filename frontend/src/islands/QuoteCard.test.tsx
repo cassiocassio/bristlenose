@@ -242,3 +242,98 @@ describe("QuoteCard — moderator question", () => {
     expect(row.className).toContain("quote-row");
   });
 });
+
+// ── Quote editing (trim handles) ────────────────────────────────────────
+
+function renderEditableCard(
+  overrides: Partial<QuoteResponse> = {},
+  extra: {
+    isEdited?: boolean;
+    onEditCommit?: (domId: string, newText: string) => void;
+  } = {},
+) {
+  const quote = makeQuote(overrides);
+  return render(
+    <QuoteCard
+      quote={quote}
+      displayText={quote.text}
+      isStarred={false}
+      isHidden={false}
+      userTags={[]}
+      deletedBadges={[]}
+      isEdited={extra.isEdited ?? false}
+      tagVocabulary={[]}
+      sessionId="s1"
+      hasMedia={false}
+      proposedTags={[]}
+      flashingTags={new Set()}
+      moderatorQuestion={null}
+      isQuestionOpen={false}
+      isPillVisible={false}
+      onToggleStar={NOOP}
+      onToggleHide={NOOP}
+      onEditCommit={extra.onEditCommit ?? NOOP}
+      onTagAdd={NOOP}
+      onTagRemove={NOOP}
+      onBadgeDelete={NOOP}
+      onBadgeRestore={NOOP}
+      onProposedAccept={NOOP}
+      onProposedDeny={NOOP}
+      onToggleQuestion={NOOP}
+      onQuoteHoverEnter={NOOP}
+      onQuoteHoverLeave={NOOP}
+      onPillHoverEnter={NOOP}
+      onPillHoverLeave={NOOP}
+    />,
+  );
+}
+
+describe("QuoteCard — editing (trim handles)", () => {
+  it("does not render a pencil edit button", () => {
+    renderEditableCard();
+    expect(document.querySelector(".edit-pencil")).not.toBeInTheDocument();
+  });
+
+  it("renders undo button", () => {
+    renderEditableCard();
+    expect(screen.getByTestId("bn-quote-q-p1-26-undo")).toBeInTheDocument();
+  });
+
+  it("undo button has .visible class when isEdited is true", () => {
+    renderEditableCard({}, { isEdited: true });
+    const btn = screen.getByTestId("bn-quote-q-p1-26-undo");
+    expect(btn.className).toContain("visible");
+  });
+
+  it("undo button does not have .visible class when isEdited is false", () => {
+    renderEditableCard({}, { isEdited: false });
+    const btn = screen.getByTestId("bn-quote-q-p1-26-undo");
+    expect(btn.className).not.toContain("visible");
+  });
+
+  it("undo button calls onEditCommit with original text", () => {
+    const onEditCommit = vi.fn();
+    renderEditableCard({}, { isEdited: true, onEditCommit });
+    fireEvent.click(screen.getByTestId("bn-quote-q-p1-26-undo"));
+    expect(onEditCommit).toHaveBeenCalledWith(
+      "q-p1-26",
+      "The navigation was hidden behind a hamburger menu",
+    );
+  });
+
+  it("renders smart quotes as separate spans", () => {
+    renderEditableCard();
+    const smartQuotes = document.querySelectorAll(".smart-quote");
+    expect(smartQuotes.length).toBe(2);
+    expect(smartQuotes[0].textContent).toBe("\u201c");
+    expect(smartQuotes[1].textContent).toBe("\u201d");
+  });
+
+  it("quote text is rendered in .quote-text span", () => {
+    renderEditableCard();
+    expect(screen.getByTestId("bn-quote-q-p1-26-text")).toBeInTheDocument();
+    expect(screen.getByTestId("bn-quote-q-p1-26-text").textContent).toBe(
+      "The navigation was hidden behind a hamburger menu",
+    );
+  });
+});

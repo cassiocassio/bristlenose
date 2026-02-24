@@ -65,7 +65,7 @@ export function ExpandableTimecode({
           aria-label="Show next transcript segment"
           data-testid={testId ? `${testId}-arrow-down` : undefined}
         >
-          &#x2304;
+          &#x2303;
         </button>
       )}
     </span>

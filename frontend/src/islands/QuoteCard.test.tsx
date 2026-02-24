@@ -45,6 +45,12 @@ function renderCard(
     isQuestionOpen?: boolean;
     isPillVisible?: boolean;
     onToggleQuestion?: (domId: string) => void;
+    canExpandAbove?: boolean;
+    canExpandBelow?: boolean;
+    onExpandAbove?: () => void;
+    onExpandBelow?: () => void;
+    exhaustedAbove?: boolean;
+    exhaustedBelow?: boolean;
   } = {},
 ) {
   const quote = makeQuote(overrides);
@@ -65,6 +71,12 @@ function renderCard(
       moderatorQuestion={extra.moderatorQuestion ?? null}
       isQuestionOpen={extra.isQuestionOpen ?? false}
       isPillVisible={extra.isPillVisible ?? false}
+      canExpandAbove={extra.canExpandAbove}
+      canExpandBelow={extra.canExpandBelow}
+      onExpandAbove={extra.onExpandAbove}
+      onExpandBelow={extra.onExpandBelow}
+      exhaustedAbove={extra.exhaustedAbove}
+      exhaustedBelow={extra.exhaustedBelow}
       onToggleStar={NOOP}
       onToggleHide={NOOP}
       onEditCommit={NOOP}
@@ -208,6 +220,70 @@ describe("QuoteCard — moderator question", () => {
       { isQuestionOpen: true, moderatorQuestion: MOD_QUESTION },
     );
     expect(document.querySelector(".quote-hover-zone")).not.toBeInTheDocument();
+  });
+});
+
+describe("QuoteCard — context expansion", () => {
+  it("wraps timecode in ExpandableTimecode when expansion callbacks provided", () => {
+    renderCard({ start_timecode: 26 }, {
+      canExpandAbove: true,
+      canExpandBelow: true,
+      onExpandAbove: () => {},
+      onExpandBelow: () => {},
+    });
+    expect(screen.getByTestId("bn-quote-q-p1-26-expand")).toBeInTheDocument();
+    expect(screen.getByTestId("bn-quote-q-p1-26-expand")).toHaveClass("timecode-expandable");
+  });
+
+  it("does not wrap timecode when no expansion callbacks", () => {
+    renderCard({ start_timecode: 26 });
+    expect(screen.queryByTestId("bn-quote-q-p1-26-expand")).not.toBeInTheDocument();
+  });
+
+  it("renders up and down arrows when both can expand", () => {
+    renderCard({ start_timecode: 26 }, {
+      canExpandAbove: true,
+      canExpandBelow: true,
+      onExpandAbove: () => {},
+      onExpandBelow: () => {},
+    });
+    expect(screen.getByTestId("bn-quote-q-p1-26-expand-arrow-up")).toBeInTheDocument();
+    expect(screen.getByTestId("bn-quote-q-p1-26-expand-arrow-down")).toBeInTheDocument();
+  });
+
+  it("calls onExpandAbove when up arrow clicked", () => {
+    const onAbove = vi.fn();
+    renderCard({ start_timecode: 26 }, {
+      canExpandAbove: true,
+      canExpandBelow: true,
+      onExpandAbove: onAbove,
+      onExpandBelow: () => {},
+    });
+    fireEvent.click(screen.getByTestId("bn-quote-q-p1-26-expand-arrow-up"));
+    expect(onAbove).toHaveBeenCalledTimes(1);
+  });
+
+  it("calls onExpandBelow when down arrow clicked", () => {
+    const onBelow = vi.fn();
+    renderCard({ start_timecode: 26 }, {
+      canExpandAbove: true,
+      canExpandBelow: true,
+      onExpandAbove: () => {},
+      onExpandBelow: onBelow,
+    });
+    fireEvent.click(screen.getByTestId("bn-quote-q-p1-26-expand-arrow-down"));
+    expect(onBelow).toHaveBeenCalledTimes(1);
+  });
+
+  it("disables up arrow when exhaustedAbove is true", () => {
+    renderCard({ start_timecode: 26 }, {
+      canExpandAbove: true,
+      canExpandBelow: true,
+      onExpandAbove: () => {},
+      onExpandBelow: () => {},
+      exhaustedAbove: true,
+    });
+    expect(screen.getByTestId("bn-quote-q-p1-26-expand-arrow-up")).toBeDisabled();
   });
 
   it("hides researcher_context when segment_index > 0", () => {

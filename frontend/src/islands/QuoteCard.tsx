@@ -13,6 +13,7 @@ import { useState, useCallback } from "react";
 import {
   Badge,
   EditableText,
+  ExpandableTimecode,
   PersonBadge,
   TagInput,
   TimecodeLink,
@@ -84,6 +85,14 @@ interface QuoteCardProps {
   /** Whether the "Question?" pill is visible (from hover timer). */
   isPillVisible: boolean;
 
+  /** Context expansion — optional, only passed when transcript cache available. */
+  canExpandAbove?: boolean;
+  canExpandBelow?: boolean;
+  onExpandAbove?: () => void;
+  onExpandBelow?: () => void;
+  exhaustedAbove?: boolean;
+  exhaustedBelow?: boolean;
+
   onToggleStar: (domId: string, newState: boolean) => void;
   onToggleHide: (domId: string, newState: boolean) => void;
   onEditCommit: (domId: string, newText: string) => void;
@@ -130,6 +139,12 @@ export function QuoteCard({
   onQuoteHoverLeave,
   onPillHoverEnter,
   onPillHoverLeave,
+  canExpandAbove,
+  canExpandBelow,
+  onExpandAbove,
+  onExpandBelow,
+  exhaustedAbove,
+  exhaustedBelow,
 }: QuoteCardProps) {
   const [isEditingText, setIsEditingText] = useState(false);
   const [isTagInputOpen, setIsTagInputOpen] = useState(false);
@@ -248,16 +263,35 @@ export function QuoteCard({
         );
       })()}
       <div className="quote-row">
-        {hasMedia ? (
-          <TimecodeLink
-            seconds={quote.start_timecode}
-            endSeconds={quote.end_timecode}
-            participantId={quote.participant_id}
-            data-testid={`bn-quote-${domId}-timecode`}
-          />
-        ) : (
-          <span className="timecode">[{timecodeStr}]</span>
-        )}
+        {(() => {
+          const hasExpansion = onExpandAbove && onExpandBelow;
+          const timecodeEl = hasMedia ? (
+            <TimecodeLink
+              seconds={quote.start_timecode}
+              endSeconds={quote.end_timecode}
+              participantId={quote.participant_id}
+              data-testid={`bn-quote-${domId}-timecode`}
+            />
+          ) : (
+            <span className="timecode">[{timecodeStr}]</span>
+          );
+          if (hasExpansion) {
+            return (
+              <ExpandableTimecode
+                canExpandAbove={canExpandAbove ?? false}
+                canExpandBelow={canExpandBelow ?? false}
+                onExpandAbove={onExpandAbove}
+                onExpandBelow={onExpandBelow}
+                exhaustedAbove={exhaustedAbove}
+                exhaustedBelow={exhaustedBelow}
+                data-testid={`bn-quote-${domId}-expand`}
+              >
+                {timecodeEl}
+              </ExpandableTimecode>
+            );
+          }
+          return timecodeEl;
+        })()}
         <div className="quote-body">
           {hasModeratorContext && !isQuestionOpen && (
             <button

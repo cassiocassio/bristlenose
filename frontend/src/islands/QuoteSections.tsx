@@ -9,6 +9,7 @@
 
 import { useCallback, useEffect, useState, useMemo } from "react";
 import { getCodebook } from "../utils/api";
+import { useTranscriptCache } from "../hooks/useTranscriptCache";
 import type { QuotesListResponse } from "../utils/types";
 import { QuoteGroup } from "./QuoteGroup";
 
@@ -72,6 +73,8 @@ export function QuoteSections({ projectId }: QuoteSectionsProps) {
     return Array.from(names).sort();
   }, [data, codebookTagNames]);
 
+  const transcriptCache = useTranscriptCache();
+
   // Detect media availability — if any quote has a video timecode link
   // in the original report, we assume media is available.
   // For now, default to true (the server can add this field later).
@@ -114,6 +117,7 @@ export function QuoteSections({ projectId }: QuoteSectionsProps) {
             quotes={section.quotes}
             tagVocabulary={tagVocabulary}
             hasMedia={hasMedia}
+            transcriptCache={transcriptCache}
           />
         );
       })}

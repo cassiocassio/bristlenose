@@ -8,14 +8,15 @@
  * calls sync to the server.
  */
 
-import { useState, useCallback, useRef, useMemo, useLayoutEffect, useEffect } from "react";
-import { Counter, EditableText } from "../components";
+import { useState, useCallback, useRef, useMemo, useReducer, useLayoutEffect, useEffect } from "react";
+import { ContextSegment, Counter, EditableText } from "../components";
 import type { CounterItem } from "../components/Counter";
 import type {
   ModeratorQuestionResponse,
   ProposedTagBrief,
   QuoteResponse,
   TagResponse,
+  TranscriptSegmentResponse,
 } from "../utils/types";
 import {
   acceptProposal,
@@ -29,6 +30,52 @@ import {
 } from "../utils/api";
 import { formatTimecode, stripSmartQuotes } from "../utils/format";
 import { QuoteCard } from "./QuoteCard";
+
+// ── Context expansion types ─────────────────────────────────────────────
+
+/** Unique key for expansion state: `${sessionId}:${domId}` */
+function quoteKey(sessionId: string, domId: string): string {
+  return `${sessionId}:${domId}`;
+}
+
+interface QuoteExpansion {
+  aboveCount: number;
+  belowCount: number;
+  exhaustedAbove: boolean;
+  exhaustedBelow: boolean;
+}
+
+type ExpansionAction =
+  | { type: "expand_above"; key: string }
+  | { type: "expand_below"; key: string }
+  | { type: "mark_exhausted_above"; key: string }
+  | { type: "mark_exhausted_below"; key: string };
+
+function expansionReducer(
+  state: Record<string, QuoteExpansion>,
+  action: ExpansionAction,
+): Record<string, QuoteExpansion> {
+  const prev = state[action.key] ?? { aboveCount: 0, belowCount: 0, exhaustedAbove: false, exhaustedBelow: false };
+  switch (action.type) {
+    case "expand_above":
+      return { ...state, [action.key]: { ...prev, aboveCount: prev.aboveCount + 1 } };
+    case "expand_below":
+      return { ...state, [action.key]: { ...prev, belowCount: prev.belowCount + 1 } };
+    case "mark_exhausted_above":
+      return { ...state, [action.key]: { ...prev, exhaustedAbove: true } };
+    case "mark_exhausted_below":
+      return { ...state, [action.key]: { ...prev, exhaustedBelow: true } };
+    default:
+      return state;
+  }
+}
+
+/** TranscriptCache interface matching useTranscriptCache return type. */
+interface TranscriptCache {
+  getSegment: (sessionId: string, segmentIndex: number) => Promise<TranscriptSegmentResponse | null>;
+  getSegmentRange: (sessionId: string, fromIndex: number, toIndex: number) => Promise<TranscriptSegmentResponse[]>;
+  getContextByTimecode: (sessionId: string, startSeconds: number, above: number, below: number) => Promise<{ above: TranscriptSegmentResponse[]; below: TranscriptSegmentResponse[] }>;
+}
 
 // ── Animation constants ─────────────────────────────────────────────────
 
@@ -73,6 +120,8 @@ interface QuoteGroupProps {
   tagVocabulary: string[];
   /** Whether video/audio is available (for timecode links). */
   hasMedia: boolean;
+  /** Transcript cache for context expansion (optional — no expansion without it). */
+  transcriptCache?: TranscriptCache;
   /** Called after any state mutation with the full state maps (for parent sync). */
   onStateChange?: (stateMaps: {
     hidden: Record<string, boolean>;
@@ -91,6 +140,7 @@ export function QuoteGroup({
   quotes,
   tagVocabulary,
   hasMedia,
+  transcriptCache,
 }: QuoteGroupProps) {
   // ── State ─────────────────────────────────────────────────────────────
 
@@ -136,6 +186,13 @@ export function QuoteGroup({
   // version counter triggers the useLayoutEffect.
   const pendingUnhides = useRef<Set<string>>(new Set());
   const [unhideVersion, setUnhideVersion] = useState(0);
+
+  // ── Context expansion state ──────────────────────────────────────────
+
+  const [expansion, dispatchExpansion] = useReducer(expansionReducer, {});
+  const [contextSegments, setContextSegments] = useState<
+    Record<string, { above: TranscriptSegmentResponse[]; below: TranscriptSegmentResponse[] }>
+  >({});
 
   // ── Moderator question state ───────────────────────────────────────────
 
@@ -652,6 +709,70 @@ export function QuoteGroup({
     [description, anchor],
   );
 
+  // ── Context expansion handlers ───────────────────────────────────────
+
+  /** Fetch context segments when expansion state changes. */
+  useEffect(() => {
+    if (!transcriptCache) return;
+
+    for (const q of quotes) {
+      const key = quoteKey(q.session_id, q.dom_id);
+      const exp = expansion[key];
+      if (!exp) continue;
+
+      const { aboveCount, belowCount } = exp;
+      if (aboveCount === 0 && belowCount === 0) continue;
+
+      const cached = contextSegments[key];
+      const haveAbove = cached?.above.length ?? 0;
+      const haveBelow = cached?.below.length ?? 0;
+
+      // Only fetch if we need more segments than we have.
+      if (haveAbove >= aboveCount && haveBelow >= belowCount) continue;
+
+      if (q.segment_index >= 0) {
+        // Index-based fetch.
+        const aboveFrom = q.segment_index - aboveCount;
+        const aboveTo = q.segment_index - 1;
+        const belowFrom = q.segment_index + 1;
+        const belowTo = q.segment_index + belowCount;
+
+        Promise.all([
+          aboveCount > 0 ? transcriptCache.getSegmentRange(q.session_id, aboveFrom, aboveTo) : Promise.resolve([]),
+          belowCount > 0 ? transcriptCache.getSegmentRange(q.session_id, belowFrom, belowTo) : Promise.resolve([]),
+        ]).then(([aboveSegs, belowSegs]) => {
+          setContextSegments((prev) => ({
+            ...prev,
+            [key]: { above: aboveSegs, below: belowSegs },
+          }));
+          if (aboveCount > 0 && aboveSegs.length < aboveCount) {
+            dispatchExpansion({ type: "mark_exhausted_above", key });
+          }
+          if (belowCount > 0 && belowSegs.length < belowCount) {
+            dispatchExpansion({ type: "mark_exhausted_below", key });
+          }
+        }).catch(() => { /* silently fail — no context shown */ });
+      } else if (q.start_timecode > 0) {
+        // Timecode-based fallback.
+        transcriptCache.getContextByTimecode(q.session_id, q.start_timecode, aboveCount, belowCount)
+          .then(({ above: aboveSegs, below: belowSegs }) => {
+            setContextSegments((prev) => ({
+              ...prev,
+              [key]: { above: aboveSegs, below: belowSegs },
+            }));
+            if (aboveCount > 0 && aboveSegs.length < aboveCount) {
+              dispatchExpansion({ type: "mark_exhausted_above", key });
+            }
+            if (belowCount > 0 && belowSegs.length < belowCount) {
+              dispatchExpansion({ type: "mark_exhausted_below", key });
+            }
+          }).catch(() => { /* silently fail */ });
+      }
+    }
+    // Intentional: only re-run when expansion state changes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [expansion, transcriptCache]);
+
   // ── Render ────────────────────────────────────────────────────────────
 
   return (
@@ -729,7 +850,13 @@ export function QuoteGroup({
             );
           }
 
-          return (
+          // ── Context expansion props ──────────────────────────────────
+          const key = quoteKey(q.session_id, q.dom_id);
+          const canExpand = !!transcriptCache && (q.start_timecode > 0 || q.segment_index >= 0);
+          const exp = expansion[key];
+          const ctx = contextSegments[key];
+
+          const quoteCard = (
             <QuoteCard
               key={q.dom_id}
               quote={q}
@@ -747,6 +874,12 @@ export function QuoteGroup({
               moderatorQuestion={modQuestionCache[q.dom_id] ?? null}
               isQuestionOpen={openQuestions.has(q.dom_id)}
               isPillVisible={pillVisibleFor === q.dom_id}
+              canExpandAbove={canExpand}
+              canExpandBelow={canExpand}
+              onExpandAbove={canExpand ? () => dispatchExpansion({ type: "expand_above", key }) : undefined}
+              onExpandBelow={canExpand ? () => dispatchExpansion({ type: "expand_below", key }) : undefined}
+              exhaustedAbove={exp?.exhaustedAbove}
+              exhaustedBelow={exp?.exhaustedBelow}
               onToggleStar={handleToggleStar}
               onToggleHide={handleToggleHide}
               onEditCommit={handleEditCommit}
@@ -767,6 +900,37 @@ export function QuoteGroup({
               onPillHoverLeave={handlePillHoverLeave}
             />
           );
+
+          // Wrap with context segments if any are loaded.
+          if (ctx && (ctx.above.length > 0 || ctx.below.length > 0)) {
+            return (
+              <div key={q.dom_id} data-testid={`bn-quote-${q.dom_id}-context-wrap`}>
+                {ctx.above.map((seg, i) => (
+                  <ContextSegment
+                    key={`above-${seg.segment_index}-${i}`}
+                    speakerCode={seg.speaker_code}
+                    isModerator={seg.is_moderator}
+                    startTime={seg.start_time}
+                    text={seg.text}
+                    data-testid={`bn-quote-${q.dom_id}-ctx-above-${i}`}
+                  />
+                ))}
+                {quoteCard}
+                {ctx.below.map((seg, i) => (
+                  <ContextSegment
+                    key={`below-${seg.segment_index}-${i}`}
+                    speakerCode={seg.speaker_code}
+                    isModerator={seg.is_moderator}
+                    startTime={seg.start_time}
+                    text={seg.text}
+                    data-testid={`bn-quote-${q.dom_id}-ctx-below-${i}`}
+                  />
+                ))}
+              </div>
+            );
+          }
+
+          return quoteCard;
         })}
       </div>
     </>

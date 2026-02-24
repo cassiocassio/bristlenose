@@ -8,6 +8,7 @@
 
 import { useEffect, useState, useMemo } from "react";
 import { getCodebook } from "../utils/api";
+import { useTranscriptCache } from "../hooks/useTranscriptCache";
 import type { QuotesListResponse } from "../utils/types";
 import { QuoteGroup } from "./QuoteGroup";
 
@@ -56,6 +57,8 @@ export function QuoteThemes({ projectId }: QuoteThemesProps) {
     return Array.from(names).sort();
   }, [data, codebookTagNames]);
 
+  const transcriptCache = useTranscriptCache();
+
   const hasMedia = true;
 
   if (error) {
@@ -95,6 +98,7 @@ export function QuoteThemes({ projectId }: QuoteThemesProps) {
             quotes={theme.quotes}
             tagVocabulary={tagVocabulary}
             hasMedia={hasMedia}
+            transcriptCache={transcriptCache}
           />
         );
       })}

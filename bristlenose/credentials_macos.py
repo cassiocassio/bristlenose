@@ -29,6 +29,7 @@ class MacOSCredentialStore(CredentialStore):
         "openai": "Bristlenose OpenAI API Key",
         "azure": "Bristlenose Azure API Key",
         "google": "Bristlenose Google Gemini API Key",
+        "miro": "Bristlenose Miro Access Token",
     }
 
     def _service_name(self, key: str) -> str:

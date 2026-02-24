@@ -91,6 +91,7 @@ class TestTableCreation:
         "heading_edits",
         "deleted_badges",
         "dismissed_signals",
+        "elaboration_caches",
         "import_conflicts",
         "autocode_jobs",
         "proposed_tags",

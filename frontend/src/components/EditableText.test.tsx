@@ -249,4 +249,45 @@ describe("EditableText", () => {
     await userEvent.click(el);
     expect(el).not.toHaveAttribute("contenteditable");
   });
+
+  // suppressBlurRef
+  it("does not commit on blur when suppressBlurRef is true", () => {
+    const onCommit = vi.fn();
+    const onCancel = vi.fn();
+    const suppressRef = { current: true };
+    render(
+      <EditableText
+        value="original"
+        onCommit={onCommit}
+        onCancel={onCancel}
+        isEditing={true}
+        suppressBlurRef={suppressRef}
+        data-testid="et"
+      />,
+    );
+    const el = screen.getByTestId("et");
+    el.textContent = "changed";
+    fireEvent.blur(el);
+    expect(onCommit).not.toHaveBeenCalled();
+    expect(onCancel).not.toHaveBeenCalled();
+  });
+
+  it("commits on blur when suppressBlurRef is false", () => {
+    const onCommit = vi.fn();
+    const suppressRef = { current: false };
+    render(
+      <EditableText
+        value="original"
+        onCommit={onCommit}
+        onCancel={() => {}}
+        isEditing={true}
+        suppressBlurRef={suppressRef}
+        data-testid="et"
+      />,
+    );
+    const el = screen.getByTestId("et");
+    el.textContent = "changed";
+    fireEvent.blur(el);
+    expect(onCommit).toHaveBeenCalledWith("changed");
+  });
 });

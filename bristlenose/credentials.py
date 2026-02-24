@@ -55,6 +55,7 @@ class EnvCredentialStore(CredentialStore):
         "openai": "OPENAI_API_KEY",
         "azure": "AZURE_API_KEY",
         "google": "GOOGLE_API_KEY",
+        "miro": "MIRO_ACCESS_TOKEN",
     }
 
     def get(self, key: str) -> str | None:

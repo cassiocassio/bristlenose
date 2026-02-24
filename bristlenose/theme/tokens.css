@@ -30,6 +30,8 @@
     --bn-colour-user-tag-text: #4b5563;
     --bn-colour-editing-bg: #fffbe6;
     --bn-colour-editing-border: #e5e0c0;
+    --bn-crop-handle-colour: #c4850a;
+    --bn-crop-handle-hover: #a06d08;
     --bn-colour-active-bg: #f0fdf4;
     --bn-colour-highlight: #fef08a;
 
@@ -263,6 +265,8 @@
         --bn-colour-user-tag-text:    light-dark(#4b5563, #d1d5db);
         --bn-colour-editing-bg:       light-dark(#fffbe6, #2a2614);
         --bn-colour-editing-border:   light-dark(#e5e0c0, #4a4528);
+        --bn-crop-handle-colour:      light-dark(#c4850a, #f0b830);
+        --bn-crop-handle-hover:       light-dark(#a06d08, #f5cc60);
         --bn-colour-active-bg:        light-dark(#f0fdf4, #0f2918);
         --bn-colour-highlight:        light-dark(#fef08a, #854d0e);
         --bn-colour-cited-bg:         light-dark(#fef9c3, #3b2f05);

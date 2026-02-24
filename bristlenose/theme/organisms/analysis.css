@@ -528,6 +528,7 @@
     display: flex;
     gap: 0.35rem;
     align-items: center;
+    margin-bottom: var(--bn-space-lg);
 }
 
 /* Pattern badge — coloured allcaps label.

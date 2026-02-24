@@ -91,6 +91,10 @@ class TagSignal(BaseModel):
     composite_signal: float
     confidence: str
     quotes: list[TagSignalQuote]
+    # Elaboration fields (populated when elaborate=True)
+    signal_name: str | None = None
+    pattern: str | None = None
+    elaboration: str | None = None
 
 
 class MatrixCellOut(BaseModel):
@@ -565,10 +569,11 @@ def get_tag_analysis(
     "/projects/{project_id}/analysis/codebooks",
     response_model=CodebookAnalysisListResponse,
 )
-def get_codebook_analysis(
+async def get_codebook_analysis(
     project_id: int,
     request: Request,
     top_n: int = Query(default=12, ge=1, le=100),
+    elaborate: bool = Query(default=False),
 ) -> CodebookAnalysisListResponse:
     """Compute per-codebook signal analysis for a project.
 
@@ -632,6 +637,10 @@ def get_codebook_analysis(
                 source_breakdown=breakdown,
                 tag_colour_indices=tag_colour_indices,
             ))
+
+        # Generate elaborations for top N framework signals
+        if elaborate and codebooks:
+            await _elaborate_top_signals(codebooks, db, project_id)
 
         return CodebookAnalysisListResponse(
             codebooks=codebooks,
@@ -737,3 +746,64 @@ def _empty_tag_response() -> TagAnalysisResponse:
         source_breakdown=_EMPTY_BREAKDOWN,
         trade_off_note=_TRADE_OFF_NOTE,
     )
+
+
+async def _elaborate_top_signals(
+    codebooks: list[CodebookAnalysisOut],
+    db: Session,
+    project_id: int,
+) -> None:
+    """Generate elaborations for the top N framework signals across codebooks.
+
+    Modifies ``TagSignal`` objects in place — sets ``signal_name``,
+    ``pattern``, and ``elaboration`` fields.
+    """
+    import logging
+
+    from bristlenose.config import load_settings
+    from bristlenose.server.elaboration import (
+        DEFAULT_TOP_N,
+        compute_signal_key,
+        generate_elaborations,
+    )
+
+    logger = logging.getLogger(__name__)
+
+    try:
+        settings = load_settings()
+    except Exception:
+        logger.exception("Failed to load settings for elaboration")
+        return
+
+    # Collect all framework signals (skip custom codebooks)
+    all_framework: list[tuple[TagSignal, str]] = []
+    for cb in codebooks:
+        if cb.codebook_id == "custom":
+            continue
+        for sig in cb.signals:
+            all_framework.append((sig, cb.codebook_id))
+
+    if not all_framework:
+        return
+
+    # Sort by composite_signal descending, take top N
+    all_framework.sort(key=lambda x: x[0].composite_signal, reverse=True)
+    top_signals = all_framework[:DEFAULT_TOP_N]
+
+    # Group by codebook_id
+    by_codebook: dict[str, list[TagSignal]] = {}
+    for sig, cb_id in top_signals:
+        by_codebook.setdefault(cb_id, []).append(sig)
+
+    # Generate elaborations per codebook
+    for cb_id, sigs in by_codebook.items():
+        elaborations = await generate_elaborations(
+            sigs, cb_id, settings, db, project_id,
+        )
+        for sig in sigs:
+            key = compute_signal_key(sig.source_type, sig.location, sig.group_name)
+            elab = elaborations.get(key)
+            if elab:
+                sig.signal_name = elab.signal_name
+                sig.pattern = elab.pattern
+                sig.elaboration = elab.elaboration

@@ -18,6 +18,7 @@ from bristlenose.server.routes.codebook import router as codebook_router
 from bristlenose.server.routes.dashboard import router as dashboard_router
 from bristlenose.server.routes.data import router as data_router
 from bristlenose.server.routes.health import router as health_router
+from bristlenose.server.routes.miro import router as miro_router
 from bristlenose.server.routes.quotes import router as quotes_router
 from bristlenose.server.routes.sessions import router as sessions_router
 from bristlenose.server.routes.transcript import router as transcript_router
@@ -248,6 +249,7 @@ def create_app(
     app.include_router(quotes_router)
     app.include_router(transcript_router)
     app.include_router(data_router)
+    app.include_router(miro_router)
 
     if dev:
         from bristlenose.server.routes.dev import router as dev_router

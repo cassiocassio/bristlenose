@@ -800,6 +800,269 @@ class TestReimportStaleClusters:
 # ---------------------------------------------------------------------------
 
 
+def _write_transcript(output_dir: Path, sid: str, content: str) -> None:
+    """Write a transcript file into the output directory."""
+    raw = output_dir / "transcripts-raw"
+    raw.mkdir(parents=True, exist_ok=True)
+    (raw / f"{sid}.txt").write_text(content)
+
+
+def _write_people_yaml(output_dir: Path, participants: dict) -> None:
+    """Write a people.yaml file into the output directory."""
+    import yaml
+
+    data = {
+        "generated_by": "bristlenose",
+        "last_updated": "2026-02-23T10:00:00Z",
+        "participants": participants,
+    }
+    (output_dir / "people.yaml").write_text(
+        yaml.dump(data, default_flow_style=False, allow_unicode=True)
+    )
+
+
+class TestImportPeopleYaml:
+    """People.yaml names should populate Person rows on import."""
+
+    def _make_project(self, tmp_path: Path) -> Path:
+        """Create a minimal project with transcripts and people.yaml."""
+        out = tmp_path / "bristlenose-output"
+        out.mkdir()
+        intermediate = out / ".bristlenose" / "intermediate"
+        intermediate.mkdir(parents=True)
+        (intermediate / "metadata.json").write_text('{"project_name": "Name Test"}')
+        (intermediate / "screen_clusters.json").write_text("[]")
+        (intermediate / "theme_groups.json").write_text("[]")
+
+        _write_transcript(
+            out,
+            "s1",
+            (
+                "# Transcript: s1\n"
+                "# Date: 2026-02-20\n"
+                "# Duration: 00:01:00\n"
+                "\n"
+                "[00:02] [m1] Welcome.\n"
+                "[00:10] [p1] Thanks for having me.\n"
+            ),
+        )
+        return tmp_path
+
+    def test_names_populated_from_people_yaml(
+        self, db: Session, tmp_path: Path,
+    ) -> None:
+        """Person rows get full_name, short_name, role from people.yaml."""
+        project_dir = self._make_project(tmp_path)
+        out = tmp_path / "bristlenose-output"
+
+        _write_people_yaml(out, {
+            "p1": {
+                "computed": {
+                    "participant_id": "p1",
+                    "session_id": "s1",
+                    "duration_seconds": 60.0,
+                    "words_spoken": 100,
+                    "pct_words": 50.0,
+                    "pct_time_speaking": 50.0,
+                    "source_file": "test.vtt",
+                },
+                "editable": {
+                    "full_name": "Sarah Jones",
+                    "short_name": "Sarah",
+                    "role": "Product Manager",
+                    "persona": "early adopter",
+                    "notes": "Very engaged",
+                },
+            },
+            "m1": {
+                "computed": {
+                    "participant_id": "m1",
+                    "session_id": "s1",
+                    "duration_seconds": 60.0,
+                    "words_spoken": 50,
+                    "pct_words": 25.0,
+                    "pct_time_speaking": 25.0,
+                    "source_file": "test.vtt",
+                },
+                "editable": {
+                    "full_name": "Jane Researcher",
+                    "short_name": "Jane",
+                    "role": "UX Researcher",
+                    "persona": "",
+                    "notes": "",
+                },
+            },
+        })
+
+        import_project(db, project_dir)
+
+        speakers = db.query(SessionSpeaker).all()
+        assert len(speakers) == 2
+
+        # Check p1
+        p1_sp = [sp for sp in speakers if sp.speaker_code == "p1"][0]
+        p1 = db.get(Person, p1_sp.person_id)
+        assert p1.full_name == "Sarah Jones"
+        assert p1.short_name == "Sarah"
+        assert p1.role_title == "Product Manager"
+        assert p1.persona == "early adopter"
+        assert p1.notes == "Very engaged"
+
+        # Check m1
+        m1_sp = [sp for sp in speakers if sp.speaker_code == "m1"][0]
+        m1 = db.get(Person, m1_sp.person_id)
+        assert m1.full_name == "Jane Researcher"
+        assert m1.short_name == "Jane"
+        assert m1.role_title == "UX Researcher"
+
+    def test_missing_people_yaml_creates_empty_names(
+        self, db: Session, tmp_path: Path,
+    ) -> None:
+        """Without people.yaml, Person rows have empty names (existing behaviour)."""
+        project_dir = self._make_project(tmp_path)
+        import_project(db, project_dir)
+
+        persons = db.query(Person).all()
+        for p in persons:
+            assert p.full_name == ""
+            assert p.short_name == ""
+
+    def test_partial_people_yaml(self, db: Session, tmp_path: Path) -> None:
+        """people.yaml with only some speakers populates what it can."""
+        project_dir = self._make_project(tmp_path)
+        out = tmp_path / "bristlenose-output"
+
+        # Only p1 has names, m1 is missing from people.yaml
+        _write_people_yaml(out, {
+            "p1": {
+                "computed": {
+                    "participant_id": "p1",
+                    "session_id": "s1",
+                    "duration_seconds": 60.0,
+                    "words_spoken": 100,
+                    "pct_words": 50.0,
+                    "pct_time_speaking": 50.0,
+                    "source_file": "test.vtt",
+                },
+                "editable": {
+                    "full_name": "Fred Thompson",
+                    "short_name": "Fred",
+                    "role": "",
+                    "persona": "",
+                    "notes": "",
+                },
+            },
+        })
+
+        import_project(db, project_dir)
+
+        speakers = db.query(SessionSpeaker).all()
+
+        p1_sp = [sp for sp in speakers if sp.speaker_code == "p1"][0]
+        p1 = db.get(Person, p1_sp.person_id)
+        assert p1.full_name == "Fred Thompson"
+        assert p1.short_name == "Fred"
+
+        m1_sp = [sp for sp in speakers if sp.speaker_code == "m1"][0]
+        m1 = db.get(Person, m1_sp.person_id)
+        assert m1.full_name == ""
+        assert m1.short_name == ""
+
+
+    def test_reimport_fills_empty_names_from_yaml(
+        self, db: Session, tmp_path: Path,
+    ) -> None:
+        """Re-import fills empty Person names from people.yaml added after first run."""
+        # First import: no people.yaml → empty names
+        project_dir = self._make_project(tmp_path)
+        import_project(db, project_dir)
+
+        speakers = db.query(SessionSpeaker).all()
+        p1_sp = [sp for sp in speakers if sp.speaker_code == "p1"][0]
+        p1 = db.get(Person, p1_sp.person_id)
+        assert p1.full_name == ""
+
+        # Now add people.yaml
+        out = tmp_path / "bristlenose-output"
+        _write_people_yaml(out, {
+            "p1": {
+                "computed": {
+                    "participant_id": "p1",
+                    "session_id": "s1",
+                    "duration_seconds": 60.0,
+                    "words_spoken": 100,
+                    "pct_words": 50.0,
+                    "pct_time_speaking": 50.0,
+                    "source_file": "test.vtt",
+                },
+                "editable": {
+                    "full_name": "Sarah Jones",
+                    "short_name": "Sarah",
+                    "role": "Designer",
+                    "persona": "",
+                    "notes": "",
+                },
+            },
+        })
+
+        # Re-import: should fill empty names from people.yaml
+        import_project(db, project_dir)
+
+        # Refresh from DB
+        db.expire_all()
+        p1 = db.get(Person, p1_sp.person_id)
+        assert p1.full_name == "Sarah Jones"
+        assert p1.short_name == "Sarah"
+        assert p1.role_title == "Designer"
+
+    def test_reimport_does_not_overwrite_ui_edits(
+        self, db: Session, tmp_path: Path,
+    ) -> None:
+        """Re-import doesn't overwrite names the researcher edited via UI."""
+        project_dir = self._make_project(tmp_path)
+        out = tmp_path / "bristlenose-output"
+
+        _write_people_yaml(out, {
+            "p1": {
+                "computed": {
+                    "participant_id": "p1",
+                    "session_id": "s1",
+                    "duration_seconds": 60.0,
+                    "words_spoken": 100,
+                    "pct_words": 50.0,
+                    "pct_time_speaking": 50.0,
+                    "source_file": "test.vtt",
+                },
+                "editable": {
+                    "full_name": "Frederick Thompson",
+                    "short_name": "Frederick",
+                    "role": "",
+                    "persona": "",
+                    "notes": "",
+                },
+            },
+        })
+
+        import_project(db, project_dir)
+
+        # Researcher edits the name via UI (simulated by direct DB update)
+        speakers = db.query(SessionSpeaker).all()
+        p1_sp = [sp for sp in speakers if sp.speaker_code == "p1"][0]
+        p1 = db.get(Person, p1_sp.person_id)
+        p1.full_name = "Fred Thompson"
+        p1.short_name = "Fred"
+        db.commit()
+
+        # Re-import: YAML still says "Frederick", but DB says "Fred"
+        import_project(db, project_dir)
+
+        db.expire_all()
+        p1 = db.get(Person, p1_sp.person_id)
+        # Researcher's edit wins — non-empty fields are never overwritten
+        assert p1.full_name == "Fred Thompson"
+        assert p1.short_name == "Fred"
+
+
 class TestFindTranscriptsDir:
     """_find_transcripts_dir tries multiple candidate locations."""
 

@@ -15,7 +15,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Badge, Metric, PersonBadge } from "../components";
 import { getCodebookAnalysis } from "../utils/api";
-import { getGroupBg, getTagBg } from "../utils/colours";
+import { getBarColour, getGroupBg, getTagBg } from "../utils/colours";
 import { formatTimecode } from "../utils/format";
 import { detectSequences, type SequenceMeta } from "../utils/sequences";
 import type {
@@ -302,6 +302,43 @@ function ParticipantGrid({
   );
 }
 
+/** Mini bar chart showing this card's signal strength relative to siblings. */
+function SparkBars({
+  values,
+  currentIndex,
+  accentVar,
+}: {
+  values: number[];
+  currentIndex: number;
+  accentVar: string;
+}) {
+  const maxVal = Math.max(...values);
+  if (maxVal === 0) return null;
+  const n = values.length;
+  const maxH = 28; // matches CSS .signal-sparkbars height
+  const barW = Math.floor((96 - (n - 1) * 2) / n);
+  return (
+    <div className="signal-sparkbars">
+      {values.map((v, i) => {
+        const h = Math.max(2, (v / maxVal) * maxH);
+        const opacity = i === currentIndex ? 1 : Math.max(0.09, (v / maxVal) * 0.45);
+        return (
+          <div
+            key={i}
+            className="signal-sparkbar"
+            style={{
+              height: `${h}px`,
+              width: `${barW}px`,
+              background: i === currentIndex ? accentVar : "var(--bn-colour-text)",
+              opacity,
+            }}
+          />
+        );
+      })}
+    </div>
+  );
+}
+
 /** Split elaboration on `||` — bold assertion, regular evidence. */
 function renderElaboration(text: string): React.ReactNode {
   const idx = text.indexOf("||");
@@ -320,11 +357,15 @@ function SignalCard({
   allPids,
   isSentiment,
   cardRef,
+  siblingSignals,
+  signalIndex,
 }: {
   signal: UnifiedSignal;
   allPids: string[];
   isSentiment: boolean;
   cardRef?: (el: HTMLDivElement | null) => void;
+  siblingSignals?: number[];
+  signalIndex?: number;
 }) {
   const [expanded, setExpanded] = useState(false);
   const expansionRef = useRef<HTMLDivElement>(null);
@@ -438,12 +479,17 @@ function SignalCard({
               )}
             </div>
             <div className="signal-card-metrics">
-              <Metric
-                label="Signal"
-                title="Composite signal strength"
-                displayValue={signal.compositeSignal.toFixed(4)}
-                viz={{ type: "none" }}
-              />
+              <span className="metric-label" title="Composite signal strength">Signal</span>
+              <span className="metric-value">{signal.compositeSignal.toFixed(2)}</span>
+              <span className="metric-viz">
+                {siblingSignals && siblingSignals.length > 1 && signalIndex != null ? (
+                  <SparkBars
+                    values={siblingSignals}
+                    currentIndex={signalIndex}
+                    accentVar={signal.colourSet ? getBarColour(signal.colourSet) : accentVar}
+                  />
+                ) : null}
+              </span>
               <Metric
                 label="Conc."
                 title="Concentration ratio — how overrepresented vs study average"
@@ -469,7 +515,7 @@ function SignalCard({
             <Metric
               label="Signal"
               title="Composite signal strength"
-              displayValue={signal.compositeSignal.toFixed(4)}
+              displayValue={signal.compositeSignal.toFixed(2)}
               viz={{ type: "none" }}
             />
             <Metric
@@ -1011,12 +1057,14 @@ export function AnalysisPage({ projectId }: AnalysisPageProps) {
             more than expected given the study average.
           </p>
           <div className="signal-cards" id="signal-cards-tags">
-            {tagSignals.map((s) => (
+            {tagSignals.map((s, idx) => (
               <SignalCard
                 key={s.key}
                 signal={s}
                 allPids={tagAllPids}
                 isSentiment={false}
+                siblingSignals={tagSignals.map((t) => t.compositeSignal)}
+                signalIndex={idx}
                 cardRef={(el: HTMLDivElement | null) => {
                   if (el) cardRefs.current.set(s.key, el);
                   else cardRefs.current.delete(s.key);

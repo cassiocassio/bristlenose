@@ -317,7 +317,7 @@ describe("AnalysisPage", () => {
       expect(screen.getAllByTestId("bn-signal-card")).toHaveLength(2);
     });
 
-    expect(screen.getByText("0.4567")).toBeTruthy(); // composite signal
+    expect(screen.getByText("0.46")).toBeTruthy(); // composite signal
     expect(screen.getByText("2.5×")).toBeTruthy();   // concentration
   });
 

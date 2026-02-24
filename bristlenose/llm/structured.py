@@ -237,3 +237,50 @@ class AutoCodeBatchResult(BaseModel):
         if isinstance(v, str):
             return json.loads(v)
         return v
+
+
+# ---------------------------------------------------------------------------
+# Signal elaboration (serve mode — analysis page)
+# ---------------------------------------------------------------------------
+
+
+class SignalElaborationItem(BaseModel):
+    """One elaboration for a single signal card."""
+
+    signal_index: int = Field(
+        description="0-based index matching the input signal order"
+    )
+    signal_name: str = Field(
+        description=(
+            "2-4 word interpretive name for this signal. "
+            "Use the group's analytical vocabulary, not raw quote words."
+        )
+    )
+    pattern: str = Field(
+        description="One of: success, gap, tension, recovery"
+    )
+    elaboration: str = Field(
+        description=(
+            "Exactly one sentence. Structure: assertion clause || evidence/nuance. "
+            "The || delimiter separates the bold opening (a self-contained finding) "
+            "from the regular continuation (supporting detail). "
+            "Place || at the first natural punctuation break: em dash, comma "
+            "before a dependent clause, or opening parenthetical."
+        )
+    )
+
+
+class SignalElaborationResult(BaseModel):
+    """LLM output for a batch of signal elaborations."""
+
+    elaborations: list[SignalElaborationItem] = Field(
+        description="One elaboration per input signal, in order"
+    )
+
+    @field_validator("elaborations", mode="before")
+    @classmethod
+    def _parse_stringified_json(cls, v: object) -> object:
+        """Some LLM providers double-serialize nested arrays as JSON strings."""
+        if isinstance(v, str):
+            return json.loads(v)
+        return v

@@ -15,17 +15,19 @@ export function PersonBadge({
   "data-testid": testId,
 }: PersonBadgeProps) {
   const content = (
-    <div
+    <span
       className={`bn-person-badge${highlighted ? " bn-person-badge-highlighted" : ""}`}
       data-testid={testId}
     >
-      <span className="badge">{code}</span>
-      {name && <span className="bn-person-badge-name">{name}</span>}
-    </div>
+      <span className="bn-speaker-badge--split">
+        <span className="bn-speaker-badge-code">{code}</span>
+        {name && <span className="bn-speaker-badge-name">{name}</span>}
+      </span>
+    </span>
   );
 
   if (href) {
-    return <a href={href}>{content}</a>;
+    return <a href={href} className="speaker-link">{content}</a>;
   }
 
   return content;

@@ -300,14 +300,16 @@ function renderSessionItem(s: SessionListItem): React.ReactNode {
 /** Render a list of speakers as badge + name fragments with Oxford-comma joining. */
 function oxfordJoin(people: TranscriptSpeakerResponse[]): React.ReactNode[] {
   return people.map((sp, i) => {
-    const showName = sp.name !== sp.code;
     const badgeRole = sp.code.startsWith("m")
       ? "moderator" as const
       : "observer" as const;
     const person = (
       <span key={sp.code} className="bn-transcript-roles__person">
-        <PersonBadge code={sp.code} role={badgeRole} />
-        {showName && <span className="bn-transcript-roles__name">{sp.name}</span>}
+        <PersonBadge
+          code={sp.code}
+          role={badgeRole}
+          name={sp.name !== sp.code ? sp.name : undefined}
+        />
       </span>
     );
     if (i === 0) return person;
@@ -489,25 +491,29 @@ export function TranscriptPage({ projectId: _projectId, sessionId }: TranscriptP
 
   return (
     <>
-      {/* Sticky journey header with session selector */}
-      {hasJourney && (
-        <div
-          className="bn-transcript-journey-header"
-          ref={headerRef}
-          data-testid="transcript-journey-header"
-        >
-          {sessionList.length > 1 && (
-            <Selector<SessionListItem>
-              label={`Session ${sessionNum}`}
-              items={sessionList}
-              itemKey={(s) => s.session_id}
-              renderItem={renderSessionItem}
-              activeKey={sessionId}
-              itemHref={(s) => `transcript_${s.session_id}.html`}
-              className="bn-session-selector"
-              data-testid="session-selector"
-            />
-          )}
+      {/* Sticky header — session selector + journey chain (when available) */}
+      <div
+        className="bn-transcript-journey-header"
+        ref={headerRef}
+        data-testid="transcript-journey-header"
+      >
+        {sessionList.length > 1 ? (
+          <Selector<SessionListItem>
+            label={`Session ${sessionNum}`}
+            items={sessionList}
+            itemKey={(s) => s.session_id}
+            renderItem={renderSessionItem}
+            activeKey={sessionId}
+            itemHref={(s) => `transcript_${s.session_id}.html`}
+            className="bn-session-selector"
+            data-testid="session-selector"
+          />
+        ) : (
+          <span className="bn-session-selector__label" data-testid="session-label">
+            Session {sessionNum}
+          </span>
+        )}
+        {hasJourney && (
           <JourneyChain
             labels={journeyLabels}
             activeIndex={activeIndex}
@@ -515,8 +521,8 @@ export function TranscriptPage({ projectId: _projectId, sessionId }: TranscriptP
             stickyOverflow
             data-testid="transcript-journey-chain"
           />
-        </div>
-      )}
+        )}
+      </div>
 
       {/* Session roles — moderator/observer line (scrolls away naturally) */}
       {renderSessionRoles(speakers)}

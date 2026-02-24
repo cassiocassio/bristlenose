@@ -2,7 +2,7 @@
 
 This document tracks active feature branches to help multiple Claude sessions coordinate without conflicts.
 
-**Updated:** 24 Feb 2026 (context-expansion merged)
+**Updated:** 24 Feb 2026 (split-badge added)
 
 ---
 
@@ -18,6 +18,7 @@ Each active feature branch gets its own **git worktree** — a full working copy
 | `bristlenose_branch symbology/` | `symbology` | § ¶ ❋ Unicode prefix symbols for sections, quotes, themes |
 | `bristlenose_branch highlighter/` | `highlighter` | Highlighter feature |
 | `bristlenose_branch react-settings-about/` | `react-settings-about` | React migration steps 1 & 2: Settings + About panels |
+| `bristlenose_branch split-badge/` | `split-badge` | Two-tone split speaker badges |
 
 **Creating a new feature branch worktree:**
 
@@ -98,6 +99,7 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 | `symbology` | `bristlenose_branch symbology/` | `origin/symbology` |
 | `highlighter` | `bristlenose_branch highlighter/` | `origin/highlighter` |
 | `react-settings-about` | `bristlenose_branch react-settings-about/` | `origin/react-settings-about` |
+| `split-badge` | `bristlenose_branch split-badge/` | `origin/split-badge` |
 
 ---
 
@@ -129,6 +131,36 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 - `bristlenose/theme/js/analysis.js` — signal cards, heatmap headers
 - `bristlenose/theme/js/transcript-annotations.js` — margin label tooltips
 - `bristlenose/theme/js/codebook.js` — quote count tooltips
+
+### `split-badge` — started 24 Feb 2026
+
+**Worktree:** `/Users/cassio/Code/bristlenose_branch split-badge`
+
+**Goal:** Two-tone split speaker badges (Treatment E). Left half shows speaker code (`p2`) in mono font on badge-bg, right half shows participant name (`Sarah`) in body font on quote-bg. Settings toggle: "Show participants as: Code and name / Code only". Em-dash removed from quote attribution, replaced with `margin-left: 1rem` gap.
+
+**Files touched:**
+- `bristlenose/theme/molecules/person-badge.css` — complete rewrite (90 lines)
+- `bristlenose/theme/js/person-display.js` — new file (display mode toggle)
+- `bristlenose/theme/js/main.js` — `initPersonDisplay` added to `_bootFns`
+- `bristlenose/stages/render_html.py` — `_split_badge_html()` helper + 8 call sites + settings fieldset + `_JS_FILES` entry
+- `bristlenose/theme/templates/session_table.html` — split badge markup
+- `bristlenose/theme/templates/dashboard_session_table.html` — split badge markup
+- `bristlenose/theme/templates/quote_card.html` — em-dash removed
+- `bristlenose/theme/organisms/blockquote.css` — speaker margin-left + nowrap
+- `frontend/src/components/PersonBadge.tsx` — rewritten for split badge structure
+- `frontend/src/components/PersonBadge.test.tsx` — 6 tests
+- `frontend/src/islands/QuoteCard.tsx` — em-dash removed
+- `frontend/src/islands/Dashboard.tsx` — featured quote uses PersonBadge
+- `frontend/src/islands/TranscriptPage.tsx` — roles panel passes name to PersonBadge
+- `tests/test_navigation.py` — badge selector updates
+- `tests/test_transcript_pages.py` — badge selector updates
+- `tests/test_moderator_identification.py` — badge selector updates
+- `tests/test_user_journeys.py` — display name badge assertions
+
+**Potential conflicts with other branches:**
+- `render_html.py` — hot file, also touched by `symbology` and `react-settings-about`
+
+---
 
 ### `react-settings-about` — started 24 Feb 2026
 

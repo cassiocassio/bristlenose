@@ -263,7 +263,7 @@ describe("TranscriptPage", () => {
     expect(chain.textContent).toContain("Search");
   });
 
-  it("hides journey header when no section annotations exist", async () => {
+  it("shows sticky header without journey chain when no section annotations exist", async () => {
     mockedGetTranscript.mockResolvedValue({
       ...mockData,
       journey_labels: [],
@@ -278,7 +278,10 @@ describe("TranscriptPage", () => {
     await waitFor(() => {
       expect(screen.getByTestId("transcript-body")).toBeTruthy();
     });
-    expect(screen.queryByTestId("transcript-journey-header")).toBeNull();
+    // Sticky header always present (acts as page title / session selector)
+    expect(screen.getByTestId("transcript-journey-header")).toBeTruthy();
+    // But journey chain is hidden when no journey data
+    expect(screen.queryByTestId("transcript-journey-chain")).toBeNull();
   });
 
   // ── Session roles line ──────────────────────────────────────────────

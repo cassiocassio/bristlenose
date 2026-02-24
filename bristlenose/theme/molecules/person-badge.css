@@ -1,16 +1,89 @@
-/* Molecule: person-badge — speaker code lozenge + display name */
+/* Molecule: person-badge — two-tone split speaker badge
+ *
+ * Structure:  .bn-person-badge > .bn-speaker-badge--split
+ *               > .bn-speaker-badge-code + .bn-speaker-badge-name
+ *
+ * Display mode: data-person-display="code" on <html> hides the name half.
+ * Hover: linked badges increase contrast (name bg lightens, code text darkens).
+ */
 
+/* Wrapper — keeps backward compat with existing selectors */
 .bn-person-badge {
     display: inline-flex;
     align-items: center;
-    gap: 0.4rem;
+    gap: 0;
     white-space: nowrap;
 }
 
-.bn-person-badge .badge {
-    flex-shrink: 0;
+/* Split badge container */
+.bn-speaker-badge--split {
+    display: inline-flex;
+    align-items: center;
+    gap: 0;
+    padding: 0;
+    border-radius: var(--bn-radius-sm);
+    overflow: hidden;
+    background: none;
+    vertical-align: baseline;
 }
 
-.bn-person-badge-name {
+/* Left half: code lozenge */
+.bn-speaker-badge--split .bn-speaker-badge-code {
+    font-family: var(--bn-font-mono);
+    font-size: 0.72rem;
+    padding: var(--bn-space-xs) 0.4rem;
+    background: var(--bn-colour-badge-bg);
+    color: var(--bn-colour-badge-text);
+    border: 1px solid var(--bn-colour-border);
+    border-right: none;
+    border-radius: var(--bn-radius-sm) 0 0 var(--bn-radius-sm);
+    transition: color var(--bn-transition-fast);
+}
+
+/* Right half: name */
+.bn-speaker-badge--split .bn-speaker-badge-name {
+    font-family: var(--bn-font-body);
+    font-size: 0.72rem;
     font-weight: var(--bn-weight-emphasis);
+    padding: var(--bn-space-xs) 0.45rem var(--bn-space-xs) 0.35rem;
+    background: var(--bn-colour-quote-bg);
+    color: var(--bn-colour-text);
+    border: 1px solid var(--bn-colour-border);
+    border-left: none;
+    border-radius: 0 var(--bn-radius-sm) var(--bn-radius-sm) 0;
+    transition: background var(--bn-transition-fast);
+}
+
+/* No name available — code gets full radius */
+.bn-speaker-badge--split .bn-speaker-badge-code:last-child {
+    border-radius: var(--bn-radius-sm);
+    border-right: 1px solid var(--bn-colour-border);
+}
+
+/* --- Hover states (linked badges only) --- */
+
+/* Code-and-name: name bg lightens towards white */
+a:hover .bn-speaker-badge--split .bn-speaker-badge-name {
+    background: var(--bn-colour-bg);
+}
+
+/* Code-only / code-and-name: code text darkens towards black */
+a:hover .bn-speaker-badge--split .bn-speaker-badge-code {
+    color: var(--bn-colour-text);
+}
+
+/* --- Display mode toggle via data-person-display on <html> --- */
+
+[data-person-display="code"] .bn-speaker-badge-name {
+    display: none;
+}
+
+[data-person-display="code"] .bn-speaker-badge--split .bn-speaker-badge-code {
+    border-radius: var(--bn-radius-sm);
+    border-right: 1px solid var(--bn-colour-border);
+}
+
+/* Highlighted state */
+.bn-person-badge-highlighted .bn-speaker-badge-code {
+    box-shadow: 0 0 0 2px var(--bn-colour-accent);
 }

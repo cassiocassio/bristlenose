@@ -132,6 +132,14 @@
     color: var(--bn-colour-muted);
 }
 
+/* Plain session label when there is only one session (no dropdown) */
+.bn-session-selector__label {
+    font-size: 0.9rem;
+    font-weight: 600;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
 /* Segments need scroll-margin to not hide behind sticky header */
 .bn-transcript-journey-header ~ .transcript-body .transcript-segment[id] {
     scroll-margin-top: var(--bn-journey-header-height, 3rem);

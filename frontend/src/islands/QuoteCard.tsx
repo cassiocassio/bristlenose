@@ -590,7 +590,6 @@ export function QuoteCard({
           </span>
           &nbsp;
           <span className="speaker">
-            &mdash;&nbsp;
             <PersonBadge
               code={quote.participant_id}
               role="participant"

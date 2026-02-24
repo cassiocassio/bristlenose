@@ -46,6 +46,8 @@ blockquote .timecode {
 blockquote .speaker {
     color: var(--bn-colour-muted);
     font-size: 0.9rem;
+    margin-left: 1rem;
+    white-space: nowrap;
 }
 
 blockquote .speaker-link {

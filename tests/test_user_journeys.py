@@ -116,8 +116,10 @@ class TestBuildTaskOutcomeHtml:
 
         assert "Alice" in html
         # session_id "s1" is displayed as "1", so "p1" may appear as part of
-        # other strings — check that the participant cell shows "Alice"
-        assert "<td>Alice</td>" in html
+        # other strings — check that the participant cell shows a split badge
+        # with both code and name.
+        assert '<span class="bn-speaker-badge-code">p1</span>' in html
+        assert '<span class="bn-speaker-badge-name">Alice</span>' in html
 
     def test_single_cluster_no_arrow(self) -> None:
         """One cluster means no arrow in the journey string."""
@@ -139,8 +141,8 @@ class TestBuildTaskOutcomeHtml:
 
         html = _build_task_outcome_html(clusters, all_quotes)
 
-        # p1 IS in the cluster so should appear
-        assert "<td>p1</td>" in html
+        # p1 IS in the cluster so should appear as a split badge
+        assert '<span class="bn-speaker-badge-code">p1</span>' in html
         # p2 has no screen cluster membership — should be absent
         assert "p2" not in html
 

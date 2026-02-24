@@ -1,7 +1,7 @@
 <blockquote class="quote-card" id="{{ quote_id }}" data-timecode="{{ timecode }}" data-participant="{{ participant_id }}" data-emotion="{{ emotion }}" data-intent="{{ intent }}">
 {%- if researcher_context %}
 <span class="context">[{{ researcher_context }}]</span>{%- endif %}
-<div class="quote-row">{{ tc_html }}<div class="quote-body"><span class="quote-text">“{{ quote_text }}”</span>&nbsp;<span class="speaker">&mdash;&nbsp;{{ speaker_link }}</span><div class="badges">{{ badges }} <span class="badge badge-add" aria-label="Add tag">+</span> <button class="badge-restore" aria-label="Restore tags" title="Restore tags" style="display:none">&#x21A9;</button></div></div></div>
+<div class="quote-row">{{ tc_html }}<div class="quote-body"><span class="quote-text">“{{ quote_text }}”</span>&nbsp;<span class="speaker">{{ speaker_link }}</span><div class="badges">{{ badges }} <span class="badge badge-add" aria-label="Add tag">+</span> <button class="badge-restore" aria-label="Restore tags" title="Restore tags" style="display:none">&#x21A9;</button></div></div></div>
 <button class="hide-btn" aria-label="Hide this quote"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg></button>
 <button class="edit-pencil" aria-label="Edit this quote">&#9998;</button>
 <button class="star-btn" aria-label="Star this quote">&#9733;</button>

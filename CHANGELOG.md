@@ -6,6 +6,10 @@ All notable changes to Bristlenose are documented here. See also the [README](RE
 
 - `bristlenose status` command — read-only project status from the manifest, shows stage completion with session counts, intermediate file validation, and `-v` per-session detail
 - Pre-run resume summary — one-line status message before pipeline output when resuming an interrupted run (e.g. "Resuming: 7/10 sessions have quotes, 3 remaining.")
+- Split speaker badges — two-tone pill with speaker code (left, mono) and participant name (right, body font). Settings toggle: "Show participants as: Code and name / Code only", persisted in localStorage. Applied across all surfaces: quote cards, session table, dashboard, transcript pages, user journeys, friction points
+- Em-dash removed from quote attribution — replaced with `margin-left: 1rem` gap between quote text and speaker badge
+- Always-on sticky transcript header — session selector dropdown always visible on transcript pages (not gated on journey data). Single-session pages show a plain label as page title
+- Serve-mode session routing — session links now navigate to standalone transcript pages (React island) instead of inline Jinja2 drill-down. Inline Jinja2 transcript pages and vanilla JS subnav stripped in serve mode
 - AutoCode frontend — complete lifecycle for LLM-assisted tag application: ✦ button on framework codebook sections triggers AutoCode run, progress toast with 2s polling and cancel support, threshold review dialog with confidence histogram and dual-threshold slider (accept/tentative/exclude zones), per-row override, proposed badges on quotes (pulsating dashed border, hover accept/deny with brightness flash animation). Tag colour pipeline carries `colour_set` + `colour_index` from CodebookGroup through to accepted user tags
 - Threshold review dialog — confidence-aware triage: 20-bin histogram with tag colours, three proposal zones, bulk accept/deny with max_confidence filter, per-quote override before committing
 - Activity chip and chip stack components — lightweight status indicators for background jobs with multi-stage progress, cancel button, and auto-dismiss on completion

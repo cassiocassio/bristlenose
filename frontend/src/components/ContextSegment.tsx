@@ -32,7 +32,7 @@ export function ContextSegment({
   return (
     <div className="context-segment" data-testid={testId}>
       <div className="quote-row">
-        <span className="timecode">[{formatTimecode(startTime)}]</span>
+        <span className="timecode"><span className="timecode-bracket">[</span>{formatTimecode(startTime)}<span className="timecode-bracket">]</span></span>
         <span className="context-text">
           {showBadge && (
             <span className="context-speaker">

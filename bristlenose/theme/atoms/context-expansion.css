@@ -36,11 +36,11 @@
 }
 
 .expand-arrow[data-dir="up"] {
-    top: 0;
+    top: 0.3rem;
 }
 
 .expand-arrow[data-dir="down"] {
-    bottom: 0;
+    bottom: 0.3rem;
     transform: translateX(-50%) rotate(180deg);
 }
 
@@ -66,6 +66,7 @@
 .context-segment {
     color: var(--bn-colour-muted);
     padding: var(--bn-space-xs) 0;
+    opacity: 0.7;
 }
 
 .context-segment .quote-row {

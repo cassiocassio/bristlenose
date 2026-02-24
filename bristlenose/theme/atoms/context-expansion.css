@@ -41,6 +41,7 @@
 
 .expand-arrow[data-dir="down"] {
     bottom: 0;
+    transform: translateX(-50%) rotate(180deg);
 }
 
 /* Show arrows on hover over the expandable wrapper */

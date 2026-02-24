@@ -433,11 +433,11 @@ class TestTranscriptPageRendering:
         )
         html = self._setup_and_render(tmp_path, people=people)
 
-        # Segment labels show speaker codes as person badges
+        # Segment labels show speaker codes as split badges
         assert 'data-participant="m1">' in html
-        assert '<span class="badge">m1</span>' in html
+        assert '<span class="bn-speaker-badge-code">m1</span>' in html
         assert 'data-participant="p1">' in html
-        assert '<span class="badge">p1</span>' in html
+        assert '<span class="bn-speaker-badge-code">p1</span>' in html
 
     def test_moderator_data_participant_attribute(self, tmp_path: Path) -> None:
         html = self._setup_and_render(tmp_path)

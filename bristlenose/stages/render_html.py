@@ -156,6 +156,7 @@ _JS_FILES: list[str] = [
     "js/journey-sort.js",
     "js/analysis.js",
     "js/settings.js",
+    "js/person-display.js",
     "js/main.js",
 ]
 
@@ -332,10 +333,12 @@ def render_html(
 
     # --- Sessions tab ---
     _w('<div class="bn-tab-panel" data-tab="sessions" id="panel-sessions" role="tabpanel" aria-label="Sessions">')
+    _w("<!-- bn-session-subnav -->")
     _w('<div class="bn-session-subnav" style="display:none">')
     _w('<button class="bn-session-back">&larr; All sessions</button>')
     _w('<span class="bn-session-label"></span>')
     _w("</div>")
+    _w("<!-- /bn-session-subnav -->")
     _w('<div class="bn-session-grid">')
 
     # --- Session Summary (at top for quick reference) ---
@@ -362,7 +365,10 @@ def render_html(
     # Close session grid
     _w("</div>")  # .bn-session-grid
 
-    # Inline transcripts (rendered as hidden divs, shown via JS drill-down)
+    # Inline transcripts (rendered as hidden divs, shown via JS drill-down).
+    # In serve mode these are stripped — the React TranscriptPage island on
+    # standalone transcript_*.html pages is the primary rendering path.
+    _w("<!-- bn-inline-transcripts -->")
     inline_transcripts = _render_inline_transcripts(
         sessions=sessions,
         project_name=project_name,
@@ -377,6 +383,7 @@ def render_html(
     )
     for t_html in inline_transcripts:
         _w(t_html)
+    _w("<!-- /bn-inline-transcripts -->")
 
     _w("</div>")  # .bn-tab-panel[sessions]
 
@@ -426,7 +433,8 @@ def render_html(
         for cluster in screen_clusters:
             anchor = f"section-{cluster.screen_label.lower().replace(' ', '-')}"
             quotes_html = "\n".join(
-                _format_quote_html(q, video_map) for q in cluster.quotes
+                _format_quote_html(q, video_map, display_names)
+                for q in cluster.quotes
             )
             groups.append({
                 "anchor": _esc(anchor), "label": _esc(cluster.screen_label),
@@ -445,7 +453,8 @@ def render_html(
         for theme in theme_groups:
             anchor = f"theme-{theme.theme_label.lower().replace(' ', '-')}"
             quotes_html = "\n".join(
-                _format_quote_html(q, video_map) for q in theme.quotes
+                _format_quote_html(q, video_map, display_names)
+                for q in theme.quotes
             )
             groups.append({
                 "anchor": _esc(anchor), "label": _esc(theme.theme_label),
@@ -460,7 +469,7 @@ def render_html(
     # --- Sentiment (includes friction points) ---
     if all_quotes:
         sentiment_html = _build_sentiment_html(all_quotes)
-        rewatch = _build_rewatch_html(all_quotes, video_map)
+        rewatch = _build_rewatch_html(all_quotes, video_map, display_names)
         if sentiment_html or rewatch:
             _w("<section>")
             _w('<h2 id="sentiment">Sentiment</h2>')
@@ -539,6 +548,15 @@ def render_html(
     _w('<label class="bn-radio-label">'
        '<input type="radio" name="bn-appearance" value="dark"> '
        "Dark</label>")
+    _w("</fieldset>")
+    _w('<fieldset class="bn-setting-group">')
+    _w("<legend>Show participants as</legend>")
+    _w('<label class="bn-radio-label">'
+       '<input type="radio" name="bn-person-display" value="code-and-name" checked> '
+       "Code and name</label>")
+    _w('<label class="bn-radio-label">'
+       '<input type="radio" name="bn-person-display" value="code"> '
+       "Code only</label>")
     _w("</fieldset>")
     _w("</div>")  # .bn-tab-panel[settings]
 
@@ -871,11 +889,8 @@ def _build_session_rows(
     moderator_parts: list[str] = []
     for code in all_moderator_codes:
         name = _resolve_speaker_name(code, people, display_names)
-        name_html = f" {_esc(name)}" if name != code else ""
         moderator_parts.append(
-            f'<span class="bn-person-badge">'
-            f'<span class="badge">{_esc(code)}</span>{name_html}'
-            f'</span>'
+            _split_badge_html(code, name if name != code else None)
         )
     if moderator_parts:
         moderator_header = "Moderated by " + _oxford_list_html(moderator_parts)
@@ -886,11 +901,8 @@ def _build_session_rows(
     observer_parts: list[str] = []
     for code in all_observer_codes:
         name = _resolve_speaker_name(code, people, display_names)
-        name_html = f" {_esc(name)}" if name != code else ""
         observer_parts.append(
-            f'<span class="bn-person-badge">'
-            f'<span class="badge">{_esc(code)}</span>{name_html}'
-            f'</span>'
+            _split_badge_html(code, name if name != code else None)
         )
     if observer_parts:
         noun = "Observer" if len(observer_parts) == 1 else "Observers"
@@ -1145,11 +1157,14 @@ def _render_featured_quote(
     quote_id = f"q-{quote.participant_id}-{int(quote.start_timecode)}"
     tc_html = _timecode_html(quote, video_map)
 
-    # Speaker code lozenge → navigates to Sessions tab on card click.
+    # Speaker badge → navigates to Sessions tab on card click.
     pid_esc, sid_esc, anchor = _session_anchor(quote)
-    speaker_badge = (
-        f'<a href="#" class="badge speaker-link" data-nav-session="{sid_esc}"'
-        f' data-nav-anchor="{anchor}">{pid_esc}</a>'
+    name = _display_name(quote.participant_id, display_names)
+    speaker_badge = _split_badge_html(
+        quote.participant_id,
+        name if name != quote.participant_id else None,
+        nav_session=sid_esc,
+        nav_anchor=anchor,
     )
 
     # AI badge (sentiment only — lightweight).
@@ -1650,8 +1665,8 @@ def _render_transcript_page(
         else:
             _w(f'<span class="timecode">{_tc_brackets(tc)}</span>')
         _w(
-            f'<span class="segment-speaker bn-person-badge" data-participant="{_esc(code)}">'
-            f'<span class="badge">{_esc(code)}</span></span>'
+            f'<span class="segment-speaker" data-participant="{_esc(code)}">'
+            f'{_split_badge_html(code)}</span>'
         )
         _w('<div class="segment-body">')
 
@@ -2190,8 +2205,8 @@ def _render_inline_transcript(
         else:
             w(f'<span class="timecode">{_tc_brackets(tc)}</span>')
         w(
-            f'<span class="segment-speaker bn-person-badge" data-participant="{_esc(code)}">'
-            f'<span class="badge">{_esc(code)}</span></span>'
+            f'<span class="segment-speaker" data-participant="{_esc(code)}">'
+            f'{_split_badge_html(code)}</span>'
         )
         w('<div class="segment-body">')
 
@@ -2301,6 +2316,44 @@ def _display_name(
     return pid
 
 
+def _split_badge_html(
+    code: str,
+    name: str | None = None,
+    *,
+    href: str | None = None,
+    nav_session: str | None = None,
+    nav_anchor: str | None = None,
+) -> str:
+    """Render a two-tone split speaker badge.
+
+    Left half shows the speaker code (e.g. p2), right half shows the name
+    (e.g. Sarah).  When name is absent or matches code, only the code half
+    renders (with full border-radius via CSS :last-child).
+
+    Optional linking: *nav_session* + *nav_anchor* produce a data-nav link
+    (session drill-down); *href* produces a plain anchor.
+    """
+    code_esc = _esc(code)
+    name_part = ""
+    if name and name != code:
+        name_part = f'<span class="bn-speaker-badge-name">{_esc(name)}</span>'
+    badge = (
+        f'<span class="bn-person-badge">'
+        f'<span class="bn-speaker-badge--split">'
+        f'<span class="bn-speaker-badge-code">{code_esc}</span>'
+        f"{name_part}</span></span>"
+    )
+    if nav_session:
+        return (
+            f'<a href="#" class="speaker-link" '
+            f'data-nav-session="{_esc(nav_session)}" '
+            f'data-nav-anchor="{_esc(nav_anchor or "")}">{badge}</a>'
+        )
+    if href:
+        return f'<a href="{_esc(href)}" class="speaker-link">{badge}</a>'
+    return badge
+
+
 def _oxford_list(names: list[str]) -> str:
     """Join names with Oxford commas: 'A', 'A and B', 'A, B, and C'."""
     if len(names) <= 1:
@@ -2340,17 +2393,21 @@ def _session_duration(
 def _format_quote_html(
     quote: ExtractedQuote,
     video_map: dict[str, str] | None = None,
+    display_names: dict[str, str] | None = None,
 ) -> str:
     """Render a single quote as an HTML blockquote."""
     quote_id = f"q-{quote.participant_id}-{int(quote.start_timecode)}"
     tc_html = _timecode_html(quote, video_map)
     tc = format_timecode(quote.start_timecode)
 
-    # Speaker link navigates to Sessions tab → session drill-down → timecode
+    # Speaker split badge → navigates to Sessions tab → session drill-down
     pid_esc, sid_esc, anchor = _session_anchor(quote)
-    speaker_link = (
-        f'<a href="#" class="speaker-link" data-nav-session="{sid_esc}"'
-        f' data-nav-anchor="{anchor}">{pid_esc}</a>'
+    name = _display_name(quote.participant_id, display_names)
+    speaker_link = _split_badge_html(
+        quote.participant_id,
+        name if name != quote.participant_id else None,
+        nav_session=sid_esc,
+        nav_anchor=anchor,
     )
 
     tmpl = _jinja_env.get_template("quote_card.html")
@@ -2565,6 +2622,7 @@ def _has_rewatch_quotes(quotes: list[ExtractedQuote]) -> bool:
 def _build_rewatch_html(
     quotes: list[ExtractedQuote],
     video_map: dict[str, str] | None = None,
+    display_names: dict[str, str] | None = None,
 ) -> str:
     """Build the rewatch list (friction points) as HTML."""
     from bristlenose.models import Sentiment
@@ -2596,7 +2654,13 @@ def _build_rewatch_html(
     for q in flagged:
         if q.participant_id != current_pid:
             if current_pid:
-                groups.append({"pid": _esc(current_pid), "entries": current_items})
+                _name = _display_name(current_pid, display_names)
+                groups.append({
+                    "pid": _split_badge_html(
+                        current_pid, _name if _name != current_pid else None,
+                    ),
+                    "entries": current_items,
+                })
             current_pid = q.participant_id
             current_items = []
         tc = format_timecode(q.start_timecode)
@@ -2633,7 +2697,13 @@ def _build_rewatch_html(
             "tc_html": tc_html, "reason": reason, "snippet_html": snippet_html,
         })
     if current_pid:
-        groups.append({"pid": _esc(current_pid), "entries": current_items})
+        _name = _display_name(current_pid, display_names)
+        groups.append({
+            "pid": _split_badge_html(
+                current_pid, _name if _name != current_pid else None,
+            ),
+            "entries": current_items,
+        })
 
     tmpl = _jinja_env.get_template("friction_points.html")
     return tmpl.render(groups=groups).strip("\n")
@@ -2742,7 +2812,7 @@ def _build_task_outcome_html(
         journey_str = " &rarr; ".join(participant_screens[pid])
         row_data.append({
             "session": _esc(session_num),
-            "pid": _esc(name),
+            "pid": _split_badge_html(pid, name if name != pid else None),
             "stages": journey_str,
         })
 

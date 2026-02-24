@@ -347,10 +347,10 @@ def test_dashboard_with_people_has_session_table(tmp_path: Path) -> None:
 
 
 def test_session_table_has_speaker_badges(tmp_path: Path) -> None:
-    """Session table renders speaker code badges for each participant."""
+    """Session table renders split speaker badges for each participant."""
     html = _render_report_with_people(tmp_path)
-    assert '<span class="badge">p1</span>' in html
-    assert '<span class="badge">p2</span>' in html
+    assert '<span class="bn-speaker-badge-code">p1</span>' in html
+    assert '<span class="bn-speaker-badge-code">p2</span>' in html
 
 
 def test_session_table_single_moderator_omitted_from_rows(tmp_path: Path) -> None:
@@ -358,10 +358,14 @@ def test_session_table_single_moderator_omitted_from_rows(tmp_path: Path) -> Non
     html = _render_report_with_people(tmp_path)
     # m1 should be in the header but not as a row badge.
     assert "Moderated by" in html
-    # The session table is rendered twice (Sessions tab + Project tab dashboard),
-    # so m1 badge appears twice (once per header). But it should not appear in
-    # bn-person-badge divs (row speaker lists).
-    assert '<div class="bn-person-badge"><span class="badge">m1</span>' not in html
+    # m1 appears in the "Moderated by" header as a split badge, but must NOT
+    # appear in the per-row session-speakers cells.
+    import re
+    speaker_cells = re.findall(
+        r'<td class="bn-session-speakers">(.*?)</td>', html, re.DOTALL,
+    )
+    for cell in speaker_cells:
+        assert "m1" not in cell, "m1 should be omitted from row speaker cells"
 
 
 def test_session_table_has_journey(tmp_path: Path) -> None:

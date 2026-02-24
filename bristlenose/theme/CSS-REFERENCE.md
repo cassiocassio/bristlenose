@@ -166,7 +166,7 @@ The sessions table in both the Sessions tab and Project tab. Shows per-session m
 
 - **`.bn-session-id`** — `#N` link, accent colour, `white-space: nowrap`. Links to inline transcript via `data-session-link`
 - **`.bn-session-speakers`** — `display: flex; flex-direction: column; gap: 0.35rem`. Contains one `.bn-person-badge` per speaker (vertically stacked)
-- **`.bn-person-badge`** (molecule) — `inline-flex, align-items: center, gap: 0.4rem, white-space: nowrap`. Contains `.badge` (flex-shrink: 0) + `.bn-person-badge-name` (font-weight: var(--bn-weight-emphasis) / 490)
+- **`.bn-person-badge`** (molecule) — two-tone split speaker badge. `inline-flex, align-items: center, gap: 0, white-space: nowrap`. Contains `.bn-speaker-badge--split` wrapper with `.bn-speaker-badge-code` (left half: mono font, badge-bg, bordered) + optional `.bn-speaker-badge-name` (right half: body font, quote-bg, bordered). When code-only, CSS `:last-child` gives full border-radius. Hover on linked badges lightens name bg → `--bn-colour-bg`, darkens code text → `--bn-colour-text`. Display toggle: `[data-person-display="code"]` hides names via CSS. Settings stored via `createStore("bristlenose-person-display")` in `person-display.js`
 - **`.bn-session-meta`** — Start date cell, contains date div + optional `.bn-session-journey`
 - **`.bn-session-journey`** — user journey path below start date. `font-size: 0.82rem`, `color: var(--bn-colour-muted)`, `white-space: normal` (wraps). Content: "Homepage → Tropical Fish → Equipment → …"
 - **`.bn-session-duration`** — `text-align: right` on both `<th>` and `<td>`. Format: `MM:SS` or `HH:MM:SS`

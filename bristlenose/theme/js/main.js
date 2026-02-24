@@ -24,6 +24,7 @@
  *   focus.js        → initFocus(), setFocus(), isEditing()
  *   feedback.js     → initFeedback(), showFeedbackModal()
  *   settings.js     → initSettings()               (depends on storage.js)
+ *   person-display.js → initPersonDisplay()        (depends on storage.js)
  *   global-nav.js   → initGlobalNav(), switchToTab()
  *   transcript-names.js → initTranscriptNames()
  *   transcript-annotations.js → initTranscriptAnnotations()
@@ -56,6 +57,7 @@ var _bootFns = [
   ['initJourneySort', initJourneySort],
   ['initAnalysis', initAnalysis],
   ['initSettings', initSettings],
+  ['initPersonDisplay', initPersonDisplay],
   ['initGlobalNav', initGlobalNav],
 ];
 for (var _bi = 0; _bi < _bootFns.length; _bi++) {

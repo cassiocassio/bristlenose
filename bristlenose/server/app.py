@@ -145,6 +145,30 @@ def _transform_report_html(html: str, project_dir: Path | None) -> str:
         r"<!-- bn-user-journeys -->.*?<!-- /bn-user-journeys -->",
         "", html, flags=re.DOTALL,
     )
+    # Remove inline Jinja2 transcript pages — React TranscriptPage island on
+    # the standalone transcript_*.html pages is the primary rendering path.
+    # Stripping these also disables vanilla JS drill-down (global-nav.js
+    # _initSessionDrillDown exits early when no .bn-session-page elements
+    # exist), so session link clicks navigate to the real transcript URLs.
+    # Match comment markers (new renders) or raw HTML (pre-existing reports).
+    html = re.sub(
+        r"<!-- bn-inline-transcripts -->.*?<!-- /bn-inline-transcripts -->",
+        "", html, flags=re.DOTALL,
+    )
+    html = re.sub(
+        r'<div class="bn-session-page"[^>]*>.*?</section>\s*</div>',
+        "", html, flags=re.DOTALL,
+    )
+    # Remove the vanilla JS session subnav (back button + label) — React
+    # sticky header on transcript pages replaces this.
+    html = re.sub(
+        r"<!-- bn-session-subnav -->.*?<!-- /bn-session-subnav -->",
+        "", html, flags=re.DOTALL,
+    )
+    html = re.sub(
+        r'<div class="bn-session-subnav"[^>]*>.*?</div>',
+        "", html, flags=re.DOTALL,
+    )
     api_base_script = (
         "<script>window.BRISTLENOSE_API_BASE = '/api/projects/1';</script>\n"
     )

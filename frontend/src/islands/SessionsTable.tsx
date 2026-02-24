@@ -256,10 +256,7 @@ function SessionRow({ session }: { session: SessionResponse }) {
   return (
     <tr data-session={session_id}>
       <td className="bn-session-id">
-        <a
-          href={`sessions/transcript_${session_id}.html`}
-          data-session-link={session_id}
-        >
+        <a href={`sessions/transcript_${session_id}.html`}>
           #{session_number}
         </a>
       </td>

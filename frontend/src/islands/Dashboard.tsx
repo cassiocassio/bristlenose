@@ -43,7 +43,8 @@ function scrollToAnchor(anchorId: string, opts?: { block?: string; highlight?: b
 }
 
 function navigateToSession(sid: string, anchorId?: string) {
-  window.navigateToSession?.(sid, anchorId);
+  const anchor = anchorId ? `#${anchorId}` : "";
+  window.location.href = `sessions/transcript_${sid}.html${anchor}`;
 }
 
 function seekTo(pid: string, seconds: number) {
@@ -237,19 +238,9 @@ function CompactSessionRow({
     displayFilename !== source_filename ? source_filename : undefined;
 
   return (
-    <tr
-      data-session={session_id}
-      onClick={() => navigateToSession(session_id)}
-    >
+    <tr data-session={session_id}>
       <td className="bn-session-id">
-        <a
-          href={`sessions/transcript_${session_id}.html`}
-          data-session-link={session_id}
-          onClick={(e) => {
-            e.preventDefault();
-            navigateToSession(session_id);
-          }}
-        >
+        <a href={`sessions/transcript_${session_id}.html`}>
           #{session_number}
         </a>
       </td>
@@ -366,19 +357,18 @@ function FeaturedQuote({ quote }: { quote: FeaturedQuoteResponse }) {
         )}
 
         <a
-          href="#"
-          className="badge speaker-link"
-          data-nav-session={quote.session_id}
-          data-nav-anchor={`t-${quote.session_id}-${Math.floor(quote.start_timecode)}`}
-          onClick={(e) => {
-            e.preventDefault();
-            navigateToSession(
-              quote.session_id,
-              `t-${quote.session_id}-${Math.floor(quote.start_timecode)}`,
-            );
-          }}
+          href={`sessions/transcript_${quote.session_id}.html#t-${quote.session_id}-${Math.floor(quote.start_timecode)}`}
+          className="speaker-link"
         >
-          {quote.participant_id}
+          <PersonBadge
+            code={quote.participant_id}
+            role="participant"
+            name={
+              quote.speaker_name !== quote.participant_id
+                ? quote.speaker_name
+                : undefined
+            }
+          />
         </a>
 
         {quote.sentiment && (

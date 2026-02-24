@@ -388,6 +388,8 @@ Edit `bristlenose/__init__.py` (the single source of truth for version), commit,
 
 **0.10.3** — _21 Feb 2026_
 
+- Split speaker badges — two-tone code+name pills across all surfaces, with "Code and name / Code only" settings toggle
+- Always-on sticky transcript header with session selector; serve-mode session links navigate to React transcript pages
 - `bristlenose status` command — read-only project status from the manifest with session counts, intermediate file validation, and `-v` per-session detail
 - Pre-run resume summary — one-line status message when resuming an interrupted pipeline run
 - AutoCode frontend — ✦ button triggers LLM tag application, progress toast, confidence-aware threshold review dialog, proposed badges on quotes with accept/deny

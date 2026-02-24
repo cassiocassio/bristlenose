@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bracket Colour Exploration — Bristlenose Design System</title>
+<style>
+/* ── Tokens ── */
+:root {
+    --bn-font-body: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
+    --bn-colour-bg: #ffffff;
+    --bn-colour-text: #1a1a1a;
+    --bn-colour-muted: #6b7280;
+    --bn-colour-border: #e5e7eb;
+    --bn-colour-quote-bg: #f9fafb;
+    --bn-colour-editing-bg: #fffbe6;
+    --bn-colour-editing-border: #e5e0c0;
+    --bn-colour-accent: #2563eb;
+    --bn-weight-strong: 700;
+    --bn-space-xs: 0.15rem;
+    --bn-radius-sm: 3px;
+}
+
+@supports (color: light-dark(#000, #fff)) {
+    :root {
+        color-scheme: light dark;
+        --bn-colour-bg:            light-dark(#ffffff, #111111);
+        --bn-colour-text:          light-dark(#1a1a1a, #e5e7eb);
+        --bn-colour-muted:         light-dark(#6b7280, #9ca3af);
+        --bn-colour-border:        light-dark(#e5e7eb, #2d2d2d);
+        --bn-colour-quote-bg:      light-dark(#f9fafb, #1a1a1a);
+        --bn-colour-editing-bg:    light-dark(#fffbe6, #2a2614);
+        --bn-colour-editing-border:light-dark(#e5e0c0, #4a4528);
+        --bn-colour-accent:        light-dark(#2563eb, #60a5fa);
+    }
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+    font-family: var(--bn-font-body);
+    font-size: 0.9rem;
+    line-height: 1.55;
+    color: var(--bn-colour-text);
+    background: var(--bn-colour-bg);
+    padding: 2rem;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+h1 {
+    font-size: 1.3rem;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+}
+
+.subtitle {
+    color: var(--bn-colour-muted);
+    margin-bottom: 1.5rem;
+    max-width: 50em;
+}
+
+/* ── Theme toggle ── */
+.controls {
+    display: flex;
+    gap: 0.75rem;
+    align-items: center;
+    margin-bottom: 2rem;
+}
+
+.toggle-btn {
+    font-family: inherit;
+    font-size: 0.8rem;
+    padding: 0.35rem 0.75rem;
+    border: 1px solid var(--bn-colour-border);
+    border-radius: 4px;
+    background: var(--bn-colour-quote-bg);
+    color: var(--bn-colour-text);
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+.toggle-btn:hover { border-color: var(--bn-colour-accent); }
+.toggle-btn.active {
+    background: var(--bn-colour-accent);
+    color: #fff;
+    border-color: var(--bn-colour-accent);
+}
+
+/* ── Grid ── */
+.grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.25rem;
+}
+
+.card {
+    background: var(--bn-colour-quote-bg);
+    border: 1px solid var(--bn-colour-border);
+    border-radius: 6px;
+    padding: 1rem 1.25rem;
+    position: relative;
+}
+
+.card.baseline {
+    border-color: var(--bn-colour-accent);
+    border-width: 2px;
+}
+
+.card-label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.65rem;
+}
+
+.card-name {
+    font-weight: 600;
+    font-size: 0.85rem;
+}
+
+.card-meta {
+    color: var(--bn-colour-muted);
+    font-size: 0.75rem;
+    font-family: "SF Mono", "Fira Code", monospace;
+}
+
+.baseline-badge {
+    font-size: 0.65rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--bn-colour-accent);
+    border: 1px solid var(--bn-colour-accent);
+    border-radius: 3px;
+    padding: 0.1rem 0.3rem;
+}
+
+/* ── Quote text simulation ── */
+.quote-sim {
+    font-size: 0.9rem;
+    line-height: 1.55;
+}
+
+.excluded {
+    color: var(--bn-colour-muted);
+    text-decoration: line-through;
+    text-decoration-color: var(--bn-colour-muted);
+    text-decoration-thickness: 1px;
+}
+
+.bracket {
+    display: inline;
+    font-size: 1.15em;
+    line-height: 1;
+    cursor: col-resize;
+    user-select: none;
+    padding: 0 1px;
+    vertical-align: baseline;
+}
+
+.included {
+    background: var(--bn-colour-editing-bg);
+    border-radius: 2px;
+    padding: 1px 0;
+}
+
+.speaker {
+    color: var(--bn-colour-muted);
+    font-size: 0.85rem;
+    white-space: nowrap;
+}
+
+.speaker-code {
+    display: inline-block;
+    background: #e0e7ff;
+    color: #3730a3;
+    font-size: 0.7rem;
+    font-weight: 600;
+    padding: 0.1rem 0.35rem;
+    border-radius: 3px;
+    vertical-align: baseline;
+}
+
+@supports (color: light-dark(#000, #fff)) {
+    .speaker-code {
+        background: light-dark(#e0e7ff, #1e1b4b);
+        color: light-dark(#3730a3, #a5b4fc);
+    }
+}
+
+/* ── Section dividers ── */
+.section-title {
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--bn-colour-muted);
+    margin: 2rem 0 1rem;
+    padding-bottom: 0.35rem;
+    border-bottom: 1px solid var(--bn-colour-border);
+    grid-column: 1 / -1;
+}
+
+/* ── Swatch ── */
+.swatch {
+    display: inline-block;
+    width: 14px;
+    height: 14px;
+    border-radius: 3px;
+    vertical-align: middle;
+    margin-right: 0.3rem;
+    border: 1px solid rgba(0,0,0,0.1);
+}
+
+@supports (color: light-dark(#000, #fff)) {
+    .swatch {
+        border-color: light-dark(rgba(0,0,0,0.1), rgba(255,255,255,0.15));
+    }
+}
+</style>
+</head>
+<body>
+
+<h1>Bracket Colour Exploration</h1>
+<p class="subtitle">
+    Each card shows the same quote in editing state with different <code>[</code>&thinsp;<code>]</code>
+    bracket colours. The brackets should read as part of the editing apparatus — a visual set with
+    the yellow "accepted text" background. We want stronger visibility without losing the warm amber family.
+</p>
+
+<div class="controls">
+    <button class="toggle-btn active" data-scheme="light" onclick="setScheme('light')">Light</button>
+    <button class="toggle-btn" data-scheme="dark" onclick="setScheme('dark')">Dark</button>
+</div>
+
+<div class="grid" id="grid">
+    <!-- Cards injected by JS -->
+</div>
+
+<script>
+// ── Colour options ──────────────────────────────────────────────────────────
+const OPTIONS = [
+    // [name, lightHex, darkHex, weight, section]
+    // ── Baseline ──
+    ["Current gold",      "#c9a63c", "#d4b84a", 700, "Baseline", true],
+
+    // ── Darker (same hue) ──
+    ["Darker gold",       "#b8942e", "#c9a63c", 700, "Darker — same hue"],
+    ["Dark amber",        "#a07d1c", "#c0992a", 700, null],
+    ["Deep honey",        "#8b6914", "#b8942e", 700, null],
+    ["Dark honey",        "#6d520f", "#a07d1c", 700, null],
+
+    // ── Warmer / more orange ──
+    ["Burnt amber",       "#c4850a", "#daa520", 700, "Warmer / more orange"],
+    ["Copper",            "#b87333", "#d4944a", 700, null],
+    ["Terracotta gold",   "#b07a20", "#cc9932", 700, null],
+
+    // ── Higher saturation ──
+    ["Vivid gold",        "#d4a017", "#e5b82a", 700, "Higher saturation"],
+    ["Strong marigold",   "#cc8800", "#e0a020", 700, null],
+    ["Bright amber",      "#e09f00", "#f0b830", 700, null],
+
+    // ── Weight variations (on dark amber #a07d1c) ──
+    ["Dark amber / 600",  "#a07d1c", "#c0992a", 600, "Weight variations on dark amber"],
+    ["Dark amber / 700",  "#a07d1c", "#c0992a", 700, null],
+    ["Dark amber / 800",  "#a07d1c", "#c0992a", 800, null],
+
+    // ── Weight variations (on strong marigold #cc8800) ──
+    ["Marigold / 600",    "#cc8800", "#e0a020", 600, "Weight variations on marigold"],
+    ["Marigold / 700",    "#cc8800", "#e0a020", 700, null],
+    ["Marigold / 800",    "#cc8800", "#e0a020", 800, null],
+];
+
+// Sample quote text
+const BEFORE = "So I think that maybe";
+const INCLUDED = "the biggest challenge for me was finding a good route that matched my ability level because there were so many options";
+const AFTER = "and I didn't know where to start really";
+
+function buildCard(opt, isDark) {
+    const [name, lightHex, darkHex, weight, section, isBaseline] = opt;
+    const hex = isDark ? darkHex : lightHex;
+
+    const card = document.createElement("div");
+    card.className = "card" + (isBaseline ? " baseline" : "");
+
+    // Label row
+    const label = document.createElement("div");
+    label.className = "card-label";
+    label.innerHTML = `
+        <span class="swatch" style="background:${hex}"></span>
+        <span class="card-name">${name}</span>
+        <span class="card-meta">${hex} · weight ${weight}</span>
+        ${isBaseline ? '<span class="baseline-badge">current</span>' : ''}
+    `;
+    card.appendChild(label);
+
+    // Quote simulation
+    const q = document.createElement("div");
+    q.className = "quote-sim";
+    q.innerHTML = `<span class="excluded">${BEFORE} </span><span class="bracket" style="color:${hex};font-weight:${weight}">[</span><span class="included">${INCLUDED}</span><span class="bracket" style="color:${hex};font-weight:${weight}">]</span><span class="excluded"> ${AFTER}</span> <span class="speaker">&mdash;&nbsp;<span class="speaker-code">P1</span> Alex</span>`;
+    card.appendChild(q);
+
+    return { card, section };
+}
+
+function render() {
+    const grid = document.getElementById("grid");
+    grid.innerHTML = "";
+    const isDark = document.documentElement.style.colorScheme === "dark";
+
+    let lastSection = null;
+    for (const opt of OPTIONS) {
+        const section = opt[4];
+        if (section && section !== lastSection) {
+            const divider = document.createElement("div");
+            divider.className = "section-title";
+            divider.textContent = section;
+            grid.appendChild(divider);
+            lastSection = section;
+        }
+        const { card } = buildCard(opt, isDark);
+        grid.appendChild(card);
+    }
+}
+
+function setScheme(scheme) {
+    document.documentElement.style.colorScheme = scheme;
+    document.querySelectorAll(".toggle-btn").forEach(b => {
+        b.classList.toggle("active", b.dataset.scheme === scheme);
+    });
+    render();
+}
+
+// Initial render
+render();
+</script>
+
+</body>
+</html>

@@ -2,10 +2,10 @@
  * QuoteGroup — a group of quote cards with editable heading,
  * optional description, and hidden-quotes counter.
  *
- * Owns local state for all quotes in the group (star, hidden,
- * edited text, tags, deleted badges). Mutations are optimistic:
- * React state updates immediately, then fire-and-forget PUT
- * calls sync to the server.
+ * Quote mutation state (star, hide, edit, tags, badges, proposals)
+ * lives in the shared QuotesStore (see contexts/QuotesContext.tsx).
+ * This component owns only presentation-level state: animations,
+ * heading edits, moderator questions, and counter dropdown.
  */
 
 import { useState, useCallback, useRef, useMemo, useLayoutEffect, useEffect } from "react";
@@ -13,48 +13,30 @@ import { Counter, EditableText } from "../components";
 import type { CounterItem } from "../components/Counter";
 import type {
   ModeratorQuestionResponse,
-  ProposedTagBrief,
   QuoteResponse,
-  TagResponse,
 } from "../utils/types";
 import {
-  acceptProposal,
-  denyProposal,
   getModeratorQuestion,
-  putHidden,
-  putStarred,
   putEdits,
-  putTags,
-  putDeletedBadges,
 } from "../utils/api";
 import { formatTimecode, stripSmartQuotes } from "../utils/format";
 import { QuoteCard } from "./QuoteCard";
+import {
+  useQuotesStore,
+  toggleStar,
+  toggleHide,
+  commitEdit,
+  addTag,
+  removeTag,
+  deleteBadge,
+  restoreBadges,
+  acceptProposedTag,
+  denyProposedTag,
+} from "../contexts/QuotesContext";
 
 // ── Animation constants ─────────────────────────────────────────────────
 
 const HIDE_DURATION = 300; // ms — matches vanilla JS _HIDE_DURATION
-
-// ── Per-quote local state ───────────────────────────────────────────────
-
-interface QuoteLocalState {
-  isStarred: boolean;
-  isHidden: boolean;
-  editedText: string | null;
-  tags: TagResponse[];
-  deletedBadges: string[];
-  proposedTags: ProposedTagBrief[];
-}
-
-function initialState(q: QuoteResponse): QuoteLocalState {
-  return {
-    isStarred: q.is_starred,
-    isHidden: q.is_hidden,
-    editedText: q.edited_text,
-    tags: [...q.tags],
-    deletedBadges: [...q.deleted_badges],
-    proposedTags: [...q.proposed_tags],
-  };
-}
 
 // ── Props ───────────────────────────────────────────────────────────────
 
@@ -73,14 +55,6 @@ interface QuoteGroupProps {
   tagVocabulary: string[];
   /** Whether video/audio is available (for timecode links). */
   hasMedia: boolean;
-  /** Called after any state mutation with the full state maps (for parent sync). */
-  onStateChange?: (stateMaps: {
-    hidden: Record<string, boolean>;
-    starred: Record<string, boolean>;
-    edits: Record<string, string>;
-    tags: Record<string, string[]>;
-    deletedBadges: Record<string, string[]>;
-  }) => void;
 }
 
 export function QuoteGroup({
@@ -92,22 +66,11 @@ export function QuoteGroup({
   tagVocabulary,
   hasMedia,
 }: QuoteGroupProps) {
-  // ── State ─────────────────────────────────────────────────────────────
+  // ── Shared quote state ─────────────────────────────────────────────────
 
-  const [stateMap, setStateMap] = useState<Record<string, QuoteLocalState>>(
-    () => {
-      const map: Record<string, QuoteLocalState> = {};
-      for (const q of quotes) {
-        map[q.dom_id] = initialState(q);
-      }
-      return map;
-    },
-  );
+  const store = useQuotesStore();
 
-  // Ref mirrors stateMap so handlers (including setTimeout closures)
-  // always see the latest state without stale-closure issues.
-  const stateRef = useRef(stateMap);
-  stateRef.current = stateMap;
+  // ── Local presentation state ───────────────────────────────────────────
 
   // Heading/description edit state.
   const [headingText, setHeadingText] = useState(label);
@@ -189,8 +152,8 @@ export function QuoteGroup({
   // ── Derived ───────────────────────────────────────────────────────────
 
   const hiddenQuotes = useMemo(
-    () => quotes.filter((q) => stateMap[q.dom_id]?.isHidden),
-    [quotes, stateMap],
+    () => quotes.filter((q) => !!store.hidden[q.dom_id]),
+    [quotes, store.hidden],
   );
 
   const counterItems: CounterItem[] = useMemo(
@@ -202,11 +165,11 @@ export function QuoteGroup({
         endSeconds: q.end_timecode,
         participantId: q.participant_id,
         previewText: stripSmartQuotes(
-          stateMap[q.dom_id]?.editedText || q.text,
+          store.edits[q.dom_id] || q.text,
         ),
         hasMedia,
       })),
-    [hiddenQuotes, stateMap, hasMedia],
+    [hiddenQuotes, store.edits, hasMedia],
   );
 
   // Tag name → colour lookup from existing quote data (for manual tag add).
@@ -227,30 +190,13 @@ export function QuoteGroup({
     return map;
   }, [quotes]);
 
-  // ── Mutation helpers ──────────────────────────────────────────────────
-
-  /** Update one quote's local state (no API call). */
-  const updateQuote = useCallback(
-    (
-      domId: string,
-      updater: (prev: QuoteLocalState) => QuoteLocalState,
-    ) => {
-      setStateMap((prev) => ({ ...prev, [domId]: updater(prev[domId]) }));
-    },
-    [],
-  );
+  // ── Mutation handlers ──────────────────────────────────────────────────
 
   const handleToggleStar = useCallback(
     (domId: string, newState: boolean) => {
-      updateQuote(domId, (s) => ({ ...s, isStarred: newState }));
-      const starred: Record<string, boolean> = {};
-      for (const [id, s] of Object.entries(stateRef.current)) {
-        const val = id === domId ? newState : s.isStarred;
-        if (val) starred[id] = true;
-      }
-      putStarred(starred);
+      toggleStar(domId, newState);
     },
-    [updateQuote],
+    [],
   );
 
   const handleToggleHide = useCallback(
@@ -310,37 +256,25 @@ export function QuoteGroup({
           setTimeout(() => ghost.remove(), HIDE_DURATION + 50);
         }
 
-        // After animation, finalise hidden state.
+        // After animation, finalise hidden state in the store.
         const timer = setTimeout(() => {
           setHidingIds((prev) => {
             const next = new Set(prev);
             next.delete(domId);
             return next;
           });
-          updateQuote(domId, (s) => ({ ...s, isHidden: true }));
-          const hidden: Record<string, boolean> = {};
-          for (const [id, s] of Object.entries(stateRef.current)) {
-            const val = id === domId ? true : s.isHidden;
-            if (val) hidden[id] = true;
-          }
-          putHidden(hidden);
+          toggleHide(domId, true);
           hideTimers.current.delete(domId);
         }, HIDE_DURATION);
         hideTimers.current.set(domId, timer);
       } else {
         // ── Unhide: fly-down from badge ─────────────────────────────────
         pendingUnhides.current.add(domId);
-        updateQuote(domId, (s) => ({ ...s, isHidden: false }));
+        toggleHide(domId, false);
         setUnhideVersion((v) => v + 1);
-        const hidden: Record<string, boolean> = {};
-        for (const [id, s] of Object.entries(stateRef.current)) {
-          const val = id === domId ? false : s.isHidden;
-          if (val) hidden[id] = true;
-        }
-        putHidden(hidden);
       }
     },
-    [updateQuote],
+    [],
   );
 
   // Fly-down animation: runs after unhidden quotes enter the DOM.
@@ -408,115 +342,56 @@ export function QuoteGroup({
 
   const handleEditCommit = useCallback(
     (domId: string, newText: string) => {
-      updateQuote(domId, (s) => ({ ...s, editedText: newText }));
-      const edits: Record<string, string> = {};
-      for (const [id, s] of Object.entries(stateRef.current)) {
-        const text = id === domId ? newText : s.editedText;
-        if (text) edits[id] = text;
-      }
-      putEdits(edits);
+      commitEdit(domId, newText);
     },
-    [updateQuote],
+    [],
   );
 
   const handleTagAdd = useCallback(
     (domId: string, tagName: string) => {
       const ci = tagColourMap[tagName];
-      updateQuote(domId, (s) => ({
-        ...s,
-        tags: [
-          ...s.tags,
-          {
-            name: tagName,
-            codebook_group: "Uncategorised",
-            colour_set: ci?.colour_set ?? "",
-            colour_index: ci?.colour_index ?? 0,
-          },
-        ],
-      }));
-      const tags: Record<string, string[]> = {};
-      for (const [id, s] of Object.entries(stateRef.current)) {
-        const names =
-          id === domId
-            ? [...s.tags.map((t) => t.name), tagName]
-            : s.tags.map((t) => t.name);
-        if (names.length > 0) tags[id] = names;
-      }
-      putTags(tags);
+      addTag(domId, {
+        name: tagName,
+        codebook_group: "Uncategorised",
+        colour_set: ci?.colour_set ?? "",
+        colour_index: ci?.colour_index ?? 0,
+      });
     },
-    [updateQuote, tagColourMap],
+    [tagColourMap],
   );
 
   const handleTagRemove = useCallback(
     (domId: string, tagName: string) => {
-      updateQuote(domId, (s) => ({
-        ...s,
-        tags: s.tags.filter((t) => t.name !== tagName),
-      }));
-      const tags: Record<string, string[]> = {};
-      for (const [id, s] of Object.entries(stateRef.current)) {
-        const names =
-          id === domId
-            ? s.tags.filter((t) => t.name !== tagName).map((t) => t.name)
-            : s.tags.map((t) => t.name);
-        if (names.length > 0) tags[id] = names;
-      }
-      putTags(tags);
+      removeTag(domId, tagName);
     },
-    [updateQuote],
+    [],
   );
 
   const handleBadgeDelete = useCallback(
     (domId: string, sentiment: string) => {
-      updateQuote(domId, (s) => ({
-        ...s,
-        deletedBadges: [...s.deletedBadges, sentiment],
-      }));
-      const badges: Record<string, string[]> = {};
-      for (const [id, s] of Object.entries(stateRef.current)) {
-        const db =
-          id === domId ? [...s.deletedBadges, sentiment] : s.deletedBadges;
-        if (db.length > 0) badges[id] = db;
-      }
-      putDeletedBadges(badges);
+      deleteBadge(domId, sentiment);
     },
-    [updateQuote],
+    [],
   );
 
   const handleBadgeRestore = useCallback(
     (domId: string) => {
-      updateQuote(domId, (s) => ({ ...s, deletedBadges: [] }));
-      const badges: Record<string, string[]> = {};
-      for (const [id, s] of Object.entries(stateRef.current)) {
-        const db = id === domId ? [] : s.deletedBadges;
-        if (db.length > 0) badges[id] = db;
-      }
-      putDeletedBadges(badges);
+      restoreBadges(domId);
     },
-    [updateQuote],
+    [],
   );
 
   // ── Proposed tag handlers ─────────────────────────────────────────────
 
   const handleProposedAccept = useCallback(
     (domId: string, proposalId: number, tagName: string) => {
-      // Optimistically: remove proposed badge, add regular user tag.
-      // Carry colour from the proposal so the accepted tag keeps its colour.
-      updateQuote(domId, (s) => {
-        const pt = s.proposedTags.find((p) => p.id === proposalId);
-        return {
-          ...s,
-          proposedTags: s.proposedTags.filter((p) => p.id !== proposalId),
-          tags: [
-            ...s.tags,
-            {
-              name: tagName,
-              codebook_group: pt?.group_name ?? "Uncategorised",
-              colour_set: pt?.colour_set ?? "",
-              colour_index: pt?.colour_index ?? 0,
-            },
-          ],
-        };
+      // Find the proposal to carry its colour into the accepted tag.
+      const pt = (store.proposedTags[domId] || []).find((p) => p.id === proposalId);
+      acceptProposedTag(domId, proposalId, {
+        name: tagName,
+        codebook_group: pt?.group_name ?? "Uncategorised",
+        colour_set: pt?.colour_set ?? "",
+        colour_index: pt?.colour_index ?? 0,
       });
       // Trigger accept flash animation on the new badge.
       const flashKey = `${domId}:${tagName}`;
@@ -528,25 +403,15 @@ export function QuoteGroup({
           return next;
         });
       }, 500);
-      // acceptProposal handles server-side tag creation — no putTags needed.
-      acceptProposal(proposalId).catch((err) =>
-        console.error("Accept proposal failed:", err),
-      );
     },
-    [updateQuote],
+    [store.proposedTags],
   );
 
   const handleProposedDeny = useCallback(
     (domId: string, proposalId: number) => {
-      updateQuote(domId, (s) => ({
-        ...s,
-        proposedTags: s.proposedTags.filter((pt) => pt.id !== proposalId),
-      }));
-      denyProposal(proposalId).catch((err) =>
-        console.error("Deny proposal failed:", err),
-      );
+      denyProposedTag(domId, proposalId);
     },
-    [updateQuote],
+    [],
   );
 
   // ── Moderator question handlers ──────────────────────────────────────
@@ -715,8 +580,12 @@ export function QuoteGroup({
       )}
       <div className="quote-group" ref={groupRef}>
         {quotes.map((q) => {
-          const state = stateMap[q.dom_id];
-          if (!state) return null;
+          const isHidden = !!store.hidden[q.dom_id];
+          const isStarred = !!store.starred[q.dom_id];
+          const editedText = store.edits[q.dom_id] ?? null;
+          const userTags = store.tags[q.dom_id] ?? [];
+          const deletedBadgesList = store.deletedBadges[q.dom_id] ?? [];
+          const proposedTagsList = store.proposedTags[q.dom_id] ?? [];
 
           // Quote in hide animation — render with .bn-hiding class.
           if (hidingIds.has(q.dom_id)) {
@@ -733,18 +602,18 @@ export function QuoteGroup({
             <QuoteCard
               key={q.dom_id}
               quote={q}
-              displayText={state.editedText || q.text}
-              isStarred={state.isStarred}
-              isHidden={state.isHidden}
-              userTags={state.tags}
-              deletedBadges={state.deletedBadges}
-              isEdited={state.editedText != null && state.editedText !== q.text}
+              displayText={editedText || q.text}
+              isStarred={isStarred}
+              isHidden={isHidden}
+              userTags={userTags}
+              deletedBadges={deletedBadgesList}
+              isEdited={editedText != null && editedText !== q.text}
               tagVocabulary={tagVocabulary}
               sessionId={q.session_id}
               hasMedia={hasMedia}
-              proposedTags={state.proposedTags}
+              proposedTags={proposedTagsList}
               flashingTags={flashingTags}
-              moderatorQuestion={modQuestionCache[q.dom_id] ?? null}
+              moderatorQuestion={modQuestionCache[q.dom_id]}
               isQuestionOpen={openQuestions.has(q.dom_id)}
               isPillVisible={pillVisibleFor === q.dom_id}
               onToggleStar={handleToggleStar}

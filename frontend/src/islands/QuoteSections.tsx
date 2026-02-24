@@ -4,12 +4,14 @@
  *
  * Fetches quote data from the API and renders each section as a
  * QuoteGroup with editable headings, descriptions, and interactive
- * quote cards.
+ * quote cards.  On fetch, populates the shared QuotesStore so
+ * mutations are visible across all quote islands.
  */
 
 import { useCallback, useEffect, useState, useMemo } from "react";
 import { getCodebook } from "../utils/api";
 import type { QuotesListResponse } from "../utils/types";
+import { initFromQuotes } from "../contexts/QuotesContext";
 import { QuoteGroup } from "./QuoteGroup";
 
 interface QuoteSectionsProps {
@@ -20,10 +22,8 @@ export function QuoteSections({ projectId }: QuoteSectionsProps) {
   const [data, setData] = useState<QuotesListResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [codebookTagNames, setCodebookTagNames] = useState<string[]>([]);
-  // Incremented on each re-fetch to force QuoteGroup remount (resets local state).
-  const [dataVersion, setDataVersion] = useState(0);
 
-  const fetchQuotes = useCallback(() => {
+  const fetchQuotes = useCallback((replace = false) => {
     fetch(`/api/projects/${projectId}/quotes`)
       .then((res) => {
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -31,7 +31,11 @@ export function QuoteSections({ projectId }: QuoteSectionsProps) {
       })
       .then((json: QuotesListResponse) => {
         setData(json);
-        setDataVersion((v) => v + 1);
+        const allQuotes = [
+          ...json.sections.flatMap((s) => s.quotes),
+          ...json.themes.flatMap((t) => t.quotes),
+        ];
+        initFromQuotes(allQuotes, replace);
       })
       .catch((err: Error) => setError(err.message));
     getCodebook()
@@ -45,7 +49,7 @@ export function QuoteSections({ projectId }: QuoteSectionsProps) {
 
   // Re-fetch when another island (CodebookPanel) applies bulk autocode tags.
   useEffect(() => {
-    const handler = () => fetchQuotes();
+    const handler = () => fetchQuotes(true);
     document.addEventListener("bn:tags-changed", handler);
     return () => document.removeEventListener("bn:tags-changed", handler);
   }, [fetchQuotes]);
@@ -106,7 +110,7 @@ export function QuoteSections({ projectId }: QuoteSectionsProps) {
         const anchor = `section-${section.screen_label.toLowerCase().replace(/ /g, "-")}`;
         return (
           <QuoteGroup
-            key={`${section.cluster_id}-v${dataVersion}`}
+            key={section.cluster_id}
             anchor={anchor}
             label={section.screen_label}
             description={section.description}

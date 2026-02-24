@@ -56,12 +56,28 @@ On/off icon buttons extracted from `button.css` and `hidden-quotes.css` (Round 2
 
 ## editable-text.css (molecule)
 
-Shared editing and committed states for inline contenteditable fields. Extracted from `quote-actions.css` and `name-edit.css` (Round 2 CSS refactoring). Groups all editing visual patterns together.
+Shared editing and committed states for inline contenteditable fields. Extracted from `quote-actions.css` and `name-edit.css` (Round 2 CSS refactoring). Groups all editing visual patterns together — including the crop bracket handles for trim editing.
 
-- **Editing state** — yellow background (`--bn-colour-editing-bg`) + outline (`--bn-colour-editing-border`) + `border-radius: sm` + cursor: text. Applied to `blockquote.editing .quote-text`, `.editable-text.editing`, `.name-cell.editing .name-text`, `.role-cell.editing .role-text`
+- **Editing state** — yellow background (`--bn-colour-editing-bg`) + outline (`--bn-colour-editing-border`) + `border-radius: sm` + cursor: text. Applied to `.editable-text.editing`, `.name-cell.editing .name-text`, `.role-cell.editing .role-text`. Quote text editing uses `.crop-editable` instead (see below)
 - **`blockquote.editing .edit-pencil`** — pencil turns accent colour during edit
-- **Committed state** — dashed underline indicating text was edited. `.quote-text.edited` and `.editable-text.edited` use `--bn-colour-muted`; `.name-text.edited` and `.role-text.edited` use `--bn-colour-accent`
+- **`blockquote.editing .smart-quote`** — `display: none`. Smart quotes (`"` `"`) hide when editing — bracket handles `[` `]` replace them visually in the same position, preventing reflow
+- **Committed state** — dashed underline indicating text was edited. `.editable-text.edited` uses `--bn-colour-muted`; `.name-text.edited` and `.role-text.edited` use `--bn-colour-accent`
 - **React**: `EditableText` component with `committedClassName="edited"` (default)
+
+### Crop bracket handles (trim editing)
+
+Bracket handles `[` `]` let researchers drag-to-crop quote boundaries. Part of the editing apparatus visual set — the burnt amber bracket colour and yellow `editing-bg` are designed to read as a single "this is the live edit" signal. Colour explored in `docs/mockups/bracket-colour-explore.html`.
+
+- **`.crop-handle`** — inline bracket styling: `--bn-crop-handle-colour` (burnt amber light / bright amber dark), `font-size: 1.15em`, `font-weight: 700`, `cursor: col-resize`, `padding: 0 1px`. Hover darkens to `--bn-crop-handle-hover`
+- **`.crop-handle.dragging`** — accent colour while actively dragging
+- **`.crop-handle.bracket-delayed`** — `opacity: 0; visibility: hidden` (initial state, brackets appear with 250ms delay)
+- **`.crop-handle.bracket-visible`** — `opacity: 1` with `bracket-fade-in` 0.15s ease animation
+- **`.crop-editable`** — the contenteditable span in hybrid editing mode: yellow `editing-bg`, no horizontal padding, rounded corners
+- **`.crop-included-region`** — continuous yellow background wrapper around included words in crop mode (prevents white gaps between individual word spans)
+- **`.crop-word`** — inline word span for drag hit detection
+- **`.crop-word.excluded`** — grey strikethrough for words outside brackets: `--bn-colour-muted`, `text-decoration: line-through`
+- **`.crop-ellipsis`** — muted `…` character shown after commit when text was cropped
+- **`.undo-btn`** — absolute positioned at `right: 3.35rem; top: 0.65rem` (between hide and star buttons), `opacity: 0` by default → `1` on `blockquote:hover .undo-btn.visible`. Accent on hover. React: shown when `isEdited` is true
 
 ## hidden-quotes.css (molecule)
 

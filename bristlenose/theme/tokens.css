@@ -30,6 +30,9 @@
     --bn-colour-user-tag-text: #4b5563;
     --bn-colour-editing-bg: #fffbe6;
     --bn-colour-editing-border: #e5e0c0;
+    /* Crop bracket handles — burnt amber (light) / bright amber (dark).
+       Part of the editing apparatus visual set with the yellow editing-bg.
+       See docs/mockups/bracket-colour-explore.html for colour exploration. */
     --bn-crop-handle-colour: #c4850a;
     --bn-crop-handle-hover: #a06d08;
     --bn-colour-active-bg: #f0fdf4;

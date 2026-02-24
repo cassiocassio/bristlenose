@@ -59,7 +59,15 @@ python3 -m venv .venv
 
 This takes 30-60 seconds. If it fails, warn but don't stop — the worktree is still usable and venv can be retried manually.
 
-## Step 7: Push to origin
+## Step 7: Symlink trial-runs
+
+```bash
+ln -s /Users/cassio/Code/bristlenose/trial-runs "/Users/cassio/Code/bristlenose_branch $0/trial-runs"
+```
+
+This symlinks the main repo's `trial-runs/` directory (gitignored, contains large video files and rendered reports) so that `./scripts/dev.sh` works in the worktree. Don't copy — the directory contains video files. If the symlink fails (target doesn't exist), warn but continue — the user may not have trial data.
+
+## Step 8: Push to origin
 
 ```bash
 git push -u origin $0
@@ -67,7 +75,7 @@ git push -u origin $0
 
 This creates a remote tracking branch so collaborators can access it. If push fails (no network), warn but continue — the branch works fine locally.
 
-## Step 8: Update docs/BRANCHES.md
+## Step 9: Update docs/BRANCHES.md
 
 Read `docs/BRANCHES.md` to understand the current format. Then:
 
@@ -102,7 +110,7 @@ Read `docs/BRANCHES.md` to understand the current format. Then:
 
 Ask the user for the description and files before writing.
 
-## Step 9: Commit BRANCHES.md on main
+## Step 10: Commit BRANCHES.md on main
 
 ```bash
 cd /Users/cassio/Code/bristlenose
@@ -110,7 +118,7 @@ git add docs/BRANCHES.md
 git commit -m "add $0 branch to BRANCHES.md"
 ```
 
-## Step 10: Report
+## Step 11: Report
 
 Print a summary:
 

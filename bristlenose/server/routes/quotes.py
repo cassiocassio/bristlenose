@@ -108,6 +108,7 @@ class QuotesListResponse(BaseModel):
     total_quotes: int
     total_hidden: int
     total_starred: int
+    has_moderator: bool
 
 
 # ---------------------------------------------------------------------------
@@ -428,12 +429,26 @@ def get_quotes(
             1 for s in state_map.values() if s.is_starred
         )
 
+        # Check if any session has a moderator speaker (speaker_code starting
+        # with "m").  Solo sessions (no moderator) shouldn't offer the
+        # "Question?" pill on quotes.
+        has_moderator = db.query(
+            db.query(TranscriptSegment)
+            .join(SessionModel, TranscriptSegment.session_id == SessionModel.id)
+            .filter(
+                SessionModel.project_id == project_id,
+                TranscriptSegment.speaker_code.like("m%"),
+            )
+            .exists()
+        ).scalar() or False
+
         return QuotesListResponse(
             sections=sections,
             themes=themes,
             total_quotes=len(all_quotes),
             total_hidden=total_hidden,
             total_starred=total_starred,
+            has_moderator=has_moderator,
         )
     finally:
         db.close()

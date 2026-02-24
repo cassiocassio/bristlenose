@@ -357,6 +357,12 @@ These are documented here because the same patterns will recur in the production
 
 **Fix:** Render `'\u2026'` (real ellipsis character) flush against the adjacent word, no space.
 
+### 9. Enter to commit trim also opened the video player
+
+**Cause:** `handleCardKeyDown` (crop mode) and `handleEditKeyDown` (hybrid mode) called `e.preventDefault()` but not `e.stopPropagation()`. The keydown event continued bubbling through the blockquote. When Enter reaches a focused `<a>` element (the TimecodeLink), the browser synthesizes a native click event. `player.js`'s document-level click listener on `a.timecode` intercepted that synthetic click and called `seekTo()`, opening the video player.
+
+**Fix:** Add `e.stopPropagation()` alongside `e.preventDefault()` in both handlers. This stops the keydown event at the blockquote boundary, preventing Enter from reaching the TimecodeLink and synthesizing a click.
+
 ---
 
 ## Timecode identity

@@ -55,6 +55,8 @@ interface QuoteGroupProps {
   tagVocabulary: string[];
   /** Whether video/audio is available (for timecode links). */
   hasMedia: boolean;
+  /** Whether any session in this project has a moderator speaker. */
+  hasModerator: boolean;
 }
 
 export function QuoteGroup({
@@ -65,6 +67,7 @@ export function QuoteGroup({
   quotes,
   tagVocabulary,
   hasMedia,
+  hasModerator,
 }: QuoteGroupProps) {
   // ── Shared quote state ─────────────────────────────────────────────────
 
@@ -611,9 +614,10 @@ export function QuoteGroup({
               tagVocabulary={tagVocabulary}
               sessionId={q.session_id}
               hasMedia={hasMedia}
+              hasModerator={hasModerator}
               proposedTags={proposedTagsList}
               flashingTags={flashingTags}
-              moderatorQuestion={modQuestionCache[q.dom_id]}
+              moderatorQuestion={modQuestionCache[q.dom_id] ?? null}
               isQuestionOpen={openQuestions.has(q.dom_id)}
               isPillVisible={pillVisibleFor === q.dom_id}
               onToggleStar={handleToggleStar}

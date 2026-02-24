@@ -47,6 +47,7 @@ class TestQuotesEndpoint:
         assert "total_quotes" in data
         assert "total_hidden" in data
         assert "total_starred" in data
+        assert "has_moderator" in data
 
     def test_total_quotes_count(self, client: TestClient) -> None:
         data = client.get("/api/projects/1/quotes").json()

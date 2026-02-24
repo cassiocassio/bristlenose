@@ -118,6 +118,7 @@ export function QuoteSections({ projectId }: QuoteSectionsProps) {
             quotes={section.quotes}
             tagVocabulary={tagVocabulary}
             hasMedia={hasMedia}
+            hasModerator={data.has_moderator}
           />
         );
       })}

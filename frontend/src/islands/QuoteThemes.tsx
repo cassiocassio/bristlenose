@@ -115,6 +115,7 @@ export function QuoteThemes({ projectId }: QuoteThemesProps) {
             quotes={theme.quotes}
             tagVocabulary={tagVocabulary}
             hasMedia={hasMedia}
+            hasModerator={data.has_moderator}
           />
         );
       })}

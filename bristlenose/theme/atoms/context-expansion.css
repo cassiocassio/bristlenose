@@ -1,0 +1,87 @@
+/* ── Context expansion: chevron arrows + surrounding transcript ─────── */
+
+/*
+ * .timecode-expandable wraps the timecode element (TimecodeLink or
+ * plain <span>) and positions chevron arrows above/below it.
+ * padding-top/bottom create hover targets without shifting layout
+ * (negative margin cancels the extra space).
+ */
+.timecode-expandable {
+    position: relative;
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    padding-top: 0.75rem;
+    padding-bottom: 0.75rem;
+    margin-top: -0.75rem;
+    margin-bottom: -0.75rem;
+    flex-shrink: 0;
+}
+
+/* Arrow buttons — invisible until parent hover */
+.expand-arrow {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    background: none;
+    border: none;
+    padding: 0 0.25rem;
+    cursor: pointer;
+    font-size: 0.8rem;
+    line-height: 1;
+    color: var(--bn-colour-muted);
+    opacity: 0;
+    transition: opacity 0.15s ease;
+    z-index: 1;
+}
+
+.expand-arrow[data-dir="up"] {
+    top: 0;
+}
+
+.expand-arrow[data-dir="down"] {
+    bottom: 0;
+}
+
+/* Show arrows on hover over the expandable wrapper */
+.timecode-expandable:hover .expand-arrow {
+    opacity: 1;
+}
+
+.expand-arrow:hover {
+    color: var(--bn-colour-text);
+}
+
+.expand-arrow:disabled {
+    opacity: 0.3 !important;
+    cursor: default;
+    color: var(--bn-colour-muted);
+}
+
+/*
+ * Context segment — a muted transcript line shown above or below
+ * the quote. Uses the same .quote-row flex layout for grid alignment.
+ */
+.context-segment {
+    color: var(--bn-colour-muted);
+    font-size: 0.9rem;
+    padding: var(--bn-space-xs) 1rem;
+}
+
+.context-segment .quote-row {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.context-segment .timecode {
+    flex-shrink: 0;
+    opacity: 0.6;
+}
+
+.context-segment .context-text {
+    flex: 1;
+}
+
+.context-segment .context-speaker {
+    margin-right: 0.25rem;
+}

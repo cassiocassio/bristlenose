@@ -12,6 +12,7 @@
 import { useState, useCallback } from "react";
 import {
   Badge,
+  ContextSegment,
   EditableText,
   ExpandableTimecode,
   PersonBadge,
@@ -19,7 +20,7 @@ import {
   TimecodeLink,
   Toggle,
 } from "../components";
-import type { ModeratorQuestionResponse, ProposedTagBrief, QuoteResponse } from "../utils/types";
+import type { ModeratorQuestionResponse, ProposedTagBrief, QuoteResponse, TranscriptSegmentResponse } from "../utils/types";
 import { formatTimecode, stripSmartQuotes } from "../utils/format";
 import { getTagBg } from "../utils/colours";
 
@@ -92,6 +93,9 @@ interface QuoteCardProps {
   onExpandBelow?: () => void;
   exhaustedAbove?: boolean;
   exhaustedBelow?: boolean;
+  /** Resolved context segments to render inside the blockquote. */
+  contextAbove?: TranscriptSegmentResponse[];
+  contextBelow?: TranscriptSegmentResponse[];
 
   onToggleStar: (domId: string, newState: boolean) => void;
   onToggleHide: (domId: string, newState: boolean) => void;
@@ -145,6 +149,8 @@ export function QuoteCard({
   onExpandBelow,
   exhaustedAbove,
   exhaustedBelow,
+  contextAbove,
+  contextBelow,
 }: QuoteCardProps) {
   const [isEditingText, setIsEditingText] = useState(false);
   const [isTagInputOpen, setIsTagInputOpen] = useState(false);
@@ -222,6 +228,17 @@ export function QuoteCard({
       data-participant={quote.participant_id}
       className={`quote-card${isStarred ? " starred" : ""}`}
     >
+      {contextAbove && contextAbove.length > 0 && contextAbove.map((seg, i) => (
+        <ContextSegment
+          key={`above-${seg.segment_index}-${i}`}
+          speakerCode={seg.speaker_code}
+          isModerator={seg.is_moderator}
+          startTime={seg.start_time}
+          text={seg.text}
+          quoteParticipantId={quote.participant_id}
+          data-testid={`bn-quote-${domId}-ctx-above-${i}`}
+        />
+      ))}
       {quote.researcher_context && !hasModeratorContext && (
         <span className="context">[{quote.researcher_context}]</span>
       )}
@@ -407,6 +424,17 @@ export function QuoteCard({
           </div>
         </div>
       </div>
+      {contextBelow && contextBelow.length > 0 && contextBelow.map((seg, i) => (
+        <ContextSegment
+          key={`below-${seg.segment_index}-${i}`}
+          speakerCode={seg.speaker_code}
+          isModerator={seg.is_moderator}
+          startTime={seg.start_time}
+          text={seg.text}
+          quoteParticipantId={quote.participant_id}
+          data-testid={`bn-quote-${domId}-ctx-below-${i}`}
+        />
+      ))}
       <Toggle
         active={false}
         onToggle={() => onToggleHide(domId, true)}

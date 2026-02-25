@@ -7,23 +7,34 @@
 <style>
 /* ── Bristlenose design tokens (subset for this guide) ───────── */
 :root {
-    --bn-font-body: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
+    --bn-font-body: "Inter", "Segoe UI Variable", "Segoe UI", system-ui, -apple-system, sans-serif;
     --bn-font-mono: "SF Mono", "Fira Code", "Consolas", monospace;
+    --bn-weight-normal: 420;
+    --bn-weight-emphasis: 490;
+    --bn-weight-starred: 520;
+    --bn-weight-strong: 700;
     --bn-colour-bg: #ffffff;
     --bn-colour-text: #1a1a1a;
     --bn-colour-muted: #6b7280;
     --bn-colour-border: #e5e7eb;
     --bn-colour-border-hover: #d1d5db;
     --bn-colour-accent: #2563eb;
+    --bn-colour-hover: #e8f0fe;
     --bn-colour-quote-bg: #f9fafb;
     --bn-colour-badge-bg: #f3f4f6;
     --bn-colour-badge-text: #374151;
     --bn-colour-user-tag-bg: #f3f4f6;
+    --bn-colour-user-tag-text: #4b5563;
     --bn-colour-editing-bg: #fffbe6;
+    --bn-colour-editing-border: #e5e0c0;
+    --bn-crop-handle-colour: #c4850a;
+    --bn-colour-active-bg: #f0fdf4;
     --bn-colour-highlight: #fef08a;
+    --bn-colour-negative: #dc2626;
     --bn-colour-icon-idle: #c9ccd1;
     --bn-colour-shadow: rgba(0, 0, 0, 0.1);
     --bn-colour-starred: #999;
+    --bn-glow-colour: rgba(37, 99, 235, 0.12);
     --bn-radius-sm: 3px;
     --bn-radius-md: 6px;
     --bn-radius-lg: 8px;
@@ -56,7 +67,7 @@
     --bn-sentiment-confidence: #2563eb;
     --bn-sentiment-confidence-bg: #eff6ff;
 
-    /* Codebook sample */
+    /* Codebook sample tints */
     --bn-ux-1-bg: oklch(94% 0.03 225);
     --bn-ux-3-bg: oklch(94% 0.03 250);
     --bn-emo-1-bg: oklch(94% 0.03 340);
@@ -69,10 +80,11 @@
 
 body {
     font-family: var(--bn-font-body);
+    font-weight: var(--bn-weight-normal);
     color: var(--bn-colour-text);
     background: var(--bn-colour-bg);
     line-height: 1.6;
-    max-width: 72rem;
+    max-width: 76rem;
     margin: 0 auto;
     padding: 2rem 3rem;
 }
@@ -86,7 +98,7 @@ body {
 
 .guide-header h1 {
     font-size: 2rem;
-    font-weight: 700;
+    font-weight: var(--bn-weight-strong);
     letter-spacing: -0.02em;
     margin-bottom: 0.25rem;
 }
@@ -94,7 +106,7 @@ body {
 .guide-header .subtitle {
     color: var(--bn-colour-muted);
     font-size: 0.95rem;
-    max-width: 60ch;
+    max-width: 70ch;
 }
 
 .layer {
@@ -110,14 +122,14 @@ body {
 
 .layer-header h2 {
     font-size: 1.4rem;
-    font-weight: 700;
+    font-weight: var(--bn-weight-strong);
     letter-spacing: -0.01em;
 }
 
 .layer-number {
     font-family: var(--bn-font-mono);
     font-size: 0.75rem;
-    font-weight: 700;
+    font-weight: var(--bn-weight-strong);
     color: var(--bn-colour-muted);
     text-transform: uppercase;
     letter-spacing: 0.08em;
@@ -165,7 +177,7 @@ body {
 }
 
 .card-name {
-    font-weight: 600;
+    font-weight: var(--bn-weight-emphasis);
     font-size: 0.8rem;
     margin-bottom: 2px;
 }
@@ -180,6 +192,13 @@ body {
     font-family: var(--bn-font-mono);
     font-size: 0.65rem;
     color: var(--bn-colour-accent);
+    margin-top: 2px;
+}
+
+.card-react {
+    font-family: var(--bn-font-mono);
+    font-size: 0.65rem;
+    color: #059669;
     margin-top: 2px;
 }
 
@@ -206,9 +225,8 @@ body {
 
 .badge-user {
     background: var(--bn-colour-user-tag-bg);
-    color: var(--bn-colour-text);
-    font-weight: 400;
-    position: relative;
+    color: var(--bn-colour-user-tag-text);
+    font-weight: var(--bn-weight-normal);
 }
 
 .badge-add {
@@ -220,6 +238,13 @@ body {
 .badge-add:hover {
     border-color: var(--bn-colour-accent);
     color: var(--bn-colour-accent);
+}
+
+.badge-proposed {
+    border: 1px solid var(--bn-colour-border);
+    background: var(--bn-colour-quote-bg);
+    color: var(--bn-colour-badge-text);
+    position: relative;
 }
 
 /* Button */
@@ -234,6 +259,7 @@ body {
     color: var(--bn-colour-text);
     font-family: var(--bn-font-body);
     font-size: 0.78rem;
+    font-weight: var(--bn-weight-normal);
     cursor: pointer;
     transition: border-color var(--bn-transition-fast), background var(--bn-transition-fast);
     line-height: 1.2;
@@ -242,22 +268,10 @@ body {
     border-color: var(--bn-colour-border-hover);
     background: var(--bn-colour-quote-bg);
 }
-.toolbar-btn .toolbar-icon-svg {
-    flex-shrink: 0;
-}
-.toolbar-btn .toolbar-arrow {
-    flex-shrink: 0;
-    color: var(--bn-colour-icon-idle);
-}
-.toolbar-btn-toggle {
-    color: var(--bn-colour-muted);
-}
-.toolbar-btn-toggle.active {
-    border-color: var(--bn-colour-accent);
-    color: var(--bn-colour-accent);
-}
+.toolbar-btn .toolbar-icon-svg { flex-shrink: 0; }
+.toolbar-btn .toolbar-arrow { flex-shrink: 0; color: var(--bn-colour-icon-idle); }
 
-.star-btn, .edit-pencil {
+.star-btn, .edit-pencil, .hide-btn {
     background: none;
     border: none;
     cursor: pointer;
@@ -266,28 +280,35 @@ body {
     opacity: 0.4;
     transition: opacity var(--bn-transition-fast);
 }
-.star-btn:hover, .edit-pencil:hover { opacity: 1; }
+.star-btn:hover, .edit-pencil:hover, .hide-btn:hover { opacity: 1; }
 
-/* Input */
-.tag-input-box {
+/* Split speaker badge */
+.bn-speaker-badge--split {
     display: inline-flex;
-    align-items: center;
-    border: 1px solid var(--bn-colour-border);
     border-radius: var(--bn-radius-sm);
-    padding: 2px 6px;
-    background: var(--bn-colour-bg);
-    min-width: 8rem;
-}
-.tag-input {
-    border: none;
-    outline: none;
-    font-family: var(--bn-font-mono);
+    overflow: hidden;
     font-size: 0.72rem;
-    background: transparent;
-    color: var(--bn-colour-text);
-    width: 100%;
+    line-height: 1;
 }
-.tag-input::placeholder { color: var(--bn-colour-muted); }
+.bn-speaker-badge-code {
+    font-family: var(--bn-font-mono);
+    padding: var(--bn-space-xs) 0.4rem;
+    background: var(--bn-colour-badge-bg);
+    color: var(--bn-colour-badge-text);
+    border: 1px solid var(--bn-colour-border);
+    border-right: none;
+    border-radius: var(--bn-radius-sm) 0 0 var(--bn-radius-sm);
+}
+.bn-speaker-badge-name {
+    font-family: var(--bn-font-body);
+    font-weight: var(--bn-weight-emphasis);
+    padding: var(--bn-space-xs) 0.4rem;
+    background: var(--bn-colour-quote-bg);
+    color: var(--bn-colour-badge-text);
+    border: 1px solid var(--bn-colour-border);
+    border-left: none;
+    border-radius: 0 var(--bn-radius-sm) var(--bn-radius-sm) 0;
+}
 
 /* Timecode */
 .timecode {
@@ -306,10 +327,7 @@ body {
     border-radius: 0 var(--bn-radius-sm) var(--bn-radius-sm) 0;
     min-width: 2px;
 }
-.sentiment-bar-count {
-    font-size: 0.75rem;
-    font-weight: 600;
-}
+.sentiment-bar-count { font-size: 0.75rem; font-weight: var(--bn-weight-emphasis); }
 .sentiment-bar-label {
     display: inline-block;
     font-family: var(--bn-font-mono);
@@ -318,14 +336,6 @@ body {
     border-radius: var(--bn-radius-sm);
     background: var(--bn-colour-badge-bg);
     color: var(--bn-colour-badge-text);
-}
-
-/* Span bar */
-.span-bar {
-    width: 2px;
-    background: var(--bn-colour-border);
-    opacity: 0.5;
-    border-radius: 1px;
 }
 
 /* Toast */
@@ -348,16 +358,8 @@ body {
     max-width: 16rem;
     position: relative;
 }
-.modal-demo h3 {
-    font-size: 0.9rem;
-    font-weight: 600;
-    margin-bottom: 0.5rem;
-}
-.modal-demo p {
-    font-size: 0.78rem;
-    color: var(--bn-colour-muted);
-    margin-bottom: 0.75rem;
-}
+.modal-demo h3 { font-size: 0.9rem; font-weight: var(--bn-weight-emphasis); margin-bottom: 0.5rem; }
+.modal-demo p { font-size: 0.78rem; color: var(--bn-colour-muted); margin-bottom: 0.75rem; }
 .modal-demo-close {
     position: absolute;
     top: 0.5rem;
@@ -378,46 +380,83 @@ body {
     color: var(--bn-colour-text);
     cursor: pointer;
 }
-.bn-btn-primary {
-    background: var(--bn-colour-accent);
-    color: #ffffff;
-    border-color: var(--bn-colour-accent);
+.bn-btn-primary { background: var(--bn-colour-accent); color: #fff; border-color: var(--bn-colour-accent); }
+.bn-btn-danger { background: var(--bn-colour-negative); color: #fff; border-color: var(--bn-colour-negative); }
+
+/* Tag input */
+.tag-input-box {
+    display: inline-flex;
+    align-items: center;
+    border: 1px solid var(--bn-colour-border);
+    border-radius: var(--bn-radius-sm);
+    padding: 2px 6px;
+    background: var(--bn-colour-bg);
+    min-width: 8rem;
 }
-.bn-btn-danger {
-    background: #dc2626;
-    color: #ffffff;
-    border-color: #dc2626;
+.tag-input {
+    border: none; outline: none;
+    font-family: var(--bn-font-mono);
+    font-size: 0.72rem;
+    background: transparent;
+    color: var(--bn-colour-text);
+    width: 100%;
+}
+.tag-input::placeholder { color: var(--bn-colour-muted); }
+
+/* Thumbnail */
+.thumbnail {
+    width: 48px; height: 36px;
+    border-radius: var(--bn-radius-sm);
+    overflow: hidden;
+    background: var(--bn-colour-badge-bg);
+    display: flex; align-items: center; justify-content: center;
+}
+.thumbnail img { width: 100%; height: 100%; object-fit: cover; }
+.thumbnail-placeholder { color: var(--bn-colour-muted); font-size: 0.7rem; }
+
+/* Sparkline */
+.bn-sparkline {
+    display: flex;
+    align-items: flex-end;
+    gap: 1px;
+    height: 20px;
+}
+.bn-sparkline-bar {
+    width: 3px;
+    border-radius: 1px;
+    min-height: 2px;
 }
 
-/* ── Molecule demos ──────────────────────────────────────────── */
-.badges-row {
-    display: flex;
-    flex-wrap: wrap;
+/* Activity chip */
+.activity-chip {
+    display: inline-flex;
+    align-items: center;
     gap: 4px;
+    font-size: 0.72rem;
+    padding: 2px 8px;
+    border-radius: var(--bn-radius-pill);
+    background: var(--bn-colour-badge-bg);
+    color: var(--bn-colour-badge-text);
 }
+.activity-chip-pending { background: var(--bn-sentiment-surprise-bg); color: var(--bn-sentiment-surprise); }
+.activity-chip-complete { background: var(--bn-sentiment-satisfaction-bg); color: var(--bn-sentiment-satisfaction); }
+
+/* ── Molecule demos ──────────────────────────────────────────── */
+.badges-row { display: flex; flex-wrap: wrap; gap: 4px; }
 
 .quote-demo {
     background: var(--bn-colour-quote-bg);
     border-radius: var(--bn-radius-md);
     padding: 0.75rem 1rem;
-    max-width: 20rem;
+    max-width: 22rem;
     position: relative;
 }
 .quote-demo .timecode { margin-right: 0.5rem; }
-.quote-demo .quote-text {
-    font-size: 0.85rem;
-    line-height: 1.5;
-    margin-bottom: 0.35rem;
-}
+.quote-demo .quote-text { font-size: 0.85rem; line-height: 1.5; margin-bottom: 0.35rem; }
 .quote-demo .quote-text::before { content: "\201C"; color: var(--bn-colour-muted); }
 .quote-demo .quote-text::after { content: "\201D"; color: var(--bn-colour-muted); }
-.quote-demo .speaker { font-size: 0.72rem; color: var(--bn-colour-muted); }
 
-.search-demo {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-}
+.search-demo { display: flex; align-items: center; gap: 6px; }
 .search-demo-input {
     font-family: var(--bn-font-body);
     font-size: 0.78rem;
@@ -427,14 +466,8 @@ body {
     outline: none;
     width: 14rem;
 }
-.search-demo-input:focus {
-    border-color: var(--bn-colour-accent);
-    box-shadow: var(--bn-focus-ring);
-}
+.search-demo-input:focus { border-color: var(--bn-colour-accent); box-shadow: var(--bn-focus-ring); }
 
-.tag-filter-demo {
-    position: relative;
-}
 .tag-filter-menu-demo {
     background: var(--bn-colour-bg);
     border: 1px solid var(--bn-colour-border);
@@ -444,28 +477,8 @@ body {
     font-size: 0.78rem;
     min-width: 10rem;
 }
-.tag-filter-item-demo {
-    padding: 4px 12px;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-}
-.tag-filter-item-demo input[type="checkbox"] {
-    accent-color: var(--bn-colour-accent);
-}
-
-.name-cell-demo {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    font-size: 0.85rem;
-}
-.name-pencil-demo {
-    font-size: 0.75rem;
-    color: var(--bn-colour-muted);
-    opacity: 0.4;
-}
-.name-cell-demo:hover .name-pencil-demo { opacity: 1; }
+.tag-filter-item-demo { padding: 4px 12px; display: flex; align-items: center; gap: 6px; }
+.tag-filter-item-demo input[type="checkbox"] { accent-color: var(--bn-colour-accent); }
 
 /* ── Organism demos ──────────────────────────────────────────── */
 .blockquote-demo {
@@ -476,16 +489,8 @@ body {
     position: relative;
     max-width: 28rem;
 }
-.blockquote-demo .star-btn-abs {
-    position: absolute;
-    top: 0.65rem;
-    right: 0.65rem;
-}
-.blockquote-demo .edit-pencil-abs {
-    position: absolute;
-    top: 0.65rem;
-    right: 2.5rem;
-}
+.blockquote-demo .star-btn-abs { position: absolute; top: 0.65rem; right: 0.65rem; }
+.blockquote-demo .edit-pencil-abs { position: absolute; top: 0.65rem; right: 2.5rem; }
 
 .toolbar-demo {
     display: flex;
@@ -538,16 +543,12 @@ body {
 }
 .swatch-label strong {
     color: var(--bn-colour-text);
-    font-weight: 600;
+    font-weight: var(--bn-weight-emphasis);
     display: block;
 }
 
 /* ── Spacing & radius demos ──────────────────────────────────── */
-.spacing-demo {
-    display: flex;
-    gap: 12px;
-    align-items: flex-end;
-}
+.spacing-demo { display: flex; gap: 12px; align-items: flex-end; }
 .spacing-box {
     background: var(--bn-colour-accent);
     opacity: 0.2;
@@ -565,30 +566,19 @@ body {
     white-space: nowrap;
 }
 
-.radius-demo {
-    display: flex;
-    gap: 16px;
-    align-items: center;
-}
+.radius-demo { display: flex; gap: 16px; align-items: center; }
 .radius-box {
-    width: 48px;
-    height: 48px;
+    width: 48px; height: 48px;
     background: var(--bn-colour-badge-bg);
     border: 1px solid var(--bn-colour-border);
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    display: flex; align-items: center; justify-content: center;
     font-family: var(--bn-font-mono);
     font-size: 0.55rem;
     color: var(--bn-colour-muted);
 }
 
 /* ── Section dividers ────────────────────────────────────────── */
-.section-break {
-    border: none;
-    border-top: 1px solid var(--bn-colour-border);
-    margin: 2rem 0;
-}
+.section-break { border: none; border-top: 1px solid var(--bn-colour-border); margin: 2rem 0; }
 
 /* ── File table ──────────────────────────────────────────────── */
 .file-table {
@@ -604,7 +594,7 @@ body {
     border-bottom: 1px solid var(--bn-colour-border);
 }
 .file-table th {
-    font-weight: 600;
+    font-weight: var(--bn-weight-emphasis);
     color: var(--bn-colour-muted);
     font-size: 0.65rem;
     text-transform: uppercase;
@@ -626,6 +616,65 @@ body {
     font-style: italic;
     margin-top: 0.5rem;
 }
+
+/* ── Architecture callout ──────────────────────────────────────── */
+.arch-callout {
+    border: 1px solid var(--bn-colour-border);
+    border-radius: var(--bn-radius-lg);
+    padding: 1.5rem;
+    margin: 1.5rem 0;
+    background: var(--bn-colour-quote-bg);
+}
+.arch-callout h3 {
+    font-size: 0.9rem;
+    font-weight: var(--bn-weight-emphasis);
+    margin-bottom: 0.75rem;
+}
+.arch-callout p,
+.arch-callout li {
+    font-size: 0.82rem;
+    line-height: 1.6;
+    color: var(--bn-colour-text);
+}
+.arch-callout ul {
+    margin: 0.5rem 0 0 1.25rem;
+}
+.arch-columns {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+    margin-top: 1rem;
+}
+.arch-col h4 {
+    font-size: 0.78rem;
+    font-weight: var(--bn-weight-emphasis);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--bn-colour-muted);
+    margin-bottom: 0.5rem;
+}
+.arch-col ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+.arch-col li {
+    font-size: 0.78rem;
+    padding: 2px 0;
+}
+.arch-col code {
+    font-family: var(--bn-font-mono);
+    font-size: 0.72rem;
+    background: var(--bn-colour-badge-bg);
+    padding: 1px 4px;
+    border-radius: 2px;
+}
+
+@media (max-width: 600px) {
+    body { padding: 1rem; }
+    .component-grid { grid-template-columns: 1fr; }
+    .arch-columns { grid-template-columns: 1fr; }
+}
 </style>
 </head>
 <body>
@@ -636,11 +685,71 @@ body {
 <header class="guide-header">
     <h1>Bristlenose Design System</h1>
     <p class="subtitle">
-        Atomic CSS architecture for Bristlenose HTML reports. All components are
-        built from design tokens and composed through atoms, molecules, organisms,
-        templates, and pages. No build step &mdash; CSS custom properties + vanilla JS.
+        Two-layer architecture: atomic CSS design tokens (shared by all render paths) +
+        React components (the active development surface in serve mode). CSS custom
+        properties are the single source of truth for visual decisions. Dark mode uses
+        <code>light-dark()</code> &mdash; no JS required.
     </p>
 </header>
+
+<!-- ════════════════════════════════════════════════════════════════
+     ARCHITECTURE
+     ════════════════════════════════════════════════════════════ -->
+<section class="layer">
+    <div class="layer-header">
+        <span class="layer-number">Architecture</span>
+        <h2>Two render paths, one design system</h2>
+    </div>
+
+    <div class="arch-callout">
+        <h3>How the layers connect</h3>
+        <p>
+            Bristlenose has two rendering paths that share the same CSS tokens and stylesheets.
+            <strong>React serve mode</strong> (<code>bristlenose serve</code>) is the actively developed
+            experience. <strong>Static HTML</strong> (<code>bristlenose render</code>) is the frozen
+            offline snapshot &mdash; correct data, no new design work.
+        </p>
+        <div class="arch-columns">
+            <div class="arch-col">
+                <h4>CSS (shared, both paths)</h4>
+                <ul>
+                    <li><code>tokens.css</code> &mdash; design tokens</li>
+                    <li><code>atoms/</code> &mdash; 18 files</li>
+                    <li><code>molecules/</code> &mdash; 16 files</li>
+                    <li><code>organisms/</code> &mdash; 9 files</li>
+                    <li><code>templates/</code> &mdash; 3 CSS + 14 HTML</li>
+                </ul>
+            </div>
+            <div class="arch-col">
+                <h4>React (serve mode only)</h4>
+                <ul>
+                    <li>20 component primitives</li>
+                    <li>12 islands (mounted via comment markers)</li>
+                    <li>3 custom hooks</li>
+                    <li>8 utility modules</li>
+                    <li>Module-level store (not Context)</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <div class="arch-callout">
+        <h3>Island mount pattern</h3>
+        <p>
+            Static HTML contains comment markers (<code>&lt;!-- bn-toolbar --&gt;</code>).
+            At serve time, <code>re.sub</code> in <code>app.py</code> replaces them with
+            React mount divs (<code>&lt;div id="bn-toolbar-root"&gt;</code>).
+            <code>main.tsx</code> calls <code>createRoot()</code> on each mount point.
+        </p>
+        <ul>
+            <li>Vanilla JS init functions no-op when their DOM targets are gone (never strip JS files &mdash; <code>main.js</code> boot array references functions at parse time)</li>
+            <li>Cross-island state uses a module-level store with <code>useSyncExternalStore</code> (React Context can&rsquo;t span separate <code>createRoot()</code> calls)</li>
+            <li>Shared utilities (<code>showToast</code>, <code>copyToClipboard</code>, <code>switchToTab</code>) remain on <code>window</code> for interop</li>
+        </ul>
+    </div>
+</section>
+
+<hr class="section-break">
 
 <!-- ════════════════════════════════════════════════════════════════
      LAYER 0 — DESIGN TOKENS
@@ -651,12 +760,13 @@ body {
         <h2>Design Tokens</h2>
     </div>
     <p class="layer-desc">
-        The single source of truth for all visual decisions. Override these CSS custom
-        properties to create a custom theme. Dark mode uses <code>light-dark()</code>
-        with the <code>color-scheme</code> property &mdash; no JS required.
+        The single source of truth for all visual decisions. <code>tokens.css</code>
+        defines colours, spacing, radii, typography, transitions, and dark mode overrides
+        via <code>light-dark()</code>. Override these CSS custom properties to theme the
+        entire application.
     </p>
 
-    <h3 style="font-size: 0.9rem; font-weight: 600; margin-bottom: 0.75rem;">Colour palette</h3>
+    <h3 style="font-size: 0.9rem; font-weight: var(--bn-weight-emphasis); margin-bottom: 0.75rem;">Colour palette</h3>
     <div class="token-grid">
         <div class="token-swatch">
             <span class="swatch-circle" style="background: #ffffff"></span>
@@ -679,6 +789,10 @@ body {
             <span class="swatch-label"><strong>--bn-colour-accent</strong>#2563eb</span>
         </div>
         <div class="token-swatch">
+            <span class="swatch-circle" style="background: #e8f0fe"></span>
+            <span class="swatch-label"><strong>--bn-colour-hover</strong>#e8f0fe</span>
+        </div>
+        <div class="token-swatch">
             <span class="swatch-circle" style="background: #f9fafb"></span>
             <span class="swatch-label"><strong>--bn-colour-quote-bg</strong>#f9fafb</span>
         </div>
@@ -687,12 +801,28 @@ body {
             <span class="swatch-label"><strong>--bn-colour-badge-bg</strong>#f3f4f6</span>
         </div>
         <div class="token-swatch">
-            <span class="swatch-circle" style="background: #374151"></span>
-            <span class="swatch-label"><strong>--bn-colour-badge-text</strong>#374151</span>
+            <span class="swatch-circle" style="background: #fffbe6"></span>
+            <span class="swatch-label"><strong>--bn-colour-editing-bg</strong>#fffbe6</span>
+        </div>
+        <div class="token-swatch">
+            <span class="swatch-circle" style="background: #c4850a"></span>
+            <span class="swatch-label"><strong>--bn-crop-handle-colour</strong>#c4850a</span>
+        </div>
+        <div class="token-swatch">
+            <span class="swatch-circle" style="background: #dc2626"></span>
+            <span class="swatch-label"><strong>--bn-colour-negative</strong>#dc2626</span>
         </div>
     </div>
 
-    <h3 style="font-size: 0.9rem; font-weight: 600; margin: 1.25rem 0 0.75rem;">Sentiment colours (v0.7+ taxonomy)</h3>
+    <h3 style="font-size: 0.9rem; font-weight: var(--bn-weight-emphasis); margin: 1.25rem 0 0.75rem;">Font weights (variable font scale)</h3>
+    <div style="display: flex; gap: 2rem; flex-wrap: wrap; margin-bottom: 1rem;">
+        <span style="font-weight: 420; font-size: 0.85rem;">420 normal</span>
+        <span style="font-weight: 490; font-size: 0.85rem;">490 emphasis</span>
+        <span style="font-weight: 520; font-size: 0.85rem;">520 starred</span>
+        <span style="font-weight: 700; font-size: 0.85rem;">700 strong</span>
+    </div>
+
+    <h3 style="font-size: 0.9rem; font-weight: var(--bn-weight-emphasis); margin: 1.25rem 0 0.75rem;">Sentiment colours (v0.7+ taxonomy)</h3>
     <div class="token-grid">
         <div class="token-swatch">
             <span class="swatch-circle" style="background: #ea580c"></span>
@@ -724,7 +854,31 @@ body {
         </div>
     </div>
 
-    <h3 style="font-size: 0.9rem; font-weight: 600; margin: 1.25rem 0 0.75rem;">Spacing scale</h3>
+    <h3 style="font-size: 0.9rem; font-weight: var(--bn-weight-emphasis); margin: 1.25rem 0 0.75rem;">Codebook tag colours (pentadic OKLCH)</h3>
+    <div class="token-grid">
+        <div class="token-swatch">
+            <span class="swatch-circle" style="background: oklch(94% 0.03 225)"></span>
+            <span class="swatch-label"><strong>UX set</strong>H 225&ndash;275 (blue)</span>
+        </div>
+        <div class="token-swatch">
+            <span class="swatch-circle" style="background: oklch(94% 0.03 340)"></span>
+            <span class="swatch-label"><strong>Emotion set</strong>H 340&ndash;40 (red-pink)</span>
+        </div>
+        <div class="token-swatch">
+            <span class="swatch-circle" style="background: oklch(94% 0.03 155)"></span>
+            <span class="swatch-label"><strong>Task set</strong>H 130&ndash;180 (green)</span>
+        </div>
+        <div class="token-swatch">
+            <span class="swatch-circle" style="background: oklch(94% 0.03 300)"></span>
+            <span class="swatch-label"><strong>Trust set</strong>H 275&ndash;325 (purple)</span>
+        </div>
+        <div class="token-swatch">
+            <span class="swatch-circle" style="background: oklch(94% 0.03 75)"></span>
+            <span class="swatch-label"><strong>Opportunity set</strong>H 50&ndash;100 (amber)</span>
+        </div>
+    </div>
+
+    <h3 style="font-size: 0.9rem; font-weight: var(--bn-weight-emphasis); margin: 1.25rem 0 0.75rem;">Spacing scale</h3>
     <div class="spacing-demo" style="margin-bottom: 2.5rem;">
         <div class="spacing-box" data-label="xs 0.15rem" style="width: 20px; height: 2.4px;"></div>
         <div class="spacing-box" data-label="sm 0.35rem" style="width: 20px; height: 5.6px;"></div>
@@ -733,7 +887,7 @@ body {
         <div class="spacing-box" data-label="xl 2rem" style="width: 20px; height: 32px;"></div>
     </div>
 
-    <h3 style="font-size: 0.9rem; font-weight: 600; margin: 1.25rem 0 0.75rem;">Border radii</h3>
+    <h3 style="font-size: 0.9rem; font-weight: var(--bn-weight-emphasis); margin: 1.25rem 0 0.75rem;">Border radii</h3>
     <div class="radius-demo">
         <div class="radius-box" style="border-radius: 3px;">sm 3px</div>
         <div class="radius-box" style="border-radius: 6px;">md 6px</div>
@@ -741,15 +895,19 @@ body {
         <div class="radius-box" style="border-radius: 999px; width: 80px;">pill</div>
     </div>
 
-    <h3 style="font-size: 0.9rem; font-weight: 600; margin: 1.25rem 0 0.75rem;">Typography</h3>
+    <h3 style="font-size: 0.9rem; font-weight: var(--bn-weight-emphasis); margin: 1.25rem 0 0.75rem;">Typography</h3>
     <div style="margin-bottom: 0.5rem;">
-        <span style="font-family: var(--bn-font-body); font-size: 0.85rem;">Body: Inter, Segoe UI, system-ui</span>
+        <span style="font-family: var(--bn-font-body); font-size: 0.85rem;">Body: Inter Variable, Segoe UI Variable, system-ui</span>
     </div>
     <div>
         <span style="font-family: var(--bn-font-mono); font-size: 0.85rem;">Mono: SF Mono, Fira Code, Consolas</span>
     </div>
 
-    <p class="note">File: <code>tokens.css</code> &mdash; 329 lines, all CSS custom properties.</p>
+    <p class="note">
+        File: <code>tokens.css</code>. Dark mode via <code>light-dark()</code> +
+        <code>color-scheme: light dark</code> on <code>:root</code>. User override via
+        <code>[data-theme="light|dark"]</code> attribute. ~87% browser support (mid-2024+).
+    </p>
 </section>
 
 <hr class="section-break">
@@ -763,9 +921,9 @@ body {
         <h2>Atoms</h2>
     </div>
     <p class="layer-desc">
-        The smallest, indivisible building blocks. Each atom is a single CSS file in
-        <code>bristlenose/theme/atoms/</code>. Atoms never compose other atoms &mdash;
-        they only reference design tokens.
+        Smallest indivisible building blocks. Each atom is a single CSS file in
+        <code>bristlenose/theme/atoms/</code>. Atoms reference only design tokens,
+        never other atoms. 18 files.
     </p>
 
     <div class="component-grid">
@@ -782,21 +940,22 @@ body {
                 <div class="card-name">Badge (sentiment)</div>
                 <div class="card-file">atoms/badge.css</div>
                 <div class="card-classes">.badge .badge-{sentiment}</div>
+                <div class="card-react">React: &lt;Badge&gt;</div>
             </div>
         </div>
 
-        <!-- User badge -->
+        <!-- User badge + proposed -->
         <div class="component-card">
             <div class="card-demo">
                 <span class="badge badge-user" style="background: oklch(94% 0.03 225)">usability</span>
                 <span class="badge badge-user" style="background: oklch(94% 0.03 340)">emotion</span>
-                <span class="badge badge-user" style="background: oklch(94% 0.03 155)">task flow</span>
+                <span class="badge badge-proposed">proposed</span>
                 <span class="badge badge-add">+ add tag</span>
             </div>
             <div class="card-info">
-                <div class="card-name">Badge (user tags + add)</div>
+                <div class="card-name">Badge (user + proposed + add)</div>
                 <div class="card-file">atoms/badge.css</div>
-                <div class="card-classes">.badge-user .badge-add</div>
+                <div class="card-classes">.badge-user .badge-proposed .badge-add</div>
             </div>
         </div>
 
@@ -804,11 +963,10 @@ body {
         <div class="component-card">
             <div class="card-demo">
                 <button class="toolbar-btn">
-                    <svg class="toolbar-icon-svg" width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="11" height="11" rx="1.5"/><path d="M9 1h6v6"/><path d="M15 1 8 8"/></svg>
-                    Codebook
+                    <svg class="toolbar-icon-svg" width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="1" width="9" height="11" rx="1.5"/><path d="M3 5H2.5A1.5 1.5 0 0 0 1 6.5v8A1.5 1.5 0 0 0 2.5 16h8a1.5 1.5 0 0 0 1.5-1.5V14"/></svg>
+                    Copy CSV
                 </button>
-                <button class="toolbar-btn toolbar-btn-toggle active">
-                    <svg class="toolbar-icon-svg" width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><line x1="1" y1="3" x2="15" y2="3"/><line x1="3" y1="8" x2="13" y2="8"/><line x1="5.5" y1="13" x2="10.5" y2="13"/></svg>
+                <button class="toolbar-btn">
                     Tags
                     <svg class="toolbar-arrow" width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 3.75 5 6.25 7.5 3.75"/></svg>
                 </button>
@@ -816,7 +974,8 @@ body {
             <div class="card-info">
                 <div class="card-name">Toolbar button</div>
                 <div class="card-file">atoms/button.css</div>
-                <div class="card-classes">.toolbar-btn .toolbar-btn-toggle</div>
+                <div class="card-classes">.toolbar-btn</div>
+                <div class="card-react">React: &lt;ToolbarButton&gt;</div>
             </div>
         </div>
 
@@ -825,26 +984,13 @@ body {
             <div class="card-demo">
                 <button class="star-btn" style="position: static; opacity: 1;">&#9733;</button>
                 <button class="edit-pencil" style="position: static; opacity: 1;">&#9998;</button>
-                <span style="font-size: 0.72rem; color: var(--bn-colour-muted);">star &amp; pencil</span>
+                <button class="hide-btn" style="position: static; opacity: 1;">&#128065;</button>
+                <span style="font-size: 0.72rem; color: var(--bn-colour-muted);">star, pencil, hide</span>
             </div>
             <div class="card-info">
-                <div class="card-name">Icon buttons (star, pencil)</div>
-                <div class="card-file">atoms/button.css</div>
-                <div class="card-classes">.star-btn .edit-pencil</div>
-            </div>
-        </div>
-
-        <!-- Input -->
-        <div class="component-card">
-            <div class="card-demo card-demo-col" style="width: 100%;">
-                <div class="tag-input-box" style="width: 100%;">
-                    <input class="tag-input" placeholder="Type to add tag..." readonly>
-                </div>
-            </div>
-            <div class="card-info">
-                <div class="card-name">Tag input</div>
-                <div class="card-file">atoms/input.css</div>
-                <div class="card-classes">.tag-input-box .tag-input</div>
+                <div class="card-name">Icon buttons</div>
+                <div class="card-file">atoms/toggle.css</div>
+                <div class="card-classes">.star-btn .edit-pencil .hide-btn</div>
             </div>
         </div>
 
@@ -859,6 +1005,91 @@ body {
                 <div class="card-name">Timecode</div>
                 <div class="card-file">atoms/timecode.css</div>
                 <div class="card-classes">.timecode .timecode-bracket</div>
+                <div class="card-react">React: &lt;TimecodeLink&gt;</div>
+            </div>
+        </div>
+
+        <!-- Split speaker badge -->
+        <div class="component-card">
+            <div class="card-demo">
+                <div class="bn-speaker-badge--split">
+                    <span class="bn-speaker-badge-code">p1</span>
+                    <span class="bn-speaker-badge-name">Sarah Chen</span>
+                </div>
+                &nbsp;
+                <div class="bn-speaker-badge--split">
+                    <span class="bn-speaker-badge-code">m1</span>
+                    <span class="bn-speaker-badge-name">Moderator</span>
+                </div>
+            </div>
+            <div class="card-info">
+                <div class="card-name">Split speaker badge</div>
+                <div class="card-file">molecules/person-badge.css</div>
+                <div class="card-classes">.bn-speaker-badge--split -code -name</div>
+                <div class="card-react">React: &lt;PersonBadge&gt;</div>
+            </div>
+        </div>
+
+        <!-- Thumbnail -->
+        <div class="component-card">
+            <div class="card-demo">
+                <div class="thumbnail">
+                    <span class="thumbnail-placeholder">&#9654;</span>
+                </div>
+                <span style="font-size: 0.72rem; color: var(--bn-colour-muted);">video keyframe / placeholder</span>
+            </div>
+            <div class="card-info">
+                <div class="card-name">Thumbnail</div>
+                <div class="card-file">atoms/thumbnail.css</div>
+                <div class="card-classes">.thumbnail .thumbnail-img .thumbnail-placeholder</div>
+                <div class="card-react">React: &lt;Thumbnail&gt;</div>
+            </div>
+        </div>
+
+        <!-- Toast -->
+        <div class="component-card">
+            <div class="card-demo">
+                <div class="toast-demo">Copied to clipboard</div>
+            </div>
+            <div class="card-info">
+                <div class="card-name">Toast notification</div>
+                <div class="card-file">atoms/toast.css</div>
+                <div class="card-classes">.bn-toast</div>
+                <div class="card-react">React: &lt;Toast&gt; + toast()</div>
+            </div>
+        </div>
+
+        <!-- Sparkline -->
+        <div class="component-card">
+            <div class="card-demo">
+                <div class="bn-sparkline">
+                    <div class="bn-sparkline-bar" style="height: 60%; background: var(--bn-sentiment-frustration);"></div>
+                    <div class="bn-sparkline-bar" style="height: 30%; background: var(--bn-sentiment-confusion);"></div>
+                    <div class="bn-sparkline-bar" style="height: 10%; background: var(--bn-sentiment-doubt);"></div>
+                    <div class="bn-sparkline-bar" style="height: 80%; background: var(--bn-sentiment-satisfaction);"></div>
+                    <div class="bn-sparkline-bar" style="height: 40%; background: var(--bn-sentiment-delight);"></div>
+                    <div class="bn-sparkline-bar" style="height: 20%; background: var(--bn-sentiment-confidence);"></div>
+                </div>
+                <span style="font-size: 0.72rem; color: var(--bn-colour-muted);">session sentiment</span>
+            </div>
+            <div class="card-info">
+                <div class="card-name">Sparkline</div>
+                <div class="card-file">molecules/sparkline.css</div>
+                <div class="card-react">React: &lt;Sparkline&gt;</div>
+            </div>
+        </div>
+
+        <!-- Activity chip -->
+        <div class="component-card">
+            <div class="card-demo">
+                <span class="activity-chip activity-chip-pending">&#9679; Running</span>
+                <span class="activity-chip activity-chip-complete">&#10003; Done</span>
+            </div>
+            <div class="card-info">
+                <div class="card-name">Activity chip</div>
+                <div class="card-file">atoms/activity-chip.css</div>
+                <div class="card-classes">.activity-chip -pending -complete -error</div>
+                <div class="card-react">React: &lt;ActivityChip&gt;</div>
             </div>
         </div>
 
@@ -883,33 +1114,6 @@ body {
             </div>
         </div>
 
-        <!-- Span bar -->
-        <div class="component-card">
-            <div class="card-demo">
-                <div class="span-bar" style="height: 48px; margin-right: 8px;"></div>
-                <div class="span-bar" style="height: 32px; margin-right: 8px;"></div>
-                <div class="span-bar" style="height: 64px;"></div>
-                <span style="font-size: 0.72rem; color: var(--bn-colour-muted); margin-left: 8px;">quote extent indicators</span>
-            </div>
-            <div class="card-info">
-                <div class="card-name">Span bar</div>
-                <div class="card-file">atoms/span-bar.css</div>
-                <div class="card-classes">.span-bar</div>
-            </div>
-        </div>
-
-        <!-- Toast -->
-        <div class="component-card">
-            <div class="card-demo">
-                <div class="toast-demo">Copied to clipboard</div>
-            </div>
-            <div class="card-info">
-                <div class="card-name">Toast notification</div>
-                <div class="card-file">atoms/toast.css</div>
-                <div class="card-classes">.bn-toast</div>
-            </div>
-        </div>
-
         <!-- Modal -->
         <div class="component-card">
             <div class="card-demo">
@@ -926,16 +1130,18 @@ body {
             <div class="card-info">
                 <div class="card-name">Modal + buttons</div>
                 <div class="card-file">atoms/modal.css</div>
-                <div class="card-classes">.bn-modal .bn-btn .bn-btn-primary .bn-btn-danger</div>
+                <div class="card-classes">.bn-overlay .bn-modal .bn-btn</div>
             </div>
         </div>
 
     </div><!-- .component-grid -->
 
     <p class="note">
-        Also: <code>atoms/logo.css</code> (logo image + logotype),
-        <code>atoms/footer.css</code> (footer layout),
-        <code>atoms/interactive.css</code> (generic interactive states).
+        Also: <code>atoms/input.css</code> (text input base), <code>atoms/logo.css</code>,
+        <code>atoms/footer.css</code>, <code>atoms/interactive.css</code>,
+        <code>atoms/span-bar.css</code> (vertical extent bars),
+        <code>atoms/context-expansion.css</code>, <code>atoms/journey-label.css</code>,
+        <code>atoms/moderator-question.css</code>, <code>atoms/autocode-toast.css</code>.
     </p>
 </section>
 
@@ -950,9 +1156,8 @@ body {
         <h2>Molecules</h2>
     </div>
     <p class="layer-desc">
-        Groups of atoms that act as a single functional unit. Each molecule combines
-        two or more atoms into a reusable component. Files live in
-        <code>bristlenose/theme/molecules/</code>.
+        Groups of atoms forming single functional units. Files live in
+        <code>bristlenose/theme/molecules/</code>. 16 files.
     </p>
 
     <div class="component-grid">
@@ -974,25 +1179,6 @@ body {
             </div>
         </div>
 
-        <!-- Quote actions -->
-        <div class="component-card">
-            <div class="card-demo card-demo-col" style="width: 100%;">
-                <div class="quote-demo" style="width: 100%;">
-                    <span class="timecode-bracket">[</span><a class="timecode" href="#">02:34</a><span class="timecode-bracket">]</span>
-                    <span class="quote-text">I couldn't find the settings menu anywhere</span>
-                    <div class="speaker">&mdash; p1</div>
-                    <div class="badges-row" style="margin-top: 4px;">
-                        <span class="badge badge-frustration" style="font-size: 0.65rem; padding: 1px 4px;">frustration</span>
-                    </div>
-                </div>
-            </div>
-            <div class="card-info">
-                <div class="card-name">Quote with actions</div>
-                <div class="card-file">molecules/quote-actions.css</div>
-                <div class="card-classes">.quote-row .quote-text .speaker</div>
-            </div>
-        </div>
-
         <!-- Search -->
         <div class="component-card">
             <div class="card-demo">
@@ -1000,13 +1186,14 @@ body {
                     <button class="toolbar-btn" style="padding: 5px 8px;">
                         <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="6.5" cy="6.5" r="5.5"/><line x1="10.5" y1="10.5" x2="15" y2="15"/></svg>
                     </button>
-                    <input class="search-demo-input" placeholder="Search quotes..." readonly>
+                    <input class="search-demo-input" placeholder="Filter quotes..." readonly>
                 </div>
             </div>
             <div class="card-info">
                 <div class="card-name">Search filter</div>
                 <div class="card-file">molecules/search.css</div>
-                <div class="card-classes">.search-container .search-toggle .search-input</div>
+                <div class="card-classes">.search-container .search-input</div>
+                <div class="card-react">React: &lt;SearchBox&gt; (150ms debounce, min 3 chars)</div>
             </div>
         </div>
 
@@ -1022,37 +1209,49 @@ body {
             <div class="card-info">
                 <div class="card-name">Tag filter dropdown</div>
                 <div class="card-file">molecules/tag-filter.css</div>
-                <div class="card-classes">.tag-filter-menu .tag-filter-item</div>
+                <div class="card-classes">.tag-filter-menu .tag-filter-group .tag-filter-item</div>
+                <div class="card-react">React: &lt;TagFilterDropdown&gt; (codebook groups, counts)</div>
             </div>
         </div>
 
-        <!-- Name edit -->
+        <!-- Hidden quotes -->
         <div class="component-card">
             <div class="card-demo">
-                <div class="name-cell-demo">
-                    <span>Sarah Chen</span>
-                    <span class="name-pencil-demo">&#9998;</span>
-                </div>
-                &nbsp;&nbsp;&mdash;&nbsp;&nbsp;
-                <div class="name-cell-demo">
-                    <span style="color: var(--bn-colour-muted); font-style: italic;">Unnamed</span>
-                    <span class="name-pencil-demo">&#9998;</span>
+                <span class="badge" style="background: var(--bn-colour-badge-bg); font-size: 0.7rem;">3 hidden</span>
+                <span style="font-size: 0.72rem; color: var(--bn-colour-muted);">click to preview + unhide</span>
+            </div>
+            <div class="card-info">
+                <div class="card-name">Hidden quotes badge</div>
+                <div class="card-file">molecules/hidden-quotes.css</div>
+                <div class="card-classes">.bn-hidden .bn-hidden-badge .bn-hidden-dropdown</div>
+                <div class="card-react">React: &lt;Counter&gt;</div>
+            </div>
+        </div>
+
+        <!-- Editable text -->
+        <div class="component-card">
+            <div class="card-demo card-demo-col" style="width: 100%;">
+                <div class="quote-demo" style="width: 100%; background: var(--bn-colour-editing-bg); border: 1px solid var(--bn-colour-editing-border);">
+                    <span style="color: var(--bn-crop-handle-colour); font-weight: bold; margin-right: 2px;">[</span>
+                    <span class="quote-text" style="margin: 0;">I couldn't find the settings</span>
+                    <span style="color: var(--bn-crop-handle-colour); font-weight: bold; margin-left: 2px;">]</span>
                 </div>
             </div>
             <div class="card-info">
-                <div class="card-name">Name edit cell</div>
-                <div class="card-file">molecules/name-edit.css</div>
-                <div class="card-classes">.name-cell .name-text .name-pencil .unnamed</div>
+                <div class="card-name">Editable text (crop mode)</div>
+                <div class="card-file">molecules/editable-text.css</div>
+                <div class="card-classes">.crop-handle .crop-editable .crop-word .undo-btn</div>
+                <div class="card-react">React: &lt;EditableText&gt; + useCropEdit()</div>
             </div>
         </div>
 
-        <!-- Transcript annotations -->
+        <!-- Transcript annotation -->
         <div class="component-card">
             <div class="card-demo card-demo-col" style="width: 100%;">
                 <div style="display: flex; gap: 8px; align-items: flex-start;">
-                    <div class="span-bar" style="height: 36px;"></div>
+                    <div style="width: 2px; background: var(--bn-colour-border); opacity: 0.5; border-radius: 1px; height: 36px;"></div>
                     <div style="display: flex; flex-direction: column; gap: 2px;">
-                        <a href="#" style="color: var(--bn-colour-accent); font-size: 0.75rem; text-decoration: none; font-weight: 500;">Navigation Issues</a>
+                        <a href="#" style="color: var(--bn-colour-accent); font-size: 0.75rem; text-decoration: none; font-weight: var(--bn-weight-emphasis);">Navigation Issues</a>
                         <div class="badges-row">
                             <span class="badge badge-frustration" style="font-size: 0.65rem; padding: 1px 4px;">frustration</span>
                             <span class="badge badge-user" style="font-size: 0.65rem; padding: 1px 4px; background: oklch(94% 0.03 250);">usability</span>
@@ -1070,11 +1269,11 @@ body {
     </div><!-- .component-grid -->
 
     <p class="note">
-        Also: <code>molecules/bar-group.css</code> (histogram bar group),
-        <code>molecules/tag-input.css</code> (tag autocomplete),
-        <code>molecules/hidden-quotes.css</code> (hidden quote badge + dropdown),
-        <code>molecules/help-overlay.css</code> (keyboard help),
-        <code>molecules/feedback.css</code> (feedback form).
+        Also: <code>molecules/bar-group.css</code>, <code>molecules/quote-actions.css</code>,
+        <code>molecules/tag-input.css</code>, <code>molecules/name-edit.css</code>,
+        <code>molecules/help-overlay.css</code>, <code>molecules/feedback.css</code>,
+        <code>molecules/autocode-report.css</code>, <code>molecules/threshold-review.css</code>,
+        <code>molecules/sparkline.css</code>, <code>molecules/person-badge.css</code>.
     </p>
 </section>
 
@@ -1090,7 +1289,7 @@ body {
     </div>
     <p class="layer-desc">
         Complex components composed of molecules and atoms, forming distinct sections
-        of the interface. Files live in <code>bristlenose/theme/organisms/</code>.
+        of the interface. Files live in <code>bristlenose/theme/organisms/</code>. 9 files.
     </p>
 
     <div class="component-grid">
@@ -1104,8 +1303,13 @@ body {
                     <div style="display: flex; gap: 0.5rem; align-items: flex-start;">
                         <span style="white-space: nowrap;"><span class="timecode-bracket">[</span><a class="timecode" href="#">02:34</a><span class="timecode-bracket">]</span></span>
                         <div>
-                            <div class="quote-text">I kept clicking on the logo expecting it to take me home but nothing happened</div>
-                            <div class="speaker">&mdash; <a href="#" class="timecode" style="color: var(--bn-colour-muted);">p1</a></div>
+                            <div class="quote-text" style="font-size: 0.85rem; line-height: 1.5;">I kept clicking on the logo expecting it to take me home but nothing happened</div>
+                            <div style="font-size: 0.72rem; color: var(--bn-colour-muted); margin-top: 4px;">
+                                <div class="bn-speaker-badge--split" style="font-size: 0.68rem;">
+                                    <span class="bn-speaker-badge-code">p1</span>
+                                    <span class="bn-speaker-badge-name">Sarah Chen</span>
+                                </div>
+                            </div>
                             <div class="badges-row" style="margin-top: 6px;">
                                 <span class="badge badge-frustration">frustration</span>
                                 <span class="badge badge-user" style="background: oklch(94% 0.03 250)">navigation</span>
@@ -1116,9 +1320,10 @@ body {
                 </div>
             </div>
             <div class="card-info">
-                <div class="card-name">Blockquote (full quote card)</div>
+                <div class="card-name">Quote card</div>
                 <div class="card-file">organisms/blockquote.css</div>
-                <div class="card-classes">.blockquote .star-btn .edit-pencil .badges .badge-add</div>
+                <div class="card-classes">.blockquote .speaker .edit-pencil .badges</div>
+                <div class="card-react">React: &lt;QuoteCard&gt; (star, hide, edit, crop, tags, badges)</div>
             </div>
         </div>
 
@@ -1131,10 +1336,6 @@ body {
                     </button>
                     <div style="flex: 1;"></div>
                     <button class="toolbar-btn">
-                        <svg class="toolbar-icon-svg" width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="11" height="11" rx="1.5"/><path d="M9 1h6v6"/><path d="M15 1 8 8"/></svg>
-                        Codebook
-                    </button>
-                    <button class="toolbar-btn toolbar-btn-toggle active">
                         <svg class="toolbar-icon-svg" width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><line x1="1" y1="3" x2="15" y2="3"/><line x1="3" y1="8" x2="13" y2="8"/><line x1="5.5" y1="13" x2="10.5" y2="13"/></svg>
                         Tags
                         <svg class="toolbar-arrow" width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 3.75 5 6.25 7.5 3.75"/></svg>
@@ -1145,38 +1346,36 @@ body {
                     </button>
                     <button class="toolbar-btn">
                         <svg class="toolbar-icon-svg" width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="1" width="9" height="11" rx="1.5"/><path d="M3 5H2.5A1.5 1.5 0 0 0 1 6.5v8A1.5 1.5 0 0 0 2.5 16h8a1.5 1.5 0 0 0 1.5-1.5V14"/></svg>
-                        CSV
+                        Copy CSV
                     </button>
                 </div>
             </div>
             <div class="card-info">
-                <div class="card-name">Toolbar (report page)</div>
+                <div class="card-name">Toolbar (sticky, Quotes tab)</div>
                 <div class="card-file">organisms/toolbar.css</div>
-                <div class="card-classes">.toolbar .search-toggle .view-switcher-btn .toolbar-btn</div>
+                <div class="card-classes">.toolbar #bn-toolbar-root (serve mode sticky)</div>
+                <div class="card-react">React: &lt;Toolbar&gt; island (SearchBox + TagFilterDropdown + ViewSwitcher + CSV)</div>
             </div>
         </div>
 
-        <!-- Sentiment chart -->
-        <div class="component-card">
-            <div class="card-demo card-demo-col" style="width: 100%;">
-                <div class="chart-demo" style="width: 100%;">
-                    <span class="sentiment-bar-label">frustration</span>
-                    <div class="sentiment-bar" style="background: var(--bn-sentiment-frustration); width: 80%;"></div>
-                    <span class="sentiment-bar-count" style="color: var(--bn-sentiment-frustration);">12</span>
-
-                    <span class="sentiment-bar-label">confusion</span>
-                    <div class="sentiment-bar" style="background: var(--bn-sentiment-confusion); width: 45%;"></div>
-                    <span class="sentiment-bar-count" style="color: var(--bn-sentiment-confusion);">7</span>
-
-                    <span class="sentiment-bar-label">doubt</span>
-                    <div class="sentiment-bar" style="background: var(--bn-sentiment-doubt); width: 25%;"></div>
-                    <span class="sentiment-bar-count" style="color: var(--bn-sentiment-doubt);">4</span>
-                </div>
+        <!-- Global nav -->
+        <div class="component-card full-width" style="grid-column: 1 / -1;">
+            <div class="card-demo" style="width: 100%;">
+                <nav style="display: flex; align-items: stretch; gap: 0; border-bottom: 1px solid var(--bn-colour-border); width: 100%;">
+                    <button style="padding: 0.5rem 0.8rem; background: none; border: none; border-bottom: 3px solid var(--bn-colour-accent); font-family: var(--bn-font-body); font-size: 0.82rem; font-weight: var(--bn-weight-emphasis); color: var(--bn-colour-accent); cursor: pointer;">Project</button>
+                    <button style="padding: 0.5rem 0.8rem; background: none; border: none; border-bottom: 3px solid transparent; font-family: var(--bn-font-body); font-size: 0.82rem; font-weight: var(--bn-weight-emphasis); color: var(--bn-colour-muted); cursor: pointer;">Sessions</button>
+                    <button style="padding: 0.5rem 0.8rem; background: none; border: none; border-bottom: 3px solid transparent; font-family: var(--bn-font-body); font-size: 0.82rem; font-weight: var(--bn-weight-emphasis); color: var(--bn-colour-muted); cursor: pointer;">Quotes</button>
+                    <button style="padding: 0.5rem 0.8rem; background: none; border: none; border-bottom: 3px solid transparent; font-family: var(--bn-font-body); font-size: 0.82rem; font-weight: var(--bn-weight-emphasis); color: var(--bn-colour-muted); cursor: pointer;">Codebook</button>
+                    <button style="padding: 0.5rem 0.8rem; background: none; border: none; border-bottom: 3px solid transparent; font-family: var(--bn-font-body); font-size: 0.82rem; font-weight: var(--bn-weight-emphasis); color: var(--bn-colour-muted); cursor: pointer;">Analysis</button>
+                    <div style="flex: 1;"></div>
+                    <button style="padding: 0.5rem 0.6rem; background: none; border: none; border-bottom: 3px solid transparent; color: var(--bn-colour-muted); cursor: pointer;" title="Settings">&#9881;</button>
+                    <button style="padding: 0.5rem 0.6rem; background: none; border: none; border-bottom: 3px solid transparent; color: var(--bn-colour-muted); cursor: pointer;" title="About">&#9432;</button>
+                </nav>
             </div>
             <div class="card-info">
-                <div class="card-name">Sentiment chart</div>
-                <div class="card-file">organisms/sentiment-chart.css</div>
-                <div class="card-classes">.sentiment-chart .sentiment-row</div>
+                <div class="card-name">Global navigation</div>
+                <div class="card-file">organisms/global-nav.css</div>
+                <div class="card-classes">.bn-global-nav .bn-tab .bn-tab-panel .bn-tab-spacer .bn-tab-icon</div>
             </div>
         </div>
 
@@ -1184,7 +1383,7 @@ body {
         <div class="component-card">
             <div class="card-demo card-demo-col" style="width: 100%;">
                 <div style="background: oklch(97% 0.015 250); border-radius: var(--bn-radius-md); padding: 0.75rem; width: 100%;">
-                    <div style="font-weight: 600; font-size: 0.85rem; margin-bottom: 0.5rem;">UX Issues</div>
+                    <div style="font-weight: var(--bn-weight-emphasis); font-size: 0.85rem; margin-bottom: 0.5rem;">UX Issues</div>
                     <div style="display: flex; flex-wrap: wrap; gap: 4px;">
                         <span class="badge badge-user" style="background: oklch(94% 0.03 225); font-size: 0.65rem; padding: 1px 4px;">navigation</span>
                         <span class="badge badge-user" style="background: oklch(94% 0.03 237); font-size: 0.65rem; padding: 1px 4px;">usability</span>
@@ -1195,32 +1394,130 @@ body {
             <div class="card-info">
                 <div class="card-name">Codebook group card</div>
                 <div class="card-file">organisms/codebook-panel.css</div>
-                <div class="card-classes">.codebook-group .group-header .tag-row</div>
+                <div class="card-classes">.codebook-grid .codebook-group .tag-row</div>
+                <div class="card-react">React: &lt;CodebookPanel&gt; island (drag-drop, inline edit)</div>
+            </div>
+        </div>
+
+        <!-- Analysis -->
+        <div class="component-card">
+            <div class="card-demo card-demo-col" style="width: 100%;">
+                <div class="chart-demo" style="width: 100%;">
+                    <span class="sentiment-bar-label">frustration</span>
+                    <div class="sentiment-bar" style="background: var(--bn-sentiment-frustration); width: 80%;"></div>
+                    <span class="sentiment-bar-count" style="color: var(--bn-sentiment-frustration);">12</span>
+                    <span class="sentiment-bar-label">confusion</span>
+                    <div class="sentiment-bar" style="background: var(--bn-sentiment-confusion); width: 45%;"></div>
+                    <span class="sentiment-bar-count" style="color: var(--bn-sentiment-confusion);">7</span>
+                    <span class="sentiment-bar-label">doubt</span>
+                    <div class="sentiment-bar" style="background: var(--bn-sentiment-doubt); width: 25%;"></div>
+                    <span class="sentiment-bar-count" style="color: var(--bn-sentiment-doubt);">4</span>
+                </div>
+            </div>
+            <div class="card-info">
+                <div class="card-name">Analysis (signal cards + OKLCH heatmap)</div>
+                <div class="card-file">organisms/analysis.css</div>
+                <div class="card-classes">.signal-cards .signal-card .heatmap .heatmap-cell</div>
+                <div class="card-react">React: &lt;AnalysisPage&gt; island</div>
             </div>
         </div>
 
     </div><!-- .component-grid -->
 
     <p class="note">
-        Also: <code>organisms/coverage.css</code> (transcript coverage details),
-        <code>organisms/toc.css</code> (table of contents navigation).
+        Also: <code>organisms/sentiment-chart.css</code>, <code>organisms/coverage.css</code>,
+        <code>organisms/toc.css</code>, <code>organisms/settings.css</code>.
     </p>
 </section>
 
 <hr class="section-break">
 
 <!-- ════════════════════════════════════════════════════════════════
-     LAYER 4 — TEMPLATES
+     REACT ISLANDS
+     ════════════════════════════════════════════════════════════ -->
+<section class="layer">
+    <div class="layer-header">
+        <span class="layer-number">Serve mode</span>
+        <h2>React Islands</h2>
+    </div>
+    <p class="layer-desc">
+        Islands are React components mounted into static HTML via comment markers.
+        Each gets its own <code>createRoot()</code> call. Cross-island state shares via
+        a module-level store (<code>useSyncExternalStore</code>), not React Context.
+    </p>
+
+    <table class="file-table">
+        <thead>
+            <tr><th>Island</th><th>Mount marker</th><th>Purpose</th></tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><strong>Dashboard</strong></td>
+                <td><code>&lt;!-- bn-dashboard --&gt;</code></td>
+                <td>Project tab: stat cards, featured quotes, session summary</td>
+            </tr>
+            <tr>
+                <td><strong>SessionsTable</strong></td>
+                <td><code>&lt;!-- bn-session-table --&gt;</code></td>
+                <td>Sessions tab: interview table with thumbnails, sparklines, drill-down</td>
+            </tr>
+            <tr>
+                <td><strong>Toolbar</strong></td>
+                <td><code>&lt;!-- bn-toolbar --&gt;</code></td>
+                <td>Quotes tab: sticky search + tag filter + view switcher + CSV export</td>
+            </tr>
+            <tr>
+                <td><strong>QuoteSections</strong></td>
+                <td><code>&lt;!-- bn-quote-sections --&gt;</code></td>
+                <td>Quotes tab: screen-specific insights with quote cards</td>
+            </tr>
+            <tr>
+                <td><strong>QuoteThemes</strong></td>
+                <td><code>&lt;!-- bn-quote-themes --&gt;</code></td>
+                <td>Quotes tab: cross-session thematic patterns with quote cards</td>
+            </tr>
+            <tr>
+                <td><strong>CodebookPanel</strong></td>
+                <td><code>&lt;!-- bn-codebook --&gt;</code></td>
+                <td>Codebook tab: masonry tag groups, drag-drop, inline editing</td>
+            </tr>
+            <tr>
+                <td><strong>AnalysisPage</strong></td>
+                <td><code>&lt;!-- bn-analysis --&gt;</code></td>
+                <td>Analysis tab: signal cards, OKLCH heatmap, drill-down</td>
+            </tr>
+            <tr>
+                <td><strong>TranscriptPage</strong></td>
+                <td><code>&lt;!-- bn-transcript-page --&gt;</code></td>
+                <td>Standalone transcript pages: segments, timecodes, annotations</td>
+            </tr>
+            <tr>
+                <td><strong>SettingsPanel</strong></td>
+                <td><code>&lt;!-- bn-settings --&gt;</code></td>
+                <td>Settings tab: appearance (auto/light/dark), speaker badge display</td>
+            </tr>
+            <tr>
+                <td><strong>AboutPanel</strong></td>
+                <td><code>&lt;!-- bn-about --&gt;</code></td>
+                <td>About tab: version, documentation links, design mockups</td>
+            </tr>
+        </tbody>
+    </table>
+</section>
+
+<hr class="section-break">
+
+<!-- ════════════════════════════════════════════════════════════════
+     TEMPLATES + PAGES
      ════════════════════════════════════════════════════════════ -->
 <section class="layer">
     <div class="layer-header">
         <span class="layer-number">Layer 4</span>
-        <h2>Templates</h2>
+        <h2>Templates &amp; Pages</h2>
     </div>
     <p class="layer-desc">
-        Page-level layout that places organisms, molecules, and atoms into a structure.
-        Templates define the skeleton &mdash; where things go, not what they contain.
-        Files live in <code>bristlenose/theme/templates/</code>.
+        Page-level layout that places organisms into a structure. Templates define the
+        skeleton &mdash; where things go, not what they contain.
     </p>
 
     <table class="file-table">
@@ -1231,12 +1528,12 @@ body {
             <tr>
                 <td><code>templates/report.css</code></td>
                 <td>Main report</td>
-                <td>Max-width constraint (52rem), article centering, header with logo + metadata, section spacing, blockquote grid</td>
+                <td>Max-width (52rem), article centering, header + metadata, section spacing, blockquote grid, tabbed panels</td>
             </tr>
             <tr>
                 <td><code>templates/transcript.css</code></td>
                 <td>Per-session transcript</td>
-                <td>Segment layout with speaker codes, right-margin annotation column (absolute on wide &ge; 1100px, inline on narrow), anchor-highlight animation, moderator de-emphasis</td>
+                <td>Segment layout with speaker codes, right-margin annotations (&ge; 1100px), anchor-highlight animation, moderator de-emphasis</td>
             </tr>
             <tr>
                 <td><code>templates/print.css</code></td>
@@ -1245,45 +1542,24 @@ body {
             </tr>
         </tbody>
     </table>
-</section>
 
-<hr class="section-break">
-
-<!-- ════════════════════════════════════════════════════════════════
-     LAYER 5 — PAGES
-     ════════════════════════════════════════════════════════════ -->
-<section class="layer">
-    <div class="layer-header">
-        <span class="layer-number">Layer 5</span>
-        <h2>Pages</h2>
-    </div>
-    <p class="layer-desc">
-        Specific instances of templates filled with real content. These are the three
-        HTML pages Bristlenose generates, each with its own JS module set.
-    </p>
-
+    <h3 style="font-size: 0.9rem; font-weight: var(--bn-weight-emphasis); margin: 1.5rem 0 0.75rem;">Generated pages</h3>
     <table class="file-table">
         <thead>
-            <tr><th>Page</th><th>File</th><th>JS modules</th><th>Description</th></tr>
+            <tr><th>Page</th><th>File</th><th>Render path</th><th>Description</th></tr>
         </thead>
         <tbody>
             <tr>
                 <td><strong>Report</strong></td>
                 <td><code>bristlenose-{slug}-report.html</code></td>
-                <td>18 modules (storage &rarr; main)</td>
-                <td>Main research report with extracted quotes, themes, sentiment histograms, search, tag filter, view switcher, inline editing, keyboard navigation</td>
+                <td>Static + Serve (10 React islands)</td>
+                <td>Main research report: 7 tabs, extracted quotes, themes, sentiment, search, editing</td>
             </tr>
             <tr>
                 <td><strong>Transcript</strong></td>
                 <td><code>sessions/transcript_s{n}.html</code></td>
-                <td>5 modules (storage &rarr; transcript-annotations)</td>
-                <td>Per-session transcript with timecoded segments, speaker codes, right-margin annotations with span bars, deep-linking</td>
-            </tr>
-            <tr>
-                <td><strong>Codebook</strong></td>
-                <td><code>codebook.html</code></td>
-                <td>4 modules (storage &rarr; codebook)</td>
-                <td>Standalone tag taxonomy page with drag-drop organisation, colour-coded groups, inline editing, cross-window sync</td>
+                <td>Static + Serve (1 React island)</td>
+                <td>Per-session transcript with timecoded segments, speaker codes, annotations</td>
             </tr>
         </tbody>
     </table>
@@ -1292,7 +1568,7 @@ body {
 <hr class="section-break">
 
 <!-- ════════════════════════════════════════════════════════════════
-     FILE MAP
+     COMPLETE FILE MAP
      ════════════════════════════════════════════════════════════ -->
 <section class="layer">
     <div class="layer-header">
@@ -1305,38 +1581,78 @@ body {
             <tr><th>Layer</th><th>File</th><th>Primary components</th></tr>
         </thead>
         <tbody>
-            <tr><td rowspan="1">Tokens</td><td><code>tokens.css</code></td><td>All CSS custom properties (colours, spacing, radii, transitions, dark mode)</td></tr>
-            <tr><td rowspan="11">Atoms</td><td><code>atoms/badge.css</code></td><td>Badge base, sentiment variants, user tags, AI tags, add-tag, animations</td></tr>
-            <tr><td><code>atoms/button.css</code></td><td>Toolbar buttons, star, pencil, restore, toggle variant</td></tr>
-            <tr><td><code>atoms/input.css</code></td><td>Tag input box, ghost completion layer, sizer</td></tr>
-            <tr><td><code>atoms/bar.css</code></td><td>Histogram bars, counts, labels, delete button</td></tr>
-            <tr><td><code>atoms/timecode.css</code></td><td>Timecode links, brackets</td></tr>
-            <tr><td><code>atoms/span-bar.css</code></td><td>Vertical extent indicator bars</td></tr>
-            <tr><td><code>atoms/modal.css</code></td><td>Overlay, modal card, action buttons</td></tr>
-            <tr><td><code>atoms/toast.css</code></td><td>Clipboard feedback toast</td></tr>
-            <tr><td><code>atoms/logo.css</code></td><td>Logo image, logotype text</td></tr>
-            <tr><td><code>atoms/footer.css</code></td><td>Footer layout, links</td></tr>
+            <tr><td>Tokens</td><td><code>tokens.css</code></td><td>All CSS custom properties (colours, spacing, radii, transitions, dark mode via <code>light-dark()</code>)</td></tr>
+            <tr><td rowspan="18">Atoms</td><td><code>atoms/activity-chip.css</code></td><td>Background job status chips (pending, complete, error)</td></tr>
+            <tr><td><code>atoms/autocode-toast.css</code></td><td>AutoCode progress notification</td></tr>
+            <tr><td><code>atoms/badge.css</code></td><td>Badge base, 7 sentiment variants, user/AI tags, proposed + accept/deny pill, animations</td></tr>
+            <tr><td><code>atoms/bar.css</code></td><td>Histogram bars, counts, labels</td></tr>
+            <tr><td><code>atoms/button.css</code></td><td>Toolbar button (.toolbar-btn)</td></tr>
+            <tr><td><code>atoms/context-expansion.css</code></td><td>Expandable context sections</td></tr>
+            <tr><td><code>atoms/footer.css</code></td><td>Footer layout, links, logo</td></tr>
+            <tr><td><code>atoms/input.css</code></td><td>Text input base styles</td></tr>
             <tr><td><code>atoms/interactive.css</code></td><td>Generic interactive element states</td></tr>
-            <tr><td rowspan="11">Molecules</td><td><code>molecules/badge-row.css</code></td><td>Flex row of badges</td></tr>
+            <tr><td><code>atoms/journey-label.css</code></td><td>User journey step labels</td></tr>
+            <tr><td><code>atoms/logo.css</code></td><td>Logo image + logotype</td></tr>
+            <tr><td><code>atoms/modal.css</code></td><td>Overlay, modal card, action buttons</td></tr>
+            <tr><td><code>atoms/moderator-question.css</code></td><td>Moderator context pill</td></tr>
+            <tr><td><code>atoms/span-bar.css</code></td><td>Vertical extent indicator bars</td></tr>
+            <tr><td><code>atoms/thumbnail.css</code></td><td>Video session thumbnail with play icon</td></tr>
+            <tr><td><code>atoms/timecode.css</code></td><td>Timecode links, brackets</td></tr>
+            <tr><td><code>atoms/toast.css</code></td><td>Toast notification</td></tr>
+            <tr><td><code>atoms/toggle.css</code></td><td>Star, hide, toolbar toggle buttons</td></tr>
+            <tr><td rowspan="16">Molecules</td><td><code>molecules/autocode-report.css</code></td><td>AutoCode proposal triage table</td></tr>
+            <tr><td><code>molecules/badge-row.css</code></td><td>Flex row of badges</td></tr>
             <tr><td><code>molecules/bar-group.css</code></td><td>Histogram bar group (<code>display: contents</code>)</td></tr>
-            <tr><td><code>molecules/quote-actions.css</code></td><td>Quote text, speaker, edited states</td></tr>
-            <tr><td><code>molecules/tag-input.css</code></td><td>Tag input with autocomplete dropdown</td></tr>
+            <tr><td><code>molecules/editable-text.css</code></td><td>Inline edit + crop bracket handles + undo</td></tr>
+            <tr><td><code>molecules/feedback.css</code></td><td>Feedback form</td></tr>
+            <tr><td><code>molecules/help-overlay.css</code></td><td>Keyboard shortcut help</td></tr>
+            <tr><td><code>molecules/hidden-quotes.css</code></td><td>Hidden quote badge + dropdown preview</td></tr>
             <tr><td><code>molecules/name-edit.css</code></td><td>Participant name cells with pencil-on-hover</td></tr>
-            <tr><td><code>molecules/search.css</code></td><td>Expanding search field with clear button</td></tr>
-            <tr><td><code>molecules/tag-filter.css</code></td><td>Tag filter dropdown with checkboxes</td></tr>
-            <tr><td><code>molecules/hidden-quotes.css</code></td><td>Hidden quote badge, dropdown preview</td></tr>
-            <tr><td><code>molecules/help-overlay.css</code></td><td>Keyboard shortcut help modal</td></tr>
-            <tr><td><code>molecules/feedback.css</code></td><td>Feedback form (sentiment + textarea)</td></tr>
-            <tr><td><code>molecules/transcript-annotations.css</code></td><td>Right-margin annotations, span bars</td></tr>
-            <tr><td rowspan="6">Organisms</td><td><code>organisms/blockquote.css</code></td><td>Full quote card with all actions</td></tr>
-            <tr><td><code>organisms/toolbar.css</code></td><td>Report toolbar layout, view switcher</td></tr>
-            <tr><td><code>organisms/sentiment-chart.css</code></td><td>Side-by-side histogram layout</td></tr>
-            <tr><td><code>organisms/coverage.css</code></td><td>Transcript coverage details</td></tr>
-            <tr><td><code>organisms/toc.css</code></td><td>Table of contents navigation</td></tr>
+            <tr><td><code>molecules/person-badge.css</code></td><td>Split speaker badge (two-tone code+name pill)</td></tr>
+            <tr><td><code>molecules/quote-actions.css</code></td><td>Bulk action hover preview states</td></tr>
+            <tr><td><code>molecules/search.css</code></td><td>Expanding search field</td></tr>
+            <tr><td><code>molecules/sparkline.css</code></td><td>Micro sentiment bar chart</td></tr>
+            <tr><td><code>molecules/tag-filter.css</code></td><td>Tag filter dropdown with codebook groups</td></tr>
+            <tr><td><code>molecules/tag-input.css</code></td><td>Tag input with autocomplete</td></tr>
+            <tr><td><code>molecules/threshold-review.css</code></td><td>Confidence threshold slider + zones</td></tr>
+            <tr><td><code>molecules/transcript-annotations.css</code></td><td>Right-margin annotations with span bars</td></tr>
+            <tr><td rowspan="9">Organisms</td><td><code>organisms/analysis.css</code></td><td>Signal cards, OKLCH heatmap grid, cell tooltips</td></tr>
+            <tr><td><code>organisms/blockquote.css</code></td><td>Full quote card with all actions</td></tr>
             <tr><td><code>organisms/codebook-panel.css</code></td><td>Codebook group grid, drag-drop, inline edit</td></tr>
+            <tr><td><code>organisms/coverage.css</code></td><td>Transcript coverage details</td></tr>
+            <tr><td><code>organisms/global-nav.css</code></td><td>Tab navigation + dashboard + featured quotes + session drill-down</td></tr>
+            <tr><td><code>organisms/sentiment-chart.css</code></td><td>Side-by-side histogram layout</td></tr>
+            <tr><td><code>organisms/settings.css</code></td><td>Settings panel layout</td></tr>
+            <tr><td><code>organisms/toc.css</code></td><td>Table of contents</td></tr>
+            <tr><td><code>organisms/toolbar.css</code></td><td>Sticky toolbar, view switcher, scroll-margin offsets</td></tr>
             <tr><td rowspan="3">Templates</td><td><code>templates/report.css</code></td><td>Report page layout</td></tr>
             <tr><td><code>templates/transcript.css</code></td><td>Transcript page layout</td></tr>
             <tr><td><code>templates/print.css</code></td><td>Print overrides</td></tr>
+        </tbody>
+    </table>
+
+    <h3 style="font-size: 0.9rem; font-weight: var(--bn-weight-emphasis); margin: 1.5rem 0 0.75rem;">React components <span style="font-weight: var(--bn-weight-normal); color: var(--bn-colour-muted);">(frontend/src/)</span></h3>
+    <table class="file-table">
+        <thead>
+            <tr><th>Layer</th><th>File</th><th>Purpose</th></tr>
+        </thead>
+        <tbody>
+            <tr><td rowspan="8">Hooks &amp; utils</td><td><code>hooks/useCropEdit.ts</code></td><td>Quote text crop editing (trim start/end with bracket handles)</td></tr>
+            <tr><td><code>hooks/useDropdown.ts</code></td><td>Shared dropdown dismiss (Escape + click-outside)</td></tr>
+            <tr><td><code>hooks/useTranscriptCache.ts</code></td><td>Session transcript segment caching</td></tr>
+            <tr><td><code>utils/filter.ts</code></td><td><code>filterQuotes()</code> &mdash; search + view mode + tag filter</td></tr>
+            <tr><td><code>utils/highlight.tsx</code></td><td><code>highlightText()</code> &mdash; search match <code>&lt;mark&gt;</code> wrapping</td></tr>
+            <tr><td><code>utils/colours.ts</code></td><td>Codebook colour mapping (mirrors vanilla JS)</td></tr>
+            <tr><td><code>utils/toast.ts</code></td><td>Imperative <code>toast()</code> function (detached React root)</td></tr>
+            <tr><td><code>utils/sequences.ts</code></td><td>Consecutive quote detection for signal cards</td></tr>
+            <tr><td rowspan="7">Primitives</td><td><code>components/Badge.tsx</code></td><td>Sentiment, user tag, proposed (accept/deny) badges</td></tr>
+            <tr><td><code>components/PersonBadge.tsx</code></td><td>Split speaker badge (code + name, display toggle)</td></tr>
+            <tr><td><code>components/SearchBox.tsx</code></td><td>Toolbar search input (150ms debounce, min 3 chars)</td></tr>
+            <tr><td><code>components/TagFilterDropdown.tsx</code></td><td>Codebook-grouped tag filter with counts</td></tr>
+            <tr><td><code>components/ViewSwitcher.tsx</code></td><td>All / Starred view mode dropdown</td></tr>
+            <tr><td><code>components/ToolbarButton.tsx</code></td><td>Styled button atom (icon + label + arrow)</td></tr>
+            <tr><td><code>components/Toast.tsx</code></td><td>Notification component</td></tr>
+            <tr><td>Store</td><td><code>contexts/QuotesContext.tsx</code></td><td>Module-level store: quotes, filters, mutations (<code>useSyncExternalStore</code>)</td></tr>
         </tbody>
     </table>
 </section>

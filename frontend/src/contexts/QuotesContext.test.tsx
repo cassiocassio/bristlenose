@@ -12,8 +12,12 @@ import {
   restoreBadges,
   acceptProposedTag,
   denyProposedTag,
+  setSearchQuery,
+  setViewMode,
+  setTagFilter,
   useQuotesStore,
 } from "./QuotesContext";
+import { EMPTY_TAG_FILTER } from "../utils/filter";
 
 // ── Mocks ────────────────────────────────────────────────────────────────
 
@@ -287,6 +291,75 @@ describe("QuotesStore", () => {
       const { result } = renderHook(() => useQuotesStore());
       expect(result.current.proposedTags["q-P1-120"]).toBeUndefined();
       expect(mockDenyProposal).toHaveBeenCalledWith(42);
+    });
+  });
+
+  describe("initFromQuotes — quotes field", () => {
+    it("stores the raw quotes array", () => {
+      const q1 = makeQuote({ dom_id: "q-P1-100" });
+      const q2 = makeQuote({ dom_id: "q-P2-200" });
+      initFromQuotes([q1, q2]);
+      const { result } = renderHook(() => useQuotesStore());
+      expect(result.current.quotes).toHaveLength(2);
+      expect(result.current.quotes[0].dom_id).toBe("q-P1-100");
+    });
+
+    it("merges quotes from two init calls", () => {
+      initFromQuotes([makeQuote({ dom_id: "q-P1-100" })]);
+      initFromQuotes([makeQuote({ dom_id: "q-P2-200" })]);
+      const { result } = renderHook(() => useQuotesStore());
+      expect(result.current.quotes).toHaveLength(2);
+    });
+
+    it("replace mode resets quotes to only the new set", () => {
+      initFromQuotes([makeQuote({ dom_id: "q-P1-100" })]);
+      initFromQuotes([makeQuote({ dom_id: "q-P2-200" })], true);
+      const { result } = renderHook(() => useQuotesStore());
+      expect(result.current.quotes).toHaveLength(1);
+      expect(result.current.quotes[0].dom_id).toBe("q-P2-200");
+    });
+  });
+
+  describe("setSearchQuery", () => {
+    it("updates the search query", () => {
+      const { result } = renderHook(() => useQuotesStore());
+      act(() => setSearchQuery("usability"));
+      expect(result.current.searchQuery).toBe("usability");
+    });
+
+    it("does not make an API call", () => {
+      setSearchQuery("test");
+      expect(mockPutStarred).not.toHaveBeenCalled();
+      expect(mockPutHidden).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("setViewMode", () => {
+    it("switches to starred mode", () => {
+      const { result } = renderHook(() => useQuotesStore());
+      act(() => setViewMode("starred"));
+      expect(result.current.viewMode).toBe("starred");
+    });
+
+    it("switches back to all mode", () => {
+      const { result } = renderHook(() => useQuotesStore());
+      act(() => setViewMode("starred"));
+      act(() => setViewMode("all"));
+      expect(result.current.viewMode).toBe("all");
+    });
+  });
+
+  describe("setTagFilter", () => {
+    it("updates the tag filter state", () => {
+      const { result } = renderHook(() => useQuotesStore());
+      const filter = { unchecked: ["UX"], noTagsUnchecked: true, clearAll: false };
+      act(() => setTagFilter(filter));
+      expect(result.current.tagFilter).toEqual(filter);
+    });
+
+    it("defaults to empty tag filter", () => {
+      const { result } = renderHook(() => useQuotesStore());
+      expect(result.current.tagFilter).toEqual(EMPTY_TAG_FILTER);
     });
   });
 

@@ -51,16 +51,17 @@ Cross-island state management. This is infrastructure, not a UI change, but it u
 - **What was built:** Module-level store (`frontend/src/contexts/QuotesContext.tsx`) with `useSyncExternalStore` — works across separate React roots without a shared provider wrapper. 11 action functions (`toggleStar`, `toggleHide`, `commitEdit`, `addTag`, `removeTag`, `deleteBadge`, `restoreBadges`, `acceptProposedTag`, `denyProposedTag`, `initFromQuotes`, `resetStore`). `useQuotesStore()` hook for React subscription. State shape includes `hidden`, `starred`, `edits`, `tags` (as `TagResponse[]` for colour info), `deletedBadges`, `proposedTags`, plus Step 4 placeholders (`viewMode`, `searchQuery`, `tagFilter`). `QuoteGroup.tsx` now reads from the store and delegates mutations — removed `stateMap`/`stateRef`/`QuoteLocalState`/`onStateChange`. Both `QuoteSections` and `QuoteThemes` call `initFromQuotes()` after fetch; `bn:tags-changed` uses `replace: true` for atomic clear-and-set. 18 Vitest tests. Key decision: used module-level store instead of React Context because the two quote islands mount as separate `createRoot()` calls
 - **Test:** 18 Vitest tests for store, actions, and cross-island sharing
 
-### Step 4: Toolbar → React island _(large)_
+### Step 4: Toolbar → React island _(large)_ ✓ DONE
 
-The first step where React replaces a user-facing vanilla JS interaction surface. Also build the **Toast** primitive (deferred from Round 2) — the CSV export "Copied!" feedback needs it.
+The first step where React replaces a user-facing vanilla JS interaction surface. Also built the **Toast** primitive (deferred from Round 2) — the CSV export "Copied!" feedback needs it.
 
-- **Replaces:** `toolbar.html` template + `search.js` (~420 lines) + `tag-filter.js` (~350 lines) + `view-switcher.js` (~170 lines) + `csv-export.js` (~250 lines). Also retires the `showToast()` function
+- **Replaces:** `toolbar.html` template + `search.js` (~420 lines) + `tag-filter.js` (~350 lines) + `view-switcher.js` (~170 lines) + `csv-export.js` (~250 lines). Vanilla JS toolbar init functions no-op in serve mode (DOM targets replaced by React mount div); shared utilities (`showToast`, `copyToClipboard`) remain available for other vanilla JS modules
 - **Dependencies:** Step 3 (QuotesStore). The toolbar writes `searchQuery`, `viewMode`, `tagFilter` to the store; quote islands read them to filter
-- **What to build:** `Toolbar` island with sub-components: `SearchBox`, `TagFilterDropdown`, `ViewSwitcher`, `CsvExportButton`. Plus `Toast` infrastructure primitive
-- **Key change:** Search and tag filtering move from DOM manipulation (`.style.display = 'none'` on `blockquote` elements) to data filtering in the React quote islands. This is cleaner and eliminates the fundamental problem of vanilla JS trying to manipulate React-rendered DOM
-- **Mount point:** Add `<!-- bn-toolbar -->` markers around the toolbar div inside `panel-quotes`
-- **Test:** Vitest for each sub-component. Manual: search filters quotes, tag filter groups by codebook, view switcher toggles starred, CSV copies correctly
+- **What was built:** `Toolbar` island (organism) composing 4 molecules: `SearchBox`, `TagFilterDropdown`, `ViewSwitcher`, CSV export button. Headless `useDropdown()` hook for click-outside + Escape dismiss (shared by TagFilterDropdown and ViewSwitcher). `Toast` component + imperative `toast()` wrapper. `filterQuotes()` pure utility for data-level filtering. `highlightText()` utility wrapping matches in `<mark>` elements. `ToolbarButton` atom (icon + label + arrow slots). `QuoteSections` and `QuoteThemes` islands read filter state from store and apply `filterQuotes()` in `useMemo`. `QuoteCard` applies `highlightText()` in idle mode. Mutual dropdown exclusion via parent-controlled `activeDropdown` state. Tag filter fetches codebook independently. CSV export builds from store data, not DOM
+- **Key change:** Search and tag filtering moved from DOM manipulation (`.style.display = 'none'` on `blockquote` elements) to data filtering in the React quote islands. Sections with zero matches are not rendered (instead of hidden). This eliminates the fundamental problem of vanilla JS trying to manipulate React-rendered DOM
+- **Mount point:** `<!-- bn-toolbar -->` markers added in `render_html.py`; `_REACT_TOOLBAR_MOUNT` in `app.py` replaces with mount div
+- **Test:** 87 new Vitest tests across 12 test files — unit tests for each component, hook, and utility, plus 10 integration tests verifying toolbar → store → quote island filtering flow
+- **Design doc:** Detailed plan at `.claude/plans/dynamic-wobbling-grove.md` — 7 discussion areas (component decomposition, state ownership, communication, toast, dropdown, portability, performance) with options, pros/cons, and resolved decisions
 
 ### Step 5: Tab navigation → React Router _(large — structural hinge)_
 

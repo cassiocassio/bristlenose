@@ -27,6 +27,7 @@ import {
 import type { ModeratorQuestionResponse, ProposedTagBrief, QuoteResponse, TranscriptSegmentResponse } from "../utils/types";
 import { formatTimecode } from "../utils/format";
 import { getTagBg } from "../utils/colours";
+import { highlightText } from "../utils/highlight";
 import { useCropEdit } from "../hooks/useCropEdit";
 
 // ── SVG icon for the hide button (eye-slash) ────────────────────────────
@@ -116,6 +117,8 @@ interface QuoteCardProps {
   onQuoteHoverLeave: (domId: string) => void;
   onPillHoverEnter: (domId: string) => void;
   onPillHoverLeave: (domId: string) => void;
+  /** Current search query — used for highlighting matching text. */
+  searchQuery?: string;
 }
 
 export function QuoteCard({
@@ -157,6 +160,7 @@ export function QuoteCard({
   exhaustedBelow,
   contextAbove,
   contextBelow,
+  searchQuery,
 }: QuoteCardProps) {
   const [isTagInputOpen, setIsTagInputOpen] = useState(false);
   const [showFullModQ, setShowFullModQ] = useState(false);
@@ -458,7 +462,7 @@ export function QuoteCard({
       );
     }
 
-    // Idle mode — plain text with optional ellipsis
+    // Idle mode — plain text with optional ellipsis and search highlighting
     return (
       <span
         className="quote-text"
@@ -469,7 +473,7 @@ export function QuoteCard({
         data-edit-key={`${domId}:text`}
       >
         {crop.hasLeftCrop && <span className="crop-ellipsis">{"\u2026"}</span>}
-        {displayText}
+        {searchQuery ? highlightText(displayText, searchQuery) : displayText}
         {crop.hasRightCrop && <span className="crop-ellipsis">{"\u2026"}</span>}
       </span>
     );

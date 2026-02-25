@@ -12,7 +12,8 @@ import { useCallback, useEffect, useState, useMemo } from "react";
 import { getCodebook } from "../utils/api";
 import { useTranscriptCache } from "../hooks/useTranscriptCache";
 import type { QuotesListResponse } from "../utils/types";
-import { initFromQuotes } from "../contexts/QuotesContext";
+import { initFromQuotes, useQuotesStore } from "../contexts/QuotesContext";
+import { filterQuotes } from "../utils/filter";
 import { QuoteGroup } from "./QuoteGroup";
 
 interface QuoteSectionsProps {
@@ -79,6 +80,31 @@ export function QuoteSections({ projectId }: QuoteSectionsProps) {
 
   const transcriptCache = useTranscriptCache();
 
+  // ── Filter state from toolbar ──────────────────────────────────────────
+
+  const store = useQuotesStore();
+  const filterState = useMemo(
+    () => ({
+      searchQuery: store.searchQuery,
+      viewMode: store.viewMode,
+      tagFilter: store.tagFilter,
+      hidden: store.hidden,
+      starred: store.starred,
+      tags: store.tags,
+    }),
+    [store.searchQuery, store.viewMode, store.tagFilter, store.hidden, store.starred, store.tags],
+  );
+
+  const filteredSections = useMemo(() => {
+    if (!data) return [];
+    return data.sections
+      .map((s) => ({
+        ...s,
+        quotes: filterQuotes(s.quotes, filterState),
+      }))
+      .filter((s) => s.quotes.length > 0);
+  }, [data, filterState]);
+
   // Detect media availability — if any quote has a video timecode link
   // in the original report, we assume media is available.
   // For now, default to true (the server can add this field later).
@@ -109,7 +135,7 @@ export function QuoteSections({ projectId }: QuoteSectionsProps) {
   return (
     <section>
       <h2 id="sections">Sections</h2>
-      {data.sections.map((section) => {
+      {filteredSections.map((section) => {
         const anchor = `section-${section.screen_label.toLowerCase().replace(/ /g, "-")}`;
         return (
           <QuoteGroup
@@ -123,6 +149,7 @@ export function QuoteSections({ projectId }: QuoteSectionsProps) {
             hasMedia={hasMedia}
             transcriptCache={transcriptCache}
             hasModerator={data.has_moderator}
+            searchQuery={store.searchQuery}
           />
         );
       })}

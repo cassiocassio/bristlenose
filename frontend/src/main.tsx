@@ -8,6 +8,7 @@ import { QuoteSections } from "./islands/QuoteSections";
 import { QuoteThemes } from "./islands/QuoteThemes";
 import { SessionsTable } from "./islands/SessionsTable";
 import { SettingsPanel } from "./islands/SettingsPanel";
+import { Toolbar } from "./islands/Toolbar";
 import { TranscriptPage } from "./islands/TranscriptPage";
 
 // Mount HelloIsland (proof of concept — will be removed later)
@@ -28,6 +29,12 @@ const sessionsRoot = document.getElementById("bn-sessions-table-root");
 if (sessionsRoot) {
   const projectId = sessionsRoot.getAttribute("data-project-id") || "1";
   createRoot(sessionsRoot).render(<SessionsTable projectId={projectId} />);
+}
+
+// Mount Toolbar into the quotes tab (above sections/themes)
+const toolbarRoot = document.getElementById("bn-toolbar-root");
+if (toolbarRoot) {
+  createRoot(toolbarRoot).render(<Toolbar />);
 }
 
 // Mount QuoteSections into the sections content area

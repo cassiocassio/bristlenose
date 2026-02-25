@@ -2,7 +2,7 @@
 
 This document tracks active feature branches to help multiple Claude sessions coordinate without conflicts.
 
-**Updated:** 24 Feb 2026 (split-badge merged)
+**Updated:** 25 Feb 2026 (react-settings-about merged)
 
 ---
 
@@ -17,7 +17,6 @@ Each active feature branch gets its own **git worktree** — a full working copy
 | `bristlenose/` | `main` | Main repo, releases, hotfixes |
 | `bristlenose_branch symbology/` | `symbology` | § ¶ ❋ Unicode prefix symbols for sections, quotes, themes |
 | `bristlenose_branch highlighter/` | `highlighter` | Highlighter feature |
-| `bristlenose_branch react-settings-about/` | `react-settings-about` | React migration steps 1 & 2: Settings + About panels |
 
 
 **Creating a new feature branch worktree:**
@@ -98,7 +97,6 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 | `main` | `bristlenose/` | `origin/main` (push via `origin/main:wip` until release time) |
 | `symbology` | `bristlenose_branch symbology/` | `origin/symbology` |
 | `highlighter` | `bristlenose_branch highlighter/` | `origin/highlighter` |
-| `react-settings-about` | `bristlenose_branch react-settings-about/` | `origin/react-settings-about` |
 
 ---
 
@@ -131,25 +129,13 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 - `bristlenose/theme/js/transcript-annotations.js` — margin label tooltips
 - `bristlenose/theme/js/codebook.js` — quote count tooltips
 
-### `react-settings-about` — started 24 Feb 2026
-
-**Worktree:** `/Users/cassio/Code/bristlenose_branch react-settings-about`
-
-**Goal:** Migrate Settings panel and About panel from vanilla JS to React islands (React migration steps 1 & 2 from `docs/design-react-migration.md`). First two self-contained migrations with no cross-island dependencies.
-
-**Files likely to touch:**
-- `frontend/src/islands/SettingsPanel.tsx` — new island (replaces `settings.js`)
-- `frontend/src/islands/AboutPanel.tsx` — new island (replaces inline About HTML + absorbs `AboutDeveloper`)
-- `frontend/src/main.tsx` — mount new islands
-- `bristlenose/stages/render_html.py` — add markers around Settings/About panels
-- `bristlenose/server/app.py` — add mount constants + `re.sub()` calls + renderer overlay CSS
-
-**Potential conflicts with other branches:**
-- `render_html.py` — hot file, also touched by `symbology`
-
 ---
 
 ## Completed Branches (for reference)
+
+### `react-settings-about` — merged 25 Feb 2026
+
+Settings panel and About panel migrated from vanilla JS to React islands (React migration steps 1 & 2). `SettingsPanel.tsx` and `AboutPanel.tsx` islands, QuotesStore module-level store with `useSyncExternalStore`, comment-marker injection in `render_html.py` and `app.py`.
 
 ### `split-badge` — merged 24 Feb 2026
 

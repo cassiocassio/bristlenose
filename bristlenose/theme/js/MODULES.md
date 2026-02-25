@@ -1,6 +1,8 @@
 # JS Module Reference
 
-20 standalone files in `js/` concatenated at render time (same pattern as CSS): storage, badge-utils, modal, codebook, player, starred, editing, tags, histogram, csv-export, view-switcher, search, tag-filter, hidden, names, focus, feedback, analysis, global-nav, main. Transcript pages use `storage.js` + `badge-utils.js` + `player.js` + `transcript-names.js` + `transcript-annotations.js`. Codebook page uses `storage.js` + `badge-utils.js` + `modal.js` + `codebook.js`. Analysis page uses `storage.js` + `analysis.js`. `transcript-names.js` only updates heading speaker names (preserving code prefix: `"m1 Sarah Chen"`); segment speaker labels stay as raw codes (`p1:`, `m1:`) and are not overridden by JS.
+20 standalone files in `js/` concatenated at render time (same pattern as CSS): storage, badge-utils, modal, codebook, player, starred, editing, tags, histogram, csv-export, view-switcher, search, tag-filter, hidden, names, focus, feedback, analysis, global-nav, main.
+
+**Serve mode (React):** All vanilla JS modules are still loaded in serve mode. The 4 toolbar modules (`csv-export.js`, `view-switcher.js`, `search.js`, `tag-filter.js`) have their init functions no-op harmlessly because the React Toolbar island replaces the vanilla toolbar HTML — the DOM elements they bind to (`#search-container`, `#view-switcher-btn`, `#tag-filter-btn`, `#export-csv`) don't exist. Shared utilities like `showToast()` and `copyToClipboard()` from `csv-export.js` remain available for other modules. Transcript pages use `storage.js` + `badge-utils.js` + `player.js` + `transcript-names.js` + `transcript-annotations.js`. Codebook page uses `storage.js` + `badge-utils.js` + `modal.js` + `codebook.js`. Analysis page uses `storage.js` + `analysis.js`. `transcript-names.js` only updates heading speaker names (preserving code prefix: `"m1 Sarah Chen"`); segment speaker labels stay as raw codes (`p1:`, `m1:`) and are not overridden by JS.
 
 ## storage.js
 
@@ -60,7 +62,7 @@ Inline name editing for the participant table. Follows the same `contenteditable
 - **Dependencies**: must load after `csv-export.js` (needs `showToast`, `copyToClipboard`) and before `main.js` (boot calls `initNames()`)
 - **Data source**: `BN_PARTICIPANTS` global — JSON object `{pid: {full_name, short_name, role}}` emitted by `render_html.py` in a `<script>` block
 
-## view-switcher.js
+## view-switcher.js _(serve mode: replaced by React Toolbar island)_
 
 Dropdown menu to switch between report views. Three modes: `all` (default), `starred`, `participants`.
 
@@ -72,7 +74,7 @@ Dropdown menu to switch between report views. Three modes: `all` (default), `sta
 - **Dependencies**: must load after `csv-export.js` (writes `currentViewMode`); before `search.js` and `main.js`
 - **CSS**: `organisms/toolbar.css` — `.view-switcher`, `.view-switcher-label`, `.view-switcher-menu` (dropdown positioned absolute right), `.menu-icon` (invisible spacer for alignment). The view switcher button uses dual classes `toolbar-btn view-switcher-btn` — shared round-rect from `atoms/button.css`, dropdown arrow uses `.toolbar-arrow`
 
-## search.js
+## search.js _(serve mode: replaced by React Toolbar island)_
 
 Search-as-you-type filtering for report quotes. Collapsed magnifying glass icon in the toolbar.
 
@@ -89,7 +91,7 @@ Search-as-you-type filtering for report quotes. Collapsed magnifying glass icon 
 - **Dependencies**: must load after `csv-export.js` (reads `currentViewMode` global) and after `view-switcher.js` (which calls `_onViewModeChange()`); before `names.js` and `main.js`
 - **CSS**: `molecules/search.css`
 
-## tag-filter.js
+## tag-filter.js _(serve mode: replaced by React Toolbar island)_
 
 Dropdown filter for quotes by user tag. Reads the codebook's group hierarchy to organise tags into tinted sections matching the codebook page's visual design. Search matches both tag names and group names.
 

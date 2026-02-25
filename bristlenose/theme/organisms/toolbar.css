@@ -12,6 +12,17 @@
     scroll-margin-top: var(--bn-toolbar-height, 3rem);
 }
 
+/* In serve mode, the React mount wrapper (#bn-toolbar-root) sits between the
+   panel and .toolbar.  position:sticky must be on the direct child of the
+   scrollable ancestor — so both the wrapper and the toolbar itself carry the
+   sticky properties (the one that's actually a direct child wins). */
+#bn-toolbar-root {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: var(--bn-colour-bg);
+}
+
 .toolbar {
     position: sticky;
     top: 0;

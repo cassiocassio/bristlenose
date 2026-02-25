@@ -37,6 +37,11 @@ _THEME_DIR = _REPO_ROOT / "bristlenose" / "theme"
 # browser picks up the change instantly, no re-render needed.
 _JS_MARKER = "/* bristlenose report.js — auto-generated from bristlenose/theme/js/ */"
 # React mount point injected in place of the Jinja2 session table at serve time
+_REACT_TOOLBAR_MOUNT = (
+    "<!-- bn-toolbar -->"
+    '<div id="bn-toolbar-root"></div>'
+    "<!-- /bn-toolbar -->"
+)
 _REACT_SESSIONS_MOUNT = (
     "<!-- bn-session-table -->"
     '<div id="bn-sessions-table-root" data-project-id="1"></div>'
@@ -136,6 +141,10 @@ def _transform_report_html(html: str, project_dir: Path | None) -> str:
     """
     if project_dir is not None:
         html = _rewrite_video_map_uris(html, project_dir)
+    html = re.sub(
+        r"<!-- bn-toolbar -->.*?<!-- /bn-toolbar -->",
+        _REACT_TOOLBAR_MOUNT, html, flags=re.DOTALL,
+    )
     html = re.sub(
         r"<!-- bn-dashboard -->.*?<!-- /bn-dashboard -->",
         _REACT_DASHBOARD_MOUNT, html, flags=re.DOTALL,
@@ -729,6 +738,10 @@ def _load_live_js() -> str:
     Imports ``_JS_FILES`` from ``render_html`` (the canonical dependency-order
     list) and concatenates the raw files.  No caching — edits are picked up
     instantly on browser refresh.
+
+    The vanilla toolbar init functions (``initSearchFilter``,
+    ``initViewSwitcher``, etc.) harmlessly no-op when their DOM targets are
+    absent — replaced by the React Toolbar island's mount div.
     """
     from bristlenose.stages.render_html import _JS_FILES
 

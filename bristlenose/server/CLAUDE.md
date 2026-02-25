@@ -167,7 +167,7 @@ Toggle with the palette button in the top-right corner. When adding a new React 
 
 In dev mode (`bristlenose serve --dev`), the server **live-reloads JS on every request**.  You can edit any `.js` file in `bristlenose/theme/js/`, refresh the browser, and see the change immediately — no `bristlenose render` step needed.
 
-How it works: `serve_report_html()` reads the baked-in HTML from disk, finds the `/* bristlenose report.js */` marker, and replaces everything from there to the IIFE closing `})();` with freshly-read source files via `_load_live_js()` (which imports `_JS_FILES` from `render_html.py` for the canonical dependency order).  The IIFE wrapper `(function() { ... })();` is part of the Jinja2 template — the replacement must preserve the closing or **all JS init functions silently fail to run** (no console error, just a dead page).
+How it works: `serve_report_html()` reads the baked-in HTML from disk, finds the `/* bristlenose report.js */` marker, and replaces everything from there to the IIFE closing `})();` with freshly-read source files via `_load_live_js()` (which imports `_JS_FILES` from `render_html.py` for the canonical dependency order).  All vanilla JS modules are loaded — the toolbar init functions (`initSearchFilter`, `initViewSwitcher`, etc.) harmlessly no-op because the React Toolbar island replaces their DOM targets.  The IIFE wrapper `(function() { ... })();` is part of the Jinja2 template — the replacement must preserve the closing or **all JS init functions silently fail to run** (no console error, just a dead page).
 
 **What still requires re-render:** changes to the Jinja2 HTML template itself (not JS), changes to CSS files, changes to data variables (quote map, analysis data).  JS changes are live.
 

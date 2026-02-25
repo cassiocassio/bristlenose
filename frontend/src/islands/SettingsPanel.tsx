@@ -35,6 +35,17 @@ function isAppearance(v: unknown): v is Appearance {
 function readSaved(): Appearance {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return "auto";
+    // The vanilla JS store (createStore in storage.js) JSON-encodes values,
+    // so localStorage contains '"dark"' not 'dark'.  Parse first, then
+    // validate.  If the value is already a bare string (legacy or direct
+    // write), fall through to the raw check.
+    try {
+      const parsed: unknown = JSON.parse(raw);
+      if (isAppearance(parsed)) return parsed;
+    } catch {
+      // Not valid JSON — check if it's a bare appearance string.
+    }
     return isAppearance(raw) ? raw : "auto";
   } catch {
     return "auto";
@@ -110,7 +121,10 @@ export function SettingsPanel() {
   const handleChange = useCallback((value: Appearance) => {
     setAppearance(value);
     try {
-      localStorage.setItem(STORAGE_KEY, value);
+      // JSON-encode to match the vanilla JS store format (createStore.set
+      // in storage.js calls JSON.stringify).  Without this, transcript pages
+      // fail to parse the raw string and fall back to "auto" (light mode).
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(value));
     } catch {
       // localStorage may be unavailable — ignore.
     }

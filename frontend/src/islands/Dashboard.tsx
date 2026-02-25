@@ -327,6 +327,11 @@ function FeaturedQuote({ quote }: { quote: FeaturedQuoteResponse }) {
 
     // Fall back to session navigation.
     const anchor = `t-${quote.session_id}-${Math.floor(quote.start_timecode)}`;
+    const url = `sessions/transcript_${quote.session_id}.html#${anchor}`;
+    if (e.metaKey || e.ctrlKey || e.shiftKey) {
+      window.open(url, "_blank");
+      return;
+    }
     navigateToSession(quote.session_id, anchor);
   };
 
@@ -436,6 +441,7 @@ function NavList({
               <a
                 href={`#${item.anchor}`}
                 onClick={(e) => {
+                  if (e.metaKey || e.ctrlKey || e.shiftKey) return;
                   e.preventDefault();
                   switchToTab(tabTarget);
                   scrollToAnchor(item.anchor);

@@ -187,6 +187,14 @@ function initGlobalNav() {
       // Fall back to transcript navigation (speaker link)
       var spLink = this.querySelector('a[data-nav-session]');
       if (spLink) {
+        if (e.metaKey || e.ctrlKey || e.shiftKey) {
+          var sid = spLink.getAttribute('data-nav-session');
+          var anc = spLink.getAttribute('data-nav-anchor');
+          var url = 'sessions/transcript_' + sid + '.html';
+          if (anc) url += '#' + anc;
+          window.open(url, '_blank');
+          return;
+        }
         navigateToSession(
           spLink.getAttribute('data-nav-session'),
           spLink.getAttribute('data-nav-anchor')
@@ -209,6 +217,7 @@ function initGlobalNav() {
     var dashSessionLinks = dashTable.querySelectorAll('a[data-session-link]');
     for (var dl = 0; dl < dashSessionLinks.length; dl++) {
       dashSessionLinks[dl].addEventListener('click', function (e) {
+        if (e.metaKey || e.ctrlKey || e.shiftKey) return;
         e.preventDefault();
         navigateToSession(this.getAttribute('data-session-link'));
       });
@@ -219,6 +228,7 @@ function initGlobalNav() {
   var dashListLinks = document.querySelectorAll('.bn-dashboard-nav a[href^="#"]');
   for (var ll = 0; ll < dashListLinks.length; ll++) {
     dashListLinks[ll].addEventListener('click', function (e) {
+      if (e.metaKey || e.ctrlKey || e.shiftKey) return;
       e.preventDefault();
       switchToTab('quotes');
       scrollToAnchor(this.getAttribute('href').slice(1));
@@ -232,6 +242,7 @@ function initGlobalNav() {
   var tocLinks = document.querySelectorAll('.toc a[href^="#"]');
   for (var tl = 0; tl < tocLinks.length; tl++) {
     tocLinks[tl].addEventListener('click', function (e) {
+      if (e.metaKey || e.ctrlKey || e.shiftKey) return;
       e.preventDefault();
       var anchor = this.getAttribute('href').slice(1);
       scrollToAnchor(anchor);
@@ -275,6 +286,7 @@ function _initSessionDrillDown() {
   var sessionLinks = _sessGrid.querySelectorAll('a[data-session-link]');
   for (var j = 0; j < sessionLinks.length; j++) {
     sessionLinks[j].addEventListener('click', function (e) {
+      if (e.metaKey || e.ctrlKey || e.shiftKey) return;
       e.preventDefault();
       var sid = this.getAttribute('data-session-link');
       _showSession(sid);
@@ -295,6 +307,14 @@ function _initSpeakerLinks() {
   var links = document.querySelectorAll('a[data-nav-session]');
   for (var i = 0; i < links.length; i++) {
     links[i].addEventListener('click', function (e) {
+      if (e.metaKey || e.ctrlKey || e.shiftKey) {
+        var sid = this.getAttribute('data-nav-session');
+        var anc = this.getAttribute('data-nav-anchor');
+        var url = 'sessions/transcript_' + sid + '.html';
+        if (anc) url += '#' + anc;
+        window.open(url, '_blank');
+        return;
+      }
       e.preventDefault();
       navigateToSession(
         this.getAttribute('data-nav-session'),

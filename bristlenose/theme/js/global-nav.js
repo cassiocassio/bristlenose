@@ -127,8 +127,12 @@ function initGlobalNav() {
   // --- Tab switching ---
   var tabs = document.querySelectorAll('.bn-tab');
   for (var i = 0; i < tabs.length; i++) {
-    tabs[i].addEventListener('click', function () {
+    tabs[i].addEventListener('click', function (e) {
       var target = this.getAttribute('data-tab');
+      if (e.metaKey || e.ctrlKey || e.shiftKey) {
+        window.open(window.location.pathname + '#' + target, '_blank');
+        return;
+      }
       switchToTab(target);
     });
   }

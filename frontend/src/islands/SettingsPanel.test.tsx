@@ -35,7 +35,14 @@ describe("SettingsPanel", () => {
     expect(auto).toBeChecked();
   });
 
-  it("restores saved preference from localStorage", () => {
+  it("restores JSON-encoded preference from localStorage", () => {
+    localStorage.setItem("bristlenose-appearance", '"dark"');
+    render(<SettingsPanel />);
+    const dark = screen.getByRole("radio", { name: /dark/i });
+    expect(dark).toBeChecked();
+  });
+
+  it("restores bare string preference from localStorage (legacy)", () => {
     localStorage.setItem("bristlenose-appearance", "dark");
     render(<SettingsPanel />);
     const dark = screen.getByRole("radio", { name: /dark/i });
@@ -76,12 +83,13 @@ describe("SettingsPanel", () => {
     expect(document.documentElement.style.colorScheme).toBe("light dark");
   });
 
-  it("persists choice to localStorage", async () => {
+  it("persists JSON-encoded choice to localStorage", async () => {
     const user = userEvent.setup();
     render(<SettingsPanel />);
     await user.click(screen.getByRole("radio", { name: /dark/i }));
 
-    expect(localStorage.getItem("bristlenose-appearance")).toBe("dark");
+    // JSON-encoded to match vanilla JS createStore.set() format
+    expect(localStorage.getItem("bristlenose-appearance")).toBe('"dark"');
   });
 
   it("falls back to auto for invalid localStorage value", () => {

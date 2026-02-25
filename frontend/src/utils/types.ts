@@ -161,6 +161,7 @@ export interface QuotesListResponse {
   total_quotes: number;
   total_hidden: number;
   total_starred: number;
+  has_moderator: boolean;
 }
 
 // ---------------------------------------------------------------------------

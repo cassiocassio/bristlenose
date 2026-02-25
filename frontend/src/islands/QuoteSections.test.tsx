@@ -46,6 +46,7 @@ const MOCK_QUOTES: QuotesListResponse = {
   total_quotes: 1,
   total_hidden: 0,
   total_starred: 0,
+  has_moderator: false,
 };
 
 const MOCK_QUOTES_WITH_TAGS: QuotesListResponse = {

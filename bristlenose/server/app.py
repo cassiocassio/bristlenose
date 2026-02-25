@@ -79,6 +79,26 @@ _REACT_ANALYSIS_MOUNT = (
     "</div>"
     "<!-- /bn-analysis -->"
 )
+# React mount point for settings panel.
+# Must preserve the .bn-tab-panel wrapper so vanilla JS tab switching can find it.
+_REACT_SETTINGS_MOUNT = (
+    "<!-- bn-settings -->"
+    '<div class="bn-tab-panel" data-tab="settings" id="panel-settings"'
+    ' role="tabpanel" aria-label="Settings">'
+    '<div id="bn-settings-root" data-project-id="1"></div>'
+    "</div>"
+    "<!-- /bn-settings -->"
+)
+# React mount point for about panel.
+# Must preserve the .bn-tab-panel wrapper so vanilla JS tab switching can find it.
+_REACT_ABOUT_MOUNT = (
+    "<!-- bn-about -->"
+    '<div class="bn-tab-panel" data-tab="about" id="panel-about"'
+    ' role="tabpanel" aria-label="About">'
+    '<div id="bn-about-root" data-project-id="1"></div>'
+    "</div>"
+    "<!-- /bn-about -->"
+)
 # React mount point for transcript page (replaces back link + heading + transcript body).
 # The {session_id} placeholder is filled at serve time from the filename.
 _REACT_TRANSCRIPT_MOUNT = (
@@ -139,6 +159,14 @@ def _transform_report_html(html: str, project_dir: Path | None) -> str:
     html = re.sub(
         r"<!-- bn-analysis -->.*?<!-- /bn-analysis -->",
         _REACT_ANALYSIS_MOUNT, html, flags=re.DOTALL,
+    )
+    html = re.sub(
+        r"<!-- bn-settings -->.*?<!-- /bn-settings -->",
+        _REACT_SETTINGS_MOUNT, html, flags=re.DOTALL,
+    )
+    html = re.sub(
+        r"<!-- bn-about -->.*?<!-- /bn-about -->",
+        _REACT_ABOUT_MOUNT, html, flags=re.DOTALL,
     )
     # User Journeys section is replaced by sticky header on transcript pages
     html = re.sub(
@@ -467,6 +495,8 @@ body.bn-dev-overlay #bn-about-developer-root,
 body.bn-dev-overlay #bn-quote-sections-root,
 body.bn-dev-overlay #bn-quote-themes-root,
 body.bn-dev-overlay #bn-codebook-root,
+body.bn-dev-overlay #bn-settings-root,
+body.bn-dev-overlay #bn-about-root,
 body.bn-dev-overlay #bn-transcript-page-root,
 body.bn-dev-overlay #codebook-grid,
 body.bn-dev-overlay #signal-cards,
@@ -478,25 +508,25 @@ body.bn-dev-overlay #heatmap-theme-container { position: relative; }
    React/Vanilla JS regions so those regions' own colour shows through.
    Elements *inside* React mount points are also excluded — React renders
    <section>, <table>, etc. that would otherwise match generic selectors. */
-body.bn-dev-overlay .bn-tab-panel:not(:has(#bn-dashboard-root, #bn-sessions-table-root, #bn-about-developer-root, #bn-quote-sections-root, #bn-quote-themes-root, #bn-codebook-root, #codebook-grid, #signal-cards, #heatmap-section-container, #heatmap-theme-container)),
+body.bn-dev-overlay .bn-tab-panel:not(:has(#bn-dashboard-root, #bn-sessions-table-root, #bn-about-developer-root, #bn-settings-root, #bn-about-root, #bn-quote-sections-root, #bn-quote-themes-root, #bn-codebook-root, #codebook-grid, #signal-cards, #heatmap-section-container, #heatmap-theme-container)),
 body.bn-dev-overlay .bn-dashboard:not(:has(#bn-dashboard-root)),
 body.bn-dev-overlay .bn-session-grid:not(:has(#bn-sessions-table-root)),
 body.bn-dev-overlay .toolbar,
 body.bn-dev-overlay .toc,
-body.bn-dev-overlay .bn-about:not(:has(#bn-about-developer-root)),
+body.bn-dev-overlay .bn-about:not(:has(#bn-about-developer-root, #bn-about-root)),
 body.bn-dev-overlay .report-header,
 body.bn-dev-overlay .bn-global-nav,
 body.bn-dev-overlay .footer {
   outline: 3px solid rgba(147, 197, 253, 0.5);  /* blue outline — Jinja2 */
   outline-offset: -3px;
 }
-body.bn-dev-overlay .bn-tab-panel:not(:has(#bn-dashboard-root, #bn-sessions-table-root, #bn-about-developer-root, #bn-quote-sections-root, #bn-quote-themes-root, #bn-codebook-root, #codebook-grid, #signal-cards, #heatmap-section-container, #heatmap-theme-container))::after,
+body.bn-dev-overlay .bn-tab-panel:not(:has(#bn-dashboard-root, #bn-sessions-table-root, #bn-about-developer-root, #bn-settings-root, #bn-about-root, #bn-quote-sections-root, #bn-quote-themes-root, #bn-codebook-root, #codebook-grid, #signal-cards, #heatmap-section-container, #heatmap-theme-container))::after,
 body.bn-dev-overlay .bn-dashboard:not(:has(#bn-dashboard-root))::after,
 body.bn-dev-overlay .bn-session-grid:not(:has(#bn-sessions-table-root))::after,
 body.bn-dev-overlay .toolbar::after,
 body.bn-dev-overlay .toc::after,
-body.bn-dev-overlay section:not(:has(#bn-dashboard-root, #bn-sessions-table-root, #bn-about-developer-root, #bn-quote-sections-root, #bn-quote-themes-root, #bn-codebook-root, #codebook-grid, #signal-cards, #heatmap-section-container, #heatmap-theme-container))::after,
-body.bn-dev-overlay .bn-about:not(:has(#bn-about-developer-root))::after,
+body.bn-dev-overlay section:not(:has(#bn-dashboard-root, #bn-sessions-table-root, #bn-about-developer-root, #bn-settings-root, #bn-about-root, #bn-quote-sections-root, #bn-quote-themes-root, #bn-codebook-root, #codebook-grid, #signal-cards, #heatmap-section-container, #heatmap-theme-container))::after,
+body.bn-dev-overlay .bn-about:not(:has(#bn-about-developer-root, #bn-about-root))::after,
 body.bn-dev-overlay .report-header::after,
 body.bn-dev-overlay .bn-global-nav::after,
 body.bn-dev-overlay .footer::after {
@@ -520,6 +550,8 @@ body.bn-dev-overlay #bn-about-developer-root section::after,
 body.bn-dev-overlay #bn-quote-sections-root section::after,
 body.bn-dev-overlay #bn-quote-themes-root section::after,
 body.bn-dev-overlay #bn-codebook-root section::after,
+body.bn-dev-overlay #bn-settings-root section::after,
+body.bn-dev-overlay #bn-about-root section::after,
 body.bn-dev-overlay #bn-transcript-page-root section::after,
 body.bn-dev-overlay #codebook-grid section::after,
 body.bn-dev-overlay #signal-cards section::after,
@@ -550,6 +582,8 @@ body.bn-dev-overlay #bn-about-developer-root,
 body.bn-dev-overlay #bn-quote-sections-root,
 body.bn-dev-overlay #bn-quote-themes-root,
 body.bn-dev-overlay #bn-codebook-root,
+body.bn-dev-overlay #bn-settings-root,
+body.bn-dev-overlay #bn-about-root,
 body.bn-dev-overlay #bn-transcript-page-root {
   outline: 3px solid rgba(34, 197, 94, 0.6);  /* green outline */
   outline-offset: -3px;
@@ -561,6 +595,8 @@ body.bn-dev-overlay #bn-about-developer-root::after,
 body.bn-dev-overlay #bn-quote-sections-root::after,
 body.bn-dev-overlay #bn-quote-themes-root::after,
 body.bn-dev-overlay #bn-codebook-root::after,
+body.bn-dev-overlay #bn-settings-root::after,
+body.bn-dev-overlay #bn-about-root::after,
 body.bn-dev-overlay #bn-transcript-page-root::after {
   content: '';
   position: absolute;

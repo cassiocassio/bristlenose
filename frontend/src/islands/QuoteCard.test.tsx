@@ -68,6 +68,7 @@ function renderCard(
       tagVocabulary={[]}
       sessionId="s1"
       hasMedia={false}
+      hasModerator={true}
       proposedTags={[]}
       flashingTags={new Set()}
       moderatorQuestion={extra.moderatorQuestion ?? null}
@@ -399,6 +400,7 @@ function renderEditableCard(
       tagVocabulary={[]}
       sessionId="s1"
       hasMedia={false}
+      hasModerator={true}
       proposedTags={[]}
       flashingTags={new Set()}
       moderatorQuestion={null}

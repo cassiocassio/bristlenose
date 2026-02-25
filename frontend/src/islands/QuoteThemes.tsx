@@ -3,13 +3,15 @@
  *
  * Fetches quote data from the API and renders each theme as a
  * QuoteGroup with editable headings, descriptions, and interactive
- * quote cards.
+ * quote cards.  On fetch, populates the shared QuotesStore so
+ * mutations are visible across all quote islands.
  */
 
-import { useEffect, useState, useMemo } from "react";
+import { useCallback, useEffect, useState, useMemo } from "react";
 import { getCodebook } from "../utils/api";
 import { useTranscriptCache } from "../hooks/useTranscriptCache";
 import type { QuotesListResponse } from "../utils/types";
+import { initFromQuotes } from "../contexts/QuotesContext";
 import { QuoteGroup } from "./QuoteGroup";
 
 interface QuoteThemesProps {
@@ -21,19 +23,37 @@ export function QuoteThemes({ projectId }: QuoteThemesProps) {
   const [error, setError] = useState<string | null>(null);
   const [codebookTagNames, setCodebookTagNames] = useState<string[]>([]);
 
-  useEffect(() => {
+  const fetchQuotes = useCallback((replace = false) => {
     fetch(`/api/projects/${projectId}/quotes`)
       .then((res) => {
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         return res.json();
       })
-      .then((json: QuotesListResponse) => setData(json))
+      .then((json: QuotesListResponse) => {
+        setData(json);
+        const allQuotes = [
+          ...json.sections.flatMap((s) => s.quotes),
+          ...json.themes.flatMap((t) => t.quotes),
+        ];
+        initFromQuotes(allQuotes, replace);
+      })
       .catch((err: Error) => setError(err.message));
     // Also fetch codebook tag names for auto-suggest vocabulary
     getCodebook()
       .then((cb) => setCodebookTagNames(cb.all_tag_names))
       .catch(() => {}); // Non-critical — silently ignore
   }, [projectId]);
+
+  useEffect(() => {
+    fetchQuotes();
+  }, [fetchQuotes]);
+
+  // Re-fetch when another island (CodebookPanel) applies bulk autocode tags.
+  useEffect(() => {
+    const handler = () => fetchQuotes(true);
+    document.addEventListener("bn:tags-changed", handler);
+    return () => document.removeEventListener("bn:tags-changed", handler);
+  }, [fetchQuotes]);
 
   // Collect all tag names across all quotes + codebook for the vocabulary.
   const tagVocabulary = useMemo(() => {
@@ -99,6 +119,7 @@ export function QuoteThemes({ projectId }: QuoteThemesProps) {
             tagVocabulary={tagVocabulary}
             hasMedia={hasMedia}
             transcriptCache={transcriptCache}
+            hasModerator={data.has_moderator}
           />
         );
       })}

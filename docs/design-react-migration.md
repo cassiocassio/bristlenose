@@ -42,15 +42,14 @@ Static content with one dynamic element (version string from `/api/health`).
 - **Mount point:** Add `<!-- bn-about -->` markers
 - **Test:** Vitest. Manual: version displays, links work, dev section appears with `--dev`
 
-### Step 3: QuotesStore context _(medium — infrastructure)_
+### Step 3: QuotesStore context _(medium — infrastructure)_ ✓ DONE
 
 Cross-island state management. This is infrastructure, not a UI change, but it unblocks the toolbar migration. Without it, the React toolbar has no way to tell React quote islands what to filter.
 
 - **Replaces:** Nothing directly — but absorbs the `localStorage → apiPut` fire-and-forget pattern from `storage.js` + `api-client.js`
 - **Dependencies:** None to create; Steps 4–8 depend on it
-- **What to build:** `QuotesProvider` context + reducer. State shape: `{ hidden, starred, edits, tags, deletedBadges, viewMode, searchQuery, tagFilter }`. On mount: read from API (serve) or localStorage (static). On mutation: update React state → write localStorage (backward compat) → fire-and-forget PUT to API
-- **Wire up:** Wrap quote islands (`QuoteSections`, `QuoteThemes`) in the provider. They consume `hidden`/`starred`/`edits`/`tags` from context instead of managing local copies. The `onStateChange` callback pattern in `QuoteGroup.tsx` is replaced by `useContext`
-- **Test:** Vitest tests for reducer. Integration: mutation in one island reflected in another
+- **What was built:** Module-level store (`frontend/src/contexts/QuotesContext.tsx`) with `useSyncExternalStore` — works across separate React roots without a shared provider wrapper. 11 action functions (`toggleStar`, `toggleHide`, `commitEdit`, `addTag`, `removeTag`, `deleteBadge`, `restoreBadges`, `acceptProposedTag`, `denyProposedTag`, `initFromQuotes`, `resetStore`). `useQuotesStore()` hook for React subscription. State shape includes `hidden`, `starred`, `edits`, `tags` (as `TagResponse[]` for colour info), `deletedBadges`, `proposedTags`, plus Step 4 placeholders (`viewMode`, `searchQuery`, `tagFilter`). `QuoteGroup.tsx` now reads from the store and delegates mutations — removed `stateMap`/`stateRef`/`QuoteLocalState`/`onStateChange`. Both `QuoteSections` and `QuoteThemes` call `initFromQuotes()` after fetch; `bn:tags-changed` uses `replace: true` for atomic clear-and-set. 18 Vitest tests. Key decision: used module-level store instead of React Context because the two quote islands mount as separate `createRoot()` calls
+- **Test:** 18 Vitest tests for store, actions, and cross-island sharing
 
 ### Step 4: Toolbar → React island _(large)_
 

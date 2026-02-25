@@ -217,6 +217,7 @@ function initPlayer() {
     // Only intercept if this is a player-enabled timecode (has data attributes).
     // Coverage section links use class="timecode" but navigate to transcript pages.
     if (pid && !isNaN(seconds)) {
+      if (e.metaKey || e.ctrlKey || e.shiftKey) return;
       e.preventDefault();
       seekTo(pid, seconds);
     }

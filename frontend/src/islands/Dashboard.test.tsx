@@ -175,6 +175,25 @@ describe("Dashboard CoverageBox", () => {
     ).toBeTruthy();
   });
 
+  it("Cmd+click on nav list link does not call switchToTab", async () => {
+    const withSections = {
+      ...baseDashboard,
+      sections: [{ label: "Onboarding", anchor: "section-onboarding" }],
+    };
+    mockFetch(withSections);
+    const switchToTab = vi.fn();
+    vi.stubGlobal("switchToTab", switchToTab);
+    (window as unknown as Record<string, unknown>).switchToTab = switchToTab;
+
+    render(<Dashboard projectId="1" />);
+    const link = await screen.findByText("Onboarding");
+
+    // Cmd+click should NOT call switchToTab
+    const ev = new MouseEvent("click", { bubbles: true, metaKey: true });
+    link.dispatchEvent(ev);
+    expect(switchToTab).not.toHaveBeenCalled();
+  });
+
   it("does not render coverage box when coverage is null", async () => {
     const noCoverage = { ...baseDashboard, coverage: null };
     mockFetch(noCoverage);

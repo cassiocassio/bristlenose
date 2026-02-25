@@ -618,6 +618,33 @@ describe("AnalysisPage", () => {
     }
   });
 
+  it("Cmd+click on signal card location link does not call switchToTab", async () => {
+    mockFetchCodebookAnalysis(mockCbData);
+    (window as unknown as Record<string, unknown>).switchToTab = vi.fn();
+    render(<AnalysisPage projectId="1" />);
+
+    await waitFor(() => {
+      expect(screen.getAllByTestId("bn-signal-card")).toHaveLength(2);
+    });
+
+    // Find the location link (section name in the signal card header)
+    const card = screen.getAllByTestId("bn-signal-card")[0];
+    const locationLink = card.querySelector("a.signal-card-location-link") as HTMLElement;
+    expect(locationLink).toBeTruthy();
+
+    // Cmd+click (Mac) — should NOT intercept
+    fireEvent.click(locationLink, { metaKey: true });
+    expect(window.switchToTab).not.toHaveBeenCalled();
+
+    // Ctrl+click (Win/Linux) — should NOT intercept
+    fireEvent.click(locationLink, { ctrlKey: true });
+    expect(window.switchToTab).not.toHaveBeenCalled();
+
+    // Plain click — should intercept
+    fireEvent.click(locationLink);
+    expect(window.switchToTab).toHaveBeenCalledWith("quotes");
+  });
+
   it("heatmap cells with count=1 get data-count attribute", async () => {
     mockFetchCodebookAnalysis(mockCbData);
     render(<AnalysisPage projectId="1" />);

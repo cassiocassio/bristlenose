@@ -381,6 +381,7 @@ function SignalCard({
   const locationHref = `#${anchorPrefix}${slug}`;
 
   const handleLocationClick = (e: React.MouseEvent) => {
+    if (e.metaKey || e.ctrlKey || e.shiftKey) return;
     e.preventDefault();
     window.switchToTab?.("quotes");
     window.scrollToAnchor?.(`${anchorPrefix}${slug}`);
@@ -609,12 +610,12 @@ function QuoteBlock({
           <span className="timecode-bracket">]</span>
         </a>
         <span className="quote-body">
-          {!isContinuation && (
-            <><span className="speaker">
-              <PersonBadge code={quote.pid} role="participant" />
-            </span>{" "}</>
-          )}
           <span className="quote-text">{quote.text}</span>
+          {!isContinuation && (
+            <>{" "}<span className="speaker">
+              <PersonBadge code={quote.pid} role="participant" />
+            </span></>
+          )}
           {!isSentiment && quote.tagNames.length > 0 && quote.tagNames.map((tag) => (
             <Badge
               key={tag}

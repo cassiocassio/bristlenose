@@ -14,6 +14,8 @@
 
 import { useSyncExternalStore } from "react";
 import type { TagResponse, ProposedTagBrief, QuoteResponse } from "../utils/types";
+import type { TagFilterState } from "../utils/filter";
+import { EMPTY_TAG_FILTER } from "../utils/filter";
 import {
   putHidden,
   putStarred,
@@ -33,12 +35,14 @@ export interface QuotesState {
   tags: Record<string, TagResponse[]>;
   deletedBadges: Record<string, string[]>;
   proposedTags: Record<string, ProposedTagBrief[]>;
-  /** Step 4 placeholder — not populated yet. */
+  /** All quotes from the API — populated by initFromQuotes. */
+  quotes: QuoteResponse[];
+  /** Current view mode for the quotes tab. */
   viewMode: "all" | "starred";
-  /** Step 4 placeholder — not populated yet. */
+  /** Current search query (min 3 chars to activate filtering). */
   searchQuery: string;
-  /** Step 4 placeholder — not populated yet. */
-  tagFilter: string[];
+  /** Tag filter state — tracks which tags are unchecked. */
+  tagFilter: TagFilterState;
 }
 
 function emptyState(): QuotesState {
@@ -49,9 +53,10 @@ function emptyState(): QuotesState {
     tags: {},
     deletedBadges: {},
     proposedTags: {},
+    quotes: [],
     viewMode: "all",
     searchQuery: "",
-    tagFilter: [],
+    tagFilter: EMPTY_TAG_FILTER,
   };
 }
 
@@ -107,6 +112,9 @@ export function initFromQuotes(quotes: QuoteResponse[], replace = false): void {
       if (q.proposed_tags.length > 0) proposedTags[q.dom_id] = [...q.proposed_tags];
     }
 
+    // Merge quotes arrays (or replace)
+    const mergedQuotes = replace ? [...quotes] : [...base.quotes, ...quotes];
+
     return {
       ...base,
       hidden,
@@ -115,6 +123,7 @@ export function initFromQuotes(quotes: QuoteResponse[], replace = false): void {
       tags,
       deletedBadges,
       proposedTags,
+      quotes: mergedQuotes,
     };
   });
 }
@@ -233,6 +242,23 @@ export function denyProposedTag(domId: string, proposalId: number): void {
   denyProposal(proposalId).catch((err) =>
     console.error("Deny proposal failed:", err),
   );
+}
+
+// ── Toolbar actions (Step 4) ─────────────────────────────────────────
+
+/** Set the search query. No API call — UI-only state. */
+export function setSearchQuery(query: string): void {
+  setState((prev) => ({ ...prev, searchQuery: query }));
+}
+
+/** Set the view mode (all / starred). No API call — UI-only state. */
+export function setViewMode(mode: "all" | "starred"): void {
+  setState((prev) => ({ ...prev, viewMode: mode }));
+}
+
+/** Set the tag filter state. No API call — UI-only state. */
+export function setTagFilter(filter: TagFilterState): void {
+  setState((prev) => ({ ...prev, tagFilter: filter }));
 }
 
 // ── React hook ───────────────────────────────────────────────────────────

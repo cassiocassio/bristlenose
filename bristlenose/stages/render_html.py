@@ -391,7 +391,9 @@ def render_html(
     _w('<div class="bn-tab-panel" data-tab="quotes" id="panel-quotes" role="tabpanel" aria-label="Quotes">')
 
     # --- Toolbar ---
+    _w("<!-- bn-toolbar -->")
     _w(_jinja_env.get_template("toolbar.html").render())
+    _w("<!-- /bn-toolbar -->")
 
     # --- Table of Contents ---
     section_toc: list[tuple[str, str]] = []

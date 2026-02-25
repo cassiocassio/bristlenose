@@ -11,7 +11,8 @@ import { useCallback, useEffect, useState, useMemo } from "react";
 import { getCodebook } from "../utils/api";
 import { useTranscriptCache } from "../hooks/useTranscriptCache";
 import type { QuotesListResponse } from "../utils/types";
-import { initFromQuotes } from "../contexts/QuotesContext";
+import { initFromQuotes, useQuotesStore } from "../contexts/QuotesContext";
+import { filterQuotes } from "../utils/filter";
 import { QuoteGroup } from "./QuoteGroup";
 
 interface QuoteThemesProps {
@@ -79,6 +80,31 @@ export function QuoteThemes({ projectId }: QuoteThemesProps) {
 
   const transcriptCache = useTranscriptCache();
 
+  // ── Filter state from toolbar ──────────────────────────────────────────
+
+  const store = useQuotesStore();
+  const filterState = useMemo(
+    () => ({
+      searchQuery: store.searchQuery,
+      viewMode: store.viewMode,
+      tagFilter: store.tagFilter,
+      hidden: store.hidden,
+      starred: store.starred,
+      tags: store.tags,
+    }),
+    [store.searchQuery, store.viewMode, store.tagFilter, store.hidden, store.starred, store.tags],
+  );
+
+  const filteredThemes = useMemo(() => {
+    if (!data) return [];
+    return data.themes
+      .map((t) => ({
+        ...t,
+        quotes: filterQuotes(t.quotes, filterState),
+      }))
+      .filter((t) => t.quotes.length > 0);
+  }, [data, filterState]);
+
   const hasMedia = true;
 
   if (error) {
@@ -106,7 +132,7 @@ export function QuoteThemes({ projectId }: QuoteThemesProps) {
   return (
     <section>
       <h2 id="themes">Themes</h2>
-      {data.themes.map((theme) => {
+      {filteredThemes.map((theme) => {
         const anchor = `theme-${theme.theme_label.toLowerCase().replace(/ /g, "-")}`;
         return (
           <QuoteGroup
@@ -120,6 +146,7 @@ export function QuoteThemes({ projectId }: QuoteThemesProps) {
             hasMedia={hasMedia}
             transcriptCache={transcriptCache}
             hasModerator={data.has_moderator}
+            searchQuery={store.searchQuery}
           />
         );
       })}

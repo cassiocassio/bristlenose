@@ -106,6 +106,8 @@ interface QuoteGroupProps {
   transcriptCache?: TranscriptCache;
   /** Whether any session in this project has a moderator speaker. */
   hasModerator: boolean;
+  /** Current search query — passed to QuoteCard for highlighting. */
+  searchQuery?: string;
 }
 
 export function QuoteGroup({
@@ -118,6 +120,7 @@ export function QuoteGroup({
   hasMedia,
   transcriptCache,
   hasModerator,
+  searchQuery,
 }: QuoteGroupProps) {
   // ── Shared quote state ─────────────────────────────────────────────────
 
@@ -773,6 +776,7 @@ export function QuoteGroup({
               onQuoteHoverLeave={handleQuoteHoverLeave}
               onPillHoverEnter={handlePillHoverEnter}
               onPillHoverLeave={handlePillHoverLeave}
+              searchQuery={searchQuery}
             />
           );
         })}

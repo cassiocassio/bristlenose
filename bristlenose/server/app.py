@@ -818,7 +818,6 @@ def _mount_dev_report(
     if report_html.is_symlink():
         report_html = output_dir / os.readlink(report_html)
 
-    dev_html = _build_dev_section_html(app.state.db_url)
     overlay_html = _build_renderer_overlay_html()
     vite_scripts = _build_vite_dev_scripts()
 
@@ -829,8 +828,6 @@ def _mount_dev_report(
         html = _replace_baked_js(html)
         # Shared: video URI rewrite, React mount points, API base URL
         html = _transform_report_html(html, project_dir)
-        # Dev-only: inject developer section before the closing .bn-about marker
-        html = html.replace("<!-- /bn-about -->", f"{dev_html}<!-- /bn-about -->")
         # Dev-only: inject renderer overlay + Vite dev scripts before </body>
         html = html.replace("</body>", f"{overlay_html}{vite_scripts}</body>")
         return HTMLResponse(html)

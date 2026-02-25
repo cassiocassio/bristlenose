@@ -80,23 +80,9 @@ If the worktree directory no longer exists, skip this step and note it.
 
 ## Step 5: Detach worktree from git
 
-```bash
-git worktree remove --force "/Users/cassio/Code/bristlenose_branch $0"
-```
-
-The `--force` flag is needed because the directory will have untracked files (the stale marker, .venv, __pycache__, etc.). This unregisters the worktree from git but the `--force` remove may delete the directory — so we need to handle this carefully:
-
-Actually, `git worktree remove` deletes the directory. Since we want to KEEP the directory, use this approach instead:
-
-1. First, copy the stale marker info we need
-2. Unlink the worktree: `git worktree remove --force "/Users/cassio/Code/bristlenose_branch $0"` will remove the directory
-3. Recreate JUST the directory and the stale marker file
-
-**Alternative approach (simpler):** Since `git worktree remove` deletes the working tree, and we want to preserve the directory:
+**Do NOT use `git worktree remove`** — it deletes the directory, which we want to keep. Instead, unlink the worktree by removing its `.git` file:
 
 ```bash
-# Prune the worktree link without deleting the directory
-# by removing the .git file that links it to the main repo
 rm "/Users/cassio/Code/bristlenose_branch $0/.git"
 git worktree prune
 ```

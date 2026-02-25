@@ -21,10 +21,21 @@ interface EndpointInfo {
   description: string;
 }
 
+interface DesignItem {
+  label: string;
+  url: string;
+}
+
+interface DesignSection {
+  heading: string;
+  items: DesignItem[];
+}
+
 interface DevInfoResponse {
   db_path: string;
   table_count: number;
   endpoints: EndpointInfo[];
+  design_sections?: DesignSection[];
 }
 
 // ---------------------------------------------------------------------------
@@ -59,6 +70,11 @@ export function AboutDeveloper() {
         </dd>
         <dt>Schema</dt>
         <dd>{info.table_count} tables</dd>
+        <dt>Renderer overlay</dt>
+        <dd>
+          Press <kbd>&sect;</kbd> to colour-code regions by renderer
+          (blue&nbsp;=&nbsp;Jinja2, green&nbsp;=&nbsp;React, amber&nbsp;=&nbsp;Vanilla&nbsp;JS)
+        </dd>
       </dl>
       <h3>Developer Tools</h3>
       <ul>
@@ -71,6 +87,26 @@ export function AboutDeveloper() {
           </li>
         ))}
       </ul>
+      {info.design_sections && info.design_sections.length > 0 && (
+        <>
+          <hr />
+          <h3>Design</h3>
+          {info.design_sections.map((section) => (
+            <div key={section.heading}>
+              <h4>{section.heading}</h4>
+              <ul>
+                {section.items.map((item) => (
+                  <li key={item.url}>
+                    <a href={item.url} target="_blank" rel="noopener noreferrer">
+                      {item.label}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
+        </>
+      )}
     </>
   );
 }

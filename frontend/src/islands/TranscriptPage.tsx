@@ -482,9 +482,12 @@ export function TranscriptPage({ projectId: _projectId, sessionId }: TranscriptP
     : sessionId;
 
   const hasJourney = journeyLabels.length > 0;
+  const speakerMap = new Map(speakers.map((sp) => [sp.code, sp]));
 
   // Track which quote IDs have been rendered (first segment per quote only)
   const seenQuoteIds = new Set<string>();
+  // Track which speakers have been introduced (first occurrence gets full name badge)
+  const introducedSpeakers = new Set<string>();
   // Track last-shown label+sentiment to suppress repetition — show only on change
   let lastShownLabel = "";
   let lastShownSentiment = "";
@@ -600,12 +603,21 @@ export function TranscriptPage({ projectId: _projectId, sessionId }: TranscriptP
                   <span className="timecode-bracket">]</span>
                 </span>
               )}
-              <span
-                className="segment-speaker bn-person-badge"
-                data-participant={seg.speaker_code}
-              >
-                <span className="badge">{seg.speaker_code}</span>
-              </span>
+              {(() => {
+                const isFirst = !introducedSpeakers.has(seg.speaker_code);
+                if (isFirst) introducedSpeakers.add(seg.speaker_code);
+                const sp = speakerMap.get(seg.speaker_code);
+                const showName = isFirst && sp != null && sp.name !== sp.code;
+                return (
+                  <span className="segment-speaker" data-participant={seg.speaker_code}>
+                    <PersonBadge
+                      code={seg.speaker_code}
+                      role={seg.is_moderator ? "moderator" : "participant"}
+                      name={showName ? sp!.name : undefined}
+                    />
+                  </span>
+                );
+              })()}
               <div className="segment-body">
                 {seg.html_text ? (
                   <span dangerouslySetInnerHTML={{ __html: seg.html_text }} />

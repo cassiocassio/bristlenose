@@ -67,7 +67,18 @@ ln -s /Users/cassio/Code/bristlenose/trial-runs "/Users/cassio/Code/bristlenose_
 
 This symlinks the main repo's `trial-runs/` directory (gitignored, contains large video files and rendered reports) so that `./scripts/dev.sh` works in the worktree. Don't copy — the directory contains video files. If the symlink fails (target doesn't exist), warn but continue — the user may not have trial data.
 
-## Step 8: Push to origin
+## Step 8: Symlink skills
+
+```bash
+mkdir -p "/Users/cassio/Code/bristlenose_branch $0/.claude"
+ln -s /Users/cassio/Code/bristlenose/.claude/skills "/Users/cassio/Code/bristlenose_branch $0/.claude/skills"
+```
+
+This ensures Claude sessions running from the worktree can access `/close-branch` and other skills defined in the main repo. Without this, skills won't load and Claude will improvise manual cleanup — which is how we bricked a shell session in Feb 2026.
+
+If the symlink fails, warn but continue.
+
+## Step 9: Push to origin
 
 ```bash
 git push -u origin $0
@@ -75,7 +86,7 @@ git push -u origin $0
 
 This creates a remote tracking branch so collaborators can access it. If push fails (no network), warn but continue — the branch works fine locally.
 
-## Step 9: Update docs/BRANCHES.md
+## Step 10: Update docs/BRANCHES.md
 
 Read `docs/BRANCHES.md` to understand the current format. Then:
 
@@ -110,7 +121,7 @@ Read `docs/BRANCHES.md` to understand the current format. Then:
 
 Ask the user for the description and files before writing.
 
-## Step 10: Commit BRANCHES.md on main
+## Step 11: Commit BRANCHES.md on main
 
 ```bash
 cd /Users/cassio/Code/bristlenose
@@ -118,7 +129,7 @@ git add docs/BRANCHES.md
 git commit -m "add $0 branch to BRANCHES.md"
 ```
 
-## Step 11: Report
+## Step 12: Report
 
 Print a summary:
 

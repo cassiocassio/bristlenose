@@ -255,6 +255,39 @@ def sessions_table_html(
 # ---------------------------------------------------------------------------
 
 
+def _label_from_filename(name: str) -> str:
+    """Turn 'mockup-codebook-panel.html' into 'Codebook panel'."""
+    stem = _Path(name).stem
+    for prefix in ("mockup-", "focus-", "dashboard-"):
+        if stem.startswith(prefix):
+            stem = stem[len(prefix):]
+            break
+    return stem.replace("-", " ").capitalize()
+
+
+def _discover_design_files() -> list[dict[str, object]]:
+    """Auto-discover HTML files in mockups, experiments, design-system dirs."""
+    repo_root = _Path(__file__).resolve().parent.parent.parent.parent
+    design_dirs: list[tuple[str, str, _Path]] = [
+        ("Mockups", "/mockups", repo_root / "docs" / "mockups"),
+        ("Experiments", "/experiments", repo_root / "experiments"),
+        ("Design System", "/design-system", repo_root / "docs" / "design-system"),
+    ]
+    sections: list[dict[str, object]] = []
+    for heading, url_prefix, dir_path in design_dirs:
+        if not dir_path.is_dir():
+            continue
+        html_files = sorted(dir_path.glob("*.html"))
+        if not html_files:
+            continue
+        items = [
+            {"label": _label_from_filename(f.name), "url": f"{url_prefix}/{f.name}"}
+            for f in html_files
+        ]
+        sections.append({"heading": heading, "items": items})
+    return sections
+
+
 @router.get("/info")
 def dev_info(request: Request) -> dict[str, object]:
     """System info for the About tab developer section."""
@@ -298,6 +331,7 @@ def dev_info(request: Request) -> dict[str, object]:
                 "description": "System status and version",
             },
         ],
+        "design_sections": _discover_design_files(),
     }
 
 

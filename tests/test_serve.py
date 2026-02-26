@@ -315,6 +315,8 @@ class TestProdServeTranscript:
         resp = prod_client.get("/report/sessions/transcript_s99.html")
         assert resp.status_code == 404
 
-    def test_transcript_404_for_non_transcript(self, prod_client: TestClient) -> None:
+    def test_non_transcript_session_serves_spa(self, prod_client: TestClient) -> None:
+        """Non-transcript session paths serve SPA HTML for React Router."""
         resp = prod_client.get("/report/sessions/notvalid.html")
-        assert resp.status_code == 404
+        assert resp.status_code == 200
+        assert "text/html" in resp.headers["content-type"]

@@ -5,12 +5,14 @@
  * and section/theme navigation lists. Read-only — no user mutations.
  *
  * Navigation actions (stat card clicks, session row clicks, featured
- * quote clicks, nav link clicks) delegate to vanilla JS globals
- * defined in global-nav.js and player.js.
+ * quote clicks, nav link clicks) use React context when available
+ * (PlayerContext for seekTo, navigation shims for tab/session nav),
+ * falling back to vanilla JS globals for legacy island mode.
  */
 
-import { useEffect, useState, useMemo } from "react";
+import { useContext, useEffect, useState, useMemo } from "react";
 import { Badge, PersonBadge, TimecodeLink } from "../components";
+import { PlayerContext } from "../contexts/PlayerContext";
 import { formatDuration, formatFinderDate, formatFinderFilename, formatTimecode } from "../utils/format";
 import type {
   CoverageResponse,
@@ -47,7 +49,7 @@ function navigateToSession(sid: string, anchorId?: string) {
   window.location.href = `/report/sessions/${sid}${anchor}`;
 }
 
-function seekTo(pid: string, seconds: number) {
+function seekToGlobal(pid: string, seconds: number) {
   window.seekTo?.(pid, seconds);
 }
 
@@ -313,6 +315,7 @@ function CompactSessionsTable({
 // ---------- Featured quotes ----------
 
 function FeaturedQuote({ quote }: { quote: FeaturedQuoteResponse }) {
+  const playerCtx = useContext(PlayerContext);
   const timecodeStr = formatTimecode(quote.start_timecode);
 
   const handleCardClick = (e: React.MouseEvent) => {
@@ -320,8 +323,9 @@ function FeaturedQuote({ quote }: { quote: FeaturedQuoteResponse }) {
     if ((e.target as HTMLElement).closest("a, button")) return;
 
     // Try video seek first.
-    if (quote.has_media && window.seekTo) {
-      seekTo(quote.participant_id, quote.start_timecode);
+    const seekFn = playerCtx?.seekTo ?? (window.seekTo ? seekToGlobal : null);
+    if (quote.has_media && seekFn) {
+      seekFn(quote.participant_id, quote.start_timecode);
       return;
     }
 

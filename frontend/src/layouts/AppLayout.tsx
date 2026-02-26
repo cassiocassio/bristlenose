@@ -8,6 +8,7 @@
 import { useEffect } from "react";
 import { Outlet, useNavigate } from "react-router-dom";
 import { NavBar } from "../components/NavBar";
+import { PlayerProvider } from "../contexts/PlayerContext";
 import { useScrollToAnchor } from "../hooks/useScrollToAnchor";
 import { installNavigationShims } from "../shims/navigation";
 
@@ -20,9 +21,9 @@ export function AppLayout() {
   }, [navigate, scrollToAnchor]);
 
   return (
-    <>
+    <PlayerProvider>
       <NavBar />
       <Outlet />
-    </>
+    </PlayerProvider>
   );
 }

@@ -22,7 +22,7 @@ This plan supersedes `docs/design-reactive-ui.md` (migration strategy sections) 
 
 ## Migration steps
 
-### Step 1: Settings panel → React island _(small)_
+### Step 1: Settings panel → React island _(small)_ ✓ DONE
 
 The easiest migration. Three radio buttons, one localStorage key, one DOM attribute.
 
@@ -32,7 +32,7 @@ The easiest migration. Three radio buttons, one localStorage key, one DOM attrib
 - **Mount point:** Add `<!-- bn-settings -->` markers around `panel-settings` content in `render_html.py`
 - **Test:** Vitest unit test. Manual: toggle appearance in serve mode, reload preserves setting
 
-### Step 2: About panel → React island _(small)_
+### Step 2: About panel → React island _(small)_ ✓ DONE
 
 Static content with one dynamic element (version string from `/api/health`).
 

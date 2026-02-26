@@ -17,6 +17,7 @@ Each active feature branch gets its own **git worktree** — a full working copy
 | `bristlenose/` | `main` | Main repo, releases, hotfixes |
 | `bristlenose_branch symbology/` | `symbology` | § ¶ ❋ Unicode prefix symbols for sections, quotes, themes |
 | `bristlenose_branch highlighter/` | `highlighter` | Highlighter feature |
+| `bristlenose_branch living-fish/` | `living-fish` | Animated "living portrait" logo for serve mode |
 
 
 **Creating a new feature branch worktree:**
@@ -97,6 +98,7 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 | `main` | `bristlenose/` | `origin/main` (push via `origin/main:wip` until release time) |
 | `symbology` | `bristlenose_branch symbology/` | `origin/symbology` |
 | `highlighter` | `bristlenose_branch highlighter/` | `origin/highlighter` |
+| `living-fish` | `bristlenose_branch living-fish/` | `origin/living-fish` |
 
 ---
 
@@ -128,6 +130,27 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 - `bristlenose/theme/js/analysis.js` — signal cards, heatmap headers
 - `bristlenose/theme/js/transcript-annotations.js` — margin label tooltips
 - `bristlenose/theme/js/codebook.js` — quote count tooltips
+
+---
+
+### `living-fish` — started 26 Feb 2026
+
+**Status:** Just started
+**Worktree:** `/Users/cassio/Code/bristlenose_branch living-fish/`
+**Remote:** `origin/living-fish`
+
+**What it does:** Animated "living portrait" bristlenose logo for serve mode. AI-generated video loop (WebM VP9 alpha + MOV HEVC alpha) with subtle breathing, gill pulsing, and fin movement — replacing the static PNG in serve mode only. Also fixes dark-mode logo by switching to a transparent-background PNG (eliminates `mix-blend-mode: lighten` hack and `<picture>` source-swapping).
+
+**Files this branch will touch:**
+- `bristlenose/server/app.py` — serve video assets as static files
+- `bristlenose/theme/report_header.html` — `<video>` element in serve-mode branch
+- `bristlenose/theme/atoms/logo.css` — video element styling, remove `mix-blend-mode` hack
+- `bristlenose/theme/images/` — new assets (`.webm`, `.mov`, transparent `.png`)
+- `frontend/src/` — React header component if logo is already a React island
+
+**Potential conflicts with other branches:**
+- `symbology` touches `render_html.py` and template headings — low risk (logo is separate from section symbols)
+- `highlighter` — unknown scope, likely no overlap
 
 ---
 

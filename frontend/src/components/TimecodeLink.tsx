@@ -1,3 +1,5 @@
+import { useContext, useCallback } from "react";
+import { PlayerContext } from "../contexts/PlayerContext";
 import { formatTimecode } from "../utils/format";
 
 interface TimecodeLinkProps {
@@ -15,7 +17,18 @@ export function TimecodeLink({
   formatted,
   "data-testid": testId,
 }: TimecodeLinkProps) {
+  const playerCtx = useContext(PlayerContext);
   const display = formatted ?? `[${formatTimecode(seconds)}]`;
+
+  const handleClick = useCallback(
+    (e: React.MouseEvent) => {
+      if (!playerCtx) return; // Legacy island mode — vanilla JS handles clicks
+      if (e.metaKey || e.ctrlKey || e.shiftKey) return;
+      e.preventDefault();
+      playerCtx.seekTo(participantId, seconds);
+    },
+    [playerCtx, participantId, seconds],
+  );
 
   return (
     <a
@@ -24,6 +37,7 @@ export function TimecodeLink({
       data-participant={participantId}
       data-seconds={seconds}
       {...(endSeconds !== undefined && { "data-end-seconds": endSeconds })}
+      onClick={playerCtx ? handleClick : undefined}
       data-testid={testId}
     >
       <span className="timecode-bracket">[</span>

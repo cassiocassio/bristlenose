@@ -8,8 +8,9 @@ import re
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
+from starlette.responses import Response
 
 from bristlenose.server.db import create_session_factory, db_url_for_project, get_engine, init_db
 from bristlenose.server.routes.analysis import router as analysis_router
@@ -225,6 +226,9 @@ def _transform_report_html(html: str, project_dir: Path | None) -> str:
         "<script>window.BRISTLENOSE_API_BASE = '/api/projects/1';</script>\n"
     )
     html = html.replace("</body>", f"{api_base_script}</body>")
+    # Ensure relative asset paths (CSS, images) resolve correctly on nested
+    # SPA routes like /report/sessions/ or /report/quotes/.
+    html = html.replace("<head>", '<head>\n<base href="/report/">', 1)
     return html
 
 
@@ -853,17 +857,21 @@ def _mount_dev_report(
     def redirect_report_to_slash() -> RedirectResponse:
         return RedirectResponse("/report/", status_code=301)
 
-    @app.get("/report/sessions/{filename}")
-    def serve_transcript_html(filename: str) -> HTMLResponse:
+    @app.get("/report/sessions/{filename}", response_model=None)
+    def serve_transcript_html(filename: str) -> Response:
         """Serve transcript pages with React island injection.
 
-        Only intercepts transcript_*.html files — other session assets
-        (if any) fall through to StaticFiles.
+        Intercepts transcript_*.html files for server-side transform.
+        Other session paths (e.g. /sessions/s1) serve the SPA HTML so
+        React Router can handle client-side routing.
         """
         if not filename.startswith("transcript_") or not filename.endswith(".html"):
-            from starlette.exceptions import HTTPException as StarletteHTTPException
-
-            raise StarletteHTTPException(status_code=404)
+            # Not a transcript file — serve SPA HTML for React Router
+            html = report_html.read_text(encoding="utf-8")
+            html = _replace_baked_js(html)
+            html = _transform_report_html(html, project_dir)
+            html = html.replace("</body>", f"{overlay_html}{vite_scripts}</body>")
+            return HTMLResponse(html)
 
         sessions_dir = output_dir / "sessions"
         page_path = sessions_dir / filename
@@ -880,13 +888,24 @@ def _mount_dev_report(
         )
         return HTMLResponse(page_html)
 
-    @app.get("/report/{path:path}")
-    def serve_report_spa(path: str = "") -> HTMLResponse:
+    @app.get("/report/{path:path}", response_model=None)
+    def serve_report_spa(path: str = "") -> Response:
         """SPA catch-all: serve the report HTML for all /report/* paths.
 
         React Router handles client-side routing. The transcript route above
-        takes priority for transcript_*.html files.
+        takes priority for transcript_*.html files.  Paths with file
+        extensions (CSS, JS, images) are served directly from the output
+        directory.
         """
+        from pathlib import PurePosixPath
+
+        if PurePosixPath(path).suffix:
+            # Static asset — serve from output directory
+            asset_path = output_dir / path
+            if asset_path.is_file():
+                return FileResponse(asset_path)
+            raise HTTPException(status_code=404, detail="Asset not found")
+
         html = report_html.read_text(encoding="utf-8")
         # Dev-only: live-reload JS from source files
         html = _replace_baked_js(html)
@@ -941,13 +960,15 @@ def _mount_prod_report(
     def redirect_report_to_slash_prod() -> RedirectResponse:
         return RedirectResponse("/report/", status_code=301)
 
-    @app.get("/report/sessions/{filename}")
-    def serve_transcript_html_prod(filename: str) -> HTMLResponse:
+    @app.get("/report/sessions/{filename}", response_model=None)
+    def serve_transcript_html_prod(filename: str) -> Response:
         """Serve transcript pages with React island injection (production)."""
         if not filename.startswith("transcript_") or not filename.endswith(".html"):
-            from starlette.exceptions import HTTPException as StarletteHTTPException
-
-            raise StarletteHTTPException(status_code=404)
+            # Not a transcript file — serve SPA HTML for React Router
+            html = report_html_path.read_text(encoding="utf-8")
+            html = _transform_report_html(html, project_dir)
+            html = html.replace("</head>", f"{bundle_tags}\n</head>")
+            return HTMLResponse(html)
 
         sessions_dir = output_dir / "sessions"
         page_path = sessions_dir / filename
@@ -960,9 +981,22 @@ def _mount_prod_report(
         page_html = page_html.replace("</head>", f"{bundle_tags}\n</head>")
         return HTMLResponse(page_html)
 
-    @app.get("/report/{path:path}")
-    def serve_report_spa_prod(path: str = "") -> HTMLResponse:
-        """SPA catch-all (production): serve report HTML for all /report/* paths."""
+    @app.get("/report/{path:path}", response_model=None)
+    def serve_report_spa_prod(path: str = "") -> Response:
+        """SPA catch-all (production): serve report HTML for all /report/* paths.
+
+        Paths with file extensions (CSS, JS, images) are served directly
+        from the output directory.
+        """
+        from pathlib import PurePosixPath
+
+        if PurePosixPath(path).suffix:
+            # Static asset — serve from output directory
+            asset_path = output_dir / path
+            if asset_path.is_file():
+                return FileResponse(asset_path)
+            raise HTTPException(status_code=404, detail="Asset not found")
+
         html = report_html_path.read_text(encoding="utf-8")
         html = _transform_report_html(html, project_dir)
         html = html.replace("</head>", f"{bundle_tags}\n</head>")

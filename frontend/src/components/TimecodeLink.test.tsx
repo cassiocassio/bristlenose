@@ -1,4 +1,6 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, fireEvent } from "@testing-library/react";
+import { vi } from "vitest";
+import { PlayerContext } from "../contexts/PlayerContext";
 import { TimecodeLink } from "./TimecodeLink";
 
 describe("TimecodeLink", () => {
@@ -57,5 +59,40 @@ describe("TimecodeLink", () => {
       <TimecodeLink seconds={10} participantId="p1" data-testid="tc" />,
     );
     expect(screen.getByTestId("tc")).not.toHaveAttribute("data-end-seconds");
+  });
+
+  // --- Player context integration ---
+
+  it("calls seekTo on click when PlayerProvider is present", () => {
+    const seekTo = vi.fn();
+    render(
+      <PlayerContext.Provider value={{ seekTo }}>
+        <TimecodeLink seconds={42} participantId="p1" data-testid="tc" />
+      </PlayerContext.Provider>,
+    );
+    const link = screen.getByTestId("tc");
+    fireEvent.click(link);
+    expect(seekTo).toHaveBeenCalledWith("p1", 42);
+  });
+
+  it("does not call seekTo on modifier-key click", () => {
+    const seekTo = vi.fn();
+    render(
+      <PlayerContext.Provider value={{ seekTo }}>
+        <TimecodeLink seconds={42} participantId="p1" data-testid="tc" />
+      </PlayerContext.Provider>,
+    );
+    const link = screen.getByTestId("tc");
+    fireEvent.click(link, { metaKey: true });
+    expect(seekTo).not.toHaveBeenCalled();
+  });
+
+  it("has no onClick handler without PlayerProvider", () => {
+    render(
+      <TimecodeLink seconds={10} participantId="p1" data-testid="tc" />,
+    );
+    // No error, no crash — just renders normally
+    const link = screen.getByTestId("tc");
+    fireEvent.click(link); // Should not throw
   });
 });

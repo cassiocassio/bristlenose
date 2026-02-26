@@ -185,6 +185,8 @@ Codebook data model, colour assignment, and interactive panel UI. Manages the re
 
 ## global-nav.js
 
+> **Serve mode:** `initGlobalNav()` is a no-op when `#bn-app-root` exists (React Router handles navigation). The functions below are still exported to `window.*` for backward compat, but in serve mode they are overwritten by shims from `frontend/src/shims/navigation.ts` that delegate to React Router. The full vanilla JS implementation remains active for the static render path (`bristlenose render`).
+
 Top-level tab bar for report navigation. Manages switching between tab panels (Project, Sessions, Quotes, Codebook, Analysis, Settings, About), the Sessions tab drill-down sub-navigation, and all cross-tab navigation from the Project dashboard.
 
 ### Reusable navigation helpers

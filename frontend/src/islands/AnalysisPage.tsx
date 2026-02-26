@@ -377,7 +377,8 @@ function SignalCard({
       : "var(--bn-colour-accent)";
 
   const anchorPrefix = signal.sourceType === "section" ? "section-" : "theme-";
-  const slug = signal.location.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "");
+  // Must match QuoteSections/QuoteThemes anchor format: lowercase, spaces → hyphens only.
+  const slug = signal.location.toLowerCase().replace(/ /g, "-");
   const locationHref = `#${anchorPrefix}${slug}`;
 
   const handleLocationClick = (e: React.MouseEvent) => {

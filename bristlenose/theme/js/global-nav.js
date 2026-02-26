@@ -124,6 +124,9 @@ function switchToTab(tabName, pushHash) {
  * Initialise global tab navigation and session drill-down.
  */
 function initGlobalNav() {
+  // React Router handles navigation in serve mode — no-op.
+  if (document.getElementById('bn-app-root')) return;
+
   // --- Tab switching ---
   var tabs = document.querySelectorAll('.bn-tab');
   for (var i = 0; i < tabs.length; i++) {

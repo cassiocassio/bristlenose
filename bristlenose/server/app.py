@@ -36,6 +36,14 @@ _THEME_DIR = _REPO_ROOT / "bristlenose" / "theme"
 # JS read from the source files — so editing a .js file and refreshing the
 # browser picks up the change instantly, no re-render needed.
 _JS_MARKER = "/* bristlenose report.js — auto-generated from bristlenose/theme/js/ */"
+# React Router app root — replaces the entire nav bar + tab panel region.
+# Individual island mount constants below are kept for reference but become
+# no-ops at serve time (their markers are inside the bn-app region).
+_REACT_APP_MOUNT = (
+    "<!-- bn-app -->"
+    '<div id="bn-app-root" data-project-id="1"></div>'
+    "<!-- /bn-app -->"
+)
 # React mount point injected in place of the Jinja2 session table at serve time
 _REACT_TOOLBAR_MOUNT = (
     "<!-- bn-toolbar -->"
@@ -141,6 +149,13 @@ def _transform_report_html(html: str, project_dir: Path | None) -> str:
     """
     if project_dir is not None:
         html = _rewrite_video_map_uris(html, project_dir)
+    # Replace the entire nav + tab-panel region with the React Router app root.
+    # This makes all subsequent individual island substitutions no-ops (their
+    # markers are inside the bn-app region and no longer exist in the HTML).
+    html = re.sub(
+        r"<!-- bn-app -->.*?<!-- /bn-app -->",
+        _REACT_APP_MOUNT, html, flags=re.DOTALL,
+    )
     html = re.sub(
         r"<!-- bn-toolbar -->.*?<!-- /bn-toolbar -->",
         _REACT_TOOLBAR_MOUNT, html, flags=re.DOTALL,
@@ -834,17 +849,6 @@ def _mount_dev_report(
     overlay_html = _build_renderer_overlay_html()
     vite_scripts = _build_vite_dev_scripts()
 
-    @app.get("/report/")
-    def serve_report_html() -> HTMLResponse:
-        html = report_html.read_text(encoding="utf-8")
-        # Dev-only: live-reload JS from source files
-        html = _replace_baked_js(html)
-        # Shared: video URI rewrite, React mount points, API base URL
-        html = _transform_report_html(html, project_dir)
-        # Dev-only: inject renderer overlay + Vite dev scripts before </body>
-        html = html.replace("</body>", f"{overlay_html}{vite_scripts}</body>")
-        return HTMLResponse(html)
-
     @app.get("/report")
     def redirect_report_to_slash() -> RedirectResponse:
         return RedirectResponse("/report/", status_code=301)
@@ -875,6 +879,22 @@ def _mount_dev_report(
             "</body>", f"{overlay_html}{vite_scripts}</body>"
         )
         return HTMLResponse(page_html)
+
+    @app.get("/report/{path:path}")
+    def serve_report_spa(path: str = "") -> HTMLResponse:
+        """SPA catch-all: serve the report HTML for all /report/* paths.
+
+        React Router handles client-side routing. The transcript route above
+        takes priority for transcript_*.html files.
+        """
+        html = report_html.read_text(encoding="utf-8")
+        # Dev-only: live-reload JS from source files
+        html = _replace_baked_js(html)
+        # Shared: video URI rewrite, React app root, API base URL
+        html = _transform_report_html(html, project_dir)
+        # Dev-only: inject renderer overlay + Vite dev scripts before </body>
+        html = html.replace("</body>", f"{overlay_html}{vite_scripts}</body>")
+        return HTMLResponse(html)
 
     # Non-HTML assets (CSS, images, JS from the pipeline) still served normally
     app.mount("/report", StaticFiles(directory=output_dir), name="report")
@@ -917,13 +937,6 @@ def _mount_prod_report(
     if report_html_path.is_symlink():
         report_html_path = output_dir / os.readlink(report_html_path)
 
-    @app.get("/report/")
-    def serve_report_html_prod() -> HTMLResponse:
-        html = report_html_path.read_text(encoding="utf-8")
-        html = _transform_report_html(html, project_dir)
-        html = html.replace("</head>", f"{bundle_tags}\n</head>")
-        return HTMLResponse(html)
-
     @app.get("/report")
     def redirect_report_to_slash_prod() -> RedirectResponse:
         return RedirectResponse("/report/", status_code=301)
@@ -946,6 +959,14 @@ def _mount_prod_report(
         page_html = _transform_transcript_html(page_html, sid, project_dir)
         page_html = page_html.replace("</head>", f"{bundle_tags}\n</head>")
         return HTMLResponse(page_html)
+
+    @app.get("/report/{path:path}")
+    def serve_report_spa_prod(path: str = "") -> HTMLResponse:
+        """SPA catch-all (production): serve report HTML for all /report/* paths."""
+        html = report_html_path.read_text(encoding="utf-8")
+        html = _transform_report_html(html, project_dir)
+        html = html.replace("</head>", f"{bundle_tags}\n</head>")
+        return HTMLResponse(html)
 
     # Non-HTML assets (CSS, images, JS from the pipeline) still served normally
     app.mount("/report", StaticFiles(directory=output_dir), name="report")

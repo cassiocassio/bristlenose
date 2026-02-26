@@ -313,6 +313,7 @@ def render_html(
     ))
 
     # --- Global Navigation ---
+    _w("<!-- bn-app -->")
     _w(_jinja_env.get_template("global_nav.html").render())
 
     # --- Project tab ---
@@ -614,6 +615,7 @@ def render_html(
     _w("</div>")  # .bn-about
     _w("</div>")  # .bn-tab-panel[about]
     _w("<!-- /bn-about -->")
+    _w("<!-- /bn-app -->")
 
     # --- Close ---
     _w("</article>")

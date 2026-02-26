@@ -44,7 +44,7 @@ function scrollToAnchor(anchorId: string, opts?: { block?: string; highlight?: b
 
 function navigateToSession(sid: string, anchorId?: string) {
   const anchor = anchorId ? `#${anchorId}` : "";
-  window.location.href = `sessions/transcript_${sid}.html${anchor}`;
+  window.location.href = `/report/sessions/${sid}${anchor}`;
 }
 
 function seekTo(pid: string, seconds: number) {
@@ -240,7 +240,7 @@ function CompactSessionRow({
   return (
     <tr data-session={session_id}>
       <td className="bn-session-id">
-        <a href={`sessions/transcript_${session_id}.html`}>
+        <a href={`/report/sessions/${session_id}`}>
           #{session_number}
         </a>
       </td>
@@ -327,7 +327,7 @@ function FeaturedQuote({ quote }: { quote: FeaturedQuoteResponse }) {
 
     // Fall back to session navigation.
     const anchor = `t-${quote.session_id}-${Math.floor(quote.start_timecode)}`;
-    const url = `sessions/transcript_${quote.session_id}.html#${anchor}`;
+    const url = `/report/sessions/${quote.session_id}#${anchor}`;
     if (e.metaKey || e.ctrlKey || e.shiftKey) {
       window.open(url, "_blank");
       return;
@@ -362,7 +362,7 @@ function FeaturedQuote({ quote }: { quote: FeaturedQuoteResponse }) {
         )}
 
         <a
-          href={`sessions/transcript_${quote.session_id}.html#t-${quote.session_id}-${Math.floor(quote.start_timecode)}`}
+          href={`/report/sessions/${quote.session_id}#t-${quote.session_id}-${Math.floor(quote.start_timecode)}`}
           className="speaker-link"
         >
           <PersonBadge

@@ -125,7 +125,7 @@ def test_css_print_forces_light(tmp_path: Path) -> None:
 
 
 # ---------------------------------------------------------------------------
-# Logo: <picture> element with dark variant
+# Logo: transparent PNG preferred, <picture> fallback for legacy installs
 # ---------------------------------------------------------------------------
 
 def test_logo_dark_file_copied(tmp_path: Path) -> None:
@@ -133,19 +133,44 @@ def test_logo_dark_file_copied(tmp_path: Path) -> None:
     assert (tmp_path / "assets" / "bristlenose-logo-dark.png").exists()
 
 
-def test_logo_picture_element(tmp_path: Path) -> None:
+def test_logo_has_comment_markers(tmp_path: Path) -> None:
+    """Logo region is wrapped in comment markers for serve-mode video injection."""
+    html = _render_minimal(tmp_path)
+    assert "<!-- bn-logo -->" in html
+    assert "<!-- /bn-logo -->" in html
+
+
+def test_logo_picture_fallback_without_transparent_png(tmp_path: Path) -> None:
+    """Without transparent PNG, the template falls back to <picture> with dark variant."""
+    from bristlenose.stages.render_html import _LOGO_TRANSPARENT_PATH
+
+    if _LOGO_TRANSPARENT_PATH.exists():
+        # Transparent PNG exists — the <picture> fallback path is not used.
+        # Skip this test (the test_logo_uses_transparent_png test covers it).
+        return
     html = _render_minimal(tmp_path)
     assert "<picture>" in html
     assert 'media="(prefers-color-scheme: dark)"' in html
-    # New layout: assets/bristlenose-logo-dark.png
     assert 'srcset="assets/bristlenose-logo-dark.png"' in html
 
 
-def test_logo_light_still_default(tmp_path: Path) -> None:
-    """The <img> fallback inside <picture> should still be the light logo."""
+def test_logo_uses_transparent_png(tmp_path: Path) -> None:
+    """When transparent PNG exists, it replaces the <picture> element."""
+    from bristlenose.stages.render_html import _LOGO_TRANSPARENT_PATH
+
+    if not _LOGO_TRANSPARENT_PATH.exists():
+        # Transparent PNG not yet provided — skip until asset is dropped in.
+        return
     html = _render_minimal(tmp_path)
-    # New layout: assets/bristlenose-logo.png
-    assert 'src="assets/bristlenose-logo.png"' in html
+    assert 'src="assets/bristlenose-logo-transparent.png"' in html
+    assert (tmp_path / "assets" / "bristlenose-logo-transparent.png").exists()
+
+
+def test_css_no_mix_blend_mode_hack(tmp_path: Path) -> None:
+    """The mix-blend-mode hack was removed — transparent PNG works on all themes."""
+    _render_minimal(tmp_path)
+    css = (tmp_path / "assets" / "bristlenose-theme.css").read_text(encoding="utf-8")
+    assert "mix-blend-mode" not in css
 
 
 # ---------------------------------------------------------------------------

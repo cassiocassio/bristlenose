@@ -118,6 +118,21 @@ class OutputPaths:
         return self.assets_dir / "bristlenose-logo-dark.png"
 
     @property
+    def logo_transparent_file(self) -> Path:
+        """Logo (transparent): assets/bristlenose-logo-transparent.png"""
+        return self.assets_dir / "bristlenose-logo-transparent.png"
+
+    @property
+    def logo_video_webm(self) -> Path:
+        """Animated logo (WebM VP9 alpha): assets/bristlenose-alive.webm"""
+        return self.assets_dir / "bristlenose-alive.webm"
+
+    @property
+    def logo_video_mov(self) -> Path:
+        """Animated logo (HEVC alpha): assets/bristlenose-alive.mov"""
+        return self.assets_dir / "bristlenose-alive.mov"
+
+    @property
     def player_file(self) -> Path:
         """Video player page: assets/bristlenose-player.html"""
         return self.assets_dir / "bristlenose-player.html"

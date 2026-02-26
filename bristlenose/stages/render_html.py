@@ -46,6 +46,9 @@ _LOGO_PATH = _THEME_DIR / "images" / "bristlenose.png"
 _LOGO_DARK_PATH = _THEME_DIR / "images" / "bristlenose-dark.png"
 _LOGO_FILENAME = "bristlenose-logo.png"
 _LOGO_DARK_FILENAME = "bristlenose-logo-dark.png"
+_LOGO_TRANSPARENT_PATH = _THEME_DIR / "images" / "bristlenose-transparent.png"
+_LOGO_VIDEO_WEBM_PATH = _THEME_DIR / "images" / "bristlenose-alive.webm"
+_LOGO_VIDEO_MOV_PATH = _THEME_DIR / "images" / "bristlenose-alive.mov"
 
 # Files concatenated in atomic-design order.
 _THEME_FILES: list[str] = [
@@ -257,6 +260,12 @@ def render_html(
         shutil.copy2(_LOGO_PATH, paths.logo_file)
     if _LOGO_DARK_PATH.exists():
         shutil.copy2(_LOGO_DARK_PATH, paths.logo_dark_file)
+    if _LOGO_TRANSPARENT_PATH.exists():
+        shutil.copy2(_LOGO_TRANSPARENT_PATH, paths.logo_transparent_file)
+    if _LOGO_VIDEO_WEBM_PATH.exists():
+        shutil.copy2(_LOGO_VIDEO_WEBM_PATH, paths.logo_video_webm)
+    if _LOGO_VIDEO_MOV_PATH.exists():
+        shutil.copy2(_LOGO_VIDEO_MOV_PATH, paths.logo_video_mov)
 
     # Build video/audio map for clickable timecodes
     video_map = _build_video_map(sessions)
@@ -2258,6 +2267,7 @@ def _report_header_html(
         assets_prefix=assets_prefix,
         has_logo=has_logo,
         has_dark_logo=has_dark_logo,
+        has_transparent_logo=_LOGO_TRANSPARENT_PATH.exists(),
         project_name=project_name,
         doc_title=doc_title,
         meta_right=meta_right,
@@ -2275,7 +2285,11 @@ def _footer_html(assets_prefix: str = "assets") -> str:
     from bristlenose import __version__
 
     tmpl = _jinja_env.get_template("footer.html")
-    return tmpl.render(version=__version__, assets_prefix=assets_prefix)
+    return tmpl.render(
+        version=__version__,
+        assets_prefix=assets_prefix,
+        has_transparent_logo=_LOGO_TRANSPARENT_PATH.exists(),
+    )
 
 
 def _esc(text: str) -> str:

@@ -32,11 +32,8 @@
     border-radius: var(--bn-radius-md);
 }
 
-/* HACK: Dark logo has a solid black background — blend it away in dark mode.
-   Remove this when the logo images are replaced with transparent-background PNGs. */
-[data-theme="dark"] .report-logo { mix-blend-mode: lighten; }
-@media (prefers-color-scheme: dark) {
-    :root:not([data-theme="light"]) .report-logo { mix-blend-mode: lighten; }
+video.report-logo {
+    object-fit: contain;
 }
 
 .report-logo:hover {
@@ -87,5 +84,8 @@
     .report-logo {
         width: 60px;
         opacity: 1;
+    }
+    video.report-logo {
+        display: none;
     }
 }

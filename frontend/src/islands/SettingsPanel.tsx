@@ -1,10 +1,11 @@
 /**
  * SettingsPanel — React island for the Settings tab.
  *
- * Replaces settings.js (105 lines of vanilla JS). Three radio buttons
- * for appearance: system (auto), light, dark. Persists to localStorage,
- * applies data-theme attr + colorScheme on <html>, and swaps the header
- * logo between light/dark variants.
+ * Three radio buttons for appearance: system (auto), light, dark. Persists to
+ * localStorage, applies data-theme attr + colorScheme on <html>. The logo uses
+ * a transparent-background PNG that works on both themes — no image swapping
+ * needed. In serve mode the logo is an animated <video>; this component handles
+ * pausing it when the user prefers reduced motion.
  */
 
 import { useCallback, useEffect, useState } from "react";
@@ -65,44 +66,14 @@ function applyTheme(value: Appearance): void {
 }
 
 /**
- * Logo dark/light swap.
- *
- * The header logo uses <picture><source media="(prefers-color-scheme: dark)">
- * which works for "auto" mode. But forced light/dark via Settings sets the
- * theme attr on <html> — <picture> <source> media queries only respond to the
- * OS-level prefers-color-scheme, not page-level overrides.
- *
- * Workaround: physically remove the <source> element when forcing light/dark
- * (so the <img> src wins), stash it, and restore when switching back to auto.
+ * Transparent-background logo works on both themes — no image swap needed.
+ * Only concern: pause the animated <video> for reduced-motion users.
  */
-let stashedSource: Element | null = null;
-
-function updateLogo(value: Appearance): void {
-  const img = document.querySelector<HTMLImageElement>(".report-logo");
-  if (!img) return;
-  const picture = img.parentElement;
-  if (!picture || picture.tagName !== "PICTURE") return;
-
-  const src = img.getAttribute("src") || "";
-  const darkSrc = src.replace("bristlenose-logo.png", "bristlenose-logo-dark.png");
-  const lightSrc = src.replace("bristlenose-logo-dark.png", "bristlenose-logo.png");
-
-  // Stash the <source> on first call so we can restore it later.
-  if (!stashedSource) {
-    stashedSource = picture.querySelector("source");
-  }
-
-  if (value === "light" || value === "dark") {
-    const existing = picture.querySelector("source");
-    if (existing) existing.remove();
-    img.src = value === "dark" ? darkSrc : lightSrc;
-  } else {
-    // Auto — restore <source> and let browser media query decide.
-    if (stashedSource && !picture.querySelector("source")) {
-      picture.insertBefore(stashedSource, img);
-    }
-    const isDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-    img.src = isDark ? darkSrc : lightSrc;
+function updateLogo(_value: Appearance): void {
+  const video = document.querySelector<HTMLVideoElement>("video.report-logo");
+  if (!video) return;
+  if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+    video.pause();
   }
 }
 
@@ -117,6 +88,21 @@ export function SettingsPanel() {
   useEffect(() => {
     applyTheme(appearance);
   }, [appearance]);
+
+  // Pause/play animated logo when reduced-motion preference changes.
+  useEffect(() => {
+    const video = document.querySelector<HTMLVideoElement>("video.report-logo");
+    if (!video) return;
+
+    const motionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
+    if (motionQuery.matches) video.pause();
+
+    const handler = (e: MediaQueryListEvent) => {
+      if (e.matches) { video.pause(); } else { void video.play(); }
+    };
+    motionQuery.addEventListener("change", handler);
+    return () => motionQuery.removeEventListener("change", handler);
+  }, []);
 
   const handleChange = useCallback((value: Appearance) => {
     setAppearance(value);

@@ -114,6 +114,25 @@ _REACT_TRANSCRIPT_MOUNT = (
 )
 
 
+def _video_logo_html(assets_prefix: str = "assets") -> str:
+    """Return the animated ``<video>`` logo HTML for serve-mode injection."""
+    return (
+        "<!-- bn-logo -->"
+        f'<a href="#project" class="report-logo-link"'
+        f" onclick=\"switchToTab('project');return false;\">"
+        f'<video class="report-logo" autoplay loop muted playsinline'
+        f' poster="{assets_prefix}/bristlenose-logo-transparent.png">'
+        f'<source src="{assets_prefix}/bristlenose-alive.webm" type="video/webm">'
+        f'<source src="{assets_prefix}/bristlenose-alive.mov" type="video/quicktime">'
+        f'<img class="report-logo"'
+        f' src="{assets_prefix}/bristlenose-logo-transparent.png"'
+        f' alt="Bristlenose logo">'
+        f"</video>"
+        f"</a>"
+        "<!-- /bn-logo -->"
+    )
+
+
 def _extract_bundle_tags() -> str:
     """Extract <script> and <link> tags from the Vite-built index.html.
 
@@ -141,6 +160,12 @@ def _transform_report_html(html: str, project_dir: Path | None) -> str:
     """
     if project_dir is not None:
         html = _rewrite_video_map_uris(html, project_dir)
+    # Swap static logo for animated video if the WebM asset exists
+    if (_THEME_DIR / "images" / "bristlenose-alive.webm").is_file():
+        html = re.sub(
+            r"<!-- bn-logo -->.*?<!-- /bn-logo -->",
+            _video_logo_html("assets"), html, flags=re.DOTALL,
+        )
     html = re.sub(
         r"<!-- bn-toolbar -->.*?<!-- /bn-toolbar -->",
         _REACT_TOOLBAR_MOUNT, html, flags=re.DOTALL,
@@ -219,6 +244,12 @@ def _transform_transcript_html(
     """Apply shared HTML transformations for transcript pages."""
     if project_dir is not None:
         html = _rewrite_video_map_uris(html, project_dir)
+    # Swap static logo for animated video (transcript pages use ../assets/ prefix)
+    if (_THEME_DIR / "images" / "bristlenose-alive.webm").is_file():
+        html = re.sub(
+            r"<!-- bn-logo -->.*?<!-- /bn-logo -->",
+            _video_logo_html("../assets"), html, flags=re.DOTALL,
+        )
     mount_html = _REACT_TRANSCRIPT_MOUNT.replace("{session_id}", session_id)
     html = re.sub(
         r"<!-- bn-transcript-page -->.*?<!-- /bn-transcript-page -->",

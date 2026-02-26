@@ -46,7 +46,8 @@ This file contains: session reminders, feature groupings with context, items too
 | Sticky header decision | #15 | small |
 | Refactor render_html.py header/toolbar into template helpers | #16 | small |
 | Theme management in browser (custom CSS themes) | #17 | small |
-| Dark logo: proper albino bristlenose pleco | #18 | small |
+| Dark logo: ~~proper albino bristlenose pleco~~ transparent PNG ships on `living-fish` branch | #18 | ~~small~~ done |
+| Living fish: animated logo for serve mode — code wired, waiting on video assets | — | blocked |
 | Lost quotes: surface unselected quotes for rescue | #19 | small |
 | .docx export | #20 | small |
 | Edit writeback to transcript files | #21 | small |

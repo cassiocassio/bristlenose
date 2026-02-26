@@ -351,7 +351,7 @@ export function QuoteCard({
 
   // ── Derived state ───────────────────────────────────────────────────
 
-  const transcriptHref = `sessions/transcript_${sessionId}.html#t-${Math.floor(quote.start_timecode)}`;
+  const transcriptHref = `/report/sessions/${sessionId}#t-${Math.floor(quote.start_timecode)}`;
   const visibleSentiment =
     quote.sentiment && !deletedBadges.includes(quote.sentiment)
       ? quote.sentiment

@@ -595,7 +595,7 @@ function QuoteBlock({
   sequenceMeta?: SequenceMeta;
 }) {
   const tc = formatTimecode(quote.startSeconds);
-  const tcHref = `sessions/transcript_${quote.sessionId}.html#t-${Math.floor(quote.startSeconds)}`;
+  const tcHref = `/report/sessions/${quote.sessionId}#t-${Math.floor(quote.startSeconds)}`;
 
   const seqPos = sequenceMeta?.position ?? "solo";
   const isContinuation = seqPos === "middle" || seqPos === "last";

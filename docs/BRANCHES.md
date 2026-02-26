@@ -17,6 +17,7 @@ Each active feature branch gets its own **git worktree** — a full working copy
 | `bristlenose/` | `main` | Main repo, releases, hotfixes |
 | `bristlenose_branch symbology/` | `symbology` | § ¶ ❋ Unicode prefix symbols for sections, quotes, themes |
 | `bristlenose_branch highlighter/` | `highlighter` | Highlighter feature |
+| `bristlenose_branch react-router/` | `react-router` | React migration Step 5: tab nav → React Router |
 
 
 **Creating a new feature branch worktree:**
@@ -97,6 +98,7 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 | `main` | `bristlenose/` | `origin/main` (push via `origin/main:wip` until release time) |
 | `symbology` | `bristlenose_branch symbology/` | `origin/symbology` |
 | `highlighter` | `bristlenose_branch highlighter/` | `origin/highlighter` |
+| `react-router` | `bristlenose_branch react-router/` | `origin/react-router` |
 
 ---
 
@@ -128,6 +130,41 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 - `bristlenose/theme/js/analysis.js` — signal cards, heatmap headers
 - `bristlenose/theme/js/transcript-annotations.js` — margin label tooltips
 - `bristlenose/theme/js/codebook.js` — quote count tooltips
+
+---
+
+### `react-router` — started 26 Feb 2026
+
+**Worktree:** `/Users/cassio/Code/bristlenose_branch react-router`
+
+**Goal:** React migration Step 5 — replace vanilla JS hash-based tab navigation (`global-nav.js`) with React Router pathname-based routing. Single React root, SPA catch-all route, backward compat shims. The "structural hinge" that enables Steps 6–10.
+
+**Files likely to touch:**
+- `frontend/package.json` — add react-router-dom
+- `frontend/src/main.tsx` — single RouterProvider
+- `frontend/src/router.tsx` — new, route definitions
+- `frontend/src/layouts/AppLayout.tsx` — new, NavBar + Outlet
+- `frontend/src/components/NavBar.tsx` — new, tab bar
+- `frontend/src/pages/*.tsx` — new, page wrappers (8 files)
+- `frontend/src/hooks/useScrollToAnchor.ts` — new
+- `frontend/src/hooks/useAppNavigate.ts` — new
+- `frontend/src/shims/navigation.ts` — new, window.* compat
+- `frontend/src/islands/Dashboard.tsx` — replace window.* nav calls
+- `frontend/src/islands/AnalysisPage.tsx` — replace window.* nav calls
+- `frontend/src/islands/SessionsTable.tsx` — update transcript hrefs
+- `frontend/src/islands/QuoteCard.tsx` — update transcript href
+- `frontend/src/islands/TranscriptPage.tsx` — update session selector hrefs
+- `frontend/src/components/ProposalZoneList.tsx` — update transcript href
+- `frontend/src/components/AutoCodeReportModal.tsx` — update transcript href
+- `bristlenose/server/app.py` — SPA catch-all + app root mount
+- `bristlenose/stages/render_html.py` — bn-app markers
+- `bristlenose/theme/js/global-nav.js` — initGlobalNav no-op guard
+
+**Conflict risk with other branches:**
+- `symbology` touches `global_nav.html` and `render_html.py` — coordinate merge order
+- `highlighter` — TBD scope, likely low conflict
+
+**Plan file:** `.claude/plans/generic-scribbling-feigenbaum.md`
 
 ---
 

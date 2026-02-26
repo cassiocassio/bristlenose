@@ -507,7 +507,7 @@ export function TranscriptPage({ projectId: _projectId, sessionId }: TranscriptP
             itemKey={(s) => s.session_id}
             renderItem={renderSessionItem}
             activeKey={sessionId}
-            itemHref={(s) => `transcript_${s.session_id}.html`}
+            itemHref={(s) => `/report/sessions/${s.session_id}`}
             className="bn-session-selector"
             data-testid="session-selector"
           />

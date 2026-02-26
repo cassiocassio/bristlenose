@@ -2,7 +2,7 @@
 
 ## What this is
 
-FastAPI server (`bristlenose serve`) that serves the HTML report, provides REST API endpoints for researcher state, and hosts React islands.  SQLite database stores all pipeline output + researcher edits.
+FastAPI server (`bristlenose serve`) that serves a React SPA (React Router, pathname-based routes) over HTTP, provides REST API endpoints for researcher state, and stores all pipeline output + researcher edits in SQLite. In serve mode, `app.py` replaces `<!-- bn-app -->` markers in the rendered HTML with `<div id="bn-app-root">`; React Router handles all client-side navigation (tab switching, session drill-down, back/forward). The SPA catch-all route (`GET /report/{path:path}`) returns the same transformed HTML for all `/report/*` paths. Transcript HTML files from `bristlenose render` are still served directly (route defined before the catch-all for priority).
 
 ## Architecture
 
@@ -22,7 +22,7 @@ bristlenose/server/
     autocode.py   — 7 AutoCode endpoints (start, status, proposals, accept/deny)
     dev.py        — Dev-only endpoints (visual diff, system info)
   codebook/       — YAML codebook templates (garrett, norman, uxr, plato)
-  static/         — Vite build output (React islands bundle)
+  static/         — Vite build output (React Router SPA bundle)
 ```
 
 ## Data API (Phase 1)

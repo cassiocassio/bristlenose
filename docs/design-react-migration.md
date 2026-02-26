@@ -63,23 +63,30 @@ The first step where React replaces a user-facing vanilla JS interaction surface
 - **Test:** 87 new Vitest tests across 12 test files — unit tests for each component, hook, and utility, plus 10 integration tests verifying toolbar → store → quote island filtering flow
 - **Design doc:** Detailed plan at `.claude/plans/dynamic-wobbling-grove.md` — 7 discussion areas (component decomposition, state ownership, communication, toast, dropdown, portability, performance) with options, pros/cons, and resolved decisions
 
-### Step 5: Tab navigation → React Router _(large — structural hinge)_
+### Step 5: Tab navigation → React Router ✓ DONE
 
-This is the big one. Everything before it is self-contained. Everything after it assumes routing works.
+The structural hinge — everything before it is self-contained, everything after it assumes routing works.
 
-- **Replaces:** `global-nav.js` (~400 lines) — tab switching, hash routing, history/popstate, session drill-down, cross-tab stat links, speaker navigation
+- **Replaces:** `global-nav.js` (~436 lines) — tab switching, hash routing, history/popstate, session drill-down, cross-tab stat links, speaker navigation
 - **Dependencies:** Steps 1–4 (settings, about, store, toolbar must be React before their tabs become routes)
-- **What to build:**
-  - Install `react-router-dom`
-  - `AppLayout` component with `<NavBar>` + `<Outlet>`
-  - Routes: `/report/` (project), `/report/sessions/` (grid), `/report/sessions/:id` (transcript), `/report/quotes/`, `/report/codebook/`, `/report/analysis/`, `/report/settings/`, `/report/about/`
-  - `NavBar` component replacing `global_nav.html` — `<NavLink>` elements with active styling using existing `.bn-tab.active` CSS
-  - Session drill-down becomes a nested route (`/report/sessions/:id`) instead of hide/show DOM manipulation
-  - Transcript pages become routes, not separate HTML files served from disk
-  - `scrollToAnchor` becomes a `useEffect` with retry logic (same 2s timeout for async island data)
+- **What was built:** `react-router-dom` v7.13.1 with `createBrowserRouter` (data router API). Single React root (`#bn-app-root`) replaces 11 separate `createRoot()` calls in serve mode
+  - `NavBar` component — 5 text tabs + 2 icon tabs (Settings, About) using `<NavLink>` with existing `.bn-tab.active` CSS
+  - `AppLayout` — `<NavBar />` + `<Outlet />`, installs backward-compat navigation shims on mount
+  - 8 thin page wrappers in `frontend/src/pages/` — each composes existing island components (`QuotesTab` = Toolbar + QuoteSections + QuoteThemes)
+  - SPA catch-all in FastAPI (`GET /report/{path:path}`), transcript file route defined first for priority
+  - `<!-- bn-app -->` markers in `render_html.py` — one `re.sub` in `app.py` replaces the entire nav + panel region with `<div id="bn-app-root">`, making individual island marker substitutions no-ops
+  - `useScrollToAnchor` hook — retry-aware scroll (50 × 100ms = 5s) for async-rendered targets
+  - `useAppNavigate` hook — wraps `useNavigate()` with tab-name-to-path mapping
+  - Backward-compat shims (`frontend/src/shims/navigation.ts`) install `window.switchToTab`, `window.scrollToAnchor`, `window.navigateToSession` delegating to React Router
+  - Hash-to-pathname redirect (`frontend/src/utils/hashRedirect.ts`) — old `#quotes` bookmarks → `/report/quotes/`
+  - `initGlobalNav()` no-op guard when `#bn-app-root` exists (same pattern as toolbar)
+  - `main.tsx` dual mode: SPA (`RouterProvider`) when `#bn-app-root` exists, legacy island mode (dynamic `import()`) as fallback
+- **Routes:** `/report/` (project), `/report/sessions/` (grid), `/report/sessions/:sessionId` (transcript), `/report/quotes/`, `/report/codebook/`, `/report/analysis/`, `/report/settings/`, `/report/about/`
 - **Key simplification:** Pathname-based routing frees hash fragments for scroll targets. `#t-123` (timecodes), `#section-name` (deep links) all just work as fragments on the correct route. The `#quotes` vs `#t-123` conflict disappears
-- **Backward compat bridge:** During transition, keep `window.switchToTab` and `window.navigateToSession` as shims that call `navigate()` internally. Islands not yet updated can still call the globals. Remove once all callers are migrated
-- **Test:** Navigate all tabs (URL updates correctly), back/forward works, deep links work, session drill-down creates a real URL, cross-tab navigation from dashboard stat cards and featured quotes works
+- **Link format change:** `sessions/transcript_s1.html#t-123` → `/report/sessions/s1#t-123` (clean session ID, matches API pattern)
+- **Files:** 15 new files, 14 modified files (36 total in commit). Detailed plan at `.claude/plans/generic-scribbling-feigenbaum.md`
+- **Test:** 45 new Vitest tests (635 total). NavBar, router, hash redirect, scroll hook, navigate hook, navigation shims
+- **Post-QA fixes:** AnalysisPage slug generation aligned with QuoteSections/QuoteThemes (was stripping special chars, now only replaces spaces — matching anchor IDs). Scroll retry window increased from 2s to 5s for cross-tab navigation where destination page needs to mount + fetch data
 
 ### Step 6: Player integration _(medium)_
 
@@ -127,16 +134,16 @@ Enabled by the complete React app. Not a migration step, but the payoff.
 ## Dependency graph
 
 ```
-Step 1 (Settings)     Step 2 (About)     Step 3 (QuotesStore)
+Step 1 (Settings) ✓   Step 2 (About) ✓   Step 3 (QuotesStore) ✓
     \                     |                    /
      \                    |                   /
       +-------------------+------------------+
                           |
-                    Step 4 (Toolbar + Toast)
+                    Step 4 (Toolbar + Toast) ✓
                           |
-                    Step 5 (React Router)  <-- structural hinge
+                    Step 5 (React Router) ✓
                           |
-                    Step 6 (Player)
+                    Step 6 (Player)  <-- you are here
                           |
                     Step 7 (Keyboard)
                           |

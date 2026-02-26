@@ -2,7 +2,7 @@
 
 Everything planned, from trivial polish to multi-month features. Big-ticket items point to their design docs rather than duplicating content here.
 
-**Current status:** v0.9.3, Feb 2026. Core pipeline complete and published (PyPI, Homebrew, Snap). Serve mode and React migration in progress on the `serve` branch.
+**Current status:** v0.10.3, Feb 2026. Core pipeline complete and published (PyPI, Homebrew, Snap). Serve mode shipped; React migration in progress on `main`.
 
 ---
 
@@ -17,7 +17,7 @@ Build all 14 reusable primitives in 4 rounds, then compose them into page-level 
 - **Round 1** (done): Badge, PersonBadge, TimecodeLink
 - **Round 2** (done): EditableText, Toggle (+Modal, Toast as infra)
 - **Round 3** (done): TagInput, Sparkline
-- **Round 4** (pending): Metric, Annotation, Counter, Thumbnail, JourneyChain
+- **Round 4** (done): Metric, Annotation, Counter, Thumbnail, JourneyChain
 
 Design doc: `docs/design-react-component-library.md`
 

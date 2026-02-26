@@ -192,15 +192,27 @@ See `docs/design-logging.md` for architecture and full tier breakdown. Infrastru
 ### Reactive UI migration
 
 See `docs/design-reactive-ui.md` for framework comparison, risk assessment, and migration plan.
-See `docs/design-react-component-library.md` for the **14-primitive component library** and 4-round build sequence.
+See `docs/design-react-component-library.md` for the **16-primitive component library** and 4-round build sequence.
 
 Tracked as issue #29 (large effort).
 
 **Component library build sequence** (primitives, not pages):
 - [x] **Round 1: Badge, PersonBadge, TimecodeLink** — stateless render primitives appearing on 3–4 surfaces each. Unlocks static skeletons of all major compositions. Done: 3 components, 19 Vitest tests, CSS rename `.bn-person-id` → `.bn-person-badge`, SessionsTable refactored to use PersonBadge
-- [ ] **Round 2: EditableText, Toggle** (+Modal, Toast as infra) — unlocks fully interactive quote card (minus tags), editable headings everywhere
-- [ ] **Round 3: TagInput, Sparkline** — unlocks complete quote card, complete codebook group, sessions table sentiment
-- [ ] **Round 4: Metric, Annotation, Counter, Thumbnail, JourneyChain** — one-surface-each primitives, build as needed
+- [x] **Round 2: EditableText, Toggle** (+Modal, Toast as infra) — unlocks fully interactive quote card (minus tags), editable headings everywhere
+- [x] **Round 3: TagInput, Sparkline** — unlocks complete quote card, complete codebook group, sessions table sentiment
+- [x] **Round 4: Metric, Annotation, Counter, Thumbnail, JourneyChain** — one-surface-each primitives, build as needed
+
+**Vanilla JS → React migration** (Steps 1–10, see `docs/design-react-migration.md`):
+- [x] **Step 1: Settings panel** → `SettingsPanel` island
+- [x] **Step 2: About panel** → `AboutPanel` island
+- [x] **Step 3: QuotesStore** — module-level store, `useSyncExternalStore`, 11 actions
+- [x] **Step 4: Toolbar** → `Toolbar` island (SearchBox, TagFilterDropdown, ViewSwitcher, CsvExport, Toast). 87 tests
+- [ ] **Step 5: Tab navigation → React Router** (structural hinge)
+- [ ] **Step 6: Player integration**
+- [ ] **Step 7: Keyboard shortcuts**
+- [ ] **Step 8: Retire remaining vanilla JS**
+- [ ] **Step 9: React app shell**
+- [ ] **Step 10: Export — DOM snapshot**
 
 **Infrastructure:**
 - [ ] **Storybook** — component playground for the 14 primitives. Develop and test each primitive in isolation with mock data, dark mode toggle, and all state variations visible. Evaluate Storybook vs Ladle (lighter, Vite-native) vs a simple `/dev/components` route in the existing Vite app

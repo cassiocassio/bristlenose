@@ -102,8 +102,8 @@ describe("useScrollToAnchor", () => {
     const { result } = renderHook(() => useScrollToAnchor());
     result.current("never-exists");
 
-    // Advance past all 20 retries (20 × 100ms = 2000ms)
-    vi.advanceTimersByTime(2100);
+    // Advance past all 50 retries (50 × 100ms = 5000ms)
+    vi.advanceTimersByTime(5100);
 
     // Should not throw — just silently stops
   });

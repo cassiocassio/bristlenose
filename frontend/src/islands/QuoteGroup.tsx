@@ -22,6 +22,7 @@ import {
 } from "../utils/api";
 import { formatTimecode, stripSmartQuotes } from "../utils/format";
 import { QuoteCard } from "./QuoteCard";
+import { useFocus } from "../contexts/FocusContext";
 import {
   useQuotesStore,
   toggleStar,
@@ -96,8 +97,10 @@ interface QuoteGroupProps {
   description: string;
   /** Heading edit key prefix ("section" or "theme"). */
   itemType: string;
-  /** All quotes in this group. */
+  /** Visible (filtered) quotes in this group. */
   quotes: QuoteResponse[];
+  /** All quotes in this group (including hidden) — for the hidden counter. */
+  allQuotes?: QuoteResponse[];
   /** Full tag vocabulary for auto-suggest across all groups. */
   tagVocabulary: string[];
   /** Whether video/audio is available (for timecode links). */
@@ -116,6 +119,7 @@ export function QuoteGroup({
   description,
   itemType,
   quotes,
+  allQuotes,
   tagVocabulary,
   hasMedia,
   transcriptCache,
@@ -125,6 +129,7 @@ export function QuoteGroup({
   // ── Shared quote state ─────────────────────────────────────────────────
 
   const store = useQuotesStore();
+  const { registerHideHandler, unregisterHideHandler } = useFocus();
 
   // ── Local presentation state ───────────────────────────────────────────
 
@@ -214,9 +219,11 @@ export function QuoteGroup({
 
   // ── Derived ───────────────────────────────────────────────────────────
 
+  // Use allQuotes (includes hidden) for the counter; fall back to quotes.
+  const counterSource = allQuotes ?? quotes;
   const hiddenQuotes = useMemo(
-    () => quotes.filter((q) => !!store.hidden[q.dom_id]),
-    [quotes, store.hidden],
+    () => counterSource.filter((q) => !!store.hidden[q.dom_id]),
+    [counterSource, store.hidden],
   );
 
   const counterItems: CounterItem[] = useMemo(
@@ -238,7 +245,7 @@ export function QuoteGroup({
   // Tag name → colour lookup from existing quote data (for manual tag add).
   const tagColourMap = useMemo(() => {
     const map: Record<string, { colour_set: string; colour_index: number }> = {};
-    for (const q of quotes) {
+    for (const q of counterSource) {
       for (const t of q.tags) {
         if (t.colour_set && !map[t.name]) {
           map[t.name] = { colour_set: t.colour_set, colour_index: t.colour_index };
@@ -339,6 +346,22 @@ export function QuoteGroup({
     },
     [],
   );
+
+  // Register hide handlers for keyboard shortcut (h) — so the animated
+  // hide path in handleToggleHide runs instead of the raw store toggle.
+  const handleToggleHideRef = useRef(handleToggleHide);
+  handleToggleHideRef.current = handleToggleHide;
+  useEffect(() => {
+    const ids = quotes.map((q) => q.dom_id);
+    for (const id of ids) {
+      registerHideHandler(id, () => handleToggleHideRef.current(id, true));
+    }
+    return () => {
+      for (const id of ids) {
+        unregisterHideHandler(id);
+      }
+    };
+  }, [quotes, registerHideHandler, unregisterHideHandler]);
 
   // Fly-down animation: runs after unhidden quotes enter the DOM.
   // useLayoutEffect fires before paint, so the user never sees a flash.

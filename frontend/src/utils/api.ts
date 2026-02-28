@@ -100,6 +100,24 @@ export function putDeletedBadges(data: Record<string, string[]>): void {
 }
 
 // ---------------------------------------------------------------------------
+// People (names) helpers
+// ---------------------------------------------------------------------------
+
+export interface PersonData {
+  full_name: string;
+  short_name: string;
+  role: string;
+}
+
+export function getPeople(): Promise<Record<string, PersonData>> {
+  return apiGet<Record<string, PersonData>>("/people");
+}
+
+export function putPeople(data: Record<string, PersonData>): void {
+  firePut("/people", data);
+}
+
+// ---------------------------------------------------------------------------
 // Moderator question helper
 // ---------------------------------------------------------------------------
 

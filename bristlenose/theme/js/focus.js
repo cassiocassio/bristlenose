@@ -628,8 +628,11 @@ function handleKeydown(e) {
 
 /**
  * Initialize focus system — attach event listeners.
+ * Bails out in serve mode (React handles focus via FocusProvider).
  */
 function initFocus() {
+  if (document.getElementById('bn-app-root')) return;
+
   document.addEventListener('keydown', handleKeydown);
   document.addEventListener('click', handleQuoteClick);
   document.addEventListener('click', handleBackgroundClick);

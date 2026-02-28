@@ -10,8 +10,9 @@
 import { useCallback, useEffect, useState, useMemo } from "react";
 import { getCodebook } from "../utils/api";
 import { useTranscriptCache } from "../hooks/useTranscriptCache";
-import type { QuotesListResponse } from "../utils/types";
+import type { QuoteResponse, QuotesListResponse } from "../utils/types";
 import { initFromQuotes, useQuotesStore } from "../contexts/QuotesContext";
+import { useFocus } from "../contexts/FocusContext";
 import { filterQuotes } from "../utils/filter";
 import { QuoteGroup } from "./QuoteGroup";
 
@@ -95,6 +96,16 @@ export function QuoteThemes({ projectId }: QuoteThemesProps) {
     [store.searchQuery, store.viewMode, store.tagFilter, store.hidden, store.starred, store.tags],
   );
 
+  // Build a map of theme_id → original (unfiltered) quotes for the hidden counter.
+  const allQuotesMap = useMemo(() => {
+    if (!data) return new Map<number, QuoteResponse[]>();
+    const map = new Map<number, QuoteResponse[]>();
+    for (const t of data.themes) {
+      map.set(t.theme_id, t.quotes);
+    }
+    return map;
+  }, [data]);
+
   const filteredThemes = useMemo(() => {
     if (!data) return [];
     return data.themes
@@ -102,8 +113,18 @@ export function QuoteThemes({ projectId }: QuoteThemesProps) {
         ...t,
         quotes: filterQuotes(t.quotes, filterState),
       }))
-      .filter((t) => t.quotes.length > 0);
-  }, [data, filterState]);
+      .filter((t) => t.quotes.length > 0 || (allQuotesMap.get(t.theme_id)?.some((q) => filterState.hidden[q.dom_id]) ?? false));
+  }, [data, filterState, allQuotesMap]);
+
+  // Register visible quote IDs for keyboard navigation.
+  const { registerVisibleQuoteIds } = useFocus();
+  const visibleIds = useMemo(
+    () => filteredThemes.flatMap((t) => t.quotes.map((q) => q.dom_id)),
+    [filteredThemes],
+  );
+  useEffect(() => {
+    registerVisibleQuoteIds("themes", visibleIds);
+  }, [registerVisibleQuoteIds, visibleIds]);
 
   const hasMedia = true;
 
@@ -142,6 +163,7 @@ export function QuoteThemes({ projectId }: QuoteThemesProps) {
             description={theme.description}
             itemType="theme"
             quotes={theme.quotes}
+            allQuotes={allQuotesMap.get(theme.theme_id)}
             tagVocabulary={tagVocabulary}
             hasMedia={hasMedia}
             transcriptCache={transcriptCache}

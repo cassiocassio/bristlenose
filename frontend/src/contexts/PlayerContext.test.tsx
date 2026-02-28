@@ -339,6 +339,138 @@ describe("PlayerContext", () => {
     expect(bq.scrollIntoView).not.toHaveBeenCalled();
   });
 
+  // --- Progress fill ---
+
+  it("sets --bn-segment-progress on transcript segments during glow", () => {
+    const seg = addSegment("p1", 10, 20);
+    renderProvider();
+
+    act(() => {
+      postPlayerMessage({
+        type: "bristlenose-timeupdate",
+        pid: "p1",
+        seconds: 15,
+        playing: true,
+      });
+    });
+
+    // 15 is 50% through [10, 20]
+    expect(seg.style.getPropertyValue("--bn-segment-progress")).toBe("0.5");
+  });
+
+  it("clamps progress between 0 and 1", () => {
+    const seg = addSegment("p1", 10, 20);
+    renderProvider();
+
+    // At the start
+    act(() => {
+      postPlayerMessage({
+        type: "bristlenose-timeupdate",
+        pid: "p1",
+        seconds: 10,
+        playing: true,
+      });
+    });
+    expect(seg.style.getPropertyValue("--bn-segment-progress")).toBe("0");
+
+    // Just before end
+    act(() => {
+      postPlayerMessage({
+        type: "bristlenose-timeupdate",
+        pid: "p1",
+        seconds: 19.9,
+        playing: true,
+      });
+    });
+    const progress = parseFloat(
+      seg.style.getPropertyValue("--bn-segment-progress"),
+    );
+    expect(progress).toBeGreaterThan(0.9);
+    expect(progress).toBeLessThanOrEqual(1);
+  });
+
+  it("clears --bn-segment-progress when segment loses glow", () => {
+    const seg1 = addSegment("p1", 10, 20);
+    addSegment("p1", 20, 30);
+    renderProvider();
+
+    // Glow seg1
+    act(() => {
+      postPlayerMessage({
+        type: "bristlenose-timeupdate",
+        pid: "p1",
+        seconds: 15,
+        playing: true,
+      });
+    });
+    expect(seg1.style.getPropertyValue("--bn-segment-progress")).toBe("0.5");
+
+    // Move to seg2 — seg1 loses glow
+    act(() => {
+      postPlayerMessage({
+        type: "bristlenose-timeupdate",
+        pid: "p1",
+        seconds: 25,
+        playing: true,
+      });
+    });
+    expect(seg1.style.getPropertyValue("--bn-segment-progress")).toBe("");
+  });
+
+  it("does not set progress on blockquote elements", () => {
+    const bq = addBlockquote("p1", 30, 45);
+    renderProvider();
+
+    act(() => {
+      postPlayerMessage({
+        type: "bristlenose-timeupdate",
+        pid: "p1",
+        seconds: 35,
+        playing: true,
+      });
+    });
+
+    expect(bq.classList.contains("bn-timecode-glow")).toBe(true);
+    expect(bq.style.getPropertyValue("--bn-segment-progress")).toBe("");
+  });
+
+  it("handles zero-duration segments using corrected end from glow index", () => {
+    const seg = addSegment("p1", 10, 10);
+    addSegment("p1", 20, 30); // next segment fixes zero-length via index
+    renderProvider();
+
+    act(() => {
+      postPlayerMessage({
+        type: "bristlenose-timeupdate",
+        pid: "p1",
+        seconds: 15,
+        playing: true,
+      });
+    });
+
+    // Zero-length segment gets fixed end=20 from next segment.
+    // (15 - 10) / (20 - 10) = 0.5
+    expect(seg.style.getPropertyValue("--bn-segment-progress")).toBe("0.5");
+  });
+
+  it("shows zero progress for last zero-length segment (Infinity end)", () => {
+    // Last segment with end == start gets end = Infinity — progress should be 0
+    const seg = addSegment("p1", 50, 50);
+    renderProvider();
+
+    act(() => {
+      postPlayerMessage({
+        type: "bristlenose-timeupdate",
+        pid: "p1",
+        seconds: 55,
+        playing: true,
+      });
+    });
+
+    expect(seg.classList.contains("bn-timecode-glow")).toBe(true);
+    expect(seg.style.getPropertyValue("--bn-segment-progress")).toBe("0");
+  });
+
   // --- Backward-compat shim ---
 
   it("installs window.seekTo shim", () => {

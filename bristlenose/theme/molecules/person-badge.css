@@ -94,11 +94,12 @@ a:hover .bn-speaker-badge--split .bn-speaker-badge-code {
     display: inline-flex;
     align-items: center;
     gap: 0.35rem;
+    white-space: nowrap;
 }
 
 .bn-speaker-editable-name {
     font-family: var(--bn-font-body);
-    font-size: 0.72rem;
+    font-size: inherit;
     font-weight: var(--bn-weight-emphasis);
     color: var(--bn-colour-text);
     cursor: text;

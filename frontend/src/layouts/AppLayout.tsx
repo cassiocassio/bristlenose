@@ -1,15 +1,17 @@
 /**
  * AppLayout — top-level layout for the report SPA.
  *
- * Renders the NavBar and an Outlet for the active route. Installs
- * backward-compat navigation shims on window for vanilla JS modules.
- * Provides FocusProvider (keyboard focus/selection) and installs
- * global keyboard shortcuts via useKeyboardShortcuts.
+ * Renders Header, NavBar, Outlet, and Footer.  Installs backward-compat
+ * navigation shims on window for vanilla JS modules.  Provides
+ * FocusProvider (keyboard focus/selection) and installs global keyboard
+ * shortcuts via useKeyboardShortcuts.
  */
 
 import { useCallback, useEffect, useState } from "react";
 import { Outlet, useNavigate } from "react-router-dom";
+import { Header } from "../components/Header";
 import { NavBar } from "../components/NavBar";
+import { Footer } from "../components/Footer";
 import { HelpModal } from "../components/HelpModal";
 import { PlayerProvider } from "../contexts/PlayerContext";
 import { FocusProvider } from "../contexts/FocusContext";
@@ -20,7 +22,7 @@ import { installNavigationShims } from "../shims/navigation";
 /**
  * Inner component that uses hooks requiring PlayerProvider + FocusProvider.
  */
-function KeyboardShortcutsManager({ children }: { children: React.ReactNode }) {
+function AppShell() {
   const [helpOpen, setHelpOpen] = useState(false);
   const toggleHelp = useCallback(() => setHelpOpen((prev) => !prev), []);
 
@@ -31,7 +33,10 @@ function KeyboardShortcutsManager({ children }: { children: React.ReactNode }) {
 
   return (
     <>
-      {children}
+      <Header />
+      <NavBar />
+      <Outlet />
+      <Footer onToggleHelp={toggleHelp} />
       <HelpModal open={helpOpen} onClose={toggleHelp} />
     </>
   );
@@ -48,10 +53,7 @@ export function AppLayout() {
   return (
     <PlayerProvider>
       <FocusProvider>
-        <KeyboardShortcutsManager>
-          <NavBar />
-          <Outlet />
-        </KeyboardShortcutsManager>
+        <AppShell />
       </FocusProvider>
     </PlayerProvider>
   );

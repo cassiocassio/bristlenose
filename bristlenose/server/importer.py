@@ -326,8 +326,16 @@ def _import_source_files(
         if existing:
             continue
 
-        # Try to find the actual file
+        # Try to find the actual file.  The transcript header stores only the
+        # filename (no subdirectory), but the pipeline's ingest stage scans one
+        # level of subdirectories (e.g. interviews/).  Mirror that: check
+        # project_dir first, then one-level subdirectories.
         source_path = project_dir / source_name
+        if not source_path.exists():
+            for subdir in project_dir.iterdir():
+                if subdir.is_dir() and (subdir / source_name).exists():
+                    source_path = subdir / source_name
+                    break
         file_type = _guess_file_type(source_name)
 
         # Update session media flags

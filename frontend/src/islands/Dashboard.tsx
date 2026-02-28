@@ -233,11 +233,40 @@ function CompactSessionRow({
     duration_seconds,
     speakers,
     source_filename,
+    has_media,
   } = session;
 
+  const playerCtx = useContext(PlayerContext);
   const displayFilename = formatFinderFilename(source_filename);
   const fileTitle =
     displayFilename !== source_filename ? source_filename : undefined;
+
+  // Media files open the popout player; non-media files are plain text.
+  let sourceEl: React.ReactNode = "\u2014";
+  if (source_filename) {
+    if (has_media) {
+      sourceEl = (
+        <a
+          href={`#t=0`}
+          className="timecode"
+          data-participant={session_id}
+          data-seconds={0}
+          data-end-seconds={0}
+          title={fileTitle}
+          onClick={(e) => {
+            if (!playerCtx) return;
+            if (e.metaKey || e.ctrlKey || e.shiftKey) return;
+            e.preventDefault();
+            playerCtx.seekTo(session_id, 0);
+          }}
+        >
+          {displayFilename}
+        </a>
+      );
+    } else {
+      sourceEl = <span title={fileTitle}>{displayFilename}</span>;
+    }
+  }
 
   return (
     <tr data-session={session_id}>
@@ -262,13 +291,7 @@ function CompactSessionRow({
       <td className="bn-session-duration">
         {formatDuration(duration_seconds)}
       </td>
-      <td>
-        {source_filename ? (
-          <span title={fileTitle}>{displayFilename}</span>
-        ) : (
-          "\u2014"
-        )}
-      </td>
+      <td>{sourceEl}</td>
     </tr>
   );
 }

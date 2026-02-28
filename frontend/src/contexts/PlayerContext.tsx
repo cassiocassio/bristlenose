@@ -66,13 +66,27 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   const glowIndexRef = useRef<Record<string, GlowEntry[]> | null>(null);
   const glowActiveRef = useRef<Set<Element>>(new Set());
 
-  // Read server-injected globals on mount
+  // Fetch video map from API (or fall back to window globals for legacy mode)
   useEffect(() => {
     const win = window as unknown as Record<string, unknown>;
-    videoMapRef.current = (win.BRISTLENOSE_VIDEO_MAP as VideoMap) ?? {};
-    if (typeof win.BRISTLENOSE_PLAYER_URL === "string") {
-      playerUrlRef.current = win.BRISTLENOSE_PLAYER_URL;
+    // Legacy fallback: use window globals if present (static render path)
+    if (win.BRISTLENOSE_VIDEO_MAP) {
+      videoMapRef.current = win.BRISTLENOSE_VIDEO_MAP as VideoMap;
+      if (typeof win.BRISTLENOSE_PLAYER_URL === "string") {
+        playerUrlRef.current = win.BRISTLENOSE_PLAYER_URL;
+      }
+      return;
     }
+    // SPA mode: fetch from API
+    fetch("/api/projects/1/video-map")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (data) {
+          videoMapRef.current = data.video_map ?? {};
+          if (data.player_url) playerUrlRef.current = data.player_url;
+        }
+      })
+      .catch(() => {});
   }, []);
 
   // ── Glow helpers ─────────────────────────────────────────────────────

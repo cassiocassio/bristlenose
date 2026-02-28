@@ -16,6 +16,18 @@ beforeEach(() => {
   root.setAttribute("data-project-id", "1");
   document.body.appendChild(root);
 
+  // Mock matchMedia (used by SettingsPanel's updateLogo when Header renders a logo)
+  Object.defineProperty(window, "matchMedia", {
+    writable: true,
+    value: vi.fn().mockImplementation((query: string) => ({
+      matches: false,
+      media: query,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    })),
+  });
+
   // Suppress fetch calls from islands — return empty JSON for all endpoints
   vi.spyOn(globalThis, "fetch").mockResolvedValue(
     new Response(JSON.stringify({ quotes: [], sessions: [], tags: [] }), {

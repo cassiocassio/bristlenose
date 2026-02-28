@@ -87,3 +87,55 @@ a:hover .bn-speaker-badge--split .bn-speaker-badge-code {
 .bn-person-badge-highlighted .bn-speaker-badge-code {
     box-shadow: 0 0 0 2px var(--bn-colour-accent);
 }
+
+/* --- Sessions grid: decomposed badge + editable name --- */
+
+.bn-session-speaker-entry {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+}
+
+.bn-speaker-editable-name {
+    font-family: var(--bn-font-body);
+    font-size: 0.72rem;
+    font-weight: var(--bn-weight-emphasis);
+    color: var(--bn-colour-text);
+    cursor: text;
+    border-radius: var(--bn-radius-sm);
+    padding: var(--bn-space-xs) 0.2rem;
+    min-width: 2rem;
+}
+
+.bn-speaker-editable-name:hover {
+    background: var(--bn-colour-quote-bg);
+}
+
+.bn-speaker-editable-name[contenteditable] {
+    outline: 1px solid var(--bn-colour-accent);
+    outline-offset: 1px;
+    background: var(--bn-colour-quote-bg);
+    cursor: text;
+}
+
+.bn-speaker-editable-name.edited {
+    font-style: italic;
+}
+
+.bn-name-pencil {
+    all: unset;
+    cursor: pointer;
+    font-size: 0.65rem;
+    opacity: 0;
+    color: var(--bn-colour-text-muted);
+    transition: opacity var(--bn-transition-fast);
+    padding: 0 0.1rem;
+}
+
+.bn-session-speaker-entry:hover .bn-name-pencil {
+    opacity: 0.4;
+}
+
+.bn-name-pencil:hover {
+    opacity: 0.8 !important;
+}

@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Header Redesign — Bristlenose Design System</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;420;490;600;700&display=swap" rel="stylesheet">
+<style>
+/* ── Tokens (from bristlenose/theme/tokens.css) ── */
+:root {
+    --bn-font-body: "Inter", "Segoe UI Variable", "Segoe UI", system-ui, -apple-system, sans-serif;
+    --bn-font-mono: "SF Mono", "Fira Code", "Consolas", monospace;
+    --bn-colour-bg: #ffffff;
+    --bn-colour-text: #1a1a1a;
+    --bn-colour-muted: #6b7280;
+    --bn-colour-border: #e5e7eb;
+    --bn-colour-accent: #2563eb;
+    --bn-colour-badge-bg: #f3f4f6;
+    --bn-colour-badge-text: #374151;
+    --bn-space-xs: 0.15rem;
+    --bn-space-sm: 0.35rem;
+    --bn-space-md: 0.75rem;
+    --bn-space-lg: 1.5rem;
+    --bn-space-xl: 2rem;
+    --bn-radius-sm: 3px;
+    --bn-radius-md: 6px;
+    --bn-radius-lg: 8px;
+    --bn-weight-normal: 420;
+    --bn-weight-emphasis: 490;
+    --bn-transition-fast: 0.15s ease;
+    --bn-transition-normal: 0.2s ease;
+}
+
+@supports (color: light-dark(#000, #fff)) {
+    :root {
+        color-scheme: light dark;
+        --bn-colour-bg: light-dark(#ffffff, #111111);
+        --bn-colour-text: light-dark(#1a1a1a, #e5e7eb);
+        --bn-colour-muted: light-dark(#6b7280, #9ca3af);
+        --bn-colour-border: light-dark(#e5e7eb, #2d2d2d);
+        --bn-colour-accent: light-dark(#2563eb, #60a5fa);
+        --bn-colour-badge-bg: light-dark(#f3f4f6, #252525);
+        --bn-colour-badge-text: light-dark(#374151, #d1d5db);
+    }
+}
+
+/* ── Page layout — flush to top ── */
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+    font-family: var(--bn-font-body);
+    color: var(--bn-colour-text);
+    background: var(--bn-colour-bg);
+    line-height: 1.6;
+}
+
+/* ── Report container ── */
+.report {
+    max-width: 52rem;
+    margin: 0 auto;
+    padding: 0 var(--bn-space-lg);
+}
+
+/* ── Logotype block — flush to top of page ── */
+.header-logotype-new {
+    font-family: var(--bn-font-body);
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 15px;
+    letter-spacing: 0.02em;
+    /* Colour set by JS breathing animation */
+    color: hsl(35, 25%, 45%);
+    display: block;
+    padding: 0.3rem 0.45rem 0.3rem;
+    /* Background set by JS breathing animation */
+    background: hsl(35, 18%, 90%);
+    width: fit-content;
+}
+
+/* ── Logo image ── */
+.report-logo {
+    width: 80px;
+    height: auto;
+    flex-shrink: 0;
+    opacity: 0.85;
+    transition: opacity var(--bn-transition-normal);
+    transform: scaleX(-1);
+    border-radius: var(--bn-radius-md);
+    display: block;
+}
+.report-logo:hover { opacity: 1; }
+
+/* HACK: Dark logo blend — same as production */
+@supports (color: light-dark(#000, #fff)) {
+    @media (prefers-color-scheme: dark) {
+        .report-logo { mix-blend-mode: lighten; }
+    }
+}
+
+/* ── Project title (existing style) ── */
+.header-project-title {
+    font-size: 1.35rem;
+    font-weight: var(--bn-weight-emphasis);
+    letter-spacing: -0.01em;
+}
+
+/* ── Meta line ── */
+.header-meta {
+    font-size: 0.82rem;
+    color: var(--bn-colour-muted);
+}
+
+/* ── Header layout: logo stack left, project info right ── */
+.report-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: var(--bn-space-lg);
+    padding: var(--bn-space-md) 0;
+}
+.header-left {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+}
+.header-right {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: var(--bn-space-xs);
+    padding-top: 0.2rem;
+}
+
+/* ── Tab bar (reproduced from global-nav.css) ── */
+.bn-global-nav {
+    display: flex;
+    align-items: stretch;
+    gap: 0;
+    border-bottom: 1px solid var(--bn-colour-border);
+}
+.bn-tab {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.6rem 1rem;
+    background: none;
+    border: none;
+    border-bottom: 3px solid transparent;
+    font-family: var(--bn-font-body);
+    font-size: 0.88rem;
+    font-weight: var(--bn-weight-emphasis);
+    color: var(--bn-colour-muted);
+    cursor: pointer;
+    white-space: nowrap;
+    transition: color var(--bn-transition-fast), border-color var(--bn-transition-fast);
+}
+.bn-tab:hover { color: var(--bn-colour-text); }
+.bn-tab.active {
+    color: var(--bn-colour-accent);
+    border-bottom-color: var(--bn-colour-accent);
+}
+.bn-tab-spacer { flex: 1; }
+.bn-tab-icon { padding: 0.6rem 0.75rem; }
+.bn-tab-icon svg { display: block; }
+
+/* ── Toolbar (simplified reproduction) ── */
+.toolbar-row {
+    display: flex;
+    align-items: center;
+    gap: var(--bn-space-md);
+    padding: var(--bn-space-md) 0;
+}
+.toolbar-search {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    flex: 0 1 20rem;
+}
+.toolbar-search svg { color: var(--bn-colour-muted); flex-shrink: 0; }
+.toolbar-search input {
+    border: 1px solid var(--bn-colour-border);
+    border-radius: var(--bn-radius-md);
+    padding: 0.4rem 0.6rem;
+    font-family: var(--bn-font-body);
+    font-size: 0.85rem;
+    color: var(--bn-colour-text);
+    background: var(--bn-colour-bg);
+    width: 100%;
+    outline: none;
+}
+.toolbar-search input::placeholder { color: var(--bn-colour-muted); }
+.toolbar-spacer { flex: 1; }
+.toolbar-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.4rem 0.7rem;
+    border: 1px solid var(--bn-colour-border);
+    border-radius: var(--bn-radius-md);
+    background: var(--bn-colour-bg);
+    font-family: var(--bn-font-body);
+    font-size: 0.82rem;
+    color: var(--bn-colour-text);
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+/* ── Speed control ── */
+.speed-control {
+    position: fixed;
+    bottom: 1.5rem;
+    right: 1.5rem;
+    background: var(--bn-colour-bg);
+    border: 1px solid var(--bn-colour-border);
+    border-radius: var(--bn-radius-lg);
+    padding: 0.75rem 1rem;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.10), 0 1px 4px rgba(0, 0, 0, 0.06);
+    font-size: 0.78rem;
+    color: var(--bn-colour-muted);
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+    z-index: 100;
+    min-width: 200px;
+}
+.speed-control label {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+.speed-control input[type="range"] {
+    width: 100%;
+    accent-color: var(--bn-colour-accent);
+}
+.speed-value {
+    font-family: var(--bn-font-mono);
+    font-size: 0.72rem;
+    min-width: 3rem;
+    text-align: right;
+}
+</style>
+</head>
+<body>
+
+<div class="report">
+    <!-- Logotype flush to top of page, left-aligned with content -->
+    <span class="header-logotype-new">Bristlenose</span>
+    <div class="report-header">
+        <div class="header-left">
+            <img class="report-logo" src="../../bristlenose/theme/images/bristlenose.png" alt="Bristlenose logo">
+        </div>
+        <div class="header-right">
+            <span class="header-project-title">project-ikea</span>
+            <span class="header-meta">4 sessions, 3 participants, Today at 09:26</span>
+        </div>
+    </div>
+    <nav class="bn-global-nav" role="tablist">
+        <button class="bn-tab" role="tab">Project</button>
+        <button class="bn-tab" role="tab">Sessions</button>
+        <button class="bn-tab active" role="tab" aria-selected="true">Quotes</button>
+        <button class="bn-tab" role="tab">Codebook</button>
+        <button class="bn-tab" role="tab">Analysis</button>
+        <div class="bn-tab-spacer"></div>
+        <button class="bn-tab bn-tab-icon" role="tab" aria-label="Settings" title="Settings"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="2.5"/><path d="M8 1.5v1.2M8 13.3v1.2M1.5 8h1.2M13.3 8h1.2M3.4 3.4l.85.85M11.75 11.75l.85.85M3.4 12.6l.85-.85M11.75 4.25l.85-.85"/></svg></button>
+        <button class="bn-tab bn-tab-icon" role="tab" aria-label="About" title="About"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="6.5"/><line x1="8" y1="7" x2="8" y2="11.5"/><circle cx="8" cy="4.5" r="0.01" fill="currentColor" stroke-width="2"/></svg></button>
+    </nav>
+    <div class="toolbar-row">
+        <div class="toolbar-search">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="7" cy="7" r="4.5"/><line x1="10.2" y1="10.2" x2="14" y2="14"/></svg>
+            <input type="text" placeholder="Filter quotes...">
+        </div>
+        <div class="toolbar-spacer"></div>
+        <button class="toolbar-btn"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><line x1="2" y1="4" x2="14" y2="4"/><line x1="2" y1="8" x2="10" y2="8"/><line x1="2" y1="12" x2="6" y2="12"/></svg> 2 tags</button>
+        <button class="toolbar-btn">All quotes</button>
+        <button class="toolbar-btn"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><rect x="2" y="2" width="5" height="5" rx="1"/><rect x="9" y="2" width="5" height="2" rx="0.5"/><rect x="9" y="6" width="5" height="2" rx="0.5"/><rect x="2" y="9" width="5" height="5" rx="1"/><rect x="9" y="10" width="5" height="2" rx="0.5"/><rect x="9" y="14" width="5" height="2" rx="0.5"/></svg> Copy CSV</button>
+    </div>
+</div>
+
+<div class="speed-control">
+    <label>Speed <span class="speed-value" id="speed-display">1.0x</span></label>
+    <input type="range" id="speed-slider" min="0" max="100" value="10" step="1">
+    <div style="display: flex; justify-content: space-between; font-size: 0.65rem;">
+        <span>glacial</span>
+        <span>frantic</span>
+    </div>
+</div>
+
+<script>
+// ── Breathing colour animation for logotype ──
+// Colours sampled from the bristlenose pleco fish:
+//   Warm brown body:    H≈30  S≈35% L≈40%
+//   Olive-green fins:   H≈55  S≈25% L≈38%
+//   Cream/gold spots:   H≈42  S≈40% L≈55%
+//   Dark umber shadow:  H≈25  S≈30% L≈30%
+//
+// Each HSL channel drifts on a different sine frequency
+// so the colour wanders organically through the fish palette.
+// Period: 20–45 seconds per cycle. Almost imperceptible.
+
+(function () {
+    const logotypes = document.querySelectorAll('.header-logotype-new');
+    if (!logotypes.length) return;
+
+    const slider = document.getElementById('speed-slider');
+    const display = document.getElementById('speed-display');
+
+    // Detect dark mode
+    const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+
+    // Fish palette range (HSL) — shared hue + saturation for both layers
+    const H_MIN = 25, H_MAX = 55;     // umber brown → olive green
+    const S_MIN = 18, S_MAX = 40;     // muted → warm
+
+    // Both text and background use the SAME full lightness range
+    // and drift on independent sine waves so they cross over.
+    // Range: 28% (dark umber) to 88% (pale cream)
+    const L_MIN = 28, L_MAX = 88;
+
+    // Base sine wave periods (ms) — coprime-ish for organic feel
+    const H_PERIOD     = 37000;  // ~37s — hue
+    const S_PERIOD     = 23000;  // ~23s — saturation
+    const TXT_L_PERIOD = 29000;  // ~29s — text lightness
+    const BG_L_PERIOD  = 43000;  // ~43s — bg lightness (different rate → crossovers)
+    const BG_H_PERIOD  = 41000;  // ~41s — bg hue (offset from text hue)
+
+    // Bias: in light mode, text should be darker ~70% of the time.
+    // We achieve this by offsetting the text lightness sine wave with
+    // a bias term. The sine still crosses over, but spends more time
+    // on the dark side. In dark mode, invert: text lighter ~70%.
+    //
+    // bias shifts the sine's midpoint: 0.5 = centred, 0.35 = skewed dark
+    const TXT_L_BIAS = isDark ? 0.65 : 0.35;
+    const BG_L_BIAS  = isDark ? 0.35 : 0.65;
+
+    // Speed: slider sets a base, then a slow sine modulates it
+    // between 2x and 8x of that base — the breathing itself breathes.
+    const SPEED_MOD_PERIOD = 67000; // ~67s — meta-breathing cycle
+
+    function getSliderBase() {
+        const v = Number(slider.value);
+        return Math.pow(10, (v - 10) / 30);
+    }
+
+    function getSpeed(realTimeMs) {
+        const base = getSliderBase();
+        // Sine modulation: oscillates multiplier between 2x and 8x of base
+        const mod = (Math.sin((realTimeMs / SPEED_MOD_PERIOD) * Math.PI * 2) + 1) / 2; // 0..1
+        const multiplier = 1.5 + mod * 2.5; // 1.5..4
+        return base * multiplier;
+    }
+
+    function formatSpeed(s) {
+        if (s < 1) return s.toFixed(2) + 'x';
+        if (s < 10) return s.toFixed(1) + 'x';
+        return Math.round(s) + 'x';
+    }
+
+    slider.addEventListener('input', () => {
+        display.textContent = formatSpeed(getSliderBase() * 2.75); // show midpoint
+    });
+
+    function lerp(min, max, t) {
+        return min + (max - min) * t;
+    }
+
+    function sinBiased(time, period, bias) {
+        // Returns 0..1, but biased so it spends more time near `bias`.
+        // Uses a power curve on the raw sine to skew the distribution.
+        const raw = (Math.sin((time / period) * Math.PI * 2) + 1) / 2; // 0..1
+        // Skew: if bias < 0.5, spend more time near 0 (dark text).
+        // The exponent controls skew strength. 0.35 bias → exponent ~0.6
+        const exponent = Math.log(0.5) / Math.log(bias);
+        return Math.pow(raw, exponent);
+    }
+
+    // Accumulated "virtual time" — integrates speed over real time
+    let prevTimestamp = null;
+    let virtualTime = 0;
+
+    function breathe(timestamp) {
+        if (prevTimestamp === null) prevTimestamp = timestamp;
+        const dt = timestamp - prevTimestamp;
+        prevTimestamp = timestamp;
+
+        // Speed itself breathes: sine-modulated between 2x–8x of slider base
+        virtualTime += dt * getSpeed(timestamp);
+        const t = virtualTime;
+
+        // Update speed display to show current effective speed
+        display.textContent = formatSpeed(getSpeed(timestamp));
+
+        // Text: hue, saturation, biased lightness
+        const txtH = lerp(H_MIN, H_MAX, sinBiased(t, H_PERIOD, 0.5));
+        const txtS = lerp(S_MIN, S_MAX, sinBiased(t, S_PERIOD, 0.5));
+        const txtL = lerp(L_MIN, L_MAX, sinBiased(t, TXT_L_PERIOD, TXT_L_BIAS));
+
+        // Background: offset hue, own saturation wave, biased lightness
+        const bgH = lerp(H_MIN, H_MAX, sinBiased(t, BG_H_PERIOD, 0.5));
+        const bgS = lerp(S_MIN * 0.5, S_MAX * 0.6, sinBiased(t, S_PERIOD * 1.3, 0.5));
+        const bgL = lerp(L_MIN, L_MAX, sinBiased(t, BG_L_PERIOD, BG_L_BIAS));
+
+        const textColor = `hsl(${txtH.toFixed(1)}, ${txtS.toFixed(1)}%, ${txtL.toFixed(1)}%)`;
+        const bgColor   = `hsl(${bgH.toFixed(1)}, ${bgS.toFixed(1)}%, ${bgL.toFixed(1)}%)`;
+
+        logotypes.forEach(el => {
+            el.style.color = textColor;
+            el.style.background = bgColor;
+        });
+
+        requestAnimationFrame(breathe);
+    }
+
+    requestAnimationFrame(breathe);
+})();
+</script>
+
+</body>
+</html>

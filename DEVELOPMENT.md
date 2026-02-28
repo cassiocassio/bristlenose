@@ -1,6 +1,6 @@
 # Development Guide
 
-Clone the repo, get productive in 5 minutes.
+Clone the repo.
 
 ## Prerequisites
 
@@ -141,9 +141,9 @@ Each worktree needs its own `.venv`. Commits are shared instantly across all wor
 
 **Never check out a feature branch inside the main `bristlenose/` directory** — use worktrees instead.
 
-### Collaborative development (two people, two Macs)
+### Collaborative development example
 
-Each person clones the repo to their own machine and creates their own worktree. GitHub is the sync point — never put the repo on a shared filesystem (Dropbox/iCloud + `.git` = corruption).
+Each person clones the repo to their own machine and creates their own worktree. 
 
 ```bash
 # 1. Clone (one-time)
@@ -169,7 +169,7 @@ git push
 git fetch origin && git log --oneline origin/their-branch -5
 ```
 
-All files are local (zero latency). Only `push`/`pull`/`fetch` touch the network. Merge to `main` via PR when done.
+ Only `push`/`pull`/`fetch` touch the network. Merge to `main` via PR when done.
 
 ## Troubleshooting
 

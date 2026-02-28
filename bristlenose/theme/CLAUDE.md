@@ -44,9 +44,13 @@ Add both light and dark values in the `light-dark()` call inside the `@supports`
 
 ### Logo
 
-The `<picture>` element swaps between `bristlenose-logo.png` (light) and `bristlenose-logo-dark.png` (dark) using `<source media="(prefers-color-scheme: dark)">`. Both are in `assets/` directory. Dark logo is currently a placeholder (inverted version) — needs replacing with a proper albino bristlenose pleco image.
+**Transparent PNG** (`bristlenose-transparent.png`) is the base logo — works on both light and dark themes with no image swapping. Eliminates the old dual-logo system (`bristlenose.png` + `bristlenose-dark.png`), the `mix-blend-mode: lighten` hack, and the `_updateLogo()` DOM manipulation in `settings.js`. Old PNGs still shipped for backward compatibility with pre-existing rendered reports.
 
-**Logo + appearance toggle gotcha**: `<picture>` `<source>` media queries only respond to the OS-level `prefers-color-scheme`, not the page-level `data-theme`/`colorScheme` override set by the Settings toggle. Setting `img.src` inside a `<picture>` has no effect when a matching `<source>` exists. Workaround in `settings.js` (`_updateLogo`): physically removes the `<source>` element when the user forces light/dark, stashes it, and restores it when switching back to auto. Messy but unavoidable without duplicating the logo as two `<img>` elements toggled by CSS classes.
+**Animated video in serve mode**: `<!-- bn-logo -->` comment markers wrap the logo in rendered HTML. `_transform_report_html()` in `app.py` swaps the static `<img>` for a `<video autoplay loop muted playsinline>` element with WebM VP9 alpha + MOV HEVC alpha sources. Conditional on `bristlenose-alive.webm` existing on disk — no video file = static `<img>` stays. See `docs/design-living-fish.md` for the full asset creation pipeline and architecture.
+
+**Reduced motion**: `prefers-reduced-motion: reduce` pauses the video via JS listener in both `settings.js` and `SettingsPanel.tsx`. Print hides the video via CSS (`video.report-logo { display: none }` in `@media print`).
+
+**Footer**: plain `<img>` with transparent PNG — no video, no `<picture>`. Fallback to old `<picture>` when `has_transparent_logo` is false (backward compat).
 
 **Logo click**: wrapped in `<a class="report-logo-link" href="#project" onclick="switchToTab('project');return false;">`. Clicking the fish logo navigates to the Project tab (home). CSS in `atoms/logo.css`: `.report-logo-link` removes underline and sets `line-height: 0` to prevent extra vertical space around the image.
 
@@ -234,8 +238,8 @@ Per-component CSS docs in `CSS-REFERENCE.md`. Key patterns: toolbar dual-class (
 | Template | Parameters | Used by |
 |----------|------------|---------|
 | `document_shell_open.html` | `color_scheme`, `title`, `css_href` | Report, transcript, codebook |
-| `report_header.html` | `assets_prefix`, `has_logo`, `has_dark_logo`, `project_name`, `doc_title`, `meta_right` | Report, transcript, codebook |
-| `footer.html` | `version`, `assets_prefix` | Report, transcript, codebook |
+| `report_header.html` | `assets_prefix`, `has_logo`, `has_dark_logo`, `has_transparent_logo`, `project_name`, `doc_title`, `meta_right` | Report, transcript, codebook |
+| `footer.html` | `version`, `assets_prefix`, `has_transparent_logo` | Report, transcript, codebook |
 | `quote_card.html` | `q` (quote context dict) | Report |
 | `toolbar.html` | (none — static) | Report |
 | `session_table.html` | `rows` (list of dicts), `moderator_header` (str) | Report |

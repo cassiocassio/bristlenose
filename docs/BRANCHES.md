@@ -97,10 +97,35 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 | `main` | `bristlenose/` | `origin/main` (push via `origin/main:wip` until release time) |
 | `symbology` | `bristlenose_branch symbology/` | `origin/symbology` |
 | `highlighter` | `bristlenose_branch highlighter/` | `origin/highlighter` |
+| `living-fish` | `bristlenose_branch living-fish/` | `origin/living-fish` |
 
 ---
 
 ## Active Branches
+
+### `living-fish` — started 26 Feb 2026
+
+**Worktree:** `/Users/cassio/Code/bristlenose_branch living-fish`
+
+**Goal:** Animated "living portrait" pleco logo for serve mode. Transparent-background PNG replaces the dual light/dark logo system. Video (`<video autoplay loop muted playsinline>`) injected via comment markers at serve time.
+
+**Status:** Code done, all tests pass. Blocked on video assets (transparent PNG + AI-generated video). See `docs/design-living-fish.md`.
+
+**Files touched:**
+- `bristlenose/output_paths.py` — new logo path properties
+- `bristlenose/stages/render_html.py` — constants, copy logic, template vars
+- `bristlenose/theme/templates/report_header.html` — `<!-- bn-logo -->` markers
+- `bristlenose/theme/templates/footer.html` — simplified to plain `<img>`
+- `bristlenose/server/app.py` — `_video_logo_html()`, marker replacement
+- `bristlenose/theme/atoms/logo.css` — removed mix-blend-mode hack, video styles
+- `bristlenose/theme/js/settings.js` — simplified `_updateLogo()`
+- `frontend/src/islands/SettingsPanel.tsx` — simplified `updateLogo()`
+- `tests/test_dark_mode.py` — updated logo tests
+- `scripts/prep-logo-assets.sh` — ffmpeg conversion helper
+
+**Merge plan:** No conflicts expected — touches logo/settings code that other branches don't modify. Merge after video assets are finalized and QA'd.
+
+---
 
 ### `highlighter` — started 13 Feb 2026
 

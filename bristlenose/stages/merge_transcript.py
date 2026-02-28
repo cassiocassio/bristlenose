@@ -18,6 +18,7 @@ logger = logging.getLogger(__name__)
 def merge_transcripts(
     sessions: list[InputSession],
     session_segments: dict[str, list[TranscriptSegment]],
+    input_dir: Path | None = None,
 ) -> list[FullTranscript]:
     """Merge all transcript sources into unified FullTranscript objects.
 
@@ -25,6 +26,10 @@ def merge_transcripts(
         sessions: The input sessions.
         session_segments: Map of session_id -> segments from any source
             (whisper, subtitle, docx).
+        input_dir: Project input directory.  When provided, source file
+            paths are stored relative to this directory (preserving
+            subdirectories like ``interviews/``).  Without it, only the
+            filename is stored (legacy behaviour).
 
     Returns:
         List of FullTranscript objects, one per session.
@@ -55,8 +60,18 @@ def merge_transcripts(
         if merged:
             duration = merged[-1].end_time
 
-        # Determine source file name
-        source_file = session.files[0].path.name if session.files else "unknown"
+        # Determine source file path (relative to input_dir when possible,
+        # so the importer can locate the file without guessing subdirectories).
+        source_file = "unknown"
+        if session.files:
+            fpath = session.files[0].path
+            if input_dir is not None:
+                try:
+                    source_file = str(fpath.relative_to(input_dir))
+                except ValueError:
+                    source_file = fpath.name
+            else:
+                source_file = fpath.name
 
         transcript = FullTranscript(
             session_id=session.session_id,

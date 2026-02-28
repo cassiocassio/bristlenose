@@ -209,6 +209,9 @@ function seekTo(pid, seconds) {
  * document will trigger `seekTo` on click.
  */
 function initPlayer() {
+  // Serve mode: PlayerProvider handles player integration
+  if (document.getElementById('bn-app-root')) return;
+
   document.addEventListener('click', function (e) {
     var link = e.target.closest('a.timecode');
     if (!link) return;

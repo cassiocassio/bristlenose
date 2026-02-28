@@ -78,13 +78,11 @@ This ensures Claude sessions running from the worktree can access `/close-branch
 
 If the symlink fails, warn but continue.
 
-## Step 9: Push to origin
+## Step 9: Stay local (do NOT push)
 
-```bash
-git push -u origin $0
-```
+**Do NOT push to origin.** The branch stays local until the user explicitly asks to push. This avoids cluttering the remote with branches that may be short-lived or experimental.
 
-This creates a remote tracking branch so collaborators can access it. If push fails (no network), warn but continue — the branch works fine locally.
+Tell the user: "Branch is local only. Push with `git push -u origin $0` when you're ready."
 
 ## Step 10: Update docs/BRANCHES.md
 
@@ -97,7 +95,7 @@ Read `docs/BRANCHES.md` to understand the current format. Then:
 
 2. Add a row to the **Backup Strategy** table:
    ```
-   | `$0` | `bristlenose_branch $0/` | `origin/$0` |
+   | `$0` | `bristlenose_branch $0/` | local only |
    ```
 
 3. Add a new section under **Active Branches** following the exact format of existing entries:
@@ -108,7 +106,7 @@ Read `docs/BRANCHES.md` to understand the current format. Then:
    **Status:** Just started
    **Started:** <today's date, format: D Mon YYYY, no leading zero on day>
    **Worktree:** `/Users/cassio/Code/bristlenose_branch $0/`
-   **Remote:** `origin/$0`
+   **Remote:** local only (push when ready)
 
    **What it does:** <ask user for a brief description>
 
@@ -135,7 +133,7 @@ Print a summary:
 
 - Branch: `$0`
 - Worktree: `/Users/cassio/Code/bristlenose_branch $0/`
-- Remote: `origin/$0`
+- Remote: local only (push with `git push -u origin $0` when ready)
 - Venv: ready (or note if it failed)
 - BRANCHES.md: updated and committed
 

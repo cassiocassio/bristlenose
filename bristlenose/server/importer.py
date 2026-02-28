@@ -228,6 +228,8 @@ def import_project(db: Session, project_dir: Path) -> Project:
 
     # --- Import transcript segments --------------------------------------
     _import_transcript_segments(db, session_map, transcripts_dir)
+    db.flush()  # ensure segments have IDs before word enrichment
+    _enrich_words_from_intermediate(db, session_map, output_dir)
 
     # --- Import persons + session_speakers from transcript segments ------
     _import_speakers(db, session_map, transcripts_dir, output_dir)
@@ -324,8 +326,16 @@ def _import_source_files(
         if existing:
             continue
 
-        # Try to find the actual file
+        # Try to find the actual file.  The transcript header stores only the
+        # filename (no subdirectory), but the pipeline's ingest stage scans one
+        # level of subdirectories (e.g. interviews/).  Mirror that: check
+        # project_dir first, then one-level subdirectories.
         source_path = project_dir / source_name
+        if not source_path.exists():
+            for subdir in project_dir.iterdir():
+                if subdir.is_dir() and (subdir / source_name).exists():
+                    source_path = subdir / source_name
+                    break
         file_type = _guess_file_type(source_name)
 
         # Update session media flags
@@ -419,6 +429,70 @@ def _import_transcript_segments(
                 segment_index=i,
             )
             db.add(seg)
+
+
+def _enrich_words_from_intermediate(
+    db: Session,
+    session_map: dict[str, SessionModel],
+    output_dir: Path,
+) -> None:
+    """Populate ``words_json`` on transcript segments from intermediate JSON.
+
+    The pipeline's ``session_segments.json`` contains Whisper word-level
+    timestamps (``Word`` objects with text, start_time, end_time).  The
+    ``.txt`` importer doesn't capture these — this function reads the
+    intermediate JSON and backfills ``words_json`` by matching segments on
+    ``segment_index``.
+
+    Compact JSON format: ``[{"t":"word","s":0.5,"e":0.8},...]``
+    """
+    ss_path = output_dir / ".bristlenose" / "intermediate" / "session_segments.json"
+    if not ss_path.exists():
+        return
+
+    try:
+        raw = json.loads(ss_path.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError):
+        return
+
+    for sid, pipeline_segs in raw.items():
+        sess = session_map.get(sid)
+        if not sess:
+            continue
+
+        # Build lookup from segment_index → word data
+        word_lookup: dict[int, list[dict[str, object]]] = {}
+        for i, pseg in enumerate(pipeline_segs):
+            words = pseg.get("words", [])
+            if not words:
+                continue
+            seg_idx = pseg.get("segment_index", -1)
+            # Prefer explicit segment_index; fall back to position in list
+            key = seg_idx if seg_idx >= 0 else i
+            compact = [
+                {"t": w["text"], "s": w["start_time"], "e": w["end_time"]}
+                for w in words
+                if w.get("text")
+            ]
+            if compact:
+                word_lookup[key] = compact
+
+        if not word_lookup:
+            continue
+
+        # Match DB segments and populate words_json
+        db_segs = (
+            db.query(TranscriptSegment)
+            .filter_by(session_id=sess.id)
+            .order_by(TranscriptSegment.start_time)
+            .all()
+        )
+        for db_seg in db_segs:
+            compact = word_lookup.get(db_seg.segment_index)
+            if compact:
+                db_seg.words_json = json.dumps(compact, separators=(",", ":"))
+
+    db.flush()
 
 
 def _load_people_for_import(output_dir: Path) -> dict[str, dict[str, str]] | None:

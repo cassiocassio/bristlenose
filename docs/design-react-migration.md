@@ -63,47 +63,53 @@ The first step where React replaces a user-facing vanilla JS interaction surface
 - **Test:** 87 new Vitest tests across 12 test files — unit tests for each component, hook, and utility, plus 10 integration tests verifying toolbar → store → quote island filtering flow
 - **Design doc:** Detailed plan at `.claude/plans/dynamic-wobbling-grove.md` — 7 discussion areas (component decomposition, state ownership, communication, toast, dropdown, portability, performance) with options, pros/cons, and resolved decisions
 
-### Step 5: Tab navigation → React Router _(large — structural hinge)_
+### Step 5: Tab navigation → React Router ✓ DONE
 
-This is the big one. Everything before it is self-contained. Everything after it assumes routing works.
+The structural hinge — everything before it is self-contained, everything after it assumes routing works.
 
-- **Replaces:** `global-nav.js` (~400 lines) — tab switching, hash routing, history/popstate, session drill-down, cross-tab stat links, speaker navigation
+- **Replaces:** `global-nav.js` (~436 lines) — tab switching, hash routing, history/popstate, session drill-down, cross-tab stat links, speaker navigation
 - **Dependencies:** Steps 1–4 (settings, about, store, toolbar must be React before their tabs become routes)
-- **What to build:**
-  - Install `react-router-dom`
-  - `AppLayout` component with `<NavBar>` + `<Outlet>`
-  - Routes: `/report/` (project), `/report/sessions/` (grid), `/report/sessions/:id` (transcript), `/report/quotes/`, `/report/codebook/`, `/report/analysis/`, `/report/settings/`, `/report/about/`
-  - `NavBar` component replacing `global_nav.html` — `<NavLink>` elements with active styling using existing `.bn-tab.active` CSS
-  - Session drill-down becomes a nested route (`/report/sessions/:id`) instead of hide/show DOM manipulation
-  - Transcript pages become routes, not separate HTML files served from disk
-  - `scrollToAnchor` becomes a `useEffect` with retry logic (same 2s timeout for async island data)
+- **What was built:** `react-router-dom` v7.13.1 with `createBrowserRouter` (data router API). Single React root (`#bn-app-root`) replaces 11 separate `createRoot()` calls in serve mode
+  - `NavBar` component — 5 text tabs + 2 icon tabs (Settings, About) using `<NavLink>` with existing `.bn-tab.active` CSS
+  - `AppLayout` — `<NavBar />` + `<Outlet />`, installs backward-compat navigation shims on mount
+  - 8 thin page wrappers in `frontend/src/pages/` — each composes existing island components (`QuotesTab` = Toolbar + QuoteSections + QuoteThemes)
+  - SPA catch-all in FastAPI (`GET /report/{path:path}`), transcript file route defined first for priority
+  - `<!-- bn-app -->` markers in `render_html.py` — one `re.sub` in `app.py` replaces the entire nav + panel region with `<div id="bn-app-root">`, making individual island marker substitutions no-ops
+  - `useScrollToAnchor` hook — retry-aware scroll (50 × 100ms = 5s) for async-rendered targets
+  - `useAppNavigate` hook — wraps `useNavigate()` with tab-name-to-path mapping
+  - Backward-compat shims (`frontend/src/shims/navigation.ts`) install `window.switchToTab`, `window.scrollToAnchor`, `window.navigateToSession` delegating to React Router
+  - Hash-to-pathname redirect (`frontend/src/utils/hashRedirect.ts`) — old `#quotes` bookmarks → `/report/quotes/`
+  - `initGlobalNav()` no-op guard when `#bn-app-root` exists (same pattern as toolbar)
+  - `main.tsx` dual mode: SPA (`RouterProvider`) when `#bn-app-root` exists, legacy island mode (dynamic `import()`) as fallback
+- **Routes:** `/report/` (project), `/report/sessions/` (grid), `/report/sessions/:sessionId` (transcript), `/report/quotes/`, `/report/codebook/`, `/report/analysis/`, `/report/settings/`, `/report/about/`
 - **Key simplification:** Pathname-based routing frees hash fragments for scroll targets. `#t-123` (timecodes), `#section-name` (deep links) all just work as fragments on the correct route. The `#quotes` vs `#t-123` conflict disappears
-- **Backward compat bridge:** During transition, keep `window.switchToTab` and `window.navigateToSession` as shims that call `navigate()` internally. Islands not yet updated can still call the globals. Remove once all callers are migrated
-- **Test:** Navigate all tabs (URL updates correctly), back/forward works, deep links work, session drill-down creates a real URL, cross-tab navigation from dashboard stat cards and featured quotes works
+- **Link format change:** `sessions/transcript_s1.html#t-123` → `/report/sessions/s1#t-123` (clean session ID, matches API pattern)
+- **Files:** 15 new files, 14 modified files (36 total in commit). Detailed plan at `.claude/plans/generic-scribbling-feigenbaum.md`
+- **Test:** 45 new Vitest tests (635 total). NavBar, router, hash redirect, scroll hook, navigate hook, navigation shims
+- **Post-QA fixes:** AnalysisPage slug generation aligned with QuoteSections/QuoteThemes (was stripping special chars, now only replaces spaces — matching anchor IDs). Scroll retry window increased from 2s to 5s for cross-tab navigation where destination page needs to mount + fetch data
 
-### Step 6: Player integration _(medium)_
+### Step 6: Player integration _(medium)_ ✓ DONE
 
 - **Replaces:** `player.js` (~250 lines) — popout window lifecycle, `postMessage` IPC, glow sync, `setInterval` close-poll
 - **Dependencies:** Step 5 (router — player glow needs route context)
-- **What to build:** `PlayerProvider` context + `usePlayer` hook. Provides `seekTo(pid, seconds)`. Manages popout window. Handles `message` events for playback state. Exposes `currentTime` + `currentPid` for glow
-- **Key change:** Glow highlighting moves from CSS class toggling via DOM queries to React state. Each `QuoteCard` and transcript segment checks if its timecode range contains `currentTime` and applies the glow class itself. Eliminates the glow index rebuild
-- **`TimecodeLink` wiring:** Already accepts `onClick` — wire to `seekTo` from context instead of `window.seekTo`
-- **Cleanup:** `useEffect` return clears the poll interval and glow state
-- **Test:** Vitest for the hook (mock `postMessage`). Manual: click timecode → player opens → glow syncs → closing player clears glow
+- **What was built:** `PlayerProvider` context + `usePlayer` hook wrapping `AppLayout`. `seekTo(pid, seconds)` manages popout window lifecycle. `TimecodeLink` calls `seekTo` via context (prevents default `href="#t=..."` navigation). Glow highlighting via DOM class manipulation (refs, not React state — 4× /sec timeupdate messages would re-render hundreds of cards). `buildGlowIndex` keys transcript segments by session ID (from URL pathname), not speaker code. Progress bar via `--bn-segment-progress` CSS custom property. `initPlayer()` bail-out when `bn-app-root` exists
+- **Key fix:** `BRISTLENOSE_VIDEO_MAP` and `BRISTLENOSE_PLAYER_URL` exposed on `window` from IIFE in `render_html.py` — React runs in a separate ES module context and can't see IIFE-scoped `var` declarations. Also fixed session routing: non-transcript URLs (`/report/sessions/s1`) now serve SPA HTML instead of 404
+- **Test:** 28 Vitest tests for PlayerContext, TimecodeLink integration, glow index building. 28 serve tests pass
 
-### Step 7: Keyboard shortcuts _(medium-large)_
+### Step 7: Keyboard shortcuts _(medium-large)_ ✓ DONE
 
-- **Replaces:** `focus.js` (~650 lines) — j/k navigation, multi-select, bulk actions, help overlay, Escape cascade
+- **Replaces:** `focus.js` (~645 lines) — j/k navigation, multi-select, bulk actions, help overlay, Escape cascade
 - **Dependencies:** Steps 3 (store for star/hide/tag), 4 (toolbar for `/`=search), 5 (router for `?`=about), 6 (player for Enter=play)
-- **What to build:** `FocusProvider` context exposing `focusedId`, `selectedIds`, `setFocus`, `toggleSelection`, `selectRange`. Single `useEffect` with `keydown` listener. `getVisibleQuotes()` becomes a derived value from QuotesStore (filtered by search, view mode, hidden state) — no more DOM queries on `offsetParent`
-- **Test:** Vitest for focus reducer. Manual: j/k navigation, multi-select, bulk star/hide/tag
+- **What was built:** `FocusProvider` context exposing `focusedId`, `selectedIds`, `setFocus`, `toggleSelection`, `selectRange`, `clearSelection`, `moveFocus`, `registerVisibleQuoteIds`, `getVisibleQuoteIds`. `useKeyboardShortcuts` hook — single `useEffect` with `keydown` listener + background click handler. `HelpModal` component (? toggle). QuoteCard click-to-focus with modifier support (Cmd/Ctrl+click toggle, Shift+click range). Hide handler registry (`registerHideHandler`/`hideQuote`) so keyboard `h` triggers `QuoteGroup.handleToggleHide` (fly-up ghost animation) instead of raw store toggle. `initFocus()` bail-out when `bn-app-root` exists
+- **Key change:** `getVisibleQuotes()` replaced by data-derived `registerVisibleQuoteIds` — no more DOM queries with `offsetParent`. QuoteSections and QuoteThemes register their visible quote IDs; FocusProvider merges them in order
+- **Test:** 62 new Vitest tests across FocusContext, useKeyboardShortcuts, HelpModal. 703 total frontend tests pass
 
-### Step 8: Retire remaining vanilla JS _(medium — mostly deletion)_
+### Step 8: Retire remaining vanilla JS _(medium — mostly deletion)_ ✓ DONE
 
 At this point, every vanilla JS module has been replaced by a React equivalent. This step removes them from the serve path.
 
-- **Retires:** `starred.js`, `hidden.js`, `editing.js`, `tags.js`, `histogram.js`, `names.js`, `codebook.js` (report page), `modal.js`, `storage.js`, `api-client.js`, `badge-utils.js`, `analysis.js`, `transcript-names.js`, `transcript-annotations.js`, `journey-sort.js`, `main.js`
-- **What to do:** Remove the `<script>` IIFE block from the serve path. The `_JS_FILES` list in `render_html.py` stays for `bristlenose render` (offline HTML). Verify each module's functionality is covered. Freeze `bristlenose/theme/js/` entirely
+- **Retires:** All 26 modules in `_JS_FILES` — `storage.js`, `api-client.js`, `badge-utils.js`, `modal.js`, `codebook.js`, `player.js`, `starred.js`, `editing.js`, `tags.js`, `histogram.js`, `csv-export.js`, `view-switcher.js`, `search.js`, `tag-filter.js`, `hidden.js`, `names.js`, `focus.js`, `feedback.js`, `global-nav.js`, `transcript-names.js`, `transcript-annotations.js`, `journey-sort.js`, `analysis.js`, `settings.js`, `person-display.js`, `main.js`
+- **What changed:** `_strip_vanilla_js()` in `app.py` uses the existing `_JS_MARKER` boundary to remove concatenated module code from the IIFE while keeping global declarations (`BRISTLENOSE_VIDEO_MAP`, `BRISTLENOSE_PLAYER_URL`, `BRISTLENOSE_ANALYSIS`) that React reads from `window.*`. Called from `_transform_report_html()` (both dev and prod paths). Dead code removed: 9 individual island marker substitutions, `_replace_baked_js()` calls from dev routes, 9 `_REACT_*_MOUNT` constants. `_JS_FILES` list in `render_html.py` stays for `bristlenose render` (offline HTML). 6 new tests
 - **Test:** `bristlenose serve` works with zero vanilla JS. `bristlenose render` still produces a working static report
 
 ### Step 9: React app shell — kill the skeleton _(large)_
@@ -127,20 +133,20 @@ Enabled by the complete React app. Not a migration step, but the payoff.
 ## Dependency graph
 
 ```
-Step 1 (Settings)     Step 2 (About)     Step 3 (QuotesStore)
+Step 1 (Settings) ✓   Step 2 (About) ✓   Step 3 (QuotesStore) ✓
     \                     |                    /
      \                    |                   /
       +-------------------+------------------+
                           |
-                    Step 4 (Toolbar + Toast)
+                    Step 4 (Toolbar + Toast) ✓
                           |
-                    Step 5 (React Router)  <-- structural hinge
+                    Step 5 (React Router) ✓
                           |
-                    Step 6 (Player)
+                    Step 6 (Player) ✓
                           |
-                    Step 7 (Keyboard)
+                    Step 7 (Keyboard) ✓
                           |
-                    Step 8 (Retire vanilla JS)
+                    Step 8 (Retire vanilla JS) ✓  <-- you are here
                           |
                     Step 9 (App shell)
                           |

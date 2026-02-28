@@ -145,6 +145,14 @@ class DashboardResponse(BaseModel):
     coverage: CoverageResponse | None
 
 
+class ProjectInfoResponse(BaseModel):
+    """Lightweight project info for the report header."""
+
+    project_name: str
+    session_count: int
+    participant_count: int
+
+
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
@@ -707,6 +715,44 @@ def get_dashboard(
             moderator_header=mod_header,
             observer_header=obs_header,
             coverage=coverage,
+        )
+    finally:
+        db.close()
+
+
+@router.get(
+    "/projects/{project_id}/info", response_model=ProjectInfoResponse,
+)
+def get_project_info(
+    project_id: int,
+    request: Request,
+) -> ProjectInfoResponse:
+    """Return lightweight project metadata for the report header."""
+    db = _get_db(request)
+    try:
+        project = db.get(Project, project_id)
+        if not project:
+            raise HTTPException(status_code=404, detail="Project not found")
+
+        session_count = (
+            db.query(SessionModel).filter_by(project_id=project_id).count()
+        )
+        # Count distinct participant speaker codes (p1, p2, ...)
+        participant_codes = (
+            db.query(SessionSpeaker.speaker_code)
+            .join(SessionModel, SessionSpeaker.session_id == SessionModel.id)
+            .filter(
+                SessionModel.project_id == project_id,
+                SessionSpeaker.speaker_code.startswith("p"),
+            )
+            .distinct()
+            .count()
+        )
+
+        return ProjectInfoResponse(
+            project_name=project.name,
+            session_count=session_count,
+            participant_count=participant_codes,
         )
     finally:
         db.close()

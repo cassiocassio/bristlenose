@@ -2,7 +2,7 @@
 
 ## What this is
 
-FastAPI server (`bristlenose serve`) that serves the HTML report, provides REST API endpoints for researcher state, and hosts React islands.  SQLite database stores all pipeline output + researcher edits.
+FastAPI server (`bristlenose serve`) that serves a React SPA (React Router, pathname-based routes) over HTTP, provides REST API endpoints for researcher state, and stores all pipeline output + researcher edits in SQLite. In serve mode, `app.py` replaces `<!-- bn-app -->` markers in the rendered HTML with `<div id="bn-app-root">`; React Router handles all client-side navigation (tab switching, session drill-down, back/forward). The SPA catch-all route (`GET /report/{path:path}`) returns the same transformed HTML for all `/report/*` paths. Transcript HTML files from `bristlenose render` are still served directly (route defined before the catch-all for priority).
 
 ## Architecture
 
@@ -22,7 +22,7 @@ bristlenose/server/
     autocode.py   — 7 AutoCode endpoints (start, status, proposals, accept/deny)
     dev.py        — Dev-only endpoints (visual diff, system info)
   codebook/       — YAML codebook templates (garrett, norman, uxr, plato)
-  static/         — Vite build output (React islands bundle)
+  static/         — Vite build output (React Router SPA bundle)
 ```
 
 ## Data API (Phase 1)
@@ -165,11 +165,9 @@ Toggle with the palette button in the top-right corner. When adding a new React 
 
 ## Dev loop (live JS reload)
 
-In dev mode (`bristlenose serve --dev`), the server **live-reloads JS on every request**.  You can edit any `.js` file in `bristlenose/theme/js/`, refresh the browser, and see the change immediately — no `bristlenose render` step needed.
+**Vanilla JS is stripped in serve mode (Step 8).** `_strip_vanilla_js()` in `app.py` uses the `_JS_MARKER` boundary to remove all concatenated module code from the IIFE, keeping only `window.*` globals (`BRISTLENOSE_VIDEO_MAP`, `BRISTLENOSE_PLAYER_URL`, `BRISTLENOSE_ANALYSIS`) that React reads.  This runs in both dev and prod paths via `_transform_report_html()`.  The `_JS_FILES` list in `render_html.py` stays for `bristlenose render` (offline HTML).
 
-How it works: `serve_report_html()` reads the baked-in HTML from disk, finds the `/* bristlenose report.js */` marker, and replaces everything from there to the IIFE closing `})();` with freshly-read source files via `_load_live_js()` (which imports `_JS_FILES` from `render_html.py` for the canonical dependency order).  All vanilla JS modules are loaded — the toolbar init functions (`initSearchFilter`, `initViewSwitcher`, etc.) harmlessly no-op because the React Toolbar island replaces their DOM targets.  The IIFE wrapper `(function() { ... })();` is part of the Jinja2 template — the replacement must preserve the closing or **all JS init functions silently fail to run** (no console error, just a dead page).
-
-**What still requires re-render:** changes to the Jinja2 HTML template itself (not JS), changes to CSS files, changes to data variables (quote map, analysis data).  JS changes are live.
+**What still requires re-render:** changes to the Jinja2 HTML template itself, changes to CSS files, changes to data variables (quote map, analysis data).
 
 **Python changes** are handled by uvicorn's `--reload` (WatchFiles) — editing `data.py`, `app.py`, etc. triggers an automatic server restart.
 
@@ -218,12 +216,13 @@ Known false positive: westernized order "Wei Zhang" (where "Wei" is also in `_FA
 - **Offline graceful degradation** — static HTML files (opened from disk, not served) have no `BRISTLENOSE_API_BASE` global.  `isServeMode()` returns false, all API calls skip silently, localStorage works as before
 - **No `await` on API calls** — the JS modules fire `apiPut()` without awaiting.  This means rapid clicks send multiple overlapping PUTs.  The server handles this safely because each PUT replaces the full state (last writer wins)
 - **Ruff ignores JS files** — `ruff check .` skips `.js` files.  Don't pass JS files to ruff directly (it tries to parse them as Python and generates hundreds of false errors)
-- **IIFE wrapper around the script block** — `render_html.py` wraps data variables + concatenated JS in `(function() { ... })();`.  The live JS reload (`_replace_baked_js`) must use `rfind("})();")` to preserve the closing.  If you break the IIFE, every init function silently fails — tabs stop working, stars don't toggle, nothing interactive works, but there's **no console error** because the JS simply never executes
+- **IIFE wrapper around the script block** — `render_html.py` wraps data variables + concatenated JS in `(function() { ... })();`.  In serve mode, `_strip_vanilla_js()` removes the module code but preserves the IIFE structure (globals + closing `})();`).  In the static render path, the full IIFE is intact.  If you break the IIFE closing, every init function silently fails — no console error, just a dead page
 - **Baked HTML requires re-render to pick up new JS** — the static HTML report on disk contains a snapshot of the JS from the last `bristlenose render`.  In production (no `--dev`), editing `.js` source files has no effect until you re-render.  The live reload only works in `--dev` mode.  If something works in dev but not in the static file, the static file is stale
 - **`pip install -e .` and render are separate steps** — an editable install makes Python changes visible immediately, but the rendered HTML is a separate artifact.  Adding a new JS file to `_JS_FILES` requires both `pip install -e .` (so Python sees the new list) and `bristlenose render` (so the static HTML includes it).  In dev mode, only a server restart is needed (uvicorn picks up the Python change, live reload reads the new file)
 - **Importer reads people.yaml** — `_import_speakers()` requires `output_dir` parameter to find `people.yaml`. On re-import, `_update_persons_from_people()` only fills empty Person fields — never overwrites non-empty values. This means browser edits survive server restarts
 - **Write-through is best-effort** — `_write_through_people_yaml()` in `routes/data.py` logs a warning on failure but doesn't fail the API request. The DB is always updated; YAML update is secondary
 - **Codebook tab stale counts on initial load** — the CodebookPanel re-fetches via MutationObserver when its parent `.bn-tab-panel` gains `.active`.  This covers the race where vanilla JS `PUT /tags` hasn't finished when the panel first mounts.  Will be unnecessary once tag writes move from localStorage PUT to React CRUD
+- **Source file paths lose subdirectory in transcript headers** — the pipeline writes `# Source: filename.mov` (just `.path.name`, no subdirectory) into transcript headers (`merge_transcript.py`, `render_output.py`). The importer reads this and resolves the file against `project_dir`. If the media file lives in a subdirectory (e.g. `interviews/`), the direct path doesn't exist. `_import_source_files()` handles this by scanning one level of subdirectories under `project_dir` — mirroring `ingest.discover_files()`. If video playback returns 404 in serve mode: (1) check `Session.source_file` in the DB — if it's missing the subdirectory, delete `bristlenose.db` and restart to force re-import; (2) check the server is running from the correct directory (worktree). The video-map API (`GET /api/projects/{id}/video-map`) converts DB paths to `/media/` URIs via `_file_to_media_uri()` in `sessions.py`. `PlayerContext.tsx` fetches this in SPA mode (no IIFE globals exist because the SPA HTML is generated directly, not from baked HTML)
 
 ## Tests
 

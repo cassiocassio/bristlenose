@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path as _Path
+from urllib.parse import quote as _url_quote
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel
@@ -14,6 +15,7 @@ from bristlenose.server.models import (
     Project,
     Quote,
     SessionSpeaker,
+    SourceFile,
 )
 from bristlenose.server.models import (
     Session as SessionModel,
@@ -66,6 +68,13 @@ class SessionsListResponse(BaseModel):
     moderator_names: list[str]
     observer_names: list[str]
     source_folder_uri: str
+
+
+class VideoMapResponse(BaseModel):
+    """Video/audio map for the popout player."""
+
+    video_map: dict[str, str]
+    player_url: str
 
 
 # ---------------------------------------------------------------------------
@@ -238,3 +247,74 @@ def _aggregate_sentiments(
                 result[q.session_id].get(q.sentiment, 0) + 1
             )
     return result
+
+
+@router.get("/projects/{project_id}/video-map", response_model=VideoMapResponse)
+def get_video_map(
+    project_id: int,
+    request: Request,
+    db: Session = Depends(_get_db),  # type: ignore[assignment]
+) -> VideoMapResponse:
+    """Return the video/audio map and player URL for a project.
+
+    Maps session IDs and participant speaker codes to ``/media/`` HTTP paths.
+    Mirrors the logic in ``render_html._build_video_map()`` — prefers video
+    files over audio.
+    """
+    try:
+        project = db.get(Project, project_id)
+        if not project:
+            raise HTTPException(status_code=404, detail="Project not found")
+
+        project_dir: _Path | None = getattr(request.app.state, "project_dir", None)
+
+        sessions = (
+            db.query(SessionModel)
+            .filter_by(project_id=project_id)
+            .all()
+        )
+
+        video_map: dict[str, str] = {}
+        for sess in sessions:
+            # Prefer video over audio (same heuristic as _build_video_map)
+            chosen: SourceFile | None = None
+            for ftype in ("video", "audio"):
+                for sf in sess.source_files:
+                    if sf.file_type == ftype:
+                        chosen = sf
+                        break
+                if chosen is not None:
+                    break
+
+            if chosen is None:
+                continue
+
+            media_uri = _file_to_media_uri(chosen.path, project_dir)
+            video_map[sess.session_id] = media_uri
+            # Also key by participant speaker codes (for quote-level lookups)
+            for sp in sess.session_speakers:
+                if sp.speaker_code.startswith("p"):
+                    video_map[sp.speaker_code] = media_uri
+
+        return VideoMapResponse(
+            video_map=video_map,
+            player_url="/report/assets/bristlenose-player.html",
+        )
+    finally:
+        db.close()
+
+
+def _file_to_media_uri(file_path: str, project_dir: _Path | None) -> str:
+    """Convert an absolute file path to a ``/media/`` HTTP URI.
+
+    Strips the ``project_dir`` prefix and URL-encodes the remainder.
+    Falls back to just the filename if project_dir is unknown.
+    """
+    p = _Path(file_path)
+    if project_dir is not None:
+        try:
+            rel = p.resolve().relative_to(project_dir.resolve())
+            return "/media/" + _url_quote(str(rel), safe="/")
+        except ValueError:
+            pass
+    return "/media/" + _url_quote(p.name, safe="/")

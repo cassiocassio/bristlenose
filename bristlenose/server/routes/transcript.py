@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import html
+import json
 import re
 
 from fastapi import APIRouter, HTTPException, Request
@@ -48,6 +49,12 @@ class TranscriptSpeakerResponse(BaseModel):
     role: str
 
 
+class WordTimingResponse(BaseModel):
+    text: str
+    start: float
+    end: float
+
+
 class TranscriptSegmentResponse(BaseModel):
     speaker_code: str
     start_time: float
@@ -58,6 +65,7 @@ class TranscriptSegmentResponse(BaseModel):
     is_quoted: bool
     quote_ids: list[str]
     segment_index: int = -1
+    words: list[WordTimingResponse] | None = None
 
 
 class QuoteAnnotationResponse(BaseModel):
@@ -345,6 +353,18 @@ def get_transcript(
                 mark_data = [(dom_id, excerpt) for dom_id, _, _, _, excerpt, _ in seg_quotes]
                 html_text = _highlight_quoted_text(seg.text, mark_data)
 
+            # Deserialise word-level timing from compact JSON
+            words: list[WordTimingResponse] | None = None
+            if seg.words_json:
+                try:
+                    raw_words = json.loads(seg.words_json)
+                    words = [
+                        WordTimingResponse(text=w["t"], start=w["s"], end=w["e"])
+                        for w in raw_words
+                    ]
+                except (json.JSONDecodeError, KeyError, TypeError):
+                    words = None
+
             seg_responses.append(TranscriptSegmentResponse(
                 speaker_code=seg.speaker_code,
                 start_time=seg.start_time,
@@ -355,6 +375,7 @@ def get_transcript(
                 is_quoted=is_quoted,
                 quote_ids=qids,
                 segment_index=seg.segment_index,
+                words=words,
             ))
 
         # Journey labels for this session

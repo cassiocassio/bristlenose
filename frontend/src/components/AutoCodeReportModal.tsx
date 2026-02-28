@@ -200,7 +200,7 @@ function SessionRows({ sessionId, items, removing, onDeny }: SessionRowsProps) {
         >
           <td className="report-timecode">
             <a
-              href={`sessions/transcript_${p.session_id}.html#t-${Math.floor(p.start_timecode)}`}
+              href={`/report/sessions/${p.session_id}#t-${Math.floor(p.start_timecode)}`}
               target="_blank"
               rel="noreferrer"
             >

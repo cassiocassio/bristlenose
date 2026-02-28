@@ -1,0 +1,748 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Checkbox Style Options — Bristlenose</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+    --bn-font-body: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
+    --bn-font-mono: "SF Mono", "Fira Code", "Consolas", monospace;
+    --bn-weight-normal: 420;
+    --bn-weight-emphasis: 490;
+    --bn-weight-strong: 700;
+    --bn-colour-bg: #ffffff;
+    --bn-colour-text: #1a1a1a;
+    --bn-colour-muted: #6b7280;
+    --bn-colour-border: #e5e7eb;
+    --bn-colour-accent: #2563eb;
+    --bn-colour-hover: #e8f0fe;
+    --bn-colour-quote-bg: #f9fafb;
+    --bn-colour-badge-bg: #f3f4f6;
+    --bn-colour-badge-text: #374151;
+    --bn-colour-border-hover: #d1d5db;
+    --bn-space-xs: 0.15rem;
+    --bn-space-sm: 0.35rem;
+    --bn-space-md: 0.75rem;
+    --bn-radius-sm: 3px;
+    --bn-transition-fast: 0.15s ease;
+    --bn-group-ux:    oklch(97% 0.015 250);
+    --bn-group-emo:   oklch(97% 0.015 10);
+    --bn-group-task:  oklch(97% 0.015 155);
+    --bn-group-trust: oklch(97% 0.015 300);
+    --bn-group-opp:   oklch(97% 0.015 75);
+}
+
+[data-theme="dark"] {
+    --bn-colour-bg: #111111;
+    --bn-colour-text: #e5e7eb;
+    --bn-colour-muted: #9ca3af;
+    --bn-colour-border: #2d2d2d;
+    --bn-colour-accent: #60a5fa;
+    --bn-colour-hover: #1e293b;
+    --bn-colour-quote-bg: #1a1a1a;
+    --bn-colour-badge-bg: #252525;
+    --bn-colour-badge-text: #d1d5db;
+    --bn-colour-border-hover: #4b5563;
+    --bn-group-ux:    oklch(22% 0.025 250);
+    --bn-group-emo:   oklch(22% 0.025 10);
+    --bn-group-task:  oklch(22% 0.020 155);
+    --bn-group-trust: oklch(22% 0.025 300);
+    --bn-group-opp:   oklch(22% 0.022 75);
+}
+
+body {
+    font-family: var(--bn-font-body);
+    font-weight: var(--bn-weight-normal);
+    background: var(--bn-colour-bg);
+    color: var(--bn-colour-text);
+    line-height: 1.5;
+    padding: 2rem;
+}
+
+h1 {
+    font-size: 1.2rem;
+    font-weight: var(--bn-weight-emphasis);
+    margin-bottom: 0.5rem;
+}
+
+.subtitle {
+    font-size: 0.85rem;
+    color: var(--bn-colour-muted);
+    margin-bottom: 2rem;
+}
+
+/* ── Grid of options ─────────────────────────────────────────── */
+
+.options-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 2rem;
+    margin-bottom: 2rem;
+}
+
+.option-card {
+    border: 1px solid var(--bn-colour-border);
+    border-radius: 8px;
+    padding: 1.25rem;
+    position: relative;
+}
+
+.option-card.recommended {
+    border-color: var(--bn-colour-accent);
+    box-shadow: 0 0 0 1px var(--bn-colour-accent);
+}
+
+.option-label {
+    font-size: 0.72rem;
+    font-weight: var(--bn-weight-emphasis);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--bn-colour-muted);
+    margin-bottom: 0.15rem;
+}
+
+.option-card.recommended .option-label {
+    color: var(--bn-colour-accent);
+}
+
+.option-title {
+    font-size: 0.95rem;
+    font-weight: var(--bn-weight-emphasis);
+    margin-bottom: 0.25rem;
+}
+
+.option-desc {
+    font-size: 0.78rem;
+    color: var(--bn-colour-muted);
+    margin-bottom: 1rem;
+    line-height: 1.4;
+}
+
+/* ── Shared group styles ─────────────────────────────────────── */
+
+.demo-group {
+    border-radius: var(--bn-radius-sm);
+    padding: 0.15rem 0;
+    margin-bottom: 0.35rem;
+}
+
+.demo-group-header {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.35rem;
+    padding: 0.35rem 0.5rem 0.1rem;
+}
+
+.demo-group-info { flex: 1; min-width: 0; }
+
+.demo-group-name {
+    font-size: 0.82rem;
+    font-weight: var(--bn-weight-emphasis);
+}
+
+.demo-group-subtitle {
+    font-size: 0.68rem;
+    color: var(--bn-colour-muted);
+    line-height: 1.3;
+}
+
+.demo-eye {
+    flex-shrink: 0;
+    background: none;
+    border: none;
+    padding: 2px;
+    color: var(--bn-colour-border-hover);
+    cursor: pointer;
+    margin-top: 0.05rem;
+}
+
+.demo-tags { padding: 0; }
+
+/* ── Tag row (shared structure) ──────────────────────────────── */
+
+.tag-row {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: center;
+    gap: var(--bn-space-sm);
+    padding: 3px 0.5rem;
+    border-radius: var(--bn-radius-sm);
+    cursor: pointer;
+    transition: background var(--bn-transition-fast);
+}
+
+.tag-row:hover {
+    background: rgba(0, 0, 0, 0.03);
+}
+
+.tag-name-area {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    min-width: 0;
+}
+
+.badge {
+    display: inline-block;
+    font-family: var(--bn-font-mono);
+    font-size: 0.72rem;
+    padding: var(--bn-space-xs) 0.45rem;
+    border-radius: var(--bn-radius-sm);
+    background: var(--bn-colour-badge-bg);
+    color: var(--bn-colour-badge-text);
+    white-space: nowrap;
+}
+
+.tag-count {
+    font-size: 0.75rem;
+    color: var(--bn-colour-muted);
+    min-width: 16px;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+}
+
+.demo-total {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: center;
+    gap: var(--bn-space-sm);
+    padding: 0.15rem 0.5rem 0.25rem;
+    border-top: 1px solid var(--bn-colour-border);
+    margin-top: 0.15rem;
+}
+
+.demo-total-label {
+    font-size: 0.7rem;
+    color: var(--bn-colour-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.demo-total-count {
+    font-size: 0.75rem;
+    font-weight: var(--bn-weight-emphasis);
+    color: var(--bn-colour-muted);
+    font-variant-numeric: tabular-nums;
+    min-width: 16px;
+    text-align: right;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   OPTION A: Browser default (the current problem)
+   ══════════════════════════════════════════════════════════════ */
+
+.opt-a input[type="checkbox"] {
+    margin: 0;
+    flex-shrink: 0;
+    /* browser default — vivid blue filled boxes */
+}
+
+/* ══════════════════════════════════════════════════════════════
+   OPTION B: Custom grey box, subtle tick
+   — light grey border, grey tick when checked, no fill
+   ══════════════════════════════════════════════════════════════ */
+
+.opt-b input[type="checkbox"] {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 14px;
+    height: 14px;
+    border: 1.5px solid var(--bn-colour-border-hover);
+    border-radius: 2px;
+    background: var(--bn-colour-bg);
+    margin: 0;
+    flex-shrink: 0;
+    cursor: pointer;
+    position: relative;
+    transition: border-color var(--bn-transition-fast);
+}
+
+.opt-b input[type="checkbox"]:checked {
+    border-color: var(--bn-colour-muted);
+}
+
+.opt-b input[type="checkbox"]:checked::after {
+    content: "";
+    position: absolute;
+    left: 3px;
+    top: 0.5px;
+    width: 5px;
+    height: 9px;
+    border: solid var(--bn-colour-muted);
+    border-width: 0 1.5px 1.5px 0;
+    transform: rotate(45deg);
+}
+
+.opt-b input[type="checkbox"]:hover {
+    border-color: var(--bn-colour-muted);
+}
+
+/* ══════════════════════════════════════════════════════════════
+   OPTION C: No box — just a subtle tick mark
+   — unchecked: faint dash or empty, checked: muted tick
+   ══════════════════════════════════════════════════════════════ */
+
+.opt-c input[type="checkbox"] {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 14px;
+    height: 14px;
+    border: none;
+    background: transparent;
+    margin: 0;
+    flex-shrink: 0;
+    cursor: pointer;
+    position: relative;
+}
+
+/* unchecked: subtle faint circle indicator */
+.opt-c input[type="checkbox"]::before {
+    content: "";
+    position: absolute;
+    inset: 2px;
+    border-radius: 50%;
+    background: var(--bn-colour-border);
+    transition: background var(--bn-transition-fast), opacity var(--bn-transition-fast);
+    opacity: 0.5;
+}
+
+/* checked: just the tick, no background */
+.opt-c input[type="checkbox"]:checked::before {
+    opacity: 0;
+}
+
+.opt-c input[type="checkbox"]:checked::after {
+    content: "";
+    position: absolute;
+    left: 3px;
+    top: 0.5px;
+    width: 5px;
+    height: 9px;
+    border: solid var(--bn-colour-muted);
+    border-width: 0 1.5px 1.5px 0;
+    transform: rotate(45deg);
+}
+
+.opt-c input[type="checkbox"]:hover::before {
+    opacity: 0.8;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   OPTION D: Ghost box — barely-there border, muted tick
+   — very faint border that recedes, tick in muted grey
+   ══════════════════════════════════════════════════════════════ */
+
+.opt-d input[type="checkbox"] {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 14px;
+    height: 14px;
+    border: 1px solid var(--bn-colour-border);
+    border-radius: 2px;
+    background: transparent;
+    margin: 0;
+    flex-shrink: 0;
+    cursor: pointer;
+    position: relative;
+    transition: border-color var(--bn-transition-fast), background var(--bn-transition-fast);
+}
+
+.opt-d input[type="checkbox"]:checked {
+    border-color: var(--bn-colour-border-hover);
+    background: var(--bn-colour-quote-bg);
+}
+
+.opt-d input[type="checkbox"]:checked::after {
+    content: "";
+    position: absolute;
+    left: 3px;
+    top: 0.5px;
+    width: 5px;
+    height: 9px;
+    border: solid var(--bn-colour-muted);
+    border-width: 0 1.5px 1.5px 0;
+    transform: rotate(45deg);
+}
+
+.opt-d input[type="checkbox"]:hover {
+    border-color: var(--bn-colour-border-hover);
+}
+
+/* ══════════════════════════════════════════════════════════════
+   OPTION E: No checkbox at all — badge opacity signals state
+   — checked: full opacity badge, unchecked: faded badge
+   ══════════════════════════════════════════════════════════════ */
+
+.opt-e input[type="checkbox"] {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 0;
+    height: 0;
+    margin: 0;
+    padding: 0;
+    border: none;
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.opt-e .tag-name-area {
+    gap: 0;  /* no gap since checkbox is hidden */
+}
+
+.opt-e .tag-row {
+    cursor: pointer;
+}
+
+.opt-e .badge {
+    transition: opacity var(--bn-transition-fast), filter var(--bn-transition-fast);
+}
+
+/* unchecked: faded badge */
+.opt-e input[type="checkbox"]:not(:checked) ~ .badge {
+    opacity: 0.35;
+    filter: grayscale(0.5);
+}
+
+/* hover reveals what clicking would do */
+.opt-e .tag-row:hover .badge {
+    opacity: 1;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   OPTION F: Accent-tinted ghost — very faint accent tint
+   when checked, almost invisible when unchecked
+   ══════════════════════════════════════════════════════════════ */
+
+.opt-f input[type="checkbox"] {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 14px;
+    height: 14px;
+    border: 1px solid var(--bn-colour-border);
+    border-radius: 3px;
+    background: transparent;
+    margin: 0;
+    flex-shrink: 0;
+    cursor: pointer;
+    position: relative;
+    transition: all var(--bn-transition-fast);
+}
+
+.opt-f input[type="checkbox"]:checked {
+    border-color: color-mix(in srgb, var(--bn-colour-accent) 30%, transparent);
+    background: color-mix(in srgb, var(--bn-colour-accent) 8%, transparent);
+}
+
+.opt-f input[type="checkbox"]:checked::after {
+    content: "";
+    position: absolute;
+    left: 3px;
+    top: 0.5px;
+    width: 5px;
+    height: 9px;
+    border: solid color-mix(in srgb, var(--bn-colour-accent) 50%, var(--bn-colour-muted));
+    border-width: 0 1.5px 1.5px 0;
+    transform: rotate(45deg);
+}
+
+.opt-f input[type="checkbox"]:hover {
+    border-color: var(--bn-colour-border-hover);
+}
+
+/* ── Controls ────────────────────────────────────────────────── */
+
+.controls {
+    position: fixed;
+    top: 1rem;
+    right: 1rem;
+    display: flex;
+    gap: 0.5rem;
+    z-index: 100;
+}
+
+.controls button {
+    padding: 0.35rem 0.75rem;
+    font-size: 0.78rem;
+    font-family: var(--bn-font-body);
+    border: 1px solid var(--bn-colour-border);
+    border-radius: var(--bn-radius-sm);
+    background: var(--bn-colour-bg);
+    color: var(--bn-colour-text);
+    cursor: pointer;
+}
+
+.controls button:hover {
+    background: var(--bn-colour-quote-bg);
+}
+</style>
+</head>
+<body>
+
+<div class="controls">
+    <button onclick="document.documentElement.dataset.theme = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark'">Toggle dark mode</button>
+</div>
+
+<h1>Checkbox style options for tag sidebar</h1>
+<p class="subtitle">The problem: 83 tags across 20 groups = a wall of vivid blue checkboxes. The checkboxes serve filtering, but shouldn't be the loudest element. Compare these options with both a tag-heavy group (Feedback, 4 tags) and an unused group (all zeros).</p>
+
+<div class="options-grid">
+
+    <!-- ── OPTION A: Browser default ─────────────────────────────── -->
+    <div class="option-card">
+        <div class="option-label">Option A</div>
+        <div class="option-title">Browser default (current)</div>
+        <div class="option-desc">The problem. Vivid blue filled boxes dominate the layout. When the window loses focus they turn grey — proving they can be quieter.</div>
+
+        <div class="demo-group opt-a" style="background:var(--bn-group-emo)">
+            <div class="demo-group-header">
+                <div class="demo-group-info">
+                    <div class="demo-group-name">Feedback</div>
+                    <div class="demo-group-subtitle">Does the system communicate results clearly?</div>
+                </div>
+                <button class="demo-eye"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M1 8s2.5-5 7-5 7 5 7 5-2.5 5-7 5-7-5-7-5z"/><circle cx="8" cy="8" r="2.5"/></svg></button>
+            </div>
+            <div class="demo-tags">
+                <div class="tag-row"><div class="tag-name-area"><input type="checkbox" checked><span class="badge">system response</span></div><span class="tag-count">10</span></div>
+                <div class="tag-row"><div class="tag-name-area"><input type="checkbox" checked><span class="badge">delayed feedback</span></div><span class="tag-count">4</span></div>
+                <div class="tag-row"><div class="tag-name-area"><input type="checkbox" checked><span class="badge">ambiguous feedback</span></div><span class="tag-count">2</span></div>
+                <div class="tag-row"><div class="tag-name-area"><input type="checkbox" checked><span class="badge">confirmation</span></div><span class="tag-count">0</span></div>
+            </div>
+            <div class="demo-total"><span class="demo-total-label">TOTAL</span><span class="demo-total-count">16</span></div>
+        </div>
+        <div class="demo-group opt-a" style="background:var(--bn-group-trust)">
+            <div class="demo-group-header">
+                <div class="demo-group-info">
+                    <div class="demo-group-name">Signifiers</div>
+                    <div class="demo-group-subtitle">Do visual cues correctly indicate how to interact?</div>
+                </div>
+                <button class="demo-eye"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M1 8s2.5-5 7-5 7 5 7 5-2.5 5-7 5-7-5-7-5z"/><circle cx="8" cy="8" r="2.5"/></svg></button>
+            </div>
+            <div class="demo-tags">
+                <div class="tag-row"><div class="tag-name-area"><input type="checkbox"><span class="badge">affordance</span></div><span class="tag-count">0</span></div>
+                <div class="tag-row"><div class="tag-name-area"><input type="checkbox"><span class="badge">perceived affordance</span></div><span class="tag-count">0</span></div>
+                <div class="tag-row"><div class="tag-name-area"><input type="checkbox"><span class="badge">false signifier</span></div><span class="tag-count">0</span></div>
+                <div class="tag-row"><div class="tag-name-area"><input type="checkbox"><span class="badge">missing signifier</span></div><span class="tag-count">0</span></div>
+            </div>
+            <div class="demo-total"><span class="demo-total-label">TOTAL</span><span class="demo-total-count">0</span></div>
+        </div>
+    </div>
+
+    <!-- ── OPTION B: Custom grey box, subtle tick ────────────────── -->
+    <div class="option-card">
+        <div class="option-label">Option B</div>
+        <div class="option-title">Grey box, grey tick</div>
+        <div class="option-desc">Custom checkbox with light grey border and a grey tick mark. No fill colour at all. The box recedes; the tick is visible but quiet.</div>
+
+        <div class="demo-group opt-b" style="background:var(--bn-group-emo)">
+            <div class="demo-group-header">
+                <div class="demo-group-info">
+                    <div class="demo-group-name">Feedback</div>
+                    <div class="demo-group-subtitle">Does the system communicate results clearly?</div>
+                </div>
+                <button class="demo-eye"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M1 8s2.5-5 7-5 7 5 7 5-2.5 5-7 5-7-5-7-5z"/><circle cx="8" cy="8" r="2.5"/></svg></button>
+            </div>
+            <div class="demo-tags">
+                <div class="tag-row"><div class="tag-name-area"><input type="checkbox" checked><span class="badge">system response</span></div><span class="tag-count">10</span></div>
+                <div class="tag-row"><div class="tag-name-area"><input type="checkbox" checked><span class="badge">delayed feedback</span></div><span class="tag-count">4</span></div>
+                <div class="tag-row"><div class="tag-name-area"><input type="checkbox" checked><span class="badge">ambiguous feedback</span></div><span class="tag-count">2</span></div>
+                <div class="tag-row"><div class="tag-name-area"><input type="checkbox" checked><span class="badge">confirmation</span></div><span class="tag-count">0</span></div>
+            </div>
+            <div class="demo-total"><span class="demo-total-label">TOTAL</span><span class="demo-total-count">16</span></div>
+        </div>
+        <div class="demo-group opt-b" style="background:var(--bn-group-trust)">
+            <div class="demo-group-header">
+                <div class="demo-group-info">
+                    <div class="demo-group-name">Signifiers</div>
+                    <div class="demo-group-subtitle">Do visual cues correctly indicate how to interact?</div>
+                </div>
+                <button class="demo-eye"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M1 8s2.5-5 7-5 7 5 7 5-2.5 5-7 5-7-5-7-5z"/><circle cx="8" cy="8" r="2.5"/></svg></button>
+            </div>
+            <div class="demo-tags">
+                <div class="tag-row"><div class="tag-name-area"><input type="checkbox"><span class="badge">affordance</span></div><span class="tag-count">0</span></div>
+                <div class="tag-row"><div class="tag-name-area"><input type="checkbox"><span class="badge">perceived affordance</span></div><span class="tag-count">0</span></div>
+                <div class="tag-row"><div class="tag-name-area"><input type="checkbox"><span class="badge">false signifier</span></div><span class="tag-count">0</span></div>
+                <div class="tag-row"><div class="tag-name-area"><input type="checkbox"><span class="badge">missing signifier</span></div><span class="tag-count">0</span></div>
+            </div>
+            <div class="demo-total"><span class="demo-total-label">TOTAL</span><span class="demo-total-count">0</span></div>
+        </div>
+    </div>
+
+    <!-- ── OPTION C: No box — just a subtle tick ─────────────────── -->
+    <div class="option-card">
+        <div class="option-label">Option C</div>
+        <div class="option-title">No box — tick or dot</div>
+        <div class="option-desc">No visible box at all. Checked: a quiet grey tick. Unchecked: a faint dot placeholder so you know it's clickable. Minimal chrome.</div>
+
+        <div class="demo-group opt-c" style="background:var(--bn-group-emo)">
+            <div class="demo-group-header">
+                <div class="demo-group-info">
+                    <div class="demo-group-name">Feedback</div>
+                    <div class="demo-group-subtitle">Does the system communicate results clearly?</div>
+                </div>
+                <button class="demo-eye"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M1 8s2.5-5 7-5 7 5 7 5-2.5 5-7 5-7-5-7-5z"/><circle cx="8" cy="8" r="2.5"/></svg></button>
+            </div>
+            <div class="demo-tags">
+                <div class="tag-row"><div class="tag-name-area"><input type="checkbox" checked><span class="badge">system response</span></div><span class="tag-count">10</span></div>
+                <div class="tag-row"><div class="tag-name-area"><input type="checkbox" checked><span class="badge">delayed feedback</span></div><span class="tag-count">4</span></div>
+                <div class="tag-row"><div class="tag-name-area"><input type="checkbox" checked><span class="badge">ambiguous feedback</span></div><span class="tag-count">2</span></div>
+                <div class="tag-row"><div class="tag-name-area"><input type="checkbox" checked><span class="badge">confirmation</span></div><span class="tag-count">0</span></div>
+            </div>
+            <div class="demo-total"><span class="demo-total-label">TOTAL</span><span class="demo-total-count">16</span></div>
+        </div>
+        <div class="demo-group opt-c" style="background:var(--bn-group-trust)">
+            <div class="demo-group-header">
+                <div class="demo-group-info">
+                    <div class="demo-group-name">Signifiers</div>
+                    <div class="demo-group-subtitle">Do visual cues correctly indicate how to interact?</div>
+                </div>
+                <button class="demo-eye"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M1 8s2.5-5 7-5 7 5 7 5-2.5 5-7 5-7-5-7-5z"/><circle cx="8" cy="8" r="2.5"/></svg></button>
+            </div>
+            <div class="demo-tags">
+                <div class="tag-row"><div class="tag-name-area"><input type="checkbox"><span class="badge">affordance</span></div><span class="tag-count">0</span></div>
+                <div class="tag-row"><div class="tag-name-area"><input type="checkbox"><span class="badge">perceived affordance</span></div><span class="tag-count">0</span></div>
+                <div class="tag-row"><div class="tag-name-area"><input type="checkbox"><span class="badge">false signifier</span></div><span class="tag-count">0</span></div>
+                <div class="tag-row"><div class="tag-name-area"><input type="checkbox"><span class="badge">missing signifier</span></div><span class="tag-count">0</span></div>
+            </div>
+            <div class="demo-total"><span class="demo-total-label">TOTAL</span><span class="demo-total-count">0</span></div>
+        </div>
+    </div>
+
+    <!-- ── OPTION D: Ghost box — barely-there border ─────────────── -->
+    <div class="option-card recommended">
+        <div class="option-label">Option D — recommended</div>
+        <div class="option-title">Ghost box, muted tick</div>
+        <div class="option-desc">Barely-visible border (lightest grey token). Checked: faint grey fill + grey tick. Unchecked: almost invisible empty box. The box is there for spatial anchoring but never competes with the badge content.</div>
+
+        <div class="demo-group opt-d" style="background:var(--bn-group-emo)">
+            <div class="demo-group-header">
+                <div class="demo-group-info">
+                    <div class="demo-group-name">Feedback</div>
+                    <div class="demo-group-subtitle">Does the system communicate results clearly?</div>
+                </div>
+                <button class="demo-eye"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M1 8s2.5-5 7-5 7 5 7 5-2.5 5-7 5-7-5-7-5z"/><circle cx="8" cy="8" r="2.5"/></svg></button>
+            </div>
+            <div class="demo-tags">
+                <div class="tag-row"><div class="tag-name-area"><input type="checkbox" checked><span class="badge">system response</span></div><span class="tag-count">10</span></div>
+                <div class="tag-row"><div class="tag-name-area"><input type="checkbox" checked><span class="badge">delayed feedback</span></div><span class="tag-count">4</span></div>
+                <div class="tag-row"><div class="tag-name-area"><input type="checkbox" checked><span class="badge">ambiguous feedback</span></div><span class="tag-count">2</span></div>
+                <div class="tag-row"><div class="tag-name-area"><input type="checkbox" checked><span class="badge">confirmation</span></div><span class="tag-count">0</span></div>
+            </div>
+            <div class="demo-total"><span class="demo-total-label">TOTAL</span><span class="demo-total-count">16</span></div>
+        </div>
+        <div class="demo-group opt-d" style="background:var(--bn-group-trust)">
+            <div class="demo-group-header">
+                <div class="demo-group-info">
+                    <div class="demo-group-name">Signifiers</div>
+                    <div class="demo-group-subtitle">Do visual cues correctly indicate how to interact?</div>
+                </div>
+                <button class="demo-eye"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M1 8s2.5-5 7-5 7 5 7 5-2.5 5-7 5-7-5-7-5z"/><circle cx="8" cy="8" r="2.5"/></svg></button>
+            </div>
+            <div class="demo-tags">
+                <div class="tag-row"><div class="tag-name-area"><input type="checkbox"><span class="badge">affordance</span></div><span class="tag-count">0</span></div>
+                <div class="tag-row"><div class="tag-name-area"><input type="checkbox"><span class="badge">perceived affordance</span></div><span class="tag-count">0</span></div>
+                <div class="tag-row"><div class="tag-name-area"><input type="checkbox"><span class="badge">false signifier</span></div><span class="tag-count">0</span></div>
+                <div class="tag-row"><div class="tag-name-area"><input type="checkbox"><span class="badge">missing signifier</span></div><span class="tag-count">0</span></div>
+            </div>
+            <div class="demo-total"><span class="demo-total-label">TOTAL</span><span class="demo-total-count">0</span></div>
+        </div>
+    </div>
+
+    <!-- ── OPTION E: No checkbox — badge opacity ─────────────────── -->
+    <div class="option-card">
+        <div class="option-label">Option E</div>
+        <div class="option-title">No checkbox — badge fades</div>
+        <div class="option-desc">No checkbox at all. Click the entire row. Checked: full opacity badge. Unchecked: faded + desaturated badge. Zero checkbox chrome. But: no standard affordance for "this is a filter" — relies on learned behaviour.</div>
+
+        <div class="demo-group opt-e" style="background:var(--bn-group-emo)">
+            <div class="demo-group-header">
+                <div class="demo-group-info">
+                    <div class="demo-group-name">Feedback</div>
+                    <div class="demo-group-subtitle">Does the system communicate results clearly?</div>
+                </div>
+                <button class="demo-eye"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M1 8s2.5-5 7-5 7 5 7 5-2.5 5-7 5-7-5-7-5z"/><circle cx="8" cy="8" r="2.5"/></svg></button>
+            </div>
+            <div class="demo-tags">
+                <div class="tag-row" onclick="this.querySelector('input').click()"><div class="tag-name-area"><input type="checkbox" checked><span class="badge">system response</span></div><span class="tag-count">10</span></div>
+                <div class="tag-row" onclick="this.querySelector('input').click()"><div class="tag-name-area"><input type="checkbox" checked><span class="badge">delayed feedback</span></div><span class="tag-count">4</span></div>
+                <div class="tag-row" onclick="this.querySelector('input').click()"><div class="tag-name-area"><input type="checkbox"><span class="badge">ambiguous feedback</span></div><span class="tag-count">2</span></div>
+                <div class="tag-row" onclick="this.querySelector('input').click()"><div class="tag-name-area"><input type="checkbox" checked><span class="badge">confirmation</span></div><span class="tag-count">0</span></div>
+            </div>
+            <div class="demo-total"><span class="demo-total-label">TOTAL</span><span class="demo-total-count">16</span></div>
+        </div>
+        <div class="demo-group opt-e" style="background:var(--bn-group-trust)">
+            <div class="demo-group-header">
+                <div class="demo-group-info">
+                    <div class="demo-group-name">Signifiers</div>
+                    <div class="demo-group-subtitle">Do visual cues correctly indicate how to interact?</div>
+                </div>
+                <button class="demo-eye"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M1 8s2.5-5 7-5 7 5 7 5-2.5 5-7 5-7-5-7-5z"/><circle cx="8" cy="8" r="2.5"/></svg></button>
+            </div>
+            <div class="demo-tags">
+                <div class="tag-row" onclick="this.querySelector('input').click()"><div class="tag-name-area"><input type="checkbox"><span class="badge">affordance</span></div><span class="tag-count">0</span></div>
+                <div class="tag-row" onclick="this.querySelector('input').click()"><div class="tag-name-area"><input type="checkbox"><span class="badge">perceived affordance</span></div><span class="tag-count">0</span></div>
+                <div class="tag-row" onclick="this.querySelector('input').click()"><div class="tag-name-area"><input type="checkbox"><span class="badge">false signifier</span></div><span class="tag-count">0</span></div>
+                <div class="tag-row" onclick="this.querySelector('input').click()"><div class="tag-name-area"><input type="checkbox"><span class="badge">missing signifier</span></div><span class="tag-count">0</span></div>
+            </div>
+            <div class="demo-total"><span class="demo-total-label">TOTAL</span><span class="demo-total-count">0</span></div>
+        </div>
+    </div>
+
+    <!-- ── OPTION F: Accent-tinted ghost ─────────────────────────── -->
+    <div class="option-card">
+        <div class="option-label">Option F</div>
+        <div class="option-title">Tinted ghost — hint of accent</div>
+        <div class="option-desc">Like D (ghost box) but checked state has a whisper of accent blue — 8% opacity fill, 30% opacity border. Acknowledges "this is a filter control" without the full-blast vivid blue.</div>
+
+        <div class="demo-group opt-f" style="background:var(--bn-group-emo)">
+            <div class="demo-group-header">
+                <div class="demo-group-info">
+                    <div class="demo-group-name">Feedback</div>
+                    <div class="demo-group-subtitle">Does the system communicate results clearly?</div>
+                </div>
+                <button class="demo-eye"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M1 8s2.5-5 7-5 7 5 7 5-2.5 5-7 5-7-5-7-5z"/><circle cx="8" cy="8" r="2.5"/></svg></button>
+            </div>
+            <div class="demo-tags">
+                <div class="tag-row"><div class="tag-name-area"><input type="checkbox" checked><span class="badge">system response</span></div><span class="tag-count">10</span></div>
+                <div class="tag-row"><div class="tag-name-area"><input type="checkbox" checked><span class="badge">delayed feedback</span></div><span class="tag-count">4</span></div>
+                <div class="tag-row"><div class="tag-name-area"><input type="checkbox" checked><span class="badge">ambiguous feedback</span></div><span class="tag-count">2</span></div>
+                <div class="tag-row"><div class="tag-name-area"><input type="checkbox" checked><span class="badge">confirmation</span></div><span class="tag-count">0</span></div>
+            </div>
+            <div class="demo-total"><span class="demo-total-label">TOTAL</span><span class="demo-total-count">16</span></div>
+        </div>
+        <div class="demo-group opt-f" style="background:var(--bn-group-trust)">
+            <div class="demo-group-header">
+                <div class="demo-group-info">
+                    <div class="demo-group-name">Signifiers</div>
+                    <div class="demo-group-subtitle">Do visual cues correctly indicate how to interact?</div>
+                </div>
+                <button class="demo-eye"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M1 8s2.5-5 7-5 7 5 7 5-2.5 5-7 5-7-5-7-5z"/><circle cx="8" cy="8" r="2.5"/></svg></button>
+            </div>
+            <div class="demo-tags">
+                <div class="tag-row"><div class="tag-name-area"><input type="checkbox"><span class="badge">affordance</span></div><span class="tag-count">0</span></div>
+                <div class="tag-row"><div class="tag-name-area"><input type="checkbox"><span class="badge">perceived affordance</span></div><span class="tag-count">0</span></div>
+                <div class="tag-row"><div class="tag-name-area"><input type="checkbox"><span class="badge">false signifier</span></div><span class="tag-count">0</span></div>
+                <div class="tag-row"><div class="tag-name-area"><input type="checkbox"><span class="badge">missing signifier</span></div><span class="tag-count">0</span></div>
+            </div>
+            <div class="demo-total"><span class="demo-total-label">TOTAL</span><span class="demo-total-count">0</span></div>
+        </div>
+    </div>
+
+</div>
+
+<script>
+// Make Option E rows toggle on click (not just the hidden checkbox)
+document.querySelectorAll('.opt-e .tag-row').forEach(function(row) {
+    row.addEventListener('click', function(e) {
+        if (e.target.tagName === 'INPUT') return; // let native handle
+        var cb = row.querySelector('input[type="checkbox"]');
+        if (cb) cb.checked = !cb.checked;
+    });
+});
+</script>
+
+</body>
+</html>

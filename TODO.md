@@ -207,9 +207,9 @@ Tracked as issue #29 (large effort).
 - [x] **Step 2: About panel** → `AboutPanel` island
 - [x] **Step 3: QuotesStore** — module-level store, `useSyncExternalStore`, 11 actions
 - [x] **Step 4: Toolbar** → `Toolbar` island (SearchBox, TagFilterDropdown, ViewSwitcher, CsvExport, Toast). 87 tests
-- [ ] **Step 5: Tab navigation → React Router** (structural hinge)
-- [ ] **Step 6: Player integration**
-- [ ] **Step 7: Keyboard shortcuts**
+- [x] **Step 5: Tab navigation → React Router** (structural hinge). `react-router-dom` v7, `createBrowserRouter`, single `#bn-app-root`, NavBar, AppLayout, 8 page wrappers, SPA catch-all, backward-compat shims. 45 tests
+- [x] **Step 6: Player integration**. `PlayerProvider` context, `seekTo`, glow highlighting via DOM refs, progress bar CSS custom property. 28 tests
+- [x] **Step 7: Keyboard shortcuts**. `FocusProvider` context, `useKeyboardShortcuts` hook, `HelpModal`, click-to-focus with modifier support, hide handler registry. 62 tests
 - [ ] **Step 8: Retire remaining vanilla JS**
 - [ ] **Step 9: React app shell**
 - [ ] **Step 10: Export — DOM snapshot**

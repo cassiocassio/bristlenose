@@ -38,80 +38,12 @@ _THEME_DIR = _REPO_ROOT / "bristlenose" / "theme"
 # browser picks up the change instantly, no re-render needed.
 _JS_MARKER = "/* bristlenose report.js — auto-generated from bristlenose/theme/js/ */"
 # React Router app root — replaces the entire nav bar + tab panel region.
-# Individual island mount constants below are kept for reference but become
-# no-ops at serve time (their markers are inside the bn-app region).
+# The bn-app markers wrap the nav bar + all tab panels, so this single
+# substitution replaces all individual island markers too.
 _REACT_APP_MOUNT = (
     "<!-- bn-app -->"
     '<div id="bn-app-root" data-project-id="1"></div>'
     "<!-- /bn-app -->"
-)
-# React mount point injected in place of the Jinja2 session table at serve time
-_REACT_TOOLBAR_MOUNT = (
-    "<!-- bn-toolbar -->"
-    '<div id="bn-toolbar-root"></div>'
-    "<!-- /bn-toolbar -->"
-)
-_REACT_SESSIONS_MOUNT = (
-    "<!-- bn-session-table -->"
-    '<div id="bn-sessions-table-root" data-project-id="1"></div>'
-    "<!-- /bn-session-table -->"
-)
-# React mount point for dashboard (Project tab)
-_REACT_DASHBOARD_MOUNT = (
-    "<!-- bn-dashboard -->"
-    '<div id="bn-dashboard-root" data-project-id="1"></div>'
-    "<!-- /bn-dashboard -->"
-)
-# React mount points for quote sections and themes
-_REACT_QUOTE_SECTIONS_MOUNT = (
-    "<!-- bn-quote-sections -->"
-    '<div id="bn-quote-sections-root" data-project-id="1"></div>'
-    "<!-- /bn-quote-sections -->"
-)
-_REACT_QUOTE_THEMES_MOUNT = (
-    "<!-- bn-quote-themes -->"
-    '<div id="bn-quote-themes-root" data-project-id="1"></div>'
-    "<!-- /bn-quote-themes -->"
-)
-# React mount point for codebook panel (Codebook tab).
-# Must preserve the .bn-tab-panel wrapper so vanilla JS tab switching can find it.
-_REACT_CODEBOOK_MOUNT = (
-    "<!-- bn-codebook -->"
-    '<div class="bn-tab-panel" data-tab="codebook" id="panel-codebook"'
-    ' role="tabpanel" aria-label="Codebook">'
-    '<div id="bn-codebook-root" data-project-id="1"></div>'
-    "</div>"
-    "<!-- /bn-codebook -->"
-)
-# React mount point for analysis page.
-# Must preserve the .bn-tab-panel wrapper so vanilla JS tab switching can find it.
-_REACT_ANALYSIS_MOUNT = (
-    "<!-- bn-analysis -->"
-    '<div class="bn-tab-panel" data-tab="analysis" id="panel-analysis"'
-    ' role="tabpanel" aria-label="Analysis">'
-    '<div id="bn-analysis-root" data-project-id="1"></div>'
-    "</div>"
-    "<!-- /bn-analysis -->"
-)
-# React mount point for settings panel.
-# Must preserve the .bn-tab-panel wrapper so vanilla JS tab switching can find it.
-_REACT_SETTINGS_MOUNT = (
-    "<!-- bn-settings -->"
-    '<div class="bn-tab-panel" data-tab="settings" id="panel-settings"'
-    ' role="tabpanel" aria-label="Settings">'
-    '<div id="bn-settings-root" data-project-id="1"></div>'
-    "</div>"
-    "<!-- /bn-settings -->"
-)
-# React mount point for about panel.
-# Must preserve the .bn-tab-panel wrapper so vanilla JS tab switching can find it.
-_REACT_ABOUT_MOUNT = (
-    "<!-- bn-about -->"
-    '<div class="bn-tab-panel" data-tab="about" id="panel-about"'
-    ' role="tabpanel" aria-label="About">'
-    '<div id="bn-about-root" data-project-id="1"></div>'
-    "</div>"
-    "<!-- /bn-about -->"
 )
 # React mount point for transcript page (replaces back link + heading + transcript body).
 # The {session_id} placeholder is filled at serve time from the filename.
@@ -146,53 +78,21 @@ def _transform_report_html(html: str, project_dir: Path | None) -> str:
     """Apply shared HTML transformations for serve mode (dev and production).
 
     Rewrites video URIs, swaps Jinja2 comment markers for React mount divs,
-    and injects the API base URL script.
+    strips vanilla JS modules, and injects the API base URL script.
     """
     if project_dir is not None:
         html = _rewrite_video_map_uris(html, project_dir)
     # Replace the entire nav + tab-panel region with the React Router app root.
-    # This makes all subsequent individual island substitutions no-ops (their
-    # markers are inside the bn-app region and no longer exist in the HTML).
+    # All individual island markers (bn-toolbar, bn-dashboard, etc.) are inside
+    # this region and disappear as part of this single substitution.
     html = re.sub(
         r"<!-- bn-app -->.*?<!-- /bn-app -->",
         _REACT_APP_MOUNT, html, flags=re.DOTALL,
     )
-    html = re.sub(
-        r"<!-- bn-toolbar -->.*?<!-- /bn-toolbar -->",
-        _REACT_TOOLBAR_MOUNT, html, flags=re.DOTALL,
-    )
-    html = re.sub(
-        r"<!-- bn-dashboard -->.*?<!-- /bn-dashboard -->",
-        _REACT_DASHBOARD_MOUNT, html, flags=re.DOTALL,
-    )
-    html = re.sub(
-        r"<!-- bn-session-table -->.*?<!-- /bn-session-table -->",
-        _REACT_SESSIONS_MOUNT, html, flags=re.DOTALL,
-    )
-    html = re.sub(
-        r"<!-- bn-quote-sections -->.*?<!-- /bn-quote-sections -->",
-        _REACT_QUOTE_SECTIONS_MOUNT, html, flags=re.DOTALL,
-    )
-    html = re.sub(
-        r"<!-- bn-quote-themes -->.*?<!-- /bn-quote-themes -->",
-        _REACT_QUOTE_THEMES_MOUNT, html, flags=re.DOTALL,
-    )
-    html = re.sub(
-        r"<!-- bn-codebook -->.*?<!-- /bn-codebook -->",
-        _REACT_CODEBOOK_MOUNT, html, flags=re.DOTALL,
-    )
-    html = re.sub(
-        r"<!-- bn-analysis -->.*?<!-- /bn-analysis -->",
-        _REACT_ANALYSIS_MOUNT, html, flags=re.DOTALL,
-    )
-    html = re.sub(
-        r"<!-- bn-settings -->.*?<!-- /bn-settings -->",
-        _REACT_SETTINGS_MOUNT, html, flags=re.DOTALL,
-    )
-    html = re.sub(
-        r"<!-- bn-about -->.*?<!-- /bn-about -->",
-        _REACT_ABOUT_MOUNT, html, flags=re.DOTALL,
-    )
+    # Strip vanilla JS modules — React handles all interactivity (Step 8).
+    # Keeps IIFE globals (BRISTLENOSE_VIDEO_MAP, BRISTLENOSE_PLAYER_URL,
+    # BRISTLENOSE_ANALYSIS) that React reads from window.*.
+    html = _strip_vanilla_js(html)
     # User Journeys section is replaced by sticky header on transcript pages
     html = re.sub(
         r"<!-- bn-user-journeys -->.*?<!-- /bn-user-journeys -->",
@@ -800,6 +700,30 @@ def _replace_baked_js(html: str) -> str:
     return html[:marker_idx] + live_js + "\n" + html[end_script:]
 
 
+def _strip_vanilla_js(html: str) -> str:
+    """Remove vanilla JS modules from the report, keeping only globals.
+
+    In serve mode React handles all interactivity.  The IIFE global
+    declarations (``BRISTLENOSE_VIDEO_MAP``, ``BRISTLENOSE_PLAYER_URL``,
+    ``BRISTLENOSE_ANALYSIS``) are preserved because React reads them from
+    ``window.*``.  Only the concatenated module code (``storage.js``
+    through ``main.js``) is removed.
+
+    Uses the same ``_JS_MARKER`` boundary as ``_replace_baked_js()``.
+    """
+    marker_idx = html.find(_JS_MARKER)
+    if marker_idx < 0:
+        return html
+    end_script = html.find("</script>", marker_idx)
+    if end_script < 0:
+        return html
+    iife_close = html.rfind("})();", marker_idx, end_script)
+    if iife_close < 0:
+        return html
+    # Remove everything from the marker to just before })();
+    return html[:marker_idx] + html[iife_close:]
+
+
 def _rewrite_video_map_uris(html: str, project_dir: Path) -> str:
     """Rewrite file:// URIs in BRISTLENOSE_VIDEO_MAP to /media/ HTTP paths.
 
@@ -868,7 +792,6 @@ def _mount_dev_report(
         if not filename.startswith("transcript_") or not filename.endswith(".html"):
             # Not a transcript file — serve SPA HTML for React Router
             html = report_html.read_text(encoding="utf-8")
-            html = _replace_baked_js(html)
             html = _transform_report_html(html, project_dir)
             html = html.replace("</body>", f"{overlay_html}{vite_scripts}</body>")
             return HTMLResponse(html)
@@ -907,9 +830,6 @@ def _mount_dev_report(
             raise HTTPException(status_code=404, detail="Asset not found")
 
         html = report_html.read_text(encoding="utf-8")
-        # Dev-only: live-reload JS from source files
-        html = _replace_baked_js(html)
-        # Shared: video URI rewrite, React app root, API base URL
         html = _transform_report_html(html, project_dir)
         # Dev-only: inject renderer overlay + Vite dev scripts before </body>
         html = html.replace("</body>", f"{overlay_html}{vite_scripts}</body>")

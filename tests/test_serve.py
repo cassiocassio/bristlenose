@@ -11,6 +11,7 @@ from fastapi.testclient import TestClient
 from bristlenose import __version__
 from bristlenose.server.app import (
     _extract_bundle_tags,
+    _strip_vanilla_js,
     _transform_report_html,
     _transform_transcript_html,
     create_app,
@@ -95,11 +96,30 @@ class TestServeCommand:
 
 _REPORT_HTML = """\
 <html><head></head><body>
+<!-- bn-app -->
+<nav>old nav</nav>
 <!-- bn-dashboard --><div>old dashboard</div><!-- /bn-dashboard -->
 <!-- bn-session-table --><table>old</table><!-- /bn-session-table -->
 <!-- bn-quote-sections --><div>old sections</div><!-- /bn-quote-sections -->
 <!-- bn-quote-themes --><div>old themes</div><!-- /bn-quote-themes -->
 <!-- bn-codebook --><div>old codebook</div><!-- /bn-codebook -->
+<!-- /bn-app -->
+<script>
+(function() {
+var BRISTLENOSE_VIDEO_MAP = {"s1":"/media/s1.mp4"};
+var BN_PARTICIPANTS = {};
+window.BRISTLENOSE_ANALYSIS = {"signals":[]};
+window.BRISTLENOSE_VIDEO_MAP = BRISTLENOSE_VIDEO_MAP;
+window.BRISTLENOSE_PLAYER_URL = 'assets/bristlenose-player.html';
+/* bristlenose report.js — auto-generated from bristlenose/theme/js/ */
+
+// --- js/storage.js ---
+function initStorage() { console.log("storage"); }
+
+// --- js/main.js ---
+function initMain() { initStorage(); }
+})();
+</script>
 </body></html>
 """
 
@@ -148,16 +168,24 @@ class TestExtractBundleTags:
 
 
 class TestTransformReportHtml:
-    def test_swaps_all_markers(self) -> None:
+    def test_swaps_bn_app_markers(self) -> None:
         result = _transform_report_html(_REPORT_HTML, project_dir=None)
-        assert 'id="bn-dashboard-root"' in result
-        assert 'id="bn-sessions-table-root"' in result
-        assert 'id="bn-quote-sections-root"' in result
-        assert 'id="bn-quote-themes-root"' in result
-        assert 'id="bn-codebook-root"' in result
-        # Original content should be gone
+        assert 'id="bn-app-root"' in result
+        # Original content inside bn-app markers should be gone
+        assert "old nav" not in result
         assert "old dashboard" not in result
         assert "old sections" not in result
+
+    def test_strips_vanilla_js_modules(self) -> None:
+        result = _transform_report_html(_REPORT_HTML, project_dir=None)
+        # Module code should be stripped
+        assert "initStorage" not in result
+        assert "initMain" not in result
+        assert "js/storage.js" not in result
+        # Globals should survive
+        assert "window.BRISTLENOSE_VIDEO_MAP" in result
+        assert "window.BRISTLENOSE_PLAYER_URL" in result
+        assert "window.BRISTLENOSE_ANALYSIS" in result
 
     def test_injects_api_base(self) -> None:
         result = _transform_report_html(_REPORT_HTML, project_dir=None)
@@ -183,6 +211,78 @@ class TestTransformTranscriptHtml:
             _TRANSCRIPT_HTML, session_id="s1", project_dir=None
         )
         assert "window.BRISTLENOSE_API_BASE" in result
+
+
+class TestStripVanillaJs:
+    """Tests for _strip_vanilla_js() — Step 8 vanilla JS retirement."""
+
+    _HTML_WITH_IIFE = """\
+<html><head></head><body>
+<script>
+(function() {
+var BRISTLENOSE_VIDEO_MAP = {"s1":"/media/s1.mp4"};
+window.BRISTLENOSE_VIDEO_MAP = BRISTLENOSE_VIDEO_MAP;
+window.BRISTLENOSE_PLAYER_URL = 'assets/bristlenose-player.html';
+/* bristlenose report.js — auto-generated from bristlenose/theme/js/ */
+
+// --- js/storage.js ---
+function initStorage() { console.log("storage"); }
+
+// --- js/main.js ---
+function initMain() { initStorage(); }
+})();
+</script>
+</body></html>
+"""
+
+    def test_removes_module_code(self) -> None:
+        result = _strip_vanilla_js(self._HTML_WITH_IIFE)
+        assert "initStorage" not in result
+        assert "initMain" not in result
+        assert "js/storage.js" not in result
+        assert "js/main.js" not in result
+
+    def test_keeps_globals(self) -> None:
+        result = _strip_vanilla_js(self._HTML_WITH_IIFE)
+        assert "window.BRISTLENOSE_VIDEO_MAP" in result
+        assert "window.BRISTLENOSE_PLAYER_URL" in result
+        assert "BRISTLENOSE_VIDEO_MAP" in result
+
+    def test_keeps_iife_structure(self) -> None:
+        result = _strip_vanilla_js(self._HTML_WITH_IIFE)
+        assert "(function() {" in result
+        assert "})();" in result
+        assert "<script>" in result
+        assert "</script>" in result
+
+    def test_noop_without_marker(self) -> None:
+        html = "<html><body><script>alert(1);</script></body></html>"
+        assert _strip_vanilla_js(html) == html
+
+    def test_noop_without_iife_close(self) -> None:
+        html = (
+            "<html><body><script>"
+            "/* bristlenose report.js — auto-generated from bristlenose/theme/js/ */"
+            "some code</script></body></html>"
+        )
+        assert _strip_vanilla_js(html) == html
+
+    def test_preserves_analysis_global(self) -> None:
+        html = """\
+<script>
+(function() {
+window.BRISTLENOSE_ANALYSIS = {"signals":[{"location":"Login"}]};
+/* bristlenose report.js — auto-generated from bristlenose/theme/js/ */
+
+// --- js/main.js ---
+function init() {}
+})();
+</script>
+"""
+        result = _strip_vanilla_js(html)
+        assert "BRISTLENOSE_ANALYSIS" in result
+        assert '"Login"' in result
+        assert "function init" not in result
 
 
 class TestProdServeReport:
@@ -213,15 +313,12 @@ class TestProdServeReport:
             )
         return TestClient(app)
 
-    def test_report_contains_react_mount_points(self, prod_client: TestClient) -> None:
+    def test_report_contains_react_app_root(self, prod_client: TestClient) -> None:
         resp = prod_client.get("/report/")
         assert resp.status_code == 200
-        html = resp.text
-        assert 'id="bn-dashboard-root"' in html
-        assert 'id="bn-sessions-table-root"' in html
-        assert 'id="bn-quote-sections-root"' in html
-        assert 'id="bn-quote-themes-root"' in html
-        assert 'id="bn-codebook-root"' in html
+        assert 'id="bn-app-root"' in resp.text
+        # Original island content should be gone
+        assert "old dashboard" not in resp.text
 
     def test_report_contains_bundle_script(self, prod_client: TestClient) -> None:
         resp = prod_client.get("/report/")
@@ -262,8 +359,8 @@ class TestProdServeReport:
         client = TestClient(app)
         resp = client.get("/report/")
         assert resp.status_code == 200
-        # Should serve vanilla HTML — no React mount points injected
-        assert 'id="bn-dashboard-root"' not in resp.text
+        # Should serve vanilla HTML — no React app root injected
+        assert 'id="bn-app-root"' not in resp.text
         assert "old dashboard" in resp.text
 
 

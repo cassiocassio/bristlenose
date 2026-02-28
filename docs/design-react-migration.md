@@ -104,12 +104,12 @@ The structural hinge — everything before it is self-contained, everything afte
 - **Key change:** `getVisibleQuotes()` replaced by data-derived `registerVisibleQuoteIds` — no more DOM queries with `offsetParent`. QuoteSections and QuoteThemes register their visible quote IDs; FocusProvider merges them in order
 - **Test:** 62 new Vitest tests across FocusContext, useKeyboardShortcuts, HelpModal. 703 total frontend tests pass
 
-### Step 8: Retire remaining vanilla JS _(medium — mostly deletion)_
+### Step 8: Retire remaining vanilla JS _(medium — mostly deletion)_ ✓ DONE
 
 At this point, every vanilla JS module has been replaced by a React equivalent. This step removes them from the serve path.
 
-- **Retires:** `starred.js`, `hidden.js`, `editing.js`, `tags.js`, `histogram.js`, `names.js`, `codebook.js` (report page), `modal.js`, `storage.js`, `api-client.js`, `badge-utils.js`, `analysis.js`, `transcript-names.js`, `transcript-annotations.js`, `journey-sort.js`, `main.js`
-- **What to do:** Remove the `<script>` IIFE block from the serve path. The `_JS_FILES` list in `render_html.py` stays for `bristlenose render` (offline HTML). Verify each module's functionality is covered. Freeze `bristlenose/theme/js/` entirely
+- **Retires:** All 26 modules in `_JS_FILES` — `storage.js`, `api-client.js`, `badge-utils.js`, `modal.js`, `codebook.js`, `player.js`, `starred.js`, `editing.js`, `tags.js`, `histogram.js`, `csv-export.js`, `view-switcher.js`, `search.js`, `tag-filter.js`, `hidden.js`, `names.js`, `focus.js`, `feedback.js`, `global-nav.js`, `transcript-names.js`, `transcript-annotations.js`, `journey-sort.js`, `analysis.js`, `settings.js`, `person-display.js`, `main.js`
+- **What changed:** `_strip_vanilla_js()` in `app.py` uses the existing `_JS_MARKER` boundary to remove concatenated module code from the IIFE while keeping global declarations (`BRISTLENOSE_VIDEO_MAP`, `BRISTLENOSE_PLAYER_URL`, `BRISTLENOSE_ANALYSIS`) that React reads from `window.*`. Called from `_transform_report_html()` (both dev and prod paths). Dead code removed: 9 individual island marker substitutions, `_replace_baked_js()` calls from dev routes, 9 `_REACT_*_MOUNT` constants. `_JS_FILES` list in `render_html.py` stays for `bristlenose render` (offline HTML). 6 new tests
 - **Test:** `bristlenose serve` works with zero vanilla JS. `bristlenose render` still produces a working static report
 
 ### Step 9: React app shell — kill the skeleton _(large)_
@@ -144,9 +144,9 @@ Step 1 (Settings) ✓   Step 2 (About) ✓   Step 3 (QuotesStore) ✓
                           |
                     Step 6 (Player) ✓
                           |
-                    Step 7 (Keyboard) ✓  <-- you are here
+                    Step 7 (Keyboard) ✓
                           |
-                    Step 8 (Retire vanilla JS)
+                    Step 8 (Retire vanilla JS) ✓  <-- you are here
                           |
                     Step 9 (App shell)
                           |

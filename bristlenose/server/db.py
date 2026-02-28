@@ -109,6 +109,15 @@ def _migrate_schema(engine: Engine) -> None:
                     )
                 )
 
+    # Word-level timing for transcript segments (JSON, nullable)
+    if "transcript_segments" in insp.get_table_names():
+        cols = {c["name"] for c in insp.get_columns("transcript_segments")}
+        if "words_json" not in cols:
+            with engine.begin() as conn:
+                conn.execute(
+                    text("ALTER TABLE transcript_segments ADD COLUMN words_json TEXT")
+                )
+
     # v0.10.3 — Session gains thumbnail_path (VARCHAR 500, nullable)
     if "sessions" in insp.get_table_names():
         cols = {c["name"] for c in insp.get_columns("sessions")}

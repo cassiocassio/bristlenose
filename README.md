@@ -386,6 +386,10 @@ Edit `bristlenose/__init__.py` (the single source of truth for version), commit,
 
 ## Changelog
 
+**0.11.1** — _28 Feb 2026_
+
+- Fix video player broken by double URL encoding and missing subdirectory in source file paths
+
 **0.11.0** — _28 Feb 2026_
 
 - Full React SPA in serve mode — React Router replaces vanilla JS tab navigation, all 26 vanilla JS modules retired from serve path

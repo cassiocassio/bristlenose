@@ -48,3 +48,31 @@ a.timecode:hover {
         animation: none;
     }
 }
+
+/* --- Progress fill: left border grows top-to-bottom during playback ---
+   Driven by --bn-segment-progress (0–1) set in PlayerContext.tsx.
+   Only appears on transcript segments (not report blockquotes). */
+
+.transcript-segment.bn-timecode-glow {
+    position: relative;
+}
+
+.transcript-segment.bn-timecode-glow::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 3px;
+    height: calc(var(--bn-segment-progress, 0) * 100%);
+    background: var(--bn-colour-accent);
+    border-radius: 0 0 1px 1px;
+    transition: height 0.25s linear;
+    pointer-events: none;
+    z-index: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .transcript-segment.bn-timecode-glow::before {
+        transition: none;
+    }
+}

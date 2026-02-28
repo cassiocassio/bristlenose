@@ -80,12 +80,22 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   const buildGlowIndex = useCallback(() => {
     const index: Record<string, GlowEntry[]> = {};
 
-    // Transcript page segments
+    // Transcript page segments — key by session ID (from URL), not speaker
+    // code, because the popout player sends pid=sessionId in timeupdate
+    // messages (e.g. "s1"), while data-participant holds the speaker code
+    // (e.g. "m1", "p1").
     const segments = document.querySelectorAll<HTMLElement>(
       ".transcript-segment[data-start-seconds][data-end-seconds]",
     );
+    // Extract session ID from pathname: /report/sessions/:sessionId
+    const sessionMatch = window.location.pathname.match(
+      /\/report\/sessions\/([^/]+)/,
+    );
+    const sessionId = sessionMatch?.[1] ?? null;
     segments.forEach((seg) => {
-      const pid = seg.getAttribute("data-participant");
+      // Use session ID when on a transcript page; fall back to
+      // data-participant for other pages (shouldn't happen, but safe).
+      const pid = sessionId ?? seg.getAttribute("data-participant");
       if (!pid) return;
       const start = parseFloat(seg.getAttribute("data-start-seconds") ?? "");
       const end = parseFloat(seg.getAttribute("data-end-seconds") ?? "");
@@ -129,6 +139,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   const clearAllGlow = useCallback(() => {
     glowActiveRef.current.forEach((el) => {
       el.classList.remove("bn-timecode-glow", "bn-timecode-playing");
+      (el as HTMLElement).style.removeProperty("--bn-segment-progress");
     });
     glowActiveRef.current = new Set();
   }, []);
@@ -140,9 +151,13 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       const entries = glowIndexRef.current?.[pid] ?? [];
       const newActive = new Set<Element>();
 
+      // Map element → corrected glow entry for progress computation
+      const activeEntries = new Map<Element, GlowEntry>();
+
       for (const entry of entries) {
         if (seconds >= entry.start && seconds < entry.end) {
           newActive.add(entry.el);
+          activeEntries.set(entry.el, entry);
         }
       }
 
@@ -150,6 +165,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       glowActiveRef.current.forEach((el) => {
         if (!newActive.has(el)) {
           el.classList.remove("bn-timecode-glow", "bn-timecode-playing");
+          (el as HTMLElement).style.removeProperty("--bn-segment-progress");
         }
       });
 
@@ -166,6 +182,23 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
           el.classList.add("bn-timecode-playing");
         } else {
           el.classList.remove("bn-timecode-playing");
+        }
+
+        // Progress fill: set --bn-segment-progress (0–1) for transcript
+        // segments so the CSS ::before left-border grows top-to-bottom.
+        // Uses corrected start/end from the glow index (handles zero-length
+        // segments whose end was fixed to the next segment's start).
+        const entry = activeEntries.get(el);
+        if (entry && el.classList.contains("transcript-segment")) {
+          const dur = entry.end - entry.start;
+          const progress =
+            dur > 0 && isFinite(dur)
+              ? Math.min(1, Math.max(0, (seconds - entry.start) / dur))
+              : 0;
+          (el as HTMLElement).style.setProperty(
+            "--bn-segment-progress",
+            String(progress),
+          );
         }
       });
 

@@ -2,6 +2,10 @@
 
 All notable changes to Bristlenose are documented here. See also the [README](README.md) for the latest releases.
 
+**0.11.1** — _28 Feb 2026_
+
+- **Fix video player** — double URL encoding broke playback for files with spaces (`%20` → `%2520`). Removed Python-side `_url_quote()` from `_file_to_media_uri()`; JS `encodeURIComponent()` now handles encoding once. Also fixed subdirectory loss: `merge_transcript.py` now stores relative paths (e.g. `interviews/show and tell 40.mov`) instead of just the filename
+
 **0.11.0** — _28 Feb 2026_
 
 - **Full React SPA in serve mode** — React Router (`react-router-dom` v7) replaces vanilla JS hash-based tab navigation. Single `RouterProvider` root with pathname routes (`/report/`, `/report/quotes/`, `/report/sessions/:id`, etc.). `AppLayout` wraps `NavBar` + `Outlet`. 8 page wrappers compose existing island components. Backward-compat shims (`window.switchToTab`, `window.navigateToSession`) delegate to React Router for any remaining callers

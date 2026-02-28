@@ -88,22 +88,21 @@ The structural hinge — everything before it is self-contained, everything afte
 - **Test:** 45 new Vitest tests (635 total). NavBar, router, hash redirect, scroll hook, navigate hook, navigation shims
 - **Post-QA fixes:** AnalysisPage slug generation aligned with QuoteSections/QuoteThemes (was stripping special chars, now only replaces spaces — matching anchor IDs). Scroll retry window increased from 2s to 5s for cross-tab navigation where destination page needs to mount + fetch data
 
-### Step 6: Player integration _(medium)_
+### Step 6: Player integration _(medium)_ ✓ DONE
 
 - **Replaces:** `player.js` (~250 lines) — popout window lifecycle, `postMessage` IPC, glow sync, `setInterval` close-poll
 - **Dependencies:** Step 5 (router — player glow needs route context)
-- **What to build:** `PlayerProvider` context + `usePlayer` hook. Provides `seekTo(pid, seconds)`. Manages popout window. Handles `message` events for playback state. Exposes `currentTime` + `currentPid` for glow
-- **Key change:** Glow highlighting moves from CSS class toggling via DOM queries to React state. Each `QuoteCard` and transcript segment checks if its timecode range contains `currentTime` and applies the glow class itself. Eliminates the glow index rebuild
-- **`TimecodeLink` wiring:** Already accepts `onClick` — wire to `seekTo` from context instead of `window.seekTo`
-- **Cleanup:** `useEffect` return clears the poll interval and glow state
-- **Test:** Vitest for the hook (mock `postMessage`). Manual: click timecode → player opens → glow syncs → closing player clears glow
+- **What was built:** `PlayerProvider` context + `usePlayer` hook wrapping `AppLayout`. `seekTo(pid, seconds)` manages popout window lifecycle. `TimecodeLink` calls `seekTo` via context (prevents default `href="#t=..."` navigation). Glow highlighting via DOM class manipulation (refs, not React state — 4× /sec timeupdate messages would re-render hundreds of cards). `buildGlowIndex` keys transcript segments by session ID (from URL pathname), not speaker code. Progress bar via `--bn-segment-progress` CSS custom property. `initPlayer()` bail-out when `bn-app-root` exists
+- **Key fix:** `BRISTLENOSE_VIDEO_MAP` and `BRISTLENOSE_PLAYER_URL` exposed on `window` from IIFE in `render_html.py` — React runs in a separate ES module context and can't see IIFE-scoped `var` declarations. Also fixed session routing: non-transcript URLs (`/report/sessions/s1`) now serve SPA HTML instead of 404
+- **Test:** 28 Vitest tests for PlayerContext, TimecodeLink integration, glow index building. 28 serve tests pass
 
-### Step 7: Keyboard shortcuts _(medium-large)_
+### Step 7: Keyboard shortcuts _(medium-large)_ ✓ DONE
 
-- **Replaces:** `focus.js` (~650 lines) — j/k navigation, multi-select, bulk actions, help overlay, Escape cascade
+- **Replaces:** `focus.js` (~645 lines) — j/k navigation, multi-select, bulk actions, help overlay, Escape cascade
 - **Dependencies:** Steps 3 (store for star/hide/tag), 4 (toolbar for `/`=search), 5 (router for `?`=about), 6 (player for Enter=play)
-- **What to build:** `FocusProvider` context exposing `focusedId`, `selectedIds`, `setFocus`, `toggleSelection`, `selectRange`. Single `useEffect` with `keydown` listener. `getVisibleQuotes()` becomes a derived value from QuotesStore (filtered by search, view mode, hidden state) — no more DOM queries on `offsetParent`
-- **Test:** Vitest for focus reducer. Manual: j/k navigation, multi-select, bulk star/hide/tag
+- **What was built:** `FocusProvider` context exposing `focusedId`, `selectedIds`, `setFocus`, `toggleSelection`, `selectRange`, `clearSelection`, `moveFocus`, `registerVisibleQuoteIds`, `getVisibleQuoteIds`. `useKeyboardShortcuts` hook — single `useEffect` with `keydown` listener + background click handler. `HelpModal` component (? toggle). QuoteCard click-to-focus with modifier support (Cmd/Ctrl+click toggle, Shift+click range). Hide handler registry (`registerHideHandler`/`hideQuote`) so keyboard `h` triggers `QuoteGroup.handleToggleHide` (fly-up ghost animation) instead of raw store toggle. `initFocus()` bail-out when `bn-app-root` exists
+- **Key change:** `getVisibleQuotes()` replaced by data-derived `registerVisibleQuoteIds` — no more DOM queries with `offsetParent`. QuoteSections and QuoteThemes register their visible quote IDs; FocusProvider merges them in order
+- **Test:** 62 new Vitest tests across FocusContext, useKeyboardShortcuts, HelpModal. 703 total frontend tests pass
 
 ### Step 8: Retire remaining vanilla JS _(medium — mostly deletion)_
 
@@ -143,9 +142,9 @@ Step 1 (Settings) ✓   Step 2 (About) ✓   Step 3 (QuotesStore) ✓
                           |
                     Step 5 (React Router) ✓
                           |
-                    Step 6 (Player)  <-- you are here
+                    Step 6 (Player) ✓
                           |
-                    Step 7 (Keyboard)
+                    Step 7 (Keyboard) ✓  <-- you are here
                           |
                     Step 8 (Retire vanilla JS)
                           |

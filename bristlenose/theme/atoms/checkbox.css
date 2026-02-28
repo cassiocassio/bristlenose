@@ -1,0 +1,43 @@
+/* Atom: checkbox — ghost-style custom checkbox.
+   Replaces native checkbox appearance with a subtle bordered square and
+   a muted tick mark. Designed to recede visually (ghost pattern) while
+   remaining functional and accessible.
+
+   Usage: <input type="checkbox" class="bn-checkbox">
+   Or apply to any input[type="checkbox"] inside a scoped container. */
+
+.bn-checkbox {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 14px;
+    height: 14px;
+    border: 1px solid var(--bn-colour-border);
+    border-radius: 2px;
+    background: transparent;
+    margin: 0;
+    flex-shrink: 0;
+    cursor: pointer;
+    position: relative;
+    transition: border-color var(--bn-transition-fast), background var(--bn-transition-fast);
+}
+
+.bn-checkbox:checked {
+    border-color: var(--bn-colour-border-hover);
+    background: var(--bn-colour-quote-bg);
+}
+
+.bn-checkbox:checked::after {
+    content: "";
+    position: absolute;
+    left: 3px;
+    top: 0.5px;
+    width: 5px;
+    height: 9px;
+    border: solid var(--bn-colour-muted);
+    border-width: 0 1.5px 1.5px 0;
+    transform: rotate(45deg);
+}
+
+.bn-checkbox:hover {
+    border-color: var(--bn-colour-border-hover);
+}

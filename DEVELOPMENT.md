@@ -141,6 +141,36 @@ Each worktree needs its own `.venv`. Commits are shared instantly across all wor
 
 **Never check out a feature branch inside the main `bristlenose/` directory** — use worktrees instead.
 
+### Collaborative development (two people, two Macs)
+
+Each person clones the repo to their own machine and creates their own worktree. GitHub is the sync point — never put the repo on a shared filesystem (Dropbox/iCloud + `.git` = corruption).
+
+```bash
+# 1. Clone (one-time)
+git clone git@github.com:USER/REPO.git ~/Code/bristlenose
+cd ~/Code/bristlenose
+
+# 2. Create your feature branch + worktree
+git branch my-feature main
+git worktree add "../bristlenose_branch my-feature" my-feature
+cd "../bristlenose_branch my-feature"
+
+# 3. Set up local env
+python3 -m venv .venv
+.venv/bin/pip install -e ".[dev,serve]"
+cd frontend && npm install && cd ..
+git push -u origin my-feature
+
+# 4. Work, commit, push
+git add -A && git commit -m "description"
+git push
+
+# 5. See what the other person is doing
+git fetch origin && git log --oneline origin/their-branch -5
+```
+
+All files are local (zero latency). Only `push`/`pull`/`fetch` touch the network. Merge to `main` via PR when done.
+
 ## Troubleshooting
 
 **Stale `__pycache__` after branch switch:**

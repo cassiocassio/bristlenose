@@ -2,7 +2,7 @@
 
 20 standalone files in `js/` concatenated at render time (same pattern as CSS): storage, badge-utils, modal, codebook, player, starred, editing, tags, histogram, csv-export, view-switcher, search, tag-filter, hidden, names, focus, feedback, analysis, global-nav, main.
 
-**Serve mode (React):** All vanilla JS modules are still loaded in serve mode. The 4 toolbar modules (`csv-export.js`, `view-switcher.js`, `search.js`, `tag-filter.js`) have their init functions no-op harmlessly because the React Toolbar island replaces the vanilla toolbar HTML — the DOM elements they bind to (`#search-container`, `#view-switcher-btn`, `#tag-filter-btn`, `#export-csv`) don't exist. Shared utilities like `showToast()` and `copyToClipboard()` from `csv-export.js` remain available for other modules. Transcript pages use `storage.js` + `badge-utils.js` + `player.js` + `transcript-names.js` + `transcript-annotations.js`. Codebook page uses `storage.js` + `badge-utils.js` + `modal.js` + `codebook.js`. Analysis page uses `storage.js` + `analysis.js`. `transcript-names.js` only updates heading speaker names (preserving code prefix: `"m1 Sarah Chen"`); segment speaker labels stay as raw codes (`p1:`, `m1:`) and are not overridden by JS.
+**Serve mode (Step 8):** Vanilla JS modules are **stripped** from the main report in serve mode — `_strip_vanilla_js()` in `app.py` removes all module code, keeping only `window.*` globals for React. The `_JS_FILES` list in `render_html.py` stays for `bristlenose render` (offline HTML). Transcript pages, codebook page, and analysis page each have their own smaller IIFE with dedicated JS lists (`_TRANSCRIPT_JS_FILES`, `_CODEBOOK_JS_FILES`, `_ANALYSIS_JS_FILES`) — these are untouched by Step 8. `transcript-names.js` only updates heading speaker names (preserving code prefix: `"m1 Sarah Chen"`); segment speaker labels stay as raw codes (`p1:`, `m1:`) and are not overridden by JS.
 
 ## storage.js
 
@@ -184,6 +184,8 @@ Codebook data model, colour assignment, and interactive panel UI. Manages the re
 - **Dependencies**: `storage.js` (for `createStore`, `escapeHtml`), `badge-utils.js` (for `createUserTagBadge`, `getTagColour`), `modal.js` (for `createModal`, `showConfirmModal`, `closeTopmostModal` — on codebook page only)
 
 ## global-nav.js
+
+> **Serve mode:** `initGlobalNav()` is a no-op when `#bn-app-root` exists (React Router handles navigation). The functions below are still exported to `window.*` for backward compat, but in serve mode they are overwritten by shims from `frontend/src/shims/navigation.ts` that delegate to React Router. The full vanilla JS implementation remains active for the static render path (`bristlenose render`).
 
 Top-level tab bar for report navigation. Manages switching between tab panels (Project, Sessions, Quotes, Codebook, Analysis, Settings, About), the Sessions tab drill-down sub-navigation, and all cross-tab navigation from the Project dashboard.
 

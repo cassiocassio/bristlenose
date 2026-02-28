@@ -10,6 +10,7 @@ export { ContextSegment } from "./ContextSegment";
 export { Counter } from "./Counter";
 export { DualThresholdSlider } from "./DualThresholdSlider";
 export { EditableText } from "./EditableText";
+export { HelpModal } from "./HelpModal";
 export { ExpandableTimecode } from "./ExpandableTimecode";
 export { JourneyChain } from "./JourneyChain";
 export { Metric } from "./Metric";

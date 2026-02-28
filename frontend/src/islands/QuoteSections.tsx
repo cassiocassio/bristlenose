@@ -11,8 +11,9 @@
 import { useCallback, useEffect, useState, useMemo } from "react";
 import { getCodebook } from "../utils/api";
 import { useTranscriptCache } from "../hooks/useTranscriptCache";
-import type { QuotesListResponse } from "../utils/types";
+import type { QuoteResponse, QuotesListResponse } from "../utils/types";
 import { initFromQuotes, useQuotesStore } from "../contexts/QuotesContext";
+import { useFocus } from "../contexts/FocusContext";
 import { filterQuotes } from "../utils/filter";
 import { QuoteGroup } from "./QuoteGroup";
 
@@ -95,6 +96,16 @@ export function QuoteSections({ projectId }: QuoteSectionsProps) {
     [store.searchQuery, store.viewMode, store.tagFilter, store.hidden, store.starred, store.tags],
   );
 
+  // Build a map of cluster_id → original (unfiltered) quotes for the hidden counter.
+  const allQuotesMap = useMemo(() => {
+    if (!data) return new Map<number, QuoteResponse[]>();
+    const map = new Map<number, QuoteResponse[]>();
+    for (const s of data.sections) {
+      map.set(s.cluster_id, s.quotes);
+    }
+    return map;
+  }, [data]);
+
   const filteredSections = useMemo(() => {
     if (!data) return [];
     return data.sections
@@ -102,8 +113,18 @@ export function QuoteSections({ projectId }: QuoteSectionsProps) {
         ...s,
         quotes: filterQuotes(s.quotes, filterState),
       }))
-      .filter((s) => s.quotes.length > 0);
-  }, [data, filterState]);
+      .filter((s) => s.quotes.length > 0 || (allQuotesMap.get(s.cluster_id)?.some((q) => filterState.hidden[q.dom_id]) ?? false));
+  }, [data, filterState, allQuotesMap]);
+
+  // Register visible quote IDs for keyboard navigation.
+  const { registerVisibleQuoteIds } = useFocus();
+  const visibleIds = useMemo(
+    () => filteredSections.flatMap((s) => s.quotes.map((q) => q.dom_id)),
+    [filteredSections],
+  );
+  useEffect(() => {
+    registerVisibleQuoteIds("sections", visibleIds);
+  }, [registerVisibleQuoteIds, visibleIds]);
 
   // Detect media availability — if any quote has a video timecode link
   // in the original report, we assume media is available.
@@ -145,6 +166,7 @@ export function QuoteSections({ projectId }: QuoteSectionsProps) {
             description={section.description}
             itemType="section"
             quotes={section.quotes}
+            allQuotes={allQuotesMap.get(section.cluster_id)}
             tagVocabulary={tagVocabulary}
             hasMedia={hasMedia}
             transcriptCache={transcriptCache}

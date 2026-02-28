@@ -26,10 +26,9 @@ individually.
 
 ## Code style
 
-- Python 3.10+
-- Ruff for linting (config in `pyproject.toml`)
-- Type hints everywhere
-- Jinja2 templates for HTML components (in `bristlenose/theme/templates/`)
+- Python 3.10+, Ruff for linting (config in `pyproject.toml`), type hints everywhere
+- React + TypeScript for the interactive frontend (`frontend/`)
+- Jinja2 templates for static HTML components (in `bristlenose/theme/templates/`)
 
 ## Project layout
 
@@ -47,6 +46,9 @@ bristlenose/          # main package
     prompts.py        # LLM prompt templates
     structured.py     # Pydantic schemas for LLM structured output
   people.py           # people file: load, compute, merge, write, name extraction
+  server/             # FastAPI serve mode (React SPA + REST API + SQLite)
+    app.py            # FastAPI factory, SPA catch-all, HTML transform
+    routes/           # API endpoints (sessions, quotes, data sync, autocode)
   theme/              # design system (atomic CSS + Jinja2 templates) — see below
     tokens.css
     atoms/
@@ -55,10 +57,22 @@ bristlenose/          # main package
     templates/        # Jinja2 HTML templates + CSS page layouts
       *.html          # 13 component templates (quote card, toolbar, etc.)
       *.css           # page-level CSS (report, transcript, print)
-    js/               # 20 JS modules concatenated at render time
+    js/               # 20 JS modules (frozen in serve mode — active for static render)
     index.css         # documents concatenation order
   utils/
     hardware.py       # GPU/CPU detection
+frontend/             # React + TypeScript SPA — see "Frontend" section below
+  src/
+    components/       # 31 reusable React components
+    islands/          # 14 island components (self-contained features)
+    pages/            # 8 page wrappers (thin route → island glue)
+    layouts/          # AppLayout (NavBar + Outlet)
+    hooks/            # useScrollToAnchor, useAppNavigate, useProjectId, useDropdown
+    shims/            # Backward-compat window.* navigation shims
+    contexts/         # QuotesStore (module-level, not React Context)
+    utils/            # API client, formatting, colours, types
+  package.json        # dependencies (React, React Router, Vitest)
+desktop/              # SwiftUI macOS shell (PyInstaller sidecar)
 snap/
   snapcraft.yaml      # Snap recipe (classic confinement, core24 base)
 tests/
@@ -174,6 +188,37 @@ These aliases point to the `--bn-` versions, so theme authors only need to overr
 ### Dark mode
 
 Dark mode is built into `tokens.css` using the CSS `light-dark()` function. For full details on the dark mode cascade, how tokens work, and adding new colour tokens, see `bristlenose/theme/CLAUDE.md`.
+
+## Frontend (React)
+
+The interactive serve-mode experience is a React + TypeScript SPA in `frontend/`. It uses React Router for pathname-based navigation (`/report/`, `/report/quotes/`, `/report/sessions/:id`, etc.).
+
+### Two render paths
+
+| | Serve mode (`bristlenose serve`) | Static render (`bristlenose render`) |
+|---|---|---|
+| **Routing** | React Router (pathname) | Vanilla JS (hash) |
+| **React** | Single `RouterProvider` root | Individual `createRoot()` per island |
+| **JS** | Vanilla JS loads but nav/toolbar no-op | Full vanilla JS suite active |
+| **Data** | API endpoints (`/api/projects/...`) | Baked into HTML / localStorage |
+
+### Dev workflow
+
+```bash
+cd frontend
+npm install           # install dependencies
+npm run dev           # Vite dev server (proxies API to FastAPI on :8150)
+npm test              # Vitest (635 tests)
+npm run build         # tsc type-check + Vite production build → dist/
+```
+
+Always run `npm run build` (not just `npm test`) before committing — `tsc -b` catches type errors that Vitest's looser context misses.
+
+### Architecture
+
+In serve mode, `app.py` replaces `<!-- bn-app -->` markers in the rendered HTML with `<div id="bn-app-root">`. The React bundle mounts a single `RouterProvider` into this div. `AppLayout` renders `NavBar` + `Outlet`; each route maps to a thin page wrapper in `frontend/src/pages/` that composes existing island components.
+
+Backward-compat shims (`frontend/src/shims/navigation.ts`) install `window.switchToTab`, `window.scrollToAnchor`, and `window.navigateToSession` as functions that delegate to React Router's `navigate()`. This lets vanilla JS modules and React islands that still use the globals work unchanged.
 
 ## Releasing
 

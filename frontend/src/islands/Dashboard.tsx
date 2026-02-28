@@ -5,12 +5,14 @@
  * and section/theme navigation lists. Read-only — no user mutations.
  *
  * Navigation actions (stat card clicks, session row clicks, featured
- * quote clicks, nav link clicks) delegate to vanilla JS globals
- * defined in global-nav.js and player.js.
+ * quote clicks, nav link clicks) use React context when available
+ * (PlayerContext for seekTo, navigation shims for tab/session nav),
+ * falling back to vanilla JS globals for legacy island mode.
  */
 
-import { useEffect, useState, useMemo } from "react";
+import { useContext, useEffect, useState, useMemo } from "react";
 import { Badge, PersonBadge, TimecodeLink } from "../components";
+import { PlayerContext } from "../contexts/PlayerContext";
 import { formatDuration, formatFinderDate, formatFinderFilename, formatTimecode } from "../utils/format";
 import type {
   CoverageResponse,
@@ -44,10 +46,10 @@ function scrollToAnchor(anchorId: string, opts?: { block?: string; highlight?: b
 
 function navigateToSession(sid: string, anchorId?: string) {
   const anchor = anchorId ? `#${anchorId}` : "";
-  window.location.href = `sessions/transcript_${sid}.html${anchor}`;
+  window.location.href = `/report/sessions/${sid}${anchor}`;
 }
 
-function seekTo(pid: string, seconds: number) {
+function seekToGlobal(pid: string, seconds: number) {
   window.seekTo?.(pid, seconds);
 }
 
@@ -231,16 +233,45 @@ function CompactSessionRow({
     duration_seconds,
     speakers,
     source_filename,
+    has_media,
   } = session;
 
+  const playerCtx = useContext(PlayerContext);
   const displayFilename = formatFinderFilename(source_filename);
   const fileTitle =
     displayFilename !== source_filename ? source_filename : undefined;
 
+  // Media files open the popout player; non-media files are plain text.
+  let sourceEl: React.ReactNode = "\u2014";
+  if (source_filename) {
+    if (has_media) {
+      sourceEl = (
+        <a
+          href={`#t=0`}
+          className="timecode"
+          data-participant={session_id}
+          data-seconds={0}
+          data-end-seconds={0}
+          title={fileTitle}
+          onClick={(e) => {
+            if (!playerCtx) return;
+            if (e.metaKey || e.ctrlKey || e.shiftKey) return;
+            e.preventDefault();
+            playerCtx.seekTo(session_id, 0);
+          }}
+        >
+          {displayFilename}
+        </a>
+      );
+    } else {
+      sourceEl = <span title={fileTitle}>{displayFilename}</span>;
+    }
+  }
+
   return (
     <tr data-session={session_id}>
       <td className="bn-session-id">
-        <a href={`sessions/transcript_${session_id}.html`}>
+        <a href={`/report/sessions/${session_id}`}>
           #{session_number}
         </a>
       </td>
@@ -260,13 +291,7 @@ function CompactSessionRow({
       <td className="bn-session-duration">
         {formatDuration(duration_seconds)}
       </td>
-      <td>
-        {source_filename ? (
-          <span title={fileTitle}>{displayFilename}</span>
-        ) : (
-          "\u2014"
-        )}
-      </td>
+      <td>{sourceEl}</td>
     </tr>
   );
 }
@@ -313,6 +338,7 @@ function CompactSessionsTable({
 // ---------- Featured quotes ----------
 
 function FeaturedQuote({ quote }: { quote: FeaturedQuoteResponse }) {
+  const playerCtx = useContext(PlayerContext);
   const timecodeStr = formatTimecode(quote.start_timecode);
 
   const handleCardClick = (e: React.MouseEvent) => {
@@ -320,14 +346,15 @@ function FeaturedQuote({ quote }: { quote: FeaturedQuoteResponse }) {
     if ((e.target as HTMLElement).closest("a, button")) return;
 
     // Try video seek first.
-    if (quote.has_media && window.seekTo) {
-      seekTo(quote.participant_id, quote.start_timecode);
+    const seekFn = playerCtx?.seekTo ?? (window.seekTo ? seekToGlobal : null);
+    if (quote.has_media && seekFn) {
+      seekFn(quote.participant_id, quote.start_timecode);
       return;
     }
 
     // Fall back to session navigation.
     const anchor = `t-${quote.session_id}-${Math.floor(quote.start_timecode)}`;
-    const url = `sessions/transcript_${quote.session_id}.html#${anchor}`;
+    const url = `/report/sessions/${quote.session_id}#${anchor}`;
     if (e.metaKey || e.ctrlKey || e.shiftKey) {
       window.open(url, "_blank");
       return;
@@ -362,7 +389,7 @@ function FeaturedQuote({ quote }: { quote: FeaturedQuoteResponse }) {
         )}
 
         <a
-          href={`sessions/transcript_${quote.session_id}.html#t-${quote.session_id}-${Math.floor(quote.start_timecode)}`}
+          href={`/report/sessions/${quote.session_id}#t-${quote.session_id}-${Math.floor(quote.start_timecode)}`}
           className="speaker-link"
         >
           <PersonBadge

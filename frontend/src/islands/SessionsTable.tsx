@@ -5,12 +5,18 @@
  * the API, and renders the full sessions table with visual parity to the
  * existing static HTML report.
  *
+ * Speaker names are editable inline: code-only PersonBadge + EditableText
+ * + pencil icon. Edits update short_name via PUT /people (fire-and-forget).
+ *
  * CSS classes match the existing theme so styles apply without changes.
  */
 
-import { useEffect, useState } from "react";
-import { JourneyChain, PersonBadge, Sparkline, Thumbnail } from "../components";
+import { useCallback, useContext, useEffect, useState } from "react";
+import { EditableText, JourneyChain, PersonBadge, Sparkline, Thumbnail } from "../components";
 import type { SparklineItem } from "../components/Sparkline";
+import { PlayerContext } from "../contexts/PlayerContext";
+import { getPeople, putPeople } from "../utils/api";
+import type { PersonData } from "../utils/api";
 import { formatDuration, formatFinderDate, formatFinderFilename } from "../utils/format";
 
 // ---------------------------------------------------------------------------
@@ -134,6 +140,8 @@ export function SessionsTable({
 }) {
   const [data, setData] = useState<SessionsListResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [peopleMap, setPeopleMap] = useState<Record<string, PersonData> | null>(null);
+  const [editingCode, setEditingCode] = useState<string | null>(null);
 
   useEffect(() => {
     fetch(`/api/projects/${projectId}/sessions`)
@@ -143,7 +151,46 @@ export function SessionsTable({
       })
       .then((json: SessionsListResponse) => setData(json))
       .catch((err: Error) => setError(err.message));
+
+    getPeople().then(setPeopleMap).catch(() => {});
   }, [projectId]);
+
+  const handleNameCommit = useCallback(
+    (speakerCode: string, newName: string) => {
+      setEditingCode(null);
+
+      // Optimistic update: update speakers in all sessions.
+      setData((prev) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          sessions: prev.sessions.map((sess) => ({
+            ...sess,
+            speakers: sess.speakers.map((sp) =>
+              sp.speaker_code === speakerCode
+                ? { ...sp, name: newName }
+                : sp,
+            ),
+          })),
+        };
+      });
+
+      // Update people map and fire PUT.
+      setPeopleMap((prev) => {
+        if (!prev) return prev;
+        const updated = {
+          ...prev,
+          [speakerCode]: {
+            ...prev[speakerCode],
+            short_name: newName,
+          },
+        };
+        putPeople(updated);
+        return updated;
+      });
+    },
+    [],
+  );
 
   if (error) {
     return (
@@ -199,7 +246,15 @@ export function SessionsTable({
         </thead>
         <tbody>
           {sessions.map((sess) => (
-            <SessionRow key={sess.session_id} session={sess} />
+            <SessionRow
+              key={sess.session_id}
+              session={sess}
+              peopleMap={peopleMap}
+              editingCode={editingCode}
+              onEditStart={setEditingCode}
+              onCancelEdit={() => setEditingCode(null)}
+              onNameCommit={handleNameCommit}
+            />
           ))}
         </tbody>
       </table>
@@ -207,7 +262,21 @@ export function SessionsTable({
   );
 }
 
-function SessionRow({ session }: { session: SessionResponse }) {
+function SessionRow({
+  session,
+  peopleMap,
+  editingCode,
+  onEditStart,
+  onCancelEdit,
+  onNameCommit,
+}: {
+  session: SessionResponse;
+  peopleMap: Record<string, PersonData> | null;
+  editingCode: string | null;
+  onEditStart: (code: string) => void;
+  onCancelEdit: () => void;
+  onNameCommit: (code: string, newName: string) => void;
+}) {
   const {
     session_id,
     session_number,
@@ -224,9 +293,9 @@ function SessionRow({ session }: { session: SessionResponse }) {
   // Journey arrow chain (now uses JourneyChain primitive)
   const hasJourney = journey_labels.length > 0;
 
-  // Source file display — media files link to the popout player; others are
-  // plain text.  The <a class="timecode"> is picked up by player.js event
-  // delegation (no additional JS wiring needed).
+  // Source file display — media files open the popout player via PlayerContext;
+  // non-media files are plain text.
+  const playerCtx = useContext(PlayerContext);
   let sourceEl: React.ReactNode = "\u2014";
   if (source_files.length > 0) {
     const sf = source_files[0];
@@ -236,12 +305,18 @@ function SessionRow({ session }: { session: SessionResponse }) {
     if (has_media) {
       sourceEl = (
         <a
-          href="#"
+          href={`#t=0`}
           className="timecode"
           data-participant={session_id}
           data-seconds={0}
           data-end-seconds={0}
           title={titleAttr}
+          onClick={(e) => {
+            if (!playerCtx) return;
+            if (e.metaKey || e.ctrlKey || e.shiftKey) return;
+            e.preventDefault();
+            playerCtx.seekTo(session_id, 0);
+          }}
         >
           {displayName}
         </a>
@@ -256,19 +331,54 @@ function SessionRow({ session }: { session: SessionResponse }) {
   return (
     <tr data-session={session_id}>
       <td className="bn-session-id">
-        <a href={`sessions/transcript_${session_id}.html`}>
+        <a href={`/report/sessions/${session_id}`}>
           #{session_number}
         </a>
       </td>
       <td className="bn-session-speakers">
-        {speakers.map((sp) => (
-          <PersonBadge
-            key={sp.speaker_code}
-            code={sp.speaker_code}
-            role={sp.role as "participant" | "moderator" | "observer"}
-            name={sp.name || undefined}
-          />
-        ))}
+        {speakers.map((sp) => {
+          const person = peopleMap?.[sp.speaker_code];
+          const displayName = person?.short_name || sp.name || "";
+          const fullName = person?.full_name || "";
+          const nameTitle =
+            fullName && fullName !== displayName ? fullName : undefined;
+          const isEditing = editingCode === sp.speaker_code;
+
+          return (
+            <span key={sp.speaker_code} className="bn-session-speaker-entry">
+              <PersonBadge
+                code={sp.speaker_code}
+                role={sp.role as "participant" | "moderator" | "observer"}
+              />
+              {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions */}
+              <span
+                onClick={isEditing ? undefined : () => onEditStart(sp.speaker_code)}
+                title={nameTitle}
+              >
+                <EditableText
+                  value={displayName}
+                  originalValue={sp.name}
+                  trigger="external"
+                  isEditing={isEditing}
+                  onCommit={(newName) => onNameCommit(sp.speaker_code, newName)}
+                  onCancel={() => onCancelEdit()}
+                  className="bn-speaker-editable-name"
+                  data-testid={`bn-name-${sp.speaker_code}`}
+                />
+              </span>
+              {!isEditing && (
+                <button
+                  className="bn-name-pencil"
+                  onClick={() => onEditStart(sp.speaker_code)}
+                  aria-label={`Edit name for ${sp.speaker_code}`}
+                  data-testid={`bn-name-pencil-${sp.speaker_code}`}
+                >
+                  &#x270E;
+                </button>
+              )}
+            </span>
+          );
+        })}
       </td>
       <td className="bn-session-meta">
         <div>{formatFinderDate(session_date)}</div>

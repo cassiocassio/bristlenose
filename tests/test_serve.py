@@ -9,12 +9,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from bristlenose import __version__
-from bristlenose.server.app import (
-    _extract_bundle_tags,
-    _transform_report_html,
-    _transform_transcript_html,
-    create_app,
-)
+from bristlenose.server.app import create_app
 from bristlenose.server.db import Base, get_engine, init_db
 
 
@@ -70,6 +65,11 @@ class TestAppFactory:
         resp = client.get("/api/health")
         assert resp.status_code == 200
 
+    def test_project_dir_stored_on_app_state(self, tmp_path: Path) -> None:
+        """project_dir should be accessible via app.state."""
+        app = create_app(project_dir=tmp_path, dev=True, db_url="sqlite://")
+        assert app.state.project_dir == tmp_path
+
 
 class TestServeCommand:
     def test_serve_in_commands_set(self) -> None:
@@ -90,24 +90,8 @@ class TestServeCommand:
 
 
 # ---------------------------------------------------------------------------
-# Minimal HTML fragments for unit tests
+# Vite build index.html fixture
 # ---------------------------------------------------------------------------
-
-_REPORT_HTML = """\
-<html><head></head><body>
-<!-- bn-dashboard --><div>old dashboard</div><!-- /bn-dashboard -->
-<!-- bn-session-table --><table>old</table><!-- /bn-session-table -->
-<!-- bn-quote-sections --><div>old sections</div><!-- /bn-quote-sections -->
-<!-- bn-quote-themes --><div>old themes</div><!-- /bn-quote-themes -->
-<!-- bn-codebook --><div>old codebook</div><!-- /bn-codebook -->
-</body></html>
-"""
-
-_TRANSCRIPT_HTML = """\
-<html><head></head><body>
-<!-- bn-transcript-page --><div>old transcript</div><!-- /bn-transcript-page -->
-</body></html>
-"""
 
 _VITE_INDEX_HTML = """\
 <!doctype html>
@@ -116,87 +100,19 @@ _VITE_INDEX_HTML = """\
     <script type="module" crossorigin src="/assets/main-abc123.js"></script>
     <link rel="modulepreload" crossorigin href="/assets/SessionsTable-def456.js">
   </head>
-  <body><div id="bn-react-root"></div></body>
+  <body><div id="bn-app-root" data-project-id="1"></div></body>
 </html>
 """
 
 
-class TestExtractBundleTags:
-    def test_rewrites_asset_paths(self, tmp_path: Path) -> None:
-        index = tmp_path / "index.html"
-        index.write_text(_VITE_INDEX_HTML)
-        with patch("bristlenose.server.app._STATIC_DIR", tmp_path):
-            result = _extract_bundle_tags()
-        assert "/static/assets/main-abc123.js" in result
-        assert "/static/assets/SessionsTable-def456.js" in result
-        # Original /assets/ paths should not appear
-        assert 'src="/assets/' not in result
-        assert 'href="/assets/' not in result
-
-    def test_returns_empty_when_no_build(self, tmp_path: Path) -> None:
-        with patch("bristlenose.server.app._STATIC_DIR", tmp_path):
-            assert _extract_bundle_tags() == ""
-
-    def test_preserves_attributes(self, tmp_path: Path) -> None:
-        index = tmp_path / "index.html"
-        index.write_text(_VITE_INDEX_HTML)
-        with patch("bristlenose.server.app._STATIC_DIR", tmp_path):
-            result = _extract_bundle_tags()
-        assert "crossorigin" in result
-        assert 'type="module"' in result
-        assert 'rel="modulepreload"' in result
-
-
-class TestTransformReportHtml:
-    def test_swaps_all_markers(self) -> None:
-        result = _transform_report_html(_REPORT_HTML, project_dir=None)
-        assert 'id="bn-dashboard-root"' in result
-        assert 'id="bn-sessions-table-root"' in result
-        assert 'id="bn-quote-sections-root"' in result
-        assert 'id="bn-quote-themes-root"' in result
-        assert 'id="bn-codebook-root"' in result
-        # Original content should be gone
-        assert "old dashboard" not in result
-        assert "old sections" not in result
-
-    def test_injects_api_base(self) -> None:
-        result = _transform_report_html(_REPORT_HTML, project_dir=None)
-        assert "window.BRISTLENOSE_API_BASE" in result
-
-    def test_preserves_structure(self) -> None:
-        result = _transform_report_html(_REPORT_HTML, project_dir=None)
-        assert "</body>" in result
-        assert "</html>" in result
-
-
-class TestTransformTranscriptHtml:
-    def test_swaps_transcript_marker(self) -> None:
-        result = _transform_transcript_html(
-            _TRANSCRIPT_HTML, session_id="s3", project_dir=None
-        )
-        assert 'id="bn-transcript-page-root"' in result
-        assert 'data-session-id="s3"' in result
-        assert "old transcript" not in result
-
-    def test_injects_api_base(self) -> None:
-        result = _transform_transcript_html(
-            _TRANSCRIPT_HTML, session_id="s1", project_dir=None
-        )
-        assert "window.BRISTLENOSE_API_BASE" in result
-
-
 class TestProdServeReport:
-    """Integration tests for production serve mode with React islands."""
+    """Integration tests for production serve mode — SPA serving."""
 
     @pytest.fixture()
     def prod_client(self, tmp_path: Path) -> TestClient:
-        """Create a test client in production mode with a mock report."""
-        # Set up mock output directory with a report file
+        """Create a test client in production mode with a Vite build."""
         output_dir = tmp_path / "bristlenose-output"
         output_dir.mkdir()
-        report = output_dir / "bristlenose-test-report.html"
-        report.write_text(_REPORT_HTML)
-        (output_dir / "index.html").symlink_to(report.name)
 
         # Set up mock static directory with a built index.html
         static_dir = tmp_path / "static"
@@ -213,30 +129,24 @@ class TestProdServeReport:
             )
         return TestClient(app)
 
-    def test_report_contains_react_mount_points(self, prod_client: TestClient) -> None:
+    def test_report_contains_app_root(self, prod_client: TestClient) -> None:
         resp = prod_client.get("/report/")
         assert resp.status_code == 200
-        html = resp.text
-        assert 'id="bn-dashboard-root"' in html
-        assert 'id="bn-sessions-table-root"' in html
-        assert 'id="bn-quote-sections-root"' in html
-        assert 'id="bn-quote-themes-root"' in html
-        assert 'id="bn-codebook-root"' in html
+        assert 'id="bn-app-root"' in resp.text
 
     def test_report_contains_bundle_script(self, prod_client: TestClient) -> None:
         resp = prod_client.get("/report/")
         assert "/static/assets/main-abc123.js" in resp.text
 
-    def test_report_contains_api_base(self, prod_client: TestClient) -> None:
+    def test_report_contains_theme_css(self, prod_client: TestClient) -> None:
         resp = prod_client.get("/report/")
-        assert "window.BRISTLENOSE_API_BASE" in resp.text
+        assert "bristlenose-theme.css" in resp.text
 
     def test_report_has_no_dev_features(self, prod_client: TestClient) -> None:
         resp = prod_client.get("/report/")
         html = resp.text
         assert "localhost:5173" not in html
         assert "@vite/client" not in html
-        assert "bn-dev-overlay-toggle" not in html
         assert "RefreshRuntime" not in html
 
     def test_report_redirect(self, prod_client: TestClient) -> None:
@@ -244,12 +154,46 @@ class TestProdServeReport:
         assert resp.status_code == 301
         assert resp.headers["location"] == "/report/"
 
+    def test_spa_routes_return_html(self, prod_client: TestClient) -> None:
+        """All non-asset /report/* paths return SPA HTML."""
+        for path in ["/report/quotes", "/report/sessions/s1", "/report/codebook"]:
+            resp = prod_client.get(path)
+            assert resp.status_code == 200
+            assert 'id="bn-app-root"' in resp.text
+
+    def test_output_dir_assets_served(self, prod_client: TestClient) -> None:
+        """Files with extensions in the output dir are served as assets."""
+        # The output dir was created but is empty — expect 404 for missing asset
+        resp = prod_client.get("/report/assets/bristlenose-theme.css")
+        assert resp.status_code == 404
+
+    def test_existing_output_asset_served(self, tmp_path: Path) -> None:
+        """An actual file in the output dir is served via FileResponse."""
+        output_dir = tmp_path / "bristlenose-output"
+        output_dir.mkdir()
+        assets_dir = output_dir / "assets"
+        assets_dir.mkdir()
+        (assets_dir / "bristlenose-theme.css").write_text("body { color: red; }")
+
+        static_dir = tmp_path / "static"
+        static_dir.mkdir()
+        (static_dir / "index.html").write_text(_VITE_INDEX_HTML)
+
+        with patch("bristlenose.server.app._STATIC_DIR", static_dir):
+            app = create_app(
+                project_dir=tmp_path, dev=False, db_url="sqlite://"
+            )
+        client = TestClient(app)
+        resp = client.get("/report/assets/bristlenose-theme.css")
+        assert resp.status_code == 200
+        assert "color: red" in resp.text
+
     def test_no_bundle_falls_back_to_static(self, tmp_path: Path) -> None:
-        """When no React bundle exists, serve vanilla HTML without mount divs."""
+        """When no React bundle exists, serve vanilla HTML from output dir."""
         output_dir = tmp_path / "bristlenose-output"
         output_dir.mkdir()
         report = output_dir / "bristlenose-test-report.html"
-        report.write_text(_REPORT_HTML)
+        report.write_text("<html><body>vanilla report</body></html>")
         (output_dir / "index.html").symlink_to(report.name)
 
         empty_static = tmp_path / "empty-static"
@@ -262,26 +206,24 @@ class TestProdServeReport:
         client = TestClient(app)
         resp = client.get("/report/")
         assert resp.status_code == 200
-        # Should serve vanilla HTML — no React mount points injected
-        assert 'id="bn-dashboard-root"' not in resp.text
-        assert "old dashboard" in resp.text
+        # Should serve vanilla HTML — no React app root injected
+        assert 'id="bn-app-root"' not in resp.text
+        assert "vanilla report" in resp.text
 
 
 class TestProdServeTranscript:
-    """Integration tests for transcript pages in production serve mode."""
+    """Transcript paths now serve SPA HTML (React Router handles routing)."""
 
     @pytest.fixture()
     def prod_client(self, tmp_path: Path) -> TestClient:
-        """Create a test client with a mock transcript page."""
+        """Create a test client with a Vite build and output dir."""
         output_dir = tmp_path / "bristlenose-output"
         output_dir.mkdir()
-        report = output_dir / "bristlenose-test-report.html"
-        report.write_text(_REPORT_HTML)
-        (output_dir / "index.html").symlink_to(report.name)
 
+        # Create a transcript file in the output dir (legacy artifact)
         sessions_dir = output_dir / "sessions"
         sessions_dir.mkdir()
-        (sessions_dir / "transcript_s1.html").write_text(_TRANSCRIPT_HTML)
+        (sessions_dir / "transcript_s1.html").write_text("<html>transcript</html>")
 
         static_dir = tmp_path / "static"
         static_dir.mkdir()
@@ -289,7 +231,6 @@ class TestProdServeTranscript:
         assets_dir = static_dir / "assets"
         assets_dir.mkdir()
         (assets_dir / "main-abc123.js").write_text("// react bundle")
-        (assets_dir / "SessionsTable-def456.js").write_text("// chunk")
 
         with patch("bristlenose.server.app._STATIC_DIR", static_dir):
             app = create_app(
@@ -297,24 +238,61 @@ class TestProdServeTranscript:
             )
         return TestClient(app)
 
-    def test_transcript_contains_react_mount(self, prod_client: TestClient) -> None:
+    def test_transcript_html_served_as_file(self, prod_client: TestClient) -> None:
+        """Transcript HTML files are served from the output dir (file extension)."""
         resp = prod_client.get("/report/sessions/transcript_s1.html")
         assert resp.status_code == 200
-        assert 'id="bn-transcript-page-root"' in resp.text
-        assert 'data-session-id="s1"' in resp.text
+        assert "transcript" in resp.text
 
-    def test_transcript_contains_bundle_script(self, prod_client: TestClient) -> None:
-        resp = prod_client.get("/report/sessions/transcript_s1.html")
-        assert "/static/assets/main-abc123.js" in resp.text
+    def test_session_path_serves_spa(self, prod_client: TestClient) -> None:
+        """Session paths without extension serve SPA HTML for React Router."""
+        resp = prod_client.get("/report/sessions/s1")
+        assert resp.status_code == 200
+        assert 'id="bn-app-root"' in resp.text
 
-    def test_transcript_has_no_dev_features(self, prod_client: TestClient) -> None:
-        resp = prod_client.get("/report/sessions/transcript_s1.html")
-        assert "localhost:5173" not in resp.text
-
-    def test_transcript_404_for_missing(self, prod_client: TestClient) -> None:
+    def test_missing_html_file_returns_404(self, prod_client: TestClient) -> None:
+        """Missing HTML files return 404 (not SPA HTML)."""
         resp = prod_client.get("/report/sessions/transcript_s99.html")
         assert resp.status_code == 404
 
-    def test_transcript_404_for_non_transcript(self, prod_client: TestClient) -> None:
-        resp = prod_client.get("/report/sessions/notvalid.html")
-        assert resp.status_code == 404
+
+class TestDevServeReport:
+    """Integration tests for dev serve mode — Vite HMR scripts."""
+
+    @pytest.fixture()
+    def dev_client(self, tmp_path: Path) -> TestClient:
+        """Create a test client in dev mode with an output dir."""
+        output_dir = tmp_path / "bristlenose-output"
+        output_dir.mkdir()
+
+        app = create_app(project_dir=tmp_path, dev=True, db_url="sqlite://")
+        return TestClient(app)
+
+    def test_dev_report_contains_app_root(self, dev_client: TestClient) -> None:
+        resp = dev_client.get("/report/")
+        assert resp.status_code == 200
+        assert 'id="bn-app-root"' in resp.text
+
+    def test_dev_report_has_vite_scripts(self, dev_client: TestClient) -> None:
+        resp = dev_client.get("/report/")
+        html = resp.text
+        assert "localhost:5173" in html
+        assert "@vite/client" in html
+        assert "RefreshRuntime" in html
+        assert "src/main.tsx" in html
+
+    def test_dev_report_has_theme_css(self, dev_client: TestClient) -> None:
+        resp = dev_client.get("/report/")
+        assert "bristlenose-theme.css" in resp.text
+
+    def test_dev_report_redirect(self, dev_client: TestClient) -> None:
+        resp = dev_client.get("/report", follow_redirects=False)
+        assert resp.status_code == 301
+        assert resp.headers["location"] == "/report/"
+
+    def test_dev_spa_routes_return_html(self, dev_client: TestClient) -> None:
+        """All non-asset /report/* paths return dev HTML."""
+        for path in ["/report/quotes", "/report/sessions/s1", "/report/codebook"]:
+            resp = dev_client.get(path)
+            assert resp.status_code == 200
+            assert 'id="bn-app-root"' in resp.text

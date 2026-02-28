@@ -29,6 +29,7 @@ import { formatTimecode } from "../utils/format";
 import { getTagBg } from "../utils/colours";
 import { highlightText } from "../utils/highlight";
 import { useCropEdit } from "../hooks/useCropEdit";
+import { useFocus, useQuoteFocusState } from "../contexts/FocusContext";
 
 // ── SVG icon for the hide button (eye-slash) ────────────────────────────
 
@@ -167,6 +168,25 @@ export function QuoteCard({
   const [bracketsVisible, setBracketsVisible] = useState(false);
 
   const domId = quote.dom_id;
+
+  // ── Focus/selection state ──────────────────────────────────────────
+  const { isFocused, isSelected } = useQuoteFocusState(domId);
+  const {
+    setFocus,
+    toggleSelection,
+    selectRange,
+    clearSelection,
+    setAnchor,
+    anchorId,
+    registerTagOpener,
+    unregisterTagOpener,
+  } = useFocus();
+
+  // Register tag opener so keyboard shortcut (t) can open tag input.
+  useEffect(() => {
+    registerTagOpener(domId, () => setIsTagInputOpen(true));
+    return () => unregisterTagOpener(domId);
+  }, [domId, registerTagOpener, unregisterTagOpener]);
   const hasModeratorContext = hasModerator && quote.segment_index > 0;
   const textSpanRef = useRef<HTMLSpanElement>(null);
 
@@ -265,6 +285,8 @@ export function QuoteCard({
 
   const handleQuoteTextClick = useCallback(
     (e: React.MouseEvent) => {
+      // Don't enter edit mode when modifier keys are held (focus/selection)
+      if (e.metaKey || e.ctrlKey || e.shiftKey) return;
       if (crop.mode === "idle") {
         crop.enterEditMode();
       } else if (crop.mode === "crop") {
@@ -322,6 +344,49 @@ export function QuoteCard({
     [domId, quote.text, onEditCommit],
   );
 
+  // ── Click-to-focus handler ──────────────────────────────────────────
+
+  const handleCardClick = useCallback(
+    (e: React.MouseEvent) => {
+      // Don't interfere with clicks on interactive elements
+      const target = e.target as HTMLElement;
+      if (target.closest("button, a, input, [contenteditable=\"true\"]")) {
+        return;
+      }
+      // Don't interfere with tag input
+      if (target.closest(".badge-add, .tag-input-wrap")) {
+        return;
+      }
+      // Don't interfere with text selection
+      const sel = window.getSelection();
+      if (sel && sel.toString().length > 0) {
+        return;
+      }
+
+      if (e.metaKey || e.ctrlKey) {
+        // Cmd/Ctrl+Click: toggle selection
+        e.preventDefault();
+        e.stopPropagation();
+        toggleSelection(domId);
+        setAnchor(domId);
+        setFocus(domId, { scroll: false });
+      } else if (e.shiftKey && anchorId) {
+        // Shift+Click: range selection
+        e.preventDefault();
+        e.stopPropagation();
+        selectRange(anchorId, domId);
+        setFocus(domId, { scroll: false });
+      } else {
+        // Plain click: focus + single-select (Finder-like)
+        clearSelection();
+        toggleSelection(domId);
+        setFocus(domId, { scroll: false });
+        setAnchor(domId);
+      }
+    },
+    [domId, anchorId, toggleSelection, selectRange, clearSelection, setFocus, setAnchor],
+  );
+
   // ── Tag handlers ────────────────────────────────────────────────────
 
   const handleTagCommit = useCallback(
@@ -351,7 +416,7 @@ export function QuoteCard({
 
   // ── Derived state ───────────────────────────────────────────────────
 
-  const transcriptHref = `sessions/transcript_${sessionId}.html#t-${Math.floor(quote.start_timecode)}`;
+  const transcriptHref = `/report/sessions/${sessionId}#t-${Math.floor(quote.start_timecode)}`;
   const visibleSentiment =
     quote.sentiment && !deletedBadges.includes(quote.sentiment)
       ? quote.sentiment
@@ -484,8 +549,9 @@ export function QuoteCard({
       id={domId}
       data-timecode={timecodeStr}
       data-participant={quote.participant_id}
-      className={`quote-card${isStarred ? " starred" : ""}${isActive ? " editing" : ""}`}
+      className={`quote-card${isStarred ? " starred" : ""}${isActive ? " editing" : ""}${isFocused ? " bn-focused" : ""}${isSelected ? " bn-selected" : ""}`}
       onKeyDown={handleCardKeyDown}
+      onClick={handleCardClick}
     >
       {contextAbove && contextAbove.length > 0 && contextAbove.map((seg, i) => (
         <ContextSegment

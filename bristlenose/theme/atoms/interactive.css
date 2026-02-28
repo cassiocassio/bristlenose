@@ -21,11 +21,22 @@
     position: relative;
 }
 
+/* Quote-card specific: beat blockquote.quote-card (0,1,1) with (0,2,1) */
+blockquote.quote-card.bn-focused {
+    background: var(--bn-colour-bg);
+}
+
 /* ---------------------------------------------------------------------
    Selected state — multi-select for bulk actions
    --------------------------------------------------------------------- */
 
 .bn-selected {
+    background: var(--bn-selection-bg);
+    border-left-color: var(--bn-selection-border);
+}
+
+/* Quote-card specific: beat blockquote.quote-card (0,1,1) with (0,2,1) */
+blockquote.quote-card.bn-selected {
     background: var(--bn-selection-bg);
     border-left-color: var(--bn-selection-border);
 }
@@ -38,6 +49,10 @@
 .bn-focused.bn-selected {
     background: var(--bn-selection-bg);
     box-shadow: var(--bn-focus-shadow);
+}
+
+blockquote.quote-card.bn-focused.bn-selected {
+    background: var(--bn-selection-bg);
 }
 
 /* ---------------------------------------------------------------------

@@ -314,6 +314,7 @@ def render_html(
     ))
 
     # --- Global Navigation ---
+    _w("<!-- bn-app -->")
     _w(_jinja_env.get_template("global_nav.html").render())
 
     # --- Project tab ---
@@ -615,6 +616,7 @@ def render_html(
     _w("</div>")  # .bn-about
     _w("</div>")  # .bn-tab-panel[about]
     _w("<!-- /bn-about -->")
+    _w("<!-- /bn-app -->")
 
     # --- Close ---
     _w("</article>")
@@ -667,6 +669,10 @@ def render_html(
 
     # Player popup URL.
     _w("var BRISTLENOSE_PLAYER_URL = 'assets/bristlenose-player.html';")
+
+    # Expose globals for React (PlayerContext reads from window.*).
+    _w("window.BRISTLENOSE_VIDEO_MAP = BRISTLENOSE_VIDEO_MAP;")
+    _w("window.BRISTLENOSE_PLAYER_URL = BRISTLENOSE_PLAYER_URL;")
 
     _w(_get_report_js())
     _w("})();")
@@ -1715,6 +1721,10 @@ def _render_transcript_page(
         _w(f"var BRISTLENOSE_QUOTE_MAP = {json.dumps(qmap)};")
     else:
         _w("var BRISTLENOSE_QUOTE_MAP = {};")
+
+    # Expose globals for React (PlayerContext reads from window.*).
+    _w("window.BRISTLENOSE_VIDEO_MAP = BRISTLENOSE_VIDEO_MAP;")
+    _w("window.BRISTLENOSE_PLAYER_URL = BRISTLENOSE_PLAYER_URL;")
 
     _w(_get_transcript_js())
     _w("initPlayer();")

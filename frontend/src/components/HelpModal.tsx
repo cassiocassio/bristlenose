@@ -95,11 +95,11 @@ export function HelpModal({ open, onClose }: HelpModalProps) {
 
   return createPortal(
     <div
-      className="help-overlay"
+      className="bn-overlay visible help-overlay"
       onClick={handleOverlayClick}
       data-testid="bn-help-overlay"
     >
-      <div className="help-modal" data-testid="bn-help-modal">
+      <div className="bn-modal help-modal" data-testid="bn-help-modal">
         <h2>Keyboard Shortcuts</h2>
         <div className="help-columns">
           {SECTIONS.map((section) => (

@@ -124,8 +124,14 @@ class TestTranscriptSegments:
         data = client.get("/api/projects/1/transcripts/s1").json()
         seg = data["segments"][0]
         for field in ("speaker_code", "start_time", "end_time", "text",
-                      "is_moderator", "is_quoted", "quote_ids"):
+                      "is_moderator", "is_quoted", "quote_ids", "words"):
             assert field in seg, f"Missing field: {field}"
+
+    def test_words_null_for_vtt_source(self, client: TestClient) -> None:
+        """VTT-sourced segments have no word-level timing data."""
+        data = client.get("/api/projects/1/transcripts/s1").json()
+        for seg in data["segments"]:
+            assert seg["words"] is None
 
 
 # ---------------------------------------------------------------------------

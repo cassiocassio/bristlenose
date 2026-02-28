@@ -222,6 +222,7 @@ class TranscriptSegment(Base):
     text: Mapped[str] = mapped_column(Text)
     source: Mapped[str] = mapped_column(String(50), default="")  # whisper, srt, vtt, docx
     segment_index: Mapped[int] = mapped_column(Integer, default=-1)
+    words_json: Mapped[str | None] = mapped_column(Text, nullable=True, default=None)
 
     session: Mapped[Session] = relationship(back_populates="transcript_segments")
 

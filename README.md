@@ -386,6 +386,16 @@ Edit `bristlenose/__init__.py` (the single source of truth for version), commit,
 
 ## Changelog
 
+**0.11.0** — _28 Feb 2026_
+
+- Full React SPA in serve mode — React Router replaces vanilla JS tab navigation, all 26 vanilla JS modules retired from serve path
+- Player integration — `PlayerContext` manages popout video player lifecycle, glow sync, and progress bar from React
+- Keyboard shortcuts — j/k navigation, multi-select, bulk star/hide/tag, `?` help modal, Escape cascade
+- React app shell — `Header`, `Footer`, `HelpModal` components; serve mode serves Vite-built SPA directly
+- Video player links on sessions page and dashboard open the popout player
+- Importer finds source files in subdirectories (mirrors ingest scan pattern)
+- Speaker display names in sessions grid use normal font size
+
 **0.10.3** — _21 Feb 2026_
 
 - Split speaker badges — two-tone code+name pills across all surfaces, with "Code and name / Code only" settings toggle

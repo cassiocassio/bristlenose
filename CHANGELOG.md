@@ -2,6 +2,18 @@
 
 All notable changes to Bristlenose are documented here. See also the [README](README.md) for the latest releases.
 
+**0.11.0** — _28 Feb 2026_
+
+- **Full React SPA in serve mode** — React Router (`react-router-dom` v7) replaces vanilla JS hash-based tab navigation. Single `RouterProvider` root with pathname routes (`/report/`, `/report/quotes/`, `/report/sessions/:id`, etc.). `AppLayout` wraps `NavBar` + `Outlet`. 8 page wrappers compose existing island components. Backward-compat shims (`window.switchToTab`, `window.navigateToSession`) delegate to React Router for any remaining callers
+- **Player integration** — `PlayerContext` manages popout video player lifecycle, `seekTo(pid, seconds)`, glow sync via DOM class manipulation (not React state). `buildGlowIndex` keys by session ID from URL pathname. Progress bar via `--bn-segment-progress` CSS custom property. `player.js` bails out in SPA mode
+- **Keyboard shortcuts** — `FocusContext` + `useKeyboardShortcuts` hook. j/k navigation, multi-select (Shift+j/k, x), bulk star/hide/tag, `?` help modal, `/` focus search, Escape cascade (modal → search → selection → focus). Data-derived visible quote IDs replace DOM queries
+- **React app shell** — `Header` (logo, project name, subtitle), `Footer` (version, `?` for Help), `HelpModal` (keyboard shortcuts overlay). Serve mode serves Vite-built SPA directly — no more `_transform_report_html()` marker substitution. Route extraction: `app.py` refactored to route modules
+- **Vanilla JS retired from serve path** — `_strip_vanilla_js()` removes all 26 modules from the IIFE while keeping `window.*` globals (`BRISTLENOSE_VIDEO_MAP`, `BRISTLENOSE_PLAYER_URL`, `BRISTLENOSE_ANALYSIS`). Static render path unchanged
+- Video player links on sessions page and dashboard open the popout player
+- Importer finds source files in one-level subdirectories (mirrors ingest scan pattern), fixing video 404s when files are in `interviews/`
+- Speaker display names in sessions grid use normal font size (matching date/duration columns)
+- Word-level timing data plumbed through pipeline to transcript API (`words` field on segments)
+
 **0.10.3** — _21 Feb 2026_
 
 - `bristlenose status` command — read-only project status from the manifest, shows stage completion with session counts, intermediate file validation, and `-v` per-session detail

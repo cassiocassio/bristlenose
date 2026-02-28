@@ -698,7 +698,7 @@ class Pipeline:
             mark_stage_running(manifest, STAGE_MERGE_TRANSCRIPT)
             status.update("[dim]Merging transcripts...[/dim]")
             t0 = time.perf_counter()
-            transcripts = merge_transcripts(sessions, session_segments)
+            transcripts = merge_transcripts(sessions, session_segments, input_dir)
             raw_dir = output_dir / "transcripts-raw"
             write_raw_transcripts(transcripts, raw_dir)
             write_raw_transcripts_md(transcripts, raw_dir)
@@ -1193,7 +1193,7 @@ class Pipeline:
             # ── Merge and write transcripts ──
             status.update("[dim]Merging transcripts...[/dim]")
             t0 = time.perf_counter()
-            transcripts = merge_transcripts(sessions, session_segments)
+            transcripts = merge_transcripts(sessions, session_segments, input_dir)
             raw_dir = output_dir / "transcripts-raw"
             write_raw_transcripts(transcripts, raw_dir)
             write_raw_transcripts_md(transcripts, raw_dir)

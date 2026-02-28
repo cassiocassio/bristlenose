@@ -326,10 +326,11 @@ def _import_source_files(
         if existing:
             continue
 
-        # Try to find the actual file.  The transcript header stores only the
-        # filename (no subdirectory), but the pipeline's ingest stage scans one
-        # level of subdirectories (e.g. interviews/).  Mirror that: check
-        # project_dir first, then one-level subdirectories.
+        # Try to find the actual file.  New transcripts store a relative path
+        # including subdirectory (e.g. "interviews/show and tell 40.mov"),
+        # so project_dir / source_name resolves directly.  Old transcripts
+        # stored only the filename — the subdirectory scan fallback handles
+        # those.
         source_path = project_dir / source_name
         if not source_path.exists():
             for subdir in project_dir.iterdir():

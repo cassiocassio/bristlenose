@@ -35,7 +35,7 @@
     --bn-radius-pill: 999px;
     --bn-transition-fast: 0.15s ease;
     --bn-transition-normal: 0.2s ease;
-    --bn-toolbar-height: 2.5rem;
+    --bn-toolbar-height: 3rem;   /* match tokens.css — runtime JS overrides */
     --bn-sidebar-width: 280px;
     --bn-sidebar-min: 200px;
     --bn-sidebar-max: 480px;
@@ -258,11 +258,11 @@ body {
     display: block;
     padding: 0.2rem 0.35rem;
     font-size: 0.82rem;
-    font-weight: 370;
+    font-weight: var(--bn-weight-light);
     color: var(--bn-colour-text);
     text-decoration: none;
     border-radius: var(--bn-radius-sm);
-    transition: background 0.15s, color 0.15s;
+    transition: background var(--bn-transition-fast), color var(--bn-transition-fast);
     cursor: pointer;
 }
 
@@ -851,7 +851,7 @@ body {
     color: var(--bn-colour-text);
     text-decoration: none;
     cursor: pointer;
-    transition: color 0.15s;
+    transition: color var(--bn-transition-fast);
 }
 
 .toc-dropdown-link:hover {
@@ -1065,7 +1065,7 @@ body {
     height: 0.6rem;
     border-radius: 0 var(--bn-radius-sm) var(--bn-radius-sm) 0;
     min-width: 2px;
-    transition: width 0.2s ease;
+    transition: width var(--bn-transition-normal);
 }
 
 .tag-sidebar .tag-count {

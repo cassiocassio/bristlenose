@@ -8,7 +8,8 @@
     --bn-font-mono: "SF Mono", "Fira Code", "Consolas", monospace;
 
     /* Font weight scale — tuned for variable fonts (Inter, SF Pro, Segoe UI Variable).
-       On static fonts (Win 10 Segoe UI), 420→400 and 490→400 — acceptable degradation. */
+       On static fonts (Win 10 Segoe UI), 370/420→400 and 490→400 — acceptable degradation. */
+    --bn-weight-light: 370;      /* subordinate text (sidebar nav links, secondary lists) */
     --bn-weight-normal: 420;     /* body text, descriptions, quote content */
     --bn-weight-emphasis: 490;   /* headings, labels, section titles */
     --bn-weight-starred: 520;    /* starred quotes — pop above emphasis, below strong */
@@ -169,6 +170,12 @@
     /* Layout */
     --bn-max-width: 52rem;
     --bn-toolbar-height: 3rem;
+
+    /* Sidebar layout (serve-mode dual-sidebar with resizable panels) */
+    --bn-sidebar-width: 280px;   /* default panel width */
+    --bn-sidebar-min: 200px;     /* minimum resize bound */
+    --bn-sidebar-max: 480px;     /* maximum resize bound */
+    --bn-rail-width: 36px;       /* collapsed icon rail width */
 
     /* Spacing scale */
     --bn-space-xs: 0.15rem;

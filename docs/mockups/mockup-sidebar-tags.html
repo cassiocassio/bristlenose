@@ -1,0 +1,3569 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sidebar Mockup — Bristlenose</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+/* ── Design tokens ────────────────────────────────────────────── */
+
+:root {
+    --bn-font-body: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
+    --bn-font-mono: "SF Mono", "Fira Code", "Consolas", monospace;
+    --bn-weight-normal: 420;
+    --bn-weight-emphasis: 490;
+    --bn-weight-strong: 700;
+    --bn-colour-bg: #ffffff;
+    --bn-colour-text: #1a1a1a;
+    --bn-colour-muted: #6b7280;
+    --bn-colour-border: #e5e7eb;
+    --bn-colour-accent: #2563eb;
+    --bn-colour-hover: #e8f0fe;
+    --bn-colour-quote-bg: #f9fafb;
+    --bn-colour-badge-bg: #f3f4f6;
+    --bn-colour-badge-text: #374151;
+    --bn-colour-border-hover: #d1d5db;
+    --bn-colour-shadow: rgba(0, 0, 0, 0.1);
+    --bn-space-xs: 0.15rem;
+    --bn-space-sm: 0.35rem;
+    --bn-space-md: 0.75rem;
+    --bn-space-lg: 1.5rem;
+    --bn-radius-sm: 3px;
+    --bn-radius-md: 6px;
+    --bn-radius-pill: 999px;
+    --bn-transition-fast: 0.15s ease;
+    --bn-transition-normal: 0.2s ease;
+    --bn-toolbar-height: 2.5rem;
+    --bn-sidebar-width: 280px;
+    --bn-sidebar-min: 200px;
+    --bn-sidebar-max: 480px;
+    --bn-rail-width: 36px;
+    --bn-group-ux:    oklch(97% 0.015 250);
+    --bn-group-emo:   oklch(97% 0.015 10);
+    --bn-group-task:  oklch(97% 0.015 155);
+    --bn-group-trust: oklch(97% 0.015 300);
+    --bn-group-opp:   oklch(97% 0.015 75);
+    --bn-sentiment-frustration: #ea580c;
+    --bn-sentiment-frustration-bg: #fff7ed;
+    --bn-sentiment-satisfaction: #16a34a;
+    --bn-sentiment-satisfaction-bg: #f0fdf4;
+    --bn-sentiment-surprise: #d97706;
+    --bn-sentiment-surprise-bg: #fffbeb;
+}
+
+[data-theme="dark"] {
+    --bn-colour-bg: #111111;
+    --bn-colour-text: #e5e7eb;
+    --bn-colour-muted: #9ca3af;
+    --bn-colour-border: #2d2d2d;
+    --bn-colour-accent: #60a5fa;
+    --bn-colour-hover: #1e293b;
+    --bn-colour-quote-bg: #1a1a1a;
+    --bn-colour-badge-bg: #252525;
+    --bn-colour-badge-text: #d1d5db;
+    --bn-colour-border-hover: #4b5563;
+    --bn-colour-shadow: rgba(0, 0, 0, 0.4);
+    --bn-group-ux:    oklch(22% 0.025 250);
+    --bn-group-emo:   oklch(22% 0.025 10);
+    --bn-group-task:  oklch(22% 0.020 155);
+    --bn-group-trust: oklch(22% 0.025 300);
+    --bn-group-opp:   oklch(22% 0.022 75);
+    --bn-sentiment-frustration: #fb923c;
+    --bn-sentiment-frustration-bg: #2d1d0e;
+    --bn-sentiment-satisfaction: #4ade80;
+    --bn-sentiment-satisfaction-bg: #0f2918;
+    --bn-sentiment-surprise: #fbbf24;
+    --bn-sentiment-surprise-bg: #2d2305;
+}
+
+body {
+    font-family: var(--bn-font-body);
+    font-weight: var(--bn-weight-normal);
+    color: var(--bn-colour-text);
+    background: var(--bn-colour-bg);
+    line-height: 1.5;
+    overflow-x: hidden;
+}
+
+/* ── Mockup controls ─────────────────────────────────────────── */
+
+.mockup-controls {
+    position: fixed;
+    top: 12px;
+    right: 50px;
+    z-index: 300;
+    display: flex;
+    gap: 6px;
+    align-items: center;
+}
+
+.mockup-controls button {
+    padding: 3px 10px;
+    border-radius: var(--bn-radius-pill);
+    border: 1px solid var(--bn-colour-border);
+    background: var(--bn-colour-bg);
+    color: var(--bn-colour-muted);
+    font-size: 0.68rem;
+    cursor: pointer;
+    font-family: var(--bn-font-body);
+    white-space: nowrap;
+}
+
+.mockup-controls .shortcut-hint {
+    font-size: 0.62rem;
+    color: var(--bn-colour-muted);
+    padding: 2px 6px;
+    border: none;
+    background: none;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   LAYOUT — single 5-column grid
+   [toc-rail | toc-sidebar | center | tag-sidebar | tag-rail]
+   ═══════════════════════════════════════════════════════════════ */
+
+.layout {
+    display: grid;
+    grid-template-columns:
+        var(--bn-rail-width)                          /* 1: toc rail    */
+        0px                                           /* 2: toc sidebar */
+        1fr                                           /* 3: center      */
+        0px                                           /* 4: tag sidebar */
+        var(--bn-rail-width);                         /* 5: tag rail    */
+    min-height: 100vh;
+}
+
+/* When TOC sidebar is open: hide rail (0), show sidebar, keep center */
+.layout.toc-open {
+    grid-template-columns:
+        0px
+        var(--toc-width, var(--bn-sidebar-width))
+        1fr
+        0px
+        var(--bn-rail-width);
+}
+
+/* When tag sidebar is open: hide tag rail (0), show tag sidebar */
+.layout.tags-open {
+    grid-template-columns:
+        var(--bn-rail-width)
+        0px
+        1fr
+        var(--tags-width, var(--bn-sidebar-width))
+        0px;
+}
+
+/* Both open */
+.layout.toc-open.tags-open {
+    grid-template-columns:
+        0px
+        var(--toc-width, var(--bn-sidebar-width))
+        1fr
+        var(--tags-width, var(--bn-sidebar-width))
+        0px;
+}
+
+.layout.animating {
+    transition: grid-template-columns 0.25s ease;
+}
+
+/* ── Column 1: Left icon rail ──────────────────────────────── */
+
+.toc-rail {
+    grid-column: 1;
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding-top: 0.75rem;
+    border-right: 1px solid var(--bn-colour-border);
+    background: var(--bn-colour-bg);
+    z-index: 50;
+    overflow: hidden;
+}
+
+.layout.toc-open .toc-rail { display: none; }
+
+.rail-btn {
+    background: none;
+    border: none;
+    padding: 6px;
+    color: var(--bn-colour-muted);
+    cursor: pointer;
+    border-radius: var(--bn-radius-sm);
+    transition: background var(--bn-transition-fast), color var(--bn-transition-fast);
+    line-height: 1;
+}
+
+.rail-btn:hover {
+    background: var(--bn-colour-hover);
+    color: var(--bn-colour-accent);
+}
+
+/* ── Column 2: Left sidebar (TOC) ─────────────────────────── */
+
+.toc-sidebar {
+    grid-column: 2;
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    overflow-y: auto;
+    overflow-x: hidden;
+    background: var(--bn-colour-bg);
+    border-right: 1px solid var(--bn-colour-border);
+    visibility: hidden;
+    opacity: 0;
+}
+
+.layout.toc-open .toc-sidebar {
+    visibility: visible;
+    opacity: 1;
+}
+
+.toc-sidebar-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 0.85rem 0.25rem;
+    flex-shrink: 0;
+}
+
+.toc-sidebar-header .sidebar-title {
+    font-size: 0.95rem;
+    font-weight: var(--bn-weight-emphasis);
+    flex: 1;
+}
+
+.toc-sidebar-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 0 0.85rem 1rem;
+}
+
+.toc-heading {
+    font-size: 0.85rem;
+    font-weight: var(--bn-weight-emphasis);
+    margin: 1rem 0 0.35rem;
+    padding-bottom: 0.25rem;
+    border-bottom: 1px solid var(--bn-colour-border);
+}
+
+.toc-heading:first-child { margin-top: 0; }
+
+.toc-link {
+    display: block;
+    padding: 0.2rem 0.35rem;
+    font-size: 0.82rem;
+    font-weight: 370;
+    color: var(--bn-colour-text);
+    text-decoration: none;
+    border-radius: var(--bn-radius-sm);
+    transition: background 0.15s, color 0.15s;
+    cursor: pointer;
+}
+
+.toc-link:hover {
+    color: var(--bn-colour-accent);
+    text-decoration: underline;
+    text-underline-offset: 0.25em;
+    text-decoration-color: var(--bn-colour-accent);
+}
+
+.toc-link.active {
+    font-weight: var(--bn-weight-emphasis);
+    color: var(--bn-colour-accent);
+    background: var(--bn-colour-hover);
+}
+
+/* ── Column 3: Center (header + tabs + toolbar + quotes) ──── */
+
+.center {
+    grid-column: 3;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+/* ── Column 4: Right sidebar (Tags) ───────────────────────── */
+
+.tag-sidebar {
+    grid-column: 4;
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    overflow-y: auto;
+    overflow-x: hidden;
+    border-left: 1px solid var(--bn-colour-border);
+    display: flex;
+    flex-direction: column;
+    visibility: hidden;
+    opacity: 0;
+}
+
+.layout.tags-open .tag-sidebar {
+    visibility: visible;
+    opacity: 1;
+}
+
+.tag-sidebar-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 0.85rem 0;
+    flex-shrink: 0;
+}
+
+.tag-sidebar-header .sidebar-title {
+    font-size: 0.95rem;
+    font-weight: var(--bn-weight-emphasis);
+}
+
+.sidebar-close {
+    background: none;
+    border: none;
+    font-size: 1.2rem;
+    color: var(--bn-colour-muted);
+    cursor: pointer;
+    padding: 0 0.15rem;
+    line-height: 1;
+    margin-left: auto;
+    transition: color var(--bn-transition-fast);
+}
+
+.sidebar-close:hover { color: var(--bn-colour-text); }
+
+.tag-sidebar-subtitle {
+    font-size: 0.72rem;
+    color: var(--bn-colour-muted);
+    padding: 0 0.85rem 0.25rem;
+}
+
+.tag-sidebar-actions {
+    display: flex;
+    gap: 0.5rem;
+    padding: 0.15rem 0.85rem 0.5rem;
+    border-bottom: 1px solid var(--bn-colour-border);
+    flex-shrink: 0;
+}
+
+.tag-sidebar-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 0.25rem 0;
+}
+
+/* 2-column masonry layout: CSS columns pack group cards tightly with no
+   row-based gaps. Items flow down column 1, then column 2.
+   break-inside: avoid keeps each group card as an unbroken unit. */
+.tag-sidebar.two-col .codebook-body {
+    columns: 2;
+    column-gap: 0.35rem;
+}
+
+/* Each group card must not split across columns */
+.tag-sidebar.two-col .tag-filter-group {
+    break-inside: avoid;
+    margin: 0 0 0.35rem 0;  /* bottom margin replaces grid gap */
+}
+
+/* ── Tag search box ─────────────────────────────────────────── */
+
+.tag-search-container {
+    padding: 0.25rem 0.85rem 0.35rem;
+    flex-shrink: 0;
+}
+
+.tag-search-input {
+    width: 100%;
+    padding: 0.35rem 0.55rem;
+    border: 1px solid var(--bn-colour-border);
+    border-radius: var(--bn-radius-md);
+    font-family: var(--bn-font-body);
+    font-size: 0.82rem;
+    color: var(--bn-colour-text);
+    background: var(--bn-colour-bg);
+    outline: none;
+    transition: border-color var(--bn-transition-fast);
+}
+
+.tag-search-input:focus {
+    border-color: var(--bn-colour-accent);
+}
+
+.tag-search-input::placeholder {
+    color: var(--bn-colour-muted);
+}
+
+/* ── Codebook framework disclosure ──────────────────────────── */
+
+.codebook-framework {
+    border-bottom: 1px solid var(--bn-colour-border);
+    margin-bottom: 0;
+}
+
+.codebook-framework:last-child {
+    border-bottom: none;
+}
+
+.codebook-framework > summary {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+    padding: 0.6rem 0.85rem;
+    cursor: pointer;
+    list-style: none;
+    user-select: none;
+    transition: background var(--bn-transition-fast);
+}
+
+.codebook-framework > summary::-webkit-details-marker { display: none; }
+.codebook-framework > summary::marker { display: none; content: ""; }
+
+.codebook-framework > summary:hover {
+    background: var(--bn-colour-quote-bg);
+}
+
+.codebook-disclosure {
+    flex-shrink: 0;
+    width: 0.85rem;
+    height: 0.85rem;
+    margin-top: 0.2rem;
+    color: var(--bn-colour-accent);
+    transition: transform var(--bn-transition-fast);
+}
+
+.codebook-framework[open] > summary .codebook-disclosure {
+    transform: rotate(90deg);
+}
+
+.codebook-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.codebook-title {
+    font-size: 0.88rem;
+    font-weight: var(--bn-weight-emphasis);
+    line-height: 1.3;
+}
+
+.codebook-author {
+    font-size: 0.72rem;
+    color: var(--bn-colour-muted);
+    line-height: 1.3;
+}
+
+/* Framework-level eye — hidden by default, visible on framework summary hover */
+.codebook-eye {
+    flex-shrink: 0;
+    background: none;
+    border: none;
+    padding: 2px;
+    color: var(--bn-colour-border-hover);
+    cursor: pointer;
+    transition: color var(--bn-transition-fast), opacity var(--bn-transition-fast);
+    margin-top: 0.1rem;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.codebook-framework > summary:hover .codebook-eye {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.codebook-eye:hover {
+    color: var(--bn-colour-muted);
+}
+
+/* When framework is hidden, eye is always visible (closed-eye affordance) */
+.codebook-framework.eye-hidden > summary .codebook-eye {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.codebook-body {
+    padding: 0 0 0.25rem;
+}
+
+/* ── Eye-toggle interaction design ─────────────────────────────
+   Two levels of eye toggle — visual declutter, NOT data filtering.
+
+   1. GROUP EYE (on each code group: "Strategy", "Feedback", etc.)
+      Open state (default):
+        – Tags visible, subtitle visible, everything expanded.
+        – Eye icon HIDDEN by default.
+        – Hover anywhere over the group → open-eye fades in (top-right).
+        – Mouse leaves → eye disappears.
+        – Click eye → closes the group.
+      Closed state:
+        – Group name shown in GREY text, no subtitle, tags collapsed.
+        – Closed-eye icon ALWAYS VISIBLE (permanent affordance).
+        – Click closed eye → reopens the group.
+
+   2. FRAMEWORK EYE (on codebook headers: "Norman", "Garrett", "UXR")
+      Same open/closed visual pattern but acts as BULK TOGGLE:
+        – Click → hides or shows ALL groups within that framework.
+        – All groups hidden → framework eye shows closed.
+        – Any groups visible → framework eye shows open.
+
+   3. EFFECT ON MAIN QUOTES AREA
+      Quotes with hidden-eye tags STILL SHOW — this is a visual
+      cleanliness tool for the sidebar, not a data filter.
+      The checkboxes are the data filter. Eyes just say "tidy these
+      tags away so I can focus on the ones I'm working with."
+   ────────────────────────────────────────────────────────────── */
+
+/* ── Group header with subtitle ─────────────────────────────── */
+
+.tag-filter-group-header-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.35rem;
+    padding: 0.35rem 0.5rem 0.1rem;
+}
+
+.tag-filter-group-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.tag-filter-group-name {
+    font-size: 0.82rem;
+    font-weight: var(--bn-weight-emphasis);
+}
+
+.tag-filter-group-subtitle {
+    font-size: 0.68rem;
+    color: var(--bn-colour-muted);
+    line-height: 1.3;
+}
+
+/* Group-level eye — hidden by default, visible on group hover */
+.group-eye {
+    flex-shrink: 0;
+    background: none;
+    border: none;
+    padding: 2px;
+    color: var(--bn-colour-border-hover);
+    cursor: pointer;
+    transition: color var(--bn-transition-fast), opacity var(--bn-transition-fast);
+    margin-top: 0.05rem;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.tag-filter-group:hover .group-eye {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.group-eye:hover {
+    color: var(--bn-colour-muted);
+}
+
+/* ── Hidden group state (eye closed) ─────────────────────────── */
+/* Group name goes grey, subtitle + tags + total hidden,
+   closed-eye icon always visible as affordance to reopen. */
+.tag-filter-group.eye-hidden .tag-filter-group-name {
+    color: var(--bn-colour-muted);
+}
+
+.tag-filter-group.eye-hidden .tag-filter-group-subtitle,
+.tag-filter-group.eye-hidden .tag-filter-group-tags {
+    display: none;
+}
+
+.tag-filter-group.eye-hidden .group-eye {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+/* ── Hidden framework state (all groups hidden) ───────────────── */
+.codebook-framework.eye-hidden .codebook-title,
+.codebook-framework.eye-hidden .codebook-author {
+    color: var(--bn-colour-muted);
+}
+
+.codebook-framework.eye-hidden .codebook-body {
+    /* Groups still render but each gets .eye-hidden individually */
+}
+
+.tag-filter-group-tags {
+    padding: 0;
+}
+
+/* ── Column 5: Right icon rail ─────────────────────────────── */
+
+.tag-rail {
+    grid-column: 5;
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding-top: 0.75rem;
+    border-left: 1px solid var(--bn-colour-border);
+    background: var(--bn-colour-bg);
+    overflow: hidden;
+}
+
+.layout.tags-open .tag-rail { display: none; }
+
+/* ── Drag handles (on sidebar edges) ─────────────────────────── */
+
+.drag-handle {
+    position: absolute;
+    top: 0;
+    width: 6px;
+    height: 100%;
+    cursor: col-resize;
+    z-index: 120;
+    background: transparent;
+}
+
+.drag-handle:hover,
+.drag-handle.active {
+    background: var(--bn-colour-accent);
+    opacity: 0.3;
+}
+
+.drag-handle::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 2px;
+    height: 24px;
+    border-radius: 1px;
+    background: var(--bn-colour-muted);
+    opacity: 0;
+    transition: opacity var(--bn-transition-fast);
+}
+
+.drag-handle:hover::after,
+.drag-handle.active::after {
+    opacity: 0.6;
+}
+
+.toc-drag-handle { right: -3px; }
+.tag-drag-handle { left: -3px; }
+
+/* Rail edge drag handles (drag-to-open from closed state) */
+.toc-rail-drag { right: -3px; }
+.tag-rail-drag  { left: -3px; }
+
+/* ── Header ──────────────────────────────────────────────────── */
+
+.report-header {
+    padding: 1.5rem 2rem 0;
+    text-align: right;
+}
+
+.project-name {
+    font-size: 1.3rem;
+    font-weight: var(--bn-weight-emphasis);
+}
+
+.project-meta {
+    font-size: 0.78rem;
+    color: var(--bn-colour-muted);
+    margin-top: 0.15rem;
+}
+
+.tab-bar {
+    display: flex;
+    gap: 0;
+    margin-top: 1rem;
+    border-bottom: 2px solid var(--bn-colour-border);
+    padding: 0 2rem;
+}
+
+.tab {
+    background: none;
+    border: none;
+    padding: 0.5rem 1rem;
+    font-family: var(--bn-font-body);
+    font-size: 0.88rem;
+    font-weight: var(--bn-weight-normal);
+    color: var(--bn-colour-muted);
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -2px;
+    transition: color var(--bn-transition-fast);
+}
+
+.tab:hover { color: var(--bn-colour-text); }
+
+.tab.active {
+    color: var(--bn-colour-accent);
+    border-bottom-color: var(--bn-colour-accent);
+    font-weight: var(--bn-weight-emphasis);
+}
+
+/* ── Toolbar ─────────────────────────────────────────────────── */
+
+.toolbar {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    display: flex;
+    align-items: baseline;
+    gap: 0.75rem;
+    padding: 0.35rem 2rem;
+    background: var(--bn-colour-bg);
+    flex-wrap: wrap;
+}
+
+.toolbar-left {
+    display: flex;
+    align-items: baseline;
+    gap: 0.75rem;
+    margin-right: auto;
+}
+
+/* ── Toolbar button ──────────────────────────────────────────── */
+
+.toolbar-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--bn-space-sm);
+    background: var(--bn-colour-bg);
+    border: 1px solid var(--bn-colour-border);
+    border-radius: var(--bn-radius-md);
+    padding: 0.4rem 0.85rem;
+    font-family: var(--bn-font-body);
+    font-size: 0.82rem;
+    color: var(--bn-colour-text);
+    cursor: pointer;
+    transition: background var(--bn-transition-fast), border-color var(--bn-transition-fast);
+    white-space: nowrap;
+    position: relative;
+}
+
+.toolbar-btn:hover {
+    background: var(--bn-colour-quote-bg);
+    border-color: var(--bn-colour-border-hover);
+}
+
+.toolbar-btn .toolbar-icon-svg {
+    color: var(--bn-colour-muted);
+    vertical-align: -0.15em;
+    flex-shrink: 0;
+}
+
+.toolbar-btn .toolbar-arrow {
+    color: var(--bn-colour-muted);
+    vertical-align: -0.05em;
+    flex-shrink: 0;
+    margin-left: -0.1rem;
+}
+
+.toolbar-btn.hidden { display: none; }
+
+/* Responsive: hide button labels when space is tight */
+.toolbar-btn-label {
+    transition: opacity var(--bn-transition-fast);
+}
+
+@media (max-width: 900px) {
+    .toolbar-btn-label { display: none; }
+}
+
+/* Hide labels when TOC sidebar is open (center column narrows) */
+.layout.toc-open .toolbar-btn-label { display: none; }
+
+/* ── Search input ────────────────────────────────────────────── */
+
+.search-container {
+    display: flex;
+    align-items: center;
+    gap: var(--bn-space-sm);
+}
+
+.search-icon { color: var(--bn-colour-muted); flex-shrink: 0; }
+
+.search-input {
+    border: none;
+    background: none;
+    font-family: var(--bn-font-body);
+    font-size: 0.85rem;
+    color: var(--bn-colour-text);
+    outline: none;
+    width: 10rem;
+    padding: 0.2rem 0;
+}
+
+.search-input::placeholder { color: var(--bn-colour-muted); }
+
+/* ── Dropdown menus ──────────────────────────────────────────── */
+
+.toolbar-dropdown { position: relative; }
+
+.dropdown-menu {
+    display: none;
+    position: absolute;
+    top: 100%;
+    margin: 0.25rem 0 0;
+    padding: 0.4rem 0;
+    background: var(--bn-colour-bg);
+    border: 1px solid var(--bn-colour-border);
+    border-radius: var(--bn-radius-md);
+    box-shadow: 0 4px 12px var(--bn-colour-shadow);
+    z-index: 200;
+}
+
+.dropdown-menu.open { display: block; }
+
+/* TOC dropdown */
+.toc-dropdown-menu {
+    left: 0;
+    min-width: 18rem;
+    max-height: 28rem;
+    overflow-y: auto;
+    padding: 0.5rem 0;
+}
+
+.toc-dropdown-actions {
+    display: flex;
+    justify-content: flex-end;
+    padding: 0 0.85rem 0.4rem;
+}
+
+.toc-dropdown-heading {
+    font-size: 0.82rem;
+    font-weight: var(--bn-weight-emphasis);
+    padding: 0.5rem 0.85rem 0.2rem;
+    border-bottom: 1px solid var(--bn-colour-border);
+    margin-bottom: 0.15rem;
+}
+
+.toc-dropdown-link {
+    display: block;
+    padding: 0.25rem 0.85rem;
+    font-size: 0.82rem;
+    color: var(--bn-colour-text);
+    text-decoration: none;
+    cursor: pointer;
+    transition: color 0.15s;
+}
+
+.toc-dropdown-link:hover {
+    color: var(--bn-colour-accent);
+    text-decoration: underline;
+    text-underline-offset: 0.25em;
+    text-decoration-color: var(--bn-colour-accent);
+    background: var(--bn-colour-quote-bg);
+}
+
+/* Tag filter dropdown */
+.tag-filter-menu {
+    right: 0;
+    min-width: 14rem;
+    max-height: 32rem;
+    overflow-y: auto;
+}
+
+.tag-filter-actions {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+    padding: 0.25rem 0.85rem 0.4rem;
+    border-bottom: 1px solid var(--bn-colour-border);
+    margin-bottom: 0.25rem;
+}
+
+.tag-filter-action {
+    font-size: 0.78rem;
+    color: var(--bn-colour-accent);
+    text-decoration: none;
+    cursor: pointer;
+    background: none;
+    border: none;
+    padding: 0;
+    font-family: var(--bn-font-body);
+}
+
+.tag-filter-action:hover { text-decoration: underline; }
+
+.tag-filter-action-open { font-weight: var(--bn-weight-emphasis); }
+
+.tag-filter-separator { color: var(--bn-colour-border); font-size: 0.78rem; }
+
+.tag-filter-group {
+    border-radius: var(--bn-radius-sm);
+    margin: 0.25rem 0.4rem;
+    padding: 0.15rem 0;
+}
+
+.tag-filter-group-header {
+    padding: 0.3rem 0.5rem 0.15rem;
+    font-size: 0.7rem;
+    font-weight: var(--bn-weight-emphasis);
+    color: var(--bn-colour-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+}
+
+.tag-filter-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.3rem 0.85rem;
+    font-size: 0.82rem;
+    color: var(--bn-colour-text);
+    cursor: pointer;
+    transition: background var(--bn-transition-fast);
+}
+
+.tag-filter-group > .tag-filter-item {
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+}
+
+.tag-filter-item:hover { background: var(--bn-colour-quote-bg); }
+
+/* Ghost checkbox for dropdown too — same as sidebar */
+.tag-filter-item input[type="checkbox"] {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 14px;
+    height: 14px;
+    border: 1px solid var(--bn-colour-border);
+    border-radius: 2px;
+    background: transparent;
+    margin: 0;
+    flex-shrink: 0;
+    cursor: pointer;
+    position: relative;
+    transition: border-color var(--bn-transition-fast), background var(--bn-transition-fast);
+}
+.tag-filter-item input[type="checkbox"]:checked {
+    border-color: var(--bn-colour-border-hover);
+    background: var(--bn-colour-quote-bg);
+}
+.tag-filter-item input[type="checkbox"]:checked::after {
+    content: "";
+    position: absolute;
+    left: 3px;
+    top: 0.5px;
+    width: 5px;
+    height: 9px;
+    border: solid var(--bn-colour-muted);
+    border-width: 0 1.5px 1.5px 0;
+    transform: rotate(45deg);
+}
+.tag-filter-item input[type="checkbox"]:hover {
+    border-color: var(--bn-colour-border-hover);
+}
+
+.tag-filter-count {
+    margin-left: auto;
+    font-size: 0.72rem;
+    color: var(--bn-colour-muted);
+    font-variant-numeric: tabular-nums;
+}
+
+.tag-filter-item-muted {
+    color: var(--bn-colour-muted);
+    font-style: italic;
+}
+
+/* ── Tag row (badge + micro-bar pattern from codebook panel) ── */
+
+.tag-sidebar .tag-row {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: center;
+    gap: var(--bn-space-sm);
+    padding: 3px 0.5rem;
+    border-radius: var(--bn-radius-sm);
+    cursor: pointer;
+    transition: background var(--bn-transition-fast);
+}
+
+.tag-sidebar .tag-row:hover {
+    background: var(--bn-hover-bg-subtle, rgba(0, 0, 0, 0.03));
+}
+
+.tag-sidebar .tag-name-area {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    min-width: 0;
+}
+
+/* Ghost checkbox (Option D) — barely-there border, muted tick.
+   All colours are design-system tokens. TODO: extract to atoms/checkbox.css */
+.tag-sidebar .tag-name-area input[type="checkbox"] {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 14px;
+    height: 14px;
+    border: 1px solid var(--bn-colour-border);       /* lightest grey — recedes */
+    border-radius: 2px;
+    background: transparent;
+    margin: 0;
+    flex-shrink: 0;
+    cursor: pointer;
+    position: relative;
+    transition: border-color var(--bn-transition-fast), background var(--bn-transition-fast);
+}
+
+.tag-sidebar .tag-name-area input[type="checkbox"]:checked {
+    border-color: var(--bn-colour-border-hover);     /* slightly stronger grey */
+    background: var(--bn-colour-quote-bg);            /* faint fill */
+}
+
+.tag-sidebar .tag-name-area input[type="checkbox"]:checked::after {
+    content: "";
+    position: absolute;
+    left: 3px;
+    top: 0.5px;
+    width: 5px;
+    height: 9px;
+    border: solid var(--bn-colour-muted);             /* mid-grey tick */
+    border-width: 0 1.5px 1.5px 0;
+    transform: rotate(45deg);
+}
+
+.tag-sidebar .tag-name-area input[type="checkbox"]:hover {
+    border-color: var(--bn-colour-border-hover);
+}
+
+/* Badge — matches design system atom: mono font, small, rounded rect */
+.tag-sidebar .badge {
+    display: inline-block;
+    font-family: var(--bn-font-mono);
+    font-size: 0.72rem;
+    padding: var(--bn-space-xs) 0.45rem;
+    border-radius: var(--bn-radius-sm);
+    background: var(--bn-colour-badge-bg);
+    color: var(--bn-colour-badge-text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 14rem;
+}
+
+/* Micro histogram bar + count */
+.tag-sidebar .tag-bar-area {
+    display: flex;
+    align-items: center;
+    gap: var(--bn-space-xs);
+    min-width: 50px;
+    justify-content: flex-end;
+}
+
+.tag-sidebar .tag-micro-bar {
+    height: 0.6rem;
+    border-radius: 0 var(--bn-radius-sm) var(--bn-radius-sm) 0;
+    min-width: 2px;
+    transition: width 0.2s ease;
+}
+
+.tag-sidebar .tag-count {
+    font-size: 0.75rem;
+    color: var(--bn-colour-muted);
+    min-width: 16px;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+}
+
+/* Group total row */
+.tag-sidebar .group-total-row {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: center;
+    gap: var(--bn-space-sm);
+    padding: 0.15rem 0.5rem 0.25rem;
+    border-top: 1px solid var(--bn-colour-border);
+    margin-top: 0.15rem;
+}
+
+.tag-sidebar .group-total-label {
+    font-size: 0.7rem;
+    color: var(--bn-colour-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.tag-sidebar .group-total-count {
+    font-size: 0.75rem;
+    font-weight: var(--bn-weight-emphasis);
+    color: var(--bn-colour-muted);
+    font-variant-numeric: tabular-nums;
+    min-width: 16px;
+    text-align: right;
+}
+
+/* Micro-bars always visible in both 1-col and 2-col views */
+
+/* ── Main content (quotes area, same width as toolbar) ─────── */
+
+.main-content {
+    padding: 0 2rem;
+}
+
+.section-heading {
+    font-size: 1.4rem;
+    font-weight: var(--bn-weight-emphasis);
+    margin: 1.5rem 0 0.25rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid var(--bn-colour-border);
+}
+
+.subsection-heading {
+    font-size: 1.05rem;
+    font-weight: var(--bn-weight-emphasis);
+    margin: 1.25rem 0 0.15rem;
+}
+
+.subsection-desc {
+    font-size: 0.88rem;
+    color: var(--bn-colour-muted);
+    margin-bottom: 0.5rem;
+}
+
+/* ── Quote cards ─────────────────────────────────────────────── */
+
+blockquote.quote-card {
+    background: var(--bn-colour-quote-bg);
+    border-left: 1px solid var(--bn-colour-border);
+    margin: 0.8rem 0;
+    padding: var(--bn-space-md) 1rem;
+    border-radius: 0 var(--bn-radius-md) var(--bn-radius-md) 0;
+    position: relative;
+    padding-right: 2.5rem;
+}
+
+blockquote .quote-row {
+    display: flex;
+    gap: 0.5rem;
+    align-items: baseline;
+}
+
+blockquote .timecode {
+    color: var(--bn-colour-accent);
+    font-family: var(--bn-font-mono);
+    font-size: 0.8rem;
+    flex-shrink: 0;
+}
+
+blockquote .quote-body { flex: 1; min-width: 0; }
+
+blockquote .speaker {
+    color: var(--bn-colour-muted);
+    font-size: 0.9rem;
+    margin-left: 0.75rem;
+    white-space: nowrap;
+}
+
+.quote-badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+    margin-top: 0.4rem;
+    padding-left: 3.5rem;
+}
+
+.badge {
+    display: inline-block;
+    font-size: 0.72rem;
+    font-family: var(--bn-font-mono);
+    padding: 0.15rem 0.5rem;
+    border-radius: var(--bn-radius-sm);
+    background: var(--bn-colour-badge-bg);
+    color: var(--bn-colour-badge-text);
+}
+
+.badge-sentiment { font-family: var(--bn-font-body); }
+
+.star-icon {
+    position: absolute;
+    right: 1rem;
+    top: var(--bn-space-md);
+    color: var(--bn-colour-border);
+    font-size: 1.1rem;
+    cursor: pointer;
+}
+
+/* ── Drag-select disable ─────────────────────────────────────── */
+
+body.dragging {
+    user-select: none;
+    cursor: col-resize !important;
+}
+
+body.dragging * {
+    cursor: col-resize !important;
+}
+
+</style>
+</head>
+<body>
+
+<!-- ── Mockup controls ───────────────────────────────────────── -->
+<div class="mockup-controls">
+    <button onclick="toggleTheme()">Toggle dark</button>
+    <span class="shortcut-hint">⌘. both &nbsp; ⌘[ left &nbsp; ⌘] right</span>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     5-column layout grid
+     ═══════════════════════════════════════════════════════════ -->
+<div class="layout" id="layout">
+
+    <!-- Col 1: Left icon rail -->
+    <div class="toc-rail" id="toc-rail">
+        <button class="rail-btn" id="toc-rail-btn" title="Table of contents (⌘[)">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none"
+                 stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
+                <line x1="1" y1="3" x2="11" y2="3"/>
+                <line x1="1" y1="8" x2="15" y2="8"/>
+                <line x1="1" y1="13" x2="13" y2="13"/>
+            </svg>
+        </button>
+        <div class="drag-handle toc-rail-drag" id="toc-rail-drag"></div>
+    </div>
+
+    <!-- Col 2: Left sidebar (TOC) -->
+    <aside class="toc-sidebar" id="toc-sidebar">
+        <div class="toc-sidebar-header" style="justify-content: flex-start;">
+            <button class="sidebar-close" id="toc-close" title="Close (⌘[)" style="margin-left: 0;">&times;</button>
+        </div>
+        <div class="toc-sidebar-body" id="toc-sidebar-body">
+<div class="toc-heading">Sections</div>
+            <a class="toc-link" href="#homepage" data-section="homepage">Homepage</a>
+            <a class="toc-link" href="#category-pages" data-section="category-pages">Category Pages</a>
+            <a class="toc-link" href="#search-results" data-section="search-results">Search Results</a>
+            <a class="toc-link" href="#product-details" data-section="product-details">Product Details</a>
+            <a class="toc-link" href="#shopping-bag" data-section="shopping-bag">Shopping Bag</a>
+            <a class="toc-link" href="#checkout" data-section="checkout">Checkout</a>
+            <a class="toc-link" href="#order-confirmation" data-section="order-confirmation">Order Confirmation</a>
+            <a class="toc-link" href="#account-settings" data-section="account-settings">Account Settings</a>
+            <a class="toc-link" href="#wishlist" data-section="wishlist">Wishlist</a>
+            <a class="toc-link" href="#store-locator" data-section="store-locator">Store Locator</a>
+            <a class="toc-link" href="#delivery-tracking" data-section="delivery-tracking">Delivery Tracking</a>
+            <a class="toc-link" href="#returns-portal" data-section="returns-portal">Returns Portal</a>
+            <a class="toc-link" href="#customer-reviews" data-section="customer-reviews">Customer Reviews</a>
+            <a class="toc-link" href="#size-guide" data-section="size-guide">Size Guide</a>
+            <a class="toc-link" href="#gift-cards" data-section="gift-cards">Gift Cards</a>
+            <a class="toc-link" href="#click-and-collect" data-section="click-and-collect">Click and Collect</a>
+            <a class="toc-link" href="#price-comparison" data-section="price-comparison">Price Comparison</a>
+            <a class="toc-link" href="#product-filters" data-section="product-filters">Product Filters</a>
+            <a class="toc-link" href="#mobile-navigation" data-section="mobile-navigation">Mobile Navigation</a>
+            <a class="toc-link" href="#accessibility-features" data-section="accessibility-features">Accessibility Features</a>
+            <a class="toc-link" href="#payment-methods" data-section="payment-methods">Payment Methods</a>
+            <a class="toc-link" href="#guest-checkout" data-section="guest-checkout">Guest Checkout</a>
+            <a class="toc-link" href="#email-notifications" data-section="email-notifications">Email Notifications</a>
+            <a class="toc-link" href="#help-centre" data-section="help-centre">Help Centre</a>
+            <a class="toc-link" href="#live-chat" data-section="live-chat">Live Chat</a>
+            <div class="toc-heading">Themes</div>
+            <a class="toc-link" href="#theme-healthcare-system-failures" data-section="theme-healthcare-system-failures">Healthcare system failures</a>
+            <a class="toc-link" href="#theme-technical-difficulties" data-section="theme-technical-difficulties">Technical difficulties during testing</a>
+            <a class="toc-link" href="#theme-brand-perception" data-section="theme-brand-perception">Brand perception and personality</a>
+            <a class="toc-link" href="#theme-session-management" data-section="theme-session-management">Session management and boundaries</a>
+            <a class="toc-link" href="#theme-trust-credibility" data-section="theme-trust-credibility">Trust and credibility concerns</a>
+            <a class="toc-link" href="#theme-pricing-transparency" data-section="theme-pricing-transparency">Pricing transparency gaps</a>
+            <a class="toc-link" href="#theme-info-architecture" data-section="theme-info-architecture">Information architecture confusion</a>
+            <a class="toc-link" href="#theme-emotional-errors" data-section="theme-emotional-errors">Emotional response to errors</a>
+            <a class="toc-link" href="#theme-cross-device" data-section="theme-cross-device">Cross-device experience friction</a>
+            <a class="toc-link" href="#theme-accessibility-barriers" data-section="theme-accessibility-barriers">Accessibility barrier patterns</a>
+            <a class="toc-link" href="#theme-social-proof" data-section="theme-social-proof">Social proof dependency</a>
+            <a class="toc-link" href="#theme-decision-fatigue" data-section="theme-decision-fatigue">Decision fatigue triggers</a>
+            <a class="toc-link" href="#theme-cognitive-load" data-section="theme-cognitive-load">Cognitive load in checkout</a>
+            <a class="toc-link" href="#theme-first-impression" data-section="theme-first-impression">First impression formation</a>
+            <a class="toc-link" href="#theme-recovery-mistakes" data-section="theme-recovery-mistakes">Recovery from mistakes</a>
+            <a class="toc-link" href="#theme-language-tone" data-section="theme-language-tone">Language and tone sensitivity</a>
+            <a class="toc-link" href="#theme-visual-hierarchy" data-section="theme-visual-hierarchy">Visual hierarchy effectiveness</a>
+            <a class="toc-link" href="#theme-loading-performance" data-section="theme-loading-performance">Loading and performance anxiety</a>
+            <a class="toc-link" href="#theme-privacy-data" data-section="theme-privacy-data">Privacy and data concerns</a>
+            <a class="toc-link" href="#theme-comparison-shopping" data-section="theme-comparison-shopping">Comparison shopping behaviour</a>
+            <a class="toc-link" href="#theme-loyalty-programme" data-section="theme-loyalty-programme">Loyalty programme confusion</a>
+            <a class="toc-link" href="#theme-seasonal-shopping" data-section="theme-seasonal-shopping">Seasonal shopping patterns</a>
+            <a class="toc-link" href="#theme-mobile-first" data-section="theme-mobile-first">Mobile-first expectations</a>
+            <a class="toc-link" href="#theme-voice-assistant" data-section="theme-voice-assistant">Voice and assistant integration</a>
+            <a class="toc-link" href="#theme-sustainability" data-section="theme-sustainability">Sustainability messaging impact</a>
+        </div>
+        <div class="drag-handle toc-drag-handle" id="toc-drag-handle"></div>
+    </aside>
+
+    <!-- Col 3: Center (everything the user works with) -->
+    <div class="center">
+        <header class="report-header">
+            <div class="project-name">project-ikea</div>
+            <div class="project-meta">4 sessions, 3 participants, Today at 09:26</div>
+        </header>
+        <nav class="tab-bar">
+            <button class="tab">Project</button>
+            <button class="tab">Sessions</button>
+            <button class="tab active">Quotes</button>
+            <button class="tab">Codebook</button>
+            <button class="tab">Analysis</button>
+        </nav>
+
+        <div class="toolbar">
+            <div class="toolbar-left">
+                <!-- TOC dropdown -->
+                <div class="toolbar-dropdown" id="toc-dropdown-wrapper">
+                    <button class="toolbar-btn" id="toc-btn">
+                        <svg class="toolbar-icon-svg" width="14" height="14" viewBox="0 0 16 16"
+                             fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
+                            <line x1="1" y1="3" x2="11" y2="3"/>
+                            <line x1="1" y1="8" x2="15" y2="8"/>
+                            <line x1="1" y1="13" x2="13" y2="13"/>
+                        </svg>
+                        <span class="toolbar-btn-label">25 Sections 25 Themes</span>
+                        <svg class="toolbar-arrow" width="10" height="10" viewBox="0 0 10 10"
+                             fill="none" stroke="currentColor" stroke-width="1.5"
+                             stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M2.5 3.75 5 6.25 7.5 3.75"/>
+                        </svg>
+                    </button>
+                    <div class="dropdown-menu toc-dropdown-menu" id="toc-dropdown">
+                        <div class="toc-dropdown-actions">
+                            <button class="tag-filter-action tag-filter-action-open" id="toc-open-btn">&laquo; Open</button>
+                        </div>
+<div class="toc-dropdown-heading">Sections</div>
+                        <a class="toc-dropdown-link" href="#homepage">Homepage</a>
+                        <a class="toc-dropdown-link" href="#category-pages">Category Pages</a>
+                        <a class="toc-dropdown-link" href="#search-results">Search Results</a>
+                        <a class="toc-dropdown-link" href="#product-details">Product Details</a>
+                        <a class="toc-dropdown-link" href="#shopping-bag">Shopping Bag</a>
+                        <a class="toc-dropdown-link" href="#checkout">Checkout</a>
+                        <a class="toc-dropdown-link" href="#order-confirmation">Order Confirmation</a>
+                        <a class="toc-dropdown-link" href="#account-settings">Account Settings</a>
+                        <a class="toc-dropdown-link" href="#wishlist">Wishlist</a>
+                        <a class="toc-dropdown-link" href="#store-locator">Store Locator</a>
+                        <a class="toc-dropdown-link" href="#delivery-tracking">Delivery Tracking</a>
+                        <a class="toc-dropdown-link" href="#returns-portal">Returns Portal</a>
+                        <a class="toc-dropdown-link" href="#customer-reviews">Customer Reviews</a>
+                        <a class="toc-dropdown-link" href="#size-guide">Size Guide</a>
+                        <a class="toc-dropdown-link" href="#gift-cards">Gift Cards</a>
+                        <a class="toc-dropdown-link" href="#click-and-collect">Click and Collect</a>
+                        <a class="toc-dropdown-link" href="#price-comparison">Price Comparison</a>
+                        <a class="toc-dropdown-link" href="#product-filters">Product Filters</a>
+                        <a class="toc-dropdown-link" href="#mobile-navigation">Mobile Navigation</a>
+                        <a class="toc-dropdown-link" href="#accessibility-features">Accessibility Features</a>
+                        <a class="toc-dropdown-link" href="#payment-methods">Payment Methods</a>
+                        <a class="toc-dropdown-link" href="#guest-checkout">Guest Checkout</a>
+                        <a class="toc-dropdown-link" href="#email-notifications">Email Notifications</a>
+                        <a class="toc-dropdown-link" href="#help-centre">Help Centre</a>
+                        <a class="toc-dropdown-link" href="#live-chat">Live Chat</a>
+                        <div class="toc-dropdown-heading">Themes</div>
+                        <a class="toc-dropdown-link" href="#theme-healthcare-system-failures">Healthcare system failures</a>
+                        <a class="toc-dropdown-link" href="#theme-technical-difficulties">Technical difficulties during testing</a>
+                        <a class="toc-dropdown-link" href="#theme-brand-perception">Brand perception and personality</a>
+                        <a class="toc-dropdown-link" href="#theme-session-management">Session management and boundaries</a>
+                        <a class="toc-dropdown-link" href="#theme-trust-credibility">Trust and credibility concerns</a>
+                        <a class="toc-dropdown-link" href="#theme-pricing-transparency">Pricing transparency gaps</a>
+                        <a class="toc-dropdown-link" href="#theme-info-architecture">Information architecture confusion</a>
+                        <a class="toc-dropdown-link" href="#theme-emotional-errors">Emotional response to errors</a>
+                        <a class="toc-dropdown-link" href="#theme-cross-device">Cross-device experience friction</a>
+                        <a class="toc-dropdown-link" href="#theme-accessibility-barriers">Accessibility barrier patterns</a>
+                        <a class="toc-dropdown-link" href="#theme-social-proof">Social proof dependency</a>
+                        <a class="toc-dropdown-link" href="#theme-decision-fatigue">Decision fatigue triggers</a>
+                        <a class="toc-dropdown-link" href="#theme-cognitive-load">Cognitive load in checkout</a>
+                        <a class="toc-dropdown-link" href="#theme-first-impression">First impression formation</a>
+                        <a class="toc-dropdown-link" href="#theme-recovery-mistakes">Recovery from mistakes</a>
+                        <a class="toc-dropdown-link" href="#theme-language-tone">Language and tone sensitivity</a>
+                        <a class="toc-dropdown-link" href="#theme-visual-hierarchy">Visual hierarchy effectiveness</a>
+                        <a class="toc-dropdown-link" href="#theme-loading-performance">Loading and performance anxiety</a>
+                        <a class="toc-dropdown-link" href="#theme-privacy-data">Privacy and data concerns</a>
+                        <a class="toc-dropdown-link" href="#theme-comparison-shopping">Comparison shopping behaviour</a>
+                        <a class="toc-dropdown-link" href="#theme-loyalty-programme">Loyalty programme confusion</a>
+                        <a class="toc-dropdown-link" href="#theme-seasonal-shopping">Seasonal shopping patterns</a>
+                        <a class="toc-dropdown-link" href="#theme-mobile-first">Mobile-first expectations</a>
+                        <a class="toc-dropdown-link" href="#theme-voice-assistant">Voice and assistant integration</a>
+                        <a class="toc-dropdown-link" href="#theme-sustainability">Sustainability messaging impact</a>
+                    </div>
+                </div>
+                <!-- Search -->
+                <div class="search-container">
+                    <svg class="search-icon" width="15" height="15" viewBox="0 0 16 16"
+                         fill="none" stroke="currentColor" stroke-width="1.5"
+                         stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="6.5" cy="6.5" r="5.5"/>
+                        <line x1="10.5" y1="10.5" x2="15" y2="15"/>
+                    </svg>
+                    <input class="search-input" type="text" placeholder="Filter quotes...">
+                </div>
+            </div>
+
+            <!-- Tag filter -->
+            <div class="toolbar-dropdown" id="tag-dropdown-wrapper">
+                <button class="toolbar-btn" id="tag-filter-btn">
+                    <svg class="toolbar-icon-svg" width="14" height="14" viewBox="0 0 16 16"
+                         fill="none" stroke="currentColor" stroke-width="1.5"
+                         stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M1.5 1.5h5.09a1 1 0 0 1 .7.29l6.42 6.42a1 1 0 0 1 0 1.41l-4.49 4.49a1 1 0 0 1-1.41 0L1.79 8.09a1 1 0 0 1-.29-.7z"/>
+                        <circle cx="4.5" cy="4.5" r="1" fill="currentColor" stroke="none"/>
+                    </svg>
+                    <span class="toolbar-btn-label">76 tags</span>
+                    <svg class="toolbar-arrow" width="10" height="10" viewBox="0 0 10 10"
+                         fill="none" stroke="currentColor" stroke-width="1.5"
+                         stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M2.5 3.75 5 6.25 7.5 3.75"/>
+                    </svg>
+                </button>
+                <div class="dropdown-menu tag-filter-menu" id="tag-dropdown">
+                    <div class="tag-filter-actions">
+                        <button class="tag-filter-action">Select all</button>
+                        <span class="tag-filter-separator">|</span>
+                        <button class="tag-filter-action">Clear</button>
+                        <span style="flex:1"></span>
+                        <button class="tag-filter-action tag-filter-action-open" id="tag-open-btn">Open &raquo;</button>
+                    </div>
+                    <label class="tag-filter-item tag-filter-item-muted">
+                        <input type="checkbox" checked> (No tags) <span class="tag-filter-count">18</span>
+                    </label>
+                    <!-- Garrett -->
+                    <div class="tag-filter-group-header" style="margin-top:0.25rem">The Elements of User Experience</div>
+                    <div class="tag-filter-group" style="background: var(--bn-group-ux)">
+                        <div class="tag-filter-group-header">Strategy</div>
+                        <label class="tag-filter-item"><input type="checkbox" checked> user need <span class="tag-filter-count">8</span></label>
+                        <label class="tag-filter-item"><input type="checkbox" checked> value proposition <span class="tag-filter-count">3</span></label>
+                    </div>
+                    <div class="tag-filter-group" style="background: var(--bn-group-ux)">
+                        <div class="tag-filter-group-header">Structure</div>
+                        <label class="tag-filter-item"><input type="checkbox" checked> navigation pattern <span class="tag-filter-count">6</span></label>
+                        <label class="tag-filter-item"><input type="checkbox" checked> interaction design <span class="tag-filter-count">5</span></label>
+                    </div>
+                    <!-- Norman -->
+                    <div class="tag-filter-group-header" style="margin-top:0.25rem">The Design of Everyday Things</div>
+                    <div class="tag-filter-group" style="background: var(--bn-group-ux)">
+                        <div class="tag-filter-group-header">Discoverability</div>
+                        <label class="tag-filter-item"><input type="checkbox" checked> visible action <span class="tag-filter-count">6</span></label>
+                        <label class="tag-filter-item"><input type="checkbox" checked> exploration <span class="tag-filter-count">4</span></label>
+                    </div>
+                    <div class="tag-filter-group" style="background: var(--bn-group-ux)">
+                        <div class="tag-filter-group-header">Feedback</div>
+                        <label class="tag-filter-item"><input type="checkbox" checked> system response <span class="tag-filter-count">16</span></label>
+                        <label class="tag-filter-item"><input type="checkbox" checked> delayed feedback <span class="tag-filter-count">4</span></label>
+                    </div>
+                </div>
+            </div>
+
+            <button class="toolbar-btn">
+                <span>All quotes</span>
+                <svg class="toolbar-arrow" width="10" height="10" viewBox="0 0 10 10"
+                     fill="none" stroke="currentColor" stroke-width="1.5"
+                     stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M2.5 3.75 5 6.25 7.5 3.75"/>
+                </svg>
+            </button>
+
+            <button class="toolbar-btn">
+                <svg class="toolbar-icon-svg" width="14" height="14" viewBox="0 0 16 16"
+                     fill="none" stroke="currentColor" stroke-width="1.5"
+                     stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="5" y="1" width="9" height="11" rx="1.5"/>
+                    <path d="M3 5H2.5A1.5 1.5 0 0 0 1 6.5v8A1.5 1.5 0 0 0 2.5 16h8a1.5 1.5 0 0 0 1.5-1.5V14"/>
+                </svg>
+                Copy CSV
+            </button>
+        </div>
+
+        <!-- Quotes (same column as toolbar, same padding) -->
+        <div class="main-content">
+<h2 class="section-heading" id="sections-heading">Sections</h2>
+            <h3 class="subsection-heading" id="homepage">Homepage</h3>
+            <p class="subsection-desc">Main IKEA landing page with navigation and promotional content.</p>
+            <blockquote class="quote-card">
+                <div class="quote-row"><span class="timecode">[00:00]</span><div class="quote-body">"I landed on the homepage and honestly had no idea where to start. There were banners everywhere and nothing told me where the sale section was." <span class="speaker">p1</span></div></div>
+                <div class="quote-badges"><span class="badge badge-sentiment" style="background:var(--bn-sentiment-frustration-bg);color:var(--bn-sentiment-frustration)">frustration</span> <span class="badge">user need</span></div><span class="star-icon">&#9734;</span>
+            </blockquote>
+            <blockquote class="quote-card">
+                <div class="quote-row"><span class="timecode">[00:37]</span><div class="quote-body">"What's the fluffiest duvet I can get? Down and feather. King size. Temperature. The warmest." <span class="speaker">p3 Fritchoff</span></div></div>
+                <div class="quote-badges"><span class="badge">exploration</span></div><span class="star-icon">&#9734;</span>
+            </blockquote>
+
+            <h3 class="subsection-heading" id="category-pages">Category Pages</h3>
+            <p class="subsection-desc">Product listing and category navigation.</p>
+            <blockquote class="quote-card">
+                <div class="quote-row"><span class="timecode">[01:14]</span><div class="quote-body">"The categories don't make sense to me. Why is 'Textiles' separate from 'Bedroom'?" <span class="speaker">p2 Fred</span></div></div>
+                <div class="quote-badges"><span class="badge badge-sentiment" style="background:var(--bn-sentiment-frustration-bg);color:var(--bn-sentiment-frustration)">frustration</span> <span class="badge">visible action</span></div><span class="star-icon">&#9734;</span>
+            </blockquote>
+
+            <h3 class="subsection-heading" id="search-results">Search Results</h3>
+            <p class="subsection-desc">Search results page with filters and sorting.</p>
+            <blockquote class="quote-card">
+                <div class="quote-row"><span class="timecode">[01:51]</span><div class="quote-body">"Wait, are these search results sorted by relevance or by price? I can't tell." <span class="speaker">p1</span></div></div>
+                <div class="quote-badges"><span class="badge">visible action</span></div><span class="star-icon">&#9734;</span>
+            </blockquote>
+            <blockquote class="quote-card">
+                <div class="quote-row"><span class="timecode">[02:28]</span><div class="quote-body">"Oh nice, it's showing me similar items as I type. That's actually really helpful." <span class="speaker">p3 Fritchoff</span></div></div>
+                <div class="quote-badges"><span class="badge badge-sentiment" style="background:var(--bn-sentiment-satisfaction-bg);color:var(--bn-sentiment-satisfaction)">satisfaction</span> <span class="badge">system response</span></div><span class="star-icon">&#9734;</span>
+            </blockquote>
+
+            <h3 class="subsection-heading" id="product-details">Product Details</h3>
+            <p class="subsection-desc">Individual product pages with images and specs.</p>
+            <blockquote class="quote-card">
+                <div class="quote-row"><span class="timecode">[03:05]</span><div class="quote-body">"I don't understand these dimensions. Is 200cm the length or the width?" <span class="speaker">p2 Fred</span></div></div>
+                <div class="quote-badges"><span class="badge">user need</span></div><span class="star-icon">&#9734;</span>
+            </blockquote>
+            <blockquote class="quote-card">
+                <div class="quote-row"><span class="timecode">[03:42]</span><div class="quote-body">"Oh this is nice. The 360 view is really helpful actually. I wish more products had this." <span class="speaker">p1</span></div></div>
+                <div class="quote-badges"><span class="badge badge-sentiment" style="background:var(--bn-sentiment-satisfaction-bg);color:var(--bn-sentiment-satisfaction)">satisfaction</span></div><span class="star-icon">&#9734;</span>
+            </blockquote>
+
+            <h3 class="subsection-heading" id="shopping-bag">Shopping Bag</h3>
+            <p class="subsection-desc">Basket review and quantity management.</p>
+            <blockquote class="quote-card">
+                <div class="quote-row"><span class="timecode">[04:19]</span><div class="quote-body">"Okay so I've added three things now. Let me check my basket... oh wait, where did the duvet go?" <span class="speaker">p3 Fritchoff</span></div></div>
+                <div class="quote-badges"><span class="badge badge-sentiment" style="background:var(--bn-sentiment-frustration-bg);color:var(--bn-sentiment-frustration)">frustration</span> <span class="badge">system response</span></div><span class="star-icon">&#9734;</span>
+            </blockquote>
+
+            <h3 class="subsection-heading" id="checkout">Checkout</h3>
+            <p class="subsection-desc">Payment and delivery flow.</p>
+            <blockquote class="quote-card">
+                <div class="quote-row"><span class="timecode">[04:56]</span><div class="quote-body">"Why can't I change the quantity here? I have to go back to the product page?" <span class="speaker">p2 Fred</span></div></div>
+                <div class="quote-badges"><span class="badge badge-sentiment" style="background:var(--bn-sentiment-frustration-bg);color:var(--bn-sentiment-frustration)">frustration</span></div><span class="star-icon">&#9734;</span>
+            </blockquote>
+            <blockquote class="quote-card">
+                <div class="quote-row"><span class="timecode">[05:33]</span><div class="quote-body">"I like that it remembers my postcode from earlier. That's a nice touch." <span class="speaker">p1</span></div></div>
+                <div class="quote-badges"><span class="badge badge-sentiment" style="background:var(--bn-sentiment-satisfaction-bg);color:var(--bn-sentiment-satisfaction)">satisfaction</span></div><span class="star-icon">&#9734;</span>
+            </blockquote>
+
+            <h3 class="subsection-heading" id="order-confirmation">Order Confirmation</h3>
+            <p class="subsection-desc">Post-purchase confirmation and next steps.</p>
+            <blockquote class="quote-card">
+                <div class="quote-row"><span class="timecode">[06:10]</span><div class="quote-body">"This is asking me for so much information. Do I really need to give my phone number?" <span class="speaker">p3 Fritchoff</span></div></div>
+                <div class="quote-badges"><span class="badge">user need</span></div><span class="star-icon">&#9734;</span>
+            </blockquote>
+            <blockquote class="quote-card">
+                <div class="quote-row"><span class="timecode">[06:47]</span><div class="quote-body">"Great, order confirmed. But where's my order number? I can't see it anywhere obvious." <span class="speaker">p2 Fred</span></div></div>
+                <div class="quote-badges"><span class="badge badge-sentiment" style="background:var(--bn-sentiment-surprise-bg);color:var(--bn-sentiment-surprise)">surprise</span> <span class="badge">system response</span></div><span class="star-icon">&#9734;</span>
+            </blockquote>
+
+            <h3 class="subsection-heading" id="account-settings">Account Settings</h3>
+            <p class="subsection-desc">Profile, preferences, and saved addresses.</p>
+            <blockquote class="quote-card">
+                <div class="quote-row"><span class="timecode">[07:24]</span><div class="quote-body">"Oh it's sent me an email already. That was fast. Good." <span class="speaker">p1</span></div></div>
+                <div class="quote-badges"><span class="badge badge-sentiment" style="background:var(--bn-sentiment-satisfaction-bg);color:var(--bn-sentiment-satisfaction)">satisfaction</span></div><span class="star-icon">&#9734;</span>
+            </blockquote>
+
+            <h3 class="subsection-heading" id="wishlist">Wishlist</h3>
+            <p class="subsection-desc">Saved items and sharing features.</p>
+            <blockquote class="quote-card">
+                <div class="quote-row"><span class="timecode">[08:01]</span><div class="quote-body">"I can't find where to change my email address. It's not under 'My details'?" <span class="speaker">p3 Fritchoff</span></div></div>
+                <div class="quote-badges"><span class="badge badge-sentiment" style="background:var(--bn-sentiment-frustration-bg);color:var(--bn-sentiment-frustration)">frustration</span> <span class="badge">visible action</span></div><span class="star-icon">&#9734;</span>
+            </blockquote>
+            <blockquote class="quote-card">
+                <div class="quote-row"><span class="timecode">[08:38]</span><div class="quote-body">"The saved addresses section is nice and clean. Easy to add a new one." <span class="speaker">p2 Fred</span></div></div>
+                <div class="quote-badges"><span class="badge badge-sentiment" style="background:var(--bn-sentiment-satisfaction-bg);color:var(--bn-sentiment-satisfaction)">satisfaction</span></div><span class="star-icon">&#9734;</span>
+            </blockquote>
+
+            <h3 class="subsection-heading" id="store-locator">Store Locator</h3>
+            <p class="subsection-desc">Finding nearby stores and stock availability.</p>
+            <blockquote class="quote-card">
+                <div class="quote-row"><span class="timecode">[09:15]</span><div class="quote-body">"I saved this sofa last week but now it says unavailable. That's annoying." <span class="speaker">p1</span></div></div>
+                <div class="quote-badges"><span class="badge badge-sentiment" style="background:var(--bn-sentiment-frustration-bg);color:var(--bn-sentiment-frustration)">frustration</span> <span class="badge">system response</span></div><span class="star-icon">&#9734;</span>
+            </blockquote>
+            <blockquote class="quote-card">
+                <div class="quote-row"><span class="timecode">[09:52]</span><div class="quote-body">"Can I share my wishlist with someone? My partner needs to see this." <span class="speaker">p3 Fritchoff</span></div></div>
+                <div class="quote-badges"><span class="badge">user need</span></div><span class="star-icon">&#9734;</span>
+            </blockquote>
+
+            <h3 class="subsection-heading" id="delivery-tracking">Delivery Tracking</h3>
+            <p class="subsection-desc">Order status and estimated delivery updates.</p>
+            <blockquote class="quote-card">
+                <div class="quote-row"><span class="timecode">[10:29]</span><div class="quote-body">"It says the nearest store is 45 minutes away but I know there's one closer." <span class="speaker">p2 Fred</span></div></div>
+                <div class="quote-badges"><span class="badge">system response</span></div><span class="star-icon">&#9734;</span>
+            </blockquote>
+
+            <h3 class="subsection-heading" id="returns-portal">Returns Portal</h3>
+            <p class="subsection-desc">Initiating returns and tracking refunds.</p>
+            <blockquote class="quote-card">
+                <div class="quote-row"><span class="timecode">[11:06]</span><div class="quote-body">"I can't tell if this item is in stock at my local store from this page." <span class="speaker">p1</span></div></div>
+                <div class="quote-badges"><span class="badge badge-sentiment" style="background:var(--bn-sentiment-frustration-bg);color:var(--bn-sentiment-frustration)">frustration</span></div><span class="star-icon">&#9734;</span>
+            </blockquote>
+            <blockquote class="quote-card">
+                <div class="quote-row"><span class="timecode">[11:43]</span><div class="quote-body">"It still says 'dispatched' but I got it yesterday. The tracking is behind." <span class="speaker">p3 Fritchoff</span></div></div>
+                <div class="quote-badges"><span class="badge">system response</span></div><span class="star-icon">&#9734;</span>
+            </blockquote>
+
+            <h3 class="subsection-heading" id="customer-reviews">Customer Reviews</h3>
+            <p class="subsection-desc">Reading and writing product reviews.</p>
+            <blockquote class="quote-card">
+                <div class="quote-row"><span class="timecode">[12:20]</span><div class="quote-body">"I love that I can see exactly where the van is. Very reassuring." <span class="speaker">p2 Fred</span></div></div>
+                <div class="quote-badges"><span class="badge badge-sentiment" style="background:var(--bn-sentiment-satisfaction-bg);color:var(--bn-sentiment-satisfaction)">satisfaction</span></div><span class="star-icon">&#9734;</span>
+            </blockquote>
+            <blockquote class="quote-card">
+                <div class="quote-row"><span class="timecode">[12:57]</span><div class="quote-body">"How do I return just one item from a multi-item order? This is confusing." <span class="speaker">p1</span></div></div>
+                <div class="quote-badges"><span class="badge badge-sentiment" style="background:var(--bn-sentiment-frustration-bg);color:var(--bn-sentiment-frustration)">frustration</span> <span class="badge">user need</span></div><span class="star-icon">&#9734;</span>
+            </blockquote>
+
+            <h3 class="subsection-heading" id="size-guide">Size Guide</h3>
+            <p class="subsection-desc">Measurement guidance for furniture and textiles.</p>
+            <blockquote class="quote-card">
+                <div class="quote-row"><span class="timecode">[13:34]</span><div class="quote-body">"The reviews are helpful but I wish I could filter by 'verified purchase'." <span class="speaker">p3 Fritchoff</span></div></div>
+                <div class="quote-badges"><span class="badge">user need</span></div><span class="star-icon">&#9734;</span>
+            </blockquote>
+
+            <h3 class="subsection-heading" id="gift-cards">Gift Cards</h3>
+            <p class="subsection-desc">Purchasing and redeeming gift cards.</p>
+            <blockquote class="quote-card">
+                <div class="quote-row"><span class="timecode">[14:11]</span><div class="quote-body">"Someone posted a photo of this in their actual room. That's way more useful than the product shots." <span class="speaker">p2 Fred</span></div></div>
+                <div class="quote-badges"><span class="badge badge-sentiment" style="background:var(--bn-sentiment-satisfaction-bg);color:var(--bn-sentiment-satisfaction)">satisfaction</span></div><span class="star-icon">&#9734;</span>
+            </blockquote>
+            <blockquote class="quote-card">
+                <div class="quote-row"><span class="timecode">[14:48]</span><div class="quote-body">"The size guide says 'standard' but what's standard? Give me centimetres." <span class="speaker">p1</span></div></div>
+                <div class="quote-badges"><span class="badge badge-sentiment" style="background:var(--bn-sentiment-frustration-bg);color:var(--bn-sentiment-frustration)">frustration</span></div><span class="star-icon">&#9734;</span>
+            </blockquote>
+
+            <h3 class="subsection-heading" id="click-and-collect">Click and Collect</h3>
+            <p class="subsection-desc">Reserve online, pick up in store.</p>
+            <blockquote class="quote-card">
+                <div class="quote-row"><span class="timecode">[15:25]</span><div class="quote-body">"Can I buy a gift card and have it emailed directly to someone? I can't tell." <span class="speaker">p3 Fritchoff</span></div></div>
+                <div class="quote-badges"><span class="badge">user need</span></div><span class="star-icon">&#9734;</span>
+            </blockquote>
+            <blockquote class="quote-card">
+                <div class="quote-row"><span class="timecode">[16:02]</span><div class="quote-body">"Oh you can choose the amount. And add a message. That's nice." <span class="speaker">p2 Fred</span></div></div>
+                <div class="quote-badges"><span class="badge badge-sentiment" style="background:var(--bn-sentiment-satisfaction-bg);color:var(--bn-sentiment-satisfaction)">satisfaction</span></div><span class="star-icon">&#9734;</span>
+            </blockquote>
+
+            <h3 class="subsection-heading" id="price-comparison">Price Comparison</h3>
+            <p class="subsection-desc">Comparing similar products and price ranges.</p>
+            <blockquote class="quote-card">
+                <div class="quote-row"><span class="timecode">[16:39]</span><div class="quote-body">"It says I can collect today but when I select my store it says tomorrow." <span class="speaker">p1</span></div></div>
+                <div class="quote-badges"><span class="badge badge-sentiment" style="background:var(--bn-sentiment-frustration-bg);color:var(--bn-sentiment-frustration)">frustration</span> <span class="badge">system response</span></div><span class="star-icon">&#9734;</span>
+            </blockquote>
+
+            <h3 class="subsection-heading" id="product-filters">Product Filters</h3>
+            <p class="subsection-desc">Narrowing results by colour, size, price.</p>
+            <blockquote class="quote-card">
+                <div class="quote-row"><span class="timecode">[17:16]</span><div class="quote-body">"Is this cheaper than John Lewis? I wish they'd show me." <span class="speaker">p3 Fritchoff</span></div></div>
+                <div class="quote-badges"><span class="badge">user need</span></div><span class="star-icon">&#9734;</span>
+            </blockquote>
+            <blockquote class="quote-card">
+                <div class="quote-row"><span class="timecode">[17:53]</span><div class="quote-body">"The price history graph is really transparent. I appreciate that." <span class="speaker">p2 Fred</span></div></div>
+                <div class="quote-badges"><span class="badge badge-sentiment" style="background:var(--bn-sentiment-satisfaction-bg);color:var(--bn-sentiment-satisfaction)">satisfaction</span></div><span class="star-icon">&#9734;</span>
+            </blockquote>
+
+            <h3 class="subsection-heading" id="mobile-navigation">Mobile Navigation</h3>
+            <p class="subsection-desc">Bottom nav, hamburger menu, gestures.</p>
+            <blockquote class="quote-card">
+                <div class="quote-row"><span class="timecode">[18:30]</span><div class="quote-body">"Too many filter options. I just want 'under £50' and 'in stock'." <span class="speaker">p1</span></div></div>
+                <div class="quote-badges"><span class="badge">user need</span></div><span class="star-icon">&#9734;</span>
+            </blockquote>
+            <blockquote class="quote-card">
+                <div class="quote-row"><span class="timecode">[19:07]</span><div class="quote-body">"The bottom navigation keeps disappearing when I scroll. Where did it go?" <span class="speaker">p3 Fritchoff</span></div></div>
+                <div class="quote-badges"><span class="badge badge-sentiment" style="background:var(--bn-sentiment-frustration-bg);color:var(--bn-sentiment-frustration)">frustration</span> <span class="badge">visible action</span></div><span class="star-icon">&#9734;</span>
+            </blockquote>
+
+            <h3 class="subsection-heading" id="accessibility-features">Accessibility Features</h3>
+            <p class="subsection-desc">Screen reader support, contrast, keyboard nav.</p>
+            <blockquote class="quote-card">
+                <div class="quote-row"><span class="timecode">[19:44]</span><div class="quote-body">"Swiping between images works nicely. Very smooth." <span class="speaker">p2 Fred</span></div></div>
+                <div class="quote-badges"><span class="badge badge-sentiment" style="background:var(--bn-sentiment-satisfaction-bg);color:var(--bn-sentiment-satisfaction)">satisfaction</span></div><span class="star-icon">&#9734;</span>
+            </blockquote>
+
+            <h3 class="subsection-heading" id="payment-methods">Payment Methods</h3>
+            <p class="subsection-desc">Card, PayPal, Klarna, Apple Pay options.</p>
+            <blockquote class="quote-card">
+                <div class="quote-row"><span class="timecode">[20:21]</span><div class="quote-body">"The screen reader is reading the decorative icons as 'image image image'." <span class="speaker">p1</span></div></div>
+                <div class="quote-badges"><span class="badge">system response</span></div><span class="star-icon">&#9734;</span>
+            </blockquote>
+            <blockquote class="quote-card">
+                <div class="quote-row"><span class="timecode">[20:58]</span><div class="quote-body">"I want to pay with Apple Pay but it's not showing as an option." <span class="speaker">p3 Fritchoff</span></div></div>
+                <div class="quote-badges"><span class="badge badge-sentiment" style="background:var(--bn-sentiment-frustration-bg);color:var(--bn-sentiment-frustration)">frustration</span></div><span class="star-icon">&#9734;</span>
+            </blockquote>
+
+            <h3 class="subsection-heading" id="guest-checkout">Guest Checkout</h3>
+            <p class="subsection-desc">Purchasing without creating an account.</p>
+            <blockquote class="quote-card">
+                <div class="quote-row"><span class="timecode">[21:35]</span><div class="quote-body">"Klarna's 'pay in 3' option is really clearly explained here." <span class="speaker">p2 Fred</span></div></div>
+                <div class="quote-badges"><span class="badge badge-sentiment" style="background:var(--bn-sentiment-satisfaction-bg);color:var(--bn-sentiment-satisfaction)">satisfaction</span></div><span class="star-icon">&#9734;</span>
+            </blockquote>
+            <blockquote class="quote-card">
+                <div class="quote-row"><span class="timecode">[22:12]</span><div class="quote-body">"Why do I have to create an account? I just want to buy one thing." <span class="speaker">p1</span></div></div>
+                <div class="quote-badges"><span class="badge badge-sentiment" style="background:var(--bn-sentiment-frustration-bg);color:var(--bn-sentiment-frustration)">frustration</span> <span class="badge">user need</span></div><span class="star-icon">&#9734;</span>
+            </blockquote>
+
+            <h3 class="subsection-heading" id="email-notifications">Email Notifications</h3>
+            <p class="subsection-desc">Order updates, marketing, preference management.</p>
+            <blockquote class="quote-card">
+                <div class="quote-row"><span class="timecode">[22:49]</span><div class="quote-body">"I'm getting too many emails from them. Where do I unsubscribe?" <span class="speaker">p3 Fritchoff</span></div></div>
+                <span class="star-icon">&#9734;</span>
+            </blockquote>
+
+            <h3 class="subsection-heading" id="help-centre">Help Centre</h3>
+            <p class="subsection-desc">FAQ, contact options, troubleshooting guides.</p>
+            <blockquote class="quote-card">
+                <div class="quote-row"><span class="timecode">[23:26]</span><div class="quote-body">"The order confirmation email has everything I need. Really well laid out." <span class="speaker">p2 Fred</span></div></div>
+                <div class="quote-badges"><span class="badge badge-sentiment" style="background:var(--bn-sentiment-satisfaction-bg);color:var(--bn-sentiment-satisfaction)">satisfaction</span></div><span class="star-icon">&#9734;</span>
+            </blockquote>
+            <blockquote class="quote-card">
+                <div class="quote-row"><span class="timecode">[24:03]</span><div class="quote-body">"I can't find the answer to my question in the FAQ. It's too vague." <span class="speaker">p1</span></div></div>
+                <div class="quote-badges"><span class="badge badge-sentiment" style="background:var(--bn-sentiment-frustration-bg);color:var(--bn-sentiment-frustration)">frustration</span></div><span class="star-icon">&#9734;</span>
+            </blockquote>
+
+            <h3 class="subsection-heading" id="live-chat">Live Chat</h3>
+            <p class="subsection-desc">Real-time support with agents and chatbots.</p>
+            <blockquote class="quote-card">
+                <div class="quote-row"><span class="timecode">[24:40]</span><div class="quote-body">"Oh there's a phone number! Most sites hide that. Good." <span class="speaker">p3 Fritchoff</span></div></div>
+                <div class="quote-badges"><span class="badge badge-sentiment" style="background:var(--bn-sentiment-satisfaction-bg);color:var(--bn-sentiment-satisfaction)">satisfaction</span></div><span class="star-icon">&#9734;</span>
+            </blockquote>
+            <blockquote class="quote-card">
+                <div class="quote-row"><span class="timecode">[25:17]</span><div class="quote-body">"The chatbot asked me the same question three times. I gave up." <span class="speaker">p2 Fred</span></div></div>
+                <div class="quote-badges"><span class="badge badge-sentiment" style="background:var(--bn-sentiment-frustration-bg);color:var(--bn-sentiment-frustration)">frustration</span> <span class="badge">system response</span></div><span class="star-icon">&#9734;</span>
+            </blockquote>
+
+            <h2 class="section-heading" id="themes-heading" style="margin-top:3rem">Themes</h2>
+            <h3 class="subsection-heading" id="theme-healthcare-system-failures">Healthcare system failures</h3>
+            <blockquote class="quote-card">
+                <div class="quote-row"><span class="timecode">[25:00]</span><div class="quote-body">"The NHS booking system could learn a thing or two from this checkout flow." <span class="speaker">p3 Fritchoff</span></div></div>
+                <span class="star-icon">&#9734;</span>
+            </blockquote>
+
+            <h3 class="subsection-heading" id="theme-technical-difficulties">Technical difficulties during testing</h3>
+            <blockquote class="quote-card">
+                <div class="quote-row"><span class="timecode">[26:41]</span><div class="quote-body">"Sorry my screen just froze for a second there. Right, where was I..." <span class="speaker">p1</span></div></div>
+                <span class="star-icon">&#9734;</span>
+            </blockquote>
+
+            <h3 class="subsection-heading" id="theme-brand-perception">Brand perception and personality</h3>
+            <blockquote class="quote-card">
+                <div class="quote-row"><span class="timecode">[27:22]</span><div class="quote-body">"IKEA feels very Swedish. In a good way. Clean, organised. But sometimes too minimal." <span class="speaker">p2 Fred</span></div></div>
+                <span class="star-icon">&#9734;</span>
+            </blockquote>
+
+            <h3 class="subsection-heading" id="theme-session-management">Session management and boundaries</h3>
+            <blockquote class="quote-card">
+                <div class="quote-row"><span class="timecode">[28:03]</span><div class="quote-body">"I've been at this for a while now. My session might time out." <span class="speaker">p3 Fritchoff</span></div></div>
+                <span class="star-icon">&#9734;</span>
+            </blockquote>
+
+            <h3 class="subsection-heading" id="theme-trust-credibility">Trust and credibility concerns</h3>
+            <blockquote class="quote-card">
+                <div class="quote-row"><span class="timecode">[29:44]</span><div class="quote-body">"I don't trust this payment page. The design looks different from the rest of the site." <span class="speaker">p1</span></div></div>
+                <div class="quote-badges"><span class="badge badge-sentiment" style="background:var(--bn-sentiment-frustration-bg);color:var(--bn-sentiment-frustration)">frustration</span></div><span class="star-icon">&#9734;</span>
+            </blockquote>
+
+            <h3 class="subsection-heading" id="theme-pricing-transparency">Pricing transparency gaps</h3>
+            <blockquote class="quote-card">
+                <div class="quote-row"><span class="timecode">[30:25]</span><div class="quote-body">"Why is delivery £5 here but free on their app? That feels sneaky." <span class="speaker">p2 Fred</span></div></div>
+                <div class="quote-badges"><span class="badge badge-sentiment" style="background:var(--bn-sentiment-frustration-bg);color:var(--bn-sentiment-frustration)">frustration</span></div><span class="star-icon">&#9734;</span>
+            </blockquote>
+
+            <h3 class="subsection-heading" id="theme-info-architecture">Information architecture confusion</h3>
+            <blockquote class="quote-card">
+                <div class="quote-row"><span class="timecode">[31:06]</span><div class="quote-body">"I keep getting lost. The breadcrumbs say one thing but the page says another." <span class="speaker">p3 Fritchoff</span></div></div>
+                <div class="quote-badges"><span class="badge badge-sentiment" style="background:var(--bn-sentiment-frustration-bg);color:var(--bn-sentiment-frustration)">frustration</span></div><span class="star-icon">&#9734;</span>
+            </blockquote>
+
+            <h3 class="subsection-heading" id="theme-emotional-errors">Emotional response to errors</h3>
+            <blockquote class="quote-card">
+                <div class="quote-row"><span class="timecode">[32:47]</span><div class="quote-body">"When I saw that error message I panicked. I thought I'd lost my whole basket." <span class="speaker">p1</span></div></div>
+                <span class="star-icon">&#9734;</span>
+            </blockquote>
+
+            <h3 class="subsection-heading" id="theme-cross-device">Cross-device experience friction</h3>
+            <blockquote class="quote-card">
+                <div class="quote-row"><span class="timecode">[33:28]</span><div class="quote-body">"I added things on my phone but they're not showing on my laptop." <span class="speaker">p2 Fred</span></div></div>
+                <div class="quote-badges"><span class="badge badge-sentiment" style="background:var(--bn-sentiment-frustration-bg);color:var(--bn-sentiment-frustration)">frustration</span></div><span class="star-icon">&#9734;</span>
+            </blockquote>
+
+            <h3 class="subsection-heading" id="theme-accessibility-barriers">Accessibility barrier patterns</h3>
+            <blockquote class="quote-card">
+                <div class="quote-row"><span class="timecode">[34:09]</span><div class="quote-body">"The font is too small for me. And I can't figure out how to zoom in properly." <span class="speaker">p3 Fritchoff</span></div></div>
+                <span class="star-icon">&#9734;</span>
+            </blockquote>
+
+            <h3 class="subsection-heading" id="theme-social-proof">Social proof dependency</h3>
+            <blockquote class="quote-card">
+                <div class="quote-row"><span class="timecode">[35:50]</span><div class="quote-body">"If nobody's reviewed it, I won't buy it. I need to see what other people think." <span class="speaker">p1</span></div></div>
+                <span class="star-icon">&#9734;</span>
+            </blockquote>
+
+            <h3 class="subsection-heading" id="theme-decision-fatigue">Decision fatigue triggers</h3>
+            <blockquote class="quote-card">
+                <div class="quote-row"><span class="timecode">[36:31]</span><div class="quote-body">"There are just too many options. I've been looking at sofas for 40 minutes." <span class="speaker">p2 Fred</span></div></div>
+                <span class="star-icon">&#9734;</span>
+            </blockquote>
+
+            <h3 class="subsection-heading" id="theme-cognitive-load">Cognitive load in checkout</h3>
+            <blockquote class="quote-card">
+                <div class="quote-row"><span class="timecode">[37:12]</span><div class="quote-body">"By the time I got to the payment page I'd forgotten what I was buying." <span class="speaker">p3 Fritchoff</span></div></div>
+                <span class="star-icon">&#9734;</span>
+            </blockquote>
+
+            <h3 class="subsection-heading" id="theme-first-impression">First impression formation</h3>
+            <blockquote class="quote-card">
+                <div class="quote-row"><span class="timecode">[38:53]</span><div class="quote-body">"First thing I noticed was how fast it loaded. That made a good impression." <span class="speaker">p1</span></div></div>
+                <div class="quote-badges"><span class="badge badge-sentiment" style="background:var(--bn-sentiment-satisfaction-bg);color:var(--bn-sentiment-satisfaction)">satisfaction</span></div><span class="star-icon">&#9734;</span>
+            </blockquote>
+
+            <h3 class="subsection-heading" id="theme-recovery-mistakes">Recovery from mistakes</h3>
+            <blockquote class="quote-card">
+                <div class="quote-row"><span class="timecode">[39:34]</span><div class="quote-body">"I accidentally deleted my address and now I can't get it back." <span class="speaker">p2 Fred</span></div></div>
+                <div class="quote-badges"><span class="badge badge-sentiment" style="background:var(--bn-sentiment-frustration-bg);color:var(--bn-sentiment-frustration)">frustration</span></div><span class="star-icon">&#9734;</span>
+            </blockquote>
+
+            <h3 class="subsection-heading" id="theme-language-tone">Language and tone sensitivity</h3>
+            <blockquote class="quote-card">
+                <div class="quote-row"><span class="timecode">[40:15]</span><div class="quote-body">"The tone is very corporate here. It doesn't match the fun vibe of the store." <span class="speaker">p3 Fritchoff</span></div></div>
+                <span class="star-icon">&#9734;</span>
+            </blockquote>
+
+            <h3 class="subsection-heading" id="theme-visual-hierarchy">Visual hierarchy effectiveness</h3>
+            <blockquote class="quote-card">
+                <div class="quote-row"><span class="timecode">[41:56]</span><div class="quote-body">"I didn't even see that button. It blends into the background." <span class="speaker">p1</span></div></div>
+                <span class="star-icon">&#9734;</span>
+            </blockquote>
+
+            <h3 class="subsection-heading" id="theme-loading-performance">Loading and performance anxiety</h3>
+            <blockquote class="quote-card">
+                <div class="quote-row"><span class="timecode">[42:37]</span><div class="quote-body">"That spinner has been going for ages. Is it broken or just slow?" <span class="speaker">p2 Fred</span></div></div>
+                <span class="star-icon">&#9734;</span>
+            </blockquote>
+
+            <h3 class="subsection-heading" id="theme-privacy-data">Privacy and data concerns</h3>
+            <blockquote class="quote-card">
+                <div class="quote-row"><span class="timecode">[43:18]</span><div class="quote-body">"Why does it need my location? I haven't agreed to anything." <span class="speaker">p3 Fritchoff</span></div></div>
+                <div class="quote-badges"><span class="badge badge-sentiment" style="background:var(--bn-sentiment-frustration-bg);color:var(--bn-sentiment-frustration)">frustration</span></div><span class="star-icon">&#9734;</span>
+            </blockquote>
+
+            <h3 class="subsection-heading" id="theme-comparison-shopping">Comparison shopping behaviour</h3>
+            <blockquote class="quote-card">
+                <div class="quote-row"><span class="timecode">[44:59]</span><div class="quote-body">"I always open three tabs and compare. Is there a built-in way to do that?" <span class="speaker">p1</span></div></div>
+                <div class="quote-badges"><span class="badge">user need</span></div><span class="star-icon">&#9734;</span>
+            </blockquote>
+
+            <h3 class="subsection-heading" id="theme-loyalty-programme">Loyalty programme confusion</h3>
+            <blockquote class="quote-card">
+                <div class="quote-row"><span class="timecode">[45:40]</span><div class="quote-body">"I have a loyalty card but I don't know what my points are worth." <span class="speaker">p2 Fred</span></div></div>
+                <span class="star-icon">&#9734;</span>
+            </blockquote>
+
+            <h3 class="subsection-heading" id="theme-seasonal-shopping">Seasonal shopping patterns</h3>
+            <blockquote class="quote-card">
+                <div class="quote-row"><span class="timecode">[46:21]</span><div class="quote-body">"Everything's on sale right now. How do I know what the real price is?" <span class="speaker">p3 Fritchoff</span></div></div>
+                <span class="star-icon">&#9734;</span>
+            </blockquote>
+
+            <h3 class="subsection-heading" id="theme-mobile-first">Mobile-first expectations</h3>
+            <blockquote class="quote-card">
+                <div class="quote-row"><span class="timecode">[47:02]</span><div class="quote-body">"On my phone this looks great. Much better than the desktop version actually." <span class="speaker">p1</span></div></div>
+                <div class="quote-badges"><span class="badge badge-sentiment" style="background:var(--bn-sentiment-satisfaction-bg);color:var(--bn-sentiment-satisfaction)">satisfaction</span></div><span class="star-icon">&#9734;</span>
+            </blockquote>
+
+            <h3 class="subsection-heading" id="theme-voice-assistant">Voice and assistant integration</h3>
+            <blockquote class="quote-card">
+                <div class="quote-row"><span class="timecode">[48:43]</span><div class="quote-body">"I tried asking Alexa to add this to my IKEA basket and it had no idea." <span class="speaker">p2 Fred</span></div></div>
+                <span class="star-icon">&#9734;</span>
+            </blockquote>
+
+            <h3 class="subsection-heading" id="theme-sustainability">Sustainability messaging impact</h3>
+            <blockquote class="quote-card">
+                <div class="quote-row"><span class="timecode">[49:24]</span><div class="quote-body">"It says 'sustainably sourced' but what does that actually mean?" <span class="speaker">p3 Fritchoff</span></div></div>
+                <span class="star-icon">&#9734;</span>
+            </blockquote>
+
+            <div style="height:30vh"></div>
+        
+        </div>
+    </div><!-- /.center -->
+
+    <!-- Col 4: Right sidebar (Tags) -->
+    <aside class="tag-sidebar" id="tag-sidebar">
+        <div class="drag-handle tag-drag-handle" id="tag-drag-handle"></div>
+        <div class="tag-sidebar-header">
+            <span class="sidebar-title">Tags</span>
+            <button class="sidebar-close" id="tag-close" title="Close (⌘])">&times;</button>
+        </div>
+        <div class="tag-sidebar-subtitle">Quotes by tag</div>
+        <div class="tag-sidebar-actions">
+            <button class="tag-filter-action">Select all</button>
+            <span class="tag-filter-separator">|</span>
+            <button class="tag-filter-action">Clear</button>
+        </div>
+        <div class="tag-search-container">
+            <input class="tag-search-input" id="tag-search" type="text" placeholder="Search tags…">
+        </div>
+        <div class="tag-sidebar-body">
+            <label class="tag-filter-item tag-filter-item-muted">
+                <input type="checkbox" checked> (No tags) <span class="tag-filter-count">18</span>
+            </label>
+
+            <!-- ── The Elements of User Experience — Jesse James Garrett ── -->
+            <details class="codebook-framework" open>
+                <summary>
+                    <svg class="codebook-disclosure" viewBox="0 0 16 16" fill="currentColor"><path d="M6 3l5 5-5 5z"/></svg>
+                    <div class="codebook-info">
+                        <div class="codebook-title">The Elements of User Experience</div>
+                        <div class="codebook-author">Jesse James Garrett</div>
+                    </div>
+                    <button class="codebook-eye" title="Hide all groups">
+                        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M1 8s2.5-5 7-5 7 5 7 5-2.5 5-7 5-7-5-7-5z"/>
+                            <circle cx="8" cy="8" r="2.5"/>
+                        </svg>
+                    </button>
+                </summary>
+                <div class="codebook-body">
+                    <div class="tag-filter-group" style="background:var(--bn-group-ux)">
+                        <div class="tag-filter-group-header-row">
+                            <div class="tag-filter-group-info">
+                                <div class="tag-filter-group-name">Strategy</div>
+                                <div class="tag-filter-group-subtitle">Is the product solving the right problem for the right users?</div>
+                            </div>
+                            <button class="group-eye" title="Hide group">
+                                <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M1 8s2.5-5 7-5 7 5 7 5-2.5 5-7 5-7-5-7-5z"/><circle cx="8" cy="8" r="2.5"/></svg>
+                            </button>
+                        </div>
+                        <div class="tag-filter-group-tags">
+                                                        <div class="tag-row">
+                                <div class="tag-name-area">
+                                    <input type="checkbox" checked>
+                                    <span class="badge">user need</span>
+                                </div>
+                                <div class="tag-bar-area">
+                                    <div class="tag-micro-bar" style="width: 30px; background: var(--bn-colour-muted); opacity: 0.35;"></div>
+                                    <span class="tag-count">8</span>
+                                </div>
+                            </div>
+                                                        <div class="tag-row">
+                                <div class="tag-name-area">
+                                    <input type="checkbox" checked>
+                                    <span class="badge">business objective</span>
+                                </div>
+                                <div class="tag-bar-area">
+                                    <div class="tag-micro-bar" style="width: 8px; background: var(--bn-colour-muted); opacity: 0.35;"></div>
+                                    <span class="tag-count">2</span>
+                                </div>
+                            </div>
+                                                        <div class="tag-row">
+                                <div class="tag-name-area">
+                                    <input type="checkbox" checked>
+                                    <span class="badge">success metric</span>
+                                </div>
+                                <div class="tag-bar-area">
+                                    <div class="tag-micro-bar" style="width: 4px; background: var(--bn-colour-muted); opacity: 0.35;"></div>
+                                    <span class="tag-count">1</span>
+                                </div>
+                            </div>
+                                                        <div class="tag-row">
+                                <div class="tag-name-area">
+                                    <input type="checkbox" checked>
+                                    <span class="badge">value proposition</span>
+                                </div>
+                                <div class="tag-bar-area">
+                                    <div class="tag-micro-bar" style="width: 11px; background: var(--bn-colour-muted); opacity: 0.35;"></div>
+                                    <span class="tag-count">3</span>
+                                </div>
+                            </div>
+                        
+                            <div class="group-total-row">
+                                <span class="group-total-label">TOTAL</span>
+                                <span class="group-total-count">14</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="tag-filter-group eye-hidden" style="background:var(--bn-group-emo)">
+                        <div class="tag-filter-group-header-row">
+                            <div class="tag-filter-group-info">
+                                <div class="tag-filter-group-name">Scope</div>
+                                <div class="tag-filter-group-subtitle">What features and content are included or excluded?</div>
+                            </div>
+                            <button class="group-eye" title="Show group"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M1 8s2.5-5 7-5 7 5 7 5-2.5 5-7 5-7-5-7-5z"/><line x1="2" y1="2" x2="14" y2="14"/></svg></button>
+                        </div>
+                        <div class="tag-filter-group-tags">
+                                                        <div class="tag-row">
+                                <div class="tag-name-area">
+                                    <input type="checkbox" checked>
+                                    <span class="badge">feature requirement</span>
+                                </div>
+                                <div class="tag-bar-area">
+                                    <div class="tag-micro-bar" style="width: 15px; background: var(--bn-colour-muted); opacity: 0.35;"></div>
+                                    <span class="tag-count">4</span>
+                                </div>
+                            </div>
+                                                        <div class="tag-row">
+                                <div class="tag-name-area">
+                                    <input type="checkbox" checked>
+                                    <span class="badge">content requirement</span>
+                                </div>
+                                <div class="tag-bar-area">
+                                    <div class="tag-micro-bar" style="width: 4px; background: var(--bn-colour-muted); opacity: 0.35;"></div>
+                                    <span class="tag-count">1</span>
+                                </div>
+                            </div>
+                                                        <div class="tag-row">
+                                <div class="tag-name-area">
+                                    <input type="checkbox" checked>
+                                    <span class="badge">priority</span>
+                                </div>
+                                <div class="tag-bar-area">
+                                    <div class="tag-micro-bar" style="width: 0px; background: var(--bn-colour-muted); opacity: 0.35;"></div>
+                                    <span class="tag-count">0</span>
+                                </div>
+                            </div>
+                                                        <div class="tag-row">
+                                <div class="tag-name-area">
+                                    <input type="checkbox" checked>
+                                    <span class="badge">scope creep</span>
+                                </div>
+                                <div class="tag-bar-area">
+                                    <div class="tag-micro-bar" style="width: 8px; background: var(--bn-colour-muted); opacity: 0.35;"></div>
+                                    <span class="tag-count">2</span>
+                                </div>
+                            </div>
+                        
+                            <div class="group-total-row">
+                                <span class="group-total-label">TOTAL</span>
+                                <span class="group-total-count">7</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="tag-filter-group" style="background:var(--bn-group-task)">
+                        <div class="tag-filter-group-header-row">
+                            <div class="tag-filter-group-info">
+                                <div class="tag-filter-group-name">Structure</div>
+                                <div class="tag-filter-group-subtitle">How is information organised conceptually?</div>
+                            </div>
+                            <button class="group-eye" title="Hide group"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M1 8s2.5-5 7-5 7 5 7 5-2.5 5-7 5-7-5-7-5z"/><circle cx="8" cy="8" r="2.5"/></svg></button>
+                        </div>
+                        <div class="tag-filter-group-tags">
+                                                        <div class="tag-row">
+                                <div class="tag-name-area">
+                                    <input type="checkbox" checked>
+                                    <span class="badge">interaction design</span>
+                                </div>
+                                <div class="tag-bar-area">
+                                    <div class="tag-micro-bar" style="width: 19px; background: var(--bn-colour-muted); opacity: 0.35;"></div>
+                                    <span class="tag-count">5</span>
+                                </div>
+                            </div>
+                                                        <div class="tag-row">
+                                <div class="tag-name-area">
+                                    <input type="checkbox" checked>
+                                    <span class="badge">information architecture</span>
+                                </div>
+                                <div class="tag-bar-area">
+                                    <div class="tag-micro-bar" style="width: 11px; background: var(--bn-colour-muted); opacity: 0.35;"></div>
+                                    <span class="tag-count">3</span>
+                                </div>
+                            </div>
+                                                        <div class="tag-row">
+                                <div class="tag-name-area">
+                                    <input type="checkbox" checked>
+                                    <span class="badge">navigation pattern</span>
+                                </div>
+                                <div class="tag-bar-area">
+                                    <div class="tag-micro-bar" style="width: 22px; background: var(--bn-colour-muted); opacity: 0.35;"></div>
+                                    <span class="tag-count">6</span>
+                                </div>
+                            </div>
+                                                        <div class="tag-row">
+                                <div class="tag-name-area">
+                                    <input type="checkbox" checked>
+                                    <span class="badge">task flow</span>
+                                </div>
+                                <div class="tag-bar-area">
+                                    <div class="tag-micro-bar" style="width: 8px; background: var(--bn-colour-muted); opacity: 0.35;"></div>
+                                    <span class="tag-count">2</span>
+                                </div>
+                            </div>
+                        
+                            <div class="group-total-row">
+                                <span class="group-total-label">TOTAL</span>
+                                <span class="group-total-count">16</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="tag-filter-group" style="background:var(--bn-group-trust)">
+                        <div class="tag-filter-group-header-row">
+                            <div class="tag-filter-group-info">
+                                <div class="tag-filter-group-name">Skeleton</div>
+                                <div class="tag-filter-group-subtitle">How are interface elements arranged?</div>
+                            </div>
+                            <button class="group-eye" title="Hide group"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M1 8s2.5-5 7-5 7 5 7 5-2.5 5-7 5-7-5-7-5z"/><circle cx="8" cy="8" r="2.5"/></svg></button>
+                        </div>
+                        <div class="tag-filter-group-tags">
+                                                        <div class="tag-row">
+                                <div class="tag-name-area">
+                                    <input type="checkbox" checked>
+                                    <span class="badge">interface layout</span>
+                                </div>
+                                <div class="tag-bar-area">
+                                    <div class="tag-micro-bar" style="width: 4px; background: var(--bn-colour-muted); opacity: 0.35;"></div>
+                                    <span class="tag-count">1</span>
+                                </div>
+                            </div>
+                                                        <div class="tag-row">
+                                <div class="tag-name-area">
+                                    <input type="checkbox" checked>
+                                    <span class="badge">wireframe issue</span>
+                                </div>
+                                <div class="tag-bar-area">
+                                    <div class="tag-micro-bar" style="width: 0px; background: var(--bn-colour-muted); opacity: 0.35;"></div>
+                                    <span class="tag-count">0</span>
+                                </div>
+                            </div>
+                                                        <div class="tag-row">
+                                <div class="tag-name-area">
+                                    <input type="checkbox" checked>
+                                    <span class="badge">convention</span>
+                                </div>
+                                <div class="tag-bar-area">
+                                    <div class="tag-micro-bar" style="width: 15px; background: var(--bn-colour-muted); opacity: 0.35;"></div>
+                                    <span class="tag-count">4</span>
+                                </div>
+                            </div>
+                                                        <div class="tag-row">
+                                <div class="tag-name-area">
+                                    <input type="checkbox" checked>
+                                    <span class="badge">component placement</span>
+                                </div>
+                                <div class="tag-bar-area">
+                                    <div class="tag-micro-bar" style="width: 8px; background: var(--bn-colour-muted); opacity: 0.35;"></div>
+                                    <span class="tag-count">2</span>
+                                </div>
+                            </div>
+                        
+                            <div class="group-total-row">
+                                <span class="group-total-label">TOTAL</span>
+                                <span class="group-total-count">7</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="tag-filter-group" style="background:var(--bn-group-opp)">
+                        <div class="tag-filter-group-header-row">
+                            <div class="tag-filter-group-info">
+                                <div class="tag-filter-group-name">Surface</div>
+                                <div class="tag-filter-group-subtitle">What is the visual treatment?</div>
+                            </div>
+                            <button class="group-eye" title="Hide group"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M1 8s2.5-5 7-5 7 5 7 5-2.5 5-7 5-7-5-7-5z"/><circle cx="8" cy="8" r="2.5"/></svg></button>
+                        </div>
+                        <div class="tag-filter-group-tags">
+                                                        <div class="tag-row">
+                                <div class="tag-name-area">
+                                    <input type="checkbox" checked>
+                                    <span class="badge">visual design</span>
+                                </div>
+                                <div class="tag-bar-area">
+                                    <div class="tag-micro-bar" style="width: 11px; background: var(--bn-colour-muted); opacity: 0.35;"></div>
+                                    <span class="tag-count">3</span>
+                                </div>
+                            </div>
+                                                        <div class="tag-row">
+                                <div class="tag-name-area">
+                                    <input type="checkbox" checked>
+                                    <span class="badge">sensory experience</span>
+                                </div>
+                                <div class="tag-bar-area">
+                                    <div class="tag-micro-bar" style="width: 4px; background: var(--bn-colour-muted); opacity: 0.35;"></div>
+                                    <span class="tag-count">1</span>
+                                </div>
+                            </div>
+                                                        <div class="tag-row">
+                                <div class="tag-name-area">
+                                    <input type="checkbox" checked>
+                                    <span class="badge">brand alignment</span>
+                                </div>
+                                <div class="tag-bar-area">
+                                    <div class="tag-micro-bar" style="width: 8px; background: var(--bn-colour-muted); opacity: 0.35;"></div>
+                                    <span class="tag-count">2</span>
+                                </div>
+                            </div>
+                                                        <div class="tag-row">
+                                <div class="tag-name-area">
+                                    <input type="checkbox" checked>
+                                    <span class="badge">aesthetic reaction</span>
+                                </div>
+                                <div class="tag-bar-area">
+                                    <div class="tag-micro-bar" style="width: 19px; background: var(--bn-colour-muted); opacity: 0.35;"></div>
+                                    <span class="tag-count">5</span>
+                                </div>
+                            </div>
+                        
+                            <div class="group-total-row">
+                                <span class="group-total-label">TOTAL</span>
+                                <span class="group-total-count">11</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </details>
+
+            <!-- ── The Design of Everyday Things — Don Norman ────────── -->
+            <details class="codebook-framework" open>
+                <summary>
+                    <svg class="codebook-disclosure" viewBox="0 0 16 16" fill="currentColor"><path d="M6 3l5 5-5 5z"/></svg>
+                    <div class="codebook-info">
+                        <div class="codebook-title">The Design of Everyday Things</div>
+                        <div class="codebook-author">Don Norman</div>
+                    </div>
+                    <button class="codebook-eye" title="Hide all groups">
+                        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M1 8s2.5-5 7-5 7 5 7 5-2.5 5-7 5-7-5-7-5z"/>
+                            <circle cx="8" cy="8" r="2.5"/>
+                        </svg>
+                    </button>
+                </summary>
+                <div class="codebook-body">
+                    <div class="tag-filter-group" style="background:var(--bn-group-ux)">
+                        <div class="tag-filter-group-header-row">
+                            <div class="tag-filter-group-info">
+                                <div class="tag-filter-group-name">Discoverability</div>
+                                <div class="tag-filter-group-subtitle">Can the user figure out what actions are possible?</div>
+                            </div>
+                            <button class="group-eye" title="Hide group"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M1 8s2.5-5 7-5 7 5 7 5-2.5 5-7 5-7-5-7-5z"/><circle cx="8" cy="8" r="2.5"/></svg></button>
+                        </div>
+                        <div class="tag-filter-group-tags">
+                                                        <div class="tag-row">
+                                <div class="tag-name-area">
+                                    <input type="checkbox" checked>
+                                    <span class="badge">visible action</span>
+                                </div>
+                                <div class="tag-bar-area">
+                                    <div class="tag-micro-bar" style="width: 22px; background: var(--bn-colour-muted); opacity: 0.35;"></div>
+                                    <span class="tag-count">6</span>
+                                </div>
+                            </div>
+                                                        <div class="tag-row">
+                                <div class="tag-name-area">
+                                    <input type="checkbox" checked>
+                                    <span class="badge">hidden feature</span>
+                                </div>
+                                <div class="tag-bar-area">
+                                    <div class="tag-micro-bar" style="width: 0px; background: var(--bn-colour-muted); opacity: 0.35;"></div>
+                                    <span class="tag-count">0</span>
+                                </div>
+                            </div>
+                                                        <div class="tag-row">
+                                <div class="tag-name-area">
+                                    <input type="checkbox" checked>
+                                    <span class="badge">exploration</span>
+                                </div>
+                                <div class="tag-bar-area">
+                                    <div class="tag-micro-bar" style="width: 15px; background: var(--bn-colour-muted); opacity: 0.35;"></div>
+                                    <span class="tag-count">4</span>
+                                </div>
+                            </div>
+                                                        <div class="tag-row">
+                                <div class="tag-name-area">
+                                    <input type="checkbox" checked>
+                                    <span class="badge">first-time use</span>
+                                </div>
+                                <div class="tag-bar-area">
+                                    <div class="tag-micro-bar" style="width: 0px; background: var(--bn-colour-muted); opacity: 0.35;"></div>
+                                    <span class="tag-count">0</span>
+                                </div>
+                            </div>
+                        
+                            <div class="group-total-row">
+                                <span class="group-total-label">TOTAL</span>
+                                <span class="group-total-count">10</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="tag-filter-group" style="background:var(--bn-group-emo)">
+                        <div class="tag-filter-group-header-row">
+                            <div class="tag-filter-group-info">
+                                <div class="tag-filter-group-name">Feedback</div>
+                                <div class="tag-filter-group-subtitle">Does the system communicate results clearly?</div>
+                            </div>
+                            <button class="group-eye" title="Hide group"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M1 8s2.5-5 7-5 7 5 7 5-2.5 5-7 5-7-5-7-5z"/><circle cx="8" cy="8" r="2.5"/></svg></button>
+                        </div>
+                        <div class="tag-filter-group-tags">
+                                                        <div class="tag-row">
+                                <div class="tag-name-area">
+                                    <input type="checkbox" checked>
+                                    <span class="badge">system response</span>
+                                </div>
+                                <div class="tag-bar-area">
+                                    <div class="tag-micro-bar" style="width: 60px; background: var(--bn-colour-muted); opacity: 0.35;"></div>
+                                    <span class="tag-count">16</span>
+                                </div>
+                            </div>
+                                                        <div class="tag-row">
+                                <div class="tag-name-area">
+                                    <input type="checkbox" checked>
+                                    <span class="badge">delayed feedback</span>
+                                </div>
+                                <div class="tag-bar-area">
+                                    <div class="tag-micro-bar" style="width: 15px; background: var(--bn-colour-muted); opacity: 0.35;"></div>
+                                    <span class="tag-count">4</span>
+                                </div>
+                            </div>
+                                                        <div class="tag-row">
+                                <div class="tag-name-area">
+                                    <input type="checkbox" checked>
+                                    <span class="badge">ambiguous feedback</span>
+                                </div>
+                                <div class="tag-bar-area">
+                                    <div class="tag-micro-bar" style="width: 8px; background: var(--bn-colour-muted); opacity: 0.35;"></div>
+                                    <span class="tag-count">2</span>
+                                </div>
+                            </div>
+                                                        <div class="tag-row">
+                                <div class="tag-name-area">
+                                    <input type="checkbox" checked>
+                                    <span class="badge">confirmation</span>
+                                </div>
+                                <div class="tag-bar-area">
+                                    <div class="tag-micro-bar" style="width: 0px; background: var(--bn-colour-muted); opacity: 0.35;"></div>
+                                    <span class="tag-count">0</span>
+                                </div>
+                            </div>
+                        
+                            <div class="group-total-row">
+                                <span class="group-total-label">TOTAL</span>
+                                <span class="group-total-count">22</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="tag-filter-group" style="background:var(--bn-group-task)">
+                        <div class="tag-filter-group-header-row">
+                            <div class="tag-filter-group-info">
+                                <div class="tag-filter-group-name">Conceptual model</div>
+                                <div class="tag-filter-group-subtitle">Does user understanding match reality?</div>
+                            </div>
+                            <button class="group-eye" title="Hide group"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M1 8s2.5-5 7-5 7 5 7 5-2.5 5-7 5-7-5-7-5z"/><circle cx="8" cy="8" r="2.5"/></svg></button>
+                        </div>
+                        <div class="tag-filter-group-tags">
+                                                        <div class="tag-row">
+                                <div class="tag-name-area">
+                                    <input type="checkbox" checked>
+                                    <span class="badge">user mental model</span>
+                                </div>
+                                <div class="tag-bar-area">
+                                    <div class="tag-micro-bar" style="width: 11px; background: var(--bn-colour-muted); opacity: 0.35;"></div>
+                                    <span class="tag-count">3</span>
+                                </div>
+                            </div>
+                                                        <div class="tag-row">
+                                <div class="tag-name-area">
+                                    <input type="checkbox" checked>
+                                    <span class="badge">system model</span>
+                                </div>
+                                <div class="tag-bar-area">
+                                    <div class="tag-micro-bar" style="width: 4px; background: var(--bn-colour-muted); opacity: 0.35;"></div>
+                                    <span class="tag-count">1</span>
+                                </div>
+                            </div>
+                                                        <div class="tag-row">
+                                <div class="tag-name-area">
+                                    <input type="checkbox" checked>
+                                    <span class="badge">model mismatch</span>
+                                </div>
+                                <div class="tag-bar-area">
+                                    <div class="tag-micro-bar" style="width: 19px; background: var(--bn-colour-muted); opacity: 0.35;"></div>
+                                    <span class="tag-count">5</span>
+                                </div>
+                            </div>
+                                                        <div class="tag-row">
+                                <div class="tag-name-area">
+                                    <input type="checkbox" checked>
+                                    <span class="badge">learned behaviour</span>
+                                </div>
+                                <div class="tag-bar-area">
+                                    <div class="tag-micro-bar" style="width: 8px; background: var(--bn-colour-muted); opacity: 0.35;"></div>
+                                    <span class="tag-count">2</span>
+                                </div>
+                            </div>
+                        
+                            <div class="group-total-row">
+                                <span class="group-total-label">TOTAL</span>
+                                <span class="group-total-count">11</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="tag-filter-group" style="background:var(--bn-group-trust)">
+                        <div class="tag-filter-group-header-row">
+                            <div class="tag-filter-group-info">
+                                <div class="tag-filter-group-name">Signifiers</div>
+                                <div class="tag-filter-group-subtitle">Do visual cues correctly indicate how to interact?</div>
+                            </div>
+                            <button class="group-eye" title="Hide group"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M1 8s2.5-5 7-5 7 5 7 5-2.5 5-7 5-7-5-7-5z"/><circle cx="8" cy="8" r="2.5"/></svg></button>
+                        </div>
+                        <div class="tag-filter-group-tags">
+                                                        <div class="tag-row">
+                                <div class="tag-name-area">
+                                    <input type="checkbox" checked>
+                                    <span class="badge">affordance</span>
+                                </div>
+                                <div class="tag-bar-area">
+                                    <div class="tag-micro-bar" style="width: 8px; background: var(--bn-colour-muted); opacity: 0.35;"></div>
+                                    <span class="tag-count">2</span>
+                                </div>
+                            </div>
+                                                        <div class="tag-row">
+                                <div class="tag-name-area">
+                                    <input type="checkbox" checked>
+                                    <span class="badge">perceived affordance</span>
+                                </div>
+                                <div class="tag-bar-area">
+                                    <div class="tag-micro-bar" style="width: 11px; background: var(--bn-colour-muted); opacity: 0.35;"></div>
+                                    <span class="tag-count">3</span>
+                                </div>
+                            </div>
+                                                        <div class="tag-row">
+                                <div class="tag-name-area">
+                                    <input type="checkbox" checked>
+                                    <span class="badge">false signifier</span>
+                                </div>
+                                <div class="tag-bar-area">
+                                    <div class="tag-micro-bar" style="width: 4px; background: var(--bn-colour-muted); opacity: 0.35;"></div>
+                                    <span class="tag-count">1</span>
+                                </div>
+                            </div>
+                                                        <div class="tag-row">
+                                <div class="tag-name-area">
+                                    <input type="checkbox" checked>
+                                    <span class="badge">missing signifier</span>
+                                </div>
+                                <div class="tag-bar-area">
+                                    <div class="tag-micro-bar" style="width: 15px; background: var(--bn-colour-muted); opacity: 0.35;"></div>
+                                    <span class="tag-count">4</span>
+                                </div>
+                            </div>
+                        
+                            <div class="group-total-row">
+                                <span class="group-total-label">TOTAL</span>
+                                <span class="group-total-count">10</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="tag-filter-group" style="background:var(--bn-group-opp)">
+                        <div class="tag-filter-group-header-row">
+                            <div class="tag-filter-group-info">
+                                <div class="tag-filter-group-name">Mapping</div>
+                                <div class="tag-filter-group-subtitle">Does the relationship between controls and outcomes feel natural?</div>
+                            </div>
+                            <button class="group-eye" title="Hide group"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M1 8s2.5-5 7-5 7 5 7 5-2.5 5-7 5-7-5-7-5z"/><circle cx="8" cy="8" r="2.5"/></svg></button>
+                        </div>
+                        <div class="tag-filter-group-tags">
+                                                        <div class="tag-row">
+                                <div class="tag-name-area">
+                                    <input type="checkbox" checked>
+                                    <span class="badge">natural mapping</span>
+                                </div>
+                                <div class="tag-bar-area">
+                                    <div class="tag-micro-bar" style="width: 4px; background: var(--bn-colour-muted); opacity: 0.35;"></div>
+                                    <span class="tag-count">1</span>
+                                </div>
+                            </div>
+                                                        <div class="tag-row">
+                                <div class="tag-name-area">
+                                    <input type="checkbox" checked>
+                                    <span class="badge">arbitrary mapping</span>
+                                </div>
+                                <div class="tag-bar-area">
+                                    <div class="tag-micro-bar" style="width: 11px; background: var(--bn-colour-muted); opacity: 0.35;"></div>
+                                    <span class="tag-count">3</span>
+                                </div>
+                            </div>
+                                                        <div class="tag-row">
+                                <div class="tag-name-area">
+                                    <input type="checkbox" checked>
+                                    <span class="badge">spatial correspondence</span>
+                                </div>
+                                <div class="tag-bar-area">
+                                    <div class="tag-micro-bar" style="width: 0px; background: var(--bn-colour-muted); opacity: 0.35;"></div>
+                                    <span class="tag-count">0</span>
+                                </div>
+                            </div>
+                                                        <div class="tag-row">
+                                <div class="tag-name-area">
+                                    <input type="checkbox" checked>
+                                    <span class="badge">logical layout</span>
+                                </div>
+                                <div class="tag-bar-area">
+                                    <div class="tag-micro-bar" style="width: 8px; background: var(--bn-colour-muted); opacity: 0.35;"></div>
+                                    <span class="tag-count">2</span>
+                                </div>
+                            </div>
+                        
+                            <div class="group-total-row">
+                                <span class="group-total-label">TOTAL</span>
+                                <span class="group-total-count">6</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="tag-filter-group" style="background:var(--bn-group-ux)">
+                        <div class="tag-filter-group-header-row">
+                            <div class="tag-filter-group-info">
+                                <div class="tag-filter-group-name">Constraints</div>
+                                <div class="tag-filter-group-subtitle">Do designed limitations guide users toward correct actions?</div>
+                            </div>
+                            <button class="group-eye" title="Hide group"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M1 8s2.5-5 7-5 7 5 7 5-2.5 5-7 5-7-5-7-5z"/><circle cx="8" cy="8" r="2.5"/></svg></button>
+                        </div>
+                        <div class="tag-filter-group-tags">
+                                                        <div class="tag-row">
+                                <div class="tag-name-area">
+                                    <input type="checkbox" checked>
+                                    <span class="badge">physical constraint</span>
+                                </div>
+                                <div class="tag-bar-area">
+                                    <div class="tag-micro-bar" style="width: 0px; background: var(--bn-colour-muted); opacity: 0.35;"></div>
+                                    <span class="tag-count">0</span>
+                                </div>
+                            </div>
+                                                        <div class="tag-row">
+                                <div class="tag-name-area">
+                                    <input type="checkbox" checked>
+                                    <span class="badge">cultural constraint</span>
+                                </div>
+                                <div class="tag-bar-area">
+                                    <div class="tag-micro-bar" style="width: 8px; background: var(--bn-colour-muted); opacity: 0.35;"></div>
+                                    <span class="tag-count">2</span>
+                                </div>
+                            </div>
+                                                        <div class="tag-row">
+                                <div class="tag-name-area">
+                                    <input type="checkbox" checked>
+                                    <span class="badge">semantic constraint</span>
+                                </div>
+                                <div class="tag-bar-area">
+                                    <div class="tag-micro-bar" style="width: 4px; background: var(--bn-colour-muted); opacity: 0.35;"></div>
+                                    <span class="tag-count">1</span>
+                                </div>
+                            </div>
+                                                        <div class="tag-row">
+                                <div class="tag-name-area">
+                                    <input type="checkbox" checked>
+                                    <span class="badge">logical constraint</span>
+                                </div>
+                                <div class="tag-bar-area">
+                                    <div class="tag-micro-bar" style="width: 0px; background: var(--bn-colour-muted); opacity: 0.35;"></div>
+                                    <span class="tag-count">0</span>
+                                </div>
+                            </div>
+                        
+                            <div class="group-total-row">
+                                <span class="group-total-label">TOTAL</span>
+                                <span class="group-total-count">3</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="tag-filter-group" style="background:var(--bn-group-emo)">
+                        <div class="tag-filter-group-header-row">
+                            <div class="tag-filter-group-info">
+                                <div class="tag-filter-group-name">Slips vs Mistakes</div>
+                                <div class="tag-filter-group-subtitle">Was the error execution-based or goal-based?</div>
+                            </div>
+                            <button class="group-eye" title="Hide group"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M1 8s2.5-5 7-5 7 5 7 5-2.5 5-7 5-7-5-7-5z"/><circle cx="8" cy="8" r="2.5"/></svg></button>
+                        </div>
+                        <div class="tag-filter-group-tags">
+                                                        <div class="tag-row">
+                                <div class="tag-name-area">
+                                    <input type="checkbox" checked>
+                                    <span class="badge">action slip</span>
+                                </div>
+                                <div class="tag-bar-area">
+                                    <div class="tag-micro-bar" style="width: 11px; background: var(--bn-colour-muted); opacity: 0.35;"></div>
+                                    <span class="tag-count">3</span>
+                                </div>
+                            </div>
+                                                        <div class="tag-row">
+                                <div class="tag-name-area">
+                                    <input type="checkbox" checked>
+                                    <span class="badge">memory lapse</span>
+                                </div>
+                                <div class="tag-bar-area">
+                                    <div class="tag-micro-bar" style="width: 4px; background: var(--bn-colour-muted); opacity: 0.35;"></div>
+                                    <span class="tag-count">1</span>
+                                </div>
+                            </div>
+                                                        <div class="tag-row">
+                                <div class="tag-name-area">
+                                    <input type="checkbox" checked>
+                                    <span class="badge">rule-based mistake</span>
+                                </div>
+                                <div class="tag-bar-area">
+                                    <div class="tag-micro-bar" style="width: 8px; background: var(--bn-colour-muted); opacity: 0.35;"></div>
+                                    <span class="tag-count">2</span>
+                                </div>
+                            </div>
+                                                        <div class="tag-row">
+                                <div class="tag-name-area">
+                                    <input type="checkbox" checked>
+                                    <span class="badge">knowledge-based mistake</span>
+                                </div>
+                                <div class="tag-bar-area">
+                                    <div class="tag-micro-bar" style="width: 0px; background: var(--bn-colour-muted); opacity: 0.35;"></div>
+                                    <span class="tag-count">0</span>
+                                </div>
+                            </div>
+                        
+                            <div class="group-total-row">
+                                <span class="group-total-label">TOTAL</span>
+                                <span class="group-total-count">6</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </details>
+
+            <!-- ── Bristlenose UXR Codebook ──────────────────────────── -->
+            <details class="codebook-framework">
+                <summary>
+                    <svg class="codebook-disclosure" viewBox="0 0 16 16" fill="currentColor"><path d="M6 3l5 5-5 5z"/></svg>
+                    <div class="codebook-info">
+                        <div class="codebook-title">Bristlenose UXR Codebook</div>
+                        <div class="codebook-author">General-purpose qualitative coding</div>
+                    </div>
+                    <button class="codebook-eye" title="Hide all groups">
+                        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M1 8s2.5-5 7-5 7 5 7 5-2.5 5-7 5-7-5-7-5z"/>
+                            <circle cx="8" cy="8" r="2.5"/>
+                        </svg>
+                    </button>
+                </summary>
+                <div class="codebook-body">
+                    <div class="tag-filter-group" style="background:var(--bn-group-ux)">
+                        <div class="tag-filter-group-header-row">
+                            <div class="tag-filter-group-info">
+                                <div class="tag-filter-group-name">Behaviour</div>
+                                <div class="tag-filter-group-subtitle">What people actually do</div>
+                            </div>
+                            <button class="group-eye" title="Hide group"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M1 8s2.5-5 7-5 7 5 7 5-2.5 5-7 5-7-5-7-5z"/><circle cx="8" cy="8" r="2.5"/></svg></button>
+                        </div>
+                        <div class="tag-filter-group-tags">
+                                                        <div class="tag-row">
+                                <div class="tag-name-area">
+                                    <input type="checkbox">
+                                    <span class="badge">workaround</span>
+                                </div>
+                                <div class="tag-bar-area">
+                                    <div class="tag-micro-bar" style="width: 0px; background: var(--bn-colour-muted); opacity: 0.35;"></div>
+                                    <span class="tag-count">0</span>
+                                </div>
+                            </div>
+                                                        <div class="tag-row">
+                                <div class="tag-name-area">
+                                    <input type="checkbox">
+                                    <span class="badge">habit</span>
+                                </div>
+                                <div class="tag-bar-area">
+                                    <div class="tag-micro-bar" style="width: 0px; background: var(--bn-colour-muted); opacity: 0.35;"></div>
+                                    <span class="tag-count">0</span>
+                                </div>
+                            </div>
+                                                        <div class="tag-row">
+                                <div class="tag-name-area">
+                                    <input type="checkbox">
+                                    <span class="badge">avoidance</span>
+                                </div>
+                                <div class="tag-bar-area">
+                                    <div class="tag-micro-bar" style="width: 0px; background: var(--bn-colour-muted); opacity: 0.35;"></div>
+                                    <span class="tag-count">0</span>
+                                </div>
+                            </div>
+                                                        <div class="tag-row">
+                                <div class="tag-name-area">
+                                    <input type="checkbox">
+                                    <span class="badge">say-do gap</span>
+                                </div>
+                                <div class="tag-bar-area">
+                                    <div class="tag-micro-bar" style="width: 0px; background: var(--bn-colour-muted); opacity: 0.35;"></div>
+                                    <span class="tag-count">0</span>
+                                </div>
+                            </div>
+                                                        <div class="tag-row">
+                                <div class="tag-name-area">
+                                    <input type="checkbox">
+                                    <span class="badge">error recovery</span>
+                                </div>
+                                <div class="tag-bar-area">
+                                    <div class="tag-micro-bar" style="width: 0px; background: var(--bn-colour-muted); opacity: 0.35;"></div>
+                                    <span class="tag-count">0</span>
+                                </div>
+                            </div>
+                        
+                            <div class="group-total-row">
+                                <span class="group-total-label">TOTAL</span>
+                                <span class="group-total-count">0</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="tag-filter-group" style="background:var(--bn-group-emo)">
+                        <div class="tag-filter-group-header-row">
+                            <div class="tag-filter-group-info">
+                                <div class="tag-filter-group-name">Pain points</div>
+                                <div class="tag-filter-group-subtitle">Where things break down</div>
+                            </div>
+                            <button class="group-eye" title="Hide group"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M1 8s2.5-5 7-5 7 5 7 5-2.5 5-7 5-7-5-7-5z"/><circle cx="8" cy="8" r="2.5"/></svg></button>
+                        </div>
+                        <div class="tag-filter-group-tags">
+                                                        <div class="tag-row">
+                                <div class="tag-name-area">
+                                    <input type="checkbox">
+                                    <span class="badge">confusion</span>
+                                </div>
+                                <div class="tag-bar-area">
+                                    <div class="tag-micro-bar" style="width: 0px; background: var(--bn-colour-muted); opacity: 0.35;"></div>
+                                    <span class="tag-count">0</span>
+                                </div>
+                            </div>
+                                                        <div class="tag-row">
+                                <div class="tag-name-area">
+                                    <input type="checkbox">
+                                    <span class="badge">frustration</span>
+                                </div>
+                                <div class="tag-bar-area">
+                                    <div class="tag-micro-bar" style="width: 0px; background: var(--bn-colour-muted); opacity: 0.35;"></div>
+                                    <span class="tag-count">0</span>
+                                </div>
+                            </div>
+                                                        <div class="tag-row">
+                                <div class="tag-name-area">
+                                    <input type="checkbox">
+                                    <span class="badge">friction</span>
+                                </div>
+                                <div class="tag-bar-area">
+                                    <div class="tag-micro-bar" style="width: 0px; background: var(--bn-colour-muted); opacity: 0.35;"></div>
+                                    <span class="tag-count">0</span>
+                                </div>
+                            </div>
+                                                        <div class="tag-row">
+                                <div class="tag-name-area">
+                                    <input type="checkbox">
+                                    <span class="badge">dead end</span>
+                                </div>
+                                <div class="tag-bar-area">
+                                    <div class="tag-micro-bar" style="width: 0px; background: var(--bn-colour-muted); opacity: 0.35;"></div>
+                                    <span class="tag-count">0</span>
+                                </div>
+                            </div>
+                                                        <div class="tag-row">
+                                <div class="tag-name-area">
+                                    <input type="checkbox">
+                                    <span class="badge">abandonment</span>
+                                </div>
+                                <div class="tag-bar-area">
+                                    <div class="tag-micro-bar" style="width: 0px; background: var(--bn-colour-muted); opacity: 0.35;"></div>
+                                    <span class="tag-count">0</span>
+                                </div>
+                            </div>
+                        
+                            <div class="group-total-row">
+                                <span class="group-total-label">TOTAL</span>
+                                <span class="group-total-count">0</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="tag-filter-group" style="background:var(--bn-group-emo)">
+                        <div class="tag-filter-group-header-row">
+                            <div class="tag-filter-group-info">
+                                <div class="tag-filter-group-name">Needs and desires</div>
+                                <div class="tag-filter-group-subtitle">What people want</div>
+                            </div>
+                            <button class="group-eye" title="Hide group"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M1 8s2.5-5 7-5 7 5 7 5-2.5 5-7 5-7-5-7-5z"/><circle cx="8" cy="8" r="2.5"/></svg></button>
+                        </div>
+                        <div class="tag-filter-group-tags">
+                                                        <div class="tag-row">
+                                <div class="tag-name-area">
+                                    <input type="checkbox">
+                                    <span class="badge">unmet need</span>
+                                </div>
+                                <div class="tag-bar-area">
+                                    <div class="tag-micro-bar" style="width: 0px; background: var(--bn-colour-muted); opacity: 0.35;"></div>
+                                    <span class="tag-count">0</span>
+                                </div>
+                            </div>
+                                                        <div class="tag-row">
+                                <div class="tag-name-area">
+                                    <input type="checkbox">
+                                    <span class="badge">feature request</span>
+                                </div>
+                                <div class="tag-bar-area">
+                                    <div class="tag-micro-bar" style="width: 0px; background: var(--bn-colour-muted); opacity: 0.35;"></div>
+                                    <span class="tag-count">0</span>
+                                </div>
+                            </div>
+                                                        <div class="tag-row">
+                                <div class="tag-name-area">
+                                    <input type="checkbox">
+                                    <span class="badge">desire path</span>
+                                </div>
+                                <div class="tag-bar-area">
+                                    <div class="tag-micro-bar" style="width: 0px; background: var(--bn-colour-muted); opacity: 0.35;"></div>
+                                    <span class="tag-count">0</span>
+                                </div>
+                            </div>
+                                                        <div class="tag-row">
+                                <div class="tag-name-area">
+                                    <input type="checkbox">
+                                    <span class="badge">expectation mismatch</span>
+                                </div>
+                                <div class="tag-bar-area">
+                                    <div class="tag-micro-bar" style="width: 0px; background: var(--bn-colour-muted); opacity: 0.35;"></div>
+                                    <span class="tag-count">0</span>
+                                </div>
+                            </div>
+                        
+                            <div class="group-total-row">
+                                <span class="group-total-label">TOTAL</span>
+                                <span class="group-total-count">0</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="tag-filter-group eye-hidden" style="background:var(--bn-group-task)">
+                        <div class="tag-filter-group-header-row">
+                            <div class="tag-filter-group-info">
+                                <div class="tag-filter-group-name">Mental models</div>
+                                <div class="tag-filter-group-subtitle">How people think it works</div>
+                            </div>
+                            <button class="group-eye" title="Show group"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M1 8s2.5-5 7-5 7 5 7 5-2.5 5-7 5-7-5-7-5z"/><line x1="2" y1="2" x2="14" y2="14"/></svg></button>
+                        </div>
+                        <div class="tag-filter-group-tags">
+                                                        <div class="tag-row">
+                                <div class="tag-name-area">
+                                    <input type="checkbox">
+                                    <span class="badge">mental model</span>
+                                </div>
+                                <div class="tag-bar-area">
+                                    <div class="tag-micro-bar" style="width: 0px; background: var(--bn-colour-muted); opacity: 0.35;"></div>
+                                    <span class="tag-count">0</span>
+                                </div>
+                            </div>
+                                                        <div class="tag-row">
+                                <div class="tag-name-area">
+                                    <input type="checkbox">
+                                    <span class="badge">assumption</span>
+                                </div>
+                                <div class="tag-bar-area">
+                                    <div class="tag-micro-bar" style="width: 0px; background: var(--bn-colour-muted); opacity: 0.35;"></div>
+                                    <span class="tag-count">0</span>
+                                </div>
+                            </div>
+                                                        <div class="tag-row">
+                                <div class="tag-name-area">
+                                    <input type="checkbox">
+                                    <span class="badge">prior experience</span>
+                                </div>
+                                <div class="tag-bar-area">
+                                    <div class="tag-micro-bar" style="width: 0px; background: var(--bn-colour-muted); opacity: 0.35;"></div>
+                                    <span class="tag-count">0</span>
+                                </div>
+                            </div>
+                                                        <div class="tag-row">
+                                <div class="tag-name-area">
+                                    <input type="checkbox">
+                                    <span class="badge">misconception</span>
+                                </div>
+                                <div class="tag-bar-area">
+                                    <div class="tag-micro-bar" style="width: 0px; background: var(--bn-colour-muted); opacity: 0.35;"></div>
+                                    <span class="tag-count">0</span>
+                                </div>
+                            </div>
+                        
+                            <div class="group-total-row">
+                                <span class="group-total-label">TOTAL</span>
+                                <span class="group-total-count">0</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="tag-filter-group" style="background:var(--bn-group-task)">
+                        <div class="tag-filter-group-header-row">
+                            <div class="tag-filter-group-info">
+                                <div class="tag-filter-group-name">Motivation</div>
+                                <div class="tag-filter-group-subtitle">Why people bother</div>
+                            </div>
+                            <button class="group-eye" title="Hide group"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M1 8s2.5-5 7-5 7 5 7 5-2.5 5-7 5-7-5-7-5z"/><circle cx="8" cy="8" r="2.5"/></svg></button>
+                        </div>
+                        <div class="tag-filter-group-tags">
+                                                        <div class="tag-row">
+                                <div class="tag-name-area">
+                                    <input type="checkbox">
+                                    <span class="badge">goal</span>
+                                </div>
+                                <div class="tag-bar-area">
+                                    <div class="tag-micro-bar" style="width: 0px; background: var(--bn-colour-muted); opacity: 0.35;"></div>
+                                    <span class="tag-count">0</span>
+                                </div>
+                            </div>
+                                                        <div class="tag-row">
+                                <div class="tag-name-area">
+                                    <input type="checkbox">
+                                    <span class="badge">trigger</span>
+                                </div>
+                                <div class="tag-bar-area">
+                                    <div class="tag-micro-bar" style="width: 0px; background: var(--bn-colour-muted); opacity: 0.35;"></div>
+                                    <span class="tag-count">0</span>
+                                </div>
+                            </div>
+                                                        <div class="tag-row">
+                                <div class="tag-name-area">
+                                    <input type="checkbox">
+                                    <span class="badge">barrier</span>
+                                </div>
+                                <div class="tag-bar-area">
+                                    <div class="tag-micro-bar" style="width: 0px; background: var(--bn-colour-muted); opacity: 0.35;"></div>
+                                    <span class="tag-count">0</span>
+                                </div>
+                            </div>
+                                                        <div class="tag-row">
+                                <div class="tag-name-area">
+                                    <input type="checkbox">
+                                    <span class="badge">job-to-be-done</span>
+                                </div>
+                                <div class="tag-bar-area">
+                                    <div class="tag-micro-bar" style="width: 0px; background: var(--bn-colour-muted); opacity: 0.35;"></div>
+                                    <span class="tag-count">0</span>
+                                </div>
+                            </div>
+                        
+                            <div class="group-total-row">
+                                <span class="group-total-label">TOTAL</span>
+                                <span class="group-total-count">0</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="tag-filter-group" style="background:var(--bn-group-trust)">
+                        <div class="tag-filter-group-header-row">
+                            <div class="tag-filter-group-info">
+                                <div class="tag-filter-group-name">Emotion and trust</div>
+                                <div class="tag-filter-group-subtitle">How people feel</div>
+                            </div>
+                            <button class="group-eye" title="Hide group"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M1 8s2.5-5 7-5 7 5 7 5-2.5 5-7 5-7-5-7-5z"/><circle cx="8" cy="8" r="2.5"/></svg></button>
+                        </div>
+                        <div class="tag-filter-group-tags">
+                                                        <div class="tag-row">
+                                <div class="tag-name-area">
+                                    <input type="checkbox">
+                                    <span class="badge">delight</span>
+                                </div>
+                                <div class="tag-bar-area">
+                                    <div class="tag-micro-bar" style="width: 0px; background: var(--bn-colour-muted); opacity: 0.35;"></div>
+                                    <span class="tag-count">0</span>
+                                </div>
+                            </div>
+                                                        <div class="tag-row">
+                                <div class="tag-name-area">
+                                    <input type="checkbox">
+                                    <span class="badge">anxiety</span>
+                                </div>
+                                <div class="tag-bar-area">
+                                    <div class="tag-micro-bar" style="width: 0px; background: var(--bn-colour-muted); opacity: 0.35;"></div>
+                                    <span class="tag-count">0</span>
+                                </div>
+                            </div>
+                                                        <div class="tag-row">
+                                <div class="tag-name-area">
+                                    <input type="checkbox">
+                                    <span class="badge">trust</span>
+                                </div>
+                                <div class="tag-bar-area">
+                                    <div class="tag-micro-bar" style="width: 0px; background: var(--bn-colour-muted); opacity: 0.35;"></div>
+                                    <span class="tag-count">0</span>
+                                </div>
+                            </div>
+                                                        <div class="tag-row">
+                                <div class="tag-name-area">
+                                    <input type="checkbox">
+                                    <span class="badge">distrust</span>
+                                </div>
+                                <div class="tag-bar-area">
+                                    <div class="tag-micro-bar" style="width: 0px; background: var(--bn-colour-muted); opacity: 0.35;"></div>
+                                    <span class="tag-count">0</span>
+                                </div>
+                            </div>
+                                                        <div class="tag-row">
+                                <div class="tag-name-area">
+                                    <input type="checkbox">
+                                    <span class="badge">surprise</span>
+                                </div>
+                                <div class="tag-bar-area">
+                                    <div class="tag-micro-bar" style="width: 0px; background: var(--bn-colour-muted); opacity: 0.35;"></div>
+                                    <span class="tag-count">0</span>
+                                </div>
+                            </div>
+                        
+                            <div class="group-total-row">
+                                <span class="group-total-label">TOTAL</span>
+                                <span class="group-total-count">0</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="tag-filter-group" style="background:var(--bn-group-trust)">
+                        <div class="tag-filter-group-header-row">
+                            <div class="tag-filter-group-info">
+                                <div class="tag-filter-group-name">Context</div>
+                                <div class="tag-filter-group-subtitle">The world around the task</div>
+                            </div>
+                            <button class="group-eye" title="Hide group"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M1 8s2.5-5 7-5 7 5 7 5-2.5 5-7 5-7-5-7-5z"/><circle cx="8" cy="8" r="2.5"/></svg></button>
+                        </div>
+                        <div class="tag-filter-group-tags">
+                                                        <div class="tag-row">
+                                <div class="tag-name-area">
+                                    <input type="checkbox">
+                                    <span class="badge">interruption</span>
+                                </div>
+                                <div class="tag-bar-area">
+                                    <div class="tag-micro-bar" style="width: 0px; background: var(--bn-colour-muted); opacity: 0.35;"></div>
+                                    <span class="tag-count">0</span>
+                                </div>
+                            </div>
+                                                        <div class="tag-row">
+                                <div class="tag-name-area">
+                                    <input type="checkbox">
+                                    <span class="badge">time pressure</span>
+                                </div>
+                                <div class="tag-bar-area">
+                                    <div class="tag-micro-bar" style="width: 0px; background: var(--bn-colour-muted); opacity: 0.35;"></div>
+                                    <span class="tag-count">0</span>
+                                </div>
+                            </div>
+                                                        <div class="tag-row">
+                                <div class="tag-name-area">
+                                    <input type="checkbox">
+                                    <span class="badge">social influence</span>
+                                </div>
+                                <div class="tag-bar-area">
+                                    <div class="tag-micro-bar" style="width: 0px; background: var(--bn-colour-muted); opacity: 0.35;"></div>
+                                    <span class="tag-count">0</span>
+                                </div>
+                            </div>
+                                                        <div class="tag-row">
+                                <div class="tag-name-area">
+                                    <input type="checkbox">
+                                    <span class="badge">device/channel</span>
+                                </div>
+                                <div class="tag-bar-area">
+                                    <div class="tag-micro-bar" style="width: 0px; background: var(--bn-colour-muted); opacity: 0.35;"></div>
+                                    <span class="tag-count">0</span>
+                                </div>
+                            </div>
+                        
+                            <div class="group-total-row">
+                                <span class="group-total-label">TOTAL</span>
+                                <span class="group-total-count">0</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="tag-filter-group" style="background:var(--bn-group-opp)">
+                        <div class="tag-filter-group-header-row">
+                            <div class="tag-filter-group-info">
+                                <div class="tag-filter-group-name">Learning</div>
+                                <div class="tag-filter-group-subtitle">How people figure things out</div>
+                            </div>
+                            <button class="group-eye" title="Hide group"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M1 8s2.5-5 7-5 7 5 7 5-2.5 5-7 5-7-5-7-5z"/><circle cx="8" cy="8" r="2.5"/></svg></button>
+                        </div>
+                        <div class="tag-filter-group-tags">
+                                                        <div class="tag-row">
+                                <div class="tag-name-area">
+                                    <input type="checkbox">
+                                    <span class="badge">aha moment</span>
+                                </div>
+                                <div class="tag-bar-area">
+                                    <div class="tag-micro-bar" style="width: 0px; background: var(--bn-colour-muted); opacity: 0.35;"></div>
+                                    <span class="tag-count">0</span>
+                                </div>
+                            </div>
+                                                        <div class="tag-row">
+                                <div class="tag-name-area">
+                                    <input type="checkbox">
+                                    <span class="badge">learning curve</span>
+                                </div>
+                                <div class="tag-bar-area">
+                                    <div class="tag-micro-bar" style="width: 0px; background: var(--bn-colour-muted); opacity: 0.35;"></div>
+                                    <span class="tag-count">0</span>
+                                </div>
+                            </div>
+                                                        <div class="tag-row">
+                                <div class="tag-name-area">
+                                    <input type="checkbox">
+                                    <span class="badge">self-taught</span>
+                                </div>
+                                <div class="tag-bar-area">
+                                    <div class="tag-micro-bar" style="width: 0px; background: var(--bn-colour-muted); opacity: 0.35;"></div>
+                                    <span class="tag-count">0</span>
+                                </div>
+                            </div>
+                                                        <div class="tag-row">
+                                <div class="tag-name-area">
+                                    <input type="checkbox">
+                                    <span class="badge">expertise</span>
+                                </div>
+                                <div class="tag-bar-area">
+                                    <div class="tag-micro-bar" style="width: 0px; background: var(--bn-colour-muted); opacity: 0.35;"></div>
+                                    <span class="tag-count">0</span>
+                                </div>
+                            </div>
+                        
+                            <div class="group-total-row">
+                                <span class="group-total-label">TOTAL</span>
+                                <span class="group-total-count">0</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </details>
+        </div>
+    </aside>
+
+    <!-- Col 5: Right icon rail -->
+    <div class="tag-rail" id="tag-rail">
+        <button class="rail-btn" id="tag-rail-btn" title="Tags (⌘])">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none"
+                 stroke="currentColor" stroke-width="1.5"
+                 stroke-linecap="round" stroke-linejoin="round">
+                <path d="M1.5 1.5h5.09a1 1 0 0 1 .7.29l6.42 6.42a1 1 0 0 1 0 1.41l-4.49 4.49a1 1 0 0 1-1.41 0L1.79 8.09a1 1 0 0 1-.29-.7z"/>
+                <circle cx="4.5" cy="4.5" r="1" fill="currentColor" stroke="none"/>
+            </svg>
+        </button>
+        <div class="drag-handle tag-rail-drag" id="tag-rail-drag"></div>
+    </div>
+
+</div><!-- /.layout -->
+
+<script>
+(function() {
+    'use strict';
+
+    var tocWidth = 280;
+    var tagsWidth = 280;
+    var MIN_W = 200;
+    var MAX_W = 480;
+    var SNAP_CLOSE = 80;
+
+    // ── Elements ────────────────────────────────────────────────
+    var layout = document.getElementById('layout');
+    var tocSidebar = document.getElementById('toc-sidebar');
+    var tagSidebar = document.getElementById('tag-sidebar');
+    var tocBtn = document.getElementById('toc-btn');
+    var tagFilterBtn = document.getElementById('tag-filter-btn');
+    var tocDropdown = document.getElementById('toc-dropdown');
+    var tagDropdown = document.getElementById('tag-dropdown');
+    var tocOpenBtn = document.getElementById('toc-open-btn');
+    var tagOpenBtn = document.getElementById('tag-open-btn');
+    var tocCloseBtn = document.getElementById('toc-close');
+    var tagCloseBtn = document.getElementById('tag-close');
+    var tocRailBtn = document.getElementById('toc-rail-btn');
+    var tagRailBtn = document.getElementById('tag-rail-btn');
+    var tocDragHandle = document.getElementById('toc-drag-handle');
+    var tagDragHandle = document.getElementById('tag-drag-handle');
+    var tocRailDrag = document.getElementById('toc-rail-drag');
+    var tagRailDrag = document.getElementById('tag-rail-drag');
+
+    // ── Theme toggle ────────────────────────────────────────────
+    window.toggleTheme = function() {
+        var h = document.documentElement;
+        h.setAttribute('data-theme', h.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
+    };
+
+    // ── Dropdown helpers ────────────────────────────────────────
+    function closeAllDropdowns() {
+        tocDropdown.classList.remove('open');
+        tagDropdown.classList.remove('open');
+    }
+
+    tocBtn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        var wasOpen = tocDropdown.classList.contains('open');
+        closeAllDropdowns();
+        if (!wasOpen) tocDropdown.classList.add('open');
+    });
+
+    tagFilterBtn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        var wasOpen = tagDropdown.classList.contains('open');
+        closeAllDropdowns();
+        if (!wasOpen) tagDropdown.classList.add('open');
+    });
+
+    document.addEventListener('click', function(e) {
+        if (!e.target.closest('.toolbar-dropdown')) closeAllDropdowns();
+    });
+
+    // ── Sidebar state helpers ───────────────────────────────────
+    function isTocOpen() { return layout.classList.contains('toc-open'); }
+    function isTagsOpen() { return layout.classList.contains('tags-open'); }
+
+    function updateGridColumns() {
+        layout.style.setProperty('--toc-width', tocWidth + 'px');
+        layout.style.setProperty('--tags-width', tagsWidth + 'px');
+    }
+
+    // ── Sidebar open/close ──────────────────────────────────────
+    function openToc() {
+        closeAllDropdowns();
+        updateGridColumns();
+        tocBtn.classList.add('hidden');
+        layout.classList.add('animating');
+        layout.offsetHeight;
+        layout.classList.add('toc-open');
+        onTransitionEnd(layout, function() { layout.classList.remove('animating'); });
+    }
+
+    function closeToc() {
+        layout.classList.remove('animating', 'toc-open');
+        tocBtn.classList.remove('hidden');
+    }
+
+    function openTags() {
+        closeAllDropdowns();
+        updateGridColumns();
+        tagFilterBtn.classList.add('hidden');
+        layout.classList.add('animating');
+        layout.offsetHeight;
+        layout.classList.add('tags-open');
+        onTransitionEnd(layout, function() { layout.classList.remove('animating'); });
+    }
+
+    function closeTags() {
+        layout.classList.remove('animating', 'tags-open');
+        tagFilterBtn.classList.remove('hidden');
+    }
+
+    function onTransitionEnd(el, cb) {
+        function handler(e) {
+            if (e.target !== el) return;
+            el.removeEventListener('transitionend', handler);
+            cb();
+        }
+        el.addEventListener('transitionend', handler);
+    }
+
+    // ── Event bindings ──────────────────────────────────────────
+    tocOpenBtn.addEventListener('click', function(e) { e.stopPropagation(); openToc(); });
+    tocCloseBtn.addEventListener('click', closeToc);
+    tocRailBtn.addEventListener('click', openToc);
+
+    tagOpenBtn.addEventListener('click', function(e) { e.stopPropagation(); openTags(); });
+    tagCloseBtn.addEventListener('click', closeTags);
+    tagRailBtn.addEventListener('click', openTags);
+
+    // ── Keyboard shortcuts ──────────────────────────────────────
+    document.addEventListener('keydown', function(e) {
+        if (!(e.metaKey || e.ctrlKey)) return;
+
+        // Cmd+. — toggle BOTH sidebars (Figma/Sketch convention)
+        if (e.key === '.') {
+            e.preventDefault();
+            var anyOpen = isTocOpen() || isTagsOpen();
+            if (anyOpen) {
+                if (isTocOpen()) closeToc();
+                if (isTagsOpen()) closeTags();
+            } else {
+                openToc();
+                openTags();
+            }
+        }
+
+        // Cmd+[ — toggle LEFT (TOC) sidebar
+        if (e.key === '[') {
+            e.preventDefault();
+            if (isTocOpen()) closeToc(); else openToc();
+        }
+
+        // Cmd+] — toggle RIGHT (Tags) sidebar
+        if (e.key === ']') {
+            e.preventDefault();
+            if (isTagsOpen()) closeTags(); else openTags();
+        }
+    });
+
+    // ── Drag-to-resize ──────────────────────────────────────────
+    function setupDrag(handle, getWidth, setWidth, closeFn, side) {
+        var startX, startW, dragging = false;
+
+        handle.addEventListener('mousedown', function(e) {
+            e.preventDefault();
+            startX = e.clientX;
+            startW = getWidth();
+            dragging = true;
+            handle.classList.add('active');
+            document.body.classList.add('dragging');
+        });
+
+        document.addEventListener('mousemove', function(e) {
+            if (!dragging) return;
+            var dx = side === 'left'
+                ? e.clientX - startX
+                : startX - e.clientX;
+            var newW = Math.max(0, startW + dx);
+
+            if (newW < SNAP_CLOSE) {
+                closeFn();
+                dragging = false;
+                handle.classList.remove('active');
+                document.body.classList.remove('dragging');
+                return;
+            }
+
+            newW = Math.min(Math.max(newW, MIN_W), MAX_W);
+            setWidth(newW);
+        });
+
+        document.addEventListener('mouseup', function() {
+            if (!dragging) return;
+            dragging = false;
+            handle.classList.remove('active');
+            document.body.classList.remove('dragging');
+        });
+    }
+
+    setupDrag(
+        tocDragHandle,
+        function() { return tocWidth; },
+        function(w) {
+            tocWidth = w;
+            layout.style.setProperty('--toc-width', w + 'px');
+        },
+        closeToc,
+        'left'
+    );
+
+    var TWO_COL_THRESHOLD = 380; // snap to 2-column tags above this width
+
+    setupDrag(
+        tagDragHandle,
+        function() { return tagsWidth; },
+        function(w) {
+            tagsWidth = w;
+            layout.style.setProperty('--tags-width', w + 'px');
+            tagSidebar.classList.toggle('two-col', w >= TWO_COL_THRESHOLD);
+        },
+        closeTags,
+        'right'
+    );
+
+    // ── Drag-to-open from rail edge ─────────────────────────────
+    function setupRailDrag(handle, openFn, isOpenFn, setWidth, closeFn, side) {
+        var startX, dragging = false;
+
+        handle.addEventListener('mousedown', function(e) {
+            e.preventDefault();
+            startX = e.clientX;
+            dragging = true;
+            handle.classList.add('active');
+            document.body.classList.add('dragging');
+        });
+
+        document.addEventListener('mousemove', function(e) {
+            if (!dragging) return;
+            var dx = side === 'left'
+                ? e.clientX - startX
+                : startX - e.clientX;
+
+            if (dx > 20 && !isOpenFn()) {
+                // Crossed threshold — open the sidebar
+                openFn();
+            }
+
+            if (isOpenFn()) {
+                // Now resizing the open sidebar
+                var newW = Math.max(0, MIN_W + (dx - 20));
+                if (newW < SNAP_CLOSE) {
+                    closeFn();
+                    dragging = false;
+                    handle.classList.remove('active');
+                    document.body.classList.remove('dragging');
+                    return;
+                }
+                newW = Math.min(Math.max(newW, MIN_W), MAX_W);
+                setWidth(newW);
+            }
+        });
+
+        document.addEventListener('mouseup', function() {
+            if (!dragging) return;
+            dragging = false;
+            handle.classList.remove('active');
+            document.body.classList.remove('dragging');
+        });
+    }
+
+    setupRailDrag(
+        tocRailDrag,
+        openToc,
+        isTocOpen,
+        function(w) {
+            tocWidth = w;
+            layout.style.setProperty('--toc-width', w + 'px');
+        },
+        closeToc,
+        'left'
+    );
+
+    setupRailDrag(
+        tagRailDrag,
+        openTags,
+        isTagsOpen,
+        function(w) {
+            tagsWidth = w;
+            layout.style.setProperty('--tags-width', w + 'px');
+            tagSidebar.classList.toggle('two-col', w >= TWO_COL_THRESHOLD);
+        },
+        closeTags,
+        'right'
+    );
+
+    // ── Scroll-spy for TOC sidebar ──────────────────────────────
+    var tocLinks = document.querySelectorAll('#toc-sidebar-body .toc-link');
+    var sectionIds = [];
+    tocLinks.forEach(function(link) {
+        var id = link.getAttribute('data-section');
+        if (id) sectionIds.push(id);
+    });
+
+    var scrollTicking = false;
+    function updateScrollSpy() {
+        var toolbarOffset = 80;
+        var activeId = sectionIds[0];
+
+        for (var i = sectionIds.length - 1; i >= 0; i--) {
+            var el = document.getElementById(sectionIds[i]);
+            if (el && el.getBoundingClientRect().top <= toolbarOffset + 20) {
+                activeId = sectionIds[i];
+                break;
+            }
+        }
+
+        tocLinks.forEach(function(link) {
+            var isActive = link.getAttribute('data-section') === activeId;
+            link.classList.toggle('active', isActive);
+            if (isActive && isTocOpen()) {
+                link.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+            }
+        });
+        scrollTicking = false;
+    }
+
+    window.addEventListener('scroll', function() {
+        if (!scrollTicking) {
+            requestAnimationFrame(updateScrollSpy);
+            scrollTicking = true;
+        }
+    });
+
+    // ── Tag search filtering ───────────────────────────────────
+    var tagSearch = document.getElementById('tag-search');
+    if (tagSearch) {
+        tagSearch.addEventListener('input', function() {
+            var q = this.value.toLowerCase().trim();
+            // Match both old .tag-filter-item and new .tag-row elements
+            var items = tagSidebar.querySelectorAll('.tag-row, .tag-filter-item:not(.tag-filter-item-muted)');
+            var groups = tagSidebar.querySelectorAll('.tag-filter-group');
+            var frameworks = tagSidebar.querySelectorAll('.codebook-framework');
+
+            // Show/hide individual tags
+            items.forEach(function(item) {
+                var text = item.textContent.toLowerCase();
+                item.style.display = (!q || text.indexOf(q) !== -1) ? '' : 'none';
+            });
+
+            // Hide groups with no visible tags
+            groups.forEach(function(group) {
+                var visibleTags = group.querySelectorAll('.tag-row:not([style*="display: none"]), .tag-filter-item:not([style*="display: none"]):not(.tag-filter-item-muted)');
+                group.style.display = visibleTags.length > 0 ? '' : 'none';
+            });
+
+            // Hide frameworks with no visible groups, and auto-open matching ones
+            frameworks.forEach(function(fw) {
+                var visibleGroups = fw.querySelectorAll('.tag-filter-group:not([style*="display: none"])');
+                fw.style.display = visibleGroups.length > 0 ? '' : 'none';
+                if (q && visibleGroups.length > 0) fw.open = true;
+            });
+        });
+    }
+
+    // ── Eye-toggle (group + framework) ─────────────────────────
+    var EYE_OPEN_SVG = '<path d="M1 8s2.5-5 7-5 7 5 7 5-2.5 5-7 5-7-5-7-5z"/><circle cx="8" cy="8" r="2.5"/>';
+    var EYE_CLOSED_SVG = '<path d="M1 8s2.5-5 7-5 7 5 7 5-2.5 5-7 5-7-5-7-5z"/><line x1="2" y1="2" x2="14" y2="14"/>';
+
+    function setEyeSvg(btn, open) {
+        var svg = btn.querySelector('svg');
+        if (svg) svg.innerHTML = open ? EYE_OPEN_SVG : EYE_CLOSED_SVG;
+    }
+
+    // Group-level eye toggle
+    tagSidebar.querySelectorAll('.group-eye').forEach(function(btn) {
+        // Remove the old stopPropagation-only onclick
+        btn.removeAttribute('onclick');
+
+        btn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            var group = btn.closest('.tag-filter-group');
+            if (!group) return;
+
+            var isHidden = group.classList.toggle('eye-hidden');
+            setEyeSvg(btn, !isHidden);
+            btn.title = isHidden ? 'Show group' : 'Hide group';
+
+            // Update parent framework eye state
+            var framework = group.closest('.codebook-framework');
+            if (framework) updateFrameworkEye(framework);
+        });
+    });
+
+    // Framework-level eye toggle
+    function updateFrameworkEye(framework) {
+        var groups = framework.querySelectorAll('.tag-filter-group');
+        var allHidden = true;
+        groups.forEach(function(g) {
+            if (!g.classList.contains('eye-hidden')) allHidden = false;
+        });
+
+        var eyeBtn = framework.querySelector(':scope > summary .codebook-eye');
+        if (!eyeBtn) return;
+
+        framework.classList.toggle('eye-hidden', allHidden);
+        setEyeSvg(eyeBtn, !allHidden);
+        eyeBtn.title = allHidden ? 'Show all groups' : 'Hide all groups';
+    }
+
+    tagSidebar.querySelectorAll('.codebook-eye').forEach(function(btn) {
+        // Remove the old stopPropagation-only onclick
+        btn.removeAttribute('onclick');
+
+        btn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            var framework = btn.closest('.codebook-framework');
+            if (!framework) return;
+
+            var groups = framework.querySelectorAll('.tag-filter-group');
+            // If any group is visible, hide all. If all hidden, show all.
+            var anyVisible = false;
+            groups.forEach(function(g) {
+                if (!g.classList.contains('eye-hidden')) anyVisible = true;
+            });
+
+            groups.forEach(function(g) {
+                g.classList.toggle('eye-hidden', anyVisible);
+                var gEye = g.querySelector('.group-eye');
+                if (gEye) {
+                    setEyeSvg(gEye, !anyVisible);
+                    gEye.title = anyVisible ? 'Show group' : 'Hide group';
+                }
+            });
+
+            updateFrameworkEye(framework);
+        });
+    });
+
+    // Sync framework eye state on page load (for groups that start hidden)
+    tagSidebar.querySelectorAll('.codebook-framework').forEach(function(fw) {
+        updateFrameworkEye(fw);
+    });
+
+    // TOC link clicks (dropdown and sidebar)
+    document.querySelectorAll('.toc-dropdown-link, .toc-link').forEach(function(link) {
+        link.addEventListener('click', function(e) {
+            e.preventDefault();
+            var target = document.getElementById(this.getAttribute('href').slice(1));
+            if (target) {
+                closeAllDropdowns();
+                target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+        });
+    });
+
+})();
+</script>
+</body>
+</html>

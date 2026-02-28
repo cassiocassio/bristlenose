@@ -112,14 +112,14 @@ At this point, every vanilla JS module has been replaced by a React equivalent. 
 - **What changed:** `_strip_vanilla_js()` in `app.py` uses the existing `_JS_MARKER` boundary to remove concatenated module code from the IIFE while keeping global declarations (`BRISTLENOSE_VIDEO_MAP`, `BRISTLENOSE_PLAYER_URL`, `BRISTLENOSE_ANALYSIS`) that React reads from `window.*`. Called from `_transform_report_html()` (both dev and prod paths). Dead code removed: 9 individual island marker substitutions, `_replace_baked_js()` calls from dev routes, 9 `_REACT_*_MOUNT` constants. `_JS_FILES` list in `render_html.py` stays for `bristlenose render` (offline HTML). 6 new tests
 - **Test:** `bristlenose serve` works with zero vanilla JS. `bristlenose render` still produces a working static report
 
-### Step 9: React app shell — kill the skeleton _(large)_
+### Step 9: React app shell — kill the skeleton ✓ DONE
 
-The serve path stops reading the static HTML file and doing `re.sub` marker replacement. Instead, it serves the Vite-built SPA.
+The serve path stopped reading the static HTML file. Instead, it serves the Vite-built SPA directly.
 
-- **Replaces:** `_transform_report_html()`, `_transform_transcript_html()`, all `_REACT_*_MOUNT` constants, `_replace_baked_js()`, the marker-based substitution pattern. The `serve_mode` parameter in `render_html.py`
-- **What to build:** React `<Header>` (logo, project name, subtitle), `<Footer>` (version, links). The Vite `index.html` becomes the SPA entry point. FastAPI serves it for all `/report/*` routes; React Router handles client-side routing. API routes unchanged
+- **Replaces:** `_transform_report_html()`, `_transform_transcript_html()`, all `_REACT_*_MOUNT` constants, `_replace_baked_js()`, the marker-based substitution pattern
+- **What was built:** React `<Header>` (logo, project name, subtitle from `/api/health`), `<Footer>` (version, `?` for Help link triggering `onToggleHelp`), `<HelpModal>` (keyboard shortcuts overlay using `createPortal`, `bn-overlay` + `bn-modal` CSS classes). `AppShell` inner component owns help modal state and wires `useKeyboardShortcuts`. Route extraction: `app.py` refactored from monolith to route modules (`routes/analysis.py`, `routes/dashboard.py`, `routes/sessions.py`, `routes/transcript.py`). Dev serve function generates SPA HTML directly (no baked HTML reading). Prod serve reads `frontend/dist/index.html`. `_strip_vanilla_js()` removes module code from IIFE while keeping `window.*` globals for React
 - **What stays:** `render_html.py` continues producing static HTML for `bristlenose render`. CSS in `bristlenose/theme/` is shared. The regex surgery in `app.py` is deleted — no more link escape bugs, ever
-- **Test:** `bristlenose serve` serves a complete React SPA. No Jinja2 HTML in the serve path. All tabs, navigation, interactions work
+- **Test:** `bristlenose serve` serves a complete React SPA. `bristlenose render` still produces a working static report. All tabs, navigation, interactions work
 
 ### Step 10: Export — DOM snapshot _(large — new feature)_
 
@@ -146,9 +146,9 @@ Step 1 (Settings) ✓   Step 2 (About) ✓   Step 3 (QuotesStore) ✓
                           |
                     Step 7 (Keyboard) ✓
                           |
-                    Step 8 (Retire vanilla JS) ✓  <-- you are here
+                    Step 8 (Retire vanilla JS) ✓
                           |
-                    Step 9 (App shell)
+                    Step 9 (App shell) ✓  <-- you are here
                           |
                     Step 10 (Export)
 ```

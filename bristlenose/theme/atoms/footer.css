@@ -1,8 +1,7 @@
 /* Atom: footer — colophon at page bottom */
 
 .report-footer {
-    max-width: var(--bn-max-width);
-    margin: var(--bn-space-xl) auto 0;
+    margin: var(--bn-space-xl) 0 0;
     padding-top: var(--bn-space-md);
     border-top: 1px solid var(--bn-colour-border);
     font-size: 0.72rem;

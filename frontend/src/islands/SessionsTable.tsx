@@ -11,9 +11,10 @@
  * CSS classes match the existing theme so styles apply without changes.
  */
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useContext, useEffect, useState } from "react";
 import { EditableText, JourneyChain, PersonBadge, Sparkline, Thumbnail } from "../components";
 import type { SparklineItem } from "../components/Sparkline";
+import { PlayerContext } from "../contexts/PlayerContext";
 import { getPeople, putPeople } from "../utils/api";
 import type { PersonData } from "../utils/api";
 import { formatDuration, formatFinderDate, formatFinderFilename } from "../utils/format";
@@ -292,9 +293,9 @@ function SessionRow({
   // Journey arrow chain (now uses JourneyChain primitive)
   const hasJourney = journey_labels.length > 0;
 
-  // Source file display — media files link to the popout player; others are
-  // plain text.  The <a class="timecode"> is picked up by player.js event
-  // delegation (no additional JS wiring needed).
+  // Source file display — media files open the popout player via PlayerContext;
+  // non-media files are plain text.
+  const playerCtx = useContext(PlayerContext);
   let sourceEl: React.ReactNode = "\u2014";
   if (source_files.length > 0) {
     const sf = source_files[0];
@@ -304,12 +305,18 @@ function SessionRow({
     if (has_media) {
       sourceEl = (
         <a
-          href="#"
+          href={`#t=0`}
           className="timecode"
           data-participant={session_id}
           data-seconds={0}
           data-end-seconds={0}
           title={titleAttr}
+          onClick={(e) => {
+            if (!playerCtx) return;
+            if (e.metaKey || e.ctrlKey || e.shiftKey) return;
+            e.preventDefault();
+            playerCtx.seekTo(session_id, 0);
+          }}
         >
           {displayName}
         </a>

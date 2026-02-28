@@ -1,14 +1,16 @@
-"""Analysis API endpoints — tag-based signal concentration analysis.
+"""Analysis API endpoints — sentiment and tag-based signal concentration analysis.
 
-Two endpoints:
+Three endpoints:
 
+- ``GET /analysis/sentiment`` — sentiment-based signal analysis (same data as
+  ``window.BRISTLENOSE_ANALYSIS`` in the static render path)
 - ``GET /analysis/tags`` — flat analysis across all active groups (backward compat)
 - ``GET /analysis/codebooks`` — per-codebook analysis (groups partitioned by framework)
 
-Both compute the same concentration / agreement / intensity maths as the
-pipeline's sentiment analysis, but using codebook groups as the column
-dimension instead of sentiments.  A quote counts in a group column if
-it has *any* tag from that group.
+Tag-based endpoints compute the same concentration / agreement / intensity
+maths as the pipeline's sentiment analysis, but using codebook groups as
+the column dimension instead of sentiments.  A quote counts in a group
+column if it has *any* tag from that group.
 
 Quotes tagged in multiple groups count in each group column — this
 inflates ``grand_total`` relative to the number of unique quotes.  The
@@ -326,7 +328,291 @@ def _load_shared_data(db: Session, project_id: int) -> _SharedProjectData | None
 
 
 # ---------------------------------------------------------------------------
-# Core analysis logic (used by both endpoints)
+# Sentiment analysis endpoint
+# ---------------------------------------------------------------------------
+
+
+def _to_camel(name: str) -> str:
+    """Convert snake_case to camelCase for JSON serialisation."""
+    parts = name.split("_")
+    return parts[0] + "".join(w.capitalize() for w in parts[1:])
+
+
+class _CamelModel(BaseModel):
+    """Base model that serialises field names as camelCase."""
+
+    model_config = {"alias_generator": _to_camel, "populate_by_name": True}
+
+
+class _SentimentMatrixCellOut(_CamelModel):
+    """A single cell in the sentiment contingency table."""
+
+    count: int
+
+
+class _SentimentMatrixOut(_CamelModel):
+    """A row x column sentiment matrix serialised for the client."""
+
+    cells: dict[str, _SentimentMatrixCellOut]
+    row_totals: dict[str, int]
+    col_totals: dict[str, int]
+    grand_total: int
+    row_labels: list[str]
+
+
+class _SentimentSignalQuoteOut(_CamelModel):
+    """One quote attached to a sentiment signal card."""
+
+    text: str
+    pid: str
+    session_id: str
+    start_seconds: float
+    intensity: int
+    segment_index: int
+
+
+class _SentimentSignalOut(_CamelModel):
+    """A notable sentiment concentration pattern."""
+
+    location: str
+    source_type: str
+    sentiment: str
+    count: int
+    participants: list[str]
+    n_eff: float
+    mean_intensity: float
+    concentration: float
+    composite_signal: float
+    confidence: str
+    quotes: list[_SentimentSignalQuoteOut]
+
+
+class SentimentAnalysisResponse(_CamelModel):
+    """Full sentiment-based analysis result (matches SentimentAnalysisData TS type)."""
+
+    signals: list[_SentimentSignalOut]
+    section_matrix: _SentimentMatrixOut
+    theme_matrix: _SentimentMatrixOut
+    total_participants: int
+    sentiments: list[str]
+    participant_ids: list[str]
+
+
+def _serialize_sentiment_matrix(matrix: object) -> _SentimentMatrixOut:
+    """Convert a Matrix dataclass to the camelCase response model."""
+    from bristlenose.analysis.models import Matrix
+
+    assert isinstance(matrix, Matrix)
+    cells_out: dict[str, _SentimentMatrixCellOut] = {}
+    for key, cell in matrix.cells.items():
+        cells_out[key] = _SentimentMatrixCellOut(count=cell.count)
+    return _SentimentMatrixOut(
+        cells=cells_out,
+        row_totals=dict(matrix.row_totals),
+        col_totals=dict(matrix.col_totals),
+        grand_total=matrix.grand_total,
+        row_labels=list(matrix.row_labels),
+    )
+
+
+def _serialize_sentiment_signal(s: object) -> _SentimentSignalOut:
+    """Convert a Signal dataclass to the camelCase response model."""
+    from bristlenose.analysis.models import Signal
+
+    assert isinstance(s, Signal)
+    return _SentimentSignalOut(
+        location=s.location,
+        source_type=s.source_type,
+        sentiment=s.sentiment,
+        count=s.count,
+        participants=s.participants,
+        n_eff=round(s.n_eff, 2),
+        mean_intensity=round(s.mean_intensity, 2),
+        concentration=round(s.concentration, 2),
+        composite_signal=round(s.composite_signal, 4),
+        confidence=s.confidence,
+        quotes=[
+            _SentimentSignalQuoteOut(
+                text=q.text,
+                pid=q.participant_id,
+                session_id=q.session_id,
+                start_seconds=q.start_seconds,
+                intensity=q.intensity,
+                segment_index=q.segment_index,
+            )
+            for q in s.quotes
+        ],
+    )
+
+
+@router.get(
+    "/projects/{project_id}/analysis/sentiment",
+    response_model=SentimentAnalysisResponse,
+)
+def get_sentiment_analysis(
+    project_id: int,
+    request: Request,
+    top_n: int = Query(default=12, ge=1, le=100),
+) -> SentimentAnalysisResponse:
+    """Compute sentiment-based signal analysis for a project.
+
+    Returns the same data shape as ``window.BRISTLENOSE_ANALYSIS`` in the
+    static render path.  Uses lightweight adapter objects to bridge DB
+    models to the pipeline analysis functions.
+    """
+    from dataclasses import dataclass, field
+
+    from bristlenose.analysis.matrix import build_section_matrix, build_theme_matrix
+    from bristlenose.analysis.signals import detect_signals
+    from bristlenose.models import Sentiment
+
+    db = _get_db(request)
+    try:
+        _check_project(db, project_id)
+
+        shared = _load_shared_data(db, project_id)
+        if shared is None:
+            return _empty_sentiment_response()
+
+        # Build lightweight adapter objects matching pipeline model interfaces.
+        # Only the fields used by build_section_matrix / build_theme_matrix /
+        # detect_signals are needed.
+
+        @dataclass
+        class _QuoteAdapter:
+            text: str
+            participant_id: str
+            session_id: str
+            start_timecode: float
+            sentiment: Sentiment | None
+            intensity: int
+            segment_index: int
+
+        @dataclass
+        class _ClusterAdapter:
+            screen_label: str
+            display_order: int
+            quotes: list[_QuoteAdapter] = field(default_factory=list)
+
+        @dataclass
+        class _ThemeAdapter:
+            theme_label: str
+            quotes: list[_QuoteAdapter] = field(default_factory=list)
+
+        # Build adapter quotes from DB quotes
+        adapter_quotes: dict[int, _QuoteAdapter] = {}
+        for q in shared.all_quotes:
+            sent: Sentiment | None = None
+            if q.sentiment:
+                try:
+                    sent = Sentiment(q.sentiment)
+                except ValueError:
+                    pass
+            adapter_quotes[q.id] = _QuoteAdapter(
+                text=q.text,
+                participant_id=q.participant_id,
+                session_id=q.session_id,
+                start_timecode=q.start_timecode,
+                sentiment=sent,
+                intensity=q.intensity,
+                segment_index=q.segment_index,
+            )
+
+        # Build cluster adapters
+        clusters = (
+            db.query(ScreenCluster)
+            .filter_by(project_id=project_id)
+            .order_by(ScreenCluster.display_order)
+            .all()
+        )
+        cluster_adapters: list[_ClusterAdapter] = []
+        for c in clusters:
+            ca = _ClusterAdapter(
+                screen_label=c.screen_label,
+                display_order=c.display_order,
+            )
+            cluster_adapters.append(ca)
+
+        # Attach quotes to clusters via ClusterQuote join
+        cluster_id_to_adapter = {c.id: ca for c, ca in zip(clusters, cluster_adapters)}
+        cqs = (
+            db.query(ClusterQuote)
+            .filter(ClusterQuote.cluster_id.in_(cluster_id_to_adapter.keys()))
+            .all()
+        ) if cluster_id_to_adapter else []
+        for cq in cqs:
+            aq = adapter_quotes.get(cq.quote_id)
+            ca = cluster_id_to_adapter.get(cq.cluster_id)
+            if aq and ca:
+                ca.quotes.append(aq)
+
+        # Build theme adapters
+        themes = db.query(ThemeGroup).filter_by(project_id=project_id).all()
+        theme_adapters: list[_ThemeAdapter] = []
+        for t in themes:
+            ta = _ThemeAdapter(theme_label=t.theme_label)
+            theme_adapters.append(ta)
+
+        # Attach quotes to themes via ThemeQuote join
+        theme_id_to_adapter = {t.id: ta for t, ta in zip(themes, theme_adapters)}
+        tqs = (
+            db.query(ThemeQuote)
+            .filter(ThemeQuote.theme_id.in_(theme_id_to_adapter.keys()))
+            .all()
+        ) if theme_id_to_adapter else []
+        for tq in tqs:
+            aq = adapter_quotes.get(tq.quote_id)
+            ta = theme_id_to_adapter.get(tq.theme_id)
+            if aq and ta:
+                ta.quotes.append(aq)
+
+        # Run analysis pipeline functions
+        section_matrix = build_section_matrix(cluster_adapters)  # type: ignore[arg-type]
+        theme_matrix = build_theme_matrix(theme_adapters)  # type: ignore[arg-type]
+
+        result = detect_signals(
+            section_matrix,
+            theme_matrix,
+            cluster_adapters,  # type: ignore[arg-type]
+            theme_adapters,  # type: ignore[arg-type]
+            shared.total_participants,
+            top_n=top_n,
+        )
+
+        # Collect participant IDs
+        all_pids: set[str] = set()
+        for s in result.signals:
+            all_pids.update(s.participants)
+
+        return SentimentAnalysisResponse(
+            signals=[_serialize_sentiment_signal(s) for s in result.signals],
+            section_matrix=_serialize_sentiment_matrix(result.section_matrix),
+            theme_matrix=_serialize_sentiment_matrix(result.theme_matrix),
+            total_participants=result.total_participants,
+            sentiments=result.sentiments,
+            participant_ids=_natural_sort_pids(all_pids),
+        )
+    finally:
+        db.close()
+
+
+def _empty_sentiment_response() -> SentimentAnalysisResponse:
+    """Return an empty sentiment analysis result."""
+    empty = _SentimentMatrixOut(
+        cells={}, row_totals={}, col_totals={}, grand_total=0, row_labels=[],
+    )
+    return SentimentAnalysisResponse(
+        signals=[],
+        section_matrix=empty,
+        theme_matrix=empty,
+        total_participants=0,
+        sentiments=[],
+        participant_ids=[],
+    )
+
+
+# ---------------------------------------------------------------------------
+# Core analysis logic (used by both tag endpoints)
 # ---------------------------------------------------------------------------
 
 

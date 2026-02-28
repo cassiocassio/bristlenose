@@ -14,7 +14,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Badge, Metric, PersonBadge } from "../components";
-import { getCodebookAnalysis } from "../utils/api";
+import { apiGet, getCodebookAnalysis } from "../utils/api";
 import { getBarColour, getGroupBg, getTagBg } from "../utils/colours";
 import { formatTimecode } from "../utils/format";
 import { detectSequences, type SequenceMeta } from "../utils/sequences";
@@ -881,8 +881,19 @@ export function AnalysisPage({ projectId }: AnalysisPageProps) {
     return () => observer.disconnect();
   }, []);
 
-  // Read baked sentiment data
-  const sentimentData = useMemo(() => window.BRISTLENOSE_ANALYSIS ?? null, []);
+  // Fetch sentiment data from API (or fall back to window global for legacy mode)
+  const [sentimentData, setSentimentData] = useState<SentimentAnalysisData | null>(
+    () => window.BRISTLENOSE_ANALYSIS ?? null,
+  );
+  useEffect(() => {
+    // Already have baked data from window global — skip API fetch
+    if (window.BRISTLENOSE_ANALYSIS) return;
+    apiGet<SentimentAnalysisData>("/analysis/sentiment")
+      .then((data) => {
+        if (data.signals.length > 0) setSentimentData(data);
+      })
+      .catch(() => {});
+  }, [projectId]);
 
   // Fetch per-codebook tag analysis from API
   useEffect(() => {

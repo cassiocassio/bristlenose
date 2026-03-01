@@ -2,6 +2,7 @@ id: plato
 title: Platonic Ontology & Epistemology
 author: Composite — Vlastos, Fine, Kraut, Sedley
 enabled: true
+sort_order: 90
 
 description: >
   A scholarly codebook for analysing Plato's dialogues through the lens of his

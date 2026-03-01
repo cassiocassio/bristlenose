@@ -1,15 +1,16 @@
 /**
  * TagGroupCard — tinted group card with eye toggle, tag rows, and group total.
  *
- * Eye toggle is visual-only declutter (local React state).
+ * Eye toggle state is read from SidebarStore (persisted to SQLite).
  * Checkbox changes go through to QuotesStore.tagFilter.
  *
  * @module TagGroupCard
  */
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo } from "react";
 import type { CodebookTagResponse } from "../utils/types";
 import { getTagBg, getBarColour } from "../utils/colours";
+import { useSidebarStore } from "../contexts/SidebarStore";
 import { EyeToggle } from "./EyeToggle";
 import { TagRow } from "./TagRow";
 
@@ -25,8 +26,8 @@ interface TagGroupCardProps {
   uncheckedSet: Set<string>;
   clearAll: boolean;
   onToggleTag: (tagName: string, checked: boolean) => void;
-  /** Force-hidden by parent framework eye. */
-  forceHidden?: boolean;
+  /** Called when this group's eye toggle is clicked. */
+  onToggleEye?: () => void;
 }
 
 export function TagGroupCard({
@@ -39,16 +40,15 @@ export function TagGroupCard({
   uncheckedSet,
   clearAll,
   onToggleTag,
-  forceHidden,
+  onToggleEye,
 }: TagGroupCardProps) {
-  const [eyeOpen, setEyeOpen] = useState(true);
+  const { hiddenTagGroups } = useSidebarStore();
+  const isHidden = hiddenTagGroups.has(name);
 
   const handleEyeClick = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();
-    setEyeOpen((prev) => !prev);
-  }, []);
-
-  const isHidden = forceHidden || !eyeOpen;
+    onToggleEye?.();
+  }, [onToggleEye]);
 
   // Max count across tags in this group (for micro-bar scaling)
   const maxCount = useMemo(

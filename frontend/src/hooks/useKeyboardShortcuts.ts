@@ -29,6 +29,11 @@ import {
 
 // ── Helpers ──────────────────────────────────────────────────────────────
 
+/** Check if the current pathname matches a given route (ignoring trailing slash). */
+function pathMatches(pathname: string, route: string): boolean {
+  return pathname === route || pathname === route + "/";
+}
+
 /**
  * Check if user is currently editing (input, textarea, contenteditable,
  * or tag suggest active).  Keyboard shortcuts should not fire while editing.
@@ -270,7 +275,7 @@ export function useKeyboardShortcuts({
 
       // [ — toggle TOC sidebar (quotes tab only)
       if (key === "[") {
-        if (locationRef.current.pathname === "/report/quotes") {
+        if (pathMatches(locationRef.current.pathname, "/report/quotes")) {
           e.preventDefault();
           toggleToc();
           return;
@@ -279,7 +284,7 @@ export function useKeyboardShortcuts({
 
       // ] — toggle tag sidebar (quotes tab only)
       if (key === "]") {
-        if (locationRef.current.pathname === "/report/quotes") {
+        if (pathMatches(locationRef.current.pathname, "/report/quotes")) {
           e.preventDefault();
           toggleTags();
           return;
@@ -288,7 +293,7 @@ export function useKeyboardShortcuts({
 
       // \ or ⌘. / Ctrl+. — toggle both sidebars (quotes tab only)
       if (key === "\\" || (key === "." && (e.metaKey || e.ctrlKey))) {
-        if (locationRef.current.pathname === "/report/quotes") {
+        if (pathMatches(locationRef.current.pathname, "/report/quotes")) {
           e.preventDefault();
           toggleBoth();
           return;

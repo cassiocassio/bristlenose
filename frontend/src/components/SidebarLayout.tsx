@@ -23,6 +23,7 @@ import {
 } from "../contexts/SidebarStore";
 import { TocSidebar } from "./TocSidebar";
 import { TagSidebar } from "./TagSidebar";
+import { useDragResize } from "../hooks/useDragResize";
 
 // ── SVG icons (inline, 18×18) ─────────────────────────────────────────────
 
@@ -95,6 +96,20 @@ export function SidebarLayout({ active, children }: SidebarLayoutProps) {
   const { tocOpen, tagsOpen, tocWidth, tagsWidth } = useSidebarStore();
   const layoutRef = useRef<HTMLDivElement>(null);
 
+  // Drag-to-resize handles (4 total).
+  const tocEdge = useDragResize({
+    side: "toc", source: "sidebar", layoutRef, currentWidth: tocWidth,
+  });
+  const tagEdge = useDragResize({
+    side: "tags", source: "sidebar", layoutRef, currentWidth: tagsWidth,
+  });
+  const tocRailDrag = useDragResize({
+    side: "toc", source: "rail", layoutRef, currentWidth: tocWidth,
+  });
+  const tagRailDrag = useDragResize({
+    side: "tags", source: "rail", layoutRef, currentWidth: tagsWidth,
+  });
+
   const handleToggleToc = useCallback(() => {
     withAnimation(layoutRef.current, toggleToc);
   }, []);
@@ -135,6 +150,12 @@ export function SidebarLayout({ active, children }: SidebarLayoutProps) {
         >
           <ListIcon />
         </button>
+        {!tocOpen && (
+          <div
+            className={`drag-handle toc-rail-drag${tocRailDrag.isDragging ? " active" : ""}`}
+            onPointerDown={tocRailDrag.handlePointerDown}
+          />
+        )}
       </div>
 
       {/* Column 2: TOC sidebar panel */}
@@ -153,6 +174,12 @@ export function SidebarLayout({ active, children }: SidebarLayoutProps) {
         <div className="toc-sidebar-body">
           <TocSidebar />
         </div>
+        {tocOpen && (
+          <div
+            className={`drag-handle toc-drag-handle${tocEdge.isDragging ? " active" : ""}`}
+            onPointerDown={tocEdge.handlePointerDown}
+          />
+        )}
       </div>
 
       {/* Column 3: Center — header, nav, content, footer */}
@@ -174,6 +201,12 @@ export function SidebarLayout({ active, children }: SidebarLayoutProps) {
           </button>
         </div>
         <TagSidebar />
+        {tagsOpen && (
+          <div
+            className={`drag-handle tag-drag-handle${tagEdge.isDragging ? " active" : ""}`}
+            onPointerDown={tagEdge.handlePointerDown}
+          />
+        )}
       </div>
 
       {/* Column 5: Tag rail (visible when tag sidebar is closed) */}
@@ -186,6 +219,12 @@ export function SidebarLayout({ active, children }: SidebarLayoutProps) {
         >
           <TagIcon />
         </button>
+        {!tagsOpen && (
+          <div
+            className={`drag-handle tag-rail-drag${tagRailDrag.isDragging ? " active" : ""}`}
+            onPointerDown={tagRailDrag.handlePointerDown}
+          />
+        )}
       </div>
     </div>
   );

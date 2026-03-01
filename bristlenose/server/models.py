@@ -484,6 +484,25 @@ class DismissedSignal(Base):
     )
 
 
+class HiddenTagGroup(Base):
+    """Researcher hid a codebook group's badges from quote cards (eye toggle).
+
+    group_name is the CodebookGroup.name string (e.g. "Behaviour", "Trust").
+    When present, badges for tags in this group are suppressed on quote cards.
+    """
+
+    __tablename__ = "hidden_tag_groups"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    project_id: Mapped[int] = mapped_column(ForeignKey("projects.id"))
+    group_name: Mapped[str] = mapped_column(String(200))
+    hidden_at: Mapped[datetime] = mapped_column(default=func.now())
+
+    __table_args__ = (
+        UniqueConstraint("project_id", "group_name", name="uq_hidden_tag_group"),
+    )
+
+
 class ElaborationCache(Base):
     """Cached LLM-generated signal elaboration.
 

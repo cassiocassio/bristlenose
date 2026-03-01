@@ -35,6 +35,7 @@ import {
   acceptProposedTag,
   denyProposedTag,
 } from "../contexts/QuotesContext";
+import { useSidebarStore } from "../contexts/SidebarStore";
 
 // ── Context expansion types ─────────────────────────────────────────────
 
@@ -129,6 +130,7 @@ export function QuoteGroup({
   // ── Shared quote state ─────────────────────────────────────────────────
 
   const store = useQuotesStore();
+  const { hiddenTagGroups } = useSidebarStore();
   const { registerHideHandler, unregisterHideHandler } = useFocus();
 
   // ── Local presentation state ───────────────────────────────────────────
@@ -733,9 +735,15 @@ export function QuoteGroup({
           const isHidden = !!store.hidden[q.dom_id];
           const isStarred = !!store.starred[q.dom_id];
           const editedText = store.edits[q.dom_id] ?? null;
-          const userTags = store.tags[q.dom_id] ?? [];
+          const allUserTags = store.tags[q.dom_id] ?? [];
+          const userTags = hiddenTagGroups.size > 0
+            ? allUserTags.filter((t) => !hiddenTagGroups.has(t.codebook_group))
+            : allUserTags;
           const deletedBadgesList = store.deletedBadges[q.dom_id] ?? [];
-          const proposedTagsList = store.proposedTags[q.dom_id] ?? [];
+          const allProposedTags = store.proposedTags[q.dom_id] ?? [];
+          const proposedTagsList = hiddenTagGroups.size > 0
+            ? allProposedTags.filter((pt) => !hiddenTagGroups.has(pt.group_name))
+            : allProposedTags;
 
           // Quote in hide animation — render with .bn-hiding class.
           if (hidingIds.has(q.dom_id)) {

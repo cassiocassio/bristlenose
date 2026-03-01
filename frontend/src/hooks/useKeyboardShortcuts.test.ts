@@ -12,6 +12,7 @@ import { createMemoryRouter, RouterProvider } from "react-router-dom";
 import { FocusProvider, useFocus } from "../contexts/FocusContext";
 import { PlayerProvider } from "../contexts/PlayerContext";
 import { resetStore, useQuotesStore } from "../contexts/QuotesContext";
+import { resetSidebarStore } from "../contexts/SidebarStore";
 import { useKeyboardShortcuts } from "./useKeyboardShortcuts";
 
 /**
@@ -65,7 +66,7 @@ function renderWithProviders(
 
   const routes = [{ path: "/report/quotes", element: createElement(Wrapper) }];
   const router = createMemoryRouter(routes, {
-    initialEntries: ["/report/quotes"],
+    initialEntries: ["/report/quotes/"],
   });
   const result = renderHook(() => useQuotesStore(), {
     wrapper: ({ children }: { children: ReactNode }) =>
@@ -102,6 +103,7 @@ function pressKey(key: string, options: Partial<KeyboardEventInit> = {}) {
 describe("useKeyboardShortcuts", () => {
   beforeEach(() => {
     resetStore();
+    resetSidebarStore();
     document.body.innerHTML = "";
   });
 
@@ -286,6 +288,47 @@ describe("useKeyboardShortcuts", () => {
       expect(focusSpy).toHaveBeenCalled();
       expect(container.classList.contains("expanded")).toBe(true);
 
+      unmount();
+    });
+  });
+
+  describe("sidebar shortcuts", () => {
+    /** Dispatch a keydown and return whether it was handled (defaultPrevented). */
+    function dispatchKey(key: string, options: Partial<KeyboardEventInit> = {}): boolean {
+      const event = new KeyboardEvent("keydown", {
+        key,
+        bubbles: true,
+        cancelable: true,
+        ...options,
+      });
+      return !document.dispatchEvent(event); // dispatchEvent returns false when preventDefault() was called
+    }
+
+    it("[ is handled on quotes page (toggles TOC)", () => {
+      const { unmount } = renderWithProviders();
+      const handled = dispatchKey("[");
+      expect(handled).toBe(true);
+      unmount();
+    });
+
+    it("] is handled on quotes page (toggles tags)", () => {
+      const { unmount } = renderWithProviders();
+      const handled = dispatchKey("]");
+      expect(handled).toBe(true);
+      unmount();
+    });
+
+    it("\\ is handled on quotes page (toggles both)", () => {
+      const { unmount } = renderWithProviders();
+      const handled = dispatchKey("\\");
+      expect(handled).toBe(true);
+      unmount();
+    });
+
+    it("⌘. is handled on quotes page (toggles both)", () => {
+      const { unmount } = renderWithProviders();
+      const handled = dispatchKey(".", { metaKey: true });
+      expect(handled).toBe(true);
       unmount();
     });
   });

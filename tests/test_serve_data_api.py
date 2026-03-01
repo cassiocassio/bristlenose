@@ -485,3 +485,55 @@ class TestDomIdParsing:
 
         with pytest.raises(ValueError, match="Invalid timecode"):
             _parse_dom_quote_id("q-p1-abc")
+
+
+# ---------------------------------------------------------------------------
+# Hidden tag groups (eye toggle — badge visibility)
+# ---------------------------------------------------------------------------
+
+
+class TestHiddenTagGroupsGet:
+    def test_returns_empty_list(self, client: TestClient) -> None:
+        resp = client.get("/api/projects/1/hidden-tag-groups")
+        assert resp.status_code == 200
+        assert resp.json() == []
+
+    def test_404_nonexistent_project(self, client: TestClient) -> None:
+        resp = client.get("/api/projects/999/hidden-tag-groups")
+        assert resp.status_code == 404
+
+
+class TestHiddenTagGroupsPut:
+    def test_put_and_get_round_trip(self, client: TestClient) -> None:
+        resp = client.put(
+            "/api/projects/1/hidden-tag-groups",
+            json=["Behaviour", "Trust"],
+        )
+        assert resp.status_code == 200
+        data = client.get("/api/projects/1/hidden-tag-groups").json()
+        assert set(data) == {"Behaviour", "Trust"}
+
+    def test_put_replaces_state(self, client: TestClient) -> None:
+        client.put("/api/projects/1/hidden-tag-groups", json=["A", "B"])
+        client.put("/api/projects/1/hidden-tag-groups", json=["C"])
+        data = client.get("/api/projects/1/hidden-tag-groups").json()
+        assert data == ["C"]
+
+    def test_put_empty_clears(self, client: TestClient) -> None:
+        client.put("/api/projects/1/hidden-tag-groups", json=["A"])
+        client.put("/api/projects/1/hidden-tag-groups", json=[])
+        data = client.get("/api/projects/1/hidden-tag-groups").json()
+        assert data == []
+
+    def test_put_deduplicates(self, client: TestClient) -> None:
+        client.put(
+            "/api/projects/1/hidden-tag-groups", json=["A", "A", "A"]
+        )
+        data = client.get("/api/projects/1/hidden-tag-groups").json()
+        assert data == ["A"]
+
+    def test_404_nonexistent_project(self, client: TestClient) -> None:
+        resp = client.put(
+            "/api/projects/999/hidden-tag-groups", json=["A"]
+        )
+        assert resp.status_code == 404

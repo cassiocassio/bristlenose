@@ -221,6 +221,55 @@ describe("AutoCodeToast", () => {
     expect(screen.getByText(/15s/)).toBeInTheDocument();
   });
 
+  it("hides dismiss button when completed (user must click Report)", async () => {
+    mockGetStatus.mockResolvedValue(
+      makeStatus({
+        status: "completed",
+        completed_at: "2026-02-20T10:01:30Z",
+      }),
+    );
+
+    render(
+      <AutoCodeToast
+        frameworkId="garrett"
+        onComplete={vi.fn()}
+        onOpenReport={vi.fn()}
+        onDismiss={vi.fn()}
+      />,
+    );
+
+    await act(async () => {});
+
+    expect(screen.queryByTestId("bn-autocode-toast-close")).not.toBeInTheDocument();
+    expect(screen.getByTestId("bn-autocode-toast-report")).toBeInTheDocument();
+  });
+
+  it("does not auto-dismiss after completion", async () => {
+    const onDismiss = vi.fn();
+    mockGetStatus.mockResolvedValue(
+      makeStatus({
+        status: "completed",
+        completed_at: "2026-02-20T10:01:30Z",
+      }),
+    );
+
+    render(
+      <AutoCodeToast
+        frameworkId="garrett"
+        onComplete={vi.fn()}
+        onOpenReport={vi.fn()}
+        onDismiss={onDismiss}
+      />,
+    );
+
+    await act(async () => {});
+    await act(async () => {
+      vi.advanceTimersByTime(60_000);
+    });
+
+    expect(onDismiss).not.toHaveBeenCalled();
+  });
+
   it("fires onComplete only once", async () => {
     const onComplete = vi.fn();
     mockGetStatus.mockResolvedValue(

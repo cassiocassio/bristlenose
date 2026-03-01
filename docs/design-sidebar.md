@@ -306,6 +306,67 @@ When the TOC sidebar is open, the center column narrows. To compensate:
 
 ---
 
+## Eye Toggle → Hide Badges on Quotes (Phase 4b)
+
+### The Three Distinct Interactions
+
+There are three conceptually different actions a researcher takes with tags in the sidebar:
+
+| Gesture | What it means | Effect on quotes | Persistence |
+|---------|--------------|-----------------|-------------|
+| **Checkbox** (uncheck a tag) | "Exclude quotes with this signal from my deliverable" | Removes quotes from the visible list | Session (QuotesStore.tagFilter) |
+| **Eye toggle** (hide a group) | "Declutter — too many signals, hide these badges for now" | Quotes stay in list, but badges for hidden tags are suppressed on quote cards | Transient (local React state, resets on navigation) |
+| **Remove codebook** | "I don't want this framework at all" | Destructive server-side removal (restorable) | Persistent (server) |
+
+### Current State
+
+Eye toggles currently only collapse the tag group card in the sidebar. They do **not** affect quote card badge rendering. This means hiding "Behaviour" in the sidebar still shows all Behaviour-tagged badges on every quote card — defeating the declutter purpose.
+
+### Desired Behaviour
+
+When a tag group's eye toggle is closed:
+1. The group card collapses in the sidebar (already works)
+2. Tag badges for that group's tags are **hidden on quote cards** (not yet implemented)
+3. Quotes remain in the list — no filtering effect
+4. The quote's remaining visible badges still render normally
+
+When a framework-level eye toggle is closed:
+1. All groups within that framework collapse (already works)
+2. All tag badges from that framework are hidden on quote cards
+3. Same: no filtering, just visual declutter
+
+### Why This Matters
+
+Researchers experience tag overload. A report with 5 frameworks × 10 groups × 5 tags = 250 possible tag badges. Each quote card might show 8–12 badges. The eye toggle is the researcher saying "I believe these signals exist, but I'm not thinking about them right now — hide them so I can focus on what I'm building a case around."
+
+This is fundamentally different from unchecking (which says "this quote isn't part of my case") and from removing a codebook (which says "this framework isn't relevant to this project").
+
+### Implementation Notes
+
+- Eye toggle state needs to flow from TagSidebar to QuoteCard badge rendering
+- Options: (a) lift eye state into SidebarStore (simplest, but couples sidebar to quotes), (b) add a `hiddenTagGroups: Set<string>` to QuotesStore (quotes already read from there), (c) new lightweight context
+- QuoteCard badge rendering already reads tags — it needs to filter out tags whose group is eye-hidden
+- Performance: the set lookup is O(1) per badge, negligible
+- The eye state is intentionally **transient** — not persisted to localStorage, resets on navigation
+
+### Open Questions
+
+1. Should the eye state persist across tab switches (Quotes → Dashboard → Quotes) within the same session? Currently it resets because it's local React state in TagSidebar.
+2. Should there be a visual indicator on quote cards that badges are being hidden? (e.g., a subtle "+3 hidden" count)
+3. When the eye reopens, should badges animate in or just appear?
+
+---
+
+## AutoCode Toast Dismissal
+
+The completed AutoCode toast (showing "Report" link to review thresholds) is **non-dismissible** — no × button, no auto-dismiss timer. The user must click "Report" to open the threshold review modal. This prevents the scenario where a user dismisses the toast and loses access to threshold review entirely, getting default thresholds applied silently.
+
+**TODO:** Add a persistent "Review AutoCode results" entry point on the Codebook page so users can revisit threshold decisions even after the toast is gone. This needs more design thinking — noted for a future session.
+
+Running/pending/failed toasts retain the × button and auto-dismiss behaviour.
+
+---
+
 ## Extensibility
 
 Future tabs may have their own sidebars. The infrastructure is reusable:

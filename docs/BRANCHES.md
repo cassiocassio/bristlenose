@@ -2,7 +2,7 @@
 
 This document tracks active feature branches to help multiple Claude sessions coordinate without conflicts.
 
-**Updated:** 1 Mar 2026 (stabilise-ci started)
+**Updated:** 1 Mar 2026 (stabilise-ci merged)
 
 ---
 
@@ -19,7 +19,7 @@ Each active feature branch gets its own **git worktree** — a full working copy
 | `bristlenose_branch highlighter/` | `highlighter` | Highlighter feature |
 | `bristlenose_branch living-fish/` | `living-fish` | Animated "living portrait" logo for serve mode |
 | `bristlenose_branch sidebar/` | `sidebar` | Dual-sidebar layout (TOC left, Tags right) for Quotes tab |
-| `bristlenose_branch stabilise-ci/` | `stabilise-ci` | Frontend CI hardening (lint, typecheck, vitest) |
+
 
 
 **Creating a new feature branch worktree:**
@@ -102,30 +102,11 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 | `highlighter` | `bristlenose_branch highlighter/` | `origin/highlighter` |
 | `living-fish` | `bristlenose_branch living-fish/` | `origin/living-fish` |
 | `sidebar` | `bristlenose_branch sidebar/` | `origin/sidebar` |
-| `stabilise-ci` | `bristlenose_branch stabilise-ci/` | local only |
+
 
 ---
 
 ## Active Branches
-
-### `stabilise-ci`
-
-**Status:** Just started
-**Started:** 1 Mar 2026
-**Worktree:** `/Users/cassio/Code/bristlenose_branch stabilise-ci/`
-**Remote:** local only (push when ready)
-
-**What it does:** Stabilize CI by adding required frontend checks (`lint`, `typecheck`, `vitest`) to stop regressions while refactoring.
-
-**Files this branch will touch:**
-- TBD — will be filled in as work progresses
-
-**Potential conflicts with other branches:**
-- `living-fish` may overlap if CI/test/build workflow files are touched there
-- `sidebar` may overlap if frontend scripts or test commands are modified there
-- `highlighter` and `symbology` are lower risk (mostly render/theme scope), but frontend test baseline changes could still overlap
-
----
 
 ### `highlighter` — started 13 Feb 2026
 
@@ -224,6 +205,10 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 ---
 
 ## Completed Branches (for reference)
+
+### `stabilise-ci` — merged 1 Mar 2026
+
+Frontend CI hardening. Added `frontend-lint-type-test` job to GitHub Actions (ESLint, TypeScript typecheck, Vitest on Node 20). ESLint step is `continue-on-error: true` pending fix of 84 pre-existing lint errors. Also added `CODEX.md` working agreement.
 
 ### `react-router` — merged 28 Feb 2026
 

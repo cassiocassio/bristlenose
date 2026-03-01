@@ -619,7 +619,22 @@ export function TranscriptPage({ projectId: _projectId, sessionId }: TranscriptP
                 );
               })()}
               <div className="segment-body">
-                {seg.html_text ? (
+                {seg.words && seg.words.length > 0 ? (
+                  // Word-level spans for karaoke highlighting during playback.
+                  // When words exist we skip html_text (<mark> quote highlighting)
+                  // because reconciling word boundaries with quote marks is a
+                  // future enhancement. Margin annotations still show quote context.
+                  seg.words.map((w, i) => (
+                    <span
+                      key={i}
+                      className="transcript-word"
+                      data-start={w.start}
+                      data-end={w.end}
+                    >
+                      {w.text}{i < seg.words!.length - 1 ? " " : ""}
+                    </span>
+                  ))
+                ) : seg.html_text ? (
                   <span dangerouslySetInnerHTML={{ __html: seg.html_text }} />
                 ) : (
                   <>{seg.text}</>

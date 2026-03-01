@@ -1,0 +1,67 @@
+/* ==========================================================================
+   Export mode — read-only overrides
+   ==========================================================================
+   Applied when <body class="bn-export-mode">.  Hides all mutation
+   affordances so the exported report looks like a finished document,
+   not an editing environment.
+   ========================================================================== */
+
+/* --- Quote card actions (star, hide, undo, add-tag, restore) --- */
+.bn-export-mode .star-btn,
+.bn-export-mode .hide-btn,
+.bn-export-mode .undo-btn,
+.bn-export-mode .badge-add,
+.bn-export-mode .badge-restore,
+.bn-export-mode .moderator-pill {
+  display: none !important;
+}
+
+/* --- Badge delete/accept/deny buttons (keep badges, hide controls) --- */
+.bn-export-mode .badge-delete,
+.bn-export-mode .badge-accept,
+.bn-export-mode .badge-deny {
+  display: none !important;
+}
+
+/* --- Pencil edit icons (headings, names) --- */
+.bn-export-mode .edit-pencil,
+.bn-export-mode .edit-pencil-inline,
+.bn-export-mode .bn-name-pencil {
+  display: none !important;
+}
+
+/* --- EditableText click-to-edit cursor --- */
+.bn-export-mode .editable-text,
+.bn-export-mode .bn-speaker-editable-name {
+  cursor: default !important;
+}
+
+/* --- Tag input ("+ tag" links in codebook and quotes) --- */
+.bn-export-mode .bn-tag-input,
+.bn-export-mode .codebook-add-tag {
+  display: none !important;
+}
+
+/* --- Hidden-quote counter (unhide controls) --- */
+.bn-export-mode .bn-counter {
+  display: none !important;
+}
+
+/* --- Codebook mutation controls --- */
+.bn-export-mode .new-group-placeholder,
+.bn-export-mode .codebook-picker-btn,
+.bn-export-mode .autocode-btn,
+.bn-export-mode .framework-remove-btn {
+  display: none !important;
+}
+
+/* --- Codebook drag handles --- */
+.bn-export-mode [draggable="true"] {
+  cursor: default !important;
+  -webkit-user-drag: none;
+}
+
+/* --- Export button itself (hidden when viewing an export) --- */
+.bn-export-mode .bn-export-btn {
+  display: none !important;
+}

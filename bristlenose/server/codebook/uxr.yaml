@@ -3,6 +3,7 @@ version: "2.0"
 title: Bristlenose UXR Codebook
 author: ""
 enabled: true
+sort_order: 10
 
 description: >
   A practitioner-oriented codebook for any user research study. Eight

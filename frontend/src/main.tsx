@@ -1,15 +1,18 @@
 import { createRoot } from "react-dom/client";
 import { RouterProvider } from "react-router-dom";
 import { router } from "./router";
+import { isExportMode } from "./utils/exportData";
 import { redirectHashToPathname } from "./utils/hashRedirect";
 
-// ── SPA mode (serve) ────────────────────────────────────────────────────
-// When the server injects #bn-app-root, mount the full React Router app.
-// This replaces the 11 separate createRoot() calls with a single root.
+// ── SPA mode (serve) / Export mode ──────────────────────────────────────
+// When #bn-app-root exists, mount the full React Router app.
+// In serve mode: browser router (pathname routes).
+// In export mode: hash router (file:// has no server for History API).
 
 const appRoot = document.getElementById("bn-app-root");
 if (appRoot) {
-  redirectHashToPathname();
+  // Hash redirect only in serve mode — export uses hash router
+  if (!isExportMode()) redirectHashToPathname();
   createRoot(appRoot).render(<RouterProvider router={router} />);
 }
 

@@ -27,3 +27,139 @@
     accent-color: var(--bn-colour-accent);
     margin: 0;
 }
+
+/* --- Configuration reference --- */
+
+.bn-config-ref {
+    margin-top: var(--bn-space-md);
+}
+
+.bn-config-ref-intro {
+    font-size: 0.9rem;
+    color: var(--bn-colour-muted);
+    margin: 0 0 var(--bn-space-lg) 0;
+    line-height: 1.5;
+}
+
+.bn-config-ref-intro code {
+    font-size: 0.85rem;
+    background: var(--bn-hover-bg);
+    padding: 0.1em 0.35em;
+    border-radius: var(--bn-radius-sm);
+}
+
+/* Category chips — horizontal scrollable row */
+
+.bn-config-ref-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--bn-space-xs);
+    margin-bottom: var(--bn-space-lg);
+}
+
+.bn-config-ref-chip {
+    font-size: 0.8rem;
+    padding: 0.25em 0.65em;
+    border: 1px solid var(--bn-colour-border);
+    border-radius: var(--bn-radius-pill);
+    background: none;
+    color: var(--bn-colour-muted);
+    cursor: pointer;
+    transition: color var(--bn-transition-fast), border-color var(--bn-transition-fast),
+                background var(--bn-transition-fast);
+    white-space: nowrap;
+}
+
+.bn-config-ref-chip:hover {
+    color: var(--bn-colour-text);
+    border-color: var(--bn-colour-border-hover);
+    background: var(--bn-hover-bg);
+}
+
+/* Category sections */
+
+.bn-config-ref-section h3 {
+    font-size: 0.95rem;
+    font-weight: var(--bn-weight-emphasis);
+    margin: var(--bn-space-lg) 0 var(--bn-space-sm) 0;
+    padding-bottom: var(--bn-space-xs);
+    border-bottom: 1px solid var(--bn-colour-border);
+    color: var(--bn-colour-text);
+}
+
+/* Individual setting rows — CSS grid */
+
+.bn-config-ref-row {
+    display: grid;
+    grid-template-columns: 1fr auto auto;
+    grid-template-rows: auto auto;
+    gap: 0 var(--bn-space-md);
+    align-items: baseline;
+    padding: var(--bn-space-sm) 0;
+    border-bottom: 1px solid var(--bn-hover-bg);
+    font-size: 0.85rem;
+}
+
+.bn-config-ref-label {
+    color: var(--bn-colour-text);
+    grid-column: 1;
+    grid-row: 1;
+}
+
+.bn-config-ref-value {
+    grid-column: 2;
+    grid-row: 1;
+    font-size: 0.8rem;
+    color: var(--bn-colour-muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 220px;
+}
+
+.bn-config-ref-file {
+    grid-column: 3;
+    grid-row: 1;
+    font-size: 0.75rem;
+    color: var(--bn-colour-muted);
+    background: var(--bn-hover-bg);
+    padding: 0.15em 0.5em;
+    border-radius: var(--bn-radius-pill);
+    white-space: nowrap;
+    cursor: help;
+}
+
+.bn-config-ref-meta {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: var(--bn-space-sm);
+    min-height: 0;
+}
+
+.bn-config-ref-envvar {
+    font-size: 0.75rem;
+    color: var(--bn-colour-muted);
+    cursor: pointer;
+    transition: color var(--bn-transition-fast);
+}
+
+.bn-config-ref-envvar:hover {
+    color: var(--bn-colour-text);
+}
+
+.bn-config-ref-envvar.copied {
+    color: var(--bn-colour-accent);
+}
+
+.bn-config-ref-envvar.copied::after {
+    content: " \2713";
+}
+
+.bn-config-ref-options {
+    font-size: 0.75rem;
+    color: var(--bn-colour-muted);
+    opacity: 0.7;
+}

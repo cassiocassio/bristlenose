@@ -211,8 +211,8 @@ Tracked as issue #29 (large effort).
 - [x] **Step 6: Player integration**. `PlayerProvider` context, `seekTo`, glow highlighting via DOM refs, progress bar CSS custom property. 28 tests
 - [x] **Step 7: Keyboard shortcuts**. `FocusProvider` context, `useKeyboardShortcuts` hook, `HelpModal`, click-to-focus with modifier support, hide handler registry. 62 tests
 - [x] **Step 8: Retire remaining vanilla JS**. `_strip_vanilla_js()` strips module code from IIFE in serve mode, keeps `window.*` globals for React. Dead island mount constants and `_replace_baked_js()` calls removed. 6 tests
-- [ ] **Step 9: React app shell**
-- [ ] **Step 10: Export — DOM snapshot**
+- [x] **Step 9: React app shell**. `Header`, `Footer`, `HelpModal` components; serve mode serves Vite-built SPA directly, no more `_transform_report_html()` marker substitution. 48 tests
+- [x] **Step 10: Export** — self-contained HTML download. Server endpoint embeds all API data as JSON, blob-URL'd JS chunks, hash router for file://. Read-only CSS + JS guards. 26 Python tests, 20 frontend tests
 
 **Infrastructure:**
 - [ ] **Storybook** — component playground for the 14 primitives. Develop and test each primitive in isolation with mock data, dark mode toggle, and all state variations visible. Evaluate Storybook vs Ladle (lighter, Vite-native) vs a simple `/dev/components` route in the existing Vite app
@@ -229,7 +229,8 @@ These are too small for issues or are internal-only concerns.
 - [ ] **Relocate AI tag toggle** — removed from toolbar (too crowded with Codebook button); needs a new home. Code commented out in `render_html.py` and `codebook.js`/`tags.js`
 - [x] **Feedback endpoint** — deploy `server/feedback.php` to Dreamhost. See `server/README.md`
 - [ ] **User research panel opt-in** — optional email field in feedback modal
-- [ ] **Export and sharing** — deferred until after React migration (see `docs/design-export-sharing.md`, "Dependency on React migration" section)
+- [x] **Export and sharing (Phase 0)** — self-contained HTML export from serve mode. See `docs/design-export-sharing.md`
+- [ ] **Export polish** — inline logo as base64 (currently shows "Bristlenose logo" text), fix footer "Bristlenoseversion" missing space, fix in-report navigation links (plain `<a href="/report/...">` don't work with hash router — need React Router `<Link>` or hash-aware hrefs)
 - [ ] **Miro bridge** — Miro-shaped CSV export → API integration → layout engine. See `docs/private/design-miro-bridge.md`
 - [ ] **Tag definitions page** — also tracked as #53
 - [ ] **Custom prompts** — user-defined tag categories via `bristlenose.toml` or `prompts.toml`

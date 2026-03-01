@@ -8,7 +8,7 @@
  */
 
 import { useCallback, useEffect, useState, useMemo } from "react";
-import { getCodebook } from "../utils/api";
+import { apiGet, getCodebook } from "../utils/api";
 import { useTranscriptCache } from "../hooks/useTranscriptCache";
 import type { QuoteResponse, QuotesListResponse } from "../utils/types";
 import { initFromQuotes, useQuotesStore } from "../contexts/QuotesContext";
@@ -26,12 +26,8 @@ export function QuoteThemes({ projectId }: QuoteThemesProps) {
   const [codebookTagNames, setCodebookTagNames] = useState<string[]>([]);
 
   const fetchQuotes = useCallback((replace = false) => {
-    fetch(`/api/projects/${projectId}/quotes`)
-      .then((res) => {
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        return res.json();
-      })
-      .then((json: QuotesListResponse) => {
+    apiGet<QuotesListResponse>("/quotes")
+      .then((json) => {
         setData(json);
         const allQuotes = [
           ...json.sections.flatMap((s) => s.quotes),

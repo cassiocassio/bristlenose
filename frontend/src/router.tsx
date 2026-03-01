@@ -1,12 +1,13 @@
 /**
- * Router — defines all report routes for serve mode.
+ * Router — defines all report routes for serve mode and export mode.
  *
- * Uses `createBrowserRouter` (React Router v7 data router API).
+ * Uses `createBrowserRouter` in serve mode (History API) and
+ * `createHashRouter` in export mode (file:// has no server).
  * The AppLayout provides the NavBar; each route renders its tab content
  * inside the Outlet.
  */
 
-import { createBrowserRouter, Navigate } from "react-router-dom";
+import { createBrowserRouter, createHashRouter, Navigate } from "react-router-dom";
 import { AppLayout } from "./layouts/AppLayout";
 import { ProjectTab } from "./pages/ProjectTab";
 import { SessionsTab } from "./pages/SessionsTab";
@@ -16,8 +17,13 @@ import { CodebookTab } from "./pages/CodebookTab";
 import { AnalysisTab } from "./pages/AnalysisTab";
 import { SettingsTab } from "./pages/SettingsTab";
 import { AboutTab } from "./pages/AboutTab";
+import { isExportMode } from "./utils/exportData";
 
 export const routes = [
+  // Root redirect — needed for hash router in export mode where the initial
+  // URL is #/ (not #/report/).  Browser router never hits this because the
+  // server redirects / → /report/.
+  { path: "/", element: <Navigate to="/report/" replace /> },
   {
     path: "/report",
     element: <AppLayout />,
@@ -36,4 +42,6 @@ export const routes = [
   },
 ];
 
-export const router = createBrowserRouter(routes);
+export const router = isExportMode()
+  ? createHashRouter(routes)
+  : createBrowserRouter(routes);

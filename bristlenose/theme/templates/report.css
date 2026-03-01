@@ -46,6 +46,91 @@ h3 {
     margin: 1.8rem 0 0.25rem;
 }
 
+.bn-about {
+    display: flex;
+    gap: var(--bn-space-xl);
+    align-items: flex-start;
+}
+
+.bn-about-sidebar {
+    width: 180px;
+    flex-shrink: 0;
+    position: sticky;
+    top: 1rem;
+}
+
+.bn-about-sidebar button {
+    display: block;
+    width: 100%;
+    text-align: left;
+    padding: 0.5rem 0;
+    font-size: 0.95rem;
+    color: var(--bn-colour-muted);
+    background: none;
+    border: none;
+    cursor: pointer;
+    transition: color var(--bn-transition-fast);
+}
+
+.bn-about-sidebar button:hover {
+    color: var(--bn-colour-text);
+}
+
+.bn-about-sidebar button.active {
+    color: var(--bn-colour-text);
+    font-weight: var(--bn-weight-emphasis);
+}
+
+.bn-about-content {
+    flex: 1;
+    min-width: 0;
+}
+
+.bn-about-content h2 {
+    margin-top: 0;
+}
+
+.bn-about-content h3 {
+    margin: 1rem 0 0.15rem;
+}
+
+.bn-about-content h4 {
+    margin: 0.8rem 0 0.1rem;
+    font-size: 0.95rem;
+}
+
+.bn-about-citation {
+    margin-bottom: 1rem;
+    padding-left: 1.5rem;
+    text-indent: -1.5rem;
+    font-size: 0.9rem;
+}
+
+.bn-about-citation a {
+    color: var(--bn-colour-link);
+    text-decoration: none;
+}
+
+.bn-about-citation a:hover {
+    text-decoration: underline;
+}
+
+.bn-about-citation .summary {
+    text-indent: 0;
+    padding-left: 1.5rem;
+    color: var(--bn-colour-muted);
+    font-size: 0.85rem;
+    margin-top: 0.2rem;
+}
+
+.bn-about-footer {
+    margin-top: 1.5rem;
+    padding-top: 0.75rem;
+    border-top: 1px solid var(--bn-colour-border);
+    font-size: 0.9rem;
+    color: var(--bn-colour-muted);
+}
+
 hr {
     border: none;
     border-top: 1px solid var(--bn-colour-border);

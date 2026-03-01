@@ -82,7 +82,7 @@ a.timecode:hover {
    Only appears when word timing data is available (Whisper sessions). */
 
 .transcript-word.bn-word-active {
-    background: color-mix(in srgb, var(--bn-colour-accent) 20%, transparent);
+    background: color-mix(in srgb, var(--bn-colour-accent) 30%, transparent);
     border-radius: 2px;
     transition: background 0.1s ease;
 }

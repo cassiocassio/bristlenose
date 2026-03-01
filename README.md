@@ -386,6 +386,10 @@ Edit `bristlenose/__init__.py` (the single source of truth for version), commit,
 
 ## Changelog
 
+**0.12.1** — _1 Mar 2026_
+
+- Word-level transcript highlighting — individual words highlight in sync with video playback (karaoke-style). Whisper sessions get per-word timing; VTT/SRT imports fall back to segment-level glow
+
 **0.12.0** — _1 Mar 2026_
 
 - Dual sidebar for Quotes tab — left: TOC with scroll-spy, right: tag filter with codebook tree and eye toggles for badge hiding. Drag-to-resize, keyboard shortcuts (`[` `]` `\` `⌘.`)

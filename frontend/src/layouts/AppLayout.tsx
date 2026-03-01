@@ -14,6 +14,7 @@ import { NavBar } from "../components/NavBar";
 import { Footer } from "../components/Footer";
 import { HelpModal } from "../components/HelpModal";
 import { SidebarLayout } from "../components/SidebarLayout";
+import { ExportDialog } from "../components/ExportDialog";
 import { PlayerProvider } from "../contexts/PlayerContext";
 import { FocusProvider } from "../contexts/FocusContext";
 import { useKeyboardShortcuts } from "../hooks/useKeyboardShortcuts";
@@ -25,8 +26,10 @@ import { installNavigationShims } from "../shims/navigation";
  */
 function AppShell() {
   const [helpOpen, setHelpOpen] = useState(false);
+  const [exportOpen, setExportOpen] = useState(false);
   const toggleHelp = useCallback(() => setHelpOpen((prev) => !prev), []);
   const isQuotes = useMatch("/report/quotes");
+  const toggleExport = useCallback(() => setExportOpen((prev) => !prev), []);
 
   useKeyboardShortcuts({
     helpModalOpen: helpOpen,
@@ -36,10 +39,11 @@ function AppShell() {
   return (
     <SidebarLayout active={!!isQuotes}>
       <Header />
-      <NavBar />
+      <NavBar onExport={toggleExport} />
       <Outlet />
       <Footer onToggleHelp={toggleHelp} />
       <HelpModal open={helpOpen} onClose={toggleHelp} />
+      <ExportDialog open={exportOpen} onClose={toggleExport} />
     </SidebarLayout>
   );
 }

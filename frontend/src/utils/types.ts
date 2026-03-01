@@ -239,6 +239,12 @@ export interface TranscriptSpeakerResponse {
   role: string;
 }
 
+export interface WordTiming {
+  text: string;
+  start: number;
+  end: number;
+}
+
 export interface TranscriptSegmentResponse {
   speaker_code: string;
   start_time: number;
@@ -249,6 +255,7 @@ export interface TranscriptSegmentResponse {
   is_quoted: boolean;
   quote_ids: string[];
   segment_index: number;
+  words: WordTiming[] | null;
 }
 
 export interface QuoteAnnotationResponse {

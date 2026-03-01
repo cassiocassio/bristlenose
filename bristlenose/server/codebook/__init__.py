@@ -63,6 +63,7 @@ class CodebookTemplate:
     preamble: str = ""
     groups: list[TemplateGroup] = field(default_factory=list)
     enabled: bool = True
+    sort_order: int = 50  # lower = earlier in browse list
 
 
 # ---------------------------------------------------------------------------
@@ -123,6 +124,7 @@ def _parse_template(raw: dict[str, Any], filename: str) -> CodebookTemplate:
     author_bio = _str(raw.get("author_bio"))
     preamble = _str(raw.get("preamble"))
     enabled = bool(raw.get("enabled", True))
+    sort_order = int(raw.get("sort_order", 50))
 
     raw_links = raw.get("author_links", []) or []
     author_links: list[tuple[str, str]] = []
@@ -144,6 +146,7 @@ def _parse_template(raw: dict[str, Any], filename: str) -> CodebookTemplate:
         preamble=preamble,
         groups=groups,
         enabled=enabled,
+        sort_order=sort_order,
     )
 
 
@@ -170,12 +173,14 @@ def get_template(template_id: str) -> CodebookTemplate | None:
 def load_all_templates() -> list[CodebookTemplate]:
     """Load all codebook templates from YAML files.
 
-    Auto-discovers ``*.yaml`` files in the templates directory.  Files
-    are sorted alphabetically so the order is deterministic.
+    Auto-discovers ``*.yaml`` files in the templates directory.  Templates
+    are sorted by ``sort_order`` (lower first, default 50), then
+    alphabetically by ``id`` as a tiebreaker.
     """
     templates: list[CodebookTemplate] = []
     for path in sorted(_TEMPLATES_DIR.glob("*.yaml")):
         templates.append(_load_template(path.stem))
+    templates.sort(key=lambda t: (t.sort_order, t.id))
     return templates
 
 

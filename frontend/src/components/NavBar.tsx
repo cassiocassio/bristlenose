@@ -2,11 +2,16 @@
  * NavBar — tab bar for the report, replacing global_nav.html.
  *
  * Uses React Router `<NavLink>` for navigation. Active tab styling uses
- * the existing `.bn-tab.active` CSS class. SVG icons for Settings and
- * About are inlined from the Jinja2 template.
+ * the existing `.bn-tab.active` CSS class. SVG icons for Settings,
+ * About, and Export are inlined.
  */
 
 import { NavLink } from "react-router-dom";
+import { isExportMode } from "../utils/exportData";
+
+interface NavBarProps {
+  onExport?: () => void;
+}
 
 const textTabs = [
   { to: "/report/", label: "Project", end: true },
@@ -24,7 +29,7 @@ function iconTabClassName({ isActive }: { isActive: boolean }): string {
   return isActive ? "bn-tab bn-tab-icon active" : "bn-tab bn-tab-icon";
 }
 
-export function NavBar() {
+export function NavBar({ onExport }: NavBarProps) {
   return (
     <nav className="bn-global-nav" role="tablist">
       {textTabs.map(({ to, label, ...rest }) => (
@@ -39,6 +44,20 @@ export function NavBar() {
         </NavLink>
       ))}
       <div className="bn-tab-spacer" />
+      {!isExportMode() && onExport && (
+        <button
+          className="bn-tab bn-tab-icon"
+          aria-label="Export"
+          title="Export report"
+          onClick={onExport}
+        >
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M2 10v3.5h12V10"/>
+            <path d="M8 2v8"/>
+            <path d="M4.5 6.5L8 10l3.5-3.5"/>
+          </svg>
+        </button>
+      )}
       <NavLink
         to="/report/settings/"
         className={iconTabClassName}

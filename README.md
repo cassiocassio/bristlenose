@@ -386,6 +386,13 @@ Edit `bristlenose/__init__.py` (the single source of truth for version), commit,
 
 ## Changelog
 
+**0.11.2** — _1 Mar 2026_
+
+- Self-contained HTML export — download button bundles all data as embedded JSON with hash router for `file://`, optional anonymisation
+- About panel redesign — sidebar layout with 5 sections (About, Signals, Codebook, Developer, Design)
+- Configuration reference panel — read-only grid of all 63 configurable values with defaults, env var names, and valid options
+- Morville honeycomb codebook — 7 groups, 28 tags with discrimination prompts and cross-codebook references
+
 **0.11.1** — _28 Feb 2026_
 
 - Fix video player broken by double URL encoding and missing subdirectory in source file paths

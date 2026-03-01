@@ -2,6 +2,13 @@
 
 All notable changes to Bristlenose are documented here. See also the [README](README.md) for the latest releases.
 
+**0.11.2** — _1 Mar 2026_
+
+- **Self-contained HTML export** — download button in the NavBar bundles all API data as embedded JSON, blob-URL'd JS chunks, and a hash router for `file://` — recipients open the report in any browser without Bristlenose installed. Optional anonymisation checkbox strips participant names before download. Read-only CSS + JS guards hide mutation UI in exported files. 26 Python tests, 20 frontend tests
+- **About panel redesign** — sidebar layout (Claude-settings style) with 5 sections: About (per-screen product guide), Signals (sentiment taxonomy, concentration metrics, academic references), Codebook (sections/themes, sentiment tags, framework codebooks with author refs), Developer (architecture, stack, APIs, contributing), Design (design system, dark mode, component library, typography)
+- **Configuration reference panel** — read-only grid in Settings tab showing all 63 configurable values across 12 categories with defaults, file badges, clickable env var names (copy to clipboard), and valid options
+- **Morville honeycomb codebook** — Peter Morville's User Experience Honeycomb: 7 groups (useful, usable, desirable, findable, accessible, credible, valuable), 28 tags with discrimination prompts and cross-codebook references. Codebooks now sorted by browse order via `sort_order` field
+
 **0.11.1** — _28 Feb 2026_
 
 - **Fix video player** — double URL encoding broke playback for files with spaces (`%20` → `%2520`). Removed Python-side `_url_quote()` from `_file_to_media_uri()`; JS `encodeURIComponent()` now handles encoding once. Also fixed subdirectory loss: `merge_transcript.py` now stores relative paths (e.g. `interviews/show and tell 40.mov`) instead of just the filename

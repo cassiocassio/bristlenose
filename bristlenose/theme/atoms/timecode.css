@@ -76,3 +76,22 @@ a.timecode:hover {
         transition: none;
     }
 }
+
+/* --- Word-level highlight: karaoke-style during playback ---
+   Driven by .bn-word-active toggled in PlayerContext.tsx.
+   Only appears when word timing data is available (Whisper sessions). */
+
+.transcript-word.bn-word-active {
+    background: color-mix(in srgb, var(--bn-colour-accent) 20%, transparent);
+    border-radius: 2px;
+    transition: background 0.1s ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .transcript-word.bn-word-active {
+        text-decoration: underline;
+        text-decoration-color: var(--bn-colour-accent);
+        background: none;
+        transition: none;
+    }
+}

@@ -335,6 +335,7 @@ describe("QuoteCard — context segments inside blockquote", () => {
     is_quoted: false,
     quote_ids: [],
     segment_index: 2,
+    words: null,
     ...overrides,
   });
 

@@ -502,4 +502,135 @@ describe("PlayerContext", () => {
     expect(seg.classList.contains("bn-timecode-glow")).toBe(false);
     expect(seg.classList.contains("bn-timecode-playing")).toBe(false);
   });
+
+  // --- Word-level highlighting ---
+
+  it("adds bn-word-active to the current word during playback", () => {
+    const seg = addSegment("p1", 10, 20);
+    const w1 = document.createElement("span");
+    w1.className = "transcript-word";
+    w1.setAttribute("data-start", "10");
+    w1.setAttribute("data-end", "13");
+    const w2 = document.createElement("span");
+    w2.className = "transcript-word";
+    w2.setAttribute("data-start", "13");
+    w2.setAttribute("data-end", "16");
+    const w3 = document.createElement("span");
+    w3.className = "transcript-word";
+    w3.setAttribute("data-start", "16");
+    w3.setAttribute("data-end", "20");
+    seg.appendChild(w1);
+    seg.appendChild(w2);
+    seg.appendChild(w3);
+
+    renderProvider();
+
+    // At t=11 → word 1 is active
+    act(() => {
+      postPlayerMessage({
+        type: "bristlenose-timeupdate",
+        pid: "p1",
+        seconds: 11,
+        playing: true,
+      });
+    });
+    expect(w1.classList.contains("bn-word-active")).toBe(true);
+    expect(w2.classList.contains("bn-word-active")).toBe(false);
+    expect(w3.classList.contains("bn-word-active")).toBe(false);
+
+    // At t=14 → word 2 is active, word 1 cleared
+    act(() => {
+      postPlayerMessage({
+        type: "bristlenose-timeupdate",
+        pid: "p1",
+        seconds: 14,
+        playing: true,
+      });
+    });
+    expect(w1.classList.contains("bn-word-active")).toBe(false);
+    expect(w2.classList.contains("bn-word-active")).toBe(true);
+    expect(w3.classList.contains("bn-word-active")).toBe(false);
+  });
+
+  it("clears bn-word-active when segment loses glow", () => {
+    const seg1 = addSegment("p1", 10, 20);
+    const w1 = document.createElement("span");
+    w1.className = "transcript-word";
+    w1.setAttribute("data-start", "10");
+    w1.setAttribute("data-end", "20");
+    seg1.appendChild(w1);
+    addSegment("p1", 20, 30);
+
+    renderProvider();
+
+    // Glow seg1 with word active
+    act(() => {
+      postPlayerMessage({
+        type: "bristlenose-timeupdate",
+        pid: "p1",
+        seconds: 15,
+        playing: true,
+      });
+    });
+    expect(w1.classList.contains("bn-word-active")).toBe(true);
+
+    // Move to seg2 — seg1 loses glow, word should clear
+    act(() => {
+      postPlayerMessage({
+        type: "bristlenose-timeupdate",
+        pid: "p1",
+        seconds: 25,
+        playing: true,
+      });
+    });
+    expect(seg1.classList.contains("bn-timecode-glow")).toBe(false);
+    expect(w1.classList.contains("bn-word-active")).toBe(false);
+  });
+
+  it("clears bn-word-active on clearAllGlow (unmount)", () => {
+    const seg = addSegment("p1", 10, 20);
+    const w1 = document.createElement("span");
+    w1.className = "transcript-word";
+    w1.setAttribute("data-start", "10");
+    w1.setAttribute("data-end", "20");
+    seg.appendChild(w1);
+
+    const { unmount } = renderProvider();
+
+    act(() => {
+      postPlayerMessage({
+        type: "bristlenose-timeupdate",
+        pid: "p1",
+        seconds: 15,
+        playing: true,
+      });
+    });
+    expect(w1.classList.contains("bn-word-active")).toBe(true);
+
+    unmount();
+    expect(w1.classList.contains("bn-word-active")).toBe(false);
+  });
+
+  it("does not add bn-word-active to blockquote children", () => {
+    const bq = addBlockquote("p1", 30, 45);
+    const w1 = document.createElement("span");
+    w1.className = "transcript-word";
+    w1.setAttribute("data-start", "30");
+    w1.setAttribute("data-end", "45");
+    bq.appendChild(w1);
+
+    renderProvider();
+
+    act(() => {
+      postPlayerMessage({
+        type: "bristlenose-timeupdate",
+        pid: "p1",
+        seconds: 35,
+        playing: true,
+      });
+    });
+    // Blockquotes get glow but not word-level highlighting
+    expect(bq.classList.contains("bn-timecode-glow")).toBe(true);
+    expect(w1.classList.contains("bn-word-active")).toBe(false);
+  });
 });

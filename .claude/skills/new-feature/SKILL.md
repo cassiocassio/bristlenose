@@ -54,7 +54,7 @@ Ask the user to confirm before continuing.
 ```bash
 cd "/Users/cassio/Code/bristlenose_branch $0"
 python3 -m venv .venv
-.venv/bin/pip install -e '.[dev]'
+.venv/bin/pip install -e '.[dev,serve]'
 ```
 
 This takes 30-60 seconds. If it fails, warn but don't stop — the worktree is still usable and venv can be retried manually.

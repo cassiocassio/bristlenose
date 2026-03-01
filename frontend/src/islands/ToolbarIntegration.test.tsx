@@ -19,6 +19,7 @@ import {
 } from "../contexts/QuotesContext";
 
 vi.mock("../utils/api", () => ({
+  apiGet: vi.fn(),
   getCodebook: vi.fn(),
   putHidden: vi.fn(),
   putStarred: vi.fn(),
@@ -30,7 +31,8 @@ vi.mock("../utils/api", () => ({
   getModeratorQuestion: vi.fn(),
 }));
 
-import { getCodebook } from "../utils/api";
+import { apiGet, getCodebook } from "../utils/api";
+const mockApiGet = vi.mocked(apiGet);
 const mockGetCodebook = vi.mocked(getCodebook);
 
 const MOCK_DATA: QuotesListResponse = {
@@ -155,16 +157,9 @@ const MOCK_DATA: QuotesListResponse = {
   has_moderator: false,
 };
 
-function mockFetch() {
-  globalThis.fetch = vi.fn().mockResolvedValue({
-    ok: true,
-    json: () => Promise.resolve(MOCK_DATA),
-  });
-}
-
 beforeEach(() => {
   resetStore();
-  mockFetch();
+  mockApiGet.mockResolvedValue(MOCK_DATA);
   mockGetCodebook.mockResolvedValue({
     all_tag_names: ["UX", "Performance"],
     groups: [],

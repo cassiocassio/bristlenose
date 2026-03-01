@@ -3,10 +3,12 @@ import { QuoteSections } from "./QuoteSections";
 import type { QuotesListResponse } from "../utils/types";
 
 vi.mock("../utils/api", () => ({
+  apiGet: vi.fn(),
   getCodebook: vi.fn(),
 }));
 
-import { getCodebook } from "../utils/api";
+import { apiGet, getCodebook } from "../utils/api";
+const mockApiGet = vi.mocked(apiGet);
 const mockGetCodebook = vi.mocked(getCodebook);
 
 const MOCK_QUOTES: QuotesListResponse = {
@@ -66,11 +68,8 @@ const MOCK_QUOTES_WITH_TAGS: QuotesListResponse = {
   ],
 };
 
-function mockFetch(data: unknown) {
-  globalThis.fetch = vi.fn().mockResolvedValue({
-    ok: true,
-    json: () => Promise.resolve(data),
-  });
+function mockQuotesApi(data: unknown) {
+  mockApiGet.mockResolvedValue(data);
 }
 
 beforeEach(() => {
@@ -83,7 +82,7 @@ afterEach(() => {
 
 describe("QuoteSections", () => {
   it("renders quotes from API", async () => {
-    mockFetch(MOCK_QUOTES);
+    mockQuotesApi(MOCK_QUOTES);
     render(<QuoteSections projectId="1" />);
     await waitFor(() => {
       expect(screen.getByText("Login")).toBeInTheDocument();
@@ -92,7 +91,7 @@ describe("QuoteSections", () => {
 
   it("re-fetches quotes when bn:tags-changed event is dispatched", async () => {
     // Initial load returns quotes without tags.
-    mockFetch(MOCK_QUOTES);
+    mockQuotesApi(MOCK_QUOTES);
 
     render(<QuoteSections projectId="1" />);
     await waitFor(() => {
@@ -103,7 +102,7 @@ describe("QuoteSections", () => {
     expect(screen.queryByText("Frustration")).not.toBeInTheDocument();
 
     // Switch to returning quotes with tags for the next fetch.
-    mockFetch(MOCK_QUOTES_WITH_TAGS);
+    mockQuotesApi(MOCK_QUOTES_WITH_TAGS);
 
     // Simulate the event that CodebookPanel dispatches after bulk apply.
     act(() => {

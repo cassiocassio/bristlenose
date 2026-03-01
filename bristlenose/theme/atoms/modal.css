@@ -117,6 +117,54 @@
     opacity: 0.85;
 }
 
+.bn-btn-secondary {
+    background: var(--bn-colour-bg);
+    color: var(--bn-colour-text);
+}
+
+.bn-btn-secondary:hover {
+    background: var(--bn-colour-quote-bg);
+}
+
+.bn-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* Modal subtitle text */
+.bn-modal-subtitle {
+    margin: 0 0 var(--bn-space-lg) 0;
+    font-size: 0.85rem;
+    color: var(--bn-colour-muted);
+}
+
+/* Export checkbox layout */
+.bn-export-checkbox {
+    display: flex;
+    gap: var(--bn-space-sm);
+    align-items: flex-start;
+    font-size: 0.85rem;
+    cursor: pointer;
+    margin: var(--bn-space-md) 0;
+}
+
+.bn-export-checkbox input[type="checkbox"] {
+    margin-top: 0.15rem;
+}
+
+.bn-export-hint {
+    display: block;
+    font-size: 0.75rem;
+    color: var(--bn-colour-muted);
+    margin-top: 0.15rem;
+}
+
+.bn-export-error {
+    color: var(--bn-sentiment-frustration);
+    font-size: 0.85rem;
+    margin: var(--bn-space-sm) 0;
+}
+
 /* Confirm-delete modal — narrow width */
 .confirm-delete-modal {
     max-width: 24rem;

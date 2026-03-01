@@ -15,8 +15,9 @@ import { useCallback, useContext, useEffect, useState } from "react";
 import { EditableText, JourneyChain, PersonBadge, Sparkline, Thumbnail } from "../components";
 import type { SparklineItem } from "../components/Sparkline";
 import { PlayerContext } from "../contexts/PlayerContext";
-import { getPeople, putPeople } from "../utils/api";
+import { apiGet, getPeople, putPeople } from "../utils/api";
 import type { PersonData } from "../utils/api";
+import { isExportMode } from "../utils/exportData";
 import { formatDuration, formatFinderDate, formatFinderFilename } from "../utils/format";
 
 // ---------------------------------------------------------------------------
@@ -144,12 +145,8 @@ export function SessionsTable({
   const [editingCode, setEditingCode] = useState<string | null>(null);
 
   useEffect(() => {
-    fetch(`/api/projects/${projectId}/sessions`)
-      .then((res) => {
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        return res.json();
-      })
-      .then((json: SessionsListResponse) => setData(json))
+    apiGet<SessionsListResponse>("/sessions")
+      .then((json) => setData(json))
       .catch((err: Error) => setError(err.message));
 
     getPeople().then(setPeopleMap).catch(() => {});
@@ -352,7 +349,7 @@ function SessionRow({
               />
               {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions */}
               <span
-                onClick={isEditing ? undefined : () => onEditStart(sp.speaker_code)}
+                onClick={isEditing || isExportMode() ? undefined : () => onEditStart(sp.speaker_code)}
                 title={nameTitle}
               >
                 <EditableText

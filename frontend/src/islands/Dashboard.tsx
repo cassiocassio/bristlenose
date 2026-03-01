@@ -13,6 +13,7 @@
 import { useContext, useEffect, useState, useMemo } from "react";
 import { Badge, PersonBadge, TimecodeLink } from "../components";
 import { PlayerContext } from "../contexts/PlayerContext";
+import { apiGet } from "../utils/api";
 import { formatDuration, formatFinderDate, formatFinderFilename, formatTimecode } from "../utils/format";
 import type {
   CoverageResponse,
@@ -598,12 +599,8 @@ export function Dashboard({ projectId }: DashboardProps) {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    fetch(`/api/projects/${projectId}/dashboard`)
-      .then((res) => {
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        return res.json();
-      })
-      .then((json: DashboardResponse) => setData(json))
+    apiGet<DashboardResponse>("/dashboard")
+      .then((json) => setData(json))
       .catch((err: Error) => setError(err.message));
   }, [projectId]);
 

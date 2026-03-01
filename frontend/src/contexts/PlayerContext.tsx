@@ -69,6 +69,10 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   // Fetch video map from API (or fall back to window globals for legacy mode)
   useEffect(() => {
     const win = window as unknown as Record<string, unknown>;
+
+    // Export mode: no media available — leave videoMap empty
+    if (win.BRISTLENOSE_EXPORT) return;
+
     // Legacy fallback: use window globals if present (static render path)
     if (win.BRISTLENOSE_VIDEO_MAP) {
       videoMapRef.current = win.BRISTLENOSE_VIDEO_MAP as VideoMap;
@@ -154,6 +158,10 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     glowActiveRef.current.forEach((el) => {
       el.classList.remove("bn-timecode-glow", "bn-timecode-playing");
       (el as HTMLElement).style.removeProperty("--bn-segment-progress");
+      // Clear word-level highlights
+      el.querySelectorAll<HTMLElement>(".transcript-word.bn-word-active").forEach(
+        (ws) => ws.classList.remove("bn-word-active"),
+      );
     });
     glowActiveRef.current = new Set();
   }, []);
@@ -180,6 +188,10 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
         if (!newActive.has(el)) {
           el.classList.remove("bn-timecode-glow", "bn-timecode-playing");
           (el as HTMLElement).style.removeProperty("--bn-segment-progress");
+          // Clear word-level highlights when segment loses glow
+          el.querySelectorAll<HTMLElement>(".transcript-word.bn-word-active").forEach(
+            (ws) => ws.classList.remove("bn-word-active"),
+          );
         }
       });
 
@@ -213,6 +225,21 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
             "--bn-segment-progress",
             String(progress),
           );
+
+          // Word-level highlighting: scan word spans inside the active
+          // segment and toggle .bn-word-active on the current word.
+          const wordSpans = el.querySelectorAll<HTMLElement>(
+            ".transcript-word[data-start][data-end]",
+          );
+          wordSpans.forEach((ws) => {
+            const wStart = parseFloat(ws.getAttribute("data-start") ?? "");
+            const wEnd = parseFloat(ws.getAttribute("data-end") ?? "");
+            if (seconds >= wStart && seconds < wEnd) {
+              ws.classList.add("bn-word-active");
+            } else {
+              ws.classList.remove("bn-word-active");
+            }
+          });
         }
       });
 

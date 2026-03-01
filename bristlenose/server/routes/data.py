@@ -20,6 +20,7 @@ from bristlenose.server.models import (
     CodebookGroup,
     DeletedBadge,
     HeadingEdit,
+    HiddenTagGroup,
     Person,
     Project,
     Quote,
@@ -671,6 +672,62 @@ def put_deleted_badges(
                         )
                     )
 
+        db.commit()
+        return {"status": "ok"}
+    finally:
+        db.close()
+
+
+# ---------------------------------------------------------------------------
+# Hidden tag groups (eye toggle — badge visibility on quote cards)
+# ---------------------------------------------------------------------------
+
+
+@router.get("/projects/{project_id}/hidden-tag-groups")
+def get_hidden_tag_groups(
+    project_id: int,
+    request: Request,
+) -> list[str]:
+    """Read hidden tag group names (eye toggle state)."""
+    db = _get_db(request)
+    try:
+        _check_project(db, project_id)
+        rows = (
+            db.query(HiddenTagGroup)
+            .filter_by(project_id=project_id)
+            .all()
+        )
+        return [r.group_name for r in rows]
+    finally:
+        db.close()
+
+
+@router.put("/projects/{project_id}/hidden-tag-groups")
+def put_hidden_tag_groups(
+    project_id: int,
+    request: Request,
+    data: list[str],
+) -> dict[str, str]:
+    """Write hidden tag group names (full replacement)."""
+    db = _get_db(request)
+    try:
+        _check_project(db, project_id)
+        # Delete all existing rows
+        db.query(HiddenTagGroup).filter_by(project_id=project_id).delete(
+            synchronize_session=False
+        )
+        # Insert new set (deduplicated)
+        seen: set[str] = set()
+        for name in data:
+            if name not in seen:
+                seen.add(name)
+                db.add(
+                    HiddenTagGroup(
+                        project_id=project_id,
+                        group_name=name,
+                        hidden_at=_now(),
+                    )
+                )
         db.commit()
         return {"status": "ok"}
     finally:

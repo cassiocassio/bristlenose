@@ -6,15 +6,25 @@
  * QuotesStore.tagFilter with the toolbar TagFilterDropdown — changes
  * in either are immediately reflected in both.
  *
+ * Eye toggle state (hiddenTagGroups) is persisted to SQLite via
+ * SidebarStore. Framework-level hidden is derived: a framework is
+ * hidden when ALL its groups are in hiddenTagGroups.
+ *
  * @module TagSidebar
  */
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { getCodebook } from "../utils/api";
+import { getCodebook, getHiddenTagGroups } from "../utils/api";
 import { getGroupBg } from "../utils/colours";
 import type { CodebookResponse, CodebookGroupResponse, CodebookTagResponse } from "../utils/types";
 import { EMPTY_TAG_FILTER } from "../utils/filter";
 import { useQuotesStore, setTagFilter } from "../contexts/QuotesContext";
+import {
+  initHiddenTagGroups,
+  setTagGroupsHidden,
+  toggleTagGroupHidden,
+  useSidebarStore,
+} from "../contexts/SidebarStore";
 import { EyeToggle } from "./EyeToggle";
 import { TagGroupCard } from "./TagGroupCard";
 
@@ -107,14 +117,22 @@ function ChevronIcon() {
 export function TagSidebar() {
   const [codebook, setCodebook] = useState<CodebookResponse | null>(null);
   const [search, setSearch] = useState("");
-  const [hiddenFrameworks, setHiddenFrameworks] = useState<Set<string>>(new Set());
 
   const store = useQuotesStore();
   const tagFilter = store.tagFilter;
 
+  const { hiddenTagGroups } = useSidebarStore();
+
   // Fetch codebook
   useEffect(() => {
     getCodebook().then(setCodebook).catch(() => {});
+  }, []);
+
+  // Hydrate hidden tag groups from API on mount
+  useEffect(() => {
+    getHiddenTagGroups()
+      .then((groups) => initHiddenTagGroups(groups))
+      .catch(() => {});
   }, []);
 
   // Re-fetch on autocode tag changes
@@ -132,6 +150,21 @@ export function TagSidebar() {
     () => (codebook ? groupByFramework(codebook) : []),
     [codebook],
   );
+
+  // Derive framework-level hidden from group-level hidden:
+  // a framework is hidden when ALL its groups are in hiddenTagGroups.
+  const hiddenFrameworks = useMemo(() => {
+    const hidden = new Set<string>();
+    for (const fw of frameworks) {
+      if (
+        fw.groups.length > 0 &&
+        fw.groups.every((g) => hiddenTagGroups.has(g.name))
+      ) {
+        hidden.add(fw.id);
+      }
+    }
+    return hidden;
+  }, [frameworks, hiddenTagGroups]);
 
   // Tag counts from QuotesStore (same logic as Toolbar)
   const tagCounts = useMemo(() => {
@@ -213,16 +246,12 @@ export function TagSidebar() {
     });
   }, [allTagNames]);
 
-  const handleToggleFrameworkEye = useCallback((fwId: string, e: React.MouseEvent) => {
+  const handleToggleFrameworkEye = useCallback((fw: FrameworkGroup, e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    setHiddenFrameworks((prev) => {
-      const next = new Set(prev);
-      if (next.has(fwId)) next.delete(fwId);
-      else next.add(fwId);
-      return next;
-    });
-  }, []);
+    const willHide = !hiddenFrameworks.has(fw.id);
+    setTagGroupsHidden(fw.groups.map((g) => g.name), willHide);
+  }, [hiddenFrameworks]);
 
   // ── Render ──────────────────────────────────────────────────────────
 
@@ -282,7 +311,7 @@ export function TagSidebar() {
                 </div>
                 <EyeToggle
                   open={!isFrameworkHidden}
-                  onClick={(e) => handleToggleFrameworkEye(fw.id, e)}
+                  onClick={(e) => handleToggleFrameworkEye(fw, e)}
                   className="codebook-eye"
                   aria-label={isFrameworkHidden ? `Show ${fw.title}` : `Hide ${fw.title}`}
                 />
@@ -301,6 +330,7 @@ export function TagSidebar() {
                       uncheckedSet={uncheckedSet}
                       clearAll={tagFilter.clearAll}
                       onToggleTag={handleToggleTag}
+                      onToggleEye={() => toggleTagGroupHidden(group.name)}
                     />
                   ))}
                 </div>

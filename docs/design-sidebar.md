@@ -182,7 +182,7 @@ CSS `columns` packs group cards tightly (no row-based whitespace gaps). `break-i
 ### Behaviour
 
 - `mousedown` → record start X/width, add `body.dragging` (disables text selection, sets `col-resize` cursor)
-- `mousemove` → compute delta, clamp width to [200, 480]
+- `mousemove` → compute delta, clamp width to [200, 320] (320 is temporary cap for single-column layout; raise to 480+ when 2-column masonry ships)
 - **Snap-close**: if dragged below 80px → snaps closed (sets width to 0, removes open class)
 - **Drag-to-open from rail**: drag >20px threshold triggers open, then continues as resize
 - `mouseup` → cleanup, persist width to `localStorage`
@@ -290,7 +290,7 @@ When the TOC sidebar is open, the center column narrows. To compensate:
 
 1. **`SidebarLayout` wraps at `AppLayout` level**, not `QuotesTab` level. This is necessary for full-height sidebars that span from above the header to below the footer. On non-Quotes tabs, it renders a pass-through `<div>` with no grid.
 
-2. **Eye toggles are local React state** — not in QuotesStore, not persisted. They reset when navigating away. This is intentional: eye toggles are quick "tidy up the sidebar" gestures, not persistent preferences.
+2. **Eye toggles are persisted to SQLite** via `hiddenTagGroups` in `SidebarStore` and the `/hidden-tag-groups` API. They survive page reloads and tab switches. Framework-level hidden state is derived: a framework is hidden when all its groups are in `hiddenTagGroups`.
 
 3. **Tag sidebar and toolbar dropdown share `QuotesStore.tagFilter`** — no sync needed. But if you add a third tag-selection UI, it gets the same state for free.
 
@@ -315,7 +315,7 @@ There are three conceptually different actions a researcher takes with tags in t
 | Gesture | What it means | Effect on quotes | Persistence |
 |---------|--------------|-----------------|-------------|
 | **Checkbox** (uncheck a tag) | "Exclude quotes with this signal from my deliverable" | Removes quotes from the visible list | Session (QuotesStore.tagFilter) |
-| **Eye toggle** (hide a group) | "Declutter — too many signals, hide these badges for now" | Quotes stay in list, but badges for hidden tags are suppressed on quote cards | Transient (local React state, resets on navigation) |
+| **Eye toggle** (hide a group) | "Declutter — too many signals, hide these badges for now" | Quotes stay in list, but badges for hidden tags are suppressed on quote cards | Persistent (server, per project) |
 | **Remove codebook** | "I don't want this framework at all" | Destructive server-side removal (restorable) | Persistent (server) |
 
 ### Current State
@@ -341,19 +341,21 @@ Researchers experience tag overload. A report with 5 frameworks × 10 groups × 
 
 This is fundamentally different from unchecking (which says "this quote isn't part of my case") and from removing a codebook (which says "this framework isn't relevant to this project").
 
-### Implementation Notes
+### Implementation (completed)
 
-- Eye toggle state needs to flow from TagSidebar to QuoteCard badge rendering
-- Options: (a) lift eye state into SidebarStore (simplest, but couples sidebar to quotes), (b) add a `hiddenTagGroups: Set<string>` to QuotesStore (quotes already read from there), (c) new lightweight context
-- QuoteCard badge rendering already reads tags — it needs to filter out tags whose group is eye-hidden
-- Performance: the set lookup is O(1) per badge, negligible
-- The eye state is intentionally **transient** — not persisted to localStorage, resets on navigation
+- `hiddenTagGroups: Set<string>` lives in `SidebarStore` (module-level store, same pattern as QuotesStore)
+- Persisted to SQLite via `HiddenTagGroup` table (one row per hidden group, project-scoped, `UniqueConstraint`)
+- API: `GET/PUT /projects/{id}/hidden-tag-groups` — full-state replacement, fire-and-forget PUT from frontend
+- `initHiddenTagGroups()` hydrates from API on TagSidebar mount
+- `TagGroupCard` reads eye state from store (no local `useState`) — eye open/closed is derived from `hiddenTagGroups.has(name)`
+- Framework-level hidden is derived in TagSidebar via `useMemo`: a framework is hidden when all its groups are in `hiddenTagGroups`
+- `QuoteGroup` filters `userTags` and `proposedTags` by checking `hiddenTagGroups` before passing to `QuoteCard`
+- Performance: O(1) set lookup per badge, negligible
 
-### Open Questions
+### Remaining Open Questions
 
-1. Should the eye state persist across tab switches (Quotes → Dashboard → Quotes) within the same session? Currently it resets because it's local React state in TagSidebar.
-2. Should there be a visual indicator on quote cards that badges are being hidden? (e.g., a subtle "+3 hidden" count)
-3. When the eye reopens, should badges animate in or just appear?
+1. Should there be a visual indicator on quote cards that badges are being hidden? (e.g., a subtle "+3 hidden" count)
+2. When the eye reopens, should badges animate in or just appear?
 
 ---
 

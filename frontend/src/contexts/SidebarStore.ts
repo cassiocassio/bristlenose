@@ -6,18 +6,20 @@
  * components without provider nesting.
  *
  * State is persisted to localStorage so sidebar open/close and widths
- * survive page reloads.
+ * survive page reloads. `hiddenTagGroups` is persisted to SQLite via
+ * the `/hidden-tag-groups` API (fire-and-forget PUTs).
  *
  * @module SidebarStore
  */
 
 import { useSyncExternalStore } from "react";
+import { putHiddenTagGroups } from "../utils/api";
 
 // ── Constants ─────────────────────────────────────────────────────────────
 
 const DEFAULT_WIDTH = 280;
 const MIN_WIDTH = 200;
-const MAX_WIDTH = 480;
+const MAX_WIDTH = 320;
 
 const LS_TOC_OPEN = "bn-toc-open";
 const LS_TAGS_OPEN = "bn-tags-open";
@@ -31,6 +33,11 @@ export interface SidebarState {
   tagsOpen: boolean;
   tocWidth: number;
   tagsWidth: number;
+  /**
+   * Tag group names whose badges are hidden on quote cards (eye toggle).
+   * Persisted to SQLite via /hidden-tag-groups API.
+   */
+  hiddenTagGroups: Set<string>;
 }
 
 // ── localStorage helpers ──────────────────────────────────────────────────
@@ -81,6 +88,7 @@ function loadState(): SidebarState {
     tagsOpen: readBool(LS_TAGS_OPEN, false),
     tocWidth: readWidth(LS_TOC_WIDTH),
     tagsWidth: readWidth(LS_TAGS_WIDTH),
+    hiddenTagGroups: new Set(),
   };
 }
 
@@ -147,6 +155,22 @@ export function closeTags(): void {
   });
 }
 
+export function openToc(): void {
+  setState((prev) => {
+    if (prev.tocOpen) return prev;
+    writeBool(LS_TOC_OPEN, true);
+    return { ...prev, tocOpen: true };
+  });
+}
+
+export function openTags(): void {
+  setState((prev) => {
+    if (prev.tagsOpen) return prev;
+    writeBool(LS_TAGS_OPEN, true);
+    return { ...prev, tagsOpen: true };
+  });
+}
+
 export function setTocWidth(width: number): void {
   const clamped = Math.max(MIN_WIDTH, Math.min(MAX_WIDTH, width));
   setState((prev) => {
@@ -163,6 +187,49 @@ export function setTagsWidth(width: number): void {
   });
 }
 
+/**
+ * Hydrate hidden tag groups from the API on mount.
+ * Replaces any existing set wholesale.
+ */
+export function initHiddenTagGroups(groupNames: string[]): void {
+  setState((prev) => ({
+    ...prev,
+    hiddenTagGroups: new Set(groupNames),
+  }));
+}
+
+/**
+ * Toggle a tag group's badge visibility on quote cards.
+ * When hidden, badges for tags in this group are suppressed.
+ * Persists to SQLite via fire-and-forget PUT.
+ */
+export function toggleTagGroupHidden(groupName: string): void {
+  setState((prev) => {
+    const next = new Set(prev.hiddenTagGroups);
+    if (next.has(groupName)) next.delete(groupName);
+    else next.add(groupName);
+    putHiddenTagGroups([...next]);
+    return { ...prev, hiddenTagGroups: next };
+  });
+}
+
+/**
+ * Hide all tag groups within a framework (bulk eye toggle).
+ * Pass the group names belonging to that framework.
+ * Persists to SQLite via fire-and-forget PUT.
+ */
+export function setTagGroupsHidden(groupNames: string[], hidden: boolean): void {
+  setState((prev) => {
+    const next = new Set(prev.hiddenTagGroups);
+    for (const name of groupNames) {
+      if (hidden) next.add(name);
+      else next.delete(name);
+    }
+    putHiddenTagGroups([...next]);
+    return { ...prev, hiddenTagGroups: next };
+  });
+}
+
 /** Reset to defaults. Used for test isolation. */
 export function resetSidebarStore(): void {
   state = {
@@ -170,6 +237,7 @@ export function resetSidebarStore(): void {
     tagsOpen: false,
     tocWidth: DEFAULT_WIDTH,
     tagsWidth: DEFAULT_WIDTH,
+    hiddenTagGroups: new Set(),
   };
   listeners.forEach((l) => l());
 }

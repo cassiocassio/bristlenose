@@ -90,6 +90,8 @@ _THEME_FILES: list[str] = [
     "organisms/toc.css",
     "organisms/global-nav.css",
     "organisms/codebook-panel.css",
+    "organisms/sidebar.css",
+    "organisms/sidebar-tags.css",
     "organisms/analysis.css",
     "organisms/settings.css",
     "templates/report.css",

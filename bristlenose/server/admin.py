@@ -14,6 +14,7 @@ from bristlenose.server.models import (
     DeletedBadge,
     DismissedSignal,
     HeadingEdit,
+    HiddenTagGroup,
     ImportConflict,
     Person,
     Project,
@@ -238,6 +239,15 @@ class DismissedSignalAdmin(ModelView, model=DismissedSignal):
     category = "Researcher"
 
 
+class HiddenTagGroupAdmin(ModelView, model=HiddenTagGroup):
+    column_list = [HiddenTagGroup.id, HiddenTagGroup.project_id,
+                   HiddenTagGroup.group_name]
+    name = "Hidden Tag Group"
+    name_plural = "Hidden Tag Groups"
+    icon = "fa-solid fa-eye-slash"
+    category = "Researcher"
+
+
 class ImportConflictAdmin(ModelView, model=ImportConflict):
     column_list = [ImportConflict.id, ImportConflict.project_id,
                    ImportConflict.entity_type, ImportConflict.conflict_type,
@@ -281,4 +291,5 @@ def register_admin_views(admin: Admin) -> None:
     admin.add_view(HeadingEditAdmin)
     admin.add_view(DeletedBadgeAdmin)
     admin.add_view(DismissedSignalAdmin)
+    admin.add_view(HiddenTagGroupAdmin)
     admin.add_view(ImportConflictAdmin)

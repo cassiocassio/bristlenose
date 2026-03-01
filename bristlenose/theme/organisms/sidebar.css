@@ -1,0 +1,343 @@
+/* Dual-sidebar layout — 5-column grid for serve-mode Quotes tab.
+   [toc-rail | toc-sidebar | center | tag-sidebar | tag-rail]
+
+   Inert in static render path — .layout wrapper exists only in React tree.
+   Design reference: docs/mockups/mockup-sidebar-tags.html
+   Design doc: docs/design-sidebar.md */
+
+/* ── Grid definition ──────────────────────────────────────────── */
+
+.layout {
+    display: grid;
+    grid-template-columns:
+        var(--bn-rail-width)                          /* 1: toc rail    */
+        0px                                           /* 2: toc sidebar */
+        1fr                                           /* 3: center      */
+        0px                                           /* 4: tag sidebar */
+        var(--bn-rail-width);                         /* 5: tag rail    */
+    min-height: 100vh;
+}
+
+/* TOC sidebar open: hide rail (0), show sidebar, keep center */
+.layout.toc-open {
+    grid-template-columns:
+        0px
+        var(--toc-width, var(--bn-sidebar-width))
+        1fr
+        0px
+        var(--bn-rail-width);
+}
+
+/* Tag sidebar open: hide tag rail (0), show tag sidebar */
+.layout.tags-open {
+    grid-template-columns:
+        var(--bn-rail-width)
+        0px
+        1fr
+        var(--tags-width, var(--bn-sidebar-width))
+        0px;
+}
+
+/* Both open */
+.layout.toc-open.tags-open {
+    grid-template-columns:
+        0px
+        var(--toc-width, var(--bn-sidebar-width))
+        1fr
+        var(--tags-width, var(--bn-sidebar-width))
+        0px;
+}
+
+/* Animated slide — added before state change, removed on transitionend */
+.layout.animating {
+    transition: grid-template-columns 0.25s ease;
+}
+
+/* ── Column 1: Left icon rail ─────────────────────────────────── */
+
+.toc-rail {
+    grid-column: 1;
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding-top: var(--bn-space-md);
+    border-right: 1px solid var(--bn-colour-border);
+    background: var(--bn-colour-bg);
+    z-index: 50;
+    overflow: hidden;
+}
+
+.layout.toc-open .toc-rail { display: none; }
+
+.rail-btn {
+    background: none;
+    border: none;
+    padding: 6px;
+    color: var(--bn-colour-muted);
+    cursor: pointer;
+    border-radius: var(--bn-radius-sm);
+    transition: background var(--bn-transition-fast), color var(--bn-transition-fast);
+    line-height: 1;
+}
+
+.rail-btn:hover {
+    background: var(--bn-colour-hover);
+    color: var(--bn-colour-accent);
+}
+
+/* ── Column 2: Left sidebar (TOC) ────────────────────────────── */
+
+.toc-sidebar {
+    grid-column: 2;
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    overflow-y: auto;
+    overflow-x: hidden;
+    background: var(--bn-colour-bg);
+    border-right: 1px solid var(--bn-colour-border);
+    visibility: hidden;
+    opacity: 0;
+}
+
+.layout.toc-open .toc-sidebar {
+    visibility: visible;
+    opacity: 1;
+}
+
+.toc-sidebar-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: var(--bn-space-md) 0.85rem 0.25rem;
+    flex-shrink: 0;
+}
+
+.toc-sidebar-header .sidebar-title {
+    font-size: 0.95rem;
+    font-weight: var(--bn-weight-emphasis);
+    flex: 1;
+}
+
+.sidebar-close {
+    background: none;
+    border: none;
+    font-size: 1.2rem;
+    color: var(--bn-colour-muted);
+    cursor: pointer;
+    padding: 0 var(--bn-space-xs);
+    line-height: 1;
+    margin-left: auto;
+    transition: color var(--bn-transition-fast);
+}
+
+.sidebar-close:hover { color: var(--bn-colour-text); }
+
+.toc-sidebar-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 0 0.85rem 1rem;
+}
+
+/* ── TOC links (scroll-spy nav) ───────────────────────────────── */
+
+.toc-heading {
+    font-size: 0.85rem;
+    font-weight: var(--bn-weight-emphasis);
+    margin: 1rem 0 var(--bn-space-sm);
+    padding-bottom: 0.25rem;
+    border-bottom: 1px solid var(--bn-colour-border);
+}
+
+.toc-heading:first-child { margin-top: 0; }
+
+.toc-link {
+    display: block;
+    padding: 0.2rem var(--bn-space-sm);
+    font-size: 0.82rem;
+    font-weight: var(--bn-weight-light);
+    color: var(--bn-colour-text);
+    text-decoration: none;
+    border-radius: var(--bn-radius-sm);
+    transition: background var(--bn-transition-fast), color var(--bn-transition-fast);
+    cursor: pointer;
+}
+
+.toc-link:hover {
+    color: var(--bn-colour-accent);
+    text-decoration: underline;
+    text-underline-offset: 0.25em;
+    text-decoration-color: var(--bn-colour-accent);
+}
+
+.toc-link.active {
+    font-weight: var(--bn-weight-emphasis);
+    color: var(--bn-colour-accent);
+    background: var(--bn-colour-hover);
+}
+
+/* ── Column 3: Center ─────────────────────────────────────────── */
+
+.layout > .center {
+    grid-column: 3;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+/* ── Column 4: Right sidebar (Tags) ───────────────────────────── */
+
+.tag-sidebar {
+    grid-column: 4;
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    overflow-y: auto;
+    overflow-x: hidden;
+    border-left: 1px solid var(--bn-colour-border);
+    display: flex;
+    flex-direction: column;
+    visibility: hidden;
+    opacity: 0;
+}
+
+.layout.tags-open .tag-sidebar {
+    visibility: visible;
+    opacity: 1;
+}
+
+.tag-sidebar-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: var(--bn-space-md) 0.85rem 0;
+    flex-shrink: 0;
+}
+
+.tag-sidebar-header .sidebar-title {
+    font-size: 0.95rem;
+    font-weight: var(--bn-weight-emphasis);
+}
+
+.tag-sidebar-subtitle {
+    font-size: 0.72rem;
+    color: var(--bn-colour-muted);
+    padding: 0 0.85rem 0.25rem;
+}
+
+.tag-sidebar-actions {
+    display: flex;
+    gap: 0.5rem;
+    padding: var(--bn-space-xs) 0.85rem 0.5rem;
+    border-bottom: 1px solid var(--bn-colour-border);
+    flex-shrink: 0;
+}
+
+.tag-sidebar-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 0.25rem 0;
+}
+
+/* 2-column masonry: CSS columns pack group cards tightly with no
+   row-based gaps. Items flow down column 1, then column 2.
+   break-inside: avoid keeps each group card as an unbroken unit. */
+.tag-sidebar.two-col .codebook-body {
+    columns: 2;
+    column-gap: var(--bn-space-sm);
+}
+
+.tag-sidebar.two-col .tag-filter-group {
+    break-inside: avoid;
+    margin: 0 0 var(--bn-space-sm) 0;
+}
+
+/* ── Column 5: Right icon rail ────────────────────────────────── */
+
+.tag-rail {
+    grid-column: 5;
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding-top: var(--bn-space-md);
+    border-left: 1px solid var(--bn-colour-border);
+    background: var(--bn-colour-bg);
+    overflow: hidden;
+}
+
+.layout.tags-open .tag-rail { display: none; }
+
+/* ── Drag handles ─────────────────────────────────────────────── */
+
+.drag-handle {
+    position: absolute;
+    top: 0;
+    width: 6px;
+    height: 100%;
+    cursor: col-resize;
+    z-index: 120;
+    background: transparent;
+}
+
+.drag-handle:hover,
+.drag-handle.active {
+    background: var(--bn-colour-accent);
+    opacity: 0.3;
+}
+
+.drag-handle::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 2px;
+    height: 24px;
+    border-radius: 1px;
+    background: var(--bn-colour-muted);
+    opacity: 0;
+    transition: opacity var(--bn-transition-fast);
+}
+
+.drag-handle:hover::after,
+.drag-handle.active::after {
+    opacity: 0.6;
+}
+
+/* Sidebar edge drag handles */
+.toc-drag-handle { right: -3px; }
+.tag-drag-handle { left: -3px; }
+
+/* Rail edge drag handles (drag-to-open from closed state) */
+.toc-rail-drag { right: -3px; }
+.tag-rail-drag  { left: -3px; }
+
+/* ── Drag-select disable ──────────────────────────────────────── */
+
+body.dragging {
+    user-select: none;
+    cursor: col-resize !important;
+}
+
+body.dragging * {
+    cursor: col-resize !important;
+}
+
+/* ── Responsive: hide toolbar labels when space is tight ──────── */
+
+.toolbar-btn-label {
+    transition: opacity var(--bn-transition-fast);
+}
+
+@media (max-width: 900px) {
+    .toolbar-btn-label { display: none; }
+}
+
+/* Hide labels when TOC sidebar is open (center column narrows) */
+.layout.toc-open .toolbar-btn-label { display: none; }

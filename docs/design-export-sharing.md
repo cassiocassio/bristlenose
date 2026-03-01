@@ -149,6 +149,7 @@ CURATED_STATE = {
   edits: { "q-p1-42": "Edited quote text..." },
   tags: { "q-p1-42": ["key-insight", "onboarding"] },
   deletedBadges: { "q-p3-99": ["doubt"] },
+  hiddenTagGroups: ["Behaviour", "Trust"],  // eye-toggled groups (badge visibility)
   names: { "p1": { full_name: "Sarah", short_name: "S", role: "Manager" } }
 }
 ```

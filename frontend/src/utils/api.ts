@@ -103,6 +103,14 @@ export function putDeletedBadges(data: Record<string, string[]>): void {
   firePut("/deleted-badges", data);
 }
 
+export function getHiddenTagGroups(): Promise<string[]> {
+  return apiGet<string[]>("/hidden-tag-groups");
+}
+
+export function putHiddenTagGroups(groupNames: string[]): void {
+  firePut("/hidden-tag-groups", groupNames);
+}
+
 // ---------------------------------------------------------------------------
 // People (names) helpers
 // ---------------------------------------------------------------------------

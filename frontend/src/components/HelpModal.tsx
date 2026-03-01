@@ -46,6 +46,15 @@ const SECTIONS: { title: string; shortcuts: Shortcut[] }[] = [
     ],
   },
   {
+    title: "Sidebar",
+    shortcuts: [
+      { keys: ["["], description: "Toggle contents" },
+      { keys: ["]"], description: "Toggle tags" },
+      { keys: ["\\"], description: "Toggle both" },
+      { keys: ["\u2318", "."], description: "Toggle both" },
+    ],
+  },
+  {
     title: "Global",
     shortcuts: [
       { keys: ["/"], description: "Search" },

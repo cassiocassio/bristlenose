@@ -8,11 +8,12 @@
  */
 
 import { useCallback, useEffect, useState } from "react";
-import { Outlet, useNavigate } from "react-router-dom";
+import { Outlet, useNavigate, useMatch } from "react-router-dom";
 import { Header } from "../components/Header";
 import { NavBar } from "../components/NavBar";
 import { Footer } from "../components/Footer";
 import { HelpModal } from "../components/HelpModal";
+import { SidebarLayout } from "../components/SidebarLayout";
 import { ExportDialog } from "../components/ExportDialog";
 import { PlayerProvider } from "../contexts/PlayerContext";
 import { FocusProvider } from "../contexts/FocusContext";
@@ -27,6 +28,7 @@ function AppShell() {
   const [helpOpen, setHelpOpen] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);
   const toggleHelp = useCallback(() => setHelpOpen((prev) => !prev), []);
+  const isQuotes = useMatch("/report/quotes");
   const toggleExport = useCallback(() => setExportOpen((prev) => !prev), []);
 
   useKeyboardShortcuts({
@@ -35,14 +37,14 @@ function AppShell() {
   });
 
   return (
-    <>
+    <SidebarLayout active={!!isQuotes}>
       <Header />
       <NavBar onExport={toggleExport} />
       <Outlet />
       <Footer onToggleHelp={toggleHelp} />
       <HelpModal open={helpOpen} onClose={toggleHelp} />
       <ExportDialog open={exportOpen} onClose={toggleExport} />
-    </>
+    </SidebarLayout>
   );
 }
 

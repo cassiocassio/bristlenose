@@ -21,8 +21,18 @@ import {
   toggleStar,
   setSearchQuery,
 } from "../contexts/QuotesContext";
+import {
+  toggleToc,
+  toggleTags,
+  toggleBoth,
+} from "../contexts/SidebarStore";
 
 // ── Helpers ──────────────────────────────────────────────────────────────
+
+/** Check if the current pathname matches a given route (ignoring trailing slash). */
+function pathMatches(pathname: string, route: string): boolean {
+  return pathname === route || pathname === route + "/";
+}
 
 /**
  * Check if user is currently editing (input, textarea, contenteditable,
@@ -262,6 +272,33 @@ export function useKeyboardShortcuts({
       // Don't intercept other keys while editing or modal is open
       if (isEditing()) return;
       if (helpModalOpenRef.current) return;
+
+      // [ — toggle TOC sidebar (quotes tab only)
+      if (key === "[") {
+        if (pathMatches(locationRef.current.pathname, "/report/quotes")) {
+          e.preventDefault();
+          toggleToc();
+          return;
+        }
+      }
+
+      // ] — toggle tag sidebar (quotes tab only)
+      if (key === "]") {
+        if (pathMatches(locationRef.current.pathname, "/report/quotes")) {
+          e.preventDefault();
+          toggleTags();
+          return;
+        }
+      }
+
+      // \ or ⌘. / Ctrl+. — toggle both sidebars (quotes tab only)
+      if (key === "\\" || (key === "." && (e.metaKey || e.ctrlKey))) {
+        if (pathMatches(locationRef.current.pathname, "/report/quotes")) {
+          e.preventDefault();
+          toggleBoth();
+          return;
+        }
+      }
 
       // / — focus search
       if (key === "/") {

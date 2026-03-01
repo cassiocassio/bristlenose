@@ -29,10 +29,18 @@ class TestLoadAllTemplates:
             assert isinstance(t, CodebookTemplate)
 
     def test_deterministic_order(self) -> None:
-        """Templates are sorted alphabetically by filename."""
+        """Templates are sorted by sort_order then alphabetically."""
         templates = load_all_templates()
         ids = [t.id for t in templates]
-        assert ids == sorted(ids)
+        expected = [t.id for t in sorted(templates, key=lambda t: (t.sort_order, t.id))]
+        assert ids == expected
+
+    def test_uxr_first_plato_last(self) -> None:
+        """UXR codebook sorts first, Plato last."""
+        templates = load_all_templates()
+        ids = [t.id for t in templates]
+        assert ids[0] == "uxr"
+        assert ids[-1] == "plato"
 
 
 class TestGetTemplate:
@@ -225,6 +233,62 @@ class TestUxrStructure:
                 assert tag.definition, f"{g.name} > {tag.name}: missing definition"
                 assert tag.apply_when, f"{g.name} > {tag.name}: missing apply_when"
                 assert tag.not_this, f"{g.name} > {tag.name}: missing not_this"
+
+
+# ---------------------------------------------------------------------------
+# Morville — structure
+# ---------------------------------------------------------------------------
+
+
+class TestMorvilleStructure:
+    @pytest.fixture()
+    def morville(self) -> CodebookTemplate:
+        t = get_template("morville")
+        assert t is not None
+        return t
+
+    def test_enabled(self, morville: CodebookTemplate) -> None:
+        assert morville.enabled is True
+
+    def test_seven_groups(self, morville: CodebookTemplate) -> None:
+        assert len(morville.groups) == 7
+        names = [g.name for g in morville.groups]
+        assert names == [
+            "Useful", "Usable", "Desirable", "Findable",
+            "Accessible", "Credible", "Valuable",
+        ]
+
+    def test_twenty_eight_tags(self, morville: CodebookTemplate) -> None:
+        total = sum(len(g.tags) for g in morville.groups)
+        assert total == 28
+
+    def test_four_tags_per_group(self, morville: CodebookTemplate) -> None:
+        for g in morville.groups:
+            assert len(g.tags) == 4, f"{g.name} has {len(g.tags)} tags, expected 4"
+
+    def test_tags_have_full_prompts(self, morville: CodebookTemplate) -> None:
+        """Morville tags have discrimination prompts."""
+        for g in morville.groups:
+            for tag in g.tags:
+                assert tag.definition, f"{g.name} > {tag.name}: missing definition"
+                assert tag.apply_when, f"{g.name} > {tag.name}: missing apply_when"
+                assert tag.not_this, f"{g.name} > {tag.name}: missing not_this"
+
+    def test_preamble_present(self, morville: CodebookTemplate) -> None:
+        assert morville.preamble
+        assert "quality dimension" in morville.preamble.lower()
+
+    def test_author_links(self, morville: CodebookTemplate) -> None:
+        assert len(morville.author_links) >= 3
+        labels = [lbl for lbl, _ in morville.author_links]
+        assert "semanticstudios.com" in labels
+
+    def test_metadata(self, morville: CodebookTemplate) -> None:
+        assert morville.title == "The User Experience Honeycomb"
+        assert morville.author == "Peter Morville"
+
+    def test_sort_order(self, morville: CodebookTemplate) -> None:
+        assert morville.sort_order == 50
 
 
 # ---------------------------------------------------------------------------

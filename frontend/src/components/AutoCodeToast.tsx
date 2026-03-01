@@ -81,9 +81,9 @@ export function AutoCodeToast({
     }
   }, [job, onComplete]);
 
-  // Auto-dismiss 30s after completion.
+  // Auto-dismiss 30s after failure (not completion — user must click Report).
   useEffect(() => {
-    if (job?.status === "completed" || job?.status === "failed") {
+    if (job?.status === "failed") {
       dismissTimer.current = setTimeout(onDismiss, 30_000);
       return () => {
         if (dismissTimer.current) clearTimeout(dismissTimer.current);
@@ -146,14 +146,16 @@ export function AutoCodeToast({
           <span>&#x2726; AutoCode failed{job.error_message ? `: ${job.error_message}` : ""}.</span>
         </>
       )}
-      <button
-        className="toast-close"
-        onClick={onDismiss}
-        aria-label="Dismiss"
-        data-testid="bn-autocode-toast-close"
-      >
-        &times;
-      </button>
+      {job?.status !== "completed" && (
+        <button
+          className="toast-close"
+          onClick={onDismiss}
+          aria-label="Dismiss"
+          data-testid="bn-autocode-toast-close"
+        >
+          &times;
+        </button>
+      )}
     </div>
   );
 

@@ -8,11 +8,12 @@
  */
 
 import { useCallback, useEffect, useState } from "react";
-import { Outlet, useNavigate } from "react-router-dom";
+import { Outlet, useNavigate, useMatch } from "react-router-dom";
 import { Header } from "../components/Header";
 import { NavBar } from "../components/NavBar";
 import { Footer } from "../components/Footer";
 import { HelpModal } from "../components/HelpModal";
+import { SidebarLayout } from "../components/SidebarLayout";
 import { PlayerProvider } from "../contexts/PlayerContext";
 import { FocusProvider } from "../contexts/FocusContext";
 import { useKeyboardShortcuts } from "../hooks/useKeyboardShortcuts";
@@ -25,6 +26,7 @@ import { installNavigationShims } from "../shims/navigation";
 function AppShell() {
   const [helpOpen, setHelpOpen] = useState(false);
   const toggleHelp = useCallback(() => setHelpOpen((prev) => !prev), []);
+  const isQuotes = useMatch("/report/quotes");
 
   useKeyboardShortcuts({
     helpModalOpen: helpOpen,
@@ -32,13 +34,13 @@ function AppShell() {
   });
 
   return (
-    <>
+    <SidebarLayout active={!!isQuotes}>
       <Header />
       <NavBar />
       <Outlet />
       <Footer onToggleHelp={toggleHelp} />
       <HelpModal open={helpOpen} onClose={toggleHelp} />
-    </>
+    </SidebarLayout>
   );
 }
 

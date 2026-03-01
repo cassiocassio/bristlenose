@@ -2,6 +2,11 @@
 
 All notable changes to Bristlenose are documented here. See also the [README](README.md) for the latest releases.
 
+**0.12.0** — _1 Mar 2026_
+
+- **Dual sidebar for Quotes tab** — left sidebar: table of contents with scroll-spy (sections + themes, active heading highlights on scroll). Right sidebar: tag filter with codebook tree, eye toggles for badge hiding (persisted to localStorage). 5-column CSS grid (`rail | sidebar | center | sidebar | rail`), drag-to-resize with snap-close thresholds, keyboard shortcuts (`[` left, `]` right, `\` both, `⌘.` tag sidebar). Quotes-tab-only — other tabs see no grid or rails. New components: `SidebarLayout`, `TocSidebar`, `TagSidebar`, `TagGroupCard`, `TagRow`, `EyeToggle`. New hooks: `useDragResize`, `useScrollSpy`. Module-level `SidebarStore` with `useSyncExternalStore`. Backend: tag-group-with-quotes API endpoint, admin panel registration. 845 Vitest tests (60 files), 1856 Python tests
+- **Frontend CI** — ESLint, TypeScript typecheck, and Vitest added to GitHub Actions (`frontend-lint-type-test` job on Node 20). ESLint step informational pending fix of 84 pre-existing errors
+
 **0.11.2** — _1 Mar 2026_
 
 - **Self-contained HTML export** — download button in the NavBar bundles all API data as embedded JSON, blob-URL'd JS chunks, and a hash router for `file://` — recipients open the report in any browser without Bristlenose installed. Optional anonymisation checkbox strips participant names before download. Read-only CSS + JS guards hide mutation UI in exported files. 26 Python tests, 20 frontend tests

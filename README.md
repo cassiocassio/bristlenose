@@ -386,6 +386,11 @@ Edit `bristlenose/__init__.py` (the single source of truth for version), commit,
 
 ## Changelog
 
+**0.12.0** — _1 Mar 2026_
+
+- Dual sidebar for Quotes tab — left: TOC with scroll-spy, right: tag filter with codebook tree and eye toggles for badge hiding. Drag-to-resize, keyboard shortcuts (`[` `]` `\` `⌘.`)
+- Frontend CI — ESLint, TypeScript typecheck, and Vitest in GitHub Actions
+
 **0.11.2** — _1 Mar 2026_
 
 - Self-contained HTML export — download button bundles all data as embedded JSON with hash router for `file://`, optional anonymisation

@@ -2,6 +2,11 @@
 
 All notable changes to Bristlenose are documented here. See also the [README](README.md) for the latest releases.
 
+**0.12.1** — _1 Mar 2026_
+
+- **Word-level transcript highlighting** — during video playback, individual words in the transcript highlight in sync with the audio, karaoke-style. Whisper captures per-word start/end timestamps during transcription; these flow through the pipeline (`session_segments.json` → SQLite `words_json` → transcript API `words` field) and render as `<span class="transcript-word">` elements with `data-start`/`data-end` attributes. `PlayerContext.updateGlow()` scans word spans at 4 Hz and toggles `.bn-word-active` on the current word. Three-tier rendering fallback: word spans (Whisper sessions) → `html_text` with `<mark>` quote highlighting (non-Whisper with quotes) → plain text. CSS uses `color-mix(in srgb, accent 30%, transparent)` with `prefers-reduced-motion` underline fallback. VTT/SRT-imported sessions gracefully degrade to segment-level glow only. Glow brightness rebalanced: paragraph glow dimmed 50%, word glow brightened 50% — the active word pops against a subtler segment background
+- Design doc: `docs/design-word-highlighting.md` — pipeline diagram, data flow, frontend architecture
+
 **0.12.0** — _1 Mar 2026_
 
 - **Dual sidebar for Quotes tab** — left sidebar: table of contents with scroll-spy (sections + themes, active heading highlights on scroll). Right sidebar: tag filter with codebook tree, eye toggles for badge hiding (persisted to localStorage). 5-column CSS grid (`rail | sidebar | center | sidebar | rail`), drag-to-resize with snap-close thresholds, keyboard shortcuts (`[` left, `]` right, `\` both, `⌘.` tag sidebar). Quotes-tab-only — other tabs see no grid or rails. New components: `SidebarLayout`, `TocSidebar`, `TagSidebar`, `TagGroupCard`, `TagRow`, `EyeToggle`. New hooks: `useDragResize`, `useScrollSpy`. Module-level `SidebarStore` with `useSyncExternalStore`. Backend: tag-group-with-quotes API endpoint, admin panel registration. 845 Vitest tests (60 files), 1856 Python tests

@@ -1,4 +1,5 @@
 import { useRef, useEffect, useCallback, useState } from "react";
+import { isExportMode } from "../utils/exportData";
 
 interface EditableTextProps {
   value: string;
@@ -124,6 +125,7 @@ export function EditableText({
 
   const handleClick = useCallback(
     (e: React.MouseEvent) => {
+      if (isExportMode()) return; // Read-only in exported reports
       if (trigger === "click" && !internalEditing) {
         clickCoordsRef.current = { x: e.clientX, y: e.clientY };
         setInternalEditing(true);
@@ -136,7 +138,9 @@ export function EditableText({
     .filter(Boolean)
     .join(" ") || undefined;
 
-  const style = trigger === "click" && !isEditing ? { cursor: "text" as const } : undefined;
+  const style = trigger === "click" && !isEditing && !isExportMode()
+    ? { cursor: "text" as const }
+    : undefined;
 
   return (
     <Tag

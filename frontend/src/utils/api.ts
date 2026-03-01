@@ -18,6 +18,7 @@ import type {
   TemplateListResponse,
   TranscriptPageResponse,
 } from "./types";
+import { isExportMode, resolveFromExport } from "./exportData";
 
 function apiBase(): string {
   return (
@@ -30,6 +31,8 @@ function apiBase(): string {
 // ---------------------------------------------------------------------------
 
 export async function apiGet<T>(path: string): Promise<T> {
+  const embedded = resolveFromExport<T>(path);
+  if (embedded !== null) return embedded;
   const resp = await fetch(`${apiBase()}${path}`);
   if (!resp.ok) throw new Error(`GET ${path} ${resp.status}`);
   return resp.json() as Promise<T>;
@@ -66,6 +69,7 @@ async function apiDeleteJson<T>(path: string): Promise<T> {
 }
 
 function firePut(path: string, body: unknown): void {
+  if (isExportMode()) return; // No server in export mode
   fetch(`${apiBase()}${path}`, {
     method: "PUT",
     headers: { "Content-Type": "application/json" },

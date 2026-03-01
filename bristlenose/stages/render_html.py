@@ -96,6 +96,7 @@ _THEME_FILES: list[str] = [
     "molecules/transcript-annotations.css",
     "templates/transcript.css",
     "templates/print.css",
+    "templates/export.css",
 ]
 
 

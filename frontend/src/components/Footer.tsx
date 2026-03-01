@@ -7,6 +7,7 @@
  */
 
 import { useEffect, useState } from "react";
+import { getExportData } from "../utils/exportData";
 
 interface FooterProps {
   onToggleHelp?: () => void;
@@ -16,6 +17,11 @@ export function Footer({ onToggleHelp }: FooterProps) {
   const [version, setVersion] = useState<string>("");
 
   useEffect(() => {
+    const exportData = getExportData();
+    if (exportData) {
+      setVersion(exportData.health.version);
+      return;
+    }
     fetch("/api/health")
       .then((r) => (r.ok ? r.json() : null))
       .then((data) => {

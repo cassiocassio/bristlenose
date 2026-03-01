@@ -29,6 +29,7 @@ const mockData: TranscriptPageResponse = {
       is_quoted: false,
       quote_ids: [],
       segment_index: 0,
+      words: null,
     },
     {
       speaker_code: "p1",
@@ -41,6 +42,7 @@ const mockData: TranscriptPageResponse = {
       is_quoted: true,
       quote_ids: ["q-p1-10"],
       segment_index: 1,
+      words: null,
     },
     {
       speaker_code: "m1",
@@ -52,6 +54,7 @@ const mockData: TranscriptPageResponse = {
       is_quoted: false,
       quote_ids: [],
       segment_index: 2,
+      words: null,
     },
     {
       speaker_code: "p1",
@@ -64,6 +67,7 @@ const mockData: TranscriptPageResponse = {
       is_quoted: true,
       quote_ids: ["q-p1-26"],
       segment_index: 3,
+      words: null,
     },
     {
       speaker_code: "p1",
@@ -76,6 +80,7 @@ const mockData: TranscriptPageResponse = {
       is_quoted: true,
       quote_ids: ["q-p1-46"],
       segment_index: 4,
+      words: null,
     },
   ],
   journey_labels: ["Dashboard", "Search"],
@@ -404,19 +409,19 @@ describe("TranscriptPage", () => {
           speaker_code: "p1", start_time: 10.0, end_time: 19.0,
           text: "The dashboard is confusing.",
           html_text: null, is_moderator: false, is_quoted: true,
-          quote_ids: ["q-p1-10"], segment_index: 0,
+          quote_ids: ["q-p1-10"], segment_index: 0, words: null,
         },
         {
           speaker_code: "p1", start_time: 30.0, end_time: 39.0,
           text: "Search works well.",
           html_text: null, is_moderator: false, is_quoted: true,
-          quote_ids: ["q-p1-30"], segment_index: 1,
+          quote_ids: ["q-p1-30"], segment_index: 1, words: null,
         },
         {
           speaker_code: "p1", start_time: 50.0, end_time: 59.0,
           text: "Back to the dashboard, still confused.",
           html_text: null, is_moderator: false, is_quoted: true,
-          quote_ids: ["q-p1-50"], segment_index: 2,
+          quote_ids: ["q-p1-50"], segment_index: 2, words: null,
         },
       ],
       annotations: {
@@ -471,5 +476,129 @@ describe("TranscriptPage", () => {
     // Should NOT have a separate name span when name === code
     const nameSpans = roles.querySelectorAll(".bn-transcript-roles__name");
     expect(nameSpans).toHaveLength(0);
+  });
+
+  // ── Word-level highlighting ─────────────────────────────────────────
+
+  it("renders word spans when words data is present", async () => {
+    const withWords: TranscriptPageResponse = {
+      ...mockData,
+      segments: [
+        {
+          speaker_code: "p1",
+          start_time: 10.0,
+          end_time: 19.0,
+          text: "I found it confusing.",
+          html_text: null,
+          is_moderator: false,
+          is_quoted: false,
+          quote_ids: [],
+          segment_index: 0,
+          words: [
+            { text: "I", start: 10.0, end: 10.5 },
+            { text: "found", start: 10.5, end: 11.2 },
+            { text: "it", start: 11.2, end: 11.6 },
+            { text: "confusing.", start: 11.6, end: 12.8 },
+          ],
+        },
+      ],
+    };
+    mockedGetTranscript.mockResolvedValue(withWords);
+    render(<TranscriptPage projectId="1" sessionId="s1" />);
+    await waitFor(() => {
+      expect(screen.getByTestId("transcript-body")).toBeTruthy();
+    });
+    const body = screen.getByTestId("transcript-body");
+    const wordSpans = body.querySelectorAll(".transcript-word");
+    expect(wordSpans).toHaveLength(4);
+    expect(wordSpans[0].textContent).toBe("I ");
+    expect(wordSpans[0].getAttribute("data-start")).toBe("10");
+    expect(wordSpans[0].getAttribute("data-end")).toBe("10.5");
+    expect(wordSpans[3].textContent).toBe("confusing.");
+    expect(wordSpans[3].getAttribute("data-start")).toBe("11.6");
+    expect(wordSpans[3].getAttribute("data-end")).toBe("12.8");
+  });
+
+  it("falls back to plain text when words is null", async () => {
+    mockedGetTranscript.mockResolvedValue(mockData);
+    render(<TranscriptPage projectId="1" sessionId="s1" />);
+    await waitFor(() => {
+      expect(screen.getByTestId("transcript-body")).toBeTruthy();
+    });
+    const body = screen.getByTestId("transcript-body");
+    // No word spans — words is null on all segments
+    const wordSpans = body.querySelectorAll(".transcript-word");
+    expect(wordSpans).toHaveLength(0);
+    // Plain text still renders
+    expect(body.textContent).toContain("Thanks for joining me today.");
+  });
+
+  it("falls back to html_text when words is empty array", async () => {
+    const emptyWords: TranscriptPageResponse = {
+      ...mockData,
+      segments: [
+        {
+          speaker_code: "p1",
+          start_time: 10.0,
+          end_time: 19.0,
+          text: "I found the dashboard pretty confusing.",
+          html_text:
+            '<mark class="bn-cited">I found the dashboard pretty confusing.</mark>',
+          is_moderator: false,
+          is_quoted: true,
+          quote_ids: ["q-p1-10"],
+          segment_index: 0,
+          words: [],
+        },
+      ],
+    };
+    mockedGetTranscript.mockResolvedValue(emptyWords);
+    render(<TranscriptPage projectId="1" sessionId="s1" />);
+    await waitFor(() => {
+      expect(screen.getByTestId("transcript-body")).toBeTruthy();
+    });
+    const body = screen.getByTestId("transcript-body");
+    // Empty words array → falls back to html_text
+    const wordSpans = body.querySelectorAll(".transcript-word");
+    expect(wordSpans).toHaveLength(0);
+    const marks = body.querySelectorAll("mark.bn-cited");
+    expect(marks).toHaveLength(1);
+  });
+
+  it("skips html_text quote marks when words are present", async () => {
+    const wordsWithHtml: TranscriptPageResponse = {
+      ...mockData,
+      segments: [
+        {
+          speaker_code: "p1",
+          start_time: 10.0,
+          end_time: 19.0,
+          text: "I found it confusing.",
+          html_text:
+            '<mark class="bn-cited">I found it confusing.</mark>',
+          is_moderator: false,
+          is_quoted: true,
+          quote_ids: ["q-p1-10"],
+          segment_index: 0,
+          words: [
+            { text: "I", start: 10.0, end: 10.5 },
+            { text: "found", start: 10.5, end: 11.2 },
+            { text: "it", start: 11.2, end: 11.6 },
+            { text: "confusing.", start: 11.6, end: 12.8 },
+          ],
+        },
+      ],
+    };
+    mockedGetTranscript.mockResolvedValue(wordsWithHtml);
+    render(<TranscriptPage projectId="1" sessionId="s1" />);
+    await waitFor(() => {
+      expect(screen.getByTestId("transcript-body")).toBeTruthy();
+    });
+    const body = screen.getByTestId("transcript-body");
+    // Word spans rendered instead of html_text <mark>
+    const wordSpans = body.querySelectorAll(".transcript-word");
+    expect(wordSpans).toHaveLength(4);
+    const marks = body.querySelectorAll("mark.bn-cited");
+    expect(marks).toHaveLength(0);
   });
 });

@@ -21,6 +21,11 @@ import {
   toggleStar,
   setSearchQuery,
 } from "../contexts/QuotesContext";
+import {
+  toggleToc,
+  toggleTags,
+  toggleBoth,
+} from "../contexts/SidebarStore";
 
 // ── Helpers ──────────────────────────────────────────────────────────────
 
@@ -262,6 +267,33 @@ export function useKeyboardShortcuts({
       // Don't intercept other keys while editing or modal is open
       if (isEditing()) return;
       if (helpModalOpenRef.current) return;
+
+      // [ — toggle TOC sidebar (quotes tab only)
+      if (key === "[") {
+        if (locationRef.current.pathname === "/report/quotes") {
+          e.preventDefault();
+          toggleToc();
+          return;
+        }
+      }
+
+      // ] — toggle tag sidebar (quotes tab only)
+      if (key === "]") {
+        if (locationRef.current.pathname === "/report/quotes") {
+          e.preventDefault();
+          toggleTags();
+          return;
+        }
+      }
+
+      // \ or ⌘. / Ctrl+. — toggle both sidebars (quotes tab only)
+      if (key === "\\" || (key === "." && (e.metaKey || e.ctrlKey))) {
+        if (locationRef.current.pathname === "/report/quotes") {
+          e.preventDefault();
+          toggleBoth();
+          return;
+        }
+      }
 
       // / — focus search
       if (key === "/") {

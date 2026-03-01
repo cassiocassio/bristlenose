@@ -1,0 +1,297 @@
+/* Tag sidebar content — codebook tree, eye toggles, tag rows, micro-bars.
+   Scoped to .tag-sidebar to avoid collisions with existing codebook-panel.css.
+
+   Design reference: docs/mockups/mockup-sidebar-tags.html
+   Design doc: docs/design-sidebar.md */
+
+/* ── Tag search box ───────────────────────────────────────────── */
+
+.tag-search-container {
+    padding: 0.25rem 0.85rem var(--bn-space-sm);
+    flex-shrink: 0;
+}
+
+.tag-search-input {
+    width: 100%;
+    padding: var(--bn-space-sm) 0.55rem;
+    border: 1px solid var(--bn-colour-border);
+    border-radius: var(--bn-radius-md);
+    font-family: var(--bn-font-body);
+    font-size: 0.82rem;
+    color: var(--bn-colour-text);
+    background: var(--bn-colour-bg);
+    outline: none;
+    transition: border-color var(--bn-transition-fast);
+}
+
+.tag-search-input:focus {
+    border-color: var(--bn-colour-accent);
+}
+
+.tag-search-input::placeholder {
+    color: var(--bn-colour-muted);
+}
+
+/* ── Codebook framework disclosure ────────────────────────────── */
+
+.codebook-framework {
+    border-bottom: 1px solid var(--bn-colour-border);
+    margin-bottom: 0;
+}
+
+.codebook-framework:last-child {
+    border-bottom: none;
+}
+
+.codebook-framework > summary {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+    padding: 0.6rem 0.85rem;
+    cursor: pointer;
+    list-style: none;
+    user-select: none;
+    transition: background var(--bn-transition-fast);
+}
+
+.codebook-framework > summary::-webkit-details-marker { display: none; }
+.codebook-framework > summary::marker { display: none; content: ""; }
+
+.codebook-framework > summary:hover {
+    background: var(--bn-colour-quote-bg);
+}
+
+.codebook-disclosure {
+    flex-shrink: 0;
+    width: 0.85rem;
+    height: 0.85rem;
+    margin-top: 0.2rem;
+    color: var(--bn-colour-accent);
+    transition: transform var(--bn-transition-fast);
+}
+
+.codebook-framework[open] > summary .codebook-disclosure {
+    transform: rotate(90deg);
+}
+
+.codebook-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.codebook-title {
+    font-size: 0.88rem;
+    font-weight: var(--bn-weight-emphasis);
+    line-height: 1.3;
+}
+
+.codebook-author {
+    font-size: 0.72rem;
+    color: var(--bn-colour-muted);
+    line-height: 1.3;
+}
+
+.codebook-body {
+    padding: 0 0 0.25rem;
+}
+
+/* ── Eye-toggle interaction design ────────────────────────────────
+   Two levels: group eye + framework eye. Visual declutter only —
+   NOT data filtering. See design doc for full interaction spec.
+   ────────────────────────────────────────────────────────────── */
+
+/* Framework-level eye — hidden by default, visible on summary hover */
+.codebook-eye {
+    flex-shrink: 0;
+    background: none;
+    border: none;
+    padding: 2px;
+    color: var(--bn-colour-border-hover);
+    cursor: pointer;
+    transition: color var(--bn-transition-fast), opacity var(--bn-transition-fast);
+    margin-top: 0.1rem;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.codebook-framework > summary:hover .codebook-eye {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.codebook-eye:hover {
+    color: var(--bn-colour-muted);
+}
+
+/* When framework is hidden, eye is always visible (closed-eye affordance) */
+.codebook-framework.eye-hidden > summary .codebook-eye {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+/* ── Group header with subtitle ───────────────────────────────── */
+
+.tag-filter-group-header-row {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--bn-space-sm);
+    padding: var(--bn-space-sm) 0.5rem 0.1rem;
+}
+
+.tag-filter-group-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.tag-filter-group-name {
+    font-size: 0.82rem;
+    font-weight: var(--bn-weight-emphasis);
+}
+
+.tag-filter-group-subtitle {
+    font-size: 0.68rem;
+    color: var(--bn-colour-muted);
+    line-height: 1.3;
+}
+
+/* Group-level eye — hidden by default, visible on group hover */
+.group-eye {
+    flex-shrink: 0;
+    background: none;
+    border: none;
+    padding: 2px;
+    color: var(--bn-colour-border-hover);
+    cursor: pointer;
+    transition: color var(--bn-transition-fast), opacity var(--bn-transition-fast);
+    margin-top: 0.05rem;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.tag-filter-group:hover .group-eye {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.group-eye:hover {
+    color: var(--bn-colour-muted);
+}
+
+/* ── Hidden group state (eye closed) ──────────────────────────── */
+/* Group name goes grey, subtitle + tags hidden,
+   closed-eye icon always visible as affordance to reopen. */
+
+.tag-filter-group.eye-hidden .tag-filter-group-name {
+    color: var(--bn-colour-muted);
+}
+
+.tag-filter-group.eye-hidden .tag-filter-group-subtitle,
+.tag-filter-group.eye-hidden .tag-filter-group-tags {
+    display: none;
+}
+
+.tag-filter-group.eye-hidden .group-eye {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+/* ── Hidden framework state ───────────────────────────────────── */
+
+.codebook-framework.eye-hidden .codebook-title,
+.codebook-framework.eye-hidden .codebook-author {
+    color: var(--bn-colour-muted);
+}
+
+.tag-filter-group-tags {
+    padding: 0;
+}
+
+/* ── Tag row (badge + micro-bar pattern) ──────────────────────── */
+
+.tag-sidebar .tag-row {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: center;
+    gap: var(--bn-space-sm);
+    padding: 3px 0.5rem;
+    border-radius: var(--bn-radius-sm);
+    cursor: pointer;
+    transition: background var(--bn-transition-fast);
+}
+
+.tag-sidebar .tag-row:hover {
+    background: var(--bn-hover-bg-subtle);
+}
+
+.tag-sidebar .tag-name-area {
+    display: flex;
+    align-items: center;
+    gap: var(--bn-space-sm);
+    min-width: 0;
+}
+
+/* Badge — matches design system atom: mono font, small, rounded rect */
+.tag-sidebar .badge {
+    display: inline-block;
+    font-family: var(--bn-font-mono);
+    font-size: 0.72rem;
+    padding: var(--bn-space-xs) 0.45rem;
+    border-radius: var(--bn-radius-sm);
+    background: var(--bn-colour-badge-bg);
+    color: var(--bn-colour-badge-text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 14rem;
+}
+
+/* Micro histogram bar + count */
+.tag-sidebar .tag-bar-area {
+    display: flex;
+    align-items: center;
+    gap: var(--bn-space-xs);
+    min-width: 50px;
+    justify-content: flex-end;
+}
+
+.tag-sidebar .tag-micro-bar {
+    height: 0.6rem;
+    border-radius: 0 var(--bn-radius-sm) var(--bn-radius-sm) 0;
+    min-width: 2px;
+    transition: width var(--bn-transition-normal);
+}
+
+.tag-sidebar .tag-count {
+    font-size: 0.75rem;
+    color: var(--bn-colour-muted);
+    min-width: 16px;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+}
+
+/* Group total row */
+.tag-sidebar .group-total-row {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: center;
+    gap: var(--bn-space-sm);
+    padding: var(--bn-space-xs) 0.5rem 0.25rem;
+    border-top: 1px solid var(--bn-colour-border);
+    margin-top: var(--bn-space-xs);
+}
+
+.tag-sidebar .group-total-label {
+    font-size: 0.7rem;
+    color: var(--bn-colour-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.tag-sidebar .group-total-count {
+    font-size: 0.75rem;
+    font-weight: var(--bn-weight-emphasis);
+    color: var(--bn-colour-muted);
+    font-variant-numeric: tabular-nums;
+    min-width: 16px;
+    text-align: right;
+}

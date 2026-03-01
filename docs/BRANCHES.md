@@ -18,6 +18,7 @@ Each active feature branch gets its own **git worktree** — a full working copy
 | `bristlenose_branch symbology/` | `symbology` | § ¶ ❋ Unicode prefix symbols for sections, quotes, themes |
 | `bristlenose_branch highlighter/` | `highlighter` | Highlighter feature |
 | `bristlenose_branch living-fish/` | `living-fish` | Animated "living portrait" logo for serve mode |
+| `bristlenose_branch sidebar/` | `sidebar` | Dual-sidebar layout (TOC left, Tags right) for Quotes tab |
 
 
 **Creating a new feature branch worktree:**
@@ -99,6 +100,7 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 | `symbology` | `bristlenose_branch symbology/` | `origin/symbology` |
 | `highlighter` | `bristlenose_branch highlighter/` | `origin/highlighter` |
 | `living-fish` | `bristlenose_branch living-fish/` | `origin/living-fish` |
+| `sidebar` | `bristlenose_branch sidebar/` | `origin/sidebar` |
 
 ---
 
@@ -150,6 +152,52 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 
 **Potential conflicts with other branches:**
 - `symbology` touches `render_html.py` and template headings — low risk (logo is separate from section symbols)
+- `highlighter` — unknown scope, likely no overlap
+
+---
+
+### `sidebar` — started 28 Feb 2026
+
+**Status:** Phase 0 complete (branch + worktree created)
+**Worktree:** `/Users/cassio/Code/bristlenose_branch sidebar/`
+**Remote:** `origin/sidebar`
+
+**Goal:** Dual-sidebar layout for the Quotes tab. Left sidebar: TOC with scroll-spy (sections + themes). Right sidebar: tag filter with codebook tree, checkboxes, eye toggles, micro-bars. 5-column CSS grid (`rail | sidebar | center | sidebar | rail`). Drag-to-resize, snap-close, keyboard shortcuts (⌘[/]/.). Quotes-tab-only scope — other tabs see no grid, no rails.
+
+**Key design constraint:** Header/NavBar live inside the grid's center column so the left edge of the logo, nav, toolbar, headings, and quote cards align vertically. When sidebars open, the center column shifts but internal alignment is preserved.
+
+**Design reference:** `docs/mockups/mockup-sidebar-tags.html` (3568-line interactive prototype).
+**Design doc:** `docs/design-sidebar.md` (to be created in Phase 1).
+**Plan file:** `.claude/plans/logical-swinging-cascade.md`.
+
+**Files this branch will touch:**
+
+*New files:*
+- `docs/design-sidebar.md` — design document
+- `bristlenose/theme/organisms/sidebar.css` — 5-column grid layout, rails, panels, drag handles
+- `bristlenose/theme/organisms/sidebar-tags.css` — tag sidebar content: frameworks, groups, eye toggles, tag rows
+- `frontend/src/contexts/SidebarStore.ts` — sidebar state (open/close, widths, persistence)
+- `frontend/src/components/SidebarLayout.tsx` — grid container, rails, panels
+- `frontend/src/components/TocSidebar.tsx` — TOC with scroll-spy
+- `frontend/src/components/TagSidebar.tsx` — codebook tree with filtering
+- `frontend/src/components/CodebookFramework.tsx` — details/summary disclosure
+- `frontend/src/components/TagGroupCard.tsx` — tinted group card
+- `frontend/src/components/TagRow.tsx` — checkbox + badge + micro-bar + count
+- `frontend/src/components/EyeToggle.tsx` — hover-reveal eye icon
+- `frontend/src/hooks/useScrollSpy.ts` — RAF-throttled scroll spy
+- `frontend/src/hooks/useDragResize.ts` — drag-to-resize with snap-close
+
+*Modified files:*
+- `bristlenose/stages/render_html.py` — add sidebar CSS to `_THEME_FILES`
+- `frontend/src/layouts/AppLayout.tsx` — wrap with SidebarLayout
+- `frontend/src/hooks/useKeyboardShortcuts.ts` — ⌘[/]/. shortcuts
+- `frontend/src/contexts/QuotesContext.tsx` — add section/theme heading arrays
+- `frontend/src/islands/Toolbar.tsx` — "Open »" button for tag sidebar
+- `frontend/src/components/HelpModal.tsx` — sidebar shortcuts in help
+
+**Potential conflicts with other branches:**
+- `symbology` touches `render_html.py` and template headings — low risk (sidebar adds to `_THEME_FILES` only)
+- `living-fish` touches `app.py` and header — low risk (sidebar wraps layout, doesn't change header internals)
 - `highlighter` — unknown scope, likely no overlap
 
 ---

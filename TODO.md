@@ -229,7 +229,8 @@ These are too small for issues or are internal-only concerns.
 - [ ] **Relocate AI tag toggle** — removed from toolbar (too crowded with Codebook button); needs a new home. Code commented out in `render_html.py` and `codebook.js`/`tags.js`
 - [x] **Feedback endpoint** — deploy `server/feedback.php` to Dreamhost. See `server/README.md`
 - [ ] **User research panel opt-in** — optional email field in feedback modal
-- [ ] **Export and sharing** — deferred until after React migration (see `docs/design-export-sharing.md`, "Dependency on React migration" section)
+- [x] **Export and sharing (Phase 0)** — self-contained HTML export from serve mode. See `docs/design-export-sharing.md`
+- [ ] **Export polish** — inline logo as base64 (currently shows "Bristlenose logo" text), fix footer "Bristlenoseversion" missing space, fix in-report navigation links (plain `<a href="/report/...">` don't work with hash router — need React Router `<Link>` or hash-aware hrefs)
 - [ ] **Miro bridge** — Miro-shaped CSV export → API integration → layout engine. See `docs/private/design-miro-bridge.md`
 - [ ] **Tag definitions page** — also tracked as #53
 - [ ] **Custom prompts** — user-defined tag categories via `bristlenose.toml` or `prompts.toml`

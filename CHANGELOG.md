@@ -2,6 +2,14 @@
 
 All notable changes to Bristlenose are documented here. See also the [README](README.md) for the latest releases.
 
+**0.12.2** — _2 Mar 2026_
+
+- **Footer feedback restored in React serve mode** — the footer once again exposes both "Report a bug" and "Feedback" in the served React app. "Feedback" now opens a React-native modal (sentiment picker + optional message), matching the legacy flow rather than reusing the keyboard-shortcuts help modal
+- **Feedback submit + fallback parity** — feedback sends `{version, rating, message}` JSON to the configured feedback endpoint when available over HTTP(S). On failure (or non-HTTP contexts), it falls back to copying a plain-text feedback payload to the clipboard and shows toast guidance
+- **Health API contract extended** — `GET /api/health` now returns `links.github_issues_url` and `feedback.{enabled,url}` alongside existing `status` and `version` keys (unchanged)
+- **Export parity with serve mode** — exported reports embed the same `health.links` + `health.feedback` shape so footer behavior is consistent between serve and export
+- **Config via environment variables** — optional server-side overrides: `BRISTLENOSE_GITHUB_ISSUES_URL`, `BRISTLENOSE_FEEDBACK_ENABLED`, `BRISTLENOSE_FEEDBACK_URL`
+
 **0.12.1** — _1 Mar 2026_
 
 - **Word-level transcript highlighting** — during video playback, individual words in the transcript highlight in sync with the audio, karaoke-style. Whisper captures per-word start/end timestamps during transcription; these flow through the pipeline (`session_segments.json` → SQLite `words_json` → transcript API `words` field) and render as `<span class="transcript-word">` elements with `data-start`/`data-end` attributes. `PlayerContext.updateGlow()` scans word spans at 4 Hz and toggles `.bn-word-active` on the current word. Three-tier rendering fallback: word spans (Whisper sessions) → `html_text` with `<mark>` quote highlighting (non-Whisper with quotes) → plain text. CSS uses `color-mix(in srgb, accent 30%, transparent)` with `prefers-reduced-motion` underline fallback. VTT/SRT-imported sessions gracefully degrade to segment-level glow only. Glow brightness rebalanced: paragraph glow dimmed 50%, word glow brightened 50% — the active word pops against a subtler segment background

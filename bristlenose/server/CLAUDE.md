@@ -15,7 +15,7 @@ bristlenose/server/
   admin.py        — SQLAdmin browser (dev-only, /admin/)
   autocode.py     — AutoCode engine (taxonomy, batching, async job runner)
   routes/
-    health.py     — GET /api/health
+    health.py     — GET /api/health (status/version + footer links/feedback config)
     sessions.py   — GET /api/projects/{id}/sessions (React sessions table, includes source_folder_uri)
     quotes.py     — GET /api/projects/{id}/quotes (quotes grouped by section/theme)
     data.py       — 12 data API endpoints (Phase 1 researcher state sync)
@@ -88,6 +88,30 @@ The JS-side HTTP abstraction (`bristlenose/theme/js/api-client.js`).  Loaded sec
 - **`apiPut(path, data)`** — fetch PUT with JSON body, shows toast on error via `showToast()` (optional dependency from `csv-export.js`)
 
 All calls are **fire-and-forget promises**.  The JS modules don't `await` them.
+
+## Health API contract (footer config)
+
+`GET /api/health` returns:
+
+- `status` (unchanged)
+- `version` (unchanged)
+- `links.github_issues_url`
+- `feedback.enabled`
+- `feedback.url`
+
+This payload is shared by serve mode and export mode (embedded in `BRISTLENOSE_EXPORT.health`).
+
+Default values:
+
+- `links.github_issues_url` = `https://github.com/cassiocassio/bristlenose/issues/new`
+- `feedback.enabled` = `true`
+- `feedback.url` = `https://cassiocassio.co.uk/feedback.php`
+
+Optional env overrides:
+
+- `BRISTLENOSE_GITHUB_ISSUES_URL`
+- `BRISTLENOSE_FEEDBACK_ENABLED` (`1/true/yes/on` truthy; everything else false)
+- `BRISTLENOSE_FEEDBACK_URL`
 
 ## Patterns to follow
 

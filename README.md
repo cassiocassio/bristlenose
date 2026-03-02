@@ -386,6 +386,13 @@ Edit `bristlenose/__init__.py` (the single source of truth for version), commit,
 
 ## Changelog
 
+**0.12.2** — _2 Mar 2026_
+
+- Footer feedback restored in React serve mode: "Feedback" now opens a dedicated feedback modal (not the Help modal), and "Report a bug" remains a direct GitHub issue link
+- Feedback submit flow parity with legacy behavior: POST to configured endpoint when available, with clipboard fallback + toast if endpoint submit is unavailable
+- Health API now includes footer config (`links.github_issues_url`, `feedback.enabled`, `feedback.url`) while preserving `status` and `version`
+- Exported reports now embed the same health/footer config shape as serve mode for consistent footer behavior
+
 **0.12.1** — _1 Mar 2026_
 
 - Word-level transcript highlighting — individual words highlight in sync with video playback (karaoke-style). Whisper sessions get per-word timing; VTT/SRT imports fall back to segment-level glow

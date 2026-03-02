@@ -10,15 +10,11 @@
  */
 
 import { useCallback, useEffect, useState } from "react";
+import type { HealthResponse } from "../utils/health";
 
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
-
-interface HealthResponse {
-  status: string;
-  version: string;
-}
 
 interface EndpointInfo {
   label: string;

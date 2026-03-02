@@ -85,6 +85,15 @@ class TestExportData:
         data = self._extract_export_data(client.get("/api/projects/1/export").text)
         assert data["health"]["status"] == "ok"
         assert "version" in data["health"]
+        assert (
+            data["health"]["links"]["github_issues_url"]
+            == "https://github.com/cassiocassio/bristlenose/issues/new"
+        )
+        assert data["health"]["feedback"]["enabled"] is True
+        assert (
+            data["health"]["feedback"]["url"]
+            == "https://cassiocassio.co.uk/feedback.php"
+        )
 
     def test_has_dashboard(self, client: TestClient) -> None:
         data = self._extract_export_data(client.get("/api/projects/1/export").text)

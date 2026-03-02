@@ -1,34 +1,27 @@
 /**
- * Footer — report footer with logo, version, bug report link, and help hint.
+ * Footer — report footer with logo, version, bug report link, feedback link,
+ * and help hint.
  *
  * Replicates bristlenose/theme/templates/footer.html.
- * Fetches version from `/api/health`.
  * Reuses existing CSS classes from atoms/footer.css.
  */
 
-import { useEffect, useState } from "react";
-import { getExportData } from "../utils/exportData";
+import type { HealthResponse } from "../utils/health";
+import {
+  DEFAULT_GITHUB_ISSUES_URL,
+} from "../utils/health";
 
 interface FooterProps {
+  health?: HealthResponse | null;
+  onOpenFeedback?: () => void;
   onToggleHelp?: () => void;
 }
 
-export function Footer({ onToggleHelp }: FooterProps) {
-  const [version, setVersion] = useState<string>("");
-
-  useEffect(() => {
-    const exportData = getExportData();
-    if (exportData) {
-      setVersion(exportData.health.version);
-      return;
-    }
-    fetch("/api/health")
-      .then((r) => (r.ok ? r.json() : null))
-      .then((data) => {
-        if (data?.version) setVersion(data.version);
-      })
-      .catch(() => {});
-  }, []);
+export function Footer({ health, onOpenFeedback, onToggleHelp }: FooterProps) {
+  const version = health?.version ?? "";
+  const githubIssuesUrl =
+    health?.links.github_issues_url ?? DEFAULT_GITHUB_ISSUES_URL;
+  const feedbackEnabled = health?.feedback.enabled ?? true;
 
   return (
     <footer className="report-footer">
@@ -52,28 +45,32 @@ export function Footer({ onToggleHelp }: FooterProps) {
           {version ? `version ${version}` : ""}
         </a>
       </div>
-      <div className="feedback-links">
+      <div
+        className={`feedback-links${feedbackEnabled ? " feedback-links-visible" : ""}`}
+      >
         <a
           className="footer-link"
-          href="https://github.com/cassiocassio/bristlenose/issues/new"
+          href={githubIssuesUrl}
           target="_blank"
           rel="noopener noreferrer"
         >
           Report a bug
         </a>
-        <span className="footer-link-sep">&middot;</span>
-        {onToggleHelp && (
-          <a
-            className="footer-link feedback-trigger"
-            role="button"
-            tabIndex={0}
-            onClick={onToggleHelp}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" || e.key === " ") onToggleHelp();
-            }}
-          >
-            Feedback
-          </a>
+        {feedbackEnabled && onOpenFeedback && (
+          <>
+            <span className="footer-link-sep">&middot;</span>
+            <a
+              className="footer-link feedback-trigger"
+              role="button"
+              tabIndex={0}
+              onClick={onOpenFeedback}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") onOpenFeedback();
+              }}
+            >
+              Feedback
+            </a>
+          </>
         )}
       </div>
       {onToggleHelp && (

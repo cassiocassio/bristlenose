@@ -1,9 +1,5 @@
 import { useEffect, useState } from "react";
-
-interface HealthResponse {
-  status: string;
-  version: string;
-}
+import type { HealthResponse } from "../utils/health";
 
 export function HelloIsland() {
   const [health, setHealth] = useState<HealthResponse | null>(null);

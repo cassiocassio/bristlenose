@@ -14,6 +14,7 @@ import type {
   TranscriptPageResponse,
 } from "./types";
 import type { PersonData } from "./api";
+import type { HealthResponse } from "./health";
 
 // ---------------------------------------------------------------------------
 // Embedded data shape
@@ -23,7 +24,7 @@ export interface ExportData {
   version: number;
   exported_at: string;
   project: { project_name: string; session_count: number; participant_count: number };
-  health: { status: string; version: string };
+  health: HealthResponse;
   dashboard: DashboardResponse;
   sessions: unknown; // SessionsListResponse (not typed here to avoid circular dep)
   quotes: unknown; // QuotesListResponse

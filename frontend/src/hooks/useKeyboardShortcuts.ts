@@ -26,6 +26,10 @@ import {
   toggleTags,
   toggleBoth,
 } from "../contexts/SidebarStore";
+import {
+  togglePlayground,
+  toggleHUD,
+} from "../contexts/PlaygroundStore";
 
 // ── Helpers ──────────────────────────────────────────────────────────────
 
@@ -237,6 +241,20 @@ export function useKeyboardShortcuts({
   useEffect(() => {
     const handleKeydown = (e: KeyboardEvent) => {
       const key = e.key;
+
+      // Ctrl+Shift+R — toggle responsive playground (dev-only)
+      if (key === "R" && e.ctrlKey && e.shiftKey) {
+        e.preventDefault();
+        togglePlayground();
+        return;
+      }
+
+      // Ctrl+Shift+H — toggle playground HUD (dev-only)
+      if (key === "H" && e.ctrlKey && e.shiftKey) {
+        e.preventDefault();
+        toggleHUD();
+        return;
+      }
 
       // Escape — cascade: close modal → clear search → clear selection → clear focus
       if (key === "Escape") {

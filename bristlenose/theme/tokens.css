@@ -169,6 +169,8 @@
 
     /* Layout */
     --bn-max-width: 52rem;
+    --bn-quote-max-width: 23rem;   /* card reading measure — ~5 words/line */
+    --bn-grid-gap: 1.25rem;        /* gap between grid columns */
     --bn-toolbar-height: 3rem;
 
     /* Sidebar layout (serve-mode dual-sidebar with resizable panels) */

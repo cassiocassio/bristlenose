@@ -22,7 +22,17 @@ const MOCK_EXPORT = {
   version: 1,
   exported_at: "2026-03-01T12:00:00Z",
   project: { project_name: "Test", session_count: 2, participant_count: 3 },
-  health: { status: "ok", version: "0.11.1" },
+  health: {
+    status: "ok",
+    version: "0.11.1",
+    links: {
+      github_issues_url: "https://github.com/cassiocassio/bristlenose/issues/new",
+    },
+    feedback: {
+      enabled: true,
+      url: "https://cassiocassio.co.uk/feedback.php",
+    },
+  },
   dashboard: { stats: { session_count: 2 } },
   sessions: { sessions: [{ session_id: "s1" }] },
   quotes: { sections: [], themes: [], total_quotes: 5 },

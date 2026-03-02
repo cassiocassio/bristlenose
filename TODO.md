@@ -20,8 +20,10 @@ This file contains: session reminders, feature groupings with context, items too
 ### Priority order
 
 1. **Export polish** — fix remaining rough edges from Step 10 export
-2. **Help modal styling** — visual polish pass
-3. **Responsive quote grid** — CSS-only Phase 1
+2. **Playwright E2E test harness** — console error monitor, link crawler, network assertion, structural smoke tests. Catches real bugs without eyeballing screenshots. Design doc: `docs/design-playwright-testing.md`. Known bugs to encode as failing tests: duplicate React keys on transcript pages (s1/s3/s4), dead "Show all N quotes" links on Analysis page
+3. **Help modal styling** — visual polish pass
+4. **Responsive quote grid** — CSS-only Phase 1
+5. **Extract design tokens for Figma** — pull colours, spacing, typography, radii from `bristlenose/theme/` into a structured format (JSON/CSS variables) importable as Figma variables. Enables Figma MCP round-trip workflow
 4. **Moderator Phase 2** (#25) — cross-session linking
 5. **Dark mode selection highlight** (#52) — visibility bug
 6. **SVG icon set** — replace fragile character glyphs (no issue — small enough to just do)

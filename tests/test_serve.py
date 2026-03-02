@@ -39,6 +39,35 @@ class TestHealthEndpoint:
         data = client.get("/api/health").json()
         assert data["status"] == "ok"
 
+    def test_returns_default_links_and_feedback(
+        self,
+        client: TestClient,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        monkeypatch.delenv("BRISTLENOSE_GITHUB_ISSUES_URL", raising=False)
+        monkeypatch.delenv("BRISTLENOSE_FEEDBACK_ENABLED", raising=False)
+        monkeypatch.delenv("BRISTLENOSE_FEEDBACK_URL", raising=False)
+        data = client.get("/api/health").json()
+        assert (
+            data["links"]["github_issues_url"]
+            == "https://github.com/cassiocassio/bristlenose/issues/new"
+        )
+        assert data["feedback"]["enabled"] is True
+        assert data["feedback"]["url"] == "https://cassiocassio.co.uk/feedback.php"
+
+    def test_respects_feedback_env_overrides(
+        self,
+        client: TestClient,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        monkeypatch.setenv("BRISTLENOSE_GITHUB_ISSUES_URL", "https://example.com/issues/new")
+        monkeypatch.setenv("BRISTLENOSE_FEEDBACK_ENABLED", "false")
+        monkeypatch.setenv("BRISTLENOSE_FEEDBACK_URL", "https://example.com/feedback")
+        data = client.get("/api/health").json()
+        assert data["links"]["github_issues_url"] == "https://example.com/issues/new"
+        assert data["feedback"]["enabled"] is False
+        assert data["feedback"]["url"] == "https://example.com/feedback"
+
 
 class TestDatabase:
     def test_init_db_creates_tables(self, engine) -> None:  # type: ignore[no-untyped-def]

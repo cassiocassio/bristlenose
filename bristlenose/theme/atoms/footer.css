@@ -105,6 +105,12 @@ body.feedback-enabled .feedback-links {
     gap: 0.5em;
 }
 
+.feedback-links.feedback-links-visible {
+    display: flex;
+    align-items: baseline;
+    gap: 0.5em;
+}
+
 .footer-link {
     color: var(--bn-colour-muted);
     text-decoration: none;

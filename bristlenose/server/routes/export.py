@@ -16,7 +16,7 @@ from pathlib import Path
 from fastapi import APIRouter, HTTPException, Query, Request
 from starlette.responses import Response
 
-from bristlenose import __version__
+from bristlenose.server.routes.health import build_health_payload
 
 logger = logging.getLogger(__name__)
 
@@ -357,7 +357,7 @@ def export_report(
         "version": 1,
         "exported_at": datetime.now(timezone.utc).isoformat(),
         "project": _to_dict(project_info),
-        "health": {"status": "ok", "version": __version__},
+        "health": build_health_payload(),
         "dashboard": _to_dict(dashboard),
         "sessions": _to_dict(sessions),
         "quotes": _to_dict(quotes),

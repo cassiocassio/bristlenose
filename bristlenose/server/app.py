@@ -218,6 +218,7 @@ def _build_dev_html(output_dir: Path) -> str:
         "  window.$RefreshReg$ = () => {}\n"
         "  window.$RefreshSig$ = () => (type) => type\n"
         "  window.__vite_plugin_react_preamble_installed__ = true\n"
+        "  window.__BRISTLENOSE_DEV__ = true\n"
         "</script>\n"
         f'<script type="module" src="{vite}/@vite/client"></script>\n'
         f'<script type="module" src="{vite}/src/main.tsx"></script>\n'

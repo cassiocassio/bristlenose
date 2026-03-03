@@ -2,7 +2,7 @@
 
 This document tracks active feature branches to help multiple Claude sessions coordinate without conflicts.
 
-**Updated:** 3 Mar 2026 (shall-we-try-it — skill test)
+**Updated:** 3 Mar 2026 (shall-we-try-it closed)
 
 ---
 
@@ -19,7 +19,7 @@ Each active feature branch gets its own **git worktree** — a full working copy
 | `bristlenose_branch highlighter/` | `highlighter` | Highlighter feature |
 | `bristlenose_branch living-fish/` | `living-fish` | Animated "living portrait" logo for serve mode |
 | `bristlenose_branch sentiment-tags/` | `sentiment-tags` | Unify sentiment badges into codebook framework system |
-| `bristlenose_branch shall-we-try-it/` | `shall-we-try-it` | Throwaway branch to test /new-feature skill |
+
 
 **Creating a new feature branch worktree:**
 
@@ -101,7 +101,7 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 | `highlighter` | `bristlenose_branch highlighter/` | `origin/highlighter` |
 | `living-fish` | `bristlenose_branch living-fish/` | `origin/living-fish` |
 | `sentiment-tags` | `bristlenose_branch sentiment-tags/` | local only |
-| `shall-we-try-it` | `bristlenose_branch shall-we-try-it/` | local only |
+
 
 ---
 
@@ -182,24 +182,11 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 
 ---
 
-### `shall-we-try-it`
-
-**Status:** Just started
-**Started:** 3 Mar 2026
-**Worktree:** `/Users/cassio/Code/bristlenose_branch shall-we-try-it/`
-**Remote:** local only (push when ready)
-
-**What it does:** Throwaway branch to test the improved `/new-feature` and `/close-branch` skills after reliability fixes.
-
-**Files this branch will touch:**
-- None — test branch, will be closed immediately
-
-**Potential conflicts with other branches:**
-- None
-
----
-
 ## Completed Branches (for reference)
+
+### `shall-we-try-it` — merged 3 Mar 2026
+
+Throwaway branch to test the improved `/new-feature` and `/close-branch` skills after reliability fixes. No code changes.
 
 ### `sidebar` — merged 1 Mar 2026
 

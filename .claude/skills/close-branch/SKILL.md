@@ -30,10 +30,12 @@ If ANY of these checks fail, **stop immediately** with:
 
 Run `git branch --merged main` and check if `$0` appears.
 
-If the branch is **NOT merged**, stop with:
-> "Branch `$0` has NOT been merged to main. This skill is for closing merged branches only. Merge the branch first, or delete it manually with `git branch -D $0` if you want to discard the work."
+If the branch is **NOT merged**, show the unmerged commits with `git log main..$0 --oneline`, then stop with:
 
-Show the unmerged commits with `git log main..$0 --oneline` for reference.
+> Branch `$0` has NOT been merged to main. To close it you can either:
+> - Merge it first: `git merge $0` (from main)
+> - Abandon the work: `git worktree remove "/Users/cassio/Code/bristlenose_branch $0" && git branch -D $0`
+> - Force-delete just the branch: `git branch -D $0`
 
 If the branch ref no longer exists (already deleted in a partial previous run), check if the worktree directory still exists — if so, continue from Step 4 (archival).
 
@@ -50,12 +52,9 @@ git -C "/Users/cassio/Code/bristlenose_branch $0" status --porcelain
 Ignore `trial-runs` (symlink) and `_Stale*` files (from partial previous run). If there are real uncommitted changes:
 
 1. Show the user the list of changed files
-2. Ask what to do:
-   - **Rescue to main** — apply the changes to main (cherry-pick, or copy the files and commit on main)
-   - **Discard** — the changes aren't needed, proceed with close
-   - **Stop** — let the user handle it manually first
+2. **Stop.** Tell the user to deal with the uncommitted work first (commit it, move it to main, or discard it), then re-run `/close-branch`.
 
-Do NOT proceed past this step until uncommitted work is resolved. Detaching the worktree makes it a non-git directory — uncommitted changes become invisible diffs with no easy recovery.
+Do NOT proceed past this step. Detaching the worktree makes it a non-git directory — uncommitted changes become invisible diffs with no easy recovery.
 
 ## Step 4: Capture commit history (BEFORE any deletion)
 

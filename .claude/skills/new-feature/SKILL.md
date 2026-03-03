@@ -10,7 +10,9 @@ Create a new feature branch called `$0` for the bristlenose project.
 
 If no branch name was provided (`$0` is empty), ask the user for one before proceeding.
 
-Follow these steps **in order**, stopping on any failure:
+**Failure policy:** Steps 1–4 are critical — stop on failure. Steps 5–8 are setup — warn on failure but continue (the worktree is usable without them).
+
+**Idempotency:** If the branch or worktree already exists from a partial previous run, detect that and skip to the first incomplete step rather than failing.
 
 ## Step 1: Validate branch name
 
@@ -30,26 +32,37 @@ Run `git status --porcelain`. If there are changes, warn the user and ask whethe
 
 ## Step 4: Create branch and worktree
 
+First, check current state to handle partial previous runs:
+
 ```bash
-git branch $0 main
-git worktree add "/Users/cassio/Code/bristlenose_branch $0" $0
+# Check if branch already exists
+git show-ref --verify --quiet refs/heads/$0 && echo "BRANCH_EXISTS" || echo "NO_BRANCH"
+# Check if worktree directory already exists
+test -d "/Users/cassio/Code/bristlenose_branch $0" && echo "DIR_EXISTS" || echo "NO_DIR"
 ```
 
-If `git branch` fails (branch already exists), tell the user and stop.
-If `git worktree add` fails (directory exists), tell the user and stop.
+Then proceed based on what exists:
+- **Neither exists:** Create both: `git branch $0 main && git worktree add "/Users/cassio/Code/bristlenose_branch $0" $0`
+- **Branch exists, no directory:** Just add the worktree: `git worktree add "/Users/cassio/Code/bristlenose_branch $0" $0`
+- **Both exist and worktree is registered** (`git worktree list` shows it): Skip — tell the user "Branch and worktree already exist, resuming setup."
+- **Directory exists but isn't a worktree:** Stop — something unexpected is there, ask the user what to do.
 
-## Step 5: Pause for Finder
+If the git commands fail for any other reason, tell the user and stop.
+
+## Step 5: Pause for Finder (non-critical)
 
 Tell the user:
 
-> The worktree directory has been created at:
+> The worktree directory is at:
 > `/Users/cassio/Code/bristlenose_branch $0/`
 >
 > You can label it in Finder now (right-click > Tags > pick a colour) before I continue with setup.
 
 Ask the user to confirm before continuing.
 
-## Step 6: Set up venv
+## Step 6: Set up venv (non-critical)
+
+Skip if `.venv/bin/python` already exists in the worktree (previous partial run).
 
 ```bash
 cd "/Users/cassio/Code/bristlenose_branch $0"
@@ -59,7 +72,9 @@ python3 -m venv .venv
 
 This takes 30-60 seconds. If it fails, warn but don't stop — the worktree is still usable and venv can be retried manually.
 
-## Step 7: Symlink trial-runs
+## Step 7: Symlink trial-runs (non-critical)
+
+Skip if the symlink already exists.
 
 ```bash
 ln -s /Users/cassio/Code/bristlenose/trial-runs "/Users/cassio/Code/bristlenose_branch $0/trial-runs"
@@ -67,26 +82,17 @@ ln -s /Users/cassio/Code/bristlenose/trial-runs "/Users/cassio/Code/bristlenose_
 
 This symlinks the main repo's `trial-runs/` directory (gitignored, contains large video files and rendered reports) so that `./scripts/dev.sh` works in the worktree. Don't copy — the directory contains video files. If the symlink fails (target doesn't exist), warn but continue — the user may not have trial data.
 
-## Step 8: Symlink skills
-
-```bash
-mkdir -p "/Users/cassio/Code/bristlenose_branch $0/.claude"
-ln -s /Users/cassio/Code/bristlenose/.claude/skills "/Users/cassio/Code/bristlenose_branch $0/.claude/skills"
-```
-
-This ensures Claude sessions running from the worktree can access `/close-branch` and other skills defined in the main repo. Without this, skills won't load and Claude will improvise manual cleanup — which is how we bricked a shell session in Feb 2026.
-
-If the symlink fails, warn but continue.
-
-## Step 9: Stay local (do NOT push)
+## Step 8: Stay local (do NOT push)
 
 **Do NOT push to origin.** The branch stays local until the user explicitly asks to push. This avoids cluttering the remote with branches that may be short-lived or experimental.
 
 Tell the user: "Branch is local only. Push with `git push -u origin $0` when you're ready."
 
-## Step 10: Update docs/BRANCHES.md
+## Step 9: Update docs/BRANCHES.md
 
-Read `docs/BRANCHES.md` to understand the current format. Then:
+Read `docs/BRANCHES.md` to understand the current format. Check if `$0` already has an entry (partial previous run) — if so, skip this step.
+
+Then:
 
 1. Add a row to the **Worktree Convention** table:
    ```
@@ -119,7 +125,7 @@ Read `docs/BRANCHES.md` to understand the current format. Then:
 
 Ask the user for the description and files before writing.
 
-## Step 11: Commit BRANCHES.md on main
+## Step 10: Commit BRANCHES.md on main
 
 ```bash
 cd /Users/cassio/Code/bristlenose
@@ -127,7 +133,7 @@ git add docs/BRANCHES.md
 git commit -m "add $0 branch to BRANCHES.md"
 ```
 
-## Step 12: Report
+## Step 11: Report
 
 Print a summary:
 

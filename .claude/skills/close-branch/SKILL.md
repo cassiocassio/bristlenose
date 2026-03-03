@@ -12,7 +12,7 @@ If no branch name was provided (`$0` is empty), run `git worktree list` and show
 
 **Important:** This skill does NOT delete the local worktree directory. The directory stays on disk with a stale marker file so the user can revisit old experiments or delete it manually later.
 
-**Failure policy:** Steps 1–2 are critical safety checks — stop on failure. Steps 3–8 are cleanup — warn on failure but continue through the rest.
+**Failure policy:** Steps 1–3 are critical safety checks — stop on failure (or stop if the user says so in Step 3). Steps 4–9 are cleanup — warn on failure but continue through the rest.
 
 **Idempotency:** If this skill was partially run before (e.g. stale marker exists but BRANCHES.md wasn't updated), detect what's already done and skip to the first incomplete step.
 
@@ -39,7 +39,25 @@ If the branch ref no longer exists (already deleted in a partial previous run), 
 
 If merged, continue.
 
-## Step 3: Capture commit history (BEFORE any deletion)
+## Step 3: Check for uncommitted work in the worktree
+
+If the worktree directory exists, check for uncommitted changes:
+
+```bash
+git -C "/Users/cassio/Code/bristlenose_branch $0" status --porcelain
+```
+
+Ignore `trial-runs` (symlink) and `_Stale*` files (from partial previous run). If there are real uncommitted changes:
+
+1. Show the user the list of changed files
+2. Ask what to do:
+   - **Rescue to main** — apply the changes to main (cherry-pick, or copy the files and commit on main)
+   - **Discard** — the changes aren't needed, proceed with close
+   - **Stop** — let the user handle it manually first
+
+Do NOT proceed past this step until uncommitted work is resolved. Detaching the worktree makes it a non-git directory — uncommitted changes become invisible diffs with no easy recovery.
+
+## Step 4: Capture commit history (BEFORE any deletion)
 
 This must happen while the branch ref still exists. Capture:
 
@@ -51,7 +69,7 @@ This uses `merge-base` instead of `main..$0` because `main..$0` is empty for mer
 
 Save this output — you'll need it for the stale marker file in Step 4.
 
-## Step 4: Run tests on main (optional)
+## Step 5: Run tests on main (optional)
 
 Ask the user:
 > "Run tests on main to confirm the merge is clean? [Y/n]"
@@ -66,7 +84,7 @@ If tests fail, warn the user but continue — the merge already landed, so test 
 
 If the user says no, skip.
 
-## Step 5: Create stale marker file
+## Step 6: Create stale marker file
 
 Check if a stale marker already exists in the worktree directory (partial previous run). If so, skip.
 
@@ -100,7 +118,7 @@ This creates a new commit that reverses the merge, keeping full history.
 
 If the worktree directory no longer exists, skip this step and note it.
 
-## Step 6: Detach worktree from git
+## Step 7: Detach worktree from git
 
 Check if the worktree is still registered (`git worktree list`). If not, just run `git worktree prune` and skip ahead.
 
@@ -114,7 +132,7 @@ git worktree prune
 
 This detaches the worktree from git (so `git worktree list` no longer shows it) while leaving all files on disk intact. The directory becomes a regular (non-git) folder with the source code frozen at the merge point.
 
-## Step 7: Ask about branch deletion
+## Step 8: Ask about branch deletion
 
 Present these as separate choices — the user can say no to either or both.
 
@@ -140,7 +158,7 @@ If the remote branch doesn't exist, say so and skip the question.
 
 If the user says no to either, that's fine — the branches stay around harmlessly.
 
-## Step 8: Update docs/BRANCHES.md
+## Step 9: Update docs/BRANCHES.md
 
 Read the file. Check if `$0` has already been moved to Completed Branches (partial previous run). If so, skip.
 
@@ -159,7 +177,7 @@ Then:
 
 5. Update the **Updated:** date at the top of the file
 
-## Step 9: Commit
+## Step 10: Commit
 
 ```bash
 cd /Users/cassio/Code/bristlenose
@@ -167,7 +185,7 @@ git add docs/BRANCHES.md
 git commit -m "close $0 branch, update BRANCHES.md"
 ```
 
-## Step 10: Report
+## Step 11: Report
 
 Print a summary of everything that was done:
 

@@ -21,8 +21,7 @@ This file contains: session reminders, feature groupings with context, items too
 ### Priority order
 
 1. **Export polish** — fix remaining rough edges from Step 10 export
-2. **Playwright E2E test harness** — console error monitor, link crawler, network assertion, structural smoke tests. Catches real bugs without eyeballing screenshots. Design doc: `docs/design-playwright-testing.md`. Known bugs to encode as failing tests: duplicate React keys on transcript pages (s1/s3/s4), dead "Show all N quotes" links on Analysis page
-3. **Help modal styling** — visual polish pass
+2. **Help modal styling** — visual polish pass
 4. **Responsive quote grid** — CSS-only Phase 1
 5. **Extract design tokens for Figma** — pull colours, spacing, typography, radii from `bristlenose/theme/` into a structured format (JSON/CSS variables) importable as Figma variables. Enables Figma MCP round-trip workflow
 4. **Moderator Phase 2** (#25) — cross-session linking
@@ -159,7 +158,8 @@ See `docs/design-logging.md` for architecture and full tier breakdown. Infrastru
 | Item | Effort |
 |------|--------|
 | Storybook / component playground for primitives | medium |
-| Playwright E2E tests (11 write actions: star, hide, edit, tag, etc.) | large |
+| Playwright E2E layer 4 (structural smoke tests) | medium |
+| Playwright E2E write-action tests (11 actions: star, hide, edit, tag, etc.) | large |
 
 ---
 
@@ -313,6 +313,7 @@ See `docs/design-serve-doctor.md` for full design. Summary: 4 new doctor checks,
 
 ## Done (reverse chronological)
 
+- [x] **Playwright E2E harness layers 1–3** (Mar 2026) — console error monitor, link crawler, network assertion. Chromium + WebKit. Auto-starts `bristlenose serve` against smoke-test fixture. CI integration. Design doc: `docs/design-playwright-testing.md`
 - [x] **React migration Steps 1–10** (Mar 2026) — full SPA with React Router, PlayerContext, FocusContext, keyboard shortcuts, export, app shell. See `docs/design-react-migration.md`
 - [x] **CI stabilisation** (Mar 2026) — frontend lint/typecheck/vitest in GitHub Actions
 - [x] **Export (Step 10)** — self-contained HTML download, blob-URL'd JS chunks, hash router for file://, optional anonymisation

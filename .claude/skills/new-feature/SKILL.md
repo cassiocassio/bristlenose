@@ -49,16 +49,15 @@ Then proceed based on what exists:
 
 If the git commands fail for any other reason, tell the user and stop.
 
-## Step 5: Pause for Finder (non-critical)
+## Step 5: Tag folder purple in Finder (non-critical)
 
-Tell the user:
+Set the worktree folder to purple (= active branch) in Finder:
 
-> The worktree directory is at:
-> `/Users/cassio/Code/bristlenose_branch $0/`
->
-> You can label it in Finder now (right-click > Tags > pick a colour) before I continue with setup.
+```bash
+osascript -e 'tell application "Finder" to set label index of (POSIX file "/Users/cassio/Code/bristlenose_branch $0" as alias) to 5'
+```
 
-Ask the user to confirm before continuing.
+If this fails (e.g. Finder not running, headless environment), warn but continue.
 
 ## Step 6: Set up venv (non-critical)
 

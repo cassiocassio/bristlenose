@@ -4,3 +4,7 @@
 assets/
 sessions/
 people.yaml
+
+# SQLite files created by bristlenose serve (E2E tests)
+*.db
+*.db-*

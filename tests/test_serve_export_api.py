@@ -1,4 +1,8 @@
-"""Tests for the export API endpoint."""
+"""Tests for the export API endpoint.
+
+Requires the frontend build (``npm run build`` in ``frontend/``).
+Skipped in CI where the lint-and-test job doesn't build the frontend.
+"""
 
 from __future__ import annotations
 
@@ -11,6 +15,18 @@ from fastapi.testclient import TestClient
 from bristlenose.server.app import create_app
 
 _FIXTURE_DIR = Path(__file__).parent / "fixtures" / "smoke-test" / "input"
+_STATIC_INDEX = (
+    Path(__file__).resolve().parent.parent
+    / "bristlenose"
+    / "server"
+    / "static"
+    / "index.html"
+)
+
+pytestmark = pytest.mark.skipif(
+    not _STATIC_INDEX.is_file(),
+    reason="frontend build not found (run 'cd frontend && npm run build')",
+)
 
 
 @pytest.fixture()

@@ -1,5 +1,7 @@
 # Windows Tech Debt
 
+Oneday!
+
 Platform assumptions that work on macOS/Linux but will need attention for Windows support. Not blocking — bristlenose is macOS/Linux first — but tracked here so we don't lose sight of them.
 
 **Updated:** 15 Feb 2026

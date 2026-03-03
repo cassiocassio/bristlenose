@@ -8,6 +8,7 @@ Last updated: 1 Mar 2026 (React migration complete, CI stabilised, export shippe
 - [ ] **Export polish** — inline logo as base64 (currently shows "Bristlenose logo" text), fix footer "Bristlenoseversion" missing space, fix in-report navigation links (plain `<a href="/report/...">` don't work with hash router — need React Router `<Link>` or hash-aware hrefs)
 - [ ] **Help modal styling** — renders but needs polish (no close button, layout rough)
 - [ ] **Responsive quote grid** — CSS-only Phase 1. Design doc ready (`docs/design-responsive-layout.md`), mockup exists. Plan approved, not yet implemented
+- [ ] **Skill stress test: remote-only branch** — test `/close-branch` when remote branch exists but local was deleted (someone pushed, you fetched). Exercises the "nothing local to delete, remote exists" path
 
 ---
 

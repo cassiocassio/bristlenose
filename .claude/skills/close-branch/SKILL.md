@@ -118,6 +118,14 @@ This creates a new commit that reverses the merge, keeping full history.
 
 If the worktree directory no longer exists, skip this step and note it.
 
+After creating the stale marker, tag the folder orange (= stale branch) in Finder:
+
+```bash
+osascript -e 'tell application "Finder" to set label index of (POSIX file "/Users/cassio/Code/bristlenose_branch $0" as alias) to 1'
+```
+
+If this fails (directory gone, headless environment), warn but continue.
+
 ## Step 7: Detach worktree from git
 
 Check if the worktree is still registered (`git worktree list`). If not, just run `git worktree prune` and skip ahead.

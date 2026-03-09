@@ -523,6 +523,7 @@ class TestAcceptProposal:
                 .first()
             )
             assert qt is not None
+            assert qt.source == "autocode"
         finally:
             db.close()
 
@@ -650,6 +651,9 @@ class TestAcceptAllProposals:
             assert accepted == 2
             qt_count = db.query(QuoteTag).count()
             assert qt_count == 2
+            # All bulk-accepted tags should have source="autocode"
+            for qt in db.query(QuoteTag).all():
+                assert qt.source == "autocode"
         finally:
             db.close()
 

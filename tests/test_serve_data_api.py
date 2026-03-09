@@ -406,6 +406,72 @@ class TestTagsPut:
 
 
 # ---------------------------------------------------------------------------
+# Tag provenance (source column)
+# ---------------------------------------------------------------------------
+
+
+class TestTagProvenance:
+    def test_manual_tag_defaults_to_human(self, client: TestClient) -> None:
+        """Manually-added tags should have source='human'."""
+        client.put("/api/projects/1/tags", json={"q-p1-10": ["usability"]})
+
+        db = client.app.state.db_factory()  # type: ignore[union-attr]
+        try:
+            from bristlenose.server.models import QuoteTag
+
+            qt = db.query(QuoteTag).first()
+            assert qt is not None
+            assert qt.source == "human"
+        finally:
+            db.close()
+
+    def test_source_in_quotes_api_response(self, client: TestClient) -> None:
+        """GET /quotes should include source on each tag."""
+        client.put("/api/projects/1/tags", json={"q-p1-10": ["usability"]})
+
+        resp = client.get("/api/projects/1/quotes")
+        assert resp.status_code == 200
+        data = resp.json()
+        # Find the quote that has our tag
+        for section in data["sections"]:
+            for q in section["quotes"]:
+                if q["dom_id"] == "q-p1-10":
+                    tag_sources = [t["source"] for t in q["tags"]]
+                    assert "human" in tag_sources
+                    return
+        pytest.fail("q-p1-10 not found in quotes response")
+
+    def test_put_tags_preserves_source_on_round_trip(
+        self, client: TestClient
+    ) -> None:
+        """Bulk-replace (delete+re-insert) must preserve existing source values."""
+        from bristlenose.server.models import QuoteTag
+
+        # Seed a tag with source="autocode" directly in the DB
+        client.put("/api/projects/1/tags", json={"q-p1-10": ["autocode-tag"]})
+
+        db = client.app.state.db_factory()  # type: ignore[union-attr]
+        try:
+            qt = db.query(QuoteTag).first()
+            assert qt is not None
+            qt.source = "autocode"
+            db.commit()
+        finally:
+            db.close()
+
+        # Re-PUT the same tags — should trigger delete+re-insert
+        client.put("/api/projects/1/tags", json={"q-p1-10": ["autocode-tag"]})
+
+        db = client.app.state.db_factory()  # type: ignore[union-attr]
+        try:
+            qt = db.query(QuoteTag).first()
+            assert qt is not None
+            assert qt.source == "autocode", "source should survive put_tags round-trip"
+        finally:
+            db.close()
+
+
+# ---------------------------------------------------------------------------
 # Deleted badges
 # ---------------------------------------------------------------------------
 

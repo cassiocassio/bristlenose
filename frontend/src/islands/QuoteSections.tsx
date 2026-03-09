@@ -12,6 +12,7 @@ import { useCallback, useEffect, useState, useMemo } from "react";
 import { apiGet, getCodebook } from "../utils/api";
 import { useTranscriptCache } from "../hooks/useTranscriptCache";
 import type { QuoteResponse, QuotesListResponse } from "../utils/types";
+import type { TagGroupInfo } from "./QuoteGroup";
 import { initFromQuotes, useQuotesStore } from "../contexts/QuotesContext";
 import { useFocus } from "../contexts/FocusContext";
 import { filterQuotes } from "../utils/filter";
@@ -25,6 +26,7 @@ export function QuoteSections({ projectId }: QuoteSectionsProps) {
   const [data, setData] = useState<QuotesListResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [codebookTagNames, setCodebookTagNames] = useState<string[]>([]);
+  const [tagGroupMap, setTagGroupMap] = useState<Record<string, TagGroupInfo>>({});
 
   const fetchQuotes = useCallback((replace = false) => {
     apiGet<QuotesListResponse>("/quotes")
@@ -38,7 +40,20 @@ export function QuoteSections({ projectId }: QuoteSectionsProps) {
       })
       .catch((err: Error) => setError(err.message));
     getCodebook()
-      .then((cb) => setCodebookTagNames(cb.all_tag_names))
+      .then((cb) => {
+        setCodebookTagNames(cb.all_tag_names);
+        const map: Record<string, TagGroupInfo> = {};
+        for (const g of cb.groups) {
+          for (let i = 0; i < g.tags.length; i++) {
+            map[g.tags[i].name.toLowerCase()] = {
+              group: g.name,
+              colour_set: g.colour_set,
+              colour_index: g.tags[i].colour_index,
+            };
+          }
+        }
+        setTagGroupMap(map);
+      })
       .catch(() => {});
   }, [projectId]);
 
@@ -164,6 +179,7 @@ export function QuoteSections({ projectId }: QuoteSectionsProps) {
             quotes={section.quotes}
             allQuotes={allQuotesMap.get(section.cluster_id)}
             tagVocabulary={tagVocabulary}
+            tagGroupMap={tagGroupMap}
             hasMedia={hasMedia}
             transcriptCache={transcriptCache}
             hasModerator={data.has_moderator}

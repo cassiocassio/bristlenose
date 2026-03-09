@@ -218,6 +218,28 @@ describe("QuotesStore", () => {
       expect(result.current.tags["q-P1-120"]).toBeUndefined();
       expect(mockPutTags).toHaveBeenCalledWith({});
     });
+
+    it("does not add a duplicate tag (exact name match)", () => {
+      initFromQuotes([makeQuote({ tags: [TAG_FRUSTRATION] })]);
+      addTag("q-P1-120", { ...TAG_FRUSTRATION });
+      const { result } = renderHook(() => useQuotesStore());
+      expect(result.current.tags["q-P1-120"]).toHaveLength(1);
+      // putTags should not be called for the duplicate.
+      expect(mockPutTags).not.toHaveBeenCalled();
+    });
+
+    it("does not add a duplicate tag (case-insensitive)", () => {
+      initFromQuotes([makeQuote({ tags: [TAG_FRUSTRATION] })]);
+      addTag("q-P1-120", {
+        name: "frustration", // lowercase vs "Frustration"
+        codebook_group: "Emotions",
+        colour_set: "emo",
+        colour_index: 0,
+      });
+      const { result } = renderHook(() => useQuotesStore());
+      expect(result.current.tags["q-P1-120"]).toHaveLength(1);
+      expect(mockPutTags).not.toHaveBeenCalled();
+    });
   });
 
   describe("deleteBadge / restoreBadges", () => {

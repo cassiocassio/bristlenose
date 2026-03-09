@@ -60,7 +60,7 @@ const MOCK_QUOTES_WITH_TAGS: QuotesListResponse = {
         {
           ...MOCK_QUOTES.sections[0].quotes[0],
           tags: [
-            { name: "Frustration", codebook_group: "Emotions", colour_set: "emo", colour_index: 0 },
+            { name: "Frustration", codebook_group: "Emotions", colour_set: "emo", colour_index: 0, source: "human" },
           ],
         },
       ],
@@ -71,6 +71,28 @@ const MOCK_QUOTES_WITH_TAGS: QuotesListResponse = {
 function mockQuotesApi(data: unknown) {
   mockApiGet.mockResolvedValue(data);
 }
+
+const MOCK_CODEBOOK_WITH_GROUPS = {
+  all_tag_names: ["Findable", "Credible", "Useful"],
+  groups: [
+    {
+      id: 1,
+      name: "Morville Honeycomb",
+      subtitle: "UX honeycomb facets",
+      colour_set: "morville",
+      order: 0,
+      tags: [
+        { id: 1, name: "Findable", count: 0, colour_index: 0 },
+        { id: 2, name: "Credible", count: 0, colour_index: 1 },
+        { id: 3, name: "Useful", count: 0, colour_index: 2 },
+      ],
+      total_quotes: 0,
+      is_default: false,
+      framework_id: "morville",
+    },
+  ],
+  ungrouped: [],
+};
 
 beforeEach(() => {
   mockGetCodebook.mockResolvedValue({ all_tag_names: [], groups: [], ungrouped: [] } as never);
@@ -87,6 +109,21 @@ describe("QuoteSections", () => {
     await waitFor(() => {
       expect(screen.getByText("Login")).toBeInTheDocument();
     });
+  });
+
+  it("builds tag vocabulary from codebook groups", async () => {
+    mockQuotesApi(MOCK_QUOTES);
+    mockGetCodebook.mockResolvedValue(MOCK_CODEBOOK_WITH_GROUPS as never);
+
+    render(<QuoteSections projectId="1" />);
+    await waitFor(() => {
+      expect(screen.getByText("Login")).toBeInTheDocument();
+    });
+
+    // The codebook tag names should be fetched and available — verify
+    // the getCodebook was called (the tagGroupMap is internal state,
+    // but we verify the data flow works without errors).
+    expect(mockGetCodebook).toHaveBeenCalled();
   });
 
   it("re-fetches quotes when bn:tags-changed event is dispatched", async () => {

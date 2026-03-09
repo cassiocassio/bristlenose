@@ -215,6 +215,50 @@ describe("TagInput", () => {
     expect(screen.getByTestId("my-tag-input")).toBeInTheDocument();
   });
 
+  describe("hiddenTags eye icon", () => {
+    it("shows eye icon on suggestions whose tag is in hiddenTags", async () => {
+      const hidden = new Set(["apple"]);
+      const { container } = render(
+        <TagInput
+          vocabulary={VOCAB}
+          hiddenTags={hidden}
+          onCommit={vi.fn()}
+          onCancel={vi.fn()}
+        />,
+      );
+      await userEvent.type(screen.getByPlaceholderText("tag"), "ap");
+      const items = container.querySelectorAll(".tag-suggest-item");
+      // "apple" should have an eye icon, "apricot" should not.
+      expect(items[0].querySelector(".tag-suggest-hidden-icon")).toBeTruthy();
+      expect(items[1].querySelector(".tag-suggest-hidden-icon")).toBeNull();
+    });
+
+    it("does not show eye icon when hiddenTags is not provided", async () => {
+      const { container } = render(
+        <TagInput vocabulary={VOCAB} onCommit={vi.fn()} onCancel={vi.fn()} />,
+      );
+      await userEvent.type(screen.getByPlaceholderText("tag"), "ap");
+      const icons = container.querySelectorAll(".tag-suggest-hidden-icon");
+      expect(icons).toHaveLength(0);
+    });
+
+    it("committing a hidden tag still calls onCommit normally", async () => {
+      const onCommit = vi.fn();
+      const hidden = new Set(["apple"]);
+      render(
+        <TagInput
+          vocabulary={["apple"]}
+          hiddenTags={hidden}
+          onCommit={onCommit}
+          onCancel={vi.fn()}
+        />,
+      );
+      await userEvent.type(screen.getByPlaceholderText("tag"), "ap");
+      await userEvent.keyboard("{Enter}");
+      expect(onCommit).toHaveBeenCalledWith("apple");
+    });
+  });
+
   describe("blur behaviour", () => {
     beforeEach(() => {
       vi.useFakeTimers();

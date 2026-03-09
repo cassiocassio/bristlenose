@@ -36,3 +36,13 @@
     background: var(--bn-colour-quote-bg);
     color: var(--bn-colour-accent);
 }
+
+.tag-suggest-hidden-icon {
+    display: inline-block;
+    vertical-align: middle;
+    margin-left: 0.5rem;
+    opacity: 0.4;
+    width: 12px;
+    height: 12px;
+    flex-shrink: 0;
+}

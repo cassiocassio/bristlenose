@@ -35,7 +35,16 @@ import {
   acceptProposedTag,
   denyProposedTag,
 } from "../contexts/QuotesContext";
-import { useSidebarStore } from "../contexts/SidebarStore";
+import { useSidebarStore, toggleTagGroupHidden } from "../contexts/SidebarStore";
+
+// ── Tag group lookup (codebook → group info) ────────────────────────────
+
+/** Codebook group info for a tag, keyed by lowercased tag name. */
+export interface TagGroupInfo {
+  group: string;
+  colour_set: string;
+  colour_index: number;
+}
 
 // ── Context expansion types ─────────────────────────────────────────────
 
@@ -104,6 +113,8 @@ interface QuoteGroupProps {
   allQuotes?: QuoteResponse[];
   /** Full tag vocabulary for auto-suggest across all groups. */
   tagVocabulary: string[];
+  /** Codebook tag→group lookup for correct group assignment on manual add. */
+  tagGroupMap?: Record<string, TagGroupInfo>;
   /** Whether video/audio is available (for timecode links). */
   hasMedia: boolean;
   /** Transcript cache for context expansion (optional — no expansion without it). */
@@ -122,6 +133,7 @@ export function QuoteGroup({
   quotes,
   allQuotes,
   tagVocabulary,
+  tagGroupMap = {},
   hasMedia,
   transcriptCache,
   hasModerator,
@@ -261,6 +273,19 @@ export function QuoteGroup({
     }
     return map;
   }, [quotes]);
+
+  // Lowercased tag names whose codebook groups are currently hidden via eye-toggle.
+  // Passed to TagInput so hidden suggestions show a closed-eye icon.
+  const hiddenTagNames = useMemo(() => {
+    if (hiddenTagGroups.size === 0) return new Set<string>();
+    const names = new Set<string>();
+    for (const [tagNameLower, info] of Object.entries(tagGroupMap)) {
+      if (hiddenTagGroups.has(info.group)) {
+        names.add(tagNameLower);
+      }
+    }
+    return names;
+  }, [hiddenTagGroups, tagGroupMap]);
 
   // ── Mutation handlers ──────────────────────────────────────────────────
 
@@ -438,14 +463,23 @@ export function QuoteGroup({
   const handleTagAdd = useCallback(
     (domId: string, tagName: string) => {
       const ci = tagColourMap[tagName];
+      const gi = tagGroupMap[tagName.toLowerCase()];
+      const groupName = gi?.group ?? "Uncategorised";
       addTag(domId, {
         name: tagName,
-        codebook_group: "Uncategorised",
-        colour_set: ci?.colour_set ?? "",
-        colour_index: ci?.colour_index ?? 0,
+        codebook_group: groupName,
+        colour_set: ci?.colour_set ?? gi?.colour_set ?? "",
+        colour_index: ci?.colour_index ?? gi?.colour_index ?? 0,
+        source: "human",
       });
+      // If the tag's group is hidden via eye-toggle, auto-unhide it so the
+      // badge is immediately visible — the user was warned by the eye icon
+      // in the autocomplete dropdown and chose the tag anyway.
+      if (hiddenTagGroups.has(groupName)) {
+        toggleTagGroupHidden(groupName);
+      }
     },
-    [tagColourMap],
+    [tagColourMap, tagGroupMap, hiddenTagGroups],
   );
 
   const handleTagRemove = useCallback(
@@ -480,6 +514,7 @@ export function QuoteGroup({
         codebook_group: pt?.group_name ?? "Uncategorised",
         colour_set: pt?.colour_set ?? "",
         colour_index: pt?.colour_index ?? 0,
+        source: "autocode",
       });
       // Trigger accept flash animation on the new badge.
       const flashKey = `${domId}:${tagName}`;
@@ -736,6 +771,7 @@ export function QuoteGroup({
           const isStarred = !!store.starred[q.dom_id];
           const editedText = store.edits[q.dom_id] ?? null;
           const allUserTags = store.tags[q.dom_id] ?? [];
+          const allTagNames = allUserTags.map((t) => t.name);
           const userTags = hiddenTagGroups.size > 0
             ? allUserTags.filter((t) => !hiddenTagGroups.has(t.codebook_group))
             : allUserTags;
@@ -770,6 +806,8 @@ export function QuoteGroup({
               isStarred={isStarred}
               isHidden={isHidden}
               userTags={userTags}
+              allTagNames={allTagNames}
+              hiddenTagNames={hiddenTagNames}
               deletedBadges={deletedBadgesList}
               isEdited={editedText != null && editedText !== q.text}
               tagVocabulary={tagVocabulary}

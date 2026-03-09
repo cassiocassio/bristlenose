@@ -438,9 +438,13 @@ def put_tags(
         for td in db.query(TagDefinition).all():
             tag_defs[td.name.lower()] = td.id
 
-        # Clear existing user tags for this project's quotes, then re-insert
+        # Clear existing user tags for this project's quotes, then re-insert.
+        # Snapshot provenance before delete so it survives the bulk-replace.
         quote_ids = _quote_ids_for_project(db, project_id)
+        existing_sources: dict[tuple[int, int], str] = {}
         if quote_ids:
+            for qt in db.query(QuoteTag).filter(QuoteTag.quote_id.in_(quote_ids)).all():
+                existing_sources[(qt.quote_id, qt.tag_definition_id)] = qt.source
             db.query(QuoteTag).filter(QuoteTag.quote_id.in_(quote_ids)).delete(
                 synchronize_session=False
             )
@@ -464,7 +468,12 @@ def put_tags(
                     tag_defs[tag_name.lower()] = td_id
                 if td_id not in seen_td_ids:
                     seen_td_ids.add(td_id)
-                    db.add(QuoteTag(quote_id=quote.id, tag_definition_id=td_id))
+                    source = existing_sources.get((quote.id, td_id), "human")
+                    db.add(QuoteTag(
+                        quote_id=quote.id,
+                        tag_definition_id=td_id,
+                        source=source,
+                    ))
 
         db.commit()
         return {"status": "ok"}

@@ -1,10 +1,31 @@
 import { useState, useRef, useMemo, useEffect, useCallback } from "react";
 
+/** Small closed-eye icon shown next to autocomplete suggestions whose codebook group is hidden. */
+const EyeClosedIcon = (
+  <svg
+    className="tag-suggest-hidden-icon"
+    width="12"
+    height="12"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    aria-hidden="true"
+  >
+    <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94" />
+    <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19" />
+    <line x1="1" y1="1" x2="23" y2="23" />
+  </svg>
+);
+
 interface TagInputProps {
   /** All known tag names for auto-suggest. */
   vocabulary: string[];
   /** Tags to exclude from suggestions (already on this target). */
   exclude?: string[];
+  /** Lowercased tag names whose codebook groups are currently hidden (eye-toggled off). */
+  hiddenTags?: Set<string>;
   /** Called when user commits a tag (Enter, suggestion click, blur with non-empty). */
   onCommit: (tagName: string) => void;
   /** Called when user cancels (Escape, blur with empty). */
@@ -22,6 +43,7 @@ interface TagInputProps {
 export function TagInput({
   vocabulary,
   exclude,
+  hiddenTags,
   onCommit,
   onCancel,
   onCommitAndReopen,
@@ -194,6 +216,7 @@ export function TagInput({
               onMouseDown={handleSuggestionClick(name)}
             >
               {name}
+              {hiddenTags?.has(name.toLowerCase()) && EyeClosedIcon}
             </div>
           ))}
         </div>

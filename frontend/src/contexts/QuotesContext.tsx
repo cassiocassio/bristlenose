@@ -177,8 +177,13 @@ export function commitEdit(domId: string, newText: string): void {
 
 export function addTag(domId: string, tag: TagResponse): void {
   setState((prev) => {
+    const existing = prev.tags[domId] || [];
+    // Prevent duplicate tags (case-insensitive).
+    if (existing.some((t) => t.name.toLowerCase() === tag.name.toLowerCase())) {
+      return prev;
+    }
     const tags = { ...prev.tags };
-    tags[domId] = [...(tags[domId] || []), tag];
+    tags[domId] = [...existing, tag];
     putTags(tagNamesMap(tags));
     return { ...prev, tags };
   });

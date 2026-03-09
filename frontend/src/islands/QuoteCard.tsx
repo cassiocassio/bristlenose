@@ -68,8 +68,12 @@ interface QuoteCardProps {
   displayText: string;
   isStarred: boolean;
   isHidden: boolean;
-  /** Tags currently on this quote (user-added). */
+  /** Tags currently on this quote (user-added, visible after hidden-group filter). */
   userTags: { name: string; codebook_group: string; colour_set: string; colour_index: number }[];
+  /** All tag names on this quote (including hidden groups) — used for TagInput exclude filter. */
+  allTagNames: string[];
+  /** Lowercased tag names whose codebook groups are currently hidden (eye-toggled off). */
+  hiddenTagNames?: Set<string>;
   /** AI sentiment badges that have been deleted. */
   deletedBadges: string[];
   /** Whether the quote text has been edited. */
@@ -128,6 +132,8 @@ export function QuoteCard({
   isStarred,
   isHidden,
   userTags,
+  allTagNames,
+  hiddenTagNames,
   deletedBadges,
   isEdited,
   tagVocabulary,
@@ -422,7 +428,7 @@ export function QuoteCard({
       ? quote.sentiment
       : null;
   const hasDeletedBadges = deletedBadges.length > 0;
-  const existingTagNames = userTags.map((t) => t.name);
+  const existingTagNames = allTagNames;
   const timecodeStr = formatTimecode(quote.start_timecode);
   const isActive = crop.mode !== "idle";
   const bracketCls = bracketsVisible ? "crop-handle bracket-visible" : "crop-handle bracket-delayed";
@@ -712,6 +718,7 @@ export function QuoteCard({
               <TagInput
                 vocabulary={tagVocabulary}
                 exclude={existingTagNames}
+                hiddenTags={hiddenTagNames}
                 onCommit={handleTagCommit}
                 onCancel={handleTagCancel}
                 onCommitAndReopen={handleTagCommitAndReopen}

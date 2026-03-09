@@ -425,6 +425,7 @@ def accept_proposal(
             db.add(QuoteTag(
                 quote_id=proposal.quote_id,
                 tag_definition_id=proposal.tag_definition_id,
+                source="autocode",
             ))
 
         proposal.status = "accepted"
@@ -532,6 +533,7 @@ def accept_all_proposals(
                 db.add(QuoteTag(
                     quote_id=proposal.quote_id,
                     tag_definition_id=proposal.tag_definition_id,
+                    source="autocode",
                 ))
 
             proposal.status = "accepted"

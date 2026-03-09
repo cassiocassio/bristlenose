@@ -42,6 +42,7 @@ class TagResponse(BaseModel):
     codebook_group: str
     colour_set: str
     colour_index: int
+    source: str = "human"
 
 
 class ProposedTagBrief(BaseModel):
@@ -220,6 +221,7 @@ def _load_researcher_state(
                 codebook_group=group_name,
                 colour_set=colour_set,
                 colour_index=cidx,
+                source=getattr(qt, "source", "human"),
             )
         )
 

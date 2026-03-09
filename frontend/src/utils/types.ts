@@ -97,6 +97,7 @@ export interface TagResponse {
   codebook_group: string;
   colour_set: string;
   colour_index: number;
+  source?: string; // "human" | "autocode"
 }
 
 export interface ProposedTagBrief {

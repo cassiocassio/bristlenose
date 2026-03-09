@@ -127,6 +127,18 @@ def _migrate_schema(engine: Engine) -> None:
                     text("ALTER TABLE sessions ADD COLUMN thumbnail_path VARCHAR(500)")
                 )
 
+    # v0.12.x — QuoteTag gains source (VARCHAR 20, default "human")
+    if "quote_tags" in insp.get_table_names():
+        cols = {c["name"] for c in insp.get_columns("quote_tags")}
+        if "source" not in cols:
+            with engine.begin() as conn:
+                conn.execute(
+                    text(
+                        "ALTER TABLE quote_tags"
+                        " ADD COLUMN source VARCHAR(20) DEFAULT 'human'"
+                    )
+                )
+
 
 def init_db(engine: Engine) -> None:
     """Create all tables. Safe to call repeatedly (CREATE IF NOT EXISTS)."""

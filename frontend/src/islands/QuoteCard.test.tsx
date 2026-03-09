@@ -63,6 +63,7 @@ function renderCard(
       isStarred={false}
       isHidden={false}
       userTags={[]}
+      allTagNames={[]}
       deletedBadges={[]}
       isEdited={false}
       tagVocabulary={[]}
@@ -396,6 +397,7 @@ function renderEditableCard(
       isStarred={false}
       isHidden={false}
       userTags={[]}
+      allTagNames={[]}
       deletedBadges={[]}
       isEdited={extra.isEdited ?? false}
       tagVocabulary={[]}

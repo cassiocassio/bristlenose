@@ -397,6 +397,7 @@ class QuoteTag(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     quote_id: Mapped[int] = mapped_column(ForeignKey("quotes.id"), index=True)
     tag_definition_id: Mapped[int] = mapped_column(ForeignKey("tag_definitions.id"))
+    source: Mapped[str] = mapped_column(String(20), default="human")
     created_at: Mapped[datetime] = mapped_column(default=func.now())
 
     __table_args__ = (

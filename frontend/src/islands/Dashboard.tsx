@@ -54,7 +54,23 @@ function seekToGlobal(pid: string, seconds: number) {
   window.seekTo?.(pid, seconds);
 }
 
-// ── Stat link handler ───────────────────────────────────────────────────
+// ── Stat link helpers ───────────────────────────────────────────────────
+
+const TAB_ROUTES: Record<string, string> = {
+  project: "/report/",
+  sessions: "/report/sessions/",
+  quotes: "/report/quotes/",
+  codebook: "/report/codebook/",
+  analysis: "/report/analysis/",
+  settings: "/report/settings/",
+  about: "/report/about/",
+};
+
+function statTargetToHref(target: string): string {
+  const [tab, anchor] = target.split(":");
+  const route = TAB_ROUTES[tab] ?? "/report/";
+  return anchor ? `${route}#${anchor}` : route;
+}
 
 function handleStatLink(target: string) {
   // target format: "tab" or "tab:anchor"
@@ -79,14 +95,19 @@ function StatCard({
   target: string;
 }) {
   return (
-    <div
+    <a
       className="bn-project-stat"
+      href={statTargetToHref(target)}
       data-stat-link={target}
-      onClick={() => handleStatLink(target)}
+      onClick={(e) => {
+        if (e.metaKey || e.ctrlKey || e.shiftKey) return;
+        e.preventDefault();
+        handleStatLink(target);
+      }}
     >
       <span className="bn-project-stat-value">{value}</span>
       <span className="bn-project-stat-label">{label}</span>
-    </div>
+    </a>
   );
 }
 
@@ -101,24 +122,34 @@ function PairStatCard({
   return (
     <div className="bn-project-stat bn-project-stat--pair">
       {left && (
-        <div
+        <a
           className="bn-project-stat--pair-half"
+          href={statTargetToHref(left.target)}
           data-stat-link={left.target}
-          onClick={() => handleStatLink(left.target)}
+          onClick={(e) => {
+            if (e.metaKey || e.ctrlKey || e.shiftKey) return;
+            e.preventDefault();
+            handleStatLink(left.target);
+          }}
         >
           <span className="bn-project-stat-value">{left.value}</span>
           <span className="bn-project-stat-label">{left.label}</span>
-        </div>
+        </a>
       )}
       {right && (
-        <div
+        <a
           className="bn-project-stat--pair-half"
+          href={statTargetToHref(right.target)}
           data-stat-link={right.target}
-          onClick={() => handleStatLink(right.target)}
+          onClick={(e) => {
+            if (e.metaKey || e.ctrlKey || e.shiftKey) return;
+            e.preventDefault();
+            handleStatLink(right.target);
+          }}
         >
           <span className="bn-project-stat-value">{right.value}</span>
           <span className="bn-project-stat-label">{right.label}</span>
-        </div>
+        </a>
       )}
     </div>
   );

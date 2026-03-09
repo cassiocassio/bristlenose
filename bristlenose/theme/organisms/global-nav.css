@@ -170,6 +170,8 @@
     min-width: 5.5rem;
     cursor: pointer;
     transition: background-color 0.15s ease;
+    text-decoration: none;
+    color: inherit;
 }
 .bn-project-stat:hover {
     background-color: var(--bn-colour-hover);
@@ -207,6 +209,8 @@
     cursor: pointer;
     transition: background-color 0.15s ease;
     border-radius: var(--bn-radius-md);
+    text-decoration: none;
+    color: inherit;
 }
 .bn-project-stat--pair-half:hover {
     background-color: var(--bn-colour-hover);

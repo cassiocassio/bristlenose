@@ -70,7 +70,7 @@ The generated HTML report has interactive features: inline editing (quotes, head
 
 ## Doctor command
 
-`bristlenose doctor` checks the runtime environment (FFmpeg, transcription backend, API keys, network, disk space) and gives install-method-aware fix instructions. Three modes: explicit `bristlenose doctor`, first-run auto-doctor (sentinel file), and per-command pre-flight. See `docs/design-doctor-and-snap.md` for full design.
+`bristlenose doctor` checks the runtime environment (FFmpeg, transcription backend, API keys, network, disk space) and gives install-method-aware fix instructions. Three modes: explicit `bristlenose doctor`, first-run auto-doctor (sentinel file), and per-command pre-flight. On Apple Silicon without MLX, doctor offers interactive installation (`Install MLX for GPU-accelerated transcription? [Y/n]`) — skipped in non-interactive contexts (`isatty()` check). Install helpers in `doctor_fixes.py` (`get_mlx_install_command`, `install_mlx`, `verify_mlx_installed`) use `sys.executable` to target the correct Python regardless of install method. `_maybe_offer_mlx_install()` in `cli.py` is wired into all three doctor entry points and returns a `skip_keys` set so `_print_doctor_fixes()` doesn't duplicate the fix text. See `docs/design-doctor-and-snap.md` for full design.
 
 ## Snap packaging and man page
 

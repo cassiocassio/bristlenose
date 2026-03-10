@@ -15,7 +15,7 @@ import { useState, useCallback, useRef, useEffect } from "react";
 import {
   closeToc,
   closeTags,
-  openToc,
+  openTocPush,
   openTags,
   setTocWidth,
   setTagsWidth,
@@ -66,7 +66,7 @@ export function useDragResize({
   currentWidthRef.current = currentWidth;
 
   const cssVar = side === "toc" ? "--toc-width" : "--tags-width";
-  const openFn = side === "toc" ? openToc : openTags;
+  const openFn = side === "toc" ? openTocPush : openTags;
   const closeFn = side === "toc" ? closeToc : closeTags;
   const setWidthFn = side === "toc" ? setTocWidth : setTagsWidth;
 

@@ -16,6 +16,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { QuotesListResponse } from "../utils/types";
 import { useProjectId } from "../hooks/useProjectId";
 import { useScrollSpy } from "../hooks/useScrollSpy";
+import { useSidebarStore, closeToc } from "../contexts/SidebarStore";
 
 // ── Slug helper (mirrors QuoteSections/QuoteThemes) ───────────────────────
 
@@ -34,6 +35,7 @@ interface TocEntry {
 
 export function TocSidebar() {
   const projectId = useProjectId();
+  const { tocMode } = useSidebarStore();
   const [data, setData] = useState<QuotesListResponse | null>(null);
   const activeRef = useRef<HTMLAnchorElement | null>(null);
 
@@ -106,13 +108,17 @@ export function TocSidebar() {
   }, [activeId]);
 
   // Click handler — smooth scroll to the target heading.
+  // In overlay mode, close the overlay after initiating the scroll.
   const handleClick = useCallback((e: React.MouseEvent<HTMLAnchorElement>, id: string) => {
     e.preventDefault();
     const el = document.getElementById(id);
     if (el) {
       el.scrollIntoView({ behavior: "smooth", block: "start" });
     }
-  }, []);
+    if (tocMode === "overlay") {
+      closeToc();
+    }
+  }, [tocMode]);
 
   if (!data) return null;
 

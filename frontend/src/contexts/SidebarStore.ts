@@ -9,6 +9,10 @@
  * survive page reloads. `hiddenTagGroups` is persisted to SQLite via
  * the `/hidden-tag-groups` API (fire-and-forget PUTs).
  *
+ * Left sidebar (TOC) has three modes: closed, overlay (temporary peek),
+ * and push (permanent, content narrows). Overlay is transient — never
+ * persisted to localStorage.
+ *
  * @module SidebarStore
  */
 
@@ -26,10 +30,14 @@ const LS_TAGS_OPEN = "bn-tags-open";
 const LS_TOC_WIDTH = "bn-toc-width";
 const LS_TAGS_WIDTH = "bn-tags-width";
 
+// ── Types ────────────────────────────────────────────────────────────────
+
+export type TocMode = "closed" | "overlay" | "push";
+
 // ── State shape ───────────────────────────────────────────────────────────
 
 export interface SidebarState {
-  tocOpen: boolean;
+  tocMode: TocMode;
   tagsOpen: boolean;
   tocWidth: number;
   tagsWidth: number;
@@ -83,8 +91,10 @@ function writeNumber(key: string, value: number): void {
 // ── Module-level store ────────────────────────────────────────────────────
 
 function loadState(): SidebarState {
+  // Backward compat: LS_TOC_OPEN stores "true"/"false". Map to push/closed.
+  const tocPersisted = readBool(LS_TOC_OPEN, false);
   return {
-    tocOpen: readBool(LS_TOC_OPEN, false),
+    tocMode: tocPersisted ? "push" : "closed",
     tagsOpen: readBool(LS_TAGS_OPEN, false),
     tocWidth: readWidth(LS_TOC_WIDTH),
     tagsWidth: readWidth(LS_TAGS_WIDTH),
@@ -113,11 +123,12 @@ function setState(updater: (prev: SidebarState) => SidebarState): void {
 
 // ── Actions ───────────────────────────────────────────────────────────────
 
+/** Toggle TOC between closed and push (keyboard shortcut `[`). Skips overlay. */
 export function toggleToc(): void {
   setState((prev) => {
-    const tocOpen = !prev.tocOpen;
-    writeBool(LS_TOC_OPEN, tocOpen);
-    return { ...prev, tocOpen };
+    const tocMode: TocMode = prev.tocMode === "closed" ? "push" : "closed";
+    writeBool(LS_TOC_OPEN, tocMode === "push");
+    return { ...prev, tocMode };
   });
 }
 
@@ -131,20 +142,36 @@ export function toggleTags(): void {
 
 export function toggleBoth(): void {
   setState((prev) => {
-    // Any open → close all; all closed → open both
-    const anyOpen = prev.tocOpen || prev.tagsOpen;
-    const tocOpen = !anyOpen;
+    const anyOpen = prev.tocMode !== "closed" || prev.tagsOpen;
+    const tocMode: TocMode = anyOpen ? "closed" : "push";
     const tagsOpen = !anyOpen;
-    writeBool(LS_TOC_OPEN, tocOpen);
+    writeBool(LS_TOC_OPEN, tocMode === "push");
     writeBool(LS_TAGS_OPEN, tagsOpen);
-    return { ...prev, tocOpen, tagsOpen };
+    return { ...prev, tocMode, tagsOpen };
   });
 }
 
+/** Open TOC as a temporary overlay (hover/rail click). Not persisted. */
+export function openTocOverlay(): void {
+  setState((prev) => {
+    if (prev.tocMode !== "closed") return prev;
+    return { ...prev, tocMode: "overlay" };
+  });
+}
+
+/** Open TOC in push mode (click the list icon). Persisted. */
+export function openTocPush(): void {
+  setState((prev) => {
+    writeBool(LS_TOC_OPEN, true);
+    return { ...prev, tocMode: "push" };
+  });
+}
+
+/** Close TOC from any mode. Persists closed state. */
 export function closeToc(): void {
   setState((prev) => {
     writeBool(LS_TOC_OPEN, false);
-    return { ...prev, tocOpen: false };
+    return { ...prev, tocMode: "closed" };
   });
 }
 
@@ -152,14 +179,6 @@ export function closeTags(): void {
   setState((prev) => {
     writeBool(LS_TAGS_OPEN, false);
     return { ...prev, tagsOpen: false };
-  });
-}
-
-export function openToc(): void {
-  setState((prev) => {
-    if (prev.tocOpen) return prev;
-    writeBool(LS_TOC_OPEN, true);
-    return { ...prev, tocOpen: true };
   });
 }
 
@@ -233,7 +252,7 @@ export function setTagGroupsHidden(groupNames: string[], hidden: boolean): void 
 /** Reset to defaults. Used for test isolation. */
 export function resetSidebarStore(): void {
   state = {
-    tocOpen: false,
+    tocMode: "closed",
     tagsOpen: false,
     tocWidth: DEFAULT_WIDTH,
     tagsWidth: DEFAULT_WIDTH,

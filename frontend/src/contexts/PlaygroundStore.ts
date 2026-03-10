@@ -29,6 +29,14 @@ export const TOKEN_DEFAULTS = {
   typeScaleRatio: 1.25, // Major Third
   lineHeight: 1.6,
   baselineUnit: 4, // px
+  // Sidebar layout
+  railWidth: 36, // px
+  minimapWidth: 48, // px (3rem at 16px base)
+  gutterLeft: 32, // px (2rem)
+  gutterRight: 40, // px (2.5rem)
+  overlayDuration: 0.3, // seconds
+  hoverDelay: 400, // ms
+  leaveGrace: 100, // ms
 } as const;
 
 // ── State shape ───────────────────────────────────────────────────────────
@@ -67,6 +75,15 @@ export interface PlaygroundState {
 
   // Type scale preset name (for display)
   typeScalePreset: string | null;
+
+  // Sidebar layout overrides (null = use CSS/JS defaults)
+  railWidth: number | null;
+  minimapWidth: number | null;
+  gutterLeft: number | null;
+  gutterRight: number | null;
+  overlayDuration: number | null;
+  hoverDelay: number | null;     // JS-only (hover intent delay, ms)
+  leaveGrace: number | null;     // JS-only (leave grace period, ms)
 }
 
 // ── sessionStorage helpers ────────────────────────────────────────────────
@@ -100,6 +117,13 @@ function loadState(): PlaygroundState {
     baselineUnit: 4,
     darkMode: null,
     typeScalePreset: null,
+    railWidth: null,
+    minimapWidth: null,
+    gutterLeft: null,
+    gutterRight: null,
+    overlayDuration: null,
+    hoverDelay: null,
+    leaveGrace: null,
   };
   try {
     const raw = sessionStorage.getItem(SS_KEY);
@@ -198,6 +222,18 @@ function applyOverrides(s: PlaygroundState): void {
     rules.push(`h2 { font-size: ${(h2 / remBase).toFixed(3)}rem !important; }`);
     rules.push(`h1 { font-size: ${(h1 / remBase).toFixed(3)}rem !important; }`);
   }
+
+  // Sidebar layout tokens
+  if (s.railWidth !== null)
+    rootVars.push(`--bn-rail-width: ${s.railWidth}px`);
+  if (s.minimapWidth !== null)
+    rootVars.push(`--bn-minimap-width: ${s.minimapWidth}px`);
+  if (s.gutterLeft !== null)
+    rootVars.push(`--bn-gutter-left: ${s.gutterLeft}px`);
+  if (s.gutterRight !== null)
+    rootVars.push(`--bn-gutter-right: ${s.gutterRight}px`);
+  if (s.overlayDuration !== null)
+    rootVars.push(`--bn-overlay-duration: ${s.overlayDuration}s`);
 
   // Baseline grid
   rootVars.push(`--bn-baseline: ${s.baselineUnit}px`);
@@ -326,6 +362,29 @@ export function setTypeScalePreset(name: string | null): void {
   setState((prev) => ({ ...prev, typeScalePreset: name }));
 }
 
+// Sidebar layout setters
+export function setRailWidth(v: number | null): void {
+  setState((prev) => ({ ...prev, railWidth: v }));
+}
+export function setMinimapWidth(v: number | null): void {
+  setState((prev) => ({ ...prev, minimapWidth: v }));
+}
+export function setGutterLeft(v: number | null): void {
+  setState((prev) => ({ ...prev, gutterLeft: v }));
+}
+export function setGutterRight(v: number | null): void {
+  setState((prev) => ({ ...prev, gutterRight: v }));
+}
+export function setOverlayDuration(v: number | null): void {
+  setState((prev) => ({ ...prev, overlayDuration: v }));
+}
+export function setHoverDelay(v: number | null): void {
+  setState((prev) => ({ ...prev, hoverDelay: v }));
+}
+export function setLeaveGrace(v: number | null): void {
+  setState((prev) => ({ ...prev, leaveGrace: v }));
+}
+
 /** Reset all overrides to CSS defaults. */
 export function resetPlayground(): void {
   // Restore window size if we resized
@@ -357,6 +416,13 @@ export function resetPlayground(): void {
     baselineUnit: 4,
     darkMode: null,
     typeScalePreset: null,
+    railWidth: null,
+    minimapWidth: null,
+    gutterLeft: null,
+    gutterRight: null,
+    overlayDuration: null,
+    hoverDelay: null,
+    leaveGrace: null,
   }));
 }
 
@@ -387,6 +453,13 @@ export function resetPlaygroundStore(): void {
     baselineUnit: 4,
     darkMode: null,
     typeScalePreset: null,
+    railWidth: null,
+    minimapWidth: null,
+    gutterLeft: null,
+    gutterRight: null,
+    overlayDuration: null,
+    hoverDelay: null,
+    leaveGrace: null,
   };
   try {
     sessionStorage.removeItem(SS_KEY);

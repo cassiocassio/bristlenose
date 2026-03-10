@@ -2,6 +2,18 @@
 
 All notable changes to Bristlenose are documented here. See also the [README](README.md) for the latest releases.
 
+**0.13.0** — _10 Mar 2026_
+
+- **Codebook-aware tag autocomplete** — TagInput now groups suggestions by codebook section with colour-coded pills and section headers, matching the IDE-style autocomplete pattern. Highlighted suggestion takes priority over ghost text. Active pill uses white text, z-index fix prevents clipping under sidebar, deeper dropdown accommodates more suggestions
+- **Sentiment tags unified into codebook framework** — sentiment tags (positive, negative, neutral, mixed) are now a proper codebook framework (`sentiment.yaml`) imported through the standard codebook system, replacing the ad-hoc UXR sentiment group. Tag colours use the design-system colour sets. Importer handles migration of existing sentiment tags to the new framework
+- **Tag provenance tracking** — `QuoteTag.source` column tracks `"human"` (manual adds) vs `"autocode"` (LLM-suggested). Provenance is preserved across bulk tag operations (snapshot before delete, restore on re-insert). Exposed in the quotes API via `TagResponse.source`. Case-insensitive duplicate guard prevents adding the same tag twice
+- **Hidden-group tag UX** — eye-toggled codebook groups show a grey closed-eye icon in TagInput autocomplete. Accepting a tag from a hidden group auto-unhides the group so the badge is immediately visible. `allTagNames` prop prevents invisible re-adds from hidden groups
+- **Quick-repeat tag shortcut** (`r`) — press `r` on a focused quote to re-apply the last-used tag without opening the tag input. Shown in help modal
+- **Context expansion fix** — fixed infinite re-render loop when clicking the up chevron to expand context on a quote card. `FocusContext` and `QuotesContext` updated to break the render cycle
+- **Doctor offers MLX install on Apple Silicon** — `bristlenose doctor` now detects Apple Silicon Macs without MLX and offers interactive installation for GPU-accelerated transcription. Install helpers use `sys.executable` to target the correct Python. Skipped in non-interactive contexts
+- **Sidebar UX accessibility** — focus management, ARIA attributes, and `prefers-reduced-motion` support for sidebar drag-resize animations
+- **Dashboard Cmd+click fix** — stat cards now use `<a>` elements with real `href` attributes, so Cmd+click opens in a new tab as expected. Normal clicks still use React Router navigation
+
 **0.12.2** — _2 Mar 2026_
 
 - **Footer feedback restored in React serve mode** — the footer once again exposes both "Report a bug" and "Feedback" in the served React app. "Feedback" now opens a React-native modal (sentiment picker + optional message), matching the legacy flow rather than reusing the keyboard-shortcuts help modal

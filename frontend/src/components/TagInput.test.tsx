@@ -415,6 +415,25 @@ describe("TagInput", () => {
       expect(onCommit).toHaveBeenCalledWith("delight");
     });
 
+    it("highlighted suggestion wins over ghost text on Enter", async () => {
+      // Bug repro: type "feed" → ghost shows "back" (from "feedback").
+      // Arrow down past "feedback" to "feedback loop".  Enter should
+      // commit "feedback loop", not "feedback" (the ghost completion).
+      const onCommit = vi.fn();
+      render(
+        <TagInput
+          vocabulary={ALL_NAMES}
+          groupedVocabulary={GROUPED}
+          onCommit={onCommit}
+          onCancel={vi.fn()}
+        />,
+      );
+      await userEvent.type(screen.getByPlaceholderText("tag"), "feed");
+      // ArrowDown twice: first → "feedback", second → "feedback loop"
+      await userEvent.keyboard("{ArrowDown}{ArrowDown}{Enter}");
+      expect(onCommit).toHaveBeenCalledWith("feedback loop");
+    });
+
     it("click on grouped suggestion commits the tag name", async () => {
       const onCommit = vi.fn();
       render(

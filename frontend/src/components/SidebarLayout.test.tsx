@@ -18,8 +18,15 @@ vi.mock("./TagSidebar", () => ({
 
 // Mock useDragResize to avoid pointer event complexity in layout tests.
 const mockHandlePointerDown = vi.fn();
+const mockHandleKeyDown = vi.fn();
 vi.mock("../hooks/useDragResize", () => ({
-  useDragResize: () => ({ handlePointerDown: mockHandlePointerDown, isDragging: false }),
+  useDragResize: () => ({
+    handlePointerDown: mockHandlePointerDown,
+    handleKeyDown: mockHandleKeyDown,
+    isDragging: false,
+  }),
+  MIN_WIDTH: 200,
+  MAX_WIDTH: 320,
 }));
 
 // Mock SidebarStore — we control state via mockState.

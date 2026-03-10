@@ -661,6 +661,41 @@ environment:
 Without all three, the snap installs fine but crashes on launch. This is the
 single most important gotcha in the entire snap build.
 
+**LD_LIBRARY_PATH for FFmpeg (critical, found Mar 2026).** The snap bundles
+FFmpeg's shared libraries under `$SNAP/usr/lib/<arch-triplet>/` but neither
+`ffprobe` nor `ffmpeg` can find them at runtime without `LD_LIBRARY_PATH`.
+Symptoms: `ffprobe: error while loading shared libraries: libavdevice.so.60`
+→ "no audio stream" false negative → transcription produces 0 segments.
+Additionally, PulseAudio's `libpulsecommon-16.1.so` lives in a subdirectory
+(`pulseaudio/`) that needs its own path entry. Fix:
+
+```yaml
+environment:
+  LD_LIBRARY_PATH: $SNAP/usr/lib/$CRAFT_ARCH_TRIPLET:$SNAP/usr/lib/$CRAFT_ARCH_TRIPLET/pulseaudio:$SNAP/usr/lib:$LD_LIBRARY_PATH
+```
+
+`$CRAFT_ARCH_TRIPLET` is resolved at build time by snapcraft (e.g. to
+`x86_64-linux-gnu` or `aarch64-linux-gnu`) and baked into the final
+`snap.yaml`. The `doctor` command appeared to show FFmpeg as OK because it
+only checked `shutil.which("ffmpeg")` — the binary existed, but couldn't
+probe files. After the fix, doctor also reports the FFmpeg version string
+(e.g. `6.1.1-3ubuntu5`) confirming `ffprobe` works.
+
+**Serve mode dependencies (found Mar 2026).** The base package (`pip install .`)
+does not include FastAPI, uvicorn, SQLAlchemy, or sqladmin — these are optional
+extras (`pip install .[serve]`). Without them, `bristlenose serve` fails with
+"Server dependencies not installed." Fix: change `python-packages` from `.` to
+`".[serve]"` in snapcraft.yaml.
+
+**React frontend bundle (found Mar 2026).** `bristlenose/server/static/` is in
+`.gitignore` — it's a build artifact produced by `npm run build` in `frontend/`.
+A clean clone (like the snap build) has no frontend bundle, so serve mode falls
+back to static HTML without React. Fix: add `npm` to `build-packages` and run
+`cd frontend && npm ci && npm run build` in `override-build` before
+`craftctl default`. The Vite build outputs to `../bristlenose/server/static/`
+which hatch then includes in the wheel via the `artifacts` glob in
+`pyproject.toml`.
+
 **Version via adopt-info.** The sketch hardcoded `version: '0.6.0'`. The final
 version uses `adopt-info: bristlenose` + `craftctl set version=...` in
 `override-build` to read the version from `bristlenose/__init__.py` at build
@@ -671,11 +706,12 @@ time. This keeps the single-source-of-version convention intact.
 `python3.12-minimal`, `libpython3.12-stdlib`, `libpython3.12-minimal`, and
 `python3-venv` to provide a working Python runtime inside the snap.
 
-**Actual snap size: ~307 MB.** Larger than the estimated 130-160 MB. The
-estimate was based on squashfs compression of the Python packages alone. The
-full FFmpeg dependency tree (libavcodec, libavformat, x264, x265, libvpx,
-opus, and ~100 transitive libs) accounts for the difference. Still within
-normal range for the Store (VS Code snap is ~150 MB but has no ML deps).
+**Actual snap size: ~357 MB (amd64), ~350 MB (arm64).** Larger than the
+estimated 130-160 MB. The full FFmpeg dependency tree (libavcodec, libavformat,
+x264, x265, libvpx, opus, and ~100 transitive libs) plus serve dependencies
+(FastAPI, SQLAlchemy, uvicorn) and the React frontend bundle account for the
+difference. Still within normal range for the Store (VS Code snap is ~150 MB
+but has no ML deps).
 
 **Linter warnings (all cosmetic, non-blocking):**
 - `classic: ELF rpath should be set to...` — hundreds of these for every shared
@@ -686,41 +722,146 @@ normal range for the Store (VS Code snap is ~150 MB but has no ML deps).
 - `library: missing dependency 'libGLU.so.1'` — only for `caca/libgl_plugin.so`
   (a libcaca OpenGL plugin). Never loaded at runtime.
 
-**Building locally on macOS (Multipass):**
+**ONNX Runtime ARM warning (cosmetic).** On ARM64 (Apple Silicon VMs, Raspberry
+Pi, etc.), ctranslate2's ONNX Runtime prints: `onnxruntime cpuid_info warning:
+Unknown CPU vendor. cpuinfo_vendor value: 0`. This is harmless — ONNX Runtime's
+CPU detection doesn't recognise ARM vendor strings. Transcription works normally.
+
+**HuggingFace model download warning (cosmetic).** First run triggers:
+`Warning: You are sending unauthenticated requests to the HF Hub.` This is
+expected — the Whisper model (~1.5 GB) downloads from HuggingFace Hub without
+a token. Rate limits are lower but adequate. Setting `HF_TOKEN` is optional.
+
+**`base: core24` locks Ubuntu 24.04.** Snap bases follow LTS releases only
+(core22 = 22.04, core24 = 24.04, core26 = 26.04). There is no core25. This
+means `--destructive-mode` only works on Ubuntu 24.04 hosts. On other Ubuntu
+versions (e.g. 25.10), use the managed LXD build (plain `snapcraft` without
+`--destructive-mode`) which creates an Ubuntu 24.04 container automatically.
+
+### Building locally
+
+**Preferred: LXD managed build on any Ubuntu host.**
+
+```bash
+# Install LXD (if not already present) and snapcraft
+sudo snap install lxd
+sudo lxd init --auto
+sudo usermod -aG lxd $USER
+newgrp lxd
+sudo snap install snapcraft --classic
+
+# Clone and build
+git clone https://github.com/cassiocassio/bristlenose.git
+cd bristlenose
+snapcraft                  # manages its own Ubuntu 24.04 container
+
+# Install and test
+sudo snap install --dangerous --classic bristlenose_*.snap
+bristlenose --version
+bristlenose doctor
+```
+
+This works on any Ubuntu version (24.04, 25.04, 25.10, etc.) and any
+architecture (amd64, arm64). The LXD container handles the base mismatch.
+
+**Alternative: destructive-mode on Ubuntu 24.04 only.**
+
+```bash
+sudo snapcraft --destructive-mode
+```
+
+Only works when the host OS matches `base: core24` (Ubuntu 24.04). Fails on
+other versions with: "Ubuntu 24.04 builds cannot be performed on this Ubuntu
+25.10 system."
+
+**From macOS (Multipass):**
 - Multipass 1.13.0 on Apple Silicon was broken (VMs created but never booted,
   stuck in "Unknown" state forever). **Requires Multipass 1.16.1+.**
 - `multipass launch noble` may not work — use `multipass launch lts` instead
   (the alias is more reliable across Multipass versions).
-- `--destructive-mode` needs `sudo` because it runs `apt install` for
-  build-packages.
 - Apple Silicon Multipass creates arm64 VMs only. For amd64, rely on CI.
-
-**Local build and test workflow (macOS with Multipass):**
+- Mount + rsync workflow (mount alone won't work — snapcraft needs local files):
 
 ```bash
-# Launch VM (4 CPU, 4 GB RAM, 20 GB disk)
 multipass launch lts --name snap-test --cpus 4 --memory 4G --disk 20G
-
-# Mount source and copy (mount alone won't work — snapcraft needs local files)
 multipass mount /path/to/bristlenose snap-test:/home/ubuntu/bristlenose
 multipass exec snap-test -- bash -c \
   "rsync -a --exclude='.venv' --exclude='.git' --exclude='__pycache__' \
-   /home/ubuntu/bristlenose/ /home/ubuntu/build/"
-
-# Install snapcraft and build
+   --exclude='node_modules' /home/ubuntu/bristlenose/ /home/ubuntu/build/"
 multipass exec snap-test -- sudo snap install snapcraft --classic
 multipass exec snap-test -- bash -c \
   "cd /home/ubuntu/build && sudo snapcraft --destructive-mode"
-
-# Install and test
 multipass exec snap-test -- sudo snap install --dangerous --classic \
   /home/ubuntu/build/bristlenose_*.snap
 multipass exec snap-test -- bristlenose --version
 multipass exec snap-test -- bristlenose doctor
-
-# Clean up when done
 multipass delete snap-test --purge
 ```
+
+### Testing the snap end-to-end
+
+**Full test matrix (Level 1–3):**
+
+| Level | What it tests | Needs | Time |
+|-------|--------------|-------|------|
+| 1 | Binary, deps, FFmpeg | Just the snap | 10 sec |
+| 2 | LLM analysis pipeline | Snap + VTT files + API key | 30 sec |
+| 3 | Full pipeline inc. transcription | Snap + video + API key | 2–5 min |
+
+**Level 1: Binary smoke test**
+
+```bash
+bristlenose --version
+bristlenose --help
+bristlenose doctor
+```
+
+Verify: version matches, all commands listed, FFmpeg shows version string
+(not just path), transcription backend shows faster-whisper version.
+
+**Level 2: Analysis only (skip transcription)**
+
+```bash
+# Use VTT fixtures from the repo
+git clone https://github.com/cassiocassio/bristlenose.git /tmp/bn-test
+export BRISTLENOSE_ANTHROPIC_API_KEY="sk-ant-..."
+bristlenose run /tmp/bn-test/tests/fixtures/multi_participant/ --skip-transcription
+```
+
+**Level 3: Full pipeline with video**
+
+```bash
+mkdir -p ~/test-interviews
+# CC BY 2.5 interview clip from Internet Archive (~16 MB, 2m40s)
+curl -L -o ~/test-interviews/interview.m4v \
+  "https://archive.org/download/JDLasicaElisabethShueonCreativeCommons/elisabeth_shue2.m4v"
+export BRISTLENOSE_ANTHROPIC_API_KEY="sk-ant-..."
+bristlenose run ~/test-interviews/
+```
+
+First run downloads the Whisper model (~1.5 GB). Expect ~2 min on arm64 CPU,
+~1 min on amd64 CPU for transcription of the 2m40s clip.
+
+**Level 3: Serve mode**
+
+```bash
+bristlenose serve ~/test-interviews/
+# Open http://127.0.0.1:8150/report/ in browser
+```
+
+Verify: React SPA loads (not static HTML fallback), sidebars visible,
+quotes rendered, tag filter works, sessions page shows transcript.
+
+**Verified checks (v0.13.0, Mar 2026, arm64 Ubuntu 25.10 via LXD build):**
+- `bristlenose --version` → `bristlenose 0.13.0` ✓
+- `bristlenose doctor` → FFmpeg 6.1.1-3ubuntu5, faster-whisper 1.2.1,
+  ctranslate2 4.7.1 (CPU) ✓
+- `$SNAP` detected → install method = snap ✓
+- Full pipeline: 37 segments, 12 quotes, 5 themes from 2m40s interview ✓
+- Serve mode: React SPA with sidebars, tags, themes ✓
+- `bristlenose --help` → all commands visible ✓
+- Whisper model download: works (unauthenticated HuggingFace) ✓
+- `bristlenose configure claude` → key validated, stored as env var ✓
 
 **`$SNAP` env var for install method detection.** Inside the snap runtime,
 `$SNAP` is set to `/snap/bristlenose/x<revision>`. This is how
@@ -728,12 +869,12 @@ multipass delete snap-test --purge
 shows snap-specific fix messages (e.g. "Bug in snap, file issue" for missing
 FFmpeg, which should never happen).
 
-**Verified checks from snap:**
-- `bristlenose --version` → `bristlenose 0.6.0` ✓
-- `bristlenose doctor` → FFmpeg found at `/snap/bristlenose/current/usr/bin/ffmpeg` ✓
-- faster-whisper 1.2.1 + ctranslate2 4.6.3 (CPU) ✓
-- `$SNAP` detected → install method = snap ✓
-- `bristlenose --help` → all commands visible ✓
+**Credential storage in snaps.** `bristlenose configure claude` attempts to
+use the system's Secret Service D-Bus API (GNOME Keyring / KDE Wallet). On
+headless or minimal Ubuntu installs (including VMs), this may not be available.
+The fallback is: print the key as an `export` statement for the user to add to
+their shell profile. This is acceptable — users running bristlenose in a
+server/VM context expect env vars, not GUI keyrings
 
 ### GitHub Actions workflow sketch
 

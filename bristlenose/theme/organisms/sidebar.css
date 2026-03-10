@@ -1,5 +1,5 @@
-/* Dual-sidebar layout — 5-column grid for serve-mode Quotes tab.
-   [toc-rail | toc-sidebar | center | tag-sidebar | tag-rail]
+/* Dual-sidebar layout — 6-column grid for serve-mode Quotes tab.
+   [toc-rail | toc-sidebar | center | tag-sidebar | tag-rail | minimap]
 
    Inert in static render path — .layout wrapper exists only in React tree.
    Design reference: docs/mockups/mockup-sidebar-tags.html
@@ -14,18 +14,20 @@
         0px                                           /* 2: toc sidebar */
         1fr                                           /* 3: center      */
         0px                                           /* 4: tag sidebar */
-        var(--bn-rail-width);                         /* 5: tag rail    */
+        var(--bn-rail-width)                          /* 5: tag rail    */
+        var(--bn-minimap-width);                      /* 6: minimap     */
     min-height: 100vh;
 }
 
-/* TOC sidebar open: hide rail (0), show sidebar, keep center */
+/* TOC sidebar push-open: hide rail (0), show sidebar, keep center */
 .layout.toc-open {
     grid-template-columns:
         0px
         var(--toc-width, var(--bn-sidebar-width))
         1fr
         0px
-        var(--bn-rail-width);
+        var(--bn-rail-width)
+        var(--bn-minimap-width);
 }
 
 /* Tag sidebar open: hide tag rail (0), show tag sidebar */
@@ -35,7 +37,8 @@
         0px
         1fr
         var(--tags-width, var(--bn-sidebar-width))
-        0px;
+        0px
+        var(--bn-minimap-width);
 }
 
 /* Both open */
@@ -45,12 +48,18 @@
         var(--toc-width, var(--bn-sidebar-width))
         1fr
         var(--tags-width, var(--bn-sidebar-width))
-        0px;
+        0px
+        var(--bn-minimap-width);
 }
 
 /* Animated slide — added before state change, removed on transitionend */
 .layout.animating {
     transition: grid-template-columns 0.25s ease;
+}
+
+/* Overlay mode uses its own animation, not grid transition */
+.layout.toc-overlay.animating {
+    transition: none;
 }
 
 /* ── Column 1: Left icon rail ─────────────────────────────────── */
@@ -60,6 +69,7 @@
     position: sticky;
     top: 0;
     height: 100vh;
+    align-self: start;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -70,6 +80,7 @@
     overflow: hidden;
 }
 
+/* Rail hidden only in push mode — stays visible in overlay mode */
 .layout.toc-open .toc-rail { display: none; }
 
 .rail-btn {
@@ -103,9 +114,40 @@
     opacity: 0;
 }
 
+/* Push mode: sidebar in grid flow */
 .layout.toc-open .toc-sidebar {
     visibility: visible;
     opacity: 1;
+}
+
+/* Overlay mode: sidebar floats above content */
+@keyframes toc-slide-in {
+    from { transform: translateX(-100%); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
+}
+
+.layout.toc-overlay .toc-sidebar {
+    position: fixed;
+    top: 0;
+    left: var(--bn-rail-width);
+    width: var(--toc-width, var(--bn-sidebar-width));
+    height: 100vh;
+    visibility: visible;
+    opacity: 1;
+    z-index: 110;
+    box-shadow: var(--bn-overlay-shadow);
+    animation: toc-slide-in var(--bn-overlay-duration, 0.3s) ease;
+}
+
+/* Closing state: slide back out to the left */
+.layout.toc-closing .toc-sidebar {
+    animation: none;
+    transform: translateX(-100%);
+    opacity: 0;
+    box-shadow: none;
+    transition: transform var(--bn-overlay-duration, 0.3s) ease,
+                opacity var(--bn-overlay-duration, 0.3s) ease,
+                box-shadow var(--bn-overlay-duration, 0.3s) ease;
 }
 
 .toc-sidebar-header {
@@ -186,6 +228,8 @@
     min-width: 0;
     display: flex;
     flex-direction: column;
+    padding-left: var(--bn-gutter-left);
+    padding-right: var(--bn-gutter-right);
 }
 
 /* ── Column 4: Right sidebar (Tags) ───────────────────────────── */
@@ -202,6 +246,9 @@
     flex-direction: column;
     visibility: hidden;
     opacity: 0;
+    /* Extra bottom padding so macOS auto-hiding scrollbar doesn't obscure
+       the last items when content overflows. */
+    padding-bottom: 2rem;
 }
 
 .layout.tags-open .tag-sidebar {
@@ -213,8 +260,13 @@
     display: flex;
     align-items: center;
     gap: 0.5rem;
-    padding: var(--bn-space-md) 0.85rem 0;
+    padding: var(--bn-space-md) 0 0 0.85rem;
     flex-shrink: 0;
+}
+
+/* Keep × button off the right border edge */
+.tag-sidebar-header .sidebar-close {
+    margin-right: 0.35rem;
 }
 
 .tag-sidebar-header .sidebar-title {
@@ -225,13 +277,13 @@
 .tag-sidebar-subtitle {
     font-size: 0.72rem;
     color: var(--bn-colour-muted);
-    padding: 0 0.85rem 0.25rem;
+    padding: 0 0 0.25rem 0.85rem;
 }
 
 .tag-sidebar-actions {
     display: flex;
     gap: 0.5rem;
-    padding: var(--bn-space-xs) 0.85rem 0.5rem;
+    padding: var(--bn-space-xs) 0 0.5rem 0.85rem;
     border-bottom: 1px solid var(--bn-colour-border);
     flex-shrink: 0;
 }
@@ -262,6 +314,7 @@
     position: sticky;
     top: 0;
     height: 100vh;
+    align-self: start;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -272,6 +325,19 @@
 }
 
 .layout.tags-open .tag-rail { display: none; }
+
+/* ── Column 6: Minimap slot (placeholder) ─────────────────────── */
+
+.minimap-slot {
+    grid-column: 6;
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    align-self: start;
+    overflow: hidden;
+    pointer-events: auto;
+    margin-right: 8px;  /* clear macOS auto-hiding scrollbar */
+}
 
 /* ── Drag handles ─────────────────────────────────────────────── */
 
@@ -314,8 +380,10 @@
 .toc-drag-handle { right: -3px; }
 .tag-drag-handle { left: -3px; }
 
+/* Overlay mode: drag handle must beat the overlay panel (z-index: 110) */
+.layout.toc-overlay .toc-drag-handle { z-index: 121; }
+
 /* Rail edge drag handles (drag-to-open from closed state) */
-.toc-rail-drag { right: -3px; }
 .tag-rail-drag  { left: -3px; }
 
 /* ── Drag-select disable ──────────────────────────────────────── */

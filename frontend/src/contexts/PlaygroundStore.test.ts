@@ -16,6 +16,13 @@ import {
   setBaselineUnit,
   setDarkMode,
   resetPlayground,
+  setRailWidth,
+  setMinimapWidth,
+  setGutterLeft,
+  setGutterRight,
+  setOverlayDuration,
+  setHoverDelay,
+  setLeaveGrace,
 } from "./PlaygroundStore";
 
 // Module-level store persists across tests — always reset.
@@ -171,5 +178,80 @@ describe("PlaygroundStore", () => {
     setQuoteMaxWidth(null);
     const el = document.getElementById("bn-playground-overrides");
     expect(el!.textContent).not.toContain("--bn-quote-max-width");
+  });
+});
+
+describe("PlaygroundStore — sidebar layout tokens", () => {
+  it("setRailWidth injects CSS override", () => {
+    setRailWidth(48);
+    const el = document.getElementById("bn-playground-overrides");
+    expect(el!.textContent).toContain("--bn-rail-width: 48px");
+  });
+
+  it("setMinimapWidth injects CSS override", () => {
+    setMinimapWidth(64);
+    const el = document.getElementById("bn-playground-overrides");
+    expect(el!.textContent).toContain("--bn-minimap-width: 64px");
+  });
+
+  it("setGutterLeft injects CSS override", () => {
+    setGutterLeft(48);
+    const el = document.getElementById("bn-playground-overrides");
+    expect(el!.textContent).toContain("--bn-gutter-left: 48px");
+  });
+
+  it("setGutterRight injects CSS override", () => {
+    setGutterRight(56);
+    const el = document.getElementById("bn-playground-overrides");
+    expect(el!.textContent).toContain("--bn-gutter-right: 56px");
+  });
+
+  it("setOverlayDuration injects CSS override", () => {
+    setOverlayDuration(0.5);
+    const el = document.getElementById("bn-playground-overrides");
+    expect(el!.textContent).toContain("--bn-overlay-duration: 0.5s");
+  });
+
+  it("setHoverDelay is JS-only (no CSS emitted)", () => {
+    setHoverDelay(600);
+    const el = document.getElementById("bn-playground-overrides");
+    // hoverDelay is a JS-only value, not a CSS token
+    expect(el!.textContent).not.toContain("hover");
+  });
+
+  it("setLeaveGrace is JS-only (no CSS emitted)", () => {
+    setLeaveGrace(200);
+    const el = document.getElementById("bn-playground-overrides");
+    // leaveGrace is a JS-only value, not a CSS token
+    expect(el!.textContent).not.toContain("grace");
+  });
+
+  it("sidebar layout values persist to sessionStorage", () => {
+    setRailWidth(50);
+    setHoverDelay(500);
+    const raw = sessionStorage.getItem("bn-playground");
+    expect(raw).toBeTruthy();
+    const parsed = JSON.parse(raw!);
+    expect(parsed.railWidth).toBe(50);
+    expect(parsed.hoverDelay).toBe(500);
+  });
+
+  it("null sidebar layout values emit no CSS", () => {
+    setRailWidth(48);
+    setRailWidth(null);
+    const el = document.getElementById("bn-playground-overrides");
+    expect(el!.textContent).not.toContain("--bn-rail-width");
+  });
+
+  it("resetPlayground clears sidebar layout overrides", () => {
+    setRailWidth(48);
+    setGutterLeft(64);
+    setHoverDelay(800);
+
+    resetPlayground();
+
+    const el = document.getElementById("bn-playground-overrides");
+    expect(el!.textContent).not.toContain("--bn-rail-width");
+    expect(el!.textContent).not.toContain("--bn-gutter-left");
   });
 });

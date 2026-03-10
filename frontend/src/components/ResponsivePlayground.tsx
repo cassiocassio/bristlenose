@@ -31,6 +31,13 @@ import {
   setBaselineUnit,
   setDarkMode,
   setTypeScalePreset,
+  setRailWidth,
+  setMinimapWidth,
+  setGutterLeft,
+  setGutterRight,
+  setOverlayDuration,
+  setHoverDelay,
+  setLeaveGrace,
   resetPlayground,
 } from "../contexts/PlaygroundStore";
 import {
@@ -41,6 +48,7 @@ import {
   ALL_TYPE_SCALE_PRESETS,
 } from "../data/typeScalePresets";
 import { TypeScalePreview } from "./TypeScalePreview";
+import { PlaygroundFab } from "./PlaygroundFab";
 
 // ── Slider helper ─────────────────────────────────────────────────────────
 
@@ -132,7 +140,7 @@ export function ResponsivePlayground() {
     [pg.drawerHeight],
   );
 
-  if (!pg.open) return null;
+  if (!pg.open) return <PlaygroundFab />;
 
   return (
     <div
@@ -266,6 +274,80 @@ export function ResponsivePlayground() {
               step={0.25}
               unit="x"
               onChange={setRadiusScale}
+            />
+          </div>
+
+          <div className="pg-section">
+            <div className="pg-section-title">Sidebar Layout</div>
+            <TokenSlider
+              label="Rail width"
+              value={pg.railWidth}
+              defaultValue={TOKEN_DEFAULTS.railWidth}
+              min={24}
+              max={64}
+              step={2}
+              unit="px"
+              onChange={setRailWidth}
+            />
+            <TokenSlider
+              label="Minimap width"
+              value={pg.minimapWidth}
+              defaultValue={TOKEN_DEFAULTS.minimapWidth}
+              min={0}
+              max={96}
+              step={4}
+              unit="px"
+              onChange={setMinimapWidth}
+            />
+            <TokenSlider
+              label="Left gutter"
+              value={pg.gutterLeft}
+              defaultValue={TOKEN_DEFAULTS.gutterLeft}
+              min={0}
+              max={64}
+              step={4}
+              unit="px"
+              onChange={setGutterLeft}
+            />
+            <TokenSlider
+              label="Right gutter"
+              value={pg.gutterRight}
+              defaultValue={TOKEN_DEFAULTS.gutterRight}
+              min={0}
+              max={80}
+              step={4}
+              unit="px"
+              onChange={setGutterRight}
+            />
+            <TokenSlider
+              label="Overlay speed"
+              value={pg.overlayDuration}
+              defaultValue={TOKEN_DEFAULTS.overlayDuration}
+              min={0.1}
+              max={1.0}
+              step={0.05}
+              unit="s"
+              onChange={setOverlayDuration}
+            />
+            <TokenSlider
+              label="Hover delay"
+              value={pg.hoverDelay}
+              defaultValue={TOKEN_DEFAULTS.hoverDelay}
+              min={100}
+              max={1000}
+              step={50}
+              unit="ms"
+              onChange={setHoverDelay}
+            />
+            <TokenSlider
+              label="Leave grace"
+              value={pg.leaveGrace}
+              defaultValue={TOKEN_DEFAULTS.leaveGrace}
+              min={0}
+              max={500}
+              step={25}
+              unit="ms"
+              onChange={setLeaveGrace}
             />
           </div>
 

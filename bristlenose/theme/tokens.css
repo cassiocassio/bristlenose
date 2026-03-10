@@ -178,6 +178,17 @@
     --bn-sidebar-min: 200px;     /* minimum resize bound */
     --bn-sidebar-max: 480px;     /* maximum resize bound */
     --bn-rail-width: 36px;       /* collapsed icon rail width */
+    --bn-minimap-width: 3rem;    /* right-edge minimap (48px at default font size) */
+    --bn-overlay-shadow: 4px 0 16px rgba(0, 0, 0, 0.08);  /* TOC overlay drop shadow */
+    --bn-overlay-duration: 0.3s;   /* overlay open/close animation speed */
+    --bn-gutter-left: 2rem;        /* gap: rail/sidebar → center content */
+    --bn-gutter-right: 2.5rem;     /* gap: center content → minimap/rail */
+
+    /* Minimap colours (subtle abstract overview of page shape) */
+    --bn-minimap-quote: #e5e7eb;                             /* quote line */
+    --bn-minimap-heading: #b0b5bd;                           /* section/theme heading line */
+    --bn-minimap-viewport-bg: rgba(37, 99, 235, 0.15);      /* viewport indicator fill */
+    --bn-minimap-viewport-border: rgba(37, 99, 235, 0.3);   /* viewport indicator stroke */
 
     /* Spacing scale */
     --bn-space-xs: 0.15rem;
@@ -286,6 +297,12 @@
         /* Playback-sync glow */
         --bn-glow-colour:             light-dark(rgba(37, 99, 235, 0.06), rgba(96, 165, 250, 0.12));
         --bn-glow-colour-strong:      light-dark(rgba(37, 99, 235, 0.11), rgba(96, 165, 250, 0.2));
+
+        /* Minimap */
+        --bn-minimap-quote:           light-dark(#e5e7eb, #333333);
+        --bn-minimap-heading:         light-dark(#b0b5bd, #555555);
+        --bn-minimap-viewport-bg:     light-dark(rgba(37, 99, 235, 0.15), rgba(96, 165, 250, 0.2));
+        --bn-minimap-viewport-border: light-dark(rgba(37, 99, 235, 0.3), rgba(96, 165, 250, 0.4));
 
         /* Sentiment colours (v0.7+ taxonomy) — foreground hues lighter on dark */
         --bn-sentiment-frustration:      light-dark(#ea580c, #fb923c);

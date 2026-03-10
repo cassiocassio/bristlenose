@@ -489,6 +489,35 @@ body.bn-show-baseline {
   background-position: 0 0;
 }
 
+/* ── Floating action button (quick-open) ─────────────────────── */
+
+.pg-fab {
+    position: fixed;
+    bottom: 16px;
+    right: 16px;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    border: 1px solid var(--bn-colour-border);
+    background: var(--bn-colour-surface);
+    color: var(--bn-colour-muted);
+    font-size: 14px;
+    cursor: pointer;
+    opacity: 0.35;
+    transition: opacity 0.2s ease, background 0.2s ease, color 0.2s ease;
+    z-index: 9970;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+.pg-fab:hover {
+    opacity: 0.85;
+    background: var(--bn-colour-hover);
+    color: var(--bn-colour-text);
+}
+
 /* ── Column grid overlay ───────────────────────────────────────── */
 
 body.bn-show-grid-overlay .quote-group {

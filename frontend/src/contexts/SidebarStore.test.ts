@@ -12,9 +12,10 @@ import {
   toggleToc,
   toggleTags,
   toggleBoth,
+  openTocOverlay,
+  openTocPush,
   closeToc,
   closeTags,
-  openToc,
   openTags,
   setTocWidth,
   setTagsWidth,
@@ -30,6 +31,7 @@ import { putHiddenTagGroups } from "../utils/api";
 
 beforeEach(() => {
   resetSidebarStore();
+  localStorage.clear();
   vi.clearAllMocks();
 });
 
@@ -143,16 +145,16 @@ describe("persistence", () => {
   });
 });
 
-// ── Toggle / open / close ────────────────────────────────────────────────
+// ── Toggle / open / close (tocMode tri-state) ────────────────────────────
 
-describe("toggleToc / toggleTags", () => {
-  it("toggleToc flips tocOpen", () => {
+describe("toggleToc (closed ↔ push)", () => {
+  it("toggleToc cycles closed → push → closed", () => {
     const { result } = renderHook(() => useSidebarStore());
-    expect(result.current.tocOpen).toBe(false);
+    expect(result.current.tocMode).toBe("closed");
     act(() => toggleToc());
-    expect(result.current.tocOpen).toBe(true);
+    expect(result.current.tocMode).toBe("push");
     act(() => toggleToc());
-    expect(result.current.tocOpen).toBe(false);
+    expect(result.current.tocMode).toBe("closed");
   });
 
   it("toggleTags flips tagsOpen", () => {
@@ -167,54 +169,81 @@ describe("toggleToc / toggleTags", () => {
   it("toggleBoth opens both when all closed", () => {
     const { result } = renderHook(() => useSidebarStore());
     act(() => toggleBoth());
-    expect(result.current.tocOpen).toBe(true);
+    expect(result.current.tocMode).toBe("push");
     expect(result.current.tagsOpen).toBe(true);
   });
 
-  it("toggleBoth closes all when any open", () => {
+  it("toggleBoth closes all when toc is push", () => {
     const { result } = renderHook(() => useSidebarStore());
     act(() => toggleToc());
     act(() => toggleBoth());
-    expect(result.current.tocOpen).toBe(false);
+    expect(result.current.tocMode).toBe("closed");
+    expect(result.current.tagsOpen).toBe(false);
+  });
+
+  it("toggleBoth closes all when toc is overlay", () => {
+    const { result } = renderHook(() => useSidebarStore());
+    act(() => openTocOverlay());
+    act(() => toggleBoth());
+    expect(result.current.tocMode).toBe("closed");
     expect(result.current.tagsOpen).toBe(false);
   });
 });
 
-describe("closeToc / closeTags", () => {
-  it("closeToc sets tocOpen to false", () => {
+describe("openTocOverlay / openTocPush / closeToc", () => {
+  it("openTocOverlay sets tocMode to overlay", () => {
     const { result } = renderHook(() => useSidebarStore());
-    act(() => toggleToc());
-    expect(result.current.tocOpen).toBe(true);
-    act(() => closeToc());
-    expect(result.current.tocOpen).toBe(false);
+    act(() => openTocOverlay());
+    expect(result.current.tocMode).toBe("overlay");
   });
 
+  it("openTocOverlay is no-op when already in push mode", () => {
+    const { result } = renderHook(() => useSidebarStore());
+    act(() => openTocPush());
+    act(() => openTocOverlay());
+    expect(result.current.tocMode).toBe("push");
+  });
+
+  it("openTocPush sets tocMode to push", () => {
+    const { result } = renderHook(() => useSidebarStore());
+    act(() => openTocPush());
+    expect(result.current.tocMode).toBe("push");
+  });
+
+  it("openTocPush works from overlay mode", () => {
+    const { result } = renderHook(() => useSidebarStore());
+    act(() => openTocOverlay());
+    act(() => openTocPush());
+    expect(result.current.tocMode).toBe("push");
+  });
+
+  it("closeToc sets tocMode to closed from push", () => {
+    const { result } = renderHook(() => useSidebarStore());
+    act(() => openTocPush());
+    act(() => closeToc());
+    expect(result.current.tocMode).toBe("closed");
+  });
+
+  it("closeToc sets tocMode to closed from overlay", () => {
+    const { result } = renderHook(() => useSidebarStore());
+    act(() => openTocOverlay());
+    act(() => closeToc());
+    expect(result.current.tocMode).toBe("closed");
+  });
+});
+
+describe("closeTags / openTags", () => {
   it("closeTags sets tagsOpen to false", () => {
     const { result } = renderHook(() => useSidebarStore());
     act(() => toggleTags());
     act(() => closeTags());
     expect(result.current.tagsOpen).toBe(false);
   });
-});
-
-describe("openToc / openTags", () => {
-  it("openToc sets tocOpen to true", () => {
-    const { result } = renderHook(() => useSidebarStore());
-    act(() => openToc());
-    expect(result.current.tocOpen).toBe(true);
-  });
 
   it("openTags sets tagsOpen to true", () => {
     const { result } = renderHook(() => useSidebarStore());
     act(() => openTags());
     expect(result.current.tagsOpen).toBe(true);
-  });
-
-  it("openToc is idempotent when already open", () => {
-    const { result } = renderHook(() => useSidebarStore());
-    act(() => openToc());
-    act(() => openToc());
-    expect(result.current.tocOpen).toBe(true);
   });
 
   it("openTags is idempotent when already open", () => {
@@ -280,9 +309,15 @@ describe("localStorage persistence", () => {
     expect(localStorage.getItem("bn-tags-open")).toBe("true");
   });
 
-  it("openToc persists to bn-toc-open", () => {
-    act(() => openToc());
+  it("openTocPush persists to bn-toc-open", () => {
+    act(() => openTocPush());
     expect(localStorage.getItem("bn-toc-open")).toBe("true");
+  });
+
+  it("openTocOverlay does not persist", () => {
+    act(() => openTocOverlay());
+    // localStorage should still be "false" (default from reset)
+    expect(localStorage.getItem("bn-toc-open")).toBeNull();
   });
 
   it("openTags persists to bn-tags-open", () => {
@@ -309,7 +344,7 @@ describe("resetSidebarStore", () => {
     act(() => toggleToc());
     act(() => setTocWidth(400));
     act(() => resetSidebarStore());
-    expect(result.current.tocOpen).toBe(false);
+    expect(result.current.tocMode).toBe("closed");
     expect(result.current.tagsOpen).toBe(false);
     expect(result.current.tocWidth).toBe(280);
     expect(result.current.tagsWidth).toBe(280);

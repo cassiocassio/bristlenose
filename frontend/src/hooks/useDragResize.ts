@@ -23,10 +23,11 @@ import {
 
 // ── Constants ────────────────────────────────────────────────────────────
 
-const MIN_WIDTH = 200;
-const MAX_WIDTH = 320;
+export const MIN_WIDTH = 200;
+export const MAX_WIDTH = 320;
 const SNAP_CLOSE_THRESHOLD = 80;
 const RAIL_OPEN_THRESHOLD = 20;
+const RESIZE_STEP = 10;
 
 // ── Types ────────────────────────────────────────────────────────────────
 
@@ -44,6 +45,8 @@ export interface UseDragResizeOptions {
 export interface UseDragResizeReturn {
   /** Attach to the drag handle div's onPointerDown. */
   handlePointerDown: (e: React.PointerEvent) => void;
+  /** Attach to the drag handle div's onKeyDown for keyboard resize. */
+  handleKeyDown: (e: React.KeyboardEvent) => void;
   /** Whether this handle is actively being dragged (for `.active` class). */
   isDragging: boolean;
 }
@@ -166,6 +169,37 @@ export function useDragResize({
     [side, source, layoutRef, cssVar, openFn, closeFn, setWidthFn],
   );
 
+  // Keyboard resize for sidebar edge handles (arrow keys ±10px, Home/End for min/max).
+  // Rail handles use the toggle button for keyboard access instead.
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent) => {
+      if (source !== "sidebar") return;
+
+      // For TOC (left sidebar): ArrowRight = wider, ArrowLeft = narrower.
+      // For Tags (right sidebar): ArrowLeft = wider, ArrowRight = narrower.
+      const increaseKey = side === "toc" ? "ArrowRight" : "ArrowLeft";
+      const decreaseKey = side === "toc" ? "ArrowLeft" : "ArrowRight";
+
+      let newWidth: number | null = null;
+
+      if (e.key === increaseKey) {
+        newWidth = Math.min(MAX_WIDTH, currentWidthRef.current + RESIZE_STEP);
+      } else if (e.key === decreaseKey) {
+        newWidth = Math.max(MIN_WIDTH, currentWidthRef.current - RESIZE_STEP);
+      } else if (e.key === "Home") {
+        newWidth = MIN_WIDTH;
+      } else if (e.key === "End") {
+        newWidth = MAX_WIDTH;
+      }
+
+      if (newWidth !== null) {
+        e.preventDefault();
+        setWidthFn(newWidth);
+      }
+    },
+    [side, source, setWidthFn],
+  );
+
   // Cleanup on unmount if drag is in progress.
   useEffect(() => {
     return () => {
@@ -173,5 +207,5 @@ export function useDragResize({
     };
   }, []);
 
-  return { handlePointerDown, isDragging };
+  return { handlePointerDown, handleKeyDown, isDragging };
 }

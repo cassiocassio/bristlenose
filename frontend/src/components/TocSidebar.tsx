@@ -79,28 +79,27 @@ export function TocSidebar() {
     }));
   }, [data]);
 
-  // All IDs for scroll spy (in DOM order: sections heading, sections, themes heading, themes).
+  // All IDs for scroll spy — only actual link targets, not group headings.
+  // Group headings ("sections", "themes") are excluded because the scroll spy
+  // would set activeId to a heading with no corresponding link, causing a
+  // brief gap where nothing in the sidebar is highlighted.
   const allIds = useMemo(() => {
     const ids: string[] = [];
-    if (sections.length > 0) {
-      ids.push("sections");
-      ids.push(...sections.map((s) => s.id));
-    }
-    if (themes.length > 0) {
-      ids.push("themes");
-      ids.push(...themes.map((t) => t.id));
-    }
+    ids.push(...sections.map((s) => s.id));
+    ids.push(...themes.map((t) => t.id));
     return ids;
   }, [sections, themes]);
 
   const activeId = useScrollSpy(allIds);
 
   // Auto-scroll active TOC link into view within the sidebar.
+  // Uses "instant" (not "smooth") to avoid competing scrollIntoView calls
+  // when activeId changes rapidly during fast scrolling.
   useEffect(() => {
     if (activeRef.current) {
       activeRef.current.scrollIntoView({
         block: "nearest",
-        behavior: "smooth",
+        behavior: "instant",
       });
     }
   }, [activeId]);
@@ -117,7 +116,7 @@ export function TocSidebar() {
   if (!data) return null;
 
   return (
-    <>
+    <nav aria-label="Table of contents">
       {sections.length > 0 && (
         <>
           <div className="toc-heading">Sections</div>
@@ -126,6 +125,7 @@ export function TocSidebar() {
               key={entry.id}
               href={`#${entry.id}`}
               className={`toc-link${activeId === entry.id ? " active" : ""}`}
+              aria-current={activeId === entry.id ? "location" : undefined}
               ref={activeId === entry.id ? activeRef : undefined}
               onClick={(e) => handleClick(e, entry.id)}
             >
@@ -142,6 +142,7 @@ export function TocSidebar() {
               key={entry.id}
               href={`#${entry.id}`}
               className={`toc-link${activeId === entry.id ? " active" : ""}`}
+              aria-current={activeId === entry.id ? "location" : undefined}
               ref={activeId === entry.id ? activeRef : undefined}
               onClick={(e) => handleClick(e, entry.id)}
             >
@@ -150,6 +151,6 @@ export function TocSidebar() {
           ))}
         </>
       )}
-    </>
+    </nav>
   );
 }

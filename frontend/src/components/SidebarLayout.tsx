@@ -13,7 +13,7 @@
  * @module SidebarLayout
  */
 
-import { useCallback, useRef } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import {
   useSidebarStore,
   toggleToc,
@@ -23,14 +23,14 @@ import {
 } from "../contexts/SidebarStore";
 import { TocSidebar } from "./TocSidebar";
 import { TagSidebar } from "./TagSidebar";
-import { useDragResize } from "../hooks/useDragResize";
+import { useDragResize, MIN_WIDTH, MAX_WIDTH } from "../hooks/useDragResize";
 
 // ── SVG icons (inline, 18×18) ─────────────────────────────────────────────
 
 /** List icon — for TOC rail button */
 function ListIcon() {
   return (
-    <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+    <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" aria-hidden="true" focusable="false">
       <line x1="5.5" y1="4.5" x2="14" y2="4.5" />
       <line x1="5.5" y1="9" x2="14" y2="9" />
       <line x1="5.5" y1="13.5" x2="14" y2="13.5" />
@@ -44,7 +44,7 @@ function ListIcon() {
 /** Tag icon — for tag rail button */
 function TagIcon() {
   return (
-    <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+    <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false">
       <path d="M2.5 3.5h5l7 7-5 5-7-7z" />
       <circle cx="6" cy="7" r="0.75" fill="currentColor" stroke="none" />
     </svg>
@@ -95,6 +95,14 @@ interface SidebarLayoutProps {
 export function SidebarLayout({ active, children }: SidebarLayoutProps) {
   const { tocOpen, tagsOpen, tocWidth, tagsWidth } = useSidebarStore();
   const layoutRef = useRef<HTMLDivElement>(null);
+  const tocRailBtnRef = useRef<HTMLButtonElement>(null);
+  const tagRailBtnRef = useRef<HTMLButtonElement>(null);
+  const tocSidebarRef = useRef<HTMLDivElement>(null);
+  const tagSidebarRef = useRef<HTMLDivElement>(null);
+
+  // Track previous open state for focus management.
+  const prevTocOpen = useRef(tocOpen);
+  const prevTagsOpen = useRef(tagsOpen);
 
   // Drag-to-resize handles (4 total).
   const tocEdge = useDragResize({
@@ -126,6 +134,57 @@ export function SidebarLayout({ active, children }: SidebarLayoutProps) {
     withAnimation(layoutRef.current, closeTags);
   }, []);
 
+  // Focus management: move focus when sidebars open/close.
+  useEffect(() => {
+    if (prevTocOpen.current !== tocOpen) {
+      if (tocOpen) {
+        // Just opened — focus first interactive element in sidebar.
+        const target = tocSidebarRef.current?.querySelector<HTMLElement>(
+          ".sidebar-close, .toc-link",
+        );
+        target?.focus();
+      } else {
+        // Just closed — return focus to rail button.
+        tocRailBtnRef.current?.focus();
+      }
+      prevTocOpen.current = tocOpen;
+    }
+  }, [tocOpen]);
+
+  useEffect(() => {
+    if (prevTagsOpen.current !== tagsOpen) {
+      if (tagsOpen) {
+        const target = tagSidebarRef.current?.querySelector<HTMLElement>(
+          ".sidebar-close",
+        );
+        target?.focus();
+      } else {
+        tagRailBtnRef.current?.focus();
+      }
+      prevTagsOpen.current = tagsOpen;
+    }
+  }, [tagsOpen]);
+
+  // Escape key: close the sidebar that contains focus.
+  useEffect(() => {
+    if (!active) return;
+
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key !== "Escape") return;
+      const target = e.target as Node | null;
+      if (tocOpen && tocSidebarRef.current?.contains(target)) {
+        e.preventDefault();
+        handleCloseToc();
+      } else if (tagsOpen && tagSidebarRef.current?.contains(target)) {
+        e.preventDefault();
+        handleCloseTags();
+      }
+    };
+
+    document.addEventListener("keydown", handleEscape);
+    return () => document.removeEventListener("keydown", handleEscape);
+  }, [active, tocOpen, tagsOpen, handleCloseToc, handleCloseTags]);
+
   if (!active) {
     return <>{children}</>;
   }
@@ -143,6 +202,7 @@ export function SidebarLayout({ active, children }: SidebarLayoutProps) {
       {/* Column 1: TOC rail (visible when TOC sidebar is closed) */}
       <div className="toc-rail">
         <button
+          ref={tocRailBtnRef}
           className="rail-btn"
           onClick={handleToggleToc}
           title="Table of contents ( [ )"
@@ -159,7 +219,11 @@ export function SidebarLayout({ active, children }: SidebarLayoutProps) {
       </div>
 
       {/* Column 2: TOC sidebar panel */}
-      <div className="toc-sidebar">
+      <div
+        ref={tocSidebarRef}
+        className="toc-sidebar"
+        inert={!tocOpen ? true : undefined}
+      >
         <div className="toc-sidebar-header">
           <span className="sidebar-title">Contents</span>
           <button
@@ -177,7 +241,15 @@ export function SidebarLayout({ active, children }: SidebarLayoutProps) {
         {tocOpen && (
           <div
             className={`drag-handle toc-drag-handle${tocEdge.isDragging ? " active" : ""}`}
+            role="separator"
+            aria-orientation="vertical"
+            aria-valuenow={tocWidth}
+            aria-valuemin={MIN_WIDTH}
+            aria-valuemax={MAX_WIDTH}
+            aria-label="Resize table of contents"
+            tabIndex={0}
             onPointerDown={tocEdge.handlePointerDown}
+            onKeyDown={tocEdge.handleKeyDown}
           />
         )}
       </div>
@@ -188,7 +260,11 @@ export function SidebarLayout({ active, children }: SidebarLayoutProps) {
       </div>
 
       {/* Column 4: Tag sidebar panel */}
-      <div className="tag-sidebar">
+      <div
+        ref={tagSidebarRef}
+        className="tag-sidebar"
+        inert={!tagsOpen ? true : undefined}
+      >
         <div className="tag-sidebar-header">
           <span className="sidebar-title">Tags</span>
           <button
@@ -204,7 +280,15 @@ export function SidebarLayout({ active, children }: SidebarLayoutProps) {
         {tagsOpen && (
           <div
             className={`drag-handle tag-drag-handle${tagEdge.isDragging ? " active" : ""}`}
+            role="separator"
+            aria-orientation="vertical"
+            aria-valuenow={tagsWidth}
+            aria-valuemin={MIN_WIDTH}
+            aria-valuemax={MAX_WIDTH}
+            aria-label="Resize tag sidebar"
+            tabIndex={0}
             onPointerDown={tagEdge.handlePointerDown}
+            onKeyDown={tagEdge.handleKeyDown}
           />
         )}
       </div>
@@ -212,6 +296,7 @@ export function SidebarLayout({ active, children }: SidebarLayoutProps) {
       {/* Column 5: Tag rail (visible when tag sidebar is closed) */}
       <div className="tag-rail">
         <button
+          ref={tagRailBtnRef}
           className="rail-btn"
           onClick={handleToggleTags}
           title="Tags ( ] )"

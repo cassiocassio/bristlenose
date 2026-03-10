@@ -1,12 +1,14 @@
 # Bristlenose — Where I Left Off
 
-Last updated: 1 Mar 2026 (React migration complete, CI stabilised, export shipped)
+Last updated: 10 Mar 2026 (snap tested end-to-end on arm64 Ubuntu, 4 snap bugs fixed)
 
 ## Next session reminder
 
-- [ ] **Codebook autocomplete Stage 2: double-t quick-repeat** — double-tap `t` within 400ms applies last-used tag to focused/selected quotes. Design: `docs/design-codebook-autocomplete.md` Stage 2. Files: `useKeyboardShortcuts.ts` (double-tap detection), `QuotesContext.tsx` (tag mutation, `lastUsedTag` tracking), CSS flash animation. Bulk support: multi-selected quotes get the tag too. Stage 1 (grouped autocomplete) shipped in commits `fbba431`, `c27351a`, `9e21266`. Estimated: half session
-- [ ] **QA: threshold review dialog on real data** — run AutoCode against real interview projects and evaluate how well the confidence histogram + dual slider helps researchers eliminate false positives. Qualitative assessment, not automated
+- [ ] **Rotate API key** — key was visible in terminal paste during snap testing session. Rotate at console.anthropic.com
+- [ ] **CI snap smoke test** — add a post-build job to the snap workflow that installs the artifact and runs `bristlenose --version && bristlenose doctor`. Belt-and-braces for amd64 correctness without needing a physical Intel box
+- [ ] **Snap Store registration** — `snapcraft register bristlenose`, request classic confinement on forum.snapcraft.io, export credentials, add `SNAPCRAFT_STORE_CREDENTIALS` to GitHub secrets. See `docs/design-doctor-and-snap.md` pre-launch checklist
 - [ ] **Auto-serve after run** — after `bristlenose run` completes, launch serve mode and open browser automatically instead of printing the static HTML link. The React served version is the canonical experience; the static HTML report link is misleading. Consider: `--no-serve` flag to opt out, port selection, what happens if serve deps are missing (fall back to static link)
+- [ ] **QA: threshold review dialog on real data** — run AutoCode against real interview projects and evaluate how well the confidence histogram + dual slider helps researchers eliminate false positives. Qualitative assessment, not automated
 - [ ] **Export polish** — inline logo as base64 (currently shows "Bristlenose logo" text), fix footer "Bristlenoseversion" missing space, fix in-report navigation links (plain `<a href="/report/...">` don't work with hash router — need React Router `<Link>` or hash-aware hrefs)
 - [ ] **Help modal styling** — renders but needs polish (no close button, layout rough)
 - [ ] **Responsive quote grid** — CSS-only Phase 1. Design doc ready (`docs/design-responsive-layout.md`), mockup exists. Plan approved, not yet implemented

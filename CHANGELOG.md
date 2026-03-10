@@ -2,6 +2,13 @@
 
 All notable changes to Bristlenose are documented here. See also the [README](README.md) for the latest releases.
 
+**0.13.1** — _10 Mar 2026_
+
+- **Responsive layout playground** — dev-only responsive design tool (`--dev` mode) with device presets, type scale previews, and a HUD overlay for testing quote grid layouts across breakpoints. FAB toggle button, `PlaygroundStore` with `useSyncExternalStore`
+- **Sidebar TOC overlay mode** — left sidebar TOC switches to hover-triggered overlay on narrower viewports. `useTocOverlay` hook manages open/close transitions with mouse-enter/leave
+- **Minimap component** — document minimap for the quotes page, showing a scaled overview of quote sections with viewport indicator
+- **Responsive quote grid CSS** — CSS-only responsive grid for quote cards, adapting column count to available width
+
 **0.13.0** — _10 Mar 2026_
 
 - **Codebook-aware tag autocomplete** — TagInput now groups suggestions by codebook section with colour-coded pills and section headers, matching the IDE-style autocomplete pattern. Highlighted suggestion takes priority over ghost text. Active pill uses white text, z-index fix prevents clipping under sidebar, deeper dropdown accommodates more suggestions

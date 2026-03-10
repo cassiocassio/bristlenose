@@ -386,6 +386,10 @@ Edit `bristlenose/__init__.py` (the single source of truth for version), commit,
 
 ## Changelog
 
+**0.13.1** — _10 Mar 2026_
+
+- Responsive layout playground, sidebar TOC overlay mode, minimap component, responsive quote grid CSS
+
 **0.13.0** — _10 Mar 2026_
 
 - Codebook-aware tag autocomplete — suggestions grouped by codebook section with colour pills and headers, IDE-style

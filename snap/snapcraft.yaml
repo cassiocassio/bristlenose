@@ -45,7 +45,11 @@ parts:
     build-packages:
       - python3-dev
       - build-essential
+      - npm
     override-build: |
+      # Build the React frontend before pip install so hatch includes
+      # the static assets in the wheel (bristlenose/server/static/).
+      cd frontend && npm ci && npm run build && cd ..
       craftctl default
       # Read version from the package and set snap metadata.
       VERSION=$($CRAFT_PART_INSTALL/bin/python3 -c "import bristlenose; print(bristlenose.__version__)")

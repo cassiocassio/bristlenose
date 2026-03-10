@@ -185,6 +185,7 @@ These are too small for issues or are internal-only concerns.
 - [ ] **Tag namespace uniqueness + import merge strategy** — flat namespace, clash detection, provenance tracking (user-created vs framework vs AutoCode)
 - [ ] **Tokenise acceptance flash as design system pattern** — generalise `badge-accept-flash` into reusable `.bn-confirm-flash` + `useFlash(key)` hook
 - [ ] **Canonical tag → colour as first-class schema** — persist `colour_set`/`colour_index` on `TagDefinition` to survive reordering; eliminate client-side colour computation
+- [ ] **Sidebar filter undo history stack** — multi-step undo for tag filter state changes in the Tag Sidebar (show-only clicks, tick toggles). See `docs/design-codebook-autocomplete.md` Decision 6b
 
 ### Transcript page interactions
 

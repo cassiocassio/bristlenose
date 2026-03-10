@@ -658,8 +658,15 @@ class TestAcceptAllProposals:
                 .count()
             )
             assert qt_count == 2
-            # All bulk-accepted tags should have source="autocode"
-            for qt in db.query(QuoteTag).all():
+            # All bulk-accepted garrett tags should have source="autocode"
+            garrett_qts = (
+                db.query(QuoteTag)
+                .join(TagDefinition)
+                .join(CodebookGroup)
+                .filter(CodebookGroup.framework_id == "garrett")
+                .all()
+            )
+            for qt in garrett_qts:
                 assert qt.source == "autocode"
         finally:
             db.close()

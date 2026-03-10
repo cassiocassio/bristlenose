@@ -1,0 +1,644 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Minimap — Quotes Tab Mockup</title>
+<style>
+/* === Design tokens (from tokens.css) === */
+:root {
+    --bn-font-body: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
+    --bn-colour-bg: #ffffff;
+    --bn-colour-text: #1a1a1a;
+    --bn-colour-muted: #6b7280;
+    --bn-colour-border: #e5e7eb;
+    --bn-colour-border-hover: #d1d5db;
+    --bn-colour-accent: #2563eb;
+    --bn-colour-quote-bg: #f9fafb;
+    --bn-colour-badge-bg: #f3f4f6;
+    --bn-colour-badge-text: #374151;
+    --bn-weight-light: 370;
+    --bn-weight-normal: 420;
+    --bn-weight-emphasis: 490;
+    --bn-radius-sm: 3px;
+    --bn-radius-md: 6px;
+    --bn-space-sm: 0.35rem;
+    --bn-space-md: 0.75rem;
+    --bn-space-lg: 1.5rem;
+    --bn-transition-fast: 0.15s ease;
+    --bn-max-width: 52rem;
+    --bn-minimap-width: 3rem;
+    --bn-rail-width: 36px;
+}
+
+/* === Reset & base === */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: auto; }
+body {
+    font-family: var(--bn-font-body);
+    font-weight: var(--bn-weight-normal);
+    color: var(--bn-colour-text);
+    background: var(--bn-colour-bg);
+    line-height: 1.5;
+}
+
+/* === Controls bar (dataset toggle) === */
+.controls {
+    position: fixed;
+    top: 12px;
+    right: 80px;
+    z-index: 200;
+    display: flex;
+    gap: 6px;
+    background: var(--bn-colour-bg);
+    border: 1px solid var(--bn-colour-border);
+    border-radius: var(--bn-radius-md);
+    padding: 4px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+}
+
+.controls button {
+    font-family: var(--bn-font-body);
+    font-size: 0.75rem;
+    font-weight: var(--bn-weight-normal);
+    padding: 4px 10px;
+    border: 1px solid var(--bn-colour-border);
+    border-radius: var(--bn-radius-sm);
+    background: var(--bn-colour-bg);
+    color: var(--bn-colour-text);
+    cursor: pointer;
+    transition: background var(--bn-transition-fast), border-color var(--bn-transition-fast);
+}
+
+.controls button:hover {
+    background: var(--bn-colour-quote-bg);
+    border-color: var(--bn-colour-border-hover);
+}
+
+.controls button.active {
+    background: var(--bn-colour-accent);
+    color: #fff;
+    border-color: var(--bn-colour-accent);
+}
+
+.controls .stats {
+    font-size: 0.7rem;
+    color: var(--bn-colour-muted);
+    align-self: center;
+    padding: 0 6px;
+    white-space: nowrap;
+}
+
+/* === Page content (simulated Quotes tab) === */
+.page-content {
+    max-width: var(--bn-max-width);
+    margin: 0 auto;
+    padding: 2rem 2rem 4rem;
+    margin-right: calc(var(--bn-minimap-width) + 2rem);
+}
+
+.page-content h1 {
+    font-size: 1.6rem;
+    font-weight: var(--bn-weight-emphasis);
+    margin-bottom: 0.5rem;
+}
+
+.page-content .subtitle {
+    font-size: 0.9rem;
+    color: var(--bn-colour-muted);
+    margin-bottom: 2rem;
+}
+
+.group-heading {
+    font-size: 1.3rem;
+    font-weight: var(--bn-weight-emphasis);
+    margin-top: 2.5rem;
+    margin-bottom: 0.25rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 2px solid var(--bn-colour-border);
+}
+
+.section-heading {
+    font-size: 1rem;
+    font-weight: var(--bn-weight-emphasis);
+    margin-top: 1.5rem;
+    margin-bottom: 0.5rem;
+    color: var(--bn-colour-text);
+}
+
+.section-description {
+    font-size: 0.85rem;
+    color: var(--bn-colour-muted);
+    margin-bottom: 0.75rem;
+}
+
+.quote-card {
+    background: var(--bn-colour-quote-bg);
+    border-left: 3px solid var(--bn-colour-border);
+    padding: 0.75rem 1rem;
+    margin-bottom: 0.5rem;
+    border-radius: 0 var(--bn-radius-sm) var(--bn-radius-sm) 0;
+    font-size: 0.88rem;
+    line-height: 1.55;
+}
+
+.quote-card .timecode {
+    font-family: monospace;
+    font-size: 0.75rem;
+    color: var(--bn-colour-accent);
+    margin-right: 0.5rem;
+}
+
+.quote-card .speaker {
+    font-size: 0.75rem;
+    color: var(--bn-colour-muted);
+    margin-top: 0.35rem;
+}
+
+.quote-card .badge {
+    display: inline-block;
+    font-size: 0.7rem;
+    padding: 1px 6px;
+    border-radius: var(--bn-radius-sm);
+    background: var(--bn-colour-badge-bg);
+    color: var(--bn-colour-badge-text);
+    margin-right: 4px;
+    margin-top: 4px;
+}
+
+/* === Minimap === */
+.bn-minimap {
+    position: fixed;
+    top: 0;
+    right: 18px;  /* clear the browser scrollbar */
+    width: var(--bn-minimap-width);
+    height: 100vh;
+    z-index: 40;
+    overflow: hidden;
+    cursor: pointer;
+}
+
+.bn-minimap-content {
+    display: flex;
+    flex-direction: column;
+    padding: 8px 0;
+    /* transform applied by JS for parallax */
+}
+
+/* Each quote = a pale grey rectangle with 1px gap below */
+.bn-minimap-quote {
+    height: 2px;
+    margin: 0 6px 1px;
+    background: #e5e7eb;  /* half-strength grey — subtle */
+    border-radius: 0.5px;
+    flex-shrink: 0;
+}
+
+/* Section/theme heading = darker, slightly taller */
+.bn-minimap-heading {
+    height: 2px;
+    margin: 3px 4px 1px;
+    background: #b0b5bd;  /* mid-grey — visible but not heavy */
+    border-radius: 1px;
+    flex-shrink: 0;
+}
+
+/* "Sections" / "Themes" group heading = double height, full width, darker */
+.bn-minimap-group-heading {
+    height: 3px;
+    margin: 2px 3px 2px;
+    background: #b0b5bd;  /* same as section headings */
+    border-radius: 1px;
+    flex-shrink: 0;
+}
+
+/* Major division between sections and themes — exaggerated gap */
+.bn-minimap-division {
+    height: 0;
+    margin: 8px 0;
+    flex-shrink: 0;
+}
+
+/* === Viewport indicator === */
+.bn-minimap-viewport {
+    position: absolute;
+    left: 0;
+    right: 0;
+    background: rgba(37, 99, 235, 0.15);
+    border: 1.5px solid rgba(37, 99, 235, 0.3);
+    border-radius: var(--bn-radius-sm);
+    cursor: grab;
+    z-index: 1;
+    pointer-events: auto;
+    min-height: 8px;
+}
+
+.bn-minimap-viewport:active {
+    cursor: grabbing;
+    background: rgba(37, 99, 235, 0.22);
+    border-color: rgba(37, 99, 235, 0.45);
+}
+
+@media (max-width: 600px) {
+    .bn-minimap { display: none; }
+}
+</style>
+</head>
+<body>
+
+<!-- Dataset toggle -->
+<div class="controls">
+    <button data-size="small" onclick="setDataset('small')">Small (120)</button>
+    <button data-size="typical" class="active" onclick="setDataset('typical')">Typical (540)</button>
+    <button data-size="large" onclick="setDataset('large')">Large (2550)</button>
+    <span class="stats" id="stats"></span>
+</div>
+
+<!-- Simulated page content -->
+<div class="page-content" id="page-content"></div>
+
+<!-- Minimap -->
+<div class="bn-minimap" id="minimap">
+    <div class="bn-minimap-content" id="minimap-content"></div>
+    <div class="bn-minimap-viewport" id="minimap-viewport"></div>
+</div>
+
+<script>
+(function() {
+    'use strict';
+
+    // ── Realistic quote text pool (1–5 sentences each) ───────────────
+
+    const QUOTE_POOL = [
+        // 1-sentence quotes
+        "I'm going to go looking for a bed at IKEA, which I found through Google.",
+        "The search results don't match what I typed at all.",
+        "I can't find where to change my delivery address.",
+        "Why do I need to create an account just to see the price?",
+        "The return process was actually really smooth.",
+        "I like how it shows me similar items for comparison.",
+        "This page loaded really slowly on my phone.",
+        "I don't understand what this icon means.",
+        "The filter options are exactly what I needed.",
+        "I keep accidentally hitting the back button.",
+
+        // 2-sentence quotes
+        "The pictures are great but I wish I could see the actual dimensions more clearly. Like, will this table actually fit in my kitchen?",
+        "I don't trust this checkout page. There's no padlock icon and the form looks completely different from the rest of the site.",
+        "I love that I can see real customer photos. The professional shots are nice but the real ones tell you what it actually looks like.",
+        "The breadcrumb navigation is confusing. I clicked 'Living Room' but it took me to something completely different.",
+        "This loaded really slowly on my phone. I almost gave up and went to the competitor's site instead.",
+        "I found what I was looking for straight away. The category labels make total sense to me.",
+        "The mobile menu is buried. I had to tap three times before I found the main navigation.",
+        "I expected the colour to match what I saw on screen. It's quite different in person.",
+        "The reviews section is really helpful. I always sort by most recent to get current feedback.",
+        "I couldn't figure out how to apply the discount code. There's no obvious field for it.",
+
+        // 3-sentence quotes
+        "What's the fluffiest duvet I can get? Down and feather, king size, the warmest they have. I've been looking for ages and nothing meets my requirements.",
+        "I'm comparing three different sofas right now. The comparison feature would be really useful if it existed. Right now I'm switching between tabs which is tedious.",
+        "The delivery estimate says 3-5 days but last time it took two weeks. I don't really trust these estimates anymore. It would help if they showed the actual dispatch date.",
+        "I want to see this in my room before buying. That AR feature some sites have would be amazing here. I've returned three items this year because they didn't fit.",
+        "The checkout process has too many steps. I counted seven pages before I could place my order. Amazon does it in two clicks.",
+        "I really appreciate the accessibility features on this site. The text size options work well and the contrast is good. Not all sites think about this.",
+        "The wishlist feature is broken on mobile. I added five items yesterday and today they've all disappeared. That's really frustrating when you're planning a big purchase.",
+
+        // 4-sentence quotes
+        "I've been a customer for ten years and the site has changed so much. The old version was simpler and I could find things faster. Now there are too many categories and subcategories. I spend more time navigating than actually shopping.",
+        "The product recommendations are surprisingly accurate. They suggested a lamp that goes perfectly with the desk I bought last month. I wonder how the algorithm works. It's much better than the generic 'people also bought' suggestions.",
+        "I tried to use the live chat for help with my order. The bot couldn't understand my question so I asked for a human. After waiting twenty minutes I gave up. I ended up calling the phone number instead which worked straight away.",
+        "The size guide is in centimetres but I think in inches. I had to open a converter on my phone while browsing on my laptop. It would be so much easier if they just showed both. Even a toggle button would work.",
+
+        // 5-sentence quotes
+        "Let me walk you through what happened when I tried to place this order. First, I added the items to my cart from the product page. Then I went to checkout and it asked me to log in, which I wasn't expecting. After logging in, my cart was completely empty. I had to start the whole process again from scratch.",
+        "I'm really torn about this purchase. On one hand, the reviews are mostly positive and the photos look great. On the other hand, the price has gone up twice in the last month which makes me suspicious. I've read some comments about quality declining recently. I think I'll wait for a sale and see if anything changes.",
+        "The store locator is one of the best features on the site. I can check stock levels in real time, which saves me a wasted trip. It also shows me the exact aisle location in the store. Last time I went in, I walked straight to the product. That's the kind of digital-physical integration that really works.",
+    ];
+
+    const SPEAKERS = ['p1', 'p2', 'p3', 'p4', 'p5', 'p6', 'p7', 'p8'];
+    const NAMES = ['', '', '', '', 'Fritchoff', 'Aliyah', 'Chen Wei', 'Priya'];
+    const BADGES = ['user need', 'exploration', 'feature requirement', 'pain point', 'workaround', 'comparison', 'satisfaction', 'confusion'];
+
+    // ── Dataset definitions (4–15 quotes per section) ────────────────
+
+    const DATASETS = {
+        small: {
+            sections: [
+                { label: 'Homepage', desc: 'Main landing page with navigation options and promotional content.', quotes: 8 },
+                { label: 'Product Search', desc: 'Finding and filtering products across the catalogue.', quotes: 12 },
+                { label: 'Checkout', desc: 'Payment flow, delivery options, and order confirmation.', quotes: 6 },
+                { label: 'Account Settings', desc: 'Profile management, preferences, and saved items.', quotes: 5 },
+                { label: 'Customer Support', desc: 'Help pages, chatbot interactions, and contact flows.', quotes: 9 },
+            ],
+            themes: [
+                { label: 'Navigation Confusion', quotes: 14 },
+                { label: 'Trust Signals', quotes: 10 },
+                { label: 'Mobile Responsiveness', quotes: 8 },
+                { label: 'Price Transparency', quotes: 15 },
+                { label: 'Information Architecture', quotes: 11 },
+                { label: 'Loading Performance', quotes: 7 },
+            ],
+        },
+        typical: {
+            sections: [
+                { label: 'Homepage', desc: 'Main landing page with navigation options and promotional content.', quotes: 12 },
+                { label: 'Product Search', desc: 'Finding and filtering products across the catalogue.', quotes: 15 },
+                { label: 'Product Detail Pages', desc: 'Individual product views with images, specs, and reviews.', quotes: 11 },
+                { label: 'Shopping Cart', desc: 'Cart management, quantity changes, and saved items.', quotes: 8 },
+                { label: 'Checkout', desc: 'Payment flow, delivery options, and order confirmation.', quotes: 14 },
+                { label: 'Account Settings', desc: 'Profile management, preferences, and saved items.', quotes: 6 },
+                { label: 'Customer Support', desc: 'Help pages, chatbot interactions, and contact flows.', quotes: 10 },
+                { label: 'Returns Process', desc: 'Return initiation, label generation, and refund tracking.', quotes: 7 },
+            ],
+            themes: [
+                { label: 'Navigation Confusion', quotes: 13 },
+                { label: 'Trust and Credibility', quotes: 9 },
+                { label: 'Mobile Experience', quotes: 15 },
+                { label: 'Price Transparency', quotes: 11 },
+                { label: 'Information Overload', quotes: 8 },
+                { label: 'Checkout Friction', quotes: 14 },
+                { label: 'Visual Design Quality', quotes: 6 },
+                { label: 'Accessibility Barriers', quotes: 5 },
+                { label: 'Loading Performance', quotes: 4 },
+                { label: 'Social Proof Impact', quotes: 12 },
+            ],
+        },
+        large: {
+            sections: [
+                { label: 'Homepage', desc: 'Main landing page with navigation options and promotional content.', quotes: 15 },
+                { label: 'Product Search', desc: 'Finding and filtering products across the catalogue.', quotes: 15 },
+                { label: 'Product Detail Pages', desc: 'Individual product views with images, specifications, reviews.', quotes: 14 },
+                { label: 'Shopping Cart', desc: 'Cart management, quantity changes, cross-sell prompts.', quotes: 12 },
+                { label: 'Checkout', desc: 'Payment flow, delivery options, promo codes, order confirmation.', quotes: 15 },
+                { label: 'Account Settings', desc: 'Profile, preferences, addresses, payment methods, order history.', quotes: 10 },
+                { label: 'Customer Support', desc: 'Help pages, chatbot, live chat, phone, email contact.', quotes: 13 },
+                { label: 'Returns Process', desc: 'Return initiation, label generation, refund tracking.', quotes: 11 },
+                { label: 'Wishlist and Favourites', desc: 'Saved items, share lists, price drop alerts.', quotes: 9 },
+                { label: 'Reviews and Ratings', desc: 'User-generated content, photo reviews, verified purchases.', quotes: 14 },
+                { label: 'Notifications and Alerts', desc: 'Email, push, SMS preferences, order updates.', quotes: 8 },
+                { label: 'Onboarding', desc: 'First-run experience, account creation, preference setup.', quotes: 7 },
+                { label: 'Store Locator', desc: 'Find nearby stores, stock levels, aisle locations, opening hours.', quotes: 10 },
+                { label: 'Delivery Tracking', desc: 'Real-time updates, driver contact, delivery window changes.', quotes: 12 },
+                { label: 'Gift Cards and Vouchers', desc: 'Purchase, redeem, balance check, corporate gifting.', quotes: 6 },
+                { label: 'Loyalty Programme', desc: 'Points, tiers, rewards, partner offers, point redemption.', quotes: 11 },
+            ],
+            themes: [
+                { label: 'Navigation Confusion', quotes: 14 },
+                { label: 'Trust and Credibility', quotes: 12 },
+                { label: 'Mobile Experience', quotes: 15 },
+                { label: 'Price Transparency', quotes: 13 },
+                { label: 'Information Overload', quotes: 10 },
+                { label: 'Checkout Friction', quotes: 15 },
+                { label: 'Visual Design Quality', quotes: 8 },
+                { label: 'Accessibility Barriers', quotes: 7 },
+                { label: 'Loading Performance', quotes: 9 },
+                { label: 'Social Proof Impact', quotes: 14 },
+                { label: 'Personalisation Quality', quotes: 11 },
+                { label: 'Error Recovery', quotes: 6 },
+                { label: 'Cross-device Continuity', quotes: 10 },
+                { label: 'Emotional Response', quotes: 13 },
+                { label: 'Feature Discoverability', quotes: 9 },
+                { label: 'Cognitive Load', quotes: 12 },
+            ],
+        },
+    };
+
+    // ── State ────────────────────────────────────────────────────────
+
+    let currentDataset = 'typical';
+    let isDragging = false;
+
+    // ── DOM refs ─────────────────────────────────────────────────────
+
+    const pageContent = document.getElementById('page-content');
+    const minimap = document.getElementById('minimap');
+    const minimapContent = document.getElementById('minimap-content');
+    const minimapViewport = document.getElementById('minimap-viewport');
+    const statsEl = document.getElementById('stats');
+
+    // ── Seeded random for reproducible quote selection ────────────────
+
+    let seed = 42;
+    function seededRandom() {
+        seed = (seed * 16807 + 0) % 2147483647;
+        return (seed - 1) / 2147483646;
+    }
+
+    // ── Generate page content ────────────────────────────────────────
+
+    function generateQuoteHTML(count) {
+        let html = '';
+        for (let i = 0; i < count; i++) {
+            const idx = Math.floor(seededRandom() * QUOTE_POOL.length);
+            const text = QUOTE_POOL[idx];
+            const spkIdx = Math.floor(seededRandom() * SPEAKERS.length);
+            const speaker = SPEAKERS[spkIdx];
+            const name = NAMES[spkIdx];
+            const badge = BADGES[Math.floor(seededRandom() * BADGES.length)];
+            const mins = Math.floor(seededRandom() * 60);
+            const secs = Math.floor(seededRandom() * 60);
+            const tc = `[${String(mins).padStart(2,'0')}:${String(secs).padStart(2,'0')}]`;
+            const nameSpan = name ? ` <strong>${name}</strong>` : '';
+            html += `<div class="quote-card">
+                <span class="timecode">${tc}</span>\u201c${text}\u201d
+                <div class="speaker">${speaker}${nameSpan} <span class="badge">${badge}</span></div>
+            </div>`;
+        }
+        return html;
+    }
+
+    function buildPageContent(dataset) {
+        seed = 42; // reset seed for reproducibility
+        const data = DATASETS[dataset];
+        let totalQuotes = 0;
+        let html = '<h1>Quotes</h1><p class="subtitle">Simulated quotes tab content for minimap testing.</p>';
+
+        // Sections
+        html += '<div class="group-heading" id="sections">Sections</div>';
+        for (const section of data.sections) {
+            const anchor = 'section-' + section.label.toLowerCase().replace(/ /g, '-');
+            html += `<h3 class="section-heading" id="${anchor}">${section.label}</h3>`;
+            html += `<p class="section-description">${section.desc}</p>`;
+            html += generateQuoteHTML(section.quotes);
+            totalQuotes += section.quotes;
+        }
+
+        // Themes
+        html += '<div class="group-heading" id="themes" style="margin-top:3rem">Themes</div>';
+        for (const theme of data.themes) {
+            const anchor = 'theme-' + theme.label.toLowerCase().replace(/ /g, '-');
+            html += `<h3 class="section-heading" id="${anchor}">${theme.label}</h3>`;
+            html += generateQuoteHTML(theme.quotes);
+            totalQuotes += theme.quotes;
+        }
+
+        pageContent.innerHTML = html;
+        return totalQuotes;
+    }
+
+    // ── Generate minimap content ─────────────────────────────────────
+
+    function buildMinimapContent(dataset) {
+        const data = DATASETS[dataset];
+        let html = '';
+
+        // "Sections" group heading
+        html += '<div class="bn-minimap-group-heading"></div>';
+
+        // Section entries
+        for (const section of data.sections) {
+            html += '<div class="bn-minimap-heading"></div>';
+            for (let i = 0; i < section.quotes; i++) {
+                html += '<div class="bn-minimap-quote"></div>';
+            }
+        }
+
+        // Major division between sections and themes
+        html += '<div class="bn-minimap-division"></div>';
+
+        // "Themes" group heading
+        html += '<div class="bn-minimap-group-heading"></div>';
+
+        // Theme entries
+        for (const theme of data.themes) {
+            html += '<div class="bn-minimap-heading"></div>';
+            for (let i = 0; i < theme.quotes; i++) {
+                html += '<div class="bn-minimap-quote"></div>';
+            }
+        }
+
+        minimapContent.innerHTML = html;
+    }
+
+    // ── Scroll tracking + parallax ───────────────────────────────────
+
+    let rafId = 0;
+
+    function updateMinimap() {
+        const scrollY = window.scrollY;
+        const scrollHeight = document.documentElement.scrollHeight;
+        const viewportHeight = window.innerHeight;
+        const contentHeight = minimapContent.scrollHeight;
+
+        // Avoid division by zero
+        const maxScroll = Math.max(1, scrollHeight - viewportHeight);
+        const scrollRatio = Math.min(1, Math.max(0, scrollY / maxScroll));
+
+        // Viewport indicator height (to-scale relative to minimap content)
+        const indicatorHeight = Math.max(8, (viewportHeight / scrollHeight) * contentHeight);
+
+        // Parallax: if minimap content overflows viewport
+        if (contentHeight > viewportHeight) {
+            const parallaxOffset = scrollRatio * (contentHeight - viewportHeight);
+            minimapContent.style.transform = `translateY(${-parallaxOffset}px)`;
+
+            // Viewport indicator position relative to the content
+            const indicatorTop = scrollRatio * (contentHeight - indicatorHeight);
+            // Offset by parallax to keep it in the visible clip area
+            minimapViewport.style.top = (indicatorTop - parallaxOffset) + 'px';
+        } else {
+            minimapContent.style.transform = 'none';
+            // Simple case: viewport indicator slides within content
+            const indicatorTop = scrollRatio * (contentHeight - indicatorHeight);
+            minimapViewport.style.top = indicatorTop + 'px';
+        }
+
+        minimapViewport.style.height = indicatorHeight + 'px';
+    }
+
+    function onScroll() {
+        cancelAnimationFrame(rafId);
+        rafId = requestAnimationFrame(updateMinimap);
+    }
+
+    // ── Click-to-scroll ──────────────────────────────────────────────
+
+    function handleMinimapClick(e) {
+        if (isDragging) return;
+        if (e.target === minimapViewport) return;
+
+        const rect = minimap.getBoundingClientRect();
+        const clickY = e.clientY - rect.top;
+        const contentHeight = minimapContent.scrollHeight;
+        const viewportHeight = window.innerHeight;
+        const scrollHeight = document.documentElement.scrollHeight;
+        const maxScroll = Math.max(1, scrollHeight - viewportHeight);
+
+        // In parallax mode, scrollRatio = pointerY / viewportHeight
+        // (algebraic simplification — no CSS transform parsing needed).
+        const ratio = contentHeight > viewportHeight
+            ? Math.min(1, Math.max(0, clickY / viewportHeight))
+            : Math.min(1, Math.max(0, clickY / contentHeight));
+
+        window.scrollTo({ top: Math.max(0, ratio * maxScroll), behavior: 'smooth' });
+    }
+
+    // ── Drag-to-scroll ───────────────────────────────────────────────
+
+    function handleViewportPointerDown(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        isDragging = true;
+
+        const contentHeight = minimapContent.scrollHeight;
+        const viewportHeight = window.innerHeight;
+        const scrollHeight = document.documentElement.scrollHeight;
+        const maxScroll = Math.max(1, scrollHeight - viewportHeight);
+
+        function onMove(ev) {
+            const rect = minimap.getBoundingClientRect();
+            const y = ev.clientY - rect.top;
+
+            // Same algebraic simplification as click-to-scroll.
+            const ratio = contentHeight > viewportHeight
+                ? Math.min(1, Math.max(0, y / viewportHeight))
+                : Math.min(1, Math.max(0, y / contentHeight));
+
+            window.scrollTo({ top: Math.max(0, ratio * maxScroll) });
+        }
+
+        function onUp() {
+            isDragging = false;
+            document.removeEventListener('pointermove', onMove);
+            document.removeEventListener('pointerup', onUp);
+        }
+
+        document.addEventListener('pointermove', onMove);
+        document.addEventListener('pointerup', onUp);
+    }
+
+    // ── Dataset switching ────────────────────────────────────────────
+
+    function setDataset(size) {
+        currentDataset = size;
+
+        document.querySelectorAll('.controls button[data-size]').forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.size === size);
+        });
+
+        const totalQuotes = buildPageContent(size);
+        buildMinimapContent(size);
+
+        const contentHeight = minimapContent.scrollHeight;
+        const vh = window.innerHeight;
+        const needsParallax = contentHeight > vh;
+        statsEl.textContent = `${totalQuotes} quotes \u00b7 minimap ${contentHeight}px ${needsParallax ? '(parallax)' : `(fits in ${vh}px)`}`;
+
+        window.scrollTo({ top: 0 });
+        requestAnimationFrame(updateMinimap);
+    }
+
+    window.setDataset = setDataset;
+
+    // ── Init ─────────────────────────────────────────────────────────
+
+    window.addEventListener('scroll', onScroll, { passive: true });
+    window.addEventListener('resize', onScroll, { passive: true });
+    minimap.addEventListener('click', handleMinimapClick);
+    minimapViewport.addEventListener('pointerdown', handleViewportPointerDown);
+
+    setDataset('typical');
+})();
+</script>
+</body>
+</html>

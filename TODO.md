@@ -4,6 +4,7 @@ Last updated: 1 Mar 2026 (React migration complete, CI stabilised, export shippe
 
 ## Next session reminder
 
+- [ ] **Codebook autocomplete Stage 2: double-t quick-repeat** — double-tap `t` within 400ms applies last-used tag to focused/selected quotes. Design: `docs/design-codebook-autocomplete.md` Stage 2. Files: `useKeyboardShortcuts.ts` (double-tap detection), `QuotesContext.tsx` (tag mutation, `lastUsedTag` tracking), CSS flash animation. Bulk support: multi-selected quotes get the tag too. Stage 1 (grouped autocomplete) shipped in commits `fbba431`, `c27351a`, `9e21266`. Estimated: half session
 - [ ] **QA: threshold review dialog on real data** — run AutoCode against real interview projects and evaluate how well the confidence histogram + dual slider helps researchers eliminate false positives. Qualitative assessment, not automated
 - [ ] **Export polish** — inline logo as base64 (currently shows "Bristlenose logo" text), fix footer "Bristlenoseversion" missing space, fix in-report navigation links (plain `<a href="/report/...">` don't work with hash router — need React Router `<Link>` or hash-aware hrefs)
 - [ ] **Help modal styling** — renders but needs polish (no close button, layout rough)

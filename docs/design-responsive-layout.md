@@ -263,3 +263,172 @@ No HTML template changes. No JavaScript changes. No Python logic changes.
 - Aldus Manutius pocket octavo format: ~6-7 words/line, optimised for portable reading (1501)
 - Robert Bringhurst, _The Elements of Typographic Style_: 45-75 characters per line for body text
 - Mockup image reference: `docs/mockups/responsive-quote-grid.html` (interactive, with slider and HUD)
+
+---
+
+# Global Layout Frame & Navigation Sidebar
+
+**Status:** Design brief — Figma in progress, not yet implemented.
+**Date:** 4 Mar 2026
+
+---
+
+## Problem
+
+The current layout varies structurally between tabs. The Quotes page has a 5-column grid with two sidebars; all other tabs are a simple centred `<article>`. Switching tabs causes visible layout jumping — the content column shifts position as sidebars appear and disappear. There is no viewport minimum width set anywhere (body, html, containers), so the app squeezes to arbitrary narrow widths with degraded rendering.
+
+Additionally, several pages need wide viewports to look good:
+
+| Page | Comfortable min width | Bottleneck |
+|------|----------------------|------------|
+| Project (dashboard) | ~780px | Stat cards row |
+| Sessions | ~900px | Table columns (thumbnail, sentiment, journey) |
+| Quotes (no sidebars) | ~500px | Quote cards (just flowing text) |
+| Quotes (both sidebars) | ~1100px | Three-panel layout |
+| Codebook | ~800px | Badge pills wrapping to two lines |
+| Analysis (heatmap) | ~950px | 7 sentiment columns + labels |
+| Analysis (signals) | ~700px | Signal cards |
+
+Setting a single global `min-width` requires making the harder pages work narrower.
+
+## Goals
+
+1. **One consistent frame across all tabs** — no layout shift when switching between Project / Sessions / Quotes / Codebook / Analysis
+2. **Single global `min-width`** — identical for all pages, number TBD after Figma design
+3. **Global left navigation sidebar** — present on every tab with contextual content
+4. **Global sticky toolbar band** — same depth on every tab, contextual content
+5. **Make wide pages work narrower** — Sessions table redesign, Analysis heatmap rotation
+
+## Design decisions
+
+### The rigid frame
+
+Three fixed horizontal bands plus a left rail. Everything below the toolbar scrolls. The frame never moves — only content inside it changes.
+
+```
+┌──────────────────────────────────────┐
+│  Header (logo, project name)         │
+├──────────────────────────────────────┤
+│  Nav tabs                            │
+├──┬───────────────────────────────────┤
+│  │  Sticky toolbar band (per-tab)    │  ← same height, same position
+│  │───────────────────────────────────│
+│R │                                   │
+│A │  Scrollable content               │
+│I │                                   │
+│L │                                   │
+└──┴───────────────────────────────────┘
+```
+
+### Global left sidebar
+
+- **Always-visible left rail** on every tab (thin strip, hosts toggle button, hover target)
+- **Two user-controlled modes** (not breakpoint-driven — the user chooses, not the viewport):
+  - **Slide-over** (mouse into rail margin): overlays content, temporary, click a heading and you're done — sidebar dismisses. For quick peeks and narrow screens
+  - **Slide-out** (click rail button / `[` keyboard shortcut): pushes content, persistent. For keeping navigation omnipresent on wider screens
+- **Pin state is global**: if pinned on Quotes, stays pinned when switching to Sessions — sidebar stays open, content swaps
+- **Default opening width is the same for all tabs** — consistent frame regardless of which tab you're on
+- **Content is contextual per tab:**
+
+  | Tab | Sidebar content |
+  |-----|----------------|
+  | Project | TBD |
+  | Sessions | Session list (participants, times, dates) |
+  | Quotes | Sections + Themes (current TOC) |
+  | Codebook | Codebook list (active + available) |
+  | Analysis | Mini signal cards (slide-navigator style, like a PowerPoint slide navigator) |
+
+- Interaction model inspired by Reddit (slide-over + slide-out as separate user-initiated gestures)
+- The tradeoff is good for narrow screens: a 13" screen can live with only the right-hand tag sidebar open for analysis work on a still reasonably sized single column of quotes
+
+### Global sticky toolbar band
+
+- **Same vertical position and height on every tab** — consistent depth in the layout
+- Content is contextual per tab:
+
+  | Tab | Sticky toolbar content |
+  |-----|----------------------|
+  | Project | Import files button + project admin controls |
+  | Sessions | Table header row (ID, Participants, Start, Duration, etc.) — column headers stay visible while scrolling rows |
+  | Quotes | Search, Tags dropdown, Stars/view filter, Copy CSV |
+  | Codebook | Current codebook header (name, author, AutoCode button, Remove) — swaps as you scroll past frameworks |
+  | Analysis | Current signal card group title (e.g. "Section × Sentiment") — swaps as you scroll past grids |
+
+- Codebook and Analysis use **contextual sticky headers** — the toolbar content changes as you scroll past section boundaries (iOS `UITableView` grouped-style section headers: the next section pushes the current one up). Pure CSS via `position: sticky` with the right `top` offset
+- Sticks below the nav tabs, above scrollable content
+
+### Right sidebar (tags)
+
+- Stays Quotes-only, unchanged for now
+
+### Analysis heatmap — rotated sentiment badge headers
+
+- Rotate the sentiment `<Badge>` pills in column headers (the tag grid headers already use `.heatmap-col-label` with `-30deg` rotation at 56px fixed column width — follow this pattern)
+- **Badges keep their visual identity** — pill shape, background colour, border-radius, monospace text. The user must recognise them as the same sentiment pills used on quotes, in the tag sidebar, and on signal cards. The rotation is a layout trick, not a redesign
+- Columns shrink from ~100px+ (horizontal badge width for `satisfaction`) to ~56px each, saving ~300px+ across 7 columns
+- **Experiment first** in `docs/mockups/` before committing to production
+
+### Sessions table
+
+- Needs layout redesign to work narrower (currently needs ~900px with thumbnail + sentiment + journey columns)
+- Designing in Figma — details TBD
+
+### Codebook badges
+
+- Long tag names (`spatial correspondence`, `knowledge-based mistake`, `perceived affordance`) wrap to two lines inside their pills at narrow widths
+- Functional but not fine — needs attention
+- Approach TBD
+
+### Global min-width
+
+- Single value on body/main container, applied to all tabs identically
+- Number determined after Figma design and responsive experiments land
+- Currently **no `min-width` is set anywhere** (body, html, `#bn-app-root`, article, `.layout`)
+- Only width constraint today: `--bn-max-width: 52rem` (832px) as a ceiling on `<article>`
+
+## Current architecture (what changes)
+
+| Current | New |
+|---------|-----|
+| `SidebarLayout` wraps only `/report/quotes/` | Becomes global — wraps `AppLayout` or merges into it |
+| `SidebarStore` pin state is Quotes-scoped | Pin state becomes global (persists across tab switches) |
+| 5-column CSS grid is Quotes-only | Left rail + left sidebar become global; right rail + right sidebar stay Quotes-only |
+| Left sidebar content hardcoded as `TocSidebar` | Becomes a slot/router-aware component rendering per-tab content |
+| No sticky toolbar band | New component at consistent depth on every tab |
+| No body/container `min-width` | Single global `min-width` |
+
+## Key files
+
+- `frontend/src/layouts/SidebarLayout.tsx` — current sidebar layout (Quotes-only)
+- `frontend/src/contexts/SidebarStore.ts` — sidebar state (open/width/hidden groups)
+- `bristlenose/theme/organisms/sidebar.css` — 5-column grid CSS
+- `frontend/src/components/TocSidebar.tsx` — current left sidebar content (Quotes TOC)
+- `frontend/src/components/TagSidebar.tsx` — current right sidebar content (tag filter)
+- `frontend/src/islands/AnalysisPage.tsx` — heatmap grid with badge headers
+- `bristlenose/theme/organisms/analysis.css` — heatmap CSS (rotated headers pattern exists for tag grids)
+- `bristlenose/theme/atoms/badge.css` — badge styling
+- `bristlenose/theme/tokens.css` — `--bn-max-width`, sidebar width tokens
+
+## Open questions
+
+1. What goes in the Project tab sidebar?
+2. Exact default sidebar width (same for all tabs)
+3. Slide-over dismiss behaviour — click-outside? click heading? both?
+4. Does sidebar content swapping feel natural across tab switches, or does it need a transition?
+5. Sessions table redesign details
+6. Codebook badge wrapping fix approach
+7. Final `min-width` value
+
+## Approach
+
+1. **Figma designs first** (in progress)
+2. **Standalone mockup** in `docs/mockups/` for slide-over / slide-out interaction
+3. **Heatmap rotation experiment** (CSS-only, can run independently)
+4. **Sessions table experiment** (after Figma design)
+5. **Implementation** — once mockups feel right, plan the real component/CSS work
+
+## Dependency chain
+
+The responsive work on individual pages isn't optional polish — it's a prerequisite for the global sidebar. The sidebar consumes ~250–280px. If Sessions currently needs ~900px *without* a sidebar, it would need ~1150px *with* one — wider than a 13" MacBook.
+
+**Narrow the pages → add the sidebar → set the min-width.** All three are one piece of work.

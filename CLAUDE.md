@@ -151,6 +151,7 @@ F401 is marked `unfixable` in `pyproject.toml` so `ruff check --fix` (and the Po
 
 ## Reference docs (read when working in these areas)
 
+- **Design decisions** (why choices were made, alternatives considered): `docs/design-decisions.md`
 - **Export and sharing**: `docs/design-export-sharing.md`
 - **HTML report / people file / transcript pages**: `docs/design-html-report.md`
 - **Theme / dark mode / CSS conventions / gotchas**: `bristlenose/theme/CLAUDE.md`

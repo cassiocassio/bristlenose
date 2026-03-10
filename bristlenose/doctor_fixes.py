@@ -275,6 +275,54 @@ def _fix_presidio_missing(method: str) -> str:
     )
 
 
+def get_mlx_install_command() -> tuple[list[str], str]:
+    """Get the pip command to install MLX.
+
+    Uses ``sys.executable`` so the command targets the same Python that is
+    running bristlenose (correct for brew, pipx, and plain-venv installs).
+
+    Returns ``(command_list, display_string)``.
+    """
+    cmd = [sys.executable, "-m", "pip", "install", "mlx", "mlx-whisper"]
+    display = f"{sys.executable} -m pip install mlx mlx-whisper"
+    return cmd, display
+
+
+def install_mlx() -> bool:
+    """Install MLX and mlx-whisper via pip.
+
+    Runs a subprocess with stdout/stderr forwarded so the user sees progress.
+    Returns ``True`` on success.
+    """
+    import subprocess
+
+    cmd, _display = get_mlx_install_command()
+    try:
+        result = subprocess.run(cmd)
+        return result.returncode == 0
+    except Exception:
+        return False
+
+
+def verify_mlx_installed() -> bool:
+    """Verify that mlx-whisper is importable after installation.
+
+    Uses a subprocess because packages installed by pip during the current
+    process are not guaranteed to be importable in-process.
+    """
+    import subprocess
+
+    try:
+        result = subprocess.run(
+            [sys.executable, "-c", "import mlx_whisper"],
+            capture_output=True,
+            timeout=30,
+        )
+        return result.returncode == 0
+    except Exception:
+        return False
+
+
 def _fix_mlx_not_installed(method: str) -> str:
     if method == "brew":
         return (

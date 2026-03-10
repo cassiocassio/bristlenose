@@ -168,12 +168,14 @@ def _format_doctor_table(report: object) -> None:
         console.print(f"  {label}{status}   {detail}")
 
 
-def _print_doctor_fixes(report: object) -> None:
-    """Print fix instructions for failures only.
+def _print_doctor_fixes(
+    report: object, *, skip_keys: set[str] | None = None
+) -> None:
+    """Print fix instructions for failures and warnings.
 
     The table already shows what passed/failed/skipped with details.
-    We only need to print actionable fix instructions for failures.
-    Notes and warnings are already visible in the table — no need to repeat.
+    ``skip_keys`` lets the caller suppress fix messages that were already
+    handled interactively (e.g. MLX auto-install prompt).
     """
     from bristlenose.doctor import DoctorReport
     from bristlenose.doctor_fixes import get_fix
@@ -183,8 +185,9 @@ def _print_doctor_fixes(report: object) -> None:
     failures = report.failures
     warnings = report.warnings
 
-    # Only print fixes for failures — the table already shows the status
     all_fixable = failures + warnings
+    if skip_keys:
+        all_fixable = [r for r in all_fixable if r.fix_key not in skip_keys]
     if all_fixable:
         console.print()  # Blank line after table
         for result in all_fixable:
@@ -192,6 +195,72 @@ def _print_doctor_fixes(report: object) -> None:
             if fix:
                 console.print(fix)
                 console.print()  # Blank line between fixes
+
+
+def _maybe_offer_mlx_install(report: object) -> bool:
+    """Offer to install MLX if the report contains the mlx_not_installed warning.
+
+    Only prompts in interactive terminals (skips CI, piped output).
+    Returns ``True`` if the warning was handled (accepted or declined
+    interactively) so the caller can suppress the duplicate fix text.
+    """
+    from bristlenose.doctor import CheckStatus, DoctorReport
+
+    assert isinstance(report, DoctorReport)
+
+    mlx_warn = next(
+        (
+            r
+            for r in report.results
+            if r.fix_key == "mlx_not_installed" and r.status == CheckStatus.WARN
+        ),
+        None,
+    )
+    if mlx_warn is None:
+        return False
+
+    if not sys.stdout.isatty():
+        return False
+
+    console.print()
+    console.print(
+        "Apple Silicon detected but MLX not installed.\n"
+        "[dim]MLX enables GPU-accelerated transcription (faster)."
+        " CPU works fine without it.[/dim]"
+    )
+    console.print()
+
+    try:
+        answer = input("Install MLX for GPU-accelerated transcription? [Y/n] ")
+    except (EOFError, KeyboardInterrupt):
+        console.print()
+        return True
+
+    if answer.strip().lower() in ("n", "no"):
+        from bristlenose.doctor_fixes import get_fix
+
+        fix = get_fix("mlx_not_installed")
+        if fix:
+            console.print()
+            console.print(fix)
+        return True
+
+    from bristlenose.doctor_fixes import get_mlx_install_command, install_mlx, verify_mlx_installed
+
+    _cmd, display = get_mlx_install_command()
+    console.print()
+    console.print(f"[dim]Running: {display}[/dim]")
+    console.print()
+
+    if install_mlx() and verify_mlx_installed():
+        console.print()
+        console.print("[green]  MLX installed. GPU transcription is now available.[/green]")
+    else:
+        console.print()
+        console.print("[yellow]  Installation failed. Try manually:[/yellow]")
+        console.print(f"  {display}")
+
+    return True
 
 
 def _maybe_auto_doctor(settings: object, command: str) -> bool:
@@ -215,9 +284,11 @@ def _maybe_auto_doctor(settings: object, command: str) -> bool:
 
     report = run_preflight(settings, command)
     _format_doctor_table(report)
+    mlx_handled = _maybe_offer_mlx_install(report)
 
     if report.has_failures:
-        _print_doctor_fixes(report)
+        skip = {"mlx_not_installed"} if mlx_handled else None
+        _print_doctor_fixes(report, skip_keys=skip)
         console.print()
         raise typer.Exit(1)
 
@@ -241,9 +312,11 @@ def _run_preflight(settings: object, command: str, *, skip_transcription: bool =
 
     report = run_preflight(settings, command, skip_transcription=skip_transcription)
     _format_doctor_table(report)
+    mlx_handled = _maybe_offer_mlx_install(report)
 
     if report.has_failures:
-        _print_doctor_fixes(report)
+        skip = {"mlx_not_installed"} if mlx_handled else None
+        _print_doctor_fixes(report, skip_keys=skip)
         console.print()
         raise typer.Exit(1)
 
@@ -1505,11 +1578,13 @@ def doctor() -> None:
 
     report = run_all(settings)
     _format_doctor_table(report)
+    mlx_handled = _maybe_offer_mlx_install(report)
 
     if not report.has_failures and not report.has_warnings:
         console.print("\n[dim green]All clear.[/dim green]")
     else:
-        _print_doctor_fixes(report)
+        skip = {"mlx_not_installed"} if mlx_handled else None
+        _print_doctor_fixes(report, skip_keys=skip)
 
     # Always update sentinel on explicit doctor
     _write_doctor_sentinel()

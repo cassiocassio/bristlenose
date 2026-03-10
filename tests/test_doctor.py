@@ -34,7 +34,13 @@ from bristlenose.doctor import (
     run_all,
     run_preflight,
 )
-from bristlenose.doctor_fixes import detect_install_method, get_fix
+from bristlenose.doctor_fixes import (
+    detect_install_method,
+    get_fix,
+    get_mlx_install_command,
+    install_mlx,
+    verify_mlx_installed,
+)
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -1359,3 +1365,144 @@ class TestSentinelLogic:
             _write_doctor_sentinel()
         assert sentinel.exists()
         assert sentinel.read_text() == __version__
+
+
+# ---------------------------------------------------------------------------
+# MLX auto-install helpers
+# ---------------------------------------------------------------------------
+
+
+class TestMlxInstallHelpers:
+    def test_get_mlx_install_command_shape(self) -> None:
+        cmd, display = get_mlx_install_command()
+        assert cmd[0] == sys.executable
+        assert "-m" in cmd and "pip" in cmd
+        assert "mlx" in cmd and "mlx-whisper" in cmd
+        assert "mlx" in display and "mlx-whisper" in display
+
+    def test_install_mlx_success(self) -> None:
+        with patch("subprocess.run") as mock_run:
+            mock_run.return_value = MagicMock(returncode=0)
+            assert install_mlx() is True
+
+    def test_install_mlx_failure(self) -> None:
+        with patch("subprocess.run") as mock_run:
+            mock_run.return_value = MagicMock(returncode=1)
+            assert install_mlx() is False
+
+    def test_install_mlx_exception(self) -> None:
+        with patch("subprocess.run", side_effect=OSError("boom")):
+            assert install_mlx() is False
+
+    def test_verify_mlx_installed_success(self) -> None:
+        with patch("subprocess.run") as mock_run:
+            mock_run.return_value = MagicMock(returncode=0)
+            assert verify_mlx_installed() is True
+
+    def test_verify_mlx_installed_failure(self) -> None:
+        with patch("subprocess.run") as mock_run:
+            mock_run.return_value = MagicMock(returncode=1)
+            assert verify_mlx_installed() is False
+
+    def test_verify_mlx_installed_timeout(self) -> None:
+        import subprocess as sp
+
+        with patch(
+            "subprocess.run",
+            side_effect=sp.TimeoutExpired(cmd=["x"], timeout=30),
+        ):
+            assert verify_mlx_installed() is False
+
+
+# ---------------------------------------------------------------------------
+# MLX auto-install interactive prompt
+# ---------------------------------------------------------------------------
+
+
+class TestMaybeOfferMlxInstall:
+    """Tests for _maybe_offer_mlx_install in cli.py."""
+
+    @staticmethod
+    def _report_with_mlx_warn() -> DoctorReport:
+        return DoctorReport(
+            results=[
+                CheckResult(
+                    label="Transcription",
+                    status=CheckStatus.WARN,
+                    detail="faster-whisper (CPU)",
+                    fix_key="mlx_not_installed",
+                ),
+            ]
+        )
+
+    @staticmethod
+    def _report_without_mlx_warn() -> DoctorReport:
+        return DoctorReport(
+            results=[
+                CheckResult(
+                    label="FFmpeg",
+                    status=CheckStatus.OK,
+                    detail="ok",
+                ),
+            ]
+        )
+
+    def test_no_warning_returns_false(self) -> None:
+        from bristlenose.cli import _maybe_offer_mlx_install
+
+        assert _maybe_offer_mlx_install(self._report_without_mlx_warn()) is False
+
+    def test_non_interactive_returns_false(self) -> None:
+        from bristlenose.cli import _maybe_offer_mlx_install
+
+        with patch("sys.stdout") as mock_stdout:
+            mock_stdout.isatty.return_value = False
+            assert _maybe_offer_mlx_install(self._report_with_mlx_warn()) is False
+
+    def test_user_declines(self) -> None:
+        from bristlenose.cli import _maybe_offer_mlx_install
+
+        with (
+            patch("sys.stdout") as mock_stdout,
+            patch("builtins.input", return_value="n"),
+        ):
+            mock_stdout.isatty.return_value = True
+            result = _maybe_offer_mlx_install(self._report_with_mlx_warn())
+        assert result is True
+
+    def test_user_accepts_success(self) -> None:
+        from bristlenose.cli import _maybe_offer_mlx_install
+
+        with (
+            patch("sys.stdout") as mock_stdout,
+            patch("builtins.input", return_value=""),
+            patch("bristlenose.doctor_fixes.install_mlx", return_value=True),
+            patch("bristlenose.doctor_fixes.verify_mlx_installed", return_value=True),
+        ):
+            mock_stdout.isatty.return_value = True
+            result = _maybe_offer_mlx_install(self._report_with_mlx_warn())
+        assert result is True
+
+    def test_user_accepts_install_fails(self) -> None:
+        from bristlenose.cli import _maybe_offer_mlx_install
+
+        with (
+            patch("sys.stdout") as mock_stdout,
+            patch("builtins.input", return_value=""),
+            patch("bristlenose.doctor_fixes.install_mlx", return_value=False),
+            patch("bristlenose.doctor_fixes.verify_mlx_installed", return_value=False),
+        ):
+            mock_stdout.isatty.return_value = True
+            result = _maybe_offer_mlx_install(self._report_with_mlx_warn())
+        assert result is True
+
+    def test_eof_returns_true(self) -> None:
+        from bristlenose.cli import _maybe_offer_mlx_install
+
+        with (
+            patch("sys.stdout") as mock_stdout,
+            patch("builtins.input", side_effect=EOFError),
+        ):
+            mock_stdout.isatty.return_value = True
+            result = _maybe_offer_mlx_install(self._report_with_mlx_warn())
+        assert result is True

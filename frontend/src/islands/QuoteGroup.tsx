@@ -147,7 +147,7 @@ export function QuoteGroup({
 
   const store = useQuotesStore();
   const { hiddenTagGroups } = useSidebarStore();
-  const { registerHideHandler, unregisterHideHandler } = useFocus();
+  const { registerHideHandler, unregisterHideHandler, registerFlashTag, unregisterFlashTag } = useFocus();
 
   // ── Local presentation state ───────────────────────────────────────────
 
@@ -394,6 +394,29 @@ export function QuoteGroup({
     };
   }, [quotes, registerHideHandler, unregisterHideHandler]);
 
+  // Register flash-tag handlers for double-t quick-repeat visual feedback.
+  useEffect(() => {
+    const ids = quotes.map((q) => q.dom_id);
+    for (const id of ids) {
+      registerFlashTag(id, (tagName: string) => {
+        const flashKey = `${id}:${tagName}`;
+        setFlashingTags((prev) => new Set(prev).add(flashKey));
+        setTimeout(() => {
+          setFlashingTags((prev) => {
+            const next = new Set(prev);
+            next.delete(flashKey);
+            return next;
+          });
+        }, 500);
+      });
+    }
+    return () => {
+      for (const id of ids) {
+        unregisterFlashTag(id);
+      }
+    };
+  }, [quotes, registerFlashTag, unregisterFlashTag]);
+
   // Fly-down animation: runs after unhidden quotes enter the DOM.
   // useLayoutEffect fires before paint, so the user never sees a flash.
   useLayoutEffect(() => {
@@ -482,6 +505,16 @@ export function QuoteGroup({
       if (hiddenTagGroups.has(groupName)) {
         toggleTagGroupHidden(groupName);
       }
+      // Flash animation — visual confirmation on all tag adds (Decision 7).
+      const flashKey = `${domId}:${tagName}`;
+      setFlashingTags((prev) => new Set(prev).add(flashKey));
+      setTimeout(() => {
+        setFlashingTags((prev) => {
+          const next = new Set(prev);
+          next.delete(flashKey);
+          return next;
+        });
+      }, 500);
     },
     [tagColourMap, tagGroupMap, hiddenTagGroups],
   );
@@ -655,15 +688,17 @@ export function QuoteGroup({
       const exp = expansion[key];
       if (!exp) continue;
 
-      const { aboveCount, belowCount } = exp;
+      const { aboveCount, belowCount, exhaustedAbove, exhaustedBelow } = exp;
       if (aboveCount === 0 && belowCount === 0) continue;
 
       const cached = contextSegments[key];
       const haveAbove = cached?.above.length ?? 0;
       const haveBelow = cached?.below.length ?? 0;
 
-      // Only fetch if we need more segments than we have.
-      if (haveAbove >= aboveCount && haveBelow >= belowCount) continue;
+      // Only fetch if we need more segments than we have (and not exhausted).
+      const aboveSatisfied = haveAbove >= aboveCount || exhaustedAbove;
+      const belowSatisfied = haveBelow >= belowCount || exhaustedBelow;
+      if (aboveSatisfied && belowSatisfied) continue;
 
       if (q.segment_index >= 0) {
         // Index-based fetch.

@@ -63,6 +63,12 @@ interface FocusContextValue {
   registerHideHandler: (domId: string, handler: () => void) => void;
   /** Unregister a hide handler. */
   unregisterHideHandler: (domId: string) => void;
+  /** Flash a tag badge on a quote (visual confirmation for quick-apply). */
+  flashTag: (domId: string, tagName: string) => void;
+  /** Register a flash-tag handler for a specific quote (called by QuoteGroup). */
+  registerFlashTag: (domId: string, handler: (tagName: string) => void) => void;
+  /** Unregister a flash-tag handler. */
+  unregisterFlashTag: (domId: string) => void;
 }
 
 // ── Context ──────────────────────────────────────────────────────────────
@@ -77,6 +83,7 @@ const noopStr = (_s: string) => {};
 const noopStrStr = (_a: string, _b: string) => {};
 const noopStrOrNull = (_s: string | null) => {};
 const noopStrFn = (_s: string, _fn: () => void) => {};
+const noopStrStrFn = (_s: string, _fn: (s: string) => void) => {};
 
 const NO_FOCUS: FocusContextValue = {
   focusedId: null,
@@ -96,6 +103,9 @@ const NO_FOCUS: FocusContextValue = {
   hideQuote: noopStr,
   registerHideHandler: noopStrFn,
   unregisterHideHandler: noopStr,
+  flashTag: noopStrStr,
+  registerFlashTag: noopStrStrFn,
+  unregisterFlashTag: noopStr,
 };
 
 // ── Hook ─────────────────────────────────────────────────────────────────
@@ -145,6 +155,9 @@ export function FocusProvider({ children }: { children: ReactNode }) {
 
   // Hide handler callbacks registered by QuoteGroup instances.
   const hideHandlersRef = useRef<Map<string, () => void>>(new Map());
+
+  // Flash-tag handlers registered by QuoteGroup instances (for quick-apply flash).
+  const flashTagHandlersRef = useRef<Map<string, (tagName: string) => void>>(new Map());
 
   // ── Visible quote ID management ─────────────────────────────────────
 
@@ -293,6 +306,24 @@ export function FocusProvider({ children }: { children: ReactNode }) {
     if (handler) handler();
   }, []);
 
+  // ── Flash-tag handlers ──────────────────────────────────────────────
+
+  const registerFlashTag = useCallback(
+    (domId: string, handler: (tagName: string) => void) => {
+      flashTagHandlersRef.current.set(domId, handler);
+    },
+    [],
+  );
+
+  const unregisterFlashTag = useCallback((domId: string) => {
+    flashTagHandlersRef.current.delete(domId);
+  }, []);
+
+  const flashTag = useCallback((domId: string, tagName: string) => {
+    const handler = flashTagHandlersRef.current.get(domId);
+    if (handler) handler(tagName);
+  }, []);
+
   // ── Context value ───────────────────────────────────────────────────
 
   const value = useMemo<FocusContextValue>(
@@ -314,6 +345,9 @@ export function FocusProvider({ children }: { children: ReactNode }) {
       hideQuote,
       registerHideHandler,
       unregisterHideHandler,
+      flashTag,
+      registerFlashTag,
+      unregisterFlashTag,
     }),
     [
       focusedId,
@@ -333,6 +367,9 @@ export function FocusProvider({ children }: { children: ReactNode }) {
       hideQuote,
       registerHideHandler,
       unregisterHideHandler,
+      flashTag,
+      registerFlashTag,
+      unregisterFlashTag,
     ],
   );
 

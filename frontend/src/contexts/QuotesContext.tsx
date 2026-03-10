@@ -65,6 +65,16 @@ function emptyState(): QuotesState {
 let state: QuotesState = emptyState();
 const listeners = new Set<() => void>();
 
+// ── Last-used tag (for double-t quick-repeat) ─────────────────────────────
+
+/** The most recently applied tag (full response, set by addTag). */
+let lastUsedTag: TagResponse | null = null;
+
+/** Get the last-used tag (full TagResponse for re-application with colours). */
+export function getLastUsedTag(): TagResponse | null {
+  return lastUsedTag;
+}
+
 function getSnapshot(): QuotesState {
   return state;
 }
@@ -131,6 +141,7 @@ export function initFromQuotes(quotes: QuoteResponse[], replace = false): void {
 /** Clear all state. Used for test isolation and before re-fetch. */
 export function resetStore(): void {
   state = emptyState();
+  lastUsedTag = null;
   listeners.forEach((l) => l());
 }
 
@@ -185,6 +196,7 @@ export function addTag(domId: string, tag: TagResponse): void {
     const tags = { ...prev.tags };
     tags[domId] = [...existing, tag];
     putTags(tagNamesMap(tags));
+    lastUsedTag = tag;
     return { ...prev, tags };
   });
 }

@@ -34,7 +34,7 @@ import { TagGroupCard } from "./TagGroupCard";
 // Falls back to capitalising the framework_id for unknown ones.
 
 const FRAMEWORK_META: Record<string, { title: string; author: string }> = {
-  sentiment: { title: "Emotional & Cognitive Signals", author: "" },
+  sentiment: { title: "Sentiment", author: "" },
   norman:    { title: "The Design of Everyday Things", author: "Don Norman" },
   garrett:   { title: "The Elements of User Experience", author: "Jesse James Garrett" },
   plato:     { title: "Platonic Ontology & Epistemology", author: "Composite — Vlastos, Fine, Kraut, Sedley" },
@@ -332,6 +332,7 @@ export function TagSidebar() {
                       clearAll={tagFilter.clearAll}
                       onToggleTag={handleToggleTag}
                       onToggleEye={() => toggleTagGroupHidden(group.name)}
+                      hideGroupHeader={fw.groups.length === 1}
                     />
                   ))}
                 </div>

@@ -490,6 +490,7 @@ describe("QuoteCard — sentiment badge dedup", () => {
         isStarred={false}
         isHidden={false}
         userTags={userTags}
+        allTagNames={userTags.map((t) => t.name)}
         deletedBadges={[]}
         isEdited={false}
         tagVocabulary={[]}

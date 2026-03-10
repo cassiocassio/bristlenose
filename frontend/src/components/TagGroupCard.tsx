@@ -28,6 +28,10 @@ interface TagGroupCardProps {
   onToggleTag: (tagName: string, checked: boolean) => void;
   /** Called when this group's eye toggle is clicked. */
   onToggleEye?: () => void;
+  /** When true, skip the group header row (name, subtitle, group eye).
+   *  Used for single-group frameworks where the framework disclosure
+   *  already provides collapse + eye toggle, making the group header redundant. */
+  hideGroupHeader?: boolean;
 }
 
 export function TagGroupCard({
@@ -41,6 +45,7 @@ export function TagGroupCard({
   clearAll,
   onToggleTag,
   onToggleEye,
+  hideGroupHeader,
 }: TagGroupCardProps) {
   const { hiddenTagGroups } = useSidebarStore();
   const isHidden = hiddenTagGroups.has(name);
@@ -69,20 +74,22 @@ export function TagGroupCard({
       className={`tag-filter-group${isHidden ? " eye-hidden" : ""}`}
       style={{ background: groupBg }}
     >
-      <div className="tag-filter-group-header-row">
-        <div className="tag-filter-group-info">
-          <div className="tag-filter-group-name">{name}</div>
-          {subtitle && !isHidden && (
-            <div className="tag-filter-group-subtitle">{subtitle}</div>
-          )}
+      {!hideGroupHeader && (
+        <div className="tag-filter-group-header-row">
+          <div className="tag-filter-group-info">
+            <div className="tag-filter-group-name">{name}</div>
+            {subtitle && !isHidden && (
+              <div className="tag-filter-group-subtitle">{subtitle}</div>
+            )}
+          </div>
+          <EyeToggle
+            open={!isHidden}
+            onClick={handleEyeClick}
+            className="group-eye"
+            aria-label={isHidden ? `Show ${name}` : `Hide ${name}`}
+          />
         </div>
-        <EyeToggle
-          open={!isHidden}
-          onClick={handleEyeClick}
-          className="group-eye"
-          aria-label={isHidden ? `Show ${name}` : `Hide ${name}`}
-        />
-      </div>
+      )}
       {!isHidden && (
         <>
           <div className="tag-filter-group-tags">

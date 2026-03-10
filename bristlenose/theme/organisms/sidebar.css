@@ -53,6 +53,10 @@
     transition: grid-template-columns 0.25s ease;
 }
 
+@media (prefers-reduced-motion: reduce) {
+    .layout.animating { transition: none; }
+}
+
 /* ── Column 1: Left icon rail ─────────────────────────────────── */
 
 .toc-rail {
@@ -86,6 +90,11 @@
 .rail-btn:hover {
     background: var(--bn-colour-hover);
     color: var(--bn-colour-accent);
+}
+
+.rail-btn:focus-visible {
+    outline: 2px solid var(--bn-colour-accent);
+    outline-offset: -2px;
 }
 
 /* ── Column 2: Left sidebar (TOC) ────────────────────────────── */
@@ -136,6 +145,11 @@
 
 .sidebar-close:hover { color: var(--bn-colour-text); }
 
+.sidebar-close:focus-visible {
+    outline: 2px solid var(--bn-colour-accent);
+    outline-offset: -2px;
+}
+
 .toc-sidebar-body {
     flex: 1;
     overflow-y: auto;
@@ -171,6 +185,11 @@
     text-decoration: underline;
     text-underline-offset: 0.25em;
     text-decoration-color: var(--bn-colour-accent);
+}
+
+.toc-link:focus-visible {
+    outline: 2px solid var(--bn-colour-accent);
+    outline-offset: -2px;
 }
 
 .toc-link.active {
@@ -289,6 +308,11 @@
 .drag-handle.active {
     background: var(--bn-colour-accent);
     opacity: 0.3;
+}
+
+.drag-handle:focus-visible {
+    outline: 2px solid var(--bn-colour-accent);
+    outline-offset: -2px;
 }
 
 .drag-handle::after {

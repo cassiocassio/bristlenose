@@ -145,24 +145,36 @@
     --bn-opp-4-bg: oklch(94% 0.03 88);
     --bn-opp-5-bg: oklch(94% 0.03 100);
 
+    /* Sentiment set — numeric aliases for the codebook colour system.
+       Maps index-based getTagBg() to the existing named sentiment vars. */
+    --bn-sentiment-1-bg: var(--bn-sentiment-frustration-bg);
+    --bn-sentiment-2-bg: var(--bn-sentiment-confusion-bg);
+    --bn-sentiment-3-bg: var(--bn-sentiment-doubt-bg);
+    --bn-sentiment-4-bg: var(--bn-sentiment-surprise-bg);
+    --bn-sentiment-5-bg: var(--bn-sentiment-satisfaction-bg);
+    --bn-sentiment-6-bg: var(--bn-sentiment-delight-bg);
+    --bn-sentiment-7-bg: var(--bn-sentiment-confidence-bg);
+
     /* Custom / ungrouped */
     --bn-custom-bg: oklch(94% 0.005 260);
 
     /* Group card background tints (very subtle set tint for codebook panel) */
-    --bn-group-ux:    oklch(97% 0.015 250);
-    --bn-group-emo:   oklch(97% 0.015 10);
-    --bn-group-task:  oklch(97% 0.015 155);
-    --bn-group-trust: oklch(97% 0.015 300);
-    --bn-group-opp:   oklch(97% 0.015 75);
-    --bn-group-none:  #f9fafb;
+    --bn-group-ux:        oklch(97% 0.015 250);
+    --bn-group-emo:       oklch(97% 0.015 10);
+    --bn-group-task:      oklch(97% 0.015 155);
+    --bn-group-trust:     oklch(97% 0.015 300);
+    --bn-group-opp:       oklch(97% 0.015 75);
+    --bn-group-sentiment: oklch(97% 0.010 200);
+    --bn-group-none:      #f9fafb;
 
     /* Micro histogram bar colours (slightly more saturated than badge bg) */
-    --bn-bar-ux:    oklch(70% 0.08 250);
-    --bn-bar-emo:   oklch(70% 0.08 10);
-    --bn-bar-task:  oklch(70% 0.06 155);
-    --bn-bar-trust: oklch(70% 0.07 300);
-    --bn-bar-opp:   oklch(72% 0.07 75);
-    --bn-bar-none:  #d1d5db;
+    --bn-bar-ux:        oklch(70% 0.08 250);
+    --bn-bar-emo:       oklch(70% 0.08 10);
+    --bn-bar-task:      oklch(70% 0.06 155);
+    --bn-bar-trust:     oklch(70% 0.07 300);
+    --bn-bar-opp:       oklch(72% 0.07 75);
+    --bn-bar-sentiment: oklch(65% 0.06 200);
+    --bn-bar-none:      #d1d5db;
 
     /* Set indicator dots (saturated anchors for codebook panel) */
     --bn-set-ux-dot: oklch(50% 0.12 250);
@@ -363,20 +375,22 @@
         --bn-opp-5-bg: light-dark(oklch(94% 0.03 100), oklch(51% 0.11 100));
         --bn-custom-bg: light-dark(oklch(94% 0.005 260), oklch(52% 0.02 260));
         /* Group card background tints */
-        --bn-group-ux:    light-dark(oklch(97% 0.015 250), oklch(22% 0.025 250));
-        --bn-group-emo:   light-dark(oklch(97% 0.015 10),  oklch(22% 0.025 10));
-        --bn-group-task:  light-dark(oklch(97% 0.015 155), oklch(22% 0.020 155));
-        --bn-group-trust: light-dark(oklch(97% 0.015 300), oklch(22% 0.025 300));
-        --bn-group-opp:   light-dark(oklch(97% 0.015 75),  oklch(22% 0.022 75));
-        --bn-group-none:  light-dark(#f9fafb, #1e1e1e);
+        --bn-group-ux:        light-dark(oklch(97% 0.015 250), oklch(22% 0.025 250));
+        --bn-group-emo:       light-dark(oklch(97% 0.015 10),  oklch(22% 0.025 10));
+        --bn-group-task:      light-dark(oklch(97% 0.015 155), oklch(22% 0.020 155));
+        --bn-group-trust:     light-dark(oklch(97% 0.015 300), oklch(22% 0.025 300));
+        --bn-group-opp:       light-dark(oklch(97% 0.015 75),  oklch(22% 0.022 75));
+        --bn-group-sentiment: light-dark(oklch(97% 0.010 200), oklch(22% 0.015 200));
+        --bn-group-none:      light-dark(#f9fafb, #1e1e1e);
 
         /* Micro histogram bar colours */
-        --bn-bar-ux:    light-dark(oklch(70% 0.08 250), oklch(55% 0.08 250));
-        --bn-bar-emo:   light-dark(oklch(70% 0.08 10),  oklch(55% 0.08 10));
-        --bn-bar-task:  light-dark(oklch(70% 0.06 155), oklch(55% 0.06 155));
-        --bn-bar-trust: light-dark(oklch(70% 0.07 300), oklch(55% 0.07 300));
-        --bn-bar-opp:   light-dark(oklch(72% 0.07 75),  oklch(57% 0.07 75));
-        --bn-bar-none:  light-dark(#d1d5db, #4b5563);
+        --bn-bar-ux:        light-dark(oklch(70% 0.08 250), oklch(55% 0.08 250));
+        --bn-bar-emo:       light-dark(oklch(70% 0.08 10),  oklch(55% 0.08 10));
+        --bn-bar-task:      light-dark(oklch(70% 0.06 155), oklch(55% 0.06 155));
+        --bn-bar-trust:     light-dark(oklch(70% 0.07 300), oklch(55% 0.07 300));
+        --bn-bar-opp:       light-dark(oklch(72% 0.07 75),  oklch(57% 0.07 75));
+        --bn-bar-sentiment: light-dark(oklch(65% 0.06 200), oklch(50% 0.06 200));
+        --bn-bar-none:      light-dark(#d1d5db, #4b5563);
 
         --bn-set-ux-dot: light-dark(oklch(50% 0.12 250), oklch(60% 0.10 250));
         --bn-set-emo-dot: light-dark(oklch(50% 0.12 10), oklch(60% 0.10 10));

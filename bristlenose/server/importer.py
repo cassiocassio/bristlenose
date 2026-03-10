@@ -22,9 +22,11 @@ from sqlalchemy.orm import Session
 
 from bristlenose.server.models import (
     ClusterQuote,
+    CodebookGroup,
     DeletedBadge,
     Person,
     Project,
+    ProjectCodebookGroup,
     Quote,
     QuoteEdit,
     QuoteState,
@@ -32,6 +34,7 @@ from bristlenose.server.models import (
     ScreenCluster,
     SessionSpeaker,
     SourceFile,
+    TagDefinition,
     ThemeGroup,
     ThemeQuote,
     TopicBoundary,
@@ -241,6 +244,10 @@ def import_project(db: Session, project_dir: Path) -> Project:
     _import_quotes_from_themes(
         db, project, session_map, theme_groups_data, quote_map, now,
     )
+
+    # --- Auto-import sentiment framework + auto-tag from pipeline ---------
+    _auto_import_sentiment_framework(db, project)
+    _auto_tag_from_sentiment_field(db, project)
 
     # --- Import topic boundaries (if available) --------------------------
     tb_path = intermediate / "topic_boundaries.json"
@@ -848,6 +855,162 @@ def _import_topic_boundaries(
             confidence=float(item.get("confidence", 0.0)),
         )
         db.add(tb)
+
+
+def _auto_import_sentiment_framework(db: Session, project: Project) -> None:
+    """Auto-import the Sentiment codebook framework if not already linked.
+
+    On first serve, every project gets the Sentiment framework imported
+    automatically so quotes arrive with sentiment tags pre-applied in the
+    sidebar.  Idempotent — re-imports skip if already linked.
+
+    Uses ``sort_order=0`` so sentiment appears first in the sidebar,
+    before user-created groups and other frameworks.
+    """
+    from bristlenose.server.codebook import get_template
+
+    # Check if sentiment framework is already linked to this project
+    existing = (
+        db.query(ProjectCodebookGroup)
+        .join(CodebookGroup)
+        .filter(
+            ProjectCodebookGroup.project_id == project.id,
+            CodebookGroup.framework_id == "sentiment",
+        )
+        .first()
+    )
+    if existing:
+        return
+
+    tmpl = get_template("sentiment")
+    if tmpl is None:
+        logger.warning("Sentiment framework YAML not found — skipping auto-import.")
+        return
+
+    # Check if orphaned groups exist (previously imported then removed)
+    orphaned = (
+        db.query(CodebookGroup)
+        .filter(CodebookGroup.framework_id == "sentiment")
+        .all()
+    )
+
+    if orphaned:
+        # Re-link orphaned groups
+        for group in orphaned:
+            db.add(ProjectCodebookGroup(
+                project_id=project.id,
+                codebook_group_id=group.id,
+                sort_order=0,
+            ))
+        logger.info(
+            "Re-linked %d orphaned sentiment codebook groups for project '%s'.",
+            len(orphaned),
+            project.name,
+        )
+    else:
+        # Fresh import: create groups + tag definitions
+        for tg in tmpl.groups:
+            group = CodebookGroup(
+                name=tg.name,
+                subtitle=tg.subtitle,
+                colour_set=tg.colour_set,
+                framework_id=tmpl.id,
+            )
+            db.add(group)
+            db.flush()  # get group.id for tag definitions
+
+            for tt in tg.tags:
+                db.add(TagDefinition(
+                    name=tt.name,
+                    codebook_group_id=group.id,
+                ))
+
+            db.add(ProjectCodebookGroup(
+                project_id=project.id,
+                codebook_group_id=group.id,
+                sort_order=0,
+            ))
+
+        logger.info(
+            "Auto-imported sentiment codebook framework for project '%s'.",
+            project.name,
+        )
+
+    db.flush()
+
+
+def _auto_tag_from_sentiment_field(db: Session, project: Project) -> None:
+    """Create QuoteTag rows from the pipeline's Quote.sentiment field.
+
+    For each quote with a non-null sentiment, looks up the matching
+    TagDefinition within the Sentiment framework's CodebookGroup and
+    creates a QuoteTag row if one doesn't already exist.
+
+    Idempotent — existing tags are preserved, no duplicates.
+    """
+    # Find the sentiment group for this project
+    sentiment_group = (
+        db.query(CodebookGroup)
+        .join(ProjectCodebookGroup)
+        .filter(
+            ProjectCodebookGroup.project_id == project.id,
+            CodebookGroup.framework_id == "sentiment",
+        )
+        .first()
+    )
+    if sentiment_group is None:
+        return
+
+    # Build name → TagDefinition lookup for sentiment tags
+    tag_defs = (
+        db.query(TagDefinition)
+        .filter(TagDefinition.codebook_group_id == sentiment_group.id)
+        .all()
+    )
+    tag_by_name: dict[str, TagDefinition] = {td.name: td for td in tag_defs}
+
+    # Get all quotes with a sentiment for this project
+    quotes_with_sentiment = (
+        db.query(Quote)
+        .filter(
+            Quote.project_id == project.id,
+            Quote.sentiment.isnot(None),
+            Quote.sentiment != "",
+        )
+        .all()
+    )
+
+    if not quotes_with_sentiment:
+        return
+
+    # Get existing QuoteTag rows to avoid duplicates
+    existing_quote_tag_pairs: set[tuple[int, int]] = set()
+    for qt in (
+        db.query(QuoteTag)
+        .filter(
+            QuoteTag.tag_definition_id.in_([td.id for td in tag_defs]),
+        )
+        .all()
+    ):
+        existing_quote_tag_pairs.add((qt.quote_id, qt.tag_definition_id))
+
+    created = 0
+    for quote in quotes_with_sentiment:
+        td = tag_by_name.get(quote.sentiment)
+        if td is None:
+            continue
+        if (quote.id, td.id) in existing_quote_tag_pairs:
+            continue
+        db.add(QuoteTag(quote_id=quote.id, tag_definition_id=td.id))
+        created += 1
+
+    if created:
+        db.flush()
+        logger.info(
+            "Auto-tagged %d quotes with sentiment tags for project '%s'.",
+            created,
+            project.name,
+        )
 
 
 def _cleanup_stale_data(

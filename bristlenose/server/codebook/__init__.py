@@ -28,7 +28,7 @@ import yaml
 
 _TEMPLATES_DIR = Path(__file__).resolve().parent
 
-_VALID_COLOUR_SETS = frozenset({"ux", "emo", "task", "trust", "opp"})
+_VALID_COLOUR_SETS = frozenset({"ux", "emo", "task", "trust", "opp", "sentiment"})
 
 
 # ---------------------------------------------------------------------------

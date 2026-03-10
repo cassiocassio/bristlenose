@@ -9,11 +9,12 @@ export const COLOUR_SETS: Record<
   string,
   { slots: number; groupBg: string; barVar: string; bgVar: string }
 > = {
-  ux:    { slots: 5, groupBg: "--bn-group-ux",    barVar: "--bn-bar-ux",    bgVar: "--bn-ux-" },
-  emo:   { slots: 6, groupBg: "--bn-group-emo",   barVar: "--bn-bar-emo",   bgVar: "--bn-emo-" },
-  task:  { slots: 5, groupBg: "--bn-group-task",   barVar: "--bn-bar-task",  bgVar: "--bn-task-" },
-  trust: { slots: 5, groupBg: "--bn-group-trust",  barVar: "--bn-bar-trust", bgVar: "--bn-trust-" },
-  opp:   { slots: 5, groupBg: "--bn-group-opp",    barVar: "--bn-bar-opp",   bgVar: "--bn-opp-" },
+  ux:        { slots: 5, groupBg: "--bn-group-ux",        barVar: "--bn-bar-ux",        bgVar: "--bn-ux-" },
+  emo:       { slots: 6, groupBg: "--bn-group-emo",       barVar: "--bn-bar-emo",       bgVar: "--bn-emo-" },
+  task:      { slots: 5, groupBg: "--bn-group-task",      barVar: "--bn-bar-task",      bgVar: "--bn-task-" },
+  trust:     { slots: 5, groupBg: "--bn-group-trust",     barVar: "--bn-bar-trust",     bgVar: "--bn-trust-" },
+  opp:       { slots: 5, groupBg: "--bn-group-opp",       barVar: "--bn-bar-opp",       bgVar: "--bn-opp-" },
+  sentiment: { slots: 7, groupBg: "--bn-group-sentiment", barVar: "--bn-bar-sentiment", bgVar: "--bn-sentiment-" },
 };
 
 export function getGroupBg(colourSet: string): string {

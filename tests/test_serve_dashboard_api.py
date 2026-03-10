@@ -90,9 +90,10 @@ class TestDashboardStats:
         # All 4 quotes have sentiment tags.
         assert data["stats"]["ai_tags_count"] == 4
 
-    def test_user_tags_count_initially_zero(self, client: TestClient) -> None:
+    def test_user_tags_count_includes_auto_imported_sentiment(self, client: TestClient) -> None:
+        """Sentiment auto-import creates 4 QuoteTags (one per smoke-test quote)."""
         data = client.get("/api/projects/1/dashboard").json()
-        assert data["stats"]["user_tags_count"] == 0
+        assert data["stats"]["user_tags_count"] == 4
 
     def test_user_tags_count_after_tagging(self, client: TestClient) -> None:
         """After adding user tags, the count updates."""

@@ -122,37 +122,6 @@ groups:
     subtitle: Where things break down
     colour_set: emo
     tags:
-      - name: confusion
-        definition: >
-          The participant doesn't understand what's happening, what
-          something means, or what to do next — a cognitive "I'm lost"
-          moment.
-        apply_when: >
-          The participant expresses uncertainty about meaning, state,
-          or next steps. Look for "I don't understand," "what does this
-          mean," "I'm not sure what," "where am I," "wait, what,"
-          "huh?"
-        not_this: >
-          If the participant understands but finds the process slow or
-          effortful, that's friction. If they have a wrong
-          understanding (but feel confident), that's misconception.
-          Confusion is the felt experience of not knowing.
-
-      - name: frustration
-        definition: >
-          The participant expresses annoyance, anger, or exasperation —
-          an emotional response to something that isn't working well.
-        apply_when: >
-          The participant shows visible or verbal signs of annoyance.
-          Look for tone markers (sighing, swearing, emphatic language),
-          "this is ridiculous," "why can't I just," "that's so
-          annoying," "I hate when," "are you kidding me."
-        not_this: >
-          Frustration is an emotional state, not a usability
-          observation. If the participant is calm but the process is
-          slow, that's friction. If they're confused but not angry,
-          that's confusion. Frustration requires emotional escalation.
-
       - name: friction
         definition: >
           Something slows the participant down, adds unnecessary steps,
@@ -415,22 +384,6 @@ groups:
     subtitle: How people feel
     colour_set: trust
     tags:
-      - name: delight
-        definition: >
-          The participant expresses genuine pleasure, joy, or positive
-          surprise — a moment that exceeds expectations.
-        apply_when: >
-          The participant shows or states positive emotion — genuine
-          pleasure, not mere satisfaction. Look for "I love," "that's
-          amazing," "oh cool," "this is great," laughing with
-          pleasure, "I didn't expect that" (positively).
-        not_this: >
-          If the participant is satisfied but not emotionally moved,
-          don't tag — delight requires elevated positive emotion. If
-          the surprise is negative, that's surprise (neutral tag).
-          Delight is specifically positive emotional response beyond
-          basic satisfaction.
-
       - name: anxiety
         definition: >
           The participant feels uncertain, worried, or nervous about
@@ -478,21 +431,6 @@ groups:
           anxiety (forward-looking). Distrust is a judgement about an
           entity's character or reliability — "they can't be trusted"
           vs "I'm worried about what might happen."
-
-      - name: surprise
-        definition: >
-          Something unexpected happened — could be positive, negative,
-          or neutral. The participant's expectations were violated.
-        apply_when: >
-          The participant encounters something they didn't expect. Look
-          for "oh!," "I didn't expect," "I was surprised," "really?,"
-          "wait, what?," "that's weird," "huh, I didn't know."
-        not_this: >
-          If the surprise is clearly positive and emotionally elevated,
-          that's delight. If the surprise reveals a gap between
-          expectation and reality, that's expectation mismatch. Use
-          surprise when the emotional valence is unclear or mixed, or
-          the reaction is brief.
 
   - name: Context
     subtitle: The world around the task

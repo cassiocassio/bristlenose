@@ -96,12 +96,6 @@ export function useKeyboardShortcuts({
   const locationRef = useRef(location);
   locationRef.current = location;
 
-  // ── Double-t quick-repeat state ────────────────────────────────────
-  /** Timestamp of last `t` keydown (for double-tap detection). */
-  const lastTTimestamp = useRef(0);
-  /** Whether the last `t` opened a TagInput (to avoid re-opening on double-tap). */
-  const lastTOpenedInput = useRef(false);
-
   // ── Star action ─────────────────────────────────────────────────────
 
   const handleStar = useCallback(() => {
@@ -387,28 +381,17 @@ export function useKeyboardShortcuts({
         }
       }
 
-      // t / tt — add tag / quick-repeat last tag
-      if (key === "t" && (focusedIdRef.current || selectedIdsRef.current.size > 0)) {
+      // t — add tag
+      if (key === "t" && focusedIdRef.current) {
         e.preventDefault();
-        const now = Date.now();
-        const gap = now - lastTTimestamp.current;
-        lastTTimestamp.current = now;
+        handleTagOpen();
+        return;
+      }
 
-        if (gap < 400 && lastTOpenedInput.current) {
-          // Double-tap: apply last-used tag (if available)
-          const applied = handleQuickApply();
-          if (applied) {
-            lastTOpenedInput.current = false;
-            return;
-          }
-          // No last tag — fall through to open TagInput
-        }
-
-        // Single tap (or no last tag): open TagInput on focused quote
-        if (focusedIdRef.current) {
-          handleTagOpen();
-          lastTOpenedInput.current = true;
-        }
+      // r — repeat last tag (quick-apply to focused/selected quotes)
+      if (key === "r" && (focusedIdRef.current || selectedIdsRef.current.size > 0)) {
+        e.preventDefault();
+        handleQuickApply();
         return;
       }
 

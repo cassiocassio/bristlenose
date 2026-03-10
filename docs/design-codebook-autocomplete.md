@@ -573,7 +573,7 @@ Similar to our use case for the export/sharing scenario — lightweight tagging 
 |---------|----------------|---------|----------|
 | ~~**Group headers in suggestions**~~ | ~~Figma, VS Code (categories), NVivo (node tree)~~ | ~~Researcher can see which framework a tag belongs to~~ | ~~High~~ ✅ Stage 1 |
 | ~~**Tag colour in suggestions**~~ | ~~Dovetail, GitHub Labels, NVivo~~ | ~~Visual orientation in a mixed vocabulary~~ | ~~High~~ ✅ Stage 1 |
-| **Quick-apply last tag** | Atlas.ti (`Ctrl+L`) | One-keystroke repeat for batch coding | High |
+| ~~**Quick-apply last tag**~~ | ~~Atlas.ti (`Ctrl+L`)~~ | ~~One-keystroke repeat for batch coding~~ | ~~High~~ ✅ Stage 2 |
 | **Trigger character** | Marvin (`#`), Slack (`:`), Notion (`/`) | Invoke picker without clicking a button first | Medium |
 | **Detail/definition pane** | VS Code (docs panel), Atlas.ti (comments) | Show tag `apply_when` text alongside the suggestion | Medium |
 | **Fuzzy matching** | VS Code, JetBrains, Slack (@) | Forgive typos: "usblty" → "Usability" | Medium |
@@ -637,25 +637,25 @@ _Decisions agreed 9 Mar 2026._
 
 **Rationale:** `#` requires Shift on US keyboards and is worse on non-US layouts (e.g., UK: `Alt+3`, German: dead key). The `t` hotkey is already discovered via the `?` help modal and pairs naturally with `j`/`k` navigation. Adding a trigger character inside the TagInput text field would conflict with legitimate tag names containing `#`.
 
-### Decision 3: Quick-repeat — double-`t` applies last-used tag
+### Decision 3: Quick-repeat — `r` applies last-used tag
 
-**Decision:** Double-tap `t` (within the double-click timing window, ~400ms) applies the **most recently used tag** to the focused quote(s). Single `t` still opens the TagInput picker.
+**Decision:** Press `r` to apply the **most recently used tag** to the focused quote(s) or all selected quotes. `t` still opens the TagInput picker. `r` is right next to `t` on QWERTY — ergonomic for the `j → t → ... → j → r → j → r` batch-coding workflow.
 
-**Rationale:** This borrows Atlas.ti's `Ctrl+L` Quick Coding concept but uses an ergonomic double-tap instead of a modifier chord. The double-click timing window is familiar from mouse UX. The workflow becomes:
+**Rationale:** This borrows Atlas.ti's `Ctrl+L` Quick Coding concept but uses a single unmodified key. Originally designed as double-tap `t` (within 400ms), but that conflicted with TagInput — the first `t` opens the picker and the second types `t` into it, triggering autocomplete for t-prefixed tags instead of quick-applying. A dedicated `r` key avoids the conflict entirely. The workflow becomes:
 
 ```
 j → t → type "usability" → Enter    (tag first quote)
-j → tt                               (stamp same tag on next quote)
-j → tt                               (and the next)
+j → r                               (stamp same tag on next quote)
+j → r                               (and the next)
 j → t → type "learnability" → Enter  (switch to a different tag)
-j → tt                               (stamp the new tag)
+j → r                               (stamp the new tag)
 ```
 
 **Implementation notes:**
-- Track `lastTagTimestamp` and `lastUsedTag` in the keyboard shortcuts hook or a small module-level store
-- If `t` is pressed within ~400ms of the previous `t` keyup, and no TagInput is currently open, apply `lastUsedTag` to the focused quote (or all selected quotes)
-- Show the success blink animation (same as tag accept) to confirm
-- If no `lastUsedTag` exists (first tag action in the session), double-`t` opens the regular TagInput instead
+- `lastUsedTag: TagResponse | null` module-level variable in `QuotesContext.tsx` — stores full `TagResponse` (with colour metadata) set by `addTag()`, cleared by `resetStore()`
+- `r` keydown in `useKeyboardShortcuts.ts` calls `handleQuickApply()` which reads `getLastUsedTag()`, applies to all targets (selected quotes or focused quote), and triggers flash animation via `flashTag()` FocusContext registry
+- Flash animation reuses the existing `badge-accept-flash` CSS keyframe (Decision 7 — flash on all tag adds)
+- If no `lastUsedTag` exists (first tag action in the session), `r` is a no-op (silent, no error)
 
 ### Decision 4: Group context in suggestions — section headers with indented tags
 
@@ -796,23 +796,29 @@ _Completed 10 Mar 2026 — commits `fbba431`, `c27351a`, `9e21266`._
 
 **Actual effort:** 2 sessions (implementation + QA polish + bug fix)
 
-### Stage 2: Double-t quick-repeat
+### Stage 2: `r` key quick-repeat ✅
 
-**What:** Double-tap `t` within 400ms applies the last-used tag to focused/selected quotes.
+_Completed 10 Mar 2026._
 
-**Changes:**
-- **Last-used tag tracking**: Module-level variable or small store (`lastUsedTag: string | null`, `lastTagTimestamp: number`)
-- **`useKeyboardShortcuts`**: On `t` keydown, check if within 400ms of last `t`. If yes and `lastUsedTag` exists, apply it directly (call the tag mutation API). If no, open TagInput as before
-- **TagInput commit callback**: When a tag is committed via TagInput, update `lastUsedTag`
-- **Success animation**: Trigger the badge-accept-flash on the quote card after quick-repeat application
-- **Bulk support**: If multiple quotes are selected, double-`t` applies the tag to all of them
+**What:** Press `r` to apply the last-used tag to focused/selected quotes. Originally designed as double-tap `t`, but that conflicted with TagInput (first `t` opens picker, second types `t` into it). Changed to dedicated `r` key.
+
+**Changes (as implemented):**
+- **Last-used tag tracking**: `lastUsedTag: TagResponse | null` module-level variable in `QuotesContext.tsx`. Set automatically by `addTag()` (full `TagResponse` with colour metadata). Cleared by `resetStore()`. Exported via `getLastUsedTag()`
+- **`useKeyboardShortcuts`**: `r` keydown calls `handleQuickApply()` — reads `getLastUsedTag()`, calls `addTag()` for each target (selected quotes or focused quote), triggers flash animation via `flashTag()` FocusContext registry. No-op if no last tag exists
+- **Flash animation**: `flashTag` registry in `FocusContext` (same pattern as `openTagInput`/`hideQuote`). QuoteGroup registers per-quote handlers that set `flashingTags` state. Also added flash to `handleTagAdd` (all manual tag adds flash, not just proposed accepts — Decision 7)
+- **Bulk support**: Selected quotes all get the tag. Falls back to focused quote if no selection
+- **HelpModal**: `r` → "Repeat last tag"
 
 **Files touched:**
-- `frontend/src/hooks/useKeyboardShortcuts.ts` — double-tap detection logic
-- `frontend/src/contexts/QuotesContext.tsx` — tag mutation (may already exist)
-- Small amount of CSS for the flash animation trigger
+- `frontend/src/hooks/useKeyboardShortcuts.ts` — `r` key handler, `handleQuickApply()` callback
+- `frontend/src/contexts/QuotesContext.tsx` — `lastUsedTag`, `getLastUsedTag()`, auto-set in `addTag()`, clear in `resetStore()`
+- `frontend/src/contexts/FocusContext.tsx` — `flashTag`/`registerFlashTag`/`unregisterFlashTag` registry
+- `frontend/src/islands/QuoteGroup.tsx` — flash-tag handler registration, flash on all tag adds
+- `frontend/src/components/HelpModal.tsx` — `r` shortcut entry
+- `frontend/src/hooks/useKeyboardShortcuts.test.ts` — 6 tests (apply, bulk, no-op, store tracking)
+- `frontend/src/components/HelpModal.test.tsx` — updated assertion
 
-**Estimated effort:** Small (half session)
+**Actual effort:** Half session
 
 ### Stage 3: Sidebar tag interactions (filter + assign)
 
@@ -878,14 +884,14 @@ _Completed 10 Mar 2026 — commits `fbba431`, `c27351a`, `9e21266`._
 | **Autocomplete** | Prefix + contains match, ghost text | Type-to-filter | `#` → autocomplete | Type-ahead in dialog | Type-to-filter in bar |
 | **Fuzzy matching** | No (contains only) | Unknown | Unknown | No (prefix) | No (prefix) |
 | **Ghost text** | Yes (best prefix match suffix) | No | No | No | No |
-| **Quick-repeat** | No | No | No | `Ctrl+L` (last code) | No |
+| **Quick-repeat** | `r` (last tag) | No | No | `Ctrl+L` (last code) | No |
 | **Group context in picker** | Yes (section headers + coloured pills) | Group colours | Hierarchy visible | Flat list | Node tree |
 | **Inline creation** | Yes (type + Enter) | Yes | Yes | Yes (`+` in dialog) | Yes |
 | **"Create X" label** | No | Yes | Unknown | No | Unknown |
 | **AI-suggested tags** | AutoCode → tentative badges | Magic Highlights (auto-apply) | Auto-apply during transcription | AI Coding (v24+) | AI coding suggestions (v15+) |
 | **Tag definitions visible** | No (only in codebook) | On tag board | On hover | Comment field | Node description |
 | **Multi-select** | No (Tab-reopen for rapid entry) | Yes (multi-tag per highlight) | Unknown | One code per dialog invocation | One node per action |
-| **Keyboard shortcut** | `t` on focused quote | Tab on selection menu | `#` in live notes | `Ctrl+J` / `Ctrl+L` / `Ctrl+Shift+V` | None documented |
+| **Keyboard shortcut** | `t` (add tag), `r` (repeat) | Tab on selection menu | `#` in live notes | `Ctrl+J` / `Ctrl+L` / `Ctrl+Shift+V` | None documented |
 | **Provenance distinction** | Group colours only | Group colours | Purple (template) vs pink (project) | Code comments | Node tree position |
 
 ---

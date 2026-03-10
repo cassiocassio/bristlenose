@@ -70,7 +70,7 @@ export function TagInput({
   onCancel,
   onCommitAndReopen,
   placeholder = "tag",
-  maxSuggestions = 8,
+  maxSuggestions = 12,
   className,
   "data-testid": testId,
 }: TagInputProps) {

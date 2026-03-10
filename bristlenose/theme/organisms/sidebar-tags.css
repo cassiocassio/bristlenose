@@ -135,7 +135,9 @@
     display: flex;
     align-items: flex-start;
     gap: var(--bn-space-sm);
-    padding: var(--bn-space-sm) 0.5rem 0.1rem;
+    /* Left padding aligns with framework title text
+       (summary padding 0.85rem + chevron 0.85rem + gap 0.5rem = 2.2rem) */
+    padding: var(--bn-space-sm) 0.5rem 0.1rem 2.2rem;
 }
 
 .tag-filter-group-info {

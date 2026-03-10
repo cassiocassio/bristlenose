@@ -21,6 +21,7 @@ export { ProposalZoneList } from "./ProposalZoneList";
 export { Selector } from "./Selector";
 export { Sparkline } from "./Sparkline";
 export { TagInput } from "./TagInput";
+export type { TagVocabularyGroup } from "./TagInput";
 export { ThresholdReviewModal } from "./ThresholdReviewModal";
 export { Thumbnail } from "./Thumbnail";
 export { TimecodeLink } from "./TimecodeLink";

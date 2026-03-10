@@ -1,6 +1,7 @@
 import { render, screen, fireEvent } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { TagInput } from "./TagInput";
+import type { TagVocabularyGroup } from "./TagInput";
 
 const VOCAB = ["apple", "apricot", "banana", "blueberry", "cherry"];
 
@@ -286,6 +287,266 @@ describe("TagInput", () => {
       fireEvent.blur(input);
       vi.advanceTimersByTime(150);
       expect(onCancel).toHaveBeenCalledOnce();
+    });
+  });
+
+  // ── Grouped vocabulary tests ──────────────────────────────────────────
+
+  describe("groupedVocabulary", () => {
+    const GROUPED: TagVocabularyGroup[] = [
+      {
+        groupName: "Norman Principles",
+        colourSet: "ux",
+        tags: [
+          { name: "affordance", colourIndex: 0 },
+          { name: "feedback", colourIndex: 1 },
+          { name: "mapping", colourIndex: 2 },
+        ],
+      },
+      {
+        groupName: "Emotion",
+        colourSet: "emo",
+        tags: [
+          { name: "frustration", colourIndex: 0 },
+          { name: "delight", colourIndex: 1 },
+        ],
+      },
+      {
+        groupName: "User Tags",
+        colourSet: "",
+        tags: [
+          { name: "feedback loop", colourIndex: 0 },
+        ],
+      },
+    ];
+
+    const ALL_NAMES = [
+      "affordance", "feedback", "mapping",
+      "frustration", "delight", "feedback loop",
+    ];
+
+    it("renders group headers when groupedVocabulary is provided", async () => {
+      const { container } = render(
+        <TagInput
+          vocabulary={ALL_NAMES}
+          groupedVocabulary={GROUPED}
+          onCommit={vi.fn()}
+          onCancel={vi.fn()}
+        />,
+      );
+      await userEvent.type(screen.getByPlaceholderText("tag"), "f");
+      const headers = container.querySelectorAll(".tag-suggest-header");
+      expect(headers.length).toBeGreaterThanOrEqual(1);
+      // Should show Norman Principles header (contains "feedback") and
+      // Emotion header (contains "frustration") and User Tags (contains "feedback loop")
+      const headerTexts = Array.from(headers).map((h) => h.textContent);
+      expect(headerTexts).toContain("Norman Principles");
+      expect(headerTexts).toContain("Emotion");
+      expect(headerTexts).toContain("User Tags");
+    });
+
+    it("shows tags as pills inside suggestion items", async () => {
+      const { container } = render(
+        <TagInput
+          vocabulary={ALL_NAMES}
+          groupedVocabulary={GROUPED}
+          onCommit={vi.fn()}
+          onCancel={vi.fn()}
+        />,
+      );
+      await userEvent.type(screen.getByPlaceholderText("tag"), "aff");
+      const pills = container.querySelectorAll(".tag-suggest-pill");
+      expect(pills).toHaveLength(1);
+      expect(pills[0].textContent).toBe("affordance");
+    });
+
+    it("arrow keys skip group headers", async () => {
+      const { container } = render(
+        <TagInput
+          vocabulary={ALL_NAMES}
+          groupedVocabulary={GROUPED}
+          onCommit={vi.fn()}
+          onCancel={vi.fn()}
+        />,
+      );
+      // "feed" matches "feedback" (Norman) and "feedback loop" (User Tags)
+      await userEvent.type(screen.getByPlaceholderText("tag"), "feed");
+      // First ArrowDown → first tag (feedback)
+      await userEvent.keyboard("{ArrowDown}");
+      const activeItems = container.querySelectorAll(".tag-suggest-item.active");
+      expect(activeItems).toHaveLength(1);
+      expect(activeItems[0].querySelector(".tag-suggest-pill")?.textContent).toBe("feedback");
+
+      // No header should be active
+      const activeHeaders = container.querySelectorAll(".tag-suggest-header.active");
+      expect(activeHeaders).toHaveLength(0);
+    });
+
+    it("typing a group name shows all its tags", async () => {
+      const { container } = render(
+        <TagInput
+          vocabulary={ALL_NAMES}
+          groupedVocabulary={GROUPED}
+          onCommit={vi.fn()}
+          onCancel={vi.fn()}
+        />,
+      );
+      await userEvent.type(screen.getByPlaceholderText("tag"), "norman");
+      // Should show all Norman Principles tags
+      const pills = container.querySelectorAll(".tag-suggest-pill");
+      const pillTexts = Array.from(pills).map((p) => p.textContent);
+      expect(pillTexts).toContain("affordance");
+      expect(pillTexts).toContain("feedback");
+      expect(pillTexts).toContain("mapping");
+    });
+
+    it("Enter on highlighted grouped suggestion commits the tag name", async () => {
+      const onCommit = vi.fn();
+      render(
+        <TagInput
+          vocabulary={ALL_NAMES}
+          groupedVocabulary={GROUPED}
+          onCommit={onCommit}
+          onCancel={vi.fn()}
+        />,
+      );
+      await userEvent.type(screen.getByPlaceholderText("tag"), "del");
+      await userEvent.keyboard("{ArrowDown}{Enter}");
+      expect(onCommit).toHaveBeenCalledWith("delight");
+    });
+
+    it("click on grouped suggestion commits the tag name", async () => {
+      const onCommit = vi.fn();
+      render(
+        <TagInput
+          vocabulary={ALL_NAMES}
+          groupedVocabulary={GROUPED}
+          onCommit={onCommit}
+          onCancel={vi.fn()}
+        />,
+      );
+      await userEvent.type(screen.getByPlaceholderText("tag"), "del");
+      const items = document.querySelectorAll(".tag-suggest-item");
+      fireEvent.mouseDown(items[0]);
+      expect(onCommit).toHaveBeenCalledWith("delight");
+    });
+
+    it("excludes tags from grouped suggestions", async () => {
+      const { container } = render(
+        <TagInput
+          vocabulary={ALL_NAMES}
+          groupedVocabulary={GROUPED}
+          exclude={["feedback"]}
+          onCommit={vi.fn()}
+          onCancel={vi.fn()}
+        />,
+      );
+      await userEvent.type(screen.getByPlaceholderText("tag"), "feed");
+      const pills = container.querySelectorAll(".tag-suggest-pill");
+      const texts = Array.from(pills).map((p) => p.textContent);
+      expect(texts).not.toContain("feedback");
+      expect(texts).toContain("feedback loop");
+    });
+
+    it("hides groups with zero matching tags", async () => {
+      const { container } = render(
+        <TagInput
+          vocabulary={ALL_NAMES}
+          groupedVocabulary={GROUPED}
+          onCommit={vi.fn()}
+          onCancel={vi.fn()}
+        />,
+      );
+      // "mapp" only matches "mapping" (Norman Principles)
+      await userEvent.type(screen.getByPlaceholderText("tag"), "mapp");
+      const headers = container.querySelectorAll(".tag-suggest-header");
+      expect(headers).toHaveLength(1);
+      expect(headers[0].textContent).toBe("Norman Principles");
+      // Only one tag item
+      const items = container.querySelectorAll(".tag-suggest-item");
+      expect(items).toHaveLength(1);
+    });
+
+    it("respects maxSuggestions across groups", async () => {
+      const { container } = render(
+        <TagInput
+          vocabulary={ALL_NAMES}
+          groupedVocabulary={GROUPED}
+          maxSuggestions={2}
+          onCommit={vi.fn()}
+          onCancel={vi.fn()}
+        />,
+      );
+      // "f" matches: feedback (Norman), frustration (Emotion), feedback loop (User Tags)
+      // With maxSuggestions=2, should only show first 2 tags
+      await userEvent.type(screen.getByPlaceholderText("tag"), "f");
+      const items = container.querySelectorAll(".tag-suggest-item");
+      expect(items).toHaveLength(2);
+    });
+
+    it("ghost text works with grouped vocabulary", async () => {
+      const { container } = render(
+        <TagInput
+          vocabulary={ALL_NAMES}
+          groupedVocabulary={GROUPED}
+          onCommit={vi.fn()}
+          onCancel={vi.fn()}
+        />,
+      );
+      await userEvent.type(screen.getByPlaceholderText("tag"), "aff");
+      const ghost = container.querySelector(".tag-ghost");
+      expect(ghost?.textContent).toBe("ordance");
+    });
+
+    it("falls back to flat mode when groupedVocabulary is empty", async () => {
+      const { container } = render(
+        <TagInput
+          vocabulary={VOCAB}
+          groupedVocabulary={[]}
+          onCommit={vi.fn()}
+          onCancel={vi.fn()}
+        />,
+      );
+      await userEvent.type(screen.getByPlaceholderText("tag"), "ap");
+      // Should work like flat mode — no headers
+      const headers = container.querySelectorAll(".tag-suggest-header");
+      expect(headers).toHaveLength(0);
+      const items = container.querySelectorAll(".tag-suggest-item");
+      expect(items).toHaveLength(2);
+    });
+
+    it("shows tag pills with background style when colourSet is provided", async () => {
+      const { container } = render(
+        <TagInput
+          vocabulary={ALL_NAMES}
+          groupedVocabulary={GROUPED}
+          onCommit={vi.fn()}
+          onCancel={vi.fn()}
+        />,
+      );
+      await userEvent.type(screen.getByPlaceholderText("tag"), "aff");
+      const pill = container.querySelector(".tag-suggest-pill") as HTMLElement;
+      expect(pill).toBeTruthy();
+      // Should have a background style from getTagBg()
+      expect(pill.style.background).toMatch(/var\(--bn-ux-/);
+    });
+
+    it("does not set background style on pills from groups without colourSet", async () => {
+      const { container } = render(
+        <TagInput
+          vocabulary={ALL_NAMES}
+          groupedVocabulary={GROUPED}
+          onCommit={vi.fn()}
+          onCancel={vi.fn()}
+        />,
+      );
+      // "feedback loop" is in "User Tags" group with colourSet=""
+      await userEvent.type(screen.getByPlaceholderText("tag"), "feedback lo");
+      const pills = container.querySelectorAll(".tag-suggest-pill") as NodeListOf<HTMLElement>;
+      const loopPill = Array.from(pills).find((p) => p.textContent === "feedback loop");
+      expect(loopPill).toBeTruthy();
+      // No inline background style (empty colourSet)
+      expect(loopPill!.style.background).toBe("");
     });
   });
 });

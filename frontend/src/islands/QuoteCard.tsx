@@ -24,6 +24,7 @@ import {
   TimecodeLink,
   Toggle,
 } from "../components";
+import type { TagVocabularyGroup } from "../components";
 import type { ModeratorQuestionResponse, ProposedTagBrief, QuoteResponse, TranscriptSegmentResponse } from "../utils/types";
 import { formatTimecode } from "../utils/format";
 import { getTagBg } from "../utils/colours";
@@ -80,6 +81,8 @@ interface QuoteCardProps {
   isEdited: boolean;
   /** Full tag vocabulary for auto-suggest. */
   tagVocabulary: string[];
+  /** Grouped vocabulary with codebook metadata (for structured autocomplete). */
+  groupedVocabulary?: TagVocabularyGroup[];
   /** Session ID for transcript link. */
   sessionId: string;
   /** Whether video is available for this quote. */
@@ -137,6 +140,7 @@ export function QuoteCard({
   deletedBadges,
   isEdited,
   tagVocabulary,
+  groupedVocabulary,
   sessionId,
   hasMedia,
   hasModerator,
@@ -723,6 +727,7 @@ export function QuoteCard({
             {isTagInputOpen ? (
               <TagInput
                 vocabulary={tagVocabulary}
+                groupedVocabulary={groupedVocabulary}
                 exclude={existingTagNames}
                 hiddenTags={hiddenTagNames}
                 onCommit={handleTagCommit}

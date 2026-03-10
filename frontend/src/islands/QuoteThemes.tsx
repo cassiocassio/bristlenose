@@ -12,6 +12,7 @@ import { apiGet, getCodebook } from "../utils/api";
 import { useTranscriptCache } from "../hooks/useTranscriptCache";
 import type { QuoteResponse, QuotesListResponse } from "../utils/types";
 import type { TagGroupInfo } from "./QuoteGroup";
+import type { TagVocabularyGroup } from "../components";
 import { initFromQuotes, useQuotesStore } from "../contexts/QuotesContext";
 import { useFocus } from "../contexts/FocusContext";
 import { filterQuotes } from "../utils/filter";
@@ -26,6 +27,7 @@ export function QuoteThemes({ projectId }: QuoteThemesProps) {
   const [error, setError] = useState<string | null>(null);
   const [codebookTagNames, setCodebookTagNames] = useState<string[]>([]);
   const [tagGroupMap, setTagGroupMap] = useState<Record<string, TagGroupInfo>>({});
+  const [groupedVocabulary, setGroupedVocabulary] = useState<TagVocabularyGroup[]>([]);
 
   const fetchQuotes = useCallback((replace = false) => {
     apiGet<QuotesListResponse>("/quotes")
@@ -43,16 +45,21 @@ export function QuoteThemes({ projectId }: QuoteThemesProps) {
       .then((cb) => {
         setCodebookTagNames(cb.all_tag_names);
         const map: Record<string, TagGroupInfo> = {};
+        const groups: TagVocabularyGroup[] = [];
         for (const g of cb.groups) {
+          const tags: { name: string; colourIndex: number }[] = [];
           for (let i = 0; i < g.tags.length; i++) {
             map[g.tags[i].name.toLowerCase()] = {
               group: g.name,
               colour_set: g.colour_set,
               colour_index: g.tags[i].colour_index,
             };
+            tags.push({ name: g.tags[i].name, colourIndex: g.tags[i].colour_index });
           }
+          groups.push({ groupName: g.name, colourSet: g.colour_set, tags });
         }
         setTagGroupMap(map);
+        setGroupedVocabulary(groups);
       })
       .catch(() => {}); // Non-critical — silently ignore
   }, [projectId]);
@@ -176,6 +183,7 @@ export function QuoteThemes({ projectId }: QuoteThemesProps) {
             quotes={theme.quotes}
             allQuotes={allQuotesMap.get(theme.theme_id)}
             tagVocabulary={tagVocabulary}
+            groupedVocabulary={groupedVocabulary}
             tagGroupMap={tagGroupMap}
             hasMedia={hasMedia}
             transcriptCache={transcriptCache}

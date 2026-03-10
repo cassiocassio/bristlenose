@@ -10,6 +10,7 @@
 
 import { useState, useCallback, useRef, useMemo, useReducer, useLayoutEffect, useEffect } from "react";
 import { Counter, EditableText } from "../components";
+import type { TagVocabularyGroup } from "../components";
 import type { CounterItem } from "../components/Counter";
 import type {
   ModeratorQuestionResponse,
@@ -113,6 +114,8 @@ interface QuoteGroupProps {
   allQuotes?: QuoteResponse[];
   /** Full tag vocabulary for auto-suggest across all groups. */
   tagVocabulary: string[];
+  /** Grouped vocabulary with codebook metadata (for structured autocomplete). */
+  groupedVocabulary?: TagVocabularyGroup[];
   /** Codebook tag→group lookup for correct group assignment on manual add. */
   tagGroupMap?: Record<string, TagGroupInfo>;
   /** Whether video/audio is available (for timecode links). */
@@ -133,6 +136,7 @@ export function QuoteGroup({
   quotes,
   allQuotes,
   tagVocabulary,
+  groupedVocabulary,
   tagGroupMap = {},
   hasMedia,
   transcriptCache,
@@ -811,6 +815,7 @@ export function QuoteGroup({
               deletedBadges={deletedBadgesList}
               isEdited={editedText != null && editedText !== q.text}
               tagVocabulary={tagVocabulary}
+              groupedVocabulary={groupedVocabulary}
               sessionId={q.session_id}
               hasMedia={hasMedia}
               hasModerator={hasModerator}

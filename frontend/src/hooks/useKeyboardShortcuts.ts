@@ -24,10 +24,16 @@ import {
   getLastUsedTag,
 } from "../contexts/QuotesContext";
 import {
+  useSidebarStore,
   toggleToc,
   toggleTags,
   toggleBoth,
+  closeToc,
 } from "../contexts/SidebarStore";
+import {
+  togglePlayground,
+  toggleHUD,
+} from "../contexts/PlaygroundStore";
 
 // ── Helpers ──────────────────────────────────────────────────────────────
 
@@ -81,6 +87,7 @@ export function useKeyboardShortcuts({
   const navigate = useNavigate();
   const location = useLocation();
   const store = useQuotesStore();
+  const { tocMode } = useSidebarStore();
 
   // Use refs for values that change frequently to avoid re-attaching the listener.
   const focusedIdRef = useRef(focusedId);
@@ -93,6 +100,8 @@ export function useKeyboardShortcuts({
   storeRef.current = store;
   const helpModalOpenRef = useRef(helpModalOpen);
   helpModalOpenRef.current = helpModalOpen;
+  const tocModeRef = useRef(tocMode);
+  tocModeRef.current = tocMode;
   const locationRef = useRef(location);
   locationRef.current = location;
 
@@ -258,11 +267,30 @@ export function useKeyboardShortcuts({
     const handleKeydown = (e: KeyboardEvent) => {
       const key = e.key;
 
-      // Escape — cascade: close modal → clear search → clear selection → clear focus
+      // Ctrl+Shift+P — toggle responsive playground (dev-only)
+      if (key === "P" && e.ctrlKey && e.shiftKey) {
+        e.preventDefault();
+        togglePlayground();
+        return;
+      }
+
+      // Ctrl+Shift+U — toggle playground HUD (dev-only)
+      if (key === "U" && e.ctrlKey && e.shiftKey) {
+        e.preventDefault();
+        toggleHUD();
+        return;
+      }
+
+      // Escape — cascade: close modal → close overlay → clear search → clear selection → clear focus
       if (key === "Escape") {
         if (helpModalOpenRef.current) {
           e.preventDefault();
           onToggleHelp();
+          return;
+        }
+        if (tocModeRef.current === "overlay") {
+          e.preventDefault();
+          closeToc();
           return;
         }
         if (clearSearch()) {

@@ -21,8 +21,14 @@ body {
 }
 
 article {
-    max-width: var(--bn-max-width);
+    max-width: none;
     margin: 0 auto;
+    padding: 0 var(--bn-space-lg);
+}
+
+/* Single-column elements keep the reading-width cap on wide screens */
+h1, h2, h3, .description, .bn-dashboard {
+    max-width: var(--bn-max-width);
 }
 
 h1 {

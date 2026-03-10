@@ -7,7 +7,7 @@
  * shortcuts via useKeyboardShortcuts.
  */
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, lazy, Suspense } from "react";
 import { Outlet, useNavigate, useMatch } from "react-router-dom";
 import { Header } from "../components/Header";
 import { NavBar } from "../components/NavBar";
@@ -23,6 +23,25 @@ import { useScrollToAnchor } from "../hooks/useScrollToAnchor";
 import { installNavigationShims } from "../shims/navigation";
 import { getExportData } from "../utils/exportData";
 import { DEFAULT_HEALTH_RESPONSE, type HealthResponse } from "../utils/health";
+
+/** Dev-only playground — lazy-loaded so it's tree-shaken in production. */
+const ResponsivePlayground = lazy(
+  () =>
+    import("../components/ResponsivePlayground").then((m) => ({
+      default: m.ResponsivePlayground,
+    })),
+);
+const PlaygroundHUD = lazy(
+  () =>
+    import("../components/PlaygroundHUD").then((m) => ({
+      default: m.PlaygroundHUD,
+    })),
+);
+
+/** Check if we're in dev mode (set by _build_dev_html in app.py). */
+const IS_DEV =
+  (window as unknown as Record<string, unknown>).__BRISTLENOSE_DEV__ === true ||
+  location.port === "5173";
 
 /**
  * Inner component that uses hooks requiring PlayerProvider + FocusProvider.
@@ -71,6 +90,12 @@ function AppShell() {
       <FeedbackModal open={feedbackOpen} onClose={closeFeedback} health={health} />
       <HelpModal open={helpOpen} onClose={toggleHelp} />
       <ExportDialog open={exportOpen} onClose={toggleExport} />
+      {IS_DEV && (
+        <Suspense fallback={null}>
+          <PlaygroundHUD />
+          <ResponsivePlayground />
+        </Suspense>
+      )}
     </SidebarLayout>
   );
 }

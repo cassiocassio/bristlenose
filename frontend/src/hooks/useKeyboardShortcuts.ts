@@ -20,6 +20,8 @@ import {
   useQuotesStore,
   toggleStar,
   setSearchQuery,
+  addTag,
+  getLastUsedTag,
 } from "../contexts/QuotesContext";
 import {
   toggleToc,
@@ -73,6 +75,7 @@ export function useKeyboardShortcuts({
     openTagInput,
     getVisibleQuoteIds,
     hideQuote,
+    flashTag,
   } = useFocus();
   const { seekTo } = usePlayer();
   const navigate = useNavigate();
@@ -92,6 +95,12 @@ export function useKeyboardShortcuts({
   helpModalOpenRef.current = helpModalOpen;
   const locationRef = useRef(location);
   locationRef.current = location;
+
+  // ── Double-t quick-repeat state ────────────────────────────────────
+  /** Timestamp of last `t` keydown (for double-tap detection). */
+  const lastTTimestamp = useRef(0);
+  /** Whether the last `t` opened a TagInput (to avoid re-opening on double-tap). */
+  const lastTOpenedInput = useRef(false);
 
   // ── Star action ─────────────────────────────────────────────────────
 
@@ -136,14 +145,31 @@ export function useKeyboardShortcuts({
     }
   }, [clearSelection, moveFocus, hideQuote]);
 
-  // ── Tag action ──────────────────────────────────────────────────────
+  // ── Tag actions ─────────────────────────────────────────────────────
 
-  const handleTag = useCallback(() => {
+  const handleTagOpen = useCallback(() => {
     const focused = focusedIdRef.current;
     if (focused) {
       openTagInput(focused);
     }
   }, [openTagInput]);
+
+  /** Quick-apply last-used tag to focused/selected quotes (double-t). */
+  const handleQuickApply = useCallback(() => {
+    const tag = getLastUsedTag();
+    if (!tag) return false; // No last tag — caller should fall back to open TagInput
+
+    const focused = focusedIdRef.current;
+    const selected = selectedIdsRef.current;
+    const targets = selected.size > 0 ? Array.from(selected) : focused ? [focused] : [];
+    if (targets.length === 0) return false;
+
+    for (const domId of targets) {
+      addTag(domId, { ...tag, source: "human" });
+      flashTag(domId, tag.name);
+    }
+    return true;
+  }, [flashTag]);
 
   // ── Play action ─────────────────────────────────────────────────────
 
@@ -361,10 +387,28 @@ export function useKeyboardShortcuts({
         }
       }
 
-      // t — add tag
-      if (key === "t" && focusedIdRef.current) {
+      // t / tt — add tag / quick-repeat last tag
+      if (key === "t" && (focusedIdRef.current || selectedIdsRef.current.size > 0)) {
         e.preventDefault();
-        handleTag();
+        const now = Date.now();
+        const gap = now - lastTTimestamp.current;
+        lastTTimestamp.current = now;
+
+        if (gap < 400 && lastTOpenedInput.current) {
+          // Double-tap: apply last-used tag (if available)
+          const applied = handleQuickApply();
+          if (applied) {
+            lastTOpenedInput.current = false;
+            return;
+          }
+          // No last tag — fall through to open TagInput
+        }
+
+        // Single tap (or no last tag): open TagInput on focused quote
+        if (focusedIdRef.current) {
+          handleTagOpen();
+          lastTOpenedInput.current = true;
+        }
         return;
       }
 
@@ -411,7 +455,8 @@ export function useKeyboardShortcuts({
     setAnchor,
     handleHide,
     handleStar,
-    handleTag,
+    handleTagOpen,
+    handleQuickApply,
     handlePlay,
   ]);
 }

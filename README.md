@@ -386,6 +386,18 @@ Edit `bristlenose/__init__.py` (the single source of truth for version), commit,
 
 ## Changelog
 
+**0.13.0** — _10 Mar 2026_
+
+- Codebook-aware tag autocomplete — suggestions grouped by codebook section with colour pills and headers, IDE-style
+- Sentiment tags unified into the codebook framework system (proper `sentiment.yaml` codebook)
+- Tag provenance tracking — `"human"` vs `"autocode"` source on every tag, preserved across edits
+- Hidden-group tag UX — eye-closed icon in autocomplete, auto-unhide on accept
+- Quick-repeat tag shortcut (`r`) — re-apply the last-used tag on a focused quote
+- Fix: context expansion crash (infinite re-render loop on up chevron)
+- Doctor offers interactive MLX install on Apple Silicon for GPU-accelerated transcription
+- Sidebar accessibility improvements (focus management, ARIA, reduced-motion support)
+- Dashboard stat cards now open in new tab on Cmd+click
+
 **0.12.2** — _2 Mar 2026_
 
 - Footer feedback restored in React serve mode: "Feedback" now opens a dedicated feedback modal (not the Help modal), and "Report a bug" remains a direct GitHub issue link

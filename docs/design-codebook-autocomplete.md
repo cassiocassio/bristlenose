@@ -571,8 +571,8 @@ Similar to our use case for the export/sharing scenario — lightweight tagging 
 
 | Pattern | Where it's used | Benefit | Priority |
 |---------|----------------|---------|----------|
-| **Group headers in suggestions** | Figma, VS Code (categories), NVivo (node tree) | Researcher can see which framework a tag belongs to | High |
-| **Tag colour in suggestions** | Dovetail, GitHub Labels, NVivo | Visual orientation in a mixed vocabulary | High |
+| ~~**Group headers in suggestions**~~ | ~~Figma, VS Code (categories), NVivo (node tree)~~ | ~~Researcher can see which framework a tag belongs to~~ | ~~High~~ ✅ Stage 1 |
+| ~~**Tag colour in suggestions**~~ | ~~Dovetail, GitHub Labels, NVivo~~ | ~~Visual orientation in a mixed vocabulary~~ | ~~High~~ ✅ Stage 1 |
 | **Quick-apply last tag** | Atlas.ti (`Ctrl+L`) | One-keystroke repeat for batch coding | High |
 | **Trigger character** | Marvin (`#`), Slack (`:`), Notion (`/`) | Invoke picker without clicking a button first | Medium |
 | **Detail/definition pane** | VS Code (docs panel), Atlas.ti (comments) | Show tag `apply_when` text alongside the suggestion | Medium |
@@ -763,26 +763,38 @@ This gives consistent visual confirmation that "yes, the tag was applied" regard
 
 _Multi-stage implementation plan. Each stage is independently shippable._
 
-### Stage 1: Structured autocomplete with group headers
+### Stage 1: Structured autocomplete with group headers ✅
+
+_Completed 10 Mar 2026 — commits `fbba431`, `c27351a`, `9e21266`._
 
 **What:** Upgrade TagInput from flat vocabulary to grouped suggestions with section headers, tag colours, and proper selection highlighting.
 
-**Changes:**
-- **TagInput props**: Replace `vocabulary: string[]` with `groupedVocabulary: TagVocabularyGroup[]` where `TagVocabularyGroup = { groupName: string; colourSet: string; tags: string[] }`. Keep `vocabulary` as a backward-compat alias (flat list → single unnamed group)
-- **Filtering**: Filter tags within each group. If a group name matches the typed text, show all its tags. If only individual tags match, show them under their group header. Hide groups with zero matching tags
-- **Rendering**: Group headers as non-selectable section dividers. Tags indented below. Tags rendered in their codebook colour (badge-style pill). Group headers show group background colour
-- **Selection highlight**: New CSS for `.tag-suggest-item.active` — white text (dark mode) / black text (light mode) with `color-mix()` background derived from the tag's group colour
-- **Arrow key navigation**: Skip group headers (non-selectable). Only tags receive focus
-- **Data plumbing**: QuoteCard / QuoteGroup need to pass grouped vocabulary from the codebook API response down to TagInput. Currently they pass a flat `vocabulary` array
+**Changes (as designed):**
+- **TagInput props**: Added `groupedVocabulary: TagVocabularyGroup[]` where `TagVocabularyGroup = { groupName: string; colourSet: string; tags: { name: string; colourIndex: number }[] }`. Kept `vocabulary` as backward-compat flat list (flat → single unnamed group)
+- **Filtering**: Tags filtered within each group. Group-name matching shows all its tags. Individual tag matches show under their group header. Groups with zero matches hidden
+- **Rendering**: Group headers as non-selectable section dividers (`.tag-suggest-header`). Tags rendered as coloured pills (`.tag-suggest-pill`) using `getTagBg(colourSet, colourIndex)`. Group headers use sentence-case, matching sidebar typography
+- **Selection highlight**: Active tag row gets `background: var(--bn-colour-quote-bg)`. Active pill gets `outline: 2px solid var(--bn-colour-accent)` with `outline-offset: 1px`. Dark mode: white bold text on active pill only (not all pills — QA fix)
+- **Arrow key navigation**: `selectableIndices` array maps only tag rows. ArrowUp/ArrowDown skip group headers. Only tags receive focus
+- **Data plumbing**: QuoteCard → QuoteGroup → QuoteSections/QuoteThemes pass `groupedVocabulary` built from codebook API response
+
+**Implementation notes (deviations from original design):**
+- `TagVocabularyGroup.tags` carries `{ name, colourIndex }` (not just `string[]`) — needed for per-tag colour lookup via `getTagBg()`
+- Selection highlight uses `outline` on the pill (not `color-mix()` background) — simpler, works across all group colours without per-colour calculation
+- `maxSuggestions` default raised from 8 to 12 — 158 codebook tags + user tags, worst-case single-letter query ("s") returns ~18 matches
+- Dropdown CSS `max-height: min(24rem, 50dvh)` — caps at 384px or half the dynamic viewport, whichever is smaller. Prevents dropdown overflowing near the bottom of the page
+- Z-index fix: `.quote-card:has(.tag-suggest) { z-index: 10; }` elevates the card containing an open dropdown above siblings
+- **resolveValue() priority fix** (`9e21266`): `selectedTagName` (arrow-key highlighted suggestion) now wins over `ghostText`. Previously, ghost text had priority, so arrowing to a different suggestion and pressing Enter committed the ghost-text completion instead of the highlighted tag
+- Internal `SuggestRow` discriminated union: `{ type: "header" | "tag"; groupName; colourSet; tagName?; colourIndex? }` — single flat array drives rendering while separating selectable from non-selectable rows
 
 **Files touched:**
-- `frontend/src/components/TagInput.tsx` — major refactor
-- `frontend/src/components/TagInput.test.tsx` — new tests for grouped rendering, header skipping, colour rendering
-- `frontend/src/islands/QuoteCard.tsx` — pass grouped vocabulary
-- `frontend/src/islands/QuoteGroup.tsx` — build grouped vocabulary from codebook data
-- CSS: `tag-input.css` or inline styles for group headers, indentation, colour pills
+- `frontend/src/components/TagInput.tsx` — major refactor (grouped vocabulary, SuggestRow, selectableIndices, resolveValue fix)
+- `frontend/src/components/TagInput.test.tsx` — 40 tests (26 original + 14 for grouped features)
+- `frontend/src/islands/QuoteCard.tsx` — pass `groupedVocabulary`
+- `frontend/src/islands/QuoteGroup.tsx` — build `groupedVocabulary` from codebook data
+- `frontend/src/pages/QuoteSectionsTab.tsx` / `QuoteThemesTab.tsx` — thread `groupedVocabulary` through
+- `bristlenose/theme/molecules/tag-input.css` — group headers, pills, dark mode active state, z-index fix, dropdown depth
 
-**Estimated effort:** Medium (1–2 sessions)
+**Actual effort:** 2 sessions (implementation + QA polish + bug fix)
 
 ### Stage 2: Double-t quick-repeat
 
@@ -867,13 +879,13 @@ _Multi-stage implementation plan. Each stage is independently shippable._
 | **Fuzzy matching** | No (contains only) | Unknown | Unknown | No (prefix) | No (prefix) |
 | **Ghost text** | Yes (best prefix match suffix) | No | No | No | No |
 | **Quick-repeat** | No | No | No | `Ctrl+L` (last code) | No |
-| **Group context in picker** | No | Group colours | Hierarchy visible | Flat list | Node tree |
+| **Group context in picker** | Yes (section headers + coloured pills) | Group colours | Hierarchy visible | Flat list | Node tree |
 | **Inline creation** | Yes (type + Enter) | Yes | Yes | Yes (`+` in dialog) | Yes |
 | **"Create X" label** | No | Yes | Unknown | No | Unknown |
 | **AI-suggested tags** | AutoCode → tentative badges | Magic Highlights (auto-apply) | Auto-apply during transcription | AI Coding (v24+) | AI coding suggestions (v15+) |
 | **Tag definitions visible** | No (only in codebook) | On tag board | On hover | Comment field | Node description |
 | **Multi-select** | No (Tab-reopen for rapid entry) | Yes (multi-tag per highlight) | Unknown | One code per dialog invocation | One node per action |
-| **Keyboard shortcut** | None (must click `+`) | Tab on selection menu | `#` in live notes | `Ctrl+J` / `Ctrl+L` / `Ctrl+Shift+V` | None documented |
+| **Keyboard shortcut** | `t` on focused quote | Tab on selection menu | `#` in live notes | `Ctrl+J` / `Ctrl+L` / `Ctrl+Shift+V` | None documented |
 | **Provenance distinction** | Group colours only | Group colours | Purple (template) vs pink (project) | Code comments | Node tree position |
 
 ---
@@ -907,4 +919,4 @@ _Multi-stage implementation plan. Each stage is independently shippable._
 - `docs/design-codebook-island.md` — TagInput decision (no autocomplete on codebook page, yes on quote page)
 - `docs/mockups/codebook-audit.html` — TagInput feature comparison table
 - `docs/design-transcript-editing.md` — Dovetail prior art (transcript editing, not tagging, but UX patterns overlap)
-- `frontend/src/components/TagInput.tsx` — current implementation (prefix + contains match, ghost text, 8 max suggestions, keyboard navigation)
+- `frontend/src/components/TagInput.tsx` — current implementation (prefix + contains match, ghost text, grouped vocabulary with section headers, 12 max suggestions, keyboard navigation with header skipping)

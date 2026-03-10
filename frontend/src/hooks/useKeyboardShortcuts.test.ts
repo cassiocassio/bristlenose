@@ -350,97 +350,12 @@ describe("useKeyboardShortcuts", () => {
     });
   });
 
-  describe("double-t quick-repeat", () => {
-    it("single t opens tag input on focused quote", () => {
-      const { getCtx, unmount } = renderWithProviders();
-      const openerSpy = vi.fn();
-      act(() => {
-        getCtx().registerVisibleQuoteIds("test", ["q-1", "q-2"]);
-        getCtx().setFocus("q-1");
-        getCtx().registerTagOpener("q-1", openerSpy);
-      });
-
-      act(() => pressKey("t"));
-      expect(openerSpy).toHaveBeenCalledTimes(1);
-
-      unmount();
-    });
-
-    it("double-t within 400ms applies last-used tag", () => {
+  describe("r — repeat last tag", () => {
+    it("r applies last-used tag to focused quote", () => {
       const { getCtx, unmount } = renderWithProviders();
       act(() => {
         getCtx().registerVisibleQuoteIds("test", ["q-1", "q-2"]);
         getCtx().setFocus("q-1");
-        getCtx().registerTagOpener("q-1", vi.fn());
-      });
-
-      // Seed a last-used tag via addTag
-      addTag("q-1", {
-        name: "usability",
-        codebook_group: "Garrett",
-        colour_set: "garrett",
-        colour_index: 0,
-        source: "human",
-      });
-      expect(getLastUsedTag()?.name).toBe("usability");
-      vi.mocked(putTags).mockClear();
-
-      // Move focus to q-2
-      act(() => getCtx().setFocus("q-2"));
-
-      // First t — opens tag input
-      let now = 1000;
-      vi.spyOn(Date, "now").mockReturnValue(now);
-      act(() => pressKey("t"));
-
-      // Second t — within 400ms — should quick-apply
-      now += 200;
-      vi.spyOn(Date, "now").mockReturnValue(now);
-      act(() => pressKey("t"));
-
-      // putTags was called by the quick-apply addTag
-      expect(putTags).toHaveBeenCalled();
-      // The tags map sent to API should include q-2 with "usability"
-      const calls = vi.mocked(putTags).mock.calls;
-      const lastCall = calls[calls.length - 1];
-      expect(lastCall?.[0]).toHaveProperty("q-2");
-      expect(lastCall?.[0]["q-2"]).toContain("usability");
-
-      unmount();
-    });
-
-    it("double-t without last tag falls back to opening tag input", () => {
-      const { getCtx, unmount } = renderWithProviders();
-      const openerSpy = vi.fn();
-      act(() => {
-        getCtx().registerVisibleQuoteIds("test", ["q-1"]);
-        getCtx().setFocus("q-1");
-        getCtx().registerTagOpener("q-1", openerSpy);
-      });
-
-      // No last tag set — both presses should open tag input
-      let now = 1000;
-      vi.spyOn(Date, "now").mockReturnValue(now);
-      act(() => pressKey("t"));
-      expect(openerSpy).toHaveBeenCalledTimes(1);
-
-      now += 200;
-      vi.spyOn(Date, "now").mockReturnValue(now);
-      act(() => pressKey("t"));
-      // Falls back to open tag input again
-      expect(openerSpy).toHaveBeenCalledTimes(2);
-
-      unmount();
-    });
-
-    it("t pressed after 400ms gap is treated as single tap", () => {
-      const { getCtx, unmount } = renderWithProviders();
-      const openerSpy = vi.fn();
-      act(() => {
-        getCtx().registerVisibleQuoteIds("test", ["q-1", "q-2"]);
-        getCtx().setFocus("q-1");
-        getCtx().registerTagOpener("q-1", openerSpy);
-        getCtx().registerTagOpener("q-2", openerSpy);
       });
 
       // Seed a last-used tag
@@ -453,32 +368,40 @@ describe("useKeyboardShortcuts", () => {
       });
       vi.mocked(putTags).mockClear();
 
+      // Move focus to q-2
       act(() => getCtx().setFocus("q-2"));
 
-      // First t
-      let now = 1000;
-      vi.spyOn(Date, "now").mockReturnValue(now);
-      act(() => pressKey("t"));
-      expect(openerSpy).toHaveBeenCalledTimes(1);
+      // Press r — should quick-apply
+      act(() => pressKey("r"));
 
-      // Second t — after 500ms (> 400ms threshold)
-      now += 500;
-      vi.spyOn(Date, "now").mockReturnValue(now);
-      act(() => pressKey("t"));
-      // Should open tag input, not quick-apply
-      expect(openerSpy).toHaveBeenCalledTimes(2);
-      // putTags should NOT have been called (no quick-apply happened)
+      expect(putTags).toHaveBeenCalled();
+      const calls = vi.mocked(putTags).mock.calls;
+      const lastCall = calls[calls.length - 1];
+      expect(lastCall?.[0]).toHaveProperty("q-2");
+      expect(lastCall?.[0]["q-2"]).toContain("usability");
+
+      unmount();
+    });
+
+    it("r does nothing when no last-used tag", () => {
+      const { getCtx, unmount } = renderWithProviders();
+      act(() => {
+        getCtx().registerVisibleQuoteIds("test", ["q-1"]);
+        getCtx().setFocus("q-1");
+      });
+
+      vi.mocked(putTags).mockClear();
+      act(() => pressKey("r"));
       expect(putTags).not.toHaveBeenCalled();
 
       unmount();
     });
 
-    it("double-t applies to all selected quotes", () => {
+    it("r applies to all selected quotes", () => {
       const { getCtx, unmount } = renderWithProviders();
       act(() => {
         getCtx().registerVisibleQuoteIds("test", ["q-1", "q-2", "q-3"]);
         getCtx().setFocus("q-1");
-        getCtx().registerTagOpener("q-1", vi.fn());
       });
 
       // Seed a last-used tag
@@ -498,16 +421,8 @@ describe("useKeyboardShortcuts", () => {
         getCtx().toggleSelection("q-3");
       });
 
-      // Double-t
-      let now = 1000;
-      vi.spyOn(Date, "now").mockReturnValue(now);
-      act(() => pressKey("t"));
+      act(() => pressKey("r"));
 
-      now += 200;
-      vi.spyOn(Date, "now").mockReturnValue(now);
-      act(() => pressKey("t"));
-
-      // putTags called with both q-2 and q-3 having the tag
       expect(putTags).toHaveBeenCalled();
       const calls = vi.mocked(putTags).mock.calls;
       const lastCall = calls[calls.length - 1];
@@ -515,6 +430,24 @@ describe("useKeyboardShortcuts", () => {
       expect(lastCall?.[0]["q-2"]).toContain("learnability");
       expect(lastCall?.[0]).toHaveProperty("q-3");
       expect(lastCall?.[0]["q-3"]).toContain("learnability");
+
+      unmount();
+    });
+
+    it("r does nothing without focus or selection", () => {
+      const { unmount } = renderWithProviders();
+
+      addTag("q-1", {
+        name: "usability",
+        codebook_group: "Garrett",
+        colour_set: "garrett",
+        colour_index: 0,
+        source: "human",
+      });
+      vi.mocked(putTags).mockClear();
+
+      act(() => pressKey("r"));
+      expect(putTags).not.toHaveBeenCalled();
 
       unmount();
     });

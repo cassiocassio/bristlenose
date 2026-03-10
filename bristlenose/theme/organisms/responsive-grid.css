@@ -1,0 +1,24 @@
+/* Organism: responsive-grid — multi-column quote layout.
+   Columns appear automatically via auto-fill as viewport widens.
+   Card reading measure stays constant at --bn-quote-max-width.
+   Remove this file from _THEME_FILES to revert to fixed-width layout. */
+
+.quote-group {
+    display: grid;
+    grid-template-columns: repeat(
+        auto-fill,
+        minmax(min(var(--bn-quote-max-width), 100%), 1fr)
+    );
+    gap: var(--bn-grid-gap);
+    align-items: start;
+}
+
+/* In grid mode, quotes don't need vertical margin — gap handles it */
+.quote-group .quote-card {
+    margin: 0;
+}
+
+/* Prevent cards splitting across columns in print */
+.quote-group blockquote {
+    break-inside: avoid;
+}

@@ -10,7 +10,7 @@ import { useDragResize } from "./useDragResize";
 vi.mock("../contexts/SidebarStore", () => ({
   closeToc: vi.fn(),
   closeTags: vi.fn(),
-  openToc: vi.fn(),
+  openTocPush: vi.fn(),
   openTags: vi.fn(),
   setTocWidth: vi.fn(),
   setTagsWidth: vi.fn(),
@@ -19,7 +19,7 @@ vi.mock("../contexts/SidebarStore", () => ({
 import {
   closeToc,
   closeTags,
-  openToc,
+  openTocPush,
   openTags,
   setTocWidth,
   setTagsWidth,
@@ -300,7 +300,7 @@ describe("rail drag-to-open (TOC)", () => {
       );
     });
     act(() => fire("pointermove", { clientX: 60 }));
-    expect(openToc).not.toHaveBeenCalled();
+    expect(openTocPush).not.toHaveBeenCalled();
     expect(document.body.classList.contains("dragging")).toBe(false);
   });
 
@@ -317,7 +317,7 @@ describe("rail drag-to-open (TOC)", () => {
     });
     // Delta = 75 - 50 = 25 (>= 20)
     act(() => fire("pointermove", { clientX: 75 }));
-    expect(openToc).toHaveBeenCalled();
+    expect(openTocPush).toHaveBeenCalled();
     expect(document.body.classList.contains("dragging")).toBe(true);
   });
 
@@ -352,7 +352,7 @@ describe("rail drag-to-open (TOC)", () => {
       );
     });
     act(() => fire("pointerup", { clientX: 55 }));
-    expect(openToc).not.toHaveBeenCalled();
+    expect(openTocPush).not.toHaveBeenCalled();
     expect(setTocWidth).not.toHaveBeenCalled();
     expect(result.current.isDragging).toBe(false);
   });

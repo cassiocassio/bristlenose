@@ -1,0 +1,70 @@
+/* Minimap — VS Code-style abstract overview of quote page.
+   Grid column 6 in the sidebar layout. Quote lines as pale grey,
+   heading lines as darker grey, blue translucent viewport indicator.
+   Parallax scrolling for long pages via translateY on .bn-minimap-content.
+   Design reference: docs/mockups/mockup-minimap.html */
+
+/* Content container — holds all lines, parallax via translateY */
+.bn-minimap-content {
+    display: flex;
+    flex-direction: column;
+    padding: 8px 0;
+    /* transform applied by JS for parallax */
+}
+
+/* Each quote = a pale grey rectangle */
+.bn-minimap-quote {
+    height: 2px;
+    margin: 0 6px 1px;
+    background: var(--bn-minimap-quote);
+    border-radius: 0.5px;
+    flex-shrink: 0;
+}
+
+/* Section/theme heading = darker, same height, wider */
+.bn-minimap-heading {
+    height: 2px;
+    margin: 3px 4px 1px;
+    background: var(--bn-minimap-heading);
+    border-radius: 1px;
+    flex-shrink: 0;
+}
+
+/* "Sections" / "Themes" group heading = taller, wider */
+.bn-minimap-group-heading {
+    height: 3px;
+    margin: 2px 3px 2px;
+    background: var(--bn-minimap-heading);
+    border-radius: 1px;
+    flex-shrink: 0;
+}
+
+/* Major division between sections and themes */
+.bn-minimap-division {
+    height: 0;
+    margin: 8px 0;
+    flex-shrink: 0;
+}
+
+/* Viewport indicator — translucent blue overlay */
+.bn-minimap-viewport {
+    position: absolute;
+    left: 0;
+    right: 0;
+    background: var(--bn-minimap-viewport-bg);
+    border: 1.5px solid var(--bn-minimap-viewport-border);
+    border-radius: var(--bn-radius-sm);
+    cursor: grab;
+    z-index: 1;
+    pointer-events: auto;
+    min-height: 8px;
+}
+
+.bn-minimap-viewport:active {
+    cursor: grabbing;
+}
+
+/* Hide minimap on narrow screens */
+@media (max-width: 600px) {
+    .minimap-slot { display: none; }
+}

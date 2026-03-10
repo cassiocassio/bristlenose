@@ -35,11 +35,12 @@ class TestLoadAllTemplates:
         expected = [t.id for t in sorted(templates, key=lambda t: (t.sort_order, t.id))]
         assert ids == expected
 
-    def test_uxr_first_plato_last(self) -> None:
-        """UXR codebook sorts first, Plato last."""
+    def test_sentiment_first_plato_last(self) -> None:
+        """Sentiment codebook sorts first (5), UXR second (10), Plato last (50)."""
         templates = load_all_templates()
         ids = [t.id for t in templates]
-        assert ids[0] == "uxr"
+        assert ids[0] == "sentiment"
+        assert ids[1] == "uxr"
         assert ids[-1] == "plato"
 
 
@@ -292,13 +293,58 @@ class TestMorvilleStructure:
 
 
 # ---------------------------------------------------------------------------
+# Sentiment — structure
+# ---------------------------------------------------------------------------
+
+
+class TestSentimentStructure:
+    @pytest.fixture()
+    def sentiment(self) -> CodebookTemplate:
+        t = get_template("sentiment")
+        assert t is not None
+        return t
+
+    def test_enabled(self, sentiment: CodebookTemplate) -> None:
+        assert sentiment.enabled is True
+
+    def test_sort_order(self, sentiment: CodebookTemplate) -> None:
+        assert sentiment.sort_order == 5
+
+    def test_one_group(self, sentiment: CodebookTemplate) -> None:
+        assert len(sentiment.groups) == 1
+        assert sentiment.groups[0].name == "Sentiment"
+        assert sentiment.groups[0].colour_set == "sentiment"
+
+    def test_seven_tags(self, sentiment: CodebookTemplate) -> None:
+        total = sum(len(g.tags) for g in sentiment.groups)
+        assert total == 7
+
+    def test_tag_names(self, sentiment: CodebookTemplate) -> None:
+        names = [tag.name for tag in sentiment.groups[0].tags]
+        assert names == [
+            "frustration", "confusion", "doubt", "surprise",
+            "satisfaction", "delight", "confidence",
+        ]
+
+    def test_tags_have_full_prompts(self, sentiment: CodebookTemplate) -> None:
+        for tag in sentiment.groups[0].tags:
+            assert tag.definition, f"{tag.name}: missing definition"
+            assert tag.apply_when, f"{tag.name}: missing apply_when"
+            assert tag.not_this, f"{tag.name}: missing not_this"
+
+    def test_metadata(self, sentiment: CodebookTemplate) -> None:
+        assert sentiment.title == "Emotional & Cognitive Signals"
+        assert sentiment.author == ""
+
+
+# ---------------------------------------------------------------------------
 # Validation
 # ---------------------------------------------------------------------------
 
 
 class TestValidation:
     def test_all_colour_sets_valid(self) -> None:
-        valid = {"ux", "emo", "task", "trust", "opp"}
+        valid = {"ux", "emo", "task", "trust", "opp", "sentiment"}
         for t in load_all_templates():
             for g in t.groups:
                 assert g.colour_set in valid, (

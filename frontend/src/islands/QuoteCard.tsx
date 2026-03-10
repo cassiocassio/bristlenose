@@ -423,8 +423,14 @@ export function QuoteCard({
   // ── Derived state ───────────────────────────────────────────────────
 
   const transcriptHref = `/report/sessions/${sessionId}#t-${Math.floor(quote.start_timecode)}`;
+  // Suppress the AI sentiment badge when the same sentiment exists as a
+  // codebook tag (from the Sentiment framework auto-import).  This prevents
+  // showing the same sentiment twice — once as AI badge, once as user tag.
+  const hasSentimentTag = userTags.some(
+    (t) => t.codebook_group === "Sentiment" && t.name === quote.sentiment,
+  );
   const visibleSentiment =
-    quote.sentiment && !deletedBadges.includes(quote.sentiment)
+    quote.sentiment && !hasSentimentTag && !deletedBadges.includes(quote.sentiment)
       ? quote.sentiment
       : null;
   const hasDeletedBadges = deletedBadges.length > 0;

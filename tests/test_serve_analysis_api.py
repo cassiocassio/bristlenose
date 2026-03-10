@@ -163,12 +163,14 @@ class TestGetTagAnalysis:
         assert set(sb.keys()) == {"accepted", "pending", "total"}
         assert sb["total"] == sb["accepted"] + sb["pending"]
 
-    def test_empty_when_no_tags(self, client: TestClient) -> None:
+    def test_only_sentiment_tags_when_no_user_tags(self, client: TestClient) -> None:
+        """Without user-applied tags, only auto-imported sentiment signals appear."""
         data = client.get("/api/projects/1/analysis/tags").json()
-        assert data["signals"] == []
-        assert data["columns"] == []
-        assert data["total_participants"] == 0
-        assert data["source_breakdown"] == {"accepted": 0, "pending": 0, "total": 0}
+        # Sentiment auto-import creates signals from pipeline sentiment field
+        for sig in data["signals"]:
+            assert sig["colour_set"] == "sentiment", (
+                f"Expected only sentiment signals, got colour_set={sig['colour_set']!r}"
+            )
 
     def test_columns_are_group_names(self, tagged_client: TestClient) -> None:
         data = tagged_client.get("/api/projects/1/analysis/tags").json()
@@ -379,12 +381,13 @@ class TestProposedTagWeighting:
         """A quote with both QuoteTag and pending ProposedTag should count once."""
         data = proposed_client.get("/api/projects/1/analysis/tags").json()
         sb = data["source_breakdown"]
-        # 2 accepted + 3 pending (minus 1 dup that was skipped) = 4 pending
-        # Actually: quote 0 has both QuoteTag and ProposedTag, so the proposal is skipped
-        # So: 2 accepted, 3 pending (from quotes 2-4) = 5 total
-        assert sb["accepted"] == 2
+        # 2 manually accepted (Pain points / frustration)
+        # + 4 auto-imported sentiment tags (from smoke-test quotes with sentiment)
+        # = 6 accepted total
+        # 3 pending (quotes 2-4, quote 0 proposal skipped because it has QuoteTag)
+        assert sb["accepted"] == 6
         assert sb["pending"] == 3  # quotes 2, 3, 4 (quote 0 proposal skipped)
-        assert sb["total"] == 5
+        assert sb["total"] == 9
 
     def test_weighted_count_in_cells(self, proposed_client: TestClient) -> None:
         """Cells should have weighted_count reflecting confidence weighting."""
@@ -590,9 +593,13 @@ class TestGetCodebookAnalysis:
                         found_tag_names = True
         assert found_tag_names, "Expected at least one quote with tag_names"
 
-    def test_empty_when_no_tags(self, client: TestClient) -> None:
+    def test_only_sentiment_codebook_when_no_user_tags(self, client: TestClient) -> None:
+        """Without user-applied tags, only the auto-imported sentiment codebook appears."""
         data = client.get("/api/projects/1/analysis/codebooks").json()
-        assert data["codebooks"] == []
+        for cb in data["codebooks"]:
+            assert cb["codebook_id"] == "sentiment", (
+                f"Expected only sentiment codebook, got {cb['codebook_id']!r}"
+            )
 
     def test_project_not_found(self, client: TestClient) -> None:
         resp = client.get("/api/projects/999/analysis/codebooks")

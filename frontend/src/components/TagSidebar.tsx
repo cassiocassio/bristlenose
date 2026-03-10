@@ -34,10 +34,11 @@ import { TagGroupCard } from "./TagGroupCard";
 // Falls back to capitalising the framework_id for unknown ones.
 
 const FRAMEWORK_META: Record<string, { title: string; author: string }> = {
-  norman:  { title: "The Design of Everyday Things", author: "Don Norman" },
-  garrett: { title: "The Elements of User Experience", author: "Jesse James Garrett" },
-  plato:   { title: "Platonic Ontology & Epistemology", author: "Composite — Vlastos, Fine, Kraut, Sedley" },
-  uxr:     { title: "Bristlenose UXR Codebook", author: "" },
+  sentiment: { title: "Emotional & Cognitive Signals", author: "" },
+  norman:    { title: "The Design of Everyday Things", author: "Don Norman" },
+  garrett:   { title: "The Elements of User Experience", author: "Jesse James Garrett" },
+  plato:     { title: "Platonic Ontology & Epistemology", author: "Composite — Vlastos, Fine, Kraut, Sedley" },
+  uxr:       { title: "Bristlenose UXR Codebook", author: "" },
 };
 
 function frameworkTitle(id: string): string {

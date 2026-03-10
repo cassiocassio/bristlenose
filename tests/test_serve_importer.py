@@ -12,8 +12,10 @@ from bristlenose.server.db import create_session_factory, get_engine, init_db
 from bristlenose.server.importer import _find_transcripts_dir, import_project
 from bristlenose.server.models import (
     ClusterQuote,
+    CodebookGroup,
     DeletedBadge,
     Person,
+    ProjectCodebookGroup,
     Quote,
     QuoteEdit,
     QuoteState,
@@ -21,6 +23,7 @@ from bristlenose.server.models import (
     ScreenCluster,
     SessionSpeaker,
     SourceFile,
+    TagDefinition,
     ThemeGroup,
     ThemeQuote,
     TranscriptSegment,
@@ -442,7 +445,6 @@ class TestReimportPreservesResearcherState:
 
     def test_tags_survive_reimport(self, db: Session, tmp_path: Path) -> None:
         """User-applied tags on surviving quotes are preserved."""
-        from bristlenose.server.models import CodebookGroup, TagDefinition
 
         clusters = [
             {
@@ -542,7 +544,6 @@ class TestReimportCleansRemovedSessionState:
         self, db: Session, tmp_path: Path,
     ) -> None:
         """Stars/hidden/tags/edits/badges on removed quotes are deleted."""
-        from bristlenose.server.models import CodebookGroup, TagDefinition
 
         clusters_v1 = [
             {
@@ -1291,3 +1292,151 @@ class TestWordEnrichment:
         assert '"e":' in seg.words_json
         # Does NOT include confidence
         assert "confidence" not in seg.words_json
+
+
+# ---------------------------------------------------------------------------
+# Sentiment auto-import and auto-tag
+# ---------------------------------------------------------------------------
+
+
+class TestSentimentAutoImport:
+    """Sentiment framework is auto-imported and quotes are auto-tagged."""
+
+    def test_auto_imports_sentiment_framework(self, db: Session) -> None:
+        """Import creates CodebookGroup + TagDefinitions for sentiment."""
+        import_project(db, _FIXTURE_DIR)
+
+        group = (
+            db.query(CodebookGroup)
+            .filter(CodebookGroup.framework_id == "sentiment")
+            .first()
+        )
+        assert group is not None
+        assert group.name == "Sentiment"
+        assert group.colour_set == "sentiment"
+
+        tags = db.query(TagDefinition).filter_by(codebook_group_id=group.id).all()
+        tag_names = {t.name for t in tags}
+        assert tag_names == {
+            "frustration", "confusion", "doubt", "surprise",
+            "satisfaction", "delight", "confidence",
+        }
+
+    def test_auto_imports_project_codebook_group(self, db: Session) -> None:
+        """Sentiment framework is linked to the project with sort_order=0."""
+        project = import_project(db, _FIXTURE_DIR)
+
+        pcg = (
+            db.query(ProjectCodebookGroup)
+            .join(CodebookGroup)
+            .filter(
+                ProjectCodebookGroup.project_id == project.id,
+                CodebookGroup.framework_id == "sentiment",
+            )
+            .first()
+        )
+        assert pcg is not None
+        assert pcg.sort_order == 0
+
+    def test_auto_tags_quotes_from_sentiment_field(self, db: Session) -> None:
+        """Quotes with a sentiment field get QuoteTag rows for sentiment tags."""
+        import_project(db, _FIXTURE_DIR)
+
+        # The smoke-test fixture has quotes with sentiments (e.g. confusion, delight)
+        quotes_with_sentiment = (
+            db.query(Quote)
+            .filter(Quote.sentiment.isnot(None), Quote.sentiment != "")
+            .all()
+        )
+        assert len(quotes_with_sentiment) > 0
+
+        for quote in quotes_with_sentiment:
+            # Each should have a QuoteTag linking to the sentiment TagDefinition
+            tag = (
+                db.query(QuoteTag)
+                .join(TagDefinition)
+                .join(CodebookGroup)
+                .filter(
+                    QuoteTag.quote_id == quote.id,
+                    CodebookGroup.framework_id == "sentiment",
+                    TagDefinition.name == quote.sentiment,
+                )
+                .first()
+            )
+            assert tag is not None, (
+                f"Quote {quote.id} has sentiment={quote.sentiment!r} "
+                f"but no matching QuoteTag"
+            )
+
+    def test_null_sentiment_gets_no_tag(self, db: Session, tmp_path: Path) -> None:
+        """Quotes with no sentiment field do not get sentiment tags."""
+        clusters = [
+            {
+                "screen_label": "Home",
+                "description": "",
+                "display_order": 1,
+                "quotes": [
+                    _make_quote("s1", "p1", 10.0, "Just navigating", sentiment=""),
+                ],
+            },
+        ]
+        _write_pipeline_output(tmp_path, clusters, [])
+        import_project(db, tmp_path)
+
+        quote = db.query(Quote).first()
+        assert quote is not None
+
+        sentiment_tags = (
+            db.query(QuoteTag)
+            .join(TagDefinition)
+            .join(CodebookGroup)
+            .filter(
+                QuoteTag.quote_id == quote.id,
+                CodebookGroup.framework_id == "sentiment",
+            )
+            .all()
+        )
+        assert len(sentiment_tags) == 0
+
+    def test_idempotent_reimport(self, db: Session) -> None:
+        """Re-importing does not duplicate sentiment tags or framework."""
+        import_project(db, _FIXTURE_DIR)
+        import_project(db, _FIXTURE_DIR)
+
+        # Only one sentiment CodebookGroup
+        groups = (
+            db.query(CodebookGroup)
+            .filter(CodebookGroup.framework_id == "sentiment")
+            .all()
+        )
+        assert len(groups) == 1
+
+        # Only one ProjectCodebookGroup link per group
+        pcgs = (
+            db.query(ProjectCodebookGroup)
+            .join(CodebookGroup)
+            .filter(CodebookGroup.framework_id == "sentiment")
+            .all()
+        )
+        assert len(pcgs) == 1
+
+        # QuoteTags not duplicated
+        quotes_with_sentiment = (
+            db.query(Quote)
+            .filter(Quote.sentiment.isnot(None), Quote.sentiment != "")
+            .all()
+        )
+        for quote in quotes_with_sentiment:
+            tags = (
+                db.query(QuoteTag)
+                .join(TagDefinition)
+                .join(CodebookGroup)
+                .filter(
+                    QuoteTag.quote_id == quote.id,
+                    CodebookGroup.framework_id == "sentiment",
+                )
+                .all()
+            )
+            assert len(tags) == 1, (
+                f"Quote {quote.id} has {len(tags)} sentiment tags, expected 1"
+            )

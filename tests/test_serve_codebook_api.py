@@ -70,23 +70,27 @@ class TestGetCodebook:
         resp = client.get("/api/projects/1/codebook")
         assert resp.status_code == 200
 
-    def test_empty_codebook_has_expected_shape(self, client: TestClient) -> None:
+    def test_baseline_codebook_has_expected_shape(self, client: TestClient) -> None:
         data = client.get("/api/projects/1/codebook").json()
         assert set(data.keys()) == {"groups", "ungrouped", "all_tag_names"}
-        # Uncategorised default group is always present
-        assert len(data["groups"]) == 1
-        default_group = data["groups"][0]
+        # Sentiment group auto-imported + Uncategorised default group
+        assert len(data["groups"]) == 2
+        group_names = {g["name"] for g in data["groups"]}
+        assert "Uncategorised" in group_names
+        assert "Sentiment" in group_names
+        default_group = next(g for g in data["groups"] if g["is_default"])
         assert default_group["name"] == "Uncategorised"
-        assert default_group["is_default"] is True
         assert default_group["tags"] == []
         assert data["ungrouped"] == []  # deprecated field
-        assert data["all_tag_names"] == []
+        # Sentiment tags present from auto-import
+        assert len(data["all_tag_names"]) == 7
 
     def test_returns_groups_with_tags(self, client_with_codebook: TestClient) -> None:
         data = client_with_codebook.get("/api/projects/1/codebook").json()
-        # 2 user-created + 1 Uncategorised default
-        assert len(data["groups"]) == 3
+        # Sentiment (auto-imported) + 2 user-created + 1 Uncategorised default
+        assert len(data["groups"]) == 4
         names = [g["name"] for g in data["groups"]]
+        assert "Sentiment" in names
         assert "Friction" in names
         assert "Delight" in names
         assert "Uncategorised" in names
@@ -169,7 +173,9 @@ class TestCreateGroup:
 class TestUpdateGroup:
     def test_rename_group(self, client_with_codebook: TestClient) -> None:
         data = client_with_codebook.get("/api/projects/1/codebook").json()
-        gid = data["groups"][0]["id"]
+        # Pick a user-created group (skip auto-imported sentiment, which is locked)
+        user_group = next(g for g in data["groups"] if g["framework_id"] is None and not g["is_default"])
+        gid = user_group["id"]
         resp = client_with_codebook.patch(
             f"/api/projects/1/codebook/groups/{gid}",
             json={"name": "Renamed"},
@@ -181,7 +187,9 @@ class TestUpdateGroup:
 
     def test_update_subtitle(self, client_with_codebook: TestClient) -> None:
         data = client_with_codebook.get("/api/projects/1/codebook").json()
-        gid = data["groups"][0]["id"]
+        # Pick a user-created group (skip auto-imported sentiment, which is locked)
+        user_group = next(g for g in data["groups"] if g["framework_id"] is None and not g["is_default"])
+        gid = user_group["id"]
         client_with_codebook.patch(
             f"/api/projects/1/codebook/groups/{gid}",
             json={"subtitle": "Updated subtitle"},
@@ -192,7 +200,9 @@ class TestUpdateGroup:
 
     def test_update_colour_set(self, client_with_codebook: TestClient) -> None:
         data = client_with_codebook.get("/api/projects/1/codebook").json()
-        gid = data["groups"][0]["id"]
+        # Pick a user-created group (skip auto-imported sentiment, which is locked)
+        user_group = next(g for g in data["groups"] if g["framework_id"] is None and not g["is_default"])
+        gid = user_group["id"]
         client_with_codebook.patch(
             f"/api/projects/1/codebook/groups/{gid}",
             json={"colour_set": "trust"},
@@ -484,10 +494,13 @@ class TestListTemplates:
         norman = next(t for t in data["templates"] if t["id"] == "norman")
         assert norman["enabled"] is True
 
-    def test_imported_flag_false_initially(self, client: TestClient) -> None:
+    def test_imported_flag_reflects_auto_import(self, client: TestClient) -> None:
         data = client.get("/api/projects/1/codebook/templates").json()
         for t in data["templates"]:
-            assert t["imported"] is False
+            if t["id"] == "sentiment":
+                assert t["imported"] is True, "Sentiment should be auto-imported"
+            else:
+                assert t["imported"] is False, f"{t['id']} should not be imported"
 
 
 # ---------------------------------------------------------------------------
@@ -503,8 +516,8 @@ class TestImportTemplate:
         )
         assert resp.status_code == 200
         data = resp.json()
-        # Should have Uncategorised + 5 Garrett groups
-        assert len(data["groups"]) == 6
+        # Sentiment (auto-imported) + 5 Garrett groups + Uncategorised
+        assert len(data["groups"]) == 7
         garrett_groups = [g for g in data["groups"] if g["framework_id"] == "garrett"]
         assert len(garrett_groups) == 5
 

@@ -649,7 +649,14 @@ class TestAcceptAllProposals:
                 db.query(ProposedTag).filter_by(status="accepted").count()
             )
             assert accepted == 2
-            qt_count = db.query(QuoteTag).count()
+            # Count only QuoteTags for garrett (exclude auto-imported sentiment tags)
+            qt_count = (
+                db.query(QuoteTag)
+                .join(TagDefinition)
+                .join(CodebookGroup)
+                .filter(CodebookGroup.framework_id == "garrett")
+                .count()
+            )
             assert qt_count == 2
             # All bulk-accepted tags should have source="autocode"
             for qt in db.query(QuoteTag).all():
@@ -718,7 +725,14 @@ class TestDenyAllProposals:
         try:
             denied = db.query(ProposedTag).filter_by(status="denied").count()
             assert denied == N_QUOTES
-            qt_count = db.query(QuoteTag).count()
+            # Count only QuoteTags for garrett (exclude auto-imported sentiment tags)
+            qt_count = (
+                db.query(QuoteTag)
+                .join(TagDefinition)
+                .join(CodebookGroup)
+                .filter(CodebookGroup.framework_id == "garrett")
+                .count()
+            )
             assert qt_count == 0
         finally:
             db.close()

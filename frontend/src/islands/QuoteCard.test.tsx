@@ -476,3 +476,79 @@ describe("QuoteCard — editing (trim handles)", () => {
     );
   });
 });
+
+describe("QuoteCard — sentiment badge dedup", () => {
+  function renderWithTags(
+    overrides: Partial<QuoteResponse>,
+    userTags: { name: string; codebook_group: string; colour_set: string; colour_index: number }[],
+  ) {
+    const quote = makeQuote(overrides);
+    return render(
+      <QuoteCard
+        quote={quote}
+        displayText={quote.text}
+        isStarred={false}
+        isHidden={false}
+        userTags={userTags}
+        deletedBadges={[]}
+        isEdited={false}
+        tagVocabulary={[]}
+        sessionId="s1"
+        hasMedia={false}
+        hasModerator={false}
+        proposedTags={[]}
+        flashingTags={new Set()}
+        moderatorQuestion={null}
+        isQuestionOpen={false}
+        isPillVisible={false}
+        onToggleStar={NOOP}
+        onToggleHide={NOOP}
+        onEditCommit={NOOP}
+        onTagAdd={NOOP}
+        onTagRemove={NOOP}
+        onBadgeDelete={NOOP}
+        onBadgeRestore={NOOP}
+        onProposedAccept={NOOP}
+        onProposedDeny={NOOP}
+        onToggleQuestion={NOOP}
+        onQuoteHoverEnter={NOOP}
+        onQuoteHoverLeave={NOOP}
+        onPillHoverEnter={NOOP}
+        onPillHoverLeave={NOOP}
+      />,
+    );
+  }
+
+  it("shows AI sentiment badge when no matching codebook tag exists", () => {
+    renderWithTags({ sentiment: "frustration" }, []);
+    expect(screen.getByTestId("bn-quote-q-p1-26-badge-ai")).toBeInTheDocument();
+    expect(screen.getByTestId("bn-quote-q-p1-26-badge-ai")).toHaveTextContent("frustration");
+  });
+
+  it("hides AI sentiment badge when matching codebook tag exists", () => {
+    renderWithTags(
+      { sentiment: "frustration" },
+      [{ name: "frustration", codebook_group: "Sentiment", colour_set: "sentiment", colour_index: 0 }],
+    );
+    expect(screen.queryByTestId("bn-quote-q-p1-26-badge-ai")).not.toBeInTheDocument();
+  });
+
+  it("shows AI sentiment badge when codebook tag is from a different group", () => {
+    renderWithTags(
+      { sentiment: "frustration" },
+      [{ name: "frustration", codebook_group: "Pain points", colour_set: "emo", colour_index: 1 }],
+    );
+    expect(screen.getByTestId("bn-quote-q-p1-26-badge-ai")).toBeInTheDocument();
+  });
+
+  it("shows codebook sentiment tag as user badge alongside hidden AI badge", () => {
+    renderWithTags(
+      { sentiment: "confusion" },
+      [{ name: "confusion", codebook_group: "Sentiment", colour_set: "sentiment", colour_index: 1 }],
+    );
+    // AI badge hidden
+    expect(screen.queryByTestId("bn-quote-q-p1-26-badge-ai")).not.toBeInTheDocument();
+    // Codebook tag visible as user badge
+    expect(screen.getByTestId("bn-quote-q-p1-26-badge-confusion")).toBeInTheDocument();
+  });
+});

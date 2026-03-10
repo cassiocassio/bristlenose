@@ -245,10 +245,12 @@ class TestQuoteResearcherState:
         q = data["sections"][0]["quotes"][0]
         assert q["edited_text"] is None
 
-    def test_default_no_tags(self, client: TestClient) -> None:
+    def test_default_has_only_sentiment_tags(self, client: TestClient) -> None:
+        """Without user-applied tags, quotes only have auto-imported sentiment tags."""
         data = client.get("/api/projects/1/quotes").json()
         q = data["sections"][0]["quotes"][0]
-        assert q["tags"] == []
+        for tag in q["tags"]:
+            assert tag["codebook_group"] == "Sentiment"
 
     def test_default_no_deleted_badges(self, client: TestClient) -> None:
         data = client.get("/api/projects/1/quotes").json()

@@ -347,10 +347,14 @@ class TestStarredPut:
 
 
 class TestTagsGet:
-    def test_returns_200_empty(self, client: TestClient) -> None:
+    def test_returns_auto_imported_sentiment_tags(self, client: TestClient) -> None:
         resp = client.get("/api/projects/1/tags")
         assert resp.status_code == 200
-        assert resp.json() == {}
+        data = resp.json()
+        # All 4 smoke-test quotes have sentiment → auto-imported sentiment tags
+        assert len(data) == 4
+        for tags in data.values():
+            assert len(tags) == 1  # one sentiment tag per quote
 
 
 class TestTagsPut:

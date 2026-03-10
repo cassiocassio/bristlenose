@@ -1,0 +1,135 @@
+id: sentiment
+version: "1.0"
+title: Emotional & Cognitive Signals
+author: ""
+enabled: true
+sort_order: 5
+
+description: >
+  Seven sentiment categories designed for UX research. Negative sentiments
+  are more granular than positive ones because frustration, confusion, and
+  doubt each point to different design problems (performance, information
+  architecture, and credibility respectively). Surprise is neutral — it
+  flags expectation mismatches for the researcher to investigate. Auto-applied
+  by the pipeline during quote extraction.
+
+author_bio: >
+  Built into Bristlenose's pipeline. These tags are auto-applied during
+  quote extraction based on emotional and cognitive signals in participant
+  speech. The taxonomy draws on Russell's core affect model, Scherer's
+  appraisal theory, Hassenzahl's pragmatic/hedonic UX distinction, and
+  Fogg's web credibility research.
+
+author_links: []
+
+preamble: >
+  These tags are auto-applied by the pipeline — every quote with a detected
+  sentiment arrives pre-tagged. Use them to orient: scan the lay of the
+  land, find the interesting quotes, then hide this layer with the eye
+  toggle as you develop your own meaningful tags. Sentiment helps your eye
+  find the signal; the insight you deliver to your team comes from your
+  own codebook.
+
+groups:
+  - name: Sentiment
+    subtitle: AI-detected emotional responses
+    colour_set: sentiment
+    tags:
+      - name: frustration
+        definition: >
+          Difficulty, annoyance, friction — the participant expresses
+          emotional escalation beyond mere observation of a problem.
+        apply_when: >
+          The participant shows visible or verbal signs of annoyance.
+          Look for tone markers (sighing, swearing, emphatic language),
+          "this is ridiculous," "why can't I just," "that's so annoying,"
+          "I hate when," "are you kidding me."
+        not_this: >
+          If the participant is calm but the process is slow, that's a
+          usability observation, not frustration. Frustration requires
+          emotional escalation — annoyance, anger, or exasperation.
+
+      - name: confusion
+        definition: >
+          The participant doesn't understand what's happening, what
+          something means, or what to do next — a cognitive "I'm lost"
+          moment.
+        apply_when: >
+          The participant expresses uncertainty about meaning, state,
+          or next steps. Look for "I don't understand," "what does this
+          mean," "I'm not sure what," "where am I," "wait, what?"
+        not_this: >
+          If the participant understands but finds the process slow,
+          that's friction (a UXR tag). If they have a wrong understanding
+          but feel confident, that's misconception (a UXR tag). Confusion
+          is the felt experience of not knowing.
+
+      - name: doubt
+        definition: >
+          Scepticism, worry, or distrust — the participant understands
+          what's presented but doesn't believe or trust it.
+        apply_when: >
+          The participant signals scepticism or uncertainty about
+          credibility. Look for "I'm not sure I'd trust this," "that
+          seems dodgy," "I don't believe," "are they really," "why do
+          they need my."
+        not_this: >
+          Doubt is separate from confusion. Confusion means "I don't
+          understand this." Doubt means "I understand it but don't
+          trust it." Different design responses: better labelling vs.
+          better credibility signals.
+
+      - name: surprise
+        definition: >
+          Expectation mismatch — something unexpected happened. Could be
+          positive, negative, or neutral. The participant's expectations
+          were violated.
+        apply_when: >
+          The participant encounters something they didn't expect. Look
+          for "oh!," "I didn't expect," "I was surprised," "really?,"
+          "wait, what?," "that's weird," "huh, I didn't know."
+        not_this: >
+          If the surprise is clearly positive and emotionally elevated,
+          that may also warrant delight. Surprise is the neutral flag for
+          any expectation mismatch — the researcher determines valence
+          from context.
+
+      - name: satisfaction
+        definition: >
+          Met expectations, task success — the participant completed what
+          they set out to do and it worked as expected.
+        apply_when: >
+          The participant signals that something worked well or met their
+          needs. Look for "good, that worked," "perfect," "that's what
+          I wanted," "exactly," "great, done."
+        not_this: >
+          If the participant is emotionally elevated beyond mere
+          satisfaction, that's delight. Satisfaction is "it works" —
+          the baseline positive signal. Delight is "it exceeds."
+
+      - name: delight
+        definition: >
+          Exceeded expectations, genuine pleasure — the participant
+          expresses positive emotion beyond mere satisfaction.
+        apply_when: >
+          The participant shows elevated positive emotion. Look for
+          "I love this," "that's amazing," "oh cool," "this is great,"
+          laughing with pleasure, "I didn't expect that" (positively).
+        not_this: >
+          If the participant is satisfied but not emotionally moved,
+          that's satisfaction. Delight requires elevated positive
+          emotion — genuine pleasure, not just "it works."
+
+      - name: confidence
+        definition: >
+          Trust and feeling in control — the participant knows what to
+          do and feels certain about the outcome.
+        apply_when: >
+          The participant signals certainty, mastery, or trust. Look for
+          "I know exactly what to do," "this makes sense," "I'm
+          confident," "I feel safe," "I trust this."
+        not_this: >
+          If the participant is satisfied with a result, that's
+          satisfaction. Confidence is forward-looking certainty — "I know
+          what to do" vs "that worked." It's about feeling in control,
+          not about the outcome.

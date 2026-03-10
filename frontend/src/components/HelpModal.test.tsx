@@ -38,7 +38,8 @@ describe("HelpModal", () => {
     expect(modal.textContent).toContain("Previous quote");
     expect(modal.textContent).toContain("Star quote(s)");
     expect(modal.textContent).toContain("Hide quote(s)");
-    expect(modal.textContent).toContain("Add tag(s)");
+    expect(modal.textContent).toContain("Add tag");
+    expect(modal.textContent).toContain("Repeat last tag");
     expect(modal.textContent).toContain("Play in video");
     expect(modal.textContent).toContain("Search");
   });

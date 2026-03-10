@@ -1,0 +1,896 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Edo Colour Palette — Bristlenose Design System</title>
+<style>
+/* ── Tokens ── */
+:root {
+    --bn-font-body: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
+    --bn-colour-bg: #ffffff;
+    --bn-colour-text: #1a1a1a;
+    --bn-colour-muted: #6b7280;
+    --bn-colour-border: #e5e7eb;
+}
+
+@supports (color: light-dark(#000, #fff)) {
+    :root {
+        color-scheme: light dark;
+        --bn-colour-bg:     light-dark(#ffffff, #111111);
+        --bn-colour-text:   light-dark(#1a1a1a, #e5e7eb);
+        --bn-colour-muted:  light-dark(#6b7280, #9ca3af);
+        --bn-colour-border: light-dark(#e5e7eb, #2d2d2d);
+    }
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+    font-family: var(--bn-font-body);
+    font-size: 0.9rem;
+    line-height: 1.55;
+    color: var(--bn-colour-text);
+    background: var(--bn-colour-bg);
+    padding: 2.5rem 2rem;
+    max-width: 1100px;
+    margin: 0 auto;
+}
+
+h1 {
+    font-size: 1.4rem;
+    font-weight: 650;
+    margin-bottom: 0.3rem;
+    letter-spacing: -0.01em;
+}
+
+.subtitle {
+    color: var(--bn-colour-muted);
+    margin-bottom: 2.5rem;
+    max-width: 55em;
+    line-height: 1.6;
+}
+
+.subtitle a {
+    color: var(--bn-colour-muted);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+}
+
+/* ── Source artwork cards ── */
+
+.sources {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.2rem;
+    margin-bottom: 3rem;
+}
+
+.source-card {
+    border: 1px solid var(--bn-colour-border);
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.source-card .art {
+    height: 140px;
+    background-size: cover;
+    background-position: center;
+    position: relative;
+}
+
+.source-card .art::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(to bottom, transparent 50%, rgba(0,0,0,0.5));
+}
+
+.source-card .label {
+    position: relative;
+    padding: 0.75rem 0.9rem;
+}
+
+.source-card .label .title {
+    font-weight: 550;
+    font-size: 0.82rem;
+    margin-bottom: 0.15rem;
+}
+
+.source-card .label .meta {
+    font-size: 0.75rem;
+    color: var(--bn-colour-muted);
+    line-height: 1.45;
+}
+
+/* Representative colour strip under each artwork */
+.source-card .strip {
+    display: flex;
+    height: 6px;
+}
+
+.source-card .strip span {
+    flex: 1;
+}
+
+/* ── Palette section ── */
+
+.palette-group {
+    margin-bottom: 2.5rem;
+}
+
+.palette-group h2 {
+    font-size: 1.05rem;
+    font-weight: 600;
+    margin-bottom: 0.2rem;
+}
+
+.palette-group .group-meta {
+    font-size: 0.8rem;
+    color: var(--bn-colour-muted);
+    margin-bottom: 1rem;
+}
+
+.chips {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 0.9rem;
+}
+
+.chip {
+    border: 1px solid var(--bn-colour-border);
+    border-radius: 8px;
+    overflow: hidden;
+    transition: box-shadow 0.15s ease;
+}
+
+.chip:hover {
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+}
+
+.chip .swatch {
+    height: 80px;
+    position: relative;
+    cursor: pointer;
+}
+
+.chip .swatch .hex-overlay {
+    position: absolute;
+    bottom: 6px;
+    right: 8px;
+    font-family: "SF Mono", "Fira Code", "Consolas", monospace;
+    font-size: 0.68rem;
+    padding: 1px 5px;
+    border-radius: 3px;
+    background: rgba(0,0,0,0.35);
+    color: #fff;
+    opacity: 0;
+    transition: opacity 0.15s ease;
+}
+
+.chip:hover .hex-overlay {
+    opacity: 1;
+}
+
+.chip .info {
+    padding: 0.55rem 0.7rem;
+}
+
+.chip .info .name {
+    font-weight: 530;
+    font-size: 0.8rem;
+    margin-bottom: 0.1rem;
+}
+
+.chip .info .hex {
+    font-family: "SF Mono", "Fira Code", "Consolas", monospace;
+    font-size: 0.72rem;
+    color: var(--bn-colour-muted);
+}
+
+.chip .info .note {
+    font-size: 0.72rem;
+    color: var(--bn-colour-muted);
+    margin-top: 0.25rem;
+    line-height: 1.4;
+}
+
+/* ── Full palette strip ── */
+
+.full-strip {
+    margin-top: 3rem;
+    border: 1px solid var(--bn-colour-border);
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.full-strip .bar {
+    display: flex;
+    height: 48px;
+}
+
+.full-strip .bar span {
+    flex: 1;
+    position: relative;
+    cursor: pointer;
+    transition: flex 0.2s ease;
+}
+
+.full-strip .bar span:hover {
+    flex: 2;
+}
+
+.full-strip .bar span::after {
+    content: attr(data-name);
+    position: absolute;
+    bottom: 4px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 0.6rem;
+    font-weight: 500;
+    white-space: nowrap;
+    opacity: 0;
+    transition: opacity 0.15s ease;
+    color: #fff;
+    text-shadow: 0 1px 3px rgba(0,0,0,0.6);
+}
+
+.full-strip .bar span:hover::after {
+    opacity: 1;
+}
+
+.full-strip .caption {
+    padding: 0.6rem 0.9rem;
+    font-size: 0.78rem;
+    color: var(--bn-colour-muted);
+}
+
+/* ── Combination previews ── */
+
+.combos {
+    margin-top: 3rem;
+}
+
+.combos h2 {
+    font-size: 1.05rem;
+    font-weight: 600;
+    margin-bottom: 0.2rem;
+}
+
+.combos .group-meta {
+    font-size: 0.8rem;
+    color: var(--bn-colour-muted);
+    margin-bottom: 1rem;
+}
+
+.combo-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1rem;
+}
+
+.combo-card {
+    border-radius: 8px;
+    padding: 1.2rem;
+    min-height: 100px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}
+
+.combo-card .combo-label {
+    font-size: 0.72rem;
+    opacity: 0.7;
+    margin-bottom: 0.5rem;
+    font-weight: 500;
+}
+
+.combo-card .combo-text {
+    font-size: 0.88rem;
+    line-height: 1.5;
+}
+
+.combo-card .combo-accent {
+    font-weight: 600;
+    margin-top: 0.5rem;
+}
+
+/* ── Mapping preview ── */
+
+.mapping {
+    margin-top: 3rem;
+    border: 1px solid var(--bn-colour-border);
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.mapping table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.82rem;
+}
+
+.mapping thead {
+    background: var(--bn-colour-border);
+}
+
+.mapping th {
+    font-weight: 560;
+    text-align: left;
+    padding: 0.5rem 0.9rem;
+    font-size: 0.78rem;
+}
+
+.mapping td {
+    padding: 0.55rem 0.9rem;
+    border-top: 1px solid var(--bn-colour-border);
+    vertical-align: middle;
+}
+
+.mapping .dot {
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    margin-right: 0.5rem;
+    vertical-align: middle;
+}
+
+.mapping .arrow {
+    color: var(--bn-colour-muted);
+    padding: 0 0.3rem;
+}
+
+/* ── Colour analysis prose ── */
+
+.analysis {
+    margin-bottom: 3rem;
+    border: 1px solid var(--bn-colour-border);
+    border-radius: 8px;
+    padding: 1.5rem 1.8rem;
+}
+
+.analysis h2 {
+    font-size: 1.05rem;
+    font-weight: 600;
+    margin-bottom: 1.2rem;
+}
+
+.analysis-item {
+    margin-bottom: 1.5rem;
+}
+
+.analysis-item:last-child {
+    margin-bottom: 0;
+}
+
+.analysis-item h3 {
+    font-size: 0.88rem;
+    font-weight: 570;
+    margin-bottom: 0.4rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.analysis-item h3 .num {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    font-size: 0.68rem;
+    font-weight: 600;
+    color: #fff;
+    flex-shrink: 0;
+}
+
+.analysis-item p {
+    font-size: 0.82rem;
+    color: var(--bn-colour-muted);
+    line-height: 1.6;
+    margin-bottom: 0.35rem;
+}
+
+.analysis-item ul {
+    list-style: none;
+    padding: 0;
+    margin: 0.3rem 0 0.5rem 0;
+}
+
+.analysis-item ul li {
+    font-size: 0.82rem;
+    color: var(--bn-colour-text);
+    line-height: 1.55;
+    padding: 0.12rem 0 0.12rem 1.1rem;
+    position: relative;
+}
+
+.analysis-item ul li::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0.55rem;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+}
+
+.analysis-item .takeaway {
+    font-size: 0.82rem;
+    font-style: italic;
+    color: var(--bn-colour-muted);
+    margin-top: 0.3rem;
+}
+
+.analysis-coda {
+    margin-top: 1.2rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--bn-colour-border);
+    font-size: 0.82rem;
+    line-height: 1.6;
+}
+
+.analysis-coda strong {
+    font-weight: 570;
+}
+
+@media (max-width: 700px) {
+    .sources { grid-template-columns: 1fr; }
+    .chips { grid-template-columns: repeat(3, 1fr); }
+    .combo-grid { grid-template-columns: 1fr; }
+    .analysis { padding: 1rem 1.2rem; }
+}
+</style>
+</head>
+<body>
+
+<h1>Edo Colour Palette</h1>
+<p class="subtitle">
+    Colours sampled from three Edo-period artworks seen at the
+    <a href="https://www.britishmuseum.org/exhibitions/samurai">British Museum <em>Samurai</em> exhibition</a>, 1 Mar 2026.
+    Pigments: mineral verdigris (rokusho), iron-gall ink (sumi), cinnabar vermillion, Prussian blue (bero-ai), yellow ochre.
+    These are the raw sampled values — a starting point for remapping Bristlenose's token system.
+</p>
+
+<!-- ── Source artworks ── -->
+
+<div class="sources">
+    <div class="source-card">
+        <div class="art" style="background: linear-gradient(135deg, #7BA8A0 0%, #C4A96A 40%, #2D3654 70%, #B5432A 100%);">
+        </div>
+        <div class="strip">
+            <span style="background: #7BA8A0;"></span>
+            <span style="background: #C4A96A;"></span>
+            <span style="background: #F0E4C8;"></span>
+            <span style="background: #2D3654;"></span>
+            <span style="background: #B5432A;"></span>
+        </div>
+        <div class="label">
+            <div class="title">Visit of the Korean Ambassadors</div>
+            <div class="meta">Tosa School, c. 1790–1810. Handscroll, ink and colour on silk. British Museum 1881,1210,0.260</div>
+        </div>
+    </div>
+
+    <div class="source-card">
+        <div class="art" style="background: linear-gradient(135deg, #F5F0E6 0%, #1A1A1A 30%, #8B3A3A 50%, #1E3A5F 80%, #4A6B52 100%);">
+        </div>
+        <div class="strip">
+            <span style="background: #1E3A5F;"></span>
+            <span style="background: #8B3A3A;"></span>
+            <span style="background: #4A6B52;"></span>
+            <span style="background: #1A1A1A;"></span>
+            <span style="background: #F5F0E6;"></span>
+        </div>
+        <div class="label">
+            <div class="title">Night Attack of the Forty-Seven Ronin</div>
+            <div class="meta">Utagawa Kuniyoshi, c. 1830s. Triptych woodblock print. British Museum</div>
+        </div>
+    </div>
+
+    <div class="source-card">
+        <div class="art" style="background: linear-gradient(135deg, #1B4D7A 0%, #5A7D9B 30%, #6B3328 60%, #D4C9A8 80%, #3D3D3D 100%);">
+        </div>
+        <div class="strip">
+            <span style="background: #1B4D7A;"></span>
+            <span style="background: #5A7D9B;"></span>
+            <span style="background: #6B3328;"></span>
+            <span style="background: #3D3D3D;"></span>
+            <span style="background: #D4C9A8;"></span>
+        </div>
+        <div class="label">
+            <div class="title">Ghosts of the Taira at Daimotsu Bay</div>
+            <div class="meta">Utagawa Kuniyoshi, c. 1845. Triptych woodblock print. Metropolitan Museum of Art</div>
+        </div>
+    </div>
+</div>
+
+<!-- ── Colour analysis ── -->
+
+<div class="analysis">
+    <h2>Colour Analysis</h2>
+
+    <div class="analysis-item">
+        <h3><span class="num" style="background: #7BA8A0;">1</span> Handscroll — Visit of Korean Ambassadors to Edo Castle</h3>
+        <p>Tosa School, c. 1790–1810</p>
+        <p>Dominated by a distinctive soft blue-green (verdigris / rokusho) on the tatami and floor areas. This is paired with:</p>
+        <ul>
+            <li style="--dot: #C4A96A;"><span style="position:absolute;left:0;top:0.55rem;width:6px;height:6px;border-radius:50%;background:#C4A96A;"></span>Warm tan/gold for the architectural woodwork and beams</li>
+            <li><span style="position:absolute;left:0;top:0.55rem;width:6px;height:6px;border-radius:50%;background:#2D3654;"></span>Deep indigo and black on the officials' robes</li>
+            <li><span style="position:absolute;left:0;top:0.55rem;width:6px;height:6px;border-radius:50%;background:#B5432A;"></span>Rich crimson/vermillion on select garments (the central figure in blue being the most vivid accent)</li>
+            <li><span style="position:absolute;left:0;top:0.55rem;width:6px;height:6px;border-radius:50%;background:#F0E4C8;"></span>Cream/buff background paper showing through clouds</li>
+            <li><span style="position:absolute;left:0;top:0.55rem;width:6px;height:6px;border-radius:50%;background:#9E8B6E;"></span>Muted earth tones — browns and ochres on the wooden structure</li>
+        </ul>
+        <div class="takeaway">The palette is restrained and courtly, typical of Tosa school narrative painting. The blue-green dominates perhaps 40% of the visible surface.</div>
+    </div>
+
+    <div class="analysis-item">
+        <h3><span class="num" style="background: #1E3A5F;">2</span> Triptych woodblock — Night Attack of the 47 Ronin</h3>
+        <p>Utagawa Kuniyoshi, c. 1830s</p>
+        <p>Much more dynamic and saturated:</p>
+        <ul>
+            <li><span style="position:absolute;left:0;top:0.55rem;width:6px;height:6px;border-radius:50%;background:#F5F0E6;"></span>Snow white — the largest single area, creating dramatic negative space</li>
+            <li><span style="position:absolute;left:0;top:0.55rem;width:6px;height:6px;border-radius:50%;background:#1A1A1A;"></span>Black — the ronin's distinctive striped surcoats (black-and-white chevron pattern)</li>
+            <li><span style="position:absolute;left:0;top:0.55rem;width:6px;height:6px;border-radius:50%;background:#1E3A5F;"></span>Deep Prussian blue — sky, distant hills, shadows on snow</li>
+            <li><span style="position:absolute;left:0;top:0.55rem;width:6px;height:6px;border-radius:50%;background:#8B3A3A;"></span>Vermillion/red — temple architecture, gate posts, scattered clothing</li>
+            <li><span style="position:absolute;left:0;top:0.55rem;width:6px;height:6px;border-radius:50%;background:#4A6B52;"></span>Grey-green — pine trees under snow</li>
+            <li><span style="position:absolute;left:0;top:0.55rem;width:6px;height:6px;border-radius:50%;background:#C4A96A;"></span>Yellow-gold accents in cartouches and name labels</li>
+        </ul>
+        <div class="takeaway">High contrast palette — the black chevron pattern against white snow is the signature visual motif.</div>
+    </div>
+
+    <div class="analysis-item">
+        <h3><span class="num" style="background: #1B4D7A;">3</span> Triptych woodblock — Ghosts of the Taira at Daimotsu Bay</h3>
+        <p>Utagawa Kuniyoshi, c. 1845</p>
+        <p>The most atmospheric of the three:</p>
+        <ul>
+            <li><span style="position:absolute;left:0;top:0.55rem;width:6px;height:6px;border-radius:50%;background:#1B4D7A;"></span>Deep indigo/Prussian blue — the enormous wave dominates the right half, grading from near-black to vivid blue</li>
+            <li><span style="position:absolute;left:0;top:0.55rem;width:6px;height:6px;border-radius:50%;background:#5A7D9B;"></span>Slate grey — the stormy sky, with ghostly figures rendered in dark charcoal/smoky black silhouettes</li>
+            <li><span style="position:absolute;left:0;top:0.55rem;width:6px;height:6px;border-radius:50%;background:#6B3328;"></span>Brown/russet — the ship's hull and masts</li>
+            <li><span style="position:absolute;left:0;top:0.55rem;width:6px;height:6px;border-radius:50%;background:#D4C9A8;"></span>Off-white/cream — the billowing sail, wave foam</li>
+            <li><span style="position:absolute;left:0;top:0.55rem;width:6px;height:6px;border-radius:50%;background:#B5432A;"></span>Scattered vermillion/red — cartouche seals, small garment accents</li>
+            <li><span style="position:absolute;left:0;top:0.55rem;width:6px;height:6px;border-radius:50%;background:#5A8A8A;"></span>Muted blue and teal on the warriors' armour</li>
+        </ul>
+        <div class="takeaway">This piece uses value (light/dark contrast) more than hue variety. The blue wave and grey sky account for roughly 60–70% of the surface area, giving it a moody, nocturnal feel.</div>
+    </div>
+
+    <div class="analysis-coda">
+        <strong>Common threads across all three:</strong> vermillion red as accent, Prussian blue/indigo as a structural colour, and cream/buff paper tone as breathing space.
+        The Tosa school painting is warmer and more muted; the two Kuniyoshi ukiyo-e prints push contrast and saturation much harder, typical of late-Edo commercial woodblock printing.
+    </div>
+</div>
+
+<!-- ── Palette: Korean Ambassadors ── -->
+
+<div class="palette-group">
+    <h2>Korean Ambassadors — Tosa School</h2>
+    <p class="group-meta">Courtly restraint. Mineral pigments on silk. Washed verdigris dominates.</p>
+    <div class="chips">
+        <div class="chip">
+            <div class="swatch" style="background: #7BA8A0;">
+                <span class="hex-overlay">#7BA8A0</span>
+            </div>
+            <div class="info">
+                <div class="name">Verdigris</div>
+                <div class="hex">#7BA8A0</div>
+                <div class="note">Rokusho. Tatami floors, dominant ~40% of surface</div>
+            </div>
+        </div>
+        <div class="chip">
+            <div class="swatch" style="background: #C4A96A;">
+                <span class="hex-overlay">#C4A96A</span>
+            </div>
+            <div class="info">
+                <div class="name">Gold Ochre</div>
+                <div class="hex">#C4A96A</div>
+                <div class="note">Architectural beams and woodwork</div>
+            </div>
+        </div>
+        <div class="chip">
+            <div class="swatch" style="background: #F0E4C8;">
+                <span class="hex-overlay">#F0E4C8</span>
+            </div>
+            <div class="info">
+                <div class="name">Washi Cream</div>
+                <div class="hex">#F0E4C8</div>
+                <div class="note">Paper/cloud background tone</div>
+            </div>
+        </div>
+        <div class="chip">
+            <div class="swatch" style="background: #2D3654;">
+                <span class="hex-overlay">#2D3654</span>
+            </div>
+            <div class="info">
+                <div class="name">Court Indigo</div>
+                <div class="hex">#2D3654</div>
+                <div class="note">Officials' robes, dark accents</div>
+            </div>
+        </div>
+        <div class="chip">
+            <div class="swatch" style="background: #B5432A;">
+                <span class="hex-overlay">#B5432A</span>
+            </div>
+            <div class="info">
+                <div class="name">Vermillion</div>
+                <div class="hex">#B5432A</div>
+                <div class="note">Cinnabar red, scattered garments</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ── Palette: 47 Ronin ── -->
+
+<div class="palette-group">
+    <h2>Night Attack — Forty-Seven Ronin</h2>
+    <p class="group-meta">High drama. Maximum contrast. Chevron black against snow white.</p>
+    <div class="chips">
+        <div class="chip">
+            <div class="swatch" style="background: #1E3A5F;">
+                <span class="hex-overlay">#1E3A5F</span>
+            </div>
+            <div class="info">
+                <div class="name">Prussian Blue</div>
+                <div class="hex">#1E3A5F</div>
+                <div class="note">Bero-ai. Night sky, snow shadows</div>
+            </div>
+        </div>
+        <div class="chip">
+            <div class="swatch" style="background: #8B3A3A;">
+                <span class="hex-overlay">#8B3A3A</span>
+            </div>
+            <div class="info">
+                <div class="name">Bengara Red</div>
+                <div class="hex">#8B3A3A</div>
+                <div class="note">Iron oxide. Temple gates, architecture</div>
+            </div>
+        </div>
+        <div class="chip">
+            <div class="swatch" style="background: #4A6B52;">
+                <span class="hex-overlay">#4A6B52</span>
+            </div>
+            <div class="info">
+                <div class="name">Pine Green</div>
+                <div class="hex">#4A6B52</div>
+                <div class="note">Snow-laden pine trees</div>
+            </div>
+        </div>
+        <div class="chip">
+            <div class="swatch" style="background: #1A1A1A;">
+                <span class="hex-overlay">#1A1A1A</span>
+            </div>
+            <div class="info">
+                <div class="name">Sumi Black</div>
+                <div class="hex">#1A1A1A</div>
+                <div class="note">Ink stick carbon. Chevron surcoats</div>
+            </div>
+        </div>
+        <div class="chip">
+            <div class="swatch" style="background: #F5F0E6;">
+                <span class="hex-overlay">#F5F0E6</span>
+            </div>
+            <div class="info">
+                <div class="name">Snow White</div>
+                <div class="hex">#F5F0E6</div>
+                <div class="note">Negative space, ~40% of surface</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ── Palette: Ghosts of the Taira ── -->
+
+<div class="palette-group">
+    <h2>Ghosts of the Taira — Daimotsu Bay</h2>
+    <p class="group-meta">Nocturnal atmosphere. Blue dominance. Value over hue.</p>
+    <div class="chips">
+        <div class="chip">
+            <div class="swatch" style="background: #1B4D7A;">
+                <span class="hex-overlay">#1B4D7A</span>
+            </div>
+            <div class="info">
+                <div class="name">Wave Indigo</div>
+                <div class="hex">#1B4D7A</div>
+                <div class="note">The great wave, 30%+ of surface</div>
+            </div>
+        </div>
+        <div class="chip">
+            <div class="swatch" style="background: #5A7D9B;">
+                <span class="hex-overlay">#5A7D9B</span>
+            </div>
+            <div class="info">
+                <div class="name">Storm Slate</div>
+                <div class="hex">#5A7D9B</div>
+                <div class="note">Grey-blue sky, atmospheric mist</div>
+            </div>
+        </div>
+        <div class="chip">
+            <div class="swatch" style="background: #6B3328;">
+                <span class="hex-overlay">#6B3328</span>
+            </div>
+            <div class="info">
+                <div class="name">Ship Hull</div>
+                <div class="hex">#6B3328</div>
+                <div class="note">Russet timber of the vessel</div>
+            </div>
+        </div>
+        <div class="chip">
+            <div class="swatch" style="background: #3D3D3D;">
+                <span class="hex-overlay">#3D3D3D</span>
+            </div>
+            <div class="info">
+                <div class="name">Ghost Charcoal</div>
+                <div class="hex">#3D3D3D</div>
+                <div class="note">Phantom silhouettes in the sky</div>
+            </div>
+        </div>
+        <div class="chip">
+            <div class="swatch" style="background: #D4C9A8;">
+                <span class="hex-overlay">#D4C9A8</span>
+            </div>
+            <div class="info">
+                <div class="name">Sail Parchment</div>
+                <div class="hex">#D4C9A8</div>
+                <div class="note">Wind-blown sail, wave foam</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ── Full palette strip ── -->
+
+<div class="full-strip">
+    <div class="bar">
+        <!-- Ambassadors -->
+        <span style="background: #7BA8A0;" data-name="Verdigris"></span>
+        <span style="background: #C4A96A;" data-name="Gold Ochre"></span>
+        <span style="background: #F0E4C8;" data-name="Washi Cream"></span>
+        <span style="background: #2D3654;" data-name="Court Indigo"></span>
+        <span style="background: #B5432A;" data-name="Vermillion"></span>
+        <!-- Ronin -->
+        <span style="background: #1E3A5F;" data-name="Prussian Blue"></span>
+        <span style="background: #8B3A3A;" data-name="Bengara Red"></span>
+        <span style="background: #4A6B52;" data-name="Pine Green"></span>
+        <span style="background: #1A1A1A;" data-name="Sumi Black"></span>
+        <span style="background: #F5F0E6;" data-name="Snow White"></span>
+        <!-- Taira -->
+        <span style="background: #1B4D7A;" data-name="Wave Indigo"></span>
+        <span style="background: #5A7D9B;" data-name="Storm Slate"></span>
+        <span style="background: #6B3328;" data-name="Ship Hull"></span>
+        <span style="background: #3D3D3D;" data-name="Ghost Charcoal"></span>
+        <span style="background: #D4C9A8;" data-name="Sail Parchment"></span>
+    </div>
+    <div class="caption">All 15 sampled colours. Hover to identify.</div>
+</div>
+
+<!-- ── Combination previews ── -->
+
+<div class="combos">
+    <h2>Combination Previews</h2>
+    <p class="group-meta">How these colours work as bg + text + accent combinations.</p>
+
+    <div class="combo-grid">
+        <!-- Combo 1: Light courtly -->
+        <div class="combo-card" style="background: #F0E4C8; color: #2D3654;">
+            <div class="combo-label">Washi Cream + Court Indigo</div>
+            <div class="combo-text">
+                "The moderator asked about their onboarding experience and three participants immediately raised friction with the signup flow."
+                <div class="combo-accent" style="color: #7BA8A0;">Verdigris accent</div>
+            </div>
+        </div>
+
+        <!-- Combo 2: Snow + Prussian -->
+        <div class="combo-card" style="background: #F5F0E6; color: #1E3A5F;">
+            <div class="combo-label">Snow White + Prussian Blue</div>
+            <div class="combo-text">
+                "I expected it to save automatically, but it didn't. I lost about twenty minutes of work."
+                <div class="combo-accent" style="color: #B5432A;">Vermillion accent</div>
+            </div>
+        </div>
+
+        <!-- Combo 3: Dark atmospheric -->
+        <div class="combo-card" style="background: #1A1A1A; color: #D4C9A8;">
+            <div class="combo-label">Sumi Black + Sail Parchment</div>
+            <div class="combo-text">
+                "Once I figured out the shortcut, it completely changed how I use the tool. It's like night and day."
+                <div class="combo-accent" style="color: #7BA8A0;">Verdigris accent</div>
+            </div>
+        </div>
+
+        <!-- Combo 4: Court Indigo bg -->
+        <div class="combo-card" style="background: #2D3654; color: #F0E4C8;">
+            <div class="combo-label">Court Indigo + Washi Cream</div>
+            <div class="combo-text">
+                "The dashboard gives me everything I need at a glance. I check it every morning before standup."
+                <div class="combo-accent" style="color: #C4A96A;">Gold Ochre accent</div>
+            </div>
+        </div>
+
+        <!-- Combo 5: Warm neutral -->
+        <div class="combo-card" style="background: #F5F0E6; color: #1A1A1A;">
+            <div class="combo-label">Snow White + Sumi Black</div>
+            <div class="combo-text">
+                "It's not confusing exactly, it's more that I don't know what's supposed to happen next."
+                <div class="combo-accent" style="color: #1B4D7A;">Wave Indigo accent</div>
+            </div>
+        </div>
+
+        <!-- Combo 6: Deep sea -->
+        <div class="combo-card" style="background: #1B4D7A; color: #F5F0E6;">
+            <div class="combo-label">Wave Indigo + Snow White</div>
+            <div class="combo-text">
+                "I've tried three competitors and this is the first one where I actually finished the task."
+                <div class="combo-accent" style="color: #C4A96A;">Gold Ochre accent</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ── Token mapping sketch ── -->
+
+<div class="mapping" style="margin-top: 3rem;">
+    <table>
+        <thead>
+            <tr>
+                <th>Current Token</th>
+                <th></th>
+                <th>Edo Candidate</th>
+                <th>Notes</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><span class="dot" style="background: #ffffff;  border: 1px solid #e5e7eb;"></span><code>--bn-colour-bg</code></td>
+                <td class="arrow">&rarr;</td>
+                <td><span class="dot" style="background: #F5F0E6;"></span>Snow White <code>#F5F0E6</code></td>
+                <td>Warm paper background (or Washi Cream for warmer)</td>
+            </tr>
+            <tr>
+                <td><span class="dot" style="background: #1a1a1a;"></span><code>--bn-colour-text</code></td>
+                <td class="arrow">&rarr;</td>
+                <td><span class="dot" style="background: #1A1A1A;"></span>Sumi Black <code>#1A1A1A</code></td>
+                <td>Already identical — carbon ink black</td>
+            </tr>
+            <tr>
+                <td><span class="dot" style="background: #6b7280;"></span><code>--bn-colour-muted</code></td>
+                <td class="arrow">&rarr;</td>
+                <td><span class="dot" style="background: #5A7D9B;"></span>Storm Slate <code>#5A7D9B</code></td>
+                <td>Atmospheric grey-blue vs neutral grey</td>
+            </tr>
+            <tr>
+                <td><span class="dot" style="background: #2563eb;"></span><code>--bn-colour-accent</code></td>
+                <td class="arrow">&rarr;</td>
+                <td><span class="dot" style="background: #1E3A5F;"></span>Prussian Blue <code>#1E3A5F</code></td>
+                <td>Bero-ai — may need lighter tint for links</td>
+            </tr>
+            <tr>
+                <td><span class="dot" style="background: #2563eb;"></span><code>--bn-colour-accent</code></td>
+                <td class="arrow">&rarr;</td>
+                <td><span class="dot" style="background: #7BA8A0;"></span>Verdigris <code>#7BA8A0</code></td>
+                <td>Alternative: distinctive, calmer, more unique</td>
+            </tr>
+            <tr>
+                <td><span class="dot" style="background: #e5e7eb;"></span><code>--bn-colour-border</code></td>
+                <td class="arrow">&rarr;</td>
+                <td><span class="dot" style="background: #D4C9A8;"></span>Sail Parchment <code>#D4C9A8</code></td>
+                <td>Warm border (strong) — may want 50% tint</td>
+            </tr>
+            <tr>
+                <td colspan="4" style="padding: 0.7rem 0.9rem; color: var(--bn-colour-muted); font-size: 0.78rem; font-style: italic;">
+                    Sentiment colours (frustration, confidence, etc.) would need separate mapping — those are functional, not aesthetic
+                </td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+
+<p style="margin-top: 2rem; font-size: 0.78rem; color: var(--bn-colour-muted);">
+    Seen in person at the <a href="https://www.britishmuseum.org/exhibitions/samurai" style="color: inherit;"><em>Samurai</em> exhibition</a>, British Museum, 1 Mar 2026.
+    Source artworks: British Museum (<a href="https://www.britishmuseum.org/collection/object/A_1881-1210-0-260" style="color: inherit;">1881,1210,0.260</a>);
+    Metropolitan Museum of Art (Kuniyoshi, <em>Ghosts of the Taira</em>).
+    Hex values are approximate — sampled by eye from photographs taken at the exhibition, not measured from pigments.
+</p>
+
+</body>
+</html>

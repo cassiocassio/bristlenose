@@ -41,7 +41,8 @@ const SECTIONS: { title: string; shortcuts: Shortcut[] }[] = [
     shortcuts: [
       { keys: ["s"], description: "Star quote(s)" },
       { keys: ["h"], description: "Hide quote(s)" },
-      { keys: ["t"], description: "Add tag(s)" },
+      { keys: ["t"], description: "Add tag" },
+      { keys: ["t", "t"], description: "Repeat last tag" },
       { keys: ["Enter"], description: "Play in video" },
     ],
   },

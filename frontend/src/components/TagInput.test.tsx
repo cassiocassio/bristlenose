@@ -194,14 +194,14 @@ describe("TagInput", () => {
     expect(ghost?.textContent).toBe("");
   });
 
-  it("max 8 suggestions shown by default", async () => {
-    const bigVocab = Array.from({ length: 12 }, (_, i) => `a-tag-${i}`);
+  it("max 12 suggestions shown by default", async () => {
+    const bigVocab = Array.from({ length: 16 }, (_, i) => `a-tag-${i}`);
     const { container } = render(
       <TagInput vocabulary={bigVocab} onCommit={vi.fn()} onCancel={vi.fn()} />,
     );
     await userEvent.type(screen.getByPlaceholderText("tag"), "a");
     const items = container.querySelectorAll(".tag-suggest-item");
-    expect(items).toHaveLength(8);
+    expect(items).toHaveLength(12);
   });
 
   it("forwards data-testid", () => {

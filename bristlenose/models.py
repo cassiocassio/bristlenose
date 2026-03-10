@@ -93,7 +93,7 @@ class JourneyStage(str, Enum):
 
 
 AUDIO_EXTENSIONS = {".wav", ".mp3", ".m4a", ".flac", ".ogg", ".wma", ".aac"}
-VIDEO_EXTENSIONS = {".mp4", ".mov", ".avi", ".mkv", ".webm"}
+VIDEO_EXTENSIONS = {".mp4", ".m4v", ".mov", ".avi", ".mkv", ".webm"}
 SUBTITLE_SRT_EXTENSIONS = {".srt"}
 SUBTITLE_VTT_EXTENSIONS = {".vtt"}
 DOCX_EXTENSIONS = {".docx"}

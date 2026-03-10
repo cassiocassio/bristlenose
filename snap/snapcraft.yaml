@@ -24,6 +24,7 @@ apps:
       LANG: C.UTF-8
       LC_ALL: C.UTF-8
       PATH: $SNAP/usr/bin:$SNAP/bin:$PATH
+      LD_LIBRARY_PATH: $SNAP/usr/lib/$CRAFT_ARCH_TRIPLET:$SNAP/usr/lib/$CRAFT_ARCH_TRIPLET/pulseaudio:$SNAP/usr/lib:$LD_LIBRARY_PATH
       PYTHONPATH: $SNAP/lib/python3.12/site-packages
       PYTHONHOME: $SNAP/usr
 
@@ -32,7 +33,7 @@ parts:
     plugin: python
     source: .
     python-packages:
-      - .
+      - ".[serve]"
     stage-packages:
       - ffmpeg
       - libsndfile1

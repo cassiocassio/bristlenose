@@ -2,7 +2,7 @@
 
 This document tracks active feature branches to help multiple Claude sessions coordinate without conflicts.
 
-**Updated:** 3 Mar 2026 (shall-we-try-it closed)
+**Updated:** 10 Mar 2026 (sentiment-tags closed)
 
 ---
 
@@ -18,7 +18,6 @@ Each active feature branch gets its own **git worktree** — a full working copy
 | `bristlenose_branch symbology/` | `symbology` | § ¶ ❋ Unicode prefix symbols for sections, quotes, themes |
 | `bristlenose_branch highlighter/` | `highlighter` | Highlighter feature |
 | `bristlenose_branch living-fish/` | `living-fish` | Animated "living portrait" logo for serve mode |
-| `bristlenose_branch sentiment-tags/` | `sentiment-tags` | Unify sentiment badges into codebook framework system |
 
 
 **Creating a new feature branch worktree:**
@@ -100,7 +99,6 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 | `symbology` | `bristlenose_branch symbology/` | `origin/symbology` |
 | `highlighter` | `bristlenose_branch highlighter/` | `origin/highlighter` |
 | `living-fish` | `bristlenose_branch living-fish/` | `origin/living-fish` |
-| `sentiment-tags` | `bristlenose_branch sentiment-tags/` | local only |
 
 
 ---
@@ -157,32 +155,11 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 
 ---
 
-### `sentiment-tags` — started 2 Mar 2026
-
-**Status:** Just started
-**Worktree:** `/Users/cassio/Code/bristlenose_branch sentiment-tags/`
-**Remote:** local only (push when ready)
-
-**What it does:** Unify sentiment badges (frustration, confusion, doubt, surprise, satisfaction, delight, confidence) into the codebook framework system. Creates a Sentiment framework YAML, auto-imports it on first serve, auto-tags quotes from pipeline sentiment field. Deduplicates 4 overlapping tags from UXR codebook. Adds `"sentiment"` colour set. Suppresses legacy AI badge when codebook tag exists.
-
-**Files this branch will touch:**
-- `bristlenose/server/codebook/sentiment.yaml` — new framework YAML
-- `bristlenose/server/codebook/__init__.py` — add `"sentiment"` to valid colour sets
-- `bristlenose/server/codebook/uxr.yaml` — remove duplicated tags
-- `bristlenose/server/importer.py` — auto-import + auto-tag logic
-- `bristlenose/theme/tokens.css` — sentiment numeric CSS var aliases
-- `frontend/src/utils/colours.ts` — sentiment colour set entry
-- `frontend/src/components/TagSidebar.tsx` — FRAMEWORK_META entry
-- `frontend/src/islands/QuoteCard.tsx` — suppress AI badge when codebook tag exists
-
-**Potential conflicts with other branches:**
-- `symbology` touches `render_html.py` — no overlap (sentiment-tags doesn't touch render_html)
-- `living-fish` touches `app.py` and header — no overlap
-- `highlighter` — unknown scope, likely no overlap
-
----
-
 ## Completed Branches (for reference)
+
+### `sentiment-tags` — merged 10 Mar 2026
+
+Unify sentiment badges (frustration, confusion, doubt, surprise, satisfaction, delight, confidence) into the codebook framework system. Sentiment framework YAML, auto-import on first serve, auto-tagging from pipeline sentiment field. Deduplicates 4 overlapping tags from UXR codebook. Adds "sentiment" colour set. Suppresses legacy AI badge when codebook tag exists.
 
 ### `shall-we-try-it` — merged 3 Mar 2026
 

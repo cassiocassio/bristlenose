@@ -205,13 +205,15 @@ export function TagInput({
     boxRef.current.style.width = `${w}px`;
   }, [inputValue, ghostText, placeholder]);
 
-  // Resolve the final value, accepting ghost text or highlighted suggestion.
+  // Resolve the final value: highlighted suggestion wins over ghost text.
+  // The user explicitly arrowed to a suggestion — that's their choice,
+  // even if ghost text shows a different prefix-match completion.
   const resolveValue = useCallback((): string => {
-    if (ghostText) {
-      return inputValue + ghostText;
-    }
     if (selectedTagName) {
       return selectedTagName;
+    }
+    if (ghostText) {
+      return inputValue + ghostText;
     }
     return inputValue.trim();
   }, [inputValue, ghostText, selectedTagName]);

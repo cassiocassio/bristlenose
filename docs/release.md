@@ -48,8 +48,11 @@ bristlenose repo (release.yml) — triggered by v* tag
                         ▼
 homebrew-bristlenose repo (update-formula.yml)
 └─ update       → fetches sdist URL + sha256 from PyPI JSON API
-                  → patches Formula/bristlenose.rb (url, sha256, version)
+                  → patches Formula/bristlenose.rb (url, sha256)
                   → commits and pushes
+                  (formula structure is stable — only URL/SHA change.
+                   See docs/design-homebrew-packaging.md for why the
+                   formula uses post_install pip instead of resource blocks)
 
 bristlenose repo (snap.yml) — triggered by push to main AND v* tags
 ├─ build        → snapcore/action-build (amd64, ~10 min)

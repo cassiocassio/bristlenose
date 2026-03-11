@@ -274,7 +274,7 @@ class Pipeline:
         )
         from bristlenose.stages.quote_clustering import cluster_by_screen
         from bristlenose.stages.quote_extraction import extract_quotes
-        from bristlenose.stages.render_html import render_html
+        from bristlenose.stages.render import render_html
         from bristlenose.stages.render_output import (
             render_markdown,
             write_intermediate_json,
@@ -1246,7 +1246,7 @@ class Pipeline:
         from bristlenose.llm.client import LLMClient
         from bristlenose.stages.quote_clustering import cluster_by_screen
         from bristlenose.stages.quote_extraction import extract_quotes
-        from bristlenose.stages.render_html import render_html
+        from bristlenose.stages.render import render_html
         from bristlenose.stages.render_output import (
             render_markdown,
             write_intermediate_json,
@@ -1523,7 +1523,7 @@ class Pipeline:
         import time
 
         from bristlenose.models import ExtractedQuote, ScreenCluster, ThemeGroup
-        from bristlenose.stages.render_html import render_html
+        from bristlenose.stages.render import render_html
         from bristlenose.stages.render_output import render_markdown
 
         self._configure_logging(output_dir)

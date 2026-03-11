@@ -41,7 +41,7 @@ bristlenose/          # main package
   models.py           # Pydantic data models (quotes, themes, enums)
   pipeline.py         # orchestrator (full run, transcribe-only, analyze-only, render-only)
   stages/             # 12-stage pipeline (ingest → render)
-    render_html.py    # HTML report renderer (Jinja2 templates + CSS from theme/, embeds JS)
+    render/           # HTML report renderer package (Jinja2 templates + CSS from theme/, embeds JS)
   llm/
     prompts.py        # LLM prompt templates
     structured.py     # Pydantic schemas for LLM structured output
@@ -83,7 +83,7 @@ pyproject.toml        # package metadata, deps, tool config (hatchling build)
 
 ## Design system (`bristlenose/theme/`)
 
-The report stylesheet follows [atomic design](https://bradfrost.com/blog/post/atomic-web-design/) principles. Each CSS concern lives in its own file. At render time, `render_html.py` reads and concatenates them in order into a single `bristlenose-theme.css` that ships alongside the report.
+The report stylesheet follows [atomic design](https://bradfrost.com/blog/post/atomic-web-design/) principles. Each CSS concern lives in its own file. At render time, `render/theme_assets.py` reads and concatenates them in order into a single `bristlenose-theme.css` that ships alongside the report.
 
 ### Architecture
 
@@ -124,11 +124,11 @@ theme/
 
 ### How it works
 
-**CSS:** `render_html.py` defines a `_THEME_FILES` list that specifies the exact concatenation order. The function `_load_default_css()` reads each file, wraps it with a section comment, and joins them into one string. This is cached once per process, then written to `bristlenose-theme.css` in the output directory on every run (always overwritten -- user state like favourites and tags lives in localStorage, not CSS).
+**CSS:** `render/theme_assets.py` defines a `_THEME_FILES` list that specifies the exact concatenation order. The function `_load_default_css()` reads each file, wraps it with a section comment, and joins them into one string. This is cached once per process, then written to `bristlenose-theme.css` in the output directory on every run (always overwritten -- user state like favourites and tags lives in localStorage, not CSS).
 
-**HTML templates:** Report components are Jinja2 templates in `theme/templates/`. Each template receives a context dict from `render_html.py` and renders a self-contained HTML fragment (quote card, toolbar, sentiment chart, etc.). `render_html.py` loads the Jinja2 environment once, then calls `template.render(context)` for each component. The Jinja2 templates live alongside the CSS templates in the same directory -- `.html` files are Jinja2, `.css` files are page-level stylesheets.
+**HTML templates:** Report components are Jinja2 templates in `theme/templates/`. Each template receives a context dict from the render submodules and renders a self-contained HTML fragment (quote card, toolbar, sentiment chart, etc.). `render/theme_assets.py` loads the Jinja2 environment once, then calls `template.render(context)` for each component. The Jinja2 templates live alongside the CSS templates in the same directory -- `.html` files are Jinja2, `.css` files are page-level stylesheets.
 
-**JS:** `render_html.py` defines `_JS_FILES` (and separate lists for transcript/codebook pages) that specify concatenation order. Each `.js` file is an IIFE. They're joined into a single `<script>` block in the rendered HTML.
+**JS:** `render/theme_assets.py` defines `_JS_FILES` (and separate lists for transcript/codebook pages) that specify concatenation order. Each `.js` file is an IIFE. They're joined into a single `<script>` block in the rendered HTML.
 
 ### Design tokens
 
@@ -144,7 +144,7 @@ All visual decisions live in `tokens.css` as CSS custom properties with a `--bn-
 
 Every other CSS file references tokens via `var(--bn-colour-accent)` etc. -- never hard-coded values. This makes the entire visual language overridable from a single file.
 
-**Legacy aliases.** The Python code in `render_html.py` generates inline `style` attributes that reference the older unprefixed names (e.g. `var(--colour-confusion)`). To avoid a breaking change, `tokens.css` defines aliases at the bottom:
+**Legacy aliases.** The Python code in `render/sentiment.py` generates inline `style` attributes that reference the older unprefixed names (e.g. `var(--colour-confusion)`). To avoid a breaking change, `tokens.css` defines aliases at the bottom:
 
 ```css
 --colour-confusion: var(--bn-colour-confusion);
@@ -159,7 +159,7 @@ These aliases point to the `--bn-` versions, so theme authors only need to overr
 1. Decide the atomic layer (is it an atom, molecule, or organism?).
 2. Create a new `.css` file in the right folder.
 3. Reference tokens, never hard-coded values.
-4. Add the file to the `_THEME_FILES` list in `render_html.py` (order matters -- later files can override earlier ones).
+4. Add the file to the `_THEME_FILES` list in `render/theme_assets.py` (order matters -- later files can override earlier ones).
 
 **Adding a new token:**
 

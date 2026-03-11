@@ -14,7 +14,7 @@ A reflective audit of Bristlenose's architecture, design system, frontend, testi
 
 | # | Item | Why it matters | Effort | Priority |
 |---|------|---------------|--------|----------|
-| A1 | **Break up `render_html.py`** (1,245 lines) | God object that knows about data models, people files, coverage, thumbnails, CSS/JS concatenation, and file I/O. Hard to test or change in isolation. Extract into `html_builder`, `asset_bundler`, `video_mapper`. | M | Medium |
+| A1 | ~~**Break up `render_html.py`**~~ **DONE** — refactored into `bristlenose/stages/render/` package (Mar 2026): `theme_assets.py`, `html_helpers.py`, `quote_format.py`, `sentiment.py`, `dashboard.py`, `transcript_pages.py`, `standalone_pages.py`, `report.py` | - | - |
 | A2 | **Consolidate timecode functions** | `format_timecode()` / `parse_timecode()` are identical in `models.py` and `utils/timecodes.py`. Remove from `models.py`, import from utils. | S | High |
 | A3 | **Centralise magic numbers** | `_MAX_SESSIONS_NO_CONFIRM = 16`, `_MAX_WARN_LEN = 74`, `_MAX_SLUG_LENGTH = 50` scattered across files. Move to a `constants.py` or fold into `BristlenoseSettings`. | S | Low |
 | A4 | **Standardise error handling** | No custom exception hierarchy — stages use `ValueError`, `RuntimeError`, bare `Exception` interchangeably. Some stages raise, others accumulate. Define `BristlenoseError` base + `LLMError`, `StageError`, `ConfigError`. | M | Medium |
@@ -109,7 +109,7 @@ A reflective audit of Bristlenose's architecture, design system, frontend, testi
 - X1: Pipeline stage howto guide
 
 **Do when relevant** (medium effort, unlock future work):
-- A1: Break up `render_html.py`
+- ~~A1: Break up `render_html.py`~~ DONE (Mar 2026)
 - A4: Exception hierarchy
 - X3: Alembic migrations
 - D5: Continue React migration (Steps 5–10)

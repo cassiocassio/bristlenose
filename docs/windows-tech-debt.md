@@ -30,7 +30,7 @@ Platform assumptions that work on macOS/Linux but will need attention for Window
 - **Fix:** Consider MSI/NSIS installer or just document pip install for Windows
 
 ### Path separators in output
-- **Where:** Various — `output_paths.py`, `render_html.py`, transcript page paths
+- **Where:** Various — `output_paths.py`, `render/`, transcript page paths
 - **Issue:** Forward slashes used in path construction; mostly fine (Python's `Path` handles it) but string formatting of paths for display or URLs may assume `/`
 - **Fix:** Audit all `str(path)` usages that end up in HTML or user-facing output
 

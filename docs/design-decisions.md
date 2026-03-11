@@ -76,7 +76,7 @@ _See also: `bristlenose/llm/CLAUDE.md`, `docs/design-llm-providers.md`_
 
 ### Export as DOM snapshot
 
-**Export is a DOM snapshot from the served React app, not a second render path.** The served app is the canonical experience — it has all the user's edits, stars, tags, and curated state. The static renderer (`render_html.py`) is a legacy offline fallback, not the export engine. Exporting by snapshotting the served DOM means the export always matches what the user sees, with embedded state as JSON and inlined CSS for standalone viewing.
+**Export is a DOM snapshot from the served React app, not a second render path.** The served app is the canonical experience — it has all the user's edits, stars, tags, and curated state. The static renderer (`bristlenose/stages/render/`) is a legacy offline fallback, not the export engine. Exporting by snapshotting the served DOM means the export always matches what the user sees, with embedded state as JSON and inlined CSS for standalone viewing.
 
 Two export modes match two audiences: "report only" (curated findings, optional anonymisation, optional video clips) for managers and PMs, and "full archive" (everything, including transcripts and media) for research team handoff.
 

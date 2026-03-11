@@ -18,7 +18,7 @@ Audited Feb 2026. Stage concurrency shipped. Remaining items ranked by impact.
 ### Quick wins
 
 - **Cache `system_profiler` results** (#30) — `utils/hardware.py` runs `system_profiler` twice on every startup (~2–4s on macOS). Cache to `~/.config/bristlenose/.hardware-cache.json` with 24h TTL. ~30 lines change
-- **Skip logo copy when unchanged** (#31) — `render_html.py` runs `shutil.copy2()` on every render. Add size/mtime check first
+- **Skip logo copy when unchanged** (#31) — `render/report.py` runs `shutil.copy2()` on every render. Add size/mtime check first
 
 ### Medium effort
 

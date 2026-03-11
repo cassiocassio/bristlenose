@@ -77,7 +77,7 @@ Reveals the preceding moderator question/statement before a participant quote in
 | File | Purpose |
 |------|---------|
 | `bristlenose/theme/atoms/moderator-question.css` | All moderator question CSS: hover zone, pill, expanded block, badge wrapper, dismiss button, more… button, reveal animation |
-| `bristlenose/stages/render_html.py` | `"atoms/moderator-question.css"` included in `_THEME_FILES` list |
+| `bristlenose/stages/render/theme_assets.py` | `"atoms/moderator-question.css"` included in `_THEME_FILES` list |
 
 ### Tests
 | File | Count | Coverage |

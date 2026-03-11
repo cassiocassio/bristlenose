@@ -10,7 +10,7 @@ from bristlenose.models import (
     ScreenCluster,
     Sentiment,
 )
-from bristlenose.stages.render_html import _build_task_outcome_html
+from bristlenose.stages.render.dashboard import _build_task_outcome_html
 from bristlenose.stages.render_output import _build_task_outcome_summary
 
 # ---------------------------------------------------------------------------

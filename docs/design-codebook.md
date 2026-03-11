@@ -100,8 +100,8 @@ ungrouped:
 **Implementation:**
 
 - New `bristlenose/codebook.py` module — `CodebookFile` Pydantic model, `load_codebook()`, `write_codebook()`, `merge_codebook()` functions.
-- `render_html.py` writes `codebook.yaml` alongside the report (like `people.yaml`).
-- `render_html.py` reads `codebook.yaml` on render and bakes group/tag/colour data into the HTML as a `BN_CODEBOOK` JavaScript constant. The codebook page reads this on load and seeds localStorage if empty.
+- `render/report.py` writes `codebook.yaml` alongside the report (like `people.yaml`).
+- `render/report.py` reads `codebook.yaml` on render and bakes group/tag/colour data into the HTML as a `BN_CODEBOOK` JavaScript constant. The codebook page reads this on load and seeds localStorage if empty.
 - **Bidirectional sync:** browser edits → localStorage → export YAML (clipboard, like names) → paste into `codebook.yaml` → `bristlenose render` → reconcile. Same pattern as `people.yaml`.
 - **Future:** once `bristlenose serve` exists, the server writes `codebook.yaml` directly on save — no clipboard dance.
 
@@ -109,7 +109,7 @@ ungrouped:
 
 - New: `bristlenose/codebook.py`
 - New: `bristlenose/models/codebook.py` (or extend `models.py`)
-- Modified: `bristlenose/stages/render_html.py` (read/write codebook, bake into HTML)
+- Modified: `bristlenose/stages/render/` (read/write codebook, bake into HTML)
 - Modified: `bristlenose/theme/js/codebook.js` (read `BN_CODEBOOK`, YAML export button)
 - Modified: `bristlenose/output_paths.py` (`codebook_yaml` property)
 
@@ -342,7 +342,7 @@ Phases 4 and 5 can ship independently. Phase 7 is a small addition that makes Ph
 
 - `bristlenose/theme/js/codebook.js` — current codebook UI (1003 lines)
 - `bristlenose/theme/organisms/codebook-panel.css` — codebook page styling (338 lines)
-- `bristlenose/stages/render_html.py` — `_render_codebook_page()`, codebook toolbar button
+- `bristlenose/stages/render/standalone_pages.py` — `_render_codebook_page()`, codebook toolbar button
 - `bristlenose/output_paths.py` — `codebook_file` property
 - `bristlenose/llm/prompts.py` — LLM prompt templates (Phases 5–6)
 - `bristlenose/models.py` — `Sentiment` enum, `ExtractedQuote`, `ScreenCluster`, `ThemeGroup`

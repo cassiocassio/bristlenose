@@ -2,7 +2,59 @@
 
 Last updated: 10 Mar 2026 (snap tested end-to-end on arm64 Ubuntu, 4 snap bugs fixed)
 
+## Megatriage of all the Todos in IA writer into this doc
+
+ODD even cadence of Fixes vs Design and IMplementation 
+
 ## Next session reminder
+
+- [ ] **Numeric stage prefixes** — rename `bristlenose/stages/*.py` to `s01_ingest.py` … `s12_render_html.py` so pipeline order is visible in file browser. Plan: `.claude/plans/rippling-twirling-salamander.md`. Blocked on current refactoring landing first
+
+## Eseential Simplicity and Clarity layout quality
+
+- **headings** not visible when anchor scrolling
+-  **left hand nav rail IS the nav**
+-  animations for all forms of opening and closing the same
+- [ ] animations for right hand the same
+- [ ] design content LHS for Sessions 
+- [ ] LHS for codebooks: user, sentiment, default UXR, frameworks
+- [ ] LHS for Analysis like powerpoint
+- [ ] empty cosmetic LHS rail for Project dashboard
+
+- [ ] standard modal with nav for Settings 
+- [ ] standard modal with nav for About 
+- [ ] make help and about the same?
+- [ ] try the RHS rail same make the ra
+ 
+
+## Adoptability
+Blockers the mean new users give up or never try
+- image of what you get on GH
+- single page website with image of each screen
+- walkthrough script of features, benefits
+- how to get an API key screenshots
+
+## Test data that's real, public, credible
+- 5h of ikea
+- test with actual user tags
+- exercise the frameworks
+- share with original authorrs
+
+## Visual fit and finish
+- grid, spacing, type, colours
+- themes, edo as switch in appearance
+
+## Toolbars for each section
+## Content navigation for each section
+
+## Microineractions
+- all the opens and closes
+- bounces and slides
+- flashes of accecptance
+
+
+
+
 
 - [ ] **Rotate API key** — key was visible in terminal paste during snap testing session. Rotate at console.anthropic.com
 - [ ] **CI snap smoke test** — add a post-build job to the snap workflow that installs the artifact and runs `bristlenose --version && bristlenose doctor`. Belt-and-braces for amd64 correctness without needing a physical Intel box
@@ -112,6 +164,7 @@ Session management design doc: `docs/design-session-management.md`
 | `.dmg` README: include "Open Anyway" instructions | — | trivial |
 | Homebrew formula: post_install for spaCy model | #42 | trivial |
 | Snap store publishing | #45 | small |
+| Windows CI: pytest on `windows-latest` | — | medium |
 | Windows installer (winget) | #44 | medium |
 
 ### Desktop app (macOS)
@@ -313,6 +366,7 @@ See `docs/design-serve-doctor.md` for full design. Summary: 4 new doctor checks,
 | `docs/design-signal-elaboration.md` | Interpretive names, pattern types |
 | `docs/design-transcript-editing.md` | Section strike, text correction, prior art |
 | `docs/design-sidebar.md` | Dual-sidebar layout (TOC left, Tags right) |
+| `docs/design-windows-ci.md` | Windows CI strategy, compatibility audit, phased plan |
 
 ---
 

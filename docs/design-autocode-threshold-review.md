@@ -190,7 +190,7 @@ No new endpoints needed. The frontend fetches all proposals with `min_confidence
 - `.threshold-zone-list` — collapsible section with chevron toggle
 - `.threshold-confidence` — monospace confidence score in table rows
 
-Register in `_THEME_FILES` list in `render_html.py`.
+Register in `_THEME_FILES` list in `render/theme_assets.py`.
 
 ## Re-entry flow
 
@@ -266,5 +266,5 @@ This requires the frontend to know whether autocode has been run for a framework
 | `frontend/src/components/ProposalZoneList.tsx` | **Create** |
 | `frontend/src/islands/CodebookPanel.tsx` | Swap modal, keep re-entry badge |
 | `bristlenose/theme/molecules/threshold-review.css` | **Create** |
-| `bristlenose/stages/render_html.py` | Register CSS in `_THEME_FILES` |
+| `bristlenose/stages/render/theme_assets.py` | Register CSS in `_THEME_FILES` |
 | `tests/test_serve_autocode_api.py` | Add deny-below tests |

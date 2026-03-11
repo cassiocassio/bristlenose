@@ -10,7 +10,7 @@ Replace the Jinja2-rendered sessions table with a React component that fetches d
 - SQLite database exists with a single `projects` table
 - React + Vite tooling works — `HelloIsland` fetches `/api/health` and renders
 - Pipeline writes intermediate JSON (`screen_clusters.json`, `theme_groups.json`, `metadata.json`) to `.bristlenose/intermediate/`
-- `_build_session_rows()` in `render_html.py` already produces structured dicts with all the session table data
+- `_build_session_rows()` in `render/dashboard.py` already produces structured dicts with all the session table data
 
 ---
 
@@ -396,7 +396,7 @@ This is the core architectural question. Three strategies, each with real trade-
 
 ### Option A — Islands on existing HTML
 
-`bristlenose serve` still runs `render_html.py` to produce the full static report. The server serves it at `/report/`. But it also serves the React bundle, which finds specific mount points in the HTML (e.g. `<div id="bn-sessions-table-root">`) and mounts React components into them. The rest of the page stays vanilla JS.
+`bristlenose serve` still runs the `render/` package to produce the full static report. The server serves it at `/report/`. But it also serves the React bundle, which finds specific mount points in the HTML (e.g. `<div id="bn-sessions-table-root">`) and mounts React components into them. The rest of the page stays vanilla JS.
 
 **How it works:**
 1. Pipeline runs → produces static HTML as normal
@@ -413,14 +413,14 @@ This is the core architectural question. Three strategies, each with real trade-
 - **Matches the migration doc.** "The report is always shippable at every step."
 
 **Cons:**
-- **Two rendering paths for the same section.** `render_html.py` renders the Jinja2 sessions table (for static export). React renders the sessions table (for serve mode). They must match visually. Changes to the table need updating in two places until Jinja2 is retired.
+- **Two rendering paths for the same section.** The `render/` package renders the Jinja2 sessions table (for static export). React renders the sessions table (for serve mode). They must match visually. Changes to the table need updating in two places until Jinja2 is retired.
 - **Flash of unhydrated content.** User might briefly see an empty placeholder (or the static table) before React mounts. Manageable with a loading skeleton, but it's there.
 - **Vanilla JS interference.** The existing report JS (17 modules) is still running. If vanilla JS binds event listeners to the sessions table DOM, React will replace that DOM and the listeners break. Need to audit which JS modules touch the sessions table.
-- **Conditional `render_html.py`.** Need to teach the Jinja2 template to emit either the full table (static export) or a mount-point div (serve mode). Adds a `serve_mode` flag that flows through the renderer.
+- **Conditional renderer.** Need to teach the Jinja2 template to emit either the full table (static export) or a mount-point div (serve mode). Adds a `serve_mode` flag that flows through the renderer.
 
 ### Option B — React replaces on hydration
 
-`render_html.py` renders the full Jinja2 sessions table as it does today. React loads and replaces the entire `<section class="bn-session-table">` element with a React-rendered version that fetches live data from the API.
+The `render/` package renders the full Jinja2 sessions table as it does today. React loads and replaces the entire `<section class="bn-session-table">` element with a React-rendered version that fetches live data from the API.
 
 **How it works:**
 1. Static HTML renders the full sessions table (Jinja2)
@@ -429,7 +429,7 @@ This is the core architectural question. Three strategies, each with real trade-
 
 **Pros:**
 - **No flash of empty content.** The Jinja2 table is visible until React swaps it. User sees content immediately.
-- **No conditional rendering in Jinja2.** `render_html.py` always renders the same output. React decides whether to take over.
+- **No conditional rendering in Jinja2.** The renderer always renders the same output. React decides whether to take over.
 - **Graceful degradation.** If React fails to load, the static table is still there.
 
 **Cons:**
@@ -438,9 +438,9 @@ This is the core architectural question. Three strategies, each with real trade-
 - **Heavier page load.** The browser renders the Jinja2 table, then React tears it down and renders its own. Wasted work.
 - **Confusing semantics.** The Jinja2 table uses pipeline data baked at render time. The React table uses API data from SQLite. If they disagree (stale import), the table visibly changes on hydration.
 
-### Option C — Standalone React shell, no render_html.py
+### Option C — Standalone React shell, no static renderer
 
-`bristlenose serve` doesn't produce or serve the static HTML report at all. It serves a React SPA that fetches everything from APIs. The pipeline's `render_html.py` path is untouched — it still produces static exports for `bristlenose render`.
+`bristlenose serve` doesn't produce or serve the static HTML report at all. It serves a React SPA that fetches everything from APIs. The pipeline's `render/` package is untouched — it still produces static exports for `bristlenose render`.
 
 **How it works:**
 1. `bristlenose serve ./project` imports data into SQLite, starts FastAPI
@@ -516,7 +516,7 @@ Assuming: full domain schema, import on startup, full visual parity, islands on 
 - Tests: FastAPI test client against imported fixture
 
 ### Step 3 — Mount point in existing HTML
-- `render_html.py` gains a `serve_mode` flag
+- `render/report.py` gains a `serve_mode` flag
 - In serve mode: sessions table section renders `<div id="bn-sessions-table-root" data-project-id="...">` instead of the Jinja2 table
 - In normal mode: unchanged (Jinja2 table for static export)
 - Audit which vanilla JS modules bind to session table DOM → ensure no conflicts
@@ -588,8 +588,8 @@ Assuming: full domain schema, import on startup, full visual parity, islands on 
 - `app.py`: registers sessions router, stores DB factory in app state, auto-imports on startup
 - All 1050 existing tests pass, lint clean
 
-**Step 4 — Mount point in existing HTML** (`bristlenose/stages/render_html.py`)
-- `render_html()` gains `serve_mode: bool = False` parameter
+**Step 4 — Mount point in existing HTML** (`bristlenose/stages/render/report.py`)
+- `render_html()` in `render/report.py` gains `serve_mode: bool = False` parameter
 - When `serve_mode=True`, Sessions tab renders `<div id="bn-sessions-table-root" data-project-id="1">` instead of Jinja2 table
 - Dashboard compact table stays static (no React replacement needed)
 - Audit confirmed: only `global-nav.js` binds to session table DOM (`tr[data-session]`, `a[data-session-link]` in both dashboard and sessions grid). React replaces the sessions grid DOM; the JS is null-safe (queries return empty NodeLists when mount point is empty)

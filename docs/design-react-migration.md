@@ -29,14 +29,14 @@ The easiest migration. Three radio buttons, one localStorage key, one DOM attrib
 - **Replaces:** `settings.js` (105 lines)
 - **Dependencies:** None — completely self-contained
 - **What to build:** `SettingsPanel` island. Controlled radio group. Reads `bristlenose-appearance` from localStorage on mount. Sets `data-theme` attr + `style.colorScheme` on `<html>`. Logo `<picture><source>` swap logic
-- **Mount point:** Add `<!-- bn-settings -->` markers around `panel-settings` content in `render_html.py`
+- **Mount point:** Add `<!-- bn-settings -->` markers around `panel-settings` content in `render/report.py`
 - **Test:** Vitest unit test. Manual: toggle appearance in serve mode, reload preserves setting
 
 ### Step 2: About panel → React island _(small)_ ✓ DONE
 
 Static content with one dynamic element (version string from `/api/health`).
 
-- **Replaces:** Inline HTML in `render_html.py` lines 530–578. Absorbs `AboutDeveloper` island (already React). Moves `feedback.js` help overlay here
+- **Replaces:** Inline HTML in `render/report.py`. Absorbs `AboutDeveloper` island (already React). Moves `feedback.js` help overlay here
 - **Dependencies:** None
 - **What to build:** `AboutPanel` island. Static JSX. Keyboard shortcuts table (reusable data, shared with future help modal). Version from API. Dev section (conditional on `--dev`)
 - **Mount point:** Add `<!-- bn-about -->` markers
@@ -59,7 +59,7 @@ The first step where React replaces a user-facing vanilla JS interaction surface
 - **Dependencies:** Step 3 (QuotesStore). The toolbar writes `searchQuery`, `viewMode`, `tagFilter` to the store; quote islands read them to filter
 - **What was built:** `Toolbar` island (organism) composing 4 molecules: `SearchBox`, `TagFilterDropdown`, `ViewSwitcher`, CSV export button. Headless `useDropdown()` hook for click-outside + Escape dismiss (shared by TagFilterDropdown and ViewSwitcher). `Toast` component + imperative `toast()` wrapper. `filterQuotes()` pure utility for data-level filtering. `highlightText()` utility wrapping matches in `<mark>` elements. `ToolbarButton` atom (icon + label + arrow slots). `QuoteSections` and `QuoteThemes` islands read filter state from store and apply `filterQuotes()` in `useMemo`. `QuoteCard` applies `highlightText()` in idle mode. Mutual dropdown exclusion via parent-controlled `activeDropdown` state. Tag filter fetches codebook independently. CSV export builds from store data, not DOM
 - **Key change:** Search and tag filtering moved from DOM manipulation (`.style.display = 'none'` on `blockquote` elements) to data filtering in the React quote islands. Sections with zero matches are not rendered (instead of hidden). This eliminates the fundamental problem of vanilla JS trying to manipulate React-rendered DOM
-- **Mount point:** `<!-- bn-toolbar -->` markers added in `render_html.py`; `_REACT_TOOLBAR_MOUNT` in `app.py` replaces with mount div
+- **Mount point:** `<!-- bn-toolbar -->` markers added in `render/report.py`; `_REACT_TOOLBAR_MOUNT` in `app.py` replaces with mount div
 - **Test:** 87 new Vitest tests across 12 test files — unit tests for each component, hook, and utility, plus 10 integration tests verifying toolbar → store → quote island filtering flow
 - **Design doc:** Detailed plan at `.claude/plans/dynamic-wobbling-grove.md` — 7 discussion areas (component decomposition, state ownership, communication, toast, dropdown, portability, performance) with options, pros/cons, and resolved decisions
 
@@ -74,7 +74,7 @@ The structural hinge — everything before it is self-contained, everything afte
   - `AppLayout` — `<NavBar />` + `<Outlet />`, installs backward-compat navigation shims on mount
   - 8 thin page wrappers in `frontend/src/pages/` — each composes existing island components (`QuotesTab` = Toolbar + QuoteSections + QuoteThemes)
   - SPA catch-all in FastAPI (`GET /report/{path:path}`), transcript file route defined first for priority
-  - `<!-- bn-app -->` markers in `render_html.py` — one `re.sub` in `app.py` replaces the entire nav + panel region with `<div id="bn-app-root">`, making individual island marker substitutions no-ops
+  - `<!-- bn-app -->` markers in `render/report.py` — one `re.sub` in `app.py` replaces the entire nav + panel region with `<div id="bn-app-root">`, making individual island marker substitutions no-ops
   - `useScrollToAnchor` hook — retry-aware scroll (50 × 100ms = 5s) for async-rendered targets
   - `useAppNavigate` hook — wraps `useNavigate()` with tab-name-to-path mapping
   - Backward-compat shims (`frontend/src/shims/navigation.ts`) install `window.switchToTab`, `window.scrollToAnchor`, `window.navigateToSession` delegating to React Router
@@ -93,7 +93,7 @@ The structural hinge — everything before it is self-contained, everything afte
 - **Replaces:** `player.js` (~250 lines) — popout window lifecycle, `postMessage` IPC, glow sync, `setInterval` close-poll
 - **Dependencies:** Step 5 (router — player glow needs route context)
 - **What was built:** `PlayerProvider` context + `usePlayer` hook wrapping `AppLayout`. `seekTo(pid, seconds)` manages popout window lifecycle. `TimecodeLink` calls `seekTo` via context (prevents default `href="#t=..."` navigation). Glow highlighting via DOM class manipulation (refs, not React state — 4× /sec timeupdate messages would re-render hundreds of cards). `buildGlowIndex` keys transcript segments by session ID (from URL pathname), not speaker code. Progress bar via `--bn-segment-progress` CSS custom property. `initPlayer()` bail-out when `bn-app-root` exists
-- **Key fix:** `BRISTLENOSE_VIDEO_MAP` and `BRISTLENOSE_PLAYER_URL` exposed on `window` from IIFE in `render_html.py` — React runs in a separate ES module context and can't see IIFE-scoped `var` declarations. Also fixed session routing: non-transcript URLs (`/report/sessions/s1`) now serve SPA HTML instead of 404
+- **Key fix:** `BRISTLENOSE_VIDEO_MAP` and `BRISTLENOSE_PLAYER_URL` exposed on `window` from IIFE in `render/report.py` — React runs in a separate ES module context and can't see IIFE-scoped `var` declarations. Also fixed session routing: non-transcript URLs (`/report/sessions/s1`) now serve SPA HTML instead of 404
 - **Test:** 28 Vitest tests for PlayerContext, TimecodeLink integration, glow index building. 28 serve tests pass
 
 ### Step 7: Keyboard shortcuts _(medium-large)_ ✓ DONE
@@ -109,7 +109,7 @@ The structural hinge — everything before it is self-contained, everything afte
 At this point, every vanilla JS module has been replaced by a React equivalent. This step removes them from the serve path.
 
 - **Retires:** All 26 modules in `_JS_FILES` — `storage.js`, `api-client.js`, `badge-utils.js`, `modal.js`, `codebook.js`, `player.js`, `starred.js`, `editing.js`, `tags.js`, `histogram.js`, `csv-export.js`, `view-switcher.js`, `search.js`, `tag-filter.js`, `hidden.js`, `names.js`, `focus.js`, `feedback.js`, `global-nav.js`, `transcript-names.js`, `transcript-annotations.js`, `journey-sort.js`, `analysis.js`, `settings.js`, `person-display.js`, `main.js`
-- **What changed:** `_strip_vanilla_js()` in `app.py` uses the existing `_JS_MARKER` boundary to remove concatenated module code from the IIFE while keeping global declarations (`BRISTLENOSE_VIDEO_MAP`, `BRISTLENOSE_PLAYER_URL`, `BRISTLENOSE_ANALYSIS`) that React reads from `window.*`. Called from `_transform_report_html()` (both dev and prod paths). Dead code removed: 9 individual island marker substitutions, `_replace_baked_js()` calls from dev routes, 9 `_REACT_*_MOUNT` constants. `_JS_FILES` list in `render_html.py` stays for `bristlenose render` (offline HTML). 6 new tests
+- **What changed:** `_strip_vanilla_js()` in `app.py` uses the existing `_JS_MARKER` boundary to remove concatenated module code from the IIFE while keeping global declarations (`BRISTLENOSE_VIDEO_MAP`, `BRISTLENOSE_PLAYER_URL`, `BRISTLENOSE_ANALYSIS`) that React reads from `window.*`. Called from `_transform_report_html()` (both dev and prod paths). Dead code removed: 9 individual island marker substitutions, `_replace_baked_js()` calls from dev routes, 9 `_REACT_*_MOUNT` constants. `_JS_FILES` list in `render/theme_assets.py` stays for `bristlenose render` (offline HTML). 6 new tests
 - **Test:** `bristlenose serve` works with zero vanilla JS. `bristlenose render` still produces a working static report
 
 ### Step 9: React app shell — kill the skeleton ✓ DONE
@@ -118,7 +118,7 @@ The serve path stopped reading the static HTML file. Instead, it serves the Vite
 
 - **Replaces:** `_transform_report_html()`, `_transform_transcript_html()`, all `_REACT_*_MOUNT` constants, `_replace_baked_js()`, the marker-based substitution pattern
 - **What was built:** React `<Header>` (logo, project name, subtitle from `/api/health`), `<Footer>` (version, `?` for Help link triggering `onToggleHelp`), `<HelpModal>` (keyboard shortcuts overlay using `createPortal`, `bn-overlay` + `bn-modal` CSS classes). `AppShell` inner component owns help modal state and wires `useKeyboardShortcuts`. Route extraction: `app.py` refactored from monolith to route modules (`routes/analysis.py`, `routes/dashboard.py`, `routes/sessions.py`, `routes/transcript.py`). Dev serve function generates SPA HTML directly (no baked HTML reading). Prod serve reads `frontend/dist/index.html`. `_strip_vanilla_js()` removes module code from IIFE while keeping `window.*` globals for React
-- **What stays:** `render_html.py` continues producing static HTML for `bristlenose render`. CSS in `bristlenose/theme/` is shared. The regex surgery in `app.py` is deleted — no more link escape bugs, ever
+- **What stays:** `render/report.py` continues producing static HTML for `bristlenose render`. CSS in `bristlenose/theme/` is shared. The regex surgery in `app.py` is deleted — no more link escape bugs, ever
 - **Test:** `bristlenose serve` serves a complete React SPA. `bristlenose render` still produces a working static report. All tabs, navigation, interactions work
 
 ### Step 10: Export — DOM snapshot _(large — new feature)_
@@ -198,7 +198,7 @@ Step 1 (Settings) ✓   Step 2 (About) ✓   Step 3 (QuotesStore) ✓
 | `frontend/src/contexts/` | New: QuotesStore, PlayerProvider, FocusProvider |
 | `frontend/src/utils/api.ts` | Already exists — extended for new data fetching |
 | `bristlenose/server/app.py` | Marker substitution → SPA serving |
-| `bristlenose/stages/render_html.py` | Add markers for settings/about/toolbar; eventually `serve_mode` removed |
+| `bristlenose/stages/render/report.py` | Add markers for settings/about/toolbar; eventually `serve_mode` removed |
 | `bristlenose/theme/templates/` | `global_nav.html`, `toolbar.html` become dead code |
 | `bristlenose/theme/js/` | Modules retired one by one from serve path |
 | `frontend/package.json` | Add `react-router-dom` at Step 5 |

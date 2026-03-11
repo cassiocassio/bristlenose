@@ -380,7 +380,7 @@ class TestTranscriptPageRendering:
     )
 
     def _setup_and_render(self, tmp_path: Path, people: PeopleFile | None = None) -> str:
-        from bristlenose.stages.render_html import render_transcript_pages
+        from bristlenose.stages.render import render_transcript_pages
 
         raw_dir = tmp_path / "transcripts-raw"
         raw_dir.mkdir(parents=True, exist_ok=True)
@@ -446,7 +446,7 @@ class TestTranscriptPageRendering:
 
     def test_old_format_renders_without_moderator_class(self, tmp_path: Path) -> None:
         """Old transcripts (all [p1]) render without segment-moderator."""
-        from bristlenose.stages.render_html import render_transcript_pages
+        from bristlenose.stages.render import render_transcript_pages
 
         old_transcript = (
             "# Transcript: s1\n"

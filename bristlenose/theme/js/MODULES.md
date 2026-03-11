@@ -2,7 +2,7 @@
 
 20 standalone files in `js/` concatenated at render time (same pattern as CSS): storage, badge-utils, modal, codebook, player, starred, editing, tags, histogram, csv-export, view-switcher, search, tag-filter, hidden, names, focus, feedback, analysis, global-nav, main.
 
-**Serve mode (Step 8):** Vanilla JS modules are **stripped** from the main report in serve mode — `_strip_vanilla_js()` in `app.py` removes all module code, keeping only `window.*` globals for React. The `_JS_FILES` list in `render_html.py` stays for `bristlenose render` (offline HTML). Transcript pages, codebook page, and analysis page each have their own smaller IIFE with dedicated JS lists (`_TRANSCRIPT_JS_FILES`, `_CODEBOOK_JS_FILES`, `_ANALYSIS_JS_FILES`) — these are untouched by Step 8. `transcript-names.js` only updates heading speaker names (preserving code prefix: `"m1 Sarah Chen"`); segment speaker labels stay as raw codes (`p1:`, `m1:`) and are not overridden by JS.
+**Serve mode (Step 8):** Vanilla JS modules are **stripped** from the main report in serve mode — `_strip_vanilla_js()` in `app.py` removes all module code, keeping only `window.*` globals for React. The `_JS_FILES` list in `render/theme_assets.py` stays for `bristlenose render` (offline HTML). Transcript pages, codebook page, and analysis page each have their own smaller IIFE with dedicated JS lists (`_TRANSCRIPT_JS_FILES`, `_CODEBOOK_JS_FILES`, `_ANALYSIS_JS_FILES`) — these are untouched by Step 8. `transcript-names.js` only updates heading speaker names (preserving code prefix: `"m1 Sarah Chen"`); segment speaker labels stay as raw codes (`p1:`, `m1:`) and are not overridden by JS.
 
 ## storage.js
 
@@ -60,7 +60,7 @@ Inline name editing for the participant table. Follows the same `contenteditable
 - **Reconciliation**: `reconcileWithBaked()` prunes localStorage entries that match `BN_PARTICIPANTS` (baked-in JSON from render time) — after user pastes edits into `people.yaml` and re-renders, browser state auto-cleans
 - **Export**: "Export names" toolbar button copies a YAML snippet via `copyToClipboard()` + `showToast()` (from `csv-export.js`)
 - **Dependencies**: must load after `csv-export.js` (needs `showToast`, `copyToClipboard`) and before `main.js` (boot calls `initNames()`)
-- **Data source**: `BN_PARTICIPANTS` global — JSON object `{pid: {full_name, short_name, role}}` emitted by `render_html.py` in a `<script>` block
+- **Data source**: `BN_PARTICIPANTS` global — JSON object `{pid: {full_name, short_name, role}}` emitted by `render/report.py` in a `<script>` block
 
 ## view-switcher.js _(serve mode: replaced by React Toolbar island)_
 
@@ -208,7 +208,7 @@ Top-level tab bar for report navigation. Manages switching between tab panels (P
 ### Cross-tab navigation (Project dashboard)
 
 - **`_initSpeakerLinks()`** — click handlers on `a[data-nav-session]` links in quote cards. Delegates to `navigateToSession()`
-- **Stat card links** — elements with `data-stat-link="tab"` or `data-stat-link="tab:anchorId"` navigate to the target tab and optionally scroll to an anchor. Uses `switchToTab()` + `scrollToAnchor()`. Python renderer adds these attributes to dashboard stat cards in `render_html.py`
+- **Stat card links** — elements with `data-stat-link="tab"` or `data-stat-link="tab:anchorId"` navigate to the target tab and optionally scroll to an anchor. Uses `switchToTab()` + `scrollToAnchor()`. Python renderer adds these attributes to dashboard stat cards in `render/dashboard.py`
 - **Featured quote cards** — clicking a `.bn-featured-quote` card body (not its internal links) either opens the video player via `seekTo()` (if a video-enabled timecode link exists) or falls back to `navigateToSession()` for transcript navigation
 - **Dashboard session table rows** — rows in the Project tab's session table navigate via `navigateToSession()`. The `#N` session-link clicks are also intercepted. Filename links (video/file) pass through unhandled
 - **Section/theme list links** — `.bn-dashboard-nav a[href^="#"]` links switch to the Quotes tab and scroll to the target section/theme anchor via `scrollToAnchor()`
@@ -222,7 +222,7 @@ Top-level tab bar for report navigation. Manages switching between tab panels (P
 
 ## Codebook page
 
-Standalone HTML page (`codebook.html`) at the output root. Rendered by `_render_codebook_page()` in `render_html.py`. Same content is also rendered inline in the report's Codebook tab. Features:
+Standalone HTML page (`codebook.html`) at the output root. Rendered by `_render_codebook_page()` in `render/standalone_pages.py`. Same content is also rendered inline in the report's Codebook tab. Features:
 
 - **Layout**: CSS columns masonry grid (`columns: 240px`, `organisms/codebook-panel.css`) with colour-coded group cards
 - **Content**: description text + `<div class="codebook-grid" id="codebook-grid">` container populated by `_initCodebookPanel()` from `codebook.js`
@@ -245,7 +245,7 @@ Application appearance toggle. Lets users switch between system/light/dark theme
 
 Analysis rendering: signal cards, heatmaps, and interactive features. Renders analysis content from `BRISTLENOSE_ANALYSIS` JSON data both in the report's Analysis tab and on standalone `analysis.html`.
 
-- **Data source**: `BRISTLENOSE_ANALYSIS` global — JSON object injected by `render_html.py` containing `signals`, `sectionMatrix`, `themeMatrix`, `totalParticipants`, `sentiments`, `participantIds`, `reportFilename`
+- **Data source**: `BRISTLENOSE_ANALYSIS` global — JSON object injected by `render/report.py` containing `signals`, `sectionMatrix`, `themeMatrix`, `totalParticipants`, `sentiments`, `participantIds`, `reportFilename`
 - **`initAnalysis()`** — if `#signal-cards` container and `BRISTLENOSE_ANALYSIS` data exist, renders signal cards + heatmaps; otherwise returns early
 - **`renderSignalCards()`** — builds signal card list from `data.signals`. Each card has: accent bar (sentiment colour), location/sentiment header, metrics grid (concentration bar, Neff, intensity dots), expandable quote list, participant presence grid, link back to report section
 - **`renderHeatmap(matrix, containerId, rowHeader, sourceType)`** — builds contingency table with OKLCH-coloured cells. Computes adjusted residuals client-side for theme-responsive colouring. Cells with matching signals are clickable (smooth-scroll to card with highlight flash)
@@ -258,7 +258,7 @@ Analysis rendering: signal cards, heatmaps, and interactive features. Renders an
 
 ## Analysis page
 
-Standalone HTML page (`analysis.html`) at the output root. Rendered by `_render_analysis_page()` in `render_html.py`. Same content also renders inline in the report's Analysis tab. Features:
+Standalone HTML page (`analysis.html`) at the output root. Rendered by `_render_analysis_page()` in `render/standalone_pages.py`. Same content also renders inline in the report's Analysis tab. Features:
 
 - **Layout**: signal cards list + two heatmap tables (Section×Sentiment, Theme×Sentiment)
 - **JS files**: `_ANALYSIS_JS_FILES` = `storage.js` + `analysis.js`. Boot calls `initAnalysis()` which detects `#signal-cards` element and renders content

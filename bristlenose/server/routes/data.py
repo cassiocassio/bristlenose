@@ -107,7 +107,7 @@ def _resolve_quote(db: Session, project_id: int, dom_id: str) -> Quote | None:
 
 
 def _quote_dom_id(quote: Quote) -> str:
-    """Build the DOM ID for a quote (matches render_html.py format)."""
+    """Build the DOM ID for a quote (matches render/quote_format.py format)."""
     return f"q-{quote.participant_id}-{int(quote.start_timecode)}"
 
 

@@ -23,7 +23,8 @@ from bristlenose.server.models import (
 from bristlenose.server.models import (
     Session as SessionModel,
 )
-from bristlenose.stages.render_html import _jinja_env, _render_sentiment_sparkline
+from bristlenose.stages.render.sentiment import _render_sentiment_sparkline
+from bristlenose.stages.render.theme_assets import _jinja_env
 from bristlenose.utils.markdown import format_finder_date, format_finder_filename
 
 router = APIRouter(prefix="/api/dev")
@@ -94,7 +95,7 @@ def sessions_table_html(
 ) -> str:
     """Render the sessions table using the Jinja2 template.
 
-    Returns the same HTML fragment that ``render_html.py`` produces for the
+    Returns the same HTML fragment that the ``render/`` package produces for the
     static report.  Used by the visual diff page to compare against the
     React ``SessionsTable`` component.
     """

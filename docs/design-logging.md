@@ -74,7 +74,7 @@ In `--dev` mode, the verbose flag is stashed in `_BRISTLENOSE_VERBOSE` env var s
 - **LLM**: `llm/client.py`
 - **Stages**: all 12 stage files (`ingest`, `extract_audio`, `parse_subtitles`, `parse_docx`, `transcribe`, `identify_speakers`, `merge_transcript`, `pii_removal`, `topic_segmentation`, `quote_extraction`, `quote_clustering`, `thematic_grouping`)
 - **Server**: `app.py`, `autocode.py`, `importer.py`, `routes/autocode.py`
-- **Other**: `doctor.py`, `ollama.py`, `people.py`, `timing.py`, `render_html.py`, `render_output.py`, `utils/audio.py`, `utils/hardware.py`
+- **Other**: `doctor.py`, `ollama.py`, `people.py`, `timing.py`, `render/`, `render_output.py`, `utils/audio.py`, `utils/hardware.py`
 
 ## Instrumentation tiers
 

@@ -131,7 +131,7 @@ def _check_project(db: Session, project_id: int) -> Project:
 
 
 def _quote_dom_id(quote: Quote) -> str:
-    """Build the DOM ID for a quote (matches render_html.py format)."""
+    """Build the DOM ID for a quote (matches render/quote_format.py format)."""
     return f"q-{quote.participant_id}-{int(quote.start_timecode)}"
 
 

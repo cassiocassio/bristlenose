@@ -129,7 +129,7 @@ h1, h2, h3, .description, .bn-dashboard {
 }
 ```
 
-#### Add to `_THEME_FILES` in `render_html.py`
+#### Add to `_THEME_FILES` in `render/theme_assets.py`
 
 Insert after `organisms/blockquote.css`:
 
@@ -192,7 +192,7 @@ Follows the existing settings.js/appearance toggle pattern exactly:
 
 1. **Token:** `--bn-content-scale` in `tokens.css` (default `1`)
 2. **CSS:** `article { font-size: calc(var(--bn-content-scale) * 1rem); }` — because all spacing tokens are `rem`-based, everything inside article scales together
-3. **HTML:** Three radio buttons in the Settings panel (`render_html.py` lines 508-523), name `bn-density`, values `compact`/`normal`/`generous`
+3. **HTML:** Three radio buttons in the Settings panel (`render/report.py`), name `bn-density`, values `compact`/`normal`/`generous`
 4. **JS:** New `density.js` module following `settings.js` pattern:
    - `createStore("bristlenose-density")` for localStorage persistence
    - `_applyDensity(value)` sets `data-density` attribute on `<html>`
@@ -202,8 +202,8 @@ Follows the existing settings.js/appearance toggle pattern exactly:
    html[data-density="compact"] article { font-size: 0.875rem; }
    html[data-density="generous"] article { font-size: 1.125rem; }
    ```
-6. **Files:** `tokens.css`, `organisms/settings.css`, new `js/density.js`, `render_html.py`, `main.js`
-7. **Add to `_THEME_FILES`** and **`_JS_FILES`** in `render_html.py`
+6. **Files:** `tokens.css`, `organisms/settings.css`, new `js/density.js`, `render/report.py`, `main.js`
+7. **Add to `_THEME_FILES`** and **`_JS_FILES`** in `render/theme_assets.py`
 
 ### Interaction with responsive grid
 
@@ -222,7 +222,7 @@ The grid's `auto-fill` handles this automatically — no special logic needed.
 | `bristlenose/theme/tokens.css` | Add `--bn-quote-max-width`, `--bn-grid-gap` tokens |
 | `bristlenose/theme/templates/report.css` | Make article fluid, cap headings at `--bn-max-width` |
 | `bristlenose/theme/organisms/responsive-grid.css` | **New file** — grid layout for `.quote-group` |
-| `bristlenose/stages/render_html.py` | Add `responsive-grid.css` to `_THEME_FILES` |
+| `bristlenose/stages/render/theme_assets.py` | Add `responsive-grid.css` to `_THEME_FILES` |
 
 No HTML template changes. No JavaScript changes. No Python logic changes.
 
@@ -234,7 +234,8 @@ No HTML template changes. No JavaScript changes. No Python logic changes.
 | `bristlenose/theme/organisms/settings.css` | Density radio button styles |
 | `bristlenose/theme/js/density.js` | **New file** — density preference module |
 | `bristlenose/theme/js/main.js` | Add `initDensity` to `_bootFns` |
-| `bristlenose/stages/render_html.py` | Add density radios to settings HTML, add `density.js` to `_JS_FILES` |
+| `bristlenose/stages/render/report.py` | Add density radios to settings HTML |
+| `bristlenose/stages/render/theme_assets.py` | Add `density.js` to `_JS_FILES` |
 
 ---
 

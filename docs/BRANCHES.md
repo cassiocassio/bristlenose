@@ -18,6 +18,7 @@ Each active feature branch gets its own **git worktree** — a full working copy
 | `bristlenose_branch symbology/` | `symbology` | § ¶ ❋ Unicode prefix symbols for sections, quotes, themes |
 | `bristlenose_branch highlighter/` | `highlighter` | Highlighter feature |
 | `bristlenose_branch living-fish/` | `living-fish` | Animated "living portrait" logo for serve mode |
+| `bristlenose_branch render-refactor/` | `render-refactor` | Break up render_html.py into render/ package, deprecate static path |
 
 
 **Creating a new feature branch worktree:**

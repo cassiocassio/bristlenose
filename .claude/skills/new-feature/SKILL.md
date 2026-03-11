@@ -61,15 +61,28 @@ If this fails (e.g. Finder not running, headless environment), warn but continue
 
 ## Step 6: Set up venv (non-critical)
 
-Skip if `.venv/bin/python` already exists in the worktree (previous partial run).
+Skip **only** if `.venv/bin/python` exists **and** the extras verification passes:
 
 ```bash
 cd "/Users/cassio/Code/bristlenose_branch $0"
-python3 -m venv .venv
-.venv/bin/pip install -e '.[dev,serve]'
+# Check if venv exists AND has the required extras
+if .venv/bin/python -c "import sqlalchemy; import fastapi; import pytest" 2>/dev/null; then
+  echo "Venv already set up with all extras — skipping"
+else
+  python3 -m venv .venv
+  .venv/bin/pip install -e '.[dev,serve]'
+fi
 ```
 
-This takes 30-60 seconds. If it fails, warn but don't stop — the worktree is still usable and venv can be retried manually.
+After install (or after skipping), **always verify**:
+
+```bash
+.venv/bin/python -c "import sqlalchemy; import fastapi; import pytest; print('All extras OK')"
+```
+
+If verification fails, warn: "Venv is missing packages. Run: `.venv/bin/pip install -e '.[dev,serve]'`" — but don't stop (worktree is still usable).
+
+This takes 30-60 seconds on first run. If it fails, warn but don't stop — the worktree is still usable and venv can be retried manually.
 
 ## Step 7: Symlink trial-runs (non-critical)
 

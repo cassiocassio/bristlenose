@@ -2,6 +2,12 @@
 
 All notable changes to Bristlenose are documented here. See also the [README](README.md) for the latest releases.
 
+**0.13.2** — _11 Mar 2026_
+
+- **Render refactor** — broke up the 2,903-line `render_html.py` monolith into `bristlenose/stages/render/` package with 8 focused submodules: `theme_assets.py` (CSS/JS loaders, Jinja2 env), `html_helpers.py` (escaping, timecodes, badges, video map), `quote_format.py` (quote HTML, badges), `sentiment.py` (sparklines, rewatch/friction), `dashboard.py` (project tab, featured quotes, coverage), `transcript_pages.py` (standalone + inline transcripts), `standalone_pages.py` (codebook, analysis), `report.py` (orchestrator). No behaviour change — same HTML output, all 1,872 tests pass
+- **Static render deprecated** — `render_html()` now emits `DeprecationWarning`. `bristlenose serve` is the canonical path; `bristlenose render` still works but is frozen
+- Updated ~99 documentation references across 34 files to point to the new submodules
+
 **0.13.1** — _10 Mar 2026_
 
 - **Responsive layout playground** — dev-only responsive design tool (`--dev` mode) with device presets, type scale previews, and a HUD overlay for testing quote grid layouts across breakpoints. FAB toggle button, `PlaygroundStore` with `useSyncExternalStore`

@@ -125,7 +125,7 @@ TranscriptSegment.segment_index (assigned at merge)
     → ExtractedQuote.segment_index (resolved at extraction)
         → intermediate JSON (Pydantic serialization, automatic)
             → SignalQuote.segment_index (analysis computation)
-            → baked BRISTLENOSE_ANALYSIS JSON (render_html.py)
+            → baked BRISTLENOSE_ANALYSIS JSON (render/standalone_pages.py)
             → Quote ORM row (server importer)
                 → API responses (quotes, analysis, transcript endpoints)
                     → frontend TypeScript types

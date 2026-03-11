@@ -45,7 +45,16 @@ All 12 stages of the pipeline, from ingest to render.
 | `quote_extraction.py` | Stage 10: extract quotes via LLM |
 | `quote_clustering.py` | Stage 11: cluster quotes |
 | `thematic_grouping.py` | Stage 12a: group into themes |
-| `render_html.py` | Stage 12b: HTML report renderer, loads CSS/JS from theme/ |
+| `render/` | Stage 12b: HTML report renderer package |
+| `render/__init__.py` | Public API: `render_html`, `render_transcript_pages` |
+| `render/report.py` | `render_html()` orchestrator |
+| `render/theme_assets.py` | CSS/JS loaders, `_jinja_env`, `_THEME_DIR`, file lists |
+| `render/html_helpers.py` | Escaping, timecodes, video map, document shell, header, footer |
+| `render/quote_format.py` | `_format_quote_html`, `_quote_badges` |
+| `render/sentiment.py` | Sparkline, sentiment HTML |
+| `render/dashboard.py` | Session rows, project tab, featured quotes, coverage |
+| `render/transcript_pages.py` | Per-participant transcript pages, quote highlighting |
+| `render/standalone_pages.py` | Codebook page, analysis page, matrix serialisation |
 | `render_output.py` | Markdown report + JSON snapshots for `render` command |
 
 ## LLM layer (`bristlenose/llm/`)

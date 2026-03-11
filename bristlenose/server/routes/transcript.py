@@ -337,7 +337,7 @@ def get_transcript(
         for seg in segments:
             is_moderator = seg.speaker_code.startswith("m")
 
-            # Find overlapping quotes (same logic as render_html.py)
+            # Find overlapping quotes (same logic as render/transcript_pages.py)
             seg_quotes = [
                 (dom_id, pid, s_tc, e_tc, excerpt, q)
                 for dom_id, pid, s_tc, e_tc, excerpt, q in quote_data

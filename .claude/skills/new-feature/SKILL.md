@@ -119,7 +119,7 @@ Then:
    - <ask user, or write "TBD — will be filled in as work progresses">
 
    **Potential conflicts with other branches:**
-   - <check existing active branches in BRANCHES.md and note likely overlaps, especially render_html.py, main.js, cli.py>
+   - <check existing active branches in BRANCHES.md and note likely overlaps, especially render/ package, main.js, cli.py>
    ```
 
 Ask the user for the description and files before writing.

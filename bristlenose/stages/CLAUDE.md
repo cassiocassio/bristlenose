@@ -16,11 +16,11 @@ Output goes **inside the input folder** by default. See root `CLAUDE.md` for the
 
 ```
 interviews/bristlenose-output/          # default output location
-├── bristlenose-{slug}-report.html      # render_html.py output
+├── bristlenose-{slug}-report.html      # render/ package output
 ├── bristlenose-{slug}-report.md        # render_output.py output
 ├── people.yaml                         # people.py output
 ├── assets/                             # static files (CSS, logos, player)
-├── sessions/                           # transcript pages (render_html.py)
+├── sessions/                           # transcript pages (render/transcript_pages.py)
 │   ├── transcript_s1.html
 │   └── transcript_s2.html
 ├── transcripts-raw/                    # Stage 6 output (merge_transcript.py)
@@ -141,7 +141,7 @@ Collapsible section at the end of the research report showing what proportion of
 - **Three percentages**: `X% in report · Y% moderator · Z% omitted` — word-count based, whole numbers. "In report" = participant words in quote timecode ranges. "Moderator" = moderator + observer speech. "Omitted" = participant words not covered by any quote
 - **Omitted content**: per-session, shows participant speech that didn't become quotes. Segments >3 words shown in full with speaker code and timecode; segments ≤3 words collapsed into a summary with repeat counts (`Okay. (4×), Yeah. (2×)`)
 - **Module**: `bristlenose/coverage.py` — `CoverageStats`, `SessionOmitted`, `OmittedSegment` dataclasses, `calculate_coverage()` function
-- **Rendering**: `_build_coverage_html()` in `render_html.py`. HTML `<details>` element, collapsed by default. CSS in `organisms/coverage.css`
+- **Rendering**: `_build_coverage_html()` in `render/dashboard.py`. HTML `<details>` element, collapsed by default. CSS in `organisms/coverage.css`
 - **Pipeline wiring**: `render_html()` accepts optional `transcripts` parameter. All three paths (`run`, `analyze`, `render`) pass transcripts
 - **Tests**: `tests/test_coverage.py` — 14 tests covering percentage calculation, fragment threshold, repeat counting, edge cases
 - **Design doc**: `docs/design-transcript-coverage.md`
@@ -168,7 +168,7 @@ These are documented to prevent re-exploration of dead ends:
 - **Transcript files named by `session_id`** (`s1.txt` in `transcripts-raw/`, not `p1_raw.txt`) — a single file contains segments from all speakers in that session (`[m1]`, `[p1]`, `[p2]`, `[o1]`)
 - **`assign_speaker_codes()` signature is `(session_id, next_participant_number, segments)`** — returns `(dict[str, str], int)` (label→code map, updated next number). The `next_participant_number` counter enables global p-code numbering across sessions
 
-## Session table helpers (render_html.py)
+## Session table helpers (render/dashboard.py)
 
 - **`_derive_journeys(screen_clusters, all_quotes)`** — extracts per-participant journey paths from screen clusters. Returns `(participant_screens, participant_session)`. Shared by the session table and user journeys table — extracted from `_build_task_outcome_html()` to avoid duplication
 - **`_oxford_list_html(*items)`** — joins pre-escaped HTML fragments with Oxford commas ("A", "A and B", "A, B, and C"). Different from the plain-text `_oxford_list()` helper — this one does NOT escape its arguments (caller must pre-escape). Used for moderator header with badge markup
@@ -185,4 +185,4 @@ These are documented to prevent re-exploration of dead ends:
 - **`transcripts-cooked/` only exists with `--redact-pii`** — if a previous run used PII redaction but the current one doesn't, stale cooked files remain on disk. Coverage and transcript pages must use the same transcript source to avoid broken links. `render_transcript_pages()` accepts a `transcripts` parameter to ensure consistency
 - **`_render_transcript_page()` accepts `FullTranscript`, not just `PiiCleanTranscript`** — the assertion uses `isinstance(transcript, FullTranscript)`. Since `PiiCleanTranscript` is a subclass, both types pass. Don't tighten this to `PiiCleanTranscript` or it will crash when PII redaction is off (the default)
 - **`player.js` only intercepts `.timecode` clicks with `data-participant` and `data-seconds`** — coverage section links use `class="timecode"` but NO data attributes, so they navigate normally. If you add new timecode links that should navigate (not open the player), omit the data attributes
-- **Transcript headers store filename only, not full path** — `merge_transcript.py` (line 59) and `render_output.py` (line 202) write `# Source: filename.mov` using `.path.name`, stripping the subdirectory. The static renderer (`render_html._build_video_map()`) doesn't use these headers — it reads `InputSession.files` directly (full absolute paths). But the serve-mode importer reads transcript headers and must reconstruct the path. If source files live in a subdirectory (e.g. `interviews/`), the importer's `_import_source_files()` scans one level of subdirectories to find them (mirroring `ingest.discover_files()`). This is a known data-loss point — the pipeline has access to `InputSession.files` with full paths, but this information is not persisted in intermediate data. Future improvement: store relative paths (including subdirectory) in transcript headers or in a dedicated manifest field
+- **Transcript headers store filename only, not full path** — `merge_transcript.py` (line 59) and `render_output.py` (line 202) write `# Source: filename.mov` using `.path.name`, stripping the subdirectory. The static renderer (`html_helpers._build_video_map()` in `render/`) doesn't use these headers — it reads `InputSession.files` directly (full absolute paths). But the serve-mode importer reads transcript headers and must reconstruct the path. If source files live in a subdirectory (e.g. `interviews/`), the importer's `_import_source_files()` scans one level of subdirectories to find them (mirroring `ingest.discover_files()`). This is a known data-loss point — the pipeline has access to `InputSession.files` with full paths, but this information is not persisted in intermediate data. Future improvement: store relative paths (including subdirectory) in transcript headers or in a dedicated manifest field

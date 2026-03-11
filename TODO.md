@@ -48,7 +48,7 @@ This file contains: session reminders, feature groupings with context, items too
 | Reduce AI tag density (tune prompt or filter) | #12 | small |
 | User-tags histogram: right-align bars | #13 | small |
 | Clickable histogram bars → filtered view | #14 | small |
-| Refactor render_html.py header/toolbar into template helpers | #16 | small |
+| Refactor render/ header/toolbar into template helpers | #16 | small |
 | Theme management in browser (custom CSS themes) | #17 | small |
 | Dark logo: proper albino bristlenose pleco | #18 | small |
 | Lost quotes: surface unselected quotes for rescue | #19 | small |
@@ -172,14 +172,14 @@ See `docs/design-logging.md` for architecture and full tier breakdown. Infrastru
 These are too small for issues or are internal-only concerns.
 
 - [ ] **SVG icon set** — replace all character glyphs (delete circles, modal close, search clear) with SVG icons. Candidates: Lucide, Heroicons, Phosphor, Tabler. See `docs/design-system/icon-catalog.html`
-- [ ] **Relocate AI tag toggle** — removed from toolbar (too crowded); needs a new home. Code commented out in `render_html.py` and `codebook.js`/`tags.js`
+- [ ] **Relocate AI tag toggle** — removed from toolbar (too crowded); needs a new home. Code commented out in `render/report.py` and `codebook.js`/`tags.js`
 - [ ] **User research panel opt-in** — optional email field in feedback modal
 - [ ] **Miro bridge** — Miro-shaped CSV export → API integration → layout engine. See `docs/private/design-miro-bridge.md`
 - [ ] **Tag definitions page** — also tracked as #53
 - [ ] **Custom prompts** — user-defined tag categories via `bristlenose.toml` or `prompts.toml`
 - [ ] **Framework acronym prefixes on badges** — small-caps 2–3 letter author prefix (e.g. `JJG`, `DN`). CSS class exists, parked until visual pattern finalised
 - [ ] **Drag-to-reorder codebook frameworks** — researchers drag framework `<details>` sections to prioritise. Persist order per project
-- [ ] **Pass transcript data to renderer** — avoid redundant disk I/O in `render_html.py`
+- [ ] **Pass transcript data to renderer** — avoid redundant disk I/O in `render/report.py`
 - [ ] **People.yaml web UI** — in-report UI to update unidentified participants. API endpoint exists, missing the HTML renderer and UX design. Part of Moderator Phase 2 (#25)
 - [ ] **Post-analysis review panel** — non-modal, dismissable panel after pipeline completes in serve mode for name correction, token summary, coverage overview
 
@@ -264,7 +264,7 @@ Bristlenose has ~30 direct + transitive deps across Python, ML, LLM SDKs, and NL
 | `bristlenose/config.py` | Pydantic settings (env vars, .env, bristlenose.toml) |
 | `bristlenose/pipeline.py` | Pipeline orchestrator |
 | `bristlenose/people.py` | People file: load, compute stats, merge, write, display name map |
-| `bristlenose/stages/render_html.py` | HTML report renderer |
+| `bristlenose/stages/render/` | HTML report renderer package |
 | `bristlenose/theme/` | Atomic CSS design system |
 | `bristlenose/theme/js/` | Report JavaScript modules (frozen — static render path only) |
 | `bristlenose/llm/prompts/` | LLM prompt templates |

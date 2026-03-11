@@ -97,7 +97,7 @@ Design docs: `docs/private/desktop-app-exploration.md` (technical architecture, 
 | User-tags histogram: right-align bars | #13 | small |
 | Clickable histogram bars → filtered view | #14 | small |
 | Sticky header decision | #15 | small |
-| Refactor render_html.py header/toolbar into template helpers | #16 | small |
+| ~~Refactor render_html.py header/toolbar into template helpers~~ DONE — `render/` package (Mar 2026) | #16 | small |
 | Theme management in browser (custom CSS themes) | #17 | small |
 | Dark logo: proper albino bristlenose pleco | #18 | small |
 | Lost quotes: surface unselected quotes for rescue | #19 | small |

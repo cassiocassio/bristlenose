@@ -386,6 +386,10 @@ Edit `bristlenose/__init__.py` (the single source of truth for version), commit,
 
 ## Changelog
 
+**0.13.2** — _11 Mar 2026_
+
+- Render refactor — `render_html.py` (2,903 lines) broken into `bristlenose/stages/render/` package with 8 submodules. Static render path formally deprecated (`DeprecationWarning`). No behaviour change
+
 **0.13.1** — _10 Mar 2026_
 
 - Responsive layout playground, sidebar TOC overlay mode, minimap component, responsive quote grid CSS

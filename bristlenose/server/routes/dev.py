@@ -95,7 +95,7 @@ def sessions_table_html(
 ) -> str:
     """Render the sessions table using the Jinja2 template.
 
-    Returns the same HTML fragment that ``render_html.py`` produces for the
+    Returns the same HTML fragment that the ``render/`` package produces for the
     static report.  Used by the visual diff page to compare against the
     React ``SessionsTable`` component.
     """

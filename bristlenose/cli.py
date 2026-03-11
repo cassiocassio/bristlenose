@@ -1160,7 +1160,7 @@ def _auto_render(project_dir: Path) -> None:
     """Re-render the HTML report from intermediate data before serving.
 
     Fast (<0.1s) and ensures the served HTML always matches the current
-    render_html.py code — no stale mount-point markers or missing CSS.
+    render/ package code — no stale mount-point markers or missing CSS.
     """
     output_dir = project_dir / "bristlenose-output"
     if not output_dir.is_dir():

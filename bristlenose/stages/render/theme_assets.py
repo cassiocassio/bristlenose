@@ -1,7 +1,7 @@
 """Theme asset loading — CSS, JS, and Jinja2 template environment.
 
 Consolidates all theme file lists, lazy-loaded caches, and the shared
-Jinja2 environment that were previously at module level in render_html.py.
+Jinja2 environment that were previously at module level in the old render_html.py monolith.
 """
 
 from __future__ import annotations

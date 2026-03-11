@@ -2,7 +2,7 @@
 
 ## Atomic CSS architecture
 
-Tokens → Atoms → Molecules → Organisms → Templates. All visual values via `--bn-*` custom properties in `tokens.css`, never hard-coded. `render_html.py` concatenates files in order defined by `_THEME_FILES`.
+Tokens → Atoms → Molecules → Organisms → Templates. All visual values via `--bn-*` custom properties in `tokens.css`, never hard-coded. `render/theme_assets.py` concatenates files in order defined by `_THEME_FILES`.
 
 **CSS ↔ React mapping:** CSS file boundaries are being aligned to match React component boundaries. See `docs/design-react-component-library.md` (CSS ↔ React alignment section) for the full mapping table and per-round refactoring schedule. When renaming or restructuring CSS files, check the mapping table first.
 
@@ -51,7 +51,7 @@ Uses CSS `light-dark()` function (supported in all major browsers since mid-2024
 
 1. **OS/browser preference** → `color-scheme: light dark` on `:root` respects `prefers-color-scheme` automatically
 2. **User override** → `color_scheme` in `bristlenose.toml` (or `BRISTLENOSE_COLOR_SCHEME` env var). Values: `"auto"` (default), `"light"`, `"dark"`
-3. **HTML attribute** → when config is `"light"` or `"dark"`, `render_html.py` emits `<html data-theme="light|dark">` which forces `color-scheme` via CSS selector
+3. **HTML attribute** → when config is `"light"` or `"dark"`, `render/report.py` emits `<html data-theme="light|dark">` which forces `color-scheme` via CSS selector
 4. **Print** → always light (forced by `color-scheme: light` in `print.css`)
 
 ### How tokens work
@@ -85,7 +85,7 @@ Template-level CSS in `templates/`: `report.css` (main report layout), `transcri
 Quoted text within transcript segments is wrapped in `<mark class="bn-cited">` elements by the Python renderer. This marks the verbatim excerpt that was extracted as a quote — the rest of the segment is context.
 
 - **CSS**: `.bn-cited` in `transcript.css` — currently `background: transparent` (visually invisible while treatment is being rethought). The `--bn-colour-cited-bg` token (`#fef9c3` light / `#3b2f05` dark) is preserved in `tokens.css`. To re-enable: change `background: transparent` to `background: var(--bn-colour-cited-bg)`
-- **HTML**: `<mark class="bn-cited">` elements are always emitted by `render_html.py` regardless of CSS visibility — the mechanism is intact
+- **HTML**: `<mark class="bn-cited">` elements are always emitted by `render/transcript_pages.py` regardless of CSS visibility — the mechanism is intact
 - **Design rationale**: the knocked-back opacity on non-quoted segments (0.6) plus first-occurrence section/theme labels plus span bars provide sufficient visual cues for quote extent, making the inline highlight redundant for now
 
 ### Anchor highlight animation
@@ -109,7 +109,7 @@ Two side-by-side horizontal bar charts in the Sentiment section: AI sentiment (s
 
 ### AI sentiment order
 
-Positive (descending by count) → surprise (neutral) → divider → negative (ascending, worst near divider). See `_build_sentiment_html()` in `render_html.py`.
+Positive (descending by count) → surprise (neutral) → divider → negative (ascending, worst near divider). See `_build_sentiment_html()` in `render/sentiment.py`.
 
 ### Histogram delete button
 
@@ -128,7 +128,7 @@ Each user tag label has a hover `×` button (`.histogram-bar-delete` in `atoms/b
 - **`.bn-person-badge`** — `inline-flex`, `align-items: center`, `gap: 0.4rem`, `white-space: nowrap`. Contains a `.badge` and a `.bn-person-badge-name`
 - **`.bn-person-badge .badge`** — `flex-shrink: 0` (badge never truncates)
 - **`.bn-person-badge-name`** — `font-weight: var(--bn-weight-emphasis)` (490). In the moderator header, names use normal weight (no `.bn-person-badge-name` class)
-- **Usage**: session table speaker cells (semibold names) and moderator header (regular weight names). The molecule is included in `_THEME_FILES` in `render_html.py`. React equivalent: `PersonBadge` component in `frontend/src/components/PersonBadge.tsx`
+- **Usage**: session table speaker cells (semibold names) and moderator header (regular weight names). The molecule is included in `_THEME_FILES` in `render/theme_assets.py`. React equivalent: `PersonBadge` component in `frontend/src/components/PersonBadge.tsx`
 
 ## Session table CSS
 
@@ -251,7 +251,7 @@ Per-component CSS docs in `CSS-REFERENCE.md`. Key patterns: toolbar dual-class (
 
 ## Jinja2 templates
 
-14 HTML templates in `templates/` (alongside CSS template files). All use `autoescape=False` — escape in Python with `_esc()` before passing to template. Jinja2 environment: `_jinja_env` at module level in `render_html.py`.
+14 HTML templates in `templates/` (alongside CSS template files). All use `autoescape=False` — escape in Python with `_esc()` before passing to template. Jinja2 environment: `_jinja_env` at module level in `render/theme_assets.py`.
 
 | Template | Parameters | Used by |
 |----------|------------|---------|
@@ -302,7 +302,7 @@ Featured quote footer shows a speaker code lozenge (`<a class="badge speaker-lin
 
 ### Python render helpers
 
-Two helpers in `render_html.py` reduce duplication across quote rendering:
+Two helpers in `render/html_helpers.py` reduce duplication across quote rendering:
 
 - **`_timecode_html(quote, video_map)`** — returns `<a class="timecode" ...>` if video exists for the participant, otherwise `<span class="timecode">`. Used by `_format_quote_html()` and `_render_featured_quote()`
 - **`_session_anchor(quote)`** — returns `(pid_esc, sid_esc, anchor)` tuple for session navigation attributes. The anchor format is `t-{sid}-{start_seconds}`
@@ -326,13 +326,13 @@ Two helpers in `render_html.py` reduce duplication across quote rendering:
 - **Modal infrastructure**: `atoms/modal.css` provides shared `.bn-overlay`, `.bn-modal`, `.bn-modal-close`, `.bn-modal-footer`, `.bn-modal-actions`, `.bn-btn`, `.bn-btn-cancel`, `.bn-btn-danger`, `.bn-btn-primary` classes. `.bn-modal` has `max-width: 24rem` default — override per-modal for wider content (e.g. `.help-modal { max-width: 600px }`). `js/modal.js` provides `createModal()` factory (returns `{ show, hide, isVisible, toggle }`) + `showConfirmModal()` reusable confirmation dialog + `_modalRegistry` + `closeTopmostModal()`. Help, feedback, codebook, and histogram modals all use these — don't duplicate overlay/card/close patterns
 - **Footer feedback visibility now has two paths**: legacy static path still uses `body.feedback-enabled .feedback-links` (set by `feedback.js` feature flag). React serve/export path uses `.feedback-links.feedback-links-visible` (set directly by `Footer.tsx`) and does not rely on `body.feedback-enabled`
 - **Sentiment chart layout**: both AI sentiment and user-tags charts use CSS grid (`grid-template-columns: max-content 1fr max-content`) on `.sentiment-chart`. Bar groups use `display: contents` so label/bar/count participate directly in the parent grid — this is what aligns all bar left edges within each chart. Labels use `width: fit-content` + `justify-self: start` so the background hugs the text and the variable gap falls between the label's right edge and the bar. The two charts sit side-by-side in `.sentiment-row` (flexbox, `align-items: flex-start` for top-alignment). Don't change the grid structure without checking both charts
-- **Surprise sentiment placement**: surprise is neutral — it renders between positive sentiments and the divider, not after negative sentiments. See `_build_sentiment_html()` in `render_html.py`
+- **Surprise sentiment placement**: surprise is neutral — it renders between positive sentiments and the divider, not after negative sentiments. See `_build_sentiment_html()` in `render/sentiment.py`
 - **Histogram delete-from-all**: clicking the hover `×` on a user tag label in the histogram shows a confirmation modal via `showConfirmModal()`, then removes that tag from every quote via `_deleteTagFromAllQuotes()` in `histogram.js`. This calls `persistUserTags()` which re-renders the histogram and re-applies tag filter
 - **Reserved sentiment names** — `_RESERVED_SENTIMENTS` in `tags.js` blocks users from creating tags matching the 7 AI sentiment names (frustration, confusion, doubt, surprise, satisfaction, delight, confidence). Guard at both commit time (toast + skip) and suggestion filter (defence-in-depth). Case-insensitive comparison
 - **Case-insensitive tag deduplication** — `closeTagInput()` uses `.some(t.toLowerCase() === valLower)` not `indexOf(val)`. If all target quotes already have the tag (any casing), shows toast "Tags are not case-sensitive". This prevents ghost duplicates like "UX" and "ux" on the same quote
 - **Bulk tag visual feedback** — when committing a tag to multiple quotes, each new badge gets `.badge-bulk-flash` (0.8s blue ring pulse). A toast ("Tag 'Foo' applied to N quotes") only appears when some tagged quotes are off-screen — if all are visible, the flash alone is sufficient
 - **`tagFocusedQuote()` selection guard** — pressing `t` only triggers bulk mode if the focused quote is in `selectedQuoteIds`. If focus is on a non-selected quote, `t` tags only that single quote. Matches the `+` click handler pattern in `tags.js`
-- **IIFE scoping and inline onclick**: all report JS is wrapped in `(function() { ... })()` by `render_html.py`. Functions defined inside are NOT accessible from inline `onclick` HTML attributes. Wire click handlers via `addEventListener` from JS instead. Footer links use `role="button" tabindex="0"` (no `href`) for keyboard accessibility
+- **IIFE scoping and inline onclick**: all report JS is wrapped in `(function() { ... })()` by `render/report.py`. Functions defined inside are NOT accessible from inline `onclick` HTML attributes. Wire click handlers via `addEventListener` from JS instead. Footer links use `role="button" tabindex="0"` (no `href`) for keyboard accessibility
 - **Stale HTML files cause debugging confusion** — if a previous render created a differently-named file (e.g. from a bug), the old file remains on disk. Always check which HTML file you're viewing matches the timestamp of your last render
 - **Codebook page sits at output root** — `codebook.html` is at the same level as the report (not in `sessions/` or `assets/`), so it uses `assets/bristlenose-theme.css` (no `../` prefix). The `_footer_html()` helper uses `assets/` paths which work correctly for root-level pages
 - **Tag-filter rebuilds on every open** — `_buildTagFilterMenu()` is called each time the dropdown opens because user tags are dynamic. This also means codebook colour/group changes from the codebook window are picked up automatically without a dedicated `storage` event listener. Don't cache the menu DOM
@@ -347,10 +347,10 @@ Two helpers in `render_html.py` reduce duplication across quote rendering:
 - **`analysis.js` avoids literal `"data-theme"` string** — dark mode tests (`test_dark_mode.py`) assert that `"data-theme"` doesn't appear in the full HTML when `color_scheme="auto"`. Since `analysis.js` is embedded inline, it uses `var THEME_ATTR = "data-" + "theme"` to construct the attribute name. Similarly, `analysis.css` uses `light-dark()` instead of `[data-theme="dark"]` selectors. If adding new dark-mode-responsive code to inline JS or embedded CSS, avoid the literal string
 - **Analysis heatmap uses client-side `adjustedResidual()`** — the function exists in both Python (`metrics.py`) and JS (`analysis.js`). The JS copy is needed because heatmap cell colours are theme-responsive (OKLCH lightness direction inverts in dark mode), so residuals must be recomputed on theme toggle. Keep both implementations in sync
 - **Renderer overlay (dev-only)** — `_build_renderer_overlay_html()` in `server/app.py` injects a floating toggle (press **D** or click the button) that colour-codes report regions by renderer origin: blue outline+wash for Jinja2, green for React islands, amber for Vanilla JS. Uses `::after` pseudo-elements with `pointer-events: none` for the translucent wash, plus `outline` for an always-visible border. Key CSS patterns: (1) Jinja2 containers that hold React/Vanilla JS mount points suppress their own `::after` via `:not(:has(#bn-...))` so the child colour shows through; (2) elements *inside* React mount points (e.g. React-rendered `<section>`) get their `::after` cancelled with `display: none` to prevent blue bleed; (3) the `body.bn-dev-overlay` class gates all overlay styles. If you add a new React island or Vanilla JS mount point, add its ID to the relevant CSS selector groups in `_build_renderer_overlay_html()`
-- **`<!-- bn-session-table -->` markers** — `render_html.py` wraps the Jinja2 session table (inside `.bn-session-grid`) with `<!-- bn-session-table -->` / `<!-- /bn-session-table -->` comment markers. The serve command's `serve_report_html()` uses `re.sub` to replace everything between these markers with the React mount point `<div id="bn-sessions-table-root">`. This avoids re-running the full render pipeline with `serve_mode=True`. If you add new React islands that replace Jinja2 content, follow the same marker pattern
-- **`serve_mode` vs runtime replacement** — `render_html.py` has a `serve_mode` param that renders React mount points instead of Jinja2 content. But `bristlenose serve` doesn't call `render_html()` — it reads the existing HTML (rendered with `serve_mode=False`) and does string replacement at serve time. Running `bristlenose render` before `bristlenose serve` is expected workflow — the markers make the replacement work. Don't assume #bn-sessions-table-root exists in the static HTML file on disk
+- **`<!-- bn-session-table -->` markers** — `render/report.py` wraps the Jinja2 session table (inside `.bn-session-grid`) with `<!-- bn-session-table -->` / `<!-- /bn-session-table -->` comment markers. The serve command's `serve_report_html()` uses `re.sub` to replace everything between these markers with the React mount point `<div id="bn-sessions-table-root">`. This avoids re-running the full render pipeline with `serve_mode=True`. If you add new React islands that replace Jinja2 content, follow the same marker pattern
+- **`serve_mode` vs runtime replacement** — `render/report.py` has a `serve_mode` param that renders React mount points instead of Jinja2 content. But `bristlenose serve` doesn't call `render_html()` — it reads the existing HTML (rendered with `serve_mode=False`) and does string replacement at serve time. Running `bristlenose render` before `bristlenose serve` is expected workflow — the markers make the replacement work. Don't assume #bn-sessions-table-root exists in the static HTML file on disk
 - **Delete circles are red, not grey** — `badge-ai::after` and `.badge-user .badge-delete` use `var(--bn-colour-danger)` (red), not `var(--bn-colour-muted)` (grey). Changed to unify delete/deny colour across all badge types (sentiment delete, user tag delete, proposed badge deny pill). If adding a new deletable badge variant, use `--bn-colour-danger` for the `×`
 - **`--bn-colour-danger` and `--bn-colour-success` are not in `tokens.css`** — badge CSS uses `var(--bn-colour-danger, #dc2626)` and `var(--bn-colour-success, #16a34a)` with hardcoded fallbacks. The tokens file defines `--bn-colour-negative` instead. The fallback values work but don't adapt in dark mode (delete circles stay `#dc2626` on dark backgrounds). The pill's dark mode overrides in `badge.css` handle this for the pill only. Future: add `--bn-colour-danger` / `--bn-colour-success` as proper `light-dark()` tokens
-- **CSS specificity vs source order in concatenated theme** — `render_html.py` concatenates CSS files in `_THEME_FILES` order (tokens → atoms → molecules → organisms → templates). At **equal specificity**, the later file wins. `atoms/interactive.css` loads before `organisms/blockquote.css`, so `blockquote.bn-selected` (0,1,1) lost to `blockquote.quote-card` (0,1,1) even though both set `background`. Fix: interactive state selectors use `blockquote.quote-card.bn-selected` (0,2,1) to win regardless of source order. When adding new state classes that override organism-level base styles, **always qualify with the base class** to avoid source-order traps
+- **CSS specificity vs source order in concatenated theme** — `render/theme_assets.py` concatenates CSS files in `_THEME_FILES` order (tokens → atoms → molecules → organisms → templates). At **equal specificity**, the later file wins. `atoms/interactive.css` loads before `organisms/blockquote.css`, so `blockquote.bn-selected` (0,1,1) lost to `blockquote.quote-card` (0,1,1) even though both set `background`. Fix: interactive state selectors use `blockquote.quote-card.bn-selected` (0,2,1) to win regardless of source order. When adding new state classes that override organism-level base styles, **always qualify with the base class** to avoid source-order traps
 - **`Element.closest()` only matches compound selectors** — `closest()` walks **up** the DOM tree and tests each ancestor against the selector. It cannot match descendant combinators (`.parent .child`), child combinators (`.parent > .child`), or any selector that implies a structural relationship between two elements. Use compound selectors only: `target.closest("blockquote.quote-card")` works; `target.closest(".quote-group blockquote")` silently returns `null` even when the element is inside a `.quote-group`. This caused the background-click handler to miss all quote clicks and clear selection on every click
 - **Font-weight tokens** — four tiers: `var(--bn-weight-normal)` (420), `var(--bn-weight-emphasis)` (490), `var(--bn-weight-starred)` (520), `var(--bn-weight-strong)` (700). Starred quotes get 520 to pop above headings/labels (490) without reaching bold (700). Inter variable font loaded from Google Fonts (`wght@400..700`) in `document_shell_open.html` and `frontend/index.html`. Static fonts (Win 10 Segoe UI) degrade 420→400 and 490→400 — acceptable

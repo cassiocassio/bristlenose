@@ -131,7 +131,7 @@ def calculate_coverage(
 
 ### Rendering
 
-In `render_html.py`, add a new section at report end:
+In `render/dashboard.py`, add a new section at report end:
 
 - Proper `<section>` with `<h2 id="transcript-coverage">` heading (same level as User Journeys)
 - Percentages as paragraph content below heading
@@ -146,7 +146,7 @@ In `render_html.py`, add a new section at report end:
 1. **New:** `bristlenose/coverage.py` — calculation logic (`CoverageStats`, `SessionOmitted`, `OmittedSegment`, `calculate_coverage()`)
 2. **New:** `bristlenose/theme/organisms/coverage.css` — styling for the disclosure section
 3. **New:** `tests/test_coverage.py` — 14 tests covering percentage calculation, fragment threshold, repeat counting, edge cases
-4. **Edit:** `bristlenose/stages/render_html.py` — added `transcripts` parameter, `_build_coverage_html()` function, coverage section after User Journeys, import for coverage module, CSS file added to `_THEME_FILES`
+4. **Edit:** `bristlenose/stages/render/dashboard.py` — `_build_coverage_html()` function, coverage section after User Journeys; `bristlenose/stages/render/theme_assets.py` — CSS file added to `_THEME_FILES`; `bristlenose/stages/render/report.py` — added `transcripts` parameter
 5. **Edit:** `bristlenose/pipeline.py` — pass transcripts to `render_html()` in `run()`, `run_analysis_only()`, `render_only()`
 
 ## Out of scope

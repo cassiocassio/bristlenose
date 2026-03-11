@@ -25,7 +25,7 @@ router = APIRouter(prefix="/api")
 
 
 # ---------------------------------------------------------------------------
-# Sentiment constants (mirrors render_html.py)
+# Sentiment constants (mirrors render/sentiment.py)
 # ---------------------------------------------------------------------------
 
 _NEGATIVE_SENTIMENTS = {"frustration", "confusion", "doubt"}
@@ -172,7 +172,7 @@ def _check_project(db: Session, project_id: int) -> Project:
 
 
 def _quote_dom_id(quote: Quote) -> str:
-    """Build the DOM ID for a quote (matches render_html.py format)."""
+    """Build the DOM ID for a quote (matches render/quote_format.py format)."""
     return f"q-{quote.participant_id}-{int(quote.start_timecode)}"
 
 
@@ -239,7 +239,7 @@ def _pick_featured_quotes(
 ) -> list[Quote]:
     """Select the most interesting quotes for the dashboard.
 
-    Port of _pick_featured_quotes() from render_html.py.
+    Port of _pick_featured_quotes() from render/dashboard.py.
     Word-count filter → score → diversify by participant and polarity.
     """
     if not all_quotes:

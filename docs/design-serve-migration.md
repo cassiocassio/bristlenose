@@ -24,7 +24,7 @@ Pipeline (unchanged)
     ├── writes intermediate JSON to .bristlenose/intermediate/
     ├── writes transcripts to transcripts-raw/
     ├── writes people.yaml
-    └── renders static HTML report (render_html.py — continues to work)
+    └── renders static HTML report (render/ package — continues to work)
 
 FastAPI server (new)
     │

@@ -2,7 +2,7 @@
 
 This document tracks active feature branches to help multiple Claude sessions coordinate without conflicts.
 
-**Updated:** 10 Mar 2026 (sentiment-tags closed)
+**Updated:** 11 Mar 2026 (render-refactor closed)
 
 ---
 
@@ -18,7 +18,7 @@ Each active feature branch gets its own **git worktree** — a full working copy
 | `bristlenose_branch symbology/` | `symbology` | § ¶ ❋ Unicode prefix symbols for sections, quotes, themes |
 | `bristlenose_branch highlighter/` | `highlighter` | Highlighter feature |
 | `bristlenose_branch living-fish/` | `living-fish` | Animated "living portrait" logo for serve mode |
-| `bristlenose_branch render-refactor/` | `render-refactor` | Break up render_html.py into render/ package, deprecate static path |
+
 
 
 **Creating a new feature branch worktree:**
@@ -157,6 +157,10 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 ---
 
 ## Completed Branches (for reference)
+
+### `render-refactor` — merged 11 Mar 2026
+
+Break up `render_html.py` (2,903 lines) into `bristlenose/stages/render/` package with 8 submodules: `theme_assets.py`, `html_helpers.py`, `quote_format.py`, `sentiment.py`, `dashboard.py`, `transcript_pages.py`, `standalone_pages.py`, `report.py`. Added `DeprecationWarning` to `render_html()`. Updated all imports (3 production, 11 test files) and ~99 doc references across 34 files. No behaviour change — pure structural refactor.
 
 ### `responsive-playground` — merged 10 Mar 2026
 

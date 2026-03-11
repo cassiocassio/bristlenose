@@ -12,12 +12,8 @@ from bristlenose.models import (
     ScreenCluster,
     ThemeGroup,
 )
-from bristlenose.stages.render_html import (
-    _JS_FILES,
-    _THEME_FILES,
-    _TRANSCRIPT_JS_FILES,
-    render_html,
-)
+from bristlenose.stages.render import render_html
+from bristlenose.stages.render.theme_assets import _JS_FILES, _THEME_FILES, _TRANSCRIPT_JS_FILES
 
 # ---------------------------------------------------------------------------
 # Helpers

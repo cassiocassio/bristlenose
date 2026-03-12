@@ -23,8 +23,8 @@ from bristlenose.server.models import (
 from bristlenose.server.models import (
     Session as SessionModel,
 )
-from bristlenose.stages.render.sentiment import _render_sentiment_sparkline
-from bristlenose.stages.render.theme_assets import _jinja_env
+from bristlenose.stages.s12_render.sentiment import _render_sentiment_sparkline
+from bristlenose.stages.s12_render.theme_assets import _jinja_env
 from bristlenose.utils.markdown import format_finder_date, format_finder_filename
 
 router = APIRouter(prefix="/api/dev")

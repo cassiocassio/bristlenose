@@ -81,7 +81,7 @@ class TestTopicSegmentationConcurrency:
     @pytest.mark.asyncio
     async def test_sequential_when_concurrency_1(self) -> None:
         """With concurrency=1, calls execute sequentially."""
-        from bristlenose.stages.topic_segmentation import segment_topics
+        from bristlenose.stages.s08_topic_segmentation import segment_topics
 
         call_times: list[tuple[str, float, float]] = []
 
@@ -113,7 +113,7 @@ class TestTopicSegmentationConcurrency:
     @pytest.mark.asyncio
     async def test_concurrent_when_concurrency_3(self) -> None:
         """With concurrency=3, up to 3 calls run in parallel."""
-        from bristlenose.stages.topic_segmentation import segment_topics
+        from bristlenose.stages.s08_topic_segmentation import segment_topics
 
         active_count = 0
         max_active = 0
@@ -140,7 +140,7 @@ class TestTopicSegmentationConcurrency:
     @pytest.mark.asyncio
     async def test_error_isolation(self) -> None:
         """A failing participant doesn't break the others."""
-        from bristlenose.stages.topic_segmentation import segment_topics
+        from bristlenose.stages.s08_topic_segmentation import segment_topics
 
         call_count = 0
 
@@ -170,7 +170,7 @@ class TestTopicSegmentationConcurrency:
     @pytest.mark.asyncio
     async def test_result_order_preserved(self) -> None:
         """Results come back in input order regardless of completion order."""
-        from bristlenose.stages.topic_segmentation import segment_topics
+        from bristlenose.stages.s08_topic_segmentation import segment_topics
 
         async def mock_analyze(system_prompt, user_prompt, response_model, **kw):
             # p3 finishes fastest, p1 slowest
@@ -200,7 +200,7 @@ class TestQuoteExtractionConcurrency:
     @pytest.mark.asyncio
     async def test_concurrent_extraction(self) -> None:
         """With concurrency=3, up to 3 calls run in parallel."""
-        from bristlenose.stages.quote_extraction import extract_quotes
+        from bristlenose.stages.s09_quote_extraction import extract_quotes
 
         active_count = 0
         max_active = 0
@@ -233,7 +233,7 @@ class TestQuoteExtractionConcurrency:
     @pytest.mark.asyncio
     async def test_extraction_error_isolation(self) -> None:
         """A failing participant produces no quotes but doesn't break others."""
-        from bristlenose.stages.quote_extraction import extract_quotes
+        from bristlenose.stages.s09_quote_extraction import extract_quotes
 
         async def mock_analyze(system_prompt, user_prompt, response_model, **kw):
             if "p2" in user_prompt:
@@ -267,7 +267,7 @@ class TestTopicSegmentationEarlyTermination:
     @pytest.mark.asyncio
     async def test_stops_after_consecutive_failures(self) -> None:
         """After 3 consecutive failures, remaining sessions are skipped."""
-        from bristlenose.stages.topic_segmentation import segment_topics
+        from bristlenose.stages.s08_topic_segmentation import segment_topics
 
         call_count = 0
 
@@ -293,7 +293,7 @@ class TestTopicSegmentationEarlyTermination:
     @pytest.mark.asyncio
     async def test_resets_on_success(self) -> None:
         """A successful call resets the consecutive failure counter."""
-        from bristlenose.stages.topic_segmentation import segment_topics
+        from bristlenose.stages.s08_topic_segmentation import segment_topics
 
         call_count = 0
         fail_on_calls = {2, 3}  # fail on 2nd and 3rd calls (non-consecutive)
@@ -327,7 +327,7 @@ class TestQuoteExtractionEarlyTermination:
     @pytest.mark.asyncio
     async def test_stops_after_consecutive_failures(self) -> None:
         """After 3 consecutive failures, remaining sessions are skipped."""
-        from bristlenose.stages.quote_extraction import extract_quotes
+        from bristlenose.stages.s09_quote_extraction import extract_quotes
 
         call_count = 0
 
@@ -358,7 +358,7 @@ class TestQuoteExtractionEarlyTermination:
     @pytest.mark.asyncio
     async def test_resets_on_success(self) -> None:
         """A successful call resets the consecutive failure counter."""
-        from bristlenose.stages.quote_extraction import extract_quotes
+        from bristlenose.stages.s09_quote_extraction import extract_quotes
 
         call_count = 0
         fail_on_calls = {2, 3}  # fail on 2nd and 3rd calls (non-consecutive)
@@ -398,7 +398,7 @@ class TestConcurrencySpeedup:
     @pytest.mark.asyncio
     async def test_topic_segmentation_speedup(self) -> None:
         """concurrency=3 should be measurably faster than concurrency=1 for 6 participants."""
-        from bristlenose.stages.topic_segmentation import segment_topics
+        from bristlenose.stages.s08_topic_segmentation import segment_topics
 
         async def mock_analyze(system_prompt, user_prompt, response_model, **kw):
             await asyncio.sleep(0.05)  # 50ms simulated latency

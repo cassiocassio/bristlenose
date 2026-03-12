@@ -30,7 +30,7 @@ from bristlenose.people import (
     extract_names_from_labels,
     suggest_short_names,
 )
-from bristlenose.stages.parse_subtitles import (
+from bristlenose.stages.s03_parse_subtitles import (
     _VTT_SPEAKER_PATTERN,
     _extract_speaker,
 )

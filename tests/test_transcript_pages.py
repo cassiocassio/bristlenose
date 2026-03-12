@@ -10,8 +10,8 @@ from bristlenose.models import (
     PersonEditable,
     PersonEntry,
 )
-from bristlenose.stages.render import render_transcript_pages
-from bristlenose.stages.render.html_helpers import _resolve_speaker_name
+from bristlenose.stages.s12_render import render_transcript_pages
+from bristlenose.stages.s12_render.html_helpers import _resolve_speaker_name
 
 # ---------------------------------------------------------------------------
 # Helpers

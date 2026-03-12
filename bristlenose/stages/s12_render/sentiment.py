@@ -8,14 +8,14 @@ from bristlenose.models import (
     QuoteIntent,
     format_timecode,
 )
-from bristlenose.stages.render.html_helpers import (
+from bristlenose.stages.s12_render.html_helpers import (
     _display_name,
     _esc,
     _session_sort_key,
     _split_badge_html,
     _tc_brackets,
 )
-from bristlenose.stages.render.theme_assets import _jinja_env
+from bristlenose.stages.s12_render.theme_assets import _jinja_env
 
 # ---------------------------------------------------------------------------
 # Sparkline (tiny inline bar chart for session table)

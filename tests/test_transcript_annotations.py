@@ -11,8 +11,8 @@ from bristlenose.models import (
     Sentiment,
     ThemeGroup,
 )
-from bristlenose.stages.render import render_transcript_pages
-from bristlenose.stages.render.transcript_pages import (
+from bristlenose.stages.s12_render import render_transcript_pages
+from bristlenose.stages.s12_render.transcript_pages import (
     _build_transcript_quote_map,
     _highlight_quoted_text,
 )
@@ -164,7 +164,7 @@ def test_quote_map_no_assignment() -> None:
 
 
 def test_highlight_with_verbatim_match() -> None:
-    from bristlenose.stages.render.transcript_pages import _QuoteAnnotation
+    from bristlenose.stages.s12_render.transcript_pages import _QuoteAnnotation
 
     ann = _QuoteAnnotation(
         quote_id="q-p1-42",
@@ -187,7 +187,7 @@ def test_highlight_with_verbatim_match() -> None:
 
 
 def test_highlight_no_verbatim_falls_back_to_whole_segment() -> None:
-    from bristlenose.stages.render.transcript_pages import _QuoteAnnotation
+    from bristlenose.stages.s12_render.transcript_pages import _QuoteAnnotation
 
     ann = _QuoteAnnotation(
         quote_id="q-p1-42",
@@ -207,7 +207,7 @@ def test_highlight_no_verbatim_falls_back_to_whole_segment() -> None:
 
 
 def test_highlight_verbatim_not_found_falls_back() -> None:
-    from bristlenose.stages.render.transcript_pages import _QuoteAnnotation
+    from bristlenose.stages.s12_render.transcript_pages import _QuoteAnnotation
 
     ann = _QuoteAnnotation(
         quote_id="q-p1-42",
@@ -226,7 +226,7 @@ def test_highlight_verbatim_not_found_falls_back() -> None:
 
 
 def test_highlight_html_escapes_text() -> None:
-    from bristlenose.stages.render.transcript_pages import _QuoteAnnotation
+    from bristlenose.stages.s12_render.transcript_pages import _QuoteAnnotation
 
     ann = _QuoteAnnotation(
         quote_id="q-p1-42",
@@ -248,7 +248,7 @@ def test_highlight_html_escapes_text() -> None:
 
 
 def test_highlight_multiple_quotes_in_segment() -> None:
-    from bristlenose.stages.render.transcript_pages import _QuoteAnnotation
+    from bristlenose.stages.s12_render.transcript_pages import _QuoteAnnotation
 
     ann1 = _QuoteAnnotation(
         quote_id="q-p1-42",

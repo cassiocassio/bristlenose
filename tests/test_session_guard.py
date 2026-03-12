@@ -64,7 +64,7 @@ class TestSessionGuardIntegration:
         pipeline = _make_pipeline()
         sessions = self._fake_sessions(16)
         with (
-            patch("bristlenose.stages.ingest.ingest", return_value=sessions),
+            patch("bristlenose.stages.s01_ingest.ingest", return_value=sessions),
             patch.object(pipeline, "_confirm_large_session_count") as mock_confirm,
             patch("bristlenose.pipeline.console"),
             patch("bristlenose.pipeline._print_step"),
@@ -86,7 +86,7 @@ class TestSessionGuardIntegration:
         pipeline = _make_pipeline()
         sessions = self._fake_sessions(17)
         with (
-            patch("bristlenose.stages.ingest.ingest", return_value=sessions),
+            patch("bristlenose.stages.s01_ingest.ingest", return_value=sessions),
             patch.object(
                 pipeline, "_confirm_large_session_count", return_value=True
             ) as mock_confirm,
@@ -110,7 +110,7 @@ class TestSessionGuardIntegration:
         pipeline = _make_pipeline()
         sessions = self._fake_sessions(17)
         with (
-            patch("bristlenose.stages.ingest.ingest", return_value=sessions),
+            patch("bristlenose.stages.s01_ingest.ingest", return_value=sessions),
             patch.object(
                 pipeline, "_confirm_large_session_count", return_value=False
             ),
@@ -131,7 +131,7 @@ class TestSessionGuardIntegration:
         pipeline = _make_pipeline(skip_confirm=True)
         sessions = self._fake_sessions(20)
         with (
-            patch("bristlenose.stages.ingest.ingest", return_value=sessions),
+            patch("bristlenose.stages.s01_ingest.ingest", return_value=sessions),
             patch.object(pipeline, "_confirm_large_session_count") as mock_confirm,
             patch("bristlenose.pipeline.console"),
             patch("bristlenose.pipeline._print_step"),

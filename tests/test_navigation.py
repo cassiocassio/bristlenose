@@ -21,8 +21,8 @@ from bristlenose.models import (
     Sentiment,
     ThemeGroup,
 )
-from bristlenose.stages.render import render_html
-from bristlenose.stages.render.dashboard import _pick_featured_quotes
+from bristlenose.stages.s12_render import render_html
+from bristlenose.stages.s12_render.dashboard import _pick_featured_quotes
 
 # ---------------------------------------------------------------------------
 # Helpers

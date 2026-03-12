@@ -9,7 +9,7 @@ from unittest.mock import AsyncMock, patch
 import pytest
 
 from bristlenose.models import FileType, InputFile, InputSession
-from bristlenose.stages.extract_audio import extract_audio_for_sessions
+from bristlenose.stages.s02_extract_audio import extract_audio_for_sessions
 
 
 def _session(
@@ -53,7 +53,7 @@ async def test_skips_extraction_when_transcript_exists(tmp_path: Path) -> None:
     """Audio extraction is skipped when session has a platform transcript."""
     session = _session(has_transcript=True, has_video=True)
     with patch(
-        "bristlenose.stages.extract_audio._extract_one",
+        "bristlenose.stages.s02_extract_audio._extract_one",
         new_callable=AsyncMock,
     ) as mock_extract:
         result = await extract_audio_for_sessions([session], tmp_path)
@@ -66,7 +66,7 @@ async def test_extracts_audio_when_no_transcript(tmp_path: Path) -> None:
     """Audio extraction runs normally when no platform transcript."""
     session = _session(has_transcript=False, has_video=True)
     with patch(
-        "bristlenose.stages.extract_audio._extract_one",
+        "bristlenose.stages.s02_extract_audio._extract_one",
         new_callable=AsyncMock,
     ) as mock_extract:
         await extract_audio_for_sessions([session], tmp_path)

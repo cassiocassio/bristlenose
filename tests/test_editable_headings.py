@@ -12,7 +12,7 @@ from bristlenose.models import (
     ScreenCluster,
     ThemeGroup,
 )
-from bristlenose.stages.render import render_html
+from bristlenose.stages.s12_render import render_html
 
 # ---------------------------------------------------------------------------
 # Helpers

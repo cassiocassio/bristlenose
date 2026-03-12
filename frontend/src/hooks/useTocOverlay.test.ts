@@ -65,7 +65,7 @@ afterEach(() => {
 // ── Tests ────────────────────────────────────────────────────────────────
 
 describe("hover intent", () => {
-  it("opens overlay after 400ms hover on rail", () => {
+  it("opens overlay after 200ms hover on rail", () => {
     const { result } = renderOverlay("closed");
 
     act(() => {
@@ -75,13 +75,13 @@ describe("hover intent", () => {
     expect(mockOpenTocOverlay).not.toHaveBeenCalled();
 
     act(() => {
-      vi.advanceTimersByTime(400);
+      vi.advanceTimersByTime(200);
     });
 
     expect(mockOpenTocOverlay).toHaveBeenCalledOnce();
   });
 
-  it("cancels overlay if mouse leaves rail before 400ms", () => {
+  it("cancels overlay if mouse leaves rail before 200ms", () => {
     const { result } = renderOverlay("closed");
 
     act(() => {
@@ -89,7 +89,7 @@ describe("hover intent", () => {
     });
 
     act(() => {
-      vi.advanceTimersByTime(200);
+      vi.advanceTimersByTime(100);
     });
 
     // Leave rightward (clientX > rail right) to trigger leave logic
@@ -186,7 +186,7 @@ describe("safe zone (button)", () => {
 
     // Timer restarted — should fire after full delay
     act(() => {
-      vi.advanceTimersByTime(399);
+      vi.advanceTimersByTime(199);
     });
     expect(mockOpenTocOverlay).not.toHaveBeenCalled();
 

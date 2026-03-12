@@ -34,8 +34,8 @@ export const TOKEN_DEFAULTS = {
   minimapWidth: 48, // px (3rem at 16px base)
   gutterLeft: 32, // px (2rem)
   gutterRight: 40, // px (2.5rem)
-  overlayDuration: 0.3, // seconds
-  hoverDelay: 400, // ms
+  overlayDuration: 0.075, // seconds
+  hoverDelay: 200, // ms
   leaveGrace: 100, // ms
 } as const;
 

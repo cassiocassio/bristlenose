@@ -49,12 +49,13 @@ describe("useScrollSpy", () => {
     expect(result.current).toBeNull();
   });
 
-  it("returns null when no elements are above threshold", () => {
+  it("defaults to first id when all elements are below threshold (page at top)", () => {
     elementMap["s1"] = mockElement(200);
     elementMap["s2"] = mockElement(400);
     const { result } = renderHook(() => useScrollSpy(["s1", "s2"], 100));
-    // Initial run: both elements are below threshold (200, 400 > 100)
-    expect(result.current).toBeNull();
+    // Initial run: both elements are below threshold (200, 400 > 100).
+    // Fallback: first section is active since the page is at the top.
+    expect(result.current).toBe("s1");
   });
 
   it("returns last element above threshold (bottom-to-top walk)", () => {
@@ -75,13 +76,15 @@ describe("useScrollSpy", () => {
 
   it("updates on scroll event", () => {
     elementMap["s1"] = mockElement(200);
-    const { result } = renderHook(() => useScrollSpy(["s1"], 100));
-    expect(result.current).toBeNull();
-
-    // Simulate scroll: move element above threshold.
-    elementMap["s1"] = mockElement(50);
-    act(() => fireScroll());
+    elementMap["s2"] = mockElement(400);
+    const { result } = renderHook(() => useScrollSpy(["s1", "s2"], 100));
+    // At top of page: fallback to first id.
     expect(result.current).toBe("s1");
+
+    // Simulate scroll: s2 moves above threshold — becomes active (deeper).
+    elementMap["s2"] = mockElement(50);
+    act(() => fireScroll());
+    expect(result.current).toBe("s2");
   });
 
   it("handles missing DOM elements gracefully", () => {

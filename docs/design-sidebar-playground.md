@@ -58,7 +58,7 @@ In overlay mode, column 2 stays at `0` — the TOC sidebar uses `position: fixed
 | `--bn-sidebar-max` | `480px` | Maximum resize bound |
 | `--bn-minimap-width` | `3rem` | Right-edge minimap column |
 | `--bn-overlay-shadow` | `4px 0 16px rgba(0,0,0,0.08)` | TOC overlay drop shadow |
-| `--bn-overlay-duration` | `0.3s` | Overlay animation speed (currently unused — animations use explicit 300ms values per-element) |
+| `--bn-overlay-duration` | `0.075s` | Overlay animation speed (currently unused — animations use explicit 75ms values per-element) |
 | `--bn-gutter-left` | `2rem` | Gap between rail/sidebar and center content |
 | `--bn-gutter-right` | `2.5rem` | Gap between content and minimap/tag rail |
 | `--bn-quote-max-width` | `23rem` | Card reading measure (~5 words/line) |
@@ -74,7 +74,7 @@ The TOC has three modes, managed by `SidebarStore.ts` as `TocMode: "closed" | "o
 
 | Event | Behaviour |
 |-------|-----------|
-| Mouse enters rail | Starts 400ms timer → opens overlay |
+| Mouse enters rail | Starts 200ms timer → opens overlay |
 | Mouse enters rail button (`.rail-btn`) | **Cancels** timer (safe zone — user is aiming to click) |
 | Mouse leaves rail button | Restarts timer (mouse is still in rail area) |
 | Click rail area | Opens overlay immediately |
@@ -94,23 +94,39 @@ Detection: `onPanelMouseLeave` checks `e.clientX >= panel.getBoundingClientRect(
 
 The rail is the panel's left edge. `clip-path: inset()` reveals the panel rightward from the rail border — content is visible from frame 1, shadow reveals progressively with the clip.
 
-**Open timeline (300ms):**
-- 0–150ms: Rail icon fades out + shifts left (departs)
-- 0–300ms: Panel clip-path reveals from rail edge
-- 150–300ms: Close × fades in at left of header (where rail icon was)
+**Open timeline (75ms):**
+- 0–40ms: Rail icon fades out + shifts left (departs)
+- 0–75ms: Panel clip-path reveals from rail edge
+- 40–75ms: Close × fades in at left of header (where rail icon was)
 
-**Close timeline (300ms):**
-- 0–150ms: Close × fades out
-- 0–300ms: Panel clip-path hides toward rail
-- 150–300ms: Rail icon fades back in
+**Close timeline (75ms):**
+- 0–40ms: Close × fades out
+- 0–75ms: Panel clip-path hides toward rail
+- 40–75ms: Rail icon fades back in
 
 Close × is repositioned to the left of the header via `order: -1` in overlay mode, so it sits in the same spatial position as the rail list icon — enabling the cross-fade illusion.
 
-`SidebarLayout.tsx` orchestrates: add `.toc-closing` → wait for `animationend` (400ms fallback) → remove class → update store (`closeToc()`). `closingRef` prevents overlapping close animations.
+`SidebarLayout.tsx` orchestrates: add `.toc-closing` → wait for `animationend` (120ms fallback) → remove class → update store (`closeToc()`). `closingRef` prevents overlapping close animations.
 
 **A/B playground toggle:** The dev playground has a "Curtain / iOS inertia" toggle. Curtain (default) reveals content stationary behind the clip. iOS variant adds `translateX(-20px→0)` on the content body with a 40ms delay, creating a "settling into place" inertia effect inspired by iOS navigation transitions. The `.overlay-ios` class is added to `.layout` when the iOS variant is active.
 
-**TOC link click:** In overlay mode, clicking a link starts `scrollIntoView({ behavior: "smooth" })`, then closes the panel after 400ms — the user sees the scroll begin before the panel slides shut, confirming their intent was actioned.
+**TOC link click:** In overlay mode, clicking a link starts `scrollIntoView({ behavior: "smooth" })`, then closes the panel after 100ms — the user sees the scroll begin before the panel slides shut, confirming their intent was actioned.
+
+### Why iOS-style content inertia works (cognitive psychology)
+
+These notes document the perceptual principles behind the animation design. The TOC sidebar is a test case for establishing Bristlenose's motion language — these principles apply to any future state transition (modal open/close, tab switching, panel reveals, toast notifications, page transitions).
+
+**1. Object permanence and implied mass.** When content moves at a different velocity than its container, the visual system infers the content has its own physical mass, separate from the container. This is the same principle behind Disney's "squash and stretch" (1930s) — physically impossible deformation that reads as "real" because it implies elastic mass. A rigid slide (container + content locked together) reads as a flat graphic being moved; a staggered slide reads as a physical drawer with things inside it.
+
+**2. The 40ms perceptual threshold.** Human visual perception has a ~40ms temporal resolution for discriminating sequential events (Exner, 1875; modern estimates 30–50ms). A content delay shorter than 40ms is invisible; longer than ~80ms reads as lag rather than inertia. The 40ms delay used in the iOS variant sits at the perceptual threshold — the brain registers "something moved separately" without consciously identifying what. This is why the A/B playground toggle exists: the effect is subtle enough that it needs to be evaluated by eye, not by reasoning.
+
+**3. Easing curves encode force.** Decelerating ease-out (content settling) implies friction — the content was moving and something slowed it down. Accelerating ease-in (content departing) implies a force was applied. The human motor system maps these curves to physical experience of pushing and releasing objects. `cubic-bezier(0.25, 0.46, 0.45, 0.94)` (the iOS content ease) has a gentle initial slope and a long deceleration tail — it reads as "heavy object coming to rest."
+
+**4. Cross-fade as shared identity.** The rail icon fading out while the close × fades in at the same spatial position exploits the Gestalt principle of common fate + spatial proximity. The brain reads them as the same object transforming, not two objects swapping. The overlap window (icon departing in first 75ms, × appearing from 75ms onward) prevents a perceptual "gap" that would break the illusion and be read as a flash or hole.
+
+**5. Confirmation through delayed close.** When a TOC link is clicked, the 100ms delay before the panel closes provides feedback that the action was registered. Without it, the panel closes instantly and the scroll happens behind it — the user can't confirm their click had the intended effect. This follows Nielsen's "visibility of system status" heuristic.
+
+**6. Application-wide implications.** These principles aren't sidebar-specific. The three element categories in any transition — departing elements (fade out fast, first ~50%), entering elements (fade in, last ~50%), and morphing elements (cross-fade with overlap) — recur everywhere. The timing ratios (40ms depart / 75ms container / 40ms arrive) and easing assignments (ease-in for departure, ease-out for arrival) form a reusable motion vocabulary. The clip-path reveal technique (`inset()` animation) is GPU-composited and layout-free, making it suitable for any panel or drawer transition. When extending to other surfaces, use the playground to A/B test curtain vs iOS inertia — the right choice depends on whether the content changes between states (iOS better) or stays the same (curtain may suffice).
 
 ---
 
@@ -205,7 +221,7 @@ All three paths call `togglePlayground()` / `toggleHUD()` from `PlaygroundStore`
 |----------|--------|---------------|
 | Layout | `--bn-quote-max-width`, `--bn-grid-gap`, `--bn-max-width` | Yes |
 | Sidebar layout | `--bn-rail-width`, `--bn-minimap-width`, `--bn-gutter-left`, `--bn-gutter-right`, `--bn-overlay-duration` | Yes |
-| JS timing | `hoverDelay` (400ms), `leaveGrace` (100ms) | No — passed as props through `SidebarLayout` → `useTocOverlay` |
+| JS timing | `hoverDelay` (200ms), `leaveGrace` (100ms) | No — passed as props through `SidebarLayout` → `useTocOverlay` |
 | Type scale | `html` font-size, heading sizes (computed from ratio), `body` line-height | Yes |
 | Spacing/radius | All `--bn-space-*` and `--bn-radius-*` scaled by multiplier | Yes |
 | Visual aids | Grid overlay, baseline grid, dark mode | Body class / `data-theme` attribute |
@@ -296,5 +312,5 @@ CSS overrides injected via `<style id="bn-playground-overrides">` on `:root`. Se
 - **Overlay mode `position: fixed` changes the containing block** for absolutely-positioned children (like drag handles). `right: -3px` on `.toc-drag-handle` resolves relative to the fixed panel, not the viewport. This is correct — the handle sits on the panel's right edge.
 - **Overlay z-index stack:** panel at 110, drag handle at 121, modals at 150+. The drag handle must beat the panel so it's grabbable above the overlay shadow.
 - **`align-self: start` on sticky columns** is required for correct sticky range. Without it, `stretch` (the grid default) makes the cell height equal the row height, leaving zero sticky travel.
-- **Animated close uses `animationend`** — both open and close use `@keyframes` animations (clip-path reveal/hide). The 400ms fallback timeout catches cases where `animationend` doesn't fire (e.g., element removed mid-animation).
+- **Animated close uses `animationend`** — both open and close use `@keyframes` animations (clip-path reveal/hide). The 120ms fallback timeout catches cases where `animationend` doesn't fire (e.g., element removed mid-animation).
 - **Escape key closes TOC instantly** (no animation) — keyboard users expect immediate response. Only mouse-initiated closes (hover leave, click outside) use the animated path.

@@ -21,7 +21,7 @@ import { useCallback, useEffect, useRef } from "react";
 import type { TocMode } from "../contexts/SidebarStore";
 import { openTocOverlay } from "../contexts/SidebarStore";
 
-const DEFAULT_HOVER_DELAY = 400;
+const DEFAULT_HOVER_DELAY = 200;
 const DEFAULT_LEAVE_GRACE = 100;
 
 interface UseTocOverlayOptions {

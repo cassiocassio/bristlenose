@@ -58,7 +58,7 @@ In overlay mode, column 2 stays at `0` — the TOC sidebar uses `position: fixed
 | `--bn-sidebar-max` | `480px` | Maximum resize bound |
 | `--bn-minimap-width` | `3rem` | Right-edge minimap column |
 | `--bn-overlay-shadow` | `4px 0 16px rgba(0,0,0,0.08)` | TOC overlay drop shadow |
-| `--bn-overlay-duration` | `0.3s` | Overlay slide animation speed |
+| `--bn-overlay-duration` | `0.3s` | Overlay animation speed (currently unused — animations use explicit 300ms values per-element) |
 | `--bn-gutter-left` | `2rem` | Gap between rail/sidebar and center content |
 | `--bn-gutter-right` | `2.5rem` | Gap between content and minimap/tag rail |
 | `--bn-quote-max-width` | `23rem` | Card reading measure (~5 words/line) |
@@ -90,20 +90,27 @@ The TOC has three modes, managed by `SidebarStore.ts` as `TocMode: "closed" | "o
 
 Detection: `onPanelMouseLeave` checks `e.clientX >= panel.getBoundingClientRect().right`. Vertical exits have `clientX` within panel bounds → `clientX < right` → not a rightward exit → ignored.
 
-### Close animation
+### Overlay animation (clip-path reveal)
 
-Open uses `@keyframes toc-slide-in` (translateX -100% → 0). Close uses CSS transitions on a `.toc-closing` class:
+The rail is the panel's left edge. `clip-path: inset()` reveals the panel rightward from the rail border — content is visible from frame 1, shadow reveals progressively with the clip.
 
-```css
-.layout.toc-closing .toc-sidebar {
-    transform: translateX(-100%);
-    opacity: 0;
-    transition: transform var(--bn-overlay-duration) ease,
-                opacity var(--bn-overlay-duration) ease;
-}
-```
+**Open timeline (300ms):**
+- 0–150ms: Rail icon fades out + shifts left (departs)
+- 0–300ms: Panel clip-path reveals from rail edge
+- 150–300ms: Close × fades in at left of header (where rail icon was)
 
-`SidebarLayout.tsx` orchestrates: add `.toc-closing` → wait for `transitionend` (400ms fallback) → remove class → update store (`closeToc()`). `closingRef` prevents overlapping close animations.
+**Close timeline (300ms):**
+- 0–150ms: Close × fades out
+- 0–300ms: Panel clip-path hides toward rail
+- 150–300ms: Rail icon fades back in
+
+Close × is repositioned to the left of the header via `order: -1` in overlay mode, so it sits in the same spatial position as the rail list icon — enabling the cross-fade illusion.
+
+`SidebarLayout.tsx` orchestrates: add `.toc-closing` → wait for `animationend` (400ms fallback) → remove class → update store (`closeToc()`). `closingRef` prevents overlapping close animations.
+
+**A/B playground toggle:** The dev playground has a "Curtain / iOS inertia" toggle. Curtain (default) reveals content stationary behind the clip. iOS variant adds `translateX(-20px→0)` on the content body with a 40ms delay, creating a "settling into place" inertia effect inspired by iOS navigation transitions. The `.overlay-ios` class is added to `.layout` when the iOS variant is active.
+
+**TOC link click:** In overlay mode, clicking a link starts `scrollIntoView({ behavior: "smooth" })`, then closes the panel after 400ms — the user sees the scroll begin before the panel slides shut, confirming their intent was actioned.
 
 ---
 
@@ -289,5 +296,5 @@ CSS overrides injected via `<style id="bn-playground-overrides">` on `:root`. Se
 - **Overlay mode `position: fixed` changes the containing block** for absolutely-positioned children (like drag handles). `right: -3px` on `.toc-drag-handle` resolves relative to the fixed panel, not the viewport. This is correct — the handle sits on the panel's right edge.
 - **Overlay z-index stack:** panel at 110, drag handle at 121, modals at 150+. The drag handle must beat the panel so it's grabbable above the overlay shadow.
 - **`align-self: start` on sticky columns** is required for correct sticky range. Without it, `stretch` (the grid default) makes the cell height equal the row height, leaving zero sticky travel.
-- **Animated close uses `transitionend`, not `animationend`** — the close slide uses CSS transitions (`.toc-closing`), not the `@keyframes` used for the open slide. The 400ms fallback timeout catches cases where `transitionend` doesn't fire (e.g., element removed mid-transition).
+- **Animated close uses `animationend`** — both open and close use `@keyframes` animations (clip-path reveal/hide). The 400ms fallback timeout catches cases where `animationend` doesn't fire (e.g., element removed mid-animation).
 - **Escape key closes TOC instantly** (no animation) — keyboard users expect immediate response. Only mouse-initiated closes (hover leave, click outside) use the animated path.

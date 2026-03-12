@@ -11,7 +11,9 @@ import type { TocMode } from "../contexts/SidebarStore";
 
 // Mock child sidebars so they don't fetch APIs.
 vi.mock("./TocSidebar", () => ({
-  TocSidebar: () => <div data-testid="toc-sidebar-stub" />,
+  TocSidebar: (props: Record<string, unknown>) => (
+    <div data-testid="toc-sidebar-stub" data-has-overlay-close={!!props.onOverlayClose} />
+  ),
 }));
 vi.mock("./TagSidebar", () => ({
   TagSidebar: () => <div data-testid="tag-sidebar-stub" />,
@@ -47,11 +49,9 @@ vi.mock("../hooks/useTocOverlay", () => ({
 }));
 
 // Mock PlaygroundStore to avoid sessionStorage complexity.
+let mockPlayground = { hoverDelay: null, leaveGrace: null, overlayStyle: null as string | null };
 vi.mock("../contexts/PlaygroundStore", () => ({
-  usePlaygroundStore: () => ({
-    hoverDelay: null,
-    leaveGrace: null,
-  }),
+  usePlaygroundStore: () => mockPlayground,
 }));
 
 // Mock SidebarStore — we control state via mockState.
@@ -97,6 +97,7 @@ beforeEach(() => {
     tagsWidth: 280,
     hiddenTagGroups: new Set(),
   };
+  mockPlayground = { hoverDelay: null, leaveGrace: null, overlayStyle: null };
 });
 
 // ── Tests ────────────────────────────────────────────────────────────────
@@ -285,5 +286,50 @@ describe("button interactions", () => {
       </SidebarLayout>,
     );
     expect(screen.getByLabelText("Close tag sidebar")).toBeTruthy();
+  });
+});
+
+describe("overlay animation", () => {
+  it("adds toc-closing class when close button clicked in overlay mode", () => {
+    mockState = { ...mockState, tocMode: "overlay" };
+    const { container } = render(
+      <SidebarLayout active={true}>
+        <div>Content</div>
+      </SidebarLayout>,
+    );
+    fireEvent.click(screen.getByLabelText("Close table of contents"));
+    expect(container.querySelector(".layout.toc-closing")).toBeTruthy();
+  });
+
+  it("adds overlay-ios class when playground overlayStyle is ios", () => {
+    mockState = { ...mockState, tocMode: "overlay" };
+    mockPlayground = { ...mockPlayground, overlayStyle: "ios" };
+    const { container } = render(
+      <SidebarLayout active={true}>
+        <div>Content</div>
+      </SidebarLayout>,
+    );
+    expect(container.querySelector(".layout.toc-overlay.overlay-ios")).toBeTruthy();
+  });
+
+  it("does not add overlay-ios class when playground overlayStyle is null", () => {
+    mockState = { ...mockState, tocMode: "overlay" };
+    const { container } = render(
+      <SidebarLayout active={true}>
+        <div>Content</div>
+      </SidebarLayout>,
+    );
+    expect(container.querySelector(".layout.overlay-ios")).toBeNull();
+  });
+
+  it("passes onOverlayClose to TocSidebar", () => {
+    mockState = { ...mockState, tocMode: "overlay" };
+    render(
+      <SidebarLayout active={true}>
+        <div>Content</div>
+      </SidebarLayout>,
+    );
+    const stub = screen.getByTestId("toc-sidebar-stub");
+    expect(stub.getAttribute("data-has-overlay-close")).toBe("true");
   });
 });

@@ -38,6 +38,7 @@ import {
   setOverlayDuration,
   setHoverDelay,
   setLeaveGrace,
+  setOverlayStyle,
   resetPlayground,
 } from "../contexts/PlaygroundStore";
 import {
@@ -349,6 +350,23 @@ export function ResponsivePlayground() {
               unit="ms"
               onChange={setLeaveGrace}
             />
+            <div className="pg-toggle-row" style={{ marginTop: "0.5rem" }}>
+              <span style={{ fontSize: "0.72rem", marginRight: "0.5rem" }}>Overlay content</span>
+              <button
+                type="button"
+                className={`pg-bp-chip${!pg.overlayStyle || pg.overlayStyle === "curtain" ? " pg-active" : ""}`}
+                onClick={() => setOverlayStyle(null)}
+              >
+                Curtain
+              </button>
+              <button
+                type="button"
+                className={`pg-bp-chip${pg.overlayStyle === "ios" ? " pg-active" : ""}`}
+                onClick={() => setOverlayStyle("ios")}
+              >
+                iOS inertia
+              </button>
+            </div>
           </div>
 
           <div className="pg-section">

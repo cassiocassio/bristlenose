@@ -234,7 +234,7 @@ describe("width clamping during drag", () => {
 // ── Snap-close ───────────────────────────────────────────────────────────
 
 describe("snap-close", () => {
-  it("width below 80px sets CSS var to 0px", () => {
+  it("width below 80px collapses to 0px (previews closed state)", () => {
     const ref = makeRef(layoutEl);
     const { result } = renderHook(() =>
       useDragResize({ side: "toc", source: "sidebar", layoutRef: ref, currentWidth: 280 }),
@@ -245,7 +245,7 @@ describe("snap-close", () => {
         new PointerEvent("pointerdown", { clientX: 300 }) as unknown as React.PointerEvent,
       );
     });
-    // 280 + (20 - 300) = 0 → below 80 threshold
+    // 280 + (20 - 300) = 0 → below 80 threshold → collapses to 0
     act(() => fire("pointermove", { clientX: 20 }));
     expect(layoutEl.style.getPropertyValue("--toc-width")).toBe("0px");
   });
@@ -288,7 +288,7 @@ describe("snap-close", () => {
 // ── Rail drag-to-open ────────────────────────────────────────────────────
 
 describe("rail drag-to-open (TOC)", () => {
-  it("delta below 20px does not trigger open", () => {
+  it("pointerdown adds body.dragging but defers toc-rail-dragging to first move", () => {
     const ref = makeRef(layoutEl);
     const { result } = renderHook(() =>
       useDragResize({ side: "toc", source: "rail", layoutRef: ref, currentWidth: 280 }),
@@ -299,29 +299,17 @@ describe("rail drag-to-open (TOC)", () => {
         new PointerEvent("pointerdown", { clientX: 50 }) as unknown as React.PointerEvent,
       );
     });
-    act(() => fire("pointermove", { clientX: 60 }));
-    expect(openTocPush).not.toHaveBeenCalled();
-    expect(document.body.classList.contains("dragging")).toBe(false);
-  });
-
-  it("delta >= 20px triggers openToc", () => {
-    const ref = makeRef(layoutEl);
-    const { result } = renderHook(() =>
-      useDragResize({ side: "toc", source: "rail", layoutRef: ref, currentWidth: 280 }),
-    );
-
-    act(() => {
-      result.current.handlePointerDown(
-        new PointerEvent("pointerdown", { clientX: 50 }) as unknown as React.PointerEvent,
-      );
-    });
-    // Delta = 75 - 50 = 25 (>= 20)
-    act(() => fire("pointermove", { clientX: 75 }));
-    expect(openTocPush).toHaveBeenCalled();
+    // Class deferred — no ghost border/shadow on pointerdown
+    expect(layoutEl.classList.contains("toc-rail-dragging")).toBe(false);
     expect(document.body.classList.contains("dragging")).toBe(true);
+    expect(openTocPush).not.toHaveBeenCalled();
+
+    // First move reveals the overlay
+    act(() => fire("pointermove", { clientX: 51 }));
+    expect(layoutEl.classList.contains("toc-rail-dragging")).toBe(true);
   });
 
-  it("after threshold, continues as resize and sets CSS var", () => {
+  it("tracks CSS var 1:1 with pointer movement from 0", () => {
     const ref = makeRef(layoutEl);
     const { result } = renderHook(() =>
       useDragResize({ side: "toc", source: "rail", layoutRef: ref, currentWidth: 280 }),
@@ -332,15 +320,21 @@ describe("rail drag-to-open (TOC)", () => {
         new PointerEvent("pointerdown", { clientX: 50 }) as unknown as React.PointerEvent,
       );
     });
-    // Cross threshold
-    act(() => fire("pointermove", { clientX: 75 }));
-    // Continue dragging further — startWidth is 0 for rail, so width = delta
-    // delta = 300 - 50 = 250, clamped to [200, 320]
+
+    // Small drag: delta = 10 → width 10px (tracks 1:1)
+    act(() => fire("pointermove", { clientX: 60 }));
+    expect(layoutEl.style.getPropertyValue("--toc-width")).toBe("10px");
+
+    // Larger drag: delta = 250
     act(() => fire("pointermove", { clientX: 300 }));
     expect(layoutEl.style.getPropertyValue("--toc-width")).toBe("250px");
+
+    // Clamps to MAX_WIDTH (320)
+    act(() => fire("pointermove", { clientX: 500 }));
+    expect(layoutEl.style.getPropertyValue("--toc-width")).toBe("320px");
   });
 
-  it("pointerup without crossing threshold is a no-op", () => {
+  it("pointerup below snap threshold aborts (stays closed)", () => {
     const ref = makeRef(layoutEl);
     const { result } = renderHook(() =>
       useDragResize({ side: "toc", source: "rail", layoutRef: ref, currentWidth: 280 }),
@@ -351,13 +345,16 @@ describe("rail drag-to-open (TOC)", () => {
         new PointerEvent("pointerdown", { clientX: 50 }) as unknown as React.PointerEvent,
       );
     });
+    // Small drag: delta = 5 → lastWidth = 5 (< 60 threshold)
+    act(() => fire("pointermove", { clientX: 55 }));
     act(() => fire("pointerup", { clientX: 55 }));
     expect(openTocPush).not.toHaveBeenCalled();
     expect(setTocWidth).not.toHaveBeenCalled();
+    expect(layoutEl.classList.contains("toc-rail-dragging")).toBe(false);
     expect(result.current.isDragging).toBe(false);
   });
 
-  it("pointerup after rail open calls setTocWidth", () => {
+  it("pointerup above snap threshold opens in push mode", () => {
     const ref = makeRef(layoutEl);
     const { result } = renderHook(() =>
       useDragResize({ side: "toc", source: "rail", layoutRef: ref, currentWidth: 280 }),
@@ -368,14 +365,36 @@ describe("rail drag-to-open (TOC)", () => {
         new PointerEvent("pointerdown", { clientX: 50 }) as unknown as React.PointerEvent,
       );
     });
+    // delta = 250 → lastWidth = 250 (>= 60 threshold)
     act(() => fire("pointermove", { clientX: 300 }));
     act(() => fire("pointerup", { clientX: 300 }));
+    expect(openTocPush).toHaveBeenCalled();
     expect(setTocWidth).toHaveBeenCalledWith(250);
+    expect(layoutEl.classList.contains("toc-rail-dragging")).toBe(false);
+  });
+
+  it("pointerup with small drag >= threshold clamps to MIN_WIDTH", () => {
+    const ref = makeRef(layoutEl);
+    const { result } = renderHook(() =>
+      useDragResize({ side: "toc", source: "rail", layoutRef: ref, currentWidth: 280 }),
+    );
+
+    act(() => {
+      result.current.handlePointerDown(
+        new PointerEvent("pointerdown", { clientX: 50 }) as unknown as React.PointerEvent,
+      );
+    });
+    // delta = 70 → lastWidth = 70 (>= 60 threshold, but < MIN_WIDTH 200)
+    act(() => fire("pointermove", { clientX: 120 }));
+    act(() => fire("pointerup", { clientX: 120 }));
+    // Should clamp to MIN_WIDTH on commit
+    expect(openTocPush).toHaveBeenCalled();
+    expect(setTocWidth).toHaveBeenCalledWith(200);
   });
 });
 
 describe("rail drag-to-open (Tags)", () => {
-  it("leftward drag >= 20px triggers openTags", () => {
+  it("leftward drag opens tags on pointerup", () => {
     const ref = makeRef(layoutEl);
     const { result } = renderHook(() =>
       useDragResize({ side: "tags", source: "rail", layoutRef: ref, currentWidth: 280 }),
@@ -386,9 +405,16 @@ describe("rail drag-to-open (Tags)", () => {
         new PointerEvent("pointerdown", { clientX: 900 }) as unknown as React.PointerEvent,
       );
     });
-    // Tags: delta = startX - clientX = 900 - 870 = 30 (>= 20)
-    act(() => fire("pointermove", { clientX: 870 }));
+    // Class deferred to first move
+    expect(layoutEl.classList.contains("tags-rail-dragging")).toBe(false);
+
+    // Tags: delta = startX - clientX = 900 - 600 = 300
+    act(() => fire("pointermove", { clientX: 600 }));
+    expect(layoutEl.classList.contains("tags-rail-dragging")).toBe(true);
+    act(() => fire("pointerup", { clientX: 600 }));
     expect(openTags).toHaveBeenCalled();
+    expect(setTagsWidth).toHaveBeenCalledWith(300);
+    expect(layoutEl.classList.contains("tags-rail-dragging")).toBe(false);
   });
 });
 
@@ -412,6 +438,88 @@ describe("animation class", () => {
 });
 
 // ── Unmount cleanup ──────────────────────────────────────────────────────
+
+// ── Custom min/max widths ─────────────────────────────────────────────
+
+describe("custom minWidth/maxWidth", () => {
+  it("clamps to custom minimum", () => {
+    const ref = makeRef(layoutEl);
+    const { result } = renderHook(() =>
+      useDragResize({
+        side: "toc", source: "sidebar", layoutRef: ref, currentWidth: 300,
+        minWidth: 250, maxWidth: 400,
+      }),
+    );
+
+    act(() => {
+      result.current.handlePointerDown(
+        new PointerEvent("pointerdown", { clientX: 300 }) as unknown as React.PointerEvent,
+      );
+    });
+    // 300 + (200 - 300) = 200 → below custom min 250 (but above snap threshold 80)
+    act(() => fire("pointermove", { clientX: 200 }));
+    expect(layoutEl.style.getPropertyValue("--toc-width")).toBe("250px");
+  });
+
+  it("clamps to custom maximum", () => {
+    const ref = makeRef(layoutEl);
+    const { result } = renderHook(() =>
+      useDragResize({
+        side: "toc", source: "sidebar", layoutRef: ref, currentWidth: 300,
+        minWidth: 250, maxWidth: 400,
+      }),
+    );
+
+    act(() => {
+      result.current.handlePointerDown(
+        new PointerEvent("pointerdown", { clientX: 300 }) as unknown as React.PointerEvent,
+      );
+    });
+    // 300 + (500 - 300) = 500 → above custom max 400
+    act(() => fire("pointermove", { clientX: 500 }));
+    expect(layoutEl.style.getPropertyValue("--toc-width")).toBe("400px");
+  });
+
+  it("rail drag clamps to custom max", () => {
+    const ref = makeRef(layoutEl);
+    const { result } = renderHook(() =>
+      useDragResize({
+        side: "toc", source: "rail", layoutRef: ref, currentWidth: 0,
+        minWidth: 250, maxWidth: 400,
+      }),
+    );
+
+    act(() => {
+      result.current.handlePointerDown(
+        new PointerEvent("pointerdown", { clientX: 50 }) as unknown as React.PointerEvent,
+      );
+    });
+    // delta = 500 → clamped to custom max 400
+    act(() => fire("pointermove", { clientX: 550 }));
+    expect(layoutEl.style.getPropertyValue("--toc-width")).toBe("400px");
+  });
+
+  it("rail commit clamps to custom min", () => {
+    const ref = makeRef(layoutEl);
+    const { result } = renderHook(() =>
+      useDragResize({
+        side: "toc", source: "rail", layoutRef: ref, currentWidth: 0,
+        minWidth: 250, maxWidth: 400,
+      }),
+    );
+
+    act(() => {
+      result.current.handlePointerDown(
+        new PointerEvent("pointerdown", { clientX: 50 }) as unknown as React.PointerEvent,
+      );
+    });
+    // delta = 70 → lastWidth = 70 (>= 60 threshold, but < custom min 250)
+    act(() => fire("pointermove", { clientX: 120 }));
+    act(() => fire("pointerup", { clientX: 120 }));
+    expect(openTocPush).toHaveBeenCalled();
+    expect(setTocWidth).toHaveBeenCalledWith(250);
+  });
+});
 
 describe("cleanup on unmount", () => {
   it("removes document listeners and body.dragging", () => {

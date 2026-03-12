@@ -2,7 +2,7 @@
  * SidebarLayout — 6-column CSS grid wrapper for the dual-sidebar layout.
  *
  * When `active` is true (Quotes tab), renders the full grid:
- *   [toc-rail | toc-sidebar | center | tag-sidebar | tag-rail | minimap]
+ *   [toc-rail | toc-sidebar | center | minimap | tag-sidebar | tag-rail]
  *
  * When `active` is false (all other tabs), renders a plain pass-through
  * wrapper with no grid — children render normally.
@@ -14,8 +14,9 @@
  *
  * Right panel: TagSidebar (codebook tree with tag checkboxes). Push only.
  *
- * Column 6: Minimap slot — empty placeholder for future scrollbar-style
- * minimap visualization.
+ * Column 4: Minimap — VS Code-style abstract overview, between center
+ * content and the tag sidebar. Stays in same position whether tags are
+ * open or closed.
  *
  * @module SidebarLayout
  */
@@ -284,6 +285,8 @@ export function SidebarLayout({ active, children }: SidebarLayoutProps) {
           <div
             className={`drag-handle toc-rail-drag${tocRailDrag.isDragging ? " active" : ""}`}
             onPointerDown={tocRailDrag.handlePointerDown}
+            onMouseEnter={overlay.onDragHandleMouseEnter}
+            onMouseLeave={overlay.onDragHandleMouseLeave}
           />
         )}
       </div>
@@ -296,7 +299,7 @@ export function SidebarLayout({ active, children }: SidebarLayoutProps) {
         onMouseEnter={overlay.onPanelMouseEnter}
         onMouseLeave={overlay.onPanelMouseLeave}
       >
-        <div className="toc-sidebar-header">
+        <div className="sidebar-header toc-sidebar-header">
           <span className="sidebar-title">Contents</span>
           <button
             className="sidebar-close"
@@ -331,13 +334,16 @@ export function SidebarLayout({ active, children }: SidebarLayoutProps) {
         {children}
       </div>
 
-      {/* Column 4: Tag sidebar panel */}
+      {/* Column 4: Minimap (between center content and tag sidebar) */}
+      <Minimap />
+
+      {/* Column 5: Tag sidebar panel */}
       <div
         ref={tagSidebarRef}
         className="tag-sidebar"
         inert={!tagsOpen ? true : undefined}
       >
-        <div className="tag-sidebar-header">
+        <div className="sidebar-header tag-sidebar-header">
           <span className="sidebar-title">Tags</span>
           <button
             className="sidebar-close"
@@ -365,7 +371,7 @@ export function SidebarLayout({ active, children }: SidebarLayoutProps) {
         )}
       </div>
 
-      {/* Column 5: Tag rail (visible when tag sidebar is closed) */}
+      {/* Column 6: Tag rail (rightmost — visible when tag sidebar is closed) */}
       <div className="tag-rail">
         <button
           ref={tagRailBtnRef}
@@ -383,9 +389,6 @@ export function SidebarLayout({ active, children }: SidebarLayoutProps) {
           />
         )}
       </div>
-
-      {/* Column 6: Minimap */}
-      <Minimap />
     </div>
   );
 }

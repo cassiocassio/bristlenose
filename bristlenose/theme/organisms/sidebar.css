@@ -1,5 +1,10 @@
 /* Dual-sidebar layout — 6-column grid for serve-mode Quotes tab.
-   [toc-rail | toc-sidebar | center | tag-sidebar | tag-rail | minimap]
+   [toc-rail | toc-sidebar | center | minimap | tag-sidebar | tag-rail]
+
+   Minimap sits between center content and the tag sidebar (VS Code-style)
+   so it stays in the same visual position whether tags are open or closed.
+   The tag rail's drag handle is the rightmost element — dragging it open
+   reveals the tag sidebar without the minimap breaking the illusion.
 
    Inert in static render path — .layout wrapper exists only in React tree.
    Design reference: docs/mockups/mockup-sidebar-tags.html
@@ -13,9 +18,9 @@
         var(--bn-rail-width)                          /* 1: toc rail    */
         0px                                           /* 2: toc sidebar */
         1fr                                           /* 3: center      */
-        0px                                           /* 4: tag sidebar */
-        var(--bn-rail-width)                          /* 5: tag rail    */
-        var(--bn-minimap-width);                      /* 6: minimap     */
+        var(--bn-minimap-width)                       /* 4: minimap     */
+        0px                                           /* 5: tag sidebar */
+        var(--bn-rail-width);                         /* 6: tag rail    */
     min-height: 100vh;
 }
 
@@ -25,9 +30,9 @@
         0px
         var(--toc-width, var(--bn-sidebar-width))
         1fr
+        var(--bn-minimap-width)
         0px
-        var(--bn-rail-width)
-        var(--bn-minimap-width);
+        var(--bn-rail-width);
 }
 
 /* Tag sidebar open: hide tag rail (0), show tag sidebar */
@@ -36,9 +41,9 @@
         var(--bn-rail-width)
         0px
         1fr
+        var(--bn-minimap-width)
         var(--tags-width, var(--bn-sidebar-width))
-        0px
-        var(--bn-minimap-width);
+        0px;
 }
 
 /* Both open */
@@ -47,9 +52,9 @@
         0px
         var(--toc-width, var(--bn-sidebar-width))
         1fr
+        var(--bn-minimap-width)
         var(--tags-width, var(--bn-sidebar-width))
-        0px
-        var(--bn-minimap-width);
+        0px;
 }
 
 /* Animated slide — added before state change, removed on transitionend */
@@ -158,11 +163,11 @@
 
 @keyframes toc-reveal {
     from { clip-path: inset(0 100% 0 0); }
-    to   { clip-path: inset(0 0 0 0); }
+    to   { clip-path: inset(0 -100px 0 0); } /* negative = room for box-shadow to paint beyond element edge */
 }
 
 @keyframes toc-hide {
-    from { clip-path: inset(0 0 0 0); }
+    from { clip-path: inset(0 -100px 0 0); } /* must match toc-reveal end state */
     to   { clip-path: inset(0 100% 0 0); }
 }
 
@@ -197,17 +202,36 @@
     to   { transform: translateX(-20px); }
 }
 
-/* ── Overlay open ─────────────────────────────────────────────── */
+/* ── Floating base: left panel ────────────────────────────────── */
+/* Shared positioning for all modes where the left sidebar leaves
+   the grid and floats over content (overlay, rail drag).
+   toc-closing co-exists with toc-overlay — inherits positioning.
+   Mode-specific overrides (left, width, shadow, animation) follow.
 
-.layout.toc-overlay .toc-sidebar {
+   top: var(--bn-space-xl) matches body padding-top so the overlay
+   starts at the same vertical position as the push-mode grid row.
+
+   left differs per mode:
+   - overlay: var(--bn-space-lg) — aligns with push mode's grid edge
+     so content (×, title, links) is at the same horizontal position
+     regardless of how the sidebar was opened.
+   - rail drag: var(--bn-rail-width) — "curtain reveals" from the rail
+     edge, frontier line visible at the expanding boundary.             */
+.layout.toc-overlay .toc-sidebar,
+.layout.toc-rail-dragging .toc-sidebar {
     position: fixed;
-    top: 0;
-    left: var(--bn-rail-width);
-    width: var(--toc-width, var(--bn-sidebar-width));
+    top: var(--bn-space-xl);
     height: 100vh;
     visibility: visible;
     opacity: 1;
     z-index: 110;
+}
+
+/* ── Overlay open ─────────────────────────────────────────────── */
+
+.layout.toc-overlay .toc-sidebar {
+    left: var(--bn-space-lg);
+    width: var(--toc-width, var(--bn-sidebar-width));
     box-shadow: var(--bn-overlay-shadow);
     animation: toc-reveal 75ms cubic-bezier(0, 0, 0.2, 1) both;
 }
@@ -222,17 +246,6 @@
 .layout.toc-overlay .toc-rail .rail-btn {
     animation: toc-icon-depart 40ms cubic-bezier(0.4, 0, 1, 1) both;
     pointer-events: none;
-}
-
-/* Close × on its own row above the title (order: -1 in column layout).
-   Outdented left via negative margin — hanging indent so the × sits
-   roughly at the rail icon's horizontal position. */
-.layout.toc-open .toc-sidebar-header .sidebar-close,
-.layout.toc-overlay .toc-sidebar-header .sidebar-close,
-.layout.toc-closing .toc-sidebar-header .sidebar-close {
-    order: -1;
-    margin-left: -0.5rem;
-    padding: 2px 6px;
 }
 
 /* Close × sneaks in at end (last 40ms) */
@@ -269,7 +282,54 @@
     animation: toc-ios-depart 50ms cubic-bezier(0.4, 0, 1, 1) both;
 }
 
-.toc-sidebar-header {
+/* ── Rail drag-to-open ────────────────────────────────────────── */
+/* During a drag from the closed rail, the sidebar appears as a
+   fixed overlay that tracks the pointer 1:1 — no grid rearrangement,
+   no animations.  Width is set directly via --toc-width CSS var.
+   On pointerup the layout commits to push mode or snaps closed. */
+
+.layout.toc-rail-dragging .toc-sidebar {
+    left: var(--bn-rail-width);
+    width: var(--toc-width, 0px);
+    box-shadow: none;
+    border-right: 1px solid var(--bn-colour-border);
+    animation: none;
+}
+
+/* Rail stays visible during drag — it's the physical thing the user grabbed. */
+
+/* ── Floating base: right panel ───────────────────────────────── */
+/* Mirror of left floating base. Currently rail-drag only;
+   tag overlay mode would add its selector here.                   */
+.layout.tags-rail-dragging .tag-sidebar {
+    position: fixed;
+    top: var(--bn-space-xl);
+    right: var(--bn-rail-width);
+    width: var(--tags-width, 0px);
+    height: 100vh;
+    visibility: visible;
+    opacity: 1;
+    z-index: 110;
+    box-shadow: none;
+    border-left: 1px solid var(--bn-colour-border);
+    animation: none;
+}
+
+/* Content previews at minimum sidebar width, clipped by the
+   narrower container — reveals progressively as the user drags. */
+.layout.toc-rail-dragging .toc-sidebar-header,
+.layout.toc-rail-dragging .toc-sidebar-body {
+    min-width: var(--bn-sidebar-min);
+}
+
+.layout.tags-rail-dragging .tag-sidebar-header,
+.layout.tags-rail-dragging .tag-sidebar-body {
+    min-width: var(--bn-sidebar-min);
+}
+
+/* Shared sidebar header layout — used by both TOC and tag headers.
+   Per-sidebar overrides (e.g. padding-bottom) use the specific class. */
+.sidebar-header {
     display: flex;
     flex-direction: column;
     align-items: flex-start;
@@ -289,10 +349,14 @@
     font-size: 1.2rem;
     color: var(--bn-colour-muted);
     cursor: pointer;
-    padding: 0 var(--bn-space-xs);
     line-height: 1;
-    margin-left: auto;
     transition: color var(--bn-transition-fast);
+    /* Always above the title (order: -1 in flex-column header).
+       Outdented left via negative margin — hanging indent so the ×
+       sits roughly at the rail icon's horizontal position. */
+    order: -1;
+    margin-left: -0.5rem;
+    padding: 2px 6px;
 }
 
 .sidebar-close:hover { color: var(--bn-colour-text); }
@@ -361,15 +425,16 @@
     padding-right: var(--bn-gutter-right);
 }
 
-/* ── Column 4: Right sidebar (Tags) ───────────────────────────── */
+/* ── Column 5: Right sidebar (Tags) ───────────────────────────── */
 
 .tag-sidebar {
-    grid-column: 4;
+    grid-column: 5;
     position: sticky;
     top: 0;
     height: 100vh;
     overflow-y: auto;
     overflow-x: hidden;
+    background: var(--bn-colour-bg);
     border-left: 1px solid var(--bn-colour-border);
     display: flex;
     flex-direction: column;
@@ -385,20 +450,9 @@
     opacity: 1;
 }
 
+/* Tag header override: no bottom padding (subtitle/actions follow) */
 .tag-sidebar-header {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 0.25rem;
-    padding: var(--bn-space-md) 0.85rem 0 0.85rem;
-    flex-shrink: 0;
-}
-
-/* Close × on its own row, outdented left (matches TOC sidebar pattern) */
-.tag-sidebar-header .sidebar-close {
-    order: -1;
-    margin-left: -0.5rem;
-    padding: 2px 6px;
+    padding-bottom: 0;
 }
 
 .tag-sidebar-header .sidebar-title {
@@ -439,10 +493,10 @@
     margin: 0 0 var(--bn-space-sm) 0;
 }
 
-/* ── Column 5: Right icon rail ────────────────────────────────── */
+/* ── Column 6: Right icon rail ────────────────────────────────── */
 
 .tag-rail {
-    grid-column: 5;
+    grid-column: 6;
     position: sticky;
     top: 0;
     height: 100vh;
@@ -454,21 +508,25 @@
     border-left: 1px solid var(--bn-colour-border);
     background: var(--bn-colour-bg);
     overflow: hidden;
+    margin-right: 8px;  /* clear macOS auto-hiding scrollbar */
 }
 
 .layout.tags-open .tag-rail { display: none; }
 
-/* ── Column 6: Minimap slot (placeholder) ─────────────────────── */
+/* ── Column 4: Minimap slot ───────────────────────────────────── */
 
 .minimap-slot {
-    grid-column: 6;
+    grid-column: 4;
     position: sticky;
     top: 0;
     height: 100vh;
     align-self: start;
     overflow: hidden;
     pointer-events: auto;
-    margin-right: 8px;  /* clear macOS auto-hiding scrollbar */
+    /* Equal breathing room from center content (left) and tag sidebar/rail (right).
+       The center column has no right padding — this column provides ALL the
+       visual separation. Padding inserts the abstract lines symmetrically. */
+    padding: 0 var(--bn-space-md);
 }
 
 /* ── Drag handles ─────────────────────────────────────────────── */

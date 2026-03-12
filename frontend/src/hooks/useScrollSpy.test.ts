@@ -24,21 +24,33 @@ function fireScroll() {
 
 let elementMap: Record<string, HTMLElement>;
 
+/** Install rAF/cAF mocks that run synchronously. Must be called AFTER
+ *  vi.useFakeTimers() if fake timers are in use, since fake timers
+ *  replace globalThis.requestAnimationFrame. */
+function installRafMock() {
+  const raf = ((cb: FrameRequestCallback) => { cb(0); return 0; }) as typeof globalThis.requestAnimationFrame;
+  const caf = (() => {}) as typeof globalThis.cancelAnimationFrame;
+  // Set on both globalThis and window to cover all resolution paths.
+  globalThis.requestAnimationFrame = raf;
+  globalThis.cancelAnimationFrame = caf;
+  window.requestAnimationFrame = raf;
+  window.cancelAnimationFrame = caf;
+}
+
 beforeEach(() => {
   elementMap = {};
   vi.spyOn(document, "getElementById").mockImplementation(
     (id: string) => elementMap[id] ?? null,
   );
-  // Mock rAF to run callbacks synchronously.
-  vi.spyOn(globalThis, "requestAnimationFrame").mockImplementation((cb) => {
-    cb(0);
-    return 0;
-  });
-  vi.spyOn(globalThis, "cancelAnimationFrame").mockImplementation(() => {});
+  // Install rAF mock (non-fake-timer tests).
+  installRafMock();
+  // Mock window.innerHeight for viewport visibility checks.
+  Object.defineProperty(window, "innerHeight", { value: 800, writable: true });
 });
 
 afterEach(() => {
   vi.restoreAllMocks();
+  vi.useRealTimers();
 });
 
 // ── Tests ────────────────────────────────────────────────────────────────
@@ -112,5 +124,174 @@ describe("useScrollSpy", () => {
 
     rerender({ ids: ["b"] });
     expect(result.current).toBe("b");
+  });
+});
+
+// ── Click intent override ────────────────────────────────────────────────
+
+describe("click intent override", () => {
+  it("honours click during immune phase (smooth scroll animation)", () => {
+    vi.useFakeTimers();
+    installRafMock();
+    vi.setSystemTime(1000);
+
+    // s1 is above threshold (normal winner), s3 is the clicked item.
+    elementMap["s1"] = mockElement(50);
+    elementMap["s2"] = mockElement(200);
+    elementMap["s3"] = mockElement(400);
+
+    const clickedRef = { current: "s3" };
+    const { result } = renderHook(() =>
+      useScrollSpy(["s1", "s2", "s3"], 100, clickedRef),
+    );
+    // During immune phase (<600ms from click detection): s3 wins regardless.
+    expect(result.current).toBe("s3");
+  });
+
+  it("stays sticky when nearby heading is the normal winner (post-settle)", () => {
+    vi.useFakeTimers();
+    installRafMock();
+    vi.setSystemTime(1000);
+
+    // s3 at threshold, s4 is the clicked last item (adjacent, index diff = 1).
+    elementMap["s1"] = mockElement(-200);
+    elementMap["s2"] = mockElement(-50);
+    elementMap["s3"] = mockElement(60);   // above threshold — normal winner
+    elementMap["s4"] = mockElement(500);  // clicked, adjacent to s3
+
+    const clickedRef = { current: "s4" };
+    const { result } = renderHook(() =>
+      useScrollSpy(["s1", "s2", "s3", "s4"], 100, clickedRef),
+    );
+    // Immune phase: s4 wins.
+    expect(result.current).toBe("s4");
+
+    // Advance past the settle period.
+    vi.setSystemTime(1000 + 700);
+    act(() => fireScroll());
+
+    // Sticky phase: s3 is the normal winner at index 2, s4 is clicked at index 3.
+    // |2 - 3| = 1 ≤ 1 → override stays.
+    expect(result.current).toBe("s4");
+  });
+
+  it("clears override when user scrolls far away (post-settle)", () => {
+    vi.useFakeTimers();
+    installRafMock();
+    vi.setSystemTime(1000);
+
+    elementMap["s1"] = mockElement(50);  // above threshold — normal winner
+    elementMap["s2"] = mockElement(200);
+    elementMap["s3"] = mockElement(400);
+    elementMap["s4"] = mockElement(600); // clicked (last)
+
+    const clickedRef = { current: "s4" };
+    const { result } = renderHook(() =>
+      useScrollSpy(["s1", "s2", "s3", "s4"], 100, clickedRef),
+    );
+    expect(result.current).toBe("s4"); // immune phase
+
+    // Advance past settle + scroll so s1 is the normal winner.
+    vi.setSystemTime(1000 + 700);
+    act(() => fireScroll());
+
+    // s1 at index 0 vs s4 at index 3: |0 - 3| = 3 > 1 → override clears.
+    expect(result.current).toBe("s1");
+    expect(clickedRef.current).toBeNull();
+  });
+
+  it("ignores clicked ID that is not in the ids list", () => {
+    elementMap["s1"] = mockElement(50);
+    elementMap["s2"] = mockElement(200);
+    elementMap["unknown"] = mockElement(400);
+
+    const clickedRef = { current: "unknown" };
+    const { result } = renderHook(() =>
+      useScrollSpy(["s1", "s2"], 100, clickedRef),
+    );
+    // "unknown" not in ids list → override skipped, normal spy runs.
+    expect(result.current).toBe("s1");
+  });
+
+  it("works without clickedIdRef (backward compat)", () => {
+    elementMap["s1"] = mockElement(50);
+    elementMap["s2"] = mockElement(80);
+    // No clickedIdRef passed — behaves exactly as before.
+    const { result } = renderHook(() => useScrollSpy(["s1", "s2"], 100));
+    expect(result.current).toBe("s2");
+  });
+
+  it("overrides for the last heading even with glitched getBoundingClientRect", () => {
+    vi.useFakeTimers();
+    installRafMock();
+    vi.setSystemTime(1000);
+
+    // Simulate the Safari bug: element returns impossible rect during smooth scroll.
+    elementMap["s1"] = mockElement(-200);
+    elementMap["s2"] = mockElement(60);  // above threshold — normal winner
+    elementMap["s3"] = mockElement(500); // clicked, but Safari returns garbage rect
+
+    // Override the s3 mock to return impossible values (bottom < top).
+    elementMap["s3"].getBoundingClientRect = () =>
+      ({ top: -849, bottom: -877, left: 0, right: 100, width: 100, height: -28, x: 0, y: -849 }) as DOMRect;
+
+    const clickedRef = { current: "s3" };
+    const { result } = renderHook(() =>
+      useScrollSpy(["s1", "s2", "s3"], 100, clickedRef),
+    );
+    // Immune phase doesn't check getBoundingClientRect — s3 still wins.
+    expect(result.current).toBe("s3");
+  });
+
+  it("updates override when user clicks a different heading", () => {
+    vi.useFakeTimers();
+    installRafMock();
+    vi.setSystemTime(1000);
+
+    elementMap["s1"] = mockElement(50);
+    elementMap["s2"] = mockElement(300);
+    elementMap["s3"] = mockElement(500);
+
+    const clickedRef = { current: "s2" };
+    const { result } = renderHook(() =>
+      useScrollSpy(["s1", "s2", "s3"], 100, clickedRef),
+    );
+    expect(result.current).toBe("s2");
+
+    // User clicks a different heading — new immune phase starts.
+    vi.setSystemTime(2000);
+    clickedRef.current = "s3";
+    act(() => fireScroll());
+    expect(result.current).toBe("s3");
+  });
+
+  it("adjacent heading keeps override sticky (last-two-headings case)", () => {
+    vi.useFakeTimers();
+    installRafMock();
+    vi.setSystemTime(1000);
+
+    // The exact user scenario: 4 headings, user clicks the very last one.
+    // Page can't scroll far enough — second-to-last is at threshold.
+    elementMap["s1"] = mockElement(-500);
+    elementMap["s2"] = mockElement(-200);
+    elementMap["s3"] = mockElement(80);   // above threshold — normal winner (index 2)
+    elementMap["s4"] = mockElement(350);  // clicked (index 3)
+
+    const clickedRef = { current: "s4" };
+    const { result } = renderHook(() =>
+      useScrollSpy(["s1", "s2", "s3", "s4"], 100, clickedRef),
+    );
+    expect(result.current).toBe("s4"); // immune
+
+    // Settle: s3 at index 2, s4 at index 3 → |2-3| = 1 → sticky holds.
+    vi.setSystemTime(1000 + 700);
+    act(() => fireScroll());
+    expect(result.current).toBe("s4");
+
+    // Even after many scrolls, as long as s3 is the normal winner, s4 holds.
+    vi.setSystemTime(1000 + 5000);
+    act(() => fireScroll());
+    expect(result.current).toBe("s4");
+    expect(clickedRef.current).toBe("s4"); // NOT cleared
   });
 });

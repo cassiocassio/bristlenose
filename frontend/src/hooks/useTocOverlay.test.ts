@@ -148,6 +148,23 @@ describe("hover intent", () => {
 
     expect(mockOpenTocOverlay).not.toHaveBeenCalled();
   });
+
+  it("does not start hover timer when entering via .drag-handle", () => {
+    const { result } = renderOverlay("closed");
+
+    const handle = document.createElement("div");
+    handle.className = "drag-handle toc-rail-drag";
+
+    act(() => {
+      result.current.onRailMouseEnter(makeMouseEvent({ target: handle }));
+    });
+
+    act(() => {
+      vi.advanceTimersByTime(500);
+    });
+
+    expect(mockOpenTocOverlay).not.toHaveBeenCalled();
+  });
 });
 
 describe("safe zone (button)", () => {
@@ -194,6 +211,66 @@ describe("safe zone (button)", () => {
       vi.advanceTimersByTime(1);
     });
     expect(mockOpenTocOverlay).toHaveBeenCalledOnce();
+  });
+});
+
+describe("safe zone (drag handle)", () => {
+  it("onDragHandleMouseEnter cancels active hover timer", () => {
+    const { result } = renderOverlay("closed");
+
+    act(() => {
+      result.current.onRailMouseEnter(makeMouseEvent());
+    });
+
+    // Drag handle enter cancels timer
+    act(() => {
+      result.current.onDragHandleMouseEnter();
+    });
+
+    act(() => {
+      vi.advanceTimersByTime(500);
+    });
+
+    expect(mockOpenTocOverlay).not.toHaveBeenCalled();
+  });
+
+  it("onDragHandleMouseLeave restarts hover timer", () => {
+    const { result } = renderOverlay("closed");
+
+    // Simulate: enter rail → enter drag handle → leave drag handle
+    act(() => {
+      result.current.onRailMouseEnter(makeMouseEvent());
+    });
+    act(() => {
+      result.current.onDragHandleMouseEnter();
+    });
+    act(() => {
+      result.current.onDragHandleMouseLeave();
+    });
+
+    // Timer restarted — should fire after full delay
+    act(() => {
+      vi.advanceTimersByTime(199);
+    });
+    expect(mockOpenTocOverlay).not.toHaveBeenCalled();
+
+    act(() => {
+      vi.advanceTimersByTime(1);
+    });
+    expect(mockOpenTocOverlay).toHaveBeenCalledOnce();
+  });
+
+  it("does not open overlay when clicking the drag handle area", () => {
+    const { result } = renderOverlay("closed");
+
+    const handle = document.createElement("div");
+    handle.className = "drag-handle toc-rail-drag";
+
+    act(() => {
+      result.current.onRailAreaClick(makeMouseEvent({ target: handle }));
+    });
+
+    expect(mockOpenTocOverlay).not.toHaveBeenCalled();
   });
 });
 

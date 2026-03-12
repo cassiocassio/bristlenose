@@ -538,3 +538,90 @@ body.bn-show-grid-overlay .quote-group::before {
     transparent calc(var(--bn-quote-max-width, 23rem) + var(--bn-grid-gap, 1.25rem))
   );
 }
+
+/* ── Layout column debug overlay ──────────────────────────────── */
+/* Each grid child gets a translucent background + label when active.
+   Shows column boundaries, padding, and sizing at a glance.       */
+
+body.bn-show-layout-columns .layout > .toc-rail,
+body.bn-show-layout-columns .layout > .toc-sidebar,
+body.bn-show-layout-columns .layout > .center,
+body.bn-show-layout-columns .layout > .minimap-slot,
+body.bn-show-layout-columns .layout > .tag-sidebar,
+body.bn-show-layout-columns .layout > .tag-rail {
+  position: relative;
+}
+
+/* Translucent fills — each column a different colour */
+body.bn-show-layout-columns .layout > .toc-rail {
+  background: rgba(239, 68, 68, 0.12);     /* red */
+  outline: 1px dashed rgba(239, 68, 68, 0.4);
+}
+body.bn-show-layout-columns .layout > .toc-sidebar {
+  background: rgba(245, 158, 11, 0.12);    /* amber */
+  outline: 1px dashed rgba(245, 158, 11, 0.4);
+}
+body.bn-show-layout-columns .layout > .center {
+  background: rgba(34, 197, 94, 0.06);     /* green — subtle since it's largest */
+  outline: 1px dashed rgba(34, 197, 94, 0.3);
+}
+body.bn-show-layout-columns .layout > .minimap-slot {
+  background: rgba(59, 130, 246, 0.12);    /* blue */
+  outline: 1px dashed rgba(59, 130, 246, 0.4);
+}
+body.bn-show-layout-columns .layout > .tag-sidebar {
+  background: rgba(139, 92, 246, 0.12);    /* purple */
+  outline: 1px dashed rgba(139, 92, 246, 0.4);
+}
+body.bn-show-layout-columns .layout > .tag-rail {
+  background: rgba(236, 72, 153, 0.12);    /* pink */
+  outline: 1px dashed rgba(236, 72, 153, 0.4);
+}
+
+/* Column labels — top-left corner of each column */
+body.bn-show-layout-columns .layout > .toc-rail::after,
+body.bn-show-layout-columns .layout > .toc-sidebar::after,
+body.bn-show-layout-columns .layout > .center::after,
+body.bn-show-layout-columns .layout > .minimap-slot::after,
+body.bn-show-layout-columns .layout > .tag-sidebar::after,
+body.bn-show-layout-columns .layout > .tag-rail::after {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  font: 500 9px/1 var(--bn-font-mono, monospace);
+  padding: 1px 3px;
+  border-radius: 2px;
+  pointer-events: none;
+  z-index: 200;
+  white-space: nowrap;
+}
+body.bn-show-layout-columns .layout > .toc-rail::after {
+  content: "1 toc-rail";
+  color: #ef4444;
+  background: rgba(239, 68, 68, 0.15);
+}
+body.bn-show-layout-columns .layout > .toc-sidebar::after {
+  content: "2 toc-sidebar";
+  color: #d97706;
+  background: rgba(245, 158, 11, 0.15);
+}
+body.bn-show-layout-columns .layout > .center::after {
+  content: "3 center";
+  color: #16a34a;
+  background: rgba(34, 197, 94, 0.15);
+}
+body.bn-show-layout-columns .layout > .minimap-slot::after {
+  content: "4 minimap";
+  color: #2563eb;
+  background: rgba(59, 130, 246, 0.15);
+}
+body.bn-show-layout-columns .layout > .tag-sidebar::after {
+  content: "5 tag-sidebar";
+  color: #7c3aed;
+  background: rgba(139, 92, 246, 0.15);
+}
+body.bn-show-layout-columns .layout > .tag-rail::after {
+  content: "6 tag-rail";
+  color: #db2777;
+  background: rgba(236, 72, 153, 0.15);
+}

@@ -588,7 +588,7 @@ Assuming: full domain schema, import on startup, full visual parity, islands on 
 - `app.py`: registers sessions router, stores DB factory in app state, auto-imports on startup
 - All 1050 existing tests pass, lint clean
 
-**Step 4 — Mount point in existing HTML** (`bristlenose/stages/render/report.py`)
+**Step 4 — Mount point in existing HTML** (`bristlenose/stages/s12_render/report.py`)
 - `render_html()` in `render/report.py` gains `serve_mode: bool = False` parameter
 - When `serve_mode=True`, Sessions tab renders `<div id="bn-sessions-table-root" data-project-id="1">` instead of Jinja2 table
 - Dashboard compact table stays static (no React replacement needed)

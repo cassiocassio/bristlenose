@@ -473,7 +473,7 @@ It's not that it wouldn't work — it's that it complicates the React migration.
 
 - `bristlenose/theme/js/storage.js` — localStorage abstraction
 - `bristlenose/theme/js/*.js` — all state-mutating modules
-- `bristlenose/stages/render/` — HTML generation, embedded globals
+- `bristlenose/stages/s12_render/` — HTML generation, embedded globals
 - `bristlenose/output_paths.py` — path construction
 - `docs/design-html-report.md` — report architecture reference
 - `docs/private/frontend-evolution.md` — full frontend roadmap (React migration, server, SaaS)

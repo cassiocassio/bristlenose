@@ -371,7 +371,7 @@ FFmpeg, Python, faster-whisper, and spaCy are all bundled — no system dependen
 See [CONTRIBUTING.md](CONTRIBUTING.md) for the full project layout, but the short version:
 
 - `bristlenose/stages/` -- the 12-stage pipeline (ingest through render), one module per stage
-- `bristlenose/stages/render/` -- HTML report renderer package, loads CSS + JS from theme/
+- `bristlenose/stages/s12_render/` -- HTML report renderer package, loads CSS + JS from theme/
 - `bristlenose/theme/` -- atomic CSS design system (tokens, atoms, molecules, organisms, templates)
 - `bristlenose/theme/js/` -- report JavaScript (12 modules, concatenated at render time)
 - `bristlenose/llm/prompts.py` -- LLM prompt templates
@@ -388,7 +388,7 @@ Edit `bristlenose/__init__.py` (the single source of truth for version), commit,
 
 **0.13.2** — _11 Mar 2026_
 
-- Render refactor — `render_html.py` (2,903 lines) broken into `bristlenose/stages/render/` package with 8 submodules. Static render path formally deprecated (`DeprecationWarning`). No behaviour change
+- Render refactor — `render_html.py` (2,903 lines) broken into `bristlenose/stages/s12_render/` package with 8 submodules. Static render path formally deprecated (`DeprecationWarning`). No behaviour change
 
 **0.13.1** — _10 Mar 2026_
 

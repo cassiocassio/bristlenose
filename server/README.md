@@ -82,7 +82,7 @@ Bookmark this. Returns `bristlenose-feedback.csv` as a download.
 
 ## Wire up the report
 
-In `bristlenose/stages/render/report.py`, change:
+In `bristlenose/stages/s12_render/report.py`, change:
 
 ```python
 _w("var BRISTLENOSE_FEEDBACK = true;")

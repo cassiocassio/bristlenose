@@ -824,7 +824,7 @@ This is the hardest piece. It needs:
 
 **How it works**:
 1. `ingest()` scans the input directory and returns the current session list
-2. Compare against manifest's `stages.ingest.sessions_discovered`
+2. Compare against manifest's `stages.s01_ingest.sessions_discovered`
 3. Classify each session:
    - **Unchanged**: same session_id, same source file hash(es) — fully cached
    - **Changed**: same session_id, different source file hash — re-process from first changed stage (Scenario B)

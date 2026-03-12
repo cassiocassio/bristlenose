@@ -11,7 +11,7 @@ Stages 3-5 (transcription) and 5b (speaker identification) now cache per-session
 | File | Change |
 |------|--------|
 | `bristlenose/pipeline.py` | Transcription caching (session_segments.json), speaker ID caching (speaker-info/*.json), moved `intermediate` dir earlier |
-| `bristlenose/stages/identify_speakers.py` | Added `speaker_info_to_dict()` / `speaker_info_from_dict()` |
+| `bristlenose/stages/s05b_identify_speakers.py` | Added `speaker_info_to_dict()` / `speaker_info_from_dict()` |
 | `tests/test_pipeline_resume.py` | 10 new tests for 1d-ext |
 
 ## Automated test coverage

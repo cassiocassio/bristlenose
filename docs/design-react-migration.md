@@ -198,7 +198,7 @@ Step 1 (Settings) ✓   Step 2 (About) ✓   Step 3 (QuotesStore) ✓
 | `frontend/src/contexts/` | New: QuotesStore, PlayerProvider, FocusProvider |
 | `frontend/src/utils/api.ts` | Already exists — extended for new data fetching |
 | `bristlenose/server/app.py` | Marker substitution → SPA serving |
-| `bristlenose/stages/render/report.py` | Add markers for settings/about/toolbar; eventually `serve_mode` removed |
+| `bristlenose/stages/s12_render/report.py` | Add markers for settings/about/toolbar; eventually `serve_mode` removed |
 | `bristlenose/theme/templates/` | `global_nav.html`, `toolbar.html` become dead code |
 | `bristlenose/theme/js/` | Modules retired one by one from serve path |
 | `frontend/package.json` | Add `react-router-dom` at Step 5 |

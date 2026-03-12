@@ -125,7 +125,7 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 
 **Files likely to touch:**
 - `bristlenose/stages/render_html.py` — dashboard stats, pane headings, template params
-- `bristlenose/stages/render_output.py` — markdown heading call sites
+- `bristlenose/stages/s12_render_output.py` — markdown heading call sites
 - `bristlenose/theme/templates/toc.html` — TOC headings
 - `bristlenose/theme/templates/global_nav.html` — tab labels
 - `bristlenose/theme/templates/analysis.html` — analysis page headings
@@ -160,7 +160,7 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 
 ### `render-refactor` — merged 11 Mar 2026
 
-Break up `render_html.py` (2,903 lines) into `bristlenose/stages/render/` package with 8 submodules: `theme_assets.py`, `html_helpers.py`, `quote_format.py`, `sentiment.py`, `dashboard.py`, `transcript_pages.py`, `standalone_pages.py`, `report.py`. Added `DeprecationWarning` to `render_html()`. Updated all imports (3 production, 11 test files) and ~99 doc references across 34 files. No behaviour change — pure structural refactor.
+Break up `render_html.py` (2,903 lines) into `bristlenose/stages/s12_render/` package with 8 submodules: `theme_assets.py`, `html_helpers.py`, `quote_format.py`, `sentiment.py`, `dashboard.py`, `transcript_pages.py`, `standalone_pages.py`, `report.py`. Added `DeprecationWarning` to `render_html()`. Updated all imports (3 production, 11 test files) and ~99 doc references across 34 files. No behaviour change — pure structural refactor.
 
 ### `responsive-playground` — merged 10 Mar 2026
 

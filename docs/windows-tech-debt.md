@@ -20,7 +20,7 @@ Platform assumptions that work on macOS/Linux but will need attention for Window
 ## Main (pre-serve)
 
 ### FFmpeg dependency
-- **Where:** `bristlenose/stages/extract_audio.py`, `doctor.py`
+- **Where:** `bristlenose/stages/s02_extract_audio.py`, `doctor.py`
 - **Issue:** Install instructions assume Homebrew (macOS) or apt/snap (Linux). Windows users need manual FFmpeg install or choco/winget
 - **Fix:** Add Windows install guidance to `doctor` output
 

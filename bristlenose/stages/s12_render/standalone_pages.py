@@ -6,13 +6,13 @@ import json
 import logging
 from pathlib import Path
 
-from bristlenose.stages.render.html_helpers import (
+from bristlenose.stages.s12_render.html_helpers import (
     _document_shell_open,
     _esc,
     _footer_html,
     _report_header_html,
 )
-from bristlenose.stages.render.theme_assets import (
+from bristlenose.stages.s12_render.theme_assets import (
     _get_analysis_js,
     _get_codebook_js,
     _jinja_env,

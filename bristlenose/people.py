@@ -26,7 +26,7 @@ from bristlenose.models import (
 )
 
 if TYPE_CHECKING:
-    from bristlenose.stages.identify_speakers import SpeakerInfo
+    from bristlenose.stages.s05b_identify_speakers import SpeakerInfo
 
 logger = logging.getLogger(__name__)
 

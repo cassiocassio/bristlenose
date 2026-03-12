@@ -15,7 +15,7 @@ from bristlenose.models import (
     ThemeGroup,
     format_timecode,
 )
-from bristlenose.stages.render.html_helpers import (
+from bristlenose.stages.s12_render.html_helpers import (
     _document_shell_open,
     _esc,
     _footer_html,
@@ -24,7 +24,7 @@ from bristlenose.stages.render.html_helpers import (
     _split_badge_html,
     _tc_brackets,
 )
-from bristlenose.stages.render.theme_assets import (
+from bristlenose.stages.s12_render.theme_assets import (
     _get_transcript_js,
     _jinja_env,
 )

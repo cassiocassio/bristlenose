@@ -689,7 +689,7 @@ def _write_speaker_info_json(
 
 def test_speaker_info_json_roundtrip(tmp_path: Path):
     """SpeakerInfo serialization round-trips correctly."""
-    from bristlenose.stages.identify_speakers import (
+    from bristlenose.stages.s05b_identify_speakers import (
         SpeakerInfo,
         speaker_info_from_dict,
         speaker_info_to_dict,
@@ -817,7 +817,7 @@ def test_speaker_info_segments_restored_from_cache(tmp_path: Path):
 
 def test_assign_speaker_codes_always_reruns():
     """assign_speaker_codes runs on all sessions for consistent global numbering."""
-    from bristlenose.stages.identify_speakers import assign_speaker_codes
+    from bristlenose.stages.s05b_identify_speakers import assign_speaker_codes
 
     # Session 1: one researcher, one participant
     segs_s1 = [

@@ -212,7 +212,7 @@ def check_whisper_model(settings: BristlenoseSettings) -> CheckResult:
     """Check whether the configured Whisper model is already cached."""
     import os
 
-    from bristlenose.stages.transcribe import _mlx_model_name
+    from bristlenose.stages.s05_transcribe import _mlx_model_name
 
     model_name = settings.whisper_model
 

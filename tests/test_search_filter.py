@@ -12,7 +12,7 @@ from bristlenose.models import (
     ScreenCluster,
     ThemeGroup,
 )
-from bristlenose.stages.render import render_html
+from bristlenose.stages.s12_render import render_html
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -184,6 +184,6 @@ def test_search_js_in_report(tmp_path: Path) -> None:
 
 def test_transcript_js_excludes_search() -> None:
     """search.js must not be in the transcript JS list."""
-    from bristlenose.stages.render.theme_assets import _TRANSCRIPT_JS_FILES
+    from bristlenose.stages.s12_render.theme_assets import _TRANSCRIPT_JS_FILES
 
     assert "js/search.js" not in _TRANSCRIPT_JS_FILES

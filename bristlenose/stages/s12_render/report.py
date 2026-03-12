@@ -22,13 +22,13 @@ from bristlenose.models import (
     ScreenCluster,
     ThemeGroup,
 )
-from bristlenose.stages.render.dashboard import (
+from bristlenose.stages.s12_render.dashboard import (
     _build_coverage_html,
     _build_session_rows,
     _build_task_outcome_html,
     _render_project_tab,
 )
-from bristlenose.stages.render.html_helpers import (
+from bristlenose.stages.s12_render.html_helpers import (
     _build_video_map,
     _document_shell_open,
     _esc,
@@ -36,24 +36,24 @@ from bristlenose.stages.render.html_helpers import (
     _report_header_html,
     _write_player_html,
 )
-from bristlenose.stages.render.quote_format import _format_quote_html
-from bristlenose.stages.render.sentiment import (
+from bristlenose.stages.s12_render.quote_format import _format_quote_html
+from bristlenose.stages.s12_render.sentiment import (
     _build_rewatch_html,
     _build_sentiment_html,
 )
-from bristlenose.stages.render.standalone_pages import (
+from bristlenose.stages.s12_render.standalone_pages import (
     _render_analysis_page,
     _render_codebook_page,
     _serialize_analysis,
 )
-from bristlenose.stages.render.theme_assets import (
+from bristlenose.stages.s12_render.theme_assets import (
     _LOGO_DARK_PATH,
     _LOGO_PATH,
     _get_default_css,
     _get_report_js,
     _jinja_env,
 )
-from bristlenose.stages.render.transcript_pages import (
+from bristlenose.stages.s12_render.transcript_pages import (
     _build_transcript_quote_map,
     _render_inline_transcripts,
     render_transcript_pages,

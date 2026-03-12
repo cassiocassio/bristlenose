@@ -3,14 +3,14 @@
 from __future__ import annotations
 
 from bristlenose.models import EmotionalTone, ExtractedQuote, QuoteIntent, format_timecode
-from bristlenose.stages.render.html_helpers import (
+from bristlenose.stages.s12_render.html_helpers import (
     _display_name,
     _esc,
     _session_anchor,
     _split_badge_html,
     _timecode_html,
 )
-from bristlenose.stages.render.theme_assets import _jinja_env
+from bristlenose.stages.s12_render.theme_assets import _jinja_env
 
 
 def _format_quote_html(

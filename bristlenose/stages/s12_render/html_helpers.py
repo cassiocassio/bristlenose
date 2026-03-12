@@ -17,7 +17,7 @@ from bristlenose.models import (
     PeopleFile,
     format_timecode,
 )
-from bristlenose.stages.render.theme_assets import _jinja_env
+from bristlenose.stages.s12_render.theme_assets import _jinja_env
 
 logger = logging.getLogger(__name__)
 

@@ -5,7 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from bristlenose.config import BristlenoseSettings
-from bristlenose.stages.render import render_html
+from bristlenose.stages.s12_render import render_html
 
 # ---------------------------------------------------------------------------
 # Helpers

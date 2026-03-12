@@ -18,7 +18,7 @@ from bristlenose.models import (
     SpeakerRole,
     TranscriptSegment,
 )
-from bristlenose.stages.identify_speakers import assign_speaker_codes
+from bristlenose.stages.s05b_identify_speakers import assign_speaker_codes
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -151,7 +151,7 @@ class TestTranscriptRoundTrip:
         )
 
     def test_raw_txt_contains_moderator_codes(self, tmp_path: Path) -> None:
-        from bristlenose.stages.merge_transcript import write_raw_transcripts
+        from bristlenose.stages.s06_merge_transcript import write_raw_transcripts
 
         transcript = self._make_transcript_with_moderator()
         write_raw_transcripts([transcript], tmp_path)
@@ -163,7 +163,7 @@ class TestTranscriptRoundTrip:
         assert "[00:41] [p1]" in content
 
     def test_raw_md_contains_moderator_codes(self, tmp_path: Path) -> None:
-        from bristlenose.stages.merge_transcript import write_raw_transcripts_md
+        from bristlenose.stages.s06_merge_transcript import write_raw_transcripts_md
 
         transcript = self._make_transcript_with_moderator()
         write_raw_transcripts_md([transcript], tmp_path)
@@ -173,7 +173,7 @@ class TestTranscriptRoundTrip:
         assert "**[00:11] p1**" in content
 
     def test_cooked_txt_contains_moderator_codes(self, tmp_path: Path) -> None:
-        from bristlenose.stages.pii_removal import write_cooked_transcripts
+        from bristlenose.stages.s07_pii_removal import write_cooked_transcripts
 
         segs = _make_two_speaker_segments()
         assign_speaker_codes(1, segs)
@@ -192,7 +192,7 @@ class TestTranscriptRoundTrip:
         assert "[00:11] [p1]" in content
 
     def test_cooked_md_contains_moderator_codes(self, tmp_path: Path) -> None:
-        from bristlenose.stages.pii_removal import write_cooked_transcripts_md
+        from bristlenose.stages.s07_pii_removal import write_cooked_transcripts_md
 
         segs = _make_two_speaker_segments()
         assign_speaker_codes(1, segs)
@@ -213,7 +213,7 @@ class TestTranscriptRoundTrip:
     def test_load_recovers_moderator_role(self, tmp_path: Path) -> None:
         """Write with [m1]/[p1] codes, load back, verify roles and codes."""
         from bristlenose.pipeline import load_transcripts_from_dir
-        from bristlenose.stages.pii_removal import write_cooked_transcripts
+        from bristlenose.stages.s07_pii_removal import write_cooked_transcripts
 
         segs = _make_two_speaker_segments()
         assign_speaker_codes(1, segs)
@@ -380,7 +380,7 @@ class TestTranscriptPageRendering:
     )
 
     def _setup_and_render(self, tmp_path: Path, people: PeopleFile | None = None) -> str:
-        from bristlenose.stages.render import render_transcript_pages
+        from bristlenose.stages.s12_render import render_transcript_pages
 
         raw_dir = tmp_path / "transcripts-raw"
         raw_dir.mkdir(parents=True, exist_ok=True)
@@ -446,7 +446,7 @@ class TestTranscriptPageRendering:
 
     def test_old_format_renders_without_moderator_class(self, tmp_path: Path) -> None:
         """Old transcripts (all [p1]) render without segment-moderator."""
-        from bristlenose.stages.render import render_transcript_pages
+        from bristlenose.stages.s12_render import render_transcript_pages
 
         old_transcript = (
             "# Transcript: s1\n"
@@ -653,7 +653,7 @@ class TestMultiParticipantRoundTrip:
 
     def test_write_parse_roundtrip_multi_participant(self, tmp_path: Path) -> None:
         from bristlenose.pipeline import load_transcripts_from_dir
-        from bristlenose.stages.pii_removal import write_cooked_transcripts
+        from bristlenose.stages.s07_pii_removal import write_cooked_transcripts
 
         segs = _make_multi_participant_segments(
             num_participants=2, with_researcher=True,
@@ -697,7 +697,7 @@ class TestMultiParticipantRoundTrip:
 
     def test_write_parse_roundtrip_with_observer(self, tmp_path: Path) -> None:
         from bristlenose.pipeline import load_transcripts_from_dir
-        from bristlenose.stages.pii_removal import write_cooked_transcripts
+        from bristlenose.stages.s07_pii_removal import write_cooked_transcripts
 
         segs = _make_multi_participant_segments(
             num_participants=1, with_researcher=True, num_observers=1,

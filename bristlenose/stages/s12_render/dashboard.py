@@ -16,7 +16,7 @@ from bristlenose.models import (
     Sentiment,
     ThemeGroup,
 )
-from bristlenose.stages.render.html_helpers import (
+from bristlenose.stages.s12_render.html_helpers import (
     _display_name,
     _esc,
     _resolve_speaker_name,
@@ -26,8 +26,8 @@ from bristlenose.stages.render.html_helpers import (
     _split_badge_html,
     _timecode_html,
 )
-from bristlenose.stages.render.sentiment import _render_sentiment_sparkline
-from bristlenose.stages.render.theme_assets import _jinja_env
+from bristlenose.stages.s12_render.sentiment import _render_sentiment_sparkline
+from bristlenose.stages.s12_render.theme_assets import _jinja_env
 from bristlenose.utils.markdown import format_finder_date, format_finder_filename
 from bristlenose.utils.timecodes import format_duration_human
 

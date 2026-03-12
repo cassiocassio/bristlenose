@@ -18,7 +18,7 @@ from bristlenose.people import (
     extract_names_from_labels,
     suggest_short_names,
 )
-from bristlenose.stages.identify_speakers import SpeakerInfo
+from bristlenose.stages.s05b_identify_speakers import SpeakerInfo
 
 _NOW = datetime(2026, 1, 15, 10, 0, 0, tzinfo=timezone.utc)
 

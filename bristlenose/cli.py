@@ -1124,7 +1124,7 @@ def render(
 
     # Recover project name from metadata written by a previous run
     if project_name is None:
-        from bristlenose.stages.render_output import read_pipeline_metadata
+        from bristlenose.stages.s12_render_output import read_pipeline_metadata
 
         meta = read_pipeline_metadata(output_dir)
         project_name = meta.get("project_name")
@@ -1178,7 +1178,7 @@ def _auto_render(project_dir: Path) -> None:
         input_dir = output_dir.resolve().parent
 
     # Recover project name from pipeline metadata
-    from bristlenose.stages.render_output import read_pipeline_metadata
+    from bristlenose.stages.s12_render_output import read_pipeline_metadata
 
     meta = read_pipeline_metadata(output_dir)
     project_name = meta.get("project_name")

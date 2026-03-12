@@ -11,8 +11,8 @@ from bristlenose.models import (
     SpeakerRole,
     TranscriptSegment,
 )
-from bristlenose.stages.merge_transcript import merge_transcripts
-from bristlenose.stages.quote_extraction import _resolve_segment_index
+from bristlenose.stages.s06_merge_transcript import merge_transcripts
+from bristlenose.stages.s09_quote_extraction import _resolve_segment_index
 
 # ---------------------------------------------------------------------------
 # Helpers

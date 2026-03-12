@@ -6,7 +6,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from bristlenose.models import FileType, InputFile
-from bristlenose.stages.ingest import (
+from bristlenose.stages.s01_ingest import (
     _is_zoom_local_dir,
     _normalise_stem,
     group_into_sessions,

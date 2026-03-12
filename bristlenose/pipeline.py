@@ -251,8 +251,9 @@ class Pipeline:
         from collections import Counter
 
         from bristlenose.llm.client import LLMClient
-        from bristlenose.stages.extract_audio import extract_audio_for_sessions
-        from bristlenose.stages.identify_speakers import (
+        from bristlenose.stages.s01_ingest import ingest
+        from bristlenose.stages.s02_extract_audio import extract_audio_for_sessions
+        from bristlenose.stages.s05b_identify_speakers import (
             SpeakerInfo,
             assign_speaker_codes,
             identify_speaker_roles_heuristic,
@@ -260,28 +261,27 @@ class Pipeline:
             speaker_info_from_dict,
             speaker_info_to_dict,
         )
-        from bristlenose.stages.ingest import ingest
-        from bristlenose.stages.merge_transcript import (
+        from bristlenose.stages.s06_merge_transcript import (
             merge_transcripts,
             write_raw_transcripts,
             write_raw_transcripts_md,
         )
-        from bristlenose.stages.pii_removal import (
+        from bristlenose.stages.s07_pii_removal import (
             remove_pii,
             write_cooked_transcripts,
             write_cooked_transcripts_md,
             write_pii_summary,
         )
-        from bristlenose.stages.quote_clustering import cluster_by_screen
-        from bristlenose.stages.quote_extraction import extract_quotes
-        from bristlenose.stages.render import render_html
-        from bristlenose.stages.render_output import (
+        from bristlenose.stages.s08_topic_segmentation import segment_topics
+        from bristlenose.stages.s09_quote_extraction import extract_quotes
+        from bristlenose.stages.s10_quote_clustering import cluster_by_screen
+        from bristlenose.stages.s11_thematic_grouping import group_by_theme
+        from bristlenose.stages.s12_render import render_html
+        from bristlenose.stages.s12_render_output import (
             render_markdown,
             write_intermediate_json,
             write_pipeline_metadata,
         )
-        from bristlenose.stages.thematic_grouping import group_by_theme
-        from bristlenose.stages.topic_segmentation import segment_topics
 
         pipeline_start = time.perf_counter()
         _printed_warnings.clear()
@@ -1108,10 +1108,10 @@ class Pipeline:
         import time
         from collections import Counter
 
-        from bristlenose.stages.extract_audio import extract_audio_for_sessions
-        from bristlenose.stages.identify_speakers import identify_speaker_roles_heuristic
-        from bristlenose.stages.ingest import ingest
-        from bristlenose.stages.merge_transcript import (
+        from bristlenose.stages.s01_ingest import ingest
+        from bristlenose.stages.s02_extract_audio import extract_audio_for_sessions
+        from bristlenose.stages.s05b_identify_speakers import identify_speaker_roles_heuristic
+        from bristlenose.stages.s06_merge_transcript import (
             merge_transcripts,
             write_raw_transcripts,
             write_raw_transcripts_md,
@@ -1244,16 +1244,16 @@ class Pipeline:
         import time
 
         from bristlenose.llm.client import LLMClient
-        from bristlenose.stages.quote_clustering import cluster_by_screen
-        from bristlenose.stages.quote_extraction import extract_quotes
-        from bristlenose.stages.render import render_html
-        from bristlenose.stages.render_output import (
+        from bristlenose.stages.s08_topic_segmentation import segment_topics
+        from bristlenose.stages.s09_quote_extraction import extract_quotes
+        from bristlenose.stages.s10_quote_clustering import cluster_by_screen
+        from bristlenose.stages.s11_thematic_grouping import group_by_theme
+        from bristlenose.stages.s12_render import render_html
+        from bristlenose.stages.s12_render_output import (
             render_markdown,
             write_intermediate_json,
             write_pipeline_metadata,
         )
-        from bristlenose.stages.thematic_grouping import group_by_theme
-        from bristlenose.stages.topic_segmentation import segment_topics
 
         pipeline_start = time.perf_counter()
         _printed_warnings.clear()
@@ -1431,9 +1431,9 @@ class Pipeline:
         Returns:
             Dict mapping session_id to list of TranscriptSegments.
         """
-        from bristlenose.stages.parse_docx import parse_docx_file
-        from bristlenose.stages.parse_subtitles import parse_subtitle_file
-        from bristlenose.stages.transcribe import transcribe_sessions
+        from bristlenose.stages.s03_parse_subtitles import parse_subtitle_file
+        from bristlenose.stages.s04_parse_docx import parse_docx_file
+        from bristlenose.stages.s05_transcribe import transcribe_sessions
 
         session_segments: dict[str, list[TranscriptSegment]] = {}
 
@@ -1523,8 +1523,8 @@ class Pipeline:
         import time
 
         from bristlenose.models import ExtractedQuote, ScreenCluster, ThemeGroup
-        from bristlenose.stages.render import render_html
-        from bristlenose.stages.render_output import render_markdown
+        from bristlenose.stages.s12_render import render_html
+        from bristlenose.stages.s12_render_output import render_markdown
 
         self._configure_logging(output_dir)
 
@@ -1562,7 +1562,7 @@ class Pipeline:
             ]
 
         # --- Re-ingest input files for video linking ---
-        from bristlenose.stages.ingest import ingest
+        from bristlenose.stages.s01_ingest import ingest
 
         sessions = ingest(input_dir)
 

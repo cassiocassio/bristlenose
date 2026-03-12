@@ -11,11 +11,11 @@ from bristlenose.models import (
     SpeakerRole,
     TranscriptSegment,
 )
-from bristlenose.stages.merge_transcript import (
+from bristlenose.stages.s06_merge_transcript import (
     write_raw_transcripts,
     write_raw_transcripts_md,
 )
-from bristlenose.stages.pii_removal import (
+from bristlenose.stages.s07_pii_removal import (
     write_cooked_transcripts,
     write_cooked_transcripts_md,
 )
@@ -391,7 +391,7 @@ def test_parser_mixed_timecode_formats(tmp_path: Path) -> None:
 
 def test_write_raw_md_long_session(tmp_path: Path) -> None:
     """Raw .md files use HH:MM:SS for segments at or past one hour."""
-    from bristlenose.stages.merge_transcript import write_raw_transcripts_md
+    from bristlenose.stages.s06_merge_transcript import write_raw_transcripts_md
 
     long = FullTranscript(
         session_id="s6",

@@ -26,8 +26,8 @@ from bristlenose.models import (
     ThemeGroup,
 )
 from bristlenose.pipeline import _compute_analysis
-from bristlenose.stages.render import render_html
-from bristlenose.stages.render.standalone_pages import _serialize_analysis, _serialize_matrix
+from bristlenose.stages.s12_render import render_html
+from bristlenose.stages.s12_render.standalone_pages import _serialize_analysis, _serialize_matrix
 
 # ---------------------------------------------------------------------------
 # Helpers

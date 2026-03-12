@@ -54,7 +54,7 @@
 
 /* Animated slide — added before state change, removed on transitionend */
 .layout.animating {
-    transition: grid-template-columns 0.25s ease;
+    transition: grid-template-columns 75ms ease;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -142,20 +142,19 @@
 }
 
 /* ── Overlay keyframes ─────────────────────────────────────────
-   The rail is the panel's left edge. clip-path reveals the panel
-   rightward so it appears to emerge from behind the rail. Content
-   is visible from frame 1 (carried along by the clip). Drop shadow
-   reveals progressively with the clip-path.
+   The rail IS the panel's left edge. clip-path reveals the panel
+   rightward from that edge. Content visible from frame 1. Shadow
+   reveals progressively with the clip.
 
-   Open timeline (300ms):
-     0–150ms  icon departs (fade + shift left)
-     0–300ms  panel clip-path reveals
-     150–300ms close × sneaks in
+   Open timeline (75ms):
+     0–40ms   icon departs (fade + shift left)
+     0–75ms   panel clip-path reveals
+     40–75ms  close × sneaks in
 
-   Close timeline (300ms):
-     0–150ms  close × fades out
-     0–300ms  panel clip-path hides
-     150–300ms icon returns                                     */
+   Close timeline (75ms):
+     0–40ms   close × fades out
+     0–75ms   panel clip-path hides
+     40–75ms  icon returns                                       */
 
 @keyframes toc-reveal {
     from { clip-path: inset(0 100% 0 0); }
@@ -210,7 +209,7 @@
     opacity: 1;
     z-index: 110;
     box-shadow: var(--bn-overlay-shadow);
-    animation: toc-reveal 300ms cubic-bezier(0, 0, 0.2, 1) both;
+    animation: toc-reveal 75ms cubic-bezier(0, 0, 0.2, 1) both;
 }
 
 /* Seamless rail-to-panel: hide rail border so rail IS the panel edge */
@@ -219,58 +218,62 @@
     border-right-color: transparent;
 }
 
-/* Rail icon departs — fades out with leftward nudge (first 150ms) */
+/* Rail icon departs — fades out with leftward nudge (first 40ms) */
 .layout.toc-overlay .toc-rail .rail-btn {
-    animation: toc-icon-depart 150ms cubic-bezier(0.4, 0, 1, 1) both;
+    animation: toc-icon-depart 40ms cubic-bezier(0.4, 0, 1, 1) both;
     pointer-events: none;
 }
 
-/* Close × repositioned to left of header (same spot as rail icon) */
+/* Close × on its own row above the title (order: -1 in column layout).
+   Outdented left via negative margin — hanging indent so the × sits
+   roughly at the rail icon's horizontal position. */
+.layout.toc-open .toc-sidebar-header .sidebar-close,
 .layout.toc-overlay .toc-sidebar-header .sidebar-close,
 .layout.toc-closing .toc-sidebar-header .sidebar-close {
     order: -1;
-    margin-left: 0;
-    margin-right: auto;
+    margin-left: -0.5rem;
+    padding: 2px 6px;
 }
 
-/* Close × sneaks in at end (last 150ms) */
+/* Close × sneaks in at end (last 40ms) */
 .layout.toc-overlay .toc-sidebar-header .sidebar-close {
-    animation: toc-close-sneak-in 150ms cubic-bezier(0, 0, 0.2, 1) 150ms both;
+    animation: toc-close-sneak-in 40ms cubic-bezier(0, 0, 0.2, 1) 40ms both;
 }
 
 /* iOS variant: content body settles with its own inertia */
 .layout.toc-overlay.overlay-ios .toc-sidebar-body {
-    animation: toc-ios-settle 260ms cubic-bezier(0.25, 0.46, 0.45, 0.94) 40ms both;
+    animation: toc-ios-settle 65ms cubic-bezier(0.25, 0.46, 0.45, 0.94) 10ms both;
 }
 
 /* ── Overlay close ────────────────────────────────────────────── */
 
 /* Panel clips shut toward rail edge */
 .layout.toc-closing .toc-sidebar {
-    animation: toc-hide 300ms cubic-bezier(0.4, 0, 1, 1) both;
+    animation: toc-hide 75ms cubic-bezier(0.4, 0, 1, 1) both;
     box-shadow: none;
 }
 
-/* Close × fades out first (first 150ms) */
+/* Close × fades out first (first 40ms) */
 .layout.toc-closing .toc-sidebar-header .sidebar-close {
-    animation: toc-close-sneak-out 150ms cubic-bezier(0.4, 0, 1, 1) both;
+    animation: toc-close-sneak-out 40ms cubic-bezier(0.4, 0, 1, 1) both;
 }
 
-/* Rail icon returns in last 150ms */
+/* Rail icon returns in last 40ms */
 .layout.toc-closing .toc-rail .rail-btn {
-    animation: toc-icon-return 150ms cubic-bezier(0, 0, 0.2, 1) 150ms both;
+    animation: toc-icon-return 40ms cubic-bezier(0, 0, 0.2, 1) 40ms both;
     pointer-events: auto;
 }
 
 /* iOS variant: content departs with inertia */
 .layout.toc-closing.overlay-ios .toc-sidebar-body {
-    animation: toc-ios-depart 200ms cubic-bezier(0.4, 0, 1, 1) both;
+    animation: toc-ios-depart 50ms cubic-bezier(0.4, 0, 1, 1) both;
 }
 
 .toc-sidebar-header {
     display: flex;
-    align-items: center;
-    gap: 0.5rem;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.25rem;
     padding: var(--bn-space-md) 0.85rem 0.25rem;
     flex-shrink: 0;
 }
@@ -278,7 +281,6 @@
 .toc-sidebar-header .sidebar-title {
     font-size: 0.95rem;
     font-weight: var(--bn-weight-emphasis);
-    flex: 1;
 }
 
 .sidebar-close {
@@ -385,15 +387,18 @@
 
 .tag-sidebar-header {
     display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: var(--bn-space-md) 0 0 0.85rem;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.25rem;
+    padding: var(--bn-space-md) 0.85rem 0 0.85rem;
     flex-shrink: 0;
 }
 
-/* Keep × button off the right border edge */
+/* Close × on its own row, outdented left (matches TOC sidebar pattern) */
 .tag-sidebar-header .sidebar-close {
-    margin-right: 0.35rem;
+    order: -1;
+    margin-left: -0.5rem;
+    padding: 2px 6px;
 }
 
 .tag-sidebar-header .sidebar-title {
@@ -516,6 +521,7 @@
 .layout.toc-overlay .toc-drag-handle { z-index: 121; }
 
 /* Rail edge drag handles (drag-to-open from closed state) */
+.toc-rail-drag  { right: -3px; }
 .tag-rail-drag  { left: -3px; }
 
 /* ── Drag-select disable ──────────────────────────────────────── */

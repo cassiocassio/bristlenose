@@ -65,7 +65,7 @@ function TagIcon() {
 
 /**
  * Add `.animating` before state change, remove after transition completes.
- * If no transition fires within 300ms (safety margin), remove anyway.
+ * If no transition fires within 120ms (safety margin), remove anyway.
  */
 function withAnimation(
   layoutEl: HTMLElement | null,
@@ -86,7 +86,7 @@ function withAnimation(
     if (e.target === layoutEl) cleanup();
   };
   layoutEl.addEventListener("transitionend", onEnd);
-  const fallback = setTimeout(cleanup, 300);
+  const fallback = setTimeout(cleanup, 120);
 
   // Run state change after animating class is applied (next microtask)
   requestAnimationFrame(() => {
@@ -126,6 +126,9 @@ export function SidebarLayout({ active, children }: SidebarLayoutProps) {
   const tagEdge = useDragResize({
     side: "tags", source: "sidebar", layoutRef, currentWidth: tagsWidth,
   });
+  const tocRailDrag = useDragResize({
+    side: "toc", source: "rail", layoutRef, currentWidth: tocWidth,
+  });
   const tagRailDrag = useDragResize({
     side: "tags", source: "rail", layoutRef, currentWidth: tagsWidth,
   });
@@ -154,7 +157,7 @@ export function SidebarLayout({ active, children }: SidebarLayoutProps) {
       if (e.target === panel) cleanup();
     };
     panel?.addEventListener("animationend", onEnd);
-    const fallback = setTimeout(cleanup, 400);
+    const fallback = setTimeout(cleanup, 120);
   }, [tocMode]);
 
   // Overlay hook for the TOC rail hover-to-peek.
@@ -277,6 +280,12 @@ export function SidebarLayout({ active, children }: SidebarLayoutProps) {
         >
           <ListIcon />
         </button>
+        {tocMode === "closed" && (
+          <div
+            className={`drag-handle toc-rail-drag${tocRailDrag.isDragging ? " active" : ""}`}
+            onPointerDown={tocRailDrag.handlePointerDown}
+          />
+        )}
       </div>
 
       {/* Column 2: TOC sidebar panel */}

@@ -38,6 +38,10 @@ export function useScrollSpy(ids: string[], threshold = 100): string | null {
             break;
           }
         }
+        // Page at top: nothing crossed the threshold yet — default to first section.
+        if (!found && ids.length > 0) {
+          found = ids[0];
+        }
         setActiveId(found);
       });
     };

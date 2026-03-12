@@ -114,8 +114,10 @@ export function TocSidebar({ onOverlayClose }: TocSidebarProps) {
   }, [activeId]);
 
   // Click handler — smooth scroll to the target heading.
-  // In overlay mode, let the scroll begin visibly, then close the panel
-  // with the animated slide-out so the user sees their intent actioned.
+  // In overlay mode, let the scroll begin visibly, then close the panel.
+  // The 400ms delay lets the user see the "you are here" highlight move
+  // to the clicked heading before the panel slides shut — confirming
+  // their intent was actioned.
   const handleClick = useCallback((e: React.MouseEvent<HTMLAnchorElement>, id: string) => {
     e.preventDefault();
     const el = document.getElementById(id);

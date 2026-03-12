@@ -1,0 +1,58 @@
+# Frontend (React / TypeScript / Vite) Context
+
+## What this is
+
+Vite + React + TypeScript + React Router SPA. 35 components in `src/components/`, 14 islands in `src/islands/`, 9 page wrappers in `src/pages/`, 1 layout in `src/layouts/`, 7 hooks in `src/hooks/`, 1 shim in `src/shims/`, 2 stores in `src/contexts/`. `npm run dev` proxies to FastAPI; `npm run build` outputs to `frontend/dist/`. See `docs/design-react-component-library.md` for build sequence.
+
+## Build & type-checking
+
+- **`npm run build` runs `tsc -b` which type-checks test files** — `tsconfig.json` includes `src/` which contains `*.test.tsx` files alongside source. Vitest has its own type context (looser), so tests may pass while `tsc -b` reports errors. Always run `npm run build` before committing frontend changes, not just `npm test`. Common culprits: `globalThis.fetch` (not `global.fetch`), window casts need `(window as unknown as Record<string, unknown>)` (double cast via `unknown`), and mock data must include all required type properties
+
+## Architecture
+
+- **`main.tsx` dual mode** — SPA mode (`#bn-app-root` exists → `RouterProvider`) vs legacy island mode (dynamic `import()` → individual `createRoot()` calls). The legacy path uses `Promise.all` for code splitting — islands load async, not synchronously like the old static imports. SPA mode is active in serve mode; legacy mode covers the static render path and transcript HTML files during transition
+- **Module-level stores (not React Context)** — `QuotesContext.tsx` and `SidebarStore.ts` use plain module-level state + `useSyncExternalStore` (React 18). Proven pattern, simpler than Context, doesn't depend on tree structure. The store is the single source of truth for quote mutations and toolbar filter state
+- **Backward-compat shims** — `src/shims/navigation.ts` installs `window.switchToTab`, `window.scrollToAnchor`, `window.navigateToSession` as functions that delegate to React Router `navigate()`
+
+## Gotchas
+
+### React patterns
+
+- **Quote edit keydown handlers must `stopPropagation()`** — `handleCardKeyDown` (crop mode) and `handleEditKeyDown` (hybrid mode) in `QuoteCard.tsx` handle Enter/Escape. Without `stopPropagation()`, the keydown bubbles to the TimecodeLink `<a>`, the browser synthesizes a click, and `player.js`'s document-level click listener opens the video player. Both handlers need `preventDefault()` + `stopPropagation()`. See bug #9 in `docs/design-quote-editing.md`
+- **`addTag()` dedup guard** — `QuotesContext.tsx` `addTag()` rejects case-insensitive duplicate tags (returns `prev` state unchanged). This is the single source of truth for all tag additions — fixes apply to manual adds, proposal accepts, etc.
+- **Hidden-group tag UX** — when a codebook group is eye-toggled off, TagInput autocomplete shows a grey closed-eye icon (`EyeClosedIcon`, 12px SVG, `.tag-suggest-hidden-icon` CSS class) next to suggestions from hidden groups. On accept, `handleTagAdd` in `QuoteGroup.tsx` calls `toggleTagGroupHidden()` to auto-unhide the group so the badge is immediately visible. `allTagNames` prop (all tags including hidden-group ones) feeds the TagInput exclude list, preventing invisible re-adds. `hiddenTagNames` (derived from `hiddenTagGroups` + `tagGroupMap`) flows through QuoteGroup → QuoteCard → TagInput as `hiddenTags` prop
+- **Clickable cards must be `<a>` not `<div>`** — any card that navigates on click (stat cards, nav links, etc.) must use an `<a>` element with a real `href` so that Cmd+click opens in a new tab. Use `onClick` with `if (e.metaKey || e.ctrlKey || e.shiftKey) return; e.preventDefault();` to keep programmatic React Router navigation for normal clicks while letting modifier-key clicks fall through to native browser behaviour. `statTargetToHref()` in `Dashboard.tsx` converts `"tab:anchor"` targets to pathname URLs. CSS needs `text-decoration: none; color: inherit` to prevent link styling
+- **React Router navigation + scroll** — calling `window.switchToTab("quotes")` then `window.scrollToAnchor("section-x")` works via backward-compat shims (`src/shims/navigation.ts`). The scroll uses retry-aware polling (50 × 100ms = 5s) because the destination page mounts and fetches data async. Anchor slugs must match between caller and target — AnalysisPage uses `toLowerCase().replace(/ /g, "-")` to match QuoteSections/QuoteThemes
+
+### Routing & serve mode
+
+- **Health payload shape (Mar 2026)** — `GET /api/health` includes footer config: `links.github_issues_url` and `feedback.{enabled,url}` in addition to `status` and `version`. Reuse the shared `HealthResponse` type (`src/utils/health.ts`) instead of ad-hoc inline interfaces to avoid shape drift across `Footer`, `FeedbackModal`, About panel, and export embedded data
+- **Route priority in `app.py`** — transcript file route (`GET /report/sessions/{filename}` with `transcript_*.html` filter) must be defined before the SPA catch-all (`GET /report/{path:path}`). Starlette resolves routes in registration order. The `/report` → `/report/` redirect is defined first, then transcript files, then the SPA catch-all, then the `StaticFiles` mount
+- **`<!-- bn-app -->` markers** — wrap nav bar + all tab panels in `bristlenose/stages/s12_render/report.py`. The IIFE script block (including `BRISTLENOSE_ANALYSIS` JSON) is outside the markers and survives the serve-time substitution. `_REACT_APP_MOUNT` in `app.py` replaces these markers with `<div id="bn-app-root">`
+- **IIFE-scoped globals need `window.` for React** — `bristlenose/stages/s12_render/report.py` wraps all JS in `(function() { ... })();`. Variables declared with `var` inside the IIFE are invisible to React (which runs in a separate ES module context). Any global that React needs must be explicitly assigned to `window.` inside the IIFE. Currently exposed: `window.BRISTLENOSE_VIDEO_MAP`, `window.BRISTLENOSE_PLAYER_URL`, `window.BRISTLENOSE_ANALYSIS`. If adding new globals for React, add `window.X = X;` after the `var` declaration — the `var` must stay for vanilla JS code in the same IIFE
+- **Session route priority** — `/report/sessions/{filename}` handles both transcript HTML files (`transcript_*.html`) and React Router SPA routes (e.g. `/report/sessions/s1`). Non-transcript filenames serve the SPA HTML instead of raising 404, so React Router can handle client-side routing
+
+### Video player
+
+- **Two data paths** — video playback has two independent data flows: (1) **Static render path** — `html_helpers._build_video_map()` reads `InputSession.files` (full absolute paths) and writes `window.BRISTLENOSE_VIDEO_MAP` with correct `file://` URIs into the IIFE. `player.js` reads this via event delegation. (2) **Serve/SPA path** — the importer reads transcript headers (`# Source: interviews/show and tell 40.mov`) which store **relative paths including subdirectory** (written by `merge_transcript.py` using `fpath.relative_to(input_dir)`), stores them in the DB, and the video-map API (`/api/projects/{id}/video-map`) converts DB paths to `/media/` URIs via `_file_to_media_uri()`. `PlayerContext.tsx` fetches this API. **Encoding rule**: `_file_to_media_uri()` returns **unencoded** paths (e.g. `/media/interviews/show and tell 40.mov`). JavaScript's `encodeURIComponent()` in `PlayerContext.tsx` handles encoding once when building the player URL hash. Never add `urllib.parse.quote()` in Python — that causes double-encoding (`%20` → `%2520`). In SPA mode, `player.js` bails out (`if (document.getElementById('bn-app-root')) return`) — only `PlayerContext` handles playback
+- **Glow index keying: session ID vs speaker code** — transcript segments have `data-participant` set to the speaker code (`m1`, `p1`), but the popout player sends `pid=sessionId` (`s1`) in `bristlenose-timeupdate` messages (because `TimecodeLink` passes `data.session_id` to `seekTo`). `buildGlowIndex` in `PlayerContext.tsx` extracts the session ID from the URL pathname (`/report/sessions/:sessionId`) and keys all transcript segment entries under that ID. Without this, the glow index would be keyed by speaker code and no entries would match the player's session-ID-based lookup
+- **Progress bar on transcript segments** — `PlayerContext.tsx` sets a `--bn-segment-progress` CSS custom property (0–1) on the active `.transcript-segment` during playback. The CSS `::before` pseudo-element in `timecode.css` renders a 3px left border that fills top-to-bottom via `scaleY()`. The segment needs `position: relative` and `overflow: hidden` for this to work. `prefers-reduced-motion` disables the transition
+
+### Data pipeline integration
+
+- **Tag provenance** (`QuoteTag.source` column) — `"human"` for manually-added tags, `"autocode"` for LLM-suggested-then-accepted tags. Preserved across `put_tags` bulk-replace (snapshot before delete, restore on re-insert in `routes/data.py`). Exposed in quotes API as `source` on `TagResponse`. Not yet surfaced in UX — data laid down for future signal weighting. Migration in `db.py` adds column to existing databases
+- **Word-level timing data** — Whisper captures per-word timestamps (`Word` model: `text`, `start_time`, `end_time`, `confidence`). The serve-mode importer populates `TranscriptSegment.words_json` — a TEXT column storing compact JSON (`[{"t":"word","s":0.5,"e":0.8},...]`). The transcript API exposes this as `words: [{text, start, end}, ...] | null` on each segment. VTT/SRT-only sessions have `words: null`. **Frontend consumption not yet implemented** — the API serves the data but `TranscriptPage.tsx` doesn't render word spans yet
+
+### Testing
+
+- **Module-level stores persist across tests** — always call `resetStore()` / `resetSidebarStore()` / `resetPlaygroundStore()` in `beforeEach`
+- **`vi.mock` factory functions can't reference variables declared after them** (mocks are hoisted) — inline data directly
+- **`useRef<T>()` needs explicit `undefined` argument** in newer TypeScript: `useRef<T>(undefined)`
+- **Mock `getCodebook`** with `.mockResolvedValue()` in `beforeEach`, not just in `vi.mock` factory (`restoreAllMocks` resets it)
+- **Router tests**: use `createMemoryRouter` with `routes` array (exported from `router.tsx`). Use `getByRole("tab", { name })` not `getByText` to avoid collisions between nav tabs and island headings
+- **Playwright E2E tests** (`e2e/`) — 3 test layers (console errors, link crawler, network assertions) running against the smoke-test fixture on Chromium + WebKit. `playwright.config.ts` auto-starts `bristlenose serve` via `webServer` — locally uses `.venv/bin/bristlenose` (resolved path), in CI uses bare `bristlenose` (on PATH). Port 8150, overridable via `BN_E2E_PORT`. The link crawler skips `<a role="button">` elements. Known bugs are `test.fixme()` stubs. See `docs/design-playwright-testing.md`
+
+### Sidebar & playground
+
+- **Sidebar layout** — 6-column CSS grid (`SidebarLayout.tsx`) with TOC overlay (hover intent + direction-aware close via `useTocOverlay.ts`), drag-to-resize (`useDragResize.ts`), and minimap slot. `hoverDelay` and `leaveGrace` are JS-only values passed as props through `SidebarLayout` → `useTocOverlay`; the remaining 5 sidebar layout values are CSS custom properties
+- **Responsive playground** — dev-only (`ResponsivePlayground.tsx`, `PlaygroundStore.ts`) injects CSS token overrides via `<style id="bn-playground-overrides">`. `PlaygroundStore` uses `useSyncExternalStore` + `sessionStorage` (not localStorage — resets on tab close). Code-split — only loaded when `--dev` flag is set (`AppLayout.tsx` dynamic import). The `PlaygroundFab` renders a floating button via `createPortal` to `document.body`

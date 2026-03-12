@@ -104,13 +104,15 @@ The rail is the panel's left edge. `clip-path: inset()` reveals the panel rightw
 - 0–75ms: Panel clip-path hides toward rail
 - 40–75ms: Rail icon fades back in
 
-Close × is repositioned to the left of the header via `order: -1` in overlay mode, so it sits in the same spatial position as the rail list icon — enabling the cross-fade illusion.
+**Header layout:** Both TOC and tag sidebar headers use `flex-direction: column` with the close × on its own row above the title (via `order: -1`). The × is outdented left (`margin-left: -0.5rem`) as a hanging indent, roughly aligned with the rail icon's horizontal position. "Contents" and body text share the standard 0.85rem indent. This two-row layout gives the × its own space without consuming extra sidebar width.
 
 `SidebarLayout.tsx` orchestrates: add `.toc-closing` → wait for `animationend` (120ms fallback) → remove class → update store (`closeToc()`). `closingRef` prevents overlapping close animations.
 
-**A/B playground toggle:** The dev playground has a "Curtain / iOS inertia" toggle. Curtain (default) reveals content stationary behind the clip. iOS variant adds `translateX(-20px→0)` on the content body with a 40ms delay, creating a "settling into place" inertia effect inspired by iOS navigation transitions. The `.overlay-ios` class is added to `.layout` when the iOS variant is active.
+**A/B playground toggle:** The dev playground has a "Curtain / iOS inertia" toggle. Curtain (default) reveals content stationary behind the clip. iOS variant adds `translateX(-20px→0)` on the content body with a 10ms delay, creating a "settling into place" inertia effect inspired by iOS navigation transitions. The `.overlay-ios` class is added to `.layout` when the iOS variant is active.
 
-**TOC link click:** In overlay mode, clicking a link starts `scrollIntoView({ behavior: "smooth" })`, then closes the panel after 100ms — the user sees the scroll begin before the panel slides shut, confirming their intent was actioned.
+**TOC link click:** In overlay mode, clicking a link starts `scrollIntoView({ behavior: "smooth" })`, then closes the panel after **400ms** — the user sees the scroll begin AND the scroll-spy "you are here" highlight move to the target heading before the panel slides shut. This delay is intentionally longer than the panel animation (75ms) to allow visual confirmation.
+
+**Scroll spy default:** `useScrollSpy` defaults to the first section ID when no heading has crossed the threshold (i.e. page is at the top). Without this, opening the TOC on a fresh session shows no "you are here" highlight until the user scrolls.
 
 ### Why iOS-style content inertia works (cognitive psychology)
 
@@ -122,11 +124,51 @@ These notes document the perceptual principles behind the animation design. The 
 
 **3. Easing curves encode force.** Decelerating ease-out (content settling) implies friction — the content was moving and something slowed it down. Accelerating ease-in (content departing) implies a force was applied. The human motor system maps these curves to physical experience of pushing and releasing objects. `cubic-bezier(0.25, 0.46, 0.45, 0.94)` (the iOS content ease) has a gentle initial slope and a long deceleration tail — it reads as "heavy object coming to rest."
 
-**4. Cross-fade as shared identity.** The rail icon fading out while the close × fades in at the same spatial position exploits the Gestalt principle of common fate + spatial proximity. The brain reads them as the same object transforming, not two objects swapping. The overlap window (icon departing in first 75ms, × appearing from 75ms onward) prevents a perceptual "gap" that would break the illusion and be read as a flash or hole.
+**4. Cross-fade as shared identity.** The rail icon fading out while the close × fades in at the same spatial position exploits the Gestalt principle of common fate + spatial proximity. The brain reads them as the same object transforming, not two objects swapping. At 75ms total with 40ms sub-animations, the overlap window is tight but sufficient — the icon departs in 0–40ms, the × appears at 40–75ms. The close × sits on its own row above the title in a hanging-indent position, roughly aligned with the rail icon horizontally.
 
-**5. Confirmation through delayed close.** When a TOC link is clicked, the 100ms delay before the panel closes provides feedback that the action was registered. Without it, the panel closes instantly and the scroll happens behind it — the user can't confirm their click had the intended effect. This follows Nielsen's "visibility of system status" heuristic.
+**5. Confirmation through delayed close.** When a TOC link is clicked, the **400ms** delay before the panel closes lets the user see two things: (a) the smooth scroll begin, and (b) the scroll-spy highlight move to the target heading in the TOC. This is deliberately much longer than the panel animation (75ms). We tried 100ms — too fast to register the highlight change. 400ms gives just enough time for the scroll-spy to update and the blue background to visibly shift. This follows Nielsen's "visibility of system status" heuristic.
 
 **6. Application-wide implications.** These principles aren't sidebar-specific. The three element categories in any transition — departing elements (fade out fast, first ~50%), entering elements (fade in, last ~50%), and morphing elements (cross-fade with overlap) — recur everywhere. The timing ratios (40ms depart / 75ms container / 40ms arrive) and easing assignments (ease-in for departure, ease-out for arrival) form a reusable motion vocabulary. The clip-path reveal technique (`inset()` animation) is GPU-composited and layout-free, making it suitable for any panel or drawer transition. When extending to other surfaces, use the playground to A/B test curtain vs iOS inertia — the right choice depends on whether the content changes between states (iOS better) or stays the same (curtain may suffice).
+
+### Timing decisions — how we got here
+
+The animation timings were tuned iteratively through visual testing. Documenting the journey so future changes don't repeat dead ends.
+
+**Starting point (v1):** 300ms panel, 150ms sub-animations. Based on iOS navigation transitions (~350ms) and Material Design guidelines (200–300ms). Felt academic and sluggish in practice — the sidebar is a lightweight reveal, not a page transition.
+
+**Halve #1 (v2):** 150ms panel, 75ms sub-animations. Better, but the hover delay (400ms) made the entire interaction feel slow. The bottleneck was the wait, not the animation.
+
+**Halve #2 + hover speedup (v3, current):** 75ms panel, 40ms sub-animations. Hover delay 200ms. This is where snappy starts to feel right. The animations are almost subliminal — you perceive the panel appearing rather than watching it arrive.
+
+**Key learnings:**
+
+| Decision | Why |
+|----------|-----|
+| **75ms panel reveal** is the sweet spot | Below ~60ms, clip-path animation is invisible (wasted GPU work). Above ~120ms, the reveal feels slow for a narrow sidebar. 75ms is 4–5 frames at 60fps — enough to see motion without waiting for it. |
+| **40ms sub-animations** (icon depart/close sneak) | At the 40ms perceptual threshold — the brain registers change without tracking it. Faster is invisible; slower creates a perceived pause. |
+| **200ms hover delay** (not faster) | Below 150ms, accidental hovers trigger the overlay when the mouse crosses the rail en route to the scroll bar. 200ms filters intent from accident. |
+| **400ms TOC link close delay** (deliberately slow) | This is the one timing that stays high. The smooth scroll takes ~200–400ms, and the scroll-spy needs a frame to update the "you are here" highlight. 400ms lets the user see both the scroll AND the highlight move before the panel closes. We tried 100ms — too fast to see the highlight change. |
+| **Rail hover cue was a bad idea** | We added `cursor: pointer` + background tint to the whole rail, then removed it. At 200ms hover delay, the overlay opens so fast that the tint reads as flicker. The only useful hover cue is on the icon button itself. |
+| **Push and overlay should look identical** | Close × on the left (via `order: -1`) in both modes. Two-row header in both modes. The only difference is persistence (overlay auto-closes, push stays open). |
+| **Grid transition speed must match overlay speed** | Push mode (grid column transition) at 75ms, overlay (clip-path) at 75ms. Mismatched speeds make one path feel broken. |
+
+**Complete timing table (current):**
+
+| Element | Duration | Delay | Easing |
+|---------|----------|-------|--------|
+| Panel clip-path reveal | 75ms | 0 | ease-out `(0,0,0.2,1)` |
+| Panel clip-path hide | 75ms | 0 | ease-in `(0.4,0,1,1)` |
+| Rail icon depart | 40ms | 0 | ease-in |
+| Rail icon return | 40ms | 40ms | ease-out |
+| Close × sneak in | 40ms | 40ms | ease-out |
+| Close × sneak out | 40ms | 0 | ease-in |
+| iOS content settle | 65ms | 10ms | `(0.25,0.46,0.45,0.94)` |
+| iOS content depart | 50ms | 0 | ease-in |
+| Push mode grid transition | 75ms | 0 | ease |
+| Hover delay | 200ms | — | — |
+| Leave grace | 100ms | — | — |
+| TOC link close delay | 400ms | — | — |
+| JS animationend fallback | 120ms | — | — |
 
 ---
 
@@ -140,6 +182,7 @@ Pointer-event state machine. During drag, CSS custom properties update directly 
 |--------|----------|-------------|-----------|
 | `.toc-drag-handle` | Right edge of col 2 | Push mode **or** overlay mode | Resize TOC sidebar |
 | `.tag-drag-handle` | Left edge of col 4 | Tag sidebar open | Resize tag sidebar |
+| `.toc-rail-drag` | Right edge of col 1 | TOC sidebar **closed** | Drag-to-open from collapsed |
 | `.tag-rail-drag` | Left edge of col 5 | Tag sidebar **closed** | Drag-to-open from collapsed |
 
 ### Constraints

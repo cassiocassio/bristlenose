@@ -8,7 +8,7 @@ ODD even cadence of Fixes vs Design and IMplementation
 
 ## Next session reminder
 
-- [ ] **Numeric stage prefixes** — rename `bristlenose/stages/*.py` to `s01_ingest.py` … `s12_render_html.py` so pipeline order is visible in file browser. Plan: `.claude/plans/rippling-twirling-salamander.md`. Blocked on current refactoring landing first
+- [x] **Numeric stage prefixes** — renamed `bristlenose/stages/*.py` to `s01_ingest.py` … `s12_render/` so pipeline order is visible in file browser
 
 ## Eseential Simplicity and Clarity layout quality
 

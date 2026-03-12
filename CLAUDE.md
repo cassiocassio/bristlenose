@@ -149,7 +149,7 @@ macOS ships BSD versions of `sed`, `grep`, `awk`, `find`, `xargs`, `date`, `stat
 - **Quote sequences** (consecutive quote detection, segment ordinals, threshold tuning): `docs/design-quote-sequences.md`
 - **Dashboard stats** (inventory of unused pipeline data, improvement priorities): `docs/design-dashboard-stats.md`
 - **Logging** (persistent log file, two-knob system, instrumentation tiers): `docs/design-logging.md` — architecture, tier 1 implementation plan, backlog. **Read this before adding log lines**
-- **Minimap** (parallax scroll, stress-test math, interaction patterns): `docs/design-minimap.md` — VS Code-style abstract overview for Quotes tab, grid column 6, scrollbar offset, parallax derivation
+- **Minimap** (parallax scroll, stress-test math, interaction patterns): `docs/design-minimap.md` — VS Code-style abstract overview for Quotes tab, grid column 4 (between center and tag sidebar), scrollbar offset, parallax derivation
 - **Pipeline resilience / crash recovery / data integrity**: `docs/design-pipeline-resilience.md` — manifest, event sourcing, incremental re-runs, provenance. **Read this before working on pipeline state tracking, resume, or data validation**
 - **Server / data API / serve mode**: `bristlenose/server/CLAUDE.md`
 - **Footer feedback restore (React serve/export)**: `docs/design-footer-feedback-react.md`

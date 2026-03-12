@@ -5,8 +5,9 @@
  * cancelled, the TOC opens in overlay mode. A leave grace period allows
  * the mouse to move from the rail into the overlay panel without closing.
  *
- * Safe zone: mouse over the rail *button* cancels the hover timer so
- * users can click the push-open icon without the overlay pre-empting.
+ * Safe zone: mouse over the rail *button* or *drag handle* cancels the
+ * hover timer so users can click the push-open icon or grab the resize
+ * handle without the overlay pre-empting.
  *
  * Direction-aware leave: only mousing rightward (into main content) closes
  * the overlay. Left/top/bottom exits are treated as accidental.
@@ -44,6 +45,8 @@ export interface UseTocOverlayHandlers {
   onRailAreaClick: (e: React.MouseEvent) => void;
   onButtonMouseEnter: () => void;
   onButtonMouseLeave: () => void;
+  onDragHandleMouseEnter: () => void;
+  onDragHandleMouseLeave: () => void;
 }
 
 export function useTocOverlay({
@@ -93,9 +96,10 @@ export function useTocOverlay({
     (e: React.MouseEvent) => {
       clearLeave();
       if (tocMode !== "closed") return;
-      // Safe zone: if entering the rail via the button, don't start the timer.
+      // Safe zone: if entering the rail via the button or drag handle,
+      // don't start the timer — let the user click/drag without pre-emption.
       const target = e.target as HTMLElement;
-      if (target.closest(".rail-btn")) return;
+      if (target.closest(".rail-btn") || target.closest(".drag-handle")) return;
       startHoverTimer();
     },
     [tocMode, clearLeave, startHoverTimer],
@@ -154,15 +158,27 @@ export function useTocOverlay({
     startHoverTimer();
   }, [tocMode, startHoverTimer]);
 
-  // ── Rail area click (not the icon button) → immediate overlay ─────────
+  // ── Safe zone: drag handle enter/leave ───────────────────────────────
+
+  /** Mouse entered the drag handle — cancel hover timer (don't pre-empt drag). */
+  const onDragHandleMouseEnter = useCallback(() => {
+    clearHover();
+  }, [clearHover]);
+
+  /** Mouse left the drag handle back into the rail — restart the hover timer. */
+  const onDragHandleMouseLeave = useCallback(() => {
+    if (tocMode !== "closed") return;
+    startHoverTimer();
+  }, [tocMode, startHoverTimer]);
+
+  // ── Rail area click (not the icon button or drag handle) → immediate overlay
 
   const onRailAreaClick = useCallback(
     (e: React.MouseEvent) => {
-      // If the click was on the icon button itself, let the button's own
-      // handler fire (push-open). Only open overlay for clicks elsewhere
-      // in the rail area.
+      // If the click was on the icon button or drag handle, let their own
+      // handlers fire. Only open overlay for clicks elsewhere in the rail.
       const target = e.target as HTMLElement;
-      if (target.closest(".rail-btn")) return;
+      if (target.closest(".rail-btn") || target.closest(".drag-handle")) return;
       if (tocMode === "closed") {
         clearHover();
         openTocOverlay();
@@ -193,5 +209,7 @@ export function useTocOverlay({
     onRailAreaClick,
     onButtonMouseEnter,
     onButtonMouseLeave,
+    onDragHandleMouseEnter,
+    onDragHandleMouseLeave,
   };
 }

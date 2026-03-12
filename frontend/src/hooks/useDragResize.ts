@@ -26,7 +26,7 @@ import {
 export const MIN_WIDTH = 200;
 export const MAX_WIDTH = 320;
 const SNAP_CLOSE_THRESHOLD = 80;
-const RAIL_OPEN_THRESHOLD = 20;
+const RAIL_SNAP_OPEN_THRESHOLD = 60;
 const RESIZE_STEP = 10;
 
 // ── Types ────────────────────────────────────────────────────────────────
@@ -40,6 +40,10 @@ export interface UseDragResizeOptions {
   layoutRef: React.RefObject<HTMLElement | null>;
   /** Current sidebar width from the store (used as startWidth for sidebar handles). */
   currentWidth: number;
+  /** Minimum sidebar width in px. Defaults to MIN_WIDTH (200). */
+  minWidth?: number;
+  /** Maximum sidebar width in px. Defaults to MAX_WIDTH (320). */
+  maxWidth?: number;
 }
 
 export interface UseDragResizeReturn {
@@ -58,6 +62,8 @@ export function useDragResize({
   source,
   layoutRef,
   currentWidth,
+  minWidth = MIN_WIDTH,
+  maxWidth = MAX_WIDTH,
 }: UseDragResizeOptions): UseDragResizeReturn {
   const [isDragging, setIsDragging] = useState(false);
 
@@ -82,12 +88,18 @@ export function useDragResize({
       const startX = e.clientX;
       const startWidth = source === "sidebar" ? currentWidthRef.current : 0;
       let lastWidth = startWidth;
-      let railConfirmed = false;
+
+      // Rail drag: CSS class name used as a temporary overlay during drag.
+      const railDragClass = side === "toc" ? "toc-rail-dragging" : "tags-rail-dragging";
+
+      // Rail drag: deferred — class is added on first pointermove, not
+      // pointerdown, so no ghost border/shadow appears before the user moves.
+      let railRevealed = false;
 
       setIsDragging(true);
+      document.body.classList.add("dragging");
 
       if (source === "sidebar") {
-        document.body.classList.add("dragging");
         layout.classList.remove("animating");
       }
 
@@ -100,27 +112,28 @@ export function useDragResize({
       const onMove = (ev: PointerEvent) => {
         const raw = computeWidth(ev.clientX);
 
-        if (source === "rail" && !railConfirmed) {
-          if (Math.abs(raw) < RAIL_OPEN_THRESHOLD) return;
-          // Crossed threshold — open the sidebar.
-          railConfirmed = true;
-          document.body.classList.add("dragging");
-          openFn();
-          // Remove animating so the open doesn't transition during drag.
-          // Need a rAF because openFn triggers a React re-render that may
-          // re-add .animating via withAnimation in SidebarLayout — but
-          // since openFn is called directly (not through withAnimation),
-          // .animating won't be added. Defensive removal anyway.
-          requestAnimationFrame(() => layout.classList.remove("animating"));
+        if (source === "rail") {
+          // Track 1:1 from 0 upward, clamped to maxWidth.
+          const w = Math.max(0, Math.min(maxWidth, raw));
+          // Reveal the overlay on the first move that produces width > 0.
+          // Deferring avoids a ghost border/shadow flash on pointerdown.
+          if (!railRevealed && w > 0) {
+            railRevealed = true;
+            layout.classList.add(railDragClass);
+          }
+          layout.style.setProperty(cssVar, `${w}px`);
+          lastWidth = w;
+          return;
         }
 
-        if (source === "rail" && !railConfirmed) return;
-
+        // Sidebar edge drag: snap-close zone + min/max clamping.
+        // In the snap zone, collapse to 0 — previewing the closed state.
+        // Content disappears, matching what happens on release.
         if (raw < SNAP_CLOSE_THRESHOLD) {
           layout.style.setProperty(cssVar, "0px");
           lastWidth = 0;
         } else {
-          const clamped = Math.max(MIN_WIDTH, Math.min(MAX_WIDTH, raw));
+          const clamped = Math.max(minWidth, Math.min(maxWidth, raw));
           layout.style.setProperty(cssVar, `${clamped}px`);
           lastWidth = clamped;
         }
@@ -133,11 +146,24 @@ export function useDragResize({
         document.body.classList.remove("dragging");
         setIsDragging(false);
 
-        if (source === "rail" && !railConfirmed) {
-          // Never crossed the threshold — treat as a no-op.
+        if (source === "rail") {
+          // Remove the temporary overlay class (only added if drag moved).
+          if (railRevealed) layout.classList.remove(railDragClass);
+
+          if (lastWidth >= RAIL_SNAP_OPEN_THRESHOLD) {
+            // Commit: open in push mode at the dragged width (clamped to min).
+            const finalWidth = Math.max(minWidth, lastWidth);
+            layout.style.setProperty(cssVar, `${finalWidth}px`);
+            openFn();
+            setWidthFn(finalWidth);
+          } else {
+            // Abort: snap back to closed — reset CSS var.
+            layout.style.removeProperty(cssVar);
+          }
           return;
         }
 
+        // Sidebar edge drag commit.
         if (lastWidth < SNAP_CLOSE_THRESHOLD) {
           // Snap-close with animation.
           layout.classList.add("animating");
@@ -164,9 +190,13 @@ export function useDragResize({
         document.removeEventListener("pointermove", onMove);
         document.removeEventListener("pointerup", onUp);
         document.body.classList.remove("dragging");
+        if (source === "rail" && railRevealed) {
+          layout.classList.remove(railDragClass);
+          layout.style.removeProperty(cssVar);
+        }
       };
     },
-    [side, source, layoutRef, cssVar, openFn, closeFn, setWidthFn],
+    [side, source, layoutRef, cssVar, openFn, closeFn, setWidthFn, minWidth, maxWidth],
   );
 
   // Keyboard resize for sidebar edge handles (arrow keys ±10px, Home/End for min/max).
@@ -183,13 +213,13 @@ export function useDragResize({
       let newWidth: number | null = null;
 
       if (e.key === increaseKey) {
-        newWidth = Math.min(MAX_WIDTH, currentWidthRef.current + RESIZE_STEP);
+        newWidth = Math.min(maxWidth, currentWidthRef.current + RESIZE_STEP);
       } else if (e.key === decreaseKey) {
-        newWidth = Math.max(MIN_WIDTH, currentWidthRef.current - RESIZE_STEP);
+        newWidth = Math.max(minWidth, currentWidthRef.current - RESIZE_STEP);
       } else if (e.key === "Home") {
-        newWidth = MIN_WIDTH;
+        newWidth = minWidth;
       } else if (e.key === "End") {
-        newWidth = MAX_WIDTH;
+        newWidth = maxWidth;
       }
 
       if (newWidth !== null) {
@@ -197,7 +227,7 @@ export function useDragResize({
         setWidthFn(newWidth);
       }
     },
-    [side, source, setWidthFn],
+    [side, source, setWidthFn, minWidth, maxWidth],
   );
 
   // Cleanup on unmount if drag is in progress.

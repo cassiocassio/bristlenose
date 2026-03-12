@@ -31,12 +31,20 @@ export const TOKEN_DEFAULTS = {
   baselineUnit: 4, // px
   // Sidebar layout
   railWidth: 36, // px
-  minimapWidth: 48, // px (3rem at 16px base)
+  minimapWidth: 80, // px (5rem at 16px base)
   gutterLeft: 32, // px (2rem)
-  gutterRight: 40, // px (2.5rem)
+  gutterRight: 8, // px (0.5rem)
   overlayDuration: 0.075, // seconds
   hoverDelay: 200, // ms
   leaveGrace: 100, // ms
+  // Overlay shadow (box-shadow on overlay TOC panel)
+  overlayShadowX: 4, // px (horizontal offset)
+  overlayShadowBlur: 16, // px
+  overlayShadowOpacity: 0.08, // 0–1
+  // Animation speed scaler (1.0 = 100% = current speeds)
+  animationScale: 1.0,
+  // Overlay auto-close on TOC anchor click (false = stay open until mouseout)
+  overlayAutoClose: false,
 } as const;
 
 // ── State shape ───────────────────────────────────────────────────────────
@@ -87,6 +95,20 @@ export interface PlaygroundState {
 
   // Overlay content animation variant (null = "curtain" default)
   overlayStyle: "curtain" | "ios" | null;
+
+  // Overlay shadow (null = use CSS default from --bn-overlay-shadow)
+  overlayShadowX: number | null;
+  overlayShadowBlur: number | null;
+  overlayShadowOpacity: number | null;
+
+  // Animation speed scaler (null = 1.0 = 100% = CSS defaults)
+  animationScale: number | null;
+
+  // Overlay auto-close on TOC anchor click (null = use default: true)
+  overlayAutoClose: boolean | null;
+
+  // Layout column debug overlay (highlight grid columns)
+  layoutColumns: boolean;
 }
 
 // ── sessionStorage helpers ────────────────────────────────────────────────
@@ -128,6 +150,12 @@ function loadState(): PlaygroundState {
     hoverDelay: null,
     leaveGrace: null,
     overlayStyle: null,
+    overlayShadowX: null,
+    overlayShadowBlur: null,
+    overlayShadowOpacity: null,
+    animationScale: null,
+    overlayAutoClose: null,
+    layoutColumns: false,
   };
   try {
     const raw = sessionStorage.getItem(SS_KEY);
@@ -239,6 +267,34 @@ function applyOverrides(s: PlaygroundState): void {
   if (s.overlayDuration !== null)
     rootVars.push(`--bn-overlay-duration: ${s.overlayDuration}s`);
 
+  // Overlay shadow — compose the full box-shadow value from individual knobs
+  if (s.overlayShadowX !== null || s.overlayShadowBlur !== null || s.overlayShadowOpacity !== null) {
+    const x = s.overlayShadowX ?? TOKEN_DEFAULTS.overlayShadowX;
+    const blur = s.overlayShadowBlur ?? TOKEN_DEFAULTS.overlayShadowBlur;
+    const opacity = s.overlayShadowOpacity ?? TOKEN_DEFAULTS.overlayShadowOpacity;
+    rootVars.push(`--bn-overlay-shadow: ${x}px 0 ${blur}px rgba(0, 0, 0, ${opacity})`);
+  }
+
+  // Animation speed scaler — multiplies all sidebar animation durations.
+  // Injects overrides for each animation rule so they scale uniformly.
+  if (s.animationScale !== null && s.animationScale !== 1.0) {
+    const sc = s.animationScale;
+    // Override sidebar grid transition
+    rules.push(`.layout.animating { transition-duration: ${Math.round(75 * sc)}ms !important; }`);
+    // Override overlay panel animation durations
+    rules.push(`.layout.toc-overlay .toc-sidebar { animation-duration: ${Math.round(75 * sc)}ms !important; }`);
+    rules.push(`.layout.toc-closing .toc-sidebar { animation-duration: ${Math.round(75 * sc)}ms !important; }`);
+    // Rail icon depart/return
+    rules.push(`.layout.toc-overlay .toc-rail .rail-btn { animation-duration: ${Math.round(40 * sc)}ms !important; }`);
+    rules.push(`.layout.toc-closing .toc-rail .rail-btn { animation-duration: ${Math.round(40 * sc)}ms !important; }`);
+    // Close × sneak-in/out (delay also scales)
+    rules.push(`.layout.toc-overlay .toc-sidebar-header .sidebar-close { animation-duration: ${Math.round(40 * sc)}ms !important; animation-delay: ${Math.round(40 * sc)}ms !important; }`);
+    rules.push(`.layout.toc-closing .toc-sidebar-header .sidebar-close { animation-duration: ${Math.round(25 * sc)}ms !important; }`);
+    // iOS variant
+    rules.push(`.layout.toc-overlay.overlay-ios .toc-sidebar-body { animation-duration: ${Math.round(65 * sc)}ms !important; animation-delay: ${Math.round(10 * sc)}ms !important; }`);
+    rules.push(`.layout.toc-closing.overlay-ios .toc-sidebar-body { animation-duration: ${Math.round(50 * sc)}ms !important; }`);
+  }
+
   // Baseline grid
   rootVars.push(`--bn-baseline: ${s.baselineUnit}px`);
 
@@ -253,6 +309,7 @@ function applyOverrides(s: PlaygroundState): void {
   // Body classes for visual aids
   document.body.classList.toggle("bn-show-baseline", s.baselineGrid);
   document.body.classList.toggle("bn-show-grid-overlay", s.gridOverlay);
+  document.body.classList.toggle("bn-show-layout-columns", s.layoutColumns);
 
   // Dark mode override
   if (s.darkMode) {
@@ -391,6 +448,24 @@ export function setLeaveGrace(v: number | null): void {
 export function setOverlayStyle(v: "curtain" | "ios" | null): void {
   setState((prev) => ({ ...prev, overlayStyle: v }));
 }
+export function setOverlayShadowX(v: number | null): void {
+  setState((prev) => ({ ...prev, overlayShadowX: v }));
+}
+export function setOverlayShadowBlur(v: number | null): void {
+  setState((prev) => ({ ...prev, overlayShadowBlur: v }));
+}
+export function setOverlayShadowOpacity(v: number | null): void {
+  setState((prev) => ({ ...prev, overlayShadowOpacity: v }));
+}
+export function setAnimationScale(v: number | null): void {
+  setState((prev) => ({ ...prev, animationScale: v }));
+}
+export function setOverlayAutoClose(v: boolean | null): void {
+  setState((prev) => ({ ...prev, overlayAutoClose: v }));
+}
+export function toggleLayoutColumns(): void {
+  setState((prev) => ({ ...prev, layoutColumns: !prev.layoutColumns }));
+}
 
 /** Reset all overrides to CSS defaults. */
 export function resetPlayground(): void {
@@ -431,6 +506,12 @@ export function resetPlayground(): void {
     hoverDelay: null,
     leaveGrace: null,
     overlayStyle: null,
+    overlayShadowX: null,
+    overlayShadowBlur: null,
+    overlayShadowOpacity: null,
+    animationScale: null,
+    overlayAutoClose: null,
+    layoutColumns: false,
   }));
 }
 
@@ -438,7 +519,7 @@ export function resetPlayground(): void {
 export function resetPlaygroundStore(): void {
   const el = document.getElementById(STYLE_ID);
   if (el) el.remove();
-  document.body.classList.remove("bn-show-baseline", "bn-show-grid-overlay");
+  document.body.classList.remove("bn-show-baseline", "bn-show-grid-overlay", "bn-show-layout-columns");
   document.documentElement.removeAttribute("data-theme");
 
   state = {
@@ -469,6 +550,12 @@ export function resetPlaygroundStore(): void {
     hoverDelay: null,
     leaveGrace: null,
     overlayStyle: null,
+    overlayShadowX: null,
+    overlayShadowBlur: null,
+    overlayShadowOpacity: null,
+    animationScale: null,
+    overlayAutoClose: null,
+    layoutColumns: false,
   };
   try {
     sessionStorage.removeItem(SS_KEY);

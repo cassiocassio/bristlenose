@@ -17,6 +17,7 @@ import type { QuotesListResponse } from "../utils/types";
 import { useProjectId } from "../hooks/useProjectId";
 import { useScrollSpy } from "../hooks/useScrollSpy";
 import { useSidebarStore, closeToc } from "../contexts/SidebarStore";
+import { usePlaygroundStore } from "../contexts/PlaygroundStore";
 
 // ── Slug helper (mirrors QuoteSections/QuoteThemes) ───────────────────────
 
@@ -43,8 +44,13 @@ interface TocSidebarProps {
 export function TocSidebar({ onOverlayClose }: TocSidebarProps) {
   const projectId = useProjectId();
   const { tocMode } = useSidebarStore();
+  const pg = usePlaygroundStore();
   const [data, setData] = useState<QuotesListResponse | null>(null);
   const activeRef = useRef<HTMLAnchorElement | null>(null);
+  // Click intent: when the user clicks a TOC link, this ref overrides
+  // the scroll spy so the clicked heading stays highlighted even if
+  // the page can't scroll far enough to make it topmost (last-item edge case).
+  const clickedIdRef = useRef<string | null>(null);
 
   // Fetch quotes data for TOC entries.
   useEffect(() => {
@@ -99,7 +105,7 @@ export function TocSidebar({ onOverlayClose }: TocSidebarProps) {
     return ids;
   }, [sections, themes]);
 
-  const activeId = useScrollSpy(allIds);
+  const activeId = useScrollSpy(allIds, 100, clickedIdRef);
 
   // Auto-scroll active TOC link into view within the sidebar.
   // Uses "instant" (not "smooth") to avoid competing scrollIntoView calls
@@ -114,24 +120,25 @@ export function TocSidebar({ onOverlayClose }: TocSidebarProps) {
   }, [activeId]);
 
   // Click handler — smooth scroll to the target heading.
-  // In overlay mode, let the scroll begin visibly, then close the panel.
-  // The 400ms delay lets the user see the "you are here" highlight move
-  // to the clicked heading before the panel slides shut — confirming
-  // their intent was actioned.
+  // In overlay mode, behaviour depends on the playground's overlayAutoClose
+  // toggle: when true (default/legacy), close the panel after a 400ms delay;
+  // when false, leave the panel open — the user closes by mousing out.
+  const autoClose = pg.overlayAutoClose ?? false;
   const handleClick = useCallback((e: React.MouseEvent<HTMLAnchorElement>, id: string) => {
     e.preventDefault();
+    clickedIdRef.current = id;
     const el = document.getElementById(id);
     if (el) {
       el.scrollIntoView({ behavior: "smooth", block: "start" });
     }
-    if (tocMode === "overlay") {
+    if (tocMode === "overlay" && autoClose) {
       if (onOverlayClose) {
         setTimeout(onOverlayClose, 400);
       } else {
         closeToc();
       }
     }
-  }, [tocMode, onOverlayClose]);
+  }, [tocMode, onOverlayClose, autoClose]);
 
   if (!data) return null;
 

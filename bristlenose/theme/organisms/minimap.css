@@ -1,5 +1,5 @@
 /* Minimap — VS Code-style abstract overview of quote page.
-   Grid column 6 in the sidebar layout. Quote lines as pale grey,
+   Grid column 4 in the sidebar layout (between center content and tag sidebar). Quote lines as pale grey,
    heading lines as darker grey, blue translucent viewport indicator.
    Parallax scrolling for long pages via translateY on .bn-minimap-content.
    Design reference: docs/mockups/mockup-minimap.html */

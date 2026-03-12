@@ -204,11 +204,11 @@
     --bn-sidebar-min: 200px;     /* minimum resize bound */
     --bn-sidebar-max: 480px;     /* maximum resize bound */
     --bn-rail-width: 36px;       /* collapsed icon rail width */
-    --bn-minimap-width: 3rem;    /* right-edge minimap (48px at default font size) */
+    --bn-minimap-width: 5rem;    /* minimap column incl. breathing room (80px; ~56px content + 12px each side) */
     --bn-overlay-shadow: 4px 0 16px rgba(0, 0, 0, 0.08);  /* TOC overlay drop shadow */
     --bn-overlay-duration: 0.3s;   /* overlay open/close animation speed */
     --bn-gutter-left: 2rem;        /* gap: rail/sidebar → center content */
-    --bn-gutter-right: 2.5rem;     /* gap: center content → minimap/rail */
+    --bn-gutter-right: 0.5rem;     /* gap: center content → minimap column */
 
     /* Minimap colours (subtle abstract overview of page shape) */
     --bn-minimap-quote: #e5e7eb;                             /* quote line */

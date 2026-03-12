@@ -39,6 +39,12 @@ import {
   setHoverDelay,
   setLeaveGrace,
   setOverlayStyle,
+  setOverlayShadowX,
+  setOverlayShadowBlur,
+  setOverlayShadowOpacity,
+  setAnimationScale,
+  setOverlayAutoClose,
+  toggleLayoutColumns,
   resetPlayground,
 } from "../contexts/PlaygroundStore";
 import {
@@ -367,6 +373,54 @@ export function ResponsivePlayground() {
                 iOS inertia
               </button>
             </div>
+            <TokenSlider
+              label="Animation speed"
+              value={pg.animationScale}
+              defaultValue={TOKEN_DEFAULTS.animationScale}
+              min={0.25}
+              max={5}
+              step={0.25}
+              unit="x"
+              onChange={setAnimationScale}
+            />
+            <TokenSlider
+              label="Shadow X offset"
+              value={pg.overlayShadowX}
+              defaultValue={TOKEN_DEFAULTS.overlayShadowX}
+              min={0}
+              max={20}
+              step={1}
+              unit="px"
+              onChange={setOverlayShadowX}
+            />
+            <TokenSlider
+              label="Shadow blur"
+              value={pg.overlayShadowBlur}
+              defaultValue={TOKEN_DEFAULTS.overlayShadowBlur}
+              min={0}
+              max={60}
+              step={2}
+              unit="px"
+              onChange={setOverlayShadowBlur}
+            />
+            <TokenSlider
+              label="Shadow opacity"
+              value={pg.overlayShadowOpacity}
+              defaultValue={TOKEN_DEFAULTS.overlayShadowOpacity}
+              min={0}
+              max={0.5}
+              step={0.02}
+              unit=""
+              onChange={setOverlayShadowOpacity}
+            />
+            <label className="pg-checkbox-label" style={{ marginTop: "0.5rem" }}>
+              <input
+                type="checkbox"
+                checked={pg.overlayAutoClose ?? true}
+                onChange={(e) => setOverlayAutoClose(e.target.checked ? null : false)}
+              />
+              Auto-close overlay on anchor click
+            </label>
           </div>
 
           <div className="pg-section">
@@ -464,6 +518,15 @@ export function ResponsivePlayground() {
                 onChange={toggleBaselineGrid}
               />
               <span>Baseline grid</span>
+            </label>
+
+            <label className="pg-toggle-row">
+              <input
+                type="checkbox"
+                checked={pg.layoutColumns}
+                onChange={toggleLayoutColumns}
+              />
+              <span>Layout columns</span>
             </label>
 
             {pg.baselineGrid && (

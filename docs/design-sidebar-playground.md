@@ -1,7 +1,7 @@
 # Sidebar Layout & Responsive Playground — Design & Implementation Notes
 
-**Status:** Implemented on `responsive-playground` branch, pending merge.
-**Date:** 10 Mar 2026
+**Status:** Shipped on `main`.
+**Date:** 10–12 Mar 2026
 
 ---
 
@@ -30,21 +30,23 @@ Separately, the dev team needs an interactive tuning environment for responsive 
 ### Column layout
 
 ```
-[toc-rail | toc-sidebar | center | tag-sidebar | tag-rail | minimap]
-   col 1       col 2       col 3     col 4        col 5     col 6
+[toc-rail | toc-sidebar | center | minimap | tag-sidebar | tag-rail]
+   col 1       col 2       col 3    col 4      col 5        col 6
 ```
 
 The grid is defined in `bristlenose/theme/organisms/sidebar.css`. The `SidebarLayout` React component (`frontend/src/components/SidebarLayout.tsx`) wraps the Quotes tab content in a `.layout` div and renders all six columns.
 
+Minimap sits between center content and the tag sidebar (VS Code-style) so it stays in the same visual position whether tags are open or closed. The tag rail is the rightmost element — dragging it open reveals the tag sidebar without the minimap shifting.
+
 ### Grid template by state
 
-| State | Col 1 (toc rail) | Col 2 (toc sidebar) | Col 3 (center) | Col 4 (tag sidebar) | Col 5 (tag rail) | Col 6 (minimap) |
+| State | Col 1 (toc rail) | Col 2 (toc sidebar) | Col 3 (center) | Col 4 (minimap) | Col 5 (tag sidebar) | Col 6 (tag rail) |
 |-------|-----------------|--------------------|-----------|--------------------|-----------------|----------------|
-| **Closed** | `--bn-rail-width` | `0` | `1fr` | `0` | `--bn-rail-width` | `--bn-minimap-width` |
-| **TOC push** | `0` | `--toc-width` | `1fr` | `0` | `--bn-rail-width` | `--bn-minimap-width` |
-| **Tags open** | `--bn-rail-width` | `0` | `1fr` | `--tags-width` | `0` | `--bn-minimap-width` |
-| **Both open** | `0` | `--toc-width` | `1fr` | `--tags-width` | `0` | `--bn-minimap-width` |
-| **TOC overlay** | `--bn-rail-width` | `0` | `1fr` | ... | ... | ... |
+| **Closed** | `--bn-rail-width` | `0` | `1fr` | `--bn-minimap-width` | `0` | `--bn-rail-width` |
+| **TOC push** | `0` | `--toc-width` | `1fr` | `--bn-minimap-width` | `0` | `--bn-rail-width` |
+| **Tags open** | `--bn-rail-width` | `0` | `1fr` | `--bn-minimap-width` | `--tags-width` | `0` |
+| **Both open** | `0` | `--toc-width` | `1fr` | `--bn-minimap-width` | `--tags-width` | `0` |
+| **TOC overlay** | `--bn-rail-width` | `0` | `1fr` | `--bn-minimap-width` | ... | ... |
 
 In overlay mode, column 2 stays at `0` — the TOC sidebar uses `position: fixed` to float above the content. The grid doesn't change.
 
@@ -56,11 +58,11 @@ In overlay mode, column 2 stays at `0` — the TOC sidebar uses `position: fixed
 | `--bn-sidebar-width` | `280px` | Default sidebar panel width |
 | `--bn-sidebar-min` | `200px` | Minimum resize bound |
 | `--bn-sidebar-max` | `480px` | Maximum resize bound |
-| `--bn-minimap-width` | `3rem` | Right-edge minimap column |
+| `--bn-minimap-width` | `5rem` | Minimap column (80px; ~56px content + 12px padding each side) |
 | `--bn-overlay-shadow` | `4px 0 16px rgba(0,0,0,0.08)` | TOC overlay drop shadow |
 | `--bn-overlay-duration` | `0.075s` | Overlay animation speed (currently unused — animations use explicit 75ms values per-element) |
 | `--bn-gutter-left` | `2rem` | Gap between rail/sidebar and center content |
-| `--bn-gutter-right` | `2.5rem` | Gap between content and minimap/tag rail |
+| `--bn-gutter-right` | `0.5rem` | Gap between center content and minimap column |
 | `--bn-quote-max-width` | `23rem` | Card reading measure (~5 words/line) |
 | `--bn-grid-gap` | `1.25rem` | Gap between grid columns |
 
@@ -77,8 +79,11 @@ The TOC has three modes, managed by `SidebarStore.ts` as `TocMode: "closed" | "o
 | Mouse enters rail | Starts 200ms timer → opens overlay |
 | Mouse enters rail button (`.rail-btn`) | **Cancels** timer (safe zone — user is aiming to click) |
 | Mouse leaves rail button | Restarts timer (mouse is still in rail area) |
-| Click rail area | Opens overlay immediately |
+| Mouse enters drag handle (`.drag-handle`) | **Cancels** timer (safe zone — user is aiming to drag) |
+| Mouse leaves drag handle | Restarts timer (mouse is still in rail area) |
+| Click rail area (not button or handle) | Opens overlay immediately |
 | Click rail button | Opens **push** mode (bypasses overlay) |
+| Drag from rail handle | Opens **rail drag-to-open** overlay (see below) |
 
 ### Direction-aware close
 
@@ -110,9 +115,16 @@ The rail is the panel's left edge. `clip-path: inset()` reveals the panel rightw
 
 **A/B playground toggle:** The dev playground has a "Curtain / iOS inertia" toggle. Curtain (default) reveals content stationary behind the clip. iOS variant adds `translateX(-20px→0)` on the content body with a 10ms delay, creating a "settling into place" inertia effect inspired by iOS navigation transitions. The `.overlay-ios` class is added to `.layout` when the iOS variant is active.
 
-**TOC link click:** In overlay mode, clicking a link starts `scrollIntoView({ behavior: "smooth" })`, then closes the panel after **400ms** — the user sees the scroll begin AND the scroll-spy "you are here" highlight move to the target heading before the panel slides shut. This delay is intentionally longer than the panel animation (75ms) to allow visual confirmation.
+**TOC link click:** Clicking a TOC link smooth-scrolls to the heading and sets a click intent override on the scroll spy. In overlay mode, behaviour depends on the `overlayAutoClose` playground toggle: when `true`, the panel closes after **400ms** (legacy); when `false` (default), the panel stays open and the user closes by mousing out. The 400ms delay lets the user see the scroll begin AND the highlight move.
 
 **Scroll spy default:** `useScrollSpy` defaults to the first section ID when no heading has crossed the threshold (i.e. page is at the top). Without this, opening the TOC on a fresh session shows no "you are here" highlight until the user scrolls.
+
+**Scroll spy click intent override:** When the user clicks a TOC link, the clicked heading becomes "active" and stays active until the user manually scrolls away. This handles the edge case where the page can't scroll far enough to place the last heading at the top of the viewport. Two-phase approach:
+
+1. **Immune phase (0–600ms):** Override is unconditional. Don't trust `getBoundingClientRect()` during this window — Safari returns glitched values (bottom < top, negative height) while `scrollIntoView({ behavior: "smooth" })` animation is in progress.
+2. **Sticky phase (>600ms):** Override holds as long as the standard algorithm picks a heading within 1 index of the clicked heading. Clears when the user scrolls far enough that the gap exceeds 1 position.
+
+The `clickedIdRef` is a mutable React ref set by `TocSidebar` on click, read by `useScrollSpy` on each scroll frame. A `lastClickedId` closure variable detects when the ref changes (new click intent), recording `Date.now()` as the click timestamp.
 
 ### Why iOS-style content inertia works (cognitive psychology)
 
@@ -187,16 +199,30 @@ Pointer-event state machine. During drag, CSS custom properties update directly 
 
 ### Constraints
 
-- Width clamped: 200px → 320px (JS constants `MIN_WIDTH`, `MAX_WIDTH`)
-- **Snap-close:** dragging below 80px triggers automatic close with grid animation
-- **Rail threshold:** drag-to-open from rail requires >20px movement before opening
-- `body.dragging` class disables text selection and forces `col-resize` cursor globally
+- Width clamped: 200px → 320px (JS constants `MIN_WIDTH`, `MAX_WIDTH`), customisable via `minWidth`/`maxWidth` props
+- **Snap-close (sidebar edge):** dragging below 80px triggers automatic close with grid animation
+- **Snap-open threshold (rail):** releasing above 60px commits to push mode; below 60px aborts (snaps closed)
+- `body.dragging` class disables text selection and forces `col-resize` cursor globally (added on `pointerdown`)
+
+### Rail drag-to-open
+
+Dragging from the closed rail reveals the sidebar as a **fixed overlay** that tracks the pointer 1:1 — no grid rearrangement, no animations. Width is set directly via `--toc-width`/`--tags-width` CSS var on the layout element.
+
+| Phase | Behaviour |
+|-------|-----------|
+| `pointerdown` | `body.dragging` added. Class deferred — no `toc-rail-dragging` yet |
+| First `pointermove` (width > 0) | `toc-rail-dragging` / `tags-rail-dragging` class added to layout. Sidebar appears as fixed overlay with `border-right: 1px solid` (no shadow, no animation) |
+| Subsequent `pointermove` | Width tracks pointer 1:1, clamped to `[0, maxWidth]`. Content inside sidebar uses `min-width: var(--bn-sidebar-min)` so text is visible at any drag width |
+| `pointerup` (width ≥ 60px) | Commit: open in push mode. Final width = `max(minWidth, lastWidth)`. Rail class removed, `openTocPush()` / `openTags()` + `setTocWidth()` / `setTagsWidth()` called |
+| `pointerup` (width < 60px) | Abort: snap closed. CSS var removed, rail class removed. No open/width actions |
+
+**Why deferred class?** Adding the overlay class on `pointerdown` causes a visible flash (border/shadow appears before the user has moved). Deferring to the first `pointermove` that produces width > 0 means the sidebar only appears once there's content to show.
 
 ---
 
 ## Minimap (`Minimap.tsx`, `minimap.css`)
 
-Column 6 renders an abstract representation of the page structure — VS Code style scrollbar minimap.
+Column 4 renders an abstract representation of the page structure — VS Code style scrollbar minimap. Positioned between center content and tag sidebar so it stays in place regardless of tag sidebar state.
 
 - Section/theme headings: darker, wider lines (`--bn-minimap-heading`)
 - Individual quotes: pale 2px lines (`--bn-minimap-quote`)
@@ -264,10 +290,13 @@ All three paths call `togglePlayground()` / `toggleHUD()` from `PlaygroundStore`
 |----------|--------|---------------|
 | Layout | `--bn-quote-max-width`, `--bn-grid-gap`, `--bn-max-width` | Yes |
 | Sidebar layout | `--bn-rail-width`, `--bn-minimap-width`, `--bn-gutter-left`, `--bn-gutter-right`, `--bn-overlay-duration` | Yes |
+| Overlay shadow | `--bn-overlay-shadow` (composed from X offset, blur, opacity sliders) | Yes |
+| Animation speed | All sidebar animation durations scaled uniformly by multiplier | Yes (via `!important` rules) |
 | JS timing | `hoverDelay` (200ms), `leaveGrace` (100ms) | No — passed as props through `SidebarLayout` → `useTocOverlay` |
+| JS behaviour | `overlayAutoClose` (false = stay open, true = close after 400ms) | No — read by `TocSidebar` |
 | Type scale | `html` font-size, heading sizes (computed from ratio), `body` line-height | Yes |
 | Spacing/radius | All `--bn-space-*` and `--bn-radius-*` scaled by multiplier | Yes |
-| Visual aids | Grid overlay, baseline grid, dark mode | Body class / `data-theme` attribute |
+| Visual aids | Grid overlay, baseline grid, layout columns, dark mode | Body class / `data-theme` attribute |
 
 CSS overrides injected via `<style id="bn-playground-overrides">` on `:root`. Setting a value to `null` removes that override (falls back to token default). "Revert All" resets every override.
 
@@ -302,29 +331,36 @@ CSS overrides injected via `<style id="bn-playground-overrides">` on `:root`. Se
 
 | File | Changes |
 |------|---------|
-| `bristlenose/theme/tokens.css` | 12 new layout/sidebar/minimap tokens |
-| `bristlenose/theme/organisms/sidebar.css` | 6-column grid, 4 state variants, overlay/closing CSS, drag handles, gutters, sticky fix |
-| `frontend/src/components/SidebarLayout.tsx` | Full rewrite: overlay animation, safe zone, drag handles in push+overlay, playground store wiring |
-| `frontend/src/components/TocSidebar.tsx` | Scroll-spy nav with section/theme headings |
+| `bristlenose/theme/tokens.css` | Layout/sidebar/minimap tokens (updated: minimap 5rem, gutter-right 0.5rem) |
+| `bristlenose/theme/organisms/sidebar.css` | 6-column grid (reordered: minimap col 4), overlay/closing/rail-drag CSS, shared sidebar-header, drag handles |
+| `bristlenose/theme/organisms/minimap.css` | Updated column reference (col 4), padding for breathing room |
+| `frontend/src/components/SidebarLayout.tsx` | Full rewrite: overlay animation, safe zone (button + drag handle), rail drag events, minimap at col 4, shared sidebar-header class |
+| `frontend/src/components/TocSidebar.tsx` | Scroll-spy nav with section/theme headings, click intent override via `clickedIdRef`, overlay auto-close toggle |
 | `frontend/src/contexts/SidebarStore.ts` | `TocMode` tri-state replacing boolean, overlay/push/closed, localStorage persistence |
-| `frontend/src/hooks/useDragResize.ts` | Sidebar + rail source modes, snap-close animation |
+| `frontend/src/contexts/PlaygroundStore.ts` | New controls: shadow (X/blur/opacity), animation scale, overlayAutoClose, layoutColumns |
+| `frontend/src/hooks/useDragResize.ts` | Sidebar + rail source modes, snap-close, rail drag-to-open overlay, custom minWidth/maxWidth |
+| `frontend/src/hooks/useScrollSpy.ts` | Two-phase click intent override (immune + sticky), `window.rAF/cAF`, defensive cleanup |
+| `frontend/src/hooks/useTocOverlay.ts` | Drag handle safe zone (`onDragHandleMouseEnter/Leave`), exclude handle from rail area click |
 | `frontend/src/hooks/useKeyboardShortcuts.ts` | `[`/`]`/`\`/`⌘.` sidebar shortcuts; `Ctrl+Shift+P/U` playground |
 | `frontend/src/layouts/AppLayout.tsx` | Lazy-load `ResponsivePlayground` + `PlaygroundHUD` in dev mode |
+| `frontend/src/components/ResponsivePlayground.tsx` | New sliders (shadow, animation), auto-close checkbox, layout columns toggle |
+| `frontend/src/components/playground.css` | Layout column debug overlay (colour-coded grid columns with labels) |
 
 ---
 
 ## Testing
 
-### Automated (934 Vitest + 1856 pytest)
+### Automated (990 Vitest + 1872 pytest)
 
 | Test file | Count | Coverage |
 |-----------|-------|----------|
 | `PlaygroundStore.test.ts` | 29 | CSS injection, persistence, reset, sidebar layout tokens |
 | `PlaygroundFab.test.tsx` | 5 | Visibility, click, a11y label |
-| `SidebarLayout.test.tsx` | 17 | Grid classes, drag handle rendering per mode, inline styles |
+| `SidebarLayout.test.tsx` | 21 | Grid classes, drag handle rendering per mode, inline styles |
 | `SidebarStore.test.ts` | 43 | Tri-state mode, overlay/push persistence, width storage |
-| `useTocOverlay.test.ts` | 17 | Safe zone, direction-aware leave, timer lifecycle |
-| `useDragResize.test.ts` | 21 | Sidebar/rail modes, snap-close, width clamping |
+| `useTocOverlay.test.ts` | 21 | Safe zone (button + drag handle), direction-aware leave, timer lifecycle |
+| `useDragResize.test.ts` | 25 | Sidebar/rail modes, snap-close, width clamping, custom min/max, rail commit |
+| `useScrollSpy.test.ts` | 16 | Base scroll spy (8) + click intent override (8: immune/sticky/clear/Safari glitch) |
 | `Minimap.test.tsx` | 11 | Data fetching, rendering, click-to-scroll |
 | `devicePresets.test.ts` | 9 | Data integrity, category coverage |
 
@@ -357,3 +393,7 @@ CSS overrides injected via `<style id="bn-playground-overrides">` on `:root`. Se
 - **`align-self: start` on sticky columns** is required for correct sticky range. Without it, `stretch` (the grid default) makes the cell height equal the row height, leaving zero sticky travel.
 - **Animated close uses `animationend`** — both open and close use `@keyframes` animations (clip-path reveal/hide). The 120ms fallback timeout catches cases where `animationend` doesn't fire (e.g., element removed mid-animation).
 - **Escape key closes TOC instantly** (no animation) — keyboard users expect immediate response. Only mouse-initiated closes (hover leave, click outside) use the animated path.
+- **Safari `getBoundingClientRect()` glitch during smooth scroll** — Safari returns impossible values (bottom < top, negative height of -28px on a 28px element) from `getBoundingClientRect()` while `scrollIntoView({ behavior: "smooth" })` animation is in progress. This broke the scroll spy's visibility check for the last heading in the TOC. Fixed by the two-phase click intent override in `useScrollSpy` — see "Scroll spy click intent override" above. Don't trust `getBoundingClientRect()` for 600ms after triggering smooth scroll in Safari.
+- **Rail drag class must be deferred to first `pointermove`** — adding `toc-rail-dragging` on `pointerdown` causes a visible flash (the `border-right` and fixed positioning appear before the user moves). Deferring to the first move that produces width > 0 prevents the ghost frame.
+- **Overlay clip-path `inset()` must use negative right value** — `clip-path: inset(0 0 0 0)` clips the box-shadow. Use `inset(0 -100px 0 0)` at the `to` state so the shadow has room to paint beyond the element edge. Both `toc-reveal` and `toc-hide` keyframes must agree on the expanded state value.
+- **Shared `.sidebar-header` base class** — both TOC and tag sidebars share a `.sidebar-header` flexbox column layout (flex-direction: column, close × on own row via `order: -1`). Per-sidebar overrides (e.g. `.tag-sidebar-header { padding-bottom: 0 }`) use the specific class. Don't duplicate the header layout in per-sidebar CSS.

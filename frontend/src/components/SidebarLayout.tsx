@@ -144,16 +144,16 @@ export function SidebarLayout({ active, children }: SidebarLayoutProps) {
     layout.classList.add("toc-closing");
 
     const cleanup = () => {
-      layout.classList.remove("toc-closing");
-      panel?.removeEventListener("transitionend", onEnd);
+      layout.classList.remove("toc-closing", "overlay-ios");
+      panel?.removeEventListener("animationend", onEnd);
       clearTimeout(fallback);
       closingRef.current = false;
       closeToc();
     };
-    const onEnd = (e: TransitionEvent) => {
+    const onEnd = (e: AnimationEvent) => {
       if (e.target === panel) cleanup();
     };
-    panel?.addEventListener("transitionend", onEnd);
+    panel?.addEventListener("animationend", onEnd);
     const fallback = setTimeout(cleanup, 400);
   }, [tocMode]);
 
@@ -244,7 +244,10 @@ export function SidebarLayout({ active, children }: SidebarLayoutProps) {
 
   const classes = ["layout"];
   if (tocMode === "push") classes.push("toc-open");
-  if (tocMode === "overlay") classes.push("toc-overlay");
+  if (tocMode === "overlay") {
+    classes.push("toc-overlay");
+    if (pg.overlayStyle === "ios") classes.push("overlay-ios");
+  }
   if (tagsOpen) classes.push("tags-open");
 
   const style: Record<string, string> = {};
@@ -296,7 +299,7 @@ export function SidebarLayout({ active, children }: SidebarLayoutProps) {
           </button>
         </div>
         <div className="toc-sidebar-body">
-          <TocSidebar />
+          <TocSidebar onOverlayClose={closeTocOverlayAnimated} />
         </div>
         {(tocMode === "push" || tocMode === "overlay") && (
           <div

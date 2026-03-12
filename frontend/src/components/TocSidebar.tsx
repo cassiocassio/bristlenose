@@ -33,7 +33,14 @@ interface TocEntry {
 
 // ── Component ─────────────────────────────────────────────────────────────
 
-export function TocSidebar() {
+interface TocSidebarProps {
+  /** Animated close callback for overlay mode. When provided, TOC link clicks
+   *  in overlay mode scroll first, then close after a brief delay so the user
+   *  sees the scroll begin before the panel slides shut. */
+  onOverlayClose?: () => void;
+}
+
+export function TocSidebar({ onOverlayClose }: TocSidebarProps) {
   const projectId = useProjectId();
   const { tocMode } = useSidebarStore();
   const [data, setData] = useState<QuotesListResponse | null>(null);
@@ -107,7 +114,8 @@ export function TocSidebar() {
   }, [activeId]);
 
   // Click handler — smooth scroll to the target heading.
-  // In overlay mode, close the overlay after initiating the scroll.
+  // In overlay mode, let the scroll begin visibly, then close the panel
+  // with the animated slide-out so the user sees their intent actioned.
   const handleClick = useCallback((e: React.MouseEvent<HTMLAnchorElement>, id: string) => {
     e.preventDefault();
     const el = document.getElementById(id);
@@ -115,9 +123,13 @@ export function TocSidebar() {
       el.scrollIntoView({ behavior: "smooth", block: "start" });
     }
     if (tocMode === "overlay") {
-      closeToc();
+      if (onOverlayClose) {
+        setTimeout(onOverlayClose, 400);
+      } else {
+        closeToc();
+      }
     }
-  }, [tocMode]);
+  }, [tocMode, onOverlayClose]);
 
   if (!data) return null;
 

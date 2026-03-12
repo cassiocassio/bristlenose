@@ -84,6 +84,9 @@ export interface PlaygroundState {
   overlayDuration: number | null;
   hoverDelay: number | null;     // JS-only (hover intent delay, ms)
   leaveGrace: number | null;     // JS-only (leave grace period, ms)
+
+  // Overlay content animation variant (null = "curtain" default)
+  overlayStyle: "curtain" | "ios" | null;
 }
 
 // ── sessionStorage helpers ────────────────────────────────────────────────
@@ -124,6 +127,7 @@ function loadState(): PlaygroundState {
     overlayDuration: null,
     hoverDelay: null,
     leaveGrace: null,
+    overlayStyle: null,
   };
   try {
     const raw = sessionStorage.getItem(SS_KEY);
@@ -384,6 +388,9 @@ export function setHoverDelay(v: number | null): void {
 export function setLeaveGrace(v: number | null): void {
   setState((prev) => ({ ...prev, leaveGrace: v }));
 }
+export function setOverlayStyle(v: "curtain" | "ios" | null): void {
+  setState((prev) => ({ ...prev, overlayStyle: v }));
+}
 
 /** Reset all overrides to CSS defaults. */
 export function resetPlayground(): void {
@@ -423,6 +430,7 @@ export function resetPlayground(): void {
     overlayDuration: null,
     hoverDelay: null,
     leaveGrace: null,
+    overlayStyle: null,
   }));
 }
 
@@ -460,6 +468,7 @@ export function resetPlaygroundStore(): void {
     overlayDuration: null,
     hoverDelay: null,
     leaveGrace: null,
+    overlayStyle: null,
   };
   try {
     sessionStorage.removeItem(SS_KEY);

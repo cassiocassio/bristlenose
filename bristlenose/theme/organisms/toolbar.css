@@ -5,10 +5,14 @@
    Uses :has(.toolbar) so only panels with a toolbar get the offset —
    currently Quotes, but future-proof if other panels gain one.
    The var fallback (3rem) covers the static render path where JS
-   hasn't measured the actual toolbar height. */
+   hasn't measured the actual toolbar height.
+   Two selectors: .bn-tab-panel for static render, .center for React SPA
+   (SidebarLayout wraps Outlet children in div.center). */
 .bn-tab-panel:has(.toolbar) h2[id],
 .bn-tab-panel:has(.toolbar) h3[id],
-.bn-tab-panel:has(.toolbar) div[id="user-tags-chart"] {
+.bn-tab-panel:has(.toolbar) div[id="user-tags-chart"],
+.center:has(.toolbar) h2[id],
+.center:has(.toolbar) h3[id] {
     scroll-margin-top: var(--bn-toolbar-height, 3rem);
 }
 

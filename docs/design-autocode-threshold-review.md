@@ -266,5 +266,5 @@ This requires the frontend to know whether autocode has been run for a framework
 | `frontend/src/components/ProposalZoneList.tsx` | **Create** |
 | `frontend/src/islands/CodebookPanel.tsx` | Swap modal, keep re-entry badge |
 | `bristlenose/theme/molecules/threshold-review.css` | **Create** |
-| `bristlenose/stages/render/theme_assets.py` | Register CSS in `_THEME_FILES` |
+| `bristlenose/stages/s12_render/theme_assets.py` | Register CSS in `_THEME_FILES` |
 | `tests/test_serve_autocode_api.py` | Add deny-below tests |

@@ -317,7 +317,7 @@ Bristlenose has ~30 direct + transitive deps across Python, ML, LLM SDKs, and NL
 | `bristlenose/config.py` | Pydantic settings (env vars, .env, bristlenose.toml) |
 | `bristlenose/pipeline.py` | Pipeline orchestrator |
 | `bristlenose/people.py` | People file: load, compute stats, merge, write, display name map |
-| `bristlenose/stages/render/` | HTML report renderer package |
+| `bristlenose/stages/s12_render/` | HTML report renderer package |
 | `bristlenose/theme/` | Atomic CSS design system |
 | `bristlenose/theme/js/` | Report JavaScript modules (frozen — static render path only) |
 | `bristlenose/llm/prompts/` | LLM prompt templates |

@@ -109,7 +109,7 @@ ungrouped:
 
 - New: `bristlenose/codebook.py`
 - New: `bristlenose/models/codebook.py` (or extend `models.py`)
-- Modified: `bristlenose/stages/render/` (read/write codebook, bake into HTML)
+- Modified: `bristlenose/stages/s12_render/` (read/write codebook, bake into HTML)
 - Modified: `bristlenose/theme/js/codebook.js` (read `BN_CODEBOOK`, YAML export button)
 - Modified: `bristlenose/output_paths.py` (`codebook_yaml` property)
 
@@ -185,9 +185,9 @@ groups:
 **Files touched:**
 
 - Modified: `bristlenose/llm/prompts.py` (codebook context injection)
-- Modified: `bristlenose/stages/quote_extraction.py` (pass codebook to prompt)
-- Modified: `bristlenose/stages/quote_clustering.py` (pass codebook to prompt)
-- Modified: `bristlenose/stages/thematic_grouping.py` (pass codebook to prompt)
+- Modified: `bristlenose/stages/s09_quote_extraction.py` (pass codebook to prompt)
+- Modified: `bristlenose/stages/s10_quote_clustering.py` (pass codebook to prompt)
+- Modified: `bristlenose/stages/s11_thematic_grouping.py` (pass codebook to prompt)
 - Modified: `bristlenose/pipeline.py` (load codebook, pass to stages)
 - Modified: `bristlenose/config.py` (codebook path config)
 - Modified: `bristlenose/codebook.py` (v2 schema support)
@@ -342,13 +342,13 @@ Phases 4 and 5 can ship independently. Phase 7 is a small addition that makes Ph
 
 - `bristlenose/theme/js/codebook.js` — current codebook UI (1003 lines)
 - `bristlenose/theme/organisms/codebook-panel.css` — codebook page styling (338 lines)
-- `bristlenose/stages/render/standalone_pages.py` — `_render_codebook_page()`, codebook toolbar button
+- `bristlenose/stages/s12_render/standalone_pages.py` — `_render_codebook_page()`, codebook toolbar button
 - `bristlenose/output_paths.py` — `codebook_file` property
 - `bristlenose/llm/prompts.py` — LLM prompt templates (Phases 5–6)
 - `bristlenose/models.py` — `Sentiment` enum, `ExtractedQuote`, `ScreenCluster`, `ThemeGroup`
-- `bristlenose/stages/quote_extraction.py` — Stage 9 (Phase 5)
-- `bristlenose/stages/quote_clustering.py` — Stage 10 (Phase 5)
-- `bristlenose/stages/thematic_grouping.py` — Stage 11 (Phase 5)
+- `bristlenose/stages/s09_quote_extraction.py` — Stage 9 (Phase 5)
+- `bristlenose/stages/s10_quote_clustering.py` — Stage 10 (Phase 5)
+- `bristlenose/stages/s11_thematic_grouping.py` — Stage 11 (Phase 5)
 - `bristlenose/people.py` — `people.yaml` merge strategy (pattern for Phase 4)
 - `docs/design-research-methodology.md` — analytical decisions behind current codes
 - `docs/academic-sources.html` — theoretical foundations for sentiment taxonomy

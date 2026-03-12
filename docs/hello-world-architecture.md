@@ -116,7 +116,7 @@ Bristlenose v0.10.2 · Claude · Apple Silicon
 **Why:** Interview recordings come in many formats from many platforms. A single Zoom call might produce an `.mp4`, a `.vtt` caption file, and an `.m4a` audio-only backup — all with slightly different names. Bristlenose needs to figure out that these all belong to the same interview session.
 
 ```python
-# bristlenose/stages/ingest.py
+# bristlenose/stages/s01_ingest.py
 def ingest(input_dir: Path) -> list[InputSession]:
     """Discover files, classify types, group into sessions."""
 ```
@@ -221,7 +221,7 @@ class InputSession(BaseModel):
 **Why:** Speech recognition models (Whisper) work on audio, not video. We need to strip the audio track. This is a fast, local operation — no cloud, no API keys.
 
 ```python
-# bristlenose/stages/extract_audio.py
+# bristlenose/stages/s02_extract_audio.py
 async def extract_audio_for_sessions(
     sessions: list[InputSession], temp_dir: Path, concurrency: int = 4
 ) -> list[InputSession]:
@@ -252,7 +252,7 @@ ffmpeg -hwaccel videotoolbox -i "Hello World Study-20260221_150000.mp4" \
 #### Path 1: VTT Parsing (Session s1)
 
 ```python
-# bristlenose/stages/parse_subtitles.py
+# bristlenose/stages/s03_parse_subtitles.py
 def parse_vtt(vtt_path: Path) -> list[TranscriptSegment]:
     """Parse WebVTT caption file into segments."""
 ```
@@ -286,7 +286,7 @@ TranscriptSegment(
 #### Path 2: Whisper Transcription (Session s2)
 
 ```python
-# bristlenose/stages/transcribe.py
+# bristlenose/stages/s05_transcribe.py
 def transcribe_sessions(
     sessions: list[InputSession], settings: BristlenoseSettings
 ) -> dict[str, list[TranscriptSegment]]:
@@ -331,7 +331,7 @@ TranscriptSegment(
 This is the **first LLM call** in the pipeline.
 
 ```python
-# bristlenose/stages/identify_speakers.py
+# bristlenose/stages/s05b_identify_speakers.py
 async def identify_speaker_roles_llm(
     segments: list[TranscriptSegment], llm_client: LLMClient
 ) -> list[SpeakerInfo]:
@@ -385,7 +385,7 @@ For our Hello World study, the LLM returns:
 **Speaker codes are then assigned:**
 
 ```python
-# bristlenose/stages/identify_speakers.py
+# bristlenose/stages/s05b_identify_speakers.py
 def assign_speaker_codes(sessions, speaker_infos):
     # RESEARCHER → m1 (moderator, per-session numbering)
     # PARTICIPANT → p1, p2 (global numbering across all sessions)
@@ -406,7 +406,7 @@ After this stage, our transcript segments have proper codes:
 **Why:** Two reasons: (1) merging consecutive same-speaker segments removes Whisper's choppy 3-second chunks, and (2) writing transcripts to disk gives researchers a permanent record they can read, share, or import into other tools.
 
 ```python
-# bristlenose/stages/merge_transcript.py
+# bristlenose/stages/s06_merge_transcript.py
 def merge_transcripts(
     sessions: list[InputSession],
     session_segments: dict[str, list[TranscriptSegment]]
@@ -477,7 +477,7 @@ This is where Bristlenose becomes more than a transcription tool. Four LLM calls
 **Why:** Interviews aren't linear. Researchers jump between topics, participants go on tangents, and the conversation circles back. Topic boundaries let Bristlenose assign quotes to the right section of the report (e.g., "Syntax preferences" vs "Language philosophy").
 
 ```python
-# bristlenose/stages/topic_segmentation.py
+# bristlenose/stages/s08_topic_segmentation.py
 async def segment_topics(
     transcripts: list[PiiCleanTranscript],
     llm_client: LLMClient,
@@ -580,7 +580,7 @@ class TopicBoundary(BaseModel):
 **Why:** This is the core value of Bristlenose. A 1-hour interview has ~8,000 words. A good research report has ~20-30 quotes. The LLM selects the quotes that best represent what participants said, tags each with sentiment, and links them to topics.
 
 ```python
-# bristlenose/stages/quote_extraction.py
+# bristlenose/stages/s09_quote_extraction.py
 async def extract_quotes(
     transcripts: list[PiiCleanTranscript],
     topic_maps: list[SessionTopicMap],
@@ -735,7 +735,7 @@ ThemeGroup(
 **Token efficiency:** The LLM receives quotes as compact JSON with indices, not full objects:
 
 ```python
-# bristlenose/stages/quote_clustering.py
+# bristlenose/stages/s10_quote_clustering.py
 quotes_json = json.dumps(quotes_for_llm, ensure_ascii=False, separators=(",", ":"))
 # separators=(",",":") saves ~15% tokens by removing whitespace
 ```

@@ -222,7 +222,7 @@ The grid's `auto-fill` handles this automatically — no special logic needed.
 | `bristlenose/theme/tokens.css` | Add `--bn-quote-max-width`, `--bn-grid-gap` tokens |
 | `bristlenose/theme/templates/report.css` | Make article fluid, cap headings at `--bn-max-width` |
 | `bristlenose/theme/organisms/responsive-grid.css` | **New file** — grid layout for `.quote-group` |
-| `bristlenose/stages/render/theme_assets.py` | Add `responsive-grid.css` to `_THEME_FILES` |
+| `bristlenose/stages/s12_render/theme_assets.py` | Add `responsive-grid.css` to `_THEME_FILES` |
 
 No HTML template changes. No JavaScript changes. No Python logic changes.
 
@@ -234,8 +234,8 @@ No HTML template changes. No JavaScript changes. No Python logic changes.
 | `bristlenose/theme/organisms/settings.css` | Density radio button styles |
 | `bristlenose/theme/js/density.js` | **New file** — density preference module |
 | `bristlenose/theme/js/main.js` | Add `initDensity` to `_bootFns` |
-| `bristlenose/stages/render/report.py` | Add density radios to settings HTML |
-| `bristlenose/stages/render/theme_assets.py` | Add `density.js` to `_JS_FILES` |
+| `bristlenose/stages/s12_render/report.py` | Add density radios to settings HTML |
+| `bristlenose/stages/s12_render/theme_assets.py` | Add `density.js` to `_JS_FILES` |
 
 ---
 

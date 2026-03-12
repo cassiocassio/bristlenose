@@ -126,7 +126,7 @@ Background agents return VTT content embedded in their output. Extract the VTT c
 After writing all files:
 
 1. **Check for invalid timestamps** — LLMs occasionally generate `00:26:60.000` (seconds >= 60). Scan all files with regex and fix any invalid values
-2. **Parse with Bristlenose** — run `_parse_vtt()` from `bristlenose.stages.parse_subtitles` on every file. Confirm:
+2. **Parse with Bristlenose** — run `_parse_vtt()` from `bristlenose.stages.s03_parse_subtitles` on every file. Confirm:
    - All files parse without errors
    - Correct number of speakers per session
    - Speaker names match the session matrix
@@ -136,7 +136,7 @@ After writing all files:
 **Verification script pattern:**
 
 ```python
-from bristlenose.stages.parse_subtitles import _parse_vtt
+from bristlenose.stages.s03_parse_subtitles import _parse_vtt
 from pathlib import Path
 
 folder = Path('trial-runs/Fishkeeping')

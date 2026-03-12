@@ -212,10 +212,10 @@ These are explicit non-goals, reflecting the philosophy that the tool assists bu
 | Sentiment enum | `bristlenose/models.py` (`Sentiment`) |
 | Quote type enum | `bristlenose/models.py` (`QuoteType`) |
 | Transition type enum | `bristlenose/models.py` (`TransitionType`) |
-| Speaker identification | `bristlenose/stages/identify_speakers.py` |
-| Topic segmentation | `bristlenose/stages/topic_segmentation.py` |
-| Quote extraction | `bristlenose/stages/quote_extraction.py` |
-| Screen clustering | `bristlenose/stages/quote_clustering.py` |
-| Thematic grouping | `bristlenose/stages/thematic_grouping.py` |
+| Speaker identification | `bristlenose/stages/s05b_identify_speakers.py` |
+| Topic segmentation | `bristlenose/stages/s08_topic_segmentation.py` |
+| Quote extraction | `bristlenose/stages/s09_quote_extraction.py` |
+| Screen clustering | `bristlenose/stages/s10_quote_clustering.py` |
+| Thematic grouping | `bristlenose/stages/s11_thematic_grouping.py` |
 | Academic citations | `docs/academic-sources.html` |
 | Quote exclusivity detail | `bristlenose/stages/CLAUDE.md` |

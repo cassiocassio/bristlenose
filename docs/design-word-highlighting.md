@@ -128,10 +128,10 @@ Confidence scores are captured by Whisper but not stored in the compact JSON (no
 
 | Layer | File | Role |
 |-------|------|------|
-| Pipeline | `bristlenose/stages/transcribe.py` | Whisper word extraction |
+| Pipeline | `bristlenose/stages/s05_transcribe.py` | Whisper word extraction |
 | Pipeline | `bristlenose/models.py` | `Word` Pydantic model |
-| Pipeline | `bristlenose/stages/merge_transcript.py` | Preserves words during merge |
-| Pipeline | `bristlenose/stages/render_output.py` | Writes to `session_segments.json` |
+| Pipeline | `bristlenose/stages/s06_merge_transcript.py` | Preserves words during merge |
+| Pipeline | `bristlenose/stages/s12_render_output.py` | Writes to `session_segments.json` |
 | Serve | `bristlenose/server/models.py` | `TranscriptSegment.words_json` ORM column |
 | Serve | `bristlenose/server/db.py` | Schema migration for existing DBs |
 | Serve | `bristlenose/server/importer.py` | `_enrich_words_from_intermediate()` |

@@ -33,29 +33,29 @@ All 12 stages of the pipeline, from ingest to render.
 
 | File | Role |
 |------|------|
-| `ingest.py` | Stage 1: discover input files |
-| `extract_audio.py` | Stage 2: extract audio from video |
-| `parse_subtitles.py` | Stage 3: parse SRT/VTT subtitle files |
-| `parse_docx.py` | Stage 4: parse .docx transcripts |
-| `transcribe.py` | Stage 5: Whisper transcription |
-| `identify_speakers.py` | Stage 5b: speaker role identification + name/title extraction (`SpeakerInfo`) |
-| `merge_transcript.py` | Stage 7: merge and write transcripts |
-| `pii_removal.py` | Stage 8: PII redaction |
-| `topic_segmentation.py` | Stage 9: segment by topic |
-| `quote_extraction.py` | Stage 10: extract quotes via LLM |
-| `quote_clustering.py` | Stage 11: cluster quotes |
-| `thematic_grouping.py` | Stage 12a: group into themes |
-| `render/` | Stage 12b: HTML report renderer package |
-| `render/__init__.py` | Public API: `render_html`, `render_transcript_pages` |
-| `render/report.py` | `render_html()` orchestrator |
-| `render/theme_assets.py` | CSS/JS loaders, `_jinja_env`, `_THEME_DIR`, file lists |
-| `render/html_helpers.py` | Escaping, timecodes, video map, document shell, header, footer |
-| `render/quote_format.py` | `_format_quote_html`, `_quote_badges` |
-| `render/sentiment.py` | Sparkline, sentiment HTML |
-| `render/dashboard.py` | Session rows, project tab, featured quotes, coverage |
-| `render/transcript_pages.py` | Per-participant transcript pages, quote highlighting |
-| `render/standalone_pages.py` | Codebook page, analysis page, matrix serialisation |
-| `render_output.py` | Markdown report + JSON snapshots for `render` command |
+| `s01_ingest.py` | Stage 1: discover input files |
+| `s02_extract_audio.py` | Stage 2: extract audio from video |
+| `s03_parse_subtitles.py` | Stage 3: parse SRT/VTT subtitle files |
+| `s04_parse_docx.py` | Stage 4: parse .docx transcripts |
+| `s05_transcribe.py` | Stage 5: Whisper transcription |
+| `s05b_identify_speakers.py` | Stage 5b: speaker role identification + name/title extraction (`SpeakerInfo`) |
+| `s06_merge_transcript.py` | Stage 6: merge and write transcripts |
+| `s07_pii_removal.py` | Stage 7: PII redaction |
+| `s08_topic_segmentation.py` | Stage 8: segment by topic |
+| `s09_quote_extraction.py` | Stage 9: extract quotes via LLM |
+| `s10_quote_clustering.py` | Stage 10: cluster quotes |
+| `s11_thematic_grouping.py` | Stage 11: group into themes |
+| `s12_render/` | Stage 12: HTML report renderer package |
+| `s12_render/__init__.py` | Public API: `render_html`, `render_transcript_pages` |
+| `s12_render/report.py` | `render_html()` orchestrator |
+| `s12_render/theme_assets.py` | CSS/JS loaders, `_jinja_env`, `_THEME_DIR`, file lists |
+| `s12_render/html_helpers.py` | Escaping, timecodes, video map, document shell, header, footer |
+| `s12_render/quote_format.py` | `_format_quote_html`, `_quote_badges` |
+| `s12_render/sentiment.py` | Sparkline, sentiment HTML |
+| `s12_render/dashboard.py` | Session rows, project tab, featured quotes, coverage |
+| `s12_render/transcript_pages.py` | Per-participant transcript pages, quote highlighting |
+| `s12_render/standalone_pages.py` | Codebook page, analysis page, matrix serialisation |
+| `s12_render_output.py` | Markdown report + JSON snapshots for `render` command |
 
 ## LLM layer (`bristlenose/llm/`)
 

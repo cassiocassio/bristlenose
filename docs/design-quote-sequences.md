@@ -203,4 +203,4 @@ Sequence rules live in `bristlenose/theme/organisms/analysis.css` — organism-l
 - `docs/design-research-methodology.md` — analytical decisions, quote extraction rationale
 - `docs/design-analysis-future.md` — analysis page roadmap
 - `bristlenose/analysis/` — signal concentration computation
-- `bristlenose/stages/quote_extraction.py` — where quotes are born from transcript segments
+- `bristlenose/stages/s09_quote_extraction.py` — where quotes are born from transcript segments

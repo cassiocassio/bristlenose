@@ -677,7 +677,7 @@ export function QuoteCard({
             {renderQuoteText()}
             <span className="smart-quote">{"\u201d"}</span>
           </span>
-          &nbsp;
+          {" "}
           <span className="speaker">
             <PersonBadge
               code={quote.participant_id}

@@ -541,7 +541,7 @@
     background: transparent;
 }
 
-.drag-handle:hover,
+.drag-handle.hover-intent,
 .drag-handle.active {
     background: var(--bn-colour-accent);
     opacity: 0.3;
@@ -566,7 +566,7 @@
     transition: opacity var(--bn-transition-fast);
 }
 
-.drag-handle:hover::after,
+.drag-handle.hover-intent::after,
 .drag-handle.active::after {
     opacity: 0.6;
 }

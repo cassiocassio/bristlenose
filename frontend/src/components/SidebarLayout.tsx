@@ -120,6 +120,21 @@ export function SidebarLayout({ active, children }: SidebarLayoutProps) {
   const prevTocOpen = useRef(tocOpen);
   const prevTagsOpen = useRef(tagsOpen);
 
+  // Hover-intent: 80ms delay before showing the blue accent highlight on
+  // drag handles. Filters out casual mouse traversals (6px handle crossed
+  // in <15ms at normal mousing speed) while feeling instant for deliberate
+  // acquisition (~60ms+ dwell when slowing to grab).
+  const hoverIntentTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const onHandleMouseEnter = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    clearTimeout(hoverIntentTimer.current);
+    const el = e.currentTarget;
+    hoverIntentTimer.current = setTimeout(() => el.classList.add("hover-intent"), 80);
+  }, []);
+  const onHandleMouseLeave = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    clearTimeout(hoverIntentTimer.current);
+    e.currentTarget.classList.remove("hover-intent");
+  }, []);
+
   // Drag-to-resize handles.
   const tocEdge = useDragResize({
     side: "toc", source: "sidebar", layoutRef, currentWidth: tocWidth,
@@ -285,8 +300,8 @@ export function SidebarLayout({ active, children }: SidebarLayoutProps) {
           <div
             className={`drag-handle toc-rail-drag${tocRailDrag.isDragging ? " active" : ""}`}
             onPointerDown={tocRailDrag.handlePointerDown}
-            onMouseEnter={overlay.onDragHandleMouseEnter}
-            onMouseLeave={overlay.onDragHandleMouseLeave}
+            onMouseEnter={(e) => { onHandleMouseEnter(e); overlay.onDragHandleMouseEnter(); }}
+            onMouseLeave={(e) => { onHandleMouseLeave(e); overlay.onDragHandleMouseLeave(); }}
           />
         )}
       </div>
@@ -325,6 +340,8 @@ export function SidebarLayout({ active, children }: SidebarLayoutProps) {
             tabIndex={0}
             onPointerDown={tocEdge.handlePointerDown}
             onKeyDown={tocEdge.handleKeyDown}
+            onMouseEnter={onHandleMouseEnter}
+            onMouseLeave={onHandleMouseLeave}
           />
         )}
       </div>
@@ -367,6 +384,8 @@ export function SidebarLayout({ active, children }: SidebarLayoutProps) {
             tabIndex={0}
             onPointerDown={tagEdge.handlePointerDown}
             onKeyDown={tagEdge.handleKeyDown}
+            onMouseEnter={onHandleMouseEnter}
+            onMouseLeave={onHandleMouseLeave}
           />
         )}
       </div>
@@ -386,6 +405,8 @@ export function SidebarLayout({ active, children }: SidebarLayoutProps) {
           <div
             className={`drag-handle tag-rail-drag${tagRailDrag.isDragging ? " active" : ""}`}
             onPointerDown={tagRailDrag.handlePointerDown}
+            onMouseEnter={onHandleMouseEnter}
+            onMouseLeave={onHandleMouseLeave}
           />
         )}
       </div>

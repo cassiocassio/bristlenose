@@ -147,7 +147,10 @@ export function QuoteGroup({
 
   const store = useQuotesStore();
   const { hiddenTagGroups } = useSidebarStore();
-  const { registerHideHandler, unregisterHideHandler, registerFlashTag, unregisterFlashTag } = useFocus();
+  const {
+    selectedIds, clearSelection,
+    registerHideHandler, unregisterHideHandler, registerFlashTag, unregisterFlashTag,
+  } = useFocus();
 
   // ── Local presentation state ───────────────────────────────────────────
 
@@ -295,13 +298,42 @@ export function QuoteGroup({
 
   const handleToggleStar = useCallback(
     (domId: string, newState: boolean) => {
-      toggleStar(domId, newState);
+      if (selectedIds.size > 0 && selectedIds.has(domId)) {
+        // Bulk star — clicked quote's toggle intent is the direction.
+        // Click unstarred star → star all; click starred star → unstar all.
+        for (const id of selectedIds) {
+          const isStarred = !!store.starred[id];
+          if (newState && !isStarred) toggleStar(id, true);
+          else if (!newState && isStarred) toggleStar(id, false);
+        }
+      } else {
+        toggleStar(domId, newState);
+      }
     },
-    [],
+    [selectedIds, store.starred],
   );
 
   const handleToggleHide = useCallback(
     (domId: string, newState: boolean) => {
+      if (newState && selectedIds.size > 0 && selectedIds.has(domId)) {
+        // ── Bulk hide: CSS collapse + store toggle (no ghost animation) ──
+        for (const id of selectedIds) {
+          if (store.hidden[id]) continue; // already hidden
+          setHidingIds((prev) => new Set(prev).add(id));
+          const timer = setTimeout(() => {
+            setHidingIds((prev) => {
+              const next = new Set(prev);
+              next.delete(id);
+              return next;
+            });
+            toggleHide(id, true);
+            hideTimers.current.delete(id);
+          }, HIDE_DURATION);
+          hideTimers.current.set(id, timer);
+        }
+        clearSelection();
+        return;
+      }
       if (newState) {
         // ── Hide: fly-up ghost + CSS collapse ───────────────────────────
         // Capture rects before any state changes.
@@ -375,7 +407,7 @@ export function QuoteGroup({
         setUnhideVersion((v) => v + 1);
       }
     },
-    [],
+    [selectedIds, store.hidden, clearSelection],
   );
 
   // Register hide handlers for keyboard shortcut (h) — so the animated
@@ -492,31 +524,41 @@ export function QuoteGroup({
       const ci = tagColourMap[tagName];
       const gi = tagGroupMap[tagName.toLowerCase()];
       const groupName = gi?.group ?? "Uncategorised";
-      addTag(domId, {
+      const tagPayload = {
         name: tagName,
         codebook_group: groupName,
         colour_set: ci?.colour_set ?? gi?.colour_set ?? "",
         colour_index: ci?.colour_index ?? gi?.colour_index ?? 0,
-        source: "human",
-      });
+        source: "human" as const,
+      };
+
+      // Bulk tag: apply to all selected quotes when the target is in the selection.
+      const targets = selectedIds.size > 0 && selectedIds.has(domId)
+        ? Array.from(selectedIds)
+        : [domId];
+
+      for (const id of targets) {
+        addTag(id, tagPayload);
+        // Flash animation — visual confirmation on all tag adds (Decision 7).
+        const flashKey = `${id}:${tagName}`;
+        setFlashingTags((prev) => new Set(prev).add(flashKey));
+        setTimeout(() => {
+          setFlashingTags((prev) => {
+            const next = new Set(prev);
+            next.delete(flashKey);
+            return next;
+          });
+        }, 500);
+      }
+
       // If the tag's group is hidden via eye-toggle, auto-unhide it so the
       // badge is immediately visible — the user was warned by the eye icon
       // in the autocomplete dropdown and chose the tag anyway.
       if (hiddenTagGroups.has(groupName)) {
         toggleTagGroupHidden(groupName);
       }
-      // Flash animation — visual confirmation on all tag adds (Decision 7).
-      const flashKey = `${domId}:${tagName}`;
-      setFlashingTags((prev) => new Set(prev).add(flashKey));
-      setTimeout(() => {
-        setFlashingTags((prev) => {
-          const next = new Set(prev);
-          next.delete(flashKey);
-          return next;
-        });
-      }, 500);
     },
-    [tagColourMap, tagGroupMap, hiddenTagGroups],
+    [tagColourMap, tagGroupMap, hiddenTagGroups, selectedIds],
   );
 
   const handleTagRemove = useCallback(

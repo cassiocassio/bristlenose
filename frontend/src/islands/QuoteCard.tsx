@@ -367,26 +367,28 @@ export function QuoteCard({
       if (target.closest(".badge-add, .tag-input-wrap")) {
         return;
       }
-      // Don't interfere with text selection
-      const sel = window.getSelection();
-      if (sel && sel.toString().length > 0) {
-        return;
-      }
-
       if (e.metaKey || e.ctrlKey) {
         // Cmd/Ctrl+Click: toggle selection
         e.preventDefault();
         e.stopPropagation();
+        window.getSelection()?.removeAllRanges();
         toggleSelection(domId);
         setAnchor(domId);
         setFocus(domId, { scroll: false });
       } else if (e.shiftKey && anchorId) {
         // Shift+Click: range selection
+        // Must clear browser's native text selection (Shift+click creates one).
         e.preventDefault();
         e.stopPropagation();
+        window.getSelection()?.removeAllRanges();
         selectRange(anchorId, domId);
         setFocus(domId, { scroll: false });
       } else {
+        // Don't interfere with text selection on plain clicks
+        const sel = window.getSelection();
+        if (sel && sel.toString().length > 0) {
+          return;
+        }
         // Plain click: focus + single-select (Finder-like)
         clearSelection();
         toggleSelection(domId);

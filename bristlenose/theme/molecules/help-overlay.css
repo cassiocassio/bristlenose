@@ -5,6 +5,14 @@
 /* Help modal width override (wider than default for 3-column layout) */
 .help-modal {
     max-width: 600px;
+    transform: scale(0.97);
+    opacity: 0;
+    transition: transform var(--bn-transition-normal), opacity var(--bn-transition-normal);
+}
+
+.help-overlay.visible .help-modal {
+    transform: scale(1);
+    opacity: 1;
 }
 
 .help-modal h2 {
@@ -23,9 +31,17 @@
     }
 }
 
+.help-section {
+    margin-bottom: var(--bn-space-md);
+}
+
+.help-section:last-child {
+    margin-bottom: 0;
+}
+
 .help-section h3 {
     margin: 0 0 var(--bn-space-sm) 0;
-    font-size: 0.75rem;
+    font-size: var(--bn-text-caption);
     font-weight: var(--bn-weight-emphasis);
     text-transform: uppercase;
     letter-spacing: 0.05em;
@@ -36,7 +52,7 @@
     margin: 0;
     display: grid;
     grid-template-columns: auto 1fr;
-    gap: var(--bn-space-xs) var(--bn-space-sm);
+    gap: var(--bn-space-sm) var(--bn-space-sm);
     align-items: baseline;
 }
 
@@ -47,7 +63,7 @@
 .help-section dd {
     margin: 0;
     color: var(--bn-colour-text);
-    font-size: 0.875rem;
+    font-size: var(--bn-text-body);
 }
 
 .help-key-sep {
@@ -75,4 +91,10 @@
     border-radius: var(--bn-radius-sm);
     box-shadow: 0 2px 0 0 var(--bn-colour-border);
     vertical-align: baseline;
+}
+
+@supports (color: light-dark(black, white)) {
+    .help-modal kbd {
+        box-shadow: 0 2px 0 0 light-dark(var(--bn-colour-border), rgba(255,255,255,0.1));
+    }
 }

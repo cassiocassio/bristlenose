@@ -18,14 +18,18 @@ describe("HelpModal", () => {
     cleanup();
   });
 
-  it("renders nothing when open is false", () => {
+  it("renders overlay without visible class when open is false", () => {
     render(<HelpModal open={false} onClose={vi.fn()} />);
-    expect(screen.queryByTestId("bn-help-overlay")).toBeNull();
+    const overlay = screen.getByTestId("bn-help-overlay");
+    expect(overlay.classList.contains("visible")).toBe(false);
+    expect(overlay.getAttribute("aria-hidden")).toBe("true");
   });
 
-  it("renders overlay when open is true", () => {
+  it("renders overlay with visible class when open is true", () => {
     render(<HelpModal open={true} onClose={vi.fn()} />);
-    expect(screen.getByTestId("bn-help-overlay")).toBeTruthy();
+    const overlay = screen.getByTestId("bn-help-overlay");
+    expect(overlay.classList.contains("visible")).toBe(true);
+    expect(overlay.getAttribute("aria-hidden")).toBe("false");
     expect(screen.getByTestId("bn-help-modal")).toBeTruthy();
   });
 

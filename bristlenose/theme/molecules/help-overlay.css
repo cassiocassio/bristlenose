@@ -62,13 +62,17 @@
 
 .help-modal kbd {
     display: inline-block;
-    padding: 0.15em 0.4em;
-    font-family: var(--bn-font-mono);
-    font-size: 0.75rem;
-    line-height: 1;
+    min-width: 1.1em;
+    padding: 0.2em 0.45em;
+    font-family: var(--bn-font-body);
+    font-size: 0.8rem;
+    font-weight: 500;
+    line-height: 1.1;
+    text-align: center;
     color: var(--bn-colour-text);
     background: var(--bn-colour-badge-bg);
     border: 1px solid var(--bn-colour-border);
     border-radius: var(--bn-radius-sm);
-    box-shadow: 0 1px 0 var(--bn-colour-border);
+    box-shadow: 0 2px 0 0 var(--bn-colour-border);
+    vertical-align: baseline;
 }

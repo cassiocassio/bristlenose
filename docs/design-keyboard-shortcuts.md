@@ -1,6 +1,6 @@
 # Design: Platform-Aware Keyboard Shortcuts & Discoverability
 
-**Status:** Phase 1 shipped, Phase 2–3 future
+**Status:** Phase 1–2 shipped, Phase 3 future
 **Date:** 13 Mar 2026
 
 ## Problem
@@ -209,35 +209,119 @@ Toolbar buttons and nav elements that have shortcuts:
 
 The `shortcut` prop uses the same `KeyDef` type as the help modal, so platform rendering is shared. The `content` prop is the descriptive text. Both render inside the tooltip bubble.
 
-## Help modal visual redesign (Phase 2 — future)
+## Help modal visual redesign (Phase 2 — ready to build)
 
-Current issues (from MEMORY.md QA notes):
-- No close button (× in top-right)
-- `.help-key-sep` class used in TSX but has no CSS rule — separators are unstyled
-- Layout works but feels rough
+Phase 1 shipped close button, `.help-key-sep` CSS, and platform-aware key rendering. The modal is functional but the visual treatment is plain compared to other modals (feedback, autocode report) which have refined spacing, entrance animations, and considered typography.
 
-Phase 2 scope:
-- Add close `×` button (reuse `.bn-modal-close` from `atoms/modal.css`)
-- Add `.help-key-sep` CSS rule (muted colour, inline-block, tight padding)
-- Consider section icons or visual grouping improvements
-- Consider Figma-style "shortcuts you've used" highlighting (stretch goal)
+### Current state
 
-## Implementation phases
+What works:
+- Three-column grid layout with responsive collapse at 500px
+- `<kbd>` badge styling (mono font, border, shadow, badge-bg)
+- Close `×` button (`.bn-modal-close` from `atoms/modal.css`)
+- `.help-key-sep` styled (muted colour, tight padding)
+- Platform-aware key display (Mac glyphs vs Windows/Linux text labels)
 
-### Phase 1: Platform-aware display (ready to build)
+What needs polish:
+- **Typography inconsistency** — section headings use hardcoded `0.75rem`, descriptions use `0.875rem`. Should migrate to `--bn-text-caption` / `--bn-text-body-sm` tokens for consistency with the design system
+- **Cramped vertical rhythm** — the `dl` grid has `gap: var(--bn-space-xs)` (2.4px) row gap which packs shortcuts tight. Other modals use `var(--bn-space-sm)` (5.6px) minimum
+- **No section dividers** — sections flow into each other with only the uppercase heading as separation. A subtle bottom border or extra bottom margin on each `.help-section` would help scanning
+- **Heading lacks breathing room** — `h2` has `font-size: 1.25rem` but no bottom padding before the grid starts; the first column's `h3` feels immediately abutted
+- **No entrance animation** — the overlay fades in (`var(--bn-transition-normal)`) but the card itself has no scale or translate animation. The feedback modal doesn't either, but the tooltip pattern uses a subtle `translateY(-8px) → 0` float-down that could elevate the help modal's feel
+- **`<kbd>` sizing** — keys are `0.75rem` which is correct for inline badges, but for the help modal (where `<kbd>` elements are the primary content, not inline annotations), slightly larger keys (0.82rem) would improve readability
+- **Dark mode contrast** — `--bn-colour-badge-bg` works but the `box-shadow: 0 1px 0 var(--bn-colour-border)` on `<kbd>` is barely visible in dark mode. Could strengthen to `0 1px 0 0.5px` or use a slightly lighter border colour
+- **3-column grid with 4 sections** — Navigation + Selection + Actions fill 3 columns; Global wraps to a second row alone, looking orphaned. Options: (a) merge into 2 wider columns, (b) rebalance content so Global isn't alone, (c) accept it
+
+### Design direction
+
+**Conservative polish, not a redesign.** The layout is correct; the three-column `dl` grid is information-dense in a good way. Changes should refine spacing, typography tokens, and add one visual flourish (entrance animation), not restructure.
+
+### Scope
+
+#### Typography token migration
+
+Replace hardcoded font sizes with design system tokens:
+
+| Element | Current | Target |
+|---------|---------|--------|
+| `.help-section h3` | `font-size: 0.75rem` | `font-size: var(--bn-text-caption)` |
+| `.help-section dd` | `font-size: 0.875rem` | `font-size: var(--bn-text-body)` |
+| `.help-modal h2` | `font-size: 1.25rem` | Keep (no matching token — between heading 1.125rem and title 1.375rem) |
+| `.help-modal kbd` | `font-size: 0.75rem` | `font-size: var(--bn-text-caption)` |
+
+#### Spacing refinement
+
+| Element | Current | Target | Rationale |
+|---------|---------|--------|-----------|
+| `.help-section dl` row gap | `var(--bn-space-xs)` (2.4px) | `var(--bn-space-sm)` (5.6px) | Less cramped, easier to scan |
+| `.help-section` | No bottom margin | `margin-bottom: var(--bn-space-md)` (12px) | Section breathing room |
+| `.help-section:last-child` | — | `margin-bottom: 0` | No trailing space |
+| `.help-columns` gap | `var(--bn-space-lg)` (24px) | Keep — already generous |
+| `.help-modal h2` | `margin: 0 0 var(--bn-space-lg)` (inherited from `.bn-modal h2`) | Keep |
+
+#### Card entrance animation
+
+Subtle scale-up on open, matching the overlay's fade:
+
+```css
+.help-modal {
+    transform: scale(0.97);
+    opacity: 0;
+    transition: transform var(--bn-transition-normal), opacity var(--bn-transition-normal);
+}
+
+.help-overlay.visible .help-modal {
+    transform: scale(1);
+    opacity: 1;
+}
+```
+
+97% → 100% scale is barely perceptible but adds life. `var(--bn-transition-normal)` (0.2s ease) matches the overlay fade timing.
+
+Note: this only affects the CSS. The React `HelpModal` component already conditionally renders (`if (!open) return null`), so the CSS transition needs the overlay wrapper to exist in the DOM before the `.visible` class is added. Currently the component unmounts entirely when closed, meaning CSS transitions won't play. **Two options:**
+
+1. **Always render the overlay** (change `if (!open) return null` to conditionally apply `.visible` class). This is how the vanilla JS modals work — the DOM is always present, `.visible` toggles visibility. Cost: the help modal DOM stays in the tree while invisible
+2. **Keep current unmount** and skip the CSS entrance animation. The overlay fade still works because it's on the wrapper div. The card just appears instantly (no scale transition)
+
+**Recommended: option 1.** The help modal is a small DOM tree (~30 elements). Always-present-but-invisible matches the pattern used by `createModal()` in `modal.js` and avoids the unmount/remount flash.
+
+#### Dark mode `<kbd>` refinement
+
+Strengthen the bottom shadow in dark mode only:
+
+```css
+@supports (color: light-dark(black, white)) {
+    .help-modal kbd {
+        box-shadow: 0 1px 0 light-dark(var(--bn-colour-border), rgba(255,255,255,0.1));
+    }
+}
+```
+
+This keeps the current light mode shadow but gives dark mode a slightly more visible bottom edge.
+
+### Files
 
 | File | Action | Description |
 |------|--------|-------------|
-| `frontend/src/utils/platform.ts` | Create | `isMac()` utility |
-| `frontend/src/utils/platform.test.ts` | Create | Tests for Mac/Windows/Linux detection |
-| `frontend/src/components/HelpModal.tsx` | Modify | Platform-conditional shortcut data + rendering |
-| `frontend/src/components/HelpModal.test.tsx` | Modify | Platform-aware test assertions |
-| `bristlenose/theme/molecules/help-overlay.css` | Modify | Add missing `.help-key-sep` rule |
+| `bristlenose/theme/molecules/help-overlay.css` | Modify | Token migration, spacing, entrance animation, dark mode kbd |
+| `frontend/src/components/HelpModal.tsx` | Modify | Always-render pattern (remove `if (!open) return null`, use class toggle) |
+| `frontend/src/components/HelpModal.test.tsx` | Modify | Update tests for always-rendered DOM |
 
-### Phase 2: Help modal visual redesign
+### Non-goals
 
-- Close button, layout polish, section styling
-- Depends on broader visual direction decisions
+- Restructuring the 3-column grid to 2 columns (if the orphaned Global row is annoying, revisit later)
+- Adding section icons (adds complexity for marginal visual value)
+- "Shortcuts you've used" highlighting (requires tracking shortcut usage in a store — Phase 4 idea)
+
+## Implementation phases
+
+### Phase 1: Platform-aware display (shipped)
+
+`isMac()` utility, `KeyCombo` data model, platform-conditional rendering (Mac glyphs vs Windows/Linux text labels), `.help-key-sep` + `.help-key-group` CSS, 26 tests.
+
+### Phase 2: Help modal visual polish (shipped)
+
+Typography token migration, spacing refinement, card entrance animation (always-render pattern), dark mode `<kbd>` shadow fix. See "Help modal visual redesign" section above for full spec. Always-render pattern: overlay DOM stays in tree with `visibility: hidden`; `.visible` class toggles visibility + entrance animation (scale 0.97→1 + fade). `aria-hidden` tracks open state.
 
 ### Phase 3: Custom tooltips
 
@@ -250,11 +334,11 @@ Phase 2 scope:
 ```
 frontend/src/
   utils/
-    platform.ts          ← NEW: isMac() detection
-    platform.test.ts     ← NEW: tests
+    platform.ts          ← Phase 1: isMac() detection (shipped)
+    platform.test.ts     ← Phase 1: tests (shipped)
   components/
-    HelpModal.tsx        ← MODIFY: platform-aware rendering
-    HelpModal.test.tsx   ← MODIFY: platform test cases
+    HelpModal.tsx        ← Phase 1–2 shipped: always-render pattern, class toggle
+    HelpModal.test.tsx   ← Phase 1–2 shipped: updated for always-render
     Tooltip.tsx          ← FUTURE (Phase 3)
   hooks/
     useKeyboardShortcuts.ts  ← NO CHANGE (already cross-platform)
@@ -262,7 +346,7 @@ frontend/src/
 
 bristlenose/theme/
   molecules/
-    help-overlay.css     ← MODIFY: add .help-key-sep rule
+    help-overlay.css     ← Phase 1–2 shipped: tokens, spacing, animation, dark kbd
   atoms/
     tooltip.css          ← FUTURE (Phase 3)
 ```

@@ -130,12 +130,11 @@ export function HelpModal({ open, onClose }: HelpModalProps) {
     return () => document.removeEventListener("keydown", handler, true);
   }, [open, onClose]);
 
-  if (!open) return null;
-
   return createPortal(
     <div
-      className="bn-overlay visible help-overlay"
+      className={`bn-overlay help-overlay${open ? " visible" : ""}`}
       onClick={handleOverlayClick}
+      aria-hidden={!open}
       data-testid="bn-help-overlay"
     >
       <div className="bn-modal help-modal" data-testid="bn-help-modal">

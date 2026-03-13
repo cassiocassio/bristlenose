@@ -1,23 +1,31 @@
 /**
  * HelpModal — keyboard shortcuts reference overlay.
  *
- * Replaces getHelpModal() HTML string in focus.js. Uses existing
- * .help-overlay / .help-modal CSS classes.  Two-column layout with
- * Navigation, Selection, Actions, Global sections.
+ * Platform-aware: Mac gets glyph-concatenated modifiers (⌘., ⇧J),
+ * Windows/Linux gets text labels with + separators (Ctrl+., Shift+J).
+ *
+ * Uses existing .help-overlay / .help-modal CSS classes. Three-column layout
+ * with Navigation, Selection, Actions, Global sections.
  *
  * @module HelpModal
  */
 
-import { useCallback, useEffect } from "react";
+import { Fragment, useCallback, useEffect } from "react";
 import { createPortal } from "react-dom";
+import { isMac } from "../utils/platform";
 
 interface HelpModalProps {
   open: boolean;
   onClose: () => void;
 }
 
+interface KeyCombo {
+  modifier?: "shift" | "cmd";
+  key: string;
+}
+
 interface Shortcut {
-  keys: string[];
+  keys: KeyCombo[];
   description: string;
 }
 
@@ -25,58 +33,79 @@ const SECTIONS: { title: string; shortcuts: Shortcut[] }[] = [
   {
     title: "Navigation",
     shortcuts: [
-      { keys: ["j", "\u2193"], description: "Next quote" },
-      { keys: ["k", "\u2191"], description: "Previous quote" },
+      { keys: [{ key: "j" }, { key: "\u2193" }], description: "Next quote" },
+      { keys: [{ key: "k" }, { key: "\u2191" }], description: "Previous quote" },
     ],
   },
   {
     title: "Selection",
     shortcuts: [
-      { keys: ["x"], description: "Toggle select" },
-      { keys: ["Shift", "+", "j", "/", "k"], description: "Extend" },
+      { keys: [{ key: "x" }], description: "Toggle select" },
+      {
+        keys: [{ modifier: "shift", key: "j" }, { modifier: "shift", key: "k" }],
+        description: "Extend",
+      },
     ],
   },
   {
     title: "Actions",
     shortcuts: [
-      { keys: ["s"], description: "Star quote(s)" },
-      { keys: ["h"], description: "Hide quote(s)" },
-      { keys: ["t"], description: "Add tag" },
-      { keys: ["r"], description: "Repeat last tag" },
-      { keys: ["Enter"], description: "Play in video" },
-    ],
-  },
-  {
-    title: "Sidebar",
-    shortcuts: [
-      { keys: ["["], description: "Toggle contents" },
-      { keys: ["]"], description: "Toggle tags" },
-      { keys: ["\\"], description: "Toggle both" },
-      { keys: ["\u2318", "."], description: "Toggle both" },
+      { keys: [{ key: "s" }], description: "Star quote(s)" },
+      { keys: [{ key: "h" }], description: "Hide quote(s)" },
+      { keys: [{ key: "t" }], description: "Add tag" },
+      { keys: [{ key: "r" }], description: "Repeat last tag" },
+      { keys: [{ key: "Enter" }], description: "Play in video" },
     ],
   },
   {
     title: "Global",
     shortcuts: [
-      { keys: ["/"], description: "Search" },
-      { keys: ["?"], description: "This help" },
-      { keys: ["Esc"], description: "Close / clear" },
+      { keys: [{ key: "/" }], description: "Search" },
+      { keys: [{ key: "[" }], description: "Toggle contents" },
+      { keys: [{ key: "]" }], description: "Toggle tags" },
+      {
+        keys: [{ key: "\\" }, { modifier: "cmd", key: "." }],
+        description: "Toggle both sidebars",
+      },
+      { keys: [{ key: "?" }], description: "This help" },
+      { keys: [{ key: "Esc" }], description: "Close / clear" },
     ],
   },
 ];
 
-function renderKeys(keys: string[]): React.ReactNode {
-  return keys.map((k, i) => {
-    // Separators: +, / are rendered as text, not in kbd
-    if (k === "+" || k === "/") {
-      return (
-        <span key={i} className="help-key-sep">
-          {k}
-        </span>
-      );
-    }
-    return <kbd key={i}>{k}</kbd>;
-  });
+function renderKeyCombo(combo: KeyCombo, idx: number): React.ReactNode {
+  const mac = isMac();
+
+  if (!combo.modifier) {
+    return <kbd key={idx}>{combo.key}</kbd>;
+  }
+
+  if (mac) {
+    // Mac: single <kbd> with glyph prefix, no separator
+    const glyph = combo.modifier === "shift" ? "\u21E7" : "\u2318";
+    const displayKey = combo.modifier === "shift" ? combo.key.toUpperCase() : combo.key;
+    return <kbd key={idx}>{glyph}{displayKey}</kbd>;
+  }
+
+  // Non-Mac: separate <kbd> elements with + separator
+  const label = combo.modifier === "shift" ? "Shift" : "Ctrl";
+  const displayKey = combo.modifier === "shift" ? combo.key.toUpperCase() : combo.key;
+  return (
+    <span key={idx} className="help-key-group">
+      <kbd>{label}</kbd>
+      <span className="help-key-sep">+</span>
+      <kbd>{displayKey}</kbd>
+    </span>
+  );
+}
+
+function renderKeys(keys: KeyCombo[]): React.ReactNode {
+  return keys.map((combo, i) => (
+    <Fragment key={i}>
+      {i > 0 && <span className="help-key-sep">/</span>}
+      {renderKeyCombo(combo, i)}
+    </Fragment>
+  ));
 }
 
 export function HelpModal({ open, onClose }: HelpModalProps) {
@@ -110,6 +139,9 @@ export function HelpModal({ open, onClose }: HelpModalProps) {
       data-testid="bn-help-overlay"
     >
       <div className="bn-modal help-modal" data-testid="bn-help-modal">
+        <button className="bn-modal-close" onClick={onClose} aria-label="Close">
+          &times;
+        </button>
         <h2>Keyboard Shortcuts</h2>
         <div className="help-columns">
           {SECTIONS.map((section) => (
@@ -117,10 +149,10 @@ export function HelpModal({ open, onClose }: HelpModalProps) {
               <h3>{section.title}</h3>
               <dl>
                 {section.shortcuts.map((s, i) => (
-                  <div key={i}>
+                  <Fragment key={i}>
                     <dt>{renderKeys(s.keys)}</dt>
                     <dd>{s.description}</dd>
-                  </div>
+                  </Fragment>
                 ))}
               </dl>
             </div>

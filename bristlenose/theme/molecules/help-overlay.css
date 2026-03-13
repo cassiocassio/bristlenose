@@ -50,6 +50,16 @@
     font-size: 0.875rem;
 }
 
+.help-key-sep {
+    padding: 0 0.15em;
+    font-size: 0.75rem;
+    color: var(--bn-colour-muted);
+}
+
+.help-key-group {
+    display: inline;
+}
+
 .help-modal kbd {
     display: inline-block;
     padding: 0.15em 0.4em;

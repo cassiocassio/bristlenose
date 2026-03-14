@@ -338,6 +338,11 @@ class PipelineResult(BaseModel):
     llm_model: str = ""
     llm_provider: str = ""
     total_quotes: int = 0
+    # Human-readable error reason when pipeline fails (e.g. "API credit balance too low")
+    pipeline_error: str = ""
+    pipeline_error_link: str = ""
+    # Warning reason when pipeline partially succeeds (some sessions failed)
+    pipeline_warning: str = ""
 
 
 # ---------------------------------------------------------------------------

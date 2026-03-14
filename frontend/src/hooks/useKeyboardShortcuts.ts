@@ -25,11 +25,9 @@ import {
 } from "../contexts/QuotesContext";
 import {
   useSidebarStore,
-  toggleToc,
-  toggleTags,
-  toggleBoth,
   closeToc,
 } from "../contexts/SidebarStore";
+import { sidebarAnimations } from "../components/SidebarLayout";
 import {
   togglePlayground,
   toggleHUD,
@@ -325,7 +323,7 @@ export function useKeyboardShortcuts({
       if (key === "[") {
         if (pathMatches(locationRef.current.pathname, "/report/quotes")) {
           e.preventDefault();
-          toggleToc();
+          sidebarAnimations.toggleToc();
           return;
         }
       }
@@ -334,7 +332,7 @@ export function useKeyboardShortcuts({
       if (key === "]") {
         if (pathMatches(locationRef.current.pathname, "/report/quotes")) {
           e.preventDefault();
-          toggleTags();
+          sidebarAnimations.toggleTags();
           return;
         }
       }
@@ -343,7 +341,7 @@ export function useKeyboardShortcuts({
       if (key === "\\" || (key === "." && (e.metaKey || e.ctrlKey))) {
         if (pathMatches(locationRef.current.pathname, "/report/quotes")) {
           e.preventDefault();
-          toggleBoth();
+          sidebarAnimations.toggleBoth();
           return;
         }
       }

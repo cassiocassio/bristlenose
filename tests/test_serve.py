@@ -289,11 +289,13 @@ class TestDevServeReport:
     """Integration tests for dev serve mode — Vite HMR scripts."""
 
     @pytest.fixture()
-    def dev_client(self, tmp_path: Path) -> TestClient:
-        """Create a test client in dev mode with an output dir."""
+    def dev_client(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> TestClient:
+        """Create a test client in HMR dev mode (serve --dev) with an output dir."""
         output_dir = tmp_path / "bristlenose-output"
         output_dir.mkdir()
 
+        # serve --dev sets this env var before calling create_app via uvicorn reload
+        monkeypatch.setenv("_BRISTLENOSE_DEV", "1")
         app = create_app(project_dir=tmp_path, dev=True, db_url="sqlite://")
         return TestClient(app)
 

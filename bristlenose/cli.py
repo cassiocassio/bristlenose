@@ -155,17 +155,17 @@ def _format_doctor_table(report: object) -> None:
 
     for result in report.results:
         if result.status == CheckStatus.OK:
-            status = "[dim green]ok[/dim green]"
+            icon = "[green]✓[/green]"
         elif result.status == CheckStatus.WARN:
-            status = "[bold yellow]!![/bold yellow]"
+            icon = "[bold yellow]⚠[/bold yellow]"
         elif result.status == CheckStatus.FAIL:
-            status = "[bold yellow]!![/bold yellow]"
+            icon = "[red]✗[/red]"
         else:
-            status = "[dim]--[/dim]"
+            icon = "[dim]—[/dim]"
 
         label = f"{result.label:<16}"
         detail = f"[dim]{result.detail}[/dim]" if result.detail else ""
-        console.print(f"  {label}{status}   {detail}")
+        console.print(f" {icon} {label}{detail}")
 
 
 def _print_doctor_fixes(
@@ -631,10 +631,11 @@ def _named_participant_summary(people: object, n_participants: int) -> str:
     return f"{len(named)} of {total} named"
 
 
-def _print_pipeline_summary(result: object) -> None:
+def _print_pipeline_summary(result: object, *, serve_url: str | None = None) -> None:
     """Print a clean summary after any pipeline command.
 
     Adapts to the fields available on the result (LLM usage, timing, etc.).
+    When *serve_url* is given, prints the serve URL instead of a file:// link.
     """
     from bristlenose.llm.pricing import PRICING_URLS, estimate_cost
     from bristlenose.pipeline import _format_duration
@@ -677,13 +678,7 @@ def _print_pipeline_summary(result: object) -> None:
         if url:
             console.print(f"  [dim]Pricing → [link={url}]{url}[/link][/dim]")
 
-    # Report path with OSC 8 file:// hyperlink (show filename only, link resolves)
-    report_path = getattr(result, "report_path", None)
-    if report_path and report_path.exists():
-        file_url = f"file://{report_path.resolve()}"
-        console.print(f"\n  Report:  [link={file_url}]{report_path.name}[/link]")
-
-    # Done line — always last
+    # Done / error line
     elapsed = getattr(result, "elapsed_seconds", 0.0)
     llm_ran = getattr(result, "llm_calls", 0) > 0
     no_quotes = getattr(result, "total_quotes", 0) == 0
@@ -691,14 +686,46 @@ def _print_pipeline_summary(result: object) -> None:
 
     if has_errors:
         time_str = f" in {_format_duration(elapsed)}" if elapsed else ""
+        p_error = getattr(result, "pipeline_error", "")
+        p_error_link = getattr(result, "pipeline_error_link", "")
+        if p_error:
+            console.print(
+                f"\n  [red]Finished with errors[/red]{time_str} — {p_error}"
+            )
+            if p_error_link:
+                console.print(
+                    f"  [dim]Billing → [link={p_error_link}]{p_error_link}[/link][/dim]"
+                )
+        else:
+            console.print(
+                f"\n  [red]Finished with errors[/red]{time_str}"
+                " — 0 quotes extracted (check API credits or logs)"
+            )
+        console.print("  [dim]Run [bold]bristlenose doctor[/bold] to diagnose[/dim]")
+    elif getattr(result, "pipeline_warning", ""):
+        p_warning = getattr(result, "pipeline_warning", "")
+        time_str = f" in {_format_duration(elapsed)}" if elapsed else ""
         console.print(
-            f"\n  [red]Finished with errors[/red]{time_str}"
-            " — 0 quotes extracted (check API credits or logs)"
+            f"\n  [yellow]Done with warnings[/yellow]{time_str} — {p_warning}"
         )
     elif elapsed:
         console.print(f"\n  [green]Done[/green] in {_format_duration(elapsed)}")
     else:
         console.print("\n  [green]Done.[/green]")
+
+    # Report line — serve URL or file path
+    if serve_url:
+        console.print(f"\n  Report:  [bold cyan]{serve_url}[/bold cyan]")
+    else:
+        report_path = getattr(result, "report_path", None)
+        if report_path and report_path.exists():
+            file_url = f"file://{report_path.resolve()}"
+            # Show relative path for readability, with OSC 8 link underneath
+            try:
+                display_path = report_path.resolve().relative_to(Path.cwd())
+            except ValueError:
+                display_path = report_path.name
+            console.print(f"\n  Report:  [link={file_url}]{display_path}[/link]")
 
 
 # ---------------------------------------------------------------------------
@@ -790,9 +817,20 @@ def run(
         Path | None,
         typer.Option("--config", "-c", help="Path to bristlenose.toml config file."),
     ] = None,
+    static: Annotated[
+        bool,
+        typer.Option(
+            "--static", "--no-serve",
+            help="Output a static HTML file instead of starting the interactive server.",
+        ),
+    ] = False,
     clean: Annotated[
         bool,
         typer.Option("--clean", help="Delete output directory before running."),
+    ] = False,
+    dev: Annotated[
+        bool,
+        typer.Option("--dev", help="Development mode: enable responsive playground in served report."),
     ] = False,
     verbose: Annotated[
         bool,
@@ -879,7 +917,50 @@ def run(
     )
     result = asyncio.run(pipeline.run(input_dir, output_dir))
 
-    _print_pipeline_summary(result)
+    # Detect pipeline errors (LLM ran but 0 quotes)
+    llm_ran = getattr(result, "llm_calls", 0) > 0
+    pipeline_errored = llm_ran and getattr(result, "total_quotes", 0) == 0
+
+    if static or pipeline_errored:
+        _print_pipeline_summary(result)
+        return
+
+    # Try to auto-serve the report
+    try:
+        import uvicorn  # noqa: F401
+    except ImportError:
+        _print_pipeline_summary(result)
+        console.print(f"  [dim]Tip: {_install_hint()} for the interactive report[/dim]")
+        return
+
+    try:
+        port = _find_open_port()
+    except RuntimeError:
+        _print_pipeline_summary(result)
+        console.print("  [yellow]⚠[/yellow] No available port (8150–8159)")
+        return
+
+    serve_url = f"http://127.0.0.1:{port}/report/"
+    if port != 8150:
+        console.print(f"  [dim]Port 8150 in use, trying {port}… ok[/dim]")
+    _print_pipeline_summary(result, serve_url=serve_url)
+    if dev:
+        console.print("  [dim]Dev mode: responsive playground enabled[/dim]")
+    console.print("  [dim]Press Ctrl-C to stop the server[/dim]")
+
+    try:
+        _start_server(input_dir, port=port, open_browser=False, dev=dev, verbose=verbose)
+    except Exception as exc:
+        console.print(f"\n  [yellow]⚠[/yellow] Could not start server: {exc}")
+        # Show file link as fallback
+        report_path = getattr(result, "report_path", None)
+        if report_path and report_path.exists():
+            file_url = f"file://{report_path.resolve()}"
+            try:
+                display_path = report_path.resolve().relative_to(Path.cwd())
+            except ValueError:
+                display_path = report_path.name
+            console.print(f"  Report:  [link={file_url}]{display_path}[/link]")
 
 
 @app.command(name="transcribe")
@@ -1156,6 +1237,69 @@ def render(
 # ---------------------------------------------------------------------------
 
 
+def _install_hint() -> str:
+    """Return the right install command for serve extras based on install method."""
+    import sys as _sys
+
+    if "pipx" in _sys.prefix:
+        return "pipx install bristlenose[serve]"
+    return "pip install bristlenose[serve]"
+
+
+def _find_open_port(start: int = 8150, attempts: int = 10) -> int:
+    """Find an available port starting from *start*.
+
+    Tries *attempts* consecutive ports.  Raises RuntimeError if all are taken.
+    """
+    import socket
+
+    for port in range(start, start + attempts):
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            try:
+                s.bind(("127.0.0.1", port))
+                return port
+            except OSError:
+                continue
+    msg = f"No available port in {start}–{start + attempts - 1}"
+    raise RuntimeError(msg)
+
+
+def _start_server(
+    project_dir: Path,
+    *,
+    port: int,
+    open_browser: bool = True,
+    dev: bool = False,
+    verbose: bool = False,
+) -> None:
+    """Start the FastAPI server (blocking).  Used by both serve() and run()."""
+    import threading
+    import webbrowser
+
+    import uvicorn
+
+    from bristlenose.server.app import create_app
+
+    report_url = f"http://127.0.0.1:{port}/report/"
+
+    if open_browser:
+        def _open() -> None:
+            import time
+
+            time.sleep(1.0)
+            webbrowser.open(report_url)
+
+        threading.Thread(target=_open, daemon=True).start()
+
+    app_instance = create_app(project_dir=project_dir, dev=dev, verbose=verbose)
+    uvicorn.run(
+        app_instance,
+        host="127.0.0.1",
+        port=port,
+        log_level="info" if verbose else "warning",
+    )
+
+
 def _auto_render(project_dir: Path) -> None:
     """Re-render the HTML report from intermediate data before serving.
 
@@ -1227,11 +1371,8 @@ def serve(
         import uvicorn  # noqa: F401 — test that serve deps are installed
     except ImportError:
         console.print("[red]Server dependencies not installed.[/red]")
-        console.print("Install with: [bold]pip install bristlenose[serve][/bold]")
+        console.print(f"Install with: [bold]{_install_hint()}[/bold]")
         raise typer.Exit(1)
-
-    import threading
-    import webbrowser
 
     # Re-render the HTML report before serving so it always matches the
     # current code (templates, CSS, JS).  This is fast (<0.1s) and avoids
@@ -1240,26 +1381,29 @@ def serve(
         _auto_render(project_dir)
 
     report_url = f"http://127.0.0.1:{port}/report/"
-    console.print(f"\n  Report: [bold cyan]{report_url}[/bold cyan]\n")
-
-    # Open the report in the default browser after a short delay so the
-    # server has time to start.  If the tab is already open the browser
-    # will refresh it (on macOS at least).
-    def _open_browser() -> None:
-        import time
-
-        time.sleep(1.0)
-        webbrowser.open(report_url)
-
-    if open_browser:
-        threading.Thread(target=_open_browser, daemon=True).start()
+    console.print(f"\n  Report: [bold cyan]{report_url}[/bold cyan]")
+    if dev:
+        console.print("  [dim]Dev mode: responsive playground enabled[/dim]")
+    console.print()
 
     if dev:
+        import os
+        import threading
+        import webbrowser
+
+        # Open browser for dev mode (non-dev uses _start_server which handles this)
+        def _open_browser_fn() -> None:
+            import time
+
+            time.sleep(1.0)
+            webbrowser.open(report_url)
+
+        if open_browser:
+            threading.Thread(target=_open_browser_fn, daemon=True).start()
+
         # In dev mode uvicorn uses a string factory and calls create_app()
         # itself (needed for reload). Stash project_dir in the environment
         # so the factory can recover it.
-        import os
-
         if project_dir is not None:
             os.environ["_BRISTLENOSE_PROJECT_DIR"] = str(project_dir.resolve())
         os.environ["_BRISTLENOSE_DEV"] = "1"
@@ -1276,15 +1420,11 @@ def serve(
             log_level="info" if verbose else "warning",
         )
     else:
-        from bristlenose.server.app import create_app
-
-        app_instance = create_app(project_dir=project_dir, verbose=verbose)
-
-        uvicorn.run(
-            app_instance,
-            host="127.0.0.1",
+        _start_server(
+            project_dir or Path("."),
             port=port,
-            log_level="info" if verbose else "warning",
+            open_browser=open_browser,
+            verbose=verbose,
         )
 
 

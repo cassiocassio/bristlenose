@@ -24,7 +24,9 @@
 import { useCallback, useEffect, useRef } from "react";
 import {
   useSidebarStore,
+  toggleToc,
   toggleTags,
+  toggleBoth,
   openTocPush,
   closeToc,
   closeTags,
@@ -35,6 +37,7 @@ import { TagSidebar } from "./TagSidebar";
 import { Minimap } from "./Minimap";
 import { useDragResize, MIN_WIDTH, MAX_WIDTH } from "../hooks/useDragResize";
 import { useTocOverlay } from "../hooks/useTocOverlay";
+import { Tooltip } from "./Tooltip";
 
 // ── SVG icons (inline, 18×18) ─────────────────────────────────────────────
 
@@ -66,7 +69,7 @@ function TagIcon() {
 
 /**
  * Add `.animating` before state change, remove after transition completes.
- * If no transition fires within 120ms (safety margin), remove anyway.
+ * Fallback timeout (200ms) covers 75ms grid transition + rAF scheduling.
  */
 function withAnimation(
   layoutEl: HTMLElement | null,
@@ -87,13 +90,25 @@ function withAnimation(
     if (e.target === layoutEl) cleanup();
   };
   layoutEl.addEventListener("transitionend", onEnd);
-  const fallback = setTimeout(cleanup, 120);
+  const fallback = setTimeout(cleanup, 200);
 
-  // Run state change after animating class is applied (next microtask)
+  // Run state change after animating class is applied (next frame)
   requestAnimationFrame(() => {
     action();
   });
 }
+
+// ── Animation registry ────────────────────────────────────────────────────
+//
+// Module-level object populated by SidebarLayout on mount. Allows
+// useKeyboardShortcuts (which has no DOM ref access) to trigger
+// animated sidebar toggles instead of bare store mutations.
+
+export const sidebarAnimations = {
+  toggleToc: toggleToc as () => void,
+  toggleTags: toggleTags as () => void,
+  toggleBoth: toggleBoth as () => void,
+};
 
 // ── Component ─────────────────────────────────────────────────────────────
 
@@ -237,6 +252,35 @@ export function SidebarLayout({ active, children }: SidebarLayoutProps) {
     }
   }, [tagsOpen]);
 
+  // Populate animation registry so keyboard shortcuts can animate.
+  // Reads tocMode at call time to pick overlay-close vs grid-transition.
+  useEffect(() => {
+    sidebarAnimations.toggleToc = () => {
+      if (tocMode === "overlay") {
+        closeTocOverlayAnimated();
+      } else {
+        withAnimation(layoutRef.current, toggleToc);
+      }
+    };
+    sidebarAnimations.toggleTags = () => {
+      withAnimation(layoutRef.current, toggleTags);
+    };
+    sidebarAnimations.toggleBoth = () => {
+      if (tocMode === "overlay") {
+        closeTocOverlayAnimated();
+        withAnimation(layoutRef.current, toggleTags);
+      } else {
+        withAnimation(layoutRef.current, toggleBoth);
+      }
+    };
+    return () => {
+      // Reset to bare store calls when SidebarLayout unmounts.
+      sidebarAnimations.toggleToc = toggleToc;
+      sidebarAnimations.toggleTags = toggleTags;
+      sidebarAnimations.toggleBoth = toggleBoth;
+    };
+  }, [tocMode, closeTocOverlayAnimated]);
+
   // Escape key: close the sidebar that contains focus.
   useEffect(() => {
     if (!active) return;
@@ -285,17 +329,18 @@ export function SidebarLayout({ active, children }: SidebarLayoutProps) {
         onMouseLeave={overlay.onRailMouseLeave}
         onClick={overlay.onRailAreaClick}
       >
-        <button
-          ref={tocRailBtnRef}
-          className="rail-btn"
-          onClick={handleOpenTocPush}
-          onMouseEnter={overlay.onButtonMouseEnter}
-          onMouseLeave={overlay.onButtonMouseLeave}
-          title="Table of contents ( [ )"
-          aria-label="Toggle table of contents"
-        >
-          <ListIcon />
-        </button>
+        <Tooltip content="Contents" shortcut={{ key: "[" }}>
+          <button
+            ref={tocRailBtnRef}
+            className="rail-btn"
+            onClick={handleOpenTocPush}
+            onMouseEnter={overlay.onButtonMouseEnter}
+            onMouseLeave={overlay.onButtonMouseLeave}
+            aria-label="Toggle table of contents"
+          >
+            <ListIcon />
+          </button>
+        </Tooltip>
         {tocMode === "closed" && (
           <div
             className={`drag-handle toc-rail-drag${tocRailDrag.isDragging ? " active" : ""}`}
@@ -392,15 +437,16 @@ export function SidebarLayout({ active, children }: SidebarLayoutProps) {
 
       {/* Column 6: Tag rail (rightmost — visible when tag sidebar is closed) */}
       <div className="tag-rail">
-        <button
-          ref={tagRailBtnRef}
-          className="rail-btn"
-          onClick={handleToggleTags}
-          title="Tags ( ] )"
-          aria-label="Toggle tag sidebar"
-        >
-          <TagIcon />
-        </button>
+        <Tooltip content="Tags" shortcut={{ key: "]" }}>
+          <button
+            ref={tagRailBtnRef}
+            className="rail-btn"
+            onClick={handleToggleTags}
+            aria-label="Toggle tag sidebar"
+          >
+            <TagIcon />
+          </button>
+        </Tooltip>
         {!tagsOpen && (
           <div
             className={`drag-handle tag-rail-drag${tagRailDrag.isDragging ? " active" : ""}`}

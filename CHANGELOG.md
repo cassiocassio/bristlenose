@@ -2,6 +2,10 @@
 
 All notable changes to Bristlenose are documented here. See also the [README](README.md) for the latest releases.
 
+**0.13.4** — _14 Mar 2026_
+
+- **Fix import FK constraint** — delete `ProposedTag` rows (AutoCode proposals) before removing stale quotes during re-import, preventing `FOREIGN KEY constraint failed` errors on `bristlenose serve` startup
+
 **0.13.3** — _14 Mar 2026_
 
 - **Help modal polish** — platform-aware keyboard shortcuts (⌘ on Mac, Ctrl on Windows/Linux), sans-serif keycaps with deeper shadow and min-width for visual consistency, typography tokens and spacing overhaul, entrance animation, dark-mode keyboard styling. Phase 3 adds custom tooltips with keyboard shortcut badges across the UI

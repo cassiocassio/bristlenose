@@ -51,6 +51,7 @@ Blockers the mean new users give up or never try
 - all the opens and closes
 - bounces and slides
 - flashes of accecptance
+- [ ] **Staggered fly-up animation for bulk hide** — when hiding multiple selected quotes, stagger the ghost animation 150ms per card (like vanilla JS version) instead of plain collapse
 
 
 

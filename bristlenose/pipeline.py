@@ -76,6 +76,20 @@ def _print_step(message: str, elapsed: float) -> None:
     console.print(f" [green]✓[/green] {message}{' ' * padding}[dim]{time_str}[/dim]")
 
 
+def _print_error_step(message: str, elapsed: float) -> None:
+    """Print a failed pipeline step with red ✗ and right-aligned timing."""
+    time_str = _format_duration(elapsed)
+    padding = max(1, 58 - len(message))
+    console.print(f" [red]✗[/red] {message}{' ' * padding}[dim]{time_str}[/dim]")
+
+
+def _print_warn_step(message: str, elapsed: float) -> None:
+    """Print a partially-succeeded step with yellow ⚠ and right-aligned timing."""
+    time_str = _format_duration(elapsed)
+    padding = max(1, 58 - len(message))
+    console.print(f" [yellow]⚠[/yellow] {message}{' ' * padding}[dim]{time_str}[/dim]")
+
+
 def _print_cached_step(message: str) -> None:
     """Print a cached pipeline step with green ✓ and right-aligned '(cached)'."""
     padding = max(1, 58 - len(message))
@@ -98,7 +112,7 @@ def _print_warn(message: str, link: str = "") -> None:
     if message in _printed_warnings:
         return
     _printed_warnings.add(message)
-    console.print(f"   [dim yellow]{message}[/dim yellow]")
+    console.print(f"   [yellow]⚠[/yellow] [dim yellow]{message}[/dim yellow]")
     if link:
         console.print(f"   [dim yellow][link={link}]{link}[/link][/dim yellow]")
 
@@ -313,7 +327,7 @@ class Pipeline:
 
         # ── Print found-sessions line, then ingest checkmark ──
         console.print(
-            f"[dim]{len(sessions)} sessions in {input_dir.name}/[/dim]\n",
+            f"  [dim]{len(sessions)} sessions in {input_dir.name}/[/dim]\n",
         )
         type_counts = Counter(
             f.file_type.value for s in sessions for f in s.files
@@ -739,6 +753,7 @@ class Pipeline:
                 ]
 
             # ── Stage 8: Topic segmentation ──────────────────────────
+            _seg_errors: list[str] = []
             _tb_path = intermediate / "topic_boundaries.json"
             if (
                 _is_stage_cached(_prev_manifest, STAGE_TOPIC_SEGMENTATION)
@@ -793,8 +808,6 @@ class Pipeline:
 
                 status.update("[dim]Segmenting topics...[/dim]")
                 t0 = time.perf_counter()
-                _seg_errors: list[str] = []
-
                 if _remaining_transcripts:
                     _fresh_topic_maps = await segment_topics(
                         _remaining_transcripts, llm_client,
@@ -829,7 +842,12 @@ class Pipeline:
                     )
                 else:
                     _msg_8 = f"Segmented {total_boundaries} topic boundaries"
-                _print_step(_msg_8, _topics_elapsed)
+                if _seg_errors and total_boundaries == 0:
+                    _print_error_step(_msg_8, _topics_elapsed)
+                elif _seg_errors:
+                    _print_warn_step(_msg_8, _topics_elapsed)
+                else:
+                    _print_step(_msg_8, _topics_elapsed)
 
                 _stage_actuals[STAGE_TOPICS] = StageActual(
                     elapsed=_topics_elapsed, input_size=_n_sessions,
@@ -841,6 +859,7 @@ class Pipeline:
             write_manifest(manifest, output_dir)
 
             # ── Stage 9: Quote extraction ────────────────────────────
+            _quote_errors: list[str] = []
             _eq_path = intermediate / "extracted_quotes.json"
             if (
                 _is_stage_cached(_prev_manifest, STAGE_QUOTE_EXTRACTION)
@@ -896,7 +915,6 @@ class Pipeline:
 
                 status.update("[dim]Extracting quotes...[/dim]")
                 t0 = time.perf_counter()
-                _quote_errors: list[str] = []
 
                 if _remaining_transcripts_q:
                     _fresh_quotes = await extract_quotes(
@@ -936,7 +954,12 @@ class Pipeline:
                     )
                 else:
                     _msg_9 = f"Extracted {len(all_quotes)} quotes"
-                _print_step(_msg_9, _quotes_elapsed)
+                if _quote_errors and len(all_quotes) == 0:
+                    _print_error_step(_msg_9, _quotes_elapsed)
+                elif _quote_errors:
+                    _print_warn_step(_msg_9, _quotes_elapsed)
+                else:
+                    _print_step(_msg_9, _quotes_elapsed)
 
                 _stage_actuals[STAGE_QUOTES] = StageActual(
                     elapsed=_quotes_elapsed, input_size=_n_sessions,
@@ -1079,6 +1102,18 @@ class Pipeline:
         if self._estimator is not None:
             self._estimator.record_run(_stage_actuals)  # type: ignore[union-attr]
 
+        # Extract root-cause error/warning for the CLI summary.
+        _p_error, _p_error_link = "", ""
+        _p_warning = ""
+        if len(all_quotes) == 0 and (_quote_errors or _seg_errors):
+            _p_error, _p_error_link = _short_reason(
+                _quote_errors or _seg_errors, self.settings.llm_provider,
+            )
+        elif len(all_quotes) > 0 and (_quote_errors or _seg_errors):
+            _p_warning, _ = _short_reason(
+                _quote_errors or _seg_errors, self.settings.llm_provider,
+            )
+
         return PipelineResult(
             project_name=self.settings.project_name,
             participants=sessions,
@@ -1096,6 +1131,9 @@ class Pipeline:
             llm_model=self.settings.llm_model,
             llm_provider=self.settings.llm_provider,
             total_quotes=len(all_quotes),
+            pipeline_error=_p_error,
+            pipeline_error_link=_p_error_link,
+            pipeline_warning=_p_warning,
         )
 
     async def run_transcription_only(
@@ -1137,7 +1175,7 @@ class Pipeline:
 
         # ── Print found-sessions line, then ingest checkmark ──
         console.print(
-            f"[dim]{len(sessions)} sessions in {input_dir.name}/[/dim]\n",
+            f"  [dim]{len(sessions)} sessions in {input_dir.name}/[/dim]\n",
         )
         type_counts = Counter(
             f.file_type.value for s in sessions for f in s.files
@@ -1313,10 +1351,14 @@ class Pipeline:
                     self.settings.project_name,
                 )
             total_boundaries = sum(len(m.boundaries) for m in topic_maps)
-            _print_step(
-                f"Segmented {total_boundaries} topic boundaries",
-                time.perf_counter() - t0,
-            )
+            _seg_elapsed_a = time.perf_counter() - t0
+            _msg_8a = f"Segmented {total_boundaries} topic boundaries"
+            if _seg_errors_a and total_boundaries == 0:
+                _print_error_step(_msg_8a, _seg_elapsed_a)
+            elif _seg_errors_a:
+                _print_warn_step(_msg_8a, _seg_elapsed_a)
+            else:
+                _print_step(_msg_8a, _seg_elapsed_a)
             if _seg_errors_a:
                 _print_warn(*_short_reason(_seg_errors_a, self.settings.llm_provider))
 
@@ -1335,10 +1377,14 @@ class Pipeline:
                     all_quotes, "extracted_quotes.json", output_dir,
                     self.settings.project_name,
                 )
-            _print_step(
-                f"Extracted {len(all_quotes)} quotes",
-                time.perf_counter() - t0,
-            )
+            _quotes_elapsed_a = time.perf_counter() - t0
+            _msg_9a = f"Extracted {len(all_quotes)} quotes"
+            if _quote_errors_a and len(all_quotes) == 0:
+                _print_error_step(_msg_9a, _quotes_elapsed_a)
+            elif _quote_errors_a:
+                _print_warn_step(_msg_9a, _quotes_elapsed_a)
+            else:
+                _print_step(_msg_9a, _quotes_elapsed_a)
             if _quote_errors_a:
                 _print_warn(*_short_reason(_quote_errors_a, self.settings.llm_provider))
 
@@ -1397,6 +1443,18 @@ class Pipeline:
 
         elapsed = time.perf_counter() - pipeline_start
 
+        # Extract root-cause error/warning for the CLI summary.
+        _p_error_a, _p_error_link_a = "", ""
+        _p_warning_a = ""
+        if len(all_quotes) == 0 and (_quote_errors_a or _seg_errors_a):
+            _p_error_a, _p_error_link_a = _short_reason(
+                _quote_errors_a or _seg_errors_a, self.settings.llm_provider,
+            )
+        elif len(all_quotes) > 0 and (_quote_errors_a or _seg_errors_a):
+            _p_warning_a, _ = _short_reason(
+                _quote_errors_a or _seg_errors_a, self.settings.llm_provider,
+            )
+
         return PipelineResult(
             project_name=self.settings.project_name,
             participants=[],
@@ -1414,6 +1472,9 @@ class Pipeline:
             llm_model=self.settings.llm_model,
             llm_provider=self.settings.llm_provider,
             total_quotes=len(all_quotes),
+            pipeline_error=_p_error_a,
+            pipeline_error_link=_p_error_link_a,
+            pipeline_warning=_p_warning_a,
         )
 
     async def _gather_all_segments(

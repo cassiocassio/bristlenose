@@ -42,13 +42,15 @@ def create_app(
     Args:
         project_dir: Path to a project's bristlenose-output/ directory.
                      When provided, serves the report files.
-        dev: When True, skip mounting static files (Vite dev server handles them).
+        dev: When True, enable dev features (playground, admin, dev routes).
+             When the Vite dev server is running (``serve --dev``), also uses
+             HMR HTML instead of the built bundle.
         db_url: Override database URL (e.g. "sqlite://" for in-memory tests).
         verbose: When True, terminal handler shows DEBUG-level messages.
 
-    In ``--dev`` mode uvicorn calls this factory with no arguments on reload.
-    The CLI stashes ``project_dir`` in ``_BRISTLENOSE_PROJECT_DIR`` so the
-    factory can recover it.
+    In ``serve --dev`` mode uvicorn calls this factory with no arguments on
+    reload.  The CLI stashes ``project_dir`` in ``_BRISTLENOSE_PROJECT_DIR``
+    so the factory can recover it.
     """
     # Recover project_dir, dev, and verbose flags from env when called by uvicorn reload
     if project_dir is None:
@@ -59,6 +61,12 @@ def create_app(
         dev = True
     if not verbose and os.environ.get("_BRISTLENOSE_VERBOSE") == "1":
         verbose = True
+
+    # HMR mode: serve --dev uses uvicorn reload with a factory pattern.
+    # When the _BRISTLENOSE_DEV env var is set, the Vite dev server should be
+    # running alongside — use HMR HTML.  When dev=True is passed directly
+    # (e.g. from run --dev), use the built bundle with the dev flag injected.
+    hmr = os.environ.get("_BRISTLENOSE_DEV") == "1"
 
     # Persistent log file — writes to <output_dir>/.bristlenose/bristlenose.log
     # alongside the per-project SQLite DB.  Controlled by BRISTLENOSE_LOG_LEVEL
@@ -116,9 +124,16 @@ def create_app(
     if project_dir is not None:
         _import_on_startup(session_factory, project_dir)
 
-    # Serve the React islands bundle (built by Vite)
-    if not dev and _STATIC_DIR.is_dir():
+    # Serve the React islands bundle (built by Vite).
+    # In HMR mode the Vite dev server handles these.
+    if not hmr and _STATIC_DIR.is_dir():
         app.mount("/static", StaticFiles(directory=_STATIC_DIR), name="static")
+        # Vite's lazy-load runtime resolves chunk paths relative to base ("/"),
+        # producing requests like /assets/Foo.css.  Mount /assets/ as an alias
+        # so these resolve without needing to rewrite paths inside JS bundles.
+        assets_dir = _STATIC_DIR / "assets"
+        if assets_dir.is_dir():
+            app.mount("/assets", StaticFiles(directory=assets_dir), name="assets")
 
     # Serve media files (video/audio) from the project input directory so the
     # popout player can load them over HTTP instead of file:// URIs.
@@ -131,14 +146,14 @@ def create_app(
         if not output_dir.is_dir():
             output_dir = project_dir  # Caller already pointed at the output dir
         if output_dir.is_dir():
-            if dev:
+            if hmr:
                 _mount_dev_report(app, output_dir)
             else:
-                _mount_prod_report(app, output_dir)
+                _mount_prod_report(app, output_dir, dev=dev)
         else:
             logger.warning("report mount skipped — %s does not exist", output_dir)
 
-    if dev:
+    if hmr:
         _print_dev_urls()
 
     return app
@@ -168,11 +183,13 @@ def _print_dev_urls() -> None:
     )
 
 
-def _build_spa_html(output_dir: Path) -> str:
+def _build_spa_html(output_dir: Path, *, dev: bool = False) -> str:
     """Read the Vite-built index.html and prepare it for serving.
 
     - Rewrites ``/assets/`` paths to ``/static/assets/`` (bundle served via StaticFiles)
     - Injects ``<link>`` for the theme CSS (from the pipeline output dir)
+    - When *dev* is True, injects ``window.__BRISTLENOSE_DEV__ = true`` so the
+      responsive playground loads (without requiring the Vite dev server)
     """
     import re
 
@@ -183,6 +200,10 @@ def _build_spa_html(output_dir: Path) -> str:
     # Inject theme CSS before </head> — served from output dir at /report/assets/
     theme_link = '<link rel="stylesheet" href="/report/assets/bristlenose-theme.css">'
     html = html.replace("</head>", f"{theme_link}\n</head>")
+    # Dev flag — enables responsive playground without Vite HMR
+    if dev:
+        dev_script = "<script>window.__BRISTLENOSE_DEV__ = true</script>"
+        html = html.replace("</head>", f"{dev_script}\n</head>")
     return html
 
 
@@ -271,12 +292,13 @@ def _mount_dev_report(app: FastAPI, output_dir: Path) -> None:
             app.mount(url_path, StaticFiles(directory=dir_path, html=True), name=url_path[1:])
 
 
-def _mount_prod_report(app: FastAPI, output_dir: Path) -> None:
+def _mount_prod_report(app: FastAPI, output_dir: Path, *, dev: bool = False) -> None:
     """Mount the report SPA in production serve mode.
 
     Reads the Vite-built index.html once at startup, rewrites asset paths,
     and injects theme CSS.  Falls back to plain StaticFiles if no Vite build
-    exists.
+    exists.  When *dev* is True, injects ``window.__BRISTLENOSE_DEV__`` so the
+    responsive playground loads without the Vite dev server.
     """
     index_path = _STATIC_DIR / "index.html"
     if not index_path.is_file():
@@ -291,7 +313,7 @@ def _mount_prod_report(app: FastAPI, output_dir: Path) -> None:
         )
         return
 
-    spa_html = _build_spa_html(output_dir)
+    spa_html = _build_spa_html(output_dir, dev=dev)
 
     @app.get("/report")
     def redirect_report_to_slash_prod() -> RedirectResponse:

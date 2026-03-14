@@ -18,6 +18,7 @@ Each active feature branch gets its own **git worktree** — a full working copy
 | `bristlenose_branch symbology/` | `symbology` | § ¶ ❋ Unicode prefix symbols for sections, quotes, themes |
 | `bristlenose_branch highlighter/` | `highlighter` | Highlighter feature |
 | `bristlenose_branch living-fish/` | `living-fish` | Animated "living portrait" logo for serve mode |
+| `bristlenose_branch drag-push/` | `drag-push` | Sidebar drag-to-open uses push mode (not overlay) |
 
 
 
@@ -100,6 +101,7 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 | `symbology` | `bristlenose_branch symbology/` | `origin/symbology` |
 | `highlighter` | `bristlenose_branch highlighter/` | `origin/highlighter` |
 | `living-fish` | `bristlenose_branch living-fish/` | `origin/living-fish` |
+| `drag-push` | `bristlenose_branch drag-push/` | local only |
 
 
 ---
@@ -153,6 +155,26 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 **Potential conflicts with other branches:**
 - `symbology` touches `render_html.py` and template headings — low risk (logo is separate from section symbols)
 - `highlighter` — unknown scope, likely no overlap
+
+---
+
+### `drag-push`
+
+**Status:** Just started
+**Started:** 14 Mar 2026
+**Worktree:** `/Users/cassio/Code/bristlenose_branch drag-push/`
+**Remote:** local only (push when ready)
+
+**What it does:** Changes sidebar rail drag-to-open from overlay (position: fixed, floats over content) to push mode (grid column resize). Both left TOC and right tag sidebars affected. Mouseover overlay on left rail unchanged. Design rationale: dragging is a sizing commitment — user needs to preview layout impact on center content during drag.
+
+**Files this branch will touch:**
+- `bristlenose/theme/organisms/sidebar.css` — grid rules for `*-rail-dragging` classes
+- `frontend/src/hooks/useDragResize.ts` — animating class on rail drag commit/abort
+
+**Potential conflicts with other branches:**
+- `symbology` — no overlap (touches render/template files, not sidebar CSS/hooks)
+- `highlighter` — unknown scope, likely no overlap
+- `living-fish` — no overlap (logo assets, not sidebar)
 
 ---
 

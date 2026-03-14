@@ -2,6 +2,18 @@
 
 All notable changes to Bristlenose are documented here. See also the [README](README.md) for the latest releases.
 
+**0.13.3** — _14 Mar 2026_
+
+- **Help modal polish** — platform-aware keyboard shortcuts (⌘ on Mac, Ctrl on Windows/Linux), sans-serif keycaps with deeper shadow and min-width for visual consistency, typography tokens and spacing overhaul, entrance animation, dark-mode keyboard styling. Phase 3 adds custom tooltips with keyboard shortcut badges across the UI
+- **Bulk actions on multi-selection** — star, hide, and tag operations now respect click-based multi-selection: clicking a starred quote in a selection unstars all, clicking an unstarred one stars all. Shift+click range selection no longer triggers browser text selection. Tag commits apply to all selected quotes
+- **Sidebar animations** — push animation on keyboard shortcuts (`[`, `]`, `\`) and click, 4× faster open/close transitions, two-row header layout. Rail drag-to-open with 60px commit threshold and pointer-tracking overlay. Drag handle hover-intent (80ms delay) filters casual mouse traversal
+- **TOC overlay clip-path animation** — smooth reveal/hide for the table-of-contents overlay panel, with playground toggle for overlay style
+- **Scroll spy Safari fix** — two-phase click-intent override (immune phase 0–600ms, sticky phase >600ms) resolves Safari's smooth-scroll `getBoundingClientRect()` timing glitch. Minimap reordered to grid column 4 (between center and tag sidebar)
+- **Pipeline error display** — failed stages show red ✗, partially successful stages show yellow ⚠ in CLI output
+- **Speaker badge fix** — correct indent when speaker badge wraps to a new line
+- **Scroll-margin fix** — section headings in React SPA now scroll to the correct position, accounting for the sticky navbar
+- **CLAUDE.md refactor** — extracted frontend, pipeline, and LLM gotchas into dedicated child files (`frontend/CLAUDE.md`, `bristlenose/stages/CLAUDE.md`, `bristlenose/llm/CLAUDE.md`), keeping the root file focused on architecture and conventions
+
 **0.13.2** — _11 Mar 2026_
 
 - **Render refactor** — broke up the 2,903-line `render_html.py` monolith into `bristlenose/stages/s12_render/` package with 8 focused submodules: `theme_assets.py` (CSS/JS loaders, Jinja2 env), `html_helpers.py` (escaping, timecodes, badges, video map), `quote_format.py` (quote HTML, badges), `sentiment.py` (sparklines, rewatch/friction), `dashboard.py` (project tab, featured quotes, coverage), `transcript_pages.py` (standalone + inline transcripts), `standalone_pages.py` (codebook, analysis), `report.py` (orchestrator). No behaviour change — same HTML output, all 1,872 tests pass

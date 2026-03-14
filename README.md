@@ -386,6 +386,14 @@ Edit `bristlenose/__init__.py` (the single source of truth for version), commit,
 
 ## Changelog
 
+**0.13.3** — _14 Mar 2026_
+
+- Help modal polish — platform-aware shortcuts (⌘/Ctrl), keycap typography, entrance animation, custom tooltips with shortcut badges
+- Bulk actions respect multi-selection on click (star, hide, tag). Shift+click range selection fix
+- Sidebar: push animations, 4× faster transitions, rail drag-to-open, drag handle hover-intent, scroll spy Safari fix
+- Pipeline CLI: red ✗ for failed stages, yellow ⚠ for partial success
+- Speaker badge wrap fix, scroll-margin fix for sticky navbar, TOC overlay clip-path animation
+
 **0.13.2** — _11 Mar 2026_
 
 - Render refactor — `render_html.py` (2,903 lines) broken into `bristlenose/stages/s12_render/` package with 8 submodules. Static render path formally deprecated (`DeprecationWarning`). No behaviour change

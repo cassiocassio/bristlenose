@@ -113,12 +113,18 @@ export const sidebarAnimations = {
 // ── Component ─────────────────────────────────────────────────────────────
 
 interface SidebarLayoutProps {
-  /** True when the sidebar grid should be active (Quotes tab). */
+  /** True when the sidebar grid should be active. */
   active: boolean;
+  /** Custom left panel content (default: TocSidebar). */
+  leftPanel?: React.ReactNode;
+  /** Title for the left sidebar header (default: "Contents"). */
+  leftPanelTitle?: string;
+  /** Show minimap + tag sidebar + tag rail (default: true). */
+  showRightSidebar?: boolean;
   children: React.ReactNode;
 }
 
-export function SidebarLayout({ active, children }: SidebarLayoutProps) {
+export function SidebarLayout({ active, leftPanel, leftPanelTitle, showRightSidebar = true, children }: SidebarLayoutProps) {
   const { tocMode, tagsOpen, tocWidth, tagsWidth } = useSidebarStore();
   const pg = usePlaygroundStore();
   const layoutRef = useRef<HTMLDivElement>(null);
@@ -360,7 +366,7 @@ export function SidebarLayout({ active, children }: SidebarLayoutProps) {
         onMouseLeave={overlay.onPanelMouseLeave}
       >
         <div className="sidebar-header toc-sidebar-header">
-          <span className="sidebar-title">Contents</span>
+          <span className="sidebar-title">{leftPanelTitle ?? "Contents"}</span>
           <button
             className="sidebar-close"
             onClick={handleCloseToc}
@@ -371,7 +377,7 @@ export function SidebarLayout({ active, children }: SidebarLayoutProps) {
           </button>
         </div>
         <div className="toc-sidebar-body">
-          <TocSidebar onOverlayClose={closeTocOverlayAnimated} />
+          {leftPanel ?? <TocSidebar onOverlayClose={closeTocOverlayAnimated} />}
         </div>
         {(tocMode === "push" || tocMode === "overlay") && (
           <div
@@ -396,66 +402,70 @@ export function SidebarLayout({ active, children }: SidebarLayoutProps) {
         {children}
       </div>
 
-      {/* Column 4: Minimap (between center content and tag sidebar) */}
-      <Minimap />
+      {showRightSidebar && (
+        <>
+          {/* Column 4: Minimap (between center content and tag sidebar) */}
+          <Minimap />
 
-      {/* Column 5: Tag sidebar panel */}
-      <div
-        ref={tagSidebarRef}
-        className="tag-sidebar"
-        inert={!tagsOpen ? true : undefined}
-      >
-        <div className="sidebar-header tag-sidebar-header">
-          <span className="sidebar-title">Tags</span>
-          <button
-            className="sidebar-close"
-            onClick={handleCloseTags}
-            title="Close"
-            aria-label="Close tag sidebar"
-          >
-            ×
-          </button>
-        </div>
-        <TagSidebar />
-        {tagsOpen && (
+          {/* Column 5: Tag sidebar panel */}
           <div
-            className={`drag-handle tag-drag-handle${tagEdge.isDragging ? " active" : ""}`}
-            role="separator"
-            aria-orientation="vertical"
-            aria-valuenow={tagsWidth}
-            aria-valuemin={MIN_WIDTH}
-            aria-valuemax={MAX_WIDTH}
-            aria-label="Resize tag sidebar"
-            tabIndex={0}
-            onPointerDown={tagEdge.handlePointerDown}
-            onKeyDown={tagEdge.handleKeyDown}
-            onMouseEnter={onHandleMouseEnter}
-            onMouseLeave={onHandleMouseLeave}
-          />
-        )}
-      </div>
+            ref={tagSidebarRef}
+            className="tag-sidebar"
+            inert={!tagsOpen ? true : undefined}
+          >
+            <div className="sidebar-header tag-sidebar-header">
+              <span className="sidebar-title">Tags</span>
+              <button
+                className="sidebar-close"
+                onClick={handleCloseTags}
+                title="Close"
+                aria-label="Close tag sidebar"
+              >
+                ×
+              </button>
+            </div>
+            <TagSidebar />
+            {tagsOpen && (
+              <div
+                className={`drag-handle tag-drag-handle${tagEdge.isDragging ? " active" : ""}`}
+                role="separator"
+                aria-orientation="vertical"
+                aria-valuenow={tagsWidth}
+                aria-valuemin={MIN_WIDTH}
+                aria-valuemax={MAX_WIDTH}
+                aria-label="Resize tag sidebar"
+                tabIndex={0}
+                onPointerDown={tagEdge.handlePointerDown}
+                onKeyDown={tagEdge.handleKeyDown}
+                onMouseEnter={onHandleMouseEnter}
+                onMouseLeave={onHandleMouseLeave}
+              />
+            )}
+          </div>
 
-      {/* Column 6: Tag rail (rightmost — visible when tag sidebar is closed) */}
-      <div className="tag-rail">
-        <Tooltip content="Tags" shortcut={{ key: "]" }}>
-          <button
-            ref={tagRailBtnRef}
-            className="rail-btn"
-            onClick={handleToggleTags}
-            aria-label="Toggle tag sidebar"
-          >
-            <TagIcon />
-          </button>
-        </Tooltip>
-        {!tagsOpen && (
-          <div
-            className={`drag-handle tag-rail-drag${tagRailDrag.isDragging ? " active" : ""}`}
-            onPointerDown={tagRailDrag.handlePointerDown}
-            onMouseEnter={onHandleMouseEnter}
-            onMouseLeave={onHandleMouseLeave}
-          />
-        )}
-      </div>
+          {/* Column 6: Tag rail (rightmost — visible when tag sidebar is closed) */}
+          <div className="tag-rail">
+            <Tooltip content="Tags" shortcut={{ key: "]" }}>
+              <button
+                ref={tagRailBtnRef}
+                className="rail-btn"
+                onClick={handleToggleTags}
+                aria-label="Toggle tag sidebar"
+              >
+                <TagIcon />
+              </button>
+            </Tooltip>
+            {!tagsOpen && (
+              <div
+                className={`drag-handle tag-rail-drag${tagRailDrag.isDragging ? " active" : ""}`}
+                onPointerDown={tagRailDrag.handlePointerDown}
+                onMouseEnter={onHandleMouseEnter}
+                onMouseLeave={onHandleMouseLeave}
+              />
+            )}
+          </div>
+        </>
+      )}
     </div>
   );
 }

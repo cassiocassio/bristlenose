@@ -15,6 +15,7 @@ import { Footer } from "../components/Footer";
 import { HelpModal } from "../components/HelpModal";
 import { FeedbackModal } from "../components/FeedbackModal";
 import { SidebarLayout } from "../components/SidebarLayout";
+import { SessionsSidebar } from "../components/SessionsSidebar";
 import { ExportDialog } from "../components/ExportDialog";
 import { PlayerProvider } from "../contexts/PlayerContext";
 import { FocusProvider } from "../contexts/FocusContext";
@@ -55,6 +56,10 @@ function AppShell() {
   const openFeedback = useCallback(() => setFeedbackOpen(true), []);
   const closeFeedback = useCallback(() => setFeedbackOpen(false), []);
   const isQuotes = useMatch("/report/quotes");
+  const isSessions = useMatch("/report/sessions");
+  const isTranscript = useMatch("/report/sessions/:sessionId");
+  const showSidebar = !!(isQuotes || isSessions || isTranscript);
+  const isSessionsRoute = !!(isSessions || isTranscript);
   const toggleExport = useCallback(() => setExportOpen((prev) => !prev), []);
 
   useEffect(() => {
@@ -78,7 +83,12 @@ function AppShell() {
   });
 
   return (
-    <SidebarLayout active={!!isQuotes}>
+    <SidebarLayout
+      active={showSidebar}
+      leftPanel={isSessionsRoute ? <SessionsSidebar /> : undefined}
+      leftPanelTitle={isSessionsRoute ? "Sessions" : undefined}
+      showRightSidebar={!!isQuotes}
+    >
       <Header />
       <NavBar onExport={toggleExport} />
       <Outlet />

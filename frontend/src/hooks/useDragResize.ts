@@ -24,7 +24,7 @@ import {
 // ── Constants ────────────────────────────────────────────────────────────
 
 export const MIN_WIDTH = 200;
-export const MAX_WIDTH = 320;
+export const MAX_WIDTH = 480;
 const SNAP_CLOSE_THRESHOLD = 80;
 const RAIL_SNAP_OPEN_THRESHOLD = 60;
 const RESIZE_STEP = 10;

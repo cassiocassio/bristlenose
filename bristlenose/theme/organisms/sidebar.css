@@ -605,3 +605,144 @@ body.dragging * {
 
 /* Hide labels when TOC sidebar is open (center column narrows) */
 .layout.toc-open .toolbar-btn-label { display: none; }
+
+/* ══════════════════════════════════════════════════════════════════
+   SESSION SIDEBAR — compact session list for Sessions/Transcript tabs
+   ══════════════════════════════════════════════════════════════════ */
+
+/* ── Molecule: session-entry ─────────────────────────────────────
+   A .toc-link variant with multi-line layout (speakers + metadata).
+   Reuses .toc-link base pattern: same padding, radius, hover, active.
+   Session ID uses the existing .badge atom.
+
+   v4: date-first priority, no stacking without thumbnail,
+   middle dot separator, JS-driven visibility (no container queries). */
+
+.session-entry {
+    display: block;
+    padding: var(--bn-space-sm);
+    border-radius: var(--bn-radius-sm);
+    text-decoration: none;
+    color: var(--bn-colour-text);
+    transition: background var(--bn-transition-fast);
+    cursor: pointer;
+}
+
+.session-entry:hover { background: var(--bn-colour-hover); }
+.session-entry.active { background: var(--bn-colour-hover); }
+
+.session-entry + .session-entry {
+    border-top: 1px solid var(--bn-colour-border);
+}
+
+.session-entry-row {
+    display: flex;
+    align-items: baseline;
+    gap: var(--bn-space-sm);
+    min-height: 1.4em;
+}
+
+.session-entry-row .badge {
+    flex-shrink: 0;
+}
+
+/* Session ID badge — accent colour variant of .badge atom */
+.session-entry .session-id-badge {
+    color: var(--bn-colour-accent);
+    background: var(--bn-sentiment-confidence-bg);
+}
+
+.session-entry-speakers {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    flex: 1;
+    min-width: 0;
+}
+
+.session-entry-speaker-row {
+    display: flex;
+    align-items: baseline;
+    gap: var(--bn-space-xs);
+}
+
+.session-entry-name {
+    font-size: var(--bn-text-body-sm);
+    font-weight: var(--bn-weight-light);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    flex: 1;
+    min-width: 0;
+}
+
+/* Duration — compact mono, right-aligned */
+.session-entry-duration {
+    font-size: var(--bn-text-caption);
+    font-family: var(--bn-font-mono);
+    color: var(--bn-colour-muted);
+    white-space: nowrap;
+    flex-shrink: 0;
+    font-variant-numeric: tabular-nums;
+    text-align: right;
+}
+
+/* Date — always right-aligned */
+.session-entry-date {
+    font-size: var(--bn-text-caption);
+    color: var(--bn-colour-muted);
+    white-space: nowrap;
+    flex-shrink: 0;
+    text-align: right;
+}
+
+/* Middle dot separator between duration and date */
+.session-entry-sep {
+    font-size: var(--bn-text-caption);
+    color: var(--bn-colour-muted);
+    flex-shrink: 0;
+    opacity: 0.5;
+}
+
+/* Right-aligned meta stack — used when thumbnail forces row depth.
+   Stacks date above duration vertically, right-aligned against thumb. */
+.session-entry-right {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    flex-shrink: 0;
+    gap: 1px;
+}
+
+.session-entry.active .session-entry-name {
+    font-weight: var(--bn-weight-emphasis);
+    color: var(--bn-colour-accent);
+}
+
+/* Thumbnail placeholder */
+.session-entry-thumb {
+    width: 64px;
+    height: 36px;
+    border-radius: var(--bn-radius-sm);
+    background: var(--bn-colour-badge-bg);
+    border: 1px solid var(--bn-colour-border);
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.6rem;
+    color: var(--bn-colour-muted);
+    align-self: flex-start;
+    overflow: hidden;
+}
+
+.session-entry-thumb img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: var(--bn-radius-sm);
+}
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}

@@ -1,71 +1,68 @@
 # Bristlenose — Where I Left Off
 
-Last updated: 10 Mar 2026 (snap tested end-to-end on arm64 Ubuntu, 4 snap bugs fixed)
+Last updated: 14 Mar 2026
 
-## Megatriage of all the Todos in IA writer into this doc
+## Near-horizon roadmap
 
-ODD even cadence of Fixes vs Design and IMplementation 
+- [ ] simplest versions of the left-hand navs
+  - simple signal cards
+  - simple speaker badges / sessions
+  - simple codebook title lists
+- [ ] right-align bar chart on tags
+- [ ] drag-and-drop tags to quotes
+- [ ] hide unused tags → responsive card thing for analysis page
+- [ ] new title bar
+- [ ] colour themes
+- [ ] edo theme
+- [ ] edo fish
 
-## Next session reminder
+## Essential simplicity and clarity (layout quality)
 
-- [x] **Numeric stage prefixes** — renamed `bristlenose/stages/*.py` to `s01_ingest.py` … `s12_render/` so pipeline order is visible in file browser
-
-## Eseential Simplicity and Clarity layout quality
-
-- **headings** not visible when anchor scrolling
--  **left hand nav rail IS the nav**
--  animations for all forms of opening and closing the same
-- [ ] animations for right hand the same
-- [ ] design content LHS for Sessions 
+- [ ] animations for right-hand sidebar (match left-hand)
+- [ ] design content LHS for Sessions
 - [ ] LHS for codebooks: user, sentiment, default UXR, frameworks
-- [ ] LHS for Analysis like powerpoint
+- [ ] LHS for Analysis (like PowerPoint)
 - [ ] empty cosmetic LHS rail for Project dashboard
-
-- [ ] standard modal with nav for Settings 
-- [ ] standard modal with nav for About 
-- [ ] make help and about the same?
-- [ ] try the RHS rail same make the ra
- 
+- [ ] standard modal with nav for Settings
+- [ ] standard modal with nav for About
+- [ ] unify help and about modals?
 
 ## Adoptability
-Blockers the mean new users give up or never try
-- image of what you get on GH
-- single page website with image of each screen
-- walkthrough script of features, benefits
-- how to get an API key screenshots
 
-## Test data that's real, public, credible
-- 5h of ikea
-- test with actual user tags
-- exercise the frameworks
-- share with original authorrs
+Blockers that mean new users give up or never try:
+
+- [ ] hero image of report on GitHub README
+- [ ] single-page website with image of each screen
+- [ ] walkthrough script of features and benefits
+- [ ] how to get an API key — screenshots
+
+## Test data (real, public, credible)
+
+- [ ] 5h of IKEA study
+- [ ] test with actual user tags
+- [ ] exercise the frameworks
+- [ ] share with original authors
 
 ## Visual fit and finish
-- grid, spacing, type, colours
-- themes, edo as switch in appearance
 
-## Toolbars for each section
-## Content navigation for each section
+- [ ] grid, spacing, type, colours audit
+- [ ] themes — edo as switch in appearance
 
-## Microineractions
-- all the opens and closes
-- bounces and slides
-- flashes of accecptance
-- [ ] **Staggered fly-up animation for bulk hide** — when hiding multiple selected quotes, stagger the ghost animation 150ms per card (like vanilla JS version) instead of plain collapse
+## Microinteractions
 
+- [ ] bounces and slides for opens/closes
+- [ ] flashes of acceptance
+- [ ] **Staggered fly-up animation for bulk hide** — stagger the ghost animation 150ms per card (like vanilla JS version) instead of plain collapse
 
-
-
+## Immediate tasks
 
 - [ ] **Rotate API key** — key was visible in terminal paste during snap testing session. Rotate at console.anthropic.com
-- [ ] **CI snap smoke test** — add a post-build job to the snap workflow that installs the artifact and runs `bristlenose --version && bristlenose doctor`. Belt-and-braces for amd64 correctness without needing a physical Intel box
-- [ ] **Snap Store registration** — `snapcraft register bristlenose`, request classic confinement on forum.snapcraft.io, export credentials, add `SNAPCRAFT_STORE_CREDENTIALS` to GitHub secrets. See `docs/design-doctor-and-snap.md` pre-launch checklist
-- [ ] **Auto-serve after run** — after `bristlenose run` completes, launch serve mode and open browser automatically instead of printing the static HTML link. The React served version is the canonical experience; the static HTML report link is misleading. Consider: `--no-serve` flag to opt out, port selection, what happens if serve deps are missing (fall back to static link)
-- [ ] **QA: threshold review dialog on real data** — run AutoCode against real interview projects and evaluate how well the confidence histogram + dual slider helps researchers eliminate false positives. Qualitative assessment, not automated
-- [ ] **Export polish** — inline logo as base64 (currently shows "Bristlenose logo" text), fix footer "Bristlenoseversion" missing space, fix in-report navigation links (plain `<a href="/report/...">` don't work with hash router — need React Router `<Link>` or hash-aware hrefs)
-- [ ] **Help modal styling** — renders but needs polish (no close button, layout rough)
-- [ ] **Responsive quote grid** — CSS-only Phase 1. Design doc ready (`docs/design-responsive-layout.md`), mockup exists. Plan approved, not yet implemented
-- [ ] **Skill stress test: remote-only branch** — test `/close-branch` when remote branch exists but local was deleted (someone pushed, you fetched). Exercises the "nothing local to delete, remote exists" path
+- [ ] **Export polish** — inline logo as base64, fix footer "Bristlenoseversion" missing space, fix in-report navigation links (hash router)
+- [ ] **Responsive quote grid** — CSS-only Phase 1. Design doc: `docs/design-responsive-layout.md`
+- [ ] **Auto-serve after run** — after `bristlenose run` completes, launch serve mode and open browser automatically. Consider: `--no-serve` flag, port selection, fallback if serve deps missing
+- [ ] **QA: threshold review dialog on real data** — run AutoCode against real projects, evaluate confidence histogram + dual slider UX. Qualitative, not automated
+- [ ] **CI snap smoke test** — add a post-build job to the snap workflow that installs the artifact and runs `bristlenose --version && bristlenose doctor`
+- [ ] **Snap Store registration** — `snapcraft register bristlenose`, request classic confinement, add `SNAPCRAFT_STORE_CREDENTIALS` to GitHub secrets. See `docs/design-doctor-and-snap.md`
 
 ---
 
@@ -78,12 +75,11 @@ This file contains: session reminders, feature groupings with context, items too
 ### Priority order
 
 1. **Export polish** — fix remaining rough edges from Step 10 export
-2. **Help modal styling** — visual polish pass
-4. **Responsive quote grid** — CSS-only Phase 1
-5. **Extract design tokens for Figma** — pull colours, spacing, typography, radii from `bristlenose/theme/` into a structured format (JSON/CSS variables) importable as Figma variables. Enables Figma MCP round-trip workflow
+2. **Responsive quote grid** — CSS-only Phase 1
+3. **Extract design tokens for Figma** — colours, spacing, typography, radii → JSON/CSS variables for Figma
 4. **Moderator Phase 2** (#25) — cross-session linking
 5. **Dark mode selection highlight** (#52) — visibility bug
-6. **SVG icon set** — replace fragile character glyphs (no issue — small enough to just do)
+6. **SVG icon set** — replace fragile character glyphs
 7. **Miro bridge** — near-term sharing story. See `docs/private/design-miro-bridge.md`
 
 ---
@@ -229,7 +225,6 @@ These are too small for issues or are internal-only concerns.
 - [ ] **Relocate AI tag toggle** — removed from toolbar (too crowded); needs a new home. Code commented out in `render/report.py` and `codebook.js`/`tags.js`
 - [ ] **User research panel opt-in** — optional email field in feedback modal
 - [ ] **Miro bridge** — Miro-shaped CSV export → API integration → layout engine. See `docs/private/design-miro-bridge.md`
-- [ ] **Tag definitions page** — also tracked as #53
 - [ ] **Custom prompts** — user-defined tag categories via `bristlenose.toml` or `prompts.toml`
 - [ ] **Framework acronym prefixes on badges** — small-caps 2–3 letter author prefix (e.g. `JJG`, `DN`). CSS class exists, parked until visual pattern finalised
 - [ ] **Drag-to-reorder codebook frameworks** — researchers drag framework `<details>` sections to prioritise. Persist order per project
@@ -373,7 +368,16 @@ See `docs/design-serve-doctor.md` for full design. Summary: 4 new doctor checks,
 
 ## Done (reverse chronological)
 
-- [x] **Playwright E2E harness layers 1–3** (Mar 2026) — console error monitor, link crawler, network assertion. Chromium + WebKit. Auto-starts `bristlenose serve` against smoke-test fixture. CI integration. Design doc: `docs/design-playwright-testing.md`
+- [x] **Help modal** (Mar 2026) — 3 phases: platform-aware shortcuts, typography tokens, entrance animation, custom tooltips with keyboard shortcut badges
+- [x] **Bulk actions on multi-selection** (Mar 2026) — star, hide, tag respect click + shift+click range selection
+- [x] **Sidebar push animation** (Mar 2026) — drag-open pushes content; keyboard shortcuts and click trigger push animation
+- [x] **Pipeline error/warning display** (Mar 2026) — red ✗ for failed stages, yellow ⚠ for partial success
+- [x] **Render refactor** (Mar 2026) — `render_html.py` broken into `bristlenose/stages/s12_render/` package (8 submodules). Static render formally deprecated
+- [x] **Numeric stage prefixes** (Mar 2026) — `bristlenose/stages/*.py` → `s01_ingest.py` … `s12_render/`
+- [x] **Sidebar architecture** (Mar 2026) — 6-column grid, TOC + tag sidebars, rail drag-to-open, minimap, scroll spy, eye toggle, keyboard shortcuts
+- [x] **Heading anchor scroll fix** (Mar 2026) — `scroll-margin-top` for section headings in React SPA
+- [x] **Tag provenance** (Mar 2026) — `QuoteTag.source` column: `"human"` vs `"autocode"`, preserved across bulk replace
+- [x] **Playwright E2E harness layers 1–3** (Mar 2026) — console error monitor, link crawler, network assertion. Chromium + WebKit
 - [x] **React migration Steps 1–10** (Mar 2026) — full SPA with React Router, PlayerContext, FocusContext, keyboard shortcuts, export, app shell. See `docs/design-react-migration.md`
 - [x] **CI stabilisation** (Mar 2026) — frontend lint/typecheck/vitest in GitHub Actions
 - [x] **Export (Step 10)** — self-contained HTML download, blob-URL'd JS chunks, hash router for file://, optional anonymisation

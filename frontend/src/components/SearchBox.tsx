@@ -10,6 +10,7 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { Tooltip } from "./Tooltip";
 
 export interface SearchBoxProps {
   /** The committed search query (from store). */
@@ -98,27 +99,29 @@ export function SearchBox({
 
   return (
     <div className={containerClass} data-testid={testId}>
-      <button
-        type="button"
-        className="search-toggle"
-        onClick={handleToggle}
-        aria-label="Search quotes"
-        data-testid={testId ? `${testId}-toggle` : undefined}
-      >
-        <svg
-          width="15"
-          height="15"
-          viewBox="0 0 16 16"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="1.5"
-          strokeLinecap="round"
-          strokeLinejoin="round"
+      <Tooltip content="Search" shortcut={{ key: "/" }}>
+        <button
+          type="button"
+          className="search-toggle"
+          onClick={handleToggle}
+          aria-label="Search quotes"
+          data-testid={testId ? `${testId}-toggle` : undefined}
         >
-          <circle cx="6.5" cy="6.5" r="5.5" />
-          <line x1="10.5" y1="10.5" x2="15" y2="15" />
-        </svg>
-      </button>
+          <svg
+            width="15"
+            height="15"
+            viewBox="0 0 16 16"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <circle cx="6.5" cy="6.5" r="5.5" />
+            <line x1="10.5" y1="10.5" x2="15" y2="15" />
+          </svg>
+        </button>
+      </Tooltip>
       <div className="search-field">
         <input
           ref={inputRef}

@@ -1,6 +1,6 @@
 # Design: Platform-Aware Keyboard Shortcuts & Discoverability
 
-**Status:** Phase 1–2 shipped, Phase 3 future
+**Status:** Phase 1–3 shipped
 **Date:** 13 Mar 2026
 
 ## Problem
@@ -323,11 +323,9 @@ This keeps the current light mode shadow but gives dark mode a slightly more vis
 
 Typography token migration, spacing refinement, card entrance animation (always-render pattern), dark mode `<kbd>` shadow fix. See "Help modal visual redesign" section above for full spec. Always-render pattern: overlay DOM stays in tree with `visibility: hidden`; `.visible` class toggles visibility + entrance animation (scale 0.97→1 + fade). `aria-hidden` tracks open state.
 
-### Phase 3: Custom tooltips
+### Phase 3: Custom tooltips (shipped)
 
-- `<Tooltip>` component + `useTooltip()` hook
-- Toolbar/nav shortcut annotations
-- Depends on Phase 1 (shares platform detection + `KeyDef` types)
+Pure CSS tooltips with platform-aware `<kbd>` badges. `<Tooltip>` component wraps trigger elements; hover delay via `transition-delay: 0.3s` in `atoms/tooltip.css`. No JS hook needed — CSS handles the timing. Applied to: search toggle (`/`), TOC rail button (`[`), tag rail button (`]`). Uses same `renderShortcutBadge()` logic as HelpModal (Mac glyphs vs text labels). `aria-describedby` links trigger to tooltip for accessibility. 10 tests.
 
 ## File map
 
@@ -339,14 +337,14 @@ frontend/src/
   components/
     HelpModal.tsx        ← Phase 1–2 shipped: always-render pattern, class toggle
     HelpModal.test.tsx   ← Phase 1–2 shipped: updated for always-render
-    Tooltip.tsx          ← FUTURE (Phase 3)
+    Tooltip.tsx          ← Phase 3 shipped: CSS tooltip with kbd badges
+    Tooltip.test.tsx     ← Phase 3 shipped: 10 tests
   hooks/
     useKeyboardShortcuts.ts  ← NO CHANGE (already cross-platform)
-    useTooltip.ts        ← FUTURE (Phase 3)
 
 bristlenose/theme/
   molecules/
     help-overlay.css     ← Phase 1–2 shipped: tokens, spacing, animation, dark kbd
   atoms/
-    tooltip.css          ← FUTURE (Phase 3)
+    tooltip.css          ← Phase 3 shipped: tooltip positioning, animation, kbd badges
 ```

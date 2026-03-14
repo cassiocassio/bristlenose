@@ -225,9 +225,9 @@ describe("width clamping during drag", () => {
         new PointerEvent("pointerdown", { clientX: 300 }) as unknown as React.PointerEvent,
       );
     });
-    // 300 + (500 - 300) = 500 → clamps to 320
+    // 300 + (500 - 300) = 500 → clamps to MAX_WIDTH (480)
     act(() => fire("pointermove", { clientX: 500 }));
-    expect(layoutEl.style.getPropertyValue("--toc-width")).toBe("320px");
+    expect(layoutEl.style.getPropertyValue("--toc-width")).toBe("480px");
   });
 });
 
@@ -329,9 +329,9 @@ describe("rail drag-to-open (TOC)", () => {
     act(() => fire("pointermove", { clientX: 300 }));
     expect(layoutEl.style.getPropertyValue("--toc-width")).toBe("250px");
 
-    // Clamps to MAX_WIDTH (320)
+    // delta = 450, below MAX_WIDTH (480)
     act(() => fire("pointermove", { clientX: 500 }));
-    expect(layoutEl.style.getPropertyValue("--toc-width")).toBe("320px");
+    expect(layoutEl.style.getPropertyValue("--toc-width")).toBe("450px");
   });
 
   it("pointerup below snap threshold aborts (stays closed)", () => {

@@ -269,10 +269,10 @@ describe("setTocWidth / setTagsWidth", () => {
     expect(result.current.tocWidth).toBe(200);
   });
 
-  it("setTocWidth clamps above MAX_WIDTH (320)", () => {
+  it("setTocWidth clamps above MAX_WIDTH (480)", () => {
     const { result } = renderHook(() => useSidebarStore());
     act(() => setTocWidth(600));
-    expect(result.current.tocWidth).toBe(320);
+    expect(result.current.tocWidth).toBe(480);
   });
 
   it("setTagsWidth stores value within range", () => {
@@ -290,7 +290,7 @@ describe("setTocWidth / setTagsWidth", () => {
   it("setTagsWidth clamps above MAX_WIDTH", () => {
     const { result } = renderHook(() => useSidebarStore());
     act(() => setTagsWidth(999));
-    expect(result.current.tagsWidth).toBe(320);
+    expect(result.current.tagsWidth).toBe(480);
   });
 });
 

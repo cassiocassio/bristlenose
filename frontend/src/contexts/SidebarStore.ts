@@ -23,7 +23,7 @@ import { putHiddenTagGroups } from "../utils/api";
 
 const DEFAULT_WIDTH = 280;
 const MIN_WIDTH = 200;
-const MAX_WIDTH = 320;
+const MAX_WIDTH = 480;
 
 const LS_TOC_OPEN = "bn-toc-open";
 const LS_TAGS_OPEN = "bn-tags-open";

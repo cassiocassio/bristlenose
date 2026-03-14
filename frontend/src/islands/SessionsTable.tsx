@@ -19,43 +19,7 @@ import { apiGet, getPeople, putPeople } from "../utils/api";
 import type { PersonData } from "../utils/api";
 import { isExportMode } from "../utils/exportData";
 import { formatDuration, formatFinderDate, formatFinderFilename } from "../utils/format";
-
-// ---------------------------------------------------------------------------
-// API response types (mirrors Pydantic models in sessions.py)
-// ---------------------------------------------------------------------------
-
-interface SpeakerResponse {
-  speaker_code: string;
-  name: string;
-  role: string;
-}
-
-interface SourceFileResponse {
-  path: string;
-  file_type: string;
-  filename: string;
-}
-
-interface SessionResponse {
-  session_id: string;
-  session_number: number;
-  session_date: string | null;
-  duration_seconds: number;
-  has_media: boolean;
-  has_video: boolean;
-  thumbnail_url: string | null;
-  speakers: SpeakerResponse[];
-  journey_labels: string[];
-  sentiment_counts: Record<string, number>;
-  source_files: SourceFileResponse[];
-}
-
-interface SessionsListResponse {
-  sessions: SessionResponse[];
-  moderator_names: string[];
-  observer_names: string[];
-  source_folder_uri: string;
-}
+import type { SessionResponse, SessionsListResponse } from "../utils/types";
 
 // ---------------------------------------------------------------------------
 // Sentiment → Sparkline mapping

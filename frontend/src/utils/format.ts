@@ -62,6 +62,31 @@ export function stripSmartQuotes(text: string): string {
   return text.replace(/^[\u201c\u201d"]+|[\u201c\u201d"]+$/g, "").trim();
 }
 
+const DAY_ABBR = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+/** Compact duration: "47m" / "1h 03" / "2h 23". Returns em-dash for 0/negative. */
+export function formatCompactDuration(seconds: number): string {
+  if (seconds <= 0) return "\u2014";
+  const h = Math.floor(seconds / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  if (h === 0) return `${m}m`;
+  return `${h}h ${String(m).padStart(2, "0")}`;
+}
+
+/** Compact date: "12 Feb" or "Wed 12 Feb" (includeDay=true). Returns em-dash for null/invalid. */
+export function formatCompactDate(isoDate: string | null, includeDay?: boolean): string {
+  if (!isoDate) return "\u2014";
+  const dt = new Date(isoDate);
+  if (isNaN(dt.getTime())) return "\u2014";
+  const day = dt.getDate();
+  const month = MONTH_ABBR[dt.getMonth() + 1];
+  if (includeDay) {
+    const dow = DAY_ABBR[dt.getDay()];
+    return `${dow} ${day} ${month}`;
+  }
+  return `${day} ${month}`;
+}
+
 /** Truncate a filename Finder-style with middle ellipsis. */
 export function formatFinderFilename(name: string, maxLen: number = 24): string {
   if (name.length <= maxLen) return name;

@@ -27,6 +27,7 @@ from bristlenose.server.models import (
     Person,
     Project,
     ProjectCodebookGroup,
+    ProposedTag,
     Quote,
     QuoteEdit,
     QuoteState,
@@ -1057,6 +1058,9 @@ def _cleanup_stale_data(
         ).delete(synchronize_session="fetch")
         db.query(DeletedBadge).filter(
             DeletedBadge.quote_id.in_(stale_quote_ids)
+        ).delete(synchronize_session="fetch")
+        db.query(ProposedTag).filter(
+            ProposedTag.quote_id.in_(stale_quote_ids)
         ).delete(synchronize_session="fetch")
 
         # Delete join rows

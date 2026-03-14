@@ -292,8 +292,8 @@ When the user signals end of session, **proactively offer to run this checklist*
 9. **Clean up branches** — delete merged feature branches
 10. **Verify CI** — check latest push passes CI
 
-## Current status (v0.13.3, Mar 2026)
+## Current status (v0.13.4, Mar 2026)
 
-Core pipeline published to PyPI + Homebrew + Snap. Latest: **Render refactor** — `render_html.py` broken into `bristlenose/stages/s12_render/` package (8 submodules). Static render formally deprecated. 1872 Python tests, 891 Vitest tests. React migration complete (Steps 1–10). See `CHANGELOG.md` and git log for full history.
+Core pipeline published to PyPI + Homebrew + Snap. Latest: **Render refactor** — `render_html.py` broken into `bristlenose/stages/s12_render/` package (8 submodules). Static render formally deprecated. 1905 Python tests, 990 Vitest tests. React migration complete (Steps 1–10). See `CHANGELOG.md` and git log for full history.
 
 **Next up:** See `TODO.md` for full task list.

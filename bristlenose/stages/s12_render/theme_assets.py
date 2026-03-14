@@ -42,6 +42,7 @@ _THEME_FILES: list[str] = [
     "atoms/checkbox.css",
     "atoms/span-bar.css",
     "atoms/modal.css",
+    "atoms/tooltip.css",
     "atoms/thumbnail.css",
     "atoms/activity-chip.css",
     "atoms/journey-label.css",

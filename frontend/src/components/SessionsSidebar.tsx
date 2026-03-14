@@ -41,6 +41,74 @@ function getShortName(name: string): string {
   return parts[0] || name;
 }
 
+// ── Layout constants (px) ──────────────────────────────────────────
+// These match the CSS in sidebar.css. If the CSS changes, update here.
+const BADGE_W = 24;       // .badge width
+const GAP = 6;            // flex gap in session-entry-row
+const DURATION_W = 36;    // "1h 03" at tabular-nums
+const SEP_W = 10;         // " · " separator
+const DATE_SHORT_W = 42;  // "12 Feb"
+const DATE_DOW_W = 70;    // "Wed 12 Feb"
+const THUMB_W = 48;       // thumbnail
+const THUMB_GAP = 8;      // gap before thumbnail
+const PAD = 16;           // horizontal padding (8px each side)
+
+// ── Text measurement ──────────────────────────────────────────────
+
+/** Measure the pixel width of the longest string using an offscreen span. */
+function measureLongestText(texts: string[], font: string): number {
+  if (texts.length === 0) return 0;
+  const span = document.createElement("span");
+  span.style.cssText =
+    "position:absolute;left:-9999px;top:-9999px;visibility:hidden;white-space:nowrap;font:" +
+    font;
+  document.body.appendChild(span);
+  let max = 0;
+  for (const t of texts) {
+    span.textContent = t;
+    max = Math.max(max, span.offsetWidth);
+  }
+  document.body.removeChild(span);
+  return max;
+}
+
+/** Compute content-adaptive breakpoint thresholds from actual name widths. */
+function computeBreakpoints(
+  sessions: SessionResponse[],
+  shape: { isOneToOne: boolean; hasMultipleModerators: boolean; hasVideo: boolean },
+  font: string,
+) {
+  // Collect short names (first name) and full names
+  const participants = sessions.flatMap((s) =>
+    s.speakers.filter((sp) => sp.role === "participant"),
+  );
+  const shortNames = participants.map((p) => getShortName(p.name));
+  const fullNames = participants.map((p) => p.name);
+
+  const shortW = measureLongestText(shortNames, font);
+  const fullW = measureLongestText(fullNames, font);
+
+  // Base = badge + gap + name + gap + padding
+  const baseShort = BADGE_W + GAP + shortW + GAP + PAD;
+  const baseFull = BADGE_W + GAP + fullW + GAP + PAD;
+
+  // Duration threshold: base + date_short + duration + sep
+  const durationAt = baseShort + DATE_SHORT_W + DURATION_W + SEP_W;
+
+  // Day-of-week threshold: base + date_dow + duration + sep
+  const dowAt = baseShort + DATE_DOW_W + DURATION_W + SEP_W;
+
+  // Full names threshold: same layout but with full name width
+  const fullNameAt = baseFull + DATE_SHORT_W + DURATION_W + SEP_W;
+
+  // Thumbnail threshold: full names + thumb + thumb_gap + stacked date/duration
+  const thumbAt = shape.hasVideo
+    ? baseFull + THUMB_W + THUMB_GAP + Math.max(DATE_DOW_W, DURATION_W)
+    : Infinity;
+
+  return { durationAt, dowAt, fullNameAt, thumbAt };
+}
+
 // ── Component ─────────────────────────────────────────────────────
 
 export function SessionsSidebar() {
@@ -53,12 +121,14 @@ export function SessionsSidebar() {
 
   const [data, setData] = useState<SessionsListResponse | null>(null);
   const [liveWidth, setLiveWidth] = useState(280);
+  const [navMounted, setNavMounted] = useState(false);
 
   // Track the sidebar's actual rendered width via ResizeObserver so
   // breakpoints update live during drag (not just on pointerup).
   const resizeObserverRef = useRef<ResizeObserver | null>(null);
   const navCallbackRef = useCallback((node: HTMLElement | null) => {
     navRef.current = node;
+    setNavMounted(!!node);
     resizeObserverRef.current?.disconnect();
     if (node) {
       const ro = new ResizeObserver((entries) => {
@@ -90,11 +160,21 @@ export function SessionsSidebar() {
     return deriveShape(data.sessions);
   }, [data]);
 
+  // Compute content-adaptive breakpoints from actual name widths.
+  // Reads the nav element's computed font so measurement matches rendering.
+  const bp = useMemo(() => {
+    if (!data || !navRef.current) return { durationAt: 260, dowAt: 320, fullNameAt: 360, thumbAt: 360 };
+    const cs = getComputedStyle(navRef.current);
+    const font = `${cs.fontWeight} ${cs.fontSize} ${cs.fontFamily}`;
+    return computeBreakpoints(data.sessions, shape, font);
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- navMounted triggers recompute when element available
+  }, [data, shape, navMounted]);
+
   // Width-driven visibility booleans — uses live observed width.
-  const showDuration = liveWidth >= 260;
-  const showDow = liveWidth >= 320;
-  const showThumb = shape.hasVideo && liveWidth >= 360;
-  const showFullNames = liveWidth >= 360;
+  const showDuration = liveWidth >= bp.durationAt;
+  const showDow = liveWidth >= bp.dowAt;
+  const showThumb = shape.hasVideo && liveWidth >= bp.thumbAt;
+  const showFullNames = liveWidth >= bp.fullNameAt;
 
   const handleClick = (
     e: React.MouseEvent<HTMLAnchorElement>,

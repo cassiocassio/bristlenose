@@ -40,6 +40,34 @@ class MockResizeObserver {
   }
 }
 
+// ── Text measurement mock ────────────────────────────────────────
+// jsdom's offsetWidth is always 0. We mock it to return ~7px/char
+// so content-adaptive breakpoints produce realistic thresholds.
+
+const CHAR_WIDTH = 7;
+let origOffsetWidth: PropertyDescriptor | undefined;
+
+function installOffsetWidthMock() {
+  origOffsetWidth = Object.getOwnPropertyDescriptor(HTMLElement.prototype, "offsetWidth");
+  Object.defineProperty(HTMLElement.prototype, "offsetWidth", {
+    configurable: true,
+    get() {
+      // Return approximate pixel width based on text content
+      const text = (this as HTMLElement).textContent ?? "";
+      return text.length * CHAR_WIDTH;
+    },
+  });
+}
+
+function restoreOffsetWidthMock() {
+  if (origOffsetWidth) {
+    Object.defineProperty(HTMLElement.prototype, "offsetWidth", origOffsetWidth);
+  }
+}
+
+// Also mock getComputedStyle to return a font string
+const origGetComputedStyle = globalThis.getComputedStyle;
+
 // ── Fixtures ──────────────────────────────────────────────────────
 
 const ONE_TO_ONE: SessionsListResponse = {
@@ -107,6 +135,26 @@ const MULTI_PARTICIPANT: SessionsListResponse = {
   source_folder_uri: "file:///input",
 };
 
+// Short names for breakpoint calculation reference:
+// "Rachel" = 6 chars × 7px = 42px, "David" = 5 chars × 7px = 35px
+// Longest short name "Rachel" → 42px
+// Full names: "Rachel Chen" = 11 chars × 7px = 77px, "David Kim" = 9 chars × 7px = 63px
+// Longest full name "Rachel Chen" → 77px
+//
+// Computed breakpoints (from computeBreakpoints):
+// baseShort = 24 + 6 + 42 + 6 + 16 = 94
+// baseFull  = 24 + 6 + 77 + 6 + 16 = 129
+// durationAt = 94 + 42 + 36 + 10 = 182
+// dowAt      = 94 + 70 + 36 + 10 = 210
+// fullNameAt = 129 + 42 + 36 + 10 = 217
+// thumbAt    = Infinity (no video)
+//
+// So for this data set:
+// - 180px: date only, short names
+// - 185px: + duration
+// - 215px: + day-of-week
+// - 220px: + full names
+
 // ── Helpers ───────────────────────────────────────────────────────
 
 function renderInRouter(path: string) {
@@ -128,6 +176,22 @@ describe("SessionsSidebar", () => {
     roCallback = null;
     initialWidth = 400; // default: wide enough to show everything
     globalThis.ResizeObserver = MockResizeObserver as unknown as typeof ResizeObserver;
+    installOffsetWidthMock();
+    // Mock getComputedStyle to return a font string
+    globalThis.getComputedStyle = ((el: Element) => {
+      const real = origGetComputedStyle(el);
+      return {
+        ...real,
+        fontWeight: "400",
+        fontSize: "14px",
+        fontFamily: "sans-serif",
+      } as CSSStyleDeclaration;
+    }) as typeof getComputedStyle;
+  });
+
+  afterEach(() => {
+    restoreOffsetWidthMock();
+    globalThis.getComputedStyle = origGetComputedStyle;
   });
 
   it("renders nothing while loading", () => {
@@ -178,23 +242,26 @@ describe("SessionsSidebar", () => {
   });
 
   it("hides duration at narrow widths", async () => {
-    initialWidth = 200;
+    // With "Rachel Chen" (11 chars) → durationAt ~182px
+    // At 150px, duration should be hidden
+    initialWidth = 150;
     mockApiGet.mockResolvedValue(ONE_TO_ONE);
     renderInRouter("/report/sessions");
 
     await waitFor(() => {
-      // At 200px, short names are shown (full names require 360px+)
+      // Short name "Rachel" shown at narrow width
       expect(screen.getByText("Rachel")).toBeDefined();
     });
 
-    // Duration should not be shown at 200px
+    // Duration should not be shown
     expect(screen.queryByText("47m")).toBeNull();
     // Date should still be shown
     expect(screen.getByText("12 Feb")).toBeDefined();
   });
 
-  it("shows duration at 260px+", async () => {
-    initialWidth = 260;
+  it("shows duration when wide enough for content", async () => {
+    // durationAt ~182px, so 200px should show it
+    initialWidth = 200;
     mockApiGet.mockResolvedValue(ONE_TO_ONE);
     renderInRouter("/report/sessions");
 
@@ -203,8 +270,9 @@ describe("SessionsSidebar", () => {
     });
   });
 
-  it("shows short names at narrow width, full names at 360px+", async () => {
-    initialWidth = 200;
+  it("shows short names at narrow width, full names when wide enough", async () => {
+    // fullNameAt ~217px for "Rachel Chen"
+    initialWidth = 150;
     mockApiGet.mockResolvedValue(ONE_TO_ONE);
     renderInRouter("/report/sessions");
 
@@ -214,7 +282,7 @@ describe("SessionsSidebar", () => {
     // Full name should not be shown
     expect(screen.queryByText("Rachel Chen")).toBeNull();
 
-    // Widen — full names appear
+    // Widen past fullNameAt — full names appear
     fireResize(400);
     await waitFor(() => {
       expect(screen.getByText("Rachel Chen")).toBeDefined();
@@ -222,7 +290,7 @@ describe("SessionsSidebar", () => {
   });
 
   it("updates breakpoints live during resize", async () => {
-    initialWidth = 200;
+    initialWidth = 150;
     mockApiGet.mockResolvedValue(ONE_TO_ONE);
     renderInRouter("/report/sessions");
 
@@ -230,22 +298,22 @@ describe("SessionsSidebar", () => {
       expect(screen.getByText("Rachel")).toBeDefined();
     });
 
-    // No duration at 200px
+    // No duration at 150px
     expect(screen.queryByText("47m")).toBeNull();
 
-    // Widen to 260 — duration appears
-    fireResize(260);
+    // Widen to 200 — duration appears (durationAt ~182)
+    fireResize(200);
     await waitFor(() => {
       expect(screen.getByText("47m")).toBeDefined();
     });
 
-    // Widen to 320 — day-of-week appears
-    fireResize(320);
+    // Widen to 250 — day-of-week appears (dowAt ~210)
+    fireResize(250);
     await waitFor(() => {
       expect(screen.getByText("Thu 12 Feb")).toBeDefined();
     });
 
-    // Widen to 400 — full names
+    // Widen to 400 — full names (fullNameAt ~217)
     fireResize(400);
     await waitFor(() => {
       expect(screen.getByText("Rachel Chen")).toBeDefined();

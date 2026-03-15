@@ -1,0 +1,10 @@
+{
+  "heading": "Doctor",
+  "checkOk": "{label}",
+  "checkFail": "{label}",
+  "checkWarn": "{label}",
+  "summary": {
+    "allPassed": "All checks passed.",
+    "issuesFound": "{count} issue(s) found."
+  }
+}

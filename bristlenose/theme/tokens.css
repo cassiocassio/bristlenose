@@ -4,7 +4,13 @@
 :root {
     /* Typography — Inter Variable loaded from Google Fonts (see document_shell_open.html).
        Fallback chain: Segoe UI Variable (Win 11), Segoe UI (Win 10), system-ui, SF Pro (macOS). */
-    --bn-font-body: "Inter", "Segoe UI Variable", "Segoe UI", system-ui, -apple-system, sans-serif;
+    --bn-font-body: "Inter", "Segoe UI Variable", "Segoe UI", system-ui, -apple-system,
+        "Hiragino Kaku Gothic ProN", "Hiragino Sans",   /* macOS Japanese */
+        "Yu Gothic UI",                                  /* Windows Japanese */
+        "Malgun Gothic",                                 /* Windows Korean */
+        "Apple SD Gothic Neo",                           /* macOS Korean */
+        "Noto Sans CJK JP", "Noto Sans CJK KR",         /* Linux CJK */
+        sans-serif;
     --bn-font-mono: "SF Mono", "Fira Code", "Consolas", monospace;
 
     /* Font weight scale — tuned for variable fonts (Inter, SF Pro, Segoe UI Variable).

@@ -28,6 +28,33 @@
     margin: 0;
 }
 
+.bn-setting-description {
+    font-size: 0.85rem;
+    color: var(--bn-colour-muted);
+    margin: 0 0 var(--bn-space-sm) 0;
+    line-height: 1.45;
+}
+
+.bn-locale-select {
+    font-size: 0.9rem;
+    padding: var(--bn-space-xs) var(--bn-space-sm);
+    border: 1px solid var(--bn-colour-border);
+    border-radius: var(--bn-radius-sm);
+    background: var(--bn-colour-bg);
+    color: var(--bn-colour-text);
+    cursor: pointer;
+    min-width: 10rem;
+}
+
+.bn-locale-select:hover {
+    border-color: var(--bn-colour-border-hover);
+}
+
+.bn-locale-select:focus {
+    outline: 2px solid var(--bn-colour-accent);
+    outline-offset: 1px;
+}
+
 /* --- Configuration reference --- */
 
 .bn-config-ref {

@@ -1,0 +1,19 @@
+{
+  "heading": "Settings",
+  "appearance": {
+    "legend": "Application appearance",
+    "auto": "Use system appearance",
+    "light": "Light",
+    "dark": "Dark"
+  },
+  "language": {
+    "legend": "Language",
+    "description": "Controls the display language of the interface. Report content is not translated."
+  },
+  "configReference": {
+    "heading": "Configuration reference",
+    "intro": "All settings below are configured via environment variables or a <code>.env</code> file. They are shown here for reference — to change a value, edit the file shown in each row.",
+    "clickToCopy": "Click to copy",
+    "copied": "Copied"
+  }
+}

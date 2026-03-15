@@ -1,0 +1,27 @@
+{
+  "version": "bristlenose {version}",
+  "help": "User-research transcription and quote extraction engine.",
+  "stage": {
+    "ingest": "Ingest",
+    "extractAudio": "Extract audio",
+    "transcribe": "Transcribe",
+    "identifySpeakers": "Identify speakers",
+    "mergeTranscript": "Merge transcript",
+    "piiRemoval": "PII removal",
+    "topicSegmentation": "Topic segmentation",
+    "quoteExtraction": "Quote extraction",
+    "quoteClustering": "Quote clustering",
+    "thematicGrouping": "Thematic grouping",
+    "render": "Render"
+  },
+  "error": {
+    "noInput": "No input directory specified.",
+    "notFound": "Directory not found: {path}",
+    "noFiles": "No audio, video, or transcript files found in {path}"
+  },
+  "progress": {
+    "complete": "Complete",
+    "failed": "Failed",
+    "skipped": "Skipped"
+  }
+}

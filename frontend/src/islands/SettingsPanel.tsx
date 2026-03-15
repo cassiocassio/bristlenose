@@ -8,6 +8,8 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { SUPPORTED_LOCALES, type Locale } from "../i18n";
+import { setLocale, useLocaleStore } from "../i18n/LocaleStore";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -23,6 +25,16 @@ const OPTIONS: { value: Appearance; label: string }[] = [
   { value: "light", label: "Light" },
   { value: "dark", label: "Dark" },
 ];
+
+/** Display labels for supported locales. Always in the locale's own language. */
+const LOCALE_LABELS: Record<Locale, string> = {
+  en: "English",
+  es: "Español",
+  ja: "日本語",
+  fr: "Français",
+  de: "Deutsch",
+  ko: "한국어",
+};
 
 // ---------------------------------------------------------------------------
 // Configuration reference data
@@ -737,6 +749,7 @@ function ConfigReference() {
 
 export function SettingsPanel() {
   const [appearance, setAppearance] = useState<Appearance>(readSaved);
+  const { locale } = useLocaleStore();
 
   // Apply theme on mount and whenever the value changes.
   useEffect(() => {
@@ -752,6 +765,13 @@ export function SettingsPanel() {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(value));
     } catch {
       // localStorage may be unavailable — ignore.
+    }
+  }, []);
+
+  const handleLocaleChange = useCallback((e: React.ChangeEvent<HTMLSelectElement>) => {
+    const value = e.target.value;
+    if (SUPPORTED_LOCALES.includes(value as Locale)) {
+      void setLocale(value as Locale);
     }
   }, []);
 
@@ -772,6 +792,24 @@ export function SettingsPanel() {
             {" "}{opt.label}
           </label>
         ))}
+      </fieldset>
+
+      <fieldset className="bn-setting-group">
+        <legend>Language</legend>
+        <p className="bn-setting-description">
+          Controls the display language of the interface. Report content is not translated.
+        </p>
+        <select
+          className="bn-locale-select"
+          value={locale}
+          onChange={handleLocaleChange}
+        >
+          {SUPPORTED_LOCALES.map((loc) => (
+            <option key={loc} value={loc}>
+              {LOCALE_LABELS[loc]}
+            </option>
+          ))}
+        </select>
       </fieldset>
 
       <hr />

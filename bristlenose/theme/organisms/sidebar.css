@@ -474,6 +474,10 @@
     flex-shrink: 0;
 }
 
+.tag-filter-action-active {
+    font-weight: var(--bn-weight-emphasis);
+}
+
 .tag-sidebar-body {
     flex: 1;
     overflow-y: auto;

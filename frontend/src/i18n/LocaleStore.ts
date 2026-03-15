@@ -5,6 +5,11 @@
  * useSyncExternalStore. Locale preference is persisted to localStorage
  * as "bn-locale".
  *
+ * Detection priority:
+ *   1. localStorage("bn-locale") — explicit user choice
+ *   2. navigator.languages / navigator.language — browser preference
+ *   3. "en" fallback
+ *
  * @module LocaleStore
  */
 
@@ -26,17 +31,31 @@ export interface LocaleState {
 
 // ── Module-level store ───────────────────────────────────────────────────
 
-function loadLocale(): Locale {
+function detectLocale(): Locale {
+  // 1. Explicit user choice in localStorage
   try {
     const raw = localStorage.getItem(LS_KEY);
     if (raw && isSupportedLocale(raw)) return raw;
   } catch {
     // localStorage unavailable
   }
+
+  // 2. Browser language (navigator.language / navigator.languages)
+  try {
+    const langs = navigator.languages ?? [navigator.language];
+    for (const lang of langs) {
+      // Match exact ("ja") or prefix ("fr-FR" → "fr")
+      const code = lang.split("-")[0];
+      if (isSupportedLocale(code)) return code;
+    }
+  } catch {
+    // navigator.languages unavailable (e.g. SSR)
+  }
+
   return "en";
 }
 
-let state: LocaleState = { locale: loadLocale(), ready: true };
+let state: LocaleState = { locale: detectLocale(), ready: true };
 const listeners = new Set<() => void>();
 
 function getSnapshot(): LocaleState {
@@ -91,4 +110,12 @@ export function resetLocaleStore(): void {
 /** Subscribe to the locale store. Re-renders on locale change. */
 export function useLocaleStore(): LocaleState {
   return useSyncExternalStore(subscribe, getSnapshot);
+}
+
+// ── Startup sync ─────────────────────────────────────────────────────────
+// If the detected locale is non-English, load its bundles and switch i18next.
+// This runs once at module load time.
+
+if (state.locale !== "en") {
+  void setLocale(state.locale);
 }

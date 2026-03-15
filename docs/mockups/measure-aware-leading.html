@@ -1,0 +1,830 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Measure-Aware Leading — Bristlenose</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400..700&display=swap" rel="stylesheet">
+
+<style>
+/* ── Tokens (from bristlenose/theme/tokens.css) ── */
+
+:root {
+    --bn-font-body: "Inter", "Segoe UI Variable", "Segoe UI", system-ui, -apple-system, sans-serif;
+    --bn-font-mono: "SF Mono", "Fira Code", "Consolas", monospace;
+
+    --bn-weight-normal: 420;
+    --bn-weight-emphasis: 490;
+    --bn-weight-strong: 700;
+
+    /* Current fixed type scale */
+    --bn-text-caption:    0.75rem;
+    --bn-text-body-sm:    0.8125rem;
+    --bn-text-body:       0.875rem;
+    --bn-text-heading:    1.125rem;
+    --bn-text-title:      1.375rem;
+
+    /* Current fixed line-heights (Bringhurst: bigger text → less leading) */
+    --bn-text-caption-lh:  1.4;
+    --bn-text-body-sm-lh:  1.45;
+    --bn-text-body-lh:     1.5;
+    --bn-text-heading-lh:  1.3;
+    --bn-text-title-lh:    1.25;
+
+    --bn-colour-bg: #ffffff;
+    --bn-colour-text: #1a1a1a;
+    --bn-colour-muted: #6b7280;
+    --bn-colour-border: #e5e7eb;
+    --bn-colour-accent: #2563eb;
+    --bn-colour-hover: #e8f0fe;
+    --bn-colour-quote-bg: #f9fafb;
+    --bn-colour-badge-bg: #f3f4f6;
+    --bn-colour-badge-text: #374151;
+    --bn-colour-shadow: rgba(0, 0, 0, 0.1);
+
+    --bn-space-xs: 0.15rem;
+    --bn-space-sm: 0.35rem;
+    --bn-space-md: 0.75rem;
+    --bn-space-lg: 1.5rem;
+
+    --bn-radius-sm: 3px;
+    --bn-radius-md: 6px;
+    --bn-radius-lg: 8px;
+    --bn-radius-pill: 999px;
+}
+
+/* ── Dark mode ── */
+@supports (color: light-dark(#000, #fff)) {
+    :root {
+        color-scheme: light dark;
+        --bn-colour-bg:         light-dark(#ffffff, #111111);
+        --bn-colour-text:       light-dark(#1a1a1a, #e5e7eb);
+        --bn-colour-muted:      light-dark(#6b7280, #9ca3af);
+        --bn-colour-border:     light-dark(#e5e7eb, #2d2d2d);
+        --bn-colour-accent:     light-dark(#2563eb, #60a5fa);
+        --bn-colour-hover:      light-dark(#e8f0fe, #1e293b);
+        --bn-colour-quote-bg:   light-dark(#f9fafb, #1a1a1a);
+        --bn-colour-badge-bg:   light-dark(#f3f4f6, #252525);
+        --bn-colour-badge-text: light-dark(#374151, #d1d5db);
+        --bn-colour-shadow:     light-dark(rgba(0,0,0,0.1), rgba(0,0,0,0.4));
+    }
+    [data-theme="light"]:root { color-scheme: light; }
+    [data-theme="dark"]:root  { color-scheme: dark; }
+}
+
+/* ── Page layout ── */
+
+* { box-sizing: border-box; }
+
+body {
+    font-family: var(--bn-font-body);
+    color: var(--bn-colour-text);
+    background: var(--bn-colour-bg);
+    margin: 0;
+    padding: 0;
+    font-weight: var(--bn-weight-normal);
+}
+
+/* ── Sticky controls ── */
+
+.controls {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: var(--bn-colour-bg);
+    border-bottom: 1px solid var(--bn-colour-border);
+    padding: 0.75rem 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+.controls-row {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+}
+.controls-label {
+    font-size: 0.7rem;
+    font-weight: var(--bn-weight-emphasis);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--bn-colour-muted);
+    min-width: 4.5rem;
+}
+
+.btn {
+    font-family: var(--bn-font-body);
+    font-size: 0.78rem;
+    padding: 0.3rem 0.65rem;
+    border: 1px solid var(--bn-colour-border);
+    border-radius: var(--bn-radius-md);
+    background: var(--bn-colour-bg);
+    color: var(--bn-colour-text);
+    cursor: pointer;
+    transition: all 0.15s ease;
+    white-space: nowrap;
+}
+.btn:hover {
+    border-color: #d1d5db;
+    background: var(--bn-colour-quote-bg);
+}
+.btn.active {
+    border-color: var(--bn-colour-accent);
+    color: var(--bn-colour-accent);
+    background: var(--bn-colour-hover);
+}
+
+.slider-group {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex: 1;
+    min-width: 200px;
+}
+.slider-group input[type="range"] {
+    flex: 1;
+    accent-color: var(--bn-colour-accent);
+}
+.slider-value {
+    font-size: 0.75rem;
+    font-family: var(--bn-font-mono);
+    color: var(--bn-colour-muted);
+    min-width: 4.5rem;
+    text-align: right;
+}
+
+.formula-display {
+    font-size: 0.72rem;
+    font-family: var(--bn-font-mono);
+    color: var(--bn-colour-muted);
+    background: var(--bn-colour-quote-bg);
+    padding: 0.4rem 0.75rem;
+    border-radius: var(--bn-radius-md);
+    line-height: 1.5;
+}
+.formula-display code {
+    color: var(--bn-colour-accent);
+}
+
+/* ── Interactive section ── */
+
+.interactive-section {
+    padding: 1.5rem;
+    max-width: 72rem;
+    margin: 0 auto;
+}
+
+.section-title {
+    font-size: var(--bn-text-heading);
+    font-weight: var(--bn-weight-emphasis);
+    line-height: var(--bn-text-heading-lh);
+    margin: 0 0 0.25rem;
+}
+.section-subtitle {
+    font-size: var(--bn-text-body-sm);
+    color: var(--bn-colour-muted);
+    margin: 0 0 1.25rem;
+}
+
+/* The resizable content column */
+.content-column {
+    container-type: inline-size;
+    container-name: content;
+    border: 1px solid var(--bn-colour-border);
+    border-radius: var(--bn-radius-lg);
+    padding: 1.25rem;
+    margin: 0 auto;
+    transition: width 0.15s ease;
+    position: relative;
+}
+
+.content-column::after {
+    content: attr(data-width-label);
+    position: absolute;
+    top: -0.5rem;
+    right: 0.75rem;
+    font-size: 0.65rem;
+    font-family: var(--bn-font-mono);
+    color: var(--bn-colour-muted);
+    background: var(--bn-colour-bg);
+    padding: 0 0.3rem;
+}
+
+/* ── Line-height readout overlay ── */
+.lh-readout {
+    font-size: 0.65rem;
+    font-family: var(--bn-font-mono);
+    color: var(--bn-colour-accent);
+    opacity: 0.7;
+    margin-left: 0.5rem;
+}
+
+/* ── Content specimens ── */
+
+.specimen { margin-bottom: 1rem; }
+.specimen:last-child { margin-bottom: 0; }
+
+.specimen-label {
+    font-size: 0.65rem;
+    font-family: var(--bn-font-mono);
+    color: var(--bn-colour-muted);
+    margin-bottom: 0.2rem;
+    letter-spacing: 0.02em;
+    display: flex;
+    align-items: baseline;
+    gap: 0.35rem;
+}
+
+.spec-title {
+    font-size: var(--bn-text-title);
+    font-weight: var(--bn-weight-strong);
+    letter-spacing: -0.01em;
+}
+.spec-heading {
+    font-size: var(--bn-text-heading);
+    font-weight: var(--bn-weight-emphasis);
+}
+
+.spec-body {
+    font-size: var(--bn-text-body);
+}
+
+.spec-quote-block {
+    border-left: 3px solid var(--bn-colour-accent);
+    background: var(--bn-colour-quote-bg);
+    padding: 0.75rem 1rem;
+    border-radius: 0 var(--bn-radius-md) var(--bn-radius-md) 0;
+}
+.spec-quote-text {
+    font-size: 0.92rem;
+    margin: 0;
+}
+.spec-quote-speaker {
+    font-size: var(--bn-text-body);
+    color: var(--bn-colour-muted);
+    margin-top: 0.4rem;
+}
+
+.spec-badge-row {
+    display: flex;
+    gap: 0.4rem;
+    flex-wrap: wrap;
+    margin-top: 0.35rem;
+}
+.spec-badge {
+    font-size: 0.72rem;
+    font-family: var(--bn-font-mono);
+    background: var(--bn-colour-badge-bg);
+    color: var(--bn-colour-badge-text);
+    padding: 0.15rem 0.5rem;
+    border-radius: var(--bn-radius-pill);
+}
+
+.spec-context {
+    font-size: var(--bn-text-body-sm);
+    color: var(--bn-colour-muted);
+}
+
+.spec-divider {
+    border: none;
+    border-top: 1px solid var(--bn-colour-border);
+    margin: 0.75rem 0;
+}
+
+/* ── Fixed leading mode: explicit line-heights from tokens ── */
+
+.leading-fixed .spec-title   { line-height: var(--bn-text-title-lh); }
+.leading-fixed .spec-heading { line-height: var(--bn-text-heading-lh); }
+.leading-fixed .spec-body    { line-height: var(--bn-text-body-lh); }
+.leading-fixed .spec-quote-text   { line-height: 1.55; }
+.leading-fixed .spec-quote-speaker { line-height: var(--bn-text-body-lh); }
+.leading-fixed .spec-context { line-height: var(--bn-text-body-sm-lh); }
+
+/* ── Measure-aware leading mode: clamp() with container query units ──
+   Formula: clamp(tight, base + k * 1cqi, loose)
+   - tight = good leading for narrow columns (~23rem / 368px)
+   - loose = good leading for wide columns (~52rem / 832px)
+   - k tuned so transition spans the 23rem–52rem range
+   - 1cqi = 1% of container inline size
+
+   The key insight: at 368px, 1cqi = 3.68px (unitless ratio context).
+   We need the preferred value to cross from below tight to above loose
+   across our 368px–832px range.
+
+   For body text (tight=1.45, loose=1.65):
+   At 368px: 1.0 + 0.014 * 368 = 1.0 + 5.15 → clamped to 1.65 ← too high
+   We need a shallower slope or different base.
+
+   Better: preferred = 1.2 + 0.0003 * 100cqi
+   100cqi = container width in px
+   At 368px: 1.2 + 0.0003*368 = 1.2 + 0.11 = 1.31 → clamped to 1.45 (min)
+   At 600px: 1.2 + 0.0003*600 = 1.2 + 0.18 = 1.38 → clamped to 1.45 (min)
+
+   Hmm, cqi is percentage-based so 100cqi = 100% of container.
+   Let's use calc() with cqi directly:
+   preferred = 1.2 + 0.3cqi
+   At 23rem (368px): 0.3 * 3.68 = 1.1, so 1.2 + 1.1 = 2.3 → clamped to 1.65
+
+   The issue is cqi values are large. We need tiny coefficients.
+   preferred = 0.008cqi
+   At 368px: 0.008 * 368/100 * 100 = ... no.
+   1cqi = 1% of container width. At 368px wide, 1cqi ≈ 3.68 in calc context.
+
+   Actually in CSS, cqi is a length unit, not a unitless number.
+   line-height accepts unitless OR length. clamp() with mixed types won't work
+   for unitless line-height.
+
+   Solution: Use JS to compute and set line-heights based on container width.
+   This is the correct approach for the mockup — CSS container queries can't
+   produce unitless line-height values from container dimensions. The mockup
+   JS measures container width and interpolates. */
+
+/* Measure-aware mode: line-heights set by JS via CSS custom properties */
+.leading-measure .spec-title   { line-height: var(--ma-title-lh); }
+.leading-measure .spec-heading { line-height: var(--ma-heading-lh); }
+.leading-measure .spec-body    { line-height: var(--ma-body-lh); }
+.leading-measure .spec-quote-text   { line-height: var(--ma-quote-lh); }
+.leading-measure .spec-quote-speaker { line-height: var(--ma-body-lh); }
+.leading-measure .spec-context { line-height: var(--ma-body-sm-lh); }
+
+/* ── Comparison grid (bottom section) ── */
+
+.comparison-section {
+    padding: 1.5rem;
+    max-width: 72rem;
+    margin: 0 auto;
+    border-top: 2px solid var(--bn-colour-border);
+}
+
+.comparison-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+}
+
+.comparison-pair {
+    display: contents;
+}
+
+.comparison-width-label {
+    grid-column: 1 / -1;
+    font-size: 0.7rem;
+    font-weight: var(--bn-weight-emphasis);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--bn-colour-muted);
+    border-bottom: 1px solid var(--bn-colour-border);
+    padding-bottom: 0.3rem;
+    margin-top: 1rem;
+}
+.comparison-width-label:first-child { margin-top: 0; }
+
+.comparison-cell {
+    container-type: inline-size;
+    border: 1px solid var(--bn-colour-border);
+    border-radius: var(--bn-radius-md);
+    padding: 0.75rem 1rem;
+    overflow: hidden;
+}
+
+.comparison-cell-header {
+    font-size: 0.65rem;
+    font-weight: var(--bn-weight-emphasis);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--bn-colour-accent);
+    margin-bottom: 0.5rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+}
+.comparison-cell-header .lh-value {
+    font-family: var(--bn-font-mono);
+    font-weight: var(--bn-weight-normal);
+    font-size: 0.65rem;
+    color: var(--bn-colour-muted);
+    text-transform: none;
+    letter-spacing: 0;
+}
+
+/* ── Responsive ── */
+@media (max-width: 600px) {
+    .controls { padding: 0.5rem 0.75rem; }
+    .comparison-grid { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+
+<!-- ── Controls ── -->
+<div class="controls">
+    <div class="controls-row">
+        <span class="controls-label">Leading</span>
+        <button class="btn active" id="btn-fixed" onclick="setMode('fixed')">Fixed (current)</button>
+        <button class="btn" id="btn-measure" onclick="setMode('measure')">Measure-aware (proposed)</button>
+        <button class="btn" id="btn-split" onclick="setMode('split')">Split comparison</button>
+    </div>
+    <div class="controls-row">
+        <span class="controls-label">Width</span>
+        <div class="slider-group">
+            <input type="range" id="width-slider" min="280" max="900" value="500" step="1">
+            <span class="slider-value" id="width-value">31.25rem (500px)</span>
+        </div>
+    </div>
+    <div class="controls-row">
+        <span class="controls-label">Theme</span>
+        <button class="btn" onclick="setTheme('light')">Light</button>
+        <button class="btn active" onclick="setTheme('auto')">Auto</button>
+        <button class="btn" onclick="setTheme('dark')">Dark</button>
+    </div>
+    <div class="formula-display" id="formula-display">
+        Fixed line-heights from <code>tokens.css</code>: title 1.25 &middot; heading 1.3 &middot; body 1.5 &middot; quote 1.55
+    </div>
+</div>
+
+<!-- ── Interactive section ── -->
+<div class="interactive-section">
+    <div class="section-title">Interactive: drag the width slider</div>
+    <p class="section-subtitle">
+        Watch how leading adapts (or doesn't) as the text column changes width.
+        The measure-aware mode interpolates line-height between a tight value (narrow columns)
+        and a loose value (wide columns).
+    </p>
+
+    <div class="content-column leading-fixed" id="content-column" data-width-label="500px">
+
+        <div class="specimen">
+            <div class="specimen-label">
+                title (1.375rem)
+                <span class="lh-readout" id="lh-title"></span>
+            </div>
+            <div class="spec-title">Climbing Research Study</div>
+        </div>
+        <hr class="spec-divider">
+
+        <div class="specimen">
+            <div class="specimen-label">
+                heading (1.125rem)
+                <span class="lh-readout" id="lh-heading"></span>
+            </div>
+            <div class="spec-heading">Community and Social Connection</div>
+        </div>
+        <hr class="spec-divider">
+
+        <div class="specimen">
+            <div class="specimen-label">
+                body (0.875rem)
+                <span class="lh-readout" id="lh-body"></span>
+            </div>
+            <p class="spec-body" style="margin:0;">
+                This section examines how participants described their initial entry into climbing
+                communities, including the role of social connections in sustaining their engagement
+                with the sport over time. Several recurring patterns emerged across interviews,
+                suggesting that social bonds formed through climbing often become as important as
+                the physical activity itself.
+            </p>
+        </div>
+        <hr class="spec-divider">
+
+        <div class="specimen">
+            <div class="specimen-label">
+                quote (0.92rem)
+                <span class="lh-readout" id="lh-quote"></span>
+            </div>
+            <div class="spec-quote-block">
+                <p class="spec-quote-text">"I started maybe six years ago at a local indoor gym. A friend dragged me along and I was honestly terrible at first, but there was something about the problem-solving aspect that really hooked me. Each route is like a puzzle you solve with your body."</p>
+                <div class="spec-quote-speaker">— p1 (Alex Chen)</div>
+            </div>
+            <div class="spec-badge-row">
+                <span class="spec-badge" style="background:#f0fdf4;color:#16a34a;">satisfaction</span>
+                <span class="spec-badge">p1</span>
+                <span class="spec-badge" style="background:#eff6ff;color:#2563eb;">confidence</span>
+            </div>
+        </div>
+        <hr class="spec-divider">
+
+        <div class="specimen">
+            <div class="specimen-label">
+                body-sm context (0.8125rem)
+                <span class="lh-readout" id="lh-context"></span>
+            </div>
+            <div class="spec-context">
+                Context: Discussing their first experience at the climbing gym and what kept them coming back.
+                Duration: 45:32 &middot; Transcribed with Whisper &middot; 7 Feb 2026
+            </div>
+        </div>
+        <hr class="spec-divider">
+
+        <div class="specimen">
+            <div class="specimen-label">
+                second body paragraph
+                <span class="lh-readout" id="lh-body2"></span>
+            </div>
+            <p class="spec-body" style="margin:0;">
+                The transition from indoor to outdoor climbing was described by most participants as
+                a significant milestone. Three participants explicitly mentioned that the social
+                support of their climbing group was what gave them the confidence to attempt their
+                first outdoor route. Without that encouragement, they said they would have remained
+                exclusively indoor climbers.
+            </p>
+        </div>
+    </div>
+</div>
+
+<!-- ── Static comparison grid ── -->
+<div class="comparison-section">
+    <div class="section-title">Reference: fixed vs measure-aware at three widths</div>
+    <p class="section-subtitle">
+        Same body paragraph at narrow (23rem), medium (36rem), and wide (52rem).
+        Notice how fixed leading looks fine at narrow widths but feels tight at wide — the eye
+        struggles to track back to the start of the next line.
+    </p>
+
+    <div class="comparison-grid" id="comparison-grid"></div>
+</div>
+
+<script>
+// ── Measure-aware leading interpolation ──────────────────────────────
+
+/**
+ * Interpolate line-height between tight (narrow) and loose (wide) values
+ * based on container width in px. Linear interpolation clamped to bounds.
+ *
+ * @param {number} widthPx  - container width in pixels
+ * @param {number} tight    - line-height at narrow end (e.g. 23rem = 368px)
+ * @param {number} loose    - line-height at wide end (e.g. 52rem = 832px)
+ * @param {number} [minPx=368]  - width where tight applies
+ * @param {number} [maxPx=832]  - width where loose applies
+ * @returns {number} interpolated line-height
+ */
+function interpolateLh(widthPx, tight, loose, minPx = 368, maxPx = 832) {
+    if (widthPx <= minPx) return tight;
+    if (widthPx >= maxPx) return loose;
+    const t = (widthPx - minPx) / (maxPx - minPx);
+    return tight + t * (loose - tight);
+}
+
+// Line-height ranges per text role: [tight, loose]
+// Tight = good for narrow columns, Loose = good for wide columns
+// The spread is bigger for body text (read continuously) than for headings (read in bursts)
+const LH_RANGES = {
+    title:   [1.20, 1.30],   // short text, small spread
+    heading: [1.25, 1.40],   // medium text
+    body:    [1.45, 1.70],   // long text, biggest spread — most affected by measure
+    quote:   [1.50, 1.70],   // similar to body but slightly more
+    bodySm:  [1.40, 1.55],   // compact text
+};
+
+// Fixed values (current tokens.css)
+const LH_FIXED = {
+    title:   1.25,
+    heading: 1.3,
+    body:    1.5,
+    quote:   1.55,
+    bodySm:  1.45,
+};
+
+// ── State ────────────────────────────────────────────────────────────
+
+let mode = "fixed"; // "fixed" | "measure" | "split"
+let widthPx = 500;
+
+// ── DOM refs ─────────────────────────────────────────────────────────
+
+const column = document.getElementById("content-column");
+const slider = document.getElementById("width-slider");
+const widthValueEl = document.getElementById("width-value");
+const formulaEl = document.getElementById("formula-display");
+
+const lhReadouts = {
+    title:   document.getElementById("lh-title"),
+    heading: document.getElementById("lh-heading"),
+    body:    document.getElementById("lh-body"),
+    quote:   document.getElementById("lh-quote"),
+    context: document.getElementById("lh-context"),
+    body2:   document.getElementById("lh-body2"),
+};
+
+// ── Update logic ─────────────────────────────────────────────────────
+
+function update() {
+    const rem = widthPx / 16;
+    widthValueEl.textContent = `${rem.toFixed(1)}rem (${widthPx}px)`;
+
+    if (mode === "split") {
+        updateSplitView();
+        return;
+    }
+
+    // Single column mode
+    document.querySelector(".interactive-section").style.display = "";
+    column.style.width = widthPx + "px";
+    column.dataset.widthLabel = `${widthPx}px / ${rem.toFixed(1)}rem`;
+
+    if (mode === "fixed") {
+        column.className = "content-column leading-fixed";
+        setReadouts(LH_FIXED.title, LH_FIXED.heading, LH_FIXED.body, LH_FIXED.quote, LH_FIXED.bodySm);
+        formulaEl.innerHTML = `Fixed line-heights from <code>tokens.css</code>: ` +
+            `title ${LH_FIXED.title} &middot; heading ${LH_FIXED.heading} &middot; ` +
+            `body ${LH_FIXED.body} &middot; quote ${LH_FIXED.quote}`;
+    } else {
+        column.className = "content-column leading-measure";
+        const lhT = interpolateLh(widthPx, ...LH_RANGES.title);
+        const lhH = interpolateLh(widthPx, ...LH_RANGES.heading);
+        const lhB = interpolateLh(widthPx, ...LH_RANGES.body);
+        const lhQ = interpolateLh(widthPx, ...LH_RANGES.quote);
+        const lhS = interpolateLh(widthPx, ...LH_RANGES.bodySm);
+
+        column.style.setProperty("--ma-title-lh", lhT.toFixed(3));
+        column.style.setProperty("--ma-heading-lh", lhH.toFixed(3));
+        column.style.setProperty("--ma-body-lh", lhB.toFixed(3));
+        column.style.setProperty("--ma-quote-lh", lhQ.toFixed(3));
+        column.style.setProperty("--ma-body-sm-lh", lhS.toFixed(3));
+
+        setReadouts(lhT, lhH, lhB, lhQ, lhS);
+        formulaEl.innerHTML = `Measure-aware at <code>${widthPx}px</code>: ` +
+            `title <code>${lhT.toFixed(2)}</code> &middot; ` +
+            `heading <code>${lhH.toFixed(2)}</code> &middot; ` +
+            `body <code>${lhB.toFixed(2)}</code> &middot; ` +
+            `quote <code>${lhQ.toFixed(2)}</code> &middot; ` +
+            `body-sm <code>${lhS.toFixed(2)}</code>`;
+    }
+}
+
+function setReadouts(t, h, b, q, s) {
+    lhReadouts.title.textContent = `lh ${t.toFixed(2)}`;
+    lhReadouts.heading.textContent = `lh ${h.toFixed(2)}`;
+    lhReadouts.body.textContent = `lh ${b.toFixed(2)}`;
+    lhReadouts.quote.textContent = `lh ${q.toFixed(2)}`;
+    lhReadouts.context.textContent = `lh ${s.toFixed(2)}`;
+    lhReadouts.body2.textContent = `lh ${b.toFixed(2)}`;
+}
+
+// ── Split view ───────────────────────────────────────────────────────
+
+function updateSplitView() {
+    const section = document.querySelector(".interactive-section");
+    const rem = widthPx / 16;
+
+    // Replace interactive section content with split view
+    const bodyText = "This section examines how participants described their initial entry " +
+        "into climbing communities, including the role of social connections in sustaining " +
+        "their engagement with the sport over time. Several recurring patterns emerged across " +
+        "interviews, suggesting that social bonds formed through climbing often become as " +
+        "important as the physical activity itself.";
+
+    const quoteText = "\u201cI started maybe six years ago at a local indoor gym. A friend " +
+        "dragged me along and I was honestly terrible at first, but there was something about " +
+        "the problem-solving aspect that really hooked me.\u201d";
+
+    const lhB_fixed = LH_FIXED.body;
+    const lhB_ma = interpolateLh(widthPx, ...LH_RANGES.body);
+    const lhQ_fixed = LH_FIXED.quote;
+    const lhQ_ma = interpolateLh(widthPx, ...LH_RANGES.quote);
+
+    // Build two side-by-side columns
+    column.style.width = "";
+    column.className = "content-column";
+    column.removeAttribute("data-width-label");
+    column.style.cssText = "";
+    column.innerHTML = `
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem;">
+            <div>
+                <div class="comparison-cell-header">
+                    Fixed <span class="lh-value">body ${lhB_fixed.toFixed(2)} &middot; quote ${lhQ_fixed.toFixed(2)}</span>
+                </div>
+                <p class="spec-body" style="margin:0 0 0.75rem; line-height:${lhB_fixed};">${bodyText}</p>
+                <div class="spec-quote-block">
+                    <p class="spec-quote-text" style="margin:0; line-height:${lhQ_fixed};">${quoteText}</p>
+                </div>
+            </div>
+            <div>
+                <div class="comparison-cell-header">
+                    Measure-aware <span class="lh-value">body ${lhB_ma.toFixed(2)} &middot; quote ${lhQ_ma.toFixed(2)}</span>
+                </div>
+                <p class="spec-body" style="margin:0 0 0.75rem; line-height:${lhB_ma.toFixed(3)};">${bodyText}</p>
+                <div class="spec-quote-block">
+                    <p class="spec-quote-text" style="margin:0; line-height:${lhQ_ma.toFixed(3)};">${quoteText}</p>
+                </div>
+            </div>
+        </div>
+    `;
+    column.style.width = (widthPx * 2 + 48) + "px";
+    column.style.maxWidth = "100%";
+
+    formulaEl.innerHTML = `Split view at <code>${widthPx}px</code> per column: ` +
+        `fixed body <code>${lhB_fixed}</code> vs measure-aware <code>${lhB_ma.toFixed(2)}</code> ` +
+        `(+${((lhB_ma - lhB_fixed) / lhB_fixed * 100).toFixed(1)}%)`;
+}
+
+// ── Mode + theme controls ────────────────────────────────────────────
+
+function setMode(m) {
+    mode = m;
+    document.getElementById("btn-fixed").classList.toggle("active", m === "fixed");
+    document.getElementById("btn-measure").classList.toggle("active", m === "measure");
+    document.getElementById("btn-split").classList.toggle("active", m === "split");
+
+    // Restore interactive section if leaving split mode
+    if (m !== "split") {
+        location.reload(); // simplest way to restore DOM
+        return;
+    }
+    update();
+}
+
+// Avoid full reload — cache original HTML and restore it
+let originalColumnHTML = column.innerHTML;
+let originalColumnClass = column.className;
+
+// Override setMode to avoid reload
+setMode = function(m) {
+    mode = m;
+    document.getElementById("btn-fixed").classList.toggle("active", m === "fixed");
+    document.getElementById("btn-measure").classList.toggle("active", m === "measure");
+    document.getElementById("btn-split").classList.toggle("active", m === "split");
+
+    if (m !== "split") {
+        column.innerHTML = originalColumnHTML;
+        column.className = originalColumnClass;
+        column.style.cssText = "";
+        // Re-grab readout refs
+        lhReadouts.title = document.getElementById("lh-title");
+        lhReadouts.heading = document.getElementById("lh-heading");
+        lhReadouts.body = document.getElementById("lh-body");
+        lhReadouts.quote = document.getElementById("lh-quote");
+        lhReadouts.context = document.getElementById("lh-context");
+        lhReadouts.body2 = document.getElementById("lh-body2");
+    }
+    update();
+};
+
+function setTheme(t) {
+    if (t === "auto") document.documentElement.removeAttribute("data-theme");
+    else document.documentElement.setAttribute("data-theme", t);
+    document.querySelectorAll(".controls-row .btn").forEach(btn => {
+        const text = btn.textContent.trim().toLowerCase();
+        if (text === "light" || text === "auto" || text === "dark") {
+            btn.classList.toggle("active", text === t);
+        }
+    });
+}
+
+// ── Slider ───────────────────────────────────────────────────────────
+
+slider.addEventListener("input", () => {
+    widthPx = parseInt(slider.value, 10);
+    update();
+});
+
+// ── Static comparison grid ───────────────────────────────────────────
+
+function buildComparisonGrid() {
+    const grid = document.getElementById("comparison-grid");
+    const widths = [
+        { label: "Narrow — 23rem (368px) — quote card", px: 368 },
+        { label: "Medium — 36rem (576px) — sidebar open", px: 576 },
+        { label: "Wide — 52rem (832px) — full width", px: 832 },
+    ];
+
+    const bodyText = "This section examines how participants described their initial entry " +
+        "into climbing communities, including the role of social connections in sustaining " +
+        "their engagement with the sport over time. Several recurring patterns emerged across " +
+        "interviews, suggesting that social bonds formed through climbing often become as " +
+        "important as the physical activity itself.";
+
+    let html = "";
+    for (const w of widths) {
+        const lhFixed = LH_FIXED.body;
+        const lhMa = interpolateLh(w.px, ...LH_RANGES.body);
+
+        html += `<div class="comparison-width-label">${w.label}</div>`;
+        html += `
+            <div class="comparison-cell" style="max-width:${w.px}px;">
+                <div class="comparison-cell-header">
+                    Fixed <span class="lh-value">lh ${lhFixed.toFixed(2)}</span>
+                </div>
+                <p class="spec-body" style="margin:0; line-height:${lhFixed};">${bodyText}</p>
+            </div>
+            <div class="comparison-cell" style="max-width:${w.px}px;">
+                <div class="comparison-cell-header">
+                    Measure-aware <span class="lh-value">lh ${lhMa.toFixed(2)}</span>
+                </div>
+                <p class="spec-body" style="margin:0; line-height:${lhMa.toFixed(3)};">${bodyText}</p>
+            </div>
+        `;
+    }
+    grid.innerHTML = html;
+}
+
+// ── Init ─────────────────────────────────────────────────────────────
+
+buildComparisonGrid();
+update();
+</script>
+</body>
+</html>

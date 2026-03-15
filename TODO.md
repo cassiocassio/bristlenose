@@ -9,6 +9,8 @@ Last updated: 14 Mar 2026
   - simple speaker badges / sessions
   - simple codebook title lists
 - [ ] right-align bar chart on tags
+- [ ] sidebar tag assign: hover hint should match "add tag" visual language (not just `cursor: copy` — consider `+` icon, tooltip, or badge glow consistent with TagInput affordance)
+- [ ] sidebar tag assign: toast undo ("Applied 'Trust' to 3 quotes — Undo")
 - [ ] drag-and-drop tags to quotes
 - [ ] hide unused tags → responsive card thing for analysis page
 - [ ] new title bar

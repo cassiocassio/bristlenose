@@ -241,6 +241,7 @@ These are too small for issues or are internal-only concerns.
 - [ ] **Tokenise acceptance flash as design system pattern** — generalise `badge-accept-flash` into reusable `.bn-confirm-flash` + `useFlash(key)` hook
 - [ ] **Canonical tag → colour as first-class schema** — persist `colour_set`/`colour_index` on `TagDefinition` to survive reordering; eliminate client-side colour computation
 - [ ] **Sidebar filter undo history stack** — multi-step undo for tag filter state changes in the Tag Sidebar (show-only clicks, tick toggles). See `docs/design-codebook-autocomplete.md` Decision 6b
+- [ ] **Measure-aware leading** — line-height should increase with wider columns (longer measure needs more leading for the eye to track back). Current `--bn-text-*-lh` tokens are fixed per size (Bringhurst size→leading already shipped). Explore interpolating line-height based on container width across the 23rem–52rem range. Mockup: `docs/mockups/measure-aware-leading.html`. Playground already has a line-height slider for manual tuning. Reference: Bringhurst §2.1.2
 
 ### Transcript page interactions
 

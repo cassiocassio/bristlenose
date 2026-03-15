@@ -11,11 +11,14 @@ that MLX targets, so M1 through M4 Ultra (and beyond) all work the same way.
 
 from __future__ import annotations
 
+import json
 import logging
 import platform
 import subprocess
+import time
 from dataclasses import dataclass
 from enum import Enum
+from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
@@ -80,20 +83,70 @@ class HardwareInfo:
         return " | ".join(parts)
 
 
+_CACHE_DIR = Path("~/.config/bristlenose").expanduser()
+_CACHE_FILE = _CACHE_DIR / ".hardware-cache.json"
+_CACHE_TTL_SECONDS = 24 * 60 * 60  # 24 hours
+
+
+def _load_hardware_cache() -> dict | None:
+    """Load cached hardware data if it exists and is fresh (within TTL)."""
+    try:
+        if not _CACHE_FILE.exists():
+            return None
+        data = json.loads(_CACHE_FILE.read_text())
+        if time.time() - data.get("timestamp", 0) < _CACHE_TTL_SECONDS:
+            logger.debug("Using cached hardware info (age: %.0fs)", time.time() - data["timestamp"])
+            return data
+        logger.debug("Hardware cache expired, re-detecting")
+    except Exception:
+        logger.debug("Could not read hardware cache, re-detecting")
+    return None
+
+
+def _save_hardware_cache(
+    chip_name: str | None, gpu_cores: int | None, memory_gb: float | None
+) -> None:
+    """Persist hardware detection results to disk."""
+    try:
+        _CACHE_DIR.mkdir(parents=True, exist_ok=True)
+        data = {
+            "chip_name": chip_name,
+            "gpu_cores": gpu_cores,
+            "memory_gb": memory_gb,
+            "timestamp": time.time(),
+        }
+        _CACHE_FILE.write_text(json.dumps(data))
+    except Exception:
+        logger.debug("Could not write hardware cache")
+
+
 def detect_hardware() -> HardwareInfo:
     """Detect the current hardware and available acceleration.
 
     Returns a HardwareInfo with the best available accelerator.
     Detection order: Apple Silicon (MLX) > NVIDIA (CUDA) > CPU.
+
+    Static hardware properties (chip name, GPU cores, memory) are cached
+    to ~/.config/bristlenose/.hardware-cache.json with a 24h TTL to avoid
+    repeated slow system_profiler calls on macOS.
     """
     info = HardwareInfo(accelerator=AcceleratorType.CPU)
 
     # Check for Apple Silicon
     if _is_apple_silicon():
         info.accelerator = AcceleratorType.APPLE_SILICON
-        info.chip_name = _get_apple_chip_name()
-        info.gpu_cores = _get_apple_gpu_cores()
-        info.memory_gb = _get_system_memory_gb()
+
+        cached = _load_hardware_cache()
+        if cached:
+            info.chip_name = cached.get("chip_name")
+            info.gpu_cores = cached.get("gpu_cores")
+            info.memory_gb = cached.get("memory_gb")
+        else:
+            info.chip_name = _get_apple_chip_name()
+            info.gpu_cores = _get_apple_gpu_cores()
+            info.memory_gb = _get_system_memory_gb()
+            _save_hardware_cache(info.chip_name, info.gpu_cores, info.memory_gb)
+
         info.mlx_available = _check_mlx_available()
 
         if not info.mlx_available:

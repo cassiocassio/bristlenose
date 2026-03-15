@@ -84,7 +84,7 @@ def _try_add_file(path: Path, files: list[InputFile]) -> None:
             duration_seconds=duration,
         )
     )
-    logger.info("Found %s file: %s", file_type.value, path.name)
+    logger.debug("Found %s file: %s", file_type.value, path.name)
 
 
 # -- Platform filename patterns --------------------------------------------------

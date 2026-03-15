@@ -251,6 +251,13 @@ async def run_autocode_job(
         # Build taxonomy text (once, shared across all batches)
         taxonomy_text = build_tag_taxonomy(template)
 
+        logger.info(
+            "AutoCode job started: framework=%s quotes=%d model=%s",
+            framework_id,
+            len(batch_items),
+            settings.llm_model,
+        )
+
         # Build tag name → TagDefinition.id map from DB
         # (framework groups have framework_id set on the CodebookGroup)
         from bristlenose.server.models import CodebookGroup
@@ -336,6 +343,12 @@ async def run_autocode_job(
                         )
                     )
                 processed_count += len(batch)
+                logger.info(
+                    "AutoCode batch done: %d/%d quotes, %d proposals",
+                    processed_count,
+                    job.total_quotes,
+                    len(proposals),
+                )
                 # Commit progress via a separate short-lived session so the
                 # status endpoint sees incremental updates (the main session
                 # holds the proposals transaction until all batches finish).
@@ -363,13 +376,22 @@ async def run_autocode_job(
         )
 
         # Store results, handling per-batch errors gracefully
+        batch_errors = 0
         for batch_result in batch_results:
             if isinstance(batch_result, BaseException):
                 logger.error("Batch failed: %s", batch_result)
+                batch_errors += 1
                 continue
             for proposal in batch_result:
                 db.add(proposal)
                 proposed_count += 1
+
+        logger.info(
+            "AutoCode job finished: %d proposals from %d quotes (%d batch errors)",
+            proposed_count,
+            len(batch_items),
+            batch_errors,
+        )
 
         # Re-read job status — it may have been cancelled during processing.
         db.expire(job)

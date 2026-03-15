@@ -10,6 +10,20 @@ Two independent knobs:
 
 Both are fully independent — ``-v`` doesn't affect the log file,
 ``BRISTLENOSE_LOG_LEVEL`` doesn't affect the terminal.
+
+PII policy (see ``docs/design-logging.md`` for full rationale):
+
+1. Never log transcript content (quote text, segment text, LLM
+   prompt/response content).  Only structural metadata (field types,
+   token counts, model names).
+2. Log identifiers, not names — session IDs (``s1``), speaker codes
+   (``p1``), quote DOM IDs (``q-p1-123``), not participant names or
+   file paths containing names.
+3. Input filenames at DEBUG, not INFO.  Aggregates ("Found 6 files")
+   are INFO; per-file details are DEBUG.
+4. Project name: log the slug or project ID, not the raw folder name.
+5. The log file lives inside the project output — same trust boundary
+   as the transcripts.  Diagnostic export (future) must strip PII.
 """
 
 from __future__ import annotations

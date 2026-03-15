@@ -1,7 +1,7 @@
 # Logging Architecture
 
-> **Status**: Phase 1 (infrastructure) implemented; Phase 2 (tier 1 instrumentation) planned; tiers 2–3 backlogged
-> **Implemented in**: v0.10.2, Feb 2026
+> **Status**: Phase 1 (infrastructure) implemented v0.10.2; Phase 2 (tier 1 instrumentation + PII hardening) implemented v0.13.5; tiers 2–3 backlogged
+> **Implemented in**: v0.10.2 (infrastructure, Feb 2026), v0.13.5 (instrumentation + PII policy, Mar 2026)
 
 ## The problem
 
@@ -15,6 +15,41 @@ This meant:
 ### Trigger
 
 An `AutoCodeBatchResult` validation error in serve mode — the Anthropic SDK returned `assignments` as a JSON string instead of a parsed list. The `logger.error()` printed to the terminal, but the surrounding context (what the SDK actually returned, which model, which batch) was invisible because those were `logger.debug()` calls suppressed by the default `WARNING` level.
+
+## Philosophy: who reads these logs, and when?
+
+Bristlenose is a local-first CLI tool that processes sensitive research data. It is not a web service. This changes everything about logging philosophy.
+
+There are exactly three scenarios:
+
+1. **The developer, debugging a reported issue.** A researcher says "it crashed on my interviews" and sends a log file. You need enough context to reproduce without access to their machine or data.
+
+2. **The desktop app, surfacing a diagnostic bundle.** The SwiftUI shell captures stdout for its progress display, but when something goes wrong the user needs a "Send diagnostic info" button that bundles the log file. The log must be self-contained and useful without the researcher explaining what happened.
+
+3. **The researcher themselves, very rarely.** A technically-inclined researcher might open the log file to see why a session was skipped or why the LLM call failed. They need the message to be comprehensible without knowledge of the code.
+
+Nobody is tailing these logs in real time. Nobody is shipping them to Grafana. Nobody is writing alert rules. This means:
+
+- **Human-readable format wins.** The pipe-delimited format (`timestamp | LEVEL | module | message`) is correct. JSON lines would make the file unreadable for scenario 3 and harder to grep for scenario 1.
+- **One log file per project.** Already the case. Each project's log lives inside its output directory. No tangling.
+- **Log actionable information.** Every log line should answer "what happened and what should I do about it?" (Peter Bourgon, _Logging v. Instrumentation_, 2016). If the answer is "nothing, this is just progress," it probably shouldn't be INFO.
+
+### Two audiences, two channels (already built)
+
+- **Terminal (stderr)**: researcher-facing. Checkmark progress lines, warnings, errors. WARNING by default, DEBUG with `-v`. This is the "did it work?" channel.
+- **Log file**: developer-facing. Full operational history. INFO by default, configurable via `BRISTLENOSE_LOG_LEVEL`. This is the "what happened?" channel.
+
+We do not need a third channel. The desktop app reads stderr for progress, reads the log file for diagnostics.
+
+### Research references
+
+| Source | Key insight | Relevance |
+|--------|-------------|-----------|
+| Peter Bourgon, _Logging v. Instrumentation_ (2016) | Log only actionable information; use metrics for volume data | Confirms our sparse-by-default approach |
+| Charity Majors, _Observability 2.0_ | "metrics, logs, and traces are just data types" — real observability = asking any question without predicting it | Argues for wide structured events — solves distributed-systems problems we don't have |
+| 12-factor app, _Logs_ | Treat logs as event streams to stdout; let infrastructure handle routing | Validates our separation: app emits events, environment decides what to do |
+| Stripe, _Canonical Log Lines_ | One rich event per operation, not scattered lines | Interesting but solves correlation in distributed systems; sequential log lines are already correlated by timestamp in a single-process tool |
+| structlog / loguru communities | Rich context binding, processor chains, ergonomic APIs | Migration cost (34 files, 133 calls, 12 tests) not justified when grep is our analysis tool |
 
 ## Architecture
 
@@ -56,11 +91,59 @@ All paths call `setup_logging()` from `bristlenose/logging.py`. The call is idem
 
 In `--dev` mode, the verbose flag is stashed in `_BRISTLENOSE_VERBOSE` env var so uvicorn's factory reload can recover it.
 
+## PII policy for logs
+
+Bristlenose processes interview transcripts containing real names, job titles, opinions about employers, health conditions, and other sensitive data. Logs can leak this in subtle ways — and logs leave their trust boundary when shared as crash reports or diagnostic bundles.
+
+### Rules
+
+1. **Never log transcript content.** No quote text, no segment text, no LLM prompt content, no LLM response content. Only structural metadata (field types, token counts, model name). The Tier 1 response shape logging logs field *types* (`{'assignments': 'list'}`) — never field *values*.
+
+2. **Log identifiers, not names.** Use session IDs (`s1`), speaker codes (`p1`), quote DOM IDs (`q-p1-123`), not participant names, file paths containing names, or project names. Where a file path must be logged, prefer the output path (which uses session IDs) over the input path (which may contain names).
+
+3. **Input filenames at DEBUG, not INFO.** Per-file discovery ("Found video: `interview_jane.mp4`") is DEBUG. Aggregates ("Found 6 supported files") are INFO. The default log level should not contain filenames that could identify participants.
+
+4. **Project name: log the slug or project ID.** The importer uses the project ID, not the raw folder name. The slug is less identifying than "Sarah Jones Q1 Interviews" but still somewhat identifying — proportional for a local tool.
+
+5. **Log file lives inside the project output.** Anyone with access to the log file already has access to the transcripts, quotes, and names it lives alongside. The log does not create new exposure within this trust boundary. PII paranoia should be proportional: the log is not more sensitive than the data beside it.
+
+6. **Diagnostic export must strip PII.** When the desktop app exports a "Send diagnostic info" bundle, it should redact input file paths, project names, and DEBUG-level lines. This is a desktop app concern (future Phase F), not a logging infrastructure concern.
+
+### Current PII exposure audit
+
+| Risk | What's logged | Status |
+|------|--------------|--------|
+| **Safe** | File counts, durations, stage names, token counts, model names | Majority of 133 logger calls |
+| **Fixed** | Per-file input filenames at INFO | Demoted to DEBUG in v0.13.5 |
+| **Low** | Full output paths (contain home directory, session IDs) | Acceptable — session IDs, not names |
+| **Low** | Speaker role maps (`{'Speaker A': RESEARCHER}`) | Labels, not person names |
+| **Low** | Tag names from LLM resolution | Controlled vocabulary from codebook templates |
+
+## Two systems: operational log vs event log
+
+The codebase has two separate logging concepts that must stay separate:
+
+**Operational log** (`bristlenose.log`) — this document:
+- Purpose: debugging, diagnostics, crash reports
+- Audience: developer, desktop app diagnostic bundle, occasionally the researcher
+- Format: human-readable, line-oriented, rotating
+- Retention: 15 MB ceiling, auto-rotated
+- Content: "LLM call: model=claude-sonnet-4 input_tokens=1234 output_tokens=567"
+
+**Event log** (`pipeline-events.jsonl`) — Phase 4 of `design-pipeline-resilience.md`:
+- Purpose: provenance, audit trail, human/LLM merge, undo
+- Audience: the tool itself (replay to rebuild state)
+- Format: structured JSONL, append-only, never rotated or deleted
+- Retention: permanent (grows with project history)
+- Content: `{"event":"quote_extracted","id":"q001","model":"claude-sonnet-4"}`
+
+These systems must not merge. The operational log is disposable. The event log is an audit trail.
+
 ## Key files
 
 | File | Purpose |
 |------|---------|
-| `bristlenose/logging.py` | `setup_logging()`, `_parse_log_level()`, rotation config |
+| `bristlenose/logging.py` | `setup_logging()`, `_parse_log_level()`, rotation config, PII policy reference |
 | `bristlenose/pipeline.py` | `Pipeline._configure_logging()` — deferred setup |
 | `bristlenose/server/app.py` | `create_app(verbose=...)` — serve mode setup |
 | `bristlenose/cli.py` | `-v` flag on `run`, `transcribe`, `analyze`, `render`, `serve` |
@@ -78,131 +161,55 @@ In `--dev` mode, the verbose flag is stashed in `_BRISTLENOSE_VERBOSE` env var s
 
 ## Instrumentation tiers
 
-The logging infrastructure is in place. What's needed now is *using* it — adding `logger.info()` and `logger.debug()` calls at the right places so the log file captures useful diagnostic information.
+### Tier 1 — LLM diagnostics + PII hardening (implemented v0.13.5)
 
-### Tier 1 — diagnosing LLM issues (high value, immediate)
+1. **LLM response shape logging** (DEBUG) — field *types* before `model_validate()`. Five providers × 1 line. Catches double-serialization, missing fields, unexpected nulls
+2. **Token usage at INFO** — model + input/output tokens after each call. Five providers × 1 line. Visible in default log level
+3. **AutoCode batch progress** (INFO) — job start (framework, quotes, batches, model), per-batch completion (progress, proposals), job finish (totals, error count)
+4. **Model name at INFO** — promoted from DEBUG in all five `_analyze_*` methods
+5. **Input filename demotion** — per-file "Found X file: filename" moved from INFO to DEBUG in `s01_ingest.py` (PII hardening)
 
-These would have helped diagnose the autocode double-serialization bug.
+### Tier 2 — pipeline diagnostics (backlog)
 
-1. **LLM response shape logging** — log `block.input` key types in the Anthropic path, and parsed `data` key types in OpenAI/Azure/Gemini/Local paths. One DEBUG line per `analyze()` call showing whether each field is the expected type. Catches double-serialization, missing fields, unexpected nulls
-2. **Token usage at INFO** — after every LLM call, log model name, input tokens, output tokens, total. Currently tracked in `LLMUsageTracker` but never logged — invisible in the log file
-3. **AutoCode batch progress** — log batch number, quote count, token spend per batch. Currently only `logger.error()` on failure; success path is silent
+6. **Cache hit/miss decisions** — when `_is_stage_cached()` returns, log stage name + reason
+7. **Importer sync stats** — already logged adequately (line 265). No change needed
 
-### Tier 2 — diagnosing pipeline and data issues (medium value)
+### Tier 3 — observability (backlog, do when touching these files)
 
-4. **Cache hit/miss decisions** — when `_is_stage_cached()` returns true/false, log which stage and why. Currently silent boolean
-5. **Importer sync stats** — log per-entity counts (projects, sessions, quotes, clusters, themes) during serve-mode import. Currently only logged at the end as a single line
-6. **Model name at INFO** — promote the `logger.debug("Calling Anthropic API: model=%s", ...)` lines in all five `_analyze_*` methods to INFO. Currently DEBUG-only, invisible at default log level
+8. **Concurrency queue depth** — log semaphore config when created. DEBUG level
+9. **PII entity breakdown** — per-type counts. DEBUG level. Low priority
+10. **FFmpeg error detail** — command and return code on failure. ERROR level
+11. **Keychain resolution** — which store, which keys found/missing. INFO level
+12. **Manifest load/save** — schema version and stage summary. DEBUG level
 
-### Tier 3 — observability (nice to have)
+### Future: desktop app support (gated on desktop work)
 
-7. **Concurrency queue depth** — when semaphore is created for quote extraction / topic segmentation / audio extraction, log the concurrency level and total tasks
-8. **PII entity breakdown** — log how many entities of each type (person, location, email, etc.) were detected/redacted per session
-9. **FFmpeg error detail** — when audio extraction fails, log the ffmpeg command and return code (currently exception-only)
-10. **Keychain resolution** — log which credential store is active and which keys were found/missing during config load
-11. **Manifest load/save** — when manifest is loaded, log schema version, previous run date, stage summary. When saved, log which stage changed status
+13. **Machine-readable progress markers** — `[BN:STAGE:8:START]` / `[BN:STAGE:8:DONE:12.3s]` on stdout for the SwiftUI process runner to parse
+14. **`bristlenose diagnostic-bundle`** CLI command — collects PII-stripped log, Python version, platform, bristlenose version, installed providers, manifest summary
+15. **Desktop app error panel** — last N stderr lines + "Send diagnostic info" button
 
-## Tier 1 implementation plan
+## Multi-project / multi-user
 
-Three changes, all in existing files. ~20 lines total.
+**Already solved by filesystem layout.** Each project has its own `bristlenose-output/.bristlenose/bristlenose.log`. No tangling. No correlation IDs needed. When the desktop app runs multiple projects, each sidecar writes to its own log. When serve mode eventually supports multi-project, project IDs in messages will suffice.
 
-### 1a. LLM response shape logging (`bristlenose/llm/client.py`)
+## Non-goals (with rationale)
 
-Add a DEBUG log line in each `_analyze_*` method, right before `response_model.model_validate()`, showing the types of the top-level fields in the parsed data. This catches double-serialization (string where list expected), missing fields, and unexpected nulls.
-
-**Anthropic** (line ~259, inside the `for block` loop):
-
-```python
-logger.debug(
-    "Anthropic tool input fields: %s",
-    {k: type(v).__name__ for k, v in block.input.items()},
-)
-return response_model.model_validate(block.input)
-```
-
-**OpenAI / Azure / Gemini / Local** (before each `model_validate(data)` call):
-
-```python
-logger.debug(
-    "LLM response fields: %s",
-    {k: type(v).__name__ for k, v in data.items()} if isinstance(data, dict) else type(data).__name__,
-)
-return response_model.model_validate(data)
-```
-
-Five insertion points total (one per provider method). No behavior change.
-
-**What it catches**: The autocode bug — you'd see `{'assignments': 'str'}` instead of `{'assignments': 'list'}` in the log file.
-
-### 1b. Token usage at INFO (`bristlenose/llm/client.py`)
-
-After each provider's token tracking block, add an INFO log with model name and token counts. Currently the tracker accumulates silently — the log file never sees individual call costs.
-
-**Pattern** (same for all five providers, after `self.tracker.record(...)` call):
-
-```python
-logger.info(
-    "LLM call: model=%s input_tokens=%d output_tokens=%d",
-    self.settings.llm_model,  # or azure_deployment, local_model
-    input_tokens,
-    output_tokens,
-)
-```
-
-Five insertion points. Uses the same token values already passed to `self.tracker.record()`.
-
-**What it catches**: Unexpectedly large/small responses, cost tracking without running `-v`, and a timeline of when LLM calls happened in the log file.
-
-### 1c. AutoCode batch progress (`bristlenose/server/autocode.py`)
-
-**Job start** (line ~249, after `job.llm_model = settings.llm_model`):
-
-```python
-logger.info(
-    "AutoCode job started: framework=%s quotes=%d batches=%d model=%s",
-    framework_id, len(batch_items), len(batches), settings.llm_model,
-)
-```
-
-**Per-batch completion** (line ~338, after `processed_count += len(batch)`):
-
-```python
-logger.info(
-    "AutoCode batch done: %d/%d quotes, %d proposals",
-    processed_count, job.total_quotes, len(proposals),
-)
-```
-
-**Job completion** (after the `batch_results` gather loop, line ~372):
-
-```python
-logger.info(
-    "AutoCode job finished: %d proposals from %d quotes (%d batch errors)",
-    proposed_count, processed_count,
-    sum(1 for r in batch_results if isinstance(r, BaseException)),
-)
-```
-
-Three insertion points. All INFO level — visible in the log file by default.
-
-**What it catches**: Progress visibility, batch failure rate, and a clear record of what the job did. The `Batch failed: %s` error on line 368 now has surrounding context.
-
-### Test coverage
-
-No new tests needed — these are log lines only, no behavior change. Existing tests continue to pass. The log lines are visible in test output when running with `-v` or when `BRISTLENOSE_LOG_LEVEL=DEBUG`.
-
-### Risk
-
-None. Additive-only changes (log lines). No control flow changes. No new dependencies.
-
-## Non-goals
-
-- **Structured logging (JSON lines)**: not needed for a local tool. Grep works fine
-- **Log aggregation / shipping**: local-first tool, no remote logging
-- **Per-request API logging middleware**: uvicorn already logs requests; we add domain-level logging where it matters
-- **Compression**: 15 MB ceiling is fine; gzip would add complexity for negligible gain
+| Non-goal | Why |
+|----------|-----|
+| **Structured logging (JSON lines)** | The only "machine" parsing these logs is `grep`. Human-readable format is faster to scan in a text editor. Migration cost across 34 files is not justified |
+| **structlog / loguru migration** | stdlib logging with two handlers is adequate. 34 files, 133 calls, 12 tests — migration cost > benefit |
+| **Log aggregation / shipping** | Local-first tool. The diagnostic bundle (future Phase F) is the "shipping" mechanism — user-initiated, not automatic |
+| **Correlation IDs** | Each project has its own log file. Session IDs in messages provide sufficient correlation within a single-process pipeline |
+| **Per-module log levels** | stdlib supports this but exposing it to users adds complexity without proportional benefit. The two-knob system is sufficient |
+| **Metrics / counters / histograms** | Prometheus-style metrics solve distributed-systems observability. For a local tool, token counts in the log file are greppable |
+| **Per-request API middleware** | Uvicorn logs requests. Domain-level handler logging covers business operations. The gap between these is not worth filling for a single-user local server |
+| **Compression** | 15 MB ceiling per project is negligible. gzip would add complexity for negligible gain |
+| **Log viewer in serve mode** | The log file is a developer artifact. The desktop app may surface last few error lines, but that reads stderr, not the log file |
 
 ## References
 
 - Phase 4a in `docs/design-pipeline-resilience.md` describes a structured event log (`pipeline-events.jsonl`) for provenance tracking. That's a separate system — immutable, append-only, machine-readable. The log file here is for human debugging, not data integrity
 - The resilience design's event log and the logging system serve different purposes: events are facts about data ("quote q001 was extracted by claude-sonnet-4"), logs are operational diagnostics ("LLM call took 3.2s, 1847 output tokens, response had 25 assignments")
+- Peter Bourgon, [_Logging v. Instrumentation_](https://peter.bourgon.org/blog/2016/02/07/logging-v-instrumentation.html) (2016) — log actionable information, use metrics for volume data
+- Charity Majors, [_Observability is a Many-Splendored Thing_](https://charity.wtf/2020/03/03/observability-is-a-many-splendored-thing/) — observability ≠ three pillars
+- The Twelve-Factor App, [_Logs_](https://12factor.net/logs) — treat logs as event streams

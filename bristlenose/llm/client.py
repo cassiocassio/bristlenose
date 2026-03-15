@@ -228,7 +228,7 @@ class LLMClient:
             "input_schema": schema,
         }
 
-        logger.debug("Calling Anthropic API: model=%s", self.settings.llm_model)
+        logger.info("Calling Anthropic API: model=%s", self.settings.llm_model)
 
         response = await client.messages.create(
             model=self.settings.llm_model,
@@ -246,6 +246,12 @@ class LLMClient:
         # Track token usage
         if hasattr(response, "usage") and response.usage:
             self.tracker.record(response.usage.input_tokens, response.usage.output_tokens)
+            logger.info(
+                "LLM call: model=%s input_tokens=%d output_tokens=%d",
+                self.settings.llm_model,
+                response.usage.input_tokens,
+                response.usage.output_tokens,
+            )
 
         # Detect truncated response — the tool use JSON is incomplete
         if response.stop_reason == "max_tokens":
@@ -257,6 +263,10 @@ class LLMClient:
         # Extract the tool use result
         for block in response.content:
             if block.type == "tool_use" and block.name == tool_name:
+                logger.debug(
+                    "Anthropic tool input fields: %s",
+                    {k: type(v).__name__ for k, v in block.input.items()},
+                )
                 return response_model.model_validate(block.input)
 
         raise RuntimeError("No structured output found in Anthropic response")
@@ -285,7 +295,7 @@ class LLMClient:
             f"```json\n{json.dumps(schema, indent=2)}\n```"
         )
 
-        logger.debug("Calling OpenAI API: model=%s", self.settings.llm_model)
+        logger.info("Calling OpenAI API: model=%s", self.settings.llm_model)
 
         response = await client.chat.completions.create(
             model=self.settings.llm_model,
@@ -303,6 +313,12 @@ class LLMClient:
             self.tracker.record(
                 response.usage.prompt_tokens, response.usage.completion_tokens
             )
+            logger.info(
+                "LLM call: model=%s input_tokens=%d output_tokens=%d",
+                self.settings.llm_model,
+                response.usage.prompt_tokens,
+                response.usage.completion_tokens,
+            )
 
         # Detect truncated response — the JSON is incomplete
         if response.choices[0].finish_reason == "length":
@@ -316,6 +332,12 @@ class LLMClient:
             raise RuntimeError("Empty response from OpenAI")
 
         data = json.loads(content)
+        logger.debug(
+            "LLM response fields: %s",
+            {k: type(v).__name__ for k, v in data.items()}
+            if isinstance(data, dict)
+            else type(data).__name__,
+        )
         return response_model.model_validate(data)
 
     async def _analyze_azure(
@@ -344,7 +366,7 @@ class LLMClient:
             f"```json\n{json.dumps(schema, indent=2)}\n```"
         )
 
-        logger.debug(
+        logger.info(
             "Calling Azure OpenAI API: deployment=%s", self.settings.azure_deployment
         )
 
@@ -364,6 +386,12 @@ class LLMClient:
             self.tracker.record(
                 response.usage.prompt_tokens, response.usage.completion_tokens
             )
+            logger.info(
+                "LLM call: deployment=%s input_tokens=%d output_tokens=%d",
+                self.settings.azure_deployment,
+                response.usage.prompt_tokens,
+                response.usage.completion_tokens,
+            )
 
         # Detect truncated response — the JSON is incomplete
         if response.choices[0].finish_reason == "length":
@@ -377,6 +405,12 @@ class LLMClient:
             raise RuntimeError("Empty response from Azure OpenAI")
 
         data = json.loads(content)
+        logger.debug(
+            "LLM response fields: %s",
+            {k: type(v).__name__ for k, v in data.items()}
+            if isinstance(data, dict)
+            else type(data).__name__,
+        )
         return response_model.model_validate(data)
 
     async def _analyze_google(
@@ -399,7 +433,7 @@ class LLMClient:
 
         schema = _flatten_schema_for_gemini(response_model.model_json_schema())
 
-        logger.debug("Calling Gemini API: model=%s", self.settings.llm_model)
+        logger.info("Calling Gemini API: model=%s", self.settings.llm_model)
 
         response = await client.models.generate_content(
             model=self.settings.llm_model,
@@ -419,6 +453,12 @@ class LLMClient:
                 response.usage_metadata.prompt_token_count or 0,
                 response.usage_metadata.candidates_token_count or 0,
             )
+            logger.info(
+                "LLM call: model=%s input_tokens=%d output_tokens=%d",
+                self.settings.llm_model,
+                response.usage_metadata.prompt_token_count or 0,
+                response.usage_metadata.candidates_token_count or 0,
+            )
 
         # Detect truncated response — Gemini uses "MAX_TOKENS" finish reason
         if (
@@ -435,6 +475,12 @@ class LLMClient:
             raise RuntimeError("Empty response from Gemini")
 
         data = json.loads(response.text)
+        logger.debug(
+            "LLM response fields: %s",
+            {k: type(v).__name__ for k, v in data.items()}
+            if isinstance(data, dict)
+            else type(data).__name__,
+        )
         return response_model.model_validate(data)
 
     async def _analyze_local(
@@ -470,7 +516,7 @@ class LLMClient:
         )
 
         model = self.settings.local_model
-        logger.debug("Calling local API: url=%s model=%s", self.settings.local_url, model)
+        logger.info("Calling local API: url=%s model=%s", self.settings.local_url, model)
 
         # Retry logic for JSON parsing failures
         max_retries = 3
@@ -495,6 +541,12 @@ class LLMClient:
                         response.usage.prompt_tokens or 0,
                         response.usage.completion_tokens or 0,
                     )
+                    logger.info(
+                        "LLM call: model=%s input_tokens=%d output_tokens=%d",
+                        model,
+                        response.usage.prompt_tokens or 0,
+                        response.usage.completion_tokens or 0,
+                    )
 
                 # Detect truncated response
                 if response.choices[0].finish_reason == "length":
@@ -508,6 +560,12 @@ class LLMClient:
                     raise RuntimeError("Empty response from local model")
 
                 data = json.loads(content)
+                logger.debug(
+                    "LLM response fields: %s",
+                    {k: type(v).__name__ for k, v in data.items()}
+                    if isinstance(data, dict)
+                    else type(data).__name__,
+                )
                 return response_model.model_validate(data)
 
             except json.JSONDecodeError as e:

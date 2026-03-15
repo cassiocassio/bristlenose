@@ -263,8 +263,8 @@ def import_project(db: Session, project_dir: Path) -> Project:
     db.commit()
 
     logger.info(
-        "Imported project '%s': %d sessions, %d quotes, %d clusters, %d themes.",
-        project_name,
+        "Imported project id=%d: %d sessions, %d quotes, %d clusters, %d themes.",
+        project.id,
         len(session_map),
         db.query(Quote).filter_by(project_id=project.id).count(),
         db.query(ScreenCluster).filter_by(project_id=project.id).count(),

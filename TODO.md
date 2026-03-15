@@ -190,13 +190,13 @@ See `docs/design-performance.md` for full audit, done items, and "not worth opti
 
 ### Logging instrumentation
 
-See `docs/design-logging.md` for architecture and full tier breakdown. Infrastructure (log file, two-knob system) is done.
+See `docs/design-logging.md` for architecture, philosophy, PII policy, and full tier breakdown. Infrastructure (log file, two-knob system) done v0.10.2. Tier 1 (LLM diagnostics + PII hardening) done v0.13.5.
+
+**Tier 1 — done (v0.13.5):** LLM response shape logging (DEBUG, 5 providers), token usage at INFO (5 providers), AutoCode batch progress (job start/batch done/job finish), model name promoted to INFO, input filenames demoted to DEBUG (PII), importer uses project ID not name (PII).
 
 | Item | Tier | Effort |
 |------|------|--------|
 | Cache hit/miss decisions in `_is_stage_cached()` | 2 | trivial |
-| Importer per-entity sync stats | 2 | trivial |
-| Promote model name from DEBUG to INFO in `_analyze_*` methods | 2 | trivial |
 | Concurrency queue depth at semaphore creation | 3 | trivial |
 | PII entity type breakdown per session | 3 | small |
 | FFmpeg command and return code on failure | 3 | trivial |

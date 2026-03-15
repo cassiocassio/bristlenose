@@ -225,10 +225,17 @@
     background: var(--bn-hover-bg-subtle);
 }
 
+.tag-sidebar .tag-checkbox-label {
+    display: inline-flex;
+    align-items: center;
+    min-width: 24px;
+    flex-shrink: 0;
+}
+
 .tag-sidebar .tag-name-area {
     display: flex;
     align-items: center;
-    gap: var(--bn-space-sm);
+    gap: var(--bn-space-md);
     min-width: 0;
 }
 
@@ -245,6 +252,16 @@
     overflow: hidden;
     text-overflow: ellipsis;
     max-width: 14rem;
+}
+
+/* Assignable badge — cursor and hover hint when quotes are selected */
+.tag-sidebar .badge.badge-assignable {
+    cursor: copy;
+    transition: filter var(--bn-transition-fast);
+}
+
+.tag-sidebar .badge.badge-assignable:hover {
+    filter: brightness(1.1);
 }
 
 /* Micro histogram bar + count */

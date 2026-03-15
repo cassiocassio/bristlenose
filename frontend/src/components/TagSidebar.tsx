@@ -16,9 +16,15 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { getCodebook, getHiddenTagGroups } from "../utils/api";
 import { getGroupBg } from "../utils/colours";
-import type { CodebookResponse, CodebookGroupResponse, CodebookTagResponse } from "../utils/types";
+import type {
+  CodebookResponse,
+  CodebookGroupResponse,
+  CodebookTagResponse,
+  TagResponse,
+} from "../utils/types";
 import { EMPTY_TAG_FILTER } from "../utils/filter";
-import { useQuotesStore, setTagFilter } from "../contexts/QuotesContext";
+import { useQuotesStore, setTagFilter, addTag } from "../contexts/QuotesContext";
+import { useFocus } from "../contexts/FocusContext";
 import {
   initHiddenTagGroups,
   setTagGroupsHidden,
@@ -113,16 +119,59 @@ function ChevronIcon() {
   );
 }
 
+// ── Tag lookup helper ─────────────────────────────────────────────────────
+
+interface FoundTag {
+  name: string;
+  codebook_group: string;
+  colour_set: string;
+  colour_index: number;
+}
+
+/** Look up a tag by name in the codebook, returning colour metadata. */
+function findTagInCodebook(
+  codebook: CodebookResponse | null,
+  tagName: string,
+): FoundTag | null {
+  if (!codebook) return null;
+  const lower = tagName.toLowerCase();
+  for (const group of codebook.groups) {
+    for (const tag of group.tags) {
+      if (tag.name.toLowerCase() === lower) {
+        return {
+          name: tag.name,
+          codebook_group: group.name,
+          colour_set: group.colour_set,
+          colour_index: tag.colour_index,
+        };
+      }
+    }
+  }
+  for (const tag of codebook.ungrouped) {
+    if (tag.name.toLowerCase() === lower) {
+      return { name: tag.name, codebook_group: "", colour_set: "", colour_index: tag.colour_index };
+    }
+  }
+  return null;
+}
+
 // ── Component ─────────────────────────────────────────────────────────────
 
 export function TagSidebar() {
   const [codebook, setCodebook] = useState<CodebookResponse | null>(null);
   const [search, setSearch] = useState("");
+  const [showUsedOnly, setShowUsedOnly] = useState(false);
 
   const store = useQuotesStore();
   const tagFilter = store.tagFilter;
 
   const { hiddenTagGroups } = useSidebarStore();
+  const { selectedIds, flashTag } = useFocus();
+
+  const assignActive = selectedIds.size > 0;
+
+  // Flashing sidebar tags (same Set+timeout pattern as QuoteGroup)
+  const [flashingSidebarTags, setFlashingSidebarTags] = useState<Set<string>>(new Set());
 
   // Fetch codebook
   useEffect(() => {
@@ -197,9 +246,29 @@ export function TagSidebar() {
     return names;
   }, [codebook]);
 
-  // Stats for subtitle
+  // Stats for subtitle (filtered by search + used-only)
   const totalTags = allTagNames.length;
   const totalFrameworks = frameworks.length;
+
+  const visibleStats = useMemo(() => {
+    if (!showUsedOnly && !search) return { tags: totalTags, frameworks: totalFrameworks };
+    let tagCount = 0;
+    let fwCount = 0;
+    for (const fw of frameworks) {
+      let fwHasTags = false;
+      for (const g of fw.groups) {
+        for (const t of g.tags) {
+          if (tagPassesFilters(t)) {
+            tagCount++;
+            fwHasTags = true;
+          }
+        }
+      }
+      if (fwHasTags) fwCount++;
+    }
+    return { tags: tagCount, frameworks: fwCount };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [frameworks, search, showUsedOnly, tagCounts, totalTags, totalFrameworks]);
 
   // ── Search filter ───────────────────────────────────────────────────
 
@@ -213,6 +282,15 @@ export function TagSidebar() {
     if (!search) return true;
     if (g.name.toLowerCase().includes(searchLower)) return true;
     return g.tags.some(tagMatchesSearch);
+  }
+
+  function tagIsUsed(t: CodebookTagResponse): boolean {
+    return (tagCounts[t.name.toLowerCase()] ?? 0) > 0;
+  }
+
+  /** A tag passes both the search and used-only filters. */
+  function tagPassesFilters(t: CodebookTagResponse): boolean {
+    return (!search || tagMatchesSearch(t)) && (!showUsedOnly || tagIsUsed(t));
   }
 
   // ── Actions ─────────────────────────────────────────────────────────
@@ -247,6 +325,44 @@ export function TagSidebar() {
     });
   }, [allTagNames]);
 
+  const handleSidebarAssign = useCallback(
+    (tagName: string) => {
+      if (selectedIds.size === 0) return;
+      const targets = Array.from(selectedIds);
+
+      const found = findTagInCodebook(codebook, tagName);
+      if (!found) return;
+
+      const payload: TagResponse = {
+        name: found.name,
+        codebook_group: found.codebook_group,
+        colour_set: found.colour_set,
+        colour_index: found.colour_index,
+        source: "human",
+      };
+
+      for (const domId of targets) {
+        addTag(domId, payload);
+        flashTag(domId, found.name);
+      }
+
+      // Flash sidebar badge
+      setFlashingSidebarTags((prev) => {
+        const next = new Set(prev);
+        next.add(tagName);
+        return next;
+      });
+      setTimeout(() => {
+        setFlashingSidebarTags((prev) => {
+          const next = new Set(prev);
+          next.delete(tagName);
+          return next;
+        });
+      }, 500);
+    },
+    [selectedIds, codebook, flashTag],
+  );
+
   const handleToggleFrameworkEye = useCallback((fw: FrameworkGroup, e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
@@ -262,8 +378,8 @@ export function TagSidebar() {
     <>
       {/* Subtitle */}
       <div className="tag-sidebar-subtitle">
-        {totalTags} tag{totalTags !== 1 ? "s" : ""} across{" "}
-        {totalFrameworks} framework{totalFrameworks !== 1 ? "s" : ""}
+        {visibleStats.tags} tag{visibleStats.tags !== 1 ? "s" : ""} across{" "}
+        {visibleStats.frameworks} framework{visibleStats.frameworks !== 1 ? "s" : ""}
       </div>
 
       {/* Actions bar */}
@@ -274,6 +390,14 @@ export function TagSidebar() {
         <span className="tag-filter-separator">|</span>
         <button type="button" className="tag-filter-action" onClick={handleClear}>
           Clear
+        </button>
+        <span className="tag-filter-separator">|</span>
+        <button
+          type="button"
+          className={`tag-filter-action${showUsedOnly ? " tag-filter-action-active" : ""}`}
+          onClick={() => setShowUsedOnly((v) => !v)}
+        >
+          {showUsedOnly ? "All" : "Used"}
         </button>
       </div>
 
@@ -294,7 +418,9 @@ export function TagSidebar() {
       {/* Framework tree */}
       <div className="tag-sidebar-body">
         {frameworks.map((fw) => {
-          const matchingGroups = fw.groups.filter(groupMatchesSearch);
+          const matchingGroups = fw.groups
+            .filter(groupMatchesSearch)
+            .filter((g) => !showUsedOnly || g.tags.some(tagPassesFilters));
           if (matchingGroups.length === 0) return null;
           const isFrameworkHidden = hiddenFrameworks.has(fw.id);
 
@@ -325,7 +451,7 @@ export function TagSidebar() {
                       name={group.name}
                       subtitle={group.subtitle}
                       colourSet={group.colour_set}
-                      tags={search ? group.tags.filter(tagMatchesSearch) : group.tags}
+                      tags={search || showUsedOnly ? group.tags.filter(tagPassesFilters) : group.tags}
                       groupBg={getGroupBg(group.colour_set)}
                       tagCounts={tagCounts}
                       uncheckedSet={uncheckedSet}
@@ -333,6 +459,9 @@ export function TagSidebar() {
                       onToggleTag={handleToggleTag}
                       onToggleEye={() => toggleTagGroupHidden(group.name)}
                       hideGroupHeader={fw.groups.length === 1}
+                      onAssign={handleSidebarAssign}
+                      assignActive={assignActive}
+                      flashingTags={flashingSidebarTags}
                     />
                   ))}
                 </div>

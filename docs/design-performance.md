@@ -10,6 +10,7 @@ Audited Feb 2026. Stage concurrency shipped. Remaining items ranked by impact.
 - **Compact JSON in LLM prompts** — `quote_clustering.py` and `thematic_grouping.py` switched from `json.dumps(indent=2)` to `separators=(",",":")`. Saves 10–20% input tokens on the two cross-participant calls
 - **FFmpeg VideoToolbox hardware decode** — `utils/audio.py` passes `-hwaccel videotoolbox` on macOS, offloading H.264/HEVC video decode to the Apple Silicon media engine. No-op for audio-only inputs and non-macOS platforms
 - **Concurrent FFmpeg audio extraction** — `extract_audio_for_sessions()` is async with `asyncio.Semaphore(4)` + `asyncio.gather()`. Blocking `subprocess.run` calls wrapped in `asyncio.to_thread()`. Up to 4 FFmpeg processes in parallel. Default of 4 is optimal across all Apple Silicon (M1–M4 Ultra) — bottleneck is the shared media engine, not CPU cores
+- **Cache `system_profiler` results** (#30) — `detect_hardware()` caches static hardware properties (chip_name, gpu_cores, memory_gb) to `~/.config/bristlenose/.hardware-cache.json` with 24h TTL. Dynamic properties (mlx_available, cuda_available) are always re-checked. Saves ~2–4s on macOS startup
 
 ---
 
@@ -17,7 +18,6 @@ Audited Feb 2026. Stage concurrency shipped. Remaining items ranked by impact.
 
 ### Quick wins
 
-- **Cache `system_profiler` results** (#30) — `utils/hardware.py` runs `system_profiler` twice on every startup (~2–4s on macOS). Cache to `~/.config/bristlenose/.hardware-cache.json` with 24h TTL. ~30 lines change
 - **Skip logo copy when unchanged** (#31) — `render/report.py` runs `shutil.copy2()` on every render. Add size/mtime check first
 
 ### Medium effort

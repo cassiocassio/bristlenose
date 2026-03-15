@@ -1,9 +1,11 @@
 /* ── Analysis page — signal cards + heatmap ─────────────────── */
 
-/* Signal card list */
+/* Signal card list — responsive grid.
+   Cards fill available width; a second column appears when the container
+   is wide enough (~900px+ in the center column). */
 .signal-cards {
-    display: flex;
-    flex-direction: column;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 26rem), 1fr));
     gap: var(--bn-space-md);
 }
 
@@ -590,5 +592,27 @@
 
 .signal-elaboration strong {
     font-weight: var(--bn-weight-starred);
+}
+
+/* ── Responsive: narrow viewport — stack card top vertically ── */
+/* --bn-breakpoint-compact = 500px */
+@media (max-width: 500px) {
+    .signal-card-top {
+        flex-direction: column;
+        gap: var(--bn-space-sm);
+    }
+
+    .signal-card-metrics {
+        align-self: flex-start;
+    }
+
+    .signal-card-right {
+        align-items: flex-start;
+        align-self: stretch;
+    }
+
+    .signal-card-badges {
+        margin-bottom: var(--bn-space-sm);
+    }
 }
 

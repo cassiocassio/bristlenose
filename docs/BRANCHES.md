@@ -19,6 +19,7 @@ Each active feature branch gets its own **git worktree** — a full working copy
 | `bristlenose_branch highlighter/` | `highlighter` | Highlighter feature |
 | `bristlenose_branch living-fish/` | `living-fish` | Animated "living portrait" logo for serve mode |
 | `bristlenose_branch drag-push/` | `drag-push` | Sidebar drag-to-open uses push mode (not overlay) |
+| `bristlenose_branch responsive-signal-cards/` | `responsive-signal-cards` | Responsive signal cards |
 
 
 
@@ -102,6 +103,7 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 | `highlighter` | `bristlenose_branch highlighter/` | `origin/highlighter` |
 | `living-fish` | `bristlenose_branch living-fish/` | `origin/living-fish` |
 | `drag-push` | `bristlenose_branch drag-push/` | local only |
+| `responsive-signal-cards` | `bristlenose_branch responsive-signal-cards/` | local only |
 
 
 ---
@@ -175,6 +177,24 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 - `symbology` — no overlap (touches render/template files, not sidebar CSS/hooks)
 - `highlighter` — unknown scope, likely no overlap
 - `living-fish` — no overlap (logo assets, not sidebar)
+
+---
+
+### `responsive-signal-cards`
+
+**Status:** Just started
+**Started:** 15 Mar 2026
+**Worktree:** `/Users/cassio/Code/bristlenose_branch responsive-signal-cards/`
+**Remote:** local only (push when ready)
+
+**What it does:** Responsive layout for signal/analysis cards across screen sizes.
+
+**Files this branch will touch:**
+- TBD — will be filled in as work progresses
+
+**Potential conflicts with other branches:**
+- `symbology` — low risk (touches render/template files, not signal card layout)
+- `drag-push` — low risk (sidebar CSS, not signal cards)
 
 ---
 

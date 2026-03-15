@@ -163,7 +163,7 @@ Ref: `docs/design-llm-providers.md`, `docs/design-research-methodology.md`
 
 | Item | Issue | Effort |
 |------|-------|--------|
-| Cache `system_profiler` results | #30 | trivial |
+| ~~Cache `system_profiler` results~~ | #30 | ~~trivial~~ ✅ |
 | Skip logo copy when unchanged | #31 | trivial |
 | Temp WAV cleanup after transcription | #33 | small |
 | Word timestamp pruning after merge stage | #35 | small |

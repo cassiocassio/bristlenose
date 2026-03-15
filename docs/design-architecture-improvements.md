@@ -83,9 +83,9 @@ Planned but not implemented. The Python package works on Windows; packaging as a
 
 ## Performance
 
-### 14. Cache `system_profiler` (Issue #30)
+### 14. Cache `system_profiler` (Issue #30) ✅
 
-Called on every startup, takes 2–4 seconds. Cache the result with a TTL or hash the hardware config.
+**Done (Mar 2026).** `detect_hardware()` caches static hardware properties (chip_name, gpu_cores, memory_gb) to `~/.config/bristlenose/.hardware-cache.json` with 24h TTL. Dynamic properties (mlx_available, cuda_available) are always re-checked. Saves ~2–4s on macOS startup.
 
 ### 15. Word Timestamp Pruning (Issue #35)
 

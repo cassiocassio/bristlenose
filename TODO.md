@@ -179,7 +179,7 @@ See `docs/design-performance.md` for full audit, done items, and "not worth opti
 
 | Item | Issue | Effort |
 |------|-------|--------|
-| Cache `system_profiler` results | #30 | trivial |
+| ~~Cache `system_profiler` results~~ | #30 | ~~trivial~~ ✅ |
 | Skip logo copy when unchanged | #31 | trivial |
 | Pipeline stages 8→9 per-participant chaining | #32 | medium |
 | Temp WAV cleanup after transcription | #33 | small |

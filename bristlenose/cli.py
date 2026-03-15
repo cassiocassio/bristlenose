@@ -12,6 +12,8 @@ from rich.console import Console
 
 from bristlenose import __version__
 from bristlenose.config import load_settings
+from bristlenose.i18n import SUPPORTED_LOCALES as _I18N_LOCALES
+from bristlenose.i18n import set_locale as _set_locale
 
 # Known commands — used by _maybe_inject_run() to detect bare directory arguments
 _COMMANDS = {
@@ -56,6 +58,11 @@ def _version_callback(value: bool) -> None:
         raise typer.Exit()
 
 
+def _lang_callback(value: str | None) -> None:
+    if value:
+        _set_locale(value)
+
+
 @app.callback()
 def main(
     version: Annotated[
@@ -67,6 +74,15 @@ def main(
             is_eager=True,
         ),
     ] = False,
+    lang: Annotated[
+        str | None,
+        typer.Option(
+            "--lang",
+            help=f"UI language ({', '.join(_I18N_LOCALES)}).",
+            callback=_lang_callback,
+            is_eager=True,
+        ),
+    ] = None,
 ) -> None:
     """User-research transcription and quote extraction engine."""
 

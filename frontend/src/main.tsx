@@ -4,6 +4,9 @@ import { router } from "./router";
 import { isExportMode } from "./utils/exportData";
 import { redirectHashToPathname } from "./utils/hashRedirect";
 
+// Initialise i18next — must be imported before any component that uses useTranslation.
+import "./i18n";
+
 // ── SPA mode (serve) / Export mode ──────────────────────────────────────
 // When #bn-app-root exists, mount the full React Router app.
 // In serve mode: browser router (pathname routes).

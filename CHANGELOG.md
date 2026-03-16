@@ -2,6 +2,10 @@
 
 All notable changes to Bristlenose are documented here. See also the [README](README.md) for the latest releases.
 
+**0.13.7** — _16 Mar 2026_
+
+- **Spanish locale** — machine-translated all 102 UI strings across 8 locale files (3 frontend, 5 backend). Covers navigation, settings, enums, CLI messages, doctor, pipeline progress, and server errors. Ready for native-speaker review and polish
+
 **0.13.6** — _16 Mar 2026_
 
 - **Single tag focus mode** — click a tag count in the sidebar to solo that tag (mixing-desk style). All other sidebar controls dim to 50%; the focused tag row stays at full brightness. "You are here" blue wash highlight matches the TOC sidebar's active link style. Click again or press Escape to exit and restore the previous tag filter

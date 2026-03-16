@@ -1,0 +1,19 @@
+{
+  "heading": "Ajustes",
+  "appearance": {
+    "legend": "Apariencia de la aplicación",
+    "auto": "Usar apariencia del sistema",
+    "light": "Claro",
+    "dark": "Oscuro"
+  },
+  "language": {
+    "legend": "Idioma",
+    "description": "Controla el idioma de la interfaz. El contenido del informe no se traduce."
+  },
+  "configReference": {
+    "heading": "Referencia de configuración",
+    "intro": "Todos los ajustes se configuran mediante variables de entorno o un archivo <code>.env</code>. Se muestran aquí como referencia — para cambiar un valor, edita el archivo indicado en cada fila.",
+    "clickToCopy": "Clic para copiar",
+    "copied": "Copiado"
+  }
+}

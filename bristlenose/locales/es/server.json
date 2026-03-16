@@ -1,0 +1,11 @@
+{
+  "error": {
+    "notFound": "Recurso no encontrado.",
+    "badRequest": "Solicitud incorrecta: {detail}",
+    "internal": "Error interno del servidor."
+  },
+  "status": {
+    "healthy": "Correcto",
+    "degraded": "Degradado"
+  }
+}

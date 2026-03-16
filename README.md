@@ -386,6 +386,10 @@ Edit `bristlenose/__init__.py` (the single source of truth for version), commit,
 
 ## Changelog
 
+**0.13.7** — _16 Mar 2026_
+
+- Spanish locale — machine-translated 102 UI strings across 8 locale files, ready for native-speaker review
+
 **0.13.6** — _16 Mar 2026_
 
 - Single tag focus mode — click a tag count to solo that tag (mixing-desk style), click again or Escape to exit. Sidebar dims non-focused tags; focused tag row stays at full brightness. "You are here" blue wash highlight on the active count matches TOC sidebar style

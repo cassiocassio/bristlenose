@@ -1,0 +1,10 @@
+{
+  "heading": "Doctor",
+  "checkOk": "{label}",
+  "checkFail": "{label}",
+  "checkWarn": "{label}",
+  "summary": {
+    "allPassed": "Todas las comprobaciones superadas.",
+    "issuesFound": "{count} problema(s) encontrado(s)."
+  }
+}

@@ -1,0 +1,35 @@
+{
+  "nav": {
+    "project": "Proyecto",
+    "quotes": "Citas",
+    "sessions": "Sesiones",
+    "analysis": "Análisis",
+    "codebook": "Libro de códigos",
+    "settings": "Ajustes",
+    "about": "Acerca de"
+  },
+  "buttons": {
+    "save": "Guardar",
+    "cancel": "Cancelar",
+    "export": "Exportar",
+    "close": "Cerrar",
+    "copy": "Copiar",
+    "delete": "Eliminar",
+    "accept": "Aceptar",
+    "deny": "Rechazar",
+    "undo": "Deshacer",
+    "apply": "Aplicar",
+    "reset": "Restablecer"
+  },
+  "labels": {
+    "search": "Buscar",
+    "loading": "Cargando…",
+    "noResults": "Sin resultados",
+    "error": "Error"
+  },
+  "footer": {
+    "builtWith": "Hecho con Bristlenose",
+    "reportIssue": "Informar de un problema",
+    "giveFeedback": "Enviar comentarios"
+  }
+}

@@ -160,6 +160,7 @@ macOS ships BSD versions of `sed`, `grep`, `awk`, `find`, `xargs`, `date`, `stat
 - **Desktop app** (macOS, SwiftUI, PyInstaller sidecar, .dmg distribution): `docs/design-desktop-app.md` — vision, PRD, stack rationale, user flow, open questions. **Read this before working in `desktop/`**
 - **Session management** (re-import, session enable/disable, quarantine, pipeline re-run): `docs/design-session-management.md`
 - **Serve mode milestone 1** (domain schema, importer, sessions API): `docs/design-serve-milestone-1.md`
+- **Internationalisation** (codebook/sentiment translation strategy, UI chrome terminology research, mixed-language interviews): `docs/design-i18n.md` — terminology table sourced from ATLAS.ti/MAXQDA/NVivo localized UIs and academic QDA literature. **Read this before working on i18n or translation**
 - **Codebook island** (migration audit, API design, drag-drop decisions): `docs/design-codebook-island.md`
 - **Moderator question pill** (hover-triggered context reveal, interaction design, file map): `docs/design-moderator-question-pill.md`
 - **Signal elaboration** (interpretive names + one-sentence summaries for framework signal cards, pattern types, generation algorithm): `docs/design-signal-elaboration.md`
@@ -292,7 +293,7 @@ When the user signals end of session, **proactively offer to run this checklist*
 9. **Clean up branches** — delete merged feature branches
 10. **Verify CI** — check latest push passes CI
 
-## Current status (v0.13.6, Mar 2026)
+## Current status (v0.13.7, Mar 2026)
 
 Core pipeline published to PyPI + Homebrew + Snap. Latest: **Render refactor** — `render_html.py` broken into `bristlenose/stages/s12_render/` package (8 submodules). Static render formally deprecated. 1938 Python tests, 1072 Vitest tests. React migration complete (Steps 1–10). See `CHANGELOG.md` and git log for full history.
 

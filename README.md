@@ -388,11 +388,8 @@ Edit `bristlenose/__init__.py` (the single source of truth for version), commit,
 
 **0.13.6** — _16 Mar 2026_
 
-- Fix solo mode: focused tag row stays at full brightness instead of dimming with everything else
-
-**0.13.5** — _16 Mar 2026_
-
-- Single tag focus mode — click a tag count to solo that tag (mixing-desk style), click again or Escape to exit. Sidebar dims to highlight the active filter
+- Single tag focus mode — click a tag count to solo that tag (mixing-desk style), click again or Escape to exit. Sidebar dims non-focused tags; focused tag row stays at full brightness. "You are here" blue wash highlight on the active count matches TOC sidebar style
+- Fix circular dependency crash in production build (SidebarStore → QuotesContext import cycle caused "Cannot access uninitialized variable" error)
 - Used/unused tag filter toggle — quickly show only tags that appear on quotes
 - Sidebar tag click-to-assign — select quotes then click a tag badge to apply it
 - Tier 1 logging instrumentation and PII hardening

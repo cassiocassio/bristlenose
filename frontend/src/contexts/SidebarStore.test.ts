@@ -29,13 +29,10 @@ vi.mock("../utils/api", () => ({
   putHiddenTagGroups: vi.fn(),
 }));
 
-// Mock QuotesContext so enterSoloMode/exitSoloMode can call setTagFilter.
-vi.mock("./QuotesContext", () => ({
-  setTagFilter: vi.fn(),
-}));
-
 import { putHiddenTagGroups } from "../utils/api";
-import { setTagFilter } from "./QuotesContext";
+
+// Standalone mock for the setTagFilter callback passed to solo functions.
+const mockSetTagFilter = vi.fn();
 
 beforeEach(() => {
   resetSidebarStore();
@@ -361,7 +358,7 @@ describe("resetSidebarStore", () => {
   it("resets solo mode state", () => {
     const { result } = renderHook(() => useSidebarStore());
     const filter = { unchecked: ["a"], noTagsUnchecked: false, clearAll: false };
-    act(() => enterSoloMode("Delight", ["Delight", "Trust", "Habit"], filter));
+    act(() => enterSoloMode("Delight", ["Delight", "Trust", "Habit"], filter, mockSetTagFilter));
     act(() => resetSidebarStore());
     expect(result.current.soloTag).toBeNull();
     expect(result.current.savedTagFilter).toBeNull();
@@ -376,19 +373,19 @@ describe("solo mode", () => {
 
   it("enterSoloMode sets soloTag", () => {
     const { result } = renderHook(() => useSidebarStore());
-    act(() => enterSoloMode("Delight", ALL_TAGS, ORIGINAL_FILTER));
+    act(() => enterSoloMode("Delight", ALL_TAGS, ORIGINAL_FILTER, mockSetTagFilter));
     expect(result.current.soloTag).toBe("delight");
   });
 
   it("enterSoloMode saves the current tag filter", () => {
     const { result } = renderHook(() => useSidebarStore());
-    act(() => enterSoloMode("Delight", ALL_TAGS, ORIGINAL_FILTER));
+    act(() => enterSoloMode("Delight", ALL_TAGS, ORIGINAL_FILTER, mockSetTagFilter));
     expect(result.current.savedTagFilter).toEqual(ORIGINAL_FILTER);
   });
 
   it("enterSoloMode calls setTagFilter with only the solo tag checked", () => {
-    act(() => enterSoloMode("Delight", ALL_TAGS, ORIGINAL_FILTER));
-    expect(setTagFilter).toHaveBeenCalledWith({
+    act(() => enterSoloMode("Delight", ALL_TAGS, ORIGINAL_FILTER, mockSetTagFilter));
+    expect(mockSetTagFilter).toHaveBeenCalledWith({
       unchecked: ["Trust", "Habit", "Doubt"],
       noTagsUnchecked: true,
       clearAll: false,
@@ -397,13 +394,13 @@ describe("solo mode", () => {
 
   it("switching solo tag preserves original savedTagFilter", () => {
     const { result } = renderHook(() => useSidebarStore());
-    act(() => enterSoloMode("Delight", ALL_TAGS, ORIGINAL_FILTER));
-    vi.mocked(setTagFilter).mockClear();
+    act(() => enterSoloMode("Delight", ALL_TAGS, ORIGINAL_FILTER, mockSetTagFilter));
+    mockSetTagFilter.mockClear();
     // Now switch to Trust — the savedTagFilter should still be ORIGINAL_FILTER
-    act(() => enterSoloMode("Trust", ALL_TAGS, { unchecked: ["Delight", "Habit", "Doubt"], noTagsUnchecked: true, clearAll: false }));
+    act(() => enterSoloMode("Trust", ALL_TAGS, { unchecked: ["Delight", "Habit", "Doubt"], noTagsUnchecked: true, clearAll: false }, mockSetTagFilter));
     expect(result.current.soloTag).toBe("trust");
     expect(result.current.savedTagFilter).toEqual(ORIGINAL_FILTER);
-    expect(setTagFilter).toHaveBeenCalledWith({
+    expect(mockSetTagFilter).toHaveBeenCalledWith({
       unchecked: ["Delight", "Habit", "Doubt"],
       noTagsUnchecked: true,
       clearAll: false,
@@ -412,24 +409,24 @@ describe("solo mode", () => {
 
   it("exitSoloMode clears soloTag and savedTagFilter", () => {
     const { result } = renderHook(() => useSidebarStore());
-    act(() => enterSoloMode("Delight", ALL_TAGS, ORIGINAL_FILTER));
-    act(() => exitSoloMode());
+    act(() => enterSoloMode("Delight", ALL_TAGS, ORIGINAL_FILTER, mockSetTagFilter));
+    act(() => exitSoloMode(mockSetTagFilter));
     expect(result.current.soloTag).toBeNull();
     expect(result.current.savedTagFilter).toBeNull();
   });
 
   it("exitSoloMode restores the saved tag filter", () => {
-    act(() => enterSoloMode("Delight", ALL_TAGS, ORIGINAL_FILTER));
-    vi.mocked(setTagFilter).mockClear();
-    act(() => exitSoloMode());
-    expect(setTagFilter).toHaveBeenCalledWith(ORIGINAL_FILTER);
+    act(() => enterSoloMode("Delight", ALL_TAGS, ORIGINAL_FILTER, mockSetTagFilter));
+    mockSetTagFilter.mockClear();
+    act(() => exitSoloMode(mockSetTagFilter));
+    expect(mockSetTagFilter).toHaveBeenCalledWith(ORIGINAL_FILTER);
   });
 
   it("exitSoloMode with no saved filter restores empty filter", () => {
     // Edge case: exitSoloMode called without enterSoloMode
-    vi.mocked(setTagFilter).mockClear();
-    act(() => exitSoloMode());
-    expect(setTagFilter).toHaveBeenCalledWith({
+    mockSetTagFilter.mockClear();
+    act(() => exitSoloMode(mockSetTagFilter));
+    expect(mockSetTagFilter).toHaveBeenCalledWith({
       unchecked: [],
       noTagsUnchecked: false,
       clearAll: false,

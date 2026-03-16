@@ -20,6 +20,7 @@ import {
   useQuotesStore,
   toggleStar,
   setSearchQuery,
+  setTagFilter,
   addTag,
   getLastUsedTag,
 } from "../contexts/QuotesContext";
@@ -296,7 +297,7 @@ export function useKeyboardShortcuts({
         }
         if (soloTagRef.current !== null) {
           e.preventDefault();
-          exitSoloMode();
+          exitSoloMode(setTagFilter);
           return;
         }
         if (clearSearch()) {

@@ -368,9 +368,9 @@ export function TagSidebar() {
   const handleSoloClick = useCallback(
     (tagName: string) => {
       if (soloTag === tagName.toLowerCase()) {
-        exitSoloMode();
+        exitSoloMode(setTagFilter);
       } else {
-        enterSoloMode(tagName, allTagNames, tagFilter);
+        enterSoloMode(tagName, allTagNames, tagFilter, setTagFilter);
       }
     },
     [soloTag, allTagNames, tagFilter],

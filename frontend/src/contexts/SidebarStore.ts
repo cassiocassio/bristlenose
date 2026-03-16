@@ -19,7 +19,6 @@
 import { useSyncExternalStore } from "react";
 import { putHiddenTagGroups } from "../utils/api";
 import type { TagFilterState } from "../utils/filter";
-import { setTagFilter } from "./QuotesContext";
 
 // ── Constants ─────────────────────────────────────────────────────────────
 
@@ -267,6 +266,7 @@ export function enterSoloMode(
   tagName: string,
   allTagNames: string[],
   currentTagFilter: TagFilterState,
+  applyTagFilter: (f: TagFilterState) => void,
 ): void {
   const lower = tagName.toLowerCase();
   setState((prev) => {
@@ -274,7 +274,7 @@ export function enterSoloMode(
       prev.soloTag === null ? currentTagFilter : prev.savedTagFilter;
     return { ...prev, soloTag: lower, savedTagFilter };
   });
-  setTagFilter({
+  applyTagFilter({
     unchecked: allTagNames.filter((n) => n.toLowerCase() !== lower),
     noTagsUnchecked: true,
     clearAll: false,
@@ -282,10 +282,12 @@ export function enterSoloMode(
 }
 
 /** Exit solo mode and restore the tag filter snapshot. */
-export function exitSoloMode(): void {
+export function exitSoloMode(
+  applyTagFilter: (f: TagFilterState) => void,
+): void {
   const saved = state.savedTagFilter;
   setState((prev) => ({ ...prev, soloTag: null, savedTagFilter: null }));
-  setTagFilter(saved ?? { unchecked: [], noTagsUnchecked: false, clearAll: false });
+  applyTagFilter(saved ?? { unchecked: [], noTagsUnchecked: false, clearAll: false });
 }
 
 /** Reset to defaults. Used for test isolation. */

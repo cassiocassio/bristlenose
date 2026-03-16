@@ -388,11 +388,18 @@ Edit `bristlenose/__init__.py` (the single source of truth for version), commit,
 
 **0.13.5** — _16 Mar 2026_
 
-- Add single tag focus mode — click a tag count to solo that tag, Escape to exit
+- Single tag focus mode — click a tag count to solo that tag (mixing-desk style), click again or Escape to exit. Sidebar dims to highlight the active filter
+- Used/unused tag filter toggle — quickly show only tags that appear on quotes
+- Sidebar tag click-to-assign — select quotes then click a tag badge to apply it
+- Tier 1 logging instrumentation and PII hardening
+- Multilingual UI infrastructure (i18next + Python i18n module, browser language auto-detection)
+- Responsive signal cards — grid layout with narrow-screen stacking
+- Cache `system_profiler` results with 24h TTL to avoid slow macOS startup
 
 **0.13.4** — _14 Mar 2026_
 
 - Fix import FK constraint — delete AutoCode proposals before removing stale quotes during re-import
+- Sessions sidebar with live-resize content-adaptive breakpoints
 
 **0.13.3** — _14 Mar 2026_
 

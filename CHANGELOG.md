@@ -2,6 +2,17 @@
 
 All notable changes to Bristlenose are documented here. See also the [README](README.md) for the latest releases.
 
+**0.13.6** — _16 Mar 2026_
+
+- **Single tag focus mode** — click a tag count in the sidebar to solo that tag (mixing-desk style). All other sidebar controls dim to 50%; the focused tag row stays at full brightness. "You are here" blue wash highlight matches the TOC sidebar's active link style. Click again or press Escape to exit and restore the previous tag filter
+- **Fix circular dependency crash** — `SidebarStore` importing `setTagFilter` from `QuotesContext` at module scope created a circular dependency that caused "Cannot access uninitialized variable" in production builds. Refactored to pass `setTagFilter` as a callback parameter
+- **Used/unused tag filter toggle** — "Used" link in tag sidebar header filters to show only tags that appear on at least one quote, hiding zero-count tags for a cleaner view
+- **Sidebar tag click-to-assign** — select quotes then click a tag badge in the sidebar to apply that tag to all selected quotes. Flash animation on each newly tagged quote, toast notification when tagged quotes are off-screen
+- **Tier 1 logging instrumentation** — persistent log file with stage-level timing, session counts, and LLM token usage. PII hardening: file paths, API keys, and participant names are scrubbed from log output
+- **Multilingual UI infrastructure** — i18next integration with `useTranslation` hook, Python i18n module, browser language auto-detection on first visit. Translation keys for all user-facing strings (not yet translated)
+- **Responsive signal cards** — signal framework cards use CSS grid layout with narrow-screen stacking for readable display on mobile viewports
+- **Cache `system_profiler` results** — 24-hour TTL cache for macOS `system_profiler` output, avoiding the slow 2-3s startup penalty on every `bristlenose doctor` or `bristlenose run`
+
 **0.13.4** — _14 Mar 2026_
 
 - **Fix import FK constraint** — delete `ProposedTag` rows (AutoCode proposals) before removing stale quotes during re-import, preventing `FOREIGN KEY constraint failed` errors on `bristlenose serve` startup

@@ -362,7 +362,8 @@
 
 /* The focused tag row stays at full brightness */
 .tag-solo-active .tag-row-solo-focused .tag-checkbox-label,
-.tag-solo-active .tag-row-solo-focused .badge {
+.tag-solo-active .tag-row-solo-focused .badge,
+.tag-solo-active .tag-row-solo-focused .tag-bar-area {
     opacity: 1;
     pointer-events: auto;
 }

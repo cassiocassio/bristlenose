@@ -30,7 +30,9 @@ import {
   openTocPush,
   closeToc,
   closeTags,
+  exitSoloMode,
 } from "../contexts/SidebarStore";
+import { setTagFilter } from "../contexts/QuotesContext";
 import { usePlaygroundStore } from "../contexts/PlaygroundStore";
 import { TocSidebar } from "./TocSidebar";
 import { TagSidebar } from "./TagSidebar";
@@ -125,7 +127,7 @@ interface SidebarLayoutProps {
 }
 
 export function SidebarLayout({ active, leftPanel, leftPanelTitle, showRightSidebar = true, children }: SidebarLayoutProps) {
-  const { tocMode, tagsOpen, tocWidth, tagsWidth } = useSidebarStore();
+  const { tocMode, tagsOpen, tocWidth, tagsWidth, soloTag } = useSidebarStore();
   const pg = usePlaygroundStore();
   const layoutRef = useRef<HTMLDivElement>(null);
   const tocRailRef = useRef<HTMLDivElement>(null);
@@ -288,6 +290,11 @@ export function SidebarLayout({ active, leftPanel, leftPanelTitle, showRightSide
   }, [tocMode, closeTocOverlayAnimated]);
 
   // Escape key: close the sidebar that contains focus.
+  // When solo mode is active and focus is in the tag sidebar, Escape exits
+  // solo mode first (undo the solo) rather than closing the whole panel.
+  const soloTagRef = useRef(soloTag);
+  soloTagRef.current = soloTag;
+
   useEffect(() => {
     if (!active) return;
 
@@ -299,7 +306,11 @@ export function SidebarLayout({ active, leftPanel, leftPanelTitle, showRightSide
         handleCloseToc();
       } else if (tagsOpen && tagSidebarRef.current?.contains(target)) {
         e.preventDefault();
-        handleCloseTags();
+        if (soloTagRef.current !== null) {
+          exitSoloMode(setTagFilter);
+        } else {
+          handleCloseTags();
+        }
       }
     };
 

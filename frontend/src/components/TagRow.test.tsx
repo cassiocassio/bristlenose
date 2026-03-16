@@ -110,4 +110,42 @@ describe("TagRow", () => {
     render(<TagRow {...BASE_PROPS} />);
     expect(screen.getByText("5")).toBeInTheDocument();
   });
+
+  // ── Solo / focus mode ─────────────────────────────────────────────────
+
+  it("bar area click calls onSoloClick with tag name", async () => {
+    const onSoloClick = vi.fn();
+    render(<TagRow {...BASE_PROPS} onSoloClick={onSoloClick} />);
+    await userEvent.click(screen.getByRole("button", { name: /focus on frustration/i }));
+    expect(onSoloClick).toHaveBeenCalledWith("Frustration");
+  });
+
+  it("bar area has role=button when onSoloClick provided", () => {
+    render(<TagRow {...BASE_PROPS} onSoloClick={vi.fn()} />);
+    expect(screen.getByRole("button", { name: /focus on frustration/i })).toBeInTheDocument();
+  });
+
+  it("bar area has no role when onSoloClick not provided", () => {
+    render(<TagRow {...BASE_PROPS} />);
+    expect(screen.queryByRole("button", { name: /focus on frustration/i })).not.toBeInTheDocument();
+  });
+
+  it("tag-solo-focused class applied to count when soloFocused", () => {
+    render(<TagRow {...BASE_PROPS} onSoloClick={vi.fn()} soloFocused={true} />);
+    expect(screen.getByText("5")).toHaveClass("tag-solo-focused");
+  });
+
+  it("tag-solo-focused class not applied when soloFocused is false", () => {
+    render(<TagRow {...BASE_PROPS} onSoloClick={vi.fn()} soloFocused={false} />);
+    expect(screen.getByText("5")).not.toHaveClass("tag-solo-focused");
+  });
+
+  it("Enter key on bar area calls onSoloClick", async () => {
+    const onSoloClick = vi.fn();
+    render(<TagRow {...BASE_PROPS} onSoloClick={onSoloClick} />);
+    const barArea = screen.getByRole("button", { name: /focus on frustration/i });
+    barArea.focus();
+    await userEvent.keyboard("{Enter}");
+    expect(onSoloClick).toHaveBeenCalledWith("Frustration");
+  });
 });

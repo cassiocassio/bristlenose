@@ -26,6 +26,10 @@ interface TagRowProps {
   assignActive?: boolean;
   /** Whether the sidebar badge should flash (accept animation). */
   flashing?: boolean;
+  /** Called when the bar area (micro-bar + count) is clicked to solo this tag. */
+  onSoloClick?: (tagName: string) => void;
+  /** Whether this tag is the active solo target (blue highlight on count). */
+  soloFocused?: boolean;
 }
 
 export function TagRow({
@@ -39,6 +43,8 @@ export function TagRow({
   onAssign,
   assignActive,
   flashing,
+  onSoloClick,
+  soloFocused,
 }: TagRowProps) {
   const handleChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -66,6 +72,20 @@ export function TagRow({
       }
     },
     [name, onAssign, assignActive],
+  );
+
+  const handleBarClick = useCallback(() => {
+    onSoloClick?.(name);
+  }, [name, onSoloClick]);
+
+  const handleBarKeyDown = useCallback(
+    (e: React.KeyboardEvent) => {
+      if (onSoloClick && (e.key === "Enter" || e.key === " ")) {
+        e.preventDefault();
+        onSoloClick(name);
+      }
+    },
+    [name, onSoloClick],
   );
 
   // Micro-bar width: proportional to max count in the group, min 2px
@@ -96,7 +116,14 @@ export function TagRow({
           {name}
         </span>
       </span>
-      <span className="tag-bar-area">
+      <span
+        className="tag-bar-area"
+        onClick={onSoloClick ? handleBarClick : undefined}
+        onKeyDown={onSoloClick ? handleBarKeyDown : undefined}
+        role={onSoloClick ? "button" : undefined}
+        tabIndex={onSoloClick ? 0 : undefined}
+        aria-label={onSoloClick ? `Focus on ${name} quotes` : undefined}
+      >
         {count > 0 && (
           <span
             className="tag-micro-bar"
@@ -106,7 +133,9 @@ export function TagRow({
             }}
           />
         )}
-        <span className="tag-count">{count}</span>
+        <span className={`tag-count${soloFocused ? " tag-solo-focused" : ""}`}>
+          {count}
+        </span>
       </span>
     </div>
   );

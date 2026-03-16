@@ -18,6 +18,8 @@
 
 import { useSyncExternalStore } from "react";
 import { putHiddenTagGroups } from "../utils/api";
+import type { TagFilterState } from "../utils/filter";
+import { setTagFilter } from "./QuotesContext";
 
 // ── Constants ─────────────────────────────────────────────────────────────
 
@@ -46,6 +48,10 @@ export interface SidebarState {
    * Persisted to SQLite via /hidden-tag-groups API.
    */
   hiddenTagGroups: Set<string>;
+  /** Lowercase tag name when in solo/focus mode, null otherwise. Ephemeral. */
+  soloTag: string | null;
+  /** Snapshot of tagFilter from before entering solo mode. */
+  savedTagFilter: TagFilterState | null;
 }
 
 // ── localStorage helpers ──────────────────────────────────────────────────
@@ -99,6 +105,8 @@ function loadState(): SidebarState {
     tocWidth: readWidth(LS_TOC_WIDTH),
     tagsWidth: readWidth(LS_TAGS_WIDTH),
     hiddenTagGroups: new Set(),
+    soloTag: null,
+    savedTagFilter: null,
   };
 }
 
@@ -249,6 +257,37 @@ export function setTagGroupsHidden(groupNames: string[], hidden: boolean): void 
   });
 }
 
+// ── Solo / focus mode ────────────────────────────────────────────────────
+
+/**
+ * Enter solo mode: show only quotes with `tagName`. Snapshots the current
+ * tag filter on first entry; switching tags preserves the original snapshot.
+ */
+export function enterSoloMode(
+  tagName: string,
+  allTagNames: string[],
+  currentTagFilter: TagFilterState,
+): void {
+  const lower = tagName.toLowerCase();
+  setState((prev) => {
+    const savedTagFilter =
+      prev.soloTag === null ? currentTagFilter : prev.savedTagFilter;
+    return { ...prev, soloTag: lower, savedTagFilter };
+  });
+  setTagFilter({
+    unchecked: allTagNames.filter((n) => n.toLowerCase() !== lower),
+    noTagsUnchecked: true,
+    clearAll: false,
+  });
+}
+
+/** Exit solo mode and restore the tag filter snapshot. */
+export function exitSoloMode(): void {
+  const saved = state.savedTagFilter;
+  setState((prev) => ({ ...prev, soloTag: null, savedTagFilter: null }));
+  setTagFilter(saved ?? { unchecked: [], noTagsUnchecked: false, clearAll: false });
+}
+
 /** Reset to defaults. Used for test isolation. */
 export function resetSidebarStore(): void {
   state = {
@@ -257,6 +296,8 @@ export function resetSidebarStore(): void {
     tocWidth: DEFAULT_WIDTH,
     tagsWidth: DEFAULT_WIDTH,
     hiddenTagGroups: new Set(),
+    soloTag: null,
+    savedTagFilter: null,
   };
   listeners.forEach((l) => l());
 }

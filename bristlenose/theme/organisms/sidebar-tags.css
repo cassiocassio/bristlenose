@@ -217,12 +217,8 @@
     gap: var(--bn-space-sm);
     padding: 3px 0.5rem;
     border-radius: var(--bn-radius-sm);
-    cursor: pointer;
-    transition: background var(--bn-transition-fast);
-}
-
-.tag-sidebar .tag-row:hover {
-    background: var(--bn-hover-bg-subtle);
+    /* No row-level hover — each zone (checkbox, badge, bar+count)
+       has its own hover affordance so the three actions are distinct. */
 }
 
 .tag-sidebar .tag-checkbox-label {
@@ -230,6 +226,15 @@
     align-items: center;
     min-width: 24px;
     flex-shrink: 0;
+    cursor: pointer;
+    border-radius: var(--bn-radius-sm);
+    padding: 2px;
+    margin: -2px;
+    transition: background var(--bn-transition-fast);
+}
+
+.tag-sidebar .tag-checkbox-label:hover {
+    background: var(--bn-hover-bg-subtle);
 }
 
 .tag-sidebar .tag-name-area {
@@ -286,6 +291,11 @@
     min-width: 16px;
     text-align: right;
     font-variant-numeric: tabular-nums;
+    /* Always reserve space for solo highlight so toggling is colour-only (no jump) */
+    padding: 1px 6px;
+    margin: -1px -6px;
+    border-radius: var(--bn-radius-sm);
+    background: transparent;
 }
 
 /* Group total row */
@@ -313,4 +323,47 @@
     font-variant-numeric: tabular-nums;
     min-width: 16px;
     text-align: right;
+}
+
+/* ── Solo / focus mode ─────────────────────────────────────────── */
+
+/* Bar area (micro-bar + count): always clickable, hover affordance */
+.tag-sidebar .tag-bar-area {
+    cursor: pointer;
+    border-radius: var(--bn-radius-sm);
+    padding: 1px 4px;
+    margin: -1px -4px;
+}
+
+.tag-sidebar .tag-bar-area:hover {
+    background: var(--bn-colour-hover);
+}
+
+/* Dim all controls except bar areas when in solo mode */
+.tag-solo-active .tag-sidebar-actions,
+.tag-solo-active .tag-search-container,
+.tag-solo-active .tag-sidebar-subtitle {
+    opacity: 0.5;
+    pointer-events: none;
+    transition: opacity var(--bn-transition-fast);
+}
+
+.tag-solo-active .tag-checkbox-label,
+.tag-solo-active .group-eye,
+.tag-solo-active .codebook-eye,
+.tag-solo-active .tag-filter-group-header-row,
+.tag-solo-active .tag-filter-group-subtitle,
+.tag-solo-active .group-total-row,
+.tag-solo-active .badge {
+    opacity: 0.5;
+    pointer-events: none;
+    transition: opacity var(--bn-transition-fast);
+}
+
+/* "You are here" highlight on the active solo tag's count number —
+   accent text + subtle blue wash. Geometry (padding/margin/radius) is on
+   the base .tag-count so toggling this class is colour-only (no layout jump). */
+.tag-sidebar .tag-count.tag-solo-focused {
+    color: var(--bn-colour-accent);
+    background: var(--bn-colour-hover);
 }

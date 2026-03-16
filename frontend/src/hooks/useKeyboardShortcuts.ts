@@ -26,6 +26,7 @@ import {
 import {
   useSidebarStore,
   closeToc,
+  exitSoloMode,
 } from "../contexts/SidebarStore";
 import { sidebarAnimations } from "../components/SidebarLayout";
 import {
@@ -85,7 +86,7 @@ export function useKeyboardShortcuts({
   const navigate = useNavigate();
   const location = useLocation();
   const store = useQuotesStore();
-  const { tocMode } = useSidebarStore();
+  const { tocMode, soloTag } = useSidebarStore();
 
   // Use refs for values that change frequently to avoid re-attaching the listener.
   const focusedIdRef = useRef(focusedId);
@@ -100,6 +101,8 @@ export function useKeyboardShortcuts({
   helpModalOpenRef.current = helpModalOpen;
   const tocModeRef = useRef(tocMode);
   tocModeRef.current = tocMode;
+  const soloTagRef = useRef(soloTag);
+  soloTagRef.current = soloTag;
   const locationRef = useRef(location);
   locationRef.current = location;
 
@@ -289,6 +292,11 @@ export function useKeyboardShortcuts({
         if (tocModeRef.current === "overlay") {
           e.preventDefault();
           closeToc();
+          return;
+        }
+        if (soloTagRef.current !== null) {
+          e.preventDefault();
+          exitSoloMode();
           return;
         }
         if (clearSearch()) {

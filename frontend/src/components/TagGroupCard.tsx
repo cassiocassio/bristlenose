@@ -38,6 +38,10 @@ interface TagGroupCardProps {
   assignActive?: boolean;
   /** Set of tag names whose sidebar badges should flash. */
   flashingTags?: Set<string>;
+  /** Called when a tag's bar area is clicked to solo that tag. */
+  onSoloClick?: (tagName: string) => void;
+  /** Lowercase name of the currently solo'd tag (for highlight). */
+  soloTag?: string | null;
 }
 
 export function TagGroupCard({
@@ -55,6 +59,8 @@ export function TagGroupCard({
   onAssign,
   assignActive,
   flashingTags,
+  onSoloClick,
+  soloTag,
 }: TagGroupCardProps) {
   const { hiddenTagGroups } = useSidebarStore();
   const isHidden = hiddenTagGroups.has(name);
@@ -117,6 +123,8 @@ export function TagGroupCard({
                   onAssign={onAssign}
                   assignActive={assignActive}
                   flashing={flashingTags?.has(tag.name)}
+                  onSoloClick={onSoloClick}
+                  soloFocused={soloTag === tag.name.toLowerCase()}
                 />
               );
             })}

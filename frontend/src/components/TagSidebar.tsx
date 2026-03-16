@@ -26,6 +26,8 @@ import { EMPTY_TAG_FILTER } from "../utils/filter";
 import { useQuotesStore, setTagFilter, addTag } from "../contexts/QuotesContext";
 import { useFocus } from "../contexts/FocusContext";
 import {
+  enterSoloMode,
+  exitSoloMode,
   initHiddenTagGroups,
   setTagGroupsHidden,
   toggleTagGroupHidden,
@@ -165,7 +167,7 @@ export function TagSidebar() {
   const store = useQuotesStore();
   const tagFilter = store.tagFilter;
 
-  const { hiddenTagGroups } = useSidebarStore();
+  const { hiddenTagGroups, soloTag } = useSidebarStore();
   const { selectedIds, flashTag } = useFocus();
 
   const assignActive = selectedIds.size > 0;
@@ -363,6 +365,17 @@ export function TagSidebar() {
     [selectedIds, codebook, flashTag],
   );
 
+  const handleSoloClick = useCallback(
+    (tagName: string) => {
+      if (soloTag === tagName.toLowerCase()) {
+        exitSoloMode();
+      } else {
+        enterSoloMode(tagName, allTagNames, tagFilter);
+      }
+    },
+    [soloTag, allTagNames, tagFilter],
+  );
+
   const handleToggleFrameworkEye = useCallback((fw: FrameworkGroup, e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
@@ -375,7 +388,7 @@ export function TagSidebar() {
   if (!codebook) return null;
 
   return (
-    <>
+    <div className={soloTag ? "tag-solo-active" : ""}>
       {/* Subtitle */}
       <div className="tag-sidebar-subtitle">
         {visibleStats.tags} tag{visibleStats.tags !== 1 ? "s" : ""} across{" "}
@@ -462,6 +475,8 @@ export function TagSidebar() {
                       onAssign={handleSidebarAssign}
                       assignActive={assignActive}
                       flashingTags={flashingSidebarTags}
+                      onSoloClick={handleSoloClick}
+                      soloTag={soloTag}
                     />
                   ))}
                 </div>
@@ -470,6 +485,6 @@ export function TagSidebar() {
           );
         })}
       </div>
-    </>
+    </div>
   );
 }

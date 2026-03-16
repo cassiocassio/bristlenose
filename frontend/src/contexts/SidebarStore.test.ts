@@ -19,6 +19,8 @@ import {
   openTags,
   setTocWidth,
   setTagsWidth,
+  enterSoloMode,
+  exitSoloMode,
 } from "./SidebarStore";
 import { renderHook, act } from "@testing-library/react";
 
@@ -27,7 +29,13 @@ vi.mock("../utils/api", () => ({
   putHiddenTagGroups: vi.fn(),
 }));
 
+// Mock QuotesContext so enterSoloMode/exitSoloMode can call setTagFilter.
+vi.mock("./QuotesContext", () => ({
+  setTagFilter: vi.fn(),
+}));
+
 import { putHiddenTagGroups } from "../utils/api";
+import { setTagFilter } from "./QuotesContext";
 
 beforeEach(() => {
   resetSidebarStore();
@@ -348,5 +356,89 @@ describe("resetSidebarStore", () => {
     expect(result.current.tagsOpen).toBe(false);
     expect(result.current.tocWidth).toBe(280);
     expect(result.current.tagsWidth).toBe(280);
+  });
+
+  it("resets solo mode state", () => {
+    const { result } = renderHook(() => useSidebarStore());
+    const filter = { unchecked: ["a"], noTagsUnchecked: false, clearAll: false };
+    act(() => enterSoloMode("Delight", ["Delight", "Trust", "Habit"], filter));
+    act(() => resetSidebarStore());
+    expect(result.current.soloTag).toBeNull();
+    expect(result.current.savedTagFilter).toBeNull();
+  });
+});
+
+// ── Solo / focus mode ─────────────────────────────────────────────────────
+
+describe("solo mode", () => {
+  const ALL_TAGS = ["Delight", "Trust", "Habit", "Doubt"];
+  const ORIGINAL_FILTER = { unchecked: ["Trust"], noTagsUnchecked: false, clearAll: false };
+
+  it("enterSoloMode sets soloTag", () => {
+    const { result } = renderHook(() => useSidebarStore());
+    act(() => enterSoloMode("Delight", ALL_TAGS, ORIGINAL_FILTER));
+    expect(result.current.soloTag).toBe("delight");
+  });
+
+  it("enterSoloMode saves the current tag filter", () => {
+    const { result } = renderHook(() => useSidebarStore());
+    act(() => enterSoloMode("Delight", ALL_TAGS, ORIGINAL_FILTER));
+    expect(result.current.savedTagFilter).toEqual(ORIGINAL_FILTER);
+  });
+
+  it("enterSoloMode calls setTagFilter with only the solo tag checked", () => {
+    act(() => enterSoloMode("Delight", ALL_TAGS, ORIGINAL_FILTER));
+    expect(setTagFilter).toHaveBeenCalledWith({
+      unchecked: ["Trust", "Habit", "Doubt"],
+      noTagsUnchecked: true,
+      clearAll: false,
+    });
+  });
+
+  it("switching solo tag preserves original savedTagFilter", () => {
+    const { result } = renderHook(() => useSidebarStore());
+    act(() => enterSoloMode("Delight", ALL_TAGS, ORIGINAL_FILTER));
+    vi.mocked(setTagFilter).mockClear();
+    // Now switch to Trust — the savedTagFilter should still be ORIGINAL_FILTER
+    act(() => enterSoloMode("Trust", ALL_TAGS, { unchecked: ["Delight", "Habit", "Doubt"], noTagsUnchecked: true, clearAll: false }));
+    expect(result.current.soloTag).toBe("trust");
+    expect(result.current.savedTagFilter).toEqual(ORIGINAL_FILTER);
+    expect(setTagFilter).toHaveBeenCalledWith({
+      unchecked: ["Delight", "Habit", "Doubt"],
+      noTagsUnchecked: true,
+      clearAll: false,
+    });
+  });
+
+  it("exitSoloMode clears soloTag and savedTagFilter", () => {
+    const { result } = renderHook(() => useSidebarStore());
+    act(() => enterSoloMode("Delight", ALL_TAGS, ORIGINAL_FILTER));
+    act(() => exitSoloMode());
+    expect(result.current.soloTag).toBeNull();
+    expect(result.current.savedTagFilter).toBeNull();
+  });
+
+  it("exitSoloMode restores the saved tag filter", () => {
+    act(() => enterSoloMode("Delight", ALL_TAGS, ORIGINAL_FILTER));
+    vi.mocked(setTagFilter).mockClear();
+    act(() => exitSoloMode());
+    expect(setTagFilter).toHaveBeenCalledWith(ORIGINAL_FILTER);
+  });
+
+  it("exitSoloMode with no saved filter restores empty filter", () => {
+    // Edge case: exitSoloMode called without enterSoloMode
+    vi.mocked(setTagFilter).mockClear();
+    act(() => exitSoloMode());
+    expect(setTagFilter).toHaveBeenCalledWith({
+      unchecked: [],
+      noTagsUnchecked: false,
+      clearAll: false,
+    });
+  });
+
+  it("starts with soloTag null", () => {
+    const { result } = renderHook(() => useSidebarStore());
+    expect(result.current.soloTag).toBeNull();
+    expect(result.current.savedTagFilter).toBeNull();
   });
 });

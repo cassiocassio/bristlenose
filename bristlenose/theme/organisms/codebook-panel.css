@@ -158,7 +158,7 @@
                 opacity var(--bn-transition-fast);
     position: relative;
 }
-.tag-row:hover {
+.codebook-panel .tag-row:hover {
     background: var(--bn-hover-bg-subtle);
 }
 .tag-row:active {

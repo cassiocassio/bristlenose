@@ -386,6 +386,10 @@ Edit `bristlenose/__init__.py` (the single source of truth for version), commit,
 
 ## Changelog
 
+**0.13.5** — _16 Mar 2026_
+
+- Add single tag focus mode — click a tag count to solo that tag, Escape to exit
+
 **0.13.4** — _14 Mar 2026_
 
 - Fix import FK constraint — delete AutoCode proposals before removing stale quotes during re-import

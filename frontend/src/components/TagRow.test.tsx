@@ -140,6 +140,20 @@ describe("TagRow", () => {
     expect(screen.getByText("5")).not.toHaveClass("tag-solo-focused");
   });
 
+  it("tag-row gets tag-row-solo-focused class when soloFocused", () => {
+    const { container } = render(
+      <TagRow {...BASE_PROPS} onSoloClick={vi.fn()} soloFocused={true} />,
+    );
+    expect(container.querySelector(".tag-row")).toHaveClass("tag-row-solo-focused");
+  });
+
+  it("tag-row does not get tag-row-solo-focused class when not focused", () => {
+    const { container } = render(
+      <TagRow {...BASE_PROPS} onSoloClick={vi.fn()} soloFocused={false} />,
+    );
+    expect(container.querySelector(".tag-row")).not.toHaveClass("tag-row-solo-focused");
+  });
+
   it("Enter key on bar area calls onSoloClick", async () => {
     const onSoloClick = vi.fn();
     render(<TagRow {...BASE_PROPS} onSoloClick={onSoloClick} />);

@@ -94,7 +94,7 @@ export function TagRow({
   const badgeClassName = `badge${assignActive ? " badge-assignable" : ""}${flashing ? " badge-accept-flash" : ""}`;
 
   return (
-    <div className="tag-row">
+    <div className={`tag-row${soloFocused ? " tag-row-solo-focused" : ""}`}>
       <span className="tag-name-area">
         <label className="tag-checkbox-label">
           <input

@@ -360,6 +360,13 @@
     transition: opacity var(--bn-transition-fast);
 }
 
+/* The focused tag row stays at full brightness */
+.tag-solo-active .tag-row-solo-focused .tag-checkbox-label,
+.tag-solo-active .tag-row-solo-focused .badge {
+    opacity: 1;
+    pointer-events: auto;
+}
+
 /* "You are here" highlight on the active solo tag's count number —
    accent text + subtle blue wash. Geometry (padding/margin/radius) is on
    the base .tag-count so toggling this class is colour-only (no layout jump). */

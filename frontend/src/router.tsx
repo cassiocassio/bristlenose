@@ -15,7 +15,6 @@ import { TranscriptTab } from "./pages/TranscriptTab";
 import { QuotesTab } from "./pages/QuotesTab";
 import { CodebookTab } from "./pages/CodebookTab";
 import { AnalysisTab } from "./pages/AnalysisTab";
-import { SettingsTab } from "./pages/SettingsTab";
 import { AboutTab } from "./pages/AboutTab";
 import { isExportMode } from "./utils/exportData";
 
@@ -34,7 +33,6 @@ export const routes = [
       { path: "quotes", element: <QuotesTab /> },
       { path: "codebook", element: <CodebookTab /> },
       { path: "analysis", element: <AnalysisTab /> },
-      { path: "settings", element: <SettingsTab /> },
       { path: "about", element: <AboutTab /> },
       // Catch-all: unknown sub-paths redirect to project tab
       { path: "*", element: <Navigate to="/report/" replace /> },

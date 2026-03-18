@@ -14,6 +14,7 @@ import { NavBar } from "../components/NavBar";
 import { Footer } from "../components/Footer";
 import { HelpModal } from "../components/HelpModal";
 import { FeedbackModal } from "../components/FeedbackModal";
+import { SettingsModal } from "../components/SettingsModal";
 import { SidebarLayout } from "../components/SidebarLayout";
 import { SessionsSidebar } from "../components/SessionsSidebar";
 import { ExportDialog } from "../components/ExportDialog";
@@ -51,10 +52,12 @@ function AppShell() {
   const [helpOpen, setHelpOpen] = useState(false);
   const [feedbackOpen, setFeedbackOpen] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const [health, setHealth] = useState<HealthResponse>(DEFAULT_HEALTH_RESPONSE);
   const toggleHelp = useCallback(() => setHelpOpen((prev) => !prev), []);
   const openFeedback = useCallback(() => setFeedbackOpen(true), []);
   const closeFeedback = useCallback(() => setFeedbackOpen(false), []);
+  const toggleSettings = useCallback(() => setSettingsOpen((prev) => !prev), []);
   const isQuotes = useMatch("/report/quotes");
   const isSessions = useMatch("/report/sessions");
   const isTranscript = useMatch("/report/sessions/:sessionId");
@@ -80,6 +83,8 @@ function AppShell() {
   useKeyboardShortcuts({
     helpModalOpen: helpOpen,
     onToggleHelp: toggleHelp,
+    settingsModalOpen: settingsOpen,
+    onToggleSettings: toggleSettings,
   });
 
   return (
@@ -90,7 +95,7 @@ function AppShell() {
       showRightSidebar={!!isQuotes}
     >
       <Header />
-      <NavBar onExport={toggleExport} />
+      <NavBar onExport={toggleExport} onSettings={toggleSettings} />
       <Outlet />
       <Footer
         health={health}
@@ -100,6 +105,7 @@ function AppShell() {
       <FeedbackModal open={feedbackOpen} onClose={closeFeedback} health={health} />
       <HelpModal open={helpOpen} onClose={toggleHelp} />
       <ExportDialog open={exportOpen} onClose={toggleExport} />
+      <SettingsModal open={settingsOpen} onClose={toggleSettings} />
       {IS_DEV && (
         <Suspense fallback={null}>
           <PlaygroundHUD />

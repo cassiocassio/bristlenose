@@ -158,6 +158,7 @@ macOS ships BSD versions of `sed`, `grep`, `awk`, `find`, `xargs`, `date`, `stat
 - **Playwright E2E tests** (layers 1–3 implemented, layers 4–5 planned, output options, CI integration): `docs/design-playwright-testing.md`
 - **Installation guide**: `INSTALL.md` — detailed per-platform install instructions for non-technical users
 - **Desktop app** (macOS, SwiftUI, PyInstaller sidecar, .dmg distribution): `docs/design-desktop-app.md` — vision, PRD, stack rationale, user flow, open questions. **Read this before working in `desktop/`**
+- **Multi-project awareness** (project index, person identity, lifecycle, assumptions audit, scope rules): `docs/design-multi-project.md` — data model future-proofing, single-project assumption inventory. Scope rules enforced in `bristlenose/server/CLAUDE.md`. **Read this before adding new DB tables or hardcoding project IDs**
 - **Session management** (re-import, session enable/disable, quarantine, pipeline re-run): `docs/design-session-management.md`
 - **Serve mode milestone 1** (domain schema, importer, sessions API): `docs/design-serve-milestone-1.md`
 - **Internationalisation** (codebook/sentiment translation strategy, UI chrome terminology research, mixed-language interviews): `docs/design-i18n.md` — terminology table sourced from ATLAS.ti/MAXQDA/NVivo localized UIs and academic QDA literature. **Read this before working on i18n or translation**

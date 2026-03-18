@@ -42,7 +42,7 @@ describe("SettingsModal", () => {
 
   it("renders via portal into document.body", () => {
     render(<SettingsModal open={true} onClose={vi.fn()} />);
-    const overlay = document.body.querySelector(".settings-overlay");
+    const overlay = document.body.querySelector(".modal-nav-overlay");
     expect(overlay).toBeTruthy();
     expect(overlay!.parentElement).toBe(document.body);
   });
@@ -51,7 +51,7 @@ describe("SettingsModal", () => {
     render(<SettingsModal open={true} onClose={vi.fn()} />);
     const dialog = screen.getByRole("dialog");
     expect(dialog.getAttribute("aria-modal")).toBe("true");
-    expect(dialog.getAttribute("aria-labelledby")).toBe("modal-nav-title");
+    expect(dialog.getAttribute("aria-labelledby")).toBe("settings-modal-title");
   });
 
   it("calls onClose when clicking close button", () => {

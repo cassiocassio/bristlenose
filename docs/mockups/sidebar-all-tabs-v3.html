@@ -1,0 +1,986 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Global Left Sidebar — All Tabs v3 (Design Mockup)</title>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     PRODUCTION STYLESHEETS — linked, not copied.
+     Changes to the design system automatically flow through.
+     ═══════════════════════════════════════════════════════════════ -->
+<link rel="stylesheet" href="../../bristlenose/theme/tokens.css">
+<link rel="stylesheet" href="../../bristlenose/theme/atoms/badge.css">
+<link rel="stylesheet" href="../../bristlenose/theme/molecules/person-badge.css">
+<link rel="stylesheet" href="../../bristlenose/theme/organisms/sidebar.css">
+
+<!-- Inter font (same as production) -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300..700&display=swap" rel="stylesheet">
+
+<style>
+/* ================================================================
+   GLOBAL LEFT SIDEBAR — DESIGN MOCKUP v3
+   ================================================================
+   Production CSS linked above provides:
+   - tokens.css: all --bn-* custom properties
+   - badge.css: .badge, .badge-{sentiment} atoms
+   - person-badge.css: .bn-person-badge, .bn-speaker-badge--split
+   - sidebar.css: .sidebar-header, .sidebar-close, .toc-heading,
+     .toc-link, .toc-sidebar-body, .toc-rail, .rail-btn
+
+   This <style> block contains ONLY:
+   1. Mockup scaffolding (page layout, resize handles, width badge)
+   2. Genuinely new styles (marked /* NEW */)
+   ================================================================ */
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { font-size: 16px; -webkit-font-smoothing: antialiased; }
+
+body {
+    font-family: var(--bn-font-body);
+    font-weight: var(--bn-weight-normal);
+    color: var(--bn-colour-text);
+    background: var(--bn-colour-bg);
+    line-height: var(--bn-text-body-lh);
+    padding: var(--bn-space-xl);
+}
+
+/* ── MOCKUP SCAFFOLDING (not part of design system) ────────────── */
+
+.mockup-row {
+    display: flex;
+    gap: var(--bn-space-xl);
+    align-items: flex-start;
+    flex-wrap: wrap;
+}
+
+.mockup-column {
+    display: flex;
+    flex-direction: column;
+    gap: var(--bn-space-md);
+}
+
+.mockup-label {
+    font-size: var(--bn-text-caption);
+    font-weight: var(--bn-weight-emphasis);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--bn-colour-muted);
+}
+
+.sidebar-panel {
+    width: var(--bn-sidebar-width);
+    min-width: var(--bn-sidebar-min);
+    max-width: 480px;
+    height: 600px;
+    background: var(--bn-colour-bg);
+    border: 1px solid var(--bn-colour-border);
+    border-radius: var(--bn-radius-sm);
+    overflow-y: auto;
+    overflow-x: hidden;
+    display: flex;
+    flex-direction: column;
+    /* Drag-resizable */
+    resize: horizontal;
+    /* Container queries for responsive content */
+    container-type: inline-size;
+}
+
+.rail-only {
+    width: var(--bn-rail-width);
+    height: 600px;
+    border-right: 1px solid var(--bn-colour-border);
+    background: var(--bn-colour-bg);
+    border-radius: var(--bn-radius-sm) 0 0 var(--bn-radius-sm);
+}
+
+/* Width badge — shows current panel width in px */
+.width-badge {
+    position: sticky;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    text-align: center;
+    padding: var(--bn-space-xs) var(--bn-space-sm);
+    background: var(--bn-colour-badge-bg);
+    border-top: 1px solid var(--bn-colour-border);
+    font-size: var(--bn-text-caption);
+    font-family: var(--bn-font-mono);
+    color: var(--bn-colour-muted);
+    flex-shrink: 0;
+}
+
+.theme-toggle {
+    position: fixed;
+    top: 1rem;
+    right: 1rem;
+    background: var(--bn-colour-badge-bg);
+    border: 1px solid var(--bn-colour-border);
+    border-radius: var(--bn-radius-md);
+    padding: var(--bn-space-sm) var(--bn-space-md);
+    font-size: var(--bn-text-body-sm);
+    color: var(--bn-colour-text);
+    cursor: pointer;
+    font-family: var(--bn-font-body);
+    z-index: 100;
+}
+
+.theme-toggle:hover { background: var(--bn-colour-hover); }
+
+/* ================================================================
+   NEW STYLES — intentional extensions to the design system.
+   Each is marked with its atomic level and rationale.
+   ================================================================ */
+
+/* ── NEW MOLECULE: session-entry ───────────────────────────────────
+   A .toc-link variant with multi-line layout (speakers + metadata).
+   Reuses .toc-link base pattern: same padding, radius, hover, active.
+   Session ID uses the existing .badge atom.                        */
+
+.session-entry {
+    display: block;
+    padding: var(--bn-space-sm);
+    border-radius: var(--bn-radius-sm);
+    text-decoration: none;
+    color: var(--bn-colour-text);
+    transition: background var(--bn-transition-fast);
+    cursor: pointer;
+}
+
+.session-entry:hover { background: var(--bn-colour-hover); }
+.session-entry.active { background: var(--bn-colour-hover); }
+
+.session-entry + .session-entry {
+    border-top: 1px solid var(--bn-colour-border);
+}
+
+.session-entry-header {
+    display: flex;
+    align-items: baseline;
+    gap: var(--bn-space-sm);
+    min-height: 1.4em;
+}
+
+.session-entry-header .badge {
+    flex-shrink: 0;
+}
+
+/* Session ID badge — accent colour variant of .badge atom */
+.session-entry .session-id-badge {
+    color: var(--bn-colour-accent);
+    background: var(--bn-sentiment-confidence-bg);
+}
+
+.session-entry-speakers {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    flex: 1;
+    min-width: 0;
+}
+
+.session-entry-speaker-row {
+    display: flex;
+    align-items: baseline;
+    gap: var(--bn-space-xs);
+}
+
+.session-entry-name {
+    font-size: var(--bn-text-body-sm);
+    font-weight: var(--bn-weight-light);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    flex: 1;
+    min-width: 0;
+}
+
+.session-entry-duration {
+    font-size: var(--bn-text-caption);
+    font-family: var(--bn-font-mono);
+    color: var(--bn-colour-muted);
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.session-entry.active .session-entry-name {
+    font-weight: var(--bn-weight-emphasis);
+    color: var(--bn-colour-accent);
+}
+
+.session-entry-meta {
+    display: flex;
+    gap: var(--bn-space-md);
+    font-size: var(--bn-text-caption);
+    line-height: var(--bn-text-caption-lh);
+    color: var(--bn-colour-muted);
+    margin-top: var(--bn-space-xs);
+}
+
+/* Thumbnail placeholder */
+.session-entry-thumb {
+    width: 64px;
+    height: 36px;
+    border-radius: var(--bn-radius-sm);
+    background: var(--bn-colour-badge-bg);
+    border: 1px solid var(--bn-colour-border);
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.6rem;
+    color: var(--bn-colour-muted);
+}
+
+/* ── CONTAINER QUERY: responsive session sidebar ──────────────────
+   Progressive disclosure based on panel width.
+   In production React, this is JS-driven (reads tocWidth from store).
+   In mockup, CSS container queries preview the behaviour.          */
+
+.session-entry-thumb,
+.session-entry-meta .session-date {
+    display: none;  /* hidden by default (narrow) */
+}
+
+.session-entry-fullname { display: none; }
+.session-entry-shortname { display: inline; }
+
+/* 260px+: show thumbnails, hide duration text */
+@container (min-width: 260px) {
+    .session-entry-thumb { display: flex; }
+    .session-entry-duration.hide-at-260 { display: none; }
+}
+
+/* 280px+: show date */
+@container (min-width: 280px) {
+    .session-entry-meta .session-date { display: inline; }
+}
+
+/* 360px+: show full names */
+@container (min-width: 360px) {
+    .session-entry-fullname { display: inline; }
+    .session-entry-shortname { display: none; }
+}
+
+
+/* ── NEW MOLECULE: codebook-entry ──────────────────────────────────
+   A .toc-link variant with a colour swatch indicator.
+   Swatch uses --bn-set-*-dot or --bn-sentiment-* tokens.
+   Tag count uses caption sizing + mono font.                       */
+
+.codebook-entry {
+    display: flex;
+    align-items: center;
+    gap: var(--bn-space-sm);
+    padding: var(--bn-space-sm);
+    border-radius: var(--bn-radius-sm);
+    cursor: pointer;
+    transition: background var(--bn-transition-fast);
+}
+
+.codebook-entry:hover { background: var(--bn-colour-hover); }
+.codebook-entry.active { background: var(--bn-colour-hover); }
+
+/* NEW ATOM: codebook-swatch — 10px colour indicator dot.
+   Uses --bn-radius-sm (3px) — matches badge corner radius. */
+.codebook-swatch {
+    width: 10px;
+    height: 10px;
+    border-radius: var(--bn-radius-sm);
+    flex-shrink: 0;
+}
+
+.codebook-entry-name {
+    font-size: var(--bn-text-body-sm);
+    font-weight: var(--bn-weight-light);
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.codebook-entry.active .codebook-entry-name {
+    font-weight: var(--bn-weight-emphasis);
+    color: var(--bn-colour-accent);
+}
+
+.codebook-entry-count {
+    font-size: var(--bn-text-caption);
+    font-family: var(--bn-font-mono);
+    color: var(--bn-colour-muted);
+    font-variant-numeric: tabular-nums;
+}
+
+/* ── NEW ORGANISM: mini-signal-card ────────────────────────────────
+   "PowerPoint slide thumbnail" for the Analysis sidebar.
+   Shows: source label, sentiment badge, heatmap strip, score.
+   Sentiment badges reuse .badge .badge-{sentiment} atoms.
+   This is genuinely new UI — no existing pattern to extend.        */
+
+.mini-signal-card {
+    padding: var(--bn-space-sm);
+    border: 1px solid var(--bn-colour-border);
+    border-radius: var(--bn-radius-sm);
+    cursor: pointer;
+    transition: border-color var(--bn-transition-fast), box-shadow var(--bn-transition-fast);
+    background: var(--bn-colour-bg);
+}
+
+.mini-signal-card:hover {
+    border-color: var(--bn-colour-accent);
+}
+
+.mini-signal-card.active {
+    border-color: var(--bn-colour-accent);
+    box-shadow: 0 0 0 1px var(--bn-colour-accent);
+}
+
+.mini-signal-card + .mini-signal-card {
+    margin-top: var(--bn-space-sm);
+}
+
+.mini-signal-source {
+    font-size: var(--bn-text-caption);
+    line-height: var(--bn-text-caption-lh);
+    font-weight: var(--bn-weight-normal);
+    color: var(--bn-colour-muted);
+    margin-bottom: var(--bn-space-xs);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.mini-signal-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: var(--bn-space-sm);
+}
+
+.mini-signal-card.active .mini-signal-source {
+    color: var(--bn-colour-accent);
+}
+
+/* NEW ATOM: mini-heatmap — abstract 10-cell intensity strip.
+   Reuses --bn-sentiment-* colours at varying opacity.
+   Empty cells use --bn-colour-border (matches minimap-quote token). */
+.mini-heatmap {
+    display: flex;
+    gap: 1px;
+    height: 10px;
+    border-radius: 1px;
+    overflow: hidden;
+}
+
+.mini-heatmap-cell {
+    flex: 1;
+    border-radius: 1px;
+}
+
+.mini-signal-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: var(--bn-space-xs);
+}
+
+.mini-signal-score {
+    font-size: var(--bn-text-caption);
+    font-weight: var(--bn-weight-emphasis);
+    font-variant-numeric: tabular-nums;
+}
+
+.mini-signal-participants {
+    font-size: var(--bn-text-caption);
+    line-height: var(--bn-text-caption-lh);
+    color: var(--bn-colour-muted);
+}
+
+</style>
+</head>
+<body>
+
+<button class="theme-toggle" onclick="document.documentElement.dataset.theme = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark'">Toggle dark mode</button>
+
+<h1 style="font-size: var(--bn-text-title); font-weight: var(--bn-weight-strong); margin-bottom: var(--bn-space-sm);">Global Left Sidebar — All Tabs v3</h1>
+<p style="font-size: var(--bn-text-body); color: var(--bn-colour-muted); margin-bottom: var(--bn-space-xl);">Drag-resizable panels. Container queries for responsive content. <a href="sidebar-all-tabs-v2.html" style="color: var(--bn-colour-accent);">v2</a> · <a href="sidebar-all-tabs-v1.html" style="color: var(--bn-colour-accent);">v1</a></p>
+
+<div class="mockup-row">
+
+<!-- 0. PROJECT DASHBOARD — cosmetic rail -->
+<div class="mockup-column">
+    <span class="mockup-label">0. Project</span>
+    <div class="rail-only"></div>
+</div>
+
+<!-- i. SESSIONS — Dataset 2 "IKEA" (multi-participant, video, 2 moderators)
+     Responsive: drag to see variants B → C → D → E
+     Production: .sidebar-header, .sidebar-close, .toc-sidebar-body, .badge
+     New: .session-entry, .session-entry-header, .session-entry-speakers,
+          .session-entry-name, .session-entry-meta, .session-entry-thumb -->
+<div class="mockup-column">
+    <span class="mockup-label">i. Sessions (multi-participant)</span>
+    <div class="sidebar-panel" data-width-badge>
+        <div class="sidebar-header toc-sidebar-header">
+            <button class="sidebar-close">&#215;</button>
+            <span class="sidebar-title">Sessions</span>
+        </div>
+        <div class="toc-sidebar-body">
+            <!-- Session 1: 2 moderators shown, 2 participants, video -->
+            <a class="session-entry" href="#">
+                <div class="session-entry-header">
+                    <span class="badge session-id-badge">#1</span>
+                    <div class="session-entry-speakers">
+                        <div class="session-entry-speaker-row">
+                            <span class="badge">m1</span>
+                            <span class="badge">p1</span>
+                            <span class="session-entry-name">
+                                <span class="session-entry-shortname">Rachel</span>
+                                <span class="session-entry-fullname">Rachel Chen</span>
+                            </span>
+                        </div>
+                        <div class="session-entry-speaker-row">
+                            <span style="width: 1.8rem; display: inline-block;"></span>
+                            <span class="badge">p2</span>
+                            <span class="session-entry-name">
+                                <span class="session-entry-shortname">David</span>
+                                <span class="session-entry-fullname">David Liu</span>
+                            </span>
+                        </div>
+                    </div>
+                    <span class="session-entry-duration hide-at-260">1h 00</span>
+                    <div class="session-entry-thumb">▶</div>
+                </div>
+                <div class="session-entry-meta">
+                    <span class="session-date">15 Feb</span>
+                </div>
+            </a>
+
+            <!-- Session 2: different moderator, 1 participant -->
+            <a class="session-entry active" href="#">
+                <div class="session-entry-header">
+                    <span class="badge session-id-badge">#2</span>
+                    <div class="session-entry-speakers">
+                        <div class="session-entry-speaker-row">
+                            <span class="badge">m2</span>
+                            <span class="badge">p3</span>
+                            <span class="session-entry-name">
+                                <span class="session-entry-shortname">Marcus</span>
+                                <span class="session-entry-fullname">Marcus Williams</span>
+                            </span>
+                        </div>
+                    </div>
+                    <span class="session-entry-duration hide-at-260">45 min</span>
+                    <div class="session-entry-thumb">▶</div>
+                </div>
+                <div class="session-entry-meta">
+                    <span class="session-date">15 Feb</span>
+                </div>
+            </a>
+
+            <!-- Session 3: 2 participants + observer -->
+            <a class="session-entry" href="#">
+                <div class="session-entry-header">
+                    <span class="badge session-id-badge">#3</span>
+                    <div class="session-entry-speakers">
+                        <div class="session-entry-speaker-row">
+                            <span class="badge">m1</span>
+                            <span class="badge">p4</span>
+                            <span class="session-entry-name">
+                                <span class="session-entry-shortname">Elena</span>
+                                <span class="session-entry-fullname">Elena Rodriguez</span>
+                            </span>
+                        </div>
+                        <div class="session-entry-speaker-row">
+                            <span style="width: 1.8rem; display: inline-block;"></span>
+                            <span class="badge">p5</span>
+                            <span class="session-entry-name">
+                                <span class="session-entry-shortname">Alex</span>
+                                <span class="session-entry-fullname">Alex Kim</span>
+                            </span>
+                        </div>
+                        <div class="session-entry-speaker-row">
+                            <span style="width: 1.8rem; display: inline-block;"></span>
+                            <span class="badge">o1</span>
+                            <span class="session-entry-name">
+                                <span class="session-entry-shortname">Jordan</span>
+                                <span class="session-entry-fullname">Jordan Lee</span>
+                            </span>
+                        </div>
+                    </div>
+                    <span class="session-entry-duration hide-at-260">1h 12</span>
+                    <div class="session-entry-thumb">▶</div>
+                </div>
+                <div class="session-entry-meta">
+                    <span class="session-date">17 Feb</span>
+                </div>
+            </a>
+
+            <!-- Session 4: single participant -->
+            <a class="session-entry" href="#">
+                <div class="session-entry-header">
+                    <span class="badge session-id-badge">#4</span>
+                    <div class="session-entry-speakers">
+                        <div class="session-entry-speaker-row">
+                            <span class="badge">m2</span>
+                            <span class="badge">p6</span>
+                            <span class="session-entry-name">
+                                <span class="session-entry-shortname">Priya</span>
+                                <span class="session-entry-fullname">Priya Sharma</span>
+                            </span>
+                        </div>
+                    </div>
+                    <span class="session-entry-duration hide-at-260">33 min</span>
+                    <div class="session-entry-thumb">▶</div>
+                </div>
+                <div class="session-entry-meta">
+                    <span class="session-date">18 Feb</span>
+                </div>
+            </a>
+        </div>
+        <div class="width-badge">280px</div>
+    </div>
+</div>
+
+<!-- i-A. SESSIONS — Dataset 1 "SaaS" (1:1, no video, single moderator)
+     Variant A: no session IDs, no moderator badges -->
+<div class="mockup-column">
+    <span class="mockup-label">i-A. Sessions (1:1)</span>
+    <div class="sidebar-panel" data-width-badge>
+        <div class="sidebar-header toc-sidebar-header">
+            <button class="sidebar-close">&#215;</button>
+            <span class="sidebar-title">Sessions</span>
+        </div>
+        <div class="toc-sidebar-body">
+            <a class="session-entry" href="#">
+                <div class="session-entry-header">
+                    <div class="session-entry-speakers">
+                        <div class="session-entry-speaker-row">
+                            <span class="badge">p1</span>
+                            <span class="session-entry-name">
+                                <span class="session-entry-shortname">Rachel</span>
+                                <span class="session-entry-fullname">Rachel Chen</span>
+                            </span>
+                        </div>
+                    </div>
+                    <span class="session-entry-duration">47 min</span>
+                </div>
+                <div class="session-entry-meta">
+                    <span class="session-date">12 Feb</span>
+                </div>
+            </a>
+
+            <a class="session-entry active" href="#">
+                <div class="session-entry-header">
+                    <div class="session-entry-speakers">
+                        <div class="session-entry-speaker-row">
+                            <span class="badge">p2</span>
+                            <span class="session-entry-name">
+                                <span class="session-entry-shortname">Marcus</span>
+                                <span class="session-entry-fullname">Marcus Williams</span>
+                            </span>
+                        </div>
+                    </div>
+                    <span class="session-entry-duration">1h 03</span>
+                </div>
+                <div class="session-entry-meta">
+                    <span class="session-date">12 Feb</span>
+                </div>
+            </a>
+
+            <a class="session-entry" href="#">
+                <div class="session-entry-header">
+                    <div class="session-entry-speakers">
+                        <div class="session-entry-speaker-row">
+                            <span class="badge">p3</span>
+                            <span class="session-entry-name">
+                                <span class="session-entry-shortname">Priya</span>
+                                <span class="session-entry-fullname">Priya Sharma</span>
+                            </span>
+                        </div>
+                    </div>
+                    <span class="session-entry-duration">38 min</span>
+                </div>
+                <div class="session-entry-meta">
+                    <span class="session-date">13 Feb</span>
+                </div>
+            </a>
+
+            <a class="session-entry" href="#">
+                <div class="session-entry-header">
+                    <div class="session-entry-speakers">
+                        <div class="session-entry-speaker-row">
+                            <span class="badge">p4</span>
+                            <span class="session-entry-name">
+                                <span class="session-entry-shortname">James</span>
+                                <span class="session-entry-fullname">James O'Brien</span>
+                            </span>
+                        </div>
+                    </div>
+                    <span class="session-entry-duration">52 min</span>
+                </div>
+                <div class="session-entry-meta">
+                    <span class="session-date">14 Feb</span>
+                </div>
+            </a>
+
+            <a class="session-entry" href="#">
+                <div class="session-entry-header">
+                    <div class="session-entry-speakers">
+                        <div class="session-entry-speaker-row">
+                            <span class="badge">p5</span>
+                            <span class="session-entry-name">
+                                <span class="session-entry-shortname">Fatima</span>
+                                <span class="session-entry-fullname">Fatima Al-Hassan</span>
+                            </span>
+                        </div>
+                    </div>
+                    <span class="session-entry-duration">41 min</span>
+                </div>
+                <div class="session-entry-meta">
+                    <span class="session-date">14 Feb</span>
+                </div>
+            </a>
+        </div>
+        <div class="width-badge">280px</div>
+    </div>
+</div>
+
+<!-- ii. CODEBOOK
+     Production: .sidebar-header, .sidebar-close, .toc-sidebar-body, .toc-heading
+     New: .codebook-entry, .codebook-swatch, .codebook-entry-name, .codebook-entry-count -->
+<div class="mockup-column">
+    <span class="mockup-label">ii. Codebook</span>
+    <div class="sidebar-panel" data-width-badge>
+        <div class="sidebar-header toc-sidebar-header">
+            <button class="sidebar-close">&#215;</button>
+            <span class="sidebar-title">Codebooks</span>
+        </div>
+        <div class="toc-sidebar-body">
+            <div class="toc-heading">Sentiment</div>
+            <div class="codebook-entry">
+                <div class="codebook-swatch" style="background: var(--bn-sentiment-frustration);"></div>
+                <span class="codebook-entry-name">Frustration</span>
+                <span class="codebook-entry-count">24</span>
+            </div>
+            <div class="codebook-entry">
+                <div class="codebook-swatch" style="background: var(--bn-sentiment-confusion);"></div>
+                <span class="codebook-entry-name">Confusion</span>
+                <span class="codebook-entry-count">18</span>
+            </div>
+            <div class="codebook-entry">
+                <div class="codebook-swatch" style="background: var(--bn-sentiment-doubt);"></div>
+                <span class="codebook-entry-name">Doubt</span>
+                <span class="codebook-entry-count">12</span>
+            </div>
+            <div class="codebook-entry">
+                <div class="codebook-swatch" style="background: var(--bn-sentiment-surprise);"></div>
+                <span class="codebook-entry-name">Surprise</span>
+                <span class="codebook-entry-count">9</span>
+            </div>
+            <div class="codebook-entry">
+                <div class="codebook-swatch" style="background: var(--bn-sentiment-satisfaction);"></div>
+                <span class="codebook-entry-name">Satisfaction</span>
+                <span class="codebook-entry-count">31</span>
+            </div>
+            <div class="codebook-entry">
+                <div class="codebook-swatch" style="background: var(--bn-sentiment-delight);"></div>
+                <span class="codebook-entry-name">Delight</span>
+                <span class="codebook-entry-count">7</span>
+            </div>
+            <div class="codebook-entry active">
+                <div class="codebook-swatch" style="background: var(--bn-sentiment-confidence);"></div>
+                <span class="codebook-entry-name">Confidence</span>
+                <span class="codebook-entry-count">15</span>
+            </div>
+
+            <div class="toc-heading">UX Fundamentals</div>
+            <div class="codebook-entry">
+                <div class="codebook-swatch" style="background: var(--bn-set-ux-dot);"></div>
+                <span class="codebook-entry-name">Learnability</span>
+                <span class="codebook-entry-count">8</span>
+            </div>
+            <div class="codebook-entry">
+                <div class="codebook-swatch" style="background: var(--bn-set-ux-dot);"></div>
+                <span class="codebook-entry-name">Efficiency</span>
+                <span class="codebook-entry-count">14</span>
+            </div>
+            <div class="codebook-entry">
+                <div class="codebook-swatch" style="background: var(--bn-set-ux-dot);"></div>
+                <span class="codebook-entry-name">Memorability</span>
+                <span class="codebook-entry-count">5</span>
+            </div>
+            <div class="codebook-entry">
+                <div class="codebook-swatch" style="background: var(--bn-set-ux-dot);"></div>
+                <span class="codebook-entry-name">Error recovery</span>
+                <span class="codebook-entry-count">11</span>
+            </div>
+
+            <div class="toc-heading">Emotion</div>
+            <div class="codebook-entry">
+                <div class="codebook-swatch" style="background: var(--bn-set-emo-dot);"></div>
+                <span class="codebook-entry-name">Joy</span>
+                <span class="codebook-entry-count">6</span>
+            </div>
+            <div class="codebook-entry">
+                <div class="codebook-swatch" style="background: var(--bn-set-emo-dot);"></div>
+                <span class="codebook-entry-name">Anxiety</span>
+                <span class="codebook-entry-count">9</span>
+            </div>
+            <div class="codebook-entry">
+                <div class="codebook-swatch" style="background: var(--bn-set-emo-dot);"></div>
+                <span class="codebook-entry-name">Trust</span>
+                <span class="codebook-entry-count">13</span>
+            </div>
+
+            <div class="toc-heading">User tags</div>
+            <div class="codebook-entry">
+                <div class="codebook-swatch" style="background: var(--bn-colour-muted);"></div>
+                <span class="codebook-entry-name">onboarding</span>
+                <span class="codebook-entry-count">7</span>
+            </div>
+            <div class="codebook-entry">
+                <div class="codebook-swatch" style="background: var(--bn-colour-muted);"></div>
+                <span class="codebook-entry-name">pricing concern</span>
+                <span class="codebook-entry-count">4</span>
+            </div>
+            <div class="codebook-entry">
+                <div class="codebook-swatch" style="background: var(--bn-colour-muted);"></div>
+                <span class="codebook-entry-name">feature request</span>
+                <span class="codebook-entry-count">11</span>
+            </div>
+        </div>
+        <div class="width-badge">280px</div>
+    </div>
+</div>
+
+<!-- iii. ANALYSIS
+     Production: .sidebar-header, .sidebar-close, .toc-sidebar-body,
+                 .toc-heading, .badge, .badge-{sentiment}
+     New: .mini-signal-card, .mini-signal-source, .mini-signal-row,
+          .mini-heatmap, .mini-heatmap-cell, .mini-signal-footer,
+          .mini-signal-score, .mini-signal-participants -->
+<div class="mockup-column">
+    <span class="mockup-label">iii. Analysis</span>
+    <div class="sidebar-panel" data-width-badge>
+        <div class="sidebar-header toc-sidebar-header">
+            <button class="sidebar-close">&#215;</button>
+            <span class="sidebar-title">Signals</span>
+        </div>
+        <div class="toc-sidebar-body">
+            <div class="toc-heading">Section &times; Sentiment</div>
+
+            <div class="mini-signal-card active">
+                <div class="mini-signal-source">Onboarding</div>
+                <div class="mini-signal-row">
+                    <span class="badge badge-frustration">frustration</span>
+                </div>
+                <div class="mini-heatmap">
+                    <div class="mini-heatmap-cell" style="background: var(--bn-sentiment-frustration); opacity: 0.8;"></div>
+                    <div class="mini-heatmap-cell" style="background: var(--bn-sentiment-frustration); opacity: 0.3;"></div>
+                    <div class="mini-heatmap-cell" style="background: var(--bn-sentiment-frustration); opacity: 0.6;"></div>
+                    <div class="mini-heatmap-cell" style="background: var(--bn-colour-border);"></div>
+                    <div class="mini-heatmap-cell" style="background: var(--bn-sentiment-frustration); opacity: 0.9;"></div>
+                    <div class="mini-heatmap-cell" style="background: var(--bn-sentiment-frustration); opacity: 0.4;"></div>
+                    <div class="mini-heatmap-cell" style="background: var(--bn-colour-border);"></div>
+                    <div class="mini-heatmap-cell" style="background: var(--bn-sentiment-frustration); opacity: 0.7;"></div>
+                    <div class="mini-heatmap-cell" style="background: var(--bn-colour-border);"></div>
+                    <div class="mini-heatmap-cell" style="background: var(--bn-sentiment-frustration); opacity: 0.5;"></div>
+                </div>
+                <div class="mini-signal-footer">
+                    <span class="mini-signal-score" style="color: var(--bn-sentiment-frustration);">4.2</span>
+                    <span class="mini-signal-participants">7 of 10</span>
+                </div>
+            </div>
+
+            <div class="mini-signal-card">
+                <div class="mini-signal-source">Navigation</div>
+                <div class="mini-signal-row">
+                    <span class="badge badge-confusion">confusion</span>
+                </div>
+                <div class="mini-heatmap">
+                    <div class="mini-heatmap-cell" style="background: var(--bn-sentiment-confusion); opacity: 0.5;"></div>
+                    <div class="mini-heatmap-cell" style="background: var(--bn-sentiment-confusion); opacity: 0.7;"></div>
+                    <div class="mini-heatmap-cell" style="background: var(--bn-colour-border);"></div>
+                    <div class="mini-heatmap-cell" style="background: var(--bn-sentiment-confusion); opacity: 0.4;"></div>
+                    <div class="mini-heatmap-cell" style="background: var(--bn-sentiment-confusion); opacity: 0.9;"></div>
+                    <div class="mini-heatmap-cell" style="background: var(--bn-colour-border);"></div>
+                    <div class="mini-heatmap-cell" style="background: var(--bn-colour-border);"></div>
+                    <div class="mini-heatmap-cell" style="background: var(--bn-sentiment-confusion); opacity: 0.6;"></div>
+                    <div class="mini-heatmap-cell" style="background: var(--bn-sentiment-confusion); opacity: 0.3;"></div>
+                    <div class="mini-heatmap-cell" style="background: var(--bn-colour-border);"></div>
+                </div>
+                <div class="mini-signal-footer">
+                    <span class="mini-signal-score" style="color: var(--bn-sentiment-confusion);">3.8</span>
+                    <span class="mini-signal-participants">6 of 10</span>
+                </div>
+            </div>
+
+            <div class="mini-signal-card">
+                <div class="mini-signal-source">Checkout</div>
+                <div class="mini-signal-row">
+                    <span class="badge badge-satisfaction">satisfaction</span>
+                </div>
+                <div class="mini-heatmap">
+                    <div class="mini-heatmap-cell" style="background: var(--bn-sentiment-satisfaction); opacity: 0.6;"></div>
+                    <div class="mini-heatmap-cell" style="background: var(--bn-sentiment-satisfaction); opacity: 0.8;"></div>
+                    <div class="mini-heatmap-cell" style="background: var(--bn-sentiment-satisfaction); opacity: 0.9;"></div>
+                    <div class="mini-heatmap-cell" style="background: var(--bn-sentiment-satisfaction); opacity: 0.4;"></div>
+                    <div class="mini-heatmap-cell" style="background: var(--bn-sentiment-satisfaction); opacity: 0.7;"></div>
+                    <div class="mini-heatmap-cell" style="background: var(--bn-colour-border);"></div>
+                    <div class="mini-heatmap-cell" style="background: var(--bn-sentiment-satisfaction); opacity: 0.5;"></div>
+                    <div class="mini-heatmap-cell" style="background: var(--bn-sentiment-satisfaction); opacity: 0.3;"></div>
+                    <div class="mini-heatmap-cell" style="background: var(--bn-sentiment-satisfaction); opacity: 0.6;"></div>
+                    <div class="mini-heatmap-cell" style="background: var(--bn-sentiment-satisfaction); opacity: 0.8;"></div>
+                </div>
+                <div class="mini-signal-footer">
+                    <span class="mini-signal-score" style="color: var(--bn-sentiment-satisfaction);">3.1</span>
+                    <span class="mini-signal-participants">8 of 10</span>
+                </div>
+            </div>
+
+            <div class="mini-signal-card">
+                <div class="mini-signal-source">Search</div>
+                <div class="mini-signal-row">
+                    <span class="badge badge-doubt">doubt</span>
+                </div>
+                <div class="mini-heatmap">
+                    <div class="mini-heatmap-cell" style="background: var(--bn-colour-border);"></div>
+                    <div class="mini-heatmap-cell" style="background: var(--bn-sentiment-doubt); opacity: 0.5;"></div>
+                    <div class="mini-heatmap-cell" style="background: var(--bn-sentiment-doubt); opacity: 0.7;"></div>
+                    <div class="mini-heatmap-cell" style="background: var(--bn-colour-border);"></div>
+                    <div class="mini-heatmap-cell" style="background: var(--bn-colour-border);"></div>
+                    <div class="mini-heatmap-cell" style="background: var(--bn-sentiment-doubt); opacity: 0.9;"></div>
+                    <div class="mini-heatmap-cell" style="background: var(--bn-sentiment-doubt); opacity: 0.4;"></div>
+                    <div class="mini-heatmap-cell" style="background: var(--bn-colour-border);"></div>
+                    <div class="mini-heatmap-cell" style="background: var(--bn-sentiment-doubt); opacity: 0.6;"></div>
+                    <div class="mini-heatmap-cell" style="background: var(--bn-colour-border);"></div>
+                </div>
+                <div class="mini-signal-footer">
+                    <span class="mini-signal-score" style="color: var(--bn-sentiment-doubt);">2.6</span>
+                    <span class="mini-signal-participants">4 of 10</span>
+                </div>
+            </div>
+
+            <div class="toc-heading">Theme &times; Sentiment</div>
+
+            <div class="mini-signal-card">
+                <div class="mini-signal-source">Trust &amp; credibility</div>
+                <div class="mini-signal-row">
+                    <span class="badge badge-confidence">confidence</span>
+                </div>
+                <div class="mini-heatmap">
+                    <div class="mini-heatmap-cell" style="background: var(--bn-sentiment-confidence); opacity: 0.7;"></div>
+                    <div class="mini-heatmap-cell" style="background: var(--bn-sentiment-confidence); opacity: 0.5;"></div>
+                    <div class="mini-heatmap-cell" style="background: var(--bn-sentiment-confidence); opacity: 0.9;"></div>
+                    <div class="mini-heatmap-cell" style="background: var(--bn-sentiment-confidence); opacity: 0.3;"></div>
+                    <div class="mini-heatmap-cell" style="background: var(--bn-colour-border);"></div>
+                    <div class="mini-heatmap-cell" style="background: var(--bn-sentiment-confidence); opacity: 0.6;"></div>
+                    <div class="mini-heatmap-cell" style="background: var(--bn-sentiment-confidence); opacity: 0.8;"></div>
+                    <div class="mini-heatmap-cell" style="background: var(--bn-colour-border);"></div>
+                    <div class="mini-heatmap-cell" style="background: var(--bn-sentiment-confidence); opacity: 0.4;"></div>
+                    <div class="mini-heatmap-cell" style="background: var(--bn-sentiment-confidence); opacity: 0.7;"></div>
+                </div>
+                <div class="mini-signal-footer">
+                    <span class="mini-signal-score" style="color: var(--bn-sentiment-confidence);">2.9</span>
+                    <span class="mini-signal-participants">7 of 10</span>
+                </div>
+            </div>
+
+            <div class="mini-signal-card">
+                <div class="mini-signal-source">Mobile experience</div>
+                <div class="mini-signal-row">
+                    <span class="badge badge-frustration">frustration</span>
+                </div>
+                <div class="mini-heatmap">
+                    <div class="mini-heatmap-cell" style="background: var(--bn-sentiment-frustration); opacity: 0.9;"></div>
+                    <div class="mini-heatmap-cell" style="background: var(--bn-colour-border);"></div>
+                    <div class="mini-heatmap-cell" style="background: var(--bn-sentiment-frustration); opacity: 0.6;"></div>
+                    <div class="mini-heatmap-cell" style="background: var(--bn-sentiment-frustration); opacity: 0.4;"></div>
+                    <div class="mini-heatmap-cell" style="background: var(--bn-sentiment-frustration); opacity: 0.7;"></div>
+                    <div class="mini-heatmap-cell" style="background: var(--bn-colour-border);"></div>
+                    <div class="mini-heatmap-cell" style="background: var(--bn-sentiment-frustration); opacity: 0.5;"></div>
+                    <div class="mini-heatmap-cell" style="background: var(--bn-colour-border);"></div>
+                    <div class="mini-heatmap-cell" style="background: var(--bn-sentiment-frustration); opacity: 0.8;"></div>
+                    <div class="mini-heatmap-cell" style="background: var(--bn-sentiment-frustration); opacity: 0.3;"></div>
+                </div>
+                <div class="mini-signal-footer">
+                    <span class="mini-signal-score" style="color: var(--bn-sentiment-frustration);">2.4</span>
+                    <span class="mini-signal-participants">5 of 10</span>
+                </div>
+            </div>
+
+            <div class="mini-signal-card">
+                <div class="mini-signal-source">Pricing clarity</div>
+                <div class="mini-signal-row">
+                    <span class="badge badge-surprise">surprise</span>
+                </div>
+                <div class="mini-heatmap">
+                    <div class="mini-heatmap-cell" style="background: var(--bn-colour-border);"></div>
+                    <div class="mini-heatmap-cell" style="background: var(--bn-sentiment-surprise); opacity: 0.6;"></div>
+                    <div class="mini-heatmap-cell" style="background: var(--bn-colour-border);"></div>
+                    <div class="mini-heatmap-cell" style="background: var(--bn-sentiment-surprise); opacity: 0.8;"></div>
+                    <div class="mini-heatmap-cell" style="background: var(--bn-colour-border);"></div>
+                    <div class="mini-heatmap-cell" style="background: var(--bn-colour-border);"></div>
+                    <div class="mini-heatmap-cell" style="background: var(--bn-sentiment-surprise); opacity: 0.5;"></div>
+                    <div class="mini-heatmap-cell" style="background: var(--bn-colour-border);"></div>
+                    <div class="mini-heatmap-cell" style="background: var(--bn-colour-border);"></div>
+                    <div class="mini-heatmap-cell" style="background: var(--bn-sentiment-surprise); opacity: 0.7;"></div>
+                </div>
+                <div class="mini-signal-footer">
+                    <span class="mini-signal-score" style="color: var(--bn-sentiment-surprise);">1.8</span>
+                    <span class="mini-signal-participants">3 of 10</span>
+                </div>
+            </div>
+        </div>
+        <div class="width-badge">280px</div>
+    </div>
+</div>
+
+<!-- REFERENCE: Quotes TOC — 100% production classes -->
+<div class="mockup-column">
+    <span class="mockup-label">Ref: Quotes TOC</span>
+    <div class="sidebar-panel" data-width-badge>
+        <div class="sidebar-header toc-sidebar-header">
+            <button class="sidebar-close">&#215;</button>
+            <span class="sidebar-title">Contents</span>
+        </div>
+        <div class="toc-sidebar-body">
+            <div class="toc-heading">Sections</div>
+            <a class="toc-link" href="#">Onboarding experience</a>
+            <a class="toc-link active" href="#">Navigation and wayfinding</a>
+            <a class="toc-link" href="#">Search functionality</a>
+            <a class="toc-link" href="#">Checkout flow</a>
+            <a class="toc-link" href="#">Account management</a>
+            <a class="toc-link" href="#">Help and support</a>
+            <a class="toc-link" href="#">Mobile experience</a>
+            <a class="toc-link" href="#">Pricing and plans</a>
+            <div class="toc-heading">Themes</div>
+            <a class="toc-link" href="#">Trust and credibility</a>
+            <a class="toc-link" href="#">Learning curve</a>
+            <a class="toc-link" href="#">Feature discovery</a>
+            <a class="toc-link" href="#">Personalisation</a>
+            <a class="toc-link" href="#">Cross-device workflow</a>
+            <a class="toc-link" href="#">Pricing clarity</a>
+        </div>
+        <div class="width-badge">280px</div>
+    </div>
+</div>
+
+</div><!-- /.mockup-row -->
+
+<!-- Width badge updater — reads offsetWidth on ResizeObserver -->
+<script>
+document.querySelectorAll('[data-width-badge]').forEach(panel => {
+    const badge = panel.querySelector('.width-badge');
+    if (!badge) return;
+    const update = () => { badge.textContent = panel.offsetWidth + 'px'; };
+    update();
+    new ResizeObserver(update).observe(panel);
+});
+</script>
+
+</body>
+</html>

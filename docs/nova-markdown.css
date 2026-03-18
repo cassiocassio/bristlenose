@@ -1,0 +1,529 @@
+/*
+ * GitHub Markdown stylesheet adapted for Nova's Markdown preview.
+ *
+ * Based on sindresorhus/github-markdown-css (MIT licence).
+ * https://github.com/sindresorhus/github-markdown-css
+ *
+ * Adaptation: every `.markdown-body` selector → `body`, because Nova
+ * renders Markdown straight into <body> with no wrapper element.
+ * GitHub-only classes (.octicon, .pl-*, .csv-data, g-emoji, etc.) removed.
+ *
+ * To use: Nova → Settings → Workspace → Markdown Stylesheet → Custom…
+ *         then pick this file.
+ */
+
+body {
+  --base-size-16: 1rem;
+  --base-size-24: 1.5rem;
+  --base-size-4: 0.25rem;
+  --base-size-40: 2.5rem;
+  --base-size-8: 0.5rem;
+  --base-text-weight-medium: 500;
+  --base-text-weight-normal: 400;
+  --base-text-weight-semibold: 600;
+  --fontStack-monospace: ui-monospace, SFMono-Regular, SF Mono, Menlo, Consolas, Liberation Mono, monospace;
+  --fontStack-sansSerif: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans", Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji";
+  --fgColor-accent: Highlight;
+}
+
+@media (prefers-color-scheme: dark) {
+  body {
+    color-scheme: dark;
+    --fgColor-accent: #4493f8;
+    --bgColor-attention-muted: #bb800926;
+    --bgColor-default: #0d1117;
+    --bgColor-muted: #151b23;
+    --bgColor-neutral-muted: #656c7633;
+    --borderColor-accent-emphasis: #1f6feb;
+    --borderColor-attention-emphasis: #9e6a03;
+    --borderColor-danger-emphasis: #da3633;
+    --borderColor-default: #3d444d;
+    --borderColor-done-emphasis: #8957e5;
+    --borderColor-success-emphasis: #238636;
+    --fgColor-attention: #d29922;
+    --fgColor-danger: #f85149;
+    --fgColor-default: #f0f6fc;
+    --fgColor-done: #ab7df8;
+    --fgColor-muted: #9198a1;
+    --fgColor-success: #3fb950;
+    --borderColor-muted: #3d444db3;
+    --focus-outlineColor: var(--borderColor-accent-emphasis);
+    --borderColor-neutral-muted: var(--borderColor-muted);
+  }
+}
+
+@media (prefers-color-scheme: light) {
+  body {
+    color-scheme: light;
+    --fgColor-danger: #d1242f;
+    --bgColor-attention-muted: #fff8c5;
+    --bgColor-muted: #f6f8fa;
+    --bgColor-neutral-muted: #818b981f;
+    --borderColor-accent-emphasis: #0969da;
+    --borderColor-attention-emphasis: #9a6700;
+    --borderColor-danger-emphasis: #cf222e;
+    --borderColor-default: #d1d9e0;
+    --borderColor-done-emphasis: #8250df;
+    --borderColor-success-emphasis: #1a7f37;
+    --fgColor-accent: #0969da;
+    --fgColor-attention: #9a6700;
+    --fgColor-done: #8250df;
+    --fgColor-muted: #59636e;
+    --fgColor-success: #1a7f37;
+    --bgColor-default: #ffffff;
+    --borderColor-muted: #d1d9e0b3;
+    --fgColor-default: #1f2328;
+    --focus-outlineColor: var(--borderColor-accent-emphasis);
+    --borderColor-neutral-muted: var(--borderColor-muted);
+  }
+}
+
+body {
+  -ms-text-size-adjust: 100%;
+  -webkit-text-size-adjust: 100%;
+  margin: 0;
+  padding: 30px;
+  font-weight: var(--base-text-weight-normal, 400);
+  color: var(--fgColor-default);
+  background-color: var(--bgColor-default);
+  font-family: var(--fontStack-sansSerif);
+  font-size: 16px;
+  line-height: 1.5;
+  word-wrap: break-word;
+}
+
+/* --- Links --- */
+
+a {
+  background-color: transparent;
+  color: var(--fgColor-accent);
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
+}
+
+a:not([href]) {
+  color: inherit;
+  text-decoration: none;
+}
+
+/* --- Focus --- */
+
+a:focus,
+input[type=radio]:focus,
+input[type=checkbox]:focus {
+  outline: 2px solid var(--focus-outlineColor);
+  outline-offset: -2px;
+  box-shadow: none;
+}
+
+a:focus:not(:focus-visible),
+input[type=radio]:focus:not(:focus-visible),
+input[type=checkbox]:focus:not(:focus-visible) {
+  outline: solid 1px transparent;
+}
+
+a:focus-visible,
+input[type=radio]:focus-visible,
+input[type=checkbox]:focus-visible {
+  outline: 2px solid var(--focus-outlineColor);
+  outline-offset: -2px;
+  box-shadow: none;
+}
+
+/* --- Typography --- */
+
+b, strong {
+  font-weight: var(--base-text-weight-semibold, 600);
+}
+
+dfn {
+  font-style: italic;
+}
+
+mark {
+  background-color: var(--bgColor-attention-muted);
+  color: var(--fgColor-default);
+}
+
+small {
+  font-size: 90%;
+}
+
+sub, sup {
+  font-size: 75%;
+  line-height: 0;
+  position: relative;
+  vertical-align: baseline;
+}
+
+sub { bottom: -0.25em; }
+sup { top: -0.5em; }
+
+abbr[title] {
+  border-bottom: none;
+  text-decoration: underline dotted;
+}
+
+/* --- Headings --- */
+
+h1, h2, h3, h4, h5, h6 {
+  margin-top: var(--base-size-24);
+  margin-bottom: var(--base-size-16);
+  font-weight: var(--base-text-weight-semibold, 600);
+  line-height: 1.25;
+}
+
+h1 {
+  margin: .67em 0;
+  padding-bottom: .3em;
+  font-size: 2em;
+  border-bottom: 1px solid var(--borderColor-muted);
+}
+
+h2 {
+  padding-bottom: .3em;
+  font-size: 1.5em;
+  border-bottom: 1px solid var(--borderColor-muted);
+}
+
+h3 { font-size: 1.25em; }
+h4 { font-size: 1em; }
+h5 { font-size: .875em; }
+
+h6 {
+  font-size: .85em;
+  color: var(--fgColor-muted);
+}
+
+h1 tt, h1 code,
+h2 tt, h2 code,
+h3 tt, h3 code,
+h4 tt, h4 code,
+h5 tt, h5 code,
+h6 tt, h6 code {
+  padding: 0 .2em;
+  font-size: inherit;
+}
+
+/* --- Block elements --- */
+
+p {
+  margin-top: 0;
+  margin-bottom: 10px;
+}
+
+p, blockquote, ul, ol, dl, table, pre, details {
+  margin-top: 0;
+  margin-bottom: var(--base-size-16);
+}
+
+body > *:first-child {
+  margin-top: 0 !important;
+}
+
+body > *:last-child {
+  margin-bottom: 0 !important;
+}
+
+/* --- Blockquote --- */
+
+blockquote {
+  margin: 0;
+  padding: 0 1em;
+  color: var(--fgColor-muted);
+  border-left: .25em solid var(--borderColor-default);
+}
+
+blockquote > :first-child { margin-top: 0; }
+blockquote > :last-child { margin-bottom: 0; }
+
+/* --- Lists --- */
+
+ul, ol {
+  margin-top: 0;
+  margin-bottom: 0;
+  padding-left: 2em;
+}
+
+ol ol, ul ol {
+  list-style-type: lower-roman;
+}
+
+ul ul ol, ul ol ol, ol ul ol, ol ol ol {
+  list-style-type: lower-alpha;
+}
+
+ul ul, ul ol, ol ol, ol ul {
+  margin-top: 0;
+  margin-bottom: 0;
+}
+
+li > p {
+  margin-top: var(--base-size-16);
+}
+
+li + li {
+  margin-top: .25em;
+}
+
+dd { margin-left: 0; }
+
+dl { padding: 0; }
+
+dl dt {
+  padding: 0;
+  margin-top: var(--base-size-16);
+  font-size: 1em;
+  font-style: italic;
+  font-weight: var(--base-text-weight-semibold, 600);
+}
+
+dl dd {
+  padding: 0 var(--base-size-16);
+  margin-bottom: var(--base-size-16);
+}
+
+/* --- Task lists (checkboxes) --- */
+
+.task-list-item {
+  list-style-type: none;
+}
+
+.task-list-item label {
+  font-weight: var(--base-text-weight-normal, 400);
+}
+
+.task-list-item + .task-list-item {
+  margin-top: var(--base-size-4);
+}
+
+.task-list-item-checkbox {
+  margin: 0 .2em .25em -1.4em;
+  vertical-align: middle;
+}
+
+/* --- Horizontal rule --- */
+
+hr {
+  box-sizing: content-box;
+  overflow: hidden;
+  background: transparent;
+  border-bottom: 1px solid var(--borderColor-muted);
+  height: .25em;
+  padding: 0;
+  margin: var(--base-size-24) 0;
+  background-color: var(--borderColor-default);
+  border: 0;
+}
+
+/* --- Images --- */
+
+img {
+  border-style: none;
+  max-width: 100%;
+  box-sizing: content-box;
+}
+
+/* --- Tables --- */
+
+table {
+  border-spacing: 0;
+  border-collapse: collapse;
+  display: block;
+  width: max-content;
+  max-width: 100%;
+  overflow: auto;
+  font-variant: tabular-nums;
+}
+
+table th {
+  font-weight: var(--base-text-weight-semibold, 600);
+}
+
+table th, table td {
+  padding: 6px 13px;
+  border: 1px solid var(--borderColor-default);
+}
+
+table td > :last-child {
+  margin-bottom: 0;
+}
+
+table tr {
+  background-color: var(--bgColor-default);
+  border-top: 1px solid var(--borderColor-muted);
+}
+
+table tr:nth-child(2n) {
+  background-color: var(--bgColor-muted);
+}
+
+/* --- Code --- */
+
+code, kbd, pre, samp {
+  font-family: var(--fontStack-monospace);
+  font-size: 1em;
+}
+
+tt, code, samp {
+  font-family: var(--fontStack-monospace);
+  font-size: 12px;
+}
+
+pre {
+  margin-top: 0;
+  margin-bottom: 0;
+  font-family: var(--fontStack-monospace);
+  font-size: 12px;
+  word-wrap: normal;
+}
+
+code, tt {
+  padding: .2em .4em;
+  margin: 0;
+  font-size: 85%;
+  white-space: break-spaces;
+  background-color: var(--bgColor-neutral-muted);
+  border-radius: 6px;
+}
+
+pre code {
+  font-size: 100%;
+}
+
+pre > code {
+  padding: 0;
+  margin: 0;
+  word-break: normal;
+  white-space: pre;
+  background: transparent;
+  border: 0;
+}
+
+.highlight pre, pre {
+  padding: var(--base-size-16);
+  overflow: auto;
+  font-size: 85%;
+  line-height: 1.45;
+  color: var(--fgColor-default);
+  background-color: var(--bgColor-muted);
+  border-radius: 6px;
+}
+
+pre code, pre tt {
+  display: inline;
+  padding: 0;
+  margin: 0;
+  overflow: visible;
+  line-height: inherit;
+  word-wrap: normal;
+  background-color: transparent;
+  border: 0;
+}
+
+/* --- Keyboard --- */
+
+kbd {
+  display: inline-block;
+  padding: var(--base-size-4);
+  font: 11px var(--fontStack-monospace);
+  line-height: 10px;
+  color: var(--fgColor-default);
+  vertical-align: middle;
+  background-color: var(--bgColor-muted);
+  border: solid 1px var(--borderColor-neutral-muted);
+  border-bottom-color: var(--borderColor-neutral-muted);
+  border-radius: 6px;
+  box-shadow: inset 0 -1px 0 var(--borderColor-neutral-muted);
+}
+
+/* --- Details / summary --- */
+
+details { display: block; }
+figcaption { display: block; }
+figure { display: block; margin: 1em var(--base-size-40); }
+summary { display: list-item; cursor: pointer; }
+
+/* --- Alignment helpers (used by some markdown renderers) --- */
+
+span.frame { display: block; overflow: hidden; }
+
+span.frame > span {
+  display: block;
+  float: left;
+  width: auto;
+  padding: 7px;
+  margin: 13px 0 0;
+  overflow: hidden;
+  border: 1px solid var(--borderColor-default);
+}
+
+span.frame span img { display: block; float: left; }
+
+span.frame span span {
+  display: block;
+  padding: 5px 0 0;
+  clear: both;
+  color: var(--fgColor-default);
+}
+
+span.align-center { display: block; overflow: hidden; clear: both; }
+span.align-center > span { display: block; margin: 13px auto 0; overflow: hidden; text-align: center; }
+span.align-center span img { margin: 0 auto; text-align: center; }
+
+span.align-right { display: block; overflow: hidden; clear: both; }
+span.align-right > span { display: block; margin: 13px 0 0; overflow: hidden; text-align: right; }
+span.align-right span img { margin: 0; text-align: right; }
+
+span.float-left { display: block; float: left; margin-right: 13px; overflow: hidden; }
+span.float-left span { margin: 13px 0 0; }
+
+span.float-right { display: block; float: right; margin-left: 13px; overflow: hidden; }
+span.float-right > span { display: block; margin: 13px auto 0; overflow: hidden; text-align: right; }
+
+/* --- Footnotes --- */
+
+[data-footnote-ref]::before { content: "["; }
+[data-footnote-ref]::after { content: "]"; }
+
+.footnotes {
+  font-size: 12px;
+  color: var(--fgColor-muted);
+  border-top: 1px solid var(--borderColor-default);
+}
+
+.footnotes ol { padding-left: var(--base-size-16); }
+.footnotes ol ul { display: inline-block; padding-left: var(--base-size-16); margin-top: var(--base-size-16); }
+
+/* --- GitHub-flavoured markdown alerts --- */
+
+.markdown-alert {
+  padding: var(--base-size-8) var(--base-size-16);
+  margin-bottom: var(--base-size-16);
+  color: inherit;
+  border-left: .25em solid var(--borderColor-default);
+}
+
+.markdown-alert > :first-child { margin-top: 0; }
+.markdown-alert > :last-child { margin-bottom: 0; }
+
+.markdown-alert .markdown-alert-title {
+  display: flex;
+  font-weight: var(--base-text-weight-medium, 500);
+  align-items: center;
+  line-height: 1;
+}
+
+.markdown-alert.markdown-alert-note { border-left-color: var(--borderColor-accent-emphasis); }
+.markdown-alert.markdown-alert-note .markdown-alert-title { color: var(--fgColor-accent); }
+.markdown-alert.markdown-alert-important { border-left-color: var(--borderColor-done-emphasis); }
+.markdown-alert.markdown-alert-important .markdown-alert-title { color: var(--fgColor-done); }
+.markdown-alert.markdown-alert-warning { border-left-color: var(--borderColor-attention-emphasis); }
+.markdown-alert.markdown-alert-warning .markdown-alert-title { color: var(--fgColor-attention); }
+.markdown-alert.markdown-alert-tip { border-left-color: var(--borderColor-success-emphasis); }
+.markdown-alert.markdown-alert-tip .markdown-alert-title { color: var(--fgColor-success); }
+.markdown-alert.markdown-alert-caution { border-left-color: var(--borderColor-danger-emphasis); }
+.markdown-alert.markdown-alert-caution .markdown-alert-title { color: var(--fgColor-danger); }

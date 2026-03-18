@@ -2,7 +2,7 @@
 
 This document tracks active feature branches to help multiple Claude sessions coordinate without conflicts.
 
-**Updated:** 11 Mar 2026 (render-refactor closed)
+**Updated:** 18 Mar 2026 (settings-modal closed)
 
 ---
 
@@ -20,7 +20,6 @@ Each active feature branch gets its own **git worktree** — a full working copy
 | `bristlenose_branch living-fish/` | `living-fish` | Animated "living portrait" logo for serve mode |
 | `bristlenose_branch drag-push/` | `drag-push` | Sidebar drag-to-open uses push mode (not overlay) |
 | `bristlenose_branch responsive-signal-cards/` | `responsive-signal-cards` | Responsive signal cards |
-| `bristlenose_branch settings-modal/` | `settings-modal` | Settings modal dialog (gear icon, ⌘,, sidebar nav) |
 
 
 
@@ -105,7 +104,6 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 | `living-fish` | `bristlenose_branch living-fish/` | `origin/living-fish` |
 | `drag-push` | `bristlenose_branch drag-push/` | local only |
 | `responsive-signal-cards` | `bristlenose_branch responsive-signal-cards/` | local only |
-| `settings-modal` | `bristlenose_branch settings-modal/` | local only |
 
 
 ---
@@ -200,35 +198,12 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 
 ---
 
-### `settings-modal`
-
-**Status:** Just started
-**Started:** 18 Mar 2026
-**Worktree:** `/Users/cassio/Code/bristlenose_branch settings-modal/`
-**Remote:** local only (push when ready)
-
-**What it does:** Replace the Settings tab with a modal dialog (⌘, / gear icon). Sidebar nav with 5 sections: General, Project, Profile, API Keys, Config. Phase 1 builds the modal shell and General page (appearance, PII, language, default provider). Other sections stubbed. Reusable `ModalNav` component for future About/Help modal. Design doc: `docs/design-settings-ui.md`.
-
-**Files this branch will touch:**
-- `frontend/src/components/ModalNav.tsx` — new reusable sidebar-nav modal
-- `frontend/src/components/SettingsModal.tsx` — settings-specific content
-- `frontend/src/components/SettingsModal.test.tsx` — tests
-- `frontend/src/layouts/AppLayout.tsx` — gear icon, render modal
-- `frontend/src/hooks/useKeyboardShortcuts.ts` — ⌘, handler
-- `frontend/src/components/HelpModal.tsx` — add shortcut entry
-- `frontend/src/islands/SettingsPanel.tsx` — extract constants
-- `frontend/src/router.tsx` — remove Settings tab route
-- `bristlenose/theme/organisms/settings-modal.css` — new CSS
-- `bristlenose/stages/s12_render/theme_assets.py` — add CSS to _THEME_FILES
-
-**Potential conflicts with other branches:**
-- `drag-push` — both touch `sidebar.css` patterns but different selectors (sidebar layout vs modal nav). Low risk
-- `responsive-signal-cards` — no overlap (analysis cards, not settings)
-- `symbology` — no overlap (render templates, not settings)
-
----
 
 ## Completed Branches (for reference)
+
+### `settings-modal` — merged 18 Mar 2026
+
+Settings modal dialog (⌘, / gear icon) with sidebar nav. Help modal with genericised ModalNav organism. WCAG 2.1 AA accessibility audit for quotes page. About tab section components (AboutSection, CodebookSection, ContributingSection, DesignSection, DeveloperSection, SignalsSection). Phase 1 modal shell and General page. Reusable `ModalNav` component for future modals.
 
 ### `render-refactor` — merged 11 Mar 2026
 

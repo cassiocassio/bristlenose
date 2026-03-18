@@ -1,0 +1,14 @@
+/* --- Settings modal — size overrides for ModalNav shell ---
+   Layout, nav, transitions live in modal-nav.css (generic organism).
+   This file only sets dimensions specific to the Settings modal. */
+
+.settings-modal {
+    max-width: 42rem;
+    height: min(32rem, 80vh);
+}
+
+@media (max-width: 500px) {
+    .settings-modal {
+        height: min(32rem, 90vh);
+    }
+}

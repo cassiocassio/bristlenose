@@ -90,15 +90,16 @@ describe("Router", () => {
     expect(tab.className).toContain("active");
   });
 
-  it("/report/settings/ activates Settings tab", () => {
+  it("/report/settings/ redirects to project tab (settings is now a modal)", () => {
     renderRoute("/report/settings/");
-    const tab = screen.getByRole("tab", { name: "Settings" });
+    // The catch-all route redirects unknown paths to /report/
+    const tab = screen.getByRole("tab", { name: "Project" });
     expect(tab.className).toContain("active");
   });
 
-  it("/report/about/ activates About tab", () => {
+  it("/report/about/ redirects to project tab", () => {
     renderRoute("/report/about/");
-    const tab = screen.getByRole("tab", { name: "About" });
+    const tab = screen.getByRole("tab", { name: "Project" });
     expect(tab.className).toContain("active");
   });
 

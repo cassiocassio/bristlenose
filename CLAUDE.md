@@ -215,6 +215,7 @@ See `docs/BRANCHES.md` for active branches, worktree paths, what files they touc
 - Keep changes minimal and focused — don't refactor or add features beyond what's asked
 - Commit messages: short, descriptive, lowercase (e.g., "fix tag suggest offering tags the quote already has")
 - **Human QA after each task**: when you finish a task, suggest only the checks a human needs to do that automated tests can't cover (visual regression, browser interaction, UX feel). Skip this for pure data/logic work where unit tests are sufficient. Include copy-pasteable commands to make it easy (e.g. server start command, URL to open). Don't duplicate what pytest already covers
+- **Never use the Claude Code preview pane for visual QA.** Bristlenose's layout needs a full-size browser window — the preview pane is too narrow, renders dark-on-dark, and doesn't have the right test data. For visual verification, tell the user to open their own browser. Give them a copy-pasteable serve command and the URL to check. For the main repo: `.venv/bin/bristlenose serve --dev trial-runs/project-ikea` (port 8150). For worktrees: use the port from `.claude/launch.json` (e.g. port 5001 for settings-modal branch)
 
 ### Release timing (evening releases)
 
@@ -294,7 +295,7 @@ When the user signals end of session, **proactively offer to run this checklist*
 9. **Clean up branches** — delete merged feature branches
 10. **Verify CI** — check latest push passes CI
 
-## Current status (v0.13.7, Mar 2026)
+## Current status (v0.13.8, Mar 2026)
 
 Core pipeline published to PyPI + Homebrew + Snap. Latest: **Render refactor** — `render_html.py` broken into `bristlenose/stages/s12_render/` package (8 submodules). Static render formally deprecated. 1938 Python tests, 1072 Vitest tests. React migration complete (Steps 1–10). See `CHANGELOG.md` and git log for full history.
 

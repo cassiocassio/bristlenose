@@ -67,6 +67,7 @@ const SECTIONS: { title: string; shortcuts: Shortcut[] }[] = [
         keys: [{ key: "\\" }, { modifier: "cmd", key: "." }],
         description: "Toggle both sidebars",
       },
+      { keys: [{ modifier: "cmd", key: "," }], description: "Settings" },
       { keys: [{ key: "?" }], description: "This help" },
       { keys: [{ key: "Esc" }], description: "Close / clear" },
     ],

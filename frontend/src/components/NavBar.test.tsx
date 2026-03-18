@@ -34,14 +34,15 @@ function renderNavBar(initialEntry = "/report/") {
 // ---------------------------------------------------------------------------
 
 describe("NavBar", () => {
-  it("renders all 7 tabs", () => {
+  it("renders all tabs and icon buttons", () => {
     renderNavBar();
     expect(screen.getByText("Project")).toBeInTheDocument();
     expect(screen.getByText("Sessions")).toBeInTheDocument();
     expect(screen.getByText("Quotes")).toBeInTheDocument();
     expect(screen.getByText("Codebook")).toBeInTheDocument();
     expect(screen.getByText("Analysis")).toBeInTheDocument();
-    expect(screen.getByRole("tab", { name: "Settings" })).toBeInTheDocument();
+    // Settings is now a button (opens modal), not a tab/link
+    expect(screen.getByRole("button", { name: "Settings" })).toBeInTheDocument();
     expect(screen.getByRole("tab", { name: "About" })).toBeInTheDocument();
   });
 
@@ -65,10 +66,11 @@ describe("NavBar", () => {
     expect(sessionsTab.className).toContain("active");
   });
 
-  it("all tabs have role=tab", () => {
+  it("all nav links have role=tab", () => {
     renderNavBar();
     const tabs = screen.getAllByRole("tab");
-    expect(tabs).toHaveLength(7);
+    // 5 text tabs + About icon = 6 (Settings is now a button, not a tab)
+    expect(tabs).toHaveLength(6);
   });
 
   it("nav has role=tablist", () => {
@@ -87,7 +89,12 @@ describe("NavBar", () => {
 
   it("Settings and About have aria-label", () => {
     renderNavBar();
-    expect(screen.getByRole("tab", { name: "Settings" })).toHaveAttribute("aria-label", "Settings");
+    expect(screen.getByRole("button", { name: "Settings" })).toHaveAttribute("aria-label", "Settings");
     expect(screen.getByRole("tab", { name: "About" })).toHaveAttribute("aria-label", "About");
+  });
+
+  it("Settings button has aria-haspopup=dialog", () => {
+    renderNavBar();
+    expect(screen.getByRole("button", { name: "Settings" })).toHaveAttribute("aria-haspopup", "dialog");
   });
 });

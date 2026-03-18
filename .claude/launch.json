@@ -10,14 +10,14 @@
     {
       "name": "serve",
       "runtimeExecutable": "bash",
-      "runtimeArgs": ["-c", "cd /Users/cassio/Code/bristlenose && .venv/bin/bristlenose serve --dev --port 5001 trial-runs/Fishkeeping"],
+      "runtimeArgs": ["-c", "cd '/Users/cassio/Code/bristlenose_branch settings-modal' && .venv/bin/bristlenose serve --dev --port 5001 trial-runs/Fishkeeping"],
       "autoPort": false,
       "port": 5001
     },
     {
       "name": "vite",
       "runtimeExecutable": "bash",
-      "runtimeArgs": ["-c", "cd /Users/cassio/Code/bristlenose/frontend && npx vite --port 5173"],
+      "runtimeArgs": ["-c", "cd '/Users/cassio/Code/bristlenose_branch settings-modal/frontend' && npx vite --port 5173"],
       "autoPort": false,
       "port": 5173
     }

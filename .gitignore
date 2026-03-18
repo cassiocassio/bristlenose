@@ -54,3 +54,4 @@ desktop/DerivedData/
 # Xcode user data (per-developer state, not shared)
 **/xcuserdata/
 **/*.xcuserstate
+.playwright-mcp/

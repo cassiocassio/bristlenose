@@ -97,9 +97,9 @@ describe("Router", () => {
     expect(tab.className).toContain("active");
   });
 
-  it("/report/about/ activates About tab", () => {
+  it("/report/about/ redirects to project tab", () => {
     renderRoute("/report/about/");
-    const tab = screen.getByRole("tab", { name: "About" });
+    const tab = screen.getByRole("tab", { name: "Project" });
     expect(tab.className).toContain("active");
   });
 

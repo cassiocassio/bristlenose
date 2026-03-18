@@ -2,8 +2,8 @@
  * NavBar — tab bar for the report, replacing global_nav.html.
  *
  * Uses React Router `<NavLink>` for navigation. Active tab styling uses
- * the existing `.bn-tab.active` CSS class. SVG icons for Settings,
- * About, and Export are inlined.
+ * the existing `.bn-tab.active` CSS class. SVG icons for Export,
+ * Settings, and Help are inlined.
  */
 
 import { NavLink } from "react-router-dom";
@@ -12,6 +12,7 @@ import { isExportMode } from "../utils/exportData";
 interface NavBarProps {
   onExport?: () => void;
   onSettings?: () => void;
+  onHelp?: () => void;
 }
 
 const textTabs = [
@@ -26,11 +27,8 @@ function tabClassName({ isActive }: { isActive: boolean }): string {
   return isActive ? "bn-tab active" : "bn-tab";
 }
 
-function iconTabClassName({ isActive }: { isActive: boolean }): string {
-  return isActive ? "bn-tab bn-tab-icon active" : "bn-tab bn-tab-icon";
-}
 
-export function NavBar({ onExport, onSettings }: NavBarProps) {
+export function NavBar({ onExport, onSettings, onHelp }: NavBarProps) {
   return (
     <nav className="bn-global-nav" role="tablist">
       {textTabs.map(({ to, label, ...rest }) => (
@@ -71,19 +69,19 @@ export function NavBar({ onExport, onSettings }: NavBarProps) {
           <path d="M8 1.5v1.2M8 13.3v1.2M1.5 8h1.2M13.3 8h1.2M3.4 3.4l.85.85M11.75 11.75l.85.85M3.4 12.6l.85-.85M11.75 4.25l.85-.85"/>
         </svg>
       </button>
-      <NavLink
-        to="/report/about/"
-        className={iconTabClassName}
-        role="tab"
-        aria-label="About"
-        title="About"
+      <button
+        className="bn-tab bn-tab-icon"
+        aria-label="Help"
+        aria-haspopup="dialog"
+        title="Help"
+        onClick={onHelp}
       >
         <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">
           <circle cx="8" cy="8" r="6.5"/>
           <line x1="8" y1="7" x2="8" y2="11.5"/>
           <circle cx="8" cy="4.5" r="0.01" fill="currentColor" strokeWidth="2"/>
         </svg>
-      </NavLink>
+      </button>
     </nav>
   );
 }

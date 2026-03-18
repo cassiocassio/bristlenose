@@ -50,11 +50,16 @@ const IS_DEV =
  */
 function AppShell() {
   const [helpOpen, setHelpOpen] = useState(false);
+  const [helpSection, setHelpSection] = useState<string>("help");
   const [feedbackOpen, setFeedbackOpen] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [health, setHealth] = useState<HealthResponse>(DEFAULT_HEALTH_RESPONSE);
   const toggleHelp = useCallback(() => setHelpOpen((prev) => !prev), []);
+  const openHelp = useCallback(() => {
+    setHelpSection("help");
+    setHelpOpen(true);
+  }, []);
   const openFeedback = useCallback(() => setFeedbackOpen(true), []);
   const closeFeedback = useCallback(() => setFeedbackOpen(false), []);
   const toggleSettings = useCallback(() => setSettingsOpen((prev) => !prev), []);
@@ -80,9 +85,14 @@ function AppShell() {
       .catch(() => {});
   }, []);
 
+  const toggleHelpShortcuts = useCallback(() => {
+    setHelpSection("shortcuts");
+    setHelpOpen((prev) => !prev);
+  }, []);
+
   useKeyboardShortcuts({
     helpModalOpen: helpOpen,
-    onToggleHelp: toggleHelp,
+    onToggleHelp: toggleHelpShortcuts,
     settingsModalOpen: settingsOpen,
     onToggleSettings: toggleSettings,
   });
@@ -95,15 +105,15 @@ function AppShell() {
       showRightSidebar={!!isQuotes}
     >
       <Header />
-      <NavBar onExport={toggleExport} onSettings={toggleSettings} />
+      <NavBar onExport={toggleExport} onSettings={toggleSettings} onHelp={openHelp} />
       <Outlet />
       <Footer
         health={health}
         onOpenFeedback={openFeedback}
-        onToggleHelp={toggleHelp}
+        onToggleHelp={openHelp}
       />
       <FeedbackModal open={feedbackOpen} onClose={closeFeedback} health={health} />
-      <HelpModal open={helpOpen} onClose={toggleHelp} />
+      <HelpModal open={helpOpen} onClose={toggleHelp} initialSection={helpSection} health={health} />
       <ExportDialog open={exportOpen} onClose={toggleExport} />
       <SettingsModal open={settingsOpen} onClose={toggleSettings} />
       {IS_DEV && (

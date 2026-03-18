@@ -1,12 +1,16 @@
 /**
- * ModalNav — reusable sidebar-nav modal shell.
+ * ModalNav — reusable sidebar-nav modal shell (design system organism).
  *
  * Generic two-column layout: sidebar navigation + content pane.
  * Supports disclosure sub-items (collapsible groups) and an optional
  * search slot above the nav list.  Responsive: collapses to a
  * dropdown selector at narrow viewports (≤500px via CSS).
  *
- * Used by SettingsModal; designed to be reusable for About/Help later.
+ * CSS: organisms/modal-nav.css (generic layout + transition).
+ * Each consumer provides a sizing class via `className` prop
+ * (e.g. "settings-modal", "help-modal").
+ *
+ * Used by SettingsModal, HelpModal, and future sidebar-nav modals.
  *
  * @module ModalNav
  */
@@ -43,10 +47,13 @@ export interface ModalNavProps {
   children: React.ReactNode;
   /** Optional slot above the nav list (e.g. search input). */
   searchSlot?: React.ReactNode;
-  /** Extra CSS class on the .bn-modal element. */
+  /** Extra CSS class on the .bn-modal element for sizing (e.g. "settings-modal"). */
   className?: string;
   /** data-testid for the overlay. */
   testId?: string;
+  /** Unique ID for the title element (for aria-labelledby). Prevents
+   *  duplicate IDs when multiple ModalNav modals are in the DOM. */
+  titleId?: string;
 }
 
 // ── Component ─────────────────────────────────────────────────────────────
@@ -62,7 +69,11 @@ export function ModalNav({
   searchSlot,
   className,
   testId,
+  titleId,
 }: ModalNavProps) {
+  const resolvedTestId = testId ?? "modal-nav";
+  const resolvedTitleId = titleId ?? `${resolvedTestId}-title`;
+
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(() => {
     // Auto-expand any group whose child is active on mount.
     const expanded = new Set<string>();
@@ -109,7 +120,7 @@ export function ModalNav({
     if (!open) return;
     const handler = (e: KeyboardEvent) => {
       if (e.key !== "Tab") return;
-      const modal = document.querySelector(`[data-testid="${testId ?? "modal-nav"}"] .bn-modal`);
+      const modal = document.querySelector(`[data-testid="${resolvedTestId}"] .bn-modal`);
       if (!modal) return;
       const focusable = modal.querySelectorAll<HTMLElement>(
         'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
@@ -127,7 +138,7 @@ export function ModalNav({
     };
     document.addEventListener("keydown", handler);
     return () => document.removeEventListener("keydown", handler);
-  }, [open, testId]);
+  }, [open, resolvedTestId]);
 
   const handleOverlayClick = useCallback(
     (e: React.MouseEvent) => {
@@ -175,16 +186,16 @@ export function ModalNav({
 
   return createPortal(
     <div
-      className={`bn-overlay settings-overlay${open ? " visible" : ""}`}
+      className={`bn-overlay modal-nav-overlay${open ? " visible" : ""}`}
       onClick={handleOverlayClick}
       aria-hidden={!open}
-      data-testid={testId ?? "modal-nav"}
+      data-testid={resolvedTestId}
     >
       <div
-        className={`bn-modal ${className ?? ""}`.trim()}
+        className={`bn-modal modal-nav-shell ${className ?? ""}`.trim()}
         role="dialog"
         aria-modal="true"
-        aria-labelledby="modal-nav-title"
+        aria-labelledby={resolvedTitleId}
       >
         <button
           ref={closeButtonRef}
@@ -194,7 +205,7 @@ export function ModalNav({
         >
           &times;
         </button>
-        <h2 id="modal-nav-title" className="modal-nav-title">
+        <h2 id={resolvedTitleId} className="modal-nav-title">
           {title}
         </h2>
 
@@ -202,7 +213,7 @@ export function ModalNav({
           {/* ── Sidebar (desktop) ── */}
           <nav className="modal-nav-sidebar" aria-label={`${title} sections`}>
             {searchSlot && <div className="modal-nav-search">{searchSlot}</div>}
-            <ul className="modal-nav-list" role="navigation">
+            <ul className="modal-nav-list">
               {items.map((item) =>
                 item.children ? (
                   <li key={item.id}>

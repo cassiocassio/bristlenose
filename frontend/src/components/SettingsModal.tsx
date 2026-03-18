@@ -436,6 +436,7 @@ export function SettingsModal({ open, onClose }: SettingsModalProps) {
       onSelect={setActiveId}
       className="settings-modal"
       testId="bn-settings-overlay"
+      titleId="settings-modal-title"
     >
       {content}
     </ModalNav>

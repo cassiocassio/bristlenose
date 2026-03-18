@@ -1,168 +1,137 @@
 /**
- * HelpModal — keyboard shortcuts reference overlay.
+ * HelpModal — sidebar-nav modal with help, shortcuts, and reference sections.
  *
- * Platform-aware: Mac gets glyph-concatenated modifiers (⌘., ⇧J),
- * Windows/Linux gets text labels with + separators (Ctrl+., Shift+J).
+ * Replaces the old keyboard-shortcut-only overlay with a ModalNav-based
+ * version that combines help, shortcuts, signals, codebook, and about
+ * into a single navigable surface.
  *
- * Uses existing .help-overlay / .help-modal CSS classes. Three-column layout
- * with Navigation, Selection, Actions, Global sections.
+ * CSS: organisms/modal-nav.css (layout), molecules/help-overlay.css (sizing + kbd).
  *
  * @module HelpModal
  */
 
-import { Fragment, useCallback, useEffect } from "react";
-import { createPortal } from "react-dom";
-import { isMac } from "../utils/platform";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { ModalNav, type NavItem } from "./ModalNav";
+import {
+  HelpSection,
+  ShortcutsSection,
+  SignalsSection,
+  CodebookSection,
+  DeveloperSection,
+  DesignSection,
+  ContributingSection,
+} from "./about";
+import type { DevInfoResponse } from "./about";
+import type { HealthResponse } from "../utils/health";
+import { isExportMode } from "../utils/exportData";
 
-interface HelpModalProps {
-  open: boolean;
-  onClose: () => void;
-}
+// ── Navigation structure ──────────────────────────────────────────────────
 
-interface KeyCombo {
-  modifier?: "shift" | "cmd";
-  key: string;
-}
-
-interface Shortcut {
-  keys: KeyCombo[];
-  description: string;
-}
-
-const SECTIONS: { title: string; shortcuts: Shortcut[] }[] = [
+const NAV_ITEMS: NavItem[] = [
+  { id: "help", label: "Help" },
+  { id: "shortcuts", label: "Shortcuts" },
+  { id: "signals", label: "Signals" },
+  { id: "codebook", label: "Codebook" },
   {
-    title: "Navigation",
-    shortcuts: [
-      { keys: [{ key: "j" }, { key: "\u2193" }], description: "Next quote" },
-      { keys: [{ key: "k" }, { key: "\u2191" }], description: "Previous quote" },
-    ],
-  },
-  {
-    title: "Selection",
-    shortcuts: [
-      { keys: [{ key: "x" }], description: "Toggle select" },
-      {
-        keys: [{ modifier: "shift", key: "j" }, { modifier: "shift", key: "k" }],
-        description: "Extend",
-      },
-    ],
-  },
-  {
-    title: "Actions",
-    shortcuts: [
-      { keys: [{ key: "s" }], description: "Star quote(s)" },
-      { keys: [{ key: "h" }], description: "Hide quote(s)" },
-      { keys: [{ key: "t" }], description: "Add tag" },
-      { keys: [{ key: "r" }], description: "Repeat last tag" },
-      { keys: [{ key: "Enter" }], description: "Play in video" },
-    ],
-  },
-  {
-    title: "Global",
-    shortcuts: [
-      { keys: [{ key: "/" }], description: "Search" },
-      { keys: [{ key: "[" }], description: "Toggle contents" },
-      { keys: [{ key: "]" }], description: "Toggle tags" },
-      {
-        keys: [{ key: "\\" }, { modifier: "cmd", key: "." }],
-        description: "Toggle both sidebars",
-      },
-      { keys: [{ key: "?" }], description: "This help" },
-      { keys: [{ key: "Esc" }], description: "Close / clear" },
+    id: "about",
+    label: "About",
+    children: [
+      { id: "developer", label: "Developer" },
+      { id: "design", label: "Design" },
+      { id: "contributing", label: "Contributing" },
     ],
   },
 ];
 
-function renderKeyCombo(combo: KeyCombo, idx: number): React.ReactNode {
-  const mac = isMac();
+// ── Component ─────────────────────────────────────────────────────────────
 
-  if (!combo.modifier) {
-    return <kbd key={idx}>{combo.key}</kbd>;
-  }
-
-  if (mac) {
-    // Mac: single <kbd> with glyph prefix, no separator
-    const glyph = combo.modifier === "shift" ? "\u21E7" : "\u2318";
-    const displayKey = combo.modifier === "shift" ? combo.key.toUpperCase() : combo.key;
-    return <kbd key={idx}>{glyph}{displayKey}</kbd>;
-  }
-
-  // Non-Mac: separate <kbd> elements with + separator
-  const label = combo.modifier === "shift" ? "Shift" : "Ctrl";
-  const displayKey = combo.modifier === "shift" ? combo.key.toUpperCase() : combo.key;
-  return (
-    <span key={idx} className="help-key-group">
-      <kbd>{label}</kbd>
-      <span className="help-key-sep">+</span>
-      <kbd>{displayKey}</kbd>
-    </span>
-  );
+interface HelpModalProps {
+  open: boolean;
+  onClose: () => void;
+  /** Which section to show when the modal opens. "help" for navbar, "shortcuts" for ? key. */
+  initialSection?: string;
+  /** Health data from AppLayout — avoids a duplicate fetch. */
+  health: HealthResponse;
 }
 
-function renderKeys(keys: KeyCombo[]): React.ReactNode {
-  return keys.map((combo, i) => (
-    <Fragment key={i}>
-      {i > 0 && <span className="help-key-sep">/</span>}
-      {renderKeyCombo(combo, i)}
-    </Fragment>
-  ));
-}
+export function HelpModal({
+  open,
+  onClose,
+  initialSection = "help",
+  health: _health,
+}: HelpModalProps) {
+  // _health reserved for version display in HelpSection (next iteration).
+  void _health;
+  const [activeId, setActiveId] = useState(initialSection);
+  const [devInfo, setDevInfo] = useState<DevInfoResponse | null>(null);
+  const devInfoFetched = useRef(false);
 
-export function HelpModal({ open, onClose }: HelpModalProps) {
-  const handleOverlayClick = useCallback(
-    (e: React.MouseEvent) => {
-      if (e.target === e.currentTarget) onClose();
-    },
-    [onClose],
-  );
-
-  // Close on Escape (belt-and-suspenders — the global handler also does this)
+  // Reset activeId to initialSection on each open (false→true transition).
+  const prevOpen = useRef(open);
   useEffect(() => {
-    if (!open) return;
-    const handler = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        e.preventDefault();
-        e.stopPropagation();
-        onClose();
-      }
-    };
-    document.addEventListener("keydown", handler, true);
-    return () => document.removeEventListener("keydown", handler, true);
-  }, [open, onClose]);
+    if (open && !prevOpen.current) {
+      setActiveId(initialSection);
+    }
+    prevOpen.current = open;
+  }, [open, initialSection]);
 
-  return createPortal(
-    <div
-      className={`bn-overlay help-overlay${open ? " visible" : ""}`}
-      onClick={handleOverlayClick}
-      aria-hidden={!open}
-      data-testid="bn-help-overlay"
+  // Lazy-fetch /api/dev/info on first open (dev mode only).
+  useEffect(() => {
+    if (!open || devInfoFetched.current || isExportMode()) return;
+    devInfoFetched.current = true;
+    fetch("/api/dev/info")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (data) setDevInfo(data as DevInfoResponse);
+      })
+      .catch(() => {});
+  }, [open]);
+
+  const handleSelect = useCallback((id: string) => {
+    setActiveId(id);
+  }, []);
+
+  // Render the content for the active section.
+  let content: React.ReactNode;
+  switch (activeId) {
+    case "help":
+      content = <HelpSection />;
+      break;
+    case "shortcuts":
+      content = <ShortcutsSection />;
+      break;
+    case "signals":
+      content = <SignalsSection />;
+      break;
+    case "codebook":
+      content = <CodebookSection />;
+      break;
+    case "developer":
+      content = <DeveloperSection info={devInfo} />;
+      break;
+    case "design":
+      content = <DesignSection sections={devInfo?.design_sections} />;
+      break;
+    case "contributing":
+      content = <ContributingSection />;
+      break;
+    default:
+      content = null;
+  }
+
+  return (
+    <ModalNav
+      open={open}
+      onClose={onClose}
+      title="Help"
+      items={NAV_ITEMS}
+      activeId={activeId}
+      onSelect={handleSelect}
+      className="help-modal"
+      testId="bn-help-overlay"
+      titleId="help-modal-title"
     >
-      <div className="bn-modal help-modal" data-testid="bn-help-modal">
-        <button className="bn-modal-close" onClick={onClose} aria-label="Close">
-          &times;
-        </button>
-        <h2>Keyboard Shortcuts</h2>
-        <div className="help-columns">
-          {SECTIONS.map((section) => (
-            <div className="help-section" key={section.title}>
-              <h3>{section.title}</h3>
-              <dl>
-                {section.shortcuts.map((s, i) => (
-                  <Fragment key={i}>
-                    <dt>{renderKeys(s.keys)}</dt>
-                    <dd>{s.description}</dd>
-                  </Fragment>
-                ))}
-              </dl>
-            </div>
-          ))}
-        </div>
-        <p className="bn-modal-footer">
-          Press <kbd>?</kbd> to open this help, <kbd>Esc</kbd> or click outside
-          to close
-        </p>
-      </div>
-    </div>,
-    document.body,
+      {content}
+    </ModalNav>
   );
 }

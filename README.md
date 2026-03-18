@@ -386,6 +386,10 @@ Edit `bristlenose/__init__.py` (the single source of truth for version), commit,
 
 ## Changelog
 
+**0.13.8** — _18 Mar 2026_
+
+- Help modal — replaces About page with sidebar-nav modal (Help, Shortcuts, Signals, Codebook, About). ModalNav genericised into reusable organism
+
 **0.13.7** — _16 Mar 2026_
 
 - Spanish locale — machine-translated 102 UI strings across 8 locale files, ready for native-speaker review

@@ -2,6 +2,11 @@
 
 All notable changes to Bristlenose are documented here. See also the [README](README.md) for the latest releases.
 
+**0.13.8** — _18 Mar 2026_
+
+- **Help modal** — replaces the About page route and keyboard shortcut overlay with a single ModalNav-based sidebar-nav modal. Seven sections: Help (stub landing), Shortcuts (keyboard grid with platform-aware badges), Signals, Codebook, and About disclosure group (Developer, Design, Contributing). Triggered by ⓘ navbar icon (opens to Help) or `?` key (opens to Shortcuts). `/report/about/` URL gracefully redirects to `/report/`
+- **ModalNav genericised** — extracted `modal-nav.css` organism from `settings-modal.css`. Generic shell (`.modal-nav-shell`, `.modal-nav-overlay` transition) with parameterised sizing per consumer. Settings and Help both use the same ModalNav component with their own sizing classes. Fixed: unique `titleId` per modal (ARIA), removed incorrect `role="navigation"` from `<ul>`
+
 **0.13.7** — _16 Mar 2026_
 
 - **Spanish locale** — machine-translated all 102 UI strings across 8 locale files (3 frontend, 5 backend). Covers navigation, settings, enums, CLI messages, doctor, pipeline progress, and server errors. Ready for native-speaker review and polish

@@ -174,6 +174,7 @@ Session management design doc: `docs/design-session-management.md`
 | ReadyView: replace `NSOpenPanel.runModal()` with SwiftUI `.fileImporter()` | — | trivial |
 | ProcessRunner: replace `availableData` polling with `AsyncBytes` | — | small |
 | `hasAnyAPIKey()` only checks Anthropic — rename or extend | — | trivial |
+| Settings shortcut ⌘, — show in Help shortcuts conditionally (desktop only, browser intercepts) | — | small |
 
 ### Performance
 

@@ -1,0 +1,191 @@
+/* --- ModalNav — reusable sidebar-nav modal layout ---
+   Generic two-column shell: sidebar navigation + content pane.
+   Used by Settings, Help, and future modals.
+
+   Size is NOT set here — each consumer applies its own class
+   (.settings-modal, .help-modal, etc.) with max-width/height.
+   The base .modal-nav-shell class provides the flex column layout
+   that every consumer needs. */
+
+/* ── Shell (every ModalNav consumer needs this) ── */
+
+.modal-nav-shell {
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+/* Title bar — sits above the two-column layout */
+.modal-nav-title {
+    margin: 0;
+    padding: var(--bn-space-lg) var(--bn-space-xl);
+    padding-bottom: var(--bn-space-md);
+    font-weight: var(--bn-weight-emphasis);
+    color: var(--bn-colour-text);
+    flex-shrink: 0;
+}
+
+/* Two-column flex: sidebar + content */
+.modal-nav {
+    display: flex;
+    flex: 1;
+    min-height: 0; /* allow children to scroll */
+}
+
+/* ── Sidebar nav ── */
+
+.modal-nav-sidebar {
+    width: 11rem;
+    flex-shrink: 0;
+    border-right: 1px solid var(--bn-colour-border);
+    overflow-y: auto;
+    padding: var(--bn-space-md) 0;
+}
+
+.modal-nav-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.modal-nav-list li {
+    list-style: none;
+}
+
+.modal-nav-item {
+    display: flex;
+    align-items: center;
+    gap: var(--bn-space-xs);
+    width: 100%;
+    padding: var(--bn-space-xs) var(--bn-space-md);
+    border: none;
+    background: none;
+    font-family: inherit;
+    font-size: var(--bn-text-body-sm);
+    line-height: var(--bn-text-body-sm-lh);
+    color: var(--bn-colour-text);
+    cursor: pointer;
+    border-radius: var(--bn-radius-sm);
+    transition: background var(--bn-transition-fast);
+    text-align: left;
+}
+
+.modal-nav-item:hover {
+    background: var(--bn-colour-hover);
+}
+
+.modal-nav-item.active {
+    font-weight: var(--bn-weight-emphasis);
+    color: var(--bn-colour-accent);
+    background: var(--bn-colour-hover);
+}
+
+/* Disclosure arrow */
+.modal-nav-arrow {
+    display: inline-block;
+    font-size: 0.6em;
+    transition: transform var(--bn-transition-fast);
+    flex-shrink: 0;
+    width: 0.8em;
+    text-align: center;
+}
+
+.modal-nav-arrow.expanded {
+    transform: rotate(90deg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .modal-nav-arrow {
+        transition: none;
+    }
+}
+
+/* Sub-items (indented under disclosure) */
+.modal-nav-sub-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.modal-nav-sub {
+    padding-left: calc(var(--bn-space-md) + 1rem);
+    color: var(--bn-colour-muted);
+}
+
+.modal-nav-sub.active {
+    color: var(--bn-colour-accent);
+}
+
+/* Optional search slot above nav list */
+.modal-nav-search {
+    padding: 0 var(--bn-space-md) var(--bn-space-sm);
+}
+
+/* ── Content pane ── */
+
+.modal-nav-content {
+    flex: 1;
+    overflow-y: auto;
+    padding: var(--bn-space-md) var(--bn-space-lg) var(--bn-space-lg);
+    min-width: 0; /* prevent flex blowout */
+}
+
+.modal-nav-content-heading {
+    margin: 0 0 var(--bn-space-md) 0;
+    font-size: var(--bn-text-heading);
+    line-height: var(--bn-text-heading-lh);
+    font-weight: var(--bn-weight-emphasis);
+    color: var(--bn-colour-text);
+    outline: none; /* receives programmatic focus, not keyboard focus */
+}
+
+/* ── Dropdown (narrow viewports, ≤500px) ── */
+/* @media uses --bn-breakpoint-compact value (500px) */
+
+.modal-nav-dropdown {
+    display: none;
+}
+
+@media (max-width: 500px) {
+    .modal-nav-sidebar {
+        display: none;
+    }
+
+    .modal-nav-dropdown {
+        display: block;
+        padding: 0 var(--bn-space-md) var(--bn-space-sm);
+        flex-shrink: 0;
+    }
+
+    .modal-nav-dropdown select {
+        width: 100%;
+    }
+
+    .modal-nav {
+        flex-direction: column;
+    }
+
+    .modal-nav-content {
+        padding: var(--bn-space-md);
+    }
+}
+
+/* ── Overlay transition (shared by all ModalNav modals) ── */
+
+.modal-nav-overlay .modal-nav-shell {
+    transform: scale(0.97);
+    opacity: 0;
+    transition: transform 0.2s ease-out, opacity 0.2s ease-out;
+}
+
+.modal-nav-overlay.visible .modal-nav-shell {
+    transform: scale(1);
+    opacity: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .modal-nav-overlay .modal-nav-shell {
+        transition: none;
+    }
+}

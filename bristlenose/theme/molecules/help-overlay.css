@@ -1,23 +1,21 @@
-/* Help overlay — keyboard shortcuts modal triggered by ? key.
-   Extends .bn-overlay / .bn-modal / .bn-modal-close from atoms/modal.css.
-   See focus.js for the JavaScript that creates and toggles this overlay. */
+/* Help overlay — keyboard shortcuts content styling.
+   Layout and transition handled by modal-nav.css (organism) in ModalNav mode.
+   This file provides content styling for the shortcuts grid and kbd badges.
+   The .help-modal sizing class is used by the ModalNav consumer. */
 
-/* Help modal width override (wider than default for 3-column layout) */
+/* Help modal size override (ModalNav consumer class) */
 .help-modal {
-    max-width: 600px;
-    transform: scale(0.97);
-    opacity: 0;
-    transition: transform var(--bn-transition-normal), opacity var(--bn-transition-normal);
+    max-width: 42rem;
+    height: min(36rem, 85vh);
 }
 
-.help-overlay.visible .help-modal {
-    transform: scale(1);
-    opacity: 1;
+@media (max-width: 500px) {
+    .help-modal {
+        height: min(36rem, 90vh);
+    }
 }
 
-.help-modal h2 {
-    font-size: 1.25rem;
-}
+/* ── Shortcuts grid content ── */
 
 .help-columns {
     display: grid;

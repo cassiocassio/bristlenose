@@ -63,11 +63,17 @@ interface UseKeyboardShortcutsOptions {
   helpModalOpen: boolean;
   /** Toggle the help modal. */
   onToggleHelp: () => void;
+  /** Whether the settings modal is currently open. */
+  settingsModalOpen?: boolean;
+  /** Toggle the settings modal. */
+  onToggleSettings?: () => void;
 }
 
 export function useKeyboardShortcuts({
   helpModalOpen,
   onToggleHelp,
+  settingsModalOpen,
+  onToggleSettings,
 }: UseKeyboardShortcutsOptions): void {
   const {
     focusedId,
@@ -100,6 +106,8 @@ export function useKeyboardShortcuts({
   storeRef.current = store;
   const helpModalOpenRef = useRef(helpModalOpen);
   helpModalOpenRef.current = helpModalOpen;
+  const settingsModalOpenRef = useRef(settingsModalOpen);
+  settingsModalOpenRef.current = settingsModalOpen;
   const tocModeRef = useRef(tocMode);
   tocModeRef.current = tocMode;
   const soloTagRef = useRef(soloTag);
@@ -283,8 +291,20 @@ export function useKeyboardShortcuts({
         return;
       }
 
+      // ⌘, / Ctrl+, — toggle settings modal
+      if (key === "," && (e.metaKey || e.ctrlKey) && !isEditing()) {
+        e.preventDefault();
+        onToggleSettings?.();
+        return;
+      }
+
       // Escape — cascade: close modal → close overlay → clear search → clear selection → clear focus
       if (key === "Escape") {
+        if (settingsModalOpenRef.current) {
+          e.preventDefault();
+          onToggleSettings?.();
+          return;
+        }
         if (helpModalOpenRef.current) {
           e.preventDefault();
           onToggleHelp();
@@ -327,6 +347,7 @@ export function useKeyboardShortcuts({
       // Don't intercept other keys while editing or modal is open
       if (isEditing()) return;
       if (helpModalOpenRef.current) return;
+      if (settingsModalOpenRef.current) return;
 
       // [ — toggle TOC sidebar (quotes tab only)
       if (key === "[") {
@@ -462,6 +483,7 @@ export function useKeyboardShortcuts({
     };
   }, [
     onToggleHelp,
+    onToggleSettings,
     clearSearch,
     clearSelection,
     setFocus,

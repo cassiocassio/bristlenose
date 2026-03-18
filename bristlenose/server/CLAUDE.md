@@ -229,6 +229,17 @@ Pipeline re-run → reads YAML → sees browser edits → preserves them
 
 Known false positive: westernized order "Wei Zhang" (where "Wei" is also in `_FAMILY_FIRST_SURNAMES`) flips incorrectly. Acceptable — researcher corrects via inline edit.
 
+## Multi-project scope rules
+
+The server currently loads one project (project ID 1). Multi-project is future work (`docs/design-multi-project.md`), but the data model is already designed for it. **These rules prevent us painting ourselves into corners:**
+
+- **Instance-scoped tables** (no `project_id`): `Person`, `CodebookGroup`, `TagDefinition`. These are shared across projects by design. **Never add `project_id` to these tables** — cross-project identity and codebook reuse depend on them being global
+- **Project-scoped tables** (have `project_id` FK): `Quote`, `Session`, `ScreenCluster`, `ThemeGroup`, and all researcher-state tables. **Every new analysis/state table must include `project_id`**
+- **Frontend project ID**: read from `data-project-id` attribute via `useProjectId()` hook or `apiBase()` helper. **Never hardcode `/api/projects/1/...` in new code** — use `apiBase()` which reads the injected `BRISTLENOSE_API_BASE` global. Existing hardcoded locations are tracked in the design doc
+- **Person rows are created per-import, not deduped** — two "John Smith" rows from different projects is correct. Merging is a future human-driven action via `person_links` table, not an automatic process
+- **`SessionSpeaker`** joins Person↔Session (with speaker code + role). It has no `project_id` because it inherits project scope through Session. This is correct — don't add `project_id` to it
+- **Per-project SQLite files** — each project gets its own DB at `<output_dir>/.bristlenose/bristlenose.db`. Cross-project data (person links, app settings) will live in the instance DB at `~/.config/bristlenose/bristlenose.db`. Don't store cross-project relationships in per-project DBs
+
 ## Gotchas
 
 - **Quote timecode range match** — DOM ID uses `int(start_timecode)` which truncates.  A quote at 123.45s becomes `q-p1-123`.  The resolver queries `start_timecode >= 123 AND start_timecode < 124` to handle this

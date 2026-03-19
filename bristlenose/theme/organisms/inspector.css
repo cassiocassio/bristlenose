@@ -20,6 +20,13 @@
     padding: var(--bn-space-lg);
 }
 
+/* When the analysis layout is active, the footer (a sibling in AppLayout)
+   sits between .analysis-layout and .inspector-panel in the DOM.
+   Hide it here — the footer scrolls naturally on all other tabs. */
+.analysis-layout ~ .report-footer {
+    display: none;
+}
+
 /* ── Panel shell ────────────────────────────────────────── */
 
 .inspector-panel {

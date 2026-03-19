@@ -1,0 +1,766 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mini Heatmaps v2 — Sections + Themes stacked, Signals right</title>
+<style>
+/* ── Design system tokens (subset from tokens.css) ───────── */
+:root {
+  --bn-font-body: "Inter", "Segoe UI Variable", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --bn-font-mono: "SF Mono", "Fira Code", "Consolas", monospace;
+  --bn-weight-light: 370;
+  --bn-weight-normal: 420;
+  --bn-weight-emphasis: 490;
+  --bn-weight-strong: 700;
+  --bn-colour-bg: #ffffff;
+  --bn-colour-text: #1a1a1a;
+  --bn-colour-muted: #6b7280;
+  --bn-colour-border: #e5e7eb;
+  --bn-colour-border-hover: #d1d5db;
+  --bn-colour-accent: #2563eb;
+  --bn-colour-hover: #e8f0fe;
+  --bn-colour-shadow: rgba(0,0,0,0.1);
+  --bn-colour-quote-bg: #f9fafb;
+  --bn-colour-flash: #fef08a;
+  --bn-space-xs: 0.15rem;
+  --bn-space-sm: 0.35rem;
+  --bn-space-md: 0.75rem;
+  --bn-space-lg: 1.5rem;
+  --bn-space-xl: 2rem;
+  --bn-radius-sm: 3px;
+  --bn-radius-md: 6px;
+  --bn-radius-lg: 8px;
+  --bn-radius-pill: 999px;
+  --bn-transition-fast: 0.15s ease;
+  color-scheme: light dark;
+
+  /* Mini heatmap tokens — 16px cells to align with row label text */
+  --mini-cell: 16px;
+  --mini-gap: 2px;
+  --mini-radius: 2px;
+  --mini-pitch: 18px; /* cell + gap */
+  --row-label-width: 140px;
+}
+
+@supports (color: light-dark(#fff, #000)) {
+  :root {
+    --bn-colour-bg: light-dark(#ffffff, #111111);
+    --bn-colour-text: light-dark(#1a1a1a, #e5e7eb);
+    --bn-colour-muted: light-dark(#6b7280, #9ca3af);
+    --bn-colour-border: light-dark(#e5e7eb, #2d2d2d);
+    --bn-colour-border-hover: light-dark(#d1d5db, #4b5563);
+    --bn-colour-accent: light-dark(#2563eb, #60a5fa);
+    --bn-colour-hover: light-dark(#e8f0fe, #1e293b);
+    --bn-colour-shadow: light-dark(rgba(0,0,0,0.1), rgba(0,0,0,0.4));
+    --bn-colour-quote-bg: light-dark(#f9fafb, #1a1a1a);
+    --bn-colour-flash: light-dark(#fef08a, #854d0e);
+  }
+}
+
+/* ── Reset ───────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: var(--bn-font-body);
+  font-weight: var(--bn-weight-normal);
+  background: var(--bn-colour-bg);
+  color: var(--bn-colour-text);
+  padding: 2rem;
+  line-height: 1.4;
+}
+
+/* ── Mockup chrome ───────────────────────────────────────── */
+.mockup-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.5rem 1rem;
+  border-bottom: 1px solid var(--bn-colour-border);
+  background: var(--bn-colour-bg);
+  font-size: 0.75rem;
+  color: var(--bn-colour-muted);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  margin: -2rem -2rem 2rem -2rem;
+}
+
+.mockup-header h1 {
+  font-size: 0.85rem;
+  font-weight: var(--bn-weight-emphasis);
+  color: var(--bn-colour-text);
+}
+
+.mockup-controls {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.mockup-controls button {
+  font-family: var(--bn-font-body);
+  font-size: 0.75rem;
+  padding: 0.25rem 0.6rem;
+  border: 1px solid var(--bn-colour-border);
+  border-radius: var(--bn-radius-sm);
+  background: var(--bn-colour-bg);
+  color: var(--bn-colour-text);
+  cursor: pointer;
+}
+.mockup-controls button:hover { background: var(--bn-colour-hover); }
+
+/* ── Main layout: grids left, signals right ──────────────── */
+.analysis-preview {
+  display: flex;
+  gap: 2rem;
+  align-items: flex-start;
+}
+
+.grids-area {
+  flex: 1;
+  min-width: 0;
+  overflow-x: auto;
+}
+
+.signals-area {
+  flex: 0 0 280px;
+  position: sticky;
+  top: 3rem;
+}
+
+/* ── Section heading ─────────────────────────────────────── */
+.block-heading {
+  font-size: 0.7rem;
+  font-weight: var(--bn-weight-emphasis);
+  color: var(--bn-colour-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: var(--bn-space-sm);
+}
+
+.block-heading:not(:first-child) {
+  margin-top: var(--bn-space-lg);
+}
+
+/* ── Grid strip: row labels + grids side by side ─────────── */
+.grid-strip {
+  display: flex;
+  gap: 0;
+  align-items: flex-start;
+  overflow-x: auto;
+  padding-bottom: 4px;
+}
+
+/* ── Row labels column ───────────────────────────────────── */
+.row-labels {
+  flex: 0 0 var(--row-label-width);
+  display: flex;
+  flex-direction: column;
+  gap: var(--mini-gap);
+  padding-right: 8px;
+  position: sticky;
+  left: 0;
+  background: var(--bn-colour-bg);
+  z-index: 3;
+}
+
+.row-label {
+  height: var(--mini-cell);
+  font-size: 0.7rem;
+  line-height: var(--mini-cell);
+  color: var(--bn-colour-accent);
+  text-align: left;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: pointer;
+  transition: background var(--bn-transition-fast);
+  padding: 0 4px;
+  border-radius: var(--bn-radius-sm);
+}
+
+.row-label:hover {
+  background: var(--bn-colour-hover);
+}
+
+.row-label.flash {
+  background: var(--bn-colour-flash) !important;
+  transition: none;
+}
+
+/* ── Individual mini heatmap column ──────────────────────── */
+.mini-heatmap-col {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  margin-left: 10px;
+  flex-shrink: 0;
+}
+
+.mini-heatmap-col:first-of-type {
+  margin-left: 0;
+}
+
+.mini-heatmap-title {
+  font-size: 0.6rem;
+  font-weight: var(--bn-weight-emphasis);
+  color: var(--bn-colour-muted);
+  white-space: nowrap;
+  margin-bottom: 4px;
+  text-align: center;
+}
+
+/* ── Separator between sentiment and codebooks ───────────── */
+.grid-sep {
+  flex: 0 0 1px;
+  background: var(--bn-colour-border);
+  align-self: stretch;
+  margin: 0 8px;
+  min-height: 50px;
+}
+
+/* ── The grid itself ─────────────────────────────────────── */
+.mini-grid {
+  display: grid;
+  gap: var(--mini-gap);
+}
+
+.mini-cell {
+  width: var(--mini-cell);
+  height: var(--mini-cell);
+  border-radius: var(--mini-radius);
+  background: var(--bn-colour-quote-bg);
+  transition: outline-offset 0.1s ease, background 0.15s ease;
+  position: relative;
+  cursor: crosshair;
+  /* Allow tiny text inside */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.5rem;
+  font-weight: var(--bn-weight-emphasis);
+  color: transparent; /* hidden by default, shown on hover */
+}
+
+.mini-cell:hover {
+  outline: 2px solid var(--bn-colour-accent);
+  outline-offset: 1px;
+  z-index: 2;
+  color: var(--bn-colour-text);
+}
+
+/* Flash animation for cross-highlight */
+.mini-cell.flash {
+  background: var(--bn-colour-flash) !important;
+  outline: 2px solid oklch(0.70 0.15 85) !important;
+  outline-offset: 0px;
+  z-index: 5;
+  transition: none;
+}
+
+/* Flagged signal — thick border */
+.mini-cell.flagged {
+  outline: 2px solid var(--bn-colour-text);
+  outline-offset: -1px;
+  z-index: 1;
+}
+
+.mini-cell.flagged:hover {
+  outline-color: var(--bn-colour-accent);
+  outline-offset: 1px;
+}
+
+/* Flag type borders */
+.mini-cell.flag-problem   { outline-color: oklch(0.55 0.18 25); }
+.mini-cell.flag-win,
+.mini-cell.flag-success   { outline-color: oklch(0.55 0.15 150); }
+.mini-cell.flag-niggle    { outline-color: oklch(0.65 0.15 80); }
+.mini-cell.flag-pattern   { outline-color: oklch(0.55 0.12 250); }
+.mini-cell.flag-surprising { outline-color: oklch(0.55 0.15 310); }
+
+/* ── Signals panel ───────────────────────────────────────── */
+.signals-area h2 {
+  font-size: 0.7rem;
+  font-weight: var(--bn-weight-emphasis);
+  color: var(--bn-colour-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: var(--bn-space-md);
+}
+
+.signal-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.signal-item {
+  font-size: 0.72rem;
+  color: var(--bn-colour-text);
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  padding: 4px 6px;
+  border-radius: var(--bn-radius-sm);
+  cursor: pointer;
+  transition: background var(--bn-transition-fast);
+  border: 1px solid transparent;
+}
+
+.signal-item:hover {
+  background: var(--bn-colour-hover);
+}
+
+.signal-item.flash {
+  background: var(--bn-colour-flash) !important;
+  border-color: oklch(0.70 0.15 85);
+  transition: none;
+}
+
+.signal-flag {
+  font-size: 0.55rem;
+  font-weight: var(--bn-weight-strong);
+  padding: 1px 5px;
+  border-radius: var(--bn-radius-pill);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.signal-flag.flag-problem   { background: oklch(0.92 0.05 25);  color: oklch(0.45 0.15 25); }
+.signal-flag.flag-win       { background: oklch(0.92 0.05 150); color: oklch(0.40 0.15 150); }
+.signal-flag.flag-success   { background: oklch(0.92 0.05 150); color: oklch(0.40 0.15 150); }
+.signal-flag.flag-niggle    { background: oklch(0.92 0.06 80);  color: oklch(0.45 0.12 80); }
+.signal-flag.flag-pattern   { background: oklch(0.92 0.04 250); color: oklch(0.45 0.12 250); }
+.signal-flag.flag-surprising { background: oklch(0.92 0.05 310); color: oklch(0.45 0.12 310); }
+
+.signal-text {
+  flex: 1;
+  line-height: 1.3;
+}
+
+.signal-meta {
+  font-size: 0.6rem;
+  color: var(--bn-colour-muted);
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.analysis-link {
+  display: inline-block;
+  margin-top: var(--bn-space-md);
+  font-size: 0.72rem;
+  color: var(--bn-colour-accent);
+  text-decoration: none;
+  font-weight: var(--bn-weight-emphasis);
+}
+.analysis-link:hover { text-decoration: underline; }
+
+/* ── Legend ───────────────────────────────────────────────── */
+.legend {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: var(--bn-space-lg);
+}
+
+.legend-label {
+  font-size: 0.6rem;
+  color: var(--bn-colour-muted);
+}
+
+.legend-cell {
+  width: 11px;
+  height: 11px;
+  border-radius: var(--mini-radius);
+}
+
+/* ── Size tuner (mockup-only) ────────────────────────────── */
+.size-tuner {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  padding: 0.5rem 0;
+  font-size: 0.7rem;
+  color: var(--bn-colour-muted);
+}
+
+.size-tuner input[type="range"] {
+  width: 100px;
+}
+
+.size-tuner code {
+  font-family: var(--bn-font-mono);
+  font-size: 0.65rem;
+  background: var(--bn-colour-quote-bg);
+  padding: 1px 4px;
+  border-radius: 2px;
+}
+</style>
+</head>
+<body>
+
+<div class="mockup-header">
+  <h1>Mini Heatmaps v2 — Stacked sections + themes, signals right</h1>
+  <div class="mockup-controls">
+    <span>12 interviews &middot; 8 sections &middot; 3 themes &middot; 6 codebooks</span>
+    <button onclick="toggleTheme()">Light / Dark</button>
+  </div>
+</div>
+
+<!-- ── Size tuner ─────────────────────────────────────────── -->
+<div class="size-tuner">
+  <label>Cell size: <input type="range" min="10" max="24" value="16" oninput="setCellSize(this.value)"></label>
+  <code id="size-readout">16px cells, 18px pitch</code>
+  <label>Label width: <input type="range" min="80" max="220" value="140" oninput="setLabelWidth(this.value)"></label>
+  <code id="label-readout">140px labels</code>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     MAIN LAYOUT: grids left, signals right
+     ═══════════════════════════════════════════════════════════ -->
+<div class="analysis-preview">
+
+  <!-- ── Grids area (scrollable) ─────────────────────────── -->
+  <div class="grids-area">
+
+    <!-- ── SECTIONS block ──────────────────────────────────── -->
+    <div class="block-heading">Sections</div>
+    <div class="grid-strip" id="sections-strip">
+      <!-- Row labels -->
+      <div class="row-labels" id="section-labels"></div>
+      <!-- Grids inserted by JS -->
+    </div>
+
+    <!-- ── THEMES block ────────────────────────────────────── -->
+    <div class="block-heading">Themes</div>
+    <div class="grid-strip" id="themes-strip">
+      <div class="row-labels" id="theme-labels"></div>
+    </div>
+
+    <!-- Legend -->
+    <div class="legend">
+      <span class="legend-label">Less</span>
+      <div class="legend-cell" style="background: #ebedf0"></div>
+      <div class="legend-cell" style="background: oklch(0.88 0.04 150)"></div>
+      <div class="legend-cell" style="background: oklch(0.75 0.08 150)"></div>
+      <div class="legend-cell" style="background: oklch(0.62 0.11 150)"></div>
+      <div class="legend-cell" style="background: oklch(0.50 0.14 150)"></div>
+      <span class="legend-label">More</span>
+      <span style="width: 12px"></span>
+      <div class="legend-cell" style="background: oklch(0.82 0.06 20)"></div>
+      <span class="legend-label">Under-rep</span>
+      <span style="width: 10px"></span>
+      <div class="legend-cell" style="background: var(--bn-colour-quote-bg); outline: 2px solid oklch(0.55 0.18 25); outline-offset: -1px;"></div>
+      <span class="legend-label">Flagged</span>
+    </div>
+  </div>
+
+  <!-- ── Signals area (right side) ───────────────────────── -->
+  <div class="signals-area">
+    <h2>Signals</h2>
+    <ul class="signal-list" id="signal-list"></ul>
+    <a href="#" class="analysis-link">View full analysis &rarr;</a>
+  </div>
+
+</div>
+
+<script>
+// ── Data ──────────────────────────────────────────────────────
+// Using the user's real project data shape for realism
+
+const SECTIONS = [
+  'Homepage', 'Category Pages', 'Search and Filtering', 'Product Pages',
+  'Shopping Bag', 'Checkout', 'Surgery Information', 'Surgery Messaging'
+];
+
+const THEMES = [
+  'Healthcare system navigation struggles',
+  'Brand perception and shopping preferences',
+  'Task completion and user frustration'
+];
+
+const CODEBOOKS = [
+  { id: 'sentiment', title: 'Sentiment',  cols: ['frustration','confusion','doubt','surprise','satisfaction','delight','confidence'], isSentiment: true },
+  { id: 'uxr',       title: 'UXR',        cols: ['Behaviour','Pain points','Needs','Mental models','Motivation','Emotion','Context','Learning'] },
+  { id: 'nielsen',   title: 'Nielsen',    cols: ['Visibility','Match','Control','Consistency','Prevention','Recognition','Flexibility','Aesthetics','Errors','Help'] },
+  { id: 'garrett',   title: 'Garrett',    cols: ['Strategy','Scope','Structure','Skeleton','Surface'] },
+  { id: 'norman',    title: 'Norman',     cols: ['Discover','Feedback','Model','Signifier','Mapping','Constraint','Slips'] },
+  { id: 'morville',  title: 'Morville',   cols: ['Useful','Usable','Desirable','Findable','Accessible','Credible','Valuable'] },
+];
+
+// Pre-defined signals with grid coordinates for cross-highlighting
+const SIGNALS = [
+  { flag: 'problem',    text: 'Strong frustration in Checkout',                    meta: '7 voices · 4.1×', section: 5, theme: 2, codebook: 'sentiment', col: 0 },
+  { flag: 'win',        text: 'High satisfaction with Homepage',                   meta: '9 voices · 3.8×', section: 0, theme: null, codebook: 'sentiment', col: 4 },
+  { flag: 'problem',    text: 'Confusion around Surgery Information',              meta: '6 voices · 3.5×', section: 6, theme: 0, codebook: 'sentiment', col: 1 },
+  { flag: 'pattern',    text: 'Consistency gaps across Navigation',                meta: '8 voices · 2.9×', section: null, theme: null, codebook: 'nielsen',   col: 3 },
+  { flag: 'niggle',     text: 'Mild doubt about Search filter labels',             meta: '4 voices · 2.7×', section: 2, theme: 2, codebook: 'sentiment', col: 2 },
+  { flag: 'success',    text: 'Delight with Product Pages detail',                 meta: '5 voices · 2.4×', section: 3, theme: 1, codebook: 'sentiment', col: 5 },
+  { flag: 'surprising', text: 'Unexpected confidence in Surgery Messaging',        meta: '3 voices · 2.2×', section: 7, theme: 0, codebook: 'sentiment', col: 6 },
+  { flag: 'problem',    text: 'Error recovery gaps in Checkout forms',             meta: '5 voices · 2.1×', section: 5, theme: 2, codebook: 'nielsen',   col: 8 },
+];
+
+// ── Deterministic seeded random ──────────────────────────────
+// So the grid doesn't reshuffle on every re-render
+let _seed = 42;
+function seededRandom() {
+  _seed = (_seed * 16807 + 0) % 2147483647;
+  return (_seed - 1) / 2147483646;
+}
+
+function resetSeed() { _seed = 42; }
+
+// ── Color logic (same as AnalysisPage.tsx) ───────────────────
+function isDark() {
+  return document.documentElement.style.colorScheme === 'dark' ||
+    window.matchMedia('(prefers-color-scheme: dark)').matches;
+}
+
+function heatCellColor(adjResidual, dark) {
+  const absR = Math.abs(adjResidual);
+  if (absR < 0.05) return null;
+  const heat = Math.min(absR / 4, 1.0);
+  const hue = adjResidual > 0 ? 150 : 20;
+  const chroma = 0.14 * heat;
+  const lMin = dark ? 0.25 : 0.50;
+  const lMax = dark ? 0.55 : 0.92;
+  const L = lMax - (lMax - lMin) * heat;
+  return `oklch(${L.toFixed(3)} ${chroma.toFixed(3)} ${hue})`;
+}
+
+function generateResiduals(rows, cols) {
+  const data = [];
+  for (let r = 0; r < rows; r++) {
+    const row = [];
+    for (let c = 0; c < cols; c++) {
+      if (seededRandom() < 0.30) {
+        row.push(0);
+      } else {
+        let v = (seededRandom() - 0.45) * 3;
+        if (seededRandom() < 0.08) v *= 2.5;
+        row.push(v);
+      }
+    }
+    data.push(row);
+  }
+  return data;
+}
+
+function generateCounts(rows, cols) {
+  const data = [];
+  for (let r = 0; r < rows; r++) {
+    const row = [];
+    for (let c = 0; c < cols; c++) {
+      row.push(seededRandom() < 0.30 ? 0 : Math.floor(seededRandom() * 8) + 1);
+    }
+    data.push(row);
+  }
+  return data;
+}
+
+// ── Build flagged cell lookup from signals ───────────────────
+function buildFlaggedCells(signals, rowType) {
+  // Returns: { "codebookId": { "row,col": flagType } }
+  const map = {};
+  for (const s of signals) {
+    const rowIdx = rowType === 'section' ? s.section : s.theme;
+    if (rowIdx === null) continue;
+    if (!map[s.codebook]) map[s.codebook] = {};
+    map[s.codebook][`${rowIdx},${s.col}`] = s.flag;
+  }
+  return map;
+}
+
+// ── Cross-highlight state ────────────────────────────────────
+let flashTimeout = null;
+
+function flashElements(selector, duration = 600) {
+  clearTimeout(flashTimeout);
+  // Clear previous flashes
+  document.querySelectorAll('.flash').forEach(el => el.classList.remove('flash'));
+  // Add flash
+  document.querySelectorAll(selector).forEach(el => el.classList.add('flash'));
+  flashTimeout = setTimeout(() => {
+    document.querySelectorAll('.flash').forEach(el => el.classList.remove('flash'));
+  }, duration);
+}
+
+// ── Render everything ────────────────────────────────────────
+function renderAll() {
+  resetSeed();
+  const dark = isDark();
+
+  // Build flagged lookups
+  const sectionFlags = buildFlaggedCells(SIGNALS, 'section');
+  const themeFlags = buildFlaggedCells(SIGNALS, 'theme');
+
+  renderStrip('sections-strip', 'section-labels', SECTIONS, sectionFlags, dark);
+  renderStrip('themes-strip', 'theme-labels', THEMES, themeFlags, dark);
+  renderSignals();
+}
+
+function renderStrip(stripId, labelsId, rowLabels, flagMap, dark) {
+  const strip = document.getElementById(stripId);
+  const labelsContainer = document.getElementById(labelsId);
+
+  // Clear everything except the labels container
+  while (strip.children.length > 1) strip.removeChild(strip.lastChild);
+  labelsContainer.innerHTML = '';
+
+  // Row labels
+  rowLabels.forEach((label, i) => {
+    const el = document.createElement('div');
+    el.className = 'row-label';
+    el.textContent = label;
+    el.dataset.row = i;
+    el.dataset.strip = stripId;
+    labelsContainer.appendChild(el);
+  });
+
+  // Each codebook gets a column
+  CODEBOOKS.forEach((cb, cbIdx) => {
+    // Separator after sentiment
+    if (cbIdx === 1) {
+      const sep = document.createElement('div');
+      sep.className = 'grid-sep';
+      strip.appendChild(sep);
+    }
+
+    const col = document.createElement('div');
+    col.className = 'mini-heatmap-col';
+
+    const title = document.createElement('div');
+    title.className = 'mini-heatmap-title';
+    title.textContent = cb.title;
+    col.appendChild(title);
+
+    const grid = document.createElement('div');
+    grid.className = 'mini-grid';
+    grid.style.gridTemplateColumns = `repeat(${cb.cols.length}, var(--mini-cell))`;
+
+    const rows = rowLabels.length;
+    const cols = cb.cols.length;
+    const residuals = generateResiduals(rows, cols);
+    const counts = generateCounts(rows, cols);
+    const cbFlags = flagMap[cb.id] || {};
+
+    for (let r = 0; r < rows; r++) {
+      for (let c = 0; c < cols; c++) {
+        const cell = document.createElement('div');
+        cell.className = 'mini-cell';
+        cell.dataset.row = r;
+        cell.dataset.col = c;
+        cell.dataset.codebook = cb.id;
+        cell.dataset.strip = stripId;
+
+        const count = counts[r][c];
+        let color;
+
+        const cellKey = `${r},${c}`;
+        if (cbFlags[cellKey]) {
+          cell.classList.add('flagged', `flag-${cbFlags[cellKey]}`);
+          // Boost flagged cells
+          color = heatCellColor(residuals[r][c] > 0 ? 3.5 : -3.0, dark);
+        } else {
+          color = heatCellColor(residuals[r][c], dark);
+        }
+
+        if (color) cell.style.background = color;
+        if (count > 0) cell.textContent = count;
+
+        cell.title = `${rowLabels[r]} × ${cb.cols[c]}\n${count} quotes`;
+
+        // Click/hover on flagged cell → flash matching signal
+        if (cbFlags[cellKey]) {
+          const flagType = cbFlags[cellKey];
+          cell.addEventListener('mouseenter', () => {
+            // Find matching signal item
+            const sigIdx = SIGNALS.findIndex(s => {
+              const rowIdx = stripId.includes('section') ? s.section : s.theme;
+              return s.codebook === cb.id && s.col === c && rowIdx === r;
+            });
+            if (sigIdx >= 0) flashElements(`[data-signal="${sigIdx}"]`);
+          });
+          cell.addEventListener('click', () => {
+            const sigIdx = SIGNALS.findIndex(s => {
+              const rowIdx = stripId.includes('section') ? s.section : s.theme;
+              return s.codebook === cb.id && s.col === c && rowIdx === r;
+            });
+            if (sigIdx >= 0) flashElements(`[data-signal="${sigIdx}"]`, 1200);
+          });
+        }
+
+        grid.appendChild(cell);
+      }
+    }
+
+    col.appendChild(grid);
+    strip.appendChild(col);
+  });
+}
+
+function renderSignals() {
+  const list = document.getElementById('signal-list');
+  list.innerHTML = '';
+
+  SIGNALS.forEach((s, i) => {
+    const li = document.createElement('li');
+    li.className = 'signal-item';
+    li.dataset.signal = i;
+
+    li.innerHTML = `
+      <span class="signal-flag flag-${s.flag}">${s.flag}</span>
+      <span class="signal-text">${s.text}</span>
+      <span class="signal-meta">${s.meta}</span>
+    `;
+
+    // Hover signal → flash corresponding grid cells
+    li.addEventListener('mouseenter', () => {
+      const selectors = [];
+      if (s.section !== null) {
+        selectors.push(`#sections-strip .mini-cell[data-codebook="${s.codebook}"][data-row="${s.section}"][data-col="${s.col}"]`);
+      }
+      if (s.theme !== null) {
+        selectors.push(`#themes-strip .mini-cell[data-codebook="${s.codebook}"][data-row="${s.theme}"][data-col="${s.col}"]`);
+      }
+      if (selectors.length) flashElements(selectors.join(', '));
+    });
+
+    // Click signal → would navigate to analysis tab
+    li.addEventListener('click', () => {
+      flashElements(`[data-signal="${i}"]`, 1200);
+      // In real app: navigate('/report/analysis/', { scrollTo: signalKey })
+    });
+
+    list.appendChild(li);
+  });
+}
+
+// ── Size tuner ───────────────────────────────────────────────
+function setCellSize(px) {
+  document.documentElement.style.setProperty('--mini-cell', px + 'px');
+  document.documentElement.style.setProperty('--mini-pitch', (parseInt(px) + 2) + 'px');
+  document.getElementById('size-readout').textContent = `${px}px cells, ${parseInt(px) + 2}px pitch`;
+}
+
+function setLabelWidth(px) {
+  document.documentElement.style.setProperty('--row-label-width', px + 'px');
+  document.getElementById('label-readout').textContent = `${px}px labels`;
+}
+
+function toggleTheme() {
+  const html = document.documentElement;
+  html.style.colorScheme = html.style.colorScheme === 'dark' ? 'light' : 'dark';
+  renderAll();
+}
+
+// Init
+renderAll();
+</script>
+
+</body>
+</html>

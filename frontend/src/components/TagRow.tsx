@@ -4,18 +4,21 @@
  * The checkbox toggles tag visibility (filter). The badge assigns the tag
  * to selected quotes (when `onAssign` is provided and quotes are selected).
  *
- * Uses sidebar-tags.css classes (.tag-row, .tag-name-area, .badge,
- * .tag-bar-area, .tag-micro-bar, .tag-count).
+ * Uses the MicroBar atom for the proportional bar — supports two-tone
+ * (tentative + accepted) when `tentativeCount` is provided.
  *
  * @module TagRow
  */
 
 import { useCallback } from "react";
+import { MicroBar } from "./MicroBar";
 
 interface TagRowProps {
   name: string;
   checked: boolean;
   count: number;
+  /** Pending autocode proposal count for this tag. */
+  tentativeCount?: number;
   maxCount: number;
   badgeBg: string;
   barColour: string;
@@ -36,6 +39,7 @@ export function TagRow({
   name,
   checked,
   count,
+  tentativeCount = 0,
   maxCount,
   badgeBg,
   barColour,
@@ -88,8 +92,9 @@ export function TagRow({
     [name, onSoloClick],
   );
 
-  // Micro-bar width: proportional to max count in the group, min 2px
-  const barWidth = maxCount > 0 ? Math.max(2, (count / maxCount) * 100) : 0;
+  const hasTentative = tentativeCount > 0;
+  const acceptedFrac = maxCount > 0 ? count / maxCount : 0;
+  const tentativeFrac = maxCount > 0 ? tentativeCount / maxCount : 0;
 
   const badgeClassName = `badge${assignActive ? " badge-assignable" : ""}${flashing ? " badge-accept-flash" : ""}`;
 
@@ -124,15 +129,16 @@ export function TagRow({
         tabIndex={onSoloClick ? 0 : undefined}
         aria-label={onSoloClick ? `Focus on ${name} quotes` : undefined}
       >
-        {count > 0 && (
-          <span
-            className="tag-micro-bar"
-            style={{
-              width: `${barWidth}%`,
-              backgroundColor: barColour,
-            }}
+        {hasTentative ? (
+          <MicroBar
+            value={acceptedFrac}
+            tentativeValue={tentativeFrac}
+            colour={barColour}
+            title={`${tentativeCount} tentative + ${count} accepted`}
           />
-        )}
+        ) : count > 0 ? (
+          <MicroBar value={acceptedFrac} colour={barColour} />
+        ) : null}
         <span className={`tag-count${soloFocused ? " tag-solo-focused" : ""}`}>
           {count}
         </span>

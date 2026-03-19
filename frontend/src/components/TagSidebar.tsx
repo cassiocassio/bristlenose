@@ -232,6 +232,20 @@ export function TagSidebar() {
     return counts;
   }, [store.quotes, store.tags, store.hidden]);
 
+  // Tentative counts from codebook API (pending autocode proposals)
+  const tentativeCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    if (!codebook) return counts;
+    for (const g of codebook.groups) {
+      for (const t of g.tags) {
+        if ((t.tentative_count ?? 0) > 0) {
+          counts[t.name.toLowerCase()] = t.tentative_count ?? 0;
+        }
+      }
+    }
+    return counts;
+  }, [codebook]);
+
   const uncheckedSet = useMemo(
     () => new Set(tagFilter.unchecked.map((t) => t.toLowerCase())),
     [tagFilter.unchecked],
@@ -467,6 +481,7 @@ export function TagSidebar() {
                       tags={search || showUsedOnly ? group.tags.filter(tagPassesFilters) : group.tags}
                       groupBg={getGroupBg(group.colour_set)}
                       tagCounts={tagCounts}
+                      tentativeCounts={tentativeCounts}
                       uncheckedSet={uncheckedSet}
                       clearAll={tagFilter.clearAll}
                       onToggleTag={handleToggleTag}

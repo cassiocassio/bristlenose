@@ -11,6 +11,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from bristlenose.analysis.metrics import (
+    classify_flag,
     composite_signal,
     concentration_ratio,
     mean_intensity,
@@ -117,6 +118,8 @@ def _compute_signals(
                 for q in raw_quotes_sorted
             ]
 
+            flag = classify_flag(col, comp, n_eff, total_participants, m_int)
+
             signals.append(
                 Signal(
                     location=row,
@@ -129,6 +132,7 @@ def _compute_signals(
                     concentration=conc,
                     composite_signal=comp,
                     confidence=confidence,
+                    flag=flag,
                     quotes=signal_quotes,
                 )
             )

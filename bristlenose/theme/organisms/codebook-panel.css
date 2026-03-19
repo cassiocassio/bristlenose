@@ -212,10 +212,40 @@
 }
 .tag-micro-bar {
     height: 0.6rem;
-    border-radius: 0 var(--bn-radius-sm) var(--bn-radius-sm) 0;
+    border-radius: var(--bn-radius-sm);
     min-width: 2px;
     transition: width 0.2s ease;
 }
+
+/* ── Two-tone stacked bar (tentative + accepted) ──────────────────────
+   [pale tentative | solid accepted] — solid hugs the number on the right.
+   Total width ∝ (tentative + accepted). Used when autocode proposals exist. */
+.tag-micro-bar-stack {
+    display: flex;
+    align-items: center;
+    height: 0.6rem;
+    min-width: 2px;
+    transition: width 0.2s ease;
+}
+.tag-micro-bar-tentative {
+    height: 100%;
+    opacity: 0.28;
+    transition: width 0.2s ease;
+}
+.tag-micro-bar-accepted {
+    height: 100%;
+    transition: width 0.2s ease;
+}
+.tag-micro-bar-stack > :first-child {
+    border-radius: var(--bn-radius-sm) 0 0 var(--bn-radius-sm);
+}
+.tag-micro-bar-stack > :last-child {
+    border-radius: 0 var(--bn-radius-sm) var(--bn-radius-sm) 0;
+}
+.tag-micro-bar-stack > :only-child {
+    border-radius: var(--bn-radius-sm);
+}
+
 .tag-count {
     font-size: 0.75rem;
     color: var(--bn-colour-muted);

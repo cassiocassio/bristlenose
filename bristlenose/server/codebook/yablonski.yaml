@@ -1,0 +1,605 @@
+id: yablonski
+title: Laws of UX
+author: Jon Yablonski
+enabled: true
+
+description: >
+  A collection of psychological principles that underpin user experience,
+  drawn from cognitive psychology, perception science, and behavioural
+  economics. Each law names a specific mechanism — Hick's Law (choice
+  paralysis), the Peak-End Rule (memory distortion), Fitts's Law (motor
+  difficulty) — that explains why a participant reacts the way they do.
+  Particularly strong at surfacing decision friction, expectation transfer
+  from other products, and the cognitive weight of complexity that other
+  frameworks describe only as generic "usability" issues.
+
+author_bio: >
+  Senior product designer based in Detroit, currently at Google. Created
+  lawsofux.com in 2017 as a curated collection of UX principles backed
+  by named psychological research. The site became one of the most-shared
+  UX resources worldwide and was expanded into "Laws of UX: Using
+  Psychology to Design Better Products & Services" (O'Reilly, 1st ed 2020,
+  2nd ed 2024). Yablonski did not invent the underlying laws — each
+  originates from a named researcher (Hick, Fitts, Miller, Kahneman,
+  Zeigarnik, etc.) — but his contribution is the curation, design-context
+  translation, and accessible presentation that made them standard
+  vocabulary for a generation of practitioners.
+
+author_links:
+  - label: lawsofux.com — all laws with explanations
+    url: https://lawsofux.com/
+  - label: Amazon US — Laws of UX (2nd edition, 2024)
+    url: https://www.amazon.com/dp/1098146964
+  - label: Amazon UK — Laws of UX (2nd edition, 2024)
+    url: https://www.amazon.co.uk/dp/1098146964
+  - label: O'Reilly — Laws of UX
+    url: https://www.oreilly.com/library/view/laws-of-ux/9781098146948/
+
+preamble: >
+  The following tags translate Yablonski's Laws of UX into a codebook for
+  participant quote-coding. Each tag maps to a named psychological
+  principle. The laws were originally formulated as design guidance
+  ("reduce choices to speed decisions"), but participants in think-aloud
+  usability sessions narrate the effects directly: "there are too many
+  options, I can't decide" (Hick's Law), "I expected it to work like my
+  email app" (Jakob's Law), "that one error at the end ruined the whole
+  thing" (Peak-End Rule). Not all 21 laws from the book are included —
+  three (Occam's Razor, Parkinson's Law, Serial Position Effect) are
+  design advice or analytical constructs that participants do not
+  articulate. The remaining laws are grouped by the cognitive mechanism
+  they describe. If the participant is not discussing interaction with a
+  designed product, interface, or service, do not apply any tag from this
+  codebook.
+
+groups:
+  # -------------------------------------------------------------------
+  # Choice & Decision — Hick's Law, Von Restorff Effect
+  # -------------------------------------------------------------------
+  - name: Choice and decision
+    subtitle: Can the user choose without freezing?
+    colour_set: ux
+    tags:
+      - name: "Hick: choice paralysis"
+        definition: >
+          The participant is overwhelmed by the number of available options
+          and struggles to make a decision — they freeze, hesitate, or
+          abandon the task because there are too many choices. This is the
+          core manifestation of Hick's Law: decision time increases with
+          the number and complexity of choices.
+        apply_when: >
+          The participant describes being unable to choose, feeling
+          overwhelmed by options, or delaying a decision because of too
+          many alternatives. Look for "there are too many options," "I
+          don't know which one to pick," "I just froze," "I can't decide
+          between all these," "there's like fifty things here and I don't
+          know where to start."
+        not_this: >
+          If the participant is overwhelmed by information density on
+          screen (not specifically by choices they must make), that's
+          cognitive overload (Effort and complexity group). Choice
+          paralysis requires an active decision between alternatives.
+          If the participant is confused by what options mean (not
+          overwhelmed by how many there are), consider jargon barrier
+          (Nielsen H2) or model mismatch (Norman).
+
+      - name: "Hick: decision simplicity"
+        definition: >
+          The participant finds it easy to choose because the options are
+          few, clear, or well-differentiated — the design has reduced
+          decision complexity to a manageable level.
+        apply_when: >
+          The participant comments on how straightforward a choice was,
+          or appreciates having fewer options. Look for "it's simple —
+          just these three options," "I didn't have to think about it,"
+          "the choices are clear," "I like that they narrowed it down,"
+          "easy decision."
+        not_this: >
+          If the participant finds the interface generally easy to use
+          (not specifically about a decision between options), that's
+          ease of use (Morville → Usable). Decision simplicity is about
+          a specific moment of choosing between alternatives.
+
+      - name: "Von Restorff: option salience"
+        definition: >
+          One option stands out visually or conceptually from the rest,
+          drawing the participant's attention and often their choice —
+          the Von Restorff Effect (isolation effect). The distinctive
+          item is the one they notice and remember.
+        apply_when: >
+          The participant describes being drawn to one option because it
+          stood out — different colour, size, position, or emphasis. Look
+          for "that one stood out," "I picked the highlighted one," "the
+          blue one caught my eye," "I didn't even look at the others
+          because that one was so prominent," "it was the obvious choice
+          because it was bigger."
+        not_this: >
+          If the participant went with the default because it was
+          pre-selected (not because it was visually distinctive), that's
+          default acceptance. If they were drawn to an element because it
+          was familiar (not visually prominent), consider convention
+          expectation (Expectation group). Option salience is specifically
+          about visual distinctiveness directing attention and choice.
+
+      - name: "Thaler: default acceptance"
+        definition: >
+          The participant accepts a pre-selected, recommended, or
+          highlighted option without evaluating alternatives — the
+          design's default steered their choice, whether intentionally
+          or not.
+        apply_when: >
+          The participant goes with whatever was pre-selected, or
+          describes choosing the recommended option without considering
+          others. Look for "I just went with the one they recommended,"
+          "it was already selected so I left it," "I picked the default,"
+          "they highlighted one plan so I chose that," "I didn't bother
+          looking at the others."
+        not_this: >
+          If the default was helpful and saved the participant effort,
+          consider helpful default (Nielsen H6). If the default was
+          risky or misleading, consider risky default (Nielsen H5).
+          Default acceptance is about the participant's behaviour of
+          going with the pre-selected option — neutral about whether
+          the default was good or bad for them.
+
+  # -------------------------------------------------------------------
+  # Expectation & Convention — Jakob's Law, Postel's Law
+  # -------------------------------------------------------------------
+  - name: Expectation and convention
+    subtitle: Does it work the way other products taught them?
+    colour_set: trust
+    tags:
+      - name: "Jakob: convention expectation"
+        definition: >
+          The participant expects the product to work like other products
+          they know — they look for familiar patterns, assume standard
+          layouts, or reference how other apps handle the same task. This
+          is Jakob's Law: users spend most of their time on other sites,
+          so they prefer yours to work the same way.
+        apply_when: >
+          The participant explicitly references other products or general
+          expectations about how software works. Look for "I expected the
+          cart to be in the top right like on every other site," "in
+          Gmail you can just," "usually there's a search bar at the top,"
+          "every other app lets you swipe to delete," "I assumed it would
+          work like [other product]."
+        not_this: >
+          If the participant expected something based on this product's
+          own behaviour elsewhere (not other products), that's internal
+          inconsistency (Nielsen H4). If they have a mental model of how
+          the system should work without referencing other products,
+          that's model mismatch (Norman → Conceptual model). Convention
+          expectation requires an explicit or implicit reference to how
+          other products work.
+
+      - name: "Jakob: transfer confusion"
+        definition: >
+          The participant applies a behaviour or assumption learned from
+          another product, and it doesn't work here — habits from
+          elsewhere create friction because this product breaks the
+          convention.
+        apply_when: >
+          The participant tries something that works elsewhere and is
+          surprised or frustrated when it fails here. Look for "I tried
+          swiping left like in my email app but nothing happened," "I
+          hit Ctrl+Z but it didn't undo," "I double-clicked because
+          that's how it works in [other app]," "I expected right-click
+          to show options."
+        not_this: >
+          If the participant expected a convention and found it (no
+          friction), that's convention expectation. If they misunderstand
+          the system's own logic (not importing habits from elsewhere),
+          that's model mismatch (Norman). Transfer confusion specifically
+          involves habits from other products failing in this one.
+
+      - name: "Postel: input intolerance"
+        definition: >
+          The system rejects valid input because of format strictness —
+          the participant entered correct information in an unexpected
+          format and the system refused it. This violates Postel's Law
+          (the robustness principle): be liberal in what you accept.
+        apply_when: >
+          The participant provides correct data that gets rejected for
+          formatting reasons. Look for "I typed my phone number with
+          spaces and it rejected it," "it says 'invalid postcode' but
+          that IS my postcode," "why can't it accept a date with
+          slashes?," "I put my email in and it says invalid — there's
+          nothing wrong with it," "it wants a specific format but
+          doesn't tell me what."
+        not_this: >
+          If the participant entered genuinely wrong data (not a format
+          issue), that's an error situation (Nielsen H9). If the
+          validation message was unhelpful, that's cryptic error
+          (Nielsen H9). Input intolerance is specifically about
+          correct information rejected due to format strictness.
+
+      - name: "Postel: input forgiveness"
+        definition: >
+          The system accepts imprecise or variably formatted input and
+          does the right thing — it handles spaces, dashes, different
+          date formats, or partial entries gracefully, following Postel's
+          Law.
+        apply_when: >
+          The participant notices that the system accepted input they
+          expected might be rejected, or comments on flexible input
+          handling. Look for "I just typed it however and it worked," "it
+          figured out what I meant," "nice, it doesn't care about the
+          format," "I put my phone number with spaces and it was fine."
+        not_this: >
+          If the system auto-corrected something the participant didn't
+          intend, that could be a loss-of-control issue (Nielsen H3). If
+          the system helpfully pre-filled data, that's helpful default
+          (Nielsen H6). Input forgiveness is about tolerating format
+          variation in user-submitted data.
+
+  # -------------------------------------------------------------------
+  # Memory & Experience — Peak-End Rule, Zeigarnik, Goal-Gradient, Miller
+  # -------------------------------------------------------------------
+  - name: Memory and experience
+    subtitle: What moments stick, and what pulls them back?
+    colour_set: emo
+    tags:
+      - name: "Kahneman: peak moment"
+        definition: >
+          One standout moment — positive or negative — defines the
+          participant's overall assessment of the experience. This is the
+          Peak-End Rule: people judge experiences by their most intense
+          point, not by the sum or average. The peak is the single
+          moment the participant keeps returning to.
+        apply_when: >
+          The participant gives disproportionate weight to one moment
+          when summarising their experience. Look for "the whole thing
+          was fine but THAT part — that's what I remember," "the one
+          thing that stood out was," "I'll never forget when it," "that
+          moment made up for everything else," "if it weren't for that
+          one thing, I'd say it was great." The key signal is
+          disproportionate influence of one moment over the overall
+          assessment.
+        not_this: >
+          If the participant is simply expressing positive or negative
+          sentiment about a specific interaction (not weighting it
+          against the rest of the experience), use general sentiment
+          tags. Peak moment requires the participant to contrast one
+          moment against the broader experience — "that one thing" vs
+          "the rest."
+
+      - name: "Kahneman: ending effect"
+        definition: >
+          The final interaction shapes the participant's overall
+          assessment — a bad ending sours an otherwise good experience,
+          or a good ending rescues a rough one. The second half of the
+          Peak-End Rule: the ending moment has disproportionate weight.
+        apply_when: >
+          The participant's overall assessment is clearly coloured by
+          how the experience ended. Look for "it was going well until
+          the very end when it crashed," "the last step ruined it,"
+          "I left on a good note — the confirmation page was really
+          nice," "the final screen made me feel like I'd done something
+          worthwhile," "I was frustrated throughout but the result at
+          the end was worth it."
+        not_this: >
+          If the participant is describing a specific error at the end
+          (not its effect on overall assessment), that's an error
+          recovery issue (Nielsen H9). If the ending was just the last
+          in a sequence of problems (not disproportionately influential),
+          use the appropriate specific tags for those problems. Ending
+          colours everything requires the ending to distort the overall
+          experience assessment.
+
+      - name: "Zeigarnik: unfinished pull"
+        definition: >
+          An incomplete task stays in the participant's mind and creates
+          tension — they feel compelled to go back and finish it, or
+          they describe discomfort about leaving it undone. This is the
+          Zeigarnik Effect: incomplete tasks are remembered better and
+          create a motivational pull to complete them.
+        apply_when: >
+          The participant describes being nagged by something unfinished,
+          or feeling compelled to complete a task even when they could
+          walk away. Look for "I keep thinking about that form I didn't
+          finish," "the notification badge drives me nuts — I have to
+          clear it," "I can't leave it half done," "it bugs me that I
+          didn't complete it," "I know I should stop but it's sitting
+          there unfinished."
+        not_this: >
+          If the participant is motivated by approaching a goal (not
+          nagged by an incomplete task), that's completion momentum
+          (Goal-Gradient). If they are simply describing a task they
+          didn't finish (no emotional pull), use general context tags.
+          Unfinished pull requires the participant to express tension,
+          compulsion, or discomfort about incompleteness.
+
+      - name: "Hull: completion momentum"
+        definition: >
+          The participant accelerates effort as they approach a goal —
+          seeing progress toward completion motivates them to finish.
+          This is the Goal-Gradient Effect: motivation strengthens as
+          the goal gets closer. Progress bars, step counters, and
+          completion percentages leverage this principle.
+        apply_when: >
+          The participant describes pushing through because they're
+          nearly done, or being motivated by visible progress. Look for
+          "I was at 80% so I thought might as well finish," "only two
+          steps left — let me just do them," "seeing the progress bar
+          fill up made me want to keep going," "I stayed up to finish
+          because I only had three items left," "I'm so close, I can't
+          stop now."
+        not_this: >
+          If the participant is nagged by an incomplete task they
+          abandoned (not currently pushing to finish), that's unfinished
+          pull (Zeigarnik). If they are commenting on a progress
+          indicator as a status communication tool, consider progress
+          indication (Nielsen H1). Completion momentum is about the
+          acceleration of effort as the goal approaches.
+
+      - name: "Miller: memory overload"
+        definition: >
+          The participant cannot hold all the necessary information in
+          working memory — they need to scroll back, take notes, or
+          check a previous screen because there is too much to remember
+          at once. This reflects Miller's Law: working memory holds
+          approximately 7 (plus or minus 2) items.
+        apply_when: >
+          The participant describes forgetting information they just
+          saw, needing to go back to check, or being unable to compare
+          options because they can't hold them all in mind. Look for
+          "by the time I got to the last option I'd forgotten the
+          first one," "I had to scroll back up to check," "I can't
+          remember what was on the previous page," "there were so many
+          things to compare — I lost track," "I'd need to write this
+          down."
+        not_this: >
+          If the participant is overwhelmed by choice quantity (not
+          information retention), that's choice paralysis (Hick's Law).
+          If they can't process the visual density on screen (not a
+          memory issue), that's cognitive overload (Effort group).
+          Memory overload specifically involves the participant
+          forgetting or being unable to retain information they need
+          for a current task.
+
+  # -------------------------------------------------------------------
+  # Perception & Aesthetics — Aesthetic-Usability Effect, Gestalt
+  # -------------------------------------------------------------------
+  - name: Perception and aesthetics
+    subtitle: Does it look trustworthy and read clearly?
+    colour_set: emo
+    tags:
+      - name: "Kurosu: beauty trust"
+        definition: >
+          The participant's assessment of the product's quality,
+          trustworthiness, or usability is influenced by its visual
+          design — a polished appearance creates trust, or a rough
+          appearance creates suspicion. This is the Aesthetic-Usability
+          Effect: attractive interfaces are perceived as more functional.
+        apply_when: >
+          The participant links visual quality to trust, competence, or
+          willingness to use the product. Look for "it looks really
+          professional so I trust it," "the design is so clean, it
+          feels like it works," "the website looks dodgy — I wouldn't
+          put my card details in," "it looks like it was made properly,"
+          "if it looks this good, the product must be good too."
+        not_this: >
+          If the participant is commenting on visual attractiveness
+          without linking it to trust or quality judgement, that's
+          aesthetic quality (Morville → Desirable). If they enjoy the
+          design without it affecting their trust, that's also Morville.
+          Beauty-trust transfer specifically requires the participant to
+          connect appearance with perceived trustworthiness or
+          competence.
+
+      - name: "Kurosu: aesthetic forgiveness"
+        definition: >
+          The participant tolerates a usability problem because the
+          overall design is attractive — they're less critical of
+          friction points when the interface looks good. The forgiving
+          side of the Aesthetic-Usability Effect.
+        apply_when: >
+          The participant encounters a problem but downplays it because
+          the design is appealing. Look for "it's a bit confusing but
+          the design is so nice I don't mind," "I got lost but the app
+          is gorgeous so I'll figure it out," "that was annoying but
+          it's such a well-designed product," "I'd normally complain
+          about that but somehow it doesn't bother me here."
+        not_this: >
+          If the participant is simply tolerant of a problem (without
+          linking that tolerance to visual quality), that's general
+          tolerance — not this tag. If they like the design AND find it
+          usable (no friction to forgive), that's beauty-trust transfer
+          or Morville's desirability. Aesthetic forgiveness requires both
+          a usability problem AND beauty as the reason for tolerance.
+
+      - name: "Gestalt: grouping confusion"
+        definition: >
+          The participant misreads which elements belong together because
+          of their visual arrangement — proximity, similarity, colour,
+          or enclosure leads them to assume a relationship that isn't
+          there, or miss one that is. This reflects the Gestalt
+          principles of perception (proximity, similarity, common region,
+          uniform connectedness, Pragnanz).
+        apply_when: >
+          The participant narrates incorrect assumptions about element
+          relationships based on visual layout. Look for "I thought
+          those two buttons went together because they were next to each
+          other," "all the blue items — I assumed they were the same
+          type," "I didn't realise that was a separate section," "it
+          looked like one group but actually they're different things,"
+          "I thought this label applied to that field."
+        not_this: >
+          If the participant misreads an icon or metaphor (not a
+          grouping issue), that's metaphor fit (Nielsen H2). If they
+          can't find an element (not grouping, just visibility), that's
+          findability (Morville). If the issue is inconsistent visual
+          treatment of the same concept, that's internal inconsistency
+          (Nielsen H4). Grouping confusion is specifically about
+          perceiving spatial/visual relationships incorrectly.
+
+      - name: "Gestalt: grouping clarity"
+        definition: >
+          The visual structure makes relationships between elements
+          obvious — the participant correctly understands what belongs
+          together because proximity, borders, colour, or alignment
+          communicate grouping effectively. Gestalt principles working
+          as intended.
+        apply_when: >
+          The participant narrates correct understanding of layout
+          relationships, or comments on clear visual structure. Look for
+          "I can see these go together," "the box around it makes it
+          clear this is one section," "the colour coding helps — I know
+          the green ones are related," "the layout makes it obvious
+          what's connected to what," "I immediately understood the
+          structure."
+        not_this: >
+          If the participant finds the overall design clean or simple
+          (not specifically about grouping), that's focused design
+          (Nielsen H8). If they appreciate clear labelling (not visual
+          grouping), that's natural language (Nielsen H2). Grouping
+          clarity is specifically about spatial and visual relationships
+          being correctly communicated.
+
+  # -------------------------------------------------------------------
+  # Effort & Complexity — Tesler's Law, Fitts's Law, Cognitive Load
+  # -------------------------------------------------------------------
+  - name: Effort and complexity
+    subtitle: Who does the hard work — the user or the system?
+    colour_set: task
+    tags:
+      - name: "Tesler: complexity burden"
+        definition: >
+          The system pushes inherent complexity onto the participant
+          instead of absorbing it — the participant must handle
+          configuration, disambiguation, or orchestration that the system
+          could have managed. This is Tesler's Law (Conservation of
+          Complexity): every system has irreducible complexity, and the
+          question is whether the user or the system bears it.
+        apply_when: >
+          The participant narrates doing complex work that they feel the
+          system should handle. Look for "setting up the integrations
+          was a nightmare — why can't it just connect automatically?,"
+          "I have to manually enter all this? Can't it pull it from my
+          account?," "why do I need to configure this? It should just
+          work," "I shouldn't have to figure this out myself."
+        not_this: >
+          If the process is long but each step is straightforward (many
+          easy steps, not complexity), consider repetitive task (Nielsen
+          H7). If the participant is confused by the interface (not
+          burdened by real complexity), that's ease of use (Morville).
+          Complexity on user specifically involves inherent complexity
+          that the system could have absorbed but didn't.
+
+      - name: "Tesler: complexity absorbed"
+        definition: >
+          The system handles inherent complexity on the participant's
+          behalf — it automates, infers, defaults, or simplifies so the
+          participant only deals with the simple part. Tesler's Law
+          working well: the system bears the complexity burden.
+        apply_when: >
+          The participant comments on the system doing the hard work for
+          them, or appreciates automatic handling of complex tasks. Look
+          for "I love that it just works — I plug in my calendar and it
+          figures out the rest," "it set everything up automatically,"
+          "I didn't have to configure anything," "someone at their end
+          clearly did the hard thinking," "it handled all the
+          complicated stuff for me."
+        not_this: >
+          If the system pre-filled a form field (a specific instance,
+          not broad complexity absorption), that's helpful default
+          (Nielsen H6). If the participant appreciates simplicity of
+          design (not complexity management), that's focused design
+          (Nielsen H8). Complexity absorbed is about the system taking
+          on inherently complex work.
+
+      - name: "Fitts: target difficulty"
+        definition: >
+          An interactive element is hard to tap, click, or reach because
+          of its size, position, or spacing — the participant struggles
+          physically to interact with it. This reflects Fitts's Law:
+          the time to reach a target is a function of its distance and
+          size. Particularly common on mobile and touch devices.
+        apply_when: >
+          The participant describes difficulty hitting a target, or
+          comments on the size or position of interactive elements. Look
+          for "that little X is tiny — I keep missing it," "the button
+          is too small on my phone," "I can't reach that with my thumb,"
+          "these links are too close together — I keep tapping the wrong
+          one," "I wish the checkout button was bigger."
+        not_this: >
+          If the participant can't find the element (not too small,
+          just invisible or badly placed), that's discoverability
+          (Norman → Signifiers) or findability (Morville). If they
+          struggle with a gesture (not a target), consider the
+          interaction type. Target difficulty is specifically about the
+          physical reachability and size of interactive elements.
+
+      - name: "Sweller: cognitive overload"
+        definition: >
+          The participant is overwhelmed by the amount of information,
+          processing, or simultaneous demands on their attention — too
+          much is happening at once for them to handle. This is about
+          total cognitive load exceeding capacity, regardless of whether
+          a decision is involved.
+        apply_when: >
+          The participant expresses being overwhelmed by the total
+          demands on their attention or processing. Look for "there's
+          so much happening I can't focus," "I need a moment to process
+          all this," "my brain is full," "I can't take in any more
+          information," "it's asking me to do too many things at once,"
+          "I'm completely lost — there's too much."
+        not_this: >
+          If the participant is specifically overwhelmed by choices
+          (not general information), that's choice paralysis (Hick's
+          Law). If they can't remember something from earlier (not
+          currently overwhelmed), that's memory overload (Miller's Law).
+          If the screen is visually cluttered (a design issue), that's
+          information overload (Nielsen H8). Cognitive overload is about
+          the participant's total processing capacity being exceeded.
+
+  # -------------------------------------------------------------------
+  # Speed & Responsiveness — Doherty Threshold
+  # -------------------------------------------------------------------
+  - name: Speed and responsiveness
+    subtitle: Is the system fast enough to stay out of the way?
+    colour_set: opp
+    tags:
+      - name: "Doherty: instant response"
+        definition: >
+          The system responds so quickly that the participant doesn't
+          notice any delay — the interaction feels immediate, smooth,
+          and continuous. This reflects the Doherty Threshold: when
+          system response time drops below ~400 milliseconds, users
+          enter a productive flow where neither human nor computer waits
+          for the other.
+        apply_when: >
+          The participant narrates speed, immediacy, or uninterrupted
+          flow during interaction. Look for "it's instant — I tap and
+          it's there," "no loading time at all," "it's so snappy," "I
+          love how fast this is," "everything just happens," "there's
+          no lag." Also applies when the participant's flow is clearly
+          unbroken — narrating actions in rapid sequence without pauses
+          or waits.
+        not_this: >
+          If the participant knows the system is working because of good
+          status communication (not speed), that's clear status (Nielsen
+          H1). If they're commenting on the efficiency of a workflow
+          (not response speed), that's efficiency (Morville → Usable).
+          Instant response is specifically about perceived speed of
+          system response to individual actions.
+
+      - name: "Doherty: waiting frustration"
+        definition: >
+          A noticeable delay breaks the participant's flow — they must
+          wait for the system to respond and the waiting creates
+          frustration, uncertainty, or disengagement. The system has
+          crossed the Doherty Threshold in the wrong direction.
+        apply_when: >
+          The participant narrates waiting, describes a delay, or
+          expresses frustration about response time. Look for "it's
+          loading... still loading," "every time I click Apply there's
+          this pause," "why is it so slow?," "I'm just sitting here
+          waiting," "is it broken or just slow?," "come on, come on,"
+          "I'd give up if it was always this slow."
+        not_this: >
+          If the participant is uncertain whether the system is
+          responding at all (not frustrated by known delay), that's
+          opaque status (Nielsen H1). If a multi-step process takes a
+          long time but shows progress, consider whether progress
+          indication (Nielsen H1) is more relevant. Waiting frustration
+          is about the participant experiencing and reacting to delay.

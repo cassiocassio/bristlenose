@@ -10,6 +10,74 @@ from __future__ import annotations
 import math
 from collections.abc import Sequence
 
+# ---------------------------------------------------------------------------
+# Finding flags — sentiment valence and signal classification
+# ---------------------------------------------------------------------------
+
+# Maps sentiment names to valence direction.
+SENTIMENT_VALENCE: dict[str, str] = {
+    "frustration": "negative",
+    "confusion": "negative",
+    "doubt": "negative",
+    "surprise": "neutral",
+    "satisfaction": "positive",
+    "delight": "positive",
+    "confidence": "positive",
+}
+
+# Tunable thresholds — starting guesses, calibrate with real data via HUD.
+# Minimum composite signal to flag at all.
+FLAG_MIN_SIGNAL: float = 0.02
+# Minimum composite signal for narrow flags (Success / Niggle).
+FLAG_SMALL_SIGNAL: float = 0.01
+# Breadth ratio (n_eff / total_participants) for broad flags (Win / Problem).
+FLAG_BREADTH: float = 0.3
+# Mean intensity threshold for Problem (vs Niggle).
+FLAG_INTENSITY: float = 2.0
+
+
+def classify_flag(
+    sentiment: str,
+    composite: float,
+    n_eff: float,
+    total_participants: int,
+    mean_int: float,
+) -> str | None:
+    """Classify a sentiment-based signal into a finding flag.
+
+    Returns one of "Win", "Problem", "Pattern", "Niggle", "Success",
+    "Surprising", or None if the signal is too weak to flag.
+
+    Only meaningful for sentiment-based signals where *sentiment* is one of the
+    seven canonical sentiment names.  For codebook-group signals, returns None.
+    """
+    valence = SENTIMENT_VALENCE.get(sentiment)
+    if valence is None:
+        return None  # not a sentiment column (e.g. codebook group name)
+
+    if composite < FLAG_SMALL_SIGNAL:
+        return None  # too weak to claim anything
+
+    breadth = n_eff / total_participants if total_participants > 0 else 0.0
+
+    if valence == "neutral":
+        # Surprise — only flag if signal is strong enough
+        return "Surprising" if composite >= FLAG_MIN_SIGNAL else None
+
+    if composite < FLAG_MIN_SIGNAL:
+        # Below the broad-flag threshold — check if strong enough for narrow flags
+        if valence == "positive":
+            return "Success"
+        return "Niggle"
+
+    if valence == "positive":
+        return "Win" if breadth >= FLAG_BREADTH else "Success"
+
+    # valence == "negative"
+    if breadth >= FLAG_BREADTH and mean_int >= FLAG_INTENSITY:
+        return "Problem"
+    return "Niggle"
+
 
 def concentration_ratio(
     cell_count: int,

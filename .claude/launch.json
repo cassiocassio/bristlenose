@@ -2,6 +2,13 @@
   "version": "0.0.1",
   "configurations": [
     {
+      "name": "serve-main",
+      "runtimeExecutable": "bash",
+      "runtimeArgs": ["-c", "cd /Users/cassio/Code/bristlenose && .venv/bin/bristlenose serve trial-runs/project-ikea"],
+      "autoPort": false,
+      "port": 8150
+    },
+    {
       "name": "mockups",
       "runtimeExecutable": "python3",
       "runtimeArgs": ["-m", "http.server", "8199", "--directory", "."],

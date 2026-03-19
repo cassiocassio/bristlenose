@@ -141,6 +141,7 @@ def _serialize_analysis(analysis: object) -> str:
                 "concentration": round(s.concentration, 2),
                 "compositeSignal": round(s.composite_signal, 4),
                 "confidence": s.confidence,
+                "flag": s.flag,
                 "quotes": [
                     {
                         "text": q.text,

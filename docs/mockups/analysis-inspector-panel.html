@@ -1,0 +1,893 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Analysis Inspector Panel — Mockup</title>
+<style>
+/* ── Design system tokens (subset from tokens.css) ───────── */
+:root {
+  --bn-font-body: "Inter", "Segoe UI Variable", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --bn-font-mono: "SF Mono", "Fira Code", "Consolas", monospace;
+  --bn-weight-light: 370;
+  --bn-weight-normal: 420;
+  --bn-weight-emphasis: 490;
+  --bn-weight-starred: 520;
+  --bn-weight-strong: 700;
+  --bn-colour-bg: #ffffff;
+  --bn-colour-text: #1a1a1a;
+  --bn-colour-muted: #6b7280;
+  --bn-colour-border: #e5e7eb;
+  --bn-colour-border-hover: #d1d5db;
+  --bn-colour-accent: #2563eb;
+  --bn-colour-hover: #e8f0fe;
+  --bn-colour-shadow: rgba(0,0,0,0.1);
+  --bn-colour-quote-bg: #f9fafb;
+  --bn-space-xs: 0.15rem;
+  --bn-space-sm: 0.35rem;
+  --bn-space-md: 0.75rem;
+  --bn-space-lg: 1.5rem;
+  --bn-space-xl: 2rem;
+  --bn-radius-sm: 3px;
+  --bn-radius-md: 6px;
+  --bn-radius-lg: 8px;
+  --bn-radius-pill: 999px;
+  --bn-transition-fast: 0.15s ease;
+  color-scheme: light dark;
+}
+
+@supports (color: light-dark(#fff, #000)) {
+  :root {
+    --bn-colour-bg: light-dark(#ffffff, #111111);
+    --bn-colour-text: light-dark(#1a1a1a, #e5e7eb);
+    --bn-colour-muted: light-dark(#6b7280, #9ca3af);
+    --bn-colour-border: light-dark(#e5e7eb, #2d2d2d);
+    --bn-colour-border-hover: light-dark(#d1d5db, #4b5563);
+    --bn-colour-accent: light-dark(#2563eb, #60a5fa);
+    --bn-colour-hover: light-dark(#e8f0fe, #1e293b);
+    --bn-colour-shadow: light-dark(rgba(0,0,0,0.1), rgba(0,0,0,0.4));
+    --bn-colour-quote-bg: light-dark(#f9fafb, #1a1a1a);
+  }
+}
+
+/* ── Reset ───────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: var(--bn-font-body);
+  font-weight: var(--bn-weight-normal);
+  background: var(--bn-colour-bg);
+  color: var(--bn-colour-text);
+  height: 100vh;
+  overflow: hidden;
+}
+
+/* ── Mockup chrome (not part of the real component) ──────── */
+.mockup-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.5rem 1rem;
+  border-bottom: 1px solid var(--bn-colour-border);
+  background: var(--bn-colour-bg);
+  font-size: 0.75rem;
+  color: var(--bn-colour-muted);
+  flex-shrink: 0;
+}
+
+.mockup-header h1 {
+  font-size: 0.85rem;
+  font-weight: var(--bn-weight-emphasis);
+  color: var(--bn-colour-text);
+}
+
+.mockup-controls {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.mockup-controls button {
+  font-family: var(--bn-font-body);
+  font-size: 0.75rem;
+  padding: 0.25rem 0.6rem;
+  border: 1px solid var(--bn-colour-border);
+  border-radius: var(--bn-radius-sm);
+  background: var(--bn-colour-bg);
+  color: var(--bn-colour-text);
+  cursor: pointer;
+}
+
+.mockup-controls button:hover {
+  border-color: var(--bn-colour-border-hover);
+  background: var(--bn-colour-hover);
+}
+
+.mockup-controls button.active {
+  border-color: var(--bn-colour-accent);
+  background: var(--bn-colour-hover);
+  color: var(--bn-colour-accent);
+}
+
+/* ── Full-page layout ────────────────────────────────────── */
+.analysis-layout {
+  display: flex;
+  flex-direction: column;
+  height: calc(100vh - 37px); /* minus mockup header */
+}
+
+/* ── Center pane (signal cards) ──────────────────────────── */
+.analysis-center {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--bn-space-lg);
+}
+
+.signal-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 26rem), 1fr));
+  gap: var(--bn-space-md);
+}
+
+.signal-card {
+  border: 1px solid var(--bn-colour-border);
+  border-radius: var(--bn-radius-sm);
+  padding: var(--bn-space-lg);
+  background: var(--bn-colour-bg);
+  transition: box-shadow var(--bn-transition-fast);
+}
+
+.signal-card:hover {
+  box-shadow: 0 2px 8px var(--bn-colour-shadow);
+}
+
+.signal-card-source {
+  display: block;
+  font-size: 0.7rem;
+  font-weight: var(--bn-weight-normal);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--bn-colour-muted);
+  margin-bottom: 0.1rem;
+}
+
+.signal-card-location {
+  font-size: 1.05rem;
+  font-weight: var(--bn-weight-emphasis);
+  margin-bottom: var(--bn-space-sm);
+}
+
+.signal-card-badge {
+  display: inline-block;
+  font-size: 0.72rem;
+  font-weight: var(--bn-weight-emphasis);
+  padding: var(--bn-space-xs) 0.45rem;
+  border-radius: var(--bn-radius-sm);
+  margin-bottom: var(--bn-space-sm);
+}
+
+.badge-frustration { background: #fee2e2; color: #991b1b; }
+.badge-satisfaction { background: #dcfce7; color: #166534; }
+.badge-confusion { background: #fef3c7; color: #92400e; }
+.badge-delight { background: #dbeafe; color: #1e40af; }
+.badge-doubt { background: #f3e8ff; color: #6b21a8; }
+
+.signal-card-metrics {
+  display: grid;
+  grid-template-columns: auto auto;
+  gap: 0.15rem 0.6rem;
+  font-size: 0.8rem;
+  margin-bottom: var(--bn-space-sm);
+}
+
+.metric-label { color: var(--bn-colour-muted); text-align: right; }
+.metric-value { font-family: var(--bn-font-mono); }
+
+.signal-card-quote {
+  background: var(--bn-colour-quote-bg);
+  border-radius: var(--bn-radius-md);
+  padding: var(--bn-space-md);
+  font-size: 0.85rem;
+  line-height: 1.5;
+  color: var(--bn-colour-text);
+  margin-top: var(--bn-space-sm);
+}
+
+.signal-card-quote .speaker {
+  font-family: var(--bn-font-mono);
+  font-size: 0.72rem;
+  color: var(--bn-colour-muted);
+}
+
+/* ── Inspector panel ─────────────────────────────────────── */
+.inspector-panel {
+  flex-shrink: 0;
+  border-top: 1px solid var(--bn-colour-border);
+  background: var(--bn-colour-bg);
+  display: flex;
+  flex-direction: column;
+  transition: height 0.15s ease;
+  overflow: hidden;
+}
+
+.inspector-panel.collapsed {
+  height: auto !important;
+}
+
+/* Drag handle bar */
+.inspector-handle {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0 0.75rem;
+  height: 28px;
+  min-height: 28px;
+  cursor: ns-resize;
+  user-select: none;
+  border-bottom: 1px solid var(--bn-colour-border);
+  background: var(--bn-colour-bg);
+}
+
+.collapsed .inspector-handle {
+  cursor: default;
+  border-bottom: none;
+}
+
+.inspector-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border: none;
+  background: none;
+  color: var(--bn-colour-muted);
+  cursor: pointer;
+  border-radius: var(--bn-radius-sm);
+  font-size: 0.75rem;
+  padding: 0;
+  flex-shrink: 0;
+}
+
+.inspector-toggle:hover {
+  background: var(--bn-colour-hover);
+  color: var(--bn-colour-text);
+}
+
+.inspector-handle-label {
+  font-size: 0.72rem;
+  font-weight: var(--bn-weight-emphasis);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--bn-colour-muted);
+}
+
+.inspector-handle-grip {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.inspector-handle-grip::before {
+  content: "";
+  display: block;
+  width: 32px;
+  height: 3px;
+  border-radius: 2px;
+  background: var(--bn-colour-border);
+  transition: background var(--bn-transition-fast);
+}
+
+.inspector-handle:hover .inspector-handle-grip::before {
+  background: var(--bn-colour-border-hover);
+}
+
+/* Tab bar */
+.inspector-tabs {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  padding: 0 0.5rem;
+  height: 32px;
+  min-height: 32px;
+  border-bottom: 1px solid var(--bn-colour-border);
+  overflow-x: auto;
+  flex-shrink: 0;
+}
+
+.inspector-tab {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0 0.75rem;
+  height: 100%;
+  border: none;
+  background: none;
+  font-family: var(--bn-font-body);
+  font-size: 0.78rem;
+  font-weight: var(--bn-weight-emphasis);
+  color: var(--bn-colour-muted);
+  cursor: pointer;
+  white-space: nowrap;
+  position: relative;
+  transition: color var(--bn-transition-fast);
+}
+
+.inspector-tab:hover {
+  color: var(--bn-colour-text);
+}
+
+.inspector-tab.active {
+  color: var(--bn-colour-text);
+}
+
+/* Active tab underline */
+.inspector-tab.active::after {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  left: 0.5rem;
+  right: 0.5rem;
+  height: 2px;
+  background: var(--bn-colour-accent);
+  border-radius: 1px;
+}
+
+/* Section/Theme split button (only visible on active tab) */
+.dimension-toggle {
+  display: none;
+  align-items: center;
+  border: 1px solid var(--bn-colour-border);
+  border-radius: var(--bn-radius-sm);
+  overflow: hidden;
+  margin-left: 0.15rem;
+  flex-shrink: 0;
+}
+
+.inspector-tab.active .dimension-toggle {
+  display: inline-flex;
+}
+
+.dimension-btn {
+  border: none;
+  background: none;
+  font-family: var(--bn-font-body);
+  font-size: 0.65rem;
+  font-weight: var(--bn-weight-normal);
+  color: var(--bn-colour-muted);
+  padding: 0.1rem 0.4rem;
+  cursor: pointer;
+  line-height: 1.3;
+  transition: all var(--bn-transition-fast);
+}
+
+.dimension-btn:first-child {
+  border-right: 1px solid var(--bn-colour-border);
+}
+
+.dimension-btn:hover {
+  background: var(--bn-colour-hover);
+  color: var(--bn-colour-text);
+}
+
+.dimension-btn.active {
+  background: var(--bn-colour-hover);
+  color: var(--bn-colour-accent);
+  font-weight: var(--bn-weight-emphasis);
+}
+
+/* Heatmap body */
+.inspector-body {
+  flex: 1;
+  overflow: auto;
+  padding: var(--bn-space-md);
+}
+
+/* ── Heatmap table (from analysis.css) ───────────────────── */
+.analysis-heatmap {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.82rem;
+}
+
+.analysis-heatmap th {
+  text-align: center;
+  padding: 0.5rem 0.3rem;
+  font-weight: var(--bn-weight-emphasis);
+  font-size: 0.75rem;
+  color: var(--bn-colour-muted);
+  border-bottom: 2px solid var(--bn-colour-border);
+  white-space: nowrap;
+}
+
+.analysis-heatmap th:first-child {
+  text-align: left;
+  min-width: 140px;
+}
+
+.analysis-heatmap td {
+  text-align: center;
+  padding: 0.45rem 0.4rem;
+  border-bottom: 1px solid var(--bn-colour-border);
+}
+
+.analysis-heatmap td:first-child {
+  text-align: left;
+  font-weight: var(--bn-weight-emphasis);
+  font-size: 0.85rem;
+}
+
+.heatmap-cell {
+  font-family: var(--bn-font-mono);
+  font-size: 0.8rem;
+  font-weight: var(--bn-weight-emphasis);
+  border-radius: var(--bn-radius-sm);
+  min-width: 36px;
+  cursor: pointer;
+  transition: outline 0.1s;
+}
+
+.heatmap-cell:hover {
+  outline: 2px solid var(--bn-colour-accent);
+  outline-offset: -1px;
+}
+
+.heatmap-cell.zero {
+  color: var(--bn-colour-border);
+  cursor: default;
+}
+
+.heatmap-cell.zero:hover { outline: none; }
+
+.heatmap-total {
+  font-weight: var(--bn-weight-emphasis);
+  color: var(--bn-colour-muted);
+  cursor: default;
+}
+
+/* ── Collapsed state hides tabs + body ───────────────────── */
+.collapsed .inspector-tabs,
+.collapsed .inspector-body {
+  display: none;
+}
+
+/* ── Dragging state ──────────────────────────────────────── */
+body.dragging {
+  cursor: ns-resize !important;
+  user-select: none !important;
+}
+
+body.dragging .inspector-panel {
+  transition: none !important;
+}
+
+/* ── Glow animation on card when clicked from heatmap ───── */
+@keyframes card-glow {
+  0%   { box-shadow: 0 0 0 3px var(--bn-colour-accent); }
+  100% { box-shadow: 0 0 0 0px transparent; }
+}
+
+.signal-card.glow {
+  animation: card-glow 1.5s ease-out;
+}
+</style>
+
+<!-- Google Fonts — Inter Variable -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300..700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+<!-- Mockup chrome -->
+<div class="mockup-header">
+  <h1>Analysis Inspector Panel — Mockup v1</h1>
+  <div class="mockup-controls">
+    <button onclick="togglePanel()">Toggle panel (m)</button>
+    <button onclick="setHeight(200)">Short</button>
+    <button onclick="setHeight(320)">Default</button>
+    <button onclick="setHeight(500)">Tall</button>
+  </div>
+</div>
+
+<!-- The actual layout -->
+<div class="analysis-layout">
+
+  <!-- Center pane: signal cards -->
+  <div class="analysis-center">
+    <div class="signal-cards">
+
+      <div class="signal-card" id="card-checkout-frustration">
+        <span class="signal-card-source">Section</span>
+        <div class="signal-card-location">Checkout flow</div>
+        <span class="signal-card-badge badge-frustration">frustration</span>
+        <div class="signal-card-metrics">
+          <span class="metric-label">Signal</span><span class="metric-value">4.2</span>
+          <span class="metric-label">Concentration</span><span class="metric-value">3.1×</span>
+          <span class="metric-label">Voices</span><span class="metric-value">5/7</span>
+        </div>
+        <div class="signal-card-quote">
+          "I kept clicking the button and nothing happened, I thought the whole thing was broken" <span class="speaker">— p3</span>
+        </div>
+      </div>
+
+      <div class="signal-card" id="card-search-satisfaction">
+        <span class="signal-card-source">Section</span>
+        <div class="signal-card-location">Product search</div>
+        <span class="signal-card-badge badge-satisfaction">satisfaction</span>
+        <div class="signal-card-metrics">
+          <span class="metric-label">Signal</span><span class="metric-value">3.8</span>
+          <span class="metric-label">Concentration</span><span class="metric-value">2.7×</span>
+          <span class="metric-label">Voices</span><span class="metric-value">6/7</span>
+        </div>
+        <div class="signal-card-quote">
+          "Oh that's nice, it found what I wanted straight away" <span class="speaker">— p1</span>
+        </div>
+      </div>
+
+      <div class="signal-card" id="card-returns-confusion">
+        <span class="signal-card-source">Theme</span>
+        <div class="signal-card-location">Trust &amp; credibility</div>
+        <span class="signal-card-badge badge-confusion">confusion</span>
+        <div class="signal-card-metrics">
+          <span class="metric-label">Signal</span><span class="metric-value">3.5</span>
+          <span class="metric-label">Concentration</span><span class="metric-value">2.4×</span>
+          <span class="metric-label">Voices</span><span class="metric-value">4/7</span>
+        </div>
+        <div class="signal-card-quote">
+          "Where do I even go to return something? I couldn't find it anywhere" <span class="speaker">— p5</span>
+        </div>
+      </div>
+
+      <div class="signal-card" id="card-onboarding-delight">
+        <span class="signal-card-source">Section</span>
+        <div class="signal-card-location">Onboarding</div>
+        <span class="signal-card-badge badge-delight">delight</span>
+        <div class="signal-card-metrics">
+          <span class="metric-label">Signal</span><span class="metric-value">3.1</span>
+          <span class="metric-label">Concentration</span><span class="metric-value">2.1×</span>
+          <span class="metric-label">Voices</span><span class="metric-value">5/7</span>
+        </div>
+        <div class="signal-card-quote">
+          "I love that it remembers my preferences, that's really thoughtful" <span class="speaker">— p2</span>
+        </div>
+      </div>
+
+      <div class="signal-card" id="card-pricing-doubt">
+        <span class="signal-card-source">Theme</span>
+        <div class="signal-card-location">Value for money</div>
+        <span class="signal-card-badge badge-doubt">doubt</span>
+        <div class="signal-card-metrics">
+          <span class="metric-label">Signal</span><span class="metric-value">2.9</span>
+          <span class="metric-label">Concentration</span><span class="metric-value">1.8×</span>
+          <span class="metric-label">Voices</span><span class="metric-value">3/7</span>
+        </div>
+        <div class="signal-card-quote">
+          "I'm not sure it's worth the premium, you know, compared to the other one" <span class="speaker">— p4</span>
+        </div>
+      </div>
+
+      <div class="signal-card" id="card-navigation-frustration">
+        <span class="signal-card-source">Section</span>
+        <div class="signal-card-location">Navigation</div>
+        <span class="signal-card-badge badge-frustration">frustration</span>
+        <div class="signal-card-metrics">
+          <span class="metric-label">Signal</span><span class="metric-value">2.7</span>
+          <span class="metric-label">Concentration</span><span class="metric-value">1.6×</span>
+          <span class="metric-label">Voices</span><span class="metric-value">4/7</span>
+        </div>
+        <div class="signal-card-quote">
+          "The menu is just... it's too many options, I don't know where anything is" <span class="speaker">— p6</span>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Inspector panel (bottom) -->
+  <div class="inspector-panel" id="inspector" style="height: 320px;">
+
+    <!-- Drag handle -->
+    <div class="inspector-handle" id="inspector-handle">
+      <button class="inspector-toggle" id="inspector-toggle-btn" title="Toggle matrix panel (m)">
+        <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+          <path d="M3 7.5L6 4.5L9 7.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </button>
+      <span class="inspector-handle-label">Matrix</span>
+      <span class="inspector-handle-grip"></span>
+    </div>
+
+    <!-- Tab bar -->
+    <div class="inspector-tabs">
+      <button class="inspector-tab active" data-source="sentiment" onclick="switchSource(this)">
+        Sentiment
+        <span class="dimension-toggle">
+          <button class="dimension-btn active" data-dim="section" onclick="switchDim(event, this)">Sec</button>
+          <button class="dimension-btn" data-dim="theme" onclick="switchDim(event, this)">Thm</button>
+        </span>
+      </button>
+      <button class="inspector-tab" data-source="ux-research" onclick="switchSource(this)">
+        UX Research
+        <span class="dimension-toggle">
+          <button class="dimension-btn active" data-dim="section" onclick="switchDim(event, this)">Sec</button>
+          <button class="dimension-btn" data-dim="theme" onclick="switchDim(event, this)">Thm</button>
+        </span>
+      </button>
+      <button class="inspector-tab" data-source="morville" onclick="switchSource(this)">
+        Morville
+        <span class="dimension-toggle">
+          <button class="dimension-btn active" data-dim="section" onclick="switchDim(event, this)">Sec</button>
+          <button class="dimension-btn" data-dim="theme" onclick="switchDim(event, this)">Thm</button>
+        </span>
+      </button>
+    </div>
+
+    <!-- Heatmap body -->
+    <div class="inspector-body">
+
+      <!-- Sentiment × Section heatmap -->
+      <div class="heatmap-content" id="heatmap-sentiment-section">
+        <table class="analysis-heatmap">
+          <thead>
+            <tr>
+              <th></th>
+              <th><span class="signal-card-badge badge-frustration" style="font-size:0.65rem">frustration</span></th>
+              <th><span class="signal-card-badge badge-confusion" style="font-size:0.65rem">confusion</span></th>
+              <th><span class="signal-card-badge badge-doubt" style="font-size:0.65rem">doubt</span></th>
+              <th><span class="signal-card-badge badge-satisfaction" style="font-size:0.65rem">satisfaction</span></th>
+              <th><span class="signal-card-badge badge-delight" style="font-size:0.65rem">delight</span></th>
+              <th>Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Checkout flow</td>
+              <td class="heatmap-cell" style="background: oklch(0.85 0.12 150)" onclick="scrollToCard('card-checkout-frustration')"><strong>12</strong></td>
+              <td class="heatmap-cell" style="background: oklch(0.92 0.04 150)">4</td>
+              <td class="heatmap-cell" style="background: oklch(0.95 0.02 150)">2</td>
+              <td class="heatmap-cell" style="background: oklch(0.94 0.03 20)">1</td>
+              <td class="heatmap-cell zero">0</td>
+              <td class="heatmap-total">19</td>
+            </tr>
+            <tr>
+              <td>Product search</td>
+              <td class="heatmap-cell" style="background: oklch(0.94 0.03 20)">1</td>
+              <td class="heatmap-cell zero">0</td>
+              <td class="heatmap-cell zero">0</td>
+              <td class="heatmap-cell" style="background: oklch(0.85 0.12 150)" onclick="scrollToCard('card-search-satisfaction')"><strong>11</strong></td>
+              <td class="heatmap-cell" style="background: oklch(0.90 0.06 150)">5</td>
+              <td class="heatmap-total">17</td>
+            </tr>
+            <tr>
+              <td>Onboarding</td>
+              <td class="heatmap-cell" style="background: oklch(0.95 0.02 150)">2</td>
+              <td class="heatmap-cell" style="background: oklch(0.95 0.02 150)">2</td>
+              <td class="heatmap-cell zero">0</td>
+              <td class="heatmap-cell" style="background: oklch(0.90 0.06 150)">6</td>
+              <td class="heatmap-cell" style="background: oklch(0.87 0.10 150)" onclick="scrollToCard('card-onboarding-delight')"><strong>9</strong></td>
+              <td class="heatmap-total">19</td>
+            </tr>
+            <tr>
+              <td>Navigation</td>
+              <td class="heatmap-cell" style="background: oklch(0.88 0.08 150)" onclick="scrollToCard('card-navigation-frustration')"><strong>8</strong></td>
+              <td class="heatmap-cell" style="background: oklch(0.92 0.04 150)">4</td>
+              <td class="heatmap-cell" style="background: oklch(0.95 0.02 150)">3</td>
+              <td class="heatmap-cell" style="background: oklch(0.95 0.02 150)">2</td>
+              <td class="heatmap-cell zero">0</td>
+              <td class="heatmap-total">17</td>
+            </tr>
+            <tr>
+              <td>Account settings</td>
+              <td class="heatmap-cell" style="background: oklch(0.95 0.02 150)">3</td>
+              <td class="heatmap-cell" style="background: oklch(0.95 0.02 150)">2</td>
+              <td class="heatmap-cell zero">0</td>
+              <td class="heatmap-cell" style="background: oklch(0.92 0.04 150)">4</td>
+              <td class="heatmap-cell" style="background: oklch(0.95 0.02 150)">2</td>
+              <td class="heatmap-total">11</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Sentiment × Theme heatmap (hidden by default) -->
+      <div class="heatmap-content" id="heatmap-sentiment-theme" style="display:none">
+        <table class="analysis-heatmap">
+          <thead>
+            <tr>
+              <th></th>
+              <th><span class="signal-card-badge badge-frustration" style="font-size:0.65rem">frustration</span></th>
+              <th><span class="signal-card-badge badge-confusion" style="font-size:0.65rem">confusion</span></th>
+              <th><span class="signal-card-badge badge-doubt" style="font-size:0.65rem">doubt</span></th>
+              <th><span class="signal-card-badge badge-satisfaction" style="font-size:0.65rem">satisfaction</span></th>
+              <th><span class="signal-card-badge badge-delight" style="font-size:0.65rem">delight</span></th>
+              <th>Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Trust &amp; credibility</td>
+              <td class="heatmap-cell" style="background: oklch(0.92 0.04 150)">4</td>
+              <td class="heatmap-cell" style="background: oklch(0.87 0.10 150)" onclick="scrollToCard('card-returns-confusion')"><strong>9</strong></td>
+              <td class="heatmap-cell" style="background: oklch(0.90 0.06 150)">5</td>
+              <td class="heatmap-cell" style="background: oklch(0.95 0.02 150)">2</td>
+              <td class="heatmap-cell zero">0</td>
+              <td class="heatmap-total">20</td>
+            </tr>
+            <tr>
+              <td>Value for money</td>
+              <td class="heatmap-cell" style="background: oklch(0.95 0.02 150)">3</td>
+              <td class="heatmap-cell" style="background: oklch(0.95 0.02 150)">2</td>
+              <td class="heatmap-cell" style="background: oklch(0.87 0.10 150)" onclick="scrollToCard('card-pricing-doubt')"><strong>8</strong></td>
+              <td class="heatmap-cell" style="background: oklch(0.95 0.02 150)">3</td>
+              <td class="heatmap-cell zero">0</td>
+              <td class="heatmap-total">16</td>
+            </tr>
+            <tr>
+              <td>Time savings</td>
+              <td class="heatmap-cell" style="background: oklch(0.95 0.02 150)">2</td>
+              <td class="heatmap-cell zero">0</td>
+              <td class="heatmap-cell zero">0</td>
+              <td class="heatmap-cell" style="background: oklch(0.88 0.08 150)">7</td>
+              <td class="heatmap-cell" style="background: oklch(0.90 0.06 150)">5</td>
+              <td class="heatmap-total">14</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Placeholder for other source heatmaps -->
+      <div class="heatmap-content" id="heatmap-ux-research-section" style="display:none">
+        <p style="color: var(--bn-colour-muted); font-size: 0.85rem; padding: 2rem; text-align: center;">UX Research × Section heatmap would render here</p>
+      </div>
+      <div class="heatmap-content" id="heatmap-ux-research-theme" style="display:none">
+        <p style="color: var(--bn-colour-muted); font-size: 0.85rem; padding: 2rem; text-align: center;">UX Research × Theme heatmap would render here</p>
+      </div>
+      <div class="heatmap-content" id="heatmap-morville-section" style="display:none">
+        <p style="color: var(--bn-colour-muted); font-size: 0.85rem; padding: 2rem; text-align: center;">Morville × Section heatmap would render here</p>
+      </div>
+      <div class="heatmap-content" id="heatmap-morville-theme" style="display:none">
+        <p style="color: var(--bn-colour-muted); font-size: 0.85rem; padding: 2rem; text-align: center;">Morville × Theme heatmap would render here</p>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+// ── State ────────────────────────────────────────────────
+let isOpen = true;
+let panelHeight = 320;
+let activeSource = "sentiment";
+let activeDimension = "section";
+
+const panel = document.getElementById("inspector");
+const handle = document.getElementById("inspector-handle");
+const toggleBtn = document.getElementById("inspector-toggle-btn");
+
+// ── Toggle ───────────────────────────────────────────────
+function togglePanel() {
+  isOpen = !isOpen;
+  if (isOpen) {
+    panel.classList.remove("collapsed");
+    panel.style.height = panelHeight + "px";
+  } else {
+    panel.classList.add("collapsed");
+  }
+  updateChevron();
+}
+
+function updateChevron() {
+  const svg = toggleBtn.querySelector("svg");
+  svg.style.transform = isOpen ? "rotate(0deg)" : "rotate(180deg)";
+  svg.style.transition = "transform 0.15s ease";
+}
+
+toggleBtn.addEventListener("click", (e) => {
+  e.stopPropagation();
+  togglePanel();
+});
+
+// ── Keyboard shortcut ────────────────────────────────────
+document.addEventListener("keydown", (e) => {
+  if (e.key === "m" && !e.metaKey && !e.ctrlKey) {
+    e.preventDefault();
+    togglePanel();
+  }
+});
+
+// ── Height presets (mockup only) ─────────────────────────
+function setHeight(h) {
+  panelHeight = h;
+  if (isOpen) {
+    panel.style.height = h + "px";
+  }
+}
+
+// ── Drag to resize ───────────────────────────────────────
+let isDragging = false;
+let startY = 0;
+let startH = 0;
+
+handle.addEventListener("pointerdown", (e) => {
+  if (!isOpen) return; // Don't drag when collapsed
+  if (e.target === toggleBtn || e.target.closest(".inspector-toggle")) return;
+
+  e.preventDefault();
+  isDragging = true;
+  startY = e.clientY;
+  startH = panel.offsetHeight;
+  document.body.classList.add("dragging");
+
+  const onMove = (ev) => {
+    const delta = startY - ev.clientY;
+    const newH = Math.max(60, Math.min(600, startH + delta));
+    panel.style.height = newH + "px";
+  };
+
+  const onUp = (ev) => {
+    document.removeEventListener("pointermove", onMove);
+    document.removeEventListener("pointerup", onUp);
+    document.body.classList.remove("dragging");
+    isDragging = false;
+
+    const finalH = panel.offsetHeight;
+    if (finalH <= 80) {
+      // Snap close
+      isOpen = false;
+      panel.classList.add("collapsed");
+      updateChevron();
+    } else {
+      panelHeight = finalH;
+    }
+  };
+
+  document.addEventListener("pointermove", onMove);
+  document.addEventListener("pointerup", onUp);
+});
+
+// ── Source tabs ───────────────────────────────────────────
+function switchSource(tab) {
+  if (tab.classList.contains("active")) return;
+
+  document.querySelectorAll(".inspector-tab").forEach(t => t.classList.remove("active"));
+  tab.classList.add("active");
+  activeSource = tab.dataset.source;
+
+  // Reset dimension to whichever is active in this tab's toggle
+  const activeBtn = tab.querySelector(".dimension-btn.active");
+  activeDimension = activeBtn ? activeBtn.dataset.dim : "section";
+
+  updateHeatmap();
+}
+
+function switchDim(event, btn) {
+  event.stopPropagation();
+  const toggle = btn.closest(".dimension-toggle");
+  toggle.querySelectorAll(".dimension-btn").forEach(b => b.classList.remove("active"));
+  btn.classList.add("active");
+  activeDimension = btn.dataset.dim;
+  updateHeatmap();
+}
+
+function updateHeatmap() {
+  document.querySelectorAll(".heatmap-content").forEach(el => {
+    el.style.display = "none";
+  });
+  const id = `heatmap-${activeSource}-${activeDimension}`;
+  const el = document.getElementById(id);
+  if (el) el.style.display = "";
+}
+
+// ── Scroll to card + glow ────────────────────────────────
+function scrollToCard(cardId) {
+  const card = document.getElementById(cardId);
+  if (!card) return;
+  card.scrollIntoView({ behavior: "smooth", block: "center" });
+  card.classList.add("glow");
+  setTimeout(() => card.classList.remove("glow"), 1500);
+}
+</script>
+</body>
+</html>

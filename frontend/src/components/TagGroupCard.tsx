@@ -22,6 +22,8 @@ interface TagGroupCardProps {
   groupBg: string;
   /** Tag counts keyed by lowercase tag name (from QuotesStore). */
   tagCounts: Record<string, number>;
+  /** Tentative (pending autocode proposal) counts keyed by lowercase tag name. */
+  tentativeCounts?: Record<string, number>;
   /** Set of unchecked lowercase tag names. */
   uncheckedSet: Set<string>;
   clearAll: boolean;
@@ -51,6 +53,7 @@ export function TagGroupCard({
   tags,
   groupBg,
   tagCounts,
+  tentativeCounts,
   uncheckedSet,
   clearAll,
   onToggleTag,
@@ -70,10 +73,14 @@ export function TagGroupCard({
     onToggleEye?.();
   }, [onToggleEye]);
 
-  // Max count across tags in this group (for micro-bar scaling)
+  // Max count across tags in this group (for micro-bar scaling, including tentative)
   const maxCount = useMemo(
-    () => Math.max(0, ...tags.map((t) => tagCounts[t.name.toLowerCase()] ?? 0)),
-    [tags, tagCounts],
+    () => Math.max(0, ...tags.map((t) => {
+      const accepted = tagCounts[t.name.toLowerCase()] ?? 0;
+      const tentative = tentativeCounts?.[t.name.toLowerCase()] ?? 0;
+      return accepted + tentative;
+    })),
+    [tags, tagCounts, tentativeCounts],
   );
 
   // Group total (sum of visible tag counts)
@@ -116,6 +123,7 @@ export function TagGroupCard({
                   name={tag.name}
                   checked={isChecked}
                   count={tagCounts[tag.name.toLowerCase()] ?? 0}
+                  tentativeCount={tentativeCounts?.[tag.name.toLowerCase()] ?? 0}
                   maxCount={maxCount}
                   badgeBg={getTagBg(colourSet, tag.colour_index)}
                   barColour={barColour}

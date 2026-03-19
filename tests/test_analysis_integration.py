@@ -525,7 +525,7 @@ class TestSerializeAnalysis:
         expected_keys = {
             "location", "sourceType", "sentiment", "count", "participants",
             "nEff", "meanIntensity", "concentration", "compositeSignal",
-            "confidence", "quotes",
+            "confidence", "flag", "quotes",
         }
         assert set(signal.keys()) == expected_keys
 

@@ -92,6 +92,7 @@ class TagSignal(BaseModel):
     concentration: float
     composite_signal: float
     confidence: str
+    flag: str | None = None
     quotes: list[TagSignalQuote]
     # Elaboration fields (populated when elaborate=True)
     signal_name: str | None = None
@@ -234,6 +235,7 @@ def _serialize_signal(
         concentration=round(s.concentration, 2),
         composite_signal=round(s.composite_signal, 4),
         confidence=s.confidence,
+        flag=s.flag,
         quotes=[
             TagSignalQuote(
                 text=q.text,
@@ -384,6 +386,7 @@ class _SentimentSignalOut(_CamelModel):
     concentration: float
     composite_signal: float
     confidence: str
+    flag: str | None = None
     quotes: list[_SentimentSignalQuoteOut]
 
 
@@ -431,6 +434,7 @@ def _serialize_sentiment_signal(s: object) -> _SentimentSignalOut:
         concentration=round(s.concentration, 2),
         composite_signal=round(s.composite_signal, 4),
         confidence=s.confidence,
+        flag=s.flag,
         quotes=[
             _SentimentSignalQuoteOut(
                 text=q.text,

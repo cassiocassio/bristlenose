@@ -173,6 +173,7 @@ export interface CodebookTagResponse {
   id: number;
   name: string;
   count: number;
+  tentative_count?: number;
   colour_index: number;
 }
 

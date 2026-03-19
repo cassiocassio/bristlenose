@@ -152,10 +152,13 @@ The small participant badges (`.p-box` in `.participant-grid`) on signal cards a
 - `bristlenose/server/codebook/uxr.yaml` — the default UXR codebook (v2)
 - `bristlenose/server/codebook/norman.yaml` — Don Norman framework codebook
 - `bristlenose/server/codebook/garrett.yaml` — Jesse James Garrett framework codebook
+- `bristlenose/server/codebook/nielsen.yaml` — Jakob Nielsen 10 Usability Heuristics codebook
+- `bristlenose/server/codebook/yablonski.yaml` — Jon Yablonski Laws of UX codebook (cognitive psychology lens)
 - `bristlenose/server/codebook/archive/` — versioned codebook archive
 - `bristlenose/server/codebook/__init__.py` — YAML loader and dataclass definitions
 - `bristlenose/server/autocode.py` — AutoCode engine (uses discrimination prompts)
 - `docs/codebook futures/bristlenose-codebook-strategy-and-design.md` — original codebook strategy
 - `docs/codebook futures/bristlenose-codebook-prompts-garrett-norman.md` — Garrett/Norman prompt design
+- `docs/design-nielsen-codebook.md` — Nielsen adaptation analysis (expert evaluation → quote coding)
 - `docs/design-research-methodology.md` — analytical decisions behind current codes
 - `docs/design-analysis-future.md` — analysis page vision (grid layering, two-pane design)

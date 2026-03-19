@@ -7,7 +7,7 @@
  * shortcuts via useKeyboardShortcuts.
  */
 
-import { useCallback, useEffect, useState, lazy, Suspense } from "react";
+import { useCallback, useEffect, useMemo, useState, lazy, Suspense } from "react";
 import { Outlet, useNavigate, useMatch } from "react-router-dom";
 import { Header } from "../components/Header";
 import { NavBar } from "../components/NavBar";
@@ -18,11 +18,15 @@ import { SettingsModal } from "../components/SettingsModal";
 import { SidebarLayout } from "../components/SidebarLayout";
 import { SessionsSidebar } from "../components/SessionsSidebar";
 import { ExportDialog } from "../components/ExportDialog";
+import { ActivityChipStack } from "../components/ActivityChipStack";
+import type { ActivityJob } from "../components/ActivityChipStack";
 import { PlayerProvider } from "../contexts/PlayerContext";
 import { FocusProvider } from "../contexts/FocusContext";
+import { useActivityJobs, removeJob } from "../contexts/ActivityStore";
 import { useKeyboardShortcuts } from "../hooks/useKeyboardShortcuts";
 import { useScrollToAnchor } from "../hooks/useScrollToAnchor";
 import { installNavigationShims } from "../shims/navigation";
+import { cancelAutoCode } from "../utils/api";
 import { getExportData } from "../utils/exportData";
 import { DEFAULT_HEALTH_RESPONSE, type HealthResponse } from "../utils/health";
 
@@ -66,9 +70,12 @@ function AppShell() {
   const isQuotes = useMatch("/report/quotes");
   const isSessions = useMatch("/report/sessions");
   const isTranscript = useMatch("/report/sessions/:sessionId");
+  const isAnalysis = useMatch("/report/analysis");
   const showSidebar = !!(isQuotes || isSessions || isTranscript);
   const isSessionsRoute = !!(isSessions || isTranscript);
   const toggleExport = useCallback(() => setExportOpen((prev) => !prev), []);
+  const navigate = useNavigate();
+  const activityJobs = useActivityJobs();
 
   useEffect(() => {
     const exportData = getExportData();
@@ -97,6 +104,28 @@ function AppShell() {
     onToggleSettings: toggleSettings,
   });
 
+  const chipJobs: ActivityJob[] = useMemo(
+    () =>
+      Array.from(activityJobs.entries()).map(([id, j]) => ({
+        id,
+        label: `\u2726 AutoCoding ${j.frameworkTitle}`,
+        completedLabel: `\u2726 AutoCoded ${j.frameworkTitle}`,
+        frameworkId: j.frameworkId,
+        onComplete: () => {
+          window.dispatchEvent(new Event("codebook-changed"));
+        },
+        onAction: isAnalysis ? undefined : () => navigate("/report/analysis"),
+        actionLabel: "View Analysis",
+        actionHref: "/report/analysis",
+        onCancel: () => {
+          cancelAutoCode(j.frameworkId).catch((err) =>
+            console.error("Cancel AutoCode failed:", err),
+          );
+        },
+      })),
+    [activityJobs, isAnalysis, navigate],
+  );
+
   return (
     <SidebarLayout
       active={showSidebar}
@@ -116,6 +145,7 @@ function AppShell() {
       <HelpModal open={helpOpen} onClose={toggleHelp} initialSection={helpSection} health={health} />
       <ExportDialog open={exportOpen} onClose={toggleExport} />
       <SettingsModal open={settingsOpen} onClose={toggleSettings} />
+      <ActivityChipStack jobs={chipJobs} onDismiss={removeJob} />
       {IS_DEV && (
         <Suspense fallback={null}>
           <PlaygroundHUD />

@@ -19,17 +19,19 @@ export interface ActivityChipJob {
 
 interface ActivityChipProps {
   job: ActivityChipJob;
-  /** Called when user clicks the action link (e.g. "Report"). Only shown when completed. */
+  /** Called when user clicks the action link (e.g. "View Analysis"). Only shown when completed. */
   onAction?: () => void;
   /** Action link text. */
   actionLabel?: string;
+  /** href for the action link (enables Cmd+click to open in new tab). */
+  actionHref?: string;
   /** Called when user clicks dismiss. Only rendered when done (completed/failed/cancelled). */
   onDismiss?: () => void;
   /** Called when user clicks cancel. Only rendered while running. */
   onCancel?: () => void;
 }
 
-export function ActivityChip({ job, onAction, actionLabel, onDismiss, onCancel }: ActivityChipProps) {
+export function ActivityChip({ job, onAction, actionLabel, actionHref, onDismiss, onCancel }: ActivityChipProps) {
   const isRunning = job.status === "running";
   const isCompleted = job.status === "completed";
   const isFailed = job.status === "failed";
@@ -67,10 +69,14 @@ export function ActivityChip({ job, onAction, actionLabel, onDismiss, onCancel }
             .
           </span>
           {onAction && actionLabel && (
-            // eslint-disable-next-line jsx-a11y/anchor-is-valid
             <a
               className="chip-link"
-              onClick={onAction}
+              href={actionHref ?? "#"}
+              onClick={(e) => {
+                if (e.metaKey || e.ctrlKey || e.shiftKey) return;
+                e.preventDefault();
+                onAction();
+              }}
               data-testid="bn-activity-chip-action"
             >
               {actionLabel}

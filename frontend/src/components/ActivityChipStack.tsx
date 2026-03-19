@@ -24,10 +24,12 @@ export interface ActivityJob {
   frameworkId: string;
   /** Called once when job transitions to completed/failed/cancelled. */
   onComplete?: () => void;
-  /** Called when user clicks the action link (e.g. "Report"). */
+  /** Called when user clicks the action link (e.g. "View Analysis"). */
   onAction?: () => void;
   /** Action link text. */
   actionLabel?: string;
+  /** href for the action link. */
+  actionHref?: string;
   /** Called when user cancels a running job. */
   onCancel?: () => void;
 }
@@ -168,6 +170,7 @@ export function ActivityChipStack({ jobs, onDismiss }: ActivityChipStackProps) {
             job={chip}
             onAction={chip.status === "completed" ? job.onAction : undefined}
             actionLabel={job.actionLabel}
+            actionHref={job.actionHref}
             onDismiss={() => onDismiss(job.id)}
             onCancel={chip.status === "running" ? job.onCancel : undefined}
           />

@@ -1,0 +1,785 @@
+id: nielsen
+title: 10 Usability Heuristics for User Interface Design
+author: Jakob Nielsen
+enabled: true
+
+description: >
+  Ten broad rules of thumb for interaction design, refined from a factor
+  analysis of 249 usability problems. Originally published as an expert
+  evaluation framework, adapted here for participant quote-coding. The
+  heuristics cover system communication, user control, error handling,
+  cognitive load, and design discipline. Particularly strong at surfacing
+  status confusion, control anxiety, and error-message quality that other
+  frameworks subsume into broader categories.
+
+author_bio: >
+  Co-founder of Nielsen Norman Group and one of the most cited researchers
+  in human-computer interaction. Coined the term "discount usability" and
+  developed the heuristic evaluation method that became standard practice
+  in UX. PhD in human-computer interaction from the Technical University
+  of Denmark (1988). Author of "Usability Engineering" (1993), "Designing
+  Web Usability" (1999), and hundreds of articles at nngroup.com. The 10
+  usability heuristics were first published with Rolf Molich in 1990 and
+  refined in the 1994 CHI paper.
+
+author_links:
+  - label: nngroup.com — 10 Usability Heuristics
+    url: https://www.nngroup.com/articles/ten-usability-heuristics/
+  - label: Original 1994 CHI paper (DOI)
+    url: https://doi.org/10.1145/191666.191729
+  - label: Amazon US — Usability Engineering
+    url: https://www.amazon.com/dp/0125184069
+  - label: Amazon UK — Usability Engineering
+    url: https://www.amazon.co.uk/dp/0125184069
+
+preamble: >
+  The following tags adapt Nielsen's 10 usability heuristics for
+  participant quote-coding. Nielsen designed these for expert evaluation —
+  a trained evaluator inspects an interface. Here they are applied to what
+  participants say in research sessions. Some heuristics transfer cleanly
+  (participants narrate confusion, frustration, and surprise directly).
+  Others — particularly Consistency (#4) and Flexibility (#7) — require
+  careful discrimination because the participant feels the friction but
+  may not name the cause. For these, look for explicit comparison
+  language ("on the other page," "in [other app]," "every other app does
+  it this way") or moderator-elicited context before applying. If the
+  participant is not discussing a designed product, interface, or service,
+  do not apply any tag from this codebook.
+
+groups:
+  # -------------------------------------------------------------------
+  # H1: Visibility of system status
+  # -------------------------------------------------------------------
+  - name: Status visibility
+    subtitle: Does the user know what's happening right now?
+    colour_set: ux
+    tags:
+      - name: clear status
+        definition: >
+          The system communicates its current state clearly — the
+          participant knows whether it's loading, processing, saved,
+          synced, or ready. The system keeps the user informed through
+          appropriate feedback within reasonable time.
+        apply_when: >
+          The participant comments positively on knowing what the system
+          is doing, or narrates confidence about the current state. Look
+          for "I can see it's loading," "it says it saved," "good, it's
+          processing," "the progress bar shows me how long."
+        not_this: >
+          If the participant is commenting on the result of a specific
+          action (not ambient system state), consider whether Norman's
+          Feedback group (system response) is a better fit. Clear status
+          is about ongoing system state awareness, not one-shot action
+          confirmation.
+
+      - name: opaque status
+        definition: >
+          The participant cannot tell what the system is doing or has
+          done — the system is silent, ambiguous, or provides no
+          indication of its current state.
+        apply_when: >
+          The participant expresses uncertainty about what's happening,
+          wonders if an action took effect, or can't tell whether the
+          system is working. Look for "is it loading?," "did it save?,"
+          "I can't tell if that worked," "nothing's happening," "am I
+          supposed to wait?"
+        not_this: >
+          If the system responded but the response was confusing, that's
+          closer to cryptic error (H9) or ambiguous feedback (Norman).
+          Opaque status is about the absence of communication — the
+          system is silent, not unclear.
+
+      - name: progress indication
+        definition: >
+          The system shows how far along a process is or how long it
+          will take — a progress bar, step counter, percentage, or
+          estimated time remaining.
+        apply_when: >
+          The participant comments on a progress indicator — whether it
+          helps them wait patiently, or whether its absence leaves them
+          uncertain. Look for "it shows me step 2 of 5," "I don't know
+          how long this will take," "the progress bar is helpful," "is
+          it stuck or just slow?"
+        not_this: >
+          If the participant is commenting on the speed of the system
+          (it's fast or slow) rather than whether progress is shown,
+          that's not this tag. If the concern is about whether an action
+          registered at all, that's opaque status. Progress indication
+          is specifically about knowing where you are in a multi-step or
+          time-consuming process.
+
+      - name: mode confusion
+        definition: >
+          The participant doesn't realise the system is in a particular
+          mode or state, and their actions produce unexpected results
+          because of it.
+        apply_when: >
+          The participant is surprised by the system's behaviour because
+          they didn't know they were in a particular mode — edit mode,
+          preview mode, offline mode, a filtered view. Look for "oh, I
+          was in edit mode," "I didn't realise the filter was on," "why
+          is it doing that — oh, I'm still in," "everything looks
+          different because."
+        not_this: >
+          If the participant expected a different outcome because they
+          misunderstood the system (not because of a hidden mode), that's
+          model mismatch (Norman → Conceptual model). Mode confusion
+          specifically involves an undisclosed or easy-to-miss system
+          state that changes behaviour.
+
+  # -------------------------------------------------------------------
+  # H2: Match between system and the real world
+  # -------------------------------------------------------------------
+  - name: Real-world matching
+    subtitle: Does the system speak the user's language?
+    colour_set: ux
+    tags:
+      - name: natural language
+        definition: >
+          The system uses words, phrases, and concepts familiar to the
+          participant — it speaks their language rather than system-
+          oriented jargon.
+        apply_when: >
+          The participant shows immediate understanding of labels,
+          instructions, or terminology, or comments that the language
+          feels natural. Look for "that makes sense," "I know what that
+          means," "it's written in plain English," "clear instructions."
+        not_this: >
+          If the participant finds something because the label matched
+          their vocabulary, consider Morville's labelling tag (Findable)
+          as an alternative — that captures findability impact
+          specifically. Natural language is about comprehension, not
+          navigation success.
+
+      - name: jargon barrier
+        definition: >
+          Technical, internal, or unfamiliar terminology blocks the
+          participant's understanding — the system speaks its own
+          language rather than the user's.
+        apply_when: >
+          The participant encounters a word, abbreviation, or concept
+          they don't understand, or comments that the language is
+          technical or confusing. Look for "what does that mean?," "I
+          don't know what a [term] is," "that's very technical," "I'd
+          call it [something else]."
+        not_this: >
+          If the participant understands the word but it doesn't match
+          their mental category (conceptual mismatch rather than language
+          barrier), consider model mismatch (Norman → Conceptual model).
+          If the label prevents them from finding something, consider
+          labelling (Morville → Findable). Jargon barrier is about
+          incomprehensible vocabulary specifically.
+
+      - name: metaphor fit
+        definition: >
+          Icons, imagery, or design metaphors map (or fail to map) to
+          real-world equivalents the participant recognises — the visual
+          language makes sense because it references something familiar.
+        apply_when: >
+          The participant interprets an icon or visual metaphor, or
+          comments on whether imagery matches real-world expectations.
+          Look for "that icon looks like a [thing]," "I thought the
+          trash can meant," "the shopping cart makes sense," "what's
+          that symbol supposed to be?"
+        not_this: >
+          If the participant can see the icon but doesn't know what
+          action it triggers, that's missing signifier (Norman →
+          Signifiers). Metaphor fit is about whether the visual
+          representation matches a real-world concept, not whether the
+          interaction mechanism is clear.
+
+      - name: logical ordering
+        definition: >
+          Information is arranged in an order that matches the
+          participant's real-world expectations — alphabetical, temporal,
+          spatial, or by priority in a way that feels natural.
+        apply_when: >
+          The participant comments on the order of items, menus, steps,
+          or sections — whether it matches or violates their
+          expectations. Look for "I'd expect this to come first," "why
+          is it in this order?," "the order makes sense," "I'd put the
+          most important one at the top."
+        not_this: >
+          If the participant is commenting on the grouping or hierarchy
+          of items (not their sequence), consider logical layout (Norman
+          → Mapping). If the ordering issue is about navigation
+          structure, consider navigation clarity (Morville → Findable).
+          Logical ordering is about sequence matching real-world
+          expectations.
+
+  # -------------------------------------------------------------------
+  # H3: User control and freedom
+  # -------------------------------------------------------------------
+  - name: Control and freedom
+    subtitle: Can the user escape, undo, and recover?
+    colour_set: task
+    tags:
+      - name: emergency exit
+        definition: >
+          The participant can easily leave an unwanted state — back,
+          cancel, close, dismiss. There is a clearly marked way out
+          when the participant ends up somewhere they didn't intend.
+        apply_when: >
+          The participant successfully escapes an unwanted state, notes
+          the presence of a back or cancel option, or navigates away
+          from something they don't want. Look for "I'll just go back,"
+          "good, there's a cancel button," "I can close this," "let me
+          get out of here."
+        not_this: >
+          If the participant undoes a specific action (not escaping a
+          state), that's undo available. If the participant is stuck
+          with no way out, that's trapped. Emergency exit is about the
+          presence and ease of escape routes, not about reversing
+          specific actions.
+
+      - name: trapped
+        definition: >
+          The participant feels stuck in a state, flow, or screen with
+          no clear way out — forced to continue, start over, or find a
+          workaround to escape.
+        apply_when: >
+          The participant looks for a way out and can't find one, or
+          expresses frustration about being forced down a path. Look for
+          "how do I get out of this?," "I'm stuck," "there's no back
+          button," "I don't want to do this but there's no way to
+          cancel," "I have to start all over."
+        not_this: >
+          If the participant is confused about what to do next (not
+          trapped), that's an ease-of-use issue (Morville → Usable). If
+          they made an error and can't reverse it, that's a missing undo
+          — being trapped is about escape routes, not action reversal.
+
+      - name: undo available
+        definition: >
+          The participant can reverse a specific action — undo, restore,
+          revert, undelete. The system supports going back to a previous
+          state after making a change.
+        apply_when: >
+          The participant uses or comments on an undo/revert capability,
+          or wishes for one. Look for "can I undo that?," "I'll just
+          hit Ctrl+Z," "good, I can restore it," "there's no undo,"
+          "I wish I could take that back."
+        not_this: >
+          If the participant is escaping a state (not reversing an
+          action), that's emergency exit. If they worry about
+          irreversible consequences before acting, that's destructive
+          action. Undo is about reversing something already done.
+
+      - name: destructive action
+        definition: >
+          An action has permanent or hard-to-reverse consequences and
+          the participant is aware of or worried about the risk —
+          deleting data, submitting irreversibly, overwriting work.
+        apply_when: >
+          The participant expresses concern about an action's
+          permanence, asks whether something can be undone, or reacts to
+          losing data. Look for "will this delete everything?," "I'm
+          afraid to click this," "what if I lose my work?," "it didn't
+          warn me before deleting," "I can't get that back."
+        not_this: >
+          If the participant is hesitating about a risky action but
+          hasn't taken it yet, that's hesitation (H5 Error prevention).
+          If they've already lost data and are reacting to the error
+          message, that's H9 (error recovery). Destructive action is
+          about the consequences of permanent actions, real or feared.
+
+  # -------------------------------------------------------------------
+  # H4: Consistency and standards
+  # -------------------------------------------------------------------
+  - name: Consistency and standards
+    subtitle: Does the system follow its own rules and platform conventions?
+    colour_set: trust
+    tags:
+      - name: internal inconsistency
+        definition: >
+          The participant notices that the product behaves, looks, or is
+          labelled differently across its own screens — elements that
+          should be the same are different, breaking the participant's
+          ability to predict how things work.
+        apply_when: >
+          The participant explicitly compares two parts of the same
+          product and notes a difference. Look for "on the other page it
+          was there," "this button looks different here," "it works
+          differently on this screen," "the icons mean different things
+          on different pages."
+        not_this: >
+          If the participant expected something based on habits from
+          other products (not this product's own screens), that's
+          platform convention or learned behaviour (Norman → Conceptual
+          model). If they can't find something without referencing
+          another screen, that's findability (Morville). Internal
+          inconsistency requires the participant to compare two parts of
+          the same product.
+
+      - name: platform convention
+        definition: >
+          The participant references a platform standard, industry
+          convention, or common design pattern that the product follows
+          or violates — expectations learned from using other software.
+        apply_when: >
+          The participant compares the product to other apps, platforms,
+          or general expectations about how software works. Look for
+          "every other app does it this way," "on iOS you'd swipe to,"
+          "I expected the standard [pattern]," "in [competitor] you
+          can," "usually there's a [element] here."
+        not_this: >
+          If the participant applies learned behaviour from another
+          product without explicitly noting a convention violation,
+          consider learned behaviour (Norman → Conceptual model). If
+          they just expected something without stating a reference point,
+          that's model mismatch (Norman), not this tag. Platform
+          convention requires an explicit reference to how other
+          software or platforms work.
+
+      - name: terminology inconsistency
+        definition: >
+          The product uses different words for the same thing in
+          different places — the participant notices that labels,
+          headings, or button text contradict each other within the same
+          product.
+        apply_when: >
+          The participant is confused because the product uses different
+          names for the same concept or action. Look for "here it's
+          called X but on that page it says Y," "which one is it — save
+          or submit?," "these mean the same thing but they have
+          different names," "is 'dashboard' the same as 'home'?"
+        not_this: >
+          If the participant doesn't understand a term (regardless of
+          consistency), that's jargon barrier (H2). If labels prevent
+          them from finding something, that's labelling (Morville →
+          Findable). Terminology inconsistency is specifically about the
+          same concept having different names within the product.
+
+  # -------------------------------------------------------------------
+  # H5: Error prevention
+  # -------------------------------------------------------------------
+  - name: Error prevention
+    subtitle: Does the design prevent mistakes before they happen?
+    colour_set: task
+    tags:
+      - name: hesitation
+        definition: >
+          The participant pauses, double-checks, or expresses anxiety
+          before taking an action — the design hasn't given them
+          confidence that the action is safe or correct.
+        apply_when: >
+          The participant slows down before acting, re-reads, or
+          verbalises uncertainty about whether to proceed. Look for "I'm
+          going to double-check first," "am I sure I want to do this?,"
+          "let me re-read that," "I'm nervous about clicking this,"
+          "what happens if I get it wrong?"
+        not_this: >
+          If the participant has already acted and is worried about
+          consequences, that's destructive action (H3). If they are
+          confused about what to do (not anxious about doing it wrong),
+          that's ease of use (Morville → Usable). Hesitation is about
+          pre-action anxiety — the moment before committing.
+
+      - name: near miss
+        definition: >
+          The participant almost makes an error but catches it just in
+          time — they reach for the wrong button, almost submit
+          prematurely, or notice a mistake before it's too late.
+        apply_when: >
+          The participant corrects themselves mid-action, catches an
+          error before committing, or narrates a close call. Look for
+          "I almost clicked the wrong one," "oh wait, that's not right,"
+          "good thing I noticed," "I nearly submitted without filling
+          in," "that was close."
+        not_this: >
+          If the participant actually made the error (didn't catch it),
+          that's action slip (Norman → Slips vs Mistakes). If the
+          system prevented the error (not the participant), that's
+          guardrail. Near miss specifically involves the participant
+          catching their own mistake before it lands.
+
+      - name: guardrail
+        definition: >
+          A design element prevents or discourages a mistake — a
+          disabled button, a confirmation dialog, a smart default, input
+          validation, or a visual warning that guides the participant
+          away from error.
+        apply_when: >
+          The participant encounters something that stops or redirects
+          them from making a mistake, or comments on the absence of such
+          protection. Look for "it won't let me submit without filling
+          in," "the button is greyed out until," "it warned me before I
+          deleted," "there's no confirmation — what if I accidentally."
+        not_this: >
+          If the participant is commenting on a specific constraint
+          mechanism (grey-out, input mask), Norman's physical constraint
+          (Constraints) may be more precise. If they encountered a
+          confirmation dialog specifically, Norman's confirmation
+          (Feedback) may fit. Guardrail is the broader Nielsen concept —
+          any design-level prevention, not a specific mechanism type.
+
+      - name: risky default
+        definition: >
+          A default value, pre-selected option, or initial state could
+          lead to an unintended outcome — the participant could proceed
+          without realising the default isn't what they want.
+        apply_when: >
+          The participant notices a pre-selected option they didn't
+          choose, discovers a default that doesn't match their intent,
+          or proceeds with a default without realising it. Look for "I
+          didn't notice it was set to," "the default is [wrong thing],"
+          "why is this checked by default?," "I would have missed that
+          if I hadn't looked carefully."
+        not_this: >
+          If the participant benefits from a good default (it matches
+          their intent), that's helpful default (H6 Recognition). If
+          the default causes an error that they discover later, that's
+          an error recovery issue (H9). Risky default is about defaults
+          that could mislead — whether or not they actually do in this
+          instance.
+
+  # -------------------------------------------------------------------
+  # H6: Recognition rather than recall
+  # -------------------------------------------------------------------
+  - name: Recognition over recall
+    subtitle: Does the interface minimise memory load?
+    colour_set: ux
+    tags:
+      - name: visible options
+        definition: >
+          Available actions, choices, or information are displayed on
+          screen rather than hidden behind recall — the participant can
+          see what's possible without remembering it.
+        apply_when: >
+          The participant finds what they need because it's visible, or
+          notes that options are easy to see. Look for "I can see all
+          my options," "it's right there," "I don't have to remember —
+          it shows me," "the menu shows everything I can do."
+        not_this: >
+          If the participant finds something because of good navigation
+          (not because it's on the current screen), that's navigation
+          clarity (Morville → Findable). If they recognise an icon
+          because of a good visual metaphor, that's metaphor fit (H2).
+          Visible options is about reducing memory load by displaying
+          choices, not about navigation or visual design.
+
+      - name: memory burden
+        definition: >
+          The participant must remember information from a previous
+          screen, step, or session — the interface requires recall of
+          something not currently visible.
+        apply_when: >
+          The participant struggles to remember something from earlier,
+          has to go back to check, or comments on needing to remember
+          across screens. Look for "what was that number on the
+          previous page?," "I have to remember my [thing]," "I need to
+          go back and check," "it expects me to know [thing] from
+          before."
+        not_this: >
+          If the participant forgot a step in a process (memory lapse
+          about what to do, not about data), that's memory lapse (Norman
+          → Slips vs Mistakes). If they can't find information that is
+          actually on the current screen, that's a findability issue.
+          Memory burden is about information that's needed here but was
+          shown there.
+
+      - name: helpful default
+        definition: >
+          The system pre-fills, suggests, or remembers based on context
+          — reducing what the participant must recall or type from
+          scratch.
+        apply_when: >
+          The participant encounters a pre-filled form, auto-suggestion,
+          or remembered preference that saves them effort. Look for "it
+          remembered my," "nice, it filled that in," "it's suggesting
+          what I want," "I don't have to type it again."
+        not_this: >
+          If the default is wrong or misleading, that's risky default
+          (H5 Error prevention). If the system remembers the
+          participant's previous actions to offer shortcuts, consider
+          whether that's more about efficiency (H7) than memory
+          reduction. Helpful default is about the system shouldering the
+          recall burden.
+
+      - name: context loss
+        definition: >
+          The participant loses track of where they are, what they were
+          doing, or what state they're in — the interface doesn't
+          maintain enough context for the participant to stay oriented.
+        apply_when: >
+          The participant asks "where was I?," navigates back to
+          reorient, or loses their place in a multi-step process. Look
+          for "I've lost track," "what was I doing?," "where am I in
+          this process?," "I need to start over because I forgot where
+          I was."
+        not_this: >
+          If the participant doesn't know what mode the system is in,
+          that's mode confusion (H1). If they lost their place because
+          of a navigation failure, that's navigation clarity (Morville →
+          Findable). Context loss is about the participant's own
+          orientation — losing the thread of what they were doing.
+
+  # -------------------------------------------------------------------
+  # H7: Flexibility and efficiency of use
+  # -------------------------------------------------------------------
+  - name: Flexibility and efficiency
+    subtitle: Does the interface support both novice and expert workflows?
+    colour_set: opp
+    tags:
+      - name: shortcut desire
+        definition: >
+          The participant wishes for a faster way to accomplish a task
+          they already know how to do — a keyboard shortcut, batch
+          operation, quick-access feature, or power-user path.
+        apply_when: >
+          The participant asks for or comments on shortcuts, accelerators,
+          or faster paths. Look for "is there a keyboard shortcut?,"
+          "I wish I could do this in bulk," "there should be a quicker
+          way," "I do this ten times a day — I need it faster," "can I
+          just type a command?"
+        not_this: >
+          If the participant is frustrated by too many steps in a
+          process they're learning (not one they know well), that's
+          ease of use (Morville → Usable) or efficiency (Morville →
+          Usable). Shortcut desire specifically involves a participant
+          who knows the task and wants a faster path — not a novice
+          struggling with complexity.
+
+      - name: repetitive task
+        definition: >
+          The participant performs (or anticipates performing) the same
+          action multiple times and finds it tedious — the interface
+          doesn't support batch operations, templates, or automation
+          for repeated work.
+        apply_when: >
+          The participant narrates doing the same thing over and over,
+          or projects forward to how tedious repeated use would be.
+          Look for "I have to do this for every single one?," "this
+          would get really old," "I'm clicking the same thing again and
+          again," "if I had fifty of these I'd go crazy."
+        not_this: >
+          If the participant has found a workaround for the repetition,
+          that's workaround (UXR codebook). If the process has too many
+          steps for a single task (not repeated tasks), that's
+          efficiency (Morville → Usable). Repetitive task is
+          specifically about the same action performed many times.
+
+      - name: customisation
+        definition: >
+          The participant wants to tailor the interface to their
+          preferences or workflow — rearranging elements, setting
+          defaults, creating saved views, or configuring the tool to
+          match how they work.
+        apply_when: >
+          The participant wishes they could personalise the interface,
+          or comments on the presence or absence of customisation. Look
+          for "I wish I could rearrange this," "can I set my own
+          default?," "I'd like to save this view," "it would be great
+          if I could hide the things I don't use."
+        not_this: >
+          If the participant is confused by too many options (not
+          wanting to customise), that's information overload (H8). If
+          they want a feature that doesn't exist (not a configuration
+          of existing features), that's feature gap (Morville → Useful).
+          Customisation is about adapting what's already there to
+          personal workflow.
+
+  # -------------------------------------------------------------------
+  # H8: Aesthetic and minimalist design
+  # -------------------------------------------------------------------
+  - name: Aesthetics and minimalism
+    subtitle: Does every element earn its place on screen?
+    colour_set: emo
+    tags:
+      - name: information overload
+        definition: >
+          Too much is shown on screen at once — the participant feels
+          overwhelmed, can't find what matters, or struggles to process
+          the density of information presented.
+        apply_when: >
+          The participant reacts to visual or information density. Look
+          for "there's too much going on," "I don't know where to look,"
+          "this is overwhelming," "it's so busy," "I can't find the
+          thing I need because there's so much other stuff."
+        not_this: >
+          If the participant is reacting to the visual attractiveness
+          (not the density), that's aesthetic quality (Morville →
+          Desirable). If they feel cognitively overloaded in a way that
+          relates to ability rather than design, that's cognitive
+          accessibility (Morville → Accessible). Information overload is
+          about too many elements competing for attention, not about
+          visual taste or cognitive capacity.
+
+      - name: focused design
+        definition: >
+          The interface shows what's needed and nothing else — the
+          participant can concentrate on their task because irrelevant
+          elements have been removed or suppressed.
+        apply_when: >
+          The participant comments on clarity, simplicity, or the
+          absence of clutter. Look for "it's clean," "I can focus on
+          what I need," "there's nothing extra," "it's simple — I like
+          that," "they only show me what matters."
+        not_this: >
+          If the participant is commenting on visual beauty (clean
+          lines, nice colours), that's aesthetic quality (Morville →
+          Desirable). If they appreciate that the interface is easy to
+          use (not specifically that it's uncluttered), that's ease of
+          use (Morville → Usable). Focused design is about information
+          discipline — showing only what's relevant.
+
+      - name: competing elements
+        definition: >
+          Multiple elements fight for the participant's attention and
+          they can't tell what's most important — visual hierarchy is
+          absent or broken, and everything seems equally prominent.
+        apply_when: >
+          The participant struggles to prioritise what to look at or
+          act on, or comments on too many things demanding attention at
+          once. Look for "everything looks equally important," "I don't
+          know what to focus on," "there are too many buttons," "which
+          of these should I click first?," "nothing stands out."
+        not_this: >
+          If the participant can't find a specific element (not a
+          hierarchy problem), that's findability (Morville → Findable)
+          or discoverability (Norman). If there are genuinely too many
+          options (not a visual hierarchy problem), consider whether
+          this is about choice overload rather than visual competition.
+          Competing elements is about visual hierarchy failure.
+
+  # -------------------------------------------------------------------
+  # H9: Help users recognise, diagnose, and recover from errors
+  # -------------------------------------------------------------------
+  - name: Errors and recovery
+    subtitle: When things go wrong, does the system explain clearly and help fix it?
+    colour_set: task
+    tags:
+      - name: clear error message
+        definition: >
+          The error message is understandable, explains what went wrong
+          in plain language, and suggests what to do next — the
+          participant can recover without external help.
+        apply_when: >
+          The participant encounters an error message that helps them
+          understand and fix the problem. Look for "it told me exactly
+          what to do," "the error message was helpful," "it said [clear
+          thing] and I knew how to fix it," "at least it explained
+          what went wrong."
+        not_this: >
+          If the participant appreciates a confirmation dialog before an
+          error occurs, that's guardrail (H5). If the system
+          communicated clearly after a successful action (not an error),
+          that's clear status (H1). Clear error message is specifically
+          about helpful post-error communication.
+
+      - name: cryptic error
+        definition: >
+          The error message is technical, vague, or meaningless to the
+          participant — error codes, stack traces, generic "something
+          went wrong" messages, or jargon that provides no actionable
+          information.
+        apply_when: >
+          The participant encounters an error they can't understand or
+          act on. Look for "what does that mean?," "error 403 — what am
+          I supposed to do with that?," "it just says 'something went
+          wrong'," "this is a bunch of technical garbage," "I have no
+          idea what happened."
+        not_this: >
+          If the system was unclear about a non-error state (not an
+          error message), that's opaque status (H1) or ambiguous
+          feedback (Norman). If the error uses jargon but isn't
+          technically an error message (confusing label), that's jargon
+          barrier (H2). Cryptic error is specifically about unhelpful
+          error messages.
+
+      - name: blame language
+        definition: >
+          The error message implies the participant did something wrong
+          — accusatory tone, "invalid input," "illegal operation,"
+          language that assigns fault to the user rather than the system.
+        apply_when: >
+          The participant reacts to an error message that makes them
+          feel blamed, stupid, or at fault. Look for "it says 'invalid'
+          — what did I do wrong?," "why is it telling me off?," "'illegal
+          operation' — I didn't do anything illegal," "it makes me feel
+          stupid."
+        not_this: >
+          If the error message is simply unclear (not blaming), that's
+          cryptic error. If the participant feels frustrated by an error
+          without blame language (just a bad experience), consider the
+          overall error recovery context. Blame language specifically
+          involves accusatory or shame-inducing error wording.
+
+      - name: recovery guidance
+        definition: >
+          The system tells the participant what to do next after an
+          error — actionable steps, a link to help, a suggestion to try
+          again, or a clear path forward.
+        apply_when: >
+          The participant encounters or comments on post-error guidance
+          (or its absence). Look for "it told me to try again with a
+          different [thing]," "there's a link to fix this," "but what
+          am I supposed to do now?," "it just says 'error' and leaves
+          me stuck," "the 'retry' button helped."
+        not_this: >
+          If the participant is looking for help resources (not
+          responding to an error), that's H10 Help and documentation.
+          If the system prevented the error entirely, that's guardrail
+          (H5). Recovery guidance is about what the system offers after
+          an error has occurred.
+
+  # -------------------------------------------------------------------
+  # H10: Help and documentation
+  # -------------------------------------------------------------------
+  - name: Help and documentation
+    subtitle: Can users find answers when they need them?
+    colour_set: opp
+    tags:
+      - name: self-service help
+        definition: >
+          The participant finds and uses help resources successfully —
+          FAQ, documentation, knowledge base, video tutorials, or search
+          within help content.
+        apply_when: >
+          The participant uses help resources and comments on the
+          experience. Look for "I found the answer in the FAQ," "the
+          documentation explained it," "I searched the help and found,"
+          "the tutorial showed me how."
+        not_this: >
+          If the participant received help from contextual guidance
+          (tooltip, inline hint) rather than a help section, that's
+          contextual guidance. If they received a helpful error message,
+          that's clear error message (H9). Self-service help is about
+          dedicated help resources the participant actively seeks out.
+
+      - name: help absent
+        definition: >
+          The participant looks for help or documentation and can't find
+          it, or the product lacks help resources entirely — leaving the
+          participant to figure things out alone or seek external help.
+        apply_when: >
+          The participant tries to find help and fails, or resorts to
+          external resources. Look for "is there a help section?," "I
+          had to Google how to do this," "there's no documentation,"
+          "I looked for help but couldn't find any," "I had to ask
+          someone."
+        not_this: >
+          If the participant is confused but hasn't actively sought help
+          (general difficulty), that's ease of use (Morville → Usable).
+          If they found help content but it was unhelpful or wrong,
+          that's still about help quality — this tag is specifically
+          about the absence or unfindability of help resources.
+
+      - name: contextual guidance
+        definition: >
+          In-place help assists the participant at the point of need —
+          tooltips, inline instructions, placeholder text, onboarding
+          hints, or contextual suggestions that appear where and when
+          they're relevant.
+        apply_when: >
+          The participant encounters or comments on in-context help
+          elements. Look for "the tooltip explained it," "there's a
+          little hint that says," "the placeholder text showed me the
+          format," "the onboarding walkthrough was helpful," "I wish
+          there was a tooltip here."
+        not_this: >
+          If the participant is commenting on a label being clear (not
+          a help element), that's natural language (H2). If the guidance
+          is part of an error message, that's recovery guidance (H9).
+          Contextual guidance is about dedicated in-place help elements,
+          not about the general clarity of the interface.

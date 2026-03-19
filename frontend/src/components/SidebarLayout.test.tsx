@@ -103,15 +103,20 @@ beforeEach(() => {
 // ── Tests ────────────────────────────────────────────────────────────────
 
 describe("SidebarLayout", () => {
-  it("renders children directly when active=false (no grid)", () => {
+  it("renders inert rail layout when active=false", () => {
     const { container } = render(
       <SidebarLayout active={false}>
         <div data-testid="child">Content</div>
       </SidebarLayout>,
     );
     expect(screen.getByTestId("child")).toBeTruthy();
-    // No .layout div should exist.
-    expect(container.querySelector(".layout")).toBeNull();
+    // Inert 2-column layout with cosmetic rail.
+    const layout = container.querySelector(".layout.layout-inert");
+    expect(layout).toBeTruthy();
+    expect(container.querySelector(".toc-rail.toc-rail-inert")).toBeTruthy();
+    // No full sidebar elements (no drag handles, no tag rail).
+    expect(container.querySelector(".tag-rail")).toBeNull();
+    expect(container.querySelector(".drag-handle")).toBeNull();
   });
 
   it("renders 6-column grid structure when active=true", () => {

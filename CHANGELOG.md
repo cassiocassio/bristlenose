@@ -4,6 +4,7 @@ All notable changes to Bristlenose are documented here. See also the [README](RE
 
 **0.13.8** — _18 Mar 2026_
 
+- **Activity chips persist across tab navigation** — AutoCode progress toasts now stay visible when switching between Quotes, Codebook, Analysis, and Sessions tabs. Previously, navigating away from the Codebook tab destroyed the chip and its polling. New `ActivityStore` (module-level store) owns the job list; `AppLayout` renders `ActivityChipStack` so it survives React Router navigation. Action link improved: real `href` for Cmd+click, label changed to "View Analysis", hidden when already on Analysis tab
 - **Help modal** — replaces the About page route and keyboard shortcut overlay with a single ModalNav-based sidebar-nav modal. Seven sections: Help (stub landing), Shortcuts (keyboard grid with platform-aware badges), Signals, Codebook, and About disclosure group (Developer, Design, Contributing). Triggered by ⓘ navbar icon (opens to Help) or `?` key (opens to Shortcuts). `/report/about/` URL gracefully redirects to `/report/`
 - **ModalNav genericised** — extracted `modal-nav.css` organism from `settings-modal.css`. Generic shell (`.modal-nav-shell`, `.modal-nav-overlay` transition) with parameterised sizing per consumer. Settings and Help both use the same ModalNav component with their own sizing classes. Fixed: unique `titleId` per modal (ARIA), removed incorrect `role="navigation"` from `<ul>`
 

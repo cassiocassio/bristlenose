@@ -755,6 +755,19 @@ export function CodebookPanel({ projectId }: CodebookPanelProps) {
     return () => window.removeEventListener("bn:codebook-browse", handler);
   }, [handleOpenPicker]);
 
+  // Open the ThresholdReviewModal when the activity chip toast dispatches
+  // bn:autocode-report (e.g. user clicks "View Report" on the completion toast).
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      if (detail?.frameworkId && detail?.frameworkTitle) {
+        setReportModal({ frameworkId: detail.frameworkId, frameworkTitle: detail.frameworkTitle });
+      }
+    };
+    window.addEventListener("bn:autocode-report", handler);
+    return () => window.removeEventListener("bn:autocode-report", handler);
+  }, []);
+
   const handleSelectTemplate = useCallback((t: TemplateOut) => {
     setSelectedTemplate(t);
     setModalView("preview");
@@ -932,26 +945,30 @@ export function CodebookPanel({ projectId }: CodebookPanelProps) {
                   {author && <div className="framework-section-author">{author}</div>}
                 </div>
                 <div className="framework-section-actions">
-                  <button
-                    className="autocode-btn"
-                    disabled={acDisabled}
-                    onClick={() => handleStartAutoCode(fid, title)}
-                    data-testid={`bn-autocode-btn-${fid}`}
-                  >
-                    &#x2726; AutoCode quotes
-                    {proposedCount > 0 && (
+                  {acStatus?.status === "completed" && proposedCount > 0 ? (
+                    <button
+                      className="autocode-btn autocode-btn-report"
+                      onClick={() => handleOpenReport(fid, title)}
+                      data-testid={`bn-autocode-report-btn-${fid}`}
+                    >
+                      View Report
                       <span
                         className="proposed-count"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleOpenReport(fid, title);
-                        }}
                         data-testid={`bn-autocode-count-${fid}`}
                       >
                         {proposedCount}
                       </span>
-                    )}
-                  </button>
+                    </button>
+                  ) : (
+                    <button
+                      className="autocode-btn"
+                      disabled={acDisabled}
+                      onClick={() => handleStartAutoCode(fid, title)}
+                      data-testid={`bn-autocode-btn-${fid}`}
+                    >
+                      &#x2726; AutoCode quotes
+                    </button>
+                  )}
                   <button
                     className="bn-btn framework-remove-btn"
                     onClick={() => handleAskRemoveFramework(fid, label)}

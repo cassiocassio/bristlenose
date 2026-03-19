@@ -2,6 +2,10 @@
 
 All notable changes to Bristlenose are documented here. See also the [README](README.md) for the latest releases.
 
+**0.13.9** — _19 Mar 2026_
+
+- **Finding flags on signal cards** — each sentiment-based signal card now carries an optional finding flag (Win, Problem, Niggle, Success, Surprising, or Pattern) that classifies the signal's direction and weight. Flags are computed from sentiment valence, participant breadth, and intensity — augmenting the existing composite signal strength with a direction label. Flags are conservative: cards that don't clear the thresholds stay unflagged. Four tunable thresholds (`FLAG_MIN_SIGNAL`, `FLAG_SMALL_SIGNAL`, `FLAG_BREADTH`, `FLAG_INTENSITY`) ready for calibration via a future dev-mode HUD. Codebook-group signals (non-sentiment columns) get no flag. Flows through all three output paths: static render, sentiment API, and tag API. 27 new tests. Design exploration: `docs/design-finding-weight.md`
+
 **0.13.8** — _18 Mar 2026_
 
 - **Activity chips persist across tab navigation** — AutoCode progress toasts now stay visible when switching between Quotes, Codebook, Analysis, and Sessions tabs. Previously, navigating away from the Codebook tab destroyed the chip and its polling. New `ActivityStore` (module-level store) owns the job list; `AppLayout` renders `ActivityChipStack` so it survives React Router navigation. Action link improved: real `href` for Cmd+click, label changed to "View Analysis", hidden when already on Analysis tab

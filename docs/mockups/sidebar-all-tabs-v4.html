@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Global Left Sidebar — All Tabs v5 (Design Mockup)</title>
+<title>Global Left Sidebar — All Tabs v4 (Design Mockup)</title>
 
 <!-- ═══════════════════════════════════════════════════════════════
      PRODUCTION STYLESHEETS — linked, not copied.
@@ -21,7 +21,7 @@
 
 <style>
 /* ================================================================
-   GLOBAL LEFT SIDEBAR — DESIGN MOCKUP v5
+   GLOBAL LEFT SIDEBAR — DESIGN MOCKUP v4
    ================================================================
    Production CSS linked above provides:
    - tokens.css: all --bn-* custom properties
@@ -368,70 +368,137 @@ body {
 }
 
 
-/* ── codebook-entry (v4, preserved for reference) ─────────────────
-   v5 replaced group-level entries with codebook-level .toc-link.
-   See sidebar-all-tabs-v4.html for the original.                  */
+/* ── NEW MOLECULE: codebook-entry ──────────────────────────────────
+   A .toc-link variant with a colour swatch indicator.
+   Swatch uses --bn-set-*-dot or --bn-sentiment-* tokens.
+   Tag count uses caption sizing + mono font.                       */
 
-/* ── NEW: disabled .toc-link (not-imported codebook) ─────────────
-   Grey, non-interactive. Used for codebooks not yet imported.      */
-
-.toc-link.disabled {
-    color: var(--bn-colour-muted);
-    pointer-events: none;
-    opacity: 0.5;
-}
-
-/* ── NEW: .toc-sub-heading — lighter sub-heading within a section
-   Used for Section / Theme sub-groups under Sentiment.             */
-
-.toc-sub-heading {
-    font-size: var(--bn-text-caption);
-    font-weight: var(--bn-weight-emphasis);
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-    color: var(--bn-colour-muted);
-    padding: var(--bn-space-xs) var(--bn-space-sm) 0;
-    margin-top: var(--bn-space-xs);
-}
-
-/* ── NEW: signal-entry — .toc-link variant with inline badge ─────
-   Signal name + sentiment/group badge on the same line.
-   Badge is a small inline token, not full-width.                   */
-
-.signal-entry {
+.codebook-entry {
     display: flex;
-    align-items: baseline;
+    align-items: center;
     gap: var(--bn-space-sm);
     padding: var(--bn-space-sm);
     border-radius: var(--bn-radius-sm);
     cursor: pointer;
     transition: background var(--bn-transition-fast);
-    text-decoration: none;
-    color: var(--bn-colour-text);
 }
 
-.signal-entry:hover { background: var(--bn-colour-hover); }
-.signal-entry.active { background: var(--bn-colour-hover); }
+.codebook-entry:hover { background: var(--bn-colour-hover); }
+.codebook-entry.active { background: var(--bn-colour-hover); }
 
-.signal-entry-name {
+/* NEW ATOM: codebook-swatch — 10px colour indicator dot.
+   Uses --bn-radius-sm (3px) — matches badge corner radius. */
+.codebook-swatch {
+    width: 10px;
+    height: 10px;
+    border-radius: var(--bn-radius-sm);
+    flex-shrink: 0;
+}
+
+.codebook-entry-name {
     font-size: var(--bn-text-body-sm);
     font-weight: var(--bn-weight-light);
     flex: 1;
-    min-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
 }
 
-.signal-entry.active .signal-entry-name {
+.codebook-entry.active .codebook-entry-name {
     font-weight: var(--bn-weight-emphasis);
     color: var(--bn-colour-accent);
 }
 
-/* Inline badge within signal entry — smaller than standalone badge */
-.signal-entry .badge {
-    flex-shrink: 0;
-    font-size: 0.65rem;
+.codebook-entry-count {
+    font-size: var(--bn-text-caption);
+    font-family: var(--bn-font-mono);
+    color: var(--bn-colour-muted);
+    font-variant-numeric: tabular-nums;
+}
+
+/* ── NEW ORGANISM: mini-signal-card ────────────────────────────────
+   "PowerPoint slide thumbnail" for the Analysis sidebar.
+   Shows: source label, sentiment badge, heatmap strip, score.
+   Sentiment badges reuse .badge .badge-{sentiment} atoms.
+   This is genuinely new UI — no existing pattern to extend.        */
+
+.mini-signal-card {
+    padding: var(--bn-space-sm);
+    border: 1px solid var(--bn-colour-border);
+    border-radius: var(--bn-radius-sm);
+    cursor: pointer;
+    transition: border-color var(--bn-transition-fast), box-shadow var(--bn-transition-fast);
+    background: var(--bn-colour-bg);
+}
+
+.mini-signal-card:hover {
+    border-color: var(--bn-colour-accent);
+}
+
+.mini-signal-card.active {
+    border-color: var(--bn-colour-accent);
+    box-shadow: 0 0 0 1px var(--bn-colour-accent);
+}
+
+.mini-signal-card + .mini-signal-card {
+    margin-top: var(--bn-space-sm);
+}
+
+.mini-signal-source {
+    font-size: var(--bn-text-caption);
+    line-height: var(--bn-text-caption-lh);
+    font-weight: var(--bn-weight-normal);
+    color: var(--bn-colour-muted);
+    margin-bottom: var(--bn-space-xs);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.mini-signal-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: var(--bn-space-sm);
+}
+
+.mini-signal-card.active .mini-signal-source {
+    color: var(--bn-colour-accent);
+}
+
+/* NEW ATOM: mini-heatmap — abstract 10-cell intensity strip.
+   Reuses --bn-sentiment-* colours at varying opacity.
+   Empty cells use --bn-colour-border (matches minimap-quote token). */
+.mini-heatmap {
+    display: flex;
+    gap: 1px;
+    height: 10px;
+    border-radius: 1px;
+    overflow: hidden;
+}
+
+.mini-heatmap-cell {
+    flex: 1;
+    border-radius: 1px;
+}
+
+.mini-signal-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: var(--bn-space-xs);
+}
+
+.mini-signal-score {
+    font-size: var(--bn-text-caption);
+    font-weight: var(--bn-weight-emphasis);
+    font-variant-numeric: tabular-nums;
+}
+
+.mini-signal-participants {
+    font-size: var(--bn-text-caption);
+    line-height: var(--bn-text-caption-lh);
+    color: var(--bn-colour-muted);
 }
 
 </style>
@@ -440,8 +507,8 @@ body {
 
 <button class="theme-toggle" onclick="document.documentElement.dataset.theme = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark'">Toggle dark mode</button>
 
-<h1 style="font-size: var(--bn-text-title); font-weight: var(--bn-weight-strong); margin-bottom: var(--bn-space-sm);">Global Left Sidebar — All Tabs v5</h1>
-<p style="font-size: var(--bn-text-body); color: var(--bn-colour-muted); margin-bottom: var(--bn-space-xl);">v5: Codebook sidebar now codebook-level (not group-level). Analysis sidebar is signal entry list (not mini cards). <a href="sidebar-all-tabs-v4.html" style="color: var(--bn-colour-accent);">v4</a> · <a href="sidebar-all-tabs-v3.html" style="color: var(--bn-colour-accent);">v3</a> · <a href="sidebar-all-tabs-v2.html" style="color: var(--bn-colour-accent);">v2</a> · <a href="sidebar-all-tabs-v1.html" style="color: var(--bn-colour-accent);">v1</a></p>
+<h1 style="font-size: var(--bn-text-title); font-weight: var(--bn-weight-strong); margin-bottom: var(--bn-space-sm);">Global Left Sidebar — All Tabs v4</h1>
+<p style="font-size: var(--bn-text-body); color: var(--bn-colour-muted); margin-bottom: var(--bn-space-xl);">Drag-resizable panels. Date always inline. Thumbnail forces stacking. <a href="sidebar-all-tabs-v3.html" style="color: var(--bn-colour-accent);">v3</a> · <a href="sidebar-all-tabs-v2.html" style="color: var(--bn-colour-accent);">v2</a> · <a href="sidebar-all-tabs-v1.html" style="color: var(--bn-colour-accent);">v1</a></p>
 
 <div class="mockup-row">
 
@@ -679,12 +746,9 @@ body {
     </div>
 </div>
 
-<!-- ii. CODEBOOK — codebook-level navigation (v5)
-     One entry per codebook (not per group). Three sections:
-     Project (user tags), Bristlenose (built-in), Frameworks (academic).
-     Grey disabled links for codebooks not yet imported.
-     Production: .sidebar-header, .sidebar-close, .toc-sidebar-body, .toc-heading, .toc-link
-     New: .toc-link.disabled                                          -->
+<!-- ii. CODEBOOK
+     Production: .sidebar-header, .sidebar-close, .toc-sidebar-body, .toc-heading
+     New: .codebook-entry, .codebook-swatch, .codebook-entry-name, .codebook-entry-count -->
 <div class="mockup-column">
     <span class="mockup-label">ii. Codebook</span>
     <div class="sidebar-panel" data-width-badge>
@@ -693,30 +757,109 @@ body {
             <span class="sidebar-title">Codebooks</span>
         </div>
         <div class="toc-sidebar-body">
-            <div class="toc-heading">Project</div>
-            <a class="toc-link active" href="#">Project Ikea</a>
+            <div class="toc-heading">Sentiment</div>
+            <div class="codebook-entry">
+                <div class="codebook-swatch" style="background: var(--bn-sentiment-frustration);"></div>
+                <span class="codebook-entry-name">Frustration</span>
+                <span class="codebook-entry-count">24</span>
+            </div>
+            <div class="codebook-entry">
+                <div class="codebook-swatch" style="background: var(--bn-sentiment-confusion);"></div>
+                <span class="codebook-entry-name">Confusion</span>
+                <span class="codebook-entry-count">18</span>
+            </div>
+            <div class="codebook-entry">
+                <div class="codebook-swatch" style="background: var(--bn-sentiment-doubt);"></div>
+                <span class="codebook-entry-name">Doubt</span>
+                <span class="codebook-entry-count">12</span>
+            </div>
+            <div class="codebook-entry">
+                <div class="codebook-swatch" style="background: var(--bn-sentiment-surprise);"></div>
+                <span class="codebook-entry-name">Surprise</span>
+                <span class="codebook-entry-count">9</span>
+            </div>
+            <div class="codebook-entry">
+                <div class="codebook-swatch" style="background: var(--bn-sentiment-satisfaction);"></div>
+                <span class="codebook-entry-name">Satisfaction</span>
+                <span class="codebook-entry-count">31</span>
+            </div>
+            <div class="codebook-entry">
+                <div class="codebook-swatch" style="background: var(--bn-sentiment-delight);"></div>
+                <span class="codebook-entry-name">Delight</span>
+                <span class="codebook-entry-count">7</span>
+            </div>
+            <div class="codebook-entry active">
+                <div class="codebook-swatch" style="background: var(--bn-sentiment-confidence);"></div>
+                <span class="codebook-entry-name">Confidence</span>
+                <span class="codebook-entry-count">15</span>
+            </div>
 
-            <div class="toc-heading">Bristlenose</div>
-            <a class="toc-link" href="#">Emotional &amp; Cognitive Signals</a>
-            <a class="toc-link" href="#">Bristlenose UXR Codebook</a>
+            <div class="toc-heading">UX Fundamentals</div>
+            <div class="codebook-entry">
+                <div class="codebook-swatch" style="background: var(--bn-set-ux-dot);"></div>
+                <span class="codebook-entry-name">Learnability</span>
+                <span class="codebook-entry-count">8</span>
+            </div>
+            <div class="codebook-entry">
+                <div class="codebook-swatch" style="background: var(--bn-set-ux-dot);"></div>
+                <span class="codebook-entry-name">Efficiency</span>
+                <span class="codebook-entry-count">14</span>
+            </div>
+            <div class="codebook-entry">
+                <div class="codebook-swatch" style="background: var(--bn-set-ux-dot);"></div>
+                <span class="codebook-entry-name">Memorability</span>
+                <span class="codebook-entry-count">5</span>
+            </div>
+            <div class="codebook-entry">
+                <div class="codebook-swatch" style="background: var(--bn-set-ux-dot);"></div>
+                <span class="codebook-entry-name">Error recovery</span>
+                <span class="codebook-entry-count">11</span>
+            </div>
 
-            <div class="toc-heading">Frameworks</div>
-            <a class="toc-link" href="#">The User Experience Honeycomb</a>
-            <a class="toc-link disabled" href="#">The Elements of User Experience</a>
-            <a class="toc-link disabled" href="#">The Design of Everyday Things</a>
-            <a class="toc-link disabled" href="#">Platonic Ontology &amp; Epistemology</a>
+            <div class="toc-heading">Emotion</div>
+            <div class="codebook-entry">
+                <div class="codebook-swatch" style="background: var(--bn-set-emo-dot);"></div>
+                <span class="codebook-entry-name">Joy</span>
+                <span class="codebook-entry-count">6</span>
+            </div>
+            <div class="codebook-entry">
+                <div class="codebook-swatch" style="background: var(--bn-set-emo-dot);"></div>
+                <span class="codebook-entry-name">Anxiety</span>
+                <span class="codebook-entry-count">9</span>
+            </div>
+            <div class="codebook-entry">
+                <div class="codebook-swatch" style="background: var(--bn-set-emo-dot);"></div>
+                <span class="codebook-entry-name">Trust</span>
+                <span class="codebook-entry-count">13</span>
+            </div>
+
+            <div class="toc-heading">User tags</div>
+            <div class="codebook-entry">
+                <div class="codebook-swatch" style="background: var(--bn-colour-muted);"></div>
+                <span class="codebook-entry-name">onboarding</span>
+                <span class="codebook-entry-count">7</span>
+            </div>
+            <div class="codebook-entry">
+                <div class="codebook-swatch" style="background: var(--bn-colour-muted);"></div>
+                <span class="codebook-entry-name">pricing concern</span>
+                <span class="codebook-entry-count">4</span>
+            </div>
+            <div class="codebook-entry">
+                <div class="codebook-swatch" style="background: var(--bn-colour-muted);"></div>
+                <span class="codebook-entry-name">feature request</span>
+                <span class="codebook-entry-count">11</span>
+            </div>
         </div>
         <div class="width-badge">280px</div>
     </div>
 </div>
 
-<!-- iii. ANALYSIS — signal entry list (v5)
-     Signal names with inline sentiment/group badges.
-     Sentiment split by Section / Theme sub-headings.
-     Codebook tags in flat list.
+<!-- iii. ANALYSIS
      Production: .sidebar-header, .sidebar-close, .toc-sidebar-body,
                  .toc-heading, .badge, .badge-{sentiment}
-     New: .toc-sub-heading, .signal-entry, .signal-entry-name        -->
+     New: .mini-signal-card, .mini-signal-source, .mini-signal-row,
+          .mini-heatmap, .mini-heatmap-cell, .mini-signal-footer,
+          .mini-signal-score, .mini-signal-participants -->
 <div class="mockup-column">
     <span class="mockup-label">iii. Analysis</span>
     <div class="sidebar-panel" data-width-badge>
@@ -725,53 +868,170 @@ body {
             <span class="sidebar-title">Signals</span>
         </div>
         <div class="toc-sidebar-body">
-            <div class="toc-heading">Sentiment</div>
+            <div class="toc-heading">Section &times; Sentiment</div>
 
-            <div class="toc-sub-heading">Section</div>
-            <a class="signal-entry active" href="#">
-                <span class="signal-entry-name">Surgery Messaging</span>
-                <span class="badge badge-delight">delight</span>
-            </a>
-            <a class="signal-entry" href="#">
-                <span class="signal-entry-name">Homepage</span>
-                <span class="badge badge-frustration">frustration</span>
-            </a>
+            <div class="mini-signal-card active">
+                <div class="mini-signal-source">Onboarding</div>
+                <div class="mini-signal-row">
+                    <span class="badge badge-frustration">frustration</span>
+                </div>
+                <div class="mini-heatmap">
+                    <div class="mini-heatmap-cell" style="background: var(--bn-sentiment-frustration); opacity: 0.8;"></div>
+                    <div class="mini-heatmap-cell" style="background: var(--bn-sentiment-frustration); opacity: 0.3;"></div>
+                    <div class="mini-heatmap-cell" style="background: var(--bn-sentiment-frustration); opacity: 0.6;"></div>
+                    <div class="mini-heatmap-cell" style="background: var(--bn-colour-border);"></div>
+                    <div class="mini-heatmap-cell" style="background: var(--bn-sentiment-frustration); opacity: 0.9;"></div>
+                    <div class="mini-heatmap-cell" style="background: var(--bn-sentiment-frustration); opacity: 0.4;"></div>
+                    <div class="mini-heatmap-cell" style="background: var(--bn-colour-border);"></div>
+                    <div class="mini-heatmap-cell" style="background: var(--bn-sentiment-frustration); opacity: 0.7;"></div>
+                    <div class="mini-heatmap-cell" style="background: var(--bn-colour-border);"></div>
+                    <div class="mini-heatmap-cell" style="background: var(--bn-sentiment-frustration); opacity: 0.5;"></div>
+                </div>
+                <div class="mini-signal-footer">
+                    <span class="mini-signal-score" style="color: var(--bn-sentiment-frustration);">4.2</span>
+                    <span class="mini-signal-participants">7 of 10</span>
+                </div>
+            </div>
 
-            <div class="toc-sub-heading">Theme</div>
-            <a class="signal-entry" href="#">
-                <span class="signal-entry-name">Brand perception and shopping preferences</span>
-                <span class="badge badge-delight">delight</span>
-            </a>
-            <a class="signal-entry" href="#">
-                <span class="signal-entry-name">Surgery Information</span>
-                <span class="badge badge-satisfaction">satisfaction</span>
-            </a>
-            <a class="signal-entry" href="#">
-                <span class="signal-entry-name">Healthcare system navigation struggles</span>
-                <span class="badge badge-frustration">frustration</span>
-            </a>
+            <div class="mini-signal-card">
+                <div class="mini-signal-source">Navigation</div>
+                <div class="mini-signal-row">
+                    <span class="badge badge-confusion">confusion</span>
+                </div>
+                <div class="mini-heatmap">
+                    <div class="mini-heatmap-cell" style="background: var(--bn-sentiment-confusion); opacity: 0.5;"></div>
+                    <div class="mini-heatmap-cell" style="background: var(--bn-sentiment-confusion); opacity: 0.7;"></div>
+                    <div class="mini-heatmap-cell" style="background: var(--bn-colour-border);"></div>
+                    <div class="mini-heatmap-cell" style="background: var(--bn-sentiment-confusion); opacity: 0.4;"></div>
+                    <div class="mini-heatmap-cell" style="background: var(--bn-sentiment-confusion); opacity: 0.9;"></div>
+                    <div class="mini-heatmap-cell" style="background: var(--bn-colour-border);"></div>
+                    <div class="mini-heatmap-cell" style="background: var(--bn-colour-border);"></div>
+                    <div class="mini-heatmap-cell" style="background: var(--bn-sentiment-confusion); opacity: 0.6;"></div>
+                    <div class="mini-heatmap-cell" style="background: var(--bn-sentiment-confusion); opacity: 0.3;"></div>
+                    <div class="mini-heatmap-cell" style="background: var(--bn-colour-border);"></div>
+                </div>
+                <div class="mini-signal-footer">
+                    <span class="mini-signal-score" style="color: var(--bn-sentiment-confusion);">3.8</span>
+                    <span class="mini-signal-participants">6 of 10</span>
+                </div>
+            </div>
 
-            <div class="toc-heading">Codebook tags</div>
-            <a class="signal-entry" href="#">
-                <span class="signal-entry-name">Pre-surgery confidence</span>
-                <span class="badge" style="background: var(--bn-set-emo-bg); color: var(--bn-set-emo-dot);">Emotion &amp; trust</span>
-            </a>
-            <a class="signal-entry" href="#">
-                <span class="signal-entry-name">Scanning habit</span>
-                <span class="badge" style="background: var(--bn-set-task-bg); color: var(--bn-set-task-dot);">Behaviour</span>
-            </a>
-            <a class="signal-entry" href="#">
-                <span class="signal-entry-name">Shopping bag tension</span>
-                <span class="badge badge-frustration">frustration</span>
-            </a>
-            <a class="signal-entry" href="#">
-                <span class="signal-entry-name">Navigation recovery</span>
-                <span class="badge" style="background: var(--bn-set-task-bg); color: var(--bn-set-task-dot);">Behaviour</span>
-            </a>
-            <a class="signal-entry" href="#">
-                <span class="signal-entry-name">Checkout confusion</span>
-                <span class="badge badge-frustration">frustration</span>
-            </a>
+            <div class="mini-signal-card">
+                <div class="mini-signal-source">Checkout</div>
+                <div class="mini-signal-row">
+                    <span class="badge badge-satisfaction">satisfaction</span>
+                </div>
+                <div class="mini-heatmap">
+                    <div class="mini-heatmap-cell" style="background: var(--bn-sentiment-satisfaction); opacity: 0.6;"></div>
+                    <div class="mini-heatmap-cell" style="background: var(--bn-sentiment-satisfaction); opacity: 0.8;"></div>
+                    <div class="mini-heatmap-cell" style="background: var(--bn-sentiment-satisfaction); opacity: 0.9;"></div>
+                    <div class="mini-heatmap-cell" style="background: var(--bn-sentiment-satisfaction); opacity: 0.4;"></div>
+                    <div class="mini-heatmap-cell" style="background: var(--bn-sentiment-satisfaction); opacity: 0.7;"></div>
+                    <div class="mini-heatmap-cell" style="background: var(--bn-colour-border);"></div>
+                    <div class="mini-heatmap-cell" style="background: var(--bn-sentiment-satisfaction); opacity: 0.5;"></div>
+                    <div class="mini-heatmap-cell" style="background: var(--bn-sentiment-satisfaction); opacity: 0.3;"></div>
+                    <div class="mini-heatmap-cell" style="background: var(--bn-sentiment-satisfaction); opacity: 0.6;"></div>
+                    <div class="mini-heatmap-cell" style="background: var(--bn-sentiment-satisfaction); opacity: 0.8;"></div>
+                </div>
+                <div class="mini-signal-footer">
+                    <span class="mini-signal-score" style="color: var(--bn-sentiment-satisfaction);">3.1</span>
+                    <span class="mini-signal-participants">8 of 10</span>
+                </div>
+            </div>
+
+            <div class="mini-signal-card">
+                <div class="mini-signal-source">Search</div>
+                <div class="mini-signal-row">
+                    <span class="badge badge-doubt">doubt</span>
+                </div>
+                <div class="mini-heatmap">
+                    <div class="mini-heatmap-cell" style="background: var(--bn-colour-border);"></div>
+                    <div class="mini-heatmap-cell" style="background: var(--bn-sentiment-doubt); opacity: 0.5;"></div>
+                    <div class="mini-heatmap-cell" style="background: var(--bn-sentiment-doubt); opacity: 0.7;"></div>
+                    <div class="mini-heatmap-cell" style="background: var(--bn-colour-border);"></div>
+                    <div class="mini-heatmap-cell" style="background: var(--bn-colour-border);"></div>
+                    <div class="mini-heatmap-cell" style="background: var(--bn-sentiment-doubt); opacity: 0.9;"></div>
+                    <div class="mini-heatmap-cell" style="background: var(--bn-sentiment-doubt); opacity: 0.4;"></div>
+                    <div class="mini-heatmap-cell" style="background: var(--bn-colour-border);"></div>
+                    <div class="mini-heatmap-cell" style="background: var(--bn-sentiment-doubt); opacity: 0.6;"></div>
+                    <div class="mini-heatmap-cell" style="background: var(--bn-colour-border);"></div>
+                </div>
+                <div class="mini-signal-footer">
+                    <span class="mini-signal-score" style="color: var(--bn-sentiment-doubt);">2.6</span>
+                    <span class="mini-signal-participants">4 of 10</span>
+                </div>
+            </div>
+
+            <div class="toc-heading">Theme &times; Sentiment</div>
+
+            <div class="mini-signal-card">
+                <div class="mini-signal-source">Trust &amp; credibility</div>
+                <div class="mini-signal-row">
+                    <span class="badge badge-confidence">confidence</span>
+                </div>
+                <div class="mini-heatmap">
+                    <div class="mini-heatmap-cell" style="background: var(--bn-sentiment-confidence); opacity: 0.7;"></div>
+                    <div class="mini-heatmap-cell" style="background: var(--bn-sentiment-confidence); opacity: 0.5;"></div>
+                    <div class="mini-heatmap-cell" style="background: var(--bn-sentiment-confidence); opacity: 0.9;"></div>
+                    <div class="mini-heatmap-cell" style="background: var(--bn-sentiment-confidence); opacity: 0.3;"></div>
+                    <div class="mini-heatmap-cell" style="background: var(--bn-colour-border);"></div>
+                    <div class="mini-heatmap-cell" style="background: var(--bn-sentiment-confidence); opacity: 0.6;"></div>
+                    <div class="mini-heatmap-cell" style="background: var(--bn-sentiment-confidence); opacity: 0.8;"></div>
+                    <div class="mini-heatmap-cell" style="background: var(--bn-colour-border);"></div>
+                    <div class="mini-heatmap-cell" style="background: var(--bn-sentiment-confidence); opacity: 0.4;"></div>
+                    <div class="mini-heatmap-cell" style="background: var(--bn-sentiment-confidence); opacity: 0.7;"></div>
+                </div>
+                <div class="mini-signal-footer">
+                    <span class="mini-signal-score" style="color: var(--bn-sentiment-confidence);">2.9</span>
+                    <span class="mini-signal-participants">7 of 10</span>
+                </div>
+            </div>
+
+            <div class="mini-signal-card">
+                <div class="mini-signal-source">Mobile experience</div>
+                <div class="mini-signal-row">
+                    <span class="badge badge-frustration">frustration</span>
+                </div>
+                <div class="mini-heatmap">
+                    <div class="mini-heatmap-cell" style="background: var(--bn-sentiment-frustration); opacity: 0.9;"></div>
+                    <div class="mini-heatmap-cell" style="background: var(--bn-colour-border);"></div>
+                    <div class="mini-heatmap-cell" style="background: var(--bn-sentiment-frustration); opacity: 0.6;"></div>
+                    <div class="mini-heatmap-cell" style="background: var(--bn-sentiment-frustration); opacity: 0.4;"></div>
+                    <div class="mini-heatmap-cell" style="background: var(--bn-sentiment-frustration); opacity: 0.7;"></div>
+                    <div class="mini-heatmap-cell" style="background: var(--bn-colour-border);"></div>
+                    <div class="mini-heatmap-cell" style="background: var(--bn-sentiment-frustration); opacity: 0.5;"></div>
+                    <div class="mini-heatmap-cell" style="background: var(--bn-colour-border);"></div>
+                    <div class="mini-heatmap-cell" style="background: var(--bn-sentiment-frustration); opacity: 0.8;"></div>
+                    <div class="mini-heatmap-cell" style="background: var(--bn-sentiment-frustration); opacity: 0.3;"></div>
+                </div>
+                <div class="mini-signal-footer">
+                    <span class="mini-signal-score" style="color: var(--bn-sentiment-frustration);">2.4</span>
+                    <span class="mini-signal-participants">5 of 10</span>
+                </div>
+            </div>
+
+            <div class="mini-signal-card">
+                <div class="mini-signal-source">Pricing clarity</div>
+                <div class="mini-signal-row">
+                    <span class="badge badge-surprise">surprise</span>
+                </div>
+                <div class="mini-heatmap">
+                    <div class="mini-heatmap-cell" style="background: var(--bn-colour-border);"></div>
+                    <div class="mini-heatmap-cell" style="background: var(--bn-sentiment-surprise); opacity: 0.6;"></div>
+                    <div class="mini-heatmap-cell" style="background: var(--bn-colour-border);"></div>
+                    <div class="mini-heatmap-cell" style="background: var(--bn-sentiment-surprise); opacity: 0.8;"></div>
+                    <div class="mini-heatmap-cell" style="background: var(--bn-colour-border);"></div>
+                    <div class="mini-heatmap-cell" style="background: var(--bn-colour-border);"></div>
+                    <div class="mini-heatmap-cell" style="background: var(--bn-sentiment-surprise); opacity: 0.5;"></div>
+                    <div class="mini-heatmap-cell" style="background: var(--bn-colour-border);"></div>
+                    <div class="mini-heatmap-cell" style="background: var(--bn-colour-border);"></div>
+                    <div class="mini-heatmap-cell" style="background: var(--bn-sentiment-surprise); opacity: 0.7;"></div>
+                </div>
+                <div class="mini-signal-footer">
+                    <span class="mini-signal-score" style="color: var(--bn-sentiment-surprise);">1.8</span>
+                    <span class="mini-signal-participants">3 of 10</span>
+                </div>
+            </div>
         </div>
         <div class="width-badge">280px</div>
     </div>

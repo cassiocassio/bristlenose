@@ -1,0 +1,732 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mini Heatmaps — Dashboard Preview Mockup</title>
+<style>
+/* ── Design system tokens (subset from tokens.css) ───────── */
+:root {
+  --bn-font-body: "Inter", "Segoe UI Variable", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --bn-font-mono: "SF Mono", "Fira Code", "Consolas", monospace;
+  --bn-weight-light: 370;
+  --bn-weight-normal: 420;
+  --bn-weight-emphasis: 490;
+  --bn-weight-strong: 700;
+  --bn-colour-bg: #ffffff;
+  --bn-colour-text: #1a1a1a;
+  --bn-colour-muted: #6b7280;
+  --bn-colour-border: #e5e7eb;
+  --bn-colour-border-hover: #d1d5db;
+  --bn-colour-accent: #2563eb;
+  --bn-colour-hover: #e8f0fe;
+  --bn-colour-shadow: rgba(0,0,0,0.1);
+  --bn-colour-quote-bg: #f9fafb;
+  --bn-space-xs: 0.15rem;
+  --bn-space-sm: 0.35rem;
+  --bn-space-md: 0.75rem;
+  --bn-space-lg: 1.5rem;
+  --bn-space-xl: 2rem;
+  --bn-radius-sm: 3px;
+  --bn-radius-md: 6px;
+  --bn-radius-lg: 8px;
+  --bn-radius-pill: 999px;
+  --bn-transition-fast: 0.15s ease;
+  color-scheme: light dark;
+
+  /* Mini heatmap tokens */
+  --mini-cell: 11px;
+  --mini-gap: 2px;
+  --mini-radius: 2px;
+}
+
+@supports (color: light-dark(#fff, #000)) {
+  :root {
+    --bn-colour-bg: light-dark(#ffffff, #111111);
+    --bn-colour-text: light-dark(#1a1a1a, #e5e7eb);
+    --bn-colour-muted: light-dark(#6b7280, #9ca3af);
+    --bn-colour-border: light-dark(#e5e7eb, #2d2d2d);
+    --bn-colour-border-hover: light-dark(#d1d5db, #4b5563);
+    --bn-colour-accent: light-dark(#2563eb, #60a5fa);
+    --bn-colour-hover: light-dark(#e8f0fe, #1e293b);
+    --bn-colour-shadow: light-dark(rgba(0,0,0,0.1), rgba(0,0,0,0.4));
+    --bn-colour-quote-bg: light-dark(#f9fafb, #1a1a1a);
+  }
+}
+
+/* ── Reset ───────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: var(--bn-font-body);
+  font-weight: var(--bn-weight-normal);
+  background: var(--bn-colour-bg);
+  color: var(--bn-colour-text);
+  padding: 2rem;
+  line-height: 1.4;
+}
+
+/* ── Mockup chrome ───────────────────────────────────────── */
+.mockup-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.5rem 1rem;
+  border-bottom: 1px solid var(--bn-colour-border);
+  background: var(--bn-colour-bg);
+  font-size: 0.75rem;
+  color: var(--bn-colour-muted);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  margin: -2rem -2rem 2rem -2rem;
+}
+
+.mockup-header h1 {
+  font-size: 0.85rem;
+  font-weight: var(--bn-weight-emphasis);
+  color: var(--bn-colour-text);
+}
+
+.mockup-controls {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.mockup-controls button {
+  font-family: var(--bn-font-body);
+  font-size: 0.75rem;
+  padding: 0.25rem 0.6rem;
+  border: 1px solid var(--bn-colour-border);
+  border-radius: var(--bn-radius-sm);
+  background: var(--bn-colour-bg);
+  color: var(--bn-colour-text);
+  cursor: pointer;
+}
+
+.mockup-controls button:hover {
+  background: var(--bn-colour-hover);
+}
+
+.mockup-controls button.active {
+  background: var(--bn-colour-accent);
+  color: white;
+  border-color: var(--bn-colour-accent);
+}
+
+/* ── Analysis preview strip ──────────────────────────────── */
+.analysis-preview {
+  /* The whole strip */
+}
+
+.analysis-preview h2 {
+  font-size: 0.8rem;
+  font-weight: var(--bn-weight-emphasis);
+  color: var(--bn-colour-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: var(--bn-space-md);
+}
+
+/* ── Heatmap row ─────────────────────────────────────────── */
+.heatmap-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.25rem;
+  align-items: flex-start;
+  margin-bottom: var(--bn-space-lg);
+}
+
+/* ── Individual mini heatmap card ────────────────────────── */
+.mini-heatmap-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--bn-space-sm);
+  cursor: pointer;
+}
+
+.mini-heatmap-card:hover .mini-heatmap-title {
+  color: var(--bn-colour-accent);
+}
+
+.mini-heatmap-title {
+  font-size: 0.7rem;
+  font-weight: var(--bn-weight-emphasis);
+  color: var(--bn-colour-muted);
+  transition: color var(--bn-transition-fast);
+  white-space: nowrap;
+}
+
+/* ── The grid itself ─────────────────────────────────────── */
+.mini-grid {
+  display: grid;
+  gap: var(--mini-gap);
+  /* columns set inline via style */
+}
+
+.mini-cell {
+  width: var(--mini-cell);
+  height: var(--mini-cell);
+  border-radius: var(--mini-radius);
+  background: var(--bn-colour-quote-bg);
+  transition: outline-offset 0.1s ease;
+  position: relative;
+}
+
+.mini-cell:hover {
+  outline: 2px solid var(--bn-colour-accent);
+  outline-offset: 1px;
+  z-index: 2;
+}
+
+/* Flagged signal — thick border */
+.mini-cell.flagged {
+  outline: 2px solid var(--bn-colour-text);
+  outline-offset: -1px;
+  z-index: 1;
+}
+
+.mini-cell.flagged:hover {
+  outline-color: var(--bn-colour-accent);
+}
+
+/* Flag type borders — optional colour coding */
+.mini-cell.flag-problem {
+  outline-color: oklch(0.55 0.18 25);
+}
+.mini-cell.flag-win,
+.mini-cell.flag-success {
+  outline-color: oklch(0.55 0.15 150);
+}
+.mini-cell.flag-niggle {
+  outline-color: oklch(0.65 0.15 80);
+}
+.mini-cell.flag-pattern {
+  outline-color: oklch(0.55 0.12 250);
+}
+.mini-cell.flag-surprising {
+  outline-color: oklch(0.55 0.15 310);
+}
+
+/* ── Tooltip (native title for now, custom later) ────────── */
+.mini-cell[title] {
+  cursor: crosshair;
+}
+
+/* ── Axis labels (optional, minimal) ─────────────────────── */
+.mini-grid-with-labels {
+  display: grid;
+  gap: 0;
+  align-items: start;
+}
+
+.row-labels {
+  display: flex;
+  flex-direction: column;
+  gap: var(--mini-gap);
+  padding-right: 6px;
+}
+
+.row-label {
+  height: var(--mini-cell);
+  font-size: 0.55rem;
+  line-height: var(--mini-cell);
+  color: var(--bn-colour-muted);
+  text-align: right;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 70px;
+}
+
+/* ── Top signals list ────────────────────────────────────── */
+.signal-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-width: 700px;
+}
+
+.signal-item {
+  font-size: 0.75rem;
+  color: var(--bn-colour-text);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 0;
+  cursor: pointer;
+}
+
+.signal-item:hover {
+  color: var(--bn-colour-accent);
+}
+
+.signal-flag {
+  font-size: 0.6rem;
+  font-weight: var(--bn-weight-strong);
+  padding: 1px 5px;
+  border-radius: var(--bn-radius-pill);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  flex-shrink: 0;
+}
+
+.signal-flag.flag-problem   { background: oklch(0.92 0.05 25);  color: oklch(0.45 0.15 25); }
+.signal-flag.flag-win       { background: oklch(0.92 0.05 150); color: oklch(0.40 0.15 150); }
+.signal-flag.flag-success   { background: oklch(0.92 0.05 150); color: oklch(0.40 0.15 150); }
+.signal-flag.flag-niggle    { background: oklch(0.92 0.06 80);  color: oklch(0.45 0.12 80); }
+.signal-flag.flag-pattern   { background: oklch(0.92 0.04 250); color: oklch(0.45 0.12 250); }
+.signal-flag.flag-surprising { background: oklch(0.92 0.05 310); color: oklch(0.45 0.12 310); }
+
+.signal-text {
+  flex: 1;
+}
+
+.signal-meta {
+  font-size: 0.65rem;
+  color: var(--bn-colour-muted);
+  flex-shrink: 0;
+}
+
+/* ── View link ───────────────────────────────────────────── */
+.analysis-link {
+  display: inline-block;
+  margin-top: var(--bn-space-md);
+  font-size: 0.75rem;
+  color: var(--bn-colour-accent);
+  text-decoration: none;
+  font-weight: var(--bn-weight-emphasis);
+}
+
+.analysis-link:hover {
+  text-decoration: underline;
+}
+
+/* ── Legend (GitHub-style) ───────────────────────────────── */
+.legend {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: var(--bn-space-sm);
+}
+
+.legend-label {
+  font-size: 0.6rem;
+  color: var(--bn-colour-muted);
+}
+
+.legend-cell {
+  width: var(--mini-cell);
+  height: var(--mini-cell);
+  border-radius: var(--mini-radius);
+}
+
+/* ── Section separator ───────────────────────────────────── */
+.sep {
+  width: 1px;
+  align-self: stretch;
+  background: var(--bn-colour-border);
+  margin: 0 0.25rem;
+  min-height: 100px;
+}
+
+/* ── Dimension note ──────────────────────────────────────── */
+.dimension-note {
+  font-size: 0.65rem;
+  color: var(--bn-colour-muted);
+  margin-top: 2px;
+  font-family: var(--bn-font-mono);
+}
+
+/* ── Compact toggle ──────────────────────────────────────── */
+.compact .row-labels { display: none; }
+.compact .mini-heatmap-card { gap: 2px; }
+
+/* ── Sections vs Themes toggle ───────────────────────────── */
+.tab-row {
+  display: flex;
+  gap: 2px;
+  margin-bottom: var(--bn-space-md);
+}
+.tab-btn {
+  font-family: var(--bn-font-body);
+  font-size: 0.7rem;
+  font-weight: var(--bn-weight-emphasis);
+  padding: 3px 10px;
+  border: 1px solid var(--bn-colour-border);
+  border-radius: var(--bn-radius-sm);
+  background: var(--bn-colour-bg);
+  color: var(--bn-colour-muted);
+  cursor: pointer;
+}
+.tab-btn.active {
+  background: var(--bn-colour-text);
+  color: var(--bn-colour-bg);
+  border-color: var(--bn-colour-text);
+}
+</style>
+</head>
+<body>
+
+<div class="mockup-header">
+  <h1>Mini Heatmaps — Dashboard Analysis Preview</h1>
+  <div class="mockup-controls">
+    <span>12 interviews &middot; 13 sections &middot; 11 themes &middot; 6 codebooks</span>
+    <button onclick="document.querySelector('.analysis-preview').classList.toggle('compact')">Toggle labels</button>
+    <button onclick="toggleTheme()">Light / Dark</button>
+  </div>
+</div>
+
+<div class="analysis-preview">
+
+  <h2>Analysis</h2>
+
+  <div class="tab-row">
+    <button class="tab-btn active" onclick="showView('sections', this)">Sections</button>
+    <button class="tab-btn" onclick="showView('themes', this)">Themes</button>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════
+       SECTIONS VIEW: 13 rows × varying columns
+       ═══════════════════════════════════════════════════════ -->
+  <div id="sections-view" class="heatmap-row">
+
+    <!-- Sentiment: 13×7 -->
+    <div class="mini-heatmap-card">
+      <div class="mini-heatmap-title">Sentiment</div>
+      <div class="mini-grid" id="grid-sentiment-s" style="grid-template-columns: repeat(7, var(--mini-cell))"></div>
+      <div class="dimension-note">13 × 7</div>
+    </div>
+
+    <div class="sep"></div>
+
+    <!-- UXR: 13×8 -->
+    <div class="mini-heatmap-card">
+      <div class="mini-heatmap-title">UXR Codebook</div>
+      <div class="mini-grid" id="grid-uxr-s" style="grid-template-columns: repeat(8, var(--mini-cell))"></div>
+      <div class="dimension-note">13 × 8</div>
+    </div>
+
+    <!-- Nielsen: 13×10 -->
+    <div class="mini-heatmap-card">
+      <div class="mini-heatmap-title">Nielsen</div>
+      <div class="mini-grid" id="grid-nielsen-s" style="grid-template-columns: repeat(10, var(--mini-cell))"></div>
+      <div class="dimension-note">13 × 10</div>
+    </div>
+
+    <!-- Garrett: 13×5 -->
+    <div class="mini-heatmap-card">
+      <div class="mini-heatmap-title">Garrett</div>
+      <div class="mini-grid" id="grid-garrett-s" style="grid-template-columns: repeat(5, var(--mini-cell))"></div>
+      <div class="dimension-note">13 × 5</div>
+    </div>
+
+    <!-- Norman: 13×7 -->
+    <div class="mini-heatmap-card">
+      <div class="mini-heatmap-title">Norman</div>
+      <div class="mini-grid" id="grid-norman-s" style="grid-template-columns: repeat(7, var(--mini-cell))"></div>
+      <div class="dimension-note">13 × 7</div>
+    </div>
+
+    <!-- Morville: 13×7 -->
+    <div class="mini-heatmap-card">
+      <div class="mini-heatmap-title">Morville</div>
+      <div class="mini-grid" id="grid-morville-s" style="grid-template-columns: repeat(7, var(--mini-cell))"></div>
+      <div class="dimension-note">13 × 7</div>
+    </div>
+
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════
+       THEMES VIEW: 11 rows × varying columns
+       ═══════════════════════════════════════════════════════ -->
+  <div id="themes-view" class="heatmap-row" style="display:none">
+
+    <div class="mini-heatmap-card">
+      <div class="mini-heatmap-title">Sentiment</div>
+      <div class="mini-grid" id="grid-sentiment-t" style="grid-template-columns: repeat(7, var(--mini-cell))"></div>
+      <div class="dimension-note">11 × 7</div>
+    </div>
+
+    <div class="sep"></div>
+
+    <div class="mini-heatmap-card">
+      <div class="mini-heatmap-title">UXR Codebook</div>
+      <div class="mini-grid" id="grid-uxr-t" style="grid-template-columns: repeat(8, var(--mini-cell))"></div>
+      <div class="dimension-note">11 × 8</div>
+    </div>
+
+    <div class="mini-heatmap-card">
+      <div class="mini-heatmap-title">Nielsen</div>
+      <div class="mini-grid" id="grid-nielsen-t" style="grid-template-columns: repeat(10, var(--mini-cell))"></div>
+      <div class="dimension-note">11 × 10</div>
+    </div>
+
+    <div class="mini-heatmap-card">
+      <div class="mini-heatmap-title">Garrett</div>
+      <div class="mini-grid" id="grid-garrett-t" style="grid-template-columns: repeat(5, var(--mini-cell))"></div>
+      <div class="dimension-note">11 × 5</div>
+    </div>
+
+    <div class="mini-heatmap-card">
+      <div class="mini-heatmap-title">Norman</div>
+      <div class="mini-grid" id="grid-norman-t" style="grid-template-columns: repeat(7, var(--mini-cell))"></div>
+      <div class="dimension-note">11 × 7</div>
+    </div>
+
+    <div class="mini-heatmap-card">
+      <div class="mini-heatmap-title">Morville</div>
+      <div class="mini-grid" id="grid-morville-t" style="grid-template-columns: repeat(7, var(--mini-cell))"></div>
+      <div class="dimension-note">11 × 7</div>
+    </div>
+
+  </div>
+
+  <!-- Legend -->
+  <div class="legend">
+    <span class="legend-label">Less</span>
+    <div class="legend-cell" style="background: #ebedf0"></div>
+    <div class="legend-cell" style="background: oklch(0.88 0.04 150)"></div>
+    <div class="legend-cell" style="background: oklch(0.75 0.08 150)"></div>
+    <div class="legend-cell" style="background: oklch(0.62 0.11 150)"></div>
+    <div class="legend-cell" style="background: oklch(0.50 0.14 150)"></div>
+    <span class="legend-label">More</span>
+    <span style="width: 16px"></span>
+    <div class="legend-cell" style="background: oklch(0.82 0.06 20)"></div>
+    <span class="legend-label">Under-represented</span>
+    <span style="width: 12px"></span>
+    <div class="legend-cell" style="background: var(--bn-colour-quote-bg); outline: 2px solid oklch(0.55 0.18 25); outline-offset: -1px;"></div>
+    <span class="legend-label">Flagged signal</span>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════
+       TOP SIGNALS
+       ═══════════════════════════════════════════════════════ -->
+  <div style="margin-top: var(--bn-space-lg);">
+    <h2>Top signals</h2>
+    <ul class="signal-list">
+      <li class="signal-item">
+        <span class="signal-flag flag-problem">Problem</span>
+        <span class="signal-text">Strong frustration in Checkout flow</span>
+        <span class="signal-meta">7 voices &middot; 4.1&times;</span>
+      </li>
+      <li class="signal-item">
+        <span class="signal-flag flag-win">Win</span>
+        <span class="signal-text">High satisfaction with Dashboard overview</span>
+        <span class="signal-meta">9 voices &middot; 3.8&times;</span>
+      </li>
+      <li class="signal-item">
+        <span class="signal-flag flag-problem">Problem</span>
+        <span class="signal-text">Confusion around Settings permissions</span>
+        <span class="signal-meta">6 voices &middot; 3.5&times;</span>
+      </li>
+      <li class="signal-item">
+        <span class="signal-flag flag-pattern">Pattern</span>
+        <span class="signal-text">Consistency issues in Navigation across sections</span>
+        <span class="signal-meta">8 voices &middot; 2.9&times;</span>
+      </li>
+      <li class="signal-item">
+        <span class="signal-flag flag-niggle">Niggle</span>
+        <span class="signal-text">Mild doubt about Search filter labels</span>
+        <span class="signal-meta">4 voices &middot; 2.7&times;</span>
+      </li>
+      <li class="signal-item">
+        <span class="signal-flag flag-success">Success</span>
+        <span class="signal-text">Delight with Onboarding wizard flow</span>
+        <span class="signal-meta">5 voices &middot; 2.4&times;</span>
+      </li>
+      <li class="signal-item">
+        <span class="signal-flag flag-surprising">Surprising</span>
+        <span class="signal-text">Unexpected confidence in Export feature</span>
+        <span class="signal-meta">3 voices &middot; 2.2&times;</span>
+      </li>
+      <li class="signal-item">
+        <span class="signal-flag flag-problem">Problem</span>
+        <span class="signal-text">Error recovery gaps in Form validation</span>
+        <span class="signal-meta">5 voices &middot; 2.1&times;</span>
+      </li>
+    </ul>
+  </div>
+
+  <a href="#" class="analysis-link">View full analysis &rarr;</a>
+
+</div>
+
+<script>
+// ── Fake data generator ─────────────────────────────────────
+// Simulates adjusted-residual-based coloring with realistic sparsity
+
+const SECTIONS = [
+  'Dashboard', 'Search', 'Browse', 'Product detail', 'Cart',
+  'Checkout', 'Account', 'Settings', 'Onboarding', 'Navigation',
+  'Notifications', 'Help', 'Export'
+];
+
+const THEMES = [
+  'Mental models', 'Trust & credibility', 'Efficiency', 'Error handling',
+  'Learning curve', 'Visual clarity', 'Emotional response', 'Accessibility',
+  'Customisation', 'Information density', 'Social proof'
+];
+
+const SENTIMENTS = ['frustration', 'confusion', 'doubt', 'surprise', 'satisfaction', 'delight', 'confidence'];
+
+const UXR_GROUPS = ['Behaviour', 'Pain points', 'Needs', 'Mental models', 'Motivation', 'Emotion', 'Context', 'Learning'];
+const NIELSEN_GROUPS = ['Visibility', 'Match', 'Control', 'Consistency', 'Prevention', 'Recognition', 'Flexibility', 'Aesthetics', 'Errors', 'Help'];
+const GARRETT_GROUPS = ['Strategy', 'Scope', 'Structure', 'Skeleton', 'Surface'];
+const NORMAN_GROUPS = ['Discover', 'Feedback', 'Model', 'Signifier', 'Mapping', 'Constraint', 'Slips'];
+const MORVILLE_GROUPS = ['Useful', 'Usable', 'Desirable', 'Findable', 'Accessible', 'Credible', 'Valuable'];
+
+// Flagged cells (row index, col index) — manually chosen for realism
+const FLAGGED_CELLS = {
+  'grid-sentiment-s': [[5,0], [0,4], [7,1], [9,3], [3,2], [8,5], [12,6], [6,0]],
+  'grid-uxr-s':       [[5,1], [0,0], [7,2], [2,4], [8,6]],
+  'grid-nielsen-s':   [[5,4], [9,3], [7,8], [0,0], [3,5]],
+  'grid-garrett-s':   [[5,2], [0,0], [8,4]],
+  'grid-norman-s':    [[5,1], [0,3], [7,0], [9,5]],
+  'grid-morville-s':  [[5,0], [0,6], [8,2], [2,3]],
+  'grid-sentiment-t': [[0,0], [1,4], [3,0], [6,5], [4,2], [9,6], [7,1]],
+  'grid-uxr-t':       [[0,1], [3,1], [6,5], [4,3]],
+  'grid-nielsen-t':   [[0,3], [3,4], [6,0], [9,7]],
+  'grid-garrett-t':   [[0,0], [3,2], [6,4]],
+  'grid-norman-t':    [[0,3], [3,1], [6,0]],
+  'grid-morville-t':  [[0,6], [3,2], [6,0], [9,4]],
+};
+
+// Flag types for flagged cells
+const FLAG_TYPES = ['problem', 'win', 'problem', 'pattern', 'niggle', 'success', 'surprising', 'problem'];
+
+function isDark() {
+  return document.documentElement.style.colorScheme === 'dark' ||
+    window.matchMedia('(prefers-color-scheme: dark)').matches;
+}
+
+function heatCellColor(adjResidual, dark) {
+  const absR = Math.abs(adjResidual);
+  if (absR < 0.05) return null; // no signal
+  const heat = Math.min(absR / 4, 1.0);
+  const hue = adjResidual > 0 ? 150 : 20;
+  const chroma = 0.14 * heat;
+  const lMin = dark ? 0.25 : 0.50;
+  const lMax = dark ? 0.55 : 0.92;
+  const L = lMax - (lMax - lMin) * heat;
+  return `oklch(${L.toFixed(3)} ${chroma.toFixed(3)} ${hue})`;
+}
+
+function generateResiduals(rows, cols) {
+  // Generate a sparse matrix of fake adjusted residuals
+  // ~40% of cells are zero, rest follow a skewed distribution
+  const data = [];
+  for (let r = 0; r < rows; r++) {
+    const row = [];
+    for (let c = 0; c < cols; c++) {
+      if (Math.random() < 0.35) {
+        row.push(0);
+      } else {
+        // Residuals centered around 0, with occasional strong signals
+        let v = (Math.random() - 0.45) * 3;
+        if (Math.random() < 0.08) v *= 2.5; // rare hot spot
+        row.push(v);
+      }
+    }
+    data.push(row);
+  }
+  return data;
+}
+
+function generateCounts(rows, cols) {
+  const data = [];
+  for (let r = 0; r < rows; r++) {
+    const row = [];
+    for (let c = 0; c < cols; c++) {
+      if (Math.random() < 0.35) {
+        row.push(0);
+      } else {
+        row.push(Math.floor(Math.random() * 8) + 1);
+      }
+    }
+    data.push(row);
+  }
+  return data;
+}
+
+function populateGrid(gridId, rowLabels, colLabels) {
+  const grid = document.getElementById(gridId);
+  if (!grid) return;
+
+  const rows = rowLabels.length;
+  const cols = colLabels.length;
+  const residuals = generateResiduals(rows, cols);
+  const counts = generateCounts(rows, cols);
+  const dark = isDark();
+  const flagged = FLAGGED_CELLS[gridId] || [];
+  const flaggedSet = new Set(flagged.map(([r,c]) => `${r},${c}`));
+
+  grid.innerHTML = '';
+
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      const cell = document.createElement('div');
+      cell.className = 'mini-cell';
+
+      const color = heatCellColor(residuals[r][c], dark);
+      if (color) {
+        cell.style.background = color;
+      }
+
+      const cellKey = `${r},${c}`;
+      if (flaggedSet.has(cellKey)) {
+        cell.classList.add('flagged');
+        const flagIdx = flagged.findIndex(([fr,fc]) => fr === r && fc === c);
+        const flagType = FLAG_TYPES[flagIdx % FLAG_TYPES.length];
+        cell.classList.add(`flag-${flagType}`);
+        // Boost the color for flagged cells
+        const boosted = heatCellColor(residuals[r][c] > 0 ? 3.5 : -3.5, dark);
+        if (boosted) cell.style.background = boosted;
+      }
+
+      cell.title = `${rowLabels[r]} × ${colLabels[c]}\n${counts[r][c]} quotes`;
+      grid.appendChild(cell);
+    }
+  }
+}
+
+function populateAll() {
+  // Sections view (13 rows)
+  populateGrid('grid-sentiment-s', SECTIONS, SENTIMENTS);
+  populateGrid('grid-uxr-s', SECTIONS, UXR_GROUPS);
+  populateGrid('grid-nielsen-s', SECTIONS, NIELSEN_GROUPS);
+  populateGrid('grid-garrett-s', SECTIONS, GARRETT_GROUPS);
+  populateGrid('grid-norman-s', SECTIONS, NORMAN_GROUPS);
+  populateGrid('grid-morville-s', SECTIONS, MORVILLE_GROUPS);
+
+  // Themes view (11 rows)
+  populateGrid('grid-sentiment-t', THEMES, SENTIMENTS);
+  populateGrid('grid-uxr-t', THEMES, UXR_GROUPS);
+  populateGrid('grid-nielsen-t', THEMES, NIELSEN_GROUPS);
+  populateGrid('grid-garrett-t', THEMES, GARRETT_GROUPS);
+  populateGrid('grid-norman-t', THEMES, NORMAN_GROUPS);
+  populateGrid('grid-morville-t', THEMES, MORVILLE_GROUPS);
+}
+
+function toggleTheme() {
+  const html = document.documentElement;
+  const current = html.style.colorScheme;
+  html.style.colorScheme = current === 'dark' ? 'light' : 'dark';
+  populateAll(); // re-render with new colors
+}
+
+function showView(view, btn) {
+  document.getElementById('sections-view').style.display = view === 'sections' ? 'flex' : 'none';
+  document.getElementById('themes-view').style.display = view === 'themes' ? 'flex' : 'none';
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+}
+
+// Init
+populateAll();
+</script>
+
+</body>
+</html>

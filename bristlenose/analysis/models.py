@@ -61,6 +61,7 @@ class Signal:
     concentration: float
     composite_signal: float
     confidence: str  # "strong", "moderate", "emerging"
+    flag: str | None = None  # finding flag: Win, Problem, Niggle, Success, Surprising, Pattern
     quotes: list[SignalQuote] = field(default_factory=list)
 
 

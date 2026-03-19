@@ -195,7 +195,7 @@ class TestGetTagAnalysis:
             expected_keys = {
                 "location", "source_type", "group_name", "colour_set", "count",
                 "participants", "n_eff", "mean_intensity", "concentration",
-                "composite_signal", "confidence", "quotes",
+                "composite_signal", "confidence", "flag", "quotes",
                 "signal_name", "pattern", "elaboration",
             }
             assert expected_keys == set(sig.keys())

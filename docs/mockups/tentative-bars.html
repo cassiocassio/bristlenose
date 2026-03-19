@@ -1,0 +1,747 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Tentative + Accepted Bars — Mockup v2</title>
+<style>
+  :root {
+    --bn-bar-ux:    oklch(70% 0.08 250);
+    --bn-bar-emo:   oklch(70% 0.08 10);
+    --bn-bar-task:  oklch(70% 0.06 155);
+    --bn-bar-trust: oklch(70% 0.07 300);
+    --bn-bar-opp:   oklch(72% 0.07 75);
+
+    --bn-group-ux:    oklch(97% 0.015 250);
+    --bn-group-emo:   oklch(97% 0.015 10);
+    --bn-group-task:  oklch(97% 0.015 155);
+    --bn-group-trust: oklch(97% 0.015 300);
+    --bn-group-opp:   oklch(97% 0.015 75);
+
+    --bn-ux-1-bg: oklch(94% 0.03 225);
+    --bn-ux-2-bg: oklch(94% 0.03 237);
+    --bn-ux-3-bg: oklch(94% 0.03 250);
+    --bn-ux-4-bg: oklch(94% 0.03 263);
+
+    --bn-emo-1-bg: oklch(94% 0.03 340);
+    --bn-emo-2-bg: oklch(94% 0.03 352);
+    --bn-emo-3-bg: oklch(94% 0.03 4);
+    --bn-emo-4-bg: oklch(94% 0.03 16);
+    --bn-emo-5-bg: oklch(94% 0.03 28);
+
+    --bn-task-1-bg: oklch(94% 0.03 130);
+    --bn-task-2-bg: oklch(94% 0.03 142);
+    --bn-task-3-bg: oklch(94% 0.03 155);
+
+    --bn-opp-1-bg: oklch(94% 0.03 50);
+    --bn-opp-2-bg: oklch(94% 0.03 62);
+
+    --bn-trust-1-bg: oklch(94% 0.03 275);
+    --bn-trust-2-bg: oklch(94% 0.03 287);
+    --bn-trust-3-bg: oklch(94% 0.03 300);
+
+    --bn-colour-muted: oklch(55% 0 0);
+    --bn-colour-border: oklch(88% 0 0);
+    --bn-space-sm: 0.5rem;
+    --bn-space-xs: 0.25rem;
+    --bn-radius-sm: 4px;
+    --bn-radius-md: 8px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+    background: #f5f5f5;
+    padding: 2rem;
+    color: #333;
+  }
+
+  h1 { font-size: 1.1rem; margin-bottom: 0.5rem; }
+  h2 { font-size: 0.95rem; font-weight: 600; margin: 2rem 0 0.75rem; color: #555; }
+  .subtitle { font-size: 0.8rem; color: #888; margin-bottom: 1.5rem; }
+
+  /* ── Layout ── */
+  .mockup-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2rem;
+    max-width: 900px;
+  }
+  .section-title { font-size: 0.85rem; font-weight: 600; color: #999; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 1rem; }
+
+  /* ── Codebook card ── */
+  .codebook-card {
+    border-radius: var(--bn-radius-md);
+    padding: 1rem 1.25rem;
+    margin-bottom: 0.75rem;
+  }
+  .card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 0.75rem;
+  }
+  .card-title { font-size: 0.95rem; font-weight: 700; }
+  .card-subtitle { font-size: 0.75rem; color: #888; margin-top: 2px; }
+  .card-total { font-size: 0.75rem; color: #888; }
+
+  /* ── Tag row (shared) ── */
+  .tag-row {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: center;
+    gap: var(--bn-space-sm);
+    padding: 3px 4px;
+    border-radius: var(--bn-radius-sm);
+  }
+  .tag-row:hover { background: rgba(0,0,0,0.03); }
+
+  .tag-name-area { display: flex; align-items: center; min-width: 0; }
+  .badge {
+    font-size: 0.82rem;
+    padding: 0.2rem 0.5rem;
+    border-radius: var(--bn-radius-sm);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .tag-bar-area {
+    display: flex;
+    align-items: center;
+    gap: var(--bn-space-xs);
+    min-width: 70px;
+    justify-content: flex-end;
+  }
+
+  /* ── Two-tone bar — right-aligned, tentative|accepted order ── */
+  /*
+     Layout: [pale tentative][solid accepted]  number
+     Right-aligned: solid bar hugs the number, pale extends left.
+     Total width ∝ (tentative + accepted).
+     A tag with 3 tentative + 1 accepted → bar is 4 units wide,
+     3/4 pale on left, 1/4 solid on right.
+  */
+  .bar-stack {
+    display: flex;
+    align-items: center;
+    height: 0.6rem;
+    /* Width set per-instance as inline style, proportional to total */
+  }
+  .bar-tentative {
+    height: 100%;
+    min-width: 0;
+    opacity: 0.28;
+    transition: width 0.2s ease;
+  }
+  .bar-accepted {
+    height: 100%;
+    min-width: 0;
+    transition: width 0.2s ease;
+  }
+
+  /* Rounding: left end of first segment, right end of last */
+  .bar-stack > :first-child {
+    border-radius: var(--bn-radius-sm) 0 0 var(--bn-radius-sm);
+  }
+  .bar-stack > :last-child {
+    border-radius: 0 var(--bn-radius-sm) var(--bn-radius-sm) 0;
+  }
+  .bar-stack > :only-child {
+    border-radius: var(--bn-radius-sm);
+  }
+
+  .tag-count {
+    font-size: 0.75rem;
+    color: var(--bn-colour-muted);
+    min-width: 16px;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+  }
+  .tag-count-zero {
+    color: oklch(75% 0 0);
+  }
+
+  /* ── Tag sidebar ── */
+  .tag-sidebar {
+    width: 260px;
+    background: white;
+    border-left: 1px solid var(--bn-colour-border);
+    padding: 1rem;
+  }
+  .sidebar-group-title {
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #888;
+    margin: 1rem 0 0.4rem;
+  }
+  .sidebar-group-title:first-child { margin-top: 0; }
+
+  .sidebar-tag-row {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 2px 0;
+    font-size: 0.78rem;
+  }
+  .sidebar-tag-name {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .sidebar-bar-area {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    min-width: 55px;
+    justify-content: flex-end;
+  }
+  .sidebar-bar-stack {
+    display: flex;
+    align-items: center;
+    height: 6px;
+  }
+  .sidebar-count {
+    font-size: 0.7rem;
+    color: var(--bn-colour-muted);
+    min-width: 14px;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* ── Tooltip ── */
+  [data-tooltip] {
+    position: relative;
+    cursor: default;
+  }
+  [data-tooltip]:hover::after {
+    content: attr(data-tooltip);
+    position: absolute;
+    bottom: calc(100% + 4px);
+    right: 0;
+    background: oklch(25% 0 0);
+    color: white;
+    font-size: 0.7rem;
+    padding: 0.25rem 0.5rem;
+    border-radius: var(--bn-radius-sm);
+    white-space: nowrap;
+    z-index: 10;
+    pointer-events: none;
+  }
+
+  /* ── Annotations ── */
+  .note {
+    font-size: 0.75rem;
+    color: #999;
+    margin-top: 0.5rem;
+    padding: 0.5rem 0.75rem;
+    background: oklch(97% 0 0);
+    border-radius: var(--bn-radius-sm);
+    border-left: 3px solid oklch(85% 0 0);
+    line-height: 1.5;
+  }
+
+  /* ── Legend ── */
+  .legend {
+    display: flex;
+    gap: 1.25rem;
+    margin-bottom: 1.5rem;
+    font-size: 0.78rem;
+    color: #666;
+  }
+  .legend-item { display: flex; align-items: center; gap: 0.4rem; }
+  .legend-swatch {
+    width: 20px;
+    height: 8px;
+    border-radius: 3px;
+  }
+  .legend-swatch-solid { background: var(--bn-bar-ux); }
+  .legend-swatch-pale { background: var(--bn-bar-ux); opacity: 0.28; }
+
+  /* ── Scenario labels ── */
+  .scenario-label {
+    font-size: 0.7rem;
+    color: #aaa;
+    margin-left: 8px;
+    font-style: italic;
+  }
+</style>
+</head>
+<body>
+
+<h1>Tentative + Accepted Bars — v2</h1>
+<p class="subtitle">
+  Bar order: <strong>[pale tentative | solid accepted] number</strong> — right-aligned.
+  Solid hugs the number. Pale extends left. Width = sum of both.
+</p>
+
+<div class="legend">
+  <div class="legend-item">
+    <span class="legend-swatch legend-swatch-pale"></span>
+    Tentative (pending proposals, left)
+  </div>
+  <div class="legend-item">
+    <span class="legend-swatch legend-swatch-solid"></span>
+    Accepted (committed, right, hugs number)
+  </div>
+</div>
+
+<div class="mockup-grid">
+
+  <!-- ════════════════════════════════════════════ -->
+  <!-- LEFT: Codebook cards                        -->
+  <!-- ════════════════════════════════════════════ -->
+  <div>
+    <div class="section-title">Codebook panel (cards)</div>
+
+    <!-- Choice and decision — max total in group is 6 (decision simplicity: 1a+5t) -->
+    <div class="codebook-card" style="background: var(--bn-group-ux);">
+      <div class="card-header">
+        <div>
+          <div class="card-title">Choice and decision</div>
+          <div class="card-subtitle">Can the user choose without freezing?</div>
+        </div>
+        <div class="card-total">TOTAL 3</div>
+      </div>
+
+      <!-- choice paralysis: 1 tentative + 1 accepted = 2 total.  Bar: 33% wide (2/6) -->
+      <div class="tag-row">
+        <div class="tag-name-area">
+          <span class="badge" style="background: var(--bn-ux-1-bg);">Hick: choice paralysis</span>
+        </div>
+        <div class="tag-bar-area">
+          <div class="bar-stack" style="width: 33%;" data-tooltip="1 tentative + 1 accepted">
+            <span class="bar-tentative" style="width: 50%; background: var(--bn-bar-ux);"></span>
+            <span class="bar-accepted" style="width: 50%; background: var(--bn-bar-ux);"></span>
+          </div>
+          <span class="tag-count">1</span>
+        </div>
+      </div>
+
+      <!-- decision simplicity: 5 tentative + 1 accepted = 6 total.  Bar: 100% wide (6/6) -->
+      <div class="tag-row">
+        <div class="tag-name-area">
+          <span class="badge" style="background: var(--bn-ux-2-bg);">Hick: decision simplicity</span>
+        </div>
+        <div class="tag-bar-area">
+          <div class="bar-stack" style="width: 100%;" data-tooltip="5 tentative + 1 accepted">
+            <span class="bar-tentative" style="width: 83%; background: var(--bn-bar-ux);"></span>
+            <span class="bar-accepted" style="width: 17%; background: var(--bn-bar-ux);"></span>
+          </div>
+          <span class="tag-count">1</span>
+        </div>
+      </div>
+
+      <!-- option salience: 1 tentative + 2 accepted = 3 total.  Bar: 50% wide (3/6) -->
+      <div class="tag-row">
+        <div class="tag-name-area">
+          <span class="badge" style="background: var(--bn-ux-3-bg);">Von Restorff: option salience</span>
+        </div>
+        <div class="tag-bar-area">
+          <div class="bar-stack" style="width: 50%;" data-tooltip="1 tentative + 2 accepted">
+            <span class="bar-tentative" style="width: 33%; background: var(--bn-bar-ux);"></span>
+            <span class="bar-accepted" style="width: 67%; background: var(--bn-bar-ux);"></span>
+          </div>
+          <span class="tag-count">2</span>
+        </div>
+      </div>
+
+      <!-- default acceptance: 5 tentative + 0 accepted = 5 total.  Bar: 83% wide (5/6) -->
+      <div class="tag-row">
+        <div class="tag-name-area">
+          <span class="badge" style="background: var(--bn-ux-4-bg);">default acceptance</span>
+        </div>
+        <div class="tag-bar-area">
+          <div class="bar-stack" style="width: 83%;" data-tooltip="5 tentative + 0 accepted">
+            <span class="bar-tentative" style="width: 100%; background: var(--bn-bar-ux);"></span>
+          </div>
+          <span class="tag-count tag-count-zero">0</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Memory and experience — max total is 6 (peak moment: 0a+6t) -->
+    <div class="codebook-card" style="background: var(--bn-group-emo);">
+      <div class="card-header">
+        <div>
+          <div class="card-title">Memory and experience</div>
+          <div class="card-subtitle">What moments stick, and what pulls them back?</div>
+        </div>
+        <div class="card-total">TOTAL 0</div>
+      </div>
+
+      <!-- peak moment: 6 tentative + 0 accepted = 6. Bar: 100% -->
+      <div class="tag-row">
+        <div class="tag-name-area">
+          <span class="badge" style="background: var(--bn-emo-1-bg);">Kahneman: peak moment</span>
+        </div>
+        <div class="tag-bar-area">
+          <div class="bar-stack" style="width: 100%;" data-tooltip="6 tentative + 0 accepted">
+            <span class="bar-tentative" style="width: 100%; background: var(--bn-bar-emo);"></span>
+          </div>
+          <span class="tag-count tag-count-zero">0</span>
+        </div>
+      </div>
+
+      <!-- ending effect: 0 + 0 = nothing -->
+      <div class="tag-row">
+        <div class="tag-name-area">
+          <span class="badge" style="background: var(--bn-emo-2-bg);">Kahneman: ending effect</span>
+        </div>
+        <div class="tag-bar-area">
+          <span class="tag-count tag-count-zero">0</span>
+        </div>
+      </div>
+
+      <!-- Zeigarnik: 0 + 0 -->
+      <div class="tag-row">
+        <div class="tag-name-area">
+          <span class="badge" style="background: var(--bn-emo-3-bg);">Zeigarnik: unfinished pull</span>
+        </div>
+        <div class="tag-bar-area">
+          <span class="tag-count tag-count-zero">0</span>
+        </div>
+      </div>
+
+      <!-- Hull: 0 + 0 -->
+      <div class="tag-row">
+        <div class="tag-name-area">
+          <span class="badge" style="background: var(--bn-emo-4-bg);">Hull: completion momentum</span>
+        </div>
+        <div class="tag-bar-area">
+          <span class="tag-count tag-count-zero">0</span>
+        </div>
+      </div>
+
+      <!-- memory overload: 0 + 0 -->
+      <div class="tag-row">
+        <div class="tag-name-area">
+          <span class="badge" style="background: var(--bn-emo-5-bg);">memory overload</span>
+        </div>
+        <div class="tag-bar-area">
+          <span class="tag-count tag-count-zero">0</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Effort and complexity — max total is 2 (cognitive overload: 0a+2t) -->
+    <div class="codebook-card" style="background: var(--bn-group-task);">
+      <div class="card-header">
+        <div>
+          <div class="card-title">Effort and complexity</div>
+          <div class="card-subtitle">Who does the hard work — the user or the system?</div>
+        </div>
+        <div class="card-total">TOTAL 0</div>
+      </div>
+
+      <!-- complexity burden: 0 + 0 -->
+      <div class="tag-row">
+        <div class="tag-name-area">
+          <span class="badge" style="background: var(--bn-task-1-bg);">Tesler: complexity burden</span>
+        </div>
+        <div class="tag-bar-area">
+          <span class="tag-count tag-count-zero">0</span>
+        </div>
+      </div>
+
+      <!-- complexity absorbed: 1 tentative + 0 accepted = 1. Bar: 50% (1/2) -->
+      <div class="tag-row">
+        <div class="tag-name-area">
+          <span class="badge" style="background: var(--bn-task-2-bg);">Tesler: complexity absorbed</span>
+        </div>
+        <div class="tag-bar-area">
+          <div class="bar-stack" style="width: 50%;" data-tooltip="1 tentative + 0 accepted">
+            <span class="bar-tentative" style="width: 100%; background: var(--bn-bar-task);"></span>
+          </div>
+          <span class="tag-count tag-count-zero">0</span>
+        </div>
+      </div>
+
+      <!-- cognitive overload: 2 tentative + 0 accepted = 2. Bar: 100% (2/2) -->
+      <div class="tag-row">
+        <div class="tag-name-area">
+          <span class="badge" style="background: var(--bn-task-3-bg);">cognitive overload</span>
+        </div>
+        <div class="tag-bar-area">
+          <div class="bar-stack" style="width: 100%;" data-tooltip="2 tentative + 0 accepted">
+            <span class="bar-tentative" style="width: 100%; background: var(--bn-bar-task);"></span>
+          </div>
+          <span class="tag-count tag-count-zero">0</span>
+        </div>
+      </div>
+
+      <!-- Fitts: 0 + 0 -->
+      <div class="tag-row">
+        <div class="tag-name-area">
+          <span class="badge" style="background: var(--bn-task-1-bg);">Fitts: target difficulty</span>
+        </div>
+        <div class="tag-bar-area">
+          <span class="tag-count tag-count-zero">0</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Speed — no proposals at all -->
+    <div class="codebook-card" style="background: var(--bn-group-opp);">
+      <div class="card-header">
+        <div>
+          <div class="card-title">Speed and responsiveness</div>
+          <div class="card-subtitle">Is the system fast enough to stay out of the way?</div>
+        </div>
+        <div class="card-total">TOTAL 0</div>
+      </div>
+
+      <div class="tag-row">
+        <div class="tag-name-area">
+          <span class="badge" style="background: var(--bn-opp-1-bg);">Doherty: instant response</span>
+        </div>
+        <div class="tag-bar-area">
+          <span class="tag-count tag-count-zero">0</span>
+        </div>
+      </div>
+
+      <div class="tag-row">
+        <div class="tag-name-area">
+          <span class="badge" style="background: var(--bn-opp-2-bg);">Doherty: waiting frustration</span>
+        </div>
+        <div class="tag-bar-area">
+          <span class="tag-count tag-count-zero">0</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="note">
+      <strong>v2 changes:</strong> Bar order is now [tentative | accepted] → number.
+      Solid accepted segment hugs the number on the right. Pale tentative extends
+      leftward. Total bar width = tentative + accepted (proportional to group max).
+      Tooltip shows breakdown. Number = accepted only.<br><br>
+      <strong>Signal:</strong> Compare "Memory and experience" (one fat pale bar on peak moment,
+      rest dark) with "Speed and responsiveness" (nothing at all). The pale bars say
+      "autocode found signal here — go triage." No bar at all = "nothing in this dataset."
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════════════ -->
+  <!-- RIGHT: Tag sidebar                          -->
+  <!-- ════════════════════════════════════════════ -->
+  <div>
+    <div class="section-title">Tag sidebar (navigator)</div>
+
+    <div class="tag-sidebar" style="border-left: none; width: 100%;">
+
+      <div class="sidebar-group-title">Choice and decision</div>
+
+      <!-- 1t + 1a = 2 -->
+      <div class="sidebar-tag-row">
+        <span class="sidebar-tag-name">Hick: choice paralysis</span>
+        <div class="sidebar-bar-area">
+          <div class="sidebar-bar-stack" style="width: 20px;" data-tooltip="1 tentative + 1 accepted">
+            <span class="bar-tentative" style="width: 50%; height: 100%; background: var(--bn-bar-ux); border-radius: 3px 0 0 3px;"></span>
+            <span class="bar-accepted" style="width: 50%; height: 100%; background: var(--bn-bar-ux); border-radius: 0 3px 3px 0;"></span>
+          </div>
+          <span class="sidebar-count">1</span>
+        </div>
+      </div>
+
+      <!-- 5t + 1a = 6 -->
+      <div class="sidebar-tag-row">
+        <span class="sidebar-tag-name">Hick: decision simplicity</span>
+        <div class="sidebar-bar-area">
+          <div class="sidebar-bar-stack" style="width: 36px;" data-tooltip="5 tentative + 1 accepted">
+            <span class="bar-tentative" style="width: 83%; height: 100%; background: var(--bn-bar-ux); border-radius: 3px 0 0 3px;"></span>
+            <span class="bar-accepted" style="width: 17%; height: 100%; background: var(--bn-bar-ux); border-radius: 0 3px 3px 0;"></span>
+          </div>
+          <span class="sidebar-count">1</span>
+        </div>
+      </div>
+
+      <!-- 1t + 2a = 3 -->
+      <div class="sidebar-tag-row">
+        <span class="sidebar-tag-name">Von Restorff: option salience</span>
+        <div class="sidebar-bar-area">
+          <div class="sidebar-bar-stack" style="width: 18px;" data-tooltip="1 tentative + 2 accepted">
+            <span class="bar-tentative" style="width: 33%; height: 100%; background: var(--bn-bar-ux); border-radius: 3px 0 0 3px;"></span>
+            <span class="bar-accepted" style="width: 67%; height: 100%; background: var(--bn-bar-ux); border-radius: 0 3px 3px 0;"></span>
+          </div>
+          <span class="sidebar-count">2</span>
+        </div>
+      </div>
+
+      <!-- 5t + 0a = 5 (tentative only) -->
+      <div class="sidebar-tag-row">
+        <span class="sidebar-tag-name">default acceptance</span>
+        <div class="sidebar-bar-area">
+          <div class="sidebar-bar-stack" style="width: 30px;" data-tooltip="5 tentative + 0 accepted">
+            <span class="bar-tentative" style="width: 100%; height: 100%; background: var(--bn-bar-ux); border-radius: 3px;"></span>
+          </div>
+          <span class="sidebar-count" style="color: oklch(75% 0 0);">0</span>
+        </div>
+      </div>
+
+      <div class="sidebar-group-title">Memory and experience</div>
+
+      <!-- 6t + 0a -->
+      <div class="sidebar-tag-row">
+        <span class="sidebar-tag-name">Kahneman: peak moment</span>
+        <div class="sidebar-bar-area">
+          <div class="sidebar-bar-stack" style="width: 36px;" data-tooltip="6 tentative + 0 accepted">
+            <span class="bar-tentative" style="width: 100%; height: 100%; background: var(--bn-bar-emo); border-radius: 3px;"></span>
+          </div>
+          <span class="sidebar-count" style="color: oklch(75% 0 0);">0</span>
+        </div>
+      </div>
+
+      <!-- 0 + 0 -->
+      <div class="sidebar-tag-row">
+        <span class="sidebar-tag-name">Kahneman: ending effect</span>
+        <div class="sidebar-bar-area">
+          <span class="sidebar-count" style="color: oklch(75% 0 0);">0</span>
+        </div>
+      </div>
+
+      <!-- 0 + 0 -->
+      <div class="sidebar-tag-row">
+        <span class="sidebar-tag-name">Zeigarnik: unfinished pull</span>
+        <div class="sidebar-bar-area">
+          <span class="sidebar-count" style="color: oklch(75% 0 0);">0</span>
+        </div>
+      </div>
+
+      <!-- 0 + 0 -->
+      <div class="sidebar-tag-row">
+        <span class="sidebar-tag-name">Hull: completion momentum</span>
+        <div class="sidebar-bar-area">
+          <span class="sidebar-count" style="color: oklch(75% 0 0);">0</span>
+        </div>
+      </div>
+
+      <div class="sidebar-group-title">Effort and complexity</div>
+
+      <!-- 0 + 0 -->
+      <div class="sidebar-tag-row">
+        <span class="sidebar-tag-name">Tesler: complexity burden</span>
+        <div class="sidebar-bar-area">
+          <span class="sidebar-count" style="color: oklch(75% 0 0);">0</span>
+        </div>
+      </div>
+
+      <!-- 1t + 0a -->
+      <div class="sidebar-tag-row">
+        <span class="sidebar-tag-name">Tesler: complexity absorbed</span>
+        <div class="sidebar-bar-area">
+          <div class="sidebar-bar-stack" style="width: 6px;" data-tooltip="1 tentative + 0 accepted">
+            <span class="bar-tentative" style="width: 100%; height: 100%; background: var(--bn-bar-task); border-radius: 3px;"></span>
+          </div>
+          <span class="sidebar-count" style="color: oklch(75% 0 0);">0</span>
+        </div>
+      </div>
+
+      <!-- 2t + 0a -->
+      <div class="sidebar-tag-row">
+        <span class="sidebar-tag-name">cognitive overload</span>
+        <div class="sidebar-bar-area">
+          <div class="sidebar-bar-stack" style="width: 12px;" data-tooltip="2 tentative + 0 accepted">
+            <span class="bar-tentative" style="width: 100%; height: 100%; background: var(--bn-bar-task); border-radius: 3px;"></span>
+          </div>
+          <span class="sidebar-count" style="color: oklch(75% 0 0);">0</span>
+        </div>
+      </div>
+
+      <div class="sidebar-group-title">Speed and responsiveness</div>
+
+      <!-- 0 + 0 -->
+      <div class="sidebar-tag-row">
+        <span class="sidebar-tag-name">Doherty: instant response</span>
+        <div class="sidebar-bar-area">
+          <span class="sidebar-count" style="color: oklch(75% 0 0);">0</span>
+        </div>
+      </div>
+
+      <!-- 0 + 0 -->
+      <div class="sidebar-tag-row">
+        <span class="sidebar-tag-name">Doherty: waiting frustration</span>
+        <div class="sidebar-bar-area">
+          <span class="sidebar-count" style="color: oklch(75% 0 0);">0</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="note" style="margin-top: 1rem;">
+      <strong>Sidebar same logic:</strong> pale bar extends left from the solid bar.
+      Solid hugs the number. Hover tooltip shows "N tentative + N accepted".<br><br>
+      <strong>TODO:</strong> Tooltip on hover showing breakdown (e.g. "5 tentative + 1 accepted").
+      Possibly later: a richer tooltip or popover with the fraction.
+    </div>
+  </div>
+
+</div>
+
+<h2>Reading the bars</h2>
+<div style="max-width: 650px; display: flex; flex-direction: column; gap: 0.5rem;">
+
+  <!-- Example rows showing different states -->
+  <div style="display: grid; grid-template-columns: 180px 1fr; align-items: center; gap: 1rem; padding: 0.5rem; background: white; border-radius: 6px;">
+    <span style="font-size: 0.8rem; color: #666;">0 tentative, 0 accepted</span>
+    <div style="display: flex; align-items: center; gap: 6px; justify-content: flex-end;">
+      <span style="font-size: 0.75rem; color: oklch(75% 0 0);">0</span>
+    </div>
+  </div>
+
+  <div style="display: grid; grid-template-columns: 180px 1fr; align-items: center; gap: 1rem; padding: 0.5rem; background: white; border-radius: 6px;">
+    <span style="font-size: 0.8rem; color: #666;">3 tentative, 0 accepted</span>
+    <div style="display: flex; align-items: center; gap: 6px; justify-content: flex-end;">
+      <div style="display: flex; height: 8px; width: 36px;">
+        <span style="width: 100%; height: 100%; background: var(--bn-bar-ux); opacity: 0.28; border-radius: 3px;"></span>
+      </div>
+      <span style="font-size: 0.75rem; color: oklch(75% 0 0);">0</span>
+    </div>
+  </div>
+
+  <div style="display: grid; grid-template-columns: 180px 1fr; align-items: center; gap: 1rem; padding: 0.5rem; background: white; border-radius: 6px;">
+    <span style="font-size: 0.8rem; color: #666;">3 tentative, 1 accepted</span>
+    <div style="display: flex; align-items: center; gap: 6px; justify-content: flex-end;">
+      <div style="display: flex; height: 8px; width: 48px;">
+        <span style="width: 75%; height: 100%; background: var(--bn-bar-ux); opacity: 0.28; border-radius: 3px 0 0 3px;"></span>
+        <span style="width: 25%; height: 100%; background: var(--bn-bar-ux); border-radius: 0 3px 3px 0;"></span>
+      </div>
+      <span style="font-size: 0.75rem; color: var(--bn-colour-muted);">1</span>
+    </div>
+  </div>
+
+  <div style="display: grid; grid-template-columns: 180px 1fr; align-items: center; gap: 1rem; padding: 0.5rem; background: white; border-radius: 6px;">
+    <span style="font-size: 0.8rem; color: #666;">2 tentative, 4 accepted</span>
+    <div style="display: flex; align-items: center; gap: 6px; justify-content: flex-end;">
+      <div style="display: flex; height: 8px; width: 72px;">
+        <span style="width: 33%; height: 100%; background: var(--bn-bar-ux); opacity: 0.28; border-radius: 3px 0 0 3px;"></span>
+        <span style="width: 67%; height: 100%; background: var(--bn-bar-ux); border-radius: 0 3px 3px 0;"></span>
+      </div>
+      <span style="font-size: 0.75rem; color: var(--bn-colour-muted);">4</span>
+    </div>
+  </div>
+
+  <div style="display: grid; grid-template-columns: 180px 1fr; align-items: center; gap: 1rem; padding: 0.5rem; background: white; border-radius: 6px;">
+    <span style="font-size: 0.8rem; color: #666;">0 tentative, 6 accepted</span>
+    <div style="display: flex; align-items: center; gap: 6px; justify-content: flex-end;">
+      <div style="display: flex; height: 8px; width: 72px;">
+        <span style="width: 100%; height: 100%; background: var(--bn-bar-ux); border-radius: 3px;"></span>
+      </div>
+      <span style="font-size: 0.75rem; color: var(--bn-colour-muted);">6</span>
+    </div>
+  </div>
+
+</div>
+
+<div class="note" style="max-width: 650px; margin-top: 1rem;">
+  <strong>Progression story:</strong><br>
+  Before autocode → all solid (or empty). Same as today.<br>
+  After autocode → pale bars appear. "Go triage."<br>
+  During triage → solid grows rightward, pale shrinks leftward. Satisfying.<br>
+  After triage → all solid again. Clean.<br><br>
+  <strong>TODO:</strong> Tooltip on bar hover showing "N tentative + N accepted" breakdown.
+</div>
+
+</body>
+</html>

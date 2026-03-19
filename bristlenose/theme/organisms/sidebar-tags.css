@@ -280,8 +280,17 @@
 
 .tag-sidebar .tag-micro-bar {
     height: 0.6rem;
-    border-radius: 0 var(--bn-radius-sm) var(--bn-radius-sm) 0;
+    border-radius: var(--bn-radius-sm);
     min-width: 2px;
+    transition: width var(--bn-transition-normal);
+}
+/* Two-tone stacked bar inherits from codebook-panel.css;
+   sidebar only overrides transition timing. */
+.tag-sidebar .tag-micro-bar-stack {
+    transition: width var(--bn-transition-normal);
+}
+.tag-sidebar .tag-micro-bar-tentative,
+.tag-sidebar .tag-micro-bar-accepted {
     transition: width var(--bn-transition-normal);
 }
 

@@ -33,6 +33,7 @@ class CodebookTagOut(BaseModel):
     id: int
     name: str
     count: int
+    tentative_count: int = 0
     colour_index: int
 
 
@@ -106,6 +107,22 @@ def _tag_quote_counts(db: Session, tag_ids: list[int]) -> dict[int, int]:
         db.query(QuoteTag.tag_definition_id, func.count(QuoteTag.id))
         .filter(QuoteTag.tag_definition_id.in_(tag_ids))
         .group_by(QuoteTag.tag_definition_id)
+        .all()
+    )
+    return {tid: cnt for tid, cnt in rows}
+
+
+def _tag_tentative_counts(db: Session, tag_ids: list[int]) -> dict[int, int]:
+    """Return {tag_definition_id: pending_proposal_count} for the given tag IDs."""
+    if not tag_ids:
+        return {}
+    rows = (
+        db.query(ProposedTag.tag_definition_id, func.count(ProposedTag.id))
+        .filter(
+            ProposedTag.tag_definition_id.in_(tag_ids),
+            ProposedTag.status == "pending",
+        )
+        .group_by(ProposedTag.tag_definition_id)
         .all()
     )
     return {tid: cnt for tid, cnt in rows}
@@ -192,8 +209,9 @@ def get_codebook(project_id: int, request: Request) -> CodebookResponse:
                 for td in g.tag_definitions:
                     all_tag_ids.append(td.id)
 
-        # Get quote counts per tag (single query)
+        # Get quote counts and tentative (pending proposal) counts per tag
         counts = _tag_quote_counts(db, all_tag_ids)
+        tentative_counts = _tag_tentative_counts(db, all_tag_ids)
 
         # Build response — Uncategorised is included as a regular group
         # with is_default=True, rendered last.
@@ -207,8 +225,10 @@ def get_codebook(project_id: int, request: Request) -> CodebookResponse:
             seen_quotes: set[int] = set()
             for i, td in enumerate(g.tag_definitions):
                 tag_count = counts.get(td.id, 0)
+                tag_tentative = tentative_counts.get(td.id, 0)
                 tags_out.append(CodebookTagOut(
-                    id=td.id, name=td.name, count=tag_count, colour_index=i,
+                    id=td.id, name=td.name, count=tag_count,
+                    tentative_count=tag_tentative, colour_index=i,
                 ))
                 all_tag_names.append(td.name)
                 qt_rows = (

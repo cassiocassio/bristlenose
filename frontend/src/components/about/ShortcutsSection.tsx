@@ -62,6 +62,7 @@ const SECTIONS: { title: string; shortcuts: Shortcut[] }[] = [
       // TODO: ⌘, is intercepted by the browser (opens Safari/Chrome prefs).
       // Uncomment for desktop app where the shortcut works natively.
       // { keys: [{ modifier: "cmd", key: "," }], description: "Settings" },
+      { keys: [{ key: "m" }], description: "Toggle heatmap" },
       { keys: [{ key: "?" }], description: "This help" },
       { keys: [{ key: "Esc" }], description: "Close / clear" },
     ],

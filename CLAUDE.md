@@ -146,6 +146,7 @@ macOS ships BSD versions of `sed`, `grep`, `awk`, `find`, `xargs`, `date`, `stat
 - **Academic sources for analysis categories**: `docs/academic-sources.html` — theoretical foundations (emotion science, UX research, trust/credibility) behind quote tagging and sentiment analysis. **Update this file when investigating theories behind any Bristlenose features.**
 - **Analysis page** (signal concentration, metrics, rendering): `docs/BRANCHES.md` → `analysis` section — architecture, design decisions, file list, test coverage
 - **Analysis page future** (two-pane vision, grid-as-selector, user-tag grid, backlog): `docs/design-analysis-future.md`
+- **Inspector panel** (bottom heatmap panel, DevTools metaphor, drag-resize, card↔matrix sync): `docs/design-inspector-panel.md` — design exploration (3 mockup iterations), interaction spec, implementation prompt. **Read this before working on the analysis tab inspector panel**
 - **Finding weight** (signal direction, valence clarity, tag interpretability tiers, finding archetypes): `docs/design-finding-weight.md` — problem-space exploration for surfacing wins vs problems vs patterns in Analysis tab
 - **Quote sequences** (consecutive quote detection, segment ordinals, threshold tuning): `docs/design-quote-sequences.md`
 - **Dashboard stats** (inventory of unused pipeline data, improvement priorities): `docs/design-dashboard-stats.md`

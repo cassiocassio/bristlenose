@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Global Left Sidebar — All Tabs v7 (Design Mockup)</title>
+<title>Global Left Sidebar — All Tabs v5 (Design Mockup)</title>
 
 <!-- ═══════════════════════════════════════════════════════════════
      PRODUCTION STYLESHEETS — linked, not copied.
@@ -21,7 +21,7 @@
 
 <style>
 /* ================================================================
-   GLOBAL LEFT SIDEBAR — DESIGN MOCKUP v7
+   GLOBAL LEFT SIDEBAR — DESIGN MOCKUP v5
    ================================================================
    Production CSS linked above provides:
    - tokens.css: all --bn-* custom properties
@@ -372,69 +372,50 @@ body {
    v5 replaced group-level entries with codebook-level .toc-link.
    See sidebar-all-tabs-v4.html for the original.                  */
 
-/* ── NEW: not-imported .toc-link (clickable but muted) ────────────
-   Muted text, reduced opacity. Still clickable — scrolls to the
-   framework browser in CodebookPanel so the user can import.       */
+/* ── NEW: disabled .toc-link (not-imported codebook) ─────────────
+   Grey, non-interactive. Used for codebooks not yet imported.      */
 
-.toc-link.not-imported {
+.toc-link.disabled {
     color: var(--bn-colour-muted);
+    pointer-events: none;
     opacity: 0.5;
 }
 
-.toc-link.not-imported:hover {
-    opacity: 1;
-    color: var(--bn-colour-accent);
-    background: var(--bn-colour-hover);
-}
+/* ── NEW: .toc-sub-heading — lighter sub-heading within a section
+   Used for Section / Theme sub-groups under Sentiment.             */
 
-/* ── NEW: sidebar mini button — compact action at bottom of a list ──
-   Reuses .bn-btn base from modal.css. Smaller padding + font-size
-   to fit sidebar context. Used for "Browse codebooks" CTA.            */
-
-.sidebar-mini-btn {
-    display: inline-flex;
-    align-items: center;
-    gap: var(--bn-space-xs);
-    font-family: inherit;
+.toc-sub-heading {
     font-size: var(--bn-text-caption);
     font-weight: var(--bn-weight-emphasis);
-    padding: var(--bn-space-xs) var(--bn-space-sm);
-    border-radius: var(--bn-radius-sm);
-    border: 1px solid var(--bn-colour-border);
-    background: var(--bn-colour-bg);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
     color: var(--bn-colour-muted);
-    cursor: pointer;
-    transition: background var(--bn-transition-fast), color var(--bn-transition-fast), border-color var(--bn-transition-fast);
-    margin: var(--bn-space-xs) var(--bn-space-sm);
+    padding: var(--bn-space-xs) var(--bn-space-sm) 0;
+    margin-top: var(--bn-space-xs);
 }
 
-.sidebar-mini-btn:hover {
-    background: var(--bn-colour-hover);
-    color: var(--bn-colour-accent);
-    border-color: var(--bn-colour-border-hover);
-}
-
-/* Hint text below a heading — discovery path for empty states */
-.toc-hint {
-    font-size: var(--bn-text-caption);
-    color: var(--bn-colour-muted);
-    padding: 0 var(--bn-space-sm);
-    cursor: pointer;
-}
-.toc-hint:hover { text-decoration: underline; }
-
-/* ── NEW: signal-entry — extends .toc-link with flex for badge ───
-   Badge + signal name + signal strength on the same line.
-   Apply as class="toc-link signal-entry" to get focus-visible
-   and hover/active behaviour from .toc-link for free.              */
+/* ── NEW: signal-entry — .toc-link variant with inline badge ─────
+   Signal name + sentiment/group badge on the same line.
+   Badge is a small inline token, not full-width.                   */
 
 .signal-entry {
     display: flex;
     align-items: baseline;
     gap: var(--bn-space-sm);
+    padding: var(--bn-space-sm);
+    border-radius: var(--bn-radius-sm);
+    cursor: pointer;
+    transition: background var(--bn-transition-fast);
+    text-decoration: none;
+    color: var(--bn-colour-text);
 }
 
+.signal-entry:hover { background: var(--bn-colour-hover); }
+.signal-entry.active { background: var(--bn-colour-hover); }
+
 .signal-entry-name {
+    font-size: var(--bn-text-body-sm);
+    font-weight: var(--bn-weight-light);
     flex: 1;
     min-width: 0;
     overflow: hidden;
@@ -442,31 +423,15 @@ body {
     white-space: nowrap;
 }
 
-/* Inline badge within signal entry — slightly smaller */
+.signal-entry.active .signal-entry-name {
+    font-weight: var(--bn-weight-emphasis);
+    color: var(--bn-colour-accent);
+}
+
+/* Inline badge within signal entry — smaller than standalone badge */
 .signal-entry .badge {
     flex-shrink: 0;
-    font-size: var(--bn-text-caption);
-}
-
-/* ── NEW: signal-badge — fixed-width square single-letter badge ──
-   Shows first letter of sentiment/group as a compact colour hint.
-   Tooltip (title attr) reveals the full name on hover.
-   Fixed width makes all badges the same size for visual alignment. */
-
-.signal-badge {
-    width: 1.4em;
-    text-align: center;
-    padding-left: 0;
-    padding-right: 0;
-}
-
-/* Signal strength composite metric (0–1) — right-aligned */
-.signal-entry-strength {
-    font-size: var(--bn-text-caption);
-    font-family: var(--bn-font-mono);
-    color: var(--bn-colour-muted);
-    font-variant-numeric: tabular-nums;
-    flex-shrink: 0;
+    font-size: 0.65rem;
 }
 
 </style>
@@ -475,8 +440,8 @@ body {
 
 <button class="theme-toggle" onclick="document.documentElement.dataset.theme = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark'">Toggle dark mode</button>
 
-<h1 style="font-size: var(--bn-text-title); font-weight: var(--bn-weight-strong); margin-bottom: var(--bn-space-sm);">Global Left Sidebar — All Tabs v7</h1>
-<p style="font-size: var(--bn-text-body); color: var(--bn-colour-muted); margin-bottom: var(--bn-space-xl);">v7: Codebook counts removed, not-imported links get accent hover + browse button. Analysis: signal strength replaces quote counts, single-letter square badges with tooltips. <a href="sidebar-all-tabs-v6.html" style="color: var(--bn-colour-accent);">v6</a> · <a href="sidebar-all-tabs-v5.html" style="color: var(--bn-colour-accent);">v5</a> · <a href="sidebar-all-tabs-v4.html" style="color: var(--bn-colour-accent);">v4</a> · <a href="sidebar-all-tabs-v3.html" style="color: var(--bn-colour-accent);">v3</a> · <a href="sidebar-all-tabs-v2.html" style="color: var(--bn-colour-accent);">v2</a> · <a href="sidebar-all-tabs-v1.html" style="color: var(--bn-colour-accent);">v1</a></p>
+<h1 style="font-size: var(--bn-text-title); font-weight: var(--bn-weight-strong); margin-bottom: var(--bn-space-sm);">Global Left Sidebar — All Tabs v5</h1>
+<p style="font-size: var(--bn-text-body); color: var(--bn-colour-muted); margin-bottom: var(--bn-space-xl);">v5: Codebook sidebar now codebook-level (not group-level). Analysis sidebar is signal entry list (not mini cards). <a href="sidebar-all-tabs-v4.html" style="color: var(--bn-colour-accent);">v4</a> · <a href="sidebar-all-tabs-v3.html" style="color: var(--bn-colour-accent);">v3</a> · <a href="sidebar-all-tabs-v2.html" style="color: var(--bn-colour-accent);">v2</a> · <a href="sidebar-all-tabs-v1.html" style="color: var(--bn-colour-accent);">v1</a></p>
 
 <div class="mockup-row">
 
@@ -714,14 +679,12 @@ body {
     </div>
 </div>
 
-<!-- ii. CODEBOOK — codebook-level navigation (v7)
+<!-- ii. CODEBOOK — codebook-level navigation (v5)
      One entry per codebook (not per group). Three sections:
-     Your tags (project), Built-in (Bristlenose), Frameworks (academic).
-     Not-imported codebooks are muted but clickable (scroll to browser).
-     No counts — main content area already shows tag metrics.
-     Production: .sidebar-header, .sidebar-close, .toc-sidebar-body,
-                 .toc-heading, .toc-link
-     New: .toc-link.not-imported (accent hover), .sidebar-mini-btn     -->
+     Project (user tags), Bristlenose (built-in), Frameworks (academic).
+     Grey disabled links for codebooks not yet imported.
+     Production: .sidebar-header, .sidebar-close, .toc-sidebar-body, .toc-heading, .toc-link
+     New: .toc-link.disabled                                          -->
 <div class="mockup-column">
     <span class="mockup-label">ii. Codebook</span>
     <div class="sidebar-panel" data-width-badge>
@@ -730,33 +693,30 @@ body {
             <span class="sidebar-title">Codebooks</span>
         </div>
         <div class="toc-sidebar-body">
-            <div class="toc-heading">Your tags</div>
-            <a class="toc-link" href="#">Project Ikea</a>
+            <div class="toc-heading">Project</div>
+            <a class="toc-link active" href="#">Project Ikea</a>
 
-            <div class="toc-heading">Built-in</div>
-            <a class="toc-link active" href="#">Emotional &amp; Cognitive Signals</a>
+            <div class="toc-heading">Bristlenose</div>
+            <a class="toc-link" href="#">Emotional &amp; Cognitive Signals</a>
             <a class="toc-link" href="#">Bristlenose UXR Codebook</a>
 
             <div class="toc-heading">Frameworks</div>
             <a class="toc-link" href="#">The User Experience Honeycomb</a>
-            <a class="toc-link not-imported" href="#">The Elements of User Experience</a>
-            <a class="toc-link not-imported" href="#">The Design of Everyday Things</a>
-            <a class="toc-link not-imported" href="#">Platonic Ontology &amp; Epistemology</a>
-            <button class="sidebar-mini-btn" type="button">Browse codebooks &rarr;</button>
+            <a class="toc-link disabled" href="#">The Elements of User Experience</a>
+            <a class="toc-link disabled" href="#">The Design of Everyday Things</a>
+            <a class="toc-link disabled" href="#">Platonic Ontology &amp; Epistemology</a>
         </div>
         <div class="width-badge">280px</div>
     </div>
 </div>
 
-<!-- iii. ANALYSIS — signal entry list (v7)
-     Badge-first layout — single lowercase letter in fixed-width square
-     badge with tooltip for full sentiment/group name. Signal strength
-     composite metric (0–1) replaces quote counts.
-     .signal-entry extends .toc-link (class="toc-link signal-entry").
+<!-- iii. ANALYSIS — signal entry list (v5)
+     Signal names with inline sentiment/group badges.
+     Sentiment split by Section / Theme sub-headings.
+     Codebook tags in flat list.
      Production: .sidebar-header, .sidebar-close, .toc-sidebar-body,
-                 .toc-heading, .toc-link, .badge, .badge-{sentiment}
-     New: .signal-entry, .signal-entry-name, .signal-entry-strength,
-          .signal-badge (fixed-width square letter badge)               -->
+                 .toc-heading, .badge, .badge-{sentiment}
+     New: .toc-sub-heading, .signal-entry, .signal-entry-name        -->
 <div class="mockup-column">
     <span class="mockup-label">iii. Analysis</span>
     <div class="sidebar-panel" data-width-badge>
@@ -766,57 +726,51 @@ body {
         </div>
         <div class="toc-sidebar-body">
             <div class="toc-heading">Sentiment</div>
-            <a class="toc-link signal-entry active" href="#">
-                <span class="badge badge-delight signal-badge" title="delight">d</span>
+
+            <div class="toc-sub-heading">Section</div>
+            <a class="signal-entry active" href="#">
                 <span class="signal-entry-name">Surgery Messaging</span>
-                <span class="signal-entry-strength">0.42</span>
+                <span class="badge badge-delight">delight</span>
             </a>
-            <a class="toc-link signal-entry" href="#">
-                <span class="badge badge-frustration signal-badge" title="frustration">f</span>
+            <a class="signal-entry" href="#">
                 <span class="signal-entry-name">Homepage</span>
-                <span class="signal-entry-strength">0.38</span>
+                <span class="badge badge-frustration">frustration</span>
             </a>
-            <a class="toc-link signal-entry" href="#">
-                <span class="badge badge-delight signal-badge" title="delight">d</span>
+
+            <div class="toc-sub-heading">Theme</div>
+            <a class="signal-entry" href="#">
                 <span class="signal-entry-name">Brand perception and shopping preferences</span>
-                <span class="signal-entry-strength">0.31</span>
+                <span class="badge badge-delight">delight</span>
             </a>
-            <a class="toc-link signal-entry" href="#">
-                <span class="badge badge-satisfaction signal-badge" title="satisfaction">s</span>
+            <a class="signal-entry" href="#">
                 <span class="signal-entry-name">Surgery Information</span>
-                <span class="signal-entry-strength">0.27</span>
+                <span class="badge badge-satisfaction">satisfaction</span>
             </a>
-            <a class="toc-link signal-entry" href="#">
-                <span class="badge badge-frustration signal-badge" title="frustration">f</span>
+            <a class="signal-entry" href="#">
                 <span class="signal-entry-name">Healthcare system navigation struggles</span>
-                <span class="signal-entry-strength">0.24</span>
+                <span class="badge badge-frustration">frustration</span>
             </a>
 
             <div class="toc-heading">Codebook tags</div>
-            <a class="toc-link signal-entry" href="#">
-                <span class="badge signal-badge" style="background: var(--bn-emo-3-bg); color: var(--bn-set-emo-dot);" title="Emotion &amp; trust">e</span>
+            <a class="signal-entry" href="#">
                 <span class="signal-entry-name">Pre-surgery confidence</span>
-                <span class="signal-entry-strength">0.21</span>
+                <span class="badge" style="background: var(--bn-set-emo-bg); color: var(--bn-set-emo-dot);">Emotion &amp; trust</span>
             </a>
-            <a class="toc-link signal-entry" href="#">
-                <span class="badge signal-badge" style="background: var(--bn-task-3-bg); color: var(--bn-set-task-dot);" title="Behaviour">b</span>
+            <a class="signal-entry" href="#">
                 <span class="signal-entry-name">Scanning habit</span>
-                <span class="signal-entry-strength">0.18</span>
+                <span class="badge" style="background: var(--bn-set-task-bg); color: var(--bn-set-task-dot);">Behaviour</span>
             </a>
-            <a class="toc-link signal-entry" href="#">
-                <span class="badge badge-frustration signal-badge" title="frustration">f</span>
+            <a class="signal-entry" href="#">
                 <span class="signal-entry-name">Shopping bag tension</span>
-                <span class="signal-entry-strength">0.15</span>
+                <span class="badge badge-frustration">frustration</span>
             </a>
-            <a class="toc-link signal-entry" href="#">
-                <span class="badge signal-badge" style="background: var(--bn-task-3-bg); color: var(--bn-set-task-dot);" title="Behaviour">b</span>
+            <a class="signal-entry" href="#">
                 <span class="signal-entry-name">Navigation recovery</span>
-                <span class="signal-entry-strength">0.12</span>
+                <span class="badge" style="background: var(--bn-set-task-bg); color: var(--bn-set-task-dot);">Behaviour</span>
             </a>
-            <a class="toc-link signal-entry" href="#">
-                <span class="badge badge-frustration signal-badge" title="frustration">f</span>
+            <a class="signal-entry" href="#">
                 <span class="signal-entry-name">Checkout confusion</span>
-                <span class="signal-entry-strength">0.09</span>
+                <span class="badge badge-frustration">frustration</span>
             </a>
         </div>
         <div class="width-badge">280px</div>

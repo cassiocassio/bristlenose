@@ -17,6 +17,7 @@ import { FeedbackModal } from "../components/FeedbackModal";
 import { SettingsModal } from "../components/SettingsModal";
 import { SidebarLayout } from "../components/SidebarLayout";
 import { SessionsSidebar } from "../components/SessionsSidebar";
+import { CodebookSidebar } from "../components/CodebookSidebar";
 import { ExportDialog } from "../components/ExportDialog";
 import { ActivityChipStack } from "../components/ActivityChipStack";
 import type { ActivityJob } from "../components/ActivityChipStack";
@@ -70,8 +71,9 @@ function AppShell() {
   const isQuotes = useMatch("/report/quotes");
   const isSessions = useMatch("/report/sessions");
   const isTranscript = useMatch("/report/sessions/:sessionId");
+  const isCodebook = useMatch("/report/codebook");
   const isAnalysis = useMatch("/report/analysis");
-  const showSidebar = !!(isQuotes || isSessions || isTranscript);
+  const showSidebar = !!(isQuotes || isSessions || isTranscript || isCodebook);
   const isSessionsRoute = !!(isSessions || isTranscript);
   const toggleExport = useCallback(() => setExportOpen((prev) => !prev), []);
   const navigate = useNavigate();
@@ -129,8 +131,8 @@ function AppShell() {
   return (
     <SidebarLayout
       active={showSidebar}
-      leftPanel={isSessionsRoute ? <SessionsSidebar /> : undefined}
-      leftPanelTitle={isSessionsRoute ? "Sessions" : undefined}
+      leftPanel={isSessionsRoute ? <SessionsSidebar /> : isCodebook ? <CodebookSidebar /> : undefined}
+      leftPanelTitle={isSessionsRoute ? "Sessions" : isCodebook ? "Codebooks" : undefined}
       showRightSidebar={!!isQuotes}
     >
       <Header />

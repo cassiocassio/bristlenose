@@ -8,8 +8,7 @@ import {
   TagInput,
   ThresholdReviewModal,
 } from "../components";
-import { ActivityChipStack } from "../components/ActivityChipStack";
-import type { ActivityJob } from "../components/ActivityChipStack";
+import { addJob } from "../contexts/ActivityStore";
 import {
   createCodebookGroup,
   createCodebookTag,
@@ -22,7 +21,6 @@ import {
   importCodebookTemplate,
   mergeCodebookTags,
   removeCodebookFramework,
-  cancelAutoCode,
   startAutoCode,
   updateCodebookGroup,
   updateCodebookTag,
@@ -123,7 +121,8 @@ function TagRow({
     [tag, onMergeDrop],
   );
 
-  const barValue = maxCount > 0 ? tag.count / maxCount : 0;
+  const hasTentative = (tag.tentative_count ?? 0) > 0;
+  const barColour = getBarColour(colourSet);
 
   const classes = [
     "tag-row",
@@ -166,9 +165,16 @@ function TagRow({
         )}
       </div>
       <div className="tag-bar-area">
-        {tag.count > 0 && (
-          <MicroBar value={barValue} colour={getBarColour(colourSet)} />
-        )}
+        {hasTentative ? (
+          <MicroBar
+            value={maxCount > 0 ? tag.count / maxCount : 0}
+            tentativeValue={maxCount > 0 ? (tag.tentative_count ?? 0) / maxCount : 0}
+            colour={barColour}
+            title={`${tag.tentative_count ?? 0} tentative + ${tag.count} accepted`}
+          />
+        ) : tag.count > 0 ? (
+          <MicroBar value={maxCount > 0 ? tag.count / maxCount : 0} colour={barColour} />
+        ) : null}
         <span className="tag-count">{tag.count}</span>
       </div>
     </div>
@@ -255,7 +261,7 @@ function CodebookGroupColumn({
   const tagInputKey = useRef(0);
   const dragOverCount = useRef(0);
 
-  const maxCount = Math.max(1, ...group.tags.map((t) => t.count));
+  const maxCount = Math.max(1, ...group.tags.map((t) => t.count + (t.tentative_count ?? 0)));
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -379,9 +385,16 @@ function CodebookGroupColumn({
                 />
               </div>
               <div className="tag-bar-area">
-                {tag.count > 0 && (
+                {(tag.tentative_count ?? 0) > 0 ? (
+                  <MicroBar
+                    value={maxCount > 0 ? tag.count / maxCount : 0}
+                    tentativeValue={maxCount > 0 ? (tag.tentative_count ?? 0) / maxCount : 0}
+                    colour={getBarColour(group.colour_set)}
+                    title={`${tag.tentative_count ?? 0} tentative + ${tag.count} accepted`}
+                  />
+                ) : tag.count > 0 ? (
                   <MicroBar value={maxCount > 0 ? tag.count / maxCount : 0} colour={getBarColour(group.colour_set)} />
-                )}
+                ) : null}
                 <span className="tag-count">{tag.count}</span>
               </div>
             </div>
@@ -498,7 +511,6 @@ export function CodebookPanel({ projectId }: CodebookPanelProps) {
 
   // --- AutoCode state ---
   const [autoCodeStatus, setAutoCodeStatus] = useState<Record<string, AutoCodeJobStatus | null>>({});
-  const [activeJobs, setActiveJobs] = useState<Map<string, { frameworkId: string; frameworkTitle: string }>>(new Map());
   const [reportModal, setReportModal] = useState<{ frameworkId: string; frameworkTitle: string } | null>(null);
 
   // Fetch codebook data
@@ -511,6 +523,28 @@ export function CodebookPanel({ projectId }: CodebookPanelProps) {
   useEffect(() => {
     fetchData();
   }, [fetchData, projectId]);
+
+  // Re-fetch when a background AutoCode job completes (event dispatched by
+  // AppLayout's ActivityChipStack onComplete callback). Refreshes both codebook
+  // data (tag counts) and per-framework autocode status (button state).
+  useEffect(() => {
+    const handler = () => {
+      fetchData();
+      if (data) {
+        for (const g of data.groups) {
+          if (g.framework_id) {
+            getAutoCodeStatus(g.framework_id)
+              .then((status) =>
+                setAutoCodeStatus((prev) => ({ ...prev, [g.framework_id!]: status })),
+              )
+              .catch(() => {});
+          }
+        }
+      }
+    };
+    window.addEventListener("codebook-changed", handler);
+    return () => window.removeEventListener("codebook-changed", handler);
+  }, [fetchData, data]);
 
   // Re-fetch when the codebook tab becomes visible (covers the race where
   // vanilla JS PUT /tags hasn't finished when the panel first mounts).
@@ -547,15 +581,12 @@ export function CodebookPanel({ projectId }: CodebookPanelProps) {
       getAutoCodeStatus(fid)
         .then((status) => {
           setAutoCodeStatus((prev) => ({ ...prev, [fid]: status }));
-          // If a job is running, add it to active jobs for the chip stack.
+          // If a job is running, register it in the activity store so the
+          // chip stack (rendered in AppLayout) shows progress.
           if (status.status === "running") {
             const tmpl = templates?.find((t) => t.id === fid);
             const title = tmpl?.title ?? fid;
-            setActiveJobs((prev) => {
-              const next = new Map(prev);
-              next.set(`autocode:${fid}`, { frameworkId: fid, frameworkTitle: title });
-              return next;
-            });
+            addJob(`autocode:${fid}`, { frameworkId: fid, frameworkTitle: title });
           }
         })
         .catch(() => {
@@ -730,38 +761,13 @@ export function CodebookPanel({ projectId }: CodebookPanelProps) {
       startAutoCode(frameworkId)
         .then((status) => {
           setAutoCodeStatus((prev) => ({ ...prev, [frameworkId]: status }));
-          setActiveJobs((prev) => {
-            const next = new Map(prev);
-            next.set(`autocode:${frameworkId}`, { frameworkId, frameworkTitle });
-            return next;
-          });
+          addJob(`autocode:${frameworkId}`, { frameworkId, frameworkTitle });
         })
         .catch((err) => console.error("Start AutoCode failed:", err));
     },
     [],
   );
 
-  const handleAutoCodeComplete = useCallback(
-    (frameworkId: string) => {
-      // Refresh autocode status and codebook counts.
-      getAutoCodeStatus(frameworkId)
-        .then((status) => setAutoCodeStatus((prev) => ({ ...prev, [frameworkId]: status })))
-        .catch(() => {});
-      fetchData();
-    },
-    [fetchData],
-  );
-
-  const handleCancelAutoCode = useCallback(
-    (frameworkId: string) => {
-      cancelAutoCode(frameworkId)
-        .then((status) => {
-          setAutoCodeStatus((prev) => ({ ...prev, [frameworkId]: status }));
-        })
-        .catch((err) => console.error("Cancel AutoCode failed:", err));
-    },
-    [],
-  );
 
   const handleOpenReport = useCallback(
     (frameworkId: string, frameworkTitle: string) => {
@@ -988,27 +994,6 @@ export function CodebookPanel({ projectId }: CodebookPanelProps) {
           />
         </div>
       )}
-
-      {/* Activity chip stack — non-dismissable while running, persistent across tabs */}
-      <ActivityChipStack
-        jobs={Array.from(activeJobs.entries()).map(([id, j]): ActivityJob => ({
-          id,
-          label: `\u2726 AutoCoding ${j.frameworkTitle}`,
-          completedLabel: `\u2726 AutoCoded ${j.frameworkTitle}`,
-          frameworkId: j.frameworkId,
-          onComplete: () => handleAutoCodeComplete(j.frameworkId),
-          onAction: () => handleOpenReport(j.frameworkId, j.frameworkTitle),
-          actionLabel: "Report",
-          onCancel: () => handleCancelAutoCode(j.frameworkId),
-        }))}
-        onDismiss={(jobId) => {
-          setActiveJobs((prev) => {
-            const next = new Map(prev);
-            next.delete(jobId);
-            return next;
-          });
-        }}
-      />
 
       {/* AutoCode threshold review modal */}
       {reportModal && (

@@ -146,6 +146,7 @@ macOS ships BSD versions of `sed`, `grep`, `awk`, `find`, `xargs`, `date`, `stat
 - **Academic sources for analysis categories**: `docs/academic-sources.html` — theoretical foundations (emotion science, UX research, trust/credibility) behind quote tagging and sentiment analysis. **Update this file when investigating theories behind any Bristlenose features.**
 - **Analysis page** (signal concentration, metrics, rendering): `docs/BRANCHES.md` → `analysis` section — architecture, design decisions, file list, test coverage
 - **Analysis page future** (two-pane vision, grid-as-selector, user-tag grid, backlog): `docs/design-analysis-future.md`
+- **Finding weight** (signal direction, valence clarity, tag interpretability tiers, finding archetypes): `docs/design-finding-weight.md` — problem-space exploration for surfacing wins vs problems vs patterns in Analysis tab
 - **Quote sequences** (consecutive quote detection, segment ordinals, threshold tuning): `docs/design-quote-sequences.md`
 - **Dashboard stats** (inventory of unused pipeline data, improvement priorities): `docs/design-dashboard-stats.md`
 - **Logging** (persistent log file, two-knob system, instrumentation tiers): `docs/design-logging.md` — architecture, tier 1 implementation plan, backlog. **Read this before adding log lines**
@@ -215,7 +216,13 @@ See `docs/BRANCHES.md` for active branches, worktree paths, what files they touc
 - Keep changes minimal and focused — don't refactor or add features beyond what's asked
 - Commit messages: short, descriptive, lowercase (e.g., "fix tag suggest offering tags the quote already has")
 - **Human QA after each task**: when you finish a task, suggest only the checks a human needs to do that automated tests can't cover (visual regression, browser interaction, UX feel). Skip this for pure data/logic work where unit tests are sufficient. Include copy-pasteable commands to make it easy (e.g. server start command, URL to open). Don't duplicate what pytest already covers
-- **Never use the Claude Code preview pane for visual QA.** Bristlenose's layout needs a full-size browser window — the preview pane is too narrow, renders dark-on-dark, and doesn't have the right test data. For visual verification, tell the user to open their own browser. Give them a copy-pasteable serve command and the URL to check. For the main repo: `.venv/bin/bristlenose serve --dev trial-runs/project-ikea` (port 8150). For worktrees: use the port from `.claude/launch.json` (e.g. port 5001 for settings-modal branch)
+- **NEVER use Claude Code preview tools (`preview_start`, `preview_screenshot`, `preview_snapshot`, `preview_eval`, etc.) for QA.** They consistently fail for Bristlenose — wrong port, missing Vite HMR, white-on-white rendering, incomplete React mount. Every attempt wastes time. Bristlenose needs the full stack (Vite dev server on 5173 + FastAPI serve on 8150) running together. For QA, tell the user to run the full stack in their own browser:
+  ```
+  .venv/bin/bristlenose serve --dev trial-runs/project-ikea
+  # In second terminal:
+  cd frontend && npx vite --port 5173
+  ```
+  Then open http://localhost:8150/report/. For worktrees: use the port from `.claude/launch.json`
 
 ### Release timing (evening releases)
 

@@ -2,7 +2,7 @@
 
 ## What this is
 
-Vite + React + TypeScript + React Router SPA. 35 components in `src/components/`, 14 islands in `src/islands/`, 9 page wrappers in `src/pages/`, 1 layout in `src/layouts/`, 7 hooks in `src/hooks/`, 1 shim in `src/shims/`, 2 stores in `src/contexts/`. 990 Vitest tests across 68 test files. `npm run dev` proxies to FastAPI; `npm run build` outputs to `frontend/dist/`. See `docs/design-react-component-library.md` for build sequence.
+Vite + React + TypeScript + React Router SPA. 35 components in `src/components/`, 14 islands in `src/islands/`, 9 page wrappers in `src/pages/`, 1 layout in `src/layouts/`, 7 hooks in `src/hooks/`, 1 shim in `src/shims/`, 3 stores in `src/contexts/`. 990 Vitest tests across 68 test files. `npm run dev` proxies to FastAPI; `npm run build` outputs to `frontend/dist/`. See `docs/design-react-component-library.md` for build sequence.
 
 ## Build & type-checking
 
@@ -11,7 +11,7 @@ Vite + React + TypeScript + React Router SPA. 35 components in `src/components/`
 ## Architecture
 
 - **`main.tsx` dual mode** — SPA mode (`#bn-app-root` exists → `RouterProvider`) vs legacy island mode (dynamic `import()` → individual `createRoot()` calls). The legacy path uses `Promise.all` for code splitting — islands load async, not synchronously like the old static imports. SPA mode is active in serve mode; legacy mode covers the static render path and transcript HTML files during transition
-- **Module-level stores (not React Context)** — `QuotesContext.tsx` and `SidebarStore.ts` use plain module-level state + `useSyncExternalStore` (React 18). Proven pattern, simpler than Context, doesn't depend on tree structure. The store is the single source of truth for quote mutations and toolbar filter state
+- **Module-level stores (not React Context)** — `QuotesContext.tsx`, `SidebarStore.ts`, and `ActivityStore.ts` use plain module-level state + `useSyncExternalStore` (React 18). Proven pattern, simpler than Context, doesn't depend on tree structure. `QuotesContext` owns quote mutations and toolbar filter state. `ActivityStore` owns background job tracking (e.g. AutoCode) — rendered from `AppLayout` so activity chips persist across tab navigation
 - **Backward-compat shims** — `src/shims/navigation.ts` installs `window.switchToTab`, `window.scrollToAnchor`, `window.navigateToSession` as functions that delegate to React Router `navigate()`
 
 ## Gotchas
@@ -46,7 +46,7 @@ Vite + React + TypeScript + React Router SPA. 35 components in `src/components/`
 
 ### Testing
 
-- **Module-level stores persist across tests** — always call `resetStore()` / `resetSidebarStore()` / `resetPlaygroundStore()` in `beforeEach`
+- **Module-level stores persist across tests** — always call `resetStore()` / `resetSidebarStore()` / `resetPlaygroundStore()` / `resetActivityStore()` in `beforeEach`
 - **`vi.mock` factory functions can't reference variables declared after them** (mocks are hoisted) — inline data directly
 - **`useRef<T>()` needs explicit `undefined` argument** in newer TypeScript: `useRef<T>(undefined)`
 - **Mock `getCodebook`** with `.mockResolvedValue()` in `beforeEach`, not just in `vi.mock` factory (`restoreAllMocks` resets it)

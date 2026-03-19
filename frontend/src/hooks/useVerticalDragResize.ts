@@ -16,7 +16,7 @@
  * @module useVerticalDragResize
  */
 
-import { useState, useCallback, useRef, useEffect } from "react";
+import { useCallback, useRef, useEffect } from "react";
 import {
   closeInspector,
   openInspector,
@@ -65,7 +65,10 @@ export function useVerticalDragResize({
   minHeight = MIN_HEIGHT,
   maxHeight = MAX_HEIGHT,
 }: UseVerticalDragResizeOptions): UseVerticalDragResizeReturn {
-  const [isDragging, setIsDragging] = useState(false);
+  // Use a ref (not state) to avoid re-renders during drag.
+  // React re-renders overwrite the DOM-level --inspector-height CSS var
+  // with the stale store value, causing the panel to snap back.
+  const isDraggingRef = useRef(false);
   const cleanupRef = useRef<(() => void) | null>(null);
   const currentHeightRef = useRef(currentHeight);
   currentHeightRef.current = currentHeight;
@@ -83,7 +86,7 @@ export function useVerticalDragResize({
       let enteredDrag = false;
       let lastHeight = startHeight;
 
-      document.body.classList.add("dragging");
+      document.body.classList.add("dragging-v");
 
       const onMove = (ev: PointerEvent) => {
         const deltaY = startY - ev.clientY; // upward = positive = taller
@@ -91,7 +94,7 @@ export function useVerticalDragResize({
         if (!enteredDrag) {
           if (Math.abs(deltaY) < DRAG_THRESHOLD) return;
           enteredDrag = true;
-          setIsDragging(true);
+          isDraggingRef.current = true;
 
           // If panel was collapsed, open it for the drag
           if (!isOpenRef.current) {
@@ -114,8 +117,8 @@ export function useVerticalDragResize({
         document.removeEventListener("pointermove", onMove);
         document.removeEventListener("pointerup", onUp);
         cleanupRef.current = null;
-        document.body.classList.remove("dragging");
-        setIsDragging(false);
+        document.body.classList.remove("dragging-v");
+        isDraggingRef.current = false;
 
         if (!enteredDrag) {
           // Click (no drag) — toggle open/close
@@ -144,7 +147,7 @@ export function useVerticalDragResize({
       cleanupRef.current = () => {
         document.removeEventListener("pointermove", onMove);
         document.removeEventListener("pointerup", onUp);
-        document.body.classList.remove("dragging");
+        document.body.classList.remove("dragging-v");
       };
     },
     [containerRef, minHeight, maxHeight],
@@ -179,5 +182,5 @@ export function useVerticalDragResize({
     };
   }, []);
 
-  return { handlePointerDown, handleKeyDown, isDragging };
+  return { handlePointerDown, handleKeyDown, isDragging: isDraggingRef.current };
 }

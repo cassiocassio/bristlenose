@@ -72,7 +72,6 @@ function AppShell() {
   const isSessions = useMatch("/report/sessions");
   const isTranscript = useMatch("/report/sessions/:sessionId");
   const isCodebook = useMatch("/report/codebook");
-  const isAnalysis = useMatch("/report/analysis");
   const showSidebar = !!(isQuotes || isSessions || isTranscript || isCodebook);
   const isSessionsRoute = !!(isSessions || isTranscript);
   const toggleExport = useCallback(() => setExportOpen((prev) => !prev), []);
@@ -116,16 +115,26 @@ function AppShell() {
         onComplete: () => {
           window.dispatchEvent(new Event("codebook-changed"));
         },
-        onAction: isAnalysis ? undefined : () => navigate("/report/analysis"),
-        actionLabel: "View Analysis",
-        actionHref: "/report/analysis",
+        onAction: isCodebook ? undefined : () => {
+          navigate("/report/codebook");
+          // Defer event dispatch so CodebookPanel has time to mount after navigation.
+          setTimeout(() => {
+            window.dispatchEvent(
+              new CustomEvent("bn:autocode-report", {
+                detail: { frameworkId: j.frameworkId, frameworkTitle: j.frameworkTitle },
+              }),
+            );
+          }, 100);
+        },
+        actionLabel: "View Report",
+        actionHref: "/report/codebook",
         onCancel: () => {
           cancelAutoCode(j.frameworkId).catch((err) =>
             console.error("Cancel AutoCode failed:", err),
           );
         },
       })),
-    [activityJobs, isAnalysis, navigate],
+    [activityJobs, isCodebook, navigate],
   );
 
   return (

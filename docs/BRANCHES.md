@@ -20,6 +20,7 @@ Each active feature branch gets its own **git worktree** — a full working copy
 | `bristlenose_branch living-fish/` | `living-fish` | Animated "living portrait" logo for serve mode |
 | `bristlenose_branch drag-push/` | `drag-push` | Sidebar drag-to-open uses push mode (not overlay) |
 | `bristlenose_branch responsive-signal-cards/` | `responsive-signal-cards` | Responsive signal cards |
+| `bristlenose_branch analysis-matrices-heatmaps-pane/` | `analysis-matrices-heatmaps-pane` | Analysis tab bottom inspector panel with heatmap matrices |
 
 
 
@@ -104,6 +105,7 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 | `living-fish` | `bristlenose_branch living-fish/` | `origin/living-fish` |
 | `drag-push` | `bristlenose_branch drag-push/` | local only |
 | `responsive-signal-cards` | `bristlenose_branch responsive-signal-cards/` | local only |
+| `analysis-matrices-heatmaps-pane` | `bristlenose_branch analysis-matrices-heatmaps-pane/` | local only |
 
 
 ---
@@ -195,6 +197,33 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 **Potential conflicts with other branches:**
 - `symbology` — low risk (touches render/template files, not signal card layout)
 - `drag-push` — low risk (sidebar CSS, not signal cards)
+
+---
+
+### `analysis-matrices-heatmaps-pane`
+
+**Status:** Just started
+**Started:** 19 Mar 2026
+**Worktree:** `/Users/cassio/Code/bristlenose_branch analysis-matrices-heatmaps-pane/`
+**Remote:** local only (push when ready)
+
+**What it does:** Bottom inspector panel in the Analysis tab showing heatmap matrices (section × sentiment, theme × sentiment, codebook group matrices). Collapsible panel with drag-to-resize, source tabs, Section/Theme toggle in table header, shimmer teaching animation, keyboard shortcut (m). Extracts heatmap rendering from AnalysisPage into dedicated InspectorPanel component.
+
+**Files this branch will touch:**
+- `frontend/src/contexts/InspectorStore.ts` — module-level store for panel state
+- `frontend/src/hooks/useVerticalDragResize.ts` — vertical drag resize hook
+- `bristlenose/theme/organisms/inspector.css` — panel CSS
+- `bristlenose/stages/s12_render/theme_assets.py` — register CSS
+- `frontend/src/components/InspectorPanel.tsx` — panel component
+- `frontend/src/components/AnalysisPage.tsx` — refactor heatmap extraction
+- `frontend/src/hooks/useKeyboardShortcuts.ts` — add `m` shortcut
+- `frontend/src/components/HelpModal.tsx` — document shortcut
+- `bristlenose/theme/organisms/analysis.css` — column rotation fix
+
+**Potential conflicts with other branches:**
+- `responsive-signal-cards` — moderate risk (both touch analysis page layout)
+- `symbology` — low risk (touches render/template files, not analysis components)
+- `drag-push` — low risk (sidebar drag, not inspector drag)
 
 ---
 

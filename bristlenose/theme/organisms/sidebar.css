@@ -57,6 +57,18 @@
         0px;
 }
 
+/* Inert rail — non-sidebar tabs (Dashboard, Analysis, About).
+   Matches the toc-rail width so content aligns with sidebar tabs. */
+.layout.layout-inert {
+    grid-template-columns:
+        var(--bn-rail-width)   /* 1: inert rail */
+        1fr;                   /* 2: center      */
+}
+
+.layout.layout-inert > .center {
+    grid-column: 2;
+}
+
 /* Animated slide — added before state change, removed on transitionend */
 .layout.animating {
     transition: grid-template-columns 75ms ease;
@@ -609,6 +621,49 @@ body.dragging * {
 
 /* Hide labels when TOC sidebar is open (center column narrows) */
 .layout.toc-open .toolbar-btn-label { display: none; }
+
+/* ══════════════════════════════════════════════════════════════════
+   CODEBOOK SIDEBAR — codebook-level navigation
+   ══════════════════════════════════════════════════════════════════ */
+
+/* Not-imported codebook links — muted but clickable.
+   Click opens the browse modal so the user can read about it and import.
+   Accent hover signals interactivity (not a dead end). */
+.toc-link.not-imported {
+    color: var(--bn-colour-muted);
+    opacity: 0.5;
+}
+
+.toc-link.not-imported:hover {
+    opacity: 1;
+    color: var(--bn-colour-accent);
+    background: var(--bn-colour-hover);
+}
+
+/* Compact action button inside sidebar body — e.g. "Browse codebooks →".
+   Smaller than .bn-btn, fits the sidebar's dense information layout. */
+.sidebar-mini-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--bn-space-xs);
+    font-family: inherit;
+    font-size: var(--bn-text-caption);
+    font-weight: var(--bn-weight-emphasis);
+    padding: var(--bn-space-xs) var(--bn-space-sm);
+    border-radius: var(--bn-radius-sm);
+    border: 1px solid var(--bn-colour-border);
+    background: var(--bn-colour-bg);
+    color: var(--bn-colour-muted);
+    cursor: pointer;
+    transition: background var(--bn-transition-fast), color var(--bn-transition-fast), border-color var(--bn-transition-fast);
+    margin: var(--bn-space-xs) var(--bn-space-sm);
+}
+
+.sidebar-mini-btn:hover {
+    background: var(--bn-colour-hover);
+    color: var(--bn-colour-accent);
+    border-color: var(--bn-colour-border-hover);
+}
 
 /* ══════════════════════════════════════════════════════════════════
    SESSION SIDEBAR — compact session list for Sessions/Transcript tabs

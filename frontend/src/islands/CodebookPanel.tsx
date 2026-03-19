@@ -727,6 +727,34 @@ export function CodebookPanel({ projectId }: CodebookPanelProps) {
       .catch((err) => console.error("Fetch templates failed:", err));
   }, []);
 
+  // Listen for sidebar "browse codebook" requests (CodebookSidebar dispatches this)
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      if (detail?.templateId) {
+        // Open picker, then auto-select the requested template
+        getCodebookTemplates()
+          .then((resp) => {
+            setTemplates(resp.templates);
+            const tmpl = resp.templates.find(
+              (t: TemplateOut) => t.id === detail.templateId,
+            );
+            if (tmpl) {
+              setSelectedTemplate(tmpl);
+              setModalView("preview");
+            } else {
+              setModalView("picker");
+            }
+          })
+          .catch(() => setModalView("picker"));
+      } else {
+        handleOpenPicker();
+      }
+    };
+    window.addEventListener("bn:codebook-browse", handler);
+    return () => window.removeEventListener("bn:codebook-browse", handler);
+  }, [handleOpenPicker]);
+
   const handleSelectTemplate = useCallback((t: TemplateOut) => {
     setSelectedTemplate(t);
     setModalView("preview");
@@ -857,6 +885,8 @@ export function CodebookPanel({ projectId }: CodebookPanelProps) {
       </div>
 
       <div className="codebook-grid" id="codebook-grid">
+        {/* Anchor for sidebar "Your tags" scroll — must be a real box (not display:contents) */}
+        <div id="codebook-project" />
         {researcherGroups.map((group) => (
           <CodebookGroupColumn
             key={group.id}
@@ -896,7 +926,7 @@ export function CodebookPanel({ projectId }: CodebookPanelProps) {
           const proposedCount = acStatus?.proposed_count ?? 0;
           return (
             <Fragment key={fid}>
-              <div className="framework-section-header">
+              <div className="framework-section-header" id={`codebook-fw-${fid}`}>
                 <div>
                   <div className="framework-section-title">{title}</div>
                   {author && <div className="framework-section-author">{author}</div>}

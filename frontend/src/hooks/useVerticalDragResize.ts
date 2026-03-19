@@ -5,6 +5,10 @@
  * same pointer-event pattern as useDragResize (sidebars) but operates on the
  * Y axis and calls InspectorStore actions.
  *
+ * Key difference from useDragResize: a 3px movement threshold distinguishes
+ * click (open to auto-height) from drag (open and resize). pointerup is the
+ * trigger for click-to-open, not pointerdown.
+ *
  * During drag, the `--inspector-height` CSS custom property is updated directly
  * on the container element (no React re-render) for 60fps performance. Store
  * actions are called only on pointerup to persist the final height.
@@ -24,6 +28,8 @@ import {
 
 // ── Constants ────────────────────────────────────────────────────────────
 
+/** Pixels of pointer movement before we enter drag mode. */
+const DRAG_THRESHOLD = 3;
 const RESIZE_STEP = 10;
 
 // ── Types ────────────────────────────────────────────────────────────────
@@ -33,6 +39,8 @@ export interface UseVerticalDragResizeOptions {
   containerRef: React.RefObject<HTMLElement | null>;
   /** Current panel height from the store. */
   currentHeight: number;
+  /** Whether the panel is currently open. */
+  isOpen: boolean;
   /** Minimum panel height in px. Defaults to MIN_HEIGHT (150). */
   minHeight?: number;
   /** Maximum panel height in px. Defaults to MAX_HEIGHT (600). */
@@ -53,6 +61,7 @@ export interface UseVerticalDragResizeReturn {
 export function useVerticalDragResize({
   containerRef,
   currentHeight,
+  isOpen,
   minHeight = MIN_HEIGHT,
   maxHeight = MAX_HEIGHT,
 }: UseVerticalDragResizeOptions): UseVerticalDragResizeReturn {
@@ -60,6 +69,8 @@ export function useVerticalDragResize({
   const cleanupRef = useRef<(() => void) | null>(null);
   const currentHeightRef = useRef(currentHeight);
   currentHeightRef.current = currentHeight;
+  const isOpenRef = useRef(isOpen);
+  isOpenRef.current = isOpen;
 
   const handlePointerDown = useCallback(
     (e: React.PointerEvent) => {
@@ -68,17 +79,27 @@ export function useVerticalDragResize({
       if (!container) return;
 
       const startY = e.clientY;
-      const startHeight = currentHeightRef.current;
+      const startHeight = isOpenRef.current ? currentHeightRef.current : currentHeightRef.current;
+      let enteredDrag = false;
       let lastHeight = startHeight;
 
-      setIsDragging(true);
       document.body.classList.add("dragging");
 
       const onMove = (ev: PointerEvent) => {
-        // Dragging upward (negative deltaY) = taller panel
-        const deltaY = startY - ev.clientY;
-        const raw = startHeight + deltaY;
+        const deltaY = startY - ev.clientY; // upward = positive = taller
 
+        if (!enteredDrag) {
+          if (Math.abs(deltaY) < DRAG_THRESHOLD) return;
+          enteredDrag = true;
+          setIsDragging(true);
+
+          // If panel was collapsed, open it for the drag
+          if (!isOpenRef.current) {
+            openInspector();
+          }
+        }
+
+        const raw = startHeight + deltaY;
         if (raw < SNAP_CLOSE_THRESHOLD) {
           container.style.setProperty("--inspector-height", "0px");
           lastHeight = 0;
@@ -96,9 +117,19 @@ export function useVerticalDragResize({
         document.body.classList.remove("dragging");
         setIsDragging(false);
 
+        if (!enteredDrag) {
+          // Click (no drag) — toggle open/close
+          if (isOpenRef.current) {
+            closeInspector();
+          } else {
+            openInspector();
+          }
+          return;
+        }
+
+        // Drag completed
         if (lastHeight < SNAP_CLOSE_THRESHOLD) {
           closeInspector();
-          // Reset CSS var so store-driven height takes over
           container.style.removeProperty("--inspector-height");
         } else {
           const finalHeight = Math.max(minHeight, lastHeight);

@@ -18,6 +18,7 @@ import {
   getLastUsedTag,
 } from "../contexts/QuotesContext";
 import { resetSidebarStore } from "../contexts/SidebarStore";
+import { resetInspectorStore } from "../contexts/InspectorStore";
 import { useKeyboardShortcuts } from "./useKeyboardShortcuts";
 import { putTags } from "../utils/api";
 
@@ -61,6 +62,7 @@ function TestConsumer({
 
 function renderWithProviders(
   onHelpToggle?: () => void,
+  initialRoute = "/report/quotes/",
 ) {
   let ctx: ReturnType<typeof useFocus> | null = null;
 
@@ -81,9 +83,10 @@ function renderWithProviders(
     );
   }
 
-  const routes = [{ path: "/report/quotes", element: createElement(Wrapper) }];
+  const routePath = initialRoute.replace(/\/$/, "") || "/report/quotes";
+  const routes = [{ path: routePath, element: createElement(Wrapper) }];
   const router = createMemoryRouter(routes, {
-    initialEntries: ["/report/quotes/"],
+    initialEntries: [initialRoute],
   });
   const result = renderHook(() => useQuotesStore(), {
     wrapper: ({ children }: { children: ReactNode }) =>
@@ -121,6 +124,7 @@ describe("useKeyboardShortcuts", () => {
   beforeEach(() => {
     resetStore();
     resetSidebarStore();
+    resetInspectorStore();
     document.body.innerHTML = "";
   });
 
@@ -483,6 +487,36 @@ describe("useKeyboardShortcuts", () => {
 
       resetStore();
       expect(getLastUsedTag()).toBeNull();
+    });
+  });
+
+  describe("m — toggle heatmap inspector", () => {
+    /** Dispatch a keydown and return whether it was handled (defaultPrevented). */
+    function dispatchKey(key: string): boolean {
+      const event = new KeyboardEvent("keydown", {
+        key,
+        bubbles: true,
+        cancelable: true,
+      });
+      return !document.dispatchEvent(event);
+    }
+
+    it("m is handled on analysis page", () => {
+      const { unmount } = renderWithProviders(undefined, "/report/analysis/");
+
+      const handled = dispatchKey("m");
+      expect(handled).toBe(true);
+
+      unmount();
+    });
+
+    it("m is not handled on non-analysis pages", () => {
+      const { unmount } = renderWithProviders(undefined, "/report/quotes/");
+
+      const handled = dispatchKey("m");
+      expect(handled).toBe(false);
+
+      unmount();
     });
   });
 });

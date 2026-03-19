@@ -2,15 +2,20 @@
 
 /* Vertical flexbox wrapper for analysis page.
    .analysis-center scrolls signal cards.
-   .inspector-panel sits below as a fixed-height pane. */
+   .inspector-panel sits below as a fixed-height pane.
+   Uses dvh (dynamic viewport height) to fill the available area
+   below header/nav. Falls back to 100vh for older browsers. */
 .analysis-layout {
     display: flex;
     flex-direction: column;
-    height: 100%;
+    /* 5.5rem ≈ header (2.5rem) + navbar (3rem) */
+    height: calc(100vh - 5.5rem);
+    height: calc(100dvh - 5.5rem);
 }
 
 .analysis-center {
     flex: 1;
+    min-height: 0;
     overflow-y: auto;
     padding: var(--bn-space-lg);
 }
@@ -33,8 +38,18 @@
 }
 
 /* Disable transition during pointer drag */
-body.dragging .inspector-panel {
+body.dragging-v .inspector-panel {
     transition: none !important;
+}
+
+/* Vertical drag cursor — override sidebar's col-resize */
+body.dragging-v {
+    user-select: none;
+    cursor: ns-resize !important;
+}
+
+body.dragging-v * {
+    cursor: ns-resize !important;
 }
 
 /* ── Handle bar ─────────────────────────────────────────── */

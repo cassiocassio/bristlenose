@@ -119,7 +119,7 @@ describe("useVerticalDragResize", () => {
     expect(storeResult.current.open).toBe(false);
   });
 
-  it("movement > 3px enters drag mode and sets isDragging", () => {
+  it("movement > 3px enters drag mode (adds dragging-v class)", () => {
     const container = makeContainer();
     const ref = { current: container };
 
@@ -133,23 +133,22 @@ describe("useVerticalDragResize", () => {
       }),
     );
 
-    expect(result.current.isDragging).toBe(false);
-
     act(() => {
       result.current.handlePointerDown(makePointerEvent("pointerdown", 500));
     });
 
     // Move < 3px — should NOT enter drag mode
     act(() => firePointerMove(498));
-    expect(result.current.isDragging).toBe(false);
+    // dragging-v class was added on pointerdown
+    expect(document.body.classList.contains("dragging-v")).toBe(true);
 
-    // Move > 3px — should enter drag mode
+    // Move > 3px — enters drag and sets CSS var on container
     act(() => firePointerMove(493));
-    expect(result.current.isDragging).toBe(true);
+    expect(container.style.getPropertyValue("--inspector-height")).toBeTruthy();
 
     // Complete the drag
     act(() => firePointerUp());
-    expect(result.current.isDragging).toBe(false);
+    expect(document.body.classList.contains("dragging-v")).toBe(false);
   });
 
   it("drag below snap threshold closes the panel", () => {
@@ -192,10 +191,10 @@ describe("useVerticalDragResize", () => {
     act(() => {
       result.current.handlePointerDown(makePointerEvent("pointerdown", 500));
     });
-    expect(document.body.classList.contains("dragging")).toBe(true);
+    expect(document.body.classList.contains("dragging-v")).toBe(true);
 
     act(() => firePointerUp());
-    expect(document.body.classList.contains("dragging")).toBe(false);
+    expect(document.body.classList.contains("dragging-v")).toBe(false);
   });
 
   it("keyboard ArrowUp increases height", () => {

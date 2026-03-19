@@ -289,7 +289,12 @@ export function SidebarLayout({ active, leftPanel, leftPanelTitle, showRightSide
 
 
   if (!active) {
-    return <>{children}</>;
+    return (
+      <div className="layout layout-inert">
+        <div className="toc-rail toc-rail-inert" />
+        <div className="center">{children}</div>
+      </div>
+    );
   }
 
   const classes = ["layout"];

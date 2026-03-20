@@ -53,6 +53,7 @@
 .bn-locale-select:focus {
     outline: 2px solid var(--bn-colour-accent);
     outline-offset: 1px;
+    border-color: var(--bn-colour-accent);
 }
 
 /* --- Configuration reference --- */

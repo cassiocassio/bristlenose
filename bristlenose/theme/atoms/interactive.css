@@ -11,6 +11,24 @@
 */
 
 /* ---------------------------------------------------------------------
+   Focus outline suppression — mouse / touch
+
+   Browsers show :focus on both keyboard and mouse interaction.
+   :focus-visible only fires on keyboard navigation (Tab, arrow keys).
+   This rule hides the outline for mouse/touch clicks globally.
+
+   Keyboard users still see the blue ring via :focus-visible rules
+   defined on individual components (sidebar.css, journey-label.css, etc.).
+
+   Industry standard pattern — used by Bootstrap 5, Tailwind, GitHub Primer.
+   See theme/CLAUDE.md "Focus outline convention" for the full rule.
+   --------------------------------------------------------------------- */
+
+:focus:not(:focus-visible) {
+    outline: none;
+}
+
+/* ---------------------------------------------------------------------
    Focused state — keyboard cursor, shadow lift
    --------------------------------------------------------------------- */
 

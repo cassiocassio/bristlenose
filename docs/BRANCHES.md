@@ -2,7 +2,7 @@
 
 This document tracks active feature branches to help multiple Claude sessions coordinate without conflicts.
 
-**Updated:** 18 Mar 2026 (settings-modal closed)
+**Updated:** 20 Mar 2026 (analysis-matrices-heatmaps-pane closed)
 
 ---
 
@@ -20,7 +20,7 @@ Each active feature branch gets its own **git worktree** — a full working copy
 | `bristlenose_branch living-fish/` | `living-fish` | Animated "living portrait" logo for serve mode |
 | `bristlenose_branch drag-push/` | `drag-push` | Sidebar drag-to-open uses push mode (not overlay) |
 | `bristlenose_branch responsive-signal-cards/` | `responsive-signal-cards` | Responsive signal cards |
-| `bristlenose_branch analysis-matrices-heatmaps-pane/` | `analysis-matrices-heatmaps-pane` | Analysis tab bottom inspector panel with heatmap matrices |
+
 
 
 
@@ -105,7 +105,7 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 | `living-fish` | `bristlenose_branch living-fish/` | `origin/living-fish` |
 | `drag-push` | `bristlenose_branch drag-push/` | local only |
 | `responsive-signal-cards` | `bristlenose_branch responsive-signal-cards/` | local only |
-| `analysis-matrices-heatmaps-pane` | `bristlenose_branch analysis-matrices-heatmaps-pane/` | local only |
+
 
 
 ---
@@ -200,61 +200,13 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 
 ---
 
-### `analysis-matrices-heatmaps-pane`
-
-**Status:** Just started
-**Started:** 19 Mar 2026
-**Worktree:** `/Users/cassio/Code/bristlenose_branch analysis-matrices-heatmaps-pane/`
-**Remote:** local only (push when ready)
-
-**What it does:** Bottom inspector panel in the Analysis tab showing heatmap matrices (section × sentiment, theme × sentiment, codebook group matrices). Collapsible panel with drag-to-resize, source tabs, Section/Theme toggle in table header, shimmer teaching animation, keyboard shortcut (m). Extracts heatmap rendering from AnalysisPage into dedicated InspectorPanel component.
-
-**Files this branch will touch:**
-- `frontend/src/contexts/InspectorStore.ts` — module-level store for panel state
-- `frontend/src/hooks/useVerticalDragResize.ts` — vertical drag resize hook
-- `bristlenose/theme/organisms/inspector.css` — panel CSS
-- `bristlenose/stages/s12_render/theme_assets.py` — register CSS
-- `frontend/src/components/InspectorPanel.tsx` — panel component
-- `frontend/src/components/AnalysisPage.tsx` — refactor heatmap extraction
-- `frontend/src/hooks/useKeyboardShortcuts.ts` — add `m` shortcut
-- `frontend/src/components/HelpModal.tsx` — document shortcut
-- `bristlenose/theme/organisms/analysis.css` — column rotation fix
-
-**Potential conflicts with other branches:**
-- `responsive-signal-cards` — moderate risk (both touch analysis page layout)
-- `symbology` — low risk (touches render/template files, not analysis components)
-- `drag-push` — low risk (sidebar drag, not inspector drag)
-
----
-
-
-### `analysis-matrices-heatmaps-pane`
-
-**Status:** In progress
-**Started:** 19 Mar 2026
-**Worktree:** `/Users/cassio/Code/bristlenose_branch analysis-matrices-heatmaps-pane/`
-**Remote:** local only (push when ready)
-
-**What it does:** DevTools-style collapsible bottom inspector panel in the Analysis tab. Heatmap matrices (section × sentiment, theme × sentiment, codebook group matrices) live in a resizable bottom pane. Collapsed by default with a grid-icon handle bar; opens via click, drag, or `m` shortcut. Signal card selection (blue wash from atomic design system) syncs with inspector source tabs. Tooltip flips above when near viewport bottom.
-
-**Key files:**
-- `frontend/src/contexts/InspectorStore.ts` — module-level store for panel state
-- `frontend/src/hooks/useVerticalDragResize.ts` — vertical drag resize hook (3px threshold, drag-from-collapsed grows from 28px)
-- `frontend/src/components/InspectorPanel.tsx` — panel component (handle bar, source tabs, body)
-- `bristlenose/theme/organisms/inspector.css` — panel CSS, viewport layout constraints
-- `bristlenose/theme/organisms/analysis.css` — signal card `.bn-selected` state
-- `frontend/src/islands/AnalysisPage.tsx` — heatmap sources, card focus state, tooltip flip
-- `frontend/src/hooks/useKeyboardShortcuts.ts` — `m` shortcut (route-guarded to analysis)
-- `frontend/src/components/about/ShortcutsSection.tsx` — shortcut in help modal
-
-**Potential conflicts with other branches:**
-- `responsive-signal-cards` — moderate risk (both touch analysis page layout)
-- `symbology` — low risk (touches render/template files, not analysis components)
-- `drag-push` — low risk (sidebar drag, not inspector drag)
-
 ---
 
 ## Completed Branches (for reference)
+
+### `analysis-matrices-heatmaps-pane` — merged 20 Mar 2026
+
+DevTools-style collapsible bottom inspector panel in the Analysis tab. Heatmap matrices (section × sentiment, theme × sentiment, codebook group matrices) in a resizable bottom pane. Collapsed by default with grid-icon handle bar; opens via click, drag, or `m` shortcut. Signal card selection syncs with inspector source tabs. Tooltip flips above when near viewport bottom. New files: `InspectorPanel.tsx`, `InspectorStore.ts`, `useVerticalDragResize.ts`, `inspector.css`. 4 commits.
 
 ### `settings-modal` — merged 18 Mar 2026
 

@@ -386,9 +386,14 @@ Edit `bristlenose/__init__.py` (the single source of truth for version), commit,
 
 ## Changelog
 
-**0.13.8** — _18 Mar 2026_
+**0.14.0** — _20 Mar 2026_
 
-- Help modal — replaces About page with sidebar-nav modal (Help, Shortcuts, Signals, Codebook, About). ModalNav genericised into reusable organism
+- Inspector panel — DevTools-style collapsible bottom panel in Analysis tab with heatmap matrices, signal card selection sync, drag-resize, and `m` keyboard shortcut
+- Codebook sidebar — left-hand navigation panel on every tab with tag groups, counts, and micro-bars
+- Finding flags — Win/Problem/Niggle/Success/Surprising/Pattern direction labels on signal cards, computed from sentiment valence, breadth, and intensity
+- Settings modal (`⌘,`) and Help modal (`?`) — sidebar-nav modals with shared ModalNav organism
+- Activity chips persist across tab navigation; new framework codebooks (Nielsen 10, Yablonski Laws)
+- Fixes: codebook tab sidebar with trailing slash, codebook grid width, autocode toast behaviour
 
 **0.13.7** — _16 Mar 2026_
 

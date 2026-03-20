@@ -303,8 +303,8 @@ When the user signals end of session, **proactively offer to run this checklist*
 9. **Clean up branches** — delete merged feature branches
 10. **Verify CI** — check latest push passes CI
 
-## Current status (v0.13.8, Mar 2026)
+## Current status (v0.14.0, Mar 2026)
 
-Core pipeline published to PyPI + Homebrew + Snap. Latest: **Render refactor** — `render_html.py` broken into `bristlenose/stages/s12_render/` package (8 submodules). Static render formally deprecated. 1938 Python tests, 1072 Vitest tests. React migration complete (Steps 1–10). See `CHANGELOG.md` and git log for full history.
+Core pipeline published to PyPI + Homebrew + Snap. Latest: **Inspector panel** — DevTools-style collapsible bottom panel in Analysis tab with heatmap matrices, signal card selection, drag-resize. Codebook sidebar on all tabs. Finding flags on signal cards. Settings + Help modals with shared ModalNav. Static render formally deprecated. 1965 Python tests, 1112 Vitest tests. React migration complete (Steps 1–10). See `CHANGELOG.md` and git log for full history.
 
 **Next up:** See `TODO.md` for full task list.

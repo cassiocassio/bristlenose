@@ -168,10 +168,10 @@ export function ActivityChipStack({ jobs, onDismiss }: ActivityChipStackProps) {
           <ActivityChip
             key={job.id}
             job={chip}
-            onAction={chip.status === "completed" ? job.onAction : undefined}
+            onAction={chip.status === "completed" && job.onAction ? () => { job.onAction!(); onDismiss(job.id); } : undefined}
             actionLabel={job.actionLabel}
             actionHref={job.actionHref}
-            onDismiss={() => onDismiss(job.id)}
+            onDismiss={chip.status === "completed" && job.onAction ? undefined : () => onDismiss(job.id)}
             onCancel={chip.status === "running" ? job.onCancel : undefined}
           />
         ))}

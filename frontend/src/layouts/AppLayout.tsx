@@ -115,16 +115,18 @@ function AppShell() {
         onComplete: () => {
           window.dispatchEvent(new Event("codebook-changed"));
         },
-        onAction: isCodebook ? undefined : () => {
-          navigate("/report/codebook");
-          // Defer event dispatch so CodebookPanel has time to mount after navigation.
-          setTimeout(() => {
-            window.dispatchEvent(
-              new CustomEvent("bn:autocode-report", {
-                detail: { frameworkId: j.frameworkId, frameworkTitle: j.frameworkTitle },
-              }),
-            );
-          }, 100);
+        onAction: () => {
+          const detail = { frameworkId: j.frameworkId, frameworkTitle: j.frameworkTitle };
+          if (isCodebook) {
+            // Already on codebook tab — open modal directly.
+            window.dispatchEvent(new CustomEvent("bn:autocode-report", { detail }));
+          } else {
+            navigate("/report/codebook");
+            // Defer so CodebookPanel has time to mount after navigation.
+            setTimeout(() => {
+              window.dispatchEvent(new CustomEvent("bn:autocode-report", { detail }));
+            }, 100);
+          }
         },
         actionLabel: "View Report",
         actionHref: "/report/codebook",

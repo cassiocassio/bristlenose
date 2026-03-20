@@ -75,6 +75,7 @@ _THEME_FILES: list[str] = [
     "organisms/minimap.css",
     "organisms/sidebar-tags.css",
     "organisms/analysis.css",
+    "organisms/inspector.css",
     "organisms/settings.css",
     "organisms/modal-nav.css",
     "organisms/settings-modal.css",

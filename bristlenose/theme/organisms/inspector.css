@@ -1,0 +1,283 @@
+/* ── Inspector panel — collapsible bottom heatmap pane ──── */
+
+/* Constrain the grid and center column to viewport height when the
+   analysis layout is active — keeps the collapsed inspector handle
+   visible at the bottom of the viewport without scrolling.
+   .layout normally has min-height: 100vh (can grow); here we cap it. */
+.layout:has(.analysis-layout) {
+    height: 100vh;
+    height: 100dvh;
+    overflow: hidden;
+}
+
+.layout > .center:has(.analysis-layout) {
+    overflow: hidden;
+}
+
+/* Vertical flexbox wrapper for analysis page.
+   .analysis-center scrolls signal cards.
+   .inspector-panel sits below as a fixed-height pane.
+   flex: 1 fills whatever space remains after Header + NavBar. */
+.analysis-layout {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+}
+
+.analysis-center {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    padding: var(--bn-space-lg);
+}
+
+/* When the analysis layout is active, the footer (a sibling in AppLayout)
+   sits between .analysis-layout and .inspector-panel in the DOM.
+   Hide it here — the footer scrolls naturally on all other tabs. */
+.analysis-layout ~ .report-footer {
+    display: none;
+}
+
+/* ── Panel shell ────────────────────────────────────────── */
+
+.inspector-panel {
+    flex-shrink: 0;
+    border-top: 1px solid var(--bn-colour-border);
+    background: var(--bn-colour-bg);
+    display: flex;
+    flex-direction: column;
+    transition: height var(--bn-transition-fast);
+    overflow: hidden;
+    height: var(--inspector-height);
+}
+
+.inspector-panel.collapsed {
+    height: auto !important;
+}
+
+/* Disable transition during pointer drag */
+body.dragging-v .inspector-panel {
+    transition: none !important;
+}
+
+/* Vertical drag cursor — override sidebar's col-resize */
+body.dragging-v {
+    user-select: none;
+    cursor: ns-resize !important;
+}
+
+body.dragging-v * {
+    cursor: ns-resize !important;
+}
+
+/* ── Handle bar ─────────────────────────────────────────── */
+
+.inspector-handle {
+    display: flex;
+    align-items: center;
+    gap: var(--bn-space-sm);
+    padding: 0 var(--bn-space-md);
+    height: 1.75rem;
+    min-height: 1.75rem;
+    user-select: none;
+    border-bottom: 1px solid var(--bn-colour-border);
+    background: var(--bn-colour-bg);
+}
+
+.collapsed .inspector-handle {
+    border-bottom: none;
+}
+
+/* Grid icon / close × toggle button */
+.inspector-icon-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    border: none;
+    background: none;
+    color: var(--bn-colour-muted);
+    cursor: pointer;
+    border-radius: var(--bn-radius-sm);
+    padding: 0;
+    flex-shrink: 0;
+}
+
+.inspector-icon-btn:hover {
+    background: var(--bn-colour-hover);
+    color: var(--bn-colour-text);
+}
+
+/* Title text */
+.inspector-handle-title {
+    font-size: var(--bn-text-caption);
+    line-height: var(--bn-text-caption-lh);
+    font-weight: var(--bn-weight-emphasis);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--bn-colour-muted);
+    cursor: default;
+}
+
+/* Shimmer teaching animation — plays when a signal card is focused
+   while the panel is collapsed. sessionStorage counter: max 3 times. */
+@keyframes inspector-shimmer {
+    0%   { color: var(--bn-colour-muted); }
+    25%  { color: var(--bn-colour-accent); }
+    50%  { color: var(--bn-colour-muted); }
+    75%  { color: var(--bn-colour-accent); }
+    100% { color: var(--bn-colour-muted); }
+}
+
+.inspector-handle-title.shimmer {
+    animation: inspector-shimmer 1.2s ease-out;
+}
+
+/* Grab handle — click to open, click+drag to resize */
+.inspector-handle-grip {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    height: 100%;
+}
+
+/* When panel is open, grip is for resize */
+.inspector-panel:not(.collapsed) .inspector-handle-grip {
+    cursor: ns-resize;
+}
+
+.inspector-handle-grip::before {
+    content: "";
+    display: block;
+    width: 32px;
+    height: 3px;
+    border-radius: 2px;
+    background: var(--bn-colour-border);
+    transition: background var(--bn-transition-fast);
+}
+
+.inspector-handle-grip:hover::before {
+    background: var(--bn-colour-border-hover);
+}
+
+/* ── Source tabs ─────────────────────────────────────────── */
+
+.inspector-tabs {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    padding: 0 var(--bn-space-sm);
+    height: 2rem;
+    min-height: 2rem;
+    border-bottom: 1px solid var(--bn-colour-border);
+    overflow-x: auto;
+    flex-shrink: 0;
+}
+
+.inspector-tab {
+    display: flex;
+    align-items: center;
+    padding: 0 var(--bn-space-md);
+    height: 100%;
+    font-family: var(--bn-font-body);
+    font-size: var(--bn-text-body-sm);
+    line-height: var(--bn-text-body-sm-lh);
+    font-weight: var(--bn-weight-emphasis);
+    color: var(--bn-colour-muted);
+    cursor: pointer;
+    white-space: nowrap;
+    position: relative;
+    transition: color var(--bn-transition-fast);
+    border: none;
+    background: none;
+}
+
+.inspector-tab:hover { color: var(--bn-colour-text); }
+.inspector-tab.active { color: var(--bn-colour-text); }
+
+.inspector-tab.active::after {
+    content: "";
+    position: absolute;
+    bottom: 0;
+    left: var(--bn-space-sm);
+    right: var(--bn-space-sm);
+    height: 2px;
+    background: var(--bn-colour-accent);
+    border-radius: 1px;
+}
+
+/* ── Heatmap body ───────────────────────────────────────── */
+
+.inspector-body {
+    flex: 1;
+    overflow: auto;
+    /* No top padding — sticky thead must sit flush against the tab bar. */
+    padding: 0 var(--bn-space-md) var(--bn-space-md);
+}
+
+/* Sticky column headers when scrolling tall matrices */
+.inspector-body .analysis-heatmap thead th {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    background: var(--bn-colour-bg);
+}
+
+/* ── Section/Theme toggle — lives in the table top-left cell ── */
+
+.dimension-toggle {
+    display: inline-flex;
+    align-items: center;
+    border: 1px solid var(--bn-colour-border);
+    border-radius: var(--bn-radius-sm);
+    overflow: hidden;
+}
+
+.dimension-btn {
+    border: none;
+    background: none;
+    font-family: var(--bn-font-body);
+    font-size: var(--bn-text-caption);
+    line-height: var(--bn-text-caption-lh);
+    font-weight: var(--bn-weight-normal);
+    color: var(--bn-colour-muted);
+    padding: var(--bn-space-xs) var(--bn-space-sm);
+    cursor: pointer;
+    transition: all var(--bn-transition-fast);
+}
+
+.dimension-btn:first-child {
+    border-right: 1px solid var(--bn-colour-border);
+}
+
+.dimension-btn:hover {
+    background: var(--bn-colour-hover);
+    color: var(--bn-colour-text);
+}
+
+.dimension-btn.active {
+    background: var(--bn-colour-hover);
+    color: var(--bn-colour-accent);
+    font-weight: var(--bn-weight-emphasis);
+}
+
+/* ── Collapsed hides tabs + body ────────────────────────── */
+
+.collapsed .inspector-tabs,
+.collapsed .inspector-body {
+    display: none;
+}
+
+/* ── Row label truncation ───────────────────────────────── */
+
+.inspector-body .analysis-heatmap td:first-child {
+    max-width: 200px;
+    text-overflow: ellipsis;
+    overflow: hidden;
+    white-space: nowrap;
+}

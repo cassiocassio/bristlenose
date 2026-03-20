@@ -57,14 +57,32 @@
         0px;
 }
 
-/* Inert rail — non-sidebar tabs (Dashboard, Analysis, About).
-   Matches the toc-rail width so content aligns with sidebar tabs. */
-.layout.layout-inert {
+/* No-right-sidebar + TOC open: 3-column layout with sidebar expanded */
+.layout.layout-no-right.toc-open {
     grid-template-columns:
-        var(--bn-rail-width)   /* 1: inert rail */
-        1fr;                   /* 2: center      */
+        0px                                           /* 1: rail hidden     */
+        var(--toc-width, var(--bn-sidebar-width))     /* 2: toc sidebar     */
+        1fr                                           /* 3: center          */
+        var(--bn-rail-width);                         /* 4: right spacer    */
 }
 
+.layout.layout-no-right.toc-open > .center {
+    grid-column: 3;
+}
+
+/* Symmetric rail — tabs without a right sidebar (Codebook, Sessions,
+   Dashboard, Analysis, About).  Left rail + center + matching right spacer
+   so margins are balanced on wide monitors.  `.layout-inert` is the
+   non-interactive variant (empty rail div, no button). */
+.layout.layout-no-right,
+.layout.layout-inert {
+    grid-template-columns:
+        var(--bn-rail-width)   /* 1: toc rail       */
+        1fr                    /* 2: center          */
+        var(--bn-rail-width);  /* 3: right spacer   */
+}
+
+.layout.layout-no-right > .center,
 .layout.layout-inert > .center {
     grid-column: 2;
 }

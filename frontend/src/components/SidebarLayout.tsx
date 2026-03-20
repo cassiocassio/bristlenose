@@ -298,6 +298,7 @@ export function SidebarLayout({ active, leftPanel, leftPanelTitle, showRightSide
   }
 
   const classes = ["layout"];
+  if (!showRightSidebar) classes.push("layout-no-right");
   if (tocMode === "push") classes.push("toc-open");
   if (tocMode === "overlay") {
     classes.push("toc-overlay");

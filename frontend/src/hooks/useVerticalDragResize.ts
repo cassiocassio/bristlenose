@@ -31,6 +31,8 @@ import {
 /** Pixels of pointer movement before we enter drag mode. */
 const DRAG_THRESHOLD = 3;
 const RESIZE_STEP = 10;
+/** Height of the collapsed handle bar (1.75rem = 28px). */
+const COLLAPSED_HEIGHT = 28;
 
 // ── Types ────────────────────────────────────────────────────────────────
 
@@ -82,7 +84,9 @@ export function useVerticalDragResize({
       if (!container) return;
 
       const startY = e.clientY;
-      const startHeight = isOpenRef.current ? currentHeightRef.current : currentHeightRef.current;
+      const wasCollapsed = !isOpenRef.current;
+      // When collapsed, grow from the handle bar height (28px), not the stored height.
+      const startHeight = wasCollapsed ? COLLAPSED_HEIGHT : currentHeightRef.current;
       let enteredDrag = false;
       let lastHeight = startHeight;
 
@@ -96,9 +100,14 @@ export function useVerticalDragResize({
           enteredDrag = true;
           isDraggingRef.current = true;
 
-          // If panel was collapsed, open it for the drag
-          if (!isOpenRef.current) {
-            openInspector();
+          // If panel was collapsed, remove the collapsed class directly on the
+          // DOM so tabs/body become visible — but don't call openInspector()
+          // yet (that would trigger a React re-render with the stored height).
+          // Set --inspector-height to the handle bar height first so the panel
+          // doesn't flash to a stale CSS var value.
+          if (wasCollapsed) {
+            container.style.setProperty("--inspector-height", `${COLLAPSED_HEIGHT}px`);
+            container.classList.remove("collapsed");
           }
         }
 
@@ -132,6 +141,7 @@ export function useVerticalDragResize({
 
         // Drag completed
         if (lastHeight < SNAP_CLOSE_THRESHOLD) {
+          // Dragged below snap threshold → close
           closeInspector();
           container.style.removeProperty("--inspector-height");
         } else {

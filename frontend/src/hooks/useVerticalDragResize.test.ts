@@ -151,6 +151,44 @@ describe("useVerticalDragResize", () => {
     expect(document.body.classList.contains("dragging-v")).toBe(false);
   });
 
+  it("drag from collapsed grows from handle height (28px), not stored height", () => {
+    const container = makeContainer();
+    container.classList.add("collapsed");
+    const ref = { current: container };
+
+    // Panel is collapsed but has a stored height of 320
+    const { result: resizeResult } = renderHook(() =>
+      useVerticalDragResize({
+        containerRef: ref,
+        currentHeight: 320,
+        isOpen: false,
+      }),
+    );
+    const { result: storeResult } = renderHook(() => useInspectorStore());
+
+    // Start drag at y=500, drag up 50px to y=450
+    // deltaY = 500 - 450 = 50; raw = 28 + 50 = 78px (below snap threshold)
+    // Drag up more to y=300: deltaY = 500 - 300 = 200; raw = 28 + 200 = 228px
+    act(() => {
+      resizeResult.current.handlePointerDown(makePointerEvent("pointerdown", 500));
+    });
+
+    // Move past threshold — should remove .collapsed class
+    act(() => firePointerMove(450));
+    expect(container.classList.contains("collapsed")).toBe(false);
+
+    // Continue dragging up — height grows from 28px base
+    act(() => firePointerMove(300));
+    const height = container.style.getPropertyValue("--inspector-height");
+    // raw = 28 + (500 - 300) = 228px → clamped to [150, 600] = 228px
+    expect(height).toBe("228px");
+
+    // Release — should persist to store
+    act(() => firePointerUp());
+    expect(storeResult.current.open).toBe(true);
+    expect(storeResult.current.height).toBe(228);
+  });
+
   it("drag below snap threshold closes the panel", () => {
     const container = makeContainer();
     const ref = { current: container };

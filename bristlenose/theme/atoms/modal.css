@@ -21,6 +21,24 @@
     visibility: visible;
 }
 
+/* Card scale+fade — matches modal-nav-shell transition */
+.bn-overlay .bn-modal {
+    transform: scale(0.97);
+    opacity: 0;
+    transition: transform 0.2s ease-out, opacity 0.2s ease-out;
+}
+
+.bn-overlay.visible .bn-modal {
+    transform: scale(1);
+    opacity: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .bn-overlay .bn-modal {
+        transition: none;
+    }
+}
+
 /* Modal card — centred white box with shadow.
    Default max-width suits confirmation dialogs; override per-modal for
    wider content (help-modal 600px, feedback-modal 420px). */

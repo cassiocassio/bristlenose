@@ -1,16 +1,29 @@
 /* ── Inspector panel — collapsible bottom heatmap pane ──── */
 
+/* Constrain the grid and center column to viewport height when the
+   analysis layout is active — keeps the collapsed inspector handle
+   visible at the bottom of the viewport without scrolling.
+   .layout normally has min-height: 100vh (can grow); here we cap it. */
+.layout:has(.analysis-layout) {
+    height: 100vh;
+    height: 100dvh;
+    overflow: hidden;
+}
+
+.layout > .center:has(.analysis-layout) {
+    overflow: hidden;
+}
+
 /* Vertical flexbox wrapper for analysis page.
    .analysis-center scrolls signal cards.
    .inspector-panel sits below as a fixed-height pane.
-   Uses dvh (dynamic viewport height) to fill the available area
-   below header/nav. Falls back to 100vh for older browsers. */
+   flex: 1 fills whatever space remains after Header + NavBar. */
 .analysis-layout {
     display: flex;
     flex-direction: column;
-    /* 5.5rem ≈ header (2.5rem) + navbar (3rem) */
-    height: calc(100vh - 5.5rem);
-    height: calc(100dvh - 5.5rem);
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
 }
 
 .analysis-center {
@@ -203,7 +216,8 @@ body.dragging-v * {
 .inspector-body {
     flex: 1;
     overflow: auto;
-    padding: var(--bn-space-md);
+    /* No top padding — sticky thead must sit flush against the tab bar. */
+    padding: 0 var(--bn-space-md) var(--bn-space-md);
 }
 
 /* Sticky column headers when scrolling tall matrices */

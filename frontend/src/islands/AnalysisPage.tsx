@@ -362,6 +362,7 @@ function SignalCard({
   signal,
   allPids,
   isSentiment,
+  isFocused,
   cardRef,
   siblingSignals,
   signalIndex,
@@ -370,6 +371,7 @@ function SignalCard({
   signal: UnifiedSignal;
   allPids: string[];
   isSentiment: boolean;
+  isFocused?: boolean;
   cardRef?: (el: HTMLDivElement | null) => void;
   siblingSignals?: number[];
   signalIndex?: number;
@@ -424,7 +426,7 @@ function SignalCard({
 
   return (
     <div
-      className={`signal-card${expanded ? " expanded" : ""}`}
+      className={`signal-card${expanded ? " expanded" : ""}${isFocused ? " bn-selected" : ""}`}
       style={{ "--card-accent": accentVar } as React.CSSProperties}
       data-testid="bn-signal-card"
       ref={cardRef ?? undefined}
@@ -722,7 +724,12 @@ function Heatmap({
         if (!wrapperRef.current) return;
         const wrapperRect = wrapperRef.current.getBoundingClientRect();
         // Position below the cell, centred horizontally
-        const top = cellRect.bottom - wrapperRect.top + 6;
+        const tipHeight = 120; // approximate tooltip height
+        const spaceBelow = window.innerHeight - cellRect.bottom;
+        const placeAbove = spaceBelow < tipHeight + 12;
+        const top = placeAbove
+          ? cellRect.top - wrapperRect.top - tipHeight - 6
+          : cellRect.bottom - wrapperRect.top + 6;
         let left = cellRect.left - wrapperRect.left + cellRect.width / 2;
         // Clamp so tooltip doesn't overflow wrapper right edge
         const wrapperWidth = wrapperRect.width;
@@ -1002,17 +1009,6 @@ export function AnalysisPage({ projectId }: AnalysisPageProps) {
   // Card refs for scroll-to from heatmap cells
   const cardRefs = useRef<Map<string, HTMLDivElement>>(new Map());
 
-  const handleCellClick = useCallback((key: string) => {
-    const el = cardRefs.current.get(key);
-    if (el) {
-      el.scrollIntoView({ behavior: "smooth", block: "center" });
-      el.style.boxShadow = "0 0 0 3px var(--bn-colour-accent)";
-      setTimeout(() => {
-        el.style.boxShadow = "";
-      }, 1500);
-    }
-  }, []);
-
   // ── Inspector store (for card focus → panel sync) ────────────────────
   // Must be called before early returns to satisfy Rules of Hooks.
   const { activeDimension } = useInspectorStore();
@@ -1020,8 +1016,20 @@ export function AnalysisPage({ projectId }: AnalysisPageProps) {
   // Shimmer trigger — increments when a card is focused while panel is collapsed
   const [shimmerTrigger, setShimmerTrigger] = useState(0);
 
+  // Track which signal card is focused (blue wash synced with inspector)
+  const [focusedSignalKey, setFocusedSignalKey] = useState<string | null>(null);
+
+  const handleCellClick = useCallback((key: string) => {
+    setFocusedSignalKey(key);
+    const el = cardRefs.current.get(key);
+    if (el) {
+      el.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+  }, []);
+
   const handleCardFocus = useCallback(
     (signal: UnifiedSignal) => {
+      setFocusedSignalKey(signal.key);
       // Determine which source key this signal belongs to
       let sourceKey: string;
       let dim: InspectorDimension;
@@ -1180,6 +1188,7 @@ export function AnalysisPage({ projectId }: AnalysisPageProps) {
                   signal={s}
                   allPids={sentimentPids}
                   isSentiment={true}
+                  isFocused={focusedSignalKey === s.key}
                   cardRef={(el: HTMLDivElement | null) => {
                     if (el) cardRefs.current.set(s.key, el);
                     else cardRefs.current.delete(s.key);
@@ -1207,6 +1216,7 @@ export function AnalysisPage({ projectId }: AnalysisPageProps) {
                   signal={s}
                   allPids={tagAllPids}
                   isSentiment={false}
+                  isFocused={focusedSignalKey === s.key}
                   siblingSignals={tagSignals.map((t) => t.compositeSignal)}
                   signalIndex={idx}
                   cardRef={(el: HTMLDivElement | null) => {

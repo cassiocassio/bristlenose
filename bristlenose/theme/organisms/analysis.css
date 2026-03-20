@@ -22,6 +22,13 @@
     box-shadow: 0 2px 8px var(--bn-colour-shadow);
 }
 
+/* Selected signal card — same blue wash as quote cards (.bn-selected)
+   from the atomic design system. Shows which card the inspector is displaying. */
+.signal-card.bn-selected {
+    background: var(--bn-selection-bg);
+    border-color: var(--bn-selection-border);
+}
+
 /* Two-column top: identity left, metrics right */
 .signal-card-top {
     display: flex;

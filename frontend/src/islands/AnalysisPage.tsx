@@ -14,6 +14,12 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Badge, Metric, PersonBadge } from "../components";
+import { InspectorPanel, DimensionToggle, type InspectorSource } from "../components/InspectorPanel";
+import {
+  useInspectorStore,
+  setInspectorSourceAndDimension,
+  type InspectorDimension,
+} from "../contexts/InspectorStore";
 import { apiGet, getCodebookAnalysis } from "../utils/api";
 import { getBarColour, getGroupBg, getTagBg } from "../utils/colours";
 import { formatTimecode } from "../utils/format";
@@ -356,16 +362,20 @@ function SignalCard({
   signal,
   allPids,
   isSentiment,
+  isFocused,
   cardRef,
   siblingSignals,
   signalIndex,
+  onFocus,
 }: {
   signal: UnifiedSignal;
   allPids: string[];
   isSentiment: boolean;
+  isFocused?: boolean;
   cardRef?: (el: HTMLDivElement | null) => void;
   siblingSignals?: number[];
   signalIndex?: number;
+  onFocus?: (signal: UnifiedSignal) => void;
 }) {
   const [expanded, setExpanded] = useState(false);
   const expansionRef = useRef<HTMLDivElement>(null);
@@ -416,10 +426,11 @@ function SignalCard({
 
   return (
     <div
-      className={`signal-card${expanded ? " expanded" : ""}`}
+      className={`signal-card${expanded ? " expanded" : ""}${isFocused ? " bn-selected" : ""}`}
       style={{ "--card-accent": accentVar } as React.CSSProperties}
       data-testid="bn-signal-card"
       ref={cardRef ?? undefined}
+      onClick={() => onFocus?.(signal)}
     >
       <div className="signal-card-top">
         <div className="signal-card-identity">
@@ -677,6 +688,7 @@ function Heatmap({
   allPids,
   onCellClick,
   isDark,
+  topLeftContent,
 }: {
   matrix: AnalysisMatrix | SentimentMatrixAdapter;
   columnLabels: string[];
@@ -687,6 +699,7 @@ function Heatmap({
   allPids: string[];
   onCellClick: (key: string) => void;
   isDark: boolean;
+  topLeftContent?: React.ReactNode;
 }) {
   const grandTotal = matrix.grand_total;
   if (grandTotal === 0 || matrix.row_labels.length === 0) return null;
@@ -711,7 +724,12 @@ function Heatmap({
         if (!wrapperRef.current) return;
         const wrapperRect = wrapperRef.current.getBoundingClientRect();
         // Position below the cell, centred horizontally
-        const top = cellRect.bottom - wrapperRect.top + 6;
+        const tipHeight = 120; // approximate tooltip height
+        const spaceBelow = window.innerHeight - cellRect.bottom;
+        const placeAbove = spaceBelow < tipHeight + 12;
+        const top = placeAbove
+          ? cellRect.top - wrapperRect.top - tipHeight - 6
+          : cellRect.bottom - wrapperRect.top + 6;
         let left = cellRect.left - wrapperRect.left + cellRect.width / 2;
         // Clamp so tooltip doesn't overflow wrapper right edge
         const wrapperWidth = wrapperRect.width;
@@ -743,7 +761,7 @@ function Heatmap({
     <table className="analysis-heatmap" data-testid="bn-heatmap">
       <thead>
         <tr>
-          <th>{rowHeader}</th>
+          <th>{topLeftContent ?? rowHeader}</th>
           {columnLabels.map((col) => {
             const isHl = col === highlightCol;
             const baseClass = isSentiment ? undefined : "heatmap-col-header";
@@ -991,16 +1009,137 @@ export function AnalysisPage({ projectId }: AnalysisPageProps) {
   // Card refs for scroll-to from heatmap cells
   const cardRefs = useRef<Map<string, HTMLDivElement>>(new Map());
 
+  // ── Inspector store (for card focus → panel sync) ────────────────────
+  // Must be called before early returns to satisfy Rules of Hooks.
+  const { activeDimension } = useInspectorStore();
+
+  // Shimmer trigger — increments when a card is focused while panel is collapsed
+  const [shimmerTrigger, setShimmerTrigger] = useState(0);
+
+  // Track which signal card is focused (blue wash synced with inspector)
+  const [focusedSignalKey, setFocusedSignalKey] = useState<string | null>(null);
+
   const handleCellClick = useCallback((key: string) => {
+    setFocusedSignalKey(key);
     const el = cardRefs.current.get(key);
     if (el) {
       el.scrollIntoView({ behavior: "smooth", block: "center" });
-      el.style.boxShadow = "0 0 0 3px var(--bn-colour-accent)";
-      setTimeout(() => {
-        el.style.boxShadow = "";
-      }, 1500);
     }
   }, []);
+
+  const handleCardFocus = useCallback(
+    (signal: UnifiedSignal) => {
+      setFocusedSignalKey(signal.key);
+      // Determine which source key this signal belongs to
+      let sourceKey: string;
+      let dim: InspectorDimension;
+      if (signal.codebookName === "" || signal.codebookName === "Sentiment") {
+        sourceKey = "sentiment";
+      } else {
+        // Find the codebook ID for this signal
+        const cb = cbData?.codebooks.find((c) => c.codebook_name === signal.codebookName);
+        sourceKey = cb ? `cb-${cb.codebook_id}` : "sentiment";
+      }
+      dim = signal.sourceType === "theme" ? "theme" : "section";
+      setInspectorSourceAndDimension(sourceKey, dim);
+      setShimmerTrigger((n) => n + 1);
+    },
+    [cbData],
+  );
+
+  void activeDimension; // used indirectly by DimensionToggle components in sources
+
+  // ── Build heatmap sources for InspectorPanel ─────────────────────────
+
+  const heatmapSources = useMemo<InspectorSource[]>(() => {
+    const sources: InspectorSource[] = [];
+
+    // Sentiment source
+    if (hasSentiment && sentimentSectionMatrix) {
+      const sentHasBoth = !!sentimentThemeMatrix;
+      sources.push({
+        key: "sentiment",
+        label: "Sentiment",
+        sectionContent: (
+          <Heatmap
+            matrix={sentimentSectionMatrix}
+            columnLabels={sentimentColumns}
+            rowHeader="Section"
+            isSentiment={true}
+            signalKeys={signalKeys}
+            signalMap={signalMap}
+            allPids={sentimentPids}
+            onCellClick={handleCellClick}
+            isDark={isDark}
+            topLeftContent={<DimensionToggle hasBoth={sentHasBoth} />}
+          />
+        ),
+        themeContent: sentimentThemeMatrix ? (
+          <Heatmap
+            matrix={sentimentThemeMatrix}
+            columnLabels={sentimentColumns}
+            rowHeader="Theme"
+            isSentiment={true}
+            signalKeys={signalKeys}
+            signalMap={signalMap}
+            allPids={sentimentPids}
+            onCellClick={handleCellClick}
+            isDark={isDark}
+            topLeftContent={<DimensionToggle hasBoth={sentHasBoth} />}
+          />
+        ) : undefined,
+      });
+    }
+
+    // Per-codebook sources
+    if (hasTags && cbData) {
+      for (const cb of cbData.codebooks) {
+        const hasSection = cb.section_matrix.grand_total > 0;
+        const hasTheme = cb.theme_matrix.grand_total > 0;
+        if (!hasSection && !hasTheme) continue;
+
+        const cbHasBoth = hasSection && hasTheme;
+        sources.push({
+          key: `cb-${cb.codebook_id}`,
+          label: cb.codebook_name,
+          sectionContent: hasSection ? (
+            <Heatmap
+              matrix={cb.section_matrix}
+              columnLabels={cb.columns}
+              rowHeader="Section"
+              isSentiment={false}
+              signalKeys={signalKeys}
+              signalMap={signalMap}
+              allPids={tagAllPids}
+              onCellClick={handleCellClick}
+              isDark={isDark}
+              topLeftContent={<DimensionToggle hasBoth={cbHasBoth} />}
+            />
+          ) : undefined,
+          themeContent: hasTheme ? (
+            <Heatmap
+              matrix={cb.theme_matrix}
+              columnLabels={cb.columns}
+              rowHeader="Theme"
+              isSentiment={false}
+              signalKeys={signalKeys}
+              signalMap={signalMap}
+              allPids={tagAllPids}
+              onCellClick={handleCellClick}
+              isDark={isDark}
+              topLeftContent={<DimensionToggle hasBoth={cbHasBoth} />}
+            />
+          ) : undefined,
+        });
+      }
+    }
+
+    return sources;
+  }, [
+    hasSentiment, sentimentSectionMatrix, sentimentThemeMatrix, sentimentColumns,
+    sentimentPids, hasTags, cbData, tagAllPids, signalKeys, signalMap,
+    handleCellClick, isDark,
+  ]);
 
   // Still loading
   if (!hasSentiment && !hasTags && !tagLoaded) {
@@ -1030,148 +1169,70 @@ export function AnalysisPage({ projectId }: AnalysisPageProps) {
     );
   }
 
-  const sentimentTotalP = sentimentData?.totalParticipants ?? 0;
-  const tagTotalP = cbData?.total_participants ?? 0;
-
   return (
-    <div data-testid="bn-analysis-page">
-      {/* ── Sentiment signal cards ─────────────────────────────── */}
-      {hasSentiment && sentimentSignals.length > 0 && (
-        <>
-          <h2 className="section-heading">Sentiment signals</h2>
-          <p className="section-desc">
-            Patterns ranked by signal strength — where sentiments concentrate
-            more than expected given the study average.
-          </p>
-          <div className="signal-cards" id="signal-cards-sentiment">
-            {sentimentSignals.map((s) => (
-              <SignalCard
-                key={s.key}
-                signal={s}
-                allPids={sentimentPids}
-                isSentiment={true}
-                cardRef={(el: HTMLDivElement | null) => {
-                  if (el) cardRefs.current.set(s.key, el);
-                  else cardRefs.current.delete(s.key);
-                }}
-              />
-            ))}
-          </div>
-        </>
-      )}
+    <div className="analysis-layout" data-testid="bn-analysis-page">
+      {/* ── Center pane: signal cards ───────────────────────── */}
+      <div className="analysis-center">
+        {/* ── Sentiment signal cards ─────────────────────────── */}
+        {hasSentiment && sentimentSignals.length > 0 && (
+          <>
+            <h2 className="section-heading">Sentiment signals</h2>
+            <p className="section-desc">
+              Patterns ranked by signal strength — where sentiments concentrate
+              more than expected given the study average.
+            </p>
+            <div className="signal-cards" id="signal-cards-sentiment">
+              {sentimentSignals.map((s) => (
+                <SignalCard
+                  key={s.key}
+                  signal={s}
+                  allPids={sentimentPids}
+                  isSentiment={true}
+                  isFocused={focusedSignalKey === s.key}
+                  cardRef={(el: HTMLDivElement | null) => {
+                    if (el) cardRefs.current.set(s.key, el);
+                    else cardRefs.current.delete(s.key);
+                  }}
+                  onFocus={handleCardFocus}
+                />
+              ))}
+            </div>
+          </>
+        )}
 
-      {/* ── Tag signal cards ───────────────────────────────────── */}
-      {hasTags && tagSignals.length > 0 && (
-        <>
-          {sourceBreakdown && <SourceBanner breakdown={sourceBreakdown} />}
-          <h2 className="section-heading">Tag signals</h2>
-          <p className="section-desc">
-            Patterns ranked by signal strength — where codebook tags concentrate
-            more than expected given the study average.
-          </p>
-          <div className="signal-cards" id="signal-cards-tags">
-            {tagSignals.map((s, idx) => (
-              <SignalCard
-                key={s.key}
-                signal={s}
-                allPids={tagAllPids}
-                isSentiment={false}
-                siblingSignals={tagSignals.map((t) => t.compositeSignal)}
-                signalIndex={idx}
-                cardRef={(el: HTMLDivElement | null) => {
-                  if (el) cardRefs.current.set(s.key, el);
-                  else cardRefs.current.delete(s.key);
-                }}
-              />
-            ))}
-          </div>
-        </>
-      )}
+        {/* ── Tag signal cards ───────────────────────────────── */}
+        {hasTags && tagSignals.length > 0 && (
+          <>
+            {sourceBreakdown && <SourceBanner breakdown={sourceBreakdown} />}
+            <h2 className="section-heading">Tag signals</h2>
+            <p className="section-desc">
+              Patterns ranked by signal strength — where codebook tags concentrate
+              more than expected given the study average.
+            </p>
+            <div className="signal-cards" id="signal-cards-tags">
+              {tagSignals.map((s, idx) => (
+                <SignalCard
+                  key={s.key}
+                  signal={s}
+                  allPids={tagAllPids}
+                  isSentiment={false}
+                  isFocused={focusedSignalKey === s.key}
+                  siblingSignals={tagSignals.map((t) => t.compositeSignal)}
+                  signalIndex={idx}
+                  cardRef={(el: HTMLDivElement | null) => {
+                    if (el) cardRefs.current.set(s.key, el);
+                    else cardRefs.current.delete(s.key);
+                  }}
+                  onFocus={handleCardFocus}
+                />
+              ))}
+            </div>
+          </>
+        )}
+      </div>
 
-      {/* ── Sentiment heatmaps ─────────────────────────────────── */}
-      {hasSentiment && sentimentSectionMatrix && (
-        <>
-          <h2 className="section-heading" id="section-x-sentiment">
-            Section × Sentiment
-          </h2>
-          <p className="section-desc">
-            Quote counts per report section and sentiment.
-            {sentimentTotalP > 0 && ` ${sentimentTotalP} participants total.`}
-          </p>
-          <Heatmap
-            matrix={sentimentSectionMatrix}
-            columnLabels={sentimentColumns}
-            rowHeader="Section"
-            isSentiment={true}
-            signalKeys={signalKeys}
-            signalMap={signalMap}
-            allPids={sentimentPids}
-            onCellClick={handleCellClick}
-            isDark={isDark}
-          />
-        </>
-      )}
-      {hasSentiment && sentimentThemeMatrix && (
-        <>
-          <h2 className="section-heading">Theme × Sentiment</h2>
-          <p className="section-desc">The same view grouped by cross-cutting themes.</p>
-          <Heatmap
-            matrix={sentimentThemeMatrix}
-            columnLabels={sentimentColumns}
-            rowHeader="Theme"
-            isSentiment={true}
-            signalKeys={signalKeys}
-            signalMap={signalMap}
-            allPids={sentimentPids}
-            onCellClick={handleCellClick}
-            isDark={isDark}
-          />
-        </>
-      )}
-
-      {/* ── Per-codebook tag heatmaps ──────────────────────────── */}
-      {hasTags && cbData && cbData.codebooks.map((cb) => (
-        <div key={cb.codebook_id} className="analysis-codebook-section">
-          <h3 className="analysis-codebook-heading">{cb.codebook_name}</h3>
-          {cb.section_matrix.grand_total > 0 && (
-            <>
-              <p className="analysis-heatmap-label">
-                Section × {cb.codebook_name}
-                {tagTotalP > 0 && ` · ${tagTotalP} participants`}
-              </p>
-              <Heatmap
-                matrix={cb.section_matrix}
-                columnLabels={cb.columns}
-                rowHeader="Section"
-                isSentiment={false}
-                signalKeys={signalKeys}
-                signalMap={signalMap}
-                allPids={tagAllPids}
-                onCellClick={handleCellClick}
-                isDark={isDark}
-              />
-            </>
-          )}
-          {cb.theme_matrix.grand_total > 0 && (
-            <>
-              <p className="analysis-heatmap-label">
-                Theme × {cb.codebook_name}
-              </p>
-              <Heatmap
-                matrix={cb.theme_matrix}
-                columnLabels={cb.columns}
-                rowHeader="Theme"
-                isSentiment={false}
-                signalKeys={signalKeys}
-                signalMap={signalMap}
-                allPids={tagAllPids}
-                onCellClick={handleCellClick}
-                isDark={isDark}
-              />
-            </>
-          )}
-        </div>
-      ))}
+      {/* ── Inspector panel: heatmaps ──────────────────────── */}
+      <InspectorPanel sources={heatmapSources} shimmerTrigger={shimmerTrigger} />
     </div>
   );
 }

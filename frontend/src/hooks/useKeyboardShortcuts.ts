@@ -34,6 +34,7 @@ import {
   togglePlayground,
   toggleHUD,
 } from "../contexts/PlaygroundStore";
+import { toggleInspector } from "../contexts/InspectorStore";
 
 // ── Helpers ──────────────────────────────────────────────────────────────
 
@@ -373,6 +374,15 @@ export function useKeyboardShortcuts({
         if (pathMatches(locationRef.current.pathname, "/report/quotes")) {
           e.preventDefault();
           sidebarAnimations.toggleBoth();
+          return;
+        }
+      }
+
+      // m — toggle heatmap inspector panel (analysis tab only)
+      if (key === "m") {
+        if (pathMatches(locationRef.current.pathname, "/report/analysis")) {
+          e.preventDefault();
+          toggleInspector();
           return;
         }
       }

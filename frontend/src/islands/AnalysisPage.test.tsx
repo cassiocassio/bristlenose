@@ -335,7 +335,7 @@ describe("AnalysisPage", () => {
 
   // --- Per-codebook features ---
 
-  it("renders separate heatmaps per codebook", async () => {
+  it("renders per-codebook tabs in inspector panel", async () => {
     mockFetchCodebookAnalysis(mockCbData);
     render(<AnalysisPage projectId="1" />);
 
@@ -343,11 +343,11 @@ describe("AnalysisPage", () => {
       expect(screen.getAllByTestId("bn-signal-card")).toHaveLength(2);
     });
 
-    expect(screen.getByText("UX Research")).toBeTruthy();
-    expect(screen.getByText("Norman Usability")).toBeTruthy();
-
-    const codebookSections = document.querySelectorAll(".analysis-codebook-section");
-    expect(codebookSections.length).toBe(2);
+    // Codebook names appear as inspector panel tabs
+    expect(screen.getByTestId("inspector-tab-cb-uxr")).toBeTruthy();
+    expect(screen.getByTestId("inspector-tab-cb-norman")).toBeTruthy();
+    expect(screen.getByTestId("inspector-tab-cb-uxr").textContent).toBe("UX Research");
+    expect(screen.getByTestId("inspector-tab-cb-norman").textContent).toBe("Norman Usability");
   });
 
   it("signals are interleaved across codebooks by composite score", async () => {

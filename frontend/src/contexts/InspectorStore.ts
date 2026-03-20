@@ -15,19 +15,26 @@ import { useSyncExternalStore } from "react";
 export const DEFAULT_HEIGHT = 320;
 export const MIN_HEIGHT = 150;
 export const MAX_HEIGHT = 600;
-export const SNAP_CLOSE_THRESHOLD = 60;
+export const SNAP_CLOSE_THRESHOLD = 80;
 
 const LS_OPEN = "bn-inspector-open";
 const LS_HEIGHT = "bn-inspector-height";
-const LS_TAB = "bn-inspector-tab";
+const LS_SOURCE = "bn-inspector-source";
+const LS_DIMENSION = "bn-inspector-dimension";
 
 // ── Types ────────────────────────────────────────────────────────────────
+
+export type InspectorDimension = "section" | "theme";
 
 export interface InspectorState {
   open: boolean;
   height: number;
-  /** Key of the active heatmap tab (empty string = first available). */
-  activeTab: string;
+  /** Whether the user has manually dragged to set a height. */
+  hasManualHeight: boolean;
+  /** Key of the active heatmap source (empty string = first available). */
+  activeSource: string;
+  /** Whether to show the section or theme dimension of the active source. */
+  activeDimension: InspectorDimension;
 }
 
 // ── localStorage helpers ──────────────────────────────────────────────────
@@ -89,10 +96,13 @@ function writeString(key: string, value: string): void {
 // ── Module-level store ────────────────────────────────────────────────────
 
 function loadState(): InspectorState {
+  const height = readNumber(LS_HEIGHT, 0, 0, MAX_HEIGHT);
   return {
     open: readBool(LS_OPEN, false),
-    height: readNumber(LS_HEIGHT, DEFAULT_HEIGHT, MIN_HEIGHT, MAX_HEIGHT),
-    activeTab: readString(LS_TAB, ""),
+    height: height || DEFAULT_HEIGHT,
+    hasManualHeight: height > 0,
+    activeSource: readString(LS_SOURCE, ""),
+    activeDimension: readString(LS_DIMENSION, "section") as InspectorDimension,
   };
 }
 
@@ -145,14 +155,32 @@ export function setInspectorHeight(height: number): void {
   const clamped = Math.max(MIN_HEIGHT, Math.min(MAX_HEIGHT, height));
   setState((prev) => {
     writeNumber(LS_HEIGHT, clamped);
-    return { ...prev, height: clamped };
+    return { ...prev, height: clamped, hasManualHeight: true };
   });
 }
 
-export function setInspectorTab(key: string): void {
+export function setInspectorSource(key: string): void {
   setState((prev) => {
-    writeString(LS_TAB, key);
-    return { ...prev, activeTab: key };
+    writeString(LS_SOURCE, key);
+    return { ...prev, activeSource: key };
+  });
+}
+
+export function setInspectorDimension(dim: InspectorDimension): void {
+  setState((prev) => {
+    writeString(LS_DIMENSION, dim);
+    return { ...prev, activeDimension: dim };
+  });
+}
+
+export function setInspectorSourceAndDimension(
+  key: string,
+  dim: InspectorDimension,
+): void {
+  setState((prev) => {
+    writeString(LS_SOURCE, key);
+    writeString(LS_DIMENSION, dim);
+    return { ...prev, activeSource: key, activeDimension: dim };
   });
 }
 
@@ -161,7 +189,9 @@ export function resetInspectorStore(): void {
   state = {
     open: false,
     height: DEFAULT_HEIGHT,
-    activeTab: "",
+    hasManualHeight: false,
+    activeSource: "",
+    activeDimension: "section",
   };
   listeners.forEach((l) => l());
 }

@@ -9,7 +9,6 @@
     grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
     gap: var(--bn-space-lg);
     align-items: start;
-    max-width: 1200px;
 }
 
 /* ── Group column ──────────────────────────────────────────────────────── */

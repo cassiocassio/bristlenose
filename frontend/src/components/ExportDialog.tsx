@@ -7,7 +7,7 @@
  * @module ExportDialog
  */
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { isExportMode } from "../utils/exportData";
 
@@ -20,6 +20,19 @@ export function ExportDialog({ open, onClose }: ExportDialogProps) {
   const [anonymise, setAnonymise] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const triggerRef = useRef<Element | null>(null);
+
+  // Reset state and track trigger element when opening.
+  useEffect(() => {
+    if (open) {
+      setAnonymise(false);
+      setError(null);
+      triggerRef.current = document.activeElement;
+    } else if (triggerRef.current instanceof HTMLElement) {
+      triggerRef.current.focus();
+      triggerRef.current = null;
+    }
+  }, [open]);
 
   const handleOverlayClick = useCallback(
     (e: React.MouseEvent) => {
@@ -77,12 +90,13 @@ export function ExportDialog({ open, onClose }: ExportDialogProps) {
     }
   }, [anonymise, onClose]);
 
-  if (!open || isExportMode()) return null;
+  if (isExportMode()) return null;
 
   return createPortal(
     <div
-      className="bn-overlay visible"
+      className={`bn-overlay${open ? " visible" : ""}`}
       onClick={handleOverlayClick}
+      aria-hidden={!open}
       data-testid="bn-export-overlay"
     >
       <div className="bn-modal" data-testid="bn-export-modal" style={{ maxWidth: 420 }}>

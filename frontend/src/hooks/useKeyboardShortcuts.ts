@@ -350,10 +350,14 @@ export function useKeyboardShortcuts({
       if (helpModalOpenRef.current) return;
       if (settingsModalOpenRef.current) return;
 
-      // [ — toggle TOC sidebar (quotes, codebook tabs)
+      // [ — toggle TOC sidebar (quotes, sessions, codebook tabs)
       if (key === "[") {
         const loc = locationRef.current.pathname;
-        if (pathMatches(loc, "/report/quotes") || pathMatches(loc, "/report/codebook")) {
+        if (
+          pathMatches(loc, "/report/quotes") ||
+          pathMatches(loc, "/report/codebook") ||
+          loc.startsWith("/report/sessions")
+        ) {
           e.preventDefault();
           sidebarAnimations.toggleToc();
           return;

@@ -20,6 +20,7 @@ Each active feature branch gets its own **git worktree** — a full working copy
 | `bristlenose_branch living-fish/` | `living-fish` | Animated "living portrait" logo for serve mode |
 | `bristlenose_branch drag-push/` | `drag-push` | Sidebar drag-to-open uses push mode (not overlay) |
 | `bristlenose_branch responsive-signal-cards/` | `responsive-signal-cards` | Responsive signal cards |
+| `bristlenose_branch macos-app/` | `macos-app` | macOS desktop app native shell |
 
 
 
@@ -105,6 +106,7 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 | `living-fish` | `bristlenose_branch living-fish/` | `origin/living-fish` |
 | `drag-push` | `bristlenose_branch drag-push/` | local only |
 | `responsive-signal-cards` | `bristlenose_branch responsive-signal-cards/` | local only |
+| `macos-app` | `bristlenose_branch macos-app/` | local only |
 
 
 
@@ -197,6 +199,31 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 **Potential conflicts with other branches:**
 - `symbology` — low risk (touches render/template files, not signal card layout)
 - `drag-push` — low risk (sidebar CSS, not signal cards)
+
+---
+
+### `macos-app`
+
+**Status:** Just started
+**Started:** 21 Mar 2026
+**Worktree:** `/Users/cassio/Code/bristlenose_branch macos-app/`
+**Remote:** local only (push when ready)
+
+**What it does:** Native macOS desktop app — SwiftUI shell with NavigationSplitView sidebar (multi-project), WKWebView detail pane embedding the React SPA, native menu bar, Cmd+1-5 tab switching, communication bridge (SwiftUI ↔ React). Design doc: `docs/design-desktop-app.md`.
+
+**Files this branch will touch:**
+- `desktop/` — SwiftUI app (new files: views, models, bridge)
+- `frontend/src/main.tsx` — embedded mode detection (`__BRISTLENOSE_EMBEDDED__`)
+- `frontend/src/layouts/AppLayout.tsx` — NavBar/Footer/Header suppression in embedded mode
+- `frontend/src/shims/bridge.ts` — new: `window.__bristlenose` namespace, message posting
+- `frontend/src/hooks/useKeyboardShortcuts.ts` — editing-started/editing-ended bridge messages
+- `bristlenose/server/app.py` — CORS middleware, `/media` mount restriction
+- `docs/design-desktop-app.md` — design doc (already committed on main)
+
+**Potential conflicts with other branches:**
+- `drag-push` — both touch sidebar CSS, low risk (different features)
+- `responsive-signal-cards` — may touch `AppLayout.tsx`, low risk
+- `symbology` — touches templates/render, no overlap with desktop shell
 
 ---
 

@@ -59,6 +59,7 @@ describe("ThresholdReviewModal", () => {
     mockGetProposals.mockReturnValue(new Promise(() => {}));
     render(
       <ThresholdReviewModal
+        open={true}
         frameworkId="garrett"
         frameworkTitle="Garrett"
         onClose={vi.fn()}
@@ -72,6 +73,7 @@ describe("ThresholdReviewModal", () => {
     mockGetProposals.mockResolvedValue({ proposals: [], total: 0 });
     render(
       <ThresholdReviewModal
+        open={true}
         frameworkId="garrett"
         frameworkTitle="Jesse James Garrett"
         onClose={vi.fn()}
@@ -86,6 +88,7 @@ describe("ThresholdReviewModal", () => {
     mockGetProposals.mockResolvedValue({ proposals: [], total: 0 });
     render(
       <ThresholdReviewModal
+        open={true}
         frameworkId="garrett"
         frameworkTitle="Garrett"
         onClose={vi.fn()}
@@ -108,6 +111,7 @@ describe("ThresholdReviewModal", () => {
 
     render(
       <ThresholdReviewModal
+        open={true}
         frameworkId="garrett"
         frameworkTitle="Garrett"
         onClose={vi.fn()}
@@ -132,6 +136,7 @@ describe("ThresholdReviewModal", () => {
 
     render(
       <ThresholdReviewModal
+        open={true}
         frameworkId="garrett"
         frameworkTitle="Garrett"
         onClose={vi.fn()}
@@ -152,6 +157,7 @@ describe("ThresholdReviewModal", () => {
     mockGetProposals.mockResolvedValue({ proposals: [], total: 0 });
     render(
       <ThresholdReviewModal
+        open={true}
         frameworkId="garrett"
         frameworkTitle="Garrett"
         onClose={vi.fn()}
@@ -168,6 +174,7 @@ describe("ThresholdReviewModal", () => {
 
     render(
       <ThresholdReviewModal
+        open={true}
         frameworkId="garrett"
         frameworkTitle="Garrett"
         onClose={onClose}
@@ -191,6 +198,7 @@ describe("ThresholdReviewModal", () => {
 
     render(
       <ThresholdReviewModal
+        open={true}
         frameworkId="garrett"
         frameworkTitle="Garrett"
         onClose={vi.fn()}
@@ -218,6 +226,7 @@ describe("ThresholdReviewModal", () => {
 
     render(
       <ThresholdReviewModal
+        open={true}
         frameworkId="garrett"
         frameworkTitle="Garrett"
         onClose={vi.fn()}
@@ -243,6 +252,7 @@ describe("ThresholdReviewModal", () => {
 
     render(
       <ThresholdReviewModal
+        open={true}
         frameworkId="garrett"
         frameworkTitle="Garrett"
         onClose={vi.fn()}
@@ -275,6 +285,7 @@ describe("ThresholdReviewModal", () => {
 
     render(
       <ThresholdReviewModal
+        open={true}
         frameworkId="garrett"
         frameworkTitle="Garrett"
         onClose={vi.fn()}

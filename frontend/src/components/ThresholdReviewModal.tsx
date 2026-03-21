@@ -26,6 +26,7 @@ const DEFAULT_LOWER = 0.30;
 const DEFAULT_UPPER = 0.70;
 
 interface ThresholdReviewModalProps {
+  open: boolean;
   frameworkId: string;
   frameworkTitle: string;
   onClose: () => void;
@@ -33,6 +34,7 @@ interface ThresholdReviewModalProps {
 }
 
 export function ThresholdReviewModal({
+  open,
   frameworkId,
   frameworkTitle,
   onClose,
@@ -56,8 +58,17 @@ export function ThresholdReviewModal({
   const [acceptedCount, setAcceptedCount] = useState(0);
   const [deniedCount, setDeniedCount] = useState(0);
 
-  // Fetch all proposals on mount (min_confidence=0 to get everything)
+  // Fetch all proposals when opened (min_confidence=0 to get everything)
   useEffect(() => {
+    if (!open) return;
+    setLoading(true);
+    setAllProposals([]);
+    setRemoved(new Set());
+    setRemoving(new Set());
+    setLower(DEFAULT_LOWER);
+    setUpper(DEFAULT_UPPER);
+    setError(null);
+    setApplying(false);
     getAutoCodeProposals(frameworkId, 0)
       .then((resp) => {
         const pending = resp.proposals.filter((p) => p.status === "pending");
@@ -74,7 +85,21 @@ export function ThresholdReviewModal({
         setError("Failed to load proposals");
         setLoading(false);
       });
-  }, [frameworkId]);
+  }, [open, frameworkId]);
+
+  // Escape key closes modal.
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        e.stopPropagation();
+        onClose();
+      }
+    };
+    document.addEventListener("keydown", handler, true);
+    return () => document.removeEventListener("keydown", handler, true);
+  }, [open, onClose]);
 
   // Proposals that are still pending (not individually removed)
   const pendingProposals = useMemo(
@@ -152,7 +177,11 @@ export function ThresholdReviewModal({
 
   const modal = (
     // eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions
-    <div className="codebook-modal-overlay" onClick={onClose}>
+    <div
+      className={`codebook-modal-overlay${open ? " visible" : ""}`}
+      onClick={onClose}
+      aria-hidden={!open}
+    >
       {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions */}
       <div
         className="codebook-modal"

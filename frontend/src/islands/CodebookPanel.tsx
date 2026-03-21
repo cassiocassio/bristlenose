@@ -1043,21 +1043,24 @@ export function CodebookPanel({ projectId }: CodebookPanelProps) {
       )}
 
       {/* AutoCode threshold review modal */}
-      {reportModal && (
-        <ThresholdReviewModal
-          frameworkId={reportModal.frameworkId}
-          frameworkTitle={reportModal.frameworkTitle}
-          onClose={() => setReportModal(null)}
-          onApply={handleReportApply}
-        />
-      )}
+      <ThresholdReviewModal
+        open={reportModal !== null}
+        frameworkId={reportModal?.frameworkId ?? ""}
+        frameworkTitle={reportModal?.frameworkTitle ?? ""}
+        onClose={() => setReportModal(null)}
+        onApply={handleReportApply}
+      />
 
       {/* Browse codebooks modal — picker and preview views.
          Portal to document.body so position:fixed escapes any ancestor
          stacking context (tab panels, dev overlay, etc.). */}
-      {modalView !== "closed" && createPortal(
+      {createPortal(
         // eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions
-        <div className="codebook-modal-overlay" onClick={handleCloseModal}>
+        <div
+          className={`codebook-modal-overlay${modalView !== "closed" ? " visible" : ""}`}
+          onClick={handleCloseModal}
+          aria-hidden={modalView === "closed"}
+        >
           {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions */}
           <div className="codebook-modal" onClick={(e) => e.stopPropagation()}>
             {modalView === "picker" && (

@@ -25,9 +25,11 @@ describe("FeedbackModal", () => {
     vi.mocked(toast).mockReset();
   });
 
-  it("renders nothing when open is false", () => {
+  it("renders hidden overlay when open is false", () => {
     render(<FeedbackModal open={false} onClose={vi.fn()} health={HEALTH} />);
-    expect(screen.queryByTestId("bn-feedback-overlay")).toBeNull();
+    const overlay = screen.getByTestId("bn-feedback-overlay");
+    expect(overlay).toHaveAttribute("aria-hidden", "true");
+    expect(overlay.className).not.toContain("visible");
   });
 
   it("disables send until sentiment is selected", () => {

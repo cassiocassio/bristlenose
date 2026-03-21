@@ -35,26 +35,15 @@ import {
   toggleHUD,
 } from "../contexts/PlaygroundStore";
 import { toggleInspector } from "../contexts/InspectorStore";
+import { isEditing } from "../utils/editing";
+import { isEmbedded } from "../utils/embedded";
+import { postEditingStarted, postEditingEnded } from "../shims/bridge";
 
 // ── Helpers ──────────────────────────────────────────────────────────────
 
 /** Check if the current pathname matches a given route (ignoring trailing slash). */
 function pathMatches(pathname: string, route: string): boolean {
   return pathname === route || pathname === route + "/";
-}
-
-/**
- * Check if user is currently editing (input, textarea, contenteditable,
- * or tag suggest active).  Keyboard shortcuts should not fire while editing.
- */
-function isEditing(): boolean {
-  const el = document.activeElement;
-  if (!el) return false;
-  const tag = el.tagName;
-  if (tag === "INPUT" || tag === "TEXTAREA") return true;
-  if ((el as HTMLElement).isContentEditable) return true;
-  if (el.closest(".tag-suggest")) return true;
-  return false;
 }
 
 // ── Hook ─────────────────────────────────────────────────────────────────
@@ -493,9 +482,35 @@ export function useKeyboardShortcuts({
     document.addEventListener("keydown", handleKeydown);
     document.addEventListener("click", handleBackgroundClick);
 
+    // Track editing state transitions for the native bridge.
+    // focusin/focusout bubble (unlike focus/blur), so a single document
+    // listener catches all input focus transitions.
+    let wasEditing = false;
+    const embedded = isEmbedded();
+
+    const handleFocusChange = () => {
+      const nowEditing = isEditing();
+      if (nowEditing && !wasEditing) {
+        postEditingStarted(document.activeElement?.tagName ?? "unknown");
+        wasEditing = true;
+      } else if (!nowEditing && wasEditing) {
+        postEditingEnded();
+        wasEditing = false;
+      }
+    };
+
+    if (embedded) {
+      document.addEventListener("focusin", handleFocusChange);
+      document.addEventListener("focusout", handleFocusChange);
+    }
+
     return () => {
       document.removeEventListener("keydown", handleKeydown);
       document.removeEventListener("click", handleBackgroundClick);
+      if (embedded) {
+        document.removeEventListener("focusin", handleFocusChange);
+        document.removeEventListener("focusout", handleFocusChange);
+      }
     };
   }, [
     onToggleHelp,

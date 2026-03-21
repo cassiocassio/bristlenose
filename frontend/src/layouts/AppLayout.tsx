@@ -7,8 +7,8 @@
  * shortcuts via useKeyboardShortcuts.
  */
 
-import { useCallback, useEffect, useMemo, useState, lazy, Suspense } from "react";
-import { Outlet, useNavigate, useMatch } from "react-router-dom";
+import { useCallback, useEffect, useMemo, useRef, useState, lazy, Suspense } from "react";
+import { Outlet, useNavigate, useMatch, useLocation } from "react-router-dom";
 import { Header } from "../components/Header";
 import { NavBar } from "../components/NavBar";
 import { Footer } from "../components/Footer";
@@ -23,12 +23,15 @@ import { ExportDialog } from "../components/ExportDialog";
 import { ActivityChipStack } from "../components/ActivityChipStack";
 import type { ActivityJob } from "../components/ActivityChipStack";
 import { PlayerProvider } from "../contexts/PlayerContext";
-import { FocusProvider } from "../contexts/FocusContext";
+import { FocusProvider, useFocus } from "../contexts/FocusContext";
 import { useActivityJobs, removeJob } from "../contexts/ActivityStore";
 import { useKeyboardShortcuts } from "../hooks/useKeyboardShortcuts";
 import { useScrollToAnchor } from "../hooks/useScrollToAnchor";
 import { installNavigationShims } from "../shims/navigation";
+import { installBridge, postRouteChange, postReady, postProjectAction } from "../shims/bridge";
 import { cancelAutoCode } from "../utils/api";
+import { isEditing } from "../utils/editing";
+import { isEmbedded } from "../utils/embedded";
 import { getExportData } from "../utils/exportData";
 import { DEFAULT_HEALTH_RESPONSE, type HealthResponse } from "../utils/health";
 
@@ -68,7 +71,13 @@ function AppShell() {
   }, []);
   const openFeedback = useCallback(() => setFeedbackOpen(true), []);
   const closeFeedback = useCallback(() => setFeedbackOpen(false), []);
-  const toggleSettings = useCallback(() => setSettingsOpen((prev) => !prev), []);
+  const toggleSettings = useCallback(() => {
+    if (isEmbedded()) {
+      postProjectAction("open-settings");
+      return;
+    }
+    setSettingsOpen((prev) => !prev);
+  }, []);
   const _isQuotes = useMatch("/report/quotes");
   const _isQuotesSlash = useMatch("/report/quotes/");
   const _isSessions = useMatch("/report/sessions");
@@ -88,10 +97,24 @@ function AppShell() {
   const navigate = useNavigate();
   const activityJobs = useActivityJobs();
 
+  // ── Embedded mode: hooks must be called before effects that use them ──
+  const embedded = isEmbedded();
+  const location = useLocation();
+  const { focusedId, selectedIds } = useFocus();
+
+  // Refs for bridge getState() — reads must be live, not stale closures.
+  const focusedIdBridgeRef = useRef(focusedId);
+  focusedIdBridgeRef.current = focusedId;
+  const selectedIdsBridgeRef = useRef(selectedIds);
+  selectedIdsBridgeRef.current = selectedIds;
+  const locationBridgeRef = useRef(location);
+  locationBridgeRef.current = location;
+
   useEffect(() => {
     const exportData = getExportData();
     if (exportData) {
       setHealth(exportData.health);
+      if (embedded) postReady();
       return;
     }
     fetch("/api/health")
@@ -99,9 +122,10 @@ function AppShell() {
       .then((data) => {
         if (!data?.version) return;
         setHealth(data as HealthResponse);
+        if (embedded) postReady();
       })
       .catch(() => {});
-  }, []);
+  }, [embedded]);
 
   const toggleHelpShortcuts = useCallback(() => {
     setHelpSection("shortcuts");
@@ -114,6 +138,30 @@ function AppShell() {
     settingsModalOpen: settingsOpen,
     onToggleSettings: toggleSettings,
   });
+
+  // Install bridge namespace (once).
+  useEffect(() => {
+    if (!embedded) return;
+    installBridge({
+      getActiveTab: () => {
+        const path = locationBridgeRef.current.pathname;
+        if (path.startsWith("/report/quotes")) return "quotes";
+        if (path.startsWith("/report/sessions")) return "sessions";
+        if (path.startsWith("/report/codebook")) return "codebook";
+        if (path.startsWith("/report/analysis")) return "analysis";
+        return "project";
+      },
+      getFocusedQuoteId: () => focusedIdBridgeRef.current,
+      getSelectedIds: () => Array.from(selectedIdsBridgeRef.current),
+      getIsEditing: () => isEditing(),
+    });
+  }, [embedded]);
+
+  // Post route changes to native for tab highlight sync.
+  useEffect(() => {
+    if (!embedded) return;
+    postRouteChange(location.pathname);
+  }, [embedded, location.pathname]);
 
   const chipJobs: ActivityJob[] = useMemo(
     () =>
@@ -156,14 +204,16 @@ function AppShell() {
       leftPanelTitle={isSessionsRoute ? "Sessions" : isCodebook ? "Codebooks" : isAnalysis ? "Signals" : undefined}
       showRightSidebar={!!isQuotes}
     >
-      <Header />
-      <NavBar onExport={toggleExport} onSettings={toggleSettings} onHelp={openHelp} />
+      {!embedded && <Header />}
+      {!embedded && <NavBar onExport={toggleExport} onSettings={toggleSettings} onHelp={openHelp} />}
       <Outlet />
-      <Footer
-        health={health}
-        onOpenFeedback={openFeedback}
-        onToggleHelp={openHelp}
-      />
+      {!embedded && (
+        <Footer
+          health={health}
+          onOpenFeedback={openFeedback}
+          onToggleHelp={openHelp}
+        />
+      )}
       <FeedbackModal open={feedbackOpen} onClose={closeFeedback} health={health} />
       <HelpModal open={helpOpen} onClose={toggleHelp} initialSection={helpSection} health={health} />
       <ExportDialog open={exportOpen} onClose={toggleExport} />

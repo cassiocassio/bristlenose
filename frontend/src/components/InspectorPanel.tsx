@@ -13,6 +13,7 @@ import {
   useEffect,
   useLayoutEffect,
   useRef,
+  useState,
   type ReactNode,
 } from "react";
 import {
@@ -112,6 +113,21 @@ export function InspectorPanel({ sources, shimmerTrigger }: InspectorPanelProps)
   const panelRef = useRef<HTMLDivElement>(null);
   const bodyRef = useRef<HTMLDivElement>(null);
   const titleRef = useRef<HTMLSpanElement>(null);
+
+  // ── Close animation state ───────────────────────────────────────────
+  // When the store transitions open→closed, hold a "closing" state for
+  // 75ms so the CSS exit animation plays before content is removed.
+  const [closing, setClosing] = useState(false);
+  const prevOpenRef = useRef(open);
+
+  useEffect(() => {
+    if (prevOpenRef.current && !open) {
+      setClosing(true);
+      const timer = setTimeout(() => setClosing(false), 75);
+      return () => clearTimeout(timer);
+    }
+    prevOpenRef.current = open;
+  }, [open]);
 
   // Resolve the active source — fall back to the first available
   const resolvedSource =
@@ -213,8 +229,16 @@ export function InspectorPanel({ sources, shimmerTrigger }: InspectorPanelProps)
 
   if (sources.length === 0) return null;
 
-  const panelClass = open ? "inspector-panel" : "inspector-panel collapsed";
-  const panelStyle = open ? { "--inspector-height": `${height}px` } as React.CSSProperties : undefined;
+  // During closing, keep content visible so exit animation plays
+  const panelClass = open
+    ? "inspector-panel"
+    : closing
+      ? "inspector-panel closing"
+      : "inspector-panel collapsed";
+  // Keep the height during closing so the panel doesn't jump
+  const panelStyle = (open || closing)
+    ? { "--inspector-height": `${height}px` } as React.CSSProperties
+    : undefined;
 
   return (
     <div

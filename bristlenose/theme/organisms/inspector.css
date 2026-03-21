@@ -8,6 +8,7 @@
     height: 100vh;
     height: 100dvh;
     overflow: hidden;
+    grid-template-rows: 1fr;
 }
 
 .layout > .center:has(.analysis-layout) {
@@ -48,13 +49,19 @@
     background: var(--bn-colour-bg);
     display: flex;
     flex-direction: column;
-    transition: height var(--bn-transition-fast);
+    transition: height 75ms cubic-bezier(0, 0, 0.2, 1);  /* decelerate — matches sidebar reveal */
     overflow: hidden;
     height: var(--inspector-height);
 }
 
 .inspector-panel.collapsed {
     height: auto !important;
+}
+
+/* During closing animation, keep height at last known value (set via React style prop).
+   No transition — clip-path keyframe handles the visual. */
+.inspector-panel.closing {
+    transition: none;
 }
 
 /* Disable transition during pointer drag */
@@ -116,8 +123,7 @@ body.dragging-v * {
     font-size: var(--bn-text-caption);
     line-height: var(--bn-text-caption-lh);
     font-weight: var(--bn-weight-emphasis);
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
+    letter-spacing: 0.02em;
     color: var(--bn-colour-muted);
     cursor: default;
 }
@@ -163,6 +169,38 @@ body.dragging-v * {
 
 .inspector-handle-grip:hover::before {
     background: var(--bn-colour-border-hover);
+}
+
+/* ── Open / close content animations ──────────────────────
+   Vertical clip-path reveal/hide mirroring the TOC sidebar's
+   toc-reveal / toc-hide keyframes (75ms, material easing).  */
+
+@keyframes inspector-reveal {
+    from { clip-path: inset(100% 0 0 0); opacity: 0; }
+    to   { clip-path: inset(0);           opacity: 1; }
+}
+
+@keyframes inspector-hide {
+    from { clip-path: inset(0);           opacity: 1; }
+    to   { clip-path: inset(100% 0 0 0); opacity: 0; }
+}
+
+/* Content reveals on open */
+.inspector-panel:not(.collapsed):not(.closing) .inspector-tabs,
+.inspector-panel:not(.collapsed):not(.closing) .inspector-body {
+    animation: inspector-reveal 75ms cubic-bezier(0, 0, 0.2, 1) both;
+}
+
+/* Content hides on close */
+.inspector-panel.closing .inspector-tabs,
+.inspector-panel.closing .inspector-body {
+    animation: inspector-hide 75ms cubic-bezier(0.4, 0, 1, 1) both;
+}
+
+/* Disable content animations during pointer drag */
+body.dragging-v .inspector-tabs,
+body.dragging-v .inspector-body {
+    animation: none !important;
 }
 
 /* ── Source tabs ─────────────────────────────────────────── */

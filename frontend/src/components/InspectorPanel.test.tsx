@@ -1,5 +1,5 @@
-import { describe, it, expect, beforeEach } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { describe, it, expect, beforeEach, vi } from "vitest";
+import { render, screen, fireEvent, act } from "@testing-library/react";
 import { InspectorPanel, type InspectorSource } from "./InspectorPanel";
 import {
   resetInspectorStore,
@@ -67,6 +67,7 @@ describe("InspectorPanel", () => {
   });
 
   it("closes panel when toggle button is clicked while open", () => {
+    vi.useFakeTimers();
     openInspector();
     render(<InspectorPanel sources={SOURCES} />);
 
@@ -74,7 +75,13 @@ describe("InspectorPanel", () => {
     expect(panel.classList.contains("collapsed")).toBe(false);
 
     fireEvent.click(screen.getByTestId("inspector-toggle"));
+    // Closing animation plays for 75ms before collapsing
+    expect(panel.classList.contains("closing")).toBe(true);
+
+    act(() => { vi.advanceTimersByTime(75); });
     expect(panel.classList.contains("collapsed")).toBe(true);
+    expect(panel.classList.contains("closing")).toBe(false);
+    vi.useRealTimers();
   });
 
   it("renders source tabs", () => {

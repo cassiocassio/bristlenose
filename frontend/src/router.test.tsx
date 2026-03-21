@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import { createMemoryRouter, RouterProvider } from "react-router-dom";
 import { routes } from "./router";
+import { _resetEmbeddedCache } from "./utils/embedded";
 
 // ---------------------------------------------------------------------------
 // Setup
@@ -40,6 +41,8 @@ beforeEach(() => {
 afterEach(() => {
   vi.restoreAllMocks();
   delete (window as unknown as Record<string, unknown>).BRISTLENOSE_API_BASE;
+  delete (window as unknown as Record<string, unknown>).__BRISTLENOSE_EMBEDDED__;
+  _resetEmbeddedCache();
   document.getElementById("bn-app-root")?.remove();
 });
 
@@ -115,5 +118,23 @@ describe("Router", () => {
       const tab = screen.getByRole("tab", { name: "Project" });
       expect(tab.className).toContain("active");
     });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Embedded mode — chrome suppression
+// ---------------------------------------------------------------------------
+
+describe("Embedded mode", () => {
+  it("suppresses NavBar, Header, and Footer when embedded", () => {
+    (window as unknown as Record<string, unknown>).__BRISTLENOSE_EMBEDDED__ = true;
+    _resetEmbeddedCache();
+    renderRoute("/report/");
+    expect(screen.queryByRole("tablist")).not.toBeInTheDocument();
+  });
+
+  it("renders NavBar when not embedded", () => {
+    renderRoute("/report/");
+    expect(screen.getByRole("tablist")).toBeInTheDocument();
   });
 });

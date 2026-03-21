@@ -152,12 +152,11 @@ export function FeedbackModal({ open, onClose, health }: FeedbackModalProps) {
     [onClose],
   );
 
-  if (!open) return null;
-
   return createPortal(
     <div
-      className="bn-overlay visible feedback-overlay"
+      className={`bn-overlay feedback-overlay${open ? " visible" : ""}`}
       onClick={handleOverlayClick}
+      aria-hidden={!open}
       data-testid="bn-feedback-overlay"
     >
       <div className="bn-modal feedback-modal" data-testid="bn-feedback-modal">

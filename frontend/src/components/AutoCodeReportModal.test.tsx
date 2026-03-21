@@ -47,6 +47,7 @@ describe("AutoCodeReportModal", () => {
     mockGetProposals.mockReturnValue(new Promise(() => {})); // Never resolves
     render(
       <AutoCodeReportModal
+        open={true}
         frameworkId="garrett"
         frameworkTitle="Garrett"
         onClose={vi.fn()}
@@ -67,6 +68,7 @@ describe("AutoCodeReportModal", () => {
 
     render(
       <AutoCodeReportModal
+        open={true}
         frameworkId="garrett"
         frameworkTitle="Garrett"
         onClose={vi.fn()}
@@ -95,6 +97,7 @@ describe("AutoCodeReportModal", () => {
 
     render(
       <AutoCodeReportModal
+        open={true}
         frameworkId="garrett"
         frameworkTitle="Garrett"
         onClose={vi.fn()}
@@ -112,6 +115,7 @@ describe("AutoCodeReportModal", () => {
 
     render(
       <AutoCodeReportModal
+        open={true}
         frameworkId="garrett"
         frameworkTitle="Jesse James Garrett"
         onClose={vi.fn()}
@@ -135,6 +139,7 @@ describe("AutoCodeReportModal", () => {
 
     render(
       <AutoCodeReportModal
+        open={true}
         frameworkId="garrett"
         frameworkTitle="Garrett"
         onClose={vi.fn()}
@@ -175,6 +180,7 @@ describe("AutoCodeReportModal", () => {
 
     render(
       <AutoCodeReportModal
+        open={true}
         frameworkId="garrett"
         frameworkTitle="Garrett"
         onClose={vi.fn()}
@@ -201,6 +207,7 @@ describe("AutoCodeReportModal", () => {
 
     render(
       <AutoCodeReportModal
+        open={true}
         frameworkId="garrett"
         frameworkTitle="Garrett"
         onClose={vi.fn()}
@@ -223,6 +230,7 @@ describe("AutoCodeReportModal", () => {
 
     render(
       <AutoCodeReportModal
+        open={true}
         frameworkId="garrett"
         frameworkTitle="Garrett"
         onClose={onClose}
@@ -245,6 +253,7 @@ describe("AutoCodeReportModal", () => {
 
     render(
       <AutoCodeReportModal
+        open={true}
         frameworkId="garrett"
         frameworkTitle="Garrett"
         onClose={vi.fn()}
@@ -268,6 +277,7 @@ describe("AutoCodeReportModal", () => {
 
     render(
       <AutoCodeReportModal
+        open={true}
         frameworkId="garrett"
         frameworkTitle="Garrett"
         onClose={vi.fn()}
@@ -289,6 +299,7 @@ describe("AutoCodeReportModal", () => {
 
     render(
       <AutoCodeReportModal
+        open={true}
         frameworkId="garrett"
         frameworkTitle="Garrett"
         onClose={vi.fn()}
@@ -310,6 +321,7 @@ describe("AutoCodeReportModal", () => {
 
     render(
       <AutoCodeReportModal
+        open={true}
         frameworkId="garrett"
         frameworkTitle="Garrett"
         onClose={vi.fn()}

@@ -1,7 +1,7 @@
 /**
  * AutoCodeReportModal — triage table for reviewing AutoCode proposals.
  *
- * Fetches proposals on mount, groups by session, allows per-row deny,
+ * Fetches proposals when opened, groups by session, allows per-row deny,
  * and offers bulk accept or "tag tentatively" (close without action).
  */
 
@@ -16,6 +16,7 @@ import type { ProposedTagResponse } from "../utils/types";
 import { getTagBg } from "../utils/colours";
 
 interface AutoCodeReportModalProps {
+  open: boolean;
   frameworkId: string;
   frameworkTitle: string;
   onClose: () => void;
@@ -32,6 +33,7 @@ function formatTimecode(seconds: number): string {
 }
 
 export function AutoCodeReportModal({
+  open,
   frameworkId,
   frameworkTitle,
   onClose,
@@ -42,7 +44,12 @@ export function AutoCodeReportModal({
   const [loading, setLoading] = useState(true);
   const [removing, setRemoving] = useState<Set<number>>(new Set());
 
+  // Fetch proposals when opened (or frameworkId changes while open).
   useEffect(() => {
+    if (!open) return;
+    setLoading(true);
+    setProposals([]);
+    setRemoving(new Set());
     getAutoCodeProposals(frameworkId)
       .then((resp) => {
         setProposals(resp.proposals.filter((p) => p.status === "pending"));
@@ -52,7 +59,21 @@ export function AutoCodeReportModal({
         console.error("Fetch proposals failed:", err);
         setLoading(false);
       });
-  }, [frameworkId]);
+  }, [open, frameworkId]);
+
+  // Escape key closes modal.
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        e.stopPropagation();
+        onClose();
+      }
+    };
+    document.addEventListener("keydown", handler, true);
+    return () => document.removeEventListener("keydown", handler, true);
+  }, [open, onClose]);
 
   // Group proposals by session. Keep removing items visible
   // so the CSS animation plays before they're removed from state.
@@ -92,7 +113,11 @@ export function AutoCodeReportModal({
 
   const modal = (
     // eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions
-    <div className="codebook-modal-overlay" onClick={onClose}>
+    <div
+      className={`codebook-modal-overlay${open ? " visible" : ""}`}
+      onClick={onClose}
+      aria-hidden={!open}
+    >
       {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions */}
       <div
         className="codebook-modal"

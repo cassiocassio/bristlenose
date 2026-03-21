@@ -18,6 +18,7 @@ import { SettingsModal } from "../components/SettingsModal";
 import { SidebarLayout } from "../components/SidebarLayout";
 import { SessionsSidebar } from "../components/SessionsSidebar";
 import { CodebookSidebar } from "../components/CodebookSidebar";
+import { AnalysisSidebar } from "../components/AnalysisSidebar";
 import { ExportDialog } from "../components/ExportDialog";
 import { ActivityChipStack } from "../components/ActivityChipStack";
 import type { ActivityJob } from "../components/ActivityChipStack";
@@ -75,10 +76,13 @@ function AppShell() {
   const isTranscript = useMatch("/report/sessions/:sessionId");
   const _isCodebook = useMatch("/report/codebook");
   const _isCodebookSlash = useMatch("/report/codebook/");
+  const _isAnalysis = useMatch("/report/analysis");
+  const _isAnalysisSlash = useMatch("/report/analysis/");
   const isQuotes = _isQuotes || _isQuotesSlash;
   const isSessions = _isSessions || _isSessionsSlash;
   const isCodebook = _isCodebook || _isCodebookSlash;
-  const showSidebar = !!(isQuotes || isSessions || isTranscript || isCodebook);
+  const isAnalysis = _isAnalysis || _isAnalysisSlash;
+  const showSidebar = !!(isQuotes || isSessions || isTranscript || isCodebook || isAnalysis);
   const isSessionsRoute = !!(isSessions || isTranscript);
   const toggleExport = useCallback(() => setExportOpen((prev) => !prev), []);
   const navigate = useNavigate();
@@ -148,8 +152,8 @@ function AppShell() {
   return (
     <SidebarLayout
       active={showSidebar}
-      leftPanel={isSessionsRoute ? <SessionsSidebar /> : isCodebook ? <CodebookSidebar /> : undefined}
-      leftPanelTitle={isSessionsRoute ? "Sessions" : isCodebook ? "Codebooks" : undefined}
+      leftPanel={isSessionsRoute ? <SessionsSidebar /> : isCodebook ? <CodebookSidebar /> : isAnalysis ? <AnalysisSidebar /> : undefined}
+      leftPanelTitle={isSessionsRoute ? "Sessions" : isCodebook ? "Codebooks" : isAnalysis ? "Signals" : undefined}
       showRightSidebar={!!isQuotes}
     >
       <Header />

@@ -499,3 +499,40 @@ export interface SessionsListResponse {
   observer_names: string[];
   source_folder_uri: string;
 }
+
+// ---------------------------------------------------------------------------
+// Analysis — unified signal types (shared by AnalysisPage + AnalysisSidebar)
+// ---------------------------------------------------------------------------
+
+/** Unified signal shape for rendering — adapts both sentiment and tag signals. */
+export interface UnifiedSignal {
+  key: string;
+  location: string;
+  sourceType: "section" | "theme";
+  columnLabel: string; // sentiment name or group name
+  colourSet: string; // codebook group colour_set (empty for sentiment)
+  codebookName: string; // display name of the codebook
+  count: number;
+  participants: string[];
+  nEff: number;
+  meanIntensity: number;
+  concentration: number;
+  compositeSignal: number;
+  confidence: "strong" | "moderate" | "emerging";
+  quotes: UnifiedQuote[];
+  signalName?: string | null;
+  pattern?: string | null;
+  elaboration?: string | null;
+}
+
+export interface UnifiedQuote {
+  text: string;
+  pid: string;
+  sessionId: string;
+  startSeconds: number;
+  intensity: number;
+  tagNames: string[];
+  colourSet: string;
+  tagColourIndices: Record<string, number>;
+  segmentIndex: number;
+}

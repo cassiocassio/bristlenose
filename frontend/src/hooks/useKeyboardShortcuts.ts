@@ -350,12 +350,13 @@ export function useKeyboardShortcuts({
       if (helpModalOpenRef.current) return;
       if (settingsModalOpenRef.current) return;
 
-      // [ — toggle TOC sidebar (quotes, sessions, codebook tabs)
+      // [ — toggle TOC sidebar (quotes, sessions, codebook, analysis tabs)
       if (key === "[") {
         const loc = locationRef.current.pathname;
         if (
           pathMatches(loc, "/report/quotes") ||
           pathMatches(loc, "/report/codebook") ||
+          pathMatches(loc, "/report/analysis") ||
           loc.startsWith("/report/sessions")
         ) {
           e.preventDefault();

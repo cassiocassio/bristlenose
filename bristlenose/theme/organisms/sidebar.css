@@ -825,3 +825,62 @@ body.dragging * {
     height: 100%;
     object-fit: cover;
 }
+
+/* ── Signal sidebar entries (Analysis tab) ─────────────────────────── */
+
+.toc-sub-heading {
+    font-size: var(--bn-text-caption);
+    line-height: var(--bn-text-caption-lh);
+    font-weight: var(--bn-weight-emphasis);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--bn-colour-muted);
+    padding: 0 var(--bn-space-sm);
+    margin-top: var(--bn-space-sm);
+}
+
+.signal-entry {
+    display: flex;
+    align-items: baseline;
+    gap: var(--bn-space-xs);
+    padding: 0.2rem var(--bn-space-sm);
+    border-radius: var(--bn-radius-sm);
+    cursor: pointer;
+    transition: background var(--bn-transition-fast);
+    text-decoration: none;
+    color: var(--bn-colour-text);
+}
+
+.signal-entry:hover {
+    background: var(--bn-colour-hover);
+}
+
+.signal-entry:focus-visible {
+    outline: 2px solid var(--bn-colour-accent);
+    outline-offset: -2px;
+}
+
+.signal-entry.active {
+    background: var(--bn-colour-hover);
+}
+
+.signal-entry.active .signal-entry-name {
+    font-weight: var(--bn-weight-emphasis);
+    color: var(--bn-colour-accent);
+}
+
+.signal-entry-name {
+    font-size: var(--bn-text-body-sm);
+    line-height: var(--bn-text-body-sm-lh);
+    font-weight: var(--bn-weight-normal);
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.signal-entry .badge {
+    flex-shrink: 0;
+    font-size: 0.65rem;
+}

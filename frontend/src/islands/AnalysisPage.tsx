@@ -20,6 +20,11 @@ import {
   setInspectorSourceAndDimension,
   type InspectorDimension,
 } from "../contexts/InspectorStore";
+import {
+  useAnalysisSignalStore,
+  setAnalysisSignals,
+  setFocusedSignalKey,
+} from "../contexts/AnalysisSignalStore";
 import { apiGet, getCodebookAnalysis } from "../utils/api";
 import { getBarColour, getGroupBg, getTagBg } from "../utils/colours";
 import { formatTimecode } from "../utils/format";
@@ -31,6 +36,8 @@ import type {
   SentimentSignal,
   SourceBreakdown,
   TagSignalQuote,
+  UnifiedSignal,
+  UnifiedQuote,
 } from "../utils/types";
 
 // ── Vanilla JS interop ─────────────────────────────────────────────────
@@ -49,39 +56,7 @@ declare global {
 const MAX_SIGNALS = 6;
 
 // ── Types ──────────────────────────────────────────────────────────────
-
-/** Unified signal shape for rendering — adapts both sentiment and tag signals. */
-interface UnifiedSignal {
-  key: string;
-  location: string;
-  sourceType: "section" | "theme";
-  columnLabel: string; // sentiment name or group name
-  colourSet: string; // codebook group colour_set (empty for sentiment)
-  codebookName: string; // display name of the codebook
-  count: number;
-  participants: string[];
-  nEff: number;
-  meanIntensity: number;
-  concentration: number;
-  compositeSignal: number;
-  confidence: "strong" | "moderate" | "emerging";
-  quotes: UnifiedQuote[];
-  signalName?: string | null;
-  pattern?: string | null;
-  elaboration?: string | null;
-}
-
-interface UnifiedQuote {
-  text: string;
-  pid: string;
-  sessionId: string;
-  startSeconds: number;
-  intensity: number;
-  tagNames: string[];
-  colourSet: string;
-  tagColourIndices: Record<string, number>;
-  segmentIndex: number;
-}
+// UnifiedSignal and UnifiedQuote are imported from utils/types.ts
 
 function adaptSentimentSignals(data: SentimentAnalysisData): UnifiedSignal[] {
   return data.signals.map((s: SentimentSignal) => ({
@@ -1016,16 +991,25 @@ export function AnalysisPage({ projectId }: AnalysisPageProps) {
   // Shimmer trigger — increments when a card is focused while panel is collapsed
   const [shimmerTrigger, setShimmerTrigger] = useState(0);
 
-  // Track which signal card is focused (blue wash synced with inspector)
-  const [focusedSignalKey, setFocusedSignalKey] = useState<string | null>(null);
+  // Focused signal key — shared via AnalysisSignalStore (sidebar reads it)
+  const { focusedKey: focusedSignalKey } = useAnalysisSignalStore();
 
-  const handleCellClick = useCallback((key: string) => {
-    setFocusedSignalKey(key);
+  // Populate the store so the sidebar can render signal entries
+  useEffect(() => {
+    setAnalysisSignals(sentimentSignals, tagSignals);
+  }, [sentimentSignals, tagSignals]);
+
+  const scrollToCard = useCallback((key: string) => {
     const el = cardRefs.current.get(key);
     if (el) {
       el.scrollIntoView({ behavior: "smooth", block: "center" });
     }
   }, []);
+
+  const handleCellClick = useCallback((key: string) => {
+    setFocusedSignalKey(key);
+    scrollToCard(key);
+  }, [scrollToCard]);
 
   const handleCardFocus = useCallback(
     (signal: UnifiedSignal) => {
@@ -1046,6 +1030,31 @@ export function AnalysisPage({ projectId }: AnalysisPageProps) {
     },
     [cbData],
   );
+
+  // Listen for sidebar signal-focus events
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const key = (e as CustomEvent<{ key: string }>).detail.key;
+      scrollToCard(key);
+      // Also sync inspector via handleCardFocus logic
+      const allSignals = [...sentimentSignals, ...tagSignals];
+      const signal = allSignals.find((s) => s.key === key);
+      if (signal) {
+        let sourceKey: string;
+        if (signal.codebookName === "" || signal.codebookName === "Sentiment") {
+          sourceKey = "sentiment";
+        } else {
+          const cb = cbData?.codebooks.find((c) => c.codebook_name === signal.codebookName);
+          sourceKey = cb ? `cb-${cb.codebook_id}` : "sentiment";
+        }
+        const dim: InspectorDimension = signal.sourceType === "theme" ? "theme" : "section";
+        setInspectorSourceAndDimension(sourceKey, dim);
+        setShimmerTrigger((n) => n + 1);
+      }
+    };
+    window.addEventListener("bn:signal-focus", handler);
+    return () => window.removeEventListener("bn:signal-focus", handler);
+  }, [scrollToCard, sentimentSignals, tagSignals, cbData]);
 
   void activeDimension; // used indirectly by DimensionToggle components in sources
 

@@ -137,6 +137,138 @@ Evaluate against these heuristics, tailored for user researchers:
 - Does the layout work at the three breakpoints (500px, 600px, 1100px)?
 - Does content reflow gracefully on narrow viewports?
 
+# macOS native shell checks
+
+When reviewing SwiftUI views, native toolbar, sidebar, bridge code, or any file
+in `desktop/`, apply these additional checks. Read `desktop/CLAUDE.md` and
+`docs/design-desktop-app.md` for the full design context.
+
+## HIG compliance
+
+- **Toolbar zones**: three zones in the unified title bar — leading (`.navigation`:
+  back/forward), centre (`.principal`: segmented tab picker), trailing (project
+  name as window title). Flag any layout that violates this
+- **Menu bar completeness**: every toolbar action must also exist in the menu bar.
+  Dim unavailable items, never hide them. Context menus are the opposite — hide
+  unavailable items. Flag hidden menu bar items or visible-but-dead context menu
+  items
+- **Standard menus**: View must include Show/Hide Sidebar, Show/Hide Toolbar,
+  Enter/Exit Full Screen. Edit must include Select All, Use Selection for Find
+  (`Cmd+E`), Jump to Selection (`Cmd+J`). Flag missing entries
+- **Reserved shortcuts**: never override `Cmd+Space`, `Cmd+Tab`, `Cmd+H`,
+  `Cmd+M`, `Cmd+Q`, `Cmd+T` (Show Fonts), `Cmd+E` (Use Selection for Find),
+  `Cmd+F5` (VoiceOver), `Ctrl+F2` (menu focus). Flag any conflicts
+- **Modifier preference**: Cmd > Shift > Option > Control. Flag Control-based
+  shortcuts or Option where Shift would suffice
+- **Context menus**: right-click only — no `•••` hover affordance (Mac-only app,
+  no iPad tax). Max 1 level of submenu. Append "..." when item requires
+  additional input (e.g. "Rename...", "Export Report...")
+- **Window title**: must be content-descriptive (project name like "Q1 Usability
+  Study"), not the app name. Empty state shows "Bristlenose" only when no project
+  is selected
+- **SF Symbols**: use exclusively for native shell icons — they auto-adapt to
+  weight, size, accessibility settings, and accent colour. Flag custom icon
+  images where an SF Symbol exists
+- **Menu item labels**: tab-contextual menus (Quotes, Codes, Video) dim
+  unavailable items based on active tab, never hide them. Flag hidden menu bar
+  items
+
+## Native feel (indie Mac dev sensibility)
+
+These reflect the standards of quality Mac apps (Things 3, Bear, Tower, Reeder)
+and the opinions of the Gruber/Siracusa cohort of Mac-native indie developers:
+
+- **Vibrancy**: sidebar must use `.sidebar` material (translucent vibrancy) —
+  this is the strongest native-feel signal, free with `NavigationSplitView`.
+  Flag opaque sidebar backgrounds
+- **System accent colour**: selection highlight must use the system accent pill
+  (default `List` selection), not hardcoded colours. Researchers set their accent
+  colour in System Settings; respect it
+- **Row height**: follow system preference (Small/Medium/Large) — SwiftUI `List`
+  in sidebar respects this automatically. Flag hardcoded row heights or padding
+  that would override the system setting
+- **Disclosure triangles**: use for collapsible sections (Archive), not custom
+  expand/collapse affordances
+- **Spring animations**: must check `@Environment(\.accessibilityReduceMotion)`
+  and fall back to instant transitions. Flag `.spring()` without reduce-motion
+  guard
+- **Date formatting**: web layer must use `Intl.DateTimeFormat()`, not hardcoded
+  date strings like `"DD MMM YYYY"`. Regional format respect is an App Store
+  review signal and a Mac-nativeness tell
+- **No critical info/actions at sidebar bottom**: users position windows low on
+  screen — bottom is clipped. Settings gear at bottom-left is acceptable only
+  because `Cmd+,` is the primary path and the app menu also has Settings
+- **Sidebar collapse**: must disappear completely (not icons-only rail) — project
+  names aren't icon-recognisable, so 8 identical folder icons provide no
+  information
+- **Badges**: grey pill for status ("Complete", "In progress"), red circle only
+  for "needs attention". Avoid notification fatigue (Tower model, not Slack)
+
+## Two-sidebar coordination
+
+The app is 2-column native (projects | web content) but the web content has its
+own sidebars on the Quotes tab (6-column CSS grid). Flag layouts where:
+
+- Three simultaneous pushed sidebars are possible — when the native project
+  sidebar is open, the web TOC sidebar should default to overlay mode (not push)
+- At 1440px (MacBook Pro 14") with 250px native sidebar, verify web content area
+  has room for both web sidebars (~630px centre minimum)
+
+## Keyboard shortcut split
+
+Two layers of shortcuts — flag conflicts or misassignment:
+
+| Layer | Shortcuts | Mechanism |
+|-------|-----------|-----------|
+| **Native** (menu bar) | `Cmd+1-5` (tabs), `Cmd+Opt+S` (sidebar), `Cmd+,` (prefs), `Cmd+N` (new), `Cmd+[`/`Cmd+]` (back/forward) | NSMenuItem — intercepted before WKWebView |
+| **Web** (WKWebView focus) | `[` `]` `\` (web sidebars), `s` `h` (star/hide), `?` (help), arrows (quotes), `m` (inspector) | `useKeyboardShortcuts.ts` — bare keys, no Cmd |
+
+- **Known conflict**: `Cmd+[`/`Cmd+]` (back/forward) vs bare `[`/`]` (web
+  sidebar toggle) — documented, deferred
+- `Cmd+[`/`Cmd+]` must be disabled when an EditableText field is active in the
+  web layer (bridge sends `editing-started`/`editing-ended`)
+- Bare-key web shortcuts must NOT get `Cmd+` menu equivalents
+
+## Accessibility at native/web boundary
+
+The hardest accessibility challenge — the transition between SwiftUI and WKWebView:
+
+- **Tab/Shift+Tab transition**: `.focusSection()` on sidebar and WKWebView
+  container. Focus must flow: sidebar → WKWebView → back to sidebar
+- **VoiceOver**: WKWebView container needs `accessibilityLabel = "Report content"`
+  so VoiceOver announces the boundary
+- **Focus on project switch**: after selecting a project or pressing `Cmd+1-5`,
+  call `webView.becomeFirstResponder()` to move focus into web content
+- **Dynamic Type**: sidebar grows with system text size, but WKWebView does NOT
+  respect system text size. Must inject CSS `font-size` override based on
+  `NSApplication.shared.preferredContentSizeCategory`. Flag mismatches
+- **High contrast**: verify `prefers-contrast: more` is handled in web CSS tokens
+- **Reduced motion**: all native spring animations must check
+  `@Environment(\.accessibilityReduceMotion)`. Web side handles
+  `prefers-reduced-motion` via CSS
+- **Drag-and-drop keyboard alternatives**: context menu "Move to" covers folder
+  reassignment. `Cmd+Opt+arrows` for reorder. `+ Add Project` with file picker
+  covers all drag scenarios for keyboard-only users
+
+## App Store sandbox readiness
+
+These won't fail now (sandbox is disabled for v0.1) but flag anything that
+creates rework debt for App Store submission:
+
+- **File references**: flag path strings where security-scoped bookmark data
+  should be used. Paths are dead in sandbox — bookmarks survive moves and renames
+- **Home directory**: flag `NSHomeDirectory()` or hardcoded `~/Library/` paths
+  — they lie in sandbox (return the container path)
+- **Temp directory**: flag hardcoded `/tmp/` — use `NSTemporaryDirectory()`
+  which redirects into the container in sandbox
+- **System binaries**: flag `Process("/usr/bin/open", ...)` or
+  `osascript` — sandbox blocks execution of anything outside the app bundle.
+  Use `NSWorkspace.shared.open(url)` instead
+- **Signing**: flag `codesign --deep` — must sign inside-out (helpers → frameworks
+  → app). Each `.so`, `.dylib`, helper binary needs Team ID
+- **Data location**: all app state should live in a single `Application Support/
+  Bristlenose/` directory for clean one-shot sandbox migration
+
 # Output format
 
 Structure your review as:

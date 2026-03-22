@@ -1,74 +1,17 @@
 /* Design tokens — the single source of truth for all visual decisions.
-   Override these custom properties to create a custom theme. */
+
+   This file contains STRUCTURAL tokens (layout, spacing, radii, transitions)
+   and ANALYTICAL tokens (sentiment colours, codebook tag colours, heatmap).
+
+   TYPOGRAPHY tokens are in tokens-typography.css (web) / tokens-desktop.css (macOS).
+   COLOUR PALETTE tokens are in colors/palette-default.css and colors/palette-edo.css.
+
+   Override palette tokens with data-color-theme="<name>" on <html>.
+   Override platform tokens with data-platform="desktop" on <html>. */
 
 :root {
-    /* Typography — Inter Variable loaded from Google Fonts (see document_shell_open.html).
-       Fallback chain: Segoe UI Variable (Win 11), Segoe UI (Win 10), system-ui, SF Pro (macOS). */
-    --bn-font-body: "Inter", "Segoe UI Variable", "Segoe UI", system-ui, -apple-system,
-        "Hiragino Kaku Gothic ProN", "Hiragino Sans",   /* macOS Japanese */
-        "Yu Gothic UI",                                  /* Windows Japanese */
-        "Malgun Gothic",                                 /* Windows Korean */
-        "Apple SD Gothic Neo",                           /* macOS Korean */
-        "Noto Sans CJK JP", "Noto Sans CJK KR",         /* Linux CJK */
-        sans-serif;
-    --bn-font-mono: "SF Mono", "Fira Code", "Consolas", monospace;
-
-    /* Font weight scale — tuned for variable fonts (Inter, SF Pro, Segoe UI Variable).
-       On static fonts (Win 10 Segoe UI), 370/420→400 and 490→400 — acceptable degradation. */
-    --bn-weight-light: 370;      /* subordinate text (sidebar nav links, secondary lists) */
-    --bn-weight-normal: 420;     /* body text, descriptions, quote content */
-    --bn-weight-emphasis: 490;   /* headings, labels, section titles */
-    --bn-weight-starred: 520;    /* starred quotes — pop above emphasis, below strong */
-    --bn-weight-strong: 700;     /* delete buttons, page title, action glyphs */
-
-    /* Typography scale — size + line-height pairs.
-       Line-height decreases as size increases (Bringhurst principle:
-       large letterforms provide visual anchoring, need less leading). */
-    --bn-text-caption:     0.75rem;    /* 12px */
-    --bn-text-caption-lh:  1.4;
-    --bn-text-body-sm:     0.8125rem;  /* 13px */
-    --bn-text-body-sm-lh:  1.45;
-    --bn-text-body:        0.875rem;   /* 14px — our base */
-    --bn-text-body-lh:     1.5;
-    --bn-text-heading:     1.125rem;   /* 18px */
-    --bn-text-heading-lh:  1.3;
-    --bn-text-title:       1.375rem;   /* 22px */
-    --bn-text-title-lh:    1.25;
-
-    /* Colour palette */
-    --bn-colour-bg: #ffffff;
-    --bn-colour-text: #1a1a1a;
-    --bn-colour-muted: #6b7280;
-    --bn-colour-border: #e5e7eb;
-    --bn-colour-accent: #2563eb;
-    --bn-colour-hover: #e8f0fe;
-
-    /* Semantic surfaces */
-    --bn-colour-quote-bg: #f9fafb;
-    --bn-colour-badge-bg: #f3f4f6;
-    --bn-colour-badge-text: #374151;
-    --bn-colour-user-tag-bg: #f3f4f6;
-    --bn-colour-user-tag-text: #4b5563;
-    --bn-colour-editing-bg: #fffbe6;
-    --bn-colour-editing-border: #e5e0c0;
-    /* Crop bracket handles — burnt amber (light) / bright amber (dark).
-       Part of the editing apparatus visual set with the yellow editing-bg.
-       See docs/mockups/bracket-colour-explore.html for colour exploration. */
-    --bn-crop-handle-colour: #c4850a;
-    --bn-crop-handle-hover: #a06d08;
-    --bn-colour-active-bg: #f0fdf4;
-    --bn-colour-highlight: #fef08a;
-
-    /* Destructive action (delete buttons, danger confirmations) */
-    --bn-colour-negative: #dc2626;
-
-    /* Playback-sync glow (player.js applies .bn-timecode-glow / .bn-timecode-playing) */
-    --bn-glow-colour: rgba(37, 99, 235, 0.06);
-    --bn-glow-colour-strong: rgba(37, 99, 235, 0.11);
-
-    /* Sentiment colours (v0.7+ taxonomy)
-       See docs/academic-sources.html for theoretical foundations.
-       Override --bn-sentiment-* to customise the palette. */
+    /* Sentiment colours (v0.7+ taxonomy) — analytical, NOT theme-overridable.
+       See docs/academic-sources.html for theoretical foundations. */
 
     /* Negative sentiments */
     --bn-sentiment-frustration: #ea580c;
@@ -89,11 +32,6 @@
     --bn-sentiment-delight-bg: #ecfdf5;
     --bn-sentiment-confidence: #2563eb;
     --bn-sentiment-confidence-bg: #eff6ff;
-
-    /* Transcript coverage bar */
-    --bn-coverage-report: #93b4f4;
-    --bn-coverage-moderator: #d97706;
-    --bn-coverage-omitted: #d1d5db;
 
     /* Analysis heatmap — OKLCH colour ramp tokens */
     --bn-heat-frustration-h: 55;
@@ -171,7 +109,6 @@
     --bn-group-trust:     oklch(97% 0.015 300);
     --bn-group-opp:       oklch(97% 0.015 75);
     --bn-group-sentiment: oklch(97% 0.010 200);
-    --bn-group-none:      #f9fafb;
 
     /* Micro histogram bar colours (slightly more saturated than badge bg) */
     --bn-bar-ux:        oklch(70% 0.08 250);
@@ -180,7 +117,6 @@
     --bn-bar-trust:     oklch(70% 0.07 300);
     --bn-bar-opp:       oklch(72% 0.07 75);
     --bn-bar-sentiment: oklch(65% 0.06 200);
-    --bn-bar-none:      #d1d5db;
 
     /* Set indicator dots (saturated anchors for codebook panel) */
     --bn-set-ux-dot: oklch(50% 0.12 250);
@@ -196,8 +132,6 @@
     --bn-colour-frustration-bg: var(--bn-sentiment-frustration-bg);
     --bn-colour-delight: var(--bn-sentiment-delight);
     --bn-colour-delight-bg: var(--bn-sentiment-delight-bg);
-    --bn-colour-suggestion: #2563eb;
-    --bn-colour-suggestion-bg: #eff6ff;
 
     /* Layout */
     --bn-max-width: 52rem;
@@ -211,16 +145,9 @@
     --bn-sidebar-max: 480px;     /* maximum resize bound */
     --bn-rail-width: 36px;       /* collapsed icon rail width */
     --bn-minimap-width: 5rem;    /* minimap column incl. breathing room (80px; ~56px content + 12px each side) */
-    --bn-overlay-shadow: 4px 0 16px rgba(0, 0, 0, 0.08);  /* TOC overlay drop shadow */
     --bn-overlay-duration: 0.3s;   /* overlay open/close animation speed */
     --bn-gutter-left: 2rem;        /* gap: rail/sidebar → center content */
     --bn-gutter-right: 0.5rem;     /* gap: center content → minimap column */
-
-    /* Minimap colours (subtle abstract overview of page shape) */
-    --bn-minimap-quote: #e5e7eb;                             /* quote line */
-    --bn-minimap-heading: #b0b5bd;                           /* section/theme heading line */
-    --bn-minimap-viewport-bg: rgba(37, 99, 235, 0.15);      /* viewport indicator fill */
-    --bn-minimap-viewport-border: rgba(37, 99, 235, 0.3);   /* viewport indicator stroke */
 
     /* Breakpoints — reference values for @media queries across the system.
        CSS @media can't consume var(), so use these values directly in
@@ -256,34 +183,6 @@
     --bn-transition-normal: 0.2s ease;
     --bn-transition-slow: 0.3s ease;
 
-    /* Interactive element colours
-       Toolbar buttons use a 3-state border progression:
-         rest    → --bn-colour-border       (#e5e7eb / gray-200)
-         hover   → --bn-colour-border-hover (#d1d5db / gray-300)
-         active  → --bn-colour-accent       (#2563eb / blue-600)
-       Background shifts from --bn-colour-bg to --bn-colour-quote-bg on hover.
-       Icon/arrow children use --bn-colour-muted; text uses --bn-colour-text.
-       Toggle variant (.toolbar-btn-toggle) uses accent for border+text when active,
-       muted text when inactive. */
-    --bn-colour-border-hover: #d1d5db;
-    --bn-colour-icon-idle: #c9ccd1;
-    --bn-colour-starred: #999;
-    --bn-colour-shadow: rgba(0, 0, 0, 0.1);
-
-    /* Focus state (keyboard navigation cursor) */
-    --bn-focus-shadow: 0 3px 12px rgba(0,0,0,0.12), 0 0 0 1px rgba(0,0,0,0.05);
-
-    /* Focus ring for inputs and interactive elements */
-    --bn-focus-ring: 0 0 0 2px rgba(37, 99, 235, 0.12);
-
-    /* Hover backgrounds — subtle tint for interactive surfaces */
-    --bn-hover-bg: rgba(0, 0, 0, 0.04);
-    --bn-hover-bg-subtle: rgba(0, 0, 0, 0.03);
-
-    /* Selection state (multi-select for bulk actions) */
-    --bn-selection-bg: #eef4fc;
-    --bn-selection-border: #2563eb;
-
     /* Legacy aliases — used by inline styles in generated HTML.
        Theme authors: override the --bn-* versions above;
        these aliases follow automatically. */
@@ -304,45 +203,12 @@
     --max-width: var(--bn-max-width);
 }
 
-/* Dark mode — uses light-dark() with the color-scheme property.
-   Browsers without light-dark() support (~13%) fall back to the
-   plain light values in the :root block above. */
+/* Dark mode overrides for analytical tokens.
+   Palette colours are handled in their own palette-*.css files. */
 
 @supports (color: light-dark(#000, #fff)) {
     :root {
         color-scheme: light dark;
-
-        /* Colour palette */
-        --bn-colour-bg:               light-dark(#ffffff, #111111);
-        --bn-colour-text:             light-dark(#1a1a1a, #e5e7eb);
-        --bn-colour-muted:            light-dark(#6b7280, #9ca3af);
-        --bn-colour-border:           light-dark(#e5e7eb, #2d2d2d);
-        --bn-colour-accent:           light-dark(#2563eb, #60a5fa);
-        --bn-colour-hover:            light-dark(#e8f0fe, #1e293b);
-
-        /* Semantic surfaces */
-        --bn-colour-quote-bg:         light-dark(#f9fafb, #1a1a1a);
-        --bn-colour-badge-bg:         light-dark(#f3f4f6, #252525);
-        --bn-colour-badge-text:       light-dark(#374151, #d1d5db);
-        --bn-colour-user-tag-bg:      light-dark(#f3f4f6, #252525);
-        --bn-colour-user-tag-text:    light-dark(#4b5563, #d1d5db);
-        --bn-colour-editing-bg:       light-dark(#fffbe6, #2a2614);
-        --bn-colour-editing-border:   light-dark(#e5e0c0, #4a4528);
-        --bn-crop-handle-colour:      light-dark(#c4850a, #f0b830);
-        --bn-crop-handle-hover:       light-dark(#a06d08, #f5cc60);
-        --bn-colour-active-bg:        light-dark(#f0fdf4, #0f2918);
-        --bn-colour-highlight:        light-dark(#fef08a, #854d0e);
-        --bn-colour-cited-bg:         light-dark(#fef9c3, #3b2f05);
-
-        /* Playback-sync glow */
-        --bn-glow-colour:             light-dark(rgba(37, 99, 235, 0.06), rgba(96, 165, 250, 0.12));
-        --bn-glow-colour-strong:      light-dark(rgba(37, 99, 235, 0.11), rgba(96, 165, 250, 0.2));
-
-        /* Minimap */
-        --bn-minimap-quote:           light-dark(#e5e7eb, #333333);
-        --bn-minimap-heading:         light-dark(#b0b5bd, #555555);
-        --bn-minimap-viewport-bg:     light-dark(rgba(37, 99, 235, 0.15), rgba(96, 165, 250, 0.2));
-        --bn-minimap-viewport-border: light-dark(rgba(37, 99, 235, 0.3), rgba(96, 165, 250, 0.4));
 
         /* Sentiment colours (v0.7+ taxonomy) — foreground hues lighter on dark */
         --bn-sentiment-frustration:      light-dark(#ea580c, #fb923c);
@@ -359,11 +225,6 @@
         --bn-sentiment-delight-bg:       light-dark(#ecfdf5, #0d261c);
         --bn-sentiment-confidence:       light-dark(#2563eb, #60a5fa);
         --bn-sentiment-confidence-bg:    light-dark(#eff6ff, #111d2e);
-
-        /* Transcript coverage bar */
-        --bn-coverage-report:    light-dark(#93b4f4, #4a7ecf);
-        --bn-coverage-moderator: light-dark(#d97706, #fbbf24);
-        --bn-coverage-omitted:   light-dark(#d1d5db, #4b5563);
 
         /* Analysis heatmap — dark mode overrides */
         --bn-heat-chroma: light-dark(0.12, 0.10);
@@ -406,7 +267,6 @@
         --bn-group-trust:     light-dark(oklch(97% 0.015 300), oklch(22% 0.025 300));
         --bn-group-opp:       light-dark(oklch(97% 0.015 75),  oklch(22% 0.022 75));
         --bn-group-sentiment: light-dark(oklch(97% 0.010 200), oklch(22% 0.015 200));
-        --bn-group-none:      light-dark(#f9fafb, #1e1e1e);
 
         /* Micro histogram bar colours */
         --bn-bar-ux:        light-dark(oklch(70% 0.08 250), oklch(55% 0.08 250));
@@ -415,7 +275,6 @@
         --bn-bar-trust:     light-dark(oklch(70% 0.07 300), oklch(55% 0.07 300));
         --bn-bar-opp:       light-dark(oklch(72% 0.07 75),  oklch(57% 0.07 75));
         --bn-bar-sentiment: light-dark(oklch(65% 0.06 200), oklch(50% 0.06 200));
-        --bn-bar-none:      light-dark(#d1d5db, #4b5563);
 
         --bn-set-ux-dot: light-dark(oklch(50% 0.12 250), oklch(60% 0.10 250));
         --bn-set-emo-dot: light-dark(oklch(50% 0.12 10), oklch(60% 0.10 10));
@@ -430,26 +289,6 @@
         --bn-colour-frustration-bg:   var(--bn-sentiment-frustration-bg);
         --bn-colour-delight:          var(--bn-sentiment-delight);
         --bn-colour-delight-bg:       var(--bn-sentiment-delight-bg);
-        --bn-colour-suggestion:       light-dark(#2563eb, #60a5fa);
-        --bn-colour-suggestion-bg:    light-dark(#eff6ff, #111d2e);
-
-        /* Destructive action */
-        --bn-colour-negative:         light-dark(#dc2626, #ef4444);
-
-        /* Interactive elements */
-        --bn-colour-border-hover:     light-dark(#d1d5db, #4b5563);
-        --bn-colour-icon-idle:        light-dark(#c9ccd1, #595959);
-        --bn-colour-starred:          light-dark(#999, #ccc);
-        --bn-colour-shadow:           light-dark(rgba(0,0,0,0.1), rgba(0,0,0,0.4));
-
-        /* Focus and selection */
-        --bn-focus-ring:              light-dark(0 0 0 2px rgba(37, 99, 235, 0.12), 0 0 0 2px rgba(96, 165, 250, 0.2));
-        --bn-selection-bg:            light-dark(#eef4fc, #1a2838);
-        --bn-selection-border:        light-dark(#2563eb, #60a5fa);
-
-        /* Hover backgrounds */
-        --bn-hover-bg:                light-dark(rgba(0,0,0,0.04), rgba(255,255,255,0.06));
-        --bn-hover-bg-subtle:         light-dark(rgba(0,0,0,0.03), rgba(255,255,255,0.04));
     }
 
     /* Explicit overrides — lock theme regardless of OS preference */

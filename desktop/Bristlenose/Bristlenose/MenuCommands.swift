@@ -245,7 +245,7 @@ private struct ViewMenuContent: View {
         Button("Toggle Left Panel") {
             bridgeHandler.menuAction("toggleLeftPanel")
         }
-        .disabled(bridgeHandler.activeTab != .quotes)
+        .disabled(!hasLeftPanel)
 
         Button("Toggle Right Panel") {
             bridgeHandler.menuAction("toggleRightPanel")

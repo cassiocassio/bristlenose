@@ -15,7 +15,7 @@ import { Footer } from "../components/Footer";
 import { HelpModal } from "../components/HelpModal";
 import { FeedbackModal } from "../components/FeedbackModal";
 import { SettingsModal } from "../components/SettingsModal";
-import { SidebarLayout } from "../components/SidebarLayout";
+import { SidebarLayout, sidebarAnimations } from "../components/SidebarLayout";
 import { SessionsSidebar } from "../components/SessionsSidebar";
 import { CodebookSidebar } from "../components/CodebookSidebar";
 import { AnalysisSidebar } from "../components/AnalysisSidebar";
@@ -30,6 +30,7 @@ import { useScrollToAnchor } from "../hooks/useScrollToAnchor";
 import { installNavigationShims } from "../shims/navigation";
 import { installBridge, postRouteChange, postReady, postProjectAction } from "../shims/bridge";
 import { cancelAutoCode } from "../utils/api";
+import { toggleInspector } from "../contexts/InspectorStore";
 import { isEditing } from "../utils/editing";
 import { isEmbedded } from "../utils/embedded";
 import { getExportData } from "../utils/exportData";
@@ -162,6 +163,27 @@ function AppShell() {
     if (!embedded) return;
     postRouteChange(location.pathname);
   }, [embedded, location.pathname]);
+
+  // Handle menu actions from native toolbar/menu (embedded mode).
+  useEffect(() => {
+    if (!embedded) return;
+    const handler = (e: Event) => {
+      const { action } = (e as CustomEvent).detail;
+      switch (action) {
+        case "toggleLeftPanel":
+          sidebarAnimations.toggleToc();
+          break;
+        case "toggleRightPanel":
+          sidebarAnimations.toggleTags();
+          break;
+        case "toggleInspectorPanel":
+          toggleInspector();
+          break;
+      }
+    };
+    window.addEventListener("bn:menu-action", handler);
+    return () => window.removeEventListener("bn:menu-action", handler);
+  }, [embedded]);
 
   const chipJobs: ActivityJob[] = useMemo(
     () =>

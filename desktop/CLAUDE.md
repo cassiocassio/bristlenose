@@ -83,9 +83,10 @@ Keyboard shortcuts: Cmd+1-5 (tabs) and Cmd+Opt+S (sidebar) live in the View menu
 - **Export** (share icon) — dropdown `Menu` whose contents change per tab. Always has "Export Report..." first. Quotes tab adds "Export Quotes as CSV"
 
 **Per-tab contextual items** (appear/disappear):
+- **Quotes/Codebook/Analysis**: `ControlGroup` pill with two buttons — left (`sidebar.left`) toggles native project sidebar via `NSSplitViewController.toggleSidebar`, right (`list.bullet`) toggles web navigation sidebar (sections/themes, codebooks, signals) via `bridgeHandler.menuAction("toggleLeftPanel")`
 - **Quotes**: Tag sidebar toggle (`sidebar.right` icon)
 - **Analysis**: Heatmap inspector toggle (`square.grid.2x2` icon)
-- **Other tabs**: no extra items
+- **Project/Sessions**: no extra items
 
 `ExportMenuButton` is a `View` struct in `ContentView.swift` that observes `bridgeHandler.activeTab` to render the correct menu items.
 

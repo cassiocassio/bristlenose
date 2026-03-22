@@ -1,0 +1,61 @@
+{
+  "fill" : {
+    "automatic-gradient" : "extended-srgb:0.00000,0.53333,1.00000,1.00000"
+  },
+  "groups" : [
+    {
+      "layers" : [
+        {
+          "glass-specializations" : [
+            {
+              "appearance" : "dark",
+              "value" : true
+            }
+          ],
+          "hidden" : false,
+          "image-name" : "foreground-mono.png",
+          "name" : "foreground-mono"
+        },
+        {
+          "hidden" : false,
+          "image-name" : "foreground-dark 2.png",
+          "name" : "foreground-dark 2"
+        },
+        {
+          "blend-mode" : "normal",
+          "glass-specializations" : [
+            {
+              "appearance" : "light",
+              "value" : true
+            }
+          ],
+          "hidden" : false,
+          "image-name" : "foreground-default.png",
+          "name" : "foreground-default",
+          "position" : {
+            "scale" : 1,
+            "translation-in-points" : [
+              16.140625,
+              -13.9296875
+            ]
+          }
+        },
+        {
+          "image-name" : "background.png",
+          "name" : "background"
+        }
+      ],
+      "shadow" : {
+        "kind" : "neutral",
+        "opacity" : 0.5
+      },
+      "translucency" : {
+        "enabled" : true,
+        "value" : 0.5
+      }
+    }
+  ],
+  "supported-platforms" : {
+    "squares" : "shared"
+  }
+}

@@ -2,7 +2,7 @@
 
 This document tracks active feature branches to help multiple Claude sessions coordinate without conflicts.
 
-**Updated:** 20 Mar 2026 (analysis-matrices-heatmaps-pane closed)
+**Updated:** 22 Mar 2026 (macos-app added)
 
 ---
 
@@ -15,6 +15,7 @@ Each active feature branch gets its own **git worktree** — a full working copy
 | Directory | Branch | Purpose |
 |-----------|--------|---------|
 | `bristlenose/` | `main` | Main repo, releases, hotfixes |
+| `bristlenose_branch macos-app/` | `macos-app` | macOS desktop app (SwiftUI + WKWebView) |
 | `bristlenose_branch symbology/` | `symbology` | § ¶ ❋ Unicode prefix symbols for sections, quotes, themes |
 | `bristlenose_branch highlighter/` | `highlighter` | Highlighter feature |
 | `bristlenose_branch living-fish/` | `living-fish` | Animated "living portrait" logo for serve mode |
@@ -101,6 +102,7 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 | Branch | Local worktree | GitHub remote |
 |--------|---------------|---------------|
 | `main` | `bristlenose/` | `origin/main` (push via `origin/main:wip` until release time) |
+| `macos-app` | `bristlenose_branch macos-app/` | `origin/macos-app` |
 | `symbology` | `bristlenose_branch symbology/` | `origin/symbology` |
 | `highlighter` | `bristlenose_branch highlighter/` | `origin/highlighter` |
 | `living-fish` | `bristlenose_branch living-fish/` | `origin/living-fish` |
@@ -113,6 +115,47 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 ---
 
 ## Active Branches
+
+### `macos-app` — started 21 Mar 2026
+
+**Status:** Active — toolbar and menu bar complete, next up: menu action wiring
+**Worktree:** `/Users/cassio/Code/bristlenose_branch macos-app/`
+**Remote:** `origin/macos-app`
+
+**What it does:** Native macOS desktop app — SwiftUI shell wrapping the React SPA in a WKWebView. Two-column NavigationSplitView (project sidebar + web content). Native toolbar (segmented tab control, back/forward, contextual trailing items). Full native menu bar (10 menus, ~89 items). Bridge protocol between Swift and React for bidirectional state sync. `bristlenose serve` subprocess lifecycle with port allocation and zombie cleanup.
+
+**Commits so far:**
+- `e19fac1` — embedded mode + bridge namespace (frontend: `bridge.ts`, `navigation.ts`, `AppLayout` suppression)
+- `b955ada` — archive v0.1 desktop app to `desktop/v0.1-archive/`
+- `7a877f8` — swift skeleton: WKWebView + serve lifecycle + bridge handler (6 Swift files, 773 lines)
+- `659de2f` — `desktop/CLAUDE.md`
+- `32eb896` — native toolbar, menu bar, and app lifecycle (Tab enum, toolbar, MenuCommands, BridgeHandler outbound actions, zombie cleanup)
+- `94f5cf0` — extended ux-review and security-review agents for macOS native shell
+
+**Files this branch touches:**
+- `desktop/` — all Swift code (new directory, no conflict risk)
+- `frontend/src/shims/bridge.ts` — new file, bridge protocol
+- `frontend/src/shims/navigation.ts` — added `TAB_ROUTES`, `switchToTab`, `scrollToAnchor`, `navigateToSession`
+- `frontend/src/layouts/AppLayout.tsx` — embedded mode suppression (`__BRISTLENOSE_EMBEDDED__`)
+- `frontend/src/main.tsx` — bridge installation in SPA mode
+- `docs/design-desktop-app.md` — design doc (1258 lines)
+- `desktop/CLAUDE.md` — Swift conventions and architecture
+- `.claude/agents/ux-review.md`, `.claude/agents/security-review.md` — macOS-specific review criteria
+
+**Potential conflicts with other branches:**
+- `symbology` — no overlap (touches render/template files, not frontend shims or desktop code)
+- `highlighter` — low risk (unknown scope, unlikely to touch shims)
+- `living-fish` — low risk (logo assets, not layout or shims)
+- `drag-push` — no overlap (sidebar CSS/hooks, not shims)
+
+**Key architecture decisions:**
+- State ownership at App level (`@StateObject` in `BristlenoseApp`, not `ContentView`)
+- `callAsyncJavaScript` for all native→web calls (security rule 3 — no string interpolation)
+- `menuAction()` single dispatch function for all ~89 menu actions
+- Ephemeral `WKWebsiteDataStore` per project (no cross-project leakage)
+- Zombie cleanup: `willTerminateNotification` + startup `lsof` scan
+
+---
 
 ### `highlighter` — started 13 Feb 2026
 

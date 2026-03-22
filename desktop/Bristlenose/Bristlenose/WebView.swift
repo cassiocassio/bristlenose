@@ -45,6 +45,25 @@ struct WebView: NSViewRepresentable {
         webView.navigationDelegate = context.coordinator
         context.coordinator.webView = webView
 
+        // Give BridgeHandler a reference for outbound calls (goBack, switchToTab).
+        bridgeHandler.webView = webView
+
+        // KVO — observe canGoBack/canGoForward for toolbar button enable state.
+        context.coordinator.canGoBackObservation = webView.observe(
+            \.canGoBack, options: [.new]
+        ) { [weak bridgeHandler] _, change in
+            Task { @MainActor in
+                bridgeHandler?.canGoBack = change.newValue ?? false
+            }
+        }
+        context.coordinator.canGoForwardObservation = webView.observe(
+            \.canGoForward, options: [.new]
+        ) { [weak bridgeHandler] _, change in
+            Task { @MainActor in
+                bridgeHandler?.canGoForward = change.newValue ?? false
+            }
+        }
+
         // Load the initial URL if provided.
         if let url {
             webView.load(URLRequest(url: url))
@@ -69,6 +88,12 @@ struct WebView: NSViewRepresentable {
         let bridgeHandler: BridgeHandler
         @MainActor var webView: WKWebView?
         @MainActor var lastLoadedURL: URL?
+
+        /// KVO observations for back/forward button enable state.
+        /// Stored strongly — auto-invalidated on Coordinator dealloc when the
+        /// WebView is recreated via `.id(project.id)` on project switch.
+        var canGoBackObservation: NSKeyValueObservation?
+        var canGoForwardObservation: NSKeyValueObservation?
 
         init(bridgeHandler: BridgeHandler) {
             self.bridgeHandler = bridgeHandler

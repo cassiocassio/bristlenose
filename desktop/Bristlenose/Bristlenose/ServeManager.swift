@@ -22,6 +22,12 @@ final class ServeManager: ObservableObject {
     @Published var state: ServeState = .idle
     @Published var outputLines: [String] = []
 
+    /// On init, kill any orphaned serve processes from previous app crashes.
+    /// Bristlenose owns the 8150–9149 port range — anything there is a zombie.
+    init() {
+        Self.killOrphanedServeProcesses()
+    }
+
     /// The URL to load in WKWebView when serve is running.
     var serveURL: URL? {
         guard case .running(let port) = state else { return nil }
@@ -209,6 +215,41 @@ final class ServeManager: ObservableObject {
             hash = hash &* 33 &+ UInt64(byte)
         }
         return 8150 + Int(hash % 1000)
+    }
+
+    /// Kill orphaned `bristlenose serve` processes left behind by previous
+    /// app crashes (SIGKILL from Xcode stop button, force-quit, etc.).
+    ///
+    /// Uses `lsof` to find PIDs listening on the Bristlenose port range
+    /// (8150–9149), then sends SIGINT for graceful Uvicorn shutdown.
+    /// Runs synchronously but fast (~10ms) — safe to call from init().
+    private nonisolated static func killOrphanedServeProcesses() {
+        let proc = Process()
+        proc.executableURL = URL(fileURLWithPath: "/usr/sbin/lsof")
+        proc.arguments = ["-ti", ":8150-9149"]
+
+        let pipe = Pipe()
+        proc.standardOutput = pipe
+        proc.standardError = FileHandle.nullDevice
+
+        do {
+            try proc.run()
+            proc.waitUntilExit()
+        } catch {
+            return  // lsof not available — nothing we can do
+        }
+
+        let data = pipe.fileHandleForReading.readDataToEndOfFile()
+        guard let output = String(data: data, encoding: .utf8) else { return }
+
+        let pids = output
+            .components(separatedBy: "\n")
+            .compactMap { Int32($0.trimmingCharacters(in: .whitespaces)) }
+
+        for pid in pids {
+            print("[ServeManager] killing orphaned serve process (PID \(pid))")
+            kill(pid, SIGINT)
+        }
     }
 
     /// Find the bristlenose binary for development use.

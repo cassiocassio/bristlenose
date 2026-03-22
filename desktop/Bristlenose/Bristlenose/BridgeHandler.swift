@@ -1,5 +1,6 @@
 import AppKit
 import Foundation
+import WebKit
 
 /// Holds state derived from WKScriptMessageHandler bridge messages.
 ///
@@ -9,6 +10,9 @@ import Foundation
 ///
 /// Published properties let ContentView react to bridge state changes
 /// (e.g. show/hide loading overlay based on `isReady`).
+///
+/// Also provides outbound actions (goBack, goForward, switchToTab) that
+/// call into the WKWebView via `callAsyncJavaScript`.
 @MainActor
 final class BridgeHandler: ObservableObject {
 
@@ -23,6 +27,102 @@ final class BridgeHandler: ObservableObject {
     /// True while the user is editing inline content (quote text, heading,
     /// name). Used to disable conflicting native menu items.
     @Published var isEditing = false
+
+    /// Whether the WKWebView can navigate back in its history.
+    /// Updated via KVO observation in WebView.Coordinator.
+    @Published var canGoBack = false
+
+    /// Whether the WKWebView can navigate forward in its history.
+    /// Updated via KVO observation in WebView.Coordinator.
+    @Published var canGoForward = false
+
+    // MARK: - Menu state (driven by bridge messages)
+
+    /// ID of the currently focused quote, or nil. Enables quote-specific
+    /// menu items (Star, Hide, Add Tag, Reveal in Transcript).
+    @Published var focusedQuoteId: String?
+
+    /// Number of currently selected quotes. Enables bulk actions
+    /// (Clear Selection, Copy as CSV).
+    @Published var selectedQuoteCount: Int = 0
+
+    /// Whether a video/audio player is open. Enables the Video menu.
+    @Published var hasPlayer = false
+
+    /// Whether the player is currently playing. Swaps Play/Pause label.
+    @Published var playerPlaying = false
+
+    /// Whether the web layer has an undo action available.
+    @Published var canUndo = false
+
+    /// Whether the web layer has a redo action available.
+    @Published var canRedo = false
+
+    /// Optional label for the undo action (e.g. "Undo Star").
+    @Published var undoLabel: String?
+
+    /// Whether the web layer is in dark mode. Swaps View menu label.
+    @Published var isDarkMode = false
+
+    /// Reference to the WKWebView for outbound calls (goBack, switchToTab).
+    /// Set by WebView.makeNSView, cleared on reset(). Weak to avoid retain cycles.
+    weak var webView: WKWebView?
+
+    /// The currently active tab, derived from `currentPath`.
+    var activeTab: Tab? {
+        Tab.from(path: currentPath)
+    }
+
+    // MARK: - Outbound navigation
+
+    /// Navigate the WKWebView back in its browser history.
+    func goBack() {
+        webView?.goBack()
+    }
+
+    /// Navigate the WKWebView forward in its browser history.
+    func goForward() {
+        webView?.goForward()
+    }
+
+    /// Switch the React SPA to the given tab by calling `window.switchToTab(tab)`.
+    ///
+    /// Uses `callAsyncJavaScript` with structured arguments (security rule 3 —
+    /// no string interpolation into JavaScript). Content world is `.page`
+    /// because `window.switchToTab` is installed by page-level JS.
+    func switchToTab(_ tab: Tab) {
+        guard let webView else { return }
+        Task {
+            try? await webView.callAsyncJavaScript(
+                "window.switchToTab(tab)",
+                arguments: ["tab": tab.rawValue],
+                in: nil,
+                in: .page
+            )
+        }
+    }
+
+    // MARK: - Menu action dispatch
+
+    /// Send a menu action to the web layer via `window.__bristlenose.menuAction()`.
+    ///
+    /// Uses `callAsyncJavaScript` with structured arguments (security rule 3).
+    func menuAction(_ action: String, payload: [String: Any]? = nil) {
+        guard let webView else { return }
+        let js: String
+        var args: [String: Any] = ["action": action]
+        if let payload {
+            js = "window.__bristlenose.menuAction(action, payload)"
+            args["payload"] = payload
+        } else {
+            js = "window.__bristlenose.menuAction(action)"
+        }
+        Task {
+            try? await webView.callAsyncJavaScript(js, arguments: args, in: nil, in: .page)
+        }
+    }
+
+    // MARK: - Inbound messages
 
     /// Dispatch a parsed bridge message. Called by WebView.Coordinator after
     /// origin validation.
@@ -46,6 +146,21 @@ final class BridgeHandler: ObservableObject {
         case "editing-ended":
             isEditing = false
 
+        case "focus-change":
+            focusedQuoteId = body["quoteId"] as? String
+            if let ids = body["selectedIds"] as? [String] {
+                selectedQuoteCount = ids.count
+            }
+
+        case "undo-state":
+            canUndo = body["canUndo"] as? Bool ?? false
+            canRedo = body["canRedo"] as? Bool ?? false
+            undoLabel = body["undoLabel"] as? String
+
+        case "player-state":
+            hasPlayer = body["hasPlayer"] as? Bool ?? false
+            playerPlaying = body["playing"] as? Bool ?? false
+
         case "project-action":
             if let action = body["action"] as? String {
                 handleProjectAction(action, data: body["data"] as? [String: Any])
@@ -62,6 +177,17 @@ final class BridgeHandler: ObservableObject {
         isReady = false
         currentPath = ""
         isEditing = false
+        canGoBack = false
+        canGoForward = false
+        focusedQuoteId = nil
+        selectedQuoteCount = 0
+        hasPlayer = false
+        playerPlaying = false
+        canUndo = false
+        canRedo = false
+        undoLabel = nil
+        isDarkMode = false
+        webView = nil
     }
 
     // MARK: - Private

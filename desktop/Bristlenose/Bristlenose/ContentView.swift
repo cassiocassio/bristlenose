@@ -13,10 +13,15 @@ struct ProjectStub: Identifiable, Hashable {
 /// Selecting a project starts `bristlenose serve` and loads the React SPA
 /// in embedded mode. The WKWebView is recreated on project switch (via .id)
 /// to get a fresh ephemeral data store per project.
+///
+/// The toolbar provides three zones:
+/// - Leading: back/forward buttons (Cmd+[/Cmd+])
+/// - Centre: tab segmented control (Cmd+1-5)
+/// - Trailing: project name as window title
 struct ContentView: View {
 
-    @StateObject private var serveManager = ServeManager()
-    @StateObject private var bridgeHandler = BridgeHandler()
+    @EnvironmentObject var serveManager: ServeManager
+    @EnvironmentObject var bridgeHandler: BridgeHandler
     @State private var selectedProject: ProjectStub?
 
     /// Placeholder projects — replace with real project list from projects.json.
@@ -32,6 +37,12 @@ struct ContentView: View {
             sidebar
         } detail: {
             detail
+                .toolbar {
+                    toolbarLeading
+                    toolbarCenter
+                    toolbarTrailing
+                }
+                .navigationTitle(selectedProject?.name ?? "Bristlenose")
         }
         .navigationSplitViewColumnWidth(min: 180, ideal: 220, max: 300)
         .onChange(of: selectedProject) { _, newValue in
@@ -40,6 +51,86 @@ struct ContentView: View {
                 serveManager.start(projectPath: project.path)
             } else {
                 serveManager.stop()
+            }
+        }
+    }
+
+    // MARK: - Toolbar
+
+    /// Two-way binding: reads activeTab from bridge, writes via switchToTab.
+    /// Maps nil to .project since segmented Picker requires non-optional selection.
+    private var tabBinding: Binding<Tab> {
+        Binding(
+            get: { bridgeHandler.activeTab ?? .project },
+            set: { bridgeHandler.switchToTab($0) }
+        )
+    }
+
+    private var toolbarLeading: some ToolbarContent {
+        ToolbarItemGroup(placement: .navigation) {
+            Button(action: { bridgeHandler.goBack() }) {
+                Image(systemName: "chevron.backward")
+            }
+            .disabled(!bridgeHandler.canGoBack)
+            .keyboardShortcut("[", modifiers: .command)
+            .help("Back (⌘[)")
+
+            Button(action: { bridgeHandler.goForward() }) {
+                Image(systemName: "chevron.forward")
+            }
+            .disabled(!bridgeHandler.canGoForward)
+            .keyboardShortcut("]", modifiers: .command)
+            .help("Forward (⌘])")
+        }
+    }
+
+    private var toolbarCenter: some ToolbarContent {
+        ToolbarItem(placement: .principal) {
+            Picker("Tab", selection: tabBinding) {
+                ForEach(Tab.allCases) { tab in
+                    Text(tab.label).tag(tab)
+                }
+            }
+            .pickerStyle(.segmented)
+            .disabled(selectedProject == nil || !bridgeHandler.isReady)
+        }
+    }
+
+    // MARK: - Toolbar trailing (contextual — menus dim, toolbars morph)
+
+    @ToolbarContentBuilder
+    private var toolbarTrailing: some ToolbarContent {
+        // Universal — Search (active on Quotes tab, dimmed elsewhere as placeholder)
+        ToolbarItem(placement: .primaryAction) {
+            Button { bridgeHandler.menuAction("find") } label: {
+                Label("Search", systemImage: "magnifyingglass")
+            }
+            .disabled(bridgeHandler.activeTab != .quotes)
+            .help("Search (⌘F)")
+        }
+
+        // Universal — Export menu (contents morph per tab)
+        ToolbarItem(placement: .primaryAction) {
+            ExportMenuButton(bridgeHandler: bridgeHandler)
+        }
+
+        // Contextual — Codebook tab: tags panel toggle
+        if bridgeHandler.activeTab == .codebook {
+            ToolbarItem(placement: .primaryAction) {
+                Button { bridgeHandler.menuAction("toggleRightPanel") } label: {
+                    Label("Tags", systemImage: "tag")
+                }
+                .help("Toggle Tags Panel")
+            }
+        }
+
+        // Contextual — Analysis tab: inspector panel toggle
+        if bridgeHandler.activeTab == .analysis {
+            ToolbarItem(placement: .primaryAction) {
+                Button { bridgeHandler.menuAction("toggleInspectorPanel") } label: {
+                    Label("Inspector", systemImage: "rectangle.bottomhalf.inset.filled")
+                }
+                .help("Toggle Inspector Panel (m)")
             }
         }
     }
@@ -98,5 +189,37 @@ struct ContentView: View {
                 description: Text("Select a project from the sidebar.")
             )
         }
+    }
+}
+
+// MARK: - Export toolbar menu
+
+/// Toolbar export button with per-tab dropdown contents.
+/// "Export Report..." is always first (universal). Tab-specific exports below a divider.
+struct ExportMenuButton: View {
+    @ObservedObject var bridgeHandler: BridgeHandler
+
+    var body: some View {
+        Menu {
+            Button("Export Report...") {
+                bridgeHandler.menuAction("exportReport")
+            }
+            .keyboardShortcut("e", modifiers: [.command, .shift])
+
+            if bridgeHandler.activeTab == .quotes {
+                Divider()
+
+                Button("Export Quotes as CSV") {
+                    bridgeHandler.menuAction("exportQuotesCSV")
+                }
+
+                // Future: "Export Starred Quotes as CSV" when starred filter active
+            }
+
+            // Future: Analysis tab → "Export Signal Cards as PPTX"
+        } label: {
+            Label("Export", systemImage: "square.and.arrow.up")
+        }
+        .help("Export (⌘⇧E)")
     }
 }

@@ -28,7 +28,15 @@ _CSS_VERSION = "bristlenose-theme v6"
 
 # Files concatenated in atomic-design order.
 _THEME_FILES: list[str] = [
+    # Layer 0: structural tokens (layout, spacing, radii, sentiment, codebook)
     "tokens.css",
+    # Layer 1: typography (web defaults; desktop overrides via data-platform)
+    "tokens-typography.css",
+    "tokens-desktop.css",
+    # Layer 2: colour palettes (default first as :root fallback, then themed overrides)
+    "colors/palette-default.css",
+    "colors/palette-edo.css",
+    # Layer 3: atoms
     "atoms/badge.css",
     "atoms/button.css",
     "atoms/toggle.css",

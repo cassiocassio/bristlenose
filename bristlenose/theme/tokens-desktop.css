@@ -1,0 +1,36 @@
+/* Desktop typography overrides — SF Pro for macOS native feel.
+   Active when data-platform="desktop" is set on <html>.
+
+   SF Pro is a system font on macOS — no download needed.
+   SF Pro Text is optimised for body sizes (<20pt), SF Pro Display for headings (≥20pt).
+   -apple-system resolves to SF Pro automatically on macOS.
+
+   Weight scale: SF Pro's variable weight axis is compatible with Inter's,
+   so the same numeric values work. Slight optical differences at 420/490
+   give SF Pro its characteristic Apple feel. */
+
+[data-platform="desktop"] {
+    /* Font family — SF Pro via -apple-system, no Google Fonts needed */
+    --bn-font-body: -apple-system, "SF Pro Text", "SF Pro", system-ui,
+        "Hiragino Kaku Gothic ProN", "Hiragino Sans",
+        sans-serif;
+    --bn-font-mono: "SF Mono", ui-monospace, monospace;
+
+    /* Type scale — adjusted to match Apple HIG conventions.
+       macOS apps typically use 13pt body (vs our 14px web default).
+       SF Pro's x-height is slightly taller than Inter at the same size,
+       so we can go 0.5px smaller and maintain the same apparent size. */
+    --bn-text-caption:     0.6875rem;   /* 11px — Apple footnote */
+    --bn-text-caption-lh:  1.35;
+    --bn-text-body-sm:     0.8125rem;   /* 13px — Apple body (same as web) */
+    --bn-text-body-sm-lh:  1.4;
+    --bn-text-body:        0.8125rem;   /* 13px — Apple body (web is 14px) */
+    --bn-text-body-lh:     1.45;
+    --bn-text-heading:     1.0625rem;   /* 17px — Apple headline */
+    --bn-text-heading-lh:  1.3;
+    --bn-text-title:       1.3125rem;   /* 21px — Apple title 2 */
+    --bn-text-title-lh:    1.2;
+
+    /* Weight scale — SF Pro optical weights at same numeric values.
+       No change needed — Inter and SF Pro share the weight axis range. */
+}

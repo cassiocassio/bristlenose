@@ -14,20 +14,21 @@ import SwiftUI
 ///
 /// Menu order: Bristlenose · File · Edit · View · Project · Codes · Quotes · Video · Window · Help
 struct MenuCommands: Commands {
-    let bridgeHandler: BridgeHandler
+    @ObservedObject var bridgeHandler: BridgeHandler
+    @ObservedObject var serveManager: ServeManager
 
     var body: some Commands {
-        // App menu (Bristlenose)
+        // App menu (Bristlenose) — replace .appInfo so we control the About
+        // panel with the Bristlenose version from the serve health endpoint.
+        // Settings (Cmd+,) is provided by the Settings {} scene automatically
+        // via .appSettings, which is separate from .appInfo.
         CommandGroup(replacing: .appInfo) {
-            AppMenuContent(bridgeHandler: bridgeHandler)
+            AppMenuContent(bridgeHandler: bridgeHandler, serveManager: serveManager)
         }
 
-        // File menu
+        // File > New/Open/Export
         CommandGroup(replacing: .newItem) {
             FileMenuContent(bridgeHandler: bridgeHandler)
-        }
-        CommandGroup(replacing: .printItem) {
-            PrintMenuContent(bridgeHandler: bridgeHandler)
         }
 
         // Edit > Undo/Redo — gated on isEditing.
@@ -72,14 +73,30 @@ struct MenuCommands: Commands {
 
 // MARK: - App menu (Bristlenose)
 
-/// About, Check System Health.
-/// Settings (Cmd+,) is NOT here — provided automatically by the Settings {} scene.
+/// About Bristlenose (with version from serve health endpoint + Xcode build number)
+/// and Check System Health. Settings (Cmd+,) comes from the Settings {} scene.
 private struct AppMenuContent: View {
     @ObservedObject var bridgeHandler: BridgeHandler
+    @ObservedObject var serveManager: ServeManager
 
     var body: some View {
         Button("About Bristlenose") {
-            NSApp.orderFrontStandardAboutPanel()
+            let buildNumber = Bundle.main.infoDictionary?["CFBundleVersion"] as? String
+            var options: [NSApplication.AboutPanelOptionKey: Any] = [:]
+
+            // "Version 0.14.0 (42)" — Bristlenose version from health API, build from Xcode
+            if let version = serveManager.serverVersion {
+                var versionString = version
+                if let build = buildNumber {
+                    versionString += " (\(build))"
+                }
+                options[.applicationVersion] = versionString
+            }
+
+            // Clear the "Version" line so it doesn't duplicate info
+            options[.version] = ""
+
+            NSApp.orderFrontStandardAboutPanel(options: options)
         }
 
         Divider()
@@ -116,13 +133,9 @@ private struct FileMenuContent: View {
         Button("Export Anonymised...") {
             bridgeHandler.menuAction("exportAnonymised")
         }
-    }
-}
 
-private struct PrintMenuContent: View {
-    @ObservedObject var bridgeHandler: BridgeHandler
+        Divider()
 
-    var body: some View {
         Button("Page Setup...") {
             bridgeHandler.menuAction("pageSetup")
         }
@@ -199,6 +212,12 @@ private struct FindMenuContent: View {
 
 private struct ViewMenuContent: View {
     @ObservedObject var bridgeHandler: BridgeHandler
+
+    private var hasLeftPanel: Bool {
+        bridgeHandler.activeTab == .quotes ||
+        bridgeHandler.activeTab == .codebook ||
+        bridgeHandler.activeTab == .analysis
+    }
 
     var body: some View {
         // Tab shortcuts Cmd+1 through Cmd+5

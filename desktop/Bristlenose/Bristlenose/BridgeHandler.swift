@@ -102,6 +102,15 @@ final class BridgeHandler: ObservableObject {
         }
     }
 
+    // MARK: - Appearance sync
+
+    /// Push the native appearance preference to the web layer.
+    /// Called when: (1) `isReady` becomes true, (2) user changes appearance in Settings.
+    func syncAppearance() {
+        let appearance = UserDefaults.standard.string(forKey: "appearance") ?? "auto"
+        menuAction("set-appearance", payload: ["value": appearance])
+    }
+
     // MARK: - Menu action dispatch
 
     /// Send a menu action to the web layer via `window.__bristlenose.menuAction()`.
@@ -134,6 +143,7 @@ final class BridgeHandler: ObservableObject {
         switch type {
         case "ready":
             isReady = true
+            syncAppearance()
 
         case "route-change":
             if let url = body["url"] as? String {

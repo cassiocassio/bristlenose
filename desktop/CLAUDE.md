@@ -42,30 +42,68 @@ ContentView uses `@EnvironmentObject` — it does not own these objects.
 
 ### Bridge communication
 
-**Inbound** (web → native): `WKScriptMessageHandler` receives messages from `window.webkit.messageHandlers.navigation.postMessage(...)`. Types: `ready`, `route-change`, `editing-started`, `editing-ended`, `project-action`.
+**Inbound** (web → native): `WKScriptMessageHandler` receives messages from `window.webkit.messageHandlers.navigation.postMessage(...)`. Types: `ready`, `route-change`, `editing-started`, `editing-ended`, `focus-change`, `undo-state`, `player-state`, `project-action`.
 
-**Outbound** (native → web): `BridgeHandler` holds a `weak var webView: WKWebView?` (set in `WebView.makeNSView`). Three outbound methods:
+**Outbound** (native → web): `BridgeHandler` holds a `weak var webView: WKWebView?` (set in `WebView.makeNSView`). Four outbound methods:
 - `goBack()` / `goForward()` — delegates to `webView?.goBack()` / `.goForward()`
-- `switchToTab(_ tab: Tab)` — calls `callAsyncJavaScript("window.switchToTab(tab)", arguments: ["tab": tab.rawValue], in: nil, in: .page)`
+- `switchToTab(_ tab: Tab)` — calls `callAsyncJavaScript("window.switchToTab(tab)", ...)`
+- `menuAction(_ action: String, payload:)` — calls `callAsyncJavaScript("window.__bristlenose.menuAction(action, payload)", ...)`. Single dispatch point for all ~89 menu actions (security rule 3 — structured arguments, no string interpolation)
 
-The `callAsyncJavaScript` parameter labels are `in: nil, in: .page` — not `contentWorld:`. Content world `.page` is required because `window.switchToTab` is installed by page-level JS (the navigation shim), not a `WKUserScript`.
+The `callAsyncJavaScript` parameter labels are `in: nil, in: .page` — not `contentWorld:`. Content world `.page` is required because `window.switchToTab` and `window.__bristlenose.menuAction` are installed by page-level JS, not a `WKUserScript`.
 
 ### Toolbar
 
-Three zones in the unified title bar:
+Four zones in the unified title bar:
 
 ```
-┌─────────────────────────────────────────────────────────────────────┐
-│ ● ● ●  ⊞  ◀ ▶  │  Project · Sessions · Quotes · Codebook · Analysis  │  Q1 Study  │
-│ leading         │  centre (segmented control)                          │  trailing  │
-└─────────────────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────────────────────────┐
+│ ● ● ●  ⊞  ◀ ▶  │  Project · Sessions · Quotes · Codebook · Analysis  │  🔍 ↑ [ctx]  │
+│ leading         │  centre (segmented control)                          │  trailing     │
+└──────────────────────────────────────────────────────────────────────────────────┘
 ```
 
 - **Leading** (`.navigation`): back/forward buttons with KVO-driven enable/disable
 - **Centre** (`.principal`): segmented `Picker` bound to `bridgeHandler.activeTab` via a two-way `Binding<Tab>` (nil mapped to `.project` — segmented Picker requires non-optional)
-- **Trailing**: `.navigationTitle(selectedProject?.name ?? "Bristlenose")`
+- **Trailing** (`.primaryAction`): contextual items that morph per tab — see "Toolbar morphing" below
+- **Title**: `.navigationTitle(selectedProject?.name ?? "Bristlenose")`
 
-Keyboard shortcuts: Cmd+1-5 (tabs) and Cmd+Opt+S (sidebar) live in `.commands {}` on the Scene (creates proper menu items, VoiceOver-discoverable). Cmd+[/] (back/forward) live as `.keyboardShortcut` on toolbar buttons.
+Keyboard shortcuts: Cmd+1-5 (tabs) and Cmd+Opt+S (sidebar) live in the View menu (via `MenuCommands`). Cmd+[/] (back/forward) live as `.keyboardShortcut` on toolbar buttons.
+
+### Toolbar morphing
+
+**Principle: menus dim, toolbars morph.** The menu bar greys out unavailable items (HIG — discoverability). The toolbar shows/hides items per tab (Photos/Notes pattern — no greyed-out button graveyard).
+
+**Universal items** (always present):
+- **Search** (magnifying glass) — active on Quotes tab, dimmed elsewhere as "coming soon"
+- **Export** (share icon) — dropdown `Menu` whose contents change per tab. Always has "Export Report..." first. Quotes tab adds "Export Quotes as CSV"
+
+**Per-tab contextual items** (appear/disappear):
+- **Codebook**: Tags panel toggle (`tag` icon)
+- **Analysis**: Inspector panel toggle (`rectangle.bottomhalf.inset.filled`)
+- **Other tabs**: no extra items
+
+`ExportMenuButton` is a `View` struct in `ContentView.swift` that observes `bridgeHandler.activeTab` to render the correct menu items.
+
+### Menu bar
+
+`MenuCommands.swift` — full native menu bar with 10 menus and ~89 items.
+
+**`View`-inside-`Commands` pattern:** `@ObservedObject` is unreliable directly in `Commands.body` (observation doesn't trigger re-evaluation). `MenuCommands` holds a plain `let bridgeHandler`. Each menu section is a `View` struct (`QuotesMenuContent`, `VideoMenuContent`, etc.) that owns `@ObservedObject var bridgeHandler` — views inside `CommandMenu`/`CommandGroup` follow normal SwiftUI view lifecycle.
+
+**Contextual dimming** — menus dim unavailable items (never hide):
+- Quotes menu: all items dim when not on Quotes tab. Star/Hide/Tag additionally require `focusedQuoteId != nil`
+- Video menu: all items dim when `!hasPlayer`. Play/Pause label swaps
+- Codes menu: group/code operations dim when not on codebook/quotes tab. Browse/Import always enabled
+- Edit > Undo/Redo: hidden when `isEditing` (lets WKWebView handle character-level undo)
+- View > panels: dim based on active tab
+
+**Responder chain rules:**
+- Do NOT touch `.pasteboard` — Cut/Copy/Paste handled by WKWebView responder chain
+- Undo/Redo hidden during `isEditing` to let Cmd+Z fall through to WKWebView
+- Cmd+F routes to web search bar (not native WKWebView find bar)
+- Settings Cmd+, comes from the `Settings {}` scene automatically — no custom menu item
+
+**No bare-key menu shortcuts** — `s`, `h`, `[`, `]`, `m`, `?`, arrows work only in WKWebView focus. Menu items for these actions have no keyboard shortcut shown. Help menu points to `?` for the full shortcut reference.
 
 ### KVO for back/forward
 
@@ -138,3 +176,6 @@ cd frontend && npm run build
 - **Segmented Picker requires non-optional selection** — `Binding<Tab?>` doesn't work with `.pickerStyle(.segmented)`. The `tabBinding` in ContentView maps nil to `.project`
 - **Tab.from(path:) prefix order** — check longest prefixes first (`/report/analysis` before `/report/`). The project tab uses exact match to avoid matching all paths
 - **`.onReceive` is a View modifier, not Scene** — attach it to the root View inside WindowGroup, not to the WindowGroup itself. The publisher is `NotificationCenter.default.publisher(for: NSApplication.willTerminateNotification)`
+- **`@ObservedObject` in `Commands` struct is unreliable** — use `let` (plain property) on the `Commands` struct, then use `@ObservedObject` inside `View` structs that are the content of `CommandMenu`/`CommandGroup`. See `MenuCommands.swift` for the pattern
+- **Don't replace `.pasteboard` in Commands** — `CommandGroup(replacing: .pasteboard)` removes Cut/Copy/Paste. WKWebView handles these via the responder chain. Only replace `.undoRedo` (for app-level undo) and `.help`
+- **Undo/Redo editing guard** — when `isEditing`, the Undo/Redo menu items are hidden (not disabled) so Cmd+Z falls through to WKWebView's character-level text undo. When not editing, they intercept and route to the bridge

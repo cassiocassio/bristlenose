@@ -114,6 +114,29 @@ When given code to review (diff, file paths, or description):
 - **Localhost binding** — 127.0.0.1 not 0.0.0.0
 - **File permissions** — output not world-readable
 
+## F. macOS native shell (desktop/ Swift code)
+
+- **Bridge injection** — `evaluateJavaScript` with string interpolation. A
+  project named `'; alert(1); '` must not become code execution. Must use
+  `callAsyncJavaScript(_:arguments:in:in:)` with parameterised `arguments:`
+  dictionary. Flag any string concatenation into JS evaluation
+- **Navigation restriction** — `decidePolicyFor` must only allow `127.0.0.1`
+  and `about:` schemes. External URLs must open via `NSWorkspace.shared.open()`.
+  Flag any navigation policy that allows arbitrary hosts
+- **Bridge origin validation** — every `WKScriptMessageHandler` callback must
+  check `message.frameInfo.request.url?.host == "127.0.0.1"`. Flag handlers
+  that skip origin validation
+- **Ephemeral storage** — each project must get `WKWebsiteDataStore.nonPersistent()`
+  to prevent cross-project cookie/sessionStorage leakage. Flag shared or
+  persistent data stores across projects
+- **Zombie process cleanup** — serve processes on ports 8150-9149 must be killed
+  on startup (crash recovery via `lsof -ti :8150-9149` + `kill`). Flag missing
+  cleanup or SIGKILL instead of SIGINT (SIGINT lets Uvicorn release the port)
+- **Port binding** — serve must bind to `127.0.0.1`, never `0.0.0.0`. Port
+  allocation: `8150 + djb2(projectPath) % 1000`. Flag non-localhost binding
+- **Settings interception** — `project-action: open-settings` must open native
+  Settings scene, not the web modal. Flag settings actions that stay in WKWebView
+
 # Persona 2: The Blocker (procurement / infosec / compliance)
 
 Think like the person filling out these questionnaires and checking these
@@ -204,6 +227,35 @@ These are the categories an enterprise security team would walk through:
   monitoring, DPA requirements
 - **Vulnerability management** — dependency updates, CVE monitoring
 
+## macOS App Store & distribution
+
+These apply when reviewing desktop/ Swift code or build/signing configuration:
+
+- **Sandbox readiness** — file access must use security-scoped bookmark data,
+  not path strings. Paths are dead in sandbox. `NSHomeDirectory()` lies in
+  sandbox (returns container path). Flag hardcoded `~/Library/` or `/tmp/` paths
+- **Bundled binaries** — all helper binaries (FFmpeg, Python sidecar) must live
+  inside the `.app` bundle. Sandbox blocks execution of anything outside. Flag
+  `Process("/usr/bin/open", ...)`, `osascript`, or any system binary invocation
+- **Codesigning** — sign inside-out: helpers → frameworks → app. Never
+  `codesign --deep` (overwrites individual signatures on XPC services). Every
+  `.so`, `.dylib`, helper binary needs Team ID signature
+- **Entitlement hygiene** — never use `NSAppleScript` (blocked, Apple rejects
+  the entitlement). Never depend on temporary exception entitlements (App Review
+  rejects them retroactively, sometimes after 15 successful submissions)
+- **Build numbers** — `CFBundleVersion` must strictly increment. Both Sparkle
+  and App Store Connect require this. Flag `CFBundleVersion = 1` as a default
+- **Quarantine xattr** — App Store Connect rejects bundles with
+  `com.apple.quarantine` on any file. Flag downloaded binaries that haven't
+  had the xattr stripped
+- **Data migration** — all app state in a single `Application Support/
+  Bristlenose/` directory. Apple provides one-shot `com.apple.security.
+  app-sandbox.migration` — miss a file location and the user loses data
+- **Network layer** — Python's `urllib3`/`requests` use OpenSSL, which may be
+  blocked in sandbox. Note whether API calls should route through Swift
+  `URLSession` for App Store builds. The Keychain (`SecItemAdd`) works in
+  sandbox with zero extra entitlements
+
 ## The Dovetail comparison
 
 Enterprise UX research tools (Dovetail, Great Question, Condens, UserTesting)
@@ -233,6 +285,17 @@ strong and where it's weak.
 | Data retention | Researcher controls retention directly — `rm -rf bristlenose-output/`. No cloud retention, no backup tapes, no "30-day soft delete" |
 | Right to erasure | Delete the participant's files. No distributed caches, no CDN, no search indices to purge |
 | Audit trail | Pipeline manifest + log file + git-style immutable output directory. More auditable than most SaaS tools |
+
+## macOS native shell rebuttals
+
+| Concern | Local-first answer |
+|---------|-------------------|
+| App sandbox security | Security-scoped bookmarks are stronger than path-based access — survive moves and renames, required for sandbox. The OS enforces access boundaries, not the app |
+| Cross-project data leakage | Each project gets `WKWebsiteDataStore.nonPersistent()` — ephemeral web storage with no cross-project cookies, sessionStorage, or cache |
+| Runtime dependencies | All binaries bundled inside the `.app` (FFmpeg, Whisper model, Python sidecar). No network fetch at runtime, no Homebrew, no pip install |
+| Auto-update risk | No auto-update, no phone-home, no telemetry, no crash reporting. Manual distribution via DMG/PyPI/Homebrew. The researcher controls when they update |
+| Bridge attack surface | Navigation restricted to `127.0.0.1` + `about:`. Bridge validates origin on every message. `callAsyncJavaScript` with parameterised arguments prevents injection. External URLs open in system browser, not WKWebView |
+| Process isolation | Serve runs as a child process (SIGINT-managed). Zombie cleanup on startup catches crash orphans. Port range 8150-9149, deterministic per project |
 
 ## Honest gaps (flag these)
 

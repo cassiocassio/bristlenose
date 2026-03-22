@@ -22,7 +22,17 @@ struct ContentView: View {
 
     @EnvironmentObject var serveManager: ServeManager
     @EnvironmentObject var bridgeHandler: BridgeHandler
+    @AppStorage("appearance") private var appearance: String = "auto"
     @State private var selectedProject: ProjectStub?
+
+    /// Map the stored appearance string to SwiftUI's ColorScheme.
+    private var colorScheme: ColorScheme? {
+        switch appearance {
+        case "light": .light
+        case "dark": .dark
+        default: nil  // "auto" → follow system
+        }
+    }
 
     /// Placeholder projects — replace with real project list from projects.json.
     /// First entry points to a real trial-runs project for testing the serve flow.
@@ -45,6 +55,7 @@ struct ContentView: View {
                 .navigationTitle(selectedProject?.name ?? "Bristlenose")
         }
         .navigationSplitViewColumnWidth(min: 180, ideal: 220, max: 300)
+        .preferredColorScheme(colorScheme)
         .onChange(of: selectedProject) { _, newValue in
             bridgeHandler.reset()
             if let project = newValue {
@@ -100,13 +111,30 @@ struct ContentView: View {
 
     @ToolbarContentBuilder
     private var toolbarTrailing: some ToolbarContent {
-        // Universal — Search (active on Quotes tab, dimmed elsewhere as placeholder)
-        ToolbarItem(placement: .primaryAction) {
-            Button { bridgeHandler.menuAction("find") } label: {
-                Label("Search", systemImage: "magnifyingglass")
+        // Contextual — Quotes/Codebook/Analysis: sidebar + navigation toggle pair
+        if bridgeHandler.activeTab == .quotes ||
+           bridgeHandler.activeTab == .codebook ||
+           bridgeHandler.activeTab == .analysis {
+            ToolbarItem(placement: .primaryAction) {
+                ControlGroup {
+                    // Left: native project sidebar
+                    Button {
+                        NSApp.keyWindow?.firstResponder?.tryToPerform(
+                            #selector(NSSplitViewController.toggleSidebar(_:)),
+                            with: nil
+                        )
+                    } label: {
+                        Label("Sidebar", systemImage: "sidebar.left")
+                    }
+                    // Right: web navigation sidebar (sections/codebooks/signals)
+                    Button {
+                        bridgeHandler.menuAction("toggleLeftPanel")
+                    } label: {
+                        Label("Navigation", systemImage: "list.bullet")
+                    }
+                }
+                .help("Toggle sidebars")
             }
-            .disabled(bridgeHandler.activeTab != .quotes)
-            .help("Search (⌘F)")
         }
 
         // Universal — Export menu (contents morph per tab)
@@ -114,24 +142,34 @@ struct ContentView: View {
             ExportMenuButton(bridgeHandler: bridgeHandler)
         }
 
-        // Contextual — Codebook tab: tags panel toggle
-        if bridgeHandler.activeTab == .codebook {
+        // Contextual — Quotes tab: tag sidebar toggle
+        if bridgeHandler.activeTab == .quotes {
             ToolbarItem(placement: .primaryAction) {
                 Button { bridgeHandler.menuAction("toggleRightPanel") } label: {
-                    Label("Tags", systemImage: "tag")
+                    Label("Tags", systemImage: "sidebar.right")
                 }
-                .help("Toggle Tags Panel")
+                .help("Toggle Tag Sidebar (])")
             }
         }
 
-        // Contextual — Analysis tab: inspector panel toggle
+        // Contextual — Analysis tab: heatmap inspector toggle
         if bridgeHandler.activeTab == .analysis {
             ToolbarItem(placement: .primaryAction) {
                 Button { bridgeHandler.menuAction("toggleInspectorPanel") } label: {
-                    Label("Inspector", systemImage: "rectangle.bottomhalf.inset.filled")
+                    Label("Inspector", systemImage: "square.grid.2x2")
                 }
                 .help("Toggle Inspector Panel (m)")
             }
+        }
+
+        // Search — always rightmost, always active. The web layer handles
+        // context: Quotes → search bar, Sessions → transcript search,
+        // Codebook → filter codes, Analysis → filter signals.
+        ToolbarItem(placement: .primaryAction) {
+            Button { bridgeHandler.menuAction("find") } label: {
+                Label("Search", systemImage: "magnifyingglass")
+            }
+            .help("Search (⌘F)")
         }
     }
 

@@ -22,10 +22,23 @@ final class ServeManager: ObservableObject {
     @Published var state: ServeState = .idle
     @Published var outputLines: [String] = []
 
+    /// Bristlenose version from `/api/health` — fetched after server starts.
+    /// Shown in the About panel alongside the Xcode build number.
+    @Published var serverVersion: String?
+
     /// On init, kill any orphaned serve processes from previous app crashes.
     /// Bristlenose owns the 8150–9149 port range — anything there is a zombie.
     init() {
         Self.killOrphanedServeProcesses()
+        prefsObserver = NotificationCenter.default.addObserver(
+            forName: .bristlenosePrefsChanged,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor in
+                self?.restartIfRunning()
+            }
+        }
     }
 
     /// The URL to load in WKWebView when serve is running.
@@ -41,12 +54,19 @@ final class ServeManager: ObservableObject {
     /// runs check this to avoid overwriting the new run's state.
     private var generation: Int = 0
 
+    /// Last project path passed to start() — used by restartIfRunning().
+    private var currentProjectPath: String?
+
+    /// Observer for preference changes that require a serve restart.
+    private var prefsObserver: Any?
+
     /// Start serving a project. Stops any existing serve process first.
     ///
     /// - Parameter projectPath: Absolute path to the project directory.
     func start(projectPath: String) {
         stop()
 
+        currentProjectPath = projectPath
         generation += 1
         let currentGeneration = generation
         state = .starting
@@ -71,8 +91,11 @@ final class ServeManager: ObservableObject {
         proc.executableURL = executableURL
         proc.arguments = ["serve", "--no-open", "--port", "\(port)", projectPath]
 
-        // Inherit current environment (picks up API keys, PATH, etc.)
-        proc.environment = ProcessInfo.processInfo.environment
+        // Inherit current environment, then overlay user preferences.
+        // API keys are read from Keychain by Python directly — no env var needed.
+        var env = ProcessInfo.processInfo.environment
+        Self.overlayPreferences(into: &env)
+        proc.environment = env
 
         let pipe = Pipe()
         proc.standardOutput = pipe
@@ -144,9 +167,85 @@ final class ServeManager: ObservableObject {
         readTask = nil
         process = nil
         state = .idle
+        serverVersion = nil
+    }
+
+    /// Restart the serve process if one is running, using the same project path.
+    /// Called when user preferences change (provider, model, API key, etc.).
+    func restartIfRunning() {
+        guard case .running = state, let path = currentProjectPath else { return }
+        print("[ServeManager] preferences changed — restarting serve")
+        start(projectPath: path)
+    }
+
+    /// Overlay UserDefaults preferences as environment variables for the
+    /// `bristlenose serve` subprocess. Only sets vars that differ from defaults
+    /// to avoid overriding `.env` file or Keychain values unnecessarily.
+    private static func overlayPreferences(into env: inout [String: String]) {
+        let defaults = UserDefaults.standard
+
+        // LLM provider & model
+        if let provider = defaults.string(forKey: "activeProvider") {
+            env["BRISTLENOSE_LLM_PROVIDER"] = provider
+        }
+        if let model = defaults.string(forKey: "llmModel") {
+            env["BRISTLENOSE_LLM_MODEL"] = model
+        }
+
+        // Temperature & concurrency (only if user has explicitly set them)
+        if defaults.object(forKey: "llmTemperature") != nil {
+            env["BRISTLENOSE_LLM_TEMPERATURE"] = String(defaults.double(forKey: "llmTemperature"))
+        }
+        if defaults.object(forKey: "llmConcurrency") != nil {
+            env["BRISTLENOSE_LLM_CONCURRENCY"] = String(Int(defaults.double(forKey: "llmConcurrency")))
+        }
+
+        // Whisper transcription
+        if let backend = defaults.string(forKey: "whisperBackend"), backend != "auto" {
+            env["BRISTLENOSE_WHISPER_BACKEND"] = backend
+        }
+        if let model = defaults.string(forKey: "whisperModel") {
+            env["BRISTLENOSE_WHISPER_MODEL"] = model
+        }
+
+        // Language
+        if let lang = defaults.string(forKey: "language"), lang != "en" {
+            env["BRISTLENOSE_WHISPER_LANGUAGE"] = lang
+        }
+
+        // Azure-specific
+        if let endpoint = defaults.string(forKey: "azureEndpoint"), !endpoint.isEmpty {
+            env["BRISTLENOSE_AZURE_ENDPOINT"] = endpoint
+        }
+        if let deployment = defaults.string(forKey: "azureDeployment"), !deployment.isEmpty {
+            env["BRISTLENOSE_AZURE_DEPLOYMENT"] = deployment
+        }
+        if let apiVersion = defaults.string(forKey: "azureAPIVersion"), !apiVersion.isEmpty {
+            env["BRISTLENOSE_AZURE_API_VERSION"] = apiVersion
+        }
+
+        // Ollama
+        if let localURL = defaults.string(forKey: "localURL"), !localURL.isEmpty {
+            env["BRISTLENOSE_LOCAL_URL"] = localURL
+        }
     }
 
     // MARK: - Private
+
+    /// Fetch the Bristlenose version from the serve health endpoint.
+    /// Non-critical — if it fails, `serverVersion` stays nil.
+    private func fetchServerVersion(port: Int) async {
+        guard let url = URL(string: "http://127.0.0.1:\(port)/api/health") else { return }
+        do {
+            let (data, _) = try await URLSession.shared.data(from: url)
+            if let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
+               let version = json["version"] as? String {
+                self.serverVersion = version
+            }
+        } catch {
+            // Non-critical — About panel shows build number only
+        }
+    }
 
     /// Strip ANSI escape sequences and OSC 8 hyperlinks for clean display.
     private static let ansiRegex = try! NSRegularExpression(
@@ -171,6 +270,7 @@ final class ServeManager: ObservableObject {
             Task {
                 await self.waitForPort(port, timeout: 10)
                 self.state = .running(port: port)
+                await self.fetchServerVersion(port: port)
             }
         }
     }

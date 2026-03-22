@@ -25,12 +25,11 @@ struct BristlenoseApp: App {
         }
         .defaultSize(width: 1000, height: 700)
         .commands {
-            MenuCommands(bridgeHandler: bridgeHandler)
+            MenuCommands(bridgeHandler: bridgeHandler, serveManager: serveManager)
         }
 
         Settings {
-            Text("Settings coming soon.")
-                .frame(width: 400, height: 200)
+            SettingsView()
         }
     }
 }

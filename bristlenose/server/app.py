@@ -183,11 +183,33 @@ def _print_dev_urls() -> None:
     )
 
 
+def _html_root_attrs() -> str:
+    """Build extra attributes for the <html> element.
+
+    Reads platform and color theme from environment:
+    - BRISTLENOSE_PLATFORM: "desktop" when launched from the macOS app
+    - BRISTLENOSE_COLOR_THEME: palette name (e.g. "edo", "default")
+
+    Desktop defaults to "edo" color theme if no explicit theme is set.
+    """
+    parts: list[str] = []
+    platform = os.environ.get("BRISTLENOSE_PLATFORM", "")
+    color_theme = os.environ.get("BRISTLENOSE_COLOR_THEME", "")
+    if platform:
+        parts.append(f'data-platform="{platform}"')
+    if not color_theme and platform == "desktop":
+        color_theme = "edo"
+    if color_theme:
+        parts.append(f'data-color-theme="{color_theme}"')
+    return " ".join(parts)
+
+
 def _build_spa_html(output_dir: Path, *, dev: bool = False) -> str:
     """Read the Vite-built index.html and prepare it for serving.
 
     - Rewrites ``/assets/`` paths to ``/static/assets/`` (bundle served via StaticFiles)
     - Injects ``<link>`` for the theme CSS (from the pipeline output dir)
+    - Injects platform/theme attributes on ``<html>``
     - When *dev* is True, injects ``window.__BRISTLENOSE_DEV__ = true`` so the
       responsive playground loads (without requiring the Vite dev server)
     """
@@ -197,6 +219,10 @@ def _build_spa_html(output_dir: Path, *, dev: bool = False) -> str:
     html = index_path.read_text(encoding="utf-8")
     # Rewrite bundle asset paths: /assets/ → /static/assets/
     html = re.sub(r'((?:src|href)=")/assets/', r'\1/static/assets/', html)
+    # Inject platform/theme attributes on <html>
+    extra = _html_root_attrs()
+    if extra:
+        html = html.replace("<html", f"<html {extra}", 1)
     # Inject theme CSS before </head> — served from output dir at /report/assets/
     theme_link = '<link rel="stylesheet" href="/report/assets/bristlenose-theme.css">'
     html = html.replace("</head>", f"{theme_link}\n</head>")
@@ -217,9 +243,11 @@ def _build_dev_html(output_dir: Path) -> str:
     - Theme CSS from the pipeline output dir
     """
     vite = "http://localhost:5173"
+    extra = _html_root_attrs()
+    html_open = f'<html lang="en" {extra}>\n' if extra else '<html lang="en">\n'
     return (
         "<!doctype html>\n"
-        '<html lang="en">\n'
+        f"{html_open}"
         "<head>\n"
         '<meta charset="UTF-8" />\n'
         '<meta name="viewport" content="width=device-width, initial-scale=1.0" />\n'

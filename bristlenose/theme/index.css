@@ -3,17 +3,33 @@
    concatenated into a single stylesheet (bristlenose-theme.css).
 
    Layer order:
-   1. Tokens   — custom properties (colours, fonts, spacing, radii)
-   2. Atoms    — smallest reusable pieces (badge, button, input, etc.)
-   3. Molecules — small groups of atoms (badge-row, bar-group, etc.)
-   4. Organisms — self-contained UI sections (blockquote, chart, toolbar)
-   5. Templates — page-level layout and print overrides
+   0. Tokens   — structural custom properties (layout, spacing, sentiment, codebook)
+   1. Typography — font stacks and type scale (web defaults + desktop overrides)
+   2. Colours  — palette files (default first, then themed overrides)
+   3. Atoms    — smallest reusable pieces (badge, button, input, etc.)
+   4. Molecules — small groups of atoms (badge-row, bar-group, etc.)
+   5. Organisms — self-contained UI sections (blockquote, chart, toolbar)
+   6. Templates — page-level layout and print overrides
+
+   Platform/theme selectors:
+   - [data-platform="desktop"] — SF Pro typography overrides (tokens-desktop.css)
+   - [data-color-theme="edo"]  — Edo colour palette (colors/palette-edo.css)
+   - [data-theme="light|dark"] — light/dark mode override
 */
 
-/* --- 1. Tokens --- */
+/* --- 0. Structural tokens --- */
 /* tokens.css */
 
-/* --- 2. Atoms --- */
+/* --- 1. Typography --- */
+/* tokens-typography.css — web defaults (Inter Variable) */
+/* tokens-desktop.css — macOS overrides (SF Pro, Apple HIG scale) */
+
+/* --- 2. Colour palettes --- */
+/* colors/palette-default.css — blue/grey (web default, :root fallback) */
+/* colors/palette-edo.css — Edo-period art palette (desktop default) */
+/* colors/_contract.css — NOT loaded; documents required tokens for theme authors */
+
+/* --- 3. Atoms --- */
 /* atoms/badge.css */
 /* atoms/button.css */
 /* atoms/input.css */
@@ -24,7 +40,7 @@
 /* atoms/interactive.css */
 /* atoms/checkbox.css */
 
-/* --- 3. Molecules --- */
+/* --- 4. Molecules --- */
 /* molecules/person-badge.css */
 /* molecules/badge-row.css */
 /* molecules/bar-group.css */
@@ -32,7 +48,7 @@
 /* molecules/tag-input.css */
 /* molecules/sparkline.css */
 
-/* --- 4. Organisms --- */
+/* --- 5. Organisms --- */
 /* organisms/blockquote.css */
 /* organisms/sentiment-chart.css */
 /* organisms/toolbar.css */
@@ -41,7 +57,7 @@
 /* organisms/sidebar.css */
 /* organisms/sidebar-tags.css */
 
-/* --- 5. Templates --- */
+/* --- 6. Templates --- */
 /* templates/report.css */
 /* templates/print.css */
 

@@ -1,0 +1,75 @@
+/* Color contract — every palette MUST define all tokens listed here.
+   This file is NOT loaded by the browser — it documents the required
+   interface for theme authors.
+
+   The test_color_contract.py test validates that every palette-*.css
+   file in this directory defines all tokens listed below.
+
+   Tokens NOT in this contract (sentiment, codebook tag colours, heatmap)
+   are analytical — they stay in tokens.css and are NOT theme-overridable.
+
+   To add a new themeable colour:
+   1. Add it here with a comment
+   2. Add it to palette-default.css (both :root and @supports blocks)
+   3. Add it to palette-edo.css (both [data-color-theme] and @supports blocks)
+   4. Run: .venv/bin/python -m pytest tests/test_color_contract.py
+*/
+
+/*
+Required tokens:
+
+--bn-colour-bg                  Page background
+--bn-colour-text                Primary text
+--bn-colour-muted               Secondary text, icons, timestamps
+--bn-colour-border              Lines, separators, card borders
+--bn-colour-accent              Links, active states, primary action
+--bn-colour-hover               Interactive hover background (light tint of accent)
+
+--bn-colour-quote-bg            Quote card background
+--bn-colour-badge-bg            Badge/chip background
+--bn-colour-badge-text          Badge/chip text
+--bn-colour-user-tag-bg         User tag badge background
+--bn-colour-user-tag-text       User tag badge text
+--bn-colour-editing-bg          Inline editing mode highlight
+--bn-colour-editing-border      Inline editing mode border
+--bn-crop-handle-colour         Crop bracket handle colour
+--bn-crop-handle-hover          Crop bracket handle hover colour
+--bn-colour-active-bg           Active/selected item background
+--bn-colour-highlight           Anchor link flash / search highlight
+
+--bn-colour-negative            Destructive action (delete, deny)
+
+--bn-glow-colour                Playback sync glow (subtle)
+--bn-glow-colour-strong         Playback sync glow (strong)
+
+--bn-minimap-quote              Minimap quote line colour
+--bn-minimap-heading            Minimap heading line colour
+--bn-minimap-viewport-bg        Minimap viewport indicator fill
+--bn-minimap-viewport-border    Minimap viewport indicator stroke
+
+--bn-coverage-report            Transcript coverage — report bar
+--bn-coverage-moderator         Transcript coverage — moderator bar
+--bn-coverage-omitted           Transcript coverage — omitted bar
+
+--bn-group-none                 Codebook group card bg (ungrouped)
+--bn-bar-none                   Histogram bar colour (ungrouped)
+
+--bn-colour-border-hover        Border hover state
+--bn-colour-icon-idle           Disabled/idle icon colour
+--bn-colour-starred             Starred quote indicator
+--bn-colour-shadow              Generic shadow colour
+
+--bn-focus-shadow               Focus state box-shadow
+--bn-focus-ring                 Input/interactive focus ring
+
+--bn-hover-bg                   Hover background (standard)
+--bn-hover-bg-subtle            Hover background (subtle)
+
+--bn-selection-bg               Multi-select background
+--bn-selection-border           Multi-select border
+
+--bn-overlay-shadow             Sidebar overlay drop shadow
+
+--bn-colour-suggestion          Legacy: suggestion badge colour
+--bn-colour-suggestion-bg       Legacy: suggestion badge bg
+*/

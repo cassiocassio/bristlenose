@@ -83,19 +83,6 @@ struct LLMSettingsView: View {
                 .tag(provider)
             }
 
-            Divider()
-
-            HStack {
-                Button(action: {}) {
-                    Image(systemName: "plus")
-                }
-                .buttonStyle(.borderless)
-                .disabled(true)
-                .help("Multiple keys per provider — coming soon")
-
-                Spacer()
-            }
-            .padding(6)
         }
     }
 
@@ -343,7 +330,7 @@ struct LLMSettingsView: View {
             HStack {
                 Text("Temperature")
                 Spacer()
-                Text(String(format: "%.1f", temperature))
+                Text(temperature.formatted(.number.precision(.fractionLength(1))))
                     .foregroundStyle(.secondary)
                     .monospacedDigit()
             }

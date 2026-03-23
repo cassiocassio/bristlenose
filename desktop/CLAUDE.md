@@ -244,4 +244,167 @@ cd frontend && npm run build
 - **`.onReceive` is a View modifier, not Scene** — attach it to the root View inside WindowGroup, not to the WindowGroup itself. The publisher is `NotificationCenter.default.publisher(for: NSApplication.willTerminateNotification)`
 - **`@ObservedObject` in `Commands` struct is unreliable** — use `let` (plain property) on the `Commands` struct, then use `@ObservedObject` inside `View` structs that are the content of `CommandMenu`/`CommandGroup`. See `MenuCommands.swift` for the pattern
 - **Don't replace `.pasteboard` in Commands** — `CommandGroup(replacing: .pasteboard)` removes Cut/Copy/Paste. WKWebView handles these via the responder chain. Only replace `.undoRedo` (for app-level undo) and `.help`
-- **Undo/Redo editing guard** — when `isEditing`, the Undo/Redo menu items are hidden (not disabled) so Cmd+Z falls through to WKWebView's character-level text undo. When not editing, they intercept and route to the bridge
+- **Undo/Redo editing guard** — when `isEditing`, the Undo/Redo menu items are hidden (not disabled) so Cmd+Z falls through to WKWebView's character-level text undo. When not editing, they intercept and route to the bridge. **Known HIG deviation:** this violates the "dim, never hide" menu principle (line 99). Hiding is necessary here because a disabled Cmd+Z menu item would still intercept the shortcut before it reaches WKWebView's responder chain — dimming prevents the key from falling through. Acceptable trade-off: character-level undo during text editing is more important than menu discoverability
+
+## Wiring menu actions (bridge handler cookbook)
+
+### The 3-file chain
+
+Every menu action follows the same path:
+
+```
+MenuCommands.swift                    → bridgeHandler.menuAction("find")
+  ↓ callAsyncJavaScript
+bridge.ts                             → window.dispatchEvent(CustomEvent("bn:menu-action"))
+  ↓ event listener
+AppLayout.tsx (or useKeyboardShortcuts) → React store call / DOM action
+```
+
+**Swift side is complete** — all ~65 menu actions call `bridgeHandler.menuAction(...)`. The gap is in the frontend: `AppLayout.tsx` only handles 3 actions today.
+
+### Adding a new handler
+
+1. **No Swift changes needed** — the menu item already dispatches via `bridgeHandler.menuAction("actionName")`
+2. **Add a case** to the `switch (action)` in `AppLayout.tsx`'s `bn:menu-action` event listener (~line 172)
+3. **Delegate to existing logic** — most actions already have implementations in `useKeyboardShortcuts.ts` or React stores. Extract the handler to a shared function if needed
+
+### Action catalogue
+
+#### Already handled in AppLayout (3)
+
+| Action | Handler |
+|--------|---------|
+| `toggleLeftPanel` | `sidebarAnimations.toggleToc()` |
+| `toggleRightPanel` | `sidebarAnimations.toggleTags()` |
+| `toggleInspectorPanel` | `toggleInspector()` |
+
+#### Have keyboard equivalents — reuse existing logic (13)
+
+These actions duplicate keyboard shortcuts in `useKeyboardShortcuts.ts`. The handler logic exists but is currently only reachable via keydown, not via `bn:menu-action`.
+
+| Action | Keyboard | Existing handler |
+|--------|----------|-----------------|
+| `find` | `/` | `focusSearchInput()` |
+| `star` | `s` | `handleStar()` — bulk-aware (uses focused/selected) |
+| `hide` | `h` | `handleHide()` — bulk-aware, moves focus after |
+| `addTag` | `t` | `handleTagOpen()` — opens TagInput on focused quote |
+| `applyLastTag` | `r` | `handleQuickApply()` — quick-apply last-used tag |
+| `playPause` | `Enter` | `handlePlay()` — seekTo via PlayerContext |
+| `nextQuote` | `j` / `↓` | `moveFocus(1)` |
+| `previousQuote` | `k` / `↑` | `moveFocus(-1)` |
+| `extendSelectionDown` | `Shift+j` | `handleShiftMove(1)` |
+| `extendSelectionUp` | `Shift+k` | `handleShiftMove(-1)` |
+| `toggleSelection` | `x` | `toggleSelection(focusedId)` |
+| `clearSelection` | `Esc` | `clearSelection()` |
+| `revealInTranscript` | *(none)* | Navigate to `/report/sessions/:id#quote-anchor` |
+
+**Implementation note:** these handlers live inside `useKeyboardShortcuts` as closures over FocusContext/QuotesContext. To reuse them from the `bn:menu-action` listener in `AppLayout`, either: (a) extract them into a shared `useMenuActions` hook that both consumers call, or (b) have `useKeyboardShortcuts` also listen for `bn:menu-action` events (simpler — same closure scope, same guards).
+
+#### Need new frontend implementation (14)
+
+| Action | Implementation needed |
+|--------|----------------------|
+| `exportReport` | Open `ExportDialog` (`setExportOpen(true)`) |
+| `exportAnonymised` | Open `ExportDialog` with anonymise pre-selected |
+| `exportQuotesCSV` | Trigger CSV download (quotes API → blob) |
+| `copyAsCSV` | Copy focused/selected quotes as CSV to clipboard |
+| `allQuotes` | Clear search + tag filter (reset to default view) |
+| `starredQuotesOnly` | Set starred-only filter |
+| `filterByTag` | Focus the tag filter dropdown |
+| `showHelp` | `setHelpSection("help"); setHelpOpen(true)` |
+| `showKeyboardShortcuts` | `setHelpSection("shortcuts"); setHelpOpen(true)` |
+| `showReleaseNotes` | `setHelpSection("release-notes"); setHelpOpen(true)` |
+| `sendFeedback` | `setFeedbackOpen(true)` |
+| `zoomIn` / `zoomOut` / `actualSize` | CSS `font-size` scaling or `document.body.style.zoom` |
+| `toggleDarkMode` | Toggle `prefers-color-scheme` override |
+
+#### Video player actions — need PlayerContext wiring (12)
+
+These require the popout player bridge (currently stub: `hasPlayer: false` in `getState()`).
+
+| Action | Player method needed |
+|--------|---------------------|
+| `skipForward5` / `skipBack5` | `player.currentTime ± 5` |
+| `skipForward30` / `skipBack30` | `player.currentTime ± 30` |
+| `speedUp` / `slowDown` / `normalSpeed` | `player.playbackRate` |
+| `volumeUp` / `volumeDown` / `mute` | `player.volume` / `player.muted` |
+| `pictureInPicture` | `player.requestPictureInPicture()` |
+| `fullscreen` | `player.requestFullscreen()` |
+
+#### Project operations — native-side or future (8)
+
+These are either native-only (Finder, print) or depend on features not yet built (project list, re-analysis).
+
+| Action | Notes |
+|--------|-------|
+| `revealInFinder` | Native: `NSWorkspace.shared.selectFile(nil, inFileViewerRootedAtPath:)`. Needs project path from ServeManager |
+| `newProject` | Future: project creation flow |
+| `openInNewWindow` | Future: multi-window |
+| `renameProject` / `archive` / `deleteProject` | Future: project management |
+| `reAnalyse` | Future: re-run pipeline |
+| `checkSystemHealth` | Navigate to `/report/` and open doctor panel (or call `/api/health`) |
+| `pageSetup` / `print` | `NSPrintOperation` on WKWebView snapshot |
+
+#### Codebook operations — need CodebookPanel wiring (10)
+
+These dispatch to the codebook UI (browse modal, group/code CRUD). Most need `CustomEvent` dispatch to `CodebookPanel`.
+
+| Action | Target |
+|--------|--------|
+| `browseCodebooks` | Dispatch `bn:codebook-browse` CustomEvent |
+| `importFramework` | Dispatch `bn:codebook-browse` with pre-selected template |
+| `removeFramework` | Dispatch `bn:codebook-remove` (needs framework ID context) |
+| `createCodeGroup` / `renameCodeGroup` / `deleteCodeGroup` / `toggleCodeGroup` | Dispatch to codebook group CRUD |
+| `createCode` / `renameCode` / `deleteCode` / `mergeCode` | Dispatch to code CRUD |
+
+#### Edit operations — partially handled (5)
+
+| Action | Status |
+|--------|--------|
+| `undo` / `redo` | Stub (`canUndo: false` in `getState()`). Needs undo store |
+| `findNext` / `findPrevious` | Need search-result cycling in QuotesContext |
+| `useSelectionForFind` / `jumpToSelection` | Standard text editing — may delegate to WKWebView |
+
+#### Internal (not from menu)
+
+| Action | Notes |
+|--------|-------|
+| `set-appearance` | Sent by `BridgeHandler.syncAppearance()` on `ready`. Frontend applies theme |
+
+### Payload conventions
+
+Most actions are **stateless** — the action string is sufficient because the frontend reads current state from FocusContext/QuotesContext (which quote is focused, which are selected).
+
+Actions that need **payloads** (the optional second argument to `menuAction`):
+
+| Action | Payload shape | Example |
+|--------|--------------|---------|
+| `set-appearance` | `{ value: "dark" \| "light" \| "auto" }` | Already wired |
+| `exportAnonymised` | `{ anonymise: true }` | Proposed |
+| `importFramework` | `{ templateId: string }` | Proposed |
+| `removeFramework` | `{ frameworkId: string }` | Proposed — needs context from native sidebar |
+
+**Rule:** if the frontend already knows the target (focused quote, active tab), don't pass it in the payload. Payloads are for data the native side has that the web side doesn't.
+
+### getState() stubs
+
+`bridge.ts` `getState()` has four hardcoded stubs:
+
+| Property | Stub value | Wired when |
+|----------|-----------|------------|
+| `canUndo` | `false` | Undo store ships (tracks quote edits, tag changes) |
+| `canRedo` | `false` | Same |
+| `hasPlayer` | `false` | PlayerContext reports popout window state to bridge |
+| `playerPlaying` | `false` | PlayerContext reports playback state to bridge |
+
+These control menu item dimming in Swift. Until wired, the Undo/Redo and Video menus will dim correctly (items disabled when stubs are `false`).
+
+### Recommended implementation order
+
+1. **High-value, low-effort** — actions with existing keyboard handlers: `find`, `star`, `hide`, `nextQuote`, `previousQuote`, `exportReport`, `showHelp`, `showKeyboardShortcuts`, `sendFeedback`
+2. **Export & clipboard** — `exportQuotesCSV`, `copyAsCSV`, `exportAnonymised`
+3. **View filters** — `allQuotes`, `starredQuotesOnly`, `filterByTag`
+4. **Codebook** — `browseCodebooks` + CRUD actions
+5. **Video** — requires PlayerContext bridge (popout window ↔ native state sync)
+6. **Project operations** — requires project list feature
+7. **Undo/Redo** — requires undo store design

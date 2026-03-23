@@ -158,6 +158,7 @@ final class BridgeHandler: ObservableObject {
         case "ready":
             isReady = true
             syncAppearance()
+            webView?.window?.makeFirstResponder(webView)
 
         case "route-change":
             if let url = body["url"] as? String {

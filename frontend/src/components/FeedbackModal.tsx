@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
+import { useInert } from "../hooks/useInert";
 import { toast } from "../utils/toast";
 import type { HealthResponse } from "../utils/health";
 
@@ -52,6 +53,7 @@ function writeDraft(draft: DraftData): void {
 }
 
 export function FeedbackModal({ open, onClose, health }: FeedbackModalProps) {
+  useInert(open);
   const [rating, setRating] = useState("");
   const [message, setMessage] = useState("");
   const [sending, setSending] = useState(false);

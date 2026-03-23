@@ -1403,7 +1403,11 @@ def serve(
     console.print()
 
     if dev:
+        import atexit
         import os
+        import signal
+        import socket
+        import subprocess
         import threading
         import webbrowser
 
@@ -1416,6 +1420,35 @@ def serve(
 
         if open_browser:
             threading.Thread(target=_open_browser_fn, daemon=True).start()
+
+        # Start Vite dev server as a subprocess (unless already running).
+        vite_proc: subprocess.Popen[bytes] | None = None
+        frontend_dir = Path(__file__).resolve().parent.parent / "frontend"
+        if frontend_dir.is_dir():
+            vite_port = 5173
+            # Check if Vite is already running on the port.
+            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+                port_in_use = sock.connect_ex(("127.0.0.1", vite_port)) == 0
+            if port_in_use:
+                console.print(f"  [dim]Vite already running on :{vite_port}[/dim]")
+            else:
+                console.print(f"  [dim]Starting Vite dev server on :{vite_port}[/dim]")
+                vite_proc = subprocess.Popen(
+                    ["npx", "vite", "--port", str(vite_port)],
+                    cwd=str(frontend_dir),
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL,
+                )
+
+                def _cleanup_vite() -> None:
+                    if vite_proc and vite_proc.poll() is None:
+                        vite_proc.send_signal(signal.SIGINT)
+                        try:
+                            vite_proc.wait(timeout=3)
+                        except subprocess.TimeoutExpired:
+                            vite_proc.kill()
+
+                atexit.register(_cleanup_vite)
 
         # In dev mode uvicorn uses a string factory and calls create_app()
         # itself (needed for reload). Stash project_dir in the environment

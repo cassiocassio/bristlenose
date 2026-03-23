@@ -30,13 +30,12 @@ function tabClassName({ isActive }: { isActive: boolean }): string {
 
 export function NavBar({ onExport, onSettings, onHelp }: NavBarProps) {
   return (
-    <nav className="bn-global-nav" role="tablist">
+    <nav className="bn-global-nav">
       {textTabs.map(({ to, label, ...rest }) => (
         <NavLink
           key={to}
           to={to}
           className={tabClassName}
-          role="tab"
           {...rest}
         >
           {label}

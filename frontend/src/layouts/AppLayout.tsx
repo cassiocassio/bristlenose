@@ -22,6 +22,7 @@ import { AnalysisSidebar } from "../components/AnalysisSidebar";
 import { ExportDialog } from "../components/ExportDialog";
 import { ActivityChipStack } from "../components/ActivityChipStack";
 import type { ActivityJob } from "../components/ActivityChipStack";
+import { AnnounceRegion } from "../components/AnnounceRegion";
 import { PlayerProvider } from "../contexts/PlayerContext";
 import { FocusProvider, useFocus } from "../contexts/FocusContext";
 import { useActivityJobs, removeJob } from "../contexts/ActivityStore";
@@ -37,11 +38,88 @@ import {
 } from "../shims/bridge";
 import { cancelAutoCode } from "../utils/api";
 import { toggleInspector } from "../contexts/InspectorStore";
-import { setSearchQuery } from "../contexts/QuotesContext";
+import { setSearchQuery, setViewMode, setTagFilter, getQuotesSnapshot } from "../contexts/QuotesContext";
+import { EMPTY_TAG_FILTER } from "../utils/filter";
+import { toast } from "../utils/toast";
+import { announce } from "../utils/announce";
 import { isEditing } from "../utils/editing";
 import { isEmbedded } from "../utils/embedded";
 import { getExportData } from "../utils/exportData";
 import { DEFAULT_HEALTH_RESPONSE, type HealthResponse } from "../utils/health";
+
+// ── CSV helpers (shared with Toolbar — duplicated to avoid coupling) ─────
+
+function csvEsc(v: string): string {
+  if (v.includes(",") || v.includes('"') || v.includes("\n")) {
+    return `"${v.replace(/"/g, '""')}"`;
+  }
+  return v;
+}
+
+function formatTimecode(seconds: number): string {
+  const h = Math.floor(seconds / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  const s = Math.floor(seconds % 60);
+  if (h > 0) return `${h}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+  return `${m}:${String(s).padStart(2, "0")}`;
+}
+
+function buildCsvString(
+  quoteIds: string[] | null,
+  store: ReturnType<typeof getQuotesSnapshot>,
+): string {
+  const header = ["Timecode", "Quote", "Participant", "Topic", "Sentiment", "Tags"];
+  const quotes = quoteIds
+    ? store.quotes.filter((q) => quoteIds.includes(q.dom_id))
+    : store.quotes;
+  const rows = quotes.map((q) => {
+    const text = store.edits[q.dom_id] ?? q.text;
+    const tags = (store.tags[q.dom_id] ?? q.tags).map((t) => t.name).join("; ");
+    return [
+      csvEsc(formatTimecode(q.start_timecode)),
+      csvEsc(text),
+      csvEsc(q.speaker_name),
+      csvEsc(q.topic_label),
+      csvEsc(q.sentiment ?? ""),
+      csvEsc(tags),
+    ].join(",");
+  });
+  return [header.join(","), ...rows].join("\n");
+}
+
+// ── Zoom helpers ─────────────────────────────────────────────────────────
+
+const ZOOM_STEP = 0.1;
+const ZOOM_MIN = 0.5;
+const ZOOM_MAX = 2.0;
+const ZOOM_KEY = "bristlenose-zoom";
+
+function getZoom(): number {
+  try {
+    const raw = localStorage.getItem(ZOOM_KEY);
+    if (raw) return Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, parseFloat(raw)));
+  } catch { /* */ }
+  return 1;
+}
+
+function applyZoom(level: number): void {
+  const clamped = Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, Math.round(level * 100) / 100));
+  document.documentElement.style.fontSize = `${clamped * 100}%`;
+  try { localStorage.setItem(ZOOM_KEY, String(clamped)); } catch { /* */ }
+}
+
+// ── Dark mode toggle (mirrors SettingsModal logic) ───────────────────────
+
+const APPEARANCE_KEY = "bristlenose-appearance";
+
+function toggleDarkMode(): void {
+  const root = document.documentElement;
+  const current = root.getAttribute("data-theme");
+  const next = current === "dark" ? "light" : "dark";
+  root.setAttribute("data-theme", next);
+  root.style.colorScheme = next;
+  try { localStorage.setItem(APPEARANCE_KEY, JSON.stringify(next)); } catch { /* */ }
+}
 
 /** Dev-only playground — lazy-loaded so it's tree-shaken in production. */
 const ResponsivePlayground = lazy(
@@ -70,6 +148,7 @@ function AppShell() {
   const [helpSection, setHelpSection] = useState<string>("help");
   const [feedbackOpen, setFeedbackOpen] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);
+  const [exportAnonymise, setExportAnonymise] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [health, setHealth] = useState<HealthResponse>(DEFAULT_HEALTH_RESPONSE);
   const toggleHelp = useCallback(() => setHelpOpen((prev) => !prev), []);
@@ -171,6 +250,24 @@ function AppShell() {
     postRouteChange(location.pathname);
   }, [embedded, location.pathname]);
 
+  // Announce tab navigation to screen readers.
+  const isFirstRender = useRef(true);
+  useEffect(() => {
+    // Skip the initial mount — only announce user-initiated navigations.
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      return;
+    }
+    const path = location.pathname;
+    let label = "Project";
+    if (path.startsWith("/report/quotes")) label = "Quotes";
+    else if (path.startsWith("/report/sessions/s")) label = "Transcript";
+    else if (path.startsWith("/report/sessions")) label = "Sessions";
+    else if (path.startsWith("/report/codebook")) label = "Codebook";
+    else if (path.startsWith("/report/analysis")) label = "Analysis";
+    announce(`Navigated to ${label}`);
+  }, [location.pathname]);
+
   // Handle menu actions from native toolbar/menu (embedded mode).
   useEffect(() => {
     if (!embedded) return;
@@ -219,6 +316,87 @@ function AppShell() {
         }
         case "jumpToSelection":
           // Native WKWebView handles scroll-to-selection; no-op on web side.
+          break;
+
+        // ── Tier 2: export, filter, help, zoom, dark mode ──────────────
+        case "exportReport":
+          setExportAnonymise(false);
+          setExportOpen(true);
+          break;
+        case "exportAnonymised":
+          setExportAnonymise(true);
+          setExportOpen(true);
+          break;
+        case "exportQuotesCSV": {
+          const snap = getQuotesSnapshot();
+          const csv = buildCsvString(null, snap);
+          const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement("a");
+          a.href = url;
+          a.download = "bristlenose-quotes.csv";
+          a.click();
+          URL.revokeObjectURL(url);
+          toast(`${snap.quotes.length} quotes exported as CSV`);
+          break;
+        }
+        case "copyAsCSV": {
+          const snap2 = getQuotesSnapshot();
+          const focused = focusedIdBridgeRef.current;
+          const selected = selectedIdsBridgeRef.current;
+          const ids = selected.size > 0 ? Array.from(selected) : focused ? [focused] : null;
+          if (!ids || ids.length === 0) {
+            toast("No quotes selected");
+            break;
+          }
+          const csv2 = buildCsvString(ids, snap2);
+          navigator.clipboard
+            .writeText(csv2)
+            .then(() => toast(`${ids.length} quote${ids.length === 1 ? "" : "s"} copied as CSV`))
+            .catch(() => toast("Could not copy to clipboard"));
+          break;
+        }
+        case "allQuotes":
+          setSearchQuery("");
+          setTagFilter(EMPTY_TAG_FILTER);
+          setViewMode("all");
+          break;
+        case "starredQuotesOnly":
+          setViewMode("starred");
+          break;
+        case "filterByTag": {
+          const btn = document.querySelector<HTMLButtonElement>(
+            '[data-testid="bn-toolbar-tag-filter"] button',
+          );
+          if (btn) btn.click();
+          break;
+        }
+        case "showHelp":
+          setHelpSection("help");
+          setHelpOpen(true);
+          break;
+        case "showKeyboardShortcuts":
+          setHelpSection("shortcuts");
+          setHelpOpen(true);
+          break;
+        case "showReleaseNotes":
+          setHelpSection("about");
+          setHelpOpen(true);
+          break;
+        case "sendFeedback":
+          setFeedbackOpen(true);
+          break;
+        case "zoomIn":
+          applyZoom(getZoom() + ZOOM_STEP);
+          break;
+        case "zoomOut":
+          applyZoom(getZoom() - ZOOM_STEP);
+          break;
+        case "actualSize":
+          applyZoom(1);
+          break;
+        case "toggleDarkMode":
+          toggleDarkMode();
           break;
       }
     };
@@ -279,9 +457,10 @@ function AppShell() {
       )}
       <FeedbackModal open={feedbackOpen} onClose={closeFeedback} health={health} />
       <HelpModal open={helpOpen} onClose={toggleHelp} initialSection={helpSection} health={health} />
-      <ExportDialog open={exportOpen} onClose={toggleExport} />
+      <ExportDialog open={exportOpen} onClose={toggleExport} initialAnonymise={exportAnonymise} />
       <SettingsModal open={settingsOpen} onClose={toggleSettings} />
       <ActivityChipStack jobs={chipJobs} onDismiss={removeJob} />
+      <AnnounceRegion />
       {IS_DEV && (
         <Suspense fallback={null}>
           <PlaygroundHUD />

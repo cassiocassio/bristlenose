@@ -274,7 +274,7 @@ AppLayout.tsx (or useKeyboardShortcuts) → React store call / DOM action
 
 ### Action catalogue
 
-#### Already handled — AppLayout (8 actions)
+#### Already handled — AppLayout (22 actions)
 
 | Action | Handler |
 |--------|---------|
@@ -286,6 +286,19 @@ AppLayout.tsx (or useKeyboardShortcuts) → React store call / DOM action
 | `findNext` | Find pasteboard text (from payload) → search query |
 | `findPrevious` | Find pasteboard text (from payload) → search query |
 | `jumpToSelection` | No-op (WKWebView native) |
+| `exportReport` | `setExportOpen(true)` |
+| `exportAnonymised` | Open ExportDialog with `initialAnonymise={true}` |
+| `exportQuotesCSV` | Build CSV from all quotes → blob download |
+| `copyAsCSV` | Copy focused/selected quotes as CSV to clipboard |
+| `allQuotes` | Reset search + tag filter + view mode to defaults |
+| `starredQuotesOnly` | `setViewMode("starred")` |
+| `filterByTag` | Click tag filter dropdown trigger button |
+| `showHelp` | Open help modal to "help" section |
+| `showKeyboardShortcuts` | Open help modal to "shortcuts" section |
+| `showReleaseNotes` | Open help modal to "about" section |
+| `sendFeedback` | `setFeedbackOpen(true)` |
+| `zoomIn` / `zoomOut` / `actualSize` | CSS `font-size` scaling (±10%, persisted to localStorage) |
+| `toggleDarkMode` | Toggle `data-theme` attribute between light/dark |
 
 #### Already handled — useKeyboardShortcuts (12 actions)
 
@@ -306,23 +319,9 @@ These are in the `handleMenuAction` switch inside `useKeyboardShortcuts.ts`, sha
 | `clearSelection` | `clearSelection()` |
 | `revealInTranscript` | `navigate(/report/sessions/:pid#anchor)` |
 
-#### Need new frontend implementation (14)
+#### Need new frontend implementation (0)
 
-| Action | Implementation needed |
-|--------|----------------------|
-| `exportReport` | Open `ExportDialog` (`setExportOpen(true)`) |
-| `exportAnonymised` | Open `ExportDialog` with anonymise pre-selected |
-| `exportQuotesCSV` | Trigger CSV download (quotes API → blob) |
-| `copyAsCSV` | Copy focused/selected quotes as CSV to clipboard |
-| `allQuotes` | Clear search + tag filter (reset to default view) |
-| `starredQuotesOnly` | Set starred-only filter |
-| `filterByTag` | Focus the tag filter dropdown |
-| `showHelp` | `setHelpSection("help"); setHelpOpen(true)` |
-| `showKeyboardShortcuts` | `setHelpSection("shortcuts"); setHelpOpen(true)` |
-| `showReleaseNotes` | `setHelpSection("release-notes"); setHelpOpen(true)` |
-| `sendFeedback` | `setFeedbackOpen(true)` |
-| `zoomIn` / `zoomOut` / `actualSize` | CSS `font-size` scaling or `document.body.style.zoom` |
-| `toggleDarkMode` | Toggle `prefers-color-scheme` override |
+All Tier 2 actions are wired — moved to "Already handled — AppLayout" above.
 
 #### Video player actions — need PlayerContext wiring (12)
 
@@ -406,7 +405,7 @@ These control menu item dimming in Swift. Until wired, the Undo/Redo and Video m
 
 ### Recommended implementation order (remaining)
 
-1. **New frontend handlers, no new infra** — `exportReport`, `showHelp`, `showKeyboardShortcuts`, `showReleaseNotes`, `sendFeedback`, `exportQuotesCSV`, `copyAsCSV`, `exportAnonymised`, `allQuotes`, `starredQuotesOnly`, `filterByTag`, `zoomIn`/`zoomOut`/`actualSize`, `toggleDarkMode`. Add to `AppLayout.tsx` handler
+1. ~~**New frontend handlers, no new infra**~~ — Done. All 14 Tier 2 actions wired in `AppLayout.tsx`
 2. **Codebook** — `browseCodebooks` + CRUD actions (dispatch CustomEvents to CodebookPanel)
 3. **Video** — requires PlayerContext bridge (popout window ↔ native state sync)
 4. **Project operations** — requires project list feature

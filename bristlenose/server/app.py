@@ -285,6 +285,15 @@ def _mount_dev_report(app: FastAPI, output_dir: Path) -> None:
     """
     dev_html = _build_dev_html(output_dir)
 
+    # Live CSS: re-read theme source files on every request (no caching).
+    # Defined before the catch-all so it takes priority.
+    @app.get("/report/assets/bristlenose-theme.css")
+    def serve_live_theme_css() -> Response:
+        """Dev only: concatenate CSS from source on every request."""
+        from bristlenose.stages.s12_render.theme_assets import _load_default_css
+
+        return Response(_load_default_css(), media_type="text/css")
+
     @app.get("/report")
     def redirect_report_to_slash() -> RedirectResponse:
         return RedirectResponse("/report/", status_code=301)

@@ -10,6 +10,7 @@
 
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { createPortal } from "react-dom";
+import { useInert } from "../hooks/useInert";
 import {
   getAutoCodeProposals,
   acceptAllProposals,
@@ -40,6 +41,7 @@ export function ThresholdReviewModal({
   onClose,
   onApply,
 }: ThresholdReviewModalProps) {
+  useInert(open);
   const [allProposals, setAllProposals] = useState<ProposedTagResponse[]>([]);
   const [loading, setLoading] = useState(true);
   const [applying, setApplying] = useState(false);

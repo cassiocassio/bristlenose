@@ -17,6 +17,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { useInert } from "../hooks/useInert";
 
 // ── Types ─────────────────────────────────────────────────────────────────
 
@@ -71,6 +72,7 @@ export function ModalNav({
   testId,
   titleId,
 }: ModalNavProps) {
+  useInert(open);
   const resolvedTestId = testId ?? "modal-nav";
   const resolvedTitleId = titleId ?? `${resolvedTestId}-title`;
 

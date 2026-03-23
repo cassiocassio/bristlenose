@@ -9,6 +9,7 @@ enum Tab: String, CaseIterable, Identifiable {
 
     var id: String { rawValue }
 
+    /// English fallback label — used when I18n is not available.
     var label: String {
         switch self {
         case .project:   "Project"
@@ -17,6 +18,19 @@ enum Tab: String, CaseIterable, Identifiable {
         case .codebook:  "Codebook"
         case .analysis:  "Analysis"
         }
+    }
+
+    /// Translated label from shared locale files.
+    /// Uses `_short` variant if available (e.g. "Códigos" instead of "Libro de códigos").
+    @MainActor func localizedLabel(_ i18n: I18n) -> String {
+        let shortKey = "common.nav.\(rawValue)Short"
+        let shortValue = i18n.t(shortKey)
+        // If _short key resolved (didn't return raw key), use it
+        if shortValue != shortKey { return shortValue }
+        // Otherwise use the full label
+        let fullKey = "common.nav.\(rawValue)"
+        let fullValue = i18n.t(fullKey)
+        return fullValue != fullKey ? fullValue : label
     }
 
     var route: String {

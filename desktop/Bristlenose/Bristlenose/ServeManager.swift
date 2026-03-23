@@ -28,8 +28,11 @@ final class ServeManager: ObservableObject {
 
     /// On init, kill any orphaned serve processes from previous app crashes.
     /// Bristlenose owns the 8150–9149 port range — anything there is a zombie.
+    /// Skip when BRISTLENOSE_DEV_PORT is set — the dev server is intentional.
     init() {
-        Self.killOrphanedServeProcesses()
+        if ProcessInfo.processInfo.environment["BRISTLENOSE_DEV_PORT"] == nil {
+            Self.killOrphanedServeProcesses()
+        }
         prefsObserver = NotificationCenter.default.addObserver(
             forName: .bristlenosePrefsChanged,
             object: nil,

@@ -23,6 +23,7 @@ video { flex: 1; width: 100%; min-height: 0; background: #000; }
   var status = document.getElementById('status');
   var currentUri = null;
   var currentPid = null;
+  var openerOrigin = '*';
 
   function fmtTC(s) {
     var h = Math.floor(s / 3600);
@@ -49,6 +50,7 @@ video { flex: 1; width: 100%; min-height: 0; background: #000; }
     }
     status.className = '';
     status.textContent = pid + ' @ ' + fmtTC(seconds);
+    document.title = pid + ' \u2014 Bristlenose';
   }
 
   // Called by the report window to load + seek
@@ -72,9 +74,45 @@ video { flex: 1; width: 100%; min-height: 0; background: #000; }
 
   // Listen for postMessage from the report window
   window.addEventListener('message', function(e) {
+    // Only accept messages from our own origin (or "null" for file:// URIs)
+    if (e.origin !== window.location.origin && e.origin !== 'null') return;
+    openerOrigin = e.origin;
     var d = e.data;
     if (d && d.type === 'bristlenose-seek' && d.src) {
       loadAndSeek(d.pid || '', d.src, parseFloat(d.t) || 0);
+    } else if (d && d.type === 'bristlenose-command') {
+      if (!currentUri) return; // No video loaded — ignore commands
+      var p = d.payload || {};
+      switch (d.command) {
+        case 'playPause':
+          video.paused ? video.play().catch(function(){}) : video.pause();
+          break;
+        case 'skipRelative':
+          video.currentTime = Math.max(0, video.currentTime + (p.seconds || 0));
+          break;
+        case 'setSpeed':
+          video.playbackRate = p.rate;
+          break;
+        case 'speedStep':
+          video.playbackRate = Math.max(0.25, Math.min(4,
+            Math.round((video.playbackRate + (p.delta || 0)) * 100) / 100));
+          break;
+        case 'volumeStep':
+          video.volume = Math.max(0, Math.min(1,
+            Math.round((video.volume + (p.delta || 0)) * 100) / 100));
+          break;
+        case 'toggleMute':
+          video.muted = !video.muted;
+          break;
+        case 'togglePip':
+          if (document.pictureInPictureElement) document.exitPictureInPicture().catch(function(){});
+          else if (video.requestPictureInPicture) video.requestPictureInPicture().catch(function(){});
+          break;
+        case 'toggleFullscreen':
+          if (document.fullscreenElement) document.exitFullscreen().catch(function(){});
+          else if (video.requestFullscreen) video.requestFullscreen().catch(function(){});
+          break;
+      }
     }
   });
 
@@ -84,11 +122,19 @@ video { flex: 1; width: 100%; min-height: 0; background: #000; }
   // Post messages back to the opener window for playback-synced glow.
   // Uses postMessage (not window.opener function calls) because browsers
   // block window.opener access for file:// URIs.
+  // BroadcastChannel fallback: WKWebView popouts may have window.opener=null.
+  var channel = (!window.opener && typeof BroadcastChannel !== 'undefined')
+      ? new BroadcastChannel('bristlenose-player') : null;
+
   function _notify(type, extra) {
-    if (!window.opener) return;
     var msg = { type: type, pid: currentPid };
     if (extra) { for (var k in extra) { msg[k] = extra[k]; } }
-    try { window.opener.postMessage(msg, '*'); } catch(e) {}
+    if (window.opener) {
+      try { window.opener.postMessage(msg, openerOrigin); } catch(e) {}
+    }
+    if (channel) {
+      try { channel.postMessage(msg); } catch(e) {}
+    }
   }
 
   video.addEventListener('timeupdate', function() {

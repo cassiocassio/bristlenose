@@ -7,6 +7,7 @@ import {
   postEditingStarted,
   postEditingEnded,
   postProjectAction,
+  postPlayerState,
 } from "./bridge";
 
 // ---------------------------------------------------------------------------
@@ -47,6 +48,8 @@ const STUB_DEPS = {
   getFocusedQuoteId: () => null as string | null,
   getSelectedIds: () => [] as string[],
   getIsEditing: () => false,
+  getHasPlayer: () => false,
+  getPlayerPlaying: () => false,
 };
 
 afterEach(() => {
@@ -161,6 +164,25 @@ describe("installBridge", () => {
     expect(state.playerPlaying).toBe(false);
   });
 
+  it("getState reads live player state from deps", () => {
+    setEmbedded(true);
+    let hasPlayer = false;
+    let playing = false;
+    installBridge({
+      ...STUB_DEPS,
+      getHasPlayer: () => hasPlayer,
+      getPlayerPlaying: () => playing,
+    });
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const ns = (window as any).__bristlenose;
+    expect(ns.getState().hasPlayer).toBe(false);
+    expect(ns.getState().playerPlaying).toBe(false);
+    hasPlayer = true;
+    playing = true;
+    expect(ns.getState().hasPlayer).toBe(true);
+    expect(ns.getState().playerPlaying).toBe(true);
+  });
+
   it("menuAction dispatches CustomEvent on window", () => {
     setEmbedded(true);
     installBridge(STUB_DEPS);
@@ -193,5 +215,35 @@ describe("installBridge", () => {
     } finally {
       window.removeEventListener("bn:menu-action", handler);
     }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// postPlayerState
+// ---------------------------------------------------------------------------
+
+describe("postPlayerState", () => {
+  it("posts player-state message with hasPlayer and playing", () => {
+    const post = installMockWebkit();
+    postPlayerState(true, false);
+    expect(post).toHaveBeenCalledWith({
+      type: "player-state",
+      hasPlayer: true,
+      playing: false,
+    });
+  });
+
+  it("posts playing=true when player is playing", () => {
+    const post = installMockWebkit();
+    postPlayerState(true, true);
+    expect(post).toHaveBeenCalledWith({
+      type: "player-state",
+      hasPlayer: true,
+      playing: true,
+    });
+  });
+
+  it("no-ops gracefully when webkit is absent", () => {
+    expect(() => postPlayerState(false, false)).not.toThrow();
   });
 });

@@ -15,7 +15,8 @@ BristlenoseApp.swift          @main — WindowGroup + Settings scene
        ├─ .toolbar {}             Back/forward + tabs + contextual trailing items
        ├─ ExportMenuButton        Per-tab export dropdown (toolbar)
        └─ WebView.swift           WKWebView wrapper (NSViewRepresentable)
-            └─ Coordinator        WKScriptMessageHandler + WKNavigationDelegate + KVO
+            └─ Coordinator        WKScriptMessageHandler + WKNavigationDelegate + WKUIDelegate + KVO
+                 └─ popoutWindow  NSWindow with WKWebView for video player (created by WKUIDelegate)
 
 MenuCommands.swift            Commands struct + per-menu View structs
 Tab.swift                     Tab enum — route mapping, path→tab derivation
@@ -255,6 +256,9 @@ The `#if DEBUG` guard on the dev port override means release builds never see it
 
 ## Gotchas
 
+- **WKWebView `createWebViewWith` requires the provided configuration** — you MUST use the `configuration` parameter passed to `webView(_:createWebViewWith:for:windowFeatures:)`. Creating a fresh `WKWebViewConfiguration` and returning a WKWebView built with it crashes with `NSInternalInconsistencyException: "Returned WKWebView was not created with the given configuration."`. This means the popout inherits the parent's `userContentController` (including the bridge message handler). The bridge is accessible but player.html never calls it
+- **WKWebView `window.open()` is blocked without `WKUIDelegate`** — `window.open()` silently returns `null` unless the Coordinator implements `WKUIDelegate` and `webView(_:createWebViewWith:for:windowFeatures:)`. No error in the console — the call just fails. This is why the video player didn't work in the desktop app before the WKUIDelegate was added
+- **Zombie cleanup kills the dev server** — `ServeManager.killOrphanedServeProcesses()` runs on `init()` and kills everything on ports 8150–9149. When `BRISTLENOSE_DEV_PORT` is set, the cleanup is now skipped. Always start the terminal server **after** Xcode launches if not using the dev port override
 - **`window.blur`/`window.focus` don't fire in WKWebView** — the web view's `window` is always considered focused from the web content's perspective. macOS window activation must be pushed from the native side via `NSWindow.didBecomeKeyNotification`/`didResignKeyNotification` → `BridgeHandler.setWindowActive()`. The browser `blur`/`focus` listener in `AppLayout.tsx` only works in browser-based serve mode
 - **Safari Web Inspector for WKWebView debugging** — enable `webView.isInspectable = true` (already set in `#if DEBUG`). Open Safari → Develop → Bristlenose → pick the localhost page. The inspector opens in a Safari window, so the Bristlenose app window stays inactive — perfect for debugging inactive-window behaviour
 - **Xcode stale indexer** — sometimes shows "no member" errors that `xcodebuild` doesn't. Fix: `Cmd+Shift+K` (Clean Build Folder) then `Cmd+R`
@@ -327,7 +331,7 @@ AppLayout.tsx (or useKeyboardShortcuts) → React store call / DOM action
 | `createCodeGroup` | Dispatch `bn:codebook-create-group` → CodebookPanel creates group |
 | `createCode` | Dispatch `bn:codebook-create-code` → CodebookPanel creates tag in first researcher group |
 
-#### Already handled — useKeyboardShortcuts (12 actions)
+#### Already handled — useKeyboardShortcuts (24 actions)
 
 These are in the `handleMenuAction` switch inside `useKeyboardShortcuts.ts`, sharing closures with the keyboard handlers.
 
@@ -337,7 +341,15 @@ These are in the `handleMenuAction` switch inside `useKeyboardShortcuts.ts`, sha
 | `hide` | `handleHide()` — bulk-aware, moves focus after |
 | `addTag` | `handleTagOpen()` — opens TagInput on focused quote |
 | `applyLastTag` | `handleQuickApply()` — quick-apply last-used tag |
-| `playPause` | `handlePlay()` — seekTo via PlayerContext |
+| `playPause` | `sendCommand("playPause")` — toggle play/pause on open player |
+| `skipForward5` / `skipBack5` | `sendCommand("skipRelative", { seconds: ±5 })` |
+| `skipForward30` / `skipBack30` | `sendCommand("skipRelative", { seconds: ±30 })` |
+| `speedUp` / `slowDown` | `sendCommand("speedStep", { delta: ±0.25 })` |
+| `normalSpeed` | `sendCommand("setSpeed", { rate: 1 })` |
+| `volumeUp` / `volumeDown` | `sendCommand("volumeStep", { delta: ±0.1 })` |
+| `mute` | `sendCommand("toggleMute")` |
+| `pictureInPicture` | `sendCommand("togglePip")` |
+| `fullscreen` | `sendCommand("toggleFullscreen")` |
 | `nextQuote` | `moveFocus(1)` |
 | `previousQuote` | `moveFocus(-1)` |
 | `extendSelectionDown` | `handleShiftMove(1)` |
@@ -346,22 +358,11 @@ These are in the `handleMenuAction` switch inside `useKeyboardShortcuts.ts`, sha
 | `clearSelection` | `clearSelection()` |
 | `revealInTranscript` | `navigate(/report/sessions/:pid#anchor)` |
 
+Video player commands use `sendCommand()` from `PlayerContext` which posts `bristlenose-command` messages to the popout player window. The popout `player.html` handles all commands (skip, speed, volume, PiP, fullscreen). Bridge `getState()` reports live `hasPlayer` / `playerPlaying` from module-level getters in `PlayerContext.tsx` — Swift uses these to dim/enable the Video menu.
+
 #### Need new frontend implementation (0)
 
 All Tier 2 actions are wired — moved to "Already handled — AppLayout" above.
-
-#### Video player actions — need PlayerContext wiring (12)
-
-These require the popout player bridge (currently stub: `hasPlayer: false` in `getState()`).
-
-| Action | Player method needed |
-|--------|---------------------|
-| `skipForward5` / `skipBack5` | `player.currentTime ± 5` |
-| `skipForward30` / `skipBack30` | `player.currentTime ± 30` |
-| `speedUp` / `slowDown` / `normalSpeed` | `player.playbackRate` |
-| `volumeUp` / `volumeDown` / `mute` | `player.volume` / `player.muted` |
-| `pictureInPicture` | `player.requestPictureInPicture()` |
-| `fullscreen` | `player.requestFullscreen()` |
 
 #### Project operations — native-side or future (8)
 

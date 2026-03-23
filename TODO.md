@@ -10,10 +10,29 @@ From security review of desktop app plan (22 Mar 2026). All findings are in the 
 - [ ] **Media endpoint filtering** — `/media` mount is `StaticFiles(directory=project_dir)` with no restrictions. Serves `.env`, `.git/`, SQLite DB, everything. Restrict to known media extensions (`.mp4`, `.mov`, `.wav`, `.mp3`, `.m4a`, `.vtt`, `.srt`, etc.), reject dotfiles and `bristlenose-output/`
 - [ ] **CORS middleware** — add `CORSMiddleware(allow_origins=["http://127.0.0.1"])` to FastAPI. One line, no reason to defer
 - [x] **Don't bundle API key in binary** — verified clean: no hardcoded keys in Swift source, Keychain-only storage, user enters via Settings
+- [x] **Skip zombie cleanup when BRISTLENOSE_DEV_PORT is set** — `killOrphanedServeProcesses()` now skips when dev port override is active, so the terminal dev server isn't killed on Xcode launch
 - [ ] **Verify zombie cleanup targets** — `killOrphanedServeProcesses()` runs `lsof -ti :8150-9149` and kills every PID found, including non-Bristlenose processes. Check process command line contains "bristlenose" before `kill()`
 - [ ] **Migrate KeychainHelper to Security framework** — current `/usr/bin/security` CLI approach is blocked in App Sandbox. Use `SecItemAdd`/`SecItemCopyMatching`/`SecItemDelete`. Also affects Python-side `credentials_macos.py`
 - [ ] **Minimal child process environment** — `ProcessInfo.processInfo.environment` passes all user env vars (DB passwords, cloud tokens) to the Python sidecar. Construct minimal env: `PATH`, `HOME`, `LANG`, `TMPDIR`, plus `BRISTLENOSE_*` vars only
 - [ ] **Port-restrict navigation policy** — `decidePolicyFor` allows any localhost port. Restrict to the expected serve port from `serveManager.state`
+
+## Desktop app — shipped this session
+
+- [x] **Video player popout (WKUIDelegate)** — `window.open()` now creates a native NSWindow with WKWebView for player.html. Dynamic title (`s1 — Bristlenose`), `setFrameAutosaveName` for position persistence, single-popout guard, `webViewDidClose` cleanup
+- [x] **12 video menu actions wired** — playPause, skip±5/±30, speed up/down/normal, volume up/down/mute, PiP, fullscreen. `sendCommand` on PlayerContext → `bristlenose-command` postMessage → player.html
+- [x] **Bridge player state** — `getState()` reports live `hasPlayer`/`playerPlaying` for Video menu dimming. `postPlayerState` notifies Swift on open/close/play/pause
+- [x] **Security hardening** — origin validation on postMessage (both directions), payload namespacing, float rounding on speed/volume steps, no-video guard
+- [x] **BroadcastChannel fallback** — defence-in-depth for glow sync if `window.opener` is nil in WKWebView popouts
+- [x] **a11y announce** — `announce("Playing pid")` on seekTo for VoiceOver
+
+## Desktop app — bugs found
+
+- [ ] **Native toolbar tabs don't navigate** — `switchToTab` shim is `"function"` but `callAsyncJavaScript` from BridgeHandler doesn't trigger React Router. In-page navigation works. See `memory/project_native_tab_routing_bug.md` for investigation prompt
+- [ ] **Native toolbar tab i18n not reactive** — changing language in Settings doesn't update toolbar labels until app restart. `I18n` `@StateObject` doesn't trigger segmented control re-render
+
+## Desktop app — future video player
+
+- [ ] **Native AVPlayer (Option B)** — replace HTML5 popout with native AVPlayer in its own NSWindow. Better PiP, Touch Bar, media keys, pitch-corrected speed (`AVAudioTimePitchAlgorithm.spectral`). Popout, never in-pane (Dovetail anti-pattern). See `memory/project_video_player_options.md`
 
 ## Near-horizon roadmap
 

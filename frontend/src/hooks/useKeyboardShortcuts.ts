@@ -79,7 +79,7 @@ export function useKeyboardShortcuts({
     hideQuote,
     flashTag,
   } = useFocus();
-  const { seekTo } = usePlayer();
+  const { seekTo, sendCommand } = usePlayer();
   const navigate = useNavigate();
   const location = useLocation();
   const store = useQuotesStore();
@@ -496,7 +496,43 @@ export function useKeyboardShortcuts({
           handleQuickApply();
           break;
         case "playPause":
-          handlePlay();
+          sendCommand("playPause");
+          break;
+        case "skipForward5":
+          sendCommand("skipRelative", { seconds: 5 });
+          break;
+        case "skipBack5":
+          sendCommand("skipRelative", { seconds: -5 });
+          break;
+        case "skipForward30":
+          sendCommand("skipRelative", { seconds: 30 });
+          break;
+        case "skipBack30":
+          sendCommand("skipRelative", { seconds: -30 });
+          break;
+        case "speedUp":
+          sendCommand("speedStep", { delta: 0.25 });
+          break;
+        case "slowDown":
+          sendCommand("speedStep", { delta: -0.25 });
+          break;
+        case "normalSpeed":
+          sendCommand("setSpeed", { rate: 1 });
+          break;
+        case "volumeUp":
+          sendCommand("volumeStep", { delta: 0.1 });
+          break;
+        case "volumeDown":
+          sendCommand("volumeStep", { delta: -0.1 });
+          break;
+        case "mute":
+          sendCommand("toggleMute");
+          break;
+        case "pictureInPicture":
+          sendCommand("togglePip");
+          break;
+        case "fullscreen":
+          sendCommand("toggleFullscreen");
           break;
         case "nextQuote":
           moveFocus(1);
@@ -585,5 +621,6 @@ export function useKeyboardShortcuts({
     handleTagOpen,
     handleQuickApply,
     handlePlay,
+    sendCommand,
   ]);
 }

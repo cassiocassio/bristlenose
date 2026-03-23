@@ -66,16 +66,16 @@ describe("NavBar", () => {
     expect(sessionsTab.className).toContain("active");
   });
 
-  it("all nav links have role=tab", () => {
+  it("nav links are <a> elements (not role=tab)", () => {
     renderNavBar();
-    const tabs = screen.getAllByRole("tab");
-    // 5 text tabs only (Settings and Help are buttons, not tabs)
-    expect(tabs).toHaveLength(5);
+    const links = screen.getAllByRole("link");
+    // 5 text nav links (Settings and Help are buttons)
+    expect(links).toHaveLength(5);
   });
 
-  it("nav has role=tablist", () => {
+  it("nav is a <nav> element (not role=tablist)", () => {
     renderNavBar();
-    expect(screen.getByRole("tablist")).toBeInTheDocument();
+    expect(screen.getByRole("navigation")).toBeInTheDocument();
   });
 
   it("tabs are links with correct hrefs", () => {

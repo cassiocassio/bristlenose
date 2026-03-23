@@ -1,6 +1,18 @@
 import { useRef, useEffect, useCallback, useState } from "react";
 import { isExportMode } from "../utils/exportData";
 
+const srOnlyStyle: React.CSSProperties = {
+  position: "absolute",
+  width: 1,
+  height: 1,
+  padding: 0,
+  margin: -1,
+  overflow: "hidden",
+  clip: "rect(0,0,0,0)",
+  whiteSpace: "nowrap",
+  border: 0,
+};
+
 interface EditableTextProps {
   value: string;
   originalValue?: string;
@@ -35,6 +47,7 @@ export function EditableText({
 }: EditableTextProps) {
   const ref = useRef<HTMLElement>(null);
   const [internalEditing, setInternalEditing] = useState(false);
+  const [announcement, setAnnouncement] = useState("");
   const clickCoordsRef = useRef<{ x: number; y: number } | null>(null);
 
   const isEditing = trigger === "click" ? internalEditing : (isEditingProp ?? false);
@@ -45,13 +58,20 @@ export function EditableText({
     (newText: string) => {
       if (trigger === "click") setInternalEditing(false);
       if (newText !== baseline) {
+        setAnnouncement("Saved");
         onCommit(newText);
       } else {
+        setAnnouncement("Cancelled");
         onCancel();
       }
     },
     [trigger, baseline, onCommit, onCancel],
   );
+
+  // Announce edit mode entry to screen readers.
+  useEffect(() => {
+    if (isEditing) setAnnouncement("Editing");
+  }, [isEditing]);
 
   // When entering edit mode: focus, set text content, place caret.
   useEffect(() => {
@@ -106,6 +126,7 @@ export function EditableText({
       if (e.key === "Escape") {
         e.preventDefault();
         if (trigger === "click") setInternalEditing(false);
+        setAnnouncement("Cancelled");
         onCancel();
       } else if (e.key === "Enter" && !e.shiftKey) {
         e.preventDefault();
@@ -143,19 +164,26 @@ export function EditableText({
     : undefined;
 
   return (
-    <Tag
-      ref={ref as React.Ref<never>}
-      className={classes}
-      style={style}
-      contentEditable={isEditing || undefined}
-      suppressContentEditableWarning={isEditing}
-      onKeyDown={isEditing ? handleKeyDown : undefined}
-      onBlur={isEditing ? handleBlur : undefined}
-      onClick={trigger === "click" ? handleClick : undefined}
-      data-testid={testId}
-      data-edit-key={editKey}
-    >
-      {isEditing ? undefined : value}
-    </Tag>
+    <>
+      <Tag
+        ref={ref as React.Ref<never>}
+        className={classes}
+        style={style}
+        contentEditable={isEditing || undefined}
+        suppressContentEditableWarning={isEditing}
+        onKeyDown={isEditing ? handleKeyDown : undefined}
+        onBlur={isEditing ? handleBlur : undefined}
+        onClick={trigger === "click" ? handleClick : undefined}
+        data-testid={testId}
+        data-edit-key={editKey}
+        role={isEditing ? "textbox" : undefined}
+        aria-label={isEditing ? "Edit text" : undefined}
+      >
+        {isEditing ? undefined : value}
+      </Tag>
+      <span aria-live="assertive" aria-atomic="true" style={srOnlyStyle}>
+        {announcement}
+      </span>
+    </>
   );
 }

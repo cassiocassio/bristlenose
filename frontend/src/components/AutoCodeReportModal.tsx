@@ -7,6 +7,7 @@
 
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { createPortal } from "react-dom";
+import { useInert } from "../hooks/useInert";
 import {
   getAutoCodeProposals,
   acceptAllProposals,
@@ -40,6 +41,7 @@ export function AutoCodeReportModal({
   onAcceptAll,
   onTagTentatively,
 }: AutoCodeReportModalProps) {
+  useInert(open);
   const [proposals, setProposals] = useState<ProposedTagResponse[]>([]);
   const [loading, setLoading] = useState(true);
   const [removing, setRemoving] = useState<Set<number>>(new Set());

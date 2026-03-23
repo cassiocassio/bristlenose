@@ -9,14 +9,18 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { useInert } from "../hooks/useInert";
 import { isExportMode } from "../utils/exportData";
 
 interface ExportDialogProps {
   open: boolean;
   onClose: () => void;
+  /** Pre-select the anonymise checkbox when opening (e.g. from Export Anonymised menu). */
+  initialAnonymise?: boolean;
 }
 
-export function ExportDialog({ open, onClose }: ExportDialogProps) {
+export function ExportDialog({ open, onClose, initialAnonymise = false }: ExportDialogProps) {
+  useInert(open);
   const [anonymise, setAnonymise] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -25,7 +29,7 @@ export function ExportDialog({ open, onClose }: ExportDialogProps) {
   // Reset state and track trigger element when opening.
   useEffect(() => {
     if (open) {
-      setAnonymise(false);
+      setAnonymise(initialAnonymise);
       setError(null);
       triggerRef.current = document.activeElement;
     } else if (triggerRef.current instanceof HTMLElement) {

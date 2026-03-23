@@ -290,4 +290,98 @@ describe("EditableText", () => {
     fireEvent.blur(el);
     expect(onCommit).toHaveBeenCalledWith("changed");
   });
+
+  // aria-live announcements
+  describe("screen reader announcements", () => {
+    function getLiveRegion() {
+      return document.querySelector("[aria-live]") as HTMLElement;
+    }
+
+    it("announces 'Editing' when entering edit mode", () => {
+      render(
+        <EditableText
+          value="text"
+          onCommit={() => {}}
+          onCancel={() => {}}
+          isEditing={true}
+          data-testid="et"
+        />,
+      );
+      expect(getLiveRegion()).toHaveTextContent("Editing");
+    });
+
+    it("announces 'Saved' when text is changed and committed", () => {
+      render(
+        <EditableText
+          value="original"
+          onCommit={() => {}}
+          onCancel={() => {}}
+          isEditing={true}
+          data-testid="et"
+        />,
+      );
+      const el = screen.getByTestId("et");
+      el.textContent = "updated";
+      fireEvent.keyDown(el, { key: "Enter" });
+      expect(getLiveRegion()).toHaveTextContent("Saved");
+    });
+
+    it("announces 'Cancelled' on Escape", () => {
+      render(
+        <EditableText
+          value="original"
+          onCommit={() => {}}
+          onCancel={() => {}}
+          isEditing={true}
+          data-testid="et"
+        />,
+      );
+      fireEvent.keyDown(screen.getByTestId("et"), { key: "Escape" });
+      expect(getLiveRegion()).toHaveTextContent("Cancelled");
+    });
+
+    it("announces 'Cancelled' when text unchanged on blur", () => {
+      render(
+        <EditableText
+          value="same"
+          onCommit={() => {}}
+          onCancel={() => {}}
+          isEditing={true}
+          data-testid="et"
+        />,
+      );
+      fireEvent.blur(screen.getByTestId("et"));
+      expect(getLiveRegion()).toHaveTextContent("Cancelled");
+    });
+
+    it("sets role=textbox and aria-label when editing", () => {
+      render(
+        <EditableText
+          value="text"
+          onCommit={() => {}}
+          onCancel={() => {}}
+          isEditing={true}
+          data-testid="et"
+        />,
+      );
+      const el = screen.getByTestId("et");
+      expect(el).toHaveAttribute("role", "textbox");
+      expect(el).toHaveAttribute("aria-label", "Edit text");
+    });
+
+    it("does not set role or aria-label when not editing", () => {
+      render(
+        <EditableText
+          value="text"
+          onCommit={() => {}}
+          onCancel={() => {}}
+          isEditing={false}
+          data-testid="et"
+        />,
+      );
+      const el = screen.getByTestId("et");
+      expect(el).not.toHaveAttribute("role");
+      expect(el).not.toHaveAttribute("aria-label");
+    });
+  });
 });

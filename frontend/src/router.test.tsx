@@ -60,62 +60,62 @@ function renderRoute(initialEntry: string) {
 describe("Router", () => {
   it("renders NavBar on /report/", () => {
     renderRoute("/report/");
-    expect(screen.getByRole("tablist")).toBeInTheDocument();
+    expect(screen.getByRole("navigation")).toBeInTheDocument();
   });
 
   it("/report/ activates Project tab", () => {
     renderRoute("/report/");
-    const tab = screen.getByRole("tab", { name: "Project" });
+    const tab = screen.getByRole("link", { name: "Project" });
     expect(tab.className).toContain("active");
   });
 
   it("/report/sessions/ activates Sessions tab", () => {
     renderRoute("/report/sessions/");
-    const tab = screen.getByRole("tab", { name: "Sessions" });
+    const tab = screen.getByRole("link", { name: "Sessions" });
     expect(tab.className).toContain("active");
   });
 
   it("/report/quotes/ activates Quotes tab", () => {
     renderRoute("/report/quotes/");
-    const tab = screen.getByRole("tab", { name: "Quotes" });
+    const tab = screen.getByRole("link", { name: "Quotes" });
     expect(tab.className).toContain("active");
   });
 
   it("/report/codebook/ activates Codebook tab", () => {
     renderRoute("/report/codebook/");
-    const tab = screen.getByRole("tab", { name: "Codebook" });
+    const tab = screen.getByRole("link", { name: "Codebook" });
     expect(tab.className).toContain("active");
   });
 
   it("/report/analysis/ activates Analysis tab", () => {
     renderRoute("/report/analysis/");
-    const tab = screen.getByRole("tab", { name: "Analysis" });
+    const tab = screen.getByRole("link", { name: "Analysis" });
     expect(tab.className).toContain("active");
   });
 
   it("/report/settings/ redirects to project tab (settings is now a modal)", () => {
     renderRoute("/report/settings/");
     // The catch-all route redirects unknown paths to /report/
-    const tab = screen.getByRole("tab", { name: "Project" });
+    const tab = screen.getByRole("link", { name: "Project" });
     expect(tab.className).toContain("active");
   });
 
   it("/report/about/ redirects to project tab", () => {
     renderRoute("/report/about/");
-    const tab = screen.getByRole("tab", { name: "Project" });
+    const tab = screen.getByRole("link", { name: "Project" });
     expect(tab.className).toContain("active");
   });
 
   it("/report/sessions/s1 activates Sessions tab (prefix match)", () => {
     renderRoute("/report/sessions/s1");
-    const tab = screen.getByRole("tab", { name: "Sessions" });
+    const tab = screen.getByRole("link", { name: "Sessions" });
     expect(tab.className).toContain("active");
   });
 
   it("unknown sub-path redirects to project tab", async () => {
     renderRoute("/report/nonexistent");
     await waitFor(() => {
-      const tab = screen.getByRole("tab", { name: "Project" });
+      const tab = screen.getByRole("link", { name: "Project" });
       expect(tab.className).toContain("active");
     });
   });
@@ -135,6 +135,6 @@ describe("Embedded mode", () => {
 
   it("renders NavBar when not embedded", () => {
     renderRoute("/report/");
-    expect(screen.getByRole("tablist")).toBeInTheDocument();
+    expect(screen.getByRole("navigation")).toBeInTheDocument();
   });
 });

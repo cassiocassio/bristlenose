@@ -27,8 +27,17 @@ From security review of desktop app plan (22 Mar 2026). All findings are in the 
 - [ ] drag-and-drop tags to quotes
 - [ ] hide unused tags → responsive card thing for analysis page
 - [ ] new title bar
-- [ ] colour themes
-- [ ] edo theme
+- [ ] **Dev HUD: end-to-end traceability panel** — debug overlay (dev-only, like the renderer overlay) showing provenance at every layer so you can instantly see if a code change carried through the full stack. Proposed contents:
+  - **Git**: branch, short SHA, dirty flag
+  - **Python**: `bristlenose.__version__`, editable-install source path
+  - **Render**: timestamp of last `bristlenose render` (from report HTML comment or CSS header)
+  - **Theme CSS**: full path being served, file mtime, `_CSS_VERSION` string, hash of first 1KB (detects stale file)
+  - **Serve mode**: `hmr` / `prod` / `embedded`, port, output dir path
+  - **Frontend**: Vite build hash (from `index.html` asset filenames), React Router mode (SPA vs legacy islands)
+  - **Bridge**: `isEmbedded()`, `isReady`, active tab, window active/inactive state
+  - **Health**: API version from `/api/health`
+  - Render as a small semi-transparent panel (like the PlaygroundHUD) or a tab in the existing dev playground. Toggle with a keyboard shortcut (e.g. `Ctrl+I`). Data sourced from: git CLI at serve startup (injected as `window.__BRISTLENOSE_BUILD__`), `/api/health`, `/api/dev/info`, CSS `@import` inspection, `document.documentElement.className`
+- [ ] **Design doc: themes vs colour schemes** — establish nomenclature and architecture for two orthogonal axes. **Theme** = structure (font family, sizes, spacing, button/icon styles): "web" (Inter, web metrics) vs "macOS" (SF Pro, system metrics). **Colour scheme** = palette that fills the token slots: light, dark, Edo (warm/muted?). One theme can have multiple schemes. Current `tokens.css` already has the slot structure (`--bn-colour-*`); `light-dark()` handles light/dark. Need: naming convention, file organisation, how schemes are selected (CSS class? data attribute?), how themes fork structural tokens, and where Edo sits in this. Write `docs/design-themes-and-schemes.md` before coding
 - [ ] edo fish
 
 ## Essential simplicity and clarity (layout quality)
@@ -223,7 +232,7 @@ Session management design doc: `docs/design-session-management.md`
 - [ ] **Services menu** — test early; right-click on selected text in WKWebView may or may not expose Services submenu
 - [ ] **Scroll feel testing** — test Quotes page with 150+ quotes for jank from useScrollSpy RAF-throttled listeners vs native inertia
 - [ ] **Serve startup progress** — show last stdout line as status text during the 8–10s boot (already parsing stdout)
-- [ ] **API key auto-save on focus loss** — currently only saves on Enter. Settings changes should apply immediately
+- [x] **API key auto-save on focus loss** — currently only saves on Enter. Settings changes should apply immediately
 
 **P2:**
 - [ ] **Inactive selection dimming** — native sidebar automatic, WKWebView needs `:window-inactive` pseudo-class

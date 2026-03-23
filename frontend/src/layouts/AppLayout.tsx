@@ -398,6 +398,41 @@ function AppShell() {
         case "toggleDarkMode":
           toggleDarkMode();
           break;
+
+        // ── Codebook operations ─────────────────────────────────────────
+        case "browseCodebooks":
+          window.dispatchEvent(new CustomEvent("bn:codebook-browse"));
+          break;
+        case "importFramework": {
+          const templateId = (payload as { templateId?: string } | undefined)?.templateId;
+          window.dispatchEvent(
+            new CustomEvent("bn:codebook-browse", templateId ? { detail: { templateId } } : undefined),
+          );
+          break;
+        }
+        case "removeFramework": {
+          const frameworkId = (payload as { frameworkId?: string } | undefined)?.frameworkId;
+          if (frameworkId) {
+            window.dispatchEvent(
+              new CustomEvent("bn:codebook-remove", { detail: { frameworkId } }),
+            );
+          }
+          break;
+        }
+        case "createCodeGroup":
+          window.dispatchEvent(new CustomEvent("bn:codebook-create-group"));
+          break;
+        case "createCode":
+          window.dispatchEvent(new CustomEvent("bn:codebook-create-code"));
+          break;
+        case "toggleCodeGroup":
+        case "renameCodeGroup":
+        case "deleteCodeGroup":
+        case "renameCode":
+        case "deleteCode":
+          // Needs focused group/code context from native sidebar (not yet built).
+          console.warn(`[bn:menu-action] "${action}" requires native focus context — not yet wired`);
+          break;
       }
     };
     window.addEventListener("bn:menu-action", handler);

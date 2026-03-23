@@ -93,12 +93,16 @@ final class BridgeHandler: ObservableObject {
     func switchToTab(_ tab: Tab) {
         guard let webView else { return }
         Task {
-            try? await webView.callAsyncJavaScript(
-                "window.switchToTab(tab)",
-                arguments: ["tab": tab.rawValue],
-                in: nil,
-                in: .page
-            )
+            do {
+                try await webView.callAsyncJavaScript(
+                    "window.switchToTab(tab)",
+                    arguments: ["tab": tab.rawValue],
+                    in: nil,
+                    in: .page
+                )
+            } catch {
+                print("[BridgeHandler] switchToTab(\(tab)) FAILED: \(error)")
+            }
         }
     }
 
@@ -131,13 +135,34 @@ final class BridgeHandler: ObservableObject {
         menuAction("set-appearance", payload: ["value": appearance])
     }
 
+    // MARK: - Locale sync
+
+    /// Push the native locale to the web layer.
+    /// Called on `ready` to confirm the URL query param injection,
+    /// and on language change in native Settings.
+    func syncLocale() {
+        let locale = UserDefaults.standard.string(forKey: "language") ?? "en"
+        guard let webView else { return }
+        Task {
+            try? await webView.callAsyncJavaScript(
+                "window.__bristlenose?.setLocale?.(locale)",
+                arguments: ["locale": locale],
+                in: nil,
+                in: .page
+            )
+        }
+    }
+
     // MARK: - Menu action dispatch
 
     /// Send a menu action to the web layer via `window.__bristlenose.menuAction()`.
     ///
     /// Uses `callAsyncJavaScript` with structured arguments (security rule 3).
     func menuAction(_ action: String, payload: [String: Any]? = nil) {
-        guard let webView else { return }
+        guard let webView else {
+            print("[BridgeHandler] menuAction(\(action)) — webView is nil")
+            return
+        }
         let js: String
         var args: [String: Any] = ["action": action]
         if let payload {
@@ -147,7 +172,11 @@ final class BridgeHandler: ObservableObject {
             js = "window.__bristlenose.menuAction(action)"
         }
         Task {
-            try? await webView.callAsyncJavaScript(js, arguments: args, in: nil, in: .page)
+            do {
+                try await webView.callAsyncJavaScript(js, arguments: args, in: nil, in: .page)
+            } catch {
+                print("[BridgeHandler] menuAction(\(action)) FAILED: \(error)")
+            }
         }
     }
 
@@ -164,6 +193,7 @@ final class BridgeHandler: ObservableObject {
         case "ready":
             isReady = true
             syncAppearance()
+            syncLocale()
             webView?.window?.makeFirstResponder(webView)
 
         case "route-change":

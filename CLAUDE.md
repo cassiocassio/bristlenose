@@ -221,10 +221,8 @@ See `docs/BRANCHES.md` for active branches, worktree paths, what files they touc
 - **NEVER use Claude Code preview tools (`preview_start`, `preview_screenshot`, `preview_snapshot`, `preview_eval`, etc.) for QA.** They consistently fail for Bristlenose — wrong port, missing Vite HMR, white-on-white rendering, incomplete React mount. Every attempt wastes time. Bristlenose needs the full stack (Vite dev server on 5173 + FastAPI serve on 8150) running together. For QA, tell the user to run the full stack in their own browser:
   ```
   .venv/bin/bristlenose serve --dev trial-runs/project-ikea
-  # In second terminal:
-  cd frontend && npx vite --port 5173
   ```
-  Then open http://localhost:8150/report/. For worktrees: use the port from `.claude/launch.json`
+  `--dev` auto-starts Vite on :5173 as a subprocess (cleaned up on exit). Then open http://localhost:8150/report/. For worktrees: use the port from `.claude/launch.json`
 
 ### Release timing (evening releases)
 

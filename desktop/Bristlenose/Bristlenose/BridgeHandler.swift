@@ -107,7 +107,11 @@ final class BridgeHandler: ObservableObject {
     /// Toggle the `bn-window-inactive` CSS class on the document root.
     /// Called by ContentView on NSWindow key/resign notifications.
     func setWindowActive(_ active: Bool) {
-        guard let webView else { return }
+        guard let webView else {
+            print("[Bridge] setWindowActive(\(active)) — no webView")
+            return
+        }
+        print("[Bridge] setWindowActive(\(active))")
         let js = active
             ? "document.documentElement.classList.remove('bn-window-inactive')"
             : "document.documentElement.classList.add('bn-window-inactive')"

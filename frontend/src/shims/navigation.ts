@@ -5,7 +5,13 @@
  * This maintains backward compatibility for:
  * - Vanilla JS modules not yet migrated (focus.js, player.js, etc.)
  * - Dashboard and AnalysisPage module-level wrapper functions
- * - Any external callers
+ * - Any external callers (including native macOS callAsyncJavaScript)
+ *
+ * The shim functions are installed once on window but always read navigate/
+ * scrollToAnchor from module-level refs — so re-calling installNavigationShims
+ * with a newer navigate function takes effect immediately without reinstalling
+ * the window functions. This prevents stale-closure bugs where the initial
+ * navigate captured at mount doesn't work until the router is fully ready.
  */
 
 import type { NavigateFunction } from "react-router-dom";
@@ -21,31 +27,45 @@ const TAB_ROUTES: Record<string, string> = {
   about: "/report/about/",
 };
 
+// Module-level refs — always point to the latest functions.
+let navigateRef: NavigateFunction = () => {};
+let scrollToAnchorRef: (
+  anchorId: string,
+  opts?: ScrollToAnchorOptions,
+) => void = () => {};
+
 export function installNavigationShims(
   navigate: NavigateFunction,
   scrollToAnchor: (anchorId: string, opts?: ScrollToAnchorOptions) => void,
 ): void {
+  // Update refs — existing window functions will pick up the new values.
+  navigateRef = navigate;
+  scrollToAnchorRef = scrollToAnchor;
+
+  // Only install window functions once (idempotent).
+  if ((window as unknown as Record<string, unknown>).switchToTab) return;
+
   (window as unknown as Record<string, unknown>).switchToTab = (
     tab: string,
   ) => {
     const route = TAB_ROUTES[tab] ?? "/report/";
-    navigate(route);
+    navigateRef(route);
   };
 
   (window as unknown as Record<string, unknown>).scrollToAnchor = (
     anchorId: string,
     opts?: ScrollToAnchorOptions,
   ) => {
-    scrollToAnchor(anchorId, opts);
+    scrollToAnchorRef(anchorId, opts);
   };
 
   (window as unknown as Record<string, unknown>).navigateToSession = (
     sid: string,
     anchorId?: string,
   ) => {
-    navigate(`/report/sessions/${sid}`);
+    navigateRef(`/report/sessions/${sid}`);
     if (anchorId) {
-      scrollToAnchor(anchorId, { block: "center", highlight: true });
+      scrollToAnchorRef(anchorId, { block: "center", highlight: true });
     }
   };
 }

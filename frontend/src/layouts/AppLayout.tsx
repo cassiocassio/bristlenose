@@ -28,9 +28,16 @@ import { useActivityJobs, removeJob } from "../contexts/ActivityStore";
 import { useKeyboardShortcuts } from "../hooks/useKeyboardShortcuts";
 import { useScrollToAnchor } from "../hooks/useScrollToAnchor";
 import { installNavigationShims } from "../shims/navigation";
-import { installBridge, postRouteChange, postReady, postProjectAction } from "../shims/bridge";
+import {
+  installBridge,
+  postRouteChange,
+  postReady,
+  postProjectAction,
+  postFindPasteboardWrite,
+} from "../shims/bridge";
 import { cancelAutoCode } from "../utils/api";
 import { toggleInspector } from "../contexts/InspectorStore";
+import { setSearchQuery } from "../contexts/QuotesContext";
 import { isEditing } from "../utils/editing";
 import { isEmbedded } from "../utils/embedded";
 import { getExportData } from "../utils/exportData";
@@ -167,8 +174,20 @@ function AppShell() {
   // Handle menu actions from native toolbar/menu (embedded mode).
   useEffect(() => {
     if (!embedded) return;
+    const focusSearchInput = () => {
+      const input = document.querySelector<HTMLInputElement>(".search-input");
+      if (input) {
+        const container = input.closest(".search-container");
+        if (container && !container.classList.contains("expanded")) {
+          container.classList.add("expanded");
+        }
+        input.focus();
+        input.select();
+      }
+    };
+
     const handler = (e: Event) => {
-      const { action } = (e as CustomEvent).detail;
+      const { action, payload } = (e as CustomEvent).detail;
       switch (action) {
         case "toggleLeftPanel":
           sidebarAnimations.toggleToc();
@@ -178,6 +197,28 @@ function AppShell() {
           break;
         case "toggleInspectorPanel":
           toggleInspector();
+          break;
+        case "find":
+          focusSearchInput();
+          break;
+        case "useSelectionForFind": {
+          const sel = window.getSelection()?.toString().trim() ?? "";
+          if (sel) {
+            setSearchQuery(sel);
+            postFindPasteboardWrite(sel);
+          }
+          focusSearchInput();
+          break;
+        }
+        case "findNext":
+        case "findPrevious": {
+          const text = (payload as { text?: string } | undefined)?.text ?? "";
+          if (text) setSearchQuery(text);
+          focusSearchInput();
+          break;
+        }
+        case "jumpToSelection":
+          // Native WKWebView handles scroll-to-selection; no-op on web side.
           break;
       }
     };
@@ -258,6 +299,20 @@ export function AppLayout() {
   useEffect(() => {
     installNavigationShims(navigate, scrollToAnchor);
   }, [navigate, scrollToAnchor]);
+
+  // Dim selection when window is inactive (macOS convention).
+  useEffect(() => {
+    const cl = document.documentElement.classList;
+    const onBlur = () => cl.add("bn-window-inactive");
+    const onFocus = () => cl.remove("bn-window-inactive");
+    window.addEventListener("blur", onBlur);
+    window.addEventListener("focus", onFocus);
+    return () => {
+      window.removeEventListener("blur", onBlur);
+      window.removeEventListener("focus", onFocus);
+      cl.remove("bn-window-inactive");
+    };
+  }, []);
 
   return (
     <PlayerProvider>

@@ -33,7 +33,8 @@ export type BridgeMessage =
   | { type: "ready" }
   | { type: "editing-started"; element: string }
   | { type: "editing-ended" }
-  | { type: "project-action"; action: string; data?: object };
+  | { type: "project-action"; action: string; data?: object }
+  | { type: "find-pasteboard-write"; text: string };
 
 // ---------------------------------------------------------------------------
 // Native message posting
@@ -67,6 +68,11 @@ export function postEditingEnded(): void {
 
 export function postProjectAction(action: string, data?: object): void {
   postNativeMessage({ type: "project-action", action, data });
+}
+
+/** Write text to the macOS shared find pasteboard (Cmd+E cross-app support). */
+export function postFindPasteboardWrite(text: string): void {
+  postNativeMessage({ type: "find-pasteboard-write", text });
 }
 
 // ---------------------------------------------------------------------------

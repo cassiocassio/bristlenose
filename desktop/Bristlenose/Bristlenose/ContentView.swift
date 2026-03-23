@@ -23,6 +23,8 @@ struct ContentView: View {
     @EnvironmentObject var serveManager: ServeManager
     @EnvironmentObject var bridgeHandler: BridgeHandler
     @AppStorage("appearance") private var appearance: String = "auto"
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @SceneStorage("selectedProjectPath") private var selectedProjectPath: String = ""
     @State private var selectedProject: ProjectStub?
 
     /// Map the stored appearance string to SwiftUI's ColorScheme.
@@ -59,9 +61,17 @@ struct ContentView: View {
         .onChange(of: selectedProject) { _, newValue in
             bridgeHandler.reset()
             if let project = newValue {
+                selectedProjectPath = project.path
                 serveManager.start(projectPath: project.path)
             } else {
+                selectedProjectPath = ""
                 serveManager.stop()
+            }
+        }
+        .onAppear {
+            if selectedProject == nil, !selectedProjectPath.isEmpty,
+               let match = projects.first(where: { $0.path == selectedProjectPath }) {
+                selectedProject = match
             }
         }
     }
@@ -219,7 +229,13 @@ struct ContentView: View {
                     }
                 }
             }
-            .animation(.easeInOut(duration: 0.2), value: bridgeHandler.isReady)
+            .transaction { t in
+                if NSWorkspace.shared.accessibilityDisplayShouldReduceMotion {
+                    t.animation = nil
+                } else {
+                    t.animation = .easeInOut(duration: 0.2)
+                }
+            }
         } else {
             ContentUnavailableView(
                 "No Project Selected",

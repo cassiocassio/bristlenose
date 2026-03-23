@@ -1,6 +1,19 @@
 # Bristlenose — Where I Left Off
 
-Last updated: 14 Mar 2026
+Last updated: 22 Mar 2026
+
+## Desktop app security (must-fix before any distribution)
+
+From security review of desktop app plan (22 Mar 2026). All findings are in the serve-side and process management layer, not the Swift bridge code (which is clean).
+
+- [ ] **Localhost auth token** — generate random bearer token at serve startup, inject into WKWebView via `WKUserScript`, require on all API requests. Any local process can currently hit `/api/projects/1/quotes` on ports 8150–9149 and exfiltrate transcripts, quotes, participant names
+- [ ] **Media endpoint filtering** — `/media` mount is `StaticFiles(directory=project_dir)` with no restrictions. Serves `.env`, `.git/`, SQLite DB, everything. Restrict to known media extensions (`.mp4`, `.mov`, `.wav`, `.mp3`, `.m4a`, `.vtt`, `.srt`, etc.), reject dotfiles and `bristlenose-output/`
+- [ ] **CORS middleware** — add `CORSMiddleware(allow_origins=["http://127.0.0.1"])` to FastAPI. One line, no reason to defer
+- [ ] **Don't bundle API key in binary** — `strings` on the .app reveals it. Require individual key setup via existing Settings panel. The "five friends" can be given keys directly
+- [ ] **Verify zombie cleanup targets** — `killOrphanedServeProcesses()` runs `lsof -ti :8150-9149` and kills every PID found, including non-Bristlenose processes. Check process command line contains "bristlenose" before `kill()`
+- [ ] **Migrate KeychainHelper to Security framework** — current `/usr/bin/security` CLI approach is blocked in App Sandbox. Use `SecItemAdd`/`SecItemCopyMatching`/`SecItemDelete`. Also affects Python-side `credentials_macos.py`
+- [ ] **Minimal child process environment** — `ProcessInfo.processInfo.environment` passes all user env vars (DB passwords, cloud tokens) to the Python sidecar. Construct minimal env: `PATH`, `HOME`, `LANG`, `TMPDIR`, plus `BRISTLENOSE_*` vars only
+- [ ] **Port-restrict navigation policy** — `decidePolicyFor` allows any localhost port. Restrict to the expected serve port from `serveManager.state`
 
 ## Near-horizon roadmap
 
@@ -175,6 +188,78 @@ Session management design doc: `docs/design-session-management.md`
 | ProcessRunner: replace `availableData` polling with `AsyncBytes` | — | small |
 | `hasAnyAPIKey()` only checks Anthropic — rename or extend | — | trivial |
 | Settings shortcut ⌘, — show in Help shortcuts conditionally (desktop only, browser intercepts) | — | small |
+
+### Desktop app — UX review findings (22 Mar 2026)
+
+**Critical:**
+- [ ] **v0.1→v1 transition story** — v0.1 opens reports in Safari, v1 shows them in-app. Plan a "What's New" sheet on first launch of v1. Keep "Open in Browser" as File menu option so the old workflow survives
+- [ ] **v0.1 pipeline progress** — 12 stages known upfront, Welford estimator exists. Show "Stage 4 of 12" alongside streaming log, not just checkmark lines
+
+**Major:**
+- [ ] **Bare-key shortcuts invisible in menu bar** — `s`/`h`/`t`/`j`/`k` have no menu representation. Show as informational labels: "Star (press S in report)". The menu bar is how Mac users learn an app
+- [ ] **"Delete Project" → "Remove Project"** — researchers fear "delete" means recordings. "Remove" communicates "take out of this app." Confirmation dialog should name the specific folder path
+- [ ] **Disambiguate three "sidebars"** — native project sidebar, web TOC, web tags. Use "Project Sidebar", "Sections Panel", "Tags Panel" in View menu labels (not "Left Panel" / "Right Panel")
+- [ ] **Archive feedback** — if ARCHIVE section is collapsed (default), archived project vanishes. Auto-expand briefly or show undo toast ("Q1 Study archived. [Undo]")
+
+**Minor:**
+- [ ] **Promote sidebar type-to-filter to P1** — `.searchable()` on List is trivial, essential at 10+ projects
+- [ ] **Simplify drop zone flow** — auto-name project from folder, default to unfiled, let user rename later (currently asks name + folder + confirm during drag)
+- [ ] **Fixed minimum width for toolbar trailing zone** — prevent centre segmented control shifting when contextual items appear/disappear per tab
+- [ ] **Window state restoration** — persist selected project to `@AppStorage` so relaunch reopens where you left off
+- [ ] **Dark mode appearance re-sync** — `syncAppearance()` only fires on `ready`. Add KVO on `NSApp.effectiveAppearance` to re-sync when user changes macOS system appearance while app is running
+- [ ] **Embedded font token** — use `--bn-text-base-embedded` design token for 13px, not hardcoded pixel value in WKUserScript
+- [ ] **Cursor reset scope** — `.bn-embedded` body class targeting non-link interactive elements only, not a blanket CSS override
+
+### Desktop app — Mac-nativeness review findings (22 Mar 2026)
+
+**P0:**
+- [ ] **13pt font injection** — loudest web-view tell. Every second at 16px next to 13pt sidebar screams hybrid
+
+**P1:**
+- [ ] **Shared find pasteboard** — Cmd+E writes to `NSPasteboard(name: .find)`, Cmd+G reads. Menu items exist, bridge write is the gap
+- [ ] **Selection dimming on inactive window** — `::selection:window-inactive` CSS in web layer
+- [ ] **Temperature slider locale** — `LLMSettingsView` uses `String(format: "%.1f")`, not locale-aware. Use `temperature.formatted(.number.precision(.fractionLength(1)))`
+- [ ] **Cocoa keybindings in contenteditable** — test Ctrl+A/E/K/F/B/P/N/Y first; may work for free in WKWebView
+- [ ] **Services menu** — test early; right-click on selected text in WKWebView may or may not expose Services submenu
+- [ ] **Scroll feel testing** — test Quotes page with 150+ quotes for jank from useScrollSpy RAF-throttled listeners vs native inertia
+- [ ] **Serve startup progress** — show last stdout line as status text during the 8–10s boot (already parsing stdout)
+- [ ] **API key auto-save on focus loss** — currently only saves on Enter. Settings changes should apply immediately
+
+**P2:**
+- [ ] **Inactive selection dimming** — native sidebar automatic, WKWebView needs `:window-inactive` pseudo-class
+- [ ] **Cursor reset in embedded mode** — `cursor: default` on non-link interactive elements behind `.bn-embedded` class
+- [ ] **Option-drag copies** — SwiftUI `onDrag` with `.copy` modifier when Option held
+- [ ] **Undo/Redo hiding deviation** — hidden during editing (not dimmed). Defensible, but document as known HIG deviation
+- [ ] **Disabled "+" button on provider list** — permanently disabled "coming soon". Ship it or remove it
+- [ ] **View menu: Enter Full Screen item** — HIG says View should include it (green button + Globe+F exist, but canonical location is View)
+
+**Missing from audit (add):**
+- [ ] **Window restoration** — persist selected project to `@SceneStorage` so relaunch remembers what was open
+- [ ] **`Cmd+0` for main window** — needed when multi-window lands (Tower/Xcode convention)
+
+### Desktop app — Accessibility review findings (22 Mar 2026)
+
+**Critical:**
+- [ ] **VoiceOver label on WKWebView** — add `.accessibilityLabel("Report content")` and `.focusSection()` to both sidebar List and WebView container
+- [ ] **Focus management on project switch** — call `webView.becomeFirstResponder()` on `"ready"` bridge message. Currently focus lands in undefined location after WKWebView recreation
+- [ ] **Focus management on tab switch (Cmd+1-5)** — after React Router navigation, focus the first meaningful heading. Add `aria-live="polite"` region in AppLayout announcing "Navigated to [tab name]"
+
+**Major:**
+- [ ] **Loading overlay traps VoiceOver** — screen reader sees both spinner and half-loaded content. Add `.accessibilityHidden(!bridgeHandler.isReady)` on WebView during loading
+- [ ] **NavBar `role="tab"` is semantically wrong** — these are navigation links, not ARIA tabs. Remove `role="tablist"`/`role="tab"`, rely on `aria-current="page"` from React Router NavLink. Native toolbar correctly uses tab semantics
+- [ ] **No `aria-live` regions in React SPA** — star/hide/tag actions, search result counts, tab navigation all invisible to screen readers. Add single announcement region to AppLayout
+- [ ] **Modal focus trapping missing** — Help, Export, Settings, Feedback modals have no focus trap. Use `inert` attribute on background content or `<dialog>` element
+- [ ] **Edit mode entry/exit not announced** — contenteditable activation has no screen reader announcement. Add `aria-live` for "Editing" / "Saved" / "Cancelled"
+- [ ] **Drag handles need ARIA** — add `role="separator"` with `aria-orientation="vertical"` and `aria-valuenow`/`valuemin`/`valuemax` to sidebar resize handles
+- [ ] **Dynamic Type scaling curve** — define native→web font-size mapping now (system `preferredContentSizeCategory` → CSS `font-size` on `<html>`). Observe changes via `NSApp` and re-inject
+
+**Minor:**
+- [ ] **Segmented Picker label** — change from "Tab" to "Report section" for VoiceOver clarity
+- [ ] **Reduced motion guard** — `ContentView.swift:222` animation needs `@Environment(\.accessibilityReduceMotion)` check
+- [ ] **Verify `<h1>` in embedded mode** — Header is suppressed, confirm heading hierarchy still starts with `<h1>` in page content
+- [ ] **Bare-key vs VoiceOver Quick Nav** — document in Help modal that s/h/t/j/k are inactive when VoiceOver Quick Nav is on (correct behaviour, just needs documentation)
+- [ ] **Settings slider accessible values** — add contextual `accessibilityValue` to temperature slider ("0.1 — focused", "0.9 — creative")
+- [ ] **API key toggle state** — add `.accessibilityAddTraits(.isToggle)` or `.accessibilityValue("Shown"/"Hidden")` to eye button
 
 ### Performance
 

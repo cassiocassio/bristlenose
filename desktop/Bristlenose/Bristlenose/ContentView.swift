@@ -215,6 +215,8 @@ struct ContentView: View {
                 case .running:
                     WebView(url: serveManager.serveURL, bridgeHandler: bridgeHandler)
                         .id(project.id)
+                        .accessibilityLabel("Report content")
+                        .focusSection()
 
                     // Loading overlay — shown until the React SPA posts "ready".
                     if !bridgeHandler.isReady {

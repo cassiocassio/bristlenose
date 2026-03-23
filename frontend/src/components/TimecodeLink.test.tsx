@@ -66,7 +66,7 @@ describe("TimecodeLink", () => {
   it("calls seekTo on click when PlayerProvider is present", () => {
     const seekTo = vi.fn();
     render(
-      <PlayerContext.Provider value={{ seekTo }}>
+      <PlayerContext.Provider value={{ seekTo, sendCommand: vi.fn() }}>
         <TimecodeLink seconds={42} participantId="p1" data-testid="tc" />
       </PlayerContext.Provider>,
     );
@@ -78,7 +78,7 @@ describe("TimecodeLink", () => {
   it("does not call seekTo on modifier-key click", () => {
     const seekTo = vi.fn();
     render(
-      <PlayerContext.Provider value={{ seekTo }}>
+      <PlayerContext.Provider value={{ seekTo, sendCommand: vi.fn() }}>
         <TimecodeLink seconds={42} participantId="p1" data-testid="tc" />
       </PlayerContext.Provider>,
     );

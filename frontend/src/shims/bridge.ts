@@ -10,6 +10,8 @@
  */
 
 import { isEmbedded } from "../utils/embedded";
+import { setLocale as setStoreLocale } from "../i18n/LocaleStore";
+import { isSupportedLocale } from "../i18n/index";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -34,7 +36,8 @@ export type BridgeMessage =
   | { type: "editing-started"; element: string }
   | { type: "editing-ended" }
   | { type: "project-action"; action: string; data?: object }
-  | { type: "find-pasteboard-write"; text: string };
+  | { type: "find-pasteboard-write"; text: string }
+  | { type: "player-state"; hasPlayer: boolean; playing: boolean };
 
 // ---------------------------------------------------------------------------
 // Native message posting
@@ -75,6 +78,11 @@ export function postFindPasteboardWrite(text: string): void {
   postNativeMessage({ type: "find-pasteboard-write", text });
 }
 
+/** Notify native shell of player open/close and play/pause state changes. */
+export function postPlayerState(hasPlayer: boolean, playing: boolean): void {
+  postNativeMessage({ type: "player-state", hasPlayer, playing });
+}
+
 // ---------------------------------------------------------------------------
 // Bridge namespace installation
 // ---------------------------------------------------------------------------
@@ -85,6 +93,8 @@ export interface BridgeDeps {
   getFocusedQuoteId: () => string | null;
   getSelectedIds: () => string[];
   getIsEditing: () => boolean;
+  getHasPlayer: () => boolean;
+  getPlayerPlaying: () => boolean;
 }
 
 /**
@@ -111,12 +121,19 @@ export function installBridge(deps: BridgeDeps): void {
         focusedQuoteId: deps.getFocusedQuoteId(),
         selectedIds: deps.getSelectedIds(),
         isEditing: deps.getIsEditing(),
-        // Stubs — wired when undo store and player bridging ship.
+        // Stubs — wired when undo store ships.
         canUndo: false,
         canRedo: false,
-        hasPlayer: false,
-        playerPlaying: false,
+        hasPlayer: deps.getHasPlayer(),
+        playerPlaying: deps.getPlayerPlaying(),
       };
+    },
+
+    /** Called by native shell to push locale changes. */
+    setLocale(locale: string): void {
+      if (isSupportedLocale(locale)) {
+        void setStoreLocale(locale);
+      }
     },
   };
 

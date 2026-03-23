@@ -23,6 +23,8 @@ import {
   type ReactNode,
 } from "react";
 import { useLocation } from "react-router-dom";
+import { announce } from "../utils/announce";
+import { postPlayerState } from "../shims/bridge";
 
 // ── Types ────────────────────────────────────────────────────────────────
 
@@ -38,6 +40,7 @@ interface GlowEntry {
 
 interface PlayerContextValue {
   seekTo: (pid: string, seconds: number) => void;
+  sendCommand: (command: string, data?: Record<string, unknown>) => void;
 }
 
 // ── Context ──────────────────────────────────────────────────────────────
@@ -50,6 +53,21 @@ export function usePlayer(): PlayerContextValue {
   const ctx = useContext(PlayerContext);
   if (!ctx) throw new Error("usePlayer must be used within PlayerProvider");
   return ctx;
+}
+
+// ── Module-level player state (for bridge — read synchronously) ──────
+
+let _hasPlayer = false;
+let _playerPlaying = false;
+
+/** Whether a popout player window is currently open. */
+export function getPlayerOpen(): boolean {
+  return _hasPlayer;
+}
+
+/** Whether the popout player is currently playing (not paused). */
+export function getPlayerPlaying(): boolean {
+  return _playerPlaying;
 }
 
 // ── Provider ─────────────────────────────────────────────────────────────
@@ -258,6 +276,19 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
+  // ── sendCommand ─────────────────────────────────────────────────────
+
+  const sendCommand = useCallback(
+    (command: string, data?: Record<string, unknown>) => {
+      if (!playerWinRef.current || playerWinRef.current.closed) return;
+      playerWinRef.current.postMessage(
+        { type: "bristlenose-command", command, payload: data },
+        window.location.origin,
+      );
+    },
+    [],
+  );
+
   // ── seekTo ───────────────────────────────────────────────────────────
 
   const seekTo = useCallback((pid: string, seconds: number) => {
@@ -280,16 +311,21 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
         "width=720,height=480,resizable=yes,scrollbars=no",
       );
       playerWinRef.current = win;
+      _hasPlayer = !!win;
+      postPlayerState(!!win, false);
     } else {
-      playerWinRef.current.postMessage(msg, "*");
+      playerWinRef.current.postMessage(msg, window.location.origin);
       playerWinRef.current.focus();
     }
+    announce(`Playing ${pid}`);
   }, []);
 
   // ── Main effect: message listener + close polling ────────────────────
 
   useEffect(() => {
     const handleMessage = (e: MessageEvent) => {
+      // Only accept messages from our own origin (or "null" for file:// URIs)
+      if (e.origin !== window.location.origin && e.origin !== "null") return;
       const d = e.data;
       if (!d || typeof d.type !== "string") return;
 
@@ -297,23 +333,43 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
         const playing = d.playing !== undefined ? d.playing : true;
         updateGlow(d.pid, d.seconds, playing);
       } else if (d.type === "bristlenose-playstate" && d.pid) {
+        _playerPlaying = !!d.playing;
+        postPlayerState(true, !!d.playing);
         updatePlayState(d.playing);
       }
     };
 
     window.addEventListener("message", handleMessage);
 
+    // BroadcastChannel fallback — WKWebView popouts may have
+    // window.opener=null, so postMessage from player never arrives.
+    // BroadcastChannel is same-origin and works across WKWebViews.
+    let bc: BroadcastChannel | null = null;
+    try {
+      bc = new BroadcastChannel("bristlenose-player");
+      bc.onmessage = handleMessage;
+    } catch {
+      // BroadcastChannel not supported (older browsers, file:// in some engines)
+    }
+
     // Poll for player window closure
     const pollInterval = setInterval(() => {
       if (playerWinRef.current && playerWinRef.current.closed) {
         playerWinRef.current = null;
+        _hasPlayer = false;
+        _playerPlaying = false;
+        postPlayerState(false, false);
         clearAllGlow();
       }
     }, 1000);
 
     return () => {
       window.removeEventListener("message", handleMessage);
+      if (bc) { try { bc.close(); } catch {} }
       clearInterval(pollInterval);
+      _hasPlayer = false;
+      _playerPlaying = false;
+      postPlayerState(false, false);
       clearAllGlow();
     };
   }, [updateGlow, updatePlayState, clearAllGlow]);
@@ -333,7 +389,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
 
   // ── Render ───────────────────────────────────────────────────────────
 
-  const value: PlayerContextValue = { seekTo };
+  const value: PlayerContextValue = { seekTo, sendCommand };
 
   return (
     <PlayerContext.Provider value={value}>{children}</PlayerContext.Provider>

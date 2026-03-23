@@ -41,8 +41,14 @@ struct WebView: NSViewRepresentable {
 
         config.userContentController = userContentController
 
+        // Allow media autoplay without user gesture — the popout player
+        // calls video.play() programmatically. This must be set on the
+        // parent config because child WKWebViews inherit media permissions.
+        config.mediaTypesRequiringUserActionForPlayback = []
+
         let webView = WKWebView(frame: .zero, configuration: config)
         webView.navigationDelegate = context.coordinator
+        webView.uiDelegate = context.coordinator
         context.coordinator.webView = webView
 
         // Enable Web Inspector (right-click → Inspect Element) for debugging.
@@ -87,8 +93,8 @@ struct WebView: NSViewRepresentable {
 
     // MARK: - Coordinator
 
-    /// Handles WKScriptMessageHandler and WKNavigationDelegate.
-    final class Coordinator: NSObject, WKScriptMessageHandler, WKNavigationDelegate {
+    /// Handles WKScriptMessageHandler, WKNavigationDelegate, and WKUIDelegate.
+    final class Coordinator: NSObject, WKScriptMessageHandler, WKNavigationDelegate, WKUIDelegate {
 
         let bridgeHandler: BridgeHandler
         @MainActor var webView: WKWebView?
@@ -99,6 +105,12 @@ struct WebView: NSViewRepresentable {
         /// WebView is recreated via `.id(project.id)` on project switch.
         var canGoBackObservation: NSKeyValueObservation?
         var canGoForwardObservation: NSKeyValueObservation?
+
+        /// The popout player window. Retained to prevent deallocation.
+        /// Not @MainActor — WKUIDelegate callbacks are already on main thread.
+        var popoutWindow: NSWindow?
+        /// KVO observation for syncing popout document.title → NSWindow title.
+        var popoutTitleObservation: NSKeyValueObservation?
 
         init(bridgeHandler: BridgeHandler) {
             self.bridgeHandler = bridgeHandler
@@ -169,6 +181,83 @@ struct WebView: NSViewRepresentable {
         /// The serve process is still running; only the renderer crashed.
         func webViewWebContentProcessDidTerminate(_ webView: WKWebView) {
             webView.reload()
+        }
+
+        // MARK: - WKUIDelegate
+
+        /// Handle window.open() from JavaScript — creates a native NSWindow
+        /// with a WKWebView for the popout video player.
+        func webView(
+            _ webView: WKWebView,
+            createWebViewWith configuration: WKWebViewConfiguration,
+            for navigationAction: WKNavigationAction,
+            windowFeatures: WKWindowFeatures
+        ) -> WKWebView? {
+            // Only allow popouts to localhost (the player page).
+            guard let url = navigationAction.request.url,
+                  url.host == "127.0.0.1" else {
+                if let url = navigationAction.request.url {
+                    NSWorkspace.shared.open(url)
+                }
+                return nil
+            }
+
+            // Close previous popout if still open — one player at a time.
+            if let existing = popoutWindow {
+                existing.close()
+                popoutWindow = nil
+                popoutTitleObservation = nil
+            }
+
+            // Must use the provided configuration — WKWebView enforces this.
+            // Allow media autoplay without user gesture (player.html calls
+            // video.play() programmatically after loadAndSeek).
+            configuration.mediaTypesRequiringUserActionForPlayback = []
+            let popoutWebView = WKWebView(frame: .zero, configuration: configuration)
+            popoutWebView.navigationDelegate = self
+
+            #if DEBUG
+            popoutWebView.isInspectable = true
+            #endif
+
+            let width = windowFeatures.width?.doubleValue ?? 720
+            let height = windowFeatures.height?.doubleValue ?? 480
+
+            let window = NSWindow(
+                contentRect: NSRect(x: 0, y: 0, width: width, height: height),
+                styleMask: [.titled, .closable, .resizable, .miniaturizable],
+                backing: .buffered,
+                defer: false
+            )
+            window.contentView = popoutWebView
+            window.title = "Bristlenose Player"
+            window.setFrameAutosaveName("BristlenosePlayer")
+            window.makeKeyAndOrderFront(nil)
+
+            // Retain the window — clean up when it closes.
+            popoutWindow = window
+
+            // KVO: sync document.title from player.html → NSWindow title bar.
+            popoutTitleObservation = popoutWebView.observe(
+                \.title, options: [.new]
+            ) { [weak window] _, change in
+                Task { @MainActor in
+                    if let title = change.newValue ?? nil, !title.isEmpty {
+                        window?.title = title
+                    }
+                }
+            }
+
+            return popoutWebView
+        }
+
+        /// Handle window.close() from JavaScript — close the native window.
+        func webViewDidClose(_ webView: WKWebView) {
+            if webView.window === popoutWindow {
+                popoutWindow?.close()
+                popoutWindow = nil
+                popoutTitleObservation = nil
+            }
         }
     }
 }

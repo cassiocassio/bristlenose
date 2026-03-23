@@ -36,6 +36,7 @@ import {
   postProjectAction,
   postFindPasteboardWrite,
 } from "../shims/bridge";
+import { getPlayerOpen, getPlayerPlaying } from "../contexts/PlayerContext";
 import { cancelAutoCode } from "../utils/api";
 import { toggleInspector } from "../contexts/InspectorStore";
 import { setSearchQuery, setViewMode, setTagFilter, getQuotesSnapshot } from "../contexts/QuotesContext";
@@ -241,6 +242,8 @@ function AppShell() {
       getFocusedQuoteId: () => focusedIdBridgeRef.current,
       getSelectedIds: () => Array.from(selectedIdsBridgeRef.current),
       getIsEditing: () => isEditing(),
+      getHasPlayer: getPlayerOpen,
+      getPlayerPlaying: getPlayerPlaying,
     });
   }, [embedded]);
 

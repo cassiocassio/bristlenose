@@ -190,6 +190,13 @@ final class BridgeHandler: ObservableObject {
                 handleProjectAction(action, data: body["data"] as? [String: Any])
             }
 
+        case "find-pasteboard-write":
+            if let text = body["text"] as? String, !text.isEmpty {
+                let pb = NSPasteboard(name: .find)
+                pb.clearContents()
+                pb.setString(text, forType: .string)
+            }
+
         default:
             break
         }

@@ -47,7 +47,7 @@ ContentView uses `@EnvironmentObject` — it does not own these objects.
 
 ### Bridge communication
 
-**Inbound** (web → native): `WKScriptMessageHandler` receives messages from `window.webkit.messageHandlers.navigation.postMessage(...)`. Types: `ready`, `route-change`, `editing-started`, `editing-ended`, `focus-change`, `undo-state`, `player-state`, `project-action`.
+**Inbound** (web → native): `WKScriptMessageHandler` receives messages from `window.webkit.messageHandlers.navigation.postMessage(...)`. Types: `ready`, `route-change`, `editing-started`, `editing-ended`, `focus-change`, `undo-state`, `player-state`, `project-action`, `find-pasteboard-write`.
 
 **Outbound** (native → web): `BridgeHandler` holds a `weak var webView: WKWebView?` (set in `WebView.makeNSView`). Four outbound methods:
 - `goBack()` / `goForward()` — delegates to `webView?.goBack()` / `.goForward()`
@@ -362,7 +362,7 @@ These dispatch to the codebook UI (browse modal, group/code CRUD). Most need `Cu
 | Action | Status |
 |--------|--------|
 | `undo` / `redo` | Stub (`canUndo: false` in `getState()`). Needs undo store |
-| `findNext` / `findPrevious` | Need search-result cycling in QuotesContext |
+| `findNext` / `findPrevious` | Swift reads `NSPasteboard.find` and sends text in payload. Frontend needs search-result cycling |
 | `useSelectionForFind` / `jumpToSelection` | Standard text editing — may delegate to WKWebView |
 
 #### Internal (not from menu)
@@ -383,6 +383,7 @@ Actions that need **payloads** (the optional second argument to `menuAction`):
 | `exportAnonymised` | `{ anonymise: true }` | Proposed |
 | `importFramework` | `{ templateId: string }` | Proposed |
 | `removeFramework` | `{ frameworkId: string }` | Proposed — needs context from native sidebar |
+| `findNext` / `findPrevious` | `{ text: string }` | Wired — reads from `NSPasteboard.find` |
 
 **Rule:** if the frontend already knows the target (focused quote, active tab), don't pass it in the payload. Payloads are for data the native side has that the web side doesn't.
 

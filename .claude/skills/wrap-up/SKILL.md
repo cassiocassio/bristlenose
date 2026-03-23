@@ -11,6 +11,10 @@ This skill has three phases: **verify**, **document**, **commit**. Run all three
 
 ## Phase 1: Verify (green before documenting)
 
+**Skip condition:** if the only changes since the last commit are documentation files (`.md`, `CLAUDE.md`, `TODO.md`, `CHANGELOG.md`, `CONTRIBUTING.md`, `MEMORY.md`, `SKILL.md`), skip Phase 1 entirely — there's nothing to break. Check with `git diff --name-only` and `git diff --cached --name-only`.
+
+If code files were changed:
+
 1. **Run tests** — `.venv/bin/python -m pytest tests/`
 2. **Run linter** — `.venv/bin/ruff check .` (whole repo, not just `bristlenose/`)
 3. If frontend files changed: `cd frontend && npm run build` (tsc catches type errors Vitest doesn't)

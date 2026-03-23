@@ -58,6 +58,12 @@ struct ContentView: View {
         }
         .navigationSplitViewColumnWidth(min: 180, ideal: 220, max: 300)
         .preferredColorScheme(colorScheme)
+        .onReceive(NotificationCenter.default.publisher(for: NSWindow.didBecomeKeyNotification)) { _ in
+            bridgeHandler.setWindowActive(true)
+        }
+        .onReceive(NotificationCenter.default.publisher(for: NSWindow.didResignKeyNotification)) { _ in
+            bridgeHandler.setWindowActive(false)
+        }
         .onChange(of: selectedProject) { _, newValue in
             bridgeHandler.reset()
             if let project = newValue {
@@ -229,13 +235,7 @@ struct ContentView: View {
                     }
                 }
             }
-            .transaction { t in
-                if NSWorkspace.shared.accessibilityDisplayShouldReduceMotion {
-                    t.animation = nil
-                } else {
-                    t.animation = .easeInOut(duration: 0.2)
-                }
-            }
+            .animation(reduceMotion ? nil : .easeInOut(duration: 0.2), value: bridgeHandler.isReady)
         } else {
             ContentUnavailableView(
                 "No Project Selected",

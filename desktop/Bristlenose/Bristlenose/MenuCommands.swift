@@ -223,7 +223,7 @@ private struct ViewMenuContent: View {
 
         Divider()
 
-        Button(i18n.t("desktop.menu.view.toggleSidebar")) {
+        Button(i18n.t("desktop.menu.view.toggleProjectSidebar")) {
             NSApp.keyWindow?.firstResponder?.tryToPerform(
                 #selector(NSSplitViewController.toggleSidebar(_:)),
                 with: nil
@@ -231,9 +231,10 @@ private struct ViewMenuContent: View {
         }
         .keyboardShortcut("s", modifiers: [.command, .option])
 
-        Button(i18n.t("desktop.menu.view.toggleLeftPanel")) {
+        Button(i18n.t("desktop.menu.view.toggleNavigationPanel")) {
             bridgeHandler.menuAction("toggleLeftPanel")
         }
+        .keyboardShortcut("l", modifiers: [.command, .option])
         .disabled(!hasLeftPanel)
 
         Button(i18n.t("desktop.menu.view.toggleRightPanel")) {

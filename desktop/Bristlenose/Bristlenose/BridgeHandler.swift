@@ -100,6 +100,9 @@ final class BridgeHandler: ObservableObject {
                     in: nil,
                     in: .page
                 )
+                // Ensure WKWebView has focus so bare-key shortcuts (s, h, [, ], m)
+                // work immediately after Cmd+1-5 tab switch.
+                webView.window?.makeFirstResponder(webView)
             } catch {
                 print("[BridgeHandler] switchToTab(\(tab)) FAILED: \(error)")
             }

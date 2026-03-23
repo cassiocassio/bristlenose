@@ -22,10 +22,26 @@ struct ContentView: View {
 
     @EnvironmentObject var serveManager: ServeManager
     @EnvironmentObject var bridgeHandler: BridgeHandler
+    @EnvironmentObject var i18n: I18n
     @AppStorage("appearance") private var appearance: String = "auto"
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @AppStorage("selectedProjectPath") private var selectedProjectPath: String = ""
     @State private var selectedProject: ProjectStub?
+
+    /// Inject the native locale as a URL query parameter so the React SPA
+    /// can detect it synchronously on first render (prevents language flash).
+    private var serveURLWithLocale: URL? {
+        guard var components = serveManager.serveURL.flatMap({
+            URLComponents(url: $0, resolvingAgainstBaseURL: false)
+        }) else { return serveManager.serveURL }
+        let locale = i18n.locale
+        if locale != "en" {
+            var items = components.queryItems ?? []
+            items.append(URLQueryItem(name: "locale", value: locale))
+            components.queryItems = items
+        }
+        return components.url ?? serveManager.serveURL
+    }
 
     /// Map the stored appearance string to SwiftUI's ColorScheme.
     private var colorScheme: ColorScheme? {
@@ -96,21 +112,42 @@ struct ContentView: View {
         )
     }
 
+    @ToolbarContentBuilder
     private var toolbarLeading: some ToolbarContent {
+        // Contextual — Quotes/Codebook/Analysis: navigation panel toggle
+        // The native sidebar toggle (for the project list) is provided by
+        // NavigationSplitView automatically — Mail-style: lives inside the
+        // sidebar column when open, snaps left to traffic lights when closed.
+        // This standalone button controls the web navigation sidebar
+        // (sections/themes on Quotes, codebooks on Codebook, signals on Analysis).
+        // Gestalt proximity: each toggle is near the thing it controls.
+        if bridgeHandler.activeTab == .quotes ||
+           bridgeHandler.activeTab == .codebook ||
+           bridgeHandler.activeTab == .analysis {
+            ToolbarItem(placement: .navigation) {
+                Button {
+                    bridgeHandler.menuAction("toggleLeftPanel")
+                } label: {
+                    Label(i18n.t("desktop.toolbar.navigation"), systemImage: "list.bullet")
+                }
+                .help(i18n.t("desktop.toolbar.toggleNavigation"))
+            }
+        }
+
         ToolbarItemGroup(placement: .navigation) {
             Button(action: { bridgeHandler.goBack() }) {
                 Image(systemName: "chevron.backward")
             }
             .disabled(!bridgeHandler.canGoBack)
             .keyboardShortcut("[", modifiers: .command)
-            .help("Back (⌘[)")
+            .help(i18n.t("desktop.toolbar.back"))
 
             Button(action: { bridgeHandler.goForward() }) {
                 Image(systemName: "chevron.forward")
             }
             .disabled(!bridgeHandler.canGoForward)
             .keyboardShortcut("]", modifiers: .command)
-            .help("Forward (⌘])")
+            .help(i18n.t("desktop.toolbar.forward"))
         }
     }
 
@@ -118,7 +155,7 @@ struct ContentView: View {
         ToolbarItem(placement: .principal) {
             Picker("Tab", selection: tabBinding) {
                 ForEach(Tab.allCases) { tab in
-                    Text(tab.label).tag(tab)
+                    Text(tab.localizedLabel(i18n)).tag(tab)
                 }
             }
             .pickerStyle(.segmented)
@@ -130,44 +167,18 @@ struct ContentView: View {
 
     @ToolbarContentBuilder
     private var toolbarTrailing: some ToolbarContent {
-        // Contextual — Quotes/Codebook/Analysis: sidebar + navigation toggle pair
-        if bridgeHandler.activeTab == .quotes ||
-           bridgeHandler.activeTab == .codebook ||
-           bridgeHandler.activeTab == .analysis {
-            ToolbarItem(placement: .primaryAction) {
-                ControlGroup {
-                    // Left: native project sidebar
-                    Button {
-                        NSApp.keyWindow?.firstResponder?.tryToPerform(
-                            #selector(NSSplitViewController.toggleSidebar(_:)),
-                            with: nil
-                        )
-                    } label: {
-                        Label("Sidebar", systemImage: "sidebar.left")
-                    }
-                    // Right: web navigation sidebar (sections/codebooks/signals)
-                    Button {
-                        bridgeHandler.menuAction("toggleLeftPanel")
-                    } label: {
-                        Label("Navigation", systemImage: "list.bullet")
-                    }
-                }
-                .help("Toggle sidebars")
-            }
-        }
-
         // Universal — Export menu (contents morph per tab)
         ToolbarItem(placement: .primaryAction) {
-            ExportMenuButton(bridgeHandler: bridgeHandler)
+            ExportMenuButton(bridgeHandler: bridgeHandler, i18n: i18n)
         }
 
         // Contextual — Quotes tab: tag sidebar toggle
         if bridgeHandler.activeTab == .quotes {
             ToolbarItem(placement: .primaryAction) {
                 Button { bridgeHandler.menuAction("toggleRightPanel") } label: {
-                    Label("Tags", systemImage: "sidebar.right")
+                    Label(i18n.t("desktop.toolbar.tags"), systemImage: "sidebar.right")
                 }
-                .help("Toggle Tag Sidebar (])")
+                .help(i18n.t("desktop.toolbar.toggleTagSidebar"))
             }
         }
 
@@ -175,9 +186,9 @@ struct ContentView: View {
         if bridgeHandler.activeTab == .analysis {
             ToolbarItem(placement: .primaryAction) {
                 Button { bridgeHandler.menuAction("toggleInspectorPanel") } label: {
-                    Label("Inspector", systemImage: "square.grid.2x2")
+                    Label(i18n.t("desktop.toolbar.inspector"), systemImage: "square.grid.2x2")
                 }
-                .help("Toggle Inspector Panel (m)")
+                .help(i18n.t("desktop.toolbar.toggleInspectorPanel"))
             }
         }
 
@@ -186,9 +197,9 @@ struct ContentView: View {
         // Codebook → filter codes, Analysis → filter signals.
         ToolbarItem(placement: .primaryAction) {
             Button { bridgeHandler.menuAction("find") } label: {
-                Label("Search", systemImage: "magnifyingglass")
+                Label(i18n.t("desktop.toolbar.search"), systemImage: "magnifyingglass")
             }
-            .help("Search (⌘F)")
+            .help(i18n.t("desktop.toolbar.searchShortcut"))
         }
     }
 
@@ -199,8 +210,8 @@ struct ContentView: View {
             Label(project.name, systemImage: "folder")
                 .tag(project)
         }
-        .navigationTitle("Projects")
-        .accessibilityLabel("Project list")
+        .navigationTitle(i18n.t("desktop.chrome.projects"))
+        .accessibilityLabel(i18n.t("desktop.chrome.projects"))
         .focusSection()
     }
 
@@ -212,13 +223,13 @@ struct ContentView: View {
             ZStack {
                 switch serveManager.state {
                 case .idle, .starting:
-                    ProgressView("Starting server...")
+                    ProgressView(i18n.t("desktop.chrome.startingServer"))
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
 
                 case .running:
-                    WebView(url: serveManager.serveURL, bridgeHandler: bridgeHandler)
+                    WebView(url: serveURLWithLocale, bridgeHandler: bridgeHandler)
                         .id(project.id)
-                        .accessibilityLabel("Report content")
+                        .accessibilityLabel(i18n.t("desktop.chrome.reportContent"))
                         .accessibilityHidden(!bridgeHandler.isReady)
                         .focusSection()
 
@@ -226,18 +237,18 @@ struct ContentView: View {
                     if !bridgeHandler.isReady {
                         ZStack {
                             Color(nsColor: .windowBackgroundColor)
-                            ProgressView("Loading report...")
+                            ProgressView(i18n.t("desktop.chrome.loadingReport"))
                         }
                         .transition(.opacity)
                     }
 
                 case .failed(let error):
                     ContentUnavailableView {
-                        Label("Server Error", systemImage: "exclamationmark.triangle")
+                        Label(i18n.t("desktop.chrome.serverError"), systemImage: "exclamationmark.triangle")
                     } description: {
                         Text(error)
                     } actions: {
-                        Button("Retry") {
+                        Button(i18n.t("desktop.chrome.retry")) {
                             serveManager.start(projectPath: project.path)
                         }
                     }
@@ -246,9 +257,9 @@ struct ContentView: View {
             .animation(reduceMotion ? nil : .easeInOut(duration: 0.2), value: bridgeHandler.isReady)
         } else {
             ContentUnavailableView(
-                "No Project Selected",
+                i18n.t("desktop.chrome.noProjectSelected"),
                 systemImage: "doc.text.magnifyingglass",
-                description: Text("Select a project from the sidebar.")
+                description: Text(i18n.t("desktop.chrome.selectProject"))
             )
         }
     }
@@ -260,10 +271,11 @@ struct ContentView: View {
 /// "Export Report..." is always first (universal). Tab-specific exports below a divider.
 struct ExportMenuButton: View {
     @ObservedObject var bridgeHandler: BridgeHandler
+    @ObservedObject var i18n: I18n
 
     var body: some View {
         Menu {
-            Button("Export Report...") {
+            Button(i18n.t("desktop.menu.file.exportReport")) {
                 bridgeHandler.menuAction("exportReport")
             }
             .keyboardShortcut("e", modifiers: [.command, .shift])
@@ -271,7 +283,7 @@ struct ExportMenuButton: View {
             if bridgeHandler.activeTab == .quotes {
                 Divider()
 
-                Button("Export Quotes as CSV") {
+                Button(i18n.t("desktop.menu.quotes.copyAsCSV")) {
                     bridgeHandler.menuAction("exportQuotesCSV")
                 }
 
@@ -280,8 +292,8 @@ struct ExportMenuButton: View {
 
             // Future: Analysis tab → "Export Signal Cards as PPTX"
         } label: {
-            Label("Export", systemImage: "square.and.arrow.up")
+            Label(i18n.t("desktop.toolbar.export"), systemImage: "square.and.arrow.up")
         }
-        .help("Export (⌘⇧E)")
+        .help(i18n.t("desktop.toolbar.exportShortcut"))
     }
 }

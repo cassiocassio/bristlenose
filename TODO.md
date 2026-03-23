@@ -29,6 +29,10 @@ From security review of desktop app plan (22 Mar 2026). All findings are in the 
 
 - [ ] **Native toolbar tabs don't navigate** — `switchToTab` shim is `"function"` but `callAsyncJavaScript` from BridgeHandler doesn't trigger React Router. In-page navigation works. See `memory/project_native_tab_routing_bug.md` for investigation prompt
 - [ ] **Native toolbar tab i18n not reactive** — changing language in Settings doesn't update toolbar labels until app restart. `I18n` `@StateObject` doesn't trigger segmented control re-render
+- [ ] **i18n: extract ~180 hardcoded frontend strings** — infrastructure is ready (single source of truth, Vite alias, i18next). Strings need to be moved from JSX literals to locale JSON keys. Tier 1 (~40 strings) is the critical path. See `docs/design-i18n.md` string audit
+- [ ] **i18n: pseudo-localisation QA** — add `i18next-pseudo` to catch hardcoded strings. See `docs/design-i18n.md`
+- [ ] **i18n: Weblate setup** — connect `hosted.weblate.org` to repo for community translation. Free Libre plan. See `docs/design-i18n.md`
+- [ ] **i18n: cross-check Spanish against Apple glossary** — verified 23 Mar 2026, all match. Do same for each new language before release
 
 ## Desktop app — future video player
 
@@ -486,6 +490,7 @@ See `docs/design-serve-doctor.md` for full design. Summary: 4 new doctor checks,
 
 ## Done (reverse chronological)
 
+- [x] **Unified i18n architecture** (Mar 2026) — single source of truth (`bristlenose/locales/`), desktop `I18n.swift`, bridge locale sync, startup flash prevention, Weblate plan, Apple glossary cross-check process. See `docs/design-i18n.md`
 - [x] **Help modal** (Mar 2026) — 3 phases: platform-aware shortcuts, typography tokens, entrance animation, custom tooltips with keyboard shortcut badges
 - [x] **Bulk actions on multi-selection** (Mar 2026) — star, hide, tag respect click + shift+click range selection
 - [x] **Sidebar push animation** (Mar 2026) — drag-open pushes content; keyboard shortcuts and click trigger push animation

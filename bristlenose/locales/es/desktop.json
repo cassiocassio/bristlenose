@@ -1,0 +1,130 @@
+{
+  "menu": {
+    "app": {
+      "about": "Acerca de Bristlenose",
+      "checkHealth": "Verificar estado del sistema…"
+    },
+    "file": {
+      "newProject": "Nuevo proyecto…",
+      "openInNewWindow": "Abrir en nueva ventana",
+      "exportReport": "Exportar informe…",
+      "exportAnonymised": "Exportar anonimizado…",
+      "pageSetup": "Configurar página…",
+      "print": "Imprimir…"
+    },
+    "edit": {
+      "undo": "Deshacer",
+      "redo": "Rehacer",
+      "find": "Buscar…",
+      "findNext": "Buscar siguiente",
+      "findPrevious": "Buscar anterior",
+      "useSelectionForFind": "Usar selección para buscar",
+      "jumpToSelection": "Ir a selección"
+    },
+    "view": {
+      "toggleSidebar": "Mostrar/ocultar barra lateral",
+      "toggleProjectSidebar": "Mostrar/ocultar barra de proyectos",
+      "toggleLeftPanel": "Mostrar/ocultar panel izquierdo",
+      "toggleNavigationPanel": "Mostrar/ocultar panel de navegación",
+      "toggleRightPanel": "Mostrar/ocultar panel derecho",
+      "toggleInspectorPanel": "Mostrar/ocultar panel de inspección",
+      "allQuotes": "Todas las citas",
+      "starredQuotesOnly": "Solo citas destacadas",
+      "filterByTag": "Filtrar por etiqueta…",
+      "zoomIn": "Ampliar",
+      "zoomOut": "Reducir",
+      "actualSize": "Tamaño real",
+      "switchToLightMode": "Cambiar a modo claro",
+      "switchToDarkMode": "Cambiar a modo oscuro"
+    },
+    "project": {
+      "showInFinder": "Mostrar en Finder",
+      "rename": "Renombrar…",
+      "reAnalyse": "Reanalizar…",
+      "archive": "Archivar…",
+      "delete": "Eliminar…"
+    },
+    "codes": {
+      "createCodeGroup": "Crear grupo de códigos",
+      "renameCodeGroup": "Renombrar grupo de códigos…",
+      "deleteCodeGroup": "Eliminar grupo de códigos",
+      "showHideCodeGroup": "Mostrar/ocultar grupo de códigos",
+      "createCode": "Crear código",
+      "renameCode": "Renombrar código…",
+      "deleteCode": "Eliminar código",
+      "mergeCodes": "Fusionar códigos…",
+      "browseCodebooks": "Explorar libros de códigos…",
+      "importFramework": "Importar framework…",
+      "removeFramework": "Eliminar framework"
+    },
+    "quotes": {
+      "star": "Destacar",
+      "hide": "Ocultar",
+      "addTag": "Añadir etiqueta…",
+      "applyLastTag": "Aplicar última etiqueta",
+      "revealInTranscript": "Mostrar en transcripción",
+      "playPause": "Reproducir/pausar",
+      "nextQuote": "Siguiente cita",
+      "previousQuote": "Cita anterior",
+      "extendSelectionDown": "Extender selección hacia abajo",
+      "extendSelectionUp": "Extender selección hacia arriba",
+      "toggleSelection": "Alternar selección",
+      "clearSelection": "Borrar selección",
+      "copyAsCSV": "Copiar como CSV"
+    },
+    "video": {
+      "play": "Reproducir",
+      "pause": "Pausar",
+      "skipForward5": "Avanzar 5 segundos",
+      "skipBack5": "Retroceder 5 segundos",
+      "skipForward30": "Avanzar 30 segundos",
+      "skipBack30": "Retroceder 30 segundos",
+      "speedUp": "Más rápido",
+      "slowDown": "Más lento",
+      "normalSpeed": "Velocidad normal",
+      "volumeUp": "Subir volumen",
+      "volumeDown": "Bajar volumen",
+      "mute": "Silenciar",
+      "pictureInPicture": "Imagen dentro de imagen",
+      "fullscreen": "Pantalla completa"
+    },
+    "help": {
+      "bristlenoseHelp": "Ayuda de Bristlenose",
+      "keyboardShortcuts": "Atajos de teclado",
+      "releaseNotes": "Notas de la versión",
+      "sendFeedback": "Enviar comentarios"
+    }
+  },
+  "chrome": {
+    "startingServer": "Iniciando servidor…",
+    "loadingReport": "Cargando informe…",
+    "noProjectSelected": "Ningún proyecto seleccionado",
+    "selectProject": "Selecciona un proyecto de la barra lateral.",
+    "serverError": "Error del servidor",
+    "retry": "Reintentar",
+    "projects": "Proyectos",
+    "reportContent": "Contenido del informe"
+  },
+  "toolbar": {
+    "back": "Atrás (⌘[)",
+    "forward": "Adelante (⌘])",
+    "tab": "Pestaña",
+    "sidebar": "Barra lateral",
+    "navigation": "Navegación",
+    "toggleNavigation": "Mostrar/ocultar panel de navegación",
+    "toggleSidebars": "Mostrar/ocultar barras laterales",
+    "tags": "Etiquetas",
+    "toggleTagSidebar": "Mostrar/ocultar barra de etiquetas (])",
+    "inspector": "Inspector",
+    "toggleInspectorPanel": "Mostrar/ocultar panel de inspección (m)",
+    "search": "Buscar",
+    "searchShortcut": "Buscar (⌘F)",
+    "export": "Exportar",
+    "exportShortcut": "Exportar (⌘⇧E)"
+  },
+  "settingsTabs": {
+    "appearance": "Apariencia",
+    "llm": "LLM",
+    "transcription": "Transcripción"
+  }
+}

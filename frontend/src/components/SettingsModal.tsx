@@ -18,6 +18,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { SUPPORTED_LOCALES, type Locale } from "../i18n";
 import { setLocale, useLocaleStore } from "../i18n/LocaleStore";
 import { ModalNav, type NavItem } from "./ModalNav";
+import { isEmbedded } from "../utils/embedded";
 
 // ── Types ─────────────────────────────────────────────────────────────────
 
@@ -316,23 +317,27 @@ function GeneralSection() {
         ))}
       </fieldset>
 
-      <fieldset className="bn-setting-group">
-        <legend>Language</legend>
-        <p className="bn-setting-description">
-          Controls the display language of the interface. Report content is not translated.
-        </p>
-        <select
-          className="bn-locale-select"
-          value={locale}
-          onChange={handleLocaleChange}
-        >
-          {SUPPORTED_LOCALES.map((loc) => (
-            <option key={loc} value={loc}>
-              {LOCALE_LABELS[loc]}
-            </option>
-          ))}
-        </select>
-      </fieldset>
+      {/* In embedded mode (macOS app), language is controlled by native
+          Settings (Cmd+,) — hide the web picker to avoid desync. */}
+      {!isEmbedded() && (
+        <fieldset className="bn-setting-group">
+          <legend>Language</legend>
+          <p className="bn-setting-description">
+            Controls the display language of the interface. Report content is not translated.
+          </p>
+          <select
+            className="bn-locale-select"
+            value={locale}
+            onChange={handleLocaleChange}
+          >
+            {SUPPORTED_LOCALES.map((loc) => (
+              <option key={loc} value={loc}>
+                {LOCALE_LABELS[loc]}
+              </option>
+            ))}
+          </select>
+        </fieldset>
+      )}
     </>
   );
 }

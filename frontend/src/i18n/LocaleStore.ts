@@ -32,6 +32,17 @@ export interface LocaleState {
 // ── Module-level store ───────────────────────────────────────────────────
 
 function detectLocale(): Locale {
+  // 0. URL query param — set by native macOS shell for synchronous detection.
+  // Prevents language flash on first render (native locale pushed before
+  // the React SPA mounts, without waiting for bridge "ready" message).
+  try {
+    const params = new URLSearchParams(window.location.search);
+    const urlLocale = params.get("locale");
+    if (urlLocale && isSupportedLocale(urlLocale)) return urlLocale;
+  } catch {
+    // URL parsing unavailable
+  }
+
   // 1. Explicit user choice in localStorage
   try {
     const raw = localStorage.getItem(LS_KEY);

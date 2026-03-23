@@ -1,6 +1,6 @@
 # Bristlenose — Where I Left Off
 
-Last updated: 22 Mar 2026
+Last updated: 23 Mar 2026
 
 ## Desktop app security (must-fix before any distribution)
 
@@ -255,7 +255,7 @@ Session management design doc: `docs/design-session-management.md`
 
 **Minor:**
 - [ ] **Segmented Picker label** — change from "Tab" to "Report section" for VoiceOver clarity
-- [ ] **Reduced motion guard** — `ContentView.swift:222` animation needs `@Environment(\.accessibilityReduceMotion)` check
+- [x] **Reduced motion guard** — `ContentView.swift:222` animation needs `@Environment(\.accessibilityReduceMotion)` check
 - [ ] **Verify `<h1>` in embedded mode** — Header is suppressed, confirm heading hierarchy still starts with `<h1>` in page content
 - [ ] **Bare-key vs VoiceOver Quick Nav** — document in Help modal that s/h/t/j/k are inactive when VoiceOver Quick Nav is on (correct behaviour, just needs documentation)
 - [ ] **Settings slider accessible values** — add contextual `accessibilityValue` to temperature slider ("0.1 — focused", "0.9 — creative")

@@ -187,12 +187,14 @@ private struct FindMenuContent: View {
         .keyboardShortcut("f", modifiers: .command)
 
         Button("Find Next") {
-            bridgeHandler.menuAction("findNext")
+            let text = NSPasteboard(name: .find).string(forType: .string) ?? ""
+            bridgeHandler.menuAction("findNext", payload: ["text": text])
         }
         .keyboardShortcut("g", modifiers: .command)
 
         Button("Find Previous") {
-            bridgeHandler.menuAction("findPrevious")
+            let text = NSPasteboard(name: .find).string(forType: .string) ?? ""
+            bridgeHandler.menuAction("findPrevious", payload: ["text": text])
         }
         .keyboardShortcut("g", modifiers: [.command, .shift])
 

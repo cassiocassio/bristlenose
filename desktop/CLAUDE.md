@@ -296,7 +296,7 @@ AppLayout.tsx (or useKeyboardShortcuts) → React store call / DOM action
 
 ### Action catalogue
 
-#### Already handled — AppLayout (22 actions)
+#### Already handled — AppLayout (27 actions)
 
 | Action | Handler |
 |--------|---------|
@@ -321,6 +321,11 @@ AppLayout.tsx (or useKeyboardShortcuts) → React store call / DOM action
 | `sendFeedback` | `setFeedbackOpen(true)` |
 | `zoomIn` / `zoomOut` / `actualSize` | CSS `font-size` scaling (±10%, persisted to localStorage) |
 | `toggleDarkMode` | Toggle `data-theme` attribute between light/dark |
+| `browseCodebooks` | Dispatch `bn:codebook-browse` → CodebookPanel opens picker |
+| `importFramework` | Dispatch `bn:codebook-browse` with `{ templateId }` payload → CodebookPanel opens preview |
+| `removeFramework` | Dispatch `bn:codebook-remove` with `{ frameworkId }` → CodebookPanel shows confirm dialog |
+| `createCodeGroup` | Dispatch `bn:codebook-create-group` → CodebookPanel creates group |
+| `createCode` | Dispatch `bn:codebook-create-code` → CodebookPanel creates tag in first researcher group |
 
 #### Already handled — useKeyboardShortcuts (12 actions)
 
@@ -372,17 +377,17 @@ These are either native-only (Finder, print) or depend on features not yet built
 | `checkSystemHealth` | Navigate to `/report/` and open doctor panel (or call `/api/health`) |
 | `pageSetup` / `print` | `NSPrintOperation` on WKWebView snapshot |
 
-#### Codebook operations — need CodebookPanel wiring (10)
+#### Codebook operations — need native focus context (5 stubs)
 
-These dispatch to the codebook UI (browse modal, group/code CRUD). Most need `CustomEvent` dispatch to `CodebookPanel`.
+These actions need to know WHICH group/code is targeted. Currently stubbed as console warnings in AppLayout.tsx. Wire when the native sidebar tracks focused codebook items.
 
-| Action | Target |
-|--------|--------|
-| `browseCodebooks` | Dispatch `bn:codebook-browse` CustomEvent |
-| `importFramework` | Dispatch `bn:codebook-browse` with pre-selected template |
-| `removeFramework` | Dispatch `bn:codebook-remove` (needs framework ID context) |
-| `createCodeGroup` / `renameCodeGroup` / `deleteCodeGroup` / `toggleCodeGroup` | Dispatch to codebook group CRUD |
-| `createCode` / `renameCode` / `deleteCode` / `mergeCode` | Dispatch to code CRUD |
+| Action | Blocked on |
+|--------|-----------|
+| `toggleCodeGroup` | No expand/collapse state in CodebookPanel — groups are always expanded |
+| `renameCodeGroup` | Native sidebar focus tracking (which group is selected) |
+| `deleteCodeGroup` | Native sidebar focus tracking |
+| `renameCode` | Native sidebar focus tracking (which code is selected) |
+| `deleteCode` | Native sidebar focus tracking |
 
 #### Edit operations — partially handled (2)
 
@@ -406,8 +411,8 @@ Actions that need **payloads** (the optional second argument to `menuAction`):
 |--------|--------------|---------|
 | `set-appearance` | `{ value: "dark" \| "light" \| "auto" }` | Already wired |
 | `exportAnonymised` | `{ anonymise: true }` | Proposed |
-| `importFramework` | `{ templateId: string }` | Proposed |
-| `removeFramework` | `{ frameworkId: string }` | Proposed — needs context from native sidebar |
+| `importFramework` | `{ templateId: string }` | Wired — pre-selects template in picker |
+| `removeFramework` | `{ frameworkId: string }` | Wired — opens confirm dialog in CodebookPanel |
 | `findNext` / `findPrevious` | `{ text: string }` | Wired — reads from `NSPasteboard.find` |
 
 **Rule:** if the frontend already knows the target (focused quote, active tab), don't pass it in the payload. Payloads are for data the native side has that the web side doesn't.
@@ -428,7 +433,7 @@ These control menu item dimming in Swift. Until wired, the Undo/Redo and Video m
 ### Recommended implementation order (remaining)
 
 1. ~~**New frontend handlers, no new infra**~~ — Done. All 14 Tier 2 actions wired in `AppLayout.tsx`
-2. **Codebook** — `browseCodebooks` + CRUD actions (dispatch CustomEvents to CodebookPanel)
+2. ~~**Codebook**~~ — Done. 5 actions fully wired (browse, import, remove, create group, create code). 5 stubbed pending native focus context (toggle/rename/delete group, rename/delete code)
 3. **Video** — requires PlayerContext bridge (popout window ↔ native state sync)
 4. **Project operations** — requires project list feature
 5. **Undo/Redo** — requires undo store design

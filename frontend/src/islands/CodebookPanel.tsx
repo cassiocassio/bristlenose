@@ -846,6 +846,45 @@ export function CodebookPanel({ projectId }: CodebookPanelProps) {
       .catch((err) => console.error("Remove framework failed:", err));
   }, [removeConfirm]);
 
+  // --- Menu-bar dispatched listeners ---
+
+  // Listen for menu-bar "remove framework" requests (dispatched by AppLayout).
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      const frameworkId = detail?.frameworkId as string | undefined;
+      if (!frameworkId || !data) return;
+      const tmpl = templates?.find((t) => t.id === frameworkId);
+      const label = tmpl?.title ?? frameworkId;
+      handleAskRemoveFramework(frameworkId, label);
+    };
+    window.addEventListener("bn:codebook-remove", handler);
+    return () => window.removeEventListener("bn:codebook-remove", handler);
+  }, [data, templates, handleAskRemoveFramework]);
+
+  // Listen for menu-bar "create group" requests (dispatched by AppLayout).
+  useEffect(() => {
+    const handler = () => handleCreateGroup();
+    window.addEventListener("bn:codebook-create-group", handler);
+    return () => window.removeEventListener("bn:codebook-create-group", handler);
+  }, [handleCreateGroup]);
+
+  // Listen for menu-bar "create code" requests (dispatched by AppLayout).
+  // Adds a new tag to the first researcher (non-framework) group.
+  useEffect(() => {
+    const handler = () => {
+      if (!data) return;
+      const researcherGroup = data.groups
+        .filter((g) => g.framework_id == null)
+        .sort((a, b) => (a.is_default === b.is_default ? a.order - b.order : a.is_default ? -1 : 1))[0];
+      if (researcherGroup) {
+        handleCreateTag("New code", researcherGroup.id);
+      }
+    };
+    window.addEventListener("bn:codebook-create-code", handler);
+    return () => window.removeEventListener("bn:codebook-create-code", handler);
+  }, [data, handleCreateTag]);
+
   // --- Render ---
 
   if (error) {

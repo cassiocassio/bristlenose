@@ -197,6 +197,8 @@ struct ContentView: View {
                 .tag(project)
         }
         .navigationTitle("Projects")
+        .accessibilityLabel("Project list")
+        .focusSection()
     }
 
     // MARK: - Detail

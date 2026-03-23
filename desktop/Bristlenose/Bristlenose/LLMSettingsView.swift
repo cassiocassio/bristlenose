@@ -156,6 +156,7 @@ struct LLMSettingsView: View {
 
     @State private var apiKeyInputs: [LLMProvider: String] = [:]
     @State private var apiKeyRevealed: [LLMProvider: Bool] = [:]
+    @FocusState private var apiKeyFocused: Bool
 
     private var apiKeySection: some View {
         Section("API Key") {
@@ -164,9 +165,11 @@ struct LLMSettingsView: View {
                 if revealed {
                     TextField("API Key", text: apiKeyBinding)
                         .textFieldStyle(.roundedBorder)
+                        .focused($apiKeyFocused)
                 } else {
                     SecureField("API Key", text: apiKeyBinding)
                         .textFieldStyle(.roundedBorder)
+                        .focused($apiKeyFocused)
                 }
 
                 Button {
@@ -188,6 +191,9 @@ struct LLMSettingsView: View {
             .onAppear { loadAPIKey() }
             .onChange(of: selectedProvider) { _, _ in loadAPIKey() }
             .onSubmit { saveAPIKey() }
+            .onChange(of: apiKeyFocused) { _, focused in
+                if !focused { saveAPIKey() }
+            }
         }
     }
 
@@ -227,14 +233,23 @@ struct LLMSettingsView: View {
     // MARK: - Ollama section
 
     @AppStorage("localURL") private var ollamaURL: String = "http://localhost:11434/v1"
+    @FocusState private var ollamaURLFocused: Bool
 
     private var ollamaSection: some View {
         Section("Server URL") {
             TextField("URL", text: $ollamaURL)
                 .textFieldStyle(.roundedBorder)
+                .focused($ollamaURLFocused)
                 .onSubmit {
                     refreshStatuses()
                     NotificationCenter.default.post(name: .bristlenosePrefsChanged, object: nil)
+                }
+                .onChange(of: ollamaURLFocused) { _, focused in
+                    if !focused {
+                        refreshStatuses()
+                        NotificationCenter.default.post(
+                            name: .bristlenosePrefsChanged, object: nil)
+                    }
                 }
         }
     }
@@ -244,6 +259,7 @@ struct LLMSettingsView: View {
     @AppStorage("llmModel") private var globalModel: String = "claude-sonnet-4-20250514"
     @State private var useCustomModel: Bool = false
     @State private var customModelText: String = ""
+    @FocusState private var customModelFocused: Bool
 
     private var modelSection: some View {
         let models = selectedProvider.availableModels
@@ -262,8 +278,14 @@ struct LLMSettingsView: View {
             if !isKnown || useCustomModel {
                 TextField("Custom model name", text: $customModelText)
                     .textFieldStyle(.roundedBorder)
+                    .focused($customModelFocused)
                     .onSubmit {
                         setModel(customModelText)
+                    }
+                    .onChange(of: customModelFocused) { _, focused in
+                        if !focused, !customModelText.isEmpty {
+                            setModel(customModelText)
+                        }
                     }
             }
         }

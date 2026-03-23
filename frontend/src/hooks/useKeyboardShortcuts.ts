@@ -479,8 +479,63 @@ export function useKeyboardShortcuts({
       setFocus(null);
     };
 
+    // ── Menu action handler (native menu bar → bridge) ────────────────
+    const handleMenuAction = (e: Event) => {
+      const { action } = (e as CustomEvent).detail;
+      switch (action) {
+        case "star":
+          handleStar();
+          break;
+        case "hide":
+          handleHide();
+          break;
+        case "addTag":
+          handleTagOpen();
+          break;
+        case "applyLastTag":
+          handleQuickApply();
+          break;
+        case "playPause":
+          handlePlay();
+          break;
+        case "nextQuote":
+          moveFocus(1);
+          break;
+        case "previousQuote":
+          moveFocus(-1);
+          break;
+        case "extendSelectionDown":
+          handleShiftMove(1);
+          break;
+        case "extendSelectionUp":
+          handleShiftMove(-1);
+          break;
+        case "toggleSelection":
+          if (focusedIdRef.current) {
+            toggleSelection(focusedIdRef.current);
+            if (!anchorIdRef.current) setAnchor(focusedIdRef.current);
+          }
+          break;
+        case "clearSelection":
+          clearSelection();
+          break;
+        case "revealInTranscript": {
+          const fid = focusedIdRef.current;
+          if (!fid) break;
+          const bq = document.getElementById(fid);
+          const pid = bq?.getAttribute("data-participant");
+          const anchor = bq?.getAttribute("data-anchor");
+          if (pid && anchor) {
+            navigate(`/report/sessions/${pid}#${anchor}`);
+          }
+          break;
+        }
+      }
+    };
+
     document.addEventListener("keydown", handleKeydown);
     document.addEventListener("click", handleBackgroundClick);
+    window.addEventListener("bn:menu-action", handleMenuAction);
 
     // Track editing state transitions for the native bridge.
     // focusin/focusout bubble (unlike focus/blur), so a single document
@@ -507,6 +562,7 @@ export function useKeyboardShortcuts({
     return () => {
       document.removeEventListener("keydown", handleKeydown);
       document.removeEventListener("click", handleBackgroundClick);
+      window.removeEventListener("bn:menu-action", handleMenuAction);
       if (embedded) {
         document.removeEventListener("focusin", handleFocusChange);
         document.removeEventListener("focusout", handleFocusChange);

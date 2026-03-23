@@ -38,6 +38,7 @@ From security review of desktop app plan (22 Mar 2026). All findings are in the 
   - **Health**: API version from `/api/health`
   - Render as a small semi-transparent panel (like the PlaygroundHUD) or a tab in the existing dev playground. Toggle with a keyboard shortcut (e.g. `Ctrl+I`). Data sourced from: git CLI at serve startup (injected as `window.__BRISTLENOSE_BUILD__`), `/api/health`, `/api/dev/info`, CSS `@import` inspection, `document.documentElement.className`
 - [ ] **Design doc: themes vs colour schemes** — establish nomenclature and architecture for two orthogonal axes. **Theme** = structure (font family, sizes, spacing, button/icon styles): "web" (Inter, web metrics) vs "macOS" (SF Pro, system metrics). **Colour scheme** = palette that fills the token slots: light, dark, Edo (warm/muted?). One theme can have multiple schemes. Current `tokens.css` already has the slot structure (`--bn-colour-*`); `light-dark()` handles light/dark. Need: naming convention, file organisation, how schemes are selected (CSS class? data attribute?), how themes fork structural tokens, and where Edo sits in this. Write `docs/design-themes-and-schemes.md` before coding
+- [ ] **Investigate dark-mode inactive selection token** — `--bn-selection-bg-inactive` dark value (`#262626`) may be too close to page bg (`#111111`), making inactive selections nearly invisible. macOS `unemphasizedSelectedContentBackgroundColor` is closer to `#3a3d41`. Address as part of colour scheme work above
 - [ ] edo fish
 
 ## Essential simplicity and clarity (layout quality)
@@ -251,12 +252,12 @@ Session management design doc: `docs/design-session-management.md`
 **Critical:**
 - [ ] **VoiceOver label on WKWebView** — add `.accessibilityLabel("Report content")` and `.focusSection()` to both sidebar List and WebView container
 - [ ] **Focus management on project switch** — call `webView.becomeFirstResponder()` on `"ready"` bridge message. Currently focus lands in undefined location after WKWebView recreation
-- [ ] **Focus management on tab switch (Cmd+1-5)** — after React Router navigation, focus the first meaningful heading. Add `aria-live="polite"` region in AppLayout announcing "Navigated to [tab name]"
+- [ ] **Focus management on tab switch (Cmd+1-5)** — after React Router navigation, focus the first meaningful heading. ~~Add `aria-live="polite"` region in AppLayout announcing "Navigated to [tab name]"~~ (announcement done, focus management still needed)
 
 **Major:**
 - [ ] **Loading overlay traps VoiceOver** — screen reader sees both spinner and half-loaded content. Add `.accessibilityHidden(!bridgeHandler.isReady)` on WebView during loading
-- [ ] **NavBar `role="tab"` is semantically wrong** — these are navigation links, not ARIA tabs. Remove `role="tablist"`/`role="tab"`, rely on `aria-current="page"` from React Router NavLink. Native toolbar correctly uses tab semantics
-- [ ] **No `aria-live` regions in React SPA** — star/hide/tag actions, search result counts, tab navigation all invisible to screen readers. Add single announcement region to AppLayout
+- [x] **NavBar `role="tab"` is semantically wrong** — these are navigation links, not ARIA tabs. Remove `role="tablist"`/`role="tab"`, rely on `aria-current="page"` from React Router NavLink. Native toolbar correctly uses tab semantics
+- [x] **`aria-live` announcement region in React SPA** — `AnnounceRegion` in AppLayout, `announce()` utility, wired to star/hide/tag actions and tab navigation
 - [ ] **Modal focus trapping missing** — Help, Export, Settings, Feedback modals have no focus trap. Use `inert` attribute on background content or `<dialog>` element
 - [ ] **Edit mode entry/exit not announced** — contenteditable activation has no screen reader announcement. Add `aria-live` for "Editing" / "Saved" / "Cancelled"
 - [ ] **Drag handles need ARIA** — add `role="separator"` with `aria-orientation="vertical"` and `aria-valuenow`/`valuemin`/`valuemax` to sidebar resize handles

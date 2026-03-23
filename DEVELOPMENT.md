@@ -35,21 +35,11 @@ Done. You can now run the pipeline or the dev server.
 # Serve mode (React SPA + API — the active development experience)
 .venv/bin/bristlenose serve path/to/interviews/ --dev
 
-# Combined dev server (Vite HMR + FastAPI in one terminal)
-./scripts/dev.sh path/to/interviews/
+# Dev server (FastAPI + Vite HMR in one command)
+.venv/bin/bristlenose serve path/to/interviews/ --dev
 ```
 
-`scripts/dev.sh` starts Vite on `:5173` (proxying to FastAPI on `:8150`) and FastAPI with `--dev`. Ctrl-C kills both.
-
-For serve mode without `scripts/dev.sh`, run two terminals:
-
-```bash
-# Terminal 1: Vite dev server
-cd frontend && npm run dev
-
-# Terminal 2: FastAPI
-.venv/bin/bristlenose serve path/to/interviews/ --dev --no-open
-```
+`--dev` starts FastAPI on `:8150` with auto-reload AND spawns Vite on `:5173` for React HMR. Theme CSS is served live from source files (no render step needed). Ctrl-C kills both.
 
 ## Testing
 

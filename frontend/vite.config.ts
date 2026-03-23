@@ -5,6 +5,11 @@ import path from "path";
 
 export default defineConfig({
   plugins: [react()],
+  resolve: {
+    alias: {
+      "@locales": path.resolve(__dirname, "../bristlenose/locales"),
+    },
+  },
   test: {
     environment: "jsdom",
     globals: true,

@@ -1,0 +1,130 @@
+{
+  "menu": {
+    "app": {
+      "about": "About Bristlenose",
+      "checkHealth": "Check System Health…"
+    },
+    "file": {
+      "newProject": "New Project…",
+      "openInNewWindow": "Open in New Window",
+      "exportReport": "Export Report…",
+      "exportAnonymised": "Export Anonymised…",
+      "pageSetup": "Page Setup…",
+      "print": "Print…"
+    },
+    "edit": {
+      "undo": "Undo",
+      "redo": "Redo",
+      "find": "Find…",
+      "findNext": "Find Next",
+      "findPrevious": "Find Previous",
+      "useSelectionForFind": "Use Selection for Find",
+      "jumpToSelection": "Jump to Selection"
+    },
+    "view": {
+      "toggleSidebar": "Toggle Sidebar",
+      "toggleProjectSidebar": "Toggle Project Sidebar",
+      "toggleLeftPanel": "Toggle Left Panel",
+      "toggleNavigationPanel": "Toggle Navigation Panel",
+      "toggleRightPanel": "Toggle Right Panel",
+      "toggleInspectorPanel": "Toggle Inspector Panel",
+      "allQuotes": "All Quotes",
+      "starredQuotesOnly": "Starred Quotes Only",
+      "filterByTag": "Filter by Tag…",
+      "zoomIn": "Zoom In",
+      "zoomOut": "Zoom Out",
+      "actualSize": "Actual Size",
+      "switchToLightMode": "Switch to Light Mode",
+      "switchToDarkMode": "Switch to Dark Mode"
+    },
+    "project": {
+      "showInFinder": "Show in Finder",
+      "rename": "Rename…",
+      "reAnalyse": "Re-analyse…",
+      "archive": "Archive…",
+      "delete": "Delete…"
+    },
+    "codes": {
+      "createCodeGroup": "Create Code Group",
+      "renameCodeGroup": "Rename Code Group…",
+      "deleteCodeGroup": "Delete Code Group",
+      "showHideCodeGroup": "Show/Hide Code Group",
+      "createCode": "Create Code",
+      "renameCode": "Rename Code…",
+      "deleteCode": "Delete Code",
+      "mergeCodes": "Merge Codes…",
+      "browseCodebooks": "Browse Codebooks…",
+      "importFramework": "Import Framework…",
+      "removeFramework": "Remove Framework"
+    },
+    "quotes": {
+      "star": "Star",
+      "hide": "Hide",
+      "addTag": "Add Tag…",
+      "applyLastTag": "Apply Last Tag",
+      "revealInTranscript": "Reveal in Transcript",
+      "playPause": "Play/Pause",
+      "nextQuote": "Next Quote",
+      "previousQuote": "Previous Quote",
+      "extendSelectionDown": "Extend Selection Down",
+      "extendSelectionUp": "Extend Selection Up",
+      "toggleSelection": "Toggle Selection",
+      "clearSelection": "Clear Selection",
+      "copyAsCSV": "Copy as CSV"
+    },
+    "video": {
+      "play": "Play",
+      "pause": "Pause",
+      "skipForward5": "Skip Forward 5 Seconds",
+      "skipBack5": "Skip Back 5 Seconds",
+      "skipForward30": "Skip Forward 30 Seconds",
+      "skipBack30": "Skip Back 30 Seconds",
+      "speedUp": "Speed Up",
+      "slowDown": "Slow Down",
+      "normalSpeed": "Normal Speed",
+      "volumeUp": "Volume Up",
+      "volumeDown": "Volume Down",
+      "mute": "Mute",
+      "pictureInPicture": "Picture in Picture",
+      "fullscreen": "Fullscreen"
+    },
+    "help": {
+      "bristlenoseHelp": "Bristlenose Help",
+      "keyboardShortcuts": "Keyboard Shortcuts",
+      "releaseNotes": "Release Notes",
+      "sendFeedback": "Send Feedback"
+    }
+  },
+  "chrome": {
+    "startingServer": "Starting server…",
+    "loadingReport": "Loading report…",
+    "noProjectSelected": "No Project Selected",
+    "selectProject": "Select a project from the sidebar.",
+    "serverError": "Server Error",
+    "retry": "Retry",
+    "projects": "Projects",
+    "reportContent": "Report content"
+  },
+  "toolbar": {
+    "back": "Back (⌘[)",
+    "forward": "Forward (⌘])",
+    "tab": "Tab",
+    "sidebar": "Sidebar",
+    "navigation": "Navigation",
+    "toggleNavigation": "Toggle Navigation Panel",
+    "toggleSidebars": "Toggle sidebars",
+    "tags": "Tags",
+    "toggleTagSidebar": "Toggle Tag Sidebar (])",
+    "inspector": "Inspector",
+    "toggleInspectorPanel": "Toggle Inspector Panel (m)",
+    "search": "Search",
+    "searchShortcut": "Search (⌘F)",
+    "export": "Export",
+    "exportShortcut": "Export (⌘⇧E)"
+  },
+  "settingsTabs": {
+    "appearance": "Appearance",
+    "llm": "LLM",
+    "transcription": "Transcription"
+  }
+}

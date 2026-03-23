@@ -95,6 +95,14 @@ macOS ships BSD versions of `sed`, `grep`, `awk`, `find`, `xargs`, `date`, `stat
 
 **Rule: when writing shell commands that use regex or platform-specific flags, prefer `gsed`/`ggrep`/`gawk`/`greadlink` (all from `brew install coreutils gnu-sed gawk findutils grep`), or use Python/Perl for portability.** The `g`-prefixed GNU tools are always available on this machine.
 
+### i18n — single source of truth
+
+- **Locale files live in `bristlenose/locales/` only** — `frontend/src/locales/` was deleted. The frontend imports from the canonical location via Vite alias `@locales`. Don't create locale files in the frontend tree
+- **`I18n.swift` reads the same JSON** — the desktop app's `I18n` class loads from `bristlenose/locales/` at runtime. Dotted key lookup: `i18n.t("desktop.menu.file.print")`. Falls back English → raw key
+- **SwiftUI `CommandMenu` titles can't use runtime strings** — `CommandMenu("Project")` uses `LocalizedStringKey` (`.lproj` bundles). Menu titles stay in English; only items inside are translated. See `docs/design-i18n.md`
+- **Toolbar `_short` keys** — `common.nav.codebookShort` exists for languages where the full label overflows the segmented control (es: "Códigos" instead of "Libro de códigos"). `Tab.localizedLabel()` checks `_short` first
+- **Apple glossary cross-check is mandatory** before shipping a new language — use [applelocalization.com](https://applelocalization.com/) or the macOS keyboard shortcuts page in the target locale. See `docs/design-i18n.md` for the full process and the Spanish cross-check results
+
 ### Other gotchas
 
 - **Tests must not depend on local environment** — CI runs with no API keys, no Ollama, no local config. Always mock environment-dependent functions. The v0.6.7–v0.6.13 release failures were caused by tests that passed locally but failed in CI

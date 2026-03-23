@@ -6,6 +6,7 @@ import SwiftUI
 /// Each tab sets its own frame — the Settings scene resizes automatically.
 struct SettingsView: View {
 
+    @EnvironmentObject var i18n: I18n
     @AppStorage("appearance") private var appearance: String = "auto"
 
     private var colorScheme: ColorScheme? {
@@ -19,13 +20,14 @@ struct SettingsView: View {
     var body: some View {
         TabView {
             AppearanceSettingsView()
-                .tabItem { Label("Appearance", systemImage: "paintbrush") }
+                .environmentObject(i18n)
+                .tabItem { Label(i18n.t("desktop.settingsTabs.appearance"), systemImage: "paintbrush") }
 
             LLMSettingsView()
-                .tabItem { Label("LLM", systemImage: "brain") }
+                .tabItem { Label(i18n.t("desktop.settingsTabs.llm"), systemImage: "brain") }
 
             TranscriptionSettingsView()
-                .tabItem { Label("Transcription", systemImage: "waveform") }
+                .tabItem { Label(i18n.t("desktop.settingsTabs.transcription"), systemImage: "waveform") }
         }
         .preferredColorScheme(colorScheme)
     }

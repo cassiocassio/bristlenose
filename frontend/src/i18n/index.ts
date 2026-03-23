@@ -11,9 +11,9 @@ import i18n from "i18next";
 import { initReactI18next } from "react-i18next";
 import LanguageDetector from "i18next-browser-languagedetector";
 
-import enCommon from "../locales/en/common.json";
-import enSettings from "../locales/en/settings.json";
-import enEnums from "../locales/en/enums.json";
+import enCommon from "@locales/en/common.json";
+import enSettings from "@locales/en/settings.json";
+import enEnums from "@locales/en/enums.json";
 
 export const SUPPORTED_LOCALES = ["en", "es", "ja", "fr", "de", "ko"] as const;
 export type Locale = (typeof SUPPORTED_LOCALES)[number];
@@ -34,7 +34,7 @@ async function loadLocaleResources(
   const resources: Record<string, Record<string, unknown>> = {};
   for (const ns of NAMESPACES) {
     try {
-      const mod = await import(`../locales/${locale}/${ns}.json`);
+      const mod = await import(`../../../bristlenose/locales/${locale}/${ns}.json`);
       resources[ns] = mod.default ?? mod;
     } catch {
       // Missing file — English fallback will be used for this namespace.

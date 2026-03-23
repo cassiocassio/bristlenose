@@ -24,7 +24,7 @@ struct ContentView: View {
     @EnvironmentObject var bridgeHandler: BridgeHandler
     @AppStorage("appearance") private var appearance: String = "auto"
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @SceneStorage("selectedProjectPath") private var selectedProjectPath: String = ""
+    @AppStorage("selectedProjectPath") private var selectedProjectPath: String = ""
     @State private var selectedProject: ProjectStub?
 
     /// Map the stored appearance string to SwiftUI's ColorScheme.

@@ -45,6 +45,11 @@ struct WebView: NSViewRepresentable {
         webView.navigationDelegate = context.coordinator
         context.coordinator.webView = webView
 
+        // Enable Web Inspector (right-click → Inspect Element) for debugging.
+        #if DEBUG
+        webView.isInspectable = true
+        #endif
+
         // Give BridgeHandler a reference for outbound calls (goBack, switchToTab).
         bridgeHandler.webView = webView
 

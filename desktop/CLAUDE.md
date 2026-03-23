@@ -255,6 +255,8 @@ The `#if DEBUG` guard on the dev port override means release builds never see it
 
 ## Gotchas
 
+- **`window.blur`/`window.focus` don't fire in WKWebView** — the web view's `window` is always considered focused from the web content's perspective. macOS window activation must be pushed from the native side via `NSWindow.didBecomeKeyNotification`/`didResignKeyNotification` → `BridgeHandler.setWindowActive()`. The browser `blur`/`focus` listener in `AppLayout.tsx` only works in browser-based serve mode
+- **Safari Web Inspector for WKWebView debugging** — enable `webView.isInspectable = true` (already set in `#if DEBUG`). Open Safari → Develop → Bristlenose → pick the localhost page. The inspector opens in a Safari window, so the Bristlenose app window stays inactive — perfect for debugging inactive-window behaviour
 - **Xcode stale indexer** — sometimes shows "no member" errors that `xcodebuild` doesn't. Fix: `Cmd+Shift+K` (Clean Build Folder) then `Cmd+R`
 - **Zombie serve processes** — if the app crashes without calling `stop()`, the Python serve process keeps running on the port. Check with `lsof -i :8150-9150 -P -n | grep LISTEN`. Next app launch cleans these up automatically (startup zombie cleanup in ServeManager.init)
 - **`Report:` readiness signal** — `bristlenose serve` prints this BEFORE Uvicorn accepts connections. The port-polling step in ServeManager handles the race

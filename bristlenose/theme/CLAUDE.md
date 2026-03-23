@@ -45,6 +45,14 @@ Reference values in `tokens.css` — CSS `@media` can't use `var()`, so these do
 | `--bn-breakpoint-toolbar` | 600px | Toolbar collapse (planned) |
 | `--bn-breakpoint-content` | 1100px | Transcript annotation margin layout |
 
+## Inactive window dimming (macOS)
+
+When the macOS app window loses focus, `.bn-window-inactive` is added to `<html>`. CSS rules in `atoms/interactive.css` dim the *chrome* (selections → grey, focus shadow → none) while keeping *content* at full contrast. This matches the macOS convention: "recede the affordances, preserve the data."
+
+- **Tokens**: `--bn-selection-bg-inactive`, `--bn-selection-border-inactive` in `tokens.css`
+- **Trigger**: Swift bridge (`BridgeHandler.setWindowActive`) on `NSWindow.didBecomeKeyNotification`/`didResignKeyNotification`. Browser fallback: `window.blur`/`window.focus` in `AppLayout.tsx`
+- **Design rule**: never dim body text, images, tags, or data. Only dim interactive state indicators (selection highlight, focus shadow)
+
 ## Dark mode
 
 Uses CSS `light-dark()` function (supported in all major browsers since mid-2024, ~87%+ global). No JS involved. The cascade:

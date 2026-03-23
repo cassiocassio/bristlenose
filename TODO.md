@@ -250,16 +250,16 @@ Session management design doc: `docs/design-session-management.md`
 ### Desktop app — Accessibility review findings (22 Mar 2026)
 
 **Critical:**
-- [ ] **VoiceOver label on WKWebView** — add `.accessibilityLabel("Report content")` and `.focusSection()` to both sidebar List and WebView container
+- [x] **VoiceOver label on WKWebView** — add `.accessibilityLabel("Report content")` and `.focusSection()` to both sidebar List and WebView container
 - [ ] **Focus management on project switch** — call `webView.becomeFirstResponder()` on `"ready"` bridge message. Currently focus lands in undefined location after WKWebView recreation
 - [ ] **Focus management on tab switch (Cmd+1-5)** — after React Router navigation, focus the first meaningful heading. ~~Add `aria-live="polite"` region in AppLayout announcing "Navigated to [tab name]"~~ (announcement done, focus management still needed)
 
 **Major:**
-- [ ] **Loading overlay traps VoiceOver** — screen reader sees both spinner and half-loaded content. Add `.accessibilityHidden(!bridgeHandler.isReady)` on WebView during loading
+- [x] **Loading overlay traps VoiceOver** — screen reader sees both spinner and half-loaded content. Add `.accessibilityHidden(!bridgeHandler.isReady)` on WebView during loading
 - [x] **NavBar `role="tab"` is semantically wrong** — these are navigation links, not ARIA tabs. Remove `role="tablist"`/`role="tab"`, rely on `aria-current="page"` from React Router NavLink. Native toolbar correctly uses tab semantics
 - [x] **`aria-live` announcement region in React SPA** — `AnnounceRegion` in AppLayout, `announce()` utility, wired to star/hide/tag actions and tab navigation
-- [ ] **Modal focus trapping missing** — Help, Export, Settings, Feedback modals have no focus trap. Use `inert` attribute on background content or `<dialog>` element
-- [ ] **Edit mode entry/exit not announced** — contenteditable activation has no screen reader announcement. Add `aria-live` for "Editing" / "Saved" / "Cancelled"
+- [x] **Modal focus trapping** — `useInert` hook sets `inert` on `#bn-app-root` while any portal modal is open (ref-counted). Added to ModalNav, ExportDialog, FeedbackModal, ThresholdReviewModal, AutoCodeReportModal
+- [x] **Edit mode entry/exit announced** — EditableText announces "Editing" / "Saved" / "Cancelled" via aria-live, plus `role="textbox"` and `aria-label="Edit text"` when editing
 - [ ] **Drag handles need ARIA** — add `role="separator"` with `aria-orientation="vertical"` and `aria-valuenow`/`valuemin`/`valuemax` to sidebar resize handles
 - [ ] **Dynamic Type scaling curve** — define native→web font-size mapping now (system `preferredContentSizeCategory` → CSS `font-size` on `<html>`). Observe changes via `NSApp` and re-inject
 

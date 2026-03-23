@@ -233,6 +233,26 @@ The Xcode project uses `PBXFileSystemSynchronizedRootGroup` — Swift files adde
 cd frontend && npm run build
 ```
 
+## Dev workflow: testing CSS/React inside the native app
+
+Two modes controlled by an Xcode scheme environment variable:
+
+**Mode 1: `BRISTLENOSE_DEV_PORT=8150` (checked)** — for CSS/React iteration
+- Start `bristlenose serve --dev trial-runs/project-ikea` in a terminal
+- Cmd+R in Xcode — app connects to the external dev server (no subprocess)
+- CSS changes: edit `bristlenose/theme/*.css` → refresh in app → instant (live CSS endpoint re-reads from source on every request)
+- React changes: Vite HMR pushes automatically
+- Swift changes: Cmd+R rebuilds app, reconnects to same server
+
+**Mode 2: `BRISTLENOSE_DEV_PORT` unchecked** — for testing the "friend with a .dmg" flow
+- Cmd+R in Xcode — app spawns its own `bristlenose serve` subprocess
+- Tests the full ServeManager lifecycle: binary discovery, process launch, readiness detection, port allocation, graceful shutdown
+- Binary search order: main repo venv → worktree venv → Homebrew → pipx
+
+The `#if DEBUG` guard on the dev port override means release builds never see it — a .dmg user gets the production code path.
+
+**Where to set it:** Xcode → Product → Scheme → Edit Scheme → Run → Arguments → Environment Variables → `BRISTLENOSE_DEV_PORT` = `8150`
+
 ## Gotchas
 
 - **Xcode stale indexer** — sometimes shows "no member" errors that `xcodebuild` doesn't. Fix: `Cmd+Shift+K` (Clean Build Folder) then `Cmd+R`

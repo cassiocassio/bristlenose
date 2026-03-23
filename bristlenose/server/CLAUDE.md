@@ -191,7 +191,9 @@ Toggle with the palette button in the top-right corner. When adding a new React 
 
 **Vanilla JS is stripped in serve mode (Step 8).** `_strip_vanilla_js()` in `app.py` uses the `_JS_MARKER` boundary to remove all concatenated module code from the IIFE, keeping only `window.*` globals (`BRISTLENOSE_VIDEO_MAP`, `BRISTLENOSE_PLAYER_URL`, `BRISTLENOSE_ANALYSIS`) that React reads.  This runs in both dev and prod paths via `_transform_report_html()`.  The `_JS_FILES` list in `render/theme_assets.py` stays for `bristlenose render` (offline HTML).
 
-**What still requires re-render:** changes to the Jinja2 HTML template itself, changes to CSS files, changes to data variables (quote map, analysis data).
+**CSS changes are live in dev mode.** `_mount_dev_report()` registers a `/report/assets/bristlenose-theme.css` route that calls `_load_default_css()` on every request — no caching, no render step. Edit `bristlenose/theme/*.css` and refresh. This route is defined before the catch-all, so it takes priority over `FileResponse(output_dir / path)`.
+
+**What still requires re-render:** changes to the Jinja2 HTML template itself, changes to data variables (quote map, analysis data). CSS no longer requires re-render in dev mode.
 
 **Python changes** are handled by uvicorn's `--reload` (WatchFiles) — editing `data.py`, `app.py`, etc. triggers an automatic server restart.
 

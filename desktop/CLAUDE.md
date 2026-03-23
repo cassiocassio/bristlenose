@@ -262,45 +262,49 @@ bridge.ts                             → window.dispatchEvent(CustomEvent("bn:m
 AppLayout.tsx (or useKeyboardShortcuts) → React store call / DOM action
 ```
 
-**Swift side is complete** — all ~65 menu actions call `bridgeHandler.menuAction(...)`. The gap is in the frontend: `AppLayout.tsx` only handles 3 actions today.
+**Swift side is complete** — all ~65 menu actions call `bridgeHandler.menuAction(...)`. Two frontend listeners handle them:
+- **`AppLayout.tsx`** — panel toggles, find actions, and modal/export actions (things that need AppLayout state)
+- **`useKeyboardShortcuts.ts`** — quote/player actions (things that need FocusContext/QuotesContext closures)
 
 ### Adding a new handler
 
 1. **No Swift changes needed** — the menu item already dispatches via `bridgeHandler.menuAction("actionName")`
-2. **Add a case** to the `switch (action)` in `AppLayout.tsx`'s `bn:menu-action` event listener (~line 172)
-3. **Delegate to existing logic** — most actions already have implementations in `useKeyboardShortcuts.ts` or React stores. Extract the handler to a shared function if needed
+2. **Choose the right listener** — if the handler needs FocusContext/QuotesContext/PlayerContext, add it to `useKeyboardShortcuts.ts`'s `handleMenuAction` switch. Otherwise add it to `AppLayout.tsx`'s `bn:menu-action` handler
+3. **Delegate to existing logic** — most actions already have implementations in `useKeyboardShortcuts.ts` or React stores
 
 ### Action catalogue
 
-#### Already handled in AppLayout (3)
+#### Already handled — AppLayout (8 actions)
 
 | Action | Handler |
 |--------|---------|
 | `toggleLeftPanel` | `sidebarAnimations.toggleToc()` |
 | `toggleRightPanel` | `sidebarAnimations.toggleTags()` |
 | `toggleInspectorPanel` | `toggleInspector()` |
+| `find` | Focus search input (expand + focus + select) |
+| `useSelectionForFind` | Selection → search query + find pasteboard write |
+| `findNext` | Find pasteboard text (from payload) → search query |
+| `findPrevious` | Find pasteboard text (from payload) → search query |
+| `jumpToSelection` | No-op (WKWebView native) |
 
-#### Have keyboard equivalents — reuse existing logic (13)
+#### Already handled — useKeyboardShortcuts (12 actions)
 
-These actions duplicate keyboard shortcuts in `useKeyboardShortcuts.ts`. The handler logic exists but is currently only reachable via keydown, not via `bn:menu-action`.
+These are in the `handleMenuAction` switch inside `useKeyboardShortcuts.ts`, sharing closures with the keyboard handlers.
 
-| Action | Keyboard | Existing handler |
-|--------|----------|-----------------|
-| `find` | `/` | `focusSearchInput()` |
-| `star` | `s` | `handleStar()` — bulk-aware (uses focused/selected) |
-| `hide` | `h` | `handleHide()` — bulk-aware, moves focus after |
-| `addTag` | `t` | `handleTagOpen()` — opens TagInput on focused quote |
-| `applyLastTag` | `r` | `handleQuickApply()` — quick-apply last-used tag |
-| `playPause` | `Enter` | `handlePlay()` — seekTo via PlayerContext |
-| `nextQuote` | `j` / `↓` | `moveFocus(1)` |
-| `previousQuote` | `k` / `↑` | `moveFocus(-1)` |
-| `extendSelectionDown` | `Shift+j` | `handleShiftMove(1)` |
-| `extendSelectionUp` | `Shift+k` | `handleShiftMove(-1)` |
-| `toggleSelection` | `x` | `toggleSelection(focusedId)` |
-| `clearSelection` | `Esc` | `clearSelection()` |
-| `revealInTranscript` | *(none)* | Navigate to `/report/sessions/:id#quote-anchor` |
-
-**Implementation note:** these handlers live inside `useKeyboardShortcuts` as closures over FocusContext/QuotesContext. To reuse them from the `bn:menu-action` listener in `AppLayout`, either: (a) extract them into a shared `useMenuActions` hook that both consumers call, or (b) have `useKeyboardShortcuts` also listen for `bn:menu-action` events (simpler — same closure scope, same guards).
+| Action | Handler |
+|--------|---------|
+| `star` | `handleStar()` — bulk-aware (uses focused/selected) |
+| `hide` | `handleHide()` — bulk-aware, moves focus after |
+| `addTag` | `handleTagOpen()` — opens TagInput on focused quote |
+| `applyLastTag` | `handleQuickApply()` — quick-apply last-used tag |
+| `playPause` | `handlePlay()` — seekTo via PlayerContext |
+| `nextQuote` | `moveFocus(1)` |
+| `previousQuote` | `moveFocus(-1)` |
+| `extendSelectionDown` | `handleShiftMove(1)` |
+| `extendSelectionUp` | `handleShiftMove(-1)` |
+| `toggleSelection` | `toggleSelection(focusedId)` + anchor |
+| `clearSelection` | `clearSelection()` |
+| `revealInTranscript` | `navigate(/report/sessions/:pid#anchor)` |
 
 #### Need new frontend implementation (14)
 
@@ -359,13 +363,11 @@ These dispatch to the codebook UI (browse modal, group/code CRUD). Most need `Cu
 | `createCodeGroup` / `renameCodeGroup` / `deleteCodeGroup` / `toggleCodeGroup` | Dispatch to codebook group CRUD |
 | `createCode` / `renameCode` / `deleteCode` / `mergeCode` | Dispatch to code CRUD |
 
-#### Edit operations — partially handled (5)
+#### Edit operations — partially handled (2)
 
 | Action | Status |
 |--------|--------|
 | `undo` / `redo` | Stub (`canUndo: false` in `getState()`). Needs undo store |
-| `findNext` / `findPrevious` | Swift reads `NSPasteboard.find` and sends text in payload. Frontend needs search-result cycling |
-| `useSelectionForFind` / `jumpToSelection` | Standard text editing — may delegate to WKWebView |
 
 #### Internal (not from menu)
 
@@ -402,12 +404,10 @@ Actions that need **payloads** (the optional second argument to `menuAction`):
 
 These control menu item dimming in Swift. Until wired, the Undo/Redo and Video menus will dim correctly (items disabled when stubs are `false`).
 
-### Recommended implementation order
+### Recommended implementation order (remaining)
 
-1. **High-value, low-effort** — actions with existing keyboard handlers: `find`, `star`, `hide`, `nextQuote`, `previousQuote`, `exportReport`, `showHelp`, `showKeyboardShortcuts`, `sendFeedback`
-2. **Export & clipboard** — `exportQuotesCSV`, `copyAsCSV`, `exportAnonymised`
-3. **View filters** — `allQuotes`, `starredQuotesOnly`, `filterByTag`
-4. **Codebook** — `browseCodebooks` + CRUD actions
-5. **Video** — requires PlayerContext bridge (popout window ↔ native state sync)
-6. **Project operations** — requires project list feature
-7. **Undo/Redo** — requires undo store design
+1. **New frontend handlers, no new infra** — `exportReport`, `showHelp`, `showKeyboardShortcuts`, `showReleaseNotes`, `sendFeedback`, `exportQuotesCSV`, `copyAsCSV`, `exportAnonymised`, `allQuotes`, `starredQuotesOnly`, `filterByTag`, `zoomIn`/`zoomOut`/`actualSize`, `toggleDarkMode`. Add to `AppLayout.tsx` handler
+2. **Codebook** — `browseCodebooks` + CRUD actions (dispatch CustomEvents to CodebookPanel)
+3. **Video** — requires PlayerContext bridge (popout window ↔ native state sync)
+4. **Project operations** — requires project list feature
+5. **Undo/Redo** — requires undo store design

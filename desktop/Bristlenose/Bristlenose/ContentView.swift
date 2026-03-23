@@ -58,6 +58,9 @@ struct ContentView: View {
         }
         .navigationSplitViewColumnWidth(min: 180, ideal: 220, max: 300)
         .preferredColorScheme(colorScheme)
+        // TODO: filter by window object when multi-window ships —
+        // currently fires for any window (Settings, player, etc.) which is
+        // correct single-window behaviour but will over-toggle with >1 content window.
         .onReceive(NotificationCenter.default.publisher(for: NSWindow.didBecomeKeyNotification)) { _ in
             bridgeHandler.setWindowActive(true)
         }

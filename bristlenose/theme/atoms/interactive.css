@@ -78,6 +78,14 @@ blockquote.quote-card.bn-focused.bn-selected {
    Body class toggled by React (AppLayout) on window blur/focus.
    --------------------------------------------------------------------- */
 
+.bn-window-inactive .bn-focused {
+    box-shadow: none;
+}
+
+.bn-window-inactive blockquote.quote-card.bn-focused {
+    box-shadow: none;
+}
+
 .bn-window-inactive .bn-selected {
     background: var(--bn-selection-bg-inactive);
     border-left-color: var(--bn-selection-border-inactive);
@@ -89,10 +97,12 @@ blockquote.quote-card.bn-focused.bn-selected {
 }
 
 .bn-window-inactive .bn-focused.bn-selected {
+    box-shadow: none;
     background: var(--bn-selection-bg-inactive);
 }
 
 .bn-window-inactive blockquote.quote-card.bn-focused.bn-selected {
+    box-shadow: none;
     background: var(--bn-selection-bg-inactive);
 }
 

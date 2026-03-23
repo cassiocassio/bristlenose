@@ -68,9 +68,22 @@ final class ServeManager: ObservableObject {
 
         currentProjectPath = projectPath
         generation += 1
-        let currentGeneration = generation
         state = .starting
         outputLines = []
+
+        #if DEBUG
+        // Dev port override: connect to an externally-running `bristlenose serve --dev`
+        // instead of spawning a subprocess. Set BRISTLENOSE_DEV_PORT in the Xcode scheme
+        // environment variables (e.g. 8150). Uncheck it to test the full subprocess flow.
+        if let devPortStr = ProcessInfo.processInfo.environment["BRISTLENOSE_DEV_PORT"],
+           let devPort = Int(devPortStr) {
+            print("[ServeManager] dev mode — connecting to external server on port \(devPort)")
+            state = .running(port: devPort)
+            return
+        }
+        #endif
+
+        let currentGeneration = generation
 
         let basePort = Self.stablePort(for: projectPath)
         // Find a free port starting from the stable base port.
@@ -159,6 +172,17 @@ final class ServeManager: ObservableObject {
     func stop() {
         timeoutTask?.cancel()
         timeoutTask = nil
+
+        #if DEBUG
+        // Dev port mode: no subprocess was spawned — just reset state.
+        if process == nil {
+            readTask?.cancel()
+            readTask = nil
+            state = .idle
+            serverVersion = nil
+            return
+        }
+        #endif
 
         if let proc = process, proc.isRunning {
             proc.interrupt()  // SIGINT — lets Uvicorn shut down gracefully
@@ -356,11 +380,11 @@ final class ServeManager: ObservableObject {
     /// Checks common locations in priority order.
     private func findBristlenoseBinary() -> URL? {
         let candidates = [
-            // Worktree venv (when running from the macos-app worktree)
+            // Main repo venv — active development happens here
+            NSString("~/Code/bristlenose/.venv/bin/bristlenose").expandingTildeInPath,
+            // Worktree venv (fallback)
             NSString("~/Code/bristlenose_branch macos-app/.venv/bin/bristlenose")
                 .expandingTildeInPath,
-            // Main repo venv
-            NSString("~/Code/bristlenose/.venv/bin/bristlenose").expandingTildeInPath,
             // Homebrew
             "/opt/homebrew/bin/bristlenose",
             "/usr/local/bin/bristlenose",

@@ -108,11 +108,17 @@ final class BridgeHandler: ObservableObject {
     /// Called by ContentView on NSWindow key/resign notifications.
     func setWindowActive(_ active: Bool) {
         guard let webView else { return }
-        let js = active
-            ? "document.documentElement.classList.remove('bn-window-inactive')"
-            : "document.documentElement.classList.add('bn-window-inactive')"
+        let js = """
+            if (active) {
+                document.documentElement.classList.remove('bn-window-inactive');
+            } else {
+                document.documentElement.classList.add('bn-window-inactive');
+            }
+            """
         Task {
-            try? await webView.callAsyncJavaScript(js, arguments: [:], in: nil, in: .page)
+            try? await webView.callAsyncJavaScript(
+                js, arguments: ["active": active], in: nil, in: .page
+            )
         }
     }
 

@@ -248,7 +248,37 @@ Send the draft to a native-speaking UXR practitioner. Key review questions:
 - Gender conventions: inclusive slash form ("Investigador/a") vs parenthetical ("Investigador(a)") vs neutral
 - Formality: formal "usted" vs informal "tú" (varies by country for Spanish; Japanese has even more registers)
 
-#### Step 6: Track review status
+#### Step 6: Machine translation QA — domain term grep
+
+Machine translation reliably handles standard UI verbs but **frequently leaves domain-specific nouns as English loanwords** in the middle of otherwise-translated sentences. The v0.14.1 batch left "codebook" untranslated in ~15 keys per language (es/fr) while correctly translating the same term in nav labels and headings.
+
+**After every machine translation batch, run this check:**
+
+```bash
+# For each domain term, grep for the English word in every non-English locale
+for lang in es fr de ko; do
+  echo "=== $lang ==="
+  for term in codebook quotes sessions signals codes tags sentiment; do
+    hits=$(grep -i "\"[^\"]*\b${term}\b[^\"]*\"" bristlenose/locales/$lang/*.json \
+           | grep -v "\"${term}\":" | wc -l)
+    [ "$hits" -gt 0 ] && echo "  $term: $hits untranslated values"
+  done
+done
+```
+
+Any English domain term appearing in a **value** (not a key) is a miss. Keys like `"codebookTags"` are internal identifiers and should stay English.
+
+**Common failure patterns to watch for:**
+
+1. **Loanword in modifier position** — "codebook tags", "browse codebooks" get half-translated ("Explorar codebooks" instead of "Explorar libros de códigos"). The machine translates the verb but leaves the noun as English
+2. **Inconsistency across namespace files** — desktop.json may get the correct translation while common.json doesn't (different translation passes or prompts)
+3. **Article gender cascades** — when the translated term changes grammatical gender, articles and adjectives throughout the sentence must change too. French: "un nouveau codebook" → "une nouvelle grille de codage" (grille is feminine). Spanish: "de codebook" → "del libro de códigos" (de + el contracts)
+4. **Preposition contractions** — Spanish "de + el" = "del", "a + el" = "al". French doesn't contract with feminine articles. Getting these wrong sounds jarring to native speakers
+5. **Singular/plural form mismatch** — the glossary should include both forms: "libro de códigos" / "libros de códigos" (es), "grille de codage" / "grilles de codage" (fr), "Codebuch" / "Codebücher" (de)
+
+**Prevention: build a glossary before translating.** Give the machine translator a term table (English → target language, singular + plural) and instruct it to use these terms exclusively. Then grep to verify.
+
+#### Step 7: Track review status
 
 Add a progress entry to the "Progress" section below with: language, date, reviewer name/location, review status, open questions.
 
@@ -308,11 +338,57 @@ Bristlenose qualifies (AGPL-3.0). No application process — create the project 
 
 ### Setup steps
 
-1. Create project at `hosted.weblate.org`
-2. Add component pointing to `bristlenose/locales/*/common.json` (repeat for each namespace)
-3. Upload Apple glossary terms as a Weblate glossary (prevents "Cancel" → wrong synonym)
-4. Add "Help translate Bristlenose" link to About panel + README
-5. Configure auto-merge for translations that match the glossary; require review for others
+1. Create project at `hosted.weblate.org` ✓
+2. Add 8 components (one per namespace), file mask `bristlenose/locales/*/{ns}.json`, monolingual base `bristlenose/locales/en/{ns}.json` ✓
+3. Upload Apple + QDA glossary (`bristlenose/locales/glossary.csv`) as Weblate glossary ✓
+4. Add "Help translate Bristlenose" link to About panel + README + CONTRIBUTING ✓
+5. CI validation (`scripts/check-locales.py`) runs on PRs touching locale files ✓
+6. Japanese (ja) stub files created for community translation ✓
+7. Translator guide: `TRANSLATING.md` ✓
+
+**Implemented 24 Mar 2026.** Weblate submits translations as pull requests; all PRs require human review.
+
+### Live configuration
+
+**Project URL:** [hosted.weblate.org/projects/bristlenose/](https://hosted.weblate.org/projects/bristlenose/)
+
+**Hosting:** Libre plan (160k strings, 0 EUR) — approval pending, trial until 7 Apr 2026.
+
+**Components (8):**
+
+| Component | File format | File mask | Strings |
+|-----------|------------|-----------|---------|
+| common | JSON nested structure | `bristlenose/locales/*/common.json` | ~275 |
+| settings | JSON nested structure | `bristlenose/locales/*/settings.json` | ~28 |
+| enums | JSON nested structure | `bristlenose/locales/*/enums.json` | ~13 |
+| cli | JSON nested structure | `bristlenose/locales/*/cli.json` | ~22 |
+| pipeline | JSON nested structure | `bristlenose/locales/*/pipeline.json` | ~4 |
+| server | JSON nested structure | `bristlenose/locales/*/server.json` | ~7 |
+| doctor | JSON nested structure | `bristlenose/locales/*/doctor.json` | ~7 |
+| desktop | JSON nested structure | `bristlenose/locales/*/desktop.json` | ~115 |
+
+**VCS integration:**
+- Version control system: GitHub pull request (Weblate forks and opens PRs)
+- Repository branch: `main`
+- Push branch: empty (Weblate manages its own fork)
+- GitHub webhook: `https://hosted.weblate.org/hooks/github/` (push events only, no secret)
+
+**Format settings:**
+- JSON indentation: 2 spaces
+- Monolingual base: `bristlenose/locales/en/{ns}.json` for each component
+- Components share the same repo clone via `weblate://bristlenose/common`
+
+**Glossary:** uploaded from `bristlenose/locales/glossary.csv` — Apple HIG terms + QDA domain terms (Codebook, Quotes, Sessions, etc.) across es/fr/de/ko.
+
+**Translation instructions:** linked to `TRANSLATING.md` in project settings.
+
+**Languages discovered:** en (source), es, fr, de, ko (100% translated), ja (0% — empty stubs, manually added as language since Weblate skips all-empty files).
+
+**Gotchas learned during setup:**
+- Weblate auto-discovers files from the repo but ignores locales where every value is an empty string (Japanese stubs). Must add the language manually via the + button on the component's Languages page
+- The "Source code repository" field on the create-component form pre-fills with a label prefix (`Source code repository: https://...`) — this must be cleared to just the bare URL or git clone fails with "protocol not supported"
+- JSON indentation defaults to 4 — must change to 2 to match our files, otherwise Weblate reformats every file on first commit
+- Second+ components should use "From an existing component" tab and select `common` to share the repo clone
 
 ### Alternatives considered
 
@@ -459,6 +535,73 @@ All 8 namespace files (common, settings, enums, cli, pipeline, server, doctor, d
 Single source of truth implemented. `frontend/src/locales/` deleted — all imports now point to `bristlenose/locales/` via Vite alias. Desktop `I18n.swift` reads the same JSON files. Desktop `desktop.json` namespace added (en + es) with ~75 native-only strings (menu bar, toolbar, chrome). Bridge locale sync with startup flash prevention (URL query param). Web language picker hidden in embedded mode.
 
 **TODO:** cross-check all Spanish UI terms against applelocalization.com before next release.
+
+### Translation quality gotchas — lessons from the v0.14.1 review
+
+Seven patterns that machine translation gets wrong. Use this list as a pre-flight checklist before shipping a new language.
+
+1. **False cognates in semantic fields.** "길이" (length) was used for time duration — it literally means physical length/distance. Machine translation picked the most common English→Korean mapping without distinguishing temporal from spatial meaning. *Fix:* flag column headers and data labels for domain-specific review. Maintain a glossary of measurement terms per language (time, distance, count, size)
+
+2. **Keyboard hint strings need grammatical context.** English "for Help" is a sentence fragment that reads naturally after `<kbd>?</kbd>`. Korean "도움말" (just "help" as a noun) drops the grammatical connector, producing "? Help" instead of "? for Help". *Fix:* annotate locale keys with rendering context — e.g. `// rendered as: <kbd>?</kbd> {this}`. Translators can't produce correct fragments without knowing the surrounding UI
+
+3. **Identical translations for different concepts are sometimes correct.** French `buttons.cancel` and `buttons.undo` are both "Annuler". This looks like an error but is standard macOS French — Apple's Edit → Undo is "Annuler". *Fix:* before "fixing" apparent duplicates, cross-check against the platform's native localisation (applelocalization.com). Document known-correct duplicates in the review notes
+
+4. **Gender-inclusive language is a style choice, not a bug.** German "Teilnehmer" vs "Teilnehmer:innen" — Apple/Microsoft German localisations consistently use the masculine generic for data labels. *Fix:* establish a gendering policy per language up front and document it in the review template. Don't let it be ad-hoc per string
+
+5. **Column headers need brevity constraints.** Korean "소요 시간" (3 syllable blocks) is wider than "길이" (2). Column headers have strict width budgets. *Fix:* add a max character count annotation to column header keys. Use `_short` variants (already used for `codebookShort`) for languages where translations overflow
+
+6. **Machine translation doesn't know platform conventions.** Multiple issues stem from machine translation ignoring macOS/Apple localisation conventions — the "Annuler" duplicate, "Teilnehmer" gendering, "Réglages" vs "Préférences". *Fix:* enforce the Apple glossary cross-check as a gate — no language ships without a completed review doc in `docs/locales/`
+
+7. **Duplicate keys across namespaces drift independently.** `sessions.colDuration` and `dashboard.colDuration` both had "길이" — fixing one without the other creates inconsistency. *Fix:* grep for all occurrences of a concept before fixing. Consider extracting shared column labels into a `columns` sub-namespace
+
+## Frontend extraction lessons (24 Mar 2026)
+
+Lessons from wiring ~200 hardcoded strings across ~35 React components to i18next.
+
+### What went well
+
+- **Test-setup-first**: adding `import "./i18n"` to `test-setup.ts` meant `t("nav.project")` returned `"Project"` in all tests — zero test rewrites needed for the basic wiring
+- **Batched approach**: 11 batches from outside-in (NavBar/Header/Footer shell first, then content, then modals, then accessibility) meant intermediate states were never jarring
+- **`Intl.DateTimeFormat` migration**: replacing hardcoded `MONTH_ABBR`/`DAY_ABBR` arrays with `Intl.DateTimeFormat(locale)` was cleaner than adding 60 month/day keys to locale files
+- **Sentiment translation in Badge**: a single `t("enums:sentiment.${text}", { defaultValue: text })` in `Badge.tsx` translates all sentiment labels everywhere — quotes, codebook, analysis, dashboard
+
+### What we got wrong
+
+1. **Incomplete string audit upfront** — missed SettingsModal (separate component from SettingsPanel), CodebookSidebar headings, AnalysisSidebar headings, SidebarLayout "Contents" title, "Browse codebooks" button. Each required a QA cycle to discover. A `grep -r '"[A-Z][a-z]' --include='*.tsx' frontend/src/` upfront would have caught them
+
+2. **`useMemo([t])` doesn't work** — the `t` function reference doesn't change on locale switch. Arrays built with `useMemo(() => [...], [t])` go stale. Fix: `[t, i18n.language]` as dependency, or skip `useMemo` for small arrays
+
+3. **Terminology inconsistency in machine-translated keys** — agent-generated translations used "codebook" as an English loanword in es/fr browse/import/restore keys while the heading used the localised term ("Libro de códigos" / "Grille de codage"). The terminology table in this doc existed but wasn't enforced during generation
+
+4. **`en` vs `en-GB` date order** — `Intl.DateTimeFormat("en")` gives US order ("Feb 12"), breaking tests that expected British order ("12 Feb"). Default is now `en-GB`
+
+5. **Capitalization in sentiment enums** — `enums.json` has `"frustration": "Frustration"` (capitalised). Tests that expected lowercase API values (`"frustration"`) broke when Badge started translating
+
+### Patterns established
+
+| Pattern | When to use | Example |
+|---------|-------------|---------|
+| `useTranslation()` hook | Inside React component functions | NavBar, Header, Footer |
+| `import i18n` + `i18n.t()` | Stores, announce calls, non-component code | QuotesContext, AppLayout |
+| Inline array (no memo) | 2–5 items with translated labels | ViewSwitcher options |
+| `useMemo([t, i18n.language])` | 8+ items passed as props | HelpModal nav items |
+| `enums` namespace lookup | Sentiment/role labels from API data | Badge, CodebookPanel |
+| `colour_set === "sentiment"` | Identifying built-in sentiment group | CodebookPanel group translation |
+| `name === "Uncategorised"` | Identifying default codebook group | CodebookPanel group translation |
+| `Intl.DateTimeFormat(locale)` | Date/time formatting | format.ts |
+| `toLocaleString(i18n.language)` | Number formatting | Dashboard stat cards |
+
+### Process for future extraction passes
+
+1. Grep all `.tsx` for hardcoded English strings — build complete inventory
+2. Cross-reference inventory against locale file keys — identify gaps
+3. Define terminology glossary upfront (this doc's table) — enforce during translation
+4. Add `import "./i18n"` to test-setup if not already present
+5. Wire components in outside-in order (shell → content → modals → accessibility)
+6. Add keys to ALL 5 locale files in the same edit — never leave gaps
+7. Run `npm test && npm run build` after each batch
+8. Review agent-generated translations against terminology table before committing
+9. QA with language switching in full browser — preview tools don't work for Bristlenose
 
 ### Not in scope
 - Translating LLM prompts (not needed — cross-lingual works)

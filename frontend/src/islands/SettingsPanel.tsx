@@ -8,6 +8,7 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { SUPPORTED_LOCALES, type Locale } from "../i18n";
 import { setLocale, useLocaleStore } from "../i18n/LocaleStore";
 
@@ -20,10 +21,10 @@ type Appearance = "auto" | "light" | "dark";
 const STORAGE_KEY = "bristlenose-appearance";
 const THEME_ATTR = "data-theme";
 
-const OPTIONS: { value: Appearance; label: string }[] = [
-  { value: "auto", label: "Use system appearance" },
-  { value: "light", label: "Light" },
-  { value: "dark", label: "Dark" },
+const OPTIONS: { value: Appearance; labelKey: string }[] = [
+  { value: "auto", labelKey: "appearance.auto" },
+  { value: "light", labelKey: "appearance.light" },
+  { value: "dark", labelKey: "appearance.dark" },
 ];
 
 /** Display labels for supported locales. Always in the locale's own language. */
@@ -665,6 +666,7 @@ function updateLogo(value: Appearance): void {
 // ---------------------------------------------------------------------------
 
 function ConfigReference() {
+  const { t } = useTranslation("settings");
   const sectionRefs = useRef<Record<string, HTMLElement | null>>({});
   const [copied, setCopied] = useState<string | null>(null);
 
@@ -725,7 +727,7 @@ function ConfigReference() {
                 <code
                   className={`bn-config-ref-envvar${copied === s.envVar ? " copied" : ""}`}
                   onClick={() => handleCopy(s.envVar)}
-                  title="Click to copy"
+                  title={t("configReference.clickToCopy")}
                 >
                   {s.envVar}
                 </code>
@@ -748,6 +750,7 @@ function ConfigReference() {
 // ---------------------------------------------------------------------------
 
 export function SettingsPanel() {
+  const { t } = useTranslation("settings");
   const [appearance, setAppearance] = useState<Appearance>(readSaved);
   const { locale } = useLocaleStore();
 
@@ -777,9 +780,9 @@ export function SettingsPanel() {
 
   return (
     <>
-      <h2>Settings</h2>
+      <h2>{t("heading")}</h2>
       <fieldset className="bn-setting-group">
-        <legend>Application appearance</legend>
+        <legend>{t("appearance.legend")}</legend>
         {OPTIONS.map((opt) => (
           <label key={opt.value} className="bn-radio-label">
             <input
@@ -789,15 +792,15 @@ export function SettingsPanel() {
               checked={appearance === opt.value}
               onChange={() => handleChange(opt.value)}
             />
-            {" "}{opt.label}
+            {" "}{t(opt.labelKey)}
           </label>
         ))}
       </fieldset>
 
       <fieldset className="bn-setting-group">
-        <legend>Language</legend>
+        <legend>{t("language.legend")}</legend>
         <p className="bn-setting-description">
-          Controls the display language of the interface. Report content is not translated.
+          {t("language.description")}
         </p>
         <select
           className="bn-locale-select"
@@ -810,11 +813,21 @@ export function SettingsPanel() {
             </option>
           ))}
         </select>
+        <p className="bn-setting-description" style={{ marginTop: "0.5rem" }}>
+          {t("language.helpTranslate")}{" "}
+          <a
+            href="https://hosted.weblate.org/projects/bristlenose/"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Weblate
+          </a>
+        </p>
       </fieldset>
 
       <hr />
 
-      <h2>Configuration reference</h2>
+      <h2>{t("configReference.heading")}</h2>
       <ConfigReference />
     </>
   );

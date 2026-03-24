@@ -7,6 +7,7 @@
 
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { createPortal } from "react-dom";
+import { useTranslation } from "react-i18next";
 import { useInert } from "../hooks/useInert";
 import {
   getAutoCodeProposals,
@@ -42,6 +43,7 @@ export function AutoCodeReportModal({
   onTagTentatively,
 }: AutoCodeReportModalProps) {
   useInert(open);
+  const { t } = useTranslation();
   const [proposals, setProposals] = useState<ProposedTagResponse[]>([]);
   const [loading, setLoading] = useState(true);
   const [removing, setRemoving] = useState<Set<number>>(new Set());
@@ -130,17 +132,16 @@ export function AutoCodeReportModal({
         <div className="codebook-modal-header">
           <div>
             <div className="codebook-modal-title">
-              &#x2726; AutoCode Report &mdash; {frameworkTitle}
+              &#x2726; {t("autocode.report.title")} &mdash; {frameworkTitle}
             </div>
             <div className="codebook-modal-subtitle" data-testid="bn-report-subtitle">
-              {visibleCount} tag{visibleCount !== 1 ? "s" : ""} proposed across{" "}
-              {sessionCount} session{sessionCount !== 1 ? "s" : ""}
+              {t("autocode.report.subtitle", { count: visibleCount, sessions: sessionCount })}
             </div>
           </div>
           <button
             className="codebook-modal-close"
             onClick={onClose}
-            aria-label="Close"
+            aria-label={t("autocode.close")}
           >
             &times;
           </button>
@@ -149,9 +150,9 @@ export function AutoCodeReportModal({
         {/* Body */}
         <div className="codebook-modal-body" style={{ padding: "1.5rem" }}>
           {loading ? (
-            <p style={{ color: "var(--bn-colour-muted)" }}>Loading proposals…</p>
+            <p style={{ color: "var(--bn-colour-muted)" }}>{t("autocode.loading")}</p>
           ) : visibleCount === 0 ? (
-            <p style={{ color: "var(--bn-colour-muted)" }}>No proposals to review.</p>
+            <p style={{ color: "var(--bn-colour-muted)" }}>{t("autocode.empty")}</p>
           ) : (
             <table className="report-table" data-testid="bn-report-table">
               <tbody>
@@ -178,21 +179,21 @@ export function AutoCodeReportModal({
           gap: "0.5rem",
         }}>
           <button className="bn-btn" onClick={onClose} data-testid="bn-report-close">
-            Close
+            {t("autocode.report.close")}
           </button>
           <button
             className="bn-btn"
             onClick={handleAcceptAll}
             data-testid="bn-report-accept-all"
           >
-            Accept all
+            {t("autocode.report.acceptAll")}
           </button>
           <button
             className="bn-btn bn-btn-primary"
             onClick={onTagTentatively}
             data-testid="bn-report-tag-tentatively"
           >
-            Tag tentatively
+            {t("autocode.report.tagTentatively")}
           </button>
         </div>
       </div>
@@ -212,6 +213,7 @@ interface SessionRowsProps {
 }
 
 function SessionRows({ sessionId, items, removing, onDeny }: SessionRowsProps) {
+  const { t } = useTranslation();
   return (
     <>
       <tr>
@@ -253,7 +255,7 @@ function SessionRows({ sessionId, items, removing, onDeny }: SessionRowsProps) {
             <button
               className="report-deny-btn"
               onClick={() => onDeny(p.id)}
-              title="Deny"
+              title={t("autocode.report.deny")}
               data-testid={`bn-report-deny-${p.id}`}
             >
               &#x2298;

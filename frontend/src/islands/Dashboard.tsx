@@ -11,6 +11,7 @@
  */
 
 import { useContext, useEffect, useState, useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import { Badge, PersonBadge, TimecodeLink } from "../components";
 import { PlayerContext } from "../contexts/PlayerContext";
 import { apiGet } from "../utils/api";
@@ -156,30 +157,26 @@ function PairStatCard({
 }
 
 function StatsRow({ stats }: { stats: StatsResponse }) {
-  // Duration label — the API returns total_duration_human which includes
-  // the value, but we want just the value and a separate label.
-  // total_duration_human is like "1h 23m" — we use it as the value.
+  const { t, i18n } = useTranslation();
   const hasDuration = stats.total_duration_seconds > 0;
   const hasWords = stats.total_words > 0;
 
   return (
     <div className="bn-dashboard-full">
       <div className="bn-project-stats">
-        {/* Sessions count */}
         <StatCard
           value={stats.session_count}
-          label={stats.session_count === 1 ? "session" : "sessions"}
+          label={t("dashboard.session", { count: stats.session_count })}
           target="sessions"
         />
 
-        {/* Duration + Words pair */}
         {(hasDuration || hasWords) && (
           <PairStatCard
             left={
               hasDuration
                 ? {
                     value: stats.total_duration_human,
-                    label: "of sessions",
+                    label: t("dashboard.ofSessions"),
                     target: "sessions",
                   }
                 : null
@@ -187,8 +184,8 @@ function StatsRow({ stats }: { stats: StatsResponse }) {
             right={
               hasWords
                 ? {
-                    value: stats.total_words.toLocaleString(),
-                    label: "words",
+                    value: stats.total_words.toLocaleString(i18n.language),
+                    label: t("dashboard.words"),
                     target: "sessions",
                   }
                 : null
@@ -196,41 +193,38 @@ function StatsRow({ stats }: { stats: StatsResponse }) {
           />
         )}
 
-        {/* Quotes + Themes pair */}
         <PairStatCard
           left={{
             value: stats.quotes_count,
-            label: stats.quotes_count === 1 ? "quote" : "quotes",
+            label: t("dashboard.quote", { count: stats.quotes_count }),
             target: "quotes",
           }}
           right={
             stats.themes_count > 0
               ? {
                   value: stats.themes_count,
-                  label: stats.themes_count === 1 ? "theme" : "themes",
+                  label: t("dashboard.theme", { count: stats.themes_count }),
                   target: "quotes:themes",
                 }
               : null
           }
         />
 
-        {/* Sections */}
         {stats.sections_count > 0 && (
           <StatCard
             value={stats.sections_count}
-            label={stats.sections_count === 1 ? "section" : "sections"}
+            label={t("dashboard.section", { count: stats.sections_count })}
             target="quotes:sections"
           />
         )}
 
-        {/* AI tags + User tags pair */}
         {(stats.ai_tags_count > 0 || stats.user_tags_count > 0) && (
           <PairStatCard
             left={
               stats.ai_tags_count > 0
                 ? {
                     value: stats.ai_tags_count,
-                    label: stats.ai_tags_count === 1 ? "AI tag" : "AI tags",
+                    label: t("dashboard.aiTag", { count: stats.ai_tags_count }),
                     target: "analysis:section-x-sentiment",
                   }
                 : null
@@ -239,7 +233,7 @@ function StatsRow({ stats }: { stats: StatsResponse }) {
               stats.user_tags_count > 0
                 ? {
                     value: stats.user_tags_count,
-                    label: stats.user_tags_count === 1 ? "user tag" : "user tags",
+                    label: t("dashboard.userTag", { count: stats.user_tags_count }),
                     target: "codebook",
                   }
                 : null
@@ -258,6 +252,7 @@ function CompactSessionRow({
 }: {
   session: DashboardSessionResponse;
 }) {
+  const { i18n } = useTranslation();
   const {
     session_id,
     session_number,
@@ -318,7 +313,7 @@ function CompactSessionRow({
         ))}
       </td>
       <td className="bn-session-meta">
-        <div>{formatFinderDate(session_date)}</div>
+        <div>{formatFinderDate(session_date, i18n.language)}</div>
       </td>
       <td className="bn-session-duration">
         {formatDuration(duration_seconds)}
@@ -337,6 +332,7 @@ function CompactSessionsTable({
   moderatorHeader: string;
   observerHeader: string;
 }) {
+  const { t } = useTranslation();
   return (
     <div className="bn-dashboard-pane bn-dashboard-full">
       <section className="bn-session-table">
@@ -349,11 +345,11 @@ function CompactSessionsTable({
         <table>
           <thead>
             <tr>
-              <th>ID</th>
-              <th>Participants</th>
-              <th>Start</th>
-              <th className="bn-session-duration">Duration</th>
-              <th>Interviews</th>
+              <th>{t("dashboard.colId")}</th>
+              <th>{t("dashboard.colParticipants")}</th>
+              <th>{t("dashboard.colStart")}</th>
+              <th className="bn-session-duration">{t("dashboard.colDuration")}</th>
+              <th>{t("dashboard.colInterviews")}</th>
             </tr>
           </thead>
           <tbody>
@@ -523,9 +519,10 @@ function OmittedSession({
 }: {
   session: SessionOmittedResponse;
 }) {
+  const { t } = useTranslation();
   return (
     <div>
-      <p className="bn-coverage-session-title">Session {session.session_number}</p>
+      <p className="bn-coverage-session-title">{t("dashboard.coverageSession", { number: session.session_number })}</p>
       {session.full_segments.map((seg, i) => (
         <div className="bn-coverage-segment" key={i}>
           <TimecodeLink
@@ -554,11 +551,12 @@ function CoverageBox({
 }: {
   coverage: CoverageResponse;
 }) {
+  const { t } = useTranslation();
   const { pct_in_report, pct_moderator, pct_omitted, omitted_by_session } = coverage;
 
   return (
     <div className="bn-coverage-box bn-dashboard-full">
-      <h3>Transcript coverage</h3>
+      <h3>{t("dashboard.transcriptCoverage")}</h3>
 
       {/* Stacked bar */}
       <div className="bn-coverage-bar">
@@ -584,18 +582,18 @@ function CoverageBox({
       <div className="bn-coverage-legend">
         <span className="bn-coverage-legend-item">
           <span className="bn-coverage-legend-dot bn-coverage-legend-dot--report" />
-          <span className="bn-coverage-legend-value">{pct_in_report}%</span> in report
+          <span className="bn-coverage-legend-value">{pct_in_report}%</span> {t("dashboard.inReport")}
         </span>
         {pct_moderator > 0 && (
           <span className="bn-coverage-legend-item">
             <span className="bn-coverage-legend-dot bn-coverage-legend-dot--moderator" />
-            <span className="bn-coverage-legend-value">{pct_moderator}%</span> moderator
+            <span className="bn-coverage-legend-value">{pct_moderator}%</span> {t("dashboard.moderator")}
           </span>
         )}
         {pct_omitted > 0 && (
           <span className="bn-coverage-legend-item">
             <span className="bn-coverage-legend-dot bn-coverage-legend-dot--omitted" />
-            <span className="bn-coverage-legend-value">{pct_omitted}%</span> omitted
+            <span className="bn-coverage-legend-value">{pct_omitted}%</span> {t("dashboard.omitted")}
           </span>
         )}
       </div>
@@ -603,11 +601,11 @@ function CoverageBox({
       {/* Omitted segments disclosure */}
       {pct_omitted === 0 ? (
         <p className="bn-coverage-empty">
-          Nothing omitted &mdash; all participant speech is in the report.
+          {t("dashboard.nothingOmitted")}
         </p>
       ) : omitted_by_session.length > 0 ? (
         <details>
-          <summary>Show omitted quotes</summary>
+          <summary>{t("dashboard.showOmitted")}</summary>
           <div>
             {omitted_by_session.map((sess) => (
               <OmittedSession key={sess.session_id} session={sess} />
@@ -626,6 +624,7 @@ interface DashboardProps {
 }
 
 export function Dashboard({ projectId }: DashboardProps) {
+  const { t } = useTranslation();
   const [data, setData] = useState<DashboardResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -639,7 +638,7 @@ export function Dashboard({ projectId }: DashboardProps) {
     return (
       <div className="bn-dashboard">
         <p style={{ color: "var(--bn-colour-danger, #c00)", padding: "1rem" }}>
-          Failed to load dashboard: {error}
+          {t("dashboard.failedToLoad", { error })}
         </p>
       </div>
     );
@@ -648,7 +647,7 @@ export function Dashboard({ projectId }: DashboardProps) {
   if (!data) {
     return (
       <div className="bn-dashboard">
-        <p style={{ opacity: 0.5, padding: "1rem" }}>Loading dashboard&hellip;</p>
+        <p style={{ opacity: 0.5, padding: "1rem" }}>{t("dashboard.loading")}</p>
       </div>
     );
   }
@@ -665,8 +664,8 @@ export function Dashboard({ projectId }: DashboardProps) {
 
       <FeaturedQuotesRow quotes={data.featured_quotes} />
 
-      <NavList heading="Sections" items={data.sections} tabTarget="quotes" />
-      <NavList heading="Themes" items={data.themes} tabTarget="quotes" />
+      <NavList heading={t("quotes.sections")} items={data.sections} tabTarget="quotes" />
+      <NavList heading={t("quotes.themes")} items={data.themes} tabTarget="quotes" />
 
       {data.coverage && <CoverageBox coverage={data.coverage} />}
     </div>

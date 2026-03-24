@@ -1,0 +1,30 @@
+{
+  "heading": "",
+  "appearance": {
+    "legend": "",
+    "auto": "",
+    "light": "",
+    "dark": ""
+  },
+  "language": {
+    "legend": "",
+    "description": "",
+    "helpTranslate": ""
+  },
+  "settingsNav": {
+    "general": "",
+    "project": "",
+    "profile": "",
+    "apiKeys": "",
+    "config": "",
+    "projectStub": "",
+    "profileStub": "",
+    "apiKeysStub": ""
+  },
+  "configReference": {
+    "heading": "",
+    "intro": "",
+    "clickToCopy": "",
+    "copied": ""
+  }
+}

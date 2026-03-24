@@ -12,27 +12,30 @@ export function formatDuration(seconds: number): string {
   return `${mm}:${ss}`;
 }
 
-const MONTH_ABBR = [
-  "", "Jan", "Feb", "Mar", "Apr", "May", "Jun",
-  "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
-];
-
-/** Format a date string as Finder-style relative date. */
-export function formatFinderDate(isoDate: string | null): string {
+/**
+ * Format a date string as Finder-style relative date, locale-aware.
+ * Uses Intl.DateTimeFormat for month/day names and Intl.RelativeTimeFormat
+ * for "today"/"yesterday".
+ */
+export function formatFinderDate(isoDate: string | null, locale?: string): string {
   if (!isoDate) return "\u2014";
   const dt = new Date(isoDate);
   if (isNaN(dt.getTime())) return "\u2014";
 
+  // Default to en-GB for day-month order (12 Feb), not en-US (Feb 12).
+  // Map bare "en" and "en-US" to "en-GB" — Bristlenose uses day-month order.
+  const lng = !locale || locale.startsWith("en") ? "en-GB" : locale;
   const now = new Date();
   const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
   const dtDate = `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, "0")}-${String(dt.getDate()).padStart(2, "0")}`;
 
-  const hh = String(dt.getHours()).padStart(2, "0");
-  const mm = String(dt.getMinutes()).padStart(2, "0");
-  const timePart = `${hh}:${mm}`;
+  const timeFmt = new Intl.DateTimeFormat(lng, { hour: "2-digit", minute: "2-digit", hour12: false });
+  const timePart = timeFmt.format(dt);
 
   if (dtDate === todayStr) {
-    return `Today at ${timePart}`;
+    const rtf = new Intl.RelativeTimeFormat(lng, { numeric: "auto" });
+    const today = rtf.format(0, "day"); // "today" / "aujourd'hui" / "heute" etc.
+    return `${today[0].toUpperCase()}${today.slice(1)}, ${timePart}`;
   }
 
   // Check yesterday
@@ -40,11 +43,13 @@ export function formatFinderDate(isoDate: string | null): string {
   yesterday.setDate(yesterday.getDate() - 1);
   const yesterdayStr = `${yesterday.getFullYear()}-${String(yesterday.getMonth() + 1).padStart(2, "0")}-${String(yesterday.getDate()).padStart(2, "0")}`;
   if (dtDate === yesterdayStr) {
-    return `Yesterday at ${timePart}`;
+    const rtf = new Intl.RelativeTimeFormat(lng, { numeric: "auto" });
+    const yesterdayWord = rtf.format(-1, "day"); // "yesterday" / "hier" etc.
+    return `${yesterdayWord[0].toUpperCase()}${yesterdayWord.slice(1)}, ${timePart}`;
   }
 
-  const month = MONTH_ABBR[dt.getMonth() + 1];
-  return `${dt.getDate()} ${month} ${dt.getFullYear()} at ${timePart}`;
+  const dateFmt = new Intl.DateTimeFormat(lng, { day: "numeric", month: "short", year: "numeric" });
+  return `${dateFmt.format(dt)}, ${timePart}`;
 }
 
 /** Format seconds as a timecode string (MM:SS or HH:MM:SS). Unlike formatDuration, always returns a timecode — never an em-dash. */
@@ -62,8 +67,6 @@ export function stripSmartQuotes(text: string): string {
   return text.replace(/^[\u201c\u201d"]+|[\u201c\u201d"]+$/g, "").trim();
 }
 
-const DAY_ABBR = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-
 /** Compact duration: "47m" / "1h 03" / "2h 23". Returns em-dash for 0/negative. */
 export function formatCompactDuration(seconds: number): string {
   if (seconds <= 0) return "\u2014";
@@ -73,18 +76,17 @@ export function formatCompactDuration(seconds: number): string {
   return `${h}h ${String(m).padStart(2, "0")}`;
 }
 
-/** Compact date: "12 Feb" or "Wed 12 Feb" (includeDay=true). Returns em-dash for null/invalid. */
-export function formatCompactDate(isoDate: string | null, includeDay?: boolean): string {
+/** Compact date: "12 Feb" or "Wed 12 Feb" (includeDay=true). Locale-aware. Returns em-dash for null/invalid. */
+export function formatCompactDate(isoDate: string | null, includeDay?: boolean, locale?: string): string {
   if (!isoDate) return "\u2014";
   const dt = new Date(isoDate);
   if (isNaN(dt.getTime())) return "\u2014";
-  const day = dt.getDate();
-  const month = MONTH_ABBR[dt.getMonth() + 1];
-  if (includeDay) {
-    const dow = DAY_ABBR[dt.getDay()];
-    return `${dow} ${day} ${month}`;
-  }
-  return `${day} ${month}`;
+  // Default to en-GB for day-month order (12 Feb), not en-US (Feb 12).
+  // Map bare "en" and "en-US" to "en-GB" — Bristlenose uses day-month order.
+  const lng = !locale || locale.startsWith("en") ? "en-GB" : locale;
+  const opts: Intl.DateTimeFormatOptions = { day: "numeric", month: "short" };
+  if (includeDay) opts.weekday = "short";
+  return new Intl.DateTimeFormat(lng, opts).format(dt);
 }
 
 /** Truncate a filename Finder-style with middle ellipsis. */

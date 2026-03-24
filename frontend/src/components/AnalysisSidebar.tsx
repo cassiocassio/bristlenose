@@ -9,6 +9,7 @@
  */
 
 import { useCallback } from "react";
+import { useTranslation } from "react-i18next";
 import {
   useAnalysisSignalStore,
   setFocusedSignalKey,
@@ -29,6 +30,7 @@ function signalsBySourceType(
 // ── Component ────────────────────────────────────────────────────────
 
 export function AnalysisSidebar() {
+  const { t } = useTranslation();
   const { sentimentSignals, tagSignals, focusedKey } = useAnalysisSignalStore();
 
   const handleClick = useCallback((key: string) => {
@@ -47,7 +49,7 @@ export function AnalysisSidebar() {
     <div className="toc-sidebar-body">
       {hasSentiment && (
         <>
-          <div className="toc-heading">Sentiment</div>
+          <div className="toc-heading">{t("analysis.sentiment")}</div>
           <SignalGroup
             signals={sentimentSignals}
             sourceType="section"
@@ -64,7 +66,7 @@ export function AnalysisSidebar() {
       )}
       {hasTags && (
         <>
-          <div className="toc-heading">Codebook tags</div>
+          <div className="toc-heading">{t("analysis.codebookTags")}</div>
           <SignalGroup
             signals={tagSignals}
             sourceType="section"
@@ -93,13 +95,14 @@ interface SignalGroupProps {
 }
 
 function SignalGroup({ signals, sourceType, focusedKey, onClick }: SignalGroupProps) {
+  const { t } = useTranslation();
   const filtered = signalsBySourceType(signals, sourceType);
   if (filtered.length === 0) return null;
 
   return (
     <>
       <div className="toc-sub-heading">
-        {sourceType === "section" ? "Section" : "Theme"}
+        {t(sourceType === "section" ? "analysis.section" : "analysis.theme")}
       </div>
       {filtered.map((s) => (
         <SignalEntry

@@ -8,7 +8,18 @@
   },
   "language": {
     "legend": "Sprache",
-    "description": "Legt die Anzeigesprache der Benutzeroberfläche fest. Berichtsinhalte werden nicht übersetzt."
+    "description": "Legt die Anzeigesprache der Benutzeroberfläche fest. Berichtsinhalte werden nicht übersetzt.",
+    "helpTranslate": "Helfen Sie, Bristlenose in Ihre Sprache zu übersetzen auf"
+  },
+  "settingsNav": {
+    "general": "Allgemein",
+    "project": "Projekt",
+    "profile": "Profil",
+    "apiKeys": "API-Schlüssel",
+    "config": "Konfiguration",
+    "projectStub": "Projekteinstellungen werden hier angezeigt. Demnächst verfügbar.",
+    "profileStub": "Profileinstellungen (Name, E-Mail, Whisper-Backend) werden hier angezeigt. Demnächst verfügbar.",
+    "apiKeysStub": "API-Schlüssel-Verwaltung wird hier angezeigt. Demnächst verfügbar."
   },
   "configReference": {
     "heading": "Konfigurationsreferenz",

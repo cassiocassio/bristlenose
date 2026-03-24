@@ -17,6 +17,10 @@ This allows the maintainer to offer commercial or dual-licence versions
 of Bristlenose in the future without needing to contact every contributor
 individually.
 
+## Translating
+
+Bristlenose uses [Weblate](https://hosted.weblate.org/projects/bristlenose/) for community translation. See [TRANSLATING.md](TRANSLATING.md) for how to get started — no Git or JSON knowledge required.
+
 ## How to contribute
 
 1. Fork the repo and create a branch.

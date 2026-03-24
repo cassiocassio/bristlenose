@@ -12,6 +12,7 @@
  */
 
 import { useCallback, useContext, useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { EditableText, JourneyChain, PersonBadge, Sparkline, Thumbnail } from "../components";
 import type { SparklineItem } from "../components/Sparkline";
 import { PlayerContext } from "../contexts/PlayerContext";
@@ -54,8 +55,9 @@ function ModeratorHeader({
 }: {
   moderatorNames: string[];
 }) {
+  const { t } = useTranslation();
   if (moderatorNames.length === 0) return null;
-  const label = "Moderated by " + oxfordList(moderatorNames);
+  const label = t("sessions.moderatedBy", { names: oxfordList(moderatorNames) });
   return <p className="bn-session-moderators">{label}</p>;
 }
 
@@ -64,9 +66,9 @@ function ObserverHeader({
 }: {
   observerNames: string[];
 }) {
+  const { t } = useTranslation();
   if (observerNames.length === 0) return null;
-  const noun = observerNames.length === 1 ? "Observer" : "Observers";
-  const label = `${noun}: ` + oxfordList(observerNames);
+  const label = t("sessions.observer", { count: observerNames.length, names: oxfordList(observerNames) });
   return <p className="bn-session-moderators">{label}</p>;
 }
 
@@ -103,6 +105,7 @@ export function SessionsTable({
 }: {
   projectId: string;
 }) {
+  const { t } = useTranslation();
   const [data, setData] = useState<SessionsListResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [peopleMap, setPeopleMap] = useState<Record<string, PersonData> | null>(null);
@@ -157,7 +160,7 @@ export function SessionsTable({
     return (
       <section className="bn-session-table">
         <p style={{ color: "var(--bn-colour-danger, #c00)", padding: "1rem" }}>
-          Failed to load sessions: {error}
+          {t("sessions.failedToLoad", { error })}
         </p>
       </section>
     );
@@ -166,7 +169,7 @@ export function SessionsTable({
   if (!data) {
     return (
       <section className="bn-session-table">
-        <p style={{ opacity: 0.5, padding: "1rem" }}>Loading sessions\u2026</p>
+        <p style={{ opacity: 0.5, padding: "1rem" }}>{t("sessions.loading")}</p>
       </section>
     );
   }
@@ -181,12 +184,12 @@ export function SessionsTable({
         e.preventDefault();
         navigator.clipboard.writeText(source_folder_uri);
       }}
-      title="Copy folder path"
+      title={t("sessions.copyFolderPath")}
     >
-      <FolderIcon /> Interviews
+      <FolderIcon /> {t("sessions.interviews")}
     </a>
   ) : (
-    "Interviews"
+    t("sessions.interviews")
   );
 
   return (
@@ -196,13 +199,13 @@ export function SessionsTable({
       <table>
         <thead>
           <tr>
-            <th>ID</th>
-            <th>Speakers</th>
-            <th>Start</th>
-            <th className="bn-session-duration">Duration</th>
+            <th>{t("sessions.colId")}</th>
+            <th>{t("sessions.colSpeakers")}</th>
+            <th>{t("sessions.colStart")}</th>
+            <th className="bn-session-duration">{t("sessions.colDuration")}</th>
             <th>{interviewsHeader}</th>
             <th></th>
-            <th>Sentiment</th>
+            <th>{t("sessions.colSentiment")}</th>
           </tr>
         </thead>
         <tbody>
@@ -238,6 +241,7 @@ function SessionRow({
   onCancelEdit: () => void;
   onNameCommit: (code: string, newName: string) => void;
 }) {
+  const { t, i18n } = useTranslation();
   const {
     session_id,
     session_number,
@@ -331,7 +335,7 @@ function SessionRow({
                 <button
                   className="bn-name-pencil"
                   onClick={() => onEditStart(sp.speaker_code)}
-                  aria-label={`Edit name for ${sp.speaker_code}`}
+                  aria-label={t("sessions.editName", { code: sp.speaker_code })}
                   data-testid={`bn-name-pencil-${sp.speaker_code}`}
                 >
                   &#x270E;
@@ -342,7 +346,7 @@ function SessionRow({
         })}
       </td>
       <td className="bn-session-meta">
-        <div>{formatFinderDate(session_date)}</div>
+        <div>{formatFinderDate(session_date, i18n.language)}</div>
         {hasJourney && <JourneyChain labels={journey_labels} />}
       </td>
       <td className="bn-session-duration">

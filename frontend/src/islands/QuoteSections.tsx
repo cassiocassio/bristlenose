@@ -9,6 +9,7 @@
  */
 
 import { useCallback, useEffect, useState, useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import { apiGet, getCodebook } from "../utils/api";
 import { useTranscriptCache } from "../hooks/useTranscriptCache";
 import type { QuoteResponse, QuotesListResponse } from "../utils/types";
@@ -24,6 +25,7 @@ interface QuoteSectionsProps {
 }
 
 export function QuoteSections({ projectId }: QuoteSectionsProps) {
+  const { t } = useTranslation();
   const [data, setData] = useState<QuotesListResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [codebookTagNames, setCodebookTagNames] = useState<string[]>([]);
@@ -152,9 +154,9 @@ export function QuoteSections({ projectId }: QuoteSectionsProps) {
   if (error) {
     return (
       <section>
-        <h2 id="sections">Sections</h2>
+        <h2 id="sections">{t("quotes.sections")}</h2>
         <p style={{ color: "var(--bn-colour-danger, #c00)", padding: "1rem" }}>
-          Failed to load quotes: {error}
+          {t("quotes.failedToLoad", { error })}
         </p>
       </section>
     );
@@ -163,8 +165,8 @@ export function QuoteSections({ projectId }: QuoteSectionsProps) {
   if (!data) {
     return (
       <section>
-        <h2 id="sections">Sections</h2>
-        <p style={{ opacity: 0.5, padding: "1rem" }}>Loading quotes&hellip;</p>
+        <h2 id="sections">{t("quotes.sections")}</h2>
+        <p style={{ opacity: 0.5, padding: "1rem" }}>{t("quotes.loading")}</p>
       </section>
     );
   }
@@ -173,7 +175,7 @@ export function QuoteSections({ projectId }: QuoteSectionsProps) {
 
   return (
     <section>
-      <h2 id="sections">Sections</h2>
+      <h2 id="sections">{t("quotes.sections")}</h2>
       {filteredSections.map((section) => {
         const anchor = `section-${section.screen_label.toLowerCase().replace(/ /g, "-")}`;
         return (

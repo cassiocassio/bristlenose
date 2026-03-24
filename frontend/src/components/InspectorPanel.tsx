@@ -26,25 +26,27 @@ import {
   DEFAULT_HEIGHT,
 } from "../contexts/InspectorStore";
 import { useVerticalDragResize } from "../hooks/useVerticalDragResize";
+import { useTranslation } from "react-i18next";
 
 // ── DimensionToggle — for the heatmap table's top-left <th> cell ─────────
 
 export function DimensionToggle({ hasBoth }: { hasBoth: boolean }) {
   const { activeDimension } = useInspectorStore();
+  const { t } = useTranslation();
 
   if (!hasBoth) {
-    return <>{activeDimension === "section" ? "Section" : "Theme"}</>;
+    return <>{activeDimension === "section" ? t("analysis.section") : t("analysis.theme")}</>;
   }
 
   return (
-    <span className="dimension-toggle" role="radiogroup" aria-label="Dimension">
+    <span className="dimension-toggle" role="radiogroup" aria-label={t("analysis.dimension")}>
       <button
         className={`dimension-btn${activeDimension === "section" ? " active" : ""}`}
         role="radio"
         aria-checked={activeDimension === "section"}
         onClick={() => setInspectorDimension("section")}
       >
-        Section
+        {t("analysis.section")}
       </button>
       <button
         className={`dimension-btn${activeDimension === "theme" ? " active" : ""}`}
@@ -52,7 +54,7 @@ export function DimensionToggle({ hasBoth }: { hasBoth: boolean }) {
         aria-checked={activeDimension === "theme"}
         onClick={() => setInspectorDimension("theme")}
       >
-        Theme
+        {t("analysis.theme")}
       </button>
     </span>
   );
@@ -109,6 +111,7 @@ interface InspectorPanelProps {
 export function InspectorPanel({ sources, shimmerTrigger }: InspectorPanelProps) {
   const { open, height, hasManualHeight, activeSource, activeDimension } =
     useInspectorStore();
+  const { t } = useTranslation();
 
   const panelRef = useRef<HTMLDivElement>(null);
   const bodyRef = useRef<HTMLDivElement>(null);
@@ -252,8 +255,8 @@ export function InspectorPanel({ sources, shimmerTrigger }: InspectorPanelProps)
         <button
           className="inspector-icon-btn"
           onClick={handleIconClick}
-          title={open ? "Close heatmap panel (m)" : "Heatmap (m)"}
-          aria-label={open ? "Close heatmap panel" : "Open heatmap panel"}
+          title={open ? t("analysis.heatmapOpen") : t("analysis.heatmapClosed")}
+          aria-label={open ? t("analysis.heatmapCloseLabel") : t("analysis.heatmapOpenLabel")}
           data-testid="inspector-toggle"
         >
           {open ? <CloseIcon /> : <GridIcon />}
@@ -264,7 +267,7 @@ export function InspectorPanel({ sources, shimmerTrigger }: InspectorPanelProps)
           className="inspector-handle-title"
           data-testid="inspector-title"
         >
-          Heatmap
+          {t("analysis.heatmap")}
         </span>
 
         <span
@@ -282,7 +285,7 @@ export function InspectorPanel({ sources, shimmerTrigger }: InspectorPanelProps)
       </div>
 
       {/* Source tabs */}
-      <div className="inspector-tabs" role="tablist" aria-label="Heatmap sources">
+      <div className="inspector-tabs" role="tablist" aria-label={t("analysis.heatmapSources")}>
         {sources.map((s) => (
           <button
             key={s.key}

@@ -22,6 +22,7 @@
  */
 
 import { useCallback, useEffect, useRef } from "react";
+import { useTranslation } from "react-i18next";
 import {
   useSidebarStore,
   toggleToc,
@@ -125,6 +126,7 @@ interface SidebarLayoutProps {
 }
 
 export function SidebarLayout({ active, leftPanel, leftPanelTitle, showRightSidebar = true, children }: SidebarLayoutProps) {
+  const { t } = useTranslation();
   const { tocMode, tagsOpen, tocWidth, tagsWidth } = useSidebarStore();
   const pg = usePlaygroundStore();
   const layoutRef = useRef<HTMLDivElement>(null);
@@ -322,14 +324,14 @@ export function SidebarLayout({ active, leftPanel, leftPanelTitle, showRightSide
         onMouseLeave={overlay.onRailMouseLeave}
         onClick={overlay.onRailAreaClick}
       >
-        <Tooltip content="Contents" shortcut={{ key: "[" }}>
+        <Tooltip content={t("quotes.contents")} shortcut={{ key: "[" }}>
           <button
             ref={tocRailBtnRef}
             className="rail-btn"
             onClick={handleOpenTocPush}
             onMouseEnter={overlay.onButtonMouseEnter}
             onMouseLeave={overlay.onButtonMouseLeave}
-            aria-label="Toggle table of contents"
+            aria-label={t("quotes.toggleContents")}
           >
             <ListIcon />
           </button>
@@ -353,7 +355,7 @@ export function SidebarLayout({ active, leftPanel, leftPanelTitle, showRightSide
         onMouseLeave={overlay.onPanelMouseLeave}
       >
         <div className="sidebar-header toc-sidebar-header">
-          <span className="sidebar-title">{leftPanelTitle ?? "Contents"}</span>
+          <span className="sidebar-title">{leftPanelTitle ?? t("quotes.contents")}</span>
           <button
             className="sidebar-close"
             onClick={handleCloseToc}

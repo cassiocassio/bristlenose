@@ -7,6 +7,7 @@
  * Reuses organisms/toolbar.css (.view-switcher, .view-switcher-menu).
  */
 
+import { useTranslation } from "react-i18next";
 import { ToolbarButton } from "./ToolbarButton";
 import { useDropdown } from "../hooks/useDropdown";
 
@@ -21,10 +22,10 @@ export interface ViewSwitcherProps {
   "data-testid"?: string;
 }
 
-const VIEW_OPTIONS: { value: "all" | "starred"; label: string; icon: string }[] = [
-  { value: "all", label: "All quotes", icon: "\u00A0" },
-  { value: "starred", label: "Starred quotes", icon: "\u2733" },
-];
+const VIEW_ICONS: Record<"all" | "starred", string> = {
+  all: "\u00A0",
+  starred: "\u2733",
+};
 
 export function ViewSwitcher({
   viewMode,
@@ -34,9 +35,15 @@ export function ViewSwitcher({
   labelOverride,
   "data-testid": testId,
 }: ViewSwitcherProps) {
+  const { t } = useTranslation();
   const { open, toggle, containerRef } = useDropdown({ isOpen, onToggle });
 
-  const currentOption = VIEW_OPTIONS.find((o) => o.value === viewMode) ?? VIEW_OPTIONS[0];
+  const viewOptions = [
+    { value: "all" as const, label: t("quotes.allQuotes"), icon: VIEW_ICONS.all },
+    { value: "starred" as const, label: t("quotes.starredQuotes"), icon: VIEW_ICONS.starred },
+  ];
+
+  const currentOption = viewOptions.find((o) => o.value === viewMode) ?? viewOptions[0];
   const displayLabel = labelOverride ?? currentOption.label;
 
   function handleSelect(value: "all" | "starred") {
@@ -65,7 +72,7 @@ export function ViewSwitcher({
           role="menu"
           data-testid={testId ? `${testId}-menu` : undefined}
         >
-          {VIEW_OPTIONS.map((opt) => (
+          {viewOptions.map((opt) => (
             <li
               key={opt.value}
               role="menuitem"

@@ -29,9 +29,18 @@ From security review of desktop app plan (22 Mar 2026). All findings are in the 
 
 - [x] **Native toolbar tabs don't navigate** — fixed: stale `navigate` closure in `installNavigationShims`. Module-level refs instead of direct closure capture. Also added `makeFirstResponder(webView)` after tab switch for keyboard focus
 - [ ] **Native toolbar tab i18n not reactive** — changing language in Settings doesn't update toolbar labels until app restart. `I18n` `@StateObject` doesn't trigger segmented control re-render
-- [ ] **i18n: extract ~180 hardcoded frontend strings** — infrastructure is ready (single source of truth, Vite alias, i18next). Strings need to be moved from JSX literals to locale JSON keys. Tier 1 (~40 strings) is the critical path. See `docs/design-i18n.md` string audit
-- [ ] **i18n: pseudo-localisation QA** — add `i18next-pseudo` to catch hardcoded strings. See `docs/design-i18n.md`
-- [ ] **i18n: Weblate setup** — connect `hosted.weblate.org` to repo for community translation. Free Libre plan. See `docs/design-i18n.md`
+- [x] **i18n: extract ~200 hardcoded frontend strings** — done (24 Mar 2026). ~30 components wired with `useTranslation()`. Sentiment badges translate via `enums.json`. `format.ts` uses `Intl.DateTimeFormat`. `<html lang>` tracks locale. Screen reader `announce()` calls use `i18n.t()`. Keys in all 5 locale files (en/es/fr/de/ko)
+- [ ] **i18n: translation quality fixes** — ~~es/fr "codebook" loanword in ~15 browse/import keys~~ (fixed 24 Mar); ko participant term inconsistency (참여자 vs 참가자); de/ko missing `nav.codebookShort`. Fixed: ko colDuration "길이"→"소요 시간", ko helpHint "도움말"→"도움말 열기". Confirmed correct: fr undo/cancel both "Annuler" (Apple convention), de "Teilnehmer" (Apple convention). Machine translation QA checklist added to `docs/design-i18n.md` Step 6
+- [x] **i18n: help prose + shortcuts (Batch 11)** — HelpSection and ShortcutsSection wired to `t()` with `help.guide.*` and `help.shortcuts.*` keys (24 Mar 2026). SignalsSection, CodebookSection, ContributingSection also wired (24 Mar). AboutSection, DeveloperSection, DesignSection remain hardcoded English — deferred as "Could" in 100days.md
+- [ ] **i18n: pseudo-localisation QA** — add `i18next-pseudo` to catch remaining hardcoded strings. See `docs/design-i18n.md`
+- [ ] **i18n: should-fix items from audit (24 Mar 2026)**:
+  - ~~`HelpModal.tsx:67` — `useMemo` deps `[t]` should be `[t, i18n.language]`~~ (already fixed)
+  - ~~Korean "Signals" terminology — uses native "신호" but glossary specifies transliteration "시그널"~~ (fixed 24 Mar, 11 keys + particle corrections)
+  - ~~`formatFinderDate`/`formatCompactDate` called without locale param in 4 files~~ (fixed 24 Mar — pass `i18n.language` in SessionsTable, TranscriptPage, Dashboard, SessionsSidebar)
+  - ~~`ConfidenceHistogram.tsx:111` — hardcoded English plural tooltip~~ (fixed 24 Mar — `autocode.proposalCount` with i18next plurals in all 5 locales)
+  - Help modal reference sections (AboutSection, DeveloperSection, DesignSection) — ~45 strings still hardcoded, deferred
+  - `SettingsPanel.tsx` CONFIG_DATA labels — hundreds of semi-technical labels, plus hardcoded intro paragraph at line 690
+- [x] **i18n: Weblate setup** — connect `hosted.weblate.org` to repo for community translation. Free Libre plan. See `docs/design-i18n.md`
 - [ ] **i18n: cross-check Spanish against Apple glossary** — verified 23 Mar 2026, all match. Do same for each new language before release
 
 ## Desktop app — future video player

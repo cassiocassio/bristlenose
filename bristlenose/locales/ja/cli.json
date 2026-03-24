@@ -1,0 +1,27 @@
+{
+  "version": "",
+  "help": "",
+  "stage": {
+    "ingest": "",
+    "extractAudio": "",
+    "transcribe": "",
+    "identifySpeakers": "",
+    "mergeTranscript": "",
+    "piiRemoval": "",
+    "topicSegmentation": "",
+    "quoteExtraction": "",
+    "quoteClustering": "",
+    "thematicGrouping": "",
+    "render": ""
+  },
+  "error": {
+    "noInput": "",
+    "notFound": "",
+    "noFiles": ""
+  },
+  "progress": {
+    "complete": "",
+    "failed": "",
+    "skipped": ""
+  }
+}

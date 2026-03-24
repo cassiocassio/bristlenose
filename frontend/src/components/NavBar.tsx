@@ -7,6 +7,7 @@
  */
 
 import { NavLink } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { isExportMode } from "../utils/exportData";
 
 interface NavBarProps {
@@ -15,12 +16,12 @@ interface NavBarProps {
   onHelp?: () => void;
 }
 
-const textTabs = [
-  { to: "/report/", label: "Project", end: true },
-  { to: "/report/sessions/", label: "Sessions" },
-  { to: "/report/quotes/", label: "Quotes" },
-  { to: "/report/codebook/", label: "Codebook" },
-  { to: "/report/analysis/", label: "Analysis" },
+const TAB_ROUTES = [
+  { to: "/report/", key: "nav.project", end: true },
+  { to: "/report/sessions/", key: "nav.sessions" },
+  { to: "/report/quotes/", key: "nav.quotes" },
+  { to: "/report/codebook/", key: "nav.codebook" },
+  { to: "/report/analysis/", key: "nav.analysis" },
 ] as const;
 
 function tabClassName({ isActive }: { isActive: boolean }): string {
@@ -29,24 +30,25 @@ function tabClassName({ isActive }: { isActive: boolean }): string {
 
 
 export function NavBar({ onExport, onSettings, onHelp }: NavBarProps) {
+  const { t } = useTranslation();
   return (
     <nav className="bn-global-nav">
-      {textTabs.map(({ to, label, ...rest }) => (
+      {TAB_ROUTES.map(({ to, key, ...rest }) => (
         <NavLink
           key={to}
           to={to}
           className={tabClassName}
           {...rest}
         >
-          {label}
+          {t(key)}
         </NavLink>
       ))}
       <div className="bn-tab-spacer" />
       {!isExportMode() && onExport && (
         <button
           className="bn-tab bn-tab-icon"
-          aria-label="Export"
-          title="Export report"
+          aria-label={t("buttons.export")}
+          title={t("buttons.export")}
           onClick={onExport}
         >
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">
@@ -58,9 +60,9 @@ export function NavBar({ onExport, onSettings, onHelp }: NavBarProps) {
       )}
       <button
         className="bn-tab bn-tab-icon"
-        aria-label="Settings"
+        aria-label={t("nav.settings")}
         aria-haspopup="dialog"
-        title="Settings"
+        title={t("nav.settings")}
         onClick={onSettings}
       >
         <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">
@@ -70,9 +72,9 @@ export function NavBar({ onExport, onSettings, onHelp }: NavBarProps) {
       </button>
       <button
         className="bn-tab bn-tab-icon"
-        aria-label="Help"
+        aria-label={t("nav.help")}
         aria-haspopup="dialog"
-        title="Help"
+        title={t("nav.help")}
         onClick={onHelp}
       >
         <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">

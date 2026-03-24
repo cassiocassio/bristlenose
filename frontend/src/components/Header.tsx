@@ -7,6 +7,7 @@
  */
 
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { apiGet } from "../utils/api";
 import { useProjectId } from "../hooks/useProjectId";
 
@@ -17,6 +18,7 @@ interface ProjectInfo {
 }
 
 export function Header() {
+  const { t } = useTranslation();
   const projectId = useProjectId();
   const [info, setInfo] = useState<ProjectInfo | null>(null);
 
@@ -25,13 +27,6 @@ export function Header() {
       .then(setInfo)
       .catch(() => {});
   }, [projectId]);
-
-  const sessionLabel = info
-    ? `${info.session_count}\u00a0session${info.session_count !== 1 ? "s" : ""}`
-    : "";
-  const participantLabel = info
-    ? `${info.participant_count}\u00a0participant${info.participant_count !== 1 ? "s" : ""}`
-    : "";
 
   return (
     <>
@@ -46,7 +41,7 @@ export function Header() {
               <img
                 className="report-logo"
                 src="/report/assets/bristlenose-logo.png"
-                alt="Bristlenose logo"
+                alt={t("header.logoAlt")}
               />
             </picture>
           </a>
@@ -58,10 +53,11 @@ export function Header() {
           </span>
         </div>
         <div className="header-right">
-          <span className="header-doc-title">Research Report</span>
+          <span className="header-doc-title">{t("header.researchReport")}</span>
           {info && (
             <span className="header-meta">
-              {sessionLabel}, {participantLabel}
+              {t("header.session", { count: info.session_count })},{" "}
+              {t("header.participant", { count: info.participant_count })}
             </span>
           )}
         </div>

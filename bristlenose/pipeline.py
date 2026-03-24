@@ -16,6 +16,7 @@ _os.environ.setdefault("HF_HUB_DISABLE_PROGRESS_BARS", "1")
 
 from bristlenose import __version__
 from bristlenose.config import BristlenoseSettings
+from bristlenose.hashing import hash_bytes
 from bristlenose.manifest import (
     STAGE_CLUSTER_AND_GROUP,
     STAGE_EXTRACT_AUDIO,
@@ -516,7 +517,10 @@ class Pipeline:
                     input_size=total_audio_mins,
                 )
                 self._emit_remaining(STAGE_TRANSCRIBE, _transcribe_elapsed)
-            mark_stage_complete(manifest, _M_STAGE_TRANSCRIBE)
+            _tx_hash = hash_bytes(_ss_path.read_bytes()) if _ss_path.exists() else None
+            mark_stage_complete(
+                manifest, _M_STAGE_TRANSCRIBE, content_hash=_tx_hash,
+            )
             write_manifest(manifest, output_dir)
 
             # ── Cost estimate before LLM stages ──────────────────────
@@ -660,10 +664,22 @@ class Pipeline:
                                     for seg in session_segments[sid]
                                 ],
                             }
-                            (_si_dir / f"{sid}.json").write_text(
-                                _json.dumps(_si_data, indent=2),
-                                encoding="utf-8",
+                            _si_bytes = _json.dumps(
+                                _si_data, indent=2,
+                            ).encode("utf-8")
+                            (_si_dir / f"{sid}.json").write_bytes(_si_bytes)
+                            # Update session record with content hash
+                            _si_rec = manifest.stages.get(
+                                STAGE_IDENTIFY_SPEAKERS,
                             )
+                            if (
+                                _si_rec
+                                and _si_rec.sessions
+                                and sid in _si_rec.sessions
+                            ):
+                                _si_rec.sessions[sid].content_hash = (
+                                    hash_bytes(_si_bytes)
+                                )
 
                 _speakers_elapsed = time.perf_counter() - t0
                 _n_new_si = len(_remaining_si_sids)
@@ -855,7 +871,12 @@ class Pipeline:
                 self._emit_remaining(STAGE_TOPICS, _topics_elapsed)
                 if _seg_errors:
                     _print_warn(*_short_reason(_seg_errors, self.settings.llm_provider))
-            mark_stage_complete(manifest, STAGE_TOPIC_SEGMENTATION)
+            _tb_hash = (
+                hash_bytes(_tb_path.read_bytes()) if _tb_path.exists() else None
+            )
+            mark_stage_complete(
+                manifest, STAGE_TOPIC_SEGMENTATION, content_hash=_tb_hash,
+            )
             write_manifest(manifest, output_dir)
 
             # ── Stage 9: Quote extraction ────────────────────────────
@@ -967,7 +988,12 @@ class Pipeline:
                 self._emit_remaining(STAGE_QUOTES, _quotes_elapsed)
                 if _quote_errors:
                     _print_warn(*_short_reason(_quote_errors, self.settings.llm_provider))
-            mark_stage_complete(manifest, STAGE_QUOTE_EXTRACTION)
+            _eq_hash = (
+                hash_bytes(_eq_path.read_bytes()) if _eq_path.exists() else None
+            )
+            mark_stage_complete(
+                manifest, STAGE_QUOTE_EXTRACTION, content_hash=_eq_hash,
+            )
             write_manifest(manifest, output_dir)
 
             # ── Stages 10+11: Cluster by screen + thematic grouping ──
@@ -1019,7 +1045,16 @@ class Pipeline:
                     elapsed=_cluster_elapsed, input_size=_n_sessions,
                 )
                 self._emit_remaining(STAGE_CLUSTER, _cluster_elapsed)
-            mark_stage_complete(manifest, STAGE_CLUSTER_AND_GROUP)
+            # Hash both output files; combine into a single stage hash
+            _cg_parts: list[bytes] = []
+            if _sc_path.exists():
+                _cg_parts.append(_sc_path.read_bytes())
+            if _tg_path.exists():
+                _cg_parts.append(_tg_path.read_bytes())
+            _cg_hash = hash_bytes(b"".join(_cg_parts)) if _cg_parts else None
+            mark_stage_complete(
+                manifest, STAGE_CLUSTER_AND_GROUP, content_hash=_cg_hash,
+            )
             write_manifest(manifest, output_dir)
 
             # ── People file ───────────────────────────────────────────

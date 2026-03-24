@@ -1,6 +1,6 @@
 # Pipeline Resilience & Data Integrity
 
-> **Status**: Phase 0–1e implemented (crash recovery, per-session caching, `bristlenose status` command, pre-run resume summary); Phase 2 (hashing + integrity) next
+> **Status**: Phase 0–1e implemented (crash recovery, per-session caching, `bristlenose status` command, pre-run resume summary); Phase 2a implemented (SHA-256 content hashes on stage outputs stored in manifest); Phase 2b–2c (verify on load, input change detection) next
 > **Scope**: Big-picture architecture for crash recovery, incremental re-runs, provenance tracking, human/LLM merge, source material change detection, mid-run provider switching, and analytical context preservation
 > **Trigger**: Plato stress test (Feb 2026) — pipeline ran out of API credits mid-run, stale SQLite data from previous project leaked into serve mode, intermediate JSON files weren't written by `analyze` command, recovery required re-spending $3.50 on LLM calls already made
 
@@ -644,13 +644,11 @@ Resuming: 7/10 sessions have quotes, 3 remaining.
 
 Phase 1 trusts the manifest blindly — "it says complete, so it must be fine." Phase 2 adds verification.
 
-#### 2a. Content hashes on stage outputs
+#### ~~2a. Content hashes on stage outputs~~ ✓ Done
 
 **What it is**: When writing a stage output (JSON, transcript text), compute its SHA-256 hash and store it in the manifest alongside the file path.
 
-**How it works**: `write_intermediate_json()` returns the hash of what it wrote. The manifest records it.
-
-**What it touches**: `render_output.py` (return hash from write function), `manifest.py` (add hash field), `pipeline.py` (pass hash to manifest update).
+**Implementation**: `hash_bytes()` in `bristlenose/hashing.py` (standalone module — will grow in Phase 2c). `content_hash: str | None` field on both `StageRecord` and `SessionRecord` in `manifest.py`. Hashes computed at the call site in `pipeline.py` (read file back and hash) rather than changing `write_intermediate_json()` return type — simpler, no interface changes. Per-session files (speaker-info) hashed individually; merged files (topic_boundaries, extracted_quotes) hashed as the whole file. Cluster+group combines both output files into one hash. 13 tests (5 hashing, 8 manifest).
 
 **Risk**: None. Just adds a field. Doesn't change behavior.
 

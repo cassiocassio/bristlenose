@@ -1,19 +1,19 @@
 # Bristlenose — Where I Left Off
 
-Last updated: 23 Mar 2026
+Last updated: 24 Mar 2026
 
 ## Desktop app security (must-fix before any distribution)
 
 From security review of desktop app plan (22 Mar 2026). All findings are in the serve-side and process management layer, not the Swift bridge code (which is clean).
 
-- [ ] **Localhost auth token** — generate random bearer token at serve startup, inject into WKWebView via `WKUserScript`, require on all API requests. Any local process can currently hit `/api/projects/1/quotes` on ports 8150–9149 and exfiltrate transcripts, quotes, participant names
-- [ ] **Media endpoint filtering** — `/media` mount is `StaticFiles(directory=project_dir)` with no restrictions. Serves `.env`, `.git/`, SQLite DB, everything. Restrict to known media extensions (`.mp4`, `.mov`, `.wav`, `.mp3`, `.m4a`, `.vtt`, `.srt`, etc.), reject dotfiles and `bristlenose-output/`
-- [ ] **CORS middleware** — add `CORSMiddleware(allow_origins=["http://127.0.0.1"])` to FastAPI. One line, no reason to defer
+- [x] **Localhost auth token** — bearer token middleware, per-session `secrets.token_urlsafe(32)`, validated on `/api/*` + `/media/*`. Injected into HTML (`json.dumps`) + WKUserScript (regex-validated). Design: `docs/design-localhost-auth.md`
+- [x] **Media endpoint filtering** — extension allowlist + path-traversal guard on `/media/` route. Also requires auth token
+- [x] **CORS middleware** — `CORSMiddleware(allow_origins=[])` blocks all cross-origin requests
 - [x] **Don't bundle API key in binary** — verified clean: no hardcoded keys in Swift source, Keychain-only storage, user enters via Settings
 - [x] **Skip zombie cleanup when BRISTLENOSE_DEV_PORT is set** — `killOrphanedServeProcesses()` now skips when dev port override is active, so the terminal dev server isn't killed on Xcode launch
 - [ ] **Verify zombie cleanup targets** — `killOrphanedServeProcesses()` runs `lsof -ti :8150-9149` and kills every PID found, including non-Bristlenose processes. Check process command line contains "bristlenose" before `kill()`
 - [ ] **Migrate KeychainHelper to Security framework** — current `/usr/bin/security` CLI approach is blocked in App Sandbox. Use `SecItemAdd`/`SecItemCopyMatching`/`SecItemDelete`. Also affects Python-side `credentials_macos.py`
-- [ ] **Minimal child process environment** — `ProcessInfo.processInfo.environment` passes all user env vars (DB passwords, cloud tokens) to the Python sidecar. Construct minimal env: `PATH`, `HOME`, `LANG`, `TMPDIR`, plus `BRISTLENOSE_*` vars only
+- [x] **Minimal child process environment** — stripped to PATH, HOME, TMPDIR, USER, SHELL, locale, VIRTUAL_ENV + BRISTLENOSE_* overlay in `ServeManager.overlayPreferences()`
 - [ ] **Port-restrict navigation policy** — `decidePolicyFor` allows any localhost port. Restrict to the expected serve port from `serveManager.state`
 
 ## Desktop app — shipped this session
@@ -195,6 +195,8 @@ Multi-column quote grid using CSS `auto-fill`. Card max-width `23rem` (368px) ke
 | Session enable/disable toggle (temporary exclusion from analysis) | — | medium |
 | Delete/quarantine session from UI (`.bristlenose-ignore`) | — | medium |
 | Re-run pipeline from serve mode (background, with progress) | — | large |
+| Pipeline resilience Phase 2b — verify hashes on load | — | small |
+| Pipeline resilience Phase 2c — input change detection | — | medium |
 | Moderator Phase 2: cross-session linking | #25 | medium |
 | Speaker diarisation improvements | #26 | medium |
 | Batch processing dashboard | #27 | medium |

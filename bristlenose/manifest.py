@@ -38,6 +38,7 @@ class SessionRecord(BaseModel):
     completed_at: str | None = None
     provider: str | None = None  # "anthropic", "google", etc.
     model: str | None = None  # "claude-sonnet-4-20250514", etc.
+    content_hash: str | None = None  # SHA-256 of the session output file
 
 
 class StageRecord(BaseModel):
@@ -48,6 +49,7 @@ class StageRecord(BaseModel):
     completed_at: str | None = None
     error: str | None = None
     sessions: dict[str, SessionRecord] | None = None  # only for per-session stages
+    content_hash: str | None = None  # SHA-256 of the stage output file
 
 
 class PipelineManifest(BaseModel):
@@ -153,11 +155,17 @@ def mark_stage_running(manifest: PipelineManifest, stage: str) -> None:
     manifest.updated_at = _now_iso()
 
 
-def mark_stage_complete(manifest: PipelineManifest, stage: str) -> None:
+def mark_stage_complete(
+    manifest: PipelineManifest,
+    stage: str,
+    content_hash: str | None = None,
+) -> None:
     """Mark a stage as complete and update the manifest timestamp."""
     record = manifest.stages.get(stage, StageRecord())
     record.status = StageStatus.COMPLETE
     record.completed_at = _now_iso()
+    if content_hash is not None:
+        record.content_hash = content_hash
     manifest.stages[stage] = record
     manifest.updated_at = _now_iso()
 
@@ -168,6 +176,7 @@ def mark_session_complete(
     session_id: str,
     provider: str | None = None,
     model: str | None = None,
+    content_hash: str | None = None,
 ) -> None:
     """Mark a single session as complete within a per-session stage.
 
@@ -188,6 +197,7 @@ def mark_session_complete(
         completed_at=_now_iso(),
         provider=provider,
         model=model,
+        content_hash=content_hash,
     )
     manifest.updated_at = _now_iso()
 

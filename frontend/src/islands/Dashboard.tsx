@@ -252,6 +252,7 @@ function CompactSessionRow({
 }: {
   session: DashboardSessionResponse;
 }) {
+  const { i18n } = useTranslation();
   const {
     session_id,
     session_number,
@@ -312,7 +313,7 @@ function CompactSessionRow({
         ))}
       </td>
       <td className="bn-session-meta">
-        <div>{formatFinderDate(session_date)}</div>
+        <div>{formatFinderDate(session_date, i18n.language)}</div>
       </td>
       <td className="bn-session-duration">
         {formatDuration(duration_seconds)}

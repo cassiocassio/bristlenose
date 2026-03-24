@@ -392,6 +392,8 @@
     "close": "Close",
     "loading": "Loading proposals\u2026",
     "empty": "No proposals to review.",
+    "proposalCount_one": "{{count}} proposal",
+    "proposalCount_other": "{{count}} proposals",
     "sessionLabel": "Session {{id}}",
     "review": {
       "title": "AutoCode Review",

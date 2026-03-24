@@ -241,7 +241,7 @@ function SessionRow({
   onCancelEdit: () => void;
   onNameCommit: (code: string, newName: string) => void;
 }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const {
     session_id,
     session_number,
@@ -346,7 +346,7 @@ function SessionRow({
         })}
       </td>
       <td className="bn-session-meta">
-        <div>{formatFinderDate(session_date)}</div>
+        <div>{formatFinderDate(session_date, i18n.language)}</div>
         {hasJourney && <JourneyChain labels={journey_labels} />}
       </td>
       <td className="bn-session-duration">

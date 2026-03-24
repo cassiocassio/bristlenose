@@ -392,6 +392,8 @@
     "close": "Schließen",
     "loading": "Vorschläge werden geladen\u2026",
     "empty": "Keine Vorschläge zum Überprüfen.",
+    "proposalCount_one": "{{count}} Vorschlag",
+    "proposalCount_other": "{{count}} Vorschläge",
     "sessionLabel": "Sitzung {{id}}",
     "review": {
       "title": "AutoCode-Überprüfung",

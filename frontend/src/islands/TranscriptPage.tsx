@@ -15,6 +15,7 @@
 import { useEffect, useState, useRef, useLayoutEffect, useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import type { TFunction } from "i18next";
+import i18n from "../i18n";
 import { JourneyChain, PersonBadge, TimecodeLink } from "../components";
 import { Annotation } from "../components/Annotation";
 import type { AnnotationTag } from "../components/Annotation";
@@ -281,7 +282,7 @@ function renderSessionItem(s: SessionListItem): React.ReactNode {
     <>
       <strong>Session {s.session_number}</strong>
       {s.session_date && (
-        <span className="bn-selector__detail">{formatFinderDate(s.session_date)}</span>
+        <span className="bn-selector__detail">{formatFinderDate(s.session_date, i18n.language)}</span>
       )}
       {participants.map((sp) => (
         <PersonBadge

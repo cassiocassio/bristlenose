@@ -34,12 +34,12 @@ From security review of desktop app plan (22 Mar 2026). All findings are in the 
 - [x] **i18n: help prose + shortcuts (Batch 11)** — HelpSection and ShortcutsSection wired to `t()` with `help.guide.*` and `help.shortcuts.*` keys (24 Mar 2026). SignalsSection, CodebookSection, ContributingSection also wired (24 Mar). AboutSection, DeveloperSection, DesignSection remain hardcoded English — deferred as "Could" in 100days.md
 - [ ] **i18n: pseudo-localisation QA** — add `i18next-pseudo` to catch remaining hardcoded strings. See `docs/design-i18n.md`
 - [ ] **i18n: should-fix items from audit (24 Mar 2026)**:
-  - `HelpModal.tsx:67` — `useMemo` deps `[t]` should be `[t, i18n.language]` (stale labels on locale switch)
-  - Korean "Signals" terminology — uses native "신호" but glossary specifies transliteration "시그널" (9 keys in ko/common.json)
-  - `formatFinderDate`/`formatCompactDate` called without locale param in 4 files (SessionsTable, TranscriptPage, Dashboard, SessionsSidebar) — defaults to en-GB instead of user's locale
-  - Help modal reference sections (AboutSection, DeveloperSection, DesignSection) — ~45 strings still hardcoded, deferred as "Could" in 100days.md. SignalsSection, CodebookSection, ContributingSection done (24 Mar)
+  - ~~`HelpModal.tsx:67` — `useMemo` deps `[t]` should be `[t, i18n.language]`~~ (already fixed)
+  - ~~Korean "Signals" terminology — uses native "신호" but glossary specifies transliteration "시그널"~~ (fixed 24 Mar, 11 keys + particle corrections)
+  - ~~`formatFinderDate`/`formatCompactDate` called without locale param in 4 files~~ (fixed 24 Mar — pass `i18n.language` in SessionsTable, TranscriptPage, Dashboard, SessionsSidebar)
+  - ~~`ConfidenceHistogram.tsx:111` — hardcoded English plural tooltip~~ (fixed 24 Mar — `autocode.proposalCount` with i18next plurals in all 5 locales)
+  - Help modal reference sections (AboutSection, DeveloperSection, DesignSection) — ~45 strings still hardcoded, deferred
   - `SettingsPanel.tsx` CONFIG_DATA labels — hundreds of semi-technical labels, plus hardcoded intro paragraph at line 690
-  - `ConfidenceHistogram.tsx:111` — hardcoded English plural tooltip
 - [x] **i18n: Weblate setup** — connect `hosted.weblate.org` to repo for community translation. Free Libre plan. See `docs/design-i18n.md`
 - [ ] **i18n: cross-check Spanish against Apple glossary** — verified 23 Mar 2026, all match. Do same for each new language before release
 

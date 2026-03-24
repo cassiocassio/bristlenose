@@ -99,7 +99,9 @@
     "csvSentiment": "Sentiment",
     "csvTags": "Étiquettes",
     "csvCopied": "{{count}} verbatim copiés en CSV",
-    "csvFailed": "Impossible de copier dans le presse-papiers"
+    "csvFailed": "Impossible de copier dans le presse-papiers",
+    "noQuotesSelected": "Aucun verbatim sélectionné",
+    "quotesExported": "{{count}} verbatim exportés en CSV"
   },
   "tags": {
     "noTags": "Aucune étiquette",
@@ -181,7 +183,42 @@
     "navAbout": "À propos",
     "navDeveloper": "Développeur",
     "navDesign": "Design",
-    "navContributing": "Contribution"
+    "navContributing": "Contribution",
+    "shortcuts": {
+      "navigation": "Navigation",
+      "nextQuote": "Verbatim suivant",
+      "previousQuote": "Verbatim précédent",
+      "selection": "Sélection",
+      "toggleSelect": "Basculer la sélection",
+      "extend": "Étendre",
+      "actions": "Actions",
+      "starQuotes": "Mettre en favori",
+      "hideQuotes": "Masquer verbatim",
+      "addTag": "Ajouter une étiquette",
+      "repeatLastTag": "Répéter la dernière étiquette",
+      "playInVideo": "Lire dans la vidéo",
+      "global": "Global",
+      "search": "Rechercher",
+      "toggleContents": "Basculer le sommaire",
+      "toggleTags": "Basculer les étiquettes",
+      "toggleBothSidebars": "Basculer les deux panneaux",
+      "toggleHeatmap": "Basculer la carte thermique",
+      "thisHelp": "Cette aide",
+      "closeClear": "Fermer / effacer"
+    },
+    "guide": {
+      "intro": "Ce guide explique comment lire et exploiter votre analyse Bristlenose.",
+      "sectionsTitle": "Sections et thèmes",
+      "sectionsBody": "Chaque verbatim est classé comme spécifique à un écran (concernant un écran ou une tâche particulière) ou contexte général (concernant la situation plus large du participant). Les verbatim spécifiques sont regroupés en sections ; les verbatim généraux sont regroupés en thèmes émergents. Chaque verbatim apparaît à un seul endroit.",
+      "sentimentTitle": "Étiquetage des sentiments",
+      "sentimentBody": "Sept étiquettes de sentiment conçues pour la recherche UX : frustration, confusion, doute, surprise, satisfaction, enchantement et confiance. Chaque verbatim reçoit une étiquette basée sur l'émotion exprimée par le participant.",
+      "signalsTitle": "Signaux",
+      "signalsBody": "La page d'analyse fait ressortir les signaux — des concentrations statistiquement notables de sentiment au sein des sections du rapport. Les signaux forts et modérés indiquent où les expériences des participants se concentrent.",
+      "starsTitle": "Favoris, étiquettes et filtres",
+      "starsBody": "Mettez des verbatim en favori pour marquer les résultats importants. Ajoutez des étiquettes pour construire votre propre schéma de codage. Utilisez le filtre d'étiquettes et la recherche pour vous concentrer sur l'essentiel. Tous les changements sont enregistrés automatiquement.",
+      "exportTitle": "Exporter",
+      "exportBody": "Téléchargez un rapport HTML autonome qui fonctionne hors ligne. L'export conserve tous vos favoris, étiquettes et modifications."
+    }
   },
   "analysis": {
     "heading": "Analyse",
@@ -198,6 +235,13 @@
     "tagDesc": "Motifs classés par intensité du signal — là où les étiquettes de la grille de codage se concentrent plus que prévu par rapport à la moyenne de l'étude.",
     "section": "Section",
     "theme": "Thème",
+    "dimension": "Dimension",
+    "heatmap": "Carte thermique",
+    "heatmapOpen": "Fermer le panneau carte thermique (m)",
+    "heatmapClosed": "Carte thermique (m)",
+    "heatmapCloseLabel": "Fermer le panneau carte thermique",
+    "heatmapOpenLabel": "Ouvrir le panneau carte thermique",
+    "heatmapSources": "Sources de la carte thermique",
     "conc": "conc",
     "voice_one": "{{count}} voix",
     "voice_other": "{{count}} voix",
@@ -273,5 +317,46 @@
     "uncategorised": "Sans catégorie",
     "uncategorisedSubtitle": "Étiquettes pas encore assignées à un groupe",
     "deleteGroupAriaLabel": "Supprimer le groupe {{name}}"
+  },
+  "autocode": {
+    "deny": "Refuser",
+    "accept": "Accepter",
+    "close": "Fermer",
+    "loading": "Chargement des propositions\u2026",
+    "empty": "Aucune proposition à examiner.",
+    "sessionLabel": "Session {{id}}",
+    "review": {
+      "title": "Révision AutoCode",
+      "remaining": "{{pending}} sur {{total}} propositions restantes",
+      "accepted": "{{count}} acceptées",
+      "excluded": "{{count}} exclues",
+      "dragInstruction": "Faites glisser les seuils pour contrôler combien d'auto-étiquettes sont appliquées comme tentatives ou acceptées.",
+      "apply": "Appliquer les seuils",
+      "applying": "Application\u2026",
+      "applyFailed": "Échec de l'application — vos décisions par ligne sont sauvegardées. Réessayez.",
+      "loadFailed": "Échec du chargement des propositions",
+      "zoneExclude": "Exclure",
+      "zoneTentative": "Tentative",
+      "zoneAccept": "Accepter",
+      "zoneAccepted": "Acceptées",
+      "zoneExcluded": "Exclues"
+    },
+    "report": {
+      "title": "Rapport AutoCode",
+      "subtitle_one": "{{count}} étiquette proposée dans {{sessions}} session",
+      "subtitle_other": "{{count}} étiquettes proposées dans {{sessions}} sessions",
+      "close": "Fermer",
+      "acceptAll": "Tout accepter",
+      "tagTentatively": "Étiqueter provisoirement",
+      "deny": "Refuser"
+    },
+    "toast": {
+      "progress": "\u2726 AutoCodage {{processed}}/{{total}} verbatim\u2026",
+      "done": "\u2726 AutoCodés {{total}} verbatim en {{duration}}.",
+      "report": "Rapport",
+      "failed": "\u2726 AutoCode a échoué",
+      "failedWithError": "\u2726 AutoCode a échoué : {{error}}",
+      "dismiss": "Fermer"
+    }
   }
 }

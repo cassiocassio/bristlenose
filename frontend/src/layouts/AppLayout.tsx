@@ -341,7 +341,7 @@ function AppShell() {
           a.download = "bristlenose-quotes.csv";
           a.click();
           URL.revokeObjectURL(url);
-          toast(`${snap.quotes.length} quotes exported as CSV`);
+          toast(i18n.t("toolbar.quotesExported", { count: snap.quotes.length }));
           break;
         }
         case "copyAsCSV": {
@@ -350,14 +350,14 @@ function AppShell() {
           const selected = selectedIdsBridgeRef.current;
           const ids = selected.size > 0 ? Array.from(selected) : focused ? [focused] : null;
           if (!ids || ids.length === 0) {
-            toast("No quotes selected");
+            toast(i18n.t("toolbar.noQuotesSelected"));
             break;
           }
           const csv2 = buildCsvString(ids, snap2);
           navigator.clipboard
             .writeText(csv2)
-            .then(() => toast(`${ids.length} quote${ids.length === 1 ? "" : "s"} copied as CSV`))
-            .catch(() => toast("Could not copy to clipboard"));
+            .then(() => toast(i18n.t("toolbar.csvCopied", { count: ids.length })))
+            .catch(() => toast(i18n.t("toolbar.csvFailed")));
           break;
         }
         case "allQuotes":

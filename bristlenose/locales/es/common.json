@@ -99,7 +99,9 @@
     "csvSentiment": "Sentimiento",
     "csvTags": "Etiquetas",
     "csvCopied": "{{count}} citas copiadas como CSV",
-    "csvFailed": "No se pudo copiar al portapapeles"
+    "csvFailed": "No se pudo copiar al portapapeles",
+    "noQuotesSelected": "No hay citas seleccionadas",
+    "quotesExported": "{{count}} citas exportadas como CSV"
   },
   "tags": {
     "noTags": "Sin etiquetas",
@@ -181,7 +183,42 @@
     "navAbout": "Acerca de",
     "navDeveloper": "Desarrollador",
     "navDesign": "Diseño",
-    "navContributing": "Contribuir"
+    "navContributing": "Contribuir",
+    "shortcuts": {
+      "navigation": "Navegación",
+      "nextQuote": "Siguiente cita",
+      "previousQuote": "Cita anterior",
+      "selection": "Selección",
+      "toggleSelect": "Alternar selección",
+      "extend": "Extender",
+      "actions": "Acciones",
+      "starQuotes": "Destacar cita(s)",
+      "hideQuotes": "Ocultar cita(s)",
+      "addTag": "Añadir etiqueta",
+      "repeatLastTag": "Repetir última etiqueta",
+      "playInVideo": "Reproducir en vídeo",
+      "global": "Global",
+      "search": "Buscar",
+      "toggleContents": "Alternar contenidos",
+      "toggleTags": "Alternar etiquetas",
+      "toggleBothSidebars": "Alternar ambos paneles",
+      "toggleHeatmap": "Alternar mapa de calor",
+      "thisHelp": "Esta ayuda",
+      "closeClear": "Cerrar / limpiar"
+    },
+    "guide": {
+      "intro": "Esta guía explica cómo leer y trabajar con tu análisis de Bristlenose.",
+      "sectionsTitle": "Secciones y temas",
+      "sectionsBody": "Cada cita se clasifica como específica de pantalla (sobre una pantalla o tarea particular) o contexto general (sobre la situación más amplia del participante). Las citas específicas de pantalla se agrupan en secciones; las citas generales se agrupan en temas emergentes. Cada cita aparece en exactamente un lugar.",
+      "sentimentTitle": "Etiquetado de sentimientos",
+      "sentimentBody": "Siete etiquetas de sentimiento diseñadas para investigación UX: frustración, confusión, duda, sorpresa, satisfacción, deleite y confianza. Cada cita recibe una etiqueta basada en la emoción expresada por el participante.",
+      "signalsTitle": "Señales",
+      "signalsBody": "La página de análisis muestra señales — concentraciones estadísticamente notables de sentimiento dentro de las secciones del informe. Las señales fuertes y moderadas destacan dónde se agrupan las experiencias de los participantes.",
+      "starsTitle": "Estrellas, etiquetas y filtros",
+      "starsBody": "Destaca citas para marcar hallazgos importantes. Añade etiquetas para construir tu propio esquema de codificación. Usa el filtro de etiquetas y la búsqueda para centrarte en lo que importa. Todos los cambios se guardan automáticamente.",
+      "exportTitle": "Exportar",
+      "exportBody": "Descarga un informe HTML autónomo que funciona sin conexión. La exportación preserva todas tus estrellas, etiquetas y ediciones."
+    }
   },
   "analysis": {
     "heading": "Análisis",
@@ -198,6 +235,13 @@
     "tagDesc": "Patrones ordenados por intensidad de señal — donde las etiquetas del libro de códigos se concentran más de lo esperado según el promedio del estudio.",
     "section": "Sección",
     "theme": "Tema",
+    "dimension": "Dimensión",
+    "heatmap": "Mapa de calor",
+    "heatmapOpen": "Cerrar panel de mapa de calor (m)",
+    "heatmapClosed": "Mapa de calor (m)",
+    "heatmapCloseLabel": "Cerrar panel de mapa de calor",
+    "heatmapOpenLabel": "Abrir panel de mapa de calor",
+    "heatmapSources": "Fuentes del mapa de calor",
     "conc": "conc",
     "voice_one": "{{count}} voz",
     "voice_other": "{{count}} voces",
@@ -273,5 +317,46 @@
     "uncategorised": "Sin categoría",
     "uncategorisedSubtitle": "Etiquetas aún no asignadas a ningún grupo",
     "deleteGroupAriaLabel": "Eliminar grupo {{name}}"
+  },
+  "autocode": {
+    "deny": "Rechazar",
+    "accept": "Aceptar",
+    "close": "Cerrar",
+    "loading": "Cargando propuestas\u2026",
+    "empty": "No hay propuestas para revisar.",
+    "sessionLabel": "Sesión {{id}}",
+    "review": {
+      "title": "Revisión de AutoCode",
+      "remaining": "{{pending}} de {{total}} propuestas restantes",
+      "accepted": "{{count}} aceptadas",
+      "excluded": "{{count}} excluidas",
+      "dragInstruction": "Arrastra los umbrales para controlar cuántas autoetiquetas se aplican como tentativas o aceptadas.",
+      "apply": "Aplicar umbrales",
+      "applying": "Aplicando\u2026",
+      "applyFailed": "Error al aplicar — tus decisiones por fila están guardadas. Inténtalo de nuevo.",
+      "loadFailed": "Error al cargar propuestas",
+      "zoneExclude": "Excluir",
+      "zoneTentative": "Tentativa",
+      "zoneAccept": "Aceptar",
+      "zoneAccepted": "Aceptadas",
+      "zoneExcluded": "Excluidas"
+    },
+    "report": {
+      "title": "Informe de AutoCode",
+      "subtitle_one": "{{count}} etiqueta propuesta en {{sessions}} sesión",
+      "subtitle_other": "{{count}} etiquetas propuestas en {{sessions}} sesiones",
+      "close": "Cerrar",
+      "acceptAll": "Aceptar todas",
+      "tagTentatively": "Etiquetar tentativamente",
+      "deny": "Rechazar"
+    },
+    "toast": {
+      "progress": "\u2726 AutoCodificando {{processed}}/{{total}} citas\u2026",
+      "done": "\u2726 AutoCodificadas {{total}} citas en {{duration}}.",
+      "report": "Informe",
+      "failed": "\u2726 AutoCode falló",
+      "failedWithError": "\u2726 AutoCode falló: {{error}}",
+      "dismiss": "Descartar"
+    }
   }
 }

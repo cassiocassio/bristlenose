@@ -9,6 +9,7 @@
  */
 
 import { Fragment } from "react";
+import { useTranslation } from "react-i18next";
 import { isMac } from "../../utils/platform";
 
 interface KeyCombo {
@@ -21,53 +22,53 @@ interface Shortcut {
   description: string;
 }
 
-const SECTIONS: { title: string; shortcuts: Shortcut[] }[] = [
-  {
-    title: "Navigation",
-    shortcuts: [
-      { keys: [{ key: "j" }, { key: "\u2193" }], description: "Next quote" },
-      { keys: [{ key: "k" }, { key: "\u2191" }], description: "Previous quote" },
-    ],
-  },
-  {
-    title: "Selection",
-    shortcuts: [
-      { keys: [{ key: "x" }], description: "Toggle select" },
-      {
-        keys: [{ modifier: "shift", key: "j" }, { modifier: "shift", key: "k" }],
-        description: "Extend",
-      },
-    ],
-  },
-  {
-    title: "Actions",
-    shortcuts: [
-      { keys: [{ key: "s" }], description: "Star quote(s)" },
-      { keys: [{ key: "h" }], description: "Hide quote(s)" },
-      { keys: [{ key: "t" }], description: "Add tag" },
-      { keys: [{ key: "r" }], description: "Repeat last tag" },
-      { keys: [{ key: "Enter" }], description: "Play in video" },
-    ],
-  },
-  {
-    title: "Global",
-    shortcuts: [
-      { keys: [{ key: "/" }], description: "Search" },
-      { keys: [{ key: "[" }], description: "Toggle contents" },
-      { keys: [{ key: "]" }], description: "Toggle tags" },
-      {
-        keys: [{ key: "\\" }, { modifier: "cmd", key: "." }],
-        description: "Toggle both sidebars",
-      },
-      // TODO: ⌘, is intercepted by the browser (opens Safari/Chrome prefs).
-      // Uncomment for desktop app where the shortcut works natively.
-      // { keys: [{ modifier: "cmd", key: "," }], description: "Settings" },
-      { keys: [{ key: "m" }], description: "Toggle heatmap" },
-      { keys: [{ key: "?" }], description: "This help" },
-      { keys: [{ key: "Esc" }], description: "Close / clear" },
-    ],
-  },
-];
+function useSections(): { title: string; shortcuts: Shortcut[] }[] {
+  const { t } = useTranslation();
+  return [
+    {
+      title: t("help.shortcuts.navigation"),
+      shortcuts: [
+        { keys: [{ key: "j" }, { key: "\u2193" }], description: t("help.shortcuts.nextQuote") },
+        { keys: [{ key: "k" }, { key: "\u2191" }], description: t("help.shortcuts.previousQuote") },
+      ],
+    },
+    {
+      title: t("help.shortcuts.selection"),
+      shortcuts: [
+        { keys: [{ key: "x" }], description: t("help.shortcuts.toggleSelect") },
+        {
+          keys: [{ modifier: "shift", key: "j" }, { modifier: "shift", key: "k" }],
+          description: t("help.shortcuts.extend"),
+        },
+      ],
+    },
+    {
+      title: t("help.shortcuts.actions"),
+      shortcuts: [
+        { keys: [{ key: "s" }], description: t("help.shortcuts.starQuotes") },
+        { keys: [{ key: "h" }], description: t("help.shortcuts.hideQuotes") },
+        { keys: [{ key: "t" }], description: t("help.shortcuts.addTag") },
+        { keys: [{ key: "r" }], description: t("help.shortcuts.repeatLastTag") },
+        { keys: [{ key: "Enter" }], description: t("help.shortcuts.playInVideo") },
+      ],
+    },
+    {
+      title: t("help.shortcuts.global"),
+      shortcuts: [
+        { keys: [{ key: "/" }], description: t("help.shortcuts.search") },
+        { keys: [{ key: "[" }], description: t("help.shortcuts.toggleContents") },
+        { keys: [{ key: "]" }], description: t("help.shortcuts.toggleTags") },
+        {
+          keys: [{ key: "\\" }, { modifier: "cmd", key: "." }],
+          description: t("help.shortcuts.toggleBothSidebars"),
+        },
+        { keys: [{ key: "m" }], description: t("help.shortcuts.toggleHeatmap") },
+        { keys: [{ key: "?" }], description: t("help.shortcuts.thisHelp") },
+        { keys: [{ key: "Esc" }], description: t("help.shortcuts.closeClear") },
+      ],
+    },
+  ];
+}
 
 function renderKeyCombo(combo: KeyCombo, idx: number): React.ReactNode {
   const mac = isMac();
@@ -103,9 +104,10 @@ function renderKeys(keys: KeyCombo[]): React.ReactNode {
 }
 
 export function ShortcutsSection() {
+  const sections = useSections();
   return (
     <div className="help-columns">
-      {SECTIONS.map((section) => (
+      {sections.map((section) => (
         <div className="help-section" key={section.title}>
           <h3>{section.title}</h3>
           <dl>

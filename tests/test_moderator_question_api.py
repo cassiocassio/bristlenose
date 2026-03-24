@@ -9,6 +9,7 @@ from fastapi.testclient import TestClient
 
 from bristlenose.server.app import create_app
 from bristlenose.server.models import Quote as QuoteModel
+from tests.conftest import AuthTestClient
 
 _FIXTURE_DIR = Path(__file__).parent / "fixtures" / "smoke-test" / "input"
 
@@ -34,7 +35,7 @@ def client() -> TestClient:
     Tests that need segment_index > 0 must update quotes via the DB.
     """
     app = create_app(project_dir=_FIXTURE_DIR, dev=True, db_url="sqlite://")
-    return TestClient(app)
+    return AuthTestClient(app)
 
 
 def _set_quote_segment_index(

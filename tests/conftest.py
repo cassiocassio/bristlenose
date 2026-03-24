@@ -4,8 +4,12 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import Any
 
+import httpx
 import pytest
+from fastapi import FastAPI
+from fastapi.testclient import TestClient
 
 from bristlenose.models import (
     ExtractedQuote,
@@ -17,6 +21,20 @@ from bristlenose.models import (
     SpeakerRole,
     TranscriptSegment,
 )
+
+
+class AuthTestClient(TestClient):
+    """TestClient that auto-injects the Bearer token from app.state.auth_token.
+
+    All serve-mode test fixtures should use this instead of bare TestClient
+    so the auth middleware passes requests through.
+    """
+
+    def __init__(self, app: FastAPI, **kwargs: Any) -> None:
+        super().__init__(app, **kwargs)
+        token = getattr(app.state, "auth_token", None)
+        if token:
+            self.headers = httpx.Headers({"authorization": f"Bearer {token}"})
 
 
 @pytest.fixture

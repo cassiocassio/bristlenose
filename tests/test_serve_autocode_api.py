@@ -27,6 +27,7 @@ from bristlenose.server.models import (
     QuoteTag,
     TagDefinition,
 )
+from tests.conftest import AuthTestClient
 
 _FIXTURE_DIR = Path(__file__).parent / "fixtures" / "smoke-test" / "input"
 
@@ -43,7 +44,7 @@ N_QUOTES = 4
 def client() -> TestClient:
     """Test client with imported smoke-test data (has quotes from importer)."""
     app = create_app(project_dir=_FIXTURE_DIR, dev=True, db_url="sqlite://")
-    return TestClient(app)
+    return AuthTestClient(app)
 
 
 def _import_garrett(app: object) -> list[int]:
@@ -87,7 +88,7 @@ def client_with_garrett() -> TestClient:
     """Test client with imported Garrett framework and sample quotes."""
     app = create_app(project_dir=_FIXTURE_DIR, dev=True, db_url="sqlite://")
     _import_garrett(app)
-    return TestClient(app)
+    return AuthTestClient(app)
 
 
 @pytest.fixture()
@@ -129,7 +130,7 @@ def client_with_completed_job() -> TestClient:
         db.commit()
     finally:
         db.close()
-    return TestClient(app)
+    return AuthTestClient(app)
 
 
 def _mock_cloud_settings() -> MagicMock:

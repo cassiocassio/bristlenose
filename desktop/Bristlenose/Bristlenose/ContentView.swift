@@ -247,7 +247,7 @@ struct ContentView: View {
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
 
                 case .running:
-                    WebView(url: serveURLWithLocale, bridgeHandler: bridgeHandler)
+                    WebView(url: serveURLWithLocale, bridgeHandler: bridgeHandler, authToken: serveManager.authToken)
                         .id(project.id)
                         .accessibilityLabel(i18n.t("desktop.chrome.reportContent"))
                         .accessibilityHidden(!bridgeHandler.isReady)

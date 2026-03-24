@@ -242,6 +242,10 @@ The server currently loads one project (project ID 1). Multi-project is future w
 - **`SessionSpeaker`** joins Person↔Session (with speaker code + role). It has no `project_id` because it inherits project scope through Session. This is correct — don't add `project_id` to it
 - **Per-project SQLite files** — each project gets its own DB at `<output_dir>/.bristlenose/bristlenose.db`. Cross-project data (person links, app settings) will live in the instance DB at `~/.config/bristlenose/bristlenose.db`. Don't store cross-project relationships in per-project DBs
 
+## Localhost access control
+
+`middleware.py` — `BearerTokenMiddleware` validates `Authorization: Bearer <token>` on `/api/*` and `/media/*` routes. Token generated per server instance in `create_app()` via `secrets.token_urlsafe(32)`, stored on `app.state.auth_token`. Injected into SPA HTML via `json.dumps()`, printed to stdout for desktop app. Exempt: `/api/health`, `/api/docs`, `/report/*`, `/static/*`. Tests use `AuthTestClient` (from `tests/conftest.py`) which auto-injects the auth header. Design doc: `docs/design-localhost-auth.md`.
+
 ## Gotchas
 
 - **Quote timecode range match** — DOM ID uses `int(start_timecode)` which truncates.  A quote at 123.45s becomes `q-p1-123`.  The resolver queries `start_timecode >= 123 AND start_timecode < 124` to handle this

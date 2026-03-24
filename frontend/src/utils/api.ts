@@ -26,6 +26,15 @@ function apiBase(): string {
   ) || "/api/projects/1";
 }
 
+/** Build headers with auth token for localhost API access control. */
+function authHeaders(extra?: Record<string, string>): Record<string, string> {
+  const token = (window as unknown as Record<string, unknown>)
+    .__BRISTLENOSE_AUTH_TOKEN__ as string | undefined;
+  const headers: Record<string, string> = { ...extra };
+  if (token) headers["Authorization"] = `Bearer ${token}`;
+  return headers;
+}
+
 // ---------------------------------------------------------------------------
 // Generic request helpers
 // ---------------------------------------------------------------------------
@@ -33,7 +42,7 @@ function apiBase(): string {
 export async function apiGet<T>(path: string): Promise<T> {
   const embedded = resolveFromExport<T>(path);
   if (embedded !== null) return embedded;
-  const resp = await fetch(`${apiBase()}${path}`);
+  const resp = await fetch(`${apiBase()}${path}`, { headers: authHeaders() });
   if (!resp.ok) throw new Error(`GET ${path} ${resp.status}`);
   return resp.json() as Promise<T>;
 }
@@ -41,7 +50,7 @@ export async function apiGet<T>(path: string): Promise<T> {
 async function apiPost<T>(path: string, body: unknown): Promise<T> {
   const resp = await fetch(`${apiBase()}${path}`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: authHeaders({ "Content-Type": "application/json" }),
     body: JSON.stringify(body),
   });
   if (!resp.ok) throw new Error(`POST ${path} ${resp.status}`);
@@ -51,19 +60,25 @@ async function apiPost<T>(path: string, body: unknown): Promise<T> {
 async function apiPatch(path: string, body: unknown): Promise<void> {
   const resp = await fetch(`${apiBase()}${path}`, {
     method: "PATCH",
-    headers: { "Content-Type": "application/json" },
+    headers: authHeaders({ "Content-Type": "application/json" }),
     body: JSON.stringify(body),
   });
   if (!resp.ok) throw new Error(`PATCH ${path} ${resp.status}`);
 }
 
 async function apiDelete(path: string): Promise<void> {
-  const resp = await fetch(`${apiBase()}${path}`, { method: "DELETE" });
+  const resp = await fetch(`${apiBase()}${path}`, {
+    method: "DELETE",
+    headers: authHeaders(),
+  });
   if (!resp.ok) throw new Error(`DELETE ${path} ${resp.status}`);
 }
 
 async function apiDeleteJson<T>(path: string): Promise<T> {
-  const resp = await fetch(`${apiBase()}${path}`, { method: "DELETE" });
+  const resp = await fetch(`${apiBase()}${path}`, {
+    method: "DELETE",
+    headers: authHeaders(),
+  });
   if (!resp.ok) throw new Error(`DELETE ${path} ${resp.status}`);
   return resp.json() as Promise<T>;
 }
@@ -72,7 +87,7 @@ function firePut(path: string, body: unknown): void {
   if (isExportMode()) return; // No server in export mode
   fetch(`${apiBase()}${path}`, {
     method: "PUT",
-    headers: { "Content-Type": "application/json" },
+    headers: authHeaders({ "Content-Type": "application/json" }),
     body: JSON.stringify(body),
   }).catch((err) => {
     console.error(`PUT ${path} failed:`, err);
@@ -139,6 +154,7 @@ export async function getModeratorQuestion(
 ): Promise<ModeratorQuestionResponse | null> {
   const resp = await globalThis.fetch(
     `${apiBase()}/quotes/${encodeURIComponent(domId)}/moderator-question`,
+    { headers: authHeaders() },
   );
   if (resp.status === 404) return null;
   if (!resp.ok) throw new Error(`GET moderator-question ${resp.status}`);

@@ -22,6 +22,7 @@ from bristlenose.server.models import (
     ThemeGroup,
     ThemeQuote,
 )
+from tests.conftest import AuthTestClient
 
 _FIXTURE_DIR = Path(__file__).parent / "fixtures" / "smoke-test" / "input"
 
@@ -120,14 +121,14 @@ def _create_tagged_project() -> TestClient:
         db.commit()
     finally:
         db.close()
-    return TestClient(app)
+    return AuthTestClient(app)
 
 
 @pytest.fixture()
 def client() -> TestClient:
     """Test client with no tags — just imported smoke-test data."""
     app = create_app(project_dir=_FIXTURE_DIR, dev=True, db_url="sqlite://")
-    return TestClient(app)
+    return AuthTestClient(app)
 
 
 @pytest.fixture()
@@ -351,7 +352,7 @@ def _create_proposed_tag_project() -> TestClient:
         db.commit()
     finally:
         db.close()
-    return TestClient(app)
+    return AuthTestClient(app)
 
 
 @pytest.fixture()
@@ -495,7 +496,7 @@ def _create_multi_codebook_project() -> TestClient:
         db.commit()
     finally:
         db.close()
-    return TestClient(app)
+    return AuthTestClient(app)
 
 
 @pytest.fixture()

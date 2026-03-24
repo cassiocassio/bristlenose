@@ -13,6 +13,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from bristlenose.server.app import create_app
+from tests.conftest import AuthTestClient
 
 _FIXTURE_DIR = Path(__file__).parent / "fixtures" / "smoke-test" / "input"
 _STATIC_INDEX = (
@@ -33,7 +34,7 @@ pytestmark = pytest.mark.skipif(
 def client() -> TestClient:
     """Create a test client with imported smoke-test data."""
     app = create_app(project_dir=_FIXTURE_DIR, dev=True, db_url="sqlite://")
-    return TestClient(app)
+    return AuthTestClient(app)
 
 
 # ---------------------------------------------------------------------------

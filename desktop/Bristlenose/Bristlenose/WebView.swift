@@ -13,6 +13,9 @@ struct WebView: NSViewRepresentable {
 
     let url: URL?
     let bridgeHandler: BridgeHandler
+    /// Bearer token for localhost API access control.
+    /// Injected via WKUserScript at document start.
+    var authToken: String?
 
     func makeCoordinator() -> Coordinator {
         Coordinator(bridgeHandler: bridgeHandler)
@@ -34,6 +37,18 @@ struct WebView: NSViewRepresentable {
             forMainFrameOnly: true
         )
         userContentController.addUserScript(embeddedScript)
+
+        // Inject auth token for localhost API access control.
+        // Validates format before interpolation (security rule 3 compliance).
+        if let token = authToken,
+           token.range(of: "^[A-Za-z0-9_-]+$", options: .regularExpression) != nil {
+            let tokenScript = WKUserScript(
+                source: "window.__BRISTLENOSE_AUTH_TOKEN__ = '\(token)';",
+                injectionTime: .atDocumentStart,
+                forMainFrameOnly: true
+            )
+            userContentController.addUserScript(tokenScript)
+        }
 
         // Register message handler for bridge messages from the web layer.
         // The web side posts via: window.webkit.messageHandlers.navigation.postMessage(msg)

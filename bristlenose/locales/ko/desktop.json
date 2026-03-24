@@ -1,0 +1,138 @@
+{
+  "menu": {
+    "app": {
+      "about": "Bristlenose 정보",
+      "checkHealth": "시스템 상태 확인…"
+    },
+    "file": {
+      "newProject": "새 프로젝트…",
+      "openInNewWindow": "새 윈도우에서 열기",
+      "exportReport": "보고서 내보내기…",
+      "exportAnonymised": "익명화하여 내보내기…",
+      "pageSetup": "페이지 설정…",
+      "print": "프린트…"
+    },
+    "edit": {
+      "undo": "실행 취소",
+      "redo": "실행 복귀",
+      "find": "찾기…",
+      "findNext": "다음 찾기",
+      "findPrevious": "이전 찾기",
+      "useSelectionForFind": "선택 부분으로 찾기",
+      "jumpToSelection": "선택 부분으로 이동"
+    },
+    "view": {
+      "toggleSidebar": "사이드바 전환",
+      "showContents": "목차 보기",
+      "hideContents": "목차 숨기기",
+      "showCodes": "코드 보기",
+      "hideCodes": "코드 숨기기",
+      "showSignals": "시그널 보기",
+      "hideSignals": "시그널 숨기기",
+      "showTags": "태그 보기",
+      "hideTags": "태그 숨기기",
+      "showHeatmap": "히트맵 보기",
+      "hideHeatmap": "히트맵 숨기기",
+      "allQuotes": "모든 인용문",
+      "starredQuotesOnly": "별표 인용문만",
+      "filterByTag": "태그로 필터…",
+      "zoomIn": "확대",
+      "zoomOut": "축소",
+      "actualSize": "실제 크기",
+      "switchToLightMode": "라이트 모드로 전환",
+      "switchToDarkMode": "다크 모드로 전환"
+    },
+    "project": {
+      "showInFinder": "Finder에서 보기",
+      "rename": "이름 변경…",
+      "reAnalyse": "재분석…",
+      "archive": "보관…",
+      "delete": "삭제…"
+    },
+    "codes": {
+      "createCodeGroup": "코드 그룹 생성",
+      "renameCodeGroup": "코드 그룹 이름 변경…",
+      "deleteCodeGroup": "코드 그룹 삭제",
+      "showHideCodeGroup": "코드 그룹 표시/숨기기",
+      "createCode": "코드 생성",
+      "renameCode": "코드 이름 변경…",
+      "deleteCode": "코드 삭제",
+      "mergeCodes": "코드 병합…",
+      "browseCodebooks": "코드북 탐색…",
+      "importFramework": "프레임워크 가져오기…",
+      "removeFramework": "프레임워크 제거"
+    },
+    "quotes": {
+      "star": "별표",
+      "hide": "숨기기",
+      "addTag": "태그 추가…",
+      "applyLastTag": "마지막 태그 적용",
+      "revealInTranscript": "전사본에서 보기",
+      "playPause": "재생/일시 정지",
+      "nextQuote": "다음 인용문",
+      "previousQuote": "이전 인용문",
+      "extendSelectionDown": "선택 아래로 확장",
+      "extendSelectionUp": "선택 위로 확장",
+      "toggleSelection": "선택 전환",
+      "clearSelection": "선택 해제",
+      "copyAsCSV": "CSV로 복사"
+    },
+    "video": {
+      "play": "재생",
+      "pause": "일시 정지",
+      "skipForward5": "5초 앞으로",
+      "skipBack5": "5초 뒤로",
+      "skipForward30": "30초 앞으로",
+      "skipBack30": "30초 뒤로",
+      "speedUp": "빠르게",
+      "slowDown": "느리게",
+      "normalSpeed": "보통 속도",
+      "volumeUp": "음량 높이기",
+      "volumeDown": "음량 낮추기",
+      "mute": "음소거",
+      "pictureInPicture": "화면 속 화면",
+      "fullscreen": "전체 화면"
+    },
+    "help": {
+      "bristlenoseHelp": "Bristlenose 도움말",
+      "keyboardShortcuts": "키보드 단축키",
+      "releaseNotes": "릴리스 노트",
+      "sendFeedback": "피드백 보내기"
+    }
+  },
+  "chrome": {
+    "startingServer": "서버 시작 중…",
+    "loadingReport": "보고서 로드 중…",
+    "noProjectSelected": "선택된 프로젝트 없음",
+    "selectProject": "사이드바에서 프로젝트를 선택하십시오.",
+    "serverError": "서버 오류",
+    "retry": "재시도",
+    "projects": "프로젝트",
+    "reportContent": "보고서 내용"
+  },
+  "toolbar": {
+    "back": "뒤로 (⌘[)",
+    "forward": "앞으로 (⌘])",
+    "tab": "탭",
+    "sidebar": "사이드바",
+    "contents": "목차",
+    "showContents": "목차 보기 (⌘⌥L)",
+    "codes": "코드",
+    "showCodes": "코드 보기 (⌘⌥L)",
+    "signals": "시그널",
+    "showSignals": "시그널 보기 (⌘⌥L)",
+    "tags": "태그",
+    "showTags": "태그 보기 (])",
+    "heatmap": "히트맵",
+    "showHeatmap": "히트맵 보기 (m)",
+    "search": "검색",
+    "searchShortcut": "검색 (⌘F)",
+    "export": "내보내기",
+    "exportShortcut": "내보내기 (⌘⇧E)"
+  },
+  "settingsTabs": {
+    "appearance": "외관",
+    "llm": "LLM",
+    "transcription": "전사"
+  }
+}

@@ -112,9 +112,29 @@ struct ContentView: View {
         )
     }
 
+    /// Per-tab label for the left-panel toolbar button.
+    private var leftPanelToolbarLabel: String {
+        switch bridgeHandler.activeTab {
+        case .quotes:   return i18n.t("desktop.toolbar.contents")
+        case .codebook: return i18n.t("desktop.toolbar.codes")
+        case .analysis: return i18n.t("desktop.toolbar.signals")
+        default:        return i18n.t("desktop.toolbar.contents")
+        }
+    }
+
+    /// Per-tab tooltip for the left-panel toolbar button.
+    private var leftPanelToolbarHelp: String {
+        switch bridgeHandler.activeTab {
+        case .quotes:   return i18n.t("desktop.toolbar.showContents")
+        case .codebook: return i18n.t("desktop.toolbar.showCodes")
+        case .analysis: return i18n.t("desktop.toolbar.showSignals")
+        default:        return i18n.t("desktop.toolbar.showContents")
+        }
+    }
+
     @ToolbarContentBuilder
     private var toolbarLeading: some ToolbarContent {
-        // Contextual — Quotes/Codebook/Analysis: navigation panel toggle
+        // Contextual — Quotes/Codebook/Analysis: left panel toggle
         // The native sidebar toggle (for the project list) is provided by
         // NavigationSplitView automatically — Mail-style: lives inside the
         // sidebar column when open, snaps left to traffic lights when closed.
@@ -128,9 +148,9 @@ struct ContentView: View {
                 Button {
                     bridgeHandler.menuAction("toggleLeftPanel")
                 } label: {
-                    Label(i18n.t("desktop.toolbar.navigation"), systemImage: "list.bullet")
+                    Label(leftPanelToolbarLabel, systemImage: "list.bullet")
                 }
-                .help(i18n.t("desktop.toolbar.toggleNavigation"))
+                .help(leftPanelToolbarHelp)
             }
         }
 
@@ -178,7 +198,7 @@ struct ContentView: View {
                 Button { bridgeHandler.menuAction("toggleRightPanel") } label: {
                     Label(i18n.t("desktop.toolbar.tags"), systemImage: "sidebar.right")
                 }
-                .help(i18n.t("desktop.toolbar.toggleTagSidebar"))
+                .help(i18n.t("desktop.toolbar.showTags"))
             }
         }
 
@@ -186,9 +206,9 @@ struct ContentView: View {
         if bridgeHandler.activeTab == .analysis {
             ToolbarItem(placement: .primaryAction) {
                 Button { bridgeHandler.menuAction("toggleInspectorPanel") } label: {
-                    Label(i18n.t("desktop.toolbar.inspector"), systemImage: "square.grid.2x2")
+                    Label(i18n.t("desktop.toolbar.heatmap"), systemImage: "square.grid.2x2")
                 }
-                .help(i18n.t("desktop.toolbar.toggleInspectorPanel"))
+                .help(i18n.t("desktop.toolbar.showHeatmap"))
             }
         }
 

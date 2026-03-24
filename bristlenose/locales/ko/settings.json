@@ -1,0 +1,19 @@
+{
+  "heading": "설정",
+  "appearance": {
+    "legend": "앱 외관",
+    "auto": "시스템 외관 사용",
+    "light": "라이트",
+    "dark": "다크"
+  },
+  "language": {
+    "legend": "언어",
+    "description": "인터페이스의 표시 언어를 설정합니다. 보고서 내용은 번역되지 않습니다."
+  },
+  "configReference": {
+    "heading": "설정 참조",
+    "intro": "아래의 모든 설정은 환경 변수 또는 <code>.env</code> 파일을 통해 구성됩니다. 참조용으로 표시되며, 값을 변경하려면 각 행에 표시된 파일을 편집하십시오.",
+    "clickToCopy": "클릭하여 복사",
+    "copied": "복사됨"
+  }
+}

@@ -1,0 +1,10 @@
+{
+  "heading": "Systemprüfung",
+  "checkOk": "{label}",
+  "checkFail": "{label}",
+  "checkWarn": "{label}",
+  "summary": {
+    "allPassed": "Alle Prüfungen bestanden.",
+    "issuesFound": "{count} Problem(e) gefunden."
+  }
+}

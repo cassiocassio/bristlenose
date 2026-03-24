@@ -1,0 +1,11 @@
+{
+  "error": {
+    "notFound": "Ressource nicht gefunden.",
+    "badRequest": "Ungültige Anfrage: {detail}",
+    "internal": "Interner Serverfehler."
+  },
+  "status": {
+    "healthy": "Funktionsfähig",
+    "degraded": "Eingeschränkt"
+  }
+}

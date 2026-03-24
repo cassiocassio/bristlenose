@@ -1,0 +1,6 @@
+{
+  "start": "{path} 파이프라인을 시작합니다",
+  "stageStart": "{stage} 실행 중…",
+  "stageComplete": "{stage} 완료 ({duration})",
+  "done": "파이프라인 완료. 출력: {output}"
+}

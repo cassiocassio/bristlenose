@@ -203,10 +203,18 @@ private struct ViewMenuContent: View {
     @ObservedObject var bridgeHandler: BridgeHandler
     @ObservedObject var i18n: I18n
 
+    /// Locale key suffix for the left-panel label, per tab.
+    private var leftPanelKey: String? {
+        switch bridgeHandler.activeTab {
+        case .quotes:   return "Contents"
+        case .codebook: return "Codes"
+        case .analysis: return "Signals"
+        default:        return nil
+        }
+    }
+
     private var hasLeftPanel: Bool {
-        bridgeHandler.activeTab == .quotes ||
-        bridgeHandler.activeTab == .codebook ||
-        bridgeHandler.activeTab == .analysis
+        leftPanelKey != nil
     }
 
     var body: some View {
@@ -223,7 +231,7 @@ private struct ViewMenuContent: View {
 
         Divider()
 
-        Button(i18n.t("desktop.menu.view.toggleProjectSidebar")) {
+        Button(i18n.t("desktop.menu.view.toggleSidebar")) {
             NSApp.keyWindow?.firstResponder?.tryToPerform(
                 #selector(NSSplitViewController.toggleSidebar(_:)),
                 with: nil
@@ -231,18 +239,19 @@ private struct ViewMenuContent: View {
         }
         .keyboardShortcut("s", modifiers: [.command, .option])
 
-        Button(i18n.t("desktop.menu.view.toggleNavigationPanel")) {
+        Button(i18n.t("desktop.menu.view.show\(leftPanelKey ?? "Contents")")) {
             bridgeHandler.menuAction("toggleLeftPanel")
         }
         .keyboardShortcut("l", modifiers: [.command, .option])
         .disabled(!hasLeftPanel)
 
-        Button(i18n.t("desktop.menu.view.toggleRightPanel")) {
+        Button(i18n.t("desktop.menu.view.showTags")) {
             bridgeHandler.menuAction("toggleRightPanel")
         }
+        .keyboardShortcut("t", modifiers: [.command, .option])
         .disabled(bridgeHandler.activeTab != .quotes)
 
-        Button(i18n.t("desktop.menu.view.toggleInspectorPanel")) {
+        Button(i18n.t("desktop.menu.view.showHeatmap")) {
             bridgeHandler.menuAction("toggleInspectorPanel")
         }
         .disabled(bridgeHandler.activeTab != .analysis)

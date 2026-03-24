@@ -406,6 +406,54 @@ All 102 existing i18n strings machine-translated across 8 files (3 frontend, 5 b
 - "Libro de códigos" — ATLAS.ti's term, recommended by our research. Confirm it feels natural vs alternatives like "Manual de códigos"
 - "Investigador/a" for Researcher — gender-inclusive slash form. Confirm this is the convention Lidia prefers (vs "Investigador(a)" or just "Investigador")
 
+### Korean (ko) — machine-translated, v0.14.x (23 Mar 2026)
+
+All 8 namespace files (common, settings, enums, cli, pipeline, server, doctor, desktop) machine-translated. First CJK locale. Cross-checked against the terminology table above — "인용문", "코드북", "세션", "시그널" all match the recommended terms. Apple Korean glossary cross-checked (see table below).
+
+**Speech register:** formal 합쇼체 (-습니다/-ㅂ니다) for sentences, noun forms for buttons/actions. Matches Apple Korean and professional tool conventions.
+
+**No `_short` keys needed.** All Korean tab labels are 2–5 syllable blocks — much shorter than their English equivalents.
+
+**Apple Korean cross-check results:**
+
+| English | Ours | Apple KO | Verdict |
+|---------|------|----------|---------|
+| Save | 저장 | 저장 | ✓ |
+| Cancel | 취소 | 취소 | ✓ |
+| Close | 닫기 | 닫기 | ✓ |
+| Copy | 복사 | 복사 | ✓ |
+| Delete | 삭제 | 삭제 (action) | ✓ action sense correct |
+| Undo | 실행 취소 | 실행 취소 | ✓ |
+| Redo | 실행 복귀 | 실행 복귀 | ✓ |
+| Search/Find | 검색/찾기 | 검색/찾기 | ✓ |
+| Find Next | 다음 찾기 | 다음 찾기 (menu label) | ✓ page says "다시 찾기" (informal) |
+| Find Previous | 이전 찾기 | 이전 찾기 | ✓ |
+| Print | 프린트 | 프린트 | ✓ |
+| Fullscreen | 전체 화면 | 전체 화면 | ✓ |
+| Settings | 설정 | 설정 (post-Ventura) | ✓ |
+| Export | 내보내기 | 내보내기 | ✓ |
+| Zoom In | 확대 | 확대 | ✓ |
+| Zoom Out | 축소 | 축소 | ✓ |
+| Accept | 승인 | 승인 | ✓ |
+| Apply | 적용 | 적용 | ✓ |
+| Reset | 재설정 | 재설정 | ✓ |
+
+**No changes needed.** All translations match Apple's canonical Korean terms.
+
+**Review status:** awaiting native-speaker review (no reviewer identified yet — need Korean UXR practitioner, ideally in Seoul).
+
+**Open questions for reviewer:**
+- "Quotes" → 인용문 or 발언? 인용문 (quotation text) is more academic; 발언 (utterance) is closer to how UXR practitioners talk about participant words. Which feels more natural in a research tool?
+- "Delight" → 기쁨 or 감동? 기쁨 is general joy/delight; 감동 is being moved/touched (deeper resonance). In UX sentiment tagging, which better captures "product delight"?
+- "Confidence" → 확신 or 자신감? 확신 is conviction about something external; 자신감 is self-confidence. Which is more appropriate for a participant expressing confidence in a product?
+- "Frustration" → 좌절감 or 답답함? 좌절감 is defeat/setback (strong); 답답함 is feeling stifled/stuck (more UX-appropriate?). Which maps better to user-research friction?
+- Speech register: confirm formal 합쇼체 (-습니다) is appropriate, or whether polite 해요체 (-해요) would feel more natural. Modern Korean tech companies (Toss, Kakao) sometimes use 해요체 for a warmer tone
+
+**CJK-specific CSS tasks (separate from translation):**
+- Add `word-break: keep-all` for Korean text — browsers break mid-syllable-block without it
+- Audit `max-width` constraints against full-width character widths (56px analysis cells will truncate)
+- Test line-height with Korean glyphs (may need adjustment from Latin 1.3–1.5)
+
 ### Unified architecture — v0.14.x (23 Mar 2026)
 
 Single source of truth implemented. `frontend/src/locales/` deleted — all imports now point to `bristlenose/locales/` via Vite alias. Desktop `I18n.swift` reads the same JSON files. Desktop `desktop.json` namespace added (en + es) with ~75 native-only strings (menu bar, toolbar, chrome). Bridge locale sync with startup flash prevention (URL query param). Web language picker hidden in embedded mode.

@@ -1,0 +1,10 @@
+{
+  "heading": "시스템 점검",
+  "checkOk": "{label}",
+  "checkFail": "{label}",
+  "checkWarn": "{label}",
+  "summary": {
+    "allPassed": "모든 검사를 통과했습니다.",
+    "issuesFound": "{count}개의 문제가 발견되었습니다."
+  }
+}

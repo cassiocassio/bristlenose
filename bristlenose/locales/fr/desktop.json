@@ -1,0 +1,130 @@
+{
+  "menu": {
+    "app": {
+      "about": "À propos de Bristlenose",
+      "checkHealth": "Vérifier l'état du système…"
+    },
+    "file": {
+      "newProject": "Nouveau projet…",
+      "openInNewWindow": "Ouvrir dans une nouvelle fenêtre",
+      "exportReport": "Exporter le rapport…",
+      "exportAnonymised": "Exporter anonymisé…",
+      "pageSetup": "Format d'impression…",
+      "print": "Imprimer…"
+    },
+    "edit": {
+      "undo": "Annuler",
+      "redo": "Rétablir",
+      "find": "Rechercher…",
+      "findNext": "Rechercher le suivant",
+      "findPrevious": "Rechercher le précédent",
+      "useSelectionForFind": "Rechercher la sélection",
+      "jumpToSelection": "Aller à la sélection"
+    },
+    "view": {
+      "toggleSidebar": "Afficher/Masquer la barre latérale",
+      "toggleProjectSidebar": "Afficher/Masquer la barre latérale des projets",
+      "toggleLeftPanel": "Afficher/Masquer le panneau gauche",
+      "toggleNavigationPanel": "Afficher/Masquer le panneau de navigation",
+      "toggleRightPanel": "Afficher/Masquer le panneau droit",
+      "toggleInspectorPanel": "Afficher/Masquer l'inspecteur",
+      "allQuotes": "Tous les verbatim",
+      "starredQuotesOnly": "Verbatim favoris uniquement",
+      "filterByTag": "Filtrer par tag…",
+      "zoomIn": "Zoom avant",
+      "zoomOut": "Zoom arrière",
+      "actualSize": "Taille réelle",
+      "switchToLightMode": "Passer en mode clair",
+      "switchToDarkMode": "Passer en mode sombre"
+    },
+    "project": {
+      "showInFinder": "Afficher dans le Finder",
+      "rename": "Renommer…",
+      "reAnalyse": "Réanalyser…",
+      "archive": "Archiver…",
+      "delete": "Supprimer…"
+    },
+    "codes": {
+      "createCodeGroup": "Créer un groupe de codes",
+      "renameCodeGroup": "Renommer le groupe de codes…",
+      "deleteCodeGroup": "Supprimer le groupe de codes",
+      "showHideCodeGroup": "Afficher/Masquer le groupe de codes",
+      "createCode": "Créer un code",
+      "renameCode": "Renommer le code…",
+      "deleteCode": "Supprimer le code",
+      "mergeCodes": "Fusionner les codes…",
+      "browseCodebooks": "Parcourir les grilles de codage…",
+      "importFramework": "Importer un cadre d'analyse…",
+      "removeFramework": "Retirer le cadre d'analyse"
+    },
+    "quotes": {
+      "star": "Favori",
+      "hide": "Masquer",
+      "addTag": "Ajouter un tag…",
+      "applyLastTag": "Appliquer le dernier tag",
+      "revealInTranscript": "Afficher dans la transcription",
+      "playPause": "Lecture/Pause",
+      "nextQuote": "Verbatim suivant",
+      "previousQuote": "Verbatim précédent",
+      "extendSelectionDown": "Étendre la sélection vers le bas",
+      "extendSelectionUp": "Étendre la sélection vers le haut",
+      "toggleSelection": "Inverser la sélection",
+      "clearSelection": "Effacer la sélection",
+      "copyAsCSV": "Copier en CSV"
+    },
+    "video": {
+      "play": "Lecture",
+      "pause": "Pause",
+      "skipForward5": "Avancer de 5 secondes",
+      "skipBack5": "Reculer de 5 secondes",
+      "skipForward30": "Avancer de 30 secondes",
+      "skipBack30": "Reculer de 30 secondes",
+      "speedUp": "Accélérer",
+      "slowDown": "Ralentir",
+      "normalSpeed": "Vitesse normale",
+      "volumeUp": "Augmenter le volume",
+      "volumeDown": "Diminuer le volume",
+      "mute": "Couper le son",
+      "pictureInPicture": "Image dans l'image",
+      "fullscreen": "Plein écran"
+    },
+    "help": {
+      "bristlenoseHelp": "Aide Bristlenose",
+      "keyboardShortcuts": "Raccourcis clavier",
+      "releaseNotes": "Notes de version",
+      "sendFeedback": "Envoyer des commentaires"
+    }
+  },
+  "chrome": {
+    "startingServer": "Démarrage du serveur…",
+    "loadingReport": "Chargement du rapport…",
+    "noProjectSelected": "Aucun projet sélectionné",
+    "selectProject": "Sélectionnez un projet dans la barre latérale.",
+    "serverError": "Erreur du serveur",
+    "retry": "Réessayer",
+    "projects": "Projets",
+    "reportContent": "Contenu du rapport"
+  },
+  "toolbar": {
+    "back": "Précédent (⌘[)",
+    "forward": "Suivant (⌘])",
+    "tab": "Onglet",
+    "sidebar": "Barre latérale",
+    "navigation": "Navigation",
+    "toggleNavigation": "Afficher/Masquer le panneau de navigation",
+    "toggleSidebars": "Afficher/Masquer les barres latérales",
+    "tags": "Tags",
+    "toggleTagSidebar": "Afficher/Masquer la barre latérale des tags (])",
+    "inspector": "Inspecteur",
+    "toggleInspectorPanel": "Afficher/Masquer l'inspecteur (m)",
+    "search": "Rechercher",
+    "searchShortcut": "Rechercher (⌘F)",
+    "export": "Exporter",
+    "exportShortcut": "Exporter (⌘⇧E)"
+  },
+  "settingsTabs": {
+    "appearance": "Apparence",
+    "llm": "LLM",
+    "transcription": "Transcription"
+  }
+}

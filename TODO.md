@@ -31,13 +31,13 @@ From security review of desktop app plan (22 Mar 2026). All findings are in the 
 - [ ] **Native toolbar tab i18n not reactive** — changing language in Settings doesn't update toolbar labels until app restart. `I18n` `@StateObject` doesn't trigger segmented control re-render
 - [x] **i18n: extract ~200 hardcoded frontend strings** — done (24 Mar 2026). ~30 components wired with `useTranslation()`. Sentiment badges translate via `enums.json`. `format.ts` uses `Intl.DateTimeFormat`. `<html lang>` tracks locale. Screen reader `announce()` calls use `i18n.t()`. Keys in all 5 locale files (en/es/fr/de/ko)
 - [ ] **i18n: translation quality fixes** — ~~es/fr "codebook" loanword in ~15 browse/import keys~~ (fixed 24 Mar); ko participant term inconsistency (참여자 vs 참가자); de/ko missing `nav.codebookShort`. Fixed: ko colDuration "길이"→"소요 시간", ko helpHint "도움말"→"도움말 열기". Confirmed correct: fr undo/cancel both "Annuler" (Apple convention), de "Teilnehmer" (Apple convention). Machine translation QA checklist added to `docs/design-i18n.md` Step 6
-- [x] **i18n: help prose + shortcuts (Batch 11)** — HelpSection and ShortcutsSection wired to `t()` with `help.guide.*` and `help.shortcuts.*` keys (24 Mar 2026). SignalsSection, AboutSection, CodebookSection, ContributingSection, DeveloperSection remain hardcoded English — decision needed on whether reference/educational content should be translated
+- [x] **i18n: help prose + shortcuts (Batch 11)** — HelpSection and ShortcutsSection wired to `t()` with `help.guide.*` and `help.shortcuts.*` keys (24 Mar 2026). SignalsSection, CodebookSection, ContributingSection also wired (24 Mar). AboutSection, DeveloperSection, DesignSection remain hardcoded English — deferred as "Could" in 100days.md
 - [ ] **i18n: pseudo-localisation QA** — add `i18next-pseudo` to catch remaining hardcoded strings. See `docs/design-i18n.md`
 - [ ] **i18n: should-fix items from audit (24 Mar 2026)**:
   - `HelpModal.tsx:67` — `useMemo` deps `[t]` should be `[t, i18n.language]` (stale labels on locale switch)
   - Korean "Signals" terminology — uses native "신호" but glossary specifies transliteration "시그널" (9 keys in ko/common.json)
   - `formatFinderDate`/`formatCompactDate` called without locale param in 4 files (SessionsTable, TranscriptPage, Dashboard, SessionsSidebar) — defaults to en-GB instead of user's locale
-  - Help modal reference sections (AboutSection, SignalsSection, CodebookSection, ContributingSection, DeveloperSection) — ~200 strings, decide whether to translate
+  - Help modal reference sections (AboutSection, DeveloperSection, DesignSection) — ~45 strings still hardcoded, deferred as "Could" in 100days.md. SignalsSection, CodebookSection, ContributingSection done (24 Mar)
   - `SettingsPanel.tsx` CONFIG_DATA labels — hundreds of semi-technical labels, plus hardcoded intro paragraph at line 690
   - `ConfidenceHistogram.tsx:111` — hardcoded English plural tooltip
 - [x] **i18n: Weblate setup** — connect `hosted.weblate.org` to repo for community translation. Free Libre plan. See `docs/design-i18n.md`

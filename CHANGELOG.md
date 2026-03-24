@@ -2,6 +2,13 @@
 
 All notable changes to Bristlenose are documented here. See also the [README](README.md) for the latest releases.
 
+**0.14.1** — _24 Mar 2026_
+
+- **French, German, Korean locales** — machine-translated all 8 namespace files (common, settings, enums, cli, pipeline, server, doctor, desktop) for fr, de, ko. Cross-checked against Apple macOS glossaries and ATLAS.ti/MAXQDA research terminology. Native reviewer docs added for German and French
+- **Contextual left-panel labels** — desktop app toolbar and View menu items now show tab-specific labels (Contents on Quotes, Codes on Codebook, Signals on Analysis) instead of generic "Navigation". View menu items renamed from "Toggle X" to "Show X" per Apple HIG
+- **Tags sidebar shortcut** — `⌘⌥T` toggles the tag sidebar in the desktop app
+- **Keyboard shortcuts design doc** — full inventory of desktop app shortcuts with conflict matrix
+
 **0.14.0** — _20 Mar 2026_
 
 - **Inspector panel** — DevTools-style collapsible bottom panel in the Analysis tab. Heatmap matrices (section × sentiment, theme × sentiment, codebook group) live in a resizable pane that opens via click, drag-up, or the `m` keyboard shortcut. Signal card selection (blue wash) syncs bidirectionally with inspector source tabs — click a card to drill into its matrix, click a tab to highlight its card. Drag-from-collapsed grows the panel smoothly from the 28px handle bar. Tooltip repositioning flips above when near viewport bottom. Footer auto-hides to maximise matrix space. New files: `InspectorPanel.tsx`, `InspectorStore.ts`, `useVerticalDragResize.ts`, `inspector.css`. 4 feature commits, 696 new test assertions

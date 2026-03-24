@@ -386,6 +386,12 @@ Edit `bristlenose/__init__.py` (the single source of truth for version), commit,
 
 ## Changelog
 
+**0.14.1** — _24 Mar 2026_
+
+- French, German, Korean locales — machine-translated across all 8 namespace files, cross-checked against Apple and ATLAS.ti glossaries
+- Contextual left-panel labels — desktop toolbar shows Contents/Codes/Signals per tab
+- Tags sidebar shortcut (`⌘⌥T`), keyboard shortcuts design doc
+
 **0.14.0** — _20 Mar 2026_
 
 - Inspector panel — DevTools-style collapsible bottom panel in Analysis tab with heatmap matrices, signal card selection sync, drag-resize, and `m` keyboard shortcut

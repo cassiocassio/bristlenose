@@ -106,7 +106,9 @@
     "csvSentiment": "Sentiment",
     "csvTags": "Tags",
     "csvCopied": "{{count}} quotes copied as CSV",
-    "csvFailed": "Could not copy to clipboard"
+    "csvFailed": "Could not copy to clipboard",
+    "noQuotesSelected": "No quotes selected",
+    "quotesExported": "{{count}} quotes exported as CSV"
   },
   "tags": {
     "noTags": "No tags",
@@ -180,7 +182,42 @@
     "navAbout": "About",
     "navDeveloper": "Developer",
     "navDesign": "Design",
-    "navContributing": "Contributing"
+    "navContributing": "Contributing",
+    "shortcuts": {
+      "navigation": "Navigation",
+      "nextQuote": "Next quote",
+      "previousQuote": "Previous quote",
+      "selection": "Selection",
+      "toggleSelect": "Toggle select",
+      "extend": "Extend",
+      "actions": "Actions",
+      "starQuotes": "Star quote(s)",
+      "hideQuotes": "Hide quote(s)",
+      "addTag": "Add tag",
+      "repeatLastTag": "Repeat last tag",
+      "playInVideo": "Play in video",
+      "global": "Global",
+      "search": "Search",
+      "toggleContents": "Toggle contents",
+      "toggleTags": "Toggle tags",
+      "toggleBothSidebars": "Toggle both sidebars",
+      "toggleHeatmap": "Toggle heatmap",
+      "thisHelp": "This help",
+      "closeClear": "Close / clear"
+    },
+    "guide": {
+      "intro": "This guide explains how to read and work with your Bristlenose analysis.",
+      "sectionsTitle": "Sections and themes",
+      "sectionsBody": "Each quote is classified as screen-specific (about a particular screen or task) or general context (about the participant\u2019s broader situation). Screen-specific quotes are grouped into sections; general quotes are grouped into emergent themes. Every quote appears in exactly one place.",
+      "sentimentTitle": "Sentiment tagging",
+      "sentimentBody": "Seven sentiment tags designed for UX research: frustration, confusion, doubt, surprise, satisfaction, delight, and confidence. Each quote receives one tag based on the participant\u2019s expressed emotion.",
+      "signalsTitle": "Signals",
+      "signalsBody": "The analysis page surfaces signals \u2014 statistically notable concentrations of sentiment within report sections. Strong and moderate signals highlight where participant experience clusters.",
+      "starsTitle": "Stars, tags, and filters",
+      "starsBody": "Star quotes to mark important findings. Add tags to build your own coding scheme. Use the tag filter and search to focus on what matters. All changes are saved automatically.",
+      "exportTitle": "Export",
+      "exportBody": "Download a self-contained HTML report that works offline. The export preserves all your stars, tags, and edits."
+    }
   },
   "analysis": {
     "heading": "Analysis",
@@ -197,6 +234,13 @@
     "tagDesc": "Patterns ranked by signal strength — where codebook tags concentrate more than expected given the study average.",
     "section": "Section",
     "theme": "Theme",
+    "dimension": "Dimension",
+    "heatmap": "Heatmap",
+    "heatmapOpen": "Close heatmap panel (m)",
+    "heatmapClosed": "Heatmap (m)",
+    "heatmapCloseLabel": "Close heatmap panel",
+    "heatmapOpenLabel": "Open heatmap panel",
+    "heatmapSources": "Heatmap sources",
     "conc": "conc",
     "voice_one": "{{count}} voice",
     "voice_other": "{{count}} voices",
@@ -272,5 +316,46 @@
     "uncategorised": "Uncategorised",
     "uncategorisedSubtitle": "Tags not yet assigned to any group",
     "deleteGroupAriaLabel": "Delete group {{name}}"
+  },
+  "autocode": {
+    "deny": "Deny",
+    "accept": "Accept",
+    "close": "Close",
+    "loading": "Loading proposals\u2026",
+    "empty": "No proposals to review.",
+    "sessionLabel": "Session {{id}}",
+    "review": {
+      "title": "AutoCode Review",
+      "remaining": "{{pending}} of {{total}} proposals remaining",
+      "accepted": "{{count}} accepted",
+      "excluded": "{{count}} excluded",
+      "dragInstruction": "Drag the thresholds to control how many auto-tags are applied as tentative or accepted.",
+      "apply": "Apply thresholds",
+      "applying": "Applying\u2026",
+      "applyFailed": "Apply failed \u2014 your per-row decisions are saved. Try again.",
+      "loadFailed": "Failed to load proposals",
+      "zoneExclude": "Exclude",
+      "zoneTentative": "Tentative",
+      "zoneAccept": "Accept",
+      "zoneAccepted": "Accepted",
+      "zoneExcluded": "Excluded"
+    },
+    "report": {
+      "title": "AutoCode Report",
+      "subtitle_one": "{{count}} tag proposed across {{sessions}} session",
+      "subtitle_other": "{{count}} tags proposed across {{sessions}} sessions",
+      "close": "Close",
+      "acceptAll": "Accept all",
+      "tagTentatively": "Tag tentatively",
+      "deny": "Deny"
+    },
+    "toast": {
+      "progress": "\u2726 AutoCoding {{processed}}/{{total}} quotes\u2026",
+      "done": "\u2726 AutoCoded {{total}} quotes in {{duration}}.",
+      "report": "Report",
+      "failed": "\u2726 AutoCode failed",
+      "failedWithError": "\u2726 AutoCode failed: {{error}}",
+      "dismiss": "Dismiss"
+    }
   }
 }

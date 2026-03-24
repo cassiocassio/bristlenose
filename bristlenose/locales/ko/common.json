@@ -91,7 +91,9 @@
     "csvSentiment": "감정",
     "csvTags": "태그",
     "csvCopied": "{{count}}개 인용문이 CSV로 복사됨",
-    "csvFailed": "클립보드에 복사할 수 없습니다"
+    "csvFailed": "클립보드에 복사할 수 없습니다",
+    "noQuotesSelected": "선택된 인용문이 없습니다",
+    "quotesExported": "{{count}}개 인용문이 CSV로 내보내짐"
   },
   "tags": {
     "noTags": "태그 없음",
@@ -171,7 +173,42 @@
     "navAbout": "정보",
     "navDeveloper": "개발자",
     "navDesign": "디자인",
-    "navContributing": "기여"
+    "navContributing": "기여",
+    "shortcuts": {
+      "navigation": "탐색",
+      "nextQuote": "다음 인용문",
+      "previousQuote": "이전 인용문",
+      "selection": "선택",
+      "toggleSelect": "선택 전환",
+      "extend": "확장",
+      "actions": "작업",
+      "starQuotes": "인용문 즐겨찾기",
+      "hideQuotes": "인용문 숨기기",
+      "addTag": "태그 추가",
+      "repeatLastTag": "마지막 태그 반복",
+      "playInVideo": "동영상에서 재생",
+      "global": "전역",
+      "search": "검색",
+      "toggleContents": "목차 전환",
+      "toggleTags": "태그 전환",
+      "toggleBothSidebars": "양쪽 사이드바 전환",
+      "toggleHeatmap": "히트맵 전환",
+      "thisHelp": "이 도움말",
+      "closeClear": "닫기 / 지우기"
+    },
+    "guide": {
+      "intro": "이 가이드는 Bristlenose 분석을 읽고 활용하는 방법을 설명합니다.",
+      "sectionsTitle": "섹션과 테마",
+      "sectionsBody": "각 인용문은 화면별(특정 화면이나 작업에 대한 것) 또는 일반 맥락(참가자의 더 넓은 상황에 대한 것)으로 분류됩니다. 화면별 인용문은 섹션으로 그룹화되고, 일반 인용문은 발현 테마로 그룹화됩니다. 모든 인용문은 정확히 한 곳에만 나타납니다.",
+      "sentimentTitle": "감정 태깅",
+      "sentimentBody": "UX 연구를 위해 설계된 7가지 감정 태그: 좌절, 혼란, 의심, 놀라움, 만족, 기쁨, 확신. 각 인용문은 참가자가 표현한 감정에 따라 하나의 태그를 받습니다.",
+      "signalsTitle": "신호",
+      "signalsBody": "분석 페이지는 신호를 표시합니다 — 보고서 섹션 내에서 통계적으로 주목할 만한 감정 집중. 강한 신호와 보통 신호는 참가자 경험이 집중되는 곳을 강조합니다.",
+      "starsTitle": "즐겨찾기, 태그 및 필터",
+      "starsBody": "중요한 발견을 표시하려면 인용문에 즐겨찾기를 추가하세요. 자신만의 코딩 체계를 구축하려면 태그를 추가하세요. 태그 필터와 검색을 사용하여 중요한 것에 집중하세요. 모든 변경 사항은 자동으로 저장됩니다.",
+      "exportTitle": "내보내기",
+      "exportBody": "오프라인에서 작동하는 독립 HTML 보고서를 다운로드하세요. 내보내기는 모든 즐겨찾기, 태그 및 편집 내용을 보존합니다."
+    }
   },
   "analysis": {
     "heading": "분석",
@@ -188,6 +225,13 @@
     "tagDesc": "신호 강도별 패턴 순위 — 연구 평균 대비 코드북 태그가 예상보다 더 집중되는 곳.",
     "section": "섹션",
     "theme": "테마",
+    "dimension": "차원",
+    "heatmap": "히트맵",
+    "heatmapOpen": "히트맵 패널 닫기 (m)",
+    "heatmapClosed": "히트맵 (m)",
+    "heatmapCloseLabel": "히트맵 패널 닫기",
+    "heatmapOpenLabel": "히트맵 패널 열기",
+    "heatmapSources": "히트맵 소스",
     "conc": "집중",
     "voice_other": "{{count}}개 목소리",
     "more": "+{{count}}개 더",
@@ -206,6 +250,7 @@
     "total": "합계",
     "accepted": "{{count}}개 승인",
     "pending": "{{count}}개 보류",
+    "basedOnTags": "{{parts}}개 태그 기반",
     "basedOnTags_other": "{{parts}}개 태그 기반",
     "pendingWeighted": "(보류 태그는 AI 신뢰도로 가중)"
   },
@@ -258,5 +303,45 @@
     "uncategorised": "미분류",
     "uncategorisedSubtitle": "아직 그룹에 할당되지 않은 태그",
     "deleteGroupAriaLabel": "{{name}} 그룹 삭제"
+  },
+  "autocode": {
+    "deny": "거부",
+    "accept": "수락",
+    "close": "닫기",
+    "loading": "제안 로드 중\u2026",
+    "empty": "검토할 제안이 없습니다.",
+    "sessionLabel": "세션 {{id}}",
+    "review": {
+      "title": "AutoCode 검토",
+      "remaining": "{{total}}개 중 {{pending}}개 제안 남음",
+      "accepted": "{{count}}개 수락됨",
+      "excluded": "{{count}}개 제외됨",
+      "dragInstruction": "임계값을 드래그하여 자동 태그가 잠정적 또는 수락으로 적용되는 수를 제어하세요.",
+      "apply": "임계값 적용",
+      "applying": "적용 중\u2026",
+      "applyFailed": "적용 실패 — 개별 결정은 저장되었습니다. 다시 시도하세요.",
+      "loadFailed": "제안을 로드하지 못했습니다",
+      "zoneExclude": "제외",
+      "zoneTentative": "잠정",
+      "zoneAccept": "수락",
+      "zoneAccepted": "수락됨",
+      "zoneExcluded": "제외됨"
+    },
+    "report": {
+      "title": "AutoCode 보고서",
+      "subtitle_other": "{{sessions}}개 세션에 걸쳐 {{count}}개 태그 제안됨",
+      "close": "닫기",
+      "acceptAll": "모두 수락",
+      "tagTentatively": "잠정적으로 태그",
+      "deny": "거부"
+    },
+    "toast": {
+      "progress": "\u2726 AutoCode {{processed}}/{{total}} 인용문 처리 중\u2026",
+      "done": "\u2726 {{duration}}에 {{total}}개 인용문 AutoCode 완료.",
+      "report": "보고서",
+      "failed": "\u2726 AutoCode 실패",
+      "failedWithError": "\u2726 AutoCode 실패: {{error}}",
+      "dismiss": "닫기"
+    }
   }
 }

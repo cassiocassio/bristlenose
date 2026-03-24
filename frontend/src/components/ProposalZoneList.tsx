@@ -7,6 +7,7 @@
  */
 
 import { useState, useMemo, useCallback } from "react";
+import { useTranslation } from "react-i18next";
 import type { ProposedTagResponse } from "../utils/types";
 import { getTagBg } from "../utils/colours";
 
@@ -29,10 +30,10 @@ function formatTimecode(seconds: number): string {
   return `${m}:${String(s).padStart(2, "0")}`;
 }
 
-const ZONE_LABELS: Record<Zone, string> = {
-  accepted: "Accepted",
-  tentative: "Tentative",
-  excluded: "Excluded",
+const ZONE_LABEL_KEYS: Record<Zone, string> = {
+  accepted: "autocode.review.zoneAccepted",
+  tentative: "autocode.review.zoneTentative",
+  excluded: "autocode.review.zoneExcluded",
 };
 
 export function ProposalZoneList({
@@ -43,6 +44,7 @@ export function ProposalZoneList({
   onDeny,
   removing,
 }: ProposalZoneListProps) {
+  const { t } = useTranslation();
   const [isOpen, setIsOpen] = useState(defaultExpanded);
 
   const visibleCount = proposals.filter((p) => !removing.has(p.id)).length;
@@ -69,7 +71,7 @@ export function ProposalZoneList({
         <span className={`threshold-zone-list-chevron${isOpen ? " threshold-zone-list-chevron--open" : ""}`}>
           &#x25B6;
         </span>
-        <span>{ZONE_LABELS[zone]}</span>
+        <span>{t(ZONE_LABEL_KEYS[zone])}</span>
         <span className="threshold-zone-list-count">({visibleCount})</span>
       </div>
 
@@ -106,6 +108,7 @@ interface SessionRowsProps {
 }
 
 function SessionRows({ sessionId, items, zone, removing, onAccept, onDeny }: SessionRowsProps) {
+  const { t } = useTranslation();
   // Filter out removed items for display but keep them in DOM briefly for animation
   const visibleItems = items.filter((p) => !removing.has(p.id));
   if (visibleItems.length === 0) return null;
@@ -114,7 +117,7 @@ function SessionRows({ sessionId, items, zone, removing, onAccept, onDeny }: Ses
     <>
       <tr>
         <td colSpan={6} className="report-session-header">
-          {/^s\d+$/.test(sessionId) ? `Session ${sessionId.slice(1)}` : sessionId}
+          {/^s\d+$/.test(sessionId) ? t("autocode.sessionLabel", { id: sessionId.slice(1) }) : sessionId}
         </td>
       </tr>
       {visibleItems.map((p) => (
@@ -156,7 +159,7 @@ function SessionRows({ sessionId, items, zone, removing, onAccept, onDeny }: Ses
               <button
                 className="threshold-action-btn threshold-action-deny"
                 onClick={() => onDeny(p.id)}
-                title="Deny"
+                title={t("autocode.deny")}
               >
                 &#x2717;
               </button>
@@ -168,7 +171,7 @@ function SessionRows({ sessionId, items, zone, removing, onAccept, onDeny }: Ses
                   <button
                     className="threshold-action-btn threshold-action-accept"
                     onClick={() => onAccept(p.id)}
-                    title="Accept"
+                    title={t("autocode.accept")}
                   >
                     &#x2713;
                   </button>
@@ -177,7 +180,7 @@ function SessionRows({ sessionId, items, zone, removing, onAccept, onDeny }: Ses
                   <button
                     className="threshold-action-btn threshold-action-deny"
                     onClick={() => onDeny(p.id)}
-                    title="Deny"
+                    title={t("autocode.deny")}
                   >
                     &#x2717;
                   </button>

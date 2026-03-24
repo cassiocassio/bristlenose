@@ -98,7 +98,9 @@
     "csvSentiment": "Stimmung",
     "csvTags": "Tags",
     "csvCopied": "{{count}} Zitate als CSV kopiert",
-    "csvFailed": "Kopieren in die Zwischenablage fehlgeschlagen"
+    "csvFailed": "Kopieren in die Zwischenablage fehlgeschlagen",
+    "noQuotesSelected": "Keine Zitate ausgewählt",
+    "quotesExported": "{{count}} Zitate als CSV exportiert"
   },
   "tags": {
     "noTags": "Keine Tags",
@@ -180,7 +182,42 @@
     "navAbout": "Über",
     "navDeveloper": "Entwickler",
     "navDesign": "Design",
-    "navContributing": "Mitwirken"
+    "navContributing": "Mitwirken",
+    "shortcuts": {
+      "navigation": "Navigation",
+      "nextQuote": "Nächstes Zitat",
+      "previousQuote": "Vorheriges Zitat",
+      "selection": "Auswahl",
+      "toggleSelect": "Auswahl umschalten",
+      "extend": "Erweitern",
+      "actions": "Aktionen",
+      "starQuotes": "Zitat(e) markieren",
+      "hideQuotes": "Zitat(e) ausblenden",
+      "addTag": "Tag hinzufügen",
+      "repeatLastTag": "Letzten Tag wiederholen",
+      "playInVideo": "Im Video abspielen",
+      "global": "Global",
+      "search": "Suchen",
+      "toggleContents": "Inhaltsverzeichnis umschalten",
+      "toggleTags": "Tags umschalten",
+      "toggleBothSidebars": "Beide Seitenleisten umschalten",
+      "toggleHeatmap": "Heatmap umschalten",
+      "thisHelp": "Diese Hilfe",
+      "closeClear": "Schließen / Löschen"
+    },
+    "guide": {
+      "intro": "Diese Anleitung erklärt, wie Sie Ihre Bristlenose-Analyse lesen und damit arbeiten können.",
+      "sectionsTitle": "Abschnitte und Themen",
+      "sectionsBody": "Jedes Zitat wird als bildschirmspezifisch (über einen bestimmten Bildschirm oder eine Aufgabe) oder als allgemeiner Kontext (über die breitere Situation des Teilnehmers) klassifiziert. Bildschirmspezifische Zitate werden in Abschnitte gruppiert; allgemeine Zitate werden in emergente Themen gruppiert. Jedes Zitat erscheint an genau einer Stelle.",
+      "sentimentTitle": "Stimmungsmarkierung",
+      "sentimentBody": "Sieben Stimmungs-Tags für UX-Forschung: Frustration, Verwirrung, Zweifel, Überraschung, Zufriedenheit, Begeisterung und Vertrauen. Jedes Zitat erhält einen Tag basierend auf der vom Teilnehmer ausgedrückten Emotion.",
+      "signalsTitle": "Signale",
+      "signalsBody": "Die Analyseseite zeigt Signale — statistisch auffällige Konzentrationen von Stimmungen innerhalb der Berichtsabschnitte. Starke und moderate Signale heben hervor, wo sich die Erfahrungen der Teilnehmer bündeln.",
+      "starsTitle": "Sterne, Tags und Filter",
+      "starsBody": "Markieren Sie Zitate mit Sternen, um wichtige Erkenntnisse hervorzuheben. Fügen Sie Tags hinzu, um Ihr eigenes Codierungsschema aufzubauen. Verwenden Sie den Tag-Filter und die Suche, um sich auf das Wesentliche zu konzentrieren. Alle Änderungen werden automatisch gespeichert.",
+      "exportTitle": "Exportieren",
+      "exportBody": "Laden Sie einen eigenständigen HTML-Bericht herunter, der offline funktioniert. Der Export bewahrt alle Ihre Sterne, Tags und Bearbeitungen."
+    }
   },
   "analysis": {
     "heading": "Analyse",
@@ -197,6 +234,13 @@
     "tagDesc": "Muster sortiert nach Signalstärke — wo sich Codebuch-Tags stärker als erwartet im Vergleich zum Studiendurchschnitt konzentrieren.",
     "section": "Abschnitt",
     "theme": "Thema",
+    "dimension": "Dimension",
+    "heatmap": "Heatmap",
+    "heatmapOpen": "Heatmap-Panel schließen (m)",
+    "heatmapClosed": "Heatmap (m)",
+    "heatmapCloseLabel": "Heatmap-Panel schließen",
+    "heatmapOpenLabel": "Heatmap-Panel öffnen",
+    "heatmapSources": "Heatmap-Quellen",
     "conc": "Konz",
     "voice_one": "{{count}} Stimme",
     "voice_other": "{{count}} Stimmen",
@@ -272,5 +316,46 @@
     "uncategorised": "Ohne Kategorie",
     "uncategorisedSubtitle": "Tags, die noch keiner Gruppe zugeordnet sind",
     "deleteGroupAriaLabel": "Gruppe {{name}} löschen"
+  },
+  "autocode": {
+    "deny": "Ablehnen",
+    "accept": "Akzeptieren",
+    "close": "Schließen",
+    "loading": "Vorschläge werden geladen\u2026",
+    "empty": "Keine Vorschläge zum Überprüfen.",
+    "sessionLabel": "Sitzung {{id}}",
+    "review": {
+      "title": "AutoCode-Überprüfung",
+      "remaining": "{{pending}} von {{total}} Vorschlägen verbleibend",
+      "accepted": "{{count}} akzeptiert",
+      "excluded": "{{count}} ausgeschlossen",
+      "dragInstruction": "Ziehen Sie die Schwellenwerte, um zu steuern, wie viele Auto-Tags als vorläufig oder akzeptiert angewendet werden.",
+      "apply": "Schwellenwerte anwenden",
+      "applying": "Wird angewendet\u2026",
+      "applyFailed": "Anwendung fehlgeschlagen — Ihre Einzelentscheidungen sind gespeichert. Versuchen Sie es erneut.",
+      "loadFailed": "Vorschläge konnten nicht geladen werden",
+      "zoneExclude": "Ausschließen",
+      "zoneTentative": "Vorläufig",
+      "zoneAccept": "Akzeptieren",
+      "zoneAccepted": "Akzeptiert",
+      "zoneExcluded": "Ausgeschlossen"
+    },
+    "report": {
+      "title": "AutoCode-Bericht",
+      "subtitle_one": "{{count}} Tag vorgeschlagen in {{sessions}} Sitzung",
+      "subtitle_other": "{{count}} Tags vorgeschlagen in {{sessions}} Sitzungen",
+      "close": "Schließen",
+      "acceptAll": "Alle akzeptieren",
+      "tagTentatively": "Vorläufig taggen",
+      "deny": "Ablehnen"
+    },
+    "toast": {
+      "progress": "\u2726 AutoCodierung {{processed}}/{{total}} Zitate\u2026",
+      "done": "\u2726 AutoCodiert {{total}} Zitate in {{duration}}.",
+      "report": "Bericht",
+      "failed": "\u2726 AutoCode fehlgeschlagen",
+      "failedWithError": "\u2726 AutoCode fehlgeschlagen: {{error}}",
+      "dismiss": "Schließen"
+    }
   }
 }

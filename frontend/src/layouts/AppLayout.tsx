@@ -43,6 +43,7 @@ import { setSearchQuery, setViewMode, setTagFilter, getQuotesSnapshot } from "..
 import { EMPTY_TAG_FILTER } from "../utils/filter";
 import { toast } from "../utils/toast";
 import { announce } from "../utils/announce";
+import i18n from "../i18n";
 import { isEditing } from "../utils/editing";
 import { isEmbedded } from "../utils/embedded";
 import { getExportData } from "../utils/exportData";
@@ -69,7 +70,14 @@ function buildCsvString(
   quoteIds: string[] | null,
   store: ReturnType<typeof getQuotesSnapshot>,
 ): string {
-  const header = ["Timecode", "Quote", "Participant", "Topic", "Sentiment", "Tags"];
+  const header = [
+    i18n.t("toolbar.csvTimecode"),
+    i18n.t("toolbar.csvQuote"),
+    i18n.t("toolbar.csvParticipant"),
+    i18n.t("toolbar.csvTopic"),
+    i18n.t("toolbar.csvSentiment"),
+    i18n.t("toolbar.csvTags"),
+  ];
   const quotes = quoteIds
     ? store.quotes.filter((q) => quoteIds.includes(q.dom_id))
     : store.quotes;
@@ -262,13 +270,13 @@ function AppShell() {
       return;
     }
     const path = location.pathname;
-    let label = "Project";
-    if (path.startsWith("/report/quotes")) label = "Quotes";
-    else if (path.startsWith("/report/sessions/s")) label = "Transcript";
-    else if (path.startsWith("/report/sessions")) label = "Sessions";
-    else if (path.startsWith("/report/codebook")) label = "Codebook";
-    else if (path.startsWith("/report/analysis")) label = "Analysis";
-    announce(`Navigated to ${label}`);
+    let key = "nav.project";
+    if (path.startsWith("/report/quotes")) key = "nav.quotes";
+    else if (path.startsWith("/report/sessions/s")) key = "announce.transcript";
+    else if (path.startsWith("/report/sessions")) key = "nav.sessions";
+    else if (path.startsWith("/report/codebook")) key = "nav.codebook";
+    else if (path.startsWith("/report/analysis")) key = "nav.analysis";
+    announce(i18n.t("announce.navigatedTo", { label: i18n.t(key) }));
   }, [location.pathname]);
 
   // Handle menu actions from native toolbar/menu (embedded mode).
@@ -340,7 +348,7 @@ function AppShell() {
           a.download = "bristlenose-quotes.csv";
           a.click();
           URL.revokeObjectURL(url);
-          toast(`${snap.quotes.length} quotes exported as CSV`);
+          toast(i18n.t("toolbar.quotesExported", { count: snap.quotes.length }));
           break;
         }
         case "copyAsCSV": {
@@ -349,14 +357,14 @@ function AppShell() {
           const selected = selectedIdsBridgeRef.current;
           const ids = selected.size > 0 ? Array.from(selected) : focused ? [focused] : null;
           if (!ids || ids.length === 0) {
-            toast("No quotes selected");
+            toast(i18n.t("toolbar.noQuotesSelected"));
             break;
           }
           const csv2 = buildCsvString(ids, snap2);
           navigator.clipboard
             .writeText(csv2)
-            .then(() => toast(`${ids.length} quote${ids.length === 1 ? "" : "s"} copied as CSV`))
-            .catch(() => toast("Could not copy to clipboard"));
+            .then(() => toast(i18n.t("toolbar.csvCopied", { count: ids.length })))
+            .catch(() => toast(i18n.t("toolbar.csvFailed")));
           break;
         }
         case "allQuotes":
@@ -446,8 +454,8 @@ function AppShell() {
     () =>
       Array.from(activityJobs.entries()).map(([id, j]) => ({
         id,
-        label: `\u2726 AutoCoding ${j.frameworkTitle}`,
-        completedLabel: `\u2726 AutoCoded ${j.frameworkTitle}`,
+        label: i18n.t("autocode.chip.coding", { title: j.frameworkTitle }),
+        completedLabel: i18n.t("autocode.chip.coded", { title: j.frameworkTitle }),
         frameworkId: j.frameworkId,
         onComplete: () => {
           window.dispatchEvent(new Event("codebook-changed"));
@@ -465,7 +473,7 @@ function AppShell() {
             }, 100);
           }
         },
-        actionLabel: "View Report",
+        actionLabel: i18n.t("codebook.viewReport"),
         actionHref: "/report/codebook",
         onCancel: () => {
           cancelAutoCode(j.frameworkId).catch((err) =>
@@ -480,7 +488,7 @@ function AppShell() {
     <SidebarLayout
       active={showSidebar}
       leftPanel={isSessionsRoute ? <SessionsSidebar /> : isCodebook ? <CodebookSidebar /> : isAnalysis ? <AnalysisSidebar /> : undefined}
-      leftPanelTitle={isSessionsRoute ? "Sessions" : isCodebook ? "Codebooks" : isAnalysis ? "Signals" : undefined}
+      leftPanelTitle={isSessionsRoute ? i18n.t("nav.sessions") : isCodebook ? i18n.t("codebook.heading") : isAnalysis ? i18n.t("analysis.signals") : undefined}
       showRightSidebar={!!isQuotes}
     >
       {!embedded && <Header />}

@@ -13,6 +13,7 @@
  */
 
 import { useCallback, useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { apiGet, getCodebook, getCodebookTemplates } from "../utils/api";
 
 // ── Types ──────────────────────────────────────────────────────────
@@ -35,6 +36,7 @@ interface CodebookEntry {
 // ── Component ──────────────────────────────────────────────────────
 
 export function CodebookSidebar() {
+  const { t } = useTranslation();
   const [projectName, setProjectName] = useState<string | null>(null);
   const [builtIn, setBuiltIn] = useState<CodebookEntry[]>([]);
   const [frameworks, setFrameworks] = useState<CodebookEntry[]>([]);
@@ -64,14 +66,14 @@ export function CodebookSidebar() {
         const builtInEntries: CodebookEntry[] = [];
         const frameworkEntries: CodebookEntry[] = [];
 
-        for (const t of templates) {
+        for (const tmpl of templates) {
           const entry: CodebookEntry = {
-            id: t.id,
-            label: t.title,
-            imported: importedFwIds.has(t.id),
-            anchorId: `codebook-fw-${t.id}`,
+            id: tmpl.id,
+            label: tmpl.id === "sentiment" ? t("codebook.sentimentTitle") : tmpl.title,
+            imported: importedFwIds.has(tmpl.id),
+            anchorId: `codebook-fw-${tmpl.id}`,
           };
-          if (t.author === "") {
+          if (tmpl.author === "") {
             builtInEntries.push(entry);
           } else {
             frameworkEntries.push(entry);
@@ -154,7 +156,7 @@ export function CodebookSidebar() {
 
   return (
     <nav aria-label="Codebooks">
-      <div className="toc-heading">Your tags</div>
+      <div className="toc-heading">{t("codebook.yourTags")}</div>
       <a
         href="#codebook-project"
         className={`toc-link${activeId === "project" ? " active" : ""}`}
@@ -166,7 +168,7 @@ export function CodebookSidebar() {
 
       {builtIn.length > 0 && (
         <>
-          <div className="toc-heading">Built-in</div>
+          <div className="toc-heading">{t("codebook.builtIn")}</div>
           {builtIn.map((entry) =>
             entry.imported ? (
               <a
@@ -195,7 +197,7 @@ export function CodebookSidebar() {
 
       {frameworks.length > 0 && (
         <>
-          <div className="toc-heading">Frameworks</div>
+          <div className="toc-heading">{t("codebook.frameworks")}</div>
           {frameworks.map((entry) =>
             entry.imported ? (
               <a
@@ -224,7 +226,7 @@ export function CodebookSidebar() {
             type="button"
             onClick={handleBrowseClick}
           >
-            Browse codebooks &rarr;
+            {t("codebook.browseCodebooks")} &rarr;
           </button>
         </>
       )}

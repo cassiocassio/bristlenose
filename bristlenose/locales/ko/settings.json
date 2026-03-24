@@ -8,7 +8,18 @@
   },
   "language": {
     "legend": "언어",
-    "description": "인터페이스의 표시 언어를 설정합니다. 보고서 내용은 번역되지 않습니다."
+    "description": "인터페이스의 표시 언어를 설정합니다. 보고서 내용은 번역되지 않습니다.",
+    "helpTranslate": "Bristlenose를 여러분의 언어로 번역하는 데 도움을 주세요:"
+  },
+  "settingsNav": {
+    "general": "일반",
+    "project": "프로젝트",
+    "profile": "프로필",
+    "apiKeys": "API 키",
+    "config": "구성",
+    "projectStub": "프로젝트 설정이 여기에 표시됩니다. 곧 제공 예정.",
+    "profileStub": "프로필 설정(이름, 이메일, whisper 백엔드)이 여기에 표시됩니다. 곧 제공 예정.",
+    "apiKeysStub": "API 키 관리가 여기에 표시됩니다. 곧 제공 예정."
   },
   "configReference": {
     "heading": "설정 참조",

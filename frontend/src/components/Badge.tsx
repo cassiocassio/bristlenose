@@ -1,4 +1,5 @@
 import { useRef, useEffect, useCallback } from "react";
+import { useTranslation } from "react-i18next";
 
 interface BadgeProps {
   text: string;
@@ -106,6 +107,12 @@ export function Badge({
   className,
   "data-testid": testId,
 }: BadgeProps) {
+  const { t } = useTranslation("enums");
+  // Translate sentiment labels (e.g. "frustration" → "Frustración") when the
+  // key exists in enums.json. Falls back to the raw API string for unknown values.
+  const displayText = sentiment
+    ? t(`sentiment.${text}`, { defaultValue: text })
+    : text;
   const classes = [
     "badge",
     variant === "ai" ? "badge-ai"
@@ -142,7 +149,7 @@ export function Badge({
         onClick={onDelete}
         data-testid={testId}
       >
-        {text}
+        {displayText}
       </span>
     );
   }
@@ -155,7 +162,7 @@ export function Badge({
           <button
             className="badge-delete"
             onClick={(e) => { e.stopPropagation(); onDelete(); }}
-            aria-label={`Delete ${text}`}
+            aria-label={`${t("buttons.delete", { ns: "common" })} ${displayText}`}
           >
             &times;
           </button>

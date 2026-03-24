@@ -8,7 +8,18 @@
   },
   "language": {
     "legend": "Langue",
-    "description": "Contrôle la langue d'affichage de l'interface. Le contenu des rapports n'est pas traduit."
+    "description": "Contrôle la langue d'affichage de l'interface. Le contenu des rapports n'est pas traduit.",
+    "helpTranslate": "Aidez à traduire Bristlenose dans votre langue sur"
+  },
+  "settingsNav": {
+    "general": "Général",
+    "project": "Projet",
+    "profile": "Profil",
+    "apiKeys": "Clés API",
+    "config": "Configuration",
+    "projectStub": "Les réglages du projet apparaîtront ici. Bientôt disponible.",
+    "profileStub": "Les réglages du profil (nom, e-mail, backend whisper) apparaîtront ici. Bientôt disponible.",
+    "apiKeysStub": "La gestion des clés API apparaîtra ici. Bientôt disponible."
   },
   "configReference": {
     "heading": "Référence de configuration",

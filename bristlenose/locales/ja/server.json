@@ -1,0 +1,11 @@
+{
+  "error": {
+    "notFound": "",
+    "badRequest": "",
+    "internal": ""
+  },
+  "status": {
+    "healthy": "",
+    "degraded": ""
+  }
+}

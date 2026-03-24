@@ -25,6 +25,8 @@ Take care. Bristlenose is very alpha, without warranty. All feedback welcome.
 
 Bristlenose is built by me, Martin Storey, a practising user researcher. It's free and open source under AGPL-3.0.
 
+Help translate Bristlenose into your language on [Weblate](https://hosted.weblate.org/projects/bristlenose/) — see [TRANSLATING.md](TRANSLATING.md) for details.
+
 Sidequest: [what is a Bristlenose?](https://www.theaquariumwiki.com/wiki/Ancistrus_sp)
 
 ---

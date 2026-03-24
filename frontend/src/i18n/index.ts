@@ -83,4 +83,9 @@ i18n
     missingKeyHandler: false,
   });
 
+// Keep <html lang> in sync so screen readers use the correct pronunciation engine.
+i18n.on("languageChanged", (lng: string) => {
+  document.documentElement.lang = lng;
+});
+
 export default i18n;

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, type ReactNode } from "react";
+import { useTranslation } from "react-i18next";
 
 interface ConfirmDialogProps {
   title: string;
@@ -14,13 +15,14 @@ interface ConfirmDialogProps {
 export function ConfirmDialog({
   title,
   body,
-  confirmLabel = "Delete",
+  confirmLabel,
   variant = "danger",
   accentColour,
   onConfirm,
   onCancel,
   "data-testid": testId,
 }: ConfirmDialogProps) {
+  const { t } = useTranslation();
   const btnRef = useRef<HTMLButtonElement>(null);
 
   // Auto-focus the confirm button on mount
@@ -69,10 +71,10 @@ export function ConfirmDialog({
       {body && <div className="confirm-dialog-body">{body}</div>}
       <div className="confirm-dialog-actions">
         <button className="confirm-dialog-btn confirm-dialog-btn--cancel" onClick={onCancel}>
-          Cancel
+          {t("buttons.cancel")}
         </button>
         <button ref={btnRef} className={btnClass} onClick={onConfirm}>
-          {confirmLabel}
+          {confirmLabel ?? t("buttons.delete")}
         </button>
       </div>
     </div>

@@ -10,7 +10,8 @@
  * @module HelpModal
  */
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { ModalNav, type NavItem } from "./ModalNav";
 import {
   HelpSection,
@@ -25,23 +26,7 @@ import type { DevInfoResponse } from "./about";
 import type { HealthResponse } from "../utils/health";
 import { isExportMode } from "../utils/exportData";
 
-// ── Navigation structure ──────────────────────────────────────────────────
-
-const NAV_ITEMS: NavItem[] = [
-  { id: "help", label: "Help" },
-  { id: "shortcuts", label: "Shortcuts" },
-  { id: "signals", label: "Signals" },
-  { id: "codebook", label: "Codebook" },
-  {
-    id: "about",
-    label: "About",
-    children: [
-      { id: "developer", label: "Developer" },
-      { id: "design", label: "Design" },
-      { id: "contributing", label: "Contributing" },
-    ],
-  },
-];
+// ── Navigation structure (built inside component for i18n) ───────────────
 
 // ── Component ─────────────────────────────────────────────────────────────
 
@@ -60,9 +45,26 @@ export function HelpModal({
   initialSection = "help",
   health: _health,
 }: HelpModalProps) {
+  const { t, i18n } = useTranslation();
   // _health reserved for version display in HelpSection (next iteration).
   void _health;
   const [activeId, setActiveId] = useState(initialSection);
+
+  const navItems = useMemo<NavItem[]>(() => [
+    { id: "help", label: t("help.navHelp") },
+    { id: "shortcuts", label: t("help.navShortcuts") },
+    { id: "signals", label: t("help.navSignals") },
+    { id: "codebook", label: t("help.navCodebook") },
+    {
+      id: "about",
+      label: t("help.navAbout"),
+      children: [
+        { id: "developer", label: t("help.navDeveloper") },
+        { id: "design", label: t("help.navDesign") },
+        { id: "contributing", label: t("help.navContributing") },
+      ],
+    },
+  ], [t, i18n.language]);
   const [devInfo, setDevInfo] = useState<DevInfoResponse | null>(null);
   const devInfoFetched = useRef(false);
 
@@ -123,8 +125,8 @@ export function HelpModal({
     <ModalNav
       open={open}
       onClose={onClose}
-      title="Help"
-      items={NAV_ITEMS}
+      title={t("help.title")}
+      items={navItems}
       activeId={activeId}
       onSelect={handleSelect}
       className="help-modal"

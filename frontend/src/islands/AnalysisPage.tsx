@@ -13,6 +13,7 @@
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Badge, Metric, PersonBadge } from "../components";
 import { InspectorPanel, DimensionToggle, type InspectorSource } from "../components/InspectorPanel";
 import {
@@ -185,6 +186,7 @@ function CellTooltip({
   allPids: string[];
   pos: TooltipPos;
 }) {
+  const { t } = useTranslation();
   const accentVar = signal.colourSet
     ? getGroupBg(signal.colourSet)
     : `var(--bn-sentiment-${signal.columnLabel})`;
@@ -205,11 +207,11 @@ function CellTooltip({
       <div className="cell-tooltip-body">
         <div className="cell-tooltip-metrics">
           <span>
-            <span className="cell-tooltip-val">{signal.concentration.toFixed(1)}&times;</span> conc
+            <span className="cell-tooltip-val">{signal.concentration.toFixed(1)}&times;</span> {t("analysis.conc")}
           </span>
           <span>
             <span className="cell-tooltip-val">{signal.participants.length}</span>
-            {signal.participants.length === 1 ? " voice" : " voices"}
+            {" "}{t("analysis.voice", { count: signal.participants.length })}
           </span>
           <span className="cell-tooltip-pips">
             {allPids.map((pid) => (
@@ -229,7 +231,7 @@ function CellTooltip({
           ))}
         </div>
         {remaining > 0 && (
-          <div className="cell-tooltip-footer">+{remaining} more</div>
+          <div className="cell-tooltip-footer">{t("analysis.more", { count: remaining })}</div>
         )}
       </div>
     </div>
@@ -239,18 +241,19 @@ function CellTooltip({
 // ── Sub-components ─────────────────────────────────────────────────────
 
 function SourceBanner({ breakdown }: { breakdown: SourceBreakdown }) {
+  const { t } = useTranslation();
   if (breakdown.total === 0) return null;
   const parts: string[] = [];
-  if (breakdown.accepted > 0) parts.push(`${breakdown.accepted} accepted`);
-  if (breakdown.pending > 0) parts.push(`${breakdown.pending} pending`);
+  if (breakdown.accepted > 0) parts.push(t("analysis.accepted", { count: breakdown.accepted }));
+  if (breakdown.pending > 0) parts.push(t("analysis.pending", { count: breakdown.pending }));
   return (
     <p
       className="description"
       style={{ fontSize: "0.82rem", marginBottom: "var(--bn-space-md)" }}
       data-testid="bn-source-banner"
     >
-      Based on {parts.join(" + ")} tag{breakdown.total === 1 ? "" : "s"}
-      {breakdown.pending > 0 && " (pending tags weighted by AI confidence)"}
+      {t("analysis.basedOnTags", { parts: parts.join(" + "), count: breakdown.total })}
+      {breakdown.pending > 0 && ` ${t("analysis.pendingWeighted")}`}
     </p>
   );
 }
@@ -352,6 +355,7 @@ function SignalCard({
   signalIndex?: number;
   onFocus?: (signal: UnifiedSignal) => void;
 }) {
+  const { t } = useTranslation();
   const [expanded, setExpanded] = useState(false);
   const expansionRef = useRef<HTMLDivElement>(null);
 
@@ -422,7 +426,7 @@ function SignalCard({
           ) : (
             <>
               <span className="signal-card-source">
-                {signal.sourceType === "section" ? "Section" : "Theme"}
+                {signal.sourceType === "section" ? t("analysis.section") : t("analysis.theme")}
               </span>
               <div className="signal-card-location">
                 <a
@@ -467,7 +471,7 @@ function SignalCard({
               )}
             </div>
             <div className="signal-card-metrics">
-              <span className="metric-label" title="Composite signal strength">Signal</span>
+              <span className="metric-label" title={t("analysis.signalTitle")}>{t("analysis.signalLabel")}</span>
               <span className="metric-value">{signal.compositeSignal.toFixed(2)}</span>
               <span className="metric-viz">
                 {siblingSignals && siblingSignals.length > 1 && signalIndex != null ? (
@@ -479,20 +483,20 @@ function SignalCard({
                 ) : null}
               </span>
               <Metric
-                label="Conc."
-                title="Concentration ratio — how overrepresented vs study average"
+                label={t("analysis.concLabel")}
+                title={t("analysis.concTitle")}
                 displayValue={`${signal.concentration.toFixed(1)}×`}
                 viz={{ type: "bar", percentage: concPct }}
               />
               <Metric
-                label="Agree."
-                title="Agreement — effective number of voices (Simpson's diversity)"
+                label={t("analysis.agreeLabel")}
+                title={t("analysis.agreeTitle")}
                 displayValue={signal.nEff.toFixed(1)}
                 viz={{ type: "bar", percentage: agreePct }}
               />
               <Metric
-                label="Intensity"
-                title="Mean emotional intensity (0–3)"
+                label={t("analysis.intensityLabel")}
+                title={t("analysis.intensityTitle")}
                 displayValue={signal.meanIntensity.toFixed(1)}
                 viz={{ type: "dots", value: signal.meanIntensity }}
               />
@@ -501,26 +505,26 @@ function SignalCard({
         ) : (
           <div className="signal-card-metrics">
             <Metric
-              label="Signal"
-              title="Composite signal strength"
+              label={t("analysis.signalLabel")}
+              title={t("analysis.signalTitle")}
               displayValue={signal.compositeSignal.toFixed(2)}
               viz={{ type: "none" }}
             />
             <Metric
-              label="Conc."
-              title="Concentration ratio — how overrepresented vs study average"
+              label={t("analysis.concLabel")}
+              title={t("analysis.concTitle")}
               displayValue={`${signal.concentration.toFixed(1)}×`}
               viz={{ type: "bar", percentage: concPct }}
             />
             <Metric
-              label="Agree."
-              title="Agreement — effective number of voices (Simpson's diversity)"
+              label={t("analysis.agreeLabel")}
+              title={t("analysis.agreeTitle")}
               displayValue={signal.nEff.toFixed(1)}
               viz={{ type: "bar", percentage: agreePct }}
             />
             <Metric
-              label="Intensity"
-              title="Mean emotional intensity (0–3)"
+              label={t("analysis.intensityLabel")}
+              title={t("analysis.intensityTitle")}
               displayValue={signal.meanIntensity.toFixed(1)}
               viz={{ type: "dots", value: signal.meanIntensity }}
             />
@@ -555,11 +559,11 @@ function SignalCard({
             onClick={toggleExpand}
             data-testid="bn-signal-toggle"
           >
-            {expanded ? "Hide" : `Show all ${signal.quotes.length} quotes \u2192`}
+            {expanded ? t("analysis.hide") : t("analysis.showAllQuotes", { count: signal.quotes.length })}
           </a>
         ) : (
           <span className="signal-card-link" style={{ visibility: "hidden" }}>
-            1 quote
+            {t("analysis.oneQuote")}
           </span>
         )}
         <ParticipantGrid
@@ -581,6 +585,7 @@ function QuoteBlock({
   isSentiment: boolean;
   sequenceMeta?: SequenceMeta;
 }) {
+  const { t } = useTranslation();
   const tc = formatTimecode(quote.startSeconds);
   const tcHref = `/report/sessions/${quote.sessionId}#t-${Math.floor(quote.startSeconds)}`;
 
@@ -617,7 +622,7 @@ function QuoteBlock({
             />
           ))}
         </span>
-        <span className="intensity-dots" title={`Intensity ${quote.intensity}/3`}>
+        <span className="intensity-dots" title={t("analysis.intensityTooltip", { value: quote.intensity })}>
           <IntensityDotsSvg value={quote.intensity} />
         </span>
       </div>
@@ -657,6 +662,7 @@ function Heatmap({
   matrix,
   columnLabels,
   rowHeader,
+  dimension,
   isSentiment,
   signalKeys,
   signalMap,
@@ -668,6 +674,8 @@ function Heatmap({
   matrix: AnalysisMatrix | SentimentMatrixAdapter;
   columnLabels: string[];
   rowHeader: string;
+  /** Logical dimension — "section" or "theme" — used for signal key lookup (not displayed). */
+  dimension: "section" | "theme";
   isSentiment: boolean;
   signalKeys: Set<string>;
   signalMap: Map<string, UnifiedSignal>;
@@ -676,6 +684,7 @@ function Heatmap({
   isDark: boolean;
   topLeftContent?: React.ReactNode;
 }) {
+  const { t } = useTranslation();
   const grandTotal = matrix.grand_total;
   if (grandTotal === 0 || matrix.row_labels.length === 0) return null;
 
@@ -752,7 +761,7 @@ function Heatmap({
             );
           })}
           <th className={isSentiment ? undefined : "heatmap-col-header"}>
-            {isSentiment ? "Total" : <span className="heatmap-col-label">Total</span>}
+            {isSentiment ? t("analysis.total") : <span className="heatmap-col-label">{t("analysis.total")}</span>}
           </th>
         </tr>
       </thead>
@@ -768,7 +777,7 @@ function Heatmap({
                 const cell = matrix.cells[cellKey];
                 const count = cell?.count ?? 0;
                 const colTotal = matrix.col_totals[col] || 0;
-                const sourceType = rowHeader.toLowerCase().includes("section") ? "section" : "theme";
+                const sourceType = dimension;
                 const signalKey = `${sourceType}|${row}|${col}`;
                 const hasCard = signalKeys.has(signalKey);
                 const style = heatCellStyle(count, rowTotal, colTotal, grandTotal, isDark);
@@ -805,7 +814,7 @@ function Heatmap({
           );
         })}
         <tr>
-          <td className="heatmap-total">Total</td>
+          <td className="heatmap-total">{t("analysis.total")}</td>
           {columnLabels.map((col) => (
             <td key={col} className="heatmap-total">
               {matrix.col_totals[col] || 0}
@@ -854,6 +863,7 @@ interface AnalysisPageProps {
 }
 
 export function AnalysisPage({ projectId }: AnalysisPageProps) {
+  const { t } = useTranslation();
   const [cbData, setCbData] = useState<CodebookAnalysisListResponse | null>(null);
   const [tagError, setTagError] = useState<string | null>(null);
   const [tagLoaded, setTagLoaded] = useState(false);
@@ -1073,7 +1083,8 @@ export function AnalysisPage({ projectId }: AnalysisPageProps) {
           <Heatmap
             matrix={sentimentSectionMatrix}
             columnLabels={sentimentColumns}
-            rowHeader="Section"
+            rowHeader={t("analysis.section")}
+            dimension="section"
             isSentiment={true}
             signalKeys={signalKeys}
             signalMap={signalMap}
@@ -1087,7 +1098,8 @@ export function AnalysisPage({ projectId }: AnalysisPageProps) {
           <Heatmap
             matrix={sentimentThemeMatrix}
             columnLabels={sentimentColumns}
-            rowHeader="Theme"
+            rowHeader={t("analysis.theme")}
+            dimension="theme"
             isSentiment={true}
             signalKeys={signalKeys}
             signalMap={signalMap}
@@ -1115,7 +1127,8 @@ export function AnalysisPage({ projectId }: AnalysisPageProps) {
             <Heatmap
               matrix={cb.section_matrix}
               columnLabels={cb.columns}
-              rowHeader="Section"
+              rowHeader={t("analysis.section")}
+            dimension="section"
               isSentiment={false}
               signalKeys={signalKeys}
               signalMap={signalMap}
@@ -1129,7 +1142,8 @@ export function AnalysisPage({ projectId }: AnalysisPageProps) {
             <Heatmap
               matrix={cb.theme_matrix}
               columnLabels={cb.columns}
-              rowHeader="Theme"
+              rowHeader={t("analysis.theme")}
+            dimension="theme"
               isSentiment={false}
               signalKeys={signalKeys}
               signalMap={signalMap}
@@ -1147,16 +1161,16 @@ export function AnalysisPage({ projectId }: AnalysisPageProps) {
   }, [
     hasSentiment, sentimentSectionMatrix, sentimentThemeMatrix, sentimentColumns,
     sentimentPids, hasTags, cbData, tagAllPids, signalKeys, signalMap,
-    handleCellClick, isDark,
+    handleCellClick, isDark, t,
   ]);
 
   // Still loading
   if (!hasSentiment && !hasTags && !tagLoaded) {
     return (
       <div>
-        <h2 className="section-heading">Analysis</h2>
+        <h2 className="section-heading">{t("analysis.heading")}</h2>
         <p className="description" style={{ opacity: 0.5 }}>
-          Loading analysis data&hellip;
+          {t("analysis.loadingData")}
         </p>
       </div>
     );
@@ -1165,13 +1179,13 @@ export function AnalysisPage({ projectId }: AnalysisPageProps) {
   if (!hasSentiment && !hasTags) {
     return (
       <div>
-        <h2 className="section-heading">Analysis</h2>
+        <h2 className="section-heading">{t("analysis.heading")}</h2>
         <p className="description">
-          No analysis data available. Run the pipeline or apply codebook tags to generate analysis.
+          {t("analysis.noData")}
         </p>
         {tagError && (
           <p style={{ color: "var(--bn-colour-danger, #c00)", fontSize: "0.82rem" }}>
-            Tag analysis error: {tagError}
+            {t("analysis.tagError", { error: tagError })}
           </p>
         )}
       </div>
@@ -1185,10 +1199,9 @@ export function AnalysisPage({ projectId }: AnalysisPageProps) {
         {/* ── Sentiment signal cards ─────────────────────────── */}
         {hasSentiment && sentimentSignals.length > 0 && (
           <>
-            <h2 className="section-heading">Sentiment signals</h2>
+            <h2 className="section-heading">{t("analysis.sentimentSignals")}</h2>
             <p className="section-desc">
-              Patterns ranked by signal strength — where sentiments concentrate
-              more than expected given the study average.
+              {t("analysis.sentimentDesc")}
             </p>
             <div className="signal-cards" id="signal-cards-sentiment">
               {sentimentSignals.map((s) => (
@@ -1213,10 +1226,9 @@ export function AnalysisPage({ projectId }: AnalysisPageProps) {
         {hasTags && tagSignals.length > 0 && (
           <>
             {sourceBreakdown && <SourceBanner breakdown={sourceBreakdown} />}
-            <h2 className="section-heading">Tag signals</h2>
+            <h2 className="section-heading">{t("analysis.tagSignals")}</h2>
             <p className="section-desc">
-              Patterns ranked by signal strength — where codebook tags concentrate
-              more than expected given the study average.
+              {t("analysis.tagDesc")}
             </p>
             <div className="signal-cards" id="signal-cards-tags">
               {tagSignals.map((s, idx) => (

@@ -7,6 +7,7 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { createPortal } from "react-dom";
+import { useTranslation } from "react-i18next";
 import { getAutoCodeStatus } from "../utils/api";
 import type { AutoCodeJobStatus } from "../utils/types";
 
@@ -38,6 +39,7 @@ export function AutoCodeToast({
   onOpenReport,
   onDismiss,
 }: AutoCodeToastProps) {
+  const { t } = useTranslation();
   const [job, setJob] = useState<AutoCodeJobStatus | null>(null);
   const [elapsed, setElapsed] = useState(0);
   const completeFired = useRef(false);
@@ -103,8 +105,9 @@ export function AutoCodeToast({
           <div className="toast-spinner" />
           <div className="toast-content">
             <span>
-              &#x2726; AutoCoding{" "}
-              {job ? `${job.processed_quotes}/${job.total_quotes}` : "…"} quotes…
+              {job
+                ? t("autocode.toast.progress", { processed: job.processed_quotes, total: job.total_quotes })
+                : t("autocode.toast.progress", { processed: "…", total: "…" })}
               {job?.status === "running" && (
                 <span className="toast-elapsed">{formatElapsed(elapsed)}</span>
               )}
@@ -124,11 +127,12 @@ export function AutoCodeToast({
         <>
           <span className="toast-check">&#x2713;</span>
           <span>
-            &#x2726; AutoCoded {job.total_quotes} quotes
-            {job.completed_at && job.started_at
-              ? ` in ${formatDuration(job.started_at, job.completed_at)}`
-              : ""}
-            .
+            {t("autocode.toast.done", {
+              total: job.total_quotes,
+              duration: job.completed_at && job.started_at
+                ? formatDuration(job.started_at, job.completed_at)
+                : "",
+            })}
           </span>
           {/* eslint-disable-next-line jsx-a11y/anchor-is-valid */}
           <a
@@ -136,21 +140,25 @@ export function AutoCodeToast({
             onClick={onOpenReport}
             data-testid="bn-autocode-toast-report"
           >
-            Report
+            {t("autocode.toast.report")}
           </a>
         </>
       )}
       {job?.status === "failed" && (
         <>
           <span className="toast-error">&#x2717;</span>
-          <span>&#x2726; AutoCode failed{job.error_message ? `: ${job.error_message}` : ""}.</span>
+          <span>
+            {job.error_message
+              ? t("autocode.toast.failedWithError", { error: job.error_message })
+              : t("autocode.toast.failed")}
+          </span>
         </>
       )}
       {job?.status !== "completed" && (
         <button
           className="toast-close"
           onClick={onDismiss}
-          aria-label="Dismiss"
+          aria-label={t("autocode.toast.dismiss")}
           data-testid="bn-autocode-toast-close"
         >
           &times;

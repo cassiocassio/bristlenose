@@ -7,6 +7,7 @@
  */
 
 import { useCallback, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { SearchBox } from "../components/SearchBox";
 import { TagFilterDropdown } from "../components/TagFilterDropdown";
 import { ViewSwitcher } from "../components/ViewSwitcher";
@@ -63,6 +64,7 @@ function formatTimecode(seconds: number): string {
 type ActiveDropdown = "none" | "tagFilter" | "viewSwitcher";
 
 export function Toolbar() {
+  const { t } = useTranslation();
   const store = useQuotesStore();
   const [activeDropdown, setActiveDropdown] = useState<ActiveDropdown>("none");
 
@@ -114,7 +116,7 @@ export function Toolbar() {
   // View switcher label (matches vanilla: shows count when filtered)
   const viewLabel = useMemo(() => {
     if (store.searchQuery.length >= 3) {
-      return `${visibleCount} matching`;
+      return t("toolbar.matching", { count: visibleCount });
     }
     return undefined; // default label from ViewSwitcher
   }, [store.searchQuery, visibleCount]);
@@ -132,7 +134,14 @@ export function Toolbar() {
   // ── CSV export ────────────────────────────────────────────────────
 
   const handleCsvExport = useCallback(() => {
-    const header = ["Timecode", "Quote", "Participant", "Topic", "Sentiment", "Tags"];
+    const header = [
+      t("toolbar.csvTimecode"),
+      t("toolbar.csvQuote"),
+      t("toolbar.csvParticipant"),
+      t("toolbar.csvTopic"),
+      t("toolbar.csvSentiment"),
+      t("toolbar.csvTags"),
+    ];
     const rows = visibleQuotes.map((q) => {
       const text = store.edits[q.dom_id] ?? q.text;
       const tags = (store.tags[q.dom_id] ?? q.tags).map((t) => t.name).join("; ");
@@ -149,8 +158,8 @@ export function Toolbar() {
     const csv = [header.join(","), ...rows].join("\n");
     navigator.clipboard
       .writeText(csv)
-      .then(() => toast(`${visibleQuotes.length} quotes copied as CSV`))
-      .catch(() => toast("Could not copy to clipboard"));
+      .then(() => toast(t("toolbar.csvCopied", { count: visibleQuotes.length })))
+      .catch(() => toast(t("toolbar.csvFailed")));
   }, [visibleQuotes, store.edits, store.tags]);
 
   // ── Render ────────────────────────────────────────────────────────
@@ -180,7 +189,7 @@ export function Toolbar() {
         data-testid="bn-toolbar-view-switcher"
       />
       <ToolbarButton
-        label="Copy CSV"
+        label={t("toolbar.copyCsv")}
         icon={<CopyIcon />}
         onClick={handleCsvExport}
         data-testid="bn-toolbar-csv"

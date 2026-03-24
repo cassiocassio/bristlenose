@@ -10,6 +10,7 @@
 
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { createPortal } from "react-dom";
+import { useTranslation } from "react-i18next";
 import { useInert } from "../hooks/useInert";
 import {
   getAutoCodeProposals,
@@ -42,6 +43,7 @@ export function ThresholdReviewModal({
   onApply,
 }: ThresholdReviewModalProps) {
   useInert(open);
+  const { t } = useTranslation();
   const [allProposals, setAllProposals] = useState<ProposedTagResponse[]>([]);
   const [loading, setLoading] = useState(true);
   const [applying, setApplying] = useState(false);
@@ -84,7 +86,7 @@ export function ThresholdReviewModal({
       })
       .catch((err) => {
         console.error("Fetch proposals failed:", err);
-        setError("Failed to load proposals");
+        setError(t("autocode.review.loadFailed"));
         setLoading(false);
       });
   }, [open, frameworkId]);
@@ -169,7 +171,7 @@ export function ThresholdReviewModal({
       onApply();
     } catch (err) {
       console.error("Apply thresholds failed:", err);
-      setError("Apply failed — your per-row decisions are saved. Try again.");
+      setError(t("autocode.review.applyFailed"));
       setApplying(false);
     }
   }, [frameworkId, lower, upper, onApply]);
@@ -194,24 +196,24 @@ export function ThresholdReviewModal({
         <div className="codebook-modal-header">
           <div>
             <div className="codebook-modal-title">
-              &#x2726; AutoCode Review &mdash; {frameworkTitle}
+              &#x2726; {t("autocode.review.title")} &mdash; {frameworkTitle}
             </div>
             <div className="codebook-modal-subtitle" data-testid="bn-threshold-subtitle">
-              {pendingCount} of {totalCount} proposals remaining
+              {t("autocode.review.remaining", { pending: pendingCount, total: totalCount })}
               {(acceptedCount > 0 || deniedCount > 0) && (
-                <> ({acceptedCount > 0 ? `${acceptedCount} accepted` : ""}
+                <> ({acceptedCount > 0 ? t("autocode.review.accepted", { count: acceptedCount }) : ""}
                 {acceptedCount > 0 && deniedCount > 0 ? ", " : ""}
-                {deniedCount > 0 ? `${deniedCount} excluded` : ""})</>
+                {deniedCount > 0 ? t("autocode.review.excluded", { count: deniedCount }) : ""})</>
               )}
             </div>
             <p className="threshold-instruction">
-              Drag the thresholds to control how many auto-tags are applied as tentative or accepted.
+              {t("autocode.review.dragInstruction")}
             </p>
           </div>
           <button
             className="codebook-modal-close"
             onClick={onClose}
-            aria-label="Close"
+            aria-label={t("autocode.close")}
           >
             &times;
           </button>
@@ -220,9 +222,9 @@ export function ThresholdReviewModal({
         {/* Body */}
         <div className="codebook-modal-body" style={{ padding: "1.5rem" }}>
           {loading ? (
-            <p style={{ color: "var(--bn-colour-muted)" }}>Loading proposals…</p>
+            <p style={{ color: "var(--bn-colour-muted)" }}>{t("autocode.loading")}</p>
           ) : !hasProposals ? (
-            <p style={{ color: "var(--bn-colour-muted)" }}>No proposals to review.</p>
+            <p style={{ color: "var(--bn-colour-muted)" }}>{t("autocode.empty")}</p>
           ) : (
             <>
               {/* Histogram */}
@@ -243,19 +245,19 @@ export function ThresholdReviewModal({
               {/* Zone counters */}
               <div className="threshold-zone-counters">
                 <span className="threshold-zone-counter threshold-zone-counter--exclude">
-                  Exclude{" "}
+                  {t("autocode.review.zoneExclude")}{" "}
                   <span className="threshold-zone-counter-count">
                     {excluded.filter((p) => !removing.has(p.id)).length}
                   </span>
                 </span>
                 <span className="threshold-zone-counter threshold-zone-counter--tentative">
-                  Tentative{" "}
+                  {t("autocode.review.zoneTentative")}{" "}
                   <span className="threshold-zone-counter-count">
                     {tentative.filter((p) => !removing.has(p.id)).length}
                   </span>
                 </span>
                 <span className="threshold-zone-counter threshold-zone-counter--accept">
-                  Accept{" "}
+                  {t("autocode.review.zoneAccept")}{" "}
                   <span className="threshold-zone-counter-count">
                     {accepted.filter((p) => !removing.has(p.id)).length}
                   </span>
@@ -300,7 +302,7 @@ export function ThresholdReviewModal({
             onClick={onClose}
             data-testid="bn-threshold-close"
           >
-            Close
+            {t("autocode.close")}
           </button>
           <button
             className="bn-btn bn-btn-primary"
@@ -308,7 +310,7 @@ export function ThresholdReviewModal({
             disabled={applying || pendingCount === 0}
             data-testid="bn-threshold-apply"
           >
-            {applying ? "Applying…" : "Apply thresholds"}
+            {applying ? t("autocode.review.applying") : t("autocode.review.apply")}
           </button>
         </div>
       </div>

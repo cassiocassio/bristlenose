@@ -251,7 +251,7 @@ describe("AnalysisPage", () => {
     await waitFor(() => {
       expect(screen.getAllByTestId("bn-signal-card")).toHaveLength(1);
     });
-    expect(screen.getAllByText("frustration").length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText("Frustration").length).toBeGreaterThanOrEqual(1);
   });
 
   it("shows both sentiment and tag cards when both data exist", async () => {
@@ -265,7 +265,7 @@ describe("AnalysisPage", () => {
     });
 
     // Both types visible simultaneously — no toggle needed
-    expect(screen.getAllByText("frustration").length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText("Frustration").length).toBeGreaterThanOrEqual(1);
     expect(screen.getAllByText("Pain points").length).toBeGreaterThanOrEqual(1);
   });
 

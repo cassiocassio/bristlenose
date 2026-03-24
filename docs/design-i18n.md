@@ -346,7 +346,49 @@ Bristlenose qualifies (AGPL-3.0). No application process — create the project 
 6. Japanese (ja) stub files created for community translation ✓
 7. Translator guide: `TRANSLATING.md` ✓
 
-**Implemented Mar 2026.** Weblate submits translations as pull requests; all PRs require human review.
+**Implemented 24 Mar 2026.** Weblate submits translations as pull requests; all PRs require human review.
+
+### Live configuration
+
+**Project URL:** [hosted.weblate.org/projects/bristlenose/](https://hosted.weblate.org/projects/bristlenose/)
+
+**Hosting:** Libre plan (160k strings, 0 EUR) — approval pending, trial until 7 Apr 2026.
+
+**Components (8):**
+
+| Component | File format | File mask | Strings |
+|-----------|------------|-----------|---------|
+| common | JSON nested structure | `bristlenose/locales/*/common.json` | ~275 |
+| settings | JSON nested structure | `bristlenose/locales/*/settings.json` | ~28 |
+| enums | JSON nested structure | `bristlenose/locales/*/enums.json` | ~13 |
+| cli | JSON nested structure | `bristlenose/locales/*/cli.json` | ~22 |
+| pipeline | JSON nested structure | `bristlenose/locales/*/pipeline.json` | ~4 |
+| server | JSON nested structure | `bristlenose/locales/*/server.json` | ~7 |
+| doctor | JSON nested structure | `bristlenose/locales/*/doctor.json` | ~7 |
+| desktop | JSON nested structure | `bristlenose/locales/*/desktop.json` | ~115 |
+
+**VCS integration:**
+- Version control system: GitHub pull request (Weblate forks and opens PRs)
+- Repository branch: `main`
+- Push branch: empty (Weblate manages its own fork)
+- GitHub webhook: `https://hosted.weblate.org/hooks/github/` (push events only, no secret)
+
+**Format settings:**
+- JSON indentation: 2 spaces
+- Monolingual base: `bristlenose/locales/en/{ns}.json` for each component
+- Components share the same repo clone via `weblate://bristlenose/common`
+
+**Glossary:** uploaded from `bristlenose/locales/glossary.csv` — Apple HIG terms + QDA domain terms (Codebook, Quotes, Sessions, etc.) across es/fr/de/ko.
+
+**Translation instructions:** linked to `TRANSLATING.md` in project settings.
+
+**Languages discovered:** en (source), es, fr, de, ko (100% translated), ja (0% — empty stubs, manually added as language since Weblate skips all-empty files).
+
+**Gotchas learned during setup:**
+- Weblate auto-discovers files from the repo but ignores locales where every value is an empty string (Japanese stubs). Must add the language manually via the + button on the component's Languages page
+- The "Source code repository" field on the create-component form pre-fills with a label prefix (`Source code repository: https://...`) — this must be cleared to just the bare URL or git clone fails with "protocol not supported"
+- JSON indentation defaults to 4 — must change to 2 to match our files, otherwise Weblate reformats every file on first commit
+- Second+ components should use "From an existing component" tab and select `common` to share the repo clone
 
 ### Alternatives considered
 

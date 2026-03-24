@@ -15,7 +15,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { QuotesListResponse } from "../utils/types";
-import { useProjectId } from "../hooks/useProjectId";
+import { apiGet } from "../utils/api";
 import { useScrollSpy } from "../hooks/useScrollSpy";
 import { useSidebarStore, closeToc } from "../contexts/SidebarStore";
 import { usePlaygroundStore } from "../contexts/PlaygroundStore";
@@ -44,7 +44,6 @@ interface TocSidebarProps {
 
 export function TocSidebar({ onOverlayClose }: TocSidebarProps) {
   const { t } = useTranslation();
-  const projectId = useProjectId();
   const { tocMode } = useSidebarStore();
   const pg = usePlaygroundStore();
   const [data, setData] = useState<QuotesListResponse | null>(null);
@@ -56,28 +55,21 @@ export function TocSidebar({ onOverlayClose }: TocSidebarProps) {
 
   // Fetch quotes data for TOC entries.
   useEffect(() => {
-    fetch(`/api/projects/${projectId}/quotes`)
-      .then((res) => {
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        return res.json();
-      })
-      .then((json: QuotesListResponse) => setData(json))
+    apiGet<QuotesListResponse>("/quotes")
+      .then(setData)
       .catch(() => {
         // Silently fail — the main content area shows the error.
       });
-  }, [projectId]);
+  }, []);
 
   // Re-fetch when autocode tags change (same event QuoteSections listens to).
   useEffect(() => {
     const handler = () => {
-      fetch(`/api/projects/${projectId}/quotes`)
-        .then((res) => res.json())
-        .then((json: QuotesListResponse) => setData(json))
-        .catch(() => {});
+      apiGet<QuotesListResponse>("/quotes").then(setData).catch(() => {});
     };
     document.addEventListener("bn:tags-changed", handler);
     return () => document.removeEventListener("bn:tags-changed", handler);
-  }, [projectId]);
+  }, []);
 
   // Build TOC entries from API data.
   const sections: TocEntry[] = useMemo(() => {

@@ -447,8 +447,8 @@ function AppShell() {
     () =>
       Array.from(activityJobs.entries()).map(([id, j]) => ({
         id,
-        label: `\u2726 AutoCoding ${j.frameworkTitle}`,
-        completedLabel: `\u2726 AutoCoded ${j.frameworkTitle}`,
+        label: i18n.t("autocode.chip.coding", { title: j.frameworkTitle }),
+        completedLabel: i18n.t("autocode.chip.coded", { title: j.frameworkTitle }),
         frameworkId: j.frameworkId,
         onComplete: () => {
           window.dispatchEvent(new Event("codebook-changed"));

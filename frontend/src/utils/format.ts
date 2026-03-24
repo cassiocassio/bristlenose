@@ -22,8 +22,9 @@ export function formatFinderDate(isoDate: string | null, locale?: string): strin
   const dt = new Date(isoDate);
   if (isNaN(dt.getTime())) return "\u2014";
 
-  // Default to en-GB for day-month order (12 Feb), not en-US (Feb 12)
-  const lng = locale ?? "en-GB";
+  // Default to en-GB for day-month order (12 Feb), not en-US (Feb 12).
+  // Map bare "en" and "en-US" to "en-GB" — Bristlenose uses day-month order.
+  const lng = !locale || locale.startsWith("en") ? "en-GB" : locale;
   const now = new Date();
   const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
   const dtDate = `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, "0")}-${String(dt.getDate()).padStart(2, "0")}`;
@@ -80,8 +81,9 @@ export function formatCompactDate(isoDate: string | null, includeDay?: boolean, 
   if (!isoDate) return "\u2014";
   const dt = new Date(isoDate);
   if (isNaN(dt.getTime())) return "\u2014";
-  // Default to en-GB for day-month order (12 Feb), not en-US (Feb 12)
-  const lng = locale ?? "en-GB";
+  // Default to en-GB for day-month order (12 Feb), not en-US (Feb 12).
+  // Map bare "en" and "en-US" to "en-GB" — Bristlenose uses day-month order.
+  const lng = !locale || locale.startsWith("en") ? "en-GB" : locale;
   const opts: Intl.DateTimeFormatOptions = { day: "numeric", month: "short" };
   if (includeDay) opts.weekday = "short";
   return new Intl.DateTimeFormat(lng, opts).format(dt);

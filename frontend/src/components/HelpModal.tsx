@@ -45,7 +45,7 @@ export function HelpModal({
   initialSection = "help",
   health: _health,
 }: HelpModalProps) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   // _health reserved for version display in HelpSection (next iteration).
   void _health;
   const [activeId, setActiveId] = useState(initialSection);
@@ -64,7 +64,7 @@ export function HelpModal({
         { id: "contributing", label: t("help.navContributing") },
       ],
     },
-  ], [t]);
+  ], [t, i18n.language]);
   const [devInfo, setDevInfo] = useState<DevInfoResponse | null>(null);
   const devInfoFetched = useRef(false);
 

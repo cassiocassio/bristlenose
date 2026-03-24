@@ -13,6 +13,8 @@
  */
 
 import { useEffect, useState, useRef, useLayoutEffect, useCallback } from "react";
+import { useTranslation } from "react-i18next";
+import type { TFunction } from "i18next";
 import { JourneyChain, PersonBadge, TimecodeLink } from "../components";
 import { Annotation } from "../components/Annotation";
 import type { AnnotationTag } from "../components/Annotation";
@@ -324,6 +326,7 @@ function oxfordJoin(people: TranscriptSpeakerResponse[]): React.ReactNode[] {
 /** Render the session roles line (moderators + observers). Returns null if none. */
 function renderSessionRoles(
   speakers: TranscriptSpeakerResponse[],
+  t: TFunction,
 ): React.ReactNode | null {
   const moderators = speakers.filter((s) => s.role === "researcher");
   const observers = speakers.filter((s) => s.role === "observer");
@@ -333,7 +336,9 @@ function renderSessionRoles(
     <div className="bn-transcript-roles" data-testid="transcript-roles">
       {moderators.length > 0 && (
         <span>
-          {moderators.length === 1 ? "Moderator " : "Moderators "}
+          {moderators.length === 1
+            ? `${t("transcript.moderator")} `
+            : `${t("transcript.moderators")} `}
           {oxfordJoin(moderators)}
         </span>
       )}
@@ -341,8 +346,12 @@ function renderSessionRoles(
       {observers.length > 0 && (
         <span>
           {moderators.length > 0
-            ? (observers.length === 1 ? "observer " : "observers ")
-            : (observers.length === 1 ? "Observer " : "Observers ")}
+            ? (observers.length === 1
+                ? `${t("transcript.observer").toLowerCase()} `
+                : `${t("transcript.observers").toLowerCase()} `)
+            : (observers.length === 1
+                ? `${t("transcript.observer")} `
+                : `${t("transcript.observers")} `)}
           {oxfordJoin(observers)}
         </span>
       )}
@@ -356,6 +365,7 @@ function renderSessionRoles(
 
 export function TranscriptPage({ projectId: _projectId, sessionId }: TranscriptPageProps) {
   void _projectId; // API base URL from window global already includes project ID
+  const { t } = useTranslation();
   const [data, setData] = useState<TranscriptPageResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -528,7 +538,7 @@ export function TranscriptPage({ projectId: _projectId, sessionId }: TranscriptP
       </div>
 
       {/* Session roles — moderator/observer line (scrolls away naturally) */}
-      {renderSessionRoles(speakers)}
+      {renderSessionRoles(speakers, t)}
 
       {/* Transcript body */}
       <section

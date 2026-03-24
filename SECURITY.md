@@ -50,6 +50,30 @@ Bristlenose uses two layers of identity: **speaker codes** (p1, p2) and optional
 
 Moderator and observer names (m1, m2, o1) are not stripped — they are part of the research team, not research subjects.
 
+## Serve mode API access control
+
+`bristlenose serve` runs a local HTTP server on `127.0.0.1` (loopback only — traffic never leaves the machine). API endpoints serve research data: participant names, interview quotes, themes, sentiment analysis, and media files.
+
+**Request validation token:** Each server instance generates a random 32-byte token (`secrets.token_urlsafe`, 256 bits of entropy) at startup. The token is:
+
+- Stored in memory only — never written to disk
+- Injected into the SPA HTML served to the browser
+- Printed to stdout for the desktop app to capture
+- Required as `Authorization: Bearer <token>` on all `/api/*` and `/media/*` requests
+- Exempt for `/api/health` (version/status only, no project data) and `/report/*` (static assets)
+
+**What this protects against:** Opportunistic API scraping by unrelated local processes. A process that doesn't know the token cannot call `curl http://127.0.0.1:8150/api/projects/1/quotes` — the request returns 401.
+
+**What this does not protect against:** A determined attacker with same-user privileges who fetches the HTML first, extracts the token, and then calls the API. The token is a defence-in-depth speed bump, not an authentication boundary. The real security boundary is OS-level process isolation. This is the standard approach for localhost development servers (VS Code, JupyterLab, Electron apps).
+
+**No TLS:** Serve mode uses HTTP on the loopback interface. Traffic on `127.0.0.1` never hits a network interface, NIC, switch, or router. It cannot be intercepted by network-based attackers. TLS is not used because the loopback interface is not routable — adding TLS would add certificate management complexity without security benefit for same-machine communication.
+
+**Additional protections:**
+
+- **CORS:** `allow_origins=[]` blocks all cross-origin browser requests
+- **Media allowlist:** `/media/` route only serves known media file extensions (`.mp4`, `.mov`, `.wav`, `.mp3`, etc.) with path-traversal guard
+- **Desktop environment scrubbing:** The macOS app passes only essential environment variables (`PATH`, `HOME`, `LANG`, etc.) to the Python subprocess — no cloud tokens, database passwords, or Xcode debug variables
+
 ## Output files
 
 Bristlenose creates output inside the input folder (`<folder>/bristlenose-output/` by default). Output includes:
@@ -60,6 +84,28 @@ Bristlenose creates output inside the input folder (`<folder>/bristlenose-output
 - `people.yaml` with participant display names
 
 These files persist until you delete them. Bristlenose does not automatically clean up output directories. If your research data is sensitive, manage these files according to your organisation's data-handling policy.
+
+## Vulnerability management
+
+Bristlenose uses automated scanning to detect known vulnerabilities in dependencies:
+
+- **Python** — `pip-audit` runs on every CI build
+- **JavaScript** — `npm audit` runs on every CI build
+- **Static analysis** — CodeQL (`security-extended` suite) runs on every push and weekly
+- **Dependency updates** — Dependabot opens PRs weekly for both Python and JavaScript dependencies
+- **Secret scanning** — gitleaks pre-commit hook locally; GitHub server-side scanning on the remote
+
+**Remediation targets:**
+
+| Severity | Direct dependencies | Transitive dependencies |
+|----------|-------------------|------------------------|
+| Critical | Patch within 7 days | Patch within 7 days if fix available; track in pinned issue if not |
+| High | Patch within 30 days | Patch within 30 days if fix available; track in pinned issue if not |
+| Medium/Low | Next scheduled release | Review quarterly |
+
+Transitive dependencies with no upstream fix (e.g. advisories in torch or protobuf that only affect training workloads, not Bristlenose's inference-only usage) are documented with justification in CI configuration via `--ignore-vuln` comments.
+
+**SBOM:** CycloneDX Software Bills of Materials for both Python and JavaScript are generated on every CI build and available as build artifacts.
 
 ## Reporting a vulnerability
 

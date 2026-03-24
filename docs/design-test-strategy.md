@@ -16,7 +16,11 @@ Phase 1 data API is complete. Manual UI testing caught bugs (double-prefix, IIFE
 | Data API (HTTP -> DB) | 94 tests (37 happy + 57 stress) | pytest + TestClient | Yes |
 | Python linting | Full | Ruff | Yes |
 | Type checking | Full | mypy | Informational (not blocking) |
-| Dependency vulnerabilities | Python deps | pip-audit | Informational (not blocking) |
+| Dependency vulnerabilities | Python + JS deps | pip-audit, npm audit | Informational (not blocking) |
+| Static analysis (SAST) | Python + JS | CodeQL (security-extended) | Informational |
+| Dependency updates | Python + JS + E2E | Dependabot (weekly) | Automated PRs |
+| Secret scanning | Git history | gitleaks (pre-commit) | Local pre-push |
+| SBOM generation | Python + JS | CycloneDX | CI artifact |
 | Man page version | Matches `__version__` | CI check | Yes |
 | Install smoke tests | pip/pipx/brew on Linux/macOS | Weekly cron + manual | Yes |
 | Release automation | PyPI (OIDC), Homebrew tap, Snap | GitHub Actions | Yes |
@@ -37,7 +41,7 @@ Phase 1 data API is complete. Manual UI testing caught bugs (double-prefix, IIFE
 | **Database migration tests** | Medium — no Alembic yet | Before first schema change |
 | **Multi-Python version CI** | Low — only tests 3.12, claims >=3.10 | Now (easy) |
 | **Multi-platform CI** | Low — tests on Ubuntu only, macOS in install-test only | Now (easy) |
-| **Security scanning** (SAST, npm audit) | Medium — pip-audit only, no frontend | Before public release |
+| ~~**Security scanning** (SAST, npm audit)~~ | ~~Medium~~ Done | ~~Before public release~~ Shipped Mar 2026 |
 | **Bundle size monitoring** | Low now, medium after React | Post-React Phase 2 |
 | **Performance regression tests** | Low — single-user tool | When multi-user matters |
 | **Docker/containers** | Low — Snap exists for Linux | When deployment model changes |
@@ -162,7 +166,7 @@ These can be stripped in production builds via a Vite plugin if bundle size is a
 
 ### Before public release / multi-user
 
-- [ ] **Security hardening** — enable Dependabot, add `npm audit` to CI, consider CodeQL
+- [x] **Security hardening** — Dependabot (3 ecosystems), npm audit, CodeQL SAST, gitleaks pre-commit, SBOM generation, vulnerability management policy in SECURITY.md (Mar 2026)
 - [ ] **Rate limiting** — protect API endpoints
 - [ ] **Authentication** — if server exposed beyond localhost
 

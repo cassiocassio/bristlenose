@@ -47,6 +47,22 @@ jobs:
           pip install pip-audit
           pip-audit
 
+      - name: Generate Python SBOM
+        # CycloneDX Software Bill of Materials — uploaded as CI artifact
+        # for compliance (US EO 14028, EU Cyber Resilience Act).
+        continue-on-error: true
+        run: |
+          pip install cyclonedx-bom
+          cyclonedx-py environment -o sbom-python.json
+
+      - name: Upload Python SBOM
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: sbom-python
+          path: sbom-python.json
+          retention-days: 90
+
       - name: Check man page version matches __version__
         run: |
           VERSION=$(python3 -c "import bristlenose; print(bristlenose.__version__)")
@@ -86,6 +102,33 @@ jobs:
       - name: Frontend typecheck
         working-directory: frontend
         run: npm run typecheck
+
+      - name: Audit frontend dependencies for known vulnerabilities
+        # Informational — flags known CVEs in the log but doesn't block
+        # the build. Production deps are the future blocking gate;
+        # full audit (incl. dev deps like Vite) is informational because
+        # dev deps execute during build and produce shipped artifacts.
+        continue-on-error: true
+        working-directory: frontend
+        run: |
+          echo "=== Production dependencies ==="
+          npm audit --omit=dev
+          echo ""
+          echo "=== All dependencies (including build-time) ==="
+          npm audit || true
+
+      - name: Generate frontend SBOM
+        continue-on-error: true
+        working-directory: frontend
+        run: npm sbom --sbom-format cyclonedx > sbom-frontend.json
+
+      - name: Upload frontend SBOM
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: sbom-frontend
+          path: frontend/sbom-frontend.json
+          retention-days: 90
 
       - name: Frontend tests (Vitest)
         working-directory: frontend

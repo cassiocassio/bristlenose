@@ -12,12 +12,12 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "i18next": "^25.8.18",
+    "i18next": "^25.10.9",
     "i18next-browser-languagedetector": "^8.2.1",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
-    "react-i18next": "^16.5.8",
-    "react-router-dom": "^7.13.1"
+    "react-i18next": "^16.6.6",
+    "react-router-dom": "^7.13.2"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.2",
@@ -31,7 +31,7 @@
     "eslint-plugin-react-hooks": "^7.0.1",
     "jsdom": "^27.0.1",
     "typescript": "~5.7.0",
-    "typescript-eslint": "^8.55.0",
+    "typescript-eslint": "^8.57.2",
     "vite": "^6.0.0",
     "vitest": "^3.2.4"
   }

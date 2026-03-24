@@ -23,7 +23,7 @@ Tab.swift                     Tab enum — route mapping, path→tab derivation
 BridgeHandler.swift           Inbound state + outbound actions + menuAction dispatch
 ServeManager.swift            Process lifecycle + startup zombie cleanup + prefs overlay
 WebView.swift                 WKWebView + security policy + KVO observations
-KeychainHelper.swift          Credential storage via macOS Keychain
+KeychainHelper.swift          Credential storage via native Security.framework (SecItem* APIs)
 LLMProvider.swift             Provider enum + ProviderStatus enum + notification name
 SettingsView.swift            TabView wrapper (3 icon tabs)
 AppearanceSettingsView.swift  Theme radio + language dropdown
@@ -208,7 +208,7 @@ Status is orthogonal to active selection. Providers don't expose balance, free-t
 
 ## Files scavenged from v0.1
 
-- `KeychainHelper.swift` — verbatim copy, `security` CLI wrapper matching Python's `MacOSCredentialStore`
+- `KeychainHelper.swift` — originally `security` CLI wrapper, now native Security.framework (`SecItemAdd`/`SecItemCopyMatching`/`SecItemDelete`). Same service names and account as Python's `MacOSCredentialStore`
 - `Assets.xcassets/` — app icon and accent colour
 - Pipe reading pattern from `ProcessRunner.swift` — `Task.detached` + `fileHandle.availableData` loop
 - ANSI escape stripping regex
@@ -256,6 +256,7 @@ The `#if DEBUG` guard on the dev port override means release builds never see it
 
 ## Gotchas
 
+- **`import Security` does NOT re-export Foundation on macOS 15 SDK** — `KeychainHelper.swift` needs both `import Foundation` and `import Security`. Without Foundation, `Data` and `ProcessInfo` are undefined. The code review suggested `import Security` alone would suffice — it doesn't
 - **WKWebView `createWebViewWith` requires the provided configuration** — you MUST use the `configuration` parameter passed to `webView(_:createWebViewWith:for:windowFeatures:)`. Creating a fresh `WKWebViewConfiguration` and returning a WKWebView built with it crashes with `NSInternalInconsistencyException: "Returned WKWebView was not created with the given configuration."`. This means the popout inherits the parent's `userContentController` (including the bridge message handler). The bridge is accessible but player.html never calls it
 - **WKWebView `window.open()` is blocked without `WKUIDelegate`** — `window.open()` silently returns `null` unless the Coordinator implements `WKUIDelegate` and `webView(_:createWebViewWith:for:windowFeatures:)`. No error in the console — the call just fails. This is why the video player didn't work in the desktop app before the WKUIDelegate was added
 - **Zombie cleanup kills the dev server** — `ServeManager.killOrphanedServeProcesses()` runs on `init()` and kills everything on ports 8150–9149. When `BRISTLENOSE_DEV_PORT` is set, the cleanup is now skipped. Always start the terminal server **after** Xcode launches if not using the dev port override

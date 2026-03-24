@@ -1,6 +1,7 @@
 import Foundation
+import Security
 
-/// Read, write, and delete API keys in macOS Keychain using the `security` CLI.
+/// Read, write, and delete API keys in macOS Keychain using native Security.framework.
 ///
 /// Uses the same service names and account as the Python `MacOSCredentialStore`
 /// in `bristlenose/credentials_macos.py`, so keys written here are automatically
@@ -24,88 +25,82 @@ enum KeychainHelper {
     static func get(provider: String) -> String? {
         guard let service = serviceNames[provider] else { return nil }
 
-        let proc = Process()
-        proc.executableURL = URL(fileURLWithPath: "/usr/bin/security")
-        proc.arguments = [
-            "find-generic-password",
-            "-a", account,
-            "-s", service,
-            "-w",
+        let query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: service,
+            kSecAttrAccount as String: account,
+            kSecReturnData as String: true,
+            kSecMatchLimit as String: kSecMatchLimitOne,
         ]
 
-        let pipe = Pipe()
-        proc.standardOutput = pipe
-        proc.standardError = Pipe()
+        var result: AnyObject?
+        let status = SecItemCopyMatching(query as CFDictionary, &result)
 
-        do {
-            try proc.run()
-            proc.waitUntilExit()
-            if proc.terminationStatus != 0 { return nil }
-
-            let data = pipe.fileHandleForReading.readDataToEndOfFile()
-            let value = String(data: data, encoding: .utf8)?
-                .trimmingCharacters(in: .whitespacesAndNewlines)
-            return (value?.isEmpty == true) ? nil : value
-        } catch {
-            return nil
+        if status != errSecSuccess && status != errSecItemNotFound {
+            logKeychainError("SecItemCopyMatching", status: status)
         }
+
+        guard status == errSecSuccess,
+              let data = result as? Data,
+              let value = String(data: data, encoding: .utf8),
+              !value.isEmpty
+        else { return nil }
+
+        return value
     }
 
-    /// Write a key to Keychain. Uses delete-then-add (matching Python implementation).
+    /// Write a key to Keychain. Uses add-then-update (atomic, no race window).
     @discardableResult
     static func set(provider: String, value: String) -> Bool {
-        guard let service = serviceNames[provider] else { return false }
+        guard let service = serviceNames[provider],
+              let data = value.data(using: .utf8)
+        else { return false }
 
-        // Delete existing entry (ignore errors if not found)
-        let delProc = Process()
-        delProc.executableURL = URL(fileURLWithPath: "/usr/bin/security")
-        delProc.arguments = [
-            "delete-generic-password",
-            "-a", account,
-            "-s", service,
+        let query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: service,
+            kSecAttrAccount as String: account,
         ]
-        delProc.standardOutput = Pipe()
-        delProc.standardError = Pipe()
-        try? delProc.run()
-        delProc.waitUntilExit()
 
-        // Add new entry
-        let addProc = Process()
-        addProc.executableURL = URL(fileURLWithPath: "/usr/bin/security")
-        addProc.arguments = [
-            "add-generic-password",
-            "-a", account,
-            "-s", service,
-            "-w", value,
-            "-U",
+        let attrs: [String: Any] = [
+            kSecValueData as String: data,
+            kSecAttrAccessible as String: kSecAttrAccessibleWhenUnlocked,
         ]
-        addProc.standardOutput = Pipe()
-        addProc.standardError = Pipe()
 
-        do {
-            try addProc.run()
-            addProc.waitUntilExit()
-            return addProc.terminationStatus == 0
-        } catch {
-            return false
+        // Try add first
+        var addQuery = query
+        addQuery.merge(attrs) { _, new in new }
+        let addStatus = SecItemAdd(addQuery as CFDictionary, nil)
+
+        if addStatus == errSecSuccess { return true }
+
+        if addStatus == errSecDuplicateItem {
+            // Already exists — update in place (atomic, no race window)
+            let updateStatus = SecItemUpdate(query as CFDictionary, attrs as CFDictionary)
+            if updateStatus != errSecSuccess {
+                logKeychainError("SecItemUpdate", status: updateStatus)
+            }
+            return updateStatus == errSecSuccess
         }
+
+        logKeychainError("SecItemAdd", status: addStatus)
+        return false
     }
 
     /// Delete a key from Keychain. No-op if not found.
     static func delete(provider: String) {
         guard let service = serviceNames[provider] else { return }
 
-        let proc = Process()
-        proc.executableURL = URL(fileURLWithPath: "/usr/bin/security")
-        proc.arguments = [
-            "delete-generic-password",
-            "-a", account,
-            "-s", service,
+        let query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: service,
+            kSecAttrAccount as String: account,
         ]
-        proc.standardOutput = Pipe()
-        proc.standardError = Pipe()
-        try? proc.run()
-        proc.waitUntilExit()
+
+        let status = SecItemDelete(query as CFDictionary)
+        if status != errSecSuccess && status != errSecItemNotFound {
+            logKeychainError("SecItemDelete", status: status)
+        }
     }
 
     /// Check if any usable API key exists (Keychain or environment).
@@ -116,5 +111,14 @@ enum KeychainHelper {
         if env["ANTHROPIC_API_KEY"] != nil { return true }
         if env["BRISTLENOSE_ANTHROPIC_API_KEY"] != nil { return true }
         return false
+    }
+
+    // MARK: - Private
+
+    private static func logKeychainError(_ operation: String, status: OSStatus) {
+        #if DEBUG
+        let message = SecCopyErrorMessageString(status, nil) as String? ?? "unknown"
+        print("[KeychainHelper] \(operation) failed: \(status) (\(message))")
+        #endif
     }
 }

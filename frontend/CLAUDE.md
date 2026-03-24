@@ -2,11 +2,19 @@
 
 ## What this is
 
-Vite + React + TypeScript + React Router SPA. 37 components in `src/components/`, 14 islands in `src/islands/`, 9 page wrappers in `src/pages/`, 1 layout in `src/layouts/`, 8 hooks in `src/hooks/`, 1 shim in `src/shims/`, 3 stores in `src/contexts/`. 1230 Vitest tests across 86 test files. `npm run dev` proxies to FastAPI; `npm run build` outputs to `frontend/dist/`. See `docs/design-react-component-library.md` for build sequence.
+Vite 8 (Rolldown) + React + TypeScript 6 + React Router SPA. 37 components in `src/components/`, 14 islands in `src/islands/`, 9 page wrappers in `src/pages/`, 1 layout in `src/layouts/`, 8 hooks in `src/hooks/`, 1 shim in `src/shims/`, 3 stores in `src/contexts/`. 1248 Vitest 4 tests across 86 test files. `npm run dev` proxies to FastAPI; `npm run build` outputs to `frontend/dist/`. See `docs/design-react-component-library.md` for build sequence.
 
 ## Build & type-checking
 
 - **`npm run build` runs `tsc -b` which type-checks test files** — `tsconfig.json` includes `src/` which contains `*.test.tsx` files alongside source. Vitest has its own type context (looser), so tests may pass while `tsc -b` reports errors. Always run `npm run build` before committing frontend changes, not just `npm test`. Common culprits: `globalThis.fetch` (not `global.fetch`), window casts need `(window as unknown as Record<string, unknown>)` (double cast via `unknown`), and mock data must include all required type properties
+
+## Tooling & dependency gotchas
+
+- **Node 24 LTS required** — ESLint 10 dropped Node 23. Node 25 breaks jsdom's localStorage (native Web Storage API conflict). Stick to Node 24 LTS
+- **`--legacy-peer-deps` required for `npm install`** — `typescript-eslint@8.57.x` declares `typescript < 6.0.0` as peer dep, but works fine with TS 6. When they update their peer dep range, drop the flag
+- **Vite 8 uses Rolldown** (Rust bundler) instead of esbuild+Rollup. Build is ~3x faster. `rollupOptions` in `vite.config.ts` is auto-converted by the compat layer. `INEFFECTIVE_DYNAMIC_IMPORT` warnings in build output are expected (dual-mode `main.tsx`)
+- **TypeScript 6 is stricter about mock types** — `ReturnType<typeof vi.fn>` no longer assignable to concrete function signatures. Use specific function types or `any` for test mocks
+- **Vitest 4 `clearAllMocks` vs `restoreAllMocks`** — `restoreAllMocks` no longer reliably clears mock call counts in some scenarios. Use `clearAllMocks` in `beforeEach` when asserting call counts
 
 ## Architecture
 

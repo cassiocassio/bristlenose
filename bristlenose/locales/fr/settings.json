@@ -8,7 +8,8 @@
   },
   "language": {
     "legend": "Langue",
-    "description": "Contrôle la langue d'affichage de l'interface. Le contenu des rapports n'est pas traduit."
+    "description": "Contrôle la langue d'affichage de l'interface. Le contenu des rapports n'est pas traduit.",
+    "helpTranslate": "Aidez à traduire Bristlenose dans votre langue sur"
   },
   "settingsNav": {
     "general": "Général",

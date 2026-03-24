@@ -34,6 +34,14 @@ struct AppearanceSettingsView: View {
                     Text("Deutsch").tag("de")
                     Text("한국어").tag("ko")
                 }
+
+                HStack(spacing: 4) {
+                    Text(i18n.t("settings.language.helpTranslate"))
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
+                    Link("Weblate", destination: URL(string: "https://hosted.weblate.org/projects/bristlenose/")!)
+                        .font(.callout)
+                }
             }
         }
         .formStyle(.grouped)

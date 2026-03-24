@@ -33,7 +33,7 @@ From security review of desktop app plan (22 Mar 2026). All findings are in the 
 - [ ] **i18n: translation quality fixes** — ~~es/fr "codebook" loanword in ~15 browse/import keys~~ (fixed 24 Mar); ko participant term inconsistency (참여자 vs 참가자); de/ko missing `nav.codebookShort`. Fixed: ko colDuration "길이"→"소요 시간", ko helpHint "도움말"→"도움말 열기". Confirmed correct: fr undo/cancel both "Annuler" (Apple convention), de "Teilnehmer" (Apple convention). Machine translation QA checklist added to `docs/design-i18n.md` Step 6
 - [ ] **i18n: help prose + signal definitions (Batch 11)** — informational text in HelpSection, SignalsSection, ShortcutsSection. Lower priority — skipped for now
 - [ ] **i18n: pseudo-localisation QA** — add `i18next-pseudo` to catch remaining hardcoded strings. See `docs/design-i18n.md`
-- [ ] **i18n: Weblate setup** — connect `hosted.weblate.org` to repo for community translation. Free Libre plan. See `docs/design-i18n.md`
+- [x] **i18n: Weblate setup** — connect `hosted.weblate.org` to repo for community translation. Free Libre plan. See `docs/design-i18n.md`
 - [ ] **i18n: cross-check Spanish against Apple glossary** — verified 23 Mar 2026, all match. Do same for each new language before release
 
 ## Desktop app — future video player

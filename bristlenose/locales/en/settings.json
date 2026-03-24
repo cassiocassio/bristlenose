@@ -8,7 +8,8 @@
   },
   "language": {
     "legend": "Language",
-    "description": "Controls the display language of the interface. Report content is not translated."
+    "description": "Controls the display language of the interface. Report content is not translated.",
+    "helpTranslate": "Help translate Bristlenose into your language on"
   },
   "settingsNav": {
     "general": "General",

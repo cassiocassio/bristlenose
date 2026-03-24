@@ -338,11 +338,15 @@ Bristlenose qualifies (AGPL-3.0). No application process — create the project 
 
 ### Setup steps
 
-1. Create project at `hosted.weblate.org`
-2. Add component pointing to `bristlenose/locales/*/common.json` (repeat for each namespace)
-3. Upload Apple glossary terms as a Weblate glossary (prevents "Cancel" → wrong synonym)
-4. Add "Help translate Bristlenose" link to About panel + README
-5. Configure auto-merge for translations that match the glossary; require review for others
+1. Create project at `hosted.weblate.org` ✓
+2. Add 8 components (one per namespace), file mask `bristlenose/locales/*/{ns}.json`, monolingual base `bristlenose/locales/en/{ns}.json` ✓
+3. Upload Apple + QDA glossary (`bristlenose/locales/glossary.csv`) as Weblate glossary ✓
+4. Add "Help translate Bristlenose" link to About panel + README + CONTRIBUTING ✓
+5. CI validation (`scripts/check-locales.py`) runs on PRs touching locale files ✓
+6. Japanese (ja) stub files created for community translation ✓
+7. Translator guide: `TRANSLATING.md` ✓
+
+**Implemented Mar 2026.** Weblate submits translations as pull requests; all PRs require human review.
 
 ### Alternatives considered
 

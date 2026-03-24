@@ -16,6 +16,19 @@ export function ContributingSection() {
         with <code>scripts/bump-version.py</code>.
       </p>
 
+      <h3>Translate</h3>
+      <p>
+        Help translate Bristlenose into your language on{" "}
+        <a
+          href="https://hosted.weblate.org/projects/bristlenose/"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          Weblate
+        </a>
+        . No Git or JSON knowledge required.
+      </p>
+
       <h3>Links</h3>
       <ul>
         <li>

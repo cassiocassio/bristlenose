@@ -1,0 +1,138 @@
+{
+  "menu": {
+    "app": {
+      "about": "",
+      "checkHealth": ""
+    },
+    "file": {
+      "newProject": "",
+      "openInNewWindow": "",
+      "exportReport": "",
+      "exportAnonymised": "",
+      "pageSetup": "",
+      "print": ""
+    },
+    "edit": {
+      "undo": "",
+      "redo": "",
+      "find": "",
+      "findNext": "",
+      "findPrevious": "",
+      "useSelectionForFind": "",
+      "jumpToSelection": ""
+    },
+    "view": {
+      "toggleSidebar": "",
+      "showContents": "",
+      "hideContents": "",
+      "showCodes": "",
+      "hideCodes": "",
+      "showSignals": "",
+      "hideSignals": "",
+      "showTags": "",
+      "hideTags": "",
+      "showHeatmap": "",
+      "hideHeatmap": "",
+      "allQuotes": "",
+      "starredQuotesOnly": "",
+      "filterByTag": "",
+      "zoomIn": "",
+      "zoomOut": "",
+      "actualSize": "",
+      "switchToLightMode": "",
+      "switchToDarkMode": ""
+    },
+    "project": {
+      "showInFinder": "",
+      "rename": "",
+      "reAnalyse": "",
+      "archive": "",
+      "delete": ""
+    },
+    "codes": {
+      "createCodeGroup": "",
+      "renameCodeGroup": "",
+      "deleteCodeGroup": "",
+      "showHideCodeGroup": "",
+      "createCode": "",
+      "renameCode": "",
+      "deleteCode": "",
+      "mergeCodes": "",
+      "browseCodebooks": "",
+      "importFramework": "",
+      "removeFramework": ""
+    },
+    "quotes": {
+      "star": "",
+      "hide": "",
+      "addTag": "",
+      "applyLastTag": "",
+      "revealInTranscript": "",
+      "playPause": "",
+      "nextQuote": "",
+      "previousQuote": "",
+      "extendSelectionDown": "",
+      "extendSelectionUp": "",
+      "toggleSelection": "",
+      "clearSelection": "",
+      "copyAsCSV": ""
+    },
+    "video": {
+      "play": "",
+      "pause": "",
+      "skipForward5": "",
+      "skipBack5": "",
+      "skipForward30": "",
+      "skipBack30": "",
+      "speedUp": "",
+      "slowDown": "",
+      "normalSpeed": "",
+      "volumeUp": "",
+      "volumeDown": "",
+      "mute": "",
+      "pictureInPicture": "",
+      "fullscreen": ""
+    },
+    "help": {
+      "bristlenoseHelp": "",
+      "keyboardShortcuts": "",
+      "releaseNotes": "",
+      "sendFeedback": ""
+    }
+  },
+  "chrome": {
+    "startingServer": "",
+    "loadingReport": "",
+    "noProjectSelected": "",
+    "selectProject": "",
+    "serverError": "",
+    "retry": "",
+    "projects": "",
+    "reportContent": ""
+  },
+  "toolbar": {
+    "back": "",
+    "forward": "",
+    "tab": "",
+    "sidebar": "",
+    "contents": "",
+    "showContents": "",
+    "codes": "",
+    "showCodes": "",
+    "signals": "",
+    "showSignals": "",
+    "tags": "",
+    "showTags": "",
+    "heatmap": "",
+    "showHeatmap": "",
+    "search": "",
+    "searchShortcut": "",
+    "export": "",
+    "exportShortcut": ""
+  },
+  "settingsTabs": {
+    "appearance": "",
+    "llm": "",
+    "transcription": ""
+  }
+}

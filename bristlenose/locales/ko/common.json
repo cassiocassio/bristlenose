@@ -343,5 +343,11 @@
       "failedWithError": "\u2726 AutoCode 실패: {{error}}",
       "dismiss": "닫기"
     }
+  },
+  "transcript": {
+    "moderator": "진행자",
+    "moderators": "진행자",
+    "observer": "관찰자",
+    "observers": "관찰자"
   }
 }

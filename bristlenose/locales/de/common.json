@@ -357,5 +357,11 @@
       "failedWithError": "\u2726 AutoCode fehlgeschlagen: {{error}}",
       "dismiss": "Schließen"
     }
+  },
+  "transcript": {
+    "moderator": "Moderator",
+    "moderators": "Moderatoren",
+    "observer": "Beobachter",
+    "observers": "Beobachter"
   }
 }

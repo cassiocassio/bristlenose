@@ -248,7 +248,37 @@ Send the draft to a native-speaking UXR practitioner. Key review questions:
 - Gender conventions: inclusive slash form ("Investigador/a") vs parenthetical ("Investigador(a)") vs neutral
 - Formality: formal "usted" vs informal "tú" (varies by country for Spanish; Japanese has even more registers)
 
-#### Step 6: Track review status
+#### Step 6: Machine translation QA — domain term grep
+
+Machine translation reliably handles standard UI verbs but **frequently leaves domain-specific nouns as English loanwords** in the middle of otherwise-translated sentences. The v0.14.1 batch left "codebook" untranslated in ~15 keys per language (es/fr) while correctly translating the same term in nav labels and headings.
+
+**After every machine translation batch, run this check:**
+
+```bash
+# For each domain term, grep for the English word in every non-English locale
+for lang in es fr de ko; do
+  echo "=== $lang ==="
+  for term in codebook quotes sessions signals codes tags sentiment; do
+    hits=$(grep -i "\"[^\"]*\b${term}\b[^\"]*\"" bristlenose/locales/$lang/*.json \
+           | grep -v "\"${term}\":" | wc -l)
+    [ "$hits" -gt 0 ] && echo "  $term: $hits untranslated values"
+  done
+done
+```
+
+Any English domain term appearing in a **value** (not a key) is a miss. Keys like `"codebookTags"` are internal identifiers and should stay English.
+
+**Common failure patterns to watch for:**
+
+1. **Loanword in modifier position** — "codebook tags", "browse codebooks" get half-translated ("Explorar codebooks" instead of "Explorar libros de códigos"). The machine translates the verb but leaves the noun as English
+2. **Inconsistency across namespace files** — desktop.json may get the correct translation while common.json doesn't (different translation passes or prompts)
+3. **Article gender cascades** — when the translated term changes grammatical gender, articles and adjectives throughout the sentence must change too. French: "un nouveau codebook" → "une nouvelle grille de codage" (grille is feminine). Spanish: "de codebook" → "del libro de códigos" (de + el contracts)
+4. **Preposition contractions** — Spanish "de + el" = "del", "a + el" = "al". French doesn't contract with feminine articles. Getting these wrong sounds jarring to native speakers
+5. **Singular/plural form mismatch** — the glossary should include both forms: "libro de códigos" / "libros de códigos" (es), "grille de codage" / "grilles de codage" (fr), "Codebuch" / "Codebücher" (de)
+
+**Prevention: build a glossary before translating.** Give the machine translator a term table (English → target language, singular + plural) and instruct it to use these terms exclusively. Then grep to verify.
+
+#### Step 7: Track review status
 
 Add a progress entry to the "Progress" section below with: language, date, reviewer name/location, review status, open questions.
 
@@ -459,6 +489,24 @@ All 8 namespace files (common, settings, enums, cli, pipeline, server, doctor, d
 Single source of truth implemented. `frontend/src/locales/` deleted — all imports now point to `bristlenose/locales/` via Vite alias. Desktop `I18n.swift` reads the same JSON files. Desktop `desktop.json` namespace added (en + es) with ~75 native-only strings (menu bar, toolbar, chrome). Bridge locale sync with startup flash prevention (URL query param). Web language picker hidden in embedded mode.
 
 **TODO:** cross-check all Spanish UI terms against applelocalization.com before next release.
+
+### Translation quality gotchas — lessons from the v0.14.1 review
+
+Seven patterns that machine translation gets wrong. Use this list as a pre-flight checklist before shipping a new language.
+
+1. **False cognates in semantic fields.** "길이" (length) was used for time duration — it literally means physical length/distance. Machine translation picked the most common English→Korean mapping without distinguishing temporal from spatial meaning. *Fix:* flag column headers and data labels for domain-specific review. Maintain a glossary of measurement terms per language (time, distance, count, size)
+
+2. **Keyboard hint strings need grammatical context.** English "for Help" is a sentence fragment that reads naturally after `<kbd>?</kbd>`. Korean "도움말" (just "help" as a noun) drops the grammatical connector, producing "? Help" instead of "? for Help". *Fix:* annotate locale keys with rendering context — e.g. `// rendered as: <kbd>?</kbd> {this}`. Translators can't produce correct fragments without knowing the surrounding UI
+
+3. **Identical translations for different concepts are sometimes correct.** French `buttons.cancel` and `buttons.undo` are both "Annuler". This looks like an error but is standard macOS French — Apple's Edit → Undo is "Annuler". *Fix:* before "fixing" apparent duplicates, cross-check against the platform's native localisation (applelocalization.com). Document known-correct duplicates in the review notes
+
+4. **Gender-inclusive language is a style choice, not a bug.** German "Teilnehmer" vs "Teilnehmer:innen" — Apple/Microsoft German localisations consistently use the masculine generic for data labels. *Fix:* establish a gendering policy per language up front and document it in the review template. Don't let it be ad-hoc per string
+
+5. **Column headers need brevity constraints.** Korean "소요 시간" (3 syllable blocks) is wider than "길이" (2). Column headers have strict width budgets. *Fix:* add a max character count annotation to column header keys. Use `_short` variants (already used for `codebookShort`) for languages where translations overflow
+
+6. **Machine translation doesn't know platform conventions.** Multiple issues stem from machine translation ignoring macOS/Apple localisation conventions — the "Annuler" duplicate, "Teilnehmer" gendering, "Réglages" vs "Préférences". *Fix:* enforce the Apple glossary cross-check as a gate — no language ships without a completed review doc in `docs/locales/`
+
+7. **Duplicate keys across namespaces drift independently.** `sessions.colDuration` and `dashboard.colDuration` both had "길이" — fixing one without the other creates inconsistency. *Fix:* grep for all occurrences of a concept before fixing. Consider extracting shared column labels into a `columns` sub-namespace
 
 ### Not in scope
 - Translating LLM prompts (not needed — cross-lingual works)

@@ -9,6 +9,7 @@
  */
 
 import { useMemo, useRef, useCallback } from "react";
+import { useTranslation } from "react-i18next";
 import type { ProposedTagResponse } from "../utils/types";
 import { getTagBg } from "../utils/colours";
 
@@ -44,6 +45,7 @@ function binZone(binIdx: number, lower: number, upper: number): "grey" | "amber"
 }
 
 export function ConfidenceHistogram({ proposals, lower, upper }: ConfidenceHistogramProps) {
+  const { t } = useTranslation();
   const containerRef = useRef<HTMLDivElement>(null);
 
   /** Build bins: each bin has a count and an array of proposals (for unit-square mode). */
@@ -108,12 +110,12 @@ export function ConfidenceHistogram({ proposals, lower, upper }: ConfidenceHisto
           <div
             className={`threshold-histogram-bar threshold-histogram-bar--${zone}`}
             style={{ height: `${heightPct}%` }}
-            title={`${count} proposal${count !== 1 ? "s" : ""}`}
+            title={t("autocode.proposalCount", { count })}
           />
         </div>
       );
     },
-    [lower, upper, maxCount, useSquares],
+    [lower, upper, maxCount, useSquares, t],
   );
 
   return (

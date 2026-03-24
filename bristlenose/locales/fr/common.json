@@ -393,6 +393,8 @@
     "close": "Fermer",
     "loading": "Chargement des propositions\u2026",
     "empty": "Aucune proposition à examiner.",
+    "proposalCount_one": "{{count}} proposition",
+    "proposalCount_other": "{{count}} propositions",
     "sessionLabel": "Session {{id}}",
     "review": {
       "title": "Révision AutoCode",

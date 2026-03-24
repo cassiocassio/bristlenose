@@ -11,6 +11,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useMatch, useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { apiGet } from "../utils/api";
 import { formatCompactDuration, formatCompactDate } from "../utils/format";
 import { useProjectId } from "../hooks/useProjectId";
@@ -112,6 +113,7 @@ function computeBreakpoints(
 // ── Component ─────────────────────────────────────────────────────
 
 export function SessionsSidebar() {
+  const { i18n } = useTranslation();
   const projectId = useProjectId();
   const navigate = useNavigate();
   const transcriptMatch = useMatch("/report/sessions/:sessionId");
@@ -195,7 +197,7 @@ export function SessionsSidebar() {
         const participants = session.speakers.filter((sp) => sp.role === "participant");
         const moderator = session.speakers.filter((sp) => sp.role === "moderator");
         const duration = formatCompactDuration(session.duration_seconds);
-        const dateStr = formatCompactDate(session.session_date, showDow);
+        const dateStr = formatCompactDate(session.session_date, showDow, i18n.language);
 
         if (shape.isOneToOne) {
           // ── 1:1 variant: badge + name + date ────────────────────

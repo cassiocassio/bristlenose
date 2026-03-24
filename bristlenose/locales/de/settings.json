@@ -8,7 +8,8 @@
   },
   "language": {
     "legend": "Sprache",
-    "description": "Legt die Anzeigesprache der Benutzeroberfläche fest. Berichtsinhalte werden nicht übersetzt."
+    "description": "Legt die Anzeigesprache der Benutzeroberfläche fest. Berichtsinhalte werden nicht übersetzt.",
+    "helpTranslate": "Helfen Sie, Bristlenose in Ihre Sprache zu übersetzen auf"
   },
   "settingsNav": {
     "general": "Allgemein",

@@ -333,6 +333,16 @@ function GeneralSection() {
               </option>
             ))}
           </select>
+          <p className="bn-setting-description" style={{ marginTop: "0.5rem" }}>
+            {t("language.helpTranslate")}{" "}
+            <a
+              href="https://hosted.weblate.org/projects/bristlenose/"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              Weblate
+            </a>
+          </p>
         </fieldset>
       )}
     </>

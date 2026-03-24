@@ -8,7 +8,8 @@
   },
   "language": {
     "legend": "언어",
-    "description": "인터페이스의 표시 언어를 설정합니다. 보고서 내용은 번역되지 않습니다."
+    "description": "인터페이스의 표시 언어를 설정합니다. 보고서 내용은 번역되지 않습니다.",
+    "helpTranslate": "Bristlenose를 여러분의 언어로 번역하는 데 도움을 주세요:"
   },
   "settingsNav": {
     "general": "일반",

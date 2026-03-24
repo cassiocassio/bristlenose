@@ -30,7 +30,7 @@
     "eslint": "^9.39.2",
     "eslint-plugin-react-hooks": "^7.0.1",
     "jsdom": "^27.0.1",
-    "typescript": "~5.7.0",
+    "typescript": "~6.0.2",
     "typescript-eslint": "^8.57.2",
     "vite": "^6.0.0",
     "vitest": "^3.2.4"

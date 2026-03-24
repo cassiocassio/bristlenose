@@ -508,6 +508,55 @@ Seven patterns that machine translation gets wrong. Use this list as a pre-fligh
 
 7. **Duplicate keys across namespaces drift independently.** `sessions.colDuration` and `dashboard.colDuration` both had "길이" — fixing one without the other creates inconsistency. *Fix:* grep for all occurrences of a concept before fixing. Consider extracting shared column labels into a `columns` sub-namespace
 
+## Frontend extraction lessons (24 Mar 2026)
+
+Lessons from wiring ~200 hardcoded strings across ~35 React components to i18next.
+
+### What went well
+
+- **Test-setup-first**: adding `import "./i18n"` to `test-setup.ts` meant `t("nav.project")` returned `"Project"` in all tests — zero test rewrites needed for the basic wiring
+- **Batched approach**: 11 batches from outside-in (NavBar/Header/Footer shell first, then content, then modals, then accessibility) meant intermediate states were never jarring
+- **`Intl.DateTimeFormat` migration**: replacing hardcoded `MONTH_ABBR`/`DAY_ABBR` arrays with `Intl.DateTimeFormat(locale)` was cleaner than adding 60 month/day keys to locale files
+- **Sentiment translation in Badge**: a single `t("enums:sentiment.${text}", { defaultValue: text })` in `Badge.tsx` translates all sentiment labels everywhere — quotes, codebook, analysis, dashboard
+
+### What we got wrong
+
+1. **Incomplete string audit upfront** — missed SettingsModal (separate component from SettingsPanel), CodebookSidebar headings, AnalysisSidebar headings, SidebarLayout "Contents" title, "Browse codebooks" button. Each required a QA cycle to discover. A `grep -r '"[A-Z][a-z]' --include='*.tsx' frontend/src/` upfront would have caught them
+
+2. **`useMemo([t])` doesn't work** — the `t` function reference doesn't change on locale switch. Arrays built with `useMemo(() => [...], [t])` go stale. Fix: `[t, i18n.language]` as dependency, or skip `useMemo` for small arrays
+
+3. **Terminology inconsistency in machine-translated keys** — agent-generated translations used "codebook" as an English loanword in es/fr browse/import/restore keys while the heading used the localised term ("Libro de códigos" / "Grille de codage"). The terminology table in this doc existed but wasn't enforced during generation
+
+4. **`en` vs `en-GB` date order** — `Intl.DateTimeFormat("en")` gives US order ("Feb 12"), breaking tests that expected British order ("12 Feb"). Default is now `en-GB`
+
+5. **Capitalization in sentiment enums** — `enums.json` has `"frustration": "Frustration"` (capitalised). Tests that expected lowercase API values (`"frustration"`) broke when Badge started translating
+
+### Patterns established
+
+| Pattern | When to use | Example |
+|---------|-------------|---------|
+| `useTranslation()` hook | Inside React component functions | NavBar, Header, Footer |
+| `import i18n` + `i18n.t()` | Stores, announce calls, non-component code | QuotesContext, AppLayout |
+| Inline array (no memo) | 2–5 items with translated labels | ViewSwitcher options |
+| `useMemo([t, i18n.language])` | 8+ items passed as props | HelpModal nav items |
+| `enums` namespace lookup | Sentiment/role labels from API data | Badge, CodebookPanel |
+| `colour_set === "sentiment"` | Identifying built-in sentiment group | CodebookPanel group translation |
+| `name === "Uncategorised"` | Identifying default codebook group | CodebookPanel group translation |
+| `Intl.DateTimeFormat(locale)` | Date/time formatting | format.ts |
+| `toLocaleString(i18n.language)` | Number formatting | Dashboard stat cards |
+
+### Process for future extraction passes
+
+1. Grep all `.tsx` for hardcoded English strings — build complete inventory
+2. Cross-reference inventory against locale file keys — identify gaps
+3. Define terminology glossary upfront (this doc's table) — enforce during translation
+4. Add `import "./i18n"` to test-setup if not already present
+5. Wire components in outside-in order (shell → content → modals → accessibility)
+6. Add keys to ALL 5 locale files in the same edit — never leave gaps
+7. Run `npm test && npm run build` after each batch
+8. Review agent-generated translations against terminology table before committing
+9. QA with language switching in full browser — preview tools don't work for Bristlenose
+
 ### Not in scope
 - Translating LLM prompts (not needed — cross-lingual works)
 - Translating codebook `definition`/`apply_when`/`not_this` fields (LLM-facing, English performs best)

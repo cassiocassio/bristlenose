@@ -48,7 +48,7 @@ function writeDraft(draft: DraftData): void {
 }
 
 export function FeedbackModal({ open, onClose, health }: FeedbackModalProps) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   useInert(open);
   const [rating, setRating] = useState("");
   const [message, setMessage] = useState("");
@@ -84,7 +84,7 @@ export function FeedbackModal({ open, onClose, health }: FeedbackModalProps) {
       Object.fromEntries(
         FEEDBACK_SENTIMENT_KEYS.map((item) => [item.value, t(item.labelKey)]),
       ) as Record<string, string>,
-    [t],
+    [t, i18n.language],
   );
 
   const clearAndClose = useCallback(

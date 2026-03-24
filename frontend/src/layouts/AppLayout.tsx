@@ -70,7 +70,14 @@ function buildCsvString(
   quoteIds: string[] | null,
   store: ReturnType<typeof getQuotesSnapshot>,
 ): string {
-  const header = ["Timecode", "Quote", "Participant", "Topic", "Sentiment", "Tags"];
+  const header = [
+    i18n.t("toolbar.csvTimecode"),
+    i18n.t("toolbar.csvQuote"),
+    i18n.t("toolbar.csvParticipant"),
+    i18n.t("toolbar.csvTopic"),
+    i18n.t("toolbar.csvSentiment"),
+    i18n.t("toolbar.csvTags"),
+  ];
   const quotes = quoteIds
     ? store.quotes.filter((q) => quoteIds.includes(q.dom_id))
     : store.quotes;
@@ -466,7 +473,7 @@ function AppShell() {
             }, 100);
           }
         },
-        actionLabel: "View Report",
+        actionLabel: i18n.t("codebook.viewReport"),
         actionHref: "/report/codebook",
         onCancel: () => {
           cancelAutoCode(j.frameworkId).catch((err) =>

@@ -65,7 +65,7 @@ export function TagFilterDropdown({
   onToggle,
   "data-testid": testId,
 }: TagFilterDropdownProps) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { open, toggle, containerRef } = useDropdown({ isOpen, onToggle });
   const [codebook, setCodebook] = useState<CodebookResponse | null>(null);
   const [menuSearch, setMenuSearch] = useState("");
@@ -150,7 +150,7 @@ export function TagFilterDropdown({
     if (tagFilter.unchecked.length === 0 && !tagFilter.noTagsUnchecked) return t("tags.tags");
     if (totalTags > 0) return t("tags.countTags", { count: checkedCount });
     return t("tags.countHidden", { count: tagFilter.unchecked.length });
-  }, [checkedCount, totalTags, tagFilter.clearAll, tagFilter.noTagsUnchecked, tagFilter.unchecked, t]);
+  }, [checkedCount, totalTags, tagFilter.clearAll, tagFilter.noTagsUnchecked, tagFilter.unchecked, t, i18n.language]);
 
   // ── Filtering within menu ─────────────────────────────────────────
 

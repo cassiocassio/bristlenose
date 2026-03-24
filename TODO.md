@@ -218,7 +218,7 @@ Session management design doc: `docs/design-session-management.md`
 |------|-------|--------|
 | CI: automate `.dmg` build on push | — | medium |
 | `.dmg` README: include "Open Anyway" instructions | — | trivial |
-| Homebrew formula: post_install for spaCy model | #42 | trivial |
+| ~~Homebrew formula: post_install for spaCy model~~ | #42 | trivial |
 | Snap store publishing | #45 | small |
 | Windows CI: pytest on `windows-latest` | — | medium |
 | Windows installer (winget) | #44 | medium |

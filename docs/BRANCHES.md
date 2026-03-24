@@ -20,6 +20,7 @@ Each active feature branch gets its own **git worktree** — a full working copy
 | `bristlenose_branch living-fish/` | `living-fish` | Animated "living portrait" logo for serve mode |
 | `bristlenose_branch drag-push/` | `drag-push` | Sidebar drag-to-open uses push mode (not overlay) |
 | `bristlenose_branch responsive-signal-cards/` | `responsive-signal-cards` | Responsive signal cards |
+| `bristlenose_branch languages/` | `languages` | Full i18n activation: useTranslation() across all React components |
 
 
 
@@ -105,6 +106,7 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 | `living-fish` | `bristlenose_branch living-fish/` | `origin/living-fish` |
 | `drag-push` | `bristlenose_branch drag-push/` | local only |
 | `responsive-signal-cards` | `bristlenose_branch responsive-signal-cards/` | local only |
+| `languages` | `bristlenose_branch languages/` | local only |
 
 
 
@@ -199,6 +201,27 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 - `drag-push` — low risk (sidebar CSS, not signal cards)
 
 ---
+
+### `languages`
+
+**Status:** Just started
+**Started:** 24 Mar 2026
+**Worktree:** `/Users/cassio/Code/bristlenose_branch languages/`
+**Remote:** local only (push when ready)
+
+**What it does:** Full i18n activation: wire `useTranslation()` across all React components, add ~100 new keys to all 5 locale files (en, es, fr, de, ko), plus any remaining locale infrastructure work. Replaces ~180 hardcoded English strings in JSX with `t()` calls.
+
+**Files this branch will touch:**
+- `frontend/src/components/` — NavBar, Header, Footer, SearchBox, ViewSwitcher, TagFilterDropdown, TagInput, ActivityChip, HelpModal (~10 files)
+- `frontend/src/islands/` — Dashboard, SessionsTable, QuoteSections, QuoteThemes, Toolbar, AnalysisPage, CodebookPanel, SettingsPanel (~8 files)
+- `frontend/src/components/about/` — HelpSection, SignalsSection (~2 files)
+- `bristlenose/locales/{en,es,fr,de,ko}/common.json` — ~100 new keys each
+- `bristlenose/locales/{en,es,fr,de,ko}/settings.json` — possible minor additions
+
+**Potential conflicts with other branches:**
+- `symbology` — overlaps on render templates and headings, but those are Jinja2 not React
+- `responsive-signal-cards` — may touch AnalysisPage layout
+- Other branches — low risk (locale files and React component internals)
 
 ---
 

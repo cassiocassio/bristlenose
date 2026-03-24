@@ -2,16 +2,20 @@
 
 from __future__ import annotations
 
+import json
 import logging
 import os
+import secrets
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
+from starlette.middleware.cors import CORSMiddleware
 from starlette.responses import Response
 
 from bristlenose.server.db import create_session_factory, db_url_for_project, get_engine, init_db
+from bristlenose.server.middleware import BearerTokenMiddleware
 from bristlenose.server.routes.analysis import router as analysis_router
 from bristlenose.server.routes.autocode import router as autocode_router
 from bristlenose.server.routes.codebook import router as codebook_router
@@ -82,6 +86,31 @@ def create_app(
 
     app = FastAPI(title="Bristlenose", docs_url="/api/docs", redoc_url=None)
 
+    # --- Localhost access control token ---
+    # Defence-in-depth: stops opportunistic local-process API scraping.
+    # Not an authentication boundary — see SECURITY.md.
+    # Recover existing token on uvicorn reload, or generate a fresh one.
+    auth_token = os.environ.get("_BRISTLENOSE_AUTH_TOKEN") or secrets.token_urlsafe(32)
+    os.environ["_BRISTLENOSE_AUTH_TOKEN"] = auth_token
+    app.state.auth_token = auth_token
+    # Print BEFORE the "Report:" readiness line so ServeManager.swift
+    # has the token before transitioning to .running.
+    print(f"[bristlenose] auth-token: {auth_token}", flush=True)
+
+    # Bearer token middleware — must be added before CORS so it runs after CORS
+    # in the middleware stack (Starlette processes middleware in reverse order).
+    app.add_middleware(BearerTokenMiddleware)
+
+    # Block cross-origin requests — serve mode is localhost-only, no reason for
+    # any other origin to call the API.  Same-origin requests are unaffected.
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=[],
+        allow_credentials=False,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
+
     # Per-project DB: derive path from project_dir unless explicitly overridden
     if db_url is None and project_dir is not None:
         db_url = db_url_for_project(project_dir)
@@ -137,8 +166,9 @@ def create_app(
 
     # Serve media files (video/audio) from the project input directory so the
     # popout player can load them over HTTP instead of file:// URIs.
+    # Extension allowlist prevents serving .env, .git, .db, etc.
     if project_dir is not None:
-        app.mount("/media", StaticFiles(directory=project_dir), name="media")
+        _mount_media_route(app, project_dir)
 
     # Serve the report SPA from the Vite build output
     if project_dir is not None:
@@ -157,6 +187,38 @@ def create_app(
         _print_dev_urls()
 
     return app
+
+
+_MEDIA_EXTENSIONS = frozenset({
+    # Video
+    ".mp4", ".mov", ".webm", ".avi", ".mkv", ".m4v",
+    # Audio
+    ".mp3", ".wav", ".m4a", ".ogg", ".flac", ".aac", ".wma",
+    # Subtitles
+    ".srt", ".vtt",
+    # Transcripts (docx ingestion)
+    ".docx", ".txt",
+    # Images (thumbnails)
+    ".jpg", ".jpeg", ".png", ".gif", ".webp",
+})
+
+
+def _mount_media_route(app: FastAPI, project_dir: Path) -> None:
+    """Register a /media/ route with extension allowlist and path-traversal guard."""
+    resolved_root = project_dir.resolve()
+
+    @app.get("/media/{path:path}")
+    async def serve_media(path: str) -> FileResponse:
+        full = (resolved_root / path).resolve()
+        # Path traversal guard — must stay inside project_dir
+        if not full.is_relative_to(resolved_root):
+            raise HTTPException(status_code=403, detail="Forbidden")
+        # Extension allowlist
+        if full.suffix.lower() not in _MEDIA_EXTENSIONS:
+            raise HTTPException(status_code=403, detail="Forbidden")
+        if not full.is_file():
+            raise HTTPException(status_code=404, detail="Not found")
+        return FileResponse(full)
 
 
 def _print_dev_urls() -> None:
@@ -204,12 +266,15 @@ def _html_root_attrs() -> str:
     return " ".join(parts)
 
 
-def _build_spa_html(output_dir: Path, *, dev: bool = False) -> str:
+def _build_spa_html(
+    output_dir: Path, *, dev: bool = False, auth_token: str = ""
+) -> str:
     """Read the Vite-built index.html and prepare it for serving.
 
     - Rewrites ``/assets/`` paths to ``/static/assets/`` (bundle served via StaticFiles)
     - Injects ``<link>`` for the theme CSS (from the pipeline output dir)
     - Injects platform/theme attributes on ``<html>``
+    - Injects auth token for API access control
     - When *dev* is True, injects ``window.__BRISTLENOSE_DEV__ = true`` so the
       responsive playground loads (without requiring the Vite dev server)
     """
@@ -226,6 +291,13 @@ def _build_spa_html(output_dir: Path, *, dev: bool = False) -> str:
     # Inject theme CSS before </head> — served from output dir at /report/assets/
     theme_link = '<link rel="stylesheet" href="/report/assets/bristlenose-theme.css">'
     html = html.replace("</head>", f"{theme_link}\n</head>")
+    # Auth token for localhost API access control (json.dumps for safe serialisation)
+    if auth_token:
+        token_script = (
+            "<script>window.__BRISTLENOSE_AUTH_TOKEN__"
+            f" = {json.dumps(auth_token)}</script>"
+        )
+        html = html.replace("</head>", f"{token_script}\n</head>")
     # Dev flag — enables responsive playground without Vite HMR
     if dev:
         dev_script = "<script>window.__BRISTLENOSE_DEV__ = true</script>"
@@ -233,7 +305,7 @@ def _build_spa_html(output_dir: Path, *, dev: bool = False) -> str:
     return html
 
 
-def _build_dev_html(output_dir: Path) -> str:
+def _build_dev_html(output_dir: Path, *, auth_token: str = "") -> str:
     """Build a self-contained dev HTML page with Vite HMR scripts.
 
     No baked HTML reading, no regex surgery.  Includes:
@@ -267,7 +339,9 @@ def _build_dev_html(output_dir: Path) -> str:
         "  window.$RefreshReg$ = () => {}\n"
         "  window.$RefreshSig$ = () => (type) => type\n"
         "  window.__vite_plugin_react_preamble_installed__ = true\n"
-        "  window.__BRISTLENOSE_DEV__ = true\n"
+        + (f"  window.__BRISTLENOSE_AUTH_TOKEN__ = {json.dumps(auth_token)}\n"
+           if auth_token else "")
+        + "  window.__BRISTLENOSE_DEV__ = true\n"
         "</script>\n"
         f'<script type="module" src="{vite}/@vite/client"></script>\n'
         f'<script type="module" src="{vite}/src/main.tsx"></script>\n'
@@ -283,7 +357,7 @@ def _mount_dev_report(app: FastAPI, output_dir: Path) -> None:
     reading or regex surgery — React renders everything (header, nav, content,
     footer).  Data comes from API endpoints.
     """
-    dev_html = _build_dev_html(output_dir)
+    dev_html = _build_dev_html(output_dir, auth_token=app.state.auth_token)
 
     # Live CSS: re-read theme source files on every request (no caching).
     # Defined before the catch-all so it takes priority.
@@ -350,7 +424,7 @@ def _mount_prod_report(app: FastAPI, output_dir: Path, *, dev: bool = False) -> 
         )
         return
 
-    spa_html = _build_spa_html(output_dir, dev=dev)
+    spa_html = _build_spa_html(output_dir, dev=dev, auth_token=app.state.auth_token)
 
     @app.get("/report")
     def redirect_report_to_slash_prod() -> RedirectResponse:

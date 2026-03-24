@@ -8,6 +8,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from bristlenose.server.app import create_app
+from tests.conftest import AuthTestClient
 
 _FIXTURE_DIR = Path(__file__).parent / "fixtures" / "smoke-test" / "input"
 
@@ -18,7 +19,7 @@ _FIXTURE_DIR = Path(__file__).parent / "fixtures" / "smoke-test" / "input"
 @pytest.fixture()
 def client() -> TestClient:
     app = create_app(project_dir=_FIXTURE_DIR, dev=True, db_url="sqlite://")
-    return TestClient(app)
+    return AuthTestClient(app)
 
 
 # ---------------------------------------------------------------------------

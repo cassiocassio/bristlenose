@@ -11,13 +11,14 @@ from fastapi.testclient import TestClient
 from bristlenose import __version__
 from bristlenose.server.app import create_app
 from bristlenose.server.db import Base, get_engine, init_db
+from tests.conftest import AuthTestClient
 
 
 @pytest.fixture()
 def client() -> TestClient:
     """Create a test client with an in-memory SQLite database."""
     app = create_app(dev=True, db_url="sqlite://")
-    return TestClient(app)
+    return AuthTestClient(app)
 
 
 @pytest.fixture()
@@ -156,7 +157,7 @@ class TestProdServeReport:
             app = create_app(
                 project_dir=tmp_path, dev=False, db_url="sqlite://"
             )
-        return TestClient(app)
+        return AuthTestClient(app)
 
     def test_report_contains_app_root(self, prod_client: TestClient) -> None:
         resp = prod_client.get("/report/")
@@ -265,7 +266,7 @@ class TestProdServeTranscript:
             app = create_app(
                 project_dir=tmp_path, dev=False, db_url="sqlite://"
             )
-        return TestClient(app)
+        return AuthTestClient(app)
 
     def test_transcript_html_served_as_file(self, prod_client: TestClient) -> None:
         """Transcript HTML files are served from the output dir (file extension)."""
@@ -297,7 +298,7 @@ class TestDevServeReport:
         # serve --dev sets this env var before calling create_app via uvicorn reload
         monkeypatch.setenv("_BRISTLENOSE_DEV", "1")
         app = create_app(project_dir=tmp_path, dev=True, db_url="sqlite://")
-        return TestClient(app)
+        return AuthTestClient(app)
 
     def test_dev_report_contains_app_root(self, dev_client: TestClient) -> None:
         resp = dev_client.get("/report/")

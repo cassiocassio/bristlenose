@@ -26,6 +26,11 @@ final class ServeManager: ObservableObject {
     /// Shown in the About panel alongside the Xcode build number.
     @Published var serverVersion: String?
 
+    /// Bearer token for localhost API access control.
+    /// Parsed from stdout line: `[bristlenose] auth-token: <token>`
+    /// Injected into WKWebView via WKUserScript.
+    @Published var authToken: String?
+
     /// On init, kill any orphaned serve processes from previous app crashes.
     /// Bristlenose owns the 8150–9149 port range — anything there is a zombie.
     /// Skip when BRISTLENOSE_DEV_PORT is set — the dev server is intentional.
@@ -107,9 +112,15 @@ final class ServeManager: ObservableObject {
         proc.executableURL = executableURL
         proc.arguments = ["serve", "--no-open", "--port", "\(port)", projectPath]
 
-        // Inherit current environment, then overlay user preferences.
+        // Minimal environment — only what the sidecar needs.  Avoids leaking
+        // credentials, DYLD_* vars, Xcode debug vars, etc. to the subprocess.
         // API keys are read from Keychain by Python directly — no env var needed.
-        var env = ProcessInfo.processInfo.environment
+        var env: [String: String] = [:]
+        let parentEnv = ProcessInfo.processInfo.environment
+        for key in ["PATH", "HOME", "TMPDIR", "USER", "SHELL",
+                     "LANG", "LC_ALL", "LC_CTYPE", "VIRTUAL_ENV"] {
+            if let val = parentEnv[key] { env[key] = val }
+        }
         Self.overlayPreferences(into: &env)
         proc.environment = env
 
@@ -195,6 +206,7 @@ final class ServeManager: ObservableObject {
         process = nil
         state = .idle
         serverVersion = nil
+        authToken = nil
     }
 
     /// Restart the serve process if one is running, using the same project path.
@@ -288,6 +300,18 @@ final class ServeManager: ObservableObject {
         )
         outputLines.append(clean)
 
+        // Parse auth token — printed before "Report:" readiness line.
+        // Format: [bristlenose] auth-token: <token>
+        if authToken == nil, clean.hasPrefix("[bristlenose] auth-token: ") {
+            let token = String(clean.dropFirst("[bristlenose] auth-token: ".count))
+                .trimmingCharacters(in: .whitespaces)
+            // Validate URL-safe characters only (safety invariant from secrets.token_urlsafe)
+            if token.range(of: "^[A-Za-z0-9_-]+$", options: .regularExpression) != nil {
+                authToken = token
+                print("[ServeManager] captured auth token (\(token.prefix(8))...)")
+            }
+        }
+
         // Detect readiness: bristlenose serve prints "Report: http://..."
         // when the server is ready and the report has been rendered.
         // However, the HTTP port may not be accepting connections yet —
@@ -353,7 +377,9 @@ final class ServeManager: ObservableObject {
     private nonisolated static func killOrphanedServeProcesses() {
         let proc = Process()
         proc.executableURL = URL(fileURLWithPath: "/usr/sbin/lsof")
-        proc.arguments = ["-ti", ":8150-9149"]
+        // Also scan :5173 — Vite dev server spawned by `bristlenose serve --dev`.
+        // Survives SIGKILL because atexit cleanup doesn't fire.
+        proc.arguments = ["-ti", ":5173,8150-9149"]
 
         let pipe = Pipe()
         proc.standardOutput = pipe

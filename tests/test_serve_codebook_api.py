@@ -17,6 +17,7 @@ from bristlenose.server.models import (
     QuoteTag,
     TagDefinition,
 )
+from tests.conftest import AuthTestClient
 
 _FIXTURE_DIR = Path(__file__).parent / "fixtures" / "smoke-test" / "input"
 
@@ -25,7 +26,7 @@ _FIXTURE_DIR = Path(__file__).parent / "fixtures" / "smoke-test" / "input"
 def client() -> TestClient:
     """Create a test client with imported smoke-test data."""
     app = create_app(project_dir=_FIXTURE_DIR, dev=True, db_url="sqlite://")
-    return TestClient(app)
+    return AuthTestClient(app)
 
 
 @pytest.fixture()
@@ -57,7 +58,7 @@ def client_with_codebook() -> TestClient:
         db.commit()
     finally:
         db.close()
-    return TestClient(app)
+    return AuthTestClient(app)
 
 
 # ---------------------------------------------------------------------------
@@ -654,7 +655,7 @@ class TestRemoveFramework:
     def test_remove_framework_deletes_quote_tags(self, client: TestClient) -> None:
         """QuoteTag associations for framework tags should be cleaned up."""
         app = create_app(project_dir=_FIXTURE_DIR, dev=True, db_url="sqlite://")
-        tc = TestClient(app)
+        tc = AuthTestClient(app)
         # Import template
         tc.post(
             "/api/projects/1/codebook/import-template",
@@ -763,7 +764,7 @@ class TestRemoveFramework:
     def test_remove_framework_preserves_autocode_data(self) -> None:
         """Removing a framework should preserve AutoCode jobs and proposals."""
         app = create_app(project_dir=_FIXTURE_DIR, dev=True, db_url="sqlite://")
-        tc = TestClient(app)
+        tc = AuthTestClient(app)
         tc.post(
             "/api/projects/1/codebook/import-template",
             json={"template_id": "garrett"},
@@ -879,7 +880,7 @@ class TestRestoreFramework:
     def test_reimport_preserves_autocode_job(self) -> None:
         """AutoCode job and proposed_count should survive remove→reimport cycle."""
         app = create_app(project_dir=_FIXTURE_DIR, dev=True, db_url="sqlite://")
-        tc = TestClient(app)
+        tc = AuthTestClient(app)
         tc.post(
             "/api/projects/1/codebook/import-template",
             json={"template_id": "garrett"},
@@ -941,7 +942,7 @@ class TestRestoreFramework:
     def test_reimport_resets_accepted_proposals(self) -> None:
         """Accepted proposals should be reset to pending on restore."""
         app = create_app(project_dir=_FIXTURE_DIR, dev=True, db_url="sqlite://")
-        tc = TestClient(app)
+        tc = AuthTestClient(app)
         tc.post(
             "/api/projects/1/codebook/import-template",
             json={"template_id": "garrett"},
@@ -1024,7 +1025,7 @@ class TestRemoveFrameworkImpact:
     def test_impact_returns_quote_count(self, client: TestClient) -> None:
         """Impact should count distinct quotes across all framework tags."""
         app = create_app(project_dir=_FIXTURE_DIR, dev=True, db_url="sqlite://")
-        tc = TestClient(app)
+        tc = AuthTestClient(app)
         tc.post(
             "/api/projects/1/codebook/import-template",
             json={"template_id": "garrett"},
@@ -1079,7 +1080,7 @@ class TestRemoveFrameworkImpact:
     def test_impact_has_autocode_true(self) -> None:
         """Framework with an AutoCode job should report has_autocode=true."""
         app = create_app(project_dir=_FIXTURE_DIR, dev=True, db_url="sqlite://")
-        tc = TestClient(app)
+        tc = AuthTestClient(app)
         tc.post(
             "/api/projects/1/codebook/import-template",
             json={"template_id": "garrett"},

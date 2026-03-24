@@ -219,3 +219,116 @@ def test_session_records_roundtrip(tmp_path: Path):
     assert rec.sessions["s1"].provider == "google"
     assert rec.sessions["s2"].model == "sonnet"
     assert rec.status == StageStatus.COMPLETE
+
+
+# ---------------------------------------------------------------------------
+# Content hashing (Phase 2a)
+# ---------------------------------------------------------------------------
+
+
+def test_stage_record_content_hash_default_none():
+    from bristlenose.manifest import StageRecord
+
+    rec = StageRecord()
+    assert rec.content_hash is None
+
+
+def test_session_record_content_hash_default_none():
+    from bristlenose.manifest import SessionRecord
+
+    rec = SessionRecord(status=StageStatus.COMPLETE, session_id="s1")
+    assert rec.content_hash is None
+
+
+def test_mark_stage_complete_stores_content_hash():
+    m = create_manifest("p", "1.0")
+    mark_stage_running(m, STAGE_INGEST)
+    mark_stage_complete(m, STAGE_INGEST, content_hash="abc123")
+    assert m.stages[STAGE_INGEST].content_hash == "abc123"
+
+
+def test_mark_stage_complete_without_hash_leaves_none():
+    m = create_manifest("p", "1.0")
+    mark_stage_running(m, STAGE_INGEST)
+    mark_stage_complete(m, STAGE_INGEST)
+    assert m.stages[STAGE_INGEST].content_hash is None
+
+
+def test_mark_session_complete_stores_content_hash():
+    m = create_manifest("p", "1.0")
+    mark_stage_running(m, STAGE_TOPIC_SEGMENTATION)
+    mark_session_complete(
+        m, STAGE_TOPIC_SEGMENTATION, "s1", content_hash="deadbeef",
+    )
+    assert m.stages[STAGE_TOPIC_SEGMENTATION].sessions["s1"].content_hash == "deadbeef"
+
+
+def test_mark_session_complete_without_hash_leaves_none():
+    m = create_manifest("p", "1.0")
+    mark_stage_running(m, STAGE_TOPIC_SEGMENTATION)
+    mark_session_complete(m, STAGE_TOPIC_SEGMENTATION, "s1")
+    assert m.stages[STAGE_TOPIC_SEGMENTATION].sessions["s1"].content_hash is None
+
+
+def test_content_hash_roundtrip(tmp_path: Path):
+    """Content hashes on stage and session records survive write → load."""
+    m = create_manifest("hash-roundtrip", "1.0")
+    mark_stage_running(m, STAGE_QUOTE_EXTRACTION)
+    mark_session_complete(
+        m, STAGE_QUOTE_EXTRACTION, "s1", content_hash="aaa111",
+    )
+    mark_stage_complete(m, STAGE_QUOTE_EXTRACTION, content_hash="bbb222")
+    write_manifest(m, tmp_path)
+
+    loaded = load_manifest(tmp_path)
+    assert loaded is not None
+    rec = loaded.stages[STAGE_QUOTE_EXTRACTION]
+    assert rec.content_hash == "bbb222"
+    assert rec.sessions["s1"].content_hash == "aaa111"
+
+
+def test_backward_compat_manifest_without_hashes(tmp_path: Path):
+    """A manifest JSON from before Phase 2a (no hash fields) loads fine."""
+    import json
+
+    manifest_dir = tmp_path / ".bristlenose"
+    manifest_dir.mkdir(parents=True)
+    # Simulate a pre-2a manifest: no content_hash fields anywhere
+    old_data = {
+        "schema_version": 1,
+        "project_name": "old-project",
+        "pipeline_version": "0.12.0",
+        "created_at": "2026-02-20T14:00:00Z",
+        "updated_at": "2026-02-20T14:30:00Z",
+        "stages": {
+            "ingest": {
+                "status": "complete",
+                "started_at": "2026-02-20T14:00:00Z",
+                "completed_at": "2026-02-20T14:00:01Z",
+            },
+            "quote_extraction": {
+                "status": "complete",
+                "started_at": "2026-02-20T14:10:00Z",
+                "completed_at": "2026-02-20T14:20:00Z",
+                "sessions": {
+                    "s1": {
+                        "status": "complete",
+                        "session_id": "s1",
+                        "completed_at": "2026-02-20T14:15:00Z",
+                        "provider": "anthropic",
+                        "model": "sonnet",
+                    },
+                },
+            },
+        },
+        "total_cost_usd": 1.50,
+    }
+    (manifest_dir / "pipeline-manifest.json").write_text(
+        json.dumps(old_data, indent=2), encoding="utf-8",
+    )
+
+    loaded = load_manifest(tmp_path)
+    assert loaded is not None
+    assert loaded.stages["ingest"].content_hash is None
+    assert loaded.stages["quote_extraction"].content_hash is None
+    assert loaded.stages["quote_extraction"].sessions["s1"].content_hash is None

@@ -192,7 +192,7 @@ function SessionRows({ sessionId, items, zone, removing, onAccept, onDeny }: Ses
               <button
                 className="threshold-action-btn threshold-action-accept"
                 onClick={() => onAccept(p.id)}
-                title="Accept"
+                title={t("autocode.accept")}
               >
                 &#x2713;
               </button>

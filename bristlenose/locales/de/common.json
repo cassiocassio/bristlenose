@@ -1,0 +1,35 @@
+{
+  "nav": {
+    "project": "Projekt",
+    "quotes": "Zitate",
+    "sessions": "Interviews",
+    "analysis": "Analyse",
+    "codebook": "Codebuch",
+    "settings": "Einstellungen",
+    "about": "Über"
+  },
+  "buttons": {
+    "save": "Sichern",
+    "cancel": "Abbrechen",
+    "export": "Exportieren",
+    "close": "Schließen",
+    "copy": "Kopieren",
+    "delete": "Löschen",
+    "accept": "Akzeptieren",
+    "deny": "Ablehnen",
+    "undo": "Widerrufen",
+    "apply": "Anwenden",
+    "reset": "Zurücksetzen"
+  },
+  "labels": {
+    "search": "Suchen",
+    "loading": "Laden…",
+    "noResults": "Keine Ergebnisse",
+    "error": "Fehler"
+  },
+  "footer": {
+    "builtWith": "Erstellt mit Bristlenose",
+    "reportIssue": "Problem melden",
+    "giveFeedback": "Feedback geben"
+  }
+}

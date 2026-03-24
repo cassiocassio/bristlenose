@@ -1,0 +1,35 @@
+{
+  "nav": {
+    "project": "프로젝트",
+    "quotes": "인용문",
+    "sessions": "세션",
+    "analysis": "분석",
+    "codebook": "코드북",
+    "settings": "설정",
+    "about": "정보"
+  },
+  "buttons": {
+    "save": "저장",
+    "cancel": "취소",
+    "export": "내보내기",
+    "close": "닫기",
+    "copy": "복사",
+    "delete": "삭제",
+    "accept": "승인",
+    "deny": "거부",
+    "undo": "실행 취소",
+    "apply": "적용",
+    "reset": "재설정"
+  },
+  "labels": {
+    "search": "검색",
+    "loading": "로드 중…",
+    "noResults": "결과 없음",
+    "error": "오류"
+  },
+  "footer": {
+    "builtWith": "Bristlenose로 제작됨",
+    "reportIssue": "문제 신고",
+    "giveFeedback": "피드백 보내기"
+  }
+}

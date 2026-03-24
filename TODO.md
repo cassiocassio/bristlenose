@@ -27,7 +27,7 @@ From security review of desktop app plan (22 Mar 2026). All findings are in the 
 
 ## Desktop app — bugs found
 
-- [ ] **Native toolbar tabs don't navigate** — `switchToTab` shim is `"function"` but `callAsyncJavaScript` from BridgeHandler doesn't trigger React Router. In-page navigation works. See `memory/project_native_tab_routing_bug.md` for investigation prompt
+- [x] **Native toolbar tabs don't navigate** — fixed: stale `navigate` closure in `installNavigationShims`. Module-level refs instead of direct closure capture. Also added `makeFirstResponder(webView)` after tab switch for keyboard focus
 - [ ] **Native toolbar tab i18n not reactive** — changing language in Settings doesn't update toolbar labels until app restart. `I18n` `@StateObject` doesn't trigger segmented control re-render
 - [ ] **i18n: extract ~180 hardcoded frontend strings** — infrastructure is ready (single source of truth, Vite alias, i18next). Strings need to be moved from JSX literals to locale JSON keys. Tier 1 (~40 strings) is the critical path. See `docs/design-i18n.md` string audit
 - [ ] **i18n: pseudo-localisation QA** — add `i18next-pseudo` to catch hardcoded strings. See `docs/design-i18n.md`
@@ -37,6 +37,17 @@ From security review of desktop app plan (22 Mar 2026). All findings are in the 
 ## Desktop app — future video player
 
 - [ ] **Native AVPlayer (Option B)** — replace HTML5 popout with native AVPlayer in its own NSWindow. Better PiP, Touch Bar, media keys, pitch-corrected speed (`AVAudioTimePitchAlgorithm.spectral`). Popout, never in-pane (Dovetail anti-pattern). See `memory/project_video_player_options.md`
+
+## Show/Hide panel label flip (desktop menu)
+
+Menu View items now say "Show Contents" / "Show Tags" / "Show Heatmap" (per-tab dynamic, Mar 2026). Hide translations exist in all 3 locales (en/es/ko) but aren't wired yet. To flip labels based on panel state:
+
+1. **Bridge**: add `leftPanelOpen`, `rightPanelOpen`, `inspectorOpen` to `BridgeState` in `frontend/src/shims/bridge.ts`. Source from `SidebarStore.getSnapshot()` and `InspectorStore.getSnapshot()`
+2. **Swift**: add matching `@Published` properties on `BridgeHandler`. Read from `getState()` response
+3. **Menu labels**: ternary on each Button — `isOpen ? i18n.t("...hide...") : i18n.t("...show...")`. Keys already exist: `desktop.menu.view.hideContents`, `hideCodes`, `hideSignals`, `hideTags`, `hideHeatmap`
+4. **Toolbar tooltips**: same pattern — switch help text between show/hide variants. Need toolbar hide keys too (currently only menu has them)
+
+Small task, ~30 min. No design decisions — just plumbing state from React stores → bridge → Swift.
 
 ## Near-horizon roadmap
 

@@ -128,6 +128,55 @@ Every shortcut in the help modal, with platform-specific display:
 
 The key handler (`useKeyboardShortcuts.ts`) already handles both `e.metaKey` (Mac) and `e.ctrlKey` (non-Mac) for the `⌘.` / `Ctrl+.` shortcut. No handler changes needed — this is purely a display concern.
 
+## Desktop app shortcut mapping
+
+The macOS desktop app (SwiftUI shell wrapping the React SPA in WKWebView) has additional shortcuts registered via native menu items in `MenuCommands.swift`. These are macOS-only — they don't apply to the browser-based serve mode.
+
+### Desktop-only shortcuts
+
+| Action | Shortcut | Menu location | Handler |
+|--------|----------|---------------|---------|
+| Toggle project sidebar | `⌘⌥S` | View | `NSSplitViewController.toggleSidebar` (native) |
+| Toggle navigation panel | `⌘⌥L` | View | `bridgeHandler.menuAction("toggleLeftPanel")` |
+| Toggle tag sidebar | `⌘⌥T` | View | `bridgeHandler.menuAction("toggleRightPanel")` |
+| Switch to tab 1–5 | `⌘1`–`⌘5` | View | `bridgeHandler.switchToTab()` |
+| Back | `⌘[` | toolbar | `bridgeHandler.goBack()` |
+| Forward | `⌘]` | toolbar | `bridgeHandler.goForward()` |
+| Find | `⌘F` | Edit | `bridgeHandler.menuAction("find")` |
+| Find Next | `⌘G` | Edit | `bridgeHandler.menuAction("findNext")` |
+| Find Previous | `⇧⌘G` | Edit | `bridgeHandler.menuAction("findPrevious")` |
+| Use Selection for Find | `⌘E` | Edit | `bridgeHandler.menuAction("useSelectionForFind")` |
+| Export Report | `⇧⌘E` | File | `bridgeHandler.menuAction("exportReport")` |
+| Settings | `⌘,` | app | native Settings scene |
+
+### Reserved (future)
+
+| Shortcut | Intended use | Notes |
+|----------|-------------|-------|
+| `⌘0` | Focus main window | When multi-window ships — BBEdit precedent |
+
+### Web vs desktop shortcut divergence
+
+The web (browser-based serve mode) and desktop app intentionally handle some shortcuts differently:
+
+| Shortcut | Web (browser) | Desktop (native app) | Why |
+|----------|--------------|---------------------|-----|
+| `⌘F` | Browser's native find bar | React search/filter bar via `menuAction("find")` | Desktop reclaims ⌘F because the native menu system intercepts it before WKWebView |
+| `⌘⌥S` | Not available | Toggle project sidebar (native NavigationSplitView) | Project sidebar only exists in the desktop app |
+| `⌘⌥L` | Not available | Toggle navigation panel | Menu-level shortcut; web uses `[` for TOC toggle |
+| `⌘1`–`⌘5` | Not available (browser uses for tab switching) | Switch Bristlenose tabs | Desktop menu system intercepts; browser reserves for its own tabs |
+| `[` / `]` / `\` | TOC / tags / both toggle | Same (bare keys pass through to WKWebView) | Unmodified keys work identically in both contexts |
+
+### Design decisions
+
+1. **Split not paired** — the project sidebar toggle and navigation panel toggle were originally a `ControlGroup` pair in the toolbar. Split into separate controls so each toggle is proximate to the thing it controls (Gestalt proximity principle — in our own Laws of UX codebook). The native sidebar toggle lives inside the sidebar column (Mail-style: snaps left when sidebar closes). The navigation toggle is a standalone toolbar button.
+
+2. **⌘⌥L not ⌘⌥D** — `⌘⌥D` is the system Dock show/hide shortcut. Discovered during review after surveying 16 macOS apps. L = Left panel, right home row, no system conflict. Mnemonic: matches the `toggleLeftPanel` action name.
+
+3. **Fallback pair** — if ⌘⌥S and ⌘⌥L don't feel right in practice, try `⌘⌥/` and `⌘⌥\` (slash/backslash as "divider" metaphor). Notion uses `⌘\` for sidebar; 1Password uses `⌘\` for Quick Access.
+
+4. **Native sidebar toggle (Mail-style)** — NavigationSplitView's built-in toggle lives inside the sidebar column header when open, snaps left to traffic lights when closed. We keep this native behaviour rather than replacing it with a custom toolbar button. The navigation panel toggle is a separate standalone button in the toolbar.
+
 ## Rendering approach
 
 ### Mac: single `<kbd>` for modifier+key

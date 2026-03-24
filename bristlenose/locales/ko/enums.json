@@ -1,0 +1,17 @@
+{
+  "sentiment": {
+    "frustration": "좌절감",
+    "confusion": "혼란",
+    "doubt": "의심",
+    "surprise": "놀라움",
+    "satisfaction": "만족감",
+    "delight": "기쁨",
+    "confidence": "확신"
+  },
+  "speakerRole": {
+    "researcher": "연구자",
+    "participant": "참여자",
+    "observer": "관찰자",
+    "unknown": "알 수 없음"
+  }
+}

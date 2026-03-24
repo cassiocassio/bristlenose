@@ -1,0 +1,27 @@
+{
+  "version": "bristlenose {version}",
+  "help": "사용자 연구 전사 및 인용문 추출 엔진.",
+  "stage": {
+    "ingest": "수집",
+    "extractAudio": "오디오 추출",
+    "transcribe": "전사",
+    "identifySpeakers": "화자 식별",
+    "mergeTranscript": "전사본 병합",
+    "piiRemoval": "개인정보 제거",
+    "topicSegmentation": "주제 분할",
+    "quoteExtraction": "인용문 추출",
+    "quoteClustering": "인용문 클러스터링",
+    "thematicGrouping": "주제별 그룹화",
+    "render": "렌더링"
+  },
+  "error": {
+    "noInput": "입력 디렉터리가 지정되지 않았습니다.",
+    "notFound": "디렉터리를 찾을 수 없습니다: {path}",
+    "noFiles": "{path}에서 오디오, 비디오 또는 전사 파일을 찾을 수 없습니다"
+  },
+  "progress": {
+    "complete": "완료",
+    "failed": "실패",
+    "skipped": "건너뜀"
+  }
+}

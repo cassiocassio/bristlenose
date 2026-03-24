@@ -1,0 +1,19 @@
+{
+  "heading": "Einstellungen",
+  "appearance": {
+    "legend": "Erscheinungsbild",
+    "auto": "Systemdarstellung verwenden",
+    "light": "Hell",
+    "dark": "Dunkel"
+  },
+  "language": {
+    "legend": "Sprache",
+    "description": "Legt die Anzeigesprache der Benutzeroberfläche fest. Berichtsinhalte werden nicht übersetzt."
+  },
+  "configReference": {
+    "heading": "Konfigurationsreferenz",
+    "intro": "Alle nachfolgenden Einstellungen werden über Umgebungsvariablen oder eine <code>.env</code>-Datei konfiguriert. Sie werden hier als Referenz angezeigt — um einen Wert zu ändern, bearbeiten Sie die in der jeweiligen Zeile angezeigte Datei.",
+    "clickToCopy": "Zum Kopieren klicken",
+    "copied": "Kopiert"
+  }
+}

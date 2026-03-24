@@ -1,0 +1,27 @@
+{
+  "version": "bristlenose {version}",
+  "help": "Transkriptions- und Zitat-Extraktions-Engine für Nutzerforschung.",
+  "stage": {
+    "ingest": "Einlesen",
+    "extractAudio": "Audio extrahieren",
+    "transcribe": "Transkribieren",
+    "identifySpeakers": "Sprecher identifizieren",
+    "mergeTranscript": "Transkript zusammenführen",
+    "piiRemoval": "Personendaten entfernen",
+    "topicSegmentation": "Themensegmentierung",
+    "quoteExtraction": "Zitat-Extraktion",
+    "quoteClustering": "Zitat-Clustering",
+    "thematicGrouping": "Thematische Gruppierung",
+    "render": "Rendern"
+  },
+  "error": {
+    "noInput": "Kein Eingabeverzeichnis angegeben.",
+    "notFound": "Verzeichnis nicht gefunden: {path}",
+    "noFiles": "Keine Audio-, Video- oder Transkriptdateien in {path} gefunden"
+  },
+  "progress": {
+    "complete": "Abgeschlossen",
+    "failed": "Fehlgeschlagen",
+    "skipped": "Übersprungen"
+  }
+}

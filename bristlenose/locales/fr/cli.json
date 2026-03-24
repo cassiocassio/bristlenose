@@ -1,0 +1,27 @@
+{
+  "version": "bristlenose {version}",
+  "help": "Moteur de transcription et d'extraction de verbatim pour la recherche utilisateur.",
+  "stage": {
+    "ingest": "Importation",
+    "extractAudio": "Extraction audio",
+    "transcribe": "Transcription",
+    "identifySpeakers": "Identification des locuteurs",
+    "mergeTranscript": "Fusion de la transcription",
+    "piiRemoval": "Suppression des données personnelles",
+    "topicSegmentation": "Segmentation thématique",
+    "quoteExtraction": "Extraction des verbatim",
+    "quoteClustering": "Regroupement des verbatim",
+    "thematicGrouping": "Regroupement thématique",
+    "render": "Rendu"
+  },
+  "error": {
+    "noInput": "Aucun répertoire d'entrée spécifié.",
+    "notFound": "Répertoire introuvable : {path}",
+    "noFiles": "Aucun fichier audio, vidéo ou de transcription trouvé dans {path}"
+  },
+  "progress": {
+    "complete": "Terminé",
+    "failed": "Échoué",
+    "skipped": "Ignoré"
+  }
+}

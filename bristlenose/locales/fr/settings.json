@@ -1,0 +1,19 @@
+{
+  "heading": "Réglages",
+  "appearance": {
+    "legend": "Apparence de l'application",
+    "auto": "Utiliser l'apparence du système",
+    "light": "Clair",
+    "dark": "Sombre"
+  },
+  "language": {
+    "legend": "Langue",
+    "description": "Contrôle la langue d'affichage de l'interface. Le contenu des rapports n'est pas traduit."
+  },
+  "configReference": {
+    "heading": "Référence de configuration",
+    "intro": "Tous les réglages ci-dessous sont configurés via des variables d'environnement ou un fichier <code>.env</code>. Ils sont affichés ici à titre indicatif — pour modifier une valeur, éditez le fichier indiqué dans chaque ligne.",
+    "clickToCopy": "Cliquer pour copier",
+    "copied": "Copié"
+  }
+}

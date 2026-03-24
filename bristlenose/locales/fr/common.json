@@ -1,0 +1,36 @@
+{
+  "nav": {
+    "project": "Projet",
+    "quotes": "Verbatim",
+    "sessions": "Entretiens",
+    "analysis": "Analyse",
+    "codebook": "Grille de codage",
+    "codebookShort": "Codage",
+    "settings": "Réglages",
+    "about": "À propos"
+  },
+  "buttons": {
+    "save": "Enregistrer",
+    "cancel": "Annuler",
+    "export": "Exporter",
+    "close": "Fermer",
+    "copy": "Copier",
+    "delete": "Supprimer",
+    "accept": "Accepter",
+    "deny": "Refuser",
+    "undo": "Annuler",
+    "apply": "Appliquer",
+    "reset": "Réinitialiser"
+  },
+  "labels": {
+    "search": "Rechercher",
+    "loading": "Chargement…",
+    "noResults": "Aucun résultat",
+    "error": "Erreur"
+  },
+  "footer": {
+    "builtWith": "Créé avec Bristlenose",
+    "reportIssue": "Signaler un problème",
+    "giveFeedback": "Donner votre avis"
+  }
+}

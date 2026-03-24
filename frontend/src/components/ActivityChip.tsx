@@ -6,6 +6,8 @@
  * A "Cancel" text button is shown while running if onCancel is provided.
  */
 
+import { useTranslation } from "react-i18next";
+
 export interface ActivityChipJob {
   id: string;
   label: string;
@@ -32,6 +34,7 @@ interface ActivityChipProps {
 }
 
 export function ActivityChip({ job, onAction, actionLabel, actionHref, onDismiss, onCancel }: ActivityChipProps) {
+  const { t } = useTranslation();
   const isRunning = job.status === "running";
   const isCompleted = job.status === "completed";
   const isFailed = job.status === "failed";
@@ -52,10 +55,10 @@ export function ActivityChip({ job, onAction, actionLabel, actionHref, onDismiss
             <button
               className="chip-cancel"
               onClick={onCancel}
-              aria-label="Cancel"
+              aria-label={t("activity.cancelAriaLabel")}
               data-testid="bn-activity-chip-cancel"
             >
-              Cancel
+              {t("activity.cancel")}
             </button>
           )}
         </>
@@ -65,7 +68,7 @@ export function ActivityChip({ job, onAction, actionLabel, actionHref, onDismiss
           <span className="chip-check">&#x2713;</span>
           <span>
             {job.completedLabel ?? job.label}
-            {job.durationLabel ? ` in ${job.durationLabel}` : ""}
+            {job.durationLabel ? ` ${t("activity.durationIn", { duration: job.durationLabel })}` : ""}
             .
           </span>
           {onAction && actionLabel && (
@@ -88,21 +91,23 @@ export function ActivityChip({ job, onAction, actionLabel, actionHref, onDismiss
         <>
           <span className="chip-error">&#x2717;</span>
           <span>
-            {job.label} failed{job.errorMessage ? `: ${job.errorMessage}` : ""}.
+            {job.errorMessage
+              ? t("activity.failed", { label: job.label, error: job.errorMessage })
+              : t("activity.failedNoError", { label: job.label })}
           </span>
         </>
       )}
       {isCancelled && (
         <>
           <span className="chip-error">&#x2717;</span>
-          <span>{job.label} cancelled.</span>
+          <span>{t("activity.cancelled", { label: job.label })}</span>
         </>
       )}
       {isDone && onDismiss && (
         <button
           className="chip-close"
           onClick={onDismiss}
-          aria-label="Dismiss"
+          aria-label={t("activity.dismiss")}
           data-testid="bn-activity-chip-close"
         >
           &times;

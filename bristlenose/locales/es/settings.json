@@ -10,6 +10,16 @@
     "legend": "Idioma",
     "description": "Controla el idioma de la interfaz. El contenido del informe no se traduce."
   },
+  "settingsNav": {
+    "general": "General",
+    "project": "Proyecto",
+    "profile": "Perfil",
+    "apiKeys": "Claves API",
+    "config": "Configuración",
+    "projectStub": "Los ajustes del proyecto aparecerán aquí. Próximamente.",
+    "profileStub": "Los ajustes de perfil (nombre, correo, backend de whisper) aparecerán aquí. Próximamente.",
+    "apiKeysStub": "La gestión de claves API aparecerá aquí. Próximamente."
+  },
   "configReference": {
     "heading": "Referencia de configuración",
     "intro": "Todos los ajustes se configuran mediante variables de entorno o un archivo <code>.env</code>. Se muestran aquí como referencia — para cambiar un valor, edita el archivo indicado en cada fila.",

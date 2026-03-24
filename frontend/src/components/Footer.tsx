@@ -6,6 +6,7 @@
  * Reuses existing CSS classes from atoms/footer.css.
  */
 
+import { useTranslation } from "react-i18next";
 import type { HealthResponse } from "../utils/health";
 import {
   DEFAULT_GITHUB_ISSUES_URL,
@@ -18,6 +19,7 @@ interface FooterProps {
 }
 
 export function Footer({ health, onOpenFeedback, onToggleHelp }: FooterProps) {
+  const { t } = useTranslation();
   const version = health?.version ?? "";
   const githubIssuesUrl =
     health?.links.github_issues_url ?? DEFAULT_GITHUB_ISSUES_URL;
@@ -42,7 +44,7 @@ export function Footer({ health, onOpenFeedback, onToggleHelp }: FooterProps) {
           className="footer-version"
           href="https://github.com/cassiocassio/bristlenose"
         >
-          {version ? `version ${version}` : ""}
+          {version ? t("footer.version", { version }) : ""}
         </a>
       </div>
       <div
@@ -54,7 +56,7 @@ export function Footer({ health, onOpenFeedback, onToggleHelp }: FooterProps) {
           target="_blank"
           rel="noopener noreferrer"
         >
-          Report a bug
+          {t("footer.reportBug")}
         </a>
         {feedbackEnabled && onOpenFeedback && (
           <>
@@ -68,7 +70,7 @@ export function Footer({ health, onOpenFeedback, onToggleHelp }: FooterProps) {
                 if (e.key === "Enter" || e.key === " ") onOpenFeedback();
               }}
             >
-              Feedback
+              {t("footer.feedback")}
             </a>
           </>
         )}
@@ -83,7 +85,7 @@ export function Footer({ health, onOpenFeedback, onToggleHelp }: FooterProps) {
             if (e.key === "Enter" || e.key === " ") onToggleHelp();
           }}
         >
-          <kbd>?</kbd> for Help
+          <kbd>?</kbd> {t("footer.helpHint")}
         </a>
       )}
     </footer>

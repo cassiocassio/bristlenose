@@ -26,6 +26,7 @@ import {
   denyProposal,
 } from "../utils/api";
 import { announce } from "../utils/announce";
+import i18n from "../i18n";
 
 // ── State shape ──────────────────────────────────────────────────────────
 
@@ -171,7 +172,7 @@ export function toggleStar(domId: string, newState: boolean): void {
     putStarred(starred);
     return { ...prev, starred };
   });
-  announce(newState ? "Quote starred" : "Quote unstarred");
+  announce(i18n.t(newState ? "announce.starred" : "announce.unstarred"));
 }
 
 export function toggleHide(domId: string, newState: boolean): void {
@@ -182,7 +183,7 @@ export function toggleHide(domId: string, newState: boolean): void {
     putHidden(hidden);
     return { ...prev, hidden };
   });
-  announce(newState ? "Quote hidden" : "Quote restored");
+  announce(i18n.t(newState ? "announce.hidden" : "announce.restored"));
 }
 
 export function commitEdit(domId: string, newText: string): void {
@@ -205,7 +206,7 @@ export function addTag(domId: string, tag: TagResponse): void {
     tags[domId] = [...existing, tag];
     putTags(tagNamesMap(tags));
     lastUsedTag = tag;
-    announce(`Tag added: ${tag.name}`);
+    announce(i18n.t("announce.tagAdded", { name: tag.name }));
     return { ...prev, tags };
   });
 }
@@ -216,7 +217,7 @@ export function removeTag(domId: string, tagName: string): void {
     tags[domId] = (tags[domId] || []).filter((t) => t.name !== tagName);
     if (tags[domId].length === 0) delete tags[domId];
     putTags(tagNamesMap(tags));
-    announce(`Tag removed: ${tagName}`);
+    announce(i18n.t("announce.tagRemoved", { name: tagName }));
     return { ...prev, tags };
   });
 }

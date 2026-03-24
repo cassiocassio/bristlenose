@@ -13,6 +13,7 @@
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import type { QuotesListResponse } from "../utils/types";
 import { useProjectId } from "../hooks/useProjectId";
 import { useScrollSpy } from "../hooks/useScrollSpy";
@@ -42,6 +43,7 @@ interface TocSidebarProps {
 }
 
 export function TocSidebar({ onOverlayClose }: TocSidebarProps) {
+  const { t } = useTranslation();
   const projectId = useProjectId();
   const { tocMode } = useSidebarStore();
   const pg = usePlaygroundStore();
@@ -146,7 +148,7 @@ export function TocSidebar({ onOverlayClose }: TocSidebarProps) {
     <nav aria-label="Table of contents">
       {sections.length > 0 && (
         <>
-          <div className="toc-heading">Sections</div>
+          <div className="toc-heading">{t("quotes.sections")}</div>
           {sections.map((entry) => (
             <a
               key={entry.id}
@@ -163,7 +165,7 @@ export function TocSidebar({ onOverlayClose }: TocSidebarProps) {
       )}
       {themes.length > 0 && (
         <>
-          <div className="toc-heading">Themes</div>
+          <div className="toc-heading">{t("quotes.themes")}</div>
           {themes.map((entry) => (
             <a
               key={entry.id}

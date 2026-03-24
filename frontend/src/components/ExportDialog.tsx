@@ -9,6 +9,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { useTranslation } from "react-i18next";
 import { useInert } from "../hooks/useInert";
 import { isExportMode } from "../utils/exportData";
 
@@ -20,6 +21,7 @@ interface ExportDialogProps {
 }
 
 export function ExportDialog({ open, onClose, initialAnonymise = false }: ExportDialogProps) {
+  const { t } = useTranslation();
   useInert(open);
   const [anonymise, setAnonymise] = useState(false);
   const [exporting, setExporting] = useState(false);
@@ -68,7 +70,7 @@ export function ExportDialog({ open, onClose, initialAnonymise = false }: Export
         `/api/projects/1/export${qs}`,
       );
       if (!resp.ok) {
-        throw new Error(`Export failed (${resp.status})`);
+        throw new Error(`${t("export.exportFailed")} (${resp.status})`);
       }
       // Extract filename from Content-Disposition header
       const cd = resp.headers.get("content-disposition") || "";
@@ -88,7 +90,7 @@ export function ExportDialog({ open, onClose, initialAnonymise = false }: Export
 
       onClose();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Export failed");
+      setError(err instanceof Error ? err.message : t("export.exportFailed"));
     } finally {
       setExporting(false);
     }
@@ -104,9 +106,9 @@ export function ExportDialog({ open, onClose, initialAnonymise = false }: Export
       data-testid="bn-export-overlay"
     >
       <div className="bn-modal" data-testid="bn-export-modal" style={{ maxWidth: 420 }}>
-        <h2>Export report</h2>
+        <h2>{t("export.heading")}</h2>
         <p className="bn-modal-subtitle">
-          Download a self-contained HTML file that anyone can open in a browser.
+          {t("export.subtitle")}
         </p>
         <label className="bn-export-checkbox">
           <input
@@ -116,10 +118,9 @@ export function ExportDialog({ open, onClose, initialAnonymise = false }: Export
             disabled={exporting}
           />
           <span>
-            Anonymise participants
+            {t("export.anonymise")}
             <small className="bn-export-hint">
-              Remove participant names, keep codes (p1, p2).
-              Moderator names are preserved.
+              {t("export.anonymiseHint")}
             </small>
           </span>
         </label>
@@ -134,14 +135,14 @@ export function ExportDialog({ open, onClose, initialAnonymise = false }: Export
             onClick={onClose}
             disabled={exporting}
           >
-            Cancel
+            {t("buttons.cancel")}
           </button>
           <button
             className="bn-btn bn-btn-primary"
             onClick={handleExport}
             disabled={exporting}
           >
-            {exporting ? "Exporting\u2026" : "Export"}
+            {exporting ? t("export.exporting") : t("buttons.export")}
           </button>
         </div>
       </div>

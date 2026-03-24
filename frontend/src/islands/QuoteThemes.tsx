@@ -8,6 +8,7 @@
  */
 
 import { useCallback, useEffect, useState, useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import { apiGet, getCodebook } from "../utils/api";
 import { useTranscriptCache } from "../hooks/useTranscriptCache";
 import type { QuoteResponse, QuotesListResponse } from "../utils/types";
@@ -23,6 +24,7 @@ interface QuoteThemesProps {
 }
 
 export function QuoteThemes({ projectId }: QuoteThemesProps) {
+  const { t } = useTranslation();
   const [data, setData] = useState<QuotesListResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [codebookTagNames, setCodebookTagNames] = useState<string[]>([]);
@@ -149,9 +151,9 @@ export function QuoteThemes({ projectId }: QuoteThemesProps) {
   if (error) {
     return (
       <section>
-        <h2 id="themes">Themes</h2>
+        <h2 id="themes">{t("quotes.themes")}</h2>
         <p style={{ color: "var(--bn-colour-danger, #c00)", padding: "1rem" }}>
-          Failed to load quotes: {error}
+          {t("quotes.failedToLoad", { error })}
         </p>
       </section>
     );
@@ -160,8 +162,8 @@ export function QuoteThemes({ projectId }: QuoteThemesProps) {
   if (!data) {
     return (
       <section>
-        <h2 id="themes">Themes</h2>
-        <p style={{ opacity: 0.5, padding: "1rem" }}>Loading quotes&hellip;</p>
+        <h2 id="themes">{t("quotes.themes")}</h2>
+        <p style={{ opacity: 0.5, padding: "1rem" }}>{t("quotes.loading")}</p>
       </section>
     );
   }
@@ -170,7 +172,7 @@ export function QuoteThemes({ projectId }: QuoteThemesProps) {
 
   return (
     <section>
-      <h2 id="themes">Themes</h2>
+      <h2 id="themes">{t("quotes.themes")}</h2>
       {filteredThemes.map((theme) => {
         const anchor = `theme-${theme.theme_label.toLowerCase().replace(/ /g, "-")}`;
         return (

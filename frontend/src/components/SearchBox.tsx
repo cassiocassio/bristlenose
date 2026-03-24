@@ -10,6 +10,7 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Tooltip } from "./Tooltip";
 
 export interface SearchBoxProps {
@@ -28,6 +29,7 @@ export function SearchBox({
   debounce = 150,
   "data-testid": testId,
 }: SearchBoxProps) {
+  const { t } = useTranslation();
   const [expanded, setExpanded] = useState(value.length > 0);
   const [localValue, setLocalValue] = useState(value);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -99,12 +101,12 @@ export function SearchBox({
 
   return (
     <div className={containerClass} data-testid={testId}>
-      <Tooltip content="Search" shortcut={{ key: "/" }}>
+      <Tooltip content={t("labels.search")} shortcut={{ key: "/" }}>
         <button
           type="button"
           className="search-toggle"
           onClick={handleToggle}
-          aria-label="Search quotes"
+          aria-label={t("search.ariaLabel")}
           data-testid={testId ? `${testId}-toggle` : undefined}
         >
           <svg
@@ -127,7 +129,7 @@ export function SearchBox({
           ref={inputRef}
           className="search-input"
           type="text"
-          placeholder="Filter quotes\u2026"
+          placeholder={t("search.placeholder")}
           autoComplete="off"
           value={localValue}
           onChange={handleInput}
@@ -138,7 +140,7 @@ export function SearchBox({
           type="button"
           className="search-clear"
           onClick={handleClear}
-          aria-label="Clear search"
+          aria-label={t("search.clearAriaLabel")}
           data-testid={testId ? `${testId}-clear` : undefined}
         >
           <svg

@@ -1,5 +1,6 @@
 import { Fragment, useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { useTranslation } from "react-i18next";
 import {
   Badge,
   ConfirmDialog,
@@ -195,8 +196,7 @@ interface CodebookGroupColumnProps {
   onMergeDrop: (targetTag: CodebookTagResponse) => void;
 }
 
-/** Placeholder text shown when a group has no subtitle. */
-const SUBTITLE_PLACEHOLDER = "Add subtitle…";
+// Placeholder key — resolved at render time via t().
 
 /**
  * Group subtitle with placeholder support.
@@ -214,12 +214,13 @@ function GroupSubtitle({
   subtitle: string;
   onCommit: (text: string) => void;
 }) {
+  const { t } = useTranslation();
   const isEmpty = !subtitle;
   const [isEditing, setIsEditing] = useState(false);
 
   // When empty and not editing: show placeholder text with placeholder style.
   // When editing: show the actual subtitle (empty string if none) with normal style.
-  const displayValue = isEmpty && !isEditing ? SUBTITLE_PLACEHOLDER : subtitle;
+  const displayValue = isEmpty && !isEditing ? t("codebook.addSubtitle") : subtitle;
   const className = `group-subtitle${isEmpty && !isEditing ? " placeholder" : ""}`;
 
   return (
@@ -254,6 +255,8 @@ function CodebookGroupColumn({
   onDropTag,
   onMergeDrop,
 }: CodebookGroupColumnProps) {
+  const { t } = useTranslation();
+  const te = useTranslation("enums").t;
   const [isDragOver, setIsDragOver] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [confirmingTag, setConfirmingTag] = useState<CodebookTagResponse | null>(null);
@@ -261,7 +264,17 @@ function CodebookGroupColumn({
   const tagInputKey = useRef(0);
   const dragOverCount = useRef(0);
 
-  const maxCount = Math.max(1, ...group.tags.map((t) => t.count + (t.tentative_count ?? 0)));
+  // Translate built-in group labels (sentiment + uncategorised)
+  const isSentiment = group.colour_set === "sentiment";
+  const isUncategorised = group.name === "Uncategorised";
+  const displayGroupName = isSentiment ? t("analysis.sentiment")
+    : isUncategorised ? t("codebook.uncategorised")
+    : group.name;
+  const displayGroupSubtitle = isSentiment ? t("analysis.sentimentSubtitle")
+    : isUncategorised ? t("codebook.uncategorisedSubtitle")
+    : group.subtitle;
+
+  const maxCount = Math.max(1, ...group.tags.map((tg) => tg.count + (tg.tentative_count ?? 0)));
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -340,8 +353,8 @@ function CodebookGroupColumn({
       <div className="group-header">
         <div className="group-title-area">
           <div className="group-title">
-            {isReadOnly ? (
-              <span className="group-title-text">{group.name}</span>
+            {isReadOnly || isSentiment ? (
+              <span className="group-title-text">{displayGroupName}</span>
             ) : (
               <EditableText
                 as="span"
@@ -353,8 +366,8 @@ function CodebookGroupColumn({
               />
             )}
           </div>
-          {isReadOnly ? (
-            <p className="group-subtitle">{group.subtitle}</p>
+          {isReadOnly || isSentiment ? (
+            <p className="group-subtitle">{displayGroupSubtitle}</p>
           ) : (
             <GroupSubtitle
               subtitle={group.subtitle}
@@ -366,7 +379,7 @@ function CodebookGroupColumn({
           <button
             className="group-close"
             onClick={() => setShowDeleteConfirm(true)}
-            aria-label={`Delete group ${group.name}`}
+            aria-label={t("codebook.deleteGroupAriaLabel", { name: group.name })}
           >
             &times;
           </button>
@@ -374,12 +387,15 @@ function CodebookGroupColumn({
       </div>
 
       <div className="tag-list">
-        {group.tags.map((tag) => (
-          isFramework ? (
+        {group.tags.map((tag) => {
+          const tagDisplayName = isSentiment
+            ? te(`sentiment.${tag.name}`, { defaultValue: tag.name })
+            : tag.name;
+          return isFramework ? (
             <div key={tag.id} className="tag-row">
               <div className="tag-name-area">
                 <Badge
-                  text={tag.name}
+                  text={tagDisplayName}
                   variant="readonly"
                   colour={getTagBg(group.colour_set, tag.colour_index)}
                 />
@@ -411,13 +427,13 @@ function CodebookGroupColumn({
               onDragEnd={onDragEnd}
               onMergeDrop={onMergeDrop}
             />
-          )
-        ))}
+          );
+        })}
       </div>
 
       {group.total_quotes > 0 && (
         <div className="group-total-row">
-          <span className="group-total-label">Total</span>
+          <span className="group-total-label">{t("codebook.total")}</span>
           <span className="group-total-count">{group.total_quotes}</span>
         </div>
       )}
@@ -435,20 +451,20 @@ function CodebookGroupColumn({
         </div>
       ) : (
         <div className="tag-add-row" onClick={() => setIsAddingTag(true)}>
-          <span className="tag-add-badge">+ tag</span>
+          <span className="tag-add-badge">{t("codebook.addTag")}</span>
         </div>
       ))}
 
       {/* Tag-delete confirmation — rendered at group level for correct positioning */}
       {confirmingTag && (
         <ConfirmDialog
-          title={`Delete "${confirmingTag.name}"?`}
+          title={t("codebook.deleteTagTitle", { name: confirmingTag.name })}
           body={
             confirmingTag.count > 0
-              ? <span>This tag is on {confirmingTag.count} quote{confirmingTag.count !== 1 ? "s" : ""}.</span>
+              ? <span>{t("codebook.tagOnQuotes", { count: confirmingTag.count })}</span>
               : undefined
           }
-          confirmLabel="Delete"
+          confirmLabel={t("buttons.delete")}
           variant="danger"
           accentColour={getBarColour(group.colour_set)}
           onConfirm={() => {
@@ -463,13 +479,13 @@ function CodebookGroupColumn({
       {/* Group-delete confirmation */}
       {showDeleteConfirm && !isReadOnly && (
         <ConfirmDialog
-          title={`Delete "${group.name}"?`}
+          title={t("codebook.deleteGroupTitle", { name: group.name })}
           body={
             group.tags.length > 0
-              ? <span>{group.tags.length} tag{group.tags.length !== 1 ? "s" : ""} will move to Uncategorised.</span>
+              ? <span>{t("codebook.tagsWillMove", { count: group.tags.length })}</span>
               : undefined
           }
-          confirmLabel="Delete group"
+          confirmLabel={t("codebook.deleteGroup")}
           variant="danger"
           accentColour={getBarColour(group.colour_set)}
           onConfirm={() => {
@@ -492,6 +508,7 @@ interface CodebookPanelProps {
 }
 
 export function CodebookPanel({ projectId }: CodebookPanelProps) {
+  const { t } = useTranslation();
   const [data, setData] = useState<CodebookResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const dragTagRef = useRef<{ tag: CodebookTagResponse; fromGroupId: number } | null>(null);
@@ -890,8 +907,8 @@ export function CodebookPanel({ projectId }: CodebookPanelProps) {
   if (error) {
     return (
       <>
-        <h1>Codebook</h1>
-        <p className="codebook-description">Error loading codebook: {error}</p>
+        <h1>{t("codebook.heading")}</h1>
+        <p className="codebook-description">{t("codebook.errorLoading", { error })}</p>
       </>
     );
   }
@@ -899,8 +916,8 @@ export function CodebookPanel({ projectId }: CodebookPanelProps) {
   if (!data) {
     return (
       <>
-        <h1>Codebook</h1>
-        <p className="codebook-description">Loading…</p>
+        <h1>{t("codebook.heading")}</h1>
+        <p className="codebook-description">{t("labels.loading")}</p>
       </>
     );
   }
@@ -925,14 +942,13 @@ export function CodebookPanel({ projectId }: CodebookPanelProps) {
     <>
       <div className="codebook-header">
         <div style={{ flex: 1, minWidth: 0 }}>
-          <h1>Codebook</h1>
+          <h1>{t("codebook.heading")}</h1>
           <p className="codebook-description">
-            Drag tags between groups to reorganise. Click a tag or title to rename it.
-            Drop a tag on another to merge.
+            {t("codebook.description")}
           </p>
         </div>
         <button className="bn-btn bn-btn-primary" onClick={handleOpenPicker} style={{ flexShrink: 0 }}>
-          Browse codebooks
+          {t("codebook.browseCodebooks")}
         </button>
       </div>
 
@@ -964,13 +980,13 @@ export function CodebookPanel({ projectId }: CodebookPanelProps) {
           onDrop={handleDropNewGroup}
         >
           <span className="new-group-icon">+</span>
-          <span className="new-group-label">New group</span>
+          <span className="new-group-label">{t("codebook.newGroup")}</span>
         </div>
 
         {/* Per-framework sections — each imported framework gets its own header + remove button */}
         {Array.from(frameworkById.entries()).map(([fid, fwGroups]) => {
           const tmpl = templates?.find((t) => t.id === fid);
-          const title = tmpl?.title ?? "Codebook framework";
+          const title = tmpl?.title ?? t("codebook.codebookFramework");
           const author = tmpl?.author ?? "";
           const label = author ? `${author} — ${title}` : title;
           const acStatus = autoCodeStatus[fid];
@@ -990,7 +1006,7 @@ export function CodebookPanel({ projectId }: CodebookPanelProps) {
                       onClick={() => handleOpenReport(fid, title)}
                       data-testid={`bn-autocode-report-btn-${fid}`}
                     >
-                      View Report
+                      {t("codebook.viewReport")}
                       <span
                         className="proposed-count"
                         data-testid={`bn-autocode-count-${fid}`}
@@ -1005,14 +1021,14 @@ export function CodebookPanel({ projectId }: CodebookPanelProps) {
                       onClick={() => handleStartAutoCode(fid, title)}
                       data-testid={`bn-autocode-btn-${fid}`}
                     >
-                      &#x2726; AutoCode quotes
+                      {t("codebook.autoCodeQuotes")}
                     </button>
                   )}
                   <button
                     className="bn-btn framework-remove-btn"
                     onClick={() => handleAskRemoveFramework(fid, label)}
                   >
-                    Remove from Codebook
+                    {t("codebook.removeFromCodebook")}
                   </button>
                 </div>
               </div>
@@ -1041,14 +1057,15 @@ export function CodebookPanel({ projectId }: CodebookPanelProps) {
       {mergeConfirm && (
         <div className="merge-overlay">
           <ConfirmDialog
-            title={`Merge "${mergeConfirm.source.name}" into "${mergeConfirm.target.name}"?`}
+            title={t("codebook.mergeTitle", { source: mergeConfirm.source.name, target: mergeConfirm.target.name })}
             body={
-              <span>
-                All quotes tagged <strong>{mergeConfirm.source.name}</strong> will be
-                retagged <strong>{mergeConfirm.target.name}</strong>. This cannot be undone.
-              </span>
+              <span
+                dangerouslySetInnerHTML={{
+                  __html: t("codebook.mergeBody", { source: mergeConfirm.source.name, target: mergeConfirm.target.name }),
+                }}
+              />
             }
-            confirmLabel="Merge"
+            confirmLabel={t("codebook.merge")}
             variant="primary"
             onConfirm={handleMergeConfirm}
             onCancel={() => setMergeConfirm(null)}
@@ -1060,20 +1077,21 @@ export function CodebookPanel({ projectId }: CodebookPanelProps) {
       {removeConfirm && (
         <div className="merge-overlay">
           <ConfirmDialog
-            title={`Hide "${removeConfirm.label}"?`}
+            title={t("codebook.hideTitle", { label: removeConfirm.label })}
             body={
               <span>
                 {removeConfirm.impact
                   ? (removeConfirm.impact.quote_count > 0
-                    ? `Tags will be removed from ${removeConfirm.impact.quote_count} quote${removeConfirm.impact.quote_count !== 1 ? "s" : ""}.`
-                    : "No quotes are currently tagged.")
-                  : "Loading impact…"}
+                    ? t("codebook.tagsRemovedFromQuotes", { count: removeConfirm.impact.quote_count })
+                    : t("codebook.noQuotesTagged"))
+                  : t("codebook.loadingImpact")}
+                {" "}
                 {removeConfirm.impact?.has_autocode
-                  ? " AutoCode results are preserved — restore instantly from Browse Codebooks."
-                  : " Restore any time from Browse Codebooks."}
+                  ? t("codebook.autoCodePreserved")
+                  : t("codebook.restoreAnytime")}
               </span>
             }
-            confirmLabel="Hide"
+            confirmLabel={t("codebook.hide")}
             variant="danger"
             onConfirm={handleConfirmRemoveFramework}
             onCancel={() => setRemoveConfirm(null)}
@@ -1106,8 +1124,8 @@ export function CodebookPanel({ projectId }: CodebookPanelProps) {
               <>
                 <div className="codebook-modal-header">
                   <div>
-                    <div className="codebook-modal-title">Browse codebooks</div>
-                    <div className="codebook-modal-subtitle">Import a framework codebook or create your own</div>
+                    <div className="codebook-modal-title">{t("codebook.browseTitle")}</div>
+                    <div className="codebook-modal-subtitle">{t("codebook.browseSubtitle")}</div>
                   </div>
                   <button
                     className="codebook-modal-close"
@@ -1119,35 +1137,35 @@ export function CodebookPanel({ projectId }: CodebookPanelProps) {
                 </div>
                 <div className="codebook-modal-body">
                   {!templates ? (
-                    <p>Loading…</p>
+                    <p>{t("labels.loading")}</p>
                   ) : (
                     <>
                       <div className="picker-section-header">
-                        <span className="picker-section-title">Codebook frameworks</span>
+                        <span className="picker-section-title">{t("codebook.frameworksHeader")}</span>
                       </div>
                       <div className="picker-row">
-                        {templates.map((t) => {
-                          const isClickable = t.enabled && !t.imported;
+                        {templates.map((tmpl) => {
+                          const isClickable = tmpl.enabled && !tmpl.imported;
                           const cardClass = [
                             "picker-card",
-                            t.imported ? "imported" : null,
-                            !t.enabled ? "disabled" : null,
-                            t.restorable && !t.imported ? "restorable" : null,
+                            tmpl.imported ? "imported" : null,
+                            !tmpl.enabled ? "disabled" : null,
+                            tmpl.restorable && !tmpl.imported ? "restorable" : null,
                           ].filter(Boolean).join(" ");
                           return (
                             // eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions
                             <div
-                              key={t.id}
+                              key={tmpl.id}
                               className={cardClass}
-                              onClick={() => isClickable && handleSelectTemplate(t)}
+                              onClick={() => isClickable && handleSelectTemplate(tmpl)}
                             >
-                              <div className="picker-card-title">{t.title}</div>
-                              {t.author && (
-                                <div className="picker-card-author">{t.author}</div>
+                              <div className="picker-card-title">{tmpl.title}</div>
+                              {tmpl.author && (
+                                <div className="picker-card-author">{tmpl.author}</div>
                               )}
-                              <div className="picker-card-desc">{t.description}</div>
+                              <div className="picker-card-desc">{tmpl.description}</div>
                               <div className="picker-card-tags">
-                                {t.groups.slice(0, 3).flatMap((g) =>
+                                {tmpl.groups.slice(0, 3).flatMap((g) =>
                                   g.tags.slice(0, 2).map((tag) => (
                                     <span
                                       key={`${g.name}-${tag.name}`}
@@ -1159,11 +1177,11 @@ export function CodebookPanel({ projectId }: CodebookPanelProps) {
                                   )),
                                 )}
                               </div>
-                              {!t.enabled && (
-                                <div className="picker-card-coming">Coming soon</div>
+                              {!tmpl.enabled && (
+                                <div className="picker-card-coming">{t("codebook.comingSoon")}</div>
                               )}
-                              {t.restorable && !t.imported && (
-                                <div className="picker-card-restore">Previously imported — restore instantly</div>
+                              {tmpl.restorable && !tmpl.imported && (
+                                <div className="picker-card-restore">{t("codebook.previouslyImported")}</div>
                               )}
                             </div>
                           );
@@ -1171,12 +1189,12 @@ export function CodebookPanel({ projectId }: CodebookPanelProps) {
                       </div>
 
                       <div className="picker-section-header">
-                        <span className="picker-section-title">Your codebooks</span>
+                        <span className="picker-section-title">{t("codebook.yourCodebooksHeader")}</span>
                       </div>
                       <div className="picker-row">
                         <div className="picker-card picker-card-create" onClick={handleCloseModal}>
                           <span className="new-icon">+</span>
-                          <span className="new-label">Create new codebook</span>
+                          <span className="new-label">{t("codebook.createNew")}</span>
                         </div>
                       </div>
                     </>
@@ -1199,13 +1217,13 @@ export function CodebookPanel({ projectId }: CodebookPanelProps) {
                       disabled={importing}
                     >
                       {importing
-                        ? (selectedTemplate.restorable ? "Restoring…" : "Importing…")
-                        : (selectedTemplate.restorable ? "Restore codebook" : "Import codebook")}
+                        ? (selectedTemplate.restorable ? t("codebook.restoringCodebook") : t("codebook.importingCodebook"))
+                        : (selectedTemplate.restorable ? t("codebook.restoreCodebook") : t("codebook.importCodebook"))}
                     </button>
                     <div className="preview-cta-help">
                       {selectedTemplate.restorable
-                        ? "Restores previous tags and AutoCode results"
-                        : "Adds to existing tags and tag-groups"}
+                        ? t("codebook.restoreHelp")
+                        : t("codebook.importHelp")}
                     </div>
                   </div>
                   <button
@@ -1220,7 +1238,7 @@ export function CodebookPanel({ projectId }: CodebookPanelProps) {
                   <div className="preview-body">
                     <div className="preview-body-main">
                       <div className="preview-desc">{selectedTemplate.description}</div>
-                      <div className="preview-section-label">Tag groups</div>
+                      <div className="preview-section-label">{t("codebook.tagGroups")}</div>
                       <div className="preview-groups">
                         {selectedTemplate.groups.map((g) => (
                           <div

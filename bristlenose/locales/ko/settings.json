@@ -10,6 +10,16 @@
     "legend": "언어",
     "description": "인터페이스의 표시 언어를 설정합니다. 보고서 내용은 번역되지 않습니다."
   },
+  "settingsNav": {
+    "general": "일반",
+    "project": "프로젝트",
+    "profile": "프로필",
+    "apiKeys": "API 키",
+    "config": "구성",
+    "projectStub": "프로젝트 설정이 여기에 표시됩니다. 곧 제공 예정.",
+    "profileStub": "프로필 설정(이름, 이메일, whisper 백엔드)이 여기에 표시됩니다. 곧 제공 예정.",
+    "apiKeysStub": "API 키 관리가 여기에 표시됩니다. 곧 제공 예정."
+  },
   "configReference": {
     "heading": "설정 참조",
     "intro": "아래의 모든 설정은 환경 변수 또는 <code>.env</code> 파일을 통해 구성됩니다. 참조용으로 표시되며, 값을 변경하려면 각 행에 표시된 파일을 편집하십시오.",

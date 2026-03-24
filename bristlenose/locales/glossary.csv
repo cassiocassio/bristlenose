@@ -1,0 +1,85 @@
+source,target,language,note
+Save,Guardar,es,Apple HIG
+Cancel,Cancelar,es,Apple HIG
+Close,Cerrar,es,Apple HIG
+Copy,Copiar,es,Apple HIG
+Delete,Eliminar,es,Apple HIG (action sense)
+Undo,Deshacer,es,Apple HIG
+Redo,Rehacer,es,Apple HIG
+Search,Buscar,es,Apple HIG
+Print,Imprimir,es,Apple HIG
+Export,Exportar,es,Apple HIG
+Settings,Ajustes,es,Apple HIG (post-Ventura)
+Open,Abrir,es,Apple HIG
+Hide,Ocultar,es,Apple HIG
+Accept,Aceptar,es,Apple HIG
+Apply,Aplicar,es,Apple HIG
+Reset,Restablecer,es,Apple HIG
+Codebook,Libro de códigos,es,ATLAS.ti/MAXQDA convention
+Quotes,Citas,es,QDA term — not Comillas
+Sessions,Sesiones,es,QDA term
+Signals,Señales,es,QDA term
+Codes,Códigos,es,QDA term
+Save,Sichern,de,Apple HIG
+Cancel,Abbrechen,de,Apple HIG
+Close,Schließen,de,Apple HIG
+Copy,Kopieren,de,Apple HIG
+Delete,Löschen,de,Apple HIG
+Undo,Widerrufen,de,Apple HIG
+Redo,Wiederholen,de,Apple HIG
+Search,Suchen,de,Apple HIG
+Print,Drucken,de,Apple HIG
+Export,Exportieren,de,Apple HIG
+Settings,Einstellungen,de,Apple HIG
+Open,Öffnen,de,Apple HIG
+Hide,Ausblenden,de,Apple HIG
+Accept,Akzeptieren,de,Apple HIG
+Apply,Anwenden,de,Apple HIG
+Reset,Zurücksetzen,de,Apple HIG
+Codebook,Codebuch,de,QDA convention
+Quotes,Zitate,de,QDA term
+Sessions,Interviews,de,QDA term
+Signals,Signale,de,QDA term
+Codes,Kodes,de,QDA term
+Save,Enregistrer,fr,Apple HIG
+Cancel,Annuler,fr,Apple HIG
+Close,Fermer,fr,Apple HIG
+Copy,Copier,fr,Apple HIG
+Delete,Supprimer,fr,Apple HIG
+Undo,Annuler,fr,Apple HIG
+Redo,Rétablir,fr,Apple HIG
+Search,Rechercher,fr,Apple HIG
+Print,Imprimer,fr,Apple HIG
+Export,Exporter,fr,Apple HIG
+Settings,Réglages,fr,Apple HIG
+Open,Ouvrir,fr,Apple HIG
+Hide,Masquer,fr,Apple HIG
+Accept,Accepter,fr,Apple HIG
+Apply,Appliquer,fr,Apple HIG
+Reset,Réinitialiser,fr,Apple HIG
+Codebook,Grille de codage,fr,QDA convention
+Quotes,Verbatim,fr,QDA term
+Sessions,Entretiens,fr,QDA term
+Signals,Signaux,fr,QDA term
+Codes,Codes,fr,QDA term
+Save,저장,ko,Apple HIG
+Cancel,취소,ko,Apple HIG
+Close,닫기,ko,Apple HIG
+Copy,복사,ko,Apple HIG
+Delete,삭제,ko,Apple HIG
+Undo,실행 취소,ko,Apple HIG
+Redo,실행 복귀,ko,Apple HIG
+Search,검색,ko,Apple HIG
+Print,프린트,ko,Apple HIG
+Export,내보내기,ko,Apple HIG
+Settings,설정,ko,Apple HIG
+Open,열기,ko,Apple HIG
+Hide,가리기,ko,Apple HIG
+Accept,승인,ko,Apple HIG
+Apply,적용,ko,Apple HIG
+Reset,재설정,ko,Apple HIG
+Codebook,코드북,ko,QDA convention
+Quotes,인용문,ko,QDA term
+Sessions,세션,ko,QDA term
+Signals,시그널,ko,QDA term
+Codes,코드,ko,QDA term

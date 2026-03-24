@@ -24,6 +24,7 @@ import {
 } from "react";
 import { useLocation } from "react-router-dom";
 import { announce } from "../utils/announce";
+import i18n from "../i18n";
 import { postPlayerState } from "../shims/bridge";
 
 // ── Types ────────────────────────────────────────────────────────────────
@@ -317,7 +318,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       playerWinRef.current.postMessage(msg, window.location.origin);
       playerWinRef.current.focus();
     }
-    announce(`Playing ${pid}`);
+    announce(i18n.t("announce.playing", { pid }));
   }, []);
 
   // ── Main effect: message listener + close polling ────────────────────

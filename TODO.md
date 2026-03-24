@@ -1,6 +1,6 @@
 # Bristlenose — Where I Left Off
 
-Last updated: 23 Mar 2026
+Last updated: 24 Mar 2026
 
 ## Desktop app security (must-fix before any distribution)
 
@@ -29,8 +29,10 @@ From security review of desktop app plan (22 Mar 2026). All findings are in the 
 
 - [x] **Native toolbar tabs don't navigate** — fixed: stale `navigate` closure in `installNavigationShims`. Module-level refs instead of direct closure capture. Also added `makeFirstResponder(webView)` after tab switch for keyboard focus
 - [ ] **Native toolbar tab i18n not reactive** — changing language in Settings doesn't update toolbar labels until app restart. `I18n` `@StateObject` doesn't trigger segmented control re-render
-- [ ] **i18n: extract ~180 hardcoded frontend strings** — infrastructure is ready (single source of truth, Vite alias, i18next). Strings need to be moved from JSX literals to locale JSON keys. Tier 1 (~40 strings) is the critical path. See `docs/design-i18n.md` string audit
-- [ ] **i18n: pseudo-localisation QA** — add `i18next-pseudo` to catch hardcoded strings. See `docs/design-i18n.md`
+- [x] **i18n: extract ~200 hardcoded frontend strings** — done (24 Mar 2026). ~30 components wired with `useTranslation()`. Sentiment badges translate via `enums.json`. `format.ts` uses `Intl.DateTimeFormat`. `<html lang>` tracks locale. Screen reader `announce()` calls use `i18n.t()`. Keys in all 5 locale files (en/es/fr/de/ko)
+- [ ] **i18n: translation quality fixes** — es/fr use "codebook" loanword in ~15 browse/import keys instead of localised term; ko participant term inconsistency (참여자 vs 참가자); de/ko missing `nav.codebookShort`. Running in other sessions
+- [ ] **i18n: help prose + signal definitions (Batch 11)** — informational text in HelpSection, SignalsSection, ShortcutsSection. Lower priority — skipped for now
+- [ ] **i18n: pseudo-localisation QA** — add `i18next-pseudo` to catch remaining hardcoded strings. See `docs/design-i18n.md`
 - [ ] **i18n: Weblate setup** — connect `hosted.weblate.org` to repo for community translation. Free Libre plan. See `docs/design-i18n.md`
 - [ ] **i18n: cross-check Spanish against Apple glossary** — verified 23 Mar 2026, all match. Do same for each new language before release
 

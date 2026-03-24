@@ -15,6 +15,7 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { SUPPORTED_LOCALES, type Locale } from "../i18n";
 import { setLocale, useLocaleStore } from "../i18n/LocaleStore";
 import { ModalNav, type NavItem } from "./ModalNav";
@@ -27,10 +28,10 @@ type Appearance = "auto" | "light" | "dark";
 const STORAGE_KEY = "bristlenose-appearance";
 const THEME_ATTR = "data-theme";
 
-const APPEARANCE_OPTIONS: { value: Appearance; label: string }[] = [
-  { value: "auto", label: "Use system appearance" },
-  { value: "light", label: "Light" },
-  { value: "dark", label: "Dark" },
+const APPEARANCE_KEYS: { value: Appearance; labelKey: string }[] = [
+  { value: "auto", labelKey: "appearance.auto" },
+  { value: "light", labelKey: "appearance.light" },
+  { value: "dark", labelKey: "appearance.dark" },
 ];
 
 /** Display labels for supported locales. Always in the locale's own language. */
@@ -261,21 +262,19 @@ const CONFIG_DATA: SettingCategory[] = [
 
 // ── Navigation structure ──────────────────────────────────────────────────
 
-const NAV_ITEMS: NavItem[] = [
-  { id: "general", label: "General" },
-  { id: "project", label: "Project" },
-  { id: "profile", label: "Profile" },
-  { id: "api-keys", label: "API Keys" },
-  {
-    id: "config",
-    label: "Config",
-    children: CONFIG_DATA.map((cat) => ({ id: `config-${cat.id}`, label: cat.label })),
-  },
+// Nav item keys — labels resolved at render time via t().
+const NAV_KEYS: { id: string; labelKey: string; hasChildren?: boolean }[] = [
+  { id: "general", labelKey: "settingsNav.general" },
+  { id: "project", labelKey: "settingsNav.project" },
+  { id: "profile", labelKey: "settingsNav.profile" },
+  { id: "api-keys", labelKey: "settingsNav.apiKeys" },
+  { id: "config", labelKey: "settingsNav.config", hasChildren: true },
 ];
 
 // ── Section components ────────────────────────────────────────────────────
 
 function GeneralSection() {
+  const { t } = useTranslation("settings");
   const [appearance, setAppearanceState] = useState<Appearance>(readSaved);
   const { locale } = useLocaleStore();
 
@@ -302,8 +301,8 @@ function GeneralSection() {
   return (
     <>
       <fieldset className="bn-setting-group">
-        <legend>Appearance</legend>
-        {APPEARANCE_OPTIONS.map((opt) => (
+        <legend>{t("appearance.legend")}</legend>
+        {APPEARANCE_KEYS.map((opt) => (
           <label key={opt.value} className="bn-radio-label">
             <input
               type="radio"
@@ -312,18 +311,16 @@ function GeneralSection() {
               checked={appearance === opt.value}
               onChange={() => handleAppearance(opt.value)}
             />
-            {" "}{opt.label}
+            {" "}{t(opt.labelKey)}
           </label>
         ))}
       </fieldset>
 
-      {/* In embedded mode (macOS app), language is controlled by native
-          Settings (Cmd+,) — hide the web picker to avoid desync. */}
       {!isEmbedded() && (
         <fieldset className="bn-setting-group">
-          <legend>Language</legend>
+          <legend>{t("language.legend")}</legend>
           <p className="bn-setting-description">
-            Controls the display language of the interface. Report content is not translated.
+            {t("language.description")}
           </p>
           <select
             className="bn-locale-select"
@@ -349,6 +346,7 @@ function StubSection({ description }: { description: string }) {
 }
 
 function ConfigSection({ categoryId }: { categoryId: string }) {
+  const { t } = useTranslation("settings");
   const cat = CONFIG_DATA.find((c) => `config-${c.id}` === categoryId);
   const [copied, setCopied] = useState<string | null>(null);
 
@@ -363,11 +361,9 @@ function ConfigSection({ categoryId }: { categoryId: string }) {
 
   return (
     <div className="bn-config-ref">
-      <p className="bn-config-ref-intro">
-        These settings are configured via environment variables or
-        a <code>.env</code> file. They are shown here for reference &mdash; to
-        change a value, edit the file shown in each row.
-      </p>
+      <p className="bn-config-ref-intro"
+        dangerouslySetInnerHTML={{ __html: t("configReference.intro") }}
+      />
       {cat.settings.map((s, i) => (
         <div key={`${cat.id}-${i}`} className="bn-config-ref-row">
           <span className="bn-config-ref-label">{s.label}</span>
@@ -381,7 +377,7 @@ function ConfigSection({ categoryId }: { categoryId: string }) {
             <code
               className={`bn-config-ref-envvar${copied === s.envVar ? " copied" : ""}`}
               onClick={() => handleCopy(s.envVar)}
-              title="Click to copy"
+              title={t("configReference.clickToCopy")}
             >
               {s.envVar}
             </code>
@@ -405,6 +401,7 @@ interface SettingsModalProps {
 }
 
 export function SettingsModal({ open, onClose }: SettingsModalProps) {
+  const { t } = useTranslation("settings");
   const [activeId, setActiveId] = useState("general");
 
   // Reset to General when reopening.
@@ -416,15 +413,26 @@ export function SettingsModal({ open, onClose }: SettingsModalProps) {
     prevOpen.current = open;
   }, [open]);
 
+  // Build translated nav items.
+  const navItems: NavItem[] = NAV_KEYS.map((k) =>
+    k.hasChildren
+      ? {
+          id: k.id,
+          label: t(k.labelKey),
+          children: CONFIG_DATA.map((cat) => ({ id: `config-${cat.id}`, label: cat.label })),
+        }
+      : { id: k.id, label: t(k.labelKey) },
+  );
+
   let content: React.ReactNode;
   if (activeId === "general") {
     content = <GeneralSection />;
   } else if (activeId === "project") {
-    content = <StubSection description="Per-project settings will appear here. Coming soon." />;
+    content = <StubSection description={t("settingsNav.projectStub")} />;
   } else if (activeId === "profile") {
-    content = <StubSection description="Profile settings (name, email, whisper backend) will appear here. Coming soon." />;
+    content = <StubSection description={t("settingsNav.profileStub")} />;
   } else if (activeId === "api-keys") {
-    content = <StubSection description="API key management will appear here. Coming soon." />;
+    content = <StubSection description={t("settingsNav.apiKeysStub")} />;
   } else if (activeId.startsWith("config-")) {
     content = <ConfigSection categoryId={activeId} />;
   } else {
@@ -435,8 +443,8 @@ export function SettingsModal({ open, onClose }: SettingsModalProps) {
     <ModalNav
       open={open}
       onClose={onClose}
-      title="Settings"
-      items={NAV_ITEMS}
+      title={t("heading")}
+      items={navItems}
       activeId={activeId}
       onSelect={setActiveId}
       className="settings-modal"

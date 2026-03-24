@@ -10,6 +10,16 @@
     "legend": "Langue",
     "description": "Contrôle la langue d'affichage de l'interface. Le contenu des rapports n'est pas traduit."
   },
+  "settingsNav": {
+    "general": "Général",
+    "project": "Projet",
+    "profile": "Profil",
+    "apiKeys": "Clés API",
+    "config": "Configuration",
+    "projectStub": "Les réglages du projet apparaîtront ici. Bientôt disponible.",
+    "profileStub": "Les réglages du profil (nom, e-mail, backend whisper) apparaîtront ici. Bientôt disponible.",
+    "apiKeysStub": "La gestion des clés API apparaîtra ici. Bientôt disponible."
+  },
   "configReference": {
     "heading": "Référence de configuration",
     "intro": "Tous les réglages ci-dessous sont configurés via des variables d'environnement ou un fichier <code>.env</code>. Ils sont affichés ici à titre indicatif — pour modifier une valeur, éditez le fichier indiqué dans chaque ligne.",

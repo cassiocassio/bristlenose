@@ -12,6 +12,7 @@
  */
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { ToolbarButton } from "./ToolbarButton";
 import { useDropdown } from "../hooks/useDropdown";
 import { getTagBg, getGroupBg } from "../utils/colours";
@@ -64,6 +65,7 @@ export function TagFilterDropdown({
   onToggle,
   "data-testid": testId,
 }: TagFilterDropdownProps) {
+  const { t } = useTranslation();
   const { open, toggle, containerRef } = useDropdown({ isOpen, onToggle });
   const [codebook, setCodebook] = useState<CodebookResponse | null>(null);
   const [menuSearch, setMenuSearch] = useState("");
@@ -144,13 +146,11 @@ export function TagFilterDropdown({
   // ── Label ─────────────────────────────────────────────────────────
 
   const label = useMemo(() => {
-    if (tagFilter.clearAll) return "No tags";
-    // If nothing is unchecked and noTags is included → generic label
-    if (tagFilter.unchecked.length === 0 && !tagFilter.noTagsUnchecked) return "Tags";
-    // Show checked count (codebook loaded) or indicate active filter (not yet loaded)
-    if (totalTags > 0) return `${checkedCount} tags`;
-    return `${tagFilter.unchecked.length} hidden`;
-  }, [checkedCount, totalTags, tagFilter.clearAll, tagFilter.noTagsUnchecked, tagFilter.unchecked]);
+    if (tagFilter.clearAll) return t("tags.noTags");
+    if (tagFilter.unchecked.length === 0 && !tagFilter.noTagsUnchecked) return t("tags.tags");
+    if (totalTags > 0) return t("tags.countTags", { count: checkedCount });
+    return t("tags.countHidden", { count: tagFilter.unchecked.length });
+  }, [checkedCount, totalTags, tagFilter.clearAll, tagFilter.noTagsUnchecked, tagFilter.unchecked, t]);
 
   // ── Filtering within menu ─────────────────────────────────────────
 
@@ -190,7 +190,7 @@ export function TagFilterDropdown({
               onClick={handleSelectAll}
               data-testid={testId ? `${testId}-select-all` : undefined}
             >
-              Select all
+              {t("tags.selectAll")}
             </button>
             <span className="tag-filter-separator">|</span>
             <button
@@ -199,7 +199,7 @@ export function TagFilterDropdown({
               onClick={handleClear}
               data-testid={testId ? `${testId}-clear` : undefined}
             >
-              Clear
+              {t("tags.clear")}
             </button>
           </div>
 
@@ -209,7 +209,7 @@ export function TagFilterDropdown({
               <input
                 type="text"
                 className="tag-filter-search-input"
-                placeholder="Search tags\u2026"
+                placeholder={t("tags.searchPlaceholder")}
                 value={menuSearch}
                 onChange={(e) => setMenuSearch(e.target.value)}
                 autoComplete="off"
@@ -226,7 +226,7 @@ export function TagFilterDropdown({
                 checked={!tagFilter.noTagsUnchecked && !tagFilter.clearAll}
                 onChange={(e) => handleToggleNoTags(e.target.checked)}
               />
-              <span>(No tags)</span>
+              <span>{t("tags.noTagsLabel")}</span>
               <span className="tag-filter-count">{noTagCount}</span>
             </label>
           )}

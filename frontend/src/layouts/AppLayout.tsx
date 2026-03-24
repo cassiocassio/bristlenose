@@ -43,6 +43,7 @@ import { setSearchQuery, setViewMode, setTagFilter, getQuotesSnapshot } from "..
 import { EMPTY_TAG_FILTER } from "../utils/filter";
 import { toast } from "../utils/toast";
 import { announce } from "../utils/announce";
+import i18n from "../i18n";
 import { isEditing } from "../utils/editing";
 import { isEmbedded } from "../utils/embedded";
 import { getExportData } from "../utils/exportData";
@@ -262,13 +263,13 @@ function AppShell() {
       return;
     }
     const path = location.pathname;
-    let label = "Project";
-    if (path.startsWith("/report/quotes")) label = "Quotes";
-    else if (path.startsWith("/report/sessions/s")) label = "Transcript";
-    else if (path.startsWith("/report/sessions")) label = "Sessions";
-    else if (path.startsWith("/report/codebook")) label = "Codebook";
-    else if (path.startsWith("/report/analysis")) label = "Analysis";
-    announce(`Navigated to ${label}`);
+    let key = "nav.project";
+    if (path.startsWith("/report/quotes")) key = "nav.quotes";
+    else if (path.startsWith("/report/sessions/s")) key = "announce.transcript";
+    else if (path.startsWith("/report/sessions")) key = "nav.sessions";
+    else if (path.startsWith("/report/codebook")) key = "nav.codebook";
+    else if (path.startsWith("/report/analysis")) key = "nav.analysis";
+    announce(i18n.t("announce.navigatedTo", { label: i18n.t(key) }));
   }, [location.pathname]);
 
   // Handle menu actions from native toolbar/menu (embedded mode).
@@ -480,7 +481,7 @@ function AppShell() {
     <SidebarLayout
       active={showSidebar}
       leftPanel={isSessionsRoute ? <SessionsSidebar /> : isCodebook ? <CodebookSidebar /> : isAnalysis ? <AnalysisSidebar /> : undefined}
-      leftPanelTitle={isSessionsRoute ? "Sessions" : isCodebook ? "Codebooks" : isAnalysis ? "Signals" : undefined}
+      leftPanelTitle={isSessionsRoute ? i18n.t("nav.sessions") : isCodebook ? i18n.t("codebook.heading") : isAnalysis ? i18n.t("analysis.signals") : undefined}
       showRightSidebar={!!isQuotes}
     >
       {!embedded && <Header />}

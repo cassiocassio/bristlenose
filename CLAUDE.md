@@ -102,6 +102,16 @@ macOS ships BSD versions of `sed`, `grep`, `awk`, `find`, `xargs`, `date`, `stat
 - **SwiftUI `CommandMenu` titles can't use runtime strings** — `CommandMenu("Project")` uses `LocalizedStringKey` (`.lproj` bundles). Menu titles stay in English; only items inside are translated. See `docs/design-i18n.md`
 - **Toolbar `_short` keys** — `common.nav.codebookShort` exists for languages where the full label overflows the segmented control (es: "Códigos" instead of "Libro de códigos"). `Tab.localizedLabel()` checks `_short` first
 - **Apple glossary cross-check is mandatory** before shipping a new language — use [applelocalization.com](https://applelocalization.com/) or the macOS keyboard shortcuts page in the target locale. See `docs/design-i18n.md` for the full process and the Spanish cross-check results
+- **`useTranslation()` is the hook; `i18n.t()` is the direct import** — use the hook inside React components, use `import i18n from "../i18n"` + `i18n.t()` in stores, announce utilities, and other non-component code (e.g. `QuotesContext.tsx`, `AppLayout.tsx` route announcements)
+- **`useMemo` deps for translated arrays** — `t` function identity doesn't change on locale switch. Use `[t, i18n.language]` as dependency, or skip `useMemo` entirely for small arrays (2–5 items). See `ViewSwitcher.tsx` (inline) vs `HelpModal.tsx` (useMemo with language dep)
+- **`i18n/index.ts` initialises test-setup** — `frontend/src/test-setup.ts` imports `"./i18n"` so all tests get English translations by default. `t("nav.project")` returns `"Project"` in tests — no test rewrites needed for i18n wiring
+- **Sentiment tag translation in Badge** — `Badge.tsx` looks up `enums:sentiment.${text}` when `sentiment` prop is truthy. This translates API-returned lowercase sentiment names ("frustration") to locale-correct labels ("Frustration" / "Verwirrung"). Tests must expect capitalised forms
+- **Built-in codebook groups translate client-side** — sentiment group (`colour_set === "sentiment"`) and uncategorised group (`name === "Uncategorised"`) have their names/subtitles translated in `CodebookPanel.tsx` using locale keys. Other codebook names are user data and stay untranslated
+- **`format.ts` uses `Intl.DateTimeFormat`** — defaults to `en-GB` (day-month order: "12 Feb"), not `en` (US order: "Feb 12"). Pass `i18n.language` from callers for locale-aware dates. `formatFinderDate` uses `Intl.RelativeTimeFormat` for "today"/"yesterday"
+- **`<html lang>` tracking** — `i18n.on("languageChanged")` in `i18n/index.ts` sets `document.documentElement.lang`. Required for screen reader pronunciation
+- **Korean has no plural forms** — only `_other` keys needed in locale files (no `_one`). i18next CLDR rules handle this automatically
+- **New keys must go in all 5 locale files** — en, es, fr, de, ko. Every `t("key")` call needs a corresponding entry in each. Use machine translation for initial pass, flag for human review
+- **Data-level vs chrome-level translation** — UI chrome (buttons, headings, labels) translates via `t()`. API data (codebook names, quote text, section labels) stays in the original language. Exceptions: sentiment group name/subtitle and uncategorised group are server constants that get client-side translation
 
 ### Other gotchas
 

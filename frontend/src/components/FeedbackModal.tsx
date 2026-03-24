@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
+import { useTranslation } from "react-i18next";
 import { useInert } from "../hooks/useInert";
 import { toast } from "../utils/toast";
 import type { HealthResponse } from "../utils/health";
@@ -10,20 +11,14 @@ interface FeedbackModalProps {
   health: HealthResponse;
 }
 
-type Sentiment = {
-  value: string;
-  emoji: string;
-  label: string;
-};
-
 const FEEDBACK_DRAFT_KEY = "bristlenose-feedback-draft";
 
-const FEEDBACK_SENTIMENTS: Sentiment[] = [
-  { value: "hate", emoji: "\uD83D\uDE20", label: "Frustrating" },
-  { value: "dislike", emoji: "\uD83D\uDE15", label: "Needs work" },
-  { value: "neutral", emoji: "\uD83D\uDE10", label: "It's okay" },
-  { value: "like", emoji: "\uD83D\uDE42", label: "Good" },
-  { value: "love", emoji: "\uD83D\uDE0A", label: "Excellent" },
+const FEEDBACK_SENTIMENT_KEYS: { value: string; emoji: string; labelKey: string }[] = [
+  { value: "hate", emoji: "\uD83D\uDE20", labelKey: "feedback.sentimentHate" },
+  { value: "dislike", emoji: "\uD83D\uDE15", labelKey: "feedback.sentimentDislike" },
+  { value: "neutral", emoji: "\uD83D\uDE10", labelKey: "feedback.sentimentNeutral" },
+  { value: "like", emoji: "\uD83D\uDE42", labelKey: "feedback.sentimentLike" },
+  { value: "love", emoji: "\uD83D\uDE0A", labelKey: "feedback.sentimentLove" },
 ];
 
 interface DraftData {
@@ -53,6 +48,7 @@ function writeDraft(draft: DraftData): void {
 }
 
 export function FeedbackModal({ open, onClose, health }: FeedbackModalProps) {
+  const { t } = useTranslation();
   useInert(open);
   const [rating, setRating] = useState("");
   const [message, setMessage] = useState("");
@@ -86,9 +82,9 @@ export function FeedbackModal({ open, onClose, health }: FeedbackModalProps) {
   const feedbackLabelByValue = useMemo(
     () =>
       Object.fromEntries(
-        FEEDBACK_SENTIMENTS.map((item) => [item.value, item.label]),
+        FEEDBACK_SENTIMENT_KEYS.map((item) => [item.value, t(item.labelKey)]),
       ) as Record<string, string>,
-    [],
+    [t],
   );
 
   const clearAndClose = useCallback(
@@ -108,14 +104,14 @@ export function FeedbackModal({ open, onClose, health }: FeedbackModalProps) {
     let text = `Bristlenose feedback (v${health.version || "unknown"})\nRating: ${ratingLabel}\n`;
     if (message.trim()) text += `Message: ${message.trim()}\n`;
     if (!navigator.clipboard?.writeText) {
-      clearAndClose("Could not copy — please submit feedback manually.");
+      clearAndClose(t("feedback.copyFailed"));
       return;
     }
     try {
       await navigator.clipboard.writeText(text);
-      clearAndClose("Copied to clipboard - paste into an email or issue.");
+      clearAndClose(t("feedback.copiedToClipboard"));
     } catch {
-      clearAndClose("Could not copy — please submit feedback manually.");
+      clearAndClose(t("feedback.copyFailed"));
     }
   }, [clearAndClose, feedbackLabelByValue, health.version, message, rating]);
 
@@ -138,7 +134,7 @@ export function FeedbackModal({ open, onClose, health }: FeedbackModalProps) {
           body: JSON.stringify(payload),
         });
         if (resp.ok) {
-          clearAndClose("Feedback sent - thank you!");
+          clearAndClose(t("feedback.sent"));
           return;
         }
       } catch {
@@ -162,9 +158,9 @@ export function FeedbackModal({ open, onClose, health }: FeedbackModalProps) {
       data-testid="bn-feedback-overlay"
     >
       <div className="bn-modal feedback-modal" data-testid="bn-feedback-modal">
-        <h2>How is Bristlenose working for you?</h2>
+        <h2>{t("feedback.heading")}</h2>
         <div className="feedback-sentiments">
-          {FEEDBACK_SENTIMENTS.map((item) => (
+          {FEEDBACK_SENTIMENT_KEYS.map((item) => (
             <button
               key={item.value}
               type="button"
@@ -173,17 +169,17 @@ export function FeedbackModal({ open, onClose, health }: FeedbackModalProps) {
               onClick={() => setRating(item.value)}
             >
               <span className="feedback-sentiment-face">{item.emoji}</span>
-              <span className="feedback-sentiment-label">{item.label}</span>
+              <span className="feedback-sentiment-label">{t(item.labelKey)}</span>
             </button>
           ))}
         </div>
         <label className="feedback-label" htmlFor="bn-feedback-message">
-          Help us improve
+          {t("feedback.helpUsImprove")}
         </label>
         <textarea
           id="bn-feedback-message"
           className="feedback-textarea"
-          placeholder="Tell us what's useful and what needs fixing..."
+          placeholder={t("feedback.placeholder")}
           rows={3}
           value={message}
           onChange={(e) => setMessage(e.target.value)}
@@ -194,7 +190,7 @@ export function FeedbackModal({ open, onClose, health }: FeedbackModalProps) {
             className="feedback-btn feedback-btn-cancel"
             onClick={onClose}
           >
-            Cancel
+            {t("buttons.cancel")}
           </button>
           <button
             type="button"
@@ -204,11 +200,11 @@ export function FeedbackModal({ open, onClose, health }: FeedbackModalProps) {
             }}
             disabled={!rating || sending}
           >
-            {sending ? "Sending..." : "Send"}
+            {sending ? t("feedback.sending") : t("feedback.send")}
           </button>
         </div>
         <p className="bn-modal-footer">
-          Anonymous - only your rating and message are shared.
+          {t("feedback.anonymous")}
         </p>
       </div>
     </div>,

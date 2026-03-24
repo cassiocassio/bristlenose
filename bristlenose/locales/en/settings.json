@@ -10,6 +10,16 @@
     "legend": "Language",
     "description": "Controls the display language of the interface. Report content is not translated."
   },
+  "settingsNav": {
+    "general": "General",
+    "project": "Project",
+    "profile": "Profile",
+    "apiKeys": "API Keys",
+    "config": "Config",
+    "projectStub": "Per-project settings will appear here. Coming soon.",
+    "profileStub": "Profile settings (name, email, whisper backend) will appear here. Coming soon.",
+    "apiKeysStub": "API key management will appear here. Coming soon."
+  },
   "configReference": {
     "heading": "Configuration reference",
     "intro": "All settings below are configured via environment variables or a <code>.env</code> file. They are shown here for reference — to change a value, edit the file shown in each row.",

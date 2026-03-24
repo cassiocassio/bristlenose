@@ -523,7 +523,7 @@ describe("QuoteCard — sentiment badge dedup", () => {
   it("shows AI sentiment badge when no matching codebook tag exists", () => {
     renderWithTags({ sentiment: "frustration" }, []);
     expect(screen.getByTestId("bn-quote-q-p1-26-badge-ai")).toBeInTheDocument();
-    expect(screen.getByTestId("bn-quote-q-p1-26-badge-ai")).toHaveTextContent("frustration");
+    expect(screen.getByTestId("bn-quote-q-p1-26-badge-ai")).toHaveTextContent("Frustration");
   });
 
   it("hides AI sentiment badge when matching codebook tag exists", () => {

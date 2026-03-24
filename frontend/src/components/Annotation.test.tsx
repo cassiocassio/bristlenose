@@ -52,7 +52,7 @@ describe("Annotation", () => {
       />,
     );
     const badge = screen.getByTestId("ann-sentiment");
-    expect(badge.textContent).toBe("delight");
+    expect(badge.textContent).toBe("Delight");
     expect(badge.classList.contains("badge-ai")).toBe(true);
     expect(badge.classList.contains("badge-delight")).toBe(true);
   });

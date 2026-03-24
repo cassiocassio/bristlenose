@@ -428,6 +428,10 @@
       "failed": "\u2726 AutoCode a échoué",
       "failedWithError": "\u2726 AutoCode a échoué : {{error}}",
       "dismiss": "Fermer"
+    },
+    "chip": {
+      "coding": "\u2726 AutoCodage {{title}}",
+      "coded": "\u2726 AutoCodé {{title}}"
     }
   },
   "transcript": {

@@ -412,6 +412,10 @@
       "failed": "\u2726 AutoCode 실패",
       "failedWithError": "\u2726 AutoCode 실패: {{error}}",
       "dismiss": "닫기"
+    },
+    "chip": {
+      "coding": "\u2726 {{title}} AutoCode 진행 중",
+      "coded": "\u2726 {{title}} AutoCode 완료"
     }
   },
   "transcript": {

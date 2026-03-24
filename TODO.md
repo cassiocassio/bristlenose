@@ -121,6 +121,7 @@ Blockers that mean new users give up or never try:
 - [ ] **Auto-serve after run** — after `bristlenose run` completes, launch serve mode and open browser automatically. Consider: `--no-serve` flag, port selection, fallback if serve deps missing
 - [ ] **QA: threshold review dialog on real data** — run AutoCode against real projects, evaluate confidence histogram + dual slider UX. Qualitative, not automated
 - [ ] **CI snap smoke test** — add a post-build job to the snap workflow that installs the artifact and runs `bristlenose --version && bristlenose doctor`
+- [ ] **Licence compliance scan** — add `pip-licenses --format=json --with-urls` to CI (informational). Verify AGPL-3.0 compatibility of all deps
 - [ ] **Snap Store registration** — `snapcraft register bristlenose`, request classic confinement, add `SNAPCRAFT_STORE_CREDENTIALS` to GitHub secrets. See `docs/design-doctor-and-snap.md`
 
 ---
@@ -348,6 +349,11 @@ See `docs/design-logging.md` for architecture, philosophy, PII policy, and full 
 | Storybook / component playground for primitives | medium |
 | Playwright E2E layer 4 (structural smoke tests) | medium |
 | Playwright E2E write-action tests (11 actions: star, hide, edit, tag, etc.) | large |
+| ~~Security scanning — npm audit, pip-audit, CodeQL~~ | ~~medium~~ done |
+| ~~Dependabot for Python + JS deps~~ | ~~trivial~~ done |
+| ~~SBOM generation (CycloneDX)~~ | ~~trivial~~ done |
+| ~~Pre-commit secret scanning (gitleaks)~~ | ~~trivial~~ done |
+| Promote pip-audit + npm audit to blocking (target v0.15.0) | trivial |
 
 ---
 
@@ -408,7 +414,7 @@ These apply to the legacy vanilla JS in `bristlenose/theme/js/`. Per CLAUDE.md, 
 
 ## Dependency maintenance
 
-Bristlenose has ~30 direct + transitive deps across Python, ML, LLM SDKs, and NLP. CI runs `pip-audit` on every push (informational, non-blocking).
+Bristlenose has ~30 direct + transitive deps across Python, ML, LLM SDKs, and NLP. CI runs `pip-audit` + `npm audit` on every push (informational, non-blocking). Dependabot opens weekly PRs for both ecosystems. CodeQL SAST runs on push + weekly. See `SECURITY.md` for remediation SLA.
 
 ### Quarterly dep review (next: May 2026, then Aug 2026, Nov 2026)
 

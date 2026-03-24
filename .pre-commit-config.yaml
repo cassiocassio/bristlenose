@@ -1,0 +1,10 @@
+# Pre-commit hooks — run `pre-commit install` to activate.
+# See https://pre-commit.com for usage.
+repos:
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.30.1
+    hooks:
+      - id: gitleaks
+        # Catches secrets (API keys, tokens, credentials) before they
+        # reach the remote. GitHub server-side secret scanning doesn't
+        # cover all LLM provider key formats (Anthropic, some Azure).

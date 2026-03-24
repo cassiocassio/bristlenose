@@ -1,0 +1,48 @@
+name: CodeQL
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    # Weekly scan — Mondays at 06:17 UTC (off-minute to reduce fleet load)
+    - cron: "17 6 * * 1"
+
+jobs:
+  analyze:
+    name: Analyze (${{ matrix.language }})
+    runs-on: ubuntu-latest
+
+    permissions:
+      security-events: write
+      contents: read
+
+    strategy:
+      fail-fast: false
+      matrix:
+        language: ["python", "javascript"]
+        # "javascript" covers both JS and TypeScript — do NOT add
+        # "typescript" as a separate entry (CodeQL would error).
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: ${{ matrix.language }}
+          queries: security-extended
+          # security-extended: broader coverage than default suite.
+          # Known limitation: does not cover LLM prompt injection
+          # (f-string concatenation into prompt templates) or YAML
+          # safe_load regressions. Use manual security-review agent
+          # or future Semgrep rules for those.
+
+      - name: Autobuild
+        uses: github/codeql-action/autobuild@v3
+
+      - name: Perform CodeQL analysis
+        uses: github/codeql-action/analyze@v3
+        with:
+          category: "/language:${{ matrix.language }}"

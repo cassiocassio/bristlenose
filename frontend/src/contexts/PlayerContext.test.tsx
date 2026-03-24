@@ -76,7 +76,7 @@ function postPlayerMessage(data: unknown) {
 // ── Setup / teardown ─────────────────────────────────────────────────────
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-let openSpy: ReturnType<typeof vi.spyOn<any, any>>;
+let openSpy: any;
 
 beforeEach(() => {
   // Provide video map and player URL globals

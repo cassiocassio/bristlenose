@@ -46,9 +46,9 @@ const tagCounts: Record<string, number> = {
 
 function renderFilter(overrides: Partial<{
   tagFilter: TagFilterState;
-  onTagFilterChange: ReturnType<typeof vi.fn>;
+  onTagFilterChange: (filter: TagFilterState) => void;
   isOpen: boolean;
-  onToggle: ReturnType<typeof vi.fn>;
+  onToggle: (open: boolean) => void;
 }> = {}) {
   const onTagFilterChange = overrides.onTagFilterChange ?? vi.fn();
   return {

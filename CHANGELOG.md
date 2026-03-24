@@ -2,6 +2,11 @@
 
 All notable changes to Bristlenose are documented here. See also the [README](README.md) for the latest releases.
 
+**0.14.2** — _24 Mar 2026_
+
+- **Localhost bearer token** — defence-in-depth API access control for serve mode. Per-session `secrets.token_urlsafe(32)` validated via Starlette middleware on `/api/*` and `/media/*` routes. Token injected into SPA HTML and desktop app WKWebView
+- **Fix: TOC sidebar empty** — left-hand contents navigation on the Quotes tab was broken by the auth middleware (raw `fetch()` lacked the bearer token). Switched to `apiGet()` helper
+
 **0.14.1** — _24 Mar 2026_
 
 - **French, German, Korean locales** — machine-translated all 8 namespace files (common, settings, enums, cli, pipeline, server, doctor, desktop) for fr, de, ko. Cross-checked against Apple macOS glossaries and ATLAS.ti/MAXQDA research terminology. Native reviewer docs added for German and French

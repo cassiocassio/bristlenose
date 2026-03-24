@@ -320,8 +320,8 @@ When the user signals end of session, **proactively offer to run this checklist*
 9. **Clean up branches** — delete merged feature branches
 10. **Verify CI** — check latest push passes CI
 
-## Current status (v0.14.1, Mar 2026)
+## Current status (v0.14.2, Mar 2026)
 
-Core pipeline published to PyPI + Homebrew + Snap. Latest: **French, German, Korean locales** — 5 languages total (en, es, fr, de, ko), machine-translated across all 8 namespaces. Contextual left-panel labels in desktop app. Inspector panel, codebook sidebar, finding flags, Settings + Help modals with shared ModalNav. Static render formally deprecated. 1965 Python tests, 1248 Vitest tests. React migration complete (Steps 1–10). See `CHANGELOG.md` and git log for full history.
+Core pipeline published to PyPI + Homebrew + Snap. Latest: **Localhost bearer token** for serve mode API access control, 5 languages (en, es, fr, de, ko). Inspector panel, codebook sidebar, finding flags, Settings + Help modals with shared ModalNav. Static render formally deprecated. 2017 Python tests, 1248 Vitest tests. React migration complete (Steps 1–10). See `CHANGELOG.md` and git log for full history.
 
 **Next up:** See `TODO.md` for full task list.

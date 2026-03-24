@@ -388,6 +388,11 @@ Edit `bristlenose/__init__.py` (the single source of truth for version), commit,
 
 ## Changelog
 
+**0.14.2** — _24 Mar 2026_
+
+- Localhost bearer token for serve mode API access control
+- Fix: TOC sidebar empty after auth middleware added
+
 **0.14.1** — _24 Mar 2026_
 
 - French, German, Korean locales — machine-translated across all 8 namespace files, cross-checked against Apple and ATLAS.ti glossaries

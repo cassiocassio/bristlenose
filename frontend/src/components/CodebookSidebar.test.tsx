@@ -94,7 +94,7 @@ const TEMPLATES_RESPONSE = {
 // ── Setup ──────────────────────────────────────────────────────────
 
 beforeEach(() => {
-  vi.restoreAllMocks();
+  vi.clearAllMocks();
   mockApiGet.mockResolvedValue(PROJECT_INFO);
   mockGetCodebook.mockResolvedValue(CODEBOOK_RESPONSE);
   mockGetCodebookTemplates.mockResolvedValue(TEMPLATES_RESPONSE);

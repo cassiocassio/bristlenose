@@ -175,7 +175,8 @@ const emptyCbData: CodebookAnalysisListResponse = {
 // Setup
 // ---------------------------------------------------------------------------
 
-let fetchMock: ReturnType<typeof vi.fn>;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let fetchMock: any;
 
 beforeEach(() => {
   fetchMock = vi.fn();

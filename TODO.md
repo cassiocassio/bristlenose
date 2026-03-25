@@ -205,7 +205,7 @@ Multi-column quote grid using CSS `auto-fill`. Card max-width `23rem` (368px) ke
 | Session enable/disable toggle (temporary exclusion from analysis) | — | medium |
 | Delete/quarantine session from UI (`.bristlenose-ignore`) | — | medium |
 | Re-run pipeline from serve mode (background, with progress) | — | large |
-| Pipeline resilience Phase 2b — verify hashes on load | — | small |
+| ~~Pipeline resilience Phase 2b — verify hashes on load~~ | — | ~~small~~ |
 | Pipeline resilience Phase 2c — input change detection | — | medium |
 | Moderator Phase 2: cross-session linking | #25 | medium |
 | Speaker diarisation improvements | #26 | medium |
@@ -544,6 +544,7 @@ See `docs/design-serve-doctor.md` for full design. Summary: 4 new doctor checks,
 - [x] **Video thumbnails** — auto-extracted keyframes, heuristic placement
 - [x] **Analysis page** — signal cards, heatmaps, codebook grids, drill-down
 - [x] **Pipeline crash recovery** (Phase 1a–1d-ext) — manifest-based resume, per-session tracking
+- [x] **Pipeline resilience Phase 2b** — verify content hashes on load, manifest invalidation on mismatch, lazy LLM client init
 - [x] **Phase 1 codebook import** — picker, preview, import, remove with impact stats
 - [x] **Desktop app scaffold** — SwiftUI macOS shell, 5-state launcher, bundled sidecar
 - [x] **Time estimation** — Welford's online algorithm, progressive disclosure

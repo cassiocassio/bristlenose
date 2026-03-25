@@ -200,6 +200,7 @@ Status is orthogonal to active selection. Providers don't expose balance, free-t
 
 ## Key conventions
 
+- **Bundle ID: `research.bristlenose.app`** — product identity, not parent company. Irrevocable after first App Store submission. Changed from `CassioCassio.Bristlenose` (25 Mar 2026). v0.1-archive retains old ID (frozen snapshot). Full infrastructure plan: `docs/private/infrastructure-and-identity.md`
 - **macOS 15.0** (Sequoia) deployment target
 - **Swift 6 concurrency** — `SWIFT_DEFAULT_ACTOR_ISOLATION = nonisolated` in build settings. Mark classes `@MainActor` explicitly
 - **`@StateObject`** at App level for ServeManager/BridgeHandler, `@EnvironmentObject` in views

@@ -111,8 +111,8 @@ describe("HelpModal — navigation", () => {
     render(<HelpModal {...defaultProps} />);
     const nav = screen.getByRole("navigation", { name: "Help sections" });
     const buttons = within(nav).getAllByRole("button");
-    // Help, Shortcuts, Signals, Codebook, About (disclosure)
-    expect(buttons.length).toBe(5);
+    // Help, Shortcuts, Signals, Codebook, Privacy, About (disclosure)
+    expect(buttons.length).toBe(6);
   });
 
   it("defaults to Help section", () => {

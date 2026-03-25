@@ -376,6 +376,185 @@ Typography token migration, spacing refinement, card entrance animation (always-
 
 Pure CSS tooltips with platform-aware `<kbd>` badges. `<Tooltip>` component wraps trigger elements; hover delay via `transition-delay: 0.3s` in `atoms/tooltip.css`. No JS hook needed — CSS handles the timing. Applied to: search toggle (`/`), TOC rail button (`[`), tag rail button (`]`). Uses same `renderShortcutBadge()` logic as HelpModal (Mac glyphs vs text labels). `aria-describedby` links trigger to tooltip for accessibility. 10 tests.
 
+### Phase 4: iA Writer-inspired layout v2 (future)
+
+**Status:** Design only
+**Date:** 25 Mar 2026
+**Reference:** iA Writer keyboard shortcuts help window (macOS)
+
+#### What iA Writer gets right
+
+iA Writer's keyboard shortcuts window is unusually easy to scan. Four properties make it work:
+
+1. **Central gutter** — keys are right-aligned, descriptions are left-aligned, meeting at a consistent vertical line. Your eye locks onto the gutter and reads in both directions from there
+
+2. **Fixed-width key caps** — every modifier glyph and letter occupies an identical-width box, forming a strict grid. Not just `min-width` — true uniform width from a monospace typeface. The caps form columns, not a ragged edge
+
+3. **Sort by primary key within subgroups** — all shortcuts sharing the same letter cluster together (all K shortcuts, all L shortcuts, all D shortcuts). Modifiers (⌘, ⇧, ⌥, ⌃) stack to the left as variant markers, not sort keys. This means the rightmost column (the letter) reads alphabetically, creating a scannable index
+
+4. **Two-level scan** — find the letter first (fast vertical scan down the right edge of the key column), then read the modifiers to the left for the specific variant. Same cognitive pattern as scanning an alphabetical index
+
+#### Four display contexts
+
+Phases 1–3 implemented two display paths (Mac vs non-Mac). v2 requires **four**, because the desktop app reclaims browser-trapped shortcuts and has its own extras:
+
+| Context | Platform detection | Modifier style | Extra shortcuts |
+|---------|-------------------|----------------|-----------------|
+| **macOS native** (desktop app) | `isDesktop() && isMac()` | Glyphs: `⌘⇧⌥⌃`, no separator | ⌘F (find), ⌘1–5 (tabs), ⌘[ / ⌘] (back/forward), ⌘⌥S/L/T (panels), ⇧⌘E (export), ⌘G / ⇧⌘G (find next/prev), ⌘E (use selection for find) |
+| **macOS browser** (serve mode) | `!isDesktop() && isMac()` | Glyphs: `⌘⇧`, no separator | Base set only (browser traps ⌘F, ⌘1–5, etc.) |
+| **Windows browser** | `!isMac()` (Windows UA) | Text: `Ctrl+`, `Shift+`, `Alt+` | Base set only |
+| **Linux browser** | `!isMac()` (Linux UA) | Text: `Ctrl+`, `Shift+`, `Alt+` | Base set only |
+
+Windows and Linux share identical display (already the case in Phases 1–3 — see "Decision: two display paths" above). The new axis is **desktop vs browser on macOS**, which determines whether reclaimed shortcuts (⌘F, ⌘1–5, etc.) appear.
+
+Detection already exists: `isMac()` in `frontend/src/utils/platform.ts`, `isDesktop()` checks `data-platform="desktop"` attribute. The four contexts collapse to two decision branches: `isDesktop()` (extra shortcuts) and `isMac()` (glyph style).
+
+##### Shortcut superset for desktop native
+
+The help modal in the desktop app should show the **union** of web shortcuts and desktop-only shortcuts (already documented in "Desktop app shortcut mapping" above). These are registered in `MenuCommands.swift` and dispatched via `bridgeHandler.menuAction()`. The web help modal omits them because the browser traps those key combos.
+
+Proposed desktop-native grouping:
+
+- **Quotes** — j/k, ↑/↓, x, ⇧J/⇧K, s, h, t, r, Enter (same as web)
+- **Find** — ⌘F (search), ⌘G (next), ⇧⌘G (previous), ⌘E (use selection) — **desktop only**
+- **Navigation** — ⌘1–5 (tabs), ⌘[ (back), ⌘] (forward) — **desktop only**
+- **Sidebars** — [ (TOC), ] (tags), \ or ⌘. (both), ⌘⌥S (project), ⌘⌥L (navigation), ⌘⌥T (tags) — mixed: bare keys shared, ⌘⌥ variants desktop only
+- **Global** — / (search, web only — desktop uses ⌘F), m (heatmap), ? (help), Esc (dismiss), ⌘, (settings), ⇧⌘E (export)
+
+##### macOS Tips app (future consideration)
+
+macOS apps can provide keyboard shortcut discovery through the system Tips framework (`TipKit`) rather than a custom modal. Tips appear as native popovers attached to UI elements, with the system managing frequency, dismissal, and "already learned" state. This is how Apple's own apps (Keynote, Photos, Finder) teach shortcuts progressively.
+
+For the desktop app, this could eventually replace or supplement the `?` help modal — the native Tips UI is more discoverable (appears proactively), more accessible (VoiceOver integration for free), and consistent with the platform. The web serve mode would keep the React modal since TipKit isn't available in browsers.
+
+Not in v2 scope — noted here so the v2 data model doesn't preclude it. The `KeyCombo` interface and shortcut data arrays should remain extractable (not coupled to React rendering) so a Swift-side consumer could read the same shortcut definitions.
+
+#### v2 changes
+
+##### 1. Monospace font on `<kbd>`
+
+**Current:** `font-family: var(--bn-font-body)` (Inter Variable) — proportional. `m` is wider than `i`, breaking the grid alignment that makes iA Writer scan well.
+
+**v2:** Switch `<kbd>` to a monospace stack:
+
+```css
+.help-modal kbd {
+    font-family: "SF Mono", "Cascadia Code", "Fira Code", ui-monospace, monospace;
+}
+```
+
+- **SF Mono** — ships with macOS, matches system UI. Apple's own help windows use it for key caps
+- **Cascadia Code** — ships with Windows Terminal, Microsoft's monospace equivalent
+- **Fira Code** — common on Linux developer machines
+- **`ui-monospace`** — CSS generic for the platform's preferred monospace
+- The rest of the help modal stays Inter. The contrast between monospace keys and proportional descriptions aids scanning — keys are "data", descriptions are "prose"
+
+**Existing code this touches:**
+- `bristlenose/theme/molecules/help-overlay.css` line 81: `font-family: var(--bn-font-body)` → monospace stack
+- Consider adding a `--bn-font-mono` token to `bristlenose/theme/tokens-typography.css` (we don't have one yet — check if it's useful elsewhere e.g. code blocks in transcript pages)
+
+##### 2. Uniform key cap width
+
+**Current:** `min-width: 1.1em` (line 79 of `help-overlay.css`) — gives a minimum but doesn't enforce uniformity. A `j` cap and an `Enter` cap have different widths.
+
+**v2:** Use `ch` units for character-based sizing:
+
+```css
+.help-modal kbd {
+    min-width: 2ch;  /* single-char keys get uniform boxes */
+}
+```
+
+With a monospace font, `1ch` = exact character width, so `2ch` gives comfortable padding for single-character keys while letting multi-character keys (`Esc`, `Enter`, `Shift+J`) size naturally via their padding. The grid alignment comes from the monospace font making all single characters identical width, not from forcing a pixel size.
+
+**Existing code this touches:**
+- `bristlenose/theme/molecules/help-overlay.css` line 79: `min-width: 1.1em` → `min-width: 2ch`
+
+##### 3. "or" connector instead of `/` separator
+
+**Current:** Alternative keys use `/` in a `<span class="help-key-sep">` (e.g. `j / ↓`). The `/` could be mistaken for a key or punctuation.
+
+**v2:** Replace with a muted "or" word:
+
+```tsx
+// Before
+{i > 0 && <span className="help-key-sep">/</span>}
+
+// After
+{i > 0 && <span className="help-key-or">{t("help.shortcuts.or")}</span>}
+```
+
+```css
+.help-key-or {
+    padding: 0 0.3em;
+    font-size: 0.7rem;
+    color: var(--bn-colour-muted);
+    font-style: italic;
+    vertical-align: baseline;
+}
+```
+
+Small, pale, italic — clearly not a key. Applies to: `j or ↓`, `k or ↑`, `⇧J or ⇧K`, `\ or ⌘.`
+
+**Existing code this touches:**
+- `frontend/src/components/about/ShortcutsSection.tsx` line 100: `/` separator in `renderKeys()`
+- `bristlenose/theme/molecules/help-overlay.css`: add `.help-key-or` class
+- `bristlenose/locales/{en,es,fr,de,ko}/common.json`: add `help.shortcuts.or` key ("or" / "o" / "ou" / "oder" / "또는")
+
+##### 4. Sort by primary key within subgroups
+
+**Current sort order** (in `useSections()`, `ShortcutsSection.tsx` lines 25–71):
+- Navigation: j, k (already alphabetical)
+- Selection: x, ⇧J/⇧K (only 2 entries)
+- Actions: s, h, t, r, Enter (not alphabetical — s, h, t, r)
+- Global: /, [, ], \, ⌘., m, ?, Esc (mixed)
+
+**v2 sort order** (alphabetical by primary key letter within each subgroup):
+- Navigation: j/↓, k/↑ ✓ (already correct)
+- Selection: ⇧J/⇧K, x (J before X)
+- Actions: Enter, h, r, s, t (E, h, r, s, t)
+- Global: /, ?, [, \, ], Esc, m, ⌘. (symbols, then letters, then multi-char keys)
+
+This is the change that makes the letter column scannable as a vertical index — the iA Writer trick. The cognitive cost is that actions no longer group by "importance" (star first), but the scanning benefit outweighs this since users are looking up a specific key, not reading the list top-to-bottom.
+
+**Existing code this touches:**
+- `frontend/src/components/about/ShortcutsSection.tsx`: reorder items in the arrays returned by `useSections()`
+- `frontend/src/components/about/ShortcutsSection.test.tsx`: update snapshot/order expectations
+
+#### What we keep unchanged
+
+Everything from Phases 1–3 that still works:
+
+- **`KeyCombo` interface** (`ShortcutsSection.tsx` line 15): `{ modifier?: "shift" | "cmd"; key: string }` — still the right data model. May need `"opt"` and `"ctrl"` variants for desktop-only shortcuts
+- **`renderKeyCombo()` platform logic** (lines 73–95): Mac glyphs vs text labels with `+` separator — correct, well-tested
+- **`isMac()` detection** (`platform.ts`): memoised, modern API with fallback — solid
+- **`isDesktop()` detection** (`platform.ts`): `data-platform="desktop"` attribute — already exists
+- **Phase 2 visual polish**: token migration, `var(--bn-space-sm)` row gap, entrance animation (scale 0.97→1), always-render pattern, `aria-hidden` — all keep
+- **Phase 3 tooltips**: CSS-only `<Tooltip>` component, `renderShortcutBadge()` shared logic, `aria-describedby` — independent of layout changes, keep
+- **`dl` grid layout** (`help-overlay.css` lines 49–55): `grid-template-columns: auto 1fr`, right-aligned `dt`, baseline alignment — this IS the central gutter pattern, already correct
+- **Dark mode `kbd` shadow** (lines 94–98): `light-dark()` conditional — keep
+- **Uppercase convention**: keys with modifiers uppercased (`⇧J` not `⇧j`) — matches Apple, keep
+- **i18n wiring**: `useTranslation()` in `useSections()`, all description keys in 5 locale files — keep
+- **Desktop bridge**: `bn:menu-action` CustomEvent from `MenuCommands.swift` → `useKeyboardShortcuts.ts` — the handler side is fine, v2 is display-only
+
+#### Deferred ideas (not in v2)
+
+- **Hierarchical grouping** (groups containing subgroups, like iA Writer's "Editing > Structure / Formatting") — reconsider when the shortcut count grows past ~30. Current 17 web + 11 desktop = 28 total, borderline. The four-context model may push this over the threshold
+- **macOS Tips integration** (TipKit) — native progressive disclosure for the desktop app. See note above
+- **"Shortcuts you've used" highlighting** — tracking shortcut usage in a store, dimming unused ones. Phase 5 idea
+- **Search within shortcuts** — filter-as-you-type in the help modal. Only useful at 40+ shortcuts
+- **Printable cheat sheet** — PDF/image export of the shortcuts grid. Nice-to-have for onboarding
+
+#### Files to modify (when implementing)
+
+| File | Change |
+|------|--------|
+| `bristlenose/theme/molecules/help-overlay.css` | `kbd` font-family → monospace stack, `min-width` → `2ch`, add `.help-key-or` class |
+| `bristlenose/theme/tokens-typography.css` | Consider adding `--bn-font-mono` token |
+| `frontend/src/components/about/ShortcutsSection.tsx` | Sort order, "or" connector, `KeyCombo.modifier` extend for desktop extras, conditional desktop sections via `isDesktop()` |
+| `frontend/src/components/about/ShortcutsSection.test.tsx` | Update for new order, "or" connector, desktop context |
+| `bristlenose/locales/{en,es,fr,de,ko}/common.json` | Add `help.shortcuts.or`, new group names, desktop-only shortcut descriptions |
+
 ## File map
 
 ```
@@ -388,12 +567,22 @@ frontend/src/
     HelpModal.test.tsx   ← Phase 1–2 shipped: updated for always-render
     Tooltip.tsx          ← Phase 3 shipped: CSS tooltip with kbd badges
     Tooltip.test.tsx     ← Phase 3 shipped: 10 tests
+    about/
+      ShortcutsSection.tsx      ← Phase 4: sort, "or", desktop sections
+      ShortcutsSection.test.tsx ← Phase 4: updated tests
   hooks/
     useKeyboardShortcuts.ts  ← NO CHANGE (already cross-platform)
 
 bristlenose/theme/
+  tokens-typography.css  ← Phase 4: consider --bn-font-mono token
   molecules/
-    help-overlay.css     ← Phase 1–2 shipped: tokens, spacing, animation, dark kbd
+    help-overlay.css     ← Phase 1–2 shipped + Phase 4: monospace kbd, 2ch width, .help-key-or
   atoms/
     tooltip.css          ← Phase 3 shipped: tooltip positioning, animation, kbd badges
+
+bristlenose/locales/
+  {en,es,fr,de,ko}/common.json  ← Phase 4: "or" key, group names, desktop descriptions
+
+desktop/Bristlenose/Bristlenose/
+  MenuCommands.swift     ← Reference only (source of desktop-only shortcuts)
 ```

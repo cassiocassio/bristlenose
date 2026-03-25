@@ -255,7 +255,7 @@ describe("HelpModal — responsive dropdown", () => {
     const select = screen.getByRole("combobox", { name: "Help section" });
     expect(select).toBeTruthy();
     const options = within(select).getAllByRole("option");
-    // Help, Shortcuts, Signals, Codebook + About children (Developer, Design, Contributing) = 7
-    expect(options.length).toBe(7);
+    // Help, Shortcuts, Signals, Codebook, Privacy + About children (Developer, Design, Contributing, Acknowledgements) = 9
+    expect(options.length).toBe(9);
   });
 });

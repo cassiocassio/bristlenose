@@ -143,8 +143,8 @@
   "export": {
     "heading": "보고서 내보내기",
     "subtitle": "누구나 브라우저에서 열 수 있는 독립형 HTML 파일을 다운로드합니다.",
-    "anonymise": "참가자 익명화",
-    "anonymiseHint": "참가자 이름을 제거하고 코드(p1, p2)를 유지합니다. 진행자 이름은 보존됩니다.",
+    "anonymise": "라벨에서 참가자 이름 제거",
+    "anonymiseHint": "메타데이터, 파일 이름 및 발화자 라벨에서 이름을 제거합니다. 코드(p1, p2)는 유지됩니다. 진행자 이름은 보존됩니다. 인용문 텍스트 내의 이름은 제거되지 않습니다.",
     "exporting": "내보내는 중\u2026",
     "exportFailed": "내보내기 실패"
   },
@@ -174,6 +174,7 @@
     "navDeveloper": "개발자",
     "navDesign": "디자인",
     "navContributing": "기여",
+    "navAcknowledgements": "감사의 글",
     "shortcuts": {
       "navigation": "탐색",
       "nextQuote": "다음 인용문",
@@ -219,6 +220,12 @@
       "linkGuide": "\uae30\uc5ec \uac00\uc774\ub4dc",
       "linkBug": "\ubc84\uadf8 \uc2e0\uace0",
       "linkSource": "\uc18c\uc2a4 \ucf54\ub4dc"
+    },
+    "acknowledgements": {
+      "intro": "Bristlenose\ub294 \ub2e4\uc74c \uc624\ud508 \uc18c\uc2a4 \ud504\ub85c\uc81d\ud2b8\ub85c \uc81c\uc791\ub418\uc5c8\uc2b5\ub2c8\ub2e4.",
+      "python": "Python \ubc31\uc5d4\ub4dc",
+      "frontend": "\ud504\ub860\ud2b8\uc5d4\ub4dc",
+      "ai": "AI \uc81c\uacf5\uc790"
     },
     "codebook": {
       "sectionsTitle": "\uc139\uc158\uacfc \ud14c\ub9c8",

@@ -98,7 +98,9 @@
       "bristlenoseHelp": "Bristlenose 도움말",
       "keyboardShortcuts": "키보드 단축키",
       "releaseNotes": "릴리스 노트",
-      "sendFeedback": "피드백 보내기"
+      "sendFeedback": "피드백 보내기…",
+      "blog": "Substack\uc758 Bristlenose",
+      "acknowledgements": "감사의 글"
     }
   },
   "chrome": {

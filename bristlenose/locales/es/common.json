@@ -153,8 +153,8 @@
   "export": {
     "heading": "Exportar informe",
     "subtitle": "Descarga un archivo HTML autónomo que cualquiera puede abrir en un navegador.",
-    "anonymise": "Anonimizar participantes",
-    "anonymiseHint": "Eliminar nombres de participantes, mantener códigos (p1, p2). Los nombres de moderadores se conservan.",
+    "anonymise": "Eliminar nombres de participantes de las etiquetas",
+    "anonymiseHint": "Elimina nombres de metadatos, nombres de archivo y etiquetas de hablantes. Conserva los códigos (p1, p2). Los nombres de moderadores se conservan. Los nombres dentro del texto de las citas NO se eliminan.",
     "exporting": "Exportando\u2026",
     "exportFailed": "La exportación falló"
   },
@@ -184,6 +184,7 @@
     "navDeveloper": "Desarrollador",
     "navDesign": "Diseño",
     "navContributing": "Contribuir",
+    "navAcknowledgements": "Agradecimientos",
     "shortcuts": {
       "navigation": "Navegación",
       "nextQuote": "Siguiente cita",
@@ -229,6 +230,12 @@
       "linkGuide": "Guía de contribución",
       "linkBug": "Reportar un error",
       "linkSource": "Código fuente"
+    },
+    "acknowledgements": {
+      "intro": "Bristlenose está construido con estos proyectos de código abierto.",
+      "python": "Backend Python",
+      "frontend": "Frontend",
+      "ai": "Proveedores de IA"
     },
     "codebook": {
       "sectionsTitle": "Secciones y temas",

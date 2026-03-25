@@ -152,8 +152,8 @@
   "export": {
     "heading": "Bericht exportieren",
     "subtitle": "Laden Sie eine eigenständige HTML-Datei herunter, die jeder in einem Browser öffnen kann.",
-    "anonymise": "Teilnehmer anonymisieren",
-    "anonymiseHint": "Teilnehmernamen entfernen, Codes beibehalten (p1, p2). Moderatorennamen bleiben erhalten.",
+    "anonymise": "Teilnehmernamen aus Beschriftungen entfernen",
+    "anonymiseHint": "Entfernt Namen aus Metadaten, Dateinamen und Sprecherbezeichnungen. Behält Codes (p1, p2) bei. Moderatorennamen bleiben erhalten. Namen im Zitattext werden NICHT entfernt.",
     "exporting": "Wird exportiert\u2026",
     "exportFailed": "Export fehlgeschlagen"
   },
@@ -183,6 +183,7 @@
     "navDeveloper": "Entwickler",
     "navDesign": "Design",
     "navContributing": "Mitwirken",
+    "navAcknowledgements": "Danksagungen",
     "shortcuts": {
       "navigation": "Navigation",
       "nextQuote": "Nächstes Zitat",
@@ -228,6 +229,12 @@
       "linkGuide": "Beitragsanleitung",
       "linkBug": "Fehler melden",
       "linkSource": "Quellcode"
+    },
+    "acknowledgements": {
+      "intro": "Bristlenose basiert auf diesen Open-Source-Projekten.",
+      "python": "Python-Backend",
+      "frontend": "Frontend",
+      "ai": "KI-Anbieter"
     },
     "codebook": {
       "sectionsTitle": "Abschnitte und Themen",

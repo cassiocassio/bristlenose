@@ -18,9 +18,11 @@ import {
   ShortcutsSection,
   SignalsSection,
   CodebookSection,
+  PrivacySection,
   DeveloperSection,
   DesignSection,
   ContributingSection,
+  AcknowledgementsSection,
 } from "./about";
 import type { DevInfoResponse } from "./about";
 import type { HealthResponse } from "../utils/health";
@@ -55,6 +57,7 @@ export function HelpModal({
     { id: "shortcuts", label: t("help.navShortcuts") },
     { id: "signals", label: t("help.navSignals") },
     { id: "codebook", label: t("help.navCodebook") },
+    { id: "privacy", label: t("help.navPrivacy") },
     {
       id: "about",
       label: t("help.navAbout"),
@@ -62,6 +65,7 @@ export function HelpModal({
         { id: "developer", label: t("help.navDeveloper") },
         { id: "design", label: t("help.navDesign") },
         { id: "contributing", label: t("help.navContributing") },
+        { id: "acknowledgements", label: t("help.navAcknowledgements") },
       ],
     },
   ], [t, i18n.language]);
@@ -108,6 +112,9 @@ export function HelpModal({
     case "codebook":
       content = <CodebookSection />;
       break;
+    case "privacy":
+      content = <PrivacySection />;
+      break;
     case "developer":
       content = <DeveloperSection info={devInfo} />;
       break;
@@ -116,6 +123,9 @@ export function HelpModal({
       break;
     case "contributing":
       content = <ContributingSection />;
+      break;
+    case "acknowledgements":
+      content = <AcknowledgementsSection />;
       break;
     default:
       content = null;

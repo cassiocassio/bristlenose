@@ -609,5 +609,15 @@ private struct HelpMenuContent: View {
         Button(i18n.t("desktop.menu.help.sendFeedback")) {
             bridgeHandler.menuAction("sendFeedback")
         }
+
+        Divider()
+
+        Button(i18n.t("desktop.menu.help.blog")) {
+            bridgeHandler.menuAction("openBlog")
+        }
+
+        Button(i18n.t("desktop.menu.help.acknowledgements")) {
+            bridgeHandler.menuAction("showAcknowledgements")
+        }
     }
 }

@@ -24,7 +24,8 @@ BridgeHandler.swift           Inbound state + outbound actions + menuAction disp
 ServeManager.swift            Process lifecycle + startup zombie cleanup + prefs overlay
 WebView.swift                 WKWebView + security policy + KVO observations
 KeychainHelper.swift          Credential storage via native Security.framework (SecItem* APIs)
-LLMProvider.swift             Provider enum + ProviderStatus enum + notification name
+LLMProvider.swift             Provider enum + ProviderStatus enum + notification names
+AIConsentView.swift           First-run AI data disclosure (Apple 5.1.2(i)) + audit log
 SettingsView.swift            TabView wrapper (3 icon tabs)
 AppearanceSettingsView.swift  Theme radio + language dropdown
 LLMSettingsView.swift         Mail Accounts pattern — provider list + detail pane
@@ -277,6 +278,8 @@ The `#if DEBUG` guard on the dev port override means release builds never see it
 - **Navigation shims use module-level refs (not closures)** — `installNavigationShims()` in `frontend/src/shims/navigation.ts` stores `navigate` and `scrollToAnchor` in module-level variables. The `window.switchToTab` etc. functions read from these refs instead of closing over the parameters directly. This prevents a stale-closure bug where the initial `navigate` captured at mount doesn't work until the router is fully ready. The `useEffect` in `AppLayout.tsx` calls `installNavigationShims` on every `navigate`/`scrollToAnchor` change — the window functions are installed once (idempotent guard) but the refs always update
 - **`callAsyncJavaScript` error handling** — `BridgeHandler.switchToTab()` and `menuAction()` use `do/catch` (not `try?`) so JavaScript errors are logged to Xcode console. If a bridge call silently fails, check the console for `[BridgeHandler] ... FAILED:` messages
 - **`NSWindow.accessibilityLanguage` doesn't exist** — VoiceOver language for web content is set via `syncLocale()` (bridge → HTML `lang` attribute). Native SwiftUI elements inherit the system language. Don't try to set accessibility language on NSWindow directly
+- **Consent version bumping** — when AI disclosure content materially changes (new cloud provider, new data category sent to LLMs), bump `AIConsentView.currentVersion`. The dialog re-shows for users who acknowledged a lower version. Bump for: adding a new cloud provider, sending a new data type. Don't bump for: copy tweaks, layout changes, adding Ollama features
+- **Serve process gated on consent** — `serveManager.start()` is only called after `aiConsentVersion >= AIConsentView.currentVersion` (checked in `.onChange(of: selectedProject)`). When consent is granted (version updated), `.onChange(of: consentVersion)` starts serve for the already-selected project. This prevents any data leaving the machine before the user has seen the AI data disclosure (Apple Guideline 5.1.2(i))
 
 ## Wiring menu actions (bridge handler cookbook)
 

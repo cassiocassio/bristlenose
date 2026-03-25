@@ -2,6 +2,7 @@
   "menu": {
     "app": {
       "about": "Acerca de Bristlenose",
+      "aiPrivacy": "IA y privacidad…",
       "checkHealth": "Verificar estado del sistema…"
     },
     "file": {
@@ -134,5 +135,26 @@
     "appearance": "Apariencia",
     "llm": "LLM",
     "transcription": "Transcripción"
+  },
+  "aiConsent": {
+    "title": "Análisis con IA",
+    "intro": "Bristlenose utiliza IA para analizar las transcripciones de sus entrevistas. Cuando usa un proveedor en la nube, los datos de la transcripción se envían a los servidores de ese proveedor para su procesamiento.",
+    "notUsedForTraining": "Sus datos no se utilizan para entrenar modelos de IA. Consulte los términos de cada proveedor para conocer sus políticas de retención de datos.",
+    "sentToCloudLabel": "Enviado al proveedor en la nube elegido",
+    "sentItem1": "Transcripciones procesadas (con eliminación de datos personales aplicada primero, si está habilitada)",
+    "sentItem2": "Códigos de hablante y marcas de tiempo",
+    "sentItem3": "Solicitudes de análisis (segmentación temática, extracción de citas, agrupación temática)",
+    "sentSummary": "Datos enviados al proveedor en la nube: transcripciones procesadas, códigos de hablante y solicitudes de análisis",
+    "staysLocalLabel": "Siempre permanece en su dispositivo",
+    "localItem1": "Grabaciones de audio y vídeo originales",
+    "localItem2": "Nombres de participantes, información de contacto y datos personales",
+    "localItem3": "Sus ediciones, etiquetas y personalizaciones del informe",
+    "localSummary": "Datos que permanecen en su dispositivo: grabaciones, datos personales y sus ediciones",
+    "providersIntro": "Proveedores en la nube que pueden procesar sus datos:",
+    "ollamaCallout": "Ollama se ejecuta completamente en su dispositivo. Ningún dato sale de su máquina.",
+    "researcherResponsibility": "Asegúrese de que los participantes hayan sido informados de que sus datos de entrevista pueden ser procesados por servicios de IA de terceros, según lo requiera la aprobación de su comité de ética.",
+    "continue": "Continuar",
+    "useOllama": "Usar Ollama (sin nube)",
+    "done": "Listo"
   }
 }

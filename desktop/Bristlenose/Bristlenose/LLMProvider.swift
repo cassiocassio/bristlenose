@@ -150,4 +150,6 @@ extension Notification.Name {
     /// Posted when any LLM or transcription preference changes.
     /// ServeManager listens to this to auto-restart the serve process.
     static let bristlenosePrefsChanged = Notification.Name("bristlenosePrefsChanged")
+    /// Posted by the app menu to re-show the AI data disclosure sheet.
+    static let showAIConsentSheet = Notification.Name("showAIConsentSheet")
 }

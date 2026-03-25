@@ -119,11 +119,12 @@ Bristlenose has ~30 direct + transitive deps across Python, ML, LLM SDKs, and NL
 | `docs/design-react-component-library.md` | 16-primitive component library (complete) |
 | `docs/design-llm-providers.md` | Provider roadmap |
 | `docs/design-performance.md` | Performance audit |
-| `docs/design-export-sharing.md` | Export and sharing phases 0–5 |
+| `docs/design-export-sharing.md` | Export and sharing phases 0–5 (**superseded** — see 4 feature docs below) |
 | `docs/design-export-slides.md` | Export dropdown (scope→format), per-quote copy icon, PowerPoint quote slides |
 | `docs/design-export-quotes.md` | CSV + XLS spreadsheet export (11-column table) |
 | `docs/design-export-clips.md` | Video clip extraction via FFmpeg |
-| `docs/design-export-html.md` | Self-contained HTML export (React SPA bundle) |
+| `docs/design-export-html.md` | Self-contained HTML export + cross-cutting export concerns |
+| `docs/design-miro-bridge.md` | Miro API integration (OAuth, board creation, layout — post-beta) |
 | `docs/design-html-report.md` | HTML report, people file, transcript pages |
 | `docs/design-responsive-layout.md` | Responsive layout, density setting, breakpoints |
 | `docs/design-doctor-and-snap.md` | Doctor command, snap packaging |
@@ -144,6 +145,7 @@ Bristlenose has ~30 direct + transitive deps across Python, ML, LLM SDKs, and NL
 
 ## Done (reverse chronological)
 
+- [x] **Export security + design docs** (Mar 2026) — XSS fix (`ensure_ascii=True`), `safe_filename()` utility (21 tests), path stripping from exports, anonymise label clarity (5 locales). Split `design-export-sharing.md` monolith into 4 focused design docs: HTML, quotes, clips, Miro. Cross-cutting concerns (anonymisation matrix, shared infrastructure, audit logging) documented in `design-export-html.md`
 - [x] **Pipeline resilience Phase 2b** (Mar 2026) — verify content hashes on load, manifest invalidation on mismatch, lazy LLM client init
 - [x] **Frontend deps bump** (Mar 2026) — Vite 8, TypeScript 6, ESLint 10, Vitest 4
 - [x] **Bearer token auth** (Mar 2026) — localhost bearer token for serve mode API access control

@@ -115,6 +115,8 @@ macOS ships BSD versions of `sed`, `grep`, `awk`, `find`, `xargs`, `date`, `stat
 
 ### Other gotchas
 
+- **Export JSON: always `ensure_ascii=True`** — `json.dumps(ensure_ascii=False)` does NOT escape `</script>` inside `<script>` tags. This is an XSS vector. The export endpoint embeds data as JSON in a script block — `ensure_ascii=True` escapes `<` as `\u003c`, preventing breakout. Fixed in v0.14.2
+- **Export filenames: use `safe_filename()` not `slugify()`** — `slugify()` lowercases and hyphenates (`"Acme Research"` → `"acme-research"`). `safe_filename()` preserves spaces and case for human-readable Finder names. Both are in `bristlenose/utils/text.py`. Use `safe_filename()` for all export naming (zip folders, transcript files, clip files, download filenames)
 - **Tests must not depend on local environment** — CI runs with no API keys, no Ollama, no local config. Always mock environment-dependent functions. The v0.6.7–v0.6.13 release failures were caused by tests that passed locally but failed in CI
 - The repo directory is `/Users/cassio/Code/bristlenose`
 - `PipelineResult` references `PeopleFile` but is defined before it in `models.py` — resolved with `PipelineResult.model_rebuild()` after PeopleFile definition
@@ -139,7 +141,11 @@ macOS ships BSD versions of `sed`, `grep`, `awk`, `find`, `xargs`, `date`, `stat
 ## Reference docs (read when working in these areas)
 
 - **Design decisions** (why choices were made, alternatives considered): `docs/design-decisions.md`
-- **Export and sharing**: `docs/design-export-sharing.md`
+- **Export: HTML report + cross-cutting concerns** (anonymisation matrix, shared infra, audit): `docs/design-export-html.md`
+- **Export: CSV/XLS quotes** (11-column schema, selection logic, export dropdown): `docs/design-export-quotes.md`
+- **Export: video clips** (FFmpeg/AVFoundation, naming, async toast): `docs/design-export-clips.md`
+- **Export: Miro bridge** (OAuth PKCE, board creation, layout — post-beta): `docs/design-miro-bridge.md`
+- **Export: original monolith** (superseded, kept for git history): `docs/design-export-sharing.md`
 - **Export dropdown + quote slides** (per-quote copy, scope→format cascade, .pptx format): `docs/design-export-slides.md`
 - **HTML report / people file / transcript pages**: `docs/design-html-report.md`
 - **Frontend / React / TypeScript / Vite**: `frontend/CLAUDE.md`

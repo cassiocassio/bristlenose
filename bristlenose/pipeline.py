@@ -16,7 +16,7 @@ _os.environ.setdefault("HF_HUB_DISABLE_PROGRESS_BARS", "1")
 
 from bristlenose import __version__
 from bristlenose.config import BristlenoseSettings
-from bristlenose.hashing import hash_bytes
+from bristlenose.hashing import hash_bytes, verify_file_hash
 from bristlenose.manifest import (
     STAGE_CLUSTER_AND_GROUP,
     STAGE_EXTRACT_AUDIO,
@@ -103,6 +103,89 @@ def _is_stage_cached(manifest: PipelineManifest | None, stage: str) -> bool:
         return False
     record = manifest.stages.get(stage)
     return record is not None and record.status == StageStatus.COMPLETE
+
+
+def _is_stage_verified(
+    manifest: PipelineManifest | None,
+    stage: str,
+    output_paths: list[Path],
+) -> bool:
+    """Return True if *stage* is complete AND all output files pass hash check.
+
+    Combines the old ``_is_stage_cached`` status check with Phase 2b
+    integrity verification: every file in *output_paths* must exist on
+    disk and its SHA-256 must match the hash stored in the manifest.
+
+    Old manifests with ``content_hash=None`` pass unconditionally
+    (backward compat).
+
+    On hash mismatch the stage is removed from *manifest* so that
+    downstream per-session resume logic (``get_completed_session_ids``)
+    won't attempt to load data from the corrupt file.
+    """
+    if not _is_stage_cached(manifest, stage):
+        return False
+    for p in output_paths:
+        if not p.exists():
+            return False
+    record = manifest.stages[stage]  # type: ignore[union-attr]
+    expected = record.content_hash
+    if expected is None:
+        return True
+    # Multi-file stages (cluster+group) store a combined hash
+    mismatch = False
+    if len(output_paths) == 1:
+        if not verify_file_hash(output_paths[0], expected):
+            _print_hash_mismatch(stage, output_paths[0])
+            mismatch = True
+    else:
+        combined = b"".join(p.read_bytes() for p in output_paths)
+        if hash_bytes(combined) != expected:
+            _print_hash_mismatch(stage, output_paths[0])
+            mismatch = True
+    if mismatch:
+        # Invalidate so per-session resume won't load corrupt data
+        manifest.stages.pop(stage, None)  # type: ignore[union-attr]
+        return False
+    return True
+
+
+def _is_speaker_stage_verified(
+    manifest: PipelineManifest | None,
+    stage: str,
+    session_files: dict[str, Path],
+) -> bool:
+    """Return True if speaker-id stage is complete and per-session hashes match.
+
+    Speaker identification stores per-session content hashes on
+    ``SessionRecord.content_hash``.  Each session file is verified
+    independently.
+
+    On hash mismatch the stage is removed from *manifest* so that
+    downstream per-session resume logic won't load corrupt data.
+    """
+    if not _is_stage_cached(manifest, stage):
+        return False
+    for path in session_files.values():
+        if not path.exists():
+            return False
+    record = manifest.stages[stage]  # type: ignore[union-attr]
+    if record.sessions is None:
+        return True
+    for sid, path in session_files.items():
+        sess_rec = record.sessions.get(sid)
+        if sess_rec is None:
+            continue
+        if not verify_file_hash(path, sess_rec.content_hash):
+            _print_hash_mismatch(stage, path)
+            manifest.stages.pop(stage, None)  # type: ignore[union-attr]
+            return False
+    return True
+
+
+def _print_hash_mismatch(stage: str, path: Path) -> None:
+    """Log a warning when a cached file fails hash verification."""
+    _print_warn(f"{stage}: {path.name} changed on disk — re-running stage")
 
 
 _printed_warnings: set[str] = set()
@@ -393,9 +476,8 @@ class Pipeline:
 
             # ── Stages 3-5: Parse existing transcripts + Transcribe ──
             _ss_path = intermediate / "session_segments.json"
-            if (
-                _is_stage_cached(_prev_manifest, _M_STAGE_TRANSCRIBE)
-                and _ss_path.exists()
+            if _is_stage_verified(
+                _prev_manifest, _M_STAGE_TRANSCRIBE, [_ss_path],
             ):
                 import json as _json
 
@@ -542,14 +624,13 @@ class Pipeline:
             concurrency = self.settings.llm_concurrency
 
             # Check for fully cached speaker ID stage
-            if (
-                _is_stage_cached(_prev_manifest, STAGE_IDENTIFY_SPEAKERS)
-                and _si_dir.is_dir()
-                and all(
-                    (_si_dir / f"{s.session_id}.json").exists()
-                    for s in sessions
-                    if s.session_id in session_segments
-                )
+            _si_session_files = {
+                s.session_id: _si_dir / f"{s.session_id}.json"
+                for s in sessions
+                if s.session_id in session_segments
+            }
+            if _is_speaker_stage_verified(
+                _prev_manifest, STAGE_IDENTIFY_SPEAKERS, _si_session_files,
             ):
                 # Load all cached speaker info + segments with roles
                 all_speaker_infos: dict[str, list] = {}
@@ -771,9 +852,8 @@ class Pipeline:
             # ── Stage 8: Topic segmentation ──────────────────────────
             _seg_errors: list[str] = []
             _tb_path = intermediate / "topic_boundaries.json"
-            if (
-                _is_stage_cached(_prev_manifest, STAGE_TOPIC_SEGMENTATION)
-                and _tb_path.exists()
+            if _is_stage_verified(
+                _prev_manifest, STAGE_TOPIC_SEGMENTATION, [_tb_path],
             ):
                 import json as _json
 
@@ -825,6 +905,8 @@ class Pipeline:
                 status.update("[dim]Segmenting topics...[/dim]")
                 t0 = time.perf_counter()
                 if _remaining_transcripts:
+                    if llm_client is None:
+                        llm_client = LLMClient(self.settings)
                     _fresh_topic_maps = await segment_topics(
                         _remaining_transcripts, llm_client,
                         concurrency=concurrency, errors=_seg_errors,
@@ -882,9 +964,8 @@ class Pipeline:
             # ── Stage 9: Quote extraction ────────────────────────────
             _quote_errors: list[str] = []
             _eq_path = intermediate / "extracted_quotes.json"
-            if (
-                _is_stage_cached(_prev_manifest, STAGE_QUOTE_EXTRACTION)
-                and _eq_path.exists()
+            if _is_stage_verified(
+                _prev_manifest, STAGE_QUOTE_EXTRACTION, [_eq_path],
             ):
                 import json as _json
 
@@ -938,6 +1019,8 @@ class Pipeline:
                 t0 = time.perf_counter()
 
                 if _remaining_transcripts_q:
+                    if llm_client is None:
+                        llm_client = LLMClient(self.settings)
                     _fresh_quotes = await extract_quotes(
                         _remaining_transcripts_q,
                         _remaining_topic_maps,
@@ -999,10 +1082,9 @@ class Pipeline:
             # ── Stages 10+11: Cluster by screen + thematic grouping ──
             _sc_path = intermediate / "screen_clusters.json"
             _tg_path = intermediate / "theme_groups.json"
-            if (
-                _is_stage_cached(_prev_manifest, STAGE_CLUSTER_AND_GROUP)
-                and _sc_path.exists()
-                and _tg_path.exists()
+            if _is_stage_verified(
+                _prev_manifest, STAGE_CLUSTER_AND_GROUP,
+                [_sc_path, _tg_path],
             ):
                 import json as _json
 

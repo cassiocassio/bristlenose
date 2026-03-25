@@ -1,6 +1,6 @@
 # Pipeline Resilience & Data Integrity
 
-> **Status**: Phase 0–1e implemented (crash recovery, per-session caching, `bristlenose status` command, pre-run resume summary); Phase 2a implemented (SHA-256 content hashes on stage outputs stored in manifest); Phase 2b–2c (verify on load, input change detection) next
+> **Status**: Phase 0–1e implemented (crash recovery, per-session caching, `bristlenose status` command, pre-run resume summary); Phase 2a implemented (SHA-256 content hashes on stage outputs stored in manifest); Phase 2b implemented (verify hashes on load — corrupted/tampered files trigger re-run instead of silent use); Phase 2c (input change detection) next
 > **Scope**: Big-picture architecture for crash recovery, incremental re-runs, provenance tracking, human/LLM merge, source material change detection, mid-run provider switching, and analytical context preservation
 > **Trigger**: Plato stress test (Feb 2026) — pipeline ran out of API credits mid-run, stale SQLite data from previous project leaked into serve mode, intermediate JSON files weren't written by `analyze` command, recovery required re-spending $3.50 on LLM calls already made
 

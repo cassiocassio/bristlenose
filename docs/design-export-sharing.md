@@ -1,5 +1,20 @@
 # Export and Sharing — Design Document
 
+> **Superseded.** This monolith has been split into focused design docs:
+>
+> - **`docs/design-export-html.md`** — Read-only HTML export, transcript bundling, polish
+> - **`docs/design-export-quotes.md`** — CSV + XLS quotes export, selection logic, Miro clipboard path
+> - **`docs/design-export-clips.md`** — Video clip extraction, FFmpeg, naming, async job
+> - **`docs/design-miro-bridge.md`** — Miro API integration (OAuth, board creation, layout)
+>
+> This file is kept for git history reference. The feature docs above are the source of truth.
+
+---
+
+_Original content below (frozen March 2026)._
+
+---
+
 Reference doc for making Bristlenose reports shareable. Covers the research package format, video clip extraction, transcript export, anonymisation, and implementation plan.
 
 ## Problem statement

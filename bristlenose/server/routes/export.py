@@ -82,6 +82,38 @@ def _anonymise_data(data: dict) -> dict:
     return data
 
 
+def _strip_filesystem_paths(data: dict) -> None:
+    """Remove absolute filesystem paths from export data.
+
+    Exported HTML is shared with stakeholders — leaking paths like
+    ``/Users/cassio/interviews/sarah.mp4`` reveals the researcher's
+    username and directory layout.  Replace ``path`` with ``filename``
+    (already present) and blank out ``source_folder_uri``.
+    """
+    # Sessions list — source_files[].path and source_folder_uri
+    sessions = data.get("sessions") or {}
+    for sess in sessions.get("sessions", []):
+        for sf in sess.get("source_files", sess.get("sourceFiles", [])):
+            if "filename" in sf:
+                sf["path"] = sf["filename"]
+            elif "path" in sf:
+                sf["path"] = sf["path"].rsplit("/", 1)[-1].rsplit("\\", 1)[-1]
+    # Blank the folder URI (absolute path as file:// URI)
+    if "source_folder_uri" in sessions:
+        sessions["source_folder_uri"] = ""
+    if "sourceFolderUri" in sessions:
+        sessions["sourceFolderUri"] = ""
+
+    # Dashboard sessions — same structure
+    dashboard = data.get("dashboard") or {}
+    for sess in dashboard.get("sessions", []):
+        for sf in sess.get("source_files", sess.get("sourceFiles", [])):
+            if "filename" in sf:
+                sf["path"] = sf["filename"]
+            elif "path" in sf:
+                sf["path"] = sf["path"].rsplit("/", 1)[-1].rsplit("\\", 1)[-1]
+
+
 # ---------------------------------------------------------------------------
 # HTML builder
 # ---------------------------------------------------------------------------
@@ -164,7 +196,7 @@ def _build_export_html(
     ordered_chunks = _toposort_chunks(all_js, chunk_names)
 
     # Build the data injection script
-    data_json = json.dumps(export_data, ensure_ascii=False, separators=(",", ":"))
+    data_json = json.dumps(export_data, ensure_ascii=True, separators=(",", ":"))
 
     # Build the full HTML
     html_parts = [
@@ -372,6 +404,9 @@ def export_report(
         "people": _to_dict(people),
         "videoMap": None,
     }
+
+    # --- Strip absolute filesystem paths (security: leaks username/dir structure) ---
+    _strip_filesystem_paths(export_data)
 
     # --- Anonymise if requested ---
     if anonymise:

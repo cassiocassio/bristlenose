@@ -51,6 +51,54 @@ def slugify(text: str, max_length: int = _MAX_SLUG_LENGTH) -> str:
     return text
 
 
+# Characters forbidden in filenames on Windows (NTFS) and macOS (HFS+/APFS).
+# Forward/back slashes and null bytes are path separators or terminators.
+_UNSAFE_FILENAME_CHARS = re.compile(r'[/\\:\*\?"<>|\x00]')
+
+# Maximum length for export filenames (leaves room for extension + path prefix)
+_MAX_FILENAME_LENGTH = 120
+
+
+def safe_filename(text: str, max_length: int = _MAX_FILENAME_LENGTH) -> str:
+    """Sanitise user-derived text for use as a filename component.
+
+    Unlike ``slugify()``, this preserves spaces, case, and accented characters
+    so that exported filenames are human-readable in Finder/Explorer.
+
+    Safety guarantees:
+    - No path separators (``/``, ``\\``)
+    - No null bytes
+    - No Windows-illegal characters (``:``, ``*``, ``?``, ``"``, ``<``, ``>``, ``|``)
+    - No ``..`` path traversal sequences
+    - No leading/trailing dots or spaces (Windows/macOS gotcha)
+    - Truncated to *max_length* (default 120)
+    - Returns ``"_"`` if input is empty or reduces to nothing
+
+    Examples:
+        "Sarah" → "Sarah"
+        "p1 03m45 Sarah onboarding was confusing" → unchanged
+        "../../etc/cron.d/evil" → "etccron.devil"
+        'He said "delete everything"' → "He said delete everything"
+    """
+    # Strip path traversal sequences first
+    text = text.replace("..", "")
+
+    # Remove unsafe characters
+    text = _UNSAFE_FILENAME_CHARS.sub("", text)
+
+    # Collapse multiple spaces (from removed chars)
+    text = re.sub(r"  +", " ", text)
+
+    # Strip leading/trailing dots and spaces
+    text = text.strip(". ")
+
+    # Truncate
+    if len(text) > max_length:
+        text = text[:max_length].rstrip(". ")
+
+    return text or "_"
+
+
 def apply_smart_quotes(text: str) -> str:
     """Replace straight double quotes with smart (curly) double quotes.
 

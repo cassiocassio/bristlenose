@@ -93,7 +93,9 @@
       "bristlenoseHelp": "Bristlenose-Hilfe",
       "keyboardShortcuts": "Tastaturkurzbefehle",
       "releaseNotes": "Versionshinweise",
-      "sendFeedback": "Feedback senden"
+      "sendFeedback": "Feedback senden…",
+      "blog": "Bristlenose auf Substack",
+      "acknowledgements": "Danksagungen"
     }
   },
   "chrome": {

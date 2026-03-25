@@ -391,11 +391,20 @@ function AppShell() {
           setHelpOpen(true);
           break;
         case "showReleaseNotes":
-          setHelpSection("about");
-          setHelpOpen(true);
+          window.open(
+            "https://github.com/cassiocassio/bristlenose/blob/main/CHANGELOG.md",
+            "_blank",
+          );
           break;
         case "sendFeedback":
           setFeedbackOpen(true);
+          break;
+        case "openBlog":
+          window.open("https://bristlenose.substack.com", "_blank");
+          break;
+        case "showAcknowledgements":
+          setHelpSection("acknowledgements");
+          setHelpOpen(true);
           break;
         case "zoomIn":
           applyZoom(getZoom() + ZOOM_STEP);

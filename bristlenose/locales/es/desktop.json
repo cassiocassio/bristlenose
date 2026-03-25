@@ -98,7 +98,9 @@
       "bristlenoseHelp": "Ayuda de Bristlenose",
       "keyboardShortcuts": "Atajos de teclado",
       "releaseNotes": "Notas de la versión",
-      "sendFeedback": "Enviar comentarios"
+      "sendFeedback": "Enviar comentarios…",
+      "blog": "Bristlenose en Substack",
+      "acknowledgements": "Agradecimientos"
     }
   },
   "chrome": {

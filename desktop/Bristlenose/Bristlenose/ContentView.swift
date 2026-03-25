@@ -26,7 +26,13 @@ struct ContentView: View {
     @AppStorage("appearance") private var appearance: String = "auto"
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @AppStorage("selectedProjectPath") private var selectedProjectPath: String = ""
+    @AppStorage("aiConsentVersion") private var consentVersion: Int = 0
     @State private var selectedProject: ProjectStub?
+    @State private var showingAIConsent = false
+    @State private var aiConsentReviewMode = false
+
+    /// Whether the user has acknowledged the current AI data disclosure.
+    private var hasConsent: Bool { consentVersion >= AIConsentView.currentVersion }
 
     /// Inject the native locale as a URL query parameter so the React SPA
     /// can detect it synchronously on first render (prevents language flash).
@@ -87,10 +93,21 @@ struct ContentView: View {
             bridgeHandler.reset()
             if let project = newValue {
                 selectedProjectPath = project.path
-                serveManager.start(projectPath: project.path)
+                // Gate serve on consent — no data leaves the machine before
+                // the user has seen the AI data disclosure (Apple 5.1.2(i)).
+                if hasConsent {
+                    serveManager.start(projectPath: project.path)
+                }
             } else {
                 selectedProjectPath = ""
                 serveManager.stop()
+            }
+        }
+        // When consent is granted (version updated), start serve for the
+        // already-selected project if one exists.
+        .onChange(of: consentVersion) { _, _ in
+            if hasConsent, let project = selectedProject {
+                serveManager.start(projectPath: project.path)
             }
         }
         .onAppear {
@@ -98,6 +115,24 @@ struct ContentView: View {
                let match = projects.first(where: { $0.path == selectedProjectPath }) {
                 selectedProject = match
             }
+            // First-run consent check.
+            if !hasConsent {
+                aiConsentReviewMode = false
+                showingAIConsent = true
+            }
+        }
+        // AI & Privacy... re-access from app menu.
+        .onReceive(NotificationCenter.default.publisher(for: .showAIConsentSheet)) { _ in
+            aiConsentReviewMode = true
+            showingAIConsent = true
+        }
+        .sheet(isPresented: $showingAIConsent) {
+            AIConsentView(
+                isReviewMode: aiConsentReviewMode,
+                onDismiss: { showingAIConsent = false }
+            )
+            .environmentObject(i18n)
+            .interactiveDismissDisabled(!aiConsentReviewMode)
         }
     }
 

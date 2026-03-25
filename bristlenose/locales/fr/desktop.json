@@ -2,6 +2,7 @@
   "menu": {
     "app": {
       "about": "À propos de Bristlenose",
+      "aiPrivacy": "IA et confidentialité…",
       "checkHealth": "Vérifier l'état du système…"
     },
     "file": {
@@ -126,5 +127,26 @@
     "appearance": "Apparence",
     "llm": "LLM",
     "transcription": "Transcription"
+  },
+  "aiConsent": {
+    "title": "Analyse par IA",
+    "intro": "Bristlenose utilise l'IA pour analyser vos transcriptions d'entretiens. Lorsque vous utilisez un fournisseur cloud, les données de transcription sont envoyées aux serveurs de ce fournisseur pour traitement.",
+    "notUsedForTraining": "Vos données ne sont pas utilisées pour entraîner des modèles d'IA. Consultez les conditions de chaque fournisseur pour leurs politiques de conservation des données.",
+    "sentToCloudLabel": "Envoyé au fournisseur cloud choisi",
+    "sentItem1": "Transcriptions traitées (avec suppression des données personnelles appliquée au préalable, si activée)",
+    "sentItem2": "Codes de locuteur et horodatages",
+    "sentItem3": "Demandes d'analyse (segmentation thématique, extraction de citations, regroupement thématique)",
+    "sentSummary": "Données envoyées au fournisseur cloud : transcriptions traitées, codes de locuteur et demandes d'analyse",
+    "staysLocalLabel": "Reste toujours sur votre appareil",
+    "localItem1": "Enregistrements audio et vidéo originaux",
+    "localItem2": "Noms des participants, coordonnées et données personnelles",
+    "localItem3": "Vos modifications, étiquettes et personnalisations du rapport",
+    "localSummary": "Données qui restent sur votre appareil : enregistrements, données personnelles et vos modifications",
+    "providersIntro": "Fournisseurs cloud susceptibles de traiter vos données :",
+    "ollamaCallout": "Ollama s'exécute entièrement sur votre appareil. Aucune donnée ne quitte votre machine.",
+    "researcherResponsibility": "Assurez-vous que les participants ont été informés que leurs données d'entretien peuvent être traitées par des services d'IA tiers, conformément à l'approbation de votre comité d'éthique.",
+    "continue": "Continuer",
+    "useOllama": "Utiliser Ollama (sans cloud)",
+    "done": "Terminé"
   }
 }

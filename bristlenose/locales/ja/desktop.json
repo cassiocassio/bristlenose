@@ -2,6 +2,7 @@
   "menu": {
     "app": {
       "about": "",
+      "aiPrivacy": "",
       "checkHealth": ""
     },
     "file": {
@@ -134,5 +135,26 @@
     "appearance": "",
     "llm": "",
     "transcription": ""
+  },
+  "aiConsent": {
+    "title": "",
+    "intro": "",
+    "notUsedForTraining": "",
+    "sentToCloudLabel": "",
+    "sentItem1": "",
+    "sentItem2": "",
+    "sentItem3": "",
+    "sentSummary": "",
+    "staysLocalLabel": "",
+    "localItem1": "",
+    "localItem2": "",
+    "localItem3": "",
+    "localSummary": "",
+    "providersIntro": "",
+    "ollamaCallout": "",
+    "researcherResponsibility": "",
+    "continue": "",
+    "useOllama": "",
+    "done": ""
   }
 }

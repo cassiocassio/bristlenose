@@ -2,6 +2,7 @@
   "menu": {
     "app": {
       "about": "About Bristlenose",
+      "aiPrivacy": "AI & Privacy…",
       "checkHealth": "Check System Health…"
     },
     "file": {
@@ -134,5 +135,26 @@
     "appearance": "Appearance",
     "llm": "LLM",
     "transcription": "Transcription"
+  },
+  "aiConsent": {
+    "title": "AI-Powered Analysis",
+    "intro": "Bristlenose uses AI to analyse your interview transcripts. When you use a cloud provider, transcript data is sent to that provider's servers for processing.",
+    "notUsedForTraining": "Your data is not used to train AI models. See each provider's terms for their data retention policies.",
+    "sentToCloudLabel": "Sent to your chosen cloud provider",
+    "sentItem1": "Processed interview transcripts (with PII redaction applied first, if enabled)",
+    "sentItem2": "Speaker codes and timecodes",
+    "sentItem3": "Analysis requests (topic segmentation, quote extraction, theme clustering)",
+    "sentSummary": "Data sent to cloud provider: processed transcripts, speaker codes, and analysis requests",
+    "staysLocalLabel": "Always stays on your device",
+    "localItem1": "Raw audio and video recordings",
+    "localItem2": "Participant names, contact info, and personal details",
+    "localItem3": "Your edits, tags, and report customisations",
+    "localSummary": "Data that stays on your device: recordings, personal details, and your edits",
+    "providersIntro": "Cloud providers that may process your data:",
+    "ollamaCallout": "Ollama runs entirely on your device. No data leaves your machine.",
+    "researcherResponsibility": "Ensure participants have been informed that their interview data may be processed by third-party AI services, as required by your research ethics approval.",
+    "continue": "Continue",
+    "useOllama": "Use Ollama Instead (No Cloud)",
+    "done": "Done"
   }
 }

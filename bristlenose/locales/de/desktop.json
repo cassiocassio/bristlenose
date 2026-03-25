@@ -2,6 +2,7 @@
   "menu": {
     "app": {
       "about": "Über Bristlenose",
+      "aiPrivacy": "KI & Datenschutz…",
       "checkHealth": "Systemzustand prüfen…"
     },
     "file": {
@@ -126,5 +127,26 @@
     "appearance": "Erscheinungsbild",
     "llm": "LLM",
     "transcription": "Transkription"
+  },
+  "aiConsent": {
+    "title": "KI-gestützte Analyse",
+    "intro": "Bristlenose nutzt KI zur Analyse Ihrer Interviewtranskripte. Wenn Sie einen Cloud-Anbieter verwenden, werden die Transkriptionsdaten zur Verarbeitung an die Server dieses Anbieters gesendet.",
+    "notUsedForTraining": "Ihre Daten werden nicht zum Trainieren von KI-Modellen verwendet. Informieren Sie sich in den Nutzungsbedingungen der einzelnen Anbieter über deren Richtlinien zur Datenspeicherung.",
+    "sentToCloudLabel": "An den gewählten Cloud-Anbieter gesendet",
+    "sentItem1": "Verarbeitete Interviewtranskripte (mit vorheriger Entfernung personenbezogener Daten, falls aktiviert)",
+    "sentItem2": "Sprecherkennungen und Zeitstempel",
+    "sentItem3": "Analyseanfragen (Themensegmentierung, Zitatextraktion, thematische Gruppierung)",
+    "sentSummary": "An den Cloud-Anbieter gesendete Daten: verarbeitete Transkripte, Sprecherkennungen und Analyseanfragen",
+    "staysLocalLabel": "Verbleibt immer auf Ihrem Gerät",
+    "localItem1": "Originale Audio- und Videoaufnahmen",
+    "localItem2": "Teilnehmernamen, Kontaktdaten und persönliche Informationen",
+    "localItem3": "Ihre Bearbeitungen, Tags und Berichtsanpassungen",
+    "localSummary": "Daten, die auf Ihrem Gerät verbleiben: Aufnahmen, persönliche Daten und Ihre Bearbeitungen",
+    "providersIntro": "Cloud-Anbieter, die Ihre Daten verarbeiten können:",
+    "ollamaCallout": "Ollama läuft vollständig auf Ihrem Gerät. Keine Daten verlassen Ihren Computer.",
+    "researcherResponsibility": "Stellen Sie sicher, dass die Teilnehmer darüber informiert wurden, dass ihre Interviewdaten von KI-Diensten Dritter verarbeitet werden können, wie von Ihrer Ethikkommission gefordert.",
+    "continue": "Fortfahren",
+    "useOllama": "Ollama verwenden (ohne Cloud)",
+    "done": "Fertig"
   }
 }

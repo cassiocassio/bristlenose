@@ -89,6 +89,13 @@ private struct AppMenuContent: View {
 
         Divider()
 
+        Button(i18n.t("desktop.menu.app.aiPrivacy")) {
+            NotificationCenter.default.post(
+                name: .showAIConsentSheet, object: nil)
+        }
+
+        Divider()
+
         Button(i18n.t("desktop.menu.app.checkHealth")) {
             bridgeHandler.menuAction("checkSystemHealth")
         }

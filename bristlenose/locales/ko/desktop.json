@@ -2,6 +2,7 @@
   "menu": {
     "app": {
       "about": "Bristlenose 정보",
+      "aiPrivacy": "AI 및 개인정보…",
       "checkHealth": "시스템 상태 확인…"
     },
     "file": {
@@ -134,5 +135,26 @@
     "appearance": "외관",
     "llm": "LLM",
     "transcription": "전사"
+  },
+  "aiConsent": {
+    "title": "AI 기반 분석",
+    "intro": "Bristlenose는 AI를 사용하여 인터뷰 전사본을 분석합니다. 클라우드 제공업체를 사용하면 전사 데이터가 해당 제공업체의 서버로 전송되어 처리됩니다.",
+    "notUsedForTraining": "귀하의 데이터는 AI 모델 학습에 사용되지 않습니다. 각 제공업체의 데이터 보관 정책은 해당 약관을 참조하세요.",
+    "sentToCloudLabel": "선택한 클라우드 제공업체로 전송",
+    "sentItem1": "처리된 인터뷰 전사본 (활성화된 경우 개인정보 삭제 적용 후)",
+    "sentItem2": "화자 코드 및 타임코드",
+    "sentItem3": "분석 요청 (주제 분류, 인용문 추출, 테마 클러스터링)",
+    "sentSummary": "클라우드 제공업체로 전송되는 데이터: 처리된 전사본, 화자 코드, 분석 요청",
+    "staysLocalLabel": "항상 기기에 보관",
+    "localItem1": "원본 오디오 및 비디오 녹음",
+    "localItem2": "참여자 이름, 연락처 및 개인 정보",
+    "localItem3": "편집, 태그 및 보고서 사용자 지정",
+    "localSummary": "기기에 보관되는 데이터: 녹음, 개인 정보, 편집 내용",
+    "providersIntro": "데이터를 처리할 수 있는 클라우드 제공업체:",
+    "ollamaCallout": "Ollama는 기기에서 완전히 실행됩니다. 데이터가 기기를 벗어나지 않습니다.",
+    "researcherResponsibility": "연구 윤리 승인에 따라 참여자에게 인터뷰 데이터가 제3자 AI 서비스에 의해 처리될 수 있음을 알렸는지 확인하세요.",
+    "continue": "계속",
+    "useOllama": "Ollama 사용 (클라우드 없음)",
+    "done": "완료"
   }
 }

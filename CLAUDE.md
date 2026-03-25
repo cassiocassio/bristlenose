@@ -140,6 +140,7 @@ macOS ships BSD versions of `sed`, `grep`, `awk`, `find`, `xargs`, `date`, `stat
 
 - **Design decisions** (why choices were made, alternatives considered): `docs/design-decisions.md`
 - **Export and sharing**: `docs/design-export-sharing.md`
+- **Export dropdown + quote slides** (per-quote copy, scope→format cascade, .pptx format): `docs/design-export-slides.md`
 - **HTML report / people file / transcript pages**: `docs/design-html-report.md`
 - **Frontend / React / TypeScript / Vite**: `frontend/CLAUDE.md`
 - **Theme / dark mode / CSS conventions / gotchas**: `bristlenose/theme/CLAUDE.md`

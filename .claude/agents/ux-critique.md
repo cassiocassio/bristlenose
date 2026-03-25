@@ -1,5 +1,5 @@
 ---
-name: ux-review
+name: ux-critique
 description: >
   UX review of designs (HTML mockups, screenshots, React components) for
   design-system consistency and usability. Use when the user shares a mockup,

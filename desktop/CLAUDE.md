@@ -20,8 +20,9 @@ BristlenoseApp.swift          @main — WindowGroup + Settings scene
                  └─ popoutWindow  NSWindow with WKWebView for video player (created by WKUIDelegate)
 
 MenuCommands.swift            Commands struct + per-menu View structs
-ProjectIndex.swift            Project model + projects.json persistence (CRUD, unique names)
-ProjectRow.swift              Sidebar row — doc.text icon, inline rename, slow-double-click
+ProjectIndex.swift            Project + Folder models, projects.json persistence, SidebarItem/SidebarSelection enums
+ProjectRow.swift              Sidebar row — doc.text icon, inline rename
+FolderRow.swift               Sidebar folder row — folder.fill icon, inline rename (Phase 3)
 Tab.swift                     Tab enum — route mapping, path→tab derivation
 BridgeHandler.swift           Inbound state + outbound actions + menuAction dispatch
 ServeManager.swift            Process lifecycle + startup zombie cleanup + prefs overlay
@@ -288,7 +289,10 @@ The `#if DEBUG` guard on the dev port override means release builds never see it
 - **ALL tap gestures on List rows break selection on macOS 26** — both `.onTapGesture` and `.simultaneousGesture(TapGesture())` on views inside `List` rows interfere with the List's built-in selection binding. `.onTapGesture` swallows the click entirely (row flashes but selection never commits). `.simultaneousGesture` works intermittently (selection sticks after 1 click then stops responding). This was confirmed with macOS 26.1 + Xcode 26.3. **Do not put any SwiftUI gesture recognisers on List row content.** Slow-double-click rename (Finder-style) is parked — needs NSEvent local monitor or AppKit subclass approach instead
 - **`.onDrop` on individual List rows breaks selection** — per-row `.onDrop(of:)` causes the same selection interference as tap gestures. Use `.onDrop` on the List itself for sidebar-level drops. Drop-on-existing-row needs a different approach (possibly `DropDelegate` on the List with hit-testing)
 - **`.contextMenu` on List rows does NOT break selection** — unlike gestures and drop targets, `.contextMenu` on rows works correctly. Right-click shows the menu, left-click selects. Context menu can live on the row (after `.tag()`) or inside the row View
-- **Project menu actions use `Notification.Name` not bridge** — Show in Finder, Rename, Delete, and New Project are native-side operations. They post notifications (`createNewProject`, `renameSelectedProject`, `deleteSelectedProject`) which ContentView receives via `.onReceive`. This is different from all other menu actions which dispatch through `bridgeHandler.menuAction()` to the web layer
+- **Project menu actions use `Notification.Name` not bridge** — Show in Finder, Rename, Delete, New Project, New Folder, and Move To are native-side operations. They post notifications (`createNewProject`, `createNewFolder`, `renameSelectedProject`, `renameSelectedFolder`, `deleteSelectedProject`, `deleteSelectedFolder`, `moveSelectedProject`) which ContentView receives via `.onReceive`. This is different from all other menu actions which dispatch through `bridgeHandler.menuAction()` to the web layer
+- **`SidebarSelection` enum for mixed-type selection** — `List(selection:)` binds to `SidebarSelection?` (`.project(UUID)` or `.folder(UUID)`) instead of `UUID?`. This lets projects and folders share the selection space while remaining type-safe. `@AppStorage("selectedProjectID")` only persists project selections (folders don't open a report). `DisclosureGroup` label `.tag()` propagates correctly — folder rows are selectable
+- **`DisclosureGroup` inside `List` works for one-level folders** — `DisclosureGroup(isExpanded:)` binding reads from `Folder.collapsed` (inverted). The expand/collapse state is persisted in `projects.json` via `setFolderCollapsed()`. If nested folders were ever needed, `OutlineGroup` would be required instead
+- **`Folder.collapsed`/`createdAt` backward compat** — old `projects.json` files have `FolderStub` shapes (just `id` and `name`). `Folder.init(from:)` uses `decodeIfPresent` with defaults (`collapsed = false`, `createdAt = Date()`) so old files parse correctly
 - **Drag-and-drop uses async URL loading** — `NSItemProvider.loadItem` callbacks run on background threads. Use `withTaskGroup` + `withCheckedContinuation` to collect all URLs, then `await MainActor.run` to process. Never mutate `@State` or `@Published` from the callback directly
 
 ## Wiring menu actions (bridge handler cookbook)

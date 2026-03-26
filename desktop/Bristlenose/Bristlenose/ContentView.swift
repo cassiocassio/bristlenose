@@ -21,21 +21,36 @@ struct ContentView: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @AppStorage("selectedProjectID") private var persistedProjectID: String = ""
     @AppStorage("aiConsentVersion") private var consentVersion: Int = 0
-    /// Selection binding for the List — uses UUID so mutations to Project fields
-    /// (e.g. lastOpened) don't break selection identity.
-    @State private var selectedID: UUID?
+    /// Selection binding for the List — uses `SidebarSelection` enum so both
+    /// projects and folders are selectable. UUID-based to survive field mutations.
+    @State private var selection: SidebarSelection?
     @State private var showingAIConsent = false
     @State private var aiConsentReviewMode = false
 
     /// The ID of the project currently in inline rename mode, or nil.
     @State private var renamingProjectID: UUID?
 
-    /// The currently selected project, derived from `selectedID`.
+    /// The ID of the folder currently in inline rename mode, or nil.
+    @State private var renamingFolderID: UUID?
+
+    /// The currently selected project, derived from `selection`.
     /// Computed so that mutations to `projectIndex.projects` (e.g. rename,
     /// updateLastOpened) don't break selection — the UUID is stable.
     private var selectedProject: Project? {
-        guard let id = selectedID else { return nil }
+        guard case .project(let id) = selection else { return nil }
         return projectIndex.projects.first { $0.id == id }
+    }
+
+    /// The currently selected folder, derived from `selection`.
+    private var selectedFolder: Folder? {
+        guard case .folder(let id) = selection else { return nil }
+        return projectIndex.folders.first { $0.id == id }
+    }
+
+    /// Extract the project UUID from the selection (for persistence and onChange).
+    private var selectedProjectID: UUID? {
+        guard case .project(let id) = selection else { return nil }
+        return id
     }
 
     /// Whether the user has acknowledged the current AI data disclosure.
@@ -88,20 +103,31 @@ struct ContentView: View {
         .onReceive(NotificationCenter.default.publisher(for: NSWindow.didResignKeyNotification)) { _ in
             bridgeHandler.setWindowActive(false)
         }
-        .onChange(of: selectedID) { _, newID in
+        .onChange(of: selection) { _, newSelection in
             bridgeHandler.reset()
-            if let id = newID, let project = projectIndex.projects.first(where: { $0.id == id }) {
-                persistedProjectID = id.uuidString
-                bridgeHandler.selectedProjectPath = project.path
-                projectIndex.updateLastOpened(id: id)
-                // Gate serve on consent — no data leaves the machine before
-                // the user has seen the AI data disclosure (Apple 5.1.2(i)).
-                if hasConsent && !project.path.isEmpty {
-                    serveManager.start(projectPath: project.path)
+            switch newSelection {
+            case .project(let id):
+                bridgeHandler.selectedFolderName = ""
+                if let project = projectIndex.projects.first(where: { $0.id == id }) {
+                    persistedProjectID = id.uuidString
+                    bridgeHandler.selectedProjectPath = project.path
+                    projectIndex.updateLastOpened(id: id)
+                    // Gate serve on consent — no data leaves the machine before
+                    // the user has seen the AI data disclosure (Apple 5.1.2(i)).
+                    if hasConsent && !project.path.isEmpty {
+                        serveManager.start(projectPath: project.path)
+                    }
                 }
-            } else {
+            case .folder(let id):
                 persistedProjectID = ""
                 bridgeHandler.selectedProjectPath = ""
+                bridgeHandler.selectedFolderName =
+                    projectIndex.folders.first { $0.id == id }?.name ?? ""
+                serveManager.stop()
+            case nil:
+                persistedProjectID = ""
+                bridgeHandler.selectedProjectPath = ""
+                bridgeHandler.selectedFolderName = ""
                 serveManager.stop()
             }
         }
@@ -116,10 +142,10 @@ struct ContentView: View {
         }
         .onAppear {
             // Restore last-selected project from persisted ID.
-            if selectedID == nil, !persistedProjectID.isEmpty,
+            if selection == nil, !persistedProjectID.isEmpty,
                let id = UUID(uuidString: persistedProjectID),
                projectIndex.projects.contains(where: { $0.id == id }) {
-                selectedID = id
+                selection = .project(id)
             }
             // First-run consent check.
             if !hasConsent {
@@ -136,18 +162,41 @@ struct ContentView: View {
         .onReceive(NotificationCenter.default.publisher(for: .createNewProject)) { _ in
             createNewProject()
         }
+        // File > New Folder (⇧⌘N) and sidebar folder.badge.plus button.
+        .onReceive(NotificationCenter.default.publisher(for: .createNewFolder)) { _ in
+            createNewFolder()
+        }
         // Project > Rename — trigger inline rename on the selected project.
         .onReceive(NotificationCenter.default.publisher(for: .renameSelectedProject)) { _ in
-            if let id = selectedID {
+            if case .project(let id) = selection {
                 renamingProjectID = id
+            }
+        }
+        // Project > Rename Folder — trigger inline rename on the selected folder.
+        .onReceive(NotificationCenter.default.publisher(for: .renameSelectedFolder)) { _ in
+            if case .folder(let id) = selection {
+                renamingFolderID = id
             }
         }
         // Project > Delete — remove the selected project.
         .onReceive(NotificationCenter.default.publisher(for: .deleteSelectedProject)) { _ in
-            if let id = selectedID {
-                selectedID = nil
+            if case .project(let id) = selection {
+                selection = nil
                 projectIndex.removeProject(id: id)
             }
+        }
+        // Project > Delete Folder — remove the selected folder (projects move to root).
+        .onReceive(NotificationCenter.default.publisher(for: .deleteSelectedFolder)) { _ in
+            if case .folder(let id) = selection {
+                selection = nil
+                projectIndex.removeFolder(id: id)
+            }
+        }
+        // Project > Move to — move the selected project into/out of a folder.
+        .onReceive(NotificationCenter.default.publisher(for: .moveSelectedProject)) { notification in
+            guard case .project(let projectId) = selection else { return }
+            let folderId = notification.userInfo?["folderId"] as? UUID
+            projectIndex.moveProject(projectId: projectId, toFolder: folderId)
         }
         .sheet(isPresented: $showingAIConsent) {
             AIConsentView(
@@ -159,13 +208,20 @@ struct ContentView: View {
         }
     }
 
-    // MARK: - Project creation
+    // MARK: - Project and folder creation
 
     /// Create a new project and put it in inline rename mode.
     private func createNewProject() {
         let project = projectIndex.addProject(name: "New Project", path: "")
-        selectedID = project.id
+        selection = .project(project.id)
         renamingProjectID = project.id
+    }
+
+    /// Create a new folder and put it in inline rename mode.
+    private func createNewFolder() {
+        let folder = projectIndex.addFolder(name: i18n.t("desktop.chrome.newFolder"))
+        selection = .folder(folder.id)
+        renamingFolderID = folder.id
     }
 
     // MARK: - Drag and drop
@@ -228,7 +284,7 @@ struct ContentView: View {
             let project = projectIndex.addProject(
                 name: url.lastPathComponent, path: url.path
             )
-            selectedID = project.id
+            selection = .project(project.id)
             renamingProjectID = project.id
         } else if !directories.isEmpty || !files.isEmpty {
             // Multiple items — one project with explicit input list.
@@ -245,7 +301,7 @@ struct ContentView: View {
             let project = projectIndex.addProject(
                 name: firstName, path: firstPath, inputFiles: allPaths
             )
-            selectedID = project.id
+            selection = .project(project.id)
             renamingProjectID = project.id
         }
     }
@@ -389,7 +445,7 @@ struct ContentView: View {
     // MARK: - Sidebar
 
     private var sidebar: some View {
-        List(selection: $selectedID) {
+        List(selection: $selection) {
             Section {
                 // "+ New Project" at the top of the list — always visible.
                 Button {
@@ -400,47 +456,13 @@ struct ContentView: View {
                 }
                 .buttonStyle(.plain)
 
-                ForEach(projectIndex.projects) { project in
-                    ProjectRow(
-                        project: project,
-                        isRenaming: Binding(
-                            get: { renamingProjectID == project.id },
-                            set: { newValue in
-                                renamingProjectID = newValue ? project.id : nil
-                            }
-                        ),
-                        onRename: { newName in
-                            projectIndex.renameProject(id: project.id, newName: newName)
-                        },
-                        onShowInFinder: {
-                            if !project.path.isEmpty {
-                                NSWorkspace.shared.selectFile(
-                                    nil, inFileViewerRootedAtPath: project.path
-                                )
-                            }
-                        },
-                        onDelete: {
-                            if selectedID == project.id { selectedID = nil }
-                            projectIndex.removeProject(id: project.id)
-                        }
-                    )
-                    .tag(project.id)
-                    .contextMenu {
-                        Button(i18n.t("desktop.menu.project.showInFinder")) {
-                            if !project.path.isEmpty {
-                                NSWorkspace.shared.selectFile(
-                                    nil, inFileViewerRootedAtPath: project.path
-                                )
-                            }
-                        }
-                        Button(i18n.t("desktop.menu.project.rename")) {
-                            renamingProjectID = project.id
-                        }
-                        Divider()
-                        Button(i18n.t("desktop.menu.project.delete"), role: .destructive) {
-                            if selectedID == project.id { selectedID = nil }
-                            projectIndex.removeProject(id: project.id)
-                        }
+                ForEach(projectIndex.sidebarItems) { item in
+                    switch item {
+                    case .folder(let folder):
+                        folderSection(folder)
+
+                    case .project(let project):
+                        projectRow(project)
                     }
                 }
             } header: {
@@ -453,20 +475,133 @@ struct ContentView: View {
             return true
         }
         .focusSection()
-        // New Folder button in the sidebar title bar — next to the sidebar
-        // toggle. Hidden when sidebar is collapsed (Phase 3, disabled for now).
+        // New Folder button in the sidebar title bar.
         .toolbar {
             ToolbarItem(placement: .automatic) {
                 Button {
-                    // Phase 3: createNewFolder()
+                    createNewFolder()
                 } label: {
                     Image(systemName: "folder.badge.plus")
                 }
                 .help(i18n.t("desktop.chrome.newFolder"))
-                .disabled(true)  // Phase 3 — folders not yet implemented
             }
         }
         .navigationTitle(i18n.t("desktop.chrome.projects"))
+    }
+
+    // MARK: - Sidebar rows
+
+    /// A collapsible folder with its child projects.
+    @ViewBuilder
+    private func folderSection(_ folder: Folder) -> some View {
+        DisclosureGroup(
+            isExpanded: Binding(
+                get: { !folder.collapsed },
+                set: { projectIndex.setFolderCollapsed(id: folder.id, collapsed: !$0) }
+            )
+        ) {
+            ForEach(projectIndex.projectsInFolder(folder.id)) { project in
+                projectRow(project)
+            }
+        } label: {
+            FolderRow(
+                folder: folder,
+                isRenaming: Binding(
+                    get: { renamingFolderID == folder.id },
+                    set: { newValue in
+                        renamingFolderID = newValue ? folder.id : nil
+                    }
+                ),
+                onRename: { newName in
+                    projectIndex.renameFolder(id: folder.id, newName: newName)
+                },
+                onDelete: {
+                    if case .folder(folder.id) = selection { selection = nil }
+                    projectIndex.removeFolder(id: folder.id)
+                }
+            )
+        }
+        .tag(SidebarSelection.folder(folder.id))
+        .contextMenu {
+            Button(i18n.t("desktop.menu.folder.rename")) {
+                renamingFolderID = folder.id
+            }
+            Button(i18n.t("desktop.menu.folder.archive")) {
+                // Phase 5
+            }
+            .disabled(true)
+            Divider()
+            Button(i18n.t("desktop.menu.folder.delete"), role: .destructive) {
+                if case .folder(folder.id) = selection { selection = nil }
+                projectIndex.removeFolder(id: folder.id)
+            }
+        }
+    }
+
+    /// A single project row with context menu (used at root level and inside folders).
+    @ViewBuilder
+    private func projectRow(_ project: Project) -> some View {
+        ProjectRow(
+            project: project,
+            isRenaming: Binding(
+                get: { renamingProjectID == project.id },
+                set: { newValue in
+                    renamingProjectID = newValue ? project.id : nil
+                }
+            ),
+            onRename: { newName in
+                projectIndex.renameProject(id: project.id, newName: newName)
+            },
+            onShowInFinder: {
+                if !project.path.isEmpty {
+                    NSWorkspace.shared.selectFile(
+                        nil, inFileViewerRootedAtPath: project.path
+                    )
+                }
+            },
+            onDelete: {
+                if case .project(project.id) = selection { selection = nil }
+                projectIndex.removeProject(id: project.id)
+            }
+        )
+        .tag(SidebarSelection.project(project.id))
+        .contextMenu {
+            Button(i18n.t("desktop.menu.project.showInFinder")) {
+                if !project.path.isEmpty {
+                    NSWorkspace.shared.selectFile(
+                        nil, inFileViewerRootedAtPath: project.path
+                    )
+                }
+            }
+            Button(i18n.t("desktop.menu.project.rename")) {
+                renamingProjectID = project.id
+            }
+
+            // "Move to" submenu — lists all folders + "No Folder" for root.
+            if !projectIndex.folders.isEmpty {
+                Menu(i18n.t("desktop.menu.project.moveTo")) {
+                    Button(i18n.t("desktop.menu.project.noFolder")) {
+                        projectIndex.moveProject(projectId: project.id, toFolder: nil)
+                    }
+                    .disabled(project.folderId == nil)
+
+                    Divider()
+
+                    ForEach(projectIndex.folders) { folder in
+                        Button(folder.name) {
+                            projectIndex.moveProject(projectId: project.id, toFolder: folder.id)
+                        }
+                        .disabled(project.folderId == folder.id)
+                    }
+                }
+            }
+
+            Divider()
+            Button(i18n.t("desktop.menu.project.delete"), role: .destructive) {
+                if case .project(project.id) = selection { selection = nil }
+                projectIndex.removeProject(id: project.id)
+            }
+        }
     }
 
     // MARK: - Detail

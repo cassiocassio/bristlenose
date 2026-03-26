@@ -45,7 +45,9 @@ Remaining desktop bugs and i18n items tracked in `docs/private/100days.md` §2, 
 - [x] **Project menu rewired** — Show in Finder (native `NSWorkspace`), Rename/Delete via notifications. Re-Analyse/Archive disabled (future). File > New Project (Cmd+N) posts notification
 - [x] **BridgeHandler.selectedProjectPath** — published property for menu disable guards, reset on project switch
 
-Remaining multi-project phases tracked in `docs/design-project-sidebar.md` (Phases 2–5: drag-from-Finder, context menus, folders, bookmarks, archive, bin).
+- [x] **Phase 3: Folders** — `FolderRow.swift`, `Folder` model with CRUD, `folderId` on Project, `SidebarSelection` enum, `DisclosureGroup` collapse, "Move to" submenu, adaptive Project menu, File > New Folder (⇧⌘N), `folder.badge.plus` enabled, collapsed state persistence, locale keys in all 6 languages
+
+Remaining multi-project phases tracked in `docs/design-project-sidebar.md` (Phases 4–5: bookmarks/availability, archive/bin).
 
 ## PII redaction audit (26 Mar 2026)
 

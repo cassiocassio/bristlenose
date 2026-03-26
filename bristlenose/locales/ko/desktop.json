@@ -7,6 +7,7 @@
     },
     "file": {
       "newProject": "새 프로젝트…",
+      "newFolder": "새 폴더…",
       "openInNewWindow": "새 윈도우에서 열기",
       "exportReport": "보고서 내보내기…",
       "exportAnonymised": "익명화하여 내보내기…",
@@ -46,9 +47,16 @@
     "project": {
       "showInFinder": "Finder에서 보기",
       "rename": "이름 변경…",
+      "moveTo": "이동",
+      "noFolder": "폴더 없음",
       "reAnalyse": "재분석…",
       "archive": "보관…",
       "delete": "삭제…"
+    },
+    "folder": {
+      "rename": "폴더 이름 변경",
+      "archive": "폴더 보관",
+      "delete": "폴더 삭제…"
     },
     "codes": {
       "createCodeGroup": "코드 그룹 생성",

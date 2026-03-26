@@ -7,6 +7,7 @@
     },
     "file": {
       "newProject": "Nouveau projet…",
+      "newFolder": "Nouveau dossier…",
       "openInNewWindow": "Ouvrir dans une nouvelle fenêtre",
       "exportReport": "Exporter le rapport…",
       "exportAnonymised": "Exporter anonymisé…",
@@ -41,9 +42,16 @@
     "project": {
       "showInFinder": "Afficher dans le Finder",
       "rename": "Renommer…",
+      "moveTo": "Déplacer vers",
+      "noFolder": "Aucun dossier",
       "reAnalyse": "Réanalyser…",
       "archive": "Archiver…",
       "delete": "Supprimer…"
+    },
+    "folder": {
+      "rename": "Renommer le dossier",
+      "archive": "Archiver le dossier",
+      "delete": "Supprimer le dossier…"
     },
     "codes": {
       "createCodeGroup": "Créer un groupe de codes",

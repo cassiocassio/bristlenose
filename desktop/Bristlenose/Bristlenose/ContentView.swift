@@ -1,13 +1,5 @@
 import SwiftUI
 
-/// A placeholder project entry for the sidebar.
-/// Will be replaced by a real Project model backed by projects.json.
-struct ProjectStub: Identifiable, Hashable {
-    let id = UUID()
-    let name: String
-    let path: String
-}
-
 /// Two-column NavigationSplitView: project list sidebar + WKWebView detail.
 ///
 /// Selecting a project starts `bristlenose serve` and loads the React SPA
@@ -22,14 +14,28 @@ struct ContentView: View {
 
     @EnvironmentObject var serveManager: ServeManager
     @EnvironmentObject var bridgeHandler: BridgeHandler
+    @EnvironmentObject var projectIndex: ProjectIndex
     @EnvironmentObject var i18n: I18n
     @AppStorage("appearance") private var appearance: String = "auto"
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @AppStorage("selectedProjectPath") private var selectedProjectPath: String = ""
+    @AppStorage("selectedProjectID") private var persistedProjectID: String = ""
     @AppStorage("aiConsentVersion") private var consentVersion: Int = 0
-    @State private var selectedProject: ProjectStub?
+    /// Selection binding for the List — uses UUID so mutations to Project fields
+    /// (e.g. lastOpened) don't break selection identity.
+    @State private var selectedID: UUID?
     @State private var showingAIConsent = false
     @State private var aiConsentReviewMode = false
+
+    /// The ID of the project currently in inline rename mode, or nil.
+    @State private var renamingProjectID: UUID?
+
+    /// The currently selected project, derived from `selectedID`.
+    /// Computed so that mutations to `projectIndex.projects` (e.g. rename,
+    /// updateLastOpened) don't break selection — the UUID is stable.
+    private var selectedProject: Project? {
+        guard let id = selectedID else { return nil }
+        return projectIndex.projects.first { $0.id == id }
+    }
 
     /// Whether the user has acknowledged the current AI data disclosure.
     private var hasConsent: Bool { consentVersion >= AIConsentView.currentVersion }
@@ -58,14 +64,6 @@ struct ContentView: View {
         }
     }
 
-    /// Placeholder projects — replace with real project list from projects.json.
-    /// First entry points to a real trial-runs project for testing the serve flow.
-    private let projects: [ProjectStub] = [
-        ProjectStub(name: "Project IKEA", path: "\(NSHomeDirectory())/Code/bristlenose/trial-runs/project-ikea"),
-        ProjectStub(name: "Pilot Interviews", path: "\(NSHomeDirectory())/Documents/pilot"),
-        ProjectStub(name: "Onboarding Round 3", path: "\(NSHomeDirectory())/Documents/onboarding-r3"),
-    ]
-
     var body: some View {
         NavigationSplitView {
             sidebar
@@ -89,17 +87,20 @@ struct ContentView: View {
         .onReceive(NotificationCenter.default.publisher(for: NSWindow.didResignKeyNotification)) { _ in
             bridgeHandler.setWindowActive(false)
         }
-        .onChange(of: selectedProject) { _, newValue in
+        .onChange(of: selectedID) { _, newID in
             bridgeHandler.reset()
-            if let project = newValue {
-                selectedProjectPath = project.path
+            if let id = newID, let project = projectIndex.projects.first(where: { $0.id == id }) {
+                persistedProjectID = id.uuidString
+                bridgeHandler.selectedProjectPath = project.path
+                projectIndex.updateLastOpened(id: id)
                 // Gate serve on consent — no data leaves the machine before
                 // the user has seen the AI data disclosure (Apple 5.1.2(i)).
-                if hasConsent {
+                if hasConsent && !project.path.isEmpty {
                     serveManager.start(projectPath: project.path)
                 }
             } else {
-                selectedProjectPath = ""
+                persistedProjectID = ""
+                bridgeHandler.selectedProjectPath = ""
                 serveManager.stop()
             }
         }
@@ -107,13 +108,17 @@ struct ContentView: View {
         // already-selected project if one exists.
         .onChange(of: consentVersion) { _, _ in
             if hasConsent, let project = selectedProject {
-                serveManager.start(projectPath: project.path)
+                if !project.path.isEmpty {
+                    serveManager.start(projectPath: project.path)
+                }
             }
         }
         .onAppear {
-            if selectedProject == nil, !selectedProjectPath.isEmpty,
-               let match = projects.first(where: { $0.path == selectedProjectPath }) {
-                selectedProject = match
+            // Restore last-selected project from persisted ID.
+            if selectedID == nil, !persistedProjectID.isEmpty,
+               let id = UUID(uuidString: persistedProjectID),
+               projectIndex.projects.contains(where: { $0.id == id }) {
+                selectedID = id
             }
             // First-run consent check.
             if !hasConsent {
@@ -126,6 +131,23 @@ struct ContentView: View {
             aiConsentReviewMode = true
             showingAIConsent = true
         }
+        // File > New Project (Cmd+N) and sidebar [+] button.
+        .onReceive(NotificationCenter.default.publisher(for: .createNewProject)) { _ in
+            createNewProject()
+        }
+        // Project > Rename — trigger inline rename on the selected project.
+        .onReceive(NotificationCenter.default.publisher(for: .renameSelectedProject)) { _ in
+            if let id = selectedID {
+                renamingProjectID = id
+            }
+        }
+        // Project > Delete — remove the selected project.
+        .onReceive(NotificationCenter.default.publisher(for: .deleteSelectedProject)) { _ in
+            if let id = selectedID {
+                selectedID = nil
+                projectIndex.removeProject(id: id)
+            }
+        }
         .sheet(isPresented: $showingAIConsent) {
             AIConsentView(
                 isReviewMode: aiConsentReviewMode,
@@ -134,6 +156,15 @@ struct ContentView: View {
             .environmentObject(i18n)
             .interactiveDismissDisabled(!aiConsentReviewMode)
         }
+    }
+
+    // MARK: - Project creation
+
+    /// Create a new project and put it in inline rename mode.
+    private func createNewProject() {
+        let project = projectIndex.addProject(name: "New Project", path: "")
+        selectedID = project.id
+        renamingProjectID = project.id
     }
 
     // MARK: - Toolbar
@@ -261,13 +292,52 @@ struct ContentView: View {
     // MARK: - Sidebar
 
     private var sidebar: some View {
-        List(projects, selection: $selectedProject) { project in
-            Label(project.name, systemImage: "folder")
-                .tag(project)
+        List(selection: $selectedID) {
+            Section {
+                // "+ New Project" at the top of the list — always visible.
+                Button {
+                    createNewProject()
+                } label: {
+                    Label(i18n.t("desktop.menu.file.newProject"), systemImage: "plus")
+                        .foregroundStyle(.secondary)
+                }
+                .buttonStyle(.plain)
+
+                ForEach(projectIndex.projects) { project in
+                    ProjectRow(
+                        project: project,
+                        isRenaming: Binding(
+                            get: { renamingProjectID == project.id },
+                            set: { newValue in
+                                renamingProjectID = newValue ? project.id : nil
+                            }
+                        ),
+                        onRename: { newName in
+                            projectIndex.renameProject(id: project.id, newName: newName)
+                        }
+                    )
+                    .tag(project.id)
+                }
+            } header: {
+                Text(i18n.t("desktop.chrome.projects"))
+            }
         }
-        .navigationTitle(i18n.t("desktop.chrome.projects"))
         .accessibilityLabel(i18n.t("desktop.chrome.projects"))
         .focusSection()
+        // New Folder button in the sidebar title bar — next to the sidebar
+        // toggle. Hidden when sidebar is collapsed (Phase 3, disabled for now).
+        .toolbar {
+            ToolbarItem(placement: .automatic) {
+                Button {
+                    // Phase 3: createNewFolder()
+                } label: {
+                    Image(systemName: "folder.badge.plus")
+                }
+                .help(i18n.t("desktop.chrome.newFolder"))
+                .disabled(true)  // Phase 3 — folders not yet implemented
+            }
+        }
+        .navigationTitle(i18n.t("desktop.chrome.projects"))
     }
 
     // MARK: - Detail
@@ -275,41 +345,50 @@ struct ContentView: View {
     @ViewBuilder
     private var detail: some View {
         if let project = selectedProject {
-            ZStack {
-                switch serveManager.state {
-                case .idle, .starting:
-                    ProgressView(i18n.t("desktop.chrome.startingServer"))
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+            if project.path.isEmpty {
+                // New project with no files yet — prompt user to add interviews.
+                ContentUnavailableView(
+                    i18n.t("desktop.chrome.dragInterviews"),
+                    systemImage: "square.and.arrow.down",
+                    description: Text(i18n.t("desktop.chrome.dragInterviewsDescription"))
+                )
+            } else {
+                ZStack {
+                    switch serveManager.state {
+                    case .idle, .starting:
+                        ProgressView(i18n.t("desktop.chrome.startingServer"))
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
 
-                case .running:
-                    WebView(url: serveURLWithLocale, bridgeHandler: bridgeHandler, authToken: serveManager.authToken)
-                        .id(project.id)
-                        .accessibilityLabel(i18n.t("desktop.chrome.reportContent"))
-                        .accessibilityHidden(!bridgeHandler.isReady)
-                        .focusSection()
+                    case .running:
+                        WebView(url: serveURLWithLocale, bridgeHandler: bridgeHandler, authToken: serveManager.authToken)
+                            .id(project.id)
+                            .accessibilityLabel(i18n.t("desktop.chrome.reportContent"))
+                            .accessibilityHidden(!bridgeHandler.isReady)
+                            .focusSection()
 
-                    // Loading overlay — shown until the React SPA posts "ready".
-                    if !bridgeHandler.isReady {
-                        ZStack {
-                            Color(nsColor: .windowBackgroundColor)
-                            ProgressView(i18n.t("desktop.chrome.loadingReport"))
+                        // Loading overlay — shown until the React SPA posts "ready".
+                        if !bridgeHandler.isReady {
+                            ZStack {
+                                Color(nsColor: .windowBackgroundColor)
+                                ProgressView(i18n.t("desktop.chrome.loadingReport"))
+                            }
+                            .transition(.opacity)
                         }
-                        .transition(.opacity)
-                    }
 
-                case .failed(let error):
-                    ContentUnavailableView {
-                        Label(i18n.t("desktop.chrome.serverError"), systemImage: "exclamationmark.triangle")
-                    } description: {
-                        Text(error)
-                    } actions: {
-                        Button(i18n.t("desktop.chrome.retry")) {
-                            serveManager.start(projectPath: project.path)
+                    case .failed(let error):
+                        ContentUnavailableView {
+                            Label(i18n.t("desktop.chrome.serverError"), systemImage: "exclamationmark.triangle")
+                        } description: {
+                            Text(error)
+                        } actions: {
+                            Button(i18n.t("desktop.chrome.retry")) {
+                                serveManager.start(projectPath: project.path)
+                            }
                         }
                     }
                 }
+                .animation(reduceMotion ? nil : .easeInOut(duration: 0.2), value: bridgeHandler.isReady)
             }
-            .animation(reduceMotion ? nil : .easeInOut(duration: 0.2), value: bridgeHandler.isReady)
         } else {
             ContentUnavailableView(
                 i18n.t("desktop.chrome.noProjectSelected"),

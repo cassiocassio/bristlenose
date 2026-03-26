@@ -111,7 +111,10 @@
     "serverError": "Server Error",
     "retry": "Retry",
     "projects": "Projects",
-    "reportContent": "Report content"
+    "reportContent": "Report content",
+    "newFolder": "New Folder",
+    "dragInterviews": "Drag Interviews Here",
+    "dragInterviewsDescription": "Add interview recordings or transcripts to get started."
   },
   "toolbar": {
     "back": "Back (⌘[)",
@@ -137,6 +140,18 @@
     "appearance": "Appearance",
     "llm": "LLM",
     "transcription": "Transcription"
+  },
+  "help": {
+    "privacy": {
+      "redactionIntro": "PII redaction is opt-in. It\u2019s off by default because false positives (redacting research-relevant text) damage data accuracy. The feature uses Microsoft Presidio, an open-source text scanner, with a configurable confidence threshold (default 0.7).",
+      "actionThreshold": "For sensitive data, lower the confidence threshold (try 0.5) to catch more at the cost of more false positives."
+    },
+    "contributing": {
+      "beforeBody": "See the <a href=\"https://github.com/cassiocassio/bristlenose/blob/main/CONTRIBUTING.md\" target=\"_blank\" rel=\"noopener noreferrer\">contributing guide</a> on GitHub for development setup and code quality checks."
+    }
+  },
+  "configReference": {
+    "intro": "Most settings are in the Settings window (\u2318,). Environment variable names are shown below for advanced configuration."
   },
   "aiConsent": {
     "title": "AI-Powered Analysis",

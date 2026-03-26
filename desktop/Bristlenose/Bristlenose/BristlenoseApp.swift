@@ -11,6 +11,7 @@ struct BristlenoseApp: App {
     // State lifted from ContentView so .commands and .onReceive can access them.
     @StateObject private var serveManager = ServeManager()
     @StateObject private var bridgeHandler = BridgeHandler()
+    @StateObject private var projectIndex = ProjectIndex()
     @StateObject private var i18n: I18n = {
         let i = I18n()
         if let dir = I18n.findLocalesDirectory() {
@@ -24,6 +25,7 @@ struct BristlenoseApp: App {
             ContentView()
                 .environmentObject(serveManager)
                 .environmentObject(bridgeHandler)
+                .environmentObject(projectIndex)
                 .environmentObject(i18n)
                 .onReceive(
                     NotificationCenter.default.publisher(for: NSApplication.willTerminateNotification)
@@ -33,7 +35,7 @@ struct BristlenoseApp: App {
         }
         .defaultSize(width: 1000, height: 700)
         .commands {
-            MenuCommands(bridgeHandler: bridgeHandler, serveManager: serveManager, i18n: i18n)
+            MenuCommands(bridgeHandler: bridgeHandler, serveManager: serveManager, projectIndex: projectIndex, i18n: i18n)
         }
 
         Settings {

@@ -7,9 +7,10 @@
  */
 
 import { useTranslation } from "react-i18next";
-import type { HealthResponse } from "../utils/health";
+import { getExportData, isExportMode } from "../utils/exportData";
 import {
   DEFAULT_GITHUB_ISSUES_URL,
+  type HealthResponse,
 } from "../utils/health";
 
 interface FooterProps {
@@ -24,18 +25,21 @@ export function Footer({ health, onOpenFeedback, onToggleHelp }: FooterProps) {
   const githubIssuesUrl =
     health?.links.github_issues_url ?? DEFAULT_GITHUB_ISSUES_URL;
   const feedbackEnabled = health?.feedback.enabled ?? true;
+  const exportLogos = isExportMode() ? getExportData()?.logos : undefined;
+  const lightSrc = exportLogos?.light ?? "/report/assets/bristlenose-logo.png";
+  const darkSrc = exportLogos?.dark ?? "/report/assets/bristlenose-logo-dark.png";
 
   return (
     <footer className="report-footer">
       <div className="footer-left">
         <picture className="footer-logo-picture">
           <source
-            srcSet="/report/assets/bristlenose-logo-dark.png"
+            srcSet={darkSrc}
             media="(prefers-color-scheme: dark)"
           />
           <img
             className="footer-logo"
-            src="/report/assets/bristlenose-logo.png"
+            src={lightSrc}
             alt=""
           />
         </picture>

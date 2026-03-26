@@ -27,7 +27,7 @@ function apiBase(): string {
 }
 
 /** Build headers with auth token for localhost API access control. */
-function authHeaders(extra?: Record<string, string>): Record<string, string> {
+export function authHeaders(extra?: Record<string, string>): Record<string, string> {
   const token = (window as unknown as Record<string, unknown>)
     .__BRISTLENOSE_AUTH_TOKEN__ as string | undefined;
   const headers: Record<string, string> = { ...extra };

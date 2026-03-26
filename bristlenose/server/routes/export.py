@@ -7,6 +7,7 @@ Recipients can open the HTML in any modern browser without Bristlenose.
 
 from __future__ import annotations
 
+import base64
 import json
 import logging
 import re
@@ -112,6 +113,28 @@ def _strip_filesystem_paths(data: dict) -> None:
                 sf["path"] = sf["filename"]
             elif "path" in sf:
                 sf["path"] = sf["path"].rsplit("/", 1)[-1].rsplit("\\", 1)[-1]
+
+
+# ---------------------------------------------------------------------------
+# Logo embedding
+# ---------------------------------------------------------------------------
+
+_LOGOS_DIR = Path(__file__).resolve().parent.parent.parent / "theme" / "images"
+
+
+def _build_logo_data_uris() -> dict[str, str]:
+    """Return base64 data URIs for the light and dark logos.
+
+    Embedded in the export payload so the footer logo renders when the
+    exported HTML is opened from ``file://`` (no server to serve images).
+    """
+    result: dict[str, str] = {}
+    for variant, fname in [("light", "bristlenose.png"), ("dark", "bristlenose-dark.png")]:
+        p = _LOGOS_DIR / fname
+        if p.is_file():
+            b64 = base64.b64encode(p.read_bytes()).decode("ascii")
+            result[variant] = f"data:image/png;base64,{b64}"
+    return result
 
 
 # ---------------------------------------------------------------------------
@@ -403,6 +426,7 @@ def export_report(
         },
         "people": _to_dict(people),
         "videoMap": None,
+        "logos": _build_logo_data_uris(),
     }
 
     # --- Strip absolute filesystem paths (security: leaks username/dir structure) ---

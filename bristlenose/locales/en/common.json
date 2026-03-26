@@ -151,7 +151,7 @@
   },
   "export": {
     "heading": "Export report",
-    "subtitle": "Download a self-contained HTML file that anyone can open in a browser.",
+    "subtitle": "Creates a standalone report that anyone can open in a browser. Recipients can view and search but cannot edit.",
     "anonymise": "Remove participant names from labels",
     "anonymiseHint": "Strips names from metadata, filenames, and speaker labels. Keeps participant codes (p1, p2). Moderator names are preserved. Names mentioned within quote text are NOT removed.",
     "exporting": "Exporting\u2026",
@@ -256,10 +256,9 @@
       "citEricsson1993": "The foundational text on think-aloud protocols \u2014 establishes when verbal reports provide valid data about cognitive processes."
     },
     "privacy": {
-      "localTitle": "Your data stays local",
-      "localBody": "Everything runs on your machine \u2014 recordings, transcripts, and analysis results never leave your computer.",
-      "localLlm": "When you use a cloud provider (Claude, ChatGPT, Gemini, Azure OpenAI), transcript text is sent to that provider\u2019s API for analysis. The audio and video files stay on your machine. Each provider\u2019s data retention policy applies to those API calls.",
-      "localOllama": "With Ollama (local models), nothing leaves your machine at all \u2014 not even transcript text. This is the most private option.",
+      "localTitle": "Where your data goes",
+      "localBody": "Bristlenose runs on your machine. Audio and video files never leave your computer. Transcript text is sent to your chosen LLM provider (Claude, ChatGPT, Gemini, Azure OpenAI) for analysis \u2014 each provider\u2019s data retention policy applies to those API calls.",
+      "localOllama": "With Ollama (local models), nothing leaves your machine at all \u2014 not even transcript text. This is the most private option, but quality is lower than cloud models in 2026.",
       "localAnon": "Speaker codes (p1, p2) are the public-facing identity used in quotes, exports, and CSV files. Display names (first names) are visible in the app for your research team but are not included in exports. Anyone outside your team sees codes, not names.",
       "redactionTitle": "PII redaction",
       "redactionIntro": "PII redaction is opt-in \u2014 enable it with --redact-pii. It\u2019s off by default because false positives (redacting research-relevant text) damage data accuracy. The feature uses Microsoft Presidio, an open-source text scanner, with a configurable confidence threshold (BRISTLENOSE_PII_SCORE_THRESHOLD, default 0.7).",
@@ -276,7 +275,8 @@
       "actionThreshold": "For sensitive data, lower the confidence threshold (BRISTLENOSE_PII_SCORE_THRESHOLD=0.5) to catch more at the cost of more false positives.",
       "actionSharing": "Before sharing externally, review quotes for sensitive disclosures and indirect identifiers that automated tools cannot catch.",
       "actionRetention": "Your organisation\u2019s data retention policy applies \u2014 delete output when the research purpose is complete.",
-      "actionNames": "Display names don\u2019t appear in exports, so you can safely use real first names during analysis without them reaching external stakeholders."
+      "actionNames": "Display names don\u2019t appear in exports, so you can safely use real first names during analysis without them reaching external stakeholders.",
+      "actionAudit": "We publish a full <a href=\"https://github.com/cassiocassio/bristlenose/tree/main/docs/pii-audit\" target=\"_blank\" rel=\"noopener noreferrer\">PII redaction audit</a> with a <a href=\"https://github.com/cassiocassio/bristlenose/blob/main/tests/fixtures/pii_horror_transcript.txt\" target=\"_blank\" rel=\"noopener noreferrer\">test transcript</a>, <a href=\"https://github.com/cassiocassio/bristlenose/blob/main/docs/pii-audit/redacted-transcript.md\" target=\"_blank\" rel=\"noopener noreferrer\">redacted output</a>, and <a href=\"https://github.com/cassiocassio/bristlenose/blob/main/docs/pii-audit/pii-summary.txt\" target=\"_blank\" rel=\"noopener noreferrer\">raw audit log</a> \u2014 so you can judge the limits for yourself."
     },
     "signals": {
       "intro": "The analysis page surfaces signals \u2014 statistically notable concentrations of sentiment or codebook tags within report sections. Two types of signal card.",

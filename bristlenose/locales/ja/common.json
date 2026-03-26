@@ -149,7 +149,7 @@
   },
   "export": {
     "heading": "",
-    "subtitle": "",
+    "subtitle": "ブラウザで誰でも開けるスタンドアロンレポートを作成します。受信者は閲覧・検索できますが、編集はできません。",
     "anonymise": "",
     "anonymiseHint": "",
     "exporting": "",

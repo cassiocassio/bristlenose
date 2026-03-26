@@ -1,7 +1,7 @@
 /** Contributing section — how to contribute, links, licence. */
 
 import { useTranslation } from "react-i18next";
-import { dt } from "../../utils/desktopTranslation";
+import { dt } from "../../utils/platformTranslation";
 
 export function ContributingSection() {
   const { t } = useTranslation();

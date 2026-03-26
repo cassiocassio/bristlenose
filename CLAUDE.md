@@ -110,8 +110,11 @@ macOS ships BSD versions of `sed`, `grep`, `awk`, `find`, `xargs`, `date`, `stat
 - **`format.ts` uses `Intl.DateTimeFormat`** — `formatFinderDate` and `formatCompactDate` accept an optional `locale` param. Callers pass `i18n.language`. Internally, any `en*` locale (including bare `"en"` from i18next and `"en-US"` from jsdom in tests) is mapped to `"en-GB"` to preserve day-month order ("12 Feb" not "Feb 12"). Non-English locales pass through unchanged. `formatFinderDate` uses `Intl.RelativeTimeFormat` for "today"/"yesterday"
 - **`<html lang>` tracking** — `i18n.on("languageChanged")` in `i18n/index.ts` sets `document.documentElement.lang`. Required for screen reader pronunciation
 - **Korean has no plural forms** — only `_other` keys needed in locale files (no `_one`). i18next CLDR rules handle this automatically
-- **New keys must go in all 5 locale files** — en, es, fr, de, ko. Every `t("key")` call needs a corresponding entry in each. Use machine translation for initial pass, flag for human review
+- **New keys must go in all 6 locale files** — en, es, fr, de, ko, ja. Every `t("key")` call needs a corresponding entry in each. If using `dt()`, the desktop override must also go in all 6 `desktop.json` files. Use machine translation for initial pass, flag for human review
 - **Data-level vs chrome-level translation** — UI chrome (buttons, headings, labels) translates via `t()`. API data (codebook names, quote text, section labels) stays in the original language. Exceptions: sentiment group name/subtitle and uncategorised group are server constants that get client-side translation
+- **Platform text forking** — `dt(t, key)` checks `desktop:` namespace first (falls back to base key). `ct(t, key)` returns `null` on desktop (hides CLI-only text). Both in `frontend/src/utils/platformTranslation.ts`. Desktop namespace loaded conditionally in `i18n/index.ts` when `data-platform="desktop"` is set. See `docs/platform-text-map.md` for the full inventory and decision tree
+- **German typographic quotes break JSON** — `„"` (U+201E / U+201C) look like JSON string delimiters to parsers. Escape as `\u201e` / `\u201c` in locale JSON files. Caught in `de/desktop.json` during platform text fork work
+- **Tests that mock `../utils/platform` must include `isDesktop`** — `HelpModal.test.tsx` mocked only `isMac`, which broke when `ContributingSection` started importing `dt()` (which imports `isDesktop`). Always mock `{ isMac, isDesktop, _resetPlatformCache }` together
 
 ### Other gotchas
 
@@ -144,6 +147,8 @@ macOS ships BSD versions of `sed`, `grep`, `awk`, `find`, `xargs`, `date`, `stat
 
 ## Reference docs (read when working in these areas)
 
+- **Terminology glossary + tone guide** (canonical vocabulary, forbidden alternatives, spelling rules, voice): `docs/glossary.md` — **read this before writing any user-facing text**
+- **Platform text map** (which text is shared/desktop-only/CLI-only/forked, `dt()`/`ct()` inventory, decision tree): `docs/platform-text-map.md` — **read this before adding help text**
 - **Design decisions** (why choices were made, alternatives considered): `docs/design-decisions.md`
 - **Export: HTML report + cross-cutting concerns** (anonymisation matrix, shared infra, audit): `docs/design-export-html.md`
 - **Export: CSV/XLS quotes** (11-column schema, selection logic, export dropdown): `docs/design-export-quotes.md`

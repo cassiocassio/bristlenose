@@ -1,7 +1,7 @@
 /** Privacy section — how data is handled, PII redaction limits, what to do. */
 
 import { useTranslation } from "react-i18next";
-import { dt } from "../../utils/desktopTranslation";
+import { dt } from "../../utils/platformTranslation";
 
 export function PrivacySection() {
   const { t } = useTranslation();

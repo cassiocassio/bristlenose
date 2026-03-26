@@ -230,7 +230,9 @@ MoSCoW within each category. **100-day goal: complete every Must.**
 - **i18n: DeveloperSection & DesignSection** — dev-facing help panels, ~20 paragraphs hardcoded. Debatable whether to translate
 - **i18n: SettingsModal CONFIG_DATA labels** — ~70 config reference labels hardcoded English. Nav chrome already wired
 - **i18n: translation quality fixes** — ko participant term inconsistency (참여자 vs 참가자); de/ko missing `nav.codebookShort`. Machine translation QA checklist in `docs/design-i18n.md` Step 6
-- **i18n: cross-check each new language against Apple glossary** — Spanish done (23 Mar 2026, all match). Required before shipping each new language. See `docs/design-i18n.md`
+- **i18n: cross-check each new language against Apple glossary** — Spanish done (23 Mar 2026, all match). fr, de, ko still need cross-check for standard menu items (Edit > Find, View > Zoom, File > Print). See `docs/design-i18n.md`
+- **i18n: fr common.json "citations" audit** — `sentItem3` in desktop.json fixed to "verbatim" (26 Mar). common.json still uses "citations" in export/copy contexts (copyQuotes, quotesCopied). These are UI action labels not the research concept — probably fine, but worth a native speaker review
+- **i18n: localOllama staleness** — `help.privacy.localOllama` says "quality is lower than cloud models in 2026" — time-dependent claim that will go stale
 
 ---
 
@@ -329,6 +331,13 @@ MoSCoW within each category. **100-day goal: complete every Must.**
 - **Research methodology guide** — how Bristlenose analyses data, for researchers who want to understand
 - **Academic citation** — BibTeX entry for papers
 - **API documentation** — for power users who want to script against serve mode
+- **Glossary heading case** — `docs/glossary.md` H1 uses title case, violating its own sentence-case rule. Trivial fix
+- **Help text bulleted lists** — `help.privacy.missesBody`, `catchesBody`, `cannotBody` are dense paragraphs listing many categories. Bulleted lists would be more scannable and translatable
+- **`ct()` candidate: actionReview** — `help.privacy.actionReview` references `pii_summary.txt` filename. Desktop users can't navigate to hidden files. Wrap in `ct()` or rewrite for desktop ("check the audit log in your project folder")
+- **`dt()` design: single-call vs double-lookup** — current: `i18n.exists()` then `t()`. Alternative: `t(desktopKey, { defaultValue: t(key) })`. Revisit if forked key count grows past ~10
+- **PII/anonymisation enforcement level** — glossary draws a hard line. Decide whether docs-review agent enforces at blocker or info level
+- **CLAUDE.md "5 languages" stale** — current status line says 5 but 6 exist (ja added). Update when next editing current status
+- **Vale linter setup** — `docs/glossary.md` terminology table can feed Vale substitution rules. See docs-review agent plan for implementation steps
 
 ---
 

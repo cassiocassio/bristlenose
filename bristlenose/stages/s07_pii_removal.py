@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import warnings
 from collections import Counter
 from pathlib import Path
 
@@ -49,6 +50,7 @@ _DEFAULT_ENTITIES = [
     "EMAIL_ADDRESS",
     "CREDIT_CARD",
     "US_SSN",
+    "UK_NHS",
     "IBAN_CODE",
     "IP_ADDRESS",
 ]
@@ -76,9 +78,11 @@ class PiiRedaction:
         self.timecode = timecode
 
     def __repr__(self) -> str:
+        # Do not include original_text — it contains PII that would leak into
+        # logs and tracebacks.  Show length instead.
         return (
             f"PiiRedaction({self.entity_type}: "
-            f"{self.original_text!r} -> {self.replacement}, "
+            f"<{len(self.original_text)} chars> -> {self.replacement}, "
             f"score={self.score:.2f})"
         )
 
@@ -96,6 +100,20 @@ def remove_pii(
     Returns:
         Tuple of (cleaned transcripts, all redactions across all sessions).
     """
+    # Warn about configured-but-unimplemented fields
+    if settings.pii_llm_pass:
+        warnings.warn(
+            "pii_llm_pass is configured but not yet implemented — "
+            "no LLM second pass will run. PII detection uses Presidio only.",
+            stacklevel=2,
+        )
+    if settings.pii_custom_names:
+        warnings.warn(
+            "pii_custom_names is configured but not yet implemented — "
+            "the listed names will NOT be automatically redacted.",
+            stacklevel=2,
+        )
+
     logger.info("Initialising Presidio (loads spaCy NLP model on first run)...")
     analyzer, anonymizer = _init_presidio(settings)
 
@@ -115,6 +133,8 @@ def remove_pii(
 
             clean_seg = seg.model_copy()
             clean_seg.text = clean_text
+            # Clear word-level data — it contains the original unredacted text
+            clean_seg.words = []
             clean_segments.append(clean_seg)
 
         clean_transcript = PiiCleanTranscript(
@@ -264,10 +284,16 @@ def write_pii_summary(
     Returns:
         Path to the summary file, or None if no redactions.
     """
-    output_dir.mkdir(parents=True, exist_ok=True)
-    path = output_dir / "pii_summary.txt"
+    # Write to .bristlenose/ hidden directory — the summary contains original
+    # PII values for audit purposes and must not be shared with the output.
+    internal_dir = output_dir / ".bristlenose"
+    internal_dir.mkdir(parents=True, exist_ok=True)
+    path = internal_dir / "pii_summary.txt"
 
     lines: list[str] = []
+    lines.append("# CONFIDENTIAL — this file contains original personal data.")
+    lines.append("# Do not share this file outside your research team.")
+    lines.append("#")
     lines.append("# PII Redaction Summary")
     lines.append(f"# Total entities redacted: {len(redactions)}")
     lines.append("")
@@ -354,7 +380,7 @@ def _redact_text(
         text=text,
         language="en",
         entities=_DEFAULT_ENTITIES,
-        score_threshold=0.7,
+        score_threshold=settings.pii_score_threshold,
     )
 
     if not results:

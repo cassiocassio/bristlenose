@@ -1,0 +1,584 @@
+# PII Horror Transcript — Expected Detection Results
+#
+# Each entry documents a planted PII item, whether Presidio is expected to
+# catch it, the legal category, and the transcript segment where it appears.
+#
+# Categories:
+#   1 = Names (baseline — should catch)
+#   2 = Names (hard — likely miss)
+#   3 = Contact details (mixed)
+#   4 = Addresses and locations
+#   5 = GDPR special category (Art. 9)
+#   6 = Indirect identifiers (quasi-identifiers)
+#   7 = Mosaic / cross-reference identification
+#   8 = PII in unexpected positions
+
+items:
+
+  # ── Category 1: Names Presidio should catch ──────────────────────────
+  - text: "Sarah Thornton"
+    segment_time: "00:12"
+    category: 1
+    entity_type: PERSON
+    should_catch: true
+    legal: "GDPR Art. 4(1), US PII (name)"
+    notes: "Full name in clear self-introduction context"
+
+  - text: "Rebecca Cheung"
+    segment_time: "00:28"
+    category: 1
+    entity_type: PERSON
+    should_catch: true
+    legal: "GDPR Art. 4(1)"
+    notes: "Moderator self-introduction"
+
+  - text: "Barry Willoughby"
+    segment_time: "01:02"
+    category: 1
+    entity_type: PERSON
+    should_catch: true
+    legal: "GDPR Art. 4(1)"
+    notes: "Full name in apposition with nickname"
+
+  - text: "Dean Marsden"
+    segment_time: "01:02"
+    category: 1
+    entity_type: PERSON
+    should_catch: true
+    legal: "GDPR Art. 4(1)"
+    notes: "Full name in apposition with nickname"
+
+  - text: "Dave Robson"
+    segment_time: "03:26"
+    category: 1
+    entity_type: PERSON
+    should_catch: true
+    legal: "GDPR Art. 4(1)"
+    notes: "Full name in reported speech"
+
+  - text: "Ahmed Rasheed"
+    segment_time: "04:20"
+    category: 1
+    entity_type: PERSON
+    should_catch: true
+    legal: "GDPR Art. 4(1)"
+    notes: "Full name with role"
+
+  - text: "Tracy Willoughby"
+    segment_time: "06:12"
+    category: 1
+    entity_type: PERSON
+    should_catch: true
+    legal: "GDPR Art. 4(1)"
+    notes: "Full name in apposition with nickname"
+
+  # ── Category 2: Names Presidio will likely miss ──────────────────────
+  - text: "Priyanka Venkataraman"
+    segment_time: "02:52"
+    category: 2
+    entity_type: PERSON
+    should_catch: false
+    legal: "GDPR Art. 4(1)"
+    notes: "South Asian name — lower spaCy recall for non-Western names"
+
+  - text: "Xiaoming"
+    segment_time: "02:52"
+    category: 2
+    entity_type: PERSON
+    should_catch: false
+    legal: "GDPR Art. 4(1)"
+    notes: "Chinese single name — poor English-model recall"
+
+  - text: "Kwame Asante-Mensah"
+    segment_time: "02:52"
+    category: 2
+    entity_type: PERSON
+    should_catch: false
+    legal: "GDPR Art. 4(1)"
+    notes: "Ghanaian hyphenated name — tokenisation may split"
+
+  - text: "Fatimah bint Khalid"
+    segment_time: "02:52"
+    category: 2
+    entity_type: PERSON
+    should_catch: false
+    legal: "GDPR Art. 4(1)"
+    notes: "Arabic patronymic name — 'bint' confuses NER"
+
+  - text: "Bazza"
+    segment_time: "01:02"
+    category: 2
+    entity_type: PERSON
+    should_catch: false
+    legal: "GDPR Art. 4(1)"
+    notes: "Australian/British nickname — not in NER training data"
+
+  - text: "Deano"
+    segment_time: "01:02"
+    category: 2
+    entity_type: PERSON
+    should_catch: false
+    legal: "GDPR Art. 4(1)"
+    notes: "British diminutive — not in NER training data"
+
+  - text: "Grace"
+    segment_time: "01:02"
+    category: 2
+    entity_type: PERSON
+    should_catch: false
+    legal: "GDPR Art. 4(1)"
+    notes: "Name that is a common English word — ambiguous context"
+
+  - text: "Will"
+    segment_time: "01:02"
+    category: 2
+    entity_type: PERSON
+    should_catch: false
+    legal: "GDPR Art. 4(1)"
+    notes: "Name that is a common English word — ambiguous context"
+
+  - text: "Hope"
+    segment_time: "01:02"
+    category: 2
+    entity_type: PERSON
+    should_catch: false
+    legal: "GDPR Art. 4(1)"
+    notes: "Name that is a common English word — ambiguous context"
+
+  - text: "Jonh"
+    segment_time: "06:12"
+    category: 2
+    entity_type: PERSON
+    should_catch: false
+    legal: "GDPR Art. 4(1)"
+    notes: "Misspelled name — NER relies on lexical match"
+
+  - text: "Karen O'Brien-Kingsley"
+    segment_time: "04:20"
+    category: 2
+    entity_type: PERSON
+    should_catch: false
+    legal: "GDPR Art. 4(1)"
+    notes: "Compound hyphenated name with apostrophe — tokenisation challenge"
+
+  - text: "Mary-Kate"
+    segment_time: "04:42"
+    category: 2
+    entity_type: PERSON
+    should_catch: false
+    legal: "GDPR Art. 4(1)"
+    notes: "Hyphenated first name"
+
+  - text: "our Trace"
+    segment_time: "06:12"
+    category: 2
+    entity_type: PERSON
+    should_catch: false
+    legal: "GDPR Art. 4(1)"
+    notes: "Colloquial diminutive with possessive 'our'"
+
+  - text: "Kapoor"
+    segment_time: "03:50"
+    category: 2
+    entity_type: PERSON
+    should_catch: false
+    legal: "GDPR Art. 4(1)"
+    notes: "Surname in vague reference — 'Mrs something-or-other, Kapoor I think'"
+
+  - text: "Karen's"
+    segment_time: "04:20"
+    category: 2
+    entity_type: PERSON
+    should_catch: false
+    legal: "GDPR Art. 4(1)"
+    notes: "Name in possessive form"
+
+  - text: "Ahmed's"
+    segment_time: "04:20"
+    category: 2
+    entity_type: PERSON
+    should_catch: false
+    legal: "GDPR Art. 4(1)"
+    notes: "Name in possessive form"
+
+  - text: "John Cheung"
+    segment_time: "06:12"
+    category: 2
+    entity_type: PERSON
+    should_catch: false
+    legal: "GDPR Art. 4(1)"
+    notes: "Name after a misspelling correction — context may confuse NER"
+
+  # ── Category 3: Contact details ──────────────────────────────────────
+  - text: "s.thornton@hartwellbs.co.uk"
+    segment_time: "00:38"
+    category: 3
+    entity_type: EMAIL_ADDRESS
+    should_catch: true
+    legal: "GDPR Art. 4(1), US PII (email)"
+    notes: "Standard email format"
+
+  - text: "dave.robson@hartwellbs.co.uk"
+    segment_time: "03:26"
+    category: 3
+    entity_type: EMAIL_ADDRESS
+    should_catch: true
+    legal: "GDPR Art. 4(1)"
+    notes: "Standard email format"
+
+  - text: "d.robson@mailbox.org"
+    segment_time: "03:26"
+    category: 3
+    entity_type: EMAIL_ADDRESS
+    should_catch: true
+    legal: "GDPR Art. 4(1)"
+    notes: "Standard email format"
+
+  - text: "p.venkataraman@hartwellbs.co.uk"
+    segment_time: "02:52"
+    category: 3
+    entity_type: EMAIL_ADDRESS
+    should_catch: true
+    legal: "GDPR Art. 4(1)"
+    notes: "Standard email format"
+
+  - text: "+44 7700 369258"
+    segment_time: "03:26"
+    category: 3
+    entity_type: PHONE_NUMBER
+    should_catch: true
+    legal: "GDPR Art. 4(1), US PII (phone)"
+    notes: "International phone format"
+
+  - text: "john dot smith at company dot co dot uk"
+    segment_time: "07:35"
+    category: 3
+    entity_type: EMAIL_ADDRESS
+    should_catch: false
+    legal: "GDPR Art. 4(1)"
+    notes: "Dictated email — no pattern match possible"
+
+  - text: "oh seven seven double-oh three six nine two five eight"
+    segment_time: "07:35"
+    category: 3
+    entity_type: PHONE_NUMBER
+    should_catch: false
+    legal: "GDPR Art. 4(1)"
+    notes: "Phone number in words — no pattern match"
+
+  - text: "@sarahthornton92"
+    segment_time: "07:35"
+    category: 3
+    entity_type: PERSON
+    should_catch: false
+    legal: "GDPR Art. 4(1) (online identifier)"
+    notes: "Social media handle — not in default entity types"
+
+  - text: "@sarah.t.a11y"
+    segment_time: "07:35"
+    category: 3
+    entity_type: PERSON
+    should_catch: false
+    legal: "GDPR Art. 4(1) (online identifier)"
+    notes: "Social media handle"
+
+  - text: "EMP-4582"
+    segment_time: "02:31"
+    category: 3
+    entity_type: PERSON
+    should_catch: false
+    legal: "GDPR Art. 4(1) (employee identifier)"
+    notes: "Internal employee badge number — no recogniser"
+
+  - text: "4532 0123 4567 8901"
+    segment_time: "05:45"
+    category: 3
+    entity_type: CREDIT_CARD
+    should_catch: false
+    legal: "GDPR Art. 4(1), US PII (financial), PCI DSS"
+    notes: "Credit card with spaces — Presidio expects contiguous digits or hyphens, misses space-separated format"
+
+  - text: "GB29 NWBK 6016 1331 9268 19"
+    segment_time: "05:45"
+    category: 3
+    entity_type: IBAN_CODE
+    should_catch: true
+    legal: "GDPR Art. 4(1), US PII (financial)"
+    notes: "Standard IBAN format"
+
+  - text: "192.168.1.42"
+    segment_time: "05:18"
+    category: 3
+    entity_type: IP_ADDRESS
+    should_catch: true
+    legal: "GDPR Art. 4(1) (online identifier), Recital 30"
+    notes: "Standard IPv4 format"
+
+  - text: "60-16-13"
+    segment_time: "08:02"
+    category: 3
+    entity_type: PHONE_NUMBER
+    should_catch: false
+    legal: "GDPR Art. 4(1) (financial)"
+    notes: "UK bank sort code — no dedicated recogniser, may false-match as phone"
+
+  - text: "31926819"
+    segment_time: "08:02"
+    category: 3
+    entity_type: PHONE_NUMBER
+    should_catch: false
+    legal: "GDPR Art. 4(1) (financial)"
+    notes: "UK bank account number — no dedicated recogniser"
+
+  # ── Category 4: Addresses and locations ──────────────────────────────
+  - text: "14 Rosemary Lane, Fetcham, GU2 4AB"
+    segment_time: "06:38"
+    category: 4
+    entity_type: ADDRESS
+    should_catch: false
+    legal: "GDPR Art. 4(1), US PII (address)"
+    notes: "Full UK postal address — ADDRESS not in _DEFAULT_ENTITIES"
+
+  - text: "the WeWork on Bermondsey Street"
+    segment_time: "00:38"
+    category: 4
+    entity_type: ADDRESS
+    should_catch: false
+    legal: "GDPR Art. 4(1) (when combined with employer)"
+    notes: "Workplace location — LOCATION entity excluded"
+
+  - text: "just off the Hogs Back near Fetcham"
+    segment_time: "06:38"
+    category: 4
+    entity_type: ADDRESS
+    should_catch: false
+    legal: "GDPR Art. 4(1) (combined identifier)"
+    notes: "Descriptive location — no pattern match"
+
+  - text: "the blue door, corner of Elm Road"
+    segment_time: "07:02"
+    category: 4
+    entity_type: ADDRESS
+    should_catch: false
+    legal: "GDPR Art. 4(1) (combined identifier)"
+    notes: "Described location — no pattern match"
+
+  # ── Category 5: GDPR special category data (Art. 9) ─────────────────
+  - text: "my ADHD diagnosis"
+    segment_time: "01:58"
+    category: 5
+    entity_type: null
+    should_catch: false
+    legal: "GDPR Art. 9(1) — health data"
+    notes: "No Presidio recogniser for health conditions"
+
+  - text: "on sertraline for anxiety"
+    segment_time: "01:58"
+    category: 5
+    entity_type: null
+    should_catch: false
+    legal: "GDPR Art. 9(1) — health data"
+    notes: "Medication name + condition — no recogniser"
+
+  - text: "Irish Travellers"
+    segment_time: "01:34"
+    category: 5
+    entity_type: null
+    should_catch: false
+    legal: "GDPR Art. 9(1) — racial or ethnic origin"
+    notes: "Ethnic identity disclosure — no recogniser"
+
+  - text: "as a mixed-race Irish Traveller woman"
+    segment_time: "08:22"
+    category: 5
+    entity_type: null
+    should_catch: false
+    legal: "GDPR Art. 9(1) — racial or ethnic origin"
+    notes: "Combined ethnic identity — no recogniser"
+
+  - text: "card-carrying Labour member"
+    segment_time: "04:42"
+    category: 5
+    entity_type: null
+    should_catch: false
+    legal: "GDPR Art. 9(1) — political opinions"
+    notes: "Political affiliation — no recogniser"
+
+  - text: "we keep halal at home"
+    segment_time: "04:42"
+    category: 5
+    entity_type: null
+    should_catch: false
+    legal: "GDPR Art. 9(1) — religious beliefs"
+    notes: "Religious practice — no recogniser"
+
+  - text: "converted to Islam"
+    segment_time: "04:42"
+    category: 5
+    entity_type: null
+    should_catch: false
+    legal: "GDPR Art. 9(1) — religious beliefs"
+    notes: "Religious conversion — no recogniser"
+
+  - text: "our Unison rep"
+    segment_time: "04:20"
+    category: 5
+    entity_type: null
+    should_catch: false
+    legal: "GDPR Art. 9(1) — trade union membership"
+    notes: "Trade union membership — no recogniser"
+
+  - text: "my wife, well partner"
+    segment_time: "04:42"
+    category: 5
+    entity_type: null
+    should_catch: false
+    legal: "GDPR Art. 9(1) — sexual orientation"
+    notes: "Same-sex relationship implied (female speaker) — no recogniser"
+
+  - text: "panic attacks"
+    segment_time: "07:02"
+    category: 5
+    entity_type: null
+    should_catch: false
+    legal: "GDPR Art. 9(1) — health data"
+    notes: "Mental health condition — no recogniser"
+
+  # ── Category 6: Indirect identifiers ─────────────────────────────────
+  - text: "born on the 14th of March 1987"
+    segment_time: "01:34"
+    category: 6
+    entity_type: DATE_TIME
+    should_catch: false
+    legal: "GDPR Art. 4(1), US PII (DOB)"
+    notes: "Date of birth — DATE_TIME not in _DEFAULT_ENTITIES"
+
+  - text: "I'm 38"
+    segment_time: "01:34"
+    category: 6
+    entity_type: null
+    should_catch: false
+    legal: "GDPR Art. 4(1) (combined identifier)"
+    notes: "Age — no recogniser, but identifying when combined"
+
+  - text: "the only accessibility tester"
+    segment_time: "00:12"
+    category: 6
+    entity_type: null
+    should_catch: false
+    legal: "GDPR Art. 4(1) (combined identifier)"
+    notes: "Unique job title — identifying when combined with employer"
+
+  - text: "943 476 5919"
+    segment_time: "03:50"
+    category: 6
+    entity_type: UK_NHS
+    should_catch: true
+    legal: "GDPR Art. 4(1), UK DPA 2018"
+    notes: "NHS number — now in _DEFAULT_ENTITIES after fix"
+
+  - text: "AB 12 34 56 C"
+    segment_time: "03:50"
+    category: 6
+    entity_type: null
+    should_catch: false
+    legal: "GDPR Art. 4(1), UK DPA 2018"
+    notes: "UK National Insurance number — no Presidio recogniser"
+
+  - text: "KV68 NPR"
+    segment_time: "05:45"
+    category: 6
+    entity_type: null
+    should_catch: false
+    legal: "GDPR Art. 4(1), UK DPA 2018 (vehicle registration)"
+    notes: "UK car registration — no recogniser"
+
+  - text: "St Peter's Primary in Ashtead"
+    segment_time: "01:34"
+    category: 6
+    entity_type: null
+    should_catch: false
+    legal: "GDPR Art. 4(1) (combined identifier — child's school)"
+    notes: "Child's school name — identifying when combined with parent details"
+
+  - text: "Riverside Surgery in Ashtead"
+    segment_time: "07:02"
+    category: 6
+    entity_type: null
+    should_catch: false
+    legal: "GDPR Art. 9(1) — health data (GP surgery implies patient)"
+    notes: "GP surgery name — health data by implication"
+
+  # ── Category 7: Mosaic / cross-reference identification ──────────────
+  - text: "38-year-old female accessibility tester at Hartwell in Fetcham who has ADHD"
+    segment_time: "08:22"
+    category: 7
+    entity_type: null
+    should_catch: false
+    legal: "GDPR Recital 26 — identifiability by 'all means reasonably likely'"
+    notes: "Combination of age + gender + unique role + employer + location + health condition = one person in the UK"
+
+  - text: "only 3 of us with this condition in Surrey"
+    segment_time: "01:58"
+    category: 7
+    entity_type: null
+    should_catch: false
+    legal: "GDPR Recital 26"
+    notes: "Small-group identification — condition + region narrows to 3 people"
+
+  # ── Category 8: PII in unexpected positions ──────────────────────────
+  - text: "Sarah"
+    segment_time: "00:00"
+    category: 8
+    entity_type: PERSON
+    should_catch: false
+    legal: "GDPR Art. 4(1)"
+    notes: "Moderator uses participant's first name in question"
+
+  - text: "sarah_thornton_feedback.docx"
+    segment_time: "02:31"
+    category: 8
+    entity_type: null
+    should_catch: false
+    legal: "GDPR Art. 4(1)"
+    notes: "Name embedded in filename — no recogniser for this pattern"
+
+  - text: "linkedin.com/in/sarah-thornton-92"
+    segment_time: "02:31"
+    category: 8
+    entity_type: URL
+    should_catch: false
+    legal: "GDPR Art. 4(1) (online identifier)"
+    notes: "URL entity not in _DEFAULT_ENTITIES; name embedded in URL path"
+
+  - text: "sthompson"
+    segment_time: "05:18"
+    category: 8
+    entity_type: null
+    should_catch: false
+    legal: "GDPR Art. 4(1) (online identifier / username)"
+    notes: "Username derived from real name — no recogniser"
+
+  - text: "bwilliams"
+    segment_time: "05:18"
+    category: 8
+    entity_type: null
+    should_catch: false
+    legal: "GDPR Art. 4(1) (online identifier / username)"
+    notes: "Username derived from real name — no recogniser"
+
+  - text: "sarah_thornton_interview.mp4"
+    segment_time: null
+    category: 8
+    entity_type: null
+    should_catch: false
+    legal: "GDPR Art. 4(1)"
+    notes: "PII in source filename (transcript header) — not processed by Presidio"
+
+  - text: "password is probably still password123"
+    segment_time: "05:18"
+    category: 8
+    entity_type: null
+    should_catch: false
+    legal: "GDPR Art. 4(1) (authentication data)"
+    notes: "Password disclosure — no recogniser (but should arguably be flagged)"

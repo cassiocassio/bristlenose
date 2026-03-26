@@ -3,24 +3,23 @@ import SwiftUI
 /// A single project row in the sidebar.
 ///
 /// Shows the project name with a document icon. Supports inline rename triggered by:
-/// - `isRenaming` binding (menu-driven or [+] button)
-/// - Slow double-click (first click selects, second click 0.3–1.0s later activates rename)
+/// - `isRenaming` binding (menu-driven, context menu, or [+] button)
+///
+/// Slow-double-click rename is parked — `simultaneousGesture(TapGesture())` and
+/// `onTapGesture` both break List selection on macOS 26. See 100days.md.
 ///
 /// Commit on Return, cancel on Escape.
-///
-/// Uses `simultaneousGesture` for slow-double-click so the List's built-in
-/// selection still fires on every click — `onTapGesture` would swallow it.
 struct ProjectRow: View {
 
     let project: Project
     @Binding var isRenaming: Bool
     let onRename: (String) -> Void
+    let onShowInFinder: () -> Void
+    let onDelete: () -> Void
 
+    @EnvironmentObject var i18n: I18n
     @State private var editText: String = ""
     @FocusState private var isTextFieldFocused: Bool
-
-    /// Track the last click time for slow double-click detection.
-    @State private var lastClickTime: Date?
 
     var body: some View {
         Label {
@@ -53,33 +52,6 @@ struct ProjectRow: View {
         } icon: {
             Image(systemName: "doc.text")
         }
-        // simultaneousGesture lets the List selection fire AND tracks
-        // slow-double-click timing for inline rename.
-        .simultaneousGesture(
-            TapGesture().onEnded {
-                guard !isRenaming else { return }
-                handleTap()
-            }
-        )
-    }
-
-    // MARK: - Slow double-click
-
-    /// Detect a slow double-click: a second tap 0.3–1.0s after the first.
-    /// The first tap selects the row (handled by the List selection binding).
-    /// The second tap triggers inline rename.
-    private func handleTap() {
-        let now = Date()
-        if let last = lastClickTime {
-            let interval = now.timeIntervalSince(last)
-            if interval >= 0.3 && interval <= 1.0 {
-                // Slow double-click — activate rename.
-                lastClickTime = nil
-                isRenaming = true
-                return
-            }
-        }
-        lastClickTime = now
     }
 
     // MARK: - Rename

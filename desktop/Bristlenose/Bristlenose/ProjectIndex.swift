@@ -2,17 +2,26 @@ import Foundation
 
 // MARK: - Project model
 
-/// A project entry in the sidebar — a pointer to a directory on disk.
-/// All project data lives in the directory; only metadata lives here.
+/// A project entry in the sidebar — a logical container referencing files on disk.
+///
+/// `path` is the project's home directory (pipeline output goes here).
+/// `inputFiles` optionally restricts which files the pipeline processes:
+/// - nil → scan the entire directory (folder-drop or legacy projects)
+/// - populated → process only these files (file-drop projects)
+///
+/// This follows the Logic Pro / Final Cut precedent: the project is a logical
+/// thing, the files are references. See `docs/design-project-sidebar.md`.
 struct Project: Identifiable, Hashable, Codable {
     var id: UUID
     var name: String
     var path: String
+    var inputFiles: [String]?
     var createdAt: Date
     var lastOpened: Date?
 
     enum CodingKeys: String, CodingKey {
         case id, name, path
+        case inputFiles = "input_files"
         case createdAt = "created_at"
         case lastOpened = "last_opened"
     }
@@ -64,14 +73,17 @@ final class ProjectIndex: ObservableObject {
 
     /// Create a new project with the given name and path.
     /// The name is de-duplicated if it already exists (appends " 2", " 3", etc.).
+    /// `inputFiles` optionally restricts which files the pipeline processes
+    /// (nil = scan the whole directory).
     /// Returns the new project so the caller can select it.
     @discardableResult
-    func addProject(name: String, path: String) -> Project {
+    func addProject(name: String, path: String, inputFiles: [String]? = nil) -> Project {
         let finalName = uniqueName(name, excluding: nil)
         let project = Project(
             id: UUID(),
             name: finalName,
             path: path,
+            inputFiles: inputFiles,
             createdAt: Date(),
             lastOpened: nil
         )
@@ -99,6 +111,26 @@ final class ProjectIndex: ObservableObject {
         guard let index = projects.firstIndex(where: { $0.id == id }) else { return }
         projects[index].lastOpened = Date()
         save()
+    }
+
+    /// Append files to an existing project's input list.
+    /// De-duplicates against files already in the project.
+    func addFiles(to id: UUID, files: [String]) {
+        guard let index = projects.firstIndex(where: { $0.id == id }) else { return }
+        var existing = projects[index].inputFiles ?? []
+        let newFiles = files.filter { !existing.contains($0) }
+        guard !newFiles.isEmpty else { return }
+        existing.append(contentsOf: newFiles)
+        projects[index].inputFiles = existing
+        save()
+    }
+
+    // MARK: - Lookup
+
+    /// Find an existing project by its filesystem path.
+    /// Used to prevent duplicates when the same folder is dropped again.
+    func findByPath(_ path: String) -> Project? {
+        projects.first { $0.path == path }
     }
 
     // MARK: - Name uniqueness

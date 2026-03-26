@@ -127,10 +127,16 @@ Phase 1 ships with plain paths only. Bookmark data added in Phase 2.
 
 ### What drag-and-drop does on disk
 
+**Updated Mar 2026** — follows Logic Pro / Final Cut / GarageBand precedent: the project is a logical container with file references, not a directory alias. No filesystem changes on drop (no creating folders, no moving files).
+
 When files/folders are dragged from Finder:
-- **Drag a folder** → index entry points to the original folder location (directory-native, no copy)
-- **Drag individual files** → create a new folder at a sensible default location (e.g. `~/Research/` or near the most recently created project), move files there, index points to the new folder
+- **Drag a single folder** → `path` = folder, `inputFiles` = nil (scan entire directory)
+- **Drag multiple folders** → one project, `path` = first folder, `inputFiles` = all folder paths
+- **Drag file(s)** → one project, `path` = first file's parent dir, `inputFiles` = exactly the dropped files (never siblings)
+- **Drag mix of files + folders** → one project, `path` = first item's dir, `inputFiles` = all paths
+- No dedup — dropping the same folder twice creates two projects (user may tag/analyse differently). Duplicate warning is a future enhancement (see 100days.md)
 - The `name` field is display-only. It must never be used to construct filesystem paths. The `path` field is set at creation and only changed by relocate
+- `inputFiles` (optional `[String]?` in `projects.json` as `input_files`): when nil, the pipeline scans the entire `path` directory. When populated, only those files/directories are processed. This is how single-file projects and multi-source projects coexist with the legacy folder-scan model
 
 ## Rename interaction
 
@@ -315,16 +321,35 @@ Replace `ProjectStub` array with `ProjectIndex` loading from `projects.json`.
 
 **Files**: `ProjectIndex.swift` (new), `ProjectRow.swift` (new), `ContentView.swift` (replace stubs), `MenuCommands.swift` (wire Project menu), `BridgeHandler.swift` (new actions)
 
-### Phase 2 — Drag-and-drop + inline rename
+### Phase 2 — Drag-and-drop + context menus (shipped 26 Mar 2026)
 
-- Accept drops from Finder (UTType validation, new project creation)
-- Inline rename on new project (name selected)
-- Slow double-click rename on existing projects
-- Right-click context menu on project rows
+**Shipped:**
+- Drag-and-drop from Finder onto sidebar — files and folders, single and multiple
+  - Single folder → project scans whole directory (`inputFiles: nil`)
+  - Multiple folders → one project, `inputFiles` lists all folder paths
+  - Single/multiple files → one project, `inputFiles` = exactly the dropped files (never siblings)
+  - Mixed files + folders → one project, all paths in `inputFiles`
+  - No dedup — same folder dropped twice creates two projects (user may analyse differently)
+  - Project named after first item (folder name or filename stem), inline rename activated
+- `Project.inputFiles` (`input_files` in JSON) — optional `[String]?`. nil = scan whole directory (backward compatible). Populated = process only listed files/directories. Follows Logic Pro / Final Cut precedent: project is a logical container, files are references
+- Right-click context menu on project rows: Show in Finder, Rename, Delete (destructive role)
+- Context menu actions scoped to right-clicked row (not necessarily the selected row)
+- ⌘⌫ keyboard shortcut for Delete in Project menu
+- `ProjectIndex.addFiles(to:files:)` — append files to existing project with dedup
+- `ProjectIndex.findByPath()` — lookup by filesystem path
+- Async URL loading from drop providers via `withTaskGroup` + `withCheckedContinuation`
+
+**Not shipped (parked in 100days.md):**
+- Slow-double-click rename — `simultaneousGesture(TapGesture())` and `onTapGesture` on List rows break selection on macOS 26. Rename works via right-click and Project menu. Needs NSEvent monitor or AppKit subclass
+- Multi-select (Shift/Cmd click) — needs `List(selection:)` with `Set<UUID>` instead of `UUID?`. Detail pane would show "N projects selected". Prerequisite for drag-to-folder
+- Drop-on-existing-project-row — per-row `.onDrop` also breaks List selection. Data model (`addFiles`) is ready but UI is parked
+- Drag-to-reorder — needs multi-select first. Phase 3 in design doc
+- Duplicate folder drop warning — dismissable warning when folder matches existing project path
 - Toast for "added interviews to project"
 - Empty state `ContentUnavailableView` as drag target
+- UTType validation for media files (currently accepts any file/folder)
 
-**Files**: `ProjectRow.swift` (context menu, drop target, inline rename)
+**Files**: `ProjectIndex.swift` (model, CRUD, inputFiles), `ProjectRow.swift` (context menu callbacks, rename), `ContentView.swift` (drop handling, context menu, async URL loading), `MenuCommands.swift` (⌘⌫ shortcut)
 
 ### Phase 3 — Folders
 

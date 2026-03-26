@@ -1,4 +1,5 @@
 import SwiftUI
+import UniformTypeIdentifiers
 
 /// Two-column NavigationSplitView: project list sidebar + WKWebView detail.
 ///
@@ -167,6 +168,102 @@ struct ContentView: View {
         renamingProjectID = project.id
     }
 
+    // MARK: - Drag and drop
+
+    /// Handle files/folders dropped from Finder onto the sidebar free space.
+    /// - Folder: create project pointing to that directory (scan all files)
+    /// - File(s): create project with inputFiles restricting to the dropped files
+    /// De-duplicates by path — if a project already exists for that folder, selects it.
+    private func handleDrop(providers: [NSItemProvider]) {
+        Task {
+            let urls = await loadURLs(from: providers)
+            await MainActor.run {
+                processDroppedURLs(urls)
+            }
+        }
+    }
+
+    /// Load file URLs from drop providers.
+    private func loadURLs(from providers: [NSItemProvider]) async -> [URL] {
+        await withTaskGroup(of: URL?.self) { group in
+            for provider in providers {
+                group.addTask {
+                    await withCheckedContinuation { continuation in
+                        provider.loadItem(
+                            forTypeIdentifier: UTType.fileURL.identifier
+                        ) { data, _ in
+                            guard let data = data as? Data,
+                                  let url = URL(
+                                      dataRepresentation: data, relativeTo: nil
+                                  ) else {
+                                continuation.resume(returning: nil)
+                                return
+                            }
+                            continuation.resume(returning: url)
+                        }
+                    }
+                }
+            }
+            var results: [URL] = []
+            for await url in group {
+                if let url { results.append(url) }
+            }
+            return results
+        }
+    }
+
+    /// Process collected URLs from a sidebar drop.
+    private func processDroppedURLs(_ urls: [URL]) {
+        let directories = urls.filter { $0.hasDirectoryPath }
+        let files = urls.filter { !$0.hasDirectoryPath }
+
+        // All drops create one project. The name comes from the first item.
+        // - Single folder: path = folder, inputFiles = nil (scan whole directory)
+        // - Multiple folders: path = first folder, inputFiles = all folder paths
+        // - File(s): path = first file's parent, inputFiles = file paths
+        // - Mix of files and folders: path = first item's dir, inputFiles = all paths
+        if directories.count == 1 && files.isEmpty {
+            // Single folder — classic mode, scan everything in it.
+            let url = directories[0]
+            let project = projectIndex.addProject(
+                name: url.lastPathComponent, path: url.path
+            )
+            selectedID = project.id
+            renamingProjectID = project.id
+        } else if !directories.isEmpty || !files.isEmpty {
+            // Multiple items — one project with explicit input list.
+            let allPaths = directories.map { $0.path } + files.map { $0.path }
+            let firstName: String
+            let firstPath: String
+            if let firstDir = directories.first {
+                firstName = firstDir.lastPathComponent
+                firstPath = firstDir.path
+            } else {
+                firstName = files[0].deletingPathExtension().lastPathComponent
+                firstPath = files[0].deletingLastPathComponent().path
+            }
+            let project = projectIndex.addProject(
+                name: firstName, path: firstPath, inputFiles: allPaths
+            )
+            selectedID = project.id
+            renamingProjectID = project.id
+        }
+    }
+
+    /// Handle files/folders dropped onto an existing project row.
+    /// Adds the dropped interviews to that project's input list.
+    private func handleDropOnProject(id: UUID, providers: [NSItemProvider]) {
+        Task {
+            let urls = await loadURLs(from: providers)
+            await MainActor.run {
+                let paths = urls.map { $0.path }
+                if !paths.isEmpty {
+                    projectIndex.addFiles(to: id, files: paths)
+                }
+            }
+        }
+    }
+
     // MARK: - Toolbar
 
     /// Two-way binding: reads activeTab from bridge, writes via switchToTab.
@@ -314,15 +411,47 @@ struct ContentView: View {
                         ),
                         onRename: { newName in
                             projectIndex.renameProject(id: project.id, newName: newName)
+                        },
+                        onShowInFinder: {
+                            if !project.path.isEmpty {
+                                NSWorkspace.shared.selectFile(
+                                    nil, inFileViewerRootedAtPath: project.path
+                                )
+                            }
+                        },
+                        onDelete: {
+                            if selectedID == project.id { selectedID = nil }
+                            projectIndex.removeProject(id: project.id)
                         }
                     )
                     .tag(project.id)
+                    .contextMenu {
+                        Button(i18n.t("desktop.menu.project.showInFinder")) {
+                            if !project.path.isEmpty {
+                                NSWorkspace.shared.selectFile(
+                                    nil, inFileViewerRootedAtPath: project.path
+                                )
+                            }
+                        }
+                        Button(i18n.t("desktop.menu.project.rename")) {
+                            renamingProjectID = project.id
+                        }
+                        Divider()
+                        Button(i18n.t("desktop.menu.project.delete"), role: .destructive) {
+                            if selectedID == project.id { selectedID = nil }
+                            projectIndex.removeProject(id: project.id)
+                        }
+                    }
                 }
             } header: {
                 Text(i18n.t("desktop.chrome.projects"))
             }
         }
         .accessibilityLabel(i18n.t("desktop.chrome.projects"))
+        .onDrop(of: [.fileURL], isTargeted: nil) { providers in
+            handleDrop(providers: providers)
+            return true
+        }
         .focusSection()
         // New Folder button in the sidebar title bar — next to the sidebar
         // toggle. Hidden when sidebar is collapsed (Phase 3, disabled for now).

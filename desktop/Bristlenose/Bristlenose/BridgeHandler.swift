@@ -69,6 +69,10 @@ final class BridgeHandler: ObservableObject {
     /// (Show in Finder) and disable guards.
     @Published var selectedProjectPath: String = ""
 
+    /// Non-empty when a folder is selected in the sidebar.
+    /// Used by the Project menu to show folder-specific items.
+    @Published var selectedFolderName: String = ""
+
     /// Reference to the WKWebView for outbound calls (goBack, switchToTab).
     /// Set by WebView.makeNSView, cleared on reset(). Weak to avoid retain cycles.
     weak var webView: WKWebView?
@@ -264,6 +268,7 @@ final class BridgeHandler: ObservableObject {
         undoLabel = nil
         isDarkMode = false
         selectedProjectPath = ""
+        selectedFolderName = ""
         webView = nil
     }
 

@@ -115,6 +115,11 @@ private struct FileMenuContent: View {
         }
         .keyboardShortcut("n", modifiers: .command)
 
+        Button(i18n.t("desktop.menu.file.newFolder")) {
+            NotificationCenter.default.post(name: .createNewFolder, object: nil)
+        }
+        .keyboardShortcut("n", modifiers: [.command, .shift])
+
         Button(i18n.t("desktop.menu.file.openInNewWindow")) {
             bridgeHandler.menuAction("openInNewWindow")
         }
@@ -319,38 +324,89 @@ private struct ProjectMenuContent: View {
         !bridgeHandler.selectedProjectPath.isEmpty
     }
 
+    /// Whether a folder is selected.
+    private var hasFolder: Bool {
+        !bridgeHandler.selectedFolderName.isEmpty
+    }
+
+    /// Whether anything is selected.
+    private var hasSelection: Bool { hasProject || hasFolder }
+
     var body: some View {
-        Button(i18n.t("desktop.menu.project.showInFinder")) {
-            let path = bridgeHandler.selectedProjectPath
-            if !path.isEmpty {
-                NSWorkspace.shared.selectFile(nil, inFileViewerRootedAtPath: path)
+        if hasFolder {
+            // Folder-specific items
+            Button(i18n.t("desktop.menu.folder.rename")) {
+                NotificationCenter.default.post(name: .renameSelectedFolder, object: nil)
             }
-        }
-        .keyboardShortcut("r", modifiers: [.command, .shift])
-        .disabled(!hasProject)
 
-        Button(i18n.t("desktop.menu.project.rename")) {
-            NotificationCenter.default.post(name: .renameSelectedProject, object: nil)
-        }
-        .disabled(bridgeHandler.selectedProjectPath.isEmpty && projectIndex.projects.isEmpty)
+            Button(i18n.t("desktop.menu.folder.archive")) {
+                // Phase 5
+            }
+            .disabled(true)
 
-        Button(i18n.t("desktop.menu.project.reAnalyse")) {
-            bridgeHandler.menuAction("reAnalyse")
-        }
-        .disabled(true)  // Future — Phase 2+
+            Divider()
 
-        Button(i18n.t("desktop.menu.project.archive")) {
-            bridgeHandler.menuAction("archive")
-        }
-        .disabled(true)  // Future — Phase 5
+            Button(i18n.t("desktop.menu.folder.delete"), role: .destructive) {
+                NotificationCenter.default.post(name: .deleteSelectedFolder, object: nil)
+            }
+            .keyboardShortcut(.delete, modifiers: .command)
+        } else {
+            // Project-specific items (or nothing selected)
+            Button(i18n.t("desktop.menu.project.showInFinder")) {
+                let path = bridgeHandler.selectedProjectPath
+                if !path.isEmpty {
+                    NSWorkspace.shared.selectFile(nil, inFileViewerRootedAtPath: path)
+                }
+            }
+            .keyboardShortcut("r", modifiers: [.command, .shift])
+            .disabled(!hasProject)
 
-        Divider()
+            Button(i18n.t("desktop.menu.project.rename")) {
+                NotificationCenter.default.post(name: .renameSelectedProject, object: nil)
+            }
+            .disabled(!hasProject)
 
-        Button(i18n.t("desktop.menu.project.delete")) {
-            NotificationCenter.default.post(name: .deleteSelectedProject, object: nil)
+            // "Move to" submenu — lists all folders + "No Folder" for root.
+            if !projectIndex.folders.isEmpty {
+                Menu(i18n.t("desktop.menu.project.moveTo")) {
+                    Button(i18n.t("desktop.menu.project.noFolder")) {
+                        NotificationCenter.default.post(
+                            name: .moveSelectedProject, object: nil
+                        )
+                    }
+
+                    Divider()
+
+                    ForEach(projectIndex.folders) { folder in
+                        Button(folder.name) {
+                            NotificationCenter.default.post(
+                                name: .moveSelectedProject, object: nil,
+                                userInfo: ["folderId": folder.id]
+                            )
+                        }
+                    }
+                }
+                .disabled(!hasProject)
+            }
+
+            Button(i18n.t("desktop.menu.project.reAnalyse")) {
+                bridgeHandler.menuAction("reAnalyse")
+            }
+            .disabled(true)  // Future — Phase 2+
+
+            Button(i18n.t("desktop.menu.project.archive")) {
+                bridgeHandler.menuAction("archive")
+            }
+            .disabled(true)  // Future — Phase 5
+
+            Divider()
+
+            Button(i18n.t("desktop.menu.project.delete")) {
+                NotificationCenter.default.post(name: .deleteSelectedProject, object: nil)
+            }
+            .keyboardShortcut(.delete, modifiers: .command)
+            .disabled(!hasProject)
         }
-        .keyboardShortcut(.delete, modifiers: .command)
-        .disabled(bridgeHandler.selectedProjectPath.isEmpty && projectIndex.projects.isEmpty)
     }
 }
 

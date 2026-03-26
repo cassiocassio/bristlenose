@@ -353,15 +353,24 @@ Replace `ProjectStub` array with `ProjectIndex` loading from `projects.json`.
 
 ### Phase 3 — Folders
 
-- `FolderRow.swift` — collapsible folder header with disclosure triangle
-- Create folder (File > New Folder, Cmd+Shift+N)
-- "Move to" submenu in context menu and Project menu
-- Drag-to-reorder projects and folders (persisted positions)
-- Folder context menu (Rename, Archive Folder, Delete Folder)
-- Project menu adapts based on selection (project vs folder)
-- Spring-loaded folders during drag
+**Shipped:**
+- `FolderRow.swift` — collapsible folder header with disclosure triangle (`DisclosureGroup`)
+- `Folder` struct replaces `FolderStub` — `id`, `name`, `collapsed`, `createdAt` (backward-compatible decoder)
+- `folderId: UUID?` on `Project` — nil = root level
+- `SidebarSelection` enum — `List(selection:)` handles both `.project(UUID)` and `.folder(UUID)`
+- Create folder: File > New Folder (⇧⌘N), sidebar `folder.badge.plus` button, inline rename on creation
+- "Move to" submenu in context menu and Project menu — lists all folders + "No Folder" for root
+- Folder context menu: Rename Folder, Archive Folder (disabled — Phase 5), Delete Folder
+- Delete folder: projects inside move to root level, folder removed
+- Project menu adapts based on selection (project items vs folder items)
+- Folder collapsed state persisted in `projects.json`
+- Locale keys in all 6 languages (en, es, fr, de, ko, ja)
 
-**Files**: `FolderRow.swift` (new), `ProjectIndex.swift` (folder CRUD, reorder), `MenuCommands.swift` (adaptive Project menu, Move To submenu)
+**Not shipped (parked):**
+- Drag-to-reorder projects and folders — needs multi-select first (parked in 100days.md)
+- Spring-loaded folders during drag — SwiftUI List doesn't support natively
+
+**Files**: `FolderRow.swift` (new), `ProjectIndex.swift` (Folder model, folder CRUD, SidebarItem/SidebarSelection enums, folderId on Project), `ContentView.swift` (sidebar restructuring, DisclosureGroup, folder notifications), `MenuCommands.swift` (adaptive Project menu, Move To submenu, New Folder in File menu), `BridgeHandler.swift` (selectedFolderName), 6 locale files
 
 ### Phase 4 — Availability + volume tracking
 

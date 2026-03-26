@@ -276,7 +276,8 @@
       "actionThreshold": "Pour les donn\u00e9es sensibles, abaissez le seuil (BRISTLENOSE_PII_SCORE_THRESHOLD=0.5).",
       "actionSharing": "Avant de partager, v\u00e9rifiez les r\u00e9v\u00e9lations sensibles et les identifiants indirects.",
       "actionRetention": "Supprimez les r\u00e9sultats lorsque l\u2019objectif de recherche est atteint.",
-      "actionNames": "Les noms r\u00e9els n\u2019apparaissent pas dans les exports."
+      "actionNames": "Les noms r\u00e9els n\u2019apparaissent pas dans les exports.",
+      "actionAudit": "Nous publions un <a href=\"https://github.com/cassiocassio/bristlenose/tree/main/docs/pii-audit\" target=\"_blank\" rel=\"noopener noreferrer\">audit PII complet</a> avec une <a href=\"https://github.com/cassiocassio/bristlenose/blob/main/tests/fixtures/pii_horror_transcript.txt\" target=\"_blank\" rel=\"noopener noreferrer\">transcription test</a>, le <a href=\"https://github.com/cassiocassio/bristlenose/blob/main/docs/pii-audit/redacted-transcript.md\" target=\"_blank\" rel=\"noopener noreferrer\">r\u00e9sultat anonymis\u00e9</a> et le <a href=\"https://github.com/cassiocassio/bristlenose/blob/main/docs/pii-audit/pii-summary.txt\" target=\"_blank\" rel=\"noopener noreferrer\">journal d\u2019audit</a> pour juger des limites par vous-m\u00eame."
     },
     "signals": {
       "intro": "La page d\u2019analyse fait ressortir les signaux \u2014 des concentrations statistiquement notables de sentiment ou d\u2019\u00e9tiquettes de grille de codage au sein des sections du rapport. Deux types de carte de signal.",

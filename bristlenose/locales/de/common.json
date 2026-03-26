@@ -275,7 +275,8 @@
       "actionThreshold": "F\u00fcr sensible Daten den Schwellenwert senken (BRISTLENOSE_PII_SCORE_THRESHOLD=0.5).",
       "actionSharing": "Vor externer Weitergabe auf sensible Offenbarungen und indirekte Identifikatoren pr\u00fcfen.",
       "actionRetention": "Ergebnisse l\u00f6schen, wenn der Forschungszweck erf\u00fcllt ist.",
-      "actionNames": "Echte Namen erscheinen nicht in Exporten."
+      "actionNames": "Echte Namen erscheinen nicht in Exporten.",
+      "actionAudit": "Wir ver\u00f6ffentlichen ein vollst\u00e4ndiges <a href=\"https://github.com/cassiocassio/bristlenose/tree/main/docs/pii-audit\" target=\"_blank\" rel=\"noopener noreferrer\">PII-Audit</a> mit einem <a href=\"https://github.com/cassiocassio/bristlenose/blob/main/tests/fixtures/pii_horror_transcript.txt\" target=\"_blank\" rel=\"noopener noreferrer\">Testtranskript</a>, der <a href=\"https://github.com/cassiocassio/bristlenose/blob/main/docs/pii-audit/redacted-transcript.md\" target=\"_blank\" rel=\"noopener noreferrer\">geschw\u00e4rzten Ausgabe</a> und dem <a href=\"https://github.com/cassiocassio/bristlenose/blob/main/docs/pii-audit/pii-summary.txt\" target=\"_blank\" rel=\"noopener noreferrer\">Audit-Protokoll</a> \u2014 damit Sie die Grenzen selbst beurteilen k\u00f6nnen."
     },
     "signals": {
       "intro": "Die Analyseseite zeigt Signale \u2014 statistisch auff\u00e4llige Konzentrationen von Stimmung oder Codebuch-Tags innerhalb der Berichtsabschnitte. Zwei Arten von Signalkarten.",

@@ -20,7 +20,7 @@ import { SUPPORTED_LOCALES, type Locale } from "../i18n";
 import { setLocale, useLocaleStore } from "../i18n/LocaleStore";
 import { ModalNav, type NavItem } from "./ModalNav";
 import { isEmbedded } from "../utils/embedded";
-import { dt } from "../utils/desktopTranslation";
+import { dt } from "../utils/platformTranslation";
 
 // ── Types ─────────────────────────────────────────────────────────────────
 

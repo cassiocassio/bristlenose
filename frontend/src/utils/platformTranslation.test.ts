@@ -1,11 +1,11 @@
 /**
- * Tests for desktop-aware translation helper.
+ * Tests for platform-aware translation helpers (dt, ct).
  */
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { _resetPlatformCache } from "./platform";
 
-// Mock i18n module — must be before import of dt()
+// Mock i18n module — must be before import of dt/ct
 vi.mock("../i18n", () => ({
   default: {
     exists: vi.fn(),
@@ -13,11 +13,11 @@ vi.mock("../i18n", () => ({
 }));
 
 import i18n from "../i18n";
-import { dt } from "./desktopTranslation";
+import { dt, ct } from "./platformTranslation";
 
 const mockExists = vi.mocked(i18n.exists);
 
-/** Stub TFunction that returns the key (or desktop key) as the "translation". */
+/** Stub TFunction that returns the key as the "translation". */
 const stubT = ((key: string) => `translated:${key}`) as any;
 
 beforeEach(() => {
@@ -39,7 +39,6 @@ describe("dt", () => {
     _resetPlatformCache();
     mockExists.mockReturnValue(true);
 
-    // When desktop key exists, dt() calls t() with the desktop-namespaced key
     const t = vi.fn().mockImplementation((key: string) => `translated:${key}`);
     const result = dt(t as any, "help.privacy.redactionIntro");
 
@@ -68,5 +67,20 @@ describe("dt", () => {
 
     expect(mockExists).toHaveBeenCalledWith("desktop:configReference.intro");
     expect(result).toBe("translated:desktop:configReference.intro");
+  });
+});
+
+describe("ct", () => {
+  it("returns translation when not on desktop (CLI mode)", () => {
+    const result = ct(stubT, "help.privacy.cliTip");
+    expect(result).toBe("translated:help.privacy.cliTip");
+  });
+
+  it("returns null when on desktop", () => {
+    document.documentElement.dataset.platform = "desktop";
+    _resetPlatformCache();
+
+    const result = ct(stubT, "help.privacy.cliTip");
+    expect(result).toBeNull();
   });
 });

@@ -173,6 +173,7 @@ Bristlenose has ~30 direct + transitive deps across Python, ML, LLM SDKs, and NL
 
 ## Done (reverse chronological)
 
+- [x] **Platform text forking** (Mar 2026) — `dt()`/`ct()` helpers in `platformTranslation.ts` for CLI vs desktop help text. Desktop namespace loaded conditionally in i18next. 4 keys forked (privacy PII, contributing, config reference). Desktop variants in all 6 locales. Terminology glossary (`docs/glossary.md`) and platform text map (`docs/platform-text-map.md`) as foundation docs for future docs-review agent. SECURITY.md desktop callout added.
 - [x] **Export security + design docs** (Mar 2026) — XSS fix (`ensure_ascii=True`), `safe_filename()` utility (21 tests), path stripping from exports, anonymise label clarity (5 locales). Split `design-export-sharing.md` monolith into 4 focused design docs: HTML, quotes, clips, Miro. Cross-cutting concerns (anonymisation matrix, shared infrastructure, audit logging) documented in `design-export-html.md`
 - [x] **Pipeline resilience Phase 2b** (Mar 2026) — verify content hashes on load, manifest invalidation on mismatch, lazy LLM client init
 - [x] **Frontend deps bump** (Mar 2026) — Vite 8, TypeScript 6, ESLint 10, Vitest 4

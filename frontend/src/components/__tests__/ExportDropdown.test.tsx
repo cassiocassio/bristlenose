@@ -143,7 +143,7 @@ describe("ExportDropdown", () => {
   });
 
   it("closes dropdown after action", () => {
-    const { onExportReport } = renderDropdown("/report/sessions/");
+    renderDropdown("/report/sessions/");
     fireEvent.click(screen.getByRole("button", { name: "Export" }));
     expect(screen.getByTestId("export-dropdown-menu")).toBeInTheDocument();
 
@@ -187,8 +187,9 @@ describe("ExportDropdown", () => {
     });
     vi.stubGlobal("fetch", mockFetch);
 
+    // Mock clipboard — jsdom doesn't have ClipboardItem
     const writeText = vi.fn().mockResolvedValue(undefined);
-    Object.assign(navigator, { clipboard: { writeText } });
+    Object.assign(navigator, { clipboard: { writeText, write: undefined } });
 
     initFromQuotes([makeQuote()]);
     renderDropdown("/report/quotes/");

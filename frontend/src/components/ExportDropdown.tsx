@@ -125,27 +125,49 @@ export function ExportDropdown({ onExportReport }: ExportDropdownProps) {
 
   // ── Handlers ──────────────────────────────────────────────────────────
 
-  const handleCopyQuotes = useCallback(async () => {
+  const handleCopyQuotes = useCallback(() => {
     setOpen(false);
     if (quoteCount === 0) {
       toast(t("export.noQuotesMatch"));
       return;
     }
     const idsParam = exportIds.join(",");
-    try {
-      const resp = await globalThis.fetch(
-        `/api/projects/${projectId}/export/quotes.csv?quote_ids=${encodeURIComponent(idsParam)}&col_headers=${encodeURIComponent(colHeaders)}`,
-        { headers: authHeaders() },
-      );
-      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-      const text = await resp.text();
-      await navigator.clipboard.writeText(text);
-      const msg = t("export.quotesCopied", { count: quoteCount });
-      toast(msg);
-      announce(msg);
-    } catch {
-      toast(t("export.exportFailed"));
+    const url = `/api/projects/${projectId}/export/quotes.csv?quote_ids=${encodeURIComponent(idsParam)}&col_headers=${encodeURIComponent(colHeaders)}`;
+
+    // ClipboardItem with a Promise<Blob> value reserves the clipboard write
+    // synchronously (preserving the user gesture) while the fetch resolves
+    // asynchronously.  The write() call MUST be in the synchronous call stack
+    // — never inside .then() — or Safari rejects with NotAllowedError.
+    const blobPromise = globalThis
+      .fetch(url, { headers: authHeaders() })
+      .then((resp) => {
+        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+        return resp.text();
+      })
+      .then((text) => new Blob([text], { type: "text/plain" }));
+
+    let copyPromise: Promise<void>;
+    if (typeof ClipboardItem !== "undefined" && navigator.clipboard?.write) {
+      // Synchronous write() call — Promise<Blob> resolves inside the browser
+      const item = new ClipboardItem({ "text/plain": blobPromise });
+      copyPromise = navigator.clipboard.write([item]);
+    } else {
+      // Fallback for environments without ClipboardItem (jsdom, old browsers)
+      copyPromise = blobPromise
+        .then((blob) => blob.text())
+        .then((text) => navigator.clipboard.writeText(text));
     }
+
+    copyPromise
+      .then(() => {
+        const msg = t("export.quotesCopied", { count: quoteCount });
+        toast(msg);
+        announce(msg);
+      })
+      .catch((err) => {
+        console.error("[ExportDropdown] Copy failed:", err);
+        toast(t("export.exportFailed"));
+      });
   }, [setOpen, quoteCount, exportIds, projectId, colHeaders, t]);
 
   const handleSaveSpreadsheet = useCallback(async () => {
@@ -171,7 +193,8 @@ export function ExportDropdown({ onExportReport }: ExportDropdownProps) {
       a.download = filename;
       a.click();
       URL.revokeObjectURL(url);
-    } catch {
+    } catch (err) {
+      console.error("[ExportDropdown] Spreadsheet download failed:", err);
       toast(t("export.exportFailed"));
     }
   }, [setOpen, quoteCount, exportIds, projectId, colHeaders, t]);

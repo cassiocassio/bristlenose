@@ -64,6 +64,11 @@ final class BridgeHandler: ObservableObject {
     /// Whether the web layer is in dark mode. Swaps View menu label.
     @Published var isDarkMode = false
 
+    /// The filesystem path of the currently selected project.
+    /// Set by ContentView on project selection. Used by Project menu actions
+    /// (Show in Finder) and disable guards.
+    @Published var selectedProjectPath: String = ""
+
     /// Reference to the WKWebView for outbound calls (goBack, switchToTab).
     /// Set by WebView.makeNSView, cleared on reset(). Weak to avoid retain cycles.
     weak var webView: WKWebView?
@@ -258,6 +263,7 @@ final class BridgeHandler: ObservableObject {
         canRedo = false
         undoLabel = nil
         isDarkMode = false
+        selectedProjectPath = ""
         webView = nil
     }
 

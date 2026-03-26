@@ -106,7 +106,10 @@
     "serverError": "Erreur du serveur",
     "retry": "Réessayer",
     "projects": "Projets",
-    "reportContent": "Contenu du rapport"
+    "reportContent": "Contenu du rapport",
+    "newFolder": "Nouveau dossier",
+    "dragInterviews": "Glissez les entretiens ici",
+    "dragInterviewsDescription": "Ajoutez des enregistrements ou des transcriptions d\u2019entretiens pour commencer."
   },
   "toolbar": {
     "back": "Précédent (⌘[)",
@@ -129,6 +132,18 @@
     "appearance": "Apparence",
     "llm": "LLM",
     "transcription": "Transcription"
+  },
+  "help": {
+    "privacy": {
+      "redactionIntro": "La suppression des données personnelles est optionnelle. Elle est désactivée par défaut car les faux positifs (supprimer du texte pertinent pour la recherche) nuisent à la qualité des données. La fonctionnalité utilise Microsoft Presidio, un scanner de texte open source, avec un seuil de confiance configurable (par défaut 0.7).",
+      "actionThreshold": "Pour les données sensibles, abaissez le seuil de confiance (essayez 0.5) pour détecter davantage au prix de plus de faux positifs."
+    },
+    "contributing": {
+      "beforeBody": "Consultez le <a href=\"https://github.com/cassiocassio/bristlenose/blob/main/CONTRIBUTING.md\" target=\"_blank\" rel=\"noopener noreferrer\">guide de contribution</a> sur GitHub pour la configuration de développement et les contrôles qualité."
+    }
+  },
+  "configReference": {
+    "intro": "La plupart des paramètres sont dans la fenêtre Réglages (\u2318,). Les noms de variables d\u2019environnement sont affichés ci-dessous pour la configuration avancée."
   },
   "aiConsent": {
     "title": "Analyse par IA",

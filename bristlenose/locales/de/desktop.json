@@ -106,7 +106,10 @@
     "serverError": "Serverfehler",
     "retry": "Erneut versuchen",
     "projects": "Projekte",
-    "reportContent": "Berichtsinhalt"
+    "reportContent": "Berichtsinhalt",
+    "newFolder": "Neuer Ordner",
+    "dragInterviews": "Interviews hierher ziehen",
+    "dragInterviewsDescription": "Fügen Sie Interviewaufnahmen oder Transkripte hinzu, um zu beginnen."
   },
   "toolbar": {
     "back": "Zurück (⌘[)",
@@ -129,6 +132,18 @@
     "appearance": "Erscheinungsbild",
     "llm": "LLM",
     "transcription": "Transkription"
+  },
+  "help": {
+    "privacy": {
+      "redactionIntro": "Die PII-Schwärzung ist optional. Sie ist standardmäßig deaktiviert, da Fehlalarme (Schwärzung forschungsrelevanter Texte) die Datengenauigkeit beeinträchtigen. Die Funktion verwendet Microsoft Presidio, einen Open-Source-Textscanner, mit einem konfigurierbaren Konfidenzschwellenwert (Standard 0.7).",
+      "actionThreshold": "Für sensible Daten senken Sie den Konfidenzschwellenwert (versuchen Sie 0.5), um mehr zu erkennen — auf Kosten von mehr Fehlalarmen."
+    },
+    "contributing": {
+      "beforeBody": "Siehe den <a href=\"https://github.com/cassiocassio/bristlenose/blob/main/CONTRIBUTING.md\" target=\"_blank\" rel=\"noopener noreferrer\">Beitragsleitfaden</a> auf GitHub für Entwicklungseinrichtung und Qualitätsprüfungen."
+    }
+  },
+  "configReference": {
+    "intro": "Die meisten Einstellungen befinden sich im Fenster \u201eEinstellungen\u201c (\u2318,). Umgebungsvariablennamen werden unten f\u00fcr die erweiterte Konfiguration angezeigt."
   },
   "aiConsent": {
     "title": "KI-gestützte Analyse",

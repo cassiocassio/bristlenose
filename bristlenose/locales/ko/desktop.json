@@ -111,7 +111,10 @@
     "serverError": "서버 오류",
     "retry": "재시도",
     "projects": "프로젝트",
-    "reportContent": "보고서 내용"
+    "reportContent": "보고서 내용",
+    "newFolder": "새 폴더",
+    "dragInterviews": "여기에 인터뷰를 드래그하세요",
+    "dragInterviewsDescription": "인터뷰 녹음 또는 대본을 추가하여 시작하세요."
   },
   "toolbar": {
     "back": "뒤로 (⌘[)",
@@ -137,6 +140,18 @@
     "appearance": "외관",
     "llm": "LLM",
     "transcription": "전사"
+  },
+  "help": {
+    "privacy": {
+      "redactionIntro": "개인정보 삭제는 선택 사항입니다. 오탐(연구에 관련된 텍스트를 삭제하는 것)이 데이터 정확도를 손상시키므로 기본적으로 비활성화되어 있습니다. Microsoft Presidio 오픈소스 텍스트 스캐너를 사용하며, 구성 가능한 신뢰도 임계값(기본값 0.7)이 있습니다.",
+      "actionThreshold": "민감한 데이터의 경우, 신뢰도 임계값을 낮추면(0.5 시도) 더 많이 감지할 수 있지만 오탐도 증가합니다."
+    },
+    "contributing": {
+      "beforeBody": "개발 환경 설정 및 코드 품질 검사에 대해서는 GitHub의 <a href=\"https://github.com/cassiocassio/bristlenose/blob/main/CONTRIBUTING.md\" target=\"_blank\" rel=\"noopener noreferrer\">기여 가이드</a>를 참조하세요."
+    }
+  },
+  "configReference": {
+    "intro": "대부분의 설정은 설정 창(\u2318,)에 있습니다. 고급 구성을 위해 환경 변수 이름이 아래에 표시됩니다."
   },
   "aiConsent": {
     "title": "AI 기반 분석",

@@ -111,7 +111,10 @@
     "serverError": "Error del servidor",
     "retry": "Reintentar",
     "projects": "Proyectos",
-    "reportContent": "Contenido del informe"
+    "reportContent": "Contenido del informe",
+    "newFolder": "Nueva carpeta",
+    "dragInterviews": "Arrastra entrevistas aquí",
+    "dragInterviewsDescription": "Añade grabaciones de entrevistas o transcripciones para comenzar."
   },
   "toolbar": {
     "back": "Atrás (⌘[)",
@@ -137,6 +140,18 @@
     "appearance": "Apariencia",
     "llm": "LLM",
     "transcription": "Transcripción"
+  },
+  "help": {
+    "privacy": {
+      "redactionIntro": "La eliminación de datos personales es opcional. Está desactivada por defecto porque los falsos positivos (eliminar texto relevante para la investigación) dañan la precisión de los datos. Usa Microsoft Presidio, un escáner de texto de código abierto, con un umbral de confianza configurable (por defecto 0.7).",
+      "actionThreshold": "Para datos sensibles, reduce el umbral de confianza (prueba con 0.5) para detectar más a costa de más falsos positivos."
+    },
+    "contributing": {
+      "beforeBody": "Consulta la <a href=\"https://github.com/cassiocassio/bristlenose/blob/main/CONTRIBUTING.md\" target=\"_blank\" rel=\"noopener noreferrer\">guía de contribución</a> en GitHub para la configuración de desarrollo y controles de calidad."
+    }
+  },
+  "configReference": {
+    "intro": "La mayoría de los ajustes están en la ventana de Configuración (\u2318,). Los nombres de variables de entorno se muestran abajo para configuración avanzada."
   },
   "aiConsent": {
     "title": "Análisis con IA",

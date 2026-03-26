@@ -8,10 +8,11 @@ SwiftUI macOS app wrapping the Bristlenose React SPA in a WKWebView. Native proj
 BristlenoseApp.swift          @main — WindowGroup + Settings scene
   ├─ @StateObject serveManager    Owns ServeManager (app-level, not view-level)
   ├─ @StateObject bridgeHandler   Owns BridgeHandler (app-level, not view-level)
+  ├─ @StateObject projectIndex    Owns ProjectIndex (app-level, not view-level)
   ├─ .commands { MenuCommands }   Full native menu bar (10 menus, ~89 items)
   ├─ .onReceive(willTerminate)    Calls serveManager.stop() on Cmd+Q
   └─ ContentView.swift            NavigationSplitView (sidebar + detail)
-       ├─ @EnvironmentObject      Receives serveManager + bridgeHandler
+       ├─ @EnvironmentObject      Receives serveManager + bridgeHandler + projectIndex
        ├─ .toolbar {}             Back/forward + tabs + contextual trailing items
        ├─ ExportMenuButton        Per-tab export dropdown (toolbar)
        └─ WebView.swift           WKWebView wrapper (NSViewRepresentable)
@@ -19,6 +20,8 @@ BristlenoseApp.swift          @main — WindowGroup + Settings scene
                  └─ popoutWindow  NSWindow with WKWebView for video player (created by WKUIDelegate)
 
 MenuCommands.swift            Commands struct + per-menu View structs
+ProjectIndex.swift            Project model + projects.json persistence (CRUD, unique names)
+ProjectRow.swift              Sidebar row — doc.text icon, inline rename, slow-double-click
 Tab.swift                     Tab enum — route mapping, path→tab derivation
 BridgeHandler.swift           Inbound state + outbound actions + menuAction dispatch
 ServeManager.swift            Process lifecycle + startup zombie cleanup + prefs overlay
@@ -281,6 +284,9 @@ The `#if DEBUG` guard on the dev port override means release builds never see it
 - **`NSWindow.accessibilityLanguage` doesn't exist** — VoiceOver language for web content is set via `syncLocale()` (bridge → HTML `lang` attribute). Native SwiftUI elements inherit the system language. Don't try to set accessibility language on NSWindow directly
 - **Consent version bumping** — when AI disclosure content materially changes (new cloud provider, new data category sent to LLMs), bump `AIConsentView.currentVersion`. The dialog re-shows for users who acknowledged a lower version. Bump for: adding a new cloud provider, sending a new data type. Don't bump for: copy tweaks, layout changes, adding Ollama features
 - **Serve process gated on consent** — `serveManager.start()` is only called after `aiConsentVersion >= AIConsentView.currentVersion` (checked in `.onChange(of: selectedProject)`). When consent is granted (version updated), `.onChange(of: consentVersion)` starts serve for the already-selected project. This prevents any data leaving the machine before the user has seen the AI data disclosure (Apple Guideline 5.1.2(i))
+- **List selection must bind to `UUID?`, not a value-type model** — `List(selection: $selectedProject)` where `selectedProject` is `Project?` (a struct) breaks when any field on the selected project mutates (e.g. `updateLastOpened` changes `lastOpened`). SwiftUI compares the selection value against the list items by hash — if the hash changed, selection drops (flashes blue then deselects). Fix: bind to `$selectedID` (`UUID?`) and derive `selectedProject` as a computed property. UUIDs are stable across field mutations
+- **`onTapGesture` on List rows swallows selection** — a `.onTapGesture` on a view inside a `List` row intercepts the click before `List`'s built-in selection binding processes it. The row flashes but selection never commits. Fix: use `.simultaneousGesture(TapGesture().onEnded { ... })` instead — this lets both the List selection and custom tap logic fire
+- **Project menu actions use `Notification.Name` not bridge** — Show in Finder, Rename, Delete, and New Project are native-side operations. They post notifications (`createNewProject`, `renameSelectedProject`, `deleteSelectedProject`) which ContentView receives via `.onReceive`. This is different from all other menu actions which dispatch through `bridgeHandler.menuAction()` to the web layer
 
 ## Wiring menu actions (bridge handler cookbook)
 

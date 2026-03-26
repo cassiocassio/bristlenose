@@ -1,6 +1,6 @@
 # Bristlenose — Where I Left Off
 
-Last updated: 26 Mar 2026
+Last updated: 27 Mar 2026
 
 **Launch plan:** `docs/private/100days.md` — triaged by topic + MoSCoW priority. That's the source of truth for what ships. This file is a public capture inbox + session context + done history.
 
@@ -36,6 +36,16 @@ Remaining security items tracked in `docs/private/100days.md` §6 Risk.
 - [x] **i18n: Weblate setup** — connect `hosted.weblate.org` to repo for community translation. Free Libre plan. See `docs/design-i18n.md`
 
 Remaining desktop bugs and i18n items tracked in `docs/private/100days.md` §2, §7, §8.
+
+## Desktop app — multi-project sidebar Phase 1 (26 Mar 2026)
+
+- [x] **ProjectIndex model** — `projects.json` in `~/Library/Application Support/Bristlenose/`. CRUD with unique name enforcement (appends " 2", " 3"). New projects insert at top
+- [x] **ProjectRow with inline rename** — `doc.text` icon, slow-double-click rename (0.3–1.0s), `simultaneousGesture` so List selection isn't swallowed. Commit on Return, cancel on Escape
+- [x] **Sidebar layout** — "Projects" section header, `+ New Project…` row at top of list, `folder.badge.plus` button in sidebar title bar (disabled, Phase 3 placeholder). Selection by UUID (not value type) survives project mutations
+- [x] **Project menu rewired** — Show in Finder (native `NSWorkspace`), Rename/Delete via notifications. Re-Analyse/Archive disabled (future). File > New Project (Cmd+N) posts notification
+- [x] **BridgeHandler.selectedProjectPath** — published property for menu disable guards, reset on project switch
+
+Remaining multi-project phases tracked in `docs/design-project-sidebar.md` (Phases 2–5: drag-from-Finder, context menus, folders, bookmarks, archive, bin).
 
 ## PII redaction audit (26 Mar 2026)
 

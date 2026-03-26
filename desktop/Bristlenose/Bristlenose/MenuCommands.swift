@@ -20,6 +20,7 @@ import SwiftUI
 struct MenuCommands: Commands {
     @ObservedObject var bridgeHandler: BridgeHandler
     @ObservedObject var serveManager: ServeManager
+    @ObservedObject var projectIndex: ProjectIndex
     @ObservedObject var i18n: I18n
 
     var body: some Commands {
@@ -45,7 +46,7 @@ struct MenuCommands: Commands {
 
         // CommandMenu titles stay in English (see doc comment above).
         CommandMenu("Project") {
-            ProjectMenuContent(bridgeHandler: bridgeHandler, i18n: i18n)
+            ProjectMenuContent(bridgeHandler: bridgeHandler, projectIndex: projectIndex, i18n: i18n)
         }
         CommandMenu("Codes") {
             CodesMenuContent(bridgeHandler: bridgeHandler, i18n: i18n)
@@ -110,7 +111,7 @@ private struct FileMenuContent: View {
 
     var body: some View {
         Button(i18n.t("desktop.menu.file.newProject")) {
-            bridgeHandler.menuAction("newProject")
+            NotificationCenter.default.post(name: .createNewProject, object: nil)
         }
         .keyboardShortcut("n", modifiers: .command)
 
@@ -310,31 +311,45 @@ private struct ViewMenuContent: View {
 
 private struct ProjectMenuContent: View {
     @ObservedObject var bridgeHandler: BridgeHandler
+    @ObservedObject var projectIndex: ProjectIndex
     @ObservedObject var i18n: I18n
+
+    /// Whether a project is selected (path is non-empty).
+    private var hasProject: Bool {
+        !bridgeHandler.selectedProjectPath.isEmpty
+    }
 
     var body: some View {
         Button(i18n.t("desktop.menu.project.showInFinder")) {
-            bridgeHandler.menuAction("revealInFinder")
+            let path = bridgeHandler.selectedProjectPath
+            if !path.isEmpty {
+                NSWorkspace.shared.selectFile(nil, inFileViewerRootedAtPath: path)
+            }
         }
         .keyboardShortcut("r", modifiers: [.command, .shift])
+        .disabled(!hasProject)
 
         Button(i18n.t("desktop.menu.project.rename")) {
-            bridgeHandler.menuAction("renameProject")
+            NotificationCenter.default.post(name: .renameSelectedProject, object: nil)
         }
+        .disabled(bridgeHandler.selectedProjectPath.isEmpty && projectIndex.projects.isEmpty)
 
         Button(i18n.t("desktop.menu.project.reAnalyse")) {
             bridgeHandler.menuAction("reAnalyse")
         }
+        .disabled(true)  // Future — Phase 2+
 
         Button(i18n.t("desktop.menu.project.archive")) {
             bridgeHandler.menuAction("archive")
         }
+        .disabled(true)  // Future — Phase 5
 
         Divider()
 
         Button(i18n.t("desktop.menu.project.delete")) {
-            bridgeHandler.menuAction("deleteProject")
+            NotificationCenter.default.post(name: .deleteSelectedProject, object: nil)
         }
+        .disabled(bridgeHandler.selectedProjectPath.isEmpty && projectIndex.projects.isEmpty)
     }
 }
 

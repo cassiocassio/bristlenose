@@ -28,23 +28,18 @@ The HTML export is the "accountability copy" — a stakeholder or client can ope
 - Basic ExportDialog with anonymise checkbox
 - Works offline in any modern browser
 
-**Known rough edges (from TODO "Export polish"):**
-- Inline logo is a broken external reference (not base64)
-- Footer has "Bristlenoseversion" missing space
-- In-report navigation links fragile on hash router
-
 ---
 
 ## Design
 
-### Polish items (Stage 0)
+### Polish items (Stage 0) — done
 
-| Item | Detail |
-|------|--------|
-| Inline logo | Embed logo as base64 data URI — no external fetch |
-| Footer spacing | Fix "Bristlenoseversion" → "Bristlenose version" |
-| Nav links | Audit hash router links for `file://` compatibility |
-| Purpose line | Add to ExportDialog: "Creates a standalone report that anyone can open in a browser. Recipients can view and search but cannot edit." |
+| Item | Status | Detail |
+|------|--------|--------|
+| Inline logo | Done | Light + dark logos base64-embedded in export payload, Footer + Header read from `BRISTLENOSE_EXPORT.logos` in export mode |
+| Footer spacing | Done (already fixed) | React Footer.tsx `{" "}` provides correct spacing; the Jinja2 bug doesn't affect exports (React path used) |
+| Nav links | Partial | Hash router handles React Router navigation. Plain `<a href="/report/sessions/...">` in Dashboard + SessionsTable still use pathname URLs — works for normal clicks (React intercepts) but Cmd+click / Open in New Tab breaks on `file://`. Convert to `<Link>` in a future pass |
+| Purpose line | Done | `export.subtitle` updated in all 6 locales (en, es, fr, de, ko, ja) |
 
 ### Stage 1: Zip with transcripts
 

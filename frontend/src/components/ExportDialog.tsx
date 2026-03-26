@@ -11,6 +11,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 import { useInert } from "../hooks/useInert";
+import { useProjectId } from "../hooks/useProjectId";
+import { authHeaders } from "../utils/api";
 import { isExportMode } from "../utils/exportData";
 
 interface ExportDialogProps {
@@ -23,6 +25,7 @@ interface ExportDialogProps {
 export function ExportDialog({ open, onClose, initialAnonymise = false }: ExportDialogProps) {
   const { t } = useTranslation();
   useInert(open);
+  const projectId = useProjectId();
   const [anonymise, setAnonymise] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -67,7 +70,8 @@ export function ExportDialog({ open, onClose, initialAnonymise = false }: Export
     try {
       const qs = anonymise ? "?anonymise=true" : "";
       const resp = await globalThis.fetch(
-        `/api/projects/1/export${qs}`,
+        `/api/projects/${projectId}/export${qs}`,
+        { headers: authHeaders() },
       );
       if (!resp.ok) {
         throw new Error(`${t("export.exportFailed")} (${resp.status})`);

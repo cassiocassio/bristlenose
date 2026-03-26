@@ -152,7 +152,7 @@
   },
   "export": {
     "heading": "Exporter le rapport",
-    "subtitle": "Téléchargez un fichier HTML autonome que n'importe qui peut ouvrir dans un navigateur.",
+    "subtitle": "Crée un rapport autonome que n'importe qui peut ouvrir dans un navigateur. Les destinataires peuvent consulter et rechercher, mais pas modifier.",
     "anonymise": "Supprimer les noms des participants des libellés",
     "anonymiseHint": "Supprime les noms des métadonnées, noms de fichiers et libellés de locuteurs. Conserve les codes (p1, p2). Les noms des modérateurs sont préservés. Les noms dans le texte des citations NE sont PAS supprimés.",
     "exporting": "Exportation en cours\u2026",
@@ -257,10 +257,9 @@
       "citEricsson1993": "Le texte fondateur sur les protocoles de pens\u00e9e \u00e0 voix haute \u2014 \u00e9tablit quand les rapports verbaux fournissent des donn\u00e9es valides sur les processus cognitifs."
     },
     "privacy": {
-      "localTitle": "Vos donn\u00e9es restent en local",
-      "localBody": "Tout s\u2019ex\u00e9cute sur votre ordinateur \u2014 les enregistrements, les transcriptions et les r\u00e9sultats d\u2019analyse ne quittent jamais votre machine.",
-      "localLlm": "Lorsque vous utilisez un fournisseur cloud (Claude, ChatGPT, Gemini, Azure OpenAI), le texte de la transcription est envoy\u00e9 \u00e0 l\u2019API de ce fournisseur. Les fichiers audio et vid\u00e9o restent sur votre machine.",
-      "localOllama": "Avec Ollama (mod\u00e8les locaux), rien ne quitte votre machine \u2014 m\u00eame pas le texte de la transcription. C\u2019est l\u2019option la plus confidentielle.",
+      "localTitle": "O\u00f9 vont vos donn\u00e9es",
+      "localBody": "Bristlenose s\u2019ex\u00e9cute sur votre ordinateur. Les fichiers audio et vid\u00e9o ne quittent jamais votre machine. Le texte de la transcription est envoy\u00e9 \u00e0 votre fournisseur de LLM (Claude, ChatGPT, Gemini, Azure OpenAI) \u2014 la politique de conservation de chaque fournisseur s\u2019applique.",
+      "localOllama": "Avec Ollama (mod\u00e8les locaux), rien ne quitte votre machine. C\u2019est l\u2019option la plus confidentielle, mais la qualit\u00e9 est inf\u00e9rieure aux mod\u00e8les cloud en 2026.",
       "localAnon": "Les codes de locuteur (p1, p2) sont l\u2019identit\u00e9 publique dans les citations, les exports et les fichiers CSV. Les noms r\u00e9els sont visibles dans l\u2019application pour votre \u00e9quipe, mais ne sont pas inclus dans les exports.",
       "redactionTitle": "Suppression des donn\u00e9es personnelles",
       "redactionIntro": "La suppression est optionnelle \u2014 activez-la avec --redact-pii. D\u00e9sactiv\u00e9e par d\u00e9faut car les faux positifs alt\u00e8rent la qualit\u00e9 des donn\u00e9es. Utilise Microsoft Presidio (BRISTLENOSE_PII_SCORE_THRESHOLD, d\u00e9faut 0.7).",

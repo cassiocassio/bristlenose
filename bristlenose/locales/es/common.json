@@ -152,7 +152,7 @@
   },
   "export": {
     "heading": "Exportar informe",
-    "subtitle": "Descarga un archivo HTML autónomo que cualquiera puede abrir en un navegador.",
+    "subtitle": "Crea un informe independiente que cualquiera puede abrir en un navegador. Los destinatarios pueden ver y buscar, pero no editar.",
     "anonymise": "Eliminar nombres de participantes de las etiquetas",
     "anonymiseHint": "Elimina nombres de metadatos, nombres de archivo y etiquetas de hablantes. Conserva los códigos (p1, p2). Los nombres de moderadores se conservan. Los nombres dentro del texto de las citas NO se eliminan.",
     "exporting": "Exportando\u2026",
@@ -257,10 +257,9 @@
       "citEricsson1993": "El texto fundacional sobre protocolos de pensamiento en voz alta \u2014 establece cuándo los informes verbales proporcionan datos válidos sobre procesos cognitivos."
     },
     "privacy": {
-      "localTitle": "Tus datos se quedan en local",
-      "localBody": "Todo se ejecuta en tu ordenador \u2014 las grabaciones, las transcripciones y los resultados del an\u00e1lisis nunca salen de tu m\u00e1quina.",
-      "localLlm": "Cuando usas un proveedor en la nube (Claude, ChatGPT, Gemini, Azure OpenAI), el texto de la transcripci\u00f3n se env\u00eda a la API de ese proveedor para su an\u00e1lisis. Los archivos de audio y v\u00eddeo permanecen en tu m\u00e1quina.",
-      "localOllama": "Con Ollama (modelos locales), nada sale de tu m\u00e1quina \u2014 ni siquiera el texto de la transcripci\u00f3n. Es la opci\u00f3n m\u00e1s privada.",
+      "localTitle": "Ad\u00f3nde van tus datos",
+      "localBody": "Bristlenose se ejecuta en tu ordenador. Los archivos de audio y v\u00eddeo nunca salen de tu m\u00e1quina. El texto de la transcripci\u00f3n se env\u00eda a tu proveedor de LLM (Claude, ChatGPT, Gemini, Azure OpenAI) para su an\u00e1lisis \u2014 se aplica la pol\u00edtica de retenci\u00f3n de datos de cada proveedor.",
+      "localOllama": "Con Ollama (modelos locales), nada sale de tu m\u00e1quina. Es la opci\u00f3n m\u00e1s privada, pero la calidad es inferior a los modelos en la nube en 2026.",
       "localAnon": "Los c\u00f3digos de hablante (p1, p2) son la identidad p\u00fablica en citas, exportaciones y archivos CSV. Los nombres reales son visibles en la aplicaci\u00f3n para tu equipo, pero no se incluyen en las exportaciones.",
       "redactionTitle": "Eliminaci\u00f3n de datos personales",
       "redactionIntro": "La eliminaci\u00f3n de datos personales es opcional \u2014 act\u00edvala con --redact-pii. Est\u00e1 desactivada por defecto porque los falsos positivos da\u00f1an la precisi\u00f3n de los datos. Usa Microsoft Presidio con un umbral de confianza configurable (BRISTLENOSE_PII_SCORE_THRESHOLD, por defecto 0.7).",

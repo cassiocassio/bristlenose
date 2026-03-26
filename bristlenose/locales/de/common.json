@@ -151,7 +151,7 @@
   },
   "export": {
     "heading": "Bericht exportieren",
-    "subtitle": "Laden Sie eine eigenständige HTML-Datei herunter, die jeder in einem Browser öffnen kann.",
+    "subtitle": "Erstellt einen eigenständigen Bericht, den jeder im Browser öffnen kann. Empfänger können ansehen und durchsuchen, aber nicht bearbeiten.",
     "anonymise": "Teilnehmernamen aus Beschriftungen entfernen",
     "anonymiseHint": "Entfernt Namen aus Metadaten, Dateinamen und Sprecherbezeichnungen. Behält Codes (p1, p2) bei. Moderatorennamen bleiben erhalten. Namen im Zitattext werden NICHT entfernt.",
     "exporting": "Wird exportiert\u2026",
@@ -256,10 +256,9 @@
       "citEricsson1993": "Der Grundlagentext \u00fcber Protokolle des lauten Denkens \u2014 legt fest, wann verbale Berichte valide Daten \u00fcber kognitive Prozesse liefern."
     },
     "privacy": {
-      "localTitle": "Ihre Daten bleiben lokal",
-      "localBody": "Alles l\u00e4uft auf Ihrem Computer \u2014 Aufnahmen, Transkripte und Analyseergebnisse verlassen nie Ihren Rechner.",
-      "localLlm": "Bei Cloud-Anbietern (Claude, ChatGPT, Gemini, Azure OpenAI) wird der Transkripttext an die API gesendet. Audio- und Videodateien bleiben lokal.",
-      "localOllama": "Mit Ollama (lokale Modelle) verl\u00e4sst nichts Ihren Rechner \u2014 nicht einmal der Transkripttext.",
+      "localTitle": "Wohin Ihre Daten gehen",
+      "localBody": "Bristlenose l\u00e4uft auf Ihrem Computer. Audio- und Videodateien verlassen nie Ihren Rechner. Der Transkripttext wird an Ihren LLM-Anbieter (Claude, ChatGPT, Gemini, Azure OpenAI) gesendet \u2014 die Aufbewahrungsrichtlinie jedes Anbieters gilt.",
+      "localOllama": "Mit Ollama (lokale Modelle) verl\u00e4sst nichts Ihren Rechner. Das ist die privateste Option, aber die Qualit\u00e4t ist 2026 geringer als bei Cloud-Modellen.",
       "localAnon": "Sprechercodes (p1, p2) sind die \u00f6ffentliche Identit\u00e4t in Zitaten, Exporten und CSV. Echte Namen sind nur f\u00fcr Ihr Team sichtbar.",
       "redactionTitle": "PII-Schw\u00e4rzung",
       "redactionIntro": "Optional \u2014 aktivieren mit --redact-pii. Verwendet Microsoft Presidio (BRISTLENOSE_PII_SCORE_THRESHOLD, Standard 0.7).",

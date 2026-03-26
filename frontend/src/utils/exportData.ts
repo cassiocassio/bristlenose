@@ -36,6 +36,7 @@ export interface ExportData {
   transcripts: Record<string, TranscriptPageResponse>;
   people: Record<string, PersonData>;
   videoMap: unknown | null;
+  logos?: { light?: string; dark?: string };
 }
 
 // ---------------------------------------------------------------------------

@@ -9,6 +9,7 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { apiGet } from "../utils/api";
+import { getExportData, isExportMode } from "../utils/exportData";
 import { useProjectId } from "../hooks/useProjectId";
 
 interface ProjectInfo {
@@ -28,19 +29,23 @@ export function Header() {
       .catch(() => {});
   }, [projectId]);
 
+  const exportLogos = isExportMode() ? getExportData()?.logos : undefined;
+  const lightSrc = exportLogos?.light ?? "/report/assets/bristlenose-logo.png";
+  const darkSrc = exportLogos?.dark ?? "/report/assets/bristlenose-logo-dark.png";
+
   return (
     <>
       <div className="report-header">
         <div className="header-left">
-          <a href="/report/" className="report-logo-link">
+          <a href={isExportMode() ? "#/report/" : "/report/"} className="report-logo-link">
             <picture>
               <source
-                srcSet="/report/assets/bristlenose-logo-dark.png"
+                srcSet={darkSrc}
                 media="(prefers-color-scheme: dark)"
               />
               <img
                 className="report-logo"
-                src="/report/assets/bristlenose-logo.png"
+                src={lightSrc}
                 alt={t("header.logoAlt")}
               />
             </picture>

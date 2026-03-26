@@ -349,6 +349,7 @@ private struct ProjectMenuContent: View {
         Button(i18n.t("desktop.menu.project.delete")) {
             NotificationCenter.default.post(name: .deleteSelectedProject, object: nil)
         }
+        .keyboardShortcut(.delete, modifiers: .command)
         .disabled(bridgeHandler.selectedProjectPath.isEmpty && projectIndex.projects.isEmpty)
     }
 }

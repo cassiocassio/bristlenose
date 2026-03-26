@@ -1,0 +1,507 @@
+# Bristlenose — 100-Day Launch Inventory
+
+**Launch: 30 June 2026 · Mac App Store · Beta · $TBD/month**
+
+Gathered from: TODO.md, ROADMAP.md, 37 GitHub issues, 20+ design docs, 6 CLAUDE.md files, 5 active branches, source code TODOs.
+
+MoSCoW within each category. **100-day goal: complete every Must.**
+
+**Icebox** sits below Could in sections that have entries. These are ideas with merit that we're deliberately not pursuing in the 100-day window — parked, not deleted. On the GitHub Projects board, Icebox is a column to the right of Done.
+
+---
+
+## 1. Missing — essential feature gaps ("it's not done without it")
+
+### Must
+- **Demo dataset** — 5h IKEA study as public, credible test data. Exercise all frameworks, test with real user tags. Run 1 real project as if i mean it - to test tags and ergonoics. Also necessary for videos for launch website
+- **~~Desktop app v0.1~~** — SwiftUI shell, PyInstaller sidecar, folder picker, pipeline runner, "Open Report" button. ~365–435 MB bundle. (design-desktop-app.md)
+- ~~**Export: standalone HTML from serve mode** — `POST /api/projects/{id}/export`, self-contained HTML. Shipped v0.11.2. (design-export-sharing.md)~~
+- **Export: research package (zip)** — zip with report.html + transcripts/ (.txt with inline timecodes) + clips/ (optional, FFmpeg). Human-readable filenames (`p1 03m45 Sarah onboarding was confusing.mp4`). Anonymisation across all surfaces. Replaces 3 hours of Final Cut Pro work. Stages 1–3 of export roadmap. (design-export-sharing.md)
+- **Multi-project support** — home screen, project list, create/switch without restart. Milestone 4 in ROADMAP. Design doc: `docs/design-project-sidebar.md` (5-phase plan). Phase 1 prompt: `docs/private/prompts/phase1-project-sidebar.md`
+- **~~File import (drag-and-drop)~~** — add recordings to project from GUI. Milestone 5. Needs design doc
+- **Duplicate folder drop warning** — when dropping a folder that matches an existing project's path, show dismissable warning with "Duplicate of \<project\>" — allow it (user may tag/analyse differently) but flag the likely mistake
+- **Slow-double-click rename in sidebar** — Finder-style slow double-click to inline rename. `simultaneousGesture(TapGesture())` and `onTapGesture` both break List selection on macOS 26. Needs NSEvent monitor approach or AppKit subclass. Rename still works via right-click and Project menu
+- **Multi-select projects (Shift/Cmd click)** — change `List(selection:)` from `UUID?` to `Set<UUID>`. Detail pane shows "3 projects selected". Enables bulk delete via right-click, and drag-to-folder in Phase 3. Prerequisite for drag-to-reorder
+- **Drag-to-reorder projects in sidebar** — persisted via `position` integer in project index. Needs multi-select first. Phase 3 in design doc
+- **~~Run pipeline from GUI~~** — "Analyse" button, background task, progress streaming. Milestone 7. Needs design doc
+- **~~Settings UI~~** — provider selection, API key entry, redaction toggle, model choice. Milestone 6. Needs design doc. Currently CLI-only config is a hard block for App Store users
+- **App Store subscription infrastructure** — StoreKit 2, receipt validation, entitlement check. Not yet designed
+- **~~Auto-serve after run~~** — pipeline finishes → auto-launch serve + open browser. (TODO.md immediate)
+
+### Should
+- **Session enable/disable toggle** — exclude sessions without re-running pipeline. Option A (`is_disabled` bool). (design-session-management.md)
+- **~~Incremental re-run~~** — add new recordings, preserve researcher work. Milestone 8. Quote stable key already in place
+- ~~**Left-hand nav content for all tabs** — signal cards, speaker badges, codebook titles, sessions list, analysis views in left sidebar~~
+- **~~Standard modal with nav for Settings and About~~** — consistent modal pattern, consider unifying help + about
+- **New title bar design** — current title bar needs refresh
+- **Post-analysis review panel** — non-modal, dismissable panel after pipeline completes: name correction, token summary, coverage overview
+
+### Could
+- **Batch processing dashboard** — queue multiple projects (#27)
+- **Custom prompts** — user-defined tag categories / analysis instructions
+
+### Won't (100 days)
+- **Windows app** — winget installer (#44), Windows credential store
+- **In-app report viewing (WKWebView)** — defer to v0.2 desktop
+- **Multi-page report** — tabs or linked pages (#51). Large effort, defer post-launch
+- **Project setup UI for new projects** (#49) — large effort, defer post-launch
+- **.docx export** — Word document output for sharing with stakeholders (#20)
+- **Published reports** — Cloudflare R2 hosted sharing. Phase 2–3 of export
+
+### Icebox (100 days)
+- **Miro bridge** — Miro-shaped CSV export → API integration → layout engine. CSV export works as stopgap. Killer feature - Resuresct for move out of beta! See `docs/private/design-miro-bridge.md`
+
+---
+
+## 2. Broken — doesn't work as designed
+
+### Must
+- **~~Dark mode selection highlight~~** — invisible in dark mode (#52)
+- **Dark logo** — placeholder inverted image, needs proper albino bristlenose pleco (#18, logo.css HACK)
+- **~~Circular dependency in production build~~** — fixed in 0.13.6 but regression-prone (SidebarStore import cycle)
+- **Import FK constraint** — fixed in 0.13.4 (ProposedTag cleanup) but needs E2E coverage to prevent regression
+- **Native toolbar tab i18n not reactive** — changing language in Settings doesn't update toolbar labels until app restart. `I18n` `@StateObject` doesn't trigger segmented control re-render
+
+
+### Should
+- **Local model reliability** — ~85% vs ~99% cloud. Investigate parse failure patterns (llm/CLAUDE.md)
+- **Speaker diarisation** — cross-session moderator linking not working (#25, #26)
+- **Badge × character** — platform-inconsistent rendering, replace with SVG (badge.css TODO)
+
+### Could
+- **Edit writeback to transcript files** (#21) — edits only persist in DB, not source files
+- **Word timestamp pruning** — unused data accumulates after merge stage (#35)
+
+---
+
+## 3. Embarrassing — too ugly to ship
+
+### Must
+- **Typography audit** — 16 font-sizes → ~10 with proper tokens (ROADMAP theme refactoring)
+- **SVG icon set** — replace character glyphs (delete circles, modal close, search clear) with proper icons. Candidates: Lucide, Heroicons, Phosphor, Tabler. See `docs/design-system/icon-catalog.html`
+- **Visual redesign: FT.com-level typographic legibility** — larger margins, fainter keylines, edo colours, more white space. FT.com as benchmark for large volumes of intense type with enough space to parse and scan
+- **Colour themes** — named themes (e.g. "edo") as appearance switch. Beyond custom CSS — curated, designed themes. Needs design doc first: `docs/design-themes-and-schemes.md` — establish nomenclature (Theme = structure (font/spacing), Colour scheme = palette), file organisation, selection mechanism (CSS class? data attribute?), how Edo fits. Also investigate `--bn-selection-bg-inactive` dark value (#262626) too close to page bg (#111111)
+- **Grid, spacing, type, colours audit** — holistic visual fit-and-finish pass
+- **Tag density** — AI generates too many tags, overwhelming (#12)
+- - **~~Logo size~~** — 80px feels tiny, increase to ~100px (#6)
+- **~~Responsive quote grid~~** — Phase 1 CSS-only, design ready, not implemented (design-responsive-layout.md)
+- ~~**Help modal polish**~~ — platform-aware shortcuts, typography tokens, entrance animation, dark kbd. Shipped 0.13.3
+- **~~"Made with Bristlenose" branding footer~~** — Phase 5 of export, quick win (design-export-sharing.md)
+- **Export polish** — minimum viable: delete things that should not be in an export, tidy up rough edges
+
+
+### Should
+
+- ~~**Histogram bar alignment** — right-align user-tags bars (#13)~~
+- **~~Day of week in session Start column~~** (#11)
+- **~~Right-hand sidebar animations~~** — match left-hand sidebar push/slide animations
+
+
+### Could
+- **Symbology** — consistent Unicode prefixes (§ ¶ ❋) across navigation. Active branch
+- **Close button CSS** — extract `.close-btn` atom (theme refactoring)
+- **Content density setting** — Compact (14px) / Normal (16px) / Generous (18px) toggle. `--bn-content-scale` token (`0.875` / `1` / `1.125`), `font-size: calc(var(--bn-content-scale) * 1rem)` on `<article>`, cascades to all `rem`-based spacing. Toggle in toolbar or settings, persist via preferences store. Interacts with responsive grid — Generous + wide screen = fewer but more readable columns
+
+
+### Icebox
+- **Animated logo** — living-fish branch: breathing, gill pulsing, fin movement. Statement piece. Parked — oneday
+
+---
+
+## 4. Value — insights & time-saving ("why they'll use us")
+
+### Must
+- **QA: threshold review dialog on real data** — run AutoCode against real projects, evaluate confidence histogram + dual slider UX
+- **~~Signal elaboration~~** — interpretive names + one-sentence summaries on signal cards. Designed (design-signal-elaboration.md)
+- ~~**Codebook-aware tagging** — shipped in 0.13.0, verify it works end-to-end on real data~~
+- ~~**Quick-repeat tag shortcut** (`r` key) — shipped, verify discoverability~~
+- ~~**Bulk actions** — shipped in 0.13.3, verify on real multi-session projects~~
+
+
+### Should
+- **Analysis Phase 4** — two-pane layout, grid-as-selector. Medium effort (design-analysis-future.md)
+- **~~Clickable histogram bars~~** → filtered view (#14)
+- **~~Lost quotes rescue~~** — surface unselected quotes (#19)
+- **Moderator question pill** — hover-triggered context (design-moderator-question-pill.md)
+- **~~Quote sequences~~** — consecutive quote detection, ordinal-based for non-timecoded transcripts, verse numbering for plain-text, per-project threshold (design-quote-sequences.md)
+- **~~Sidebar tag assign~~** — hover hint matching "add tag" visual language + toast undo ("Applied 'Trust' to 3 quotes — Undo")
+- **Dashboard stats coverage** — increase the number of pipeline metrics surfaced on dashboard
+- **PII summary dashboard widget** — surface pii_summary.txt findings (entity counts, flagged items needing review) in the serve-mode dashboard instead of expecting users to find and read a hidden text file
+- **Drag-and-drop tags to quotes** — drag tag badge onto quote card to apply
+
+### Could
+- **~~Analysis Phase 5~~** — LLM narration of signal cards
+- **User-tag × group grid** — new heatmap view
+- **Tag definitions page** (#53)
+- **Transcript page user tags** — tag directly from transcript view
+- **~~Framework acronym prefixes on badges~~** — small-caps 2–3 letter author prefix (e.g. `JJG`, `DN`)
+- **Drag-to-reorder codebook frameworks** — researchers drag framework sections to prioritise, persist per project
+- **People.yaml web UI** — in-report UI to update unidentified participants. API endpoint exists, missing UX design. Part of Moderator Phase 2 (#25)
+- **Relocate AI tag toggle** — removed from toolbar (too crowded); needs a new home. Code commented out in `render/report.py` and `codebook.js`/`tags.js`
+- **Delete/quarantine session from UI** — `.bristlenose-ignore` file (safe, reversible). (design-session-management.md)
+- **Re-run pipeline from serve mode** — `POST /api/projects/{id}/rerun`, background task with progress streaming
+- **~~User research panel opt-in~~** — optional email field in feedback modal
+- **Pass transcript data to renderer** — avoid redundant disk I/O
+
+---
+
+## 5. Blocking — prevents adoption or causes abandonment
+
+### Must
+- **First-run experience** — new user opens app, has no project, no API key, no recordings. What happens? Needs design
+- ~~**API key entry in GUI** — currently requires terminal. Absolute blocker for App Store users~~
+- ~~**Error messaging**~~ — pipeline failures show actionable messages ("check API credits or logs", "run bristlenose doctor"), red ✗ / yellow ⚠ per stage. Shipped 0.13.3
+- **`bristlenose doctor` in GUI** — dependency health checks visible in app, not just CLI
+- ~~**Homebrew formula: spaCy model** — post_install step (#42). Without it, first run fails~~
+
+### Should
+- **Time estimate warning** — warn before long transcription jobs (#39)
+- **Provider documentation** — which provider to choose, cost comparison (#38)
+- **Whisper prefetch flag** — `--prefetch-model` to avoid surprise downloads (#41)
+
+### Could
+- **Shell completion** — `--install-completion` for power users
+- **Snap Store publishing** (#45) — Linux adoption path. `snapcraft register bristlenose`, request classic confinement, add `SNAPCRAFT_STORE_CREDENTIALS` to GitHub secrets. See `docs/design-doctor-and-snap.md`
+- **Cancel button** — cancel running pipeline (desktop app stretch goal)
+
+---
+
+## 6. Risk — could get us into trouble
+
+### Must
+- ~~**Desktop security: localhost auth token**~~ — bearer token middleware, per-session `secrets.token_urlsafe(32)`, injected into HTML + WKUserScript. Design plan: `docs/design-localhost-auth.md`
+- ~~**Desktop security: media endpoint filtering**~~ — extension allowlist + path-traversal guard on `/media/` route
+- ~~**Desktop security: CORS middleware**~~ — `CORSMiddleware` with `allow_origins=[]` (same-origin only)
+- ~~**Desktop security: verify zombie cleanup targets**~~ — added Vite :5173 to orphan port scan
+- ~~**Desktop security: migrate Keychain to Security framework**~~ — native `SecItemAdd`/`SecItemCopyMatching`/`SecItemDelete` replaces `/usr/bin/security` CLI. Add-then-update pattern (atomic), `kSecAttrAccessibleWhenUnlocked`, DEBUG error logging. Plan: `.claude/plans/cuddly-orbiting-yao.md`. Python side (`credentials_macos.py`) still uses CLI — needs separate migration before sandbox
+- ~~**Desktop security: minimal child process environment**~~ — stripped to PATH, HOME, TMPDIR, locale, VIRTUAL_ENV + BRISTLENOSE_* overlay
+- ~~**Desktop security: port-restrict navigation policy**~~ — shipped in `WebView.swift` (`decidePolicyFor` restricts to `127.0.0.1` + `about:`)
+- **~~Rotate API key~~** — was visible in terminal (TODO.md immediate)
+- **Privacy policy** — required for App Store submission. Local-first model simplifies this but document must exist
+- **Terms of service** — subscription terms, refund policy, data handling
+- **App Store review compliance** — sandbox, entitlements, code signing, notarisation pipeline
+- **PII redaction audit** — verify Presidio catches names/emails in transcripts before shipping to paying users
+- ~~**Security scanning** — npm audit, pip-audit, CodeQL before public release (design-test-strategy.md)~~
+- **Alembic/migration strategy** — DB schema changes without data loss. Currently no migration framework
+- **AI data disclosure dialog** — Apple Guideline 5.1.2(i) (Nov 2025) requires explicit consent before sending transcript data to third-party AI. Non-negotiable for App Store. (design-desktop-security-audit.md)
+- **Privacy Manifest (`PrivacyInfo.xcprivacy`)** — required for App Store since mid-2024. Declare data types and API usage reasons. (design-desktop-security-audit.md)
+
+### Should
+- **Vulnerability disclosure page** — SECURITY.md exists but not public-facing. Add `security@bristlenose.research`, publish `security.txt` at `bristlenose.research/.well-known/security.txt` (RFC 9116). (infrastructure-and-identity.md)
+- **AGPL + App Store legal opinion** — CLA enables dual-licensing, but untested. Brief written opinion needed (~£200–500). Lawyers: see `docs/private/licensing-and-legal.md`
+- **GDPR/data processor statement** — even though local-first, API calls send data to LLM providers
+- **Crash reporting** — know when the app breaks in the field. Sentry or similar
+- **Windows credential store** — env var fallback is insecure (SECURITY.md gap)
+- ~~**PostMessage origin tightening**~~ — React path uses `window.location.origin` (PlayerContext.tsx). Vanilla JS path deprecated — just remove
+- **localStorage namespace by project** — review what's still in localStorage and why (most state moved to SQLite). Collision risk may be moot
+- **WKWebView Content Security Policy** — inject CSP via WKUserScript restricting script sources and connection targets. (design-desktop-security-audit.md)
+- **Clean SecurityChecklist.swift** — remove resolved items #1, #3, #7; keep genuine blockers #2, #5, #8. (design-desktop-security-audit.md)
+- **Wrap dev paths in `#if DEBUG`** — `ContentView.swift`, `ServeManager`, `I18n` leak developer directory structure into release binary. (design-desktop-security-audit.md)
+- **Bundled fallback API key risk** — extractable from PyInstaller binary. Cap spending, use dedicated key, document accepted risk. (design-desktop-security-audit.md)
+- **DASVS Level 1 audit** — AFINE's Desktop Application Security Verification Standard (Nov 2025), purpose-built for desktop apps. 12 domains, 150+ requirements. ([github.com/afine-com/DASVS](https://github.com/afine-com/DASVS))
+
+### Could
+- **Export anonymisation** — checkbox to strip names/display-names from exported HTML
+- **Rate limiting** — if server ever exposed beyond localhost
+- ~~**pip-audit in CI**~~ — shipped in ci.yml. Also: `pip-licenses --format=json --with-urls` for licence compliance (verify AGPL-3.0 compatibility of all deps) — licence check still TODO
+
+---
+
+## 7. Halo — gets us noticed, makes a statement
+
+### Must
+- **Local-first story** — "nothing leaves your laptop" messaging. Core differentiator. Needs landing page copy
+- ~~**One-command install** — `brew install bristlenose` already works. Showcase this~~
+
+### Should
+- **Living logo** — animated bristlenose pleco (living-fish branch). Memorable, delightful
+- **Dark mode** — already implemented, polish the rough edges
+- **Speed demo** — "folder in, report out in 5 minutes" video/GIF for landing page
+- **Keyboard-first UX** — shortcuts already deep (`[`, `]`, `\`, `r`, `s`, `?`). Showcase in marketing
+- **Open source (AGPL)** — trust signal for researchers. Emphasise in positioning
+- **Microinteractions** — bounces/slides for opens/closes, flashes of acceptance, staggered fly-up for bulk hide (150ms per card like vanilla JS version)
+
+### Could
+- **Video clip export story** — "folder in, clips out" — the 3-hour Final Cut Pro task done in seconds. Demo-able, visceral, differentiator vs Dovetail
+- **Ollama integration** — "free, no account required" local LLM story
+- ~~**Multi-language**~~ — 5 locales shipped (en, es, fr, de, ko) in 0.14.1. Infrastructure + 4 languages exceeds target
+- **i18n: help.signals/codebook/contributing translations** — EN keys exist (~63), ES/FR/DE/KO locales missing all of them
+- **i18n: AboutSection full extraction** — ~15 paragraphs hardcoded English, needs `useTranslation` wiring + keys in all 5 locales
+- **i18n: DeveloperSection & DesignSection** — dev-facing help panels, ~20 paragraphs hardcoded. Debatable whether to translate
+- **i18n: SettingsModal CONFIG_DATA labels** — ~70 config reference labels hardcoded English. Nav chrome already wired
+- **i18n: translation quality fixes** — ko participant term inconsistency (참여자 vs 참가자); de/ko missing `nav.codebookShort`. Machine translation QA checklist in `docs/design-i18n.md` Step 6
+- **i18n: cross-check each new language against Apple glossary** — Spanish done (23 Mar 2026, all match). Required before shipping each new language. See `docs/design-i18n.md`
+
+---
+
+## 8. Quality of life — enhancements that bring joy
+
+### Must
+- ~~**Keyboard shortcuts help modal** — shipped but needs polish. Platform-aware ⌘/Ctrl~~
+
+### Should
+- ~~**Sidebar drag-to-push** — active branch (drag-push), replaces overlay mode~~
+- **~~Responsive signal cards~~** — active branch (responsive-signal-cards)
+- **Undo bulk tag** — Cmd+Z for last tag action (ROADMAP)
+- **Sticky header** — decision pending (#15)
+- **Density setting** — compact/comfortable/spacious for quote grid
+- **Show/Hide panel label flip (desktop menu)** — wire SidebarStore/InspectorStore open state → bridge → Swift menu labels. Hide translations already exist in en/es/ko. ~30 min, fully scoped
+- **Desktop UX review findings (22 Mar 2026)** — v0.1→v1 transition story (What's New sheet), pipeline progress (Stage 4 of 12), bare-key shortcuts in menu bar, "Remove" not "Delete" for projects, disambiguate three sidebars (Project Sidebar / Sections Panel / Tags Panel), archive undo toast, sidebar `.searchable()`, simplify drop zone flow, toolbar fixed min-width, window state restoration, dark mode re-sync KVO, embedded font token, cursor reset scope. Full checklist in session notes
+- **Desktop Mac-nativeness (22 Mar 2026)** — P0: 13pt font injection (loudest web-view tell). P1: shared find pasteboard (Cmd+E/G), selection dimming on inactive window, temperature slider locale, Cocoa keybindings in contenteditable, Services menu testing, scroll feel testing (150+ quotes), serve startup progress line. P2: option-drag copies, undo/redo hiding deviation, disabled "+" button, View menu Enter Full Screen
+- **Transcript page: tidy up extent bars** — small effort
+- **Transcript page: flag uncited quote for inclusion** — medium-large effort
+
+### Could
+- **Theme management in browser** — custom CSS themes (#17)
+- **Transcript expand/collapse** — collapsible sections and themes
+- **Drag-and-drop quote reordering** — large effort
+- **Transcript pulldown menu** — margin annotations (ROADMAP)
+- **Measure-aware leading** — line-height interpolation based on column width across 23rem–52rem range (Bringhurst §2.1.2). Current `--bn-text-*-lh` tokens are fixed per size. Mockup: `docs/mockups/measure-aware-leading.html`. Playground already has slider
+- **Britannification pass** (#40) — CLI text consistency
+- **Input focus CSS `.bn-input` atom** — extract shared input styling
+- **Checkbox atom** — extract ghost checkbox style
+
+### Icebox
+- **Highlighter feature** — active branch, scope TBD. Parked
+
+---
+
+## 9. Technical debt — foundations for the future
+
+### Must
+- **Playwright E2E layers 4–5** — layers 1–3 done, need layers 4–5 for DB-mutating actions and visual regression. Beta blocker: 3 thin specs is not enough coverage for a shipped product (design-playwright-testing.md)
+- **Pipeline resilience notes go here**
+- **Pipeline resilience Phase 2b** — verify content hashes on load (done 25 Mar 2026). Next: **Phase 2c — input change detection** (medium effort, design-pipeline-resilience.md)
+- ~~**PyPI `Development Status` classifier** — currently unset in pyproject.toml. Must be `Development Status :: 4 - Beta` before launch. Signals maturity to pip users~~
+- ~~**Frontend CI**~~ — Vitest + ESLint + TypeScript typecheck gated in CI since 0.12.0. ESLint step informational (84 pre-existing errors). Prettier not yet added
+- **pytest coverage in CI** — trivial to enable, currently blind to dead code
+- **Multi-Python CI** — test 3.10, 3.11, 3.12, 3.13 (trivial, avoids EOL surprises)
+
+### Should
+- **Alembic setup** — DB migration framework before any schema change
+- **Visual regression baselines** — Playwright screenshots, light + dark
+- **Cross-browser Playwright** — Chromium + Firefox + WebKit
+- **Bundle size budget** — track and gate frontend bundle growth
+- **Platform detection refactor** — shared `utils/system.py` (#43)
+- **Skip logo copy when unchanged** (#31)
+- **Temp WAV cleanup** (#33)
+- **Pipeline concurrent chaining** (#32)
+- **LLM response cache** (#34)
+- **Logging tiers 2–3** — cache hit/miss decisions, concurrency queue depth, PII entity breakdown, FFmpeg command/return code, keychain resolution, manifest load/save (6 items, all trivial–small)
+- **Promote pip-audit + npm audit to blocking** — target v0.15.0 (trivial)
+- **i18n: pseudo-localisation QA** — add `i18next-pseudo` to catch remaining hardcoded strings. See `docs/design-i18n.md`
+
+### Could
+- **a11y lint rules** — eslint-plugin-jsx-a11y
+- **axe-core in E2E** — automated accessibility assertions
+- **Component Storybook** — visual component catalogue
+- **Typography token consolidation** — 16 sizes → ~10
+- **Tag-count dedup** — 3 implementations → shared `countUserTags()`
+- **`isEditing()` guard dedup** — shared `EditGuard` class
+- **Inline edit commit pattern** — shared `inlineEdit()` helper
+- **Shared user-tags data layer** — vanilla JS dedup (frozen path, low priority)
+- **Dev HUD: end-to-end traceability panel** — debug overlay showing provenance at every layer (git branch/SHA/dirty, Python version/source, render timestamp, theme CSS path/mtime/hash, serve mode/port, frontend Vite hash/router mode, bridge state, API health). Toggle with keyboard shortcut. Data from git CLI at startup, `/api/health`, `/api/dev/info`, CSS inspection
+
+### Won't (100 days)
+- **JS module cleanup** (#7, #8, #9, #10, #22, #23) — vanilla JS is frozen/deprecated
+- **`'use strict'` in all modules** (#7) — frozen path
+- **Explicit cross-module state management** (#23) — React replaced this
+
+---
+
+## 10. Documentation — guides, help, onboarding
+
+### Must
+- **App Store description** — short + long description, keywords, screenshots
+- **Video walkthrough** — 2-minute "here's what Bristlenose does" screencast
+- **In-app onboarding** — first-run wizard or guided tour for new users
+- **Provider setup guide** — which LLM provider, how to get API key, cost expectations
+- **README polish** — landing page README for GitHub (currently dev-focused)
+- **Hero image of report on GitHub README** — screenshot showing a real report, above the fold
+
+### Should
+- **FAQ / troubleshooting** — common issues (FFmpeg, API keys, large files)
+- **INSTALL.md desktop section** — "Download, drag to Applications, done"
+- **Changelog for users** — user-facing changelog (not dev changelog)
+- **How-to-get-API-key screenshots** — step-by-step visual guide for Claude, ChatGPT, Gemini console
+
+### Could
+- **Research methodology guide** — how Bristlenose analyses data, for researchers who want to understand
+- **Academic citation** — BibTeX entry for papers
+- **API documentation** — for power users who want to script against serve mode
+
+---
+
+## 11. Operations — CI/CD, release, monitoring
+
+### Must
+- **Desktop app build pipeline** — Xcode archive → .dmg → notarisation → upload. CI: automate .dmg build on push
+- **App Store Connect setup** — app record, pricing, TestFlight beta group
+- **Code signing** — Apple Developer Program membership, Developer ID certificate
+- **CI: add macOS runner** — currently Linux-only
+- **.dmg README** — include "Open Anyway" Gatekeeper instructions
+- **PyInstaller sidecar signing** — every `.dylib`, `.so`, and framework inside the bundle must be individually codesigned before notarization. (design-desktop-security-audit.md)
+- **Build number auto-increment** — `CFBundleVersion = 1` blocks Sparkle and App Store update logic. Set up CI auto-increment
+- **Domain & email infrastructure** — register `bristlenose.research` + `bristlenose.app` (defensive), configure SPF/DKIM/DMARC, set up email on DreamHost (`hello@`, `support@`, `security@`), Substack custom domain (`blog.bristlenose.research`). Full plan: `docs/private/infrastructure-and-identity.md`
+- **Supply chain hardening** — GitHub 2FA with hardware key, branch protection on main, PyPI hardware key + project-scoped token, register PyPI typosquats. Full checklist: `docs/private/infrastructure-and-identity.md`
+- **Succession plan** — bus-factor doc (every account/credential/recovery path), password manager emergency access for one trusted person. (infrastructure-and-identity.md)
+
+### Should
+- **Desktop app polish** — ReadyView: SwiftUI `.fileImporter()` (replace `NSOpenPanel.runModal()`). ProcessRunner: `AsyncBytes` instead of `availableData` polling. `hasAnyAPIKey()`: extend beyond Anthropic-only (or rename). Settings shortcut ⌘, : show in Help shortcuts conditionally (desktop only, browser intercepts). (Keychain migration moved to §6 Risk Must)
+- **Doctor serve-mode checks** — Vite auto-discovery via `/__vite_ping`, replace hardcoded port (design-serve-doctor.md)
+- **Extract design tokens for Figma** — colours, spacing, typography, radii → JSON/CSS variables
+- **Crash reporting** — Sentry or Apple's built-in crash reporting
+- **Update mechanism** — Sparkle framework or App Store auto-update
+- **CI snap smoke test** — verify Snap package installs cleanly (TODO.md)
+- **TestFlight beta** — pre-launch testing with real users
+- **Windows CI** — pytest on `windows-latest` runner
+- **AV false-positive testing** — test signed `.dmg` against common macOS antivirus. PyInstaller bundles frequently flagged. (design-desktop-security-audit.md)
+- **Semgrep CI integration** — Swift security rules (experimental) + Python security rules (mature). (design-desktop-security-audit.md)
+- **Objective-See QA** — run KnockKnock + LuLu during pre-release QA to verify system footprint
+
+### Could
+- **Analytics** — privacy-respecting usage analytics (opt-in only)
+- **Feedback endpoint** — deploy to Dreamhost (TODO.md)
+- **Weekly install smoke tests** — automated pip/pipx/brew verification
+
+---
+
+## 12. Legal/Compliance — gates to App Store
+
+### Must
+- **Apple Developer Program** — $99/year, individual enrollment initially. Bundle ID: `research.bristlenose.app`. Transition to Ltd organisation enrollment if/when revenue justifies it (team transfer preserves app listing, reviews, URL). Full plan: `docs/private/infrastructure-and-identity.md`
+- **Privacy policy URL** — required for App Store submission. Host at `bristlenose.research/privacy`
+- **Terms of service** — subscription terms
+- **App sandbox compliance** — entitlements for file access, network (LLM API calls)
+- **Export compliance** — HTTPS only, no custom encryption = simplified declaration
+- **Age rating** — likely 4+ (no objectionable content)
+- **EULA** — standard Apple EULA or custom
+- **Privacy Manifest (`PrivacyInfo.xcprivacy`)** — declare required reason APIs and data types. Cross-ref §6 Risk. (design-desktop-security-audit.md)
+- **AI data transparency per Apple 5.1.2(i)** — first-run consent dialog naming each LLM provider, linking privacy policies, Ollama offline option. Cross-ref §6 Risk. (design-desktop-security-audit.md)
+
+### Should
+- **GDPR statement** — data processing description (local-first, API calls to LLM providers)
+- **Accessibility statement** — VoiceOver compatibility, keyboard navigation
+- **Open source license display** — AGPL notice in app + dependency licenses
+
+### Could
+- **Cookie/tracking transparency** — App Tracking Transparency framework (likely N/A for local-first)
+
+---
+
+## 13. Go-to-market — revenue enablement
+
+### Must
+- **~~Pricing decision~~** — $/month, what's included, free tier?
+- **Blog at substack** — minimal posts and place for people to gather and chat. cross posts from linkedin
+- **Launch Blog post** — "why we built Bristlenose" story 3 minute read
+- **Public-facing website 1** — The 1 pages brochure not App Store, not GitHub. Product landing page at `bristlenose.research` with video, install CTA, "nothing leaves your laptop" messaging, speed demo GIF, comparison vs Dovetail/EnjoyHQ, what it does, who it's for, install/download CTA → part of public-facing website above
+- **Public-facing website2 ** — The 1 pages manual
+- **Landing page** — - **Domain registration** — `bristlenose.research` as primary product domain. `bristlenose.app` as defensive redirect. `blog.bristlenose.research` for Substack (portable — CNAME). Note: `bristlenose.com` is taken (Namecheap, Jan 2026, resolves to Shopify). Full plan: `docs/private/infrastructure-and-identity.md`
+- **App Store screenshots** — 3-5 screenshots at required resolutions
+- **App Store preview video** — 15-30 second demo (optional but high impact)
+
+### Should
+- **Product Hunt launch** — prepared assets, description, maker comment
+- **Demo dataset** — sample project that ships with app or is downloadable, so new users see a real report immediately
+- **Twitter/LinkedIn announcement** — launch thread with GIF/video
+- **HN Show post** — "Show HN: Local-first user research analysis"
+- **UX research community outreach** — ResearchOps Slack, UXPA, mixed methods communities
+
+
+### Could
+
+- **Academic outreach** — HCI conferences, PhD students
+- **Referral/word-of-mouth** — "share with a colleague" in-app prompt
+
+### Won’t
+- **Comparison page** — vs Dovetail, vs EnjoyHQ, vs manual spreadsheet
+
+---
+
+## 14. Accessibility — inclusive by default
+
+### Must
+- **Systematic accessibility review via ux-review skill** — run the `ux-review` agent on every new feature before merge and retroactively on all existing interactive surfaces (modals, sidebar, tag input, toolbar, quote cards, analysis page). The skill checks WCAG 2.1 AA, keyboard navigation, ARIA roles, focus management, screen reader support, and reduced motion. Make this a gated step in the feature workflow, not an afterthought
+- **Non-focusable interactive elements (span onClick → button)** — Add Tag (+) on QuoteCard, Badge delete, Badge accept/deny actions, Counter unhide are all bare `<span onClick>` — invisible to keyboard users and screen readers. Convert to `<button>` with `aria-label`. (a11y audit, critical)
+- **TagInput: implement WAI-ARIA combobox pattern** — missing `role="combobox"`, `aria-expanded`, `aria-autocomplete="list"`, `aria-controls`, `aria-activedescendant`. Suggestion list needs `role="listbox"`, items need `role="option"`. (a11y audit, critical)
+- **Modal atom accessibility upgrade** — `role="dialog"`, `aria-modal`, focus trap, focus restore as a shared hook/wrapper. Retrofit to all 6 modals (HelpModal, ExportDialog, FeedbackModal, AutoCodeReportModal, ThresholdReviewModal, SettingsModal). HelpModal is the worst — no dialog role, no focus trap, no focus return. SettingsModal's ModalNav pattern is the reference implementation. (a11y audit, major)
+- **NavBar: remove incorrect role="tablist"** — router links are not ARIA tabs; no matching `role="tabpanel"` exists. Semantic `<nav>` with links is correct. (a11y audit, major)
+- **Missing aria-labels on inputs** — SearchBox ("Filter quotes"), TagInput ("Add tag"), TagSidebar search ("Search tags"), TagFilterDropdown search ("Search tags"). Placeholder text is not a label. (a11y audit, major)
+- **ViewSwitcher dropdown keyboard navigation** — menu items have no `tabindex`, no Arrow key navigation, no Enter/Space to select, no Escape to close. (a11y audit, major)
+- **Icon contrast failures** — `--bn-colour-icon-idle` (#c9ccd1 on white = 1.8:1) and `--bn-colour-starred` (#999 on white = 2.8:1) fail WCAG 1.4.11 non-text contrast (3:1 required). Dark mode `--bn-colour-icon-idle` (#595959 on #111 = 2.4:1) also fails. (a11y audit, major)
+- **No `<main>` landmark** — QuotesTab renders in a bare fragment. Wrap `<Outlet>` in AppLayout's center column with `<main>`. (a11y audit, major)
+- **Keyboard navigation audit** — verify all interactive elements reachable via Tab
+- **VoiceOver testing** — basic screen reader pass on report and desktop app
+- **Colour contrast** — WCAG AA on all text (light + dark mode)
+- **Focus indicators** — visible focus rings on all interactive elements
+
+### Should
+- **Toast announcements** — toast container (e.g. "3 quotes copied as CSV") needs `role="status"` or `aria-live="polite"` for screen reader announcements. (a11y audit, major)
+- **ARIA attributes** — proper roles on custom widgets (sidebar, tag input, dropdowns) (#24)
+- **Reduced motion** — `prefers-reduced-motion` respected (partially shipped in 0.13.0)
+- **eslint-plugin-jsx-a11y** — lint-time a11y checks
+- **axe-core in Playwright** — automated a11y assertions in E2E
+- **aria-live regions** — announcements for async operations (tag applied, quote hidden, key validated, export complete)
+- **Desktop a11y: focus management** — on project switch (`webView.becomeFirstResponder()` on "ready" bridge message) and on tab switch (Cmd+1-5: focus first meaningful heading after React Router navigation). Currently focus lands in undefined location
+- **Desktop a11y: drag handle ARIA** — add `role="separator"` with `aria-orientation="vertical"` and `aria-valuenow`/`valuemin`/`valuemax` to sidebar resize handles
+- **Desktop a11y: Dynamic Type scaling curve** — define native→web font-size mapping (system `preferredContentSizeCategory` → CSS `font-size` on `<html>`). Observe changes via `NSApp` and re-inject
+- **Desktop a11y: minor fixes** — segmented picker label ("Report section" not "Tab"), verify `<h1>` in embedded mode, bare-key vs VoiceOver Quick Nav documentation, settings slider accessible values, API key toggle state traits
+
+### Could
+- **High contrast mode** — Windows high contrast / forced-colors support
+
+---
+
+## Active feature branches
+
+| Branch | Started | Description | Merge target |
+|--------|---------|-------------|-------------|
+| `symbology` | 12 Feb | Unicode prefix symbols (§ ¶ ❋) across UI | main |
+| `highlighter` | 13 Feb | Highlighter feature (scope TBD) — **Icebox** | main |
+| `living-fish` | 26 Feb | Animated bristlenose logo — **Icebox** | main |
+
+---
+
+## GitHub issues to close as obsolete
+
+- **#29** — Reactive UI architecture (superseded by React migration, complete)
+- **#16** — Refactor render_html.py (done in 0.13.2)
+- **#7, #8, #9, #10, #22, #23** — Vanilla JS improvements (frozen/deprecated path)
+
+---
+
+## Items needing design docs before implementation
+
+1. Multi-project support (Milestone 4)
+2. File import / drag-and-drop (Milestone 5)
+3. Settings UI (Milestone 6)
+4. Run pipeline from GUI (Milestone 7)
+5. First-run experience / onboarding
+6. App Store subscription infrastructure
+7. Pricing model
+
+---
+
+## Dependency maintenance due in window
+
+- **Quarterly review: May 2026** — `pip list --outdated`, bump for security/features
+- **Python 3.10 EOL: Oct 2026** — decide minimum version before launch
+- **faster-whisper/ctranslate2 health check** — HIGH risk dependency, monitor
+
+---
+
+## Investigations (no commitment — explore if time allows)
+
+These are speculative ideas worth thinking about but without a delivery commitment:
+
+- **Sentiment badges as built-in codebook framework** — sentiments are conceptually just another codebook; unifying would simplify thresholds, review dialog, accept/deny. Big but significant
+- **Tag namespace uniqueness + import merge strategy** — flat namespace, clash detection, provenance tracking (user vs framework vs AutoCode)
+- **Canonical tag → colour as first-class schema** — persist `colour_set`/`colour_index` on `TagDefinition` to survive reordering; eliminate client-side colour computation
+- **Sidebar filter undo history stack** — multi-step undo for tag filter state changes (show-only clicks, tick toggles). See `docs/design-codebook-autocomplete.md` Decision 6b
+- **Measure-aware leading** — line-height should increase with wider columns (Bringhurst §2.1.2). Explore interpolating across 23rem–52rem range. Playground has a slider already
+- **Tokenise acceptance flash as design system pattern** — generalise `badge-accept-flash` into reusable `.bn-confirm-flash` + `useFlash(key)` hook
+
+---
+
+*Updated 25 Mar 2026. Domain architecture decided: `bristlenose.research` (primary), `blog.bristlenose.research` (Substack), `bristlenose.app` (defensive). Bundle ID changed to `research.bristlenose.app`. Infrastructure plan: `docs/private/infrastructure-and-identity.md`. `bristlenose.com` taken (Jan 2026, Shopify). Reality check pass: struck through shipped items (export HTML, help modal polish, error messaging, frontend CI, pip-audit, multi-language, PostMessage origin), amended export polish and localStorage scope, added Icebox tier. Security audit additions from design-desktop-security-audit.md. Original: 16 Mar 2026.*

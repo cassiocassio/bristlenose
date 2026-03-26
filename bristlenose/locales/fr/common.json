@@ -90,18 +90,7 @@
     "loading": "Chargement du tableau de bord\u2026"
   },
   "toolbar": {
-    "copyCsv": "Copier CSV",
-    "matching": "{{count}} correspondances",
-    "csvTimecode": "Code temporel",
-    "csvQuote": "Verbatim",
-    "csvParticipant": "Participant",
-    "csvTopic": "Sujet",
-    "csvSentiment": "Sentiment",
-    "csvTags": "Étiquettes",
-    "csvCopied": "{{count}} verbatim copiés en CSV",
-    "csvFailed": "Impossible de copier dans le presse-papiers",
-    "noQuotesSelected": "Aucun verbatim sélectionné",
-    "quotesExported": "{{count}} verbatim exportés en CSV"
+    "matching": "{{count}} correspondances"
   },
   "tags": {
     "noTags": "Aucune étiquette",
@@ -156,7 +145,30 @@
     "anonymise": "Supprimer les noms des participants des libellés",
     "anonymiseHint": "Supprime les noms des métadonnées, noms de fichiers et libellés de locuteurs. Conserve les codes (p1, p2). Les noms des modérateurs sont préservés. Les noms dans le texte des citations NE sont PAS supprimés.",
     "exporting": "Exportation en cours\u2026",
-    "exportFailed": "L'exportation a échoué"
+    "exportFailed": "L'exportation a échoué",
+    "copyQuotes": "Copier les citations",
+    "copyQuotesCount_one": "Copier {{count}} citation",
+    "copyQuotesCount_other": "Copier {{count}} citations",
+    "saveAsSpreadsheet": "Enregistrer sous feuille de calcul",
+    "exportReport": "Exporter le rapport...",
+    "quotesCopied_one": "{{count}} citation copiée",
+    "quotesCopied_other": "{{count}} citations copiées",
+    "noQuotesMatch": "Aucune citation ne correspond aux filtres actuels",
+    "pasteHint": "Coller dans Miro, Excel ou Google Sheets",
+    "exportingQuotes_other": "Export de {{count}} citations",
+    "fromSessions_one": "de {{count}} session",
+    "fromSessions_other": "de {{count}} sessions",
+    "colQuote": "Citation",
+    "colParticipantCode": "Code participant",
+    "colParticipantName": "Nom du participant",
+    "colSection": "Section",
+    "colTheme": "Thème",
+    "colSentiment": "Sentiment",
+    "colTags": "Étiquettes",
+    "colStarred": "Marqué",
+    "colTimecode": "Code temporel",
+    "colSession": "Session",
+    "colSourceFile": "Fichier source"
   },
   "feedback": {
     "heading": "Comment fonctionne Bristlenose pour vous ?",

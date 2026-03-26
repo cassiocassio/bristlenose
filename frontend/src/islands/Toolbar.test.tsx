@@ -61,13 +61,12 @@ afterEach(() => {
 });
 
 describe("Toolbar", () => {
-  it("renders all four toolbar sections", () => {
+  it("renders toolbar sections", () => {
     const { getByTestId } = render(<Toolbar />);
     expect(getByTestId("bn-toolbar")).toBeDefined();
     expect(getByTestId("bn-toolbar-search")).toBeDefined();
     expect(getByTestId("bn-toolbar-tag-filter")).toBeDefined();
     expect(getByTestId("bn-toolbar-view-switcher")).toBeDefined();
-    expect(getByTestId("bn-toolbar-csv")).toBeDefined();
   });
 
   it("applies .toolbar CSS class", () => {
@@ -101,27 +100,6 @@ describe("Toolbar", () => {
 
     // Label should now say "Starred quotes"
     expect(getByTestId("bn-toolbar-view-switcher-btn").textContent).toContain("Starred quotes");
-  });
-
-  it("CSV export copies to clipboard", async () => {
-    const writeText = vi.fn().mockResolvedValue(undefined);
-    Object.assign(navigator, { clipboard: { writeText } });
-
-    initFromQuotes([
-      makeQuote({ dom_id: "q-p1-1", text: "Quote one", speaker_name: "Alice" }),
-      makeQuote({ dom_id: "q-p1-2", text: "Quote two", speaker_name: "Bob" }),
-    ]);
-
-    const { getByTestId } = render(<Toolbar />);
-    fireEvent.click(getByTestId("bn-toolbar-csv"));
-
-    // Should have called clipboard with CSV
-    expect(writeText).toHaveBeenCalledOnce();
-    const csv = writeText.mock.calls[0][0] as string;
-    expect(csv).toContain("Timecode,Quote,Participant,Topic,Sentiment,Tags");
-    expect(csv).toContain("Quote one");
-    expect(csv).toContain("Quote two");
-    expect(csv).toContain("Alice");
   });
 
   it("mutual dropdown exclusion — opening one closes the other", () => {

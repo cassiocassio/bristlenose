@@ -501,7 +501,7 @@ function AppShell() {
       showRightSidebar={!!isQuotes}
     >
       {!embedded && <Header />}
-      {!embedded && <NavBar onExport={toggleExport} onSettings={toggleSettings} onHelp={openHelp} />}
+      {!embedded && <NavBar onExportReport={toggleExport} onSettings={toggleSettings} onHelp={openHelp} />}
       <Outlet />
       {!embedded && (
         <Footer

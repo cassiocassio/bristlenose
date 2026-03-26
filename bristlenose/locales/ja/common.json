@@ -97,16 +97,7 @@
     "loading": ""
   },
   "toolbar": {
-    "copyCsv": "",
-    "matching": "",
-    "csvTimecode": "",
-    "csvQuote": "",
-    "csvParticipant": "",
-    "csvTopic": "",
-    "csvSentiment": "",
-    "csvTags": "",
-    "csvCopied": "",
-    "csvFailed": ""
+    "matching": ""
   },
   "tags": {
     "noTags": "",
@@ -153,7 +144,27 @@
     "anonymise": "",
     "anonymiseHint": "",
     "exporting": "",
-    "exportFailed": ""
+    "exportFailed": "",
+    "copyQuotes": "引用をコピー",
+    "copyQuotesCount_other": "{{count}}件の引用をコピー",
+    "saveAsSpreadsheet": "スプレッドシートとして保存",
+    "exportReport": "レポートをエクスポート...",
+    "quotesCopied_other": "{{count}}件の引用をコピーしました",
+    "noQuotesMatch": "現在のフィルターに一致する引用がありません",
+    "pasteHint": "Miro、Excel、またはGoogle Sheetsに貼り付け",
+    "exportingQuotes_other": "{{count}}件の引用をエクスポート中",
+    "fromSessions_other": "{{count}}件のセッションから",
+    "colQuote": "引用",
+    "colParticipantCode": "参加者コード",
+    "colParticipantName": "参加者名",
+    "colSection": "セクション",
+    "colTheme": "テーマ",
+    "colSentiment": "感情",
+    "colTags": "タグ",
+    "colStarred": "スター付き",
+    "colTimecode": "タイムコード",
+    "colSession": "セッション",
+    "colSourceFile": "ソースファイル"
   },
   "feedback": {
     "heading": "",

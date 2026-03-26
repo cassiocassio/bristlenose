@@ -89,18 +89,7 @@
     "loading": "Dashboard wird geladen\u2026"
   },
   "toolbar": {
-    "copyCsv": "CSV kopieren",
-    "matching": "{{count}} Treffer",
-    "csvTimecode": "Zeitcode",
-    "csvQuote": "Zitat",
-    "csvParticipant": "Teilnehmer",
-    "csvTopic": "Thema",
-    "csvSentiment": "Stimmung",
-    "csvTags": "Tags",
-    "csvCopied": "{{count}} Zitate als CSV kopiert",
-    "csvFailed": "Kopieren in die Zwischenablage fehlgeschlagen",
-    "noQuotesSelected": "Keine Zitate ausgewählt",
-    "quotesExported": "{{count}} Zitate als CSV exportiert"
+    "matching": "{{count}} Treffer"
   },
   "tags": {
     "noTags": "Keine Tags",
@@ -155,7 +144,30 @@
     "anonymise": "Teilnehmernamen aus Beschriftungen entfernen",
     "anonymiseHint": "Entfernt Namen aus Metadaten, Dateinamen und Sprecherbezeichnungen. Behält Codes (p1, p2) bei. Moderatorennamen bleiben erhalten. Namen im Zitattext werden NICHT entfernt.",
     "exporting": "Wird exportiert\u2026",
-    "exportFailed": "Export fehlgeschlagen"
+    "exportFailed": "Export fehlgeschlagen",
+    "copyQuotes": "Zitate kopieren",
+    "copyQuotesCount_one": "{{count}} Zitat kopieren",
+    "copyQuotesCount_other": "{{count}} Zitate kopieren",
+    "saveAsSpreadsheet": "Als Tabelle sichern",
+    "exportReport": "Bericht exportieren...",
+    "quotesCopied_one": "{{count}} Zitat kopiert",
+    "quotesCopied_other": "{{count}} Zitate kopiert",
+    "noQuotesMatch": "Keine Zitate entsprechen den aktuellen Filtern",
+    "pasteHint": "In Miro, Excel oder Google Sheets einfügen",
+    "exportingQuotes_other": "{{count}} Zitate werden exportiert",
+    "fromSessions_one": "aus {{count}} Sitzung",
+    "fromSessions_other": "aus {{count}} Sitzungen",
+    "colQuote": "Zitat",
+    "colParticipantCode": "Teilnehmercode",
+    "colParticipantName": "Teilnehmername",
+    "colSection": "Abschnitt",
+    "colTheme": "Thema",
+    "colSentiment": "Stimmung",
+    "colTags": "Tags",
+    "colStarred": "Markiert",
+    "colTimecode": "Zeitmarke",
+    "colSession": "Sitzung",
+    "colSourceFile": "Quelldatei"
   },
   "feedback": {
     "heading": "Wie funktioniert Bristlenose für Sie?",

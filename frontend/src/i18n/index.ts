@@ -14,6 +14,7 @@ import LanguageDetector from "i18next-browser-languagedetector";
 import enCommon from "@locales/en/common.json";
 import enSettings from "@locales/en/settings.json";
 import enEnums from "@locales/en/enums.json";
+import enDesktop from "@locales/en/desktop.json";
 
 export const SUPPORTED_LOCALES = ["en", "es", "ja", "fr", "de", "ko"] as const;
 export type Locale = (typeof SUPPORTED_LOCALES)[number];
@@ -24,6 +25,14 @@ export function isSupportedLocale(v: unknown): v is Locale {
 
 const NAMESPACES = ["common", "settings", "enums"] as const;
 
+/** Desktop mode detected from `data-platform="desktop"` on `<html>`. */
+const _isDesktopMode = document.documentElement.dataset.platform === "desktop";
+
+/** Namespaces to load for non-English locales — includes `desktop` in desktop mode. */
+const LAZY_NAMESPACES: readonly string[] = _isDesktopMode
+  ? [...NAMESPACES, "desktop"]
+  : [...NAMESPACES];
+
 /**
  * Lazily load a non-English locale's translation bundles.
  * Returns a resources object keyed by namespace.
@@ -32,7 +41,7 @@ async function loadLocaleResources(
   locale: Locale,
 ): Promise<Record<string, Record<string, unknown>>> {
   const resources: Record<string, Record<string, unknown>> = {};
-  for (const ns of NAMESPACES) {
+  for (const ns of LAZY_NAMESPACES) {
     try {
       const mod = await import(`../../../bristlenose/locales/${locale}/${ns}.json`);
       resources[ns] = mod.default ?? mod;
@@ -65,11 +74,12 @@ i18n
         common: enCommon,
         settings: enSettings,
         enums: enEnums,
+        ...(_isDesktopMode ? { desktop: enDesktop } : {}),
       },
     },
     fallbackLng: "en",
     defaultNS: "common",
-    ns: [...NAMESPACES],
+    ns: [...LAZY_NAMESPACES],
     interpolation: {
       escapeValue: false, // React already escapes
     },

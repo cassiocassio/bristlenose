@@ -20,6 +20,7 @@ import { SUPPORTED_LOCALES, type Locale } from "../i18n";
 import { setLocale, useLocaleStore } from "../i18n/LocaleStore";
 import { ModalNav, type NavItem } from "./ModalNav";
 import { isEmbedded } from "../utils/embedded";
+import { dt } from "../utils/desktopTranslation";
 
 // ── Types ─────────────────────────────────────────────────────────────────
 
@@ -372,7 +373,7 @@ function ConfigSection({ categoryId }: { categoryId: string }) {
   return (
     <div className="bn-config-ref">
       <p className="bn-config-ref-intro"
-        dangerouslySetInnerHTML={{ __html: t("configReference.intro") }}
+        dangerouslySetInnerHTML={{ __html: dt(t, "configReference.intro") }}
       />
       {cat.settings.map((s, i) => (
         <div key={`${cat.id}-${i}`} className="bn-config-ref-row">

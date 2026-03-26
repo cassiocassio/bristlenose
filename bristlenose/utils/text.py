@@ -53,7 +53,7 @@ def slugify(text: str, max_length: int = _MAX_SLUG_LENGTH) -> str:
 
 # Characters forbidden in filenames on Windows (NTFS) and macOS (HFS+/APFS).
 # Forward/back slashes and null bytes are path separators or terminators.
-_UNSAFE_FILENAME_CHARS = re.compile(r'[/\\:\*\?"<>|\x00]')
+_UNSAFE_FILENAME_CHARS = re.compile(r'[/\\:\*\?"<>|\x00\r\n]')
 
 # Maximum length for export filenames (leaves room for extension + path prefix)
 _MAX_FILENAME_LENGTH = 120

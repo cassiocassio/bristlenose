@@ -55,6 +55,7 @@ serve = [
     "uvicorn[standard]>=0.32",
     "sqlalchemy>=2.0",
     "sqladmin>=0.20",
+    "openpyxl>=3.1",
 ]
 
 [project.scripts]

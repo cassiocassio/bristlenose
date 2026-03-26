@@ -8,10 +8,10 @@
 
 import { NavLink } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { isExportMode } from "../utils/exportData";
+import { ExportDropdown } from "./ExportDropdown";
 
 interface NavBarProps {
-  onExport?: () => void;
+  onExportReport?: () => void;
   onSettings?: () => void;
   onHelp?: () => void;
 }
@@ -29,7 +29,7 @@ function tabClassName({ isActive }: { isActive: boolean }): string {
 }
 
 
-export function NavBar({ onExport, onSettings, onHelp }: NavBarProps) {
+export function NavBar({ onExportReport, onSettings, onHelp }: NavBarProps) {
   const { t } = useTranslation();
   return (
     <nav className="bn-global-nav">
@@ -44,19 +44,8 @@ export function NavBar({ onExport, onSettings, onHelp }: NavBarProps) {
         </NavLink>
       ))}
       <div className="bn-tab-spacer" />
-      {!isExportMode() && onExport && (
-        <button
-          className="bn-tab bn-tab-icon"
-          aria-label={t("buttons.export")}
-          title={t("buttons.export")}
-          onClick={onExport}
-        >
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M2 10v3.5h12V10"/>
-            <path d="M8 2v8"/>
-            <path d="M4.5 6.5L8 10l3.5-3.5"/>
-          </svg>
-        </button>
+      {onExportReport && (
+        <ExportDropdown onExportReport={onExportReport} />
       )}
       <button
         className="bn-tab bn-tab-icon"

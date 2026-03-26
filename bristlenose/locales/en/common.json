@@ -97,18 +97,7 @@
     "loading": "Loading dashboard\u2026"
   },
   "toolbar": {
-    "copyCsv": "Copy CSV",
-    "matching": "{{count}} matching",
-    "csvTimecode": "Timecode",
-    "csvQuote": "Quote",
-    "csvParticipant": "Participant",
-    "csvTopic": "Topic",
-    "csvSentiment": "Sentiment",
-    "csvTags": "Tags",
-    "csvCopied": "{{count}} quotes copied as CSV",
-    "csvFailed": "Could not copy to clipboard",
-    "noQuotesSelected": "No quotes selected",
-    "quotesExported": "{{count}} quotes exported as CSV"
+    "matching": "{{count}} matching"
   },
   "tags": {
     "noTags": "No tags",
@@ -155,7 +144,30 @@
     "anonymise": "Remove participant names from labels",
     "anonymiseHint": "Strips names from metadata, filenames, and speaker labels. Keeps participant codes (p1, p2). Moderator names are preserved. Names mentioned within quote text are NOT removed.",
     "exporting": "Exporting\u2026",
-    "exportFailed": "Export failed"
+    "exportFailed": "Export failed",
+    "copyQuotes": "Copy Quotes",
+    "copyQuotesCount_one": "Copy {{count}} Quote",
+    "copyQuotesCount_other": "Copy {{count}} Quotes",
+    "saveAsSpreadsheet": "Save as Spreadsheet",
+    "exportReport": "Export Report...",
+    "quotesCopied_one": "{{count}} quote copied",
+    "quotesCopied_other": "{{count}} quotes copied",
+    "noQuotesMatch": "No quotes match current filters",
+    "pasteHint": "Paste into Miro, Excel, or Google Sheets",
+    "exportingQuotes_other": "Exporting {{count}} quotes",
+    "fromSessions_one": "from {{count}} session",
+    "fromSessions_other": "from {{count}} sessions",
+    "colQuote": "Quote",
+    "colParticipantCode": "Participant code",
+    "colParticipantName": "Participant name",
+    "colSection": "Section",
+    "colTheme": "Theme",
+    "colSentiment": "Sentiment",
+    "colTags": "Tags",
+    "colStarred": "Starred",
+    "colTimecode": "Timecode",
+    "colSession": "Session",
+    "colSourceFile": "Source file"
   },
   "feedback": {
     "heading": "How is Bristlenose working for you?",

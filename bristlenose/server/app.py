@@ -25,6 +25,7 @@ from bristlenose.server.routes.export import router as export_router
 from bristlenose.server.routes.health import router as health_router
 from bristlenose.server.routes.miro import router as miro_router
 from bristlenose.server.routes.quotes import router as quotes_router
+from bristlenose.server.routes.quotes_export import router as quotes_export_router
 from bristlenose.server.routes.sessions import router as sessions_router
 from bristlenose.server.routes.transcript import router as transcript_router
 
@@ -130,6 +131,7 @@ def create_app(
     app.include_router(codebook_router)
     app.include_router(dashboard_router)
     app.include_router(export_router)
+    app.include_router(quotes_export_router)
     app.include_router(sessions_router)
     app.include_router(quotes_router)
     app.include_router(transcript_router)

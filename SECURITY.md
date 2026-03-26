@@ -20,7 +20,7 @@ Keys are never written to disk in plaintext by Bristlenose. The `.env` fallback 
 
 ## PII redaction
 
-PII redaction is **opt-in** via `--redact-pii`. When enabled, Bristlenose uses Microsoft Presidio (spaCy NLP) to detect and replace personally identifiable information in transcripts before LLM analysis. It is off by default because false positives (redacting research-relevant text) damage data accuracy.
+PII redaction is **opt-in** — enable it with `--redact-pii` from the command line. **In the desktop app,** PII redaction settings will be available in a future Settings update. When enabled, Bristlenose uses Microsoft Presidio (spaCy NLP) to detect and replace personally identifiable information in transcripts before LLM analysis. It is off by default because false positives (redacting research-relevant text) damage data accuracy.
 
 **Configurable threshold:** `BRISTLENOSE_PII_SCORE_THRESHOLD` (default 0.7, range 0.0–1.0). Lower values catch more PII at the cost of more false positives. See [Presidio analyzer docs](https://microsoft.github.io/presidio/analyzer/).
 

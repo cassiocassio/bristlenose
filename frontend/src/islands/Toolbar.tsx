@@ -1,9 +1,11 @@
 /**
- * Toolbar — organism island composing search, tag filter, view switcher, and CSV export.
+ * Toolbar — organism island composing search, tag filter, and view switcher.
  *
  * Connects to QuotesStore for shared filter state.
  * Manages mutual exclusion of dropdowns.
  * Reuses organisms/toolbar.css (.toolbar).
+ *
+ * CSV/XLSX export actions moved to ExportDropdown in NavBar (v0.15).
  */
 
 import { useCallback, useMemo, useState } from "react";
@@ -11,7 +13,6 @@ import { useTranslation } from "react-i18next";
 import { SearchBox } from "../components/SearchBox";
 import { TagFilterDropdown } from "../components/TagFilterDropdown";
 import { ViewSwitcher } from "../components/ViewSwitcher";
-import { ToolbarButton } from "../components/ToolbarButton";
 import {
   useQuotesStore,
   setSearchQuery,
@@ -20,44 +21,6 @@ import {
 } from "../contexts/QuotesContext";
 import { filterQuotes } from "../utils/filter";
 import type { FilterState } from "../utils/filter";
-import { toast } from "../utils/toast";
-
-// ── Icons ─────────────────────────────────────────────────────────────
-
-function CopyIcon() {
-  return (
-    <svg
-      width="14"
-      height="14"
-      viewBox="0 0 16 16"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.5"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <rect x="5" y="1" width="9" height="11" rx="1.5" />
-      <path d="M3 5H2.5A1.5 1.5 0 0 0 1 6.5v8A1.5 1.5 0 0 0 2.5 16h8a1.5 1.5 0 0 0 1.5-1.5V14" />
-    </svg>
-  );
-}
-
-// ── CSV builder ───────────────────────────────────────────────────────
-
-function csvEsc(v: string): string {
-  if (v.includes(",") || v.includes('"') || v.includes("\n")) {
-    return `"${v.replace(/"/g, '""')}"`;
-  }
-  return v;
-}
-
-function formatTimecode(seconds: number): string {
-  const h = Math.floor(seconds / 3600);
-  const m = Math.floor((seconds % 3600) / 60);
-  const s = Math.floor(seconds % 60);
-  if (h > 0) return `${h}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
-  return `${m}:${String(s).padStart(2, "0")}`;
-}
 
 // ── Component ─────────────────────────────────────────────────────────
 
@@ -131,37 +94,6 @@ export function Toolbar() {
     setActiveDropdown(open ? "viewSwitcher" : "none");
   }, []);
 
-  // ── CSV export ────────────────────────────────────────────────────
-
-  const handleCsvExport = useCallback(() => {
-    const header = [
-      t("toolbar.csvTimecode"),
-      t("toolbar.csvQuote"),
-      t("toolbar.csvParticipant"),
-      t("toolbar.csvTopic"),
-      t("toolbar.csvSentiment"),
-      t("toolbar.csvTags"),
-    ];
-    const rows = visibleQuotes.map((q) => {
-      const text = store.edits[q.dom_id] ?? q.text;
-      const tags = (store.tags[q.dom_id] ?? q.tags).map((t) => t.name).join("; ");
-      return [
-        csvEsc(formatTimecode(q.start_timecode)),
-        csvEsc(text),
-        csvEsc(q.speaker_name),
-        csvEsc(q.topic_label),
-        csvEsc(q.sentiment ?? ""),
-        csvEsc(tags),
-      ].join(",");
-    });
-
-    const csv = [header.join(","), ...rows].join("\n");
-    navigator.clipboard
-      .writeText(csv)
-      .then(() => toast(t("toolbar.csvCopied", { count: visibleQuotes.length })))
-      .catch(() => toast(t("toolbar.csvFailed")));
-  }, [visibleQuotes, store.edits, store.tags]);
-
   // ── Render ────────────────────────────────────────────────────────
 
   return (
@@ -187,12 +119,6 @@ export function Toolbar() {
         onToggle={handleViewSwitcherToggle}
         labelOverride={viewLabel}
         data-testid="bn-toolbar-view-switcher"
-      />
-      <ToolbarButton
-        label={t("toolbar.copyCsv")}
-        icon={<CopyIcon />}
-        onClick={handleCsvExport}
-        data-testid="bn-toolbar-csv"
       />
     </div>
   );

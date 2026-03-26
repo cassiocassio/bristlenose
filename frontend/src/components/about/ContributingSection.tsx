@@ -1,6 +1,7 @@
 /** Contributing section — how to contribute, links, licence. */
 
 import { useTranslation } from "react-i18next";
+import { dt } from "../../utils/desktopTranslation";
 
 export function ContributingSection() {
   const { t } = useTranslation();
@@ -9,7 +10,7 @@ export function ContributingSection() {
       <p>{t("help.contributing.licence")}</p>
 
       <h3>{t("help.contributing.beforeTitle")}</h3>
-      <p dangerouslySetInnerHTML={{ __html: t("help.contributing.beforeBody") }} />
+      <p dangerouslySetInnerHTML={{ __html: dt(t, "help.contributing.beforeBody") }} />
 
       <h3>{t("help.contributing.translateTitle")}</h3>
       <p dangerouslySetInnerHTML={{ __html: t("help.contributing.translateBody") }} />

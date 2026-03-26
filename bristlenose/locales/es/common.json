@@ -90,18 +90,7 @@
     "loading": "Cargando panel\u2026"
   },
   "toolbar": {
-    "copyCsv": "Copiar CSV",
-    "matching": "{{count}} coincidencias",
-    "csvTimecode": "Código de tiempo",
-    "csvQuote": "Cita",
-    "csvParticipant": "Participante",
-    "csvTopic": "Tema",
-    "csvSentiment": "Sentimiento",
-    "csvTags": "Etiquetas",
-    "csvCopied": "{{count}} citas copiadas como CSV",
-    "csvFailed": "No se pudo copiar al portapapeles",
-    "noQuotesSelected": "No hay citas seleccionadas",
-    "quotesExported": "{{count}} citas exportadas como CSV"
+    "matching": "{{count}} coincidencias"
   },
   "tags": {
     "noTags": "Sin etiquetas",
@@ -156,7 +145,30 @@
     "anonymise": "Eliminar nombres de participantes de las etiquetas",
     "anonymiseHint": "Elimina nombres de metadatos, nombres de archivo y etiquetas de hablantes. Conserva los códigos (p1, p2). Los nombres de moderadores se conservan. Los nombres dentro del texto de las citas NO se eliminan.",
     "exporting": "Exportando\u2026",
-    "exportFailed": "La exportación falló"
+    "exportFailed": "La exportación falló",
+    "copyQuotes": "Copiar citas",
+    "copyQuotesCount_one": "Copiar {{count}} cita",
+    "copyQuotesCount_other": "Copiar {{count}} citas",
+    "saveAsSpreadsheet": "Guardar como hoja de cálculo",
+    "exportReport": "Exportar informe...",
+    "quotesCopied_one": "{{count}} cita copiada",
+    "quotesCopied_other": "{{count}} citas copiadas",
+    "noQuotesMatch": "Ninguna cita coincide con los filtros actuales",
+    "pasteHint": "Pegar en Miro, Excel o Google Sheets",
+    "exportingQuotes_other": "Exportando {{count}} citas",
+    "fromSessions_one": "de {{count}} sesión",
+    "fromSessions_other": "de {{count}} sesiones",
+    "colQuote": "Cita",
+    "colParticipantCode": "Código de participante",
+    "colParticipantName": "Nombre del participante",
+    "colSection": "Sección",
+    "colTheme": "Tema",
+    "colSentiment": "Sentimiento",
+    "colTags": "Etiquetas",
+    "colStarred": "Destacado",
+    "colTimecode": "Código de tiempo",
+    "colSession": "Sesión",
+    "colSourceFile": "Archivo fuente"
   },
   "feedback": {
     "heading": "¿Cómo te va con Bristlenose?",

@@ -82,18 +82,7 @@
     "loading": "대시보드 로드 중\u2026"
   },
   "toolbar": {
-    "copyCsv": "CSV 복사",
-    "matching": "{{count}}개 일치",
-    "csvTimecode": "타임코드",
-    "csvQuote": "인용문",
-    "csvParticipant": "참가자",
-    "csvTopic": "주제",
-    "csvSentiment": "감정",
-    "csvTags": "태그",
-    "csvCopied": "{{count}}개 인용문이 CSV로 복사됨",
-    "csvFailed": "클립보드에 복사할 수 없습니다",
-    "noQuotesSelected": "선택된 인용문이 없습니다",
-    "quotesExported": "{{count}}개 인용문이 CSV로 내보내짐"
+    "matching": "{{count}}개 일치"
   },
   "tags": {
     "noTags": "태그 없음",
@@ -146,7 +135,27 @@
     "anonymise": "라벨에서 참가자 이름 제거",
     "anonymiseHint": "메타데이터, 파일 이름 및 발화자 라벨에서 이름을 제거합니다. 코드(p1, p2)는 유지됩니다. 진행자 이름은 보존됩니다. 인용문 텍스트 내의 이름은 제거되지 않습니다.",
     "exporting": "내보내는 중\u2026",
-    "exportFailed": "내보내기 실패"
+    "exportFailed": "내보내기 실패",
+    "copyQuotes": "인용구 복사",
+    "copyQuotesCount_other": "인용구 {{count}}개 복사",
+    "saveAsSpreadsheet": "스프레드시트로 저장",
+    "exportReport": "보고서 내보내기...",
+    "quotesCopied_other": "인용구 {{count}}개 복사됨",
+    "noQuotesMatch": "현재 필터에 일치하는 인용구가 없습니다",
+    "pasteHint": "Miro, Excel 또는 Google Sheets에 붙여넣기",
+    "exportingQuotes_other": "인용구 {{count}}개 내보내는 중",
+    "fromSessions_other": "세션 {{count}}개에서",
+    "colQuote": "인용구",
+    "colParticipantCode": "참여자 코드",
+    "colParticipantName": "참여자 이름",
+    "colSection": "섹션",
+    "colTheme": "테마",
+    "colSentiment": "감정",
+    "colTags": "태그",
+    "colStarred": "별표",
+    "colTimecode": "시간 코드",
+    "colSession": "세션",
+    "colSourceFile": "원본 파일"
   },
   "feedback": {
     "heading": "Bristlenose가 잘 작동하고 있나요?",

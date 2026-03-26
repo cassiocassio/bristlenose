@@ -13,6 +13,8 @@ import { isMac } from "../utils/platform";
 
 vi.mock("../utils/platform", () => ({
   isMac: vi.fn(() => true),
+  isDesktop: vi.fn(() => false),
+  _resetPlatformCache: vi.fn(),
 }));
 
 vi.mock("../utils/exportData", () => ({

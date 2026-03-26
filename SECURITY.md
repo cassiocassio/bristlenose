@@ -20,13 +20,45 @@ Keys are never written to disk in plaintext by Bristlenose. The `.env` fallback 
 
 ## PII redaction
 
-PII redaction is **opt-in** via `--redact-pii`. When enabled, Bristlenose uses Microsoft Presidio (spaCy NLP) to detect and replace personally identifiable information in transcripts before LLM analysis.
+PII redaction is **opt-in** via `--redact-pii`. When enabled, Bristlenose uses Microsoft Presidio (spaCy NLP) to detect and replace personally identifiable information in transcripts before LLM analysis. It is off by default because false positives (redacting research-relevant text) damage data accuracy.
 
-**Redacted entity types:** person names, phone numbers, email addresses, credit card numbers, national ID numbers (US SSN, UK NHS), driver's licence numbers, passport numbers, bank account numbers, IBAN codes, IP addresses, URLs, dates/times.
+**Configurable threshold:** `BRISTLENOSE_PII_SCORE_THRESHOLD` (default 0.7, range 0.0–1.0). Lower values catch more PII at the cost of more false positives. See [Presidio analyzer docs](https://microsoft.github.io/presidio/analyzer/).
 
-**Deliberately excluded:** location names — redacting these would destroy research data (e.g. "Oxford Street IKEA" becomes "[ADDRESS] IKEA").
+### What PII redaction catches reliably
 
-**Audit trail:** `pii_summary.txt` in the output directory lists every redaction with the original text, replacement label, confidence score, and timecode. Review this file to catch false positives or missed items.
+Person names in clear context (~90% recall), email addresses, phone numbers in standard formats, credit card numbers, US Social Security numbers, UK NHS numbers, IBAN codes, and IP addresses.
+
+**Deliberately excluded:** location names — redacting these destroys research data (e.g. "Oxford Street IKEA" becomes "[ADDRESS] IKEA").
+
+### What PII redaction misses
+
+- **Non-Western names** — the spaCy English model has significantly lower recall for names from South Asian, East Asian, African, and Arabic naming traditions
+- **Nicknames and diminutives** — informal names like "Bazza", "Deano" are invisible to NER
+- **Names that are common words** — "Grace", "Will", "Hope" in ambiguous context
+- **Misspelled names** — NER relies on lexical match
+- **Dictated contact details** — "john dot smith at company dot co dot uk" is not recognised as an email
+- **Phone numbers spoken in words** — "oh seven seven double-oh three six nine"
+- **Social media handles, usernames** — not in default entity types
+- **UK National Insurance numbers** — no Presidio recogniser
+- **Vehicle registrations** — no recogniser
+
+### What PII redaction cannot detect
+
+**GDPR special category data (Article 9):** health conditions, racial or ethnic origin, political opinions, religious beliefs, trade union membership, sexual orientation. No automated tool reliably detects these in conversational speech. They require human review before sharing transcripts externally.
+
+**Indirect identification (GDPR Recital 26):** individually harmless facts that together identify someone — for example, "38-year-old accessibility tester at [employer] in [town] with ADHD" may narrow to one person. Job title combined with employer, rare conditions combined with location, or school names combined with children's ages can all enable re-identification. Automated tools cannot detect these; they require researcher judgement.
+
+### Speaker identification and PII timing
+
+Speaker identification (Stage 5b) sends a small portion of raw transcript to the LLM **before** PII redaction runs (Stage 7), because it needs names and roles to work correctly. This is typically the most PII-dense portion of an interview (introductions, name confirmations). With Ollama (local models), this stays on your machine. With cloud LLM providers, this portion is sent unredacted.
+
+### Audit trail
+
+`pii_summary.txt` is written to the `.bristlenose/` hidden directory inside the output folder. It contains every original PII value with replacement labels, confidence scores, and timecodes — **this file is a re-identification key and must not be shared outside the research team.** Review it to catch false positives or missed items.
+
+### Testing
+
+The test suite includes an adversarial transcript (`tests/fixtures/pii_horror_transcript.txt`) with PII planted across 8 categories designed to stress-test every known weakness in NER-based detection. Expected results are documented in `tests/fixtures/pii_horror_expected.yaml`.
 
 PII redaction is heuristic-based and not guaranteed to catch every instance. Always review the audit summary before sharing transcripts externally.
 

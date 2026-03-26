@@ -1,0 +1,73 @@
+# ──────────────────────────────────────────────────────────────────────
+# FICTION — This transcript is entirely fictional, created for the sole
+# purpose of stress-testing PII detection software (Microsoft Presidio).
+# All people, organisations, addresses, phone numbers, and other details
+# are invented.  Any resemblance to real persons or entities is
+# coincidental and unintended.
+# ──────────────────────────────────────────────────────────────────────
+
+# Session: s1
+# Source: sarah_thornton_interview.mp4
+# Date: 2025-11-14
+
+[00:00] [m1] Right, so we're recording now. Thanks for coming in today, erm, Sarah. Before we start, could you just confirm your name and role for the recording?
+
+[00:12] [p1] Yeah sure. I'm Sarah Thornton, I'm an accessibility tester at Hartwell Building Society. Been there about three years now. I'm the only accessibility tester they've got actually, just me covering the whole digital team.
+
+[00:28] [m1] Great, and just for the transcript, I'm Rebecca Cheung, lead researcher at Lantern UX. So Sarah, tell me about your typical day.
+
+[00:38] [p1] So I get in around half eight, grab a coffee from the Clocktower Coworking on Brimley Street — that's where our London office is — and I usually start by checking my emails. My work email is s.thornton@hartwellbs.co.uk, but most people just ping me on Teams.
+
+[00:55] [m1] And who do you typically work with?
+
+[01:02] [p1] Mainly my manager Grace — she's head of digital accessibility. I also work quite a lot with Will in the design team, and there's Hope at reception who handles all the test participant scheduling. My mate Bazza — Barry Willoughby — he's in the Sheffield office, he does the same role up there. And then there's Deano, Dean Marsden, he's the one who trained me originally.
+
+[01:28] [m1] Can you tell me a bit about your background? How did you end up in this role?
+
+[01:34] [p1] Yeah so I was born on the 14th of March 1987, grew up in Fetcham. My mum's side are Travellers actually, Irish Travellers, so I moved around a lot as a kid. I'm 38 now. I went to St Wilfred's Primary in Ashtead, then did my GCSEs at the local comp. My son goes to St Wilfred's now actually, funny how that works out.
+
+[01:58] [p1] I got into accessibility because of my ADHD diagnosis — I was diagnosed at 26, quite late. I'm on sertraline for the anxiety that comes with it, been on it about two years now. It really opened my eyes to how hard things can be when the interface doesn't work for you. There are only 3 of us with this condition in the whole Surrey digital accessibility meetup, so it's quite a niche community.
+
+[02:25] [m1] That's really interesting context. So when you're testing, what tools do you use?
+
+[02:31] [p1] Right, so I've got my work laptop, badge number EMP-4582, and I use a mix of screen readers and browser extensions. My profile is on linkedin.com/in/sarah-thornton-92 if you want to see my full toolkit. I saved my testing checklist as sarah_thornton_feedback.docx on the shared drive.
+
+[02:52] [p1] Oh, and my colleague Priyanka Venkataraman, she's amazing — she handles all the WCAG compliance audits. Her email is p.venkataraman@hartwellbs.co.uk. Then there's Xiaoming in the Beijing office who does localisation testing, and Kwame Asante-Mensah who joined from our Accra branch. And Fatimah bint Khalid in the Dubai team, she does right-to-left layout testing.
+
+[03:18] [m1] That's quite an international team. Let me ask about a specific scenario — can you walk me through a time when testing went wrong?
+
+[03:26] [p1] Oh god yes. Last month, right, my boss said "email Dave Robson about the ARIA labels" — Dave's the tech lead — and I sent it to the wrong Dave. His email is dave.robson@hartwellbs.co.uk, but I sent it to d.robson@mailbox.org by accident. I had to call him to apologise, his number is +44 7700 369258, and he was dead nice about it actually.
+
+[03:50] [p1] But the worst bit was, I'd included a screenshot of a test user's details in the email. The test user, Mrs something-or-other, Kapoor I think, her NHS number 943 476 5919 was visible in the screenshot. Had to report it as a data breach. My NI number is AB 12 34 56 C by the way, I had to give that to HR for the incident report.
+
+[04:15] [m1] That sounds stressful. How did the team handle it?
+
+[04:20] [p1] Well our Unison rep said we should push back on the process, because there's no proper PII handling in the test environment. That's Karen's desk — Karen O'Brien-Kingsley, she's the union rep. She went to Ahmed's office to discuss it, Ahmed Rasheed, he's the head of information security.
+
+[04:42] [p1] I'm a card-carrying Labour member actually, so I care about workers' rights, and I think the union's doing the right thing here. My wife, well partner, we're not married yet — Mary-Kate, she works in HR at the same company, she says the data handling policies are a mess. We keep halal at home by the way, since I converted to Islam last year, and the Friday prayers schedule clashes with our sprint reviews which is a whole other issue.
+
+[05:12] [m1] Let's talk about the actual interface. Can you show me the screen you were on?
+
+[05:18] [p1] Yeah so this is the dashboard. You can see our team listed here — I mentioned Bazza earlier, his username is bwilloughby and honestly his password is probably still password123, he's terrible with security. My username is sthornton. The IP address for our test server is 192.168.1.42 and the staging URL is https://staging.hartwell-digital.co.uk/a11y-dashboard.
+
+[05:45] [p1] Oh and I paid for the accessibility conference with my company card, the number is 4532 0123 4567 8901, I need to claim that back. The IBAN for expenses is GB29 NWBK 6016 1331 9268 19. My car reg is KV68 NPR if that matters for the parking claim.
+
+[06:05] [m1] So Sarah, going back to the testing workflow — you mentioned that the process is broken. What specifically?
+
+[06:12] [p1] Right so when I spoke to Jonh — sorry, John, everyone spells his name wrong in emails — John Cheung in the dev team, he said the problem is that the ARIA labels are auto-generated. I also spoke to Rachael, or is it Rachel, I always get confused, she's the project manager. And our Trace — Tracy Willoughby, Bazza's sister actually — she flagged the same issue from the Leeds office.
+
+[06:38] [p1] The real problem is, I told my friend about it over coffee — gave her all the details, mentioned it's the blue door, corner of Elm Road, you can't miss it — that's where our satellite office is, 14 Rosemary Lane, Fetcham, GU2 4AB. It's just off the Hogs Back near Fetcham, opposite that new Aldi on Park Road.
+
+[07:02] [p1] My doctor at the Riverside Surgery in Ashtead said the stress from this data breach incident actually made my ADHD worse. She prescribed a higher dose. I told her I was a 38-year-old female accessibility tester at Hartwell in Fetcham who's been having panic attacks, and she said "oh you must be the one who reported it, I saw it in the local paper."
+
+[07:28] [m1] That must have been very difficult. Just a couple more questions — how do you communicate with external testers?
+
+[07:35] [p1] Well we've got a Slack channel, and I sometimes message them on social media. My Twitter handle is @sarahthornton92 and I'm on Instagram as @sarah.t.a11y. For the test participants we usually call them — one of them gave me her number as "oh seven seven double-oh three six nine two five eight" — I always write those down wrong. Another one emailed their details as "my email is john dot smith at company dot co dot uk" which took me ages to parse.
+
+[08:02] [p1] Oh before I forget, for the incentive payments, my bank sort code is 60-16-13 and account number is 31926819. I know you said you'd send a bank transfer.
+
+[08:15] [m1] We actually send vouchers, not bank transfers! But thank you for being so open. One last thing — can you summarise the key issue?
+
+[08:22] [p1] Yeah basically, the accessibility testing process at Hartwell has no PII safeguards. And I'm saying this as someone who grew up as a mixed-race Irish Traveller woman with ADHD in Fetcham who now works as the sole accessibility tester at one of the country's biggest building societies. If you put all that together, you could probably find me with a five-second search. That's the kind of thing the system should protect against.
+
+[08:45] [m1] That's a really powerful point. Thank you, Sarah. I'll stop the recording now.

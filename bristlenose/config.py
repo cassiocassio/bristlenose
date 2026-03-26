@@ -78,8 +78,15 @@ class BristlenoseSettings(BaseSettings):
 
     # PII
     pii_enabled: bool = False
-    pii_llm_pass: bool = False
-    pii_custom_names: list[str] = Field(default_factory=list)
+    pii_llm_pass: bool = False  # Not yet implemented — see runtime warning below
+    pii_custom_names: list[str] = Field(default_factory=list)  # Not yet implemented
+    # Confidence threshold for Presidio PII detection (0.0–1.0).
+    # Lower = catch more PII but more false positives (over-redaction).
+    # 0.5 = aggressive (sensitive data, accept over-redaction)
+    # 0.7 = balanced (default)
+    # 0.9 = conservative (minimise false positives, risk missing some PII)
+    # See: https://microsoft.github.io/presidio/analyzer/
+    pii_score_threshold: float = Field(default=0.7, ge=0.0, le=1.0)
 
     # Miro
     miro_access_token: str = ""

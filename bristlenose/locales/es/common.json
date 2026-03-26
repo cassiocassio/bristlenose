@@ -276,7 +276,8 @@
       "actionThreshold": "Para datos sensibles, reduce el umbral de confianza (BRISTLENOSE_PII_SCORE_THRESHOLD=0.5) para detectar m\u00e1s a costa de m\u00e1s falsos positivos.",
       "actionSharing": "Antes de compartir externamente, revisa las citas en busca de revelaciones sensibles e identificadores indirectos.",
       "actionRetention": "Se aplica la pol\u00edtica de retenci\u00f3n de datos de tu organizaci\u00f3n \u2014 elimina los resultados cuando se complete el prop\u00f3sito de la investigaci\u00f3n.",
-      "actionNames": "Los nombres reales no aparecen en las exportaciones, as\u00ed que puedes usarlos durante el an\u00e1lisis sin que lleguen a terceros."
+      "actionNames": "Los nombres reales no aparecen en las exportaciones, as\u00ed que puedes usarlos durante el an\u00e1lisis sin que lleguen a terceros.",
+      "actionAudit": "Publicamos una <a href=\"https://github.com/cassiocassio/bristlenose/tree/main/docs/pii-audit\" target=\"_blank\" rel=\"noopener noreferrer\">auditor\u00eda completa de PII</a> con una <a href=\"https://github.com/cassiocassio/bristlenose/blob/main/tests/fixtures/pii_horror_transcript.txt\" target=\"_blank\" rel=\"noopener noreferrer\">transcripci\u00f3n de prueba</a>, <a href=\"https://github.com/cassiocassio/bristlenose/blob/main/docs/pii-audit/redacted-transcript.md\" target=\"_blank\" rel=\"noopener noreferrer\">resultado anonimizado</a> y <a href=\"https://github.com/cassiocassio/bristlenose/blob/main/docs/pii-audit/pii-summary.txt\" target=\"_blank\" rel=\"noopener noreferrer\">registro de auditor\u00eda</a> para que puedas juzgar los l\u00edmites por ti mismo."
     },
     "signals": {
       "intro": "La página de análisis muestra señales \u2014 concentraciones estadísticamente notables de sentimiento o etiquetas de libro de códigos dentro de las secciones del informe. Dos tipos de tarjeta de señal.",

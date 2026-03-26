@@ -117,7 +117,14 @@
     "serverError": "",
     "retry": "",
     "projects": "",
-    "reportContent": ""
+    "reportContent": "",
+    "projectUnavailable": "",
+    "projectUnavailableHint": "",
+    "projectMoved": "",
+    "projectMovedDescription": "",
+    "locate": "",
+    "locateMessage": "",
+    "onThisMac": ""
   },
   "toolbar": {
     "back": "",
@@ -143,6 +150,18 @@
     "appearance": "",
     "llm": "",
     "transcription": ""
+  },
+  "help": {
+    "privacy": {
+      "redactionIntro": "個人情報の削除はオプションです。誤検出（研究に関連するテキストの削除）がデータの精度を損なうため、デフォルトでは無効になっています。Microsoft Presidioオープンソーステキストスキャナーを使用し、設定可能な信頼度しきい値（デフォルト0.7）があります。",
+      "actionThreshold": "機密データの場合、信頼度しきい値を下げると（0.5を試してください）、より多く検出できますが、誤検出も増加します。"
+    },
+    "contributing": {
+      "beforeBody": "開発環境のセットアップとコード品質チェックについては、GitHubの<a href=\"https://github.com/cassiocassio/bristlenose/blob/main/CONTRIBUTING.md\" target=\"_blank\" rel=\"noopener noreferrer\">コントリビューションガイド</a>を参照してください。"
+    }
+  },
+  "configReference": {
+    "intro": "ほとんどの設定は設定ウィンドウ（\u2318,）にあります。高度な設定には、以下の環境変数名を参照してください。"
   },
   "aiConsent": {
     "title": "",

@@ -1,6 +1,6 @@
 # Bristlenose — Where I Left Off
 
-Last updated: 25 Mar 2026
+Last updated: 26 Mar 2026
 
 **Launch plan:** `docs/private/100days.md` — triaged by topic + MoSCoW priority. That's the source of truth for what ships. This file is a public capture inbox + session context + done history.
 
@@ -36,6 +36,22 @@ Remaining security items tracked in `docs/private/100days.md` §6 Risk.
 - [x] **i18n: Weblate setup** — connect `hosted.weblate.org` to repo for community translation. Free Libre plan. See `docs/design-i18n.md`
 
 Remaining desktop bugs and i18n items tracked in `docs/private/100days.md` §2, §7, §8.
+
+## PII redaction audit (26 Mar 2026)
+
+- [x] **Bug: Word objects not cleared after redaction** — `model_copy()` replaced `seg.text` but `seg.words` still contained original PII. Fixed in `s07_pii_removal.py`
+- [x] **Bug: `pii_summary.txt` was a re-identification key in shareable output** — moved to `.bristlenose/` hidden directory with CONFIDENTIAL header
+- [x] **Bug: `__repr__` leaked original PII into logs** — now shows `<N chars>` instead
+- [x] **Bug: `UK_NHS` in entity map but not in `_DEFAULT_ENTITIES`** — one-line fix
+- [x] **Config: `pii_score_threshold`** — configurable via `BRISTLENOSE_PII_SCORE_THRESHOLD` (0.0–1.0, default 0.7). Wired into `_redact_text()`
+- [x] **Runtime warnings for dead config fields** — `pii_llm_pass` and `pii_custom_names` warn when set but not implemented
+- [x] **Horror-show test transcript** — fictional adversarial interview with 70+ planted PII items across 8 categories. `tests/fixtures/pii_horror_transcript.txt` + `pii_horror_expected.yaml`
+- [x] **PII audit test suite** — `tests/test_pii_audit.py` — 12 CI-safe tests + 70 parametrised Presidio detection tests (`@pytest.mark.slow`)
+- [x] **Privacy help section** — new "Privacy" section in HelpModal (between Codebook and About). 3 subsections: where data goes, PII redaction limits, what to do. Links to published audit artifacts on GitHub. All 5 locales
+- [x] **SECURITY.md overhaul** — PII section expanded with catches/misses/cannot-detect subsections, speaker ID timing, audit trail location
+- [x] **PII audit artifacts** — `docs/pii-audit/` with README, redacted transcript, and summary log. Linked from help panel
+
+Remaining PII work tracked in `docs/private/100days.md` §4 Value (PII dashboard widget) and §6 Risk.
 
 ---
 

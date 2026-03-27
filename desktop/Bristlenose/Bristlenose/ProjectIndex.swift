@@ -237,18 +237,25 @@ final class ProjectIndex: ObservableObject {
 
     private let fileURL: URL
 
-    init() {
-        let appSupport = FileManager.default.urls(
-            for: .applicationSupportDirectory,
-            in: .userDomainMask
-        ).first!.appendingPathComponent("Bristlenose")
+    /// Create a project index backed by `projects.json` in Application Support.
+    /// Pass a custom `fileURL` for testing (temp directory) to avoid touching
+    /// the user's real project list.
+    init(fileURL: URL? = nil) {
+        if let fileURL {
+            self.fileURL = fileURL
+        } else {
+            let appSupport = FileManager.default.urls(
+                for: .applicationSupportDirectory,
+                in: .userDomainMask
+            ).first!.appendingPathComponent("Bristlenose")
 
-        // Create the directory if it doesn't exist.
-        try? FileManager.default.createDirectory(
-            at: appSupport, withIntermediateDirectories: true
-        )
+            // Create the directory if it doesn't exist.
+            try? FileManager.default.createDirectory(
+                at: appSupport, withIntermediateDirectories: true
+            )
 
-        fileURL = appSupport.appendingPathComponent("projects.json")
+            self.fileURL = appSupport.appendingPathComponent("projects.json")
+        }
         load()
     }
 

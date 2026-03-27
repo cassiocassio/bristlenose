@@ -1,6 +1,19 @@
 import Foundation
 import Security
 
+// MARK: - Protocol
+
+/// Abstraction for credential storage. Production uses macOS Keychain
+/// via `KeychainHelper`, tests use `InMemoryKeychain` to avoid touching
+/// real credentials.
+protocol KeychainStore {
+    func get(provider: String) -> String?
+    @discardableResult func set(provider: String, value: String) -> Bool
+    func delete(provider: String)
+}
+
+// MARK: - Real implementation
+
 /// Read, write, and delete API keys in macOS Keychain using native Security.framework.
 ///
 /// Uses the same service names and account as the Python `MacOSCredentialStore`
@@ -8,6 +21,10 @@ import Security
 /// picked up by the sidecar via `_populate_keys_from_keychain()` in `config.py`.
 ///
 /// If service names change in the Python file, they must be updated here too.
+///
+/// All methods are static for backward compatibility with existing call sites.
+/// For protocol-based usage (e.g. dependency injection in tests), use
+/// `KeychainHelper.liveStore` which returns a `KeychainStore` instance.
 enum KeychainHelper {
 
     static let account = "bristlenose"
@@ -20,6 +37,9 @@ enum KeychainHelper {
         "azure": "Bristlenose Azure API Key",
         "google": "Bristlenose Google Gemini API Key",
     ]
+
+    /// A `KeychainStore` backed by the real macOS Keychain.
+    static let liveStore: any KeychainStore = LiveKeychain()
 
     /// Read a key from Keychain. Returns nil if not found.
     static func get(provider: String) -> String? {
@@ -120,5 +140,40 @@ enum KeychainHelper {
         let message = SecCopyErrorMessageString(status, nil) as String? ?? "unknown"
         print("[KeychainHelper] \(operation) failed: \(status) (\(message))")
         #endif
+    }
+}
+
+// MARK: - Live store (protocol wrapper around static methods)
+
+/// Thin wrapper that delegates to `KeychainHelper` static methods,
+/// conforming to `KeychainStore` for dependency injection.
+private struct LiveKeychain: KeychainStore {
+    func get(provider: String) -> String? { KeychainHelper.get(provider: provider) }
+    @discardableResult func set(provider: String, value: String) -> Bool { KeychainHelper.set(provider: provider, value: value) }
+    func delete(provider: String) { KeychainHelper.delete(provider: provider) }
+}
+
+// MARK: - In-memory mock (for tests)
+
+/// Dictionary-backed keychain mock. No real Keychain access, no side effects.
+/// Uses the same provider validation as `KeychainHelper` (unknown providers return nil/false).
+final class InMemoryKeychain: KeychainStore {
+    private var storage: [String: String] = [:]
+
+    func get(provider: String) -> String? {
+        guard KeychainHelper.serviceNames[provider] != nil else { return nil }
+        guard let value = storage[provider], !value.isEmpty else { return nil }
+        return value
+    }
+
+    @discardableResult
+    func set(provider: String, value: String) -> Bool {
+        guard KeychainHelper.serviceNames[provider] != nil else { return false }
+        storage[provider] = value
+        return true
+    }
+
+    func delete(provider: String) {
+        storage.removeValue(forKey: provider)
     }
 }

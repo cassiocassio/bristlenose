@@ -104,38 +104,13 @@ struct ContentView: View {
             bridgeHandler.setWindowActive(false)
         }
         .onChange(of: selection) { _, newSelection in
-            bridgeHandler.reset()
-            switch newSelection {
-            case .project(let id):
-                bridgeHandler.selectedFolderName = ""
-                if let project = projectIndex.projects.first(where: { $0.id == id }) {
-                    persistedProjectID = id.uuidString
-                    bridgeHandler.selectedProjectPath = project.path
-                    projectIndex.updateLastOpened(id: id)
-                    // Gate serve on consent — no data leaves the machine before
-                    // the user has seen the AI data disclosure (Apple 5.1.2(i)).
-                    if hasConsent && !project.path.isEmpty {
-                        serveManager.start(projectPath: project.path)
-                    }
-                }
-            case .folder(let id):
-                persistedProjectID = ""
-                bridgeHandler.selectedProjectPath = ""
-                bridgeHandler.selectedFolderName =
-                    projectIndex.folders.first { $0.id == id }?.name ?? ""
-                serveManager.stop()
-            case nil:
-                persistedProjectID = ""
-                bridgeHandler.selectedProjectPath = ""
-                bridgeHandler.selectedFolderName = ""
-                serveManager.stop()
-            }
+            handleSelectionChange(newSelection)
         }
         // When consent is granted (version updated), start serve for the
         // already-selected project if one exists.
         .onChange(of: consentVersion) { _, _ in
             if hasConsent, let project = selectedProject {
-                if !project.path.isEmpty {
+                if !project.path.isEmpty && project.isAvailable {
                     serveManager.start(projectPath: project.path)
                 }
             }
@@ -166,38 +141,13 @@ struct ContentView: View {
         .onReceive(NotificationCenter.default.publisher(for: .createNewFolder)) { _ in
             createNewFolder()
         }
-        // Project > Rename — trigger inline rename on the selected project.
-        .onReceive(NotificationCenter.default.publisher(for: .renameSelectedProject)) { _ in
-            if case .project(let id) = selection {
-                renamingProjectID = id
-            }
-        }
-        // Project > Rename Folder — trigger inline rename on the selected folder.
-        .onReceive(NotificationCenter.default.publisher(for: .renameSelectedFolder)) { _ in
-            if case .folder(let id) = selection {
-                renamingFolderID = id
-            }
-        }
-        // Project > Delete — remove the selected project.
-        .onReceive(NotificationCenter.default.publisher(for: .deleteSelectedProject)) { _ in
-            if case .project(let id) = selection {
-                selection = nil
-                projectIndex.removeProject(id: id)
-            }
-        }
-        // Project > Delete Folder — remove the selected folder (projects move to root).
-        .onReceive(NotificationCenter.default.publisher(for: .deleteSelectedFolder)) { _ in
-            if case .folder(let id) = selection {
-                selection = nil
-                projectIndex.removeFolder(id: id)
-            }
-        }
-        // Project > Move to — move the selected project into/out of a folder.
-        .onReceive(NotificationCenter.default.publisher(for: .moveSelectedProject)) { notification in
-            guard case .project(let projectId) = selection else { return }
-            let folderId = notification.userInfo?["folderId"] as? UUID
-            projectIndex.moveProject(projectId: projectId, toFolder: folderId)
-        }
+        .modifier(ProjectNotificationReceivers(
+            selection: $selection,
+            renamingProjectID: $renamingProjectID,
+            renamingFolderID: $renamingFolderID,
+            projectIndex: projectIndex,
+            onLocate: { project in locateProject(project) }
+        ))
         .sheet(isPresented: $showingAIConsent) {
             AIConsentView(
                 isReviewMode: aiConsentReviewMode,
@@ -207,6 +157,41 @@ struct ContentView: View {
             .interactiveDismissDisabled(!aiConsentReviewMode)
         }
     }
+
+    // MARK: - Selection change
+
+    private func handleSelectionChange(_ newSelection: SidebarSelection?) {
+        bridgeHandler.reset()
+        switch newSelection {
+        case .project(let id):
+            bridgeHandler.selectedFolderName = ""
+            if let project = projectIndex.projects.first(where: { $0.id == id }) {
+                persistedProjectID = id.uuidString
+                bridgeHandler.selectedProjectPath = project.path
+                bridgeHandler.selectedProjectAvailable = project.isAvailable
+                projectIndex.updateLastOpened(id: id)
+                // Gate serve on consent + availability — no data leaves the machine
+                // before the user has seen the AI data disclosure (Apple 5.1.2(i)).
+                if hasConsent && !project.path.isEmpty && project.isAvailable {
+                    serveManager.start(projectPath: project.path)
+                }
+            }
+        case .folder(let id):
+            persistedProjectID = ""
+            bridgeHandler.selectedProjectPath = ""
+            bridgeHandler.selectedFolderName =
+                projectIndex.folders.first { $0.id == id }?.name ?? ""
+            serveManager.stop()
+        case nil:
+            persistedProjectID = ""
+            bridgeHandler.selectedProjectPath = ""
+            bridgeHandler.selectedFolderName = ""
+            serveManager.stop()
+        }
+    }
+
+    // MARK: - Notification receivers (extracted to reduce body complexity)
+    // Split into a ViewModifier to keep the main body within type-checker limits.
 
     // MARK: - Project and folder creation
 
@@ -222,6 +207,29 @@ struct ContentView: View {
         let folder = projectIndex.addFolder(name: i18n.t("desktop.chrome.newFolder"))
         selection = .folder(folder.id)
         renamingFolderID = folder.id
+    }
+
+    /// Open NSOpenPanel to re-locate a moved/deleted project.
+    private func locateProject(_ project: Project) {
+        let panel = NSOpenPanel()
+        panel.canChooseDirectories = true
+        panel.canChooseFiles = false
+        panel.allowsMultipleSelection = false
+        panel.prompt = i18n.t("desktop.chrome.locate")
+        panel.message = String(format: i18n.t("desktop.chrome.locateMessage"), project.name)
+
+        panel.begin { response in
+            if response == .OK, let url = panel.url {
+                Task { @MainActor in
+                    projectIndex.relocateProject(id: project.id, newPath: url.path)
+                    bridgeHandler.selectedProjectPath = url.path
+                    bridgeHandler.selectedProjectAvailable = true
+                    if case .project(project.id) = selection, hasConsent {
+                        serveManager.start(projectPath: url.path)
+                    }
+                }
+            }
+        }
     }
 
     // MARK: - Drag and drop
@@ -562,10 +570,20 @@ struct ContentView: View {
             onDelete: {
                 if case .project(project.id) = selection { selection = nil }
                 projectIndex.removeProject(id: project.id)
-            }
+            },
+            onLocate: project.isAvailable ? nil : { locateProject(project) }
         )
         .tag(SidebarSelection.project(project.id))
         .contextMenu {
+            // "Locate…" for moved/deleted projects — actionable first.
+            if !project.isAvailable,
+               case .movedOrDeleted = project.unavailabilityReason {
+                Button(i18n.t("desktop.chrome.locate")) {
+                    locateProject(project)
+                }
+                Divider()
+            }
+
             Button(i18n.t("desktop.menu.project.showInFinder")) {
                 if !project.path.isEmpty {
                     NSWorkspace.shared.selectFile(
@@ -573,6 +591,8 @@ struct ContentView: View {
                     )
                 }
             }
+            .disabled(!project.isAvailable)
+
             Button(i18n.t("desktop.menu.project.rename")) {
                 renamingProjectID = project.id
             }
@@ -609,7 +629,10 @@ struct ContentView: View {
     @ViewBuilder
     private var detail: some View {
         if let project = selectedProject {
-            if project.path.isEmpty {
+            if !project.isAvailable {
+                // Project directory is not accessible — volume ejected or folder moved.
+                unavailableProjectView(project)
+            } else if project.path.isEmpty {
                 // New project with no files yet — prompt user to add interviews.
                 ContentUnavailableView(
                     i18n.t("desktop.chrome.dragInterviews"),
@@ -661,9 +684,85 @@ struct ContentView: View {
             )
         }
     }
+
+    /// Detail pane for an unavailable project — shows why and offers Locate action.
+    @ViewBuilder
+    private func unavailableProjectView(_ project: Project) -> some View {
+        switch project.unavailabilityReason {
+        case .volumeNotMounted(let hint):
+            ContentUnavailableView {
+                Label(i18n.t("desktop.chrome.projectUnavailable"), systemImage: "externaldrive.trianglebadge.exclamationmark")
+            } description: {
+                Text(hint)
+                Text(i18n.t("desktop.chrome.projectUnavailableHint"))
+            }
+        case .movedOrDeleted:
+            ContentUnavailableView {
+                Label(i18n.t("desktop.chrome.projectMoved"), systemImage: "questionmark.folder")
+            } description: {
+                Text(i18n.t("desktop.chrome.projectMovedDescription"))
+            } actions: {
+                Button(i18n.t("desktop.chrome.locate")) {
+                    locateProject(project)
+                }
+            }
+        case nil:
+            EmptyView()
+        }
+    }
 }
 
 // MARK: - Export toolbar menu
+
+// MARK: - Project notification receivers (extracted ViewModifier)
+
+/// Receives project-related notifications (rename, delete, move, locate) from the
+/// native menu bar. Extracted from ContentView's body to keep the SwiftUI expression
+/// within the type-checker's complexity limits.
+private struct ProjectNotificationReceivers: ViewModifier {
+    @Binding var selection: SidebarSelection?
+    @Binding var renamingProjectID: UUID?
+    @Binding var renamingFolderID: UUID?
+    let projectIndex: ProjectIndex
+    let onLocate: (Project) -> Void
+
+    func body(content: Content) -> some View {
+        content
+            .onReceive(NotificationCenter.default.publisher(for: .renameSelectedProject)) { _ in
+                if case .project(let id) = selection {
+                    renamingProjectID = id
+                }
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .renameSelectedFolder)) { _ in
+                if case .folder(let id) = selection {
+                    renamingFolderID = id
+                }
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .deleteSelectedProject)) { _ in
+                if case .project(let id) = selection {
+                    selection = nil
+                    projectIndex.removeProject(id: id)
+                }
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .deleteSelectedFolder)) { _ in
+                if case .folder(let id) = selection {
+                    selection = nil
+                    projectIndex.removeFolder(id: id)
+                }
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .moveSelectedProject)) { notification in
+                guard case .project(let projectId) = selection else { return }
+                let folderId = notification.userInfo?["folderId"] as? UUID
+                projectIndex.moveProject(projectId: projectId, toFolder: folderId)
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .locateSelectedProject)) { _ in
+                guard case .project(let id) = selection else { return }
+                if let project = projectIndex.projects.first(where: { $0.id == id }) {
+                    onLocate(project)
+                }
+            }
+    }
+}
 
 /// Toolbar export button with per-tab dropdown contents.
 /// "Export Report..." is always first (universal). Tab-specific exports below a divider.

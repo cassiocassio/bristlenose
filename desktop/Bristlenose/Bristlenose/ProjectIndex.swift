@@ -1,5 +1,27 @@
 import Foundation
 
+// MARK: - Location model
+
+/// Where a project lives on disk — auto-detected from the path on creation.
+/// Persisted to `projects.json` for availability detection when volumes unmount.
+struct Location: Codable, Hashable {
+    enum LocationType: String, Codable {
+        case local, volume, network, cloud
+    }
+
+    var type: LocationType
+    var volumeName: String?
+    var volumeRelativePath: String?
+    var displayHint: String
+
+    enum CodingKeys: String, CodingKey {
+        case type
+        case volumeName = "volume_name"
+        case volumeRelativePath = "volume_relative_path"
+        case displayHint = "display_hint"
+    }
+}
+
 // MARK: - Project model
 
 /// A project entry in the sidebar — a logical container referencing files on disk.
@@ -16,6 +38,8 @@ struct Project: Identifiable, Hashable, Codable {
     var name: String
     var path: String
     var inputFiles: [String]?
+    var location: Location?
+    var bookmarkData: Data?
     var folderId: UUID?
     var createdAt: Date
     var lastOpened: Date?
@@ -23,9 +47,85 @@ struct Project: Identifiable, Hashable, Codable {
     enum CodingKeys: String, CodingKey {
         case id, name, path
         case inputFiles = "input_files"
+        case location
+        case bookmarkData = "bookmark_data"
         case folderId = "folder_id"
         case createdAt = "created_at"
         case lastOpened = "last_opened"
+    }
+
+    // Custom coding for bookmarkData (Base64 string in JSON instead of byte array).
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(UUID.self, forKey: .id)
+        name = try container.decode(String.self, forKey: .name)
+        path = try container.decode(String.self, forKey: .path)
+        inputFiles = try container.decodeIfPresent([String].self, forKey: .inputFiles)
+        location = try container.decodeIfPresent(Location.self, forKey: .location)
+        if let b64 = try container.decodeIfPresent(String.self, forKey: .bookmarkData) {
+            bookmarkData = Data(base64Encoded: b64)
+        } else {
+            bookmarkData = nil
+        }
+        folderId = try container.decodeIfPresent(UUID.self, forKey: .folderId)
+        createdAt = try container.decode(Date.self, forKey: .createdAt)
+        lastOpened = try container.decodeIfPresent(Date.self, forKey: .lastOpened)
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(id, forKey: .id)
+        try container.encode(name, forKey: .name)
+        try container.encode(path, forKey: .path)
+        try container.encodeIfPresent(inputFiles, forKey: .inputFiles)
+        try container.encodeIfPresent(location, forKey: .location)
+        try container.encodeIfPresent(bookmarkData?.base64EncodedString(), forKey: .bookmarkData)
+        try container.encodeIfPresent(folderId, forKey: .folderId)
+        try container.encode(createdAt, forKey: .createdAt)
+        try container.encodeIfPresent(lastOpened, forKey: .lastOpened)
+    }
+
+    init(id: UUID, name: String, path: String, inputFiles: [String]? = nil,
+         location: Location? = nil, bookmarkData: Data? = nil,
+         folderId: UUID? = nil, createdAt: Date = Date(), lastOpened: Date? = nil) {
+        self.id = id
+        self.name = name
+        self.path = path
+        self.inputFiles = inputFiles
+        self.location = location
+        self.bookmarkData = bookmarkData
+        self.folderId = folderId
+        self.createdAt = createdAt
+        self.lastOpened = lastOpened
+    }
+
+    /// Whether the project directory is currently accessible on disk.
+    /// Always true for projects with no path (new, unsaved projects).
+    var isAvailable: Bool {
+        guard !path.isEmpty else { return true }
+        return FileManager.default.fileExists(atPath: path)
+    }
+
+    /// Why the project is unavailable, if it is.
+    enum UnavailabilityReason {
+        /// The volume (external drive, network share) isn't mounted.
+        case volumeNotMounted(displayHint: String)
+        /// The path doesn't exist on a mounted volume — moved or deleted.
+        case movedOrDeleted
+    }
+
+    /// Returns nil when the project is available.
+    var unavailabilityReason: UnavailabilityReason? {
+        guard !path.isEmpty, !isAvailable else { return nil }
+        if let location, location.type == .volume || location.type == .network,
+           let volumeName = location.volumeName {
+            let volumePath = "/Volumes/\(volumeName)"
+            if !FileManager.default.fileExists(atPath: volumePath) {
+                return .volumeNotMounted(displayHint: location.displayHint)
+            }
+        }
+        return .movedOrDeleted
     }
 }
 
@@ -117,6 +217,9 @@ extension Notification.Name {
     /// Posted by Project > Move to to move the selected project into a folder.
     /// `userInfo["folderId"]` is the target `UUID` or `NSNull` for root.
     static let moveSelectedProject = Notification.Name("bristlenoseMoveSelectedProject")
+
+    /// Posted by Project > Locate… to re-point a moved/deleted project.
+    static let locateSelectedProject = Notification.Name("bristlenoseLocateSelectedProject")
 }
 
 // MARK: - Project index (persistence)
@@ -159,11 +262,15 @@ final class ProjectIndex: ObservableObject {
     @discardableResult
     func addProject(name: String, path: String, inputFiles: [String]? = nil) -> Project {
         let finalName = uniqueName(name, excluding: nil)
+        let location = path.isEmpty ? nil : Self.detectLocation(for: path)
+        let bookmark = Self.createBookmark(for: path)
         let project = Project(
             id: UUID(),
             name: finalName,
             path: path,
             inputFiles: inputFiles,
+            location: location,
+            bookmarkData: bookmark,
             createdAt: Date(),
             lastOpened: nil
         )
@@ -305,6 +412,155 @@ final class ProjectIndex: ObservableObject {
         return "\(name) \(counter)"
     }
 
+    // MARK: - Location detection
+
+    /// Detect the storage location type from a filesystem path.
+    static func detectLocation(for path: String) -> Location {
+        let homeDir = FileManager.default.homeDirectoryForCurrentUser.path
+
+        // Cloud detection — check before local, since cloud paths live under /Users/
+        let cloudPrefixes: [(prefix: String, label: String)] = [
+            ("/Library/CloudStorage/OneDrive", "OneDrive"),
+            ("/Library/CloudStorage/Dropbox", "Dropbox"),
+            ("/Library/Mobile Documents", "iCloud Drive"),
+        ]
+        for cloud in cloudPrefixes {
+            if path.contains(cloud.prefix) {
+                return Location(type: .cloud, displayHint: cloud.label)
+            }
+        }
+
+        // Volume — under /Volumes/
+        if path.hasPrefix("/Volumes/") {
+            let afterVolumes = path.dropFirst("/Volumes/".count)
+            let components = afterVolumes.split(separator: "/", maxSplits: 1)
+            let volumeName = String(components.first ?? "")
+            let relativePath = components.count > 1 ? String(components[1]) : ""
+
+            let isNetwork = isNetworkFilesystem(path: path)
+            if isNetwork {
+                return Location(
+                    type: .network, volumeName: volumeName,
+                    volumeRelativePath: relativePath,
+                    displayHint: "Network drive — \(volumeName)"
+                )
+            }
+
+            return Location(
+                type: .volume, volumeName: volumeName,
+                volumeRelativePath: relativePath,
+                displayHint: "External drive — \(volumeName)"
+            )
+        }
+
+        // Local — under /Users/ or home dir
+        if path.hasPrefix(homeDir) || path.hasPrefix("/Users/") {
+            return Location(type: .local, displayHint: "On this Mac")
+        }
+
+        return Location(type: .local, displayHint: "On this Mac")
+    }
+
+    /// Check if a path is on a network filesystem (SMB, AFP, NFS, WebDAV).
+    private static func isNetworkFilesystem(path: String) -> Bool {
+        var stat = statfs()
+        guard statfs(path, &stat) == 0 else { return false }
+        let fstype = withUnsafePointer(to: stat.f_fstypename) { ptr in
+            ptr.withMemoryRebound(to: CChar.self, capacity: Int(MFSTYPENAMELEN)) {
+                String(cString: $0)
+            }
+        }
+        return ["smbfs", "afpfs", "nfs", "webdav"].contains(fstype)
+    }
+
+    // MARK: - Bookmark data
+
+    /// Create a security-scoped bookmark for a path.
+    /// Returns nil for empty paths or if bookmark creation fails.
+    private static func createBookmark(for path: String) -> Data? {
+        guard !path.isEmpty else { return nil }
+        let url = URL(fileURLWithPath: path)
+        return try? url.bookmarkData(options: .withSecurityScope)
+    }
+
+    /// Try to resolve a path from bookmark data.
+    /// Returns the resolved path if the target exists, nil otherwise.
+    private static func resolveBookmark(_ data: Data) -> String? {
+        var isStale = false
+        guard let url = try? URL(
+            resolvingBookmarkData: data,
+            options: .withSecurityScope,
+            relativeTo: nil,
+            bookmarkDataIsStale: &isStale
+        ) else { return nil }
+
+        _ = url.startAccessingSecurityScopedResource()
+        let resolvedPath = url.path
+        return FileManager.default.fileExists(atPath: resolvedPath) ? resolvedPath : nil
+    }
+
+    // MARK: - Availability
+
+    /// Re-check availability for all projects. Called on launch and volume mount/unmount.
+    /// Tries bookmark resolution first, then volume-relative path fallback.
+    func refreshAvailability() {
+        var changed = false
+        for i in projects.indices {
+            let project = projects[i]
+            guard !project.path.isEmpty else { continue }
+
+            // Try bookmark resolution first
+            if let bookmark = project.bookmarkData,
+               let resolvedPath = Self.resolveBookmark(bookmark) {
+                if resolvedPath != project.path {
+                    projects[i].path = resolvedPath
+                    projects[i].location = Self.detectLocation(for: resolvedPath)
+                    projects[i].bookmarkData = Self.createBookmark(for: resolvedPath)
+                    changed = true
+                }
+                continue
+            }
+
+            // Volume-relative path fallback for external/network drives
+            if let location = project.location,
+               (location.type == .volume || location.type == .network),
+               let relativePath = location.volumeRelativePath, !relativePath.isEmpty {
+                if let resolvedPath = Self.resolveVolumeRelativePath(relativePath) {
+                    projects[i].path = resolvedPath
+                    projects[i].location = Self.detectLocation(for: resolvedPath)
+                    projects[i].bookmarkData = Self.createBookmark(for: resolvedPath)
+                    changed = true
+                }
+            }
+        }
+        if changed { save() }
+        objectWillChange.send()
+    }
+
+    /// Scan all mounted volumes for a relative path.
+    /// Handles "Samsung T7" → "Samsung T7 1" renames.
+    private static func resolveVolumeRelativePath(_ relativePath: String) -> String? {
+        guard let contents = try? FileManager.default.contentsOfDirectory(atPath: "/Volumes") else {
+            return nil
+        }
+        for volumeName in contents {
+            let candidatePath = "/Volumes/\(volumeName)/\(relativePath)"
+            if FileManager.default.fileExists(atPath: candidatePath) {
+                return candidatePath
+            }
+        }
+        return nil
+    }
+
+    /// Relocate a project to a new path (after user selects via NSOpenPanel).
+    func relocateProject(id: UUID, newPath: String) {
+        guard let index = projects.firstIndex(where: { $0.id == id }) else { return }
+        projects[index].path = newPath
+        projects[index].location = Self.detectLocation(for: newPath)
+        projects[index].bookmarkData = Self.createBookmark(for: newPath)
+        save()
+    }
+
     // MARK: - Persistence
 
     private func load() {
@@ -319,6 +575,17 @@ final class ProjectIndex: ObservableObject {
             let wrapper = try JSONDecoder.iso8601Fractional.decode(ProjectsFile.self, from: data)
             projects = wrapper.projects
             folders = wrapper.folders
+
+            // Backfill location and bookmark for projects migrated from Phase 1–3.
+            var needsSave = false
+            for i in projects.indices {
+                if !projects[i].path.isEmpty && projects[i].location == nil {
+                    projects[i].location = Self.detectLocation(for: projects[i].path)
+                    projects[i].bookmarkData = Self.createBookmark(for: projects[i].path)
+                    needsSave = true
+                }
+            }
+            if needsSave { save() }
         } catch {
             print("[ProjectIndex] Failed to load projects.json: \(error)")
         }

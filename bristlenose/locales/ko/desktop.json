@@ -122,7 +122,14 @@
     "reportContent": "보고서 내용",
     "newFolder": "새 폴더",
     "dragInterviews": "여기에 인터뷰를 드래그하세요",
-    "dragInterviewsDescription": "인터뷰 녹음 또는 대본을 추가하여 시작하세요."
+    "dragInterviewsDescription": "인터뷰 녹음 또는 대본을 추가하여 시작하세요.",
+    "projectUnavailable": "프로젝트를 사용할 수 없음",
+    "projectUnavailableHint": "이 프로젝트에 접근하려면 드라이브를 연결하세요.",
+    "projectMoved": "프로젝트가 이동 또는 삭제됨",
+    "projectMovedDescription": "프로젝트 폴더를 찾을 수 없습니다. 이동되었거나 삭제되었을 수 있습니다.",
+    "locate": "찾기\u2026",
+    "locateMessage": "\u201c%@\u201d의 새 위치 찾기",
+    "onThisMac": "이 Mac에서"
   },
   "toolbar": {
     "back": "뒤로 (⌘[)",

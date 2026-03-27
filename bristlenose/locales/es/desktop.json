@@ -122,7 +122,14 @@
     "reportContent": "Contenido del informe",
     "newFolder": "Nueva carpeta",
     "dragInterviews": "Arrastra entrevistas aquí",
-    "dragInterviewsDescription": "Añade grabaciones de entrevistas o transcripciones para comenzar."
+    "dragInterviewsDescription": "Añade grabaciones de entrevistas o transcripciones para comenzar.",
+    "projectUnavailable": "Proyecto no disponible",
+    "projectUnavailableHint": "Conecta la unidad para acceder a este proyecto.",
+    "projectMoved": "Proyecto movido o eliminado",
+    "projectMovedDescription": "No se pudo encontrar la carpeta del proyecto. Es posible que se haya movido o eliminado.",
+    "locate": "Localizar\u2026",
+    "locateMessage": "Busca la nueva ubicación de \u201c%@\u201d",
+    "onThisMac": "En este Mac"
   },
   "toolbar": {
     "back": "Atrás (⌘[)",

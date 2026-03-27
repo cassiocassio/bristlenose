@@ -51,7 +51,8 @@
       "noFolder": "No Folder",
       "reAnalyse": "Re-analyse…",
       "archive": "Archive…",
-      "delete": "Delete…"
+      "delete": "Delete…",
+      "chooseIcon": "Choose Icon\u2026"
     },
     "folder": {
       "rename": "Rename Folder",
@@ -129,7 +130,16 @@
     "projectMovedDescription": "The project folder couldn\u2019t be found. It may have been moved or deleted.",
     "locate": "Locate\u2026",
     "locateMessage": "Find the new location for \u201c%@\u201d",
-    "onThisMac": "On this Mac"
+    "onThisMac": "On this Mac",
+    "projectIcon": "Project icon",
+    "duplicateProject": "Project Already Exists",
+    "duplicateProjectMessage": "A project for this folder already exists: \u201c%@\u201d. You can open the existing project or create a new one.",
+    "openExisting": "Open Existing",
+    "createAnyway": "Create Anyway",
+    "emptyStateHint": "Drag a folder here or press \u2318N",
+    "addedInterviews": "Added %d interviews to %@",
+    "multipleSelected": "%d items selected",
+    "multipleSelectedHint": "Select a single project to view its report."
   },
   "toolbar": {
     "back": "Back (⌘[)",

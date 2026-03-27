@@ -17,6 +17,7 @@ struct ProjectRow: View {
 
     let project: Project
     @Binding var isRenaming: Bool
+    var isDropTarget: Bool = false
     let onRename: (String) -> Void
     let onShowInFinder: () -> Void
     let onDelete: () -> Void
@@ -80,12 +81,17 @@ struct ProjectRow: View {
                 Image(systemName: "questionmark.folder")
                     .foregroundStyle(.secondary)
             } else {
-                Image(systemName: "doc.text")
+                Image(systemName: project.icon ?? IconPickerPopover.defaultIcon)
                     .foregroundStyle(available ? .primary : .secondary)
             }
         }
         .accessibilityElement(children: .combine)
         .accessibilityLabel(accessibilityLabel)
+        .overlay(
+            RoundedRectangle(cornerRadius: 4)
+                .stroke(Color.accentColor, lineWidth: 2)
+                .opacity(isDropTarget ? 1 : 0)
+        )
     }
 
     // MARK: - Accessibility

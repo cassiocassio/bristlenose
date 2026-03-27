@@ -40,12 +40,14 @@ struct Project: Identifiable, Hashable, Codable {
     var inputFiles: [String]?
     var location: Location?
     var bookmarkData: Data?
+    var icon: String?
     var folderId: UUID?
+    var position: Int
     var createdAt: Date
     var lastOpened: Date?
 
     enum CodingKeys: String, CodingKey {
-        case id, name, path
+        case id, name, path, icon, position
         case inputFiles = "input_files"
         case location
         case bookmarkData = "bookmark_data"
@@ -62,6 +64,7 @@ struct Project: Identifiable, Hashable, Codable {
         name = try container.decode(String.self, forKey: .name)
         path = try container.decode(String.self, forKey: .path)
         inputFiles = try container.decodeIfPresent([String].self, forKey: .inputFiles)
+        icon = try container.decodeIfPresent(String.self, forKey: .icon)
         location = try container.decodeIfPresent(Location.self, forKey: .location)
         if let b64 = try container.decodeIfPresent(String.self, forKey: .bookmarkData) {
             bookmarkData = Data(base64Encoded: b64)
@@ -69,6 +72,7 @@ struct Project: Identifiable, Hashable, Codable {
             bookmarkData = nil
         }
         folderId = try container.decodeIfPresent(UUID.self, forKey: .folderId)
+        position = try container.decodeIfPresent(Int.self, forKey: .position) ?? 0
         createdAt = try container.decode(Date.self, forKey: .createdAt)
         lastOpened = try container.decodeIfPresent(Date.self, forKey: .lastOpened)
     }
@@ -79,23 +83,27 @@ struct Project: Identifiable, Hashable, Codable {
         try container.encode(name, forKey: .name)
         try container.encode(path, forKey: .path)
         try container.encodeIfPresent(inputFiles, forKey: .inputFiles)
+        try container.encodeIfPresent(icon, forKey: .icon)
         try container.encodeIfPresent(location, forKey: .location)
         try container.encodeIfPresent(bookmarkData?.base64EncodedString(), forKey: .bookmarkData)
         try container.encodeIfPresent(folderId, forKey: .folderId)
+        try container.encode(position, forKey: .position)
         try container.encode(createdAt, forKey: .createdAt)
         try container.encodeIfPresent(lastOpened, forKey: .lastOpened)
     }
 
     init(id: UUID, name: String, path: String, inputFiles: [String]? = nil,
-         location: Location? = nil, bookmarkData: Data? = nil,
-         folderId: UUID? = nil, createdAt: Date = Date(), lastOpened: Date? = nil) {
+         icon: String? = nil, location: Location? = nil, bookmarkData: Data? = nil,
+         folderId: UUID? = nil, position: Int = 0, createdAt: Date = Date(), lastOpened: Date? = nil) {
         self.id = id
         self.name = name
         self.path = path
         self.inputFiles = inputFiles
+        self.icon = icon
         self.location = location
         self.bookmarkData = bookmarkData
         self.folderId = folderId
+        self.position = position
         self.createdAt = createdAt
         self.lastOpened = lastOpened
     }
@@ -137,10 +145,11 @@ struct Folder: Identifiable, Hashable, Codable {
     var id: UUID
     var name: String
     var collapsed: Bool
+    var position: Int
     var createdAt: Date
 
     enum CodingKeys: String, CodingKey {
-        case id, name, collapsed
+        case id, name, collapsed, position
         case createdAt = "created_at"
     }
 
@@ -151,13 +160,15 @@ struct Folder: Identifiable, Hashable, Codable {
         id = try container.decode(UUID.self, forKey: .id)
         name = try container.decode(String.self, forKey: .name)
         collapsed = try container.decodeIfPresent(Bool.self, forKey: .collapsed) ?? false
+        position = try container.decodeIfPresent(Int.self, forKey: .position) ?? 0
         createdAt = try container.decodeIfPresent(Date.self, forKey: .createdAt) ?? Date()
     }
 
-    init(id: UUID, name: String, collapsed: Bool = false, createdAt: Date = Date()) {
+    init(id: UUID, name: String, collapsed: Bool = false, position: Int = 0, createdAt: Date = Date()) {
         self.id = id
         self.name = name
         self.collapsed = collapsed
+        self.position = position
         self.createdAt = createdAt
     }
 }
@@ -173,6 +184,13 @@ enum SidebarItem: Identifiable {
         switch self {
         case .folder(let f): f.id
         case .project(let p): p.id
+        }
+    }
+
+    var position: Int {
+        switch self {
+        case .folder(let f): f.position
+        case .project(let p): p.position
         }
     }
 
@@ -271,6 +289,13 @@ final class ProjectIndex: ObservableObject {
         let finalName = uniqueName(name, excluding: nil)
         let location = path.isEmpty ? nil : Self.detectLocation(for: path)
         let bookmark = Self.createBookmark(for: path)
+        // New items get position 0; push all existing root items down by 1.
+        for i in projects.indices where projects[i].folderId == nil {
+            projects[i].position += 1
+        }
+        for i in folders.indices {
+            folders[i].position += 1
+        }
         let project = Project(
             id: UUID(),
             name: finalName,
@@ -278,6 +303,7 @@ final class ProjectIndex: ObservableObject {
             inputFiles: inputFiles,
             location: location,
             bookmarkData: bookmark,
+            position: 0,
             createdAt: Date(),
             lastOpened: nil
         )
@@ -297,6 +323,14 @@ final class ProjectIndex: ObservableObject {
     func renameProject(id: UUID, newName: String) {
         guard let index = projects.firstIndex(where: { $0.id == id }) else { return }
         projects[index].name = uniqueName(newName, excluding: id)
+        save()
+    }
+
+    /// Set the SF Symbol icon for a project.
+    /// Pass nil to reset to the default icon.
+    func setIcon(id: UUID, icon: String?) {
+        guard let index = projects.firstIndex(where: { $0.id == id }) else { return }
+        projects[index].icon = icon
         save()
     }
 
@@ -333,7 +367,14 @@ final class ProjectIndex: ObservableObject {
     @discardableResult
     func addFolder(name: String) -> Folder {
         let finalName = uniqueFolderName(name, excluding: nil)
-        let folder = Folder(id: UUID(), name: finalName, createdAt: Date())
+        // New folders get position 0; push existing root items down.
+        for i in projects.indices where projects[i].folderId == nil {
+            projects[i].position += 1
+        }
+        for i in folders.indices {
+            folders[i].position += 1
+        }
+        let folder = Folder(id: UUID(), name: finalName, position: 0, createdAt: Date())
         folders.insert(folder, at: 0)
         save()
         return folder
@@ -371,16 +412,48 @@ final class ProjectIndex: ObservableObject {
 
     // MARK: - Sidebar ordering
 
-    /// Root-level items (projects without a folder + folders), sorted newest first.
+    /// Root-level items (projects without a folder + folders), sorted by position.
     var sidebarItems: [SidebarItem] {
         let rootProjects = projects.filter { $0.folderId == nil }.map { SidebarItem.project($0) }
         let allFolders = folders.map { SidebarItem.folder($0) }
-        return (rootProjects + allFolders).sorted { $0.createdAt > $1.createdAt }
+        return (rootProjects + allFolders).sorted { $0.position < $1.position }
     }
 
-    /// Projects belonging to a specific folder, sorted newest first.
+    /// Projects belonging to a specific folder, sorted by position.
     func projectsInFolder(_ folderId: UUID) -> [Project] {
-        projects.filter { $0.folderId == folderId }.sorted { $0.createdAt > $1.createdAt }
+        projects.filter { $0.folderId == folderId }.sorted { $0.position < $1.position }
+    }
+
+    /// Reorder root-level sidebar items. Called from `.onMove` in the sidebar List.
+    func moveSidebarItems(from source: IndexSet, to destination: Int) {
+        var items = sidebarItems
+        items.move(fromOffsets: source, toOffset: destination)
+        // Reassign positions based on new order.
+        for (newPosition, item) in items.enumerated() {
+            switch item {
+            case .project(let p):
+                if let idx = projects.firstIndex(where: { $0.id == p.id }) {
+                    projects[idx].position = newPosition
+                }
+            case .folder(let f):
+                if let idx = folders.firstIndex(where: { $0.id == f.id }) {
+                    folders[idx].position = newPosition
+                }
+            }
+        }
+        save()
+    }
+
+    /// Reorder projects within a folder. Called from `.onMove` on folder contents.
+    func moveProjectsInFolder(_ folderId: UUID, from source: IndexSet, to destination: Int) {
+        var items = projectsInFolder(folderId)
+        items.move(fromOffsets: source, toOffset: destination)
+        for (newPosition, project) in items.enumerated() {
+            if let idx = projects.firstIndex(where: { $0.id == project.id }) {
+                projects[idx].position = newPosition
+            }
+        }
+        save()
     }
 
     // MARK: - Name uniqueness
@@ -592,6 +665,47 @@ final class ProjectIndex: ObservableObject {
                     needsSave = true
                 }
             }
+
+            // Backfill positions for projects migrated from pre-position era.
+            // All positions default to 0 — assign based on createdAt (newest first).
+            let allZeroProjects = projects.allSatisfy { $0.position == 0 } && projects.count > 1
+            let allZeroFolders = folders.allSatisfy { $0.position == 0 } && folders.count > 1
+            if allZeroProjects || allZeroFolders {
+                // Build combined root items sorted newest-first (preserving old behaviour).
+                let rootProjects = projects.enumerated()
+                    .filter { $0.element.folderId == nil }
+                let rootFolders = folders.enumerated()
+
+                var rootItems: [(kind: String, arrayIndex: Int, createdAt: Date)] = []
+                for (idx, p) in rootProjects {
+                    rootItems.append(("project", idx, p.createdAt))
+                }
+                for (idx, f) in rootFolders {
+                    rootItems.append(("folder", idx, f.createdAt))
+                }
+                rootItems.sort { $0.createdAt > $1.createdAt }
+
+                for (pos, item) in rootItems.enumerated() {
+                    if item.kind == "project" {
+                        projects[item.arrayIndex].position = pos
+                    } else {
+                        folders[item.arrayIndex].position = pos
+                    }
+                }
+
+                // Also backfill positions within each folder.
+                for folder in folders {
+                    let inFolder = projects.enumerated()
+                        .filter { $0.element.folderId == folder.id }
+                        .sorted { $0.element.createdAt > $1.element.createdAt }
+                    for (pos, (idx, _)) in inFolder.enumerated() {
+                        projects[idx].position = pos
+                    }
+                }
+
+                needsSave = true
+            }
+
             if needsSave { save() }
         } catch {
             print("[ProjectIndex] Failed to load projects.json: \(error)")

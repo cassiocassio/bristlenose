@@ -51,7 +51,8 @@
       "noFolder": "Aucun dossier",
       "reAnalyse": "Réanalyser…",
       "archive": "Archiver…",
-      "delete": "Supprimer…"
+      "delete": "Supprimer…",
+      "chooseIcon": "Choisir une ic\u00f4ne\u2026"
     },
     "folder": {
       "rename": "Renommer le dossier",
@@ -129,7 +130,16 @@
     "projectMovedDescription": "Le dossier du projet est introuvable. Il a peut-être été déplacé ou supprimé.",
     "locate": "Localiser\u2026",
     "locateMessage": "Recherchez le nouvel emplacement de \u00ab\u00a0%@\u00a0\u00bb",
-    "onThisMac": "Sur ce Mac"
+    "onThisMac": "Sur ce Mac",
+    "projectIcon": "Ic\u00f4ne du projet",
+    "duplicateProject": "Le projet existe d\u00e9j\u00e0",
+    "duplicateProjectMessage": "Un projet pour ce dossier existe d\u00e9j\u00e0\u00a0: \u00ab\u00a0%@\u00a0\u00bb. Vous pouvez ouvrir le projet existant ou en cr\u00e9er un nouveau.",
+    "openExisting": "Ouvrir l\u2019existant",
+    "createAnyway": "Cr\u00e9er quand m\u00eame",
+    "emptyStateHint": "Glissez un dossier ici ou appuyez sur \u2318N",
+    "addedInterviews": "%d entretiens ajout\u00e9s \u00e0 %@",
+    "multipleSelected": "%d \u00e9l\u00e9ments s\u00e9lectionn\u00e9s",
+    "multipleSelectedHint": "S\u00e9lectionnez un seul projet pour afficher son rapport."
   },
   "toolbar": {
     "back": "Précédent (⌘[)",

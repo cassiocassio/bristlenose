@@ -1,6 +1,34 @@
 import SwiftUI
 import UniformTypeIdentifiers
 
+// MARK: - Duplicate drop alert model
+
+/// State for the "this folder already has a project" alert.
+struct DuplicateDropAlert: Identifiable {
+    let id = UUID()
+    let existingProject: Project
+    let urls: [URL]
+}
+
+// MARK: - Row frame preference key
+
+/// Preference key collecting project row frames for drop hit-testing.
+/// Each project row reports its frame in the sidebar's named coordinate space.
+private struct RowFramePreferenceKey: PreferenceKey {
+    static let defaultValue: [UUID: CGRect] = [:]
+    static func reduce(value: inout [UUID: CGRect], nextValue: () -> [UUID: CGRect]) {
+        value.merge(nextValue(), uniquingKeysWith: { $1 })
+    }
+}
+
+/// Preference key collecting folder row frames for drop hit-testing.
+private struct FolderFramePreferenceKey: PreferenceKey {
+    static let defaultValue: [UUID: CGRect] = [:]
+    static func reduce(value: inout [UUID: CGRect], nextValue: () -> [UUID: CGRect]) {
+        value.merge(nextValue(), uniquingKeysWith: { $1 })
+    }
+}
+
 /// Two-column NavigationSplitView: project list sidebar + WKWebView detail.
 ///
 /// Selecting a project starts `bristlenose serve` and loads the React SPA
@@ -16,6 +44,7 @@ struct ContentView: View {
     @EnvironmentObject var serveManager: ServeManager
     @EnvironmentObject var bridgeHandler: BridgeHandler
     @EnvironmentObject var projectIndex: ProjectIndex
+    @EnvironmentObject var toast: ToastStore
     @EnvironmentObject var i18n: I18n
     @AppStorage("appearance") private var appearance: String = "auto"
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -23,7 +52,12 @@ struct ContentView: View {
     @AppStorage("aiConsentVersion") private var consentVersion: Int = 0
     /// Selection binding for the List — uses `SidebarSelection` enum so both
     /// projects and folders are selectable. UUID-based to survive field mutations.
-    @State private var selection: SidebarSelection?
+    /// Set enables Cmd+click / Shift+click multi-select natively.
+    @State private var selection: Set<SidebarSelection> = []
+    /// Tracks whether the project list sidebar column is visible.
+    /// Used to gate sidebar-specific toolbar items — if the user has hidden
+    /// the project list, don't compensate by moving project controls to the toolbar.
+    @State private var columnVisibility: NavigationSplitViewVisibility = .all
     @State private var showingAIConsent = false
     @State private var aiConsentReviewMode = false
 
@@ -33,25 +67,51 @@ struct ContentView: View {
     /// The ID of the folder currently in inline rename mode, or nil.
     @State private var renamingFolderID: UUID?
 
-    /// The currently selected project, derived from `selection`.
+    /// The ID of the project currently showing the icon picker popover, or nil.
+    @State private var iconPickerProjectID: UUID?
+
+    /// Row frames for drop hit-testing — populated via preference key.
+    @State private var rowFrames: [UUID: CGRect] = [:]
+
+    /// Folder frames for drop hit-testing — populated via preference key.
+    @State private var folderFrames: [UUID: CGRect] = [:]
+
+    /// The project row currently targeted by a drag hover, or nil.
+    @State private var dropTargetProjectID: UUID?
+
+    /// The folder row currently targeted by a drag hover, or nil.
+    @State private var dropTargetFolderID: UUID?
+
+    /// Alert state for duplicate folder drop warning.
+    @State private var duplicateDropAlert: DuplicateDropAlert?
+
+    /// The single selected item, if exactly one is selected.
+    private var soleSelection: SidebarSelection? {
+        selection.count == 1 ? selection.first : nil
+    }
+
+    /// The currently selected project (when exactly one project is selected).
     /// Computed so that mutations to `projectIndex.projects` (e.g. rename,
     /// updateLastOpened) don't break selection — the UUID is stable.
     private var selectedProject: Project? {
-        guard case .project(let id) = selection else { return nil }
+        guard case .project(let id) = soleSelection else { return nil }
         return projectIndex.projects.first { $0.id == id }
     }
 
-    /// The currently selected folder, derived from `selection`.
+    /// The currently selected folder (when exactly one folder is selected).
     private var selectedFolder: Folder? {
-        guard case .folder(let id) = selection else { return nil }
+        guard case .folder(let id) = soleSelection else { return nil }
         return projectIndex.folders.first { $0.id == id }
     }
 
-    /// Extract the project UUID from the selection (for persistence and onChange).
+    /// Extract the project UUID from a single selection (for persistence and onChange).
     private var selectedProjectID: UUID? {
-        guard case .project(let id) = selection else { return nil }
+        guard case .project(let id) = soleSelection else { return nil }
         return id
     }
+
+    /// How many items are currently selected.
+    private var selectionCount: Int { selection.count }
 
     /// Whether the user has acknowledged the current AI data disclosure.
     private var hasConsent: Bool { consentVersion >= AIConsentView.currentVersion }
@@ -117,10 +177,10 @@ struct ContentView: View {
         }
         .onAppear {
             // Restore last-selected project from persisted ID.
-            if selection == nil, !persistedProjectID.isEmpty,
+            if selection.isEmpty, !persistedProjectID.isEmpty,
                let id = UUID(uuidString: persistedProjectID),
                projectIndex.projects.contains(where: { $0.id == id }) {
-                selection = .project(id)
+                selection = [.project(id)]
             }
             // First-run consent check.
             if !hasConsent {
@@ -156,13 +216,40 @@ struct ContentView: View {
             .environmentObject(i18n)
             .interactiveDismissDisabled(!aiConsentReviewMode)
         }
+        .alert(
+            i18n.t("desktop.chrome.duplicateProject"),
+            isPresented: Binding(
+                get: { duplicateDropAlert != nil },
+                set: { if !$0 { duplicateDropAlert = nil } }
+            ),
+            presenting: duplicateDropAlert
+        ) { alert in
+            Button(i18n.t("desktop.chrome.openExisting")) {
+                selection = [.project(alert.existingProject.id)]
+            }
+            Button(i18n.t("desktop.chrome.createAnyway")) {
+                let directories = alert.urls.filter { $0.hasDirectoryPath }
+                let files = alert.urls.filter { !$0.hasDirectoryPath }
+                createProjectFromURLs(directories: directories, files: files)
+            }
+            Button(i18n.t("common.cancel"), role: .cancel) {}
+        } message: { alert in
+            Text(String(
+                format: i18n.t("desktop.chrome.duplicateProjectMessage"),
+                alert.existingProject.name
+            ))
+        }
     }
 
     // MARK: - Selection change
 
-    private func handleSelectionChange(_ newSelection: SidebarSelection?) {
+    private func handleSelectionChange(_ newSelection: Set<SidebarSelection>) {
         bridgeHandler.reset()
-        switch newSelection {
+
+        // Only serve when exactly one project is selected.
+        let sole = newSelection.count == 1 ? newSelection.first : nil
+
+        switch sole {
         case .project(let id):
             bridgeHandler.selectedFolderName = ""
             if let project = projectIndex.projects.first(where: { $0.id == id }) {
@@ -182,7 +269,8 @@ struct ContentView: View {
             bridgeHandler.selectedFolderName =
                 projectIndex.folders.first { $0.id == id }?.name ?? ""
             serveManager.stop()
-        case nil:
+        default:
+            // Multi-select or empty — stop serve, clear state.
             persistedProjectID = ""
             bridgeHandler.selectedProjectPath = ""
             bridgeHandler.selectedFolderName = ""
@@ -198,14 +286,14 @@ struct ContentView: View {
     /// Create a new project and put it in inline rename mode.
     private func createNewProject() {
         let project = projectIndex.addProject(name: "New Project", path: "")
-        selection = .project(project.id)
+        selection = [.project(project.id)]
         renamingProjectID = project.id
     }
 
     /// Create a new folder and put it in inline rename mode.
     private func createNewFolder() {
         let folder = projectIndex.addFolder(name: i18n.t("desktop.chrome.newFolder"))
-        selection = .folder(folder.id)
+        selection = [.folder(folder.id)]
         renamingFolderID = folder.id
     }
 
@@ -224,7 +312,7 @@ struct ContentView: View {
                     projectIndex.relocateProject(id: project.id, newPath: url.path)
                     bridgeHandler.selectedProjectPath = url.path
                     bridgeHandler.selectedProjectAvailable = true
-                    if case .project(project.id) = selection, hasConsent {
+                    if selection.contains(.project(project.id)), hasConsent {
                         serveManager.start(projectPath: url.path)
                     }
                 }
@@ -234,6 +322,29 @@ struct ContentView: View {
 
     // MARK: - Drag and drop
 
+    /// File extensions accepted by the Bristlenose pipeline.
+    /// Matches `ALL_EXTENSIONS` in `bristlenose/models.py` plus `.txt` (analyze mode).
+    /// Directories are always accepted (they become project roots).
+    private static let acceptedExtensions: Set<String> = [
+        // Audio
+        "wav", "mp3", "m4a", "flac", "ogg", "wma", "aac",
+        // Video
+        "mp4", "m4v", "mov", "avi", "mkv", "webm",
+        // Subtitles
+        "srt", "vtt",
+        // Documents
+        "docx", "txt",
+    ]
+
+    /// Filter URLs to only accepted media types. Directories always pass.
+    private static func filterAcceptedURLs(_ urls: [URL]) -> [URL] {
+        urls.filter { url in
+            if url.hasDirectoryPath { return true }
+            let ext = url.pathExtension.lowercased()
+            return acceptedExtensions.contains(ext)
+        }
+    }
+
     /// Handle files/folders dropped from Finder onto the sidebar free space.
     /// - Folder: create project pointing to that directory (scan all files)
     /// - File(s): create project with inputFiles restricting to the dropped files
@@ -241,8 +352,9 @@ struct ContentView: View {
     private func handleDrop(providers: [NSItemProvider]) {
         Task {
             let urls = await loadURLs(from: providers)
+            let accepted = Self.filterAcceptedURLs(urls)
             await MainActor.run {
-                processDroppedURLs(urls)
+                processDroppedURLs(accepted)
             }
         }
     }
@@ -278,9 +390,26 @@ struct ContentView: View {
 
     /// Process collected URLs from a sidebar drop.
     private func processDroppedURLs(_ urls: [URL]) {
+        guard !urls.isEmpty else { return }
+
         let directories = urls.filter { $0.hasDirectoryPath }
         let files = urls.filter { !$0.hasDirectoryPath }
 
+        // Check for duplicate: single folder that already has a project.
+        if directories.count == 1 && files.isEmpty {
+            if let existing = projectIndex.findByPath(directories[0].path) {
+                duplicateDropAlert = DuplicateDropAlert(
+                    existingProject: existing, urls: urls
+                )
+                return
+            }
+        }
+
+        createProjectFromURLs(directories: directories, files: files)
+    }
+
+    /// Create a project from classified URLs (after duplicate check passes).
+    private func createProjectFromURLs(directories: [URL], files: [URL]) {
         // All drops create one project. The name comes from the first item.
         // - Single folder: path = folder, inputFiles = nil (scan whole directory)
         // - Multiple folders: path = first folder, inputFiles = all folder paths
@@ -292,7 +421,7 @@ struct ContentView: View {
             let project = projectIndex.addProject(
                 name: url.lastPathComponent, path: url.path
             )
-            selection = .project(project.id)
+            selection = [.project(project.id)]
             renamingProjectID = project.id
         } else if !directories.isEmpty || !files.isEmpty {
             // Multiple items — one project with explicit input list.
@@ -309,7 +438,7 @@ struct ContentView: View {
             let project = projectIndex.addProject(
                 name: firstName, path: firstPath, inputFiles: allPaths
             )
-            selection = .project(project.id)
+            selection = [.project(project.id)]
             renamingProjectID = project.id
         }
     }
@@ -319,10 +448,21 @@ struct ContentView: View {
     private func handleDropOnProject(id: UUID, providers: [NSItemProvider]) {
         Task {
             let urls = await loadURLs(from: providers)
+            let accepted = Self.filterAcceptedURLs(urls)
             await MainActor.run {
-                let paths = urls.map { $0.path }
+                let paths = accepted.map { $0.path }
                 if !paths.isEmpty {
                     projectIndex.addFiles(to: id, files: paths)
+                    selection = [.project(id)]
+                    // Toast confirmation: "Added 3 interviews to Project Name"
+                    if let project = projectIndex.projects.first(where: { $0.id == id }) {
+                        let count = paths.count
+                        let message = String(
+                            format: i18n.t("desktop.chrome.addedInterviews"),
+                            count, project.name
+                        )
+                        toast.show(message)
+                    }
                 }
             }
         }
@@ -361,6 +501,22 @@ struct ContentView: View {
 
     @ToolbarContentBuilder
     private var toolbarLeading: some ToolbarContent {
+        // Project icon + name — replaces the system title lozenge (.toolbar(removing: .title)
+        // is set on the detail view). Shows the project's custom SF Symbol and name directly
+        // on the toolbar surface, matching the Finder visual pattern.
+        ToolbarItem(placement: .navigation) {
+            HStack(spacing: 4) {
+                if let project = selectedProject {
+                    Image(systemName: project.icon ?? IconPickerPopover.defaultIcon)
+                        .foregroundStyle(.secondary)
+                }
+                Text(selectedProject?.name ?? "Bristlenose")
+                    .lineLimit(1)
+            }
+            .accessibilityElement(children: .combine)
+            .accessibilityLabel(selectedProject?.name ?? "Bristlenose")
+        }
+
         // Contextual — Quotes/Codebook/Analysis: left panel toggle
         // The native sidebar toggle (for the project list) is provided by
         // NavigationSplitView automatically — Mail-style: lives inside the
@@ -381,21 +537,28 @@ struct ContentView: View {
             }
         }
 
-        ToolbarItemGroup(placement: .navigation) {
-            Button(action: { bridgeHandler.goBack() }) {
-                Image(systemName: "chevron.backward")
-            }
-            .disabled(!bridgeHandler.canGoBack)
-            .keyboardShortcut("[", modifiers: .command)
-            .help(i18n.t("desktop.toolbar.back"))
+        // Back / forward as a joined Finder-style control group.
+        // .controlGroupStyle(.navigation) renders the chevrons in a single
+        // bordered pill — the same appearance as Finder and Safari.
+        ToolbarItem(placement: .navigation) {
+            ControlGroup {
+                Button(action: { bridgeHandler.goBack() }) {
+                    Image(systemName: "chevron.backward")
+                }
+                .disabled(!bridgeHandler.canGoBack)
+                .keyboardShortcut("[", modifiers: .command)
+                .help(i18n.t("desktop.toolbar.back"))
 
-            Button(action: { bridgeHandler.goForward() }) {
-                Image(systemName: "chevron.forward")
+                Button(action: { bridgeHandler.goForward() }) {
+                    Image(systemName: "chevron.forward")
+                }
+                .disabled(!bridgeHandler.canGoForward)
+                .keyboardShortcut("]", modifiers: .command)
+                .help(i18n.t("desktop.toolbar.forward"))
             }
-            .disabled(!bridgeHandler.canGoForward)
-            .keyboardShortcut("]", modifiers: .command)
-            .help(i18n.t("desktop.toolbar.forward"))
+            .controlGroupStyle(.navigation)
         }
+
     }
 
     private var toolbarCenter: some ToolbarContent {
@@ -473,15 +636,42 @@ struct ContentView: View {
                         projectRow(project)
                     }
                 }
+                .onMove { source, destination in
+                    projectIndex.moveSidebarItems(from: source, to: destination)
+                }
+
+                // Empty state hint when no projects exist.
+                if projectIndex.projects.isEmpty {
+                    Text(i18n.t("desktop.chrome.emptyStateHint"))
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
+                        .frame(maxWidth: .infinity, alignment: .center)
+                        .padding(.top, 20)
+                        .listRowSeparator(.hidden)
+                }
             } header: {
                 Text(i18n.t("desktop.chrome.projects"))
             }
         }
         .accessibilityLabel(i18n.t("desktop.chrome.projects"))
-        .onDrop(of: [.fileURL], isTargeted: nil) { providers in
-            handleDrop(providers: providers)
-            return true
+        .coordinateSpace(name: "sidebar")
+        .onPreferenceChange(RowFramePreferenceKey.self) { frames in
+            rowFrames = frames
         }
+        .onPreferenceChange(FolderFramePreferenceKey.self) { frames in
+            folderFrames = frames
+        }
+        .onDrop(of: [.fileURL, .utf8PlainText], delegate: SidebarDropDelegate(
+            rowFrames: rowFrames,
+            folderFrames: folderFrames,
+            dropTargetProjectID: $dropTargetProjectID,
+            dropTargetFolderID: $dropTargetFolderID,
+            onDropOnProject: { id, providers in handleDropOnProject(id: id, providers: providers) },
+            onDropOnFreeSpace: { providers in handleDrop(providers: providers) },
+            onMoveProjectToFolder: { projectId, folderId in
+                projectIndex.moveProject(projectId: projectId, toFolder: folderId)
+            }
+        ))
         .focusSection()
         // New Folder button in the sidebar title bar.
         .toolbar {
@@ -511,6 +701,9 @@ struct ContentView: View {
             ForEach(projectIndex.projectsInFolder(folder.id)) { project in
                 projectRow(project)
             }
+            .onMove { source, destination in
+                projectIndex.moveProjectsInFolder(folder.id, from: source, to: destination)
+            }
         } label: {
             FolderRow(
                 folder: folder,
@@ -524,26 +717,39 @@ struct ContentView: View {
                     projectIndex.renameFolder(id: folder.id, newName: newName)
                 },
                 onDelete: {
-                    if case .folder(folder.id) = selection { selection = nil }
+                    selection.remove(.folder(folder.id))
                     projectIndex.removeFolder(id: folder.id)
                 }
             )
+            .contextMenu {
+                Button(i18n.t("desktop.menu.folder.rename")) {
+                    renamingFolderID = folder.id
+                }
+                Button(i18n.t("desktop.menu.folder.archive")) {
+                    // Phase 5
+                }
+                .disabled(true)
+                Divider()
+                Button(i18n.t("desktop.menu.folder.delete"), role: .destructive) {
+                    selection.remove(.folder(folder.id))
+                    projectIndex.removeFolder(id: folder.id)
+                }
+            }
         }
         .tag(SidebarSelection.folder(folder.id))
-        .contextMenu {
-            Button(i18n.t("desktop.menu.folder.rename")) {
-                renamingFolderID = folder.id
+        .background(
+            GeometryReader { geo in
+                Color.clear.preference(
+                    key: FolderFramePreferenceKey.self,
+                    value: [folder.id: geo.frame(in: .named("sidebar"))]
+                )
             }
-            Button(i18n.t("desktop.menu.folder.archive")) {
-                // Phase 5
-            }
-            .disabled(true)
-            Divider()
-            Button(i18n.t("desktop.menu.folder.delete"), role: .destructive) {
-                if case .folder(folder.id) = selection { selection = nil }
-                projectIndex.removeFolder(id: folder.id)
-            }
-        }
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 4)
+                .stroke(Color.accentColor, lineWidth: 2)
+                .opacity(dropTargetFolderID == folder.id ? 1 : 0)
+        )
     }
 
     /// A single project row with context menu (used at root level and inside folders).
@@ -557,6 +763,7 @@ struct ContentView: View {
                     renamingProjectID = newValue ? project.id : nil
                 }
             ),
+            isDropTarget: dropTargetProjectID == project.id,
             onRename: { newName in
                 projectIndex.renameProject(id: project.id, newName: newName)
             },
@@ -568,12 +775,21 @@ struct ContentView: View {
                 }
             },
             onDelete: {
-                if case .project(project.id) = selection { selection = nil }
+                selection.remove(.project(project.id))
                 projectIndex.removeProject(id: project.id)
             },
             onLocate: project.isAvailable ? nil : { locateProject(project) }
         )
+        .background(
+            GeometryReader { geo in
+                Color.clear.preference(
+                    key: RowFramePreferenceKey.self,
+                    value: [project.id: geo.frame(in: .named("sidebar"))]
+                )
+            }
+        )
         .tag(SidebarSelection.project(project.id))
+        .draggable(project.id.uuidString)
         .contextMenu {
             // "Locate…" for moved/deleted projects — actionable first.
             if !project.isAvailable,
@@ -597,6 +813,10 @@ struct ContentView: View {
                 renamingProjectID = project.id
             }
 
+            Button(i18n.t("desktop.menu.project.chooseIcon")) {
+                iconPickerProjectID = project.id
+            }
+
             // "Move to" submenu — lists all folders + "No Folder" for root.
             if !projectIndex.folders.isEmpty {
                 Menu(i18n.t("desktop.menu.project.moveTo")) {
@@ -618,9 +838,24 @@ struct ContentView: View {
 
             Divider()
             Button(i18n.t("desktop.menu.project.delete"), role: .destructive) {
-                if case .project(project.id) = selection { selection = nil }
+                selection.remove(.project(project.id))
                 projectIndex.removeProject(id: project.id)
             }
+        }
+        .popover(
+            isPresented: Binding(
+                get: { iconPickerProjectID == project.id },
+                set: { if !$0 { iconPickerProjectID = nil } }
+            ),
+            arrowEdge: .trailing
+        ) {
+            IconPickerPopover(
+                selectedIcon: project.icon,
+                onSelect: { icon in
+                    projectIndex.setIcon(id: project.id, icon: icon)
+                    iconPickerProjectID = nil
+                }
+            )
         }
     }
 
@@ -676,6 +911,12 @@ struct ContentView: View {
                 }
                 .animation(reduceMotion ? nil : .easeInOut(duration: 0.2), value: bridgeHandler.isReady)
             }
+        } else if selectionCount > 1 {
+            ContentUnavailableView(
+                String(format: i18n.t("desktop.chrome.multipleSelected"), selectionCount),
+                systemImage: "square.stack",
+                description: Text(i18n.t("desktop.chrome.multipleSelectedHint"))
+            )
         } else {
             ContentUnavailableView(
                 i18n.t("desktop.chrome.noProjectSelected"),
@@ -720,43 +961,58 @@ struct ContentView: View {
 /// native menu bar. Extracted from ContentView's body to keep the SwiftUI expression
 /// within the type-checker's complexity limits.
 private struct ProjectNotificationReceivers: ViewModifier {
-    @Binding var selection: SidebarSelection?
+    @Binding var selection: Set<SidebarSelection>
     @Binding var renamingProjectID: UUID?
     @Binding var renamingFolderID: UUID?
     let projectIndex: ProjectIndex
     let onLocate: (Project) -> Void
 
+    /// The single selected item, if exactly one.
+    private var sole: SidebarSelection? {
+        selection.count == 1 ? selection.first : nil
+    }
+
     func body(content: Content) -> some View {
         content
             .onReceive(NotificationCenter.default.publisher(for: .renameSelectedProject)) { _ in
-                if case .project(let id) = selection {
+                if case .project(let id) = sole {
                     renamingProjectID = id
                 }
             }
             .onReceive(NotificationCenter.default.publisher(for: .renameSelectedFolder)) { _ in
-                if case .folder(let id) = selection {
+                if case .folder(let id) = sole {
                     renamingFolderID = id
                 }
             }
             .onReceive(NotificationCenter.default.publisher(for: .deleteSelectedProject)) { _ in
-                if case .project(let id) = selection {
-                    selection = nil
+                // Delete all selected projects.
+                let projectIds = selection.compactMap { sel -> UUID? in
+                    if case .project(let id) = sel { return id }
+                    return nil
+                }
+                for id in projectIds {
+                    selection.remove(.project(id))
                     projectIndex.removeProject(id: id)
                 }
             }
             .onReceive(NotificationCenter.default.publisher(for: .deleteSelectedFolder)) { _ in
-                if case .folder(let id) = selection {
-                    selection = nil
+                // Delete all selected folders.
+                let folderIds = selection.compactMap { sel -> UUID? in
+                    if case .folder(let id) = sel { return id }
+                    return nil
+                }
+                for id in folderIds {
+                    selection.remove(.folder(id))
                     projectIndex.removeFolder(id: id)
                 }
             }
             .onReceive(NotificationCenter.default.publisher(for: .moveSelectedProject)) { notification in
-                guard case .project(let projectId) = selection else { return }
+                guard case .project(let projectId) = sole else { return }
                 let folderId = notification.userInfo?["folderId"] as? UUID
                 projectIndex.moveProject(projectId: projectId, toFolder: folderId)
             }
             .onReceive(NotificationCenter.default.publisher(for: .locateSelectedProject)) { _ in
-                guard case .project(let id) = selection else { return }
+                guard case .project(let id) = sole else { return }
                 if let project = projectIndex.projects.first(where: { $0.id == id }) {
                     onLocate(project)
                 }
@@ -792,5 +1048,103 @@ struct ExportMenuButton: View {
             Label(i18n.t("desktop.toolbar.export"), systemImage: "square.and.arrow.up")
         }
         .help(i18n.t("desktop.toolbar.exportShortcut"))
+    }
+}
+
+// MARK: - Sidebar drop delegate
+
+/// Custom `DropDelegate` that uses geometry hit-testing to determine whether a
+/// drop targets an existing project row, a folder, or free sidebar space.
+///
+/// Handles two drop types:
+/// - **File URLs** (from Finder): add files to existing project or create new project
+/// - **Plain text** (internal project UUID): move a project into a folder
+///
+/// This avoids per-row `.onDrop` which breaks List selection on macOS 26.
+/// Row/folder frames are collected via preference keys in the "sidebar"
+/// coordinate space.
+private struct SidebarDropDelegate: DropDelegate {
+    let rowFrames: [UUID: CGRect]
+    let folderFrames: [UUID: CGRect]
+    @Binding var dropTargetProjectID: UUID?
+    @Binding var dropTargetFolderID: UUID?
+    let onDropOnProject: (UUID, [NSItemProvider]) -> Void
+    let onDropOnFreeSpace: ([NSItemProvider]) -> Void
+    let onMoveProjectToFolder: (UUID, UUID?) -> Void
+
+    /// Find which project row (if any) contains the given point.
+    private func projectAt(_ location: CGPoint) -> UUID? {
+        for (id, frame) in rowFrames where frame.contains(location) {
+            return id
+        }
+        return nil
+    }
+
+    /// Find which folder (if any) contains the given point.
+    private func folderAt(_ location: CGPoint) -> UUID? {
+        for (id, frame) in folderFrames where frame.contains(location) {
+            return id
+        }
+        return nil
+    }
+
+    /// Whether this drag is an internal project move (vs Finder file drop).
+    private func isInternalDrag(_ info: DropInfo) -> Bool {
+        info.hasItemsConforming(to: [.utf8PlainText]) && !info.hasItemsConforming(to: [.fileURL])
+    }
+
+    func validateDrop(info: DropInfo) -> Bool {
+        info.hasItemsConforming(to: [.fileURL]) || info.hasItemsConforming(to: [.utf8PlainText])
+    }
+
+    func dropUpdated(info: DropInfo) -> DropProposal? {
+        if isInternalDrag(info) {
+            // Internal project drag — highlight folders only.
+            dropTargetProjectID = nil
+            dropTargetFolderID = folderAt(info.location)
+            return DropProposal(operation: .move)
+        } else {
+            // External Finder drop — highlight project rows only.
+            dropTargetFolderID = nil
+            dropTargetProjectID = projectAt(info.location)
+            return DropProposal(operation: .copy)
+        }
+    }
+
+    func dropExited(info: DropInfo) {
+        dropTargetProjectID = nil
+        dropTargetFolderID = nil
+    }
+
+    func performDrop(info: DropInfo) -> Bool {
+        let targetFolder = folderAt(info.location)
+        let targetProject = projectAt(info.location)
+        dropTargetProjectID = nil
+        dropTargetFolderID = nil
+
+        if isInternalDrag(info) {
+            // Internal project move — extract UUID from plain text.
+            let providers = info.itemProviders(for: [.utf8PlainText])
+            guard let provider = providers.first else { return false }
+            provider.loadItem(forTypeIdentifier: "public.utf8-plain-text") { data, _ in
+                guard let data = data as? Data,
+                      let uuidString = String(data: data, encoding: .utf8),
+                      let projectId = UUID(uuidString: uuidString) else { return }
+                Task { @MainActor in
+                    // Drop on folder → move into it. Drop on free space → move to root.
+                    onMoveProjectToFolder(projectId, targetFolder)
+                }
+            }
+            return true
+        } else {
+            // External Finder drop.
+            let providers = info.itemProviders(for: [.fileURL])
+            if let targetProject {
+                onDropOnProject(targetProject, providers)
+            } else {
+                onDropOnFreeSpace(providers)
+            }
+            return true
+        }
     }
 }

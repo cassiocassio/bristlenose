@@ -34,6 +34,8 @@ SettingsView.swift            TabView wrapper (3 icon tabs)
 AppearanceSettingsView.swift  Theme radio + language dropdown
 LLMSettingsView.swift         Mail Accounts pattern — provider list + detail pane
 TranscriptionSettingsView.swift  Whisper backend + model pickers
+ToastView.swift               ToastStore (@Published message) + ToastOverlay (bottom fade, 3s auto-dismiss)
+IconPickerPopover.swift       SF Symbol icon picker for project rows
 ```
 
 ### State ownership
@@ -287,7 +289,9 @@ The `#if DEBUG` guard on the dev port override means release builds never see it
 - **Serve process gated on consent** — `serveManager.start()` is only called after `aiConsentVersion >= AIConsentView.currentVersion` (checked in `.onChange(of: selectedProject)`). When consent is granted (version updated), `.onChange(of: consentVersion)` starts serve for the already-selected project. This prevents any data leaving the machine before the user has seen the AI data disclosure (Apple Guideline 5.1.2(i))
 - **List selection must bind to `UUID?`, not a value-type model** — `List(selection: $selectedProject)` where `selectedProject` is `Project?` (a struct) breaks when any field on the selected project mutates (e.g. `updateLastOpened` changes `lastOpened`). SwiftUI compares the selection value against the list items by hash — if the hash changed, selection drops (flashes blue then deselects). Fix: bind to `$selectedID` (`UUID?`) and derive `selectedProject` as a computed property. UUIDs are stable across field mutations
 - **ALL tap gestures on List rows break selection on macOS 26** — both `.onTapGesture` and `.simultaneousGesture(TapGesture())` on views inside `List` rows interfere with the List's built-in selection binding. `.onTapGesture` swallows the click entirely (row flashes but selection never commits). `.simultaneousGesture` works intermittently (selection sticks after 1 click then stops responding). This was confirmed with macOS 26.1 + Xcode 26.3. **Do not put any SwiftUI gesture recognisers on List row content.** Slow-double-click rename (Finder-style) is parked — needs NSEvent local monitor or AppKit subclass approach instead
-- **`.onDrop` on individual List rows breaks selection** — per-row `.onDrop(of:)` causes the same selection interference as tap gestures. Use `.onDrop` on the List itself for sidebar-level drops. Drop-on-existing-row needs a different approach (possibly `DropDelegate` on the List with hit-testing)
+- **`.onDrop` on individual List rows breaks selection** — per-row `.onDrop(of:)` causes the same selection interference as tap gestures. Use `.onDrop` on the List itself for sidebar-level drops. **Workaround shipped:** `SidebarDropDelegate` uses `DropInfo.location` + `GeometryReader` preferences (`RowFramePreferenceKey`/`FolderFramePreferenceKey`) to hit-test which row the drop targets. Handles both Finder file drops (onto project rows) and internal project drags (onto folders via `.draggable`). No per-row `.onDrop` needed
+- **`List(selection: Set<SidebarSelection>)` for multi-select** — Cmd+click and Shift+click work natively with `Set` binding. `soleSelection` helper derives single-item state for serve/persist. Bulk delete via menu notifications filters by type (projects only, folders only)
+- **`Project.position` / `Folder.position` for sidebar ordering** — `Int` field, auto-assigned on creation (new items get 0, existing pushed +1). `.onMove` on `ForEach` handles drag-to-reorder. Backward compat: old `projects.json` without `position` defaults to 0; first load backfills positions from `createdAt` order
 - **`.contextMenu` on List rows does NOT break selection** — unlike gestures and drop targets, `.contextMenu` on rows works correctly. Right-click shows the menu, left-click selects. Context menu can live on the row (after `.tag()`) or inside the row View
 - **Project menu actions use `Notification.Name` not bridge** — Show in Finder, Rename, Delete, New Project, New Folder, and Move To are native-side operations. They post notifications (`createNewProject`, `createNewFolder`, `renameSelectedProject`, `renameSelectedFolder`, `deleteSelectedProject`, `deleteSelectedFolder`, `moveSelectedProject`) which ContentView receives via `.onReceive`. This is different from all other menu actions which dispatch through `bridgeHandler.menuAction()` to the web layer
 - **`SidebarSelection` enum for mixed-type selection** — `List(selection:)` binds to `SidebarSelection?` (`.project(UUID)` or `.folder(UUID)`) instead of `UUID?`. This lets projects and folders share the selection space while remaining type-safe. `@AppStorage("selectedProjectID")` only persists project selections (folders don't open a report). `DisclosureGroup` label `.tag()` propagates correctly — folder rows are selectable
@@ -459,3 +463,43 @@ These control menu item dimming in Swift. Until wired, the Undo/Redo and Video m
 3. **Video** — requires PlayerContext bridge (popout window ↔ native state sync)
 4. **Project operations** — requires project list feature
 5. **Undo/Redo** — requires undo store design
+
+## Testing
+
+### Framework choice
+
+- **Swift Testing** (`@Test`, `#expect`) for all unit and integration tests
+- **XCTest** (`XCTestCase`, `XCUIApplication`) reserved for UI tests only — it's the only framework with UI automation
+- Both can coexist in the same test target, but **never mix assertions** — `#expect` inside an `XCTestCase` is silently ignored, and `XCTFail` inside a `@Test` doesn't register ([interop proposal ST-0021](https://forums.swift.org/t/st-0021-targeted-interoperability-between-swift-testing-and-xctest/84965) is in progress)
+
+### Conventions
+
+- Test file naming: `{ClassName}Tests.swift` in `BristlenoseTests/`
+- `@MainActor @Test` for any test touching `@MainActor` types (ProjectIndex, I18n). Swift Testing runs `@Test` on arbitrary executors by default
+- KeychainHelper tests always use `InMemoryKeychain`, never real SecItem — avoids overwriting real API keys (SIGKILL bypasses teardown, so cleanup is not crash-safe)
+- ProjectIndex tests always use `ProjectIndex(fileURL: tempURL)`, never the default Application Support path
+- I18n tests use `configure(localesDirectory:)` with fixtures in `BristlenoseTests/Fixtures/`, never `findLocalesDirectory()` (which hardcodes dev paths)
+
+### Test target setup
+
+The `BristlenoseTests` target uses `PBXFileSystemSynchronizedRootGroup` — new `.swift` files added to `BristlenoseTests/` are auto-discovered. No Xcode GUI needed after initial target creation.
+
+Build settings must match the app target:
+- `SWIFT_VERSION` — same as app (currently 5.0)
+- `SWIFT_DEFAULT_ACTOR_ISOLATION = nonisolated`
+- `ENABLE_APP_SANDBOX = NO`
+
+### Running tests
+
+```bash
+xcodebuild test -project desktop/Bristlenose/Bristlenose.xcodeproj -scheme Bristlenose -destination 'platform=macOS'
+```
+
+Or in Xcode: Cmd+U.
+
+### Testability refactors
+
+Two injection points exist for safe testing:
+
+1. **`ProjectIndex(fileURL:)`** — pass a temp directory URL to avoid touching `~/Library/Application Support/Bristlenose/projects.json`
+2. **`KeychainStore` protocol** — `KeychainHelper.liveStore` for production, `InMemoryKeychain()` for tests. The static `KeychainHelper.get/set/delete` methods remain unchanged for existing call sites

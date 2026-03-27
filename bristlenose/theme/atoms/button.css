@@ -7,7 +7,7 @@
     right: 3.35rem;
     background: none;
     border: none;
-    font-size: 0.8rem;
+    font-size: var(--bn-text-label);
     color: var(--bn-colour-icon-idle);
     cursor: pointer;
     padding: var(--bn-space-xs);
@@ -32,7 +32,7 @@
     background: none;
     border: none;
     color: var(--bn-colour-muted);
-    font-size: 0.8rem;
+    font-size: var(--bn-text-label);
     cursor: pointer;
     padding: 0.1rem 0.25rem;
     line-height: 1;
@@ -63,7 +63,7 @@
     border-radius: var(--bn-radius-md);
     padding: 0.4rem 0.85rem;
     font-family: var(--bn-font-body);
-    font-size: 0.82rem;
+    font-size: var(--bn-text-label);
     color: var(--bn-colour-text);
     cursor: pointer;
     transition: background var(--bn-transition-fast), border-color var(--bn-transition-fast);
@@ -75,7 +75,7 @@
 }
 
 .toolbar-btn .toolbar-icon {
-    font-size: 0.95rem;
+    font-size: var(--bn-text-label);
     color: var(--bn-colour-muted);
 }
 

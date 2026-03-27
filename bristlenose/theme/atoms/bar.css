@@ -7,7 +7,7 @@
 }
 
 .sentiment-bar-count {
-    font-size: 0.75rem;
+    font-size: var(--bn-text-caption);
     font-weight: var(--bn-weight-emphasis);
     flex-shrink: 0;
 }
@@ -15,7 +15,7 @@
 .sentiment-bar-label {
     display: inline-block;
     font-family: var(--bn-font-mono);
-    font-size: 0.72rem;
+    font-size: var(--bn-text-badge);
     padding: var(--bn-space-xs) 0.45rem;
     border-radius: var(--bn-radius-sm);
     background: var(--bn-colour-badge-bg);
@@ -42,7 +42,7 @@
     border: none;
     border-radius: 50%;
     color: var(--bn-colour-muted);
-    font-size: 0.6rem;
+    font-size: var(--bn-text-micro);
     font-weight: var(--bn-weight-strong);
     line-height: 1;
     cursor: pointer;

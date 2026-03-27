@@ -1,0 +1,1031 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Type Scale Comparison — Bristlenose</title>
+
+<!-- Google Fonts: Inter (variable, full range) -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap" rel="stylesheet">
+
+<style>
+/* ── Local font files (platform fonts for cross-platform preview) ── */
+
+@font-face {
+    font-family: "Segoe UI Local";
+    src: url("fonts/segoeui.woff2") format("woff2"),
+         url("fonts/SegoeUI.woff2") format("woff2"),
+         url("fonts/segoeui.ttf") format("truetype");
+    font-weight: 100 900;
+    font-display: swap;
+}
+@font-face {
+    font-family: "Segoe UI Local";
+    src: url("fonts/segoeuib.woff2") format("woff2"),
+         url("fonts/SegoeUI-Bold.woff2") format("woff2");
+    font-weight: 700;
+    font-display: swap;
+}
+@font-face {
+    font-family: "Segoe UI Local";
+    src: url("fonts/seguisb.woff2") format("woff2"),
+         url("fonts/SegoeUI-Semibold.woff2") format("woff2");
+    font-weight: 600;
+    font-display: swap;
+}
+
+/* ── Design tokens ── */
+
+:root {
+    --bn-font-body: "Inter", sans-serif;
+    --bn-font-mono: "SF Mono", "Fira Code", "Consolas", monospace;
+
+    --bn-colour-bg: #ffffff;
+    --bn-colour-text: #1a1a1a;
+    --bn-colour-muted: #6b7280;
+    --bn-colour-border: #e5e7eb;
+    --bn-colour-accent: #2563eb;
+    --bn-colour-hover: #e8f0fe;
+    --bn-colour-quote-bg: #f9fafb;
+    --bn-colour-badge-bg: #f3f4f6;
+    --bn-colour-badge-text: #374151;
+    --bn-colour-border-hover: #d1d5db;
+    --bn-colour-icon-idle: #c9ccd1;
+    --bn-colour-starred: #999;
+    --bn-colour-shadow: rgba(0, 0, 0, 0.1);
+
+    --bn-sentiment-frustration: #ea580c;
+    --bn-sentiment-frustration-bg: #fff7ed;
+    --bn-sentiment-satisfaction: #16a34a;
+    --bn-sentiment-satisfaction-bg: #f0fdf4;
+    --bn-sentiment-confidence: #2563eb;
+    --bn-sentiment-confidence-bg: #eff6ff;
+    --bn-sentiment-delight: #059669;
+    --bn-sentiment-delight-bg: #ecfdf5;
+    --bn-sentiment-confusion: #dc2626;
+    --bn-sentiment-confusion-bg: #fef2f2;
+    --bn-sentiment-doubt: #7c3aed;
+    --bn-sentiment-doubt-bg: #f5f3ff;
+
+    --bn-space-xs: 0.15rem;
+    --bn-space-sm: 0.35rem;
+    --bn-space-md: 0.75rem;
+    --bn-space-lg: 1.5rem;
+
+    --bn-radius-sm: 3px;
+    --bn-radius-md: 6px;
+    --bn-radius-lg: 8px;
+    --bn-radius-pill: 999px;
+
+    --bn-transition-fast: 0.15s ease;
+
+    /* Weight tokens */
+    --bn-weight-light: 370;
+    --bn-weight-normal: 420;
+    --bn-weight-emphasis: 490;
+    --bn-weight-starred: 520;
+    --bn-weight-strong: 700;
+}
+
+/* Dark mode */
+@supports (color: light-dark(#000, #fff)) {
+    :root {
+        color-scheme: light dark;
+        --bn-colour-bg:           light-dark(#ffffff, #111111);
+        --bn-colour-text:         light-dark(#1a1a1a, #e5e7eb);
+        --bn-colour-muted:        light-dark(#6b7280, #9ca3af);
+        --bn-colour-border:       light-dark(#e5e7eb, #2d2d2d);
+        --bn-colour-accent:       light-dark(#2563eb, #60a5fa);
+        --bn-colour-hover:        light-dark(#e8f0fe, #1e293b);
+        --bn-colour-quote-bg:     light-dark(#f9fafb, #1a1a1a);
+        --bn-colour-badge-bg:     light-dark(#f3f4f6, #252525);
+        --bn-colour-badge-text:   light-dark(#374151, #d1d5db);
+        --bn-colour-border-hover: light-dark(#d1d5db, #4b5563);
+        --bn-colour-icon-idle:    light-dark(#c9ccd1, #595959);
+        --bn-colour-starred:      light-dark(#999, #ccc);
+        --bn-colour-shadow:       light-dark(rgba(0,0,0,0.1), rgba(0,0,0,0.4));
+
+        --bn-sentiment-frustration:    light-dark(#ea580c, #fb923c);
+        --bn-sentiment-frustration-bg: light-dark(#fff7ed, #2d1d0e);
+        --bn-sentiment-satisfaction:   light-dark(#16a34a, #4ade80);
+        --bn-sentiment-satisfaction-bg:light-dark(#f0fdf4, #0f2918);
+        --bn-sentiment-confidence:     light-dark(#2563eb, #60a5fa);
+        --bn-sentiment-confidence-bg:  light-dark(#eff6ff, #111d2e);
+        --bn-sentiment-delight:        light-dark(#059669, #34d399);
+        --bn-sentiment-delight-bg:     light-dark(#ecfdf5, #0d261c);
+        --bn-sentiment-confusion:      light-dark(#dc2626, #f87171);
+        --bn-sentiment-confusion-bg:   light-dark(#fef2f2, #2d1515);
+        --bn-sentiment-doubt:          light-dark(#7c3aed, #a78bfa);
+        --bn-sentiment-doubt-bg:       light-dark(#f5f3ff, #1e1533);
+    }
+    [data-theme="light"]:root { color-scheme: light; }
+    [data-theme="dark"]:root  { color-scheme: dark; }
+}
+
+/* ── Page layout ── */
+
+* { box-sizing: border-box; }
+
+body {
+    font-family: var(--bn-font-body);
+    color: var(--bn-colour-text);
+    background: var(--bn-colour-bg);
+    line-height: 1.5;
+    margin: 0;
+    padding: 0;
+    font-size: 16px;
+}
+
+/* ── Control panel (sticky HUD) ── */
+
+.control-panel {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: var(--bn-colour-bg);
+    border-bottom: 1px solid var(--bn-colour-border);
+    padding: 0.6rem 1.25rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+}
+
+.control-row {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    flex-wrap: wrap;
+}
+
+.control-label {
+    font-size: 0.68rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--bn-colour-muted);
+    min-width: 4.5rem;
+}
+
+.control-group {
+    display: flex;
+    gap: 0.25rem;
+    flex-wrap: wrap;
+    align-items: center;
+}
+
+.btn {
+    font-family: var(--bn-font-body);
+    font-size: 0.75rem;
+    padding: 0.25rem 0.55rem;
+    border: 1px solid var(--bn-colour-border);
+    border-radius: var(--bn-radius-md);
+    background: var(--bn-colour-bg);
+    color: var(--bn-colour-text);
+    cursor: pointer;
+    transition: all var(--bn-transition-fast);
+    white-space: nowrap;
+}
+.btn:hover { border-color: var(--bn-colour-border-hover); }
+.btn.active {
+    border-color: var(--bn-colour-accent);
+    color: var(--bn-colour-accent);
+    background: var(--bn-colour-hover);
+}
+
+.slider-wrap {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    min-width: 160px;
+    max-width: 280px;
+}
+.slider-wrap input[type="range"] {
+    flex: 1;
+    accent-color: var(--bn-colour-accent);
+    height: 4px;
+}
+.slider-value {
+    font-family: var(--bn-font-mono);
+    font-size: 0.75rem;
+    min-width: 2.5rem;
+    text-align: right;
+    font-weight: 600;
+}
+
+.hint {
+    font-size: 0.7rem;
+    color: var(--bn-colour-muted);
+    line-height: 1.4;
+    max-width: 80rem;
+}
+
+/* ── Column grid ── */
+
+.columns-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 1px;
+    background: var(--bn-colour-border);
+}
+.columns-grid.single-col {
+    grid-template-columns: 1fr;
+}
+
+.scale-column {
+    background: var(--bn-colour-bg);
+    padding: 1rem 1.25rem 2rem;
+    min-width: 0;
+    overflow: hidden;
+}
+
+.col-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    border-bottom: 2px solid var(--bn-colour-accent);
+    padding-bottom: 0.4rem;
+    margin-bottom: 1rem;
+}
+.col-header h2 {
+    font-size: 0.85rem;
+    font-weight: 600;
+    margin: 0;
+    color: var(--bn-colour-accent);
+}
+.col-header .col-meta {
+    font-size: 0.65rem;
+    color: var(--bn-colour-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+/* ── Token annotation labels ── */
+
+.token-label {
+    font-size: 0.55rem;
+    font-family: var(--bn-font-mono);
+    letter-spacing: 0.02em;
+    padding: 0.05rem 0.3rem;
+    border-radius: 2px;
+    white-space: nowrap;
+    vertical-align: middle;
+    margin-left: 0.4rem;
+    font-weight: 500;
+}
+.token-label.existing {
+    background: #dcfce7;
+    color: #166534;
+}
+.token-label.new-token {
+    background: #fef3c7;
+    color: #92400e;
+}
+.token-label.killed {
+    background: #fecaca;
+    color: #991b1b;
+}
+@supports (color: light-dark(#000, #fff)) {
+    .token-label.existing { background: light-dark(#dcfce7, #0f2918); color: light-dark(#166534, #4ade80); }
+    .token-label.new-token { background: light-dark(#fef3c7, #2d2305); color: light-dark(#92400e, #fbbf24); }
+    .token-label.killed { background: light-dark(#fecaca, #2d1515); color: light-dark(#991b1b, #f87171); }
+}
+
+/* ── Specimen: section wrapper ── */
+
+.specimen {
+    margin-bottom: 1.25rem;
+    position: relative;
+}
+.specimen-label {
+    font-size: 0.58rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--bn-colour-icon-idle);
+    margin-bottom: 0.3rem;
+}
+
+/* ── Specimen: nav bar ── */
+
+.sp-nav {
+    display: flex;
+    gap: 1rem;
+    font-weight: var(--bn-weight-emphasis);
+    color: var(--bn-colour-muted);
+    border-bottom: 1px solid var(--bn-colour-border);
+    padding-bottom: 0.35rem;
+}
+.sp-nav span:first-child {
+    color: var(--bn-colour-accent);
+    border-bottom: 2px solid var(--bn-colour-accent);
+    padding-bottom: calc(0.35rem - 1px);
+    margin-bottom: -1px;
+}
+
+/* ── Specimen: toolbar ── */
+
+.sp-toolbar {
+    display: flex;
+    gap: 0.4rem;
+    flex-wrap: wrap;
+}
+.sp-toolbar-btn {
+    padding: 0.25rem 0.5rem;
+    border: 1px solid var(--bn-colour-border);
+    border-radius: var(--bn-radius-md);
+    color: var(--bn-colour-text);
+    font-weight: var(--bn-weight-normal);
+}
+
+/* ── Specimen: headings ── */
+
+.sp-h2 {
+    font-weight: var(--bn-weight-emphasis);
+    line-height: 1.3;
+    margin: 0;
+}
+.sp-h3 {
+    font-weight: var(--bn-weight-emphasis);
+    line-height: 1.35;
+    margin: 0;
+    color: var(--bn-colour-text);
+}
+
+/* ── Specimen: quote card ── */
+
+.sp-quote {
+    background: var(--bn-colour-quote-bg);
+    border-left: 1px solid var(--bn-colour-border);
+    padding: var(--bn-space-md) 0.8rem;
+    border-radius: 0 var(--bn-radius-md) var(--bn-radius-md) 0;
+    position: relative;
+}
+.sp-quote.starred { border-left-color: var(--bn-colour-starred); }
+.sp-quote .star-icon {
+    position: absolute;
+    top: 0.4rem;
+    right: 0.5rem;
+    color: var(--bn-colour-icon-idle);
+}
+.sp-quote.starred .star-icon { color: var(--bn-colour-starred); }
+.sp-quote .context {
+    display: block;
+    color: var(--bn-colour-muted);
+    margin-bottom: 0.2rem;
+    font-weight: var(--bn-weight-normal);
+}
+.sp-quote .quote-row {
+    display: flex;
+    gap: 0.4rem;
+    align-items: baseline;
+}
+.sp-quote .timecode {
+    flex-shrink: 0;
+    color: var(--bn-colour-accent);
+    font-family: var(--bn-font-mono);
+    font-weight: var(--bn-weight-normal);
+    text-decoration: none;
+}
+.sp-quote .quote-body { flex: 1; min-width: 0; }
+.sp-quote .quote-text {
+    margin: 0;
+    line-height: 1.5;
+}
+.sp-quote .speaker {
+    color: var(--bn-colour-muted);
+    font-weight: var(--bn-weight-normal);
+}
+.sp-quote .badges {
+    display: flex;
+    gap: 0.25rem;
+    flex-wrap: wrap;
+    margin-top: 0.3rem;
+}
+
+/* ── Specimen: badges ── */
+
+.sp-badge {
+    font-family: var(--bn-font-mono);
+    padding: 0.1rem 0.4rem;
+    border-radius: var(--bn-radius-pill);
+    white-space: nowrap;
+    font-weight: var(--bn-weight-normal);
+}
+.sp-badge.sentiment { background: var(--bg); color: var(--fg); }
+.sp-badge.tag { background: var(--bn-colour-badge-bg); color: var(--bn-colour-badge-text); }
+.sp-badge.person { background: var(--bn-colour-badge-bg); color: var(--bn-colour-badge-text); font-weight: var(--bn-weight-emphasis); }
+
+/* ── Specimen: sidebar TOC ── */
+
+.sp-toc {
+    border: 1px solid var(--bn-colour-border);
+    border-radius: var(--bn-radius-md);
+    padding: 0.6rem 0.75rem;
+}
+.sp-toc h4 {
+    margin: 0 0 0.4rem;
+    font-weight: var(--bn-weight-emphasis);
+}
+.sp-toc ul {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+.sp-toc li {
+    padding: 0.15rem 0;
+}
+.sp-toc a {
+    color: var(--bn-colour-accent);
+    text-decoration: none;
+    font-weight: var(--bn-weight-light);
+}
+
+/* ── Specimen: tag filter ── */
+
+.sp-tag-filter {
+    border: 1px solid var(--bn-colour-border);
+    border-radius: var(--bn-radius-md);
+    padding: 0.5rem 0.65rem;
+}
+.sp-tag-filter .group-header {
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    color: var(--bn-colour-muted);
+    margin-bottom: 0.3rem;
+}
+.sp-tag-filter .filter-item {
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+    padding: 0.1rem 0;
+    color: var(--bn-colour-text);
+}
+.sp-tag-filter .filter-count {
+    font-family: var(--bn-font-mono);
+    color: var(--bn-colour-muted);
+    margin-left: auto;
+}
+
+/* ── Specimen: stat card ── */
+
+.sp-stat {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    border: 1px solid var(--bn-colour-border);
+    border-radius: var(--bn-radius-md);
+    padding: 0.5rem 1rem;
+    min-width: 5rem;
+}
+.sp-stat .stat-value {
+    font-weight: var(--bn-weight-normal);
+    line-height: 1.2;
+}
+.sp-stat .stat-label {
+    color: var(--bn-colour-muted);
+}
+
+/* ── Specimen: footer ── */
+
+.sp-footer {
+    color: var(--bn-colour-muted);
+}
+
+/* ── Consolidation map ── */
+
+.consolidation {
+    max-width: 72rem;
+    margin: 2rem auto;
+    padding: 0 1.25rem 3rem;
+}
+.consolidation h2 {
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+}
+.consolidation p {
+    font-size: 0.82rem;
+    color: var(--bn-colour-muted);
+    margin-bottom: 1rem;
+}
+.consolidation table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.78rem;
+}
+.consolidation th {
+    text-align: left;
+    font-size: 0.65rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--bn-colour-muted);
+    border-bottom: 2px solid var(--bn-colour-border);
+    padding: 0.3rem 0.5rem;
+}
+.consolidation td {
+    padding: 0.35rem 0.5rem;
+    border-bottom: 1px solid var(--bn-colour-border);
+    vertical-align: top;
+}
+.consolidation .mono {
+    font-family: var(--bn-font-mono);
+}
+.consolidation .delta-pos { color: #16a34a; }
+.consolidation .delta-neg { color: #dc2626; }
+.consolidation .delta-zero { color: var(--bn-colour-muted); }
+.consolidation .selectors {
+    font-size: 0.68rem;
+    color: var(--bn-colour-muted);
+    max-width: 20rem;
+}
+
+/* ── Token map (in HUD) ── */
+
+.token-map {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(10rem, 1fr));
+    gap: 0.2rem 1rem;
+    font-size: 0.68rem;
+    font-family: var(--bn-font-mono);
+    padding: 0.4rem 0;
+}
+.token-map-entry {
+    display: flex;
+    gap: 0.3rem;
+    align-items: baseline;
+}
+.token-map-name { color: var(--bn-colour-accent); font-weight: 500; }
+.token-map-value { color: var(--bn-colour-text); }
+.token-map-px { color: var(--bn-colour-muted); }
+
+/* Responsive */
+@media (max-width: 1200px) {
+    .columns-grid { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 700px) {
+    .columns-grid { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+
+<!-- ── Control panel ── -->
+<div class="control-panel">
+    <div class="control-row">
+        <span class="control-label">Scale</span>
+        <div class="control-group" id="scale-btns">
+            <button class="btn active" data-scale="side-by-side">Side by side</button>
+            <button class="btn" data-scale="a">A: Apple HIG</button>
+            <button class="btn" data-scale="b">B: Major Third</button>
+            <button class="btn" data-scale="c">C: Hybrid</button>
+            <button class="btn" data-scale="d">D: HIG + callout quotes</button>
+            <button class="btn" data-scale="f">F: HIG + New York quotes</button>
+        </div>
+
+        <span class="control-label" style="margin-left: 0.5rem;">Font</span>
+        <div class="control-group" id="font-btns">
+            <button class="btn active" data-font="inter">Inter</button>
+            <button class="btn" data-font="sf">SF Pro</button>
+            <button class="btn" data-font="segoe">Segoe UI</button>
+        </div>
+
+        <span class="control-label" style="margin-left: 0.5rem;">Theme</span>
+        <div class="control-group" id="theme-btns">
+            <button class="btn active" data-theme="light">Light</button>
+            <button class="btn" data-theme="auto">Auto</button>
+            <button class="btn" data-theme="dark">Dark</button>
+        </div>
+    </div>
+
+    <div class="control-row">
+        <span class="control-label">Base size</span>
+        <div class="slider-wrap">
+            <input type="range" id="base-slider" min="12" max="18" step="0.5" value="16">
+            <span class="slider-value" id="base-value">16px</span>
+        </div>
+        <span class="hint">
+            Adjusts root font-size. All rem values scale proportionally.
+            <strong>Green</strong> = existing token, <strong>amber</strong> = new token, <strong>red</strong> = ad-hoc size being removed.
+        </span>
+    </div>
+
+    <div id="token-map" class="token-map"></div>
+</div>
+
+<!-- ── Columns ── -->
+<div class="columns-grid" id="columns-grid"></div>
+
+<!-- ── Consolidation map ── -->
+<div class="consolidation">
+    <h2>Consolidation Map</h2>
+    <p>Every ad-hoc font-size and the token it collapses into. Delta shows the pixel shift. Scale C (Hybrid) shown.</p>
+    <table>
+        <thead>
+            <tr>
+                <th>Current</th>
+                <th>px</th>
+                <th>Proposed token</th>
+                <th>px</th>
+                <th>Delta</th>
+                <th>Affected selectors</th>
+            </tr>
+        </thead>
+        <tbody id="consolidation-body"></tbody>
+    </table>
+</div>
+
+<script>
+// ── Scale definitions ──
+
+const SCALES = {
+    a: {
+        name: "A: Apple HIG",
+        meta: "Desktop-native",
+        tokens: {
+            micro:   { rem: 0.6,    px: 9.6,  lh: 1.2 },
+            badge:   { rem: 0.6875, px: 11,   lh: 1.3 },
+            caption: { rem: 0.75,   px: 12,   lh: 1.4 },
+            label:   { rem: 0.8125, px: 13,   lh: 1.4 },
+            body:    { rem: 0.8125, px: 13,   lh: 1.45 },
+            callout: { rem: 0.9375, px: 15,   lh: 1.4 },
+            heading: { rem: 1.0625, px: 17,   lh: 1.3 },
+            title:   { rem: 1.375,  px: 22,   lh: 1.25 },
+            display: { rem: 1.75,   px: 28,   lh: 1.2 },
+        },
+    },
+    b: {
+        name: "B: Major Third",
+        meta: "Ratio 1.25 from 14px",
+        tokens: {
+            micro:   { rem: 0.6,    px: 9.6,  lh: 1.2 },
+            badge:   { rem: 0.7,    px: 11.2, lh: 1.3 },
+            caption: { rem: 0.75,   px: 12,   lh: 1.4 },
+            label:   { rem: 0.875,  px: 14,   lh: 1.45 },
+            body:    { rem: 0.875,  px: 14,   lh: 1.5 },
+            callout: { rem: 0.875,  px: 14,   lh: 1.5 },
+            heading: { rem: 1.09375,px: 17.5, lh: 1.3 },
+            title:   { rem: 1.375,  px: 22,   lh: 1.25 },
+            display: { rem: 1.71875,px: 27.5, lh: 1.2 },
+        },
+    },
+    c: {
+        name: "C: Hybrid",
+        meta: "HIG stops + Inter offset",
+        tokens: {
+            micro:   { rem: 0.6,    px: 9.6,  lh: 1.2 },
+            badge:   { rem: 0.72,   px: 11.5, lh: 1.3 },
+            caption: { rem: 0.75,   px: 12,   lh: 1.4 },
+            label:   { rem: 0.8125, px: 13,   lh: 1.45 },
+            body:    { rem: 0.875,  px: 14,   lh: 1.5 },
+            callout: { rem: 0.9375, px: 15,   lh: 1.4 },
+            heading: { rem: 1.125,  px: 18,   lh: 1.3 },
+            title:   { rem: 1.375,  px: 22,   lh: 1.25 },
+            display: { rem: 1.75,   px: 28,   lh: 1.2 },
+        },
+    },
+    d: {
+        name: "D: HIG + callout quotes",
+        meta: "Quotes at 15px, chrome at 13px",
+        tokens: {
+            micro:   { rem: 0.6,    px: 9.6,  lh: 1.2 },
+            badge:   { rem: 0.6875, px: 11,   lh: 1.3 },
+            caption: { rem: 0.75,   px: 12,   lh: 1.4 },
+            label:   { rem: 0.8125, px: 13,   lh: 1.4 },
+            body:    { rem: 0.8125, px: 13,   lh: 1.45 },
+            callout: { rem: 0.9375, px: 15,   lh: 1.45 },
+            heading: { rem: 1.0625, px: 17,   lh: 1.3 },
+            title:   { rem: 1.375,  px: 22,   lh: 1.25 },
+            display: { rem: 1.75,   px: 28,   lh: 1.2 },
+        },
+        // Quote text uses callout instead of body
+        quoteToken: "callout",
+    },
+    f: {
+        name: "F: HIG + New York quotes",
+        meta: "Serif quotes at 15px, SF chrome",
+        tokens: {
+            micro:   { rem: 0.6,    px: 9.6,  lh: 1.2 },
+            badge:   { rem: 0.6875, px: 11,   lh: 1.3 },
+            caption: { rem: 0.75,   px: 12,   lh: 1.4 },
+            label:   { rem: 0.8125, px: 13,   lh: 1.4 },
+            body:    { rem: 0.8125, px: 13,   lh: 1.45 },
+            callout: { rem: 0.9375, px: 15,   lh: 1.5 },
+            heading: { rem: 1.0625, px: 17,   lh: 1.3 },
+            title:   { rem: 1.375,  px: 22,   lh: 1.25 },
+            display: { rem: 1.75,   px: 28,   lh: 1.2 },
+        },
+        quoteToken: "callout",
+        // New York is Apple's system serif — available on macOS Catalina+
+        quoteFont: '"New York", "New York Large", "New York Medium", "New York Small", ui-serif, Georgia, serif',
+    },
+};
+
+// ── Font families ──
+
+const FONTS = {
+    inter: '"Inter", sans-serif',
+    sf:    '-apple-system, BlinkMacSystemFont, system-ui, sans-serif',
+    segoe: '"Segoe UI Local", "Segoe UI", sans-serif',
+};
+
+// ── State ──
+
+let currentView = "side-by-side";
+let currentFont = "inter";
+let basePx = 16;
+
+// ── Consolidation data (Scale C mapping) ──
+
+const CONSOLIDATION = [
+    { cur: "0.92rem", curPx: 14.7, token: "--bn-text-body", toPx: 14, selectors: ".bn-featured-quote .quote-text" },
+    { cur: "0.9rem",  curPx: 14.4, token: "--bn-text-body", toPx: 14, selectors: "table, .toc li, .speaker, .bn-radio-label, .bn-dashboard-nav li" },
+    { cur: "0.88rem", curPx: 14.1, token: "--bn-text-body", toPx: 14, selectors: ".bn-tab, .bn-session-label" },
+    { cur: "0.875rem",curPx: 14,   token: "--bn-text-body", toPx: 14, selectors: ".search-input, .help-section dd" },
+    { cur: "0.85rem", curPx: 13.6, token: "--bn-text-body", toPx: 14, selectors: ".context, .transcript-meta, .codebook-description, .clipboard-toast, .bn-project-stat--text" },
+    { cur: "0.95rem", curPx: 15.2, token: "--bn-text-callout", toPx: 15, selectors: ".bn-session-moderators, .toolbar-icon" },
+    { cur: "0.82rem", curPx: 13.1, token: "--bn-text-label", toPx: 13, selectors: ".toolbar-btn, .tag-filter-item, .bn-featured-footer, .bn-session-journey, .header-meta, .feedback-label, .analysis-heatmap, .new-group-label (14 selectors)" },
+    { cur: "0.8rem",  curPx: 12.8, token: "--bn-text-label", toPx: 13, selectors: ".bn-project-stat-label, .timecode, .star-btn, .heatmap-cell, .signal-card-footer (8 selectors)" },
+    { cur: "0.78rem", curPx: 12.5, token: "--bn-text-caption", toPx: 12, selectors: ".tag-filter-action, .group-subtitle" },
+    { cur: "1.05rem", curPx: 16.8, token: "--bn-text-heading", toPx: 18, selectors: ".signal-card-location" },
+    { cur: "1.25rem", curPx: 20,   token: "--bn-text-heading", toPx: 18, selectors: ".help-modal h2" },
+    { cur: "1.1rem",  curPx: 17.6, token: "--bn-text-heading", toPx: 18, selectors: "h3, .toc h2, .header-doc-title, .feedback-modal h2" },
+    { cur: "1.35rem", curPx: 21.6, token: "--bn-text-title", toPx: 22, selectors: "h2, .header-logotype, .header-project" },
+    { cur: "1.5rem",  curPx: 24,   token: "--bn-text-title", toPx: 22, selectors: ".bn-project-stat-value" },
+    { cur: "0.7rem",  curPx: 11.2, token: "--bn-text-badge", toPx: 11.5, selectors: ".signal-card-source, .group-total-label, .tag-filter-group-header, .bn-play-icon" },
+    { cur: "0.65rem", curPx: 10.4, token: "--bn-text-micro", toPx: 9.6, selectors: ".confidence-badge, .margin-tags .badge, .feedback-sentiment-label" },
+];
+
+// ── Specimen HTML generator ──
+
+function specimenHTML(scale) {
+    const t = scale.tokens;
+    const qt = scale.quoteToken ? t[scale.quoteToken] : t.body;
+    const qf = scale.quoteFont || "";
+    const s = (token) => `font-size:${token.rem}rem; line-height:${token.lh};`;
+
+    return `
+    <!-- Nav bar -->
+    <div class="specimen">
+        <div class="specimen-label">Nav bar <span class="token-label existing">body ${t.body.px}px</span></div>
+        <div class="sp-nav" style="${s(t.body)}">
+            <span>Quotes</span>
+            <span>Sessions</span>
+            <span>Analysis</span>
+            <span>Codebook</span>
+        </div>
+    </div>
+
+    <!-- Toolbar -->
+    <div class="specimen">
+        <div class="specimen-label">Toolbar <span class="token-label new-token">label ${t.label.px}px</span></div>
+        <div class="sp-toolbar" style="${s(t.label)}">
+            <span class="sp-toolbar-btn">Export CSV ▾</span>
+            <span class="sp-toolbar-btn">Search</span>
+            <span class="sp-toolbar-btn">Hidden (2)</span>
+            <span class="sp-toolbar-btn">⭐ Starred</span>
+        </div>
+    </div>
+
+    <!-- Section heading -->
+    <div class="specimen">
+        <div class="specimen-label">Section heading <span class="token-label existing">title ${t.title.px}px</span></div>
+        <div class="sp-h2" style="${s(t.title)}">Community and Social Connection</div>
+    </div>
+
+    <!-- Theme heading -->
+    <div class="specimen">
+        <div class="specimen-label">Theme heading <span class="token-label existing">heading ${t.heading.px}px</span></div>
+        <div class="sp-h3" style="${s(t.heading)}">Learning Journey and Skill Development</div>
+    </div>
+
+    <!-- Quote card (regular) -->
+    <div class="specimen">
+        <div class="specimen-label">Quote card <span class="token-label ${scale.quoteToken ? 'new-token' : 'existing'}">${scale.quoteToken || 'body'} ${qt.px}px${qf ? ' · serif' : ''}</span></div>
+        <div class="sp-quote">
+            <span class="star-icon">☆</span>
+            <span class="context" style="${s(t.label)}">Discussing first climbing experience</span>
+            <div class="quote-row">
+                <a class="timecode" style="${s(t.caption)}; font-size:${t.caption.rem}rem;">[03:22]</a>
+                <div class="quote-body">
+                    <p class="quote-text" style="${s(qt)} font-weight:var(--bn-weight-normal);${qf ? ' font-family:' + qf + ';' : ''}">"I started maybe six years ago at a local indoor gym. A friend dragged me along and I was honestly terrible at first, but there was something about the problem-solving aspect that really hooked me."</p>
+                </div>
+            </div>
+            <span class="speaker" style="${s(t.label)}">— p1 (Alex Chen)</span>
+            <div class="badges">
+                <span class="sp-badge sentiment" style="${s(t.badge)} --bg:var(--bn-sentiment-satisfaction-bg); --fg:var(--bn-sentiment-satisfaction);">satisfaction</span>
+                <span class="sp-badge tag" style="${s(t.badge)}">onboarding</span>
+                <span class="sp-badge tag" style="${s(t.badge)}">motivation</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Starred quote card -->
+    <div class="specimen">
+        <div class="specimen-label">Starred quote <span class="token-label ${scale.quoteToken ? 'new-token' : 'existing'}">${scale.quoteToken || 'body'} ${qt.px}px · weight 520${qf ? ' · serif' : ''}</span></div>
+        <div class="sp-quote starred">
+            <span class="star-icon">★</span>
+            <span class="context" style="${s(t.label)}">On long-term engagement</span>
+            <div class="quote-row">
+                <a class="timecode" style="${s(t.caption)}; font-size:${t.caption.rem}rem;">[08:17]</a>
+                <div class="quote-body">
+                    <p class="quote-text" style="${s(qt)} font-weight:var(--bn-weight-starred);${qf ? ' font-family:' + qf + ';' : ''}">"I think what keeps me coming back is that every session feels different. Even if I'm projecting the same route, my body feels different, the conditions change, and I have to solve it fresh each time."</p>
+                </div>
+            </div>
+            <span class="speaker" style="${s(t.label)}">— p2 (Jordan Rivera)</span>
+            <div class="badges">
+                <span class="sp-badge sentiment" style="${s(t.badge)} --bg:var(--bn-sentiment-confidence-bg); --fg:var(--bn-sentiment-confidence);">confidence</span>
+                <span class="sp-badge tag" style="${s(t.badge)}">retention</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sidebar TOC -->
+    <div class="specimen">
+        <div class="specimen-label">Sidebar TOC <span class="token-label existing">body-sm/label</span></div>
+        <div class="sp-toc">
+            <h4 style="${s(t.heading)}">Sections</h4>
+            <ul style="${s(t.label)}">
+                <li><a href="#">Community and Social Connection</a></li>
+                <li><a href="#">Risk Management and Safety</a></li>
+                <li><a href="#">Equipment and Gear Preferences</a></li>
+                <li><a href="#">Training and Progression</a></li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- Tag filter -->
+    <div class="specimen">
+        <div class="specimen-label">Tag filter <span class="token-label new-token">label ${t.label.px}px</span></div>
+        <div class="sp-tag-filter">
+            <div class="group-header" style="font-size:${t.badge.rem}rem;">SENTIMENTS</div>
+            <div class="filter-item" style="${s(t.label)}">
+                <input type="checkbox" checked> frustration
+                <span class="filter-count" style="font-size:${t.badge.rem}rem;">(12)</span>
+            </div>
+            <div class="filter-item" style="${s(t.label)}">
+                <input type="checkbox" checked> satisfaction
+                <span class="filter-count" style="font-size:${t.badge.rem}rem;">(8)</span>
+            </div>
+            <div class="filter-item" style="${s(t.label)}">
+                <input type="checkbox"> delight
+                <span class="filter-count" style="font-size:${t.badge.rem}rem;">(5)</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Stat cards -->
+    <div class="specimen">
+        <div class="specimen-label">Stat cards <span class="token-label existing">title + label</span></div>
+        <div style="display:flex; gap:0.6rem; flex-wrap:wrap;">
+            <div class="sp-stat">
+                <span class="stat-value" style="${s(t.title)}"">42</span>
+                <span class="stat-label" style="${s(t.label)}">Quotes</span>
+            </div>
+            <div class="sp-stat">
+                <span class="stat-value" style="${s(t.title)}">6</span>
+                <span class="stat-label" style="${s(t.label)}">Sessions</span>
+            </div>
+            <div class="sp-stat">
+                <span class="stat-value" style="${s(t.title)}">2:14:38</span>
+                <span class="stat-label" style="${s(t.label)}">Duration</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Badge row -->
+    <div class="specimen">
+        <div class="specimen-label">Badge row <span class="token-label existing">badge ${t.badge.px}px</span></div>
+        <div style="display:flex; gap:0.3rem; flex-wrap:wrap; align-items:center;">
+            <span class="sp-badge sentiment" style="${s(t.badge)} --bg:var(--bn-sentiment-frustration-bg); --fg:var(--bn-sentiment-frustration);">frustration</span>
+            <span class="sp-badge sentiment" style="${s(t.badge)} --bg:var(--bn-sentiment-delight-bg); --fg:var(--bn-sentiment-delight);">delight</span>
+            <span class="sp-badge tag" style="${s(t.badge)}">onboarding</span>
+            <span class="sp-badge tag" style="${s(t.badge)}">peer-support</span>
+            <span class="sp-badge person" style="${s(t.badge)}">p1</span>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="specimen">
+        <div class="specimen-label">Footer <span class="token-label existing">caption ${t.caption.px}px</span></div>
+        <div class="sp-footer" style="${s(t.caption)}">Generated by Bristlenose v0.14.2</div>
+    </div>`;
+}
+
+// ── Token map display ──
+
+function renderTokenMap(scaleId) {
+    const scale = SCALES[scaleId];
+    const el = document.getElementById("token-map");
+    el.innerHTML = Object.entries(scale.tokens).map(([name, t]) =>
+        `<div class="token-map-entry">
+            <span class="token-map-name">${name}</span>
+            <span class="token-map-value">${t.rem}rem</span>
+            <span class="token-map-px">${t.px}px</span>
+        </div>`
+    ).join("");
+}
+
+// ── Main render ──
+
+function render() {
+    const grid = document.getElementById("columns-grid");
+    const fontFamily = FONTS[currentFont];
+
+    document.documentElement.style.fontSize = basePx + "px";
+
+    if (currentView === "side-by-side") {
+        grid.classList.remove("single-col");
+        grid.innerHTML = ["a", "b", "c", "d", "f"].map(id => {
+            const scale = SCALES[id];
+            return `<div class="scale-column" style="font-family:${fontFamily};">
+                <div class="col-header">
+                    <h2>${scale.name}</h2>
+                    <span class="col-meta">${scale.meta}</span>
+                </div>
+                ${specimenHTML(scale)}
+            </div>`;
+        }).join("");
+        renderTokenMap("c");
+    } else {
+        grid.classList.add("single-col");
+        const scale = SCALES[currentView];
+        grid.innerHTML = `<div class="scale-column" style="font-family:${fontFamily}; max-width:48rem;">
+            <div class="col-header">
+                <h2>${scale.name}</h2>
+                <span class="col-meta">${scale.meta}</span>
+            </div>
+            ${specimenHTML(scale)}
+        </div>`;
+        renderTokenMap(currentView);
+    }
+}
+
+// ── Consolidation map table ──
+
+function renderConsolidation() {
+    const tbody = document.getElementById("consolidation-body");
+    tbody.innerHTML = CONSOLIDATION.map(row => {
+        const delta = row.toPx - row.curPx;
+        const sign = delta > 0 ? "+" : "";
+        const cls = delta > 0 ? "delta-pos" : delta < 0 ? "delta-neg" : "delta-zero";
+        return `<tr>
+            <td class="mono">${row.cur}</td>
+            <td class="mono">${row.curPx}</td>
+            <td class="mono">${row.token}</td>
+            <td class="mono">${row.toPx}</td>
+            <td class="mono ${cls}">${sign}${delta.toFixed(1)}px</td>
+            <td class="selectors">${row.selectors}</td>
+        </tr>`;
+    }).join("");
+}
+
+// ── Event handlers ──
+
+document.getElementById("scale-btns").addEventListener("click", (e) => {
+    const btn = e.target.closest(".btn");
+    if (!btn) return;
+    currentView = btn.dataset.scale;
+    document.querySelectorAll("#scale-btns .btn").forEach(b =>
+        b.classList.toggle("active", b === btn));
+    render();
+});
+
+document.getElementById("font-btns").addEventListener("click", (e) => {
+    const btn = e.target.closest(".btn");
+    if (!btn) return;
+    currentFont = btn.dataset.font;
+    document.querySelectorAll("#font-btns .btn").forEach(b =>
+        b.classList.toggle("active", b === btn));
+    render();
+});
+
+document.getElementById("theme-btns").addEventListener("click", (e) => {
+    const btn = e.target.closest(".btn");
+    if (!btn) return;
+    const t = btn.dataset.theme;
+    if (t === "auto") document.documentElement.removeAttribute("data-theme");
+    else document.documentElement.setAttribute("data-theme", t);
+    document.querySelectorAll("#theme-btns .btn").forEach(b =>
+        b.classList.toggle("active", b === btn));
+});
+
+const baseSlider = document.getElementById("base-slider");
+const baseValue = document.getElementById("base-value");
+baseSlider.addEventListener("input", () => {
+    basePx = parseFloat(baseSlider.value);
+    baseValue.textContent = basePx + "px";
+    render();
+});
+
+// ── Init ──
+
+document.documentElement.setAttribute("data-theme", "light");
+render();
+renderConsolidation();
+</script>
+</body>
+</html>

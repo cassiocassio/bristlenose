@@ -8,7 +8,7 @@
 
 .bn-setting-group legend {
     font-weight: var(--bn-weight-emphasis);
-    font-size: 0.95rem;
+    font-size: var(--bn-text-label);
     color: var(--bn-colour-text);
     margin-bottom: var(--bn-space-sm);
 }
@@ -19,7 +19,7 @@
     gap: var(--bn-space-xs);
     padding: var(--bn-space-xs) 0;
     cursor: pointer;
-    font-size: 0.9rem;
+    font-size: var(--bn-text-label);
     color: var(--bn-colour-text);
 }
 
@@ -29,14 +29,14 @@
 }
 
 .bn-setting-description {
-    font-size: 0.85rem;
+    font-size: var(--bn-text-label);
     color: var(--bn-colour-muted);
     margin: 0 0 var(--bn-space-sm) 0;
-    line-height: 1.45;
+    line-height: var(--bn-text-label-lh);
 }
 
 .bn-locale-select {
-    font-size: 0.9rem;
+    font-size: var(--bn-text-label);
     padding: var(--bn-space-xs) var(--bn-space-sm);
     border: 1px solid var(--bn-colour-border);
     border-radius: var(--bn-radius-sm);
@@ -63,14 +63,14 @@
 }
 
 .bn-config-ref-intro {
-    font-size: 0.9rem;
+    font-size: var(--bn-text-label);
     color: var(--bn-colour-muted);
     margin: 0 0 var(--bn-space-lg) 0;
-    line-height: 1.5;
+    line-height: var(--bn-text-label-lh);
 }
 
 .bn-config-ref-intro code {
-    font-size: 0.85rem;
+    font-size: var(--bn-text-label);
     background: var(--bn-hover-bg);
     padding: 0.1em 0.35em;
     border-radius: var(--bn-radius-sm);
@@ -86,7 +86,7 @@
 }
 
 .bn-config-ref-chip {
-    font-size: 0.8rem;
+    font-size: var(--bn-text-label);
     padding: 0.25em 0.65em;
     border: 1px solid var(--bn-colour-border);
     border-radius: var(--bn-radius-pill);
@@ -107,7 +107,7 @@
 /* Category sections */
 
 .bn-config-ref-section h3 {
-    font-size: 0.95rem;
+    font-size: var(--bn-text-label);
     font-weight: var(--bn-weight-emphasis);
     margin: var(--bn-space-lg) 0 var(--bn-space-sm) 0;
     padding-bottom: var(--bn-space-xs);
@@ -125,7 +125,7 @@
     align-items: baseline;
     padding: var(--bn-space-sm) 0;
     border-bottom: 1px solid var(--bn-hover-bg);
-    font-size: 0.85rem;
+    font-size: var(--bn-text-label);
 }
 
 .bn-config-ref-label {
@@ -137,7 +137,7 @@
 .bn-config-ref-value {
     grid-column: 2;
     grid-row: 1;
-    font-size: 0.8rem;
+    font-size: var(--bn-text-label);
     color: var(--bn-colour-muted);
     white-space: nowrap;
     overflow: hidden;
@@ -148,7 +148,7 @@
 .bn-config-ref-file {
     grid-column: 3;
     grid-row: 1;
-    font-size: 0.75rem;
+    font-size: var(--bn-text-caption);
     color: var(--bn-colour-muted);
     background: var(--bn-hover-bg);
     padding: 0.15em 0.5em;
@@ -168,7 +168,7 @@
 }
 
 .bn-config-ref-envvar {
-    font-size: 0.75rem;
+    font-size: var(--bn-text-caption);
     color: var(--bn-colour-muted);
     cursor: pointer;
     transition: color var(--bn-transition-fast);
@@ -187,7 +187,7 @@
 }
 
 .bn-config-ref-options {
-    font-size: 0.75rem;
+    font-size: var(--bn-text-caption);
     color: var(--bn-colour-muted);
     opacity: 0.7;
 }

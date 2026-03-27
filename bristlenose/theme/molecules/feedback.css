@@ -8,7 +8,7 @@
 }
 
 .feedback-modal h2 {
-    font-size: 1.1rem;
+    font-size: var(--bn-text-heading);
 }
 
 /* Sentiment picker — 5 emoji faces in a row */
@@ -43,12 +43,12 @@
 }
 
 .feedback-sentiment-face {
-    font-size: 1.5rem;
+    font-size: var(--bn-text-display);
     line-height: 1;
 }
 
 .feedback-sentiment-label {
-    font-size: 0.65rem;
+    font-size: var(--bn-text-micro);
     color: var(--bn-colour-muted);
     white-space: nowrap;
 }
@@ -56,7 +56,7 @@
 /* Label */
 .feedback-label {
     display: block;
-    font-size: 0.82rem;
+    font-size: var(--bn-text-label);
     font-weight: var(--bn-weight-emphasis);
     color: var(--bn-colour-text);
     margin-bottom: var(--bn-space-sm);
@@ -70,7 +70,7 @@
     min-height: 5rem;
     padding: var(--bn-space-md);
     font-family: var(--bn-font-body);
-    font-size: 0.85rem;
+    font-size: var(--bn-text-label);
     color: var(--bn-colour-text);
     background: var(--bn-colour-bg);
     border: 1px solid var(--bn-colour-border);
@@ -99,7 +99,7 @@
 .feedback-btn {
     padding: 0.45rem 1rem;
     font-family: var(--bn-font-body);
-    font-size: 0.82rem;
+    font-size: var(--bn-text-label);
     border-radius: var(--bn-radius-md);
     cursor: pointer;
     transition: background var(--bn-transition-fast), border-color var(--bn-transition-fast);

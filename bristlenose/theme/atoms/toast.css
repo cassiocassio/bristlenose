@@ -8,7 +8,7 @@
     color: var(--bn-colour-bg);
     padding: 0.6rem 1.2rem;
     border-radius: var(--bn-radius-lg);
-    font-size: 0.85rem;
+    font-size: var(--bn-text-label);
     opacity: 0;
     transform: translateY(0.5rem);
     transition: opacity 0.25s ease, transform 0.25s ease;

@@ -18,7 +18,7 @@
     border: none;
     border-bottom: 3px solid transparent;
     font-family: var(--bn-font-body);
-    font-size: 0.88rem;
+    font-size: var(--bn-text-label);
     font-weight: var(--bn-weight-emphasis);
     color: var(--bn-colour-muted);
     cursor: pointer;
@@ -76,7 +76,7 @@
     background: none;
     border: none;
     font-family: var(--bn-font-body);
-    font-size: 0.88rem;
+    font-size: var(--bn-text-label);
     color: var(--bn-colour-accent);
     cursor: pointer;
     padding: 0.3rem 0.5rem;
@@ -89,7 +89,7 @@
 }
 
 .bn-session-label {
-    font-size: 0.88rem;
+    font-size: var(--bn-text-label);
     font-weight: var(--bn-weight-emphasis);
     color: var(--bn-colour-text);
 }
@@ -143,7 +143,7 @@
 }
 .bn-dashboard-nav li {
     margin: var(--bn-space-xs) 0;
-    font-size: 0.9rem;
+    font-size: var(--bn-text-label);
 }
 .bn-dashboard-nav a {
     color: var(--bn-colour-accent);
@@ -178,14 +178,14 @@
 }
 
 .bn-project-stat-value {
-    font-size: 1.5rem;
+    font-size: var(--bn-text-display);
     font-weight: var(--bn-weight-normal);
     color: var(--bn-colour-text);
-    line-height: 1.2;
+    line-height: var(--bn-text-display-lh);
 }
 
 .bn-project-stat-label {
-    font-size: 0.8rem;
+    font-size: var(--bn-text-label);
     color: var(--bn-colour-text);
     margin-top: 0.15rem;
     text-align: center;
@@ -219,7 +219,7 @@
 /* Text-style stat card (e.g. "Moderator: Name, Name, and Name") */
 .bn-project-stat--text {
     flex-direction: row;
-    font-size: 0.85rem;
+    font-size: var(--bn-text-label);
     color: var(--bn-colour-text);
 }
 .bn-project-stat--text .bn-project-stat-label {
@@ -251,14 +251,14 @@
 }
 
 .bn-featured-quote .quote-text {
-    font-size: 0.92rem;
+    font-size: var(--bn-text-label);
     line-height: 1.55;
     flex: 1;
 }
 
 .bn-featured-quote .context {
     display: block;
-    font-size: 0.8rem;
+    font-size: var(--bn-text-label);
     color: var(--bn-colour-muted);
     margin-bottom: var(--bn-space-xs);
 }
@@ -269,13 +269,65 @@
     align-items: center;
     gap: 1rem;
     margin-top: var(--bn-space-sm);
-    font-size: 0.82rem;
+    font-size: var(--bn-text-label);
     color: var(--bn-colour-muted);
     flex-wrap: wrap;
 }
 .bn-featured-footer a.badge {
     text-decoration: none;
     color: var(--bn-colour-badge-text);
+}
+
+/* Export dropdown (NavBar) — action menu for quote/report exports */
+.export-dropdown-wrapper {
+    position: relative;
+}
+
+.export-dropdown-menu {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    margin: 0.25rem 0 0;
+    padding: 0.25rem 0;
+    list-style: none;
+    background: var(--bn-colour-bg);
+    border: 1px solid var(--bn-colour-border);
+    border-radius: var(--bn-radius-md);
+    box-shadow: 0 4px 12px var(--bn-colour-shadow);
+    min-width: 14rem;
+    z-index: 200;
+}
+
+.export-dropdown-item {
+    display: flex;
+    align-items: center;
+    gap: var(--bn-space-sm);
+    padding: 0.4rem 0.85rem;
+    font-size: var(--bn-text-body-sm);
+    color: var(--bn-colour-text);
+    cursor: pointer;
+    transition: background var(--bn-transition-fast);
+    white-space: nowrap;
+}
+
+.export-dropdown-item:hover,
+.export-dropdown-item:focus {
+    background: var(--bn-colour-quote-bg);
+    outline: none;
+}
+
+.export-dropdown-hint {
+    padding: 0 0.85rem 0.25rem;
+    font-size: var(--bn-text-caption);
+    color: var(--bn-colour-muted);
+    list-style: none;
+}
+
+.export-dropdown-separator {
+    height: 0;
+    margin: 0.25rem 0;
+    border-top: 1px solid var(--bn-colour-border);
+    list-style: none;
 }
 
 /* Responsive: collapse dashboard to single column, scroll nav */
@@ -286,7 +338,7 @@
     }
 
     .bn-tab {
-        font-size: 0.82rem;
+        font-size: var(--bn-text-label);
         padding: 0.5rem 0.75rem;
     }
 

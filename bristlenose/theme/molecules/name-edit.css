@@ -13,7 +13,7 @@
     transform: translateY(-50%);
     background: none;
     border: none;
-    font-size: 0.8rem;
+    font-size: var(--bn-text-label);
     color: var(--bn-colour-icon-idle);
     cursor: pointer;
     padding: var(--bn-space-xs);

@@ -21,7 +21,7 @@
     left: 0;
     display: inline-block;
     font-family: var(--bn-font-mono);
-    font-size: 0.65rem;
+    font-size: var(--bn-text-micro);
     padding: 2px 6px;
     border-radius: var(--bn-radius-sm);
     border: none;
@@ -65,7 +65,7 @@
     display: block;
     flex: 1;
     min-width: 0;
-    font-size: 0.85rem;
+    font-size: var(--bn-text-label);
     color: var(--bn-colour-muted);
     margin-bottom: 0;
     padding-left: 0;
@@ -93,7 +93,7 @@
     border: none;
     border-radius: 50%;
     color: var(--bn-colour-danger, #dc2626);
-    font-size: 0.6rem;
+    font-size: var(--bn-text-micro);
     font-weight: var(--bn-weight-strong);
     line-height: 1;
     cursor: pointer;
@@ -118,7 +118,7 @@
 
 .moderator-question-more {
     font-style: normal;
-    font-size: 0.75rem;
+    font-size: var(--bn-text-caption);
     color: var(--bn-colour-accent);
     cursor: pointer;
     margin-left: 0.3rem;

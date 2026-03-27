@@ -43,7 +43,7 @@
 }
 
 .tag-filter-action {
-    font-size: 0.78rem;
+    font-size: var(--bn-text-caption);
     color: var(--bn-colour-accent);
     text-decoration: none;
     cursor: pointer;
@@ -59,7 +59,7 @@
 
 .tag-filter-separator {
     color: var(--bn-colour-border);
-    font-size: 0.78rem;
+    font-size: var(--bn-text-caption);
 }
 
 .tag-filter-search {
@@ -73,7 +73,7 @@
     box-sizing: border-box;
     padding: 0.3rem 0.5rem;
     font-family: var(--bn-font-body);
-    font-size: 0.78rem;
+    font-size: var(--bn-text-caption);
     color: var(--bn-colour-text);
     background: var(--bn-colour-quote-bg);
     border: 1px solid var(--bn-colour-border);
@@ -105,7 +105,7 @@
 /* Group header — codebook group name label inside the tinted container */
 .tag-filter-group-header {
     padding: 0.3rem 0.5rem 0.15rem;
-    font-size: 0.7rem;
+    font-size: var(--bn-text-badge);
     font-weight: var(--bn-weight-emphasis);
     color: var(--bn-colour-muted);
     text-transform: uppercase;
@@ -118,7 +118,7 @@
     align-items: center;
     gap: 0.5rem;
     padding: 0.3rem 0.85rem;
-    font-size: 0.82rem;
+    font-size: var(--bn-text-label);
     color: var(--bn-colour-text);
     cursor: pointer;
     transition: background var(--bn-transition-fast);
@@ -155,7 +155,7 @@
 
 .tag-filter-count {
     margin-left: auto;
-    font-size: 0.72rem;
+    font-size: var(--bn-text-badge);
     color: var(--bn-colour-muted);
     font-variant-numeric: tabular-nums;
 }

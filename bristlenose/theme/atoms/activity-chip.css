@@ -17,7 +17,7 @@
     color: var(--bn-colour-bg);
     padding: 0.6rem 1rem;
     border-radius: var(--bn-radius-lg);
-    font-size: 0.82rem;
+    font-size: var(--bn-text-label);
     display: flex;
     align-items: center;
     gap: 0.5rem;
@@ -67,7 +67,7 @@
     border: none;
     color: rgba(255, 255, 255, 0.4);
     cursor: pointer;
-    font-size: 0.9rem;
+    font-size: var(--bn-text-label);
     padding: 0 0.2rem;
     margin-left: 0.3rem;
 }
@@ -81,7 +81,7 @@
     border: none;
     color: rgba(255, 255, 255, 0.5);
     cursor: pointer;
-    font-size: 0.82rem;
+    font-size: var(--bn-text-label);
     padding: 0 0.2rem;
     margin-left: auto;
 }
@@ -102,7 +102,7 @@
     border: none;
     color: rgba(255, 255, 255, 0.4);
     cursor: pointer;
-    font-size: 0.7rem;
+    font-size: var(--bn-text-badge);
     padding: 0 0.2rem;
     margin-left: auto;
 }

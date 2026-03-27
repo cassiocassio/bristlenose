@@ -27,6 +27,6 @@
     border-radius: 50%;
     border: 2px solid var(--bn-colour-muted);
     color: var(--bn-colour-muted);
-    font-size: 0.7rem;
+    font-size: var(--bn-text-badge);
     padding-left: 2px;
 }

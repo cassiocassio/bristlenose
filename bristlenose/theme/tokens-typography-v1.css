@@ -1,0 +1,34 @@
+/* Typography tokens v1 — ARCHIVE (pre-Scale D).
+   This file is NOT loaded by the browser. It preserves the original 5-token
+   scale for A/B comparison during the type scale migration.
+
+   To revert to v1: copy this file over tokens-typography.css and reload.
+   See also: tokens-desktop-v1.css for the matching desktop overrides. */
+
+:root {
+    --bn-font-body: "Inter", "Segoe UI Variable", "Segoe UI", system-ui, -apple-system,
+        "Hiragino Kaku Gothic ProN", "Hiragino Sans",
+        "Yu Gothic UI",
+        "Malgun Gothic",
+        "Apple SD Gothic Neo",
+        "Noto Sans CJK JP", "Noto Sans CJK KR",
+        sans-serif;
+    --bn-font-mono: "SF Mono", "Fira Code", "Consolas", monospace;
+
+    --bn-weight-light: 370;
+    --bn-weight-normal: 420;
+    --bn-weight-emphasis: 490;
+    --bn-weight-starred: 520;
+    --bn-weight-strong: 700;
+
+    --bn-text-caption:     0.75rem;    /* 12px */
+    --bn-text-caption-lh:  1.4;
+    --bn-text-body-sm:     0.8125rem;  /* 13px */
+    --bn-text-body-sm-lh:  1.45;
+    --bn-text-body:        0.875rem;   /* 14px — our base */
+    --bn-text-body-lh:     1.5;
+    --bn-text-heading:     1.125rem;   /* 18px */
+    --bn-text-heading-lh:  1.3;
+    --bn-text-title:       1.375rem;   /* 22px */
+    --bn-text-title-lh:    1.25;
+}

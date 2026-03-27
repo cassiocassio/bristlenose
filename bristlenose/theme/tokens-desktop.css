@@ -17,14 +17,25 @@
     --bn-font-mono: "SF Mono", ui-monospace, monospace;
 
     /* Type scale — adjusted to match Apple HIG conventions.
-       macOS apps typically use 13pt body (vs our 14px web default).
-       SF Pro's x-height is slightly taller than Inter at the same size,
-       so we can go 0.5px smaller and maintain the same apparent size. */
+       Scale D migration in progress (see tokens-desktop-v2.css for target).
+       New tokens added at current values — no visual change until Phase 3. */
+
+    /* New tokens (Phase 1 — available but not yet consumed) */
+    --bn-text-micro:       0.6rem;      /* 9.6px */
+    --bn-text-micro-lh:    1.2;
+    --bn-text-badge:       0.6875rem;   /* 11px — Apple footnote */
+    --bn-text-badge-lh:    1.3;
+    --bn-text-label:       0.8125rem;   /* 13px — Apple body / subheadline */
+    --bn-text-label-lh:    1.4;
+    --bn-text-display:     1.75rem;     /* 28px — Apple title 1 */
+    --bn-text-display-lh:  1.15;
+
+    /* Existing tokens (unchanged — Phase 3 will update body to 15px callout) */
     --bn-text-caption:     0.6875rem;   /* 11px — Apple footnote */
     --bn-text-caption-lh:  1.35;
-    --bn-text-body-sm:     0.8125rem;   /* 13px — Apple body (same as web) */
+    --bn-text-body-sm:     0.8125rem;   /* 13px — will be replaced by --bn-text-label */
     --bn-text-body-sm-lh:  1.4;
-    --bn-text-body:        0.8125rem;   /* 13px — Apple body (web is 14px) */
+    --bn-text-body:        0.8125rem;   /* 13px — will become 15px (callout) in Phase 3 */
     --bn-text-body-lh:     1.45;
     --bn-text-heading:     1.0625rem;   /* 17px — Apple headline */
     --bn-text-heading-lh:  1.3;

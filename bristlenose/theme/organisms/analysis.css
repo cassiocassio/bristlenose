@@ -45,7 +45,8 @@
 
 .signal-card-source {
     display: block;
-    font-size: 0.7rem;
+    font-size: var(--bn-text-badge);
+    line-height: var(--bn-text-badge-lh);
     font-weight: var(--bn-weight-normal);
     text-transform: uppercase;
     letter-spacing: 0.04em;
@@ -54,7 +55,8 @@
 }
 
 .signal-card-location {
-    font-size: 1.05rem;
+    font-size: var(--bn-text-heading);
+    line-height: var(--bn-text-heading-lh);
     font-weight: var(--bn-weight-emphasis);
     margin-bottom: var(--bn-space-sm);
 }
@@ -76,7 +78,7 @@
     grid-template-columns: auto auto auto;
     gap: 0.2rem 0.6rem;
     align-items: center;
-    font-size: 0.8rem;
+    font-size: var(--bn-text-label);
     white-space: nowrap;
 }
 
@@ -88,7 +90,7 @@
 
 .metric-value {
     font-family: var(--bn-font-mono);
-    font-size: 0.8rem;
+    font-size: var(--bn-text-label);
     color: var(--bn-colour-text);
     text-align: right;
 }
@@ -167,7 +169,7 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    font-size: 0.8rem;
+    font-size: var(--bn-text-label);
     color: var(--bn-colour-muted);
 }
 
@@ -182,7 +184,7 @@
 .participant-grid .p-box {
     display: inline-block;
     font-family: var(--bn-font-mono);
-    font-size: 0.72rem;
+    font-size: var(--bn-text-badge);
     padding: var(--bn-space-xs) 0.45rem;
     border-radius: var(--bn-radius-sm);
     line-height: 1;
@@ -192,7 +194,7 @@
 }
 
 .participant-grid .participant-count {
-    font-size: 0.72rem;
+    font-size: var(--bn-text-badge);
     color: var(--bn-colour-muted);
     margin-right: 0.2rem;
     white-space: nowrap;
@@ -215,7 +217,7 @@
 /* Confidence badge — hidden from UI, preserved for future */
 .confidence-badge {
     display: inline-block;
-    font-size: 0.65rem;
+    font-size: var(--bn-text-micro);
     font-weight: var(--bn-weight-emphasis);
     text-transform: uppercase;
     letter-spacing: 0.04em;
@@ -232,7 +234,7 @@
 .analysis-heatmap {
     width: 100%;
     border-collapse: collapse;
-    font-size: 0.82rem;
+    font-size: var(--bn-text-label);
     margin-bottom: var(--bn-space-xl);
 }
 
@@ -240,7 +242,7 @@
     text-align: center;
     padding: 0.5rem 0.3rem;
     font-weight: var(--bn-weight-emphasis);
-    font-size: 0.75rem;
+    font-size: var(--bn-text-caption);
     color: var(--bn-colour-muted);
     border-bottom: 2px solid var(--bn-colour-border);
     white-space: nowrap;
@@ -263,14 +265,14 @@
 .analysis-heatmap td:first-child {
     text-align: left;
     font-weight: var(--bn-weight-emphasis);
-    font-size: 0.85rem;
+    font-size: var(--bn-text-label);
     padding-right: var(--bn-space-md);
 }
 
 /* Cell colouring — inline oklch background set by JS */
 .heatmap-cell {
     font-family: var(--bn-font-mono);
-    font-size: 0.8rem;
+    font-size: var(--bn-text-label);
     font-weight: var(--bn-weight-emphasis);
     border-radius: var(--bn-radius-sm);
     min-width: 36px;
@@ -334,7 +336,7 @@
     transform: rotate(-30deg);
     transform-origin: left bottom;
     white-space: nowrap;
-    font-size: 0.75rem;
+    font-size: var(--bn-text-caption);
     font-weight: var(--bn-weight-emphasis);
     color: var(--bn-colour-muted);
 }
@@ -347,7 +349,7 @@
 
 .signal-quote-tag {
     margin-left: 0.4rem;
-    font-size: 0.72rem;
+    font-size: var(--bn-text-badge);
     vertical-align: middle;
 }
 
@@ -358,7 +360,7 @@
 }
 
 .analysis-codebook-heading {
-    font-size: 0.95rem;
+    font-size: var(--bn-text-label);
     font-weight: var(--bn-weight-emphasis);
     color: var(--bn-colour-text);
     margin: var(--bn-space-lg) 0 var(--bn-space-sm);
@@ -367,7 +369,7 @@
 }
 
 .analysis-heatmap-label {
-    font-size: 0.82rem;
+    font-size: var(--bn-text-label);
     font-weight: var(--bn-weight-emphasis);
     color: var(--bn-colour-muted);
     margin: var(--bn-space-md) 0 var(--bn-space-xs);
@@ -415,7 +417,8 @@
     gap: 0.6rem;
     align-items: center;
     font-family: var(--bn-font-mono);
-    font-size: 0.65rem;
+    font-size: var(--bn-text-micro);
+    line-height: var(--bn-text-micro-lh);
     color: var(--bn-colour-muted);
     margin-bottom: 0.25rem;
 }
@@ -454,8 +457,8 @@
 }
 
 .cell-tooltip-quote {
-    font-size: 0.72rem;
-    line-height: 1.35;
+    font-size: var(--bn-text-badge);
+    line-height: var(--bn-text-badge-lh);
     display: flex;
     gap: 0.3rem;
     align-items: flex-start;
@@ -464,7 +467,7 @@
 .cell-tooltip-quote::before {
     content: "\201C";
     color: var(--bn-colour-muted);
-    font-size: 0.8rem;
+    font-size: var(--bn-text-label);
     line-height: 1;
     flex-shrink: 0;
 }
@@ -481,7 +484,7 @@
 
 .cell-tooltip-speaker {
     font-family: var(--bn-font-mono);
-    font-size: 0.62rem;
+    font-size: var(--bn-text-micro);
     color: var(--bn-colour-muted);
     white-space: nowrap;
     flex-shrink: 0;
@@ -490,7 +493,7 @@
 
 .cell-tooltip-footer {
     font-family: var(--bn-font-mono);
-    font-size: 0.62rem;
+    font-size: var(--bn-text-micro);
     color: var(--bn-colour-muted);
     margin-top: 0.2rem;
 }
@@ -546,7 +549,7 @@
 .pattern-label {
     display: inline-block;
     font-family: var(--bn-font-mono);
-    font-size: 0.72rem;
+    font-size: var(--bn-text-badge);
     font-weight: var(--bn-weight-starred);
     text-transform: uppercase;
     letter-spacing: 0.06em;
@@ -563,10 +566,10 @@
 /* Signal rank counter: "#2" */
 .signal-rank {
     font-family: var(--bn-font-mono);
-    font-size: 1.15rem;
+    font-size: var(--bn-text-heading);
     font-weight: var(--bn-weight-emphasis);
     color: var(--bn-colour-muted);
-    line-height: 1;
+    line-height: var(--bn-text-heading-lh);
 }
 
 /* Mini sparkbar chart — inline in the Signal metric row.
@@ -590,9 +593,9 @@
    <strong> wraps the core assertion (first clause), ending at the
    first natural break. Regular weight for evidence/nuance after. */
 .signal-elaboration {
-    font-size: 0.88rem;
+    font-size: var(--bn-text-label);
     color: var(--bn-colour-text);
-    line-height: 1.55;
+    line-height: var(--bn-text-label-lh);
     margin-bottom: var(--bn-space-sm);
     font-weight: var(--bn-weight-normal);
 }

@@ -3,7 +3,7 @@
 .badge {
     display: inline-block;
     font-family: var(--bn-font-mono);
-    font-size: 0.72rem;
+    font-size: var(--bn-text-badge);
     padding: var(--bn-space-xs) 0.45rem;
     border-radius: var(--bn-radius-sm);
     background: var(--bn-colour-badge-bg);
@@ -59,7 +59,7 @@
     background: var(--bn-colour-bg);
     color: var(--bn-colour-danger, #dc2626);
     border-radius: 50%;
-    font-size: 0.6rem;
+    font-size: var(--bn-text-micro);
     font-weight: var(--bn-weight-strong);
     line-height: 1;
     opacity: 0;
@@ -112,7 +112,7 @@ body.hide-ai-tags .badge-ai { display: none; }
     border: none;
     border-radius: 50%;
     color: var(--bn-colour-danger, #dc2626);
-    font-size: 0.6rem;
+    font-size: var(--bn-text-micro);
     font-weight: var(--bn-weight-strong);
     line-height: 1;
     cursor: pointer;
@@ -197,7 +197,7 @@ body.hide-ai-tags .badge-ai { display: none; }
     justify-content: center;
     width: 1rem;       /* 16px */
     height: 1rem;
-    font-size: 0.65rem;
+    font-size: var(--bn-text-micro);
     font-weight: var(--bn-weight-strong);
     cursor: pointer;
     border: none;

@@ -2,7 +2,7 @@
 
 .transcript-meta {
     color: var(--bn-colour-muted);
-    font-size: 0.85rem;
+    font-size: var(--bn-text-label);
     margin-bottom: var(--bn-space-md);
 }
 
@@ -59,7 +59,7 @@
 .bn-selector__trigger {
     all: unset;
     font: inherit;
-    font-size: 0.9rem;
+    font-size: var(--bn-text-label);
     font-weight: 600;
     color: inherit;
     cursor: pointer;
@@ -82,7 +82,7 @@
 }
 
 .bn-selector__caret {
-    font-size: 0.7rem;
+    font-size: var(--bn-text-badge);
     opacity: 0.6;
 }
 
@@ -110,8 +110,8 @@
     padding: 0.4rem 0.75rem;
     color: inherit;
     text-decoration: none;
-    font-size: 0.85rem;
-    line-height: 1.4;
+    font-size: var(--bn-text-label);
+    line-height: var(--bn-text-label-lh);
     cursor: pointer;
     white-space: nowrap;
     box-sizing: border-box;
@@ -127,14 +127,14 @@
 
 /* Session-specific: secondary detail line (date) */
 .bn-selector__detail {
-    font-size: 0.78rem;
+    font-size: var(--bn-text-caption);
     font-weight: 400;
     color: var(--bn-colour-muted);
 }
 
 /* Plain session label when there is only one session (no dropdown) */
 .bn-session-selector__label {
-    font-size: 0.9rem;
+    font-size: var(--bn-text-label);
     font-weight: 600;
     white-space: nowrap;
     flex-shrink: 0;
@@ -149,7 +149,7 @@
 
 .bn-transcript-roles {
     color: var(--bn-colour-muted);
-    font-size: 0.85rem;
+    font-size: var(--bn-text-label);
     margin: var(--bn-space-lg) 0 0;
     line-height: 1.5;
 }

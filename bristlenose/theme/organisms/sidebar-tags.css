@@ -17,7 +17,7 @@
     border: 1px solid var(--bn-colour-border);
     border-radius: var(--bn-radius-md);
     font-family: var(--bn-font-body);
-    font-size: 0.82rem;
+    font-size: var(--bn-text-label);
     color: var(--bn-colour-text);
     background: var(--bn-colour-bg);
     outline: none;
@@ -80,15 +80,15 @@
 }
 
 .codebook-title {
-    font-size: 0.88rem;
+    font-size: var(--bn-text-label);
     font-weight: var(--bn-weight-emphasis);
-    line-height: 1.3;
+    line-height: var(--bn-text-label-lh);
 }
 
 .codebook-author {
-    font-size: 0.72rem;
+    font-size: var(--bn-text-badge);
     color: var(--bn-colour-muted);
-    line-height: 1.3;
+    line-height: var(--bn-text-badge-lh);
 }
 
 .codebook-body {
@@ -146,14 +146,14 @@
 }
 
 .tag-filter-group-name {
-    font-size: 0.82rem;
+    font-size: var(--bn-text-label);
     font-weight: var(--bn-weight-emphasis);
 }
 
 .tag-filter-group-subtitle {
-    font-size: 0.68rem;
+    font-size: var(--bn-text-micro);
     color: var(--bn-colour-muted);
-    line-height: 1.3;
+    line-height: var(--bn-text-micro-lh);
 }
 
 /* Group-level eye — hidden by default, visible on group hover */
@@ -248,7 +248,7 @@
 .tag-sidebar .badge {
     display: inline-block;
     font-family: var(--bn-font-mono);
-    font-size: 0.72rem;
+    font-size: var(--bn-text-badge);
     padding: var(--bn-space-xs) 0.45rem;
     border-radius: var(--bn-radius-sm);
     background: var(--bn-colour-badge-bg);
@@ -295,7 +295,7 @@
 }
 
 .tag-sidebar .tag-count {
-    font-size: 0.75rem;
+    font-size: var(--bn-text-caption);
     color: var(--bn-colour-muted);
     min-width: 16px;
     text-align: right;
@@ -319,14 +319,14 @@
 }
 
 .tag-sidebar .group-total-label {
-    font-size: 0.7rem;
+    font-size: var(--bn-text-badge);
     color: var(--bn-colour-muted);
     text-transform: uppercase;
     letter-spacing: 0.04em;
 }
 
 .tag-sidebar .group-total-count {
-    font-size: 0.75rem;
+    font-size: var(--bn-text-caption);
     font-weight: var(--bn-weight-emphasis);
     color: var(--bn-colour-muted);
     font-variant-numeric: tabular-nums;

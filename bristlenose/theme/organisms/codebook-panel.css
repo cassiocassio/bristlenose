@@ -44,10 +44,10 @@
 }
 
 .group-title {
-    font-size: 0.95rem;
+    font-size: var(--bn-text-label);
     font-weight: var(--bn-weight-emphasis);
     color: var(--bn-colour-text);
-    line-height: 1.3;
+    line-height: var(--bn-text-label-lh);
 }
 
 .group-title-text {
@@ -88,7 +88,7 @@
 
 /* Subtitle — click to edit */
 .group-subtitle {
-    font-size: 0.78rem;
+    font-size: var(--bn-text-caption);
     color: var(--bn-colour-muted);
     margin-top: 1px;
     cursor: text;
@@ -96,7 +96,7 @@
     margin-left: -3px;
     border-radius: var(--bn-radius-sm);
     min-height: 1.2em;
-    line-height: 1.4;
+    line-height: var(--bn-text-caption-lh);
 }
 .group-subtitle:hover {
     background: var(--bn-hover-bg-subtle);
@@ -108,7 +108,7 @@
 
 /* TagInput inside codebook groups: match upscaled badge font size */
 .codebook-group .tag-input {
-    font-size: 0.82rem;
+    font-size: var(--bn-text-label);
 }
 
 /* Group total row — aligns with tag-row count column */
@@ -120,13 +120,13 @@
     padding: 0 4px 4px;
 }
 .group-total-label {
-    font-size: 0.7rem;
+    font-size: var(--bn-text-badge);
     color: var(--bn-colour-muted);
     text-transform: uppercase;
     letter-spacing: 0.04em;
 }
 .group-total-count {
-    font-size: 0.75rem;
+    font-size: var(--bn-text-caption);
     font-weight: var(--bn-weight-emphasis);
     color: var(--bn-colour-muted);
     font-variant-numeric: tabular-nums;
@@ -183,7 +183,7 @@
 
 /* In codebook panel, badges are primary content — sized up from 0.72rem */
 .codebook-group .badge {
-    font-size: 0.82rem;
+    font-size: var(--bn-text-label);
     padding: 0.2rem 0.5rem;
 }
 
@@ -246,7 +246,7 @@
 }
 
 .tag-count {
-    font-size: 0.75rem;
+    font-size: var(--bn-text-caption);
     color: var(--bn-colour-muted);
     min-width: 16px;
     text-align: right;
@@ -271,7 +271,7 @@
 .tag-add-badge {
     display: inline-block;
     font-family: var(--bn-font-mono);
-    font-size: 0.82rem;
+    font-size: var(--bn-text-label);
     padding: 0.2rem 0.5rem;
     border-radius: var(--bn-radius-sm);
     border: 1px dashed var(--bn-colour-border);
@@ -288,7 +288,7 @@
 /* Inline input for new tag */
 .tag-add-input {
     font-family: var(--bn-font-mono);
-    font-size: 0.82rem;
+    font-size: var(--bn-text-label);
     border: 1px solid var(--bn-colour-border);
     border-radius: var(--bn-radius-sm);
     padding: 0.2rem 0.5rem;
@@ -322,12 +322,12 @@
     background: var(--bn-hover-bg-subtle);
 }
 .new-group-icon {
-    font-size: 1.2rem;
+    font-size: var(--bn-text-heading);
     color: var(--bn-colour-muted);
     line-height: 1;
 }
 .new-group-label {
-    font-size: 0.82rem;
+    font-size: var(--bn-text-label);
     color: var(--bn-colour-muted);
 }
 
@@ -338,7 +338,7 @@
     pointer-events: none;
     z-index: 200;
     font-family: var(--bn-font-mono);
-    font-size: 0.82rem;
+    font-size: var(--bn-text-label);
     padding: 0.2rem 0.5rem;
     border-radius: var(--bn-radius-sm);
     color: var(--bn-colour-text);
@@ -351,7 +351,7 @@
 .tag-preview {
     display: inline;
     font-family: var(--bn-font-mono);
-    font-size: 0.72rem;
+    font-size: var(--bn-text-badge);
     padding: var(--bn-space-xs) 0.45rem;
     border-radius: var(--bn-radius-sm);
     font-weight: var(--bn-weight-normal);
@@ -360,7 +360,7 @@
 /* ── Codebook page layout ──────────────────────────────────────────────── */
 
 .codebook-description {
-    font-size: 0.85rem;
+    font-size: var(--bn-text-label);
     color: var(--bn-colour-muted);
     margin-bottom: var(--bn-space-lg);
 }
@@ -384,17 +384,17 @@
     box-shadow: 0 4px 16px var(--bn-colour-shadow, rgba(0, 0, 0, 0.12));
 }
 .confirm-dialog-title {
-    font-size: 0.88rem;
+    font-size: var(--bn-text-label);
     font-weight: var(--bn-weight-emphasis);
     color: var(--bn-colour-text);
     margin: 0 0 var(--bn-space-xs);
-    line-height: 1.3;
+    line-height: var(--bn-text-label-lh);
 }
 .confirm-dialog-body {
-    font-size: 0.82rem;
+    font-size: var(--bn-text-label);
     color: var(--bn-colour-muted);
     margin-bottom: var(--bn-space-md);
-    line-height: 1.4;
+    line-height: var(--bn-text-label-lh);
 }
 .confirm-dialog-actions {
     display: flex;
@@ -402,7 +402,7 @@
     justify-content: flex-end;
 }
 .confirm-dialog-btn {
-    font-size: 0.82rem;
+    font-size: var(--bn-text-label);
     font-weight: var(--bn-weight-emphasis);
     padding: 0.4rem 1.2rem;
     border-radius: var(--bn-radius-sm);
@@ -479,18 +479,18 @@
     margin: var(--bn-space-md) 0 var(--bn-space-sm);
 }
 .framework-section-title {
-    font-size: 1.1rem;
+    font-size: var(--bn-text-heading);
     font-weight: var(--bn-weight-emphasis);
     color: var(--bn-colour-text);
-    line-height: 1.3;
+    line-height: var(--bn-text-heading-lh);
 }
 .framework-section-author {
-    font-size: 0.82rem;
+    font-size: var(--bn-text-label);
     color: var(--bn-colour-muted);
     margin-top: 0.15rem;
 }
 .framework-remove-btn {
-    font-size: 0.78rem;
+    font-size: var(--bn-text-caption);
     color: var(--bn-colour-muted);
     border-color: var(--bn-colour-border);
     background: var(--bn-colour-bg);
@@ -516,7 +516,7 @@
 
 .autocode-btn {
     font-family: var(--bn-font-body);
-    font-size: 0.78rem;
+    font-size: var(--bn-text-caption);
     font-weight: var(--bn-weight-emphasis);
     padding: 0.3rem 0.7rem;
     border-radius: var(--bn-radius-sm);
@@ -541,7 +541,7 @@
 .autocode-btn .sparkle { font-size: 0.85em; }
 
 .proposed-count {
-    font-size: 0.72rem;
+    font-size: var(--bn-text-badge);
     font-weight: var(--bn-weight-emphasis);
     color: var(--bn-colour-accent);
     background: rgba(37, 99, 235, 0.08);
@@ -612,18 +612,18 @@
     flex-shrink: 0;
 }
 .codebook-modal-title {
-    font-size: 1.1rem;
+    font-size: var(--bn-text-heading);
     font-weight: var(--bn-weight-emphasis);
 }
 .codebook-modal-subtitle {
-    font-size: 0.82rem;
+    font-size: var(--bn-text-label);
     color: var(--bn-colour-muted);
     margin-top: 0.2rem;
 }
 .codebook-modal-close {
     background: none;
     border: none;
-    font-size: 1.2rem;
+    font-size: var(--bn-text-heading);
     color: var(--bn-colour-muted);
     cursor: pointer;
     padding: 0.2rem;
@@ -650,7 +650,7 @@
     margin-top: 0;
 }
 .picker-section-title {
-    font-size: 0.7rem;
+    font-size: var(--bn-text-badge);
     text-transform: uppercase;
     letter-spacing: 0.04em;
     color: var(--bn-colour-muted);
@@ -703,7 +703,7 @@
     position: absolute;
     top: 8px;
     right: 8px;
-    font-size: 0.65rem;
+    font-size: var(--bn-text-micro);
     font-weight: var(--bn-weight-emphasis);
     color: light-dark(#16a34a, #4ade80);
     background: light-dark(rgba(22, 163, 74, 0.08), rgba(74, 222, 128, 0.12));
@@ -711,17 +711,17 @@
     border-radius: var(--bn-radius-sm);
 }
 .picker-card-title {
-    font-size: 0.95rem;
+    font-size: var(--bn-text-label);
     font-weight: var(--bn-weight-emphasis);
     margin-bottom: 0.15rem;
 }
 .picker-card-author {
-    font-size: 0.82rem;
+    font-size: var(--bn-text-label);
     color: var(--bn-colour-muted);
     margin-bottom: 0.5rem;
 }
 .picker-card-desc {
-    font-size: 0.82rem;
+    font-size: var(--bn-text-label);
     color: var(--bn-colour-muted);
     line-height: 1.5;
 }
@@ -732,7 +732,7 @@
     margin-top: var(--bn-space-md);
 }
 .picker-card-coming {
-    font-size: 0.72rem;
+    font-size: var(--bn-text-badge);
     color: var(--bn-colour-muted);
     font-style: italic;
     margin-top: 4px;
@@ -741,7 +741,7 @@
     border-color: var(--bn-colour-accent);
 }
 .picker-card-restore {
-    font-size: 0.72rem;
+    font-size: var(--bn-text-badge);
     color: var(--bn-colour-accent);
     margin-top: var(--bn-space-sm);
     font-style: italic;
@@ -766,7 +766,7 @@
 /* ── Codebook preview ────────────────────────────────────────────────── */
 
 .preview-back {
-    font-size: 0.82rem;
+    font-size: var(--bn-text-label);
     color: var(--bn-colour-muted);
     cursor: pointer;
     background: none;
@@ -793,16 +793,16 @@
     min-width: 0;
 }
 .preview-title {
-    font-size: 1.15rem;
+    font-size: var(--bn-text-heading);
     font-weight: var(--bn-weight-emphasis);
     margin-bottom: 0.15rem;
 }
 .preview-subtitle {
-    font-size: 0.88rem;
+    font-size: var(--bn-text-label);
     color: var(--bn-colour-muted);
 }
 .preview-cta-help {
-    font-size: 0.72rem;
+    font-size: var(--bn-text-badge);
     color: var(--bn-colour-muted);
     margin-top: 0.3rem;
 }
@@ -822,14 +822,14 @@
 }
 
 .preview-desc {
-    font-size: 0.9rem;
+    font-size: var(--bn-text-label);
     color: var(--bn-colour-muted);
     line-height: 1.6;
     margin-bottom: var(--bn-space-lg);
 }
 
 .preview-section-label {
-    font-size: 0.7rem;
+    font-size: var(--bn-text-badge);
     text-transform: uppercase;
     letter-spacing: 0.04em;
     color: var(--bn-colour-muted);
@@ -851,11 +851,11 @@
 }
 .preview-author-name {
     font-weight: var(--bn-weight-emphasis);
-    font-size: 0.9rem;
+    font-size: var(--bn-text-label);
     margin-bottom: 0.25rem;
 }
 .preview-author-bio {
-    font-size: 0.75rem;
+    font-size: var(--bn-text-caption);
     color: var(--bn-colour-muted);
     margin-bottom: var(--bn-space-md);
     line-height: 1.5;
@@ -864,7 +864,7 @@
     display: flex;
     flex-wrap: wrap;
     gap: var(--bn-space-lg);
-    font-size: 0.78rem;
+    font-size: var(--bn-text-caption);
 }
 .preview-author-links a {
     color: var(--bn-colour-accent);

@@ -51,7 +51,8 @@
       "noFolder": "Sin carpeta",
       "reAnalyse": "Reanalizar…",
       "archive": "Archivar…",
-      "delete": "Eliminar…"
+      "delete": "Eliminar…",
+      "chooseIcon": "Elegir icono\u2026"
     },
     "folder": {
       "rename": "Renombrar carpeta",
@@ -129,7 +130,16 @@
     "projectMovedDescription": "No se pudo encontrar la carpeta del proyecto. Es posible que se haya movido o eliminado.",
     "locate": "Localizar\u2026",
     "locateMessage": "Busca la nueva ubicación de \u201c%@\u201d",
-    "onThisMac": "En este Mac"
+    "onThisMac": "En este Mac",
+    "projectIcon": "Icono del proyecto",
+    "duplicateProject": "El proyecto ya existe",
+    "duplicateProjectMessage": "Ya existe un proyecto para esta carpeta: \u201c%@\u201d. Puedes abrir el proyecto existente o crear uno nuevo.",
+    "openExisting": "Abrir existente",
+    "createAnyway": "Crear de todos modos",
+    "emptyStateHint": "Arrastra una carpeta aqu\u00ed o pulsa \u2318N",
+    "addedInterviews": "%d entrevistas a\u00f1adidas a %@",
+    "multipleSelected": "%d elementos seleccionados",
+    "multipleSelectedHint": "Selecciona un solo proyecto para ver su informe."
   },
   "toolbar": {
     "back": "Atrás (⌘[)",

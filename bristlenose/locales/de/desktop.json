@@ -51,7 +51,8 @@
       "noFolder": "Kein Ordner",
       "reAnalyse": "Erneut analysieren…",
       "archive": "Archivieren…",
-      "delete": "Löschen…"
+      "delete": "L\u00f6schen\u2026",
+      "chooseIcon": "Symbol ausw\u00e4hlen\u2026"
     },
     "folder": {
       "rename": "Ordner umbenennen",
@@ -129,7 +130,16 @@
     "projectMovedDescription": "Der Projektordner konnte nicht gefunden werden. Er wurde möglicherweise verschoben oder gelöscht.",
     "locate": "Suchen\u2026",
     "locateMessage": "Neuen Speicherort für \u201e%@\u201c suchen",
-    "onThisMac": "Auf diesem Mac"
+    "onThisMac": "Auf diesem Mac",
+    "projectIcon": "Projektsymbol",
+    "duplicateProject": "Projekt existiert bereits",
+    "duplicateProjectMessage": "F\u00fcr diesen Ordner existiert bereits ein Projekt: \u201e%@\u201c. Sie k\u00f6nnen das vorhandene Projekt \u00f6ffnen oder ein neues erstellen.",
+    "openExisting": "Vorhandenes \u00f6ffnen",
+    "createAnyway": "Trotzdem erstellen",
+    "emptyStateHint": "Ordner hierher ziehen oder \u2318N dr\u00fccken",
+    "addedInterviews": "%d Interviews zu %@ hinzugef\u00fcgt",
+    "multipleSelected": "%d Elemente ausgew\u00e4hlt",
+    "multipleSelectedHint": "W\u00e4hlen Sie ein einzelnes Projekt aus, um den Bericht anzuzeigen."
   },
   "toolbar": {
     "back": "Zurück (⌘[)",

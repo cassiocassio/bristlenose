@@ -13,6 +13,7 @@ struct BristlenoseApp: App {
     @StateObject private var bridgeHandler = BridgeHandler()
     @StateObject private var projectIndex = ProjectIndex()
     @StateObject private var volumeWatcher = VolumeWatcher()
+    @StateObject private var toast = ToastStore()
     @StateObject private var i18n: I18n = {
         let i = I18n()
         if let dir = I18n.findLocalesDirectory() {
@@ -27,7 +28,9 @@ struct BristlenoseApp: App {
                 .environmentObject(serveManager)
                 .environmentObject(bridgeHandler)
                 .environmentObject(projectIndex)
+                .environmentObject(toast)
                 .environmentObject(i18n)
+                .overlay { ToastOverlay().environmentObject(toast) }
                 .onAppear {
                     volumeWatcher.projectIndex = projectIndex
                     projectIndex.refreshAvailability()

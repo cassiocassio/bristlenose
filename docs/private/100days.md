@@ -23,12 +23,17 @@ MoSCoW within each category. **100-day goal: complete every Must.**
 - **Slow-double-click rename in sidebar** — Finder-style slow double-click to inline rename. `simultaneousGesture(TapGesture())` and `onTapGesture` both break List selection on macOS 26. Needs NSEvent monitor approach or AppKit subclass. Rename still works via right-click and Project menu
 - **Multi-select projects (Shift/Cmd click)** — change `List(selection:)` from `UUID?` to `Set<UUID>`. Detail pane shows "3 projects selected". Enables bulk delete via right-click, and drag-to-folder in Phase 3. Prerequisite for drag-to-reorder
 - **Drag-to-reorder projects in sidebar** — persisted via `position` integer in project index. Needs multi-select first. Phase 3 in design doc
+- **Drop-on-existing-project row** — add interviews to existing project via drag. Data model ready (`addFiles`). Needs `DropDelegate` hit-testing on List (per-row `.onDrop` breaks selection on macOS 26)
+- **UTType validation on drop** — filter dropped files to accepted media types (audio, video, subtitle, docx, txt). Currently accepts any file
+- **Empty state drag target** — `ContentUnavailableView` as `.onDrop` target when project list is empty
 - **~~Run pipeline from GUI~~** — "Analyse" button, background task, progress streaming. Milestone 7. Needs design doc
 - **~~Settings UI~~** — provider selection, API key entry, redaction toggle, model choice. Milestone 6. Needs design doc. Currently CLI-only config is a hard block for App Store users
 - **App Store subscription infrastructure** — StoreKit 2, receipt validation, entitlement check. Not yet designed
 - **~~Auto-serve after run~~** — pipeline finishes → auto-launch serve + open browser. (TODO.md immediate)
 
 ### Should
+- **Desktop toast infrastructure** — SwiftUI toast overlay (auto-dismiss, fade). Needed for "Added N interviews to project", archive undo, and future feedback. Reference: `frontend/src/components/Toast.tsx`
+- **Add interview flow (serve mode)** — dashboard/sessions list "Add interviews" button → file picker → re-process. CLI route: `bristlenose add <files> <project-folder>`. Both need toast confirmation
 - **Session enable/disable toggle** — exclude sessions without re-running pipeline. Option A (`is_disabled` bool). (design-session-management.md)
 - **~~Incremental re-run~~** — add new recordings, preserve researcher work. Milestone 8. Quote stable key already in place
 - ~~**Left-hand nav content for all tabs** — signal cards, speaker badges, codebook titles, sessions list, analysis views in left sidebar~~
@@ -50,6 +55,7 @@ MoSCoW within each category. **100-day goal: complete every Must.**
 
 ### Icebox (100 days)
 - **Miro bridge** — Miro-shaped CSV export → API integration → layout engine. CSV export works as stopgap. Killer feature - Resuresct for move out of beta! See `docs/private/design-miro-bridge.md`
+- **Spring-loaded folders during drag** — open folder on hover during drag. SwiftUI List doesn't support natively; needs timer or NSEvent monitor. Low priority — "Move to" submenu covers the use case
 
 ---
 
@@ -263,6 +269,7 @@ MoSCoW within each category. **100-day goal: complete every Must.**
 - **Britannification pass** (#40) — CLI text consistency
 - **Input focus CSS `.bn-input` atom** — extract shared input styling
 - **Checkbox atom** — extract ghost checkbox style
+- **Titlebar project icon** — show the chosen SF Symbol icon next to the project name in the macOS title bar. SwiftUI `.navigationTitle` doesn't support inline images and toolbar items always get a lozenge. Needs AppKit-level NSWindow manipulation or a future SwiftUI API
 
 ### Icebox
 - **Highlighter feature** — active branch, scope TBD. Parked

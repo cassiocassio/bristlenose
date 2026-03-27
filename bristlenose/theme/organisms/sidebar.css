@@ -370,14 +370,14 @@
 }
 
 .toc-sidebar-header .sidebar-title {
-    font-size: 0.95rem;
+    font-size: var(--bn-text-label);
     font-weight: var(--bn-weight-emphasis);
 }
 
 .sidebar-close {
     background: none;
     border: none;
-    font-size: 1.2rem;
+    font-size: var(--bn-text-heading);
     color: var(--bn-colour-muted);
     cursor: pointer;
     line-height: 1;
@@ -406,7 +406,7 @@
 /* ── TOC links (scroll-spy nav) ───────────────────────────────── */
 
 .toc-heading {
-    font-size: 0.85rem;
+    font-size: var(--bn-text-label);
     font-weight: var(--bn-weight-emphasis);
     margin: 1rem 0 var(--bn-space-sm);
     padding-bottom: 0.25rem;
@@ -418,7 +418,7 @@
 .toc-link {
     display: block;
     padding: 0.2rem var(--bn-space-sm);
-    font-size: 0.82rem;
+    font-size: var(--bn-text-label);
     font-weight: var(--bn-weight-light);
     color: var(--bn-colour-text);
     text-decoration: none;
@@ -488,12 +488,12 @@
 }
 
 .tag-sidebar-header .sidebar-title {
-    font-size: 0.95rem;
+    font-size: var(--bn-text-label);
     font-weight: var(--bn-weight-emphasis);
 }
 
 .tag-sidebar-subtitle {
-    font-size: 0.72rem;
+    font-size: var(--bn-text-badge);
     color: var(--bn-colour-muted);
     padding: 0 0 0.25rem 0.85rem;
 }
@@ -809,7 +809,7 @@ body.dragging * {
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 0.6rem;
+    font-size: var(--bn-text-micro);
     color: var(--bn-colour-muted);
     align-self: flex-start;
     overflow: hidden;
@@ -882,5 +882,5 @@ body.dragging * {
 
 .signal-entry .badge {
     flex-shrink: 0;
-    font-size: 0.65rem;
+    font-size: var(--bn-text-micro);
 }

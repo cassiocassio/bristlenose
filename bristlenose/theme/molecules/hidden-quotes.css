@@ -39,7 +39,7 @@
 .bn-hidden-toggle {
     background: none;
     border: none;
-    font-size: 0.82rem;
+    font-size: var(--bn-text-label);
     color: var(--bn-colour-accent);
     cursor: pointer;
     padding: var(--bn-space-xs) var(--bn-space-sm);
@@ -78,7 +78,7 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    font-size: 0.82rem;
+    font-size: var(--bn-text-label);
     font-weight: var(--bn-weight-emphasis);
     color: var(--bn-colour-muted);
     margin-bottom: var(--bn-space-sm);
@@ -86,7 +86,7 @@
 
 .bn-unhide-all {
     font-weight: var(--bn-weight-normal);
-    font-size: 0.8rem;
+    font-size: var(--bn-text-label);
     color: var(--bn-colour-accent);
     text-decoration: none;
     cursor: pointer;
@@ -104,7 +104,7 @@
     gap: 0.5em;
     padding: var(--bn-space-xs) 0;
     border-bottom: 1px solid var(--bn-colour-border);
-    font-size: 0.85rem;
+    font-size: var(--bn-text-label);
 }
 
 .bn-hidden-item:last-child {
@@ -114,7 +114,7 @@
 .bn-hidden-item .timecode {
     flex-shrink: 0;
     font-family: var(--bn-font-mono);
-    font-size: 0.8rem;
+    font-size: var(--bn-text-label);
     color: var(--bn-colour-accent);
     text-decoration: none;
 }
@@ -140,7 +140,7 @@
     margin-left: 0.3em;
     color: var(--bn-colour-muted);
     text-decoration: none;
-    font-size: 0.8rem;
+    font-size: var(--bn-text-label);
     transition: color var(--bn-transition-fast);
 }
 

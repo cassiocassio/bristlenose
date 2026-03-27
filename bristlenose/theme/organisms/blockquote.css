@@ -17,7 +17,7 @@ blockquote.quote-card {
 blockquote .context {
     display: block;
     color: var(--bn-colour-muted);
-    font-size: 0.85rem;
+    font-size: var(--bn-text-label);
     margin-bottom: 0.3rem;
 }
 
@@ -40,12 +40,12 @@ blockquote .quote-body {
 blockquote .timecode {
     color: var(--bn-colour-accent);
     font-family: var(--bn-font-mono);
-    font-size: 0.8rem;
+    font-size: var(--bn-text-label);
 }
 
 blockquote .speaker {
     color: var(--bn-colour-muted);
-    font-size: 0.9rem;
+    font-size: var(--bn-text-label);
     white-space: nowrap;
 }
 
@@ -92,12 +92,12 @@ blockquote .speaker-link:hover {
 
 .rewatch-item {
     margin: 0.2rem 0 0.2rem 1.2rem;
-    font-size: 0.9rem;
+    font-size: var(--bn-text-label);
 }
 
 .rewatch-item .timecode {
     font-family: var(--bn-font-mono);
-    font-size: 0.8rem;
+    font-size: var(--bn-text-label);
     color: var(--bn-colour-accent);
 }
 

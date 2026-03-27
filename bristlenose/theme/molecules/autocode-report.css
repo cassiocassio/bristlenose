@@ -6,7 +6,7 @@
 }
 
 .report-session-header {
-    font-size: 0.88rem;
+    font-size: var(--bn-text-label);
     color: var(--bn-colour-muted);
     padding: 0.8rem 0 0.4rem;
     font-weight: var(--bn-weight-emphasis);
@@ -25,14 +25,14 @@
 .report-row td {
     padding: 0.5rem 0.5rem;
     vertical-align: baseline;
-    font-size: 0.85rem;
+    font-size: var(--bn-text-label);
 }
 
 .report-row td:first-child { padding-left: 0; }
 
 .report-timecode {
     font-family: var(--bn-font-mono);
-    font-size: 0.78rem;
+    font-size: var(--bn-text-caption);
     white-space: nowrap;
     width: 60px;
 }
@@ -47,7 +47,7 @@
 .report-speaker {
     white-space: nowrap;
     color: var(--bn-colour-muted);
-    font-size: 0.78rem;
+    font-size: var(--bn-text-caption);
     width: 60px;
 }
 
@@ -68,7 +68,7 @@
     border: none;
     color: var(--bn-colour-muted);
     cursor: pointer;
-    font-size: 0.9rem;
+    font-size: var(--bn-text-label);
     padding: 2px 4px;
     border-radius: var(--bn-radius-sm);
     transition: color var(--bn-transition-fast), background var(--bn-transition-fast);
@@ -103,7 +103,7 @@
     background: var(--bn-colour-bg);
     color: var(--bn-colour-text);
     border: 1px solid var(--bn-colour-border);
-    font-size: 0.72rem;
+    font-size: var(--bn-text-badge);
     padding: 0.45rem 0.65rem;
     border-radius: var(--bn-radius-md);
     white-space: normal;

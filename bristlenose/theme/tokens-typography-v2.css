@@ -1,0 +1,48 @@
+/* Typography tokens v2 — Scale D (HIG + callout quotes).
+   This file is NOT loaded by the browser yet. It defines the target 8-token
+   scale for the type scale migration.
+
+   To activate: copy this file over tokens-typography.css and reload.
+   See also: tokens-desktop-v2.css for the matching desktop overrides.
+
+   Scale D rationale:
+   - body (15px) is exclusively for quote text — the research data tier
+   - label (13px) handles all UI chrome (toolbar, filters, nav, context lines)
+   - This gives quotes visual breathing room above the chrome without
+     encroaching on headings (18px) */
+
+:root {
+    --bn-font-body: "Inter", "Segoe UI Variable", "Segoe UI", system-ui, -apple-system,
+        "Hiragino Kaku Gothic ProN", "Hiragino Sans",
+        "Yu Gothic UI",
+        "Malgun Gothic",
+        "Apple SD Gothic Neo",
+        "Noto Sans CJK JP", "Noto Sans CJK KR",
+        sans-serif;
+    --bn-font-mono: "SF Mono", "Fira Code", "Consolas", monospace;
+
+    --bn-weight-light: 370;
+    --bn-weight-normal: 420;
+    --bn-weight-emphasis: 490;
+    --bn-weight-starred: 520;
+    --bn-weight-strong: 700;
+
+    /* Typography scale — 8 stops, size + line-height pairs.
+       Line-height decreases as size increases (Bringhurst principle). */
+    --bn-text-micro:       0.6rem;      /* 9.6px  — delete ×, confidence badges */
+    --bn-text-micro-lh:    1.2;
+    --bn-text-badge:       0.72rem;     /* 11.5px — badges, group headers, tag counts */
+    --bn-text-badge-lh:    1.3;
+    --bn-text-caption:     0.75rem;     /* 12px   — footnotes, footer, modal footer, kbd */
+    --bn-text-caption-lh:  1.4;
+    --bn-text-label:       0.8125rem;   /* 13px   — toolbar, filters, context, timecodes */
+    --bn-text-label-lh:    1.45;
+    --bn-text-body:        0.9375rem;   /* 15px   — quote text only (the callout size) */
+    --bn-text-body-lh:     1.5;
+    --bn-text-heading:     1.125rem;    /* 18px   — section headings, h3, modal titles */
+    --bn-text-heading-lh:  1.3;
+    --bn-text-title:       1.375rem;    /* 22px   — page titles, h2, logotype */
+    --bn-text-title-lh:    1.25;
+    --bn-text-display:     1.75rem;     /* 28px   — report h1 */
+    --bn-text-display-lh:  1.2;
+}

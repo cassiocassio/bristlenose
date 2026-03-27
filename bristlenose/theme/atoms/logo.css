@@ -48,13 +48,13 @@
 }
 
 .header-logotype {
-    font-size: 1.35rem;
+    font-size: var(--bn-text-title);
     font-weight: var(--bn-weight-emphasis);
     letter-spacing: -0.01em;
 }
 
 .header-project {
-    font-size: 1.35rem;
+    font-size: var(--bn-text-title);
     font-weight: var(--bn-weight-normal);
     letter-spacing: -0.01em;
 }
@@ -68,12 +68,12 @@
 }
 
 .header-doc-title {
-    font-size: 1.1rem;
+    font-size: var(--bn-text-heading);
     font-weight: var(--bn-weight-normal);
 }
 
 .header-meta {
-    font-size: 0.82rem;
+    font-size: var(--bn-text-label);
     color: var(--bn-colour-muted);
 }
 

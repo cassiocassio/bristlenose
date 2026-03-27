@@ -45,7 +45,7 @@
     min-width: 1em;
     padding: 0.15em 0.35em;
     font-family: var(--bn-font-body);
-    font-size: 0.7rem;
+    font-size: var(--bn-text-badge);
     font-weight: 500;
     line-height: 1.1;
     text-align: center;

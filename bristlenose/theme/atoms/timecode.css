@@ -4,7 +4,7 @@ a.timecode,
 a.timecode:visited {
     color: var(--bn-colour-accent);
     font-family: var(--bn-font-mono);
-    font-size: 0.8rem;
+    font-size: var(--bn-text-label);
     text-decoration: none;
     cursor: pointer;
 }
@@ -12,7 +12,7 @@ a.timecode:visited {
 span.timecode {
     color: var(--bn-colour-accent);
     font-family: var(--bn-font-mono);
-    font-size: 0.8rem;
+    font-size: var(--bn-text-label);
 }
 
 a.timecode:hover {

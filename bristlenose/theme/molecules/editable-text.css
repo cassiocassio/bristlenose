@@ -134,7 +134,7 @@
     background: none;
     border: none;
     padding: var(--bn-space-xs);
-    font-size: 0.8rem;
+    font-size: var(--bn-text-label);
     cursor: pointer;
     color: var(--bn-colour-muted);
     line-height: 1;

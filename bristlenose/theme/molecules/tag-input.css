@@ -29,7 +29,7 @@
 
 .tag-suggest-header {
     padding: 0.3rem 0.5rem 0.15rem;
-    font-size: 0.82rem;
+    font-size: var(--bn-text-label);
     font-weight: var(--bn-weight-emphasis);
     color: var(--bn-colour-muted);
     white-space: nowrap;
@@ -67,7 +67,7 @@
 .tag-suggest-pill {
     display: inline-block;
     font-family: var(--bn-font-mono);
-    font-size: 0.72rem;
+    font-size: var(--bn-text-badge);
     padding: var(--bn-space-xs) 0.45rem;
     border-radius: var(--bn-radius-sm);
     background: var(--bn-colour-badge-bg);

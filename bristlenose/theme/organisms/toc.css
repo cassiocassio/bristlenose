@@ -12,7 +12,7 @@
 }
 
 .toc h2 {
-    font-size: 1.1rem;
+    font-size: var(--bn-text-heading);
     margin-bottom: 0.5rem;
 }
 
@@ -24,7 +24,7 @@
 
 .toc li {
     margin: var(--bn-space-xs) 0;
-    font-size: 0.9rem;
+    font-size: var(--bn-text-label);
     break-inside: avoid;
 }
 

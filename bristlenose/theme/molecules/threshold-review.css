@@ -45,7 +45,7 @@
 .threshold-histogram-axis {
     display: flex;
     justify-content: space-between;
-    font-size: 0.68rem;
+    font-size: var(--bn-text-micro);
     color: var(--bn-colour-muted);
     font-family: var(--bn-font-mono);
     padding: 0.15rem 0 0;
@@ -111,7 +111,7 @@
     top: -18px;
     left: 50%;
     transform: translateX(-50%);
-    font-size: 0.68rem;
+    font-size: var(--bn-text-micro);
     font-family: var(--bn-font-mono);
     color: var(--bn-colour-text);
     white-space: nowrap;
@@ -131,7 +131,7 @@
     display: inline-flex;
     align-items: center;
     gap: 0.3rem;
-    font-size: 0.78rem;
+    font-size: var(--bn-text-caption);
     padding: 0.25rem 0.6rem;
     border-radius: var(--bn-radius-sm, 4px);
     border: 1px solid var(--bn-colour-border, #e5e7eb);
@@ -177,7 +177,7 @@
     gap: 0.4rem;
     padding: 0.5rem 0;
     cursor: pointer;
-    font-size: 0.88rem;
+    font-size: var(--bn-text-label);
     font-weight: var(--bn-weight-emphasis);
     color: var(--bn-colour-text);
     user-select: none;
@@ -187,7 +187,7 @@
 .threshold-zone-list-header:hover { color: var(--bn-colour-accent); }
 
 .threshold-zone-list-chevron {
-    font-size: 0.7rem;
+    font-size: var(--bn-text-badge);
     transition: transform 0.15s ease;
     width: 1em;
     text-align: center;
@@ -198,7 +198,7 @@
 .threshold-zone-list-count {
     font-weight: var(--bn-weight-normal);
     color: var(--bn-colour-muted);
-    font-size: 0.82rem;
+    font-size: var(--bn-text-label);
 }
 
 .threshold-zone-list-body {
@@ -220,7 +220,7 @@
 
 .threshold-confidence {
     font-family: var(--bn-font-mono);
-    font-size: 0.78rem;
+    font-size: var(--bn-text-caption);
     white-space: nowrap;
     width: 42px;
     text-align: right;
@@ -237,7 +237,7 @@
     background: none;
     border: none;
     cursor: pointer;
-    font-size: 0.85rem;
+    font-size: var(--bn-text-label);
     padding: 2px 4px;
     border-radius: var(--bn-radius-sm);
     transition: color var(--bn-transition-fast), background var(--bn-transition-fast);
@@ -263,7 +263,7 @@
 /* ── Instruction text ──────────────────────────────────────── */
 
 .threshold-instruction {
-    font-size: 0.82rem;
+    font-size: var(--bn-text-label);
     color: var(--bn-colour-muted);
     margin: 0;
     padding: 0.2rem 0 0;

@@ -4,7 +4,7 @@
     margin: var(--bn-space-xl) 0 0;
     padding-top: var(--bn-space-md);
     border-top: 1px solid var(--bn-colour-border);
-    font-size: 0.72rem;
+    font-size: var(--bn-text-badge);
     color: var(--bn-colour-muted);
     display: flex;
     justify-content: space-between;

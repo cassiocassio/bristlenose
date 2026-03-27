@@ -78,7 +78,7 @@
     align-items: center;
     gap: var(--bn-space-sm);
     padding: 0.4rem 0.85rem;
-    font-size: 0.82rem;
+    font-size: var(--bn-text-label);
     color: var(--bn-colour-text);
     cursor: pointer;
     transition: background var(--bn-transition-fast);
@@ -97,7 +97,7 @@
     display: inline-block;
     width: 1em;
     text-align: center;
-    font-size: 0.95rem;
+    font-size: var(--bn-text-label);
     color: var(--bn-colour-muted);
     flex-shrink: 0;
 }

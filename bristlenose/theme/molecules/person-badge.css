@@ -30,7 +30,7 @@
 /* Left half: code lozenge */
 .bn-speaker-badge--split .bn-speaker-badge-code {
     font-family: var(--bn-font-mono);
-    font-size: 0.72rem;
+    font-size: var(--bn-text-badge);
     padding: var(--bn-space-xs) 0.4rem;
     background: var(--bn-colour-badge-bg);
     color: var(--bn-colour-badge-text);
@@ -43,7 +43,7 @@
 /* Right half: name */
 .bn-speaker-badge--split .bn-speaker-badge-name {
     font-family: var(--bn-font-body);
-    font-size: 0.72rem;
+    font-size: var(--bn-text-badge);
     font-weight: var(--bn-weight-emphasis);
     padding: var(--bn-space-xs) 0.45rem var(--bn-space-xs) 0.35rem;
     background: var(--bn-colour-quote-bg);
@@ -126,7 +126,7 @@ a:hover .bn-speaker-badge--split .bn-speaker-badge-code {
 .bn-name-pencil {
     all: unset;
     cursor: pointer;
-    font-size: 0.65rem;
+    font-size: var(--bn-text-micro);
     opacity: 0;
     color: var(--bn-colour-text-muted);
     transition: opacity var(--bn-transition-fast);

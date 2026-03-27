@@ -249,7 +249,7 @@ function SourceBanner({ breakdown }: { breakdown: SourceBreakdown }) {
   return (
     <p
       className="description"
-      style={{ fontSize: "0.82rem", marginBottom: "var(--bn-space-md)" }}
+      style={{ fontSize: "var(--bn-text-label)", marginBottom: "var(--bn-space-md)" }}
       data-testid="bn-source-banner"
     >
       {t("analysis.basedOnTags", { parts: parts.join(" + "), count: breakdown.total })}
@@ -1184,7 +1184,7 @@ export function AnalysisPage({ projectId }: AnalysisPageProps) {
           {t("analysis.noData")}
         </p>
         {tagError && (
-          <p style={{ color: "var(--bn-colour-danger, #c00)", fontSize: "0.82rem" }}>
+          <p style={{ color: "var(--bn-colour-danger, #c00)", fontSize: "var(--bn-text-label)" }}>
             {t("analysis.tagError", { error: tagError })}
           </p>
         )}

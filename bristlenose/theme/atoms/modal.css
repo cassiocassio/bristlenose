@@ -66,7 +66,7 @@
     right: var(--bn-space-md);
     background: none;
     border: none;
-    font-size: 1.25rem;
+    font-size: var(--bn-text-heading);
     line-height: 1;
     color: var(--bn-colour-muted);
     cursor: pointer;
@@ -84,7 +84,7 @@
 .bn-modal-footer {
     margin: var(--bn-space-lg) 0 0 0;
     text-align: center;
-    font-size: 0.75rem;
+    font-size: var(--bn-text-caption);
     color: var(--bn-colour-muted);
 }
 
@@ -98,7 +98,7 @@
 
 .bn-btn {
     font-family: inherit;
-    font-size: 0.85rem;
+    font-size: var(--bn-text-label);
     padding: 0.4rem 1rem;
     border-radius: var(--bn-radius-sm);
     border: 1px solid var(--bn-colour-border);
@@ -152,7 +152,7 @@
 /* Modal subtitle text */
 .bn-modal-subtitle {
     margin: 0 0 var(--bn-space-lg) 0;
-    font-size: 0.85rem;
+    font-size: var(--bn-text-label);
     color: var(--bn-colour-muted);
 }
 
@@ -161,7 +161,7 @@
     display: flex;
     gap: var(--bn-space-sm);
     align-items: flex-start;
-    font-size: 0.85rem;
+    font-size: var(--bn-text-label);
     cursor: pointer;
     margin: var(--bn-space-md) 0;
 }
@@ -172,14 +172,14 @@
 
 .bn-export-hint {
     display: block;
-    font-size: 0.75rem;
+    font-size: var(--bn-text-caption);
     color: var(--bn-colour-muted);
     margin-top: 0.15rem;
 }
 
 .bn-export-error {
     color: var(--bn-sentiment-frustration);
-    font-size: 0.85rem;
+    font-size: var(--bn-text-label);
     margin: var(--bn-space-sm) 0;
 }
 

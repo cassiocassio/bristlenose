@@ -22,9 +22,11 @@ _AUTH_EXEMPT_PREFIXES: tuple[str, ...] = (
 )
 
 # Paths that require bearer token validation.
+# NOTE: /media/ is NOT included — <video> and <audio> elements cannot send
+# Authorization headers.  Media files are protected by the path-traversal
+# guard, extension allowlist, and localhost binding instead.
 _AUTH_REQUIRED_PREFIXES: tuple[str, ...] = (
     "/api/",
-    "/media/",
 )
 
 _UNAUTHORIZED_BODY = json.dumps({"detail": "Unauthorized"}).encode()

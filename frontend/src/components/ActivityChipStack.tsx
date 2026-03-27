@@ -13,8 +13,16 @@ import type { AutoCodeJobStatus } from "../utils/types";
 import { ActivityChip } from "./ActivityChip";
 import type { ActivityChipJob } from "./ActivityChip";
 
+/** Normalised status shape used internally by the chip stack. */
+export interface NormalisedJobStatus {
+  status: "running" | "completed" | "failed" | "cancelled";
+  progressLabel: string | null;
+  durationLabel: string | null;
+  errorMessage: string | null;
+}
+
 export interface ActivityJob {
-  /** Unique key, e.g. "autocode:garrett". */
+  /** Unique key, e.g. "autocode:garrett" or "clips". */
   id: string;
   /** Human-readable label, e.g. "AutoCoding Garrett". */
   label: string;
@@ -32,6 +40,11 @@ export interface ActivityJob {
   actionHref?: string;
   /** Called when user cancels a running job. */
   onCancel?: () => void;
+  /**
+   * Custom poll function. If provided, called instead of getAutoCodeStatus().
+   * Must return a NormalisedJobStatus (or throw to be silently ignored).
+   */
+  pollFn?: () => Promise<NormalisedJobStatus>;
 }
 
 interface ActivityChipStackProps {
@@ -50,36 +63,46 @@ function formatDuration(startedAt: string, completedAt: string): string {
   return min > 0 ? `${min}:${String(sec).padStart(2, "0")}` : `${sec}s`;
 }
 
-function toChipJob(job: ActivityJob, status: AutoCodeJobStatus | null): ActivityChipJob {
-  const s = status?.status ?? "running";
+/** Convert an AutoCode API status to the normalised shape. */
+function normaliseAutoCode(status: AutoCodeJobStatus): NormalisedJobStatus {
+  const s = status.status;
   const effectiveStatus: "running" | "completed" | "failed" | "cancelled" =
     s === "pending" ? "running" : (s as "running" | "completed" | "failed" | "cancelled");
 
   let progressLabel: string | null = null;
-  if (effectiveStatus === "running" && status) {
+  if (effectiveStatus === "running") {
     progressLabel = `${status.processed_quotes}/${status.total_quotes}`;
   }
 
   let durationLabel: string | null = null;
-  if (effectiveStatus === "completed" && status?.started_at && status?.completed_at) {
+  if (effectiveStatus === "completed" && status.started_at && status.completed_at) {
     durationLabel = formatDuration(status.started_at, status.completed_at);
   }
 
   return {
-    id: job.id,
-    label: job.label,
-    completedLabel: job.completedLabel,
     status: effectiveStatus,
     progressLabel,
     durationLabel,
-    errorMessage: status?.error_message || null,
+    errorMessage: status.error_message || null,
+  };
+}
+
+function toChipJob(job: ActivityJob, norm: NormalisedJobStatus | null): ActivityChipJob {
+  return {
+    id: job.id,
+    label: job.label,
+    completedLabel: job.completedLabel,
+    status: norm?.status ?? "running",
+    progressLabel: norm?.progressLabel ?? null,
+    durationLabel: norm?.durationLabel ?? null,
+    errorMessage: norm?.errorMessage ?? null,
   };
 }
 
 const POLL_INTERVAL = 2000;
 
 export function ActivityChipStack({ jobs, onDismiss }: ActivityChipStackProps) {
-  const [statuses, setStatuses] = useState<Record<string, AutoCodeJobStatus | null>>({});
+  const [statuses, setStatuses] = useState<Record<string, NormalisedJobStatus | null>>({});
   const [expanded, setExpanded] = useState(false);
   const completeFired = useRef<Set<string>>(new Set());
   // Ref mirror of statuses so the interval callback can read current values
@@ -87,11 +110,15 @@ export function ActivityChipStack({ jobs, onDismiss }: ActivityChipStackProps) {
   const statusesRef = useRef(statuses);
   statusesRef.current = statuses;
 
-  // Poll each job.
+  // Poll each job — dispatch by pollFn (custom) or getAutoCodeStatus (default).
   const pollJob = useCallback((job: ActivityJob) => {
-    getAutoCodeStatus(job.frameworkId)
-      .then((status) => {
-        setStatuses((prev) => ({ ...prev, [job.id]: status }));
+    const promise = job.pollFn
+      ? job.pollFn()
+      : getAutoCodeStatus(job.frameworkId).then(normaliseAutoCode);
+
+    promise
+      .then((norm) => {
+        setStatuses((prev) => ({ ...prev, [job.id]: norm }));
       })
       .catch(() => {
         // Silently ignore — endpoint may not exist yet.
@@ -141,7 +168,7 @@ export function ActivityChipStack({ jobs, onDismiss }: ActivityChipStackProps) {
   const showSummary = jobs.length >= 2;
 
   const content = (
-    <div className="activity-chip-stack" data-testid="bn-activity-chip-stack">
+    <div className="activity-chip-stack" role="status" data-testid="bn-activity-chip-stack">
       {showSummary && !expanded && (
         <div
           className="activity-chip activity-chip-summary"

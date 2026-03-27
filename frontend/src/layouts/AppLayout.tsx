@@ -37,7 +37,8 @@ import {
   postFindPasteboardWrite,
 } from "../shims/bridge";
 import { getPlayerOpen, getPlayerPlaying } from "../contexts/PlayerContext";
-import { cancelAutoCode } from "../utils/api";
+import { cancelAutoCode, getClipExtractionStatus, revealClips } from "../utils/api";
+import type { NormalisedJobStatus } from "../components/ActivityChipStack";
 import { toggleInspector } from "../contexts/InspectorStore";
 import { setSearchQuery, setViewMode, setTagFilter, getQuotesSnapshot } from "../contexts/QuotesContext";
 import { EMPTY_TAG_FILTER } from "../utils/filter";
@@ -461,35 +462,63 @@ function AppShell() {
 
   const chipJobs: ActivityJob[] = useMemo(
     () =>
-      Array.from(activityJobs.entries()).map(([id, j]) => ({
-        id,
-        label: i18n.t("autocode.chip.coding", { title: j.frameworkTitle }),
-        completedLabel: i18n.t("autocode.chip.coded", { title: j.frameworkTitle }),
-        frameworkId: j.frameworkId,
-        onComplete: () => {
-          window.dispatchEvent(new Event("codebook-changed"));
-        },
-        onAction: () => {
-          const detail = { frameworkId: j.frameworkId, frameworkTitle: j.frameworkTitle };
-          if (isCodebook) {
-            // Already on codebook tab — open modal directly.
-            window.dispatchEvent(new CustomEvent("bn:autocode-report", { detail }));
-          } else {
-            navigate("/report/codebook");
-            // Defer so CodebookPanel has time to mount after navigation.
-            setTimeout(() => {
+      Array.from(activityJobs.entries()).map(([id, j]) => {
+        if (j.type === "clips") {
+          return {
+            id,
+            label: i18n.t("export.clips.progress", { progress: 0, total: j.total ?? 0 }),
+            completedLabel: i18n.t("export.clips.done", { count: j.total ?? 0 }),
+            frameworkId: "",
+            onComplete: () => {
+              // no-op — reveal is the action
+            },
+            onAction: () => {
+              revealClips().catch((err) =>
+                console.error("Reveal clips failed:", err),
+              );
+            },
+            actionLabel: i18n.t("export.clips.reveal"),
+            pollFn: async (): Promise<NormalisedJobStatus> => {
+              const s = await getClipExtractionStatus();
+              const status = s.status === "idle" ? "running" : s.status;
+              return {
+                status: status as "running" | "completed" | "failed",
+                progressLabel: status === "running" ? `${s.progress}/${s.total}` : null,
+                durationLabel: null,
+                errorMessage: status === "failed" ? i18n.t("export.clips.failed") : null,
+              };
+            },
+          };
+        }
+        // Default: autocode job
+        return {
+          id,
+          label: i18n.t("autocode.chip.coding", { title: j.frameworkTitle }),
+          completedLabel: i18n.t("autocode.chip.coded", { title: j.frameworkTitle }),
+          frameworkId: j.frameworkId,
+          onComplete: () => {
+            window.dispatchEvent(new Event("codebook-changed"));
+          },
+          onAction: () => {
+            const detail = { frameworkId: j.frameworkId, frameworkTitle: j.frameworkTitle };
+            if (isCodebook) {
               window.dispatchEvent(new CustomEvent("bn:autocode-report", { detail }));
-            }, 100);
-          }
-        },
-        actionLabel: i18n.t("codebook.viewReport"),
-        actionHref: "/report/codebook",
-        onCancel: () => {
-          cancelAutoCode(j.frameworkId).catch((err) =>
-            console.error("Cancel AutoCode failed:", err),
-          );
-        },
-      })),
+            } else {
+              navigate("/report/codebook");
+              setTimeout(() => {
+                window.dispatchEvent(new CustomEvent("bn:autocode-report", { detail }));
+              }, 100);
+            }
+          },
+          actionLabel: i18n.t("codebook.viewReport"),
+          actionHref: "/report/codebook",
+          onCancel: () => {
+            cancelAutoCode(j.frameworkId).catch((err) =>
+              console.error("Cancel AutoCode failed:", err),
+            );
+          },
+        };
+      }),
     [activityJobs, isCodebook, navigate],
   );
 

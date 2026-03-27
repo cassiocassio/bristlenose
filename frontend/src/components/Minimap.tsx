@@ -15,6 +15,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { QuotesListResponse } from "../utils/types";
 import { useProjectId } from "../hooks/useProjectId";
+import { apiGet } from "../utils/api";
 
 export function Minimap() {
   const projectId = useProjectId();
@@ -26,21 +27,16 @@ export function Minimap() {
 
   // Fetch quotes data for minimap lines.
   useEffect(() => {
-    fetch(`/api/projects/${projectId}/quotes`)
-      .then((res) => {
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        return res.json();
-      })
-      .then((json: QuotesListResponse) => setData(json))
+    apiGet<QuotesListResponse>("/quotes")
+      .then((json) => setData(json))
       .catch(() => {});
   }, [projectId]);
 
   // Re-fetch when autocode tags change.
   useEffect(() => {
     const handler = () => {
-      fetch(`/api/projects/${projectId}/quotes`)
-        .then((res) => res.json())
-        .then((json: QuotesListResponse) => setData(json))
+      apiGet<QuotesListResponse>("/quotes")
+        .then((json) => setData(json))
         .catch(() => {});
     };
     document.addEventListener("bn:tags-changed", handler);

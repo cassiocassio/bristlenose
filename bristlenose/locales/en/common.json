@@ -167,7 +167,22 @@
     "colStarred": "Starred",
     "colTimecode": "Timecode",
     "colSession": "Session",
-    "colSourceFile": "Source file"
+    "colSourceFile": "Source file",
+    "extractClips": "Extract Video Clips\u2026",
+    "clips": {
+      "noMedia": "No media files in project",
+      "inProgress": "Extraction in progress",
+      "progress": "Extracting clips\u2026 ({{progress}} of {{total}})",
+      "done_one": "{{count}} clip ready",
+      "done_other": "{{count}} clips ready",
+      "donePartial": "{{count}} clips ready ({{skipped}} skipped)",
+      "reveal": "Show in folder",
+      "revealMac": "Reveal in Finder",
+      "piiWarning": "Clips contain original audio \u2014 PII redaction applies to transcript text only",
+      "failed": "Clip extraction failed",
+      "ffmpegMissing": "FFmpeg not found \u2014 install it to extract clips",
+      "noClips": "No starred or featured quotes to extract"
+    }
   },
   "feedback": {
     "heading": "How is Bristlenose working for you?",
@@ -281,7 +296,7 @@
       "cannotTitle": "What it cannot detect",
       "cannotBody": "Sensitive personal disclosures \u2014 health conditions, ethnicity, political beliefs, religion, sexual orientation, and trade union membership. No automated tool reliably detects these in conversational speech. They require human review before sharing transcripts externally.",
       "cannotIndirect": "Indirect identification \u2014 individually harmless facts that together identify someone. For example, \u201c38-year-old accessibility tester at a building society in Surrey\u201d might narrow to one person. Job title combined with employer, a rare condition combined with a location, or a school name combined with a child\u2019s age can all enable identification. This requires researcher judgement.",
-      "speakerIdNote": "Note: speaker identification sends a small portion of raw transcript to the LLM before PII redaction runs, because it needs names and roles to work correctly. With Ollama, this stays on your machine.",
+      "speakerIdNote": "Note: speaker identification sends a small portion of raw transcript to the LLM before PII redaction runs, because speaker identification needs names and roles to work correctly. With Ollama, this stays on your machine.",
       "actionTitle": "What you should do",
       "actionReview": "Always review the pii_summary.txt audit file after redaction \u2014 it lists everything that was detected and replaced, so you can check for false positives (over-redaction) or false negatives (things that were missed).",
       "actionThreshold": "For sensitive data, lower the confidence threshold (BRISTLENOSE_PII_SCORE_THRESHOLD=0.5) to catch more at the cost of more false positives.",
@@ -424,7 +439,7 @@
     "yourTags": "Your tags",
     "builtIn": "Built-in",
     "frameworks": "Frameworks",
-    "sentimentTitle": "Emotional & Cognitive Signals",
+    "sentimentTitle": "Emotional and cognitive signals",
     "uncategorised": "Uncategorised",
     "uncategorisedSubtitle": "Tags not yet assigned to any group",
     "deleteGroupAriaLabel": "Delete group {{name}}"

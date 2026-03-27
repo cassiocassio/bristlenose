@@ -11,8 +11,11 @@
 import { useSyncExternalStore } from "react";
 
 export interface ActivityJobEntry {
+  type: "autocode" | "clips";
   frameworkId: string;
   frameworkTitle: string;
+  /** Total items (clips count) — used by clips jobs. */
+  total?: number;
 }
 
 // ── Module-level state ───────────────────────────────────────────────────

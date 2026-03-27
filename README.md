@@ -12,15 +12,15 @@ Click a timecode to watch the video of that quote.
 
 You can check a summary of unused quotes - to ensure nothing crucial was trimmed by the AI - typically ~20% or less of the original.
 
-You can tag and favourite, to organise the most powerful quotes. It auto-tags with a sentiment-analysis to help you identify moments of frustration or delight.
+You can tag and star quotes to organise them. It auto-tags with sentiment analysis to help you identify moments of frustration or delight.
 
 Filter your quotes, and export via CSV to your boards in Miro, Figjam, Mural or Lucidspark, or spreadsheet - for further analysis.   
 
-Bristlenose transcribes locally, and can do the thematic analysis on a (built in) local LLM –– but for speedy results you'll want an API key from Anthropic, OpenAI, Google or Azure. For commercial work, obviously check your org's policies on public LLM use.
+Bristlenose transcribes locally, and can do the thematic analysis on a (built in) local LLM — but for speedy results you'll want an API key from Claude, ChatGPT, Gemini, or Azure OpenAI. For commercial work, check your org's policies on public LLM use.
 
 For a typical study, e.g. 5–8 participant-hours, you'd be looking at roughly $1.50–$2.50 total cost from your LLM provider.
 
-Take care. Bristlenose is very alpha, without warranty. All feedback welcome.  
+Pre-release software, without warranty. All feedback welcome.  
 <!-- TODO: screenshot of an HTML report here -->
 
 Bristlenose is built by me, Martin Storey, a practising user researcher. It's free and open source under AGPL-3.0.
@@ -38,13 +38,13 @@ The report includes:
 - **Sections** -- quotes grouped by screen or task
 - **Themes** -- cross-participant patterns, surfaced automatically
 - **Tags** -- your own free-text tags with auto-suggest
-- **Sentiment** -- AI-generated badges plus y
+- **Sentiment** -- AI-generated badges per quote
 - **Charts** -- histogram of emotions across all quotes
 - **Friction points** -- confusion, frustration, and error-recovery moments flagged for review
 - **User journeys** -- per-participant stage progression
 - **Per-participant transcripts** -- full transcript pages with clickable timecodes, linked from the participant table
 - **Clickable timecodes** -- jump to the exact moment in a **popout video player**
-- **Favourite quotes** -- star, reorder
+- **Starred quotes** -- star, reorder
 - **Inline editing** -- fix transcription errors directly in the report
 - **Editable participant names** -- click the pencil icon to name participants in-browser; export edits as YAML
 - Filter and **export as CSV** into **Miro** and more
@@ -276,11 +276,7 @@ Transcription hardware is auto-detected. Apple Silicon uses MLX on Metal GPU. NV
 
 ### Analysis
 
-- **Codebook** -- define your own tags (codes) with descriptions; apply them consistently across quotes
 - **Your own themes** -- create, rename and reorder themes manually, not just the AI-generated ones
-- **Hide/show quotes** -- dismiss irrelevant quotes from the report without losing them
-- **Tag definitions** -- explain what each sentiment tag means (and its theoretical basis) inside the report
-- **Clickable histogram** -- click a sentiment bar to filter the report to just those quotes
 
 ### Sharing
 
@@ -334,7 +330,7 @@ On Linux, install `python3.12` and `ffmpeg` via your package manager. On Windows
 ### Verify everything works
 
 ```bash
-.venv/bin/python -m pytest tests/    # ~550 tests (approximate), should pass in <2s
+.venv/bin/python -m pytest tests/    # ~3200 tests (Python + Vitest), should pass in <10s
 .venv/bin/ruff check .               # lint
 .venv/bin/mypy bristlenose/          # type check (some third-party SDK errors are expected)
 ```
@@ -375,8 +371,8 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for the full project layout, but the shor
 - `bristlenose/stages/` -- the 12-stage pipeline (ingest through render), one module per stage
 - `bristlenose/stages/s12_render/` -- HTML report renderer package, loads CSS + JS from theme/
 - `bristlenose/theme/` -- atomic CSS design system (tokens, atoms, molecules, organisms, templates)
-- `bristlenose/theme/js/` -- report JavaScript (12 modules, concatenated at render time)
-- `bristlenose/llm/prompts.py` -- LLM prompt templates
+- `bristlenose/theme/js/` -- report JavaScript (17 modules, concatenated at render time)
+- `bristlenose/llm/prompts/` -- LLM prompt templates (Markdown files)
 - `bristlenose/pipeline.py` -- orchestrator that wires the stages together
 - `bristlenose/cli.py` -- Typer CLI entry point
 
@@ -387,6 +383,12 @@ Edit `bristlenose/__init__.py` (the single source of truth for version), commit,
 ---
 
 ## Changelog
+
+**0.14.3** — _27 Mar 2026_
+
+- Export: video clip extraction from starred and featured quotes (FFmpeg stream-copy)
+- Fix: video player "Cannot play" error caused by bearer token on `/media/` routes
+- Fix: `safe_filename()` path traversal reassembly vulnerability
 
 **0.14.2** — _24 Mar 2026_
 

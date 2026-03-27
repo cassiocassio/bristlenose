@@ -155,7 +155,21 @@
     "colStarred": "별표",
     "colTimecode": "시간 코드",
     "colSession": "세션",
-    "colSourceFile": "원본 파일"
+    "colSourceFile": "원본 파일",
+    "extractClips": "비디오 클립 추출\u2026",
+    "clips": {
+      "noMedia": "프로젝트에 미디어 파일이 없습니다",
+      "inProgress": "추출 진행 중",
+      "progress": "클립 추출 중\u2026 ({{progress}} / {{total}})",
+      "done_other": "{{count}}개 클립 준비 완료",
+      "donePartial": "{{count}}개 클립 준비 완료 ({{skipped}}개 건너뜀)",
+      "reveal": "폴더에서 보기",
+      "revealMac": "Finder에서 보기",
+      "piiWarning": "클립에는 원본 오디오가 포함되어 있습니다 \u2014 익명화는 텍스트에만 적용됩니다",
+      "failed": "클립 추출 실패",
+      "ffmpegMissing": "FFmpeg를 찾을 수 없습니다 \u2014 클립을 추출하려면 설치하세요",
+      "noClips": "추출할 별표 또는 주요 인용문이 없습니다"
+    }
   },
   "feedback": {
     "heading": "Bristlenose가 잘 작동하고 있나요?",

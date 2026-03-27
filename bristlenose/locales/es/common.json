@@ -168,7 +168,22 @@
     "colStarred": "Destacado",
     "colTimecode": "Código de tiempo",
     "colSession": "Sesión",
-    "colSourceFile": "Archivo fuente"
+    "colSourceFile": "Archivo fuente",
+    "extractClips": "Extraer clips de v\u00eddeo\u2026",
+    "clips": {
+      "noMedia": "No hay archivos multimedia en el proyecto",
+      "inProgress": "Extracci\u00f3n en curso",
+      "progress": "Extrayendo clips\u2026 ({{progress}} de {{total}})",
+      "done_one": "{{count}} clip listo",
+      "done_other": "{{count}} clips listos",
+      "donePartial": "{{count}} clips listos ({{skipped}} omitidos)",
+      "reveal": "Mostrar en carpeta",
+      "revealMac": "Mostrar en Finder",
+      "piiWarning": "Los clips contienen audio original \u2014 la anonimizaci\u00f3n solo se aplica al texto",
+      "failed": "Error al extraer clips",
+      "ffmpegMissing": "FFmpeg no encontrado \u2014 inst\u00e1lelo para extraer clips",
+      "noClips": "No hay citas destacadas o favoritas para extraer"
+    }
   },
   "feedback": {
     "heading": "¿Cómo te va con Bristlenose?",

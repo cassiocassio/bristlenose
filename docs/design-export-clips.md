@@ -2,7 +2,7 @@
 
 Extract trimmed video clips of key quotes for stakeholder playback and slide decks.
 
-**Status:** Not started. Design complete. Separate standalone feature.
+**Status:** v0.14.3 — serve-mode extraction shipped (FFmpeg backend, async job, API endpoints, React UI). CLI command deferred. AVFoundation backend deferred to desktop milestone.
 
 ---
 

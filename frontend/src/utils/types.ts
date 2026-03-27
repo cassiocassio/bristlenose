@@ -305,6 +305,22 @@ export interface AutoCodeJobStatus {
   completed_at: string | null;
 }
 
+export interface ClipJobStartResponse {
+  status: string;
+  total: number;
+  pii_warning: boolean;
+}
+
+export interface ClipJobStatus {
+  status: "idle" | "running" | "completed" | "failed";
+  progress: number;
+  total: number;
+  completed_count: number;
+  skipped_count: number;
+  current_clip: string;
+  output_dir: string | null;
+}
+
 export interface ProposedTagResponse {
   id: number;
   quote_id: number;

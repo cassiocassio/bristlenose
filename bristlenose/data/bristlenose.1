@@ -1,6 +1,6 @@
 .\" Man page for bristlenose
 .\" Generated from cli.py help text
-.TH BRISTLENOSE 1 "March 2026" "bristlenose 0.14.2" "User Commands"
+.TH BRISTLENOSE 1 "March 2026" "bristlenose 0.14.3" "User Commands"
 .SH NAME
 bristlenose \- user-research transcription and quote extraction engine
 .SH SYNOPSIS
@@ -61,7 +61,7 @@ on your machine.
 .PP
 The HTML report includes sections (grouped by screen), themes (cross-participant
 patterns), a sentiment histogram, friction points, user journeys, clickable
-timecodes with a popout video player, favourite quotes with CSV export, inline
+timecodes with a popout video player, starred quotes with CSV export, inline
 editing, and a tag system with auto-suggest.
 .SH COMMANDS
 .TP
@@ -245,13 +245,13 @@ securely in the system credential store (macOS Keychain, Linux Secret Service).
 .SS API keys
 .TP
 .B BRISTLENOSE_ANTHROPIC_API_KEY
-Anthropic API key.
+Claude API key.
 .TP
 .B BRISTLENOSE_OPENAI_API_KEY
-OpenAI API key.
+ChatGPT API key.
 .TP
 .B BRISTLENOSE_GOOGLE_API_KEY
-Google Gemini API key.
+Gemini API key.
 .SS Azure OpenAI settings
 .TP
 .B BRISTLENOSE_AZURE_API_KEY

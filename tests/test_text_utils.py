@@ -93,6 +93,12 @@ class TestSafeFilename:
         assert ".." not in result
         assert "/" not in result
 
+    def test_strips_reassembled_dotdot(self) -> None:
+        """Four dots collapse into a new '..' after one pass — loop handles this."""
+        result = safe_filename("....//evil")
+        assert ".." not in result
+        assert result == "evil"
+
     def test_strips_null_bytes(self) -> None:
         assert "\x00" not in safe_filename("hello\x00world")
 

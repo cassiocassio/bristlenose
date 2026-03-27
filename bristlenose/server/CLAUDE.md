@@ -248,6 +248,7 @@ The server currently loads one project (project ID 1). Multi-project is future w
 
 ## Gotchas
 
+- **`/media/` must NOT require bearer token auth** — HTML `<video>` and `<audio>` elements fetch their `src` URL without custom headers. If `/media/` is in `_AUTH_REQUIRED_PREFIXES`, media loads get 401'd and the player shows "Cannot play this format" (`MediaError code: 4`). This is NOT a codec issue — it's an auth issue. **Diagnostic**: check Network tab for 401 on the `/media/...` URL BEFORE investigating codecs. `/media/` is protected by path-traversal guard, extension allowlist, localhost binding, and CORS instead. This has been misdiagnosed as a format problem three times — don't add `/media/` back to the auth prefixes
 - **Quote timecode range match** — DOM ID uses `int(start_timecode)` which truncates.  A quote at 123.45s becomes `q-p1-123`.  The resolver queries `start_timecode >= 123 AND start_timecode < 124` to handle this
 - **PUT replaces entire state** — PUT `/hidden` with `{}` unhides everything.  PUT `/tags` with `{}` deletes all tags.  This is intentional (mirrors localStorage `setItem`)
 - **TagDefinition foreign key** — `codebook_group_id` is non-nullable.  New tags go to the "Ungrouped" group.  Don't use `codebook_group_id=0` — it violates the FK constraint

@@ -24,6 +24,7 @@ import {
 } from "react";
 import { useLocation } from "react-router-dom";
 import { announce } from "../utils/announce";
+import { apiGet } from "../utils/api";
 import i18n from "../i18n";
 import { postPlayerState } from "../shims/bridge";
 
@@ -100,14 +101,11 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       }
       return;
     }
-    // SPA mode: fetch from API
-    fetch("/api/projects/1/video-map")
-      .then((r) => (r.ok ? r.json() : null))
+    // SPA mode: fetch from API (must include auth token)
+    apiGet<{ video_map: VideoMap; player_url?: string }>("/video-map")
       .then((data) => {
-        if (data) {
-          videoMapRef.current = data.video_map ?? {};
-          if (data.player_url) playerUrlRef.current = data.player_url;
-        }
+        videoMapRef.current = data.video_map ?? {};
+        if (data.player_url) playerUrlRef.current = data.player_url;
       })
       .catch(() => {});
   }, []);

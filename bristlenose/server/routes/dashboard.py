@@ -8,6 +8,7 @@ from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
+from bristlenose.server.export_core import pick_featured_quotes
 from bristlenose.server.models import (
     Person,
     Project,
@@ -22,14 +23,6 @@ from bristlenose.server.models import (
 from bristlenose.server.models import Session as SessionModel
 
 router = APIRouter(prefix="/api")
-
-
-# ---------------------------------------------------------------------------
-# Sentiment constants (mirrors render/sentiment.py)
-# ---------------------------------------------------------------------------
-
-_NEGATIVE_SENTIMENTS = {"frustration", "confusion", "doubt"}
-_POSITIVE_SENTIMENTS = {"satisfaction", "confidence", "delight"}
 
 # Sentiment order for the sparkline (positive → negative, matching render_html)
 _SENTIMENT_ORDER = [
@@ -231,100 +224,6 @@ def _resolve_speaker_names(
                 name = person.short_name or person.full_name or ""
             result[(sess.session_id, sp.speaker_code)] = name
     return result
-
-
-def _pick_featured_quotes(
-    all_quotes: list[Quote],
-    n: int = 9,
-) -> list[Quote]:
-    """Select the most interesting quotes for the dashboard.
-
-    Port of _pick_featured_quotes() from render/dashboard.py.
-    Word-count filter → score → diversify by participant and polarity.
-    """
-    if not all_quotes:
-        return []
-
-    # Filter: prefer quotes between 12–33 words.
-    preferred = [q for q in all_quotes if 12 <= len(q.text.split()) <= 33]
-    if len(preferred) >= n:
-        candidates = preferred
-    else:
-        longer = [
-            q for q in all_quotes
-            if len(q.text.split()) >= 12 and q not in preferred
-        ]
-        candidates = preferred + longer
-    if not candidates:
-        candidates = list(all_quotes)
-
-    def _score(q: Quote) -> float:
-        s = 0.0
-        s += min(q.intensity, 3)
-        if q.sentiment in _NEGATIVE_SENTIMENTS:
-            s += 2
-        elif q.sentiment == "surprise":
-            s += 2
-        elif q.sentiment == "delight":
-            s += 2
-        elif q.sentiment in _POSITIVE_SENTIMENTS:
-            s += 1
-        if q.researcher_context:
-            s += 1
-        word_count = len(q.text.split())
-        if word_count > 33:
-            s -= min((word_count - 33) / 10, 2.0)
-        return s
-
-    scored = sorted(
-        candidates,
-        key=lambda q: (-_score(q), q.start_timecode),
-    )
-
-    picked: list[Quote] = []
-    used_pids: set[str] = set()
-    used_polarities: set[str] = set()
-
-    def _polarity(q: Quote) -> str:
-        if q.sentiment in _POSITIVE_SENTIMENTS:
-            return "positive"
-        if q.sentiment in _NEGATIVE_SENTIMENTS:
-            return "negative"
-        if q.sentiment == "surprise":
-            return "surprise"
-        return "neutral"
-
-    # Pass 1: one per participant, different polarities.
-    for q in scored:
-        if len(picked) >= n:
-            break
-        pid = q.participant_id
-        pol = _polarity(q)
-        if pid not in used_pids and pol not in used_polarities:
-            picked.append(q)
-            used_pids.add(pid)
-            used_polarities.add(pol)
-
-    # Pass 2: relax polarity, still different participants.
-    if len(picked) < n:
-        for q in scored:
-            if len(picked) >= n:
-                break
-            if q in picked:
-                continue
-            if q.participant_id not in used_pids:
-                picked.append(q)
-                used_pids.add(q.participant_id)
-
-    # Pass 3: relax all constraints.
-    if len(picked) < n:
-        for q in scored:
-            if len(picked) >= n:
-                break
-            if q not in picked:
-                picked.append(q)
-
-    return picked[:n]
 
 
 # ---------------------------------------------------------------------------
@@ -611,7 +510,7 @@ def get_dashboard(
         )
 
         # --- Featured quotes ---
-        featured = _pick_featured_quotes(all_quotes, n=9)
+        featured = pick_featured_quotes(all_quotes, n=9)
         speaker_names = _resolve_speaker_names(db, project_id)
 
         # Batch load starred/hidden state for featured quotes.

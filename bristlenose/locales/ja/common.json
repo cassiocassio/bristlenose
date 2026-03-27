@@ -164,7 +164,21 @@
     "colStarred": "スター付き",
     "colTimecode": "タイムコード",
     "colSession": "セッション",
-    "colSourceFile": "ソースファイル"
+    "colSourceFile": "ソースファイル",
+    "extractClips": "ビデオクリップを抽出\u2026",
+    "clips": {
+      "noMedia": "プロジェクトにメディアファイルがありません",
+      "inProgress": "抽出中",
+      "progress": "クリップを抽出中\u2026（{{progress}} / {{total}}）",
+      "done_other": "{{count}}個のクリップが準備完了",
+      "donePartial": "{{count}}個のクリップが準備完了（{{skipped}}個スキップ）",
+      "reveal": "フォルダに表示",
+      "revealMac": "Finderに表示",
+      "piiWarning": "クリップには元の音声が含まれています — 匿名化はテキストにのみ適用されます",
+      "failed": "クリップの抽出に失敗しました",
+      "ffmpegMissing": "FFmpegが見つかりません — クリップを抽出するにはインストールしてください",
+      "noClips": "抽出するスター付きまたは注目の引用がありません"
+    }
   },
   "feedback": {
     "heading": "",

@@ -105,9 +105,11 @@ class TestUnauthenticatedRequests:
         resp = raw_client.get("/api/projects/1/quotes")
         assert resp.json() == {"detail": "Unauthorized"}
 
-    def test_401_on_media(self, raw_client: TestClient) -> None:
+    def test_media_exempt_from_auth(self, raw_client: TestClient) -> None:
+        """Media routes are exempt — <video>/<audio> elements can't send auth headers."""
         resp = raw_client.get("/media/test.mp4")
-        assert resp.status_code == 401
+        # 404 (file not found), not 401 — auth is not checked
+        assert resp.status_code != 401
 
     def test_401_on_post(self, raw_client: TestClient) -> None:
         resp = raw_client.post(
@@ -165,8 +167,9 @@ class TestMiddlewareConstants:
     def test_required_prefixes_include_api(self) -> None:
         assert "/api/" in _AUTH_REQUIRED_PREFIXES
 
-    def test_required_prefixes_include_media(self) -> None:
-        assert "/media/" in _AUTH_REQUIRED_PREFIXES
+    def test_media_not_in_required_prefixes(self) -> None:
+        """Media exempt — <video>/<audio> can't send Authorization headers."""
+        assert "/media/" not in _AUTH_REQUIRED_PREFIXES
 
     def test_health_is_exempt(self) -> None:
         assert "/api/health" in _AUTH_EXEMPT_PREFIXES

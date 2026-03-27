@@ -18,7 +18,8 @@ import { useFocus } from "../contexts/FocusContext";
 import { useQuotesStore } from "../contexts/QuotesContext";
 import { filterQuotes } from "../utils/filter";
 import type { FilterState } from "../utils/filter";
-import { authHeaders } from "../utils/api";
+import { authHeaders, startClipExtraction } from "../utils/api";
+import { addJob } from "../contexts/ActivityStore";
 import { toast } from "../utils/toast";
 import { announce } from "../utils/announce";
 import { isExportMode } from "../utils/exportData";
@@ -204,6 +205,36 @@ export function ExportDropdown({ onExportReport }: ExportDropdownProps) {
     onExportReport();
   }, [setOpen, onExportReport]);
 
+  const handleExtractClips = useCallback(async () => {
+    setOpen(false);
+    try {
+      const result = await startClipExtraction();
+      if (result.total === 0) {
+        toast(t("export.clips.noClips"));
+        return;
+      }
+      addJob("clips", {
+        type: "clips",
+        frameworkId: "",
+        frameworkTitle: "",
+        total: result.total,
+      });
+      if (result.pii_warning) {
+        toast(t("export.clips.piiWarning"));
+      }
+      announce(t("export.clips.progress", { progress: 0, total: result.total }));
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "";
+      if (msg.includes("422")) {
+        toast(t("export.clips.ffmpegMissing"));
+      } else if (msg.includes("409")) {
+        toast(t("export.clips.inProgress"));
+      } else {
+        toast(t("export.clips.failed"));
+      }
+    }
+  }, [setOpen, t]);
+
   // ── Render ────────────────────────────────────────────────────────────
 
   if (isExportMode()) return null;
@@ -250,6 +281,15 @@ export function ExportDropdown({ onExportReport }: ExportDropdownProps) {
                 onClick={handleSaveSpreadsheet}
               >
                 {t("export.saveAsSpreadsheet")}
+              </li>
+              <li role="separator" className="export-dropdown-separator" />
+              <li
+                role="menuitem"
+                tabIndex={-1}
+                className="export-dropdown-item"
+                onClick={handleExtractClips}
+              >
+                {t("export.extractClips")}
               </li>
               <li role="separator" className="export-dropdown-separator" />
             </>

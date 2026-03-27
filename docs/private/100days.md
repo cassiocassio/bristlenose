@@ -199,6 +199,7 @@ MoSCoW within each category. **100-day goal: complete every Must.**
 - **Wrap dev paths in `#if DEBUG`** — `ContentView.swift`, `ServeManager`, `I18n` leak developer directory structure into release binary. (design-desktop-security-audit.md)
 - **Bundled fallback API key risk** — extractable from PyInstaller binary. Cap spending, use dedicated key, document accepted risk. (design-desktop-security-audit.md)
 - **DASVS Level 1 audit** — AFINE's Desktop Application Security Verification Standard (Nov 2025), purpose-built for desktop apps. 12 domains, 150+ requirements. ([github.com/afine-com/DASVS](https://github.com/afine-com/DASVS))
+- **`safe_filename()` `..` removal hardening** — single-pass `replace("..", "")` can reassemble traversal from `"..../"`. Fixed with `while` loop in v0.14.2 clip extraction work, but needs systematic security review pass across all filename utilities
 
 ### Could
 - **Export anonymisation** — checkbox to strip names/display-names from exported HTML
@@ -277,6 +278,7 @@ MoSCoW within each category. **100-day goal: complete every Must.**
 - ~~**PyPI `Development Status` classifier** — currently unset in pyproject.toml. Must be `Development Status :: 4 - Beta` before launch. Signals maturity to pip users~~
 - ~~**Frontend CI**~~ — Vitest + ESLint + TypeScript typecheck gated in CI since 0.12.0. ESLint step informational (84 pre-existing errors). Prettier not yet added
 - **pytest coverage in CI** — trivial to enable, currently blind to dead code
+- **Frontend test coverage for clip export** — extend ActivityChipStack + ExportDropdown tests for clips job type (added during clip extraction work, 27 Mar 2026)
 - **Multi-Python CI** — test 3.10, 3.11, 3.12, 3.13 (trivial, avoids EOL surprises)
 
 ### Should

@@ -2,9 +2,16 @@
 
 All notable changes to Bristlenose are documented here. See also the [README](README.md) for the latest releases.
 
+**0.14.3** — _27 Mar 2026_
+
+- **Export: video clip extraction** — starred and featured quotes extracted as trimmed video clips via FFmpeg stream-copy. Human-readable filenames (`p1 03m45 Sarah onboarding was confusing.mp4`), adjacent merge, async progress toast, `clips_manifest.json` audit trail. Two-backend architecture (FFmpeg now, AVFoundation future) with `ClipBackend` Protocol. 64 new Python tests
+- **Fix: video player 401** — `<video>` elements can't send Authorization headers; `/media/` routes exempted from bearer token middleware. Also fixed `PlayerContext.tsx` and `Minimap.tsx` using raw `fetch()` instead of `apiGet()`
+- **Fix: `safe_filename()` path traversal** — single-pass `..` removal could reassemble from `"..../"`. Now uses `while` loop
+- **Refactor: `pick_featured_quotes()`** — moved from `dashboard.py` to `export_core.py` for shared use by dashboard and clip extraction
+
 **0.14.2** — _24 Mar 2026_
 
-- **Localhost bearer token** — defence-in-depth API access control for serve mode. Per-session `secrets.token_urlsafe(32)` validated via Starlette middleware on `/api/*` and `/media/*` routes. Token injected into SPA HTML and desktop app WKWebView
+- **Localhost bearer token** — defence-in-depth API access control for serve mode. Per-session `secrets.token_urlsafe(32)` validated via Starlette middleware on `/api/*` routes. Token injected into SPA HTML and desktop app WKWebView
 - **Fix: TOC sidebar empty** — left-hand contents navigation on the Quotes tab was broken by the auth middleware (raw `fetch()` lacked the bearer token). Switched to `apiGet()` helper
 
 **0.14.1** — _24 Mar 2026_

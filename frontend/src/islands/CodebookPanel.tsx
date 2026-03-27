@@ -603,7 +603,7 @@ export function CodebookPanel({ projectId }: CodebookPanelProps) {
           if (status.status === "running") {
             const tmpl = templates?.find((t) => t.id === fid);
             const title = tmpl?.title ?? fid;
-            addJob(`autocode:${fid}`, { frameworkId: fid, frameworkTitle: title });
+            addJob(`autocode:${fid}`, { type: "autocode", frameworkId: fid, frameworkTitle: title });
           }
         })
         .catch(() => {
@@ -819,7 +819,7 @@ export function CodebookPanel({ projectId }: CodebookPanelProps) {
       startAutoCode(frameworkId)
         .then((status) => {
           setAutoCodeStatus((prev) => ({ ...prev, [frameworkId]: status }));
-          addJob(`autocode:${frameworkId}`, { frameworkId, frameworkTitle });
+          addJob(`autocode:${frameworkId}`, { type: "autocode", frameworkId, frameworkTitle });
         })
         .catch((err) => console.error("Start AutoCode failed:", err));
     },

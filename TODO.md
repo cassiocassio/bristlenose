@@ -178,6 +178,7 @@ Bristlenose has ~30 direct + transitive deps across Python, ML, LLM SDKs, and NL
 - [x] **Pipeline resilience Phase 2b** (Mar 2026) — verify content hashes on load, manifest invalidation on mismatch, lazy LLM client init
 - [x] **Frontend deps bump** (Mar 2026) — Vite 8, TypeScript 6, ESLint 10, Vitest 4
 - [x] **Bearer token auth** (Mar 2026) — localhost bearer token for serve mode API access control
+- [x] **Export: video clip extraction** (Mar 2026) — FFmpeg stream-copy clips from starred + featured quotes. Human-readable filenames, adjacent merge, async progress toast, `clips_manifest.json` audit trail. `ClipBackend` Protocol for future AVFoundation backend. 64 new tests. Also fixed: `safe_filename()` `..` reassembly, `/media/` auth exemption, `PlayerContext`/`Minimap` raw fetch 401s
 - [x] **Security scanning** (Mar 2026) — npm audit, CodeQL, Dependabot, gitleaks, SBOM
 - [x] **Unified i18n architecture** (Mar 2026) — single source of truth (`bristlenose/locales/`), desktop `I18n.swift`, bridge locale sync, startup flash prevention, Weblate plan, Apple glossary cross-check process. See `docs/design-i18n.md`
 - [x] **Help modal** (Mar 2026) — 3 phases: platform-aware shortcuts, typography tokens, entrance animation, custom tooltips with keyboard shortcut badges

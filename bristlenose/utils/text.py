@@ -80,8 +80,9 @@ def safe_filename(text: str, max_length: int = _MAX_FILENAME_LENGTH) -> str:
         "../../etc/cron.d/evil" → "etccron.devil"
         'He said "delete everything"' → "He said delete everything"
     """
-    # Strip path traversal sequences first
-    text = text.replace("..", "")
+    # Strip path traversal sequences (loop handles reassembly, e.g. "....//")
+    while ".." in text:
+        text = text.replace("..", "")
 
     # Remove unsafe characters
     text = _UNSAFE_FILENAME_CHARS.sub("", text)

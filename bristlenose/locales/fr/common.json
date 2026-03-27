@@ -168,7 +168,22 @@
     "colStarred": "Marqué",
     "colTimecode": "Code temporel",
     "colSession": "Session",
-    "colSourceFile": "Fichier source"
+    "colSourceFile": "Fichier source",
+    "extractClips": "Extraire les clips vid\u00e9o\u2026",
+    "clips": {
+      "noMedia": "Aucun fichier m\u00e9dia dans le projet",
+      "inProgress": "Extraction en cours",
+      "progress": "Extraction des clips\u2026 ({{progress}} sur {{total}})",
+      "done_one": "{{count}} clip pr\u00eat",
+      "done_other": "{{count}} clips pr\u00eats",
+      "donePartial": "{{count}} clips pr\u00eats ({{skipped}} ignor\u00e9s)",
+      "reveal": "Afficher dans le dossier",
+      "revealMac": "R\u00e9v\u00e9ler dans le Finder",
+      "piiWarning": "Les clips contiennent l\u2019audio original \u2014 l\u2019anonymisation ne s\u2019applique qu\u2019au texte",
+      "failed": "\u00c9chec de l\u2019extraction des clips",
+      "ffmpegMissing": "FFmpeg introuvable \u2014 installez-le pour extraire des clips",
+      "noClips": "Aucune citation marqu\u00e9e ou mise en avant \u00e0 extraire"
+    }
   },
   "feedback": {
     "heading": "Comment fonctionne Bristlenose pour vous ?",

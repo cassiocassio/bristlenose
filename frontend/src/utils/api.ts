@@ -7,6 +7,8 @@
 
 import type {
   AutoCodeJobStatus,
+  ClipJobStartResponse,
+  ClipJobStatus,
   CodebookGroupResponse,
   CodebookResponse,
   CodebookTagResponse,
@@ -334,4 +336,20 @@ export function getCodebookAnalysis(
 ): Promise<CodebookAnalysisListResponse> {
   const qs = elaborate ? "?elaborate=true" : "";
   return apiGet<CodebookAnalysisListResponse>(`/analysis/codebooks${qs}`);
+}
+
+// ---------------------------------------------------------------------------
+// Clip export
+// ---------------------------------------------------------------------------
+
+export function startClipExtraction(anonymise = false): Promise<ClipJobStartResponse> {
+  return apiPost<ClipJobStartResponse>("/export/clips", { anonymise });
+}
+
+export function getClipExtractionStatus(): Promise<ClipJobStatus> {
+  return apiGet<ClipJobStatus>("/export/clips/status");
+}
+
+export function revealClips(): Promise<{ revealed: boolean; path: string }> {
+  return apiPost<{ revealed: boolean; path: string }>("/export/clips/reveal", {});
 }

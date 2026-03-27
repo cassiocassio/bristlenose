@@ -97,13 +97,13 @@ describe("ExportDropdown", () => {
     expect(screen.getByTestId("export-dropdown-menu")).toBeInTheDocument();
   });
 
-  it("shows 3 items on Quotes tab", () => {
+  it("shows 4 items on Quotes tab", () => {
     initFromQuotes([makeQuote()]);
     renderDropdown("/report/quotes/");
     fireEvent.click(screen.getByRole("button", { name: "Export" }));
 
     const items = screen.getAllByRole("menuitem");
-    expect(items).toHaveLength(3);
+    expect(items).toHaveLength(4);
   });
 
   it("shows only Export Report on non-Quotes tabs", () => {

@@ -122,7 +122,14 @@
     "reportContent": "Report content",
     "newFolder": "New Folder",
     "dragInterviews": "Drag Interviews Here",
-    "dragInterviewsDescription": "Add interview recordings or transcripts to get started."
+    "dragInterviewsDescription": "Add interview recordings or transcripts to get started.",
+    "projectUnavailable": "Project Unavailable",
+    "projectUnavailableHint": "Connect the drive to access this project.",
+    "projectMoved": "Project Moved or Deleted",
+    "projectMovedDescription": "The project folder couldn\u2019t be found. It may have been moved or deleted.",
+    "locate": "Locate\u2026",
+    "locateMessage": "Find the new location for \u201c%@\u201d",
+    "onThisMac": "On this Mac"
   },
   "toolbar": {
     "back": "Back (⌘[)",

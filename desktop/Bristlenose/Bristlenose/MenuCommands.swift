@@ -319,9 +319,9 @@ private struct ProjectMenuContent: View {
     @ObservedObject var projectIndex: ProjectIndex
     @ObservedObject var i18n: I18n
 
-    /// Whether a project is selected (path is non-empty).
+    /// Whether a project is selected (path is non-empty or project is unavailable).
     private var hasProject: Bool {
-        !bridgeHandler.selectedProjectPath.isEmpty
+        !bridgeHandler.selectedProjectPath.isEmpty || !bridgeHandler.selectedProjectAvailable
     }
 
     /// Whether a folder is selected.
@@ -359,7 +359,12 @@ private struct ProjectMenuContent: View {
                 }
             }
             .keyboardShortcut("r", modifiers: [.command, .shift])
-            .disabled(!hasProject)
+            .disabled(!hasProject || !bridgeHandler.selectedProjectAvailable)
+
+            Button(i18n.t("desktop.chrome.locate")) {
+                NotificationCenter.default.post(name: .locateSelectedProject, object: nil)
+            }
+            .disabled(bridgeHandler.selectedProjectAvailable)
 
             Button(i18n.t("desktop.menu.project.rename")) {
                 NotificationCenter.default.post(name: .renameSelectedProject, object: nil)

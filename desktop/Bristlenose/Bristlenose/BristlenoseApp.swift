@@ -12,6 +12,7 @@ struct BristlenoseApp: App {
     @StateObject private var serveManager = ServeManager()
     @StateObject private var bridgeHandler = BridgeHandler()
     @StateObject private var projectIndex = ProjectIndex()
+    @StateObject private var volumeWatcher = VolumeWatcher()
     @StateObject private var i18n: I18n = {
         let i = I18n()
         if let dir = I18n.findLocalesDirectory() {
@@ -27,6 +28,10 @@ struct BristlenoseApp: App {
                 .environmentObject(bridgeHandler)
                 .environmentObject(projectIndex)
                 .environmentObject(i18n)
+                .onAppear {
+                    volumeWatcher.projectIndex = projectIndex
+                    projectIndex.refreshAvailability()
+                }
                 .onReceive(
                     NotificationCenter.default.publisher(for: NSApplication.willTerminateNotification)
                 ) { _ in

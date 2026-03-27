@@ -73,6 +73,11 @@ final class BridgeHandler: ObservableObject {
     /// Used by the Project menu to show folder-specific items.
     @Published var selectedFolderName: String = ""
 
+    /// Whether the currently selected project's directory is accessible on disk.
+    /// Set by ContentView on selection change. Used by the Project menu to
+    /// enable/disable "Locate…" and "Show in Finder".
+    @Published var selectedProjectAvailable: Bool = true
+
     /// Reference to the WKWebView for outbound calls (goBack, switchToTab).
     /// Set by WebView.makeNSView, cleared on reset(). Weak to avoid retain cycles.
     weak var webView: WKWebView?
@@ -269,6 +274,7 @@ final class BridgeHandler: ObservableObject {
         isDarkMode = false
         selectedProjectPath = ""
         selectedFolderName = ""
+        selectedProjectAvailable = true
         webView = nil
     }
 

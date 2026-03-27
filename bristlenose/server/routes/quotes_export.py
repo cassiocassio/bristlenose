@@ -10,7 +10,6 @@ from __future__ import annotations
 import csv
 import io
 import logging
-from dataclasses import fields
 
 from fastapi import APIRouter, HTTPException, Query, Request
 from starlette.responses import Response

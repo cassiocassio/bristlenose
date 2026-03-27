@@ -378,7 +378,7 @@ def _prompt_for_provider() -> str | None:
     console.print()
     console.print("[bold]No LLM provider configured.[/bold] Choose one:")
     console.print()
-    console.print("  [1] Claude API (best quality, ~$1.50/study)")
+    console.print("  [1] Claude API (recommended, ~$1.50/study)")
     console.print("      [dim]Get a key from console.anthropic.com[/dim]")
     console.print()
     console.print("  [2] ChatGPT API (good quality, ~$1.00/study)")

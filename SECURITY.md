@@ -78,7 +78,7 @@ Bristlenose uses two layers of identity: **speaker codes** (p1, p2) and optional
 - The Markdown summary includes display names when available
 - `people.yaml` in the output directory stores both display names and full names
 
-**Design intent:** Display names are a working tool for the research team (researchers, moderators, observers who were on the call). When findings are presented to a wider audience — product teams, stakeholders, executives — the speaker codes provide the anonymisation boundary. The planned export/share feature will strip names by default, making this the safe path for external distribution.
+**Design intent:** Display names are a working tool for the research team (researchers, moderators, observers who were on the call). When findings are presented to a wider audience — product teams, stakeholders, executives — the speaker codes provide the anonymisation boundary. The HTML export (Export Report) strips display names by default, making this the safe path for external distribution. Anonymisation is controlled by a checkbox in the export dialog.
 
 Moderator and observer names (m1, m2, o1) are not stripped — they are part of the research team, not research subjects.
 

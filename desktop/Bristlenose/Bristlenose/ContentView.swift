@@ -1,6 +1,83 @@
 import SwiftUI
 import UniformTypeIdentifiers
 
+// MARK: - Window title manager
+
+/// Sets NSWindow.title for Cmd+Tab / Mission Control without using
+/// `.navigationTitle()` on the detail view (which adds a visible toolbar title
+/// item that duplicates the custom icon+name ToolbarItem).
+/// Also hides the title bar text via `titleVisibility = .hidden` as belt-and-
+/// suspenders in case any navigation layer restores it.
+private struct WindowTitleManager: NSViewRepresentable {
+    let title: String
+
+    func makeNSView(context: Context) -> NSView {
+        let view = NSView()
+        DispatchQueue.main.async { Self.apply(title: title, to: view) }
+        return view
+    }
+    func updateNSView(_ view: NSView, context: Context) {
+        DispatchQueue.main.async { Self.apply(title: title, to: view) }
+    }
+    private static func apply(title: String, to view: NSView) {
+        guard let window = view.window else { return }
+        window.title = title
+        window.titleVisibility = .hidden
+    }
+}
+
+// MARK: - Sidebar empty-click deselection monitor
+
+/// Clears the sidebar selection when the user clicks in the empty area below
+/// all list rows. Uses NSEvent local monitor + NSTableView.row(at:) so it
+/// doesn't conflict with List's selection gesture (no SwiftUI gesture needed).
+/// The monitor is installed once and removed in deinit — no leak risk.
+private struct SidebarDeselectMonitor: NSViewRepresentable {
+    let deselect: () -> Void
+
+    func makeCoordinator() -> Coordinator { Coordinator(deselect: deselect) }
+    func makeNSView(context: Context) -> NSView { NSView() }
+    func updateNSView(_ view: NSView, context: Context) {
+        context.coordinator.deselect = deselect
+    }
+
+    final class Coordinator {
+        var deselect: () -> Void
+        private var monitor: Any?
+
+        init(deselect: @escaping () -> Void) {
+            self.deselect = deselect
+            monitor = NSEvent.addLocalMonitorForEvents(matching: .leftMouseDown) { [weak self] event in
+                self?.handle(event)
+                return event  // always pass through — we never consume
+            }
+        }
+
+        private func handle(_ event: NSEvent) {
+            guard let window = event.window,
+                  let tableView = Self.sidebarTableView(in: window) else { return }
+            let point = tableView.convert(event.locationInWindow, from: nil)
+            // Only act when click is inside the table view but below all rows.
+            guard tableView.bounds.contains(point) else { return }
+            if tableView.row(at: point) < 0 {
+                DispatchQueue.main.async { self.deselect() }
+            }
+        }
+
+        /// Finds the sidebar NSTableView — the first one in the window hierarchy.
+        /// The detail area is a WKWebView; it contains no NSTableViews.
+        private static func sidebarTableView(in window: NSWindow) -> NSTableView? {
+            func find(in view: NSView) -> NSTableView? {
+                if let tv = view as? NSTableView { return tv }
+                return view.subviews.lazy.compactMap { find(in: $0) }.first
+            }
+            return window.contentView.flatMap { find(in: $0) }
+        }
+
+        deinit { if let m = monitor { NSEvent.removeMonitor(m) } }
+    }
+}
+
 // MARK: - Duplicate drop alert model
 
 /// State for the "this folder already has a project" alert.
@@ -150,8 +227,12 @@ struct ContentView: View {
                     toolbarCenter
                     toolbarTrailing
                 }
-                .navigationTitle(selectedProject?.name ?? "Bristlenose")
+        // No .navigationTitle on the detail view — that would add a visible
+        // toolbar title item that duplicates the custom icon+name ToolbarItem.
+        // NSWindow.title is managed by WindowTitleManager below.
         }
+        .background(WindowTitleManager(title: selectedProject?.name ?? "Bristlenose"))
+        .background(SidebarDeselectMonitor { selection = [] })
         .navigationSplitViewColumnWidth(min: 180, ideal: 220, max: 300)
         .preferredColorScheme(colorScheme)
         // TODO: filter by window object when multi-window ships —
@@ -673,6 +754,9 @@ struct ContentView: View {
             }
         ))
         .focusSection()
+        // Empty-space deselection is handled by SidebarDeselectMonitor (NSEvent
+        // local monitor on the NavigationSplitView background) — no SwiftUI
+        // gesture needed here, which avoids macOS 26 List selection conflicts.
         // New Folder button in the sidebar title bar.
         .toolbar {
             ToolbarItem(placement: .automatic) {

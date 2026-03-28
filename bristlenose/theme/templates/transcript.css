@@ -191,6 +191,8 @@
 
 .transcript-segment .segment-body {
     min-width: 0;
+    font-size: var(--bn-text-body);
+    line-height: var(--bn-text-body-lh);
 }
 
 .transcript-segment .segment-speaker {

@@ -5,9 +5,17 @@
    SF Pro Text is optimised for body sizes (<20pt), SF Pro Display for headings (≥20pt).
    -apple-system resolves to SF Pro automatically on macOS.
 
-   Weight scale: SF Pro's variable weight axis is compatible with Inter's,
-   so the same numeric values work. Slight optical differences at 420/490
-   give SF Pro its characteristic Apple feel. */
+   Scale D — Apple HIG mapping:
+   - micro:   (custom, below footnote)
+   - badge:   footnote (11px)
+   - caption: caption 2 (12px)
+   - label:   body / subheadline (13px) — app voice
+   - body:    callout (15px)           — participant voice (quotes + transcript)
+   - heading: headline (17px)
+   - title:   title 2 (22px)
+   - display: title 1 (28px)
+
+   Archive of previous scale: tokens-desktop-v1.css */
 
 [data-platform="desktop"] {
     /* Font family — SF Pro via -apple-system, no Google Fonts needed */
@@ -16,31 +24,22 @@
         sans-serif;
     --bn-font-mono: "SF Mono", ui-monospace, monospace;
 
-    /* Type scale — adjusted to match Apple HIG conventions.
-       Scale D migration in progress (see tokens-desktop-v2.css for target).
-       New tokens added at current values — no visual change until Phase 3. */
-
-    /* New tokens (Phase 1 — available but not yet consumed) */
-    --bn-text-micro:       0.6rem;      /* 9.6px */
+    --bn-text-micro:       0.6rem;      /* 9.6px  */
     --bn-text-micro-lh:    1.2;
-    --bn-text-badge:       0.6875rem;   /* 11px — Apple footnote */
+    --bn-text-badge:       0.6875rem;   /* 11px   — Apple footnote */
     --bn-text-badge-lh:    1.3;
-    --bn-text-label:       0.8125rem;   /* 13px — Apple body / subheadline */
-    --bn-text-label-lh:    1.4;
-    --bn-text-display:     1.75rem;     /* 28px — Apple title 1 */
-    --bn-text-display-lh:  1.15;
-
-    /* Existing tokens (unchanged — Phase 3 will update body to 15px callout) */
-    --bn-text-caption:     0.6875rem;   /* 11px — Apple footnote */
+    --bn-text-caption:     0.75rem;     /* 12px   — Apple caption 2 */
     --bn-text-caption-lh:  1.35;
-    --bn-text-body-sm:     0.8125rem;   /* 13px — will be replaced by --bn-text-label */
-    --bn-text-body-sm-lh:  1.4;
-    --bn-text-body:        0.8125rem;   /* 13px — will become 15px (callout) in Phase 3 */
+    --bn-text-label:       0.8125rem;   /* 13px   — Apple body / subheadline */
+    --bn-text-label-lh:    1.4;
+    --bn-text-body:        0.9375rem;   /* 15px   — Apple callout */
     --bn-text-body-lh:     1.45;
-    --bn-text-heading:     1.0625rem;   /* 17px — Apple headline */
+    --bn-text-heading:     1.0625rem;   /* 17px   — Apple headline */
     --bn-text-heading-lh:  1.3;
-    --bn-text-title:       1.3125rem;   /* 21px — Apple title 2 */
+    --bn-text-title:       1.375rem;    /* 22px   — Apple title 2 */
     --bn-text-title-lh:    1.2;
+    --bn-text-display:     1.75rem;     /* 28px   — Apple title 1 */
+    --bn-text-display-lh:  1.15;
 
     /* Weight scale — SF Pro optical weights at same numeric values.
        No change needed — Inter and SF Pro share the weight axis range. */

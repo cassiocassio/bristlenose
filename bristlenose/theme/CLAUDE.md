@@ -21,17 +21,20 @@ Tokens → Atoms → Molecules → Organisms → Templates. All visual values vi
 
 **Rules:** Never hardcode `font-weight` values in CSS — always use the tokens.
 
-**Typography scale** — paired font-size + line-height tokens (line-height decreases as size increases, per Bringhurst — large letterforms provide visual anchoring, need less leading):
+**Typography scale (Scale D)** — 8 stops, paired font-size + line-height tokens (line-height decreases as size increases, per Bringhurst — large letterforms provide visual anchoring, need less leading):
 
 | Size token | Value | Line-height token | Value | Usage |
 |------------|-------|-------------------|-------|-------|
-| `--bn-text-caption` | 0.75rem (12px) | `--bn-text-caption-lh` | 1.4 | Timestamps, footnotes, secondary labels |
-| `--bn-text-body-sm` | 0.8125rem (13px) | `--bn-text-body-sm-lh` | 1.45 | Compact lists, sidebar nav, table cells |
-| `--bn-text-body` | 0.875rem (14px) | `--bn-text-body-lh` | 1.5 | Quote content, descriptions, body text |
-| `--bn-text-heading` | 1.125rem (18px) | `--bn-text-heading-lh` | 1.3 | Section headings, card titles |
-| `--bn-text-title` | 1.375rem (22px) | `--bn-text-title-lh` | 1.25 | Page titles, h1 |
+| `--bn-text-micro` | 9.6px | `--bn-text-micro-lh` | 1.3 | Drag handles, pill counts |
+| `--bn-text-badge` | 11.5px | `--bn-text-badge-lh` | 1.35 | Badges, compact indicators |
+| `--bn-text-caption` | 12px | `--bn-text-caption-lh` | 1.4 | Timestamps, footnotes |
+| `--bn-text-label` | 13px | `--bn-text-label-lh` | 1.45 | UI chrome, nav, sidebar, table cells |
+| `--bn-text-body` | 15px | `--bn-text-body-lh` | 1.5 | Quote content, transcript, body text |
+| `--bn-text-heading` | 18px | `--bn-text-heading-lh` | 1.3 | Section headings, card titles |
+| `--bn-text-title` | 22px | `--bn-text-title-lh` | 1.25 | Page titles, h1 |
+| `--bn-text-display` | 28px | `--bn-text-display-lh` | 1.2 | Dashboard hero numbers |
 
-Components migrate gradually — use `font-size: var(--bn-text-body); line-height: var(--bn-text-body-lh);` instead of hardcoded values. Existing CSS continues to work.
+Desktop overrides (`tokens-desktop.css`, activated by `data-platform="desktop"`): `--bn-text-body` stays 15px (Apple callout), `--bn-text-caption` → 12px, `--bn-text-title` → 22px (Apple title 2), `--bn-text-display` → 28px (Apple title 1). Chrome defaults to `--bn-text-label` (13px) via `body { font-size: var(--bn-text-label) }` in `report.css`.
 
 **Known limitation (Windows 10):** Static Segoe UI (pre-Variable) snaps 420→400 and 490→400 when offline (no Google Fonts). Structural cues (font-size, whitespace, borders) still carry hierarchy. Documented as acceptable degradation.
 

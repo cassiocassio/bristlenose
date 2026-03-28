@@ -62,8 +62,8 @@
     border: none;
     background: none;
     font-family: inherit;
-    font-size: var(--bn-text-body-sm);
-    line-height: var(--bn-text-body-sm-lh);
+    font-size: var(--bn-text-label);
+    line-height: var(--bn-text-label-lh);
     color: var(--bn-colour-text);
     cursor: pointer;
     border-radius: var(--bn-radius-sm);

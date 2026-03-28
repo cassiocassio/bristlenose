@@ -746,7 +746,7 @@ body.dragging * {
 }
 
 .session-entry-name {
-    font-size: var(--bn-text-body-sm);
+    font-size: var(--bn-text-label);
     font-weight: var(--bn-weight-light);
     overflow: hidden;
     text-overflow: ellipsis;
@@ -870,8 +870,8 @@ body.dragging * {
 }
 
 .signal-entry-name {
-    font-size: var(--bn-text-body-sm);
-    line-height: var(--bn-text-body-sm-lh);
+    font-size: var(--bn-text-label);
+    line-height: var(--bn-text-label-lh);
     font-weight: var(--bn-weight-normal);
     flex: 1;
     min-width: 0;

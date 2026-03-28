@@ -1,0 +1,11 @@
+{
+  "nav": {
+    "project": "Project",
+    "quotes": "Quotes",
+    "sessions": "Sessions"
+  },
+  "actions": {
+    "save": "Save",
+    "cancel": "Cancel"
+  }
+}

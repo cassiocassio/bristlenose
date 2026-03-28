@@ -287,6 +287,7 @@ MoSCoW within each category. **100-day goal: complete every Must.**
 - **pytest coverage in CI** — trivial to enable, currently blind to dead code
 - **Frontend test coverage for clip export** — extend ActivityChipStack + ExportDropdown tests for clips job type (added during clip extraction work, 27 Mar 2026)
 - **Multi-Python CI** — test 3.10, 3.11, 3.12, 3.13 (trivial, avoids EOL surprises)
+- **Swift test harness** — XCTest target + ~42 Swift Testing tests across 5 files (Tab, I18n, LLMProvider, KeychainHelper, ProjectIndex). Two tiny refactors: `ProjectIndex.init(fileURL:)` for temp-dir isolation, `KeychainStore` protocol for `InMemoryKeychain` mock (security review: real Keychain overwrites API keys on crash). Also clean up `SecurityChecklist.swift` (4 resolved items). Community consensus: Swift Testing for unit, XCTest reserved for future UI tests. Session notes: 27 Mar 2026. Enablement: (1) open Xcode → File → New → Target → Unit Testing Bundle → `BristlenoseTests`, (2) Claude writes tests. Docs: [Apple — Swift Testing](https://developer.apple.com/xcode/swift-testing/), [Apple — Adding tests to Xcode](https://developer.apple.com/documentation/testing/adding-tests-to-your-xcode-project), [desktop security audit](docs/design-desktop-security-audit.md)
 
 ### Should
 - **Alembic setup** — DB migration framework before any schema change
@@ -374,6 +375,7 @@ MoSCoW within each category. **100-day goal: complete every Must.**
 - **TestFlight beta** — pre-launch testing with real users
 - **Windows CI** — pytest on `windows-latest` runner
 - **AV false-positive testing** — test signed `.dmg` against common macOS antivirus. PyInstaller bundles frequently flagged. (design-desktop-security-audit.md)
+- **OS version compatibility testing** — set up macOS 15 Sequoia VM (UTM, Virtualization.framework) and test full app on the deployment target. Dev machine runs macOS 26 Tahoe — need VM coverage for macOS 15 (floor). Run BroadcastChannel spike, full app smoke test, WKWebView security policy, `.nonPersistent()` behaviour
 - **Semgrep CI integration** — Swift security rules (experimental) + Python security rules (mature). (design-desktop-security-audit.md)
 - **Objective-See QA** — run KnockKnock + LuLu during pre-release QA to verify system footprint
 

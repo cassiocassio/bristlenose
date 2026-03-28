@@ -200,6 +200,29 @@ Status is orthogonal to active selection. Providers don't expose balance, free-t
 4. **Ephemeral storage** — each project gets `WKWebsiteDataStore.nonPersistent()` to prevent cross-project cookie/sessionStorage leakage.
 5. **Settings interception** — `project-action: open-settings` opens the native Settings scene, not the web modal.
 
+## WKWebView cross-view messaging
+
+Multiple WKWebViews can communicate via **BroadcastChannel** if they share the same `WKWebsiteDataStore` instance. Validated in spike (28 Mar 2026, macOS 26.1). Full design: `docs/design-wkwebview-messaging.md`.
+
+**Critical rule:** `.nonPersistent()` creates a new ephemeral partition on every call. Two views that each call `.nonPersistent()` independently are fully isolated. To enable BroadcastChannel between views, both must use the **same instance** via a singleton:
+
+```swift
+class SharedConfigStore {
+    static let shared = SharedConfigStore()
+    let dataStore: WKWebsiteDataStore = .nonPersistent()
+    let processPool: WKProcessPool = WKProcessPool()
+}
+
+// In both WebView configs:
+config.websiteDataStore = SharedConfigStore.shared.dataStore
+```
+
+Process pool sharing is optional — separate pools do not break BroadcastChannel. Only the data store instance matters.
+
+**Channel naming:** `bristlenose-{purpose}-{projectId}` (e.g. `bristlenose-tags-1`). First consumer: Tag Inspector panel (`docs/design-native-inspector.md`).
+
+**Each WKWebView needs its own `WKWebViewConfiguration`** — don't share a config object between views (each has its own `userContentController` for message handlers). Share the data store and pool *via* the config, not the config itself.
+
 ## Port allocation
 
 `8150 + djb2(projectPath) % 1000` — deterministic per project path, range 8150–9149. If the computed port is busy, tries up to 10 consecutive ports. Swift's `String.hashValue` is randomized per process (since Swift 4.2), so we use a stable djb2 hash instead.
@@ -264,6 +287,9 @@ The `#if DEBUG` guard on the dev port override means release builds never see it
 
 ## Gotchas
 
+- **`.nonPersistent()` creates a new partition every call** — the most common mistake with multi-WKWebView setups. Two views that each call `.nonPersistent()` are fully isolated (no BroadcastChannel, no shared localStorage, no shared cookies). Store the instance in a singleton (`SharedConfigStore.shared.dataStore`) and pass it to both configs. See `docs/design-wkwebview-messaging.md`
+- **Custom URL schemes + `.nonPersistent()` crash WebKit on macOS 26** — `WKURLSchemeHandler` with a custom scheme (e.g. `spike://`) and `.nonPersistent()` data store crashes the WebKit network process. Use HTTP (localhost) instead. Bug is specific to custom schemes, not a general `.nonPersistent()` regression
+- **Don't share `WKWebViewConfiguration` between WKWebViews** — each view needs its own config (they have separate `userContentController` for message handlers/scripts). Sharing a config and then calling `userContentController.add(_, name: "X")` on both views adds duplicate handlers to the same controller, which crashes. Share the data store and pool *via* the config
 - **`import Security` does NOT re-export Foundation on macOS 15 SDK** — `KeychainHelper.swift` needs both `import Foundation` and `import Security`. Without Foundation, `Data` and `ProcessInfo` are undefined. The code review suggested `import Security` alone would suffice — it doesn't
 - **WKWebView `createWebViewWith` requires the provided configuration** — you MUST use the `configuration` parameter passed to `webView(_:createWebViewWith:for:windowFeatures:)`. Creating a fresh `WKWebViewConfiguration` and returning a WKWebView built with it crashes with `NSInternalInconsistencyException: "Returned WKWebView was not created with the given configuration."`. This means the popout inherits the parent's `userContentController` (including the bridge message handler). The bridge is accessible but player.html never calls it
 - **WKWebView `window.open()` is blocked without `WKUIDelegate`** — `window.open()` silently returns `null` unless the Coordinator implements `WKUIDelegate` and `webView(_:createWebViewWith:for:windowFeatures:)`. No error in the console — the call just fails. This is why the video player didn't work in the desktop app before the WKUIDelegate was added
@@ -298,6 +324,8 @@ The `#if DEBUG` guard on the dev port override means release builds never see it
 - **`DisclosureGroup` inside `List` works for one-level folders** — `DisclosureGroup(isExpanded:)` binding reads from `Folder.collapsed` (inverted). The expand/collapse state is persisted in `projects.json` via `setFolderCollapsed()`. If nested folders were ever needed, `OutlineGroup` would be required instead
 - **`Folder.collapsed`/`createdAt` backward compat** — old `projects.json` files have `FolderStub` shapes (just `id` and `name`). `Folder.init(from:)` uses `decodeIfPresent` with defaults (`collapsed = false`, `createdAt = Date()`) so old files parse correctly
 - **Drag-and-drop uses async URL loading** — `NSItemProvider.loadItem` callbacks run on background threads. Use `withTaskGroup` + `withCheckedContinuation` to collect all URLs, then `await MainActor.run` to process. Never mutate `@State` or `@Published` from the callback directly
+- **`.navigationTitle()` on the detail view adds a visible toolbar title item** — in `NavigationSplitView`, calling `.navigationTitle("Project Name")` on the detail view both sets `NSWindow.title` AND injects a SwiftUI toolbar title item. With a custom icon+name `ToolbarItem(placement: .navigation)` this creates a duplicate. Fix: omit `.navigationTitle` on the detail view entirely; set `NSWindow.title` via a `WindowTitleManager: NSViewRepresentable` that calls `window.title = title` in `updateNSView`. `titleVisibility = .hidden` alone does NOT suppress the SwiftUI toolbar item
+- **Empty-space deselection in `List(selection: Set<>)` on macOS 26** — `List(selection: $selection)` with a `Set` binding no longer auto-deselects when clicking empty space on macOS 26. SwiftUI gesture workarounds (`DragGesture(minimumDistance: 0)` as `.simultaneousGesture`) don't fire reliably. Fix: `SidebarDeselectMonitor: NSViewRepresentable` with `NSEvent.addLocalMonitorForEvents(matching: .leftMouseDown)`. In the handler, find the sidebar `NSTableView` (first table view in the window — WKWebView detail has none), convert the click to table coordinates, call `row(at:)`. If it returns -1 (click below all rows and within the table bounds), clear `selection = []`. Always `return event` to pass through
 
 ## Wiring menu actions (bridge handler cookbook)
 

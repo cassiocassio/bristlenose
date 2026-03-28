@@ -35,6 +35,8 @@ blockquote .quote-row .timecode {
 blockquote .quote-body {
     flex: 1;
     min-width: 0;
+    font-size: var(--bn-text-body);
+    line-height: var(--bn-text-body-lh);
 }
 
 blockquote .timecode {

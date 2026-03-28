@@ -110,10 +110,12 @@ def test_css_light_fallback_preserved(tmp_path: Path) -> None:
     """The plain :root block with light-only values must remain as fallback."""
     _render_minimal(tmp_path)
     css = (tmp_path / "assets" / "bristlenose-theme.css").read_text(encoding="utf-8")
-    # The original :root block should contain the plain value (no light-dark)
-    # Find content before the @supports block
-    supports_idx = css.index("@supports")
-    before_supports = css[:supports_idx]
+    # Colour tokens live in palette-default.css — find that section in the
+    # concatenated output (theme_assets adds "/* --- <filename> --- */" markers).
+    palette_start = css.index("/* --- colors/palette-default.css --- */")
+    palette_css = css[palette_start:]
+    supports_idx = palette_css.index("@supports")
+    before_supports = palette_css[:supports_idx]
     assert "--bn-colour-bg: #ffffff;" in before_supports
 
 

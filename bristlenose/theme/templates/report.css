@@ -13,9 +13,10 @@ html {
 
 body {
     font-family: var(--bn-font-body);
+    font-size: var(--bn-text-label);
+    line-height: var(--bn-text-label-lh);
     color: var(--bn-colour-text);
     background: var(--bn-colour-bg);
-    line-height: 1.6;
     margin: 0;
     padding: var(--bn-space-xl) var(--bn-space-lg);
 }

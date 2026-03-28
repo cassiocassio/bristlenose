@@ -223,8 +223,8 @@ body.dragging-v .inspector-body {
     padding: 0 var(--bn-space-md);
     height: 100%;
     font-family: var(--bn-font-body);
-    font-size: var(--bn-text-body-sm);
-    line-height: var(--bn-text-body-sm-lh);
+    font-size: var(--bn-text-label);
+    line-height: var(--bn-text-label-lh);
     font-weight: var(--bn-weight-emphasis);
     color: var(--bn-colour-muted);
     cursor: pointer;

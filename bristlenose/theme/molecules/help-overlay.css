@@ -61,7 +61,7 @@
 .help-section dd {
     margin: 0;
     color: var(--bn-colour-text);
-    font-size: var(--bn-text-body);
+    font-size: var(--bn-text-label);
 }
 
 .help-key-sep {

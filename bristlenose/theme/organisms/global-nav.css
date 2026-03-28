@@ -303,7 +303,7 @@
     align-items: center;
     gap: var(--bn-space-sm);
     padding: 0.4rem 0.85rem;
-    font-size: var(--bn-text-body-sm);
+    font-size: var(--bn-text-label);
     color: var(--bn-colour-text);
     cursor: pointer;
     transition: background var(--bn-transition-fast);

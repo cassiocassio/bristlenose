@@ -57,8 +57,12 @@ struct ProjectRow: View {
                     }
             } else {
                 VStack(alignment: .leading, spacing: 1) {
-                    Text(project.name)
-                        .foregroundStyle(available ? .primary : .secondary)
+                    if available {
+                        Text(project.name)
+                    } else {
+                        Text(project.name)
+                            .foregroundStyle(.secondary)
+                    }
 
                     if !available {
                         switch reason {
@@ -69,7 +73,8 @@ struct ProjectRow: View {
                         case .movedOrDeleted:
                             Text(i18n.t("desktop.chrome.locate"))
                                 .font(.caption)
-                                .foregroundStyle(.blue)
+                                // No explicit foregroundStyle — inherits primary (deselected)
+                                // or white (selected) from the List selection environment.
                         case nil:
                             EmptyView()
                         }
@@ -81,14 +86,18 @@ struct ProjectRow: View {
                 Image(systemName: "questionmark.folder")
                     .foregroundStyle(.secondary)
             } else {
-                Image(systemName: project.icon ?? IconPickerPopover.defaultIcon)
-                    .foregroundStyle(available ? .primary : .secondary)
+                if available {
+                    Image(systemName: project.icon ?? IconPickerPopover.defaultIcon)
+                } else {
+                    Image(systemName: project.icon ?? IconPickerPopover.defaultIcon)
+                        .foregroundStyle(.secondary)
+                }
             }
         }
         .accessibilityElement(children: .combine)
         .accessibilityLabel(accessibilityLabel)
         .overlay(
-            RoundedRectangle(cornerRadius: 4)
+            RoundedRectangle(cornerRadius: 6)
                 .stroke(Color.accentColor, lineWidth: 2)
                 .opacity(isDropTarget ? 1 : 0)
         )

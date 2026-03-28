@@ -51,6 +51,7 @@ desktop/Bristlenose/Resources/ffprobe
 desktop/Bristlenose/Resources/models/
 desktop/build/
 desktop/DerivedData/
+desktop/testtest/
 # Xcode user data (per-developer state, not shared)
 **/xcuserdata/
 **/*.xcuserstate

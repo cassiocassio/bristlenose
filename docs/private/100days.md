@@ -17,7 +17,7 @@ MoSCoW within each category. **100-day goal: complete every Must.**
 - **~~Desktop app v0.1~~** — SwiftUI shell, PyInstaller sidecar, folder picker, pipeline runner, "Open Report" button. ~365–435 MB bundle. (design-desktop-app.md)
 - ~~**Export: standalone HTML from serve mode** — `POST /api/projects/{id}/export`, self-contained HTML. Shipped v0.11.2. (design-export-sharing.md)~~
 - [S4] **Export: research package (zip)** — zip with report.html + transcripts/ (.txt with inline timecodes) + clips/ (optional, FFmpeg). Human-readable filenames (`p1 03m45 Sarah onboarding was confusing.mp4`). Anonymisation across all surfaces. Replaces 3 hours of Final Cut Pro work. Stages 1–3 of export roadmap. (design-export-sharing.md)
-- [S3] **Multi-project support** — home screen, project list, create/switch without restart. Milestone 4 in ROADMAP. Design doc: `docs/design-project-sidebar.md` (5-phase plan). Phase 1 prompt: `docs/private/prompts/phase1-project-sidebar.md`
+- [S3] **Multi-project support** — home screen, project list, create/switch without restart. Milestone 4 in ROADMAP. Design docs: `docs/design-project-sidebar.md` (5-phase plan), `docs/design-multi-project.md` (infra/DB/architecture). Phase 1 prompt: `docs/private/prompts/phase1-project-sidebar.md`
 - **~~File import (drag-and-drop)~~** — add recordings to project from GUI. Milestone 5. Needs design doc
 - [S3] **Duplicate folder drop warning** — when dropping a folder that matches an existing project's path, show dismissable warning with "Duplicate of \<project\>" — allow it (user may tag/analyse differently) but flag the likely mistake
 - [S3] **Slow-double-click rename in sidebar** — Finder-style slow double-click to inline rename. `simultaneousGesture(TapGesture())` and `onTapGesture` both break List selection on macOS 26. Needs NSEvent monitor approach or AppKit subclass. Rename still works via right-click and Project menu
@@ -52,6 +52,9 @@ MoSCoW within each category. **100-day goal: complete every Must.**
 - **Project setup UI for new projects** (#49) — large effort, defer post-launch
 - **.docx export** — Word document output for sharing with stakeholders (#20)
 - **Published reports** — Cloudflare R2 hosted sharing. Phase 2–3 of export
+- **Person linking** — cross-project identity via `person_links` table in instance DB (same/not_same link types, transitivity, canonical person display). Folder-scoped only — no cross-folder linking (security review CRITICAL). Requires instance DB, UUID migration, encryption. (design-multi-project.md §2, §3c)
+- **Cross-project search** — folder-scoped quote/tag/participant search across project DBs. FTS5 per-project, no central index. Speaker codes by default, not display names. (design-multi-project.md §3b, §3c Finding 5)
+- **Project archive/restore** — active→archived→reopened lifecycle. Schema fields (`archived`, `previous_folder_id`) included from start. Flat archive section, folder-level archive, un-archive with folder restore. (design-multi-project.md §3a)
 
 ### Icebox (100 days)
 - **Miro bridge** — Miro-shaped CSV export → API integration → layout engine. CSV export works as stopgap. Killer feature - Resuresct for move out of beta! See `docs/private/design-miro-bridge.md`
@@ -206,11 +209,18 @@ MoSCoW within each category. **100-day goal: complete every Must.**
 - **Bundled fallback API key risk** — extractable from PyInstaller binary. Cap spending, use dedicated key, document accepted risk. (design-desktop-security-audit.md)
 - **DASVS Level 1 audit** — AFINE's Desktop Application Security Verification Standard (Nov 2025), purpose-built for desktop apps. 12 domains, 150+ requirements. ([github.com/afine-com/DASVS](https://github.com/afine-com/DASVS))
 - **`safe_filename()` `..` removal hardening** — single-pass `replace("..", "")` can reassemble traversal from `"..../"`. Fixed with `while` loop in v0.14.2 clip extraction work, but needs systematic security review pass across all filename utilities
+- [S3] **Person UUID migration** — change Person.id from auto-increment integer to UUID before any person_links rows exist. Currently `Mapped[int]` in `server/models.py`. Design doc: "cost of adding UUIDs now is near-zero; retrofitting requires a migration touching every row." Depends on Alembic. (design-multi-project.md §2, §3c Finding 7)
+- **Project index metadata exposure** — `projects.json` is a client roster (project names, folder/client names, paths, timestamps). Propagates via cloud sync, MDM, dotfile managers. Document sensitivity in SECURITY.md; desktop path in `~/Library/Application Support/` not `~/.config/`. (design-multi-project.md §3c, Finding 3)
 
 ### Could
 - **Export anonymisation** — checkbox to strip names/display-names from exported HTML
 - **Rate limiting** — if server ever exposed beyond localhost
 - ~~**pip-audit in CI**~~ — shipped in ci.yml. Also: `pip-licenses --format=json --with-urls` for licence compliance (verify AGPL-3.0 compatibility of all deps) — licence check still TODO
+
+### Won't (100 days)
+- **Instance DB encryption** — cross-project instance DB will contain person_links (cross-client identity). Two independent security reviews rated unencrypted storage CRITICAL. Options: SQLCipher or Keychain-derived key. Required before person linking ships. (design-multi-project.md §3c, Finding 2)
+- **`bristlenose forget` — GDPR erasure across instance DB** — when person_links exist, deleting the project folder no longer erases all identity state. Needs CLI command: purge Person rows + person_links + transitive chains + audit receipt. (design-multi-project.md §3c, Finding 4)
+- **Export isolation integration test** — CI-gated test: load 2 projects, verify Project A export contains zero data from Project B (Person rows, codebook groups, tags). (design-multi-project.md §3c, Finding 10)
 
 ---
 
@@ -304,6 +314,7 @@ MoSCoW within each category. **100-day goal: complete every Must.**
 - **Logging tiers 2–3** — cache hit/miss decisions, concurrency queue depth, PII entity breakdown, FFmpeg command/return code, keychain resolution, manifest load/save (6 items, all trivial–small)
 - **Promote pip-audit + npm audit to blocking** — target v0.15.0 (trivial)
 - **i18n: pseudo-localisation QA** — add `i18next-pseudo` to catch remaining hardcoded strings. See `docs/design-i18n.md`
+- [S3] **Hardcoded project ID audit** — ~12 locations hardcode project ID `1` (`app.py`, `export.py`, `api.ts`, `PlayerContext.tsx`, `ExportDialog.tsx`, `useProjectId.ts`, `main.tsx`, `index.html`). Two are bugs now (bypass `apiBase()`). Parameterise before multi-project. (design-multi-project.md §4)
 
 ### Could
 - **a11y lint rules** — eslint-plugin-jsx-a11y
@@ -495,7 +506,7 @@ MoSCoW within each category. **100-day goal: complete every Must.**
 
 ## Items needing design docs before implementation
 
-1. Multi-project support (Milestone 4)
+1. ~~Multi-project support (Milestone 4)~~ — design docs complete: `docs/design-multi-project.md`, `docs/design-project-sidebar.md`
 2. File import / drag-and-drop (Milestone 5)
 3. Settings UI (Milestone 6)
 4. Run pipeline from GUI (Milestone 7)

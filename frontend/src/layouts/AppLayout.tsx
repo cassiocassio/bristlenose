@@ -401,7 +401,7 @@ function AppShell() {
           setFeedbackOpen(true);
           break;
         case "openBlog":
-          window.open("https://bristlenose.substack.com", "_blank");
+          window.open("https://blog.bristlenose.app", "_blank");
           break;
         case "showAcknowledgements":
           setHelpSection("acknowledgements");

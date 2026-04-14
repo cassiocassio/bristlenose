@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
-"""Mark items as Done on the GitHub Projects board and strike through in 100days.md.
+"""DEPRECATED: use sync_100days.py instead (bidirectional sync).
+
+Mark items as Done on the GitHub Projects board and strike through in 100days.md.
 
 Takes item titles (or substrings) as arguments, finds matching cards on the board,
 moves them to Done, and applies strikethrough in the markdown.

@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
-"""Create GitHub Projects cards for items in 100days.md that don't exist on the board.
+"""DEPRECATED: use sync_100days.py instead (bidirectional sync).
+
+Create GitHub Projects cards for items in 100days.md that don't exist on the board.
 
 Parses the markdown to extract Kind (from ## headings) and Priority (from ### headings),
 then diffs against existing board titles and creates missing cards.
@@ -293,8 +295,8 @@ def main():
 
     print(f"\nCreating {len(new_items)} cards...")
     for i, item in enumerate(new_items):
-        safe_title = item["title"].replace('"', '\\"').replace("\n", " ")
-        safe_body = item["description"].replace('"', '\\"').replace("\n", " ")
+        safe_title = item["title"].replace("\\", "\\\\").replace('"', '\\"').replace("\n", " ")
+        safe_body = item["description"].replace("\\", "\\\\").replace('"', '\\"').replace("\n", " ")
 
         query = f'''
         mutation {{

@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
-"""Sync 100days.md strikethrough styling from GitHub Projects board status.
+"""DEPRECATED: use sync_100days.py instead (bidirectional sync).
+
+Sync 100days.md strikethrough styling from GitHub Projects board status.
 
 Items marked Done on the board get ~~strikethrough~~ in the markdown.
 Items not Done have strikethrough removed (if previously applied).

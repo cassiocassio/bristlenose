@@ -8,6 +8,19 @@ MoSCoW within each category. **100-day goal: complete every Must.**
 
 **Icebox** sits below Could in sections that have entries. These are ideas with merit that we're deliberately not pursuing in the 100-day window — parked, not deleted. On the GitHub Projects board, Icebox is a column to the right of Done.
 
+### Sprint schedule
+
+Items tagged `[S1]`–`[S6]` are assigned to a sprint. Untagged items are unassigned. Synced to the [GitHub Projects board](https://github.com/cassiocassio/bristlenose-delivery) via `/sync-board`.
+
+| Tag | Dates | Theme |
+|-----|-------|-------|
+| [S1] | 14–25 Apr | Start the clocks |
+| [S2] | 28 Apr–9 May | Build pipeline + legal |
+| [S3] | 12–23 May | Multi-project |
+| [S4] | 26 May–6 Jun | First-run + export |
+| [S5] | 8–19 Jun | Visual design + a11y |
+| [S6] | 22–30 Jun | Launch prep |
+
 ---
 
 ## 1. Missing — essential feature gaps ("it's not done without it")
@@ -157,7 +170,7 @@ MoSCoW within each category. **100-day goal: complete every Must.**
 ## 5. Blocking — prevents adoption or causes abandonment
 
 ### Must
-- [S4] **First-run experience** — new user opens app, has no project, no API key, no recordings. What happens? Needs design
+- [S4] **First-run experience** — new user opens app, has no project, no API key, no recordings. What happens? Design doc complete (`launch-docs/design-first-run-experience.md` in delivery repo): coach-in-context, no wizards/sheets, trial IS the onboarding. Needs implementation
 - ~~**API key entry in GUI** — currently requires terminal. Absolute blocker for App Store users~~
 - ~~**Error messaging**~~ — pipeline failures show actionable messages ("check API credits or logs", "run bristlenose doctor"), red ✗ / yellow ⚠ per stage. Shipped 0.13.3
 - [S4] **`bristlenose doctor` in GUI** — dependency health checks visible in app, not just CLI
@@ -186,14 +199,14 @@ MoSCoW within each category. **100-day goal: complete every Must.**
 - ~~**Desktop security: minimal child process environment**~~ — stripped to PATH, HOME, TMPDIR, locale, VIRTUAL_ENV + BRISTLENOSE_* overlay
 - ~~**Desktop security: port-restrict navigation policy**~~ — shipped in `WebView.swift` (`decidePolicyFor` restricts to `127.0.0.1` + `about:`)
 - **~~Rotate API key~~** — was visible in terminal (TODO.md immediate)
-- [S2] **Privacy policy** — required for App Store submission. Local-first model simplifies this but document must exist
-- [S2] **Terms of service** — subscription terms, refund policy, data handling
+- [S2] **Privacy policy** — required for App Store submission. Local-first model simplifies this but document must exist. Draft v1 complete (`launch-docs/privacy-policy.md` in delivery repo), needs solicitor review
+- [S2] **Terms of service** — subscription terms, refund policy, data handling. Draft v0.9.1 complete (`launch-docs/terms-of-service.md` in delivery repo), needs solicitor review
 - [S2] **App Store review compliance** — sandbox, entitlements, code signing, notarisation pipeline
 - [S5] **PII redaction audit** — verify Presidio catches names/emails in transcripts before shipping to paying users
 - ~~**Security scanning** — npm audit, pip-audit, CodeQL before public release (design-test-strategy.md)~~
 - [S1] **Alembic/migration strategy** — DB schema changes without data loss. Currently no migration framework
 - [S2] **AI data disclosure dialog** — Apple Guideline 5.1.2(i) (Nov 2025) requires explicit consent before sending transcript data to third-party AI. Non-negotiable for App Store. (design-desktop-security-audit.md)
-- [S2] **Privacy Manifest (`PrivacyInfo.xcprivacy`)** — required for App Store since mid-2024. Declare data types and API usage reasons. (design-desktop-security-audit.md)
+- [S2] **Privacy Manifest (`PrivacyInfo.xcprivacy`)** — required for App Store since mid-2024. Declare data types and API usage reasons. (design-desktop-security-audit.md). Draft complete (`launch-docs/PrivacyInfo.xcprivacy` + `privacy-manifest-rationale.md` in delivery repo), needs codebase audit to validate reason codes
 
 ### Should
 - **Vulnerability disclosure page** — SECURITY.md exists but not public-facing. Add `security@bristlenose.research`, publish `security.txt` at `bristlenose.research/.well-known/security.txt` (RFC 9116). (infrastructure-and-identity.md)
@@ -208,6 +221,7 @@ MoSCoW within each category. **100-day goal: complete every Must.**
 - **Wrap dev paths in `#if DEBUG`** — `ContentView.swift`, `ServeManager`, `I18n` leak developer directory structure into release binary. (design-desktop-security-audit.md)
 - **Bundled fallback API key risk** — extractable from PyInstaller binary. Cap spending, use dedicated key, document accepted risk. (design-desktop-security-audit.md)
 - **DASVS Level 1 audit** — AFINE's Desktop Application Security Verification Standard (Nov 2025), purpose-built for desktop apps. 12 domains, 150+ requirements. ([github.com/afine-com/DASVS](https://github.com/afine-com/DASVS))
+- **PII detection warning before LLM send** — consider adding a PII detection warning before sending transcripts to LLM — strengthens privacy-by-design story. Non-blocking, nice-to-have. Review feasibility and UX implications
 - **`safe_filename()` `..` removal hardening** — single-pass `replace("..", "")` can reassemble traversal from `"..../"`. Fixed with `while` loop in v0.14.2 clip extraction work, but needs systematic security review pass across all filename utilities
 - [S3] **Person UUID migration** — change Person.id from auto-increment integer to UUID before any person_links rows exist. Currently `Mapped[int]` in `server/models.py`. Design doc: "cost of adding UUIDs now is near-zero; retrofitting requires a migration touching every row." Depends on Alembic. (design-multi-project.md §2, §3c Finding 7)
 - **Project index metadata exposure** — `projects.json` is a client roster (project names, folder/client names, paths, timestamps). Propagates via cloud sync, MDM, dotfile managers. Document sensitivity in SECURITY.md; desktop path in `~/Library/Application Support/` not `~/.config/`. (design-multi-project.md §3c, Finding 3)
@@ -305,7 +319,7 @@ MoSCoW within each category. **100-day goal: complete every Must.**
 - **Real-data stress test corpus** — acquire NASA transcripts (~50 .txt), StoryCorps audio (~30 .mp3), SpinTX Spanish (~20 .mp4+.srt), IWM British (~10 .mp3), Korean War Legacy (~10 .mp4). ~125 sessions, ~100h, 3 languages. Exercise transcription quality, thematic analysis depth, scale rendering, i18n analysis. (design-real-data-testing.md)
 - **Visual regression baselines** — Playwright screenshots, light + dark
 - **Cross-browser Playwright** — Chromium + Firefox + WebKit
-- **Bundle size budget** — track and gate frontend bundle growth
+- ~~**Bundle size budget**~~ — moved to §15 Performance as a Must
 - **Platform detection refactor** — shared `utils/system.py` (#43)
 - **Skip logo copy when unchanged** (#31)
 - **Temp WAV cleanup** (#33)
@@ -339,7 +353,7 @@ MoSCoW within each category. **100-day goal: complete every Must.**
 ### Must
 - [S6] **App Store description** — short + long description, keywords, screenshots
 - [S6] **Video walkthrough** — 2-minute "here's what Bristlenose does" screencast
-- [S4] **In-app onboarding** — first-run wizard or guided tour for new users
+- [S4] **~~In-app onboarding~~** — merged into first-run experience (§5). Trial IS the onboarding — no separate wizard. Post-trial, contextual tooltips only for features the trial didn't cover
 - [S4] **Provider setup guide** — which LLM provider, how to get API key, cost expectations
 - [S6] **README polish** — landing page README for GitHub (currently dev-focused)
 - [S6] **Hero image of report on GitHub README** — screenshot showing a real report, above the fold
@@ -379,6 +393,8 @@ MoSCoW within each category. **100-day goal: complete every Must.**
 - [S1] **Succession plan** — bus-factor doc (every account/credential/recovery path), password manager emergency access for one trusted person. (infrastructure-and-identity.md)
 
 ### Should
+- [S2] **Rate-limit trial-key endpoint** — add rate limiting (1 req/min/IP) + server-side receipt validation to the trial-key endpoint, even for the 20-user beta. See `trial-and-pricing-architecture.md` Part 2
+- [S1] **Anthropic billing alerts** — set up billing alerts at $5 and $10 thresholds for the trial API key account
 - **Desktop app polish** — ReadyView: SwiftUI `.fileImporter()` (replace `NSOpenPanel.runModal()`). ProcessRunner: `AsyncBytes` instead of `availableData` polling. `hasAnyAPIKey()`: extend beyond Anthropic-only (or rename). Settings shortcut ⌘, : show in Help shortcuts conditionally (desktop only, browser intercepts). (Keychain migration moved to §6 Risk Must)
 - **Doctor serve-mode checks** — Vite auto-discovery via `/__vite_ping`, replace hardcoded port (design-serve-doctor.md)
 - **Extract design tokens for Figma** — colours, spacing, typography, radii → JSON/CSS variables
@@ -403,8 +419,8 @@ MoSCoW within each category. **100-day goal: complete every Must.**
 
 ### Must
 - [S1] **Apple Developer Program** — $99/year, individual enrollment initially. Bundle ID: `research.bristlenose.app`. Transition to Ltd organisation enrollment if/when revenue justifies it (team transfer preserves app listing, reviews, URL). Full plan: `docs/private/infrastructure-and-identity.md`
-- [S2] **Privacy policy URL** — required for App Store submission. Host at `bristlenose.research/privacy`
-- [S2] **Terms of service** — subscription terms
+- [S2] **Privacy policy URL** — required for App Store submission. Host at `bristlenose.research/privacy`. Draft complete, needs solicitor review then hosting
+- [S2] **Terms of service** — subscription terms. v0.9.1 drafted, needs solicitor review
 - [S2] **App sandbox compliance** — entitlements for file access, network (LLM API calls)
 - [S2] **Export compliance** — HTTPS only, no custom encryption = simplified declaration
 - [S2] **Age rating** — likely 4+ (no objectionable content)
@@ -413,6 +429,8 @@ MoSCoW within each category. **100-day goal: complete every Must.**
 - [S2] **AI data transparency per Apple 5.1.2(i)** — first-run consent dialog naming each LLM provider, linking privacy policies, Ollama offline option. Cross-ref §6 Risk. (design-desktop-security-audit.md)
 
 ### Should
+- [S2] **Draft DPA for relay mode** — accept processor status under GDPR Article 4(2). Short, 2-page, honest DPA. Needed before v1.0 subscription launch. See `trial-and-pricing-architecture.md` Part 2
+- [S2] **Execute DPAs with LLM providers** — execute DPAs with Anthropic/OpenAI/Google for the relay API accounts (sub-processor agreements). Needed before v1.0
 - **GDPR statement** — data processing description (local-first, API calls to LLM providers)
 - **Accessibility statement** — VoiceOver compatibility, keyboard navigation
 - **Open source license display** — AGPL notice in app + dependency licenses
@@ -486,6 +504,50 @@ MoSCoW within each category. **100-day goal: complete every Must.**
 
 ---
 
+## 15. Performance — "never let it get slower"
+
+Safari's performance team made WebKit fast by never allowing it to become slower — every commit runs benchmarks, regressions are rejected before they land. The report SPA is the core product surface inside both the macOS app and the CLI. It needs the same discipline. Full design doc: `spa-performance.md`.
+
+**The plan: profile first, then fix by impact, then gate in CI.**
+
+### Must
+- [S1] **Profile the demo dataset** — run Lighthouse, Playwright DOM count, Xcode Instruments Animation Hitches, and manual scroll testing against the IKEA study. Record baselines for TTI, FCP, LCP, CLS, DOM node count, bundle size, static export file size. You can't prioritise what you haven't measured. This is step 0
+- [S1] **Bundle size CI gate** — `bundlesize` or equivalent, fail if app > 100 KB gzip. Promoted from §9 Should — without a gate, bundles only grow
+- [S1] **`GZipMiddleware` in FastAPI** — one line. ~70% reduction in served HTML/CSS/JS. Free win for WKWebView and browser
+- [S1] **`content-visibility: auto` on quote card containers** — CSS only, works everywhere including file://. Browser skips layout/paint for off-screen cards. Supported since Safari 17.4. Essential for static export path where JS virtualisation isn't possible
+- [S2] **`@tanstack/virtual` in serve mode** — required, not optional. A 15h study produces ~1,500 quotes (~100/hour from real usage). That's ~30,000 DOM nodes without virtualisation. Virtualisation drops visible DOM to ~1,000 regardless of total. This is the single most important performance feature
+- [S1] **Move `<script>` to end of `<body>`** — FCP should not wait for JS parse. Currently the IIFE block is render-blocking. One-line change in `render_html.py`
+- [S2] **Performance regression gate in CI** — Playwright test on demo dataset measuring DOM node count (fail > 10,000) and static export size (fail > 2 MB). The ratchet: once you have a number, no PR makes it worse
+- [S1] **`perf-review` agent** — Claude Code agent (`.claude/agents/perf-review.md`) that reviews PRs for performance regressions: new deps without size justification, unvirtualised large lists, missing `passive: true`, blocking resource additions. Catches the obvious stuff before CI catches the rest
+
+### Should
+- **`contain: layout style`** on sidebar panels and modals — tells browser it can skip these during layout
+- **Debounce search input** at 150ms if not already done
+- **`passive: true`** on all scroll/touch event listeners
+- **Route-based code splitting** — `React.lazy()` per tab (quotes, transcripts, codebook, analysis, settings). Vite handles this natively
+- **`React.memo` on repeated components** — QuoteCard, SessionRow, TagBadge. Rule: every component rendered > 50 times in a list must be memoised
+- **Dynamic `import()` for Three.js fish** — ~168 KB gzip must never be in the critical path
+- **Lighthouse CI** — run on every PR once serve mode is stable. Warn < 90, fail < 70
+- **Minify CSS/JS in static export** — Python build step, reduces inline code by ~40-60%
+- **WKWebView: disable `dataDetectorTypes`** — prevents unwanted layout work on quote cards
+- **WKWebView: inject critical CSS via `WKUserScript` at `.atDocumentStart`** — eliminates flash-of-unstyled-content on cold loads
+- **Replace `setInterval` player polling** with `BroadcastChannel` or `beforeunload` — timer runs even when player is closed
+- **Profile in WKWebView specifically** — Xcode Instruments before each desktop release. JavaScriptCore has different optimisation behaviour to V8
+
+### Could
+- **`@tanstack/virtual`** for quote lists > 100 items — only if `content-visibility` is insufficient (measure first)
+- **PurgeCSS** — strip unused CSS from the 4,366-line design system per page
+- **`<link rel="modulepreload">`** for anticipated next routes
+- **API pagination** — 50 quotes per page for large datasets
+- **Static export CSS splitting** — critical (above-fold) inline, deferred (print, modals) loaded via `requestIdleCallback`
+
+### Won't (100 days)
+- **Service workers** — local-first app doesn't need offline cache. Revisit at SaaS tier
+- **SSR / static generation** — local server, not CDN. React hydration is fine
+- **Optimise the vanilla JS frozen path** — deprecated, don't invest
+
+---
+
 ## Active feature branches
 
 | Branch | Started | Description | Merge target |
@@ -537,4 +599,4 @@ These are speculative ideas worth thinking about but without a delivery commitme
 
 ---
 
-*Updated 25 Mar 2026. Domain architecture decided: `bristlenose.research` (primary), `blog.bristlenose.research` (Substack), `bristlenose.app` (defensive). Bundle ID changed to `research.bristlenose.app`. Infrastructure plan: `docs/private/infrastructure-and-identity.md`. `bristlenose.com` taken (Jan 2026, Shopify). Reality check pass: struck through shipped items (export HTML, help modal polish, error messaging, frontend CI, pip-audit, multi-language, PostMessage origin), amended export polish and localStorage scope, added Icebox tier. Security audit additions from design-desktop-security-audit.md. Original: 16 Mar 2026.*
+*Updated 14 Apr 2026. Reconciled with delivery repo copy: added §15 Performance (WebKit philosophy, profiling-first roadmap, perf-review agent, CI gates), sprint legend, iPad session outputs (privacy policy draft, ToS v0.9.1, privacy manifest, first-run experience design, new items L5/L6/I6/I7/R6), bundle size → §15 promotion. Previous: 25 Mar 2026 — domain architecture, security audit additions, shipped-item strikethrough. Original: 16 Mar 2026.*

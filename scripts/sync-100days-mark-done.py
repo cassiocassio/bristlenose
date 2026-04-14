@@ -151,7 +151,9 @@ def strike_in_doc(titles: set[str], apply: bool) -> int:
     new_lines = []
 
     item_re = re.compile(
-        r"^(\s*- \*\*)"        # prefix: "- **"
+        r"^(\s*- )"            # prefix: "- "
+        r"(\[S\d+\]\s+)?"     # optional sprint tag
+        r"(\*\*)"              # open bold
         r"(~~)?"               # optional existing strikethrough open
         r"(.+?)"               # title text
         r"(~~)?"               # optional existing strikethrough close
@@ -166,14 +168,14 @@ def strike_in_doc(titles: set[str], apply: bool) -> int:
             new_lines.append(line)
             continue
 
-        had_strike = bool(m.group(2))
-        title = m.group(3).replace("~~", "").strip()
+        sprint_tag = m.group(2) or ""
+        had_strike = bool(m.group(4))
+        title = m.group(5).replace("~~", "").strip()
 
         if normalize(title) in normalized_titles and not had_strike:
             prefix = m.group(1)
-            bold_close = m.group(5)
-            rest = m.group(6)
-            new_line = f"{prefix}~~{title}~~{bold_close}{rest}\n"
+            rest = m.group(8)
+            new_line = f"{prefix}{sprint_tag}**~~{title}~~**{rest}\n"
             changes += 1
             print(f"  STRIKE: {title}")
             new_lines.append(new_line)

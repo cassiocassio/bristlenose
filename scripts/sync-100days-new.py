@@ -82,9 +82,11 @@ def parse_doc() -> list[dict]:
     category_re = re.compile(r"^## (\d+)\.\s+")
     # ### Must / Should / Could / Won't
     priority_re = re.compile(r"^### (Must|Should|Could|Won't)")
-    # - **Title** — description  (with optional ~~strikethrough~~)
+    # - [S1] **Title** — description  (with optional sprint tag and ~~strikethrough~~)
     item_re = re.compile(
-        r"^\s*-\s+\*\*(~~)?"   # "- **" with optional ~~
+        r"^\s*-\s+"
+        r"(?:\[S(\d+)\]\s+)?"   # optional sprint tag [S1]-[S6]
+        r"\*\*(~~)?"           # ** with optional ~~
         r"(.+?)"               # title
         r"(~~)?\*\*"           # optional ~~ then **
         r"\s*[—–-]\s*"         # em dash, en dash, or hyphen separator
@@ -92,7 +94,9 @@ def parse_doc() -> list[dict]:
     )
     # Items without description
     item_no_desc_re = re.compile(
-        r"^\s*-\s+\*\*(~~)?"
+        r"^\s*-\s+"
+        r"(?:\[S(\d+)\]\s+)?"   # optional sprint tag
+        r"\*\*(~~)?"
         r"(.+?)"
         r"(~~)?\*\*\s*$"
     )
@@ -140,25 +144,29 @@ def parse_doc() -> list[dict]:
         # Check for item with description
         m = item_re.match(line)
         if m:
-            title = m.group(2).replace("~~", "").strip()
-            description = m.group(4).strip()
+            sprint = m.group(1)  # "1"-"6" or None
+            title = m.group(3).replace("~~", "").strip()
+            description = m.group(5).strip()
             items.append({
                 "kind": current_kind,
                 "priority": current_priority,
                 "title": title,
                 "description": description,
+                "sprint": f"Sprint {sprint}" if sprint else None,
             })
             continue
 
         # Check for item without description
         m = item_no_desc_re.match(line)
         if m:
-            title = m.group(2).replace("~~", "").strip()
+            sprint = m.group(1)
+            title = m.group(3).replace("~~", "").strip()
             items.append({
                 "kind": current_kind,
                 "priority": current_priority,
                 "title": title,
                 "description": "",
+                "sprint": f"Sprint {sprint}" if sprint else None,
             })
 
     return items
@@ -266,7 +274,8 @@ def main():
     print(f"{len(new_items)} new item(s) to create:\n")
     for item in new_items:
         pri = item["priority"] or "-"
-        print(f"  [{item['kind']}] [{pri}] {item['title']}")
+        sprint = item.get("sprint") or "-"
+        print(f"  [{item['kind']}] [{pri}] [{sprint}] {item['title']}")
         if item["description"]:
             print(f"    {item['description'][:80]}...")
 
@@ -278,6 +287,7 @@ def main():
     print("\nFetching field options...")
     kind_field_id, kind_map = get_field_options("Kind")
     priority_field_id, priority_map = get_field_options("Priority")
+    sprint_field_id, sprint_map = get_field_options("Sprint")
     _, status_map = get_field_options("Status")
     todo_id = status_map["Todo"]
 
@@ -316,8 +326,14 @@ def main():
         if item["priority"] and item["priority"] in priority_map:
             set_field(item_id, priority_field_id, priority_map[item["priority"]])
 
+        # Set Sprint
+        sprint = item.get("sprint")
+        if sprint and sprint in sprint_map:
+            set_field(item_id, sprint_field_id, sprint_map[sprint])
+
         pri = item["priority"] or "-"
-        print(f"  OK [{i+1}/{len(new_items)}]: {item['title']} -> {item['kind']} / {pri}")
+        sprint_label = sprint or "-"
+        print(f"  OK [{i+1}/{len(new_items)}]: {item['title']} -> {item['kind']} / {pri} / {sprint_label}")
         time.sleep(0.3)
 
     print(f"\nDone! {len(new_items)} cards created.")

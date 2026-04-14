@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bristlenose Manual</title>
+  <meta name="description" content="Getting started, core concepts, keyboard shortcuts, and changelog for Bristlenose.">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<nav class="site-nav">
+  <a href="/" class="nav-logo">Bristlenose</a>
+  <div class="nav-links">
+    <a href="/manual.html" class="active">Manual</a>
+    <a href="https://github.com/cassiocassio/bristlenose" target="_blank">GitHub</a>
+  </div>
+</nav>
+
+<div class="manual-layout">
+
+<aside class="manual-toc">
+  <ul>
+    <li><a href="#getting-started">Getting started</a></li>
+    <li><a href="#install">Install</a></li>
+    <li><a href="#ai-provider">Set up an AI provider</a></li>
+    <li><a href="#first-run">Your first run</a></li>
+    <li><a href="#concepts">Core concepts</a></li>
+    <li><a href="#serve-mode">Serve mode</a></li>
+    <li><a href="#codebooks">Codebooks</a></li>
+    <li><a href="#keyboard-shortcuts">Keyboard shortcuts</a></li>
+    <li><a href="#commands">CLI commands</a></li>
+    <li><a href="#privacy">Privacy &amp; security</a></li>
+    <li><a href="#changelog">Changelog</a></li>
+  </ul>
+</aside>
+
+<main class="manual-content">
+
+<!-- ============================================================
+     GETTING STARTED
+     ============================================================ -->
+<section id="getting-started">
+  <h1>Manual</h1>
+  <p>
+    Bristlenose takes a folder of interview recordings and produces organised
+    research findings — quotes grouped by screen and theme, sentiment flagged,
+    friction surfaced. This page covers everything from installation to daily use.
+  </p>
+</section>
+
+<!-- ============================================================
+     INSTALL
+     ============================================================ -->
+<section id="install">
+  <h2>Install</h2>
+
+  <h3>macOS — desktop app</h3>
+  <p>
+    Download <a href="https://github.com/cassiocassio/bristlenose/releases/latest">Bristlenose.dmg</a>
+    from GitHub Releases, drag to Applications, open it.
+    The app bundles Python, FFmpeg, and Whisper — no terminal needed.
+  </p>
+  <p>
+    First launch: macOS will block it. Go to <strong>System Settings → Privacy &amp; Security</strong>,
+    scroll down, click <strong>"Open Anyway"</strong>. One time only.
+    Requires macOS 15 Sequoia, Apple Silicon (M1+).
+  </p>
+
+  <h3>macOS — Homebrew</h3>
+  <pre><code>brew install cassiocassio/bristlenose/bristlenose</code></pre>
+  <p>Handles Python, FFmpeg, and all dependencies.</p>
+
+  <h3>Windows</h3>
+  <ol>
+    <li>Install Python from <a href="https://www.python.org/downloads/">python.org</a> — tick <strong>"Add python.exe to PATH"</strong></li>
+    <li>Install pipx: <code>python -m pip install --user pipx</code> then <code>python -m pipx ensurepath</code></li>
+    <li>Install FFmpeg: <code>winget install FFmpeg</code></li>
+    <li>Install Bristlenose: <code>pipx install bristlenose</code></li>
+  </ol>
+
+  <h3>Linux</h3>
+  <ol>
+    <li>Install FFmpeg: <code>sudo apt install ffmpeg</code> (Ubuntu/Debian) or <code>sudo dnf install ffmpeg-free</code> (Fedora)</li>
+    <li>Install Bristlenose: <code>pipx install bristlenose</code> or <code>uv tool install bristlenose</code></li>
+  </ol>
+
+  <h3>Verify your setup</h3>
+  <pre><code>bristlenose doctor</code></pre>
+  <p>
+    Checks FFmpeg, transcription backend, API keys, network, and disk space.
+    Shows fix commands for anything missing.
+  </p>
+</section>
+
+<!-- ============================================================
+     AI PROVIDER
+     ============================================================ -->
+<section id="ai-provider">
+  <h2>Set up an AI provider</h2>
+  <p>
+    Bristlenose uses an LLM for the analysis pass (speaker identification, quote extraction,
+    thematic grouping). Transcription is always local. You need one provider:
+  </p>
+
+  <h3>Claude (recommended)</h3>
+  <p>Best quality. ~$1.50 per study.</p>
+  <ol>
+    <li>Sign up at <a href="https://console.anthropic.com/settings/keys">console.anthropic.com</a></li>
+    <li>Create a key, copy it</li>
+    <li>Run: <code>bristlenose configure claude</code></li>
+  </ol>
+
+  <h3>ChatGPT</h3>
+  <p>Similar quality. ~$1.00 per study.</p>
+  <ol>
+    <li>Sign up at <a href="https://platform.openai.com/api-keys">platform.openai.com</a></li>
+    <li>Create a key, copy it</li>
+    <li>Run: <code>bristlenose configure chatgpt</code></li>
+  </ol>
+  <p>Add <code>--llm openai</code> to your commands to use ChatGPT instead of the default.</p>
+
+  <h3>Gemini</h3>
+  <p>Budget option. ~$0.20 per study.</p>
+  <pre><code>bristlenose configure gemini
+bristlenose run ./interviews/ --llm gemini</code></pre>
+
+  <h3>Azure OpenAI</h3>
+  <p>For enterprise teams with Azure contracts.</p>
+  <pre><code>export BRISTLENOSE_AZURE_ENDPOINT=https://your-resource.openai.azure.com/
+export BRISTLENOSE_AZURE_DEPLOYMENT=your-deployment-name
+bristlenose configure azure</code></pre>
+
+  <h3>Ollama (free, local)</h3>
+  <p>
+    No API key, no account, no cost. Install <a href="https://ollama.ai">Ollama</a>,
+    then run:
+  </p>
+  <pre><code>bristlenose run ./interviews/ --llm local</code></pre>
+  <p>
+    Bristlenose will offer to set up Ollama automatically.
+    Trade-off: ~10 minutes vs ~2 minutes per study, lower JSON reliability (~85% vs ~99%).
+  </p>
+
+  <h3>Where are keys stored?</h3>
+  <p>
+    Keys live in your operating system's secure credential store — never in plaintext.
+    macOS: Keychain. Linux: Secret Service (GNOME Keyring / KDE Wallet).
+    Fallback: <code>.env</code> file or environment variables.
+  </p>
+</section>
+
+<!-- ============================================================
+     FIRST RUN
+     ============================================================ -->
+<section id="first-run">
+  <h2>Your first run</h2>
+  <pre><code># Point at a folder of recordings
+bristlenose run ./interviews/
+
+# Output appears inside the folder
+# ./interviews/bristlenose-output/
+
+# Open the report
+open interviews/bristlenose-output/bristlenose-interviews-report.html</code></pre>
+
+  <p>
+    Bristlenose accepts any mix of audio (.wav, .mp3, .m4a, .flac, .ogg, .aac),
+    video (.mp4, .mov, .avi, .mkv, .webm), subtitles (.srt, .vtt),
+    and transcripts (.docx from Zoom, Teams, or Google Meet).
+  </p>
+  <p>
+    Files sharing a name stem (e.g. <code>p1.mp4</code> and <code>p1.srt</code>)
+    are treated as one session. Existing subtitles skip transcription.
+  </p>
+  <p>
+    A typical study (5–8 interviews) takes 2–5 minutes on Apple Silicon.
+  </p>
+</section>
+
+<!-- ============================================================
+     CORE CONCEPTS
+     ============================================================ -->
+<section id="concepts">
+  <h2>Core concepts</h2>
+
+  <h3>Sessions and participants</h3>
+  <p>
+    Each recording is a <strong>session</strong>. Bristlenose identifies who's speaking:
+    <strong>moderators</strong> (researchers asking questions — never quoted),
+    <strong>participants</strong> (the people you're researching — primary data),
+    and <strong>observers</strong> (silent attendees — excluded from quotes).
+  </p>
+  <p>
+    Participants get speaker codes (<code>p1</code>, <code>p2</code>) for anonymisation.
+    You can add display names for your team's reference — these stay internal.
+    Stakeholders see codes only.
+  </p>
+
+  <h3>Quotes</h3>
+  <p>
+    Bristlenose extracts quotable moments from every interview. Filler words are removed.
+    Meaning, emotion, and self-corrections are preserved. Editorial context is added
+    sparingly: <code>[clarifying context]</code> only where meaning would be lost.
+  </p>
+  <p>
+    Each quote appears in <strong>exactly one section</strong> of the report — no duplicates.
+  </p>
+
+  <h3>Sections and themes</h3>
+  <p>
+    <strong>Sections</strong> group quotes by screen or task (what the participant was looking at).
+    <strong>Themes</strong> group quotes by cross-participant pattern (what kept coming up).
+  </p>
+  <p>
+    Screen-specific quotes go to sections. General-context quotes (job role, daily workflow,
+    broader opinions) go to themes.
+  </p>
+
+  <h3>Sentiment and signals</h3>
+  <p>
+    Every quote gets AI-generated sentiment tags: positive, negative, neutral, mixed,
+    plus specific emotions (confusion, delight, frustration, trust, skepticism).
+    Signal cards summarise patterns across participants — flagging wins, problems,
+    niggles, and surprises.
+  </p>
+
+  <h3>Tags and codebooks</h3>
+  <p>
+    Tags are your own codes, applied to quotes as you review them.
+    A <strong>codebook</strong> organises tags into named groups with colours.
+    You can create your own or import a standard framework:
+  </p>
+  <ul>
+    <li>Bristlenose (domain-agnostic UXR codebook)</li>
+    <li>Jesse James Garrett — Elements of User Experience</li>
+    <li>Don Norman — Emotional Design</li>
+    <li>Peter Morville — User Experience Honeycomb</li>
+    <li>Nielsen's 10 Usability Heuristics</li>
+    <li>Yablonski's Laws of UX</li>
+  </ul>
+
+  <h3>The pipeline</h3>
+  <p>
+    Bristlenose runs a 12-stage pipeline: ingest → extract audio → parse subtitles →
+    parse transcripts → transcribe → identify speakers → merge transcript → PII removal →
+    topic segmentation → quote extraction → quote clustering → thematic grouping → render.
+  </p>
+  <p>
+    If a run is interrupted, re-running the same command resumes where it left off.
+    Completed sessions are loaded from cache in milliseconds.
+  </p>
+</section>
+
+<!-- ============================================================
+     SERVE MODE
+     ============================================================ -->
+<section id="serve-mode">
+  <h2>Serve mode</h2>
+  <pre><code>bristlenose serve ./interviews/</code></pre>
+  <p>
+    Opens an interactive version of your report in the browser. Everything you do is
+    saved to a local database — star quotes, tag, hide noise, edit names, reorganise
+    your codebook. Changes persist between sessions.
+  </p>
+  <p>
+    Serve mode is the primary way to work with Bristlenose. The static HTML render
+    (<code>bristlenose render</code>) still works for offline sharing, but serve mode
+    is where the active development happens.
+  </p>
+
+  <h3>What you can do in serve mode</h3>
+  <ul>
+    <li><strong>Star quotes</strong> — mark the ones that belong in your presentation</li>
+    <li><strong>Hide quotes</strong> — dismiss noise without deleting it</li>
+    <li><strong>Tag quotes</strong> — apply your own codes, with autocomplete from your codebook</li>
+    <li><strong>Edit names</strong> — add display names for participants and moderators</li>
+    <li><strong>Edit codebook</strong> — drag-and-drop tags between groups, rename, recolour</li>
+    <li><strong>AutoCode</strong> — let the LLM propose tags, then review with a confidence threshold</li>
+    <li><strong>Search</strong> — find any quote across all interviews</li>
+    <li><strong>Filter by tag</strong> — focus on one code at a time</li>
+    <li><strong>Export</strong> — CSV for Miro/FigJam, or self-contained HTML for stakeholders</li>
+  </ul>
+</section>
+
+<!-- ============================================================
+     CODEBOOKS
+     ============================================================ -->
+<section id="codebooks">
+  <h2>Codebooks</h2>
+  <p>
+    A codebook is an organised set of tags for analysing your quotes. Each tag belongs
+    to a group, and each group has a colour. You can have multiple codebooks active.
+  </p>
+
+  <h3>Built-in frameworks</h3>
+  <p>
+    Import a standard UXR framework from the codebook panel:
+    <strong>Codebook → Add Framework</strong>. Each framework comes with pre-defined
+    groups and tags based on published research methodology.
+  </p>
+
+  <h3>Custom codebooks</h3>
+  <p>
+    Create your own groups and tags from the codebook panel. Drag tags between groups,
+    rename groups, set colours. Your codebook is saved to the project database.
+  </p>
+
+  <h3>AutoCode</h3>
+  <p>
+    Press the ✦ button on a codebook section to let the LLM propose tags for your quotes.
+    Review proposals in a confidence histogram — set a threshold for automatic acceptance,
+    review borderline cases one by one, reject the rest.
+  </p>
+</section>
+
+<!-- ============================================================
+     KEYBOARD SHORTCUTS
+     ============================================================ -->
+<section id="keyboard-shortcuts">
+  <h2>Keyboard shortcuts</h2>
+  <table class="shortcuts-table">
+    <thead>
+      <tr><th>Key</th><th>Action</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><kbd>j</kbd> / <kbd>k</kbd></td><td>Next / previous quote</td></tr>
+      <tr><td><kbd>s</kbd></td><td>Star focused quote</td></tr>
+      <tr><td><kbd>h</kbd></td><td>Hide focused quote</td></tr>
+      <tr><td><kbd>t</kbd></td><td>Open tag input on focused quote</td></tr>
+      <tr><td><kbd>r</kbd></td><td>Repeat last tag</td></tr>
+      <tr><td><kbd>x</kbd></td><td>Toggle selection on focused quote</td></tr>
+      <tr><td><kbd>/</kbd></td><td>Focus search</td></tr>
+      <tr><td><kbd>?</kbd></td><td>Help</td></tr>
+      <tr><td><kbd>Escape</kbd></td><td>Clear (cascades: modal → search → selection → focus)</td></tr>
+      <tr><td><kbd>[</kbd></td><td>Toggle left sidebar (TOC)</td></tr>
+      <tr><td><kbd>]</kbd></td><td>Toggle right sidebar (tags)</td></tr>
+      <tr><td><kbd>\</kbd></td><td>Toggle both sidebars</td></tr>
+      <tr><td><kbd>m</kbd></td><td>Toggle inspector panel (Analysis tab)</td></tr>
+      <tr><td><kbd>Tab</kbd></td><td>Commit tag and open new input (fast tagging)</td></tr>
+      <tr><td><kbd>Shift</kbd>+<kbd>j</kbd>/<kbd>k</kbd></td><td>Extend selection</td></tr>
+      <tr><td><kbd>Cmd</kbd>+<kbd>click</kbd></td><td>Multi-select</td></tr>
+      <tr><td><kbd>Cmd</kbd>+<kbd>,</kbd></td><td>Settings</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ============================================================
+     CLI COMMANDS
+     ============================================================ -->
+<section id="commands">
+  <h2>CLI commands</h2>
+  <table class="commands-table">
+    <thead>
+      <tr><th>Command</th><th>What it does</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code>bristlenose run &lt;folder&gt;</code></td>
+        <td>Full pipeline — transcribe, analyse, render. Default command: <code>bristlenose &lt;folder&gt;</code> does the same thing.</td>
+      </tr>
+      <tr>
+        <td><code>bristlenose serve &lt;folder&gt;</code></td>
+        <td>Interactive browser-based report with live editing and database sync.</td>
+      </tr>
+      <tr>
+        <td><code>bristlenose transcribe &lt;folder&gt;</code></td>
+        <td>Transcription only — no LLM calls. Useful for checking transcripts before analysis.</td>
+      </tr>
+      <tr>
+        <td><code>bristlenose analyze &lt;folder&gt;</code></td>
+        <td>Skip transcription, run LLM analysis on existing transcripts.</td>
+      </tr>
+      <tr>
+        <td><code>bristlenose render &lt;folder&gt;</code></td>
+        <td>Re-render HTML from existing JSON — no LLM calls. For tweaking names or formatting.</td>
+      </tr>
+      <tr>
+        <td><code>bristlenose status &lt;folder&gt;</code></td>
+        <td>Read-only project status — which stages completed, how many sessions.</td>
+      </tr>
+      <tr>
+        <td><code>bristlenose doctor</code></td>
+        <td>Check dependencies, API keys, and runtime environment.</td>
+      </tr>
+      <tr>
+        <td><code>bristlenose configure &lt;provider&gt;</code></td>
+        <td>Store an API key securely. Providers: <code>claude</code>, <code>chatgpt</code>, <code>gemini</code>, <code>azure</code>.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>Common options</h3>
+  <table class="commands-table">
+    <thead>
+      <tr><th>Flag</th><th>Effect</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><code>-p "Project Name"</code></td><td>Name your project (appears in reports)</td></tr>
+      <tr><td><code>--llm openai</code></td><td>Use ChatGPT instead of Claude</td></tr>
+      <tr><td><code>--llm gemini</code></td><td>Use Gemini</td></tr>
+      <tr><td><code>--llm local</code></td><td>Use Ollama (free)</td></tr>
+      <tr><td><code>--llm azure</code></td><td>Use Azure OpenAI</td></tr>
+      <tr><td><code>--redact-pii</code></td><td>Detect and redact personal information</td></tr>
+      <tr><td><code>--output &lt;dir&gt;</code></td><td>Override default output location</td></tr>
+      <tr><td><code>-y</code></td><td>Skip confirmation prompts</td></tr>
+      <tr><td><code>-v</code></td><td>Verbose terminal output (DEBUG level)</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ============================================================
+     PRIVACY
+     ============================================================ -->
+<section id="privacy">
+  <h2>Privacy &amp; security</h2>
+
+  <h3>Local-first</h3>
+  <p>
+    No Bristlenose server. No accounts. No telemetry. Audio is transcribed locally
+    using Whisper on your machine. The analysis pass sends transcript text to your
+    chosen LLM provider — or stays entirely offline with Ollama.
+  </p>
+
+  <h3>Credential storage</h3>
+  <p>
+    API keys are stored in your OS credential store (macOS Keychain, Linux Secret Service),
+    never in plaintext. Fallback to <code>.env</code> or environment variables.
+  </p>
+
+  <h3>PII redaction</h3>
+  <p>
+    The <code>--redact-pii</code> flag uses Microsoft Presidio + spaCy to detect and redact
+    names, phone numbers, email addresses, ID numbers, and other personal data.
+    An audit trail (<code>pii_summary.txt</code>) lists every redaction with confidence scores.
+    Location names are deliberately excluded — they carry research context.
+  </p>
+
+  <h3>Anonymisation boundary</h3>
+  <p>
+    Two layers of identity. <strong>Speaker codes</strong> (<code>p1</code>, <code>p2</code>)
+    are the anonymisation boundary — used in reports by default. <strong>Display names</strong>
+    (first names) help your team recall "who's Mary" during analysis. Exports use speaker
+    codes only, preventing stakeholder bias.
+  </p>
+
+  <h3>Vulnerability reporting</h3>
+  <p>
+    Email <a href="mailto:security@cassiocassio.co.uk">security@cassiocassio.co.uk</a>.
+    Do not open public GitHub issues for security vulnerabilities.
+  </p>
+</section>
+
+<!-- ============================================================
+     CHANGELOG
+     ============================================================ -->
+<section id="changelog">
+  <h2>Changelog</h2>
+
+  <p>Recent releases. Full history on <a href="https://github.com/cassiocassio/bristlenose/blob/main/CHANGELOG.md">GitHub</a>.</p>
+
+  <article class="changelog-entry">
+    <h3>0.14.0 <span class="changelog-date">20 Mar 2026</span></h3>
+    <ul>
+      <li><strong>Inspector panel</strong> — DevTools-style collapsible bottom panel in Analysis tab with heatmap matrices and signal card selection</li>
+      <li><strong>Codebook sidebar</strong> — available on every tab, not just Quotes</li>
+      <li><strong>Finding flags</strong> — signal cards carry Win/Problem/Niggle/Success/Surprising/Pattern flags computed from sentiment, breadth, and intensity</li>
+      <li><strong>Settings &amp; Help modals</strong> — gear icon and ? key, shared sidebar-nav shell</li>
+      <li>Nielsen's 10 Usability Heuristics and Yablonski's Laws of UX framework codebooks</li>
+    </ul>
+  </article>
+
+  <article class="changelog-entry">
+    <h3>0.13.6 <span class="changelog-date">16 Mar 2026</span></h3>
+    <ul>
+      <li><strong>Single tag focus mode</strong> — click a tag count in the sidebar to solo that tag</li>
+      <li>Used/unused tag filter, sidebar tag click-to-assign</li>
+      <li>Tier 1 logging, multilingual UI infrastructure, responsive signal cards</li>
+    </ul>
+  </article>
+
+  <article class="changelog-entry">
+    <h3>0.13.0 <span class="changelog-date">10 Mar 2026</span></h3>
+    <ul>
+      <li><strong>Codebook-aware tag autocomplete</strong> — grouped suggestions with colour-coded pills</li>
+      <li>Sentiment tags unified into codebook framework</li>
+      <li>Tag provenance tracking (human vs autocode)</li>
+      <li>Quick-repeat tag shortcut (<kbd>r</kbd>)</li>
+    </ul>
+  </article>
+
+  <article class="changelog-entry">
+    <h3>0.12.1 <span class="changelog-date">1 Mar 2026</span></h3>
+    <ul>
+      <li><strong>Word-level transcript highlighting</strong> — karaoke-style sync with video playback</li>
+    </ul>
+  </article>
+
+  <article class="changelog-entry">
+    <h3>0.12.0 <span class="changelog-date">1 Mar 2026</span></h3>
+    <ul>
+      <li><strong>Dual sidebar</strong> — left TOC with scroll-spy, right tag filter with codebook tree</li>
+      <li>Self-contained HTML export with optional anonymisation</li>
+    </ul>
+  </article>
+
+  <article class="changelog-entry">
+    <h3>0.11.0 <span class="changelog-date">28 Feb 2026</span></h3>
+    <ul>
+      <li><strong>Full React SPA</strong> — React Router replaces vanilla JS navigation</li>
+      <li>Keyboard shortcuts, player integration, app shell</li>
+    </ul>
+  </article>
+
+  <article class="changelog-entry">
+    <h3>0.10.0 <span class="changelog-date">18 Feb 2026</span></h3>
+    <ul>
+      <li><strong>Desktop app</strong> — SwiftUI macOS launcher with folder picker and drag-and-drop</li>
+      <li>.dmg packaging, API key onboarding, serve mode after pipeline</li>
+    </ul>
+  </article>
+
+  <article class="changelog-entry">
+    <h3>0.9.4 <span class="changelog-date">17 Feb 2026</span></h3>
+    <ul>
+      <li><strong>Serve mode</strong> — FastAPI + SQLite + React islands, codebook CRUD, data API</li>
+      <li>AutoCode frontend with confidence thresholds</li>
+    </ul>
+  </article>
+
+  <article class="changelog-entry">
+    <h3>0.9.0 <span class="changelog-date">11 Feb 2026</span></h3>
+    <ul>
+      <li>Tab navigation with URL hash state and browser back/forward</li>
+      <li>Analysis tab with inline signal cards and heatmaps</li>
+    </ul>
+  </article>
+
+  <article class="changelog-entry">
+    <h3>0.8.0 <span class="changelog-date">7 Feb 2026</span></h3>
+    <ul>
+      <li><strong>Azure OpenAI</strong> provider for enterprise teams</li>
+      <li>Hidden quotes (<kbd>h</kbd>), codebook standalone page, toolbar redesign</li>
+      <li>Multi-select and bulk actions</li>
+    </ul>
+  </article>
+
+  <article class="changelog-entry">
+    <h3>0.6.11 <span class="changelog-date">3 Feb 2026</span></h3>
+    <ul>
+      <li><strong>Ollama support</strong> — free local AI, no API key needed</li>
+      <li>Automated Ollama installation and auto-start</li>
+    </ul>
+  </article>
+
+</section>
+
+</main>
+</div>
+
+<!-- ============================================================
+     FOOTER
+     ============================================================ -->
+<footer class="site-footer">
+  <div class="footer-links">
+    <a href="/">Home</a>
+    <a href="https://github.com/cassiocassio/bristlenose" target="_blank">GitHub</a>
+    <a href="https://github.com/cassiocassio/bristlenose/issues" target="_blank">Report a bug</a>
+    <a href="https://PUBLICATION_NAME.substack.com" target="_blank">Newsletter</a>
+  </div>
+  <p class="footer-note">
+    Built by Martin Storey. AGPL-3.0 open source.
+  </p>
+</footer>
+
+</body>
+</html>

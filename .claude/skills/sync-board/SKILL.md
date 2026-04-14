@@ -1,6 +1,6 @@
 ---
 name: sync-board
-description: Sync 100days.md strikethrough with GitHub Projects board — strike through Done items, create cards for new entries, or mark specific items as Done
+description: Bidirectional sync between 100days.md and GitHub Projects board — strikethrough Done items, create new cards, backfill Sprint tags
 disable-model-invocation: false
 user-invocable: true
 allowed-tools: Bash, Read, Edit
@@ -8,61 +8,44 @@ allowed-tools: Bash, Read, Edit
 
 Sync the 100-day launch inventory (`docs/private/100days.md`) with the GitHub Projects board (Bristlenose Roadmap).
 
-Three modes, selected by argument `$0`:
+Two modes, selected by argument `$0`:
 
-- **`/sync-board done`** (or no argument) — board → doc: strike through Done items in the markdown
-- **`/sync-board new`** — doc → board: create cards for items in the doc that don't exist on the board
+- **`/sync-board`** (no argument) — bidirectional sync: board→doc strikethrough + doc→board new cards + doc→board sprint backfill
 - **`/sync-board mark-done "Item 1" "Item 2" ...`** — move specific items to Done on the board and strike through in the doc. Use when you've verified items are complete by reading the code
 
-If no argument is given, default to `done`.
+## Mode: default (bidirectional)
 
-## Mode: done (board → doc)
-
-Run the sync script:
+Run the unified sync script:
 
 ```bash
 cd /Users/cassio/Code/bristlenose
-python3 scripts/sync-100days-status.py
+python3 scripts/sync_100days.py
 ```
 
 Review the dry-run output with the user. If changes look correct, apply:
 
 ```bash
-python3 scripts/sync-100days-status.py --apply
+python3 scripts/sync_100days.py --apply
 ```
 
-Report what was struck through (and what was un-struck, if any items moved back from Done).
-
-## Mode: new (doc → board)
-
-Run the reverse sync script:
-
-```bash
-cd /Users/cassio/Code/bristlenose
-python3 scripts/sync-100days-new.py
-```
-
-Review the dry-run output with the user. If the new cards look correct, apply:
-
-```bash
-python3 scripts/sync-100days-new.py --apply
-```
-
-Report how many cards were created and in which Kind categories.
+Report what changed in each direction:
+- Board → doc: items struck through or un-struck
+- Doc → board: new cards created (with Kind, Priority, Sprint fields)
+- Doc → board: Sprint field backfilled on existing cards
 
 ## Mode: mark-done (code-verified → board + doc)
 
-The remaining arguments after `mark-done` are item titles (or substrings). Run the mark-done script:
+The remaining arguments after `mark-done` are item titles (or substrings). Run:
 
 ```bash
 cd /Users/cassio/Code/bristlenose
-python3 scripts/sync-100days-mark-done.py "Item title 1" "Item title 2"
+python3 scripts/sync_100days.py mark-done "Item title 1" "Item title 2"
 ```
 
-Review the dry-run output with the user — it shows which cards will move to Done and which lines will get strikethrough. If correct, apply:
+Review the dry-run output. If correct, apply:
 
 ```bash
-python3 scripts/sync-100days-mark-done.py --apply "Item title 1" "Item title 2"
+python3 scripts/sync_100days.py mark-done --apply "Item title 1" "Item title 2"
 ```
 
 Report what was moved to Done and what was struck through. Items already Done on the board are skipped (but still struck through in the doc if not already).
@@ -73,5 +56,7 @@ Report what was moved to Done and what was struck through. Items already Done on
 - Project ID: `PVT_kwHOAEYXlM4BORbY`
 - Status field ID: `PVTSSF_lAHOAEYXlM4BORbYzg9Becg`
 - 100days.md is in `docs/private/` (gitignored — contains names and value judgements)
+- Sprint tags in 100days.md use the format `[S1]`–`[S6]` before the bold title
 - Item matching uses normalized title text (lowercase, no punctuation) for fuzzy matching
-- The scripts are in `scripts/sync-100days-status.py`, `scripts/sync-100days-new.py`, and `scripts/sync-100days-mark-done.py`
+- The unified script is `scripts/sync_100days.py` (tests: `tests/test_sync_100days.py`)
+- Old single-direction scripts (`sync-100days-status.py`, `sync-100days-new.py`, `sync-100days-mark-done.py`) are deprecated — do not use

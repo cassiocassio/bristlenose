@@ -94,9 +94,11 @@ def sync_file(done_titles: set[str], apply: bool) -> int:
     changes = 0
     new_lines = []
 
-    # Pattern: "- **Title** — description" or "- **~~Title~~** — description"
+    # Pattern: "- [S1] **Title** — description" or "- **~~Title~~** — description"
     item_re = re.compile(
-        r"^(\s*- \*\*)"        # prefix: "- **"
+        r"^(\s*- )"            # prefix: "- "
+        r"(\[S\d+\]\s+)?"     # optional sprint tag
+        r"(\*\*)"              # open bold
         r"(~~)?"               # optional existing strikethrough open
         r"(.+?)"               # title text
         r"(~~)?"               # optional existing strikethrough close
@@ -111,11 +113,11 @@ def sync_file(done_titles: set[str], apply: bool) -> int:
             new_lines.append(line)
             continue
 
-        prefix = m.group(1)         # "- **"
-        had_strike = bool(m.group(2))
-        title = m.group(3)
-        bold_close = m.group(5)     # "**"
-        rest = m.group(6)           # " — description..."
+        prefix = m.group(1)         # "- "
+        sprint_tag = m.group(2) or ""  # "[S1] " or ""
+        had_strike = bool(m.group(4))
+        title = m.group(5)
+        rest = m.group(8)           # " — description..."
 
         # Clean title for matching (remove any residual ~~)
         clean_title = title.replace("~~", "").strip()
@@ -123,13 +125,13 @@ def sync_file(done_titles: set[str], apply: bool) -> int:
 
         if is_done and not had_strike:
             # Add strikethrough
-            new_line = f"{prefix}~~{clean_title}~~{bold_close}{rest}\n"
+            new_line = f"{prefix}{sprint_tag}**~~{clean_title}~~**{rest}\n"
             changes += 1
             print(f"  + STRIKE: {clean_title}")
             new_lines.append(new_line)
         elif not is_done and had_strike:
             # Remove strikethrough (item un-done)
-            new_line = f"{prefix}{clean_title}{bold_close}{rest}\n"
+            new_line = f"{prefix}{sprint_tag}**{clean_title}**{rest}\n"
             changes += 1
             print(f"  - UNSTRIKE: {clean_title}")
             new_lines.append(new_line)

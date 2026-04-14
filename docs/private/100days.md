@@ -13,22 +13,22 @@ MoSCoW within each category. **100-day goal: complete every Must.**
 ## 1. Missing — essential feature gaps ("it's not done without it")
 
 ### Must
-- **Demo dataset** — 5h IKEA study as public, credible test data. Exercise all frameworks, test with real user tags. Run 1 real project as if i mean it - to test tags and ergonoics. Also necessary for videos for launch website
+- [S1] **Demo dataset** — 5h IKEA study as public, credible test data. Exercise all frameworks, test with real user tags. Run 1 real project as if i mean it - to test tags and ergonoics. Also necessary for videos for launch website. Additionally: record 5-6 friends doing usability tasks on gov.uk — classic moderated usability test format to validate the UXR codebook (moderator questions, friction, sentiment). Double duty as demo + speed demo video. (design-real-data-testing.md)
 - **~~Desktop app v0.1~~** — SwiftUI shell, PyInstaller sidecar, folder picker, pipeline runner, "Open Report" button. ~365–435 MB bundle. (design-desktop-app.md)
 - ~~**Export: standalone HTML from serve mode** — `POST /api/projects/{id}/export`, self-contained HTML. Shipped v0.11.2. (design-export-sharing.md)~~
-- **Export: research package (zip)** — zip with report.html + transcripts/ (.txt with inline timecodes) + clips/ (optional, FFmpeg). Human-readable filenames (`p1 03m45 Sarah onboarding was confusing.mp4`). Anonymisation across all surfaces. Replaces 3 hours of Final Cut Pro work. Stages 1–3 of export roadmap. (design-export-sharing.md)
-- **Multi-project support** — home screen, project list, create/switch without restart. Milestone 4 in ROADMAP. Design doc: `docs/design-project-sidebar.md` (5-phase plan). Phase 1 prompt: `docs/private/prompts/phase1-project-sidebar.md`
+- [S4] **Export: research package (zip)** — zip with report.html + transcripts/ (.txt with inline timecodes) + clips/ (optional, FFmpeg). Human-readable filenames (`p1 03m45 Sarah onboarding was confusing.mp4`). Anonymisation across all surfaces. Replaces 3 hours of Final Cut Pro work. Stages 1–3 of export roadmap. (design-export-sharing.md)
+- [S3] **Multi-project support** — home screen, project list, create/switch without restart. Milestone 4 in ROADMAP. Design doc: `docs/design-project-sidebar.md` (5-phase plan). Phase 1 prompt: `docs/private/prompts/phase1-project-sidebar.md`
 - **~~File import (drag-and-drop)~~** — add recordings to project from GUI. Milestone 5. Needs design doc
-- **Duplicate folder drop warning** — when dropping a folder that matches an existing project's path, show dismissable warning with "Duplicate of \<project\>" — allow it (user may tag/analyse differently) but flag the likely mistake
-- **Slow-double-click rename in sidebar** — Finder-style slow double-click to inline rename. `simultaneousGesture(TapGesture())` and `onTapGesture` both break List selection on macOS 26. Needs NSEvent monitor approach or AppKit subclass. Rename still works via right-click and Project menu
-- **Multi-select projects (Shift/Cmd click)** — change `List(selection:)` from `UUID?` to `Set<UUID>`. Detail pane shows "3 projects selected". Enables bulk delete via right-click, and drag-to-folder in Phase 3. Prerequisite for drag-to-reorder
-- **Drag-to-reorder projects in sidebar** — persisted via `position` integer in project index. Needs multi-select first. Phase 3 in design doc
-- **Drop-on-existing-project row** — add interviews to existing project via drag. Data model ready (`addFiles`). Needs `DropDelegate` hit-testing on List (per-row `.onDrop` breaks selection on macOS 26)
-- **UTType validation on drop** — filter dropped files to accepted media types (audio, video, subtitle, docx, txt). Currently accepts any file
-- **Empty state drag target** — `ContentUnavailableView` as `.onDrop` target when project list is empty
+- [S3] **Duplicate folder drop warning** — when dropping a folder that matches an existing project's path, show dismissable warning with "Duplicate of \<project\>" — allow it (user may tag/analyse differently) but flag the likely mistake
+- [S3] **Slow-double-click rename in sidebar** — Finder-style slow double-click to inline rename. `simultaneousGesture(TapGesture())` and `onTapGesture` both break List selection on macOS 26. Needs NSEvent monitor approach or AppKit subclass. Rename still works via right-click and Project menu
+- [S3] **Multi-select projects (Shift/Cmd click)** — change `List(selection:)` from `UUID?` to `Set<UUID>`. Detail pane shows "3 projects selected". Enables bulk delete via right-click, and drag-to-folder in Phase 3. Prerequisite for drag-to-reorder
+- [S3] **Drag-to-reorder projects in sidebar** — persisted via `position` integer in project index. Needs multi-select first. Phase 3 in design doc
+- [S3] **Drop-on-existing-project row** — add interviews to existing project via drag. Data model ready (`addFiles`). Needs `DropDelegate` hit-testing on List (per-row `.onDrop` breaks selection on macOS 26)
+- [S3] **UTType validation on drop** — filter dropped files to accepted media types (audio, video, subtitle, docx, txt). Currently accepts any file
+- [S3] **Empty state drag target** — `ContentUnavailableView` as `.onDrop` target when project list is empty
 - **~~Run pipeline from GUI~~** — "Analyse" button, background task, progress streaming. Milestone 7. Needs design doc
 - **~~Settings UI~~** — provider selection, API key entry, redaction toggle, model choice. Milestone 6. Needs design doc. Currently CLI-only config is a hard block for App Store users
-- **App Store subscription infrastructure** — StoreKit 2, receipt validation, entitlement check. Not yet designed
+- [S4] **App Store subscription infrastructure** — StoreKit 2, receipt validation, entitlement check. Not yet designed
 - **~~Auto-serve after run~~** — pipeline finishes → auto-launch serve + open browser. (TODO.md immediate)
 
 ### Should
@@ -63,10 +63,10 @@ MoSCoW within each category. **100-day goal: complete every Must.**
 
 ### Must
 - **~~Dark mode selection highlight~~** — invisible in dark mode (#52)
-- **Dark logo** — placeholder inverted image, needs proper albino bristlenose pleco (#18, logo.css HACK)
+- [S5] **Dark logo** — placeholder inverted image, needs proper albino bristlenose pleco (#18, logo.css HACK)
 - **~~Circular dependency in production build~~** — fixed in 0.13.6 but regression-prone (SidebarStore import cycle)
-- **Import FK constraint** — fixed in 0.13.4 (ProposedTag cleanup) but needs E2E coverage to prevent regression
-- **Native toolbar tab i18n not reactive** — changing language in Settings doesn't update toolbar labels until app restart. `I18n` `@StateObject` doesn't trigger segmented control re-render
+- [S3] **Import FK constraint** — fixed in 0.13.4 (ProposedTag cleanup) but needs E2E coverage to prevent regression
+- [S3] **Native toolbar tab i18n not reactive** — changing language in Settings doesn't update toolbar labels until app restart. `I18n` `@StateObject` doesn't trigger segmented control re-render
 
 
 ### Should
@@ -83,17 +83,17 @@ MoSCoW within each category. **100-day goal: complete every Must.**
 ## 3. Embarrassing — too ugly to ship
 
 ### Must
-- **Typography audit** — 16 font-sizes → ~10 with proper tokens (ROADMAP theme refactoring)
-- **SVG icon set** — replace character glyphs (delete circles, modal close, search clear) with proper icons. Candidates: Lucide, Heroicons, Phosphor, Tabler. See `docs/design-system/icon-catalog.html`
-- **Visual redesign: FT.com-level typographic legibility** — larger margins, fainter keylines, edo colours, more white space. FT.com as benchmark for large volumes of intense type with enough space to parse and scan
-- **Colour themes** — named themes (e.g. "edo") as appearance switch. Beyond custom CSS — curated, designed themes. Needs design doc first: `docs/design-themes-and-schemes.md` — establish nomenclature (Theme = structure (font/spacing), Colour scheme = palette), file organisation, selection mechanism (CSS class? data attribute?), how Edo fits. Also investigate `--bn-selection-bg-inactive` dark value (#262626) too close to page bg (#111111)
-- **Grid, spacing, type, colours audit** — holistic visual fit-and-finish pass
-- **Tag density** — AI generates too many tags, overwhelming (#12)
+- [S5] **Typography audit** — 16 font-sizes → ~10 with proper tokens (ROADMAP theme refactoring)
+- [S5] **SVG icon set** — replace character glyphs (delete circles, modal close, search clear) with proper icons. Candidates: Lucide, Heroicons, Phosphor, Tabler. See `docs/design-system/icon-catalog.html`
+- [S5] **Visual redesign: FT.com-level typographic legibility** — larger margins, fainter keylines, edo colours, more white space. FT.com as benchmark for large volumes of intense type with enough space to parse and scan
+- [S5] **Colour themes** — named themes (e.g. "edo") as appearance switch. Beyond custom CSS — curated, designed themes. Needs design doc first: `docs/design-themes-and-schemes.md` — establish nomenclature (Theme = structure (font/spacing), Colour scheme = palette), file organisation, selection mechanism (CSS class? data attribute?), how Edo fits. Also investigate `--bn-selection-bg-inactive` dark value (#262626) too close to page bg (#111111)
+- [S5] **Grid, spacing, type, colours audit** — holistic visual fit-and-finish pass
+- [S3] **Tag density** — AI generates too many tags, overwhelming (#12)
 - - **~~Logo size~~** — 80px feels tiny, increase to ~100px (#6)
 - **~~Responsive quote grid~~** — Phase 1 CSS-only, design ready, not implemented (design-responsive-layout.md)
 - ~~**Help modal polish**~~ — platform-aware shortcuts, typography tokens, entrance animation, dark kbd. Shipped 0.13.3
 - **~~"Made with Bristlenose" branding footer~~** — Phase 5 of export, quick win (design-export-sharing.md)
-- **Export polish** — minimum viable: delete things that should not be in an export, tidy up rough edges
+- [S5] **Export polish** — minimum viable: delete things that should not be in an export, tidy up rough edges
 
 
 ### Should
@@ -117,7 +117,7 @@ MoSCoW within each category. **100-day goal: complete every Must.**
 ## 4. Value — insights & time-saving ("why they'll use us")
 
 ### Must
-- **QA: threshold review dialog on real data** — run AutoCode against real projects, evaluate confidence histogram + dual slider UX
+- [S5] **QA: threshold review dialog on real data** — run AutoCode against real projects, evaluate confidence histogram + dual slider UX
 - **~~Signal elaboration~~** — interpretive names + one-sentence summaries on signal cards. Designed (design-signal-elaboration.md)
 - ~~**Codebook-aware tagging** — shipped in 0.13.0, verify it works end-to-end on real data~~
 - ~~**Quick-repeat tag shortcut** (`r` key) — shipped, verify discoverability~~
@@ -154,10 +154,10 @@ MoSCoW within each category. **100-day goal: complete every Must.**
 ## 5. Blocking — prevents adoption or causes abandonment
 
 ### Must
-- **First-run experience** — new user opens app, has no project, no API key, no recordings. What happens? Needs design
+- [S4] **First-run experience** — new user opens app, has no project, no API key, no recordings. What happens? Needs design
 - ~~**API key entry in GUI** — currently requires terminal. Absolute blocker for App Store users~~
 - ~~**Error messaging**~~ — pipeline failures show actionable messages ("check API credits or logs", "run bristlenose doctor"), red ✗ / yellow ⚠ per stage. Shipped 0.13.3
-- **`bristlenose doctor` in GUI** — dependency health checks visible in app, not just CLI
+- [S4] **`bristlenose doctor` in GUI** — dependency health checks visible in app, not just CLI
 - ~~**Homebrew formula: spaCy model** — post_install step (#42). Without it, first run fails~~
 
 ### Should
@@ -183,14 +183,14 @@ MoSCoW within each category. **100-day goal: complete every Must.**
 - ~~**Desktop security: minimal child process environment**~~ — stripped to PATH, HOME, TMPDIR, locale, VIRTUAL_ENV + BRISTLENOSE_* overlay
 - ~~**Desktop security: port-restrict navigation policy**~~ — shipped in `WebView.swift` (`decidePolicyFor` restricts to `127.0.0.1` + `about:`)
 - **~~Rotate API key~~** — was visible in terminal (TODO.md immediate)
-- **Privacy policy** — required for App Store submission. Local-first model simplifies this but document must exist
-- **Terms of service** — subscription terms, refund policy, data handling
-- **App Store review compliance** — sandbox, entitlements, code signing, notarisation pipeline
-- **PII redaction audit** — verify Presidio catches names/emails in transcripts before shipping to paying users
+- [S2] **Privacy policy** — required for App Store submission. Local-first model simplifies this but document must exist
+- [S2] **Terms of service** — subscription terms, refund policy, data handling
+- [S2] **App Store review compliance** — sandbox, entitlements, code signing, notarisation pipeline
+- [S5] **PII redaction audit** — verify Presidio catches names/emails in transcripts before shipping to paying users
 - ~~**Security scanning** — npm audit, pip-audit, CodeQL before public release (design-test-strategy.md)~~
-- **Alembic/migration strategy** — DB schema changes without data loss. Currently no migration framework
-- **AI data disclosure dialog** — Apple Guideline 5.1.2(i) (Nov 2025) requires explicit consent before sending transcript data to third-party AI. Non-negotiable for App Store. (design-desktop-security-audit.md)
-- **Privacy Manifest (`PrivacyInfo.xcprivacy`)** — required for App Store since mid-2024. Declare data types and API usage reasons. (design-desktop-security-audit.md)
+- [S1] **Alembic/migration strategy** — DB schema changes without data loss. Currently no migration framework
+- [S2] **AI data disclosure dialog** — Apple Guideline 5.1.2(i) (Nov 2025) requires explicit consent before sending transcript data to third-party AI. Non-negotiable for App Store. (design-desktop-security-audit.md)
+- [S2] **Privacy Manifest (`PrivacyInfo.xcprivacy`)** — required for App Store since mid-2024. Declare data types and API usage reasons. (design-desktop-security-audit.md)
 
 ### Should
 - **Vulnerability disclosure page** — SECURITY.md exists but not public-facing. Add `security@bristlenose.research`, publish `security.txt` at `bristlenose.research/.well-known/security.txt` (RFC 9116). (infrastructure-and-identity.md)
@@ -217,10 +217,11 @@ MoSCoW within each category. **100-day goal: complete every Must.**
 ## 7. Halo — gets us noticed, makes a statement
 
 ### Must
-- **Local-first story** — "nothing leaves your laptop" messaging. Core differentiator. Needs landing page copy
+- [S6] **Local-first story** — "nothing leaves your laptop" messaging. Core differentiator. Needs landing page copy
 - ~~**One-command install** — `brew install bristlenose` already works. Showcase this~~
 
 ### Should
+- **Public-domain interview screenshots for marketing** — Veterans History Project (US govt, public domain) and NASA astronaut interviews for website, App Store listing, blog posts. Real interview content, freely usable. (design-real-data-testing.md)
 - **Living logo** — animated bristlenose pleco (living-fish branch). Memorable, delightful
 - **Dark mode** — already implemented, polish the rough edges
 - **Speed demo** — "folder in, report out in 5 minutes" video/GIF for landing page
@@ -279,18 +280,19 @@ MoSCoW within each category. **100-day goal: complete every Must.**
 ## 9. Technical debt — foundations for the future
 
 ### Must
-- **Playwright E2E layers 4–5** — layers 1–3 done, need layers 4–5 for DB-mutating actions and visual regression. Beta blocker: 3 thin specs is not enough coverage for a shipped product (design-playwright-testing.md)
-- **Pipeline resilience notes go here**
-- **Pipeline resilience Phase 2b** — verify content hashes on load (done 25 Mar 2026). Next: **Phase 2c — input change detection** (medium effort, design-pipeline-resilience.md)
+- [S4] **Playwright E2E layers 4–5** — layers 1–3 done, need layers 4–5 for DB-mutating actions and visual regression. Beta blocker: 3 thin specs is not enough coverage for a shipped product (design-playwright-testing.md)
+- [S1] **Pipeline resilience notes go here**
+- [S1] **Pipeline resilience Phase 2b** — verify content hashes on load (done 25 Mar 2026). Next: **Phase 2c — input change detection** (medium effort, design-pipeline-resilience.md)
 - ~~**PyPI `Development Status` classifier** — currently unset in pyproject.toml. Must be `Development Status :: 4 - Beta` before launch. Signals maturity to pip users~~
 - ~~**Frontend CI**~~ — Vitest + ESLint + TypeScript typecheck gated in CI since 0.12.0. ESLint step informational (84 pre-existing errors). Prettier not yet added
-- **pytest coverage in CI** — trivial to enable, currently blind to dead code
-- **Frontend test coverage for clip export** — extend ActivityChipStack + ExportDropdown tests for clips job type (added during clip extraction work, 27 Mar 2026)
-- **Multi-Python CI** — test 3.10, 3.11, 3.12, 3.13 (trivial, avoids EOL surprises)
-- **Swift test harness** — XCTest target + ~42 Swift Testing tests across 5 files (Tab, I18n, LLMProvider, KeychainHelper, ProjectIndex). Two tiny refactors: `ProjectIndex.init(fileURL:)` for temp-dir isolation, `KeychainStore` protocol for `InMemoryKeychain` mock (security review: real Keychain overwrites API keys on crash). Also clean up `SecurityChecklist.swift` (4 resolved items). Community consensus: Swift Testing for unit, XCTest reserved for future UI tests. Session notes: 27 Mar 2026. Enablement: (1) open Xcode → File → New → Target → Unit Testing Bundle → `BristlenoseTests`, (2) Claude writes tests. Docs: [Apple — Swift Testing](https://developer.apple.com/xcode/swift-testing/), [Apple — Adding tests to Xcode](https://developer.apple.com/documentation/testing/adding-tests-to-your-xcode-project), [desktop security audit](docs/design-desktop-security-audit.md)
+- [S1] **pytest coverage in CI** — trivial to enable, currently blind to dead code
+- [S6] **Frontend test coverage for clip export** — extend ActivityChipStack + ExportDropdown tests for clips job type (added during clip extraction work, 27 Mar 2026)
+- [S1] **Multi-Python CI** — test 3.10, 3.11, 3.12, 3.13 (trivial, avoids EOL surprises)
+- [S4] **Swift test harness** — XCTest target + ~42 Swift Testing tests across 5 files (Tab, I18n, LLMProvider, KeychainHelper, ProjectIndex). Two tiny refactors: `ProjectIndex.init(fileURL:)` for temp-dir isolation, `KeychainStore` protocol for `InMemoryKeychain` mock (security review: real Keychain overwrites API keys on crash). Also clean up `SecurityChecklist.swift` (4 resolved items). Community consensus: Swift Testing for unit, XCTest reserved for future UI tests. Session notes: 27 Mar 2026. Enablement: (1) open Xcode → File → New → Target → Unit Testing Bundle → `BristlenoseTests`, (2) Claude writes tests. Docs: [Apple — Swift Testing](https://developer.apple.com/xcode/swift-testing/), [Apple — Adding tests to Xcode](https://developer.apple.com/documentation/testing/adding-tests-to-your-xcode-project), [desktop security audit](docs/design-desktop-security-audit.md)
 
 ### Should
 - **Alembic setup** — DB migration framework before any schema change
+- **Real-data stress test corpus** — acquire NASA transcripts (~50 .txt), StoryCorps audio (~30 .mp3), SpinTX Spanish (~20 .mp4+.srt), IWM British (~10 .mp3), Korean War Legacy (~10 .mp4). ~125 sessions, ~100h, 3 languages. Exercise transcription quality, thematic analysis depth, scale rendering, i18n analysis. (design-real-data-testing.md)
 - **Visual regression baselines** — Playwright screenshots, light + dark
 - **Cross-browser Playwright** — Chromium + Firefox + WebKit
 - **Bundle size budget** — track and gate frontend bundle growth
@@ -324,12 +326,12 @@ MoSCoW within each category. **100-day goal: complete every Must.**
 ## 10. Documentation — guides, help, onboarding
 
 ### Must
-- **App Store description** — short + long description, keywords, screenshots
-- **Video walkthrough** — 2-minute "here's what Bristlenose does" screencast
-- **In-app onboarding** — first-run wizard or guided tour for new users
-- **Provider setup guide** — which LLM provider, how to get API key, cost expectations
-- **README polish** — landing page README for GitHub (currently dev-focused)
-- **Hero image of report on GitHub README** — screenshot showing a real report, above the fold
+- [S6] **App Store description** — short + long description, keywords, screenshots
+- [S6] **Video walkthrough** — 2-minute "here's what Bristlenose does" screencast
+- [S4] **In-app onboarding** — first-run wizard or guided tour for new users
+- [S4] **Provider setup guide** — which LLM provider, how to get API key, cost expectations
+- [S6] **README polish** — landing page README for GitHub (currently dev-focused)
+- [S6] **Hero image of report on GitHub README** — screenshot showing a real report, above the fold
 
 ### Should
 - **FAQ / troubleshooting** — common issues (FFmpeg, API keys, large files)
@@ -354,16 +356,16 @@ MoSCoW within each category. **100-day goal: complete every Must.**
 ## 11. Operations — CI/CD, release, monitoring
 
 ### Must
-- **Desktop app build pipeline** — Xcode archive → .dmg → notarisation → upload. CI: automate .dmg build on push
-- **App Store Connect setup** — app record, pricing, TestFlight beta group
-- **Code signing** — Apple Developer Program membership, Developer ID certificate
-- **CI: add macOS runner** — currently Linux-only
-- **.dmg README** — include "Open Anyway" Gatekeeper instructions
-- **PyInstaller sidecar signing** — every `.dylib`, `.so`, and framework inside the bundle must be individually codesigned before notarization. (design-desktop-security-audit.md)
-- **Build number auto-increment** — `CFBundleVersion = 1` blocks Sparkle and App Store update logic. Set up CI auto-increment
-- **Domain & email infrastructure** — register `bristlenose.research` + `bristlenose.app` (defensive), configure SPF/DKIM/DMARC, set up email on DreamHost (`hello@`, `support@`, `security@`), Substack custom domain (`blog.bristlenose.research`). Full plan: `docs/private/infrastructure-and-identity.md`
-- **Supply chain hardening** — GitHub 2FA with hardware key, branch protection on main, PyPI hardware key + project-scoped token, register PyPI typosquats. Full checklist: `docs/private/infrastructure-and-identity.md`
-- **Succession plan** — bus-factor doc (every account/credential/recovery path), password manager emergency access for one trusted person. (infrastructure-and-identity.md)
+- [S2] **Desktop app build pipeline** — Xcode archive → .dmg → notarisation → upload. CI: automate .dmg build on push
+- [S4] **App Store Connect setup** — app record, pricing, TestFlight beta group
+- [S2] **Code signing** — Apple Developer Program membership, Developer ID certificate
+- [S1] **CI: add macOS runner** — currently Linux-only
+- [S2] **.dmg README** — include "Open Anyway" Gatekeeper instructions
+- [S2] **PyInstaller sidecar signing** — every `.dylib`, `.so`, and framework inside the bundle must be individually codesigned before notarization. (design-desktop-security-audit.md)
+- [S1] **Build number auto-increment** — `CFBundleVersion = 1` blocks Sparkle and App Store update logic. Set up CI auto-increment
+- [S1] **Domain & email infrastructure** — register `bristlenose.research` + `bristlenose.app` (defensive), configure SPF/DKIM/DMARC, set up email on DreamHost (`hello@`, `support@`, `security@`), Substack custom domain (`blog.bristlenose.research`). Full plan: `docs/private/infrastructure-and-identity.md`
+- [S1] **Supply chain hardening** — GitHub 2FA with hardware key, branch protection on main, PyPI hardware key + project-scoped token, register PyPI typosquats. Full checklist: `docs/private/infrastructure-and-identity.md`
+- [S1] **Succession plan** — bus-factor doc (every account/credential/recovery path), password manager emergency access for one trusted person. (infrastructure-and-identity.md)
 
 ### Should
 - **Desktop app polish** — ReadyView: SwiftUI `.fileImporter()` (replace `NSOpenPanel.runModal()`). ProcessRunner: `AsyncBytes` instead of `availableData` polling. `hasAnyAPIKey()`: extend beyond Anthropic-only (or rename). Settings shortcut ⌘, : show in Help shortcuts conditionally (desktop only, browser intercepts). (Keychain migration moved to §6 Risk Must)
@@ -389,15 +391,15 @@ MoSCoW within each category. **100-day goal: complete every Must.**
 ## 12. Legal/Compliance — gates to App Store
 
 ### Must
-- **Apple Developer Program** — $99/year, individual enrollment initially. Bundle ID: `research.bristlenose.app`. Transition to Ltd organisation enrollment if/when revenue justifies it (team transfer preserves app listing, reviews, URL). Full plan: `docs/private/infrastructure-and-identity.md`
-- **Privacy policy URL** — required for App Store submission. Host at `bristlenose.research/privacy`
-- **Terms of service** — subscription terms
-- **App sandbox compliance** — entitlements for file access, network (LLM API calls)
-- **Export compliance** — HTTPS only, no custom encryption = simplified declaration
-- **Age rating** — likely 4+ (no objectionable content)
-- **EULA** — standard Apple EULA or custom
-- **Privacy Manifest (`PrivacyInfo.xcprivacy`)** — declare required reason APIs and data types. Cross-ref §6 Risk. (design-desktop-security-audit.md)
-- **AI data transparency per Apple 5.1.2(i)** — first-run consent dialog naming each LLM provider, linking privacy policies, Ollama offline option. Cross-ref §6 Risk. (design-desktop-security-audit.md)
+- [S1] **Apple Developer Program** — $99/year, individual enrollment initially. Bundle ID: `research.bristlenose.app`. Transition to Ltd organisation enrollment if/when revenue justifies it (team transfer preserves app listing, reviews, URL). Full plan: `docs/private/infrastructure-and-identity.md`
+- [S2] **Privacy policy URL** — required for App Store submission. Host at `bristlenose.research/privacy`
+- [S2] **Terms of service** — subscription terms
+- [S2] **App sandbox compliance** — entitlements for file access, network (LLM API calls)
+- [S2] **Export compliance** — HTTPS only, no custom encryption = simplified declaration
+- [S2] **Age rating** — likely 4+ (no objectionable content)
+- [S2] **EULA** — standard Apple EULA or custom
+- [S2] **Privacy Manifest (`PrivacyInfo.xcprivacy`)** — declare required reason APIs and data types. Cross-ref §6 Risk. (design-desktop-security-audit.md)
+- [S2] **AI data transparency per Apple 5.1.2(i)** — first-run consent dialog naming each LLM provider, linking privacy policies, Ollama offline option. Cross-ref §6 Risk. (design-desktop-security-audit.md)
 
 ### Should
 - **GDPR statement** — data processing description (local-first, API calls to LLM providers)
@@ -413,13 +415,13 @@ MoSCoW within each category. **100-day goal: complete every Must.**
 
 ### Must
 - **~~Pricing decision~~** — $/month, what's included, free tier?
-- **Blog at substack** — minimal posts and place for people to gather and chat. cross posts from linkedin
-- **Launch Blog post** — "why we built Bristlenose" story 3 minute read
-- **Public-facing website 1** — The 1 pages brochure not App Store, not GitHub. Product landing page at `bristlenose.research` with video, install CTA, "nothing leaves your laptop" messaging, speed demo GIF, comparison vs Dovetail/EnjoyHQ, what it does, who it's for, install/download CTA → part of public-facing website above
-- **Public-facing website2 ** — The 1 pages manual
-- **Landing page** — - **Domain registration** — `bristlenose.research` as primary product domain. `bristlenose.app` as defensive redirect. `blog.bristlenose.research` for Substack (portable — CNAME). Note: `bristlenose.com` is taken (Namecheap, Jan 2026, resolves to Shopify). Full plan: `docs/private/infrastructure-and-identity.md`
-- **App Store screenshots** — 3-5 screenshots at required resolutions
-- **App Store preview video** — 15-30 second demo (optional but high impact)
+- [S6] **Blog at substack** — minimal posts and place for people to gather and chat. cross posts from linkedin
+- [S6] **Launch Blog post** — "why we built Bristlenose" story 3 minute read
+- [S6] **Public-facing website 1** — The 1 pages brochure not App Store, not GitHub. Product landing page at `bristlenose.research` with video, install CTA, "nothing leaves your laptop" messaging, speed demo GIF, comparison vs Dovetail/EnjoyHQ, what it does, who it's for, install/download CTA → part of public-facing website above
+- [S6] **Public-facing website2 ** — The 1 pages manual
+- [S6] **Landing page** — - **Domain registration** — `bristlenose.research` as primary product domain. `bristlenose.app` as defensive redirect. `blog.bristlenose.research` for Substack (portable — CNAME). Note: `bristlenose.com` is taken (Namecheap, Jan 2026, resolves to Shopify). Full plan: `docs/private/infrastructure-and-identity.md`
+- [S6] **App Store screenshots** — 3-5 screenshots at required resolutions
+- [S6] **App Store preview video** — 15-30 second demo (optional but high impact)
 
 ### Should
 - **Product Hunt launch** — prepared assets, description, maker comment
@@ -442,19 +444,19 @@ MoSCoW within each category. **100-day goal: complete every Must.**
 ## 14. Accessibility — inclusive by default
 
 ### Must
-- **Systematic accessibility review via ux-review skill** — run the `ux-review` agent on every new feature before merge and retroactively on all existing interactive surfaces (modals, sidebar, tag input, toolbar, quote cards, analysis page). The skill checks WCAG 2.1 AA, keyboard navigation, ARIA roles, focus management, screen reader support, and reduced motion. Make this a gated step in the feature workflow, not an afterthought
-- **Non-focusable interactive elements (span onClick → button)** — Add Tag (+) on QuoteCard, Badge delete, Badge accept/deny actions, Counter unhide are all bare `<span onClick>` — invisible to keyboard users and screen readers. Convert to `<button>` with `aria-label`. (a11y audit, critical)
-- **TagInput: implement WAI-ARIA combobox pattern** — missing `role="combobox"`, `aria-expanded`, `aria-autocomplete="list"`, `aria-controls`, `aria-activedescendant`. Suggestion list needs `role="listbox"`, items need `role="option"`. (a11y audit, critical)
-- **Modal atom accessibility upgrade** — `role="dialog"`, `aria-modal`, focus trap, focus restore as a shared hook/wrapper. Retrofit to all 6 modals (HelpModal, ExportDialog, FeedbackModal, AutoCodeReportModal, ThresholdReviewModal, SettingsModal). HelpModal is the worst — no dialog role, no focus trap, no focus return. SettingsModal's ModalNav pattern is the reference implementation. (a11y audit, major)
-- **NavBar: remove incorrect role="tablist"** — router links are not ARIA tabs; no matching `role="tabpanel"` exists. Semantic `<nav>` with links is correct. (a11y audit, major)
-- **Missing aria-labels on inputs** — SearchBox ("Filter quotes"), TagInput ("Add tag"), TagSidebar search ("Search tags"), TagFilterDropdown search ("Search tags"). Placeholder text is not a label. (a11y audit, major)
-- **ViewSwitcher dropdown keyboard navigation** — menu items have no `tabindex`, no Arrow key navigation, no Enter/Space to select, no Escape to close. (a11y audit, major)
-- **Icon contrast failures** — `--bn-colour-icon-idle` (#c9ccd1 on white = 1.8:1) and `--bn-colour-starred` (#999 on white = 2.8:1) fail WCAG 1.4.11 non-text contrast (3:1 required). Dark mode `--bn-colour-icon-idle` (#595959 on #111 = 2.4:1) also fails. (a11y audit, major)
-- **No `<main>` landmark** — QuotesTab renders in a bare fragment. Wrap `<Outlet>` in AppLayout's center column with `<main>`. (a11y audit, major)
-- **Keyboard navigation audit** — verify all interactive elements reachable via Tab
-- **VoiceOver testing** — basic screen reader pass on report and desktop app
-- **Colour contrast** — WCAG AA on all text (light + dark mode)
-- **Focus indicators** — visible focus rings on all interactive elements
+- [S5] **Systematic accessibility review via ux-review skill** — run the `ux-review` agent on every new feature before merge and retroactively on all existing interactive surfaces (modals, sidebar, tag input, toolbar, quote cards, analysis page). The skill checks WCAG 2.1 AA, keyboard navigation, ARIA roles, focus management, screen reader support, and reduced motion. Make this a gated step in the feature workflow, not an afterthought
+- [S5] **Non-focusable interactive elements (span onClick → button)** — Add Tag (+) on QuoteCard, Badge delete, Badge accept/deny actions, Counter unhide are all bare `<span onClick>` — invisible to keyboard users and screen readers. Convert to `<button>` with `aria-label`. (a11y audit, critical)
+- [S5] **TagInput: implement WAI-ARIA combobox pattern** — missing `role="combobox"`, `aria-expanded`, `aria-autocomplete="list"`, `aria-controls`, `aria-activedescendant`. Suggestion list needs `role="listbox"`, items need `role="option"`. (a11y audit, critical)
+- [S5] **Modal atom accessibility upgrade** — `role="dialog"`, `aria-modal`, focus trap, focus restore as a shared hook/wrapper. Retrofit to all 6 modals (HelpModal, ExportDialog, FeedbackModal, AutoCodeReportModal, ThresholdReviewModal, SettingsModal). HelpModal is the worst — no dialog role, no focus trap, no focus return. SettingsModal's ModalNav pattern is the reference implementation. (a11y audit, major)
+- [S5] **NavBar: remove incorrect role="tablist"** — router links are not ARIA tabs; no matching `role="tabpanel"` exists. Semantic `<nav>` with links is correct. (a11y audit, major)
+- [S5] **Missing aria-labels on inputs** — SearchBox ("Filter quotes"), TagInput ("Add tag"), TagSidebar search ("Search tags"), TagFilterDropdown search ("Search tags"). Placeholder text is not a label. (a11y audit, major)
+- [S5] **ViewSwitcher dropdown keyboard navigation** — menu items have no `tabindex`, no Arrow key navigation, no Enter/Space to select, no Escape to close. (a11y audit, major)
+- [S5] **Icon contrast failures** — `--bn-colour-icon-idle` (#c9ccd1 on white = 1.8:1) and `--bn-colour-starred` (#999 on white = 2.8:1) fail WCAG 1.4.11 non-text contrast (3:1 required). Dark mode `--bn-colour-icon-idle` (#595959 on #111 = 2.4:1) also fails. (a11y audit, major)
+- [S5] **No `<main>` landmark** — QuotesTab renders in a bare fragment. Wrap `<Outlet>` in AppLayout's center column with `<main>`. (a11y audit, major)
+- [S6] **Keyboard navigation audit** — verify all interactive elements reachable via Tab
+- [S6] **VoiceOver testing** — basic screen reader pass on report and desktop app
+- [S6] **Colour contrast** — WCAG AA on all text (light + dark mode)
+- [S5] **Focus indicators** — visible focus rings on all interactive elements
 
 ### Should
 - **Toast announcements** — toast container (e.g. "3 quotes copied as CSV") needs `role="status"` or `aria-live="polite"` for screen reader announcements. (a11y audit, major)

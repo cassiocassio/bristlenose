@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections.abc import Generator
 from pathlib import Path
 
-from sqlalchemy import create_engine, event, inspect, text
+from sqlalchemy import create_engine, event, inspect
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
 from sqlalchemy.pool import StaticPool
@@ -71,81 +71,49 @@ def create_session_factory(engine: Engine) -> sessionmaker[Session]:
     return sessionmaker(bind=engine)
 
 
-def _migrate_schema(engine: Engine) -> None:
-    """Add columns introduced after initial schema creation.
+def run_migrations(engine: Engine) -> None:
+    """Run Alembic migrations. Handles fresh, pre-Alembic, and managed DBs.
 
-    SQLAlchemy's ``create_all`` only creates *new* tables — it never alters
-    existing ones.  This helper inspects the live schema and issues ALTER TABLE
-    statements for any missing columns so that existing databases pick up new
-    fields without requiring a full Alembic migration stack.
+    Detection logic:
+    - ``alembic_version`` exists → already managed, upgrade to head
+    - No ``alembic_version`` + user tables exist → pre-Alembic DB, stamp
+      at baseline (001) then upgrade to head
+    - No ``alembic_version`` + no user tables → brand-new DB,
+      ``create_all()`` already ran, stamp at head
     """
-    insp = inspect(engine)
+    from alembic import command
+    from alembic.config import Config
 
-    # v0.10.x — CodebookGroup gains framework_id (VARCHAR 50, nullable)
-    if "codebook_groups" in insp.get_table_names():
-        cols = {c["name"] for c in insp.get_columns("codebook_groups")}
-        if "framework_id" not in cols:
-            with engine.begin() as conn:
-                conn.execute(
-                    text("ALTER TABLE codebook_groups ADD COLUMN framework_id VARCHAR(50)")
-                )
+    alembic_cfg = Config()
+    alembic_cfg.set_main_option(
+        "script_location", str(Path(__file__).parent / "alembic")
+    )
 
-    # v0.11.x — Quote and TranscriptSegment gain segment_index (INTEGER, default -1)
-    if "quotes" in insp.get_table_names():
-        cols = {c["name"] for c in insp.get_columns("quotes")}
-        if "segment_index" not in cols:
-            with engine.begin() as conn:
-                conn.execute(
-                    text("ALTER TABLE quotes ADD COLUMN segment_index INTEGER DEFAULT -1")
-                )
-    if "transcript_segments" in insp.get_table_names():
-        cols = {c["name"] for c in insp.get_columns("transcript_segments")}
-        if "segment_index" not in cols:
-            with engine.begin() as conn:
-                conn.execute(
-                    text(
-                        "ALTER TABLE transcript_segments"
-                        " ADD COLUMN segment_index INTEGER DEFAULT -1"
-                    )
-                )
+    with engine.begin() as connection:
+        alembic_cfg.attributes["connection"] = connection
 
-    # Word-level timing for transcript segments (JSON, nullable)
-    if "transcript_segments" in insp.get_table_names():
-        cols = {c["name"] for c in insp.get_columns("transcript_segments")}
-        if "words_json" not in cols:
-            with engine.begin() as conn:
-                conn.execute(
-                    text("ALTER TABLE transcript_segments ADD COLUMN words_json TEXT")
-                )
+        insp = inspect(engine)
+        tables = set(insp.get_table_names())
+        has_alembic = "alembic_version" in tables
 
-    # v0.10.3 — Session gains thumbnail_path (VARCHAR 500, nullable)
-    if "sessions" in insp.get_table_names():
-        cols = {c["name"] for c in insp.get_columns("sessions")}
-        if "thumbnail_path" not in cols:
-            with engine.begin() as conn:
-                conn.execute(
-                    text("ALTER TABLE sessions ADD COLUMN thumbnail_path VARCHAR(500)")
-                )
-
-    # v0.12.x — QuoteTag gains source (VARCHAR 20, default "human")
-    if "quote_tags" in insp.get_table_names():
-        cols = {c["name"] for c in insp.get_columns("quote_tags")}
-        if "source" not in cols:
-            with engine.begin() as conn:
-                conn.execute(
-                    text(
-                        "ALTER TABLE quote_tags"
-                        " ADD COLUMN source VARCHAR(20) DEFAULT 'human'"
-                    )
-                )
+        if has_alembic:
+            # Already managed — upgrade to head
+            command.upgrade(alembic_cfg, "head")
+        elif tables:
+            # Pre-Alembic DB: tables exist from create_all() + old _migrate_schema()
+            command.stamp(alembic_cfg, "001")
+            command.upgrade(alembic_cfg, "head")
+        else:
+            # Brand-new empty DB: create_all() just ran, stamp at head
+            command.stamp(alembic_cfg, "head")
 
 
 def init_db(engine: Engine) -> None:
-    """Create all tables. Safe to call repeatedly (CREATE IF NOT EXISTS)."""
+    """Create all tables and run migrations. Safe to call repeatedly."""
     from bristlenose.server import models  # noqa: F401 — registers all tables
 
     Base.metadata.create_all(bind=engine)
-    _migrate_schema(engine)
+    run_migrations(engine)
 
 
 def get_db(engine: Engine) -> Generator[Session, None, None]:

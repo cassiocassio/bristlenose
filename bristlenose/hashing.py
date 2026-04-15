@@ -28,9 +28,9 @@ def hash_file_metadata(paths: list[Path]) -> str:
     for p in sorted(paths):
         if p.exists():
             st = p.stat()
-            parts.append(f"{p.name}:{st.st_size}:{st.st_mtime_ns}")
+            parts.append(f"{p}:{st.st_size}:{st.st_mtime_ns}")
         else:
-            parts.append(f"{p.name}:MISSING")
+            parts.append(f"{p}:MISSING")
     return hashlib.sha256("|".join(parts).encode()).hexdigest()
 
 

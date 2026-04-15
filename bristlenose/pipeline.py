@@ -97,6 +97,11 @@ def _print_cached_step(message: str) -> None:
     console.print(f" [green]✓[/green] {message}{' ' * padding}[dim](cached)[/dim]")
 
 
+# Sentinel for missing upstream hash — won't match any real SHA-256 digest,
+# so downstream stages always re-run when their upstream didn't produce output.
+_MISSING_HASH = "MISSING"
+
+
 def _is_stage_cached(manifest: PipelineManifest | None, stage: str) -> bool:
     """Return True if *stage* is marked complete in an existing manifest."""
     if manifest is None:
@@ -664,7 +669,7 @@ class Pipeline:
                 for s in sessions
                 if s.session_id in session_segments
             }
-            _si_input_hashes = {"upstream": _tx_hash or ""}
+            _si_input_hashes = {"upstream": _tx_hash or _MISSING_HASH}
             if _is_speaker_stage_verified(
                 _prev_manifest, STAGE_IDENTIFY_SPEAKERS, _si_session_files,
                 current_input_hashes=_si_input_hashes,
@@ -892,7 +897,12 @@ class Pipeline:
             # ── Stage 8: Topic segmentation ──────────────────────────
             _seg_errors: list[str] = []
             _tb_path = intermediate / "topic_boundaries.json"
-            _topic_input_hashes = {"upstream": _tx_hash or ""}
+            # Track both upstream transcript hash and PII config — toggling
+            # --redact-pii changes the transcript content that topics see.
+            _topic_input_hashes = {
+                "upstream": _tx_hash or _MISSING_HASH,
+                "pii_enabled": str(self.settings.pii_enabled),
+            }
             if _is_stage_verified(
                 _prev_manifest, STAGE_TOPIC_SEGMENTATION, [_tb_path],
                 current_input_hashes=_topic_input_hashes,
@@ -1008,7 +1018,7 @@ class Pipeline:
             # ── Stage 9: Quote extraction ────────────────────────────
             _quote_errors: list[str] = []
             _eq_path = intermediate / "extracted_quotes.json"
-            _qe_input_hashes = {"upstream": _tb_hash or ""}
+            _qe_input_hashes = {"upstream": _tb_hash or _MISSING_HASH}
             if _is_stage_verified(
                 _prev_manifest, STAGE_QUOTE_EXTRACTION, [_eq_path],
                 current_input_hashes=_qe_input_hashes,
@@ -1130,7 +1140,7 @@ class Pipeline:
             # ── Stages 10+11: Cluster by screen + thematic grouping ──
             _sc_path = intermediate / "screen_clusters.json"
             _tg_path = intermediate / "theme_groups.json"
-            _cg_input_hashes = {"upstream": _eq_hash or ""}
+            _cg_input_hashes = {"upstream": _eq_hash or _MISSING_HASH}
             if _is_stage_verified(
                 _prev_manifest, STAGE_CLUSTER_AND_GROUP,
                 [_sc_path, _tg_path],

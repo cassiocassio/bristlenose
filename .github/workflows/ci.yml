@@ -9,11 +9,15 @@ on:
 
 jobs:
   lint-and-test:
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
+    # macOS is informational — catches platform bugs without blocking merges
+    continue-on-error: ${{ matrix.os == 'macos-latest' }}
 
     strategy:
+      fail-fast: false
       matrix:
         python-version: ["3.12"]
+        os: [ubuntu-latest, macos-latest]
 
     steps:
       - uses: actions/checkout@v4
@@ -42,6 +46,7 @@ jobs:
         # Informational — flags known CVEs in the log but doesn't block
         # the build. Transitive deps (torch, protobuf) often have unfixed
         # advisories that we can't act on. Review on each run.
+        if: matrix.os == 'ubuntu-latest'
         continue-on-error: true
         run: |
           pip install pip-audit
@@ -50,13 +55,14 @@ jobs:
       - name: Generate Python SBOM
         # CycloneDX Software Bill of Materials — uploaded as CI artifact
         # for compliance (US EO 14028, EU Cyber Resilience Act).
+        if: matrix.os == 'ubuntu-latest'
         continue-on-error: true
         run: |
           pip install cyclonedx-bom
           cyclonedx-py environment -o sbom-python.json
 
       - name: Upload Python SBOM
-        if: always()
+        if: matrix.os == 'ubuntu-latest'
         uses: actions/upload-artifact@v4
         with:
           name: sbom-python

@@ -79,7 +79,15 @@ jobs:
           }
 
       - name: Run tests
-        run: pytest --tb=short -q -m "not slow"
+        run: pytest --tb=short -q -m "not slow" --cov --cov-report=term-missing --cov-report=xml:coverage.xml
+
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report-${{ matrix.os }}
+          path: coverage.xml
+          retention-days: 90
 
   frontend-lint-type-test:
     runs-on: ubuntu-latest

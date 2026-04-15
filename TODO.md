@@ -1,6 +1,6 @@
 # Bristlenose — Where I Left Off
 
-Last updated: 16 Apr 2026
+Last updated: 15 Apr 2026
 
 **Launch plan:** `docs/private/100days.md` — triaged by topic + MoSCoW priority. That's the source of truth for what ships. This file is a public capture inbox + session context + done history.
 
@@ -55,6 +55,7 @@ Remaining multi-project phases tracked in `docs/design-project-sidebar.md` (Phas
 - [x] **macOS CI matrix** — `ubuntu-latest` + `macos-latest` (informational, `continue-on-error`). Catches platform-specific bugs without blocking merges
 - [x] **GZip middleware** — `GZipMiddleware(minimum_size=500)` on FastAPI app. Media routes set `Content-Encoding: identity` to prevent re-compression of video/audio
 - [x] **Frontend bundle size gate** — `size-limit` (300 kB gzipped JS), `npm run size` / `npm run size:why`, runs in CI after frontend build
+- [x] **Alembic migration strategy** — replaces manual `_migrate_schema()` with programmatic Alembic (no `alembic.ini`). Per-project SQLite, `render_as_batch=True` for SQLite compat, detect-and-stamp for existing DBs. Baseline revision 001 (no-op). 9 migration tests. Unblocks Person UUID migration (S3)
 
 ## PII redaction audit (26 Mar 2026)
 

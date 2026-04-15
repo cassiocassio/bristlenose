@@ -29,17 +29,19 @@ Two audiences, done in parallel where possible.
 
 4. **`TODO.md`** — mark completed items done, add new items discovered during the session. Update the "Last updated" date. If the near-horizon roadmap changed, reorder it.
 
-5. **Design docs** — if the session produced or updated a design doc (`docs/design-*.md`), check that it reflects the final state, not an intermediate plan. Remove stale TODOs inside design docs that were resolved.
+5. **`100days.md` sprint progress** — read `docs/private/100days.md`. Find the current sprint (check the sprint schedule table against today's date). Compare items tagged with that sprint — and any untagged items — against what was accomplished this session (check `git log --oneline` since session start, TODO.md completions, and the work just done). Strike through completed items with `~~`. If an item is partially done, leave it unstruck but add a brief parenthetical note (e.g. `— phase 1 done, phase 2 remains`). Don't touch items the session didn't work on.
 
-6. **`CHANGELOG.md`** — if a version was bumped, add an entry. Format: `**X.Y.Z** — _D Mon YYYY_`. If no version bump, skip.
+6. **Design docs** — if the session produced or updated a design doc (`docs/design-*.md`), check that it reflects the final state, not an intermediate plan. Remove stale TODOs inside design docs that were resolved.
 
-7. **`README.md`** — if a version was bumped, update the changelog section. If a user-visible feature shipped, add it to the feature list if appropriate. Don't touch README for internal-only changes.
+7. **`CHANGELOG.md`** — if a version was bumped, add an entry. Format: `**X.Y.Z** — _D Mon YYYY_`. If no version bump, skip.
 
-8. **`CONTRIBUTING.md`** — only if design system, release process, or dev setup changed.
+8. **`README.md`** — if a version was bumped, update the changelog section. If a user-visible feature shipped, add it to the feature list if appropriate. Don't touch README for internal-only changes.
+
+9. **`CONTRIBUTING.md`** — only if design system, release process, or dev setup changed.
 
 ### For robots (corrections, patterns, and conventions for future sessions)
 
-9. **CLAUDE.md gotchas** — review the session for anything Claude got wrong, had to retry, or learned the hard way. Add corrections to the appropriate CLAUDE.md file:
+10. **CLAUDE.md gotchas** — review the session for anything Claude got wrong, had to retry, or learned the hard way. Add corrections to the appropriate CLAUDE.md file:
    - Root `CLAUDE.md` — project-wide conventions, infrastructure gotchas
    - `frontend/CLAUDE.md` — React/TS/Vite patterns, test gotchas
    - `bristlenose/theme/CLAUDE.md` — CSS, design system
@@ -50,7 +52,7 @@ Two audiences, done in parallel where possible.
 
    **The test:** "If I removed this line, would a future Claude session make the same mistake?" If yes, add it. If not, skip it. Don't add things Claude can infer from reading the code.
 
-10. **Auto-memory** — save anything that should persist across conversations but doesn't belong in CLAUDE.md:
+11. **Auto-memory** — save anything that should persist across conversations but doesn't belong in CLAUDE.md:
     - User preferences or feedback given during the session
     - Project context (deadlines, stakeholder decisions, external constraints)
     - References to external systems discovered
@@ -69,24 +71,24 @@ Two audiences, done in parallel where possible.
 
 ## Phase 3: Commit + close out
 
-11. **Check for uncommitted changes** — `git status` + `git diff --stat`
+12. **Check for uncommitted changes** — `git status` + `git diff --stat`
 
-12. **Stage and commit** — commit all changes from this chunk with a descriptive message. If multiple logical changes were made, ask the user whether to bundle into one commit or split.
+13. **Stage and commit** — commit all changes from this chunk with a descriptive message. If multiple logical changes were made, ask the user whether to bundle into one commit or split.
 
     Commit message style: short, descriptive, lowercase. Examples:
     - `add security findings to TODO, document bridge handler wiring`
     - `fix tag suggest offering tags the quote already has`
     - `inspector panel with drag-resize and signal card selection`
 
-13. **Maintenance schedule check** — read the "Dependency maintenance" section of `TODO.md`. If today's date is past any unchecked quarterly/annual item, remind the user it's due.
+14. **Maintenance schedule check** — read the "Dependency maintenance" section of `TODO.md`. If today's date is past any unchecked quarterly/annual item, remind the user it's due.
 
-14. **QA backlog reminder** — check `docs/private/qa-backlog.md` for unacked items. Remind the user if any exist.
+15. **QA backlog reminder** — check `docs/private/qa-backlog.md` for unacked items. Remind the user if any exist.
 
-15. **Branch cleanup** — check for merged feature branches that can be deleted. Ask before deleting.
+16. **Branch cleanup** — check for merged feature branches that can be deleted. Ask before deleting.
 
-16. **Push decision** — don't push by default. Remind about the evening release rule (after 9pm London on weekdays; weekends any time). If they want to see work remotely before release: `git push origin main:wip`. Push only if the user says to.
+17. **Push decision** — don't push by default. Remind about the evening release rule (after 9pm London on weekdays; weekends any time). If they want to see work remotely before release: `git push origin main:wip`. Push only if the user says to.
 
-17. **CI verification** — only if pushed. Check the latest push passes CI.
+18. **CI verification** — only if pushed. Check the latest push passes CI.
 
 ## Output
 
@@ -97,6 +99,7 @@ End of session:
 - Tests: passed (N tests) / skipped (docs only)
 - Lint: clean / skipped (docs only)
 - Updated: TODO.md, CLAUDE.md (list what was touched)
+- 100days: struck through 2 items in S1 (or "no sprint items completed")
 - Memory: saved feedback on X (or "nothing new")
 - Committed: "commit message here" (N files, +X -Y lines)
 - Maintenance: nothing due (or "May 2026 dep review is due")

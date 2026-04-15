@@ -2,6 +2,12 @@
 
 All notable changes to Bristlenose are documented here. See also the [README](README.md) for the latest releases.
 
+**0.14.4** — _16 Apr 2026_
+
+- **Pipeline resilience: input change detection** — phase 2c of pipeline resilience. Detects when input files have been added, removed, or modified between runs. Stale sessions are quarantined and the affected stages re-run automatically. SHA-256 content hashing with size-based short-circuit for large files
+- **Alembic migration infrastructure** — replaced manual `_migrate_schema()` with Alembic for schema migrations. Existing databases auto-stamp to the baseline revision on first serve. New migrations go in `bristlenose/server/migrations/`
+- **CI: multi-python matrix** — test suite now runs against Python 3.10, 3.11, 3.12, and 3.13. Lint job split from test jobs for faster feedback
+
 **0.14.3** — _27 Mar 2026_
 
 - **Export: video clip extraction** — starred and featured quotes extracted as trimmed video clips via FFmpeg stream-copy. Human-readable filenames (`p1 03m45 Sarah onboarding was confusing.mp4`), adjacent merge, async progress toast, `clips_manifest.json` audit trail. Two-backend architecture (FFmpeg now, AVFoundation future) with `ClipBackend` Protocol. 64 new Python tests

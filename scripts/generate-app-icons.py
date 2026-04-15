@@ -9,7 +9,7 @@ Creates:
 import math
 from pathlib import Path
 
-from PIL import Image, ImageDraw, ImageFilter
+from PIL import Image, ImageDraw
 
 REPO = Path("/home/user/bristlenose")
 SRC_LIGHT = REPO / "bristlenose/theme/images/bristlenose.png"
@@ -68,7 +68,6 @@ def create_background_layer(size: int = 1024) -> Image.Image:
     that works well under glass translucency.
     """
     img = Image.new("RGBA", (size, size), (0, 0, 0, 0))
-    draw = ImageDraw.Draw(img)
 
     # Radial gradient: lighter center, slightly deeper edges
     cx, cy = size // 2, size // 2

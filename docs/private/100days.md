@@ -26,7 +26,7 @@ Items tagged `[S1]`–`[S6]` are assigned to a sprint. Untagged items are unassi
 ## 1. Missing — essential feature gaps ("it's not done without it")
 
 ### Must
-- [S1] **Demo dataset** — 5h IKEA study as public, credible test data. Exercise all frameworks, test with real user tags. Run 1 real project as if i mean it - to test tags and ergonoics. Also necessary for videos for launch website. Additionally: record 5-6 friends doing usability tasks on gov.uk — classic moderated usability test format to validate the UXR codebook (moderator questions, friction, sentiment). Double duty as demo + speed demo video. (design-real-data-testing.md)
+- **IKEA codebook validation dataset** — 5 moderated IKEA interviews with UXR friends (favours, not schedulable). ~1/week over S1–S5. Tests whether sentiment categories, UXR codebook (moderator questions, friction, sentiment), and thematic grouping produce useful results on real research data. Also provides marketing screenshots and speed demo video. (design-real-data-testing.md)
 - **~~Desktop app v0.1~~** — SwiftUI shell, PyInstaller sidecar, folder picker, pipeline runner, "Open Report" button. ~365–435 MB bundle. (design-desktop-app.md)
 - ~~**Export: standalone HTML from serve mode** — `POST /api/projects/{id}/export`, self-contained HTML. Shipped v0.11.2. (design-export-sharing.md)~~
 - [S4] **Export: research package (zip)** — zip with report.html + transcripts/ (.txt with inline timecodes) + clips/ (optional, FFmpeg). Human-readable filenames (`p1 03m45 Sarah onboarding was confusing.mp4`). Anonymisation across all surfaces. Replaces 3 hours of Final Cut Pro work. Stages 1–3 of export roadmap. (design-export-sharing.md)
@@ -512,13 +512,13 @@ Safari's performance team made WebKit fast by never allowing it to become slower
 **The plan: profile first, then fix by impact, then gate in CI.**
 
 ### Must
-- [S1] **Profile the demo dataset** — run Lighthouse, Playwright DOM count, Xcode Instruments Animation Hitches, and manual scroll testing against the IKEA study. Record baselines for TTI, FCP, LCP, CLS, DOM node count, bundle size, static export file size. You can't prioritise what you haven't measured. This is step 0
+- [S1] **Profile against FOSSDA dataset** — run Lighthouse, Playwright DOM count, Xcode Instruments Animation Hitches, and manual scroll testing against FOSSDA interviews (~10 sessions). Record baselines for TTI, FCP, LCP, CLS, DOM node count, bundle size, static export file size. You can't prioritise what you haven't measured. This is step 0. FOSSDA downloaded, unblocked now
 - ~~[S1] **Bundle size CI gate** — `size-limit` + `@size-limit/file`, 305 KB gzip limit. CI enforces in `frontend-lint-type-test` job. Current ~300 KB. 100 KB target needs route-level code splitting (separate task)~~
 - ~~[S1] **`GZipMiddleware` in FastAPI** — one line. ~70% reduction in served HTML/CSS/JS. Free win for WKWebView and browser~~
 - ~~[S1] **`content-visibility: auto` on quote card containers** — CSS only, works everywhere including file://. Browser skips layout/paint for off-screen cards. Supported since Safari 17.4. Essential for static export path where JS virtualisation isn't possible~~
 - [S2] **`@tanstack/virtual` in serve mode** — required, not optional. A 15h study produces ~1,500 quotes (~100/hour from real usage). That's ~30,000 DOM nodes without virtualisation. Virtualisation drops visible DOM to ~1,000 regardless of total. This is the single most important performance feature
 - ~~[S1] **Move `<script>` to end of `<body>`** — script block is already at end of `<body>` (after all `<article>` content, before `</body>`). No `<head>` scripts exist. Done~~
-- [S2] **Performance regression gate in CI** — Playwright test on demo dataset measuring DOM node count (fail > 10,000) and static export size (fail > 2 MB). The ratchet: once you have a number, no PR makes it worse
+- [S2] **Performance regression gate in CI** — Playwright test on FOSSDA dataset measuring DOM node count (fail > 10,000) and static export size (fail > 2 MB). The ratchet: once you have a number, no PR makes it worse
 - ~~[S1] **`perf-review` agent** — Claude Code agent (`.claude/agents/perf-review.md`) that reviews PRs for performance regressions: new deps without size justification, unvirtualised large lists, missing `passive: true`, blocking resource additions. Catches the obvious stuff before CI catches the rest~~
 
 ### Should

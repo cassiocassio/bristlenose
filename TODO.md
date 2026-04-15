@@ -1,6 +1,6 @@
 # Bristlenose — Where I Left Off
 
-Last updated: 15 Apr 2026
+Last updated: 16 Apr 2026
 
 **Launch plan:** `docs/private/100days.md` — triaged by topic + MoSCoW priority. That's the source of truth for what ships. This file is a public capture inbox + session context + done history.
 
@@ -191,6 +191,7 @@ Bristlenose has ~30 direct + transitive deps across Python, ML, LLM SDKs, and NL
 - [x] **Help modal** (Mar 2026) — 3 phases: platform-aware shortcuts, typography tokens, entrance animation, custom tooltips with keyboard shortcut badges
 - [x] **Bulk actions on multi-selection** (Mar 2026) — star, hide, tag respect click + shift+click range selection
 - [x] **Sidebar push animation** (Mar 2026) — drag-open pushes content; keyboard shortcuts and click trigger push animation
+- [x] **Pipeline resilience Phase 2c** (Apr 2026) — input change detection via source file metadata hashing (size+mtime), upstream content_hash propagation, cascade invalidation. 12 new tests
 - [x] **CI hardening sprint 1** (Apr 2026) — pytest coverage (73% baseline), macOS CI matrix, GZip middleware, bundle size gate
 - [x] **Pipeline error/warning display** (Mar 2026) — red ✗ for failed stages, yellow ⚠ for partial success
 - [x] **Render refactor** (Mar 2026) — `render_html.py` broken into `bristlenose/stages/s12_render/` package (8 submodules). Static render formally deprecated

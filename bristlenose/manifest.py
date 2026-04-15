@@ -50,6 +50,7 @@ class StageRecord(BaseModel):
     error: str | None = None
     sessions: dict[str, SessionRecord] | None = None  # only for per-session stages
     content_hash: str | None = None  # SHA-256 of the stage output file
+    input_hashes: dict[str, str] | None = None  # Phase 2c: hashes of stage inputs
 
 
 class PipelineManifest(BaseModel):
@@ -159,6 +160,7 @@ def mark_stage_complete(
     manifest: PipelineManifest,
     stage: str,
     content_hash: str | None = None,
+    input_hashes: dict[str, str] | None = None,
 ) -> None:
     """Mark a stage as complete and update the manifest timestamp."""
     record = manifest.stages.get(stage, StageRecord())
@@ -166,6 +168,8 @@ def mark_stage_complete(
     record.completed_at = _now_iso()
     if content_hash is not None:
         record.content_hash = content_hash
+    if input_hashes is not None:
+        record.input_hashes = input_hashes
     manifest.stages[stage] = record
     manifest.updated_at = _now_iso()
 

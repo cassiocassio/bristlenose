@@ -16,7 +16,7 @@ _os.environ.setdefault("HF_HUB_DISABLE_PROGRESS_BARS", "1")
 
 from bristlenose import __version__
 from bristlenose.config import BristlenoseSettings
-from bristlenose.hashing import hash_bytes, verify_file_hash
+from bristlenose.hashing import hash_bytes, hash_file_metadata, verify_file_hash
 from bristlenose.manifest import (
     STAGE_CLUSTER_AND_GROUP,
     STAGE_EXTRACT_AUDIO,
@@ -109,6 +109,7 @@ def _is_stage_verified(
     manifest: PipelineManifest | None,
     stage: str,
     output_paths: list[Path],
+    current_input_hashes: dict[str, str] | None = None,
 ) -> bool:
     """Return True if *stage* is complete AND all output files pass hash check.
 
@@ -116,8 +117,12 @@ def _is_stage_verified(
     integrity verification: every file in *output_paths* must exist on
     disk and its SHA-256 must match the hash stored in the manifest.
 
-    Old manifests with ``content_hash=None`` pass unconditionally
-    (backward compat).
+    Phase 2c adds input change detection: if *current_input_hashes* is
+    provided and differs from the stored ``input_hashes``, the stage is
+    stale even though its output file is intact.
+
+    Old manifests with ``content_hash=None`` or ``input_hashes=None``
+    pass unconditionally (backward compat).
 
     On hash mismatch the stage is removed from *manifest* so that
     downstream per-session resume logic (``get_completed_session_ids``)
@@ -129,6 +134,18 @@ def _is_stage_verified(
         if not p.exists():
             return False
     record = manifest.stages[stage]  # type: ignore[union-attr]
+
+    # Phase 2c: input change detection
+    if (
+        current_input_hashes is not None
+        and record.input_hashes is not None
+        and record.input_hashes != current_input_hashes
+    ):
+        logger.info("Stage %s inputs changed — re-running", stage)
+        _print_warn(f"{stage}: inputs changed since last run — re-running stage")
+        manifest.stages.pop(stage, None)  # type: ignore[union-attr]
+        return False
+
     expected = record.content_hash
     if expected is None:
         return True
@@ -154,6 +171,7 @@ def _is_speaker_stage_verified(
     manifest: PipelineManifest | None,
     stage: str,
     session_files: dict[str, Path],
+    current_input_hashes: dict[str, str] | None = None,
 ) -> bool:
     """Return True if speaker-id stage is complete and per-session hashes match.
 
@@ -170,6 +188,18 @@ def _is_speaker_stage_verified(
         if not path.exists():
             return False
     record = manifest.stages[stage]  # type: ignore[union-attr]
+
+    # Phase 2c: input change detection
+    if (
+        current_input_hashes is not None
+        and record.input_hashes is not None
+        and record.input_hashes != current_input_hashes
+    ):
+        logger.info("Stage %s inputs changed — re-running", stage)
+        _print_warn(f"{stage}: inputs changed since last run — re-running stage")
+        manifest.stages.pop(stage, None)  # type: ignore[union-attr]
+        return False
+
     if record.sessions is None:
         return True
     for sid, path in session_files.items():
@@ -476,8 +506,11 @@ class Pipeline:
 
             # ── Stages 3-5: Parse existing transcripts + Transcribe ──
             _ss_path = intermediate / "session_segments.json"
+            _source_paths = [f.path for s in sessions for f in s.files]
+            _tx_input_hashes = {"source_files": hash_file_metadata(_source_paths)}
             if _is_stage_verified(
                 _prev_manifest, _M_STAGE_TRANSCRIBE, [_ss_path],
+                current_input_hashes=_tx_input_hashes,
             ):
                 import json as _json
 
@@ -601,7 +634,9 @@ class Pipeline:
                 self._emit_remaining(STAGE_TRANSCRIBE, _transcribe_elapsed)
             _tx_hash = hash_bytes(_ss_path.read_bytes()) if _ss_path.exists() else None
             mark_stage_complete(
-                manifest, _M_STAGE_TRANSCRIBE, content_hash=_tx_hash,
+                manifest, _M_STAGE_TRANSCRIBE,
+                content_hash=_tx_hash,
+                input_hashes=_tx_input_hashes,
             )
             write_manifest(manifest, output_dir)
 
@@ -629,8 +664,10 @@ class Pipeline:
                 for s in sessions
                 if s.session_id in session_segments
             }
+            _si_input_hashes = {"upstream": _tx_hash or ""}
             if _is_speaker_stage_verified(
                 _prev_manifest, STAGE_IDENTIFY_SPEAKERS, _si_session_files,
+                current_input_hashes=_si_input_hashes,
             ):
                 # Load all cached speaker info + segments with roles
                 all_speaker_infos: dict[str, list] = {}
@@ -802,7 +839,10 @@ class Pipeline:
                     session.participant_id = p_codes[0]
                     session.participant_number = int(p_codes[0][1:])
 
-            mark_stage_complete(manifest, STAGE_IDENTIFY_SPEAKERS)
+            mark_stage_complete(
+                manifest, STAGE_IDENTIFY_SPEAKERS,
+                input_hashes=_si_input_hashes,
+            )
             write_manifest(manifest, output_dir)
 
             # ── Stage 6: Merge and write raw transcripts ─────────────
@@ -852,8 +892,10 @@ class Pipeline:
             # ── Stage 8: Topic segmentation ──────────────────────────
             _seg_errors: list[str] = []
             _tb_path = intermediate / "topic_boundaries.json"
+            _topic_input_hashes = {"upstream": _tx_hash or ""}
             if _is_stage_verified(
                 _prev_manifest, STAGE_TOPIC_SEGMENTATION, [_tb_path],
+                current_input_hashes=_topic_input_hashes,
             ):
                 import json as _json
 
@@ -957,15 +999,19 @@ class Pipeline:
                 hash_bytes(_tb_path.read_bytes()) if _tb_path.exists() else None
             )
             mark_stage_complete(
-                manifest, STAGE_TOPIC_SEGMENTATION, content_hash=_tb_hash,
+                manifest, STAGE_TOPIC_SEGMENTATION,
+                content_hash=_tb_hash,
+                input_hashes=_topic_input_hashes,
             )
             write_manifest(manifest, output_dir)
 
             # ── Stage 9: Quote extraction ────────────────────────────
             _quote_errors: list[str] = []
             _eq_path = intermediate / "extracted_quotes.json"
+            _qe_input_hashes = {"upstream": _tb_hash or ""}
             if _is_stage_verified(
                 _prev_manifest, STAGE_QUOTE_EXTRACTION, [_eq_path],
+                current_input_hashes=_qe_input_hashes,
             ):
                 import json as _json
 
@@ -1075,16 +1121,20 @@ class Pipeline:
                 hash_bytes(_eq_path.read_bytes()) if _eq_path.exists() else None
             )
             mark_stage_complete(
-                manifest, STAGE_QUOTE_EXTRACTION, content_hash=_eq_hash,
+                manifest, STAGE_QUOTE_EXTRACTION,
+                content_hash=_eq_hash,
+                input_hashes=_qe_input_hashes,
             )
             write_manifest(manifest, output_dir)
 
             # ── Stages 10+11: Cluster by screen + thematic grouping ──
             _sc_path = intermediate / "screen_clusters.json"
             _tg_path = intermediate / "theme_groups.json"
+            _cg_input_hashes = {"upstream": _eq_hash or ""}
             if _is_stage_verified(
                 _prev_manifest, STAGE_CLUSTER_AND_GROUP,
                 [_sc_path, _tg_path],
+                current_input_hashes=_cg_input_hashes,
             ):
                 import json as _json
 
@@ -1135,7 +1185,9 @@ class Pipeline:
                 _cg_parts.append(_tg_path.read_bytes())
             _cg_hash = hash_bytes(b"".join(_cg_parts)) if _cg_parts else None
             mark_stage_complete(
-                manifest, STAGE_CLUSTER_AND_GROUP, content_hash=_cg_hash,
+                manifest, STAGE_CLUSTER_AND_GROUP,
+                content_hash=_cg_hash,
+                input_hashes=_cg_input_hashes,
             )
             write_manifest(manifest, output_dir)
 

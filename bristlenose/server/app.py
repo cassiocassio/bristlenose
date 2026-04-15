@@ -12,6 +12,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.cors import CORSMiddleware
+from starlette.middleware.gzip import GZipMiddleware
 from starlette.responses import Response
 
 from bristlenose.server.db import create_session_factory, db_url_for_project, get_engine, init_db
@@ -112,6 +113,11 @@ def create_app(
         allow_methods=["*"],
         allow_headers=["*"],
     )
+
+    # GZip: compresses text responses (JSON, HTML, CSS, JS).  Added after
+    # CORS/auth so it wraps outermost (compresses the final response).  BREACH
+    # is not a concern — no user input is reflected in token-bearing responses.
+    app.add_middleware(GZipMiddleware, minimum_size=500)
 
     # Per-project DB: derive path from project_dir unless explicitly overridden
     if db_url is None and project_dir is not None:
@@ -222,7 +228,11 @@ def _mount_media_route(app: FastAPI, project_dir: Path) -> None:
             raise HTTPException(status_code=403, detail="Forbidden")
         if not full.is_file():
             raise HTTPException(status_code=404, detail="Not found")
-        return FileResponse(full)
+        resp = FileResponse(full)
+        # Prevent GZipMiddleware from compressing pre-compressed media codecs
+        # (wastes CPU, breaks Range/byte-seek for video playback).
+        resp.headers["Content-Encoding"] = "identity"
+        return resp
 
 
 def _print_dev_urls() -> None:

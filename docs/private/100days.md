@@ -390,11 +390,11 @@ Items tagged `[S1]`–`[S6]` are assigned to a sprint. Untagged items are unassi
 - [S1] **Build number auto-increment** — `CFBundleVersion = 1` blocks Sparkle and App Store update logic. Set up CI auto-increment
 - ~~[S1] **Domain & email infrastructure** — register `bristlenose.app`, configure SPF/DKIM/DMARC, Substack custom domain (`blog.bristlenose.app`), deploy site, set up email on DreamHost (`hello@`, `support@`, `security@`). Full plan: `docs/private/infrastructure-and-identity.md`~~
 - [S6] **Supply chain hardening** — GitHub 2FA with hardware key, branch protection on main, PyPI hardware key + project-scoped token, register PyPI typosquats. Full checklist: `docs/private/infrastructure-and-identity.md`. Deferred from S1: low threat until commercial launch (see `docs/private/supply-chain-deferral.md`)
-- [S1] **Succession plan** — bus-factor doc (every account/credential/recovery path), password manager emergency access for one trusted person. (infrastructure-and-identity.md)
+- [S1] **Succession plan** — bus-factor doc (every account/credential/recovery path), password manager emergency access for one trusted person. (infrastructure-and-identity.md) — draft complete (`docs/private/succession-plan.md`), needs: Apple Developer renewal date, password manager emergency access config, successor briefing
 
 ### Should
 - [S2] **Rate-limit trial-key endpoint** — add rate limiting (1 req/min/IP) + server-side receipt validation to the trial-key endpoint, even for the 20-user beta. See `trial-and-pricing-architecture.md` Part 2
-- [S1] **Anthropic billing alerts** — set up billing alerts at $5 and $10 thresholds for the trial API key account
+- ~~[S1] **Anthropic billing alerts** — set up billing alerts at $5 and $10 thresholds for the trial API key account~~
 - **Desktop app polish** — ReadyView: SwiftUI `.fileImporter()` (replace `NSOpenPanel.runModal()`). ProcessRunner: `AsyncBytes` instead of `availableData` polling. `hasAnyAPIKey()`: extend beyond Anthropic-only (or rename). Settings shortcut ⌘, : show in Help shortcuts conditionally (desktop only, browser intercepts). (Keychain migration moved to §6 Risk Must)
 - **Doctor serve-mode checks** — Vite auto-discovery via `/__vite_ping`, replace hardcoded port (design-serve-doctor.md)
 - **Extract design tokens for Figma** — colours, spacing, typography, radii → JSON/CSS variables
@@ -407,10 +407,10 @@ Items tagged `[S1]`–`[S6]` are assigned to a sprint. Untagged items are unassi
 - **OS version compatibility testing** — set up macOS 15 Sequoia VM (UTM, Virtualization.framework) and test full app on the deployment target. Dev machine runs macOS 26 Tahoe — need VM coverage for macOS 15 (floor). Run BroadcastChannel spike, full app smoke test, WKWebView security policy, `.nonPersistent()` behaviour
 - **Semgrep CI integration** — Swift security rules (experimental) + Python security rules (mature). (design-desktop-security-audit.md)
 - **Objective-See QA** — run KnockKnock + LuLu during pre-release QA to verify system footprint
+- **Move feedback endpoint to bristlenose.app** — currently on cassiocassio.co.uk. Update `DEFAULT_FEEDBACK_URL` in Python + TS, `From:` header in `feedback.php` to `support@bristlenose.app`, redeploy to bristlenose.app web root. Tidy-up, not a blocker — current endpoint works
 
 ### Could
 - **Analytics** — privacy-respecting usage analytics (opt-in only)
-- **Feedback endpoint** — deploy to Dreamhost (TODO.md)
 - **Weekly install smoke tests** — automated pip/pipx/brew verification
 
 ---

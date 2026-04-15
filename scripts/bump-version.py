@@ -16,6 +16,9 @@ from pathlib import Path
 ROOT = Path(__file__).parent.parent
 INIT_FILE = ROOT / "bristlenose" / "__init__.py"
 MAN_FILE = ROOT / "bristlenose" / "data" / "bristlenose.1"
+PBXPROJ_FILE = (
+    ROOT / "desktop" / "Bristlenose" / "Bristlenose.xcodeproj" / "project.pbxproj"
+)
 
 
 
@@ -75,6 +78,32 @@ def update_man_page(new_version: str) -> None:
     print(f"  Updated {MAN_FILE.relative_to(ROOT)}")
 
 
+def get_build_number() -> int:
+    """Get monotonically increasing build number from git commit count."""
+    result = subprocess.run(
+        ["git", "rev-list", "--count", "HEAD"],
+        capture_output=True, text=True, check=True, cwd=ROOT,
+    )
+    return int(result.stdout.strip())
+
+
+def update_pbxproj(new_version: str, build_number: int) -> None:
+    """Update MARKETING_VERSION and CURRENT_PROJECT_VERSION in Xcode project."""
+    text = PBXPROJ_FILE.read_text()
+    text = re.sub(
+        r"CURRENT_PROJECT_VERSION = \d+;",
+        f"CURRENT_PROJECT_VERSION = {build_number};",
+        text,
+    )
+    text = re.sub(
+        r"MARKETING_VERSION = [\d.]+;",
+        f"MARKETING_VERSION = {new_version};",
+        text,
+    )
+    PBXPROJ_FILE.write_text(text)
+    print(f"  Updated {PBXPROJ_FILE.relative_to(ROOT)} ({new_version}, build {build_number})")
+
+
 def create_git_tag(new_version: str) -> None:
     """Create git tag (does not push)."""
     tag = f"v{new_version}"
@@ -93,14 +122,31 @@ def main() -> None:
 
     print(f"Bumping {current} → {new_version}\n")
 
+    updated_files = []
+
     update_init(new_version)
+    updated_files.append(INIT_FILE)
+
     update_man_page(new_version)
+    updated_files.append(MAN_FILE)
+
+    build_number = get_build_number()
+    update_pbxproj(new_version, build_number)
+    updated_files.append(PBXPROJ_FILE)
+
+    # Stage all modified files
+    subprocess.run(
+        ["git", "add"] + [str(f) for f in updated_files],
+        check=True, cwd=ROOT,
+    )
+    print(f"\n  Staged {len(updated_files)} files")
+
     create_git_tag(new_version)
 
     print("\nDone. Remember to:")
     print("  1. Update README.md changelog")
     print("  2. Update CLAUDE.md 'Current status' version")
-    print(f"  3. Commit: git add -A && git commit -m 'bump to {new_version}'")
+    print(f"  3. Commit: git commit -m 'bump to {new_version}'")
     print("  4. Push (after 9pm): git push origin main --tags")
 
 

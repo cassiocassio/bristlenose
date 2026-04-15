@@ -21,6 +21,7 @@ output/
 .pytest_cache/
 .ruff_cache/
 .coverage
+coverage.xml
 htmlcov/
 .DS_Store
 trial-runs/

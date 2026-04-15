@@ -93,3 +93,13 @@ asyncio_mode = "auto"
 markers = [
     "slow: marks tests that call real LLMs (deselect with '-m \"not slow\"')",
 ]
+
+[tool.coverage.run]
+source = ["bristlenose"]
+omit = [
+    "bristlenose/stages/s12_render/*",  # deprecated static renderer
+]
+
+[tool.coverage.report]
+show_missing = true
+skip_empty = true

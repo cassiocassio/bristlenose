@@ -1,6 +1,6 @@
 # Bristlenose — Where I Left Off
 
-Last updated: 27 Mar 2026
+Last updated: 15 Apr 2026
 
 **Launch plan:** `docs/private/100days.md` — triaged by topic + MoSCoW priority. That's the source of truth for what ships. This file is a public capture inbox + session context + done history.
 
@@ -48,6 +48,13 @@ Remaining desktop bugs and i18n items tracked in `docs/private/100days.md` §2, 
 - [x] **Phase 3: Folders** — `FolderRow.swift`, `Folder` model with CRUD, `folderId` on Project, `SidebarSelection` enum, `DisclosureGroup` collapse, "Move to" submenu, adaptive Project menu, File > New Folder (⇧⌘N), `folder.badge.plus` enabled, collapsed state persistence, locale keys in all 6 languages
 
 Remaining multi-project phases tracked in `docs/design-project-sidebar.md` (Phases 4–5: bookmarks/availability, archive/bin).
+
+## CI hardening — sprint 1 (15 Apr 2026)
+
+- [x] **pytest coverage in CI** — `--cov` flags on pytest, coverage XML uploaded as artifact, `[tool.coverage]` config in `pyproject.toml`. Baseline: 73% (11,116 statements). No `fail_under` yet — informational
+- [x] **macOS CI matrix** — `ubuntu-latest` + `macos-latest` (informational, `continue-on-error`). Catches platform-specific bugs without blocking merges
+- [x] **GZip middleware** — `GZipMiddleware(minimum_size=500)` on FastAPI app. Media routes set `Content-Encoding: identity` to prevent re-compression of video/audio
+- [x] **Frontend bundle size gate** — `size-limit` (300 kB gzipped JS), `npm run size` / `npm run size:why`, runs in CI after frontend build
 
 ## PII redaction audit (26 Mar 2026)
 
@@ -184,6 +191,7 @@ Bristlenose has ~30 direct + transitive deps across Python, ML, LLM SDKs, and NL
 - [x] **Help modal** (Mar 2026) — 3 phases: platform-aware shortcuts, typography tokens, entrance animation, custom tooltips with keyboard shortcut badges
 - [x] **Bulk actions on multi-selection** (Mar 2026) — star, hide, tag respect click + shift+click range selection
 - [x] **Sidebar push animation** (Mar 2026) — drag-open pushes content; keyboard shortcuts and click trigger push animation
+- [x] **CI hardening sprint 1** (Apr 2026) — pytest coverage (73% baseline), macOS CI matrix, GZip middleware, bundle size gate
 - [x] **Pipeline error/warning display** (Mar 2026) — red ✗ for failed stages, yellow ⚠ for partial success
 - [x] **Render refactor** (Mar 2026) — `render_html.py` broken into `bristlenose/stages/s12_render/` package (8 submodules). Static render formally deprecated
 - [x] **Numeric stage prefixes** (Mar 2026) — `bristlenose/stages/*.py` → `s01_ingest.py` … `s12_render/`

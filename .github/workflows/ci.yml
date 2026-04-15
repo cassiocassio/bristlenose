@@ -148,6 +148,14 @@ jobs:
         working-directory: frontend
         run: npm test
 
+      - name: Build frontend
+        working-directory: frontend
+        run: npm run build
+
+      - name: Check bundle size
+        working-directory: frontend
+        run: npx size-limit
+
   e2e:
     needs: [lint-and-test, frontend-lint-type-test]
     runs-on: ubuntu-latest

@@ -381,6 +381,7 @@ Items tagged `[S1]`–`[S6]` are assigned to a sprint. Untagged items are unassi
 ## 11. Operations — CI/CD, release, monitoring
 
 ### Must
+- [S2] **CI: desktop-build job** — `xcodebuild build` + `xcodebuild test` on macOS runner, `CODE_SIGNING_ALLOWED=NO`, informational initially. Catches Swift compilation errors and Swift Testing regressions on every push. Prerequisite for the full build pipeline below. Plan: `docs/design-ci.md` §Coverage gaps
 - [S2] **Desktop app build pipeline** — Xcode archive → .dmg → notarisation → upload. CI: automate .dmg build on push
 - [S4] **App Store Connect setup** — app record, pricing, TestFlight beta group
 - [S2] **Code signing** — Apple Developer Program membership, Developer ID certificate

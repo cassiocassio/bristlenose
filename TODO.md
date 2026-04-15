@@ -1,6 +1,6 @@
 # Bristlenose — Where I Left Off
 
-Last updated: 15 Apr 2026
+Last updated: 16 Apr 2026
 
 **Launch plan:** `docs/private/100days.md` — triaged by topic + MoSCoW priority. That's the source of truth for what ships. This file is a public capture inbox + session context + done history.
 
@@ -49,13 +49,18 @@ Remaining desktop bugs and i18n items tracked in `docs/private/100days.md` §2, 
 
 Remaining multi-project phases tracked in `docs/design-project-sidebar.md` (Phases 4–5: bookmarks/availability, archive/bin).
 
-## CI hardening — sprint 1 (15 Apr 2026)
+## CI hardening — sprint 1 (15–16 Apr 2026)
 
 - [x] **pytest coverage in CI** — `--cov` flags on pytest, coverage XML uploaded as artifact, `[tool.coverage]` config in `pyproject.toml`. Baseline: 73% (11,116 statements). No `fail_under` yet — informational
 - [x] **macOS CI matrix** — `ubuntu-latest` + `macos-latest` (informational, `continue-on-error`). Catches platform-specific bugs without blocking merges
 - [x] **GZip middleware** — `GZipMiddleware(minimum_size=500)` on FastAPI app. Media routes set `Content-Encoding: identity` to prevent re-compression of video/audio
 - [x] **Frontend bundle size gate** — `size-limit` (300 kB gzipped JS), `npm run size` / `npm run size:why`, runs in CI after frontend build
 - [x] **Alembic migration strategy** — replaces manual `_migrate_schema()` with programmatic Alembic (no `alembic.ini`). Per-project SQLite, `render_as_batch=True` for SQLite compat, detect-and-stamp for existing DBs. Baseline revision 001 (no-op). 9 migration tests. Unblocks Person UUID migration (S3)
+- [x] **Multi-Python CI** — test matrix expanded to 3.10, 3.11, 3.12, 3.13 × 2 OS (8 cells). `fail-fast: false`, macOS informational
+- [x] **Split lint from test jobs** — `lint` (ruff, mypy, man page, pip-audit, SBOM) runs once on ubuntu/3.12. `test` matrix `needs: lint` — universal failures skip all 8 test jobs
+- [x] **pip cache on test runners** — `cache: pip` on `setup-python` saves 30-60s per job
+- [x] **Single coverage artifact** — only ubuntu/3.12 uploads coverage XML (was 8 redundant uploads)
+- [x] **CI architecture doc** — `docs/design-ci.md`: goals, philosophy, job structure, matrix strategy, coverage gaps audit, desktop-build plan
 
 ## PII redaction audit (26 Mar 2026)
 

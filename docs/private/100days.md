@@ -204,7 +204,7 @@ Items tagged `[S1]`–`[S6]` are assigned to a sprint. Untagged items are unassi
 - [S2] **App Store review compliance** — sandbox, entitlements, code signing, notarisation pipeline
 - [S5] **PII redaction audit** — verify Presidio catches names/emails in transcripts before shipping to paying users
 - ~~**Security scanning** — npm audit, pip-audit, CodeQL before public release (design-test-strategy.md)~~
-- [S1] **Alembic/migration strategy** — DB schema changes without data loss. Currently no migration framework
+- ~~[S1] **Alembic/migration strategy** — DB schema changes without data loss. Currently no migration framework~~
 - [S2] **AI data disclosure dialog** — Apple Guideline 5.1.2(i) (Nov 2025) requires explicit consent before sending transcript data to third-party AI. Non-negotiable for App Store. (design-desktop-security-audit.md)
 - [S2] **Privacy Manifest (`PrivacyInfo.xcprivacy`)** — required for App Store since mid-2024. Declare data types and API usage reasons. (design-desktop-security-audit.md). Draft complete (`launch-docs/PrivacyInfo.xcprivacy` + `privacy-manifest-rationale.md` in delivery repo), needs codebase audit to validate reason codes
 
@@ -305,8 +305,8 @@ Items tagged `[S1]`–`[S6]` are assigned to a sprint. Untagged items are unassi
 
 ### Must
 - [S4] **Playwright E2E layers 4–5** — layers 1–3 done, need layers 4–5 for DB-mutating actions and visual regression. Beta blocker: 3 thin specs is not enough coverage for a shipped product (design-playwright-testing.md)
-- [S1] **Pipeline resilience notes go here**
-- [S1] **Pipeline resilience Phase 2b** — verify content hashes on load (done 25 Mar 2026). Next: **Phase 2c — input change detection** (medium effort, design-pipeline-resilience.md)
+- [S1] ~~**Pipeline resilience Phase 2c** — input change detection: source file metadata hashing (size+mtime), upstream content_hash propagation, cascade invalidation, PII flag tracking. Done 15 Apr 2026~~
+- [S1] ~~**Pipeline resilience Phase 2b** — verify content hashes on load (done 25 Mar 2026)~~
 - ~~**PyPI `Development Status` classifier** — currently unset in pyproject.toml. Must be `Development Status :: 4 - Beta` before launch. Signals maturity to pip users~~
 - ~~**Frontend CI**~~ — Vitest + ESLint + TypeScript typecheck gated in CI since 0.12.0. ESLint step informational (84 pre-existing errors). Prettier not yet added
 - [S1] **pytest coverage in CI** — trivial to enable, currently blind to dead code
@@ -315,7 +315,7 @@ Items tagged `[S1]`–`[S6]` are assigned to a sprint. Untagged items are unassi
 - [S4] **Swift test harness** — XCTest target + ~42 Swift Testing tests across 5 files (Tab, I18n, LLMProvider, KeychainHelper, ProjectIndex). Two tiny refactors: `ProjectIndex.init(fileURL:)` for temp-dir isolation, `KeychainStore` protocol for `InMemoryKeychain` mock (security review: real Keychain overwrites API keys on crash). Also clean up `SecurityChecklist.swift` (4 resolved items). Community consensus: Swift Testing for unit, XCTest reserved for future UI tests. Session notes: 27 Mar 2026. Enablement: (1) open Xcode → File → New → Target → Unit Testing Bundle → `BristlenoseTests`, (2) Claude writes tests. Docs: [Apple — Swift Testing](https://developer.apple.com/xcode/swift-testing/), [Apple — Adding tests to Xcode](https://developer.apple.com/documentation/testing/adding-tests-to-your-xcode-project), [desktop security audit](docs/design-desktop-security-audit.md)
 
 ### Should
-- **Alembic setup** — DB migration framework before any schema change
+- ~~**Alembic setup** — DB migration framework before any schema change~~
 - **Real-data stress test corpus** — acquire NASA transcripts (~50 .txt), StoryCorps audio (~30 .mp3), SpinTX Spanish (~20 .mp4+.srt), IWM British (~10 .mp3), Korean War Legacy (~10 .mp4). ~125 sessions, ~100h, 3 languages. Exercise transcription quality, thematic analysis depth, scale rendering, i18n analysis. (design-real-data-testing.md)
 - **Visual regression baselines** — Playwright screenshots, light + dark
 - **Cross-browser Playwright** — Chromium + Firefox + WebKit

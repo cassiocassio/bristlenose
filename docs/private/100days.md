@@ -388,7 +388,7 @@ Items tagged `[S1]`–`[S6]` are assigned to a sprint. Untagged items are unassi
 - [S2] **.dmg README** — include "Open Anyway" Gatekeeper instructions
 - [S2] **PyInstaller sidecar signing** — every `.dylib`, `.so`, and framework inside the bundle must be individually codesigned before notarization. (design-desktop-security-audit.md)
 - [S1] **Build number auto-increment** — `CFBundleVersion = 1` blocks Sparkle and App Store update logic. Set up CI auto-increment
-- [S1] **Domain & email infrastructure** — ~~register `bristlenose.app`~~, ~~configure SPF/DMARC~~, ~~Substack custom domain (`blog.bristlenose.app`)~~, ~~deploy site~~. Remaining: set up email on DreamHost (`hello@`, `support@`, `security@`), DKIM. Full plan: `docs/private/infrastructure-and-identity.md`
+- ~~[S1] **Domain & email infrastructure** — register `bristlenose.app`, configure SPF/DKIM/DMARC, Substack custom domain (`blog.bristlenose.app`), deploy site, set up email on DreamHost (`hello@`, `support@`, `security@`). Full plan: `docs/private/infrastructure-and-identity.md`~~
 - [S1] **Supply chain hardening** — GitHub 2FA with hardware key, branch protection on main, PyPI hardware key + project-scoped token, register PyPI typosquats. Full checklist: `docs/private/infrastructure-and-identity.md`
 - [S1] **Succession plan** — bus-factor doc (every account/credential/recovery path), password manager emergency access for one trusted person. (infrastructure-and-identity.md)
 

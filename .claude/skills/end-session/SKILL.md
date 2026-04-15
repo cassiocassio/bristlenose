@@ -1,17 +1,17 @@
 ---
-name: wrap-up
-description: End-of-chunk ritual — update docs for humans (TODO, CHANGELOG, design docs) and robots (CLAUDE.md gotchas, auto-memory), then commit
+name: end-session
+description: End-of-session ritual — verify, document for humans and robots, commit, close out
 user-invocable: true
 allowed-tools: Bash, Read, Write, Edit, Glob, Grep, AskUserQuestion, Agent, TodoWrite
 ---
 
-Wrap up the current chunk of work. "Document for humans and for robots, then commit."
+End the current session. "Verify, document for humans and for robots, commit, close out."
 
-This skill has three phases: **verify**, **document**, **commit**. Run all three unless the user says to skip one.
+This skill has three phases: **verify**, **document**, **commit + close out**. Run all three unless the user says to skip one.
 
 ## Phase 1: Verify (green before documenting)
 
-**Skip condition:** if the only changes since the last commit are documentation files (`.md`, `CLAUDE.md`, `TODO.md`, `CHANGELOG.md`, `CONTRIBUTING.md`, `MEMORY.md`, `SKILL.md`), skip Phase 1 entirely — there's nothing to break. Check with `git diff --name-only` and `git diff --cached --name-only`.
+**Skip condition:** if the only changes since the last commit are documentation files (`.md`, `.txt`, locale `.json`, `CLAUDE.md`, `TODO.md`, `CHANGELOG.md`, `CONTRIBUTING.md`, `MEMORY.md`, `SKILL.md`), skip Phase 1 entirely — there's nothing to break. Check with `git diff --name-only` and `git diff --cached --name-only` and `git ls-files --others --exclude-standard`.
 
 If code files were changed:
 
@@ -67,7 +67,7 @@ Two audiences, done in parallel where possible.
 - Don't copy code into docs (it goes stale — use file:line pointers instead)
 - Don't update test counts or file counts in memory unless they changed significantly (50+)
 
-## Phase 3: Commit
+## Phase 3: Commit + close out
 
 11. **Check for uncommitted changes** — `git status` + `git diff --stat`
 
@@ -78,25 +78,28 @@ Two audiences, done in parallel where possible.
     - `fix tag suggest offering tags the quote already has`
     - `inspector panel with drag-resize and signal card selection`
 
-13. **Don't push** unless the user explicitly asks. Remind them of the evening release rule (after 9pm London on weekdays; weekends any time). If they want to see work remotely before release: `git push origin main:wip`.
+13. **Maintenance schedule check** — read the "Dependency maintenance" section of `TODO.md`. If today's date is past any unchecked quarterly/annual item, remind the user it's due.
 
-## What to skip
+14. **QA backlog reminder** — check `docs/private/qa-backlog.md` for unacked items. Remind the user if any exist.
 
-- **No maintenance schedule check** — only do this at actual session end, not every chunk
-- **No branch cleanup** — only at session end
-- **No CI verification** — only after push
-- **No human QA suggestions** — those belong at the end of the implementation step, not wrap-up
+15. **Branch cleanup** — check for merged feature branches that can be deleted. Ask before deleting.
+
+16. **Push decision** — don't push by default. Remind about the evening release rule (after 9pm London on weekdays; weekends any time). If they want to see work remotely before release: `git push origin main:wip`. Push only if the user says to.
+
+17. **CI verification** — only if pushed. Check the latest push passes CI.
 
 ## Output
 
 After completing, print a brief summary:
 
 ```
-Wrapped up:
-- Tests: passed (N tests)
-- Lint: clean
-- Updated: TODO.md, desktop/CLAUDE.md (list what was touched)
+End of session:
+- Tests: passed (N tests) / skipped (docs only)
+- Lint: clean / skipped (docs only)
+- Updated: TODO.md, CLAUDE.md (list what was touched)
 - Memory: saved feedback on X (or "nothing new")
 - Committed: "commit message here" (N files, +X -Y lines)
-- Not pushed (evening release rule)
+- Maintenance: nothing due (or "May 2026 dep review is due")
+- QA backlog: 0 unacked (or "3 items need review")
+- Not pushed (evening release rule — push with `git push origin main`)
 ```

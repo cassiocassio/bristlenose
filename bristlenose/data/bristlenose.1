@@ -379,8 +379,8 @@ Full pipeline run (output created inside input folder):
 .PP
 .RS
 .nf
-bristlenose run ./interviews/
-# Creates ./interviews/bristlenose-output/
+bristlenose interviews
+# Creates interviews/bristlenose-output/
 .fi
 .RE
 .PP
@@ -388,7 +388,7 @@ Full pipeline with custom output location:
 .PP
 .RS
 .nf
-bristlenose run ./interviews/ -o ./results/ -p "Q1 Usability Study"
+bristlenose run interviews -o results/ -p "Q1 Usability Study"
 .fi
 .RE
 .PP
@@ -407,7 +407,7 @@ Use Azure OpenAI (enterprise):
 export BRISTLENOSE_AZURE_ENDPOINT=https://my-resource.openai.azure.com/
 export BRISTLENOSE_AZURE_DEPLOYMENT=gpt-4o-research
 bristlenose configure azure
-bristlenose run ./interviews/ --llm azure
+bristlenose run interviews --llm azure
 .fi
 .RE
 .PP
@@ -416,7 +416,7 @@ Use Gemini (budget option):
 .RS
 .nf
 bristlenose configure gemini
-bristlenose run ./interviews/ --llm gemini
+bristlenose run interviews --llm gemini
 .fi
 .RE
 .PP
@@ -424,7 +424,7 @@ Use local AI via Ollama (free, no API key):
 .PP
 .RS
 .nf
-bristlenose run ./interviews/ --llm local
+bristlenose run interviews --llm local
 # Requires Ollama running: ollama serve
 .fi
 .RE

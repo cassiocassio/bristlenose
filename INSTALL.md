@@ -232,7 +232,7 @@ Bristlenose uses AI to analyse your transcripts. Use whichever provider you alre
 
 ### Local AI (Ollama) — free, no signup
 
-Just run `bristlenose run ./your-interviews/` — bristlenose will offer to set up Ollama automatically (installation, startup, and model download).
+Just run `bristlenose your-interviews/` — bristlenose will offer to set up Ollama automatically (installation, startup, and model download).
 
 Or install [Ollama](https://ollama.ai) yourself and run with `--llm local`.
 
@@ -253,7 +253,7 @@ This checks FFmpeg, your transcription backend, AI provider, network connectivit
 Point bristlenose at a folder containing your interview recordings:
 
 ```bash
-bristlenose run ./path-to-your-interviews/
+bristlenose path-to-your-interviews/
 ```
 
 The report will appear inside that folder at `bristlenose-output/`. Open the `.html` file in your browser.

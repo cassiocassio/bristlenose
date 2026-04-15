@@ -117,7 +117,7 @@ bristlenose configure chatgpt    # validates the key and stores it in your syste
 To use ChatGPT instead of the default, add `--llm openai` to your commands:
 
 ```bash
-bristlenose run ./interviews/ -o ./results/ --llm openai
+bristlenose run interviews -o results/ --llm openai
 ```
 
 ### Option C: Azure OpenAI (enterprise)
@@ -128,7 +128,7 @@ If your organisation has a Microsoft Azure contract that includes Azure OpenAI S
 export BRISTLENOSE_AZURE_ENDPOINT=https://your-resource.openai.azure.com/
 export BRISTLENOSE_AZURE_DEPLOYMENT=your-deployment-name
 bristlenose configure azure    # validates the key and stores it in your system credential store
-bristlenose run ./interviews/ --llm azure
+bristlenose run interviews --llm azure
 ```
 
 You'll need your endpoint URL, API key, and deployment name from the [Azure portal](https://portal.azure.com).
@@ -146,7 +146,7 @@ bristlenose configure gemini    # validates the key and stores it in your system
 To use Gemini instead of the default, add `--llm gemini` to your commands:
 
 ```bash
-bristlenose run ./interviews/ -o ./results/ --llm gemini
+bristlenose run interviews -o results/ --llm gemini
 ```
 
 **Budget option:** Gemini is 5–7× cheaper than Claude or ChatGPT — roughly $0.20 per study instead of $1–3.
@@ -159,10 +159,10 @@ Run analysis entirely on your machine using open-source models. No account, no A
 2. Run bristlenose — it will offer to set up local AI automatically:
 
 ```bash
-bristlenose run ./interviews/
+bristlenose interviews
 
 # Or explicitly:
-bristlenose run ./interviews/ --llm local
+bristlenose run interviews --llm local
 ```
 
 If Ollama isn't installed, bristlenose will offer to install it for you (via Homebrew on macOS, snap on Linux).
@@ -211,7 +211,7 @@ Then open a new terminal window (or run `source ~/.zshrc` / `source ~/.bashrc`).
 ## Quick start
 
 ```bash
-bristlenose run ./interviews/
+bristlenose interviews
 ```
 
 That's it. Point it at a folder containing your recordings and it will produce the report inside that folder. Expect roughly 2--5 minutes per participant on Apple Silicon, longer on CPU.
@@ -253,7 +253,7 @@ Override the output location with `--output`: `bristlenose run interviews/ -o /e
 ### More commands
 
 ```bash
-bristlenose run ./interviews/ -p "Q1 Usability Study"    # name the project
+bristlenose run interviews -p "Q1 Usability Study"    # name the project
 bristlenose transcribe ./interviews/                     # transcribe, no LLM
 bristlenose analyze ./interviews/bristlenose-output/     # skip transcription, run LLM analysis
 bristlenose render ./interviews/bristlenose-output/      # re-render from JSON, no LLM calls
@@ -359,7 +359,7 @@ bristlenose doctor
 # 4. Run it for real (store whichever API key you have)
 bristlenose configure claude      # validates and saves to system credential store
 # or: bristlenose configure chatgpt
-bristlenose run ./interviews/ -o ./results/
+bristlenose run interviews -o results/
 ```
 
 FFmpeg, Python, faster-whisper, and spaCy are all bundled — no system dependencies needed. Feedback welcome via [issues](https://github.com/cassiocassio/bristlenose/issues).

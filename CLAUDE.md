@@ -327,18 +327,7 @@ The PreferencesFile incident (keyboard-navigation branch, Feb 2026) was caused b
 
 ## Session-end housekeeping
 
-When the user signals end of session, **proactively offer to run this checklist**:
-
-1. **Run tests** — `.venv/bin/python -m pytest tests/`
-2. **Run linter** — `.venv/bin/ruff check bristlenose/`
-3. **Check maintenance schedule** — read the "Dependency maintenance" section of `TODO.md`; if today's date is past any unchecked quarterly/annual item, remind the user it's due
-4. **Update `TODO.md`** — mark completed items, add new items discovered
-5. **Update CLAUDE.md files** — persist new conventions, architectural decisions, or gotchas learned during the session (root CLAUDE.md or the appropriate child file: `frontend/CLAUDE.md`, `bristlenose/theme/CLAUDE.md`, `bristlenose/stages/CLAUDE.md`, `bristlenose/llm/CLAUDE.md`, `bristlenose/server/CLAUDE.md`); update version in "Current status" if bumped
-6. **Update `CONTRIBUTING.md`** — if design system, release process, or dev setup changed
-7. **Update `README.md`** — if version bump, add changelog entry
-8. **Check for uncommitted changes** — `git status` + `git diff` — commit everything, push to `origin/main`
-9. **Clean up branches** — delete merged feature branches
-10. **Verify CI** — check latest push passes CI
+When the user signals end of session, **run `/end-session`** — the skill handles verify, document, commit, and close-out. See `.claude/skills/end-session/SKILL.md` for the full checklist.
 
 ## Current status (v0.14.3, Mar 2026)
 

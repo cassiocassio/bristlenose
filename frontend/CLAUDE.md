@@ -6,6 +6,7 @@ Vite 8 (Rolldown) + React + TypeScript 6 + React Router SPA. 37 components in `s
 
 ## Build & type-checking
 
+- **Bundle size gate** — `npm run size` (after `npm run build`) checks total JS gzip stays under 305 KB. CI enforces this. Current ~300 KB. Aspirational target is 100 KB (requires route-level code splitting). Ratchet the limit down as optimisations land
 - **`npm run build` runs `tsc -b` which type-checks test files** — `tsconfig.json` includes `src/` which contains `*.test.tsx` files alongside source. Vitest has its own type context (looser), so tests may pass while `tsc -b` reports errors. Always run `npm run build` before committing frontend changes, not just `npm test`. Common culprits: `globalThis.fetch` (not `global.fetch`), window casts need `(window as unknown as Record<string, unknown>)` (double cast via `unknown`), and mock data must include all required type properties
 
 ## Tooling & dependency gotchas

@@ -44,6 +44,7 @@ Check which areas are touched (file extensions, directory prefixes, content):
 | Security-sensitive (auth, tokens, PII, file access, bridge) | `security-review` |
 | HTML/React components with interactive elements | `a11y-review` |
 | `desktop/`, `.swift` files, macOS/HIG mentioned | `what-would-gruber-say` |
+| `.ts`/`.tsx`/`.css`, `package.json`, server, pipeline, or perf-sensitive | `perf-review` |
 
 **`code-review` always runs.** The others run only if their area is touched.
 
@@ -91,6 +92,8 @@ hard part — don't just concatenate. Do this:
 3. **Categorise** — group findings into:
    - **Bugs / Errors** — things that are broken or will break
    - **Convention violations** — deviations from documented project rules
+   - **Performance** — regressions, bundle size, rendering, loading (from
+     perf-review agent)
    - **Design questions** — tradeoffs and competing approaches (from all agents'
      Questions sections, deduplicated)
    - **Improvements** — things that work but could be better
@@ -115,13 +118,16 @@ hard part — don't just concatenate. Do this:
 3. `file:line` — description. Ref: CLAUDE.md rule (flagged by: code-review)
 4. `locale/key` — description (flagged by: i18n-review)
 
+## Performance
+5. [MEDIUM — bundle] `package.json` — description (flagged by: perf-review)
+
 ## Design Questions
-5. Description of tradeoff. Two views: (a) ... (b) ...
+6. Description of tradeoff. Two views: (a) ... (b) ...
    (raised by: code-review, ux-critique)
-6. Description of tradeoff. (raised by: security-review)
+7. Description of tradeoff. (raised by: security-review)
 
 ## Improvements
-7. `file:line` — suggestion (flagged by: ux-critique)
+8. `file:line` — suggestion (flagged by: ux-critique)
 
 ---
 Your call — which to act on, park, or ignore?

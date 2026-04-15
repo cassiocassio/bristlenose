@@ -83,6 +83,8 @@ blockquote .speaker-link:hover {
 .quote-group .quote-card {
     position: relative;
     padding-right: 4.5rem;
+    content-visibility: auto;
+    contain-intrinsic-size: auto 250px;
 }
 
 /* Rewatch items inside quotes / friction points */

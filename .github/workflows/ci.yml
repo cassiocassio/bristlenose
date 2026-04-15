@@ -8,24 +8,16 @@ on:
   workflow_call:  # allow release.yml to invoke this workflow
 
 jobs:
-  lint-and-test:
-    runs-on: ${{ matrix.os }}
-    # macOS is informational — catches platform bugs without blocking merges
-    continue-on-error: ${{ matrix.os == 'macos-latest' }}
-
-    strategy:
-      fail-fast: false
-      matrix:
-        python-version: ["3.12"]
-        os: [ubuntu-latest, macos-latest]
+  lint:
+    runs-on: ubuntu-latest
 
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up Python ${{ matrix.python-version }}
+      - name: Set up Python 3.12
         uses: actions/setup-python@v5
         with:
-          python-version: ${{ matrix.python-version }}
+          python-version: "3.12"
 
       - name: Install dependencies
         run: |
@@ -42,33 +34,6 @@ jobs:
         continue-on-error: true
         run: mypy bristlenose/ --ignore-missing-imports
 
-      - name: Audit dependencies for known vulnerabilities
-        # Informational — flags known CVEs in the log but doesn't block
-        # the build. Transitive deps (torch, protobuf) often have unfixed
-        # advisories that we can't act on. Review on each run.
-        if: matrix.os == 'ubuntu-latest'
-        continue-on-error: true
-        run: |
-          pip install pip-audit
-          pip-audit
-
-      - name: Generate Python SBOM
-        # CycloneDX Software Bill of Materials — uploaded as CI artifact
-        # for compliance (US EO 14028, EU Cyber Resilience Act).
-        if: matrix.os == 'ubuntu-latest'
-        continue-on-error: true
-        run: |
-          pip install cyclonedx-bom
-          cyclonedx-py environment -o sbom-python.json
-
-      - name: Upload Python SBOM
-        if: matrix.os == 'ubuntu-latest'
-        uses: actions/upload-artifact@v4
-        with:
-          name: sbom-python
-          path: sbom-python.json
-          retention-days: 90
-
       - name: Check man page version matches __version__
         run: |
           VERSION=$(python3 -c "import bristlenose; print(bristlenose.__version__)")
@@ -78,14 +43,64 @@ jobs:
             exit 1
           }
 
+      - name: Audit dependencies for known vulnerabilities
+        # Informational — flags known CVEs in the log but doesn't block
+        # the build. Transitive deps (torch, protobuf) often have unfixed
+        # advisories that we can't act on. Review on each run.
+        continue-on-error: true
+        run: |
+          pip install pip-audit
+          pip-audit
+
+      - name: Generate Python SBOM
+        # CycloneDX Software Bill of Materials — uploaded as CI artifact
+        # for compliance (US EO 14028, EU Cyber Resilience Act).
+        continue-on-error: true
+        run: |
+          pip install cyclonedx-bom
+          cyclonedx-py environment -o sbom-python.json
+
+      - name: Upload Python SBOM
+        uses: actions/upload-artifact@v4
+        with:
+          name: sbom-python
+          path: sbom-python.json
+          retention-days: 90
+
+  test:
+    needs: lint
+    runs-on: ${{ matrix.os }}
+    # macOS is informational — catches platform bugs without blocking merges
+    continue-on-error: ${{ matrix.os == 'macos-latest' }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.11", "3.12", "3.13"]
+        os: [ubuntu-latest, macos-latest]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev,serve]"
+
       - name: Run tests
         run: pytest --tb=short -q -m "not slow" --cov --cov-report=term-missing --cov-report=xml:coverage.xml
 
       - name: Upload coverage report
-        if: always()
+        if: always() && matrix.os == 'ubuntu-latest' && matrix.python-version == '3.12'
         uses: actions/upload-artifact@v4
         with:
-          name: coverage-report-${{ matrix.os }}
+          name: coverage-report
           path: coverage.xml
           retention-days: 90
 
@@ -157,7 +172,7 @@ jobs:
         run: npx size-limit
 
   e2e:
-    needs: [lint-and-test, frontend-lint-type-test]
+    needs: [test, frontend-lint-type-test]
     runs-on: ubuntu-latest
 
     steps:

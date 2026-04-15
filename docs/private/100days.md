@@ -309,9 +309,9 @@ Items tagged `[S1]`–`[S6]` are assigned to a sprint. Untagged items are unassi
 - [S1] ~~**Pipeline resilience Phase 2b** — verify content hashes on load (done 25 Mar 2026)~~
 - ~~**PyPI `Development Status` classifier** — currently unset in pyproject.toml. Must be `Development Status :: 4 - Beta` before launch. Signals maturity to pip users~~
 - ~~**Frontend CI**~~ — Vitest + ESLint + TypeScript typecheck gated in CI since 0.12.0. ESLint step informational (84 pre-existing errors). Prettier not yet added
-- [S1] **pytest coverage in CI** — trivial to enable, currently blind to dead code
+- ~~[S1] **pytest coverage in CI** — trivial to enable, currently blind to dead code~~
 - [S6] **Frontend test coverage for clip export** — extend ActivityChipStack + ExportDropdown tests for clips job type (added during clip extraction work, 27 Mar 2026)
-- [S1] **Multi-Python CI** — test 3.10, 3.11, 3.12, 3.13 (trivial, avoids EOL surprises)
+- ~~[S1] **Multi-Python CI** — test 3.10, 3.11, 3.12, 3.13. Done 15 Apr 2026~~
 - [S4] **Swift test harness** — XCTest target + ~42 Swift Testing tests across 5 files (Tab, I18n, LLMProvider, KeychainHelper, ProjectIndex). Two tiny refactors: `ProjectIndex.init(fileURL:)` for temp-dir isolation, `KeychainStore` protocol for `InMemoryKeychain` mock (security review: real Keychain overwrites API keys on crash). Also clean up `SecurityChecklist.swift` (4 resolved items). Community consensus: Swift Testing for unit, XCTest reserved for future UI tests. Session notes: 27 Mar 2026. Enablement: (1) open Xcode → File → New → Target → Unit Testing Bundle → `BristlenoseTests`, (2) Claude writes tests. Docs: [Apple — Swift Testing](https://developer.apple.com/xcode/swift-testing/), [Apple — Adding tests to Xcode](https://developer.apple.com/documentation/testing/adding-tests-to-your-xcode-project), [desktop security audit](docs/design-desktop-security-audit.md)
 
 ### Should
@@ -384,13 +384,13 @@ Items tagged `[S1]`–`[S6]` are assigned to a sprint. Untagged items are unassi
 - [S2] **Desktop app build pipeline** — Xcode archive → .dmg → notarisation → upload. CI: automate .dmg build on push
 - [S4] **App Store Connect setup** — app record, pricing, TestFlight beta group
 - [S2] **Code signing** — Apple Developer Program membership, Developer ID certificate
-- [S1] **CI: add macOS runner** — currently Linux-only
+- ~~[S1] **CI: add macOS runner** — currently Linux-only (informational, 15 Apr 2026)~~
 - [S2] **.dmg README** — include "Open Anyway" Gatekeeper instructions
 - [S2] **PyInstaller sidecar signing** — every `.dylib`, `.so`, and framework inside the bundle must be individually codesigned before notarization. (design-desktop-security-audit.md)
-- [S1] **Build number auto-increment** — `CFBundleVersion = 1` blocks Sparkle and App Store update logic. Set up CI auto-increment
+- ~~[S1] **Build number auto-increment** — `CFBundleVersion = 1` blocks Sparkle and App Store update logic. Set up CI auto-increment. Done: `bump-version.py` unifies desktop+CLI, auto-increments build number~~
 - ~~[S1] **Domain & email infrastructure** — register `bristlenose.app`, configure SPF/DKIM/DMARC, Substack custom domain (`blog.bristlenose.app`), deploy site, set up email on DreamHost (`hello@`, `support@`, `security@`). Full plan: `docs/private/infrastructure-and-identity.md`~~
 - [S6] **Supply chain hardening** — GitHub 2FA with hardware key, branch protection on main, PyPI hardware key + project-scoped token, register PyPI typosquats. Full checklist: `docs/private/infrastructure-and-identity.md`. Deferred from S1: low threat until commercial launch (see `docs/private/supply-chain-deferral.md`)
-- [S1] **Succession plan** — bus-factor doc (every account/credential/recovery path), password manager emergency access for one trusted person. (infrastructure-and-identity.md) — draft complete (`docs/private/succession-plan.md`), needs: Apple Developer renewal date, password manager emergency access config, successor briefing
+- [S1] **Succession plan** — bus-factor doc (every account/credential/recovery path), password manager emergency access for one trusted person. (infrastructure-and-identity.md) — draft complete (`docs/private/succession-plan.md`), needs: Apple Developer renewal date, password manager emergency access config, successor briefing — draft committed 15 Apr 2026
 
 ### Should
 - [S2] **Rate-limit trial-key endpoint** — add rate limiting (1 req/min/IP) + server-side receipt validation to the trial-key endpoint, even for the 20-user beta. See `trial-and-pricing-architecture.md` Part 2
@@ -513,12 +513,12 @@ Safari's performance team made WebKit fast by never allowing it to become slower
 ### Must
 - [S1] **Profile the demo dataset** — run Lighthouse, Playwright DOM count, Xcode Instruments Animation Hitches, and manual scroll testing against the IKEA study. Record baselines for TTI, FCP, LCP, CLS, DOM node count, bundle size, static export file size. You can't prioritise what you haven't measured. This is step 0
 - ~~[S1] **Bundle size CI gate** — `size-limit` + `@size-limit/file`, 305 KB gzip limit. CI enforces in `frontend-lint-type-test` job. Current ~300 KB. 100 KB target needs route-level code splitting (separate task)~~
-- [S1] **`GZipMiddleware` in FastAPI** — one line. ~70% reduction in served HTML/CSS/JS. Free win for WKWebView and browser
-- [S1] **`content-visibility: auto` on quote card containers** — CSS only, works everywhere including file://. Browser skips layout/paint for off-screen cards. Supported since Safari 17.4. Essential for static export path where JS virtualisation isn't possible
+- ~~[S1] **`GZipMiddleware` in FastAPI** — one line. ~70% reduction in served HTML/CSS/JS. Free win for WKWebView and browser~~
+- ~~[S1] **`content-visibility: auto` on quote card containers** — CSS only, works everywhere including file://. Browser skips layout/paint for off-screen cards. Supported since Safari 17.4. Essential for static export path where JS virtualisation isn't possible~~
 - [S2] **`@tanstack/virtual` in serve mode** — required, not optional. A 15h study produces ~1,500 quotes (~100/hour from real usage). That's ~30,000 DOM nodes without virtualisation. Virtualisation drops visible DOM to ~1,000 regardless of total. This is the single most important performance feature
-- [S1] **Move `<script>` to end of `<body>`** — FCP should not wait for JS parse. Currently the IIFE block is render-blocking. One-line change in `render_html.py`
+- ~~[S1] **Move `<script>` to end of `<body>`** — script block is already at end of `<body>` (after all `<article>` content, before `</body>`). No `<head>` scripts exist. Done~~
 - [S2] **Performance regression gate in CI** — Playwright test on demo dataset measuring DOM node count (fail > 10,000) and static export size (fail > 2 MB). The ratchet: once you have a number, no PR makes it worse
-- [S1] **`perf-review` agent** — Claude Code agent (`.claude/agents/perf-review.md`) that reviews PRs for performance regressions: new deps without size justification, unvirtualised large lists, missing `passive: true`, blocking resource additions. Catches the obvious stuff before CI catches the rest
+- ~~[S1] **`perf-review` agent** — Claude Code agent (`.claude/agents/perf-review.md`) that reviews PRs for performance regressions: new deps without size justification, unvirtualised large lists, missing `passive: true`, blocking resource additions. Catches the obvious stuff before CI catches the rest~~
 
 ### Should
 - **`contain: layout style`** on sidebar panels and modals — tells browser it can skip these during layout
@@ -599,4 +599,4 @@ These are speculative ideas worth thinking about but without a delivery commitme
 
 ---
 
-*Updated 14 Apr 2026. Reconciled with delivery repo copy: added §15 Performance (WebKit philosophy, profiling-first roadmap, perf-review agent, CI gates), sprint legend, iPad session outputs (privacy policy draft, ToS v0.9.1, privacy manifest, first-run experience design, new items L5/L6/I6/I7/R6), bundle size → §15 promotion. Previous: 25 Mar 2026 — domain architecture, security audit additions, shipped-item strikethrough. Original: 16 Mar 2026.*
+*Updated 15 Apr 2026. Reconciled with delivery repo copy: added §15 Performance (WebKit philosophy, profiling-first roadmap, perf-review agent, CI gates), sprint legend, iPad session outputs (privacy policy draft, ToS v0.9.1, privacy manifest, first-run experience design, new items L5/L6/I6/I7/R6), bundle size → §15 promotion. Previous: 25 Mar 2026 — domain architecture, security audit additions, shipped-item strikethrough. Original: 16 Mar 2026.*

@@ -192,6 +192,7 @@ macOS ships BSD versions of `sed`, `grep`, `awk`, `find`, `xargs`, `date`, `stat
 - **Server / data API / serve mode**: `bristlenose/server/CLAUDE.md`
 - **Footer feedback restore (React serve/export)**: `docs/design-footer-feedback-react.md`
 - **React component library** (16 primitives, complete): `docs/design-react-component-library.md` — primitive dictionary, coverage matrix, CSS alignment. All 16 primitives shipped
+- **CI architecture** (job structure, matrix strategy, informational vs blocking, artifacts, maintenance): `docs/design-ci.md`
 - **Testing & CI strategy** (gap audit, Playwright plan, visual regression, `data-testid` convention): `docs/design-test-strategy.md`
 - **Playwright E2E tests** (layers 1–3 implemented, layers 4–5 planned, output options, CI integration): `docs/design-playwright-testing.md`
 - **Installation guide**: `INSTALL.md` — detailed per-platform install instructions for non-technical users

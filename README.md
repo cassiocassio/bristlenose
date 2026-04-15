@@ -384,6 +384,12 @@ Edit `bristlenose/__init__.py` (the single source of truth for version), commit,
 
 ## Changelog
 
+**0.14.4** — _16 Apr 2026_
+
+- Pipeline resilience: input change detection (added/removed/modified files trigger re-run)
+- Alembic migration infrastructure replaces manual schema migrations
+- CI: multi-python matrix (3.10–3.13), split lint from test jobs
+
 **0.14.3** — _27 Mar 2026_
 
 - Export: video clip extraction from starred and featured quotes (FFmpeg stream-copy)

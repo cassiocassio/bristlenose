@@ -396,7 +396,7 @@ Transcribe only (no API key needed):
 .PP
 .RS
 .nf
-bristlenose transcribe ./interviews/
+bristlenose transcribe interviews
 .fi
 .RE
 .PP
@@ -433,7 +433,7 @@ Analyse existing transcripts:
 .PP
 .RS
 .nf
-bristlenose analyze ./interviews/bristlenose-output/transcripts-raw/
+bristlenose analyze interviews/bristlenose-output/transcripts-raw/
 .fi
 .RE
 .PP
@@ -441,9 +441,9 @@ Re-render after CSS changes (no API key needed):
 .PP
 .RS
 .nf
-cd ./interviews/ && bristlenose render
+cd interviews && bristlenose render
 # Or specify explicitly:
-bristlenose render ./interviews/bristlenose-output/
+bristlenose render interviews/bristlenose-output/
 .fi
 .RE
 .PP
@@ -451,7 +451,7 @@ Browse the report interactively:
 .PP
 .RS
 .nf
-bristlenose serve ./interviews/
+bristlenose serve interviews
 .fi
 .RE
 .PP
@@ -459,8 +459,8 @@ Check project status (read-only):
 .PP
 .RS
 .nf
-bristlenose status ./interviews/
-bristlenose status ./interviews/ -v    # per-session detail
+bristlenose status interviews
+bristlenose status interviews -v    # per-session detail
 .fi
 .RE
 .PP

@@ -50,6 +50,7 @@ def _manifest_with_stage(
     stage: str,
     content_hash: str | None = None,
     sessions: dict[str, SessionRecord] | None = None,
+    input_hashes: dict[str, str] | None = None,
 ) -> PipelineManifest:
     return PipelineManifest(
         schema_version=1,
@@ -62,6 +63,7 @@ def _manifest_with_stage(
                 status=StageStatus.COMPLETE,
                 content_hash=content_hash,
                 sessions=sessions,
+                input_hashes=input_hashes,
             ),
         },
     )
@@ -253,3 +255,114 @@ def test_speaker_verified_no_sessions_record(tmp_path: Path):
     assert _is_speaker_stage_verified(
         m, STAGE_IDENTIFY_SPEAKERS, {"s1": f1},
     ) is True
+
+
+# ── Phase 2c: input change detection ────────────────────────────
+
+
+def test_stage_verified_inputs_match(tmp_path: Path):
+    """When current input hashes match stored ones → cached."""
+    f = tmp_path / "quotes.json"
+    f.write_bytes(b'[]')
+    h = hash_bytes(f.read_bytes())
+    ih = {"upstream": "abc123"}
+    m = _manifest_with_stage(
+        STAGE_QUOTE_EXTRACTION, content_hash=h, input_hashes=ih,
+    )
+    assert _is_stage_verified(
+        m, STAGE_QUOTE_EXTRACTION, [f], current_input_hashes=ih,
+    ) is True
+
+
+def test_stage_verified_inputs_changed(tmp_path: Path):
+    """When current input hashes differ → stale, re-run."""
+    f = tmp_path / "quotes.json"
+    f.write_bytes(b'[]')
+    h = hash_bytes(f.read_bytes())
+    m = _manifest_with_stage(
+        STAGE_QUOTE_EXTRACTION,
+        content_hash=h,
+        input_hashes={"upstream": "old_hash"},
+    )
+    assert _is_stage_verified(
+        m, STAGE_QUOTE_EXTRACTION, [f],
+        current_input_hashes={"upstream": "new_hash"},
+    ) is False
+
+
+def test_stage_verified_inputs_changed_invalidates_manifest(tmp_path: Path):
+    """Input change removes the stage from manifest (like hash mismatch)."""
+    f = tmp_path / "quotes.json"
+    f.write_bytes(b'[]')
+    h = hash_bytes(f.read_bytes())
+    m = _manifest_with_stage(
+        STAGE_QUOTE_EXTRACTION,
+        content_hash=h,
+        input_hashes={"upstream": "old"},
+    )
+    _is_stage_verified(
+        m, STAGE_QUOTE_EXTRACTION, [f],
+        current_input_hashes={"upstream": "new"},
+    )
+    assert STAGE_QUOTE_EXTRACTION not in m.stages
+
+
+def test_stage_verified_no_stored_input_hashes_backward_compat(tmp_path: Path):
+    """Old manifests without input_hashes → trust the cache."""
+    f = tmp_path / "quotes.json"
+    f.write_bytes(b'[]')
+    h = hash_bytes(f.read_bytes())
+    m = _manifest_with_stage(
+        STAGE_QUOTE_EXTRACTION, content_hash=h, input_hashes=None,
+    )
+    assert _is_stage_verified(
+        m, STAGE_QUOTE_EXTRACTION, [f],
+        current_input_hashes={"upstream": "anything"},
+    ) is True
+
+
+def test_stage_verified_no_current_input_hashes(tmp_path: Path):
+    """When caller doesn't provide current_input_hashes → skip check."""
+    f = tmp_path / "quotes.json"
+    f.write_bytes(b'[]')
+    h = hash_bytes(f.read_bytes())
+    m = _manifest_with_stage(
+        STAGE_QUOTE_EXTRACTION,
+        content_hash=h,
+        input_hashes={"upstream": "stored"},
+    )
+    assert _is_stage_verified(
+        m, STAGE_QUOTE_EXTRACTION, [f],
+    ) is True
+
+
+def test_speaker_verified_inputs_changed(tmp_path: Path):
+    """Speaker stage with changed inputs → stale."""
+    si_dir = tmp_path / "speaker-info"
+    si_dir.mkdir()
+    f1 = si_dir / "s1.json"
+    f1.write_bytes(b'{}')
+    m = _manifest_with_stage(
+        STAGE_IDENTIFY_SPEAKERS,
+        sessions=None,
+        input_hashes={"upstream": "old"},
+    )
+    assert _is_speaker_stage_verified(
+        m, STAGE_IDENTIFY_SPEAKERS, {"s1": f1},
+        current_input_hashes={"upstream": "new"},
+    ) is False
+
+
+def test_mark_stage_complete_stores_input_hashes():
+    """Round-trip: input_hashes survive manifest serialisation."""
+    from bristlenose.manifest import create_manifest, mark_stage_complete
+
+    m = create_manifest("test", "0.14.3")
+    ih = {"upstream": "abc123", "source_files": "def456"}
+    mark_stage_complete(m, STAGE_QUOTE_EXTRACTION, input_hashes=ih)
+    rec = m.stages[STAGE_QUOTE_EXTRACTION]
+    assert rec.input_hashes == ih
+
+    # Verify JSON round-trip
+    m2 = PipelineManifest.model_validate_json(m.model_dump_json())
+    assert m2.stages[STAGE_QUOTE_EXTRACTION].input_hashes == ih

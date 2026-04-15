@@ -1,6 +1,6 @@
 # Pipeline Resilience & Data Integrity
 
-> **Status**: Phase 0–1e implemented (crash recovery, per-session caching, `bristlenose status` command, pre-run resume summary); Phase 2a implemented (SHA-256 content hashes on stage outputs stored in manifest); Phase 2b implemented (verify hashes on load — corrupted/tampered files trigger re-run instead of silent use); Phase 2c (input change detection) next
+> **Status**: Phase 0–1e implemented (crash recovery, per-session caching, `bristlenose status` command, pre-run resume summary); Phase 2a implemented (SHA-256 content hashes on stage outputs stored in manifest); Phase 2b implemented (verify hashes on load — corrupted/tampered files trigger re-run instead of silent use); Phase 2c implemented (input change detection — source file metadata hashing via size+mtime, upstream content_hash propagation, cascade invalidation); Phase 3 (reset command) next
 > **Scope**: Big-picture architecture for crash recovery, incremental re-runs, provenance tracking, human/LLM merge, source material change detection, mid-run provider switching, and analytical context preservation
 > **Trigger**: Plato stress test (Feb 2026) — pipeline ran out of API credits mid-run, stale SQLite data from previous project leaked into serve mode, intermediate JSON files weren't written by `analyze` command, recovery required re-spending $3.50 on LLM calls already made
 
@@ -662,7 +662,7 @@ Phase 1 trusts the manifest blindly — "it says complete, so it must be fine." 
 
 **Risk**: Low. The only behavioral change is: corrupted files trigger re-runs instead of producing garbled output.
 
-#### 2c. Input change detection
+#### ~~2c. Input change detection~~ ✓ Done
 
 **What it is**: Hash the inputs to each stage (the transcript text, the prompt template, the model name). If any input changed since the last run, the stage's output is stale even though it exists.
 
@@ -955,7 +955,7 @@ The key insight: **each sub-step is a single PR-sized change**. None of them req
 4. ~~Ship 1d + 1d-ext (per-session tracking for all stages)~~ ✓ Done
 5. ~~Ship 1e (status report + pre-run summary)~~ ✓ Done
 6. Ship 2a + 2b + 2d (hashing + verification — one session, 2 hours)
-7. Ship 2c (input change detection — one session, 2 hours)
+7. ~~Ship 2c (input change detection — one session, 2 hours)~~ ✓ Done
 8. Ship 3a (reset command — one session, 1-2 hours)
 9. Phases 4-5: design and schedule when Phases 1-3 are stable
 10. Ship 5a-5d (incremental sessions + source change detection — needs Phases 1-3 as foundation)

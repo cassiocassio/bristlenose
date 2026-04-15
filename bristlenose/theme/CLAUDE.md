@@ -325,6 +325,14 @@ Two helpers in `render/html_helpers.py` reduce duplication across quote renderin
 - **`switchToTab(tab)`** — static render: toggles `.active` class on tabs/panels, pushes URL hash. Serve mode shim: `navigate("/report/{tab}/")`. All callers work unchanged via `window.switchToTab`
 - **Sticky toolbar scroll offset** — `--bn-toolbar-height` CSS variable (default `3rem` in `tokens.css`, measured at runtime on first tab switch in `global-nav.js`). `toolbar.css` applies `scroll-margin-top` to `h2[id]`/`h3[id]` inside containers with a toolbar. **Two selectors required**: `.bn-tab-panel:has(.toolbar)` for the static render path, `.center:has(.toolbar)` for the React SPA (where `SidebarLayout` wraps content in `div.center`, not `.bn-tab-panel`). This prevents anchor links from scrolling headings behind the sticky toolbar. If the toolbar height changes (new buttons, typography), the JS measurement auto-adapts. **When adding new sticky elements that occlude content, always add a matching `scroll-margin-top` rule for both render paths** — check that the CSS selector matches the actual DOM wrapper in each path
 
+## Off-screen rendering skip (`content-visibility`)
+
+`.quote-group .quote-card` uses `content-visibility: auto` with `contain-intrinsic-size: auto 250px`. The browser skips layout and paint for quote cards scrolled out of the viewport, which matters when hundreds of quotes are in the DOM (no virtualization). The `auto` keyword in `contain-intrinsic-size` means the browser remembers each card's real height after first render — scroll position stays stable when scrolling back up.
+
+**Scoped to `.quote-group` only** — featured quotes on the dashboard and other small-count contexts don't get containment.
+
+**Gotcha:** `content-visibility: auto` applies `contain: layout style paint` implicitly. This creates a new containing block, but `.quote-group .quote-card` already has `position: relative`, so absolute-positioned action buttons (star, hide) are unaffected. If you add a new child that relies on a containing block *outside* the quote card (e.g. a portal or fixed-position overlay), it will be clipped — use a React portal mounted higher in the tree instead.
+
 ## Gotchas
 
 - **Focus outline convention** — `:focus:not(:focus-visible) { outline: none }` in `atoms/interactive.css` suppresses the browser's default focus outline for mouse/touch clicks globally. Keyboard Tab navigation still shows the blue ring via `:focus-visible` rules on individual components. When adding a new interactive element that needs a visible keyboard focus indicator, add a `:focus-visible` rule with `outline: 2px solid var(--bn-colour-accent); outline-offset: -2px;` — the global suppressor handles the mouse case automatically. Never add per-element `:focus:not(:focus-visible)` rules (the global rule covers it). For text inputs, `:focus { border-color: var(--bn-colour-accent) }` provides a secondary cue that works for both mouse and keyboard

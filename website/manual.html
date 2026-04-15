@@ -123,7 +123,7 @@
   <h3>Gemini</h3>
   <p>Budget option. ~$0.20 per study.</p>
   <pre><code>bristlenose configure gemini
-bristlenose run ./interviews/ --llm gemini</code></pre>
+bristlenose run interviews --llm gemini</code></pre>
 
   <h3>Azure OpenAI</h3>
   <p>For enterprise teams with Azure contracts.</p>
@@ -136,7 +136,7 @@ bristlenose configure azure</code></pre>
     No API key, no account, no cost. Install <a href="https://ollama.ai">Ollama</a>,
     then run:
   </p>
-  <pre><code>bristlenose run ./interviews/ --llm local</code></pre>
+  <pre><code>bristlenose run interviews --llm local</code></pre>
   <p>
     Bristlenose will offer to set up Ollama automatically.
     Trade-off: ~10 minutes vs ~2 minutes per study, lower JSON reliability (~85% vs ~99%).
@@ -156,13 +156,15 @@ bristlenose configure azure</code></pre>
 <section id="first-run">
   <h2>Your first run</h2>
   <pre><code># Point at a folder of recordings
-bristlenose run ./interviews/
+bristlenose interviews
 
 # Output appears inside the folder
-# ./interviews/bristlenose-output/
+# interviews/bristlenose-output/
 
-# Open the report
-open interviews/bristlenose-output/bristlenose-interviews-report.html</code></pre>
+# Open the report in your browser
+# macOS:  open interviews/bristlenose-output/bristlenose-interviews-report.html
+# Linux:  xdg-open interviews/bristlenose-output/bristlenose-interviews-report.html
+# Windows: start interviews\bristlenose-output\bristlenose-interviews-report.html</code></pre>
 
   <p>
     Bristlenose accepts any mix of audio (.wav, .mp3, .m4a, .flac, .ogg, .aac),
@@ -257,7 +259,7 @@ open interviews/bristlenose-output/bristlenose-interviews-report.html</code></pr
      ============================================================ -->
 <section id="serve-mode">
   <h2>Serve mode</h2>
-  <pre><code>bristlenose serve ./interviews/</code></pre>
+  <pre><code>bristlenose serve interviews</code></pre>
   <p>
     Opens an interactive version of your report in the browser. Everything you do is
     saved to a local database — star quotes, tag, hide noise, edit names, reorganise
@@ -566,7 +568,7 @@ open interviews/bristlenose-output/bristlenose-interviews-report.html</code></pr
     <a href="/">Home</a>
     <a href="https://github.com/cassiocassio/bristlenose" target="_blank">GitHub</a>
     <a href="https://github.com/cassiocassio/bristlenose/issues" target="_blank">Report a bug</a>
-    <a href="https://PUBLICATION_NAME.substack.com" target="_blank">Newsletter</a>
+    <a href="https://blog.bristlenose.app" target="_blank">Newsletter</a>
   </div>
   <p class="footer-note">
     Built by Martin Storey. AGPL-3.0 open source.

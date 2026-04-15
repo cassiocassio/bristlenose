@@ -254,11 +254,11 @@ Override the output location with `--output`: `bristlenose run interviews/ -o /e
 
 ```bash
 bristlenose run interviews -p "Q1 Usability Study"    # name the project
-bristlenose transcribe ./interviews/                     # transcribe, no LLM
-bristlenose analyze ./interviews/bristlenose-output/     # skip transcription, run LLM analysis
-bristlenose render ./interviews/bristlenose-output/      # re-render from JSON, no LLM calls
-bristlenose serve ./interviews/                          # browse the report interactively
-bristlenose status ./interviews/                         # check project status (read-only)
+bristlenose transcribe interviews                        # transcribe, no LLM
+bristlenose analyze interviews/bristlenose-output/       # skip transcription, run LLM analysis
+bristlenose render interviews/bristlenose-output/        # re-render from JSON, no LLM calls
+bristlenose serve interviews                             # browse the report interactively
+bristlenose status interviews                            # check project status (read-only)
 bristlenose doctor                                       # check dependencies
 ```
 

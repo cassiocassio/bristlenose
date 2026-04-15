@@ -388,7 +388,7 @@ Items tagged `[S1]`–`[S6]` are assigned to a sprint. Untagged items are unassi
 - [S2] **.dmg README** — include "Open Anyway" Gatekeeper instructions
 - [S2] **PyInstaller sidecar signing** — every `.dylib`, `.so`, and framework inside the bundle must be individually codesigned before notarization. (design-desktop-security-audit.md)
 - [S1] **Build number auto-increment** — `CFBundleVersion = 1` blocks Sparkle and App Store update logic. Set up CI auto-increment
-- [S1] **Domain & email infrastructure** — register `bristlenose.research` + `bristlenose.app` (defensive), configure SPF/DKIM/DMARC, set up email on DreamHost (`hello@`, `support@`, `security@`), Substack custom domain (`blog.bristlenose.research`). Full plan: `docs/private/infrastructure-and-identity.md`
+- [S1] **Domain & email infrastructure** — ~~register `bristlenose.app`~~, ~~configure SPF/DMARC~~, ~~Substack custom domain (`blog.bristlenose.app`)~~, ~~deploy site~~. Remaining: set up email on DreamHost (`hello@`, `support@`, `security@`), DKIM. Full plan: `docs/private/infrastructure-and-identity.md`
 - [S1] **Supply chain hardening** — GitHub 2FA with hardware key, branch protection on main, PyPI hardware key + project-scoped token, register PyPI typosquats. Full checklist: `docs/private/infrastructure-and-identity.md`
 - [S1] **Succession plan** — bus-factor doc (every account/credential/recovery path), password manager emergency access for one trusted person. (infrastructure-and-identity.md)
 
@@ -446,9 +446,9 @@ Items tagged `[S1]`–`[S6]` are assigned to a sprint. Untagged items are unassi
 - **~~Pricing decision~~** — $/month, what's included, free tier?
 - [S6] **Blog at substack** — minimal posts and place for people to gather and chat. cross posts from linkedin
 - [S6] **Launch Blog post** — "why we built Bristlenose" story 3 minute read
-- [S6] **Public-facing website 1** — The 1 pages brochure not App Store, not GitHub. Product landing page at `bristlenose.research` with video, install CTA, "nothing leaves your laptop" messaging, speed demo GIF, comparison vs Dovetail/EnjoyHQ, what it does, who it's for, install/download CTA → part of public-facing website above
-- [S6] **Public-facing website2 ** — The 1 pages manual
-- [S6] **Landing page** — - **Domain registration** — `bristlenose.research` as primary product domain. `bristlenose.app` as defensive redirect. `blog.bristlenose.research` for Substack (portable — CNAME). Note: `bristlenose.com` is taken (Namecheap, Jan 2026, resolves to Shopify). Full plan: `docs/private/infrastructure-and-identity.md`
+- ~~[S6] **Public-facing website 1** — brochure landing page at bristlenose.app. Deployed 15 Apr 2026 via rsync to DreamHost. Still needs: video, speed demo GIF, comparison section, App Store download link~~
+- ~~[S6] **Public-facing website 2** — manual page at bristlenose.app/manual.html. Deployed 15 Apr 2026~~
+- ~~[S6] **Landing page + domain** — `bristlenose.app` registered (DreamHost), DNS configured, site deployed. Deploy skill: `/deploy-website`. Shell alias: `deploy-website`~~
 - [S6] **App Store screenshots** — 3-5 screenshots at required resolutions
 - [S6] **App Store preview video** — 15-30 second demo (optional but high impact)
 

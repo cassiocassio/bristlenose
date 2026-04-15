@@ -141,6 +141,6 @@ Transitive dependencies with no upstream fix (e.g. advisories in torch or protob
 
 ## Reporting a vulnerability
 
-If you find a security issue, please email **security@cassiocassio.co.uk** with a description of the vulnerability and steps to reproduce. You should receive a response within 7 days.
+If you find a security issue, please email **security@bristlenose.app** with a description of the vulnerability and steps to reproduce. You should receive a response within 7 days.
 
 Please do not open a public GitHub issue for security vulnerabilities.

@@ -1,6 +1,6 @@
 # Real-Data Testing Strategy
 
-## Why synthetic data isn't enough
+## Why synthetic data isn't enough 
 
 The fishkeeping, rockclimbing, and Socrates datasets exercise pipeline mechanics — stage transitions, JSON schemas, quote extraction logic. They don't test:
 

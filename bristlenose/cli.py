@@ -1753,7 +1753,7 @@ def configure(
     if canonical == "miro":
         console.print("You can now export to Miro from: [bold]bristlenose serve[/bold]")
     else:
-        console.print("You can now run: [bold]bristlenose run ./interviews[/bold]")
+        console.print("You can now run: [bold]bristlenose run interviews[/bold]")
 
 
 @app.command()

@@ -393,6 +393,7 @@ class Pipeline:
             identify_speaker_roles_llm,
             speaker_info_from_dict,
             speaker_info_to_dict,
+            split_single_speaker_llm,
         )
         from bristlenose.stages.s06_merge_transcript import (
             merge_transcripts,
@@ -742,6 +743,32 @@ class Pipeline:
                 _speaker_errors: list[str] = []
 
                 if _remaining_si_sids:
+                    # Split single-speaker transcripts (LLM pre-pass)
+                    _split_sids = [
+                        sid for sid in _remaining_si_sids
+                        if len(set(
+                            seg.speaker_label or "Unknown"
+                            for seg in session_segments[sid]
+                        )) <= 1
+                    ]
+                    if _split_sids:
+                        _sem_split = asyncio.Semaphore(concurrency)
+
+                        async def _split(
+                            sid: str,
+                            segments: list[TranscriptSegment],
+                        ) -> None:
+                            async with _sem_split:
+                                await split_single_speaker_llm(
+                                    segments, llm_client,
+                                    errors=_speaker_errors,
+                                )
+
+                        await asyncio.gather(*(
+                            _split(sid, session_segments[sid])
+                            for sid in _split_sids
+                        ))
+
                     # Heuristic pass for remaining sessions
                     for sid in _remaining_si_sids:
                         identify_speaker_roles_heuristic(

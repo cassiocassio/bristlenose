@@ -11,6 +11,42 @@ from pydantic import BaseModel, Field, field_validator
 # ---------------------------------------------------------------------------
 
 
+class SpeakerBoundary(BaseModel):
+    """A speaker change boundary in a single-speaker transcript."""
+
+    segment_index: int = Field(
+        ge=0,
+        description=(
+            "0-based index of the transcript line where this speaker starts talking. "
+            "The first boundary must have segment_index=0."
+        ),
+    )
+    speaker_id: str = Field(
+        description="Speaker identifier, e.g. 'Speaker A', 'Speaker B'"
+    )
+    person_name: str = Field(
+        default="",
+        description=(
+            "The speaker's real name if mentioned in the transcript "
+            "(e.g. 'my name is Brian', 'thank you Daniel'). "
+            "Empty string if unknown."
+        ),
+    )
+
+
+class SpeakerSplitAssignment(BaseModel):
+    """LLM output for splitting a single-speaker transcript into multiple speakers."""
+
+    speaker_count: int = Field(description="Number of distinct speakers detected")
+    boundaries: list[SpeakerBoundary] = Field(
+        description=(
+            "Speaker change boundaries in chronological order. "
+            "Each boundary means 'from this segment index onwards, this speaker is talking'. "
+            "Must start with segment_index=0."
+        )
+    )
+
+
 class SpeakerRoleItem(BaseModel):
     """A single speaker-to-role assignment with optional name extraction."""
 

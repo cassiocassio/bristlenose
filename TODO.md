@@ -1,6 +1,6 @@
 # Bristlenose — Where I Left Off
 
-Last updated: 16 Apr 2026
+Last updated: 17 Apr 2026
 
 **Launch plan:** `docs/private/100days.md` — triaged by topic + MoSCoW priority. That's the source of truth for what ships. This file is a public capture inbox + session context + done history.
 
@@ -179,6 +179,10 @@ Bristlenose has ~30 direct + transitive deps across Python, ML, LLM SDKs, and NL
 | `docs/design-codebook-island.md` | Migration audit, API design, drag-drop |
 | `docs/design-signal-elaboration.md` | Interpretive names, pattern types |
 | `docs/design-transcript-editing.md` | Section strike, text correction, prior art |
+| `docs/design-speaker-splitting.md` | LLM splitting for single-speaker transcripts |
+| `docs/design-speaker-role-detection.md` | Generalised role detection (oral history, journalism, etc.) |
+| `docs/design-speaker-editing.md` | Four transcript editing operations (name, reassign, split, merge) |
+| `docs/design-transcript-speaker-editing-roadmap.md` | 11-layer work breakdown for transcript + speaker editing |
 | `docs/design-sidebar.md` | Dual-sidebar layout (TOC left, Tags right) |
 | `docs/design-windows-ci.md` | Windows CI strategy, compatibility audit, phased plan |
 

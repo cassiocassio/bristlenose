@@ -87,7 +87,7 @@ Items tagged `[S1]`–`[S6]` are assigned to a sprint. Untagged items are unassi
 
 ### Should
 - **Local model reliability** — ~85% vs ~99% cloud. Investigate parse failure patterns (llm/CLAUDE.md)
-- **Speaker diarisation** — cross-session moderator linking not working (#25, #26)
+- **Speaker diarisation** — cross-session moderator linking not working (#25, #26) — single-session detection improved (LLM splitting, generalised heuristic, format-agnostic prompt, Apr 2026). Cross-session linking remains. See `docs/design-transcript-speaker-editing-roadmap.md` Layer 11
 - **Badge × character** — platform-inconsistent rendering, replace with SVG (badge.css TODO)
 
 ### Could

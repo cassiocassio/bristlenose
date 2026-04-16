@@ -6,9 +6,11 @@
  * Thresholds use a doubling rule: fail at 2x baseline, warn at 1.5x.
  * See docs/design-perf-regression-gate.md for measured baselines.
  */
-import { test, expect } from '@playwright/test';
+import { test, expect, Page } from '@playwright/test';
 import { writeFileSync, appendFileSync } from 'fs';
 import { resolve } from 'path';
+import { execSync } from 'child_process';
+import os from 'os';
 
 test.describe.configure({ mode: 'serial' });
 
@@ -47,6 +49,60 @@ function authToken(): string {
   return process.env._BRISTLENOSE_AUTH_TOKEN ?? '';
 }
 
+/**
+ * Wait for the React SPA to fully mount, including deferred useEffect islands.
+ *
+ * `networkidle` alone is fragile on slow CI runners — it can fire before
+ * lazy components mount, inflating false negatives. This:
+ *  1. waits for `networkidle` (server chatter quiet)
+ *  2. waits for `#bn-app-root` to have rendered children (React mounted)
+ *  3. waits for DOM node count to stabilise across two 200ms polls
+ *     (no deferred effects still adding nodes)
+ */
+async function waitForPageReady(page: Page): Promise<void> {
+  await page.waitForLoadState('networkidle');
+  await page.waitForFunction(
+    () => {
+      const root = document.querySelector('#bn-app-root');
+      return !!(root && root.children.length > 0);
+    },
+    { timeout: 5_000 },
+  );
+  // DOM node count stable across two consecutive polls = deferred mounts done.
+  // The __prevDomCount property is a primitive, not a DOM node — it doesn't
+  // affect the count being measured.
+  await page.waitForFunction(
+    () => {
+      const current = document.querySelectorAll('*').length;
+      const prev = (window as unknown as { __prevDomCount?: number }).__prevDomCount;
+      (window as unknown as { __prevDomCount?: number }).__prevDomCount = current;
+      return prev !== undefined && prev === current;
+    },
+    { timeout: 5_000, polling: 200 },
+  );
+}
+
+function getGitSha(): string | null {
+  try {
+    return execSync('git rev-parse HEAD', {
+      cwd: resolve(__dirname, '..', '..'),
+      stdio: ['ignore', 'pipe', 'ignore'],
+    })
+      .toString()
+      .trim();
+  } catch {
+    return null;
+  }
+}
+
+function getRunner(): string {
+  // GitHub Actions sets GITHUB_ACTIONS=true and RUNNER_OS
+  if (process.env.GITHUB_ACTIONS === 'true') {
+    return `ci:${process.env.RUNNER_OS ?? 'unknown'}:${process.env.GITHUB_RUN_ID ?? '?'}`;
+  }
+  return `local:${os.platform()}-${os.arch()}`;
+}
+
 // ── Tests ───────────────────────────────────────────────────────────────
 
 test('server identity guard — smoke-test fixture', async ({ page, baseURL }) => {
@@ -61,7 +117,7 @@ test('server identity guard — smoke-test fixture', async ({ page, baseURL }) =
 for (const t of DOM_THRESHOLDS) {
   test(`DOM nodes — ${t.label} (baseline ${t.baseline}, fail > ${t.fail})`, async ({ page }) => {
     await page.goto(t.path);
-    await page.waitForLoadState('networkidle');
+    await waitForPageReady(page);
 
     const count = await page.evaluate(() => document.querySelectorAll('*').length);
     results[`dom_${t.label.toLowerCase().replace(/\s+/g, '_')}`] = count;
@@ -80,16 +136,20 @@ for (const t of DOM_THRESHOLDS) {
 
 test('API latency — quotes endpoint', async ({ page, baseURL }) => {
   await page.goto('/report/');
-  await page.waitForLoadState('networkidle');
+  await waitForPageReady(page);
 
-  const ms = await page.evaluate(async (url: string) => {
-    const token = (window as any).__BRISTLENOSE_AUTH_TOKEN__;
+  const { ms, ok, status } = await page.evaluate(async (url: string) => {
+    const token = (window as unknown as { __BRISTLENOSE_AUTH_TOKEN__?: string }).__BRISTLENOSE_AUTH_TOKEN__;
     const start = performance.now();
-    await fetch(`${url}/api/projects/1/quotes`, {
+    const res = await fetch(`${url}/api/projects/1/quotes`, {
       headers: token ? { Authorization: `Bearer ${token}` } : {},
     });
-    return performance.now() - start;
+    return { ms: performance.now() - start, ok: res.ok, status: res.status };
   }, baseURL!);
+
+  // Guard against silent-pass trap: a 401 completes in ~1ms and would look
+  // like excellent latency. Fail loudly if the response wasn't 2xx.
+  expect(ok, `quotes API returned ${status} — auth token missing?`).toBe(true);
 
   results.api_latency_quotes_ms = Math.round(ms * 10) / 10;
 
@@ -101,16 +161,18 @@ test('API latency — quotes endpoint', async ({ page, baseURL }) => {
 
 test('API latency — dashboard endpoint', async ({ page, baseURL }) => {
   await page.goto('/report/');
-  await page.waitForLoadState('networkidle');
+  await waitForPageReady(page);
 
-  const ms = await page.evaluate(async (url: string) => {
-    const token = (window as any).__BRISTLENOSE_AUTH_TOKEN__;
+  const { ms, ok, status } = await page.evaluate(async (url: string) => {
+    const token = (window as unknown as { __BRISTLENOSE_AUTH_TOKEN__?: string }).__BRISTLENOSE_AUTH_TOKEN__;
     const start = performance.now();
-    await fetch(`${url}/api/projects/1/dashboard`, {
+    const res = await fetch(`${url}/api/projects/1/dashboard`, {
       headers: token ? { Authorization: `Bearer ${token}` } : {},
     });
-    return performance.now() - start;
+    return { ms: performance.now() - start, ok: res.ok, status: res.status };
   }, baseURL!);
+
+  expect(ok, `dashboard API returned ${status} — auth token missing?`).toBe(true);
 
   results.api_latency_dashboard_ms = Math.round(ms * 10) / 10;
 
@@ -125,16 +187,24 @@ test(`export HTML size (fail > ${(EXPORT_SIZE_FAIL / 1024 / 1024).toFixed(1)} MB
   baseURL,
 }) => {
   await page.goto('/report/');
-  await page.waitForLoadState('networkidle');
+  await waitForPageReady(page);
 
-  const sizeBytes = await page.evaluate(async (url: string) => {
-    const token = (window as any).__BRISTLENOSE_AUTH_TOKEN__;
+  const { sizeBytes, ok, status } = await page.evaluate(async (url: string) => {
+    const token = (window as unknown as { __BRISTLENOSE_AUTH_TOKEN__?: string }).__BRISTLENOSE_AUTH_TOKEN__;
     const res = await fetch(`${url}/api/projects/1/export`, {
       headers: token ? { Authorization: `Bearer ${token}` } : {},
     });
     const blob = await res.blob();
-    return blob.size;
+    return { sizeBytes: blob.size, ok: res.ok, status: res.status };
   }, baseURL!);
+
+  // Silent-pass guard: a 401 body is ~50 bytes and would trivially pass the
+  // 3.2 MB fail threshold. Assert 2xx + a sanity floor.
+  expect(ok, `export returned ${status} — auth token missing?`).toBe(true);
+  expect(
+    sizeBytes,
+    `Export HTML ${sizeBytes} bytes is implausibly small — real export is ~1.6 MB`,
+  ).toBeGreaterThan(500_000);
 
   results.export_html_bytes = sizeBytes;
   const sizeMB = sizeBytes / 1024 / 1024;
@@ -157,7 +227,12 @@ test.afterAll(() => {
   if (Object.keys(results).length === 0) return;
 
   const timestamp = new Date().toISOString();
-  const record = { timestamp, ...results };
+  const git_sha = getGitSha();
+  const runner = getRunner();
+  // Fields at the top so they read first in the JSONL; results spread after.
+  // Schema stays forward-compatible — new fields can be added without breaking
+  // readers that do `.get(key, '—')`.
+  const record = { timestamp, git_sha, runner, ...results };
   const e2eDir = resolve(__dirname, '..');
 
   // Latest snapshot (overwritten each run)

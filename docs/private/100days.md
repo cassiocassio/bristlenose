@@ -209,7 +209,7 @@ Items tagged `[S1]`–`[S6]` are assigned to a sprint. Untagged items are unassi
 - [S2] **Privacy Manifest (`PrivacyInfo.xcprivacy`)** — required for App Store since mid-2024. Declare data types and API usage reasons. (design-desktop-security-audit.md). Draft complete (`launch-docs/PrivacyInfo.xcprivacy` + `privacy-manifest-rationale.md` in delivery repo), needs codebase audit to validate reason codes
 
 ### Should
-- **Vulnerability disclosure page** — SECURITY.md exists but not public-facing. Add `security@bristlenose.research`, publish `security.txt` at `bristlenose.research/.well-known/security.txt` (RFC 9116). (infrastructure-and-identity.md)
+- ~~**Vulnerability disclosure page** — `security.txt` (RFC 9116) at `bristlenose.app/.well-known/security.txt`. PR #85~~
 - **AGPL + App Store legal opinion** — CLA enables dual-licensing, but untested. Brief written opinion needed (~£200–500). Lawyers: see `docs/private/licensing-and-legal.md`
 - **GDPR/data processor statement** — even though local-first, API calls send data to LLM providers
 - **Crash reporting** — know when the app breaks in the field. Sentry or similar

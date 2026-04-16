@@ -44,9 +44,19 @@ du -sh trial-runs/fossda-opensource/bristlenose-output/*/ \
 grep '✓' trial-runs/fossda-opensource/perf-baselines/pipeline-run.log \
   > trial-runs/fossda-opensource/perf-baselines/stage-times.txt
 
-# 5. Extract LLM request latencies (median/p95) from the log
-grep -i 'request.*ms\|latency\|duration' .bristlenose/bristlenose.log \
+# 5. Extract LLM request latencies from the log (one line per LLM call)
+grep 'llm_request' \
+  trial-runs/fossda-opensource/bristlenose-output/.bristlenose/bristlenose.log \
   > trial-runs/fossda-opensource/perf-baselines/llm-latencies.txt
+
+# Summarise median and p95 latency
+awk -F'elapsed_ms=' '{print $2}' \
+  trial-runs/fossda-opensource/perf-baselines/llm-latencies.txt \
+  | awk '{print $1}' | sort -n \
+  | awk 'BEGIN{c=0} {a[c++]=$1} END{
+      print "median="a[int(c/2)]"ms  p95="a[int(c*0.95)]"ms  n="c
+    }' \
+  >> trial-runs/fossda-opensource/perf-baselines/llm-latencies.txt
 
 # 6. Record temp WAV disk usage (baseline for cleanup optimisation)
 du -sh trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/ \

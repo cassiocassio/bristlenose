@@ -5,6 +5,7 @@ from __future__ import annotations
 import copy
 import json
 import logging
+import time
 from typing import TypeVar
 
 from pydantic import BaseModel
@@ -178,28 +179,43 @@ class LLMClient:
         """
         max_tokens = max_tokens or self.settings.llm_max_tokens
 
-        if self.provider == "anthropic":
-            return await self._analyze_anthropic(
-                system_prompt, user_prompt, response_model, max_tokens
+        t0 = time.perf_counter()
+        try:
+            if self.provider == "anthropic":
+                result = await self._analyze_anthropic(
+                    system_prompt, user_prompt, response_model, max_tokens
+                )
+            elif self.provider == "openai":
+                result = await self._analyze_openai(
+                    system_prompt, user_prompt, response_model, max_tokens
+                )
+            elif self.provider == "azure":
+                result = await self._analyze_azure(
+                    system_prompt, user_prompt, response_model, max_tokens
+                )
+            elif self.provider == "google":
+                result = await self._analyze_google(
+                    system_prompt, user_prompt, response_model, max_tokens
+                )
+            elif self.provider == "local":
+                result = await self._analyze_local(
+                    system_prompt, user_prompt, response_model, max_tokens
+                )
+            else:
+                raise ValueError(f"Unsupported LLM provider: {self.provider}")
+        finally:
+            elapsed_ms = int((time.perf_counter() - t0) * 1000)
+            # Stable, greppable prefix for perf baselining — see
+            # docs/design-perf-fossda-baseline.md step 5.
+            logger.info(
+                "llm_request | provider=%s | model=%s | elapsed_ms=%d | "
+                "schema=%s",
+                self.provider,
+                self.settings.llm_model,
+                elapsed_ms,
+                response_model.__name__,
             )
-        elif self.provider == "openai":
-            return await self._analyze_openai(
-                system_prompt, user_prompt, response_model, max_tokens
-            )
-        elif self.provider == "azure":
-            return await self._analyze_azure(
-                system_prompt, user_prompt, response_model, max_tokens
-            )
-        elif self.provider == "google":
-            return await self._analyze_google(
-                system_prompt, user_prompt, response_model, max_tokens
-            )
-        elif self.provider == "local":
-            return await self._analyze_local(
-                system_prompt, user_prompt, response_model, max_tokens
-            )
-        else:
-            raise ValueError(f"Unsupported LLM provider: {self.provider}")
+        return result
 
     async def _analyze_anthropic(
         self,

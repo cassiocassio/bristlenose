@@ -50,12 +50,19 @@ print(build_hardware_key(load_settings()))
 #     snapshot loop in a second terminal until the pipeline exits:
 #
 #        while pgrep -f 'bristlenose run' >/dev/null; do
-#          du -sh trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/ \
+#          date +%H:%M:%S
+#          du -sk trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/ \
 #            2>/dev/null
 #          sleep 30
 #        done | tee trial-runs/fossda-opensource/perf-baselines/temp-wav-timeline.txt
 #
-#     Record the peak observed size in the results template.
+#     Then extract the peak (kilobytes, converted to human-readable MB):
+#
+#        awk 'NF==2 {print $1}' \
+#          trial-runs/fossda-opensource/perf-baselines/temp-wav-timeline.txt \
+#          | sort -n | tail -1 \
+#          | awk '{printf "peak_temp_wav_MB=%.1f\n", $1/1024}' \
+#          > trial-runs/fossda-opensource/perf-baselines/temp-wav-peak.txt
 
 # 4. Record output sizes
 du -sh trial-runs/fossda-opensource/bristlenose-output/*/ \
@@ -128,6 +135,8 @@ Write to `trial-runs/fossda-opensource/perf-baselines/pipeline-baseline.md`:
 | .bristlenose/intermediate/ | ... |
 | sessions/ | ... |
 | Total | ... |
+| Peak temp WAV (mid-run, from `temp-wav-peak.txt`) | ___ MB |
+| End-of-run temp WAV (from `temp-wav-size.txt`) | ... |
 ```
 
 ## New files
@@ -140,6 +149,7 @@ Write to `trial-runs/fossda-opensource/perf-baselines/pipeline-baseline.md`:
 | `trial-runs/fossda-opensource/perf-baselines/stage-times.txt` | Per-stage elapsed (step 5, ANSI stripped) |
 | `trial-runs/fossda-opensource/perf-baselines/llm-latencies.txt` | LLM requests + median/p95 summary (step 6) |
 | `trial-runs/fossda-opensource/perf-baselines/temp-wav-timeline.txt` | Mid-run temp WAV snapshots (step 3b, optional) |
+| `trial-runs/fossda-opensource/perf-baselines/temp-wav-peak.txt` | Peak mid-run temp WAV in MB (step 3b post-process) |
 | `trial-runs/fossda-opensource/perf-baselines/temp-wav-size.txt` | End-of-run temp WAV size (step 7) |
 | `trial-runs/fossda-opensource/perf-baselines/output-sizes.txt` | Output directory sizes (step 4) |
 

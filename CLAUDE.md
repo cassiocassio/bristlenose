@@ -98,24 +98,13 @@ macOS ships BSD versions of `sed`, `grep`, `awk`, `find`, `xargs`, `date`, `stat
 
 ### i18n — single source of truth
 
-- **Locale files live in `bristlenose/locales/` only** — `frontend/src/locales/` was deleted. The frontend imports from the canonical location via Vite alias `@locales`. Don't create locale files in the frontend tree
-- **`I18n.swift` reads the same JSON** — the desktop app's `I18n` class loads from `bristlenose/locales/` at runtime. Dotted key lookup: `i18n.t("desktop.menu.file.print")`. Falls back English → raw key
-- **SwiftUI `CommandMenu` titles can't use runtime strings** — `CommandMenu("Project")` uses `LocalizedStringKey` (`.lproj` bundles). Menu titles stay in English; only items inside are translated. See `docs/design-i18n.md`
-- **Toolbar `_short` keys** — `common.nav.codebookShort` exists for languages where the full label overflows the segmented control (es: "Códigos" instead of "Libro de códigos"). `Tab.localizedLabel()` checks `_short` first
-- **Apple glossary cross-check is mandatory** before shipping a new language — use [applelocalization.com](https://applelocalization.com/) or the macOS keyboard shortcuts page in the target locale. See `docs/design-i18n.md` for the full process and the Spanish cross-check results
-- **`useTranslation()` is the hook; `i18n.t()` is the direct import** — use the hook inside React components, use `import i18n from "../i18n"` + `i18n.t()` in stores, announce utilities, and other non-component code (e.g. `QuotesContext.tsx`, `AppLayout.tsx` route announcements)
-- **`useMemo` deps for translated arrays** — `t` function identity doesn't change on locale switch. Use `[t, i18n.language]` as dependency, or skip `useMemo` entirely for small arrays (2–5 items). See `ViewSwitcher.tsx` (inline) vs `HelpModal.tsx` (useMemo with language dep)
-- **`i18n/index.ts` initialises test-setup** — `frontend/src/test-setup.ts` imports `"./i18n"` so all tests get English translations by default. `t("nav.project")` returns `"Project"` in tests — no test rewrites needed for i18n wiring
-- **Sentiment tag translation in Badge** — `Badge.tsx` looks up `enums:sentiment.${text}` when `sentiment` prop is truthy. This translates API-returned lowercase sentiment names ("frustration") to locale-correct labels ("Frustration" / "Verwirrung"). Tests must expect capitalised forms
-- **Built-in codebook groups translate client-side** — sentiment group (`colour_set === "sentiment"`) and uncategorised group (`name === "Uncategorised"`) have their names/subtitles translated in `CodebookPanel.tsx` using locale keys. Other codebook names are user data and stay untranslated
-- **`format.ts` uses `Intl.DateTimeFormat`** — `formatFinderDate` and `formatCompactDate` accept an optional `locale` param. Callers pass `i18n.language`. Internally, any `en*` locale (including bare `"en"` from i18next and `"en-US"` from jsdom in tests) is mapped to `"en-GB"` to preserve day-month order ("12 Feb" not "Feb 12"). Non-English locales pass through unchanged. `formatFinderDate` uses `Intl.RelativeTimeFormat` for "today"/"yesterday"
-- **`<html lang>` tracking** — `i18n.on("languageChanged")` in `i18n/index.ts` sets `document.documentElement.lang`. Required for screen reader pronunciation
-- **Korean has no plural forms** — only `_other` keys needed in locale files (no `_one`). i18next CLDR rules handle this automatically
-- **New keys must go in all 6 locale files** — en, es, fr, de, ko, ja. Every `t("key")` call needs a corresponding entry in each. If using `dt()`, the desktop override must also go in all 6 `desktop.json` files. Use machine translation for initial pass, flag for human review
-- **Data-level vs chrome-level translation** — UI chrome (buttons, headings, labels) translates via `t()`. API data (codebook names, quote text, section labels) stays in the original language. Exceptions: sentiment group name/subtitle and uncategorised group are server constants that get client-side translation
-- **Platform text forking** — `dt(t, key)` checks `desktop:` namespace first (falls back to base key). `ct(t, key)` returns `null` on desktop (hides CLI-only text). Both in `frontend/src/utils/platformTranslation.ts`. Desktop namespace loaded conditionally in `i18n/index.ts` when `data-platform="desktop"` is set. See `docs/platform-text-map.md` for the full inventory and decision tree
-- **German typographic quotes break JSON** — `„"` (U+201E / U+201C) look like JSON string delimiters to parsers. Escape as `\u201e` / `\u201c` in locale JSON files. Caught in `de/desktop.json` during platform text fork work
-- **Tests that mock `../utils/platform` must include `isDesktop`** — `HelpModal.test.tsx` mocked only `isMac`, which broke when `ContributingSection` started importing `dt()` (which imports `isDesktop`). Always mock `{ isMac, isDesktop, _resetPlatformCache }` together
+- **Locale files live in `bristlenose/locales/` only** — `frontend/src/locales/` was deleted. The frontend imports via Vite alias `@locales`. Don't create locale files in the frontend tree. `I18n.swift` (desktop) reads the same JSON at runtime
+- **`useTranslation()` is the hook; `i18n.t()` is the direct import** — use the hook inside React components; use `import i18n from "../i18n"` + `i18n.t()` in stores, announce utilities, and other non-component code
+- **New keys must go in all 6 locale files** — en, es, fr, de, ko, ja. Every `t("key")` call needs an entry in each. If using `dt()`, the desktop override must also go in all 6 `desktop.json` files
+- **Platform text forking** — `dt(t, key)` checks `desktop:` namespace first (falls back to base key). `ct(t, key)` returns `null` on desktop (hides CLI-only text). Both in `frontend/src/utils/platformTranslation.ts`. See `docs/platform-text-map.md`
+- **SwiftUI `CommandMenu` titles can't use runtime strings** — menu titles stay in English; only items inside are translated
+
+See `docs/design-i18n.md` for implementation gotchas (Apple glossary cross-check, `useMemo` deps, sentiment tag translation, Intl.DateTimeFormat quirks, Korean plurals, data vs chrome translation, German typographic quote JSON escaping, test mocking requirements).
 
 ### Other gotchas
 
@@ -150,72 +139,58 @@ macOS ships BSD versions of `sed`, `grep`, `awk`, `find`, `xargs`, `date`, `stat
 
 ## Reference docs (read when working in these areas)
 
-- **Terminology glossary + tone guide** (canonical vocabulary, forbidden alternatives, spelling rules, voice): `docs/glossary.md` — **read this before writing any user-facing text**
-- **Platform text map** (which text is shared/desktop-only/CLI-only/forked, `dt()`/`ct()` inventory, decision tree): `docs/platform-text-map.md` — **read this before adding help text**
-- **Design decisions** (why choices were made, alternatives considered): `docs/design-decisions.md`
-- **Export: HTML report + cross-cutting concerns** (anonymisation matrix, shared infra, audit): `docs/design-export-html.md`
-- **Export: CSV/XLS quotes** (11-column schema, selection logic, export dropdown): `docs/design-export-quotes.md`
-- **Export: video clips** (FFmpeg/AVFoundation, naming, async toast): `docs/design-export-clips.md`
-- **Export: Miro bridge** (OAuth PKCE, board creation, layout — post-beta): `docs/design-miro-bridge.md`
-- **Export: original monolith** (superseded, kept for git history): `docs/design-export-sharing.md`
-- **Export dropdown + quote slides** (per-quote copy, scope→format cascade, .pptx format): `docs/design-export-slides.md`
-- **HTML report / people file / transcript pages**: `docs/design-html-report.md`
-- **Frontend / React / TypeScript / Vite**: `frontend/CLAUDE.md`
-- **Theme / dark mode / CSS conventions / gotchas**: `bristlenose/theme/CLAUDE.md`
-- **JS module API reference**: `bristlenose/theme/js/MODULES.md`
-- **CSS component reference**: `bristlenose/theme/CSS-REFERENCE.md`
-- **Responsive layout** (quote grid, density setting, breakpoints): `docs/design-responsive-layout.md` — content-level responsiveness. See `docs/design-sidebar-playground.md` for chrome-level (sidebar modes)
-- **Sidebar layout & responsive playground** (6-column grid, overlay, drag-resize, minimap, dev playground): `docs/design-sidebar-playground.md` — architecture, file map, token reference, QA checklist. **Read this before working on sidebar layout, overlay behaviour, or playground features**
-- **Pipeline stages / transcript format / output structure**: `bristlenose/stages/CLAUDE.md`
-- **LLM providers / credentials / concurrency**: `bristlenose/llm/CLAUDE.md`
-- **File map** (what lives where): `docs/file-map.md`
-- **Release process / CI / secrets**: `docs/release.md`
-- **Design system / contributing**: `CONTRIBUTING.md`
-- **Doctor command + Snap packaging design**: `docs/design-doctor-and-snap.md`
-- **Homebrew formula packaging** (dylib relinking workaround, alternatives, automation): `docs/design-homebrew-packaging.md`
-- **Platform transcript ingestion**: `docs/design-platform-transcripts.md`
-- **Transcript coverage feature**: `docs/design-transcript-coverage.md`
-- **CLI improvements**: `docs/design-cli-improvements.md`
-- **LLM provider roadmap**: `docs/design-llm-providers.md`
-- **React migration plan** (vanilla JS shell → full SPA, 10-step sequence): `docs/design-react-migration.md` — **the active plan.** Read this before working on serve-mode UI migration
-- **Reactive UI architecture / framework / migration** (partially superseded): `docs/design-reactive-ui.md` — framework choice, business risk, file:// audit remain valid reference
-- **Performance audit / optimisation decisions**: `docs/design-performance.md`
-- **Research methodology** (quote selection, sentiment taxonomy, clustering/theming rationale): `docs/design-research-methodology.md` — single source of truth for analytical decisions. **Read this before changing prompts or analysis logic.**
-- **Academic sources for analysis categories**: `docs/academic-sources.html` — theoretical foundations (emotion science, UX research, trust/credibility) behind quote tagging and sentiment analysis. **Update this file when investigating theories behind any Bristlenose features.**
-- **Analysis page** (signal concentration, metrics, rendering): `docs/BRANCHES.md` → `analysis` section — architecture, design decisions, file list, test coverage
-- **Analysis page future** (two-pane vision, grid-as-selector, user-tag grid, backlog): `docs/design-analysis-future.md`
-- **Inspector panel** (bottom heatmap panel, DevTools metaphor, drag-resize, card↔matrix sync): `docs/design-inspector-panel.md` — design exploration (3 mockup iterations), interaction spec, implementation prompt. **Read this before working on the analysis tab inspector panel**
-- **Finding weight** (signal direction, valence clarity, tag interpretability tiers, finding archetypes): `docs/design-finding-weight.md` — problem-space exploration for surfacing wins vs problems vs patterns in Analysis tab
-- **Quote sequences** (consecutive quote detection, segment ordinals, threshold tuning): `docs/design-quote-sequences.md`
-- **Dashboard stats** (inventory of unused pipeline data, improvement priorities): `docs/design-dashboard-stats.md`
-- **Logging** (persistent log file, two-knob system, instrumentation tiers): `docs/design-logging.md` — architecture, tier 1 implementation plan, backlog. **Read this before adding log lines**
-- **Minimap** (parallax scroll, stress-test math, interaction patterns): `docs/design-minimap.md` — VS Code-style abstract overview for Quotes tab, grid column 4 (between center and tag sidebar), scrollbar offset, parallax derivation
-- **Pipeline resilience / crash recovery / data integrity**: `docs/design-pipeline-resilience.md` — manifest, event sourcing, incremental re-runs, provenance. **Read this before working on pipeline state tracking, resume, or data validation**
-- **Server / data API / serve mode**: `bristlenose/server/CLAUDE.md`
-- **Footer feedback restore (React serve/export)**: `docs/design-footer-feedback-react.md`
-- **React component library** (16 primitives, complete): `docs/design-react-component-library.md` — primitive dictionary, coverage matrix, CSS alignment. All 16 primitives shipped
-- **CI architecture** (job structure, matrix strategy, informational vs blocking, artifacts, maintenance): `docs/design-ci.md`
-- **Testing & CI strategy** (gap audit, Playwright plan, visual regression, `data-testid` convention): `docs/design-test-strategy.md`
-- **Playwright E2E tests** (layers 1–3 implemented, layers 4–5 planned, output options, CI integration): `docs/design-playwright-testing.md`
-- **Installation guide**: `INSTALL.md` — detailed per-platform install instructions for non-technical users
-- **Desktop app** (macOS, SwiftUI, PyInstaller sidecar, .dmg distribution): `docs/design-desktop-app.md` — vision, PRD, stack rationale, user flow, open questions. **Read this before working in `desktop/`**
-- **Desktop app security audit** (WKWebView, sidecar, Keychain, sandbox, DASVS, Apple guidelines): `docs/design-desktop-security-audit.md` — challenges, opportunities, attack surface review, relevant standards. Items prioritised into `docs/private/100days.md`
-- **WKWebView cross-view messaging** (BroadcastChannel, data store sharing, spike results): `docs/design-wkwebview-messaging.md` — validated pattern for multi-WKWebView communication. **Read this before adding a second WKWebView to the desktop app**
-- **Multi-project awareness** (project index, person identity, lifecycle, assumptions audit, scope rules): `docs/design-multi-project.md` — data model future-proofing, single-project assumption inventory. Scope rules enforced in `bristlenose/server/CLAUDE.md`. **Read this before adding new DB tables or hardcoding project IDs**
-- **Project sidebar** (macOS desktop sidebar UX, menus, rename, drag-drop, delete/bin, 5-phase plan): `docs/design-project-sidebar.md` — Mail-style sidebar, Recently Deleted bin, inline rename, system selection highlight. **Read this before working on desktop multi-project UI**
-- **Session management** (re-import, session enable/disable, quarantine, pipeline re-run): `docs/design-session-management.md`
-- **Serve mode milestone 1** (domain schema, importer, sessions API): `docs/design-serve-milestone-1.md`
-- **Internationalisation** (codebook/sentiment translation strategy, UI chrome terminology research, mixed-language interviews): `docs/design-i18n.md` — terminology table sourced from ATLAS.ti/MAXQDA/NVivo localized UIs and academic QDA literature. **Read this before working on i18n or translation**
-- **Codebook island** (migration audit, API design, drag-drop decisions): `docs/design-codebook-island.md`
-- **Moderator question pill** (hover-triggered context reveal, interaction design, file map): `docs/design-moderator-question-pill.md`
-- **Signal elaboration** (interpretive names + one-sentence summaries for framework signal cards, pattern types, generation algorithm): `docs/design-signal-elaboration.md`
-- **Speaker splitting** (LLM pre-pass for single-speaker transcripts): `docs/design-speaker-splitting.md`
-- **Speaker role detection** (generalised heuristic + prompt for non-UXR formats): `docs/design-speaker-role-detection.md`
-- **Speaker editing** (name, reassign, split, merge — four transcript operations): `docs/design-speaker-editing.md` — Dovetail-style in-context editing. **Read this before working on transcript speaker UI**
-- **Transcript editing** (future — section strike, text correction, prior art, data model): `docs/design-transcript-editing.md` — two-operation approach (junk deletion + word correction), prior art from 7 tools, edit history analysis. **Read this before working on transcript text editing**
-- **Transcript & speaker editing roadmap** (11-layer work breakdown): `docs/design-transcript-speaker-editing-roadmap.md` — dependency graph, priority order, page responsibility model
-- **Security & privacy**: `SECURITY.md` — local-first design, credential storage, PII redaction, anonymisation boundary, vulnerability reporting
-- **Product roadmap**: `docs/ROADMAP.md`
+**Must-read before writing user-facing text:**
+- `docs/glossary.md` — terminology + tone guide
+- `docs/platform-text-map.md` — shared/desktop/CLI text forking, `dt()`/`ct()` inventory
+
+**Sibling CLAUDE.md files:** `frontend/`, `bristlenose/theme/`, `bristlenose/stages/`, `bristlenose/llm/`, `bristlenose/server/`, `desktop/`
+
+**Frontend / UI:**
+- `bristlenose/theme/js/MODULES.md`, `bristlenose/theme/CSS-REFERENCE.md` — JS + CSS component reference
+- `docs/design-sidebar-playground.md` — 6-column grid, overlay, drag-resize, minimap, dev playground
+- `docs/design-responsive-layout.md` — quote grid, density, breakpoints
+- `docs/design-react-migration.md` — active migration plan
+- `docs/design-react-component-library.md` — 16 primitives
+- `docs/design-minimap.md`, `docs/design-inspector-panel.md`, `docs/design-finding-weight.md`
+
+**Pipeline / backend:**
+- `docs/design-pipeline-resilience.md` — manifest, event sourcing, resume, provenance
+- `docs/design-platform-transcripts.md`, `docs/design-transcript-coverage.md`
+- `docs/design-speaker-splitting.md`, `docs/design-speaker-role-detection.md`
+- `docs/design-speaker-editing.md`, `docs/design-transcript-editing.md`, `docs/design-transcript-speaker-editing-roadmap.md`
+- `docs/design-multi-project.md` — scope rules (instance vs project tables)
+- `docs/design-session-management.md`, `docs/design-serve-milestone-1.md`
+- `docs/design-logging.md`
+
+**Export:**
+- `docs/design-export-html.md` (anonymisation), `docs/design-export-quotes.md` (CSV/XLS), `docs/design-export-clips.md`, `docs/design-export-slides.md`, `docs/design-miro-bridge.md`, `docs/design-footer-feedback-react.md`
+
+**Desktop:**
+- `docs/design-desktop-app.md`, `docs/design-desktop-security-audit.md`
+- `docs/design-project-sidebar.md`, `docs/design-wkwebview-messaging.md`
+- `docs/design-desktop-menu-actions.md`, `docs/design-desktop-settings.md`
+
+**Analysis / research methodology:**
+- `docs/design-research-methodology.md` — read before changing prompts or analysis logic
+- `docs/academic-sources.html` — theoretical foundations
+- `docs/design-analysis-future.md`, `docs/design-quote-sequences.md`, `docs/design-dashboard-stats.md`, `docs/design-signal-elaboration.md`
+
+**i18n:** `docs/design-i18n.md` — terminology table, implementation gotchas
+
+**Codebook:** `docs/design-codebook-island.md`, `docs/design-moderator-question-pill.md`
+
+**HTML report / dashboard / auth:**
+- `docs/design-html-report.md`, `docs/design-dashboard-navigation.md`
+- `docs/design-sentiment-charts.md`, `docs/design-badge-action-pill.md`
+- `docs/design-react-islands.md`, `docs/design-autocode.md`
+
+**Ops / release:**
+- `docs/release.md`, `docs/file-map.md`, `CONTRIBUTING.md`, `INSTALL.md`, `SECURITY.md`
+- `docs/design-ci.md`, `docs/design-test-strategy.md`, `docs/design-playwright-testing.md`
+- `docs/design-doctor-and-snap.md`, `docs/design-homebrew-packaging.md`
+- `docs/design-cli-improvements.md`, `docs/design-llm-providers.md`, `docs/design-performance.md`
+- `docs/design-decisions.md` (why), `docs/design-reactive-ui.md` (partially superseded)
+- `docs/ROADMAP.md`
 
 ## Working preferences
 

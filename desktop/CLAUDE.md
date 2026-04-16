@@ -134,63 +134,9 @@ Gap: Xcode's stop button sends SIGKILL which bypasses `willTerminate`. The start
 
 ## Settings window (Cmd+,)
 
-Apple canonical `Settings` scene with 3 icon tabs. Constant width (660pt) across all tabs, height animates to fit content.
+Apple canonical `Settings` scene with 3 icon tabs (Appearance, LLM, Transcription). Constant width 660pt, height animates to fit content. Settings sync to the serve process via env vars (`ServeManager.overlayPreferences()` reads `UserDefaults` and injects before launching). API keys bypass env vars — Python's `MacOSCredentialStore` reads Keychain directly. LLM tab uses Mail Accounts pattern (sidebar list + detail pane). One provider must always be active; activation guarded by status.
 
-### Tab 1: Appearance (paintbrush)
-
-Theme radio group (auto/light/dark) + language dropdown (6 locales). `@AppStorage("appearance")` drives `.preferredColorScheme` on both the main window and Settings window. Appearance is also synced to the web layer via `BridgeHandler.syncAppearance()` on `ready` — native wins, web Settings modal hides its appearance picker in embedded mode.
-
-### Tab 2: LLM (brain) — Mail Accounts pattern
-
-Left sidebar list of 5 pre-populated providers (Claude, ChatGPT, Gemini, Azure, Ollama) with two orthogonal indicators per row:
-- **Radio/checkmark** — which provider is active (user choice, `@AppStorage("activeProvider")`)
-- **Status dot** — whether the provider is configured (green "Online" / grey "Not set up" / red "Invalid" / orange "Unavailable")
-
-Right detail pane shows the selected provider's settings: API key (`SecureField` → Keychain via `KeychainHelper`), model picker (per-provider known models + "Custom…"), temperature slider, concurrency slider. Azure adds endpoint/deployment/version fields. Ollama shows URL instead of API key.
-
-**Activation guard**: a provider cannot be activated (radio or toggle) unless its status is `.online`. You can select a provider in the sidebar to set it up, but the radio stays greyed out until a valid key is entered. One provider must always be active.
-
-**Per-provider model storage**: `UserDefaults` key `llmModel_{provider}` stores each provider's selected model. When a provider becomes active, its model is written to the global `llmModel` key for ServeManager.
-
-### Tab 3: Transcription (waveform)
-
-Whisper backend picker (Auto/MLX/faster-whisper) + model picker (large-v3-turbo through tiny). `@AppStorage` for both.
-
-### Preferences → serve process
-
-`ServeManager.overlayPreferences()` reads `UserDefaults` and injects values as environment variables into the `Process.environment` dictionary before launching `bristlenose serve`. API keys don't need env var pass-through — Python's `MacOSCredentialStore` reads Keychain directly.
-
-`ServeManager` subscribes to `Notification.Name.bristlenosePrefsChanged`. When any settings view posts this notification and a serve process is running, `restartIfRunning()` stops and re-starts with the new environment.
-
-| Setting | UserDefaults key | Env var |
-|---------|-----------------|---------|
-| Active provider | `activeProvider` | `BRISTLENOSE_LLM_PROVIDER` |
-| Model | `llmModel` | `BRISTLENOSE_LLM_MODEL` |
-| Temperature | `llmTemperature` | `BRISTLENOSE_LLM_TEMPERATURE` |
-| Concurrency | `llmConcurrency` | `BRISTLENOSE_LLM_CONCURRENCY` |
-| Whisper backend | `whisperBackend` | `BRISTLENOSE_WHISPER_BACKEND` |
-| Whisper model | `whisperModel` | `BRISTLENOSE_WHISPER_MODEL` |
-| Language | `language` | `BRISTLENOSE_WHISPER_LANGUAGE` |
-| Azure endpoint | `azureEndpoint` | `BRISTLENOSE_AZURE_ENDPOINT` |
-| Azure deployment | `azureDeployment` | `BRISTLENOSE_AZURE_DEPLOYMENT` |
-| Azure API version | `azureAPIVersion` | `BRISTLENOSE_AZURE_API_VERSION` |
-| Ollama URL | `localURL` | `BRISTLENOSE_LOCAL_URL` |
-| Appearance | `appearance` | *(bridge, not env)* |
-| API keys | **Keychain** | *(Python reads directly)* |
-
-### Provider status model
-
-`ProviderStatus` in `LLMProvider.swift` — normalised account status:
-
-| Status | Dot | Detection |
-|--------|-----|-----------|
-| `.online` | Green | Key valid (2xx test call) or Ollama reachable |
-| `.notSetUp` | Grey | No key in Keychain |
-| `.invalid` | Red | 401/403 from test call |
-| `.unavailable` | Orange | 402/429/network error |
-| `.checking` | Grey | Validation in progress |
-
-Status is orthogonal to active selection. Providers don't expose balance, free-tier, or trial status via API — we report only what we can detect.
+See `docs/design-desktop-settings.md` for the three tab specs, the UserDefaults→env var mapping table, and the `ProviderStatus` model.
 
 ## Security rules
 
@@ -229,7 +175,7 @@ Process pool sharing is optional — separate pools do not break BroadcastChanne
 
 ## Key conventions
 
-- **Bundle ID: `research.bristlenose.app`** — product identity, not parent company. Irrevocable after first App Store submission. Changed from `CassioCassio.Bristlenose` (25 Mar 2026). v0.1-archive retains old ID (frozen snapshot). Full infrastructure plan: `docs/private/infrastructure-and-identity.md`
+- **Bundle ID: `app.bristlenose`** — reverse-DNS of `bristlenose.app`. Irrevocable after first App Store submission. Changed from `CassioCassio.Bristlenose` (25 Mar 2026), then `research.bristlenose.app` (which referenced a non-existent `.research` TLD). v0.1-archive retains original ID (frozen snapshot). Full infrastructure plan: `docs/private/infrastructure-and-identity.md`
 - **macOS 15.0** (Sequoia) deployment target
 - **Swift 6 concurrency** — `SWIFT_DEFAULT_ACTOR_ISOLATION = nonisolated` in build settings. Mark classes `@MainActor` explicitly
 - **`@StateObject`** at App level for ServeManager/BridgeHandler, `@EnvironmentObject` in views
@@ -353,144 +299,12 @@ AppLayout.tsx (or useKeyboardShortcuts) → React store call / DOM action
 
 ### Action catalogue
 
-#### Already handled — AppLayout (27 actions)
+See `docs/design-desktop-menu-actions.md` for the full catalogue (65+ actions across AppLayout, useKeyboardShortcuts, project ops, codebook stubs, edit ops), payload conventions, `getState()` stubs, and recommended implementation order.
 
-| Action | Handler |
-|--------|---------|
-| `toggleLeftPanel` | `sidebarAnimations.toggleToc()` |
-| `toggleRightPanel` | `sidebarAnimations.toggleTags()` |
-| `toggleInspectorPanel` | `toggleInspector()` |
-| `find` | Focus search input (expand + focus + select) |
-| `useSelectionForFind` | Selection → search query + find pasteboard write |
-| `findNext` | Find pasteboard text (from payload) → search query |
-| `findPrevious` | Find pasteboard text (from payload) → search query |
-| `jumpToSelection` | No-op (WKWebView native) |
-| `exportReport` | `setExportOpen(true)` |
-| `exportAnonymised` | Open ExportDialog with `initialAnonymise={true}` |
-| `exportQuotesCSV` | Build CSV from all quotes → blob download |
-| `copyAsCSV` | Copy focused/selected quotes as CSV to clipboard |
-| `allQuotes` | Reset search + tag filter + view mode to defaults |
-| `starredQuotesOnly` | `setViewMode("starred")` |
-| `filterByTag` | Click tag filter dropdown trigger button |
-| `showHelp` | Open help modal to "help" section |
-| `showKeyboardShortcuts` | Open help modal to "shortcuts" section |
-| `showReleaseNotes` | Open help modal to "about" section |
-| `sendFeedback` | `setFeedbackOpen(true)` |
-| `zoomIn` / `zoomOut` / `actualSize` | CSS `font-size` scaling (±10%, persisted to localStorage) |
-| `toggleDarkMode` | Toggle `data-theme` attribute between light/dark |
-| `browseCodebooks` | Dispatch `bn:codebook-browse` → CodebookPanel opens picker |
-| `importFramework` | Dispatch `bn:codebook-browse` with `{ templateId }` payload → CodebookPanel opens preview |
-| `removeFramework` | Dispatch `bn:codebook-remove` with `{ frameworkId }` → CodebookPanel shows confirm dialog |
-| `createCodeGroup` | Dispatch `bn:codebook-create-group` → CodebookPanel creates group |
-| `createCode` | Dispatch `bn:codebook-create-code` → CodebookPanel creates tag in first researcher group |
-
-#### Already handled — useKeyboardShortcuts (24 actions)
-
-These are in the `handleMenuAction` switch inside `useKeyboardShortcuts.ts`, sharing closures with the keyboard handlers.
-
-| Action | Handler |
-|--------|---------|
-| `star` | `handleStar()` — bulk-aware (uses focused/selected) |
-| `hide` | `handleHide()` — bulk-aware, moves focus after |
-| `addTag` | `handleTagOpen()` — opens TagInput on focused quote |
-| `applyLastTag` | `handleQuickApply()` — quick-apply last-used tag |
-| `playPause` | `sendCommand("playPause")` — toggle play/pause on open player |
-| `skipForward5` / `skipBack5` | `sendCommand("skipRelative", { seconds: ±5 })` |
-| `skipForward30` / `skipBack30` | `sendCommand("skipRelative", { seconds: ±30 })` |
-| `speedUp` / `slowDown` | `sendCommand("speedStep", { delta: ±0.25 })` |
-| `normalSpeed` | `sendCommand("setSpeed", { rate: 1 })` |
-| `volumeUp` / `volumeDown` | `sendCommand("volumeStep", { delta: ±0.1 })` |
-| `mute` | `sendCommand("toggleMute")` |
-| `pictureInPicture` | `sendCommand("togglePip")` |
-| `fullscreen` | `sendCommand("toggleFullscreen")` |
-| `nextQuote` | `moveFocus(1)` |
-| `previousQuote` | `moveFocus(-1)` |
-| `extendSelectionDown` | `handleShiftMove(1)` |
-| `extendSelectionUp` | `handleShiftMove(-1)` |
-| `toggleSelection` | `toggleSelection(focusedId)` + anchor |
-| `clearSelection` | `clearSelection()` |
-| `revealInTranscript` | `navigate(/report/sessions/:pid#anchor)` |
-
-Video player commands use `sendCommand()` from `PlayerContext` which posts `bristlenose-command` messages to the popout player window. The popout `player.html` handles all commands (skip, speed, volume, PiP, fullscreen). Bridge `getState()` reports live `hasPlayer` / `playerPlaying` from module-level getters in `PlayerContext.tsx` — Swift uses these to dim/enable the Video menu.
-
-#### Need new frontend implementation (0)
-
-All Tier 2 actions are wired — moved to "Already handled — AppLayout" above.
-
-#### Project operations — native-side or future (8)
-
-These are either native-only (Finder, print) or depend on features not yet built (project list, re-analysis).
-
-| Action | Notes |
-|--------|-------|
-| `revealInFinder` | Native: `NSWorkspace.shared.selectFile(nil, inFileViewerRootedAtPath:)`. Needs project path from ServeManager |
-| `newProject` | Future: project creation flow |
-| `openInNewWindow` | Future: multi-window |
-| `renameProject` / `archive` / `deleteProject` | Future: project management |
-| `reAnalyse` | Future: re-run pipeline |
-| `checkSystemHealth` | Navigate to `/report/` and open doctor panel (or call `/api/health`) |
-| `pageSetup` / `print` | `NSPrintOperation` on WKWebView snapshot |
-
-#### Codebook operations — need native focus context (5 stubs)
-
-These actions need to know WHICH group/code is targeted. Currently stubbed as console warnings in AppLayout.tsx. Wire when the native sidebar tracks focused codebook items.
-
-| Action | Blocked on |
-|--------|-----------|
-| `toggleCodeGroup` | No expand/collapse state in CodebookPanel — groups are always expanded |
-| `renameCodeGroup` | Native sidebar focus tracking (which group is selected) |
-| `deleteCodeGroup` | Native sidebar focus tracking |
-| `renameCode` | Native sidebar focus tracking (which code is selected) |
-| `deleteCode` | Native sidebar focus tracking |
-
-#### Edit operations — partially handled (2)
-
-| Action | Status |
-|--------|--------|
-| `undo` / `redo` | Stub (`canUndo: false` in `getState()`). Needs undo store |
-
-#### Internal (not from menu)
-
-| Action | Notes |
-|--------|-------|
-| `set-appearance` | Sent by `BridgeHandler.syncAppearance()` on `ready`. Frontend applies theme |
-
-### Payload conventions
-
-Most actions are **stateless** — the action string is sufficient because the frontend reads current state from FocusContext/QuotesContext (which quote is focused, which are selected).
-
-Actions that need **payloads** (the optional second argument to `menuAction`):
-
-| Action | Payload shape | Example |
-|--------|--------------|---------|
-| `set-appearance` | `{ value: "dark" \| "light" \| "auto" }` | Already wired |
-| `exportAnonymised` | `{ anonymise: true }` | Proposed |
-| `importFramework` | `{ templateId: string }` | Wired — pre-selects template in picker |
-| `removeFramework` | `{ frameworkId: string }` | Wired — opens confirm dialog in CodebookPanel |
-| `findNext` / `findPrevious` | `{ text: string }` | Wired — reads from `NSPasteboard.find` |
-
-**Rule:** if the frontend already knows the target (focused quote, active tab), don't pass it in the payload. Payloads are for data the native side has that the web side doesn't.
-
-### getState() stubs
-
-`bridge.ts` `getState()` has four hardcoded stubs:
-
-| Property | Stub value | Wired when |
-|----------|-----------|------------|
-| `canUndo` | `false` | Undo store ships (tracks quote edits, tag changes) |
-| `canRedo` | `false` | Same |
-| `hasPlayer` | `false` | PlayerContext reports popout window state to bridge |
-| `playerPlaying` | `false` | PlayerContext reports playback state to bridge |
-
-These control menu item dimming in Swift. Until wired, the Undo/Redo and Video menus will dim correctly (items disabled when stubs are `false`).
-
-### Recommended implementation order (remaining)
-
-1. ~~**New frontend handlers, no new infra**~~ — Done. All 14 Tier 2 actions wired in `AppLayout.tsx`
-2. ~~**Codebook**~~ — Done. 5 actions fully wired (browse, import, remove, create group, create code). 5 stubbed pending native focus context (toggle/rename/delete group, rename/delete code)
-3. **Video** — requires PlayerContext bridge (popout window ↔ native state sync)
-4. **Project operations** — requires project list feature
-5. **Undo/Redo** — requires undo store design
+**Quick pointers:**
+- AppLayout (`bn:menu-action` handler) owns panel toggles, find actions, modals, exports, zoom, dark-mode toggle, codebook dispatches
+- `useKeyboardShortcuts.ts` (`handleMenuAction` switch) owns quote/player actions that need FocusContext/QuotesContext/PlayerContext closures
+- Payloads only for data the native side has that the web side doesn't (e.g. `findNext` text from `NSPasteboard.find`)
 
 ## Testing
 

@@ -207,7 +207,11 @@ macOS ships BSD versions of `sed`, `grep`, `awk`, `find`, `xargs`, `date`, `stat
 - **Codebook island** (migration audit, API design, drag-drop decisions): `docs/design-codebook-island.md`
 - **Moderator question pill** (hover-triggered context reveal, interaction design, file map): `docs/design-moderator-question-pill.md`
 - **Signal elaboration** (interpretive names + one-sentence summaries for framework signal cards, pattern types, generation algorithm): `docs/design-signal-elaboration.md`
+- **Speaker splitting** (LLM pre-pass for single-speaker transcripts): `docs/design-speaker-splitting.md`
+- **Speaker role detection** (generalised heuristic + prompt for non-UXR formats): `docs/design-speaker-role-detection.md`
+- **Speaker editing** (name, reassign, split, merge — four transcript operations): `docs/design-speaker-editing.md` — Dovetail-style in-context editing. **Read this before working on transcript speaker UI**
 - **Transcript editing** (future — section strike, text correction, prior art, data model): `docs/design-transcript-editing.md` — two-operation approach (junk deletion + word correction), prior art from 7 tools, edit history analysis. **Read this before working on transcript text editing**
+- **Transcript & speaker editing roadmap** (11-layer work breakdown): `docs/design-transcript-speaker-editing-roadmap.md` — dependency graph, priority order, page responsibility model
 - **Security & privacy**: `SECURITY.md` — local-first design, credential storage, PII redaction, anonymisation boundary, vulnerability reporting
 - **Product roadmap**: `docs/ROADMAP.md`
 

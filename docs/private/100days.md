@@ -57,6 +57,7 @@ Items tagged `[S1]`–`[S6]` are assigned to a sprint. Untagged items are unassi
 ### Could
 - **Batch processing dashboard** — queue multiple projects (#27)
 - **Custom prompts** — user-defined tag categories / analysis instructions
+- **`.well-known/apple-app-site-association`** — Universal Links so `bristlenose.app/...` URLs open in the desktop app. Needs bundle ID + team ID from Apple Developer account
 
 ### Won't (100 days)
 - **Windows app** — winget installer (#44), Windows credential store
@@ -249,7 +250,7 @@ Items tagged `[S1]`–`[S6]` are assigned to a sprint. Untagged items are unassi
 - **Living logo** — animated bristlenose pleco (living-fish branch). Memorable, delightful
 - **Dark mode** — already implemented, polish the rough edges
 - **Speed demo** — "folder in, report out in 5 minutes" video/GIF for landing page
-- **Keyboard-first UX** — shortcuts already deep (`[`, `]`, `\`, `r`, `s`, `?`). Showcase in marketing
+- **~~Keyboard-first UX~~** — shortcuts already deep (`[`, `]`, `\`, `r`, `s`, `?`). Showcase in marketing
 - **Open source (AGPL)** — trust signal for researchers. Emphasise in positioning
 - **Microinteractions** — bounces/slides for opens/closes, flashes of acceptance, staggered fly-up for bulk hide (150ms per card like vanilla JS version)
 
@@ -339,6 +340,7 @@ Items tagged `[S1]`–`[S6]` are assigned to a sprint. Untagged items are unassi
 - **`isEditing()` guard dedup** — shared `EditGuard` class
 - **Inline edit commit pattern** — shared `inlineEdit()` helper
 - **Shared user-tags data layer** — vanilla JS dedup (frozen path, low priority)
+- **Configurable codebook URL** — `BRISTLENOSE_CODEBOOK_URL` as injected global instead of hardcoded (trivial, from old ROADMAP)
 - **Dev HUD: end-to-end traceability panel** — debug overlay showing provenance at every layer (git branch/SHA/dirty, Python version/source, render timestamp, theme CSS path/mtime/hash, serve mode/port, frontend Vite hash/router mode, bridge state, API health). Toggle with keyboard shortcut. Data from git CLI at startup, `/api/health`, `/api/dev/info`, CSS inspection
 
 ### Won't (100 days)
@@ -353,7 +355,7 @@ Items tagged `[S1]`–`[S6]` are assigned to a sprint. Untagged items are unassi
 ### Must
 - [S6] **App Store description** — short + long description, keywords, screenshots
 - [S6] **Video walkthrough** — 2-minute "here's what Bristlenose does" screencast
-- [S4] **~~In-app onboarding~~** — merged into first-run experience (§5). Trial IS the onboarding — no separate wizard. Post-trial, contextual tooltips only for features the trial didn't cover
+- [S4] **In-app onboarding** — merged into first-run experience (§5). Trial IS the onboarding — no separate wizard. Post-trial, contextual tooltips only for features the trial didn't cover
 - [S4] **Provider setup guide** — which LLM provider, how to get API key, cost expectations
 - [S6] **README polish** — landing page README for GitHub (currently dev-focused)
 - [S6] **Hero image of report on GitHub README** — screenshot showing a real report, above the fold
@@ -413,13 +415,14 @@ Items tagged `[S1]`–`[S6]` are assigned to a sprint. Untagged items are unassi
 ### Could
 - **Analytics** — privacy-respecting usage analytics (opt-in only)
 - **Weekly install smoke tests** — automated pip/pipx/brew verification
+- **Perf history charts** — render `e2e/.perf-history.jsonl` as a chart over time (DOM counts, API latency, export size). Currently view-only via `scripts/perf-history.sh` (tabular). Options: Observable notebook, tiny matplotlib script, or a React page in the dev-only About panel. Source data: one JSON line per perf-gate run, gitignored (local-only). When we want cross-machine history, upload `.perf-history.jsonl` as a CI artifact and stitch runs together
 
 ---
 
 ## 12. Legal/Compliance — gates to App Store
 
 ### Must
-- [S1] **Apple Developer Program** — $99/year, individual enrollment initially. Bundle ID: `research.bristlenose.app`. Transition to Ltd organisation enrollment if/when revenue justifies it (team transfer preserves app listing, reviews, URL). Full plan: `docs/private/infrastructure-and-identity.md`
+- [S1] **Apple Developer Program** — $99/year, individual enrollment initially. Bundle ID: `app.bristlenose`. Transition to Ltd organisation enrollment if/when revenue justifies it (team transfer preserves app listing, reviews, URL). Full plan: `docs/private/infrastructure-and-identity.md`
 - [S2] **Privacy policy URL** — required for App Store submission. Host at `bristlenose.research/privacy`. Draft complete, needs solicitor review then hosting
 - [S2] **Terms of service** — subscription terms. v0.9.1 drafted, needs solicitor review
 - [S2] **App sandbox compliance** — entitlements for file access, network (LLM API calls)
@@ -518,7 +521,7 @@ Safari's performance team made WebKit fast by never allowing it to become slower
 - ~~[S1] **`content-visibility: auto` on quote card containers** — CSS only, works everywhere including file://. Browser skips layout/paint for off-screen cards. Supported since Safari 17.4. Essential for static export path where JS virtualisation isn't possible~~
 - [S2] **`@tanstack/virtual` in serve mode** — required, not optional. A 15h study produces ~1,500 quotes (~100/hour from real usage). That's ~30,000 DOM nodes without virtualisation. Virtualisation drops visible DOM to ~1,000 regardless of total. This is the single most important performance feature
 - ~~[S1] **Move `<script>` to end of `<body>`** — script block is already at end of `<body>` (after all `<article>` content, before `</body>`). No `<head>` scripts exist. Done~~
-- [S2] **Performance regression gate in CI** — Playwright test on FOSSDA dataset measuring DOM node count (fail > 10,000) and static export size (fail > 2 MB). The ratchet: once you have a number, no PR makes it worse
+- [S2] **Performance regression gate in CI** — Playwright spec in existing E2E suite measuring DOM node count, API latency, export file size against smoke-test fixture. Doubling rule (fail at 2x baseline). Measured baselines: quotes page 549 nodes, export 1.6 MB. Design doc reviewed, ready to implement. See `docs/design-perf-regression-gate.md`
 - ~~[S1] **`perf-review` agent** — Claude Code agent (`.claude/agents/perf-review.md`) that reviews PRs for performance regressions: new deps without size justification, unvirtualised large lists, missing `passive: true`, blocking resource additions. Catches the obvious stuff before CI catches the rest~~
 
 ### Should

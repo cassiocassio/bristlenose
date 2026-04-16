@@ -2,6 +2,8 @@
 
 Audited Feb 2026. Stage concurrency shipped. Remaining items ranked by impact.
 
+**Measurement procedure:** `docs/design-perf-fossda-baseline.md` — manual pipeline-throughput baseline against FOSSDA. Run before/after any optimisation below.
+
 ---
 
 ## Done

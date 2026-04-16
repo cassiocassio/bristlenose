@@ -97,34 +97,34 @@ The perf-gate runs inside the existing E2E suite — no separate job, no orchest
 
 ### CI integration
 
-Add a `perf-gate` job to `.github/workflows/ci.yml`:
+The perf-gate spec runs inside the existing `e2e` job — no separate job needed. The existing workflow already starts the server, builds the frontend, and installs Playwright. To run locally:
 
-```yaml
-perf-gate:
-  runs-on: ubuntu-latest
-  needs: [test, frontend-lint-type-test]  # needs passing tests + built assets
-  steps:
-    - uses: actions/checkout@v4
-    - uses: actions/setup-node@v4
-      with:
-        node-version: "20"
-    - uses: actions/setup-python@v5
-      with:
-        python-version: "3.12"
-    - name: Install Python dependencies (including serve extras)
-      run: |
-        python -m pip install --upgrade pip
-        pip install -e ".[dev,serve]"
-    - name: Build frontend
-      working-directory: frontend
-      run: |
-        npm ci
-        npm run build
-    - name: Install E2E dependencies
-      run: cd e2e && npm ci && npx playwright install chromium
-    - name: Perf gate
-      run: ./scripts/perf-gate.sh
+```bash
+cd e2e && _BRISTLENOSE_AUTH_TOKEN=test-token npx playwright test tests/perf-gate.spec.ts --project=chromium
 ```
+
+The full E2E suite (including perf-gate) runs as part of the `e2e` job on every push. Perf-gate tests skip on WebKit via a top-level `test.skip` — they run only on Chromium for deterministic measurements.
+
+### Results schema
+
+Each run appends a JSON line to `e2e/.perf-history.jsonl`:
+
+```json
+{
+  "timestamp": "2026-04-16T15:58:02.996Z",
+  "git_sha": "7e56768...",
+  "runner": "local:darwin-arm64",
+  "dom_quotes": 549,
+  "dom_transcript_s1": 374,
+  "dom_dashboard": 334,
+  "dom_sessions": 304,
+  "api_latency_quotes_ms": 11.6,
+  "api_latency_dashboard_ms": 5.3,
+  "export_html_bytes": 1638619
+}
+```
+
+`git_sha` and `runner` are included now so that if CI ever uploads `.perf-history.jsonl` as an artifact for cross-machine trend analysis, the schema is already forward-compatible. `runner` is `local:<platform>-<arch>` on dev machines and `ci:<os>:<run_id>` in GitHub Actions. The JSONL is currently gitignored and local-only.
 
 ### Server identity guard
 

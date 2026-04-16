@@ -38,10 +38,11 @@ interviews/bristlenose-output/          # default output location
 
 ## Stage 5b: Speaker identification
 
-`identify_speakers.py` runs a two-pass speaker role assignment: heuristic first, then LLM refinement.
+`identify_speakers.py` runs a three-pass speaker assignment: splitting, heuristic, then LLM refinement.
 
-- **Heuristic pass** (`identify_speaker_roles_heuristic`): scores speakers by question ratio and researcher-phrase hits. Assigns `RESEARCHER`, `PARTICIPANT`, or `OBSERVER`. Fast, no LLM needed
-- **LLM pass** (`identify_speaker_roles_llm`): sends first ~5 minutes to the LLM for refined role assignment. Also extracts `person_name` and `job_title` for each speaker when mentioned in the transcript
+- **Splitting pre-pass** (`split_single_speaker_llm`): when a session has 0-1 unique speaker labels (raw audio, no platform transcript), sends first ~10 minutes to the LLM to detect speaker boundaries from conversational cues (names, turn-taking, topic shifts). Mutates `speaker_label` on segments. Skipped when 2+ speakers already exist. Design doc: `docs/design-speaker-splitting.md`
+- **Heuristic pass** (`identify_speaker_roles_heuristic`): scores speakers by question ratio, researcher-phrase hits, and word count asymmetry (speakers who talk less score higher). Assigns `RESEARCHER`, `PARTICIPANT`, or `OBSERVER`. Phrase list covers task-oriented prompts, conversation management, and open-ended prompting. Fast, no LLM needed
+- **LLM pass** (`identify_speaker_roles_llm`): sends first ~5 minutes to the LLM for refined role assignment. Prompt is format-agnostic (covers UXR, oral history, journalism, market research). Also extracts `person_name` and `job_title` for each speaker when mentioned in the transcript. Design doc: `docs/design-speaker-role-detection.md`
 - **Return type**: `identify_speaker_roles_llm()` returns `list[SpeakerInfo]` — a dataclass with `speaker_label`, `role`, `person_name`, `job_title`. Still mutates segments in place for role assignment (existing behaviour). Returns empty list on exception
 - **`SpeakerInfo` import**: defined in `identify_speakers.py`. Other modules import it under `TYPE_CHECKING` to avoid circular imports (e.g. `people.py` uses `if TYPE_CHECKING: from bristlenose.stages.s05b_identify_speakers import SpeakerInfo`)
 - **Structured output**: `SpeakerRoleItem` in `llm/structured.py` has `person_name` and `job_title` fields (both default `""` for backward compatibility with existing LLM responses)

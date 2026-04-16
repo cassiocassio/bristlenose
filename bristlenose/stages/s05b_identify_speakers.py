@@ -41,6 +41,7 @@ def speaker_info_from_dict(d: dict) -> SpeakerInfo:
 
 # Keywords suggesting a researcher/interviewer role
 _RESEARCHER_PHRASES = [
+    # Task-oriented prompts
     "can you tell me",
     "could you tell me",
     "what do you think",
@@ -49,23 +50,35 @@ _RESEARCHER_PHRASES = [
     "describe for me",
     "let me show you",
     "i'm going to show",
-    "let's move on to",
-    "next i'd like",
-    "next we're going to",
-    "thank you for",
-    "thanks for joining",
-    "thanks for coming",
     "we're going to look at",
     "i'd like you to",
     "can you try",
     "could you try",
     "what would you do",
     "what would you expect",
+    "how would you rate",
+    "on a scale of",
+    # Conversation management
+    "let's move on to",
+    "next i'd like",
+    "next we're going to",
+    "thank you for",
+    "thanks for joining",
+    "thanks for coming",
     "is there anything else",
     "any other thoughts",
     "any questions",
-    "how would you rate",
-    "on a scale of",
+    # Open-ended prompting
+    "tell me about",
+    "can you describe",
+    "what was it like",
+    "how did you get involved",
+    "what happened next",
+    "can you say more",
+    "i'd like to ask about",
+    "let's talk about",
+    "what was your reaction",
+    "how did that come about",
 ]
 
 
@@ -116,12 +129,26 @@ def identify_speaker_roles_heuristic(
         return segments
 
     # Score each speaker: higher = more likely researcher
+    total_words_all = sum(s.total_words for s in speakers.values())
     for stats in speakers.values():
         if stats.segment_count > 0:
             stats.question_ratio = stats.question_count / stats.segment_count
+        # Word count asymmetry: in a 1:1 interview the researcher typically
+        # speaks less than the participant.  0 = most words, 1 = fewest.
+        # Only applied for 2-speaker sessions — with 3+ speakers, low word
+        # count could be a secondary interviewer or observer, and asymmetry
+        # would inflate both equally.  Phrase hits and question ratio are
+        # better discriminators for multi-speaker sessions.
+        if total_words_all > 0 and len(speakers) == 2:
+            word_share = stats.total_words / total_words_all
+            # Invert: lower share → higher score.  Clamp to [0, 1].
+            stats.word_asymmetry = max(0.0, min(1.0, 1.0 - word_share))
+        else:
+            stats.word_asymmetry = 0.0
         stats.researcher_score = (
             stats.question_ratio * 3.0
             + stats.researcher_phrase_hits * 2.0
+            + stats.word_asymmetry * 2.0
         )
 
     # The speaker with highest researcher score is the researcher
@@ -161,6 +188,127 @@ def identify_speaker_roles_heuristic(
             seg.speaker_role = SpeakerRole.PARTICIPANT
 
     return segments
+
+
+async def split_single_speaker_llm(
+    segments: list[TranscriptSegment],
+    llm_client: object,
+    errors: list[str] | None = None,
+) -> list[TranscriptSegment]:
+    """Split a single-speaker transcript into multiple speakers using an LLM.
+
+    When a transcript has 0 or 1 unique speaker labels (e.g. raw audio
+    transcribed by Whisper with no diarization), this function asks the LLM
+    to detect speaker changes from conversational context (names, turn-taking,
+    topic shifts) and updates ``speaker_label`` on each segment.
+
+    If the transcript already has 2+ distinct speaker labels, returns
+    segments unchanged.
+
+    Mutates *segments* in place (sets ``speaker_label``).
+
+    Args:
+        segments: Transcript segments (may all have the same or no speaker label).
+        llm_client: The LLM client for analysis.
+        errors: Optional list to append error messages to.
+
+    Returns:
+        The same segment list with ``speaker_label`` updated.
+    """
+    if not segments:
+        return segments
+
+    # Guard: only split when there's a single speaker (or none)
+    unique_labels = set(seg.speaker_label or "Unknown" for seg in segments)
+    if len(unique_labels) >= 2:
+        return segments
+
+    from bristlenose.llm.client import LLMClient
+    from bristlenose.llm.prompts import get_prompt
+
+    client: LLMClient = llm_client  # type: ignore[assignment]
+
+    # Build sample: at least 5 min, up to 18% of total duration, capped at 8 min.
+    # Intros and speaker establishment rarely last longer than 8 minutes.
+    total_duration = segments[-1].end_time if segments else 0.0
+    sample_ceiling = min(max(300.0, total_duration * 0.18), 480.0)
+    sample_lines: list[str] = []
+    for i, seg in enumerate(segments):
+        if seg.start_time > sample_ceiling:
+            break
+        sample_lines.append(f"[{i}] {seg.text}")
+
+    if not sample_lines:
+        return segments
+
+    sample_text = "\n".join(sample_lines)
+    _prompt = get_prompt("speaker-splitting")
+
+    try:
+        from bristlenose.llm.structured import SpeakerSplitAssignment
+
+        result = await client.analyze(
+            system_prompt=_prompt.system,
+            user_prompt=_prompt.user.format(
+                transcript_sample=sample_text,
+                segment_count=len(sample_lines),
+            ),
+            response_model=SpeakerSplitAssignment,
+        )
+
+        if result.speaker_count <= 1:  # type: ignore[attr-defined]
+            logger.info("LLM speaker splitting: single speaker confirmed")
+            return segments
+
+        # Sort boundaries by segment index, filter out-of-range
+        boundaries = sorted(
+            (b for b in result.boundaries if b.segment_index < len(segments)),  # type: ignore[attr-defined]
+            key=lambda b: b.segment_index,
+        )
+
+        if not boundaries:
+            return segments
+
+        # Ensure first boundary starts at segment 0
+        if boundaries[0].segment_index != 0:
+            boundaries.insert(0, type(boundaries[0])(
+                segment_index=0,
+                speaker_id=boundaries[0].speaker_id,
+            ))
+
+        # Apply boundaries to all segments (including those beyond sample window)
+        current_label = boundaries[0].speaker_id
+        boundary_idx = 1
+        for i, seg in enumerate(segments):
+            # Advance to next boundary if we've reached it
+            while (
+                boundary_idx < len(boundaries)
+                and i >= boundaries[boundary_idx].segment_index
+            ):
+                current_label = boundaries[boundary_idx].speaker_id
+                boundary_idx += 1
+            seg.speaker_label = current_label
+
+        # Log the speaker names extracted
+        names = {
+            b.speaker_id: b.person_name
+            for b in boundaries
+            if b.person_name
+        }
+        logger.debug(
+            "LLM speaker splitting: %d speakers detected, %d boundaries, names=%s",
+            result.speaker_count,  # type: ignore[attr-defined]
+            len(boundaries),
+            names or "(none extracted)",
+        )
+
+        return segments
+
+    except Exception as exc:
+        logger.debug("LLM speaker splitting failed, keeping single speaker: %s", exc)
+        if errors is not None:
+            errors.append(f"speaker splitting: {exc}")
+        return segments
 
 
 async def identify_speaker_roles_llm(
@@ -316,4 +464,5 @@ class _SpeakerStats:
         self.question_count = 0
         self.researcher_phrase_hits = 0
         self.question_ratio = 0.0
+        self.word_asymmetry = 0.0
         self.researcher_score = 0.0

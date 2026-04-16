@@ -31,20 +31,42 @@ Before starting: machine should be idle for 10+ minutes (thermal stabilisation).
 rm -rf trial-runs/fossda-opensource/bristlenose-output
 mkdir -p trial-runs/fossda-opensource/perf-baselines
 
-# 2. Run pipeline with timing
+# 2. Record the hardware key (for comparing across runs)
+.venv/bin/python -c "
+from bristlenose.config import load_settings
+from bristlenose.timing import build_hardware_key
+print(build_hardware_key(load_settings()))
+" > trial-runs/fossda-opensource/perf-baselines/hardware-key.txt
+
+# 3. Run pipeline with timing
 /usr/bin/time -l .venv/bin/bristlenose run trial-runs/fossda-opensource \
   --provider anthropic --model claude-sonnet-4-20250514 \
   2>&1 | tee trial-runs/fossda-opensource/perf-baselines/pipeline-run.log
 
-# 3. Record output sizes
+# 3b. While the pipeline runs (after transcription starts), in a second
+#     terminal, capture peak temp WAV size. Temp WAVs are written during
+#     transcription and currently never cleaned up — but after the cleanup
+#     optimisation ships, measuring at end-of-run gives zero. Run this
+#     snapshot loop in a second terminal until the pipeline exits:
+#
+#        while pgrep -f 'bristlenose run' >/dev/null; do
+#          du -sh trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/ \
+#            2>/dev/null
+#          sleep 30
+#        done | tee trial-runs/fossda-opensource/perf-baselines/temp-wav-timeline.txt
+#
+#     Record the peak observed size in the results template.
+
+# 4. Record output sizes
 du -sh trial-runs/fossda-opensource/bristlenose-output/*/ \
   > trial-runs/fossda-opensource/perf-baselines/output-sizes.txt
 
-# 4. Copy the timing summary from the log
+# 5. Copy the timing summary from the log (strip ANSI colour codes)
 grep '✓' trial-runs/fossda-opensource/perf-baselines/pipeline-run.log \
+  | sed $'s/\033\\[[0-9;]*m//g' \
   > trial-runs/fossda-opensource/perf-baselines/stage-times.txt
 
-# 5. Extract LLM request latencies from the log (one line per LLM call)
+# 6. Extract LLM request latencies from the log (one line per LLM call)
 grep 'llm_request' \
   trial-runs/fossda-opensource/bristlenose-output/.bristlenose/bristlenose.log \
   > trial-runs/fossda-opensource/perf-baselines/llm-latencies.txt
@@ -58,9 +80,13 @@ awk -F'elapsed_ms=' '{print $2}' \
     }' \
   >> trial-runs/fossda-opensource/perf-baselines/llm-latencies.txt
 
-# 6. Record temp WAV disk usage (baseline for cleanup optimisation)
-du -sh trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/ \
-  >> trial-runs/fossda-opensource/perf-baselines/output-sizes.txt
+# 7. Record end-of-run temp WAV disk usage (separate file; may be zero after
+#    the cleanup optimisation ships — see step 3b for peak mid-run size)
+{
+  echo "temp WAVs at end of run:"
+  du -sh trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/ \
+    2>/dev/null || echo "(not present)"
+} > trial-runs/fossda-opensource/perf-baselines/temp-wav-size.txt
 ```
 
 ## Results format
@@ -77,7 +103,7 @@ Write to `trial-runs/fossda-opensource/perf-baselines/pipeline-baseline.md`:
 - Whisper backend: mlx / faster-whisper / openai-api (resolved value, not "auto")
 - Provider: Claude (claude-sonnet-4-20250514)
 - LLM concurrency: 3 (default — record actual `llm_concurrency` value)
-- Hardware key: `chip | backend | whisper_model | provider | model` (from `build_hardware_key()` in `timing.py`)
+- Hardware key: _paste contents of `hardware-key.txt` from step 2_
 - Dataset: 10 FOSSDA interviews
 
 ## Stage Timing
@@ -110,12 +136,20 @@ Write to `trial-runs/fossda-opensource/perf-baselines/pipeline-baseline.md`:
 |------|---------|
 | `trial-runs/fossda-opensource/perf-baselines/pipeline-baseline.md` | Results (gitignored) |
 | `trial-runs/fossda-opensource/perf-baselines/pipeline-run.log` | Raw log (gitignored) |
+| `trial-runs/fossda-opensource/perf-baselines/hardware-key.txt` | Composite chip/backend/model key (step 2) |
+| `trial-runs/fossda-opensource/perf-baselines/stage-times.txt` | Per-stage elapsed (step 5, ANSI stripped) |
+| `trial-runs/fossda-opensource/perf-baselines/llm-latencies.txt` | LLM requests + median/p95 summary (step 6) |
+| `trial-runs/fossda-opensource/perf-baselines/temp-wav-timeline.txt` | Mid-run temp WAV snapshots (step 3b, optional) |
+| `trial-runs/fossda-opensource/perf-baselines/temp-wav-size.txt` | End-of-run temp WAV size (step 7) |
+| `trial-runs/fossda-opensource/perf-baselines/output-sizes.txt` | Output directory sizes (step 4) |
 
 No scripts to create — this is a manual procedure. The pipeline already prints everything we need.
 
 ## Comparing before/after
 
 When per-participant chaining ships, stages 8 (topic segmentation) and 9 (quote extraction) will overlap via chained coroutines. The individual stage `✓` lines will mean something different — compare **combined topics + quotes wall-clock time**, not individual stage lines.
+
+`stage-times.txt` captures **actual elapsed wall-clock** per stage, not the Welford-based ETA estimates that `timing.py` displays during a run. The ETA history in `~/.config/bristlenose/` is independent of this procedure and can be ignored for baselining.
 
 ## When to re-run
 

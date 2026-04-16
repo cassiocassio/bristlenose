@@ -107,30 +107,7 @@ When navigating to a transcript page via anchor link (e.g., from coverage sectio
 
 ## Sentiment bar charts
 
-Two side-by-side horizontal bar charts in the Sentiment section: AI sentiment (server-rendered) and User tags (JS-rendered by `histogram.js`). The dual-chart design lets researchers compare what the AI detected with what they've tagged themselves.
-
-### Layout (CSS grid)
-
-`.sentiment-chart` uses `display: grid; grid-template-columns: max-content 1fr max-content` with `row-gap: var(--bn-space-md)`. Each `.sentiment-bar-group` uses `display: contents` so its three children (label, bar, count) participate directly in the parent grid. This is what aligns all bar left edges — the `max-content` first column sizes to the widest label in that chart.
-
-- **Labels** (`atoms/bar.css`): `width: fit-content` + `justify-self: start` — background hugs the text, variable gap falls between label right edge and bar left edge. `max-width: 12rem` with `text-overflow: ellipsis` for long tags
-- **Bars**: inline `style="width:Xpx"` set by Python (`_build_sentiment_html()`) and JS (`renderUserTagsChart()`). `max_bar_px = 180`
-- **Side-by-side**: `.sentiment-row` is `display: flex; align-items: flex-start` — charts top-align, wrap on narrow viewports
-- **Title + divider**: `grid-column: 1 / -1` to span all three columns
-
-### AI sentiment order
-
-Positive (descending by count) → surprise (neutral) → divider → negative (ascending, worst near divider). See `_build_sentiment_html()` in `render/sentiment.py`.
-
-### Histogram delete button
-
-Each user tag label has a hover `×` button (`.histogram-bar-delete` in `atoms/bar.css`, same visual as `.badge-delete`). Click shows a confirmation modal via `createModal()`, then `_deleteTagFromAllQuotes()` removes the tag from all quotes and calls `persistUserTags()`.
-
-### CSS files
-
-- `atoms/bar.css` — `.sentiment-bar`, `.sentiment-bar-label`, `.sentiment-bar-count`, `.histogram-bar-delete`, `.sentiment-divider`
-- `molecules/bar-group.css` — `.sentiment-bar-group` (`display: contents`)
-- `organisms/sentiment-chart.css` — `.sentiment-row`, `.sentiment-chart`, `.sentiment-chart-title`
+Two side-by-side horizontal bar charts: AI sentiment (Python-rendered) and User tags (JS-rendered by `histogram.js`). CSS grid layout with `display: contents` on bar groups to align bar edges. See `docs/design-sentiment-charts.md` for layout details, AI sentiment ordering, histogram delete button, and CSS file list.
 
 ## PersonBadge molecule
 
@@ -193,64 +170,11 @@ All custom content tooltips use a consistent pattern: **soft surface, 300ms hove
 
 ## Badge action pill (proposed badges)
 
-Floating `[✗ | ✓]` pill bar on autocode-proposed badges. Replaces the old inline `✓/✗` approach that caused layout shift (badge width grew on hover, pushing the `+` button).
+Floating `[✗ | ✓]` pill bar on autocode-proposed badges, appearing on hover. Replaces old inline `✓/✗` (caused layout shift). `.badge-action-pill` container + `.badge-action-deny`/`.badge-action-accept` compartments. All delete/deny actions use `var(--bn-colour-danger)` for colour unification. See `docs/design-badge-action-pill.md` for spec, CSS classes, and rationale.
 
-### Design decision
+## Span bar atom & transcript annotations molecule
 
-7 variations explored in `docs/mockups/mockup-proposed-badge-actions.html` (A–G). **Var G chosen** — combines E's pill concept, D's 16px hit targets, and A's positioning at the existing delete-circle location.
-
-### Spec
-
-| Property | Value | Notes |
-|---|---|---|
-| position (vertical) | `top: calc(-0.3rem - 1px)` | Same as delete `×` circles |
-| position (horizontal) | `right: calc(-0.3rem - 1px - 1rem)` | `✗` aligns with delete `×`, `✓` hangs right |
-| compartment size | `1rem × 1rem` (16px) | Larger than delete circles (14.5px) for better Fitts' law |
-| border-radius | `8px` | Pill shape |
-| shadow | `0 1px 4px rgba(0,0,0,0.16), 0 0 1px rgba(0,0,0,0.06)` | Matches delete circles |
-| `✗` colour | `var(--bn-colour-danger)` / `#fef2f2` bg on hover | Same red as all delete/deny actions |
-| `✓` colour | `var(--bn-colour-success)` / `#dcfce7` bg on hover | Green accept |
-| divider | `1px solid var(--bn-colour-border)` | Between compartments |
-
-### CSS classes
-
-- **`.badge-action-pill`** — absolute-positioned pill container, `opacity: 0` → `1` on `.badge-proposed:hover`
-- **`.badge-action-deny`** — left compartment (`✗`), red
-- **`.badge-action-accept`** — right compartment (`✓`), green, `border-left` divider
-
-### React
-
-`Badge.tsx` proposed variant: DOM order is deny-then-accept (left-to-right in pill). Click handlers via `onAccept` / `onDeny` props.
-
-### Colour unification
-
-All delete/deny actions across badge types use `var(--bn-colour-danger)` (red):
-- Sentiment badge `::after` delete circle
-- User tag `.badge-delete` circle
-- Proposed badge pill `.badge-action-deny` compartment
-
-This replaced the previous grey `var(--bn-colour-muted)` on delete circles. Rationale: delete IS deny ("I don't want this tag"), so the colour should be consistent.
-
-## Span bar atom
-
-Reusable vertical extent indicator for showing how far a range (e.g. a quote) extends across a list of items. Positioned absolutely by JS; visual properties come from `--bn-span-bar-*` tokens.
-
-- **CSS**: `atoms/span-bar.css` — `.span-bar` uses `background`, `border-radius`, `opacity`, `width` from tokens, `pointer-events: none`
-- **Tokens** (in `tokens.css`): `--bn-span-bar-width` (2px), `--bn-span-bar-gap` (6px), `--bn-span-bar-offset` (8px), `--bn-span-bar-colour` (border colour), `--bn-span-bar-opacity` (0.5), `--bn-span-bar-radius` (1px)
-- **Usage**: JS creates `<div class="span-bar">`, sets `position: absolute`, `top`, `height`, `right` via inline styles, and appends to a `position: relative` container. Currently used by `transcript-annotations.js` for quote extent bars
-- **Responsive**: hidden on narrow viewports via `molecules/transcript-annotations.css` (`@media (max-width: 1099px) { .span-bar { display: none } }`)
-
-## Transcript annotations molecule
-
-Right-margin annotation layout for transcript pages. Shows section/theme labels, tag badges, and span bars alongside quoted segments. This helps researchers see at a glance which parts of a transcript contributed to which report sections.
-
-- **CSS**: `molecules/transcript-annotations.css`
-- **`.segment-margin`** — annotation container. Wide viewports: absolute-positioned in right margin (`right: -13.5rem`, `width: 12.5rem`). Narrow viewports: inline below the segment text (`margin-left: 3.5rem` to align past timecode column)
-- **`.transcript-body`** — gets `padding-right: 14rem` on wide viewports to make room for the margin column
-- **`.margin-annotation`** — one per quote in a segment, flex column with 2px gap
-- **`.margin-label`** — section/theme label, accent colour, truncated with ellipsis, links to report quote
-- **`.margin-tags`** — flex row of badge elements, `overflow: visible` to allow delete × circles to protrude
-- **Breakpoint**: 1100px — below this, annotations are inline and span bars are hidden
+Vertical extent indicators (quote span bars) and right-margin annotation layout for transcript pages. Breakpoint 1100px — below that, annotations go inline and span bars are hidden. See `CSS-REFERENCE.md` for class inventory, tokens, and usage.
 
 ## JS modules
 
@@ -262,68 +186,17 @@ Per-component CSS docs in `CSS-REFERENCE.md`. Key patterns: toolbar dual-class (
 
 ## Jinja2 templates
 
-14 HTML templates in `templates/` (alongside CSS template files). All use `autoescape=False` — escape in Python with `_esc()` before passing to template. Jinja2 environment: `_jinja_env` at module level in `render/theme_assets.py`.
-
-| Template | Parameters | Used by |
-|----------|------------|---------|
-| `document_shell_open.html` | `color_scheme`, `title`, `css_href` | Report, transcript, codebook |
-| `report_header.html` | `assets_prefix`, `has_logo`, `has_dark_logo`, `project_name`, `doc_title`, `meta_right` | Report, transcript, codebook |
-| `footer.html` | `version`, `assets_prefix` | Report, transcript, codebook |
-| `quote_card.html` | `q` (quote context dict) | Report |
-| `toolbar.html` | (none — static) | Report |
-| `session_table.html` | `rows` (list of dicts), `moderator_header` (str) | Report |
-| `toc.html` | `section_toc`, `theme_toc`, `chart_toc` | Report |
-| `content_section.html` | `heading`, `item_type`, `groups` | Report (sections + themes). `h2` has `id="{{ heading | lower }}"` for anchor navigation from dashboard |
-| `sentiment_chart.html` | `max_count`, `pos_bars`, `surprise_bar`, `neg_bars` | Report |
-| `friction_points.html` | `groups` (list of dicts with `pid`, `entries`) | Report |
-| `user_journeys.html` | `rows` (list of dicts) | Report |
-| `coverage.html` | `summary`, `pct_omitted`, `sessions` | Report |
-| `player.html` | (none — static) | Separate player file |
-| `analysis.html` | (none — structural only, JS populates) | Analysis page. `h2` has `id="section-x-sentiment"` for anchor navigation from dashboard |
+14 HTML templates in `templates/`. All use `autoescape=False` — escape in Python with `_esc()` before passing to template. Jinja2 environment: `_jinja_env` at module level in `render/theme_assets.py`. See `CSS-REFERENCE.md` for the full template table (parameters + usage).
 
 ## Dashboard cross-tab navigation
 
 The Project tab dashboard is fully interactive — stat cards, featured quotes, session table rows, and section/theme lists all navigate to other tabs.
 
-> **Serve mode (React Router):** Navigation is handled by React Router. The `data-stat-link` convention, `switchToTab()`, `scrollToAnchor()`, and `navigateToSession()` still work via backward-compat shims installed by `frontend/src/shims/navigation.ts`. The shims delegate to React Router's `navigate()`. The conventions below apply to both paths — shims bridge the gap in serve mode.
+- **Convention:** stat cards use `data-stat-link="tab"` or `data-stat-link="tab:anchorId"` attributes
+- **Shims:** `switchToTab()`, `scrollToAnchor()`, `navigateToSession()` work in both static render (vanilla JS in `global-nav.js`) and serve mode (React Router shims in `frontend/src/shims/navigation.ts`)
+- **Sticky toolbar gotcha:** two `scroll-margin-top` CSS selectors required — `.bn-tab-panel:has(.toolbar)` for static path, `.center:has(.toolbar)` for React SPA. Missing either breaks anchor navigation for one of the paths
 
-### `data-stat-link` convention
-
-Stat cards use `data-stat-link="tab"` or `data-stat-link="tab:anchorId"` attributes. JS in `global-nav.js` handles the click: calls `switchToTab(tab)` then `scrollToAnchor(anchorId)` if present. In serve mode, the Dashboard React island calls the same `window.switchToTab` / `window.scrollToAnchor` globals (shimmed to React Router). Current mappings:
-
-| Stat | Target |
-|------|--------|
-| Audio/video duration | `sessions` |
-| Word count | `sessions` |
-| Quote count | `quotes` |
-| Section count | `quotes:sections` |
-| Theme count | `quotes:themes` |
-| AI tag count | `analysis:section-x-sentiment` |
-| User tag count | `codebook` |
-
-The anchor IDs `sections` and `themes` come from `content_section.html` (`id="{{ heading | lower }}"`). The `section-x-sentiment` anchor is on the h2 in `analysis.html`.
-
-### `--bn-colour-hover` token
-
-Interactive hover background for clickable rows and cards: `light-dark(#e8f0fe, #1e293b)`. Used by stat cards, featured quotes, and session table rows. Dark mode value is a dark blue-grey so white text stays readable (not a light blue which would require black text).
-
-### Featured quote attribution
-
-Featured quote footer shows a speaker code lozenge (`<a class="badge speaker-link">`) instead of the display name. The lozenge links to the session transcript via `data-nav-session` / `data-nav-anchor`. Clicking the card body tries the video player first (`seekTo`), falls back to transcript navigation.
-
-### Python render helpers
-
-Two helpers in `render/html_helpers.py` reduce duplication across quote rendering:
-
-- **`_timecode_html(quote, video_map)`** — returns `<a class="timecode" ...>` if video exists for the participant, otherwise `<span class="timecode">`. Used by `_format_quote_html()` and `_render_featured_quote()`
-- **`_session_anchor(quote)`** — returns `(pid_esc, sid_esc, anchor)` tuple for session navigation attributes. The anchor format is `t-{sid}-{start_seconds}`
-
-### JS navigation helpers (global-nav.js / React shims)
-
-- **`scrollToAnchor(anchorId, opts)`** — rAF + `getElementById` + `scrollIntoView`. Options: `block` (`'start'`/`'center'`), `highlight` (adds `anchor-highlight` class for yellow flash). Retry-aware: 50 × 100ms (5s) for async-rendered targets. In serve mode, this is the `useScrollToAnchor` React hook (`frontend/src/hooks/useScrollToAnchor.ts`) installed as a shim on `window.scrollToAnchor`
-- **`navigateToSession(sid, anchorId)`** — static render: `switchToTab('sessions')` + `_showSession(sid)` + optional `scrollToAnchor` with highlight. Serve mode shim: `navigate("/report/sessions/${sid}")` + optional scroll. Used by speaker links, featured quotes, and dashboard table rows
-- **`switchToTab(tab)`** — static render: toggles `.active` class on tabs/panels, pushes URL hash. Serve mode shim: `navigate("/report/{tab}/")`. All callers work unchanged via `window.switchToTab`
-- **Sticky toolbar scroll offset** — `--bn-toolbar-height` CSS variable (default `3rem` in `tokens.css`, measured at runtime on first tab switch in `global-nav.js`). `toolbar.css` applies `scroll-margin-top` to `h2[id]`/`h3[id]` inside containers with a toolbar. **Two selectors required**: `.bn-tab-panel:has(.toolbar)` for the static render path, `.center:has(.toolbar)` for the React SPA (where `SidebarLayout` wraps content in `div.center`, not `.bn-tab-panel`). This prevents anchor links from scrolling headings behind the sticky toolbar. If the toolbar height changes (new buttons, typography), the JS measurement auto-adapts. **When adding new sticky elements that occlude content, always add a matching `scroll-margin-top` rule for both render paths** — check that the CSS selector matches the actual DOM wrapper in each path
+See `docs/design-dashboard-navigation.md` for the full stat-to-target mapping, Python render helpers (`_timecode_html`, `_session_anchor`), JS navigation helper APIs, and session table render helpers.
 
 ## Off-screen rendering skip (`content-visibility`)
 

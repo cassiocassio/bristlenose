@@ -213,3 +213,45 @@ Analysis page signal cards and heatmap table. The analysis page presents statist
 - **`.heatmap-cell`** — data cell with OKLCH background set inline by JS. Clickable cells (`.has-card`) scroll to matching signal card. `.heat-strong` class inverts text colour for readability on dark backgrounds using `light-dark(#fff, #111)`
 - **`.heatmap-cell[data-count="0"]`** — zero cells: muted colour, no cursor, no hover outline
 - **`.heatmap-total`** — row/column total cells: transparent background, no interaction
+
+## Span Bar Atom
+
+Reusable vertical extent indicator for showing how far a range (e.g. a quote) extends across a list of items. Positioned absolutely by JS; visual properties come from `--bn-span-bar-*` tokens.
+
+- **CSS**: `atoms/span-bar.css` — `.span-bar` uses `background`, `border-radius`, `opacity`, `width` from tokens, `pointer-events: none`
+- **Tokens** (in `tokens.css`): `--bn-span-bar-width` (2px), `--bn-span-bar-gap` (6px), `--bn-span-bar-offset` (8px), `--bn-span-bar-colour` (border colour), `--bn-span-bar-opacity` (0.5), `--bn-span-bar-radius` (1px)
+- **Usage**: JS creates `<div class="span-bar">`, sets `position: absolute`, `top`, `height`, `right` via inline styles, and appends to a `position: relative` container. Currently used by `transcript-annotations.js` for quote extent bars
+- **Responsive**: hidden on narrow viewports via `molecules/transcript-annotations.css` (`@media (max-width: 1099px) { .span-bar { display: none } }`)
+
+## Transcript Annotations Molecule
+
+Right-margin annotation layout for transcript pages. Shows section/theme labels, tag badges, and span bars alongside quoted segments. This helps researchers see at a glance which parts of a transcript contributed to which report sections.
+
+- **CSS**: `molecules/transcript-annotations.css`
+- **`.segment-margin`** — annotation container. Wide viewports: absolute-positioned in right margin (`right: -13.5rem`, `width: 12.5rem`). Narrow viewports: inline below the segment text (`margin-left: 3.5rem` to align past timecode column)
+- **`.transcript-body`** — gets `padding-right: 14rem` on wide viewports to make room for the margin column
+- **`.margin-annotation`** — one per quote in a segment, flex column with 2px gap
+- **`.margin-label`** — section/theme label, accent colour, truncated with ellipsis, links to report quote
+- **`.margin-tags`** — flex row of badge elements, `overflow: visible` to allow delete × circles to protrude
+- **Breakpoint**: 1100px — below this, annotations are inline and span bars are hidden
+
+## Jinja2 Templates
+
+14 HTML templates in `templates/` (alongside CSS template files). All use `autoescape=False` — escape in Python with `_esc()` before passing to template. Jinja2 environment: `_jinja_env` at module level in `render/theme_assets.py`.
+
+| Template | Parameters | Used by |
+|----------|------------|---------|
+| `document_shell_open.html` | `color_scheme`, `title`, `css_href` | Report, transcript, codebook |
+| `report_header.html` | `assets_prefix`, `has_logo`, `has_dark_logo`, `project_name`, `doc_title`, `meta_right` | Report, transcript, codebook |
+| `footer.html` | `version`, `assets_prefix` | Report, transcript, codebook |
+| `quote_card.html` | `q` (quote context dict) | Report |
+| `toolbar.html` | (none — static) | Report |
+| `session_table.html` | `rows` (list of dicts), `moderator_header` (str) | Report |
+| `toc.html` | `section_toc`, `theme_toc`, `chart_toc` | Report |
+| `content_section.html` | `heading`, `item_type`, `groups` | Report (sections + themes). `h2` has `id="{{ heading \| lower }}"` for anchor navigation from dashboard |
+| `sentiment_chart.html` | `max_count`, `pos_bars`, `surprise_bar`, `neg_bars` | Report |
+| `friction_points.html` | `groups` (list of dicts with `pid`, `entries`) | Report |
+| `user_journeys.html` | `rows` (list of dicts) | Report |
+| `coverage.html` | `summary`, `pct_omitted`, `sessions` | Report |
+| `player.html` | (none — static) | Separate player file |
+| `analysis.html` | (none — structural only, JS populates) | Analysis page. `h2` has `id="section-x-sentiment"` for anchor navigation from dashboard |

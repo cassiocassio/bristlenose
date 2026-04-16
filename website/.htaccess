@@ -1,0 +1,2 @@
+RewriteEngine On
+RewriteRule ^security\.txt$ /.well-known/security.txt [R=301,L]

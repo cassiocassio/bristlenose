@@ -1,3 +1,5 @@
 node_modules/
 test-results/
 playwright-report/
+perf-results.json
+.perf-history.jsonl

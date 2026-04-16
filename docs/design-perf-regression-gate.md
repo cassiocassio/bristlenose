@@ -84,12 +84,16 @@ Re-measure and update thresholds when:
 
 ## Architecture
 
-### New files
+### New files (shipped Apr 2026)
 
 | File | Purpose |
 |------|---------|
-| `e2e/tests/perf-gate.spec.ts` | Playwright test: DOM counts, API latency, export size, thresholds |
-| `scripts/perf-gate.sh` | Orchestrator: start server, run Playwright, measure export, report |
+| `e2e/tests/perf-gate.spec.ts` | Playwright test: server identity guard, DOM counts, API latency, export size. Chromium-only via `test.skip`. Writes results in `test.afterAll` |
+| `scripts/perf-history.sh` | Tabular view of `e2e/.perf-history.jsonl` — one row per perf-gate run |
+| `e2e/perf-results.json` | Latest run snapshot (gitignored, overwritten each run) |
+| `e2e/.perf-history.jsonl` | Append-only run history (gitignored, local-only) |
+
+The perf-gate runs inside the existing E2E suite — no separate job, no orchestrator script, no separate port. Server identity guard (first test, serial mode) catches stale servers on 8150 before wrong metrics are recorded.
 
 ### CI integration
 
@@ -187,6 +191,7 @@ Those are covered by the stress test and FOSSDA plans.
 2. **DOM count and export size are blocking.** API latency is warn-only (too noisy across CI runners)
 3. **Doubling rule for thresholds.** Fail at 2x baseline, warn at 1.5x. Simple, auditable, catches real regressions without false positives from normal feature work
 
-## Open questions
+## Resolved
 
-1. Should the perf-gate be a separate CI job or fold into the existing `e2e` job? Separate job = independent, Chromium-only. Folding in = reuses server lifecycle + browser install, avoids 40s duplicated setup. **Recommendation: fold in** — add `perf-gate.spec.ts` to the existing `e2e/tests/` directory. The server identity guard (above) prevents stale-server contamination. The separate shell script and CI job become unnecessary
+1. **Folded into the existing `e2e` job** (Apr 2026). Added `perf-gate.spec.ts` to `e2e/tests/`. The server identity guard prevents stale-server contamination; separate shell script and CI job were unnecessary.
+2. **Results archive** — each run writes `e2e/perf-results.json` (latest snapshot) and appends one JSON line to `e2e/.perf-history.jsonl`. View with `./scripts/perf-history.sh`. Fancy charts (Observable/matplotlib/React page) tracked in `100days.md` §11 Operations → Could.

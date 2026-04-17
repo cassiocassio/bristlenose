@@ -15,20 +15,26 @@ Items tagged `[S1]`–`[S6]` are assigned to a sprint. Untagged items are unassi
 | Tag | Dates | Theme |
 |-----|-------|-------|
 | [S1] | 14–25 Apr | Start the clocks |
-| [S2] | 28 Apr–9 May | Mac app MVP flow + CI cleanup (signing homework in parallel) |
+| [S2] | 28 Apr–9 May | Road to alpha — A/B interleave sandbox + MVP flow, CI cleanup first |
 | [S3] | 12–23 May | Multi-project |
 | [S4] | 26 May–6 Jun | First-run + export |
 | [S5] | 8–19 Jun | Visual design + a11y |
 | [S6] | 22–30 Jun | Launch prep + public legal |
 
-**Sprint 2 re-scope v2 (17 Apr 2026).** The Mac app compiles but the end-to-end human workflow doesn't work yet. That's the real blocker — there is no point inviting friends to an embarrassing build, and TestFlight upload is expensive infra work that locks in a broken experience. So S2 pivots to:
+**Sprint 2 re-scope v3 (17 Apr 2026).** Alpha path decided: **internal TestFlight, not `.dmg`.** Sandbox work is unavoidable (StoreKit needs it), and a `.dmg` path would be throwaway code. Doing it now gets us a modern sandbox-aware codebase from the start. Rejected items: Developer ID cert, `.dmg` build pipeline, Gatekeeper README (all struck in §11 Operations). See `docs/private/road-to-alpha.md` for the full 14-checkpoint path.
 
-1. **Fix the MVP 1-hour human session** in the Mac app, covering every beat of the canonical flow (see §1a below). This is the gate.
-2. **Clean up CI** — re-enable the E2E gate (3 parked P3 regressions), land the perf regression gate.
-3. **Start the signing/sandbox homework in the background** — Apple Distribution cert, sandbox entitlements audit, Privacy Manifest reason-code audit, PyInstaller sidecar signing script. Big and fiddly, worth doing in parallel while MVP work runs. The actual TestFlight upload moves to S6 (or whenever MVP flow is green).
-4. **Real QA = IKEA study + CLI handholding on video calls with UXR friends.** Not TestFlight. That's what gets us to a share-ready product.
+**Sprint 2 cadence — A/B interleave.** Alternate sandbox/signing steps with MVP flow / UI quality steps. Each step unblocks the other: sandbox work surfaces UI regressions (folder bookmarks, temp paths); UI work exercises the sandboxed paths. Order:
 
-Performance: stress sweep shows clean linear scaling to 3000 quotes — virtualisation deferred to Icebox. AI disclosure dialog: already shipped (`AIConsentView.swift`). Solicitor contact: still May.
+1. **Clean up CI** — re-enable the E2E gate (3 parked P3 regressions), land the perf regression gate. Unblocks everything else.
+2. **A/B/A/B through S2:**
+   - A: sandbox step (one entitlement + related code migration at a time)
+   - B: MVP flow step (one beat of §1a below at a time)
+   - Repeat. Ship nothing to friends until MVP 1-hour flow is green AND sandboxed build runs end-to-end.
+3. **First TestFlight upload** lands when both tracks are green. May slip into S3 — that's fine, deadline is MVP quality, not calendar.
+
+**Real QA = IKEA study + CLI handholding on video calls with UXR friends.** TestFlight is the delivery mechanism; video-call UXR sessions are the feedback loop.
+
+Performance: stress sweep shows clean linear scaling to 3000 quotes — virtualisation deferred to Icebox. AI disclosure dialog: already shipped (`AIConsentView.swift`). Solicitor contact: still May (external TestFlight and public legal paperwork are S6+, not alpha-blocking).
 
 ---
 
@@ -238,7 +244,7 @@ The canonical end-to-end beats a first-time user must complete successfully in t
 - **~~Rotate API key~~** — was visible in terminal (TODO.md immediate)
 - [S6] **Privacy policy** — required for external TestFlight + App Store submission. Not needed for internal-only alpha. Local-first model simplifies this but document must exist. Draft v1 complete (`launch-docs/privacy-policy.md` in delivery repo), needs solicitor review (May)
 - [S6] **Terms of service** — subscription terms, refund policy, data handling. Draft v0.9.1 complete (`launch-docs/terms-of-service.md` in delivery repo), needs solicitor review (May)
-- [S6] **App Store review compliance (TestFlight subset)** — sandbox, entitlements, code signing, notarisation. Moved out of S2 with TestFlight upload; individual items (Apple Distribution cert, sandbox, Privacy Manifest, sidecar signing) stay in S2 as background homework
+- [S2] **App Store review compliance (TestFlight subset)** — umbrella for: Apple Distribution cert, sandbox + entitlements, PyInstaller sidecar signing, Privacy Manifest reason-code audit, Hardened Runtime. All tracked as individual items. Full review hardening for external testers / submission lives in S6
 - [S5] **PII redaction audit** — verify Presidio catches names/emails in transcripts before shipping to paying users
 - ~~**Security scanning** — npm audit, pip-audit, CodeQL before public release (design-test-strategy.md)~~
 - ~~[S1] **Alembic/migration strategy** — DB schema changes without data loss. Currently no migration framework~~
@@ -420,13 +426,13 @@ The canonical end-to-end beats a first-time user must complete successfully in t
 
 ### Must
 - [S2] **CI: desktop-build job** — `xcodebuild build` + `xcodebuild test` on macOS runner, `CODE_SIGNING_ALLOWED=NO`, informational initially. Catches Swift compilation errors and Swift Testing regressions on every push. Prerequisite for the full build pipeline below. Plan: `docs/design-ci.md` §Coverage gaps
-- [S6] **TestFlight upload pipeline** — Xcode archive → App Store Connect upload (altool/notarytool). Moved out of S2: no point uploading until MVP flow works
-- [S6] **Desktop app build pipeline (.dmg path)** — Xcode archive → .dmg → notarisation → upload for direct download distribution. Separate from TestFlight. CI: automate .dmg build on push
-- [S6] **App Store Connect setup** — app record, TestFlight internal beta group (≤100 testers, no Beta App Review), Privacy Nutrition Labels. Moved out of S2 with TestFlight upload
+- [S2] **TestFlight upload pipeline** — Xcode archive → App Store Connect upload (notarytool). Manual first (local `xcodebuild -exportArchive` + `xcrun notarytool submit`). Automate in S6. Only runs when MVP flow is green + sandbox is clean
+- ~~**Desktop app build pipeline (.dmg path)** — won't do (17 Apr 2026). App Store is the sole distribution channel. See `docs/private/road-to-alpha.md` Decision section~~
+- [S2] **App Store Connect setup** — app record, TestFlight internal beta group (≤100 testers, no Beta App Review), Privacy Nutrition Labels. Pricing + external tester config deferred to S6
 - [S2] **Apple Distribution certificate + provisioning profile** — required for App Store Connect uploads (TestFlight + App Store). Different cert from Developer ID (.dmg path). Generate via Xcode or manually in Apple Developer portal
-- [S6] **Developer ID certificate** — for `.dmg` outside-the-store distribution. Not needed for TestFlight path
+- ~~**Developer ID certificate** — won't do (17 Apr 2026). App Store path only, uses Apple Distribution cert~~
 - ~~[S1] **CI: add macOS runner** — currently Linux-only (informational, 15 Apr 2026)~~
-- [S6] **.dmg README** — include "Open Anyway" Gatekeeper instructions. Only relevant to `.dmg` path
+- ~~**.dmg README** — won't do (17 Apr 2026). App Store path only~~
 - [S2] **PyInstaller sidecar signing** — every `.dylib`, `.so`, and framework inside the bundle must be individually codesigned before notarization. (design-desktop-security-audit.md)
 - ~~[S1] **Build number auto-increment** — `CFBundleVersion = 1` blocks Sparkle and App Store update logic. Set up CI auto-increment. Done: `bump-version.py` unifies desktop+CLI, auto-increments build number~~
 - ~~[S1] **Domain & email infrastructure** — register `bristlenose.app`, configure SPF/DKIM/DMARC, Substack custom domain (`blog.bristlenose.app`), deploy site, set up email on DreamHost (`hello@`, `support@`, `security@`). Full plan: `docs/private/infrastructure-and-identity.md`~~
@@ -642,4 +648,4 @@ These are speculative ideas worth thinking about but without a delivery commitme
 
 ---
 
-*Updated 17 Apr 2026 (three passes). Third pass: Mac app MVP 1-hour flow is the real S2 gate — TestFlight upload deferred (no point sharing an embarrassing build). Added §1a MVP flow checklist. Virtualisation → Icebox (stress sweep shows clean scaling to n=3000). AI disclosure dialog marked shipped (AIConsentView.swift). Real QA path = IKEA study + CLI handholding on video calls with UXR friends, not TestFlight. Signing/sandbox homework runs in parallel as background work. Second pass: Sprint 2 re-scoped to "Perf + TestFlight alpha pipeline": perf items first (virtualisation, regression gate), then internal TestFlight path (App Store Connect record, Apple Distribution cert, sandbox, Privacy Manifest, Export compliance, sidecar signing, AI disclosure lightweight). Second pass deduplicated Privacy Manifest + AI disclosure (kept §6 Risk as canonical, §12 Legal points there); split signing into Apple Distribution (S2, TestFlight path) vs Developer ID (S6, .dmg path); moved .dmg build pipeline, .dmg README, DPAs, and trial-key rate-limit to S6 (v1.0-blocking, not alpha-blocking). Solicitor contact: May. Previous: 15 Apr 2026. Reconciled with delivery repo copy: added §15 Performance (WebKit philosophy, profiling-first roadmap, perf-review agent, CI gates), sprint legend, iPad session outputs (privacy policy draft, ToS v0.9.1, privacy manifest, first-run experience design, new items L5/L6/I6/I7/R6), bundle size → §15 promotion. Previous: 25 Mar 2026 — domain architecture, security audit additions, shipped-item strikethrough. Original: 16 Mar 2026.*
+*Updated 17 Apr 2026 (four passes). Fourth pass: alpha path decided — internal TestFlight, not `.dmg`. Reasoning: StoreKit needs sandbox anyway, doing it now means a modern codebase from the start. Rejected `.dmg` path items (Developer ID cert, .dmg build pipeline, Gatekeeper README) struck in §11. TestFlight upload pipeline + App Store Connect setup + App Store review compliance umbrella moved back to S2. S2 cadence: CI cleanup first, then A/B interleave sandbox/signing ↔ MVP flow steps. First upload when both tracks green (may slip to S3 — MVP quality is the deadline, not calendar). Full path in `docs/private/road-to-alpha.md`. Third pass: Mac app MVP 1-hour flow is the real gate. Added §1a MVP flow checklist. Virtualisation → Icebox (stress sweep shows clean scaling to n=3000). AI disclosure dialog marked shipped (AIConsentView.swift). Real QA path = IKEA study + CLI handholding on video calls with UXR friends. Second pass: Sprint 2 re-scoped to "Perf + TestFlight alpha pipeline": perf items first (virtualisation, regression gate), then internal TestFlight path (App Store Connect record, Apple Distribution cert, sandbox, Privacy Manifest, Export compliance, sidecar signing, AI disclosure lightweight). Second pass deduplicated Privacy Manifest + AI disclosure (kept §6 Risk as canonical, §12 Legal points there); split signing into Apple Distribution (S2, TestFlight path) vs Developer ID (S6, .dmg path); moved .dmg build pipeline, .dmg README, DPAs, and trial-key rate-limit to S6 (v1.0-blocking, not alpha-blocking). Solicitor contact: May. Previous: 15 Apr 2026. Reconciled with delivery repo copy: added §15 Performance (WebKit philosophy, profiling-first roadmap, perf-review agent, CI gates), sprint legend, iPad session outputs (privacy policy draft, ToS v0.9.1, privacy manifest, first-run experience design, new items L5/L6/I6/I7/R6), bundle size → §15 promotion. Previous: 25 Mar 2026 — domain architecture, security audit additions, shipped-item strikethrough. Original: 16 Mar 2026.*

@@ -284,7 +284,13 @@ class TestLocalTruncation:
 
 
 class TestDefaultMaxTokens:
-    def test_default_is_32768(self) -> None:
-        """Default llm_max_tokens should be 32768 — enough for 1-hour transcripts."""
+    def test_default_is_64000(self) -> None:
+        """Default llm_max_tokens should be 64000 — headroom for dense 1-hour transcripts.
+
+        Raised from 32768 on 17 Apr 2026 after FOSSDA baseline hit truncation on s5
+        (quote extraction). Anthropic's claude-sonnet-4-20250514 hard-caps output at
+        64000 tokens (decimal, not 65536). GPT-5 allows 128K and Gemini 2.5 Pro allows
+        65K, so 64000 is the portable ceiling across all three providers.
+        """
         settings = BristlenoseSettings()
-        assert settings.llm_max_tokens == 32768
+        assert settings.llm_max_tokens == 64000

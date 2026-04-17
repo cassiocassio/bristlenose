@@ -13,9 +13,18 @@ const BRISTLENOSE = process.env.CI
   ? 'bristlenose'
   : resolve(REPO_ROOT, '.venv/bin/bristlenose');
 
+// perf-stress is always excluded here — it needs its own fixture + orchestrator
+// (scripts/perf-stress.sh + playwright.stress.config.ts).
+// perf-gate is excluded from the default e2e run and runs in a dedicated CI job;
+// set BN_RUN_PERF_GATE=1 to include it explicitly (e.g. for local diagnostics).
+const testIgnore = ['**/perf-stress.spec.ts'];
+if (process.env.BN_RUN_PERF_GATE !== '1') {
+  testIgnore.push('**/perf-gate.spec.ts');
+}
+
 export default defineConfig({
   testDir: './tests',
-  testIgnore: '**/perf-stress.spec.ts', // run via playwright.stress.config.ts
+  testIgnore,
   timeout: 30_000,
   retries: 0,
   workers: 1, // Serial — all tests share one server

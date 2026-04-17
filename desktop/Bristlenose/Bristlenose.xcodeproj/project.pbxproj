@@ -279,7 +279,7 @@
 					"@executable_path/../Frameworks",
 				);
 				MARKETING_VERSION = 0.14.4;
-				PRODUCT_BUNDLE_IDENTIFIER = research.bristlenose.app;
+				PRODUCT_BUNDLE_IDENTIFIER = app.bristlenose;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_APPROACHABLE_CONCURRENCY = NO;
 				SWIFT_DEFAULT_ACTOR_ISOLATION = nonisolated;
@@ -306,7 +306,7 @@
 					"@executable_path/../Frameworks",
 				);
 				MARKETING_VERSION = 0.14.4;
-				PRODUCT_BUNDLE_IDENTIFIER = research.bristlenose.app;
+				PRODUCT_BUNDLE_IDENTIFIER = app.bristlenose;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_APPROACHABLE_CONCURRENCY = NO;
 				SWIFT_DEFAULT_ACTOR_ISOLATION = nonisolated;

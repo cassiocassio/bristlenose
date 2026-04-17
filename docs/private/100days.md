@@ -15,11 +15,13 @@ Items tagged `[S1]`–`[S6]` are assigned to a sprint. Untagged items are unassi
 | Tag | Dates | Theme |
 |-----|-------|-------|
 | [S1] | 14–25 Apr | Start the clocks |
-| [S2] | 28 Apr–9 May | Build pipeline + legal |
+| [S2] | 28 Apr–9 May | Perf + TestFlight alpha pipeline |
 | [S3] | 12–23 May | Multi-project |
 | [S4] | 26 May–6 Jun | First-run + export |
 | [S5] | 8–19 Jun | Visual design + a11y |
-| [S6] | 22–30 Jun | Launch prep |
+| [S6] | 22–30 Jun | Launch prep + public legal |
+
+**Sprint 2 re-scope (17 Apr 2026).** Finish performance work first (virtualisation, regression gate), then open the TestFlight alpha pipeline for a handful of friends as **internal testers** (up to 100 people added to App Store Connect users — no Beta App Review). Internal TestFlight needs: App Store Connect record, Apple Distribution cert, sandbox + entitlements, Privacy Manifest, Export compliance self-cert, Privacy Nutrition Labels. It does **not** need a hosted privacy policy URL, ToS, EULA, age rating, solicitor review, or DPAs — those slip to S6 when we open up to external testers / App Store submission. Solicitor contact: May.
 
 ---
 
@@ -200,13 +202,13 @@ Items tagged `[S1]`–`[S6]` are assigned to a sprint. Untagged items are unassi
 - ~~**Desktop security: minimal child process environment**~~ — stripped to PATH, HOME, TMPDIR, locale, VIRTUAL_ENV + BRISTLENOSE_* overlay
 - ~~**Desktop security: port-restrict navigation policy**~~ — shipped in `WebView.swift` (`decidePolicyFor` restricts to `127.0.0.1` + `about:`)
 - **~~Rotate API key~~** — was visible in terminal (TODO.md immediate)
-- [S2] **Privacy policy** — required for App Store submission. Local-first model simplifies this but document must exist. Draft v1 complete (`launch-docs/privacy-policy.md` in delivery repo), needs solicitor review
-- [S2] **Terms of service** — subscription terms, refund policy, data handling. Draft v0.9.1 complete (`launch-docs/terms-of-service.md` in delivery repo), needs solicitor review
-- [S2] **App Store review compliance** — sandbox, entitlements, code signing, notarisation pipeline
+- [S6] **Privacy policy** — required for external TestFlight + App Store submission. Not needed for internal-only alpha. Local-first model simplifies this but document must exist. Draft v1 complete (`launch-docs/privacy-policy.md` in delivery repo), needs solicitor review (May)
+- [S6] **Terms of service** — subscription terms, refund policy, data handling. Draft v0.9.1 complete (`launch-docs/terms-of-service.md` in delivery repo), needs solicitor review (May)
+- [S2] **App Store review compliance (TestFlight subset)** — sandbox, entitlements, code signing, notarisation. Enough for internal TestFlight upload. Full review hardening (external testers / submission) in S6
 - [S5] **PII redaction audit** — verify Presidio catches names/emails in transcripts before shipping to paying users
 - ~~**Security scanning** — npm audit, pip-audit, CodeQL before public release (design-test-strategy.md)~~
 - ~~[S1] **Alembic/migration strategy** — DB schema changes without data loss. Currently no migration framework~~
-- [S2] **AI data disclosure dialog** — Apple Guideline 5.1.2(i) (Nov 2025) requires explicit consent before sending transcript data to third-party AI. Non-negotiable for App Store. (design-desktop-security-audit.md)
+- [S2] **AI data disclosure dialog** — Apple Guideline 5.1.2(i) (Nov 2025) requires explicit consent before sending transcript data to third-party AI. Non-negotiable for App Store. Lightweight version acceptable for internal alpha; polish for S6 submission. (design-desktop-security-audit.md)
 - [S2] **Privacy Manifest (`PrivacyInfo.xcprivacy`)** — required for App Store since mid-2024. Declare data types and API usage reasons. (design-desktop-security-audit.md). Draft complete (`launch-docs/PrivacyInfo.xcprivacy` + `privacy-manifest-rationale.md` in delivery repo), needs codebase audit to validate reason codes
 
 ### Should
@@ -385,7 +387,7 @@ Items tagged `[S1]`–`[S6]` are assigned to a sprint. Untagged items are unassi
 ### Must
 - [S2] **CI: desktop-build job** — `xcodebuild build` + `xcodebuild test` on macOS runner, `CODE_SIGNING_ALLOWED=NO`, informational initially. Catches Swift compilation errors and Swift Testing regressions on every push. Prerequisite for the full build pipeline below. Plan: `docs/design-ci.md` §Coverage gaps
 - [S2] **Desktop app build pipeline** — Xcode archive → .dmg → notarisation → upload. CI: automate .dmg build on push
-- [S4] **App Store Connect setup** — app record, pricing, TestFlight beta group
+- [S2] **App Store Connect setup** — app record, TestFlight internal beta group (≤100 testers, no Beta App Review), Privacy Nutrition Labels. Pricing/external tester review deferred to S6
 - [S2] **Code signing** — Apple Developer Program membership, Developer ID certificate
 - ~~[S1] **CI: add macOS runner** — currently Linux-only (informational, 15 Apr 2026)~~
 - [S2] **.dmg README** — include "Open Anyway" Gatekeeper instructions
@@ -393,7 +395,7 @@ Items tagged `[S1]`–`[S6]` are assigned to a sprint. Untagged items are unassi
 - ~~[S1] **Build number auto-increment** — `CFBundleVersion = 1` blocks Sparkle and App Store update logic. Set up CI auto-increment. Done: `bump-version.py` unifies desktop+CLI, auto-increments build number~~
 - ~~[S1] **Domain & email infrastructure** — register `bristlenose.app`, configure SPF/DKIM/DMARC, Substack custom domain (`blog.bristlenose.app`), deploy site, set up email on DreamHost (`hello@`, `support@`, `security@`). Full plan: `docs/private/infrastructure-and-identity.md`~~
 - [S6] **Supply chain hardening** — GitHub 2FA with hardware key, branch protection on main, PyPI hardware key + project-scoped token, register PyPI typosquats. Full checklist: `docs/private/infrastructure-and-identity.md`. Deferred from S1: low threat until commercial launch (see `docs/private/supply-chain-deferral.md`)
-- [S1] **Succession plan** — bus-factor doc (every account/credential/recovery path), password manager emergency access for one trusted person. (infrastructure-and-identity.md) — draft complete (`docs/private/succession-plan.md`), needs: Apple Developer renewal date, password manager emergency access config, successor briefing — draft committed 15 Apr 2026
+- [S1] **Succession plan** — bus-factor doc (every account/credential/recovery path), password manager emergency access for one trusted person. (infrastructure-and-identity.md) — draft complete (`docs/private/succession-plan.md`), Apple Developer renewal date filled in (2027-04-16, Team ID `Z56GZVA2QB`); still needs: password manager emergency access config, successor briefing
 
 ### Should
 - [S2] **Rate-limit trial-key endpoint** — add rate limiting (1 req/min/IP) + server-side receipt validation to the trial-key endpoint, even for the 20-user beta. See `trial-and-pricing-architecture.md` Part 2
@@ -422,13 +424,13 @@ Items tagged `[S1]`–`[S6]` are assigned to a sprint. Untagged items are unassi
 ## 12. Legal/Compliance — gates to App Store
 
 ### Must
-- [S1] **Apple Developer Program** — $99/year, individual enrollment initially. Bundle ID: `app.bristlenose`. Transition to Ltd organisation enrollment if/when revenue justifies it (team transfer preserves app listing, reviews, URL). Full plan: `docs/private/infrastructure-and-identity.md`
-- [S2] **Privacy policy URL** — required for App Store submission. Host at `bristlenose.research/privacy`. Draft complete, needs solicitor review then hosting
-- [S2] **Terms of service** — subscription terms. v0.9.1 drafted, needs solicitor review
-- [S2] **App sandbox compliance** — entitlements for file access, network (LLM API calls)
+- ~~[S1] **Apple Developer Program** — $99/year, individual enrollment (Martin Storey, Team ID `Z56GZVA2QB`). Bundle ID: `app.bristlenose`. Activated 16 Apr 2026, expires 16 Apr 2027. Transition to Ltd organisation enrollment if/when revenue justifies it (team transfer preserves app listing, reviews, URL). Full plan: `docs/private/infrastructure-and-identity.md`~~
+- [S6] **Privacy policy URL** — required for external TestFlight + App Store submission. Not needed for internal alpha. Host at `bristlenose.research/privacy`. Draft complete, needs solicitor review (May) then hosting
+- [S6] **Terms of service** — subscription terms. v0.9.1 drafted, needs solicitor review (May)
+- [S2] **App sandbox compliance** — entitlements for file access, network (LLM API calls). Required for App Store Connect upload (including TestFlight)
 - [S2] **Export compliance** — HTTPS only, no custom encryption = simplified declaration
-- [S2] **Age rating** — likely 4+ (no objectionable content)
-- [S2] **EULA** — standard Apple EULA or custom
+- [S6] **Age rating** — likely 4+ (no objectionable content). App Store Connect only, not needed for internal TestFlight
+- [S6] **EULA** — standard Apple EULA or custom
 - [S2] **Privacy Manifest (`PrivacyInfo.xcprivacy`)** — declare required reason APIs and data types. Cross-ref §6 Risk. (design-desktop-security-audit.md)
 - [S2] **AI data transparency per Apple 5.1.2(i)** — first-run consent dialog naming each LLM provider, linking privacy policies, Ollama offline option. Cross-ref §6 Risk. (design-desktop-security-audit.md)
 
@@ -537,6 +539,7 @@ Safari's performance team made WebKit fast by never allowing it to become slower
 - **WKWebView: inject critical CSS via `WKUserScript` at `.atDocumentStart`** — eliminates flash-of-unstyled-content on cold loads
 - **Replace `setInterval` player polling** with `BroadcastChannel` or `beforeunload` — timer runs even when player is closed
 - **Profile in WKWebView specifically** — Xcode Instruments before each desktop release. JavaScriptCore has different optimisation behaviour to V8
+- **WKWebView stress-test confirmation pass (post-launch-fast)** — the synthetic stress harness (`scripts/perf-stress.sh`) is Chromium-only today; fine for proving virtualisation works, but desktop ships primarily via WKWebView (JavaScriptCore). Add a WebKit project to `e2e/playwright.stress.config.ts` or a separate `run-in-wkwebview.swift` that loads the served report in a real WKWebView, runs the same DOM/paint assertions, and writes to `stress-results-wkwebview.json`. Compare deltas vs Chromium. Blocks signing off any virtualisation-adjacent perf claim for the desktop build
 
 ### Could
 - **`@tanstack/virtual`** for quote lists > 100 items — only if `content-visibility` is insufficient (measure first)
@@ -603,4 +606,4 @@ These are speculative ideas worth thinking about but without a delivery commitme
 
 ---
 
-*Updated 15 Apr 2026. Reconciled with delivery repo copy: added §15 Performance (WebKit philosophy, profiling-first roadmap, perf-review agent, CI gates), sprint legend, iPad session outputs (privacy policy draft, ToS v0.9.1, privacy manifest, first-run experience design, new items L5/L6/I6/I7/R6), bundle size → §15 promotion. Previous: 25 Mar 2026 — domain architecture, security audit additions, shipped-item strikethrough. Original: 16 Mar 2026.*
+*Updated 17 Apr 2026. Sprint 2 re-scoped to "Perf + TestFlight alpha pipeline": perf items first (virtualisation, regression gate), then internal TestFlight path (App Store Connect record, signing, sandbox, Privacy Manifest, Export compliance). Solicitor-dependent legal (privacy policy, ToS, EULA, age rating, external-tester policy URL) moved from S2 → S6; solicitor contact moved to May. Previous: 15 Apr 2026. Reconciled with delivery repo copy: added §15 Performance (WebKit philosophy, profiling-first roadmap, perf-review agent, CI gates), sprint legend, iPad session outputs (privacy policy draft, ToS v0.9.1, privacy manifest, first-run experience design, new items L5/L6/I6/I7/R6), bundle size → §15 promotion. Previous: 25 Mar 2026 — domain architecture, security audit additions, shipped-item strikethrough. Original: 16 Mar 2026.*

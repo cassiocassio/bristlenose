@@ -32,6 +32,7 @@ interface Results {
   fetch_roundtrip_ms: Record<string, number>;
   paint_ms: Record<string, number>;
   interaction_deltas: Record<string, number>;
+  heap_mb: Record<string, number>;
 }
 
 const results: Results = {
@@ -39,7 +40,25 @@ const results: Results = {
   fetch_roundtrip_ms: {},
   paint_ms: {},
   interaction_deltas: {},
+  heap_mb: {},
 };
+
+/**
+ * Sample Chromium's JS heap via `performance.memory.usedJSHeapSize`.
+ * Chromium-only; returns -1 on other browsers.  Values are quantized
+ * for security (~1 MB granularity) but stable enough for regression
+ * tracking of heap growth vs quote count.  Native DOM memory is NOT
+ * included — approximate it separately as ~200–400 bytes per DOM node.
+ */
+async function sampleHeapMb(page: Page): Promise<number> {
+  return await page.evaluate(() => {
+    const mem = (performance as unknown as {
+      memory?: { usedJSHeapSize?: number };
+    }).memory;
+    if (!mem || typeof mem.usedJSHeapSize !== 'number') return -1;
+    return Math.round((mem.usedJSHeapSize / 1024 / 1024) * 10) / 10;
+  });
+}
 
 // ── Helpers ─────────────────────────────────────────────────────────────
 
@@ -152,6 +171,7 @@ test('DOM counts — quotes page', async ({ page }) => {
   results.dom.quotes_scoped = counts.scoped;
   results.dom.quote_cards = counts.cards;
   results.dom.quotes_total = counts.total;
+  results.heap_mb.quotes = await sampleHeapMb(page);
 
   const paint = await page.evaluate(() => {
     const entries = performance.getEntriesByType('paint') as PerformanceEntry[];
@@ -189,6 +209,7 @@ test('DOM counts — dashboard', async ({ page }) => {
 
   results.dom.dashboard_scoped = counts.scoped;
   results.dom.dashboard_total = counts.total;
+  results.heap_mb.dashboard = await sampleHeapMb(page);
   console.log(`  dashboard: ${counts.scoped} scoped, ${counts.total} total`);
 });
 
@@ -208,6 +229,7 @@ test('DOM counts — transcript s1', async ({ page }) => {
 
   results.dom.transcript_scoped = counts.scoped;
   results.dom.transcript_total = counts.total;
+  results.heap_mb.transcript = await sampleHeapMb(page);
   console.log(`  transcript s1: ${counts.scoped} scoped, ${counts.total} total`);
 });
 
@@ -339,6 +361,9 @@ test.afterAll(() => {
     ),
     ...Object.entries(results.interaction_deltas).map(
       ([k, v]) => `│  ui.${k.padEnd(25)} ${String(v).padStart(8)}            │`,
+    ),
+    ...Object.entries(results.heap_mb).map(
+      ([k, v]) => `│  heap.${k.padEnd(23)} ${String(v).padStart(8)} MB         │`,
     ),
     '└──────────────────────────────────────────────────────────┘',
     `  Saved: ${outPath}`,

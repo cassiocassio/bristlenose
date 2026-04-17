@@ -1,83 +1,98 @@
 # Performance Monitoring — Index
 
-How we measure performance in Bristlenose, and what's been built. This doc indexes the three measurement plans and tracks their delivery status.
+How we measure performance in Bristlenose, what each measurement caught, and where to look next. This doc is the top of the tree; every perf sub-doc is reachable from here.
 
-For the **optimisation audit** (what was sped up, what's still slow), see [`design-performance.md`](design-performance.md).
+For the **optimisation audit** (what we sped up in code) see [`design-performance.md`](design-performance.md).
 
-## The framework: three plans, three datasets, three jobs
+## The framework: three measurements, three datasets, three cadences
 
-| Plan | Data | Catches | Cadence | Cost |
+| Measurement | Data | Catches | Cadence | Cost |
 |---|---|---|---|---|
 | **Regression gate** | Smoke fixture (4 quotes) | Linear creep — DOM bloat, bundle growth, export size, API latency | Every PR (CI) | Free, ~60s |
-| **Stress test** | Synthetic (1,500 quotes) | Non-linear cliffs — when does the browser choke? | Before/after virtualisation | Free, ~2 min |
-| **FOSSDA baseline** | Real video (10 interviews) | Pipeline throughput — stage timing, memory, token cost | Manual, before/after stage optimisation | ~$5 API, ~30 min |
+| **Stress test** | Synthetic (up to 3,000 quotes) | Non-linear cliffs — when does the browser choke? | Ad-hoc, before/after structural changes | Free, ~2 min |
+| **FOSSDA baseline** | Real video (10 FOSSDA interviews) | Pipeline throughput — stage timing, memory, token cost | Manual, before/after pipeline optimisation | ~$5 API, ~35 min |
 
-Design docs:
-- [`design-perf-regression-gate.md`](design-perf-regression-gate.md)
-- [`design-perf-stress-test.md`](design-perf-stress-test.md)
-- [`design-perf-fossda-baseline.md`](design-perf-fossda-baseline.md)
+The philosophy: from `100days.md` §15, *"Safari's performance team made WebKit fast by never allowing it to become slower — every commit runs benchmarks, regressions are rejected before they land."* The three-plan structure follows:
 
-## What's built
+- The **regression gate** enforces "never slower" on every PR.
+- The **stress test** shows where the cliffs are, so we know when virtualisation is mandatory vs nice-to-have.
+- The **FOSSDA baseline** grounds pipeline optimisation in real wall-clock numbers, not micro-benchmarks.
 
-### Regression gate — partly shipped
+## Status (Apr 2026)
 
-- `e2e/tests/perf-gate.spec.ts` — DOM counts, API latency, export size assertions
-- `scripts/perf-history.sh` — viewer for `e2e/.perf-history.jsonl` (gitignored, append-only local archive)
-- Doubling-rule thresholds (fail at 2× baseline). Quotes page = 549 nodes baseline, export = 1.6 MB
-- E2E auth bug fixed along the way
-- Silent-pass assertions, robust waits, schema forward-compat
-- **Not yet wired into `.github/workflows/ci.yml`** — the spec exists but isn't a CI job yet
+All three measurements are built, running, and have produced at least one baseline.
 
-### Stress test — shipped
+| Measurement | Status | See |
+|---|---|---|
+| Regression gate | Live in CI (`perf-gate` job, chromium-only, 90-day artifact) | [`design-perf-regression-gate.md`](design-perf-regression-gate.md) |
+| Stress test | Sweep run 17 Apr 2026 | [`design-perf-stress-findings.md`](design-perf-stress-findings.md) + [`design-perf-stress-test.md`](design-perf-stress-test.md) |
+| FOSSDA baseline | Captured 17 Apr 2026 | [`trial-runs/fossda-opensource/perf-baselines/pipeline-baseline.md`](../trial-runs/fossda-opensource/perf-baselines/pipeline-baseline.md) + [`design-perf-fossda-baseline.md`](design-perf-fossda-baseline.md) |
 
-- `scripts/generate-stress-fixture.py` — synthetic project generator, no LLM
-- `scripts/perf-stress.sh` — orchestrator
-- `e2e/tests/perf-stress.spec.ts` — measurement-only Playwright spec
-- Scaling run includes `n=0` for fixed-overhead measurement
-- Lighthouse off-by-default (times out on 1,500-quote pages)
-- **Not yet run for the scaling sweep** — produces results when invoked
+## What we learned (Apr 2026)
 
-### FOSSDA baseline — procedure documented, not yet run
+### The report SPA is not the bottleneck at any realistic scale
 
-- Pure manual procedure — no scripts to write
-- Captures hardware key, peak temp WAV size mid-run, ANSI-stripped stage times, LLM latency median/p95
-- Pipeline LLM latency logging added (`3ca4396`) so the procedure has data to extract
+From the stress sweep ([findings](design-perf-stress-findings.md)):
 
-### Supporting infrastructure (this week)
+- DOM cost is **linear** — ~39 nodes per quote, stable from n=100 to n=3000, no super-linear term.
+- JS heap grows from ~10 MB to ~150 MB across the same range; comfortably under a 500 MB per-tab ceiling on 8 GB machines.
+- Quotes API latency is the first thing to feel slow (180 ms at n=1500, 337 ms at n=3000) — backend serialisation, not frontend paint.
+- Export size is linear too (~2.8 KB per quote, 1.56 MB + per-quote cost).
 
-- `scripts/download-fossda.sh` — dataset acquisition (10 OSS pioneer interviews from fossda.org)
-- `.claude/agents/perf-review.md` — adversarial PR review agent (catches new deps without size justification, unvirtualised lists, missing `passive: true`)
-- LLM per-request latency logging in `bristlenose.log`
-- Bundle size CI gate (already shipped pre-S1, 305 KB gzip via `size-limit`)
-- E2E gotchas documented (networkidle fragility, silent-pass fetches)
+**Implication for launch:** virtualisation is not a beta-blocker. Someone running >1,000 quotes isn't evaluating a new tool for the first time anyway. Virtualisation remains on the S2 plan for the long tail.
 
-## Cross-references between plans
+**Caveat:** all measurements on M2 Max / 32 GB. Scroll jank and paint stalls arrive earlier on low-end hardware. A throttled-Chromium or actual-8GB-machine pass is worth doing before public beta.
 
-- Stress test scaling results → recalibrate regression gate thresholds
-- FOSSDA before/after numbers → validate per-participant chaining (S2) and LLM cache wins
-- Regression gate baseline (11,546 nodes for 4 quotes) → flagged the export size question for stress test to investigate
-- Stress test → will reveal whether export bloat is fixed-overhead (gzip JS chunks) or per-quote (virtualisation)
+### Token output caps are the recurring LLM failure mode
 
-## What's left
+From FOSSDA baseline + cross-trial analysis ([scale-and-tokens](design-perf-scale-and-tokens.md)):
 
-1. ~~**Wire perf-gate into CI**~~ — **done 17 Apr 2026**. New `perf-gate` job in `.github/workflows/ci.yml`, chromium-only, 90-day artifact retention on `perf-results.json` + `.perf-history.jsonl`. Perf-gate now runs only via `BN_RUN_PERF_GATE=1` (set in the dedicated job); default e2e run skips it
-2. ~~**Run the stress test scaling sweep**~~ — **done 17 Apr 2026**. Linear scaling confirmed, no cliff up to n=3000. See [design-perf-stress-findings.md](design-perf-stress-findings.md). No gate recalibration needed
-3. ~~**Run FOSSDA baseline**~~ — **done 17 Apr 2026**. 36m 48s, 238 quotes, $3.11. One LLM truncation on s5 at default max_tokens=32768. See [trial-runs/fossda-opensource/perf-baselines/pipeline-baseline.md](../trial-runs/fossda-opensource/perf-baselines/pipeline-baseline.md) and [design-perf-scale-and-tokens.md](design-perf-scale-and-tokens.md)
-4. **Perf history charts** (post-launch icebox) — render `.perf-history.jsonl` over time as a chart. Currently view-only via `scripts/perf-history.sh` (tabular)
+- Default `llm_max_tokens = 32768` truncated **one session** in the FOSSDA run (s5 was dropped entirely — ~50 quotes lost).
+- Quote length varies ~6× across studies (oral history 140 token median, task-based 22 token median). Output volume isn't predictable from input size alone.
+- Raising the default to 64K is safe for Sonnet 4 and Gemini 2.5. It's **not** safe for Haiku 3.5 (8K cap) or GPT-4o/mini (16K cap) — and we currently have no per-model clamp.
+- The lasting fix is quote atomicity (see [design-quote-length.md](design-quote-length.md)); raising the cap is a stopgap.
 
-## Decisions worth noting
+### The real pipeline runs cleanly on FOSSDA
 
-- **Lighthouse dropped from CI** — too stochastic on shared runners. DOM count + bundle size are deterministic proxies
-- **Doubling rule for thresholds** — fail at 2× baseline, not arbitrary numbers. Allows feature growth, catches regressions
-- **API latency is warn-only** in CI — runner variance too high for hard gates
-- **Three separate ports**: 8150 (E2E smoke), 8153 (stress), no port for FOSSDA (pipeline run)
-- **Auth pattern**: `_BRISTLENOSE_AUTH_TOKEN=test-token` env var, passed via Playwright `extraHTTPHeaders` and `curl -H Authorization` in shell scripts
+From the FOSSDA baseline ([results](../trial-runs/fossda-opensource/perf-baselines/pipeline-baseline.md)):
 
-## Philosophy
+- 10 interviews / 490 min of audio → 36m 48s wall-clock, $3.11.
+- Transcribe and Quote Extraction each take ~17 min — those are the two stages that matter for S2 optimisation.
+- Peak RSS 3.27 GB; peak macOS memory footprint 24.88 GB (dominated by MLX model weights).
+- Temp WAVs (944 MB) are **not cleaned up at end of run** — known optimisation item on [`design-performance.md`](design-performance.md).
 
-From `100days.md` §15: *"Safari's performance team made WebKit fast by never allowing it to become slower — every commit runs benchmarks, regressions are rejected before they land. The report SPA is the core product surface inside both the macOS app and the CLI. It needs the same discipline."*
+### CI was silently red before perf-gate landed
 
-The three-plan structure follows from this:
-- The regression gate enforces the "never slower" rule on every PR
-- The stress test reveals where the cliffs are, so we know when virtualisation is mandatory vs nice-to-have
-- The FOSSDA baseline grounds optimisation work in real wall-clock numbers, not micro-benchmarks
+Before the dedicated `perf-gate` job, the spec ran inside the `e2e` job but failed every run because `_BRISTLENOSE_AUTH_TOKEN` wasn't set. The `e2e` job is `continue-on-error: true` (parked S2 failures), so nobody noticed. Now the perf-gate job is isolated, auth'd, and red-is-red.
+
+## Supporting infrastructure
+
+- `scripts/download-fossda.sh` — FOSSDA dataset acquisition (10 OSS pioneer interviews from fossda.org).
+- `scripts/generate-stress-fixture.py` — synthetic N-quote project generator.
+- `scripts/perf-stress.sh` — stress orchestrator (picks ephemeral port, handles auth safely, writes JSON results).
+- `scripts/perf-history.sh` — tabular viewer for `e2e/.perf-history.jsonl` (local append-only archive).
+- `.claude/agents/perf-review.md` — adversarial PR review agent for frontend/CSS/bundle changes.
+- LLM per-request latency logging in `bristlenose.log` (`llm_request | ... | elapsed_ms=N | ...`).
+- Bundle size CI gate (pre-S1, 305 KB gzip via `size-limit`).
+
+## Decisions worth keeping in mind
+
+- **Doubling rule for thresholds.** Fail at 2× baseline, warn at 1.5×. Allows feature growth, catches regressions.
+- **Lighthouse not in CI.** Too stochastic on shared runners. DOM count + bundle size are deterministic proxies.
+- **API latency is warn-only.** Runner variance too high for hard gates.
+- **Perf-gate is chromium-only.** Determinism > cross-browser coverage; WebKit peculiarities are noise at these scales.
+- **History is artifact-only.** No CI-to-branch write. Offline analysis via `scripts/perf-history.sh` against the downloaded artifact.
+- **Three separate ports:** 8150 (E2E smoke + perf-gate), ephemeral (stress), no port for FOSSDA (pipeline run).
+- **Auth:** `_BRISTLENOSE_AUTH_TOKEN=test-token` env var — injected at job level in `ci.yml`, passed via Playwright `extraHTTPHeaders` and shell scripts.
+
+## Cross-references
+
+- Stress findings → confirm regression gate thresholds (no recalibration needed as of Apr 2026).
+- Scale and tokens → informs LLM-layer work (per-model max-tokens clamp; quote atomicity).
+- FOSSDA before → compare against after S2 ships (per-participant chaining, LLM response cache).
+
+## Backlog
+
+- **Per-model `llm_max_tokens` clamp.** Defaults exceed provider caps for Haiku 3.5 / GPT-4o / GPT-4o-mini. See [`design-perf-scale-and-tokens.md`](design-perf-scale-and-tokens.md).
+- **Low-end-hardware stress pass.** Throttled Chromium or actual 8 GB machine before public beta.
+- **Perf history charts.** Icebox — render `.perf-history.jsonl` as a trend chart. Currently view-only via `scripts/perf-history.sh`.

@@ -1,5 +1,7 @@
 # Design: Synthetic Stress Test
 
+**Status (17 Apr 2026):** Shipped. First scaling sweep run 17 Apr 2026 — see [`design-perf-stress-findings.md`](design-perf-stress-findings.md) for results. This doc is the design reference (how to run, what it measures, invariants).
+
 ## Problem
 
 The quotes page renders every quote as a DOM node. A real 15-hour study produces ~1,500 quotes (~100/hour). That's ~30,000 DOM nodes without virtualisation. We need to know exactly where the browser starts choking — and prove that `@tanstack/virtual` (S2) fixes it.
@@ -145,10 +147,12 @@ Results from this scaling run feed back into the regression gate — see [design
 
 ## Verification
 
-1. `./scripts/perf-stress.sh` completes and prints summary
-2. DOM count at 1,500 quotes is ~25,000–35,000 (confirming virtualisation is needed)
-3. After `@tanstack/virtual` ships: re-run, DOM count drops to ~1,000–2,000 regardless of quote count
-4. Export HTML at 1,500 quotes — measure the ceiling. The regression gate baseline shows 6.9 MB for just 4 quotes (base64 logos + uncompressed JS chunks are ~6 MB fixed overhead). The stress test reveals whether export growth is dominated by that fixed cost (addressable by gzipping JS chunks) or per-quote content (addressable by virtualisation/lazy rendering)
+1. `./scripts/perf-stress.sh` completes and prints summary.
+2. DOM count at 1,500 quotes is in the 55,000–65,000 range (59,202 observed 17 Apr 2026). Virtualisation is needed to ship that comfortably on low-end hardware, though scaling is clean and linear to n=3,000.
+3. After `@tanstack/virtual` ships: re-run, DOM count should drop to ~1,000–2,000 regardless of quote count.
+4. Export HTML at 1,500 quotes measured at 5.78 MB (fixed overhead 1.56 MB + ~2.8 KB per quote). Growth is per-quote content, not fixed overhead — confirms virtualisation/lazy rendering is the right lever.
+
+Full scaling results: [`design-perf-stress-findings.md`](design-perf-stress-findings.md).
 
 ## Non-goals
 

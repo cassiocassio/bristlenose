@@ -384,6 +384,16 @@ Edit `bristlenose/__init__.py` (the single source of truth for version), commit,
 
 ## Changelog
 
+**0.14.5** — _17 Apr 2026_
+
+- CI unblock release: no user-facing changes
+- Fix `eslint-plugin-react-hooks` 7.0.1 → 7.1.0 (eslint 10 peer-range)
+- Pin `jsdom` to 27.x (29 dropped localStorage shims, 140+ test failures)
+- Fix stale Vitest mocks after `api.ts` and i18n changes
+- Regenerate `e2e/package-lock.json` (lighthouse was added without `npm install`)
+- Exclude `perf-stress.spec.ts` from default Playwright discovery
+- e2e CI gate temporarily informational; three P3 findings parked to sprint 2
+
 **0.14.4** — _16 Apr 2026_
 
 - Pipeline resilience: input change detection (added/removed/modified files trigger re-run)

@@ -1,5 +1,7 @@
 # Design: FOSSDA Pipeline Throughput Baseline
 
+**Status (17 Apr 2026):** First baseline captured — [`trial-runs/fossda-opensource/perf-baselines/pipeline-baseline.md`](../trial-runs/fossda-opensource/perf-baselines/pipeline-baseline.md). Summary: 36m 48s wall-clock for 10 interviews (490 min audio), 238 quotes, $3.11. One LLM truncation on session s5 at default `max_tokens=32768` — see [`design-perf-scale-and-tokens.md`](design-perf-scale-and-tokens.md). This doc is the procedure for re-runs.
+
 ## Problem
 
 We don't know how long the full pipeline takes on a real dataset of meaningful size. Stage timing is printed to the terminal during a run, but we've never recorded a baseline against a consistent corpus. When we optimise pipeline stages (S2: per-participant chaining, LLM response cache), we need before/after numbers.
@@ -39,8 +41,10 @@ print(build_hardware_key(load_settings()))
 " > trial-runs/fossda-opensource/perf-baselines/hardware-key.txt
 
 # 3. Run pipeline with timing
+#    Defaults: --llm claude (→ anthropic), model from config
+#    (claude-sonnet-4-20250514 as of 17 Apr 2026 — check hardware-key.txt
+#    above to confirm what got resolved). Override with --llm if needed.
 /usr/bin/time -l .venv/bin/bristlenose run trial-runs/fossda-opensource \
-  --provider anthropic --model claude-sonnet-4-20250514 \
   2>&1 | tee trial-runs/fossda-opensource/perf-baselines/pipeline-run.log
 
 # 3b. While the pipeline runs (after transcription starts), in a second
@@ -139,19 +143,21 @@ Write to `trial-runs/fossda-opensource/perf-baselines/pipeline-baseline.md`:
 | End-of-run temp WAV (from `temp-wav-size.txt`) | ... |
 ```
 
-## New files
+## Output files
+
+All results land in `trial-runs/fossda-opensource/perf-baselines/`, which is whitelisted in `.gitignore` (FOSSDA is open-source material so the measurements can be committed and diffed across runs; other `trial-runs/` data stays private).
 
 | File | Purpose |
 |------|---------|
-| `trial-runs/fossda-opensource/perf-baselines/pipeline-baseline.md` | Results (gitignored) |
-| `trial-runs/fossda-opensource/perf-baselines/pipeline-run.log` | Raw log (gitignored) |
-| `trial-runs/fossda-opensource/perf-baselines/hardware-key.txt` | Composite chip/backend/model key (step 2) |
-| `trial-runs/fossda-opensource/perf-baselines/stage-times.txt` | Per-stage elapsed (step 5, ANSI stripped) |
-| `trial-runs/fossda-opensource/perf-baselines/llm-latencies.txt` | LLM requests + median/p95 summary (step 6) |
-| `trial-runs/fossda-opensource/perf-baselines/temp-wav-timeline.txt` | Mid-run temp WAV snapshots (step 3b, optional) |
-| `trial-runs/fossda-opensource/perf-baselines/temp-wav-peak.txt` | Peak mid-run temp WAV in MB (step 3b post-process) |
-| `trial-runs/fossda-opensource/perf-baselines/temp-wav-size.txt` | End-of-run temp WAV size (step 7) |
-| `trial-runs/fossda-opensource/perf-baselines/output-sizes.txt` | Output directory sizes (step 4) |
+| `pipeline-baseline.md` | Human-readable summary from the template in §Results format |
+| `pipeline-run.log` | Raw pipeline stdout + `/usr/bin/time -l` tail (scrub any auth-token line before committing) |
+| `hardware-key.txt` | Composite chip/backend/model key (step 2) |
+| `stage-times.txt` | Per-stage elapsed (step 5, ANSI stripped) |
+| `llm-latencies.txt` | LLM requests + median/p95 summary (step 6) |
+| `temp-wav-timeline.txt` | Mid-run temp WAV snapshots (step 3b, optional) |
+| `temp-wav-peak.txt` | Peak mid-run temp WAV in MB (step 3b post-process) |
+| `temp-wav-size.txt` | End-of-run temp WAV size (step 7) |
+| `output-sizes.txt` | Output directory sizes (step 4) |
 
 No scripts to create — this is a manual procedure. The pipeline already prints everything we need.
 

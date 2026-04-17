@@ -1,5 +1,7 @@
 # Design: CI Performance Regression Gate
 
+**Status (17 Apr 2026):** Shipped as a dedicated `perf-gate` job in `.github/workflows/ci.yml`. All thresholds below are live and blocking. See [`design-performance-monitoring.md`](design-performance-monitoring.md) for the wider context.
+
 ## Problem
 
 We ship PRs without knowing whether they made the app slower or bigger. Bundle size has a gate (305 KB gzip) but nothing catches DOM bloat, API latency regression, paint time regression, or export size growth. These are linear regressions — small datasets detect them fine.
@@ -97,13 +99,25 @@ The perf-gate runs inside the existing E2E suite — no separate job, no orchest
 
 ### CI integration
 
-The perf-gate spec runs inside the existing `e2e` job — no separate job needed. The existing workflow already starts the server, builds the frontend, and installs Playwright. To run locally:
+A dedicated `perf-gate` job in `.github/workflows/ci.yml` runs perf-gate against the smoke fixture on every push. Chromium-only, `needs: [test, frontend-lint-type-test]`. The job sets `BN_RUN_PERF_GATE=1` and `_BRISTLENOSE_AUTH_TOKEN=test-token` (smoke fixture has no real data, so the token isn't a secret).
 
-```bash
-cd e2e && _BRISTLENOSE_AUTH_TOKEN=test-token npx playwright test tests/perf-gate.spec.ts --project=chromium
+By default `npx playwright test` skips perf-gate — `testIgnore` in `e2e/playwright.config.ts` filters it out unless `BN_RUN_PERF_GATE=1`. That keeps the regular `e2e` job's coverage scoped to smoke specs.
+
+On every CI run, results are archived for 90 days:
+
+```
+Artifact: perf-results-${{ github.run_id }}
+Contents: e2e/perf-results.json, e2e/.perf-history.jsonl
 ```
 
-The full E2E suite (including perf-gate) runs as part of the `e2e` job on every push. Perf-gate tests skip on WebKit via a top-level `test.skip` — they run only on Chromium for deterministic measurements.
+Download the artifact locally and run `scripts/perf-history.sh` against the JSONL for a tabular trend view.
+
+To run locally:
+
+```bash
+cd e2e && BN_RUN_PERF_GATE=1 _BRISTLENOSE_AUTH_TOKEN=test-token \
+  npx playwright test tests/perf-gate.spec.ts --project=chromium
+```
 
 ### Results schema
 
@@ -193,5 +207,5 @@ Those are covered by the stress test and FOSSDA plans.
 
 ## Resolved
 
-1. **Folded into the existing `e2e` job** (Apr 2026). Added `perf-gate.spec.ts` to `e2e/tests/`. The server identity guard prevents stale-server contamination; separate shell script and CI job were unnecessary.
-2. **Results archive** — each run writes `e2e/perf-results.json` (latest snapshot) and appends one JSON line to `e2e/.perf-history.jsonl`. View with `./scripts/perf-history.sh`. Fancy charts (Observable/matplotlib/React page) tracked in `100days.md` §11 Operations → Could.
+1. **Initial placement inside the `e2e` job, then split into a dedicated `perf-gate` job** (17 Apr 2026). The first attempt folded perf-gate into the existing `e2e` job, but `_BRISTLENOSE_AUTH_TOKEN` wasn't set — every CI run was red and nobody noticed because `e2e` is `continue-on-error: true`. Splitting into a dedicated job made failures visible: red-is-red, artifact scope is clean, perf signal isn't entangled with parked S2 smoke failures.
+2. **Results archive** — each run writes `e2e/perf-results.json` (latest snapshot) and appends one JSON line to `e2e/.perf-history.jsonl`. In CI, both are uploaded as a 90-day artifact. View with `./scripts/perf-history.sh`. Fancy charts (Observable/matplotlib/React page) tracked in `100days.md` §11 Operations → Could.

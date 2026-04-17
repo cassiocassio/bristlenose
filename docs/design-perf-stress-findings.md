@@ -6,20 +6,22 @@ Ran `./scripts/perf-stress.sh --quotes $n` for `n ∈ {0, 100, 200, 300, 500, 75
 
 ## Results
 
-| n | DOM quotes page | DOM dashboard | DOM transcript | quotes API (ms) | codebook API (ms) | export (MB) | startup (s) |
-|----:|----------------:|--------------:|---------------:|----------------:|------------------:|------------:|------------:|
-|   0 |    425 |   335 |    286 |   4.2 |   4.9 | 1.56 | 1 |
-| 100 |  4,586 |   436 |    992 |  13.2 |   7.3 | 1.88 | 1 |
-| 200 |  8,486 |   436 |  1,749 |  21.1 |   7.9 | 2.16 | 1 |
-| 300 | 12,386 |   436 |  2,466 |  27.2 |   9.0 | 2.44 | 2 |
-| 500 | 20,200 |   436 |  3,897 |  69.6 |   8.1 | 3.00 | 1 |
-| 750 | 29,950 |   436 |  5,713 |  92.6 |  10.3 | 3.69 | 2 |
-| 1000 | 39,672 |  436 |  7,513 | 112.8 |  12.8 | 4.39 | 1 |
-| 1500 | 59,202 |  436 | 11,102 | 180.3 |  16.6 | 5.78 | 2 |
-| 2000 | 78,712 |  436 | 14,756 | 214.1 |  16.9 | 7.17 | 2 |
-| 3000 | 117,724 | 436 | 21,898 | 337.4 |  22.7 | 9.98 | 3 |
+| n | DOM quotes | DOM dashboard | DOM transcript | Heap quotes (MB) | Heap dashboard (MB) | Heap transcript (MB) | quotes API (ms) | codebook API (ms) | export (MB) |
+|----:|----------:|--------------:|---------------:|-----------------:|--------------------:|---------------------:|----------------:|------------------:|------------:|
+|   0 |    425 |   335 |    286 |   9.5 |   9.5 |   9.5 |   4.2 |   4.9 | 1.56 |
+| 100 |  4,586 |   436 |    992 |   9.5 |   9.5 |   9.5 |  13.2 |   7.3 | 1.88 |
+| 200 |  8,486 |   436 |  1,749 |  15.4 |   9.5 |   9.5 |  21.1 |   7.9 | 2.16 |
+| 300 | 12,386 |   436 |  2,466 |  18.4 |   9.5 |   9.5 |  27.2 |   9.0 | 2.44 |
+| 500 | 20,200 |   436 |  3,897 |  26.3 |   9.5 |   9.5 |  69.6 |   8.1 | 3.00 |
+| 750 | 29,950 |   436 |  5,713 |  37.8 |   9.5 |  10.7 |  92.6 |  10.3 | 3.69 |
+| 1000 | 39,672 |  436 |  7,513 |  51.0 |   9.5 |  13.6 | 112.8 |  12.8 | 4.39 |
+| 1500 | 59,202 |  436 | 11,102 |  77.6 |   9.5 |  23.4 | 180.3 |  16.6 | 5.78 |
+| 2000 | 78,712 |  436 | 14,756 |  98.2 |   9.5 |  31.6 | 214.1 |  16.9 | 7.17 |
+| 3000 | 117,724 | 436 | 21,898 | 149.7 |   9.5 |  37.8 | 337.4 |  22.7 | 9.98 |
 
-Raw per-n results: `trial-runs/stress-test-$n/perf-baselines/stress-results.json` (gitignored).
+Heap from `performance.memory.usedJSHeapSize` (Chromium-only, quantized to ~1 MB). Raw per-n results: `trial-runs/stress-test-$n/perf-baselines/stress-results.json` (gitignored).
+
+**Heap stays well under any modern ceiling.** Dashboard is flat (9.5 MB — same aggregating-not-listing story as its DOM count). Quotes page grows from 9.5 MB baseline at n=0 to ~150 MB at n=3000, which is ~47 KB JS heap per quote (slightly super-linear — React fiber overhead compounds at scale). Transcript grows more slowly (~9 KB/quote). Add ~200–300 MB for Chromium's base memory + DOM native, and even n=3000 sits comfortably under 500 MB per tab — fine on an 8 GB machine alongside browser + OS + editor. JS heap is not the constraint; perceived responsiveness (scroll jank from DOM size) hits first.
 
 ## Where's the cliff?
 

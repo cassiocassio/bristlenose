@@ -391,11 +391,13 @@ Items tagged `[S1]`–`[S6]` are assigned to a sprint. Untagged items are unassi
 
 ### Must
 - [S2] **CI: desktop-build job** — `xcodebuild build` + `xcodebuild test` on macOS runner, `CODE_SIGNING_ALLOWED=NO`, informational initially. Catches Swift compilation errors and Swift Testing regressions on every push. Prerequisite for the full build pipeline below. Plan: `docs/design-ci.md` §Coverage gaps
-- [S2] **Desktop app build pipeline** — Xcode archive → .dmg → notarisation → upload. CI: automate .dmg build on push
+- [S2] **TestFlight upload pipeline** — Xcode archive → App Store Connect upload (altool/notarytool). Manual first (local `xcodebuild -exportArchive` + `xcrun altool --upload-app`), automate in S6
+- [S6] **Desktop app build pipeline (.dmg path)** — Xcode archive → .dmg → notarisation → upload for direct download distribution. Separate from TestFlight. CI: automate .dmg build on push
 - [S2] **App Store Connect setup** — app record, TestFlight internal beta group (≤100 testers, no Beta App Review), Privacy Nutrition Labels. Pricing/external tester review deferred to S6
-- [S2] **Code signing** — Apple Developer Program membership, Developer ID certificate
+- [S2] **Apple Distribution certificate + provisioning profile** — required for App Store Connect uploads (TestFlight + App Store). Different cert from Developer ID (.dmg path). Generate via Xcode or manually in Apple Developer portal
+- [S6] **Developer ID certificate** — for `.dmg` outside-the-store distribution. Not needed for TestFlight path
 - ~~[S1] **CI: add macOS runner** — currently Linux-only (informational, 15 Apr 2026)~~
-- [S2] **.dmg README** — include "Open Anyway" Gatekeeper instructions
+- [S6] **.dmg README** — include "Open Anyway" Gatekeeper instructions. Only relevant to `.dmg` path
 - [S2] **PyInstaller sidecar signing** — every `.dylib`, `.so`, and framework inside the bundle must be individually codesigned before notarization. (design-desktop-security-audit.md)
 - ~~[S1] **Build number auto-increment** — `CFBundleVersion = 1` blocks Sparkle and App Store update logic. Set up CI auto-increment. Done: `bump-version.py` unifies desktop+CLI, auto-increments build number~~
 - ~~[S1] **Domain & email infrastructure** — register `bristlenose.app`, configure SPF/DKIM/DMARC, Substack custom domain (`blog.bristlenose.app`), deploy site, set up email on DreamHost (`hello@`, `support@`, `security@`). Full plan: `docs/private/infrastructure-and-identity.md`~~
@@ -403,7 +405,7 @@ Items tagged `[S1]`–`[S6]` are assigned to a sprint. Untagged items are unassi
 - [S1] **Succession plan** — bus-factor doc (every account/credential/recovery path), password manager emergency access for one trusted person. (infrastructure-and-identity.md) — draft complete (`docs/private/succession-plan.md`), Apple Developer renewal date filled in (2027-04-16, Team ID `Z56GZVA2QB`); still needs: password manager emergency access config, successor briefing
 
 ### Should
-- [S2] **Rate-limit trial-key endpoint** — add rate limiting (1 req/min/IP) + server-side receipt validation to the trial-key endpoint, even for the 20-user beta. See `trial-and-pricing-architecture.md` Part 2
+- [S6] **Rate-limit trial-key endpoint** — add rate limiting (1 req/min/IP) + server-side receipt validation to the trial-key endpoint, even for the 20-user beta. Blocks v1.0 subscription launch, not alpha (trial-key endpoint doesn't exist yet). See `trial-and-pricing-architecture.md` Part 2
 - ~~[S1] **Anthropic billing alerts** — set up billing alerts at $5 and $10 thresholds for the trial API key account~~
 - **Desktop app polish** — ReadyView: SwiftUI `.fileImporter()` (replace `NSOpenPanel.runModal()`). ProcessRunner: `AsyncBytes` instead of `availableData` polling. `hasAnyAPIKey()`: extend beyond Anthropic-only (or rename). Settings shortcut ⌘, : show in Help shortcuts conditionally (desktop only, browser intercepts). (Keychain migration moved to §6 Risk Must)
 - **Doctor serve-mode checks** — Vite auto-discovery via `/__vite_ping`, replace hardcoded port (design-serve-doctor.md)
@@ -436,12 +438,12 @@ Items tagged `[S1]`–`[S6]` are assigned to a sprint. Untagged items are unassi
 - [S2] **Export compliance** — HTTPS only, no custom encryption = simplified declaration
 - [S6] **Age rating** — likely 4+ (no objectionable content). App Store Connect only, not needed for internal TestFlight
 - [S6] **EULA** — standard Apple EULA or custom
-- [S2] **Privacy Manifest (`PrivacyInfo.xcprivacy`)** — declare required reason APIs and data types. Cross-ref §6 Risk. (design-desktop-security-audit.md)
-- [S2] **AI data transparency per Apple 5.1.2(i)** — first-run consent dialog naming each LLM provider, linking privacy policies, Ollama offline option. Cross-ref §6 Risk. (design-desktop-security-audit.md)
+- **Privacy Manifest (`PrivacyInfo.xcprivacy`)** — canonical entry in §6 Risk
+- **AI data transparency per Apple 5.1.2(i)** — canonical entry in §6 Risk ("AI data disclosure dialog")
 
 ### Should
-- [S2] **Draft DPA for relay mode** — accept processor status under GDPR Article 4(2). Short, 2-page, honest DPA. Needed before v1.0 subscription launch. See `trial-and-pricing-architecture.md` Part 2
-- [S2] **Execute DPAs with LLM providers** — execute DPAs with Anthropic/OpenAI/Google for the relay API accounts (sub-processor agreements). Needed before v1.0
+- [S6] **Draft DPA for relay mode** — accept processor status under GDPR Article 4(2). Short, 2-page, honest DPA. Needed before v1.0 subscription launch, not for alpha. See `trial-and-pricing-architecture.md` Part 2
+- [S6] **Execute DPAs with LLM providers** — execute DPAs with Anthropic/OpenAI/Google for the relay API accounts (sub-processor agreements). Needed before v1.0, not for alpha
 - **GDPR statement** — data processing description (local-first, API calls to LLM providers)
 - **Accessibility statement** — VoiceOver compatibility, keyboard navigation
 - **Open source license display** — AGPL notice in app + dependency licenses
@@ -611,4 +613,4 @@ These are speculative ideas worth thinking about but without a delivery commitme
 
 ---
 
-*Updated 17 Apr 2026. Sprint 2 re-scoped to "Perf + TestFlight alpha pipeline": perf items first (virtualisation, regression gate), then internal TestFlight path (App Store Connect record, signing, sandbox, Privacy Manifest, Export compliance). Solicitor-dependent legal (privacy policy, ToS, EULA, age rating, external-tester policy URL) moved from S2 → S6; solicitor contact moved to May. Previous: 15 Apr 2026. Reconciled with delivery repo copy: added §15 Performance (WebKit philosophy, profiling-first roadmap, perf-review agent, CI gates), sprint legend, iPad session outputs (privacy policy draft, ToS v0.9.1, privacy manifest, first-run experience design, new items L5/L6/I6/I7/R6), bundle size → §15 promotion. Previous: 25 Mar 2026 — domain architecture, security audit additions, shipped-item strikethrough. Original: 16 Mar 2026.*
+*Updated 17 Apr 2026 (two passes). Sprint 2 re-scoped to "Perf + TestFlight alpha pipeline": perf items first (virtualisation, regression gate), then internal TestFlight path (App Store Connect record, Apple Distribution cert, sandbox, Privacy Manifest, Export compliance, sidecar signing, AI disclosure lightweight). Second pass deduplicated Privacy Manifest + AI disclosure (kept §6 Risk as canonical, §12 Legal points there); split signing into Apple Distribution (S2, TestFlight path) vs Developer ID (S6, .dmg path); moved .dmg build pipeline, .dmg README, DPAs, and trial-key rate-limit to S6 (v1.0-blocking, not alpha-blocking). Solicitor contact: May. Previous: 15 Apr 2026. Reconciled with delivery repo copy: added §15 Performance (WebKit philosophy, profiling-first roadmap, perf-review agent, CI gates), sprint legend, iPad session outputs (privacy policy draft, ToS v0.9.1, privacy manifest, first-run experience design, new items L5/L6/I6/I7/R6), bundle size → §15 promotion. Previous: 25 Mar 2026 — domain architecture, security audit additions, shipped-item strikethrough. Original: 16 Mar 2026.*

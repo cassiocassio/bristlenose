@@ -15,13 +15,20 @@ Items tagged `[S1]`–`[S6]` are assigned to a sprint. Untagged items are unassi
 | Tag | Dates | Theme |
 |-----|-------|-------|
 | [S1] | 14–25 Apr | Start the clocks |
-| [S2] | 28 Apr–9 May | Perf + TestFlight alpha pipeline |
+| [S2] | 28 Apr–9 May | Mac app MVP flow + CI cleanup (signing homework in parallel) |
 | [S3] | 12–23 May | Multi-project |
 | [S4] | 26 May–6 Jun | First-run + export |
 | [S5] | 8–19 Jun | Visual design + a11y |
 | [S6] | 22–30 Jun | Launch prep + public legal |
 
-**Sprint 2 re-scope (17 Apr 2026).** Finish performance work first (virtualisation, regression gate), then open the TestFlight alpha pipeline for a handful of friends as **internal testers** (up to 100 people added to App Store Connect users — no Beta App Review). Internal TestFlight needs: App Store Connect record, Apple Distribution cert, sandbox + entitlements, Privacy Manifest, Export compliance self-cert, Privacy Nutrition Labels. It does **not** need a hosted privacy policy URL, ToS, EULA, age rating, solicitor review, or DPAs — those slip to S6 when we open up to external testers / App Store submission. Solicitor contact: May.
+**Sprint 2 re-scope v2 (17 Apr 2026).** The Mac app compiles but the end-to-end human workflow doesn't work yet. That's the real blocker — there is no point inviting friends to an embarrassing build, and TestFlight upload is expensive infra work that locks in a broken experience. So S2 pivots to:
+
+1. **Fix the MVP 1-hour human session** in the Mac app, covering every beat of the canonical flow (see §1a below). This is the gate.
+2. **Clean up CI** — re-enable the E2E gate (3 parked P3 regressions), land the perf regression gate.
+3. **Start the signing/sandbox homework in the background** — Apple Distribution cert, sandbox entitlements audit, Privacy Manifest reason-code audit, PyInstaller sidecar signing script. Big and fiddly, worth doing in parallel while MVP work runs. The actual TestFlight upload moves to S6 (or whenever MVP flow is green).
+4. **Real QA = IKEA study + CLI handholding on video calls with UXR friends.** Not TestFlight. That's what gets us to a share-ready product.
+
+Performance: stress sweep shows clean linear scaling to 3000 quotes — virtualisation deferred to Icebox. AI disclosure dialog: already shipped (`AIConsentView.swift`). Solicitor contact: still May.
 
 ---
 
@@ -75,6 +82,28 @@ Items tagged `[S1]`–`[S6]` are assigned to a sprint. Untagged items are unassi
 ### Icebox (100 days)
 - **Miro bridge** — Miro-shaped CSV export → API integration → layout engine. CSV export works as stopgap. Killer feature - Resuresct for move out of beta! See `docs/private/design-miro-bridge.md`
 - **Spring-loaded folders during drag** — open folder on hover during drag. SwiftUI List doesn't support natively; needs timer or NSEvent monitor. Low priority — "Move to" submenu covers the use case
+
+---
+
+## 1a. MVP 1-hour human session flow (S2 focus)
+
+The canonical end-to-end beats a first-time user must complete successfully in the Mac app before we ship to anyone. Each beat that doesn't work in the current build becomes an S2 item.
+
+1. **First-time open** — app launches, window shows a welcoming empty state
+2. **AI disclosure sheet** — shown, acknowledged, dismissed (shipped: `AIConsentView.swift`)
+3. **Set up Claude API key** — Settings → paste key → saved to Keychain → validated
+4. **New project** — create a project (folder picker or named project)
+5. **Drop interview folder** — drag-and-drop a folder of recordings/subtitles onto the project
+6. **Process** — pipeline runs, progress visible, completes without crashing
+7. **Display** — report opens, quotes render, transcripts navigable
+8. **Add a codebook** — import or create a codebook, apply to project, quotes re-tagged
+9. **Investigate signals** — dashboard signal cards clickable, lead to relevant quotes
+10. **Use stars and filtering** — star quotes, filter by tag/star/sentiment, filters stick
+11. **Export credible report** — standalone HTML export, opens in browser, looks shareable
+12. **Export video clips** — FFmpeg stream-copy produces human-named clips from starred quotes
+13. **Export CSV** — quotes export opens in Excel, columns sensible, no broken characters; Miro paste works
+
+**S2 exit criterion:** Martin can run this flow on a laptop with no API keys pre-configured and no cached state, from new, in under an hour, and produce a report he'd send to a UXR friend without apologising. Everything below §2 Broken that blocks any step above gets promoted into S2 implicitly.
 
 ---
 
@@ -209,11 +238,11 @@ Items tagged `[S1]`–`[S6]` are assigned to a sprint. Untagged items are unassi
 - **~~Rotate API key~~** — was visible in terminal (TODO.md immediate)
 - [S6] **Privacy policy** — required for external TestFlight + App Store submission. Not needed for internal-only alpha. Local-first model simplifies this but document must exist. Draft v1 complete (`launch-docs/privacy-policy.md` in delivery repo), needs solicitor review (May)
 - [S6] **Terms of service** — subscription terms, refund policy, data handling. Draft v0.9.1 complete (`launch-docs/terms-of-service.md` in delivery repo), needs solicitor review (May)
-- [S2] **App Store review compliance (TestFlight subset)** — sandbox, entitlements, code signing, notarisation. Enough for internal TestFlight upload. Full review hardening (external testers / submission) in S6
+- [S6] **App Store review compliance (TestFlight subset)** — sandbox, entitlements, code signing, notarisation. Moved out of S2 with TestFlight upload; individual items (Apple Distribution cert, sandbox, Privacy Manifest, sidecar signing) stay in S2 as background homework
 - [S5] **PII redaction audit** — verify Presidio catches names/emails in transcripts before shipping to paying users
 - ~~**Security scanning** — npm audit, pip-audit, CodeQL before public release (design-test-strategy.md)~~
 - ~~[S1] **Alembic/migration strategy** — DB schema changes without data loss. Currently no migration framework~~
-- [S2] **AI data disclosure dialog** — Apple Guideline 5.1.2(i) (Nov 2025) requires explicit consent before sending transcript data to third-party AI. Non-negotiable for App Store. Lightweight version acceptable for internal alpha; polish for S6 submission. (design-desktop-security-audit.md)
+- ~~**AI data disclosure dialog** — Apple Guideline 5.1.2(i). Shipped: `desktop/Bristlenose/Bristlenose/AIConsentView.swift` (first-run sheet, consent version policy, re-accessible via menu)~~
 - [S2] **Privacy Manifest (`PrivacyInfo.xcprivacy`)** — required for App Store since mid-2024. Declare data types and API usage reasons. (design-desktop-security-audit.md). Draft complete (`launch-docs/PrivacyInfo.xcprivacy` + `privacy-manifest-rationale.md` in delivery repo), needs codebase audit to validate reason codes
 
 ### Should
@@ -391,9 +420,9 @@ Items tagged `[S1]`–`[S6]` are assigned to a sprint. Untagged items are unassi
 
 ### Must
 - [S2] **CI: desktop-build job** — `xcodebuild build` + `xcodebuild test` on macOS runner, `CODE_SIGNING_ALLOWED=NO`, informational initially. Catches Swift compilation errors and Swift Testing regressions on every push. Prerequisite for the full build pipeline below. Plan: `docs/design-ci.md` §Coverage gaps
-- [S2] **TestFlight upload pipeline** — Xcode archive → App Store Connect upload (altool/notarytool). Manual first (local `xcodebuild -exportArchive` + `xcrun altool --upload-app`), automate in S6
+- [S6] **TestFlight upload pipeline** — Xcode archive → App Store Connect upload (altool/notarytool). Moved out of S2: no point uploading until MVP flow works
 - [S6] **Desktop app build pipeline (.dmg path)** — Xcode archive → .dmg → notarisation → upload for direct download distribution. Separate from TestFlight. CI: automate .dmg build on push
-- [S2] **App Store Connect setup** — app record, TestFlight internal beta group (≤100 testers, no Beta App Review), Privacy Nutrition Labels. Pricing/external tester review deferred to S6
+- [S6] **App Store Connect setup** — app record, TestFlight internal beta group (≤100 testers, no Beta App Review), Privacy Nutrition Labels. Moved out of S2 with TestFlight upload
 - [S2] **Apple Distribution certificate + provisioning profile** — required for App Store Connect uploads (TestFlight + App Store). Different cert from Developer ID (.dmg path). Generate via Xcode or manually in Apple Developer portal
 - [S6] **Developer ID certificate** — for `.dmg` outside-the-store distribution. Not needed for TestFlight path
 - ~~[S1] **CI: add macOS runner** — currently Linux-only (informational, 15 Apr 2026)~~
@@ -528,7 +557,7 @@ Safari's performance team made WebKit fast by never allowing it to become slower
 - ~~[S1] **Bundle size CI gate** — `size-limit` + `@size-limit/file`, 305 KB gzip limit. CI enforces in `frontend-lint-type-test` job. Current ~300 KB. 100 KB target needs route-level code splitting (separate task)~~
 - ~~[S1] **`GZipMiddleware` in FastAPI** — one line. ~70% reduction in served HTML/CSS/JS. Free win for WKWebView and browser~~
 - ~~[S1] **`content-visibility: auto` on quote card containers** — CSS only, works everywhere including file://. Browser skips layout/paint for off-screen cards. Supported since Safari 17.4. Essential for static export path where JS virtualisation isn't possible~~
-- [S2] **`@tanstack/virtual` in serve mode** — required, not optional. A 15h study produces ~1,500 quotes (~100/hour from real usage). That's ~30,000 DOM nodes without virtualisation. Virtualisation drops visible DOM to ~1,000 regardless of total. This is the single most important performance feature
+- [Icebox] **`@tanstack/virtual` in serve mode** — deferred 17 Apr 2026. Stress sweep (see git log: `stress sweep findings: clean linear scaling to n=3000`) shows clean linear scaling up to 3000 synthetic quotes, well above the 1,500-quote 15h-study ceiling. Not a blocker for alpha or launch. Re-open if real-world use surfaces pathological cases
 - ~~[S1] **Move `<script>` to end of `<body>`** — script block is already at end of `<body>` (after all `<article>` content, before `</body>`). No `<head>` scripts exist. Done~~
 - [S2] **Performance regression gate in CI** — Playwright spec in existing E2E suite measuring DOM node count, API latency, export file size against smoke-test fixture. Doubling rule (fail at 2x baseline). Measured baselines: quotes page 549 nodes, export 1.6 MB. Design doc reviewed, ready to implement. See `docs/design-perf-regression-gate.md`
 - ~~[S1] **`perf-review` agent** — Claude Code agent (`.claude/agents/perf-review.md`) that reviews PRs for performance regressions: new deps without size justification, unvirtualised large lists, missing `passive: true`, blocking resource additions. Catches the obvious stuff before CI catches the rest~~
@@ -613,4 +642,4 @@ These are speculative ideas worth thinking about but without a delivery commitme
 
 ---
 
-*Updated 17 Apr 2026 (two passes). Sprint 2 re-scoped to "Perf + TestFlight alpha pipeline": perf items first (virtualisation, regression gate), then internal TestFlight path (App Store Connect record, Apple Distribution cert, sandbox, Privacy Manifest, Export compliance, sidecar signing, AI disclosure lightweight). Second pass deduplicated Privacy Manifest + AI disclosure (kept §6 Risk as canonical, §12 Legal points there); split signing into Apple Distribution (S2, TestFlight path) vs Developer ID (S6, .dmg path); moved .dmg build pipeline, .dmg README, DPAs, and trial-key rate-limit to S6 (v1.0-blocking, not alpha-blocking). Solicitor contact: May. Previous: 15 Apr 2026. Reconciled with delivery repo copy: added §15 Performance (WebKit philosophy, profiling-first roadmap, perf-review agent, CI gates), sprint legend, iPad session outputs (privacy policy draft, ToS v0.9.1, privacy manifest, first-run experience design, new items L5/L6/I6/I7/R6), bundle size → §15 promotion. Previous: 25 Mar 2026 — domain architecture, security audit additions, shipped-item strikethrough. Original: 16 Mar 2026.*
+*Updated 17 Apr 2026 (three passes). Third pass: Mac app MVP 1-hour flow is the real S2 gate — TestFlight upload deferred (no point sharing an embarrassing build). Added §1a MVP flow checklist. Virtualisation → Icebox (stress sweep shows clean scaling to n=3000). AI disclosure dialog marked shipped (AIConsentView.swift). Real QA path = IKEA study + CLI handholding on video calls with UXR friends, not TestFlight. Signing/sandbox homework runs in parallel as background work. Second pass: Sprint 2 re-scoped to "Perf + TestFlight alpha pipeline": perf items first (virtualisation, regression gate), then internal TestFlight path (App Store Connect record, Apple Distribution cert, sandbox, Privacy Manifest, Export compliance, sidecar signing, AI disclosure lightweight). Second pass deduplicated Privacy Manifest + AI disclosure (kept §6 Risk as canonical, §12 Legal points there); split signing into Apple Distribution (S2, TestFlight path) vs Developer ID (S6, .dmg path); moved .dmg build pipeline, .dmg README, DPAs, and trial-key rate-limit to S6 (v1.0-blocking, not alpha-blocking). Solicitor contact: May. Previous: 15 Apr 2026. Reconciled with delivery repo copy: added §15 Performance (WebKit philosophy, profiling-first roadmap, perf-review agent, CI gates), sprint legend, iPad session outputs (privacy policy draft, ToS v0.9.1, privacy manifest, first-run experience design, new items L5/L6/I6/I7/R6), bundle size → §15 promotion. Previous: 25 Mar 2026 — domain architecture, security audit additions, shipped-item strikethrough. Original: 16 Mar 2026.*

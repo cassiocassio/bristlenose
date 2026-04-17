@@ -24,6 +24,7 @@ output/
 coverage.xml
 htmlcov/
 .DS_Store
+.claude/scheduled_tasks.lock
 # Private UXR trial data stays ignored. FOSSDA is explicitly open-source
 # material (fossda.org) used as a public perf-baseline dataset, so its
 # perf-baselines/ subdir is whitelisted for tracking.

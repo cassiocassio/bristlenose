@@ -15,6 +15,7 @@ const BRISTLENOSE = process.env.CI
 
 export default defineConfig({
   testDir: './tests',
+  testIgnore: '**/perf-stress.spec.ts', // run via playwright.stress.config.ts
   timeout: 30_000,
   retries: 0,
   workers: 1, // Serial — all tests share one server

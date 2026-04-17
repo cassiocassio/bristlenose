@@ -264,7 +264,7 @@ Items tagged `[S1]`–`[S6]` are assigned to a sprint. Untagged items are unassi
 ### Could
 - **Video clip export story** — "folder in, clips out" — the 3-hour Final Cut Pro task done in seconds. Demo-able, visceral, differentiator vs Dovetail
 - **Ollama integration** — "free, no account required" local LLM story
-- **CLI text-only mode** — `bristlenose analyze --text` dumps themes/sentiment/quotes/sections as plain markdown to stdout. Not for researchers (99% GUI crowd), but a contributor affordance: reviewable over SSH/Cloud VM/iPad, diff-friendly for prompt regression, lowers the barrier to contribute without Node/Xcode/browser. Design: `docs/design-cli-text-mode.md`. Parked — build when an OSS contributor actually asks
+- **CLI text-only mode** — `bristlenose run/analyze/render --text` emits the full analysis (themes, signals, sections, codebook-tagged quotes, sentiment, friction) as plain markdown to stdout. Full ingestion works: audio, video, Zoom/Teams recordings, voice memos — not just transcripts. Second product surface for the CLI-native Linux/Pi/snap crowd who won't buy an App Store subscription but align with the local-first + AGPL story. Pairs well with the snap. Design: `docs/design-cli-text-mode.md`. Time-box v0.1 to a weekend when the slot opens
 - ~~**Multi-language**~~ — 5 locales shipped (en, es, fr, de, ko) in 0.14.1. Infrastructure + 4 languages exceeds target
 - **i18n: help.signals/codebook/contributing translations** — EN keys exist (~63), ES/FR/DE/KO locales missing all of them
 - **i18n: AboutSection full extraction** — ~15 paragraphs hardcoded English, needs `useTranslation` wiring + keys in all 5 locales

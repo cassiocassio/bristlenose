@@ -24,6 +24,7 @@ import { putTags } from "../utils/api";
 
 // Mock API calls (addTag calls putTags internally).
 vi.mock("../utils/api", () => ({
+  apiGet: vi.fn().mockResolvedValue({ video_map: {} }),
   putHidden: vi.fn(),
   putStarred: vi.fn(),
   putEdits: vi.fn(),

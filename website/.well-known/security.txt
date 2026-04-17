@@ -1,0 +1,8 @@
+# Bristlenose vulnerability disclosure
+# https://bristlenose.app/.well-known/security.txt
+
+Contact: mailto:security@bristlenose.app
+Expires: 2026-10-16T00:00:00z
+Preferred-Languages: en
+Canonical: https://bristlenose.app/.well-known/security.txt
+Policy: https://github.com/cassiocassio/bristlenose/blob/main/SECURITY.md

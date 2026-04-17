@@ -42,7 +42,7 @@ const TEMPLATES_RESPONSE = {
   templates: [
     {
       id: "sentiment",
-      title: "Emotional & Cognitive Signals",
+      title: "Emotional and cognitive signals",
       author: "",
       description: "Built-in sentiment",
       author_bio: "",
@@ -122,9 +122,9 @@ describe("CodebookSidebar", () => {
   it("renders imported templates as normal toc-link", async () => {
     render(<CodebookSidebar />);
     await waitFor(() => {
-      expect(screen.getByText("Emotional & Cognitive Signals")).toBeInTheDocument();
+      expect(screen.getByText("Emotional and cognitive signals")).toBeInTheDocument();
     });
-    const link = screen.getByText("Emotional & Cognitive Signals");
+    const link = screen.getByText("Emotional and cognitive signals");
     expect(link).toHaveClass("toc-link");
     expect(link).not.toHaveClass("not-imported");
   });
@@ -168,7 +168,7 @@ describe("CodebookSidebar", () => {
   it("sets active on click of imported entry", async () => {
     render(<CodebookSidebar />);
     await waitFor(() => {
-      expect(screen.getByText("Emotional & Cognitive Signals")).toBeInTheDocument();
+      expect(screen.getByText("Emotional and cognitive signals")).toBeInTheDocument();
     });
 
     // Mock scrollIntoView since it doesn't exist in jsdom
@@ -178,9 +178,9 @@ describe("CodebookSidebar", () => {
     mockEl.id = "codebook-fw-sentiment";
     document.body.appendChild(mockEl);
 
-    fireEvent.click(screen.getByText("Emotional & Cognitive Signals"));
+    fireEvent.click(screen.getByText("Emotional and cognitive signals"));
 
-    expect(screen.getByText("Emotional & Cognitive Signals")).toHaveClass("active");
+    expect(screen.getByText("Emotional and cognitive signals")).toHaveClass("active");
     expect(screen.getByText("Project Ikea")).not.toHaveClass("active");
     expect(mockScrollIntoView).toHaveBeenCalledWith({ behavior: "smooth", block: "start" });
 
@@ -251,14 +251,14 @@ describe("CodebookSidebar", () => {
   it("splits built-in and framework templates correctly", async () => {
     render(<CodebookSidebar />);
     await waitFor(() => {
-      expect(screen.getByText("Emotional & Cognitive Signals")).toBeInTheDocument();
+      expect(screen.getByText("Emotional and cognitive signals")).toBeInTheDocument();
     });
 
     // Built-in (author === ""): sentiment (imported), uxr (not imported)
     // Frameworks (author !== ""): morville (imported), garrett (not imported)
     const allLinks = screen.getAllByRole("link");
     const labels = allLinks.map((el) => el.textContent);
-    expect(labels).toContain("Emotional & Cognitive Signals");
+    expect(labels).toContain("Emotional and cognitive signals");
     expect(labels).toContain("Bristlenose UXR Codebook");
     expect(labels).toContain("The User Experience Honeycomb");
     expect(labels).toContain("The Elements of User Experience");

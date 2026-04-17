@@ -80,6 +80,12 @@ Remaining PII work tracked in `docs/private/100days.md` §4 Value (PII dashboard
 
 ---
 
+## Ideas (captured, not triaged)
+
+- **Feedback pipeline → Bristlenose (internal dogfooding)** (17 Apr 2026) — IMAP fetch from feedback@bristlenose.app (DreamHost) → deterministic PII/header strip (Presidio + salted anon IDs for sender stability) → redacted `.md` archive in gitignored dir → monthly batch ingest into a private Bristlenose project to cluster themes for roadmap input. Read-only, never used as demo data, never shipped. Consent-safe because it stays internal. Caveats: emails are many short sessions (not few long ones) — may need a batch mode or synthetic "session per month"; no moderator questions so question-pill logic doesn't apply.
+
+---
+
 ## Task tracking
 
 **GitHub Issues is the source of truth for actionable tasks:** https://github.com/cassiocassio/bristlenose/issues

@@ -73,7 +73,7 @@ class BristlenoseSettings(BaseModel):
     llm_model: str = "claude-sonnet-4-20250514"
     anthropic_api_key: str = ""              # From .env or ANTHROPIC_API_KEY
     llm_concurrency: int = 3                 # Max parallel LLM calls
-    llm_max_tokens: int = 32768              # Output token ceiling
+    llm_max_tokens: int = 64000              # Output token ceiling
     pii_enabled: bool = False                # PII redaction off by default
     transcription_backend: str = "auto"      # MLX on Apple Silicon, faster-whisper otherwise
 ```

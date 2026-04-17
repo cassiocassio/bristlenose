@@ -49,7 +49,9 @@ Per-participant LLM calls (stages 5b, 8, 9) run concurrently, bounded by `llm_co
 
 ## max_tokens and truncation detection
 
-Default `llm_max_tokens` is **32768** (set in `config.py`). This is the output token ceiling per LLM call — users only pay for tokens actually generated, not the limit. All 5 providers detect when the response is truncated and raise `RuntimeError` with an actionable message pointing to `BRISTLENOSE_LLM_MAX_TOKENS` in `.env`.
+Default `llm_max_tokens` is **64000** (set in `config.py`, raised from 32768 on 17 Apr 2026 after FOSSDA baseline hit truncation on a dense session). This is the output token ceiling per LLM call — users only pay for tokens actually generated, not the limit. All 5 providers detect when the response is truncated and raise `RuntimeError` with an actionable message pointing to `BRISTLENOSE_LLM_MAX_TOKENS` in `.env`.
+
+**Why 64000 not 65536**: Anthropic's `claude-sonnet-4-20250514` hard-caps output at 64000 (decimal), not 65536 (2^16). GPT-5 allows 128K, Gemini 2.5 Pro allows 65K. 64000 is the portable ceiling across all three frontier providers. Going higher requires per-provider branching — not worth the complexity until smart-splitting lands.
 
 - **Anthropic**: checks `response.stop_reason == "max_tokens"`
 - **OpenAI / Azure / Local**: checks `response.choices[0].finish_reason == "length"`

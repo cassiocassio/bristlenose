@@ -1,0 +1,57 @@
+
+Bristlenose v0.14.4 · Claude · Apple M2 Max · MLX
+
+Checking your setup
+ ✓ FFmpeg          8.1 (/opt/homebrew/bin/ffmpeg)
+ ✓ Transcription   faster-whisper 1.2.1, ctranslate2 4.7.0 (MLX)
+ ✓ Whisper model   large-v3-turbo cached (1.5 GB)
+ ✓ API key         Anthropic (sk-ant-...AAA) (Keychain)
+ ✓ Network         api.anthropic.com reachable (117ms)
+ — PII redaction   off (use --redact-pii to enable)
+ ✓ Disk space      55 GB free
+  10 sessions in fossda-opensource/
+
+ ✓ Ingested 10 sessions (10 video)                           0.4s
+
+   Estimated time: ~34 min (±8 min)
+
+ ✓ Extracted audio from 10 sessions                          9.4s
+ ✓ Transcribed 10 sessions (6367 segments, 490m 45s audio)   17m 21s
+  Estimated LLM cost: ~$2.01 for 10 sessions (claude-sonnet-4-20250514)
+
+ ✓ Identified speakers                                       39.5s
+ ✓ Merged transcripts                                        0.0s
+ ✓ Segmented 129 topic boundaries                            35.9s
+ ⚠ Extracted 238 quotes                                      17m 30s
+   ⚠ LLM response was truncated (hit max_tokens=32768). Set BRISTLENOSE_LLM_MA…
+ ✓ Clustered 6 screens · Grouped 15 themes                   27.1s
+ ✓ Rendered report                                           4.5s
+
+  10 participants (10 of 10 named) · 6 screens · 15 themes · 238 quotes
+  LLM: 308,240 in · 145,947 out · ~$3.11 (claude-sonnet-4-20250514)
+  Pricing → https://docs.anthropic.com/en/docs/about-claude/models
+
+  Done with warnings in 36m 48s — LLM response was truncated (hit 
+max_tokens=32768). Set BRISTLENOSE_LLM_MA…
+
+  Report:  http://127.0.0.1:8150/report/
+  Press Ctrl-C to stop the server
+[bristlenose] auth-token: [redacted]
+    24006.80 real       277.89 user       127.67 sys
+          3428712448  maximum resident set size
+                   0  average shared memory size
+                   0  average unshared data size
+                   0  average unshared stack size
+              938762  page reclaims
+               11217  page faults
+                   0  swaps
+                   0  block input operations
+                   0  block output operations
+                 218  messages sent
+                 202  messages received
+                   3  signals received
+               44006  voluntary context switches
+             8439196  involuntary context switches
+       2133277505750  instructions retired
+        874968750398  cycles elapsed
+         26714758224  peak memory footprint

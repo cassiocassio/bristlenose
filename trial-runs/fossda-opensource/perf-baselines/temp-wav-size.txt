@@ -1,0 +1,2 @@
+temp WAVs at end of run:
+944M	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/

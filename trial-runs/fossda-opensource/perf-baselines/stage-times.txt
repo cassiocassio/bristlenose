@@ -1,0 +1,16 @@
+ ✓ FFmpeg          8.1 (/opt/homebrew/bin/ffmpeg)
+ ✓ Transcription   faster-whisper 1.2.1, ctranslate2 4.7.0 (MLX)
+ ✓ Whisper model   large-v3-turbo cached (1.5 GB)
+ ✓ API key         Anthropic (sk-ant-...AAA) (Keychain)
+ ✓ Network         api.anthropic.com reachable (117ms)
+ ✓ Disk space      55 GB free
+ ✓ Ingested 10 sessions (10 video)                           0.4s
+ ✓ Extracted audio from 10 sessions                          9.4s
+ ✓ Transcribed 10 sessions (6367 segments, 490m 45s audio)   17m 21s
+ ✓ Identified speakers                                       39.5s
+ ✓ Merged transcripts                                        0.0s
+ ✓ Segmented 129 topic boundaries                            35.9s
+ ⚠ Extracted 238 quotes                                      17m 30s
+   ⚠ LLM response was truncated (hit max_tokens=32768). Set BRISTLENOSE_LLM_MA…
+ ✓ Clustered 6 screens · Grouped 15 themes                   27.1s
+ ✓ Rendered report                                           4.5s

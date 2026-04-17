@@ -96,6 +96,11 @@ Items tagged `[S1]`–`[S6]` are assigned to a sprint. Untagged items are unassi
 ### Could
 - **Edit writeback to transcript files** (#21) — edits only persist in DB, not source files
 - **Word timestamp pruning** — unused data accumulates after merge stage (#35)
+- [S2] **E2E regressions parked during v0.14.5 release unblock (17 Apr 2026)** — set `continue-on-error: true` on the e2e CI job to ship v0.14.5. Three independent P3 items to clear before re-enabling the gate:
+  - **Unknown subresource 404 on `/report/codebook/`** — Playwright console spec catches a 404 but `msg.text()` truncates the URL. Local `curl` of the page + all listed assets all return 200; some runtime subresource fails. Need to run the e2e locally with trace viewer and check Network tab to identify. Likely a route-chunk prefetch, a missing thumbnail in the smoke fixture, or a font. User impact: cosmetic (devtools only).
+  - **Autocode status endpoint 404 is noisy** — `GET /api/projects/{id}/autocode/{framework_id}/status` returns 404 when no job exists. `CodebookPanel.tsx` polls it on mount for every imported framework. `.catch()` swallows the error but the fetch itself logs to console. Fix options: (a) backend returns 200 with `{status: "idle"}` (correct REST — "no current job" ≠ "resource not found"); (b) frontend uses a non-throwing helper for this poll only. Prefer (a). User impact: devtools noise only.
+  - **perf-gate.spec.ts server identity guard: `_BRISTLENOSE_AUTH_TOKEN` env var not wired into CI** — test reads `process.env._BRISTLENOSE_AUTH_TOKEN`, but `.github/workflows/ci.yml` line 210 runs `npx playwright test` without setting it. Fix: have the workflow capture the token from `bristlenose serve` stdout (first stdout line) and pass it via `env:` on the test step, OR add a `/api/test-token` endpoint only exposed when `BRISTLENOSE_DEV_MODE=test`. Needs design decision. User impact: zero (test infra).
+  - See session transcript "fix release pipeline + main CI, step by step" (17 Apr 2026 wrap-up) for full investigation notes, curl proofs, and file:line pointers.
 
 ---
 

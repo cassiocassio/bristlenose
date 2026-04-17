@@ -1,82 +1,110 @@
 # CLI text-only mode
 
-A pipe-friendly way to run Bristlenose's LLM analysis against a transcript and get themes, sentiment, quotes, and sections back as plain markdown — no HTML, no React, no browser, no Mac app required.
+A pipe-friendly way to run Bristlenose's full pipeline (audio, video, Zoom/Teams recordings, or existing transcripts) and get themes, signals, sections, codebook-tagged quotes, sentiment, and friction back as plain markdown — no HTML render, no React, no browser, no Mac app required.
 
-**Status (Apr 2026):** design stage, parked. Not scheduled. Revisit when the first external contributor asks how to iterate on prompts without spinning up the full desktop app, or when we want a regression harness for prompt changes.
+**Status (Apr 2026):** design stage, parked. Not scheduled. Revisit when the first CLI-native user asks for it, when we want a prompt-regression harness, or when we decide it's time to stop being dogmatic about the GUI being the only surface.
 
 ---
 
-## Who this is for (and who it isn't)
+## Who this is for
 
-**For:**
-- Open-source contributors hacking on prompts, stages, or analysis logic who don't want to install Node, Vite, Xcode, or run a browser
-- Anyone doing a quick sanity check on a prompt change over SSH or in a Claude Code Cloud VM (see `docs/design-deployment-targets.md`)
-- CI / regression harness for prompt and analysis changes — diff markdown before vs after a prompt tweak
-- Researchers on an iPad or a stripped-down environment who just want to see the raw output of the pipeline
+People who already have more tooling than the average Bristlenose user, not less: 20 terminal tabs, tmux, htop, Grafana, a row of Chrome inspectors. They're not avoiding the browser because they can't run one — they're avoiding it because the browser is the wrong tool for what they want to do right now. They want to `grep`, `pipe`, `jq`, `less`, `diff`, `awk`. They want output that flows into their existing workflow.
 
-**Not for:**
-- The 99% of user researchers who bought Bristlenose for the desktop app or the browser-based serve mode. Text-only mode is a **contributor affordance**, not a product surface. It should never be promoted as the main way to use Bristlenose, and the researcher docs should not mention it in the main flow.
+Concretely:
 
-This distinction matters because it shapes the scope: we're building a Unix-ish tool for engineers, not a second product. The bar is "works well enough that an OSS contributor can iterate", not "works well enough to ship to paying customers".
+- Developers running Linux, Raspberry Pi, snap, NixOS — people who installed Bristlenose via `snap install bristlenose` or `pip install` because that's how they install everything
+- Anyone doing qualitative analysis over SSH, in a Claude Code Cloud VM, on an iPad-with-shell-access, or inside a container (see `docs/design-deployment-targets.md`)
+- Community organisers, volunteer committees, hobbyist interviewers — someone recorded a roundtable at the bar about how to organise the teenager football league, they want the themes back in a form they can paste into a Discourse post or a shared markdown doc
+- Open-source contributors hacking on prompts, stages, or analysis logic who want fast iteration — edit prompt, re-run, diff
+- Anyone discussing the UX of a CLI tool, a developer experience, a protocol design — research subjects who *themselves* live in the terminal and whose insights make more sense in monospace than in a styled HTML report
+- CI / regression harness for prompt and analysis changes: commit a fixture, diff markdown before vs after
+
+**What this crowd cares about (and why they still want Bristlenose):**
+- Sections — structure of the conversation
+- Themes and signals — what ideas keep coming up
+- Running codebooks — "give me every quote tagged `mental-model`"
+- Quote attribution with timecodes
+- Sentiment and friction points as data, not charts
+- Ingesting whatever they've got — phone voice memos, Zoom recordings, Teams exports, old `.srt` files, a `.docx` someone sent. Audio/video ingestion is not a "researcher feature" they need to skip; it's core and it works fine headless
+
+**What they don't care about (and why the GUI isn't right for them):**
+- Inline editing in a browser — they'll edit markdown in `vim`/`nvim`/`hx`
+- PowerPoint-shaped exports for stakeholders — they're not presenting to stakeholders; they're thinking out loud, or sharing with peers who'll also read markdown
+- The macOS app — they're likely not on a Mac, and if they are, `brew install` and a terminal is their native interface
+- App Store subscriptions — most won't pay for one; some might, but that's not the hook
+
+### How this changes the product framing
+
+Text-only mode is not *just* a contributor affordance. It's a **second legitimate product surface** for a different audience — the CLI-native, self-hosting, grep-and-pipe crowd. That audience probably won't pay for an App Store subscription, but:
+
+- They're the people who write blog posts, star repos, submit PRs, file interesting bug reports, and tell other technical people about tools
+- They align with the "local-first, AGPL, nothing leaves your laptop" story better than almost any other audience — they're already sceptical of cloud SaaS, already comfortable running a pipeline locally
+- If we ship a snap and a working CLI, they have a path in. If we ship only a Mac app, we don't exist for them
+- It's just cool. That's not nothing. A tool that does one serious thing well from the terminal earns a kind of trust that a glossy app doesn't
+
+Scope caveat that still applies: **don't rebuild the HTML report in markdown.** Features that are inherently about interactivity (inline rename, live search, drag-to-reorder) stay in the serve/desktop experience. Features that are about *words and meaning* (themes, signals, codebook tags, sentiment, friction, sections) should work equally well in both surfaces — that's the actual line.
 
 ---
 
 ## Motivation
 
-1. **Contribution barrier.** Right now, evaluating a prompt change means: run the full pipeline, wait, open the HTML report in a browser, eyeball it. For small prompt tweaks that's heavyweight. A text dump would let contributors see the effect in seconds.
-2. **Reviewability.** An OSS project that can only be evaluated through a Mac app is effectively closed to reviewers who don't want to grant an unsigned binary access to their machine. `transcripts in → markdown out` is a surface you can read.
-3. **Regression harness for prompts.** If text output is stable (deterministic ordering, no timestamps), you can commit a golden-output fixture and `git diff` catches unexpected regressions from prompt or model changes. Free test infrastructure.
-4. **Cloud VM viability.** The Claude Code Cloud VM audit (Apr 2026) showed the full pipeline runs there. A text-mode flag makes that realistically usable for pipeline work, not just document work.
+1. **Reach a second audience.** Researchers on Macs aren't the only people who want themes out of recorded conversations. CLI-native users, community organisers with voice memos, developers analysing their own user interviews over SSH — all of them are currently locked out or badly served by a GUI-first tool. Text mode opens the door.
+2. **Fast iteration on prompts.** Edit prompt, re-run, diff markdown. Compare to: run pipeline, wait, open HTML report, eyeball differences, forget what the old one said. Text-mode turns minutes into seconds.
+3. **Reviewability.** An OSS project evaluable only through an unsigned Mac binary is effectively closed to reviewers who won't grant that kind of trust. `recording in → markdown out` is a surface anyone can read and judge.
+4. **Regression harness for prompts.** If text output is stable (deterministic ordering, no timestamps, no run IDs), commit a golden fixture and `git diff` catches regressions from prompt or model changes. Free test infrastructure.
+5. **Cloud VM viability.** The Claude Code Cloud VM audit (Apr 2026) confirmed the full pipeline runs there. Text mode makes that realistically useful, not just a place to do document work.
+6. **It's cool.** A tool that does one serious thing well from the terminal earns trust. Bristlenose as a Unix-philosophy citizen — composable, greppable, scriptable — is a better open-source story than Bristlenose-as-Mac-app.
 
 ---
 
 ## Proposed surface
 
-Two candidates, pick one.
+A `--text` flag on **both** `run` and `analyze`, because the audience wants both entry points:
 
-### Option A — flag on `analyze`
+- `bristlenose run <folder> --text` — full pipeline, audio/video/Zoom/Teams/subtitles/docx in, markdown out. This is the headline surface. Someone dropped a folder of Zoom recordings and a voice memo from a committee meeting? One command.
+- `bristlenose analyze <transcripts> --text` — skip ingestion/transcription, go straight from existing transcripts to analysis. Fast iteration when you already have transcripts, or for prompt-tweaking loops.
+- `bristlenose render <output-dir> --text` — re-emit markdown from an already-completed run's intermediate JSON. No LLM calls. Cheap.
 
+All three routes produce the same markdown using the same formatter. The flag is the switch; the input stage is whatever the command already supports.
+
+```bash
+# Full pipeline, text out
+bristlenose run interviews/ --text > report.md
+
+# Pipe straight into less
+bristlenose run interviews/ --text | less
+
+# Pipe a specific section into grep
+bristlenose render output/ --text | grep -A5 "mental-model"
+
+# Regression diff after prompt edit
+bristlenose analyze transcripts/ --text > after.md
+diff before.md after.md
 ```
-bristlenose analyze transcripts-raw/ --text
-```
 
-Reuses the existing command. Writes markdown to stdout (or a user-given file via `-o`). Skips the HTML renderer entirely — no Jinja2, no React. Intermediate JSON still written so you can re-render later.
-
-**Pros:** smallest change, no new command to document, composable (`--text > out.md`).
-**Cons:** `analyze` already has many flags. One more.
-
-### Option B — dedicated `tweak` command
-
-```
-bristlenose tweak sample-transcript.txt
-bristlenose tweak transcripts-raw/
-```
-
-A new sibling to `analyze`. Accepts either a folder or a single file. Always emits markdown. No HTML ever. A dedicated "play with text" surface.
-
-**Pros:** discoverable as "the text-mode command", less flag clutter on `analyze`, easier to advertise in the README for contributors.
-**Cons:** new command surface to maintain, near-duplicate of `analyze`.
-
-**Recommendation:** **Option A**, initially. If OSS contributors actually use it and ask for a dedicated command, promote to B later. Don't design for a hypothetical audience.
+**Also considered but rejected for v1:** a dedicated `bristlenose tweak` or `bristlenose text` command. A new command surface is a maintenance cost we don't need to pay yet. If users ask for it by name later, promote.
 
 ---
 
 ## Input
 
-### v1 (minimum useful)
+No input restrictions. **The text flag doesn't change what goes in — only what comes out.**
 
-A folder of `.txt` transcripts, exactly as `bristlenose analyze` takes today. The file format is whatever the existing transcript stages produce — plain text with speaker labels and timecodes.
+- Audio: `.mp3`, `.wav`, `.m4a`, `.aac`, voice memos from phones
+- Video: `.mp4`, `.mov`, `.mkv`, Zoom cloud recordings, Teams exports
+- Existing transcripts: `.txt`, `.srt`, `.vtt`, `.docx`
+- Mixed folder: all of the above together, like any real recorded project
 
-### v2 (nice later, iPad-friendly)
+This matters for the audience. A volunteer football-league committee recorded a roundtable in a pub on someone's phone. A developer ran a 45-minute Zoom user-interview. Neither of them has "transcripts" — they have recordings. The whole pipeline runs, ffmpeg extracts audio, faster-whisper transcribes, PII redaction runs if requested, analysis runs, and markdown comes out the other end. None of that changes just because the output is text.
 
-A single `.txt` file via stdin or as a positional arg:
+### Future stdin/single-file support (v2)
 
 ```
 cat interview-1.txt | bristlenose analyze --text -
 bristlenose analyze --text interview-1.txt
 ```
 
-Single-file input needs a minimal fixture format — probably just a wrapper that fakes the "sessions" shape the pipeline expects. Design that when someone actually asks for it.
+Needs a minimal fixture wrapper for the pipeline's "sessions" shape. Design when someone actually asks.
 
 ---
 
@@ -136,7 +164,11 @@ Skeleton (illustrative, not final):
 
 ## Use cases this unlocks
 
-1. **"Did my prompt change make things better?"**
+1. **Football committee roundtable.** Phone voice memo of a meeting about how to organise next season's teenager league. `bristlenose run meeting.m4a --text > notes.md`, read it back, paste the themes into the club's Discourse. No App Store, no sign-up.
+
+2. **Developer analysing their own UX-of-a-CLI-tool interviews.** Five Zoom calls with contributors discussing the command's ergonomics. Whole pipeline runs, themes come out as markdown, dev pipes it into `less`, then greps for every quote tagged `friction`.
+
+3. **"Did my prompt change make things better?"**
    ```bash
    bristlenose analyze fixture/ --text > before.md
    # edit bristlenose/llm/prompts/themes.md
@@ -144,23 +176,29 @@ Skeleton (illustrative, not final):
    diff before.md after.md
    ```
 
-2. **Regression harness.** Commit a transcript fixture + expected markdown. CI runs analyze and diffs.
+4. **Running a codebook over an existing project.** `bristlenose render output/ --text | grep -B2 -A5 "mental-model"` to see every quote tagged `mental-model` with context.
 
-3. **Contributor onboarding.** README snippet: `pip install bristlenose && bristlenose analyze examples/ikea-tiny/ --text` — one command, no Node, no Xcode, no API key (if we also add a `--fake-llm` for a deterministic stub; see Open questions).
+5. **Regression harness.** Commit a transcript fixture + expected markdown. CI runs analyze and diffs.
 
-4. **SSH / Cloud / iPad.** Run it from anywhere that has Python and an API key.
+6. **SSH / Cloud VM / iPad-with-shell.** Run it anywhere with Python and an API key.
+
+7. **Snap-first distribution story.** Linux users do `snap install bristlenose`, run `bristlenose run recordings/ --text`, done. No Electron, no web browser, no Mac. A snap + text mode is a complete product for this audience.
 
 ---
 
 ## Tradeoffs
 
-**Cost:** small. `analyze` already runs the full pipeline through quote extraction, clustering, and thematic grouping. All intermediate state is already in `.bristlenose/intermediate/*.json`. We're just adding a formatter that walks the pipeline result and prints markdown, reusing `utils/markdown.py`. Probably 200–400 lines including tests.
+**Cost:** small. The pipeline already runs through ingestion, transcription, extraction, clustering, and thematic grouping. All intermediate state lands in `.bristlenose/intermediate/*.json`. We're adding a formatter that walks the pipeline result and prints markdown, reusing `utils/markdown.py`. Probably 200–400 lines including tests, most of it in one new file plus a flag added to three commands.
 
-**Risk:** scope creep. Once text mode exists, every section of the HTML report will attract a "can you add X to the text output?" request. Two responses ready:
-- For researcher-facing features (inline edit, search, CSV export, etc.): "no, use the browser". Text mode is a contributor tool.
-- For analysis features (new theme taxonomy, new sentiment dimension): "yes, but add it to `utils/markdown.py` first so both paths benefit".
+**Risk — scope creep:** once text mode exists, every section of the HTML report will attract a "can you add X to the text output?" request. The line to hold:
+- **Words and meaning** (themes, signals, codebook tags, sentiment, friction, sections, quotes with attribution, participant summaries) — yes, both surfaces. Add to `utils/markdown.py` first, both paths benefit.
+- **Interactivity** (inline edit, live search, drag-to-reorder, tag-filter persistence, hidden quotes UI, video scrubbing) — no, use serve/desktop. These aren't missing from text mode; they're inherently GUI.
 
-**Deprecation hazard:** the static HTML renderer at `bristlenose/stages/s12_render/` is already deprecated (see CLAUDE.md). Text mode should not be built on top of it — it should walk the same pipeline result data structures that the React serve mode reads. Otherwise we'd be building new features on a deprecated path.
+That line is defensible because it's about what the feature *is*, not who the user is.
+
+**Deprecation hazard:** the static HTML renderer at `bristlenose/stages/s12_render/` is already deprecated (see CLAUDE.md). Text mode should walk the same `PipelineResult` data structures that the React serve mode reads, not the Jinja2 templates. Otherwise we'd be building new features on a deprecated path.
+
+**Audience-drift hazard:** if we ship text mode and it gets popular with the CLI-native crowd, we'll feel pressure to answer their issues and PRs as if they were paying customers. That's fine as long as we're clear that text mode's bar is "does what it says on the tin", not "delightful end-to-end experience". If a feature request is really "please rebuild the HTML report in markdown", say no.
 
 ---
 
@@ -209,9 +247,12 @@ Reuse what's already there. Most `format_*` helpers likely exist in `utils/markd
 
 1. **`--fake-llm` / deterministic mode for tests?** If we want a true regression harness, we need a way to run analysis without real API calls and without network. Options: record/replay via VCR-style fixtures, or a stub provider that returns canned responses keyed off transcript text. Out of scope for v1 — add when/if regression testing is actually wanted.
 2. **stdin support?** Lovely in principle, awkward in practice — the pipeline currently assumes a folder with one file per session. Deferred.
-3. **JSON output too?** `--json` would give structured output for tooling. Probably yes eventually, but markdown-first because diffability is the main motivator.
-4. **Cross-reference with `bristlenose render`?** `render` already re-emits HTML + markdown from existing intermediate JSON. Text-only could be `render --text-only` instead of `analyze --text`. Worth considering — it'd mean you can re-emit text for an old run without re-running the LLM. Possibly both paths should exist.
-5. **Do we need this at all?** Honest check: if no OSS contributors materialise or ask for this, it's dead weight. Hence parking it. Build when someone's waiting for it.
+3. **JSON output too?** `--json` would give structured output for tooling — `jq '.themes[] | .label'`, feeding into other scripts. Probably yes eventually, but markdown-first because diffability and human-readability are the main motivators.
+4. **`--codebook mental-model` / tag-filter from the CLI?** Rather than forcing the user to `grep`, expose codebook/tag filtering as a flag: `bristlenose render output/ --text --tag mental-model`. Smaller, more Unix-y than a grep pipeline when the data model already knows what a tag is. Worth sketching.
+5. **Snap integration.** The 100-day plan already has a "won't" on Snap/Flatpak polish, but a working text mode makes the snap a lot more useful. Check whether the current snap lets you pipe stdout cleanly (confinement can interfere with stdio in surprising ways).
+6. **Discoverability.** Where does text mode get advertised? README top section alongside `brew install`? A dedicated "For command-line users" heading? Probably the latter — it tells the right audience they're welcome without confusing the researcher audience.
+7. **Progress output on stderr.** Text-mode output goes to stdout; Rich progress/status output from the pipeline currently also goes to stdout (via `console.print`). We'll need a clean split so `> report.md` captures only the markdown, not the spinner. Already done elsewhere in typer tools — check `console.print(file=sys.stderr)` or route progress to stderr by default in `--text` mode.
+8. **Do we actually build it?** Current instinct: yes, but time-box v0.1 to a weekend. The audience is real (CLI-native Linux users, Pi hobbyists, developers who do user research on their own tools, community organisers with phone recordings). Shipping a working CLI path alongside the GUI is a cheap way to have two products from one pipeline.
 
 ---
 

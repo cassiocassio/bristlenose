@@ -2,6 +2,8 @@
 
 Ran `./scripts/perf-stress.sh --quotes $n` for `n ∈ {0, 100, 200, 300, 500, 750, 1000, 1500, 2000, 3000}` on 17 Apr 2026 (Chromium on Apple M2 Max, 32 GB). Synthetic fixture, no real LLM calls. Full sweep took ~1m 47s end-to-end because per-run startup + 7 playwright tests is ~6–18s.
 
+**Hardware caveat.** All numbers here are on an M2 Max with 32 GB RAM — the top-end consumer Mac. A beta user on an 8 GB MacBook Air or Chromebook will hit scroll jank and paint stalls noticeably earlier. The linear per-quote cost (~39 DOM nodes, ~2.8 KB export) doesn't change, but the threshold where it starts to *feel* slow shifts down. Worth re-running this sweep on a low-end machine before the public beta — or at least throttling Chromium to "4× slowdown" in a future pass to simulate it.
+
 ## Results
 
 | n | DOM quotes page | DOM dashboard | DOM transcript | quotes API (ms) | codebook API (ms) | export (MB) | startup (s) |

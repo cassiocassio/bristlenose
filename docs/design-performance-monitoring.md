@@ -60,7 +60,7 @@ Design docs:
 
 ## What's left
 
-1. **Wire perf-gate into CI** — spec exists but no `perf-gate` job in `.github/workflows/ci.yml`
+1. ~~**Wire perf-gate into CI**~~ — **done 17 Apr 2026**. New `perf-gate` job in `.github/workflows/ci.yml`, chromium-only, 90-day artifact retention on `perf-results.json` + `.perf-history.jsonl`. Perf-gate now runs only via `BN_RUN_PERF_GATE=1` (set in the dedicated job); default e2e run skips it
 2. ~~**Run the stress test scaling sweep**~~ — **done 17 Apr 2026**. Linear scaling confirmed, no cliff up to n=3000. See [design-perf-stress-findings.md](design-perf-stress-findings.md). No gate recalibration needed
 3. ~~**Run FOSSDA baseline**~~ — **done 17 Apr 2026**. 36m 48s, 238 quotes, $3.11. One LLM truncation on s5 at default max_tokens=32768. See [trial-runs/fossda-opensource/perf-baselines/pipeline-baseline.md](../trial-runs/fossda-opensource/perf-baselines/pipeline-baseline.md) and [design-perf-scale-and-tokens.md](design-perf-scale-and-tokens.md)
 4. **Perf history charts** (post-launch icebox) — render `.perf-history.jsonl` over time as a chart. Currently view-only via `scripts/perf-history.sh` (tabular)

@@ -7,6 +7,12 @@ on:
     branches: [main]
   workflow_call:  # allow release.yml to invoke this workflow
 
+# Silence the per-step "actions/checkout@v4 is running on Node 20"
+# deprecation chatter and run JS actions on Node 24 ahead of the June
+# 2026 default switch.  Matches the Node version pinned for local dev.
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
 jobs:
   lint:
     runs-on: ubuntu-latest

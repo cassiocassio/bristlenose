@@ -29,6 +29,9 @@ on:
       - ".github/workflows/install-test.yml"
       - "tests/fixtures/smoke-test/**"
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
 jobs:
 
   # ── Linux: pip install from source ──────────────────────────────

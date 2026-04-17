@@ -4,6 +4,9 @@ on:
   push:
     tags: ["v*"]
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
 jobs:
   # Run the full CI suite first — don't publish a broken release.
   ci:

@@ -9,6 +9,9 @@ on:
     # Weekly scan — Mondays at 06:17 UTC (off-minute to reduce fleet load)
     - cron: "17 6 * * 1"
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
 jobs:
   analyze:
     name: Analyze (${{ matrix.language }})

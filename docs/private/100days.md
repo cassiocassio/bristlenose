@@ -14,7 +14,7 @@ Items tagged `[S1]`–`[S6]` are assigned to a sprint. Untagged items are unassi
 
 | Tag | Dates | Theme |
 |-----|-------|-------|
-| [S1] | 14–25 Apr | Start the clocks |
+| ~~[S1]~~ | ~~14–25 Apr~~ | ~~Start the clocks~~ ✅ **Done 17 Apr 2026** (8 days early; succession plan deferred beyond 100days) |
 | [S2] | 28 Apr–9 May | Road to alpha — A/B interleave sandbox + MVP flow, CI cleanup first |
 | [S3] | 12–23 May | Multi-project |
 | [S4] | 26 May–6 Jun | First-run + export |
@@ -367,7 +367,7 @@ The canonical end-to-end beats a first-time user must complete successfully in t
 - **Platform detection refactor** — shared `utils/system.py` (#43)
 - **Skip logo copy when unchanged** (#31)
 - **Temp WAV cleanup** (#33)
-- **Pipeline concurrent chaining** (#32)
+- **Pipeline concurrent chaining** (#32) — always-on semantic splitting for quote extraction. Related: **smart-split-on-truncation fallback** (deferred S3+, not S2). 17 Apr 2026: `llm_max_tokens` default raised 32768 → 64000 (Anthropic hard-caps Claude Sonnet 4 at 64000 decimal; portable ceiling across Claude/Gemini 65K/GPT-5 128K). FOSSDA baseline hit truncation on one dense session at the old 32K default. Smart-split sketch: on `max_tokens` truncation, fall back to splitting that one session on natural breaks (stage-8 topic segments, moderator Q pivots, long silences); reprocess truncated session only; monologue fallback is mechanical halves/thirds with explicit warning. Different from per-participant chaining: chaining is always-on semantic; smart-split is rare-path recovery
 - **LLM response cache** (#34)
 - **Logging tiers 2–3** — cache hit/miss decisions, concurrency queue depth, PII entity breakdown, FFmpeg command/return code, keychain resolution, manifest load/save (6 items, all trivial–small)
 - **Promote pip-audit + npm audit to blocking** — target v0.15.0 (trivial)

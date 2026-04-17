@@ -45,6 +45,10 @@ node_modules/
 bristlenose/server/static/
 *.tsbuildinfo
 
+# Stress-test runtime snapshot (written by the Playwright spec when run
+# directly, without the orchestrator setting $STRESS_RESULTS_PATH).
+e2e/stress-results.json
+
 # Desktop app — bundled binaries and Xcode build artifacts
 desktop/Bristlenose/Resources/bristlenose-sidecar/
 desktop/Bristlenose/Resources/ffmpeg

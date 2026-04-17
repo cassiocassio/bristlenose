@@ -97,18 +97,18 @@ Measures (does NOT assert thresholds — this is measurement, not gating):
 
 | Metric | How |
 |--------|-----|
-| DOM node count (quotes container) | `document.querySelectorAll('.quote-sections *, .quote-themes *').length` — scoped to quote content, excludes NavBar/sidebar/SVG noise |
+| DOM node count (quotes container) | `document.querySelectorAll('.quote-group *').length` — scoped to quote content, excludes NavBar/sidebar/SVG noise. The `.quote-group` class wraps each section/theme; there is no `.quote-sections` wrapper in the current React tree |
 | DOM node count (full page) | `document.querySelectorAll('*').length` — secondary metric for total page weight |
-| Quote card count | `document.querySelectorAll('[data-testid="quote-card"]').length` — primary signal, cleanest comparison |
+| Quote card count | `document.querySelectorAll('.quote-card').length` — primary signal, cleanest comparison. `data-testid="quote-card"` is not emitted; the CSS class is the stable selector |
 | DOM node count (dashboard) | Scoped to dashboard container |
 | DOM node count (transcript s1) | Scoped to transcript container |
-| API latency: `/api/projects/1/quotes` | Warm-up request first, then `performance.getEntriesByType("resource")` for `responseEnd - requestStart`. Median of 3 runs |
-| API latency: `/api/projects/1/tag-groups-with-quotes` | Same |
+| fetch roundtrip: `/api/projects/1/quotes` | Warm-up request first, then `performance.now()` around `fetch()`. Median of 3 runs. Note: this measures browser round-trip (JS queue + network + server + response delivery), not server-side time alone |
+| fetch roundtrip: `/api/projects/1/codebook` | Same (the codebook endpoint powers the right sidebar's tag groups and quote counts) |
 | Page load time (quotes) | `page.goto('/report/quotes/', { waitUntil: 'networkidle' })` — time from navigation start to interactive. Captures React render cost of mounting all QuoteCard components |
 | Tag filter DOM delta | Count before/after applying a tag filter |
 | Search DOM delta | Count before/after typing in search |
 
-All timing metrics (API latency, tag filter, search) use median-of-3 to reduce noise from macOS background processes, Chrome JIT warm-up, and Spotlight indexing. DOM counts are deterministic — single measurement is sufficient.
+All timing metrics (fetch roundtrip, tag filter, search) use median-of-3 to reduce noise from macOS background processes, Chrome JIT warm-up, and Spotlight indexing. DOM counts are deterministic — single measurement is sufficient.
 
 Output: `trial-runs/stress-test-1500/perf-baselines/stress-results.json`
 
@@ -116,37 +116,72 @@ Output: `trial-runs/stress-test-1500/perf-baselines/stress-results.json`
 
 Lighthouse will likely time out on unvirtualised 1,500-quote pages (returns `null` metrics, not poor scores). FCP/LCP are already captured cheaply via `performance.getEntriesByType("paint")` in the Playwright spec. Only enable Lighthouse when you specifically need the full audit (TTI, CLS, SI).
 
+**Version pinning.** `e2e/package.json` pins Lighthouse as a devDependency so scoring weights don't drift between runs. Lighthouse's Chromium compatibility matrix and scoring weights changed materially between major versions (TTI was deprecated at v11 → v12). **Review pin: October 2026** — bump if the current range has been stable in upstream for a quarter.
+
 ## Scaling runs
 
 Run the generator at multiple quote counts to find the cliff:
 
 ```bash
-for n in 100 200 300 500 750 1000 1500 2000 3000; do
+for n in 0 100 200 300 500 750 1000 1500 2000 3000; do
   ./scripts/perf-stress.sh --quotes $n
 done
 ```
 
-Extra points at 200, 300, 750 add negligible run time but give a sharper inflection curve. The cliff is where frame rate drops below 30fps or DOM count exceeds browser paint budget (~10,000 nodes for smooth 60fps). The cliff shape also reveals whether the problem is O(n) linear paint cost or O(n²) layout reflow.
+The `n=0` run establishes the fixed DOM overhead (sidebar, toolbar, codebook, SVG icons, modals) — the regression gate baseline shows 11,546 nodes for just 4 quotes, so the fixed cost is significant. Extra points at 200, 300, 750 add negligible run time but give a sharper inflection curve. The cliff is where frame rate drops below 30fps or DOM count exceeds browser paint budget (~10,000 nodes for smooth 60fps). The cliff shape also reveals whether the problem is O(n) linear paint cost or O(n²) layout reflow.
+
+Results from this scaling run feed back into the regression gate — see [design-perf-regression-gate.md](design-perf-regression-gate.md) recalibration triggers. If the per-quote marginal DOM cost is higher than expected, the gate thresholds may need tightening.
 
 ## New files
 
 | File | Purpose |
 |------|---------|
 | `scripts/generate-stress-fixture.py` | Synthetic fixture generator |
+| `scripts/stress-tag-fixture.py` | Post-import DB augmentation for realistic tag fanout |
 | `scripts/perf-stress.sh` | Orchestrator: generate, serve, measure, report |
-| `e2e/tests/perf-stress.spec.ts` | Playwright: DOM counts, API timing at scale |
-| `e2e/playwright.stress.config.ts` | Config: stress fixture, port 8153, Chromium only |
-| `trial-runs/stress-test-1500/` | Output (gitignored via `trial-runs/`) |
+| `e2e/tests/perf-stress.spec.ts` | Playwright: DOM counts, fetch roundtrip at scale |
+| `e2e/playwright.stress.config.ts` | Chromium-only; honours `BN_STRESS_PORT` env |
+| `trial-runs/stress-test-<N>/` | Output (gitignored via `trial-runs/`) |
 
 ## Verification
 
 1. `./scripts/perf-stress.sh` completes and prints summary
 2. DOM count at 1,500 quotes is ~25,000–35,000 (confirming virtualisation is needed)
 3. After `@tanstack/virtual` ships: re-run, DOM count drops to ~1,000–2,000 regardless of quote count
-4. Export HTML at 1,500 quotes is under 2 MB (or we know the ceiling)
+4. Export HTML at 1,500 quotes — measure the ceiling. The regression gate baseline shows 6.9 MB for just 4 quotes (base64 logos + uncompressed JS chunks are ~6 MB fixed overhead). The stress test reveals whether export growth is dominated by that fixed cost (addressable by gzipping JS chunks) or per-quote content (addressable by virtualisation/lazy rendering)
 
 ## Non-goals
 
 - This is not a CI job — too slow, too environment-dependent
 - No threshold assertions — measurement only. The regression gate handles thresholds
 - No scroll smoothness measurement (Playwright can't measure perceived jank — that's manual)
+
+## Review outcomes (Apr 2026)
+
+Three review agents (`code-review`, `security-review`, `perf-review`) ran against the initial implementation via the `usual-suspects` skill. 23 numbered findings total.
+
+### Actioned
+
+- **Token safety (bugs 1–4, 19)** — heredoc interpolation removed in favour of `STRESS_EXPORT_*` env vars; `curl -v` dropped in favour of `-w` response metrics (`curl -v` echoed stdin-config content on some builds); `server.err` relocated outside the results tree with a redact-on-cleanup copy; startup-failure tail piped through `_redact`; `_BRISTLENOSE_AUTH_TOKEN` unset before the stats-merge Python block.
+- **Portability (7)** — all `mktemp` calls use full-template form (works on BSD and GNU).
+- **Selectors (8)** — design-doc table updated to match actual DOM: `.quote-group *` + `.quote-card`. The React tree has no `.quote-sections` wrapper and quote cards carry the CSS class but no `data-testid`.
+- **Config deduplication (9)** — identity-guard test drops its explicit `Authorization` header; `extraHTTPHeaders` in `playwright.stress.config.ts` is the sole source of truth.
+- **Stability polling (10, 13)** — `waitForPageReady` requires 3 consecutive equal 200ms polls and resets counters on each call, closing the race where two adjacent polls could false-stabilise mid-render at 1,500 quotes.
+- **Metric rename (11)** — `api_latency_ms` → `fetch_roundtrip_ms` to reflect that it measures browser round-trip (JS queue + network + server), not server-side latency.
+- **Lighthouse pin (12)** — pinned as `"lighthouse": "^12.0.0"` in `e2e/package.json`. Scoring weights drift between majors (TTI deprecated at v12). **Review pin: October 2026.**
+- **Port randomisation (18)** — ephemeral port picked via `socket.bind(('127.0.0.1', 0))` and exported as `BN_STRESS_PORT`. Closes the check-then-bind race against a same-UID attacker.
+- **Defence-in-depth (20, 22)** — `umask 077` around `mktemp` calls; Playwright `beforeAll` refuses to run if `trace !== 'off'` under `CI=true` (trace ZIPs bundle the bearer token from `extraHTTPHeaders`).
+- **Sentinel guard (21)** — `generate-stress-fixture.py` refuses to `rmtree` any `--output` directory missing `.bristlenose-stress-fixture`; drops the sentinel on creation.
+- **Summary box (23)** — long results-path moved outside the box so the border never overflows.
+- **Realistic fixture (14)** — new `scripts/stress-tag-fixture.py` opens the per-project SQLite after import and adds two synthetic codebook groups (`User goals`, `Friction types`, 6 tags each, `framework_id="stress-*"`) with 1–2 tags per group applied per quote (`source="autocode"`). Real projects run AutoCode and produce ~3–5 tags per quote — the sidebar `/api/projects/{id}/codebook` endpoint now returns a realistic payload instead of sentiment-only floor.
+
+### Auto-handled
+
+- **Sed case-sensitivity (5)** — the `_redact` helper uses `[Aa]uthorization` + `[Bb]earer` so HTTP/2 lowercase headers would be caught. Not triggered in practice (uvicorn serves HTTP/1.1 plaintext locally).
+- **Disputed perf-review claim (6)** — agent claimed `window.__BRISTLENOSE_AUTH_TOKEN__` was never set so API-latency tests would silently 401. Verified wrong: `bristlenose/server/app.py:311` injects the global on every `/report/*` response, and the smoke run showed real (non-401) latencies.
+
+### Parked — worth revisiting
+
+- **Identity-guard regex vs exact match (16)** — the Playwright spec asserts `/^Stress Test \(\d+ quotes?\)$/`; the orchestrator knows the exact count via `$STRESS_QUOTES`. The two checks disagree where they could match exactly. Tightening is safe but not urgent — the orchestrator-side exact check already fires before Playwright runs.
+- **70/30 coin-flip vs deterministic index (17)** — `generate-stress-fixture.py` hand-rolls a 70/30 screen/theme split via coin-flip + drift correction. Switching to `i % 10 < 7` would be future-proof against ratio tweaks and consume less RNG, but would change every byte of today's fixture and break seed=0 continuity with existing baselines. Revisit if the 70/30 ratio ever changes, or if we need cross-version comparability.
+- **Fixture "floor" variants** — the current fixture is "realistic" (AutoCode-simulated tags applied). If we want a pure "quote-card cost" floor measurement, add a `--no-tag-fanout` flag that skips the DB augmentation step. Not built — we have one realistic mode, not two.

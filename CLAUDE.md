@@ -62,7 +62,7 @@ Key helpers: `OutputPaths` in `output_paths.py` (consistent path construction), 
 - **Design artifacts** (tracked, not shipped): `docs/mockups/`, `docs/design-system/`, `experiments/` — HTML mockups, style guides, throwaway prototypes. These are working materials for contributors, kept in the tree for backup and collaboration. Users never navigate to them. Add new mockups to `docs/mockups/`, not the repo root. **Serve mode auto-discovery**: `bristlenose serve --dev` mounts all three directories and auto-discovers `*.html` files for the Design section in the About tab (`_build_dev_section_html()` in `app.py`). New HTML files added to these directories appear automatically — no code changes needed
 - **Website** (deployed): `website/` — static HTML/CSS for bristlenose.app. Deploy with `/deploy-website` skill or `deploy-website` shell alias. See `docs/private/deploy-website.md`. **Note:** rsync deploy needs SSH agent access — Claude Code's sandbox can't reach it, so the user runs the deploy command manually
 - **Never touch**: `.env`, output directories, `bristlenose/theme/images/`
-- **Gitignored (private)**: `docs/private/`, `trial-runs/` — contain names, contacts, and value judgements not suitable for a public repo
+- **Gitignored (private)**: `docs/private/`, `trial-runs/` — contain names, contacts, and value judgements not suitable for a public repo. **Gotcha:** some files inside `docs/private/` are force-tracked (e.g. `100days.md`, `qa-backlog.md`). Editing them is fine, but committing needs `git add -f docs/private/<file>` because the directory is gitignored. Plain `git add` will bounce with "paths ignored by .gitignore"
 
 ## HTML report features
 

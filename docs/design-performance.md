@@ -1,8 +1,8 @@
 # Performance Audit
 
-Audited Feb 2026. Stage concurrency shipped. Remaining items ranked by impact.
+Audited Feb 2026, re-confirmed against captured baselines Apr 2026. Stage concurrency shipped. Remaining items ranked by impact.
 
-**Measurement procedure:** `docs/design-perf-fossda-baseline.md` — manual pipeline-throughput baseline against FOSSDA. Run before/after any optimisation below.
+**Measurement procedures:** [`design-performance-monitoring.md`](design-performance-monitoring.md) indexes all three (regression gate in CI, stress test ad-hoc, FOSSDA manual). Run the FOSSDA baseline before/after any optimisation in this doc — procedure at [`design-perf-fossda-baseline.md`](design-perf-fossda-baseline.md), first baseline at [`trial-runs/fossda-opensource/perf-baselines/pipeline-baseline.md`](../trial-runs/fossda-opensource/perf-baselines/pipeline-baseline.md).
 
 ---
 
@@ -26,12 +26,13 @@ Audited Feb 2026. Stage concurrency shipped. Remaining items ranked by impact.
 
 - **Pipeline stages 8→9 per-participant chaining** (#32) — instead of "all stage 8 then all stage 9", run `_segment_single(p) → _extract_single(p)` as a chained coroutine per participant. Lets participant B's topic segmentation overlap with participant A's quote extraction
 - **Pass transcript data to renderer** — `render_transcript_pages()` re-reads `.txt` files from disk even though the pipeline had all transcript data in memory. Thread `clean_transcripts` through to avoid redundant I/O
-- **Temp WAV cleanup** (#33) — extracted WAV files in `output/temp/` are never cleaned up. ~115 MB per hour per participant. Add `shutil.rmtree(temp_dir)` after `_gather_all_segments`, guarded by config flag
+- **Temp WAV cleanup** (#33) — extracted WAV files in `output/temp/` are never cleaned up. ~115 MB per hour per participant; **FOSSDA baseline measured 944 MB left behind** on a 10-interview run ([pipeline-baseline.md](../trial-runs/fossda-opensource/perf-baselines/pipeline-baseline.md)). Add `shutil.rmtree(temp_dir)` after `_gather_all_segments`, guarded by config flag
 
 ### Larger effort
 
 - **LLM response cache** (#34) — hash `(transcript + prompt + model)` → cache response JSON. Skip API calls on re-runs with unchanged transcripts. ~80 lines in `llm/client.py` + `--no-cache` flag
 - **Word timestamp pruning** (#35) — `TranscriptSegment.words` stores per-word timing used only during merge. Drop after stage 6 to free memory (~80,000 Word objects for 10 interviews)
+- **Per-model `llm_max_tokens` clamp** — default of 32,768 already exceeds provider caps for Haiku 3.5 (8K) and GPT-4o/mini (16K). Silent-fail potential if a user switches provider. Full context: [`design-perf-scale-and-tokens.md`](design-perf-scale-and-tokens.md). Recurring issue on real datasets (FOSSDA s5 dropped entirely on the baseline run)
 
 ---
 

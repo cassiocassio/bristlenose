@@ -80,6 +80,10 @@ Remaining PII work tracked in `docs/private/100days.md` §4 Value (PII dashboard
 
 ---
 
+## Quick follow-ups
+
+- **Bump `BRISTLENOSE_LLM_MAX_TOKENS` to 65536** (17 Apr 2026) — FOSSDA baseline hit 32K truncation on quote extraction for at least one dense interview. Claude Sonnet 4.6 sync supports 64K output; free headroom. Re-run baseline after bump to replace stage-9 number before using it as an S2 comparison target. Per-participant chaining (S2) remains the robust fix; this is the interim lever
+
 ## Ideas (captured, not triaged)
 
 - **Feedback pipeline → Bristlenose (internal dogfooding)** (17 Apr 2026) — IMAP fetch from feedback@bristlenose.app (DreamHost) → deterministic PII/header strip (Presidio + salted anon IDs for sender stability) → redacted `.md` archive in gitignored dir → monthly batch ingest into a private Bristlenose project to cluster themes for roadmap input. Read-only, never used as demo data, never shipped. Consent-safe because it stays internal. Caveats: emails are many short sessions (not few long ones) — may need a batch mode or synthetic "session per month"; no moderator questions so question-pill logic doesn't apply.

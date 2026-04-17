@@ -11,7 +11,7 @@ Vite 8 (Rolldown) + React + TypeScript 6 + React Router SPA. 37 components in `s
 
 ## Tooling & dependency gotchas
 
-- **Node 24 LTS required** — ESLint 10 dropped Node 23. Node 25 breaks jsdom's localStorage (native Web Storage API conflict). Stick to Node 24 LTS
+- **Node 24 LTS required** — ESLint 10 dropped Node 23. Node 25 breaks jsdom's localStorage (native Web Storage API conflict). Stick to Node 24 LTS. **If Vitest produces a large number of `localStorage.X is not a function` failures, the first thing to check is `node --version`** — not jsdom, not the test-setup. Run tests with `PATH="/opt/homebrew/opt/node@24/bin:$PATH"` if you default to a newer Node. This cost a full hour of mis-diagnosis in Apr 2026 (140+ tests apparently failing on main; actually all passed once we switched to Node 24)
 - **`--legacy-peer-deps` required for `npm install`** — `typescript-eslint@8.57.x` declares `typescript < 6.0.0` as peer dep, but works fine with TS 6. When they update their peer dep range, drop the flag
 - **Vite 8 uses Rolldown** (Rust bundler) instead of esbuild+Rollup. Build is ~3x faster. `rollupOptions` in `vite.config.ts` is auto-converted by the compat layer. `INEFFECTIVE_DYNAMIC_IMPORT` warnings in build output are expected (dual-mode `main.tsx`)
 - **TypeScript 6 is stricter about mock types** — `ReturnType<typeof vi.fn>` no longer assignable to concrete function signatures. Use specific function types or `any` for test mocks

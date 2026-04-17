@@ -64,6 +64,10 @@ Key helpers: `OutputPaths` in `output_paths.py` (consistent path construction), 
 - **Never touch**: `.env`, output directories, `bristlenose/theme/images/`
 - **Gitignored (private)**: `docs/private/`, `trial-runs/` — contain names, contacts, and value judgements not suitable for a public repo. **Gotcha:** some files inside `docs/private/` are force-tracked (e.g. `100days.md`, `qa-backlog.md`). Editing them is fine, but committing needs `git add -f docs/private/<file>` because the directory is gitignored. Plain `git add` will bounce with "paths ignored by .gitignore"
 
+## Deployment targets
+
+Bristlenose runs on three targets: macOS arm64 (primary dev), Linux x86_64 via GitHub Actions CI (release pipeline), and — newly — Claude Code Cloud VMs (ephemeral Ubuntu x86_64,  but reachable when the user picks Cloud in the picker). Cloud is useful for code/test/lint/frontend-build work, **not** for pipeline runs on private interview data. See `docs/design-deployment-targets.md for the audit checklist and use-case boundary table.
+
 ## HTML report features
 
 The generated HTML report has interactive features: inline editing (quotes, headings, names), search-as-you-type, view switching, CSV export, tag filter, hidden quotes, and per-participant transcript pages with deep-linked timecodes. Full implementation details in `docs/design-html-report.md`. Key concepts: people file merge strategy, speaker codes, anonymisation boundary, tag filter persistence, hidden quotes with `.bn-hidden` defence-in-depth. See `bristlenose/theme/CLAUDE.md` for CSS/design gotchas, `bristlenose/theme/js/MODULES.md` for JS module details, `bristlenose/theme/CSS-REFERENCE.md` for per-component CSS docs.

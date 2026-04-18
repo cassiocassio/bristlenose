@@ -32,7 +32,7 @@ CLI commands: `run` (full pipeline), `transcribe-only`, `analyze` (skip transcri
 
 Serve mode: FastAPI + SQLite + React SPA. See `bristlenose/server/CLAUDE.md` for architecture.
 
-Desktop app: `desktop/` — SwiftUI macOS shell. See `docs/design-desktop-app.md`.
+Desktop app: `desktop/` — SwiftUI macOS shell. Alpha ships a bundled, signed PyInstaller sidecar running `bristlenose serve`, distributed via internal TestFlight. v0.2 currently uses launcher-style scaffolding (dev-only, not shippable). See `docs/design-desktop-app.md` for the overall app design, `docs/design-modularity.md` for cross-channel component decisions (CLI ≡ macOS Python code; packaging differences only), and `docs/private/road-to-alpha.md` for the 14-checkpoint path to TestFlight.
 
 Frontend: `frontend/` — Vite + React + TypeScript + React Router. See `frontend/CLAUDE.md` for gotchas and architecture.
 
@@ -174,6 +174,10 @@ See `docs/design-i18n.md` for implementation gotchas (Apple glossary cross-check
 
 **Desktop:**
 - `docs/design-desktop-app.md`, `docs/design-desktop-security-audit.md`
+- `docs/design-modularity.md` — **canonical cross-channel component strategy** (CLI + macOS, Background Assets, no-fork principle, trickle-to-full-capability)
+- `docs/design-desktop-python-runtime.md` — Mac sidecar mechanics (to be written as Track C C0 output)
+- `docs/private/sprint2-tracks.md` — Track A (sandbox), B (MVP UX), C (sidecar bundling + signing, C0–C5)
+- `docs/private/road-to-alpha.md` — 14 checkpoints to TestFlight
 - `docs/design-project-sidebar.md`, `docs/design-wkwebview-messaging.md`
 - `docs/design-desktop-menu-actions.md`, `docs/design-desktop-settings.md`
 

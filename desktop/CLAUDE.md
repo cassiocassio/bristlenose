@@ -1,8 +1,34 @@
 # Desktop App — macOS Shell
 
-SwiftUI macOS app wrapping the Bristlenose React SPA in a WKWebView. Native project sidebar, native toolbar, native Settings window, web content in embedded mode.
+SwiftUI macOS app wrapping the Bristlenose React SPA in a WKWebView. Native project sidebar, native toolbar, native Settings window, web content in embedded mode. **Alpha ships a bundled, signed PyInstaller sidecar** that runs `bristlenose serve` inside the `.app`, distributed via internal TestFlight. The current code uses **launcher-style scaffolding** (the Swift app searches the user's `$PATH` and venv directories for an installed `bristlenose` CLI rather than carrying its own) so v0.2 native-shell work could iterate without paying the bundle-sign-distribute tax on every change. Track C in Sprint 2 replaces it with the bundled sidecar.
 
-## Architecture
+## Shipping architecture (alpha and beyond)
+
+See `docs/design-desktop-python-runtime.md` (to be written as part of Track C C0) for the canonical design. Summary:
+
+- **Bundled, signed PyInstaller sidecar.** The Python `bristlenose serve` runtime ships inside `Bristlenose.app/Contents/Resources/bristlenose-sidecar/`. Every `.dylib`, `.so`, and framework inside is individually codesigned with Hardened Runtime. FFmpeg + ffprobe bundled alongside (trimmed codec set, ~25 MB). Whisper transcription model downloaded on first run to `~/Library/Application Support/Bristlenose/models/` — keeps the `.app` under ~200 MB, matches Aiko/MacWhisper/Audio Hijack UX.
+- **Why sidecar, not embedded interpreter.** Long-running pipeline operations (transcription, LLM calls) must be independently killable from Activity Monitor. An embedded Python interpreter takes the SwiftUI chrome down if Python hangs — beach ball on the toolbar, force-quit the whole app. Separate process keeps that failure mode contained.
+- **Single Python artefact.** Same `bristlenose serve` code path ships via Homebrew/Snap/pip for CLI users and via the `.app` for desktop users. No fork.
+- **Apple-supported pattern.** Apple Developer Support recognises three App-Store-supported Python architectures (pure-Python wrapper via Briefcase, sidecar via IPC, embedded interpreter via PythonKit). Sidecar is documented and shippable.
+- **App Sandbox on, Hardened Runtime on** for Release / TestFlight. Debug builds may relax either to speed iteration.
+
+**Development history:** v0.1 (Feb 2026, in `desktop/v0.1-archive/`) proved the bundling pipeline end-to-end with a one-shot `bristlenose run` wizard. v0.2 (Mar 2026 onwards, this codebase) rebuilt the native shell — NavigationSplitView workspace, WKWebView, native sidebar/menu/settings — using the simpler launcher pattern so the native work could iterate without the bundle-sign-distribute tax on every change. Alpha recombines them: v0.2's native shell + v0.1's bundling pipeline, adapted to the long-lived `bristlenose serve` lifecycle.
+
+## Current state vs target state
+
+| | Current (v0.2, dev only) | Target (alpha, TestFlight) |
+|---|---|---|
+| Python runtime | Launcher: `ServeManager.findBristlenoseBinary()` searches user's venv/Homebrew/pipx | Bundled: `ServeManager.findSidecar()` uses `Bundle.main.resourceURL/bristlenose-sidecar/bristlenose-sidecar` |
+| Sandbox | `ENABLE_APP_SANDBOX = NO` (dev convenience) | On, with a minimal entitlement set enumerated by the C0 spike |
+| Hardened Runtime | Off | `--options=runtime` at codesign time |
+| Signing | Xcode automatic (ad-hoc / dev identity) | Apple Distribution cert + per-binary signing of every dylib/so/framework inside the PyInstaller bundle |
+| FFmpeg | User-installed, found via `$PATH` | Bundled at `Contents/Resources/bin/ffmpeg`, trimmed codecs |
+| Whisper model | User-installed or downloaded by the CLI | First-run download to Application Support |
+| Keychain access (Python side) | `/usr/bin/security` CLI via subprocess | Sandbox-friendly: either `pyobjc-framework-Security`, or Swift fetches keys and passes them via env vars |
+| Ollama integration | Shells out to `ollama` binary | HTTP-only detection against user-configured `localURL` |
+| Distribution | Cmd+R in Xcode on Martin's Mac | Internal TestFlight (up to 100 invited testers) |
+
+## Architecture (SwiftUI layer)
 
 ```
 BristlenoseApp.swift          @main — WindowGroup + Settings scene
@@ -25,7 +51,7 @@ ProjectRow.swift              Sidebar row — doc.text icon, inline rename
 FolderRow.swift               Sidebar folder row — folder.fill icon, inline rename (Phase 3)
 Tab.swift                     Tab enum — route mapping, path→tab derivation
 BridgeHandler.swift           Inbound state + outbound actions + menuAction dispatch
-ServeManager.swift            Process lifecycle + startup zombie cleanup + prefs overlay
+ServeManager.swift            Sidecar lifecycle + startup zombie cleanup + prefs overlay
 WebView.swift                 WKWebView + security policy + KVO observations
 KeychainHelper.swift          Credential storage via native Security.framework (SecItem* APIs)
 LLMProvider.swift             Provider enum + ProviderStatus enum + notification names
@@ -132,11 +158,15 @@ Two layers:
 
 Gap: Xcode's stop button sends SIGKILL which bypasses `willTerminate`. The startup cleanup catches these on next launch.
 
+**Sandbox implication for alpha:** `/usr/sbin/lsof` exec is blocked by App Sandbox. In the shipped build this cleanup path will silently fail. The user-visible consequence is a "port in use" error on the next launch after a crash, which should be handled with a clear restart prompt. Alternatively replace with a Swift-native TCP connect sweep across the port range. Decision deferred to C1.
+
 ## Settings window (Cmd+,)
 
-Apple canonical `Settings` scene with 3 icon tabs (Appearance, LLM, Transcription). Constant width 660pt, height animates to fit content. Settings sync to the serve process via env vars (`ServeManager.overlayPreferences()` reads `UserDefaults` and injects before launching). API keys bypass env vars — Python's `MacOSCredentialStore` reads Keychain directly. LLM tab uses Mail Accounts pattern (sidebar list + detail pane). One provider must always be active; activation guarded by status.
+Apple canonical `Settings` scene with 3 icon tabs (Appearance, LLM, Transcription). Constant width 660pt, height animates to fit content. Settings sync to the serve process via env vars (`ServeManager.overlayPreferences()` reads `UserDefaults` and injects before launching). API keys bypass env vars today — Python's `MacOSCredentialStore` reads Keychain directly. LLM tab uses Mail Accounts pattern (sidebar list + detail pane). One provider must always be active; activation guarded by status.
 
 See `docs/design-desktop-settings.md` for the three tab specs, the UserDefaults→env var mapping table, and the `ProviderStatus` model.
+
+**Alpha change:** sandboxed Python can't exec `/usr/bin/security`, so Track C C3 replaces the CLI-based credential store with either `pyobjc-framework-Security` or a Swift-fetches-then-injects-via-env pattern (preferred). The env-var pattern is symmetric with `overlayPreferences()` and keeps Python out of the Keychain entirely.
 
 ## Security rules
 
@@ -173,6 +203,17 @@ Process pool sharing is optional — separate pools do not break BroadcastChanne
 
 `8150 + djb2(projectPath) % 1000` — deterministic per project path, range 8150–9149. If the computed port is busy, tries up to 10 consecutive ports. Swift's `String.hashValue` is randomized per process (since Swift 4.2), so we use a stable djb2 hash instead.
 
+## Patterns inherited from v0.1 (battle-tested)
+
+These are the parts of v0.1 that survived the v0.2 rewrite because they work. Alpha leans on them too.
+
+- `KeychainHelper.swift` — originally wrapped the `security` CLI, now uses Security.framework (`SecItemAdd`/`SecItemCopyMatching`/`SecItemDelete`). Same service names and account as Python's `MacOSCredentialStore` so either side can read keys written by the other.
+- `Assets.xcassets/` — app icon and accent colour.
+- Pipe reading pattern in `ServeManager` — `Task.detached` + `fileHandle.availableData` loop, originally from v0.1's `ProcessRunner.swift`.
+- ANSI escape stripping regex.
+- PyInstaller `--onedir` + Xcode "Copy Sidecar Resources" Build Phase pattern — preserved in `desktop/v0.1-archive/` as the reference for Track C C1.
+- FFmpeg + ffprobe sibling-binary layout in `Contents/Resources/` — the path convention the sidecar's `bundled_binary_path()` helper will use.
+
 ## Key conventions
 
 - **Bundle ID: `app.bristlenose`** — reverse-DNS of `bristlenose.app`. Irrevocable after first App Store submission. Changed from `CassioCassio.Bristlenose` (25 Mar 2026), then `research.bristlenose.app` (which referenced a non-existent `.research` TLD). v0.1-archive retains original ID (frozen snapshot). Full infrastructure plan: `docs/private/infrastructure-and-identity.md`
@@ -180,17 +221,15 @@ Process pool sharing is optional — separate pools do not break BroadcastChanne
 - **Swift 6 concurrency** — `SWIFT_DEFAULT_ACTOR_ISOLATION = nonisolated` in build settings. Mark classes `@MainActor` explicitly
 - **`@StateObject`** at App level for ServeManager/BridgeHandler, `@EnvironmentObject` in views
 - **SIGINT** (not SIGTERM) for graceful serve shutdown — lets Uvicorn release the port
-- **Sandbox disabled** (`ENABLE_APP_SANDBOX = NO`) — needed for subprocess spawning and localhost network access
+- **App Sandbox: currently off, on for alpha.** Today's Debug/Release builds run unsandboxed so the launcher-style CLI discovery works. Track C C0 spike determines the minimum entitlement set; C1 flips sandbox on and switches to bundled-sidecar discovery.
+- **Hardened Runtime: currently off, on for alpha.** Track C C2 wires `--options=runtime` at codesign time.
 - **`callAsyncJavaScript` param labels**: `in: nil, in: .page` — the two `in` parameters are frame and content world respectively
-
-## Files scavenged from v0.1
-
-- `KeychainHelper.swift` — originally `security` CLI wrapper, now native Security.framework (`SecItemAdd`/`SecItemCopyMatching`/`SecItemDelete`). Same service names and account as Python's `MacOSCredentialStore`
-- `Assets.xcassets/` — app icon and accent colour
-- Pipe reading pattern from `ProcessRunner.swift` — `Task.detached` + `fileHandle.availableData` loop
-- ANSI escape stripping regex
+- **Dev escape hatch: two explicit env vars, three Xcode schemes.** `BRISTLENOSE_DEV_EXTERNAL_PORT` connects to an externally-running `bristlenose serve`; `BRISTLENOSE_DEV_SIDECAR_PATH` spawns a specific binary; neither set → bundled sidecar. Both set → startup error. Release builds ignore both (`#if DEBUG` guard, verified by `desktop/scripts/check-release-binary.sh` post-archive). See "Dev workflow" section.
+- **Logging: `os.Logger`, not `print`.** `Logger(subsystem: "app.bristlenose", category: "<area>")`. Use `print` only for scripts, never in shipped Swift code.
 
 ## Build
+
+### Dev build (today)
 
 ```bash
 # CLI build (uses xcodebuild)
@@ -203,6 +242,18 @@ open desktop/Bristlenose/Bristlenose.xcodeproj
 
 The Xcode project uses `PBXFileSystemSynchronizedRootGroup` — Swift files added to `desktop/Bristlenose/Bristlenose/` are auto-discovered. No need to manually add them to the project.
 
+### Alpha build (Track C C1 and beyond)
+
+End-to-end orchestration lives in `desktop/scripts/build-all.sh`:
+
+1. `scripts/fetch-ffmpeg.sh` — downloads pinned SHA256 FFmpeg/ffprobe
+2. `scripts/build-sidecar.sh` — PyInstaller `--onedir` of `bristlenose serve`
+3. `scripts/sign-sidecar.sh` — parallel (`xargs -P8`) per-binary codesign loop
+4. `xcodebuild archive` — including the Copy Sidecar Resources Build Phase
+5. `xcodebuild -exportArchive` — using `desktop/Bristlenose/ExportOptions.plist`
+
+The signing identity comes from `SIGN_IDENTITY` env var (`-` for ad-hoc local iteration; `Apple Distribution: …` for TestFlight uploads once Track A delivers the cert).
+
 ## Frontend build requirement
 
 `bristlenose serve` needs the React bundle built into `bristlenose/server/static/`. If you see "React bundle not found" warnings:
@@ -211,25 +262,25 @@ The Xcode project uses `PBXFileSystemSynchronizedRootGroup` — Swift files adde
 cd frontend && npm run build
 ```
 
-## Dev workflow: testing CSS/React inside the native app
+## Dev workflow: three modes via Xcode scheme variants
 
-Two modes controlled by an Xcode scheme environment variable:
+After Track C C1 lands, three shared Xcode schemes map to three sidecar resolution modes. Pick the scheme in the Run-button dropdown next to Cmd+R. Each scheme pre-sets the appropriate env vars; Debug-only `#if DEBUG` guards mean Release builds physically exclude these reads and always use the bundled path.
 
-**Mode 1: `BRISTLENOSE_DEV_PORT=8150` (checked)** — for CSS/React iteration
-- Start `bristlenose serve --dev trial-runs/project-ikea` in a terminal
-- Cmd+R in Xcode — app connects to the external dev server (no subprocess)
-- CSS changes: edit `bristlenose/theme/*.css` → refresh in app → instant (live CSS endpoint re-reads from source on every request)
-- React changes: Vite HMR pushes automatically
-- Swift changes: Cmd+R rebuilds app, reconnects to same server
+| Scheme | Env vars it sets | Mode | Purpose | Failure mode |
+|---|---|---|---|---|
+| **Bristlenose** (default) | _(none)_ | `bundled` | What TestFlight ships. Spawns the sidecar at `Bundle.main.resourceURL/bristlenose-sidecar/bristlenose-sidecar`. Exercises the full shipping flow end-to-end. | Debug + bundle missing → `.failed` state + SwiftUI error card with "set `BRISTLENOSE_DEV_SIDECAR_PATH` or run `desktop/scripts/build-sidecar.sh`". Release + bundle missing → `.failed` + "installation corrupted" + Reveal in Finder. |
+| **Bristlenose (External Server)** | `BRISTLENOSE_DEV_EXTERNAL_PORT=8150` | `external` | Fast CSS/React iteration. Start `bristlenose serve --dev trial-runs/project-ikea` in a terminal, then Cmd+R. App connects to the external server — no subprocess. Live CSS endpoint re-reads on every request; Vite HMR pushes React changes. | App can't reach `127.0.0.1:<port>` → standard connection error + retry. Terminal server missing → same. |
+| **Bristlenose (Dev Sidecar)** | `BRISTLENOSE_DEV_SIDECAR_PATH=/Users/cassio/Code/bristlenose/.venv/bin/bristlenose` | `devSidecar` | Swift spawns the exact binary you point at — usually your dev venv. Iterate on Python + test the full ServeManager subprocess flow without a PyInstaller rebuild. `Logger.warning` fires on mode resolution so a poisoned env var is visible. | Path invalid (non-existent, directory, non-executable) → `fatalError` with the resolved path (Debug only; never in Release because the env-var read is `#if DEBUG`-guarded). |
 
-**Mode 2: `BRISTLENOSE_DEV_PORT` unchecked** — for testing the "friend with a .dmg" flow
-- Cmd+R in Xcode — app spawns its own `bristlenose serve` subprocess
-- Tests the full ServeManager lifecycle: binary discovery, process launch, readiness detection, port allocation, graceful shutdown
-- Binary search order: main repo venv → worktree venv → Homebrew → pipx
+**Both env vars set simultaneously** → `ServeManager.init()` fails with "Both dev env vars set — pick one." Catches configuration mistakes at launch rather than on first project click.
 
-The `#if DEBUG` guard on the dev port override means release builds never see it — a .dmg user gets the production code path.
+**Mode logging.** `ServeManager` uses `Logger(subsystem: "app.bristlenose", category: "serve")` and emits one line at startup: `Mode: external-server, port=8150` / `Mode: dev-sidecar, path=/Users/.../bristlenose` / `Mode: bundled, path=/Applications/.../bristlenose-sidecar`. Shows up in Xcode console, Console.app, and `log stream --predicate 'subsystem == "app.bristlenose"'` in Terminal. Release builds get automatic privacy redaction.
 
-**Where to set it:** Xcode → Product → Scheme → Edit Scheme → Run → Arguments → Environment Variables → `BRISTLENOSE_DEV_PORT` = `8150`
+**Swap schemes via the dropdown** next to the Run button in Xcode. To set your own env-var value inside a scheme: Product → Scheme → Edit Scheme → Run → Arguments → Environment Variables. For personal paths (e.g. a non-default venv location), edit the scheme's env-var value directly — the schemes are checked into `xcshareddata/xcschemes/` so the default values are shared, but personal overrides stay local until you commit them.
+
+**Linux / Windows contributors** never touch this — these env vars are read by Swift, not Python. If you're working on the Python sidecar or React frontend, run `bristlenose serve` directly from your terminal and use any browser; the macOS shell is out of scope.
+
+See `docs/design-modularity.md` "External dev server" glossary entry and `docs/private/sprint2-tracks.md` Track C C1 for the implementation spec. Underlying resolver is `SidecarMode.resolve(env:bundle:fileManager:)` — a pure function unit-tested in `BristlenoseTests/SidecarModeTests.swift`.
 
 ## Gotchas
 
@@ -239,19 +290,19 @@ The `#if DEBUG` guard on the dev port override means release builds never see it
 - **`import Security` does NOT re-export Foundation on macOS 15 SDK** — `KeychainHelper.swift` needs both `import Foundation` and `import Security`. Without Foundation, `Data` and `ProcessInfo` are undefined. The code review suggested `import Security` alone would suffice — it doesn't
 - **WKWebView `createWebViewWith` requires the provided configuration** — you MUST use the `configuration` parameter passed to `webView(_:createWebViewWith:for:windowFeatures:)`. Creating a fresh `WKWebViewConfiguration` and returning a WKWebView built with it crashes with `NSInternalInconsistencyException: "Returned WKWebView was not created with the given configuration."`. This means the popout inherits the parent's `userContentController` (including the bridge message handler). The bridge is accessible but player.html never calls it
 - **WKWebView `window.open()` is blocked without `WKUIDelegate`** — `window.open()` silently returns `null` unless the Coordinator implements `WKUIDelegate` and `webView(_:createWebViewWith:for:windowFeatures:)`. No error in the console — the call just fails. This is why the video player didn't work in the desktop app before the WKUIDelegate was added
-- **Zombie cleanup kills the dev server** — `ServeManager.killOrphanedServeProcesses()` runs on `init()` and kills everything on ports 8150–9149. When `BRISTLENOSE_DEV_PORT` is set, the cleanup is now skipped. Always start the terminal server **after** Xcode launches if not using the dev port override
+- **Zombie cleanup kills the dev server** — `ServeManager.killOrphanedServeProcesses()` runs on `init()` and kills everything on ports 8150–9149. When `BRISTLENOSE_DEV_EXTERNAL_PORT` is set (external-server scheme), cleanup is skipped — we don't own that process. When `BRISTLENOSE_DEV_SIDECAR_PATH` is set (dev-sidecar scheme), cleanup still runs because we own the spawned subprocess. Always start the terminal server **after** Xcode launches if using the external-server scheme.
 - **`window.blur`/`window.focus` don't fire in WKWebView** — the web view's `window` is always considered focused from the web content's perspective. macOS window activation must be pushed from the native side via `NSWindow.didBecomeKeyNotification`/`didResignKeyNotification` → `BridgeHandler.setWindowActive()`. The browser `blur`/`focus` listener in `AppLayout.tsx` only works in browser-based serve mode
 - **Safari Web Inspector for WKWebView debugging** — enable `webView.isInspectable = true` (already set in `#if DEBUG`). Open Safari → Develop → Bristlenose → pick the localhost page. The inspector opens in a Safari window, so the Bristlenose app window stays inactive — perfect for debugging inactive-window behaviour
 - **Xcode stale indexer** — sometimes shows "no member" errors that `xcodebuild` doesn't. Fix: `Cmd+Shift+K` (Clean Build Folder) then `Cmd+R`
-- **Zombie serve processes** — if the app crashes without calling `stop()`, the Python serve process keeps running on the port. Check with `lsof -i :8150-9150 -P -n | grep LISTEN`. Next app launch cleans these up automatically (startup zombie cleanup in ServeManager.init)
-- **`Report:` readiness signal** — `bristlenose serve` prints this BEFORE Uvicorn accepts connections. The port-polling step in ServeManager handles the race
+- **Zombie serve processes** — if the app crashes without calling `stop()`, the Python serve process keeps running on the port. Check with `lsof -i :8150-9150 -P -n | grep LISTEN`. Next app launch cleans these up automatically (startup zombie cleanup in ServeManager.init). **Note:** sandboxed Release builds can't exec `lsof` — see "Zombie process cleanup" above
+- **`Report:` readiness signal** — `bristlenose serve` prints this BEFORE Uvicorn accepts connections. The port-polling step in ServeManager handles the race. The sidecar will keep this log line and parser — it's the alpha readiness contract
 - **Bridge code on main vs feature branch** — the `macos-app` branch has the bridge shims in `frontend/src/shims/bridge.ts`. The main branch build served by `bristlenose serve` won't post `ready` messages. The `didFinish` fallback in WebView handles this (shows content after 2s timeout)
 - **Segmented Picker requires non-optional selection** — `Binding<Tab?>` doesn't work with `.pickerStyle(.segmented)`. The `tabBinding` in ContentView maps nil to `.project`
 - **Tab.from(path:) prefix order** — check longest prefixes first (`/report/analysis` before `/report/`). The project tab uses exact match to avoid matching all paths
 - **`.onReceive` is a View modifier, not Scene** — attach it to the root View inside WindowGroup, not to the WindowGroup itself. The publisher is `NotificationCenter.default.publisher(for: NSApplication.willTerminateNotification)`
 - **`@ObservedObject` in `Commands` struct is unreliable** — use `let` (plain property) on the `Commands` struct, then use `@ObservedObject` inside `View` structs that are the content of `CommandMenu`/`CommandGroup`. See `MenuCommands.swift` for the pattern
 - **Don't replace `.pasteboard` in Commands** — `CommandGroup(replacing: .pasteboard)` removes Cut/Copy/Paste. WKWebView handles these via the responder chain. Only replace `.undoRedo` (for app-level undo) and `.help`
-- **Undo/Redo editing guard** — when `isEditing`, the Undo/Redo menu items are hidden (not disabled) so Cmd+Z falls through to WKWebView's character-level text undo. When not editing, they intercept and route to the bridge. **Known HIG deviation:** this violates the "dim, never hide" menu principle (line 99). Hiding is necessary here because a disabled Cmd+Z menu item would still intercept the shortcut before it reaches WKWebView's responder chain — dimming prevents the key from falling through. Acceptable trade-off: character-level undo during text editing is more important than menu discoverability
+- **Undo/Redo editing guard** — when `isEditing`, the Undo/Redo menu items are hidden (not disabled) so Cmd+Z falls through to WKWebView's character-level text undo. When not editing, they intercept and route to the bridge. **Known HIG deviation:** this violates the "dim, never hide" menu principle. Hiding is necessary here because a disabled Cmd+Z menu item would still intercept the shortcut before it reaches WKWebView's responder chain — dimming prevents the key from falling through. Acceptable trade-off: character-level undo during text editing is more important than menu discoverability
 - **`@AppStorage` not `@SceneStorage` for project selection** — `selectedProjectPath` uses `@AppStorage` so the last-opened project persists across app launches. `@SceneStorage` doesn't survive relaunch for unsigned/debug-signed apps (macOS state restoration requires proper code signing). Xcode debug runs also reset scene storage between launches. Use `@AppStorage` for anything that must persist across relaunches
 - **Web Inspector** — enabled via `webView.isInspectable = true` in `#if DEBUG` builds only. Right-click → Inspect Element works in debug builds for diagnosing bridge/CSS issues
 - **Navigation shims use module-level refs (not closures)** — `installNavigationShims()` in `frontend/src/shims/navigation.ts` stores `navigate` and `scrollToAnchor` in module-level variables. The `window.switchToTab` etc. functions read from these refs instead of closing over the parameters directly. This prevents a stale-closure bug where the initial `navigate` captured at mount doesn't work until the router is fully ready. The `useEffect` in `AppLayout.tsx` calls `installNavigationShims` on every `navigate`/`scrollToAnchor` change — the window functions are installed once (idempotent guard) but the refs always update
@@ -329,7 +380,7 @@ The `BristlenoseTests` target uses `PBXFileSystemSynchronizedRootGroup` — new 
 Build settings must match the app target:
 - `SWIFT_VERSION` — same as app (currently 5.0)
 - `SWIFT_DEFAULT_ACTOR_ISOLATION = nonisolated`
-- `ENABLE_APP_SANDBOX = NO`
+- `ENABLE_APP_SANDBOX = NO` (today; matches app target; flips to YES for alpha)
 
 ### Running tests
 
@@ -345,3 +396,11 @@ Two injection points exist for safe testing:
 
 1. **`ProjectIndex(fileURL:)`** — pass a temp directory URL to avoid touching `~/Library/Application Support/Bristlenose/projects.json`
 2. **`KeychainStore` protocol** — `KeychainHelper.liveStore` for production, `InMemoryKeychain()` for tests. The static `KeychainHelper.get/set/delete` methods remain unchanged for existing call sites
+
+## See also
+
+- `docs/design-modularity.md` — canonical reference for what ships where (Python deps, extras, Background Assets, no-fork principle across CLI + macOS)
+- `docs/design-desktop-python-runtime.md` — canonical shipping architecture for the Mac sidecar specifically (write-up due as part of Track C C0)
+- `docs/private/road-to-alpha.md` — 14 checkpoints to TestFlight
+- `docs/private/sprint2-tracks.md` — Track A (sandbox plumbing), Track B (MVP UX flow), Track C (sidecar bundling + signing)
+- `desktop/v0.1-archive/README.md` — v0.1 bundling pipeline reference

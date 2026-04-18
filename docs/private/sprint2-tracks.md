@@ -67,28 +67,37 @@ The `100days.md` §1a beats 1–13. The long pole. Judgment-heavy. Quality bar: 
 
 **B1 first move:** clean-profile walkthrough on the current build to identify the first broken beat. Clean profile = wipe `~/Library/Application Support/Bristlenose` + Keychain entries, no Claude key set.
 
-### Track C — Codesigning infrastructure
+### Track C — Sidecar bundling + signing (re-scoped 18 Apr 2026)
 
-Road-to-alpha checkpoints **#4** (PyInstaller sidecar signing) and **#5** (Hardened Runtime entitlements — "comes with 4" per the doc).
+**Re-scoped.** Original Track C assumed the desktop app already bundled a Python sidecar that just needed codesigning. It doesn't — v0.2 is a launcher-style dev shell (`ServeManager.findBristlenoseBinary()`) that was never intended to ship. Real Track C covers resurrecting the bundling pipeline from v0.1, signing it, and wiring in all the Mac App Store prerequisites. See the implementation plan in `~/.claude/plans/when-you-have-done-encapsulated-conway.md`.
 
-Mechanical. Binary pass/fail success criterion. Claude can drive end-to-end with ad-hoc signing locally; human validates when it produces a runnable bundle.
+**Canonical design references:**
+- [`docs/design-modularity.md`](../design-modularity.md) — **what** goes where (Python deps, extras, Background Assets, cross-channel decisions). The no-fork principle lives here.
+- `docs/design-desktop-python-runtime.md` (to be written in C0) — **how** the Mac sidecar specifically works (ServeManager, entitlements, Privacy Manifest, codesign chain).
 
-**Scope cut:** one branch, `sidecar-signing`. Covers:
-- `scripts/sign-sidecar.sh` (or `.py`) — `find` → per-binary `codesign --force --timestamp --options=runtime --sign …` loop, innermost first, then outer `.app` sign
-- `desktop/Bristlenose/ExportOptions.plist` — for `xcodebuild -exportArchive`
-- Hardened Runtime flag plumbing (`com.apple.security.cs.allow-unsigned-executable-memory`, `disable-library-validation`, `allow-jit` as required)
-- Ad-hoc signing fallback (`--sign -`) for local dev before A delivers Apple Distribution cert
-- Signing identity parameterised via env var (`SIGN_IDENTITY="Apple Distribution: …"` or `-`)
-- Possibly `desktop/build-sidecar.sh` if one exists
+**Sub-scopes (own branch each or narrow sequence):**
 
-**Won't put in this branch:**
-- Contents of the entitlements file (A's output — C just references the path)
-- CI upload job (#11 / S6)
-- Actual TestFlight upload (#12 — needs real cert + finalised entitlements)
+- **C0 — Entitlement spike** (~½ day). Build v0.1 sidecar fresh against current deps, run under Hardened Runtime, enumerate minimum entitlement set. Output: entitlement table in `design-desktop-python-runtime.md`.
+- **C1 — Resurrect bundling pipeline, scoped to `serve`** (~2 days). Port `desktop/v0.1-archive/` forward with trim-ruthlessly packaging per `design-modularity.md` (MLX-only, presidio bundled for alpha-only, FFmpeg trimmed). **Dev escape hatch consolidation:** replace `findBristlenoseBinary()`'s silent 5-path search with a pure `SidecarMode.resolve(env:bundle:fileManager:)` function; two explicit env vars (`BRISTLENOSE_DEV_EXTERNAL_PORT`, `BRISTLENOSE_DEV_SIDECAR_PATH`) both `#if DEBUG`-guarded; three shared Xcode schemes wrap the env vars; swap `print()` for `os.Logger`. Full spec in `~/.claude/plans/when-you-have-done-encapsulated-conway.md`. **Lazy-import the heavy providers** (`anthropic`, `openai`, `google-genai`, `mlx_whisper`) inside their use sites rather than at module top — free `serve` cold-start win that ships with the bundle.
+- **C2 — Sign every binary** (~1 day). Parallel `xargs -P8 codesign --options=runtime`. Ad-hoc for local; Apple Distribution when Track A delivers cert. Also wire `desktop/scripts/check-release-binary.sh` (post-archive `strings | grep BRISTLENOSE_DEV_` gate — fails the build if any dev env-var literal leaked into the Release Mach-O). One-line defence-in-depth proving the `#if DEBUG` invariant.
+- **C3 — Keychain in sandbox** (~½ day). Swift fetches keys, passes via env vars (no Mac-only Python dep — preserves no-fork principle).
+- **C4 — Privacy Manifest** (~½ day). Generate `PrivacyInfo.xcprivacy` against bundled sidecar. Declare zero collection.
+- **C5 — Supply-chain provenance** (~½ day). SHA256-pin FFmpeg/Whisper URLs, `THIRD-PARTY-BINARIES.md`, CVE-monitoring note.
 
-**Won't touch:** any Python source, any frontend, any server route.
+**Branch:** `sidecar-signing` (current worktree — scope extended from original three-sentence version)
 
-**C1 first move:** inventory the current PyInstaller bundle (count signable binaries, list dylib/so/framework patterns), write the loop, iterate locally with ad-hoc signing until the bundle launches and runs.
+**Won't do in Track C:** Developer ID / `.dmg` pipeline (rejected per road-to-alpha); CI upload job (#11 / S6); actual TestFlight upload (#12 / S6); App Store Connect app record (#10 / S6).
+
+**Deferred to public-beta polish pass (post-alpha, before 100-days):**
+- Native SwiftUI splash window during sidecar boot (alpha can cope with 3–6 s blank WKWebView; paying users can't).
+- "Manage downloaded content" Settings panel (storage view, per-asset delete) — needs Background Assets to be live first.
+- Upgrade prompts when Apple-Hosted asset packs publish a new version (e.g. better Whisper model).
+- Per-asset retry / cancel UI for failed Background Assets downloads.
+- First-run "we'll trickle additional capability over the next hour" sheet.
+
+The split is deliberate: alpha proves the architecture works with 5 friends; public beta polishes the UX for evaluators. Don't pull beta polish into Track C — it'll bloat alpha.
+
+**C0 first move:** build v0.1 sidecar fresh, `codesign -o runtime`, run, record every entitlement violation. Populate entitlement table in `design-desktop-python-runtime.md`.
 
 ## Track interaction matrix
 

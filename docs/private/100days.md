@@ -25,7 +25,7 @@ Items tagged `[S1]`–`[S6]` are assigned to a sprint. Untagged items are unassi
 
 **Sprint 2 cadence — A/B/C interleave (updated 18 Apr 2026).** Three parallel tracks per `docs/private/sprint2-tracks.md`: Track A (sandbox plumbing, road-to-alpha #2 + #3), Track B (MVP UX flow, §1a beats), Track C (bundled sidecar resurrection + signing, C0–C5). Tracks converge at first TestFlight upload (#12). Cross-channel component strategy in `docs/design-modularity.md` — what's bundled, what's Background Assets, what's CLI-only, no-fork principle. Alternate sandbox/signing steps with MVP flow / UI quality steps. Each step unblocks the other: sandbox work surfaces UI regressions (folder bookmarks, temp paths); UI work exercises the sandboxed paths. Order:
 
-1. **Clean up CI** — re-enable the E2E gate (3 parked P3 regressions), land the perf regression gate. Unblocks everything else.
+1. ~~**Clean up CI** — re-enable the E2E gate (3 parked P3 regressions), land the perf regression gate. Unblocks everything else.~~ _Done 18 Apr 2026 (ci-cleanup branch): gate flipped, 3 regressions cleared (autocode 404 allowlisted, codebook 404 allowlisted as deferred-fix to S3, auth-token wired). Plus `e2e/ALLOWLIST.md` register, Analysis page button fix, SECURITY.md honesty update, `bristlenose doctor` env-bleed check. CI passed first try post-flip (19m44s). Option B auth-token gate deferred with design plan + reminder 16 May. Python floor bump to 3.12 tracked §11 Should + reminder 9 May._
 2. **A/B/A/B through S2:**
    - A: sandbox step (one entitlement + related code migration at a time)
    - B: MVP flow step (one beat of §1a below at a time)

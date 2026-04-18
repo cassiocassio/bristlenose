@@ -1,6 +1,6 @@
 # Bristlenose — Where I Left Off
 
-Last updated: 17 Apr 2026
+Last updated: 18 Apr 2026
 
 **Launch plan:** `docs/private/100days.md` — triaged by topic + MoSCoW priority. That's the source of truth for what ships. This file is a public capture inbox + session context + done history.
 
@@ -48,6 +48,14 @@ Remaining desktop bugs and i18n items tracked in `docs/private/100days.md` §2, 
 - [x] **Phase 3: Folders** — `FolderRow.swift`, `Folder` model with CRUD, `folderId` on Project, `SidebarSelection` enum, `DisclosureGroup` collapse, "Move to" submenu, adaptive Project menu, File > New Folder (⇧⌘N), `folder.badge.plus` enabled, collapsed state persistence, locale keys in all 6 languages
 
 Remaining multi-project phases tracked in `docs/design-project-sidebar.md` (Phases 4–5: bookmarks/availability, archive/bin).
+
+## CI hardening — sprint 2 step 0 (18 Apr 2026, ci-cleanup branch)
+
+- [x] **Flip e2e gate to blocking** — removed `continue-on-error: true` from `.github/workflows/ci.yml`. First CI run post-flip passed green (19m44s). The three P3 regressions parked during v0.14.5 release-unblock are cleared: autocode status 404 allowlisted (REST-correct), codebook route 404 allowlisted as deferred-fix (root cause S3), `_BRISTLENOSE_AUTH_TOKEN=test-token` wired into the main e2e workflow
+- [x] **`e2e/ALLOWLIST.md` register** — every deliberate e2e-spec suppression now has a categorised entry + `// ci-allowlist: CI-A<N>` code marker. 3 categories: infra / by-design / deferred-fix. 4 current entries. Prevents silent accretion. Validator + staleness gate deferred to v2 (tracked §11)
+- [x] **SECURITY.md auth-token honesty update** — prior text claimed the token was random-at-startup and memory-only unconditionally; reality is `_BRISTLENOSE_AUTH_TOKEN` in env overrides (for CI fixtures + uvicorn reload). Spec now matches code; doctor check warns on accidental env bleed. The proper gate (behind `BRISTLENOSE_DEV_MODE=test`) is a design problem deferred with a full plan (reminder 16 May 2026)
+- [x] **Fix: Analysis "Show all N quotes" toggle** — was an `<a>` without `href` (surfaced only when e2e gate became blocking). Converted to `<button type="button">` with minimal CSS reset
+- [x] **Fix: `playwright.config.ts` shell-quoting** — unquoted `${BRISTLENOSE}` / `${FIXTURE_DIR}` interpolation broke worktrees with spaces in the name. Pre-existing; surfaced during ci-cleanup verification
 
 ## CI hardening — sprint 1 (15–16 Apr 2026)
 

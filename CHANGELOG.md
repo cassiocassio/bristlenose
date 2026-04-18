@@ -2,6 +2,15 @@
 
 All notable changes to Bristlenose are documented here. See also the [README](README.md) for the latest releases.
 
+**0.14.6** — _18 Apr 2026_
+
+- **CI: e2e gate re-enabled as a blocking check** — cleared the three P3 items parked during v0.14.5. Autocode-status 404 allowlisted in `e2e/tests/network.spec.ts` (kept REST semantics; frontend at `CodebookPanel.tsx:609` already null-tolerant). Codebook-route console subresource 404 allowlisted in `e2e/tests/console.spec.ts` with a `TODO(S3)` pointer; root-cause fix deferred to the next frontend sprint. `_BRISTLENOSE_AUTH_TOKEN=test-token` wired into the main e2e workflow step so Node-side fetches can authenticate
+- **Fix: Analysis page "Show all N quotes" toggle** — the expand/collapse toggle on signal cards was rendered as an `<a>` without `href`, which fails a11y (not keyboard-focusable) and trips link validators. Converted to a proper `<button type="button">` with minimal CSS reset in `analysis.css`. Discovered during the e2e gate-flip verification on this branch
+- **Fix: Playwright config shell-quotes** — `playwright.config.ts` interpolated `${BRISTLENOSE}` and `${FIXTURE_DIR}` unquoted, so worktree paths with spaces (like `bristlenose_branch ci-cleanup`) broke the webServer launch. Paths now quoted. Pre-existing bug, surfaced by the branch naming convention
+- **Security docs: `SECURITY.md` corrected** — prior text claimed the auth token was "random at startup" and "memory only" unconditionally. Reality: `_BRISTLENOSE_AUTH_TOKEN` in the process environment overrides the random token (required for CI fixtures and for uvicorn `--reload` session continuity across code saves). Spec updated to describe the actual behaviour; a future hardening task will gate the override behind `BRISTLENOSE_DEV_MODE=test`
+- **Doctor: new `Auth token` check** — `bristlenose doctor` now warns if `_BRISTLENOSE_AUTH_TOKEN` is set in the shell environment. Helps catch accidental bleed from a previous CI run or dotfile that would otherwise silently pin the serve token
+- **CI: allowlist register** — every deliberate suppression in the Playwright e2e gate now has an entry in `e2e/ALLOWLIST.md` and a `// ci-allowlist: CI-A<N>` marker in code. Three categories: `infra` (stack artefact, never fixable), `by-design` (intentional correct behaviour), `deferred-fix` (real bug with tracker link). Prevents silent accumulation of "we ignored that failure because" in the gate. Validator script + staleness gate deferred until ~10 entries
+
 **0.14.5** — _17 Apr 2026_
 
 - **CI: unblock release pipeline** — v0.14.0–v0.14.4 releases all failed in CI for three independent reasons that had compounded since early April. No user-facing changes; cutting this release to prove the pipeline is green end-to-end before resuming normal feature work

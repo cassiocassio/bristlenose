@@ -392,6 +392,19 @@ def _fix_ollama_model_missing(_method: str) -> str:
     )
 
 
+def _fix_auth_token_env_set(_method: str) -> str:
+    return (
+        "_BRISTLENOSE_AUTH_TOKEN is set in your shell. `bristlenose serve` "
+        "will use this value as the auth token instead of generating a fresh "
+        "random one, which is usually not what you want outside CI.\n\n"
+        "Unset it:\n\n"
+        "  unset _BRISTLENOSE_AUTH_TOKEN\n\n"
+        "If this is a CI or test shell, you can ignore this warning. Also "
+        "check your shell config (.zshrc, .bashrc, direnv, etc.) in case "
+        "it's being exported automatically."
+    )
+
+
 # ---------------------------------------------------------------------------
 # Lookup table
 # ---------------------------------------------------------------------------
@@ -416,4 +429,5 @@ _FIX_TABLE: dict[str, object] = {
     "ollama_not_running": _fix_ollama_not_running,
     "ollama_not_installed": _fix_ollama_not_installed,
     "ollama_model_missing": _fix_ollama_model_missing,
+    "auth_token_env_set": _fix_auth_token_env_set,
 }

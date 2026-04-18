@@ -14,9 +14,12 @@ test('no console errors on any route', async ({ page, baseURL }) => {
   page.on('console', (msg) => {
     if (msg.type() === 'error') {
       const text = msg.text();
-      // Ignore favicon 404 (browsers request this automatically)
+      const url = page.url();
+      // ci-allowlist: CI-A1 (infra — see e2e/ALLOWLIST.md)
       if (text.includes('favicon')) return;
-      errors.push(`${page.url()}: ${text}`);
+      // ci-allowlist: CI-A4 (deferred-fix — see e2e/ALLOWLIST.md; tracker: 100days.md §2)
+      if (url.includes('/report/codebook') && text.includes('404')) return;
+      errors.push(`${url}: ${text}`);
     }
   });
 

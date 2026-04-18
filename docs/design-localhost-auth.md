@@ -106,6 +106,8 @@ No distinction between missing token, wrong token, or expired token. No hints ab
 
 Token stashed in `os.environ["_BRISTLENOSE_AUTH_TOKEN"]` (follows `_BRISTLENOSE_PROJECT_DIR` convention). Factory recovers it on reload. Token survives hot-reload, changes on full restart.
 
+**Known gap (18 Apr 2026):** the env-override is currently unconditional — if `_BRISTLENOSE_AUTH_TOKEN` is set in the parent shell (e.g. leftover from a CI run or a dotfile), serve adopts it instead of generating random. `SECURITY.md` was corrected in v0.14.6 to describe this, and `bristlenose doctor` warns when the env var is set, but a proper gate behind `BRISTLENOSE_DEV_MODE=test` is deferred — tracked in `docs/private/100days.md` §6 Risk. The gate needs to preserve reload continuity (the whole point of the writeback above) while refusing inherited tokens, which is a non-trivial read-vs-write design question.
+
 ## Files to modify
 
 ### Python (server side)

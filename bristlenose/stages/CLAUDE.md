@@ -1,5 +1,9 @@
 # Pipeline Stages Context
 
+## Bundled binary lookup (forward-looking)
+
+Stages that shell out to FFmpeg/ffprobe (`s02_extract_audio.py`, `utils/video.py`, `utils/audio.py`) currently use `shutil.which()`. When the Mac sidecar work lands (Track C C1, see `docs/design-modularity.md`), call sites will switch to a `bundled_binary_path("ffmpeg")` helper that prefers an env var set by Swift, then a bundle-relative path, then falls through to `shutil.which()`. Single source code path on CLI and desktop — different acquisition. Don't inline `shutil.which()` calls or hard-code paths in new stages; they'll need updating again later.
+
 ## Transcript format conventions
 
 - **Speaker codes**: Each segment is tagged with a speaker code in brackets: `[p1]` for participants, `[m1]`/`[m2]` for moderators (researchers), `[o1]` for observers. A single session file (e.g. `p1_raw.txt`) can contain segments from multiple speakers

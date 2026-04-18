@@ -14,7 +14,7 @@ From security review of desktop app plan (22 Mar 2026). All findings are in the 
 - [x] **Media endpoint filtering** — extension allowlist + path-traversal guard on `/media/` route. Also requires auth token
 - [x] **CORS middleware** — `CORSMiddleware(allow_origins=[])` blocks all cross-origin requests
 - [x] **Don't bundle API key in binary** — verified clean: no hardcoded keys in Swift source, Keychain-only storage, user enters via Settings
-- [x] **Skip zombie cleanup when BRISTLENOSE_DEV_PORT is set** — `killOrphanedServeProcesses()` now skips when dev port override is active, so the terminal dev server isn't killed on Xcode launch
+- [x] **Skip zombie cleanup when dev port override is set** — `killOrphanedServeProcesses()` now skips when the external-server env var is active, so the terminal dev server isn't killed on Xcode launch. (Env var renamed from `BRISTLENOSE_DEV_PORT` to `BRISTLENOSE_DEV_EXTERNAL_PORT` in Track C C1.)
 - [x] **Minimal child process environment** — stripped to PATH, HOME, TMPDIR, USER, SHELL, locale, VIRTUAL_ENV + BRISTLENOSE_* overlay in `ServeManager.overlayPreferences()`
 
 Remaining security items tracked in `docs/private/100days.md` §6 Risk.

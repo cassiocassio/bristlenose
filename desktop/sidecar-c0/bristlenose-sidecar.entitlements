@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+Hardened Runtime entitlements for the bundled Python sidecar.
+
+Empirically reduced during Track C C0 (18 Apr 2026) from v0.1's full set.
+
+Load-bearing: ONLY com.apple.security.cs.disable-library-validation.
+  Reason: the outer binary is ad-hoc signed (Team ID = "-"); the bundled
+  Python.framework and every .so file are ad-hoc signed with different
+  identifiers. Library validation otherwise blocks dlopen with
+  "mapping process and mapped file have different Team IDs".
+
+NOT needed for serve-only scope (confirmed by empty-entitlement test,
+Python 3.12 + mlx_whisper, Apr 2026):
+  - cs.allow-unsigned-executable-memory: CPython 3.12 does not use W+X.
+  - cs.allow-jit: ctranslate2 is excluded; MLX uses Metal GPU kernels, not CPU JIT.
+  - cs.allow-dyld-environment-variables: not required for serve.
+
+If a future addition needs any of the above, document the trigger here.
+App Sandbox + user-facing entitlements (files, network, bookmarks)
+are Track A's concern — the sidecar will add com.apple.security.inherit
+at that point so the parent's sandbox applies.
+-->
+<plist version="1.0">
+<dict>
+    <key>com.apple.security.cs.disable-library-validation</key>
+    <true/>
+</dict>
+</plist>

@@ -25,6 +25,7 @@ from bristlenose.doctor import (
     CheckStatus,
     DoctorReport,
     check_api_key,
+    check_auth_token_env,
     check_backend,
     check_disk_space,
     check_ffmpeg,
@@ -919,13 +920,44 @@ class TestCheckDiskSpace:
 
 
 # ---------------------------------------------------------------------------
+# check_auth_token_env — env-var presence
+# ---------------------------------------------------------------------------
+
+
+class TestCheckAuthTokenEnv:
+    def test_env_var_unset(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """No env var → OK, no warning."""
+        monkeypatch.delenv("_BRISTLENOSE_AUTH_TOKEN", raising=False)
+        result = check_auth_token_env()
+        assert result.status == CheckStatus.OK
+        assert result.fix_key == ""
+        assert "random" in result.detail
+
+    def test_env_var_set(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Env var present → WARN with fix_key."""
+        monkeypatch.setenv("_BRISTLENOSE_AUTH_TOKEN", "some-value")
+        result = check_auth_token_env()
+        assert result.status == CheckStatus.WARN
+        assert result.fix_key == "auth_token_env_set"
+        assert "_BRISTLENOSE_AUTH_TOKEN" in result.detail
+
+    def test_env_var_empty_string(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Empty string counts as unset (os.environ.get returns "" which is falsy)."""
+        monkeypatch.setenv("_BRISTLENOSE_AUTH_TOKEN", "")
+        result = check_auth_token_env()
+        assert result.status == CheckStatus.OK
+
+
+# ---------------------------------------------------------------------------
 # run_all and run_preflight
 # ---------------------------------------------------------------------------
 
 
 class TestRunAll:
-    def test_run_all_returns_seven_results(self) -> None:
+    def test_run_all_returns_eight_results(self, monkeypatch: pytest.MonkeyPatch) -> None:
         settings = _settings()
+        # check_auth_token_env reads os.environ directly; pin it OK for this test.
+        monkeypatch.delenv("_BRISTLENOSE_AUTH_TOKEN", raising=False)
         with (
             patch("bristlenose.doctor.check_ffmpeg") as m1,
             patch("bristlenose.doctor.check_backend") as m2,
@@ -939,7 +971,7 @@ class TestRunAll:
                 m.return_value = CheckResult(status=CheckStatus.OK, label="test")
             report = run_all(settings)
 
-        assert len(report.results) == 7
+        assert len(report.results) == 8
         assert not report.has_failures
 
 
@@ -1294,6 +1326,14 @@ class TestGetFixGrid:
         fix = get_fix("low_disk_space", method)
         assert "tiny" in fix
         assert "small" in fix
+
+    # -- auth_token_env_set: same for all methods --
+
+    @pytest.mark.parametrize("method", ["snap", "brew", "pip"])
+    def test_auth_token_env_set(self, method: str) -> None:
+        fix = get_fix("auth_token_env_set", method)
+        assert "_BRISTLENOSE_AUTH_TOKEN" in fix
+        assert "unset _BRISTLENOSE_AUTH_TOKEN" in fix
 
     # -- unknown key --
 

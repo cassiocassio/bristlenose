@@ -384,6 +384,15 @@ Edit `bristlenose/__init__.py` (the single source of truth for version), commit,
 
 ## Changelog
 
+**0.14.6** — _18 Apr 2026_
+
+- CI: e2e gate re-enabled as a blocking check (three P3 items cleared)
+- Fix: Analysis "Show all N quotes" toggle now a proper `<button>` (was an `<a>` without href)
+- Fix: `playwright.config.ts` shell-quotes paths so worktrees with spaces in the name work
+- `SECURITY.md`: corrected auth-token description (env-override path is real and used by CI fixtures / uvicorn reload; future hardening tracked)
+- `bristlenose doctor`: new `Auth token` check warns if `_BRISTLENOSE_AUTH_TOKEN` is set in the shell
+- CI: allowlist register at `e2e/ALLOWLIST.md` — every test suppression categorised and tracked; prevents silent accumulation
+
 **0.14.5** — _17 Apr 2026_
 
 - CI unblock release: no user-facing changes

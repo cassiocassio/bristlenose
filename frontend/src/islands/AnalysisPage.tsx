@@ -554,13 +554,14 @@ function SignalCard({
 
       <div className="signal-card-footer">
         {hiddenQuotes.length > 0 ? (
-          <a
+          <button
+            type="button"
             className="signal-card-link signal-card-toggle"
             onClick={toggleExpand}
             data-testid="bn-signal-toggle"
           >
             {expanded ? t("analysis.hide") : t("analysis.showAllQuotes", { count: signal.quotes.length })}
-          </a>
+          </button>
         ) : (
           <span className="signal-card-link" style={{ visibility: "hidden" }}>
             {t("analysis.oneQuote")}

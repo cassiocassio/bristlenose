@@ -1,8 +1,27 @@
 # LLM / Provider Context
 
+## Lazy-import discipline
+
+Provider SDKs (`anthropic`, `openai`, `google-genai`) and transcription backends (`ctranslate2`, `mlx_whisper`) **must be imported inside the functions that use them, not at module top**. Heavy imports at module-level pay their cost on every `bristlenose serve` boot regardless of which provider the user picks — typically 3–6 s of dead time on cold start, much of which is spent loading SDKs the user will never call.
+
+**Pattern:**
+
+```python
+def call_anthropic(prompt: str) -> str:
+    from anthropic import Anthropic  # imported on first call only
+    client = Anthropic()
+    ...
+```
+
+The cost moves from boot to first-use, where the user is already engaged with the app. Same total work, vastly better perceived performance — Sketch / Linear / modern Photoshop pattern, not 2003-Photoshop "warming up your filters" pattern.
+
+**Convention:** any new provider, any new heavy library, any new optional backend — defer the import. Module-top `import anthropic` in new code is a review reject.
+
 ## Credential storage (Keychain)
 
 API keys are stored securely in the system keychain. Uses native CLI tools — no Python keyring shim.
+
+**Forward-looking (Track C C3):** the bundled Mac sidecar can't shell out to `/usr/bin/security` (sandbox blocks it). Plan: Swift fetches keys from the Keychain at sidecar launch and passes them via env vars (symmetric with `ServeManager.overlayPreferences()`). Python keychain code stays as the CLI fallback when env vars aren't set. No Mac-only Python dep — preserves the no-fork principle in `docs/design-modularity.md`.
 
 - **CLI command**: `bristlenose configure <provider>` — prompts for key, validates with API, stores in keychain. Accepts `--key` option to bypass interactive prompt (useful in scripts or when TTY has issues)
 - **Provider aliases**: `claude` → `anthropic`, `chatgpt`/`gpt` → `openai`, `gemini` → `google`

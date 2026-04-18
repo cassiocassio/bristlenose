@@ -236,7 +236,7 @@ jobs:
     # API latency, export size. Chromium-only, runs against the smoke
     # fixture (1 session, 4 quotes). Lives in its own job so perf failures
     # are scoped clearly — a regression doesn't get masked by unrelated
-    # e2e red (currently continue-on-error).
+    # e2e red.
     needs: [test, frontend-lint-type-test]
     runs-on: ubuntu-latest
 

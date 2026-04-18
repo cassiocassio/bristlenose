@@ -32,7 +32,7 @@ CLI commands: `run` (full pipeline), `transcribe-only`, `analyze` (skip transcri
 
 Serve mode: FastAPI + SQLite + React SPA. See `bristlenose/server/CLAUDE.md` for architecture.
 
-Desktop app: `desktop/` — SwiftUI macOS shell. See `docs/design-desktop-app.md`.
+Desktop app: `desktop/` — SwiftUI macOS shell. Alpha ships a bundled, signed PyInstaller sidecar running `bristlenose serve`, distributed via internal TestFlight. v0.2 currently uses launcher-style scaffolding (dev-only, not shippable). See `docs/design-desktop-app.md` for the overall app design, `docs/design-modularity.md` for cross-channel component decisions (CLI ≡ macOS Python code; packaging differences only), and `docs/private/road-to-alpha.md` for the 14-checkpoint path to TestFlight.
 
 Frontend: `frontend/` — Vite + React + TypeScript + React Router. See `frontend/CLAUDE.md` for gotchas and architecture.
 
@@ -62,7 +62,11 @@ Key helpers: `OutputPaths` in `output_paths.py` (consistent path construction), 
 - **Design artifacts** (tracked, not shipped): `docs/mockups/`, `docs/design-system/`, `experiments/` — HTML mockups, style guides, throwaway prototypes. These are working materials for contributors, kept in the tree for backup and collaboration. Users never navigate to them. Add new mockups to `docs/mockups/`, not the repo root. **Serve mode auto-discovery**: `bristlenose serve --dev` mounts all three directories and auto-discovers `*.html` files for the Design section in the About tab (`_build_dev_section_html()` in `app.py`). New HTML files added to these directories appear automatically — no code changes needed
 - **Website** (deployed): `website/` — static HTML/CSS for bristlenose.app. Deploy with `/deploy-website` skill or `deploy-website` shell alias. See `docs/private/deploy-website.md`. **Note:** rsync deploy needs SSH agent access — Claude Code's sandbox can't reach it, so the user runs the deploy command manually
 - **Never touch**: `.env`, output directories, `bristlenose/theme/images/`
-- **Gitignored (private)**: `docs/private/`, `trial-runs/` — contain names, contacts, and value judgements not suitable for a public repo
+- **Gitignored (private)**: `docs/private/`, `trial-runs/` — contain names, contacts, and value judgements not suitable for a public repo. **Gotcha:** some files inside `docs/private/` are force-tracked (e.g. `100days.md`, `qa-backlog.md`). Editing them is fine, but committing needs `git add -f docs/private/<file>` because the directory is gitignored. Plain `git add` will bounce with "paths ignored by .gitignore"
+
+## Deployment targets
+
+Bristlenose runs on three targets: macOS arm64 (primary dev), Linux x86_64 via GitHub Actions CI (release pipeline), and — newly — Claude Code Cloud VMs (ephemeral Ubuntu x86_64,  but reachable when the user picks Cloud in the picker). Cloud is useful for code/test/lint/frontend-build work, **not** for pipeline runs on private interview data. See `docs/design-deployment-targets.md for the audit checklist and use-case boundary table.
 
 ## HTML report features
 
@@ -171,6 +175,10 @@ See `docs/design-i18n.md` for implementation gotchas (Apple glossary cross-check
 
 **Desktop:**
 - `docs/design-desktop-app.md`, `docs/design-desktop-security-audit.md`
+- `docs/design-modularity.md` — **canonical cross-channel component strategy** (CLI + macOS, Background Assets, no-fork principle, trickle-to-full-capability)
+- `docs/design-desktop-python-runtime.md` — Mac sidecar mechanics (to be written as Track C C0 output)
+- `docs/private/sprint2-tracks.md` — Track A (sandbox), B (MVP UX), C (sidecar bundling + signing, C0–C5)
+- `docs/private/road-to-alpha.md` — 14 checkpoints to TestFlight
 - `docs/design-project-sidebar.md`, `docs/design-wkwebview-messaging.md`
 - `docs/design-desktop-menu-actions.md`, `docs/design-desktop-settings.md`
 

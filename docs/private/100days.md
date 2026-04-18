@@ -23,7 +23,7 @@ Items tagged `[S1]`–`[S6]` are assigned to a sprint. Untagged items are unassi
 
 **Sprint 2 re-scope v3 (17 Apr 2026).** Alpha path decided: **internal TestFlight, not `.dmg`.** Sandbox work is unavoidable (StoreKit needs it), and a `.dmg` path would be throwaway code. Doing it now gets us a modern sandbox-aware codebase from the start. Rejected items: Developer ID cert, `.dmg` build pipeline, Gatekeeper README (all struck in §11 Operations). See `docs/private/road-to-alpha.md` for the full 14-checkpoint path.
 
-**Sprint 2 cadence — A/B interleave.** Alternate sandbox/signing steps with MVP flow / UI quality steps. Each step unblocks the other: sandbox work surfaces UI regressions (folder bookmarks, temp paths); UI work exercises the sandboxed paths. Order:
+**Sprint 2 cadence — A/B/C interleave (updated 18 Apr 2026).** Three parallel tracks per `docs/private/sprint2-tracks.md`: Track A (sandbox plumbing, road-to-alpha #2 + #3), Track B (MVP UX flow, §1a beats), Track C (bundled sidecar resurrection + signing, C0–C5). Tracks converge at first TestFlight upload (#12). Cross-channel component strategy in `docs/design-modularity.md` — what's bundled, what's Background Assets, what's CLI-only, no-fork principle. Alternate sandbox/signing steps with MVP flow / UI quality steps. Each step unblocks the other: sandbox work surfaces UI regressions (folder bookmarks, temp paths); UI work exercises the sandboxed paths. Order:
 
 1. **Clean up CI** — re-enable the E2E gate (3 parked P3 regressions), land the perf regression gate. Unblocks everything else.
 2. **A/B/A/B through S2:**
@@ -246,7 +246,7 @@ The canonical end-to-end beats a first-time user must complete successfully in t
 - [S6] **Privacy policy** — required for external TestFlight + App Store submission. Not needed for internal-only alpha. Local-first model simplifies this but document must exist. Draft v1 complete (`launch-docs/privacy-policy.md` in delivery repo), needs solicitor review (May)
 - [S6] **Terms of service** — subscription terms, refund policy, data handling. Draft v0.9.1 complete (`launch-docs/terms-of-service.md` in delivery repo), needs solicitor review (May)
 - [S2] **App Store review compliance (TestFlight subset)** — umbrella for: Apple Distribution cert, sandbox + entitlements, PyInstaller sidecar signing, Privacy Manifest reason-code audit, Hardened Runtime. All tracked as individual items. Full review hardening for external testers / submission lives in S6
-- [S5] **PII redaction audit** — verify Presidio catches names/emails in transcripts before shipping to paying users
+- [S5] **PII redaction audit** — verify Presidio catches names/emails in transcripts before shipping to paying users. Per `docs/design-modularity.md`: PII moves to `[pii]` pip extra (CLI) and tier-2 Background Assets pack (macOS, public beta) — out of base install. Alpha bundles it inline to avoid the asset-pack Python-packages-as-data problem; public beta deferred-downloads it.
 - ~~**Security scanning** — npm audit, pip-audit, CodeQL before public release (design-test-strategy.md)~~
 - ~~[S1] **Alembic/migration strategy** — DB schema changes without data loss. Currently no migration framework~~
 - ~~**AI data disclosure dialog** — Apple Guideline 5.1.2(i). Shipped: `desktop/Bristlenose/Bristlenose/AIConsentView.swift` (first-run sheet, consent version policy, re-accessible via menu)~~
@@ -302,6 +302,7 @@ The canonical end-to-end beats a first-time user must complete successfully in t
 ### Could
 - **Video clip export story** — "folder in, clips out" — the 3-hour Final Cut Pro task done in seconds. Demo-able, visceral, differentiator vs Dovetail
 - **Ollama integration** — "free, no account required" local LLM story
+- **CLI text-only mode** — `bristlenose run/analyze/render --text` emits the full analysis (themes, signals, sections, codebook-tagged quotes, sentiment, friction) as plain markdown to stdout. Full ingestion (audio, video, Zoom/Teams, voice memos). Second product surface for the **AI-first early-adopter crowd** running local models on Linux/Pi/homelab — not the traditional NVivo/Atlas.ti ethnographer. Pairs with Ollama for a fully-local audio→markdown pipeline (no cloud in the loop, not even for analysis) — strongest privacy story we can tell. Pairs with the snap for Linux distribution. Design: `docs/design-cli-text-mode.md`. Time-box v0.1 to a weekend when the slot opens
 - ~~**Multi-language**~~ — 5 locales shipped (en, es, fr, de, ko) in 0.14.1. Infrastructure + 4 languages exceeds target
 - **i18n: help.signals/codebook/contributing translations** — EN keys exist (~63), ES/FR/DE/KO locales missing all of them
 - **i18n: AboutSection full extraction** — ~15 paragraphs hardcoded English, needs `useTranslation` wiring + keys in all 5 locales
@@ -436,7 +437,7 @@ The canonical end-to-end beats a first-time user must complete successfully in t
 - ~~**Developer ID certificate** — won't do (17 Apr 2026). App Store path only, uses Apple Distribution cert~~
 - ~~[S1] **CI: add macOS runner** — currently Linux-only (informational, 15 Apr 2026)~~
 - ~~**.dmg README** — won't do (17 Apr 2026). App Store path only~~
-- [S2] **PyInstaller sidecar signing** — every `.dylib`, `.so`, and framework inside the bundle must be individually codesigned before notarization. (design-desktop-security-audit.md)
+- [S2] **PyInstaller sidecar signing** — every `.dylib`, `.so`, and framework inside the bundle must be individually codesigned before notarization. (design-desktop-security-audit.md). **Re-scoped 18 Apr 2026:** v0.2 dropped the bundle for dev iteration; alpha resurrects it. See `docs/design-modularity.md` (cross-channel components + Background Assets strategy) and `docs/private/sprint2-tracks.md` (Track C C0–C5)
 - ~~[S1] **Build number auto-increment** — `CFBundleVersion = 1` blocks Sparkle and App Store update logic. Set up CI auto-increment. Done: `bump-version.py` unifies desktop+CLI, auto-increments build number~~
 - ~~[S1] **Domain & email infrastructure** — register `bristlenose.app`, configure SPF/DKIM/DMARC, Substack custom domain (`blog.bristlenose.app`), deploy site, set up email on DreamHost (`hello@`, `support@`, `security@`). Full plan: `docs/private/infrastructure-and-identity.md`~~
 - [S6] **Supply chain hardening** — GitHub 2FA with hardware key, branch protection on main, PyPI hardware key + project-scoped token, register PyPI typosquats. Full checklist: `docs/private/infrastructure-and-identity.md`. Deferred from S1: low threat until commercial launch (see `docs/private/supply-chain-deferral.md`)
@@ -453,7 +454,7 @@ The canonical end-to-end beats a first-time user must complete successfully in t
 - **CI snap smoke test** — verify Snap package installs cleanly (TODO.md)
 - **TestFlight beta** — pre-launch testing with real users
 - **Windows CI** — pytest on `windows-latest` runner
-- **AV false-positive testing** — test signed `.dmg` against common macOS antivirus. PyInstaller bundles frequently flagged. (design-desktop-security-audit.md)
+- ~~**AV false-positive testing** — test signed `.dmg` against common macOS antivirus. PyInstaller bundles frequently flagged.~~ _Won't do (18 Apr 2026) — App Store path only, no `.dmg`. Notarised App Store builds don't hit the AV heuristics that unsigned `.dmg`s do._ (design-desktop-security-audit.md)
 - **OS version compatibility testing** — set up macOS 15 Sequoia VM (UTM, Virtualization.framework) and test full app on the deployment target. Dev machine runs macOS 26 Tahoe — need VM coverage for macOS 15 (floor). Run BroadcastChannel spike, full app smoke test, WKWebView security policy, `.nonPersistent()` behaviour
 - **Semgrep CI integration** — Swift security rules (experimental) + Python security rules (mature). (design-desktop-security-audit.md)
 - **Objective-See QA** — run KnockKnock + LuLu during pre-release QA to verify system footprint

@@ -2,7 +2,7 @@
 
 This document tracks active feature branches to help multiple Claude sessions coordinate without conflicts.
 
-**Updated:** 24 Mar 2026 (languages merged)
+**Updated:** 18 Apr 2026 (ci-cleanup merged)
 
 ---
 
@@ -20,7 +20,6 @@ Each active feature branch gets its own **git worktree** — a full working copy
 | `bristlenose_branch living-fish/` | `living-fish` | Animated "living portrait" logo for serve mode |
 | `bristlenose_branch drag-push/` | `drag-push` | Sidebar drag-to-open uses push mode (not overlay) |
 | `bristlenose_branch responsive-signal-cards/` | `responsive-signal-cards` | Responsive signal cards |
-| `bristlenose_branch ci-cleanup/` | `ci-cleanup` | S2 Step 0: clear 3 parked P3 E2E regressions + flip gate to blocking |
 | `bristlenose_branch sidecar-signing/` | `sidecar-signing` | S2 Track C: PyInstaller sidecar codesigning + Hardened Runtime entitlements (road-to-alpha #4 + #5) |
 
 
@@ -108,7 +107,6 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 | `living-fish` | `bristlenose_branch living-fish/` | `origin/living-fish` |
 | `drag-push` | `bristlenose_branch drag-push/` | local only |
 | `responsive-signal-cards` | `bristlenose_branch responsive-signal-cards/` | local only |
-| `ci-cleanup` | `bristlenose_branch ci-cleanup/` | local only |
 | `sidecar-signing` | `bristlenose_branch sidecar-signing/` | local only |
 
 
@@ -188,31 +186,6 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 
 ---
 
-### `ci-cleanup`
-
-**Status:** Just started
-**Started:** 17 Apr 2026
-**Worktree:** `/Users/cassio/Code/bristlenose_branch ci-cleanup/`
-**Remote:** local only (push when ready)
-
-**What it does:** S2 Step 0 — clears the three P3 E2E regressions parked during the v0.14.5 release unblock (autocode status 404 noise, codebook console 404, `_BRISTLENOSE_AUTH_TOKEN` not wired into the main e2e CI job) and flips the e2e gate back to blocking (`continue-on-error: false`). Also verifies the perf regression gate is green on recent runs. Prerequisite for the Sprint 2 sandbox/MVP A/B interleave — without a blocking gate, sandbox regressions land invisibly. Plan: `~/.claude/plans/break-down-and-plan-shimmying-journal.md`.
-
-**Files this branch will touch:**
-- `bristlenose/server/routes/autocode.py` — change `get_autocode_status()` from 404 to 200 `{status: "idle"}` when no job exists
-- `frontend/src/islands/CodebookPanel.tsx` — simplify the `.catch` handler on the autocode status poll (now that the happy path returns 200)
-- `frontend/src/utils/api.ts` — possibly update `getAutoCodeStatus()` types
-- `tests/test_serve_autocode_api.py` — rename/update `test_returns_404_if_no_job` to assert 200 + body shape
-- `bristlenose/server/app.py` — add dev/test-mode env-token path (reads `_BRISTLENOSE_AUTH_TOKEN` from env when `BRISTLENOSE_DEV_MODE=test`; prod always generates random)
-- `.github/workflows/ci.yml` — wire `_BRISTLENOSE_AUTH_TOKEN` + `BRISTLENOSE_DEV_MODE=test` into the main e2e job env; remove `continue-on-error: true` at the end
-- `e2e/playwright.config.ts` — set the same env vars on `webServer.env` for local parity
-- `e2e/tests/console.spec.ts` — possibly extend the allowlist for the codebook 404 if trace-viewer triage exceeds the 0.5-day budget
-
-**Potential conflicts with other branches:**
-- `living-fish` touches `bristlenose/server/app.py` (serving video assets) — overlap possible in different parts of the file; coordinate at merge time
-- `symbology`, `highlighter`, `drag-push`, `responsive-signal-cards` — no overlap (different surfaces)
-
----
-
 ### `sidecar-signing`
 
 **Status:** Just started
@@ -232,7 +205,7 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 
 **Potential conflicts with other branches:**
 - Track A (sandbox plumbing, not yet started) — will author `.entitlements` file; this branch only references the path
-- `ci-cleanup` — no overlap (CI workflow vs build script)
+- ~~`ci-cleanup` — no overlap (CI workflow vs build script)~~ _merged 18 Apr 2026_
 - `living-fish`, `symbology`, `highlighter`, `drag-push`, `responsive-signal-cards` — no overlap (different surfaces)
 
 ---
@@ -256,6 +229,10 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 ---
 
 ## Completed Branches (for reference)
+
+### `ci-cleanup` — merged 18 Apr 2026
+
+S2 Step 0 — CI cleanup. Cleared the three P3 e2e regressions parked during v0.14.5 release-unblock (autocode 404 allowlisted, codebook 404 allowlisted as deferred-fix [S3], `_BRISTLENOSE_AUTH_TOKEN` wired into the main e2e workflow) and flipped the e2e gate back to blocking. First CI run post-flip passed green in 19m44s. Bonus: Analysis page "Show all N quotes" `<a>`→`<button>` fix, `playwright.config.ts` shell-quoting fix, `e2e/ALLOWLIST.md` register (3 categories, 4 entries, `// ci-allowlist: CI-A<N>` code markers), `SECURITY.md` auth-token honesty update, new `bristlenose doctor` env-bleed check. Two follow-ups deferred with reminders: Option B auth-token gate (16 May) and Python floor bump to 3.12 (9 May). Squash-merged as `0a8345b` via PR #86. 4 commits → 1 squash commit.
 
 ### `languages` — merged 24 Mar 2026
 

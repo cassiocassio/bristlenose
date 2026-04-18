@@ -672,6 +672,35 @@ def check_disk_space(settings: BristlenoseSettings) -> CheckResult:
         )
 
 
+def check_auth_token_env() -> CheckResult:
+    """Warn when _BRISTLENOSE_AUTH_TOKEN is set in the shell env.
+
+    The serve-mode auth token can be pinned by the environment (see
+    bristlenose/server/app.py). That path exists for CI test fixtures and
+    uvicorn --reload continuity, but it also means an env var inherited from
+    a dotfile or a previous terminal session silently makes `bristlenose serve`
+    use a known/pinned token instead of a fresh random one. This check surfaces
+    that so users aren't confused.
+    """
+    import os
+
+    if os.environ.get("_BRISTLENOSE_AUTH_TOKEN"):
+        return CheckResult(
+            status=CheckStatus.WARN,
+            label="Auth token",
+            detail=(
+                "_BRISTLENOSE_AUTH_TOKEN set in shell env — "
+                "serve will use pinned token, not random"
+            ),
+            fix_key="auth_token_env_set",
+        )
+    return CheckResult(
+        status=CheckStatus.OK,
+        label="Auth token",
+        detail="random (generated at serve startup)",
+    )
+
+
 # ---------------------------------------------------------------------------
 # Aggregators
 # ---------------------------------------------------------------------------
@@ -689,7 +718,7 @@ _COMMAND_CHECKS: dict[str, list[str]] = {
 
 
 def run_all(settings: BristlenoseSettings) -> DoctorReport:
-    """Run all seven checks (used by explicit `bristlenose doctor`)."""
+    """Run all checks (used by explicit `bristlenose doctor`)."""
     return DoctorReport(results=[
         check_ffmpeg(),
         check_backend(),
@@ -698,6 +727,7 @@ def run_all(settings: BristlenoseSettings) -> DoctorReport:
         check_network(settings),
         check_pii(settings),
         check_disk_space(settings),
+        check_auth_token_env(),
     ])
 
 

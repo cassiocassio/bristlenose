@@ -180,10 +180,6 @@ jobs:
   e2e:
     needs: [test, frontend-lint-type-test]
     runs-on: ubuntu-latest
-    # Informational — three pre-existing P3 e2e failures are parked to
-    # docs/private/100days.md S2.  Unblocks v0.14.5 release.  Re-enable as
-    # a blocking gate once the three items are fixed.
-    continue-on-error: true
 
     steps:
       - uses: actions/checkout@v4
@@ -222,6 +218,10 @@ jobs:
         run: npx playwright test
         env:
           CI: true
+          # Pin the server's auth token so Node-side fetch() in fixtures and
+          # in-browser fetch() in page.evaluate() can send the same bearer.
+          # See frontend/CLAUDE.md and root CLAUDE.md for the consuming paths.
+          _BRISTLENOSE_AUTH_TOKEN: test-token
 
       - name: Upload test results on failure
         if: failure()
@@ -236,7 +236,7 @@ jobs:
     # API latency, export size. Chromium-only, runs against the smoke
     # fixture (1 session, 4 quotes). Lives in its own job so perf failures
     # are scoped clearly — a regression doesn't get masked by unrelated
-    # e2e red (currently continue-on-error).
+    # e2e red.
     needs: [test, frontend-lint-type-test]
     runs-on: ubuntu-latest
 

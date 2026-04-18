@@ -86,9 +86,9 @@ Moderator and observer names (m1, m2, o1) are not stripped — they are part of 
 
 `bristlenose serve` runs a local HTTP server on `127.0.0.1` (loopback only — traffic never leaves the machine). API endpoints serve research data: participant names, interview quotes, themes, sentiment analysis, and media files.
 
-**Request validation token:** Each server instance generates a random 32-byte token (`secrets.token_urlsafe`, 256 bits of entropy) at startup. The token is:
+**Request validation token:** Each server instance generates a random 32-byte token (`secrets.token_urlsafe`, 256 bits of entropy) at startup. If `_BRISTLENOSE_AUTH_TOKEN` is set in the process environment, it overrides the random token — this path exists so CI test fixtures can pin a known token and so `uvicorn --reload` can preserve session continuity across code saves. A future hardening task will gate this override behind an explicit `BRISTLENOSE_DEV_MODE=test` flag so production serve runs ignore environment tokens inherited from the parent shell; tracked in project planning. The token is:
 
-- Stored in memory only — never written to disk
+- Kept in process memory (and exported to the process environment for reload recovery) — never written to disk
 - Injected into the SPA HTML served to the browser
 - Printed to stdout for the desktop app to capture
 - Required as `Authorization: Bearer <token>` on all `/api/*` and `/media/*` requests
@@ -105,6 +105,7 @@ Moderator and observer names (m1, m2, o1) are not stripped — they are part of 
 - **CORS:** `allow_origins=[]` blocks all cross-origin browser requests
 - **Media allowlist:** `/media/` route only serves known media file extensions (`.mp4`, `.mov`, `.wav`, `.mp3`, etc.) with path-traversal guard
 - **Desktop environment scrubbing:** The macOS app passes only essential environment variables (`PATH`, `HOME`, `LANG`, etc.) to the Python subprocess — no cloud tokens, database passwords, or Xcode debug variables
+- **Auditable CI suppressions:** every suppression in the Playwright e2e gate is source-controlled, justified inline with a register ID, and indexed in `e2e/ALLOWLIST.md` with a category and tracker — so the distinction between "CI lubricant we learned to live with" and "real product debt" stays visible over time
 
 ## Output files
 

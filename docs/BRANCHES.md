@@ -21,6 +21,7 @@ Each active feature branch gets its own **git worktree** — a full working copy
 | `bristlenose_branch drag-push/` | `drag-push` | Sidebar drag-to-open uses push mode (not overlay) |
 | `bristlenose_branch responsive-signal-cards/` | `responsive-signal-cards` | Responsive signal cards |
 | `bristlenose_branch ci-cleanup/` | `ci-cleanup` | S2 Step 0: clear 3 parked P3 E2E regressions + flip gate to blocking |
+| `bristlenose_branch sidecar-signing/` | `sidecar-signing` | S2 Track C: PyInstaller sidecar codesigning + Hardened Runtime entitlements (road-to-alpha #4 + #5) |
 
 
 
@@ -108,6 +109,7 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 | `drag-push` | `bristlenose_branch drag-push/` | local only |
 | `responsive-signal-cards` | `bristlenose_branch responsive-signal-cards/` | local only |
 | `ci-cleanup` | `bristlenose_branch ci-cleanup/` | local only |
+| `sidecar-signing` | `bristlenose_branch sidecar-signing/` | local only |
 
 
 
@@ -208,6 +210,30 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 **Potential conflicts with other branches:**
 - `living-fish` touches `bristlenose/server/app.py` (serving video assets) — overlap possible in different parts of the file; coordinate at merge time
 - `symbology`, `highlighter`, `drag-push`, `responsive-signal-cards` — no overlap (different surfaces)
+
+---
+
+### `sidecar-signing`
+
+**Status:** Just started
+**Started:** 18 Apr 2026
+**Worktree:** `/Users/cassio/Code/bristlenose_branch sidecar-signing/`
+**Remote:** local only (push when ready)
+
+**What it does:** S2 Track C — PyInstaller sidecar codesigning infrastructure. Implements road-to-alpha checkpoints #4 (per-binary `codesign --options=runtime` loop, innermost first, then outer `.app` sign) and #5 (Hardened Runtime entitlements). Mechanical, binary pass/fail. Iterates locally with ad-hoc signing (`--sign -`) until the bundle launches; identity parameterised via env var so it can swap to Apple Distribution when Track A delivers the cert. Plan: `docs/private/sprint2-tracks.md`.
+
+**Files this branch will touch:**
+- `scripts/sign-sidecar.sh` (new) — find + codesign loop, outer app sign
+- `desktop/Bristlenose/ExportOptions.plist` (new) — for `xcodebuild -exportArchive`
+- `desktop/Bristlenose/Bristlenose.xcodeproj` — build phase that invokes the sidecar sign script
+- Possibly `desktop/build-sidecar.sh` if it exists
+
+**Won't touch:** any Python source, frontend, server routes, entitlements file contents (Track A's output — referenced by path only).
+
+**Potential conflicts with other branches:**
+- Track A (sandbox plumbing, not yet started) — will author `.entitlements` file; this branch only references the path
+- `ci-cleanup` — no overlap (CI workflow vs build script)
+- `living-fish`, `symbology`, `highlighter`, `drag-push`, `responsive-signal-cards` — no overlap (different surfaces)
 
 ---
 

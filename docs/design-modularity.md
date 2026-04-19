@@ -115,7 +115,7 @@ Tiny (~100 KB per language). Bundle all 6 (en, es, fr, de, ko, ja) on every chan
 
 | Platform | Mechanism | Python code |
 |---|---|---|
-| macOS desktop sidecar | Swift reads Keychain via `SecItemCopyMatching`; passes keys via env vars to sidecar | Python reads `os.environ["BRISTLENOSE_ANTHROPIC_KEY"]` etc. |
+| macOS desktop sidecar | Swift reads Keychain via `SecItemCopyMatching`; injects `BRISTLENOSE_<PROVIDER>_API_KEY` env vars at subprocess launch (C3, Apr 2026) | Python reads via pydantic-settings, no Keychain call |
 | macOS CLI | `/usr/bin/security` CLI wrapper in `credentials_macos.py` | Unchanged |
 | Linux CLI | `libsecret` via `secretstorage` package | Platform-conditional import |
 | Windows CLI | Future — `keyring` package's win32 backend | Same pattern |

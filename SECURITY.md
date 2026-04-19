@@ -12,11 +12,19 @@ Bristlenose runs on your laptop. There is no Bristlenose server, no account, and
 
 API keys are stored in your operating system's secure credential store:
 
-- **macOS** — Keychain (via `security` CLI)
+- **macOS (CLI)** — Keychain (via `security` CLI)
+- **macOS (desktop app, Apr 2026 onwards)** — Keychain via Security.framework (`SecItemAdd`/`SecItemCopyMatching`). The SwiftUI host reads your key from Keychain at the moment it starts the local analysis process, passes it to that process as an environment variable, and the process holds it in memory for the duration of your pipeline run. Keys are read from Keychain only at launch and never persisted to disk.
 - **Linux** — Secret Service (GNOME Keyring / KDE Wallet, via `secret-tool`)
 - **Fallback** — environment variables or `.env` file
 
 Keys are never written to disk in plaintext by Bristlenose. The `.env` fallback is read-only — Bristlenose reads it if present but does not create or modify it.
+
+## Data leaves your machine only when:
+
+1. **You use a cloud LLM provider.** Transcript text is sent to the provider you selected in Settings (Claude, ChatGPT, Azure OpenAI, or Gemini), using your own API key, at the moment you trigger an analysis. Using Ollama with a local model eliminates even this.
+2. **Whisper downloads its transcription model**, once per model, on first transcription. Model files are downloaded from huggingface.co to `~/Library/Application Support/Bristlenose/models/`. This is data, not code — the download is consumed by the transcription library that already ships signed inside the app.
+
+Bristlenose itself has zero sub-processors. There is no cloud database, no analytics service, no error-tracking vendor, no auth provider, and no telemetry endpoint.
 
 ## PII redaction
 

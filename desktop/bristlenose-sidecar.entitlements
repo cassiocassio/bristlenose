@@ -3,13 +3,18 @@
 <!--
 Hardened Runtime entitlements for the bundled Python sidecar.
 
-Empirically reduced during Track C C0 (18 Apr 2026) from v0.1's full set.
+Empirically reduced during Track C C0 (18 Apr 2026).
 
 Load-bearing: ONLY com.apple.security.cs.disable-library-validation.
-  Reason: the outer binary is ad-hoc signed (Team ID = "-"); the bundled
-  Python.framework and every .so file are ad-hoc signed with different
-  identifiers. Library validation otherwise blocks dlopen with
-  "mapping process and mapped file have different Team IDs".
+  Reason (post-C2, Apr 2026): even with the whole bundle signed under a
+  single Apple Distribution identity (Z56GZVA2QB), PyInstaller's bundled
+  Python.framework carries a nested internal identifier, and some third-
+  party .so files retain signatures from their upstream wheels. Library
+  validation blocks those dlopen sites with "mapping process and mapped
+  file have different Team IDs". A full remove-then-resign cycle across
+  every inner Mach-O followed by an exercised pipeline run is the planned
+  retest that could allow dropping this entitlement —
+  see ~/.claude/plans/c3-empty-ents-retest.md.
 
 NOT needed for serve-only scope (confirmed by empty-entitlement test,
 Python 3.12 + mlx_whisper, Apr 2026):
@@ -17,10 +22,15 @@ Python 3.12 + mlx_whisper, Apr 2026):
   - cs.allow-jit: ctranslate2 is excluded; MLX uses Metal GPU kernels, not CPU JIT.
   - cs.allow-dyld-environment-variables: not required for serve.
 
+C3 credential path (Apr 2026): the sidecar does NOT access macOS Keychain.
+The Swift host reads Keychain via Security.framework and passes API keys
+as BRISTLENOSE_*_API_KEY env vars at subprocess launch. No keychain-access-
+groups or Security.framework entitlement needed on this side.
+
 If a future addition needs any of the above, document the trigger here.
-App Sandbox + user-facing entitlements (files, network, bookmarks)
-are Track A's concern — the sidecar will add com.apple.security.inherit
-at that point so the parent's sandbox applies.
+App Sandbox + user-facing entitlements (files, network, bookmarks) are
+Track A's concern — the sidecar will add com.apple.security.inherit at
+that point so the parent's sandbox applies.
 -->
 <plist version="1.0">
 <dict>

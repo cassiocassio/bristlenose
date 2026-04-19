@@ -18,7 +18,7 @@ See `docs/design-desktop-python-runtime.md` (to be written as part of Track C C0
 
 | | Current (v0.2, dev only) | Target (alpha, TestFlight) |
 |---|---|---|
-| Python runtime | Launcher: `ServeManager.findBristlenoseBinary()` searches user's venv/Homebrew/pipx | Bundled: `ServeManager.findSidecar()` uses `Bundle.main.resourceURL/bristlenose-sidecar/bristlenose-sidecar` |
+| Python runtime | Mode resolved once at `ServeManager.init` via `SidecarMode.resolve`; three Xcode schemes wrap Debug-only env vars (`BRISTLENOSE_DEV_SIDECAR_PATH`, `BRISTLENOSE_DEV_EXTERNAL_PORT`). Default scheme uses bundled path but expects the bundle to be present. | Bundled: `SidecarMode.resolve` returns `.bundled(path:)` pointing at `Bundle.main.resourceURL/bristlenose-sidecar/bristlenose-sidecar`. Release builds physically exclude the dev env-var reads. |
 | Sandbox | `ENABLE_APP_SANDBOX = NO` (dev convenience) | On, with a minimal entitlement set enumerated by the C0 spike |
 | Hardened Runtime | Off | `--options=runtime` at codesign time |
 | Signing | Xcode automatic (ad-hoc / dev identity) | Apple Distribution cert + per-binary signing of every dylib/so/framework inside the PyInstaller bundle |
@@ -280,7 +280,7 @@ After Track C C1 lands, three shared Xcode schemes map to three sidecar resoluti
 
 **Linux / Windows contributors** never touch this — these env vars are read by Swift, not Python. If you're working on the Python sidecar or React frontend, run `bristlenose serve` directly from your terminal and use any browser; the macOS shell is out of scope.
 
-See `docs/design-modularity.md` "External dev server" glossary entry and `docs/private/sprint2-tracks.md` Track C C1 for the implementation spec. Underlying resolver is `SidecarMode.resolve(env:bundle:fileManager:)` — a pure function unit-tested in `BristlenoseTests/SidecarModeTests.swift`.
+See `docs/design-modularity.md` "External dev server" glossary entry and `docs/private/sprint2-tracks.md` Track C C1 for the implementation spec. Underlying resolver is `SidecarMode.resolve(externalPortRaw:sidecarPathRaw:bundleResourceURL:fileManager:)` — a pure function (takes the two env-var raw strings as typed `Optional<String>` rather than an env dictionary, so the string literals live only inside the caller's `#if DEBUG` block and are absent from the Release Mach-O). Unit-tested in `BristlenoseTests/SidecarModeTests.swift` (orphan target today — see test-target note in this file).
 
 ## Gotchas
 

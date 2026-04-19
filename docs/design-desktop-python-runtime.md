@@ -1,6 +1,6 @@
 # Desktop Python Runtime — sidecar mechanics
 
-_Written 18 Apr 2026 as Track C C0 spike output. Covers entitlements, signing, bundling trim, and runtime resource resolution for the bundled PyInstaller sidecar on macOS. Cross-channel component decisions (what ships where, and why) live in [`design-modularity.md`](./design-modularity.md) — this doc is strictly Mac-specific mechanics._
+_Written 18 Apr 2026 as Track C C0 spike output; updated the same day with the C1 resolver contract. Covers entitlements, signing, bundling, and runtime resource resolution for the bundled PyInstaller sidecar on macOS. Cross-channel component decisions (what ships where, and why) live in [`design-modularity.md`](./design-modularity.md) — this doc is strictly Mac-specific mechanics._
 
 ## Scope
 
@@ -12,14 +12,15 @@ This doc is the canonical source for:
 - How resources (FFmpeg, Whisper models, credentials) are located at runtime
 - How codesigning is layered (inner `.dylib`/`.so` → outer binary → outer `.app`)
 
-It is **not** the implementation plan — that's Track C C1, tracked in `docs/private/sprint2-tracks.md`.
+It is **not** the implementation plan — the C1 implementation work was tracked in `docs/private/sprint2-tracks.md` (now marked done) and `~/.claude/plans/when-you-have-done-encapsulated-conway.md`.
 
-## Status (C0 output, 18 Apr 2026)
+## Status (C1, 18 Apr 2026)
 
-- ✅ Trimmed PyInstaller spec drafted at `desktop/sidecar-c0/bristlenose-sidecar.spec` (MLX-only; ctranslate2 / faster-whisper / presidio / spaCy excluded).
+- ✅ Trimmed PyInstaller spec at `desktop/bristlenose-sidecar.spec` (MLX-only; ctranslate2 / faster-whisper / presidio / spaCy excluded).
 - ✅ Sidecar builds, ad-hoc codesigns with Hardened Runtime, and serves HTTP on localhost under `bristlenose serve`.
 - ✅ Minimum entitlement set empirically confirmed: **one key only**.
-- ⚠️ Bundle size 644 MB (target ≤ 200 MB). Transitive torch / llvmlite / onnxruntime still pulled in — C1 needs a deeper excludes pass. See §"Bundle-size findings" below.
+- ✅ **Sidecar resolution** refactored to pure `SidecarMode.resolve(externalPortRaw:sidecarPathRaw:bundleResourceURL:fileManager:)`; `ServeManager` switches on the resolved `.bundled` / `.devSidecar` / `.external` mode; env-var reads gated by `#if DEBUG`; three shared Xcode schemes wrap the dev env vars. Post-archive `desktop/scripts/check-release-binary.sh` asserts dev env-var literals are absent from the Release Mach-O.
+- ⏸️ Bundle size 644 MB. Size optimisation deferred: per `design-modularity.md` §"trickle to full capability" the post-install story is Apple Background Assets, not build-time trimming. See §"Bundle-size findings" below.
 - ❌ `com.apple.security.inherit` not yet tested (App Sandbox is Track A; sidecar inherits only once parent has sandbox enabled).
 
 ## Entitlement table
@@ -39,7 +40,7 @@ Each row: what the sidecar requests, which dependency forces it, and how to just
 
 ### How this was determined
 
-Test rig: `desktop/sidecar-c0/build-and-sign.sh` produces a `--onedir` PyInstaller bundle, ad-hoc signs it with `codesign --force --options=runtime --entitlements …`, and runs it as `./bristlenose-sidecar --port 18150 --no-open /tmp/scratch`.
+Test rig: `desktop/scripts/build-sidecar.sh` produces a `--onedir` PyInstaller bundle, signs it (default ad-hoc for local iteration; `SIGN_IDENTITY="Apple Distribution: …"` for TestFlight) with `codesign --force --options=runtime --entitlements …`, and runs it as `./bristlenose-sidecar --port 18150 --no-open /tmp/scratch`.
 
 Four signing runs:
 
@@ -60,7 +61,7 @@ Clean outcome: `cs.disable-library-validation` is the only load-bearing key.
 
 ## Spike bundle layout
 
-The C0 bundle lives at `desktop/sidecar-c0/dist/bristlenose-sidecar/` (gitignored). Shape:
+The sidecar bundle builds into `desktop/Bristlenose/Resources/bristlenose-sidecar/` (gitignored). Xcode's "Copy Sidecar Resources" build phase stages it into `Bristlenose.app/Contents/Resources/bristlenose-sidecar/`. Shape:
 
 ```
 bristlenose-sidecar/
@@ -69,42 +70,64 @@ bristlenose-sidecar/
     ├── Python                (dyld stub → Python.framework)
     ├── Python.framework/     (CPython 3.12 runtime)
     ├── base_library.zip      (pure-Python stdlib frozen)
-    ├── torch/                (288 MB — transitively pulled; C1 target)
-    ├── llvmlite/             (110 MB — transitively pulled; C1 target)
-    ├── onnxruntime/          (58 MB — transitively pulled; C1 target)
+    ├── torch/                (288 MB — transitive; Background Assets candidate)
+    ├── llvmlite/             (110 MB — transitive; Background Assets candidate)
+    ├── onnxruntime/          (58 MB — transitive; Background Assets candidate)
     ├── mlx/                  (24 MB — ours)
-    ├── scipy/                (37 MB — transitively pulled; C1 target)
+    ├── scipy/                (37 MB — transitive; Background Assets candidate)
     ├── bristlenose/          (theme, data, locales, server/alembic)
     └── … every signed .so and .dylib
 ```
 
 The flat `_internal/` layout is PyInstaller `--onedir`. Swift finds the outer binary at a fixed path; dyld resolves everything inside `_internal/` via embedded rpath.
 
-## Bundle-size findings (C1 work item)
+## Bundle-size findings (deferred to Background Assets)
 
-Target per road-to-alpha §4: ≤ 200 MB. Actual C0 bundle: **644 MB**. The gap is three transitive dependencies PyInstaller grabbed despite the `excludes`:
+C0 bundle: **644 MB**. Transitive deps PyInstaller pulled despite the `excludes`:
 
-| Package | Size | Likely hop | C1 mitigation |
-|---|---|---|---|
-| `torch` | 288 MB | Probably pulled via `tiktoken` → `transformers` legacy tokenizers. We don't actually call torch at runtime. | Add `torch`, `torchvision`, `torchaudio` to `excludes`; confirm no code path imports them |
-| `llvmlite` | 110 MB | Pulled via `numba` which is pulled via some audio preprocessing dep | Add `numba`, `llvmlite` to `excludes` |
-| `onnxruntime` | 58 MB | Pulled via `tokenizers` or `huggingface_hub`'s optional paths | Add `onnxruntime`, `onnxruntime-genai` to `excludes` |
-| `scipy` | 37 MB | Pulled via librosa or audio feature extraction | Audit whether we touch scipy at runtime in serve mode; probably excludable |
+| Package | Size | Likely hop |
+|---|---|---|
+| `torch` | 288 MB | Via `tiktoken` → `transformers` legacy tokenizers |
+| `llvmlite` | 110 MB | Via `numba` → audio preprocessing dep |
+| `onnxruntime` | 58 MB | Via `tokenizers` / `huggingface_hub` optional paths |
+| `scipy` | 37 MB | Via librosa / audio feature extraction |
 
-Expected post-trim: ~150 MB. C1 should end with a `scripts/check-bundle-size.sh` that fails CI if the trimmed bundle exceeds 200 MB — regressions here are easy to ship accidentally and expensive to debug.
+**C1 decision (18 Apr 2026): size optimisation deferred.** Per `design-modularity.md` §"Acquisition strategy: trickle to full capability", the alpha story is Apple Background Assets — Whisper models and large optional deps trickle in post-install (Wi-Fi-opportunistic, Apple-hosted, OS-scheduled) rather than bloating the initial `.app` download. Build-time trimming before that story lands would be premature optimisation.
+
+What we ship in the alpha: whatever the trimmed-by-explicit-excludes-only spec produces. Size is a soft constraint when the user's install flow is "tap install in TestFlight, app opens, heavy bits download in the background while they pick their first project." Track C C5 (post-alpha) may revisit excludes if TestFlight reports cite bundle size as a friction point; more likely the work moves straight to Background Assets integration.
 
 ## Bundling gotchas discovered
 
 1. **Alembic migrations directory must be explicitly listed in `datas`.** `bristlenose/server/alembic/` is a filesystem resource read by Alembic's `ScriptDirectory.from_config`; PyInstaller doesn't detect it through `bristlenose.server.db`'s imports. Without it: `CommandError: Path doesn't exist: …/_internal/bristlenose/server/alembic` at first DB init. Added to the spec.
 2. **Locales directory same story** — `bristlenose/locales/*.json` is read as data, not imported. Added to `datas`.
-3. **React static bundle not present in C0.** The sidecar runs fine without `bristlenose/server/static/` but emits a WARNING log line. C1 needs a pre-build `npm run build` step that emits into the PyInstaller staging area.
+3. **React static bundle must be pre-built.** The sidecar runs without `bristlenose/server/static/` but emits a WARNING log line. Still unresolved in C1 — `desktop/scripts/build-sidecar.sh` does not yet invoke `npm run build` before PyInstaller. Slated for C2 / the build-all orchestration script.
 4. **`--host` is not a `bristlenose serve` option.** The server hardcodes `127.0.0.1`. Fine for sidecar-over-localhost; document if we ever need to bind elsewhere (probably never).
 5. **Sentiment framework YAML not found** warning at startup — cosmetic; the YAML is optional user config.
 6. **Sidecar ignores `BRISTLENOSE_AUTH_TOKEN` env var** — the server always generates a fresh per-run token. If Swift wants to know the token, it has to either read stdout (current pattern) or we add env-var plumbing in C1. Defer.
 
+## SidecarMode resolution contract (C1 output)
+
+`ServeManager` no longer searches the filesystem for a `bristlenose` binary. Mode is decided once at init by `SidecarMode.resolve(externalPortRaw:sidecarPathRaw:bundleResourceURL:fileManager:)` — a pure function in `desktop/Bristlenose/Bristlenose/SidecarMode.swift` — returning one of:
+
+- `.bundled(path:)` — `Bundle.main.resourceURL/bristlenose-sidecar/bristlenose-sidecar`. What TestFlight ships.
+- `.devSidecar(path:)` — a dev-specified binary (Debug-only, via `BRISTLENOSE_DEV_SIDECAR_PATH`).
+- `.external(port:)` — an externally-running `bristlenose serve` on localhost (Debug-only, via `BRISTLENOSE_DEV_EXTERNAL_PORT`).
+
+Both dev env vars are read only inside `#if DEBUG` guards in `ServeManager.init`; in Release, the resolver receives `nil`/`nil` and can only return `.bundled`. `desktop/scripts/check-release-binary.sh` asserts the env-var string literals are absent from the Release Mach-O — a refactor that moves a read outside `#if DEBUG` fails the gate rather than silently shipping.
+
+Three Xcode shared schemes wrap the env vars so developers see the choice in the Run-button dropdown:
+
+| Scheme | Env var set | Mode |
+|---|---|---|
+| Bristlenose | _(none)_ | `.bundled` |
+| Bristlenose (Dev Sidecar) | `BRISTLENOSE_DEV_SIDECAR_PATH` | `.devSidecar` |
+| Bristlenose (External Server) | `BRISTLENOSE_DEV_EXTERNAL_PORT` | `.external` |
+
+Both env vars set at once → `SidecarResolveError.bothDevEnvVarsSet` → `.failed` state at init (no fatalError; the app renders a SwiftUI error card via `LocalizedError.errorDescription`).
+
 ## Signing strategy (C2 preview)
 
-C0 script `build-and-sign.sh` uses a sequential `find … | while read` loop to sign each inner binary, then the outer. C2 needs:
+C1 script `desktop/scripts/build-sidecar.sh` uses a sequential `find … | while read` loop to sign each inner binary, then the outer. `SIGN_IDENTITY` defaults to `-` (ad-hoc); override for TestFlight. `TIMESTAMP_FLAG` auto-picks `--timestamp=none` for ad-hoc and `--timestamp` for real identities. Post-sign: inner `codesign -v --strict` per binary plus outer `--verify --deep --strict` (Gatekeeper-equivalent). C2 needs:
 
 ```bash
 # Parallelise per-binary signing (10× faster in CI)
@@ -132,13 +155,12 @@ All four patterns are "Swift resolves via platform API, passes via env var, Pyth
 
 - Without `cs.disable-library-validation`: Python.framework fails to dlopen; `[PYI-XXXX:ERROR] Failed to load Python shared library`. Exit code 0 (PyInstaller swallows). Silent failure on the Swift side unless it polls health.
 - Alembic path missing: `CommandError` at first DB init, process exits 0 with a Rich traceback on stderr. Caught by `datas` fix.
-- Sidecar up but on the wrong port: HTTP connection refused from Swift, no error from sidecar. C1 should have Swift read "Report: http://127.0.0.1:PORT/" line and match against the configured port.
+- Sidecar up but on the wrong port: HTTP connection refused from Swift, no error from sidecar. C1 shipped the `ServeManager.handleLine` "Report: http://…" readiness parser with a generation-guarded port-poll before state transitions to `.running`.
 
-## Open questions (resolve during C1)
+## Open questions (C2 onwards)
 
 - **What extra entitlements does App Sandbox need?** Track A's violation log will tell us. The sidecar itself only needs `inherit`; all user-facing entitlements (files, network, bookmarks) go on the parent `.app`.
-- **Does mlx_whisper need any runtime-allow keys?** Not observed in C0 (we didn't run inference). Test in C1 with a real transcription.
-- **Is the bundle size trim enough to get back to ≤ 200 MB without losing functionality?** C1 prototype target.
+- **Does mlx_whisper need any runtime-allow keys?** Not observed in C0 (no inference run). Surface in C2 integration test.
 - **What happens when the user's Mac has no Metal GPU support** (e.g. x86_64 Mac running Rosetta on the arm64 sidecar)? The sidecar is `target_arch="arm64"`; Rosetta shouldn't apply. Still worth a compatibility matrix.
 
 ## Cross-references
@@ -146,5 +168,7 @@ All four patterns are "Swift resolves via platform API, passes via env var, Pyth
 - [`docs/design-modularity.md`](./design-modularity.md) — what gets bundled
 - [`docs/private/sprint2-tracks.md`](./private/sprint2-tracks.md) — Track C C0–C5
 - [`docs/private/road-to-alpha.md`](./private/road-to-alpha.md) §3, §4, §5 — sandbox, signing, Hardened Runtime checkpoints
-- [`desktop/sidecar-c0/`](../desktop/sidecar-c0/) — spec, entitlements, build script, this spike's output
+- [`desktop/bristlenose-sidecar.spec`](../desktop/bristlenose-sidecar.spec), [`desktop/bristlenose-sidecar.entitlements`](../desktop/bristlenose-sidecar.entitlements), [`desktop/sidecar_entry.py`](../desktop/sidecar_entry.py) — sidecar packaging
+- [`desktop/scripts/build-sidecar.sh`](../desktop/scripts/build-sidecar.sh), [`desktop/scripts/check-release-binary.sh`](../desktop/scripts/check-release-binary.sh) — build + post-archive gate
+- [`desktop/Bristlenose/Bristlenose/SidecarMode.swift`](../desktop/Bristlenose/Bristlenose/SidecarMode.swift) — mode resolution contract
 - [`desktop/v0.1-archive/bristlenose-sidecar.spec`](../desktop/v0.1-archive/bristlenose-sidecar.spec) — prior art

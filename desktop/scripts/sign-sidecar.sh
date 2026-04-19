@@ -95,7 +95,10 @@ echo "    inner: ${#INNER_FILES[@]}, outer: 1, identity: $SIGN_IDENTITY"
 # swaps without a clean rebuild can leave stale CDHashes — desktop
 # CLAUDE.md line 327 for the full gotcha.
 if [ "$ALLOW_RESIGN" != "1" ]; then
-    if codesign -dv "$OUTER" 2>&1 | grep -q "^Authority="; then
+    # Capture output before grepping (SIGPIPE + pipefail trap —
+    # see the Timestamp= assertion below for the full story).
+    _pre_dv=$(codesign -dv "$OUTER" 2>&1)
+    if grep -q "^Authority=" <<< "$_pre_dv"; then
         echo "error: outer binary is already signed with a real identity." >&2
         echo "rebuild from scratch (desktop/scripts/build-sidecar.sh)" >&2
         echo "or set ALLOW_RESIGN=1 to override." >&2
@@ -127,8 +130,13 @@ sign_one() {
         # back to --timestamp=none when timestamp.apple.com is
         # unreachable. Un-notarisable signatures otherwise surface
         # hours later during submission.
+        #
+        # Capture output before grepping: `codesign -dvv | grep -q`
+        # trips `pipefail` via SIGPIPE (codesign is still writing when
+        # grep -q exits on first match → codesign rc=141 → false fail).
         if [ "$SIGN_IDENTITY" != "-" ]; then
-            if ! codesign -dvv "$f" 2>&1 | grep -q "Timestamp="; then
+            _dvv_out=$(codesign -dvv "$f" 2>&1)
+            if ! grep -q "Timestamp=" <<< "$_dvv_out"; then
                 echo "ERROR: no trusted timestamp on $f" >&2
                 exit 2
             fi
@@ -179,10 +187,11 @@ OUTER_LOG="$LOG_DIR/__outer.log"
         --entitlements "$ENTITLEMENTS" \
         --sign "$SIGN_IDENTITY" "$OUTER"
     if [ "$SIGN_IDENTITY" != "-" ]; then
-        codesign -dvv "$OUTER" 2>&1 | grep -q "Timestamp=" || {
+        _dvv_outer=$(codesign -dvv "$OUTER" 2>&1)
+        if ! grep -q "Timestamp=" <<< "$_dvv_outer"; then
             echo "ERROR: no trusted timestamp on outer" >&2
             exit 2
-        }
+        fi
     fi
 } >"$OUTER_LOG" 2>&1 || {
     cat "$OUTER_LOG" >&2

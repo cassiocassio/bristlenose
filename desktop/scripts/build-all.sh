@@ -57,8 +57,10 @@ echo
 echo "==> 1. Pre-flight..."
 
 if [ "$SIGN_IDENTITY" != "-" ]; then
-    if ! security find-identity -v -p codesigning \
-        | grep -qF "$SIGN_IDENTITY"; then
+    # Capture output before grepping (SIGPIPE + pipefail trap —
+    # see sign-sidecar.sh Timestamp= assertion for the full story).
+    _identities=$(security find-identity -v -p codesigning)
+    if ! grep -qF "$SIGN_IDENTITY" <<< "$_identities"; then
         echo "error: signing identity not found in keychain:" >&2
         echo "  $SIGN_IDENTITY" >&2
         echo "Install the Apple Distribution cert (see" >&2
@@ -142,13 +144,84 @@ echo
 echo "==> 4. Signing sidecar bundle..."
 "$SCRIPT_DIR/sign-sidecar.sh"
 
+# Ad-hoc runs stop here — xcodebuild with the manual-signing Release
+# config requires a real Apple Distribution identity.
+if [ "$SIGN_IDENTITY" = "-" ]; then
+    echo
+    echo "=============================================="
+    echo " Ad-hoc signing stage complete."
+    echo "=============================================="
+    echo "Skipping archive + export (Release config requires a real"
+    echo "Apple Distribution identity). Set SIGN_IDENTITY to exercise"
+    echo "the full pipeline."
+    exit 0
+fi
+
 # ------------------------------------------------------------
-# 5-10. Archive, export, post-archive gates, notarise.
-# Added in commits 3 and 4.
+# 5. xcodebuild archive
+# ------------------------------------------------------------
+# The Release config (pbxproj) is manual-signing against the Apple
+# Distribution cert + "Bristlenose Mac App Store" profile. The Copy
+# Sidecar Resources build phase picks up the signed tree from
+# desktop/Bristlenose/Resources/bristlenose-sidecar/.
+
+ARCHIVE_PATH="$DESKTOP_DIR/build/Bristlenose.xcarchive"
+EXPORT_DIR="$DESKTOP_DIR/build/export"
+PROJECT_DIR="$DESKTOP_DIR/Bristlenose"
+EXPORT_OPTIONS="$PROJECT_DIR/ExportOptions.plist"
+ARCHIVE_LOG="$DESKTOP_DIR/build/xcodebuild-archive.log"
+EXPORT_LOG="$DESKTOP_DIR/build/xcodebuild-export.log"
+
+rm -rf "$ARCHIVE_PATH" "$EXPORT_DIR"
+
+echo
+echo "==> 5. xcodebuild archive..."
+if ! xcodebuild \
+    -project "$PROJECT_DIR/Bristlenose.xcodeproj" \
+    -scheme Bristlenose \
+    -configuration Release \
+    -destination "generic/platform=macOS" \
+    -archivePath "$ARCHIVE_PATH" \
+    archive \
+    > "$ARCHIVE_LOG" 2>&1; then
+    echo "error: xcodebuild archive failed. tail:" >&2
+    tail -50 "$ARCHIVE_LOG" >&2
+    exit 1
+fi
+echo "    OK — $ARCHIVE_PATH"
+
+# ------------------------------------------------------------
+# 6. xcodebuild -exportArchive
+# ------------------------------------------------------------
+
+echo
+echo "==> 6. xcodebuild -exportArchive..."
+if ! xcodebuild \
+    -exportArchive \
+    -archivePath "$ARCHIVE_PATH" \
+    -exportPath "$EXPORT_DIR" \
+    -exportOptionsPlist "$EXPORT_OPTIONS" \
+    > "$EXPORT_LOG" 2>&1; then
+    echo "error: xcodebuild -exportArchive failed. tail:" >&2
+    tail -50 "$EXPORT_LOG" >&2
+    exit 1
+fi
+
+EXPORTED_APP=$(find "$EXPORT_DIR" -maxdepth 2 -name "*.app" -type d | head -1)
+if [ -z "$EXPORTED_APP" ]; then
+    echo "error: no .app found under $EXPORT_DIR" >&2
+    exit 1
+fi
+echo "    OK — $EXPORTED_APP"
+
+# ------------------------------------------------------------
+# 7-10. Post-export gates, notarisation, final verification.
+# Added in commit 4.
 # ------------------------------------------------------------
 
 echo
 echo "=============================================="
-echo " Signing stage complete."
+echo " Archive + export complete."
 echo "=============================================="
-echo "Archive/export/notarise stages land in commits 3 + 4."
+echo "Exported: $EXPORTED_APP"
+echo "Next: notarisation + verification (commit 4)."

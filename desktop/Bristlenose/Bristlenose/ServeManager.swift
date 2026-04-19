@@ -425,7 +425,7 @@ final class ServeManager: ObservableObject {
     ///
     /// This is defence in depth, not a substitute for avoiding key logs in the
     /// first place — see `check-logging-hygiene.sh` for the source-level gate.
-    private static let keyRedactionRegex = try! NSRegularExpression(
+    static let keyRedactionRegex = try! NSRegularExpression(
         pattern: [
             "sk-ant-(api|sid)[0-9]{2}-[A-Za-z0-9_\\-]{90,}",
             "sk-(proj|None)-[A-Za-z0-9_\\-]{48,}",
@@ -434,6 +434,15 @@ final class ServeManager: ObservableObject {
         ].joined(separator: "|"),
         options: []
     )
+
+    /// Apply the key-shape redactor to a string. Exposed for testing.
+    static func redactKeys(in line: String) -> String {
+        keyRedactionRegex.stringByReplacingMatches(
+            in: line,
+            range: NSRange(line.startIndex..., in: line),
+            withTemplate: "***REDACTED***"
+        )
+    }
 
     private func handleLine(_ line: String, port: Int) {
         let clean = Self.ansiRegex.stringByReplacingMatches(
@@ -460,13 +469,8 @@ final class ServeManager: ObservableObject {
 
         // Redact key-shaped substrings for everything published downstream:
         // outputLines (displayed, exposed in error messages, suffix used in
-        // termination failure reporting) and any subsequent pattern checks.
-        let redacted = Self.keyRedactionRegex.stringByReplacingMatches(
-            in: clean,
-            range: NSRange(clean.startIndex..., in: clean),
-            withTemplate: "***REDACTED***"
-        )
-        outputLines.append(redacted)
+        // termination failure reporting).
+        outputLines.append(Self.redactKeys(in: clean))
 
         // Detect readiness: bristlenose serve prints "Report: http://..."
         // when the server is ready and the report has been rendered.

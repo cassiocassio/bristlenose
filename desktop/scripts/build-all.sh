@@ -215,13 +215,177 @@ fi
 echo "    OK — $EXPORTED_APP"
 
 # ------------------------------------------------------------
-# 7-10. Post-export gates, notarisation, final verification.
-# Added in commit 4.
+# 7. check-release-binary.sh post-export
+# ------------------------------------------------------------
+# Scans every Mach-O in the exported .app for:
+#   - BRISTLENOSE_DEV_* string literals (dev escape-hatch leak)
+#   - get-task-allow entitlement (Debug-only; App-Store-rejected)
+# Skips Contents/Resources/bristlenose-sidecar/* (Python strings
+# expected; no Swift #if DEBUG invariant applies).
+
+echo
+echo "==> 7. check-release-binary.sh (strings + entitlements)..."
+"$SCRIPT_DIR/check-release-binary.sh" "$EXPORTED_APP"
+
+# ------------------------------------------------------------
+# 8. Provisioning profile sanity check
+# ------------------------------------------------------------
+# Assert the embedded profile matches our bundle ID + team ID. Xcode
+# sometimes embeds a stale or wrong profile when manual signing is
+# misconfigured — easier to catch here than at App Store upload time.
+
+echo
+echo "==> 8. Embedded provisioning profile sanity check..."
+EMBEDDED_PROFILE="$EXPORTED_APP/Contents/embedded.provisionprofile"
+if [ ! -f "$EMBEDDED_PROFILE" ]; then
+    echo "error: embedded.provisionprofile missing from exported app." >&2
+    echo "check ExportOptions.plist and pbxproj signing settings." >&2
+    exit 1
+fi
+
+# security cms -D decodes the PKCS#7 wrapper into an XML plist.
+# PlistBuddy needs a real file (can't read stdin), so stage through
+# desktop/build/.
+PROFILE_DECODED="$DESKTOP_DIR/build/embedded-profile.plist"
+security cms -D -i "$EMBEDDED_PROFILE" -o "$PROFILE_DECODED" 2>/dev/null
+
+# The Mac App Store profile declares the entitlements using the
+# com.apple.* reverse-DNS keys (NOT the iOS-style short keys).
+PROFILE_APP_ID=$(/usr/libexec/PlistBuddy \
+    -c "Print :Entitlements:com.apple.application-identifier" \
+    "$PROFILE_DECODED")
+PROFILE_TEAM_ID=$(/usr/libexec/PlistBuddy \
+    -c "Print :Entitlements:com.apple.developer.team-identifier" \
+    "$PROFILE_DECODED")
+
+# application-identifier = "<TEAMID>.<bundle>".
+EXPECTED_APP_ID="${TEAM_ID}.app.bristlenose"
+if [ "$PROFILE_APP_ID" != "$EXPECTED_APP_ID" ]; then
+    echo "error: embedded profile application-identifier mismatch." >&2
+    echo "  expected: $EXPECTED_APP_ID" >&2
+    echo "  found:    $PROFILE_APP_ID" >&2
+    exit 1
+fi
+if [ "$PROFILE_TEAM_ID" != "$TEAM_ID" ]; then
+    echo "error: embedded profile team ID mismatch." >&2
+    echo "  expected: $TEAM_ID" >&2
+    echo "  found:    $PROFILE_TEAM_ID" >&2
+    exit 1
+fi
+echo "    OK — $PROFILE_APP_ID / $PROFILE_TEAM_ID"
+
+# ------------------------------------------------------------
+# 9. Notarisation + stapling
+# ------------------------------------------------------------
+# `ditto` is mandatory for zipping a .app for notarisation — plain
+# `zip` mangles extended attributes and symlinks, producing a zip
+# that notarytool rejects. Staple the .app (not the zip).
+
+echo
+echo "==> 9. Notarisation..."
+NOTARY_ZIP="$DESKTOP_DIR/build/$(basename "$EXPORTED_APP").zip"
+rm -f "$NOTARY_ZIP"
+ditto -c -k --sequesterRsrc --keepParent "$EXPORTED_APP" "$NOTARY_ZIP"
+echo "    zip: $NOTARY_ZIP"
+
+echo "    submitting to Apple notarisation service (this can take"
+echo "    1–15 minutes; --wait blocks until Apple's response)..."
+SUBMIT_LOG="$DESKTOP_DIR/build/notarytool-submit.log"
+if ! xcrun notarytool submit "$NOTARY_ZIP" \
+        --keychain-profile "$NOTARY_PROFILE" \
+        --wait \
+        --output-format plist \
+        > "$SUBMIT_LOG" 2>&1; then
+    echo "error: notarytool submit failed. tail:" >&2
+    tail -50 "$SUBMIT_LOG" >&2
+    exit 1
+fi
+
+# Extract the submission UUID from the plist-formatted output.
+# `notarytool submit --output-format plist` writes a top-level dict
+# with :id set to the UUID.
+SUBMISSION_ID=$(
+    /usr/libexec/PlistBuddy -c "Print :id" "$SUBMIT_LOG" 2>/dev/null || true
+)
+if [ -z "$SUBMISSION_ID" ]; then
+    echo "error: could not extract submission UUID from notarytool output." >&2
+    cat "$SUBMIT_LOG" >&2
+    exit 1
+fi
+
+echo "    submission UUID: $SUBMISSION_ID"
+
+# Don't trust `notarytool history` — it can show a cached prior run.
+# Explicitly fetch this submission's log and assert Accepted.
+LOG_JSON="$DESKTOP_DIR/build/notarytool-log.json"
+xcrun notarytool log "$SUBMISSION_ID" \
+    --keychain-profile "$NOTARY_PROFILE" \
+    "$LOG_JSON"
+
+STATUS=$(/usr/bin/python3 -c \
+    'import json,sys; print(json.load(open(sys.argv[1])).get("status",""))' \
+    "$LOG_JSON")
+
+if [ "$STATUS" != "Accepted" ]; then
+    echo "error: notarisation status '$STATUS' (expected Accepted)." >&2
+    echo "log: $LOG_JSON" >&2
+    /usr/bin/python3 -c \
+        'import json,sys; d=json.load(open(sys.argv[1])); [print(i) for i in d.get("issues",[])[:10]]' \
+        "$LOG_JSON" >&2
+    exit 1
+fi
+echo "    status: Accepted"
+
+echo "==> Stapling..."
+xcrun stapler staple "$EXPORTED_APP"
+
+# ------------------------------------------------------------
+# 10. Final verification battery
 # ------------------------------------------------------------
 
 echo
+echo "==> 10. Final verification..."
+
+echo "    [a] stapler validate"
+xcrun stapler validate "$EXPORTED_APP"
+
+echo "    [b] spctl (Gatekeeper assessment)"
+SPCTL_OUT=$(spctl -a -t exec -vv "$EXPORTED_APP" 2>&1)
+echo "$SPCTL_OUT" | sed 's/^/        /'
+if ! grep -q "accepted" <<< "$SPCTL_OUT"; then
+    echo "error: spctl did not accept the app." >&2
+    exit 1
+fi
+
+echo "    [c] codesign --verify --deep --strict"
+codesign --verify --deep --strict --verbose=2 "$EXPORTED_APP"
+
+echo "    [d] outer binary entitlements (must not contain get-task-allow)"
+OUTER_BIN="$EXPORTED_APP/Contents/MacOS/Bristlenose"
+OUTER_ENTS=$(codesign -d --entitlements :- "$OUTER_BIN" 2>/dev/null || true)
+# Xcode may record the key with <false/>; only flag <true/>.
+if grep -A1 "get-task-allow" <<< "$OUTER_ENTS" | grep -q "<true/>"; then
+    echo "error: outer binary has get-task-allow=TRUE" >&2
+    echo "$OUTER_ENTS" | sed 's/^/    /' >&2
+    exit 1
+fi
+
+echo "    [e] designated requirement (must include Team ID)"
+REQ=$(codesign -d --requirements - "$OUTER_BIN" 2>&1 || true)
+if ! grep -q "$TEAM_ID" <<< "$REQ"; then
+    echo "error: designated requirement does not reference $TEAM_ID" >&2
+    echo "$REQ" | sed 's/^/    /' >&2
+    exit 1
+fi
+
+SIGN_MANIFEST="$DESKTOP_DIR/build/sign-manifest.json"
+echo
 echo "=============================================="
-echo " Archive + export complete."
+echo " DONE — Bristlenose.app notarised and stapled"
 echo "=============================================="
-echo "Exported: $EXPORTED_APP"
-echo "Next: notarisation + verification (commit 4)."
+echo "  app:           $EXPORTED_APP"
+echo "  archive:       $ARCHIVE_PATH"
+echo "  sign manifest: $SIGN_MANIFEST"
+echo "  notary log:    $LOG_JSON"
+echo
+echo "Ready for C3 / Track B: .pkg export + TestFlight upload."

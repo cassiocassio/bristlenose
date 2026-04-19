@@ -14,14 +14,19 @@ This doc is the canonical source for:
 
 It is **not** the implementation plan — the C1 implementation work was tracked in `docs/private/sprint2-tracks.md` (now marked done) and `~/.claude/plans/when-you-have-done-encapsulated-conway.md`.
 
-## Status (C1, 18 Apr 2026)
+## Status (C2, 19 Apr 2026)
 
 - ✅ Trimmed PyInstaller spec at `desktop/bristlenose-sidecar.spec` (MLX-only; ctranslate2 / faster-whisper / presidio / spaCy excluded).
-- ✅ Sidecar builds, ad-hoc codesigns with Hardened Runtime, and serves HTTP on localhost under `bristlenose serve`.
-- ✅ Minimum entitlement set empirically confirmed: **one key only**.
-- ✅ **Sidecar resolution** refactored to pure `SidecarMode.resolve(externalPortRaw:sidecarPathRaw:bundleResourceURL:fileManager:)`; `ServeManager` switches on the resolved `.bundled` / `.devSidecar` / `.external` mode; env-var reads gated by `#if DEBUG`; three shared Xcode schemes wrap the dev env vars. Post-archive `desktop/scripts/check-release-binary.sh` asserts dev env-var literals are absent from the Release Mach-O.
-- ⏸️ Bundle size 644 MB. Size optimisation deferred: per `design-modularity.md` §"trickle to full capability" the post-install story is Apple Background Assets, not build-time trimming. See §"Bundle-size findings" below.
-- ❌ `com.apple.security.inherit` not yet tested (App Sandbox is Track A; sidecar inherits only once parent has sandbox enabled).
+- ✅ Sidecar builds, real-identity codesigns with Hardened Runtime, serves HTTP on localhost under `bristlenose serve`.
+- ✅ Minimum entitlement set empirically confirmed: **one key only** (`cs.disable-library-validation`). Empty-entitlements re-test post-unified-identity signing is parked; see `docs/private/c2-session-notes.md` Goal 2.
+- ✅ **Sidecar resolution** refactored to pure `SidecarMode.resolve(…)` (C1).
+- ✅ **Parallel per-Mach-O signing** via bash `wait -n` pool, SHA256 manifest, trusted-timestamp assertion per file (C2).
+- ✅ **ExportOptions.plist + pbxproj Manual signing** — Release flipped to Apple Distribution + Bristlenose Mac App Store profile + Team `Z56GZVA2QB`; Debug stays Automatic (C2).
+- ✅ **Notarisation + stapling flow** wired in `build-all.sh` (C2). Notarytool credentials: profile `bristlenose-notary` in login keychain.
+- ✅ **Strings gate + `get-task-allow` gate** on every archived Mach-O (`check-release-binary.sh`, C2).
+- 🟡 **End-to-end verification blocked** (19 Apr 2026) by pre-existing `#error` directives in `desktop/Bristlenose/Bristlenose/SecurityChecklist.swift` (SECURITY #5 + #8 — unrelated to signing). Unblocks both C2 verification and C3.
+- ⏸️ Bundle size 644 MB. Deferred to Background Assets. See §"Bundle-size findings".
+- ❌ `com.apple.security.inherit` not yet tested (App Sandbox is Track A).
 
 ## Entitlement table
 
@@ -125,20 +130,85 @@ Three Xcode shared schemes wrap the env vars so developers see the choice in the
 
 Both env vars set at once → `SidecarResolveError.bothDevEnvVarsSet` → `.failed` state at init (no fatalError; the app renders a SwiftUI error card via `LocalizedError.errorDescription`).
 
-## Signing strategy (C2 preview)
+## Signing strategy (C2, 19 Apr 2026)
 
-C1 script `desktop/scripts/build-sidecar.sh` uses a sequential `find … | while read` loop to sign each inner binary, then the outer. `SIGN_IDENTITY` defaults to `-` (ad-hoc); override for TestFlight. `TIMESTAMP_FLAG` auto-picks `--timestamp=none` for ad-hoc and `--timestamp` for real identities. Post-sign: inner `codesign -v --strict` per binary plus outer `--verify --deep --strict` (Gatekeeper-equivalent). C2 needs:
+Four-script chain, orchestrated by `desktop/scripts/build-all.sh`:
+
+- `build-sidecar.sh` — PyInstaller `--onedir` only.
+- `sign-sidecar.sh` — parallel inner-Mach-O sign, sequential outer sign, strict + deep verify, SHA256 manifest. Inner loop is a bash `wait -n` job pool, not `xargs -P`: BSD `xargs` on macOS drops child exit codes under concurrent jobs, so a single failed codesign would be masked in interleaved stderr.
+- `fetch-ffmpeg.sh` — SHA256-pinned FFmpeg 8.1 download. Cache under `desktop/build/ffmpeg-cache/`.
+- `sign-ffmpeg.sh` — signs the two FFmpeg siblings with the same identity and Hardened Runtime. Notarisation rejects the outer bundle otherwise.
+
+`SIGN_IDENTITY` defaults to `-` (ad-hoc). For release: `"Apple Distribution: Martin Storey (Z56GZVA2QB)"`. `SIGN_JOBS` defaults to `$(sysctl -n hw.ncpu)`; override if Keychain contention matters at `SIGN_JOBS≥16`.
+
+Ordering: inner `.dylib`/`.so` first and in parallel, then outer `bristlenose-sidecar`, then outer `.app` via `xcodebuild archive`. Every codesign call uses `--options=runtime`. Timestamps come from Apple's TSA per-binary via `--timestamp`.
+
+Inner Mach-Os do **not** receive `--entitlements`. The kernel ignores inner entitlements for Hardened Runtime; passing the flag on every binary cluttered `codesign -d` audit output with DLV-granted noise on 240 dylibs.
+
+Output manifest (`desktop/build/sign-manifest.json`): path + SHA256 + identity + UTC timestamp per signed Mach-O. C2's sliver of the SBOM story (full CycloneDX is C5).
+
+### One-time Mac setup before signing works silently
+
+**Partition list ACL.** `codesign`'s Keychain access races against "Always Allow" when run in parallel — `SIGN_JOBS=12` can trigger twelve prompts. The canonical fix (every CI uses this):
 
 ```bash
-# Parallelise per-binary signing (10× faster in CI)
-find "$BUNDLE" -type f \( -name "*.dylib" -o -name "*.so" \) -print0 |
-    xargs -0 -P8 -I{} codesign --force --options=runtime --timestamp \
-        --entitlements "$ENT" --sign "$IDENTITY" {}
+security set-key-partition-list -S apple-tool:,apple: -s ~/Library/Keychains/login.keychain-db
 ```
 
-Ordering: inner binaries before the outer executable; outer executable before the `.app` wrapper. Each `--timestamp` call contacts Apple's TSA server — parallelisation is the only way to keep CI time reasonable.
+Prompts once for the login password, then all Apple-signed tools (including `codesign`) can use signing keys without further GUI prompts. Re-run if the cert is rotated or reinstalled. On a single-user dev Mac this is the documented indie pattern; a dedicated `build.keychain` is the CI/shared-machine equivalent (post-alpha refactor).
 
-Identity swaps: `-` (ad-hoc, local iteration) vs `"Apple Distribution: Martin Storey (Z56GZVA2QB)"` for upload. Pass via `SIGN_IDENTITY` env var.
+**Note on output:** the command above dumps metadata for every signing key it touches (one `keychain: …` block per key). That's expected, not an error.
+
+### Timestamp assertion (guards against silent TSA failure)
+
+After every successful `codesign --sign`, `sign-sidecar.sh` and `sign-ffmpeg.sh` assert `codesign -dvv | grep "Timestamp="`. If the Apple TSA is unreachable, `codesign` succeeds silently with `--timestamp=none` — producing an un-notarisable signature that would surface as a notarisation failure hours later. The assertion fails fast.
+
+Implementation gotcha: `codesign -dvv | grep -q` trips `pipefail` via SIGPIPE. `grep -q` exits on first match, `codesign` keeps writing, gets SIGPIPE, returns 141. Pipeline is non-zero → false "no timestamp" alarm. The scripts capture codesign output into a variable first, then grep the here-string.
+
+### Notarisation + stapling
+
+`build-all.sh` steps 9–10:
+
+1. `ditto -c -k --sequesterRsrc --keepParent <app> <app>.zip` — **never** plain `zip`, which mangles xattrs and symlinks inside `.app`.
+2. `xcrun notarytool submit <zip> --keychain-profile bristlenose-notary --wait --output-format plist` — captures submission UUID from `:id`.
+3. `xcrun notarytool log <UUID> --keychain-profile bristlenose-notary <log.json>` — assert `status == "Accepted"` explicitly. Don't trust `notarytool history` — it can show cached prior runs.
+4. `xcrun stapler staple <app>`.
+
+Credentials live as a `bristlenose-notary` profile in the login keychain. One-time setup:
+
+```bash
+xcrun notarytool store-credentials "bristlenose-notary" \
+  --apple-id martin_storey@mac.com \
+  --team-id Z56GZVA2QB \
+  --password <app-specific-password>
+```
+
+App-specific password generated at [appleid.apple.com](https://appleid.apple.com) — revocable and regeneratable; no need to save outside the keychain.
+
+**Deferred.** App Store Connect API key (`.p8` + key ID + issuer ID) is more scopeable and audit-friendly than Apple-ID + app-specific password. Parked in qa-backlog for post-alpha — the ASP path is simpler for alpha-1.
+
+### Final verification battery (`build-all.sh` step 10)
+
+Run after `stapler staple`:
+
+- `xcrun stapler validate <app>` — ticket present and valid.
+- `spctl -a -t exec -vv <app>` — Gatekeeper accepts; "source=Notarized Developer ID" is the expected phrase for Apple Distribution–signed chains.
+- `codesign --verify --deep --strict --verbose=2 <app>` — seals match through every nested Mach-O.
+- `codesign -d --entitlements :- <outer>` — assert **no** `get-task-allow=TRUE` (Debug debuggability entitlement, silently App-Store-rejected).
+- `codesign -d --requirements - <outer>` — assert designated requirement includes Team ID `Z56GZVA2QB`.
+
+### Pre-archive gate (`check-release-binary.sh`)
+
+Scans every Mach-O in the archived/exported `.app` for two Release-forbidden conditions:
+
+1. `BRISTLENOSE_DEV_*` string literals — the Debug-only dev escape-hatch env vars. A Release build that references them means a `#if DEBUG` guard was accidentally removed.
+2. `get-task-allow=TRUE` entitlement — Debug-only debuggability.
+
+Skips `Contents/Resources/bristlenose-sidecar/*` (Python strings expected; no Swift `#if DEBUG` invariant applies). Wired into `build-all.sh` post-export (not as an Xcode Run Script phase — merge-hostile pbxproj pollution, and the build-all script is the canonical release path anyway).
+
+### `get-task-allow` "<false/>" entries
+
+Xcode sometimes emits `<key>get-task-allow</key><false/>` in the entitlements dict (rather than omitting the key). That's fine — the check in `check-release-binary.sh` only fires on `<true/>`.
 
 ## Resource resolution (forward reference)
 
@@ -169,6 +239,10 @@ All four patterns are "Swift resolves via platform API, passes via env var, Pyth
 - [`docs/private/sprint2-tracks.md`](./private/sprint2-tracks.md) — Track C C0–C5
 - [`docs/private/road-to-alpha.md`](./private/road-to-alpha.md) §3, §4, §5 — sandbox, signing, Hardened Runtime checkpoints
 - [`desktop/bristlenose-sidecar.spec`](../desktop/bristlenose-sidecar.spec), [`desktop/bristlenose-sidecar.entitlements`](../desktop/bristlenose-sidecar.entitlements), [`desktop/sidecar_entry.py`](../desktop/sidecar_entry.py) — sidecar packaging
-- [`desktop/scripts/build-sidecar.sh`](../desktop/scripts/build-sidecar.sh), [`desktop/scripts/check-release-binary.sh`](../desktop/scripts/check-release-binary.sh) — build + post-archive gate
+- [`desktop/scripts/build-all.sh`](../desktop/scripts/build-all.sh) — C2 end-to-end orchestrator
+- [`desktop/scripts/build-sidecar.sh`](../desktop/scripts/build-sidecar.sh), [`desktop/scripts/sign-sidecar.sh`](../desktop/scripts/sign-sidecar.sh), [`desktop/scripts/fetch-ffmpeg.sh`](../desktop/scripts/fetch-ffmpeg.sh), [`desktop/scripts/sign-ffmpeg.sh`](../desktop/scripts/sign-ffmpeg.sh) — C2 build + sign chain
+- [`desktop/scripts/check-release-binary.sh`](../desktop/scripts/check-release-binary.sh) — post-archive gate (strings + `get-task-allow`)
+- [`desktop/Bristlenose/ExportOptions.plist`](../desktop/Bristlenose/ExportOptions.plist) — `xcodebuild -exportArchive` options
 - [`desktop/Bristlenose/Bristlenose/SidecarMode.swift`](../desktop/Bristlenose/Bristlenose/SidecarMode.swift) — mode resolution contract
 - [`desktop/v0.1-archive/bristlenose-sidecar.spec`](../desktop/v0.1-archive/bristlenose-sidecar.spec) — prior art
+- [`docs/private/c2-session-notes.md`](./private/c2-session-notes.md) — C2 session notes, gotchas, resume-cold guide

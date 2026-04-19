@@ -1,25 +1,24 @@
 # -*- mode: python ; coding: utf-8 -*-
-# Track C C0 spike spec — trimmed per docs/design-modularity.md.
+# PyInstaller spec for the bristlenose desktop sidecar (Track C).
 #
-# Differences from desktop/v0.1-archive/bristlenose-sidecar.spec:
-#   - Excludes ctranslate2 + faster-whisper (Mac is MLX-only)
-#   - Excludes presidio-* + spacy (not in alpha scope)
+# Per docs/design-modularity.md:
+#   - Mac is MLX-only (ctranslate2 + faster-whisper excluded)
+#   - Presidio + spaCy excluded (Background Assets post-alpha)
 #   - Keeps mlx + mlx_whisper (Apple Silicon transcription)
-#   - Scoped to `bristlenose serve` (sidecar entry point), not full CLI
 #
-# Usage:
-#   cd /Users/cassio/Code/bristlenose_branch\ sidecar-signing
+# Usage (via desktop/scripts/build-sidecar.sh):
+#   cd <repo-root>
 #   .venv/bin/python -m PyInstaller \
-#       --distpath desktop/sidecar-c0/dist \
-#       --workpath desktop/sidecar-c0/build \
+#       --distpath desktop/Bristlenose/Resources \
+#       --workpath desktop/build/pyinstaller \
 #       --clean --noconfirm \
-#       desktop/sidecar-c0/bristlenose-sidecar.spec
+#       desktop/bristlenose-sidecar.spec
 
 import os
 
 from PyInstaller.utils.hooks import collect_submodules
 
-PROJECT_ROOT = os.path.abspath(os.path.join(SPECPATH, "..", ".."))
+PROJECT_ROOT = os.path.abspath(os.path.join(SPECPATH, ".."))
 
 a = Analysis(
     # Entry point: run `bristlenose serve` directly.

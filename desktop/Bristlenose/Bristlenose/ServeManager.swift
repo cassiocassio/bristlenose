@@ -181,8 +181,11 @@ final class ServeManager: ObservableObject {
         proc.arguments = Self.arguments(for: mode, port: port, projectPath: projectPath)
 
         // Minimal environment — only what the sidecar needs. Avoids leaking
-        // credentials, DYLD_* vars, Xcode debug vars, etc. to the subprocess.
-        // API keys are read from Keychain by Python directly — no env var needed.
+        // DYLD_* vars, Xcode debug vars, etc. to the subprocess.
+        // API keys are fetched from Keychain in Swift (host process) and
+        // injected as BRISTLENOSE_*_API_KEY env vars — Python never touches
+        // Keychain directly, so it works under App Sandbox without any
+        // Security.framework dep on the Python side.
         var env: [String: String] = [:]
         let parentEnv = ProcessInfo.processInfo.environment
         for key in ["PATH", "HOME", "TMPDIR", "USER", "SHELL",
@@ -190,6 +193,7 @@ final class ServeManager: ObservableObject {
             if let val = parentEnv[key] { env[key] = val }
         }
         Self.overlayPreferences(into: &env)
+        Self.overlayAPIKeys(into: &env, using: KeychainHelper.liveStore)
         proc.environment = env
 
         let pipe = Pipe()
@@ -346,6 +350,36 @@ final class ServeManager: ObservableObject {
         // Ollama
         if let localURL = defaults.string(forKey: "localURL"), !localURL.isEmpty {
             env["BRISTLENOSE_LOCAL_URL"] = localURL
+        }
+    }
+
+    /// Fetch LLM API keys from Keychain and overlay them as `BRISTLENOSE_<PROVIDER>_API_KEY`
+    /// env vars on the subprocess environment dict.
+    ///
+    /// This is the sandbox-compatible credential path: the Swift host reads Keychain
+    /// (Security.framework, no Python dep), the sidecar reads env vars via
+    /// pydantic-settings. No `/usr/bin/security` subprocess call needed by Python,
+    /// so the sidecar works under App Sandbox without `keychain-access-groups`
+    /// or any Security.framework linkage on the Python side.
+    ///
+    /// Residual risk: env vars are visible to same-UID processes via `ps -E`.
+    /// Under that threat model the attacker can also call SecItemCopyMatching
+    /// directly, so net attack-surface delta is small. Documented in
+    /// `docs/design-desktop-python-runtime.md`.
+    ///
+    /// - Parameter env: env dict to mutate
+    /// - Parameter store: Keychain-abstracted store (`KeychainHelper.liveStore` in
+    ///   production, `InMemoryKeychain` in tests)
+    static func overlayAPIKeys(into env: inout [String: String], using store: any KeychainStore) {
+        // Iterate LLM providers only. Miro descoped from alpha (see c3 plan).
+        let providers = ["anthropic", "openai", "azure", "google"]
+        for provider in providers {
+            guard let value = store.get(provider: provider), !value.isEmpty else {
+                continue
+            }
+            let envKey = "BRISTLENOSE_\(provider.uppercased())_API_KEY"
+            env[envKey] = value
+            log.info("injected API key for provider=\(provider, privacy: .public)")
         }
     }
 

@@ -102,7 +102,7 @@ final class ServeManager: ObservableObject {
             print("[ServeManager] port \(port) already in use, trying next")
         }
 
-        guard let executableURL = findBristlenoseBinary() else {
+        guard let executableURL = BristlenoseShared.findBristlenoseBinary() else {
             state = .failed(error: "Could not find bristlenose binary")
             return
         }
@@ -112,17 +112,7 @@ final class ServeManager: ObservableObject {
         proc.executableURL = executableURL
         proc.arguments = ["serve", "--no-open", "--port", "\(port)", projectPath]
 
-        // Minimal environment — only what the sidecar needs.  Avoids leaking
-        // credentials, DYLD_* vars, Xcode debug vars, etc. to the subprocess.
-        // API keys are read from Keychain by Python directly — no env var needed.
-        var env: [String: String] = [:]
-        let parentEnv = ProcessInfo.processInfo.environment
-        for key in ["PATH", "HOME", "TMPDIR", "USER", "SHELL",
-                     "LANG", "LC_ALL", "LC_CTYPE", "VIRTUAL_ENV"] {
-            if let val = parentEnv[key] { env[key] = val }
-        }
-        Self.overlayPreferences(into: &env)
-        proc.environment = env
+        proc.environment = BristlenoseShared.buildChildEnvironment()
 
         let pipe = Pipe()
         proc.standardOutput = pipe
@@ -217,58 +207,6 @@ final class ServeManager: ObservableObject {
         start(projectPath: path)
     }
 
-    /// Overlay UserDefaults preferences as environment variables for the
-    /// `bristlenose serve` subprocess. Only sets vars that differ from defaults
-    /// to avoid overriding `.env` file or Keychain values unnecessarily.
-    private static func overlayPreferences(into env: inout [String: String]) {
-        let defaults = UserDefaults.standard
-
-        // LLM provider & model
-        if let provider = defaults.string(forKey: "activeProvider") {
-            env["BRISTLENOSE_LLM_PROVIDER"] = provider
-        }
-        if let model = defaults.string(forKey: "llmModel") {
-            env["BRISTLENOSE_LLM_MODEL"] = model
-        }
-
-        // Temperature & concurrency (only if user has explicitly set them)
-        if defaults.object(forKey: "llmTemperature") != nil {
-            env["BRISTLENOSE_LLM_TEMPERATURE"] = String(defaults.double(forKey: "llmTemperature"))
-        }
-        if defaults.object(forKey: "llmConcurrency") != nil {
-            env["BRISTLENOSE_LLM_CONCURRENCY"] = String(Int(defaults.double(forKey: "llmConcurrency")))
-        }
-
-        // Whisper transcription
-        if let backend = defaults.string(forKey: "whisperBackend"), backend != "auto" {
-            env["BRISTLENOSE_WHISPER_BACKEND"] = backend
-        }
-        if let model = defaults.string(forKey: "whisperModel") {
-            env["BRISTLENOSE_WHISPER_MODEL"] = model
-        }
-
-        // Language
-        if let lang = defaults.string(forKey: "language"), lang != "en" {
-            env["BRISTLENOSE_WHISPER_LANGUAGE"] = lang
-        }
-
-        // Azure-specific
-        if let endpoint = defaults.string(forKey: "azureEndpoint"), !endpoint.isEmpty {
-            env["BRISTLENOSE_AZURE_ENDPOINT"] = endpoint
-        }
-        if let deployment = defaults.string(forKey: "azureDeployment"), !deployment.isEmpty {
-            env["BRISTLENOSE_AZURE_DEPLOYMENT"] = deployment
-        }
-        if let apiVersion = defaults.string(forKey: "azureAPIVersion"), !apiVersion.isEmpty {
-            env["BRISTLENOSE_AZURE_API_VERSION"] = apiVersion
-        }
-
-        // Ollama
-        if let localURL = defaults.string(forKey: "localURL"), !localURL.isEmpty {
-            env["BRISTLENOSE_LOCAL_URL"] = localURL
-        }
-    }
-
     // MARK: - Private
 
     /// Fetch the Bristlenose version from the serve health endpoint.
@@ -286,18 +224,8 @@ final class ServeManager: ObservableObject {
         }
     }
 
-    /// Strip ANSI escape sequences and OSC 8 hyperlinks for clean display.
-    private static let ansiRegex = try! NSRegularExpression(
-        pattern: "\\x1b\\[[0-9;]*m|\\x1b\\]8;;[^\\x1b]*\\x1b\\\\",
-        options: []
-    )
-
     private func handleLine(_ line: String, port: Int) {
-        let clean = Self.ansiRegex.stringByReplacingMatches(
-            in: line,
-            range: NSRange(line.startIndex..., in: line),
-            withTemplate: ""
-        )
+        let clean = BristlenoseShared.stripANSI(line)
         outputLines.append(clean)
 
         // Parse auth token — printed before "Report:" readiness line.
@@ -405,28 +333,4 @@ final class ServeManager: ObservableObject {
         }
     }
 
-    /// Find the bristlenose binary for development use.
-    /// Checks common locations in priority order.
-    private func findBristlenoseBinary() -> URL? {
-        let candidates = [
-            // Main repo venv — active development happens here
-            NSString("~/Code/bristlenose/.venv/bin/bristlenose").expandingTildeInPath,
-            // Worktree venv (fallback)
-            NSString("~/Code/bristlenose_branch macos-app/.venv/bin/bristlenose")
-                .expandingTildeInPath,
-            // Homebrew
-            "/opt/homebrew/bin/bristlenose",
-            "/usr/local/bin/bristlenose",
-            // pipx / user install
-            NSString("~/.local/bin/bristlenose").expandingTildeInPath,
-        ]
-
-        for path in candidates {
-            let url = URL(fileURLWithPath: path)
-            if FileManager.default.isExecutableFile(atPath: url.path) {
-                return url
-            }
-        }
-        return nil
-    }
 }

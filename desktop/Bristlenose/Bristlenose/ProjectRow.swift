@@ -24,13 +24,37 @@ struct ProjectRow: View {
     let onLocate: (() -> Void)?
 
     @EnvironmentObject var i18n: I18n
+    @EnvironmentObject var pipelineRunner: PipelineRunner
     @State private var editText: String = ""
+    /// Trailing spinner appears only after a short delay so the steady-state
+    /// case (manifests already on disk, scan resolves in a few ms) shows no
+    /// indicator at all. Avoids a stadium-wave of spinners at every launch.
+    @State private var showScanIndicator: Bool = false
     @FocusState private var isTextFieldFocused: Bool
 
     private var available: Bool { project.isAvailable }
     private var reason: Project.UnavailabilityReason? { project.unavailabilityReason }
+    private var pipelineState: PipelineState? { pipelineRunner.state[project.id] }
 
     var body: some View {
+        HStack(spacing: 6) {
+            rowLabel
+            Spacer(minLength: 4)
+            trailingIndicator
+        }
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(accessibilityLabel)
+        .overlay(
+            RoundedRectangle(cornerRadius: 6)
+                .stroke(Color.accentColor, lineWidth: 2)
+                .opacity(isDropTarget ? 1 : 0)
+        )
+        .onAppear { scheduleScanIndicator() }
+        .onChange(of: pipelineState) { _, _ in scheduleScanIndicator() }
+    }
+
+    @ViewBuilder
+    private var rowLabel: some View {
         Label {
             if isRenaming {
                 TextField("Project name", text: $editText)
@@ -78,6 +102,19 @@ struct ProjectRow: View {
                         case nil:
                             EmptyView()
                         }
+                    } else {
+                        // Reserve the subtitle line so row heights stay fixed
+                        // across the sidebar — Mail/Notes/Finder convention.
+                        // Hidden placeholder when there's no real subtitle.
+                        if let subtitle = pipelineSubtitle {
+                            Text(subtitle)
+                                .font(.caption)
+                                .foregroundStyle(pipelineSubtitleStyle)
+                        } else {
+                            Text(" ")
+                                .font(.caption)
+                                .hidden()
+                        }
                     }
                 }
             }
@@ -94,13 +131,101 @@ struct ProjectRow: View {
                 }
             }
         }
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel(accessibilityLabel)
-        .overlay(
-            RoundedRectangle(cornerRadius: 6)
-                .stroke(Color.accentColor, lineWidth: 2)
-                .opacity(isDropTarget ? 1 : 0)
-        )
+    }
+
+    /// Trailing element: spinner while scanning (after delay), red glyph for
+    /// failures, otherwise empty. Spinner uses `.controlSize(.small)` to match
+    /// Finder's "determining size…" indicator.
+    @ViewBuilder
+    private var trailingIndicator: some View {
+        if isScanning && showScanIndicator {
+            ProgressView()
+                .controlSize(.small)
+                .scaleEffect(0.7)
+        } else if case .failed = pipelineState {
+            Image(systemName: "exclamationmark.circle.fill")
+                .foregroundStyle(.red)
+                .imageScale(.small)
+        } else {
+            EmptyView()
+        }
+    }
+
+    // MARK: - Pipeline state display
+
+    private var isScanning: Bool {
+        if case .scanning = pipelineState { return true }
+        return false
+    }
+
+    /// Subtitle text for the pipeline state. Nil means no subtitle row — the
+    /// label collapses to single-line like projects without a state.
+    /// Copy is draft-quality for alpha; final strings belong in
+    /// `bristlenose/locales/*/desktop.json` (see `docs/design-i18n.md`).
+    private var pipelineSubtitle: String? {
+        switch pipelineState {
+        case .none, .scanning, .idle:
+            return nil
+        case .queued(let position):
+            return "Queued · position \(position)"
+        case .running:
+            return "Analysing…"
+        case .ready(let date):
+            return "Analysed \(Self.formatAnalysed(date))"
+        case .failed(let summary, _):
+            // Use the human summary the runner already computed for us — far
+            // more useful than a generic "Last run failed".
+            return summary
+        case .unreachable(let reason):
+            return reason
+        }
+    }
+
+    /// Failed subtitle gets a slightly stronger colour so the human summary
+    /// reads as actionable, not muted away.
+    private var pipelineSubtitleStyle: HierarchicalShapeStyle {
+        if case .failed = pipelineState { return .secondary }
+        return .tertiary
+    }
+
+    /// Relative for the first week ("2 hr ago"), absolute thereafter
+    /// ("14 Mar"). Matches Mail's pattern.
+    private static func formatAnalysed(_ date: Date) -> String {
+        let elapsed = Date().timeIntervalSince(date)
+        if elapsed < 7 * 24 * 60 * 60 {
+            return relativeFormatter.localizedString(for: date, relativeTo: Date())
+        }
+        return absoluteFormatter.string(from: date)
+    }
+
+    private static let relativeFormatter: RelativeDateTimeFormatter = {
+        let f = RelativeDateTimeFormatter()
+        f.unitsStyle = .short
+        return f
+    }()
+
+    private static let absoluteFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.setLocalizedDateFormatFromTemplate("d MMM")
+        return f
+    }()
+
+    /// Schedule the spinner to appear after a brief delay, but only if the
+    /// scan hasn't already resolved by then. Most local-disk reads complete
+    /// in single-digit ms — those rows never show a spinner at all.
+    private func scheduleScanIndicator() {
+        guard isScanning else {
+            showScanIndicator = false
+            return
+        }
+        let projectID = project.id
+        Task { @MainActor in
+            try? await Task.sleep(for: .milliseconds(250))
+            // Re-check after the delay — the scan may have resolved already,
+            // and the row may now be looking at a different project.
+            guard project.id == projectID, isScanning else { return }
+            showScanIndicator = true
+        }
     }
 
     // MARK: - Accessibility
@@ -116,6 +241,8 @@ struct ProjectRow: View {
             case nil:
                 break
             }
+        } else if let subtitle = pipelineSubtitle {
+            label += ", \(subtitle)"
         }
         return label
     }

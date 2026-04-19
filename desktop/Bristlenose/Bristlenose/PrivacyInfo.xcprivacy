@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+Privacy manifest for the Bristlenose Mac app (host shell only).
+
+Required by Apple from 1 May 2024 for all App Store submissions. Declares
+which "required reason" APIs the app uses and why.
+
+Scope: this file covers the SwiftUI host (desktop/Bristlenose/Bristlenose/).
+The bundled Python sidecar and every embedded framework (e.g. Python.framework)
+need their own PrivacyInfo.xcprivacy at their respective bundle roots —
+see docs/design-desktop-python-runtime.md when implementing.
+
+Tracking: Bristlenose is local-first. The app does not track users across
+apps or websites owned by other companies. NSPrivacyTracking = false.
+
+Data collection: nothing is collected by Bristlenose itself. Interview
+content and quotes stay on the user's machine. When the user configures an
+LLM provider (Claude, ChatGPT, Azure OpenAI, Gemini), content is transmitted
+to that provider under the user's own account — that is the provider's
+data collection, not Bristlenose's, and is disclosed separately in the
+in-app AI consent dialog (AIConsentView.swift, Apple Guideline 5.1.2(i)).
+
+Required Reason APIs declared:
+  - UserDefaults (NSUserDefaultsAccess)
+      Reason: CA92.1 — "Access info from same app, per documentation."
+      Triggered by: @AppStorage property wrappers throughout the app
+      (selectedProjectID, aiConsentVersion, appearance settings, etc.).
+
+  - File timestamp (NSFileTimestampAccess)
+      Reason: C617.1 — "Display file timestamps to the person using the device."
+      Triggered by: sidebar "last opened" display on project rows.
+
+If you add a framework, SDK, or call that touches another required-reason
+category (disk space, active keyboards, system boot time), add the
+declaration below with a documented reason code. Apple's full list:
+https://developer.apple.com/documentation/bundleresources/privacy_manifest_files/describing_use_of_required_reason_api
+-->
+<plist version="1.0">
+<dict>
+    <key>NSPrivacyTracking</key>
+    <false/>
+    <key>NSPrivacyTrackingDomains</key>
+    <array/>
+    <key>NSPrivacyCollectedDataTypes</key>
+    <array/>
+    <key>NSPrivacyAccessedAPITypes</key>
+    <array>
+        <dict>
+            <key>NSPrivacyAccessedAPIType</key>
+            <string>NSPrivacyAccessedAPICategoryUserDefaults</string>
+            <key>NSPrivacyAccessedAPITypeReasons</key>
+            <array>
+                <string>CA92.1</string>
+            </array>
+        </dict>
+        <dict>
+            <key>NSPrivacyAccessedAPIType</key>
+            <string>NSPrivacyAccessedAPICategoryFileTimestamp</string>
+            <key>NSPrivacyAccessedAPITypeReasons</key>
+            <array>
+                <string>C617.1</string>
+            </array>
+        </dict>
+    </array>
+</dict>
+</plist>

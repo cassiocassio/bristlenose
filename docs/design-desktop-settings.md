@@ -24,7 +24,7 @@ Whisper backend picker (Auto/MLX/faster-whisper) + model picker (large-v3-turbo 
 
 ## Preferences → serve process
 
-`ServeManager.overlayPreferences()` reads `UserDefaults` and injects values as environment variables into the `Process.environment` dictionary before launching `bristlenose serve`. API keys don't need env var pass-through — Python's `MacOSCredentialStore` reads Keychain directly.
+`ServeManager.overlayPreferences()` reads `UserDefaults` and injects values as environment variables into the `Process.environment` dictionary before launching `bristlenose serve`. API keys are injected via `ServeManager.overlayAPIKeys()` (C3, Apr 2026) — Swift reads Keychain via `Security.framework` and sets `BRISTLENOSE_<PROVIDER>_API_KEY` on the same env dict. Python never touches Keychain in this deployment; pydantic-settings reads the env vars directly.
 
 `ServeManager` subscribes to `Notification.Name.bristlenosePrefsChanged`. When any settings view posts this notification and a serve process is running, `restartIfRunning()` stops and re-starts with the new environment.
 

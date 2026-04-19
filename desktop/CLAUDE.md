@@ -24,7 +24,7 @@ See `docs/design-desktop-python-runtime.md` (to be written as part of Track C C0
 | Signing | Xcode automatic (ad-hoc / dev identity) | Apple Distribution cert + per-binary signing of every dylib/so/framework inside the PyInstaller bundle |
 | FFmpeg | User-installed, found via `$PATH` | Bundled at `Contents/Resources/bin/ffmpeg`, trimmed codecs |
 | Whisper model | User-installed or downloaded by the CLI | First-run download to Application Support |
-| Keychain access (Python side) | `/usr/bin/security` CLI via subprocess | Sandbox-friendly: either `pyobjc-framework-Security`, or Swift fetches keys and passes them via env vars |
+| Keychain access (Python side) | `/usr/bin/security` CLI via subprocess (works fine under non-sandboxed CLI Mac distros; blocked under App Sandbox) | **Not reached** — Swift host fetches keys via Security.framework at sidecar launch and injects as `BRISTLENOSE_*_API_KEY` env vars (C3, Apr 2026). `credentials_macos.py` stays as-is for CLI Mac users; sandboxed sidecar never reaches it because env vars satisfy the fallback chain earlier. |
 | Ollama integration | Shells out to `ollama` binary | HTTP-only detection against user-configured `localURL` |
 | Distribution | Cmd+R in Xcode on Martin's Mac | Internal TestFlight (up to 100 invited testers) |
 

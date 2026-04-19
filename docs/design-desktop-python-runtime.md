@@ -216,10 +216,37 @@ Per `design-modularity.md`, single-source lookup functions live in the Python co
 
 - **FFmpeg** — Swift reads `Bundle.main.resourceURL/bin/ffmpeg`, passes via `BRISTLENOSE_FFMPEG_PATH` env var. Python `find_binary("ffmpeg")` checks env → `shutil.which`. (CLI users skip the env var, fall through to `which`.)
 - **Whisper models** — env var `BRISTLENOSE_WHISPER_MODEL_DIR` → `~/Library/Application Support/Bristlenose/models/` → HuggingFace cache. Background Assets writes to Application Support in public beta; alpha bundles the `small.en` model directly.
-- **Credentials** — Swift reads Keychain (via Security framework), passes per-provider env vars (`BRISTLENOSE_ANTHROPIC_KEY`, etc.). No Mac-specific Python dep.
+- **Credentials (implemented, C3)** — `ServeManager.overlayAPIKeys()` reads Keychain via Security.framework (`SecItemCopyMatching`) at sidecar launch and injects `BRISTLENOSE_<PROVIDER>_API_KEY` env vars (`ANTHROPIC`, `OPENAI`, `AZURE`, `GOOGLE` — Miro descoped from alpha). Python reads them via pydantic-settings before `_populate_keys_from_keychain` runs. **The sidecar does not call `SecItemCopyMatching`, does not exec `/usr/bin/security`, and does not need any keychain-access-groups or Security.framework entitlement.** It reads plain env vars. See the "Credential flow" section below for details, residual risks, and rationale vs. `pyobjc-framework-Security`.
 - **Auth token** — server prints once at startup; Swift greps the token out of the sidecar's stdout. C1 may add structured-stdout (JSON line for handshake) if scraping proves fragile.
 
 All four patterns are "Swift resolves via platform API, passes via env var, Python reads env." That's the no-fork principle from `design-modularity.md`.
+
+## Credential flow (C3, Apr 2026)
+
+The sidecar never touches the macOS Keychain. Instead:
+
+1. User enters an LLM API key via the app's Settings (Cmd+,) → LLM pane.
+2. `LLMSettingsView` writes the key to login Keychain via `KeychainHelper.set()` (Security.framework, `SecItemAdd`/`SecItemUpdate`). Service names: "Bristlenose Anthropic API Key", "Bristlenose OpenAI API Key", etc. — kept in sync with `MacOSCredentialStore.SERVICE_NAMES` in `bristlenose/credentials_macos.py`.
+3. On project open, `ServeManager.start(projectPath:)` builds a minimal env dict (`PATH`, `HOME`, locale, preferences overlay) and calls `overlayAPIKeys(into:using:)`.
+4. `overlayAPIKeys` iterates the four supported LLM providers. For each where `KeychainStore.get(provider:)` returns a non-empty value, it sets `BRISTLENOSE_<PROVIDER>_API_KEY` on the env dict and logs one `Logger.info("injected API key for provider=\(provider, privacy: .public)")` line — presence only, never the value.
+5. The env dict is attached to a `Process`, which spawns the sidecar. Foundation copies the strings into `posix_spawn` argv.
+6. Python's pydantic-settings reads each `BRISTLENOSE_*_API_KEY` into the corresponding `BristlenoseSettings.*_api_key` field before `_populate_keys_from_keychain` runs. The keychain-fallback path in `credentials_macos.py` never triggers in the sandboxed sidecar because the field is already populated.
+
+**The sidecar requires no `keychain-access-groups` entitlement, no Security.framework linkage, and no temporary-exception entitlements.** It is a consumer of env vars. Under App Sandbox this path just works.
+
+**Why env-var injection instead of `pyobjc-framework-Security`:**
+- Adding `pyobjc-framework-Security` to `pyproject.toml` would either (a) break CLI install on Linux/Windows, or (b) sit in a `[macos]` extra that CLI users must remember to add — both violate the no-fork principle from `design-modularity.md`.
+- Env var injection is symmetric with the existing `ServeManager.overlayPreferences` pattern (LLM provider, model, Azure endpoint etc. are already passed this way).
+- Keys live in-process only; no disk write.
+
+**Residual risks (documented, not fixed in alpha):**
+- `ps -E <pid>` shows the full env block to any same-UID process. An attacker with same-UID code execution can therefore scrape keys from the sidecar's environment while it runs. But that same attacker can also call `SecItemCopyMatching` directly against the login keychain, so the net attack-surface delta is small. Honest framing in SECURITY.md: keys "never persist to disk," not "never leave Keychain."
+- Crash dumps may contain the Swift-side `env` dictionary. Zeroing Swift `String` memory is not reliably possible without dropping to C; we rely on the same-process-access-equals-keychain-access argument above.
+- Log redaction (runtime regex in `ServeManager.handleLine`; source-level grep in `desktop/scripts/check-logging-hygiene.sh`) is defence-in-depth against accidental printing of keys.
+
+**Post-alpha knobs (not scheduled):**
+- Biometric gate on Keychain access (`kSecAttrAccessControl` + `.biometryCurrentSet`) — post-alpha Settings toggle.
+- Key rotation / revocation flow — manual today (re-enter in Settings → `bristlenosePrefsChanged` notification → `ServeManager.restartIfRunning()` → fresh env dict on next spawn).
 
 ## Failure modes observed during C0
 

@@ -56,6 +56,13 @@ echo
 
 echo "==> 1. Pre-flight..."
 
+# 1a. Source-level logging hygiene — catches credential-shaped interpolations
+# in Swift logger calls without a privacy marker. Complements the runtime
+# redactor in ServeManager.handleLine (Python-side leakage defence). Cheap;
+# runs in <1s; fails fast before expensive archive work.
+echo "==> 1a. check-logging-hygiene.sh..."
+"$SCRIPT_DIR/check-logging-hygiene.sh" "$ROOT"
+
 if [ "$SIGN_IDENTITY" != "-" ]; then
     # Capture output before grepping (SIGPIPE + pipefail trap —
     # see sign-sidecar.sh Timestamp= assertion for the full story).

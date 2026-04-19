@@ -37,11 +37,12 @@ Show what will be synced:
 ```bash
 rsync -avz --dry-run --delete \
   --exclude='draft text for*' \
+  --exclude='weeknotes/' \
   website/ \
   dreamhost:/home/cassiocassio/bristlenose.app/
 ```
 
-Show the output to the user. The `--exclude` skips the draft markdown file (working notes, not for the live site). `--delete` removes files on the remote that no longer exist locally.
+Show the output to the user. The excludes skip the draft markdown file (working notes) and the weeknotes archive (raw markdown mirror of the Substack feed — kept in the repo for portability, not served). `--delete` removes files on the remote that no longer exist locally.
 
 ## Step 3: Confirm and deploy
 
@@ -52,6 +53,7 @@ If confirmed, run the real deploy:
 ```bash
 rsync -avz --delete \
   --exclude='draft text for*' \
+  --exclude='weeknotes/' \
   website/ \
   dreamhost:/home/cassiocassio/bristlenose.app/
 ```

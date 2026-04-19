@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>app.bristlenose.sync-weeknotes</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>/Users/cassio/Code/bristlenose/scripts/sync-weeknotes.py</string>
+    </array>
+
+    <!-- Every Monday at 07:30 local time -->
+    <key>StartCalendarInterval</key>
+    <dict>
+        <key>Weekday</key>
+        <integer>1</integer>
+        <key>Hour</key>
+        <integer>7</integer>
+        <key>Minute</key>
+        <integer>30</integer>
+    </dict>
+
+    <key>StandardOutPath</key>
+    <string>/Users/cassio/Library/Logs/bristlenose-sync-weeknotes.log</string>
+    <key>StandardErrorPath</key>
+    <string>/Users/cassio/Library/Logs/bristlenose-sync-weeknotes.log</string>
+
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>PATH</key>
+        <string>/Users/cassio/.local/bin:/opt/homebrew/bin:/usr/bin:/bin</string>
+    </dict>
+</dict>
+</plist>

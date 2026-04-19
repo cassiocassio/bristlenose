@@ -47,7 +47,10 @@ for binary in ffmpeg ffprobe; do
         --sign "$SIGN_IDENTITY" "$target"
 
     if [ "$SIGN_IDENTITY" != "-" ]; then
-        if ! codesign -dvv "$target" 2>&1 | grep -q "Timestamp="; then
+        # Capture first: `grep -q` causes SIGPIPE on codesign under
+        # pipefail. See sign-sidecar.sh for the full story.
+        _dvv_out=$(codesign -dvv "$target" 2>&1)
+        if ! grep -q "Timestamp=" <<< "$_dvv_out"; then
             echo "error: no trusted timestamp on $target" >&2
             exit 1
         fi

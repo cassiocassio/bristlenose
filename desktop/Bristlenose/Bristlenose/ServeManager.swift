@@ -1,4 +1,7 @@
 import Foundation
+import OSLog
+
+private let log = Logger(subsystem: "app.bristlenose", category: "serve")
 
 /// State machine for the `bristlenose serve` subprocess.
 enum ServeState: Equatable {
@@ -14,7 +17,12 @@ enum ServeState: Equatable {
 /// for the "Uvicorn running on" readiness signal, and exposes the serve URL
 /// as a published property for the WKWebView to load.
 ///
-/// Port allocation: `8150 + abs(projectPath.hashValue) % 1000` — deterministic
+/// Sidecar resolution happens once at `init()` via `SidecarMode.resolve`:
+/// the resolved `mode` is stored and every downstream call site switches on
+/// it. See `SidecarMode.swift` for the three modes + the Debug-only dev
+/// env vars, and `desktop/CLAUDE.md` "Dev workflow" for the scheme table.
+///
+/// Port allocation: `8150 + djb2(projectPath) % 1000` — deterministic
 /// per project path, range 8150–9149.
 @MainActor
 final class ServeManager: ObservableObject {
@@ -31,13 +39,71 @@ final class ServeManager: ObservableObject {
     /// Injected into WKWebView via WKUserScript.
     @Published var authToken: String?
 
-    /// On init, kill any orphaned serve processes from previous app crashes.
-    /// Bristlenose owns the 8150–9149 port range — anything there is a zombie.
-    /// Skip when BRISTLENOSE_DEV_PORT is set — the dev server is intentional.
+    /// Resolved sidecar mode for this process. Decided once at init from env
+    /// + bundle layout. If resolution fails, `mode` is nil and `state` is
+    /// `.failed` — every downstream call becomes a no-op.
+    let mode: SidecarMode?
+
+    /// On init, resolve the sidecar mode and kill any orphaned serve
+    /// processes from previous app crashes. Bristlenose owns the 8150–9149
+    /// port range — anything there is a zombie unless we're in
+    /// external-server mode (the dev terminal server is intentional).
     init() {
-        if ProcessInfo.processInfo.environment["BRISTLENOSE_DEV_PORT"] == nil {
+        // The env-var string literals for the dev escape hatch live only
+        // inside `#if DEBUG`-guarded code so the Release Mach-O has no
+        // reference to them. `desktop/scripts/check-release-binary.sh`
+        // verifies this at archive time.
+        #if DEBUG
+        let externalPortRaw = ProcessInfo.processInfo.environment["BRISTLENOSE_DEV_EXTERNAL_PORT"]
+        let sidecarPathRaw = ProcessInfo.processInfo.environment["BRISTLENOSE_DEV_SIDECAR_PATH"]
+        let userIntendedExternal = externalPortRaw != nil
+        #else
+        let externalPortRaw: String? = nil
+        let sidecarPathRaw: String? = nil
+        let userIntendedExternal = false
+        #endif
+
+        let resolved = SidecarMode.resolve(
+            externalPortRaw: externalPortRaw,
+            sidecarPathRaw: sidecarPathRaw,
+            bundleResourceURL: Bundle.main.resourceURL
+        )
+        switch resolved {
+        case .success(let resolvedMode):
+            self.mode = resolvedMode
+            log.info("Mode: \(resolvedMode.logDescription, privacy: .public)")
+            #if DEBUG
+            if case .devSidecar(let path) = resolvedMode {
+                log.warning(
+                    "spawning dev sidecar from env var: \(path.path, privacy: .public)"
+                )
+            }
+            #endif
+        case .failure(let error):
+            self.mode = nil
+            log.error("sidecar mode resolution failed: \(error.description, privacy: .public)")
+            self.state = .failed(error: error.localizedDescription)
+        }
+
+        // Skip the 8150–9149 kill-sweep when the user pointed us at an
+        // externally-running server — we don't own that process. Also skip
+        // when resolution failed but the user *intended* external mode
+        // (e.g. invalid port value); killing what they were trying to
+        // reach would compound the error.
+        //
+        // Asymmetric on purpose: dev-sidecar mode spawns a subprocess on
+        // 8150–9149 that *we* own, so any zombie there is still our
+        // responsibility to reap even if a later resolve failed.
+        let skipCleanup: Bool
+        switch self.mode {
+        case .external: skipCleanup = true
+        case .bundled, .devSidecar: skipCleanup = false
+        case .none: skipCleanup = userIntendedExternal
+        }
+        if !skipCleanup {
             Self.killOrphanedServeProcesses()
         }
+
         prefsObserver = NotificationCenter.default.addObserver(
             forName: .bristlenosePrefsChanged,
             object: nil,
@@ -74,45 +140,47 @@ final class ServeManager: ObservableObject {
     func start(projectPath: String) {
         stop()
 
+        guard let mode = self.mode else {
+            // Resolution failed at init; state is already .failed.
+            return
+        }
+
         currentProjectPath = projectPath
         generation += 1
         state = .starting
         outputLines = []
 
-        #if DEBUG
-        // Dev port override: connect to an externally-running `bristlenose serve --dev`
-        // instead of spawning a subprocess. Set BRISTLENOSE_DEV_PORT in the Xcode scheme
-        // environment variables (e.g. 8150). Uncheck it to test the full subprocess flow.
-        if let devPortStr = ProcessInfo.processInfo.environment["BRISTLENOSE_DEV_PORT"],
-           let devPort = Int(devPortStr) {
-            print("[ServeManager] dev mode — connecting to external server on port \(devPort)")
-            state = .running(port: devPort)
+        // External mode: no subprocess. Just point at the existing server.
+        if case .external(let port) = mode {
+            log.info("connecting to external server on port \(port, privacy: .public)")
+            state = .running(port: port)
             return
         }
-        #endif
 
         let currentGeneration = generation
 
+        let executableURL: URL
+        switch mode {
+        case .bundled(let path), .devSidecar(let path):
+            executableURL = path
+        case .external:
+            return  // handled above
+        }
+
         let basePort = Self.stablePort(for: projectPath)
-        // Find a free port starting from the stable base port.
         var port = basePort
         for offset in 0..<10 {
             port = basePort + offset
             if !Self.isPortOpen(port) { break }
-            print("[ServeManager] port \(port) already in use, trying next")
-        }
-
-        guard let executableURL = findBristlenoseBinary() else {
-            state = .failed(error: "Could not find bristlenose binary")
-            return
+            log.debug("port \(port, privacy: .public) already in use, trying next")
         }
 
         let proc = Process()
         self.process = proc
         proc.executableURL = executableURL
-        proc.arguments = ["serve", "--no-open", "--port", "\(port)", projectPath]
+        proc.arguments = Self.arguments(for: mode, port: port, projectPath: projectPath)
 
-        // Minimal environment — only what the sidecar needs.  Avoids leaking
+        // Minimal environment — only what the sidecar needs. Avoids leaking
         // credentials, DYLD_* vars, Xcode debug vars, etc. to the subprocess.
         // API keys are read from Keychain by Python directly — no env var needed.
         var env: [String: String] = [:]
@@ -131,8 +199,6 @@ final class ServeManager: ObservableObject {
         let handle = pipe.fileHandleForReading
 
         // Read pipe on a detached task to avoid Sendable/actor-isolation issues.
-        // Pattern from v0.1 ProcessRunner.swift — availableData blocks until
-        // data arrives or EOF, breaking the loop on process termination.
         readTask = Task.detached { [weak self] in
             let fileHandle = handle
             while true {
@@ -153,7 +219,6 @@ final class ServeManager: ObservableObject {
             Task { @MainActor in
                 guard let self, self.generation == currentGeneration else { return }
                 self.timeoutTask?.cancel()
-                // Include last few output lines in error for debugging.
                 let lastLines = self.outputLines.suffix(5).joined(separator: "\n")
                 if case .running = self.state {
                     self.state = .failed(error: "Server exited with code \(status)\n\(lastLines)")
@@ -170,7 +235,6 @@ final class ServeManager: ObservableObject {
             return
         }
 
-        // Timeout: if the server doesn't become ready within 15 seconds, fail.
         timeoutTask = Task { [weak self] in
             try? await Task.sleep(for: .seconds(15))
             guard !Task.isCancelled else { return }
@@ -182,21 +246,37 @@ final class ServeManager: ObservableObject {
         }
     }
 
+    /// Build the argument list for the sidecar subprocess.
+    ///
+    /// - Bundled: `sidecar_entry.py` auto-injects "serve", so pass flags only.
+    /// - Dev sidecar: user's venv-installed `bristlenose`, needs "serve"
+    ///   prepended.
+    private static func arguments(for mode: SidecarMode, port: Int, projectPath: String) -> [String] {
+        let flags = ["--no-open", "--port", "\(port)", projectPath]
+        switch mode {
+        case .bundled:
+            return flags
+        case .devSidecar:
+            return ["serve"] + flags
+        case .external:
+            return []
+        }
+    }
+
     /// Stop the serve process and reset state.
     func stop() {
         timeoutTask?.cancel()
         timeoutTask = nil
 
-        #if DEBUG
-        // Dev port mode: no subprocess was spawned — just reset state.
-        if process == nil {
+        // External mode: no subprocess was spawned — just reset state.
+        if case .external = mode, process == nil {
             readTask?.cancel()
             readTask = nil
             state = .idle
             serverVersion = nil
+            authToken = nil
             return
         }
-        #endif
 
         if let proc = process, proc.isRunning {
             proc.interrupt()  // SIGINT — lets Uvicorn shut down gracefully
@@ -213,7 +293,7 @@ final class ServeManager: ObservableObject {
     /// Called when user preferences change (provider, model, API key, etc.).
     func restartIfRunning() {
         guard case .running = state, let path = currentProjectPath else { return }
-        print("[ServeManager] preferences changed — restarting serve")
+        log.info("preferences changed — restarting serve")
         start(projectPath: path)
     }
 
@@ -308,7 +388,9 @@ final class ServeManager: ObservableObject {
             // Validate URL-safe characters only (safety invariant from secrets.token_urlsafe)
             if token.range(of: "^[A-Za-z0-9_-]+$", options: .regularExpression) != nil {
                 authToken = token
-                print("[ServeManager] captured auth token (\(token.prefix(8))...)")
+                // .private redacts in Release unified logging; still visible
+                // in Debug for local inspection.
+                log.info("captured auth token (prefix=\(token.prefix(8), privacy: .private))")
             }
         }
 
@@ -318,10 +400,19 @@ final class ServeManager: ObservableObject {
         // poll until it is before transitioning to .running.
         if case .starting = state, clean.contains("Report:") && clean.contains("http://") {
             timeoutTask?.cancel()
-            Task {
-                await self.waitForPort(port, timeout: 10)
-                self.state = .running(port: port)
-                await self.fetchServerVersion(port: port)
+            // Belt-and-braces: the state check alone catches most stop/start
+            // races, but a rapid stop() + start() between "Report:" arrival
+            // and port-poll completion could have state back at .starting
+            // for the *next* run. The generation guard distinguishes them.
+            let readyGeneration = self.generation
+            Task { [weak self] in
+                await self?.waitForPort(port, timeout: 10)
+                await MainActor.run {
+                    guard let self, self.generation == readyGeneration,
+                          case .starting = self.state else { return }
+                    self.state = .running(port: port)
+                    Task { await self.fetchServerVersion(port: port) }
+                }
             }
         }
     }
@@ -330,12 +421,12 @@ final class ServeManager: ObservableObject {
     private func waitForPort(_ port: Int, timeout: Int) async {
         for _ in 0..<(timeout * 10) {  // check every 100ms
             if Self.isPortOpen(port) {
-                print("[ServeManager] port \(port) is accepting connections")
+                log.debug("port \(port, privacy: .public) is accepting connections")
                 return
             }
             try? await Task.sleep(for: .milliseconds(100))
         }
-        print("[ServeManager] port \(port) poll timed out — proceeding anyway")
+        log.warning("port \(port, privacy: .public) poll timed out — proceeding anyway")
     }
 
     /// Quick TCP connect check to see if a port is accepting connections.
@@ -400,33 +491,8 @@ final class ServeManager: ObservableObject {
             .compactMap { Int32($0.trimmingCharacters(in: .whitespaces)) }
 
         for pid in pids {
-            print("[ServeManager] killing orphaned serve process (PID \(pid))")
+            log.info("killing orphaned serve process (PID \(pid, privacy: .public))")
             kill(pid, SIGINT)
         }
-    }
-
-    /// Find the bristlenose binary for development use.
-    /// Checks common locations in priority order.
-    private func findBristlenoseBinary() -> URL? {
-        let candidates = [
-            // Main repo venv — active development happens here
-            NSString("~/Code/bristlenose/.venv/bin/bristlenose").expandingTildeInPath,
-            // Worktree venv (fallback)
-            NSString("~/Code/bristlenose_branch macos-app/.venv/bin/bristlenose")
-                .expandingTildeInPath,
-            // Homebrew
-            "/opt/homebrew/bin/bristlenose",
-            "/usr/local/bin/bristlenose",
-            // pipx / user install
-            NSString("~/.local/bin/bristlenose").expandingTildeInPath,
-        ]
-
-        for path in candidates {
-            let url = URL(fileURLWithPath: path)
-            if FileManager.default.isExecutableFile(atPath: url.path) {
-                return url
-            }
-        }
-        return nil
     }
 }

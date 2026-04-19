@@ -406,16 +406,46 @@ final class ServeManager: ObservableObject {
         options: []
     )
 
+    /// Key-shape redactor — defence against Python-side leakage of LLM API keys
+    /// (Uvicorn env dumps on startup errors, pydantic tracebacks that echo a
+    /// SecretStr, accidental `print(os.environ)` from a future change).
+    ///
+    /// Covers: Anthropic (`sk-ant-api/sid<NN>-<90+ chars>`), OpenAI (project-scoped
+    /// `sk-proj-<48+>` + historical `sk-<48>`), Google (`AIza<35>`).
+    ///
+    /// Limitations:
+    /// - Per-line only. If Python wraps a key across two log lines (e.g. in a
+    ///   boxed stack trace) the redactor won't catch the split halves. Inherent
+    ///   to line-based processing.
+    /// - Azure deliberately NOT covered: 32-char hex false-positives on UUIDs
+    ///   and SHA hashes are worse than the residual risk. Pre-beta audit
+    ///   tracked in `docs/private/100days.md` §6 Risk → Should.
+    /// - Does not catch provider-format changes after this code was written.
+    /// - Does not catch misformatted keys the regex doesn't match by shape.
+    ///
+    /// This is defence in depth, not a substitute for avoiding key logs in the
+    /// first place — see `check-logging-hygiene.sh` for the source-level gate.
+    private static let keyRedactionRegex = try! NSRegularExpression(
+        pattern: [
+            "sk-ant-(api|sid)[0-9]{2}-[A-Za-z0-9_\\-]{90,}",
+            "sk-(proj|None)-[A-Za-z0-9_\\-]{48,}",
+            "sk-[A-Za-z0-9]{48}",
+            "AIza[A-Za-z0-9_\\-]{35}",
+        ].joined(separator: "|"),
+        options: []
+    )
+
     private func handleLine(_ line: String, port: Int) {
         let clean = Self.ansiRegex.stringByReplacingMatches(
             in: line,
             range: NSRange(line.startIndex..., in: line),
             withTemplate: ""
         )
-        outputLines.append(clean)
 
-        // Parse auth token — printed before "Report:" readiness line.
-        // Format: [bristlenose] auth-token: <token>
+        // Parse auth token FIRST — before redaction. The token format is
+        // base64url (secrets.token_urlsafe), extremely unlikely to match the
+        // key shapes above, but we want the unredacted source regardless so
+        // the parser's exact-prefix match is never interfered with.
         if authToken == nil, clean.hasPrefix("[bristlenose] auth-token: ") {
             let token = String(clean.dropFirst("[bristlenose] auth-token: ".count))
                 .trimmingCharacters(in: .whitespaces)
@@ -427,6 +457,16 @@ final class ServeManager: ObservableObject {
                 log.info("captured auth token (prefix=\(token.prefix(8), privacy: .private))")
             }
         }
+
+        // Redact key-shaped substrings for everything published downstream:
+        // outputLines (displayed, exposed in error messages, suffix used in
+        // termination failure reporting) and any subsequent pattern checks.
+        let redacted = Self.keyRedactionRegex.stringByReplacingMatches(
+            in: clean,
+            range: NSRange(clean.startIndex..., in: clean),
+            withTemplate: "***REDACTED***"
+        )
+        outputLines.append(redacted)
 
         // Detect readiness: bristlenose serve prints "Report: http://..."
         // when the server is ready and the report has been rendered.

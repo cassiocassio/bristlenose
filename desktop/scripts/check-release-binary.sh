@@ -97,6 +97,7 @@ fi
 echo "==> Scanning ${#TARGETS[@]} Mach-O file(s) for dev env-var literals..."
 
 LEAK_COUNT=0
+GTA_COUNT=0
 for f in "${TARGETS[@]}"; do
     # -F = fixed string, `|| true` stops `set -e` killing us on zero
     # matches — we want to keep going.
@@ -112,19 +113,44 @@ for f in "${TARGETS[@]}"; do
         echo "  LEAK: $f" >&2
         echo "$hits" | sed 's/^/    /' >&2
     fi
+
+    # get-task-allow entitlement check. This is the Debug
+    # debuggability entitlement, auto-added by Xcode to Debug builds
+    # and silently rejected by App Store Connect at submission time.
+    # A Release archive must never carry it on any Mach-O.
+    # Capture first: codesign can SIGPIPE under pipefail+grep.
+    ents=$(codesign -d --entitlements :- "$f" 2>/dev/null || true)
+    if grep -q "get-task-allow" <<< "$ents"; then
+        # Xcode also embeds a dict key without a <true/> value in some
+        # Debug configs; only flag if the value is true.
+        if grep -A1 "get-task-allow" <<< "$ents" | grep -q "<true/>"; then
+            GTA_COUNT=$((GTA_COUNT + 1))
+            echo "  get-task-allow=TRUE: $f" >&2
+        fi
+    fi
 done
 
-if [ "$LEAK_COUNT" -gt 0 ]; then
+if [ "$LEAK_COUNT" -gt 0 ] || [ "$GTA_COUNT" -gt 0 ]; then
     echo >&2
-    echo "FAIL: $LEAK_COUNT binary/binaries leak dev env-var literals." >&2
-    echo "A Release Mach-O must not reference BRISTLENOSE_DEV_EXTERNAL_PORT" >&2
-    echo "or BRISTLENOSE_DEV_SIDECAR_PATH. These are Debug-only dev" >&2
-    echo "overrides — a leak here means the shipped app could honour them." >&2
-    echo "Check ServeManager.init for a read moved outside #if DEBUG." >&2
-    echo >&2
-    echo "Note: this script is for Release archives. Debug builds ship the" >&2
-    echo "#if DEBUG branch by design; run this against a Release build only." >&2
+    if [ "$LEAK_COUNT" -gt 0 ]; then
+        echo "FAIL: $LEAK_COUNT binary/binaries leak dev env-var literals." >&2
+        echo "A Release Mach-O must not reference BRISTLENOSE_DEV_EXTERNAL_PORT" >&2
+        echo "or BRISTLENOSE_DEV_SIDECAR_PATH. These are Debug-only dev" >&2
+        echo "overrides — a leak here means the shipped app could honour them." >&2
+        echo "Check ServeManager.init for a read moved outside #if DEBUG." >&2
+        echo >&2
+    fi
+    if [ "$GTA_COUNT" -gt 0 ]; then
+        echo "FAIL: $GTA_COUNT binary/binaries carry get-task-allow=TRUE." >&2
+        echo "This is a Debug debuggability entitlement (auto-added by Xcode" >&2
+        echo "in Debug configs); App Store Connect rejects it at submission." >&2
+        echo "Check that pbxproj Release signing style is Manual and that" >&2
+        echo "the Apple Distribution cert is being used." >&2
+        echo >&2
+    fi
+    echo "Note: this script is for Release archives. Debug builds ship both" >&2
+    echo "conditions by design; run this against a Release build only." >&2
     exit 1
 fi
 
-echo "OK: no dev env-var literals found in any scanned Mach-O."
+echo "OK: no dev env-var literals and no get-task-allow in any scanned Mach-O."

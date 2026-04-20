@@ -12,16 +12,16 @@ This walkthrough is the at-the-keyboard companion. ~20 min wall-clock, two passe
 
 You'll need a **throwaway Anthropic key** — not your production key, because the smoke test involves `ps ewww` output which lands in shell scrollback and history.
 
-**The spend cap goes on the workspace, not the key.** Anthropic doesn't offer per-key spend limits directly; the canonical sandbox is a dedicated workspace with a spend limit, and the key issued inside it. One-time setup, reusable for future smoke tests.
+**On spend caps:** individual Anthropic accounts don't have per-key or per-workspace budgets (those appear to be enterprise-tier features — "here's $500 for the research department"). Individual account control is limited to the top-up balance and auto-recharge toggle. Practical approach:
 
-1. https://console.anthropic.com → **Settings** → **Workspaces** → **Create Workspace**. Name it `bristlenose-smoke` or similar.
-2. Inside the new workspace: **Settings** → **Spend Limit** → set monthly limit to `$5`.
-3. Inside the same workspace: **API Keys** → **Create Key** → name it `bristlenose-c3-smoke-<YYYY-MM-DD>`.
+1. **Turn off auto-recharge** at https://console.anthropic.com → **Settings → Billing** (or wherever auto-recharge is toggled in the current UI) for the duration of the smoke test. Whatever balance is already on the account becomes the effective cap.
+2. **Note current balance** so you can eyeball it before and after the test — expect a drop of cents, not dollars (one autocode run on an IKEA-sized project is ~$0.10–$0.50).
+3. **Create the key:**
+   https://console.anthropic.com/settings/keys → **Create Key** → name it `bristlenose-c3-smoke-<YYYY-MM-DD>`.
 4. Copy the key into a scratch note — you'll paste it into the app's Settings, not a shell.
+5. After the test (before restoring auto-recharge): check the balance to confirm no runaway spend.
 
-Menu paths are Anthropic's as of writing; labels change occasionally. If they've shifted, search "spend limit" or "workspace" in the Console's search.
-
-**Alternative:** if you don't mind a temporary account-level cap, skip the workspace and set a global monthly Usage Limit under Settings → Billing. Simpler, but it caps your whole Anthropic account for the duration.
+The real control isn't a cap, it's **revoking the key immediately after the test** (covered in Cleanup §C1).
 
 ### Target project
 

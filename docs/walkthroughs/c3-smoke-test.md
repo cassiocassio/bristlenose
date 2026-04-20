@@ -12,10 +12,16 @@ This walkthrough is the at-the-keyboard companion. ~20 min wall-clock, two passe
 
 You'll need a **throwaway Anthropic key** — not your production key, because the smoke test involves `ps ewww` output which lands in shell scrollback and history.
 
-1. Open https://console.anthropic.com/settings/keys in a browser
-2. Create key → name it `bristlenose-c3-smoke-2026-04-20`
-3. **Set a $5 hard spend cap** on the key (per-key usage limit setting)
-4. Copy the key into a scratch note — you'll paste it into Settings, not a shell
+**The spend cap goes on the workspace, not the key.** Anthropic doesn't offer per-key spend limits directly; the canonical sandbox is a dedicated workspace with a spend limit, and the key issued inside it. One-time setup, reusable for future smoke tests.
+
+1. https://console.anthropic.com → **Settings** → **Workspaces** → **Create Workspace**. Name it `bristlenose-smoke` or similar.
+2. Inside the new workspace: **Settings** → **Spend Limit** → set monthly limit to `$5`.
+3. Inside the same workspace: **API Keys** → **Create Key** → name it `bristlenose-c3-smoke-<YYYY-MM-DD>`.
+4. Copy the key into a scratch note — you'll paste it into the app's Settings, not a shell.
+
+Menu paths are Anthropic's as of writing; labels change occasionally. If they've shifted, search "spend limit" or "workspace" in the Console's search.
+
+**Alternative:** if you don't mind a temporary account-level cap, skip the workspace and set a global monthly Usage Limit under Settings → Billing. Simpler, but it caps your whole Anthropic account for the duration.
 
 ### Target project
 

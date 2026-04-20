@@ -63,6 +63,13 @@ echo "==> 1. Pre-flight..."
 echo "==> 1a. check-logging-hygiene.sh..."
 "$SCRIPT_DIR/check-logging-hygiene.sh" "$ROOT"
 
+# 1b. Bundle manifest coverage — asserts every runtime-data dir under
+# bristlenose/ is covered by a datas entry in the spec. Prevents the
+# C3-smoke-test BUG-3/4/5 class (data file in source, missing from bundle).
+# ~60ms; fail-closed on parse errors.
+echo "==> 1b. check-bundle-manifest.sh..."
+"$SCRIPT_DIR/check-bundle-manifest.sh" "$ROOT"
+
 if [ "$SIGN_IDENTITY" != "-" ]; then
     # Capture output before grepping (SIGPIPE + pipefail trap —
     # see sign-sidecar.sh Timestamp= assertion for the full story).

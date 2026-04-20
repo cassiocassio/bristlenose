@@ -79,15 +79,20 @@ Build outputs (gitignored):
 6. Green → commit empty file; update `docs/design-desktop-python-runtime.md` entitlement table to remove DLV justification.
 7. Red → restore from backup: `mv desktop/bristlenose-sidecar.entitlements.dlv-backup desktop/bristlenose-sidecar.entitlements`; add a note in the entitlement table explaining the real reason DLV is load-bearing.
 
-**Goal 3 — C3 (TestFlight upload).**
+**Goal 3 — TestFlight upload (Track B, whenever scheduled).**
+
+Naming reminder: Track C C3 is "Keychain in sandbox", not TestFlight. TestFlight upload is Track B work and lands whenever the schedule allows — no fixed sprint pin. Don't conflate with any Cn.
 
 Prerequisites:
 - Goal 1 done (end-to-end produces a notarised `.app`)
-- App Store Connect app record created (separate portal — Track B)
+- App Store Connect app record created (separate Apple portal — Track B territory)
 - `.pkg` export via `xcodebuild -exportArchive` with `method=app-store` (already in ExportOptions.plist)
 - Upload via `xcrun notarytool submit <pkg> --keychain-profile bristlenose-notary` OR Transporter.app
 
-This is its own commit / track, not more C2.
+**Remaining Track C work that's NOT in this session's scope:**
+- **C3** — Keychain in sandbox (~½ day). Swift fetches keys, passes via env vars to sandboxed Python. Depends on Track A (sandbox on).
+- **C4** — Privacy Manifest `PrivacyInfo.xcprivacy` (~½ day). Small; can drop in anytime.
+- **C5** — Supply-chain provenance / SBOM + SHA256 pins (~½ day). Small; can drop in anytime.
 
 ## Open questions (things I couldn't answer without asking you)
 

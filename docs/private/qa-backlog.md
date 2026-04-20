@@ -47,3 +47,51 @@ Parked items from the usual-suspects reviews of sidecar-signing C1 (18 Apr 2026)
 
 ### Documentation
 - [ ] **Cross-reference `docs/private/c2-session-notes.md` into `bristlenose-docs-private/infrastructure-and-identity.md`** next time the private repo is updated (keychain partition list, app-specific password regen flow, App Store Connect record prerequisites for C3).
+
+## Parked from app-store-police first run (19 Apr 2026)
+
+First run of the new `app-store-police` agent against the sidecar-signing branch. Two BLOCKERs fixed in-branch (`PrivacyInfo.xcprivacy`, `INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO`, non-empty copyright). The rest are deferred to the right track — Track A for sandbox, Track C C4/C5 for post-build verification.
+
+### Blocks first MAS submission (Track A territory)
+- [ ] **Flip `ENABLE_APP_SANDBOX = YES` for Release** in `desktop/Bristlenose/Bristlenose.xcodeproj/project.pbxproj`. Automated App Store Connect gate — unsandboxed archive bounces at upload (§2.4.5(i)). Owner: Track A. Today's `ENABLE_APP_SANDBOX = NO` is deliberate dev convenience per `desktop/CLAUDE.md`.
+- [ ] **Create host-app entitlements file** (`desktop/Bristlenose/Bristlenose.entitlements`) with `com.apple.security.app-sandbox = true` + the minimal set determined by Track A's sandbox spike (likely `network.server` for loopback serve, `user-selected.read-write` + security-scoped bookmarks for interview folders). Owner: Track A. Do the empirical reduction the same way the sidecar's entitlements were reduced in C0 (18 Apr) — start with maximal, subtract until something breaks, document the load-bearing set.
+- [ ] **Add `com.apple.security.inherit` to the bundled sidecar** (`desktop/bristlenose-sidecar.entitlements`) once host sandbox is on, so the sidecar runs under the parent's sandbox. Owner: Track A. Pre-documented in the sidecar entitlements comment block.
+
+### Post-build verification (Track C C4/C5 — needs a built `.app`)
+- [ ] **Verify `Python.framework` is signed as a framework bundle**, not just its inner Mach-Os. Run `codesign -dv <app>/Contents/Resources/bristlenose-sidecar/_internal/Python.framework/Versions/3.12` — output must show a bundle `CodeDirectory`, not just a plain Mach-O signature. Notarisation + MAS validation reject loose-Mach-O-only framework signatures. Ref: TN3127. If `sign-sidecar.sh` doesn't already sign the framework bundle path, add it before the inner-dylib loop.
+- [ ] **Add `xcrun stapler validate -v` to `build-all.sh`** post-notarisation. Confirm the staple ticket covers the sidecar tree, not just the outer `.app`. Belt-and-braces check — notarised-but-not-fully-stapled bundles give Gatekeeper dialogs to offline users.
+
+### Privacy manifest follow-ups
+- [ ] **Add `PrivacyInfo.xcprivacy` inside the bundled Python tree** (bundle root of `bristlenose-sidecar/` and inside `Python.framework`). Apple requires privacy manifests on every embedded framework since 1 May 2024. Host-app manifest shipped 19 Apr 2026; sidecar manifest is part of Track C C4 when the runtime doc lands. Document required-reason API usage for CPython + any `.so` that hits `file_timestamp` / `disk_space` / `system_boot_time` / `active_keyboards`.
+- [ ] **Revisit host-app `PrivacyInfo.xcprivacy` when sandbox lands.** Adding file-access entitlements may bring new required-reason API categories into scope; re-audit the manifest then.
+
+### LLM disclosure prep (§5.1.2)
+- [ ] **Draft App Privacy disclosure in App Store Connect** before first TestFlight build. Every configured LLM provider (Claude, ChatGPT, Azure OpenAI, Gemini) needs disclosure under Data Used to Track You / Data Linked to You — specifically User Content / Audio Data / Search History categories, since interview recordings contain all of these. Pre-drafting avoids a same-week scramble the morning of the first submission.
+
+### Copyright holder — resolved
+Copyright holder is "Martin Storey" (sole trader). No change needed. See `memory/project_legal_entity.md`. Revisit only if Martin incorporates.
+
+## Parked from C3 closeout (20 Apr 2026)
+
+### LLMSettingsView polish (what-would-gruber-say flagged during C3 review)
+- [ ] **Save-on-blur silently clobbers working API keys** (**alpha-blocker-class**). `LLMSettingsView.swift:193–196` writes the field contents to Keychain on focus-loss with no validation, no confirmation, no undo. A 2-char typo + tab-away destroys the working key — user then has to generate a new one at the provider console. Fix: explicit Save button with verify-on-save HEAD request, OR restore the previous value if first API call 401s. This WILL bite an alpha tester.
+- [ ] **Status dot reflects presence, not validity.** `refreshStatuses()` checks "key exists in Keychain" not "key works." Paste rubbish → green dot → 401 ten minutes into pipeline. Wire `ProviderStatus.invalid` to a verify-on-save HEAD.
+- [ ] **Double activation control** — sidebar radio button + detail-pane toggle both set "active provider." Pick one. Kill the radio; let the toggle carry activation.
+- [ ] **Provider logos dimmed to 0.55 opacity** — sign the assets are the wrong weight. Ship tuned 16pt symbol-weight icons or fall back to SF Symbols.
+- [ ] **Fixed window height** (`.frame(width: 660, height: 460)`) — Mail's accounts pane flexes. Allow height to animate to content.
+- [ ] **Missing Section footer under API Key field** — Mail pattern shows "Unable to verify account name or password." inline. Wire `helperText` as footer for the API Key section.
+- [ ] **"Clear" button for API key has no confirmation** — destructive on a live key. At least `.borderless` style + right-of-field glyph position (`xmark.circle.fill`) per 1Password pattern.
+- [ ] **Reveal-eye state persists across provider switches** — revealing Anthropic key, switching to OpenAI, switching back reveals Anthropic again. Reset on switch.
+- [ ] **Escape doesn't cancel in-flight API key edit** — Settings panes should revert field on Escape.
+
+### Logging hygiene phase 2 (post-C3)
+- [ ] **Audit every `Logger` / `os_log` / `print` call in `desktop/Bristlenose/Bristlenose/**/*.swift`** — add explicit `privacy: .public` or `privacy: .private` annotations. Currently many interpolated strings have no marker, which defaults to `.private` in Release (correct-but-unreadable in unified logging). ~2 hrs.
+- [ ] **Document the Swift logging convention in `desktop/CLAUDE.md`** — public vs private vs sensitive markers, when each applies, examples of each.
+- [ ] **Extend `check-logging-hygiene.sh` to Python side** — symmetric gate for `logger.*` calls with user-content interpolation. ~1 hr.
+- [ ] **Pre-beta: Azure key shape re-audit** — tracked in `100days.md` §6 Risk → Should; revisit when Azure's API-key format stabilises or a context-sensitive regex becomes tractable.
+
+### Test target wiring (C1 + C3 have both added aspirational tests now)
+- [ ] **Wire `BristlenoseTests` target into the Xcode project** — currently 7 aspirational Swift test files orphan: `I18nTests`, `KeychainHelperTests`, `ProjectIndexTests`, `TabTests`, `LLMProviderTests`, `SidecarModeTests`, `ServeManagerEnvTests`, `HandleLineRedactorTests`. `xcodebuild -list` shows only `Bristlenose`. 20–60 min of pbxproj editing or a `PBXFileSystemSynchronizedRootGroup` entry. Do this as a dedicated micro-track between desktop tracks to avoid pbxproj merge conflicts.
+
+### Empty-ents retest (split from C3, prerequisite SECURITY #5+#8)
+- [ ] **Run the 8-point empty-entitlements retest** per `~/.claude/plans/c3-empty-ents-retest.md`. Prerequisite: SECURITY #5+#8 unblocker. Outcome either drops `cs.disable-library-validation` entirely (strong procurement line) or rewrites the load-bearing justification.

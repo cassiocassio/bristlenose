@@ -100,4 +100,13 @@ Copyright holder is "Martin Storey" (sole trader). No change needed. See `memory
 
 ### Worktree hygiene
 - [ ] **`/new-feature` skill should cover frontend deps when a worktree will touch desktop/sidecar work.** As discovered during C3 smoke test, the skill currently skips `cd frontend && npm install && npm run build`. Without those, `bristlenose/server/static/` is missing, so the bundled sidecar serves the deprecated static-render HTML instead of the React SPA. Either: (a) add a step 6b that always runs the frontend setup, or (b) make it conditional on a flag (e.g. `/new-feature my-branch --desktop`). Worth a `/new-feature` SKILL.md update before the next worktree is created.
+- [x] ~~**Bundle-vs-source CI gate — source→spec part** (BUG-6a).~~ **Landed 21 Apr 2026** as `desktop/scripts/check-bundle-manifest.sh` (commit `673ddee`). Wired into `build-all.sh` step 1b. Python AST parser + extension-whitelist walker. ~60ms. Fail-closed on unparseable; allowlist at `desktop/scripts/bundle-manifest-allowlist.md` (`BMAN-<N>` markers).
+
+- [ ] **Bundle-vs-source CI gate — spec→bundle runtime smoke test (BUG-6b).** Complementary to the landed source→spec gate. Catches "spec entry present, PyInstaller silently dropped files" class (different from BUG-3/4/5's source→spec class, which was the immediate fire). Shape:
+  - Post-`build-sidecar.sh`, spawn bundled binary on ephemeral port, hit representative endpoints, assert no 5xx from `FileNotFoundError` / `ModuleNotFoundError`.
+  - Endpoints to probe: `GET /api/health`, `GET /api/codebooks/` (or wherever `CODEBOOK_TEMPLATES` is exposed), plus one probe that forces `_load_prompt("autocode")` to execute — so BUG-5-class regressions are caught.
+  - Security hardening (per /usual-suspects review): **must pin `--host 127.0.0.1`**, set `HOME=$(mktemp -d)` for the child, use a random high-entropy token (not a predictable sentinel), `trap` cleanup on exit/SIGINT, hard `timeout 60`, don't persist stdout with tokens into CI artefacts.
+  - TCP-poll readiness detection (per perf-review): don't rely solely on `Report: http://...` log line — it fires before Uvicorn accepts connections. Add a `nc -z 127.0.0.1 <port>` poll with 50ms interval + 30s timeout after the log signal.
+  - ~30s runtime. Lands in `build-all.sh` post-`build-sidecar.sh`, before `archive`.
+
 - [ ] **`sidecar-signing` worktree's `trial-runs/` is irregular.** The skill says it should be a clean top-level symlink (`trial-runs → /Users/cassio/Code/bristlenose/trial-runs`). Instead, it's a real directory with `.DS_Store`, a real `fossda-opensource/` subdir, AND a nested `trial-runs/trial-runs → main` symlink inside. Cleanup: delete the directory's contents, replace with the proper symlink. Not blocking, just messy.

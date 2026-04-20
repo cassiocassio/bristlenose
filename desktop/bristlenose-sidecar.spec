@@ -38,6 +38,17 @@ a = Analysis(
             os.path.join(PROJECT_ROOT, "bristlenose", "locales"),
             os.path.join("bristlenose", "locales"),
         ),
+        # LLM prompt templates (.md files loaded at runtime by
+        # bristlenose/llm/prompts/__init__.py::_load_prompt). Every
+        # LLM-using stage reads from here — topic-segmentation,
+        # quote-extraction, thematic-grouping, autocode, etc.
+        # Without this entry, every LLM call fails with FileNotFoundError
+        # before reaching the provider (BUG-5 from the C3 smoke test,
+        # 21 Apr 2026).
+        (
+            os.path.join(PROJECT_ROOT, "bristlenose", "llm", "prompts"),
+            os.path.join("bristlenose", "llm", "prompts"),
+        ),
         # Alembic migrations (read at runtime by server/db.py).
         (
             os.path.join(PROJECT_ROOT, "bristlenose", "server", "alembic"),
@@ -52,6 +63,14 @@ a = Analysis(
         (
             os.path.join(PROJECT_ROOT, "bristlenose", "server", "static"),
             os.path.join("bristlenose", "server", "static"),
+        ),
+        # YAML codebook templates (garrett, morville, norman, uxr, plato).
+        # Loaded by routes/codebook.py and exposed via the Browse Codebooks
+        # modal. Without this entry the CODEBOOK FRAMEWORKS list is empty
+        # (BUG-4 from the C3 smoke test, 21 Apr 2026).
+        (
+            os.path.join(PROJECT_ROOT, "bristlenose", "server", "codebook"),
+            os.path.join("bristlenose", "server", "codebook"),
         ),
     ],
     hiddenimports=[

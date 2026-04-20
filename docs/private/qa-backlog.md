@@ -95,3 +95,9 @@ Copyright holder is "Martin Storey" (sole trader). No change needed. See `memory
 
 ### Empty-ents retest (split from C3, prerequisite SECURITY #5+#8)
 - [ ] **Run the 8-point empty-entitlements retest** per `~/.claude/plans/c3-empty-ents-retest.md`. Prerequisite: SECURITY #5+#8 unblocker. Outcome either drops `cs.disable-library-validation` entirely (strong procurement line) or rewrites the load-bearing justification.
+
+## Parked from C3 smoke test (21 Apr 2026)
+
+### Worktree hygiene
+- [ ] **`/new-feature` skill should cover frontend deps when a worktree will touch desktop/sidecar work.** As discovered during C3 smoke test, the skill currently skips `cd frontend && npm install && npm run build`. Without those, `bristlenose/server/static/` is missing, so the bundled sidecar serves the deprecated static-render HTML instead of the React SPA. Either: (a) add a step 6b that always runs the frontend setup, or (b) make it conditional on a flag (e.g. `/new-feature my-branch --desktop`). Worth a `/new-feature` SKILL.md update before the next worktree is created.
+- [ ] **`sidecar-signing` worktree's `trial-runs/` is irregular.** The skill says it should be a clean top-level symlink (`trial-runs → /Users/cassio/Code/bristlenose/trial-runs`). Instead, it's a real directory with `.DS_Store`, a real `fossda-opensource/` subdir, AND a nested `trial-runs/trial-runs → main` symlink inside. Cleanup: delete the directory's contents, replace with the proper symlink. Not blocking, just messy.

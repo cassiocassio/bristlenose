@@ -16,9 +16,10 @@ Plus **`docs/c3: credential flow, sub-processor list, review notes`** (final com
 
 ## What works (proven by tests + build)
 
-- `xcodebuild build -scheme Bristlenose -configuration Debug -destination "platform=macOS"` → `** BUILD SUCCEEDED **`. Verified after each Swift-touching commit.
-- `.venv/bin/python -m pytest tests/test_credentials.py -x` → 37 passed, 4 skipped (Linux-only). Covers the new exception-broadening and env-wins cases.
-- `.venv/bin/ruff check bristlenose/credentials_macos.py tests/test_credentials.py` → clean (after auto-fix of import-sort in test file).
+- `xcodebuild build -scheme Bristlenose -configuration Debug -destination "platform=macOS"` → `** BUILD SUCCEEDED **`. Verified after each Swift-touching commit plus a final end-of-session pass.
+- `.venv/bin/python -m pytest tests/` (full suite) → 2239 passed, 101 skipped, 22 xfailed, 3 errors. Runtime 2m32s.
+  - The 3 errors are in `tests/test_autocode_discrimination.py::TestLiveLLMDiscrimination` — pre-existing, environment-dependent. Test class is `@pytest.mark.slow` but its class-level fixture instantiates an `LLMClient` at setup, which raises `ValueError: Claude API key not set` when `BRISTLENOSE_ANTHROPIC_API_KEY` isn't exported. Not caused by C3. Worth a follow-up (skip at fixture layer, not class-marker layer) but scope creep for this session.
+- `.venv/bin/ruff check .` → clean (whole repo, matches CI).
 - `desktop/scripts/check-logging-hygiene.sh` → clean against the real codebase; confirmed catches deliberate violations (temp `/tmp/hygiene-test/` scaffolding with `Logger.info("\(secret)")` + `print(env)`); confirmed silences when `privacy: .private` marker present.
 - Redactor regex sanity-checked against `trial-runs/fossda-opensource/perf-baselines/pipeline-run.log` — zero false-positive hits.
 

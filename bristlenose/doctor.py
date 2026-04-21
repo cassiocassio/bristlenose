@@ -688,6 +688,260 @@ _COMMAND_CHECKS: dict[str, list[str]] = {
 }
 
 
+# ---------------------------------------------------------------------------
+# Bundle integrity checks (P2 from c3-bundle-completeness plan)
+#
+# These check that runtime data files the bundle depends on are actually
+# present at the paths the code will look for them. Runs equivalently against
+# the source tree (pip install -e .) and against a PyInstaller bundle
+# (bristlenose.__file__ resolves correctly in both).
+#
+# Purpose: catch the BUG-3/4/5 class (data file in source, missing from
+# bundle) at build time via `bristlenose doctor --self-test`. Run as step 7a
+# of desktop/scripts/build-all.sh — after build-sidecar.sh, before archive.
+# ---------------------------------------------------------------------------
+
+
+def _package_root() -> Path:
+    from pathlib import Path
+
+    import bristlenose
+    return Path(bristlenose.__file__).parent
+
+
+def _check_data_dir(
+    label: str,
+    rel_path: str,
+    *,
+    min_size: int = 1,
+    required_names: list[str] | None = None,
+) -> CheckResult:
+    """Generic runtime-data-dir check.
+
+    - rel_path is relative to the bristlenose/ package root.
+    - min_size is the smallest acceptable non-empty file size.
+    - required_names, if given, is a list of basenames that must exist.
+    """
+    dir_path = _package_root() / rel_path
+    if not dir_path.is_dir():
+        return CheckResult(
+            status=CheckStatus.FAIL,
+            label=label,
+            detail=f"missing directory: {dir_path}",
+            fix_key="bundle_dir_missing",
+        )
+
+    files = [p for p in dir_path.iterdir() if p.is_file() and not p.name.startswith(".")]
+    if not files:
+        return CheckResult(
+            status=CheckStatus.FAIL,
+            label=label,
+            detail=f"directory exists but is empty: {dir_path}",
+            fix_key="bundle_dir_empty",
+        )
+
+    too_small = [p for p in files if p.stat().st_size < min_size]
+    if too_small:
+        names = ", ".join(sorted(p.name for p in too_small[:3]))
+        return CheckResult(
+            status=CheckStatus.FAIL,
+            label=label,
+            detail=f"files below min_size={min_size}: {names}",
+            fix_key="bundle_file_truncated",
+        )
+
+    if required_names:
+        present = {p.name for p in files}
+        missing = [n for n in required_names if n not in present]
+        if missing:
+            return CheckResult(
+                status=CheckStatus.FAIL,
+                label=label,
+                detail=f"missing required files: {', '.join(missing)}",
+                fix_key="bundle_file_missing",
+            )
+
+    return CheckResult(
+        status=CheckStatus.OK,
+        label=label,
+        detail=f"{len(files)} file(s) in {rel_path}",
+    )
+
+
+def check_bundle_react_spa() -> CheckResult:
+    """React SPA — the single most important bundled asset."""
+    from pathlib import Path
+
+    index = _package_root() / "server" / "static" / "index.html"
+    if not index.is_file():
+        return CheckResult(
+            status=CheckStatus.FAIL,
+            label="Bundle: React SPA",
+            detail=f"index.html missing at {index} (BUG-3 class)",
+            fix_key="bundle_react_missing",
+        )
+    size = index.stat().st_size
+    if size < 512:
+        return CheckResult(
+            status=CheckStatus.FAIL,
+            label="Bundle: React SPA",
+            detail=f"index.html suspiciously small ({size} bytes) — Vite build may have failed",
+            fix_key="bundle_react_truncated",
+        )
+    assets = _package_root() / "server" / "static" / "assets"
+    if not assets.is_dir() or not any(assets.iterdir()):
+        return CheckResult(
+            status=CheckStatus.FAIL,
+            label="Bundle: React SPA",
+            detail=f"assets/ missing or empty at {assets}",
+            fix_key="bundle_react_assets_missing",
+        )
+    return CheckResult(
+        status=CheckStatus.OK,
+        label="Bundle: React SPA",
+        detail=f"index.html ({size} bytes) + assets/",
+    )
+
+
+def check_bundle_codebooks() -> CheckResult:
+    """Codebook YAML frameworks (garrett, morville, norman, plato, uxr, etc.)."""
+    return _check_data_dir(
+        "Bundle: codebooks",
+        "server/codebook",
+        min_size=100,
+        required_names=["garrett.yaml", "norman.yaml", "plato.yaml"],
+    )
+
+
+def check_bundle_prompts() -> CheckResult:
+    """LLM prompt templates (autocode, quote-extraction, thematic-grouping, etc.)."""
+    return _check_data_dir(
+        "Bundle: LLM prompts",
+        "llm/prompts",
+        min_size=500,
+        required_names=[
+            "autocode.md",
+            "quote-extraction.md",
+            "thematic-grouping.md",
+            "topic-segmentation.md",
+        ],
+    )
+
+
+def check_bundle_locales() -> CheckResult:
+    """i18n locale files (6 languages)."""
+    from pathlib import Path
+
+    locales_root = _package_root() / "locales"
+    if not locales_root.is_dir():
+        return CheckResult(
+            status=CheckStatus.FAIL,
+            label="Bundle: locales",
+            detail=f"missing: {locales_root}",
+            fix_key="bundle_dir_missing",
+        )
+    expected = {"en", "es", "fr", "de", "ja", "ko"}
+    present = {p.name for p in locales_root.iterdir() if p.is_dir()}
+    missing = expected - present
+    if missing:
+        return CheckResult(
+            status=CheckStatus.FAIL,
+            label="Bundle: locales",
+            detail=f"missing language dirs: {', '.join(sorted(missing))}",
+            fix_key="bundle_locales_missing",
+        )
+    # Every language must have a non-empty common.json
+    for lang in sorted(expected):
+        common = locales_root / lang / "common.json"
+        if not common.is_file() or common.stat().st_size < 100:
+            return CheckResult(
+                status=CheckStatus.FAIL,
+                label="Bundle: locales",
+                detail=f"{lang}/common.json missing or truncated",
+                fix_key="bundle_locales_missing",
+            )
+    return CheckResult(
+        status=CheckStatus.OK,
+        label="Bundle: locales",
+        detail=f"{len(present)} languages, all with common.json",
+    )
+
+
+def check_bundle_theme() -> CheckResult:
+    """Theme CSS + JS (atoms, molecules, organisms, templates)."""
+    from pathlib import Path
+
+    theme = _package_root() / "theme"
+    if not theme.is_dir():
+        return CheckResult(
+            status=CheckStatus.FAIL,
+            label="Bundle: theme",
+            detail=f"missing: {theme}",
+            fix_key="bundle_dir_missing",
+        )
+    expected_subdirs = {"atoms", "molecules", "organisms", "templates"}
+    present = {p.name for p in theme.iterdir() if p.is_dir()}
+    missing = expected_subdirs - present
+    if missing:
+        return CheckResult(
+            status=CheckStatus.FAIL,
+            label="Bundle: theme",
+            detail=f"missing subdirs: {', '.join(sorted(missing))}",
+            fix_key="bundle_theme_missing",
+        )
+    return CheckResult(
+        status=CheckStatus.OK,
+        label="Bundle: theme",
+        detail=f"{len(present)} subdirs",
+    )
+
+
+def check_bundle_alembic() -> CheckResult:
+    """Alembic migrations (server DB init)."""
+    from pathlib import Path
+
+    versions = _package_root() / "server" / "alembic" / "versions"
+    if not versions.is_dir():
+        return CheckResult(
+            status=CheckStatus.FAIL,
+            label="Bundle: Alembic",
+            detail=f"versions dir missing: {versions}",
+            fix_key="bundle_dir_missing",
+        )
+    version_files = list(versions.glob("*.py"))
+    # __init__.py not required but often present; migrations end in .py
+    non_init = [p for p in version_files if p.name != "__init__.py"]
+    if not non_init:
+        return CheckResult(
+            status=CheckStatus.FAIL,
+            label="Bundle: Alembic",
+            detail="no migration files found (.py)",
+            fix_key="bundle_alembic_missing",
+        )
+    return CheckResult(
+        status=CheckStatus.OK,
+        label="Bundle: Alembic",
+        detail=f"{len(non_init)} migration(s)",
+    )
+
+
+def run_bundle_integrity() -> DoctorReport:
+    """Run only the bundle-integrity checks.
+
+    Used by ``bristlenose doctor --self-test``, which is invoked from
+    desktop/scripts/build-all.sh step 7a to catch BUG-3/4/5-class bugs at
+    build time rather than at first user-facing runtime.
+    """
+    return DoctorReport(results=[
+        check_bundle_react_spa(),
+        check_bundle_codebooks(),
+        check_bundle_prompts(),
+        check_bundle_locales(),
+        check_bundle_theme(),
+        check_bundle_alembic(),
+    ])
+
+
 def run_all(settings: BristlenoseSettings) -> DoctorReport:
     """Run all seven checks (used by explicit `bristlenose doctor`)."""
     return DoctorReport(results=[

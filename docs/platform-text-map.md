@@ -1,6 +1,6 @@
 # Platform Text Map
 
-Inventory of all user-facing text in Bristlenose, categorised by which platform sees it. Used by the docs-review agent to verify platform correctness, by translators to know which keys need desktop variants, and by contributors to decide whether new text needs `dt()` or `ct()` wrapping.
+Inventory of all user-facing text in Bristlenose, categorised by which platform sees it. Used by the user-documentation-review agent to verify platform correctness, by translators to know which keys need desktop variants, and by contributors to decide whether new text needs `dt()` or `ct()` wrapping.
 
 **Last updated**: 26 Mar 2026
 

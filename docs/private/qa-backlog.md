@@ -109,4 +109,14 @@ Copyright holder is "Martin Storey" (sole trader). No change needed. See `memory
   - TCP-poll readiness detection (per perf-review): don't rely solely on `Report: http://...` log line — it fires before Uvicorn accepts connections. Add a `nc -z 127.0.0.1 <port>` poll with 50ms interval + 30s timeout after the log signal.
   - ~30s runtime. Lands in `build-all.sh` post-`build-sidecar.sh`, before `archive`.
 
+- [ ] **Personal dev artefacts bleeding into shared docs (umbrella — flagged 21 Apr 2026 during C3 post-mortem).** The smoke-test walkthrough and several CLAUDE.md files reference paths and conventions that are specific to Martin's machine/setup, not universal:
+  - `trial-runs/` — Martin's personal project-stash dir, not a project convention. Gitignored. Nobody else has it. Walkthrough references `/Users/cassio/Code/bristlenose/trial-runs/foo/` with specific paths.
+  - `project-ikea`, `fossda-opensource`, etc. — Martin's specific test projects.
+  - Specific worktree paths like `/Users/cassio/Code/bristlenose_branch sidecar-signing/` hard-coded in docs.
+  - Xcode scheme selector visible-to-all-cloners (next item).
+
+  **Universal principle:** docs under `docs/` (not `docs/private/`) should work for anyone cloning the repo. Personal setup conventions belong in `docs/private/` or Martin's own notes, never in `docs/walkthroughs/`, `docs/design-*.md`, or root `CLAUDE.md`. Sweep needed before any public-repo release.
+
+- [ ] **Xcode schemes surface area for GitHub visitors (flagged 21 Apr 2026 during C3 post-mortem).** `Bristlenose`, `Bristlenose (External Server)`, and `Bristlenose (Dev Sidecar)` are all in `xcshareddata/xcschemes/` — so anyone cloning the repo sees all three in Xcode's scheme selector. 99.9% of GitHub visitors just want to click Run and try the app; the dev schemes are noise that imply "make a choice." TestFlight/App Store users never touch Xcode — this is specifically about the repo clone-and-try experience. Fix: move the two dev schemes from `xcshareddata/xcschemes/` into `xcuserdata/martin.xcuserdatad/xcschemes/` (local-only, gitignored). Keep the default `Bristlenose` scheme shared. Document recreation steps in `desktop/CLAUDE.md` "Dev workflow" for future maintainers. Also revisit `docs/walkthroughs/c3-smoke-test.md` A1: the "pick Bristlenose scheme" sanity check becomes unnecessary once only one scheme is visible.
+
 - [ ] **`sidecar-signing` worktree's `trial-runs/` is irregular.** The skill says it should be a clean top-level symlink (`trial-runs → /Users/cassio/Code/bristlenose/trial-runs`). Instead, it's a real directory with `.DS_Store`, a real `fossda-opensource/` subdir, AND a nested `trial-runs/trial-runs → main` symlink inside. Cleanup: delete the directory's contents, replace with the proper symlink. Not blocking, just messy.

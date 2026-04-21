@@ -81,6 +81,23 @@ Plus **`docs/c3: credential flow, sub-processor list, review notes`** (final com
 | `docs/private/sprint2-tracks.md` | C3 marked ✅; C4 budget revised up; duplicate C4 line removed |
 | `docs/private/100days.md` | Pre-beta LLM-provider key-format re-audit entry added |
 
+## Smoke test findings (post-hand-off, 21 Apr 2026)
+
+After the autonomous session closed out, Martin ran the Step 6 manual smoke test (Xcode Cmd+R, Debug build, throwaway Anthropic key) and three data-bundling bugs surfaced that the autonomous session couldn't have caught — unit tests run against an editable install where every source dir is present. All were fixed on `sidecar-signing` before the doc-truing pass:
+
+| Bug | Symptom | Commit | Root cause |
+|---|---|---|---|
+| **BUG-3** | Sidecar served the deprecated Jinja2 static-render HTML instead of the React SPA. Masked by serve mode's silent fallback — the UI looked plausibly like Bristlenose | `5aae47c` | `bristlenose/server/static/` (React SPA build output) not in PyInstaller `datas`. Fix includes a **fail-loud contract**: `_mount_prod_report` now returns HTTP 500 + error page (`3a9bc6a`) rather than falling back. Static render formally reframed as vestigial scaffolding (`66f4050`) |
+| **BUG-4** | Browse Codebooks modal empty; CODEBOOK FRAMEWORKS list returned zero entries | `08a0664` | `bristlenose/server/codebook/*.yaml` not in `datas` — loaded as filesystem resource by `routes/codebook.py`, not via Python import |
+| **BUG-5** | Every LLM call raised `FileNotFoundError` before reaching the provider | `08a0664` (same commit) | `bristlenose/llm/prompts/*.md` not in `datas` — loaded by `prompts/__init__.py::_load_prompt` as a filesystem resource |
+| **BUG-6** | *(meta)* No gate existed to prevent a future fourth data dir from shipping missing | `673ddee` | Added `desktop/scripts/check-bundle-manifest.sh`: AST-parses the spec, walks `bristlenose/` for dirs containing runtime-data file extensions, asserts every uncovered dir appears in `datas` or in the allowlist. Wired as `build-all.sh` pre-flight step 2a |
+
+Plus `bristlenose doctor --self-test` (`52024f8`) — runtime bundle-integrity check the sidecar can run against itself, giving the `doctor` command a sidecar-aware code path.
+
+**Lesson burned in.** PyInstaller's `Analysis` only traces `.py` imports; non-`.py` runtime data must be listed explicitly in `datas`. Unit tests can't catch this because they run against the editable install where every source dir is on disk. The only audit that surfaces this class of issue is a manual end-to-end smoke test — and serve-mode's old silent fallback to static render masked even that. The fix is structural (bundle-manifest gate + fail-loud contract), not procedural — the gate now runs on every build, not "remember to check."
+
+These findings were promoted into `docs/design-desktop-python-runtime.md` §"Bundle data requirements" and §"Fail-loud contracts" as the canonical reference.
+
 ## Open questions / follow-ups for future sessions
 
 - **Empty-ents retest outcome.** If green, significant procurement win ("sidecar runs with empty entitlements"). If red, investigate which Mach-O actually needs DLV post-C2 single-identity signing. Diagnostic toolkit spelled out in the retest plan.

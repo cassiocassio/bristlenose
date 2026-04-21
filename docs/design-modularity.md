@@ -120,7 +120,7 @@ Tiny (~100 KB per language). Bundle all 6 (en, es, fr, de, ko, ja) on every chan
 | Linux CLI | `libsecret` via `secretstorage` package | Platform-conditional import |
 | Windows CLI | Future — `keyring` package's win32 backend | Same pattern |
 
-The **env-var injection** pattern for the desktop sidecar is the key insight: it keeps the Python side free of Mac-specific code. Credential lookup function: env var → platform-native CLI (Mac `security`, Linux libsecret). Desktop doesn't need to import `pyobjc-framework-Security`.
+The **env-var injection** pattern for the desktop sidecar is the key insight: it keeps the Python side free of Mac-specific code. Credential lookup function: env var → platform-native CLI (Mac `security`, Linux libsecret). Desktop doesn't need to import `pyobjc-framework-Security`. See [`design-desktop-python-runtime.md`](./design-desktop-python-runtime.md) §"Credential flow" for the end-to-end sequence (Keychain → Swift → env → pydantic-settings) and residual risks.
 
 ### Development / testing deps
 
@@ -200,7 +200,7 @@ Proposed:
 - Add docs on which channel uses which extra set
 
 **Order of work:**
-1. (Track C C1) Write PyInstaller spec that includes only `[apple]`-style transcription, excludes presidio/spaCy — validate bundle ≤ 200 MB before Whisper.
+1. (Track C C1) Write PyInstaller spec that includes only `[apple]`-style transcription, excludes presidio/spaCy — targeted bundle ≤ 200 MB before Whisper. **Reality check (C0, 18 Apr 2026):** the shipped spec landed at **644 MB**, not 200 MB — torch (288 MB), llvmlite (110 MB), onnxruntime (58 MB), and scipy (37 MB) came in as transitive pulls via `tiktoken`/`transformers`/`numba`/`librosa`. The gap is absorbed by the trickle-to-full-capability strategy below (Background Assets for Whisper models + future optional deps) rather than by build-time trimming. Revisit if TestFlight reports cite install size as friction; for alpha, the bundle ships as-is. See `design-desktop-python-runtime.md` §"Bundle-size findings" for the transitive-pull table.
 2. (Track C C1) Write `bristlenose-sidecar[pii]` asset pack for Background Assets — deferred to public beta.
 3. (separate pyproject refactor) Move presidio to `[pii]` extras. Update Homebrew formula to install without PII by default.
 4. (post-100-days) Implement runtime `sys.path` extension for downloaded PII asset pack on Mac.
@@ -362,7 +362,7 @@ This is not a design. The Track C C0/C1 work needs a separate UX-design pass (li
 
 ## Cross-references
 
-- [`docs/design-desktop-python-runtime.md`](./design-desktop-python-runtime.md) — canonical desktop sidecar architecture (to be written, Track C C0)
+- [`docs/design-desktop-python-runtime.md`](./design-desktop-python-runtime.md) — canonical desktop sidecar architecture (written 18 Apr 2026 as Track C C0 output; updated through C3). Read this for the credential flow, bundle-data requirements, validation gates, and fail-loud contracts
 - [`desktop/CLAUDE.md`](../desktop/CLAUDE.md) — desktop app working notes; points here for cross-channel component decisions
 - [`docs/private/sprint2-tracks.md`](./private/sprint2-tracks.md) — Track C scope
 - [`docs/private/road-to-alpha.md`](./private/road-to-alpha.md) — TestFlight path

@@ -15,8 +15,8 @@ Comprehensive security review of the macOS desktop app (`desktop/Bristlenose/`),
 
 | Area | Assessment | Evidence |
 |------|------------|----------|
-| Keychain credential storage | Excellent | Native Security.framework, `kSecAttrAccessibleWhenUnlocked`, no plaintext fallback, cross-compatible with Python `MacOSCredentialStore` |
-| Environment scrubbing | Excellent | Sidecar receives exactly 9 allowlisted env vars. No API keys, no DYLD, no cloud tokens |
+| Keychain credential storage | Excellent | Native Security.framework, `kSecAttrAccessibleWhenUnlocked`, no plaintext fallback. **C3 (Apr 2026)**: Swift reads Keychain at sidecar launch and injects `BRISTLENOSE_<PROVIDER>_API_KEY` env vars; the sandboxed sidecar never reaches `MacOSCredentialStore`. `credentials_macos.py` remains the CLI-Mac happy path. See `design-desktop-python-runtime.md` §"Credential flow" |
+| Environment scrubbing | Excellent | Sidecar receives an allowlisted env dict. No DYLD, no cloud tokens. **API keys are now intentional, allowlisted entries** (`BRISTLENOSE_<PROVIDER>_API_KEY`) fetched by Swift from Keychain at spawn time — keys live in-process only; no disk write |
 | Bearer token auth | Strong | 256-bit random token per instance, CORS blocks cross-origin, media route has path-traversal guard + extension allowlist |
 | JS bridge design | Strong | All 5 `callAsyncJavaScript` sites use parameterised `arguments:` dicts. Zero `evaluateJavaScript` calls |
 | Ephemeral WKWebView | Strong | `.nonPersistent()` data store per project — no cross-project leakage |
@@ -50,7 +50,7 @@ Comprehensive security review of the macOS desktop app (`desktop/Bristlenose/`),
 
 | # | Challenge | 100days |
 |---|-----------|---------|
-| 10 | Auth token prefix (8 chars) logged to stdout | §6 Could |
+| 10 | ~~Auth token prefix (8 chars) logged to stdout~~ ✅ **FIXED — C3 (`8a41f60`, `c17954d`)** | Runtime log redactor in `ServeManager.handleLine` masks Anthropic/OpenAI/Google key shapes (Azure deferred, pre-beta re-audit); source-level `check-logging-hygiene.sh` CI gate prevents Swift-side regressions. Auth-token parse runs before redaction so base64url tokens can't collide |
 | 11 | Hardcoded dev paths in release binary (`~/Code/bristlenose/...`) | §6 Should (new) |
 | 12 | Ollama URL accepts arbitrary HTTP without warning | §6 Should |
 | 13 | CFBundleVersion = 1 (blocks Sparkle/App Store updates) | §11 Should |
@@ -62,7 +62,7 @@ Comprehensive security review of the macOS desktop app (`desktop/Bristlenose/`),
 | # | Constraint | Why It's Hard |
 |---|-----------|---------------|
 | 16 | Sandbox vs subprocess spawning | Python sidecar, arbitrary directory access, dynamic localhost ports. Requires security-scoped bookmarks + XPC |
-| 17 | Hardened Runtime vs Python JIT | `com.apple.security.cs.allow-unsigned-executable-memory` required. Known PyInstaller issue |
+| 17 | ~~Hardened Runtime vs Python JIT: `com.apple.security.cs.allow-unsigned-executable-memory` required~~ ✅ **FIXED — C0 (`7d121fa`)**: empirically not required. Single entitlement `com.apple.security.cs.disable-library-validation` is sufficient for the CPython 3.12 + MLX sidecar. `allow-unsigned-executable-memory` and `allow-jit` both proved unnecessary (ctranslate2 excluded; MLX runs on Metal GPU kernels, not CPU JIT). See `design-desktop-python-runtime.md` §"Entitlement table" |
 | 18 | No DASVS audit done | The right standard for desktop apps (not MASVS/ASVS). 150+ requirements across 12 domains |
 
 ---
@@ -78,6 +78,9 @@ Comprehensive security review of the macOS desktop app (`desktop/Bristlenose/`),
 | E | Strip token prefix from release logs | 1 line | No token fragment in Console.app |
 | F | Add `NSAllowsLocalNetworking` to Info.plist | Config | Correct ATS (not implicit via sandbox-off) |
 | G | Warn on non-localhost Ollama URL | Small SwiftUI | Prevents unencrypted transcript transmission |
+| H1 | ~~Broaden `MacOSCredentialStore` subprocess exception handling for sandbox-denied cases~~ ✅ **DONE — C3 (`f44ac52`)** | 1 commit | `credentials_macos.py` `get`/`set`/`delete` now also catch `FileNotFoundError` / `PermissionError` / `OSError` alongside `CalledProcessError`, with DEBUG-level diagnostic logging. Sandbox regressions surface as "No API key configured" rather than unhandled tracebacks |
+| H2 | ~~Source-level logging-hygiene CI gate~~ ✅ **DONE — C3 (`c17954d`)** | 1 script | `check-logging-hygiene.sh` scans Swift for credential-shaped interpolations without `privacy: .private` markers; wired as `build-all.sh` pre-flight step 1a |
+| H3 | ~~Bundle-data coverage gate~~ ✅ **DONE — C3 (`673ddee`, BUG-6)** | 1 script | `check-bundle-manifest.sh` AST-parses the PyInstaller spec, walks the source tree, fails closed on any runtime-data directory missing from `datas`. Prevents the BUG-3/4/5 class (React SPA, codebook YAMLs, llm/prompts shipped missing because Analysis only discovers `.py` imports) |
 
 ## Opportunities — Distribution Prep
 

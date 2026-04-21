@@ -139,6 +139,31 @@ fi
 echo "    OK (fetch-ffmpeg + build-sidecar)"
 
 # ------------------------------------------------------------
+# 2a. Bundle integrity self-test
+# ------------------------------------------------------------
+# Spawns the just-built sidecar binary with `doctor --self-test`. Asserts
+# every runtime-data file (React SPA, codebook YAMLs, LLM prompts, locales,
+# theme, Alembic migrations) is present in the bundle and non-trivial.
+#
+# Catches the BUG-3/4/5 class — data file in source, missing from bundle.
+# Spec→bundle complement to step 1b's source→spec check (which catches
+# "forgot to add to spec"). This step catches "in spec but PyInstaller
+# silently dropped it." See docs/walkthroughs/c3-smoke-test results.md
+# for the post-mortem.
+#
+# Runs the binary directly (single in-process exec, ~2-3s). No HTTP,
+# no port handling, no subprocess orchestration.
+
+echo
+echo "==> 2a. Bundle integrity self-test..."
+SIDECAR_BIN="$DESKTOP_DIR/Bristlenose/Resources/bristlenose-sidecar/bristlenose-sidecar"
+if [ ! -x "$SIDECAR_BIN" ]; then
+    echo "error: sidecar binary not found or not executable: $SIDECAR_BIN" >&2
+    exit 1
+fi
+"$SIDECAR_BIN" doctor --self-test
+
+# ------------------------------------------------------------
 # 3. Sign bundled FFmpeg + ffprobe
 # ------------------------------------------------------------
 # Child scripts inherit SIGN_IDENTITY (+ optional SIGN_JOBS,

@@ -109,6 +109,8 @@ Copyright holder is "Martin Storey" (sole trader). No change needed. See `memory
   - TCP-poll readiness detection (per perf-review): don't rely solely on `Report: http://...` log line — it fires before Uvicorn accepts connections. Add a `nc -z 127.0.0.1 <port>` poll with 50ms interval + 30s timeout after the log signal.
   - ~30s runtime. Lands in `build-all.sh` post-`build-sidecar.sh`, before `archive`.
 
+- [ ] **Create `DEVELOPMENT.md` at repo root (flagged 21 Apr 2026 during C3 post-mortem).** CLAUDE.md is instructions for Claude. `DEVELOPMENT.md` is instructions for humans-or-robots setting up a dev environment. Step-by-step, rationale per step, ergonomic by default. Should cover: worktree creation (link to `/new-feature` skill and explain what it does), venv setup with right extras, frontend `npm install + npm run build`, trial-runs convention (if kept), Xcode project opening, running tests, building the sidecar. Contents that are currently in desktop/CLAUDE.md "Dev workflow" and root CLAUDE.md move here. Alpha-tester install path stays separate (README.md or install doc). Explicit scope: DEVELOPMENT.md assumes "you want to contribute to or build from source"; not "you want to try the app."
+
 - [ ] **Personal dev artefacts bleeding into shared docs (umbrella — flagged 21 Apr 2026 during C3 post-mortem).** The smoke-test walkthrough and several CLAUDE.md files reference paths and conventions that are specific to Martin's machine/setup, not universal:
   - `trial-runs/` — Martin's personal project-stash dir, not a project convention. Gitignored. Nobody else has it. Walkthrough references `/Users/cassio/Code/bristlenose/trial-runs/foo/` with specific paths.
   - `project-ikea`, `fossda-opensource`, etc. — Martin's specific test projects.

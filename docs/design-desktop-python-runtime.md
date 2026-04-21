@@ -1,6 +1,6 @@
 # Desktop Python Runtime — sidecar mechanics
 
-_Written 18 Apr 2026 as Track C C0 spike output; updated the same day with the C1 resolver contract. Covers entitlements, signing, bundling, and runtime resource resolution for the bundled PyInstaller sidecar on macOS. Cross-channel component decisions (what ships where, and why) live in [`design-modularity.md`](./design-modularity.md) — this doc is strictly Mac-specific mechanics._
+_Written 18 Apr 2026 as Track C C0 spike output; updated through C3 (21 Apr 2026) with post-smoke-test bundle-data requirements, validation gates, and fail-loud contracts. Covers entitlements, signing, bundling, and runtime resource resolution for the bundled PyInstaller sidecar on macOS. Cross-channel component decisions (what ships where, and why) live in [`design-modularity.md`](./design-modularity.md) — this doc is strictly Mac-specific mechanics._
 
 ## Scope
 
@@ -12,19 +12,23 @@ This doc is the canonical source for:
 - How resources (FFmpeg, Whisper models, credentials) are located at runtime
 - How codesigning is layered (inner `.dylib`/`.so` → outer binary → outer `.app`)
 
-It is **not** the implementation plan — the C1 implementation work was tracked in `docs/private/sprint2-tracks.md` (now marked done) and `~/.claude/plans/when-you-have-done-encapsulated-conway.md`.
+It is **not** the implementation plan — per-checkpoint work was tracked in `docs/private/sprint2-tracks.md` and session-specific `~/.claude/plans/*.md` files (C1 implementation plan, C3 closeout, C3 empty-ents retest, C4 privacy manifests). Session notes for the finished tracks live in `docs/private/c2-session-notes.md` and `docs/private/c3-session-notes.md`.
 
-## Status (C2, 19 Apr 2026)
+## Status (C2–C3, 21 Apr 2026)
 
 - ✅ Trimmed PyInstaller spec at `desktop/bristlenose-sidecar.spec` (MLX-only; ctranslate2 / faster-whisper / presidio / spaCy excluded).
 - ✅ Sidecar builds, real-identity codesigns with Hardened Runtime, serves HTTP on localhost under `bristlenose serve`.
-- ✅ Minimum entitlement set empirically confirmed: **one key only** (`cs.disable-library-validation`). Empty-entitlements re-test post-unified-identity signing is parked; see `docs/private/c2-session-notes.md` Goal 2.
+- ✅ Minimum entitlement set empirically confirmed: **one key only** (`cs.disable-library-validation`). Empty-entitlements re-test post-unified-identity signing is parked in its own plan at `~/.claude/plans/c3-empty-ents-retest.md`; prerequisite is the SECURITY #5 + #8 unblocker (see below).
 - ✅ **Sidecar resolution** refactored to pure `SidecarMode.resolve(…)` (C1).
 - ✅ **Parallel per-Mach-O signing** via bash `wait -n` pool, SHA256 manifest, trusted-timestamp assertion per file (C2).
 - ✅ **ExportOptions.plist + pbxproj Manual signing** — Release flipped to Apple Distribution + Bristlenose Mac App Store profile + Team `Z56GZVA2QB`; Debug stays Automatic (C2).
 - ✅ **Notarisation + stapling flow** wired in `build-all.sh` (C2). Notarytool credentials: profile `bristlenose-notary` in login keychain.
 - ✅ **Strings gate + `get-task-allow` gate** on every archived Mach-O (`check-release-binary.sh`, C2).
-- 🟡 **End-to-end verification blocked** (19 Apr 2026) by pre-existing `#error` directives in `desktop/Bristlenose/Bristlenose/SecurityChecklist.swift` (SECURITY #5 + #8 — unrelated to signing). Unblocks both C2 verification and C3.
+- ✅ **Keychain credential flow** — Swift reads Keychain via `Security.framework` and injects `BRISTLENOSE_<PROVIDER>_API_KEY` env vars at sidecar launch (C3). Python `credentials_macos.py` subprocess-exception broadened to cover sandbox-denied cases. Runtime log redactor + source-level `check-logging-hygiene.sh` CI gate for Anthropic/OpenAI/Google key shapes.
+- ✅ **Bundle-data coverage** — BUG-3/4/5 fixed in C3 (React SPA `static/`, codebook YAMLs, llm/prompts all now hard-required in the spec). `check-bundle-manifest.sh` regression gate (BUG-6) added as `build-all.sh` pre-flight. `bristlenose doctor --self-test` gives the sidecar a runtime self-check path.
+- ✅ **Fail-loud on missing React bundle** — `_mount_prod_report` returns HTTP 500 with a clear error page rather than silently falling back to the deprecated static-render HTML (which masked BUG-3 in the C3 smoke test).
+- 🟡 **End-to-end verification blocked** (19 Apr 2026, still current) by pre-existing `#error` directives in `desktop/Bristlenose/Bristlenose/SecurityChecklist.swift` (SECURITY #5 + #8 — unrelated to signing). Unblocks both C2 verification and the C3 empty-ents retest.
+- 🟡 **C3 smoke test (manual, Step 6)** parked for human — Xcode Cmd+R with a throwaway Anthropic key; procedure in `~/.claude/plans/c3-closeout.md`.
 - ⏸️ Bundle size 644 MB. Deferred to Background Assets. See §"Bundle-size findings".
 - ❌ `com.apple.security.inherit` not yet tested (App Sandbox is Track A).
 
@@ -101,14 +105,31 @@ C0 bundle: **644 MB**. Transitive deps PyInstaller pulled despite the `excludes`
 
 What we ship in the alpha: whatever the trimmed-by-explicit-excludes-only spec produces. Size is a soft constraint when the user's install flow is "tap install in TestFlight, app opens, heavy bits download in the background while they pick their first project." Track C C5 (post-alpha) may revisit excludes if TestFlight reports cite bundle size as a friction point; more likely the work moves straight to Background Assets integration.
 
-## Bundling gotchas discovered
+## Bundle data requirements
 
-1. **Alembic migrations directory must be explicitly listed in `datas`.** `bristlenose/server/alembic/` is a filesystem resource read by Alembic's `ScriptDirectory.from_config`; PyInstaller doesn't detect it through `bristlenose.server.db`'s imports. Without it: `CommandError: Path doesn't exist: …/_internal/bristlenose/server/alembic` at first DB init. Added to the spec.
-2. **Locales directory same story** — `bristlenose/locales/*.json` is read as data, not imported. Added to `datas`.
-3. **React static bundle must be pre-built.** The sidecar runs without `bristlenose/server/static/` but emits a WARNING log line. Still unresolved in C1 — `desktop/scripts/build-sidecar.sh` does not yet invoke `npm run build` before PyInstaller. Slated for C2 / the build-all orchestration script.
-4. **`--host` is not a `bristlenose serve` option.** The server hardcodes `127.0.0.1`. Fine for sidecar-over-localhost; document if we ever need to bind elsewhere (probably never).
-5. **Sentiment framework YAML not found** warning at startup — cosmetic; the YAML is optional user config.
-6. **Sidecar ignores `BRISTLENOSE_AUTH_TOKEN` env var** — the server always generates a fresh per-run token. If Swift wants to know the token, it has to either read stdout (current pattern) or we add env-var plumbing in C1. Defer.
+PyInstaller's `Analysis` traces Python imports but doesn't discover non-`.py` files. Every runtime data directory must appear explicitly in `datas` in `desktop/bristlenose-sidecar.spec`. The C3 smoke test (20–21 Apr 2026) uncovered three missing entries that produced functional (not cosmetic) breakage in the bundled sidecar. All three are now hard requirements.
+
+| Source dir | Purpose | How it broke before the fix |
+|---|---|---|
+| `bristlenose/theme/` | CSS + JS assets for the static render scaffold | Cosmetic only |
+| `bristlenose/data/` | Built-in codebook and sample data | Cosmetic only |
+| `bristlenose/locales/` | i18n JSON (en, es, fr, de, ko, ja) | Translation fallback to key names |
+| `bristlenose/llm/prompts/` | Markdown prompt templates loaded by every LLM-using stage (topic-segmentation, quote-extraction, thematic-grouping, autocode, …) | **BUG-5** (`08a0664`) — every LLM call raised `FileNotFoundError` before reaching the provider |
+| `bristlenose/server/alembic/` | Migration scripts read by `server/db.py` via `ScriptDirectory.from_config` | `CommandError: Path doesn't exist: …/_internal/bristlenose/server/alembic` at first DB init |
+| `bristlenose/server/static/` | React SPA build output (`cd frontend && npm run build`) | **BUG-3** (`5aae47c`) — sidecar served the deprecated static-render HTML for everything. Now a hard requirement with a fail-loud contract (see below) |
+| `bristlenose/server/codebook/` | YAML codebook templates (garrett, morville, norman, uxr, plato) loaded by `routes/codebook.py` and exposed via the Browse Codebooks modal | **BUG-4** (`08a0664`) — `CODEBOOK FRAMEWORKS` list empty |
+
+The regression gate `desktop/scripts/check-bundle-manifest.sh` (BUG-6, `673ddee`) is now the `build-all.sh` pre-flight step 2a: it AST-parses the spec, walks `bristlenose/` for any directory containing runtime-data file extensions (yaml, yml, json, md, html, css, js, txt, png, svg, ico, csv, toml, mako, 1, sqlite, bin, pt, onnx, ttf, woff2), and asserts every uncovered dir appears in `datas` or in `desktop/scripts/bundle-manifest-allowlist.md`. Unit tests can't catch this class of bug — they run against an editable install where every source dir is present — so the gate is source-vs-spec, not source-vs-runtime.
+
+### Lesson
+
+PyInstaller's Analysis only picks up `.py` imports. Any runtime data dir — even obvious ones like a React SPA build output — has to be listed explicitly. Manual end-to-end smoke tests are the only audit that surfaces this class of issue; the bundle-manifest gate now enforces the pattern at build time so we can't regress silently.
+
+## Smaller bundling notes
+
+- **`--host` is not a `bristlenose serve` option.** The server hardcodes `127.0.0.1`. Fine for sidecar-over-localhost.
+- **Sentiment framework YAML not found** warning at startup — cosmetic; the YAML is optional user config.
+- **Sidecar ignores `BRISTLENOSE_AUTH_TOKEN` env var** — the server always generates a fresh per-run token. Swift scrapes the token out of the sidecar's stdout (see "Resource resolution" below).
 
 ## SidecarMode resolution contract (C1 output)
 
@@ -135,9 +156,20 @@ Both env vars set at once → `SidecarResolveError.bothDevEnvVarsSet` → `.fail
 Four-script chain, orchestrated by `desktop/scripts/build-all.sh`:
 
 - `build-sidecar.sh` — PyInstaller `--onedir` only.
-- `sign-sidecar.sh` — parallel inner-Mach-O sign, sequential outer sign, strict + deep verify, SHA256 manifest. Inner loop is a bash `wait -n` job pool, not `xargs -P`: BSD `xargs` on macOS drops child exit codes under concurrent jobs, so a single failed codesign would be masked in interleaved stderr.
-- `fetch-ffmpeg.sh` — SHA256-pinned FFmpeg 8.1 download. Cache under `desktop/build/ffmpeg-cache/`.
+- `sign-sidecar.sh` — parallel inner-Mach-O sign, sequential outer sign, strict + deep verify, SHA256 manifest. Inner loop is a bash `wait -n` job pool, **not `xargs -P`**: BSD `xargs` on macOS drops child exit codes under concurrent jobs, so a single failed codesign would be masked in interleaved stderr (the script would "succeed" while shipping an unsigned dylib). Requires bash 4.3+ for `wait -n`; Apple's default `/bin/bash` is 3.2, so the shebang is `#!/usr/bin/env bash` + a Homebrew bash in `$PATH`.
+- `fetch-ffmpeg.sh` — SHA256-pinned FFmpeg 8.1 download (arm64 static builds from evermeet.cx). Cache under `desktop/build/ffmpeg-cache/`. Mismatched SHA256 fails closed — supply-chain-attack defence.
 - `sign-ffmpeg.sh` — signs the two FFmpeg siblings with the same identity and Hardened Runtime. Notarisation rejects the outer bundle otherwise.
+
+### `codesign --force` entitlement trap
+
+Noted during C0 (commit `8bd6883`). When probing minimum entitlement sets, `codesign --force --entitlements <file>` without a preceding `codesign --remove-signature` is unreliable: if the outer binary already carried a signature that granted (say) `disable-library-validation`, re-signing with `--force` and a trimmed entitlements file will appear to succeed (`codesign -dv` reports the new entitlements) but the process still runs because the inner `.dylib` / `.so` / `Python.framework` files retain their own signatures with the old entitlements. To genuinely test a minimum set:
+
+```bash
+codesign --remove-signature <binary>
+codesign --force --options=runtime --entitlements <file> --sign - <binary>
+```
+
+The production `sign-sidecar.sh` flow doesn't hit this trap because it signs fresh PyInstaller output, but every entitlement-spike run has to start from `--remove-signature`.
 
 `SIGN_IDENTITY` defaults to `-` (ad-hoc). For release: `"Apple Distribution: Martin Storey (Z56GZVA2QB)"`. `SIGN_JOBS` defaults to `$(sysctl -n hw.ncpu)`; override if Keychain contention matters at `SIGN_JOBS≥16`.
 
@@ -242,11 +274,41 @@ The sidecar never touches the macOS Keychain. Instead:
 **Residual risks (documented, not fixed in alpha):**
 - `ps -E <pid>` shows the full env block to any same-UID process. An attacker with same-UID code execution can therefore scrape keys from the sidecar's environment while it runs. But that same attacker can also call `SecItemCopyMatching` directly against the login keychain, so the net attack-surface delta is small. Honest framing in SECURITY.md: keys "never persist to disk," not "never leave Keychain."
 - Crash dumps may contain the Swift-side `env` dictionary. Zeroing Swift `String` memory is not reliably possible without dropping to C; we rely on the same-process-access-equals-keychain-access argument above.
-- Log redaction (runtime regex in `ServeManager.handleLine`; source-level grep in `desktop/scripts/check-logging-hygiene.sh`) is defence-in-depth against accidental printing of keys.
+- **Log redaction is two-layered (C3, `8a41f60` + `c17954d`):**
+  - **Runtime regex** — `ServeManager.handleLine` applies `redactKeys(in:)` before appending lines to `outputLines`. Three key shapes matched: Anthropic (`sk-ant-...`), OpenAI (`sk-proj-...` and classic `sk-...`), and Google (`AIza...`). Azure is deliberately skipped — its 32-char hex format collides with UUIDs and SHAs producing too many false positives; a pre-beta re-audit is tracked in `docs/private/100days.md`. Auth-token parse runs *before* redaction so base64url tokens can't collide.
+  - **Source-level grep** — `desktop/scripts/check-logging-hygiene.sh` scans `.swift` files under `desktop/Bristlenose/Bristlenose/` (excluding `*Tests.swift`) for logger calls and `print()`/`os_log`/`NSLog` calls that interpolate credential-shaped identifiers (`key|secret|token|credential|password`) without a `privacy: .private|.sensitive` marker, and for `print(env ...)` dumps. Allowlist at `desktop/scripts/logging-hygiene-allowlist.md` uses `HYG-<N>` markers. Wired as `build-all.sh` pre-flight step 1a — fails fast before archive. Runtime and source gates are belt-and-braces: one catches active regressions, the other prevents them being introduced.
 
 **Post-alpha knobs (not scheduled):**
 - Biometric gate on Keychain access (`kSecAttrAccessControl` + `.biometryCurrentSet`) — post-alpha Settings toggle.
 - Key rotation / revocation flow — manual today (re-enter in Settings → `bristlenosePrefsChanged` notification → `ServeManager.restartIfRunning()` → fresh env dict on next spawn).
+
+## Validation gates
+
+Four gates run at different points in the build. Each exists because a specific class of defect shipped or nearly shipped, and can't be caught by unit tests against the editable install.
+
+| Gate | Stage | Commit | Catches |
+|---|---|---|---|
+| `check-logging-hygiene.sh` | `build-all.sh` pre-flight (step 1a) | `c17954d` (C3) | Swift logger / `print` / `os_log` calls that interpolate credential-shaped identifiers without `privacy: .private|.sensitive` marker; `print(env ...)` env-dict dumps |
+| `check-bundle-manifest.sh` | `build-all.sh` pre-flight (step 2a) | `673ddee` (C3, BUG-6) | Runtime-data directories (yaml/md/json/etc.) present in `bristlenose/` but absent from `datas` in the PyInstaller spec. AST-parses the spec; walks the source tree; requires every covered dir or an allowlist entry (`BMAN-<N>` marker) |
+| `check-release-binary.sh` | Post-archive + post-export | `73093ff` (C1), extended `cd04ee9` (C2) | `BRISTLENOSE_DEV_*` string literals in any Release Mach-O (a `#if DEBUG` guard accidentally removed); `get-task-allow=TRUE` entitlement (Debug-only debuggability, silently App-Store-rejected). Skips the Python sidecar's `Contents/Resources/bristlenose-sidecar/*` subtree — Python strings are expected there and no Swift `#if DEBUG` invariant applies |
+| `bristlenose doctor --self-test` | Runtime (sidecar self-check) | `52024f8` (C3) | Bundle-integrity drift at deployment time — the sidecar verifies its own `datas` payload is present and shaped as expected. Gives the `doctor` command a sidecar-aware path rather than assuming a CLI install |
+
+Ordering matters. The logging-hygiene and bundle-manifest gates fail fast (seconds) before the 3-minute PyInstaller build. The strings/`get-task-allow` gate runs after archive because it's scanning the built artefact.
+
+## Fail-loud contracts
+
+The C3 smoke test surfaced that **silent fallback to the deprecated static render masked a functional regression (BUG-3)**. The architectural response: fail loud at every layer where a missing or malformed bundle component could hide a real bug.
+
+| Contract | Enforced by | What used to happen instead |
+|---|---|---|
+| **React bundle missing** → HTTP 500 + clear error page | `bristlenose/server/app.py:_mount_prod_report` (`3a9bc6a`) | Silently served the deprecated Jinja2 static-render HTML. Masked the BUG-3 regression — the C3 smoke test saw a plausible-looking Bristlenose UI without noticing it wasn't the React SPA |
+| **Bundle data missing** → `build-all.sh` fails pre-PyInstaller | `check-bundle-manifest.sh` | Bundle would build successfully, sidecar would crash at runtime with `FileNotFoundError` on first use of the missing data (BUG-4, BUG-5 class) |
+| **Dev env-var leak into Release Mach-O** → archive gate fails | `check-release-binary.sh` | Release binary would carry `BRISTLENOSE_DEV_*` string literals readable via `strings <binary>`. Potentially exploitable; certainly an App-Store-review smell |
+| **Log hygiene violation** → pre-flight fails | `check-logging-hygiene.sh` | Swift-side API-key interpolation without a `privacy: .private` marker would ship into production and leak keys to Console.app / unified logging archives |
+| **Both dev env vars set** → `SidecarMode.resolve` returns `.failed` | `SidecarMode.swift` | Silent misconfiguration; mode selection would have been ambiguous |
+| **`codesign --timestamp` silently degrades to `--timestamp=none`** → sign-script asserts and fails | `sign-sidecar.sh` / `sign-ffmpeg.sh` post-sign `grep "Timestamp="` | Un-notarisable signature; notarisation failure hours later |
+
+Lesson from the smoke test: treat "the pipeline produced an artefact" as weak evidence. A gate that fails loud at the earliest layer prevents a downstream audit (human or reviewer) from being the first thing to notice.
 
 ## Failure modes observed during C0
 
@@ -269,7 +331,11 @@ The sidecar never touches the macOS Keychain. Instead:
 - [`desktop/scripts/build-all.sh`](../desktop/scripts/build-all.sh) — C2 end-to-end orchestrator
 - [`desktop/scripts/build-sidecar.sh`](../desktop/scripts/build-sidecar.sh), [`desktop/scripts/sign-sidecar.sh`](../desktop/scripts/sign-sidecar.sh), [`desktop/scripts/fetch-ffmpeg.sh`](../desktop/scripts/fetch-ffmpeg.sh), [`desktop/scripts/sign-ffmpeg.sh`](../desktop/scripts/sign-ffmpeg.sh) — C2 build + sign chain
 - [`desktop/scripts/check-release-binary.sh`](../desktop/scripts/check-release-binary.sh) — post-archive gate (strings + `get-task-allow`)
+- [`desktop/scripts/check-bundle-manifest.sh`](../desktop/scripts/check-bundle-manifest.sh) — C3 source→spec coverage gate (BUG-6)
+- [`desktop/scripts/check-logging-hygiene.sh`](../desktop/scripts/check-logging-hygiene.sh) — C3 Swift-side credential-string hygiene gate
 - [`desktop/Bristlenose/ExportOptions.plist`](../desktop/Bristlenose/ExportOptions.plist) — `xcodebuild -exportArchive` options
 - [`desktop/Bristlenose/Bristlenose/SidecarMode.swift`](../desktop/Bristlenose/Bristlenose/SidecarMode.swift) — mode resolution contract
+- [`desktop/Bristlenose/Bristlenose/ServeManager.swift`](../desktop/Bristlenose/Bristlenose/ServeManager.swift) — `overlayAPIKeys` + `handleLine` redactor (C3)
 - [`desktop/v0.1-archive/bristlenose-sidecar.spec`](../desktop/v0.1-archive/bristlenose-sidecar.spec) — prior art
 - [`docs/private/c2-session-notes.md`](./private/c2-session-notes.md) — C2 session notes, gotchas, resume-cold guide
+- [`docs/private/c3-session-notes.md`](./private/c3-session-notes.md) — C3 session notes (Keychain injection, redactor, BUG-3..6 smoke-test findings)

@@ -1,6 +1,8 @@
 # Desktop App Distribution
 
-> **Historical context, not a plan (17 Apr 2026).** The `.dmg` / Developer ID path described below is rejected. Alpha ships via internal TestFlight; v1.0 ships via Mac App Store. Reasoning: StoreKit requires sandbox regardless, so a `.dmg` path would be throwaway code. See `docs/private/road-to-alpha.md` for the active plan.
+> **Historical context, not a plan (17 Apr 2026, pre-Track C).** The `.dmg` / Developer ID path described below is rejected. Alpha ships via internal TestFlight; v1.0 ships via Mac App Store. Reasoning: StoreKit requires sandbox regardless, so a `.dmg` path would be throwaway code. See `docs/private/road-to-alpha.md` for the active plan.
+>
+> **Post-script (21 Apr 2026).** Track C C0–C3 have since shipped the real signing + bundling pipeline on the TestFlight path (per-Mach-O codesign, Hardened Runtime, notarisation, stapling, Keychain credential injection, bundle-data gates). Size estimates below were pre-C0 guesses — actuals: sidecar 644 MB (vs 200–400 MB estimated), transitive pulls deferred to Background Assets. Canonical sizing and signing chain live in `docs/design-desktop-python-runtime.md` and `docs/design-modularity.md`.
 
 _Summary of distribution options for the macOS desktop app, Feb 2026._
 

@@ -109,6 +109,15 @@ Copyright holder is "Martin Storey" (sole trader). No change needed. See `memory
   - TCP-poll readiness detection (per perf-review): don't rely solely on `Report: http://...` log line — it fires before Uvicorn accepts connections. Add a `nc -z 127.0.0.1 <port>` poll with 50ms interval + 30s timeout after the log signal.
   - ~30s runtime. Lands in `build-all.sh` post-`build-sidecar.sh`, before `archive`.
 
+- [ ] **Audit + delete `bristlenose/stages/s12_render/` and `bristlenose render` CLI command (flagged 21 Apr 2026 during C3 post-mortem).** Static renderer is vestigial scaffolding from the React-migration era — not a product, not pixel/feature parity with the React SPA. Legitimate offline-share path is `bristlenose serve` → browse → **Export HTML** (which embeds the React bundle, doesn't touch `s12_render/`). Removal sequence:
+  1. Audit external workflows: any docs / blog posts / user community references to `bristlenose render`? Any CI / Snap / Homebrew tests that depend on the on-disk HTML produced by stage 12?
+  2. Deprecate loudly: `render_html()` already emits `DeprecationWarning` (at `s12_render/__init__.py:108`); strengthen the message to point at "use `bristlenose serve` + Export HTML instead."
+  3. Stop running stage 12 in `bristlenose run` — pipeline becomes 11 stages, no on-disk HTML produced.
+  4. Remove `bristlenose render` CLI command from `cli.py`.
+  5. Delete `bristlenose/stages/s12_render/` package.
+  6. Strip `bristlenose/theme/js/` (vanilla JS only used by static render — already frozen).
+  Likely shrinks the bundle and the CLI surface area meaningfully.
+
 - [ ] **Create `DEVELOPMENT.md` at repo root (flagged 21 Apr 2026 during C3 post-mortem).** CLAUDE.md is instructions for Claude. `DEVELOPMENT.md` is instructions for humans-or-robots setting up a dev environment. Step-by-step, rationale per step, ergonomic by default. Should cover: worktree creation (link to `/new-feature` skill and explain what it does), venv setup with right extras, frontend `npm install + npm run build`, trial-runs convention (if kept), Xcode project opening, running tests, building the sidecar. Contents that are currently in desktop/CLAUDE.md "Dev workflow" and root CLAUDE.md move here. Alpha-tester install path stays separate (README.md or install doc). Explicit scope: DEVELOPMENT.md assumes "you want to contribute to or build from source"; not "you want to try the app."
 
 - [ ] **Personal dev artefacts bleeding into shared docs (umbrella — flagged 21 Apr 2026 during C3 post-mortem).** The smoke-test walkthrough and several CLAUDE.md files reference paths and conventions that are specific to Martin's machine/setup, not universal:

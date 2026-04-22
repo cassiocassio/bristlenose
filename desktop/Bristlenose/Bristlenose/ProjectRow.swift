@@ -141,7 +141,6 @@ struct ProjectRow: View {
         if isScanning && showScanIndicator {
             ProgressView()
                 .controlSize(.small)
-                .scaleEffect(0.7)
         } else if case .failed = pipelineState {
             Image(systemName: "exclamationmark.circle.fill")
                 .foregroundStyle(.red)

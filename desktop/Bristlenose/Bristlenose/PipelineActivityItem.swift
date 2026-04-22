@@ -40,7 +40,11 @@ struct PipelineActivityItem: View {
             .buttonStyle(.plain)
             .help(pillHelp)
             .popover(isPresented: $showPopover, arrowEdge: .bottom) {
-                popoverContent.padding(16).frame(width: 360)
+                // Fixed height envelope so the disclosure expansion doesn't
+                // trigger an animated NSPopover resize that fights SwiftUI
+                // ProgressView constraint pass — caused a hard main-thread
+                // livelock requiring force-quit (QA, 20 Apr 2026).
+                popoverContent.padding(16).frame(width: 360, height: 320)
             }
             .task(id: project.id) {
                 // Tick once a second so elapsed time updates while popover is
@@ -71,7 +75,7 @@ struct PipelineActivityItem: View {
                     Text("Analysing…")
                         .font(.system(.caption).weight(.medium))
                 }
-                ProgressView().controlSize(.small).scaleEffect(0.6)
+                ProgressView().controlSize(.small)
 
             case .queued(let position):
                 Image(systemName: "clock")

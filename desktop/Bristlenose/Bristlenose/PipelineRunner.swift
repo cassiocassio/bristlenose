@@ -674,7 +674,13 @@ final class PipelineRunner: ObservableObject {
 
         let proc = Process()
         proc.executableURL = binary
-        proc.arguments = ["run", project.path]
+        // --static (alias for --no-serve) makes `bristlenose run` exit after
+        // rendering instead of auto-starting a serve and waiting for Ctrl-C.
+        // Without this the subprocess never terminates → terminationHandler
+        // never fires → state stays .running indefinitely (QA, 20 Apr 2026).
+        // ServeManager.start() starts the serve on the Mac side after pipeline
+        // success per the plan's "pipeline first, then serve" policy.
+        proc.arguments = ["run", project.path, "--static"]
         proc.environment = BristlenoseShared.buildChildEnvironment()
 
         let pipe = Pipe()

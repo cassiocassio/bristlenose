@@ -58,6 +58,7 @@ Performance: stress sweep shows clean linear scaling to 3000 quotes — virtuali
 - **~~Settings UI~~** — provider selection, API key entry, redaction toggle, model choice. Milestone 6. Needs design doc. Currently CLI-only config is a hard block for App Store users
 - [S4] **App Store subscription infrastructure** — StoreKit 2, receipt validation, entitlement check. Not yet designed
 - **~~Auto-serve after run~~** — pipeline finishes → auto-launch serve + open browser. (TODO.md immediate)
+- **Subprocess lifecycle / orphan management** — make orphan handling invisible to the user. PID-file-based scan-and-reconcile at app init for both `bristlenose run` and `bristlenose serve`; sandbox-clean (`proc_pidinfo` / `proc_pidpath` instead of `lsof`/`pgrep`). Replaces today's serve-only `lsof`-based cleanup. Required before sandbox flips on for TestFlight. Surfaced during port-v01-ingestion QA. Design: `docs/design-subprocess-lifecycle.md`. Estimated ~2 days.
 
 ### Should
 - **Desktop toast infrastructure** — SwiftUI toast overlay (auto-dismiss, fade). Needed for "Added N interviews to project", archive undo, and future feedback. Reference: `frontend/src/components/Toast.tsx`

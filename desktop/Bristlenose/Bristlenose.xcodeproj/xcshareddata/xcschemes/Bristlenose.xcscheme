@@ -54,6 +54,11 @@
          <EnvironmentVariable
             key = "BRISTLENOSE_DEV_PORT"
             value = "8150"
+            isEnabled = "NO">
+         </EnvironmentVariable>
+         <EnvironmentVariable
+            key = "PATH"
+            value = "/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin&#10;"
             isEnabled = "YES">
          </EnvironmentVariable>
       </EnvironmentVariables>

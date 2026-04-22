@@ -152,6 +152,12 @@ See `docs/design-i18n.md` for implementation gotchas (Apple glossary cross-check
 - `docs/glossary.md` — terminology + tone guide
 - `docs/platform-text-map.md` — shared/desktop/CLI text forking, `dt()`/`ct()` inventory
 
+**Must-read before touching tag suggestion, telemetry, or data governance:**
+- `docs/methodology/` — canonical methodology docs. Treat as authoritative: when code and doc disagree, the doc is the spec and the code is wrong.
+  - `tag-rejections-are-great.md` — rejection-telemetry theory, alpha experiments, six-field data model, ten-year ratchet endgame
+  - `consent-gradient.md` — Level 0–3 data-governance gradient, sensitivity model, consent UX principles, sequencing discipline
+  - `framework-arc-quarterly-review.md` — quarterly review template and the long-arc commitments it reviews against
+
 **Sibling CLAUDE.md files:** `frontend/`, `bristlenose/theme/`, `bristlenose/stages/`, `bristlenose/llm/`, `bristlenose/server/`, `desktop/`
 
 **Frontend / UI:**
@@ -224,7 +230,10 @@ Feature branches live in **separate git worktrees** — each is a full working c
 pwd
 git branch --show-current
 cat docs/BRANCHES.md
+test -f .claude/setup-incomplete && cat .claude/setup-incomplete
 ```
+
+If `.claude/setup-incomplete` exists, the worktree's environment isn't fully prepped (`/new-feature` either aborted or hasn't finished). **Do not start real work until the user re-runs `/new-feature` or completes setup manually** (frontend build, venv, smoke test). Tell the user the sentinel is present and wait. The file is removed only when the smoke test passes — its absence means the env is ready.
 
 If the user starts asking about a feature without specifying, **remind them to check** which worktree they want to work in. Never check out a feature branch inside the main `bristlenose/` directory — use the worktree instead. A `PreToolUse` hook in `.claude/settings.json` blocks `git checkout`/`git switch` to feature branches when CWD is the main repo.
 

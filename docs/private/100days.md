@@ -641,6 +641,14 @@ Safari's performance team made WebKit fast by never allowing it to become slower
 
 ---
 
+## Post 100 days
+
+Items deliberately deferred past the 100-day window because they depend on Apple's 2026 release cycle (WWDC 8 June, macOS 27 developer beta shortly after, public release September) or on hardware we don't have yet.
+
+- **Per-stage pluggable backends — stage A/B benchmark** — full plan in [`docs/design-stage-backends.md`](../design-stage-backends.md). s10 `quote_extraction` dominates both wall time (47.6%) and LLM cost (92.5%) on real runs; on Teams/Zoom inputs (s05 skipped) it becomes ~90% of runtime. The spike is designed as a re-runnable benchmark, not a one-shot. Sequencing: Phase A (cloud + Ollama harness, cheap, can run any time) → Phase B (MLX arm, Python-native, no Swift; most valuable against M5 / macOS 27 stack) → Phase C (Apple FM Swift shim, wait for post-WWDC FM announcements — chasing today's 4k-context 3B before the next OS ships risks throwing away work). Target: first full benchmark snapshot at macOS 27 developer beta (July 2026), re-run at GA (September 2026), re-run again before Jan 2027 launch copy is finalised. Apple ML Research's Nov 2025 M5 benchmarks (3.3–4× TTFT over M4, 14B dense at <10s TTFT, 30B MoE at <3s) are the reason this is worth planning for, not dismissing.
+
+---
+
 ## Investigations (no commitment — explore if time allows)
 
 These are speculative ideas worth thinking about but without a delivery commitment:

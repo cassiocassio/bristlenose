@@ -149,7 +149,7 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 
 ### `living-fish` — started 26 Feb 2026
 
-**Status:** Just started
+**Status:** Icebox — one day maybe. Not on the critical path to alpha; parked until after TestFlight.
 **Worktree:** `/Users/cassio/Code/bristlenose_branch living-fish/`
 **Remote:** `origin/living-fish`
 

@@ -98,6 +98,8 @@ All calls are **fire-and-forget promises**.  The JS modules don't `await` them.
 - `links.github_issues_url`
 - `feedback.enabled`
 - `feedback.url`
+- `telemetry.enabled`
+- `telemetry.url`
 
 This payload is shared by serve mode and export mode (embedded in `BRISTLENOSE_EXPORT.health`).
 
@@ -105,13 +107,27 @@ Default values:
 
 - `links.github_issues_url` = `https://github.com/cassiocassio/bristlenose/issues/new`
 - `feedback.enabled` = `true`
-- `feedback.url` = `https://cassiocassio.co.uk/feedback.php`
+- `feedback.url` = `https://bristlenose.app/feedback.php` (was `cassiocassio.co.uk/feedback.php` — 90-day overlap in effect until the old endpoint is retired)
+- `telemetry.enabled` = `true`
+- `telemetry.url` = `https://bristlenose.app/telemetry.php` (prod) or `/api/dev/telemetry` (dev mode, relative → local stub)
 
 Optional env overrides:
 
 - `BRISTLENOSE_GITHUB_ISSUES_URL`
 - `BRISTLENOSE_FEEDBACK_ENABLED` (`1/true/yes/on` truthy; everything else false)
 - `BRISTLENOSE_FEEDBACK_URL`
+- `BRISTLENOSE_TELEMETRY_ENABLED`
+- `BRISTLENOSE_TELEMETRY_URL`
+
+### Dev telemetry stub (`--dev` only)
+
+`bristlenose serve --dev` mounts three extra routes used by the alpha telemetry work. Stands in for the production `bristlenose.app/telemetry.php` so the React emission hook and Swift first-launch sheets can be tested before any PHP is deployed. Dev-only; the routes are absent without `--dev`.
+
+- `POST /api/dev/telemetry` — accepts `{"events": [{tag_id, prompt_version, event_type, researcher_id}, ...]}` and appends one JSON line per event to `/tmp/bristlenose-dev-telemetry.jsonl`. Validates `event_type ∈ {suggested, accepted, rejected, edited}` and rejects payloads missing any required field
+- `GET /api/dev/telemetry` — returns everything written to the JSONL so far (debug helper)
+- `DELETE /api/dev/telemetry` — truncates the JSONL (debug helper; also used by the test fixture)
+
+The same request shape is what the real `telemetry.php` endpoint will accept, so React code that works against the stub works unchanged in production. Spec: `docs/methodology/tag-rejections-are-great.md`.
 
 ## Patterns to follow
 

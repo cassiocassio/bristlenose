@@ -131,6 +131,7 @@ def create_app(
     app.state.db_factory = session_factory
     app.state.db_url = db_url or ""
     app.state.project_dir = project_dir
+    app.state.dev = dev
 
     app.include_router(health_router)
     app.include_router(analysis_router)

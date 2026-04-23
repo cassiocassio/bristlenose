@@ -109,8 +109,10 @@ class TestExportData:
         assert data["health"]["feedback"]["enabled"] is True
         assert (
             data["health"]["feedback"]["url"]
-            == "https://cassiocassio.co.uk/feedback.php"
+            == "https://bristlenose.app/feedback.php"
         )
+        assert data["health"]["telemetry"]["enabled"] is True
+        assert "url" in data["health"]["telemetry"]
 
     def test_has_dashboard(self, client: TestClient) -> None:
         data = self._extract_export_data(client.get("/api/projects/1/export").text)

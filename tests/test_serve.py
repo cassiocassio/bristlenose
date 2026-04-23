@@ -54,7 +54,7 @@ class TestHealthEndpoint:
             == "https://github.com/cassiocassio/bristlenose/issues/new"
         )
         assert data["feedback"]["enabled"] is True
-        assert data["feedback"]["url"] == "https://cassiocassio.co.uk/feedback.php"
+        assert data["feedback"]["url"] == "https://bristlenose.app/feedback.php"
 
     def test_respects_feedback_env_overrides(
         self,
@@ -68,6 +68,126 @@ class TestHealthEndpoint:
         assert data["links"]["github_issues_url"] == "https://example.com/issues/new"
         assert data["feedback"]["enabled"] is False
         assert data["feedback"]["url"] == "https://example.com/feedback"
+
+    def test_telemetry_dev_default_points_at_local_stub(
+        self,
+        client: TestClient,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """In dev mode, health advertises the local /api/dev/telemetry stub."""
+        monkeypatch.delenv("BRISTLENOSE_TELEMETRY_ENABLED", raising=False)
+        monkeypatch.delenv("BRISTLENOSE_TELEMETRY_URL", raising=False)
+        data = client.get("/api/health").json()
+        assert data["telemetry"]["enabled"] is True
+        assert data["telemetry"]["url"] == "/api/dev/telemetry"
+
+    def test_telemetry_non_dev_default_points_at_production(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """Without --dev, health advertises the production PHP endpoint."""
+        monkeypatch.delenv("BRISTLENOSE_TELEMETRY_ENABLED", raising=False)
+        monkeypatch.delenv("BRISTLENOSE_TELEMETRY_URL", raising=False)
+        app = create_app(dev=False, db_url="sqlite://")
+        non_dev_client = AuthTestClient(app)
+        data = non_dev_client.get("/api/health").json()
+        assert data["telemetry"]["enabled"] is True
+        assert data["telemetry"]["url"] == "https://bristlenose.app/telemetry.php"
+
+    def test_respects_telemetry_env_overrides(
+        self,
+        client: TestClient,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        monkeypatch.setenv("BRISTLENOSE_TELEMETRY_ENABLED", "false")
+        monkeypatch.setenv("BRISTLENOSE_TELEMETRY_URL", "https://example.com/telemetry.php")
+        data = client.get("/api/health").json()
+        assert data["telemetry"]["enabled"] is False
+        assert data["telemetry"]["url"] == "https://example.com/telemetry.php"
+
+
+class TestDevTelemetryStub:
+    """The /api/dev/telemetry stub — stands in for bristlenose.app/telemetry.php."""
+
+    @pytest.fixture(autouse=True)
+    def _clean_jsonl(self, client: TestClient) -> None:
+        """Truncate the shared JSONL between tests so ordering is deterministic."""
+        client.delete("/api/dev/telemetry")
+
+    def _event(
+        self,
+        *,
+        tag_id: str = "usability-problem",
+        prompt_version: str = "usability-problem-abcd1234",
+        event_type: str = "rejected",
+        researcher_id: str = "11111111-1111-1111-1111-111111111111",
+    ) -> dict[str, str]:
+        return {
+            "tag_id": tag_id,
+            "prompt_version": prompt_version,
+            "event_type": event_type,
+            "researcher_id": researcher_id,
+        }
+
+    def test_post_accepts_valid_batch(self, client: TestClient) -> None:
+        resp = client.post(
+            "/api/dev/telemetry",
+            json={"events": [self._event(), self._event(event_type="accepted")]},
+        )
+        assert resp.status_code == 200
+        body = resp.json()
+        assert body["ok"] is True
+        assert body["received"] == 2
+        assert body["written_to"].endswith("bristlenose-dev-telemetry.jsonl")
+
+    def test_get_returns_previously_posted_events(self, client: TestClient) -> None:
+        client.post("/api/dev/telemetry", json={"events": [self._event()]})
+        client.post("/api/dev/telemetry", json={"events": [self._event(event_type="edited")]})
+        resp = client.get("/api/dev/telemetry")
+        assert resp.status_code == 200
+        events = resp.json()["events"]
+        assert [e["event_type"] for e in events] == ["rejected", "edited"]
+
+    def test_delete_truncates_jsonl(self, client: TestClient) -> None:
+        client.post("/api/dev/telemetry", json={"events": [self._event()]})
+        client.delete("/api/dev/telemetry")
+        resp = client.get("/api/dev/telemetry")
+        assert resp.json()["events"] == []
+
+    def test_rejects_non_list_events(self, client: TestClient) -> None:
+        resp = client.post("/api/dev/telemetry", json={"events": "nope"})
+        assert resp.status_code == 400
+
+    def test_rejects_empty_batch(self, client: TestClient) -> None:
+        resp = client.post("/api/dev/telemetry", json={"events": []})
+        assert resp.status_code == 400
+
+    def test_rejects_missing_required_field(self, client: TestClient) -> None:
+        bad = self._event()
+        del bad["tag_id"]
+        resp = client.post("/api/dev/telemetry", json={"events": [bad]})
+        assert resp.status_code == 400
+        assert "tag_id" in resp.json()["detail"]
+
+    def test_rejects_unknown_event_type(self, client: TestClient) -> None:
+        resp = client.post(
+            "/api/dev/telemetry",
+            json={"events": [self._event(event_type="liked")]},
+        )
+        assert resp.status_code == 400
+
+    def test_stub_absent_without_dev_flag(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """When --dev is off, the stub endpoint isn't mounted."""
+        app = create_app(dev=False, db_url="sqlite://")
+        non_dev_client = AuthTestClient(app)
+        resp = non_dev_client.post(
+            "/api/dev/telemetry",
+            json={"events": [self._event()]},
+        )
+        assert resp.status_code == 404
 
 
 class TestDatabase:

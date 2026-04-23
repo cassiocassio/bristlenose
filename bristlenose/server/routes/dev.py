@@ -5,11 +5,13 @@ Registered only when ``bristlenose serve --dev`` is active.
 
 from __future__ import annotations
 
+import json as _json
+import tempfile as _tempfile
 from datetime import datetime, timezone
 from html import escape as _esc
 from pathlib import Path as _Path
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from fastapi import APIRouter, Body, Depends, HTTPException, Query, Request
 from fastapi.responses import HTMLResponse
 from sqlalchemy.orm import Session
 
@@ -342,3 +344,86 @@ def _oxford_list(parts: list[str]) -> str:
     if len(parts) == 2:
         return f"{parts[0]} and {parts[1]}"
     return ", ".join(parts[:-1]) + ", and " + parts[-1]
+
+
+# ---------------------------------------------------------------------------
+# Alpha telemetry stub
+# ---------------------------------------------------------------------------
+#
+# Stands in for the real PHP endpoint at bristlenose.app/telemetry.php during
+# Swift + React development.  Accepts the same batched payload the real
+# endpoint will accept and appends one JSON line per event to a local file.
+# Dev-only: mounted only when ``bristlenose serve --dev`` is active.
+
+_TELEMETRY_EVENT_TYPES = frozenset({"suggested", "accepted", "rejected", "edited"})
+_TELEMETRY_REQUIRED_FIELDS = ("tag_id", "prompt_version", "event_type", "researcher_id")
+
+
+def _dev_telemetry_path() -> _Path:
+    return _Path(_tempfile.gettempdir()) / "bristlenose-dev-telemetry.jsonl"
+
+
+def _validate_event(event: object) -> dict[str, str]:
+    if not isinstance(event, dict):
+        raise HTTPException(400, "each event must be an object")
+    for field in _TELEMETRY_REQUIRED_FIELDS:
+        value = event.get(field)
+        if not isinstance(value, str) or not value:
+            raise HTTPException(400, f"event missing required string field: {field}")
+    if event["event_type"] not in _TELEMETRY_EVENT_TYPES:
+        raise HTTPException(
+            400,
+            f"event_type must be one of {sorted(_TELEMETRY_EVENT_TYPES)}",
+        )
+    return {field: event[field] for field in _TELEMETRY_REQUIRED_FIELDS}
+
+
+@router.post("/telemetry")
+def dev_telemetry_post(payload: dict = Body(...)) -> dict[str, object]:
+    """Append a batch of telemetry events to a local JSONL file.
+
+    Same request shape as the real ``telemetry.php`` endpoint:
+    ``{"events": [{"tag_id", "prompt_version", "event_type", "researcher_id"}, ...]}``.
+    Returns the path to the JSONL file so the developer can tail it.
+    """
+    events = payload.get("events")
+    if not isinstance(events, list):
+        raise HTTPException(400, "payload must include an events list")
+    if not events:
+        raise HTTPException(400, "events list must not be empty")
+
+    cleaned = [_validate_event(e) for e in events]
+    out_path = _dev_telemetry_path()
+    with out_path.open("a", encoding="utf-8") as fp:
+        for ev in cleaned:
+            fp.write(_json.dumps(ev) + "\n")
+
+    return {
+        "ok": True,
+        "received": len(cleaned),
+        "written_to": str(out_path),
+    }
+
+
+@router.get("/telemetry")
+def dev_telemetry_get() -> dict[str, object]:
+    """Return every event written to the local JSONL file (debug helper)."""
+    out_path = _dev_telemetry_path()
+    if not out_path.exists():
+        return {"events": [], "path": str(out_path)}
+    events: list[dict[str, object]] = []
+    with out_path.open("r", encoding="utf-8") as fp:
+        for line in fp:
+            line = line.strip()
+            if line:
+                events.append(_json.loads(line))
+    return {"events": events, "path": str(out_path)}
+
+
+@router.delete("/telemetry")
+def dev_telemetry_delete() -> dict[str, object]:
+    """Truncate the local JSONL file (debug helper)."""
+    out_path = _dev_telemetry_path()
+    if out_path.exists():
+        out_path.unlink()
+    return {"ok": True, "path": str(out_path)}

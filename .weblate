@@ -1,0 +1,19 @@
+# wlc (Weblate command-line client) configuration.
+# Docs: https://docs.weblate.org/en/latest/wlc.html
+#
+# What this file does: tells the `wlc` CLI which Weblate instance and
+# project to talk to by default. With this file in the repo root,
+# contributors can run `wlc ls`, `wlc pull`, `wlc commit` etc. without
+# passing --url or --project flags.
+#
+# What this file does NOT do: declare components or auto-create them on
+# the Weblate server. Component setup is server-side — see TRANSLATING.md
+# for the Component Discovery regex used to pick up all 8 namespaces from
+# bristlenose/locales/<lang>/<namespace>.json.
+#
+# API tokens are supplied via ~/.config/weblate or the WLC_TOKEN env var.
+# Never commit tokens to this file.
+
+[weblate]
+url = https://hosted.weblate.org/api/
+translation = bristlenose

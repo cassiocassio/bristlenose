@@ -40,7 +40,7 @@ Four fields per event. Nothing else.
 
 | Field | Notes |
 |---|---|
-| `tag_id` | The code suggested (codebook entry, not applied-tag instance) |
+| `tag_id` | The tag suggested (codebook entry, not applied-tag instance) |
 | `prompt_version` | A string we bump manually when we edit the prompt |
 | `event_type` | `suggested`, `accepted`, `rejected`, or `edited` |
 | `researcher_id` | Random UUID minted at first launch, stored in the macOS keychain under a Bristlenose-scoped key, rotatable by the tester via a Settings → Reset telemetry ID control. Pseudonymous, not anonymous — the alpha cohort is a handful of people we know personally via TestFlight, so we will often know from context which UUID maps to which tester, and the T&Cs say so rather than pretending otherwise. No server-side table maps UUIDs to Apple ID, email, or StoreKit identity, even once IAP is in the same app. |
@@ -49,21 +49,33 @@ No quote content. No participant data. No reason. No transcript excerpt. No time
 
 This constraint is non-negotiable at alpha. It's what makes the T&Cs clean and the whole exercise ethically straightforward.
 
-The `edited` event type is worth distinguishing from accept and reject. It captures "right code, wrong boundaries" — the researcher thinks the code applies but adjusted the selected quote span. That's a subtler signal about prompt quality than flat accept/reject and may turn out to be more informative than either. Important: `edited` is a flag on the event, not a payload — we record *that* the researcher adjusted the span, never the offsets or length of the adjustment. Character offsets plus transcript length would leak where the interesting content sits, which is exactly the kind of re-identification vector the minimal-field discipline exists to prevent.
+The `edited` event type is worth distinguishing from accept and reject. It captures "right tag, wrong boundaries" — the researcher thinks the tag applies but adjusted the selected quote span. That's a subtler signal about prompt quality than flat accept/reject and may turn out to be more informative than either. Important: `edited` is a flag on the event, not a payload — we record *that* the researcher adjusted the span, never the offsets or length of the adjustment. Character offsets plus transcript length would leak where the interesting content sits, which is exactly the kind of re-identification vector the minimal-field discipline exists to prevent.
 
 ## Alpha experiments
 
-Four experiments, all small enough to run on testflight builds with offline analysis.
+One experiment at alpha. Everything else we might learn is noticed along the way, not instrumented.
 
-**Experiment 1: Baseline rejection rates per tag.** Log suggest/accept/reject/edit events for every tag in the shipped UXR codebook. After 20 hours of coded sessions across the alpha cohort, compute rejection rate per tag. Rank them. Expected learning: which of our 15-odd tags are currently well-operationalised and which aren't, in the hands of real researchers on real transcripts.
+**Experiment 1: Rank tags by success rate.**
 
-**Experiment 2: Hand-tune the worst two prompts and ship v2.** Take the two tags with the highest rejection rates from Experiment 1. Rewrite their prompts based on researcher feedback and our own judgement — this is still a human craft task, not an algorithmic one. Bump the prompt version. Collect rejection data on v2 from subsequent sessions and compare against v1. Expected learning: whether hand-tuning meaningfully moves rejection rates, and by how much. If v2 is no better than v1, we learn that the problem wasn't prompt wording — it was concept ambiguity or scope creep, which is itself a finding.
+`success_rate(tag) = (accepted + edited) / suggested`
 
-**Experiment 3: Researcher-level variance check.** For each tag, compute rejection rate per researcher. Look for outliers — researchers who reject a given tag much more or much less than their peers. Have a conversation with each outlier. Expected learning: how much of our rejection signal is tag-quality and how much is coder-calibration. This matters for how we interpret everything else.
+Drop tags with `suggested < 10` as below-ranking-threshold. Edited counts as success — the researcher agreed with the concept, disagreed on the span. Ignored = `suggested − (accepted + rejected + edited)`; counts as failure. Report a single table sorted ascending. Bottom of the table is the attention list.
 
-**Experiment 4: Informal offline "why" for the top three rejected tags.** We're not building in-product reason capture at alpha — that's Level 1 data, out of scope here. But for the three most-rejected tags from Experiment 1, we can just ask researchers informally, over a call or a Slack message: "You kept rejecting this one. Why?" Tally the reasons by hand. Expected learning: whether a structured reason taxonomy would be worth building for beta, and what the categories in it should be. This is the cheapest possible preview of what Level 1 data would give us, without any of the consent complexity.
+Error bars are wide at alpha scale. Say so in prose rather than imply false precision by reporting rates to two decimal places.
 
-All four can run in parallel on the same alpha cohort. The only engineering required is the event-logging hook and a CSV export.
+**Follow-on (not an experiment): hand-tune the bottom three.**
+
+Read those prompts. Read textbook definitions of what the tag is meant to capture. Read out-of-band samples of rejected quotes (separately, with explicit researcher permission — not from the telemetry stream). Rewrite inclusion/exclusion criteria. Hash changes naturally because the prompt text changed. Ship v2.
+
+No before/after rejection-rate claim at this cohort size — 10 testers × 1 hour is too small to measure a prompt-rewrite effect cleanly. The next cohort tells us whether we were right.
+
+**Things we'll notice along the way** (not first-class experiments):
+
+- Researcher-level variance — one tester who rejects everything pulls rates up across every tag they touch. We'll see it in the per-researcher breakdown and handle it by conversation, not by statistics.
+- Informal "why" — for the bottom three tags, we'll just ask on Slack. No structured reason taxonomy at Level 0.
+- Rubber-stamping signal — a tag applied constantly with near-100% acceptance is different from one applied rarely with near-100% acceptance. Cross-reference with application rate when reading the table.
+
+The only engineering required is the event-logging hook, the batched POST endpoint, and a CSV export.
 
 ## Consent and T&Cs for alpha
 
@@ -165,14 +177,18 @@ Even the demonstration has value beyond Bristlenose itself. "Here are the reject
 
 ## What success looks like at end of alpha
 
+Alpha is an experiment about whether this signal is worth collecting, not a guarantee it will move prompts. The cohort may be too small and the signal too noisy to meaningfully improve prompts on its own. That's fine — we'll combine the quant signal with qualitative feedback from the testers we know personally, and decide then whether to act on any given tag. It would be silly *not* to collect the basics of tag rejection as we go; the cost is tiny and the optionality is real.
+
 By the end of the alpha window, we should have:
 
-- A rejection rate number for every tag in the UXR codebook, based on real researcher behaviour
-- At least two tag prompts that have been hand-improved based on the data, with before-and-after rejection rates demonstrating (or failing to demonstrate) the improvement
-- Informal notes from researchers on why they rejected the top three worst-performing tags
-- A clear view on whether researcher-level variance is a first-order concern for data interpretation
+- A success-rate number for every tag in the UXR codebook that cleared the `suggested ≥ 10` threshold, based on real researcher behaviour
+- The bottom of that table identified as the attention list, with hand-tuned v2 prompts shipped for (some of) them — hashed, logged, ready for the next cohort to evaluate
+- Informal notes from researchers on why they rejected the bottom three tags, gathered over Slack or a call
+- A qualitative view on whether researcher-level variance is a first-order concern for data interpretation
 - Enough confidence in the mechanism to design and scope the Level 1 capture (structured reasons) for beta
 - At least one publishable observation about how the UXR codebook performs operationally
+
+What we explicitly aren't promising: a clean before/after demonstration that v2 prompts reduced rejection. The cohort is too small and the noise floor too high to make that claim honestly at alpha scale. The next cohort tells us whether the hand-tuning worked.
 
 That set is enough to justify the data architecture for beta, to write a first Substack piece that establishes Bristlenose's methodological posture publicly, and to make a concrete case to researchers about why contributing this data benefits them.
 
@@ -192,7 +208,7 @@ Before shipping the logging hook, commit to the prompt-version derivation. A man
 
 Other prerequisites worth naming so they don't get improvised:
 
-- **Storage.** Alpha events land in a SQLite table in Bristlenose's existing on-device database, then ship to a Bristlenose-operated endpoint on a schedule (batched, not per-event). No third-party analytics service, no hosted LLM in the telemetry path.
+- **Storage.** Alpha events land in a SQLite table in Bristlenose's existing on-device database, then ship batched (not per-event) to `https://bristlenose.app/telemetry.php` — a small PHP endpoint on DreamHost shared hosting, patterned on the existing `feedback.php`, appending one row per event to `data/telemetry.csv`. No third-party analytics service, no hosted LLM in the telemetry path.
 - **Offline behaviour.** If the endpoint is unreachable (plane, secure environment), events buffer on disk indefinitely and ship when connectivity returns. They never block analysis and are never dropped silently.
 - **Deletion workflow.** Since `researcher_id` is keychain-stored and pseudonymous, deletion-on-request is operationally: the tester tells us their UUID (visible in Settings), we delete matching rows. The `researcher_id` Reset control also breaks the link to future events while leaving past events in place unless explicitly deleted.
 - **Debounce.** Accept-then-un-accept within 2 seconds collapses to a single final-state event; later edits emit a new event. The rule is: one event per final state per `(researcher_id, tag_id, prompt_version, session_of_analysis)`, where "session of analysis" is a device-local grouping that never leaves the device.

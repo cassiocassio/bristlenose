@@ -22,6 +22,7 @@ Each active feature branch gets its own **git worktree** — a full working copy
 | `bristlenose_branch responsive-signal-cards/` | `responsive-signal-cards` | Responsive signal cards |
 | `bristlenose_branch sidecar-signing/` | `sidecar-signing` | S2 Track C: PyInstaller sidecar codesigning + Hardened Runtime entitlements (road-to-alpha #4 + #5) |
 | `bristlenose_branch port-v01-ingestion/` | `port-v01-ingestion` | S2 Track B: re-introduce pipeline invocation (`bristlenose run`) into the v0.2 multi-project shell — informed rewrite of v0.1 ProcessRunner, unblocks 100days.md beats 6–13 |
+| `bristlenose_branch alpha-telemetry/` | `alpha-telemetry` | Level 0 tag-rejection telemetry for TestFlight alpha — four-field event log, PHP endpoint on bristlenose.app, SwiftUI first-launch sheets, Settings Privacy screen |
 
 
 
@@ -110,6 +111,7 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 | `responsive-signal-cards` | `bristlenose_branch responsive-signal-cards/` | local only |
 | `sidecar-signing` | `bristlenose_branch sidecar-signing/` | local only |
 | `port-v01-ingestion` | `bristlenose_branch port-v01-ingestion/` | local only |
+| `alpha-telemetry` | `bristlenose_branch alpha-telemetry/` | local only |
 
 
 
@@ -252,6 +254,34 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 - `sidecar-signing` (Track C) — no code overlap; will interact at packaging time (signed sidecar must run the pipeline, not just serve). Coordinate only at ship.
 - `ci-cleanup` — merged, no conflict.
 - `living-fish`, `symbology`, `highlighter`, `drag-push`, `responsive-signal-cards` — no overlap (web/CSS/Python surfaces, not desktop Swift).
+
+---
+
+### `alpha-telemetry`
+
+**Status:** Just started
+**Started:** 23 Apr 2026
+**Worktree:** `/Users/cassio/Code/bristlenose_branch alpha-telemetry/`
+**Remote:** local only (push when ready)
+
+**What it does:** Level 0 tag-rejection telemetry for the TestFlight alpha (~10 invited testers × ~1 hour each). Spec: [`docs/methodology/tag-rejections-are-great.md`](methodology/tag-rejections-are-great.md). Implementation handoff: [`docs/private/alpha-telemetry-implementation-prompt.md`](private/alpha-telemetry-implementation-prompt.md). Four-field event log (`tag_id`, `prompt_version`, `event_type`, `researcher_id`), batched POST to `https://bristlenose.app/telemetry.php` (new PHP endpoint patterned on `feedback.php`), SQLite on-device buffer with offline persistence, two first-launch SwiftUI sheets (AI disclosure + telemetry opt-in), Settings → Privacy screen with toggle / tester ID / email-driven deletion. No timestamps, no study IDs, no quote content.
+
+**Files this branch will touch:**
+- `website/server/telemetry.php` (new) + move existing `server/feedback.php` into `website/` so `/deploy-website` rsyncs both
+- `frontend/src/utils/health.ts` — add `DEFAULT_TELEMETRY_URL`, extend `HealthResponse` with `telemetry: {enabled, url}`
+- `bristlenose/server/` — extend `/api/health` to include telemetry alongside feedback; add dev stub endpoint `POST /api/_dev/telemetry` that appends JSON lines to a local file (for React/Swift testing before deploy)
+- `frontend/src/` — tag-suggestion emission hook (suggest / accept / reject / edit), case-insensitive debounce rule
+- `bristlenose/server/db.py` (or new module) — SQLite buffer table for unshipped events + batched POST scheduler
+- `bristlenose/llm/` — `prompts/versions.jsonl` sidecar writer; `prompt_version = {tag_id}-{sha256(prompt_text)[:8]}` derivation at event-emit time
+- `desktop/Bristlenose/` — two first-launch sheets (SwiftUI), Settings → Privacy screen with Reset / Delete my events email handler
+- WKWebView messaging bridge — event emission wired React→Swift→SQLite (see `docs/design-wkwebview-messaging.md`)
+
+**Won't touch:** `.env`, output directories, `bristlenose/theme/images/`, production `feedback.php` at cassiocassio.co.uk (90-day overlap; user retires it manually later).
+
+**Potential conflicts with other branches:**
+- `port-v01-ingestion` (Track B) — also touches `desktop/Bristlenose/`, but different surfaces (PipelineRunner + ContentView drop handling vs first-launch sheets + Settings pane). Low overlap risk; coordinate on `ContentView.swift` if first-launch sheet mounts there.
+- `sidecar-signing` (Track C) — interacts at ship time only (signed sidecar must serve the new `/api/health` shape and relay telemetry events). No code overlap now.
+- `living-fish`, `symbology`, `highlighter`, `drag-push`, `responsive-signal-cards` — no overlap (different surfaces).
 
 ---
 

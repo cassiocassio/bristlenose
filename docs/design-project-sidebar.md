@@ -1,3 +1,16 @@
+---
+status: partial
+last-trued: 2026-04-23
+trued-against: HEAD@port-v01-ingestion on 2026-04-23
+---
+
+> **Truing status:** Partial — Phases 1–3 (project list, drag-and-drop, folders) shipped and broadly accurate; drop-matrix outcomes, project-state table, "Pipeline does not auto-run on drop" claim, activity-status-bar placement, and Phase 2 "not shipped" list have drifted and carry inline `Superseded 2026-04-23` banners. Pipeline-state × run-trigger matrix added at end. See changelog below.
+
+## Changelog
+
+- _2026-04-23_ — trued up during port-v01-ingestion QA: inline-banner'd the Project-states table (shipped `PipelineState` enum has .scanning/.queued/.failed/.unreachable/attached-orphan that the table omits); inline-banner'd drop-matrix row 2 (shipped behaviour is blocker toast for `.ready` until incremental re-analyse lands); inline-banner'd "Pipeline does not auto-run on drop" (shipped behaviour DOES auto-run on folder drop); inline-banner'd Activity-status-bar section (shipped placement is toolbar pill `PipelineActivityItem`, not sidebar-bottom); inline-banner'd Phase 2 "not shipped" list (multi-select delete, drag-to-folder, duplicate-drop alert, drop-on-row via SidebarDropDelegate, extension allow-list, addedInterviews toast are in fact shipped); added "Pipeline state × run-trigger matrix" at end. Anchors: `ContentView.swift:508-605`, `PipelineRunner.swift:37-53`, `MenuCommands.swift:397-400`, `PipelineActivityItem.swift:207-210`. Commits: 3d9f43c, 5e254cd, 6d08f3f.
+- _Previous_ — shipped Phases 1–3 (project list from disk, drag-and-drop + context menus, folders).
+
 # Multi-Project Sidebar — macOS Desktop App
 
 ## Context
@@ -40,6 +53,8 @@ Mental model: **Mail sidebar** — curated list of items you've placed, not a li
 - Archive section: sorted last (after a separator line), not pinned outside scroll region
 
 ### Project states (simplified)
+
+> **Superseded 2026-04-23.** Shipped `PipelineState` enum (`PipelineRunner.swift:37-53`) has additional states not in this table: `.scanning` (initial), `.queued` (FIFO wait), `.running` (includes attached orphans), `.failed(category)`, `.unreachable` (e.g. offline volume). User-cancelled runs land in `.idle`; never-run and post-cancel are conflated under `.idle` today — a split (`.stopped` / `.cancelled`) is in the alpha backlog. Shipped UI surfaces activity in the toolbar pill `PipelineActivityItem`, not in the sidebar row — the spinner/badges described below are not on the row. See `Pipeline state × run-trigger matrix` at end of doc for the current trigger map.
 
 | State | Row appearance | Trailing icon |
 |-------|---------------|---------------|
@@ -240,6 +255,18 @@ All items disabled when nothing is selected.
 
 ### Interaction model
 
+> **Superseded 2026-04-23.** Drop-on-row matrix ships differently from the table below. Shipped policy (see `ContentView.swift:548-605`, `handleDropOnProject`) is state-dependent:
+>
+> | Target state | Shipped behaviour |
+> |---|---|
+> | `.idle` / `.scanning` | `addFiles` + auto-run, toast "Added N interviews to …" (no Undo button) |
+> | `.ready` | Blocker toast "Adding extra interviews to an analysed project isn't supported yet" — incremental re-analyse not yet implemented |
+> | `.failed` | Toast redirects user to pill-popover Retry |
+> | `.running` / `.queued` | Toast "Finish or stop the current run before adding more" |
+> | `.unreachable` | Blocked with explanation toast |
+>
+> Empty-sidebar-area drop (row 1 below) matches the shipped path. The row 2 vision (Add interviews + Undo on any state) is the aspirational target once incremental re-analyse lands.
+
 | Drag source | Drop target | Result |
 |-------------|-------------|--------|
 | Files/folder from Finder | Empty sidebar area | Create new project, name from folder/parent, inline rename selected |
@@ -257,6 +284,8 @@ All items disabled when nothing is selected.
 - **Menu bar equivalents for everything**: File > New Project…, context menu > Add Interviews…
 
 ### What drag does NOT do
+
+> **Superseded 2026-04-23.** First bullet below is reversed: shipped behaviour (`ContentView.swift:508-510`) DOES auto-run the pipeline on folder drop (ported from v0.1 where drop-equals-analyse was the whole UX). No separate "Analyse" menu action exists today — `Project > Re-analyse…` menu item is `.disabled(true)` per `MenuCommands.swift:397-400`. The "Analyse as a separate action" design intent is still on the table, but gated on landing the `Analyse` / `Resume` / `Retry` context-menu verbs alongside incremental re-analyse.
 
 - Pipeline does not auto-run on drop — "Analyse" is a separate action
 - No confirmation modal for new project creation — just do it (Finder pattern)
@@ -284,6 +313,8 @@ Non-modal panel (like Finder's Cmd+I window). Shows:
 Built later — not Phase 1.
 
 ## Activity status bar
+
+> **Superseded 2026-04-23.** Shipped placement is a trailing-toolbar pill (`PipelineActivityItem` in `ContentView.swift:754-761`), not a sidebar-bottom status bar. The pill opens a popover with stage/elapsed/Stop/Retry. Per-row spinner icons and row-level completion checkmarks described below are not shipped — all activity is centralised in the toolbar pill. This section retained as planning history; when re-designing the cross-project activity surface, reconsider the Mail-pattern bottom strip vs the current pill.
 
 Bottom-left of sidebar, like Mail's "Updated just now" area.
 - Use `safeAreaInset(edge: .bottom)` to place below the list without fighting scroll
@@ -348,6 +379,17 @@ Replace `ProjectStub` array with `ProjectIndex` loading from `projects.json`.
 - Toast for "added interviews to project"
 - Empty state `ContentUnavailableView` as drag target
 - UTType validation for media files (currently accepts any file/folder)
+
+> **Superseded 2026-04-23 — items that actually did ship:**
+> - **Multi-select** shipped via `List(selection: Set<SidebarSelection>)` (`ContentView.swift` sidebar). Multi-select context-menu Delete has a known bug: deletes only the focused row, not the full selection (logged as alpha fix).
+> - **Drop-on-existing-project-row** shipped via `SidebarDropDelegate` with frame hit-testing (workaround for `.onDrop` + List selection breakage). Outcome is state-dependent (see drop matrix above).
+> - **Duplicate folder drop warning** shipped as `duplicateDropAlert` with Open Existing / Create Anyway / Cancel (`ContentView.swift:301-323`).
+> - **"Added interviews to project" toast** shipped via `desktop.chrome.addedInterviews` format string (`ContentView.swift:586-592`) for `.idle` / `.scanning` targets.
+> - **Drag-to-folder (internal)** shipped via `.draggable` + `SidebarDropDelegate` hit-test on folder rows.
+> - **File-type validation** shipped as extension allow-list (`acceptedExtensions` Set in `ContentView.swift:410-419`) — not UTType-based as originally specced, but equivalent outcome for accepted formats.
+> - **Subset-project state** (drag of single file(s)) shipped via `UnsupportedSubsetView` — displays "Bristlenose analyses folders" detail view for projects created from individual files.
+>
+> Still accurately parked: slow-double-click rename, drag-to-reorder, spring-loaded folders, empty-state ContentUnavailableView.
 
 **Files**: `ProjectIndex.swift` (model, CRUD, inputFiles), `ProjectRow.swift` (context menu callbacks, rename), `ContentView.swift` (drop handling, context menu, async URL loading), `MenuCommands.swift` (⌘⌫ shortcut)
 
@@ -426,3 +468,29 @@ Note: Xcode uses `PBXFileSystemSynchronizedRootGroup` — new Swift files in `de
 - Build desktop app: `cd desktop/Bristlenose && xcodebuild build -scheme Bristlenose -configuration Debug -destination "platform=macOS"`
 - Manual QA per phase: each phase has its own testable surface
 - VoiceOver: verify sidebar navigation, status announcements (Phase 4+)
+
+## Pipeline state × run-trigger matrix (as of 2026-04-23)
+
+Added during 23 Apr 2026 QA pass — shipped reality for "how can a user start/resume/retry/re-analyse a project?" Not previously documented in any design doc.
+
+| State | Pill popover Retry | Menu `Project > Re-analyse…` | Drop on row (state-dependent) | Drop on empty area |
+|---|---|---|---|---|
+| `.idle` (never run or post-cancel) | n/a | disabled (`Phase 2+`) | auto-run via `addFiles` + spawn | ✅ creates new project (duplicate) |
+| `.scanning` (initial manifest read) | n/a | disabled | auto-run | ✅ duplicate |
+| `.queued` | n/a | disabled | rejected with toast | ✅ duplicate |
+| `.running` (includes attached orphan) | shows Stop, not Retry | disabled | rejected with toast | ✅ duplicate |
+| `.failed` | ✅ Retry | disabled | redirects user to pill Retry | ✅ duplicate |
+| `.ready` | n/a | disabled | blocker toast (no incremental re-analyse) | ✅ duplicate |
+| `.unreachable` (moved / offline volume) | n/a | disabled | blocked | ✅ duplicate |
+
+**Gaps this table surfaces:**
+
+- `.idle`, `.stopped` (would-be post-cancel), and `.ready` have **no first-class run trigger** — users must drop the folder again on the empty area, which creates a duplicate project, OR rely on pill Retry for `.failed` only.
+- `Project > Re-analyse…` menu item exists (`MenuCommands.swift:397-400`) but is `.disabled(true)` with Phase 2+ comment.
+- Context menu on project rows has no `Analyse` / `Resume` / `Retry` items.
+- Three user-facing verbs have been scoped for alpha (see also `docs/design-subprocess-lifecycle.md` and plan-note):
+  - **Resume** — pipeline was interrupted, manifest has partial state, safe to continue (no human data exists yet).
+  - **Retry** — pipeline errored, same mechanism as Resume, different entry.
+  - **Re-analyse…** — destructive do-over, nukes human edits/tags/stars/hidden quotes, confirmation modal. Copy: "Discards all your edits, tags, stars, and hidden quotes. Runs a fresh analysis."
+
+**Alpha scope:** splitting `.idle` into `.idle` (never-run) and `.stopped` (post-cancel); context-menu verbs above; incremental re-analyse (to unblock drop-on-`.ready`). Logged in plan-note `docs/private/truing-ingestion-lifecycle-2026-04-23.md` and in active QA plan.

@@ -1,8 +1,22 @@
+---
+status: partial
+last-trued: 2026-04-23
+trued-against: HEAD@port-v01-ingestion on 2026-04-23
+---
+
+> **Truing status:** Partial — Phase 0–2c CLI-side claims accurate; desktop-app consumer of the manifest (orphan-attach `readManifestState`) is not covered by this doc and collapses partial state to `.idle`. Cross-ref to `design-subprocess-lifecycle.md` added. See changelog below.
+
+## Changelog
+
+- _2026-04-23_ — trued up during port-v01-ingestion QA: added cross-ref to `design-subprocess-lifecycle.md`; noted Swift desktop consumer collapses partial → `.idle` and uses all-stages-complete criterion for `.ready`; noted PID file sidecar (`<App Support>/Bristlenose/pids/`) is Swift-owned and not part of the manifest schema. Anchors: `PipelineRunner.swift:534-583`. No status-line changes.
+- _Previous_ — Phase 0–2c implemented per status header below.
+
 # Pipeline Resilience & Data Integrity
 
 > **Status**: Phase 0–1e implemented (crash recovery, per-session caching, `bristlenose status` command, pre-run resume summary); Phase 2a implemented (SHA-256 content hashes on stage outputs stored in manifest); Phase 2b implemented (verify hashes on load — corrupted/tampered files trigger re-run instead of silent use); Phase 2c implemented (input change detection — source file metadata hashing via size+mtime, upstream content_hash propagation, cascade invalidation); Phase 3 (reset command) next
 > **Scope**: Big-picture architecture for crash recovery, incremental re-runs, provenance tracking, human/LLM merge, source material change detection, mid-run provider switching, and analytical context preservation
 > **Trigger**: Plato stress test (Feb 2026) — pipeline ran out of API credits mid-run, stale SQLite data from previous project leaked into serve mode, intermediate JSON files weren't written by `analyze` command, recovery required re-spending $3.50 on LLM calls already made
+> **Desktop consumer**: the macOS app reads the same manifest in two places — `PipelineRunner.readManifestState` (orphan-attach scan) and `applyScanResult` (reconcile after scan). Desktop-side semantics: `.ready` requires every stage in the manifest to be `complete`; missing-status / partial / pending all collapse to `.idle`. Partial-state surfacing described elsewhere in this doc (e.g. "7/10 sessions" examples) is CLI-only; the desktop pill shows `.ready` / `.idle` / `.failed` only. See `design-subprocess-lifecycle.md` for orphan attach mechanics and the empirical false-ready bug logged 23 Apr 2026 (caused by manifest-completion not being strictly checked at one historical scan call site — fix tracked separately).
 
 ## The problem
 

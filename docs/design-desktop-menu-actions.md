@@ -1,6 +1,20 @@
+---
+status: partial
+last-trued: 2026-04-23
+trued-against: HEAD@port-v01-ingestion on 2026-04-23
+---
+
+> **Truing status:** Partial — most native-side project ops moved from "Future" to "Shipped via NotificationCenter" (Phase 2 sidebar work landed Mar–Apr 2026). `reAnalyse` and `archive` accurately remain Future. Section "Project operations" rewritten with the dual-pattern split (NotificationCenter vs `bridgeHandler.menuAction`); a few small additions / label corrections noted inline. See changelog below.
+
+## Changelog
+
+- _2026-04-23_ — trued up during port-v01-ingestion QA: rewrote §"Project operations — native-only or future" to reflect shipped NotificationCenter-based project ops (newProject, renameProject, deleteProject, locateProject, createNewFolder, renameFolder, deleteFolder, moveSelectedProject); kept `reAnalyse` (`.disabled(true)` per `MenuCommands.swift:397-400`) and `archive` (Phase 5) as Future; added missing entries (`openBlog`, `showAcknowledgements`, `mergeCode`); flagged `revealInFinder` label drift vs shipped `showInFinder`. Anchors: `MenuCommands.swift:355-360, 397-405, 433-466, 692-698`, `ContentView.swift:279-292, 1118-1176`. Commit: 3d9f43c.
+
 # Desktop Menu Actions — Bridge Handler Cookbook
 
 Reference for all menu actions wired through `BridgeHandler.menuAction()`. Working context (the 3-file chain, how to add a new handler) lives in `desktop/CLAUDE.md`.
+
+> **Note (2026-04-23):** Project operations use **two wiring patterns** — actions affecting the native sidebar (project/folder CRUD, rename, move) post `Notification.Name` events that ContentView receives via `.onReceive`, while actions targeting the web layer (re-analyse, archive, codebook ops) dispatch through `bridgeHandler.menuAction()`. The catalogue below should be read with this distinction in mind. Detail in `desktop/CLAUDE.md` "Project menu actions use Notification.Name not bridge."
 
 ## Action catalogue
 
@@ -70,7 +84,30 @@ All Tier 2 actions are wired — moved to "Already handled — AppLayout" above.
 
 ### Project operations — native-side or future (8)
 
-These are either native-only (Finder, print) or depend on features not yet built (project list, re-analysis).
+These are either native-only (Finder, print) or depend on features not yet built (re-analysis, archive).
+
+> **Superseded 2026-04-23.** Most "Future: project management" entries below shipped during sidebar Phases 1–3 via the NotificationCenter pattern. Remaining true-Future items are `reAnalyse` and `archive` (both `.disabled(true)` in `MenuCommands.swift`). Updated table:
+>
+> | Action | Status | Notes |
+> |---|---|---|
+> | `showInFinder` | **Shipped** (native) | `NSWorkspace.shared.selectFile` in `MenuCommands.swift:355-360`; also wired to ProjectRow context menu (`ContentView.swift:954-961`). _Doc previously named this `revealInFinder`._ |
+> | `newProject` | **Shipped** (NotificationCenter) | `createNewProject` notification → ContentView handler |
+> | `createNewFolder` | **Shipped** (NotificationCenter) | `createNewFolder` notification |
+> | `renameProject` | **Shipped** (NotificationCenter) | `renameSelectedProject` notification |
+> | `renameFolder` | **Shipped** (NotificationCenter) | `renameSelectedFolder` notification |
+> | `deleteProject` | **Shipped** (NotificationCenter) | `deleteSelectedProject` notification — multi-select bug noted (only deletes focused row, alpha fix) |
+> | `deleteFolder` | **Shipped** (NotificationCenter) | `deleteSelectedFolder` notification |
+> | `moveSelectedProject` | **Shipped** (NotificationCenter) | "Move to" submenu populated from folders + "No Folder" |
+> | `locateProject` | **Shipped** (NotificationCenter) | NSOpenPanel for moved/deleted projects |
+> | `openInNewWindow` | Future | multi-window not in scope for alpha |
+> | `reAnalyse` | **Future (shipped as `.disabled(true)`)** | `MenuCommands.swift:397-400` with "Future — Phase 2+" comment. Will dispatch via bridge once incremental re-analyse pipeline lands |
+> | `archive` (project) | Future | `MenuCommands.swift:402-405`, `.disabled(true)`, Phase 5 |
+> | `archiveFolder` | Future | Phase 5 |
+> | `checkSystemHealth` | Bridge dispatch | `bridgeHandler.menuAction("checkSystemHealth")` — handler in frontend |
+> | `pageSetup` / `print` | Bridge / future | NSPrintOperation on WKWebView snapshot |
+> | `openBlog` | **Shipped** | `MenuCommands.swift:692` — opens substack via NSWorkspace |
+> | `showAcknowledgements` | **Shipped** | `MenuCommands.swift:698` — opens credits modal |
+> | `mergeCode` | **Shipped** (bridge) | dispatched from Codes menu (`MenuCommands.swift:464-466`) |
 
 | Action | Notes |
 |--------|-------|

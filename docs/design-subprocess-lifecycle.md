@@ -1,13 +1,14 @@
 ---
 status: partial
-last-trued: 2026-04-23
-trued-against: HEAD@port-v01-ingestion on 2026-04-23
+last-trued: 2026-04-24
+trued-against: HEAD@port-v01-ingestion on 2026-04-24
 ---
 
-> **Truing status:** Partial — orphan-attach and per-project cancel have shipped in this branch; sandbox-clean probes (`proc_pidinfo`/`proc_pidpath`), `stopAll()`, and unified serve-side reconcile are design-intent, not shipped. Stop-is-a-lie bug and stale-pill visibility gap surfaced during 23 Apr 2026 QA — called out inline. See changelog below.
+> **Truing status:** Partial — orphan-attach and per-project cancel have shipped in this branch; sandbox-clean probes (`proc_pidinfo`/`proc_pidpath`), `stopAll()`, and unified serve-side reconcile are design-intent, not shipped. Stop-is-a-lie bug (orphan-path cancel) is the headline alpha blocker — owned-process cancel is fixed (`49930e4`), orphan path is not. Stale-pill visibility gap also still open. See changelog below.
 
 ## Changelog
 
+- _2026-04-24_ — Tier 2 truing follow-up: cite commit `49930e4` for the owned-process cancel-flag fix (was "this branch, working-tree"); add corner-case notes for the `projectIndex`-lookup PID-file leak (`PipelineRunner.swift:776-778`) and the spawn-vs-`writePIDFile` race (`:737-742`).
 - _2026-04-23_ — trued up during port-v01-ingestion QA: PID file naming correction (shipped is `<uuid>.pid` without `<role>-` prefix); `atexit` ownership correction (Swift side removes, not Python); sandbox-compat scoped (`/bin/ps` exec in `aliveOwnedRunPID` is also incompatible, not just `lsof`); ServeManager port range corrected (`:5173,8150-9149`); Stop-is-a-lie bug called out in §Cancellation; attached-orphan visibility gap (stale "Starting up" pill) called out in §The design; `stopAll()` marked as planned. Anchors: `PipelineRunner.swift:341-358, 626-660, 690`, `ServeManager.swift:305-334`. Commits: 6d08f3f, 5e254cd.
 - _20 Apr 2026_ — initial draft surfaced during port-v01-ingestion QA.
 
@@ -95,7 +96,11 @@ There is no global "kill all" surface. If the user wants to nuke everything, the
 >
 > **Fix direction.** Remove re-verification at cancel time. We attached to a PID; send SIGINT to that PID. `kill(pid, SIGINT)` return value is the only signal needed: ESRCH = already dead (treat as success), EPERM = not ours (surface toast). Never unconditionally clear state — clear only when we confirm the kill.
 
-**Owned-process cancel (non-orphan) was also broken and fixed inline in port-v01-ingestion.** Pre-fix: `cancel()` called `proc.interrupt()` and relied on the termination handler to route `.failed`. Any non-zero exit landed in `.failed` including user-initiated cancels — "Transcription failed" appeared after a Stop click. Post-fix (this branch, working-tree): a `cancellationRequested` flag is set before `proc.interrupt()`; `handleTermination` checks it and routes to `.idle` with log line "run cancelled". Clean cancel UX — matches what Stop semantically means.
+**Owned-process cancel (non-orphan) was also broken and fixed inline in port-v01-ingestion (commit `49930e4`).** Pre-fix: `cancel()` called `proc.interrupt()` and relied on the termination handler to route `.failed`. Any non-zero exit landed in `.failed` including user-initiated cancels — "Transcription failed" appeared after a Stop click. Post-fix: a `cancellationRequested` flag (`PipelineRunner.swift:206`) is set before `proc.interrupt()` (`:629-630`); `handleTermination` checks it (`:790-795`) and routes to `.idle` with log line "run cancelled". Flag cleared at each spawn (`:677`). Clean cancel UX — matches what Stop semantically means. Orphan-path `cancel()` is unchanged and still carries the Stop-is-a-lie bug above.
+
+**Open corner cases (not yet shipped, surfaced 24 Apr 2026):**
+- **PID-file leak via `projectIndex` lookup.** `handleTermination` at `PipelineRunner.swift:776-778` removes the PID file by looking the project up from `projectIndex`. If `projectIndex` is unwired (logged at `:826`) or the project was deleted between spawn and termination, the PID file is leaked. Next launch's orphan-attach scan will find a dead PID and the `kill(pid, 0)` sweep removes it harmlessly — but worth being explicit so a future refactor doesn't assume the cleanup path is bulletproof.
+- **Spawn-vs-`writePIDFile` race.** `PipelineRunner.swift:737-742` carries an in-source comment acknowledging a window where an app crash between `proc.run()` and `writePIDFile` leaves an unattachable orphan (subprocess running, no PID file). Accepted trade-off; documenting it here so the design intent survives.
 
 ### Quit propagation: kill children when the .app exits
 

@@ -1,13 +1,14 @@
 ---
-status: partial
-last-trued: 2026-04-23
-trued-against: HEAD@port-v01-ingestion on 2026-04-23
+status: trued
+last-trued: 2026-04-24
+trued-against: HEAD@port-v01-ingestion on 2026-04-24
 ---
 
-> **Truing status:** Partial — most native-side project ops moved from "Future" to "Shipped via NotificationCenter" (Phase 2 sidebar work landed Mar–Apr 2026). `reAnalyse` and `archive` accurately remain Future. Section "Project operations" rewritten with the dual-pattern split (NotificationCenter vs `bridgeHandler.menuAction`); a few small additions / label corrections noted inline. See changelog below.
+> **Truing status:** Trued. Project-ops table rewritten with NotificationCenter / bridge split; old contradicting Future-only table removed. Keyboard shortcuts added throughout. `openInNewWindow` corrected (Shipped, not Future). Help, View, and Codes menus given dedicated sub-sections. Alpha gap (no Analyse/Resume/Retry in context menu) called out inline. See changelog.
 
 ## Changelog
 
+- _2026-04-24_ — Tier 1 truing follow-up (post `design-doc-review` audit): deleted the stale Future-only project-ops table that contradicted the rewritten one above it; added Shortcut column to the rewritten project-ops table (⇧⌘R, ⌘N, ⇧⌘N, ⌘⌫, ⇧⌘O); corrected `openInNewWindow` from Future to Shipped (bridge); added `chooseIcon` and `aiPrivacy` rows; added new sub-sections for View menu (Cmd+1–5, toggleSidebar, heatmap toggle), Help menu (6 actions), and Codes menu (6 wired actions, `mergeCode` moved out of project-ops); added inline alpha-gap callout for missing Analyse/Resume/Retry in the project context menu; noted `playPause` triple-dispatch (Video / Quotes / kbd). Section heading count corrected from "(8)" to "(17)".
 - _2026-04-23_ — trued up during port-v01-ingestion QA: rewrote §"Project operations — native-only or future" to reflect shipped NotificationCenter-based project ops (newProject, renameProject, deleteProject, locateProject, createNewFolder, renameFolder, deleteFolder, moveSelectedProject); kept `reAnalyse` (`.disabled(true)` per `MenuCommands.swift:397-400`) and `archive` (Phase 5) as Future; added missing entries (`openBlog`, `showAcknowledgements`, `mergeCode`); flagged `revealInFinder` label drift vs shipped `showInFinder`. Anchors: `MenuCommands.swift:355-360, 397-405, 433-466, 692-698`, `ContentView.swift:279-292, 1118-1176`. Commit: 3d9f43c.
 
 # Desktop Menu Actions — Bridge Handler Cookbook
@@ -82,42 +83,71 @@ Video player commands use `sendCommand()` from `PlayerContext` which posts `bris
 
 All Tier 2 actions are wired — moved to "Already handled — AppLayout" above.
 
-### Project operations — native-side or future (8)
+### Project operations — native-side or future (17)
 
 These are either native-only (Finder, print) or depend on features not yet built (re-analysis, archive).
 
-> **Superseded 2026-04-23.** Most "Future: project management" entries below shipped during sidebar Phases 1–3 via the NotificationCenter pattern. Remaining true-Future items are `reAnalyse` and `archive` (both `.disabled(true)` in `MenuCommands.swift`). Updated table:
+> **Trued 2026-04-24.** Most "Future: project management" entries shipped during sidebar Phases 1–3 via the NotificationCenter pattern. Remaining true-Future items are `reAnalyse`, `archive`, `archiveFolder` (all `.disabled(true)` or unwired in `MenuCommands.swift`). Catalogue:
 >
-> | Action | Status | Notes |
-> |---|---|---|
-> | `showInFinder` | **Shipped** (native) | `NSWorkspace.shared.selectFile` in `MenuCommands.swift:355-360`; also wired to ProjectRow context menu (`ContentView.swift:954-961`). _Doc previously named this `revealInFinder`._ |
-> | `newProject` | **Shipped** (NotificationCenter) | `createNewProject` notification → ContentView handler |
-> | `createNewFolder` | **Shipped** (NotificationCenter) | `createNewFolder` notification |
-> | `renameProject` | **Shipped** (NotificationCenter) | `renameSelectedProject` notification |
-> | `renameFolder` | **Shipped** (NotificationCenter) | `renameSelectedFolder` notification |
-> | `deleteProject` | **Shipped** (NotificationCenter) | `deleteSelectedProject` notification — multi-select bug noted (only deletes focused row, alpha fix) |
-> | `deleteFolder` | **Shipped** (NotificationCenter) | `deleteSelectedFolder` notification |
-> | `moveSelectedProject` | **Shipped** (NotificationCenter) | "Move to" submenu populated from folders + "No Folder" |
-> | `locateProject` | **Shipped** (NotificationCenter) | NSOpenPanel for moved/deleted projects |
-> | `openInNewWindow` | Future | multi-window not in scope for alpha |
-> | `reAnalyse` | **Future (shipped as `.disabled(true)`)** | `MenuCommands.swift:397-400` with "Future — Phase 2+" comment. Will dispatch via bridge once incremental re-analyse pipeline lands |
-> | `archive` (project) | Future | `MenuCommands.swift:402-405`, `.disabled(true)`, Phase 5 |
-> | `archiveFolder` | Future | Phase 5 |
-> | `checkSystemHealth` | Bridge dispatch | `bridgeHandler.menuAction("checkSystemHealth")` — handler in frontend |
-> | `pageSetup` / `print` | Bridge / future | NSPrintOperation on WKWebView snapshot |
-> | `openBlog` | **Shipped** | `MenuCommands.swift:692` — opens substack via NSWorkspace |
-> | `showAcknowledgements` | **Shipped** | `MenuCommands.swift:698` — opens credits modal |
-> | `mergeCode` | **Shipped** (bridge) | dispatched from Codes menu (`MenuCommands.swift:464-466`) |
+> | Action | Shortcut | Status | Notes |
+> |---|---|---|---|
+> | `showInFinder` | ⇧⌘R | **Shipped** (native) | `NSWorkspace.shared.selectFile` in `MenuCommands.swift:355-361`; also wired to ProjectRow context menu (`ContentView.swift:954-961`). _Doc previously named this `revealInFinder`._ |
+> | `newProject` | ⌘N | **Shipped** (NotificationCenter) | `createNewProject` notification → ContentView handler (`MenuCommands.swift:113-116`) |
+> | `createNewFolder` | ⇧⌘N | **Shipped** (NotificationCenter) | `createNewFolder` notification (`MenuCommands.swift:118-121`) |
+> | `renameProject` | — | **Shipped** (NotificationCenter) | `renameSelectedProject` notification |
+> | `renameFolder` | — | **Shipped** (NotificationCenter) | `renameSelectedFolder` notification |
+> | `deleteProject` | ⌘⌫ | **Shipped** (NotificationCenter) | `deleteSelectedProject` notification — multi-select bug noted (only deletes focused row, alpha fix); `MenuCommands.swift:412` |
+> | `deleteFolder` | ⌘⌫ | **Shipped** (NotificationCenter) | `deleteSelectedFolder` notification (`MenuCommands.swift:352`) |
+> | `moveSelectedProject` | — | **Shipped** (NotificationCenter) | "Move to" submenu populated from folders + "No Folder" |
+> | `locateProject` | — | **Shipped** (NotificationCenter) | NSOpenPanel for moved/deleted projects |
+> | `openInNewWindow` | ⇧⌘O | **Shipped** (bridge) | `bridgeHandler.menuAction("openInNewWindow")` (`MenuCommands.swift:123-126`). Active, not `.disabled` |
+> | `chooseIcon` | — | **Shipped** (project-row context menu) | SF Symbol picker via `IconPickerPopover` (`ContentView.swift:967-969`) |
+> | `aiPrivacy` | — | **Shipped** (NotificationCenter) | Posts `.showAIConsentSheet` (`MenuCommands.swift:93-96`); opens AIConsentView |
+> | `reAnalyse` | — | **Future (shipped as `.disabled(true)`)** | `MenuCommands.swift:397-400` with "Future — Phase 2+" comment. Will dispatch via bridge once incremental re-analyse pipeline lands |
+> | `archive` (project) | — | Future | `MenuCommands.swift:402-405`, `.disabled(true)`, Phase 5 |
+> | `archiveFolder` | — | Future | Phase 5 |
+> | `checkSystemHealth` | — | Bridge dispatch | `bridgeHandler.menuAction("checkSystemHealth")` — handler in frontend |
+> | `pageSetup` / `print` | ⌘P (print) | Bridge / future | NSPrintOperation on WKWebView snapshot |
+>
+> **Alpha gap (24 Apr 2026):** the project-row context menu (`ContentView.swift:944-995`) and the Project menu do **not** include `Analyse`, `Resume`, or `Retry` actions. Today the only Retry lives on the toolbar pill (`ContentView.swift:572`) and the detail-pane error state (`ContentView.swift:1061`). Tracked in the alpha-blocker shortlist (`docs/private/truing-ingestion-lifecycle-2026-04-23.md`).
 
-| Action | Notes |
-|--------|-------|
-| `revealInFinder` | Native: `NSWorkspace.shared.selectFile(nil, inFileViewerRootedAtPath:)`. Needs project path from ServeManager |
-| `newProject` | Future: project creation flow |
-| `openInNewWindow` | Future: multi-window |
-| `renameProject` / `archive` / `deleteProject` | Future: project management |
-| `reAnalyse` | Future: re-run pipeline |
-| `checkSystemHealth` | Navigate to `/report/` and open doctor panel (or call `/api/health`) |
-| `pageSetup` / `print` | `NSPrintOperation` on WKWebView snapshot |
+### View menu (3)
+
+| Action | Shortcut | Status | Notes |
+|---|---|---|---|
+| `toggleSidebar` | ⌥⌘S | **Shipped** (responder chain) | `NSSplitViewController.toggleSidebar` via `tryToPerform` (`MenuCommands.swift:247-253`) — distinct from `toggleLeftPanel` (web sidebar) |
+| Tab switch (Cmd+1…Cmd+5) | ⌘1–⌘5 | **Shipped** (bridge) | `bridgeHandler.switchToTab(tab)` — separate code path from `menuAction` (`MenuCommands.swift:235-243`) |
+| `toggleInspectorPanel` (heatmap) | — | **Shipped** (bridge, tab-gated) | Disabled outside Analysis tab (`MenuCommands.swift:267-270`) |
+
+### Help menu (6)
+
+All wired in `MenuCommands.swift:670-699`.
+
+| Action | Status | Notes |
+|---|---|---|
+| `bristlenoseHelp` / `showHelp` | **Shipped** | Opens help modal to "help" section |
+| `showKeyboardShortcuts` | **Shipped** | Opens help modal to "shortcuts" section |
+| `releaseNotes` / `showReleaseNotes` | **Shipped** | Opens help modal to "about" section |
+| `sendFeedback` | **Shipped** | `setFeedbackOpen(true)` |
+| `openBlog` | **Shipped** (native) | NSWorkspace opens Substack URL (`MenuCommands.swift:692`) |
+| `showAcknowledgements` | **Shipped** (native) | Opens credits modal (`MenuCommands.swift:698`) |
+
+### Codes menu (9)
+
+5 stubs that need native focus context are catalogued separately under "Codebook operations" below. Wired actions:
+
+| Action | Status | Notes |
+|---|---|---|
+| `browseCodebooks` | **Shipped** (bridge → CodebookPanel) | Dispatches `bn:codebook-browse` |
+| `importFramework` | **Shipped** (bridge) | Dispatches `bn:codebook-browse` with `{ templateId }` |
+| `removeFramework` | **Shipped** (bridge) | Dispatches `bn:codebook-remove` |
+| `createCodeGroup` | **Shipped** (bridge) | Dispatches `bn:codebook-create-group` |
+| `createCode` | **Shipped** (bridge) | Dispatches `bn:codebook-create-code` |
+| `mergeCode` | **Shipped** (bridge) | Dispatched from Codes menu (`MenuCommands.swift:464-466`) |
+
+### Quotes menu — `playPause` triple-dispatch note
+
+`playPause` appears in three menu-source paths: the Video menu, the **Quotes menu** (`MenuCommands.swift:530-533`), and `useKeyboardShortcuts.ts`. All three resolve to `sendCommand("playPause")` via `PlayerContext`.
 
 ### Codebook operations — need native focus context (5 stubs)
 

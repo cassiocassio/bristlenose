@@ -414,6 +414,16 @@ final class PipelineRunner: ObservableObject {
         orphanPollTasks[projectID] = nil
         Self.removePIDFile(for: project)
 
+        // Drop out of .running so the manifest re-read can settle the
+        // final state. applyScanResult guards against overwriting
+        // .running (passive scans must not clobber active runs), but
+        // handleOrphanExit IS the "run is over" signal — without this
+        // transition, the pill stays "Running" after the subprocess
+        // dies and the user thinks Stop didn't take.
+        if case .running = state[projectID] {
+            state[projectID] = .idle
+        }
+
         // Re-read the manifest one final time to derive .ready vs .idle.
         // Brief delay so a clean SIGINT exit has time to flush atexit
         // handlers (manifest write); a SIGKILL/crash won't benefit but won't

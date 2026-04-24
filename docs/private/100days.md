@@ -41,7 +41,7 @@ Performance: stress sweep shows clean linear scaling to 3000 quotes — virtuali
 ## 1. Missing — essential feature gaps ("it's not done without it")
 
 ### Must
-- **IKEA codebook validation dataset** — 5 moderated IKEA interviews with UXR friends (favours, not schedulable). ~1/week over S1–S5. Tests whether sentiment categories, UXR codebook (moderator questions, friction, sentiment), and thematic grouping produce useful results on real research data. Also provides marketing screenshots and speed demo video. (design-real-data-testing.md)
+- [S1-S5] **IKEA codebook validation dataset** — 5 moderated IKEA interviews with UXR friends (favours, not schedulable). ~1/week over S1–S5. Tests whether sentiment categories, UXR codebook (moderator questions, friction, sentiment), and thematic grouping produce useful results on real research data. Also provides marketing screenshots and speed demo video. (design-real-data-testing.md)
 - **~~Desktop app v0.1~~** — SwiftUI shell, PyInstaller sidecar, folder picker, pipeline runner, "Open Report" button. ~365–435 MB bundle. (design-desktop-app.md)
 - ~~**Export: standalone HTML from serve mode** — `POST /api/projects/{id}/export`, self-contained HTML. Shipped v0.11.2. (design-export-sharing.md)~~
 - [S4] **Export: research package (zip)** — zip with report.html + transcripts/ (.txt with inline timecodes) + clips/ (optional, FFmpeg). Human-readable filenames (`p1 03m45 Sarah onboarding was confusing.mp4`). Anonymisation across all surfaces. Replaces 3 hours of Final Cut Pro work. Stages 1–3 of export roadmap. (design-export-sharing.md)
@@ -443,7 +443,8 @@ The canonical end-to-end beats a first-time user must complete successfully in t
 - ~~[S1] **Build number auto-increment** — `CFBundleVersion = 1` blocks Sparkle and App Store update logic. Set up CI auto-increment. Done: `bump-version.py` unifies desktop+CLI, auto-increments build number~~
 - ~~[S1] **Domain & email infrastructure** — register `bristlenose.app`, configure SPF/DKIM/DMARC, Substack custom domain (`blog.bristlenose.app`), deploy site, set up email on DreamHost (`hello@`, `support@`, `security@`). Full plan: `docs/private/infrastructure-and-identity.md`~~
 - [S6] **Supply chain hardening** — GitHub 2FA with hardware key, branch protection on main, PyPI hardware key + project-scoped token, register PyPI typosquats. Full checklist: `docs/private/infrastructure-and-identity.md`. Deferred from S1: low threat until commercial launch (see `docs/private/supply-chain-deferral.md`)
-- **Succession plan** — bus-factor doc (every account/credential/recovery path), password manager emergency access for one trusted person. (infrastructure-and-identity.md) — draft complete (`docs/private/succession-plan.md`), Apple Developer renewal date filled in (2027-04-16, Team ID `Z56GZVA2QB`); still needs: password manager emergency access config, successor briefing. **Deferred beyond 100days (17 Apr 2026):** no income, no commercial asset yet — inheritable asset is Martin shipping, not a repo. Revisit when Ltd is set up or there's paying customers
+
+(Succession plan moved to §Post 100 days — deferred 17 Apr 2026.)
 
 ### Should
 - [S6] **Rate-limit trial-key endpoint** — add rate limiting (1 req/min/IP) + server-side receipt validation to the trial-key endpoint, even for the 20-user beta. Blocks v1.0 subscription launch, not alpha (trial-key endpoint doesn't exist yet). See `trial-and-pricing-architecture.md` Part 2
@@ -645,7 +646,9 @@ Safari's performance team made WebKit fast by never allowing it to become slower
 
 ## Post 100 days
 
-Items deliberately deferred past the 100-day window because they depend on Apple's 2026 release cycle (WWDC 8 June, macOS 27 developer beta shortly after, public release September) or on hardware we don't have yet.
+Items deliberately deferred past the 100-day window. Reasons vary: dependence on Apple's 2026 release cycle (WWDC 8 June, macOS 27 developer beta shortly after, public release September), hardware not yet available, or commercial-stage prerequisites that the alpha doesn't yet meet.
+
+- **Succession plan** — bus-factor doc (every account/credential/recovery path), password manager emergency access for one trusted person. (infrastructure-and-identity.md) — draft complete (`docs/private/succession-plan.md`), Apple Developer renewal date filled in (2027-04-16, Team ID `Z56GZVA2QB`); still needs: password manager emergency access config, successor briefing. **Deferred beyond 100days (17 Apr 2026):** no income, no commercial asset yet — inheritable asset is Martin shipping, not a repo. Revisit when Ltd is set up or there's paying customers.
 
 - **Per-stage pluggable backends — stage A/B benchmark** — full plan in [`docs/design-stage-backends.md`](../design-stage-backends.md). s10 `quote_extraction` dominates both wall time (47.6%) and LLM cost (92.5%) on real runs; on Teams/Zoom inputs (s05 skipped) it becomes ~90% of runtime. The spike is designed as a re-runnable benchmark, not a one-shot. Sequencing: Phase A (cloud + Ollama harness, cheap, can run any time) → Phase B (MLX arm, Python-native, no Swift; most valuable against M5 / macOS 27 stack) → Phase C (Apple FM Swift shim, wait for post-WWDC FM announcements — chasing today's 4k-context 3B before the next OS ships risks throwing away work). Target: first full benchmark snapshot at macOS 27 developer beta (July 2026), re-run at GA (September 2026), re-run again before Jan 2027 launch copy is finalised. Apple ML Research's Nov 2025 M5 benchmarks (3.3–4× TTFT over M4, 14B dense at <10s TTFT, 30B MoE at <3s) are the reason this is worth planning for, not dismissing.
 

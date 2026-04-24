@@ -380,6 +380,44 @@ struct ContentView: View {
     }
 
     /// Open NSOpenPanel to re-locate a moved/deleted project.
+    /// Finder/Mail pattern for context-menu Delete on a multi-select.
+    /// If the right-clicked row is part of the current selection, the
+    /// action applies to all selected rows. If the right-clicked row is
+    /// NOT in the selection, it acts on only that row (the click is
+    /// treated as a temporary single-row target without disturbing the
+    /// existing selection — matches Finder behaviour).
+    private func deleteFromContextMenu(targetingProject id: UUID) {
+        if selection.contains(.project(id)) {
+            let projectIds = selection.compactMap { sel -> UUID? in
+                if case .project(let pid) = sel { return pid }
+                return nil
+            }
+            for pid in projectIds {
+                selection.remove(.project(pid))
+                projectIndex.removeProject(id: pid)
+            }
+        } else {
+            selection.remove(.project(id))
+            projectIndex.removeProject(id: id)
+        }
+    }
+
+    private func deleteFromContextMenu(targetingFolder id: UUID) {
+        if selection.contains(.folder(id)) {
+            let folderIds = selection.compactMap { sel -> UUID? in
+                if case .folder(let fid) = sel { return fid }
+                return nil
+            }
+            for fid in folderIds {
+                selection.remove(.folder(fid))
+                projectIndex.removeFolder(id: fid)
+            }
+        } else {
+            selection.remove(.folder(id))
+            projectIndex.removeFolder(id: id)
+        }
+    }
+
     private func locateProject(_ project: Project) {
         let panel = NSOpenPanel()
         panel.canChooseDirectories = true
@@ -882,8 +920,7 @@ struct ContentView: View {
                 .disabled(true)
                 Divider()
                 Button(i18n.t("desktop.menu.folder.delete"), role: .destructive) {
-                    selection.remove(.folder(folder.id))
-                    projectIndex.removeFolder(id: folder.id)
+                    deleteFromContextMenu(targetingFolder: folder.id)
                 }
             }
         }
@@ -990,8 +1027,7 @@ struct ContentView: View {
 
             Divider()
             Button(i18n.t("desktop.menu.project.delete"), role: .destructive) {
-                selection.remove(.project(project.id))
-                projectIndex.removeProject(id: project.id)
+                deleteFromContextMenu(targetingProject: project.id)
             }
         }
         .popover(

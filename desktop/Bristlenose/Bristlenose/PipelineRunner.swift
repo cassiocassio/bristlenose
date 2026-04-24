@@ -631,27 +631,43 @@ final class PipelineRunner: ObservableObject {
             }
             // The termination handler will clear currentlyRunning and dequeue.
         } else if let pid = attachedOrphanPIDs[project.id] {
-            // Stop an attached orphan: re-verify ownership before signalling
-            // (PID could have been reused for an unrelated process between
-            // attach and now), then SIGINT and tear down the polling task.
-            // Re-verification is sync-on-MainActor; orphan cancel is
-            // user-initiated (rare), so the ~5 ms `/bin/ps` cost is fine here.
-            let stillOurs = Self.aliveOwnedRunPID(for: project) == pid
-            if stillOurs {
-                kill(pid, SIGINT)
+            // Stop an attached orphan. Trust the attach: we only set
+            // attachedOrphanPIDs for PIDs that aliveOwnedRunPID confirmed
+            // were ours. Send SIGINT directly and interpret errno —
+            // re-verifying via /bin/ps was racy (PID-file write delays,
+            // ps exec hiccups) and the silent skip path was the
+            // Stop-is-a-lie alpha blocker (24 Apr 2026).
+            let result = kill(pid, SIGINT)
+            if result == 0 {
                 Self.logger.info(
                     "SIGINT to attached orphan project=\(project.id.uuidString, privacy: .public) pid=\(pid, privacy: .public)"
                 )
+                liveData.mutateProgress(for: project.id) { p in
+                    p.lastLine = "Stopping…"
+                }
+                // Don't clear state here — the orphan poll task
+                // (kill(pid,0) every 2s) will detect the exit and call
+                // handleOrphanExit, which tears down attachedOrphanPIDs,
+                // removes the PID file, and resolves the final state
+                // from the manifest. ≤2s pill lag is acceptable.
+            } else if errno == ESRCH {
+                // Process already gone (raced our cancel). Treat as
+                // success and run the same teardown the poll task would.
+                Self.logger.info(
+                    "orphan already exited project=\(project.id.uuidString, privacy: .public) pid=\(pid, privacy: .public)"
+                )
+                handleOrphanExit(projectID: project.id, project: project)
+            } else if errno == EPERM {
+                // Not ours after all — leave state intact, surface in log.
+                // Should not happen given attach-time ownership check.
+                Self.logger.error(
+                    "SIGINT denied (EPERM) project=\(project.id.uuidString, privacy: .public) pid=\(pid, privacy: .public)"
+                )
             } else {
-                Self.logger.warning(
-                    "skip SIGINT — orphan PID no longer ours project=\(project.id.uuidString, privacy: .public) pid=\(pid, privacy: .public)"
+                Self.logger.error(
+                    "SIGINT failed errno=\(errno, privacy: .public) project=\(project.id.uuidString, privacy: .public) pid=\(pid, privacy: .public)"
                 )
             }
-            orphanPollTasks[project.id]?.cancel()
-            orphanPollTasks[project.id] = nil
-            attachedOrphanPIDs[project.id] = nil
-            Self.removePIDFile(for: project)
-            state[project.id] = .idle
         } else if let idx = queue.firstIndex(of: project.id) {
             queue.remove(at: idx)
             state[project.id] = .idle

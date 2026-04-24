@@ -588,9 +588,12 @@ final class PipelineRunner: ObservableObject {
 
     /// Read a manifest file with a hard timeout. Maps to a `PipelineState`:
     /// - file missing → `.idle`
-    /// - all stages `complete` → `.ready(completed_at)`
-    /// - any stage non-`complete` → `.idle` (treat partial as "ready to run
-    ///   again"; orphan-attach comes in Slice 7)
+    /// - terminal `render` stage present and `complete`, all other present
+    ///   stages also `complete` → `.ready(completed_at)`
+    /// - any stage non-`complete`, OR `render` stage absent → `.idle` (run
+    ///   was interrupted before finishing; the manifest is written
+    ///   incrementally so absence of the last stage is the canonical
+    ///   "pipeline never finished" signal — see manifest.py STAGE_ORDER)
     /// - read error / timeout → `.unreachable(reason:)`
     /// - Parameter allowTimeout: when `true`, a 5 s hard timeout via
     ///   `withThrowingTaskGroup` guards against a dead network mount; when
@@ -654,15 +657,26 @@ final class PipelineRunner: ObservableObject {
                 return .unreachable(reason: "Project file is damaged.")
             }
 
-            // All stages must be "complete" for .ready; otherwise .idle.
+            // Terminal "render" stage must be present and complete — the
+            // Python side writes the manifest incrementally (one
+            // write_manifest per mark_stage_complete in pipeline.py), so a
+            // crash mid-run leaves a manifest with only the stages that
+            // got that far. Without the render-present guard, an
+            // interrupted run that happened to be between two stages would
+            // read as `.ready` and the user would see "Analysed N min ago"
+            // for a project with no report (QA, 23 Apr 2026).
             var latestCompleted: Date?
-            for (_, raw) in stages {
+            var renderComplete = false
+            for (name, raw) in stages {
                 guard let stage = raw as? [String: Any],
                       let status = stage["status"] as? String else {
                     return .idle
                 }
                 if status != "complete" {
                     return .idle
+                }
+                if name == "render" {
+                    renderComplete = true
                 }
                 if let ts = stage["completed_at"] as? String,
                    let date = Self.iso8601.date(from: ts) {
@@ -672,6 +686,7 @@ final class PipelineRunner: ObservableObject {
                 }
             }
 
+            guard renderComplete else { return .idle }
             return .ready(latestCompleted ?? Date())
         } catch {
             return .unreachable(reason: "Can't read this project.")

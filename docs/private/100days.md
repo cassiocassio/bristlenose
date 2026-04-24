@@ -58,6 +58,7 @@ Performance: stress sweep shows clean linear scaling to 3000 quotes — virtuali
 - **~~Settings UI~~** — provider selection, API key entry, redaction toggle, model choice. Milestone 6. Needs design doc. Currently CLI-only config is a hard block for App Store users
 - [S4] **App Store subscription infrastructure** — StoreKit 2, receipt validation, entitlement check. Not yet designed
 - **~~Auto-serve after run~~** — pipeline finishes → auto-launch serve + open browser. (TODO.md immediate)
+- [S2] **Alpha telemetry (Level 0) — full TestFlight bundle** — four-field tag-rejection event log (`tag_id`, `prompt_version`, `event_type`, `researcher_id`). Seeds Experiment 1 (success-rate ranking) from real TestFlight traffic, which in turn informs the first Substack piece and the first hand-tuned v2 prompts. Spec: `docs/methodology/tag-rejections-are-great.md`. Branch in flight (`alpha-telemetry`, 4 commits). **Done:** dev stub endpoint + `/api/health` telemetry block + PHP endpoints in `website/` (Pydantic validation with `extra="forbid"`, 500-event batch cap, `hash_equals`, CSV cell safety, placeholder-token guardrail). **Remaining:** (1) Python — `TelemetryEvent` SQLite table + Alembic migration, `POST /api/telemetry/events` (auth-required), background batched shipper (30s cadence, ships to `bristlenose.app/telemetry.php`), `bristlenose/llm/prompt_version.py` + `prompts/versions.jsonl` sidecar. (2) React — emission hook wherever tag chips render, debounce rule (accept-then-un-accept within 2s → one final-state event), `edited` as flag not span-offset. (3) Swift — Sheet 2 telemetry opt-in (verbatim copy from spec §First-launch sheets), Keychain UUID helper with Reset, sidecar env-var injection (`BRISTLENOSE_RESEARCHER_ID`), Settings → Privacy screen (toggle + tester ID + email-driven delete). Four architectural questions + eight parked `/usual-suspects` findings open — see `docs/private/alpha-telemetry-progress.md` and `docs/private/alpha-telemetry-next-session-prompt.md`
 
 ### Should
 - **Desktop toast infrastructure** — SwiftUI toast overlay (auto-dismiss, fade). Needed for "Added N interviews to project", archive undo, and future feedback. Reference: `frontend/src/components/Toast.tsx`
@@ -97,6 +98,7 @@ The canonical end-to-end beats a first-time user must complete successfully in t
 
 1. **First-time open** — app launches, window shows a welcoming empty state
 2. **AI disclosure sheet** — shown, acknowledged, dismissed (shipped: `AIConsentView.swift`)
+2a. **Telemetry opt-in sheet** — "Help improve auto-tagging?" with equal-weight "Sure" / "Not now". Sequential after Sheet 1. Dismiss = off. Part of [S2] Alpha telemetry bundle above
 3. **Set up Claude API key** — Settings → paste key → saved to Keychain → validated
 4. **New project** — create a project (folder picker or named project)
 5. **Drop interview folder** — drag-and-drop a folder of recordings/subtitles onto the project

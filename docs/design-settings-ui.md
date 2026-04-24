@@ -1,8 +1,27 @@
+---
+status: partial
+last-trued: 2026-04-21
+trued-against: HEAD@sidecar-signing on 2026-04-21
+---
+
+> **Truing status:** Partial — Phase 1 (web gear-icon modal, `SettingsModal.tsx`, `ModalNav.tsx`, `⌘,` shortcut) **shipped**; Phases 2/3/4 remain pending as described. The "API Keys" section is architecturally superseded for the desktop-embedded deployment — see banner there. The serve-mode CLI path still applies when running `bristlenose serve` outside the sandboxed desktop app.
+
+## Changelog
+
+- _2026-04-21_ — trued up: marked Phase 1 as shipped with anchors; fixed `bristlenose credential` → `bristlenose configure` (shipped command name, 2 occurrences); added "Shipping status (Apr 2026)" callout; added supersedence banner to §API Keys pointing at `design-desktop-settings.md` + `design-keychain.md` §Desktop credential path; corrected "Existing infrastructure → Config loading" claim (keychain lookup is in `credentials.py`, not `config.py`); added cross-references to `design-desktop-settings.md`. Anchors: `frontend/src/components/SettingsModal.tsx:414`, `frontend/src/components/ModalNav.tsx`, `frontend/src/layouts/AppLayout.tsx:17,162,171,545`, `frontend/src/hooks/useKeyboardShortcuts.ts:284`, `bristlenose/cli.py:1613`. Preserved: Phase 2/3/4 plans (still correct, still pending).
+
 # Settings UI — API Keys & Provider Switching
 
 How Bristlenose lets users manage LLM credentials and switch providers from the serve-mode GUI.
 
-_Last updated: 18 Mar 2026_
+_Last updated: 2026-04-21_
+
+> **Shipping status (Apr 2026):**
+> - **Phase 1** ✅ shipped — web gear-icon `SettingsModal` with `ModalNav`, `⌘,` shortcut, settings card migration from About panel. Anchors: `frontend/src/components/SettingsModal.tsx:414`, `frontend/src/components/ModalNav.tsx`, `frontend/src/layouts/AppLayout.tsx:17,162,171,545`, `frontend/src/hooks/useKeyboardShortcuts.ts:284`.
+> - **Phase 2** (API key CRUD endpoints, keychain validation) — pending. API Keys section in `SettingsModal.tsx` is currently a `<StubSection>`.
+> - **Phase 3** (project settings endpoints) — pending. No `/api/projects/{id}/settings` routes.
+> - **Phase 4** (appearance/language migration) — pending. Currently still in About panel.
+> - **Desktop embedded path**: sandboxed alpha bypasses the Phase-2/3 web API Key flow entirely — Swift SwiftUI Settings writes to Keychain, injects env vars to the sidecar. See §API Keys banner below, `design-desktop-settings.md`, and `design-keychain.md` §Desktop credential path.
 
 ---
 
@@ -100,11 +119,11 @@ Python and Swift share the same Keychain entries. A key saved via CLI is visible
 
 ### CLI credential command (complete)
 
-`bristlenose credential <provider>` — validates key with test API call, stores in keychain.
+`bristlenose configure <provider>` — validates key with test API call, stores in keychain. See `bristlenose/cli.py:1613`.
 
 ### Config loading (complete)
 
-`config.py` → `BristlenoseSettings` (Pydantic) — loads env vars, `.env`, keychain.
+`config.py` → `BristlenoseSettings` (Pydantic) — loads env vars + `.env`. Keychain lookup lives in `bristlenose/credentials.py` (`_populate_keys_from_keychain`, `bristlenose/config.py:137-178`), not in `config.py` directly; the two cooperate via the credential store protocol.
 
 ---
 
@@ -193,6 +212,8 @@ Who you are. Set once, used across all projects.
 Room for more personal settings over time (e.g. organisation name, default codebook preference).
 
 ### API Keys section
+
+> **Architecturally superseded for the desktop-embedded case as of 2026-04-21.** In the sandboxed macOS alpha, Swift owns Keychain CRUD — SwiftUI Settings → LLM tab writes entries; `ServeManager.overlayAPIKeys` injects `BRISTLENOSE_<PROVIDER>_API_KEY` env vars into the Python sidecar; Python never touches Keychain. The list UI below is the correct design for **serve-mode CLI use** (running `bristlenose serve` outside the sandbox). For the embedded path see `design-desktop-settings.md` §Tab 2 LLM and `design-keychain.md` §Desktop (sandboxed) credential path. Body retained — the web-UI list design still applies when not embedded.
 
 A list of all configured keys. Click a row to make it the active key. Actions on hover or via kebab menu.
 
@@ -521,7 +542,7 @@ The Settings UI introduces a third mutation surface for configuration (alongside
 
 ### What's safe today
 
-- **Keychain is atomic.** CLI (`bristlenose credential`), desktop app (`KeychainHelper.swift`), and the new web UI all write to the same macOS Keychain entries. Keychain handles concurrent access — last writer wins, no corruption.
+- **Keychain is atomic.** CLI (`bristlenose configure`), desktop app (`KeychainHelper.swift`), and the new web UI all write to the same macOS Keychain entries. Keychain handles concurrent access — last writer wins, no corruption. *Note: in the sandboxed-desktop deployment, the web UI never writes Keychain — Swift does. See `design-desktop-settings.md`.*
 - **Settings are not cached in serve mode.** `load_settings()` is called fresh per-request in routes that need it (AutoCode, elaboration). A Keychain change from CLI is picked up on the next serve-mode request without restart.
 - **SQLite WAL mode** serialises writers. CLI pipeline and serve mode can both access the same project DB safely. Writes queue; no data corruption.
 

@@ -1,13 +1,14 @@
 ---
-status: partial
-last-trued: 2026-04-23
-trued-against: HEAD@port-v01-ingestion on 2026-04-23
+status: trued
+last-trued: 2026-04-24
+trued-against: HEAD@port-v01-ingestion on 2026-04-24
 ---
 
-> **Truing status:** Partial — Phases 1–3 (project list, drag-and-drop, folders) shipped and broadly accurate; drop-matrix outcomes, project-state table, "Pipeline does not auto-run on drop" claim, activity-status-bar placement, and Phase 2 "not shipped" list have drifted and carry inline `Superseded 2026-04-23` banners. Pipeline-state × run-trigger matrix added at end. See changelog below.
+> **Truing status:** Trued. Phases 1–3 shipped; remaining drift carries inline banners. Project-menu and context-menu ASCII art trued (phantom Add Interviews / Analyse / Get Info removed). Drop matrix duplicate row clarified. Phase 2 "not shipped" list updated with strikethrough on items that did ship. Pipeline-state × run-trigger matrix at end of doc.
 
 ## Changelog
 
+- _2026-04-24_ — Tier 1 truing follow-up (post `design-doc-review` audit): Project menu ASCII art corrected to match `MenuCommands.swift:317-415` shipped reality (phantom `Add Interviews… ⇧⌘I`, `Analyse… ⇧⌘A`, `Get Info ⌘I` removed; Locate, Move to submenu, ⌘⌫ shortcut added); right-click context menu ASCII corrected and `Choose Icon…` added (`ContentView.swift:967-969`); drop-matrix "Drop on empty area" column nuanced to call out `duplicateDropAlert` flow (`ContentView.swift:301-323`); Phase 2 "not shipped" list updated with strikethrough markers for items that the override banner already noted as shipped (multi-select, drop-on-row, duplicate alert, addedInterviews toast, extension allow-list).
 - _2026-04-23_ — trued up during port-v01-ingestion QA: inline-banner'd the Project-states table (shipped `PipelineState` enum has .scanning/.queued/.failed/.unreachable/attached-orphan that the table omits); inline-banner'd drop-matrix row 2 (shipped behaviour is blocker toast for `.ready` until incremental re-analyse lands); inline-banner'd "Pipeline does not auto-run on drop" (shipped behaviour DOES auto-run on folder drop); inline-banner'd Activity-status-bar section (shipped placement is toolbar pill `PipelineActivityItem`, not sidebar-bottom); inline-banner'd Phase 2 "not shipped" list (multi-select delete, drag-to-folder, duplicate-drop alert, drop-on-row via SidebarDropDelegate, extension allow-list, addedInterviews toast are in fact shipped); added "Pipeline state × run-trigger matrix" at end. Anchors: `ContentView.swift:508-605`, `PipelineRunner.swift:37-53`, `MenuCommands.swift:397-400`, `PipelineActivityItem.swift:207-210`. Commits: 3d9f43c, 5e254cd, 6d08f3f.
 - _Previous_ — shipped Phases 1–3 (project list from disk, drag-and-drop + context menus, folders).
 
@@ -187,31 +188,32 @@ File
 
 ### Project menu (adapts based on selection — project or folder)
 
-When a project is selected:
+> **Trued 2026-04-24.** Original ASCII art listed `Add Interviews… ⇧⌘I`, `Analyse… ⇧⌘A`, and `Get Info ⌘I` — none exist in `MenuCommands.swift`. The shipped Project menu (`MenuCommands.swift:317-415`) wires Show in Finder, Locate (when unavailable), Rename, Move to (submenu, conditional on folders existing), Re-analyse (`.disabled(true)`), Archive (`.disabled(true)`), and Delete. Get Info is Phase 5 (see §"Get Info" below). Add Interviews / Analyse remain valid future work but should be tracked in §"Implementation phases", not asserted as shipped menu items.
+
+When a project is selected (shipped):
 ```
 Project
 ┌──────────────────────────────┐
 │ Show in Finder         ⇧⌘R   │
+│ Locate                        │   (enabled only when project unreachable)
 │ Rename                        │
-│ Move to                ▶     │
-│ Get Info               ⌘I    │
+│ Move to                ▶     │   (when folders exist)
 ├──────────────────────────────┤
-│ Add Interviews…        ⇧⌘I   │
-│ Analyse…               ⇧⌘A   │
+│ Re-analyse…                   │   (disabled — Phase 2+)
+│ Archive                       │   (disabled — Phase 5)
 ├──────────────────────────────┤
-│ Archive                       │
-│ Delete…                       │
+│ Delete                 ⌘⌫    │
 └──────────────────────────────┘
 ```
 
-When a folder is selected:
+When a folder is selected (shipped, `MenuCommands.swift:336-352`):
 ```
 Project
 ┌──────────────────────────────┐
 │ Rename Folder                 │
-│ Archive Folder                │
+│ Archive Folder                │   (disabled — Phase 5)
 ├──────────────────────────────┤
-│ Delete Folder…                │
+│ Delete Folder          ⌘⌫    │
 └──────────────────────────────┘
 ```
 
@@ -219,20 +221,23 @@ All items disabled when nothing is selected.
 
 ### Right-click context menu on a project (NO keyboard shortcut glyphs — HIG rule)
 
+> **Trued 2026-04-24.** Same drift as above — `Add Interviews…` and `Analyse…` are not in the shipped context menu (`ContentView.swift:944-995`). Add `Choose Icon…` (opens IconPickerPopover via `ContentView.swift:967-969`).
+
 ```
 ┌──────────────────────────────┐
 │ Show in Finder                │
 │ Rename                        │
 │ Move to                ▶     │
-│ Get Info                      │
+│ Choose Icon…                  │
 ├──────────────────────────────┤
-│ Add Interviews…               │
-│ Analyse…                      │
+│ Re-analyse…                   │   (disabled)
+│ Archive                       │   (disabled)
 ├──────────────────────────────┤
-│ Archive                       │
-│ Delete…                       │
+│ Delete                        │
 └──────────────────────────────┘
 ```
+
+**Alpha gap:** no `Analyse` / `Resume` / `Retry` actions in either menu — see matrix at end of doc.
 
 ### Right-click on a folder
 
@@ -372,13 +377,13 @@ Replace `ProjectStub` array with `ProjectIndex` loading from `projects.json`.
 
 **Not shipped (parked in 100days.md):**
 - Slow-double-click rename — `simultaneousGesture(TapGesture())` and `onTapGesture` on List rows break selection on macOS 26. Rename works via right-click and Project menu. Needs NSEvent monitor or AppKit subclass
-- Multi-select (Shift/Cmd click) — needs `List(selection:)` with `Set<UUID>` instead of `UUID?`. Detail pane would show "N projects selected". Prerequisite for drag-to-folder
-- Drop-on-existing-project-row — per-row `.onDrop` also breaks List selection. Data model (`addFiles`) is ready but UI is parked
+- ~~Multi-select (Shift/Cmd click)~~ — **shipped** (`List(selection: Set<SidebarSelection>)`); known multi-select Delete bug is the alpha-blocker
+- ~~Drop-on-existing-project-row~~ — **shipped** via `SidebarDropDelegate` frame hit-test
 - Drag-to-reorder — needs multi-select first. Phase 3 in design doc
-- Duplicate folder drop warning — dismissable warning when folder matches existing project path
-- Toast for "added interviews to project"
+- ~~Duplicate folder drop warning~~ — **shipped** as `duplicateDropAlert` (`ContentView.swift:301-323`)
+- ~~Toast for "added interviews to project"~~ — **shipped** (`desktop.chrome.addedInterviews`, `ContentView.swift:586-592`)
 - Empty state `ContentUnavailableView` as drag target
-- UTType validation for media files (currently accepts any file/folder)
+- ~~UTType validation for media files~~ — **shipped** as extension allow-list (`acceptedExtensions`, `ContentView.swift:410-419`); not UTType-based but equivalent outcome
 
 > **Superseded 2026-04-23 — items that actually did ship:**
 > - **Multi-select** shipped via `List(selection: Set<SidebarSelection>)` (`ContentView.swift` sidebar). Multi-select context-menu Delete has a known bug: deletes only the focused row, not the full selection (logged as alpha fix).
@@ -475,13 +480,15 @@ Added during 23 Apr 2026 QA pass — shipped reality for "how can a user start/r
 
 | State | Pill popover Retry | Menu `Project > Re-analyse…` | Drop on row (state-dependent) | Drop on empty area |
 |---|---|---|---|---|
-| `.idle` (never run or post-cancel) | n/a | disabled (`Phase 2+`) | auto-run via `addFiles` + spawn | ✅ creates new project (duplicate) |
-| `.scanning` (initial manifest read) | n/a | disabled | auto-run | ✅ duplicate |
-| `.queued` | n/a | disabled | rejected with toast | ✅ duplicate |
-| `.running` (includes attached orphan) | shows Stop, not Retry | disabled | rejected with toast | ✅ duplicate |
-| `.failed` | ✅ Retry | disabled | redirects user to pill Retry | ✅ duplicate |
-| `.ready` | n/a | disabled | blocker toast (no incremental re-analyse) | ✅ duplicate |
-| `.unreachable` (moved / offline volume) | n/a | disabled | blocked | ✅ duplicate |
+| `.idle` (never run or post-cancel) | n/a | disabled (`Phase 2+`) | auto-run via `addFiles` + spawn | new project; single-folder duplicate → `duplicateDropAlert` (Open Existing / Create Anyway / Cancel) |
+| `.scanning` (initial manifest read) | n/a | disabled | auto-run | as above |
+| `.queued` | n/a | disabled | rejected with toast | as above |
+| `.running` (includes attached orphan) | shows Stop, not Retry | disabled | rejected with toast | as above |
+| `.failed` | ✅ Retry | disabled | redirects user to toolbar Retry (toast text: "Use Retry on the toolbar to try this run again") | as above |
+| `.ready` | n/a | disabled | blocker toast (no incremental re-analyse) | as above |
+| `.unreachable` (moved / offline volume) | n/a | disabled | blocked with explanation toast | as above |
+
+**Empty-area drop note:** "Drop on empty area" creates a new project on first drop. For single-folder drops matching an existing project path, `duplicateDropAlert` (`ContentView.swift:301-323`) intercepts before creation — the user picks Open Existing / Create Anyway / Cancel. Multi-item drops bypass the dedup check.
 
 **Gaps this table surfaces:**
 

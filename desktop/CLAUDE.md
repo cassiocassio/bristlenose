@@ -151,7 +151,7 @@ Keyboard shortcuts: Cmd+1-5 (tabs) and Cmd+Opt+S (sidebar) live in the View menu
 
 ### Zombie process cleanup
 
-Two layers:
+Two layers, **both serve-only** — `bristlenose run` subprocesses (the pipeline) have their own PID-file scan/attach lifecycle managed by `PipelineRunner`. See `docs/design-subprocess-lifecycle.md` for the run-side mechanics; the `lsof` cleanup below is port-scoped to serve and does not cascade to run.
 
 1. **Clean quit**: `.onReceive(NSApplication.willTerminateNotification)` on the root View calls `serveManager.stop()` (SIGINT).
 2. **Crash recovery**: `ServeManager.init()` runs `killOrphanedServeProcesses()` — a nonisolated static method that calls `lsof -ti :8150-9149` to find PIDs, then `kill(pid, SIGINT)` each one. Runs synchronously (~10ms), safe at startup.

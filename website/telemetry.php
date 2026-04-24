@@ -26,10 +26,26 @@
 
 $DOWNLOAD_TOKEN = 'CHANGE_ME_TO_A_RANDOM_STRING'; // bin2hex(random_bytes(20))
 
+$MAX_EVENTS_PER_BATCH = 500;
+$MAX_BODY_BYTES       = 131072; // 128 KB, ~1000 maxed-out events
+
 // ── Paths ────────────────────────────────────────────────────────────────
 
 $DATA_DIR = __DIR__ . '/data';
 $CSV_FILE = $DATA_DIR . '/telemetry.csv';
+
+// ── Guardrail: refuse to run if the placeholder token wasn't rotated ─────
+//
+// If /deploy-website rsyncs this file without an edit, the download endpoint
+// would ship with a publicly-known token. Fail every request loudly until
+// the operator replaces the placeholder.
+
+if ($DOWNLOAD_TOKEN === 'CHANGE_ME_TO_A_RANDOM_STRING') {
+    http_response_code(503);
+    header('Content-Type: text/plain');
+    echo "Endpoint not configured: rotate \$DOWNLOAD_TOKEN in telemetry.php before deploying.\n";
+    exit;
+}
 
 // ── CORS (Mac app, dev reports, future web contexts) ─────────────────────
 
@@ -70,6 +86,11 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 }
 
 $body = file_get_contents('php://input');
+if (strlen($body) > $MAX_BODY_BYTES) {
+    http_response_code(413);
+    echo 'Payload too large';
+    exit;
+}
 $data = json_decode($body, true);
 
 if (!$data || !isset($data['events']) || !is_array($data['events']) || empty($data['events'])) {
@@ -78,7 +99,33 @@ if (!$data || !isset($data['events']) || !is_array($data['events']) || empty($da
     exit;
 }
 
+if (count($data['events']) > $MAX_EVENTS_PER_BATCH) {
+    http_response_code(400);
+    echo "Bad request: batch too large (max $MAX_EVENTS_PER_BATCH events)";
+    exit;
+}
+
 $VALID_EVENT_TYPES = ['suggested', 'accepted', 'rejected', 'edited'];
+$EXPECTED_FIELDS   = ['tag_id', 'prompt_version', 'event_type', 'researcher_id'];
+
+/**
+ * Strip control characters and neutralise leading CSV-formula markers.
+ *
+ * fputcsv() already quotes fields containing commas, quotes, and newlines,
+ * but it does NOT prefix =/+/-/@ with a tick — opening the CSV in Excel
+ * would evaluate a cell beginning with `=HYPERLINK("http://evil")`. Strip
+ * newline / carriage return / null first so a single forged field can't
+ * forge additional rows in downstream tools, then prefix formula-starters
+ * with a single quote.
+ */
+function bn_csv_safe(string $s): string {
+    $s = str_replace(["\r", "\n", "\0"], '', $s);
+    if ($s !== '' && in_array($s[0], ['=', '+', '-', '@', "\t"], true)) {
+        $s = "'" . $s;
+    }
+    return $s;
+}
+
 $rows = [];
 foreach ($data['events'] as $ev) {
     if (!is_array($ev)) {
@@ -86,6 +133,17 @@ foreach ($data['events'] as $ev) {
         echo 'Bad request: each event must be an object';
         exit;
     }
+
+    // Reject unknown fields — enforces the methodology doc's
+    // "Four fields per event. Nothing else." invariant.
+    foreach (array_keys($ev) as $key) {
+        if (!in_array($key, $EXPECTED_FIELDS, true)) {
+            http_response_code(400);
+            echo "Bad request: unexpected field: $key";
+            exit;
+        }
+    }
+
     $tag_id         = isset($ev['tag_id'])         ? (string) $ev['tag_id']         : '';
     $prompt_version = isset($ev['prompt_version']) ? (string) $ev['prompt_version'] : '';
     $event_type     = isset($ev['event_type'])     ? (string) $ev['event_type']     : '';
@@ -103,11 +161,12 @@ foreach ($data['events'] as $ev) {
     }
 
     // Input caps — defence in depth against overlong or malformed input.
+    // Sanitise before write: strip control chars, neutralise formula chars.
     $rows[] = [
-        substr($tag_id,         0, 100),
-        substr($prompt_version, 0, 80),
-        $event_type,
-        substr($researcher_id,  0, 64),
+        bn_csv_safe(substr($tag_id,         0, 100)),
+        bn_csv_safe(substr($prompt_version, 0, 80)),
+        $event_type, // enum-validated above; no sanitiser needed
+        bn_csv_safe(substr($researcher_id,  0, 64)),
     ];
 }
 

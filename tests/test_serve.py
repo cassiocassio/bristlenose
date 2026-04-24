@@ -111,7 +111,7 @@ class TestDevTelemetryStub:
 
     @pytest.fixture(autouse=True)
     def _clean_jsonl(self, client: TestClient) -> None:
-        """Truncate the shared JSONL between tests so ordering is deterministic."""
+        """Truncate the PID-scoped JSONL between tests so ordering is deterministic."""
         client.delete("/api/dev/telemetry")
 
     def _event(
@@ -138,7 +138,9 @@ class TestDevTelemetryStub:
         body = resp.json()
         assert body["ok"] is True
         assert body["received"] == 2
-        assert body["written_to"].endswith("bristlenose-dev-telemetry.jsonl")
+        # PID-scoped filename, e.g. bristlenose-dev-telemetry-12345.jsonl
+        assert "bristlenose-dev-telemetry-" in body["written_to"]
+        assert body["written_to"].endswith(".jsonl")
 
     def test_get_returns_previously_posted_events(self, client: TestClient) -> None:
         client.post("/api/dev/telemetry", json={"events": [self._event()]})
@@ -156,25 +158,46 @@ class TestDevTelemetryStub:
 
     def test_rejects_non_list_events(self, client: TestClient) -> None:
         resp = client.post("/api/dev/telemetry", json={"events": "nope"})
-        assert resp.status_code == 400
+        assert resp.status_code == 422
 
     def test_rejects_empty_batch(self, client: TestClient) -> None:
         resp = client.post("/api/dev/telemetry", json={"events": []})
-        assert resp.status_code == 400
+        assert resp.status_code == 422
 
     def test_rejects_missing_required_field(self, client: TestClient) -> None:
         bad = self._event()
         del bad["tag_id"]
         resp = client.post("/api/dev/telemetry", json={"events": [bad]})
-        assert resp.status_code == 400
-        assert "tag_id" in resp.json()["detail"]
+        assert resp.status_code == 422
+        assert any("tag_id" in str(err) for err in resp.json()["detail"])
 
     def test_rejects_unknown_event_type(self, client: TestClient) -> None:
         resp = client.post(
             "/api/dev/telemetry",
             json={"events": [self._event(event_type="liked")]},
         )
-        assert resp.status_code == 400
+        assert resp.status_code == 422
+
+    def test_rejects_unknown_field(self, client: TestClient) -> None:
+        """Enforces the methodology doc's 'Four fields. Nothing else.' invariant."""
+        bad = self._event()
+        bad["timestamp"] = "2026-04-24T12:00:00Z"
+        resp = client.post("/api/dev/telemetry", json={"events": [bad]})
+        assert resp.status_code == 422
+        assert any("timestamp" in str(err) or "extra" in str(err).lower()
+                   for err in resp.json()["detail"])
+
+    def test_rejects_batch_larger_than_max(self, client: TestClient) -> None:
+        """Caps batch size to prevent amplification DoS."""
+        events = [self._event(researcher_id=f"r-{i:04d}") for i in range(501)]
+        resp = client.post("/api/dev/telemetry", json={"events": events})
+        assert resp.status_code == 422
+
+    def test_accepts_batch_at_max_size(self, client: TestClient) -> None:
+        events = [self._event(researcher_id=f"r-{i:04d}") for i in range(500)]
+        resp = client.post("/api/dev/telemetry", json={"events": events})
+        assert resp.status_code == 200
+        assert resp.json()["received"] == 500
 
     def test_stub_absent_without_dev_flag(
         self,
@@ -188,6 +211,19 @@ class TestDevTelemetryStub:
             json={"events": [self._event()]},
         )
         assert resp.status_code == 404
+
+    def test_stub_requires_bearer_token(self) -> None:
+        """Regression tripwire: /api/dev/telemetry must never leak into auth exemptions.
+
+        The dev stub is local-dev-only, but it writes to disk — a future change
+        to `_AUTH_EXEMPT_PREFIXES` in middleware.py that accidentally covers
+        `/api/dev/` would let any browser tab POST forged events. Guard it.
+        """
+        app = create_app(dev=True, db_url="sqlite://")
+        raw = TestClient(app)  # no auth header
+        assert raw.post("/api/dev/telemetry", json={"events": [self._event()]}).status_code == 401
+        assert raw.get("/api/dev/telemetry").status_code == 401
+        assert raw.delete("/api/dev/telemetry").status_code == 401
 
 
 class TestDatabase:

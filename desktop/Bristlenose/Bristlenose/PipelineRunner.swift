@@ -237,6 +237,12 @@ final class PipelineRunner: ObservableObject {
     /// `.unreachable`.
     static let scanTimeout: Duration = .seconds(5)
 
+    /// Terminal stage name in the Python pipeline. Must match
+    /// `bristlenose/manifest.py` `STAGE_RENDER` — the last entry of
+    /// `STAGE_ORDER`. Load-bearing: presence of this stage in a manifest
+    /// is the canonical "pipeline finished" signal for `parseManifest`.
+    private static let terminalStage = "render"
+
     init() {
         Self.logger.info("PipelineRunner initialised")
     }
@@ -657,14 +663,6 @@ final class PipelineRunner: ObservableObject {
                 return .unreachable(reason: "Project file is damaged.")
             }
 
-            // Terminal "render" stage must be present and complete — the
-            // Python side writes the manifest incrementally (one
-            // write_manifest per mark_stage_complete in pipeline.py), so a
-            // crash mid-run leaves a manifest with only the stages that
-            // got that far. Without the render-present guard, an
-            // interrupted run that happened to be between two stages would
-            // read as `.ready` and the user would see "Analysed N min ago"
-            // for a project with no report (QA, 23 Apr 2026).
             var latestCompleted: Date?
             var renderComplete = false
             for (name, raw) in stages {
@@ -675,7 +673,7 @@ final class PipelineRunner: ObservableObject {
                 if status != "complete" {
                     return .idle
                 }
-                if name == "render" {
+                if name == Self.terminalStage {
                     renderComplete = true
                 }
                 if let ts = stage["completed_at"] as? String,

@@ -397,7 +397,8 @@ struct ContentView: View {
                 projectIndex.removeProject(id: pid)
             }
         } else {
-            selection.remove(.project(id))
+            // Right-clicked row is not in the current selection — leave
+            // selection alone (Finder behaviour) and act only on the target.
             projectIndex.removeProject(id: id)
         }
     }
@@ -413,7 +414,8 @@ struct ContentView: View {
                 projectIndex.removeFolder(id: fid)
             }
         } else {
-            selection.remove(.folder(id))
+            // Right-clicked row is not in the current selection — leave
+            // selection alone (Finder behaviour) and act only on the target.
             projectIndex.removeFolder(id: id)
         }
     }

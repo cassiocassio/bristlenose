@@ -158,6 +158,12 @@ Two layers, **both serve-only** — `bristlenose run` subprocesses (the pipeline
 
 Gap: Xcode's stop button sends SIGKILL which bypasses `willTerminate`. The startup cleanup catches these on next launch.
 
+**Cancelling a `bristlenose run` subprocess needs signal escalation, not just SIGINT.** Whisper / torch / ctranslate2 hold the GIL during long C calls (model load can take 30–60s). Python signal handlers only run between bytecodes — SIGINT and SIGTERM both sit queued during the wedge, so a Stop click sees no effect for tens of seconds. `PipelineRunner.scheduleOrphanCancelEscalation` does SIGINT → SIGTERM at +5s → SIGKILL at +8s; bails at any step if the PID is dead or `attachedOrphanPIDs[id]` no longer matches. SIGKILL bypasses Python entirely so it always wins. Owned-process cancel still uses `proc.interrupt()` (SIGINT only) — same wedge risk, escalation TODO.
+
+**`applyScanResult` won't overwrite `.running`.** Passive sidebar manifest scans must not clobber active runs, so the function returns early on `.running`/`.queued`/`.failed`. `handleOrphanExit` IS the "run is over" signal — it must explicitly transition `state[projectID] = .idle` itself before scheduling the manifest re-read, or the pill stays "Running" forever after the subprocess dies.
+
+**`PipelineProgress.isStopping` is the immediate-ack contract.** Set unconditionally at the top of `cancel()` for both owned and orphan paths so the toolbar pill, popover, and sidebar row all flip to "Stopping…" before the kill propagates. Without this, the user mashes Stop while signals play out (1–8s).
+
 **Sandbox implication for alpha:** `/usr/sbin/lsof` exec is blocked by App Sandbox. In the shipped build this cleanup path will silently fail. The user-visible consequence is a "port in use" error on the next launch after a crash, which should be handled with a clear restart prompt. Alternatively replace with a Swift-native TCP connect sweep across the port range. Decision deferred to C1.
 
 ## Settings window (Cmd+,)

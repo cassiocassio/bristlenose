@@ -200,6 +200,11 @@ final class PipelineRunner: ObservableObject {
     /// spawn so stage indices don't leak between projects.
     private var currentParser: any ProgressParser = StdoutProgressParser()
 
+    /// Set by `cancel()` on the owned-process path so `handleTermination`
+    /// routes the non-zero exit status to `.idle` (user asked) rather than
+    /// `.failed` (pipeline errored). Cleared on each `spawn`.
+    private var cancellationRequested: Bool = false
+
     /// Manifest timestamps include fractional seconds
     /// (`2026-04-17T00:37:27.480978+00:00`), which the default
     /// `ISO8601DateFormatter` does not parse.
@@ -621,6 +626,7 @@ final class PipelineRunner: ObservableObject {
     func cancel(project: Project) {
         if currentlyRunning == project.id {
             if let proc = currentProcess, proc.isRunning {
+                cancellationRequested = true
                 proc.interrupt()
             }
             // The termination handler will clear currentlyRunning and dequeue.
@@ -668,6 +674,7 @@ final class PipelineRunner: ObservableObject {
         currentlyRunning = project.id
         currentProject = project
         currentParser = StdoutProgressParser()
+        cancellationRequested = false
         state[project.id] = .running
         liveData.setProgress(PipelineProgress(startedAt: Date()), for: project.id)
         liveData.clearOutput(for: project.id)
@@ -779,6 +786,12 @@ final class PipelineRunner: ObservableObject {
             state[projectID] = .ready(Date())
             Self.logger.info(
                 "run succeeded project=\(projectID.uuidString, privacy: .public)"
+            )
+        } else if cancellationRequested {
+            cancellationRequested = false
+            state[projectID] = .idle
+            Self.logger.info(
+                "run cancelled project=\(projectID.uuidString, privacy: .public)"
             )
         } else {
             let lines = liveData.snapshotOutput(for: projectID)

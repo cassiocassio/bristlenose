@@ -123,7 +123,7 @@ Optional env overrides:
 
 `bristlenose serve --dev` mounts three extra routes used by the alpha telemetry work. Stands in for the production `bristlenose.app/telemetry.php` so the React emission hook and Swift first-launch sheets can be tested before any PHP is deployed. Dev-only; the routes are absent without `--dev`.
 
-- `POST /api/dev/telemetry` — accepts `{"events": [{tag_id, prompt_version, event_type, researcher_id}, ...]}` and appends one JSON line per event to `/tmp/bristlenose-dev-telemetry.jsonl`. Validates `event_type ∈ {suggested, accepted, rejected, edited}` and rejects payloads missing any required field
+- `POST /api/dev/telemetry` — accepts `{"events": [{tag_id, prompt_version, event_type, researcher_id}, ...]}` and appends one JSON line per event to `<tempfile.gettempdir()>/bristlenose-dev-telemetry.jsonl` (`/tmp/...` on Linux, `/var/folders/.../T/...` on macOS — GET returns the exact path). Validates `event_type ∈ {suggested, accepted, rejected, edited}` and rejects payloads missing any required field
 - `GET /api/dev/telemetry` — returns everything written to the JSONL so far (debug helper)
 - `DELETE /api/dev/telemetry` — truncates the JSONL (debug helper; also used by the test fixture)
 

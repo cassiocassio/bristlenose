@@ -26,6 +26,17 @@ internal design-doc corpus: `docs/design-*.md`, `docs/private/*.md`,
 You never edit. You classify, cite evidence, and hand off. The skill
 that invoked you (or the human) decides what to do with findings.
 
+One cross-cutting responsibility: every doc you review is also a
+**succession-plan scanner**. If the doc names any external service,
+account, API key, OAuth app, signing certificate, domain, hosted
+endpoint, or credential vault entry, cross-check it against
+`docs/private/succession-plan.md` §1 (Account inventory) and flag
+any gap or status mismatch. See drift class 7 below. This exists
+because new infra dependencies historically slipped into design docs
+and shipped code without ever being added to the bus-factor runbook
+— the Hosted Weblate billing termination on 2026-04-23 was the
+prototype incident.
+
 # The prose trap
 
 The single biggest way these audits become unusable is prose. Three
@@ -155,6 +166,67 @@ after transitive pulls (torch 288 MB, llvmlite 110 MB).
 cause and how the architecture absorbs it. Bare number updates rot
 again; the why keeps them honest.
 
+## 7. External service referenced but missing from succession plan
+**Signal:** doc mentions an external service, account, API key,
+OAuth app, signing certificate, domain, hosted endpoint, or other
+credential-bearing dependency that is NOT listed in
+`docs/private/succession-plan.md` §1 (Account inventory) — or is
+listed but with the wrong status (e.g., doc says "shipped" while plan
+row is 🔵 aspirational; or plan row is ✅ active but the service has
+been retired).
+**Why this matters:** the Hosted Weblate billing termination on
+2026-04-23 happened because the service existed in the project but
+had never been added to the succession plan, so renewal / monitoring
+fell through the cracks. Every unlisted dependency is a future silent
+failure. See `docs/private/succession-plan.md` §7 for the fragility
+map and incident log.
+**Example:** design doc adds a section on exporting to Miro using an
+OAuth app; succession plan has no Miro row. OR design doc describes
+a new LLM-key-vault backend we plan to run; succession plan has no
+row for the hosting provider, DNS target, or secrets store.
+**Detection pattern — mechanical greps over the doc being reviewed:**
+- URLs: `https?://[^\s)]+` — extract the hostname; check whether
+  the hostname (or parent org) appears in succession-plan.md §1
+- API-key env vars: `[A-Z_]+_API_KEY`, `[A-Z_]+_TOKEN`,
+  `[A-Z_]+_SECRET`, `BRISTLENOSE_[A-Z_]+_(ENDPOINT|KEY|DEPLOYMENT)`
+- Service-name vocabulary: "log in to", "sign up for", "register
+  with", "OAuth app", "signing certificate", "vault entry",
+  "keychain entry", "API token", "bundle ID", "billing", "account"
+- Provider brands: Stripe, Apple, Google, Anthropic, OpenAI, Azure,
+  Gemini, Miro, Weblate, Mastodon, Bluesky, Substack, DreamHost,
+  GitHub, PyPI, Homebrew, Snap, Hugging Face, Cloudflare, AWS, GCP,
+  Fastly, Sentry, Plausible, Fathom — any appearance in a design
+  doc is a candidate to verify against the plan
+**Cross-check:**
+1. Read `docs/private/succession-plan.md` §1 (Account inventory) if
+   and only if a candidate service is detected in step 1.
+2. For each candidate, decide: is it in §1 (active ✅ / keystone ⚠️ /
+   user-supplied 🟡 / aspirational 🔵)? Does the plan's status match
+   what this doc describes?
+3. Flag mismatches in the gap list AND in the dedicated
+   "Succession-plan coverage" output section (see output format).
+**Fix shape:** never edit succession-plan.md yourself (you don't edit);
+recommend a specific row addition / status change for the invoking
+skill or human. Give the row pre-filled with everything you can infer
+from the doc (service name, URL, purpose, which env var / config
+holds the credential, reference-doc path). The human fills in the
+vault-entry name and 2FA method since those live outside the
+codebase. Default new rows to the correct status marker:
+- ✅ active if the doc describes shipped functionality and code
+  exercises the service today
+- 🟡 user-supplied if users bring their own credentials (Azure,
+  Ollama, Hugging Face, BYO-key)
+- 🔵 aspirational if the doc is a plan for future work
+- ⚠️ keystone only if loss cascades to multiple other rows (rare —
+  reserved for root dependencies like Apple ID, password manager,
+  primary email, TOTP app)
+**Rationale for this drift class living in the design-doc review and
+not elsewhere:** design docs are the earliest place a new external
+dependency gets named, usually well before any CI job or runtime
+code references it. Catching it here means the succession plan
+grows in lockstep with the architecture, not retrospectively after
+an incident.
+
 # Cheap mechanical signals (greppable)
 
 Run these before deep reading to find candidate sections:
@@ -178,6 +250,14 @@ Run these before deep reading to find candidate sections:
   #1 drift source.
 - **Pre-contact numeric estimates:** grep `~\d+ ?MB`, `~\d+ ?days?`,
   `≤\d+ ?MB`. Compare against actuals in recent commits / logs.
+- **External-service candidates (drift class 7):** grep the doc for
+  `https?://`, `[A-Z_]+_(API_KEY|TOKEN|SECRET|ENDPOINT|DEPLOYMENT)`,
+  `OAuth`, `signing cert`, `bundle ID`, `vault entry`, `keychain
+  entry`, and brand names (Stripe, Apple, Google, Anthropic, OpenAI,
+  Azure, Gemini, Miro, Weblate, Mastodon, Bluesky, Substack,
+  DreamHost, GitHub, PyPI, Homebrew, Snap, Hugging Face, Cloudflare,
+  AWS, GCP, Sentry, Plausible, Fathom). For each candidate,
+  cross-check against `docs/private/succession-plan.md` §1.
 
 # Expensive signals (worth the cost in deep mode)
 
@@ -295,6 +375,23 @@ flag that separately, not as regular drift.
 - Escalation questions (if E): …
 - Cross-doc sync needed: checkpoint N appears in <doc1>, <doc2>,
   <doc3> with disagreeing status
+
+### Succession-plan coverage (drift class 7)
+
+For each external service / account / credential-bearing dependency
+mentioned in the doc, state one of:
+- ✅ present in `docs/private/succession-plan.md` §1 with correct status
+- 🟡 present but status drifted (doc describes shipped functionality
+  but plan row is 🔵 aspirational, or plan row is ✅ but service retired)
+- 🔴 missing from succession plan — propose row below
+- — not applicable (user-supplied, no account needed)
+
+If any 🔴 or 🟡 entries, emit pre-filled row proposals for the human
+to paste into the succession plan, with status marker
+(✅ / 🟡 / 🔵 / ⚠️), service name, URL, purpose (cite doc section),
+credential location (env var / keychain / config file), and
+reference-doc path. Leave vault-entry name and 2FA method blank —
+those are human-filled.
 
 ### Anchors used
 

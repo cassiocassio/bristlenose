@@ -64,7 +64,10 @@ struct PipelineActivityItem: View {
         HStack(spacing: 6) {
             switch state {
             case .running:
-                if let p = progress, p.stageIndex == 0 {
+                if let p = progress, p.isStopping {
+                    Text("Stopping…")
+                        .font(.system(.caption, design: .default).weight(.medium))
+                } else if let p = progress, p.stageIndex == 0 {
                     Text("Starting…")
                         .font(.system(.caption, design: .default).weight(.medium))
                 } else if let p = progress {
@@ -165,7 +168,9 @@ struct PipelineActivityItem: View {
 
     private var headlineStatus: String {
         switch state {
-        case .running: return "Running"
+        case .running:
+            if let p = progress, p.isStopping { return "Stopping" }
+            return "Running"
         case .queued:  return "Queued"
         case .failed:  return "Failed"
         default: return ""
@@ -175,7 +180,22 @@ struct PipelineActivityItem: View {
     @ViewBuilder
     private func runningPopoverBody(progress p: PipelineProgress) -> some View {
         VStack(alignment: .leading, spacing: 6) {
-            if p.stageIndex == 0 {
+            if p.isStopping {
+                Text("Stopping…")
+                    .font(.callout)
+                Text("Waiting for the analysis subprocess to exit.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            } else if p.attachedFromOrphan && p.stageIndex == 0 {
+                Text("Resuming analysis (reconnected after app restart).")
+                    .font(.callout)
+                if !p.lastLine.isEmpty {
+                    Text(p.lastLine)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(2)
+                }
+            } else if p.stageIndex == 0 {
                 Text("Starting up — loading models and validating credentials.")
                     .font(.callout)
             } else {
@@ -190,11 +210,12 @@ struct PipelineActivityItem: View {
                     .font(.caption)
                     .foregroundStyle(.secondary)
                 Spacer()
-                Button("Stop", role: .destructive) {
+                Button(p.isStopping ? "Stopping…" : "Stop", role: .destructive) {
                     pipelineRunner.cancel(project: project)
                     showPopover = false
                 }
                 .controlSize(.small)
+                .disabled(p.isStopping)
             }
         }
     }

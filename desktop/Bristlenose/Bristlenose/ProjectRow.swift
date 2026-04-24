@@ -35,6 +35,31 @@ struct ProjectRow: View {
     private var available: Bool { project.isAvailable }
     private var reason: Project.UnavailabilityReason? { project.unavailabilityReason }
     private var pipelineState: PipelineState? { pipelineRunner.state[project.id] }
+    /// Observed so the row reflects `isStopping` updates instantly.
+    @ObservedObject private var liveData: PipelineLiveData
+    private var isStoppingProgress: Bool {
+        liveData.progress[project.id]?.isStopping ?? false
+    }
+
+    init(
+        project: Project,
+        isRenaming: Binding<Bool>,
+        isDropTarget: Bool = false,
+        liveData: PipelineLiveData,
+        onRename: @escaping (String) -> Void,
+        onShowInFinder: @escaping () -> Void,
+        onDelete: @escaping () -> Void,
+        onLocate: (() -> Void)? = nil
+    ) {
+        self.project = project
+        self._isRenaming = isRenaming
+        self.isDropTarget = isDropTarget
+        self.onRename = onRename
+        self.onShowInFinder = onShowInFinder
+        self.onDelete = onDelete
+        self.onLocate = onLocate
+        self._liveData = ObservedObject(wrappedValue: liveData)
+    }
 
     var body: some View {
         HStack(spacing: 6) {
@@ -168,7 +193,7 @@ struct ProjectRow: View {
         case .queued(let position):
             return "Queued · position \(position)"
         case .running:
-            return "Analysing…"
+            return isStoppingProgress ? "Stopping…" : "Analysing…"
         case .ready(let date):
             return "Analysed \(Self.formatAnalysed(date))"
         case .failed(let summary, _):

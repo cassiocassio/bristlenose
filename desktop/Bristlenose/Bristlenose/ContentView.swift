@@ -915,6 +915,7 @@ struct ContentView: View {
                 }
             ),
             isDropTarget: dropTargetProjectID == project.id,
+            liveData: pipelineRunner.liveData,
             onRename: { newName in
                 projectIndex.renameProject(id: project.id, newName: newName)
             },

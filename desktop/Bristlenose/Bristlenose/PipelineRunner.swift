@@ -28,6 +28,18 @@ struct PipelineProgress: Equatable {
     var elapsed: TimeInterval = 0
     var lastLine: String = ""
     var startedAt: Date = Date()
+    /// True when this run was attached from an existing PID at app
+    /// launch (orphan recovery), false for runs we spawned ourselves.
+    /// Drives popover copy ("Resuming…" vs "Starting up…") and lets
+    /// the orphan poll task tail the log file off disk for the
+    /// technical-details surface.
+    var attachedFromOrphan: Bool = false
+    /// True between the user clicking Stop and the subprocess
+    /// actually exiting. Lets the pill / popover acknowledge the
+    /// click immediately ("Stopping…", disabled button) so the user
+    /// doesn't keep clicking Stop while SIGINT/SIGTERM/SIGKILL play
+    /// out (can take 1–8s on a wedged subprocess).
+    var isStopping: Bool = false
 }
 
 // MARK: - Lifecycle state
@@ -190,6 +202,12 @@ final class PipelineRunner: ObservableObject {
     /// Manifest-polling tasks for attached orphans (project ID → task).
     /// Cancelled when the orphan finishes or the user clicks Stop.
     private var orphanPollTasks: [UUID: Task<Void, Never>] = [:]
+
+    /// Byte offset into `<output>/.bristlenose/bristlenose.log` for each
+    /// orphan-attached project. The poll task seeks here and reads new
+    /// bytes only — avoids re-streaming the whole log on every 2s tick.
+    /// Cleared in `handleOrphanExit`.
+    private var orphanLogOffsets: [UUID: UInt64] = [:]
 
     /// Incremented on each spawn — termination handlers from previous runs
     /// check this to avoid overwriting the new run's state. Same pattern as
@@ -369,7 +387,21 @@ final class PipelineRunner: ObservableObject {
         )
         attachedOrphanPIDs[project.id] = pid
         state[project.id] = .running
-        liveData.setProgress(PipelineProgress(startedAt: Date()), for: project.id)
+        var initial = PipelineProgress(startedAt: Date())
+        initial.attachedFromOrphan = true
+        liveData.setProgress(initial, for: project.id)
+        liveData.clearOutput(for: project.id)
+        // Start at end-of-file so we don't dump the entire prior-run log
+        // into the popover. Subsequent polls only surface lines written
+        // after we attached.
+        let logURL = Self.logFileURL(for: project)
+        if let attrs = try? FileManager.default.attributesOfItem(
+            atPath: logURL.path
+        ), let size = attrs[.size] as? UInt64 {
+            orphanLogOffsets[project.id] = size
+        } else {
+            orphanLogOffsets[project.id] = 0
+        }
 
         let projectID = project.id
         let manifestURL = Self.manifestURL(for: project)
@@ -388,6 +420,19 @@ final class PipelineRunner: ObservableObject {
                     return
                 }
 
+                // Tail the CLI log file off disk so the popover technical
+                // details has real progress lines, not "Polling…" placeholder.
+                let priorOffset = self.orphanLogOffsets[projectID] ?? 0
+                let (newLines, newOffset) = await Task.detached {
+                    Self.readLogTail(url: logURL, offset: priorOffset)
+                }.value
+                if !newLines.isEmpty {
+                    self.orphanLogOffsets[projectID] = newOffset
+                    for line in newLines {
+                        self.liveData.appendOutput(line, for: projectID)
+                    }
+                }
+
                 // Read manifest off-main; map to PipelineState. We trust the
                 // local disk on these in-poll reads — no timeout machinery.
                 let resolved = await Self.readManifestState(
@@ -397,11 +442,11 @@ final class PipelineRunner: ObservableObject {
                     self.handleOrphanExit(projectID: projectID, project: project)
                     return
                 }
-                // Update the lastLine so the popover technical-details shows
-                // "polling manifest…" rather than blank — cheap signal of life.
                 self.liveData.mutateProgress(for: projectID) { p in
                     p.elapsed = Date().timeIntervalSince(p.startedAt)
-                    p.lastLine = "Polling project manifest (attached run)"
+                    if let last = newLines.last {
+                        p.lastLine = last
+                    }
                 }
             }
         }
@@ -412,6 +457,7 @@ final class PipelineRunner: ObservableObject {
         attachedOrphanPIDs[projectID] = nil
         orphanPollTasks[projectID]?.cancel()
         orphanPollTasks[projectID] = nil
+        orphanLogOffsets[projectID] = nil
         Self.removePIDFile(for: project)
 
         // Drop out of .running so the manifest re-read can settle the
@@ -498,6 +544,46 @@ final class PipelineRunner: ObservableObject {
             .appendingPathComponent("bristlenose-output")
             .appendingPathComponent(".bristlenose")
             .appendingPathComponent("pipeline-manifest.json")
+    }
+
+    /// Location of a project's CLI log. Per CLAUDE.md "Logging" — the
+    /// CLI writes INFO-level lines here regardless of `-v`. We tail
+    /// this on the orphan-attach path (no stdout to parse).
+    static func logFileURL(for project: Project) -> URL {
+        URL(fileURLWithPath: project.path)
+            .appendingPathComponent("bristlenose-output")
+            .appendingPathComponent(".bristlenose")
+            .appendingPathComponent("bristlenose.log")
+    }
+
+    /// Read new bytes from `url` starting at `offset`, return `(lines,
+    /// newOffset)`. Returns empty + same offset if file missing or
+    /// unchanged. Off-main: pure I/O, no actor state. Capped at 64 KB
+    /// per read so a misbehaving log can't block the poll task — older
+    /// runs that produced megabytes of log are caught up over many polls.
+    nonisolated static func readLogTail(
+        url: URL, offset: UInt64
+    ) -> (lines: [String], newOffset: UInt64) {
+        guard let handle = try? FileHandle(forReadingFrom: url) else {
+            return ([], offset)
+        }
+        defer { try? handle.close() }
+        guard let endOffset = try? handle.seekToEnd(), endOffset > offset else {
+            return ([], offset)
+        }
+        let readFrom = max(offset, endOffset > 65_536 ? endOffset - 65_536 : 0)
+        guard (try? handle.seek(toOffset: readFrom)) != nil else {
+            return ([], offset)
+        }
+        let data = (try? handle.readToEnd()) ?? Data()
+        guard let text = String(data: data, encoding: .utf8) else {
+            return ([], endOffset)
+        }
+        let lines = text
+            .split(whereSeparator: { $0 == "\n" || $0 == "\r" })
+            .map { String($0) }
+            .filter { !$0.isEmpty }
+        return (lines, endOffset)
     }
 
     /// Read a manifest file with a hard timeout. Maps to a `PipelineState`:
@@ -634,6 +720,11 @@ final class PipelineRunner: ObservableObject {
     /// writes in its `atexit` handlers, so cancelled runs are still safe to
     /// resume.
     func cancel(project: Project) {
+        // Acknowledge the click immediately on the UI so the user
+        // doesn't keep mashing Stop while signals propagate.
+        liveData.mutateProgress(for: project.id) { p in
+            p.isStopping = true
+        }
         if currentlyRunning == project.id {
             if let proc = currentProcess, proc.isRunning {
                 cancellationRequested = true

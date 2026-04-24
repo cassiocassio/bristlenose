@@ -72,7 +72,7 @@ https://bristlenose.app/feedback.php?download=1&token=YOUR_TOKEN
 https://bristlenose.app/telemetry.php?download=1&token=YOUR_TOKEN
 ```
 
-Bookmark both. Telemetry uses `hash_equals()` for constant-time token comparison; feedback currently uses `===` (fine at this traffic volume, tighten later if needed).
+Bookmark both. Both endpoints use `hash_equals()` for constant-time token comparison and refuse to serve anything (503) if `$DOWNLOAD_TOKEN` is still the placeholder string — so a forgotten deploy-time rotation fails loud rather than silent.
 
 ## CORS
 
@@ -104,4 +104,6 @@ Existing baked-into-HTML reports still hit the old URL. New serve-mode / export 
 - **Download token** — unguessable URL parameter. Same approach as "anyone with the link" sharing. Fine for anonymous feedback + pseudonymous telemetry data
 - **Input limits** — all string fields are length-capped before writing; no SQL, no eval, no shell — just `fputcsv()`. `mail()` is called only from `feedback.php` and only after the rating is capped to 20 chars
 - **No authentication on POST** — feedback and telemetry are pseudonymous by design. Worst case: someone spams the CSVs. DreamHost `.htaccess` rate limiting is available if that happens
-- **No PII in telemetry** — the four-field discipline is enforced server-side as well as client-side. A malformed POST with extra fields is accepted (extras are ignored), but the CSV only ever stores the four columns
+- **No PII in telemetry** — the four-field discipline is enforced server-side as well as client-side. The endpoint rejects POSTs that include any field outside `{tag_id, prompt_version, event_type, researcher_id}` with a 400 — no silent field-drop, so client-side bugs that try to add a timestamp or study ID fail loudly rather than pollute the CSV quietly
+- **CSV cell safety** — both endpoints strip `\r\n\0` and prefix `=+-@\t` with `'` before writing, so an operator opening the CSV in Excel won't execute a forged `=HYPERLINK()` cell
+- **Batch + body caps** — `telemetry.php` rejects POSTs larger than 128 KB (`413`) or with more than 500 events per batch (`400`), so a runaway Swift retry loop can't fill the inode quota overnight

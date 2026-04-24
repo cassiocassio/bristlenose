@@ -650,6 +650,13 @@ final class PipelineRunner: ObservableObject {
                 // handleOrphanExit, which tears down attachedOrphanPIDs,
                 // removes the PID file, and resolves the final state
                 // from the manifest. ≤2s pill lag is acceptable.
+                //
+                // Schedule signal escalation: SIGINT alone won't cut
+                // through whisper/torch model loads (Python signal
+                // handler can only run between bytecodes, blocked
+                // during long C calls). At 5s escalate to SIGTERM, at
+                // 8s SIGKILL — the user's "Stop" must always succeed.
+                scheduleOrphanCancelEscalation(pid: pid, projectID: project.id)
             } else if errno == ESRCH {
                 // Process already gone (raced our cancel). Treat as
                 // success and run the same teardown the poll task would.
@@ -672,6 +679,34 @@ final class PipelineRunner: ObservableObject {
             queue.remove(at: idx)
             state[project.id] = .idle
             renumberQueue()
+        }
+    }
+
+    /// Escalate from SIGINT to SIGTERM to SIGKILL if the orphan won't
+    /// die. Whisper / torch / ctranslate2 hold the GIL during long C
+    /// calls, so a Python signal handler can be deferred 30–60s during
+    /// model load. The user clicked Stop; their contract is "this
+    /// stops". Bail out at any step if the PID is already dead or the
+    /// attach has changed (project was re-cancelled with a new run, or
+    /// orphan poll task already ran handleOrphanExit).
+    private func scheduleOrphanCancelEscalation(pid: pid_t, projectID: UUID) {
+        Task { @MainActor [weak self] in
+            try? await Task.sleep(for: .seconds(5))
+            guard let self else { return }
+            guard kill(pid, 0) == 0 else { return }
+            guard self.attachedOrphanPIDs[projectID] == pid else { return }
+            kill(pid, SIGTERM)
+            Self.logger.warning(
+                "SIGTERM escalation pid=\(pid, privacy: .public) project=\(projectID.uuidString, privacy: .public) — SIGINT didn't take in 5s"
+            )
+
+            try? await Task.sleep(for: .seconds(3))
+            guard kill(pid, 0) == 0 else { return }
+            guard self.attachedOrphanPIDs[projectID] == pid else { return }
+            kill(pid, SIGKILL)
+            Self.logger.error(
+                "SIGKILL escalation pid=\(pid, privacy: .public) project=\(projectID.uuidString, privacy: .public) — SIGTERM didn't take in 3s"
+            )
         }
     }
 

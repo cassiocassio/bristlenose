@@ -1,3 +1,24 @@
+---
+status: mixed
+last-trued: 2026-04-23
+trued-against: HEAD@port-v01-ingestion on 2026-04-23
+split-candidate: true
+---
+
+> **Truing status:** Mixed — the v0.1 single-window launcher Vision / PRD / User Flow / Project Structure sections are superseded by the v0.2 multi-project shell shipping in this branch (3d9f43c port + ongoing). Retained as planning history; do not treat the body as current UX truth. For current authority:
+>
+> - [design-project-sidebar.md](design-project-sidebar.md) — sidebar, drop matrix, menus, state model
+> - [design-subprocess-lifecycle.md](design-subprocess-lifecycle.md) — orphan attach, PID files, cancel/resume semantics
+> - [design-pipeline-resilience.md](design-pipeline-resilience.md) — manifest + resume + provenance
+> - [../desktop/CLAUDE.md](../desktop/CLAUDE.md) — shipped architecture, conventions, gotchas
+>
+> Specific section-level drifts noted inline with `Superseded 2026-04-23` banners (ServeManager signal, pipeline-running/failed UI placement, v0.1→v1 transition).
+
+## Changelog
+
+- _2026-04-23_ — trued up during port-v01-ingestion QA: added top-of-file supersession banner; inline-banner'd ServeManager-signal claim (SIGINT, not SIGTERM); inline-banner'd sidebar-row pipeline-progress UI (shipped is toolbar pill `PipelineActivityItem`, not row badge); inline-banner'd v0.1→v1 transition section (substantially landed in port-v01-ingestion). Body preserved as planning history. Anchors: `PipelineRunner.swift`, `ContentView.swift:754-761`, `PipelineActivityItem.swift`. Commits: 3d9f43c.
+- _Feb 2026_ — initial draft (v0.1 launcher vision).
+
 # Bristlenose Desktop App
 
 _Design document — Feb 2026_
@@ -1107,7 +1128,7 @@ One serve process per active project, managed by a `ServeManager` observable obj
                     │Switching│ → new process starts, old stays alive
                     └────┬────┘
                          │ new process ready
-                         │ old process gets SIGTERM (graceful, 5s timeout → SIGKILL)
+                         │ old process gets SIGINT (superseded — see banner below)
                          └──→ Active (new project)
 ```
 
@@ -1116,6 +1137,8 @@ One serve process per active project, managed by a `ServeManager` observable obj
 **Failure handling:** If the serve process doesn't output "Uvicorn running on..." within 10 seconds, or the `ready` bridge message doesn't arrive within 15 seconds of page load, transition to `Failed` state. Show error sheet: stderr log, [Retry] [Dismiss]. During `Switching`, do NOT navigate the WKWebView or SIGTERM the old process until the new one reaches `Active`. If the new process fails, cancel the switch — restore old WKWebView to full opacity with an error toast.
 
 **Cleanup:** `applicationWillTerminate` sends `SIGTERM` to all managed processes. `atexit` handler catches crashes. `ServeManager` tracks PIDs and ports in an in-memory dictionary — no persistent state.
+
+> **Superseded 2026-04-23.** Shipped signal is **SIGINT**, not SIGTERM (Python CLI's atexit handlers flush manifest writes on SIGINT; SIGTERM bypasses them). See `desktop/CLAUDE.md` "Key conventions" and `PipelineRunner.swift:630`, `ServeManager.swift`. For `bristlenose run` subprocesses (not covered by this section), ServeManager no longer owns them — they have their own PID-file lifecycle managed by `PipelineRunner`; see `design-subprocess-lifecycle.md`.
 
 **Multi-window (future):** Each popped-out report window keeps its serve process alive independently. `ServeManager` reference-counts: process lives as long as at least one window references it. Last window closes → `SIGTERM`.
 
@@ -1128,6 +1151,8 @@ One serve process per active project, managed by a `ServeManager` observable obj
 | **Tab switch** (`Cmd+1-5`) | Instant — `evaluateJavaScript` changes the URL, React Router handles client-side transition. No native loading state needed | < 100ms |
 | **Pipeline running** | Sidebar project row shows a spinning activity indicator (replaces status badge). Main content stays on current report. Progress streams to a sheet or popover anchored to the sidebar row | Minutes |
 | **Pipeline failed** | Activity indicator replaced by red exclamation badge. Clicking the badge opens a sheet: error message, stdout/stderr log, [Retry] [Copy Error] [Dismiss]. If partial output exists (transcription done, analysis failed): [View Partial Report] button | — |
+
+> **Superseded 2026-04-23** — two rows above describe pipeline progress/failure on the sidebar row. Shipped reality is the **toolbar-trailing pill** (`PipelineActivityItem` in `ContentView.swift:754-761`) with a popover for stage/elapsed/Stop/Retry; sidebar rows carry only a short subtitle ("Analysing…", "Transcription failed", "Analysed N min ago"). `[View Partial Report]` affordance is not shipped. See `design-project-sidebar.md` inline banner on "Activity status bar" and `design-subprocess-lifecycle.md` for the surfacing model.
 | **No project selected** (empty state) | Sidebar shows `+ Add Project` and project list. Main area shows a drop zone with one sentence: _"Drag a folder of interviews here, or click + Add Project"_ | — |
 
 ### WKWebView configuration
@@ -1186,6 +1211,8 @@ These were flagged as open questions. Now answered:
 | 8 | Add Tag shortcut | `Cmd+Shift+T` — closest to `Cmd+T` without conflicting with Show Fonts. Not ideal, but functional. Revisit after user testing | `Cmd+D` conflicts with "Add Bookmark" muscle memory. `Ctrl+T` violates the "avoid Control" HIG guideline |
 
 ### v0.1 → v1 transition
+
+> **Superseded 2026-04-23.** The transition described below has substantially landed in branch `port-v01-ingestion` (commit 3d9f43c "port v0.1 pipeline ingestion into v0.2 multi-project shell"). Sidebar, WKWebView, drop-to-analyse, and multi-project state all ship. Remaining gaps from this section: Sparkle auto-update (Track C/C1 distribution work), auto-import of v0.1 projects (v0.1 user base is effectively zero — skipped). Section retained as planning history.
 
 Same app, same bundle ID. v1 replaces v0.1 as an update (`.dmg` swap or auto-update via Sparkle).
 

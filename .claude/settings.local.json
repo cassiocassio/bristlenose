@@ -118,7 +118,16 @@
       "Bash(cp /Users/cassio/Code/code-backup/healthcheck.sh /Users/cassio/.config/code-backup/healthcheck.sh)",
       "Bash(chmod +x /Users/cassio/.config/code-backup/healthcheck.sh)",
       "Bash(.venv/bin/python -c \"from bristlenose.server.app import _mount_prod_report; print\\('imports clean'\\)\")",
-      "Bash(.venv/bin/python -c ' *)"
+      "Bash(.venv/bin/python -c ' *)",
+      "Bash(cp \".claude/agents/app-store-police.md\" /tmp/app-store-police.md)",
+      "Read(//tmp/**)",
+      "Bash(gh api *)",
+      "Bash(gh repo *)",
+      "Skill(end-session)",
+      "Skill(end-session:*)",
+      "Bash(kill 29755 30077)",
+      "Bash(ps -p 29755,30077 -o pid,command)",
+      "Bash(awk 'NR==1 || $1 != \"Finder\"')"
     ]
   }
 }

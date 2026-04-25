@@ -12,8 +12,10 @@ from rich.console import Console
 
 from bristlenose import __version__
 from bristlenose.config import load_settings
+from bristlenose.events import KindEnum
 from bristlenose.i18n import SUPPORTED_LOCALES as _I18N_LOCALES
 from bristlenose.i18n import set_locale as _set_locale
+from bristlenose.run_lifecycle import ConcurrentRunError, run_lifecycle
 
 # Known commands — used by _maybe_inject_run() to detect bare directory arguments
 _COMMANDS = {
@@ -931,7 +933,12 @@ def run(
         settings, verbose=verbose, on_event=on_event,
         estimator=estimator, skip_confirm=yes,
     )
-    result = asyncio.run(pipeline.run(input_dir, output_dir))
+    try:
+        with run_lifecycle(output_dir, KindEnum.RUN):
+            result = asyncio.run(pipeline.run(input_dir, output_dir))
+    except ConcurrentRunError as exc:
+        console.print(f"[red]{exc}[/red]")
+        raise typer.Exit(1) from exc
 
     # Detect pipeline errors (LLM ran but 0 quotes)
     llm_ran = getattr(result, "llm_calls", 0) > 0
@@ -1028,7 +1035,12 @@ def transcribe(
     from bristlenose.pipeline import Pipeline
 
     pipeline = Pipeline(settings, verbose=verbose, skip_confirm=yes)
-    result = asyncio.run(pipeline.run_transcription_only(input_dir, output_dir))
+    try:
+        with run_lifecycle(output_dir, KindEnum.TRANSCRIBE_ONLY):
+            result = asyncio.run(pipeline.run_transcription_only(input_dir, output_dir))
+    except ConcurrentRunError as exc:
+        console.print(f"[red]{exc}[/red]")
+        raise typer.Exit(1) from exc
 
     _print_pipeline_summary(result)
     # Transcript-specific: point to the transcripts dir, not the report
@@ -1102,7 +1114,12 @@ def analyze(
         settings, verbose=verbose, on_event=on_event,
         estimator=estimator, skip_confirm=yes,
     )
-    result = asyncio.run(pipeline.run_analysis_only(transcripts_dir, output_dir))
+    try:
+        with run_lifecycle(output_dir, KindEnum.ANALYZE):
+            result = asyncio.run(pipeline.run_analysis_only(transcripts_dir, output_dir))
+    except ConcurrentRunError as exc:
+        console.print(f"[red]{exc}[/red]")
+        raise typer.Exit(1) from exc
 
     _print_pipeline_summary(result)
 

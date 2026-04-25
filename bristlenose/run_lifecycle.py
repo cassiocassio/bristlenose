@@ -40,6 +40,7 @@ from contextlib import contextmanager
 from pathlib import Path
 
 from bristlenose import __version__ as _bristlenose_version
+from bristlenose.cost import RunCost
 from bristlenose.events import (
     Cause,
     CauseCategoryEnum,
@@ -232,6 +233,23 @@ class ConcurrentRunError(RuntimeError):
     """Raised when another live run already owns the project's PID file."""
 
 
+class RunHandle:
+    """Handle yielded by ``run_lifecycle`` — lets the CLI attach cost data.
+
+    Mutable because the cost is only known after the pipeline returns.
+    Stays ``None`` for runs that didn't make LLM calls (transcribe-only
+    with local Whisper) — that's fine; the terminus event records None.
+    """
+
+    def __init__(self, run_id: str) -> None:
+        self.run_id = run_id
+        self.cost: RunCost | None = None
+
+    def set_cost(self, cost: RunCost | None) -> None:
+        """Attach the cost totals; stamped onto the terminus event."""
+        self.cost = cost
+
+
 def _process_envelope(start_time: str) -> Process:
     return Process(
         pid=os.getpid(),
@@ -281,10 +299,11 @@ def run_lifecycle(
     kind: KindEnum,
     *,
     install_signal_handlers: bool = True,
-) -> Iterator[str]:
+) -> Iterator[RunHandle]:
     """Wrap a CLI command body with run-level event-log discipline.
 
-    Yields the run_id (for callers that want to log it).
+    Yields a ``RunHandle``. Use ``handle.set_cost(...)`` after the
+    pipeline returns to stamp token + USD totals onto the terminus event.
 
     Behaviour summary:
         - Refuses if another live run owns the project (PID file +
@@ -343,8 +362,21 @@ def run_lifecycle(
 
     log.info("run_started run_id=%s kind=%s", run_id, kind.value)
 
+    handle = RunHandle(run_id)
+
+    def _cost_kwargs() -> dict[str, object]:
+        """Render the handle's cost (if any) as terminus-event kwargs."""
+        if handle.cost is None:
+            return {}
+        return {
+            "input_tokens": handle.cost.input_tokens,
+            "output_tokens": handle.cost.output_tokens,
+            "cost_usd_estimate": handle.cost.cost_usd_estimate,
+            "price_table_version": handle.cost.price_table_version,
+        }
+
     try:
-        yield run_id
+        yield handle
     except KeyboardInterrupt as exc:
         sig = _caught_signal or signal.SIGINT
         ended = _now_iso()
@@ -356,7 +388,7 @@ def run_lifecycle(
         )
         append_event(events_file, RunCancelledEvent(
             ts=ended, run_id=run_id, kind=kind, started_at=started_at,
-            ended_at=ended, cause=cancel_cause,
+            ended_at=ended, cause=cancel_cause, **_cost_kwargs(),
         ))
         log.info("run_cancelled run_id=%s signal=%s", run_id, cancel_cause.signal_name)
         _remove_pid_file(output_dir)
@@ -367,7 +399,7 @@ def run_lifecycle(
         if code == 0:
             append_event(events_file, RunCompletedEvent(
                 ts=ended, run_id=run_id, kind=kind, started_at=started_at,
-                ended_at=ended,
+                ended_at=ended, **_cost_kwargs(),
             ))
             log.info("run_completed run_id=%s exit_code=0", run_id)
         else:
@@ -379,6 +411,7 @@ def run_lifecycle(
                     message=f"CLI exited with code {code}",
                     exit_code=code,
                 ),
+                **_cost_kwargs(),
             ))
             log.info("run_failed run_id=%s exit_code=%s", run_id, code)
         _remove_pid_file(output_dir)
@@ -388,7 +421,7 @@ def run_lifecycle(
         cause = categorise_exception(exc)
         append_event(events_file, RunFailedEvent(
             ts=ended, run_id=run_id, kind=kind, started_at=started_at,
-            ended_at=ended, cause=cause,
+            ended_at=ended, cause=cause, **_cost_kwargs(),
         ))
         log.info("run_failed run_id=%s category=%s", run_id, cause.category.value)
         _remove_pid_file(output_dir)
@@ -397,7 +430,7 @@ def run_lifecycle(
         ended = _now_iso()
         append_event(events_file, RunCompletedEvent(
             ts=ended, run_id=run_id, kind=kind, started_at=started_at,
-            ended_at=ended,
+            ended_at=ended, **_cost_kwargs(),
         ))
         log.info("run_completed run_id=%s", run_id)
         _remove_pid_file(output_dir)

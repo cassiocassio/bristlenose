@@ -147,14 +147,14 @@ def test_is_alive_owned_start_time_mismatch_returns_false():
 
 
 def test_lifecycle_clean_exit_writes_started_then_completed(tmp_path: Path):
-    with run_lifecycle(tmp_path, KindEnum.RUN, install_signal_handlers=False) as run_id:
+    with run_lifecycle(tmp_path, KindEnum.RUN, install_signal_handlers=False) as handle:
         assert pid_file_path(tmp_path).exists()
-        assert run_id  # ULID generated
+        assert handle.run_id  # ULID generated
     events = read_events(events_path(tmp_path))
     assert len(events) == 2
     assert isinstance(events[0], RunStartedEvent)
     assert isinstance(events[1], RunCompletedEvent)
-    assert events[0].run_id == events[1].run_id == run_id
+    assert events[0].run_id == events[1].run_id == handle.run_id
     # PID file cleaned up.
     assert not pid_file_path(tmp_path).exists()
 

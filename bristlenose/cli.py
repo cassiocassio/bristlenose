@@ -12,6 +12,7 @@ from rich.console import Console
 
 from bristlenose import __version__
 from bristlenose.config import load_settings
+from bristlenose.cost import compute_run_cost
 from bristlenose.events import KindEnum
 from bristlenose.i18n import SUPPORTED_LOCALES as _I18N_LOCALES
 from bristlenose.i18n import set_locale as _set_locale
@@ -934,8 +935,13 @@ def run(
         estimator=estimator, skip_confirm=yes,
     )
     try:
-        with run_lifecycle(output_dir, KindEnum.RUN):
+        with run_lifecycle(output_dir, KindEnum.RUN) as _run_handle:
             result = asyncio.run(pipeline.run(input_dir, output_dir))
+            _run_handle.set_cost(compute_run_cost(
+                result.llm_model,
+                result.llm_input_tokens,
+                result.llm_output_tokens,
+            ))
     except ConcurrentRunError as exc:
         console.print(f"[red]{exc}[/red]")
         raise typer.Exit(1) from exc
@@ -1115,8 +1121,13 @@ def analyze(
         estimator=estimator, skip_confirm=yes,
     )
     try:
-        with run_lifecycle(output_dir, KindEnum.ANALYZE):
+        with run_lifecycle(output_dir, KindEnum.ANALYZE) as _run_handle:
             result = asyncio.run(pipeline.run_analysis_only(transcripts_dir, output_dir))
+            _run_handle.set_cost(compute_run_cost(
+                result.llm_model,
+                result.llm_input_tokens,
+                result.llm_output_tokens,
+            ))
     except ConcurrentRunError as exc:
         console.print(f"[red]{exc}[/red]")
         raise typer.Exit(1) from exc

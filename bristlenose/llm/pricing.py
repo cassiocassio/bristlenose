@@ -1,10 +1,17 @@
 """LLM pricing estimates for token usage reporting.
 
 Prices are approximate and may be outdated — users see a verification link
-in the CLI output so they can check current rates.
+in the CLI output so they can check current rates. The estimate is honest
+by construction: see ``cost_usd_estimate`` in ``bristlenose/events.py``
+and the design-pipeline-resilience.md cost discussion.
 """
 
 from __future__ import annotations
+
+# Bump when any rate changes — stamped onto every cost-bearing event so a
+# future reader can recompute against a newer table.
+PRICE_TABLE_VERSION = "2026-04-25"
+CURRENCY = "USD"
 
 # Pricing per million tokens: (input_rate_usd, output_rate_usd).
 PRICING: dict[str, tuple[float, float]] = {

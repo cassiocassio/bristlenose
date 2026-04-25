@@ -127,12 +127,16 @@ struct PipelineActivityItem: View {
     private var failureCategoryLabel: String {
         guard case .failed(_, let category) = state else { return "Failed" }
         switch category {
-        case .auth:    return "Provider key issue"
-        case .network: return "Network error"
-        case .quota:   return "Rate limited"
-        case .disk:    return "Out of disk space"
-        case .whisper: return "Transcription failed"
-        case .unknown: return "Failed"
+        case .auth:       return "Provider key issue"
+        case .network:    return "Network error"
+        case .quota:      return "Rate limited"
+        case .disk:       return "Out of disk space"
+        case .whisper:    return "Transcription failed"
+        case .userSignal: return "Stopped"
+        case .apiRequest: return "Provider rejected request"
+        case .apiServer:  return "Provider unavailable"
+        case .missingDep: return "Missing dependency"
+        case .unknown:    return "Failed"
         }
     }
 

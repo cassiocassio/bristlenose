@@ -13,6 +13,14 @@ enum PipelineFailureCategory: String, Codable, Equatable {
     case disk
     case whisper
     case unknown
+    // Phase 1f Slice 4 — additive. Names match Python `CauseCategoryEnum`
+    // exactly (snake_case round-trips through `String` rawValue). No
+    // existing case is renamed — the Swift/Python boundary is contractually
+    // stable. See docs/design-pipeline-resilience.md §"Cross-boundary naming".
+    case userSignal = "user_signal"
+    case apiRequest = "api_request"
+    case apiServer = "api_server"
+    case missingDep = "missing_dep"
 }
 
 // MARK: - Neutral progress struct
@@ -62,6 +70,13 @@ enum PipelineState: Equatable {
     /// Project can't be scanned (volume unmounted, path gone, permission denied).
     /// Distinct from `.failed` — nothing to retry, just unreachable right now.
     case unreachable(reason: String)
+    /// A `transcribe-only` run completed cleanly — transcripts present,
+    /// no analysis. Phase 1f Slice 4 — surface "Continue (analyse)".
+    /// `stagesComplete` derived from the manifest at display time.
+    case partial(kind: String, stagesComplete: [String])
+    /// User cancelled the prior run via SIGINT/SIGTERM. Resume / Re-analyse…
+    /// `stagesComplete` derived from the manifest at display time.
+    case stopped(stagesComplete: [String])
 }
 
 // MARK: - Progress parser protocol
@@ -636,6 +651,28 @@ final class PipelineRunner: ObservableObject {
         }
     }
 
+    /// Read `stages` from the manifest and return names of those marked complete.
+    /// Used by `parseManifest` to compute `stagesComplete` for `.partial` and
+    /// `.stopped` states (the events log doesn't store this — manifest is
+    /// the single source of truth for stage state per the design doc).
+    nonisolated static func stagesCompleteFromManifest(at url: URL) -> [String] {
+        guard let data = try? Data(contentsOf: url),
+              let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let stages = json["stages"] as? [String: Any] else {
+            return []
+        }
+        var out: [String] = []
+        for (name, raw) in stages {
+            guard let stage = raw as? [String: Any],
+                  let status = stage["status"] as? String,
+                  status == "complete" else {
+                continue
+            }
+            out.append(name)
+        }
+        return out.sorted()
+    }
+
     private static func parseManifest(at url: URL) async -> PipelineState {
         let fm = FileManager.default
         let parentDir = url.deletingLastPathComponent()
@@ -653,6 +690,25 @@ final class PipelineRunner: ObservableObject {
 
         guard fm.fileExists(atPath: url.path) else {
             return .idle
+        }
+
+        // Phase 1f Slice 4 — prefer the events log when present. Falls back
+        // to the strict manifest inference below for projects that predate
+        // the events log (backward compatibility).
+        let dotBristlenose = url.deletingLastPathComponent()
+        let eventsURL = dotBristlenose.appendingPathComponent(EventLogReader.filename)
+        let pidURL = dotBristlenose.appendingPathComponent(EventLogReader.pidFilename)
+        if fm.fileExists(atPath: eventsURL.path) {
+            let stages = stagesCompleteFromManifest(at: url)
+            if let derived = EventLogReader.deriveState(
+                eventsURL: eventsURL,
+                pidURL: pidURL,
+                stagesComplete: stages,
+            ) {
+                return derived
+            }
+            // Events log present but unreadable — fall through to strict
+            // manifest inference rather than block the user.
         }
 
         do {
@@ -1033,12 +1089,16 @@ final class PipelineRunner: ObservableObject {
 
     static func humanSummary(for category: PipelineFailureCategory) -> String {
         switch category {
-        case .auth:    return "Your LLM provider key isn't working."
-        case .network: return "Couldn't reach the LLM provider."
-        case .quota:   return "LLM provider rate limit reached."
-        case .disk:    return "Not enough disk space to finish."
-        case .whisper: return "Transcription failed — the speech model didn't load."
-        case .unknown: return "Something went wrong during analysis."
+        case .auth:       return "Your LLM provider key isn't working."
+        case .network:    return "Couldn't reach the LLM provider."
+        case .quota:      return "LLM provider rate limit reached."
+        case .disk:       return "Not enough disk space to finish."
+        case .whisper:    return "Transcription failed — the speech model didn't load."
+        case .userSignal: return "Run was stopped."
+        case .apiRequest: return "The LLM provider rejected the request."
+        case .apiServer:  return "The LLM provider is unavailable. Try again shortly."
+        case .missingDep: return "A required tool isn't installed."
+        case .unknown:    return "Something went wrong during analysis."
         }
     }
 

@@ -374,7 +374,7 @@ See `docs/design-desktop-menu-actions.md` for the full catalogue (65+ actions ac
 ### Conventions
 
 - Test file naming: `{ClassName}Tests.swift` in `BristlenoseTests/`
-- `@MainActor @Test` for any test touching `@MainActor` types (ProjectIndex, I18n). Swift Testing runs `@Test` on arbitrary executors by default
+- **Suite-level `@MainActor` for tests that touch `@MainActor` types** — annotate the `@Suite struct`, not each `@Test func`. The per-method approach (`@MainActor @Test func ...`) is noisier and tends to miss tests that call static methods on actor-isolated types. Two existing files (`I18nTests`, `ProjectIndexTests`) had header comments saying *"X is @MainActor — all tests must be @MainActor too"* but were missing the suite-level annotation; adding it cleared all the actor-isolation errors at once. Swift Testing runs `@Test` on arbitrary executors by default
 - KeychainHelper tests always use `InMemoryKeychain`, never real SecItem — avoids overwriting real API keys (SIGKILL bypasses teardown, so cleanup is not crash-safe)
 - ProjectIndex tests always use `ProjectIndex(fileURL: tempURL)`, never the default Application Support path
 - I18n tests use `configure(localesDirectory:)` with fixtures in `BristlenoseTests/Fixtures/`, never `findLocalesDirectory()` (which hardcodes dev paths)
@@ -382,6 +382,8 @@ See `docs/design-desktop-menu-actions.md` for the full catalogue (65+ actions ac
 ### Test target setup
 
 The `BristlenoseTests` target uses `PBXFileSystemSynchronizedRootGroup` — new `.swift` files added to `BristlenoseTests/` are auto-discovered. No Xcode GUI needed after initial target creation.
+
+**Auto-sync flattens flat-resource folders into `Resources/` and collides** — e.g. `Fixtures/{en,es}/*.json` (locale-style folders that aren't `.lproj`) all copy to `Resources/<name>.json` with no per-locale subdir, causing `Multiple commands produce '...common.json'` build errors. Fix in `Bristlenose.xcodeproj/project.pbxproj`: add a `PBXFileSystemSynchronizedBuildFileExceptionSet` referencing the synced root with `membershipExceptions = (Fixtures/en/common.json, ...)` listing each colliding file. Folder paths (`Fixtures` or `Fixtures/en`) don't work as exceptions — must list each file explicitly. The proper Xcode-side fix (folder reference instead of group) preserves the subdir structure but requires the GUI; pbxproj exceptions are the CLI-friendly workaround. Same exception set can also exclude pre-existing test files that don't yet compile under Swift 6 strict mode
 
 Build settings must match the app target:
 - `SWIFT_VERSION` — same as app (currently 5.0)

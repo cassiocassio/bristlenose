@@ -218,13 +218,22 @@ class TestProdServeReport:
         assert resp.status_code == 200
         assert "color: red" in resp.text
 
-    def test_no_bundle_falls_back_to_static(self, tmp_path: Path) -> None:
-        """When no React bundle exists, serve vanilla HTML from output dir."""
+    def test_no_bundle_returns_500_fail_loud(self, tmp_path: Path) -> None:
+        """When no React bundle exists, fail loud with 500 — don't fall back
+        to the deprecated static render.
+
+        Updated 21 Apr 2026 (P1 from c3-bundle-completeness): previously
+        this fell back to static-rendered HTML, which masked BUG-3 in the
+        C3 smoke test (broken bundle appeared to "work" but served the
+        deprecated UI). Static render is vestigial scaffolding being
+        phased out, not a serve-mode degradation path.
+        """
         output_dir = tmp_path / "bristlenose-output"
         output_dir.mkdir()
+        # Even if a static-rendered HTML exists on disk, serve mode must
+        # NOT fall back to it.
         report = output_dir / "bristlenose-test-report.html"
         report.write_text("<html><body>vanilla report</body></html>")
-        (output_dir / "index.html").symlink_to(report.name)
 
         empty_static = tmp_path / "empty-static"
         empty_static.mkdir()
@@ -235,10 +244,11 @@ class TestProdServeReport:
             )
         client = TestClient(app)
         resp = client.get("/report/")
-        assert resp.status_code == 200
-        # Should serve vanilla HTML — no React app root injected
-        assert 'id="bn-app-root"' not in resp.text
-        assert "vanilla report" in resp.text
+        assert resp.status_code == 500
+        # Error page should clearly identify the build issue
+        assert "Build incomplete" in resp.text or "bundle" in resp.text.lower()
+        # Must NOT have served the static-rendered content
+        assert "vanilla report" not in resp.text
 
 
 class TestProdServeTranscript:

@@ -127,7 +127,9 @@
       "Skill(end-session:*)",
       "Bash(kill 29755 30077)",
       "Bash(ps -p 29755,30077 -o pid,command)",
-      "Bash(awk 'NR==1 || $1 != \"Finder\"')"
+      "Bash(awk 'NR==1 || $1 != \"Finder\"')",
+      "Skill(true-the-docs)",
+      "Skill(true-the-docs:*)"
     ]
   }
 }

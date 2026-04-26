@@ -6,11 +6,30 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXContainerItemProxy section */
+		DFA8ED0F2F9E7745004CF8AA /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = DFF544FC2F466A4A00A539C4 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = DFF545032F466A4A00A539C4;
+			remoteInfo = Bristlenose;
+		};
+/* End PBXContainerItemProxy section */
+
 /* Begin PBXFileReference section */
+		DFA8ED0B2F9E7745004CF8AA /* BristlenoseTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = BristlenoseTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		DFF545042F466A4A00A539C4 /* Bristlenose.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Bristlenose.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
+		DFA8ED0C2F9E7745004CF8AA /* BristlenoseTests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				DFA8ED202F9E7745004CF8AA /* Exceptions for "BristlenoseTests" folder in "BristlenoseTests" target */,
+			);
+			path = BristlenoseTests;
+			sourceTree = "<group>";
+		};
 		DFF545062F466A4A00A539C4 /* Bristlenose */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = Bristlenose;
@@ -18,7 +37,31 @@
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		DFA8ED202F9E7745004CF8AA /* Exceptions for "BristlenoseTests" folder in "BristlenoseTests" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Fixtures/en/common.json,
+				Fixtures/en/desktop.json,
+				Fixtures/en/enums.json,
+				Fixtures/en/settings.json,
+				Fixtures/es/common.json,
+				Fixtures/es/desktop.json,
+				Fixtures/es/enums.json,
+				Fixtures/es/settings.json,
+			);
+			target = DFA8ED0A2F9E7745004CF8AA /* BristlenoseTests */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
 /* Begin PBXFrameworksBuildPhase section */
+		DFA8ED082F9E7745004CF8AA /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		DFF545012F466A4A00A539C4 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -33,6 +76,7 @@
 			isa = PBXGroup;
 			children = (
 				DFF545062F466A4A00A539C4 /* Bristlenose */,
+				DFA8ED0C2F9E7745004CF8AA /* BristlenoseTests */,
 				DFF545052F466A4A00A539C4 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -41,6 +85,7 @@
 			isa = PBXGroup;
 			children = (
 				DFF545042F466A4A00A539C4 /* Bristlenose.app */,
+				DFA8ED0B2F9E7745004CF8AA /* BristlenoseTests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -48,6 +93,29 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
+		DFA8ED0A2F9E7745004CF8AA /* BristlenoseTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = DFA8ED112F9E7745004CF8AA /* Build configuration list for PBXNativeTarget "BristlenoseTests" */;
+			buildPhases = (
+				DFA8ED072F9E7745004CF8AA /* Sources */,
+				DFA8ED082F9E7745004CF8AA /* Frameworks */,
+				DFA8ED092F9E7745004CF8AA /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				DFA8ED102F9E7745004CF8AA /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				DFA8ED0C2F9E7745004CF8AA /* BristlenoseTests */,
+			);
+			name = BristlenoseTests;
+			packageProductDependencies = (
+			);
+			productName = BristlenoseTests;
+			productReference = DFA8ED0B2F9E7745004CF8AA /* BristlenoseTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
 		DFF545032F466A4A00A539C4 /* Bristlenose */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = DFF5450F2F466A4B00A539C4 /* Build configuration list for PBXNativeTarget "Bristlenose" */;
@@ -78,9 +146,13 @@
 			isa = PBXProject;
 			attributes = {
 				BuildIndependentTargetsInParallel = 1;
-				LastSwiftUpdateCheck = 2620;
+				LastSwiftUpdateCheck = 2630;
 				LastUpgradeCheck = 2620;
 				TargetAttributes = {
+					DFA8ED0A2F9E7745004CF8AA = {
+						CreatedOnToolsVersion = 26.3;
+						TestTargetID = DFF545032F466A4A00A539C4;
+					};
 					DFF545032F466A4A00A539C4 = {
 						CreatedOnToolsVersion = 26.2;
 					};
@@ -101,11 +173,19 @@
 			projectRoot = "";
 			targets = (
 				DFF545032F466A4A00A539C4 /* Bristlenose */,
+				DFA8ED0A2F9E7745004CF8AA /* BristlenoseTests */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
+		DFA8ED092F9E7745004CF8AA /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		DFF545022F466A4A00A539C4 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -133,6 +213,13 @@
 /* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
+		DFA8ED072F9E7745004CF8AA /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		DFF545002F466A4A00A539C4 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -142,7 +229,57 @@
 		};
 /* End PBXSourcesBuildPhase section */
 
+/* Begin PBXTargetDependency section */
+		DFA8ED102F9E7745004CF8AA /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = DFF545032F466A4A00A539C4 /* Bristlenose */;
+			targetProxy = DFA8ED0F2F9E7745004CF8AA /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
 /* Begin XCBuildConfiguration section */
+		DFA8ED122F9E7745004CF8AA /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 864;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 26.1;
+				MARKETING_VERSION = 0.15.0;
+				PRODUCT_BUNDLE_IDENTIFIER = app.bristlenose.BristlenoseTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Bristlenose.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Bristlenose";
+			};
+			name = Debug;
+		};
+		DFA8ED132F9E7745004CF8AA /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 864;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 26.1;
+				MARKETING_VERSION = 0.15.0;
+				PRODUCT_BUNDLE_IDENTIFIER = app.bristlenose.BristlenoseTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Bristlenose.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Bristlenose";
+			};
+			name = Release;
+		};
 		DFF5450D2F466A4B00A539C4 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -269,7 +406,7 @@
 				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = NO;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 809;
+				CURRENT_PROJECT_VERSION = 864;
 				ENABLE_APP_SANDBOX = NO;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -278,7 +415,7 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MARKETING_VERSION = 0.14.5;
+				MARKETING_VERSION = 0.15.0;
 				PRODUCT_BUNDLE_IDENTIFIER = app.bristlenose;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_APPROACHABLE_CONCURRENCY = NO;
@@ -296,7 +433,7 @@
 				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = NO;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 809;
+				CURRENT_PROJECT_VERSION = 864;
 				ENABLE_APP_SANDBOX = NO;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -305,7 +442,7 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MARKETING_VERSION = 0.14.5;
+				MARKETING_VERSION = 0.15.0;
 				PRODUCT_BUNDLE_IDENTIFIER = app.bristlenose;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_APPROACHABLE_CONCURRENCY = NO;
@@ -318,6 +455,15 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
+		DFA8ED112F9E7745004CF8AA /* Build configuration list for PBXNativeTarget "BristlenoseTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				DFA8ED122F9E7745004CF8AA /* Debug */,
+				DFA8ED132F9E7745004CF8AA /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
 		DFF544FF2F466A4A00A539C4 /* Build configuration list for PBXProject "Bristlenose" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (

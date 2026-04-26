@@ -3,6 +3,7 @@ import Testing
 
 // MARK: - Tab.from(path:) tests
 
+@MainActor
 @Suite("Tab route parsing")
 struct TabTests {
 

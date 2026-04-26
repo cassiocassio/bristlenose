@@ -29,6 +29,19 @@
       selectedLauncherIdentifier = "Xcode.DebuggerFoundation.Launcher.LLDB"
       shouldUseLaunchSchemeArgsEnv = "YES"
       shouldAutocreateTestPlan = "YES">
+      <Testables>
+         <TestableReference
+            skipped = "NO"
+            parallelizable = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "DFA8ED0A2F9E7745004CF8AA"
+               BuildableName = "BristlenoseTests.xctest"
+               BlueprintName = "BristlenoseTests"
+               ReferencedContainer = "container:Bristlenose.xcodeproj">
+            </BuildableReference>
+         </TestableReference>
+      </Testables>
    </TestAction>
    <LaunchAction
       buildConfiguration = "Debug"
@@ -54,6 +67,11 @@
          <EnvironmentVariable
             key = "BRISTLENOSE_DEV_PORT"
             value = "8150"
+            isEnabled = "NO">
+         </EnvironmentVariable>
+         <EnvironmentVariable
+            key = "PATH"
+            value = "/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin&#10;"
             isEnabled = "YES">
          </EnvironmentVariable>
       </EnvironmentVariables>

@@ -45,6 +45,12 @@ struct Project: Identifiable, Hashable, Codable {
     var position: Int
     var createdAt: Date
     var lastOpened: Date?
+    /// Timestamp of the last successful `bristlenose run` against this project.
+    /// Sourced from the manifest's final-stage completion time; mirrored here
+    /// so sidebar rows can show "Analysed 2 hours ago" without re-reading the
+    /// manifest on every render. Reactive pipeline state lives in
+    /// `PipelineRunner.state[project.id]`, not on this model.
+    var lastPipelineRunAt: Date?
 
     enum CodingKeys: String, CodingKey {
         case id, name, path, icon, position
@@ -54,6 +60,7 @@ struct Project: Identifiable, Hashable, Codable {
         case folderId = "folder_id"
         case createdAt = "created_at"
         case lastOpened = "last_opened"
+        case lastPipelineRunAt = "last_pipeline_run_at"
     }
 
     // Custom coding for bookmarkData (Base64 string in JSON instead of byte array).
@@ -75,6 +82,7 @@ struct Project: Identifiable, Hashable, Codable {
         position = try container.decodeIfPresent(Int.self, forKey: .position) ?? 0
         createdAt = try container.decode(Date.self, forKey: .createdAt)
         lastOpened = try container.decodeIfPresent(Date.self, forKey: .lastOpened)
+        lastPipelineRunAt = try container.decodeIfPresent(Date.self, forKey: .lastPipelineRunAt)
     }
 
     func encode(to encoder: Encoder) throws {
@@ -90,11 +98,13 @@ struct Project: Identifiable, Hashable, Codable {
         try container.encode(position, forKey: .position)
         try container.encode(createdAt, forKey: .createdAt)
         try container.encodeIfPresent(lastOpened, forKey: .lastOpened)
+        try container.encodeIfPresent(lastPipelineRunAt, forKey: .lastPipelineRunAt)
     }
 
     init(id: UUID, name: String, path: String, inputFiles: [String]? = nil,
          icon: String? = nil, location: Location? = nil, bookmarkData: Data? = nil,
-         folderId: UUID? = nil, position: Int = 0, createdAt: Date = Date(), lastOpened: Date? = nil) {
+         folderId: UUID? = nil, position: Int = 0, createdAt: Date = Date(),
+         lastOpened: Date? = nil, lastPipelineRunAt: Date? = nil) {
         self.id = id
         self.name = name
         self.path = path
@@ -106,6 +116,7 @@ struct Project: Identifiable, Hashable, Codable {
         self.position = position
         self.createdAt = createdAt
         self.lastOpened = lastOpened
+        self.lastPipelineRunAt = lastPipelineRunAt
     }
 
     /// Whether the project directory is currently accessible on disk.

@@ -154,8 +154,15 @@ struct WebView: NSViewRepresentable {
 
         // MARK: - WKNavigationDelegate
 
-        /// Restrict navigation to localhost only. External URLs open in the
-        /// system browser via NSWorkspace.
+        /// Restrict navigation to the project's assigned serve port on
+        /// 127.0.0.1. External URLs open in the system browser via NSWorkspace.
+        ///
+        /// SECURITY #8: previously allowed any 127.0.0.1 port and any `about:`
+        /// scheme. An iframe, `window.open`, or bridge-driven navigation
+        /// could target a different localhost port (a colleague's dev server,
+        /// an open debugger, an exposed admin UI) and load its content into
+        /// our WKWebView. Now restricted to the loaded URL's port; `about:`
+        /// narrowed to `about:blank` only.
         func webView(
             _ webView: WKWebView,
             decidePolicyFor navigationAction: WKNavigationAction,
@@ -166,8 +173,7 @@ struct WebView: NSViewRepresentable {
                 return
             }
 
-            // Allow localhost (the serve process) and about: (blank pages).
-            if url.host == "127.0.0.1" || url.scheme == "about" {
+            if isAllowedServeURL(url) || url.absoluteString == "about:blank" {
                 decisionHandler(.allow)
                 return
             }
@@ -175,6 +181,27 @@ struct WebView: NSViewRepresentable {
             // External URL — open in default browser, cancel in-app navigation.
             NSWorkspace.shared.open(url)
             decisionHandler(.cancel)
+        }
+
+        /// True iff `url` is `http://127.0.0.1:<assignedPort>/...`. The
+        /// assigned port is read from `lastLoadedURL` (set when WebView loads
+        /// the initial serve URL — see makeNSView/updateNSView). Popout
+        /// child WKWebViews share this Coordinator, so popout navigations
+        /// also resolve against the parent's serve port — correct, because
+        /// the popout player is served by the same `bristlenose serve`
+        /// instance.
+        ///
+        /// If `lastLoadedURL` is nil (no initial load yet) or has no explicit
+        /// port, return false. Fail closed.
+        @MainActor
+        private func isAllowedServeURL(_ url: URL) -> Bool {
+            guard let allowedPort = lastLoadedURL?.port,
+                  url.host == "127.0.0.1",
+                  url.scheme == "http",
+                  url.port == allowedPort else {
+                return false
+            }
+            return true
         }
 
         /// Page finished loading — if the bridge `ready` message hasn't arrived
@@ -208,9 +235,11 @@ struct WebView: NSViewRepresentable {
             for navigationAction: WKNavigationAction,
             windowFeatures: WKWindowFeatures
         ) -> WKWebView? {
-            // Only allow popouts to localhost (the player page).
+            // SECURITY #8: only allow popouts to the project's assigned serve
+            // port (not any 127.0.0.1 port). isAllowedServeURL reads the port
+            // from the parent's lastLoadedURL.
             guard let url = navigationAction.request.url,
-                  url.host == "127.0.0.1" else {
+                  isAllowedServeURL(url) else {
                 if let url = navigationAction.request.url {
                     NSWorkspace.shared.open(url)
                 }

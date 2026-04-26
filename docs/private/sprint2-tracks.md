@@ -153,9 +153,9 @@ Also out of scope and parked elsewhere:
 - [ ] Track A: sandbox enabled in Debug, MVP flow runs without violations, entitlements file finalised
 - [ ] Track A: Apple Distribution cert + provisioning profile in place (#2)
 - [x] Track C: `sign-sidecar.sh` produces a runnable ad-hoc-signed bundle (C2 code done, `fc95b99..cd04ee9`)
-- [x] Track C: same script swapped to Apple Distribution, produces uploadable `.pkg` (C2 code done; end-to-end `xcodebuild archive` blocked by SECURITY #5+#8)
+- [x] Track C: same script swapped to Apple Distribution, produces uploadable `.pkg` (C2 code done; ~~end-to-end `xcodebuild archive` blocked by SECURITY #5+#8~~ — unblocked 26 Apr 2026)
 - [x] Track C: Keychain credential injection wired, sandbox-compatible (C3, `a8dc3cb..ab1b2a1`; smoke test Step 6 pending human)
 - [x] Track C: bundle-data coverage enforced (C3, BUG-6 `673ddee`); fail-loud on missing React bundle (`3a9bc6a`); runtime self-check (`52024f8`)
-- [ ] **PREREQUISITE**: fix SECURITY #5 + #8 in `SecurityChecklist.swift` — unblocks C2 end-to-end verification + C3 empty-ents retest
+- [x] ~~**PREREQUISITE**: fix SECURITY #5 + #8 in `SecurityChecklist.swift`~~ ✅ **Done 26 Apr 2026** on `sidecar-signing` (commits `823f9be..38808fe`). #5: `proc_pidpath` PID verification (libproc, sandbox-friendly). #8: port-restricted nav policy + `NSWorkspace.open` allowlist. Release archives now compile. End-to-end `build-all.sh` run + empty-ents retest still pending.
 - [ ] Track B: §1a clean-profile walkthrough completes end-to-end without apology
 - [ ] Promote to S6 work (#10, #12) → first upload

@@ -29,8 +29,8 @@ Parked items from the usual-suspects reviews of sidecar-signing C1 (18 Apr 2026)
 ## Parked from C2 review + session (19 Apr 2026)
 
 ### Blocks full end-to-end (own track, not C2)
-- [ ] **SECURITY #5** in `desktop/Bristlenose/Bristlenose/SecurityChecklist.swift:23` — `ServeManager.killOrphanedServeProcesses` SIGINTs any PID on 8150–9149 without checking it's actually a bristlenose process. Multi-user Mac could terminate unrelated processes. Fix: match process name before kill. Blocks every Release archive.
-- [ ] **SECURITY #8** in `SecurityChecklist.swift:24` — WKWebView navigation policy allows any `127.0.0.1:*`. Fix: restrict to the specific serve port assigned to the project. Blocks every Release archive.
+- [x] ~~**SECURITY #5** — `ServeManager.killOrphanedServeProcesses` SIGINTs any PID on 8150–9149 without checking.~~ ✅ **Done 26 Apr 2026** on `sidecar-signing` (commits `823f9be` + `38808fe`). PID verified via `proc_pidpath` (libproc, sandbox-friendly), prefix-matches `bristlenose`. Vite cleanup on port 5173 deliberately dropped — `node` basename indistinguishable from user's other servers.
+- [x] ~~**SECURITY #8** — WKWebView navigation policy allows any `127.0.0.1:*`.~~ ✅ **Done 26 Apr 2026** on `sidecar-signing` (commits `fdf90dc` + `92a1d36`). Restricted to the serve port assigned to the project (read from `lastLoadedURL.port`); `about:` narrowed to `about:blank` exact match. Both `decidePolicyFor` and `createWebViewWith` popout site updated. Hardening commit also gates `NSWorkspace.shared.open()` to `http`/`https`/`mailto` and logs port-mismatch rejections. SecurityChecklist.swift `#error` directives removed — Release archives now compile.
 
 ### Signing hardening (procurement / CI polish)
 - [ ] **Empty-entitlements re-test.** Confirm `cs.disable-library-validation` is still load-bearing now that the whole bundle is signed by one Apple Distribution identity. If it passes empty, drop DLV and update the entitlement table. Recipe: `docs/private/c2-session-notes.md` Goal 2.

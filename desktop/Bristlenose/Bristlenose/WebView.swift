@@ -1,5 +1,8 @@
+import OSLog
 import SwiftUI
 import WebKit
+
+private let log = Logger(subsystem: "app.bristlenose", category: "webview")
 
 /// WKWebView wrapper for displaying the Bristlenose React SPA in embedded mode.
 ///
@@ -178,8 +181,7 @@ struct WebView: NSViewRepresentable {
                 return
             }
 
-            // External URL — open in default browser, cancel in-app navigation.
-            NSWorkspace.shared.open(url)
+            openExternal(url)
             decisionHandler(.cancel)
         }
 
@@ -193,15 +195,41 @@ struct WebView: NSViewRepresentable {
         ///
         /// If `lastLoadedURL` is nil (no initial load yet) or has no explicit
         /// port, return false. Fail closed.
+        ///
+        /// Logs a warning when a 127.0.0.1 URL is rejected on port mismatch
+        /// (including port-less URLs, which return `URL.port == nil`). Without
+        /// this, the failure mode "SPA emits a port-less localhost link, gets
+        /// silently shunted to the user's default browser" is invisible.
         @MainActor
         private func isAllowedServeURL(_ url: URL) -> Bool {
             guard let allowedPort = lastLoadedURL?.port,
                   url.host == "127.0.0.1",
                   url.scheme == "http",
                   url.port == allowedPort else {
+                if url.host == "127.0.0.1" {
+                    log.warning("rejecting 127.0.0.1 URL with port=\(url.port ?? -1, privacy: .public) (allowed=\(self.lastLoadedURL?.port ?? -1, privacy: .public))")
+                }
                 return false
             }
             return true
+        }
+
+        /// Open a URL in the user's default app, but only for safe schemes.
+        ///
+        /// Pre-existing fallthrough in decidePolicyFor / createWebViewWith
+        /// blindly called `NSWorkspace.shared.open(url)` for any URL the
+        /// allow-list rejected. NSWorkspace happily opens `file://` (launches
+        /// local apps), `data:` (browser-rendered attacker content), and
+        /// `javascript:` URLs. Defence-in-depth: gate the external open on
+        /// http(s) / mailto only.
+        @MainActor
+        private func openExternal(_ url: URL) {
+            let scheme = url.scheme?.lowercased() ?? ""
+            if scheme == "http" || scheme == "https" || scheme == "mailto" {
+                NSWorkspace.shared.open(url)
+            } else {
+                log.warning("blocking external open for scheme=\(scheme, privacy: .public)")
+            }
         }
 
         /// Page finished loading — if the bridge `ready` message hasn't arrived
@@ -241,7 +269,7 @@ struct WebView: NSViewRepresentable {
             guard let url = navigationAction.request.url,
                   isAllowedServeURL(url) else {
                 if let url = navigationAction.request.url {
-                    NSWorkspace.shared.open(url)
+                    openExternal(url)
                 }
                 return nil
             }

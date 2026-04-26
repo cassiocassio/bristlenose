@@ -543,12 +543,18 @@ final class ServeManager: ObservableObject {
     /// Uses `lsof` to find PIDs listening on the Bristlenose port range
     /// (8150–9149), then sends SIGINT for graceful Uvicorn shutdown.
     /// Runs synchronously but fast (~10ms) — safe to call from init().
+    ///
+    /// SECURITY #5: every PID is verified via `ps -o comm=` before kill, to
+    /// avoid SIGINTing unrelated processes that happen to be listening on a
+    /// port in our range (a colleague's dev server, a Jupyter kernel, etc.).
+    /// Vite dev server cleanup (port 5173) is intentionally dropped — the
+    /// process basename is `node`, indistinguishable from the user's other
+    /// node servers. Vite zombies must be killed manually after a SIGKILL of
+    /// `serve --dev`. Acceptable: rare, dev-only, no security exposure.
     private nonisolated static func killOrphanedServeProcesses() {
         let proc = Process()
         proc.executableURL = URL(fileURLWithPath: "/usr/sbin/lsof")
-        // Also scan :5173 — Vite dev server spawned by `bristlenose serve --dev`.
-        // Survives SIGKILL because atexit cleanup doesn't fire.
-        proc.arguments = ["-ti", ":5173,8150-9149"]
+        proc.arguments = ["-ti", ":8150-9149"]
 
         let pipe = Pipe()
         proc.standardOutput = pipe
@@ -569,8 +575,49 @@ final class ServeManager: ObservableObject {
             .compactMap { Int32($0.trimmingCharacters(in: .whitespaces)) }
 
         for pid in pids {
+            guard isBristlenoseSidecar(pid: pid) else {
+                log.warning("skipping non-bristlenose PID \(pid, privacy: .public) on bristlenose port range")
+                continue
+            }
             log.info("killing orphaned serve process (PID \(pid, privacy: .public))")
             kill(pid, SIGINT)
         }
+    }
+
+    /// Verify that a PID belongs to a bristlenose sidecar before killing it.
+    ///
+    /// Reads the executable basename via `/bin/ps -o comm= -p <pid>` and
+    /// prefix-matches `bristlenose`. Covers both shipping (`bristlenose-sidecar`,
+    /// PyInstaller onedir) and dev-sidecar mode (`bristlenose`, the user's venv
+    /// CLI). If `ps` fails or the comm is unreadable, returns false — fail
+    /// closed: don't kill what we can't identify.
+    ///
+    /// `/bin/ps` is allowed under App Sandbox at the default level (it's a
+    /// read-only informational tool with no sandbox-protected data access).
+    /// Compare to `lsof`, which IS blocked under sandbox — both calls in this
+    /// path are best-effort and silently no-op under sandbox.
+    private nonisolated static func isBristlenoseSidecar(pid: Int32) -> Bool {
+        let task = Process()
+        task.executableURL = URL(fileURLWithPath: "/bin/ps")
+        task.arguments = ["-o", "comm=", "-p", String(pid)]
+
+        let pipe = Pipe()
+        task.standardOutput = pipe
+        task.standardError = FileHandle.nullDevice
+
+        do {
+            try task.run()
+            task.waitUntilExit()
+        } catch {
+            return false
+        }
+
+        let data = pipe.fileHandleForReading.readDataToEndOfFile()
+        guard let raw = String(data: data, encoding: .utf8) else { return false }
+
+        // `ps -o comm=` returns the full path on macOS; take the basename.
+        let comm = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        let basename = (comm as NSString).lastPathComponent
+        return basename.hasPrefix("bristlenose")
     }
 }

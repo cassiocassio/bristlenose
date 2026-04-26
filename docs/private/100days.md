@@ -260,7 +260,7 @@ The canonical end-to-end beats a first-time user must complete successfully in t
 - ~~**PostMessage origin tightening**~~ — React path uses `window.location.origin` (PlayerContext.tsx). Vanilla JS path deprecated — just remove
 - **localStorage namespace by project** — review what's still in localStorage and why (most state moved to SQLite). Collision risk may be moot
 - **WKWebView Content Security Policy** — inject CSP via WKUserScript restricting script sources and connection targets. (design-desktop-security-audit.md)
-- **Clean SecurityChecklist.swift** — remove resolved items #1, #3, #7; keep genuine blockers #2, #5, #8. (design-desktop-security-audit.md)
+- **Clean SecurityChecklist.swift** — remove resolved items #1, #3, ~~#5~~, #7, ~~#8~~; keep genuine blocker #2. (#5 + #8 done 26 Apr 2026 on `sidecar-signing` — `proc_pidpath` PID verification, port-restricted nav). (design-desktop-security-audit.md)
 - **Wrap dev paths in `#if DEBUG`** — `ContentView.swift`, `ServeManager`, `I18n` leak developer directory structure into release binary. (design-desktop-security-audit.md)
 - **Bundled fallback API key risk** — extractable from PyInstaller binary. Cap spending, use dedicated key, document accepted risk. (design-desktop-security-audit.md)
 - **DASVS Level 1 audit** — AFINE's Desktop Application Security Verification Standard (Nov 2025), purpose-built for desktop apps. 12 domains, 150+ requirements. ([github.com/afine-com/DASVS](https://github.com/afine-com/DASVS))
@@ -435,7 +435,7 @@ The canonical end-to-end beats a first-time user must complete successfully in t
 - ~~**Developer ID certificate** — won't do (17 Apr 2026). App Store path only, uses Apple Distribution cert~~
 - ~~[S1] **CI: add macOS runner** — currently Linux-only (informational, 15 Apr 2026)~~
 - ~~**.dmg README** — won't do (17 Apr 2026). App Store path only~~
-- ~~[S2] **PyInstaller sidecar signing**~~ ✅ **Done 19 Apr 2026 (Track C C2).** Parallel `wait -n` job pool, SHA256 sign-manifest, full notarisation + stapling + verification battery in `desktop/scripts/build-all.sh`. End-to-end blocked on SECURITY #5/#8 unblocker (separate plan). C3 (Apr 2026) added bundle-integrity gates that surfaced + resolved 3 datas coverage bugs (BUG-3/4/5)
+- ~~[S2] **PyInstaller sidecar signing**~~ ✅ **Done 19 Apr 2026 (Track C C2).** Parallel `wait -n` job pool, SHA256 sign-manifest, full notarisation + stapling + verification battery in `desktop/scripts/build-all.sh`. ~~End-to-end blocked on SECURITY #5/#8 unblocker (separate plan).~~ SECURITY #5/#8 done 26 Apr 2026 — `xcodebuild archive` now compiles; end-to-end run still pending. C3 (Apr 2026) added bundle-integrity gates that surfaced + resolved 3 datas coverage bugs (BUG-3/4/5)
 - ~~[S1] **Build number auto-increment** — `CFBundleVersion = 1` blocks Sparkle and App Store update logic. Set up CI auto-increment. Done: `bump-version.py` unifies desktop+CLI, auto-increments build number~~
 - ~~[S1] **Domain & email infrastructure** — register `bristlenose.app`, configure SPF/DKIM/DMARC, Substack custom domain (`blog.bristlenose.app`), deploy site, set up email on DreamHost (`hello@`, `support@`, `security@`). Full plan: `docs/private/infrastructure-and-identity.md`~~
 - [S6] **Supply chain hardening** — GitHub 2FA with hardware key, branch protection on main, PyPI hardware key + project-scoped token, register PyPI typosquats. Full checklist: `docs/private/infrastructure-and-identity.md`. Deferred from S1: low threat until commercial launch (see `docs/private/supply-chain-deferral.md`)

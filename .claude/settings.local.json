@@ -129,7 +129,12 @@
       "Bash(ps -p 29755,30077 -o pid,command)",
       "Bash(awk 'NR==1 || $1 != \"Finder\"')",
       "Skill(true-the-docs)",
-      "Skill(true-the-docs:*)"
+      "Skill(true-the-docs:*)",
+      "Bash(desktop/scripts/check-logging-hygiene.sh)",
+      "Bash(echo \"EXIT=$?\")",
+      "Bash(desktop/scripts/check-bundle-manifest.sh)",
+      "Bash(desktop/Bristlenose/Resources/bristlenose-sidecar/bristlenose-sidecar doctor *)",
+      "Bash(xcodebuild build *)"
     ]
   }
 }

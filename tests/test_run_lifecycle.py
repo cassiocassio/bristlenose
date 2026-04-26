@@ -352,24 +352,40 @@ def _spawn_lifecycle_subprocess(tmp_path: Path, body: str) -> subprocess.Popen:
     )
 
 
-def _wait_for_run_started(events_file: Path, *, timeout: float = 30.0) -> None:
-    """Block until a RunStartedEvent is durable on disk.
+def _wait_for_event(
+    events_file: Path,
+    predicate,
+    *,
+    timeout: float = 30.0,
+) -> bool:
+    """Poll the events file until `predicate(event)` matches, or timeout.
 
-    Generous deadline because the subprocess pays import cost (Pydantic,
-    pricing, etc.) before installing handlers — under full-suite CPU
-    contention the cold-import takes seconds.
+    Generous deadline because:
+    - The subprocess pays cold-import cost (Pydantic, pricing, etc.) before
+      installing handlers — slow CI runners take a few seconds even idle.
+    - After SIGINT/SIGTERM, the lifecycle wrapper has to catch
+      KeyboardInterrupt, build the Cause, and fsync the line. On Python
+      3.10 + Linux ubuntu-latest under full-matrix load this can exceed
+      the 15s `proc.wait` timeout we used to use.
     """
     deadline = time.time() + timeout
     while time.time() < deadline:
-        if events_file.exists() and any(
-            isinstance(e, RunStartedEvent) for e in read_events(events_file)
-        ):
-            return
+        if events_file.exists():
+            for event in read_events(events_file):
+                if predicate(event):
+                    return True
         time.sleep(0.05)
-    raise AssertionError(
-        f"Subprocess never wrote run_started within {timeout}s — likely "
-        "import-time crash before handler install.",
-    )
+    return False
+
+
+def _wait_for_run_started(events_file: Path, *, timeout: float = 30.0) -> None:
+    if not _wait_for_event(
+        events_file, lambda e: isinstance(e, RunStartedEvent), timeout=timeout,
+    ):
+        raise AssertionError(
+            f"Subprocess never wrote run_started within {timeout}s — likely "
+            "import-time crash before handler install.",
+        )
 
 
 def test_subprocess_sigint_writes_run_cancelled(tmp_path: Path):
@@ -381,17 +397,25 @@ def test_subprocess_sigint_writes_run_cancelled(tmp_path: Path):
     try:
         _wait_for_run_started(f)
         proc.send_signal(signal.SIGINT)
-        proc.wait(timeout=15)
+        # Poll the events file rather than wait for proc exit — proc cleanup
+        # can take longer than the cancel-event flush on slow CI runners
+        # (ubuntu-latest + Python 3.10 has been observed > 15s under load).
+        landed = _wait_for_event(
+            f,
+            lambda e: (
+                isinstance(e, RunCancelledEvent)
+                and e.cause.category == CauseCategoryEnum.USER_SIGNAL
+                and e.cause.signal == int(signal.SIGINT)
+                and e.cause.signal_name == "SIGINT"
+            ),
+            timeout=30.0,
+        )
     finally:
         if proc.poll() is None:
             proc.kill()
-    events = read_events(f)
-    assert any(
-        isinstance(e, RunCancelledEvent)
-        and e.cause.category == CauseCategoryEnum.USER_SIGNAL
-        and e.cause.signal == int(signal.SIGINT)
-        and e.cause.signal_name == "SIGINT"
-        for e in events
+        proc.wait(timeout=10)
+    assert landed, (
+        "RunCancelledEvent (SIGINT) never landed within 30s of sending the signal"
     )
 
 
@@ -412,13 +436,18 @@ def test_subprocess_sigterm_writes_run_cancelled(tmp_path: Path):
     try:
         _wait_for_run_started(f)
         proc.send_signal(signal.SIGTERM)
-        proc.wait(timeout=15)
+        landed = _wait_for_event(
+            f,
+            lambda e: (
+                isinstance(e, RunCancelledEvent)
+                and e.cause.signal_name == "SIGTERM"
+            ),
+            timeout=30.0,
+        )
     finally:
         if proc.poll() is None:
             proc.kill()
-    events = read_events(f)
-    assert any(
-        isinstance(e, RunCancelledEvent)
-        and e.cause.signal_name == "SIGTERM"
-        for e in events
+        proc.wait(timeout=10)
+    assert landed, (
+        "RunCancelledEvent (SIGTERM) never landed within 30s of sending the signal"
     )

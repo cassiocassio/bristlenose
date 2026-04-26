@@ -2,7 +2,7 @@
 
 This document tracks active feature branches to help multiple Claude sessions coordinate without conflicts.
 
-**Updated:** 18 Apr 2026 (ci-cleanup merged)
+**Updated:** 26 Apr 2026 (port-v01-ingestion merged)
 
 ---
 
@@ -21,7 +21,6 @@ Each active feature branch gets its own **git worktree** — a full working copy
 | `bristlenose_branch drag-push/` | `drag-push` | Sidebar drag-to-open uses push mode (not overlay) |
 | `bristlenose_branch responsive-signal-cards/` | `responsive-signal-cards` | Responsive signal cards |
 | `bristlenose_branch sidecar-signing/` | `sidecar-signing` | S2 Track C: PyInstaller sidecar codesigning + Hardened Runtime entitlements (road-to-alpha #4 + #5) |
-| `bristlenose_branch port-v01-ingestion/` | `port-v01-ingestion` | S2 Track B: re-introduce pipeline invocation (`bristlenose run`) into the v0.2 multi-project shell — informed rewrite of v0.1 ProcessRunner, unblocks 100days.md beats 6–13 |
 | `bristlenose_branch alpha-telemetry/` | `alpha-telemetry` | Level 0 tag-rejection telemetry for TestFlight alpha — four-field event log, PHP endpoint on bristlenose.app, SwiftUI first-launch sheets, Settings Privacy screen |
 
 
@@ -110,7 +109,6 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 | `drag-push` | `bristlenose_branch drag-push/` | local only |
 | `responsive-signal-cards` | `bristlenose_branch responsive-signal-cards/` | local only |
 | `sidecar-signing` | `bristlenose_branch sidecar-signing/` | local only |
-| `port-v01-ingestion` | `bristlenose_branch port-v01-ingestion/` | local only |
 | `alpha-telemetry` | `bristlenose_branch alpha-telemetry/` | local only |
 
 
@@ -232,31 +230,6 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 
 ---
 
-### `port-v01-ingestion`
-
-**Status:** Just started
-**Started:** 18 Apr 2026
-**Worktree:** `/Users/cassio/Code/bristlenose_branch port-v01-ingestion/`
-**Remote:** local only (push when ready)
-
-**What it does:** S2 Track B — re-introduces pipeline invocation (`bristlenose run`) into the v0.2 multi-project desktop shell. v0.1 had a working `ProcessRunner` that was deliberately dropped when v0.2 rewrote the shell as a WKWebView + sidebar multi-project app. Today's v0.2 captures dropped files into `Project.inputFiles` but nothing ever spawns the pipeline — every project opens an empty report. This branch adds `PipelineRunner.swift` (sibling to `ServeManager`), an in-project progress UI, drop→run wiring, and a serve-when-ready policy. Informed rewrite, not line-by-line port: mirrors `ServeManager`'s subprocess pattern (state enum, `@Published`, generation counter, orphan cleanup) rather than copying v0.1's `Task.detached` + OSC 8 regex + substring stage detector. Unblocks 100days.md beats 6–13. Plan: `~/.claude/plans/gentle-brewing-penguin.md`.
-
-**Files this branch will touch:**
-- `desktop/Bristlenose/PipelineRunner.swift` (new) — sibling to `ServeManager`, `Process()`-based runner with FIFO single-slot queue
-- `desktop/Bristlenose/PipelineProgressView.swift` (new) — in-project progress UI (stage label, line count, cancel, log disclosure)
-- `desktop/Bristlenose/ContentView.swift` — wire drop → `PipelineRunner.start()`; gate `ServeManager.start()` on `.ready`; inject `PipelineProgressView` while `.running`
-- `desktop/Bristlenose/ProjectIndex.swift` — reactive `pipelineStatus` per project (derived from `.bristlenose/pipeline-manifest.json`), optional persisted `lastPipelineRunAt`
-- `desktop/Bristlenose/ServeManager.swift` — extract binary-discovery helper for reuse (no behaviour change)
-- `desktop/Bristlenose/Bristlenose.xcodeproj` — add new `.swift` files to target
-- `docs/private/track-b-walkthrough.md` — dated correction block: findings 2 and 4 were wrong (routing IS wired; `inputFiles` IS populated)
-
-**Potential conflicts with other branches:**
-- `sidecar-signing` (Track C) — no code overlap; will interact at packaging time (signed sidecar must run the pipeline, not just serve). Coordinate only at ship.
-- `ci-cleanup` — merged, no conflict.
-- `living-fish`, `symbology`, `highlighter`, `drag-push`, `responsive-signal-cards` — no overlap (web/CSS/Python surfaces, not desktop Swift).
-
----
-
 ### `alpha-telemetry`
 
 **Status:** Just started
@@ -279,13 +252,16 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 **Won't touch:** `.env`, output directories, `bristlenose/theme/images/`, production `feedback.php` at cassiocassio.co.uk (90-day overlap; user retires it manually later).
 
 **Potential conflicts with other branches:**
-- `port-v01-ingestion` (Track B) — also touches `desktop/Bristlenose/`, but different surfaces (PipelineRunner + ContentView drop handling vs first-launch sheets + Settings pane). Low overlap risk; coordinate on `ContentView.swift` if first-launch sheet mounts there.
 - `sidecar-signing` (Track C) — interacts at ship time only (signed sidecar must serve the new `/api/health` shape and relay telemetry events). No code overlap now.
 - `living-fish`, `symbology`, `highlighter`, `drag-push`, `responsive-signal-cards` — no overlap (different surfaces).
 
 ---
 
 ## Completed Branches (for reference)
+
+### `port-v01-ingestion` — merged 26 Apr 2026
+
+S2 Track B — re-introduced pipeline invocation (`bristlenose run`) into the v0.2 multi-project desktop shell. New `PipelineRunner.swift` (sibling to `ServeManager`) with state enum, generation counter, orphan cleanup; `PipelineProgressView` in-project UI; drop→run wiring; serve-when-ready policy. Also landed Phase 1f / 4a-pre — append-only `pipeline-events.jsonl`, structured `Cause` (10 categories), honest cost estimates, stranded-run reconciliation, desktop `EventLogReader`. Shipped as v0.15.0. Merge commit `e781ebe`.
 
 ### `ci-cleanup` — merged 18 Apr 2026
 

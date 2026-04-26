@@ -322,8 +322,8 @@ The PreferencesFile incident (keyboard-navigation branch, Feb 2026) was caused b
 
 When the user signals end of session, **run `/end-session`** — the skill handles verify, document, commit, and close-out. See `.claude/skills/end-session/SKILL.md` for the full checklist.
 
-## Current status (v0.14.5, Apr 2026)
+## Current status (v0.15.0, Apr 2026)
 
-Core pipeline published to PyPI + Homebrew + Snap. v0.14.5 is a CI-unblock release only (no user-facing changes). Latest product feature: **Video clip extraction** (FFmpeg stream-copy, async job, `ClipBackend` Protocol for future AVFoundation), 6 languages (en, es, fr, de, ko, ja). Inspector panel, codebook sidebar, finding flags, Settings + Help modals with shared ModalNav. Static render formally deprecated. ~2309 Python tests, ~1265 Vitest tests. React migration complete (Steps 1–10). See `CHANGELOG.md` and git log for full history.
+Core pipeline published to PyPI + Homebrew + Snap. v0.15.0 lands **pipeline resilience Phase 1f / 4a-pre** — append-only `pipeline-events.jsonl` with structured `Cause` (10 categories), honest cost estimates, stranded-run reconciliation, desktop `EventLogReader`. Replaces the old "infer from manifest" path that mis-classified interrupted runs as `.ready`. Earlier product feature: **Video clip extraction** (FFmpeg stream-copy, async job, `ClipBackend` Protocol for future AVFoundation), 6 languages (en, es, fr, de, ko, ja). Inspector panel, codebook sidebar, finding flags, Settings + Help modals with shared ModalNav. Static render formally deprecated. ~2328 Python tests, ~1265 Vitest tests, 90 Swift tests. React migration complete (Steps 1–10). See `CHANGELOG.md` and git log for full history.
 
 **Next up:** See `TODO.md` for full task list.

@@ -49,12 +49,6 @@
 				Fixtures/es/desktop.json,
 				Fixtures/es/enums.json,
 				Fixtures/es/settings.json,
-				BristlenoseTests.swift,
-				I18nTests.swift,
-				KeychainHelperTests.swift,
-				LLMProviderTests.swift,
-				ProjectIndexTests.swift,
-				TabTests.swift,
 			);
 			target = DFA8ED0A2F9E7745004CF8AA /* BristlenoseTests */;
 		};

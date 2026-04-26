@@ -384,6 +384,14 @@ Edit `bristlenose/__init__.py` (the single source of truth for version), commit,
 
 ## Changelog
 
+**0.15.0** — _26 Apr 2026_
+
+- **Pipeline resilience: run-level event log + honest run state** — pipelines now write `pipeline-events.jsonl` recording how each run ended, with a structured `Cause` (10 categories). Replaces the desktop's old inference path that mis-classified interrupted runs as ready
+- **Cost as honest estimate** — `cost_usd_estimate` + `price_table_version` + `input_tokens` + `output_tokens` stamped on every terminus event. Surfaced as `"~$0.46 (est.)"` — never bare dollars
+- **Stranded-run reconciliation** — prior runs that died mid-flight are now noticed on the next `bristlenose run` and synthesised as `failed` with cause `unknown` ("Analysis stopped unexpectedly.")
+- **Desktop: `EventLogReader`** — Swift consumer of the events log; new `PipelineState.partial` / `.stopped` cases. UI verb wiring (Resume / Retry / Re-analyse…) lands in a follow-up iteration
+- **Desktop: Swift test target wired up** — `xcodebuild test` runs 90 tests including new `EventLogReaderTests`
+
 **0.14.5** — _17 Apr 2026_
 
 - CI unblock release: no user-facing changes

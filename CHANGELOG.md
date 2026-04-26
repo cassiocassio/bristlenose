@@ -2,6 +2,17 @@
 
 All notable changes to Bristlenose are documented here. See also the [README](README.md) for the latest releases.
 
+**0.15.0** — _26 Apr 2026_
+
+- **Pipeline resilience: Phase 1f / 4a-pre — run-level event log + honest run state** — pipelines now write a single-source append-only `pipeline-events.jsonl` recording how each run ended (started / completed / cancelled / failed) with a structured `Cause` object capturing category, code, message, provider, stage, signal. Replaces the inference path the desktop app previously used (which mis-classified interrupted runs as `.ready`). Survives crashes, recovers cleanly from torn writes, refuses concurrent runs against the same project. See `docs/design-pipeline-resilience.md` §"Run outcomes and intent"
+- **Structured failure causes** — exceptions categorised into 10 cases: `auth` / `network` / `quota` / `disk` / `whisper` / `unknown` (existing) plus `user_signal` / `api_request` / `api_server` / `missing_dep` (new). Same case names on Python and Swift sides for lossless JSON round-trip; word-boundary regex matchers anchor the categoriser to avoid false positives (e.g. `"credit"` no longer matches `"credentials"`)
+- **Cost as honest estimate** — pipelines now stamp `cost_usd_estimate` + `price_table_version` + `input_tokens` + `output_tokens` onto every terminus event. UI surfaces via `format_cost_estimate()` as `"~$0.46 (est.)"` — never bare dollars. Token counts are real (provider returns them); USD is best-effort. `SessionRecord` extended additively with the same fields
+- **Python-side PID file with start-time check** — `<output>/.bristlenose/run.pid` containing `(pid, start_time, run_id)` for cross-process liveness. Defeats PID reuse on busy macOS; mode 0o600 + `O_NOFOLLOW`. Lives inside the project folder so App Sandbox doesn't need extra entitlements
+- **Stranded-run reconciliation** — if a prior run died mid-flight (kill -9, OOM, hard reboot), the next `bristlenose run` notices the stranded `run_started` event and synthesises a `run_failed` for it before starting a new run. Honest fallback: cause is `unknown`, message is "Analysis stopped unexpectedly."
+- **Desktop: `EventLogReader.deriveState`** — Swift consumer of the events log. New `PipelineState` cases `.partial(kind, stagesComplete)` (transcribe-only completed) and `.stopped(stagesComplete)` (user cancelled) join the existing set. UI verb wiring (Resume / Retry / Re-analyse…) deferred to a separate desktop UX iteration tracked in `docs/private/desktop-ux-iteration.md`
+- **Desktop: `BristlenoseTests` target wired up** — `xcodebuild test` now runs 90 Swift tests (Tab, I18n, LLMProvider, KeychainHelper, ProjectIndex, plus new `EventLogReaderTests`). Pre-existing test files marked `@MainActor` at suite level to satisfy Swift 6 strict concurrency
+- **Test totals**: 2328 Python (4 new test files, 80 new tests) + 90 Swift, all green
+
 **0.14.5** — _17 Apr 2026_
 
 - **CI: unblock release pipeline** — v0.14.0–v0.14.4 releases all failed in CI for three independent reasons that had compounded since early April. No user-facing changes; cutting this release to prove the pipeline is green end-to-end before resuming normal feature work

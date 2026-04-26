@@ -251,7 +251,14 @@ def append_event(events_file: Path, event: AnyEvent) -> None:
 
     Uses ``O_APPEND`` + ``fsync``. POSIX guarantees seek-to-end-and-write
     is atomic per ``write()`` call on regular files; concurrent appenders
-    don't tear lines.
+    that single-write a line under PIPE_BUF (4 KB on macOS) don't tear.
+    The 4 KB cap on ``Cause.message`` keeps run-level events under that
+    bound; the ``ConcurrentRunError`` PID-file check is the real guard
+    against parallel writers, since the manifest and SQLite DB also race.
+
+    Mode 0o600 + O_NOFOLLOW: events log contains the OS username +
+    hostname in the process envelope; restrict readability to the
+    project owner and refuse to follow symlink-attacked paths.
 
     Survives process crashes (fsync). Power-loss durability is NOT
     promised on macOS — that requires F_FULLFSYNC, deferred per design doc.
@@ -260,8 +267,8 @@ def append_event(events_file: Path, event: AnyEvent) -> None:
     line = event.model_dump_json(exclude_none=False) + "\n"
     data = line.encode("utf-8")
 
-    # O_APPEND ensures the kernel seeks-to-end on every write, atomically.
-    fd = os.open(events_file, os.O_WRONLY | os.O_CREAT | os.O_APPEND, 0o644)
+    flags = os.O_WRONLY | os.O_CREAT | os.O_APPEND | os.O_NOFOLLOW
+    fd = os.open(events_file, flags, 0o600)
     try:
         os.write(fd, data)
         os.fsync(fd)

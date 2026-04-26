@@ -67,9 +67,12 @@ def test_categorise_missing_dependency():
     assert cause.category == CauseCategoryEnum.MISSING_DEP
 
 
-def test_categorise_filenotfound_as_missing_dep():
+def test_categorise_filenotfound_is_unknown_not_missing_dep():
+    """FileNotFoundError is too broad for MISSING_DEP — pipelines raise it for
+    missing input/audio/people files all the time. Should land in UNKNOWN.
+    Only ImportError / ModuleNotFoundError signal a missing tool."""
     cause = categorise_exception(FileNotFoundError("ffmpeg"))
-    assert cause.category == CauseCategoryEnum.MISSING_DEP
+    assert cause.category == CauseCategoryEnum.UNKNOWN
 
 
 def test_categorise_auth():

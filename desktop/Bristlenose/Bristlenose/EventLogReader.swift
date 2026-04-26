@@ -77,12 +77,20 @@ enum EventLogReader {
     /// Read the most recent `run_*` event. Returns `nil` when the file is
     /// missing, empty, or contains no parseable events. Bounded read.
     static func tailEvent(at url: URL) -> Event? {
-        guard let data = readBoundedTail(url: url, maxBytes: 65_536) else {
+        let maxBytes = 65_536
+        guard let (data, wasTruncated) = readBoundedTail(url: url, maxBytes: maxBytes) else {
             return nil
         }
         // JSONL: split on newlines, parse from the tail back.
         let text = String(data: data, encoding: .utf8) ?? ""
-        let lines = text.split(separator: "\n", omittingEmptySubsequences: true)
+        var lines = Array(text.split(separator: "\n", omittingEmptySubsequences: true))
+        // If we read from a truncated tail (file > maxBytes), the first slice
+        // is almost certainly chopped mid-line. Drop it before iterating —
+        // otherwise an accidentally-valid-looking JSON fragment would decode
+        // to a wrong event.
+        if wasTruncated, !lines.isEmpty {
+            lines.removeFirst()
+        }
         let decoder = JSONDecoder()
         for line in lines.reversed() {
             // Strip trailing NULs (power-loss padding).
@@ -120,7 +128,7 @@ enum EventLogReader {
                 return .running
             }
             return .failed(
-                "Process exited without writing a terminus event",
+                "Analysis stopped unexpectedly.",
                 category: .unknown,
             )
         case "run_completed":
@@ -132,7 +140,9 @@ enum EventLogReader {
             let category = event.cause?.category ?? .unknown
             return .failed(summary, category: category)
         default:
-            logger.warning("unexpected event: \(event.event, privacy: .public)")
+            // Unknown event type — likely forward-compat (Phase 4a stage events).
+            // Swallow gracefully; not actionable for a human.
+            logger.info("unexpected event: \(event.event, privacy: .public)")
             return nil
         }
     }
@@ -148,7 +158,7 @@ enum EventLogReader {
         }
         // For .ready we want a Date — parse `ended_at` if available.
         let date: Date
-        if let endedAt = event.endedAt, let parsed = iso8601.date(from: endedAt) {
+        if let endedAt = event.endedAt, let parsed = parseISO8601(endedAt) {
             date = parsed
         } else {
             date = Date()
@@ -185,23 +195,41 @@ enum EventLogReader {
         return trimmed.isEmpty ? nil : trimmed
     }
 
-    /// Read the last `maxBytes` bytes of `url`. Returns `nil` on missing or
-    /// unreadable file. Mirrors Python's `_iter_event_lines` recovery
-    /// posture — caller handles malformed trailing lines.
-    private static func readBoundedTail(url: URL, maxBytes: Int) -> Data? {
+    /// Read the last `maxBytes` bytes of `url`. Returns `(data, wasTruncated)`
+    /// where `wasTruncated` indicates the file exceeded `maxBytes` and the
+    /// caller should drop the first slice (likely chopped mid-line).
+    /// Returns `nil` on missing or unreadable file. Mirrors Python's
+    /// `_iter_event_lines` recovery posture — caller handles malformed lines.
+    private static func readBoundedTail(url: URL, maxBytes: Int) -> (Data, Bool)? {
         guard let handle = try? FileHandle(forReadingFrom: url) else {
             return nil
         }
         defer { try? handle.close() }
         guard let endOffset = try? handle.seekToEnd() else { return nil }
-        let readFrom: UInt64 = endOffset > UInt64(maxBytes) ? endOffset - UInt64(maxBytes) : 0
+        let truncated = endOffset > UInt64(maxBytes)
+        let readFrom: UInt64 = truncated ? endOffset - UInt64(maxBytes) : 0
         guard (try? handle.seek(toOffset: readFrom)) != nil else { return nil }
-        return try? handle.readToEnd()
+        guard let data = try? handle.readToEnd() else { return nil }
+        return (data, truncated)
     }
 
-    private static let iso8601: ISO8601DateFormatter = {
+    /// Parse a Python-emitted ISO8601 timestamp. Tries with fractional
+    /// seconds first (Python's default), falls back to without — Python's
+    /// `datetime.isoformat()` omits fractional seconds when `microsecond == 0`.
+    static func parseISO8601(_ string: String) -> Date? {
+        if let date = iso8601WithFractional.date(from: string) { return date }
+        return iso8601Plain.date(from: string)
+    }
+
+    private static let iso8601WithFractional: ISO8601DateFormatter = {
         let f = ISO8601DateFormatter()
         f.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        return f
+    }()
+
+    private static let iso8601Plain: ISO8601DateFormatter = {
+        let f = ISO8601DateFormatter()
+        f.formatOptions = [.withInternetDateTime]
         return f
     }()
 }

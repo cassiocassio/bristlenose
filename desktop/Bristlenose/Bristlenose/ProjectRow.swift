@@ -197,10 +197,10 @@ struct ProjectRow: View {
         case .ready(let date):
             return "Analysed \(Self.formatAnalysed(date))"
         case .partial(let kind, _):
-            // transcribe-only completed → user can choose to analyse next.
-            return kind == "transcribe-only" ? "Transcribed · ready to analyse" : "Partial run"
+            // transcribe-only completed; full-analysis verbs land in next UX iteration.
+            return kind == "transcribe-only" ? "Transcribed" : "Partial run"
         case .stopped:
-            return "Stopped — resume or re-analyse"
+            return "Stopped"
         case .failed(let summary, _):
             // Use the human summary the runner already computed for us — far
             // more useful than a generic "Last run failed".

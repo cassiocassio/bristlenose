@@ -11,6 +11,7 @@ import shutil
 import subprocess
 from dataclasses import dataclass, field
 from enum import Enum
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -703,7 +704,6 @@ _COMMAND_CHECKS: dict[str, list[str]] = {
 
 
 def _package_root() -> Path:
-    from pathlib import Path
 
     import bristlenose
     return Path(bristlenose.__file__).parent
@@ -770,7 +770,6 @@ def _check_data_dir(
 
 def check_bundle_react_spa() -> CheckResult:
     """React SPA — the single most important bundled asset."""
-    from pathlib import Path
 
     index = _package_root() / "server" / "static" / "index.html"
     if not index.is_file():
@@ -830,7 +829,6 @@ def check_bundle_prompts() -> CheckResult:
 
 def check_bundle_locales() -> CheckResult:
     """i18n locale files (6 languages)."""
-    from pathlib import Path
 
     locales_root = _package_root() / "locales"
     if not locales_root.is_dir():
@@ -869,7 +867,6 @@ def check_bundle_locales() -> CheckResult:
 
 def check_bundle_theme() -> CheckResult:
     """Theme CSS + JS (atoms, molecules, organisms, templates)."""
-    from pathlib import Path
 
     theme = _package_root() / "theme"
     if not theme.is_dir():
@@ -898,7 +895,6 @@ def check_bundle_theme() -> CheckResult:
 
 def check_bundle_alembic() -> CheckResult:
     """Alembic migrations (server DB init)."""
-    from pathlib import Path
 
     versions = _package_root() / "server" / "alembic" / "versions"
     if not versions.is_dir():

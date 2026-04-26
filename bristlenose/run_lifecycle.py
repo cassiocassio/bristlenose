@@ -26,11 +26,11 @@ and §"Open decisions".
 
 from __future__ import annotations
 
-import atexit
 import json
 import logging
 import os
 import platform
+import re
 import signal
 import socket
 import subprocess
@@ -122,7 +122,9 @@ def _ps_start_time(pid: int) -> str | None:
     """
     try:
         out = subprocess.run(
-            ["ps", "-o", "lstart=", "-p", str(pid)],
+            # Absolute path: matches Swift `psLstart` and refuses any hostile
+            # `$PATH` shadowing of `ps`. POSIX-portable on macOS + Linux.
+            ["/bin/ps", "-o", "lstart=", "-p", str(pid)],
             capture_output=True,
             text=True,
             check=False,
@@ -137,7 +139,12 @@ def _ps_start_time(pid: int) -> str | None:
 
 
 def _write_pid_file(output_dir: Path, run_id: str, start_time: str) -> Path:
-    """Atomic-write ``run.pid`` with our (pid, start_time, run_id)."""
+    """Atomic-write ``run.pid`` with our (pid, start_time, run_id).
+
+    Mode 0o600 + O_NOFOLLOW + O_TRUNC: refuses to follow a symlink-attacked
+    target and limits readability to the project's owner. Defensive default
+    even though the project dir lives inside the user's interview folder.
+    """
     path = pid_file_path(output_dir)
     path.parent.mkdir(parents=True, exist_ok=True)
     payload = {
@@ -146,7 +153,12 @@ def _write_pid_file(output_dir: Path, run_id: str, start_time: str) -> Path:
         "run_id": run_id,
     }
     tmp = path.with_suffix(".tmp")
-    tmp.write_text(json.dumps(payload), encoding="utf-8")
+    flags = os.O_WRONLY | os.O_CREAT | os.O_TRUNC | os.O_NOFOLLOW
+    fd = os.open(tmp, flags, 0o600)
+    try:
+        os.write(fd, json.dumps(payload).encode("utf-8"))
+    finally:
+        os.close(fd)
     tmp.replace(path)
     return path
 
@@ -185,12 +197,22 @@ def _is_alive_owned(pid_file: dict) -> bool:
 # ---------------------------------------------------------------------------
 
 
+_AUTH_RE = re.compile(r"\b(unauthorized|401|invalid api key|authentication)\b")
+_QUOTA_RE = re.compile(r"\b(rate limit|quota|429|credit)\b")
+_NETWORK_RE = re.compile(r"\b(connection|timeout|dns|unreachable)\b")
+_API_SERVER_RE = re.compile(r"\b(internal server|500|502|503|504)\b")
+
+
 def categorise_exception(exc: BaseException) -> Cause:
     """Best-effort mapping of an exception to a structured Cause.
 
     Conservative: most things land in ``unknown`` with ``str(exc)`` as the
     message. Refine as new failure modes warrant. Provider-specific HTTP
     status codes deserve their own categoriser pass — out of scope here.
+
+    Substring matchers are anchored with `\\b` word boundaries to avoid
+    false positives — `"credit"` must not match `"credentials"`,
+    `"authentication"` must not match an unrelated `OSError` quoting it.
     """
     msg = str(exc) or exc.__class__.__name__
     name = exc.__class__.__name__.lower()
@@ -200,25 +222,22 @@ def categorise_exception(exc: BaseException) -> Cause:
     if isinstance(exc, OSError) and getattr(exc, "errno", None) == 28:  # ENOSPC
         return Cause(category=CauseCategoryEnum.DISK, message=msg)
 
-    # Missing dependency.
-    if isinstance(exc, (ImportError, ModuleNotFoundError, FileNotFoundError)):
-        # FileNotFoundError on a binary lookup (ffmpeg, whisper) is also missing-dep.
+    # Missing dependency — Python import failure only. FileNotFoundError is
+    # NOT a missing dep: pipelines raise it for missing input/audio/people
+    # files all the time (would mislead the user with "tool not installed").
+    if isinstance(exc, (ImportError, ModuleNotFoundError)):
         return Cause(category=CauseCategoryEnum.MISSING_DEP, message=msg)
 
-    # Auth-shaped errors.
-    if any(tok in haystack for tok in ("unauthorized", "401", "invalid api key", "authentication")):
+    if _AUTH_RE.search(haystack):
         return Cause(category=CauseCategoryEnum.AUTH, message=msg)
 
-    # Quota / rate limit.
-    if any(tok in haystack for tok in ("rate limit", "quota", "429", "credit")):
+    if _QUOTA_RE.search(haystack):
         return Cause(category=CauseCategoryEnum.QUOTA, message=msg)
 
-    # Network.
-    if any(tok in haystack for tok in ("connection", "timeout", "dns", "unreachable")):
+    if _NETWORK_RE.search(haystack):
         return Cause(category=CauseCategoryEnum.NETWORK, message=msg)
 
-    # 5xx-ish.
-    if any(tok in haystack for tok in ("internal server", "500", "502", "503", "504")):
+    if _API_SERVER_RE.search(haystack):
         return Cause(category=CauseCategoryEnum.API_SERVER, message=msg)
 
     return Cause(category=CauseCategoryEnum.UNKNOWN, message=msg)
@@ -283,7 +302,7 @@ def _reconcile_stranded_run(events_file: Path) -> None:
         ended_at=now,
         cause=Cause(
             category=CauseCategoryEnum.UNKNOWN,
-            message="Process exited without writing a terminus event",
+            message="Analysis stopped unexpectedly.",
         ),
     )
     append_event(events_file, synth)
@@ -356,9 +375,6 @@ def run_lifecycle(
     )
     append_event(events_file, started_event)
     _write_pid_file(output_dir, run_id, proc_start_time)
-
-    # Best-effort cleanup at interpreter exit (defence in depth).
-    atexit.register(_remove_pid_file, output_dir)
 
     log.info("run_started run_id=%s kind=%s", run_id, kind.value)
 

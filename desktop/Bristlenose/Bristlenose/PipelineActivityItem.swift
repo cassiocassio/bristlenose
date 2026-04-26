@@ -132,10 +132,10 @@ struct PipelineActivityItem: View {
         case .quota:      return "Rate limited"
         case .disk:       return "Out of disk space"
         case .whisper:    return "Transcription failed"
-        case .userSignal: return "Stopped"
+        case .userSignal: return "Stopped"  // unreachable in practice — RunCancelledEvent maps to .stopped, not .failed; kept for completeness
         case .apiRequest: return "Provider rejected request"
         case .apiServer:  return "Provider unavailable"
-        case .missingDep: return "Missing dependency"
+        case .missingDep: return "Setup needed"
         case .unknown:    return "Failed"
         }
     }

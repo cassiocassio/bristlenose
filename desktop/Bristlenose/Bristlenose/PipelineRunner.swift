@@ -652,15 +652,11 @@ final class PipelineRunner: ObservableObject {
     }
 
     /// Read `stages` from the manifest and return names of those marked complete.
-    /// Used by `parseManifest` to compute `stagesComplete` for `.partial` and
-    /// `.stopped` states (the events log doesn't store this — manifest is
-    /// the single source of truth for stage state per the design doc).
-    nonisolated static func stagesCompleteFromManifest(at url: URL) -> [String] {
-        guard let data = try? Data(contentsOf: url),
-              let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-              let stages = json["stages"] as? [String: Any] else {
-            return []
-        }
+    /// Derive stages-complete from a parsed manifest dict. Used to compute
+    /// `stagesComplete` for `.partial` and `.stopped` states (the events log
+    /// doesn't store this — manifest is the single source of truth for stage
+    /// state per the design doc).
+    nonisolated static func stagesCompleteFromStages(_ stages: [String: Any]) -> [String] {
         var out: [String] = []
         for (name, raw) in stages {
             guard let stage = raw as? [String: Any],
@@ -692,6 +688,23 @@ final class PipelineRunner: ObservableObject {
             return .idle
         }
 
+        // Read manifest once and reuse for both the events-log and fallback
+        // paths — avoids a duplicate Data(contentsOf:) when 50 sidebar
+        // projects scan in parallel at launch.
+        let manifestData: Data
+        let stages: [String: Any]
+        do {
+            manifestData = try Data(contentsOf: url)
+            guard let json = try JSONSerialization.jsonObject(with: manifestData)
+                    as? [String: Any],
+                  let parsedStages = json["stages"] as? [String: Any] else {
+                return .unreachable(reason: "Project file is damaged.")
+            }
+            stages = parsedStages
+        } catch {
+            return .unreachable(reason: "Can't read this project.")
+        }
+
         // Phase 1f Slice 4 — prefer the events log when present. Falls back
         // to the strict manifest inference below for projects that predate
         // the events log (backward compatibility).
@@ -699,11 +712,11 @@ final class PipelineRunner: ObservableObject {
         let eventsURL = dotBristlenose.appendingPathComponent(EventLogReader.filename)
         let pidURL = dotBristlenose.appendingPathComponent(EventLogReader.pidFilename)
         if fm.fileExists(atPath: eventsURL.path) {
-            let stages = stagesCompleteFromManifest(at: url)
+            let stagesComplete = stagesCompleteFromStages(stages)
             if let derived = EventLogReader.deriveState(
                 eventsURL: eventsURL,
                 pidURL: pidURL,
-                stagesComplete: stages,
+                stagesComplete: stagesComplete,
             ) {
                 return derived
             }
@@ -711,40 +724,29 @@ final class PipelineRunner: ObservableObject {
             // manifest inference rather than block the user.
         }
 
-        do {
-            let data = try Data(contentsOf: url)
-            guard let json = try JSONSerialization.jsonObject(with: data)
-                    as? [String: Any],
-                  let stages = json["stages"] as? [String: Any] else {
-                return .unreachable(reason: "Project file is damaged.")
+        var latestCompleted: Date?
+        var renderComplete = false
+        for (name, raw) in stages {
+            guard let stage = raw as? [String: Any],
+                  let status = stage["status"] as? String else {
+                return .idle
             }
-
-            var latestCompleted: Date?
-            var renderComplete = false
-            for (name, raw) in stages {
-                guard let stage = raw as? [String: Any],
-                      let status = stage["status"] as? String else {
-                    return .idle
-                }
-                if status != "complete" {
-                    return .idle
-                }
-                if name == Self.terminalStage {
-                    renderComplete = true
-                }
-                if let ts = stage["completed_at"] as? String,
-                   let date = Self.iso8601.date(from: ts) {
-                    if latestCompleted == nil || date > latestCompleted! {
-                        latestCompleted = date
-                    }
+            if status != "complete" {
+                return .idle
+            }
+            if name == Self.terminalStage {
+                renderComplete = true
+            }
+            if let ts = stage["completed_at"] as? String,
+               let date = Self.iso8601.date(from: ts) {
+                if latestCompleted == nil || date > latestCompleted! {
+                    latestCompleted = date
                 }
             }
-
-            guard renderComplete else { return .idle }
-            return .ready(latestCompleted ?? Date())
-        } catch {
-            return .unreachable(reason: "Can't read this project.")
         }
+
+        guard renderComplete else { return .idle }
+        return .ready(latestCompleted ?? Date())
     }
 
     // MARK: - Public API
@@ -1095,9 +1097,9 @@ final class PipelineRunner: ObservableObject {
         case .disk:       return "Not enough disk space to finish."
         case .whisper:    return "Transcription failed — the speech model didn't load."
         case .userSignal: return "Run was stopped."
-        case .apiRequest: return "The LLM provider rejected the request."
-        case .apiServer:  return "The LLM provider is unavailable. Try again shortly."
-        case .missingDep: return "A required tool isn't installed."
+        case .apiRequest: return "LLM provider rejected the request."
+        case .apiServer:  return "LLM provider is unavailable — try again shortly."
+        case .missingDep: return "Setup needed — a required tool isn't installed."
         case .unknown:    return "Something went wrong during analysis."
         }
     }

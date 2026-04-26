@@ -3,6 +3,7 @@ import Foundation
 @testable import Bristlenose
 
 /// I18n is @MainActor — all tests must be @MainActor too.
+@MainActor
 @Suite("I18n translation")
 struct I18nTests {
 

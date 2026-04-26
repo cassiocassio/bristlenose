@@ -3,6 +3,7 @@ import Testing
 
 /// Tests for KeychainStore protocol using InMemoryKeychain.
 /// No real macOS Keychain is touched — safe in CI, safe on dev machines.
+@MainActor
 @Suite("KeychainStore (in-memory)")
 struct KeychainHelperTests {
 

@@ -11,16 +11,6 @@
 //   #1 Bearer token — implemented in ServeManager + WebView (v0.14.0)
 //   #2 Media allowlist — implemented in FastAPI (v0.14.0)
 //   #3 CORS middleware — implemented in FastAPI (v0.14.0)
+//   #5 Zombie cleanup — PID verified via ps -o comm before SIGINT (sidecar-signing)
 //   #7 Env scrubbing — implemented in ServeManager (v0.14.0)
-
-#if DEBUG
-
-#warning("SECURITY #5: Zombie cleanup kills any PID on 8150-9149 — verify process is bristlenose before kill()")
-#warning("SECURITY #8: Navigation policy allows any localhost port — restrict to expected serve port")
-
-#else
-
-#error("SECURITY #5: Zombie cleanup kills any PID on 8150-9149 — verify process is bristlenose before kill()")
-#error("SECURITY #8: Navigation policy allows any localhost port — restrict to expected serve port")
-
-#endif
+//   #8 Navigation policy — restricted to assigned serve port + about:blank (sidecar-signing)

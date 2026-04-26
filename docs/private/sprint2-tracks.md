@@ -150,3 +150,9 @@ Also out of scope and parked elsewhere:
 - [ ] Track C: same script swapped to Apple Distribution, produces uploadable `.pkg`
 - [ ] Track B: §1a clean-profile walkthrough completes end-to-end without apology
 - [ ] Promote to S6 work (#10, #12) → first upload
+
+## Post-alpha pickups
+
+After the first internal-TestFlight cohort reports back, pick up work that was deferred from S2 to keep the TestFlight runway clear:
+
+- **Alpha telemetry Phases 2–4** — Phase 1 plumbing landed 26 Apr 2026 (`alpha-telemetry` branch, merge `c5a7f61`). Remaining: Python event API + SQLite buffer + shipper + prompt-version sidecar, React emission hook, Swift opt-in sheet + Keychain UUID + Settings → Privacy. Full prompt: `docs/private/alpha-telemetry-next-session-prompt.md`. Tracked in `road-to-alpha.md` §13b and `100days.md` §1 Must.

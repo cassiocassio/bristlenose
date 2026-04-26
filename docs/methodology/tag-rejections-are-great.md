@@ -2,6 +2,8 @@
 
 *A methodology note for Bristlenose alpha. Pre-beta draft. Expected to evolve.*
 
+> **Implementation status — 26 Apr 2026.** Phase 1 plumbing has shipped (`/api/health` advertises the telemetry endpoint, `/api/dev/telemetry` stub mounted in `--dev`, `website/telemetry.php` ready but not yet deployed; merge commit `c5a7f61`). The full Level 0 collection described below — Python ingestion + SQLite buffer + batched shipper, React emission hook, Swift opt-in sheet + Keychain UUID + Settings → Privacy — is **deliberately deferred to post-TestFlight**. TestFlight tester feedback comes from video-call UX sessions, not instrumented data; pushing through the remaining work was pushing the TestFlight runway. The doc below remains accurate as the *plan*, with the qualifier that no researcher events have yet been collected. Resume context: [`docs/private/alpha-telemetry-next-session-prompt.md`](../private/alpha-telemetry-next-session-prompt.md). Tracking: [`100days.md`](../private/100days.md) §1 Must, `road-to-alpha.md` §13b.
+
 ## Why this doc exists
 
 This captures the thinking behind using tag-rejection signal as Bristlenose's first piece of telemetry and its first mechanism for improving prompt quality. It's written at the pre-alpha stage as a design note, not a spec. It proposes a small set of experiments that can run on testflight alpha builds without new infrastructure — just a bit of event logging and some offline analysis — and sketches what we'd expect to learn from them.

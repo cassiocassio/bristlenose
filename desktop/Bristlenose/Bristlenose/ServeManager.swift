@@ -1,3 +1,4 @@
+import Darwin
 import Foundation
 import OSLog
 
@@ -586,38 +587,30 @@ final class ServeManager: ObservableObject {
 
     /// Verify that a PID belongs to a bristlenose sidecar before killing it.
     ///
-    /// Reads the executable basename via `/bin/ps -o comm= -p <pid>` and
-    /// prefix-matches `bristlenose`. Covers both shipping (`bristlenose-sidecar`,
-    /// PyInstaller onedir) and dev-sidecar mode (`bristlenose`, the user's venv
-    /// CLI). If `ps` fails or the comm is unreadable, returns false — fail
-    /// closed: don't kill what we can't identify.
+    /// Resolves the PID's executable path via `proc_pidpath` (libproc) and
+    /// prefix-matches the basename against `bristlenose`. Covers both
+    /// shipping (`bristlenose-sidecar`, PyInstaller onedir) and dev-sidecar
+    /// mode (`bristlenose`, the user's venv CLI). Fail-closed: if proc_pidpath
+    /// returns 0 (PID gone, permission denied) or the path is empty, return
+    /// false — don't kill what we can't identify.
     ///
-    /// `/bin/ps` is allowed under App Sandbox at the default level (it's a
-    /// read-only informational tool with no sandbox-protected data access).
-    /// Compare to `lsof`, which IS blocked under sandbox — both calls in this
-    /// path are best-effort and silently no-op under sandbox.
+    /// `proc_pidpath` is a single libproc syscall (~µs) — no fork/exec, no
+    /// pipe wrangling, and works under App Sandbox without an exception
+    /// (Activity Monitor uses the same call). This also keeps the zombie-
+    /// cleanup path *alive* under sandbox, where `Process()` exec of /bin/ps
+    /// or /usr/sbin/lsof would silently fail. The lsof call above is still
+    /// the limiting factor — replacing it with proc_listpids + proc_pidfdinfo
+    /// is the next step (see desktop/CLAUDE.md "Zombie process cleanup").
     private nonisolated static func isBristlenoseSidecar(pid: Int32) -> Bool {
-        let task = Process()
-        task.executableURL = URL(fileURLWithPath: "/bin/ps")
-        task.arguments = ["-o", "comm=", "-p", String(pid)]
-
-        let pipe = Pipe()
-        task.standardOutput = pipe
-        task.standardError = FileHandle.nullDevice
-
-        do {
-            try task.run()
-            task.waitUntilExit()
-        } catch {
+        var buf = [CChar](repeating: 0, count: Int(MAXPATHLEN))
+        let len = proc_pidpath(pid, &buf, UInt32(MAXPATHLEN))
+        guard len > 0 else {
+            log.debug("proc_pidpath failed for PID \(pid, privacy: .public) (errno=\(errno, privacy: .public))")
             return false
         }
-
-        let data = pipe.fileHandleForReading.readDataToEndOfFile()
-        guard let raw = String(data: data, encoding: .utf8) else { return false }
-
-        // `ps -o comm=` returns the full path on macOS; take the basename.
-        let comm = raw.trimmingCharacters(in: .whitespacesAndNewlines)
-        let basename = (comm as NSString).lastPathComponent
+        let path = String(cString: buf)
+        guard !path.isEmpty else { return false }
+        let basename = URL(fileURLWithPath: path).lastPathComponent
         return basename.hasPrefix("bristlenose")
     }
 }

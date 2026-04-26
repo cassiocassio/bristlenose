@@ -2,7 +2,7 @@
 
 This document tracks active feature branches to help multiple Claude sessions coordinate without conflicts.
 
-**Updated:** 26 Apr 2026 (port-v01-ingestion merged)
+**Updated:** 26 Apr 2026 (alpha-telemetry merged)
 
 ---
 
@@ -21,7 +21,6 @@ Each active feature branch gets its own **git worktree** — a full working copy
 | `bristlenose_branch drag-push/` | `drag-push` | Sidebar drag-to-open uses push mode (not overlay) |
 | `bristlenose_branch responsive-signal-cards/` | `responsive-signal-cards` | Responsive signal cards |
 | `bristlenose_branch sidecar-signing/` | `sidecar-signing` | S2 Track C: PyInstaller sidecar codesigning + Hardened Runtime entitlements (road-to-alpha #4 + #5) |
-| `bristlenose_branch alpha-telemetry/` | `alpha-telemetry` | Level 0 tag-rejection telemetry for TestFlight alpha — four-field event log, PHP endpoint on bristlenose.app, SwiftUI first-launch sheets, Settings Privacy screen |
 
 
 
@@ -109,7 +108,6 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 | `drag-push` | `bristlenose_branch drag-push/` | local only |
 | `responsive-signal-cards` | `bristlenose_branch responsive-signal-cards/` | local only |
 | `sidecar-signing` | `bristlenose_branch sidecar-signing/` | local only |
-| `alpha-telemetry` | `bristlenose_branch alpha-telemetry/` | local only |
 
 
 
@@ -230,34 +228,11 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 
 ---
 
-### `alpha-telemetry`
-
-**Status:** Just started
-**Started:** 23 Apr 2026
-**Worktree:** `/Users/cassio/Code/bristlenose_branch alpha-telemetry/`
-**Remote:** local only (push when ready)
-
-**What it does:** Level 0 tag-rejection telemetry for the TestFlight alpha (~10 invited testers × ~1 hour each). Spec: [`docs/methodology/tag-rejections-are-great.md`](methodology/tag-rejections-are-great.md). Implementation handoff: [`docs/private/alpha-telemetry-implementation-prompt.md`](private/alpha-telemetry-implementation-prompt.md). Four-field event log (`tag_id`, `prompt_version`, `event_type`, `researcher_id`), batched POST to `https://bristlenose.app/telemetry.php` (new PHP endpoint patterned on `feedback.php`), SQLite on-device buffer with offline persistence, two first-launch SwiftUI sheets (AI disclosure + telemetry opt-in), Settings → Privacy screen with toggle / tester ID / email-driven deletion. No timestamps, no study IDs, no quote content.
-
-**Files this branch will touch:**
-- `website/server/telemetry.php` (new) + move existing `server/feedback.php` into `website/` so `/deploy-website` rsyncs both
-- `frontend/src/utils/health.ts` — add `DEFAULT_TELEMETRY_URL`, extend `HealthResponse` with `telemetry: {enabled, url}`
-- `bristlenose/server/` — extend `/api/health` to include telemetry alongside feedback; add dev stub endpoint `POST /api/_dev/telemetry` that appends JSON lines to a local file (for React/Swift testing before deploy)
-- `frontend/src/` — tag-suggestion emission hook (suggest / accept / reject / edit), case-insensitive debounce rule
-- `bristlenose/server/db.py` (or new module) — SQLite buffer table for unshipped events + batched POST scheduler
-- `bristlenose/llm/` — `prompts/versions.jsonl` sidecar writer; `prompt_version = {tag_id}-{sha256(prompt_text)[:8]}` derivation at event-emit time
-- `desktop/Bristlenose/` — two first-launch sheets (SwiftUI), Settings → Privacy screen with Reset / Delete my events email handler
-- WKWebView messaging bridge — event emission wired React→Swift→SQLite (see `docs/design-wkwebview-messaging.md`)
-
-**Won't touch:** `.env`, output directories, `bristlenose/theme/images/`, production `feedback.php` at cassiocassio.co.uk (90-day overlap; user retires it manually later).
-
-**Potential conflicts with other branches:**
-- `sidecar-signing` (Track C) — interacts at ship time only (signed sidecar must serve the new `/api/health` shape and relay telemetry events). No code overlap now.
-- `living-fish`, `symbology`, `highlighter`, `drag-push`, `responsive-signal-cards` — no overlap (different surfaces).
-
----
-
 ## Completed Branches (for reference)
+
+### `alpha-telemetry` — merged 26 Apr 2026
+
+Phase 1 plumbing only for Level 0 tag-rejection telemetry — TestFlight alpha groundwork. Added `website/server/telemetry.php` (PHP endpoint patterned on `feedback.php`, moved into `website/` so `/deploy-website` rsyncs both), extended `/api/health` with telemetry payload, dev stub endpoint `POST /api/_dev/telemetry`, `DEFAULT_TELEMETRY_URL` and extended `HealthResponse` in `frontend/src/utils/health.ts`. Phases 2–4 (event emission, SQLite buffer, SwiftUI sheets, Settings Privacy screen, prompts/versions.jsonl) deferred to post-TestFlight. Spec: [`docs/methodology/tag-rejections-are-great.md`](methodology/tag-rejections-are-great.md). Merge commit `c5a7f61`.
 
 ### `port-v01-ingestion` — merged 26 Apr 2026
 

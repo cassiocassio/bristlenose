@@ -1,11 +1,13 @@
 # Server endpoints (DreamHost)
 
-Two PHP files deployed alongside the rest of `website/` to bristlenose.app:
+Two PHP files staged in `website/` to deploy alongside the rest of the site to bristlenose.app:
 
 - **`feedback.php`** — anonymous free-text feedback from the HTML report footer
 - **`telemetry.php`** — batched Level 0 tag-rejection events from TestFlight alpha testers
 
 Both are simple single-file endpoints (no DB, no framework) that append to CSV files under `data/`. They share the same `data/` directory and the same download-token mechanism.
+
+> **Deployment status — 26 Apr 2026.** Neither file is live on bristlenose.app yet. `feedback.php` is still served from the legacy `cassiocassio.co.uk` URL during the 90-day overlap (see §Migration state). `telemetry.php` is intentionally not deployed until alpha-telemetry Phase 2 starts — there's no client emitting events, so an unreachable URL on the health payload is the correct state. Run `/deploy-website` only when Phase 2 is ready to test against production. Both files refuse to run (503) while `$DOWNLOAD_TOKEN` is still the placeholder, so a forgotten rotation fails loud rather than silent.
 
 ## What they do
 

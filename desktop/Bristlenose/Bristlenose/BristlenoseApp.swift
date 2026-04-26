@@ -12,6 +12,7 @@ struct BristlenoseApp: App {
     @StateObject private var serveManager = ServeManager()
     @StateObject private var bridgeHandler = BridgeHandler()
     @StateObject private var projectIndex = ProjectIndex()
+    @StateObject private var pipelineRunner = PipelineRunner()
     @StateObject private var volumeWatcher = VolumeWatcher()
     @StateObject private var toast = ToastStore()
     @StateObject private var i18n: I18n = {
@@ -28,12 +29,15 @@ struct BristlenoseApp: App {
                 .environmentObject(serveManager)
                 .environmentObject(bridgeHandler)
                 .environmentObject(projectIndex)
+                .environmentObject(pipelineRunner)
                 .environmentObject(toast)
                 .environmentObject(i18n)
                 .overlay { ToastOverlay().environmentObject(toast) }
                 .onAppear {
                     volumeWatcher.projectIndex = projectIndex
                     projectIndex.refreshAvailability()
+                    pipelineRunner.setProjectIndex(projectIndex)
+                    pipelineRunner.scanAllProjects(projectIndex.projects)
                 }
                 .onReceive(
                     NotificationCenter.default.publisher(for: NSApplication.willTerminateNotification)

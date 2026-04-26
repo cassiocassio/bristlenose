@@ -1,6 +1,7 @@
 import Testing
 @testable import Bristlenose
 
+@MainActor
 @Suite("LLM provider definitions")
 struct LLMProviderTests {
 

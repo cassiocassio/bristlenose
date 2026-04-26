@@ -121,6 +121,7 @@ struct ContentView: View {
     @EnvironmentObject var serveManager: ServeManager
     @EnvironmentObject var bridgeHandler: BridgeHandler
     @EnvironmentObject var projectIndex: ProjectIndex
+    @EnvironmentObject var pipelineRunner: PipelineRunner
     @EnvironmentObject var toast: ToastStore
     @EnvironmentObject var i18n: I18n
     @AppStorage("appearance") private var appearance: String = "auto"
@@ -379,6 +380,46 @@ struct ContentView: View {
     }
 
     /// Open NSOpenPanel to re-locate a moved/deleted project.
+    /// Finder/Mail pattern for context-menu Delete on a multi-select.
+    /// If the right-clicked row is part of the current selection, the
+    /// action applies to all selected rows. If the right-clicked row is
+    /// NOT in the selection, it acts on only that row (the click is
+    /// treated as a temporary single-row target without disturbing the
+    /// existing selection — matches Finder behaviour).
+    private func deleteFromContextMenu(targetingProject id: UUID) {
+        if selection.contains(.project(id)) {
+            let projectIds = selection.compactMap { sel -> UUID? in
+                if case .project(let pid) = sel { return pid }
+                return nil
+            }
+            for pid in projectIds {
+                selection.remove(.project(pid))
+                projectIndex.removeProject(id: pid)
+            }
+        } else {
+            // Right-clicked row is not in the current selection — leave
+            // selection alone (Finder behaviour) and act only on the target.
+            projectIndex.removeProject(id: id)
+        }
+    }
+
+    private func deleteFromContextMenu(targetingFolder id: UUID) {
+        if selection.contains(.folder(id)) {
+            let folderIds = selection.compactMap { sel -> UUID? in
+                if case .folder(let fid) = sel { return fid }
+                return nil
+            }
+            for fid in folderIds {
+                selection.remove(.folder(fid))
+                projectIndex.removeFolder(id: fid)
+            }
+        } else {
+            // Right-clicked row is not in the current selection — leave
+            // selection alone (Finder behaviour) and act only on the target.
+            projectIndex.removeFolder(id: id)
+        }
+    }
+
     private func locateProject(_ project: Project) {
         let panel = NSOpenPanel()
         panel.canChooseDirectories = true
@@ -504,8 +545,16 @@ struct ContentView: View {
             )
             selection = [.project(project.id)]
             renamingProjectID = project.id
+            // Folder-drop is the explicit signal to analyse — auto-run.
+            // Plan §Phase 3 point 2 (the ~90% happy path).
+            pipelineRunner.start(project: project)
         } else if !directories.isEmpty || !files.isEmpty {
             // Multiple items — one project with explicit input list.
+            // CLI's `discover_files` doesn't accept a subset list yet
+            // (memory project_inputfiles_model), so we capture the files but
+            // do NOT start the pipeline. The project content area will show
+            // the unsupported-subset state (Slice 6) — for now the project
+            // simply sits in `.idle`.
             let allPaths = directories.map { $0.path } + files.map { $0.path }
             let firstName: String
             let firstPath: String
@@ -525,24 +574,70 @@ struct ContentView: View {
     }
 
     /// Handle files/folders dropped onto an existing project row.
-    /// Adds the dropped interviews to that project's input list.
+    /// Adds the dropped interviews to that project's input list and — when
+    /// appropriate — kicks off a pipeline run on them.
+    ///
+    /// Drop-policy matrix (plan §Phase 5 finding 40):
+    /// - target `.running` / `.queued`: reject (toast); never silently queue
+    ///   another drop on a busy project
+    /// - target `.ready` (already analysed): accept the addFiles, show the
+    ///   "extra interviews not supported yet" toast, do NOT re-run
+    /// - target `.idle` / `.failed` / `.scanning` / `.unreachable`: accept,
+    ///   addFiles, kick off pipeline (`PipelineRunner` will queue if another
+    ///   project is currently running)
     private func handleDropOnProject(id: UUID, providers: [NSItemProvider]) {
         Task {
             let urls = await loadURLs(from: providers)
             let accepted = Self.filterAcceptedURLs(urls)
             await MainActor.run {
                 let paths = accepted.map { $0.path }
-                if !paths.isEmpty {
+                guard !paths.isEmpty else { return }
+                guard let project = projectIndex.projects.first(where: { $0.id == id }) else {
+                    return
+                }
+
+                switch pipelineRunner.state[id] {
+                case .running, .queued:
+                    toast.show("Finish or stop the current run before adding more.")
+                    return
+                case .ready:
                     projectIndex.addFiles(to: id, files: paths)
                     selection = [.project(id)]
-                    // Toast confirmation: "Added 3 interviews to Project Name"
-                    if let project = projectIndex.projects.first(where: { $0.id == id }) {
-                        let count = paths.count
-                        let message = String(
-                            format: i18n.t("desktop.chrome.addedInterviews"),
-                            count, project.name
-                        )
-                        toast.show(message)
+                    toast.show("Adding extra interviews to an analysed project isn't supported yet.")
+                    return
+                case .failed:
+                    // Don't silently retry a known-broken pipeline (would burn
+                    // LLM spend repeating the same failure). User explicitly
+                    // re-runs from the toolbar pill's Retry button.
+                    toast.show("Use Retry on the toolbar to try this run again.")
+                    return
+                case .unreachable:
+                    // Volume not mounted / folder gone — addFiles would write
+                    // to a path that doesn't exist; pipeline would fail with
+                    // a generic error stacked on top. Surface the real cause.
+                    toast.show("This project's folder isn't reachable right now.")
+                    return
+                default:
+                    break
+                }
+
+                projectIndex.addFiles(to: id, files: paths)
+                selection = [.project(id)]
+                // Toast confirmation: "Added 3 interviews to Project Name"
+                let count = paths.count
+                let message = String(
+                    format: i18n.t("desktop.chrome.addedInterviews"),
+                    count, project.name
+                )
+                toast.show(message)
+
+                // Re-fetch the project — addFiles may have mutated inputFiles.
+                if let updated = projectIndex.projects.first(where: { $0.id == id }) {
+                    // Only auto-run if this project is folder-shaped
+                    // (`inputFiles == nil`). File-subset projects can't run
+                    // until the CLI gains `--files` support.
+                    if updated.inputFiles == nil {
+                        pipelineRunner.start(project: updated)
                     }
                 }
             }
@@ -692,6 +787,18 @@ struct ContentView: View {
             }
             .help(i18n.t("desktop.toolbar.searchShortcut"))
         }
+
+        // Pipeline activity pill — only visible when the selected project's
+        // run is .running / .queued / .failed. Self-hides otherwise.
+        if let project = selectedProject {
+            ToolbarItem(placement: .primaryAction) {
+                PipelineActivityItem(
+                    project: project,
+                    pipelineRunner: pipelineRunner,
+                    liveData: pipelineRunner.liveData
+                )
+            }
+        }
     }
 
     // MARK: - Sidebar
@@ -815,8 +922,7 @@ struct ContentView: View {
                 .disabled(true)
                 Divider()
                 Button(i18n.t("desktop.menu.folder.delete"), role: .destructive) {
-                    selection.remove(.folder(folder.id))
-                    projectIndex.removeFolder(id: folder.id)
+                    deleteFromContextMenu(targetingFolder: folder.id)
                 }
             }
         }
@@ -848,6 +954,7 @@ struct ContentView: View {
                 }
             ),
             isDropTarget: dropTargetProjectID == project.id,
+            liveData: pipelineRunner.liveData,
             onRename: { newName in
                 projectIndex.renameProject(id: project.id, newName: newName)
             },
@@ -922,8 +1029,7 @@ struct ContentView: View {
 
             Divider()
             Button(i18n.t("desktop.menu.project.delete"), role: .destructive) {
-                selection.remove(.project(project.id))
-                projectIndex.removeProject(id: project.id)
+                deleteFromContextMenu(targetingProject: project.id)
             }
         }
         .popover(
@@ -958,6 +1064,10 @@ struct ContentView: View {
                     systemImage: "square.and.arrow.down",
                     description: Text(i18n.t("desktop.chrome.dragInterviewsDescription"))
                 )
+            } else if project.inputFiles != nil {
+                // File-subset project — CLI can't analyse this shape yet.
+                // Show files + Show-in-Finder; pipeline never starts.
+                UnsupportedSubsetView(project: project)
             } else {
                 ZStack {
                     switch serveManager.state {

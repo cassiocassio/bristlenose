@@ -26,6 +26,29 @@ $DOWNLOAD_TOKEN = 'CHANGE_ME_TO_A_RANDOM_STRING'; // e.g. bin2hex(random_bytes(2
 $DATA_DIR = __DIR__ . '/data';
 $CSV_FILE = $DATA_DIR . '/feedback.csv';
 
+// ── Guardrail: refuse to run if the placeholder token wasn't rotated ─────
+
+if ($DOWNLOAD_TOKEN === 'CHANGE_ME_TO_A_RANDOM_STRING') {
+    http_response_code(503);
+    header('Content-Type: text/plain');
+    echo "Endpoint not configured: rotate \$DOWNLOAD_TOKEN in feedback.php before deploying.\n";
+    exit;
+}
+
+// ── CSV cell safety ──────────────────────────────────────────────────────
+//
+// Strip control characters and neutralise leading CSV-formula markers.
+// fputcsv() quotes commas/quotes/newlines but does NOT prefix =/+/-/@ —
+// opening the CSV in Excel would evaluate a cell beginning with =HYPERLINK().
+
+function bn_csv_safe(string $s): string {
+    $s = str_replace(["\r", "\n", "\0"], '', $s);
+    if ($s !== '' && in_array($s[0], ['=', '+', '-', '@', "\t"], true)) {
+        $s = "'" . $s;
+    }
+    return $s;
+}
+
 // ── CORS (reports are served from file:// or other origins) ──────────────
 
 header('Access-Control-Allow-Origin: *');
@@ -40,7 +63,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 // ── CSV download ─────────────────────────────────────────────────────────
 
 if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['download'])) {
-    if (!isset($_GET['token']) || $_GET['token'] !== $DOWNLOAD_TOKEN) {
+    if (!isset($_GET['token']) || !hash_equals($DOWNLOAD_TOKEN, $_GET['token'])) {
         http_response_code(403);
         echo 'Forbidden';
         exit;
@@ -91,7 +114,13 @@ if ($fp) {
     if ($needs_header) {
         fputcsv($fp, ['time', 'version', 'rating', 'message', 'ip']);
     }
-    fputcsv($fp, [$time, $version, $rating, $message, $ip]);
+    fputcsv($fp, [
+        $time,
+        bn_csv_safe($version),
+        bn_csv_safe($rating),
+        bn_csv_safe($message),
+        bn_csv_safe($ip),
+    ]);
     fclose($fp);
 }
 

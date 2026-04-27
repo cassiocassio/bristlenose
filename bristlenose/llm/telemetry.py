@@ -28,6 +28,7 @@ file. Trim is invoked from ``run_lifecycle`` at run terminus.
 from __future__ import annotations
 
 import json
+import logging
 import os
 import tempfile
 from collections.abc import Iterator
@@ -40,6 +41,8 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field
 
 from .cohort_normalise import normalise_model
+
+logger = logging.getLogger(__name__)
 
 JSONL_FILENAME = "llm-calls.jsonl"
 DEFAULT_RETENTION = 1000
@@ -197,14 +200,20 @@ def record_call(
 
     target_dir = run_dir if run_dir is not None else _run_dir.get()
     if target_dir is None:
+        logger.debug("record_call: no _run_dir contextvar set, skipping")
         return
 
     rid = run_id if run_id is not None else _run_id.get()
     if rid is None:
+        logger.debug("record_call: no _run_id contextvar set, skipping")
         return
 
     stg = stage_override if stage_override is not None else _stage_id.get()
     if stg is None:
+        logger.debug(
+            "record_call: no _stage_id contextvar set "
+            "(missing 'with telemetry.stage(...)' wrapper?), skipping"
+        )
         return
 
     sid = session_id_override if session_id_override is not None else _session_id.get()

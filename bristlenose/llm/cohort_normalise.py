@@ -107,10 +107,13 @@ def normalise_model(provider: str, response_model: str) -> tuple[str, str]:
         return (model.lower(), "0")
 
     # local (Ollama)
-    base = model.split(":", 1)[0]
+    # Quantisation/size tag (`:3b`, `:8b`) materially changes token throughput
+    # and cost, so it is part of the cohort key — encoded into family.
+    base, _, tag = model.partition(":")
+    size_suffix = f"-{tag.lower()}" if tag else ""
     m = _LOCAL_RE.match(base)
     if m:
-        family = m.group("family").lower()
+        family = m.group("family").lower() + size_suffix
         major = m.group("major") or "0"
         return (family, major)
-    return (base.lower(), "0")
+    return (base.lower() + size_suffix, "0")

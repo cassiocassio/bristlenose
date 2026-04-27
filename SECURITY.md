@@ -56,6 +56,8 @@ Speaker identification (Stage 5b) sends a small portion of raw transcript to the
 
 `pii_summary.txt` is written to the `.bristlenose/` hidden directory inside the output folder. It contains every original PII value with replacement labels, confidence scores, and timecodes — **this file is a re-identification key and must not be shared outside the research team.** Review it to catch false positives or missed items.
 
+`llm-calls.jsonl` is written to the same `.bristlenose/` directory. Each row records one LLM call's cost, timing, model, and participant code (`p1`, `p2` …) for the cost-forecasting feature. The file does **not** contain transcript text, quotes, or LLM prompt/response bodies. **It is a re-identification key when combined with the transcript files in the same project — must not be shared outside the research team, never include in any export or support bundle.** Mode `0o600` and `O_NOFOLLOW` are enforced. The file is local-only and never transmitted; there is no Bristlenose backend that sees this data. To purge: `rm <project>/.bristlenose/llm-calls.jsonl` (deletion of the project folder removes it automatically). Kill switch: `BRISTLENOSE_LLM_TELEMETRY=0` stops new appends. Retention is bounded by `BRISTLENOSE_LLM_CALLS_RETAIN` (default 1000 rows).
+
 ### Testing
 
 The test suite includes an adversarial transcript (`tests/fixtures/pii_horror_transcript.txt`) with PII planted across 8 categories designed to stress-test every known weakness in NER-based detection. Expected results are documented in `tests/fixtures/pii_horror_expected.yaml`.

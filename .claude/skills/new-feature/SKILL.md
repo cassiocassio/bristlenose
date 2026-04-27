@@ -79,7 +79,18 @@ cd "/Users/cassio/Code/bristlenose_branch $0"
 if .venv/bin/python -c "import sqlalchemy; import fastapi; import pytest" 2>/dev/null; then
   echo "Venv already set up with all extras — skipping"
 else
-  python3 -m venv .venv
+  # Derive Python version from CI (single source of truth) instead of baking it in.
+  # release.yml is the canonical "primary" version — install-test.yml, i18n-check.yml,
+  # and the lint/coverage jobs in ci.yml all match it. Fallback to 3.12 if grep fails.
+  # NEVER use bare `python3` — default may be 3.14 (brew) with broken ensurepip on macOS
+  # (see CLAUDE.md gotcha).
+  PYVER=$(grep -oE 'python-version: "[0-9]+\.[0-9]+"' /Users/cassio/Code/bristlenose/.github/workflows/release.yml | head -1 | grep -oE '[0-9]+\.[0-9]+')
+  PYVER=${PYVER:-3.12}
+  if ! command -v "python${PYVER}" >/dev/null; then
+    echo "✗ python${PYVER} not installed — install with: brew install python@${PYVER}"
+    exit 1
+  fi
+  "python${PYVER}" -m venv .venv
   .venv/bin/pip install -e '.[dev,serve]'
 fi
 ```

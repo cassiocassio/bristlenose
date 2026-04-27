@@ -5,8 +5,9 @@ from __future__ import annotations
 import asyncio
 import logging
 
+from bristlenose.llm import telemetry
 from bristlenose.llm.client import LLMClient
-from bristlenose.llm.prompts import get_prompt
+from bristlenose.llm.prompts import get_prompt_template
 from bristlenose.llm.structured import QuoteExtractionResult
 from bristlenose.models import (
     EmotionalTone,
@@ -116,9 +117,10 @@ async def extract_quotes(
             )
             topic_map = topic_map_lookup.get(transcript.session_id)
             try:
-                quotes = await _extract_single(
-                    transcript, topic_map, llm_client, min_quote_words
-                )
+                with telemetry.session(transcript.participant_id):
+                    quotes = await _extract_single(
+                        transcript, topic_map, llm_client, min_quote_words
+                    )
                 consecutive_failures = 0
                 logger.info(
                     "%s: Extracted %d quotes",
@@ -172,15 +174,16 @@ async def _extract_single(
     # so the LLM understands context, but it must only extract participant quotes)
     transcript_text = transcript.full_text()
 
-    _prompt = get_prompt("quote-extraction")
+    _tmpl = get_prompt_template("quote-extraction")
 
     result = await llm_client.analyze(
-        system_prompt=_prompt.system,
-        user_prompt=_prompt.user.format(
+        system_prompt=_tmpl.system,
+        user_prompt=_tmpl.user.format(
             topic_boundaries=boundaries_text,
             transcript_text=transcript_text,
         ),
         response_model=QuoteExtractionResult,
+        prompt_template=_tmpl,
     )
 
     # Convert LLM output to our domain models

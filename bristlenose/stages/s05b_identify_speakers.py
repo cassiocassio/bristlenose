@@ -224,7 +224,7 @@ async def split_single_speaker_llm(
         return segments
 
     from bristlenose.llm.client import LLMClient
-    from bristlenose.llm.prompts import get_prompt
+    from bristlenose.llm.prompts import get_prompt_template
 
     client: LLMClient = llm_client  # type: ignore[assignment]
 
@@ -242,18 +242,19 @@ async def split_single_speaker_llm(
         return segments
 
     sample_text = "\n".join(sample_lines)
-    _prompt = get_prompt("speaker-splitting")
+    _tmpl = get_prompt_template("speaker-splitting")
 
     try:
         from bristlenose.llm.structured import SpeakerSplitAssignment
 
         result = await client.analyze(
-            system_prompt=_prompt.system,
-            user_prompt=_prompt.user.format(
+            system_prompt=_tmpl.system,
+            user_prompt=_tmpl.user.format(
                 transcript_sample=sample_text,
                 segment_count=len(sample_lines),
             ),
             response_model=SpeakerSplitAssignment,
+            prompt_template=_tmpl,
         )
 
         if result.speaker_count <= 1:  # type: ignore[attr-defined]
@@ -334,7 +335,7 @@ async def identify_speaker_roles_llm(
         an empty list if the LLM call fails.
     """
     from bristlenose.llm.client import LLMClient
-    from bristlenose.llm.prompts import get_prompt
+    from bristlenose.llm.prompts import get_prompt_template
 
     client: LLMClient = llm_client  # type: ignore[assignment]
 
@@ -356,17 +357,18 @@ async def identify_speaker_roles_llm(
         seg.speaker_label or "Unknown" for seg in segments
     ))
 
-    _prompt = get_prompt("speaker-identification")
+    _tmpl = get_prompt_template("speaker-identification")
 
     try:
         from bristlenose.llm.structured import SpeakerRoleAssignment
         result = await client.analyze(
-            system_prompt=_prompt.system,
-            user_prompt=_prompt.user.format(
+            system_prompt=_tmpl.system,
+            user_prompt=_tmpl.user.format(
                 transcript_sample=sample_text,
                 speaker_list=", ".join(unique_speakers),
             ),
             response_model=SpeakerRoleAssignment,
+            prompt_template=_tmpl,
         )
 
         # Apply LLM assignments and collect extracted info

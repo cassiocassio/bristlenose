@@ -6,7 +6,7 @@ import json
 import logging
 
 from bristlenose.llm.client import LLMClient
-from bristlenose.llm.prompts import get_prompt
+from bristlenose.llm.prompts import get_prompt_template
 from bristlenose.llm.structured import ThematicGroupingResult
 from bristlenose.models import ExtractedQuote, QuoteType, ThemeGroup
 from bristlenose.utils.timecodes import format_timecode
@@ -52,13 +52,14 @@ async def group_by_theme(
 
     quotes_json = json.dumps(quotes_for_llm, ensure_ascii=False, separators=(",", ":"))
 
-    _prompt = get_prompt("thematic-grouping")
+    _tmpl = get_prompt_template("thematic-grouping")
 
     try:
         result = await llm_client.analyze(
-            system_prompt=_prompt.system,
-            user_prompt=_prompt.user.format(quotes_json=quotes_json),
+            system_prompt=_tmpl.system,
+            user_prompt=_tmpl.user.format(quotes_json=quotes_json),
             response_model=ThematicGroupingResult,
+            prompt_template=_tmpl,
         )
     except Exception as exc:
         logger.error("Thematic grouping failed: %s", exc)

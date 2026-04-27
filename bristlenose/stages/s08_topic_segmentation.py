@@ -5,8 +5,9 @@ from __future__ import annotations
 import asyncio
 import logging
 
+from bristlenose.llm import telemetry
 from bristlenose.llm.client import LLMClient
-from bristlenose.llm.prompts import get_prompt
+from bristlenose.llm.prompts import get_prompt_template
 from bristlenose.llm.structured import TopicSegmentationResult
 from bristlenose.models import (
     PiiCleanTranscript,
@@ -62,7 +63,8 @@ async def segment_topics(
                 transcript.duration_seconds,
             )
             try:
-                topic_map = await _segment_single(transcript, llm_client)
+                with telemetry.session(transcript.participant_id):
+                    topic_map = await _segment_single(transcript, llm_client)
                 consecutive_failures = 0
                 logger.info(
                     "%s: Found %d topic boundaries",
@@ -97,12 +99,13 @@ async def _segment_single(
     """Segment topics for a single transcript."""
     transcript_text = transcript.full_text()
 
-    _prompt = get_prompt("topic-segmentation")
+    _tmpl = get_prompt_template("topic-segmentation")
 
     result = await llm_client.analyze(
-        system_prompt=_prompt.system,
-        user_prompt=_prompt.user.format(transcript_text=transcript_text),
+        system_prompt=_tmpl.system,
+        user_prompt=_tmpl.user.format(transcript_text=transcript_text),
         response_model=TopicSegmentationResult,
+        prompt_template=_tmpl,
     )
 
     # Convert LLM output to our domain models

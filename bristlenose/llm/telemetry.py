@@ -17,9 +17,12 @@ atomic on local filesystems, so multiple concurrent writers do not
 interleave. We do **not** ``fsync`` per call — telemetry is statistical,
 not forensic. ``fsync`` happens at run terminus via :func:`trim_to_cap`.
 
-**Kill switch.** Set ``BRISTLENOSE_LLM_TELEMETRY=0`` to short-circuit
-:func:`record_call` to a no-op. The read path tolerates missing/empty
-JSONL.
+**Kill switch.** Set ``BRISTLENOSE_LLM_TELEMETRY=0`` *before launching
+the process* to short-circuit :func:`record_call` to a no-op. The env
+var is read on every call but processes inherit a fixed env at fork
+time, so flipping the variable in a sibling shell does **not** affect
+an already-running ``bristlenose serve`` or pipeline run. The read
+path tolerates missing/empty JSONL.
 
 **Retention.** ``BRISTLENOSE_LLM_CALLS_RETAIN`` (default 1000) caps the
 file. Trim is invoked from ``run_lifecycle`` at run terminus.
@@ -77,6 +80,9 @@ class LLMCallEvent(BaseModel):
     prompt_id: str | None = None
     prompt_version: str | None = None
     prompt_path: str | None = None
+    # SHA of the on-disk prompt template file (before user-data
+    # substitution). Identifies the prompt version, never hashes
+    # rendered prompt content with transcripts in it.
     prompt_sha: str | None = None
     input_chars: int
     input_tokens: int | None = Field(default=None, alias="gen_ai.usage.input_tokens")

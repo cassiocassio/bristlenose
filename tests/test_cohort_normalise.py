@@ -30,11 +30,13 @@ from bristlenose.llm.cohort_normalise import normalise_model
         ("google", "gemini-2.5-pro", ("gemini-pro", "2")),
         ("google", "gemini-2.5-flash", ("gemini-flash", "2")),
         ("google", "gemini-1.5-pro", ("gemini-pro", "1")),
-        # Local (Ollama)
-        ("local", "llama3.2:3b", ("llama", "3")),
-        ("local", "llama3.1:8b", ("llama", "3")),
-        ("local", "mistral:7b", ("mistral", "0")),
-        ("local", "qwen2.5:7b", ("qwen", "2")),
+        # Local (Ollama) — quantisation/size tag is part of the cohort key
+        # (token throughput differs materially between :3b and :8b)
+        ("local", "llama3.2:3b", ("llama-3b", "3")),
+        ("local", "llama3.1:8b", ("llama-8b", "3")),
+        ("local", "llama3.2", ("llama", "3")),  # no tag → no suffix
+        ("local", "mistral:7b", ("mistral-7b", "0")),
+        ("local", "qwen2.5:7b", ("qwen-7b", "2")),
     ],
 )
 def test_normalise_known_models(

@@ -10,6 +10,7 @@ trued-against: HEAD@cost-and-time-forecasts (efc051a) on 2026-04-27
 
 **Status:** Slice A shipped (2026-04-27, `efc051a`); Slices B + C planned.
 **Parent design:** [design-llm-call-telemetry.md](design-llm-call-telemetry.md) — full design covering cost + time + UX + shoal across five phases. This doc is the file-by-file implementation plan for Phase 1 only.
+**Sibling:** [design-llm-pricing-fetch.md](design-llm-pricing-fetch.md) — keeps the rate sheet itself current between releases (separate followup PR after slice C).
 **Scope:** narrow. Replace the hardcoded `_TOKENS_PER_SESSION` constant with a self-correcting cost forecast backed by per-call data capture. Time forecast is Phase 2.
 **Branch:** `cost-and-time-forecasts`.
 

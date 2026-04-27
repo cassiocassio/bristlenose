@@ -22,6 +22,11 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
+          # Canonical primary Python version. If you bump this, also bump it in
+          # ci.yml (lint/coverage/install-test jobs), i18n-check.yml, install-test.yml.
+          # Then do the 100days "Primary Python version helper" item — extract a
+          # scripts/primary-python-version.sh so the new-feature skill etc. read
+          # from one source instead of grep'ing this file.
           python-version: "3.12"
 
       - name: Set up Node.js

@@ -541,48 +541,98 @@ final class ServeManager: ObservableObject {
     /// Kill orphaned `bristlenose serve` processes left behind by previous
     /// app crashes (SIGKILL from Xcode stop button, force-quit, etc.).
     ///
-    /// Uses `lsof` to find PIDs listening on the Bristlenose port range
-    /// (8150–9149), then sends SIGINT for graceful Uvicorn shutdown.
-    /// Runs synchronously but fast (~10ms) — safe to call from init().
+    /// Two-stage filter via libproc syscalls (no fork/exec, sandbox-friendly):
+    ///   1. `proc_listpids` enumerates every PID, filtered to those whose
+    ///      executable basename starts with `bristlenose` via `proc_pidpath`.
+    ///   2. For each survivor, `proc_pidfdinfo(PROC_PIDFDSOCKETINFO)` walks
+    ///      the socket FDs looking for a TCP-LISTEN socket whose local port
+    ///      falls inside the Bristlenose range (8150–9149). Matches get SIGINT
+    ///      for graceful Uvicorn shutdown.
     ///
-    /// SECURITY #5: every PID is verified via `ps -o comm=` before kill, to
-    /// avoid SIGINTing unrelated processes that happen to be listening on a
-    /// port in our range (a colleague's dev server, a Jupyter kernel, etc.).
-    /// Vite dev server cleanup (port 5173) is intentionally dropped — the
-    /// process basename is `node`, indistinguishable from the user's other
-    /// node servers. Vite zombies must be killed manually after a SIGKILL of
-    /// `serve --dev`. Acceptable: rare, dev-only, no security exposure.
+    /// Why two stages: stage 1 alone would kill any `bristlenose run` CLI
+    /// the user happens to be running in another terminal (which doesn't
+    /// listen on a port). Stage 2 narrows to genuine `serve` processes.
+    ///
+    /// Replaces the legacy `lsof -ti :8150-9149` exec which is blocked under
+    /// App Sandbox (parallel to SECURITY #5's `proc_pidpath` swap for `ps`).
+    /// All libproc calls work under sandbox without an exception — the same
+    /// APIs Activity Monitor uses.
+    ///
+    /// Vite zombies are still not caught: the process basename is `node`,
+    /// indistinguishable from the user's other node servers. Vite zombies
+    /// must be killed manually after a SIGKILL of `serve --dev`. Acceptable:
+    /// rare, dev-only, no security exposure.
     private nonisolated static func killOrphanedServeProcesses() {
-        let proc = Process()
-        proc.executableURL = URL(fileURLWithPath: "/usr/sbin/lsof")
-        proc.arguments = ["-ti", ":8150-9149"]
-
-        let pipe = Pipe()
-        proc.standardOutput = pipe
-        proc.standardError = FileHandle.nullDevice
-
-        do {
-            try proc.run()
-            proc.waitUntilExit()
-        } catch {
-            return  // lsof not available — nothing we can do
-        }
-
-        let data = pipe.fileHandleForReading.readDataToEndOfFile()
-        guard let output = String(data: data, encoding: .utf8) else { return }
-
-        let pids = output
-            .components(separatedBy: "\n")
-            .compactMap { Int32($0.trimmingCharacters(in: .whitespaces)) }
-
-        for pid in pids {
-            guard isBristlenoseSidecar(pid: pid) else {
-                log.warning("skipping non-bristlenose PID \(pid, privacy: .public) on bristlenose port range")
-                continue
-            }
+        for pid in listeningBristlenosePIDs(portRange: 8150...9149) {
             log.info("killing orphaned serve process (PID \(pid, privacy: .public))")
             kill(pid, SIGINT)
         }
+    }
+
+    /// Enumerate every PID, keep those whose executable basename starts with
+    /// `bristlenose` AND have a TCP-LISTEN socket in `portRange`.
+    private nonisolated static func listeningBristlenosePIDs(portRange: ClosedRange<UInt16>) -> [Int32] {
+        // Probe required buffer size, then over-allocate by 25% to absorb
+        // process churn between probe and read.
+        let probeSize = proc_listpids(UInt32(PROC_ALL_PIDS), 0, nil, 0)
+        guard probeSize > 0 else {
+            log.debug("proc_listpids probe returned \(probeSize, privacy: .public) (errno=\(errno, privacy: .public))")
+            return []
+        }
+        let probedCount = Int(probeSize) / MemoryLayout<Int32>.size
+        let capacity = probedCount + (probedCount / 4) + 16
+        var pids = [Int32](repeating: 0, count: capacity)
+        let actual = pids.withUnsafeMutableBufferPointer { buf -> Int32 in
+            proc_listpids(UInt32(PROC_ALL_PIDS), 0, buf.baseAddress, Int32(capacity * MemoryLayout<Int32>.size))
+        }
+        guard actual > 0 else { return [] }
+        let count = Int(actual) / MemoryLayout<Int32>.size
+
+        var result: [Int32] = []
+        for i in 0..<count where pids[i] > 0 {
+            let pid = pids[i]
+            guard isBristlenoseSidecar(pid: pid) else { continue }
+            if hasListeningPortInRange(pid: pid, range: portRange) {
+                result.append(pid)
+            }
+        }
+        return result
+    }
+
+    /// True if `pid` has any TCP socket in LISTEN state with a local port
+    /// inside `range`. Returns false on any libproc error — fail-closed,
+    /// same posture as `isBristlenoseSidecar`.
+    private nonisolated static func hasListeningPortInRange(pid: Int32, range: ClosedRange<UInt16>) -> Bool {
+        let probe = proc_pidinfo(pid, PROC_PIDLISTFDS, 0, nil, 0)
+        guard probe > 0 else { return false }
+        let entrySize = MemoryLayout<proc_fdinfo>.stride
+        let capacity = Int(probe) / entrySize + 8
+        var fds = [proc_fdinfo](repeating: proc_fdinfo(), count: capacity)
+        let actual = fds.withUnsafeMutableBufferPointer { buf -> Int32 in
+            proc_pidinfo(pid, PROC_PIDLISTFDS, 0, buf.baseAddress, Int32(capacity * entrySize))
+        }
+        guard actual > 0 else { return false }
+        let fdCount = Int(actual) / entrySize
+
+        for i in 0..<fdCount {
+            let fd = fds[i]
+            guard fd.proc_fdtype == UInt32(PROX_FDTYPE_SOCKET) else { continue }
+            var info = socket_fdinfo()
+            let infoSize = MemoryLayout<socket_fdinfo>.stride
+            let got = withUnsafeMutablePointer(to: &info) { ptr -> Int32 in
+                proc_pidfdinfo(pid, fd.proc_fd, PROC_PIDFDSOCKETINFO, ptr, Int32(infoSize))
+            }
+            guard got >= Int32(infoSize) else { continue }
+            guard Int32(info.psi.soi_kind) == SOCKINFO_TCP else { continue }
+            guard info.psi.soi_proto.pri_tcp.tcpsi_state == TSI_S_LISTEN else { continue }
+            // insi_lport is in network byte order.
+            let lportNetwork = UInt16(truncatingIfNeeded: info.psi.soi_proto.pri_tcp.tcpsi_ini.insi_lport)
+            let lport = UInt16(bigEndian: lportNetwork)
+            if range.contains(lport) {
+                return true
+            }
+        }
+        return false
     }
 
     /// Verify that a PID belongs to a bristlenose sidecar before killing it.
@@ -596,11 +646,9 @@ final class ServeManager: ObservableObject {
     ///
     /// `proc_pidpath` is a single libproc syscall (~µs) — no fork/exec, no
     /// pipe wrangling, and works under App Sandbox without an exception
-    /// (Activity Monitor uses the same call). This also keeps the zombie-
-    /// cleanup path *alive* under sandbox, where `Process()` exec of /bin/ps
-    /// or /usr/sbin/lsof would silently fail. The lsof call above is still
-    /// the limiting factor — replacing it with proc_listpids + proc_pidfdinfo
-    /// is the next step (see desktop/CLAUDE.md "Zombie process cleanup").
+    /// (Activity Monitor uses the same call). Combined with `proc_listpids`
+    /// + `proc_pidfdinfo` above, the entire zombie-cleanup path is now
+    /// libproc-only and survives sandbox flip with no further changes.
     private nonisolated static func isBristlenoseSidecar(pid: Int32) -> Bool {
         var buf = [CChar](repeating: 0, count: Int(MAXPATHLEN))
         let len = proc_pidpath(pid, &buf, UInt32(MAXPATHLEN))

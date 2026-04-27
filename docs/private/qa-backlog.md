@@ -13,7 +13,7 @@ Parked items from the usual-suspects reviews of sidecar-signing C1 (18 Apr 2026)
 - [ ] **Asymmetric cleanup guard for `.devSidecar` invalid path.** `ServeManager.init` only skips orphan cleanup when `userIntendedExternal` (BRISTLENOSE_DEV_EXTERNAL_PORT set). A user setting BRISTLENOSE_DEV_SIDECAR_PATH to a non-existent file still runs the kill-sweep. Current behaviour is arguably correct (dev-sidecar spawns a process we own, so zombies are ours); worth confirming intent with a comment already in place.
 - [ ] **SBOM step in sidecar build** — `pip-licenses --format=json` alongside each build, archived to build output. Trust-centre material. Post-alpha.
 - [ ] **Reproducible builds** for PyInstaller output. Timestamps + compile order pollute binaries. Post-alpha.
-- [ ] **Replace `lsof` zombie-cleanup with in-proc TCP-connect sweep** once Track A sandbox lands — `/usr/sbin/lsof` exec is blocked under App Sandbox. Today the cleanup silently fails in a sandboxed build.
+- [x] **Replace `lsof` zombie-cleanup with libproc** — done 27 Apr 2026 (sidecar-signing). `proc_listpids` + `proc_pidfdinfo(PROC_PIDFDSOCKETINFO)` filter to bristlenose PIDs with a TCP-LISTEN socket in 8150–9149. Whole zombie-cleanup path is now libproc-only and survives sandbox flip with no further changes.
 
 ## Parked from final C1 review (18 Apr 2026)
 

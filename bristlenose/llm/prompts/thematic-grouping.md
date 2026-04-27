@@ -1,3 +1,7 @@
+---
+id: thematic-grouping
+version: 0.1.0
+---
 # Thematic Grouping
 
 <!-- Variables: {quotes_json} -->

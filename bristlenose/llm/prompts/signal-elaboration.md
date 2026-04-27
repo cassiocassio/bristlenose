@@ -1,3 +1,7 @@
+---
+id: signal-elaboration
+version: 0.1.0
+---
 # Signal Elaboration
 
 <!-- Variables: {signals_text} -->

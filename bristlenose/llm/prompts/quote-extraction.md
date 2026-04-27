@@ -1,3 +1,7 @@
+---
+id: quote-extraction
+version: 0.1.0
+---
 # Quote Extraction
 
 <!-- Variables: {topic_boundaries}, {transcript_text} -->

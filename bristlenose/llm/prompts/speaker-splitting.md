@@ -1,3 +1,7 @@
+---
+id: speaker-splitting
+version: 0.1.0
+---
 # Speaker Splitting
 
 <!-- Variables: {transcript_sample}, {segment_count} -->

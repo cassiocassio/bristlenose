@@ -4,10 +4,15 @@
 Export options for `xcodebuild -exportArchive`. Used by
 desktop/scripts/build-all.sh (Track C C2).
 
-method=app-store — targets App Store Connect / TestFlight. The same
-archive passes Gatekeeper via notarisation + stapling (Apple
-Distribution certs produce a chain Gatekeeper treats as
-Notarized Developer ID for standalone exec checks).
+method=app-store — targets App Store Connect / TestFlight. Output is
+a `.pkg` (App Store upload format), uploaded via Transporter or
+`xcrun altool --upload-app`. App Store Connect validates server-side
+after upload; `notarytool` is NOT part of this flow (and explicitly
+rejects Apple Distribution-signed binaries — the cert family it accepts
+is Developer ID Application). If we ever ship a direct-download
+.app outside the App Store, that's a parallel `method=developer-id`
+flow with a different cert + notarytool — see memory note
+`project_developer_id_revisit.md` (deferred).
 
 signingStyle=manual — avoids auto-provisioning surprises in CI and on
 shared machines where Xcode might otherwise refresh a stale profile
@@ -17,6 +22,16 @@ silently. Requires the provisioning profile below to be installed at
 teamID Z56GZVA2QB — Bristlenose / Martin Storey.
 Provisioning profile "Bristlenose Mac App Store" — bundle ID
 app.bristlenose, issued against the Apple Distribution cert.
+Mac App Store profiles only carry Distribution certs (the .app
+signer); installer certs are NOT part of the profile — Apple's
+"profile doesn't include installer cert" export error is misleading
+on that point. The fix is to specify both certs explicitly here.
+
+signingCertificate — signs the .app bundle (Apple Distribution).
+installerSigningCertificate — signs the .pkg wrapper that App Store
+Connect requires for Mac apps (Mac Installer Distribution, also
+shown as "3rd Party Mac Developer Installer" in `security
+find-identity` output — same cert type).
 
 uploadSymbols=false — PyInstaller strips symbols from the sidecar,
 so symbolicating inside Python is a non-starter anyway. Swift dSYMs
@@ -32,6 +47,8 @@ land in the .xcarchive; upload is C3's concern.
     <string>manual</string>
     <key>signingCertificate</key>
     <string>Apple Distribution</string>
+    <key>installerSigningCertificate</key>
+    <string>3rd Party Mac Developer Installer</string>
     <key>provisioningProfiles</key>
     <dict>
         <key>app.bristlenose</key>

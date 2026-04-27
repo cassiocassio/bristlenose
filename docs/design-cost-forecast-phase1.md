@@ -1,9 +1,17 @@
+---
+status: mixed
+last-trued: 2026-04-27
+trued-against: HEAD@cost-and-time-forecasts (efc051a) on 2026-04-27
+---
+
 # Phase 1 — LLM cost forecast (implementation plan)
 
-**Status:** Planned (Apr 2026)
+> **Trued 2026-04-27 against `efc051a`.** Slice A (schema + writer + frontmatter) shipped. Slices B (hot-path wiring) and C (forecast replacement) remain planned. Provider-method line refs in §EDIT files item 9 refreshed against current `client.py`. Branch name corrected.
+
+**Status:** Slice A shipped (2026-04-27, `efc051a`); Slices B + C planned.
 **Parent design:** [design-llm-call-telemetry.md](design-llm-call-telemetry.md) — full design covering cost + time + UX + shoal across five phases. This doc is the file-by-file implementation plan for Phase 1 only.
 **Scope:** narrow. Replace the hardcoded `_TOKENS_PER_SESSION` constant with a self-correcting cost forecast backed by per-call data capture. Time forecast is Phase 2.
-**Branch:** `cost-forecast`.
+**Branch:** `cost-and-time-forecasts`.
 
 ## Context
 
@@ -67,13 +75,13 @@ Implementation order is dependency-driven: data + helpers, then plumbing, then h
 
 8. **`bristlenose/llm/prompts/__init__.py`** — extend the loader (lines 22–53) to parse frontmatter. Add `PromptTemplate(id, version, sha, system, user, path)` dataclass. New `get_prompt_template(name) -> PromptTemplate`. Keep `get_prompt(name) -> PromptPair` shim around the new loader for backward compatibility (~9 external call sites).
 
-9. **`bristlenose/llm/client.py`** — `LLMClient.analyze()` (lines 162–218) accepts new optional `prompt_template: PromptTemplate | None = None` argument. Each provider method (`_analyze_anthropic` line 264, `_analyze_openai` lines 329-330, `_analyze_azure` line 402, `_analyze_google` line 468, `_analyze_local` line 556) calls `telemetry.record_call(...)` exactly once on terminal outcome, alongside the existing `tracker.record(...)`.
+9. **`bristlenose/llm/client.py`** — `LLMClient.analyze()` (line 162) accepts new optional `prompt_template: PromptTemplate | None = None` argument. Each provider method (`_analyze_anthropic` line 220, `_analyze_openai` line 290, `_analyze_azure` line 359, `_analyze_google` line 432, `_analyze_local` line 502) calls `telemetry.record_call(...)` exactly once on terminal outcome, alongside the existing `tracker.record(...)`. Line refs verified at HEAD `efc051a`; re-confirm before applying Slice B edits.
 
    **`_analyze_local` retry summing**: accumulators outside the `for attempt` loop sum tokens + elapsed across attempts; one terminal `tracker.record` and one terminal `record_call` with `retry_count = attempts_used - 1`. Don't double-count.
 
 10. **`bristlenose/run_lifecycle.py`** — at line 364 (after `new_run_id()`), set `_run_id` and `_run_dir` contextvars; reset in the `finally` clause that wraps the lifecycle (currently lines 394–452). Run-terminus retention trim runs in the same finally block before `_remove_pid_file`.
 
-11. **`bristlenose/pipeline.py`** — wrap each LLM-issuing stage body with `with telemetry.stage("s10_quote_extraction"):` (analogous per stage: `s05b_identify_speakers`, `s08_topic_segmentation`, `s09_quote_extraction`, `s10_quote_clustering`, `s11_thematic_grouping`). Per-participant inner tasks add `with telemetry.session(participant_id):`. Update the two `estimate_pipeline_cost(...)` call sites at lines 650 and 1531 to pass `run_dir=self.output_dir / ".bristlenose"`.
+11. **`bristlenose/pipeline.py`** — wrap each LLM-issuing stage body with `with telemetry.stage("s10_quote_extraction"):` (analogous per stage: `s05b_identify_speakers`, `s08_topic_segmentation`, `s09_quote_extraction`, `s10_quote_clustering`, `s11_thematic_grouping`). Per-participant inner tasks add `with telemetry.session(participant_id):`. Update the two `estimate_pipeline_cost(...)` call sites at lines 652 and 1531 (imports at 650 and 1529) to pass `run_dir=self.output_dir / ".bristlenose"`.
 
 12. **5 stage modules** (`bristlenose/stages/s05b_identify_speakers.py`, `s08_topic_segmentation.py`, `s09_quote_extraction.py`, `s10_quote_clustering.py`, `s11_thematic_grouping.py`) — switch `get_prompt(name)` calls to `get_prompt_template(name)` and pass into `client.analyze(..., prompt_template=tmpl)`.
 

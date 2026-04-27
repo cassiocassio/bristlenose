@@ -8,6 +8,8 @@ and the design-pipeline-resilience.md cost discussion.
 
 from __future__ import annotations
 
+from pathlib import Path
+
 # Bump when any rate changes — stamped onto every cost-bearing event so a
 # future reader can recompute against a newer table.
 PRICE_TABLE_VERSION = "2026-04-25"
@@ -51,11 +53,21 @@ def estimate_cost(
 _TOKENS_PER_SESSION: tuple[int, int] = (17_000, 10_000)
 
 
-def estimate_pipeline_cost(model: str, n_sessions: int) -> float | None:
+def estimate_pipeline_cost(
+    model: str,
+    n_sessions: int,
+    run_dir: Path | None = None,
+) -> float | None:
     """Estimate total LLM cost for a pipeline run before it starts.
 
     Returns estimated USD, or None if the model isn't in the pricing table.
+
+    ``run_dir`` is accepted for forward compatibility with Slice C — the
+    caller passes the project's ``.bristlenose/`` directory so the forecast
+    can read accumulated ``llm-calls.jsonl`` rows. Slice B accepts and
+    discards; Slice C will switch to data-driven medians.
     """
+    del run_dir  # Slice B placeholder; consumed in Slice C.
     if n_sessions <= 0:
         return None
     inp_per_session, out_per_session = _TOKENS_PER_SESSION

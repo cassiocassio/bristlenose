@@ -17,6 +17,7 @@ _os.environ.setdefault("HF_HUB_DISABLE_PROGRESS_BARS", "1")
 from bristlenose import __version__
 from bristlenose.config import BristlenoseSettings
 from bristlenose.hashing import hash_bytes, hash_file_metadata, verify_file_hash
+from bristlenose.llm import telemetry as _llm_telemetry
 from bristlenose.manifest import (
     STAGE_CLUSTER_AND_GROUP,
     STAGE_EXTRACT_AUDIO,
@@ -649,7 +650,10 @@ class Pipeline:
             # ── Cost estimate before LLM stages ──────────────────────
             from bristlenose.llm.pricing import estimate_pipeline_cost
 
-            est = estimate_pipeline_cost(self.settings.llm_model, len(sessions))
+            est = estimate_pipeline_cost(
+                self.settings.llm_model, len(sessions),
+                run_dir=output_dir / ".bristlenose",
+            )
             if est is not None:
                 console.print(
                     f"  [dim]Estimated LLM cost: ~${est:.2f}"
@@ -759,15 +763,17 @@ class Pipeline:
                             segments: list[TranscriptSegment],
                         ) -> None:
                             async with _sem_split:
-                                await split_single_speaker_llm(
-                                    segments, llm_client,
-                                    errors=_speaker_errors,
-                                )
+                                with _llm_telemetry.session(sid):
+                                    await split_single_speaker_llm(
+                                        segments, llm_client,
+                                        errors=_speaker_errors,
+                                    )
 
-                        await asyncio.gather(*(
-                            _split(sid, session_segments[sid])
-                            for sid in _split_sids
-                        ))
+                        with _llm_telemetry.stage("s05b_identify_speakers"):
+                            await asyncio.gather(*(
+                                _split(sid, session_segments[sid])
+                                for sid in _split_sids
+                            ))
 
                     # Heuristic pass for remaining sessions
                     for sid in _remaining_si_sids:
@@ -782,15 +788,17 @@ class Pipeline:
                         sid: str, segments: list[TranscriptSegment],
                     ) -> tuple[str, list]:
                         async with _sem_5b:
-                            infos = await identify_speaker_roles_llm(
-                                segments, llm_client,
-                                errors=_speaker_errors,
-                            )
+                            with _llm_telemetry.session(sid):
+                                infos = await identify_speaker_roles_llm(
+                                    segments, llm_client,
+                                    errors=_speaker_errors,
+                                )
                             return sid, infos
 
-                    _results_5b = await asyncio.gather(*(
-                        _identify(sid, session_segments[sid])
-                        for sid in _remaining_si_sids
+                    with _llm_telemetry.stage("s05b_identify_speakers"):
+                        _results_5b = await asyncio.gather(*(
+                            _identify(sid, session_segments[sid])
+                            for sid in _remaining_si_sids
                     ))
                     for sid, infos in _results_5b:
                         all_speaker_infos[sid] = infos
@@ -986,10 +994,11 @@ class Pipeline:
                 if _remaining_transcripts:
                     if llm_client is None:
                         llm_client = LLMClient(self.settings)
-                    _fresh_topic_maps = await segment_topics(
-                        _remaining_transcripts, llm_client,
-                        concurrency=concurrency, errors=_seg_errors,
-                    )
+                    with _llm_telemetry.stage("s08_topic_segmentation"):
+                        _fresh_topic_maps = await segment_topics(
+                            _remaining_transcripts, llm_client,
+                            concurrency=concurrency, errors=_seg_errors,
+                        )
                     # Record per-session completion
                     for tm in _fresh_topic_maps:
                         mark_session_complete(
@@ -1104,14 +1113,15 @@ class Pipeline:
                 if _remaining_transcripts_q:
                     if llm_client is None:
                         llm_client = LLMClient(self.settings)
-                    _fresh_quotes = await extract_quotes(
-                        _remaining_transcripts_q,
-                        _remaining_topic_maps,
-                        llm_client,
-                        min_quote_words=self.settings.min_quote_words,
-                        concurrency=concurrency,
-                        errors=_quote_errors,
-                    )
+                    with _llm_telemetry.stage("s09_quote_extraction"):
+                        _fresh_quotes = await extract_quotes(
+                            _remaining_transcripts_q,
+                            _remaining_topic_maps,
+                            llm_client,
+                            min_quote_words=self.settings.min_quote_words,
+                            concurrency=concurrency,
+                            errors=_quote_errors,
+                        )
                     # Record per-session completion — derive session_ids
                     # from the transcripts that were processed.
                     for t in _remaining_transcripts_q:
@@ -1191,9 +1201,19 @@ class Pipeline:
                 mark_stage_running(manifest, STAGE_CLUSTER_AND_GROUP)
                 status.update("[dim]Clustering and grouping...[/dim]")
                 t0 = time.perf_counter()
+                assert llm_client is not None  # narrowed by upstream lazy-init guards
+                _client_cg = llm_client
+
+                async def _run_clustering() -> list[ScreenCluster]:
+                    with _llm_telemetry.stage("s10_quote_clustering"):
+                        return await cluster_by_screen(all_quotes, _client_cg)
+
+                async def _run_grouping() -> list[ThemeGroup]:
+                    with _llm_telemetry.stage("s11_thematic_grouping"):
+                        return await group_by_theme(all_quotes, _client_cg)
+
                 screen_clusters, theme_groups = await asyncio.gather(
-                    cluster_by_screen(all_quotes, llm_client),
-                    group_by_theme(all_quotes, llm_client),
+                    _run_clustering(), _run_grouping(),
                 )
                 if self.settings.write_intermediate:
                     write_intermediate_json(
@@ -1530,6 +1550,7 @@ class Pipeline:
 
         est = estimate_pipeline_cost(
             self.settings.llm_model, len(clean_transcripts),
+            run_dir=output_dir / ".bristlenose",
         )
         if est is not None:
             console.print(
@@ -1547,10 +1568,11 @@ class Pipeline:
             status.update("[dim]Segmenting topics...[/dim]")
             t0 = time.perf_counter()
             _seg_errors_a: list[str] = []
-            topic_maps = await segment_topics(
-                clean_transcripts, llm_client, concurrency=concurrency,
-                errors=_seg_errors_a,
-            )
+            with _llm_telemetry.stage("s08_topic_segmentation"):
+                topic_maps = await segment_topics(
+                    clean_transcripts, llm_client, concurrency=concurrency,
+                    errors=_seg_errors_a,
+                )
             if self.settings.write_intermediate:
                 write_intermediate_json(
                     topic_maps, "topic_boundaries.json", output_dir,
@@ -1572,12 +1594,13 @@ class Pipeline:
             status.update("[dim]Extracting quotes...[/dim]")
             t0 = time.perf_counter()
             _quote_errors_a: list[str] = []
-            all_quotes = await extract_quotes(
-                clean_transcripts, topic_maps, llm_client,
-                min_quote_words=self.settings.min_quote_words,
-                concurrency=concurrency,
-                errors=_quote_errors_a,
-            )
+            with _llm_telemetry.stage("s09_quote_extraction"):
+                all_quotes = await extract_quotes(
+                    clean_transcripts, topic_maps, llm_client,
+                    min_quote_words=self.settings.min_quote_words,
+                    concurrency=concurrency,
+                    errors=_quote_errors_a,
+                )
             if self.settings.write_intermediate:
                 write_intermediate_json(
                     all_quotes, "extracted_quotes.json", output_dir,
@@ -1597,9 +1620,17 @@ class Pipeline:
             # ── Cluster + group ──
             status.update("[dim]Clustering and grouping...[/dim]")
             t0 = time.perf_counter()
+            async def _run_clustering_a() -> list[ScreenCluster]:
+                with _llm_telemetry.stage("s10_quote_clustering"):
+                    return await cluster_by_screen(all_quotes, llm_client)
+
+            async def _run_grouping_a() -> list[ThemeGroup]:
+                with _llm_telemetry.stage("s11_thematic_grouping"):
+                    return await group_by_theme(all_quotes, llm_client)
+
             screen_clusters, theme_groups = await asyncio.gather(
-                cluster_by_screen(all_quotes, llm_client),
-                group_by_theme(all_quotes, llm_client),
+                _run_clustering_a(),
+                _run_grouping_a(),
             )
             if self.settings.write_intermediate:
                 write_intermediate_json(

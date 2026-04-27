@@ -56,6 +56,7 @@ from bristlenose.events import (
     new_run_id,
     read_events,
 )
+from bristlenose.llm import telemetry
 
 PID_FILENAME = "run.pid"
 
@@ -391,62 +392,71 @@ def run_lifecycle(
             "price_table_version": handle.cost.price_table_version,
         }
 
+    telemetry_tokens = telemetry.set_run_context(run_id, output_dir / ".bristlenose")
+
     try:
-        yield handle
-    except KeyboardInterrupt as exc:
-        sig = _caught_signal or signal.SIGINT
-        ended = _now_iso()
-        cancel_cause = Cause(
-            category=CauseCategoryEnum.USER_SIGNAL,
-            signal=int(sig),
-            signal_name=signal.Signals(sig).name,
-            message=str(exc) or None,
-        )
-        append_event(events_file, RunCancelledEvent(
-            ts=ended, run_id=run_id, kind=kind, started_at=started_at,
-            ended_at=ended, cause=cancel_cause, **_cost_kwargs(),
-        ))
-        log.info("run_cancelled run_id=%s signal=%s", run_id, cancel_cause.signal_name)
-        _remove_pid_file(output_dir)
-        raise
-    except SystemExit as exc:
-        code = exc.code if isinstance(exc.code, int) else (1 if exc.code else 0)
-        ended = _now_iso()
-        if code == 0:
+        try:
+            yield handle
+        except KeyboardInterrupt as exc:
+            sig = _caught_signal or signal.SIGINT
+            ended = _now_iso()
+            cancel_cause = Cause(
+                category=CauseCategoryEnum.USER_SIGNAL,
+                signal=int(sig),
+                signal_name=signal.Signals(sig).name,
+                message=str(exc) or None,
+            )
+            append_event(events_file, RunCancelledEvent(
+                ts=ended, run_id=run_id, kind=kind, started_at=started_at,
+                ended_at=ended, cause=cancel_cause, **_cost_kwargs(),
+            ))
+            log.info("run_cancelled run_id=%s signal=%s", run_id, cancel_cause.signal_name)
+            telemetry.trim_run_terminus()
+            _remove_pid_file(output_dir)
+            raise
+        except SystemExit as exc:
+            code = exc.code if isinstance(exc.code, int) else (1 if exc.code else 0)
+            ended = _now_iso()
+            if code == 0:
+                append_event(events_file, RunCompletedEvent(
+                    ts=ended, run_id=run_id, kind=kind, started_at=started_at,
+                    ended_at=ended, **_cost_kwargs(),
+                ))
+                log.info("run_completed run_id=%s exit_code=0", run_id)
+            else:
+                append_event(events_file, RunFailedEvent(
+                    ts=ended, run_id=run_id, kind=kind, started_at=started_at,
+                    ended_at=ended,
+                    cause=Cause(
+                        category=CauseCategoryEnum.UNKNOWN,
+                        message=f"CLI exited with code {code}",
+                        exit_code=code,
+                    ),
+                    **_cost_kwargs(),
+                ))
+                log.info("run_failed run_id=%s exit_code=%s", run_id, code)
+            telemetry.trim_run_terminus()
+            _remove_pid_file(output_dir)
+            raise
+        except BaseException as exc:
+            ended = _now_iso()
+            cause = categorise_exception(exc)
+            append_event(events_file, RunFailedEvent(
+                ts=ended, run_id=run_id, kind=kind, started_at=started_at,
+                ended_at=ended, cause=cause, **_cost_kwargs(),
+            ))
+            log.info("run_failed run_id=%s category=%s", run_id, cause.category.value)
+            telemetry.trim_run_terminus()
+            _remove_pid_file(output_dir)
+            raise
+        else:
+            ended = _now_iso()
             append_event(events_file, RunCompletedEvent(
                 ts=ended, run_id=run_id, kind=kind, started_at=started_at,
                 ended_at=ended, **_cost_kwargs(),
             ))
-            log.info("run_completed run_id=%s exit_code=0", run_id)
-        else:
-            append_event(events_file, RunFailedEvent(
-                ts=ended, run_id=run_id, kind=kind, started_at=started_at,
-                ended_at=ended,
-                cause=Cause(
-                    category=CauseCategoryEnum.UNKNOWN,
-                    message=f"CLI exited with code {code}",
-                    exit_code=code,
-                ),
-                **_cost_kwargs(),
-            ))
-            log.info("run_failed run_id=%s exit_code=%s", run_id, code)
-        _remove_pid_file(output_dir)
-        raise
-    except BaseException as exc:
-        ended = _now_iso()
-        cause = categorise_exception(exc)
-        append_event(events_file, RunFailedEvent(
-            ts=ended, run_id=run_id, kind=kind, started_at=started_at,
-            ended_at=ended, cause=cause, **_cost_kwargs(),
-        ))
-        log.info("run_failed run_id=%s category=%s", run_id, cause.category.value)
-        _remove_pid_file(output_dir)
-        raise
-    else:
-        ended = _now_iso()
-        append_event(events_file, RunCompletedEvent(
-            ts=ended, run_id=run_id, kind=kind, started_at=started_at,
-            ended_at=ended, **_cost_kwargs(),
-        ))
-        log.info("run_completed run_id=%s", run_id)
-        _remove_pid_file(output_dir)
+            log.info("run_completed run_id=%s", run_id)
+            telemetry.trim_run_terminus()
+            _remove_pid_file(output_dir)
+    finally:
+        telemetry.reset_run_context(telemetry_tokens)

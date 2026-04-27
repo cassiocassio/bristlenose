@@ -290,20 +290,23 @@ async def generate_elaborations(
 
     # Generate via LLM
     try:
+        from bristlenose.llm import telemetry
         from bristlenose.llm.client import LLMClient
-        from bristlenose.llm.prompts import get_prompt
+        from bristlenose.llm.prompts import get_prompt_template
         from bristlenose.llm.structured import SignalElaborationResult
 
-        prompt_pair = get_prompt("signal-elaboration")
+        prompt_tmpl = get_prompt_template("signal-elaboration")
         signals_text = format_signals_for_prompt(uncached_signals, template)
-        user_prompt = prompt_pair.user.format(signals_text=signals_text)
+        user_prompt = prompt_tmpl.user.format(signals_text=signals_text)
 
         client = LLMClient(settings)
-        result = await client.analyze(
-            prompt_pair.system,
-            user_prompt,
-            SignalElaborationResult,
-        )
+        with telemetry.stage("serve_signal_elaboration"):
+            result = await client.analyze(
+                system_prompt=prompt_tmpl.system,
+                user_prompt=user_prompt,
+                response_model=SignalElaborationResult,
+                prompt_template=prompt_tmpl,
+            )
 
         # Process results
         new_entries: list[tuple[str, str, ElaborationResult]] = []

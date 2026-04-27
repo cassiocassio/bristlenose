@@ -18,6 +18,7 @@ import difflib
 import logging
 from dataclasses import dataclass
 from datetime import datetime, timezone
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 from bristlenose.server.codebook import CodebookTemplate, TemplateGroup, TemplateTag
@@ -181,18 +182,36 @@ async def run_autocode_job(
     project_id: int,
     framework_id: str,
     settings: BristlenoseSettings,
+    project_dir: Path | None = None,
 ) -> None:
     """Execute an AutoCode job: load quotes, batch, call LLM, store proposals.
 
     This is the top-level coroutine spawned by ``asyncio.create_task()``
     from the API endpoint.  It manages its own DB sessions and handles
     errors gracefully — the caller does not await this.
+
+    When ``project_dir`` is provided, telemetry contextvars are bound for
+    the duration of the job so per-call rows land in
+    ``<output_dir>/.bristlenose/llm-calls.jsonl``.
     """
+    from bristlenose.llm import telemetry
     from bristlenose.llm.client import LLMClient
-    from bristlenose.llm.prompts import get_prompt
+    from bristlenose.llm.prompts import get_prompt_template
     from bristlenose.llm.structured import AutoCodeBatchResult
     from bristlenose.server.codebook import get_template
     from bristlenose.server.models import AutoCodeJob, ProposedTag, Quote, TagDefinition
+
+    # Bind telemetry context for the duration of the job. ``project_dir``
+    # may be either the project root or the bristlenose-output dir; resolve
+    # to the canonical .bristlenose/ run dir.
+    telemetry_tokens: tuple[object, object] | None = None
+    if project_dir is not None:
+        _output_dir = project_dir / "bristlenose-output"
+        if not _output_dir.is_dir():
+            _output_dir = project_dir
+        run_dir = _output_dir / ".bristlenose"
+        run_id = f"autocode-{project_id}-{framework_id}-{datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%SZ')}"
+        telemetry_tokens = telemetry.set_run_context(run_id, run_dir)
 
     db = db_factory()
     try:
@@ -278,7 +297,7 @@ async def run_autocode_job(
         llm_client = LLMClient(settings)
 
         # Load prompt template
-        prompt_pair = get_prompt("autocode")
+        prompt_tmpl = get_prompt_template("autocode")
 
         # Chunk into batches
         batches: list[list[QuoteBatchItem]] = []
@@ -308,17 +327,19 @@ async def run_autocode_job(
                     cancel_db.close()
 
                 quote_text = build_quote_batch(batch)
-                user_prompt = prompt_pair.user.format(
+                user_prompt = prompt_tmpl.user.format(
                     codebook_title=template.title,
                     codebook_preamble=template.preamble,
                     formatted_tag_taxonomy=taxonomy_text,
                     formatted_quotes=quote_text,
                 )
-                result = await llm_client.analyze(
-                    system_prompt=prompt_pair.system,
-                    user_prompt=user_prompt,
-                    response_model=AutoCodeBatchResult,
-                )
+                with telemetry.stage("serve_autocode"):
+                    result = await llm_client.analyze(
+                        system_prompt=prompt_tmpl.system,
+                        user_prompt=user_prompt,
+                        response_model=AutoCodeBatchResult,
+                        prompt_template=prompt_tmpl,
+                    )
                 # Map assignments to ProposedTag rows
                 proposals: list[ProposedTag] = []
                 for assignment in result.assignments:
@@ -429,3 +450,9 @@ async def run_autocode_job(
             logger.exception("Failed to mark job as failed")
     finally:
         db.close()
+        if telemetry_tokens is not None:
+            try:
+                telemetry.trim_run_terminus()
+            except Exception:
+                logger.debug("telemetry trim failed", exc_info=True)
+            telemetry.reset_run_context(telemetry_tokens)

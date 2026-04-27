@@ -246,12 +246,26 @@ if ! xcodebuild \
     exit 1
 fi
 
+# method=app-store-connect produces a .pkg (App Store upload format),
+# not a standalone .app. Steps 7–9 (release-binary check, profile sanity,
+# notarisation + staple) need a .app, so when the export dir holds only
+# a .pkg we fall back to the .app inside the .xcarchive — it's the same
+# signed bundle, just unwrapped. Methods that emit .app directly
+# (developer-id, mac-application) keep using $EXPORT_DIR as before.
 EXPORTED_APP=$(find "$EXPORT_DIR" -maxdepth 2 -name "*.app" -type d | head -1)
+EXPORTED_PKG=$(find "$EXPORT_DIR" -maxdepth 2 -name "*.pkg" -type f | head -1)
 if [ -z "$EXPORTED_APP" ]; then
-    echo "error: no .app found under $EXPORT_DIR" >&2
-    exit 1
+    ARCHIVE_APP=$(find "$ARCHIVE_PATH/Products/Applications" -maxdepth 1 -name "*.app" -type d | head -1)
+    if [ -n "$ARCHIVE_APP" ] && [ -n "$EXPORTED_PKG" ]; then
+        EXPORTED_APP="$ARCHIVE_APP"
+        echo "    note: app-store export produced .pkg only — using .app from xcarchive for downstream gates"
+    else
+        echo "error: no .app found under $EXPORT_DIR or in $ARCHIVE_PATH/Products/Applications" >&2
+        exit 1
+    fi
 fi
 echo "    OK — $EXPORTED_APP"
+[ -n "$EXPORTED_PKG" ] && echo "    .pkg: $EXPORTED_PKG"
 
 # ------------------------------------------------------------
 # 7. check-release-binary.sh post-export
@@ -316,10 +330,32 @@ echo "    OK — $PROFILE_APP_ID / $PROFILE_TEAM_ID"
 # ------------------------------------------------------------
 # 9. Notarisation + stapling
 # ------------------------------------------------------------
+# `notarytool` only accepts Developer ID-signed binaries — it explicitly
+# rejects Apple Distribution-signed builds with "not signed with a valid
+# Developer ID certificate". App Store / TestFlight builds are validated
+# server-side after upload to App Store Connect, NOT via notarytool. So
+# when `method=app-store(-connect)` we skip steps 9 and 10[a] entirely;
+# the .pkg in $EXPORT_DIR is the alpha deliverable, ready for Transporter
+# / `xcrun altool --upload-app`.
+#
 # `ditto` is mandatory for zipping a .app for notarisation — plain
 # `zip` mangles extended attributes and symlinks, producing a zip
 # that notarytool rejects. Staple the .app (not the zip).
 
+EXPORT_METHOD=$(/usr/libexec/PlistBuddy -c "Print :method" "$EXPORT_OPTIONS" 2>/dev/null || echo "")
+case "$EXPORT_METHOD" in
+    app-store|app-store-connect)
+        echo
+        echo "==> 9. Notarisation... SKIPPED (method=$EXPORT_METHOD; App Store Connect handles validation server-side)"
+        echo "    .pkg ready: $EXPORTED_PKG"
+        SKIP_NOTARISE=1
+        ;;
+    *)
+        SKIP_NOTARISE=0
+        ;;
+esac
+
+if [ "$SKIP_NOTARISE" = "0" ]; then
 echo
 echo "==> 9. Notarisation..."
 NOTARY_ZIP="$DESKTOP_DIR/build/$(basename "$EXPORTED_APP").zip"
@@ -377,6 +413,7 @@ echo "    status: Accepted"
 
 echo "==> Stapling..."
 xcrun stapler staple "$EXPORTED_APP"
+fi  # end SKIP_NOTARISE guard
 
 # ------------------------------------------------------------
 # 10. Final verification battery
@@ -385,15 +422,38 @@ xcrun stapler staple "$EXPORTED_APP"
 echo
 echo "==> 10. Final verification..."
 
+if [ "$SKIP_NOTARISE" = "0" ]; then
 echo "    [a] stapler validate"
 xcrun stapler validate "$EXPORTED_APP"
+else
+echo "    [a] stapler validate — SKIPPED (notarisation skipped above)"
+fi
 
-echo "    [b] spctl (Gatekeeper assessment)"
-SPCTL_OUT=$(spctl -a -t exec -vv "$EXPORTED_APP" 2>&1)
-echo "$SPCTL_OUT" | sed 's/^/        /'
-if ! grep -q "accepted" <<< "$SPCTL_OUT"; then
-    echo "error: spctl did not accept the app." >&2
-    exit 1
+# Local Gatekeeper assessment only makes sense for notarised Developer ID
+# builds. Apple Distribution / App Store builds are validated server-side
+# by App Store Connect after upload — spctl will always reject them locally
+# because they lack the notarised-Developer-ID provenance Gatekeeper expects
+# for standalone exec on this machine. For app-store flow we instead verify
+# the .pkg installer signature with pkgutil.
+if [ "$SKIP_NOTARISE" = "0" ]; then
+    echo "    [b] spctl (Gatekeeper assessment)"
+    SPCTL_OUT=$(spctl -a -t exec -vv "$EXPORTED_APP" 2>&1)
+    echo "$SPCTL_OUT" | sed 's/^/        /'
+    if ! grep -q "accepted" <<< "$SPCTL_OUT"; then
+        echo "error: spctl did not accept the app." >&2
+        exit 1
+    fi
+elif [ -n "$EXPORTED_PKG" ]; then
+    echo "    [b] pkgutil --check-signature (replacement for spctl on app-store flow)"
+    PKGUTIL_OUT=$(pkgutil --check-signature "$EXPORTED_PKG" 2>&1)
+    echo "$PKGUTIL_OUT" | sed 's/^/        /'
+    if ! grep -q "Status: signed by a developer certificate issued by Apple" <<< "$PKGUTIL_OUT" \
+       && ! grep -q "Status: signed by a certificate trusted for current user" <<< "$PKGUTIL_OUT"; then
+        echo "error: pkgutil did not accept the .pkg signature." >&2
+        exit 1
+    fi
+else
+    echo "    [b] spctl/pkgutil — SKIPPED (no .pkg and notarisation skipped)"
 fi
 
 echo "    [c] codesign --verify --deep --strict"

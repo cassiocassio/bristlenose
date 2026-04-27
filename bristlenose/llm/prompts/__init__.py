@@ -26,7 +26,7 @@ from typing import NamedTuple
 _PROMPTS_DIR = Path(__file__).resolve().parent
 
 _SECTION_RE = re.compile(r"^##\s+(system|user)\s*$", re.IGNORECASE | re.MULTILINE)
-_FRONTMATTER_RE = re.compile(r"\A---\n(.*?)\n---\n", re.DOTALL)
+_FRONTMATTER_RE = re.compile(r"\A---\r?\n(.*?)\r?\n---\r?\n", re.DOTALL)
 _FRONTMATTER_LINE_RE = re.compile(r"^([A-Za-z_][A-Za-z0-9_]*):\s*(.*)$")
 
 

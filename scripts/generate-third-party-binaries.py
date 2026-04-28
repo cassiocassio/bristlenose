@@ -47,8 +47,23 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SPEC = REPO_ROOT / "desktop" / "bristlenose-sidecar.spec"
 TARGET = REPO_ROOT / "THIRD-PARTY-BINARIES.md"
-BEGIN = "<!-- BEGIN AUTO: python-wheels -->"
-END = "<!-- END AUTO: python-wheels -->"
+BEGIN_WHEELS = "<!-- BEGIN AUTO: python-wheels -->"
+END_WHEELS = "<!-- END AUTO: python-wheels -->"
+BEGIN_FRAMEWORK = "<!-- BEGIN AUTO: framework-libs -->"
+END_FRAMEWORK = "<!-- END AUTO: framework-libs -->"
+
+# Override the Licence cell for packages whose pip metadata is unhelpful.
+# pip-licenses returns whatever the wheel declared in its metadata, which
+# for some packages is the full licence body (tiktoken) or an unversioned
+# "GPL" string (pysrt). Keys are PEP 503-normalised distribution names.
+LICENSE_OVERRIDES: dict[str, str] = {
+    # tiktoken's wheel embeds the entire MIT licence text in the License
+    # field; without an override it spans 22 lines and breaks the table.
+    "tiktoken": "MIT",
+    # pysrt declares "GNU General Public License (GPL)" without a version;
+    # the upstream repo is GPL-3.0-or-later, which is AGPL-3.0 compatible.
+    "pysrt": "GPL-3.0-or-later",
+}
 
 # Hard-coded "obviously not shipped" set on top of the spec excludes.
 # These are dev/build tooling that's in the venv but never in the bundle.
@@ -133,6 +148,8 @@ def _pip_licenses_json() -> list[dict]:
         [pip_licenses, "--format=json", "--with-urls"],
         capture_output=True,
         text=True,
+        encoding="utf-8",
+        errors="replace",
     )
     if proc.returncode != 0:
         sys.stderr.write(
@@ -148,6 +165,13 @@ def _filtered_records(records: list[dict], excludes: set[str]) -> list[dict]:
     return [r for r in records if _normalise(r["Name"]) not in drop]
 
 
+def _clean_licence(raw: str) -> str:
+    """Collapse whitespace, escape pipes, truncate. Defends against pip-licenses
+    returning full licence bodies (tiktoken) or labels with newlines."""
+    one_line = " ".join(raw.split()).replace("|", "/")
+    return one_line if len(one_line) <= 80 else one_line[:77] + "..."
+
+
 def _format_rows(records: list[dict]) -> str:
     # Sort by name for determinism across machines / Python versions.
     sorted_records = sorted(records, key=lambda r: r["Name"].lower())
@@ -158,7 +182,8 @@ def _format_rows(records: list[dict]) -> str:
     for r in sorted_records:
         name = r["Name"]
         version = r["Version"]
-        licence = r["License"].replace("|", "/")
+        override = LICENSE_OVERRIDES.get(_normalise(name))
+        licence = override if override else _clean_licence(r["License"])
         url = r.get("URL") or ""
         if url in {"UNKNOWN", "None", ""}:
             url_cell = "—"
@@ -168,16 +193,56 @@ def _format_rows(records: list[dict]) -> str:
     return "\n".join(lines)
 
 
-def _splice(existing: str, table: str) -> str:
-    if BEGIN not in existing or END not in existing:
+def _probe_framework_libs() -> str:
+    """Query the running Python for versions of bundled C libraries.
+
+    Pythonic: each stdlib module that wraps a C library exposes the linked
+    version as an attribute (`ssl.OPENSSL_VERSION`, `sqlite3.sqlite_version`,
+    etc.). For libraries the stdlib doesn't expose, we declare them as
+    "tracks Python release" — versions move with the python.org installer
+    used by the build runner.
+    """
+    import sqlite3
+    import ssl
+    import sys
+    import xml.parsers.expat
+    import zlib
+
+    rows = [
+        ("Python", sys.version.split()[0], "Tracks the build runner's `python.org` install"),
+        ("OpenSSL", ssl.OPENSSL_VERSION.split()[1], "Linked into `_ssl` and `_hashlib`"),
+        ("SQLite", sqlite3.sqlite_version, "Linked into `_sqlite3`"),
+        ("zlib", zlib.ZLIB_VERSION, "Linked into `zlib`"),
+        ("expat", xml.parsers.expat.EXPAT_VERSION.removeprefix("expat_"), "Linked into `pyexpat`"),
+    ]
+    lines = [
+        "| Library | Version | Where it lives in the bundle |",
+        "|---|---|---|",
+    ]
+    lines += [f"| `{n}` | {v} | {w} |" for n, v, w in rows]
+    return "\n".join(lines)
+
+
+def _splice(existing: str, table: str, begin: str, end: str) -> str:
+    """Replace content between begin/end markers. Validates that exactly one
+    marker pair exists and that begin precedes end — defends against
+    duplicated or reversed markers silently producing garbage."""
+    if existing.count(begin) != 1 or existing.count(end) != 1:
         sys.stderr.write(
-            f"error: marker block missing in {TARGET}\n"
-            f"       expected '{BEGIN}' and '{END}'\n"
+            f"error: marker pair must appear exactly once in {TARGET}\n"
+            f"       found {existing.count(begin)}x BEGIN, {existing.count(end)}x END\n"
+            f"       markers: '{begin}' / '{end}'\n"
         )
         sys.exit(2)
-    pre, _, rest = existing.partition(BEGIN)
-    _, _, post = rest.partition(END)
-    return f"{pre}{BEGIN}\n{table}\n{END}{post}"
+    if existing.index(begin) >= existing.index(end):
+        sys.stderr.write(
+            f"error: BEGIN marker must precede END marker in {TARGET}\n"
+            f"       markers: '{begin}' / '{end}'\n"
+        )
+        sys.exit(2)
+    pre, _, rest = existing.partition(begin)
+    _, _, post = rest.partition(end)
+    return f"{pre}{begin}\n{table}\n{end}{post}"
 
 
 def main() -> int:
@@ -195,22 +260,30 @@ def main() -> int:
         sys.stderr.write("error: no packages survived filtering\n")
         return 2
 
-    table = _format_rows(records)
+    wheels_table = _format_rows(records)
+    framework_table = _probe_framework_libs()
 
     existing = TARGET.read_text(encoding="utf-8") if TARGET.exists() else ""
-    updated = _splice(existing, table)
+    updated = _splice(existing, wheels_table, BEGIN_WHEELS, END_WHEELS)
+    updated = _splice(updated, framework_table, BEGIN_FRAMEWORK, END_FRAMEWORK)
 
     if args.check:
         if existing != updated:
             sys.stderr.write(
                 f"{TARGET.relative_to(REPO_ROOT)} is out of date — "
-                "run scripts/generate-third-party-binaries.py to regenerate\n"
+                "run scripts/generate-third-party-binaries.py to regenerate.\n"
+                "       --check is meant to run on the canonical Mac sidecar build "
+                "runner; per-platform venv differences (mlx, av, torch) may flag "
+                "drift on other machines that isn't real drift.\n"
             )
             return 1
         return 0
 
     TARGET.write_text(updated, encoding="utf-8")
-    print(f"wrote {len(records)} package rows to {TARGET.relative_to(REPO_ROOT)}")
+    print(
+        f"wrote {len(records)} package rows + framework-libs table "
+        f"to {TARGET.relative_to(REPO_ROOT)}"
+    )
     return 0
 
 

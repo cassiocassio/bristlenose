@@ -1,18 +1,24 @@
 ---
-status: mixed
-last-trued: 2026-04-27
-trued-against: HEAD@cost-and-time-forecasts (efc051a) on 2026-04-27
+status: archived-reference
+last-trued: 2026-04-28
+trued-against: HEAD@main (23d56af) on 2026-04-28
 ---
 
 # Phase 1 — LLM cost forecast (implementation plan)
 
-> **Trued 2026-04-27 against `efc051a`.** Slice A (schema + writer + frontmatter) shipped. Slices B (hot-path wiring) and C (forecast replacement) remain planned. Provider-method line refs in §EDIT files item 9 refreshed against current `client.py`. Branch name corrected.
+> **Truing status:** Partial — Phase 1 is shipped in full as of 2026-04-28; this doc is preserved as the implementation-record of how it landed. Slice A (`efc051a`), Slice B (`b140650`, `5ba52c7`), Slice C (`4401e41`) are all merged on main via `98df507`; branch closed in `23d56af`. The §File-by-file plan and §Verification plan are retained verbatim as the historical plan against which slices were executed — read them as past, not future, work. The "FOSSDA dogfood between B and C" sequencing in §Decisions taken did **not** happen as planned: `cohort-baselines.json` is still the empty placeholder from Slice A. See changelog and the FOSSDA-pivot note in §Decisions taken.
 
-**Status:** Slice A shipped (2026-04-27, `efc051a`); Slices B + C planned.
+## Changelog
+
+- _2026-04-28_ — trued up: status flipped to archived-reference, doc reframed as historical implementation plan rather than forward-looking work. Slices B/C confirmed shipped (commits `b140650`, `5ba52c7`, `4401e41`); merged via `98df507`; branch closed `23d56af`. Kill switch `BRISTLENOSE_LLM_FORECAST=legacy` confirmed wired at `bristlenose/llm/pricing.py:224`. FOSSDA pivot called out in §Decisions taken: maintainer dogfood deferred post-merge, baselines remain empty placeholder. Stage-5b session_id observation promoted from parenthetical "Slice B reality" note to documented invariant. Anchors: `bristlenose/llm/pricing.py:8-12` (module docstring describes shipped behaviour), `bristlenose/llm/pricing.py:66` (`_LEGACY_TOKENS_PER_SESSION`), `bristlenose/llm/pricing.py:204-247` (`estimate_pipeline_cost` data-driven body).
+- _2026-04-27_ — trued up against `efc051a`: Slice A shipped; provider-method line refs in §EDIT files item 9 refreshed; branch name corrected.
+- _2026-04-25_ — initial draft.
+
+**Status:** All three slices shipped (Slice A `efc051a`, Slice B `b140650` + `5ba52c7`, Slice C `4401e41`); merged via `98df507`; branch `cost-and-time-forecasts` closed (`23d56af`).
 **Parent design:** [design-llm-call-telemetry.md](design-llm-call-telemetry.md) — full design covering cost + time + UX + shoal across five phases. This doc is the file-by-file implementation plan for Phase 1 only.
-**Sibling:** [design-llm-pricing-fetch.md](design-llm-pricing-fetch.md) — keeps the rate sheet itself current between releases (separate followup PR after slice C).
+**Sibling:** [design-llm-pricing-fetch.md](design-llm-pricing-fetch.md) — keeps the rate sheet itself current between releases (separate followup PR after slice C; not yet implemented as of 2026-04-28).
 **Scope:** narrow. Replace the hardcoded `_TOKENS_PER_SESSION` constant with a self-correcting cost forecast backed by per-call data capture. Time forecast is Phase 2.
-**Branch:** `cost-and-time-forecasts`.
+**Branch:** `cost-and-time-forecasts` — merged via `98df507`, closed in `23d56af`.
 
 ## Context
 
@@ -132,16 +138,20 @@ class LLMCallEvent(BaseModel):
 
 ## Slice strategy
 
+> **Shipped — preserved as record.** All three slices landed on main. Section retained verbatim below to capture the planned sequencing; commit anchors added inline.
+
 Three independently mergeable slices. Each leaves `main` shippable.
 
-- **Slice A — Schema + writer** (steps 1–6, 16, partial tests). Lands frontmatter, prompt-loader extension, `cohort_normalise`, `telemetry.py`, **empty** `cohort-baselines.json`, CLAUDE.md gotcha, schema/normalise/frontmatter tests. `record_call` is unused in production — exercised by tests only. Zero behaviour change.
-- **Slice B — Wire telemetry into the hot path** (steps 9–12). `client.py`, stage modules, contextvars set in `run_lifecycle.py` and `pipeline.py`. After this lands, every real run produces JSONL rows. Forecast still uses the old constant.
-- **Between B and C** — maintainer runs FOSSDA once on this branch, JSONL accumulates real rows, derive `cohort-baselines.json` medians from those rows (hand or quick script), commit populated JSON.
-- **Slice C — Replace the forecast** (step 13 + remaining tests). Delete `_TOKENS_PER_SESSION`, swap `estimate_pipeline_cost` body. The user-visible change. Isolates the rollback decision.
+- **Slice A — Schema + writer** (steps 1–6, 16, partial tests). Lands frontmatter, prompt-loader extension, `cohort_normalise`, `telemetry.py`, **empty** `cohort-baselines.json`, CLAUDE.md gotcha, schema/normalise/frontmatter tests. `record_call` is unused in production — exercised by tests only. Zero behaviour change. **Shipped `efc051a` (2026-04-27).**
+- **Slice B — Wire telemetry into the hot path** (steps 9–12). `client.py`, stage modules, contextvars set in `run_lifecycle.py` and `pipeline.py`. After this lands, every real run produces JSONL rows. Forecast still uses the old constant. **Shipped `b140650` (hot-path) + `5ba52c7` (serve-mode autocode + elaboration binding).**
+- **Between B and C** — maintainer runs FOSSDA once on this branch, JSONL accumulates real rows, derive `cohort-baselines.json` medians from those rows (hand or quick script), commit populated JSON. **Did not happen as planned — see §Decisions taken pivot note.**
+- **Slice C — Replace the forecast** (step 13 + remaining tests). Delete `_TOKENS_PER_SESSION`, swap `estimate_pipeline_cost` body. The user-visible change. Isolates the rollback decision. **Shipped `4401e41` with `_LEGACY_TOKENS_PER_SESSION` retained as kill-switch (not deleted, gated by `BRISTLENOSE_LLM_FORECAST=legacy`).**
 
 ## Decisions taken (resolved during plan review)
 
-- **Initial baselines**: Slice A ships `{"cohorts": []}`. Real medians derived between Slices B and C from a maintainer FOSSDA run on this branch. Cleaner dogfood loop than parsing DEBUG log lines pre-Slice-A.
+> **Pivot from plan — 2026-04-28.** The "FOSSDA dogfood between Slices B and C, derive medians, commit populated JSON" step did **not** happen as planned. Slice C shipped (`4401e41`) with `cohort-baselines.json` still as the empty Slice A placeholder. Per Slice C commit message: "cohort-baselines.json remains the Slice A placeholder; populating it from a FOSSDA dogfood run is a separate manual step." The data-driven path therefore only kicks in after a project accumulates ≥3 local rows per stage; otherwise `estimate_pipeline_cost` returns `None` (no shipped baseline to fall back to). Populating baselines is now an out-of-band maintainer task tracked separately.
+
+- **Initial baselines**: Slice A ships `{"cohorts": []}`. Real medians were planned to be derived between Slices B and C from a maintainer FOSSDA run on this branch. Cleaner dogfood loop than parsing DEBUG log lines pre-Slice-A. *(See pivot note above — sequencing did not hold; baselines remain the empty placeholder as of 2026-04-28.)*
 - **CLI provider-prompt strings** at `cli.py:384,387,393` (`~$1.50/study` etc) stay hardcoded. Out of Phase 1 scope; revisit with provider-chooser UX work.
 - **`bristlenose forget <session_id>`** erasure CLI deferred to a separate GDPR-erasure design.
 - **`PromptTemplate` legacy `get_prompt` shim** kept indefinitely. No deprecation warning.
@@ -149,6 +159,8 @@ Three independently mergeable slices. Each leaves `main` shippable.
 - **Single growing JSONL** with 1000-row retention cap, accept residual atomicity risk (rows ~700B, well under PIPE_BUF 4KB on macOS).
 
 ## Verification plan
+
+> **Shipped — preserved as record.** Verification was executed during slice merges; this section retained as the original verification design. Test files referenced (`tests/test_llm_usage.py`, `tests/test_llm_telemetry.py`) all exist and pass on main as of 2026-04-28.
 
 **Out-of-the-box no-worse than today** (Slice C):
 - Manual: fresh project (no `.bristlenose/llm-calls.jsonl`), run `bristlenose run` against FOSSDA. Compare pre-run cost line to pre-Phase-1 main-branch line. Accept within ±20% on Sonnet 4 / GPT-4o / Gemini 2.5 Pro defaults.
@@ -171,10 +183,10 @@ Three independently mergeable slices. Each leaves `main` shippable.
 
 ## Rollback / kill switches
 
-Three layers, cheapest first:
+Three layers, cheapest first. **All three wired and shipped as of 2026-04-28**:
 
 1. `BRISTLENOSE_LLM_TELEMETRY=0` — short-circuits `record_call()` to a no-op. Read path tolerates missing/empty JSONL (returns `None` → falls back to baselines).
-2. `BRISTLENOSE_LLM_FORECAST=legacy` — `estimate_pipeline_cost` uses retained `_LEGACY_TOKENS_PER_SESSION = (17_000, 10_000)` regardless of JSONL/baselines. Six-month grace; remove in Phase 2 PR.
+2. `BRISTLENOSE_LLM_FORECAST=legacy` — `estimate_pipeline_cost` uses retained `_LEGACY_TOKENS_PER_SESSION = (17_000, 10_000)` regardless of JSONL/baselines. Wired at [`bristlenose/llm/pricing.py:224`](../bristlenose/llm/pricing.py:224); six-month grace; remove in Phase 2 PR.
 3. Git revert. Slice C is the only user-visible behaviour change; reverting just C leaves A+B intact (rows accumulate, forecast goes back to constant). Preserves the data-collection win even if forecast logic is buggy.
 
 Document both env vars in [bristlenose/llm/CLAUDE.md](../bristlenose/llm/CLAUDE.md) and a one-liner in CLI `--help` epilogue.

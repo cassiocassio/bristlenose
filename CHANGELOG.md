@@ -2,6 +2,12 @@
 
 All notable changes to Bristlenose are documented here. See also the [README](README.md) for the latest releases.
 
+## Unreleased
+
+- **Desktop alpha-readiness landed (Sprint 2 Track C C2–C5)** — sandbox-safe API-key injection (Swift Keychain → env vars; Python no longer execs `/usr/bin/security`), libproc-based zombie cleanup (`proc_listpids` + `proc_pidfdinfo` + `proc_pidpath` — replaces `lsof` and `/bin/ps`, both blocked by App Sandbox), `os.Logger` with privacy redaction throughout `ServeManager`, key-shape stdout redactor (Anthropic / OpenAI / Google formats) as defence-in-depth against accidental key leakage in subprocess output, `SidecarMode.resolve` + three Xcode schemes for the dev escape hatch, privacy manifests for host + sidecar (TestFlight unblock), per-binary signing infrastructure, supply-chain provenance (`THIRD-PARTY-BINARIES.md` + auto-regen script). Desktop-only — no PyPI surface change
+- **`bristlenose doctor --self-test`** — new flag that verifies sidecar bundle integrity (spec → bundle file presence). Catches the "data files declared in `.spec` but missing from the built bundle" class of bug. Runs in `desktop/scripts/build-all.sh` step 2a
+- **`bristlenose serve` fail-loud on missing React bundle** — returns a "Build incomplete" 500 page instead of silently falling back to the static render. The static render is officially vestigial scaffolding now, not a fallback
+
 **0.15.0** — _26 Apr 2026_
 
 - **Pipeline resilience: Phase 1f / 4a-pre — run-level event log + honest run state** — pipelines now write a single-source append-only `pipeline-events.jsonl` recording how each run ended (started / completed / cancelled / failed) with a structured `Cause` object capturing category, code, message, provider, stage, signal. Replaces the inference path the desktop app previously used (which mis-classified interrupted runs as `.ready`). Survives crashes, recovers cleanly from torn writes, refuses concurrent runs against the same project. See `docs/design-pipeline-resilience.md` §"Run outcomes and intent"

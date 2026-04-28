@@ -34,8 +34,8 @@ Comprehensive security review of the macOS desktop app (`desktop/Bristlenose/`),
 | # | Challenge | Status | 100days |
 |---|-----------|--------|---------|
 | 1 | ~~No code signing or notarization~~ ✅ **CODE SIGNING DONE — C2 (`cd04ee9`, `0db0b28`); NOTARISATION REJECTED for App Store path (`1ee30eb`)** — Per-Mach-O Apple Distribution signing on every binary in the bundle. ExportOptions declares both `signingCertificate` (Apple Distribution) and `installerSigningCertificate` (Mac Installer Distribution). `notarytool` only accepts Developer ID, not Apple Distribution; App Store flow validates server-side after upload via App Store Connect. Developer ID notarytool flow preserved as deferred future-state in `design-desktop-python-runtime.md` §"Deferred — Developer ID flow" | §11 Must |
-| 2 | App Sandbox disabled (`ENABLE_APP_SANDBOX = NO`) | Track A — sandbox flip is the next major piece; deferred until C4/C5 land. Empty-ents-style empirical entitlement reduction will run on the host app once sandbox is on | §12 Must |
-| 3 | No Privacy Manifest (`PrivacyInfo.xcprivacy`) | Host manifest staged in C3; sidecar + Python.framework + 222 third-party `.so` files triage is C4 | §12 Must |
+| 2 | App Sandbox disabled (`ENABLE_APP_SANDBOX = NO`) | Track A — sandbox flip is the next major piece. C4 done 28 Apr 2026; C5 outstanding. Empty-ents-style empirical entitlement reduction will run on the host app once sandbox is on | §12 Must |
+| 3 | ~~No Privacy Manifest (`PrivacyInfo.xcprivacy`)~~ ✅ **DONE — C4 (`765b111`..`f6c3170`, 28 Apr 2026)**. Host manifest at `Contents/Resources/` covers SwiftUI shell + FFmpeg; sidecar manifest at `Contents/Resources/bristlenose-sidecar/` covers embedded Python + 222 `.so` files. Single sidecar bundle-root manifest (per-package sub-manifests rejected as gold-plating after symbol-sweep triage). Build pipeline rejects archives missing either file or failing `plutil -lint`. See `docs/design-desktop-python-runtime.md` §"Privacy manifest coverage (C4)" | §12 Must |
 | 4 | No AI data disclosure dialog | ✅ Done — `AIConsentView.swift` shipped C3, gates serve start until version acknowledged | §6 Must |
 | 5 | ~~PyInstaller sidecar unsigned nested binaries~~ ✅ **DONE — C2 (`sign-sidecar.sh`)** — parallel per-binary loop signs all 240 inner `.dylib`/`.so`/framework binaries plus the outer Mach-O under one Apple Distribution identity. Note (28 Apr retest, `8cfd2ee`): per-Mach-O resigning is **necessary but not sufficient** to drop `cs.disable-library-validation` — Python.framework's internal `_CodeSignature/` seal is read by AMFI at dlopen and presents an identifier that doesn't match our Team ID. DLV stays. The empirical comment in `desktop/bristlenose-sidecar.entitlements` is the procurement-relevant record | §11 Must |
 
@@ -90,7 +90,7 @@ Comprehensive security review of the macOS desktop app (`desktop/Bristlenose/`),
 |---|-------------|--------|--------|
 | H | ~~Code signing + notarization CI pipeline~~ ✅ **CODE SIGNING DONE** (C2 `cd04ee9` + 28 Apr `1ee30eb` end-to-end fixes); **notarisation rejected for App Store path** — server-side validation by App Store Connect after upload replaces it | done | Distribution unblocked via App Store flow |
 | I | First-run AI data consent dialog | 1 day | Apple Guideline 5.1.2(i) compliance |
-| J | Privacy Manifest (`PrivacyInfo.xcprivacy`) | Half day | App Store requirement |
+| J | ~~Privacy Manifest (`PrivacyInfo.xcprivacy`)~~ ✅ **DONE — C4 (28 Apr 2026)** | done | App Store requirement |
 | K | Inject CSP via WKUserScript | Half day | Restrict script sources in WKWebView |
 | L | DASVS Level 1 checklist audit | 2-3 days | Purpose-built standard for desktop apps |
 | M | Build number auto-increment | CI | Unblocks Sparkle and App Store |

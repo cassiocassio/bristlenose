@@ -1,6 +1,8 @@
 # Desktop Python Runtime — sidecar mechanics
 
-_Written 18 Apr 2026 as Track C C0 spike output; updated through C3 (21 Apr 2026) with post-smoke-test bundle-data requirements, validation gates, and fail-loud contracts. Covers entitlements, signing, bundling, and runtime resource resolution for the bundled PyInstaller sidecar on macOS. Cross-channel component decisions (what ships where, and why) live in [`design-modularity.md`](./design-modularity.md) — this doc is strictly Mac-specific mechanics._
+_Written 18 Apr 2026 as Track C C0 spike output; updated through C3 (21 Apr 2026) with post-smoke-test bundle-data requirements, validation gates, and fail-loud contracts. Trued 28 Apr 2026 against the empty-ents retest (RED), the App-Store-flow `build-all.sh` end-to-end fixes, and the App-Store-only / Developer-ID-deferred distribution decision. Covers entitlements, signing, bundling, and runtime resource resolution for the bundled PyInstaller sidecar on macOS. Cross-channel component decisions (what ships where, and why) live in [`design-modularity.md`](./design-modularity.md) — this doc is strictly Mac-specific mechanics._
+
+> **Trued 28 Apr 2026 against `sidecar-signing` HEAD `8cfd2ee`.** Status block, entitlement-table justification, and verification battery updated to reflect: empty-ents retest result (RED — Python.framework's nested `_CodeSignature/` seal is the empirical reason DLV stays); `build-all.sh` end-to-end working for App Store flow (Mac Installer Distribution cert added; notarisation + stapling + spctl correctly skipped because notarytool only accepts Developer ID); SECURITY #5/#8 unblocker shipped; libproc-only zombie cleanup. New §"App Store distribution flow" section. §"Notarisation + stapling" preserved verbatim under a "Deferred — Developer ID flow" header (revisit at ~10k paying users per memory `project_developer_id_revisit.md`).
 
 ## Scope
 
@@ -14,20 +16,21 @@ This doc is the canonical source for:
 
 It is **not** the implementation plan — per-checkpoint work was tracked in `docs/private/sprint2-tracks.md` and session-specific `~/.claude/plans/*.md` files (C1 implementation plan, C3 closeout, C3 empty-ents retest, C4 privacy manifests). Session notes for the finished tracks live in `docs/private/c2-session-notes.md` and `docs/private/c3-session-notes.md`.
 
-## Status (C2–C3, 21 Apr 2026)
+## Status (C2–C3 + post-C3 hardening, 28 Apr 2026)
 
 - ✅ Trimmed PyInstaller spec at `desktop/bristlenose-sidecar.spec` (MLX-only; ctranslate2 / faster-whisper / presidio / spaCy excluded).
 - ✅ Sidecar builds, real-identity codesigns with Hardened Runtime, serves HTTP on localhost under `bristlenose serve`.
-- ✅ Minimum entitlement set empirically confirmed: **one key only** (`cs.disable-library-validation`). Empty-entitlements re-test post-unified-identity signing is parked in its own plan at `~/.claude/plans/c3-empty-ents-retest.md`; prerequisite is the SECURITY #5 + #8 unblocker (see below).
+- ✅ **Minimum entitlement set empirically confirmed:** one key only (`cs.disable-library-validation`). Empty-entitlements retest ran 28 Apr 2026 — RED. PyInstaller's bundled `Python.framework/Versions/3.12/Python` carries an internal `_CodeSignature/` seal distinct from the per-binary signatures applied by `sign-sidecar.sh`. AMFI reads the framework's nested seal at dlopen, not the per-binary resign — so unified-identity signing across individual Mach-Os does not reach the framework's identifier. DLV stays. Path forward (parked): treat Python.framework as a unit with `codesign --force` on the directory itself, properly resealing the internal `_CodeSignature`. The empirical comment block in [`desktop/bristlenose-sidecar.entitlements`](../desktop/bristlenose-sidecar.entitlements) is the canonical record (commit `8cfd2ee`).
 - ✅ **Sidecar resolution** refactored to pure `SidecarMode.resolve(…)` (C1).
 - ✅ **Parallel per-Mach-O signing** via bash `wait -n` pool, SHA256 manifest, trusted-timestamp assertion per file (C2).
-- ✅ **ExportOptions.plist + pbxproj Manual signing** — Release flipped to Apple Distribution + Bristlenose Mac App Store profile + Team `Z56GZVA2QB`; Debug stays Automatic (C2).
-- ✅ **Notarisation + stapling flow** wired in `build-all.sh` (C2). Notarytool credentials: profile `bristlenose-notary` in login keychain.
+- ✅ **ExportOptions.plist + pbxproj Manual signing** — Release flipped to Apple Distribution + Bristlenose Mac App Store profile + Team `Z56GZVA2QB`; Debug stays Automatic (C2). `installerSigningCertificate` (`3rd Party Mac Developer Installer`) added 28 Apr (`1ee30eb`) to sign the `.pkg` wrapper; required for App Store upload.
+- ✅ **`build-all.sh` end-to-end** for the App Store flow (28 Apr 2026, `1ee30eb`). See §"App Store distribution flow" below for the dual-cert ExportOptions, the xcarchive-`.app` fallback when `method=app-store` exports only a `.pkg`, and the `pkgutil --check-signature` replacement for `spctl`.
 - ✅ **Strings gate + `get-task-allow` gate** on every archived Mach-O (`check-release-binary.sh`, C2).
 - ✅ **Keychain credential flow** — Swift reads Keychain via `Security.framework` and injects `BRISTLENOSE_<PROVIDER>_API_KEY` env vars at sidecar launch (C3). Python `credentials_macos.py` subprocess-exception broadened to cover sandbox-denied cases. Runtime log redactor + source-level `check-logging-hygiene.sh` CI gate for Anthropic/OpenAI/Google key shapes.
 - ✅ **Bundle-data coverage** — BUG-3/4/5 fixed in C3 (React SPA `static/`, codebook YAMLs, llm/prompts all now hard-required in the spec). `check-bundle-manifest.sh` regression gate (BUG-6) added as `build-all.sh` pre-flight. `bristlenose doctor --self-test` gives the sidecar a runtime self-check path.
 - ✅ **Fail-loud on missing React bundle** — `_mount_prod_report` returns HTTP 500 with a clear error page rather than silently falling back to the deprecated static-render HTML (which masked BUG-3 in the C3 smoke test).
-- 🟡 **End-to-end verification blocked** (19 Apr 2026, still current) by pre-existing `#error` directives in `desktop/Bristlenose/Bristlenose/SecurityChecklist.swift` (SECURITY #5 + #8 — unrelated to signing). Unblocks both C2 verification and the C3 empty-ents retest.
+- ✅ **SECURITY #5 + #8 unblocked** (26 Apr 2026, commits `823f9be` `fdf90dc` `92a1d36` `38808fe`). Both `SecurityChecklist.swift` `#error` directives gone; Release archives compile.
+- ✅ **Zombie cleanup is libproc-only** (`5471b35`, 28 Apr 2026). `proc_listpids` + `proc_pidfdinfo(PROC_PIDFDSOCKETINFO)` replace the `lsof` exec; combined with the earlier `proc_pidpath` replacement for `/bin/ps` (`38808fe`), the entire supervisor path survives the Track A sandbox flip with no further changes.
 - 🟡 **C3 smoke test (manual, Step 6)** parked for human — Xcode Cmd+R with a throwaway Anthropic key; procedure in `~/.claude/plans/c3-closeout.md`.
 - ⏸️ Bundle size 644 MB. Deferred to Background Assets. See §"Bundle-size findings".
 - ❌ `com.apple.security.inherit` not yet tested (App Sandbox is Track A).
@@ -38,16 +41,18 @@ Each row: what the sidecar requests, which dependency forces it, and how to just
 
 | Key | Status | Triggered by | App Review justification |
 |---|---|---|---|
-| `com.apple.security.cs.disable-library-validation` | **Required** | PyInstaller bundle: ad-hoc signed outer binary loads `Python.framework` and 100+ `.so` files with a different (or empty) Team ID. Library validation rejects with "mapping process and mapped file have different Team IDs". | "Our app bundles a Python runtime (CPython 3.12) and its C-extension dependencies. These binaries are signed at build time by our own signing pipeline with our team identifier, but dyld's library validation check fires because CPython's internal layering treats the framework as a separately signed object. Disabling library validation is the standard pattern for embedded-Python apps on macOS; our own signing step ensures every loaded binary is trusted by us." |
+| `com.apple.security.cs.disable-library-validation` | **Required** (empirically, 28 Apr 2026 retest) | PyInstaller's bundled `Python.framework/Versions/3.12/Python` carries an internal `_CodeSignature/` seal distinct from the per-binary signatures applied by `sign-sidecar.sh`. AMFI reads the framework's nested seal at dlopen, not the per-binary resign. Result: even after a full remove-then-resign cycle across all 240+1 inner+outer Mach-Os under one Apple Distribution identity (`Z56GZVA2QB`), the framework's `Python` binary is rejected with "mapping process and mapped file (non-platform) have different Team IDs". | "Our app bundles a Python runtime (CPython 3.12) inside Apple's Framework structure. We sign every Mach-O in the bundle — including every `.so`, every `.dylib`, FFmpeg, and the framework's own `Python` binary — with our Apple Distribution identity (Team ID `Z56GZVA2QB`). However, `Python.framework` carries an internal `_CodeSignature/` seal as part of the macOS framework convention, and AMFI's library-validation check at dlopen reads that nested seal rather than the per-binary signature. The framework's internal identifier does not match our Team ID, so dyld rejects the load. Disabling library validation is the standard pattern for embedded-Python apps on macOS — Apple Developer Support documents it explicitly. The mitigation is robust: every loaded binary is signed by us under one identity, our Hardened Runtime is otherwise enabled, App Sandbox (when Track A flips it on) constrains the process. Future work to drop this entitlement is `codesign --force` on the framework directory as a unit (parked; non-trivial — Apple's framework versioned-symlink layout is fussy)." |
 | `com.apple.security.cs.allow-unsigned-executable-memory` | ❌ Not needed | Would be required if Python used W+X pages, but CPython 3.12 and the modules we ship don't. Included in v0.1's spec defensively; empirically unnecessary. | — (don't request) |
 | `com.apple.security.cs.allow-jit` | ❌ Not needed | Would be required if ctranslate2 / faster-whisper were in the bundle (they emit CPU JIT). Both are excluded; MLX runs on Metal GPU kernels. | — (don't request) |
 | `com.apple.security.cs.allow-dyld-environment-variables` | ❌ Not needed | PyInstaller `--onedir` bundles don't need `DYLD_*` tweaks; rpath is embedded by the installer. | — (don't request) |
 | `com.apple.security.cs.debugger` | ❌ Not needed | Only useful for attaching debuggers; shipping code doesn't need it. | — (don't request) |
 | `com.apple.security.inherit` | ⬜ Future (Track A) | Required once the parent `.app` enables App Sandbox, so the sidecar inherits the parent's sandbox rather than being evaluated standalone. | "The sidecar runs as a child of the sandboxed parent process. Inheriting the parent's sandbox is the standard pattern for a non-UI helper binary; the sidecar requests no additional entitlements of its own." |
 
-**Summary.** Track C C0 reduces the expected entitlement footprint from road-to-alpha §5's three-item guess (`allow-unsigned-executable-memory`, `disable-library-validation`, `allow-jit`) to a **single entitlement**. Each removed key is one fewer line of justification at App Review.
+**Summary.** Track C C0 reduces the expected entitlement footprint from the original three-item guess (`allow-unsigned-executable-memory`, `disable-library-validation`, `allow-jit`) to a **single entitlement**. Each removed key is one fewer line of justification at App Review. The 28 Apr 2026 retest confirmed this is the empirical floor, not a defensive caveat — see the next subsection for the C0 four-run table that established the floor, and §"Why DLV survives unified-identity signing" below for the framework-nested-seal finding from the post-C2 retest.
 
-### How this was determined
+### How this was determined (C0 spike, 18 Apr 2026 — historical baseline)
+
+> **Status: superseded as a justification but retained as evidence.** The four-run table below was produced at C0 against an ad-hoc-signed bundle, before the C2 unified-identity sign chain existed. The clean outcome ("only DLV is load-bearing") was correct in shape but its *reason* was not the one we hypothesised. The §"Why DLV survives unified-identity signing" subsection below replaces the reasoning while keeping the original evidence visible.
 
 Test rig: `desktop/scripts/build-sidecar.sh` produces a `--onedir` PyInstaller bundle, signs it (default ad-hoc for local iteration; `SIGN_IDENTITY="Apple Distribution: …"` for TestFlight) with `codesign --force --options=runtime --entitlements …`, and runs it as `./bristlenose-sidecar --port 18150 --no-open /tmp/scratch`.
 
@@ -61,6 +66,24 @@ Four signing runs:
 | Empty `<dict/>` | `[PYI-XXXX:ERROR] Failed to load Python shared library … code signature … not valid for use in process: mapping process and mapped file (non-platform) have different Team IDs` |
 
 Clean outcome: `cs.disable-library-validation` is the only load-bearing key.
+
+### Why DLV survives unified-identity signing (28 Apr 2026 retest)
+
+Hypothesis going into the retest: now that `desktop/scripts/sign-sidecar.sh` runs a full remove-then-resign cycle across every Mach-O in the bundle (240 inner + 1 outer) under one Apple Distribution identity (`Z56GZVA2QB`), the per-binary Team-ID mismatch that originally forced `cs.disable-library-validation` should be gone, and we should be able to drop the entitlement.
+
+Procedure: cleared `desktop/bristlenose-sidecar.entitlements` to `<dict/>`, ran `desktop/scripts/build-all.sh`, exercised the bundle.
+
+Result: **RED.** First sidecar `dlopen` failed with kernel AMFI library validation rejection on `Python.framework/Versions/3.12/Python`:
+
+> `'.../bristlenose-sidecar/_internal/Python.framework/Versions/3.12/Python' not valid for use in process: mapping process and mapped file (non-platform) have different Team IDs`
+
+Root cause (no longer hypothetical): macOS frameworks carry their own internal `_CodeSignature/` seal at `Python.framework/Versions/3.12/_CodeSignature/`, distinct from the per-Mach-O signatures applied by `sign-sidecar.sh`. AMFI's library-validation check at dlopen reads the framework's nested seal, not the per-binary resign — so the unified-identity cycle, however thorough across individual Mach-Os, doesn't reach the framework's internal identifier. The framework continues to present whatever identifier upstream PyInstaller's framework copy carried, and AMFI rejects.
+
+Implications:
+
+- **DLV stays.** The empirical comment block in [`desktop/bristlenose-sidecar.entitlements`](../desktop/bristlenose-sidecar.entitlements) (commit `8cfd2ee`) is the canonical record. App Review justification text is in the entitlement table above and reflects this empirical reasoning.
+- **Path forward (parked).** Drop DLV by treating `Python.framework` as a unit: `codesign --force --options=runtime --sign "Apple Distribution: …"` on the framework directory itself, properly resealing the internal `_CodeSignature`. Non-trivial — Apple's framework versioned-symlink layout is fussy, and `codesign` requires the version structure to be coherent before it will reseal. Future `sign-sidecar.sh` enhancement; not on the alpha critical path.
+- **Procurement talking point.** "Bristlenose's only Hardened Runtime exception is `cs.disable-library-validation`, empirically forced by Apple's framework seal layout for embedded-Python apps. Every Mach-O in the bundle is signed under our Apple Distribution identity. The exception is documented in our entitlements file with the specific framework path that triggers it." Clean answer for a security questionnaire.
 
 ### What wasn't tested
 
@@ -197,6 +220,75 @@ After every successful `codesign --sign`, `sign-sidecar.sh` and `sign-ffmpeg.sh`
 
 Implementation gotcha: `codesign -dvv | grep -q` trips `pipefail` via SIGPIPE. `grep -q` exits on first match, `codesign` keeps writing, gets SIGPIPE, returns 141. Pipeline is non-zero → false "no timestamp" alarm. The scripts capture codesign output into a variable first, then grep the here-string.
 
+### App Store distribution flow (28 Apr 2026, `1ee30eb`)
+
+`build-all.sh` ships an alpha-ready `.pkg` end-to-end via the App Store path. Three structural pieces, all guarded by `method=app-store` in [`desktop/Bristlenose/ExportOptions.plist`](../desktop/Bristlenose/ExportOptions.plist):
+
+**Dual signing identities in `ExportOptions.plist`.** App Store submissions need two certs because Mac apps are uploaded as `.pkg` installers (not raw `.app` bundles):
+
+```xml
+<key>signingCertificate</key>
+<string>Apple Distribution</string>
+<key>installerSigningCertificate</key>
+<string>3rd Party Mac Developer Installer</string>
+```
+
+The first signs every Mach-O in the `.app` bundle. The second signs the `.pkg` wrapper. `xcodebuild -exportArchive` looks both up by name in the login keychain (`security find-identity -v -p basic` lists them; the installer cert appears under the legacy display name `3rd Party Mac Developer Installer` — same cert family).
+
+**xcarchive-`.app` fallback for downstream gates.** With `method=app-store`, the export step produces only a `.pkg` (276 MB at this version). The script's downstream gates (release-binary scan, embedded-profile sanity, signing battery) need a `.app` to inspect. `build-all.sh` falls back to the `.app` inside the xcarchive at `desktop/build/Bristlenose.xcarchive/Products/Applications/Bristlenose.app` — same signed bundle, just unwrapped:
+
+```bash
+EXPORTED_APP=$(find "$EXPORT_DIR" -maxdepth 2 -name "*.app" -type d | head -1)
+if [ -z "$EXPORTED_APP" ]; then
+    ARCHIVE_APP=$(find "$ARCHIVE_PATH/Products/Applications" -maxdepth 1 -name "*.app" -type d | head -1)
+    if [ -n "$ARCHIVE_APP" ] && [ -n "$EXPORTED_PKG" ]; then
+        EXPORTED_APP="$ARCHIVE_APP"
+        echo "    note: app-store export produced .pkg only — using .app from xcarchive for downstream gates"
+    fi
+fi
+```
+
+Methods that emit `.app` directly (`developer-id`, `mac-application`) keep using `$EXPORT_DIR` as before — the fallback is conditional.
+
+**`pkgutil --check-signature` replaces `spctl` for App Store builds.** `spctl -a -t exec` on a non-stapled Apple Distribution `.app` always rejects with "rejected" — Gatekeeper's `exec` policy expects either App Store provenance OR notarised Developer ID, neither of which applies pre-upload. The replacement is `pkgutil --check-signature` on the `.pkg`:
+
+```bash
+pkgutil --check-signature "$EXPORTED_PKG"
+# Status: signed by a developer certificate issued by Apple (Development)
+# Certificate Chain:
+#   1. 3rd Party Mac Developer Installer: Martin Storey (Z56GZVA2QB)
+#   2. Apple Worldwide Developer Relations Certification Authority
+#   3. Apple Root CA
+```
+
+The `(Development)` label in pkgutil output is misleading nomenclature — the Mac Installer Distribution cert is a production cert, but pkgutil's status string categorises it under "developer certificate issued by Apple". The success string we assert against is `signed by a developer certificate issued by Apple`.
+
+**Notarisation + stapling are skipped on this path.** `notarytool` rejects Apple Distribution-signed binaries with "not signed with a valid Developer ID certificate" — it accepts only the Developer ID cert family. App Store submissions are validated server-side by App Store Connect after upload (which includes notarisation as a subset of the review pipeline), so notarytool isn't part of the App Store flow. `build-all.sh` guards steps 9 (notarise) and 10[a] (stapler validate) by export method:
+
+```bash
+case "$EXPORT_METHOD" in
+    app-store|app-store-connect) SKIP_NOTARISE=1 ;;
+    *) SKIP_NOTARISE=0 ;;
+esac
+```
+
+**Standalone-launch constraint.** Apple Distribution-signed `.app` bundles with App Store provisioning profiles refuse to launch standalone on any user account — even on the dev's own Mac. The error: `RBSRequestErrorDomain Code=5 "Launch failed."` with `NSPOSIXErrorDomain Code=163` (Launchd job spawn failed). Profile expects App Store provenance; standalone double-click doesn't satisfy. To run the bundle locally for empirical work (e.g., the empty-ents retest), use the Xcode Debug Swift host (ad-hoc-signed, launchable) wrapping the empty-ents-signed sidecar from `desktop/Bristlenose/Resources/bristlenose-sidecar/`. AMFI's library-validation check happens at sidecar-internal `dlopen`, independent of the Swift host's signing identity, so the result is valid.
+
+**Upload command.** From `build-all.sh`'s end-of-run banner:
+
+```bash
+xcrun altool --upload-app -f "desktop/build/export/Bristlenose.pkg" --type macos \
+    --apiKey <KEY_ID> --apiIssuer <ISSUER_ID>
+```
+
+(Track B's job. Transporter.app is the GUI alternative.)
+
+### Deferred — Developer ID flow (revisit at ~10k paying users)
+
+> **Section status: deferred to future commercial scale.** Distribution decision (28 Apr 2026): the App Store flow above is Bristlenose's only distribution channel for alpha + beta + early commercial. Developer ID (direct download with notarisation + stapling + Sparkle updates) is **not** a parallel path being maintained alongside — it's deferred until ~10k paying users when the App Store cut becomes material relative to the engineering+ops cost of running a parallel direct-distribution channel. Trigger conditions, cost model, and a quick how-to for adding the cert when we revisit live in the user's `project_developer_id_revisit.md` memory note.
+>
+> **The Notarisation + stapling subsection below is preserved verbatim** as the design baseline for the eventual revisit. None of these scripts run today; `build-all.sh` skips them when `method=app-store` (the only method we use). Reading guide: treat the subsection as **specification of a future flow**, not a description of current behaviour.
+
 ### Notarisation + stapling
 
 `build-all.sh` steps 9–10:
@@ -221,13 +313,19 @@ App-specific password generated at [appleid.apple.com](https://appleid.apple.com
 
 ### Final verification battery (`build-all.sh` step 10)
 
-Run after `stapler staple`:
+Different battery per export method. App Store flow (current shipping path):
 
-- `xcrun stapler validate <app>` — ticket present and valid.
-- `spctl -a -t exec -vv <app>` — Gatekeeper accepts; "source=Notarized Developer ID" is the expected phrase for Apple Distribution–signed chains.
+- `pkgutil --check-signature <pkg>` — assert `Status: signed by a developer certificate issued by Apple` on the `.pkg` wrapper. Replaces `spctl -a -t exec` because Gatekeeper's `exec` policy rejects Apple Distribution-signed `.app` bundles standalone (they require App Store provenance, which only arrives after upload).
 - `codesign --verify --deep --strict --verbose=2 <app>` — seals match through every nested Mach-O.
 - `codesign -d --entitlements :- <outer>` — assert **no** `get-task-allow=TRUE` (Debug debuggability entitlement, silently App-Store-rejected).
 - `codesign -d --requirements - <outer>` — assert designated requirement includes Team ID `Z56GZVA2QB`.
+
+Developer ID flow (deferred — would run instead of `pkgutil` if `method=developer-id`):
+
+- `xcrun stapler validate <app>` — ticket present and valid.
+- `spctl -a -t exec -vv <app>` — Gatekeeper accepts; expected phrase is "source=Notarized Developer ID".
+
+The `SKIP_NOTARISE` guard in `build-all.sh` selects between the two batteries based on `method` in `ExportOptions.plist`.
 
 ### Pre-archive gate (`check-release-binary.sh`)
 

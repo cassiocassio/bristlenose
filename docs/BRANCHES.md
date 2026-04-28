@@ -2,7 +2,7 @@
 
 This document tracks active feature branches to help multiple Claude sessions coordinate without conflicts.
 
-**Updated:** 26 Apr 2026 (alpha-telemetry merged)
+**Updated:** 28 Apr 2026 (cost-and-time-forecasts merged)
 
 ---
 
@@ -229,6 +229,10 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 ---
 
 ## Completed Branches (for reference)
+
+### `cost-and-time-forecasts` — merged 28 Apr 2026
+
+LLM call telemetry + data-driven pipeline cost forecast. Slice A: telemetry schema (`bristlenose/llm/telemetry.py`), append-only JSONL writer, prompt frontmatter. Slice B: contextvars + `record_call` wired into pipeline hot path and serve-mode autocode/elaboration. Slice C: data-driven cost forecast replacing prior heuristic estimates, with `cohort-baselines.json` + `cohort_normalise.py`. Sibling design doc `design-llm-pricing-fetch.md` for keeping price estimates current (followup PR). Merge commit `98df507`.
 
 ### `alpha-telemetry` — merged 26 Apr 2026
 

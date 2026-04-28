@@ -1,13 +1,18 @@
 ---
-status: planned
-last-trued: 2026-04-27
-trued-against: HEAD@cost-and-time-forecasts on 2026-04-27
+status: pending
+last-trued: 2026-04-28
+trued-against: HEAD@main (23d56af) on 2026-04-28
 ---
 
 # Keeping LLM price estimates current
 
-> **Status:** planned. Followup to Phase 1 cost forecast — implementation lands as a small PR after slice C, not inside it. Forecast logic and pricing freshness are independent concerns.
+> **Pending / aspirational.** Followup to Phase 1 cost forecast. Slice C of Phase 1 has now shipped (`4401e41`); implementation can begin as a separate small PR. Forecast logic (now data-driven) and pricing freshness are independent concerns. Last confirmed aspirational 2026-04-28.
 > **Parent design:** [design-llm-call-telemetry.md](design-llm-call-telemetry.md). Sibling: [design-cost-forecast-phase1.md](design-cost-forecast-phase1.md).
+
+## Changelog
+
+- _2026-04-28_ — confirmed still aspirational; Phase 1 Slice C shipped (`4401e41`) so the "after slice C" precondition is now met. Branch `cost-and-time-forecasts` closed (`23d56af`); `trued-against` re-anchored to main.
+- _2026-04-27_ — initial draft.
 
 ## Problem
 

@@ -2,7 +2,7 @@
 
 This document tracks active feature branches to help multiple Claude sessions coordinate without conflicts.
 
-**Updated:** 29 Apr 2026 (sandbox-debug started)
+**Updated:** 29 Apr 2026 (first-run started)
 
 ---
 
@@ -21,6 +21,7 @@ Each active feature branch gets its own **git worktree** — a full working copy
 | `bristlenose_branch drag-push/` | `drag-push` | Sidebar drag-to-open uses push mode (not overlay) |
 | `bristlenose_branch responsive-signal-cards/` | `responsive-signal-cards` | Responsive signal cards |
 | `bristlenose_branch sandbox-debug/` | `sandbox-debug` | S2 Track A — macOS app sandbox violation triage (A1 spike onward) |
+| `bristlenose_branch first-run/` | `first-run` | S2 Track B Branch 1 — first-run experience (cold open → AI consent → API key → empty-state narrative) |
 
 
 
@@ -108,6 +109,7 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 | `drag-push` | `bristlenose_branch drag-push/` | local only |
 | `responsive-signal-cards` | `bristlenose_branch responsive-signal-cards/` | local only |
 | `sandbox-debug` | `bristlenose_branch sandbox-debug/` | local only |
+| `first-run` | `bristlenose_branch first-run/` | local only |
 
 
 
@@ -115,6 +117,29 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 ---
 
 ## Active Branches
+
+### `first-run`
+
+**Status:** Just started
+**Started:** 29 Apr 2026
+**Worktree:** `/Users/cassio/Code/bristlenose_branch first-run/`
+**Remote:** local only (push when ready)
+
+**What it does:** S2 Track B Branch 1 — first-run experience for the macOS app. Covers the cold-open → AI disclosure → API key → empty-state path that gates everything else for alpha cohort. Scope: §1a beats 1–3 plus the connective tissue (welcoming empty state, narrative onboarding, "what do I do first" affordances). Both Claude and Ollama paths. Adds Ollama detection / model-picker / install-hint as a real beat-3b. Cold-start splash so post-C1 sidecar boot doesn't feel hung. Plan: `~/.claude/plans/there-was-work-on-piped-lark.md` (Branch 1 section).
+
+**Files this branch will touch:**
+- `desktop/Bristlenose/Bristlenose/ContentView.swift`, `AIConsentView.swift`, sidebar views — empty state, sidebar width truncation
+- `frontend/src/components/SettingsModal.tsx` — Claude key paste + validation UX
+- `bristlenose/server/routes/settings.py` — key validation endpoint
+- `desktop/Bristlenose/Bristlenose/Keychain*.swift` — sandboxed Keychain (post-C3)
+- `bristlenose/llm/providers/ollama.py` (or sibling) — Ollama detection probe
+- Possibly `frontend/src/pages/` for empty-state narrative if main pane gets a "what is Bristlenose" intro
+
+**Potential conflicts with other branches:**
+- `sandbox-debug` (Track A) — both touch `desktop/`. Sandbox triage runs in parallel; coordinate before merging either to main if both alter entitlements
+- `symbology`, `highlighter`, `living-fish`, `drag-push`, `responsive-signal-cards` — no overlap (those are frontend/theme; this is desktop chrome + Settings + LLM provider detection)
+
+---
 
 ### `sandbox-debug`
 

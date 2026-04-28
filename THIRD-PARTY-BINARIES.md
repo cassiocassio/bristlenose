@@ -19,8 +19,22 @@ These are signed under our Apple Distribution identity (Team ID
 |---|---|---|---|---|
 | `ffmpeg` | 8.1 | <https://ffmpeg.martin-riedl.de/download/macos/arm64/1774549676_8.1/ffmpeg.zip> | `cc3a7e0cce36c5eca6c17eeb93830984c657637a8e710dc98f19c8051201fa3a` | LGPL-2.1+ |
 | `ffprobe` | 8.1 | <https://ffmpeg.martin-riedl.de/download/macos/arm64/1774549676_8.1/ffprobe.zip> | `fd2e6b7fad9c9aa2bec17c0d7211b5afcc00b4b5c9b63c120985e80c3c198af6` | LGPL-2.1+ |
-| `Python.framework` | 3.12.x | Bundled by PyInstaller (vendored from python.org) | _captured per build in `desktop/build/sign-manifest.json`_ | Python Software Foundation Licence |
-| PyInstaller bootloader (`bristlenose-sidecar` outer binary) | 6.x | https://pyinstaller.org | _captured per build in `desktop/build/sign-manifest.json`_ | GPL-2.0-with-bootloader-exception |
+| `Python.framework` | 3.12.x | Copied from the build runner's installed Python (today: developer's local `python3.12`; a future GitHub Actions desktop-build job would use `actions/setup-python@v5` which is `python-build-standalone`) | _captured per build in `desktop/build/sign-manifest.json`_ | Python Software Foundation Licence |
+| PyInstaller bootloader (`bristlenose-sidecar` outer binary) | 6.x | <https://pyinstaller.org> | _captured per build in `desktop/build/sign-manifest.json`_ | GPL-2.0-or-later WITH PyInstaller-bootloader-exception (proprietary apps may embed the bootloader; see <https://github.com/pyinstaller/pyinstaller/blob/develop/COPYING.txt>) |
+
+### Bundled inside Python.framework (auto-generated)
+
+`Python.framework` rolls up several C libraries that procurement reviewers want broken out for CVE matching. Versions move with whichever Python the build runner installed; bumps land when that Python is upgraded.
+
+<!-- BEGIN AUTO: framework-libs -->
+| Library | Version | Where it lives in the bundle |
+|---|---|---|
+| `Python` | 3.12.13 | Tracks the build runner's `python.org` install |
+| `OpenSSL` | 3.6.2 | Linked into `_ssl` and `_hashlib` |
+| `SQLite` | 3.53.0 | Linked into `_sqlite3` |
+| `zlib` | 1.2.12 | Linked into `zlib` |
+| `expat` | 2.7.1 | Linked into `pyexpat` |
+<!-- END AUTO: framework-libs -->
 
 ## Python wheels (auto-generated)
 
@@ -40,7 +54,18 @@ desktop/scripts/build-sidecar.sh   # rebuild the bundle
 ```
 
 CI can call `scripts/generate-third-party-binaries.py --check` to fail
-the build if this file is stale relative to the bundle.
+the build if this file is stale relative to the bundle. `desktop/scripts/build-all.sh`
+runs the check automatically after `build-sidecar.sh`. The check is meant
+to run on the canonical Mac sidecar build runner; per-platform venv
+differences (mlx, av, torch) may flag drift on other machines that isn't
+real drift.
+
+**Caveat (over-inclusion).** The auto-generated table errs on the side of
+listing every package in the build venv that isn't explicitly excluded by
+the PyInstaller spec — even transitive dependencies of excluded packages
+(e.g. some spaCy transitives) that PyInstaller's modulegraph would actually
+strip from the bundle. Over-listing is the safer error direction for
+procurement; under-listing would be a compliance risk.
 
 <!-- BEGIN AUTO: python-wheels -->
 | Package | Version | Licence | URL |
@@ -111,7 +136,7 @@ the build if this file is stale relative to the bundle.
 | `pydantic-settings` | 2.13.1 | MIT | <https://github.com/pydantic/pydantic-settings> |
 | `pydantic_core` | 2.46.2 | MIT | <https://github.com/pydantic> |
 | `Pygments` | 2.20.0 | BSD-2-Clause | <https://pygments.org> |
-| `pysrt` | 1.1.2 | GNU General Public License (GPL) | <https://github.com/byroot/pysrt> |
+| `pysrt` | 1.1.2 | GPL-3.0-or-later | <https://github.com/byroot/pysrt> |
 | `python-docx` | 1.2.0 | MIT License | <https://github.com/python-openxml/python-docx> |
 | `python-dotenv` | 1.2.2 | BSD-3-Clause | <https://github.com/theskumar/python-dotenv> |
 | `python-multipart` | 0.0.26 | Apache-2.0 | <https://github.com/Kludex/python-multipart> |
@@ -133,28 +158,7 @@ the build if this file is stale relative to the bundle.
 | `sympy` | 1.14.0 | BSD License | <https://sympy.org> |
 | `tenacity` | 9.1.4 | Apache Software License | <https://github.com/jd/tenacity> |
 | `thinc` | 8.3.13 | MIT License | <https://github.com/explosion/thinc> |
-| `tiktoken` | 0.12.0 | MIT License
-
-Copyright (c) 2022 OpenAI, Shantanu Jain
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
- | <https://github.com/openai/tiktoken> |
+| `tiktoken` | 0.12.0 | MIT | <https://github.com/openai/tiktoken> |
 | `tldextract` | 5.3.1 | BSD-3-Clause | <https://github.com/john-kurkowski/tldextract> |
 | `tokenizers` | 0.22.2 | Apache Software License | <https://github.com/huggingface/tokenizers> |
 | `torch` | 2.11.0 | BSD-3-Clause | <https://pytorch.org> |
@@ -193,11 +197,11 @@ build time.
 
 No automated gate forces re-audit; the cadence below is the gate.
 
-- **GitHub Dependabot** — on for the repo (Settings → Code security →
-  Dependabot alerts + version updates). PRs land for security
-  advisories without human prompting; quarterly review covers anything
-  Dependabot can't auto-PR (e.g. major-version bumps with breaking
-  changes).
+- **GitHub Dependabot** — configured at [`.github/dependabot.yml`](.github/dependabot.yml)
+  (pip + npm/frontend + npm/e2e + npm/desktop, weekly, grouped by
+  minor-and-patch). PRs land for security advisories without human
+  prompting; quarterly review covers anything Dependabot can't auto-PR
+  (e.g. major-version bumps with breaking changes).
 - **Quarterly manual review** — `pip list --outdated` against the
   pinned venv, diff vs the previous quarter's snapshot, regenerate the
   Python wheels table above. Tracked in `docs/private/100days.md`
@@ -229,6 +233,14 @@ gets a yes/no with reasoning rather than silence.
   easier to grep but harder to read. Will add if a procurement
   reviewer specifically asks; trivial to drive from the same
   `pip-licenses --format=json` output the auto section uses.
+- **`pysrt` GPL aggregation question.** `pysrt` ships under "GNU General
+  Public License (GPL)" without a version in its wheel metadata; the
+  upstream repo is GPL-3.0-or-later. Used in `bristlenose/stages/s03_parse_subtitles.py`.
+  Bristlenose's overall licence is AGPL-3.0-only, which is a strict
+  superset of GPL-3.0-or-later, so the combined work's licence
+  position is unchanged. The `LICENSE_OVERRIDES` map in
+  `scripts/generate-third-party-binaries.py` declares the version
+  explicitly so the auto table doesn't carry the unversioned label.
 
 ## See also
 

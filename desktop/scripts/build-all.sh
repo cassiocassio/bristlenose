@@ -164,6 +164,29 @@ fi
 "$SIDECAR_BIN" doctor --self-test
 
 # ------------------------------------------------------------
+# 2b. THIRD-PARTY-BINARIES.md staleness check (C5)
+# ------------------------------------------------------------
+# Asserts the supply-chain inventory is up to date with the venv that
+# produced the bundle. Runs the regen script in --check mode; exits 1
+# if the file would change. Avoids the "shipped a release with stale
+# licence/version inventory" failure mode.
+#
+# Skipped when pip-licenses isn't installed (release extra not pulled
+# in) — keeps non-release builds friction-free.
+
+PYTHON_BIN="$ROOT/.venv/bin/python"
+if [ -x "$PYTHON_BIN" ] && "$PYTHON_BIN" -c "import importlib.util, sys; sys.exit(0 if importlib.util.find_spec('piplicenses') else 1)" 2>/dev/null; then
+    echo
+    echo "==> 2b. THIRD-PARTY-BINARIES.md staleness check..."
+    "$PYTHON_BIN" "$ROOT/scripts/generate-third-party-binaries.py" --check
+    echo "    OK (THIRD-PARTY-BINARIES.md fresh)"
+else
+    echo
+    echo "==> 2b. THIRD-PARTY-BINARIES.md staleness check — SKIPPED"
+    echo "    (install pip-licenses with: $ROOT/.venv/bin/pip install -e '$ROOT[release]')"
+fi
+
+# ------------------------------------------------------------
 # 3. Sign bundled FFmpeg + ffprobe
 # ------------------------------------------------------------
 # Child scripts inherit SIGN_IDENTITY (+ optional SIGN_JOBS,

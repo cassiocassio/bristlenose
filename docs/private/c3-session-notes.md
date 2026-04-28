@@ -139,3 +139,22 @@ git push origin sidecar-signing
 - `~/.claude/plans/next-track-security-5-and-8-unblocker.md` — empty-ents prerequisite
 - `docs/private/c2-session-notes.md` — prior context
 - `docs/private/sprint2-tracks.md` — overall track status
+
+## Empty-entitlements retest — RED, 28 Apr 2026
+
+Hypothesis (per `~/.claude/plans/c3-empty-ents-retest.md`): now that `desktop/scripts/sign-sidecar.sh` does a full remove-then-resign cycle across all 240 inner + 1 outer Mach-Os under a single Apple Distribution identity (`Z56GZVA2QB`), `cs.disable-library-validation` should no longer be load-bearing. Test: clear `desktop/bristlenose-sidecar.entitlements` to `<dict/>`, run `build-all.sh`, exercise the bundle.
+
+**Outcome: RED. DLV stays.** First sidecar `dlopen` failed with kernel AMFI library validation rejection on `Python.framework/Versions/3.12/Python`:
+
+> `Python not valid for use in process: mapping process and mapped file (non-platform) have different Team IDs`
+
+**Root cause confirmed empirically (no longer hypothetical):** macOS frameworks carry their own internal `_CodeSignature/` seal, distinct from per-binary signatures. `sign-sidecar.sh`'s remove-then-resign cycle reaches every Mach-O **including** Python.framework's nested `Python` binary, but the framework's internal seal presents a separate identifier from the binary's outer signature. The kernel reads the framework's nested seal at dlopen, not the per-binary resign — so unified-identity signing across individual Mach-Os doesn't reach Python.framework's internal identifier.
+
+**To drop DLV in a future iteration**, `sign-sidecar.sh` would need to treat Python.framework as a unit (`codesign --force` on the framework directory itself, properly resealing the internal `_CodeSignature`) rather than only its inner binaries. Non-trivial — frameworks have versioned-symlink structure that codesign is picky about, and PyInstaller's framework layout may need preprocessing to be codesign-acceptable. Parked.
+
+**Action taken:**
+- Restored DLV in `desktop/bristlenose-sidecar.entitlements`
+- Rewrote the comment block: was hypothetical pre-retest; now reflects the empirical finding (Python.framework nested signature is the binding reason)
+- Plan doc `~/.claude/plans/c3-empty-ents-retest.md` retains the procedure for when someone wants to take another run at the framework-resigning approach
+
+**Test methodology footnote:** The retest plan originally called for testing on a clean second macOS user account. Apple Distribution + Mac App Store provisioning profile builds **refuse to launch standalone** on any account (RBS error 163 — Launchd job spawn failed; profile expects App Store provenance). The actual rejection was observed via the Xcode Debug Swift host (ad-hoc-signed, launchable) which copies the empty-ents-signed sidecar from `desktop/Bristlenose/Resources/bristlenose-sidecar/`. The library validation check happens at `dlopen` inside the sidecar process, independent of the host's signing identity, so the result is valid. Clean-user-account fidelity is what TestFlight delivers; doesn't need replicating locally.

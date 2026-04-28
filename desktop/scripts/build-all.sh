@@ -480,11 +480,23 @@ fi
 SIGN_MANIFEST="$DESKTOP_DIR/build/sign-manifest.json"
 echo
 echo "=============================================="
-echo " DONE — Bristlenose.app notarised and stapled"
+if [ "$SKIP_NOTARISE" = "0" ]; then
+    echo " DONE — Bristlenose.app notarised and stapled"
+else
+    echo " DONE — Bristlenose.pkg ready for App Store Connect"
+fi
 echo "=============================================="
 echo "  app:           $EXPORTED_APP"
 echo "  archive:       $ARCHIVE_PATH"
 echo "  sign manifest: $SIGN_MANIFEST"
-echo "  notary log:    $LOG_JSON"
+if [ "$SKIP_NOTARISE" = "0" ]; then
+    echo "  notary log:    $LOG_JSON"
+else
+    echo "  pkg:           $EXPORTED_PKG"
+    echo
+    echo "Upload to App Store Connect via Transporter or:"
+    echo "  xcrun altool --upload-app -f \"$EXPORTED_PKG\" --type macos \\"
+    echo "      --apiKey <KEY_ID> --apiIssuer <ISSUER_ID>"
+fi
 echo
-echo "Ready for C3 / Track B: .pkg export + TestFlight upload."
+echo "Ready for C3 / Track B: TestFlight upload."

@@ -246,7 +246,7 @@ _See also: `SECURITY.md` §Anonymisation boundary_
 
 ### Credential storage
 
-**Native keychain on macOS (Keychain) and Linux (Secret Service), with env var fallback.** Keys are never written to disk in plaintext by Bristlenose. The `.env` fallback is read-only — Bristlenose reads it if present but does not create or modify it. Priority order: keychain, env var, `.env` file. Keys are validated before storing to catch typos and truncation.
+**Native keychain on macOS (Keychain via Security.framework from the desktop app's Swift host; `security` CLI from Python-only CLI distributions) and Linux (Secret Service), with env var fallback.** Keys are never persisted to disk in plaintext by Bristlenose. The `.env` fallback is read-only — Bristlenose reads it if present but does not create or modify it. Priority order for Python settings: env var, `.env`, keychain. On the sandboxed desktop sidecar the Swift host reads Keychain once at process launch and injects `BRISTLENOSE_<PROVIDER>_API_KEY` env vars — Python never touches Keychain there. Keys are validated before storing to catch typos and truncation.
 
 _See also: `docs/design-keychain.md`_
 

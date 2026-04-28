@@ -1785,8 +1785,40 @@ def configure(
 
 
 @app.command()
-def doctor() -> None:
-    """Check dependencies, API keys, and system configuration."""
+def doctor(
+    self_test: Annotated[
+        bool,
+        typer.Option(
+            "--self-test",
+            help="Run bundle-integrity checks only (for build-all.sh pre-archive).",
+        ),
+    ] = False,
+) -> None:
+    """Check dependencies, API keys, and system configuration.
+
+    With --self-test, runs only the bundle-integrity checks — asserts every
+    runtime-data file the code will look for (React SPA, codebook YAMLs,
+    LLM prompts, locales, theme, Alembic) is present and non-trivial.
+    Exits non-zero on any failure. Used by desktop/scripts/build-all.sh
+    step 7a to catch BUG-3/4/5-class packaging bugs at build time.
+    """
+    if self_test:
+        from bristlenose.doctor import run_bundle_integrity
+        report = run_bundle_integrity()
+        _format_doctor_table(report)
+        if report.has_failures:
+            console.print("\n[bold red]Bundle integrity: FAIL[/bold red]")
+            console.print(
+                "One or more runtime-data dirs are missing or truncated. "
+                "This build is NOT shippable. "
+                "Check `desktop/bristlenose-sidecar.spec` `datas`, then "
+                "rebuild via `desktop/scripts/build-sidecar.sh`."
+            )
+            import sys
+            sys.exit(1)
+        console.print("\n[dim green]Bundle integrity: OK[/dim green]\n")
+        return
+
     from bristlenose.doctor import run_all
 
     settings = load_settings()

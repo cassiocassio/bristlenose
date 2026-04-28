@@ -1,3 +1,15 @@
+---
+status: partial
+last-trued: 2026-04-21
+trued-against: HEAD@sidecar-signing on 2026-04-21
+---
+
+> **Truing status:** Partial — the original design (§Design Decisions, §Module Structure, §CLI Commands) shipped and remains the canonical CLI/serve-mode credential path, with provider-list expansion (2→5). The Track C sandboxed-desktop deployment ships a different credential path (Swift reads Keychain, injects env vars; Python never touches Keychain) — documented in the new §"Desktop (sandboxed) credential path" section. Inline Python source (§Module Structure) is the pre-ship plan; see `bristlenose/credentials.py` + `credentials_macos.py` for current.
+
+## Changelog
+
+- _2026-04-21_ — trued up: expanded provider list from 2 (anthropic, openai) to 5 (anthropic, openai, azure, google, miro); updated `bristlenose configure` samples to use product names (`claude`, `chatgpt`); marked Snap section as shipped via env-var fallback; added new §"Desktop (sandboxed) credential path" for the Track C Swift→env-var→Python architecture (load-bearing invariant for alpha); added §"Secret-leak defences" covering runtime log redactor + `check-logging-hygiene.sh` CI gate. Anchors: `bristlenose/credentials.py:53-58`, `bristlenose/credentials_macos.py:42-44`, `bristlenose/cli.py:1613-1727`, `desktop/Bristlenose/Bristlenose/ServeManager.swift:183-197,356-383,409-473`, `desktop/Bristlenose/Bristlenose/KeychainHelper.swift`, `desktop/scripts/check-logging-hygiene.sh`, commits "inject keychain api keys as env vars", "runtime log redactor for api key shapes", "tests for env injection, redactor", "CI grep gate for Swift logging hygiene". Preserved: inlined Python source in §Module Structure as pre-ship plan record.
+
 # Keychain Integration
 
 Secure credential storage for API keys using native system keychains.
@@ -30,9 +42,14 @@ Instead:
 
 **Decision:** Human-readable service names with "API Key" suffix.
 
-Examples:
+Examples (expanded from original 2 providers to 5 shipped):
 - `Bristlenose Anthropic API Key`
 - `Bristlenose OpenAI API Key`
+- `Bristlenose Azure API Key`
+- `Bristlenose Google API Key`
+- `Bristlenose Miro API Key` (Miro board-bridge integration)
+
+See `bristlenose/credentials_macos.py:42-44` for the shipped service-name table.
 
 **Rationale:** Users search their keychain for "anthropic" and should find something clearly labelled. Anthropic has other credentials (console password, etc.) — the "API Key" suffix disambiguates.
 
@@ -46,12 +63,16 @@ Keychain fields:
 **Decision:** One provider at a time via `bristlenose configure <provider>`.
 
 ```bash
-bristlenose configure anthropic
+bristlenose configure claude
 # Prompts for key, validates, stores in Keychain
 
-bristlenose configure openai
+bristlenose configure chatgpt
 # Same flow
+
+# Also: azure, gemini, miro
 ```
+
+**Shipped note:** command takes **product names** (`claude`, `chatgpt`, `gemini`) in user-facing flags, not internal names (`anthropic`, `openai`, `google`). See `bristlenose/cli.py:1613-1727`. Internal storage still keys on internal names.
 
 **Not** a wizard that configures everything at once — that's rare and over-engineered.
 
@@ -88,6 +109,93 @@ bristlenose configure openai
 **Decision:** Handle Snap later. For now, Snap users use env vars.
 
 **Rationale:** Snap runs in a sandbox and may not have Keychain access. We'll figure out the right fallback (encrypted file in `$SNAP_USER_COMMON`?) when we get there. Don't let it block the macOS implementation.
+
+> **Post-script (2026-04-21):** Snap shipped with env-var fallback. `bristlenose configure` detects snap context and prints an `export ANTHROPIC_API_KEY=...` message for the user to add to their shell profile. Encrypted-file approach was not needed — env vars are sufficient for snap users who are already comfortable with shell. See `docs/design-doctor-and-snap.md:872-877` for shipped behaviour.
+
+---
+
+## Desktop (sandboxed) credential path
+
+**Shipped in Track C (Apr 2026).** This is a distinct deployment from the CLI/serve-mode path above. When Bristlenose runs embedded in the macOS desktop app (sandboxed, signed, TestFlight/App Store bound), the credential flow inverts: **Swift reads Keychain via Security.framework; Python never touches Keychain.**
+
+### The flow
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│ 1. User sets API key in SwiftUI Settings → LLM tab              │
+│    → LLMSettingsView writes via KeychainHelper (Security.framework) │
+│    → Keychain entry: access group scoped to app bundle ID       │
+│                                                                 │
+│ 2. User starts analysis                                         │
+│    → ServeManager boots the sidecar subprocess                  │
+│    → Before exec: overlayAPIKeys() reads all keychain entries   │
+│    → Injects BRISTLENOSE_<PROVIDER>_API_KEY env vars            │
+│                                                                 │
+│ 3. Python sidecar starts                                        │
+│    → config.py reads env vars (EnvCredentialStore path)         │
+│    → Never calls `security` CLI, never links Security.framework │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+**Anchors:**
+- `desktop/Bristlenose/Bristlenose/ServeManager.swift:356-383` — `overlayAPIKeys(into:)` iterates providers, reads keychain, injects env vars
+- `desktop/Bristlenose/Bristlenose/KeychainHelper.swift` — Security.framework-based store (no shell-out to `security` CLI)
+- `desktop/Bristlenose/Bristlenose/LLMSettingsView.swift` — SwiftUI Settings UI that calls KeychainHelper
+- `desktop/Bristlenose/Bristlenose/ServeManager.swift:183-197` — subprocess boot that applies the overlay
+- Commit: "inject keychain api keys as env vars" (a8dc3cb)
+
+### Why this split
+
+The sandboxed desktop context adds constraints that change the optimal design:
+
+- **Sandbox entitlements.** Giving the Python sidecar `keychain-access-groups` would require additional entitlements and complicate the sandbox profile. Reading Keychain from Swift (the app's sandbox principal) and passing credentials via process env vars is simpler.
+- **PyInstaller bundle size.** Linking Security.framework from Python via PyObjC or similar adds weight to a bundle that's already 644 MB. The `security` CLI shell-out wouldn't work from the sandboxed Python subprocess either.
+- **Separation of concerns.** The Swift side owns all OS-integration concerns (Keychain, notifications, unified logging). Python focuses on the analysis pipeline.
+
+### Threat-model rationale
+
+Env-var-over-keychain-access-groups has a small but non-zero residual risk: env vars are visible to anyone with the same UID via `ps -E`. The trade-off:
+
+- An attacker with same-UID code execution on the machine can already call `SecItemCopyMatching` directly against the same keychain entries the app uses. Net delta from env-var exposure is small.
+- The sandbox protects against *other* UIDs and untrusted cross-app actors. Both `security` CLI and Security.framework rely on the same sandbox boundary.
+- Clear documentation ("same-UID threat not mitigated") is honest; hiding the env vars in Keychain access groups would be security theatre against the actual threat model.
+
+See the comment block at `desktop/Bristlenose/Bristlenose/ServeManager.swift:366-371` for the in-code rationale.
+
+### Testability
+
+`ServeManager` takes `any KeychainStore` as a protocol, with `InMemoryKeychain` as a test shim. Swift-side tests exercise the env-var injection path without touching the real keychain. See `desktop/Bristlenose/BristlenoseTests/` and `desktop/CLAUDE.md` §Testability refactors.
+
+## Secret-leak defences
+
+Shipped alongside the desktop credential path in Track C (Apr 2026). Two layers, both defence-in-depth against API-key-shaped substrings leaking into sidecar stdout / unified logging.
+
+### Layer 1: Runtime log redactor (Swift side)
+
+Every line of sidecar stdout passes through a regex-based redactor before forwarding to unified logging. Recognises the shape of known provider API keys and replaces with `<REDACTED>`.
+
+- Anchors: `desktop/Bristlenose/Bristlenose/ServeManager.swift:409-473` (redactor implementation), `desktop/Bristlenose/BristlenoseTests/HandleLineRedactorTests.swift` (tests)
+- Commits: "runtime log redactor for api key shapes" (8a41f60), "tests for env injection, redactor" (5dc971f)
+
+Why runtime and not just source-time? Python logging is out of our control — third-party libraries, error messages, subprocess output. A runtime filter catches leaks the source-time gate can't.
+
+### Layer 2: Source-time CI grep gate (Swift side)
+
+`desktop/scripts/check-logging-hygiene.sh` — CI gate that greps Swift source for `print`/`os_log`/`Logger` calls that interpolate secret-shaped values. Fails the build if a developer writes `os_log("key: \(apiKey)")` or similar.
+
+- Anchor: `desktop/scripts/check-logging-hygiene.sh`
+- Commit: "CI grep gate for Swift logging hygiene" (c17954d)
+
+Why both layers? Source-time catches the easy mistake before it ships. Runtime catches the hard case (library output, error messages, future code paths) where source inspection can't reach.
+
+### What's not covered
+
+- **Python-side logging.** The Python operational log (`.bristlenose/bristlenose.log`) is governed by `design-logging.md`'s PII policy. Not redacted at runtime — assumption is that Python-side code already avoids logging keys.
+- **Shell process inspection (`ps -E`).** Same-UID attackers can read env vars. See §"Threat-model rationale" above.
+
+---
+
+> **Historical:** the sections below (Module Structure through Implementation Order) describe the pre-ship plan. The approach shipped with expansion (5 providers instead of 2, Swift-side store for desktop context) but the Python-side structure is substantively as planned. Inlined source is the plan-version; see `bristlenose/credentials.py`, `credentials_macos.py`, `credentials_linux.py` for current.
 
 ---
 

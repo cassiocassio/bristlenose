@@ -21,11 +21,11 @@ The cost moves from boot to first-use, where the user is already engaged with th
 
 API keys are stored securely in the system keychain. Uses native CLI tools — no Python keyring shim.
 
-**Forward-looking (Track C C3):** the bundled Mac sidecar can't shell out to `/usr/bin/security` (sandbox blocks it). Plan: Swift fetches keys from the Keychain at sidecar launch and passes them via env vars (symmetric with `ServeManager.overlayPreferences()`). Python keychain code stays as the CLI fallback when env vars aren't set. No Mac-only Python dep — preserves the no-fork principle in `docs/design-modularity.md`.
+**Sandboxed desktop sidecar (Track C C3, Apr 2026):** Swift host reads Keychain via Security.framework at sidecar launch and injects keys as `BRISTLENOSE_*_API_KEY` env vars. Python never touches Keychain in this deployment — pydantic-settings picks the env vars up before `_populate_keys_from_keychain` runs. `credentials_macos.py` stays as-is and remains the happy path for **CLI Mac distros** (Homebrew, pip — not sandboxed, `/usr/bin/security` works fine). No Mac-only Python dep; no-fork principle preserved per `docs/design-modularity.md`.
 
 - **CLI command**: `bristlenose configure <provider>` — prompts for key, validates with API, stores in keychain. Accepts `--key` option to bypass interactive prompt (useful in scripts or when TTY has issues)
 - **Provider aliases**: `claude` → `anthropic`, `chatgpt`/`gpt` → `openai`, `gemini` → `google`
-- **Priority order**: keychain → env var (`ANTHROPIC_API_KEY`) → .env file
+- **Priority order**: env var (`BRISTLENOSE_<PROVIDER>_API_KEY` or bare `ANTHROPIC_API_KEY`) → .env file → keychain. On the sandboxed desktop sidecar the env var is always set by Swift before launch, so keychain is effectively bypassed there; CLI Mac users hit the keychain fallback as usual.
 - **macOS**: `bristlenose/credentials_macos.py` — uses `security` CLI (add-generic-password, find-generic-password, delete-generic-password). Service names: "Bristlenose Anthropic API Key", "Bristlenose OpenAI API Key", "Bristlenose Google Gemini API Key"
 - **Linux**: `bristlenose/credentials_linux.py` — uses `secret-tool` (Secret Service API). Falls back to `EnvCredentialStore` if secret-tool unavailable
 - **Fallback**: `bristlenose/credentials.py` — `EnvCredentialStore` reads from env vars (cannot write)

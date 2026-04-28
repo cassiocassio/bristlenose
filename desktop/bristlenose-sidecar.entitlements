@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+Hardened Runtime entitlements for the bundled Python sidecar.
+
+Load-bearing: ONLY com.apple.security.cs.disable-library-validation.
+
+Reason (empty-entitlements retest, 28 Apr 2026 — RED):
+PyInstaller bundled Python.framework carries an internal code seal
+distinct from per-binary signatures. AMFI library validation reads
+the framework nested seal at dlopen time, not the per-binary resign
+sign-sidecar.sh applies. Result: dlopen of Python.framework Python
+fails with mapping process and mapped file have different Team IDs,
+even after a full remove-then-resign cycle across all inner Mach-Os
+under a single Apple Distribution identity Z56GZVA2QB.
+
+Full diagnostic + path forward in docs/private/c3-session-notes.md
+section Empty-entitlements retest. Plan for a future attempt at
+framework-level resigning in plans/c3-empty-ents-retest.md.
+
+NOT needed for serve-only scope (confirmed Apr 2026):
+  cs.allow-unsigned-executable-memory: CPython 3.12 has no W+X.
+  cs.allow-jit: ctranslate2 excluded, MLX uses Metal GPU not CPU JIT.
+  cs.allow-dyld-environment-variables: not required for serve.
+
+C3 credential path (Apr 2026): sidecar never accesses macOS Keychain.
+Swift host fetches via Security.framework, injects BRISTLENOSE_*_API_KEY
+env vars at subprocess launch. No Keychain entitlements needed here.
+
+App Sandbox + user-facing entitlements (files, network, bookmarks)
+are Track A territory; sidecar will add com.apple.security.inherit
+at that point so the parent sandbox applies.
+-->
+<plist version="1.0">
+<dict>
+    <key>com.apple.security.cs.disable-library-validation</key>
+    <true/>
+</dict>
+</plist>

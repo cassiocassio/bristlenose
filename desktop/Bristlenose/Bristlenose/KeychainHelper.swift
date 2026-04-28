@@ -123,13 +123,27 @@ enum KeychainHelper {
         }
     }
 
-    /// Check if any usable API key exists (Keychain or environment).
+    /// Check if any usable API key exists across all supported providers.
+    /// Checks Keychain + both `BRISTLENOSE_<PROVIDER>_API_KEY` (pydantic-settings
+    /// convention) and the bare provider-native env var the SDK would auto-read.
     static func hasAnyAPIKey() -> Bool {
-        if get(provider: "anthropic") != nil { return true }
-
         let env = ProcessInfo.processInfo.environment
-        if env["ANTHROPIC_API_KEY"] != nil { return true }
-        if env["BRISTLENOSE_ANTHROPIC_API_KEY"] != nil { return true }
+        // Providers → provider-native env var name (the one each SDK auto-reads
+        // when no explicit key is passed). Keep in sync with pydantic-settings
+        // field names in `bristlenose/config.py`.
+        let nativeEnvNames = [
+            "anthropic": "ANTHROPIC_API_KEY",
+            "openai": "OPENAI_API_KEY",
+            "azure": "AZURE_API_KEY",
+            "google": "GOOGLE_API_KEY",
+        ]
+        for provider in serviceNames.keys {
+            if get(provider: provider) != nil { return true }
+            let bristlenoseEnv = "BRISTLENOSE_\(provider.uppercased())_API_KEY"
+            if let value = env[bristlenoseEnv], !value.isEmpty { return true }
+            if let native = nativeEnvNames[provider],
+               let value = env[native], !value.isEmpty { return true }
+        }
         return false
     }
 

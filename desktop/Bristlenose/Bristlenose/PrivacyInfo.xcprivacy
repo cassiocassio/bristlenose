@@ -4,23 +4,17 @@
 Privacy manifest — Bristlenose host shell. Required by Apple from 1 May 2024.
 
 Scope: SwiftUI host (desktop/Bristlenose/Bristlenose/) and FFmpeg + ffprobe
-shipped at Contents/Resources/. The Python sidecar has its own manifest at
-Contents/Resources/bristlenose-sidecar/PrivacyInfo.xcprivacy.
-
-NSPrivacyTracking = false. User-configured LLM providers transmit content
-under the user's own account; disclosed in AIConsentView.swift per Apple
-Guideline 5.1.2(i). NSPrivacyCollectedDataTypes is empty.
+shipped at Contents/Resources/. The Python sidecar declares its own API uses
+in Contents/Resources/bristlenose-sidecar/PrivacyInfo.xcprivacy.
 
 Required-reason APIs:
-  CA92.1 — UserDefaults: @AppStorage property wrappers throughout the app.
+  CA92.1 — UserDefaults: @AppStorage property wrappers in the host app.
   C617.1 — FileTimestamp: sidebar "last opened" display on project rows.
-  DDA9.1 — FileTimestamp: FFmpeg reading source-file mtimes when extracting
-           audio for transcription. FFmpeg ships at the app level, so its
-           API uses are declared here rather than in the sidecar manifest.
+  DDA9.1 — FileTimestamp: FFmpeg reading source-file mtimes during audio
+           extraction.
   E174.1 — DiskSpace: FFmpeg statfs/fstatfs for output-size estimation.
   35F9.1 — SystemBootTime: FFmpeg mach_absolute_time for encode-speed
-           timeline. Monotonic counter, not absolute boot-instant; not used
-           for fingerprinting and not persisted.
+           timeline (monotonic counter, not absolute boot-instant).
 
 Reason-code reference:
 https://developer.apple.com/documentation/bundleresources/privacy_manifest_files/describing_use_of_required_reason_api

@@ -478,11 +478,16 @@ if ! grep -q "$TEAM_ID" <<< "$REQ"; then
 fi
 
 echo "    [f] privacy manifests (host + sidecar) present and parseable"
+echo "        Found PrivacyInfo.xcprivacy files in bundle:"
+find "$EXPORTED_APP" -name "PrivacyInfo.xcprivacy" 2>/dev/null | sed 's|^|            |'
 HOST_MANIFEST="$EXPORTED_APP/Contents/Resources/PrivacyInfo.xcprivacy"
 SIDECAR_MANIFEST="$EXPORTED_APP/Contents/Resources/bristlenose-sidecar/PrivacyInfo.xcprivacy"
 for m in "$HOST_MANIFEST" "$SIDECAR_MANIFEST"; do
     if [ ! -f "$m" ]; then
-        echo "error: privacy manifest missing: $m" >&2
+        echo "error: privacy manifest missing at expected path: $m" >&2
+        echo "       (Xcode may have copied the host manifest to a different path —" >&2
+        echo "        check the find output above, then check Copy Bundle Resources" >&2
+        echo "        phase in desktop/Bristlenose/Bristlenose.xcodeproj.)" >&2
         exit 1
     fi
     if ! plutil -lint "$m" >/dev/null 2>&1; then

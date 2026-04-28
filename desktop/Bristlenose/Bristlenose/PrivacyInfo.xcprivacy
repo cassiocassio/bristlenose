@@ -28,9 +28,17 @@ Required Reason APIs declared:
       (selectedProjectID, aiConsentVersion, appearance settings, etc.).
 
   - File timestamp (NSFileTimestampAccess)
-      Reason: C617.1 — "Display file timestamps to the person using the device."
-      Triggered by: sidebar "last opened" display on project rows; FFmpeg
-      reads source-file timestamps when extracting audio for transcription.
+      Reasons:
+        C617.1 — "Display file timestamps to the person using the device."
+                 Triggered by: sidebar "last opened" display on project rows.
+        DDA9.1 — "Access timestamp information about files inside the app
+                 container, app group container, or the app's CloudKit
+                 container."
+                 Triggered by: FFmpeg (Contents/Resources/ffmpeg + ffprobe)
+                 reading source-file mtimes when extracting audio for
+                 transcription. FFmpeg ships at the app level, so its API
+                 uses are declared in this host manifest rather than in the
+                 sidecar manifest.
 
   - Disk space (NSDiskSpaceAccess)
       Reason: E174.1 — "Check disk space before writing files."
@@ -42,8 +50,9 @@ Required Reason APIs declared:
       events that occurred within the app or to perform calculations to
       enable timers."
       Triggered by: FFmpeg's encode-speed/duration timeline reporting via
-      mach_absolute_time. Bristlenose's own Swift code does not use uptime
-      APIs.
+      mach_absolute_time (a monotonic counter, NOT absolute boot time).
+      Bristlenose does not use this category for device fingerprinting and
+      does not read or persist absolute boot-instant values.
 
 The bundled Python sidecar ships its own PrivacyInfo.xcprivacy at
 Contents/Resources/bristlenose-sidecar/PrivacyInfo.xcprivacy covering
@@ -79,6 +88,7 @@ https://developer.apple.com/documentation/bundleresources/privacy_manifest_files
             <key>NSPrivacyAccessedAPITypeReasons</key>
             <array>
                 <string>C617.1</string>
+                <string>DDA9.1</string>
             </array>
         </dict>
         <dict>

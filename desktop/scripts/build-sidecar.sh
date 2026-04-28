@@ -53,5 +53,18 @@ echo "==> Building sidecar with PyInstaller..."
 echo "==> Bundle size:"
 du -sh "$BUNDLE"
 
+# Privacy manifest. Apple requires a PrivacyInfo.xcprivacy at the bundle
+# root covering required-reason API usage by the embedded Python interpreter
+# and vendored packages. Source kept at desktop/bristlenose-sidecar.PrivacyInfo.xcprivacy
+# so it travels with the spec. C4 (28 Apr 2026).
+PRIVACY_SRC="$DESKTOP_DIR/bristlenose-sidecar.PrivacyInfo.xcprivacy"
+PRIVACY_DST="$BUNDLE/PrivacyInfo.xcprivacy"
+if [ ! -f "$PRIVACY_SRC" ]; then
+    echo "error: privacy manifest source missing at $PRIVACY_SRC" >&2
+    exit 1
+fi
+cp "$PRIVACY_SRC" "$PRIVACY_DST"
+echo "==> Privacy manifest: $PRIVACY_DST"
+
 echo "==> Done. Bundle: $BUNDLE"
 echo "    Next: desktop/scripts/sign-sidecar.sh"

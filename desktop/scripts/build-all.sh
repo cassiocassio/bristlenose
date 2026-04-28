@@ -477,6 +477,22 @@ if ! grep -q "$TEAM_ID" <<< "$REQ"; then
     exit 1
 fi
 
+echo "    [f] privacy manifests (host + sidecar) present and parseable"
+HOST_MANIFEST="$EXPORTED_APP/Contents/Resources/PrivacyInfo.xcprivacy"
+SIDECAR_MANIFEST="$EXPORTED_APP/Contents/Resources/bristlenose-sidecar/PrivacyInfo.xcprivacy"
+for m in "$HOST_MANIFEST" "$SIDECAR_MANIFEST"; do
+    if [ ! -f "$m" ]; then
+        echo "error: privacy manifest missing: $m" >&2
+        exit 1
+    fi
+    if ! plutil -lint "$m" >/dev/null 2>&1; then
+        echo "error: privacy manifest fails plutil -lint: $m" >&2
+        plutil -lint "$m" >&2 || true
+        exit 1
+    fi
+    echo "        OK: $m"
+done
+
 SIGN_MANIFEST="$DESKTOP_DIR/build/sign-manifest.json"
 echo
 echo "=============================================="

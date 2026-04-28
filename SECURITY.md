@@ -29,6 +29,8 @@ The build pipeline lives in `desktop/scripts/build-all.sh`. Pre-archive gates sc
 
 Privacy manifests cover the entire bundle: `Contents/Resources/PrivacyInfo.xcprivacy` for the SwiftUI host and FFmpeg, and `Contents/Resources/bristlenose-sidecar/PrivacyInfo.xcprivacy` for the embedded Python runtime and its native extensions. Both declare `NSPrivacyTracking = false`, an empty `NSPrivacyCollectedDataTypes`, and the specific required-reason API categories triggered by bundled code. The build pipeline rejects any release archive that's missing either manifest or fails `plutil -lint`.
 
+A complete inventory of every third-party binary and Python wheel that ships in the desktop app — origin URL, version, SHA256 (where applicable), licence — is maintained at [`THIRD-PARTY-BINARIES.md`](THIRD-PARTY-BINARIES.md). The Python-wheel section is auto-regenerated from the venv install via `scripts/generate-third-party-binaries.py`. CVE monitoring runs through GitHub Dependabot for Python dependencies + a quarterly manual review for native binaries; the cadence is documented in the same file.
+
 ## Data leaves your machine only when:
 
 1. **You use a cloud LLM provider.** Transcript text is sent to the provider you selected in Settings (Claude, ChatGPT, Azure OpenAI, or Gemini), using your own API key, at the moment you trigger an analysis. Using Ollama with a local model eliminates even this.

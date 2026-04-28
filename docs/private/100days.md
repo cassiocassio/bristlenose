@@ -393,6 +393,7 @@ The canonical end-to-end beats a first-time user must complete successfully in t
 - **Shared user-tags data layer** — vanilla JS dedup (frozen path, low priority)
 - **Configurable codebook URL** — `BRISTLENOSE_CODEBOOK_URL` as injected global instead of hardcoded (trivial, from old ROADMAP)
 - **Dev HUD: end-to-end traceability panel** — debug overlay showing provenance at every layer (git branch/SHA/dirty, Python version/source, render timestamp, theme CSS path/mtime/hash, serve mode/port, frontend Vite hash/router mode, bridge state, API health). Toggle with keyboard shortcut. Data from git CLI at startup, `/api/health`, `/api/dev/info`, CSS inspection
+- **Primary Python version helper** — extract `scripts/primary-python-version.sh` so `new-feature` skill, `bump-version.py`, and future tooling all read from one parser instead of grep'ing `release.yml` individually. Trigger: do this the next time we bump the CI python-version (currently 3.12) — bundles the bump and the DRY refactor into one piece of thinking
 
 ### Won't (100 days)
 - **JS module cleanup** (#7, #8, #9, #10, #22, #23) — vanilla JS is frozen/deprecated

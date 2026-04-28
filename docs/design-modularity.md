@@ -128,6 +128,8 @@ The **env-var injection** pattern for the desktop sidecar is the key insight: it
 
 ## Acquisition mechanisms by channel
 
+> **Distribution decision (28 Apr 2026).** The macOS `.app` ships **App Store only** (alpha, beta, and early commercial). Direct download via Developer ID + notarytool + Sparkle is **not** maintained as a parallel channel — it's deferred until the App Store cut becomes material relative to the cost of running a parallel direct-distribution channel (memo trigger: ~10k paying users, or first enterprise MDM ask). Today's `desktop/scripts/build-all.sh` produces a `.pkg` for App Store Connect upload via Transporter / `xcrun altool --upload-app`. No `.dmg`. No Sparkle. Pricing via Apple In-App Purchase, not Stripe — App Store handles payments, tax, refunds, chargebacks, IAP infrastructure, and a chunk of trust signal that an indie can't manufacture cheaply.
+
 ### macOS `.app` (TestFlight / App Store)
 
 | Mechanism | When | Size limit | Used for |
@@ -140,9 +142,9 @@ The **env-var injection** pattern for the desktop sidecar is the key insight: it
 
 **Rule:** if Apple can host it, let Apple host it. Apple-Hosted Background Assets wins on signing, trust, CDN, resumability, storage management, and Privacy Manifest posture. Roll-your-own downloads are for cases Background Assets can't cover (e.g. extending `sys.path` with downloaded Python packages — still needs manual unpack but the asset can still be delivered via Background Assets).
 
-### macOS `.dmg` (not happening per [road-to-alpha](private/road-to-alpha.md))
+### macOS `.dmg` — deferred (not "rejected"; revisit at ~10k paying users)
 
-Would have had Sparkle for updates. Rejected because TestFlight/App Store is the chosen alpha path.
+Would have shipped via Developer ID + notarytool + Sparkle for in-app updates. Status updated 28 Apr 2026 from "rejected" to "deferred" per the distribution-decision callout above. The Sparkle/notarytool flow is preserved as a future-state subsection in `docs/design-desktop-python-runtime.md` §"Deferred — Developer ID flow". Re-add this row to the active mechanisms table when the trigger conditions fire.
 
 ### macOS Homebrew (CLI)
 

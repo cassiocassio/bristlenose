@@ -1,72 +1,33 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <!--
-Privacy manifest for the Bristlenose Python sidecar.
+Privacy manifest — Bristlenose Python sidecar. Required by Apple from 1 May 2024.
 
-Apple requires privacy manifests on all App Store / TestFlight submissions
-since 1 May 2024. This manifest covers the bundled Python interpreter,
-Python.framework, and every vendored Python package shipped inside
-Contents/Resources/bristlenose-sidecar/_internal/ — composed once at the
-sidecar bundle root rather than per-package because Apple's bar is
-API-category coverage, not one manifest per vendored library.
+Scope: bundled CPython (Python.framework) and every native extension under
+Contents/Resources/bristlenose-sidecar/_internal/. Single bundle-root manifest
+because Apple's bar is API-category coverage, not per-package. Host manifest:
+Contents/Resources/PrivacyInfo.xcprivacy.
 
-Build placement: copied into the bundle root by desktop/scripts/build-sidecar.sh
-post-PyInstaller. Source kept at desktop/bristlenose-sidecar.PrivacyInfo.xcprivacy
-(sibling to desktop/bristlenose-sidecar.spec) so it travels with the spec.
+Build placement: copied to the bundle root by desktop/scripts/build-sidecar.sh
+post-PyInstaller. Source: desktop/bristlenose-sidecar.PrivacyInfo.xcprivacy.
 
-Tracking: false. Bristlenose is local-first. Interview content stays on
-the user's machine. The sidecar is exactly where outbound LLM HTTP calls
-originate (bristlenose/llm/), but transmission is to a provider account
-the user configures themselves (Claude, ChatGPT, Azure OpenAI, Gemini, or
-local Ollama). That is the user's contract with their LLM provider, not
-data collection by Bristlenose. Disclosed in the in-app AI consent dialog
-before any network call (AIConsentView.swift, Apple Guideline 5.1.2(i));
-the Ollama path keeps everything 100% local.
+NSPrivacyTracking = false. The sidecar is where outbound LLM HTTP calls
+originate (bristlenose/llm/), but transmission is to a user-configured
+provider account, disclosed in AIConsentView.swift per Apple 5.1.2(i).
+NSPrivacyCollectedDataTypes is empty. No telemetry, no analytics.
 
-Required Reason APIs covered (per the symbol-sweep triage in the
-session notes for C4, 28 Apr 2026):
+Required-reason APIs (covers bundled CPython and native extensions performing
+standard cache and stat operations on files inside the app container):
+  DDA9.1 — FileTimestamp: stat-family calls inside the app container.
+  E174.1 — DiskSpace: statfs/fstatfs preflight before cache writes.
+  35F9.1 — SystemBootTime: mach_absolute_time for monotonic elapsed-time
+           measurement (e.g. time.monotonic). Not absolute boot-instant;
+           not used for fingerprinting and not persisted.
 
-  - File timestamp (NSPrivacyAccessedAPICategoryFileTimestamp)
-      Reason: DDA9.1 — "Access timestamp information about files inside
-      the app container, app group container, or the app's CloudKit
-      container."
-      Triggered by: stat/fstat/lstat in Python.framework (CPython os.stat),
-      cryptography/libssl/libcrypto (cert chain validation against bundled
-      CA store), libsqlite3 (file-mtime checks for journal mode), bundled
-      torch/scipy/numba/llvmlite (model file mtime checks), hf_xet/lxml/
-      jiter/pydantic_core/tiktoken (file-based caches and lazy-loaded
-      resources). All reads are against files the sidecar wrote or shipped
-      itself; no inspection of files outside the app container.
+NSUserDefaults / CFPreferences: not used by the sidecar (verified by symbol
+sweep of the bundle). Active keyboards: Obj-C only API, not applicable.
 
-  - Disk space (NSPrivacyAccessedAPICategoryDiskSpace)
-      Reason: E174.1 — "Check disk space before writing files."
-      Triggered by: statfs/fstatfs in Python.framework, libsqlite3 (page-write
-      preflight), llvmlite (JIT cache writes), torch (model cache writes).
-      Bristlenose's own pre-write disk-space check is deferred (post-alpha);
-      the underlying APIs are present in bundled binaries today.
-
-  - System boot time (NSPrivacyAccessedAPICategorySystemBootTime)
-      Reason: 35F9.1 — "Measure the amount of time that has elapsed between
-      events that occurred within the app or to perform calculations to
-      enable timers."
-      Triggered by: mach_absolute_time in Python.framework (time.monotonic),
-      torch (perf counters), hf_xet (download timing). All uses are
-      monotonic elapsed-time measurements, NOT reads of absolute boot-instant.
-      Bristlenose does not use this category for device fingerprinting and
-      does not persist or transmit any boot-derived value.
-
-  - User defaults: not declared.
-      The sidecar is pure Python; zero NSUserDefaults / CFPreferences symbols
-      in the symbol sweep. The host app's manifest declares CA92.1 for
-      @AppStorage, which is correct.
-
-  - Active keyboards: not applicable (Obj-C only API).
-
-Data collection: nothing. The sidecar serves a local FastAPI app to the host
-WKWebView on 127.0.0.1; no telemetry, no analytics, no remote logging. The
-only outbound network is the user-configured LLM passthrough described above.
-
-Apple's reason-code reference:
+Reason-code reference:
 https://developer.apple.com/documentation/bundleresources/privacy_manifest_files/describing_use_of_required_reason_api
 -->
 <plist version="1.0">

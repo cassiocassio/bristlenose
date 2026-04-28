@@ -1,67 +1,28 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <!--
-Privacy manifest for the Bristlenose Mac app (host shell only).
+Privacy manifest — Bristlenose host shell. Required by Apple from 1 May 2024.
 
-Required by Apple from 1 May 2024 for all App Store submissions. Declares
-which "required reason" APIs the app uses and why.
+Scope: SwiftUI host (desktop/Bristlenose/Bristlenose/) and FFmpeg + ffprobe
+shipped at Contents/Resources/. The Python sidecar has its own manifest at
+Contents/Resources/bristlenose-sidecar/PrivacyInfo.xcprivacy.
 
-Scope: this file covers the SwiftUI host (desktop/Bristlenose/Bristlenose/).
-The bundled Python sidecar and every embedded framework (e.g. Python.framework)
-need their own PrivacyInfo.xcprivacy at their respective bundle roots —
-see docs/design-desktop-python-runtime.md when implementing.
+NSPrivacyTracking = false. User-configured LLM providers transmit content
+under the user's own account; disclosed in AIConsentView.swift per Apple
+Guideline 5.1.2(i). NSPrivacyCollectedDataTypes is empty.
 
-Tracking: Bristlenose is local-first. The app does not track users across
-apps or websites owned by other companies. NSPrivacyTracking = false.
+Required-reason APIs:
+  CA92.1 — UserDefaults: @AppStorage property wrappers throughout the app.
+  C617.1 — FileTimestamp: sidebar "last opened" display on project rows.
+  DDA9.1 — FileTimestamp: FFmpeg reading source-file mtimes when extracting
+           audio for transcription. FFmpeg ships at the app level, so its
+           API uses are declared here rather than in the sidecar manifest.
+  E174.1 — DiskSpace: FFmpeg statfs/fstatfs for output-size estimation.
+  35F9.1 — SystemBootTime: FFmpeg mach_absolute_time for encode-speed
+           timeline. Monotonic counter, not absolute boot-instant; not used
+           for fingerprinting and not persisted.
 
-Data collection: nothing is collected by Bristlenose itself. Interview
-content and quotes stay on the user's machine. When the user configures an
-LLM provider (Claude, ChatGPT, Azure OpenAI, Gemini), content is transmitted
-to that provider under the user's own account — that is the provider's
-data collection, not Bristlenose's, and is disclosed separately in the
-in-app AI consent dialog (AIConsentView.swift, Apple Guideline 5.1.2(i)).
-
-Required Reason APIs declared:
-  - UserDefaults (NSUserDefaultsAccess)
-      Reason: CA92.1 — "Access info from same app, per documentation."
-      Triggered by: @AppStorage property wrappers throughout the app
-      (selectedProjectID, aiConsentVersion, appearance settings, etc.).
-
-  - File timestamp (NSFileTimestampAccess)
-      Reasons:
-        C617.1 — "Display file timestamps to the person using the device."
-                 Triggered by: sidebar "last opened" display on project rows.
-        DDA9.1 — "Access timestamp information about files inside the app
-                 container, app group container, or the app's CloudKit
-                 container."
-                 Triggered by: FFmpeg (Contents/Resources/ffmpeg + ffprobe)
-                 reading source-file mtimes when extracting audio for
-                 transcription. FFmpeg ships at the app level, so its API
-                 uses are declared in this host manifest rather than in the
-                 sidecar manifest.
-
-  - Disk space (NSDiskSpaceAccess)
-      Reason: E174.1 — "Check disk space before writing files."
-      Triggered by: FFmpeg's internal output-size estimation when transcoding
-      audio for transcription (statfs/fstatfs on the output volume).
-
-  - System boot time (NSSystemBootTimeAccess)
-      Reason: 35F9.1 — "Measure the amount of time that has elapsed between
-      events that occurred within the app or to perform calculations to
-      enable timers."
-      Triggered by: FFmpeg's encode-speed/duration timeline reporting via
-      mach_absolute_time (a monotonic counter, NOT absolute boot time).
-      Bristlenose does not use this category for device fingerprinting and
-      does not read or persist absolute boot-instant values.
-
-The bundled Python sidecar ships its own PrivacyInfo.xcprivacy at
-Contents/Resources/bristlenose-sidecar/PrivacyInfo.xcprivacy covering
-the Python.framework and bundled `.so` files (numpy, scipy, mlx, torch,
-cryptography, libsqlite3, etc.). Maintained as a single sidecar-level
-manifest rather than per-package — Apple's bar is API-category coverage,
-not one manifest per vendored library.
-
-Apple's reason-code reference:
+Reason-code reference:
 https://developer.apple.com/documentation/bundleresources/privacy_manifest_files/describing_use_of_required_reason_api
 -->
 <plist version="1.0">

@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+Privacy manifest for the Bristlenose Python sidecar.
+
+Apple requires privacy manifests on all App Store / TestFlight submissions
+since 1 May 2024. This manifest covers the bundled Python interpreter,
+Python.framework, and every vendored Python package shipped inside
+Contents/Resources/bristlenose-sidecar/_internal/ — composed once at the
+sidecar bundle root rather than per-package because Apple's bar is
+API-category coverage, not one manifest per vendored library.
+
+Build placement: copied into the bundle root by desktop/scripts/build-sidecar.sh
+post-PyInstaller. Source kept at desktop/bristlenose-sidecar.PrivacyInfo.xcprivacy
+(sibling to desktop/bristlenose-sidecar.spec) so it travels with the spec.
+
+Tracking: false. Bristlenose is local-first. Interview content stays on
+the user's machine; LLM provider transmission is the user's own account
+under their own ToS, disclosed in AIConsentView.swift (Apple 5.1.2(i)).
+
+Required Reason APIs covered (per the symbol-sweep triage in
+docs/private/c4-triage.csv, 28 Apr 2026):
+
+  - File timestamp (NSPrivacyAccessedAPICategoryFileTimestamp)
+      Reason: C617.1 — "Display file timestamps to the person using the device."
+      Triggered by: stat/fstat/lstat in Python.framework (CPython os.stat),
+      cryptography/libssl/libcrypto (cert chain validation), libsqlite3
+      (file-mtime checks for journal mode), bundled torch/scipy/numba/llvmlite
+      (model file mtime checks), hf_xet/lxml/jiter/pydantic_core/tiktoken
+      (file-based caches and lazy-loaded resources).
+
+  - Disk space (NSPrivacyAccessedAPICategoryDiskSpace)
+      Reason: E174.1 — "Check disk space before writing files."
+      Triggered by: statfs/fstatfs in Python.framework, libsqlite3 (page-write
+      preflight), llvmlite (JIT cache writes), torch (model cache writes).
+      Bristlenose's own pre-write disk-space check is deferred (post-alpha);
+      the underlying APIs are present in bundled binaries today.
+
+  - System boot time (NSPrivacyAccessedAPICategorySystemBootTime)
+      Reason: 35F9.1 — "Measure the amount of time that has elapsed between
+      events that occurred within the app or to perform calculations to
+      enable timers."
+      Triggered by: mach_absolute_time in Python.framework (time.monotonic),
+      torch (CUDA-style perf counters even on Mac), hf_xet (download timing),
+      onnxruntime (operator-level perf telemetry; remains bundled even though
+      not reachable from runtime imports — see triage notes).
+
+  - User defaults: not declared.
+      The sidecar is pure Python; zero NSUserDefaults / CFPreferences symbols
+      in the symbol sweep. The host app's manifest declares CA92.1 for
+      @AppStorage, which is correct.
+
+  - Active keyboards: not applicable (Obj-C only API).
+
+Data collection: nothing. The sidecar serves a local FastAPI app to the host
+WKWebView on 127.0.0.1; no telemetry, no analytics, no remote logging.
+
+Apple's reason-code reference:
+https://developer.apple.com/documentation/bundleresources/privacy_manifest_files/describing_use_of_required_reason_api
+-->
+<plist version="1.0">
+<dict>
+    <key>NSPrivacyTracking</key>
+    <false/>
+    <key>NSPrivacyTrackingDomains</key>
+    <array/>
+    <key>NSPrivacyCollectedDataTypes</key>
+    <array/>
+    <key>NSPrivacyAccessedAPITypes</key>
+    <array>
+        <dict>
+            <key>NSPrivacyAccessedAPIType</key>
+            <string>NSPrivacyAccessedAPICategoryFileTimestamp</string>
+            <key>NSPrivacyAccessedAPITypeReasons</key>
+            <array>
+                <string>C617.1</string>
+            </array>
+        </dict>
+        <dict>
+            <key>NSPrivacyAccessedAPIType</key>
+            <string>NSPrivacyAccessedAPICategoryDiskSpace</string>
+            <key>NSPrivacyAccessedAPITypeReasons</key>
+            <array>
+                <string>E174.1</string>
+            </array>
+        </dict>
+        <dict>
+            <key>NSPrivacyAccessedAPIType</key>
+            <string>NSPrivacyAccessedAPICategorySystemBootTime</string>
+            <key>NSPrivacyAccessedAPITypeReasons</key>
+            <array>
+                <string>35F9.1</string>
+            </array>
+        </dict>
+    </array>
+</dict>
+</plist>

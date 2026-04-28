@@ -29,11 +29,30 @@ Required Reason APIs declared:
 
   - File timestamp (NSFileTimestampAccess)
       Reason: C617.1 — "Display file timestamps to the person using the device."
-      Triggered by: sidebar "last opened" display on project rows.
+      Triggered by: sidebar "last opened" display on project rows; FFmpeg
+      reads source-file timestamps when extracting audio for transcription.
 
-If you add a framework, SDK, or call that touches another required-reason
-category (disk space, active keyboards, system boot time), add the
-declaration below with a documented reason code. Apple's full list:
+  - Disk space (NSDiskSpaceAccess)
+      Reason: E174.1 — "Check disk space before writing files."
+      Triggered by: FFmpeg's internal output-size estimation when transcoding
+      audio for transcription (statfs/fstatfs on the output volume).
+
+  - System boot time (NSSystemBootTimeAccess)
+      Reason: 35F9.1 — "Measure the amount of time that has elapsed between
+      events that occurred within the app or to perform calculations to
+      enable timers."
+      Triggered by: FFmpeg's encode-speed/duration timeline reporting via
+      mach_absolute_time. Bristlenose's own Swift code does not use uptime
+      APIs.
+
+The bundled Python sidecar ships its own PrivacyInfo.xcprivacy at
+Contents/Resources/bristlenose-sidecar/PrivacyInfo.xcprivacy covering
+the Python.framework and bundled `.so` files (numpy, scipy, mlx, torch,
+cryptography, libsqlite3, etc.). Maintained as a single sidecar-level
+manifest rather than per-package — Apple's bar is API-category coverage,
+not one manifest per vendored library.
+
+Apple's reason-code reference:
 https://developer.apple.com/documentation/bundleresources/privacy_manifest_files/describing_use_of_required_reason_api
 -->
 <plist version="1.0">
@@ -60,6 +79,22 @@ https://developer.apple.com/documentation/bundleresources/privacy_manifest_files
             <key>NSPrivacyAccessedAPITypeReasons</key>
             <array>
                 <string>C617.1</string>
+            </array>
+        </dict>
+        <dict>
+            <key>NSPrivacyAccessedAPIType</key>
+            <string>NSPrivacyAccessedAPICategoryDiskSpace</string>
+            <key>NSPrivacyAccessedAPITypeReasons</key>
+            <array>
+                <string>E174.1</string>
+            </array>
+        </dict>
+        <dict>
+            <key>NSPrivacyAccessedAPIType</key>
+            <string>NSPrivacyAccessedAPICategorySystemBootTime</string>
+            <key>NSPrivacyAccessedAPITypeReasons</key>
+            <array>
+                <string>35F9.1</string>
             </array>
         </dict>
     </array>

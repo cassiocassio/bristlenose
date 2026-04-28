@@ -2,7 +2,7 @@
 
 This document tracks active feature branches to help multiple Claude sessions coordinate without conflicts.
 
-**Updated:** 28 Apr 2026 (sidecar-signing merged)
+**Updated:** 29 Apr 2026 (sandbox-debug started)
 
 ---
 
@@ -20,6 +20,7 @@ Each active feature branch gets its own **git worktree** — a full working copy
 | `bristlenose_branch living-fish/` | `living-fish` | Animated "living portrait" logo for serve mode |
 | `bristlenose_branch drag-push/` | `drag-push` | Sidebar drag-to-open uses push mode (not overlay) |
 | `bristlenose_branch responsive-signal-cards/` | `responsive-signal-cards` | Responsive signal cards |
+| `bristlenose_branch sandbox-debug/` | `sandbox-debug` | S2 Track A — macOS app sandbox violation triage (A1 spike onward) |
 
 
 
@@ -106,6 +107,7 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 | `living-fish` | `bristlenose_branch living-fish/` | `origin/living-fish` |
 | `drag-push` | `bristlenose_branch drag-push/` | local only |
 | `responsive-signal-cards` | `bristlenose_branch responsive-signal-cards/` | local only |
+| `sandbox-debug` | `bristlenose_branch sandbox-debug/` | local only |
 
 
 
@@ -113,6 +115,24 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 ---
 
 ## Active Branches
+
+### `sandbox-debug`
+
+**Status:** Just started
+**Started:** 29 Apr 2026
+**Worktree:** `/Users/cassio/Code/bristlenose_branch sandbox-debug/`
+**Remote:** local only (push when ready)
+
+**What it does:** S2 Track A — macOS app sandbox violation triage. A1 spike: turn the sandbox on in Debug, walk the §1a flow, capture every `deny(1)` line, output a violation inventory. No fixes in this branch — it's the inventory pass before A2–A6 narrow per-violation branches (credentials / Ollama / FFmpeg paths / clip backend / doctor + security-scoped bookmarks).
+
+**Files this branch will touch:**
+- `desktop/` — entitlements files, sandbox toggle in Debug scheme
+- TBD — likely `bristlenose/llm/`, `bristlenose/utils/video.py`, `bristlenose/doctor.py` once A2+ branches start
+
+**Potential conflicts with other branches:**
+- `symbology`, `highlighter`, `living-fish`, `drag-push`, `responsive-signal-cards` — no overlap (those touch frontend/theme; this is desktop sandbox + Python paths)
+
+---
 
 ### `highlighter` — started 13 Feb 2026
 

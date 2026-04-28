@@ -1,4 +1,18 @@
+---
+status: current
+last-trued: 2026-04-21
+trued-against: HEAD@sidecar-signing on 2026-04-21
+---
+
+> **Truing status:** Current for Python-side logging (Phase 1 + Phase 2 as described). Scope note added for the Track C desktop channel (sidecar stdout → Swift redactor → unified logging) — that layer is covered in `design-keychain.md` §Secret-leak defences rather than duplicated here.
+
+## Changelog
+
+- _2026-04-21_ — trued up: added scoping note clarifying this doc covers Python-side logging only; corrected "We do not need a third channel" claim (Track C desktop deployment adds a third channel with its own hygiene layer); updated Tier 3 item on keychain resolution to reflect Swift-side partial-ship. Canonical home for desktop-side log hygiene is `design-keychain.md` §Secret-leak defences; this doc cross-references rather than duplicating. Anchors: `desktop/Bristlenose/Bristlenose/ServeManager.swift:409-473`, `desktop/Bristlenose/Bristlenose/ServeManager.swift:382`, `desktop/scripts/check-logging-hygiene.sh`, commits "runtime log redactor for api key shapes", "CI grep gate for Swift logging hygiene".
+
 # Logging Architecture
+
+> **Scope note (Apr 2026):** This doc covers **Python-side logging** — the operational log file (`.bristlenose/bristlenose.log`), CLI stderr, and the PII policy that governs both. The Track C macOS desktop deployment adds a third channel (sidecar stdout → Swift runtime redactor → unified logging); that layer and its secret-leak defences live in **`design-keychain.md` §Secret-leak defences**. Keep the two docs cross-referenced; don't duplicate the mechanism.
 
 > **Status**: Phase 1 (infrastructure) implemented v0.10.2; Phase 2 (tier 1 instrumentation + PII hardening) implemented v0.13.5; tiers 2–3 backlogged
 > **Implemented in**: v0.10.2 (infrastructure, Feb 2026), v0.13.5 (instrumentation + PII policy, Mar 2026)
@@ -39,7 +53,9 @@ Nobody is tailing these logs in real time. Nobody is shipping them to Grafana. N
 - **Terminal (stderr)**: researcher-facing. Checkmark progress lines, warnings, errors. WARNING by default, DEBUG with `-v`. This is the "did it work?" channel.
 - **Log file**: developer-facing. Full operational history. INFO by default, configurable via `BRISTLENOSE_LOG_LEVEL`. This is the "what happened?" channel.
 
-We do not need a third channel. The desktop app reads stderr for progress, reads the log file for diagnostics.
+The desktop app reads stderr for progress and reads the log file for diagnostics.
+
+> **Amended 2026-04-21:** the original statement here — "we do not need a third channel" — is load-bearingly wrong for the Track C sandboxed-desktop deployment. That deployment adds a third channel: the Swift host reads sidecar stdout line-by-line, applies a runtime key-shape redactor (`ServeManager.swift:409-473`), then forwards to `os.Logger` unified logging with `.private` markers. A source-time CI grep gate (`desktop/scripts/check-logging-hygiene.sh`) blocks Swift source from interpolating secret-shaped values. Canonical home for these defences: `design-keychain.md` §Secret-leak defences. The two-channel model in this doc remains correct for the Python side; the third channel is layered on top by Swift.
 
 ### Research references
 
@@ -179,7 +195,7 @@ These systems must not merge. The operational log is disposable. The event log i
 8. **Concurrency queue depth** — log semaphore config when created. DEBUG level
 9. **PII entity breakdown** — per-type counts. DEBUG level. Low priority
 10. **FFmpeg error detail** — command and return code on failure. ERROR level
-11. **Keychain resolution** — which store, which keys found/missing. INFO level
+11. **Keychain resolution** — which store, which keys found/missing. INFO level. *Python-side: still backlogged. Swift-side partial-ship: `ServeManager.overlayAPIKeys` logs `injected API key for provider=<name>` at `ServeManager.swift:382`. Equivalent coverage for the desktop deployment's credential path; Python-side CLI/serve still uninstrumented.*
 12. **Manifest load/save** — schema version and stage summary. DEBUG level
 
 ### Future: desktop app support (gated on desktop work)

@@ -12,11 +12,31 @@ Bristlenose runs on your laptop. There is no Bristlenose server, no account, and
 
 API keys are stored in your operating system's secure credential store:
 
-- **macOS** — Keychain (via `security` CLI)
+- **macOS (CLI)** — Keychain (via `security` CLI). The library that ships through PyPI / Homebrew / Snap is signed by the package channel.
+- **macOS (desktop app, Apr 2026 onwards)** — Keychain via Security.framework (`SecItemAdd`/`SecItemCopyMatching`). The SwiftUI host reads your key from Keychain at the moment it starts the local analysis process, passes it to that process as an environment variable, and the process holds it in memory for the lifetime of the local serve process. Keys are read from Keychain only at launch and never persisted to disk.
 - **Linux** — Secret Service (GNOME Keyring / KDE Wallet, via `secret-tool`)
 - **Fallback** — environment variables or `.env` file
 
 Keys are never written to disk in plaintext by Bristlenose. The `.env` fallback is read-only — Bristlenose reads it if present but does not create or modify it.
+
+## Code signing and runtime hardening (macOS desktop app)
+
+The desktop app is distributed through the Mac App Store. Every Mach-O in the bundle — the SwiftUI host, the bundled Python runtime, FFmpeg, every `.dylib` and Python C-extension `.so` — is signed under our Apple Distribution identity (Team ID `Z56GZVA2QB`) with Hardened Runtime enabled. App Store Connect validates the upload server-side before distribution; users only ever receive bundles that have passed Apple's automated security review.
+
+The Hardened Runtime entitlement table requests **one** entitlement: `com.apple.security.cs.disable-library-validation`. This is empirically required, not defensive. Apple's bundled `Python.framework` carries an internal code signature that AMFI's library-validation check reads at `dlopen` time, distinct from the per-binary signatures we apply during build. The framework's nested signature does not match our Team ID, so dyld would refuse to load it without the entitlement. Disabling library validation is the standard pattern for embedded-Python apps on macOS — Apple Developer Support documents it explicitly. The mitigation: every binary in the bundle is signed by us under one identity, the rest of Hardened Runtime remains enabled (no `allow-jit`, no `allow-unsigned-executable-memory`, no `allow-dyld-environment-variables`), and the App Sandbox (when enabled) constrains the process. The specific framework path that triggers the requirement is documented in `desktop/bristlenose-sidecar.entitlements`.
+
+The build pipeline lives in `desktop/scripts/build-all.sh`. Pre-archive gates scan every Mach-O for the `BRISTLENOSE_DEV_*` developer-only environment variable references and reject any binary carrying the `get-task-allow` debugger entitlement. SHA256-pinned downloads (FFmpeg/ffprobe from evermeet.cx) and a sign-manifest emitted on every build give per-binary supply-chain provenance.
+
+Privacy manifests cover the entire bundle: `Contents/Resources/PrivacyInfo.xcprivacy` for the SwiftUI host and FFmpeg, and `Contents/Resources/bristlenose-sidecar/PrivacyInfo.xcprivacy` for the embedded Python runtime and its native extensions. Both declare `NSPrivacyTracking = false`, an empty `NSPrivacyCollectedDataTypes`, and the specific required-reason API categories triggered by bundled code. The build pipeline rejects any release archive that's missing either manifest or fails `plutil -lint`.
+
+A complete inventory of every third-party binary and Python wheel that ships in the desktop app — origin URL, version, SHA256 (where applicable), licence — is maintained at [`THIRD-PARTY-BINARIES.md`](THIRD-PARTY-BINARIES.md). The Python-wheel section is auto-regenerated from the venv install via `scripts/generate-third-party-binaries.py`. CVE monitoring runs through GitHub Dependabot for Python dependencies + a quarterly manual review for native binaries; the cadence is documented in the same file.
+
+## Data leaves your machine only when:
+
+1. **You use a cloud LLM provider.** Transcript text is sent to the provider you selected in Settings (Claude, ChatGPT, Azure OpenAI, or Gemini), using your own API key, at the moment you trigger an analysis. Using Ollama with a local model eliminates even this.
+2. **Whisper downloads its transcription model**, once per model, on first transcription. Model files are downloaded from huggingface.co to `~/Library/Application Support/Bristlenose/models/`. This is data, not code — the download is consumed by the transcription library that already ships signed inside the app.
+
+Bristlenose itself has zero sub-processors. There is no cloud database, no analytics service, no error-tracking vendor, no auth provider, and no telemetry endpoint.
 
 ## PII redaction
 

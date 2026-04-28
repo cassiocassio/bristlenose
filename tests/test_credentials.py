@@ -197,6 +197,47 @@ class TestMacOSCredentialStore:
         """Unknown provider should get a generic service name."""
         assert store._service_name("gemini") == "Bristlenose Gemini API Key"
 
+    # C3 (Apr 2026): exception broadening for App Sandbox contexts where
+    # /usr/bin/security exec is blocked. Keep sandboxed-sidecar failure mode
+    # graceful (None / no-op) rather than unhandled traceback.
+
+    def test_get_handles_file_not_found(self, store, caplog) -> None:
+        """get() returns None when /usr/bin/security is missing."""
+        with patch("subprocess.run") as mock_run:
+            mock_run.side_effect = FileNotFoundError("security: No such file")
+            with caplog.at_level("DEBUG", logger="bristlenose.credentials_macos"):
+                result = store.get("anthropic")
+            assert result is None
+            assert any("security CLI failed" in r.message for r in caplog.records)
+
+    def test_get_handles_permission_error(self, store) -> None:
+        """get() returns None when sandbox denies exec."""
+        with patch("subprocess.run") as mock_run:
+            mock_run.side_effect = PermissionError("Operation not permitted")
+            assert store.get("anthropic") is None
+
+    def test_get_handles_generic_os_error(self, store) -> None:
+        """get() returns None on any OSError (catchall)."""
+        with patch("subprocess.run") as mock_run:
+            mock_run.side_effect = OSError("sandbox violation")
+            assert store.get("anthropic") is None
+
+    def test_set_handles_exec_denial(self, store, caplog) -> None:
+        """set() is a no-op if subprocess-exec is blocked."""
+        with patch("subprocess.run") as mock_run:
+            mock_run.side_effect = FileNotFoundError("security: No such file")
+            with caplog.at_level("DEBUG", logger="bristlenose.credentials_macos"):
+                # Should not raise
+                store.set("anthropic", "sk-ant-example")
+            assert any("security CLI failed" in r.message for r in caplog.records)
+
+    def test_delete_handles_exec_denial(self, store) -> None:
+        """delete() is a no-op if subprocess-exec is blocked."""
+        with patch("subprocess.run") as mock_run:
+            mock_run.side_effect = PermissionError("Operation not permitted")
+            # Should not raise
+            store.delete("anthropic")
+
 
 @pytest.mark.skipif(sys.platform == "darwin", reason="Linux only")
 class TestLinuxCredentialStore:
@@ -319,3 +360,46 @@ class TestGetCredentialSource:
 
             result = get_credential_source("anthropic")
             assert result is None
+
+
+class TestPopulateKeysFromKeychain:
+    """Tests for _populate_keys_from_keychain — ensures env wins over keychain.
+
+    Motivation (C3): the sandboxed desktop sidecar relies on Swift injecting
+    keys as BRISTLENOSE_*_API_KEY env vars before launch. pydantic-settings
+    populates the settings field from env, then _populate_keys_from_keychain
+    should NOT overwrite that with a (potentially stale) keychain value.
+    """
+
+    def test_env_wins_over_keychain(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """If env var is set, keychain is not consulted for that provider."""
+        from bristlenose.config import BristlenoseSettings, _populate_keys_from_keychain
+
+        settings = BristlenoseSettings(anthropic_api_key="env-injected-key")
+
+        mock_store = MagicMock()
+        mock_store.get.return_value = "keychain-stale-key"
+
+        with patch("bristlenose.credentials.get_credential_store", return_value=mock_store):
+            result = _populate_keys_from_keychain(settings)
+
+        assert result.anthropic_api_key == "env-injected-key"
+        # For providers WITHOUT env var set, keychain IS called. Just verify
+        # the env-set provider's slot was not clobbered.
+        get_calls_for_anthropic = [c for c in mock_store.get.call_args_list
+                                   if c.args and c.args[0] == "anthropic"]
+        assert get_calls_for_anthropic == [], \
+            "Keychain should not be consulted when env var already populated the field"
+
+    def test_keychain_fallback_when_env_empty(self) -> None:
+        """If no env var set, keychain value populates the field."""
+        from bristlenose.config import BristlenoseSettings, _populate_keys_from_keychain
+
+        settings = BristlenoseSettings()  # no keys from env
+        mock_store = MagicMock()
+        mock_store.get.side_effect = lambda k: "kc-key" if k == "anthropic" else None
+
+        with patch("bristlenose.credentials.get_credential_store", return_value=mock_store):
+            result = _populate_keys_from_keychain(settings)
+
+        assert result.anthropic_api_key == "kc-key"

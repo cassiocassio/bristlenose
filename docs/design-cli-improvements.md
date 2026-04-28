@@ -1,8 +1,23 @@
+---
+status: partial
+last-trued: 2026-04-21
+trued-against: HEAD@sidecar-signing on 2026-04-21
+---
+
+> **Truing status:** Partial — individual item analyses remain useful; status line and the "Provider Registry Abstraction" section are stale; command name throughout was the aspirational `config set-key` (now corrected to shipped `configure`). See banner at Provider Registry Abstraction section for the aspirational-not-shipped call-out. Cost tables are Feb-2026 snapshots; `llm_max_tokens` default doubled Apr 2026. Preserved: all open-item analyses (still correct, still open).
+
+## Changelog
+
+- _2026-04-21_ — trued up: fixed `bristlenose configure` → `bristlenose configure` throughout (11+ occurrences) — this was the highest-impact fix, users copy these snippets. Compacted Item #1 (render argument) with shipped anchor; updated Item #6 `--llm` naming to reflect shipped `claude/chatgpt/azure/gemini/local`; marked Provider Registry Abstraction section as "Aspirational — not shipped"; date-stamped cost tables; updated top-of-file status line. Anchors: `bristlenose/cli.py:1115-1140`, `bristlenose/cli.py:818,1061`, `bristlenose/cli.py:1613`, `bristlenose/cli.py:845`, commit "raise default llm_max_tokens from 32768 to 64000". Preserved: item-level analysis and rationale even for shipped items (useful context for future CLI design).
+- _Gemini provider shipment_: `config.py:66` has `google_api_key` field; runtime dispatch in `bristlenose/llm/` unverified by this pass — flagged for human.
+
 # CLI improvements
 
 Catalogue of CLI warts, inconsistencies, and potential improvements. Prioritised by user friction, not implementation difficulty.
 
-**Status (Feb 2026):** 7 items completed, 9 items open, 4 won't fix. Detailed LLM provider implementation records (Ollama, Azure, Keychain — all shipped) archived to `archive/design-llm-providers-implementation.md`.
+**Status (Apr 2026):** many items completed since Feb 2026 snapshot below — including Ollama, Azure, Keychain, Gemini (config field present; runtime dispatch unverified in last truing pass — flag for confirm), `render --input` auto-detect, LLM product-name aliases (`claude`/`chatgpt`). The "Done" section at the bottom is the authoritative running list; top-inline ✅ markers are consolidated there. **Stale from Feb 2026:** "7 items completed, 9 items open, 4 won't fix" — out of date; do not trust the count.
+
+Detailed LLM provider implementation records (Ollama, Azure, Keychain — all shipped) archived to `archive/design-llm-providers-implementation.md`.
 
 ---
 
@@ -518,26 +533,26 @@ Bristlenose works with several AI providers. You only need **one**.
 
 **Claude** (default)
 ```bash
-bristlenose config set-key claude
+bristlenose configure claude
 # Prompts for your API key, stores securely in Keychain
 ```
 
 **ChatGPT**
 ```bash
-bristlenose config set-key chatgpt
+bristlenose configure chatgpt
 bristlenose run ./interviews --llm chatgpt
 ```
 
 **Azure OpenAI** (enterprise)
 ```bash
-bristlenose config set-key azure
+bristlenose configure azure
 # Prompts for: endpoint, deployment name, API key
 bristlenose run ./interviews --llm azure
 ```
 
 **Gemini** (budget)
 ```bash
-bristlenose config set-key gemini
+bristlenose configure gemini
 bristlenose run ./interviews --llm gemini
 ```
 
@@ -569,7 +584,7 @@ bristlenose run ./interviews --llm gemini   # use Gemini this time
 To change the default, set a different key:
 
 ```bash
-bristlenose config set-key chatgpt
+bristlenose configure chatgpt
 ```
 
 ### Environment variables (alternative to Keychain)
@@ -621,7 +636,7 @@ bristlenose run ./interviews --llm local --model mistral
 
 The user-facing documentation reveals several design requirements:
 
-1. **Unified `config set-key` command** — one command handles all providers, prompts for the right fields
+1. **Unified `configure` command** — one command handles all providers, prompts for the right fields
 2. **Provider aliases** — users type `claude`/`chatgpt`/`azure`/`gemini`/`local`, not `anthropic`/`openai`
 3. **Keychain-first** — secure by default, env vars as fallback
 4. **Doctor shows provider status** — single line showing which provider is active and how it's configured
@@ -630,6 +645,8 @@ The user-facing documentation reveals several design requirements:
 7. **Environment variable naming** — `BRISTLENOSE_AZURE_*` not `BRISTLENOSE_AZURE_OPENAI_*` (shorter, user types "azure")
 
 #### Provider Registry Abstraction
+
+> **Aspirational — not shipped as of 2026-04-21.** The `ProviderSpec` / `ConfigField` / `resolve_provider()` abstraction sketched below was never built. Shipped providers (Ollama, Azure, Gemini, Claude, ChatGPT, Miro) use direct dispatch in `bristlenose/llm/client.py`. Body retained as design rationale — the abstraction may still be worth doing if provider count grows further. See the "What this enables" list below for the case.
 
 From the docs, we need a provider registry that knows:
 
@@ -640,7 +657,7 @@ class ProviderSpec:
     name: str                          # Internal name: "anthropic", "openai", "azure", "gemini", "local"
     display_name: str                  # User-facing: "Claude", "ChatGPT", "Azure OpenAI", "Gemini", "Local"
     aliases: list[str]                 # CLI aliases: ["claude"], ["chatgpt", "gpt"], ["azure"], etc.
-    config_fields: list[ConfigField]   # What to prompt for in `config set-key`
+    config_fields: list[ConfigField]   # What to prompt for in `configure`
     default_model: str                 # e.g. "claude-sonnet-4-20250514", "gpt-4o", "gemini-2.5-flash"
     sdk_module: str                    # e.g. "anthropic", "openai", "google.genai"
     pricing_url: str                   # For doctor output and cost estimates
@@ -751,7 +768,7 @@ class LLMClient:
                 if not value:
                     raise ValueError(
                         f"{self.spec.display_name} {field.prompt.lower()} not set. "
-                        f"Run: bristlenose config set-key {self.spec.aliases[0]}"
+                        f"Run: bristlenose configure {self.spec.aliases[0]}"
                     )
 
     def _get_config_value(self, field: ConfigField) -> str:
@@ -812,9 +829,9 @@ class LLMClient:
 #### Benefits of This Abstraction
 
 1. **Adding a new provider** = add one entry to `PROVIDERS` dict + one dispatch branch if new SDK
-2. **`config set-key` is generic** — loops over `spec.config_fields`, prompts for each, stores in Keychain
+2. **`configure` is generic** — loops over `spec.config_fields`, prompts for each, stores in Keychain
 3. **Doctor is generic** — loops over providers, checks which have valid config
-4. **Error messages are consistent** — "Run: bristlenose config set-key {alias}" for all providers
+4. **Error messages are consistent** — "Run: bristlenose configure {alias}" for all providers
 5. **Pricing is centralised** — `spec.pricing_url` used in doctor and cost estimates
 6. **Future-proof** — Mistral, Cohere, AWS Bedrock all fit the same pattern
 

@@ -2,7 +2,7 @@
 
 Single source of truth for vocabulary, voice, and writing mechanics across all user-facing text: locale files, help modal, man page, README, SECURITY.md, CLI `--help`, and the future website.
 
-Consumers: human writers, translators (Weblate glossary seed), docs-review agent, Vale linter (future).
+Consumers: human writers, translators (Weblate glossary seed), user-documentation-review agent, Vale linter (future).
 
 ---
 

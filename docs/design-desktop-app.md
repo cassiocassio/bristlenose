@@ -682,7 +682,7 @@ The `projects.json` index (see `docs/design-multi-project.md`) currently stores 
 
 ### App Store sandbox guardrails
 
-v0.1 ships as a notarized `.dmg` with sandbox disabled — correct for user testing. The App Store is the endgame. These rules prevent us adding things now that have to be undone later. The full sandbox spec is in `docs/design-desktop-distribution.md` and `ROADMAP.md` (milestone 10). This section is just the "don't paint yourself into a corner" checklist for day-to-day development.
+v0.1 shipped to friends with sandbox disabled — correct for early user testing. Alpha onwards ships via the App Store. These rules prevent us adding things now that have to be undone later. The active sidecar mechanics + entitlement spec live in `docs/design-desktop-python-runtime.md`; the cross-channel "what ships where" decisions in `docs/design-modularity.md`. This section is just the "don't paint yourself into a corner" checklist for day-to-day development.
 
 **File access — the #1 source of rework:**
 

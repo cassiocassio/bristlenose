@@ -58,6 +58,12 @@ serve = [
     "openpyxl>=3.1",
     "alembic>=1.13",
 ]
+release = [
+    # Tools used at release time only (e.g. THIRD-PARTY-BINARIES.md
+    # auto-generation by scripts/generate-third-party-binaries.py).
+    # Not needed for runtime, not in the desktop sidecar bundle.
+    "pip-licenses>=5.0",
+]
 
 [project.scripts]
 bristlenose = "bristlenose.cli:app"

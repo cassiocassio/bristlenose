@@ -422,21 +422,62 @@ def _mount_prod_report(app: FastAPI, output_dir: Path, *, dev: bool = False) -> 
     """Mount the report SPA in production serve mode.
 
     Reads the Vite-built index.html once at startup, rewrites asset paths,
-    and injects theme CSS.  Falls back to plain StaticFiles if no Vite build
-    exists.  When *dev* is True, injects ``window.__BRISTLENOSE_DEV__`` so the
-    responsive playground loads without the Vite dev server.
+    and injects theme CSS.  When *dev* is True, injects
+    ``window.__BRISTLENOSE_DEV__`` so the responsive playground loads without
+    the Vite dev server.
+
+    **Fail-loud contract (C3 post-mortem, 21 Apr 2026):** if the React bundle
+    is missing from ``static/``, this mount refuses to serve — it returns 500
+    with a clear error page explaining the bundle is broken. The previous
+    behaviour silently fell back to serving the static-rendered HTML from the
+    output dir, which looked like the app was working but had no data APIs,
+    no video playback, no React islands. That fallback masked bundle-
+    packaging bugs (BUG-3 in the C3 smoke test) and is not a valid
+    degradation path.
+
+    The static render (``bristlenose/stages/s12_render/``) remains a
+    first-class product for CLI users via ``bristlenose render`` and the
+    on-disk HTML report written by ``bristlenose run``. It is deliberately
+    **never** served by ``bristlenose serve``.
     """
     index_path = _STATIC_DIR / "index.html"
     if not index_path.is_file():
-        logger.warning(
-            "React bundle not found at %s — serving static HTML without React "
-            "islands. Run 'npm run build' in frontend/ to build the bundle.",
+        logger.error(
+            "React bundle not found at %s — serve mode refusing to start. "
+            "Run 'npm run build' in frontend/, OR if this is a bundled "
+            "sidecar, the .app is incomplete (BUG-3 class). See "
+            "docs/walkthroughs/c3-smoke-test results.md.",
             _STATIC_DIR,
         )
-        _ensure_index_symlink(output_dir)
-        app.mount(
-            "/report", StaticFiles(directory=output_dir, html=True), name="report"
-        )
+
+        @app.get("/report")
+        @app.get("/report/{path:path}", response_model=None)
+        def serve_bundle_error(path: str = "") -> Response:
+            html = (
+                "<!doctype html><html><head>"
+                "<meta charset=\"utf-8\"><title>Bristlenose — build incomplete</title>"
+                "<style>body{font-family:ui-sans-serif,system-ui,sans-serif;"
+                "max-width:640px;margin:4rem auto;padding:0 1rem;color:#ddd;"
+                "background:#1a1a1a;line-height:1.5}code{background:#333;"
+                "padding:.1em .3em;border-radius:.2em}h1{color:#fff}"
+                ".detail{color:#999;font-size:.9em;margin-top:2rem}</style>"
+                "</head><body>"
+                "<h1>Build incomplete</h1>"
+                "<p>The Bristlenose React bundle is missing from this build. "
+                "Serve mode refuses to start without it.</p>"
+                "<p>If you are running the desktop app, this build is broken — "
+                "reinstall or report a bug.</p>"
+                "<p>If you are a developer: run <code>npm run build</code> in "
+                "<code>frontend/</code> and restart <code>bristlenose serve</code>. "
+                "If running from the PyInstaller sidecar, check that "
+                "<code>bristlenose/server/static/</code> is in the spec's "
+                "<code>datas</code>.</p>"
+                "<p class=\"detail\">BUG-3 class — see the C3 smoke test "
+                "post-mortem for context.</p>"
+                "</body></html>"
+            )
+            return HTMLResponse(html, status_code=500)
+
         return
 
     spa_html = _build_spa_html(output_dir, dev=dev, auth_token=app.state.auth_token)

@@ -115,18 +115,20 @@ Tiny (~100 KB per language). Bundle all 6 (en, es, fr, de, ko, ja) on every chan
 
 | Platform | Mechanism | Python code |
 |---|---|---|
-| macOS desktop sidecar | Swift reads Keychain via `SecItemCopyMatching`; passes keys via env vars to sidecar | Python reads `os.environ["BRISTLENOSE_ANTHROPIC_KEY"]` etc. |
+| macOS desktop sidecar | Swift reads Keychain via `SecItemCopyMatching`; injects `BRISTLENOSE_<PROVIDER>_API_KEY` env vars at subprocess launch (C3, Apr 2026) | Python reads via pydantic-settings, no Keychain call |
 | macOS CLI | `/usr/bin/security` CLI wrapper in `credentials_macos.py` | Unchanged |
 | Linux CLI | `libsecret` via `secretstorage` package | Platform-conditional import |
 | Windows CLI | Future — `keyring` package's win32 backend | Same pattern |
 
-The **env-var injection** pattern for the desktop sidecar is the key insight: it keeps the Python side free of Mac-specific code. Credential lookup function: env var → platform-native CLI (Mac `security`, Linux libsecret). Desktop doesn't need to import `pyobjc-framework-Security`.
+The **env-var injection** pattern for the desktop sidecar is the key insight: it keeps the Python side free of Mac-specific code. Credential lookup function: env var → platform-native CLI (Mac `security`, Linux libsecret). Desktop doesn't need to import `pyobjc-framework-Security`. See [`design-desktop-python-runtime.md`](./design-desktop-python-runtime.md) §"Credential flow" for the end-to-end sequence (Keychain → Swift → env → pydantic-settings) and residual risks.
 
 ### Development / testing deps
 
 `[dev]` extras (`pytest`, `ruff`, `mypy`). Never bundled. Installed by contributors only.
 
 ## Acquisition mechanisms by channel
+
+> **Distribution decision (28 Apr 2026).** The macOS `.app` ships **App Store only** (alpha, beta, and early commercial). Direct download via Developer ID + notarytool + Sparkle is **not** maintained as a parallel channel — it's deferred until the App Store cut becomes material relative to the cost of running a parallel direct-distribution channel (memo trigger: ~10k paying users, or first enterprise MDM ask). Today's `desktop/scripts/build-all.sh` produces a `.pkg` for App Store Connect upload via Transporter / `xcrun altool --upload-app`. No `.dmg`. No Sparkle. Pricing via Apple In-App Purchase, not Stripe — App Store handles payments, tax, refunds, chargebacks, IAP infrastructure, and a chunk of trust signal that an indie can't manufacture cheaply.
 
 ### macOS `.app` (TestFlight / App Store)
 
@@ -140,9 +142,9 @@ The **env-var injection** pattern for the desktop sidecar is the key insight: it
 
 **Rule:** if Apple can host it, let Apple host it. Apple-Hosted Background Assets wins on signing, trust, CDN, resumability, storage management, and Privacy Manifest posture. Roll-your-own downloads are for cases Background Assets can't cover (e.g. extending `sys.path` with downloaded Python packages — still needs manual unpack but the asset can still be delivered via Background Assets).
 
-### macOS `.dmg` (not happening per [road-to-alpha](private/road-to-alpha.md))
+### macOS `.dmg` — deferred (not "rejected"; revisit at ~10k paying users)
 
-Would have had Sparkle for updates. Rejected because TestFlight/App Store is the chosen alpha path.
+Would have shipped via Developer ID + notarytool + Sparkle for in-app updates. Status updated 28 Apr 2026 from "rejected" to "deferred" per the distribution-decision callout above. The Sparkle/notarytool flow is preserved as a future-state subsection in `docs/design-desktop-python-runtime.md` §"Deferred — Developer ID flow". Re-add this row to the active mechanisms table when the trigger conditions fire.
 
 ### macOS Homebrew (CLI)
 
@@ -200,7 +202,7 @@ Proposed:
 - Add docs on which channel uses which extra set
 
 **Order of work:**
-1. (Track C C1) Write PyInstaller spec that includes only `[apple]`-style transcription, excludes presidio/spaCy — validate bundle ≤ 200 MB before Whisper.
+1. (Track C C1) Write PyInstaller spec that includes only `[apple]`-style transcription, excludes presidio/spaCy — targeted bundle ≤ 200 MB before Whisper. **Reality check (C0, 18 Apr 2026):** the shipped spec landed at **644 MB**, not 200 MB — torch (288 MB), llvmlite (110 MB), onnxruntime (58 MB), and scipy (37 MB) came in as transitive pulls via `tiktoken`/`transformers`/`numba`/`librosa`. The gap is absorbed by the trickle-to-full-capability strategy below (Background Assets for Whisper models + future optional deps) rather than by build-time trimming. Revisit if TestFlight reports cite install size as friction; for alpha, the bundle ships as-is. See `design-desktop-python-runtime.md` §"Bundle-size findings" for the transitive-pull table.
 2. (Track C C1) Write `bristlenose-sidecar[pii]` asset pack for Background Assets — deferred to public beta.
 3. (separate pyproject refactor) Move presidio to `[pii]` extras. Update Homebrew formula to install without PII by default.
 4. (post-100-days) Implement runtime `sys.path` extension for downloaded PII asset pack on Mac.
@@ -362,7 +364,7 @@ This is not a design. The Track C C0/C1 work needs a separate UX-design pass (li
 
 ## Cross-references
 
-- [`docs/design-desktop-python-runtime.md`](./design-desktop-python-runtime.md) — canonical desktop sidecar architecture (to be written, Track C C0)
+- [`docs/design-desktop-python-runtime.md`](./design-desktop-python-runtime.md) — canonical desktop sidecar architecture (written 18 Apr 2026 as Track C C0 output; updated through C3). Read this for the credential flow, bundle-data requirements, validation gates, and fail-loud contracts
 - [`desktop/CLAUDE.md`](../desktop/CLAUDE.md) — desktop app working notes; points here for cross-channel component decisions
 - [`docs/private/sprint2-tracks.md`](./private/sprint2-tracks.md) — Track C scope
 - [`docs/private/road-to-alpha.md`](./private/road-to-alpha.md) — TestFlight path

@@ -1,6 +1,18 @@
+---
+status: current
+last-trued: 2026-04-21
+trued-against: HEAD@sidecar-signing on 2026-04-21
+---
+
+> **Truing status:** Current with one structural addition — Part 1 (doctor) and Part 2 (snap) are both shipped as described; Track C (Apr 2026) added a second class of checks (bundle integrity, exposed via `bristlenose doctor --self-test`) which now has its own sub-section below.
+
+## Changelog
+
+- _2026-04-21_ — trued up: added new sub-section "Bundle-integrity checks (`--self-test`)" covering the six `check_bundle_*` functions shipped for desktop sidecar bundle validation; added `--self-test` to the command-to-check matrix; noted `check-bundle-manifest.sh` as sibling gate; promoted docstring invariant (catch BUG-3/4/5 class at build time, not first runtime); corrected Phase 2 snap status (store publication pending, not ✅; CI workflow shipped-but-failing since 2026-04-17; snap-name registration blocked on identity recovery). Anchors: `bristlenose/doctor.py:690-942`, `desktop/scripts/check-bundle-manifest.sh`, commits "bristlenose doctor --self-test for bundle integrity (P2)", "check-bundle-manifest.sh — source→spec coverage gate", "serve fail-loud when React bundle missing (P1)", "bundle React SPA static/ into the sidecar (BUG-3 fix)". Preserved: original doctor seven-checks design and snap build/testing sections (both shipped as described — only store publication status corrected).
+
 # Design: `bristlenose doctor` and Snap packaging
 
-Status: Part 1 (doctor) implemented in v0.6.0. Part 2 (snap) implemented in v0.6.0. (Feb 2026)
+Status: Part 1 (doctor) implemented in v0.6.0. Part 2 (snap) — local build implemented in v0.6.0 (Feb 2026); store publication pending (CI regression since 2026-04-17, snapstore identity recovery pending). Part 3 (bundle-integrity `--self-test`) shipped in Track C (Apr 2026) — see new sub-section under Part 1.
 
 ---
 
@@ -66,24 +78,58 @@ Each check returns one of three states: **ok**, **warn** (works but suboptimal),
 | 6 | PII redaction | presidio importable + spaCy model installed. Only checked when `--redact-pii` is active |
 | 7 | Disk space | `shutil.disk_usage()` — enough room for model download + working files |
 
+### Bundle-integrity checks (`--self-test`, Track C, Apr 2026)
+
+A second class of checks, distinct from runtime dependency health. Runs via `bristlenose doctor --self-test` and verifies that the Python package contains the data files it needs (React SPA static bundle, codebook YAMLs, LLM prompt Markdown, locale JSON, theme assets, Alembic migrations).
+
+**Invariant (from `bristlenose/doctor.py:700-702` docstring):**
+
+> Catches the BUG-3/4/5 class — data file present in source tree but missing from PyInstaller bundle — at *build time*, not on first runtime. The cost of shipping a sidecar without its React SPA (BUG-3) was three days of debugging a fail-loud 500 error; cheaper to fail a CI gate.
+
+**The six checks** (`bristlenose/doctor.py:690-942`):
+
+| # | Check | What it verifies |
+|---|-------|------------------|
+| 1 | `check_bundle_react_spa` | `bristlenose/server/static/` contains `index.html` and hashed JS/CSS assets |
+| 2 | `check_bundle_codebooks` | `bristlenose/llm/codebooks/*.yaml` all present |
+| 3 | `check_bundle_prompts` | `bristlenose/llm/prompts/*.md` all present |
+| 4 | `check_bundle_locales` | `bristlenose/locales/*/*.json` all 6 locales present |
+| 5 | `check_bundle_theme` | `bristlenose/theme/` CSS + JS modules present |
+| 6 | `check_bundle_alembic` | `bristlenose/server/migrations/` scripts present |
+
+**Invocation contract:** `desktop/scripts/build-all.sh` step 7a invokes `bristlenose doctor --self-test` against the signed bundle before notarisation. Failure of any check aborts the build — the invariant is that a shipped sidecar must pass self-test.
+
+**Sibling gate — source→spec coverage** (`desktop/scripts/check-bundle-manifest.sh`, commit "check-bundle-manifest.sh — source→spec coverage gate"): greps the source tree for data files and checks that each appears in `bristlenose-sidecar.spec` `datas`. Catches the inverse problem: a file added to source that never gets declared for bundling. Runs as a separate CI gate, earlier in the pipeline.
+
+**Why both gates?** `--self-test` verifies the built artefact; `check-bundle-manifest.sh` verifies the spec. Together they close the loop — source is complete (by spec coverage), and the build produces what the spec declared (by self-test).
+
+**For the desktop/PyInstaller install path:** install-method fix table below (§Install-method-specific fix table) does not yet have a "desktop sidecar" row; failures of bundle-integrity checks on desktop should print guidance pointing at `desktop/scripts/build-all.sh` and the two gate scripts.
+
 ### Command-to-check matrix
 
 Not every command checks everything. Pre-flight is tailored to the command:
 
 ```
-Check             run   run --skip-tx   transcribe-only   analyze   render
--------------------------------------------------------------------------
-FFmpeg             *                          *
-faster-whisper     *                          *
-Whisper model      *                          *
-API key            *         *                               *
-Network (API)      *         *                               *
-spaCy model       (1)       (1)
-Disk space         *         *                *              *
--------------------------------------------------------------------------
+Check                 run   run --skip-tx   transcribe-only   analyze   render   --self-test
+--------------------------------------------------------------------------------------------
+FFmpeg                 *                          *
+faster-whisper         *                          *
+Whisper model          *                          *
+API key                *         *                               *
+Network (API)          *         *                               *
+spaCy model           (1)       (1)
+Disk space             *         *                *              *
+React SPA bundle                                                                      *
+Codebook YAMLs                                                                        *
+LLM prompts                                                                           *
+Locale JSON                                                                           *
+Theme assets                                                                          *
+Alembic migrations                                                                    *
+--------------------------------------------------------------------------------------------
 
 (1) only if --redact-pii
 render: no pre-flight at all — it reads JSON, writes HTML, needs nothing external
+--self-test: bundle-integrity only; no runtime dependency checks
 ```
 
 ### Pre-flightable vs not
@@ -961,15 +1007,15 @@ These two workstreams are mostly independent but doctor landed first:
 6. Update Homebrew formula: add `post_install` for spaCy model, improve caveats
 7. ✅ Tests for doctor checks (mock imports, mock shutil.which, etc.)
 
-### Phase 2: Snap packaging ✅ (v0.6.0)
+### Phase 2: Snap packaging (v0.6.0 local; store publication pending)
 
 1. ✅ Write `snap/snapcraft.yaml`
 2. ✅ Test locally with Multipass (arm64 on Apple Silicon)
-3. Register snap name and request classic confinement (pre-launch, manual)
-4. ✅ Write `.github/workflows/snap.yml` CI workflow
-5. Add `SNAPCRAFT_STORE_CREDENTIALS` secret (pre-launch, manual)
-6. Build, test from edge channel (pending store registration)
-7. Promote to stable (pending classic confinement approval)
+3. ⬜ Register snap name and request classic confinement (pre-launch, manual). **Blocked** on snapstore identity recovery — pre-existing Ubuntu One account for the preferred name has no recoverable password; decision pending on whether to recover or register an alternative name. Surface for decision: 2026-05-24 reminder.
+4. 🟡 `.github/workflows/snap.yml` CI workflow — **shipped but failing every push since 2026-04-17** (see `docs/private/qa-backlog.md` + `project_snap_known_failure.md` memory). Fix deferred until after TestFlight alpha; surface 2026-05-24. Not a regression — a persistent known issue parked behind Track C.
+5. ⬜ Add `SNAPCRAFT_STORE_CREDENTIALS` secret (pre-launch, manual; blocked on #3)
+6. ⬜ Build, test from edge channel (blocked on #3, #4, #5)
+7. ⬜ Promote to stable (blocked on #6 + classic confinement approval)
 8. ✅ Update README.md and TODO.md
 
 ### Phase 3: Polish

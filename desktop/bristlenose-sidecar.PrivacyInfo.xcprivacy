@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+Privacy manifest — Bristlenose Python sidecar. Required by Apple from 1 May 2024.
+
+Scope: bundled CPython (Python.framework) and every native extension under
+Contents/Resources/bristlenose-sidecar/_internal/. Single bundle-root manifest
+because Apple's bar is API-category coverage, not per-package. Host shell
+manifest: Contents/Resources/PrivacyInfo.xcprivacy.
+
+Build placement: copied to the bundle root by desktop/scripts/build-sidecar.sh
+post-PyInstaller. Source: desktop/bristlenose-sidecar.PrivacyInfo.xcprivacy.
+
+Required-reason APIs (covers bundled CPython and native extensions performing
+standard cache and stat operations on files inside the app container):
+  DDA9.1 — FileTimestamp: stat-family calls inside the app container.
+  E174.1 — DiskSpace: statfs/fstatfs preflight before cache writes.
+  35F9.1 — SystemBootTime: mach_absolute_time for monotonic elapsed-time
+           (e.g. time.monotonic). Not absolute boot-instant.
+
+NSUserDefaults / CFPreferences: not used by the sidecar (verified by symbol
+sweep of the bundle). Active keyboards: Obj-C only API, not applicable.
+
+Reason-code reference:
+https://developer.apple.com/documentation/bundleresources/privacy_manifest_files/describing_use_of_required_reason_api
+-->
+<plist version="1.0">
+<dict>
+    <key>NSPrivacyTracking</key>
+    <false/>
+    <key>NSPrivacyTrackingDomains</key>
+    <array/>
+    <key>NSPrivacyCollectedDataTypes</key>
+    <array/>
+    <key>NSPrivacyAccessedAPITypes</key>
+    <array>
+        <dict>
+            <key>NSPrivacyAccessedAPIType</key>
+            <string>NSPrivacyAccessedAPICategoryFileTimestamp</string>
+            <key>NSPrivacyAccessedAPITypeReasons</key>
+            <array>
+                <string>DDA9.1</string>
+            </array>
+        </dict>
+        <dict>
+            <key>NSPrivacyAccessedAPIType</key>
+            <string>NSPrivacyAccessedAPICategoryDiskSpace</string>
+            <key>NSPrivacyAccessedAPITypeReasons</key>
+            <array>
+                <string>E174.1</string>
+            </array>
+        </dict>
+        <dict>
+            <key>NSPrivacyAccessedAPIType</key>
+            <string>NSPrivacyAccessedAPICategorySystemBootTime</string>
+            <key>NSPrivacyAccessedAPITypeReasons</key>
+            <array>
+                <string>35F9.1</string>
+            </array>
+        </dict>
+    </array>
+</dict>
+</plist>

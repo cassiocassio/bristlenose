@@ -3,34 +3,33 @@
 <!--
 Hardened Runtime entitlements for the bundled Python sidecar.
 
-Empirically reduced during Track C C0 (18 Apr 2026).
-
 Load-bearing: ONLY com.apple.security.cs.disable-library-validation.
-  Reason (post-C2, Apr 2026): even with the whole bundle signed under a
-  single Apple Distribution identity (Z56GZVA2QB), PyInstaller's bundled
-  Python.framework carries a nested internal identifier, and some third-
-  party .so files retain signatures from their upstream wheels. Library
-  validation blocks those dlopen sites with "mapping process and mapped
-  file have different Team IDs". A full remove-then-resign cycle across
-  every inner Mach-O followed by an exercised pipeline run is the planned
-  retest that could allow dropping this entitlement —
-  see ~/.claude/plans/c3-empty-ents-retest.md.
 
-NOT needed for serve-only scope (confirmed by empty-entitlement test,
-Python 3.12 + mlx_whisper, Apr 2026):
-  - cs.allow-unsigned-executable-memory: CPython 3.12 does not use W+X.
-  - cs.allow-jit: ctranslate2 is excluded; MLX uses Metal GPU kernels, not CPU JIT.
-  - cs.allow-dyld-environment-variables: not required for serve.
+Reason (empty-entitlements retest, 28 Apr 2026 — RED):
+PyInstaller bundled Python.framework carries an internal code seal
+distinct from per-binary signatures. AMFI library validation reads
+the framework nested seal at dlopen time, not the per-binary resign
+sign-sidecar.sh applies. Result: dlopen of Python.framework Python
+fails with mapping process and mapped file have different Team IDs,
+even after a full remove-then-resign cycle across all inner Mach-Os
+under a single Apple Distribution identity Z56GZVA2QB.
 
-C3 credential path (Apr 2026): the sidecar does NOT access macOS Keychain.
-The Swift host reads Keychain via Security.framework and passes API keys
-as BRISTLENOSE_*_API_KEY env vars at subprocess launch. No keychain-access-
-groups or Security.framework entitlement needed on this side.
+Full diagnostic + path forward in docs/private/c3-session-notes.md
+section Empty-entitlements retest. Plan for a future attempt at
+framework-level resigning in plans/c3-empty-ents-retest.md.
 
-If a future addition needs any of the above, document the trigger here.
-App Sandbox + user-facing entitlements (files, network, bookmarks) are
-Track A's concern — the sidecar will add com.apple.security.inherit at
-that point so the parent's sandbox applies.
+NOT needed for serve-only scope (confirmed Apr 2026):
+  cs.allow-unsigned-executable-memory: CPython 3.12 has no W+X.
+  cs.allow-jit: ctranslate2 excluded, MLX uses Metal GPU not CPU JIT.
+  cs.allow-dyld-environment-variables: not required for serve.
+
+C3 credential path (Apr 2026): sidecar never accesses macOS Keychain.
+Swift host fetches via Security.framework, injects BRISTLENOSE_*_API_KEY
+env vars at subprocess launch. No Keychain entitlements needed here.
+
+App Sandbox + user-facing entitlements (files, network, bookmarks)
+are Track A territory; sidecar will add com.apple.security.inherit
+at that point so the parent sandbox applies.
 -->
 <plist version="1.0">
 <dict>

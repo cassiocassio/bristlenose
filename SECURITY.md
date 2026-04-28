@@ -27,6 +27,8 @@ The Hardened Runtime entitlement table requests **one** entitlement: `com.apple.
 
 The build pipeline lives in `desktop/scripts/build-all.sh`. Pre-archive gates scan every Mach-O for the `BRISTLENOSE_DEV_*` developer-only environment variable references and reject any binary carrying the `get-task-allow` debugger entitlement. SHA256-pinned downloads (FFmpeg/ffprobe from evermeet.cx) and a sign-manifest emitted on every build give per-binary supply-chain provenance.
 
+Privacy manifests cover the entire bundle: `Contents/Resources/PrivacyInfo.xcprivacy` for the SwiftUI host and FFmpeg, and `Contents/Resources/bristlenose-sidecar/PrivacyInfo.xcprivacy` for the embedded Python runtime and its native extensions. Both declare `NSPrivacyTracking = false`, an empty `NSPrivacyCollectedDataTypes`, and the specific required-reason API categories triggered by bundled code. The build pipeline rejects any release archive that's missing either manifest or fails `plutil -lint`.
+
 ## Data leaves your machine only when:
 
 1. **You use a cloud LLM provider.** Transcript text is sent to the provider you selected in Settings (Claude, ChatGPT, Azure OpenAI, or Gemini), using your own API key, at the moment you trigger an analysis. Using Ollama with a local model eliminates even this.

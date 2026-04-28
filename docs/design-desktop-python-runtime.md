@@ -327,6 +327,47 @@ Developer ID flow (deferred — would run instead of `pkgutil` if `method=develo
 
 The `SKIP_NOTARISE` guard in `build-all.sh` selects between the two batteries based on `method` in `ExportOptions.plist`.
 
+### Privacy manifest coverage (C4, 28 Apr 2026)
+
+Apple requires `PrivacyInfo.xcprivacy` on App Store / TestFlight uploads since 1 May 2024. App Store Connect parses each manifest at upload time and rejects (`ITMS-91056`/`ITMS-91061`) on invalid reason codes or missing manifests for SDKs on Apple's named hard-rejection list.
+
+**Two manifests** cover the entire bundle:
+
+- **Host** at `Contents/Resources/PrivacyInfo.xcprivacy` (Xcode Copy Bundle Resources from `desktop/Bristlenose/Bristlenose/PrivacyInfo.xcprivacy`). Covers the SwiftUI shell **and** FFmpeg + ffprobe (which ship at `Contents/Resources/`, the host bundle level). Declares `CA92.1` (UserDefaults / `@AppStorage`), `C617.1` + `DDA9.1` (FileTimestamp — sidebar "last opened" display + FFmpeg source-mtime reads), `E174.1` (DiskSpace — FFmpeg statfs), `35F9.1` (SystemBootTime — FFmpeg `mach_absolute_time` for encode-speed timeline).
+- **Sidecar** at `Contents/Resources/bristlenose-sidecar/PrivacyInfo.xcprivacy` (copied by `desktop/scripts/build-sidecar.sh` from `desktop/bristlenose-sidecar.PrivacyInfo.xcprivacy` post-PyInstaller). Single bundle-root manifest covering the embedded `Python.framework` and 222 `.so` files. Declares `DDA9.1`, `E174.1`, `35F9.1`. **No `UserDefaults`** — the sidecar is pure Python; a 244-Mach-O `nm` sweep found zero `NSUserDefaults` / `CFPreferences` symbols.
+
+**Why one sidecar manifest, not 222.** Apple's bar is API-category coverage at the bundle level, not one manifest per vendored library. The named-SDK list that triggers `ITMS-91061` (~90 entries: Firebase, Adjust, Branch, OneSignal, etc.) does not include any of Bristlenose's Python deps. Per-package sub-manifests would be gold-plating without a rejection lever to defend against.
+
+**Why two manifests, not one.** The host signs and ships under one Apple Distribution identity; the sidecar is a separable PyInstaller `--onedir` bundle that's bootloader-launched as a child process. Mirroring the framework convention (manifest at the embedded bundle's root) keeps the two scopes parseable independently — useful for procurement reviewers grepping the `.pkg`, and a clean structural fit with how `codesign --deep` walks the bundle.
+
+**Triage method (Phase 1, kept for repeatability):**
+
+```bash
+SIDECAR="desktop/Bristlenose/Resources/bristlenose-sidecar"
+APP="desktop/build/Bristlenose.xcarchive/Products/Applications/Bristlenose.app"
+find "$SIDECAR" -type f \( -name "*.so" -o -name "*.dylib" -o -name "Python" -o -name "bristlenose-sidecar" \) > /tmp/macho-list.txt
+find "$APP/Contents/Resources" -maxdepth 1 -type f \( -name "ffmpeg" -o -name "ffprobe" \) >> /tmp/macho-list.txt
+while IFS= read -r f; do nm -u "$f" 2>/dev/null | awk -v F="$f" '{print F"\t"$NF}'; done < /tmp/macho-list.txt > /tmp/symbols-raw.txt
+# Then grep for the four required-reason symbol families:
+#   FileTimestamp:    _stat _fstat _lstat _fstatat _getattrlist _getattrlistbulk _fgetattrlist _getattrlistat
+#   DiskSpace:        _statfs _fstatfs _statvfs _fstatvfs
+#   SystemBootTime:   _mach_absolute_time _mach_continuous_time _clock_gettime_nsec_np
+#   UserDefaults:     _NSUserDefaults _CFPreferences*
+```
+
+**Build-time enforcement.** `desktop/scripts/build-all.sh` step [f] runs `find ... -name PrivacyInfo.xcprivacy` (always-echo for debuggability) then asserts presence at the two expected paths and `plutil -lint` clean. Any new release archive that lacks either manifest fails the gate before the `.pkg` is exported.
+
+**Re-audit triggers** — situations that may invalidate the current manifest set and require a fresh sweep:
+
+- Sandbox flip (Track A): file-access entitlements may bring new required-reason API categories into scope.
+- Dependency upgrades adding new symbol families (`pip install --upgrade torch` etc.). A periodic `nm`-vs-reason-codes regression script is parked as a low-priority follow-up — would catch this class automatically rather than relying on next-upload App Store rejection.
+- New bundled binaries (e.g. a custom-built FFmpeg with different codec set).
+
+**Out of scope (post-alpha):**
+
+- Per-Python-package sub-manifests inside `_internal/<package>/` — promote only if a future dep lands on Apple's named-SDK list.
+- `NSPrivacyCollectedDataTypes` — currently empty in both manifests, defensible because Bristlenose collects nothing first-party. The user-configured LLM passthrough is third-party data flow under the user's own provider account, disclosed in `AIConsentView.swift` (Apple Guideline 5.1.2(i)). A pre-written reply for the App Store reviewer who asks about this is kept with the rest of the launch-time notes.
+
 ### Pre-archive gate (`check-release-binary.sh`)
 
 Scans every Mach-O in the archived/exported `.app` for two Release-forbidden conditions:

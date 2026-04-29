@@ -317,7 +317,9 @@ All Spanish translations verified against [Apple's macOS keyboard shortcuts page
 
 [Weblate](https://weblate.org/) is a libre (GPLv3) translation platform. The hosted instance at `hosted.weblate.org` is **free for libre/FOSS projects** — equivalent to the 160k strings tier (€114/month value). Unlimited projects, components, translators. All features included.
 
-Bristlenose qualifies (AGPL-3.0). No application process — create the project and go.
+Bristlenose qualifies (AGPL-3.0) and was approved for the Libre plan on 29 Apr 2026 after a multi-week trial-and-merge-conflict saga (see `project_weblate_ticket_2013688.md` memory for the operational history). **This is the path forward for the foreseeable future** — the alternatives below were considered and ruled out, the merge-conflict failure modes are now understood, and the gratis hosting unlocks community translation without ongoing cost.
+
+The Libre plan carries one condition: attribution. Mention Weblate in the README (done — see translation section) and on bristlenose.app (outstanding). Content for both can be pulled verbatim from the Community menu of the Weblate project.
 
 ### How it works
 
@@ -352,7 +354,7 @@ Bristlenose qualifies (AGPL-3.0). No application process — create the project 
 
 **Project URL:** [hosted.weblate.org/projects/bristlenose/](https://hosted.weblate.org/projects/bristlenose/)
 
-**Hosting:** Libre plan (160k strings, 0 EUR) — approval pending, trial until 7 Apr 2026.
+**Hosting:** Libre plan (160k strings, 0 EUR) — **approved 29 Apr 2026**. Attribution required (mention Weblate in README and on bristlenose.app); README already links Weblate from the translation section, website mention pending.
 
 **Components (8):**
 
@@ -457,11 +459,8 @@ Key files: `bristlenose/server/codebook/__init__.py`, `bristlenose/server/codebo
 - Create review checklist for native-speaking UX researchers per language
 - Track review status per locale (reviewed/unreviewed flag)
 
-### Phase 5: Weblate setup
-- Create project on hosted.weblate.org
-- Upload Apple glossary as Weblate glossary
-- Add "Help translate" link to About panel
-- Announce in README
+### Phase 5: Weblate setup ✓
+Complete. Project live at [hosted.weblate.org/projects/bristlenose/](https://hosted.weblate.org/projects/bristlenose/), Libre plan approved 29 Apr 2026, glossary uploaded, translator guide at `TRANSLATING.md`, README links it. See "Live configuration" section above for component breakdown and lessons from setup. **Outstanding:** Weblate attribution mention on bristlenose.app website (Libre plan condition).
 
 ### Phase 6: Pseudo-localisation QA
 - Add `i18next-pseudo` to dev dependencies

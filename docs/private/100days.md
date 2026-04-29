@@ -316,6 +316,7 @@ The canonical end-to-end beats a first-time user must complete successfully in t
 - **i18n: cross-check each new language against Apple glossary** — Spanish done (23 Mar 2026, all match). fr, de, ko still need cross-check for standard menu items (Edit > Find, View > Zoom, File > Print). See `docs/design-i18n.md`
 - **i18n: fr common.json "citations" audit** — `sentItem3` in desktop.json fixed to "verbatim" (26 Mar). common.json still uses "citations" in export/copy contexts (copyQuotes, quotesCopied). These are UI action labels not the research concept — probably fine, but worth a native speaker review
 - **i18n: localOllama staleness** — `help.privacy.localOllama` says "quality is lower than cloud models in 2026" — time-dependent claim that will go stale
+- **Weblate attribution on bristlenose.app** — Libre plan condition (approval landed 29 Apr 2026). README link already present; website mention outstanding. Pull content from the Community menu of the Weblate project (badge + short blurb), drop into footer or about section of `website/index.html`
 
 ---
 

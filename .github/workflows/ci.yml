@@ -7,6 +7,12 @@ on:
     branches: [main]
   workflow_call:  # allow release.yml to invoke this workflow
 
+# Silence the per-step "actions/checkout@v4 is running on Node 20"
+# deprecation chatter and run JS actions on Node 24 ahead of the June
+# 2026 default switch.  Matches the Node version pinned for local dev.
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
 jobs:
   lint:
     runs-on: ubuntu-latest
@@ -212,6 +218,10 @@ jobs:
         run: npx playwright test
         env:
           CI: true
+          # Pin the server's auth token so Node-side fetch() in fixtures and
+          # in-browser fetch() in page.evaluate() can send the same bearer.
+          # See frontend/CLAUDE.md and root CLAUDE.md for the consuming paths.
+          _BRISTLENOSE_AUTH_TOKEN: test-token
 
       - name: Upload test results on failure
         if: failure()
@@ -220,3 +230,64 @@ jobs:
           name: playwright-report
           path: e2e/playwright-report/
           retention-days: 7
+
+  perf-gate:
+    # Regression gate for the serve-mode report SPA: DOM node counts,
+    # API latency, export size. Chromium-only, runs against the smoke
+    # fixture (1 session, 4 quotes). Lives in its own job so perf failures
+    # are scoped clearly — a regression doesn't get masked by unrelated
+    # e2e red.
+    needs: [test, frontend-lint-type-test]
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Python dependencies (including serve extras)
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev,serve]"
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Build frontend
+        working-directory: frontend
+        run: |
+          npm ci
+          npm run build
+
+      - name: Install E2E dependencies
+        working-directory: e2e
+        run: npm ci
+
+      - name: Install Playwright (chromium only)
+        working-directory: e2e
+        run: npx playwright install chromium --with-deps
+
+      - name: Run perf-gate
+        working-directory: e2e
+        run: npx playwright test tests/perf-gate.spec.ts --project=chromium
+        env:
+          CI: true
+          BN_RUN_PERF_GATE: "1"
+          # Smoke fixture only — no real data; token is not a secret.
+          _BRISTLENOSE_AUTH_TOKEN: test-token
+
+      - name: Upload perf results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: perf-results-${{ github.run_id }}
+          path: |
+            e2e/perf-results.json
+            e2e/.perf-history.jsonl
+          retention-days: 90
+          if-no-files-found: warn

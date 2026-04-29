@@ -82,7 +82,7 @@ Two audiences, done in parallel where possible.
 
 14. **Maintenance schedule check** — read the "Dependency maintenance" section of `TODO.md`. If today's date is past any unchecked quarterly/annual item, remind the user it's due.
 
-15. **QA backlog reminder** — check `docs/private/qa-backlog.md` for unacked items. Remind the user if any exist.
+15. **QA backlog reminder** — check `docs/qa-backlog.md` for unacked items. Remind the user if any exist.
 
 16. **Branch cleanup** — check for merged feature branches that can be deleted. Ask before deleting.
 

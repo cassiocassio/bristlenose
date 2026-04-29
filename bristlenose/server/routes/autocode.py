@@ -224,8 +224,12 @@ async def start_autocode_job(
 
         # Spawn background task — fire and forget
         db_factory = request.app.state.db_factory
+        project_dir = request.app.state.project_dir
         asyncio.create_task(
-            run_autocode_job(db_factory, project_id, framework_id, settings)
+            run_autocode_job(
+                db_factory, project_id, framework_id, settings,
+                project_dir=project_dir,
+            )
         )
 
         return _job_to_out(job)

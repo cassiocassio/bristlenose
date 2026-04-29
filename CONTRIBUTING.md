@@ -28,6 +28,10 @@ Bristlenose uses [Weblate](https://hosted.weblate.org/projects/bristlenose/) for
 3. Run `ruff check` and `pytest` before submitting.
 4. Open a pull request with a clear description of what and why.
 
+## Using an AI coding agent
+
+Bristlenose's canonical context for coding agents lives in `CLAUDE.md` at the repo root, plus nested `CLAUDE.md` files under `bristlenose/theme/`, `bristlenose/stages/`, `bristlenose/llm/`, `bristlenose/server/`, `frontend/`, and `desktop/`. Claude Code auto-loads these. If you use a different agent (Cursor, Windsurf, Copilot, Codex, Zed, etc.), point it at these files — they're the source of truth for conventions, architecture, and the design-system token rules, regardless of which tool you use.
+
 ## Code style
 
 - Python 3.10+, Ruff for linting (config in `pyproject.toml`), type hints everywhere

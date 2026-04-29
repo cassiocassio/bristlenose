@@ -2,7 +2,7 @@
 
 Single source of truth for vocabulary, voice, and writing mechanics across all user-facing text: locale files, help modal, man page, README, SECURITY.md, CLI `--help`, and the future website.
 
-Consumers: human writers, translators (Weblate glossary seed), docs-review agent, Vale linter (future).
+Consumers: human writers, translators (Weblate glossary seed), user-documentation-review agent, Vale linter (future).
 
 ---
 
@@ -55,6 +55,8 @@ Fixed taxonomy. Do not add new categories without research justification.
 | **display name** | real name, actual name, first name | Editable short name visible to the research team only. Never appears in exports. A working tool, not an identity. | `design-html-report.md` lines 156–169 |
 | **PII redaction** | anonymisation (when meaning Presidio), data masking, scrubbing | Opt-in automated detection of personal data (names, emails, phone numbers) using Microsoft Presidio. Applied before LLM analysis. Distinct from anonymisation. | `SECURITY.md` lines 21–63 |
 | **anonymisation** | PII redaction (when meaning export control), de-identification | Researcher-controlled removal of participant names from exports. Speaker codes remain. A narrative/export control choice, not a safety mechanism. | `design-export-html.md` lines 213–274 |
+| **auth token** | API key, access token, session token | Short-lived bearer token protecting the localhost `bristlenose serve` API. Generated per-process at startup (random by default); may be pinned via `_BRISTLENOSE_AUTH_TOKEN` for CI fixtures and uvicorn `--reload` continuity. Not a user-visible concept — researchers never see it. | `SECURITY.md` "Serve mode API access control", `design-localhost-auth.md` |
+| **CI test mode** | debug mode, dev mode (in this context) | The pinned-token path used by CI fixtures, activated today by setting `_BRISTLENOSE_AUTH_TOKEN` in the environment. A future hardening task will gate this behind `BRISTLENOSE_DEV_MODE=test`. Distinct from the CLI `--dev` flag (which starts Vite + enables live reload). | `SECURITY.md`, `docs/private/100days.md` §6 Risk |
 
 **The distinction matters.** PII redaction is safety/compliance (automated, before LLM). Anonymisation is researcher choice (manual, at export time). Using one word for both causes real confusion in compliance contexts.
 

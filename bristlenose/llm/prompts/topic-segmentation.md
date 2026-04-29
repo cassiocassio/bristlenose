@@ -1,3 +1,7 @@
+---
+id: topic-segmentation
+version: 0.1.0
+---
 # Topic Segmentation
 
 <!-- Variables: {transcript_text} -->

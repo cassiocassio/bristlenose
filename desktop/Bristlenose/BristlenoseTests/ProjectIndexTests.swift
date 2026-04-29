@@ -4,6 +4,7 @@ import Foundation
 
 /// ProjectIndex is @MainActor — all tests must be @MainActor too.
 /// All tests use a temp directory to avoid touching the real projects.json.
+@MainActor
 @Suite("ProjectIndex persistence and logic")
 struct ProjectIndexTests {
 

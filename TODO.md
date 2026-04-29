@@ -1,6 +1,8 @@
 # Bristlenose — Where I Left Off
 
-Last updated: 17 Apr 2026
+Last updated: 26 Apr 2026
+
+**Most recent ship: v0.15.0 (26 Apr 2026)** — Phase 1f / 4a-pre. Pipeline-resilience event log (`pipeline-events.jsonl`) + structured `Cause` (10 categories) + honest `cost_usd_estimate` + desktop `EventLogReader`. Replaces the manifest-inference path that mis-classified interrupted runs as `.ready`. See `CHANGELOG.md` for full features, `docs/design-pipeline-resilience.md` for the design, and `docs/private/desktop-ux-iteration.md` for the deferred desktop UX work (Resume / Retry / Re-analyse… verb wiring + 9 other themed sections).
 
 **Launch plan:** `docs/private/100days.md` — triaged by topic + MoSCoW priority. That's the source of truth for what ships. This file is a public capture inbox + session context + done history.
 
@@ -14,7 +16,7 @@ From security review of desktop app plan (22 Mar 2026). All findings are in the 
 - [x] **Media endpoint filtering** — extension allowlist + path-traversal guard on `/media/` route. Also requires auth token
 - [x] **CORS middleware** — `CORSMiddleware(allow_origins=[])` blocks all cross-origin requests
 - [x] **Don't bundle API key in binary** — verified clean: no hardcoded keys in Swift source, Keychain-only storage, user enters via Settings
-- [x] **Skip zombie cleanup when BRISTLENOSE_DEV_PORT is set** — `killOrphanedServeProcesses()` now skips when dev port override is active, so the terminal dev server isn't killed on Xcode launch
+- [x] **Skip zombie cleanup when dev port override is set** — `killOrphanedServeProcesses()` now skips when the external-server env var is active, so the terminal dev server isn't killed on Xcode launch. (Env var renamed from `BRISTLENOSE_DEV_PORT` to `BRISTLENOSE_DEV_EXTERNAL_PORT` in Track C C1.)
 - [x] **Minimal child process environment** — stripped to PATH, HOME, TMPDIR, USER, SHELL, locale, VIRTUAL_ENV + BRISTLENOSE_* overlay in `ServeManager.overlayPreferences()`
 
 Remaining security items tracked in `docs/private/100days.md` §6 Risk.
@@ -49,6 +51,14 @@ Remaining desktop bugs and i18n items tracked in `docs/private/100days.md` §2, 
 
 Remaining multi-project phases tracked in `docs/design-project-sidebar.md` (Phases 4–5: bookmarks/availability, archive/bin).
 
+## CI hardening — sprint 2 step 0 (18 Apr 2026, ci-cleanup branch)
+
+- [x] **Flip e2e gate to blocking** — removed `continue-on-error: true` from `.github/workflows/ci.yml`. First CI run post-flip passed green (19m44s). The three P3 regressions parked during v0.14.5 release-unblock are cleared: autocode status 404 allowlisted (REST-correct), codebook route 404 allowlisted as deferred-fix (root cause S3), `_BRISTLENOSE_AUTH_TOKEN=test-token` wired into the main e2e workflow
+- [x] **`e2e/ALLOWLIST.md` register** — every deliberate e2e-spec suppression now has a categorised entry + `// ci-allowlist: CI-A<N>` code marker. 3 categories: infra / by-design / deferred-fix. 4 current entries. Prevents silent accretion. Validator + staleness gate deferred to v2 (tracked §11)
+- [x] **SECURITY.md auth-token honesty update** — prior text claimed the token was random-at-startup and memory-only unconditionally; reality is `_BRISTLENOSE_AUTH_TOKEN` in env overrides (for CI fixtures + uvicorn reload). Spec now matches code; doctor check warns on accidental env bleed. The proper gate (behind `BRISTLENOSE_DEV_MODE=test`) is a design problem deferred with a full plan (reminder 16 May 2026)
+- [x] **Fix: Analysis "Show all N quotes" toggle** — was an `<a>` without `href` (surfaced only when e2e gate became blocking). Converted to `<button type="button">` with minimal CSS reset
+- [x] **Fix: `playwright.config.ts` shell-quoting** — unquoted `${BRISTLENOSE}` / `${FIXTURE_DIR}` interpolation broke worktrees with spaces in the name. Pre-existing; surfaced during ci-cleanup verification
+
 ## CI hardening — sprint 1 (15–16 Apr 2026)
 
 - [x] **pytest coverage in CI** — `--cov` flags on pytest, coverage XML uploaded as artifact, `[tool.coverage]` config in `pyproject.toml`. Baseline: 73% (11,116 statements). No `fail_under` yet — informational
@@ -77,6 +87,12 @@ Remaining multi-project phases tracked in `docs/design-project-sidebar.md` (Phas
 - [x] **PII audit artifacts** — `docs/pii-audit/` with README, redacted transcript, and summary log. Linked from help panel
 
 Remaining PII work tracked in `docs/private/100days.md` §4 Value (PII dashboard widget) and §6 Risk.
+
+---
+
+## Ideas (captured, not triaged)
+
+- **Feedback pipeline → Bristlenose (internal dogfooding)** (17 Apr 2026) — IMAP fetch from feedback@bristlenose.app (DreamHost) → deterministic PII/header strip (Presidio + salted anon IDs for sender stability) → redacted `.md` archive in gitignored dir → monthly batch ingest into a private Bristlenose project to cluster themes for roadmap input. Read-only, never used as demo data, never shipped. Consent-safe because it stays internal. Caveats: emails are many short sessions (not few long ones) — may need a batch mode or synthetic "session per month"; no moderator questions so question-pill logic doesn't apply.
 
 ---
 
@@ -190,6 +206,8 @@ Bristlenose has ~30 direct + transitive deps across Python, ML, LLM SDKs, and NL
 
 ## Done (reverse chronological)
 
+- [x] **FOSSDA pipeline throughput baseline** (Apr 2026) — manual measurement procedure for per-stage wall-clock times, LLM latency, peak RSS, peak mid-run temp WAV against 10 FOSSDA interviews. Added `logger.info("llm_request | ...")` in `LLMClient.analyze()` so request-latency median/p95 is derivable from `bristlenose.log`. Ran two usual-suspects passes; fixes covered thermal stabilisation, ANSI-strip, hardware-key capture, Welford vs elapsed clarification. See `docs/design-perf-fossda-baseline.md`
+- [x] **CLAUDE.md refactor** (Apr 2026) — offloaded reference material (lookup tables, feature specs, action catalogues) from 5 CLAUDE.md files into 8 new docs + 3 existing docs. Total CLAUDE.md down 1,995→1,527 lines (-23%). New docs: `design-desktop-menu-actions`, `design-desktop-settings`, `design-sentiment-charts`, `design-badge-action-pill`, `design-dashboard-navigation`, `design-react-islands`, `design-autocode`, `design-react-migration-status`. Gotchas/conventions/patterns preserved; reference lookups moved with one-liner pointers
 - [x] **Platform text forking** (Mar 2026) — `dt()`/`ct()` helpers in `platformTranslation.ts` for CLI vs desktop help text. Desktop namespace loaded conditionally in i18next. 4 keys forked (privacy PII, contributing, config reference). Desktop variants in all 6 locales. Terminology glossary (`docs/glossary.md`) and platform text map (`docs/platform-text-map.md`) as foundation docs for future docs-review agent. SECURITY.md desktop callout added.
 - [x] **Export security + design docs** (Mar 2026) — XSS fix (`ensure_ascii=True`), `safe_filename()` utility (21 tests), path stripping from exports, anonymise label clarity (5 locales). Split `design-export-sharing.md` monolith into 4 focused design docs: HTML, quotes, clips, Miro. Cross-cutting concerns (anonymisation matrix, shared infrastructure, audit logging) documented in `design-export-html.md`
 - [x] **Pipeline resilience Phase 2b** (Mar 2026) — verify content hashes on load, manifest invalidation on mismatch, lazy LLM client init

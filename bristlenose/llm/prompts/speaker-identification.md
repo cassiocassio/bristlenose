@@ -1,3 +1,7 @@
+---
+id: speaker-identification
+version: 0.1.0
+---
 # Speaker Identification
 
 <!-- Variables: {transcript_sample}, {speaker_list} -->

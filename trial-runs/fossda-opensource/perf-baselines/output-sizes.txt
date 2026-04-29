@@ -1,0 +1,3 @@
+700K	trial-runs/fossda-opensource/bristlenose-output/assets/
+1.0M	trial-runs/fossda-opensource/bristlenose-output/sessions/
+768K	trial-runs/fossda-opensource/bristlenose-output/transcripts-raw/

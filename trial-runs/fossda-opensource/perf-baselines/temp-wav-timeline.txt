@@ -1,0 +1,1598 @@
+01:37:30
+339968	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+01:38:00
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+01:38:30
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+01:39:00
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+01:39:30
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+01:40:00
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+01:40:30
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+01:41:00
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+01:41:30
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+01:42:01
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+01:42:31
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+01:43:01
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+01:43:31
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+01:44:01
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+01:44:31
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+01:45:01
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+01:45:31
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+01:46:01
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+01:46:31
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+01:47:01
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+01:47:31
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+01:48:01
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+01:48:31
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+01:49:01
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+01:49:31
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+01:50:01
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+01:50:31
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+01:51:01
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+01:51:31
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+01:52:01
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+01:52:31
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+01:53:01
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+01:53:31
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+01:54:01
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+01:54:31
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+01:55:01
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+01:55:31
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+01:56:01
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+01:56:32
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+01:57:02
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+01:57:32
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+01:58:02
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+01:58:32
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+01:59:02
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+01:59:32
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+02:00:02
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+02:00:32
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+02:01:02
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+02:01:32
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+02:02:02
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+02:02:32
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+02:03:02
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+02:03:32
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+02:04:02
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+02:04:32
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+02:05:02
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+02:05:32
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+02:06:02
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+02:06:32
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+02:07:02
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+02:07:32
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+02:08:03
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+02:08:33
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+02:09:03
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+02:09:33
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+02:10:03
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+02:10:33
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+02:11:03
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+02:11:33
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+02:12:03
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+02:12:33
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+02:13:03
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+02:13:33
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+02:14:03
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+02:14:33
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+02:15:03
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+02:15:33
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+02:16:03
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+02:16:33
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+02:17:03
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+02:17:33
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+02:18:03
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+02:18:33
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+02:19:03
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+02:19:34
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+02:20:04
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+02:20:34
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+02:21:04
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+02:21:34
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+02:22:04
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+02:22:34
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+02:23:04
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+02:23:34
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+02:24:04
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+02:24:34
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+02:25:04
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+02:25:34
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+02:26:04
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+02:26:34
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+02:27:04
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+02:27:34
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+02:28:04
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+02:28:34
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+02:29:04
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+02:29:34
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+02:30:05
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+02:30:35
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+02:31:05
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+02:31:35
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+02:32:05
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+02:32:35
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+02:33:05
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+02:33:35
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+02:34:05
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+02:34:35
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+02:35:05
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+02:35:35
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+02:36:05
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+02:36:35
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+02:37:05
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+02:37:35
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+02:38:05
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+02:38:35
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+02:39:05
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+02:39:35
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+02:40:05
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+02:40:35
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+02:41:06
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+02:41:36
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+02:42:06
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+02:42:36
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+02:43:06
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+02:43:36
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+02:44:06
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+02:44:36
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+02:45:06
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+02:45:36
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+02:46:06
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+02:46:36
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+02:47:06
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+02:47:36
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+02:48:06
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+02:48:36
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+02:49:06
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+02:49:36
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+02:50:06
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+02:50:36
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+02:51:06
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+02:51:36
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+02:52:07
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+02:52:37
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+02:53:07
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+02:53:37
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+02:54:07
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+02:54:37
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+02:55:07
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+02:55:37
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+02:56:07
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+02:56:37
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+02:57:07
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+02:57:37
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+02:58:07
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+02:58:37
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+02:59:07
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+02:59:37
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+03:00:07
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+03:00:37
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+03:01:07
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+03:01:37
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+03:02:07
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+03:02:37
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+03:03:07
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+03:03:38
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+03:04:08
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+03:04:38
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+03:05:08
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+03:05:38
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+03:06:08
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+03:06:38
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+03:07:08
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+03:07:38
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+03:08:08
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+03:08:38
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+03:09:08
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+03:09:38
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+03:10:08
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+03:10:38
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+03:11:08
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+03:11:38
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+03:12:08
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+03:12:38
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+03:13:08
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+03:13:38
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+03:14:08
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+03:14:38
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+03:15:08
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+03:15:39
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+03:16:09
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+03:16:39
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+03:17:09
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+03:17:39
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+03:18:09
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+03:18:39
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+03:19:09
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+03:19:39
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+03:20:09
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+03:20:39
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+03:21:09
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+03:21:39
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+03:22:09
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+03:22:39
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+03:23:09
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+03:23:39
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+03:24:09
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+03:24:39
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+03:25:09
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+03:25:39
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+03:26:09
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+03:26:40
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+03:27:10
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+03:27:40
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+03:28:10
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+03:28:40
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+03:29:10
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+03:29:40
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+03:30:10
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+03:30:40
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+03:31:10
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+03:31:40
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+03:32:10
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+03:32:40
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+03:33:10
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+03:33:40
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+03:34:10
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+03:34:40
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+03:35:10
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+03:35:40
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+03:36:10
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+03:36:40
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+03:37:10
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+03:37:40
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+03:38:11
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+03:38:41
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+03:39:11
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+03:39:41
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+03:40:11
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+03:40:41
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+03:41:11
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+03:41:41
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+03:42:11
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+03:42:41
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+03:43:11
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+03:43:41
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+03:44:11
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+03:44:41
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+03:45:11
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+03:45:41
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+03:46:11
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+03:46:41
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+03:47:11
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+03:47:41
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+03:48:11
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+03:48:41
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+03:49:11
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+03:49:42
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+03:50:12
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+03:50:42
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+03:51:12
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+03:51:42
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+03:52:12
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+03:52:42
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+03:53:12
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+03:53:42
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+03:54:12
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+03:54:42
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+03:55:12
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+03:55:42
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+03:56:12
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+03:56:42
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+03:57:12
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+03:57:42
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+03:58:12
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+03:58:42
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+03:59:12
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+03:59:42
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+04:00:12
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+04:00:42
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+04:01:13
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+04:01:43
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+04:02:13
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+04:02:43
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+04:03:13
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+04:03:43
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+04:04:13
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+04:04:43
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+04:05:13
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+04:05:43
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+04:06:13
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+04:06:43
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+04:07:13
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+04:07:43
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+04:08:13
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+04:08:43
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+04:09:13
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+04:09:43
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+04:10:13
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+04:10:43
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+04:11:13
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+04:11:43
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+04:12:13
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+04:12:44
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+04:13:14
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+04:13:44
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+04:14:14
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+04:14:44
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+04:15:14
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+04:15:44
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+04:16:14
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+04:16:44
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+04:17:14
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+04:17:44
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+04:18:14
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+04:18:44
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+04:19:14
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+04:19:44
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+04:20:14
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+04:20:44
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+04:21:14
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+04:21:44
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+04:22:14
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+04:22:44
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+04:23:14
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+04:23:44
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+04:24:15
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+04:24:45
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+04:25:15
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+04:25:45
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+04:26:15
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+04:26:45
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+04:27:15
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+04:27:45
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+04:28:15
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+04:28:45
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+04:29:15
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+04:29:45
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+04:30:15
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+04:30:45
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+04:31:15
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+04:31:45
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+04:32:15
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+04:32:45
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+04:33:15
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+04:33:45
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+04:34:15
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+04:34:45
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+04:35:15
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+04:35:46
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+04:36:16
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+04:36:46
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+04:37:16
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+04:37:46
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+04:38:16
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+04:38:46
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+04:39:16
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+04:39:46
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+04:40:16
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+04:40:46
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+04:41:16
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+04:41:46
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+04:42:16
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+04:42:46
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+04:43:16
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+04:43:46
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+04:44:16
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+04:44:46
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+04:45:16
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+04:45:46
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+04:46:16
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+04:46:47
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+04:47:17
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+04:47:47
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+04:48:17
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+04:48:47
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+04:49:17
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+04:49:47
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+04:50:17
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+04:50:47
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+04:51:17
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+04:51:47
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+04:52:17
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+04:52:47
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+04:53:17
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+04:53:47
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+04:54:17
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+04:54:47
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+04:55:17
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+04:55:47
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+04:56:17
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+04:56:47
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+04:57:17
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+04:57:48
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+04:58:18
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+04:58:48
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+04:59:18
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+04:59:48
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+05:00:18
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+05:00:48
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+05:01:18
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+05:01:48
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+05:02:18
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+05:02:48
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+05:03:18
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+05:03:48
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+05:04:18
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+05:04:48
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+05:05:18
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+05:05:48
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+05:06:18
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+05:06:48
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+05:07:18
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+05:07:48
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+05:08:18
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+05:08:48
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+05:09:19
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+05:09:49
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+05:10:19
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+05:10:49
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+05:11:19
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+05:11:49
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+05:12:19
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+05:12:49
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+05:13:19
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+05:13:49
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+05:14:19
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+05:14:49
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+05:15:19
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+05:15:49
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+05:16:19
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+05:16:49
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+05:17:19
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+05:17:49
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+05:18:19
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+05:18:49
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+05:19:19
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+05:19:49
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+05:20:20
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+05:20:50
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+05:21:20
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+05:21:50
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+05:22:20
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+05:22:50
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+05:23:20
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+05:23:50
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+05:24:20
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+05:24:50
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+05:25:20
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+05:25:50
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+05:26:20
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+05:26:50
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+05:27:20
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+05:27:50
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+05:28:20
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+05:28:50
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+05:29:20
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+05:29:50
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+05:30:20
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+05:30:50
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+05:31:21
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+05:31:51
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+05:32:21
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+05:32:51
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+05:33:21
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+05:33:51
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+05:34:21
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+05:34:51
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+05:35:21
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+05:35:51
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+05:36:21
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+05:36:51
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+05:37:21
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+05:37:51
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+05:38:21
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+05:38:51
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+05:39:21
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+05:39:51
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+05:40:21
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+05:40:51
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+05:41:21
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+05:41:51
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+05:42:21
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+05:42:52
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+05:43:22
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+05:43:52
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+05:44:22
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+05:44:52
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+05:45:22
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+05:45:52
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+05:46:22
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+05:46:52
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+05:47:22
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+05:47:52
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+05:48:22
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+05:48:52
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+05:49:22
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+05:49:52
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+05:50:22
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+05:50:52
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+05:51:22
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+05:51:52
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+05:52:22
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+05:52:52
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+05:53:22
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+05:53:52
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+05:54:23
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+05:54:53
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+05:55:23
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+05:55:53
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+05:56:23
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+05:56:53
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+05:57:23
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+05:57:53
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+05:58:23
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+05:58:53
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+05:59:23
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+05:59:53
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+06:00:23
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+06:00:53
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+06:01:23
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+06:01:53
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+06:02:23
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+06:02:53
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+06:03:23
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+06:03:53
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+06:04:23
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+06:04:53
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+06:05:23
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+06:05:54
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+06:06:24
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+06:06:54
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+06:07:24
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+06:07:54
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+06:08:24
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+06:08:54
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+06:09:24
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+06:09:54
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+06:10:24
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+06:10:54
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+06:11:24
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+06:11:54
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+06:12:24
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+06:12:54
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+06:13:24
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+06:13:54
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+06:14:24
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+06:14:54
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+06:15:24
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+06:15:54
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+06:16:24
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+06:16:55
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+06:17:25
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+06:17:55
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+06:18:25
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+06:18:55
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+06:19:25
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+06:19:55
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+06:20:25
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+06:20:55
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+06:21:25
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+06:21:55
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+06:22:25
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+06:22:55
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+06:23:25
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+06:23:55
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+06:24:25
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+06:24:55
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+06:25:25
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+06:25:55
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+06:26:25
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+06:26:55
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+06:27:25
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+06:27:55
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+06:28:26
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+06:28:56
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+06:29:26
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+06:29:56
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+06:30:26
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+06:30:56
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+06:31:26
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+06:31:56
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+06:32:26
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+06:32:56
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+06:33:26
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+06:33:56
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+06:34:26
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+06:34:56
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+06:35:26
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+06:35:56
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+06:36:26
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+06:36:56
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+06:37:26
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+06:37:56
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+06:38:26
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+06:38:56
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+06:39:27
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+06:39:57
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+06:40:27
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+06:40:57
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+06:41:27
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+06:41:57
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+06:42:27
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+06:42:57
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+06:43:27
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+06:43:57
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+06:44:27
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+06:44:57
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+06:45:27
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+06:45:57
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+06:46:27
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+06:46:57
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+06:47:27
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+06:47:57
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+06:48:27
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+06:48:57
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+06:49:27
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+06:49:57
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+06:50:28
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+06:50:58
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+06:51:28
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+06:51:58
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+06:52:28
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+06:52:58
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+06:53:28
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+06:53:58
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+06:54:28
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+06:54:58
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+06:55:28
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+06:55:58
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+06:56:28
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+06:56:58
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+06:57:28
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+06:57:58
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+06:58:28
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+06:58:58
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+06:59:28
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+06:59:58
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+07:00:28
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+07:00:58
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+07:01:29
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+07:01:59
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+07:02:29
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+07:02:59
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+07:03:29
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+07:03:59
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+07:04:29
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+07:04:59
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+07:05:29
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+07:05:59
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+07:06:29
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+07:06:59
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+07:07:29
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+07:07:59
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+07:08:29
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+07:08:59
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+07:09:29
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+07:09:59
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+07:10:29
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+07:10:59
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+07:11:29
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+07:11:59
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+07:12:29
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+07:12:59
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+07:13:30
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+07:14:00
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+07:14:30
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+07:15:00
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+07:15:30
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+07:16:00
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+07:16:30
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+07:17:00
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+07:17:30
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+07:18:00
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+07:18:30
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+07:19:00
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+07:19:30
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+07:20:00
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+07:20:30
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+07:21:00
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+07:21:30
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+07:22:00
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+07:22:30
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+07:23:00
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+07:23:30
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+07:24:00
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+07:24:30
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+07:25:01
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+07:25:31
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+07:26:01
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+07:26:31
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+07:27:01
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+07:27:31
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+07:28:01
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+07:28:31
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+07:29:01
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+07:29:31
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+07:30:01
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+07:30:31
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+07:31:01
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+07:31:31
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+07:32:01
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+07:32:31
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+07:33:01
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+07:33:31
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+07:34:01
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+07:34:31
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+07:35:01
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+07:35:31
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+07:36:01
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+07:36:31
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+07:37:02
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+07:37:32
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+07:38:02
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+07:38:32
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+07:39:02
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+07:39:32
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+07:40:02
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+07:40:32
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+07:41:02
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+07:41:32
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+07:42:02
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+07:42:32
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+07:43:02
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+07:43:32
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+07:44:02
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+07:44:32
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+07:45:02
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+07:45:32
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+07:46:02
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+07:46:32
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+07:47:02
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+07:47:32
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+07:48:02
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+07:48:33
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+07:49:03
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+07:49:33
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+07:50:03
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+07:50:33
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+07:51:03
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+07:51:33
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+07:52:03
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+07:52:33
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+07:53:03
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+07:53:33
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+07:54:03
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+07:54:33
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+07:55:03
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+07:55:33
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+07:56:03
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+07:56:33
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+07:57:03
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+07:57:33
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+07:58:03
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+07:58:33
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+07:59:03
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+07:59:33
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+08:00:04
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+08:00:34
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+08:01:04
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+08:01:34
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+08:02:04
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+08:02:34
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+08:03:04
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+08:03:34
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+08:04:04
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+08:04:34
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+08:05:04
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+08:05:34
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+08:06:04
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+08:06:34
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+08:07:04
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+08:07:34
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+08:08:04
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+08:08:34
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+08:09:04
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+08:09:34
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+08:10:04
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+08:10:34
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+08:11:04
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+08:11:35
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+08:12:05
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+08:12:35
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+08:13:05
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+08:13:35
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+08:14:05
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+08:14:35
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+08:15:05
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+08:15:35
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+08:16:05
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+08:16:35
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/
+08:17:05
+966144	trial-runs/fossda-opensource/bristlenose-output/.bristlenose/temp/

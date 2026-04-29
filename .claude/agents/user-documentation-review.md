@@ -1,5 +1,5 @@
 ---
-name: docs-review
+name: user-documentation-review
 description: >
   User-facing documentation review — terminology consistency, platform
   correctness (CLI vs desktop), tone, i18n coverage, accuracy, and

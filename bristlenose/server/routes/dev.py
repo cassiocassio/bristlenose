@@ -5,12 +5,17 @@ Registered only when ``bristlenose serve --dev`` is active.
 
 from __future__ import annotations
 
+import json
+import os
+import tempfile
 from datetime import datetime, timezone
 from html import escape as _esc
 from pathlib import Path as _Path
+from typing import Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from fastapi.responses import HTMLResponse
+from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy.orm import Session
 
 from bristlenose.server.journey import derive_journeys
@@ -342,3 +347,91 @@ def _oxford_list(parts: list[str]) -> str:
     if len(parts) == 2:
         return f"{parts[0]} and {parts[1]}"
     return ", ".join(parts[:-1]) + ", and " + parts[-1]
+
+
+# ---------------------------------------------------------------------------
+# Alpha telemetry stub
+# ---------------------------------------------------------------------------
+#
+# Stands in for the real PHP endpoint at bristlenose.app/telemetry.php during
+# Swift + React development.  Accepts the same batched payload the real
+# endpoint will accept and appends one JSON line per event to a local file.
+# Dev-only: mounted only when ``bristlenose serve --dev`` is active.
+#
+# The path is PID-scoped so (a) concurrent test runners don't clobber each
+# other, (b) each server restart starts with a clean file. Old files orphan
+# in the tempdir but the OS reaps them.
+
+_TELEMETRY_MAX_EVENTS_PER_BATCH = 500
+
+
+class TelemetryEventIn(BaseModel):
+    """One tag-rejection event. Four fields only — see methodology doc."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    tag_id: str = Field(min_length=1, max_length=100)
+    prompt_version: str = Field(min_length=1, max_length=80)
+    event_type: Literal["suggested", "accepted", "rejected", "edited"]
+    researcher_id: str = Field(min_length=1, max_length=64)
+
+
+class TelemetryBatchIn(BaseModel):
+    """Request body for POST /api/dev/telemetry."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    events: list[TelemetryEventIn] = Field(
+        min_length=1,
+        max_length=_TELEMETRY_MAX_EVENTS_PER_BATCH,
+    )
+
+
+def _dev_telemetry_path() -> _Path:
+    return _Path(tempfile.gettempdir()) / f"bristlenose-dev-telemetry-{os.getpid()}.jsonl"
+
+
+@router.post("/telemetry")
+def dev_telemetry_post(batch: TelemetryBatchIn) -> dict[str, object]:
+    """Append a batch of telemetry events to a local JSONL file.
+
+    Same request shape as the real ``telemetry.php`` endpoint:
+    ``{"events": [{"tag_id", "prompt_version", "event_type", "researcher_id"}, ...]}``.
+    Rejects unknown fields and batches larger than
+    ``_TELEMETRY_MAX_EVENTS_PER_BATCH``. Returns the JSONL path so the
+    developer can tail it.
+    """
+    out_path = _dev_telemetry_path()
+    with out_path.open("a", encoding="utf-8") as fp:
+        for ev in batch.events:
+            fp.write(json.dumps(ev.model_dump()) + "\n")
+
+    return {
+        "ok": True,
+        "received": len(batch.events),
+        "written_to": str(out_path),
+    }
+
+
+@router.get("/telemetry")
+def dev_telemetry_get() -> dict[str, object]:
+    """Return every event written to the local JSONL file (debug helper)."""
+    out_path = _dev_telemetry_path()
+    if not out_path.exists():
+        return {"events": [], "path": str(out_path)}
+    events: list[dict[str, object]] = []
+    with out_path.open("r", encoding="utf-8") as fp:
+        for line in fp:
+            line = line.strip()
+            if line:
+                events.append(json.loads(line))
+    return {"events": events, "path": str(out_path)}
+
+
+@router.delete("/telemetry")
+def dev_telemetry_delete() -> dict[str, object]:
+    """Truncate the local JSONL file (debug helper)."""
+    out_path = _dev_telemetry_path()
+    if out_path.exists():
+        out_path.unlink()
+    return {"ok": True, "path": str(out_path)}

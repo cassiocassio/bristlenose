@@ -1,3 +1,7 @@
+---
+id: autocode
+version: 0.1.0
+---
 # AutoCode — Codebook Tag Application
 
 <!-- Variables: {codebook_title}, {codebook_preamble}, {formatted_tag_taxonomy}, {formatted_quotes} -->

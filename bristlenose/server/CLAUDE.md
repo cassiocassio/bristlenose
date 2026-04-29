@@ -98,6 +98,8 @@ All calls are **fire-and-forget promises**.  The JS modules don't `await` them.
 - `links.github_issues_url`
 - `feedback.enabled`
 - `feedback.url`
+- `telemetry.enabled`
+- `telemetry.url`
 
 This payload is shared by serve mode and export mode (embedded in `BRISTLENOSE_EXPORT.health`).
 
@@ -105,13 +107,27 @@ Default values:
 
 - `links.github_issues_url` = `https://github.com/cassiocassio/bristlenose/issues/new`
 - `feedback.enabled` = `true`
-- `feedback.url` = `https://cassiocassio.co.uk/feedback.php`
+- `feedback.url` = `https://bristlenose.app/feedback.php` (was `cassiocassio.co.uk/feedback.php` — 90-day overlap in effect until the old endpoint is retired)
+- `telemetry.enabled` = `true`
+- `telemetry.url` = `https://bristlenose.app/telemetry.php` (prod) or `/api/dev/telemetry` (dev mode, relative → local stub)
 
 Optional env overrides:
 
 - `BRISTLENOSE_GITHUB_ISSUES_URL`
 - `BRISTLENOSE_FEEDBACK_ENABLED` (`1/true/yes/on` truthy; everything else false)
 - `BRISTLENOSE_FEEDBACK_URL`
+- `BRISTLENOSE_TELEMETRY_ENABLED`
+- `BRISTLENOSE_TELEMETRY_URL`
+
+### Dev telemetry stub (`--dev` only)
+
+`bristlenose serve --dev` mounts three extra routes used by the alpha telemetry work. Stands in for the production `bristlenose.app/telemetry.php` so the React emission hook and Swift first-launch sheets can be tested before any PHP is deployed. Dev-only; the routes are absent without `--dev`.
+
+- `POST /api/dev/telemetry` — accepts `{"events": [{tag_id, prompt_version, event_type, researcher_id}, ...]}` and appends one JSON line per event to `<tempfile.gettempdir()>/bristlenose-dev-telemetry.jsonl` (`/tmp/...` on Linux, `/var/folders/.../T/...` on macOS — GET returns the exact path). Validates `event_type ∈ {suggested, accepted, rejected, edited}` and rejects payloads missing any required field
+- `GET /api/dev/telemetry` — returns everything written to the JSONL so far (debug helper)
+- `DELETE /api/dev/telemetry` — truncates the JSONL (debug helper; also used by the test fixture)
+
+The same request shape is what the real `telemetry.php` endpoint will accept, so React code that works against the stub works unchanged in production. Spec: `docs/methodology/tag-rejections-are-great.md`.
 
 ## Patterns to follow
 
@@ -140,52 +156,11 @@ The factory is stored on `app.state` during `create_app()`.  Each route creates 
 
 ## React island integration
 
-React islands replace static Jinja2 content at serve time using a **marker-based substitution** pattern. No changes to the render pipeline or Jinja2 templates beyond adding comment markers.
+React islands replace Jinja2 content at serve time via **marker-based substitution** — `<!-- bn-{name} -->` comments in `render/report.py` become `<div id="bn-{name}-root">` at serve time (regex replacement in `app.py:serve_report_html()`). Browser mounts React into the div via `main.tsx`.
 
-### How it works
+**When adding a new island:** register it in the renderer overlay CSS (4 places) so it shows green (React) not blue (Jinja2) under the dev-only overlay.
 
-1. **Render time** (`render/report.py`): wraps content regions in comment markers:
-   ```html
-   <!-- bn-quote-sections -->
-   <section>...Jinja2 content...</section>
-   <!-- /bn-quote-sections -->
-   ```
-
-2. **Serve time** (`app.py:serve_report_html()`): regex replaces marker regions with React mount divs:
-   ```html
-   <!-- bn-quote-sections -->
-   <div id="bn-quote-sections-root" data-project-id="1"></div>
-   <!-- /bn-quote-sections -->
-   ```
-
-3. **Browser**: React `main.tsx` finds `#bn-quote-sections-root`, calls `createRoot().render(<QuoteSections />)`
-
-### Current React islands
-
-| Mount point | Component | Markers | API endpoint |
-|------------|-----------|---------|-------------|
-| `#bn-sessions-table-root` | `SessionsTable` | `bn-session-table` | `GET /api/projects/{id}/sessions` |
-| `#bn-quote-sections-root` | `QuoteSections` | `bn-quote-sections` | `GET /api/projects/{id}/quotes` |
-| `#bn-quote-themes-root` | `QuoteThemes` | `bn-quote-themes` | `GET /api/projects/{id}/quotes` |
-| `#bn-about-developer-root` | `AboutDeveloper` | (created by JS) | `GET /api/dev/info` |
-
-### Adding a new React island
-
-1. Add `<!-- bn-{name} -->` / `<!-- /bn-{name} -->` markers in `render/report.py`
-2. Add `_REACT_{NAME}_MOUNT` constant in `app.py` with the mount div
-3. Add `re.sub()` call in `serve_report_html()` to swap markers for mount div
-4. Register the mount point in the renderer overlay CSS (4 places: `position:relative`, `:not(:has())` exclusions, cancel-inside-React, green overlay+outline)
-5. Add mount logic in `frontend/src/main.tsx`
-6. Re-render the report (`bristlenose render`) to bake in the new markers
-
-### Renderer overlay (dev-only)
-
-The `_build_renderer_overlay_html()` function injects CSS that colour-codes the page by renderer origin:
-- **Blue** — Jinja2 (static pipeline HTML)
-- **Green** — React islands
-- **Amber** — Vanilla JS regions (codebook grid, analysis)
-
-Toggle with the palette button in the top-right corner. When adding a new React island, register it in all 4 CSS blocks (see step 4 above) or it will show as blue instead of green.
+See `docs/design-react-islands.md` for the 6-step "Adding a new island" checklist, current islands table, and renderer overlay details.
 
 ## Dev loop (live JS reload)
 
@@ -288,93 +263,17 @@ Stress tests cover: Unicode (emoji, CJK, RTL, combining chars), large payloads (
 
 After the React migration, Playwright E2E tests will cover the full browser → JS → API → DB path. Currently deferred because E2E tests target DOM selectors which all change during migration. The React components will emit `data-testid` attributes from day one to provide stable selectors. See `docs/design-reactive-ui.md` "Testing strategy" section for the full plan.
 
-## React migration status (updated 17 Feb 2026)
+## React migration status
 
-### Primitives (`frontend/src/components/`)
-
-| # | Primitive | Round | Tests | Notes |
-|---|-----------|-------|-------|-------|
-| 1 | Badge | R1 done | 8 | Sentiment/tag labels, deletable variant |
-| 2 | PersonBadge | R1 done | 5 | Speaker code lozenges (p1/m1/o1) |
-| 3 | TimecodeLink | R1 done | 6 | Clickable timecodes, player integration |
-| 4 | EditableText | R2 done | 19 | Click-to-edit + external trigger modes |
-| 5 | Toggle | R2 done | 9 | Star/hide buttons |
-| 6 | TagInput | R3 done | 23 | Auto-suggest, ghost text, rapid entry |
-| 7 | Sparkline | R3 done | 12 | Mini stacked bars (sentiment distribution) |
-| 8 | Counter | R3 done | 14 | Hidden-quotes dropdown (pulled from R4) |
-| 9 | Metric | R4 done | 13 | Bar fill + SVG intensity dots, for analysis signal cards |
-| 10 | JourneyChain | R4 done | 8 | Arrow-separated labels, wired into SessionsTable |
-| 11 | Annotation | R4 done | 14 | Transcript page margin labels, composes Badge |
-| 12 | Thumbnail | R4 done | 5 | Sessions table media preview, CSS extracted to atom |
-| 13 | MicroBar | M5 done | 12 | Horizontal proportional bar (codebook + analysis) |
-| 14 | ConfirmDialog | M5 done | 13 | Contextual inline confirmation, Enter/Escape |
-| 15 | Modal | Infra | — | Infrastructure (build when needed for viewport-level dialogs) |
-| 16 | Toast | Infra | — | Infrastructure (build when needed for feedback notifications) |
-
-**All 4 rounds + M5 complete (14 primitives + 2 infrastructure, 182 Vitest tests).** Modal and Toast are infrastructure — build when first consumer needs them. ConfirmDialog covers the inline confirmation need that Modal was originally earmarked for.
-
-### Islands (`frontend/src/islands/`)
-
-| Island | Status | Mount point | API |
-|--------|--------|-------------|-----|
-| SessionsTable | Shipped (M1) | `#bn-sessions-table-root` | `GET /sessions` |
-| QuoteSections | Shipped | `#bn-quote-sections-root` | `GET /quotes` |
-| QuoteThemes | Shipped | `#bn-quote-themes-root` | `GET /quotes` |
-| QuoteCard | Built (internal) | — | (composed into above) |
-| QuoteGroup | Built (internal) | — | (composed into above) |
-| Dashboard | Shipped (M4) | `#bn-dashboard-root` | `GET /dashboard` |
-| CodebookPanel | Shipped (M5) | `#bn-codebook-root` | `GET /codebook` + CRUD |
-| AboutDeveloper | Built (dev-only) | `#bn-about-developer-root` | `GET /dev/info` |
-
-### Backend APIs — complete
-
-6 data endpoints (hidden, starred, tags, edits, people, deleted-badges) + sessions + quotes + dashboard + 9 codebook CRUD endpoints. 330+ Python serve tests across 8 files.
-
-### CSS alignment — done through M5
-
-Extracted (R1–R3): `toggle.css`, `editable-text.css`, `sparkline.css`. Renamed: `person-id.css` → `person-badge.css`. Metric reuses existing classes from `organisms/analysis.css`. JourneyChain reuses `.bn-session-journey`. Thumbnail extracted to `atoms/thumbnail.css`. M5 tokenised `codebook-panel.css` (spacing, dark mode merge-target via `color-mix()`, sub-pixel border fix). Added `.confirm-dialog` styles to `codebook-panel.css`.
-
-### What's next
-
-1 remaining infrastructure primitive: **Toast** (build when first feedback notification need arises). Modal is deferred — ConfirmDialog covers inline confirmations. Next islands: transcript page, analysis page.
+Migration complete through M5 (Feb 2026): 14 primitives + 2 infrastructure, 8 islands, 330+ Python serve tests. Next islands: transcript page, analysis page. Toast is the only unbuilt infrastructure primitive (build when first consumer needs it). See `docs/design-react-migration-status.md` for the primitive inventory (16 rows), island inventory (8 rows), and CSS alignment summary.
 
 ## AutoCode (LLM-assisted tag application)
 
-`autocode.py` is the engine module. `routes/autocode.py` has 7 API endpoints. Two new ORM tables: `AutoCodeJob` (job lifecycle) and `ProposedTag` (per-quote tag proposals with confidence + rationale).
+`autocode.py` engine + `routes/autocode.py` (7 endpoints) + two ORM tables (`AutoCodeJob`, `ProposedTag`). First feature to call LLMs from serve mode — uses `asyncio.create_task()`, no Celery/Redis. Cloud-only (prompt weight ~14K-17K tokens doesn't fit Ollama's 4K context). Unique constraint `(project_id, framework_id)` — one job per codebook per project.
 
-### How it works
+**Gotcha:** `LLMClient(settings)` takes only settings, not an LLMUsageTracker — creates its own internally.
 
-1. Researcher clicks "✦ AutoCode quotes" on a framework separator (e.g. Garrett)
-2. `POST /api/projects/{id}/autocode/{framework_id}` → starts background job via `asyncio.create_task()`
-3. Engine loads all quotes + codebook discrimination prompts, batches into groups of 25
-4. Each batch → one LLM call with full taxonomy (all sub-tags with definition/apply_when/not_this)
-5. LLM returns best-fit tag + confidence (0.0-1.0) + rationale per quote — no hard NO_FIT
-6. Results stored as `ProposedTag` rows (status: "pending")
-7. Frontend polls `/status`, then opens report modal with proposals
-
-### API endpoints
-
-| Method | Path | Purpose |
-|--------|------|---------|
-| POST | `/projects/{id}/autocode/{framework_id}` | Start job |
-| GET | `/projects/{id}/autocode/{framework_id}/status` | Poll progress |
-| GET | `/projects/{id}/autocode/{framework_id}/proposals` | List proposals (min_confidence filter) |
-| POST | `/projects/{id}/autocode/proposals/{id}/accept` | Accept → creates QuoteTag |
-| POST | `/projects/{id}/autocode/proposals/{id}/deny` | Deny → keeps for telemetry |
-| POST | `/projects/{id}/autocode/{framework_id}/accept-all` | Bulk accept above threshold |
-| POST | `/projects/{id}/autocode/{framework_id}/deny-all` | Bulk deny pending |
-
-### Gotchas
-
-- **Re-run guard**: Unique constraint on `(project_id, framework_id)` — one job per codebook per project. Denied proposals stay for telemetry, not deleted
-- **Cloud-only**: Prompt weight ~14K-17K tokens per call. Ollama excluded (4K context can't fit taxonomy + quotes)
-- **Background task**: First feature to call LLMs from serve mode. Uses `asyncio.create_task()` — job runs after endpoint returns. No Celery/Redis needed
-- **Confidence filter**: Proposals endpoint accepts `min_confidence` query param (default 0.5). All assignments stored regardless, filtered at query time. Stretch goal: user-facing threshold slider
-- **LLMClient(settings)**: Takes only settings, creates its own tracker internally. Don't pass LLMUsageTracker as second arg
-
-### Testing
-
-96 tests across 5 files. Live LLM eval harness (`test_autocode_discrimination.py`) has 20 golden Garrett quotes — run with `pytest -m slow` (~$0.01/run, ≥80% accuracy threshold).
+See `docs/design-autocode.md` for the 7-step workflow, API endpoints, and testing notes.
 
 ## Reference docs
 

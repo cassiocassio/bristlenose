@@ -24,7 +24,15 @@ output/
 coverage.xml
 htmlcov/
 .DS_Store
-trial-runs/
+.claude/scheduled_tasks.lock
+# Private UXR trial data stays ignored. FOSSDA is explicitly open-source
+# material (fossda.org) used as a public perf-baseline dataset, so its
+# perf-baselines/ subdir is whitelisted for tracking.
+trial-runs/*
+!trial-runs/fossda-opensource/
+trial-runs/fossda-opensource/*
+!trial-runs/fossda-opensource/perf-baselines/
+!trial-runs/fossda-opensource/perf-baselines/**
 .nova/
 plan.md
 git-cheatsheet.md
@@ -44,6 +52,10 @@ docs/mockups/fonts/*.otf
 node_modules/
 bristlenose/server/static/
 *.tsbuildinfo
+
+# Stress-test runtime snapshot (written by the Playwright spec when run
+# directly, without the orchestrator setting $STRESS_RESULTS_PATH).
+e2e/stress-results.json
 
 # Desktop app — bundled binaries and Xcode build artifacts
 desktop/Bristlenose/Resources/bristlenose-sidecar/

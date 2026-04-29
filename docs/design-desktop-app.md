@@ -1,3 +1,25 @@
+---
+status: mixed
+last-trued: 2026-04-24
+trued-against: HEAD@port-v01-ingestion on 2026-04-24
+split-candidate: true
+---
+
+> **Truing status:** Mixed — the v0.1 single-window launcher Vision / PRD / User Flow / Project Structure sections are superseded by the v0.2 multi-project shell shipping in this branch (3d9f43c port + ongoing). Retained as planning history; do not treat the body as current UX truth. For current authority:
+>
+> - [design-project-sidebar.md](design-project-sidebar.md) — sidebar, drop matrix, menus, state model
+> - [design-subprocess-lifecycle.md](design-subprocess-lifecycle.md) — orphan attach, PID files, cancel/resume semantics
+> - [design-pipeline-resilience.md](design-pipeline-resilience.md) — manifest + resume + provenance
+> - [../desktop/CLAUDE.md](../desktop/CLAUDE.md) — shipped architecture, conventions, gotchas
+>
+> Specific section-level drifts noted inline with `Superseded 2026-04-23` banners (ServeManager signal, pipeline-running/failed UI placement, v0.1→v1 transition).
+
+## Changelog
+
+- _2026-04-24_ — Tier 1 truing follow-up (post `design-doc-review` audit): fixed two stranded `SIGTERM` mentions in §"Cleanup" body and §"Multi-window (future)" that the previous SIGINT banner only covered for the diagram (`docs/design-desktop-app.md:1139, 1143`); added section-head banners on §"Native menu bar" (redirects to `design-desktop-menu-actions.md`), §"Bridge protocol (expanded)" (redirects to `desktop/CLAUDE.md` "Bridge communication"), and §"WKWebView configuration" (corrects the per-project-config claim — shipped is `SharedConfigStore` singleton with `.nonPersistent()` shared instance for BroadcastChannel).
+- _2026-04-23_ — trued up during port-v01-ingestion QA: added top-of-file supersession banner; inline-banner'd ServeManager-signal claim (SIGINT, not SIGTERM); inline-banner'd sidebar-row pipeline-progress UI (shipped is toolbar pill `PipelineActivityItem`, not row badge); inline-banner'd v0.1→v1 transition section (substantially landed in port-v01-ingestion). Body preserved as planning history. Anchors: `PipelineRunner.swift`, `ContentView.swift:754-761`, `PipelineActivityItem.swift`. Commits: 3d9f43c.
+- _Feb 2026_ — initial draft (v0.1 launcher vision).
+
 # Bristlenose Desktop App
 
 _Design document — Feb 2026_
@@ -660,7 +682,7 @@ The `projects.json` index (see `docs/design-multi-project.md`) currently stores 
 
 ### App Store sandbox guardrails
 
-v0.1 ships as a notarized `.dmg` with sandbox disabled — correct for user testing. The App Store is the endgame. These rules prevent us adding things now that have to be undone later. The full sandbox spec is in `docs/design-desktop-distribution.md` and `ROADMAP.md` (milestone 10). This section is just the "don't paint yourself into a corner" checklist for day-to-day development.
+v0.1 shipped to friends with sandbox disabled — correct for early user testing. Alpha onwards ships via the App Store. These rules prevent us adding things now that have to be undone later. The active sidecar mechanics + entitlement spec live in `docs/design-desktop-python-runtime.md`; the cross-channel "what ships where" decisions in `docs/design-modularity.md`. This section is just the "don't paint yourself into a corner" checklist for day-to-day development.
 
 **File access — the #1 source of rework:**
 
@@ -782,6 +804,8 @@ Cross-referenced against the [macOS Human Interface Guidelines](https://develope
 | Append "..." when menu item requires additional input | Added ellipses to: Rename..., Export Report..., Browse Codebooks..., etc. |
 
 ### Native menu bar
+
+> **Superseded 2026-04-24.** Canonical menu-bar catalogue is `docs/design-desktop-menu-actions.md` (matched against `desktop/Bristlenose/Bristlenose/MenuCommands.swift`). The shipped menu bar ships ~89 items across 10 menus with the dual-pattern split (NotificationCenter for native sidebar ops, `bridgeHandler.menuAction` for web layer). Treat the spec below as planning history; consult the catalogue for current shortcuts and wiring.
 
 Every command in the app must be reachable from the menu bar — this is macOS, not Slack. The menu bar is the primary discovery mechanism for keyboard shortcuts and features.
 
@@ -934,6 +958,8 @@ Every command in the app must be reachable from the menu bar — this is macOS, 
 - System-registered **MPNowPlayingInfoCenter** + **MPRemoteCommandCenter** integration is a future enhancement — would make keyboard media keys (play/pause on Touch Bar / function row) and the Control Center Now Playing widget work automatically. Requires bridging the HTML5 Media Session API from WKWebView.
 
 ### Bridge protocol (expanded)
+
+> **Superseded 2026-04-24.** Canonical inbound/outbound bridge spec lives in `desktop/CLAUDE.md` "Bridge communication" — the shipped inbound types are `ready`, `route-change`, `editing-started`, `editing-ended`, `focus-change`, `undo-state`, `player-state`, `project-action`, `find-pasteboard-write`. Outbound is unified through `bridgeHandler.menuAction(action, payload)` (single dispatch point, ~89 actions) plus `switchToTab(tab)` and `goBack`/`goForward`. The expanded message-type table below predates this consolidation.
 
 The initial bridge (3 message types) needs expansion to support the full menu bar. The mechanism is simple and extensible — just more message types and a dispatch function.
 
@@ -1107,7 +1133,7 @@ One serve process per active project, managed by a `ServeManager` observable obj
                     │Switching│ → new process starts, old stays alive
                     └────┬────┘
                          │ new process ready
-                         │ old process gets SIGTERM (graceful, 5s timeout → SIGKILL)
+                         │ old process gets SIGINT (superseded — see banner below)
                          └──→ Active (new project)
 ```
 
@@ -1115,9 +1141,11 @@ One serve process per active project, managed by a `ServeManager` observable obj
 
 **Failure handling:** If the serve process doesn't output "Uvicorn running on..." within 10 seconds, or the `ready` bridge message doesn't arrive within 15 seconds of page load, transition to `Failed` state. Show error sheet: stderr log, [Retry] [Dismiss]. During `Switching`, do NOT navigate the WKWebView or SIGTERM the old process until the new one reaches `Active`. If the new process fails, cancel the switch — restore old WKWebView to full opacity with an error toast.
 
-**Cleanup:** `applicationWillTerminate` sends `SIGTERM` to all managed processes. `atexit` handler catches crashes. `ServeManager` tracks PIDs and ports in an in-memory dictionary — no persistent state.
+**Cleanup:** `applicationWillTerminate` sends `SIGINT` to all managed processes. `atexit` handler catches crashes. `ServeManager` tracks PIDs and ports in an in-memory dictionary — no persistent state.
 
-**Multi-window (future):** Each popped-out report window keeps its serve process alive independently. `ServeManager` reference-counts: process lives as long as at least one window references it. Last window closes → `SIGTERM`.
+> **Superseded 2026-04-23.** Shipped signal is **SIGINT**, not SIGTERM (Python CLI's atexit handlers flush manifest writes on SIGINT; SIGTERM bypasses them). See `desktop/CLAUDE.md` "Key conventions" and `PipelineRunner.swift:630`, `ServeManager.swift`. For `bristlenose run` subprocesses (not covered by this section), ServeManager no longer owns them — they have their own PID-file lifecycle managed by `PipelineRunner`; see `design-subprocess-lifecycle.md`.
+
+**Multi-window (future):** Each popped-out report window keeps its serve process alive independently. `ServeManager` reference-counts: process lives as long as at least one window references it. Last window closes → `SIGINT`.
 
 ### Loading and transition states
 
@@ -1128,9 +1156,17 @@ One serve process per active project, managed by a `ServeManager` observable obj
 | **Tab switch** (`Cmd+1-5`) | Instant — `evaluateJavaScript` changes the URL, React Router handles client-side transition. No native loading state needed | < 100ms |
 | **Pipeline running** | Sidebar project row shows a spinning activity indicator (replaces status badge). Main content stays on current report. Progress streams to a sheet or popover anchored to the sidebar row | Minutes |
 | **Pipeline failed** | Activity indicator replaced by red exclamation badge. Clicking the badge opens a sheet: error message, stdout/stderr log, [Retry] [Copy Error] [Dismiss]. If partial output exists (transcription done, analysis failed): [View Partial Report] button | — |
+
+> **Superseded 2026-04-23** — two rows above describe pipeline progress/failure on the sidebar row. Shipped reality is the **toolbar-trailing pill** (`PipelineActivityItem` in `ContentView.swift:754-761`) with a popover for stage/elapsed/Stop/Retry; sidebar rows carry only a short subtitle ("Analysing…", "Transcription failed", "Analysed N min ago"). `[View Partial Report]` affordance is not shipped. See `design-project-sidebar.md` inline banner on "Activity status bar" and `design-subprocess-lifecycle.md` for the surfacing model.
 | **No project selected** (empty state) | Sidebar shows `+ Add Project` and project list. Main area shows a drop zone with one sentence: _"Drag a folder of interviews here, or click + Add Project"_ | — |
 
 ### WKWebView configuration
+
+> **Superseded 2026-04-24.** Shipped reality differs from this section in two important ways:
+> 1. The `WKWebsiteDataStore` is a **shared singleton** (`SharedConfigStore.shared.dataStore` — a single `.nonPersistent()` instance reused by every WKWebView), NOT per-project. This is required for cross-WKWebView `BroadcastChannel` to work — `.nonPersistent()` creates a new isolated partition on every call, so two views that each call it independently are fully isolated. See `desktop/CLAUDE.md` "WKWebView cross-view messaging" and `docs/design-wkwebview-messaging.md`.
+> 2. The "Per-project WKWebViewConfiguration" point in §"WKWebView security hardening" #4 below directly contradicts this. The shipped pattern is shared data store + per-view `WKWebViewConfiguration` (each view needs its own config because `userContentController` cannot be shared).
+>
+> Refer to `desktop/CLAUDE.md` and `docs/design-wkwebview-messaging.md` as canonical for the WKWebView wiring; the rest of this section is retained for planning history.
 
 **Process pool:** One shared `WKProcessPool` across all WKWebViews for v1 (saves memory, shares cookies/session storage). Per-project pools if multi-window ships and isolation matters.
 
@@ -1186,6 +1222,8 @@ These were flagged as open questions. Now answered:
 | 8 | Add Tag shortcut | `Cmd+Shift+T` — closest to `Cmd+T` without conflicting with Show Fonts. Not ideal, but functional. Revisit after user testing | `Cmd+D` conflicts with "Add Bookmark" muscle memory. `Ctrl+T` violates the "avoid Control" HIG guideline |
 
 ### v0.1 → v1 transition
+
+> **Superseded 2026-04-23.** The transition described below has substantially landed in branch `port-v01-ingestion` (commit 3d9f43c "port v0.1 pipeline ingestion into v0.2 multi-project shell"). Sidebar, WKWebView, drop-to-analyse, and multi-project state all ship. Remaining gaps from this section: Sparkle auto-update (Track C/C1 distribution work), auto-import of v0.1 projects (v0.1 user base is effectively zero — skipped). Section retained as planning history.
 
 Same app, same bundle ID. v1 replaces v0.1 as an update (`.dmg` swap or auto-update via Sparkle).
 

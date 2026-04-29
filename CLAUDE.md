@@ -22,7 +22,7 @@ Bristlenose is a local-first user-research analysis tool. It takes a folder of i
 - **Licence**: AGPL-3.0 with CLA
 - **Provider naming**: user-facing text says "Claude", "ChatGPT", and "Azure OpenAI" (product names), not "Anthropic" and "OpenAI" (company names). Researchers know the products, not the companies. Internal code uses `"anthropic"` / `"openai"` / `"azure"` as config values — that's fine, only human-readable strings need product names
 - **Changelog version/date format**: `**X.Y.Z** — _D Mon YYYY_` (e.g. `**0.8.1** — _7 Feb 2026_`). Bold version, em dash, italic date. No hyphens in dates, no leading zero on day. Used in both `CHANGELOG.md` and the changelog section of `README.md`
-- **React is the primary rendering path (Feb 2026).** All visual/design work targets the React serve version (`bristlenose serve`). The static HTML renderer (`bristlenose/stages/s12_render/`) is **deprecated** — it ships correct data but does not receive design updates. `render_html()` emits a `DeprecationWarning`. Rules: (1) New features and design changes: React only. (2) CSS in `bristlenose/theme/` is shared — CSS changes apply to both paths automatically. (3) Vanilla JS in `bristlenose/theme/js/` is frozen — data-integrity fixes only, no feature work. (4) When a section becomes a React island, its Jinja2 equivalent becomes dead code — stop maintaining it. (5) The `bristlenose render` CLI command continues to work for users who want offline HTML, but it's the "frozen snapshot" format, not the actively developed experience. (6) The old monolithic `render_html.py` was refactored into `bristlenose/stages/s12_render/` package (Mar 2026): `theme_assets.py`, `html_helpers.py`, `quote_format.py`, `sentiment.py`, `dashboard.py`, `transcript_pages.py`, `standalone_pages.py`, `report.py`
+- **The React SPA is the product. The static renderer is vestigial scaffolding (updated 21 Apr 2026).** `bristlenose serve` + the React SPA is the interactive experience. The legitimate offline-share path is: open in serve mode, browse, click **Export HTML** in the toolbar — produces a self-contained file with all the modern features (the Export endpoint embeds the React bundle + JSON; doesn't call `s12_render/` at all). The Jinja2 static renderer at `bristlenose/stages/s12_render/` is **scaffolding from the React-migration era that hasn't been removed yet**: stage 12 of `bristlenose run` still writes a frozen-design HTML to disk, and `bristlenose render` still regenerates it, but neither has design parity with the React SPA and neither is the product offering. Treat both as deprecated CLI surfaces that will be deleted once we're sure no workflows depend on them. Rules: (1) New features and design changes go to the React SPA only. (2) CSS in `bristlenose/theme/` is shared between the React build and static render incidentally — the static render still loads it, but design intent lives in `frontend/`. (3) Vanilla JS in `bristlenose/theme/js/` is frozen — data-integrity fixes only. (4) **Serve mode never falls back to static render.** If the React SPA is missing from the bundle, `_mount_prod_report` returns 500 with a clear error page (fail-loud) rather than silently serving the static HTML — that fallback masked BUG-3 in the C3 smoke test. (5) The old monolithic `render_html.py` was refactored into `bristlenose/stages/s12_render/` package (Mar 2026): `theme_assets.py`, `html_helpers.py`, `quote_format.py`, `sentiment.py`, `dashboard.py`, `transcript_pages.py`, `standalone_pages.py`, `report.py` — kept readable in case anyone needs to extract data-extraction logic; the rendering layer itself is on the deletion path.
 
 ## Architecture
 
@@ -32,7 +32,7 @@ CLI commands: `run` (full pipeline), `transcribe-only`, `analyze` (skip transcri
 
 Serve mode: FastAPI + SQLite + React SPA. See `bristlenose/server/CLAUDE.md` for architecture.
 
-Desktop app: `desktop/` — SwiftUI macOS shell. See `docs/design-desktop-app.md`.
+Desktop app: `desktop/` — SwiftUI macOS shell. Alpha ships a bundled, signed PyInstaller sidecar running `bristlenose serve`, distributed via internal TestFlight. v0.2 currently uses launcher-style scaffolding (dev-only, not shippable). See `docs/design-desktop-app.md` for the overall app design, `docs/design-modularity.md` for cross-channel component decisions (CLI ≡ macOS Python code; packaging differences only), and `docs/private/road-to-alpha.md` for the 14-checkpoint path to TestFlight.
 
 Frontend: `frontend/` — Vite + React + TypeScript + React Router. See `frontend/CLAUDE.md` for gotchas and architecture.
 
@@ -62,7 +62,11 @@ Key helpers: `OutputPaths` in `output_paths.py` (consistent path construction), 
 - **Design artifacts** (tracked, not shipped): `docs/mockups/`, `docs/design-system/`, `experiments/` — HTML mockups, style guides, throwaway prototypes. These are working materials for contributors, kept in the tree for backup and collaboration. Users never navigate to them. Add new mockups to `docs/mockups/`, not the repo root. **Serve mode auto-discovery**: `bristlenose serve --dev` mounts all three directories and auto-discovers `*.html` files for the Design section in the About tab (`_build_dev_section_html()` in `app.py`). New HTML files added to these directories appear automatically — no code changes needed
 - **Website** (deployed): `website/` — static HTML/CSS for bristlenose.app. Deploy with `/deploy-website` skill or `deploy-website` shell alias. See `docs/private/deploy-website.md`. **Note:** rsync deploy needs SSH agent access — Claude Code's sandbox can't reach it, so the user runs the deploy command manually
 - **Never touch**: `.env`, output directories, `bristlenose/theme/images/`
-- **Gitignored (private)**: `docs/private/`, `trial-runs/` — contain names, contacts, and value judgements not suitable for a public repo
+- **Gitignored (private)**: `docs/private/`, `trial-runs/` — contain names, contacts, strategy, pricing, legal drafts, and value judgements that don't belong on the public repo. Local-only, backed up by a separate code-backup script, never committed to git. Do not suggest `git add -f` for files here.
+
+## Deployment targets
+
+Bristlenose runs on three targets: macOS arm64 (primary dev), Linux x86_64 via GitHub Actions CI (release pipeline), and — newly — Claude Code Cloud VMs (ephemeral Ubuntu x86_64,  but reachable when the user picks Cloud in the picker). Cloud is useful for code/test/lint/frontend-build work, **not** for pipeline runs on private interview data. See `docs/design-deployment-targets.md for the audit checklist and use-case boundary table.
 
 ## HTML report features
 
@@ -98,32 +102,31 @@ macOS ships BSD versions of `sed`, `grep`, `awk`, `find`, `xargs`, `date`, `stat
 
 ### i18n — single source of truth
 
-- **Locale files live in `bristlenose/locales/` only** — `frontend/src/locales/` was deleted. The frontend imports from the canonical location via Vite alias `@locales`. Don't create locale files in the frontend tree
-- **`I18n.swift` reads the same JSON** — the desktop app's `I18n` class loads from `bristlenose/locales/` at runtime. Dotted key lookup: `i18n.t("desktop.menu.file.print")`. Falls back English → raw key
-- **SwiftUI `CommandMenu` titles can't use runtime strings** — `CommandMenu("Project")` uses `LocalizedStringKey` (`.lproj` bundles). Menu titles stay in English; only items inside are translated. See `docs/design-i18n.md`
-- **Toolbar `_short` keys** — `common.nav.codebookShort` exists for languages where the full label overflows the segmented control (es: "Códigos" instead of "Libro de códigos"). `Tab.localizedLabel()` checks `_short` first
-- **Apple glossary cross-check is mandatory** before shipping a new language — use [applelocalization.com](https://applelocalization.com/) or the macOS keyboard shortcuts page in the target locale. See `docs/design-i18n.md` for the full process and the Spanish cross-check results
-- **`useTranslation()` is the hook; `i18n.t()` is the direct import** — use the hook inside React components, use `import i18n from "../i18n"` + `i18n.t()` in stores, announce utilities, and other non-component code (e.g. `QuotesContext.tsx`, `AppLayout.tsx` route announcements)
-- **`useMemo` deps for translated arrays** — `t` function identity doesn't change on locale switch. Use `[t, i18n.language]` as dependency, or skip `useMemo` entirely for small arrays (2–5 items). See `ViewSwitcher.tsx` (inline) vs `HelpModal.tsx` (useMemo with language dep)
-- **`i18n/index.ts` initialises test-setup** — `frontend/src/test-setup.ts` imports `"./i18n"` so all tests get English translations by default. `t("nav.project")` returns `"Project"` in tests — no test rewrites needed for i18n wiring
-- **Sentiment tag translation in Badge** — `Badge.tsx` looks up `enums:sentiment.${text}` when `sentiment` prop is truthy. This translates API-returned lowercase sentiment names ("frustration") to locale-correct labels ("Frustration" / "Verwirrung"). Tests must expect capitalised forms
-- **Built-in codebook groups translate client-side** — sentiment group (`colour_set === "sentiment"`) and uncategorised group (`name === "Uncategorised"`) have their names/subtitles translated in `CodebookPanel.tsx` using locale keys. Other codebook names are user data and stay untranslated
-- **`format.ts` uses `Intl.DateTimeFormat`** — `formatFinderDate` and `formatCompactDate` accept an optional `locale` param. Callers pass `i18n.language`. Internally, any `en*` locale (including bare `"en"` from i18next and `"en-US"` from jsdom in tests) is mapped to `"en-GB"` to preserve day-month order ("12 Feb" not "Feb 12"). Non-English locales pass through unchanged. `formatFinderDate` uses `Intl.RelativeTimeFormat` for "today"/"yesterday"
-- **`<html lang>` tracking** — `i18n.on("languageChanged")` in `i18n/index.ts` sets `document.documentElement.lang`. Required for screen reader pronunciation
-- **Korean has no plural forms** — only `_other` keys needed in locale files (no `_one`). i18next CLDR rules handle this automatically
-- **New keys must go in all 6 locale files** — en, es, fr, de, ko, ja. Every `t("key")` call needs a corresponding entry in each. If using `dt()`, the desktop override must also go in all 6 `desktop.json` files. Use machine translation for initial pass, flag for human review
-- **Data-level vs chrome-level translation** — UI chrome (buttons, headings, labels) translates via `t()`. API data (codebook names, quote text, section labels) stays in the original language. Exceptions: sentiment group name/subtitle and uncategorised group are server constants that get client-side translation
-- **Platform text forking** — `dt(t, key)` checks `desktop:` namespace first (falls back to base key). `ct(t, key)` returns `null` on desktop (hides CLI-only text). Both in `frontend/src/utils/platformTranslation.ts`. Desktop namespace loaded conditionally in `i18n/index.ts` when `data-platform="desktop"` is set. See `docs/platform-text-map.md` for the full inventory and decision tree
-- **German typographic quotes break JSON** — `„"` (U+201E / U+201C) look like JSON string delimiters to parsers. Escape as `\u201e` / `\u201c` in locale JSON files. Caught in `de/desktop.json` during platform text fork work
-- **Tests that mock `../utils/platform` must include `isDesktop`** — `HelpModal.test.tsx` mocked only `isMac`, which broke when `ContributingSection` started importing `dt()` (which imports `isDesktop`). Always mock `{ isMac, isDesktop, _resetPlatformCache }` together
+- **Locale files live in `bristlenose/locales/` only** — `frontend/src/locales/` was deleted. The frontend imports via Vite alias `@locales`. Don't create locale files in the frontend tree. `I18n.swift` (desktop) reads the same JSON at runtime
+- **`useTranslation()` is the hook; `i18n.t()` is the direct import** — use the hook inside React components; use `import i18n from "../i18n"` + `i18n.t()` in stores, announce utilities, and other non-component code
+- **New keys must go in all 6 locale files** — en, es, fr, de, ko, ja. Every `t("key")` call needs an entry in each. If using `dt()`, the desktop override must also go in all 6 `desktop.json` files
+- **Platform text forking** — `dt(t, key)` checks `desktop:` namespace first (falls back to base key). `ct(t, key)` returns `null` on desktop (hides CLI-only text). Both in `frontend/src/utils/platformTranslation.ts`. See `docs/platform-text-map.md`
+- **SwiftUI `CommandMenu` titles can't use runtime strings** — menu titles stay in English; only items inside are translated
+
+See `docs/design-i18n.md` for implementation gotchas (Apple glossary cross-check, `useMemo` deps, sentiment tag translation, Intl.DateTimeFormat quirks, Korean plurals, data vs chrome translation, German typographic quote JSON escaping, test mocking requirements).
 
 ### Other gotchas
 
+- **E2E allowlists must be registered.** Every `if (...) return;`-style suppression inside a Playwright spec (e.g. "this 404 is expected") needs (a) a matching entry in `e2e/ALLOWLIST.md` and (b) a `// ci-allowlist: CI-A<N>` comment marker above the code. Categories: `infra` (stack artefact, never fixable) / `by-design` (intentional correct behaviour) / `deferred-fix` (real bug, must link to 100days.md tracker). Prevents the e2e gate from accumulating silent suppressions nobody can audit six months later. See the register header for schema, retired IDs, and v2 tooling (validator + staleness gate, deferred until ~10 entries).
+- **PyInstaller bundle datas: source dir present ≠ bundle dir present.** Non-`.py` runtime files (YAML, JSON, Markdown, JS, CSS, etc.) only ship if they're in `desktop/bristlenose-sidecar.spec`'s `datas=[...]` list. Python packages get bytecompiled into `base_library.zip` automatically; data files don't. Discovered the hard way during C3 smoke test (BUG-3/4/5: React SPA `static/`, `server/codebook/*.yaml`, `llm/prompts/*.md` all missing). Two gates land catching this class: `desktop/scripts/check-bundle-manifest.sh` (source→spec, ~60ms, runs in `build-all.sh` step 1b) and `bristlenose doctor --self-test` (spec→bundle, ~2-3s, runs in step 2a). Unit tests can't catch this — they run against `pip install -e .` where data files live at their real paths
+- **macOS BSD `find -regextype` doesn't exist** (subset of the BSD/GNU userland gotcha below) — when scripting cross-platform shell, use `find ... -name "*.ext" -print | grep -E pattern` not `find ... -regex`. Hit during C3 when writing `check-bundle-manifest.sh`
+- **`from __future__ import annotations` doesn't satisfy ruff F821 if the annotated name isn't imported.** Type annotations become strings at runtime, but ruff's F821 still validates that the name is reachable in the module scope. So `def foo() -> Path:` with a per-function `from pathlib import Path` inside the body fails F821. Move the import to top-of-file. Hit during C3 doctor self-test work
+- **The static render is vestigial scaffolding, not a fallback.** `bristlenose/stages/s12_render/` and `bristlenose render` CLI command are React-migration-era leftovers — pixel/feature-incomplete vs the React SPA, on the eventual-deletion path. The legitimate offline-share product is `bristlenose serve` → browse → **Export HTML** in toolbar (which embeds the React bundle, doesn't touch `s12_render/`). Serve mode does NOT fall back to the static render when the React bundle is missing — it returns 500 with a "Build incomplete" page (changed in C3 P1). If you find code or docs that treat the static render as a "first-class CLI product" or "fallback in serve mode," that framing is stale; the package is leftover scaffolding that's gradually being audited for deletion
+- **E2E tests: stale server on port 8150 gives wrong results** — `playwright.config.ts` uses `reuseExistingServer: !process.env.CI`. If a previous `bristlenose serve` is running locally on port 8150 (e.g. from `bristlenose serve trial-runs/project-ikea`), Playwright silently connects to it instead of starting the smoke-test fixture. This produces completely wrong measurements (353 quotes instead of 4). Always check `lsof -i :8150` before running E2E tests locally. In CI this can't happen (`reuseExistingServer: false`). The perf-gate spec has a server identity guard (`project_name === "Smoke Test"`) to catch this
+- **E2E Node-side `fetch()` needs auth token explicitly** — Playwright's `extraHTTPHeaders` only applies to browser contexts (page navigation). Node-side `fetch()` in test fixtures gets 401'd without the bearer token. `e2e/fixtures/routes.ts` reads `_BRISTLENOSE_AUTH_TOKEN` from env and passes it via `authHeaders()`. Set the env var when running E2E tests: `_BRISTLENOSE_AUTH_TOKEN=test-token npx playwright test`
+- **E2E: `waitForLoadState('networkidle')` is too fragile for SPAs** — fires after a 500ms idle window, which can beat deferred `useEffect` mounts on slow CI runners. Missed nodes look like "passed" tests and you measure the wrong state. In `perf-gate.spec.ts` the pattern is a `waitForPageReady()` helper that chains: `networkidle` → wait for `#bn-app-root` children → wait for `document.querySelectorAll('*').length` to be stable across two 200ms polls. Copy this pattern for any E2E spec that measures DOM state
+- **E2E: in-browser `fetch()` in `page.evaluate` can silently 401** — a dropped auth token turns into 1ms latency and a ~50-byte error body. Without `res.ok` assertions this registers as "excellent latency" and sails past size thresholds. Always assert `res.ok` inside the evaluate (`expect(ok).toBe(true)`) AND add a sanity floor for payload sizes (`expect(sizeBytes).toBeGreaterThan(500_000)` when real size is ~1.6 MB). The server identity guard (first test, serial mode) catches most cases but defence-in-depth matters
 - **Export JSON: always `ensure_ascii=True`** — `json.dumps(ensure_ascii=False)` does NOT escape `</script>` inside `<script>` tags. This is an XSS vector. The export endpoint embeds data as JSON in a script block — `ensure_ascii=True` escapes `<` as `\u003c`, preventing breakout. Fixed in v0.14.2
 - **Export filenames: use `safe_filename()` not `slugify()`** — `slugify()` lowercases and hyphenates (`"Acme Research"` → `"acme-research"`). `safe_filename()` preserves spaces and case for human-readable Finder names. Both are in `bristlenose/utils/text.py`. Use `safe_filename()` for all export naming (zip folders, transcript files, clip files, download filenames)
 - **Tests must not depend on local environment** — CI runs with no API keys, no Ollama, no local config. Always mock environment-dependent functions. The v0.6.7–v0.6.13 release failures were caused by tests that passed locally but failed in CI
 - **PII redaction: `model_copy()` is shallow** — when redacting transcript segments, `seg.model_copy()` copies the Pydantic model but `words` (a list of `Word` objects) still references the original unredacted words. Always clear `clean_seg.words = []` after replacing `clean_seg.text`. Same caution applies to any field that might contain PII (`speaker_label`, `source_file`)
 - **PII summary is a re-identification key** — `pii_summary.txt` lists every original PII value with timecodes. It lives in `.bristlenose/` (hidden), NOT in the shareable output root. Never move it back to the output directory
+- **LLM call log is a re-identification key** — `<output_dir>/.bristlenose/llm-calls.jsonl` carries session ids, prompt shas, and timing fingerprints (sibling to `pii_summary.txt`). Never include in any export, support bundle, or shareable archive. Mode `0o600` + `O_NOFOLLOW` enforced by `bristlenose/llm/telemetry.py`. Kill switch: `BRISTLENOSE_LLM_TELEMETRY=0`
 - **`pii_score_threshold` is the only PII config that's wired** — `pii_llm_pass` and `pii_custom_names` are declared in `config.py` but not used by `s07_pii_removal.py`. They emit runtime warnings when set. Don't write code that reads them without implementing the feature first
 - **Presidio slow tests need spaCy model** — `@pytest.mark.slow` tests in `test_pii_audit.py` require `presidio-analyzer` + `spacy` + `en_core_web_lg` (400MB download). They're skipped in CI. Run with `pytest -m slow`
 - The repo directory is `/Users/cassio/Code/bristlenose`
@@ -133,87 +136,89 @@ macOS ships BSD versions of `sed`, `grep`, `awk`, `find`, `xargs`, `date`, `stat
 - `doctor.py` imports `platform` and `urllib` locally inside function bodies (not at module level). When testing, patch at stdlib level (`patch("platform.system")`) not module level
 - `check_backend()` catches `Exception` (not just `ImportError`) for faster_whisper import — torch native libs can raise `OSError` on some machines
 - **Never remove a worktree from inside it.** Always `cd /Users/cassio/Code/bristlenose` first, then `git worktree remove ...`. See `docs/BRANCHES.md`
+- **`git checkout --theirs/--ours` is blocked during merges in the main repo** — the `.claude/hooks/block-checkout.sh` PreToolUse hook intercepts every `git checkout` to prevent feature-branch checkouts in `bristlenose/`. It can't distinguish "checkout a branch" from "resolve a conflicted file via --theirs/--ours." Workaround: write the index stage directly. `git show :3:path/to/file > path/to/file` takes the branch (theirs) version; `:2:` takes HEAD (ours); `:1:` takes the merge-base. Then `git add path/to/file` to stage. Used during the sidecar-signing merge (29 Apr 2026)
 - **Renaming the repo directory breaks the venv.** Fix: `find . -name __pycache__ -exec rm -rf {} +` then `.venv/bin/python -m pip install -e '.[dev]'`
+- **Python 3.14's `ensurepip` is broken for `python -m venv` on some macOS installs.** If default `python3` points at 3.14 (brew-installed), `/new-feature` (or plain `python3 -m venv .venv`) fails with `ensurepip --upgrade --default-pip returned non-zero exit status 1`. Fix: use `python3.12 -m venv .venv` explicitly — 3.12 is what CI uses and what every other worktree uses. This will shake out when 3.14 tooling stabilises, but as of April 2026 it's a real papercut on fresh worktree setup
 - **Stale `__pycache__` can serve old CSS after theme edits.** `bristlenose render` reads CSS files at runtime, but stale `.pyc` bytecode can interfere with the import chain. If theme CSS changes aren't appearing in the rendered output, run `find . -name __pycache__ -exec rm -rf {} +` before rendering. For daily dev, set `export PYTHONDONTWRITEBYTECODE=1` in your shell profile to prevent `.pyc` creation entirely
 - **`Console(width=min(80, Console().width))`** — the `Console()` inside `min()` is a throwaway instance that auto-detects the real terminal width. This is the intended pattern; don't cache it
 - **Homebrew tap repo must be named `homebrew-bristlenose`** (not `bristlenose-homebrew`). See `docs/design-homebrew-packaging.md`
 - **Homebrew formula uses `post_install` pip to avoid dylib relinking failures.** See `docs/design-homebrew-packaging.md`
 - **`BRISTLENOSE_FAKE_THUMBNAILS=1`** env var — layout testing only. Defined as `_FAKE_THUMBNAILS` in `bristlenose/stages/s12_render/dashboard.py`
-- **Logging**: two independent knobs — `-v` controls terminal (WARNING/DEBUG), `BRISTLENOSE_LOG_LEVEL` env var controls log file (default INFO). See `docs/design-logging.md`
+- **Logging**: two independent knobs — `-v` controls terminal (WARNING/DEBUG), `BRISTLENOSE_LOG_LEVEL` env var controls log file (default INFO). Log file lives at `<output_dir>/.bristlenose/bristlenose.log` — **not** at `.bristlenose/bristlenose.log` relative to cwd. When grepping per-project logs, always prefix with the output dir. See `docs/design-logging.md`
+- **LLM request latency**: every `LLMClient.analyze()` call emits one INFO line `llm_request | provider=X | model=Y | elapsed_ms=N | schema=Z` (added Apr 2026 for perf baselining). Greppable for median/p95 analysis — see `docs/design-perf-fossda-baseline.md` step 6. New providers get this automatically (wrapping is in the dispatcher, not per-provider)
 - For React/TypeScript/frontend gotchas (routing, video player, stores, testing), see `frontend/CLAUDE.md`
 - For pipeline runtime gotchas (resume, caching, llm_client lifecycle, metadata), see `bristlenose/stages/CLAUDE.md`
 - For stage/pipeline gotchas (topic maps, transcripts, coverage, speaker codes), see `bristlenose/stages/CLAUDE.md`
 - For JS/CSS/report gotchas (load order, modals, hidden quotes, toolbar), see `bristlenose/theme/CLAUDE.md`
 - For LLM/provider gotchas (Azure, Ollama, provider registry, max_tokens), see `bristlenose/llm/CLAUDE.md`
+- **Cloud-session `claude/...` branches: cherry-pick the docs, drop the staging dir.** When a Claude Code Cloud session (often phone-started) creates a `claude/<name>-XXXXX` branch, it tends to dump work into a staging dir like `_<name>-extract-me/` plus a design doc. The script/rules usually get installed to `~/bin/` + `~/.claude/` on the Mac during the session, so the staging dir is throwaway. Rescue pattern: `git checkout main && git checkout origin/claude/<name>-XXXXX -- docs/design-<thing>.md && git commit && git push && git branch -D … && git push origin --delete …`. Don't merge the whole branch — the staging dir doesn't belong in the tree. Also: the cloud session may leave the main repo dir checked out to the feature branch with stale "modifications" that are just main's progression — `git checkout -- <files>` is safe (vs-main diff is empty)
+- **Release-to-PyPI workflow doesn't always fire on tag push via `--tags`** — `git push origin main --tags` triggers the branch-push workflows (CI, CodeQL, Snap) but the tag-driven `Release to PyPI` workflow can silently miss the event. Workaround: `git push --delete origin v<X.Y.Z> && git push origin v<X.Y.Z>` — same SHA, fresh trigger, semantic no-op. Observed v0.15.0 (26 Apr 2026); root cause appears to be GitHub Actions debouncing tag-push events bundled with branch-push events. Future fix: add `workflow_dispatch:` to `release.yml` so it can be re-triggered without tag surgery
+- **Subprocess signal-handling tests: poll the events file, don't `proc.wait`** — `tests/test_run_lifecycle.py` originally used `proc.wait(timeout=15)` after sending SIGINT, then asserted on the cancel event. Failed on Python 3.10 / ubuntu-latest only — slow runner, the lifecycle's `KeyboardInterrupt` catch + `Cause` build + fsync took longer than 15 s under matrix CPU contention. Pattern that works: `_wait_for_event(f, predicate, timeout=30)` polling the events file, with `proc.wait(timeout=10)` only in the `finally` for cleanup. Monotonic against runner load. See `tests/test_run_lifecycle.py:_wait_for_event`
 
 ## Reference docs (read when working in these areas)
 
-- **Terminology glossary + tone guide** (canonical vocabulary, forbidden alternatives, spelling rules, voice): `docs/glossary.md` — **read this before writing any user-facing text**
-- **Platform text map** (which text is shared/desktop-only/CLI-only/forked, `dt()`/`ct()` inventory, decision tree): `docs/platform-text-map.md` — **read this before adding help text**
-- **Design decisions** (why choices were made, alternatives considered): `docs/design-decisions.md`
-- **Export: HTML report + cross-cutting concerns** (anonymisation matrix, shared infra, audit): `docs/design-export-html.md`
-- **Export: CSV/XLS quotes** (11-column schema, selection logic, export dropdown): `docs/design-export-quotes.md`
-- **Export: video clips** (FFmpeg/AVFoundation, naming, async toast): `docs/design-export-clips.md`
-- **Export: Miro bridge** (OAuth PKCE, board creation, layout — post-beta): `docs/design-miro-bridge.md`
-- **Export: original monolith** (superseded, kept for git history): `docs/design-export-sharing.md`
-- **Export dropdown + quote slides** (per-quote copy, scope→format cascade, .pptx format): `docs/design-export-slides.md`
-- **HTML report / people file / transcript pages**: `docs/design-html-report.md`
-- **Frontend / React / TypeScript / Vite**: `frontend/CLAUDE.md`
-- **Theme / dark mode / CSS conventions / gotchas**: `bristlenose/theme/CLAUDE.md`
-- **JS module API reference**: `bristlenose/theme/js/MODULES.md`
-- **CSS component reference**: `bristlenose/theme/CSS-REFERENCE.md`
-- **Responsive layout** (quote grid, density setting, breakpoints): `docs/design-responsive-layout.md` — content-level responsiveness. See `docs/design-sidebar-playground.md` for chrome-level (sidebar modes)
-- **Sidebar layout & responsive playground** (6-column grid, overlay, drag-resize, minimap, dev playground): `docs/design-sidebar-playground.md` — architecture, file map, token reference, QA checklist. **Read this before working on sidebar layout, overlay behaviour, or playground features**
-- **Pipeline stages / transcript format / output structure**: `bristlenose/stages/CLAUDE.md`
-- **LLM providers / credentials / concurrency**: `bristlenose/llm/CLAUDE.md`
-- **File map** (what lives where): `docs/file-map.md`
-- **Release process / CI / secrets**: `docs/release.md`
-- **Design system / contributing**: `CONTRIBUTING.md`
-- **Doctor command + Snap packaging design**: `docs/design-doctor-and-snap.md`
-- **Homebrew formula packaging** (dylib relinking workaround, alternatives, automation): `docs/design-homebrew-packaging.md`
-- **Platform transcript ingestion**: `docs/design-platform-transcripts.md`
-- **Transcript coverage feature**: `docs/design-transcript-coverage.md`
-- **CLI improvements**: `docs/design-cli-improvements.md`
-- **LLM provider roadmap**: `docs/design-llm-providers.md`
-- **React migration plan** (vanilla JS shell → full SPA, 10-step sequence): `docs/design-react-migration.md` — **the active plan.** Read this before working on serve-mode UI migration
-- **Reactive UI architecture / framework / migration** (partially superseded): `docs/design-reactive-ui.md` — framework choice, business risk, file:// audit remain valid reference
-- **Performance audit / optimisation decisions**: `docs/design-performance.md`
-- **Research methodology** (quote selection, sentiment taxonomy, clustering/theming rationale): `docs/design-research-methodology.md` — single source of truth for analytical decisions. **Read this before changing prompts or analysis logic.**
-- **Academic sources for analysis categories**: `docs/academic-sources.html` — theoretical foundations (emotion science, UX research, trust/credibility) behind quote tagging and sentiment analysis. **Update this file when investigating theories behind any Bristlenose features.**
-- **Analysis page** (signal concentration, metrics, rendering): `docs/BRANCHES.md` → `analysis` section — architecture, design decisions, file list, test coverage
-- **Analysis page future** (two-pane vision, grid-as-selector, user-tag grid, backlog): `docs/design-analysis-future.md`
-- **Inspector panel** (bottom heatmap panel, DevTools metaphor, drag-resize, card↔matrix sync): `docs/design-inspector-panel.md` — design exploration (3 mockup iterations), interaction spec, implementation prompt. **Read this before working on the analysis tab inspector panel**
-- **Finding weight** (signal direction, valence clarity, tag interpretability tiers, finding archetypes): `docs/design-finding-weight.md` — problem-space exploration for surfacing wins vs problems vs patterns in Analysis tab
-- **Quote sequences** (consecutive quote detection, segment ordinals, threshold tuning): `docs/design-quote-sequences.md`
-- **Dashboard stats** (inventory of unused pipeline data, improvement priorities): `docs/design-dashboard-stats.md`
-- **Logging** (persistent log file, two-knob system, instrumentation tiers): `docs/design-logging.md` — architecture, tier 1 implementation plan, backlog. **Read this before adding log lines**
-- **Minimap** (parallax scroll, stress-test math, interaction patterns): `docs/design-minimap.md` — VS Code-style abstract overview for Quotes tab, grid column 4 (between center and tag sidebar), scrollbar offset, parallax derivation
-- **Pipeline resilience / crash recovery / data integrity**: `docs/design-pipeline-resilience.md` — manifest, event sourcing, incremental re-runs, provenance. **Read this before working on pipeline state tracking, resume, or data validation**
-- **Server / data API / serve mode**: `bristlenose/server/CLAUDE.md`
-- **Footer feedback restore (React serve/export)**: `docs/design-footer-feedback-react.md`
-- **React component library** (16 primitives, complete): `docs/design-react-component-library.md` — primitive dictionary, coverage matrix, CSS alignment. All 16 primitives shipped
-- **CI architecture** (job structure, matrix strategy, informational vs blocking, artifacts, maintenance): `docs/design-ci.md`
-- **Testing & CI strategy** (gap audit, Playwright plan, visual regression, `data-testid` convention): `docs/design-test-strategy.md`
-- **Playwright E2E tests** (layers 1–3 implemented, layers 4–5 planned, output options, CI integration): `docs/design-playwright-testing.md`
-- **Installation guide**: `INSTALL.md` — detailed per-platform install instructions for non-technical users
-- **Desktop app** (macOS, SwiftUI, PyInstaller sidecar, .dmg distribution): `docs/design-desktop-app.md` — vision, PRD, stack rationale, user flow, open questions. **Read this before working in `desktop/`**
-- **Desktop app security audit** (WKWebView, sidecar, Keychain, sandbox, DASVS, Apple guidelines): `docs/design-desktop-security-audit.md` — challenges, opportunities, attack surface review, relevant standards. Items prioritised into `docs/private/100days.md`
-- **WKWebView cross-view messaging** (BroadcastChannel, data store sharing, spike results): `docs/design-wkwebview-messaging.md` — validated pattern for multi-WKWebView communication. **Read this before adding a second WKWebView to the desktop app**
-- **Multi-project awareness** (project index, person identity, lifecycle, assumptions audit, scope rules): `docs/design-multi-project.md` — data model future-proofing, single-project assumption inventory. Scope rules enforced in `bristlenose/server/CLAUDE.md`. **Read this before adding new DB tables or hardcoding project IDs**
-- **Project sidebar** (macOS desktop sidebar UX, menus, rename, drag-drop, delete/bin, 5-phase plan): `docs/design-project-sidebar.md` — Mail-style sidebar, Recently Deleted bin, inline rename, system selection highlight. **Read this before working on desktop multi-project UI**
-- **Session management** (re-import, session enable/disable, quarantine, pipeline re-run): `docs/design-session-management.md`
-- **Serve mode milestone 1** (domain schema, importer, sessions API): `docs/design-serve-milestone-1.md`
-- **Internationalisation** (codebook/sentiment translation strategy, UI chrome terminology research, mixed-language interviews): `docs/design-i18n.md` — terminology table sourced from ATLAS.ti/MAXQDA/NVivo localized UIs and academic QDA literature. **Read this before working on i18n or translation**
-- **Codebook island** (migration audit, API design, drag-drop decisions): `docs/design-codebook-island.md`
-- **Moderator question pill** (hover-triggered context reveal, interaction design, file map): `docs/design-moderator-question-pill.md`
-- **Signal elaboration** (interpretive names + one-sentence summaries for framework signal cards, pattern types, generation algorithm): `docs/design-signal-elaboration.md`
-- **Speaker splitting** (LLM pre-pass for single-speaker transcripts): `docs/design-speaker-splitting.md`
-- **Speaker role detection** (generalised heuristic + prompt for non-UXR formats): `docs/design-speaker-role-detection.md`
-- **Speaker editing** (name, reassign, split, merge — four transcript operations): `docs/design-speaker-editing.md` — Dovetail-style in-context editing. **Read this before working on transcript speaker UI**
-- **Transcript editing** (future — section strike, text correction, prior art, data model): `docs/design-transcript-editing.md` — two-operation approach (junk deletion + word correction), prior art from 7 tools, edit history analysis. **Read this before working on transcript text editing**
-- **Transcript & speaker editing roadmap** (11-layer work breakdown): `docs/design-transcript-speaker-editing-roadmap.md` — dependency graph, priority order, page responsibility model
-- **Security & privacy**: `SECURITY.md` — local-first design, credential storage, PII redaction, anonymisation boundary, vulnerability reporting
-- **Product roadmap**: `docs/ROADMAP.md`
+**Must-read before writing user-facing text:**
+- `docs/glossary.md` — terminology + tone guide
+- `docs/platform-text-map.md` — shared/desktop/CLI text forking, `dt()`/`ct()` inventory
+
+**Must-read before touching tag suggestion, telemetry, or data governance:**
+- `docs/methodology/` — canonical methodology docs. Treat as authoritative: when code and doc disagree, the doc is the spec and the code is wrong.
+  - `tag-rejections-are-great.md` — rejection-telemetry theory, alpha experiments, six-field data model, ten-year ratchet endgame
+  - `consent-gradient.md` — Level 0–3 data-governance gradient, sensitivity model, consent UX principles, sequencing discipline
+  - `framework-arc-quarterly-review.md` — quarterly review template and the long-arc commitments it reviews against
+
+**Sibling CLAUDE.md files:** `frontend/`, `bristlenose/theme/`, `bristlenose/stages/`, `bristlenose/llm/`, `bristlenose/server/`, `desktop/`
+
+**Frontend / UI:**
+- `bristlenose/theme/js/MODULES.md`, `bristlenose/theme/CSS-REFERENCE.md` — JS + CSS component reference
+- `docs/design-sidebar-playground.md` — 6-column grid, overlay, drag-resize, minimap, dev playground
+- `docs/design-responsive-layout.md` — quote grid, density, breakpoints
+- `docs/design-react-migration.md` — active migration plan
+- `docs/design-react-component-library.md` — 16 primitives
+- `docs/design-minimap.md`, `docs/design-inspector-panel.md`, `docs/design-finding-weight.md`
+
+**Pipeline / backend:**
+- `docs/design-pipeline-resilience.md` — manifest, event sourcing, resume, provenance
+- `docs/design-platform-transcripts.md`, `docs/design-transcript-coverage.md`
+- `docs/design-speaker-splitting.md`, `docs/design-speaker-role-detection.md`
+- `docs/design-speaker-editing.md`, `docs/design-transcript-editing.md`, `docs/design-transcript-speaker-editing-roadmap.md`
+- `docs/design-multi-project.md` — scope rules (instance vs project tables)
+- `docs/design-session-management.md`, `docs/design-serve-milestone-1.md`
+- `docs/design-logging.md`
+
+**Export:**
+- `docs/design-export-html.md` (anonymisation), `docs/design-export-quotes.md` (CSV/XLS), `docs/design-export-clips.md`, `docs/design-export-slides.md`, `docs/design-miro-bridge.md`, `docs/design-footer-feedback-react.md`
+
+**Desktop:**
+- `docs/design-desktop-app.md`, `docs/design-desktop-security-audit.md`
+- `docs/design-modularity.md` — **canonical cross-channel component strategy** (CLI + macOS, Background Assets, no-fork principle, trickle-to-full-capability)
+- `docs/design-desktop-python-runtime.md` — Mac sidecar mechanics (to be written as Track C C0 output)
+- `docs/private/sprint2-tracks.md` — Track A (sandbox), B (MVP UX), C (sidecar bundling + signing, C0–C5)
+- `docs/private/road-to-alpha.md` — 14 checkpoints to TestFlight
+- `docs/design-project-sidebar.md`, `docs/design-wkwebview-messaging.md`
+- `docs/design-desktop-menu-actions.md`, `docs/design-desktop-settings.md`
+
+**Analysis / research methodology:**
+- `docs/design-research-methodology.md` — read before changing prompts or analysis logic
+- `docs/academic-sources.html` — theoretical foundations
+- `docs/design-analysis-future.md`, `docs/design-quote-sequences.md`, `docs/design-dashboard-stats.md`, `docs/design-signal-elaboration.md`
+
+**i18n:** `docs/design-i18n.md` — terminology table, implementation gotchas
+
+**Codebook:** `docs/design-codebook-island.md`, `docs/design-moderator-question-pill.md`
+
+**HTML report / dashboard / auth:**
+- `docs/design-html-report.md`, `docs/design-dashboard-navigation.md`
+- `docs/design-sentiment-charts.md`, `docs/design-badge-action-pill.md`
+- `docs/design-react-islands.md`, `docs/design-autocode.md`
+
+**Ops / release:**
+- `docs/release.md`, `docs/file-map.md`, `CONTRIBUTING.md`, `INSTALL.md`, `SECURITY.md`
+- `docs/design-ci.md`, `docs/design-test-strategy.md`, `docs/design-playwright-testing.md`
+- `docs/design-doctor-and-snap.md`, `docs/design-homebrew-packaging.md`
+- `docs/design-cli-improvements.md`, `docs/design-llm-providers.md`, `docs/design-performance.md`
+- `docs/design-decisions.md` (why), `docs/design-reactive-ui.md` (partially superseded)
+- `docs/ROADMAP.md`
 
 ## Working preferences
 
@@ -234,7 +239,10 @@ Feature branches live in **separate git worktrees** — each is a full working c
 pwd
 git branch --show-current
 cat docs/BRANCHES.md
+test -f .claude/setup-incomplete && cat .claude/setup-incomplete
 ```
+
+If `.claude/setup-incomplete` exists, the worktree's environment isn't fully prepped (`/new-feature` either aborted or hasn't finished). **Do not start real work until the user re-runs `/new-feature` or completes setup manually** (frontend build, venv, smoke test). Tell the user the sentinel is present and wait. The file is removed only when the smoke test passes — its absence means the env is ready.
 
 If the user starts asking about a feature without specifying, **remind them to check** which worktree they want to work in. Never check out a feature branch inside the main `bristlenose/` directory — use the worktree instead. A `PreToolUse` hook in `.claude/settings.json` blocks `git checkout`/`git switch` to feature branches when CWD is the main repo.
 
@@ -334,8 +342,8 @@ The PreferencesFile incident (keyboard-navigation branch, Feb 2026) was caused b
 
 When the user signals end of session, **run `/end-session`** — the skill handles verify, document, commit, and close-out. See `.claude/skills/end-session/SKILL.md` for the full checklist.
 
-## Current status (v0.14.4, Apr 2026)
+## Current status (v0.15.0, Apr 2026)
 
-Core pipeline published to PyPI + Homebrew + Snap. Latest: **Video clip extraction** (FFmpeg stream-copy, async job, `ClipBackend` Protocol for future AVFoundation), 6 languages (en, es, fr, de, ko, ja). Inspector panel, codebook sidebar, finding flags, Settings + Help modals with shared ModalNav. Static render formally deprecated. ~2090 Python tests, ~1265 Vitest tests. React migration complete (Steps 1–10). See `CHANGELOG.md` and git log for full history.
+Core pipeline published to PyPI + Homebrew + Snap. v0.15.0 lands **pipeline resilience Phase 1f / 4a-pre** — append-only `pipeline-events.jsonl` with structured `Cause` (10 categories), honest cost estimates, stranded-run reconciliation, desktop `EventLogReader`. Replaces the old "infer from manifest" path that mis-classified interrupted runs as `.ready`. Earlier product feature: **Video clip extraction** (FFmpeg stream-copy, async job, `ClipBackend` Protocol for future AVFoundation), 6 languages (en, es, fr, de, ko, ja). Inspector panel, codebook sidebar, finding flags, Settings + Help modals with shared ModalNav. Static render formally deprecated. ~2328 Python tests, ~1265 Vitest tests, 90 Swift tests. React migration complete (Steps 1–10). See `CHANGELOG.md` and git log for full history.
 
 **Next up:** See `TODO.md` for full task list.

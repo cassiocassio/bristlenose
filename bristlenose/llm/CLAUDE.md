@@ -1,12 +1,31 @@
 # LLM / Provider Context
 
+## Lazy-import discipline
+
+Provider SDKs (`anthropic`, `openai`, `google-genai`) and transcription backends (`ctranslate2`, `mlx_whisper`) **must be imported inside the functions that use them, not at module top**. Heavy imports at module-level pay their cost on every `bristlenose serve` boot regardless of which provider the user picks — typically 3–6 s of dead time on cold start, much of which is spent loading SDKs the user will never call.
+
+**Pattern:**
+
+```python
+def call_anthropic(prompt: str) -> str:
+    from anthropic import Anthropic  # imported on first call only
+    client = Anthropic()
+    ...
+```
+
+The cost moves from boot to first-use, where the user is already engaged with the app. Same total work, vastly better perceived performance — Sketch / Linear / modern Photoshop pattern, not 2003-Photoshop "warming up your filters" pattern.
+
+**Convention:** any new provider, any new heavy library, any new optional backend — defer the import. Module-top `import anthropic` in new code is a review reject.
+
 ## Credential storage (Keychain)
 
 API keys are stored securely in the system keychain. Uses native CLI tools — no Python keyring shim.
 
+**Sandboxed desktop sidecar (Track C C3, Apr 2026):** Swift host reads Keychain via Security.framework at sidecar launch and injects keys as `BRISTLENOSE_*_API_KEY` env vars. Python never touches Keychain in this deployment — pydantic-settings picks the env vars up before `_populate_keys_from_keychain` runs. `credentials_macos.py` stays as-is and remains the happy path for **CLI Mac distros** (Homebrew, pip — not sandboxed, `/usr/bin/security` works fine). No Mac-only Python dep; no-fork principle preserved per `docs/design-modularity.md`.
+
 - **CLI command**: `bristlenose configure <provider>` — prompts for key, validates with API, stores in keychain. Accepts `--key` option to bypass interactive prompt (useful in scripts or when TTY has issues)
 - **Provider aliases**: `claude` → `anthropic`, `chatgpt`/`gpt` → `openai`, `gemini` → `google`
-- **Priority order**: keychain → env var (`ANTHROPIC_API_KEY`) → .env file
+- **Priority order**: env var (`BRISTLENOSE_<PROVIDER>_API_KEY` or bare `ANTHROPIC_API_KEY`) → .env file → keychain. On the sandboxed desktop sidecar the env var is always set by Swift before launch, so keychain is effectively bypassed there; CLI Mac users hit the keychain fallback as usual.
 - **macOS**: `bristlenose/credentials_macos.py` — uses `security` CLI (add-generic-password, find-generic-password, delete-generic-password). Service names: "Bristlenose Anthropic API Key", "Bristlenose OpenAI API Key", "Bristlenose Google Gemini API Key"
 - **Linux**: `bristlenose/credentials_linux.py` — uses `secret-tool` (Secret Service API). Falls back to `EnvCredentialStore` if secret-tool unavailable
 - **Fallback**: `bristlenose/credentials.py` — `EnvCredentialStore` reads from env vars (cannot write)
@@ -49,7 +68,9 @@ Per-participant LLM calls (stages 5b, 8, 9) run concurrently, bounded by `llm_co
 
 ## max_tokens and truncation detection
 
-Default `llm_max_tokens` is **32768** (set in `config.py`). This is the output token ceiling per LLM call — users only pay for tokens actually generated, not the limit. All 5 providers detect when the response is truncated and raise `RuntimeError` with an actionable message pointing to `BRISTLENOSE_LLM_MAX_TOKENS` in `.env`.
+Default `llm_max_tokens` is **64000** (set in `config.py`, raised from 32768 on 17 Apr 2026 after FOSSDA baseline hit truncation on a dense session). This is the output token ceiling per LLM call — users only pay for tokens actually generated, not the limit. All 5 providers detect when the response is truncated and raise `RuntimeError` with an actionable message pointing to `BRISTLENOSE_LLM_MAX_TOKENS` in `.env`.
+
+**Why 64000 not 65536**: Anthropic's `claude-sonnet-4-20250514` hard-caps output at 64000 (decimal), not 65536 (2^16). GPT-5 allows 128K, Gemini 2.5 Pro allows 65K. 64000 is the portable ceiling across all three frontier providers. Going higher requires per-provider branching — not worth the complexity until smart-splitting lands.
 
 - **Anthropic**: checks `response.stop_reason == "max_tokens"`
 - **OpenAI / Azure / Local**: checks `response.choices[0].finish_reason == "length"`

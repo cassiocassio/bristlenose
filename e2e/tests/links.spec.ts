@@ -28,8 +28,7 @@ test('all links have href and internal links resolve', async ({
       const text = (await link.textContent())?.trim() ?? '';
       const role = await link.getAttribute('role');
 
-      // Skip <a role="button"> — these are interactive elements (modals,
-      // toggles) intentionally without href
+      // ci-allowlist: CI-A2 (by-design — see e2e/ALLOWLIST.md)
       if (role === 'button') continue;
 
       // Links with visible text should have an href
@@ -58,14 +57,3 @@ test('all links have href and internal links resolve', async ({
   expect(deadLinks).toEqual([]);
   expect(brokenLinks).toEqual([]);
 });
-
-// Known bug: 12 "Show all N quotes" links on Analysis page have no
-// href and no click handler. Only reproducible with analysis data
-// (project-ikea fixture).
-test.fixme(
-  'KNOWN BUG: dead "Show all N quotes" links on Analysis page',
-  async () => {
-    // Promote when analysis page fixture data produces signal cards
-    // with "Show all" links.
-  },
-);

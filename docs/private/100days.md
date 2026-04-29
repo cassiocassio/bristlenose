@@ -14,19 +14,34 @@ Items tagged `[S1]`–`[S6]` are assigned to a sprint. Untagged items are unassi
 
 | Tag | Dates | Theme |
 |-----|-------|-------|
-| [S1] | 14–25 Apr | Start the clocks |
-| [S2] | 28 Apr–9 May | Build pipeline + legal |
+| ~~[S1]~~ | ~~14–25 Apr~~ | ~~Start the clocks~~ ✅ **Done 17 Apr 2026** (8 days early; succession plan deferred beyond 100days) |
+| [S2] | 28 Apr–9 May | Road to alpha — A/B interleave sandbox + MVP flow, CI cleanup first |
 | [S3] | 12–23 May | Multi-project |
 | [S4] | 26 May–6 Jun | First-run + export |
 | [S5] | 8–19 Jun | Visual design + a11y |
-| [S6] | 22–30 Jun | Launch prep |
+| [S6] | 22–30 Jun | Launch prep + public legal |
+
+**Sprint 2 re-scope v3 (17 Apr 2026).** Alpha path decided: **internal TestFlight, not `.dmg`.** Sandbox work is unavoidable (StoreKit needs it), and a `.dmg` path would be throwaway code. Doing it now gets us a modern sandbox-aware codebase from the start. Rejected items: Developer ID cert, `.dmg` build pipeline, Gatekeeper README (all struck in §11 Operations). See `docs/private/road-to-alpha.md` for the full 14-checkpoint path.
+
+**Sprint 2 cadence — A/B/C interleave (updated 18 Apr 2026).** Three parallel tracks per `docs/private/sprint2-tracks.md`: Track A (sandbox plumbing, road-to-alpha #2 + #3), Track B (MVP UX flow, §1a beats), Track C (bundled sidecar resurrection + signing, C0–C5). Tracks converge at first TestFlight upload (#12). Cross-channel component strategy in `docs/design-modularity.md` — what's bundled, what's Background Assets, what's CLI-only, no-fork principle. Alternate sandbox/signing steps with MVP flow / UI quality steps. Each step unblocks the other: sandbox work surfaces UI regressions (folder bookmarks, temp paths); UI work exercises the sandboxed paths. Order:
+
+1. ~~**Clean up CI** — re-enable the E2E gate (3 parked P3 regressions), land the perf regression gate. Unblocks everything else.~~ _Done 18 Apr 2026 (ci-cleanup branch): gate flipped, 3 regressions cleared (autocode 404 allowlisted, codebook 404 allowlisted as deferred-fix to S3, auth-token wired). Plus `e2e/ALLOWLIST.md` register, Analysis page button fix, SECURITY.md honesty update, `bristlenose doctor` env-bleed check. CI passed first try post-flip (19m44s). Option B auth-token gate deferred with design plan + reminder 16 May. Python floor bump to 3.12 tracked §11 Should + reminder 9 May._
+2. **A/B/A/B through S2:**
+   - A: sandbox step (one entitlement + related code migration at a time)
+   - B: MVP flow step (one beat of §1a below at a time)
+   - Repeat. Ship nothing to friends until MVP 1-hour flow is green AND sandboxed build runs end-to-end.
+3. **First TestFlight upload** lands when both tracks are green. May slip into S3 — that's fine, deadline is MVP quality, not calendar.
+
+**Real QA = IKEA study + CLI handholding on video calls with UXR friends.** TestFlight is the delivery mechanism; video-call UXR sessions are the feedback loop.
+
+Performance: stress sweep shows clean linear scaling to 3000 quotes — virtualisation deferred to Icebox. AI disclosure dialog: already shipped (`AIConsentView.swift`). Solicitor contact: still May (external TestFlight and public legal paperwork are S6+, not alpha-blocking).
 
 ---
 
 ## 1. Missing — essential feature gaps ("it's not done without it")
 
 ### Must
-- **IKEA codebook validation dataset** — 5 moderated IKEA interviews with UXR friends (favours, not schedulable). ~1/week over S1–S5. Tests whether sentiment categories, UXR codebook (moderator questions, friction, sentiment), and thematic grouping produce useful results on real research data. Also provides marketing screenshots and speed demo video. (design-real-data-testing.md)
+- [S1-S5] **IKEA codebook validation dataset** — 5 moderated IKEA interviews with UXR friends (favours, not schedulable). ~1/week over S1–S5. Tests whether sentiment categories, UXR codebook (moderator questions, friction, sentiment), and thematic grouping produce useful results on real research data. Also provides marketing screenshots and speed demo video. (design-real-data-testing.md)
 - **~~Desktop app v0.1~~** — SwiftUI shell, PyInstaller sidecar, folder picker, pipeline runner, "Open Report" button. ~365–435 MB bundle. (design-desktop-app.md)
 - ~~**Export: standalone HTML from serve mode** — `POST /api/projects/{id}/export`, self-contained HTML. Shipped v0.11.2. (design-export-sharing.md)~~
 - [S4] **Export: research package (zip)** — zip with report.html + transcripts/ (.txt with inline timecodes) + clips/ (optional, FFmpeg). Human-readable filenames (`p1 03m45 Sarah onboarding was confusing.mp4`). Anonymisation across all surfaces. Replaces 3 hours of Final Cut Pro work. Stages 1–3 of export roadmap. (design-export-sharing.md)
@@ -43,6 +58,9 @@ Items tagged `[S1]`–`[S6]` are assigned to a sprint. Untagged items are unassi
 - **~~Settings UI~~** — provider selection, API key entry, redaction toggle, model choice. Milestone 6. Needs design doc. Currently CLI-only config is a hard block for App Store users
 - [S4] **App Store subscription infrastructure** — StoreKit 2, receipt validation, entitlement check. Not yet designed
 - **~~Auto-serve after run~~** — pipeline finishes → auto-launch serve + open browser. (TODO.md immediate)
+- **Subprocess lifecycle / orphan management** — make orphan handling invisible to the user. PID-file-based scan-and-reconcile at app init for both `bristlenose run` and `bristlenose serve`; sandbox-clean (`proc_pidinfo` / `proc_pidpath` instead of `lsof`/`pgrep`). Replaces today's serve-only `lsof`-based cleanup. Required before sandbox flips on for TestFlight. Surfaced during port-v01-ingestion QA. Design: `docs/design-subprocess-lifecycle.md`. Estimated ~2 days. _(24 Apr 2026: Stop-is-a-lie + stale-pill alpha blockers shipped — 4 commits 896c074..da5cc45. Owned- and orphan-path cancel both ack instantly via `isStopping`; orphan-path SIGINT→SIGTERM→SIGKILL escalation; orphan-attach popover tails `bristlenose.log`. Sandbox-clean probes + `stopAll()` still TODO.)_
+- ~~[S2] **Alpha telemetry — Phase 1 plumbing**~~ — `/api/health` advertises `telemetry: {enabled, url}`; dev-only `POST/GET/DELETE /api/dev/telemetry` stub with Pydantic validation, 500-event batch cap, PID-scoped JSONL; `website/telemetry.php` + moved `website/feedback.php` with `hash_equals`, placeholder-token guardrail, CSV cell-safety helper. Reviewed (3 agents, 8 mechanical findings fixed, 8 design-questions parked). Done 26 Apr 2026 (alpha-telemetry branch, 6 commits). PHP files NOT yet deployed to bristlenose.app — `/deploy-website` only when Phase 2 starts so the URL the health endpoint advertises actually resolves
+- **Alpha telemetry — Phases 2–4 (deferred to post-TestFlight)** — TestFlight tester feedback path is video-call + UX observation, not instrumented data; alpha telemetry can wait without losing the testers (they don't notice it's missing). Deferred 26 Apr 2026 to keep the TestFlight runway clear of feature-creep. Pick up after first TestFlight cohort reports back. Open work: (2) Python — `TelemetryEvent` SQLite table + Alembic migration, `POST /api/telemetry/events`, background batched shipper, `bristlenose/llm/prompt_version.py` + `prompts/versions.jsonl` sidecar. (3) React — emission hook on suggest/accept/reject/edit, 2 s debounce collapse rule, `edited` as flag not offset. (4) Swift — Sheet 2 telemetry opt-in (verbatim from spec §First-launch sheets), Keychain UUID helper, sidecar env-var injection (`BRISTLENOSE_RESEARCHER_ID`), Settings → Privacy screen. Four architectural questions + eight parked `/usual-suspects` findings — full context in `docs/private/alpha-telemetry-next-session-prompt.md`. Methodology spec stays on main as the plan; absence of in-alpha data means the first Substack piece pushes to second cohort, not first
 
 ### Should
 - **Desktop toast infrastructure** — SwiftUI toast overlay (auto-dismiss, fade). Needed for "Added N interviews to project", archive undo, and future feedback. Reference: `frontend/src/components/Toast.tsx`
@@ -57,6 +75,7 @@ Items tagged `[S1]`–`[S6]` are assigned to a sprint. Untagged items are unassi
 ### Could
 - **Batch processing dashboard** — queue multiple projects (#27)
 - **Custom prompts** — user-defined tag categories / analysis instructions
+- **`.well-known/apple-app-site-association`** — Universal Links so `bristlenose.app/...` URLs open in the desktop app. Needs bundle ID + team ID from Apple Developer account
 
 ### Won't (100 days)
 - **Windows app** — winget installer (#44), Windows credential store
@@ -72,6 +91,28 @@ Items tagged `[S1]`–`[S6]` are assigned to a sprint. Untagged items are unassi
 ### Icebox (100 days)
 - **Miro bridge** — Miro-shaped CSV export → API integration → layout engine. CSV export works as stopgap. Killer feature - Resuresct for move out of beta! See `docs/private/design-miro-bridge.md`
 - **Spring-loaded folders during drag** — open folder on hover during drag. SwiftUI List doesn't support natively; needs timer or NSEvent monitor. Low priority — "Move to" submenu covers the use case
+
+---
+
+## 1a. MVP 1-hour human session flow (S2 focus)
+
+The canonical end-to-end beats a first-time user must complete successfully in the Mac app before we ship to anyone. Each beat that doesn't work in the current build becomes an S2 item.
+
+1. **First-time open** — app launches, window shows a welcoming empty state
+2. **AI disclosure sheet** — shown, acknowledged, dismissed (shipped: `AIConsentView.swift`)
+3. **Set up Claude API key** — Settings → paste key → saved to Keychain → validated
+4. **New project** — create a project (folder picker or named project)
+5. **Drop interview folder** — drag-and-drop a folder of recordings/subtitles onto the project
+6. **Process** — pipeline runs, progress visible, completes without crashing
+7. **Display** — report opens, quotes render, transcripts navigable
+8. **Add a codebook** — import or create a codebook, apply to project, quotes re-tagged
+9. **Investigate signals** — dashboard signal cards clickable, lead to relevant quotes
+10. **Use stars and filtering** — star quotes, filter by tag/star/sentiment, filters stick
+11. **Export credible report** — standalone HTML export, opens in browser, looks shareable
+12. **Export video clips** — FFmpeg stream-copy produces human-named clips from starred quotes
+13. **Export CSV** — quotes export opens in Excel, columns sensible, no broken characters; Miro paste works
+
+**S2 exit criterion:** Martin can run this flow on a laptop with no API keys pre-configured and no cached state, from new, in under an hour, and produce a report he'd send to a UXR friend without apologising. Everything below §2 Broken that blocks any step above gets promoted into S2 implicitly.
 
 ---
 
@@ -93,6 +134,12 @@ Items tagged `[S1]`–`[S6]` are assigned to a sprint. Untagged items are unassi
 ### Could
 - **Edit writeback to transcript files** (#21) — edits only persist in DB, not source files
 - **Word timestamp pruning** — unused data accumulates after merge stage (#35)
+- **E2E regressions parked during v0.14.5 release unblock (17 Apr 2026)** — set `continue-on-error: true` on the e2e CI job to ship v0.14.5. Cleared on `ci-cleanup` branch (18 Apr 2026) via targeted allowlists + CI env-var wiring; e2e gate flipped back to blocking. One item deferred to S3 (root-cause fix, not the allowlist).
+  - [S3] [CI-A4] **Unknown subresource 404 on `/report/codebook/`** — Playwright console spec catches a 404 but `msg.text()` truncates the URL. Local `curl` of the page + all listed assets all return 200; some runtime subresource fails. Need to run the e2e locally with trace viewer and check Network tab to identify. Likely a route-chunk prefetch, a missing thumbnail in the smoke fixture, or a font. User impact: cosmetic (devtools only). **Allowlisted in `e2e/tests/console.spec.ts` during `ci-cleanup` branch (18 Apr 2026) — see `e2e/ALLOWLIST.md` CI-A4; root-cause fix deferred to S3 when we're back in the frontend.**
+  - ~~**"Show all N quotes →" links on Analysis page have no href/click handler**~~ — resolved (18 Apr 2026) during `ci-cleanup` branch. Surfaced a 4th hidden regression that was sailing past the `continue-on-error` gate. Fixed at the source: converted the `<a>`-with-no-href to a proper `<button type="button">` in `AnalysisPage.tsx` with minimal CSS reset in `analysis.css`. `test.fixme` placeholder in `e2e/tests/links.spec.ts` removed. Previously reported as "only reproducible with project-ikea"; turns out the smoke fixture also produces signal cards with these links.
+  - ~~**Autocode status endpoint 404 is noisy**~~ — resolved (18 Apr 2026): kept REST semantics (404 = no job for this framework), allowlisted in `e2e/tests/network.spec.ts` with a pointer to `CodebookPanel.tsx:609`'s null-tolerant consumer. Frontend already treats 404 as idle.
+  - ~~**perf-gate.spec.ts server identity guard: `_BRISTLENOSE_AUTH_TOKEN` env var not wired into CI**~~ — resolved (18 Apr 2026): `_BRISTLENOSE_AUTH_TOKEN: test-token` added to the main e2e job's `env:` block. Server already honours the env var at `app.py:96` (no code change needed on this branch; the env-override is tracked as a future hardening task — see §6 Risk Should).
+  - See session transcript "fix release pipeline + main CI, step by step" (17 Apr 2026 wrap-up) for full investigation notes, curl proofs, and file:line pointers.
 
 ---
 
@@ -184,7 +231,7 @@ Items tagged `[S1]`–`[S6]` are assigned to a sprint. Untagged items are unassi
 ### Could
 - **Shell completion** — `--install-completion` for power users
 - **Snap Store publishing** (#45) — Linux adoption path. `snapcraft register bristlenose`, request classic confinement, add `SNAPCRAFT_STORE_CREDENTIALS` to GitHub secrets. See `docs/design-doctor-and-snap.md`
-- **Cancel button** — cancel running pipeline (desktop app stretch goal)
+- ~~**Cancel button** — cancel running pipeline (desktop app stretch goal)~~ — shipped 24 Apr 2026 (toolbar pill Stop, owned + orphan paths, signal escalation, instant ack)
 
 ---
 
@@ -199,14 +246,14 @@ Items tagged `[S1]`–`[S6]` are assigned to a sprint. Untagged items are unassi
 - ~~**Desktop security: minimal child process environment**~~ — stripped to PATH, HOME, TMPDIR, locale, VIRTUAL_ENV + BRISTLENOSE_* overlay
 - ~~**Desktop security: port-restrict navigation policy**~~ — shipped in `WebView.swift` (`decidePolicyFor` restricts to `127.0.0.1` + `about:`)
 - **~~Rotate API key~~** — was visible in terminal (TODO.md immediate)
-- [S2] **Privacy policy** — required for App Store submission. Local-first model simplifies this but document must exist. Draft v1 complete (`launch-docs/privacy-policy.md` in delivery repo), needs solicitor review
-- [S2] **Terms of service** — subscription terms, refund policy, data handling. Draft v0.9.1 complete (`launch-docs/terms-of-service.md` in delivery repo), needs solicitor review
-- [S2] **App Store review compliance** — sandbox, entitlements, code signing, notarisation pipeline
-- [S5] **PII redaction audit** — verify Presidio catches names/emails in transcripts before shipping to paying users
+- [S6] **Privacy policy** — required for external TestFlight + App Store submission. Not needed for internal-only alpha. Local-first model simplifies this but document must exist. Draft v1 complete (`launch-docs/privacy-policy.md` in delivery repo), needs solicitor review (May)
+- [S6] **Terms of service** — subscription terms, refund policy, data handling. Draft v0.9.1 complete (`launch-docs/terms-of-service.md` in delivery repo), needs solicitor review (May)
+- [S2] **App Store review compliance (TestFlight subset)** — umbrella for: Apple Distribution cert ✅, sandbox + entitlements (Track A pending), PyInstaller sidecar signing ✅, Privacy Manifest reason-code audit ✅ (C4, 28 Apr 2026), Hardened Runtime ✅. All tracked as individual items. Full review hardening for external testers / submission lives in S6. **C3 (Apr 2026) shipped Keychain → env-var injection + bundle integrity gates** (`check-bundle-manifest.sh` source→spec + `bristlenose doctor --self-test` spec→bundle, both wired into `build-all.sh`). Discovered 3 datas-coverage bugs during smoke test, resolved.
+- [S5] **PII redaction audit** — verify Presidio catches names/emails in transcripts before shipping to paying users. Per `docs/design-modularity.md`: PII moves to `[pii]` pip extra (CLI) and tier-2 Background Assets pack (macOS, public beta) — out of base install. Alpha bundles it inline to avoid the asset-pack Python-packages-as-data problem; public beta deferred-downloads it.
 - ~~**Security scanning** — npm audit, pip-audit, CodeQL before public release (design-test-strategy.md)~~
 - ~~[S1] **Alembic/migration strategy** — DB schema changes without data loss. Currently no migration framework~~
-- [S2] **AI data disclosure dialog** — Apple Guideline 5.1.2(i) (Nov 2025) requires explicit consent before sending transcript data to third-party AI. Non-negotiable for App Store. (design-desktop-security-audit.md)
-- [S2] **Privacy Manifest (`PrivacyInfo.xcprivacy`)** — required for App Store since mid-2024. Declare data types and API usage reasons. (design-desktop-security-audit.md). Draft complete (`launch-docs/PrivacyInfo.xcprivacy` + `privacy-manifest-rationale.md` in delivery repo), needs codebase audit to validate reason codes
+- ~~**AI data disclosure dialog** — Apple Guideline 5.1.2(i). Shipped: `desktop/Bristlenose/Bristlenose/AIConsentView.swift` (first-run sheet, consent version policy, re-accessible via menu)~~
+- ~~[S2] **Privacy Manifest (`PrivacyInfo.xcprivacy`)** — required for App Store since mid-2024. Host shipped 19 Apr 2026; sidecar shipped 28 Apr 2026 as Track C C4 (`765b111`..`f6c3170`). Two manifests cover the whole bundle (host at `Contents/Resources/`, sidecar at `Contents/Resources/bristlenose-sidecar/`). Symbol-sweep triage rejected per-package sub-manifests as gold-plating; build-all.sh step [f] enforces presence + plutil-lint on every release archive. See `docs/design-desktop-python-runtime.md` §"Privacy manifest coverage (C4)".~~
 
 ### Should
 - ~~**Vulnerability disclosure page** — `security.txt` (RFC 9116) at `bristlenose.app/.well-known/security.txt`. PR #85~~
@@ -217,14 +264,17 @@ Items tagged `[S1]`–`[S6]` are assigned to a sprint. Untagged items are unassi
 - ~~**PostMessage origin tightening**~~ — React path uses `window.location.origin` (PlayerContext.tsx). Vanilla JS path deprecated — just remove
 - **localStorage namespace by project** — review what's still in localStorage and why (most state moved to SQLite). Collision risk may be moot
 - **WKWebView Content Security Policy** — inject CSP via WKUserScript restricting script sources and connection targets. (design-desktop-security-audit.md)
-- **Clean SecurityChecklist.swift** — remove resolved items #1, #3, #7; keep genuine blockers #2, #5, #8. (design-desktop-security-audit.md)
+- **Clean SecurityChecklist.swift** — remove resolved items #1, #3, ~~#5~~, #7, ~~#8~~; keep genuine blocker #2. (#5 + #8 done 26 Apr 2026 on `sidecar-signing` — `proc_pidpath` PID verification, port-restricted nav). (design-desktop-security-audit.md)
 - **Wrap dev paths in `#if DEBUG`** — `ContentView.swift`, `ServeManager`, `I18n` leak developer directory structure into release binary. (design-desktop-security-audit.md)
 - **Bundled fallback API key risk** — extractable from PyInstaller binary. Cap spending, use dedicated key, document accepted risk. (design-desktop-security-audit.md)
 - **DASVS Level 1 audit** — AFINE's Desktop Application Security Verification Standard (Nov 2025), purpose-built for desktop apps. 12 domains, 150+ requirements. ([github.com/afine-com/DASVS](https://github.com/afine-com/DASVS))
 - **PII detection warning before LLM send** — consider adding a PII detection warning before sending transcripts to LLM — strengthens privacy-by-design story. Non-blocking, nice-to-have. Review feasibility and UX implications
 - **`safe_filename()` `..` removal hardening** — single-pass `replace("..", "")` can reassemble traversal from `"..../"`. Fixed with `while` loop in v0.14.2 clip extraction work, but needs systematic security review pass across all filename utilities
+- **Pre-beta: re-audit LLM-provider API-key formats and extend log redactor** — C3 shipped a runtime redactor covering Anthropic (`sk-ant-`), OpenAI (`sk-proj-` / historical `sk-`), and Google (`AIza`). Azure was skipped (32-char hex false-positives on UUIDs/SHAs). Before beta: verify current formats haven't changed, add Azure with context-sensitive matching, confirm redactor hits across all providers with real test keys. Code site: `ServeManager.handleLine()`
 - [S3] **Person UUID migration** — change Person.id from auto-increment integer to UUID before any person_links rows exist. Currently `Mapped[int]` in `server/models.py`. Design doc: "cost of adding UUIDs now is near-zero; retrofitting requires a migration touching every row." Depends on Alembic. (design-multi-project.md §2, §3c Finding 7)
 - **Project index metadata exposure** — `projects.json` is a client roster (project names, folder/client names, paths, timestamps). Propagates via cloud sync, MDM, dotfile managers. Document sensitivity in SECURITY.md; desktop path in `~/Library/Application Support/` not `~/.config/`. (design-multi-project.md §3c, Finding 3)
+- **Gate `_BRISTLENOSE_AUTH_TOKEN` env override behind `BRISTLENOSE_DEV_MODE=test`** — deferred from `ci-cleanup` branch (18 Apr 2026). Today `app.py:96` honours the env var unconditionally. SECURITY.md updated in v0.14.6 to describe the actual behaviour and `bristlenose doctor` warns when the env var is set, but the real gate was deferred: the writeback at `app.py:97` exists for `uvicorn --reload` session continuity, and a clean gate needs a "this PID wrote the env var" semantic so local dev doesn't lose its session on every code save. Also touches `scripts/perf-stress.sh` (currently pins the token without a flag). Open question surfaced by ci-cleanup review: is the gate genuine hardening or cosmetic given both env vars sit at the same attacker privilege level? Worth resolving before coding
+- **Release-artifact scan for `BRISTLENOSE_DEV_MODE` string** — once the gate above lands, grep PyInstaller/Snap/Homebrew/`.app` artifacts to verify the dev-mode flag isn't baked into a user-distributable binary. Pre-empts enterprise reviewer question about dev-flag leakage
 
 ### Could
 - **Export anonymisation** — checkbox to strip names/display-names from exported HTML
@@ -249,13 +299,14 @@ Items tagged `[S1]`–`[S6]` are assigned to a sprint. Untagged items are unassi
 - **Living logo** — animated bristlenose pleco (living-fish branch). Memorable, delightful
 - **Dark mode** — already implemented, polish the rough edges
 - **Speed demo** — "folder in, report out in 5 minutes" video/GIF for landing page
-- **Keyboard-first UX** — shortcuts already deep (`[`, `]`, `\`, `r`, `s`, `?`). Showcase in marketing
+- **~~Keyboard-first UX~~** — shortcuts already deep (`[`, `]`, `\`, `r`, `s`, `?`). Showcase in marketing
 - **Open source (AGPL)** — trust signal for researchers. Emphasise in positioning
 - **Microinteractions** — bounces/slides for opens/closes, flashes of acceptance, staggered fly-up for bulk hide (150ms per card like vanilla JS version)
 
 ### Could
 - **Video clip export story** — "folder in, clips out" — the 3-hour Final Cut Pro task done in seconds. Demo-able, visceral, differentiator vs Dovetail
 - **Ollama integration** — "free, no account required" local LLM story
+- **CLI text-only mode** — `bristlenose run/analyze/render --text` emits the full analysis (themes, signals, sections, codebook-tagged quotes, sentiment, friction) as plain markdown to stdout. Full ingestion (audio, video, Zoom/Teams, voice memos). Second product surface for the **AI-first early-adopter crowd** running local models on Linux/Pi/homelab — not the traditional NVivo/Atlas.ti ethnographer. Pairs with Ollama for a fully-local audio→markdown pipeline (no cloud in the loop, not even for analysis) — strongest privacy story we can tell. Pairs with the snap for Linux distribution. Design: `docs/design-cli-text-mode.md`. Time-box v0.1 to a weekend when the slot opens
 - ~~**Multi-language**~~ — 5 locales shipped (en, es, fr, de, ko) in 0.14.1. Infrastructure + 4 languages exceeds target
 - **i18n: help.signals/codebook/contributing translations** — EN keys exist (~63), ES/FR/DE/KO locales missing all of them
 - **i18n: AboutSection full extraction** — ~15 paragraphs hardcoded English, needs `useTranslation` wiring + keys in all 5 locales
@@ -312,7 +363,9 @@ Items tagged `[S1]`–`[S6]` are assigned to a sprint. Untagged items are unassi
 - ~~[S1] **pytest coverage in CI** — trivial to enable, currently blind to dead code~~
 - [S6] **Frontend test coverage for clip export** — extend ActivityChipStack + ExportDropdown tests for clips job type (added during clip extraction work, 27 Mar 2026)
 - ~~[S1] **Multi-Python CI** — test 3.10, 3.11, 3.12, 3.13. Done 15 Apr 2026~~
-- [S4] **Swift test harness** — XCTest target + ~42 Swift Testing tests across 5 files (Tab, I18n, LLMProvider, KeychainHelper, ProjectIndex). Two tiny refactors: `ProjectIndex.init(fileURL:)` for temp-dir isolation, `KeychainStore` protocol for `InMemoryKeychain` mock (security review: real Keychain overwrites API keys on crash). Also clean up `SecurityChecklist.swift` (4 resolved items). Community consensus: Swift Testing for unit, XCTest reserved for future UI tests. Session notes: 27 Mar 2026. Enablement: (1) open Xcode → File → New → Target → Unit Testing Bundle → `BristlenoseTests`, (2) Claude writes tests. Docs: [Apple — Swift Testing](https://developer.apple.com/xcode/swift-testing/), [Apple — Adding tests to Xcode](https://developer.apple.com/documentation/testing/adding-tests-to-your-xcode-project), [desktop security audit](docs/design-desktop-security-audit.md)
+- ~~[S4] **Swift test harness** — XCTest target + ~42 Swift Testing tests across 5 files (Tab, I18n, LLMProvider, KeychainHelper, ProjectIndex). Done 26 Apr 2026: `BristlenoseTests` target wired up via Xcode wizard; suite-level `@MainActor` added to fix Swift 6 actor-isolation errors on the pre-existing tests; EventLogReaderTests added alongside (Phase 1f Slice 4). 90 tests passing via `xcodebuild test`.~~
+- **`BristlenoseTests` fixture re-include** — `Fixtures/{en,es}/*.json` (8 files) currently excluded from the BristlenoseTests target via `PBXFileSystemSynchronizedBuildFileExceptionSet` membershipExceptions because the auto-sync flattens them into `Resources/<name>.json` and they collide. `I18nTests` doesn't currently exercise its fixture-loading fallback path so tests still pass without them, but if/when that path is exercised they need re-including. The right fix is Xcode-side: in the project navigator, right-click `Fixtures` under `BristlenoseTests` → File Inspector → convert from group to folder reference (preserves `en/` and `es/` subdirs at copy time). Then remove the 8 entries from the membershipExceptions list in `Bristlenose.xcodeproj/project.pbxproj`. Trivial — surface when the test starts failing or when adding a new locale fixture. (debt added 26 Apr 2026, Slice 4 follow-up)
+- **Desktop UX iteration** — full backlog in `docs/private/desktop-ux-iteration.md` (captured 26 Apr 2026 from `port-v01-ingestion` QA). Ten themed sections: activity pill placement (blocker — invisible at default widths), failure-surface deduplication, Resume/Retry/Re-analyse… verb wiring (Slice 4 carry-over), local Stop affordances + truthful state, CLI-rich progress surfacing, Settings/dev-mode rough edges, UnsupportedSubsetView, gruber polish, sidebar polish + incremental re-analysis, i18n debts. Suggested 5-pass grouping. User flagged "needs to happen sooner rather than later" — pairs naturally with [S5] (visual design + a11y) or splits as its own sprint between alpha and public beta.
 
 ### Should
 - ~~**Alembic setup** — DB migration framework before any schema change~~
@@ -323,7 +376,7 @@ Items tagged `[S1]`–`[S6]` are assigned to a sprint. Untagged items are unassi
 - **Platform detection refactor** — shared `utils/system.py` (#43)
 - **Skip logo copy when unchanged** (#31)
 - **Temp WAV cleanup** (#33)
-- **Pipeline concurrent chaining** (#32)
+- **Pipeline concurrent chaining** (#32) — always-on semantic splitting for quote extraction. Related: **smart-split-on-truncation fallback** (deferred S3+, not S2). 17 Apr 2026: `llm_max_tokens` default raised 32768 → 64000 (Anthropic hard-caps Claude Sonnet 4 at 64000 decimal; portable ceiling across Claude/Gemini 65K/GPT-5 128K). FOSSDA baseline hit truncation on one dense session at the old 32K default. Smart-split sketch: on `max_tokens` truncation, fall back to splitting that one session on natural breaks (stage-8 topic segments, moderator Q pivots, long silences); reprocess truncated session only; monologue fallback is mechanical halves/thirds with explicit warning. Different from per-participant chaining: chaining is always-on semantic; smart-split is rare-path recovery
 - **LLM response cache** (#34)
 - **Logging tiers 2–3** — cache hit/miss decisions, concurrency queue depth, PII entity breakdown, FFmpeg command/return code, keychain resolution, manifest load/save (6 items, all trivial–small)
 - **Promote pip-audit + npm audit to blocking** — target v0.15.0 (trivial)
@@ -339,7 +392,9 @@ Items tagged `[S1]`–`[S6]` are assigned to a sprint. Untagged items are unassi
 - **`isEditing()` guard dedup** — shared `EditGuard` class
 - **Inline edit commit pattern** — shared `inlineEdit()` helper
 - **Shared user-tags data layer** — vanilla JS dedup (frozen path, low priority)
+- **Configurable codebook URL** — `BRISTLENOSE_CODEBOOK_URL` as injected global instead of hardcoded (trivial, from old ROADMAP)
 - **Dev HUD: end-to-end traceability panel** — debug overlay showing provenance at every layer (git branch/SHA/dirty, Python version/source, render timestamp, theme CSS path/mtime/hash, serve mode/port, frontend Vite hash/router mode, bridge state, API health). Toggle with keyboard shortcut. Data from git CLI at startup, `/api/health`, `/api/dev/info`, CSS inspection
+- **Primary Python version helper** — extract `scripts/primary-python-version.sh` so `new-feature` skill, `bump-version.py`, and future tooling all read from one parser instead of grep'ing `release.yml` individually. Trigger: do this the next time we bump the CI python-version (currently 3.12) — bundles the bump and the DRY refactor into one piece of thinking
 
 ### Won't (100 days)
 - **JS module cleanup** (#7, #8, #9, #10, #22, #23) — vanilla JS is frozen/deprecated
@@ -353,7 +408,7 @@ Items tagged `[S1]`–`[S6]` are assigned to a sprint. Untagged items are unassi
 ### Must
 - [S6] **App Store description** — short + long description, keywords, screenshots
 - [S6] **Video walkthrough** — 2-minute "here's what Bristlenose does" screencast
-- [S4] **~~In-app onboarding~~** — merged into first-run experience (§5). Trial IS the onboarding — no separate wizard. Post-trial, contextual tooltips only for features the trial didn't cover
+- [S4] **In-app onboarding** — merged into first-run experience (§5). Trial IS the onboarding — no separate wizard. Post-trial, contextual tooltips only for features the trial didn't cover
 - [S4] **Provider setup guide** — which LLM provider, how to get API key, cost expectations
 - [S6] **README polish** — landing page README for GitHub (currently dev-focused)
 - [S6] **Hero image of report on GitHub README** — screenshot showing a real report, above the fold
@@ -382,19 +437,22 @@ Items tagged `[S1]`–`[S6]` are assigned to a sprint. Untagged items are unassi
 
 ### Must
 - [S2] **CI: desktop-build job** — `xcodebuild build` + `xcodebuild test` on macOS runner, `CODE_SIGNING_ALLOWED=NO`, informational initially. Catches Swift compilation errors and Swift Testing regressions on every push. Prerequisite for the full build pipeline below. Plan: `docs/design-ci.md` §Coverage gaps
-- [S2] **Desktop app build pipeline** — Xcode archive → .dmg → notarisation → upload. CI: automate .dmg build on push
-- [S4] **App Store Connect setup** — app record, pricing, TestFlight beta group
-- [S2] **Code signing** — Apple Developer Program membership, Developer ID certificate
+- [S2] **TestFlight upload pipeline** — Xcode archive → App Store Connect upload (notarytool). Manual first (local `xcodebuild -exportArchive` + `xcrun notarytool submit`). Automate in S6. Only runs when MVP flow is green + sandbox is clean
+- ~~**Desktop app build pipeline (.dmg path)** — won't do (17 Apr 2026). App Store is the sole distribution channel. See `docs/private/road-to-alpha.md` Decision section~~
+- [S2] **App Store Connect setup** — app record, TestFlight internal beta group (≤100 testers, no Beta App Review), Privacy Nutrition Labels. Pricing + external tester config deferred to S6
+- ~~[S2] **Apple Distribution certificate + provisioning profile**~~ ✅ **Done 19 Apr 2026 (Track C C2).** Cert + profile installed; notarytool keychain profile `bristlenose-notary` set up. Portal artefacts in `~/Code/Apple Developer/`
+- **Developer ID certificate** — **deferred, not rejected (28 Apr 2026 reframe).** Trigger to revisit: ~10k paying users, OR first enterprise MDM ask. Sparkle update flow + notarytool submit are preserved as future-state in `design-desktop-python-runtime.md` §"Deferred — Developer ID flow"
 - ~~[S1] **CI: add macOS runner** — currently Linux-only (informational, 15 Apr 2026)~~
-- [S2] **.dmg README** — include "Open Anyway" Gatekeeper instructions
-- [S2] **PyInstaller sidecar signing** — every `.dylib`, `.so`, and framework inside the bundle must be individually codesigned before notarization. (design-desktop-security-audit.md)
+- ~~**.dmg README** — won't do (17 Apr 2026). App Store path only~~
+- ~~[S2] **PyInstaller sidecar signing**~~ ✅ **Done end-to-end 28 Apr 2026 (Track C C2 + post-C3 hardening).** Parallel `wait -n` job pool, SHA256 sign-manifest, full pipeline in `desktop/scripts/build-all.sh`. SECURITY #5/#8 unblocker landed 26 Apr (`823f9be..38808fe`); end-to-end run clean 28 Apr (`1ee30eb`) — adds Mac Installer Distribution cert + `installerSigningCertificate` in ExportOptions, falls back to `.app` from xcarchive when `method=app-store` exports only `.pkg`, skips notarytool/stapler/spctl on the App-Store path (`notarytool` only accepts Developer ID; App Store Connect validates server-side), uses `pkgutil --check-signature` instead. Empty-ents retest ran 28 Apr — RED (`8cfd2ee`): Python.framework's nested `_CodeSignature/` seal is the binding reason DLV stays. Lsof zombie-cleanup also libproc-only now (`5471b35`). C3 bundle-integrity gates resolved BUG-3/4/5
 - ~~[S1] **Build number auto-increment** — `CFBundleVersion = 1` blocks Sparkle and App Store update logic. Set up CI auto-increment. Done: `bump-version.py` unifies desktop+CLI, auto-increments build number~~
 - ~~[S1] **Domain & email infrastructure** — register `bristlenose.app`, configure SPF/DKIM/DMARC, Substack custom domain (`blog.bristlenose.app`), deploy site, set up email on DreamHost (`hello@`, `support@`, `security@`). Full plan: `docs/private/infrastructure-and-identity.md`~~
 - [S6] **Supply chain hardening** — GitHub 2FA with hardware key, branch protection on main, PyPI hardware key + project-scoped token, register PyPI typosquats. Full checklist: `docs/private/infrastructure-and-identity.md`. Deferred from S1: low threat until commercial launch (see `docs/private/supply-chain-deferral.md`)
-- [S1] **Succession plan** — bus-factor doc (every account/credential/recovery path), password manager emergency access for one trusted person. (infrastructure-and-identity.md) — draft complete (`docs/private/succession-plan.md`), needs: Apple Developer renewal date, password manager emergency access config, successor briefing — draft committed 15 Apr 2026
+
+(Succession plan moved to §Post 100 days — deferred 17 Apr 2026.)
 
 ### Should
-- [S2] **Rate-limit trial-key endpoint** — add rate limiting (1 req/min/IP) + server-side receipt validation to the trial-key endpoint, even for the 20-user beta. See `trial-and-pricing-architecture.md` Part 2
+- [S6] **Rate-limit trial-key endpoint** — add rate limiting (1 req/min/IP) + server-side receipt validation to the trial-key endpoint, even for the 20-user beta. Blocks v1.0 subscription launch, not alpha (trial-key endpoint doesn't exist yet). See `trial-and-pricing-architecture.md` Part 2
 - ~~[S1] **Anthropic billing alerts** — set up billing alerts at $5 and $10 thresholds for the trial API key account~~
 - **Desktop app polish** — ReadyView: SwiftUI `.fileImporter()` (replace `NSOpenPanel.runModal()`). ProcessRunner: `AsyncBytes` instead of `availableData` polling. `hasAnyAPIKey()`: extend beyond Anthropic-only (or rename). Settings shortcut ⌘, : show in Help shortcuts conditionally (desktop only, browser intercepts). (Keychain migration moved to §6 Risk Must)
 - **Doctor serve-mode checks** — Vite auto-discovery via `/__vite_ping`, replace hardcoded port (design-serve-doctor.md)
@@ -404,34 +462,37 @@ Items tagged `[S1]`–`[S6]` are assigned to a sprint. Untagged items are unassi
 - **CI snap smoke test** — verify Snap package installs cleanly (TODO.md)
 - **TestFlight beta** — pre-launch testing with real users
 - **Windows CI** — pytest on `windows-latest` runner
-- **AV false-positive testing** — test signed `.dmg` against common macOS antivirus. PyInstaller bundles frequently flagged. (design-desktop-security-audit.md)
+- ~~**AV false-positive testing** — test signed `.dmg` against common macOS antivirus. PyInstaller bundles frequently flagged.~~ _Won't do (18 Apr 2026) — App Store path only, no `.dmg`. Notarised App Store builds don't hit the AV heuristics that unsigned `.dmg`s do._ (design-desktop-security-audit.md)
 - **OS version compatibility testing** — set up macOS 15 Sequoia VM (UTM, Virtualization.framework) and test full app on the deployment target. Dev machine runs macOS 26 Tahoe — need VM coverage for macOS 15 (floor). Run BroadcastChannel spike, full app smoke test, WKWebView security policy, `.nonPersistent()` behaviour
 - **Semgrep CI integration** — Swift security rules (experimental) + Python security rules (mature). (design-desktop-security-audit.md)
 - **Objective-See QA** — run KnockKnock + LuLu during pre-release QA to verify system footprint
 - **Move feedback endpoint to bristlenose.app** — currently on cassiocassio.co.uk. Update `DEFAULT_FEEDBACK_URL` in Python + TS, `From:` header in `feedback.php` to `support@bristlenose.app`, redeploy to bristlenose.app web root. Tidy-up, not a blocker — current endpoint works
+- **CI allowlist validator + staleness gate** — `scripts/check-ci-allowlists.py`: parse `// ci-allowlist: CI-A<N>` markers in `e2e/tests/*.spec.ts`, parse the register at `e2e/ALLOWLIST.md`, fail CI if either side has an ID the other doesn't. Also flag any `deferred-fix` entry with `added:` > 90 days unless renewed. Plus a regex-shape lint (reject unanchored `.*` / `.+` in suppression patterns — mitigates regex-widening review finding). Trigger: ~10th register entry or before first external contributor, whichever is sooner. See `e2e/ALLOWLIST.md` "Future v2" section for full deferred scope
+- **Bump Python floor to `>=3.12` — drop 3.10 and 3.11 from the CI matrix.** 3.10 EOLs upstream Oct 2026; beta realistically lands ~Jan 2027, so the floor has to ratchet before then. 3.11 is a transitional release (not the default on any LTS), covered by the 3.10-and-3.12 bracket today — dropping both at once is one ratchet instead of two. 3.12 matches Ubuntu 24.04 LTS + current Homebrew + macOS 15 Python. Touches: `pyproject.toml` (`requires-python`, classifiers, mypy `python_version`), `.github/workflows/ci.yml` matrix, `README.md`, `INSTALL.md`, `CLAUDE.md`, grep for any `sys.version_info` / `# Python 3.10` conditionals. User-visible: minor version bump to v0.15.0 with CHANGELOG note. Users on Ubuntu 22.04 with system Python 3.10 would need `apt install python3.12` (universe), snap, or the desktop app — acceptable given audience skew (researchers on brew / modern Linux) and that we ship two other distribution paths. Saves ~10 min wall-clock per CI run. ~1–2 hours of focused work. Branch name: `python-floor-3.12`. Reminder scheduled for 9 May 2026.
 
 ### Could
 - **Analytics** — privacy-respecting usage analytics (opt-in only)
 - **Weekly install smoke tests** — automated pip/pipx/brew verification
+- **Perf history charts** — render `e2e/.perf-history.jsonl` as a chart over time (DOM counts, API latency, export size). Currently view-only via `scripts/perf-history.sh` (tabular). Options: Observable notebook, tiny matplotlib script, or a React page in the dev-only About panel. Source data: one JSON line per perf-gate run, gitignored (local-only). When we want cross-machine history, upload `.perf-history.jsonl` as a CI artifact and stitch runs together
 
 ---
 
 ## 12. Legal/Compliance — gates to App Store
 
 ### Must
-- [S1] **Apple Developer Program** — $99/year, individual enrollment initially. Bundle ID: `research.bristlenose.app`. Transition to Ltd organisation enrollment if/when revenue justifies it (team transfer preserves app listing, reviews, URL). Full plan: `docs/private/infrastructure-and-identity.md`
-- [S2] **Privacy policy URL** — required for App Store submission. Host at `bristlenose.research/privacy`. Draft complete, needs solicitor review then hosting
-- [S2] **Terms of service** — subscription terms. v0.9.1 drafted, needs solicitor review
-- [S2] **App sandbox compliance** — entitlements for file access, network (LLM API calls)
+- ~~[S1] **Apple Developer Program** — $99/year, individual enrollment (Martin Storey, Team ID `Z56GZVA2QB`). Bundle ID: `app.bristlenose`. Activated 16 Apr 2026, expires 16 Apr 2027. Transition to Ltd organisation enrollment if/when revenue justifies it (team transfer preserves app listing, reviews, URL). Full plan: `docs/private/infrastructure-and-identity.md`~~
+- [S6] **Privacy policy URL** — required for external TestFlight + App Store submission. Not needed for internal alpha. Host at `bristlenose.research/privacy`. Draft complete, needs solicitor review (May) then hosting
+- [S6] **Terms of service** — subscription terms. v0.9.1 drafted, needs solicitor review (May)
+- [S2] **App sandbox compliance** — entitlements for file access, network (LLM API calls). Required for App Store Connect upload (including TestFlight)
 - [S2] **Export compliance** — HTTPS only, no custom encryption = simplified declaration
-- [S2] **Age rating** — likely 4+ (no objectionable content)
-- [S2] **EULA** — standard Apple EULA or custom
-- [S2] **Privacy Manifest (`PrivacyInfo.xcprivacy`)** — declare required reason APIs and data types. Cross-ref §6 Risk. (design-desktop-security-audit.md)
-- [S2] **AI data transparency per Apple 5.1.2(i)** — first-run consent dialog naming each LLM provider, linking privacy policies, Ollama offline option. Cross-ref §6 Risk. (design-desktop-security-audit.md)
+- [S6] **Age rating** — likely 4+ (no objectionable content). App Store Connect only, not needed for internal TestFlight
+- [S6] **EULA** — standard Apple EULA or custom
+- **Privacy Manifest (`PrivacyInfo.xcprivacy`)** — canonical entry in §6 Risk
+- **AI data transparency per Apple 5.1.2(i)** — canonical entry in §6 Risk ("AI data disclosure dialog")
 
 ### Should
-- [S2] **Draft DPA for relay mode** — accept processor status under GDPR Article 4(2). Short, 2-page, honest DPA. Needed before v1.0 subscription launch. See `trial-and-pricing-architecture.md` Part 2
-- [S2] **Execute DPAs with LLM providers** — execute DPAs with Anthropic/OpenAI/Google for the relay API accounts (sub-processor agreements). Needed before v1.0
+- [S6] **Draft DPA for relay mode** — accept processor status under GDPR Article 4(2). Short, 2-page, honest DPA. Needed before v1.0 subscription launch, not for alpha. See `trial-and-pricing-architecture.md` Part 2
+- [S6] **Execute DPAs with LLM providers** — execute DPAs with Anthropic/OpenAI/Google for the relay API accounts (sub-processor agreements). Needed before v1.0, not for alpha
 - **GDPR statement** — data processing description (local-first, API calls to LLM providers)
 - **Accessibility statement** — VoiceOver compatibility, keyboard navigation
 - **Open source license display** — AGPL notice in app + dependency licenses
@@ -516,9 +577,9 @@ Safari's performance team made WebKit fast by never allowing it to become slower
 - ~~[S1] **Bundle size CI gate** — `size-limit` + `@size-limit/file`, 305 KB gzip limit. CI enforces in `frontend-lint-type-test` job. Current ~300 KB. 100 KB target needs route-level code splitting (separate task)~~
 - ~~[S1] **`GZipMiddleware` in FastAPI** — one line. ~70% reduction in served HTML/CSS/JS. Free win for WKWebView and browser~~
 - ~~[S1] **`content-visibility: auto` on quote card containers** — CSS only, works everywhere including file://. Browser skips layout/paint for off-screen cards. Supported since Safari 17.4. Essential for static export path where JS virtualisation isn't possible~~
-- [S2] **`@tanstack/virtual` in serve mode** — required, not optional. A 15h study produces ~1,500 quotes (~100/hour from real usage). That's ~30,000 DOM nodes without virtualisation. Virtualisation drops visible DOM to ~1,000 regardless of total. This is the single most important performance feature
+- [Icebox] **`@tanstack/virtual` in serve mode** — deferred 17 Apr 2026. Stress sweep (see git log: `stress sweep findings: clean linear scaling to n=3000`) shows clean linear scaling up to 3000 synthetic quotes, well above the 1,500-quote 15h-study ceiling. Not a blocker for alpha or launch. Re-open if real-world use surfaces pathological cases
 - ~~[S1] **Move `<script>` to end of `<body>`** — script block is already at end of `<body>` (after all `<article>` content, before `</body>`). No `<head>` scripts exist. Done~~
-- [S2] **Performance regression gate in CI** — Playwright test on FOSSDA dataset measuring DOM node count (fail > 10,000) and static export size (fail > 2 MB). The ratchet: once you have a number, no PR makes it worse
+- [S2] **Performance regression gate in CI** — Playwright spec in existing E2E suite measuring DOM node count, API latency, export file size against smoke-test fixture. Doubling rule (fail at 2x baseline). Measured baselines: quotes page 549 nodes, export 1.6 MB. Design doc reviewed, ready to implement. See `docs/design-perf-regression-gate.md`
 - ~~[S1] **`perf-review` agent** — Claude Code agent (`.claude/agents/perf-review.md`) that reviews PRs for performance regressions: new deps without size justification, unvirtualised large lists, missing `passive: true`, blocking resource additions. Catches the obvious stuff before CI catches the rest~~
 
 ### Should
@@ -534,6 +595,7 @@ Safari's performance team made WebKit fast by never allowing it to become slower
 - **WKWebView: inject critical CSS via `WKUserScript` at `.atDocumentStart`** — eliminates flash-of-unstyled-content on cold loads
 - **Replace `setInterval` player polling** with `BroadcastChannel` or `beforeunload` — timer runs even when player is closed
 - **Profile in WKWebView specifically** — Xcode Instruments before each desktop release. JavaScriptCore has different optimisation behaviour to V8
+- **WKWebView stress-test confirmation pass (post-launch-fast)** — the synthetic stress harness (`scripts/perf-stress.sh`) is Chromium-only today; fine for proving virtualisation works, but desktop ships primarily via WKWebView (JavaScriptCore). Add a WebKit project to `e2e/playwright.stress.config.ts` or a separate `run-in-wkwebview.swift` that loads the served report in a real WKWebView, runs the same DOM/paint assertions, and writes to `stress-results-wkwebview.json`. Compare deltas vs Chromium. Blocks signing off any virtualisation-adjacent perf claim for the desktop build
 
 ### Could
 - **`@tanstack/virtual`** for quote lists > 100 items — only if `content-visibility` is insufficient (measure first)
@@ -587,6 +649,16 @@ Safari's performance team made WebKit fast by never allowing it to become slower
 
 ---
 
+## Post 100 days
+
+Items deliberately deferred past the 100-day window. Reasons vary: dependence on Apple's 2026 release cycle (WWDC 8 June, macOS 27 developer beta shortly after, public release September), hardware not yet available, or commercial-stage prerequisites that the alpha doesn't yet meet.
+
+- **Succession plan** — bus-factor doc (every account/credential/recovery path), password manager emergency access for one trusted person. (infrastructure-and-identity.md) — draft complete (`docs/private/succession-plan.md`), Apple Developer renewal date filled in (2027-04-16, Team ID `Z56GZVA2QB`); still needs: password manager emergency access config, successor briefing. **Deferred beyond 100days (17 Apr 2026):** no income, no commercial asset yet — inheritable asset is Martin shipping, not a repo. Revisit when Ltd is set up or there's paying customers.
+
+- **Per-stage pluggable backends — stage A/B benchmark** — full plan in [`docs/design-stage-backends.md`](../design-stage-backends.md). s10 `quote_extraction` dominates both wall time (47.6%) and LLM cost (92.5%) on real runs; on Teams/Zoom inputs (s05 skipped) it becomes ~90% of runtime. The spike is designed as a re-runnable benchmark, not a one-shot. Sequencing: Phase A (cloud + Ollama harness, cheap, can run any time) → Phase B (MLX arm, Python-native, no Swift; most valuable against M5 / macOS 27 stack) → Phase C (Apple FM Swift shim, wait for post-WWDC FM announcements — chasing today's 4k-context 3B before the next OS ships risks throwing away work). Target: first full benchmark snapshot at macOS 27 developer beta (July 2026), re-run at GA (September 2026), re-run again before Jan 2027 launch copy is finalised. Apple ML Research's Nov 2025 M5 benchmarks (3.3–4× TTFT over M4, 14B dense at <10s TTFT, 30B MoE at <3s) are the reason this is worth planning for, not dismissing.
+
+---
+
 ## Investigations (no commitment — explore if time allows)
 
 These are speculative ideas worth thinking about but without a delivery commitment:
@@ -600,4 +672,4 @@ These are speculative ideas worth thinking about but without a delivery commitme
 
 ---
 
-*Updated 15 Apr 2026. Reconciled with delivery repo copy: added §15 Performance (WebKit philosophy, profiling-first roadmap, perf-review agent, CI gates), sprint legend, iPad session outputs (privacy policy draft, ToS v0.9.1, privacy manifest, first-run experience design, new items L5/L6/I6/I7/R6), bundle size → §15 promotion. Previous: 25 Mar 2026 — domain architecture, security audit additions, shipped-item strikethrough. Original: 16 Mar 2026.*
+*Updated 17 Apr 2026 (four passes). Fourth pass: alpha path decided — internal TestFlight, not `.dmg`. Reasoning: StoreKit needs sandbox anyway, doing it now means a modern codebase from the start. Rejected `.dmg` path items (Developer ID cert, .dmg build pipeline, Gatekeeper README) struck in §11. TestFlight upload pipeline + App Store Connect setup + App Store review compliance umbrella moved back to S2. S2 cadence: CI cleanup first, then A/B interleave sandbox/signing ↔ MVP flow steps. First upload when both tracks green (may slip to S3 — MVP quality is the deadline, not calendar). Full path in `docs/private/road-to-alpha.md`. Third pass: Mac app MVP 1-hour flow is the real gate. Added §1a MVP flow checklist. Virtualisation → Icebox (stress sweep shows clean scaling to n=3000). AI disclosure dialog marked shipped (AIConsentView.swift). Real QA path = IKEA study + CLI handholding on video calls with UXR friends. Second pass: Sprint 2 re-scoped to "Perf + TestFlight alpha pipeline": perf items first (virtualisation, regression gate), then internal TestFlight path (App Store Connect record, Apple Distribution cert, sandbox, Privacy Manifest, Export compliance, sidecar signing, AI disclosure lightweight). Second pass deduplicated Privacy Manifest + AI disclosure (kept §6 Risk as canonical, §12 Legal points there); split signing into Apple Distribution (S2, TestFlight path) vs Developer ID (S6, .dmg path); moved .dmg build pipeline, .dmg README, DPAs, and trial-key rate-limit to S6 (v1.0-blocking, not alpha-blocking). Solicitor contact: May. Previous: 15 Apr 2026. Reconciled with delivery repo copy: added §15 Performance (WebKit philosophy, profiling-first roadmap, perf-review agent, CI gates), sprint legend, iPad session outputs (privacy policy draft, ToS v0.9.1, privacy manifest, first-run experience design, new items L5/L6/I6/I7/R6), bundle size → §15 promotion. Previous: 25 Mar 2026 — domain architecture, security audit additions, shipped-item strikethrough. Original: 16 Mar 2026.*

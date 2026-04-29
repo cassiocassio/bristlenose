@@ -1,0 +1,1 @@
+Apple M2 Max | mlx | large-v3-turbo | anthropic | claude-sonnet-4-20250514

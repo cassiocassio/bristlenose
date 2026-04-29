@@ -39,6 +39,11 @@ class SessionRecord(BaseModel):
     provider: str | None = None  # "anthropic", "google", etc.
     model: str | None = None  # "claude-sonnet-4-20250514", etc.
     content_hash: str | None = None  # SHA-256 of the session output file
+    # Phase 1f cost extension — additive, defaults to None for back-compat.
+    input_tokens: int | None = None
+    output_tokens: int | None = None
+    cost_usd_estimate: float | None = None
+    price_table_version: str | None = None
 
 
 class StageRecord(BaseModel):

@@ -1,3 +1,7 @@
+---
+id: quote-clustering
+version: 0.1.0
+---
 # Quote Clustering
 
 <!-- Variables: {quotes_json} -->

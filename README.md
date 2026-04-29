@@ -384,6 +384,33 @@ Edit `bristlenose/__init__.py` (the single source of truth for version), commit,
 
 ## Changelog
 
+**0.15.0** — _26 Apr 2026_
+
+- **Pipeline resilience: run-level event log + honest run state** — pipelines now write `pipeline-events.jsonl` recording how each run ended, with a structured `Cause` (10 categories). Replaces the desktop's old inference path that mis-classified interrupted runs as ready
+- **Cost as honest estimate** — `cost_usd_estimate` + `price_table_version` + `input_tokens` + `output_tokens` stamped on every terminus event. Surfaced as `"~$0.46 (est.)"` — never bare dollars
+- **Stranded-run reconciliation** — prior runs that died mid-flight are now noticed on the next `bristlenose run` and synthesised as `failed` with cause `unknown` ("Analysis stopped unexpectedly.")
+- **Desktop: `EventLogReader`** — Swift consumer of the events log; new `PipelineState.partial` / `.stopped` cases. UI verb wiring (Resume / Retry / Re-analyse…) lands in a follow-up iteration
+- **Desktop: Swift test target wired up** — `xcodebuild test` runs 90 tests including new `EventLogReaderTests`
+
+**0.14.6** — _18 Apr 2026_
+
+- CI: e2e gate re-enabled as a blocking check (three P3 items cleared)
+- Fix: Analysis "Show all N quotes" toggle now a proper `<button>` (was an `<a>` without href)
+- Fix: `playwright.config.ts` shell-quotes paths so worktrees with spaces in the name work
+- `SECURITY.md`: corrected auth-token description (env-override path is real and used by CI fixtures / uvicorn reload; future hardening tracked)
+- `bristlenose doctor`: new `Auth token` check warns if `_BRISTLENOSE_AUTH_TOKEN` is set in the shell
+- CI: allowlist register at `e2e/ALLOWLIST.md` — every test suppression categorised and tracked; prevents silent accumulation
+
+**0.14.5** — _17 Apr 2026_
+
+- CI unblock release: no user-facing changes
+- Fix `eslint-plugin-react-hooks` 7.0.1 → 7.1.0 (eslint 10 peer-range)
+- Pin `jsdom` to 27.x (29 dropped localStorage shims, 140+ test failures)
+- Fix stale Vitest mocks after `api.ts` and i18n changes
+- Regenerate `e2e/package-lock.json` (lighthouse was added without `npm install`)
+- Exclude `perf-stress.spec.ts` from default Playwright discovery
+- e2e CI gate temporarily informational; three P3 findings parked to sprint 2
+
 **0.14.4** — _16 Apr 2026_
 
 - Pipeline resilience: input change detection (added/removed/modified files trigger re-run)

@@ -1,13 +1,14 @@
 ---
 status: partial
-last-trued: 2026-04-21
-trued-against: HEAD@sidecar-signing on 2026-04-21
+last-trued: 2026-04-29
+trued-against: HEAD@first-run on 2026-04-29 (uncommitted Beat 3)
 ---
 
 > **Truing status:** Partial — Phase 1 (web gear-icon modal, `SettingsModal.tsx`, `ModalNav.tsx`, `⌘,` shortcut) **shipped**; Phases 2/3/4 remain pending as described. The "API Keys" section is architecturally superseded for the desktop-embedded deployment — see banner there. The serve-mode CLI path still applies when running `bristlenose serve` outside the sandboxed desktop app.
 
 ## Changelog
 
+- _2026-04-29_ — confirmed still current after Beat 3 (desktop SwiftUI round-trip credential validation in `LLMValidator.swift` + `LLMSettingsView.swift`, plus the post-review batch: ProgressView spinner for `.checking`, Mail-density icons, verdict cache with TTL, "Last verified" line, Ollama HTTP probe, Anthropic forward-compat). Beat 3 lives entirely on the desktop-embedded path delegated to `design-desktop-settings.md`; the web SPA Settings scope this doc owns is unchanged. Phase 2 (web `/api/credentials/{provider}/test` endpoint) remains pending — Beat 3 deliberately did not extend into serve-mode validation. Anchors: `desktop/Bristlenose/Bristlenose/LLMValidator.swift`, `desktop/Bristlenose/Bristlenose/LLMSettingsView.swift`.
 - _2026-04-21_ — trued up: marked Phase 1 as shipped with anchors; fixed `bristlenose credential` → `bristlenose configure` (shipped command name, 2 occurrences); added "Shipping status (Apr 2026)" callout; added supersedence banner to §API Keys pointing at `design-desktop-settings.md` + `design-keychain.md` §Desktop credential path; corrected "Existing infrastructure → Config loading" claim (keychain lookup is in `credentials.py`, not `config.py`); added cross-references to `design-desktop-settings.md`. Anchors: `frontend/src/components/SettingsModal.tsx:414`, `frontend/src/components/ModalNav.tsx`, `frontend/src/layouts/AppLayout.tsx:17,162,171,545`, `frontend/src/hooks/useKeyboardShortcuts.ts:284`, `bristlenose/cli.py:1613`. Preserved: Phase 2/3/4 plans (still correct, still pending).
 
 # Settings UI — API Keys & Provider Switching

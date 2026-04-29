@@ -1,5 +1,9 @@
 # Design: About Panel (future)
 
+## Changelog
+
+- **2026-04-29** — Build Info diagnostic landed: standard About panel now carries a monospaced credits block (branch, short SHA + dirty flag, configuration, sandbox / Hardened-Runtime state, sidecar mode, build date), and a sibling **Build Info…** menu item opens a copyable sheet with the same content. Implementation: [BuildInfo.swift](../desktop/Bristlenose/Bristlenose/BuildInfo.swift), [BuildInfoSheet.swift](../desktop/Bristlenose/Bristlenose/BuildInfoSheet.swift), credits injection in [MenuCommands.swift](../desktop/Bristlenose/Bristlenose/MenuCommands.swift) `AppMenuContent`. Git values come from a generated Swift constants file refreshed each build by `desktop/scripts/generate-build-info.sh`.
+
 ## Current implementation
 
 Standard macOS About panel via `NSApp.orderFrontStandardAboutPanel(options:)`. Shows:
@@ -7,6 +11,9 @@ Standard macOS About panel via `NSApp.orderFrontStandardAboutPanel(options:)`. S
 - "Bristlenose"
 - Version from `/api/health` + Xcode build number in brackets (e.g. "0.14.0 (42)")
 - Copyright
+- **Credits block** (NSAttributedString, monospaced 10pt) with the same provenance line that the in-app footer / Build Info sheet shows — `v<X.Y.Z> · <branch> · <sha>[-dirty] · <Debug|Release> · sandbox=<on|off> HR=<on|off> · sidecar=<bundled|dev-sidecar|external:N>` plus build-number and build-date lines.
+
+Adjacent **Build Info…** menu item (Bristlenose menu, immediately below About) opens a SwiftUI sheet with the same block plus a Copy button — this surface is always visible (no `#if DEBUG` gate) so a tester pasting "what build is this?" into a support thread doesn't depend on the in-app footer being legible in the screenshot. The footer overlay in `ContentView` is the in-app counterpart and is `#if DEBUG || BRISTLENOSE_SHOW_DIAGNOSTIC_OVERLAY`-gated so it never reaches App Store / TestFlight users.
 
 ## Future vision
 

@@ -152,4 +152,6 @@ extension Notification.Name {
     static let bristlenosePrefsChanged = Notification.Name("bristlenosePrefsChanged")
     /// Posted by the app menu to re-show the AI data disclosure sheet.
     static let showAIConsentSheet = Notification.Name("showAIConsentSheet")
+    /// Posted by the app menu to show the Build Info diagnostic sheet.
+    static let showBuildInfoSheet = Notification.Name("showBuildInfoSheet")
 }

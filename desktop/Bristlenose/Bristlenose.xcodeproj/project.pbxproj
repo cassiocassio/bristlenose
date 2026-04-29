@@ -202,13 +202,15 @@
 			files = (
 			);
 			inputPaths = (
+				"$(PROJECT_DIR)/Resources/bristlenose-sidecar/bristlenose-sidecar",
 			);
 			name = "Copy Sidecar Resources";
 			outputPaths = (
+				"$(BUILT_PRODUCTS_DIR)/$(UNLOCALIZED_RESOURCES_FOLDER_PATH)/bristlenose-sidecar/bristlenose-sidecar",
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/bash;
-			shellScript = "# Copy pre-built sidecar, FFmpeg, and Whisper model into the app bundle.\n# These are large binaries built by scripts in desktop/scripts/ and\n# placed in desktop/Bristlenose/Resources/. Xcode's file sync does not\n# pick them up automatically, so we copy them in a build phase.\n\nRESOURCES_SRC=\"${PROJECT_DIR}/Resources\"\nRESOURCES_DST=\"${BUILT_PRODUCTS_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}\"\n\n# Sidecar (PyInstaller --onedir output)\nif [ -d \"${RESOURCES_SRC}/bristlenose-sidecar\" ]; then\n    rsync -a --delete \"${RESOURCES_SRC}/bristlenose-sidecar\" \"${RESOURCES_DST}/\"\n    echo \"Copied bristlenose-sidecar\"\nfi\n\n# FFmpeg + ffprobe\nfor bin in ffmpeg ffprobe; do\n    if [ -x \"${RESOURCES_SRC}/${bin}\" ]; then\n        cp -p \"${RESOURCES_SRC}/${bin}\" \"${RESOURCES_DST}/${bin}\"\n        echo \"Copied ${bin}\"\n    fi\ndone\n\n# Whisper model\nif [ -d \"${RESOURCES_SRC}/models\" ]; then\n    rsync -a --delete \"${RESOURCES_SRC}/models\" \"${RESOURCES_DST}/\"\n    echo \"Copied models\"\nfi\n";
+			shellScript = "# Copy pre-built sidecar, FFmpeg, and Whisper model into the app bundle.\n# These are large binaries built by scripts in desktop/scripts/ and\n# placed in desktop/Bristlenose/Resources/. Xcode's file sync does not\n# pick them up automatically, so we copy them in a build phase.\n#\n# Incremental builds: the input/output paths above declare the sidecar\n# main binary as the dependency anchor — when its mtime changes, this\n# phase re-runs. ffmpeg/ffprobe/models stay as optional side-effects\n# (the `if [ -x ]` / `if [ -d ]` guards mean the build still works\n# without them, e.g. when iterating on the Python sidecar alone).\n# If a future build needs ffmpeg/models tracked too, add them to the\n# input/output lists above.\n\nRESOURCES_SRC=\"${PROJECT_DIR}/Resources\"\nRESOURCES_DST=\"${BUILT_PRODUCTS_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}\"\n\n# Sidecar (PyInstaller --onedir output)\nif [ -d \"${RESOURCES_SRC}/bristlenose-sidecar\" ]; then\n    rsync -a --delete \"${RESOURCES_SRC}/bristlenose-sidecar\" \"${RESOURCES_DST}/\"\n    echo \"Copied bristlenose-sidecar\"\nfi\n\n# FFmpeg + ffprobe\nfor bin in ffmpeg ffprobe; do\n    if [ -x \"${RESOURCES_SRC}/${bin}\" ]; then\n        cp -p \"${RESOURCES_SRC}/${bin}\" \"${RESOURCES_DST}/${bin}\"\n        echo \"Copied ${bin}\"\n    fi\ndone\n\n# Whisper model\nif [ -d \"${RESOURCES_SRC}/models\" ]; then\n    rsync -a --delete \"${RESOURCES_SRC}/models\" \"${RESOURCES_DST}/\"\n    echo \"Copied models\"\nfi\n";
 		};
 /* End PBXShellScriptBuildPhase section */
 

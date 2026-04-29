@@ -90,6 +90,21 @@ Remaining PII work tracked in `docs/private/100days.md` §4 Value (PII dashboard
 
 ---
 
+## Re-evaluate security-review agent calibration (29 Apr 2026)
+
+AI makes it cheap to enumerate every "could go wrong" — that doesn't mean every finding is worth acting on. During Beat 3 QA setup, security-review returned 11 findings against a single QA doc; piping them verbatim (rotate test keys, dedicated $5-cap key, Logger privacy spot-check, quit Zoom/iCloud before Wi-Fi off, wipe keychain via shell) added theatre without proportional risk reduction for a dev Mac with $20-cap + no-auto-renew keys. User pushback ("if they get my mac and cut my thumb off they can have the keychain — what do i care about $20 in a log") was the right calibration check.
+
+Agent-side fixes to evaluate:
+- Have the agent lead each finding with realistic impact + cost-of-mitigation, not adversarial scenario. Proportionality as burden of proof.
+- Self-classify findings as "ship blocker" / "code-quality nice" / "threat-model dependent" instead of flat severity.
+- Inject the user's threat model (single-user dev Mac, capped keys, security-literate ex-Canonical) so the agent weighs against actual consequence.
+
+Caller-side discipline already captured in `feedback_proportionate_security.md` and the index entry in `MEMORY.md` — don't pipe agent output verbatim, mediate.
+
+Bigger question: same calibration likely applies to other adversarial-by-design agents (a11y-review, perf-review). Worth tuning the suite prompts together.
+
+---
+
 ## Ideas (captured, not triaged)
 
 - **Feedback pipeline → Bristlenose (internal dogfooding)** (17 Apr 2026) — IMAP fetch from feedback@bristlenose.app (DreamHost) → deterministic PII/header strip (Presidio + salted anon IDs for sender stability) → redacted `.md` archive in gitignored dir → monthly batch ingest into a private Bristlenose project to cluster themes for roadmap input. Read-only, never used as demo data, never shipped. Consent-safe because it stays internal. Caveats: emails are many short sessions (not few long ones) — may need a batch mode or synthetic "session per month"; no moderator questions so question-pill logic doesn't apply.

@@ -85,6 +85,95 @@ enum LLMProvider: String, CaseIterable, Identifiable {
         default: nil
         }
     }
+
+    /// User-facing label for a status, with provider-specific overrides.
+    /// Ollama swaps "Online" for "Local" — both healthy, but "Local"
+    /// names the actual privacy property the user picked Ollama for.
+    func statusLabel(for status: ProviderStatus) -> String {
+        if self == .ollama && status == .online {
+            return "Local"
+        }
+        return status.label
+    }
+
+    /// Label for the "Use this provider" activation toggle.
+    /// Cloud providers use the generic phrasing — they're already named
+    /// in the sidebar row above. Ollama gets a custom label that names
+    /// the local-only property, since "Use this provider" undersells the
+    /// reason a user would pick it.
+    var activationToggleLabel: String {
+        switch self {
+        case .ollama: "Use the local Ollama model"
+        default: "Use this provider"
+        }
+    }
+
+    // MARK: - External links
+
+    /// External links for the provider — homepage (label = bare domain),
+    /// pricing page, and the console where keys are issued. Surfaced as a
+    /// row under the Status toggle so a `.notSetUp` user knows where to
+    /// go to get a key. URLs drift over time; keep them centralised here
+    /// so updates are one-file. `pricing` and `console` are optional —
+    /// Ollama has neither (free, local).
+    struct ProviderLinks {
+        let homepage: URL
+        let homepageLabel: String
+        let pricing: URL?
+        let console: URL?
+        let consoleLabel: String  // "Keys" for cloud APIs; "Portal" for Azure
+    }
+
+    var links: ProviderLinks {
+        switch self {
+        case .claude:
+            return ProviderLinks(
+                homepage: URL(string: "https://anthropic.com")!,
+                homepageLabel: "anthropic.com",
+                pricing: URL(string: "https://anthropic.com/pricing"),
+                console: URL(string: "https://console.anthropic.com"),
+                consoleLabel: "Keys"
+            )
+        case .chatGPT:
+            return ProviderLinks(
+                homepage: URL(string: "https://openai.com")!,
+                homepageLabel: "openai.com",
+                pricing: URL(string: "https://openai.com/api/pricing"),
+                console: URL(string: "https://platform.openai.com/api-keys"),
+                consoleLabel: "Keys"
+            )
+        case .gemini:
+            return ProviderLinks(
+                homepage: URL(string: "https://ai.google.dev")!,
+                homepageLabel: "ai.google.dev",
+                pricing: URL(string: "https://ai.google.dev/pricing"),
+                console: URL(string: "https://aistudio.google.com/app/apikey"),
+                consoleLabel: "Keys"
+            )
+        case .azure:
+            // Azure customers manage keys inside their org's portal under
+            // their own deployment — there's no single "get a key" page.
+            return ProviderLinks(
+                homepage: URL(
+                    string: "https://azure.microsoft.com/en-us/products/ai-services/openai-service")!,
+                homepageLabel: "azure.microsoft.com",
+                pricing: URL(
+                    string:
+                        "https://azure.microsoft.com/en-us/pricing/details/cognitive-services/openai-service/"
+                ),
+                console: URL(string: "https://portal.azure.com"),
+                consoleLabel: "Portal"
+            )
+        case .ollama:
+            return ProviderLinks(
+                homepage: URL(string: "https://ollama.com")!,
+                homepageLabel: "ollama.com",
+                pricing: nil,
+                console: nil,
+                consoleLabel: ""
+            )
+        }
+    }
 }
 
 // MARK: - Account status
@@ -138,7 +227,8 @@ enum ProviderStatus: Equatable {
         }
     }
 
-    /// True when the key has been validated successfully.
+    /// True when the provider may be activated. `.online` only — every
+    /// other state (including `.unavailable`) blocks the radio.
     var isConfigured: Bool {
         self == .online
     }

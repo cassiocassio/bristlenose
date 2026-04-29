@@ -1,7 +1,7 @@
 # Pluggable LLM routing, per-stage model choice, and quality eval
 
 **Status:** Design draft — not yet implemented. April 2026.
-**Related:** [design-llm-providers.md](design-llm-providers.md), [design-gemma4-local-models.md](design-gemma4-local-models.md), [design-modularity.md](design-modularity.md), [design-perf-fossda-baseline.md](design-perf-fossda-baseline.md)
+**Related:** [design-gemma4-local-models.md](design-gemma4-local-models.md), [design-modularity.md](design-modularity.md), [design-perf-fossda-baseline.md](design-perf-fossda-baseline.md), [archive/design-llm-providers.md](archive/design-llm-providers.md) (historical roadmap)
 
 ## Why now
 

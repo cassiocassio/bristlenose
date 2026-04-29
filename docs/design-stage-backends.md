@@ -358,7 +358,7 @@ Isolated script wins on every axis.
 
 - [`docs/design-performance.md`](design-performance.md) — principle-level performance notes, complementary
 - [`docs/design-perf-fossda-baseline.md`](design-perf-fossda-baseline.md) — precedent for this kind of evidence doc
-- [`docs/design-llm-providers.md`](design-llm-providers.md) — current provider abstraction
+- [`docs/design-pluggable-llm-routing.md`](design-pluggable-llm-routing.md) — provider abstraction (replaces archived `design-llm-providers.md`)
 - [`docs/design-modularity.md`](design-modularity.md) — single-Python-artefact principle; Apple FM must respect it
 - [`scripts/perf-breakdown.py`](../scripts/perf-breakdown.py) — evidence producer
 - [`bristlenose/llm/client.py`](../bristlenose/llm/client.py) — `LLMClient.analyze`

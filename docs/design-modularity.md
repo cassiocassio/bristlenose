@@ -370,6 +370,6 @@ This is not a design. The Track C C0/C1 work needs a separate UX-design pass (li
 - [`docs/private/road-to-alpha.md`](./private/road-to-alpha.md) — TestFlight path
 - [`docs/design-homebrew-packaging.md`](./design-homebrew-packaging.md) — Mac CLI formula
 - [`docs/design-doctor-and-snap.md`](./design-doctor-and-snap.md) — Snap packaging
-- [`docs/design-llm-providers.md`](./design-llm-providers.md) — provider SDKs (all base)
+- [`docs/archive/design-llm-providers.md`](./archive/design-llm-providers.md) — provider SDKs (historical roadmap; all 5 phases shipped)
 - [Apple Background Assets framework](https://developer.apple.com/documentation/backgroundassets)
 - [Apple-Hosted Background Assets overview](https://developer.apple.com/help/app-store-connect/manage-asset-packs/overview-of-apple-hosted-asset-packs/)

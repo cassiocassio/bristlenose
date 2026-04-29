@@ -1,3 +1,20 @@
+---
+status: archived-historical
+last-trued: 2026-04-29
+trued-against: HEAD@main on 2026-04-29
+archived: 2026-04-29
+archive-reason: Roadmap that ran out of road. All 5 phases shipped (Ollama, Azure, Keychain, Gemini, provider docs). For alpha, no new providers planned (`project_alpha_no_new_providers`). Canonical references live in `design-llm-call-telemetry.md`, `design-pluggable-llm-routing.md`, and the `LLMProvider.swift` enum.
+---
+
+> **Archived 29 Apr 2026.** Preserved as a record of the Phase 1–5 provider
+> roadmap. Phases 4 (Gemini) and 5 (provider documentation) shipped after
+> this doc was last edited (9 Feb 2026); both are on main now. For alpha,
+> the 5-provider set (Anthropic / OpenAI / Google / Azure / Local-Ollama)
+> is intentionally frozen. For current LLM provider state see
+> [`design-llm-call-telemetry.md`](../design-llm-call-telemetry.md),
+> [`design-pluggable-llm-routing.md`](../design-pluggable-llm-routing.md),
+> and `desktop/Bristlenose/Bristlenose/LLMProvider.swift`.
+
 # LLM Provider Roadmap
 
 Goal: support whatever LLM your organisation has access to.

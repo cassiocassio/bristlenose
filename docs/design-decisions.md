@@ -72,7 +72,7 @@ _See also: `docs/design-desktop-app.md`_
 
 The local provider (Ollama) is the zero-friction fallback — it runs on the user's machine with no API key, no account, no cost. Reliability is lower (~85% valid JSON vs ~99% for cloud providers), with 3 retries and exponential backoff, but it's good enough for users who can't or won't use cloud APIs.
 
-_See also: `bristlenose/llm/CLAUDE.md`, `docs/design-llm-providers.md`_
+_See also: `bristlenose/llm/CLAUDE.md`, `docs/design-llm-call-telemetry.md`, `docs/archive/design-llm-providers.md` (historical roadmap)_
 
 ### Export as DOM snapshot
 

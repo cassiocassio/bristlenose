@@ -216,7 +216,7 @@ See `docs/design-i18n.md` for implementation gotchas (Apple glossary cross-check
 - `docs/release.md`, `docs/file-map.md`, `CONTRIBUTING.md`, `INSTALL.md`, `SECURITY.md`
 - `docs/design-ci.md`, `docs/design-test-strategy.md`, `docs/design-playwright-testing.md`
 - `docs/design-doctor-and-snap.md`, `docs/design-homebrew-packaging.md`
-- `docs/design-cli-improvements.md`, `docs/design-llm-providers.md`, `docs/design-performance.md`
+- `docs/design-cli-improvements.md`, `docs/design-llm-call-telemetry.md`, `docs/design-performance.md` (`docs/design-llm-providers.md` archived 29 Apr — see `docs/archive/`)
 - `docs/design-decisions.md` (why), `docs/design-reactive-ui.md` (partially superseded)
 - `docs/ROADMAP.md`
 

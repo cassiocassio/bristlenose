@@ -420,17 +420,19 @@ Replace `ProjectStub` array with `ProjectIndex` loading from `projects.json`.
 
 **Files**: `FolderRow.swift` (new), `ProjectIndex.swift` (Folder model, folder CRUD, SidebarItem/SidebarSelection enums, folderId on Project), `ContentView.swift` (sidebar restructuring, DisclosureGroup, folder notifications), `MenuCommands.swift` (adaptive Project menu, Move To submenu, New Folder in File menu), `BridgeHandler.swift` (selectedFolderName), 6 locale files
 
-### Phase 4 — Availability + volume tracking
+### Phase 4 — Availability + volume tracking ✅ shipped 26 Apr 2026 (port-v01-ingestion)
 
-- `location` field auto-populated on project creation (local/volume/network/cloud detection)
-- Grey treatment for unavailable projects with `display_hint` secondary line
-- Bookmark data stored alongside paths (hybrid resolution)
-- `NSWorkspace.didMountNotification` / `didUnmountNotification` to update availability
-- Volume-relative path fallback for remounted drives
-- "Locate…" action for moved/deleted projects (re-select via NSOpenPanel)
-- `VolumeWatcher.swift` — separate observer, not on ContentView
+- `location` field auto-populated on project creation (local/volume/network/cloud detection) — `Location` struct in `ProjectIndex.swift:14-22`
+- Grey treatment for unavailable projects with `display_hint` secondary line — `Project.availability` enum in `ProjectIndex.swift:132-145`
+- Bookmark data stored alongside paths (hybrid resolution) — `bookmarkData: Data?` accepted in init; resolution-on-access still to verify under sandbox (Track A territory)
+- `NSWorkspace.didMountNotification` / `didUnmountNotification` to update availability — `VolumeWatcher.swift:21-44`
+- Volume-relative path fallback for remounted drives — shipped
+- "Locate…" action for moved/deleted projects (re-select via NSOpenPanel) — verify
+- `VolumeWatcher.swift` — separate observer, not on ContentView ✅
 
-**Files**: `ProjectIndex.swift` (availability, bookmarks), `VolumeWatcher.swift` (new), `ProjectRow.swift` (grey state, secondary line)
+**Files**: `ProjectIndex.swift` (availability, bookmarks), `VolumeWatcher.swift`, `ProjectRow.swift` (grey state, secondary line)
+
+**Outstanding under Phase 4:** confirm security-scoped bookmark resolution under the macOS sandbox once Track A (`sandbox-debug` worktree) lands its inventory; also confirm the "Locate…" action is wired.
 
 ### Phase 5 — Archive + status bar + Get Info
 

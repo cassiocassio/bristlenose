@@ -138,6 +138,7 @@ struct ContentView: View {
     @State private var columnVisibility: NavigationSplitViewVisibility = .all
     @State private var showingAIConsent = false
     @State private var aiConsentReviewMode = false
+    @State private var showingBuildInfo = false
 
     /// The ID of the project currently in inline rename mode, or nil.
     @State private var renamingProjectID: UUID?
@@ -234,6 +235,22 @@ struct ContentView: View {
         }
         .background(WindowTitleManager(title: selectedProject?.name ?? "Bristlenose"))
         .background(SidebarDeselectMonitor { selection = [] })
+        .overlay(alignment: .bottomTrailing) {
+            // Compact build-info diagnostic — Debug only by default; Release
+            // exposure gated on a custom build flag so internal/ad-hoc archives
+            // can opt in. Never shipped to TestFlight / App Store users.
+            // See BuildInfo.swift for the rationale and target format.
+            #if DEBUG || BRISTLENOSE_SHOW_DIAGNOSTIC_OVERLAY
+            Text(BuildInfo.current.oneLine(sidecar: serveManager.mode?.shortSummary ?? "?"))
+                .font(.system(size: 10, design: .monospaced))
+                .foregroundStyle(Color.secondary.opacity(0.6))
+                .textSelection(.enabled)
+                .padding(.horizontal, 8)
+                .padding(.vertical, 4)
+                .allowsHitTesting(true)
+                .accessibilityHidden(true)
+            #endif
+        }
         .navigationSplitViewColumnWidth(min: 180, ideal: 220, max: 300)
         .preferredColorScheme(colorScheme)
         // TODO: filter by window object when multi-window ships —
@@ -274,6 +291,15 @@ struct ContentView: View {
         .onReceive(NotificationCenter.default.publisher(for: .showAIConsentSheet)) { _ in
             aiConsentReviewMode = true
             showingAIConsent = true
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .showBuildInfoSheet)) { _ in
+            showingBuildInfo = true
+        }
+        .sheet(isPresented: $showingBuildInfo) {
+            BuildInfoSheet(
+                sidecar: serveManager.mode?.shortSummary ?? "?",
+                onDismiss: { showingBuildInfo = false }
+            )
         }
         // File > New Project (Cmd+N) and sidebar [+] button.
         .onReceive(NotificationCenter.default.publisher(for: .createNewProject)) { _ in

@@ -84,8 +84,32 @@ private struct AppMenuContent: View {
                 options[.applicationVersion] = versionString
             }
 
+            // Stash the BuildInfo block in the standard panel's Credits area
+            // so users posting an "About" screenshot already include enough
+            // provenance to disambiguate the build.
+            let credits = BuildInfo.current.detailed(
+                sidecar: serveManager.mode?.shortSummary ?? "?"
+            )
+            options[.credits] = NSAttributedString(
+                string: credits,
+                attributes: [
+                    .font: NSFont.monospacedSystemFont(ofSize: 10, weight: .regular),
+                    .foregroundColor: NSColor.secondaryLabelColor,
+                ]
+            )
+
             options[.version] = ""
             NSApp.orderFrontStandardAboutPanel(options: options)
+        }
+
+        // Always-visible copyable Build Info diagnostic. Mirrors the footer
+        // overlay's content but works in Release / TestFlight too — useful
+        // when a user posts a screenshot of the About panel rather than the
+        // main window.
+        // Sheet is presented by ContentView via .onReceive — attaching .sheet
+        // to a menu Button has no host window to present from.
+        Button("Build Info…") {
+            NotificationCenter.default.post(name: .showBuildInfoSheet, object: nil)
         }
 
         Divider()

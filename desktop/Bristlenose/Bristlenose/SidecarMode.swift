@@ -36,6 +36,17 @@ enum SidecarMode: Equatable {
             return "external-server, port=\(port)"
         }
     }
+
+    /// Short one-token summary for the BuildInfo provenance line. No path —
+    /// this is for screenshots / support pastes where we want to fit on one
+    /// line and only need the *kind*, not the location.
+    var shortSummary: String {
+        switch self {
+        case .bundled: return "bundled"
+        case .devSidecar: return "dev-sidecar"
+        case .external(let port): return "external:\(port)"
+        }
+    }
 }
 
 /// Reasons `SidecarMode.resolve` can fail.

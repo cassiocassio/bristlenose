@@ -813,6 +813,7 @@ Every command in the app must be reachable from the menu bar — this is macOS, 
 
 **Bristlenose** (app menu — system provides Services, Hide, Show All, Quit automatically)
 - About Bristlenose
+- Build Info... (copyable provenance sheet — branch, SHA, configuration, sandbox / HR, sidecar mode; see [design-about-panel.md](design-about-panel.md))
 - ---
 - Settings... (`Cmd+,`)
 - Check System Health... (runs `doctor`, output in a sheet)

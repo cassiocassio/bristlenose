@@ -120,6 +120,7 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = DFF5450F2F466A4B00A539C4 /* Build configuration list for PBXNativeTarget "Bristlenose" */;
 			buildPhases = (
+				DFB14F002F00BD1F00BD1F00 /* Generate Build Info */,
 				DFF545002F466A4A00A539C4 /* Sources */,
 				DFF545012F466A4A00A539C4 /* Frameworks */,
 				DFF545022F466A4A00A539C4 /* Resources */,
@@ -196,6 +197,28 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXShellScriptBuildPhase section */
+		DFB14F002F00BD1F00BD1F00 /* Generate Build Info */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+				"$(SRCROOT)/../../.git/HEAD",
+				"$(SRCROOT)/../scripts/generate-build-info.sh",
+			);
+			name = "Generate Build Info";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+				"$(SRCROOT)/Bristlenose/GeneratedBuildInfo.swift",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/bash;
+			shellScript = "# Regenerate GeneratedBuildInfo.swift before Compile Sources runs.\n# alwaysOutOfDate=1 ensures this fires every build (so a fresh commit\n# is picked up); the script itself is idempotent — it only rewrites the\n# .swift file when contents change, so Xcode's Compile Sources step\n# stays incremental.\n\"${SRCROOT}/../scripts/generate-build-info.sh\"\n";
+		};
 		DFF545202F466A4A00A539C4 /* Copy Sidecar Resources */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 2147483647;

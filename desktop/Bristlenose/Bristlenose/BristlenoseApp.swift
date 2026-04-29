@@ -1,8 +1,21 @@
+import OSLog
 import SwiftUI
+
+private let appLog = Logger(subsystem: "app.bristlenose", category: "app")
 
 /// Minimal AppDelegate for future delegate needs.
 /// Zombie cleanup uses `.onReceive(willTerminateNotification)` on the root View.
-final class AppDelegate: NSObject, NSApplicationDelegate {}
+final class AppDelegate: NSObject, NSApplicationDelegate {
+    func applicationDidFinishLaunching(_ notification: Notification) {
+        // Symmetry with the existing `Mode:` line in ServeManager — this one
+        // captures provenance facts known at *build* time so support sessions
+        // can disambiguate Debug vs Release archives even when the screenshot
+        // doesn't include the diagnostic footer. Sidecar mode is appended
+        // when ServeManager finishes its own resolve, so emit "?" here and
+        // let the per-launch ServeManager line carry the sidecar slot.
+        appLog.info("BuildInfo: \(BuildInfo.current.oneLine(sidecar: "?"), privacy: .public)")
+    }
+}
 
 @main
 struct BristlenoseApp: App {

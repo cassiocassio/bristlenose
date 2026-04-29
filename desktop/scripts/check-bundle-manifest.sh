@@ -140,58 +140,78 @@ covered_paths_raw=$("$PYTHON" -c "$covered_paths_script" "$SPEC_FILE" "$REPO_ROO
 # Sort + dedupe covered paths.
 mapfile -t covered_paths < <(echo "$covered_paths_raw" | sort -u | grep -v '^$' || true)
 
-# --- Walk bristlenose/ for runtime-data dirs. ------------------------------
-# A dir qualifies if it contains at least one file matching the extension
-# whitelist AND is not inside an excluded path.
+# --- Walk bristlenose/ for runtime-data files. -----------------------------
+# A file qualifies if its extension matches the whitelist AND it's not in an
+# excluded path. Per-file enumeration (rather than per-dir) lets a file-level
+# datas entry cover exactly one file — and lets us catch a new uncovered
+# file added to a dir whose siblings are already covered.
 #
 # macOS BSD find doesn't support -regextype, so filter via grep. `-prune` on
 # __pycache__ + *-archive skips those subtrees cheaply before grep runs.
 EXT_RE='\.(yaml|yml|json|md|html|css|js|txt|png|svg|ico|csv|toml|mako|1|sqlite|bin|pt|onnx|ttf|woff2)$'
 
-candidate_dirs=$(
+candidate_files=$(
     cd "$REPO_ROOT" && \
     find bristlenose \
         \( -type d \( -name "__pycache__" -o -name "*-archive" \) -prune \) -o \
         \( -type f -not -name "CLAUDE.md" -print \) \
     2>/dev/null | \
     grep -E "$EXT_RE" | \
-    sed 's|/[^/]*$||' | \
     sort -u
 )
 
-# --- For each candidate, check it's covered by some datas entry. ----------
-# Coverage = candidate == covered_path OR candidate starts with covered_path + "/".
+# Per-file enumeration (was per-dir until 29 Apr 2026): a file-level datas
+# entry covers exactly one file, and a new uncovered file added to a
+# partially-covered dir gets caught instead of being whitewashed.
+
+# --- For each candidate file, check coverage. -----------------------------
+# Coverage rules (cov is a datas source path from the spec):
+#   - cov ends in a known data extension → file-level entry, covers iff
+#     the candidate equals cov.
+#   - otherwise → directory-level entry, covers iff candidate is inside
+#     that tree (candidate startswith cov + "/").
+# Allowlist patterns still match against the candidate's parent directory.
 violations=0
 while IFS= read -r candidate; do
     [ -z "$candidate" ] && continue
-    if is_allowlisted "$candidate"; then continue; fi
+    cand_dir="${candidate%/*}"
+    if is_allowlisted "$cand_dir"; then continue; fi
 
     covered=false
     for cov in "${covered_paths[@]}"; do
-        if [ "$candidate" = "$cov" ] || [[ "$candidate" == "$cov/"* ]]; then
-            covered=true
-            break
+        if echo "$cov" | grep -qE "$EXT_RE"; then
+            # File-level entry: must equal exactly.
+            if [ "$candidate" = "$cov" ]; then
+                covered=true
+                break
+            fi
+        else
+            # Directory-level entry: candidate must be inside that tree.
+            if [[ "$candidate" == "$cov/"* ]]; then
+                covered=true
+                break
+            fi
         fi
     done
     if ! $covered; then
         echo "UNCOVERED: $candidate"
         violations=$((violations + 1))
     fi
-done <<< "$candidate_dirs"
+done <<< "$candidate_files"
 
 if [ "$violations" -gt 0 ]; then
     echo "" >&2
-    echo "bundle-manifest: $violations uncovered runtime-data dir(s) found." >&2
-    echo "Each listed dir contains data files (yaml/md/json/etc.) that the" >&2
-    echo "PyInstaller bundle will miss unless added to datas in:" >&2
+    echo "bundle-manifest: $violations uncovered runtime-data file(s) found." >&2
+    echo "Each listed file is data the PyInstaller bundle will miss unless" >&2
+    echo "added to datas in:" >&2
     echo "  $SPEC_FILE" >&2
     echo "" >&2
     echo "Fixes:" >&2
-    echo "  (a) Add a datas entry for the dir." >&2
-    echo "  (b) If the dir is genuinely not runtime (e.g. archive), add an" >&2
+    echo "  (a) Add a datas entry for the file (or its parent dir)." >&2
+    echo "  (b) If the file is genuinely not runtime (e.g. archive), add an" >&2
     echo "      allowlist entry in $ALLOWLIST" >&2
-    echo "      with a BMAN-<N> marker + justification." >&2
+    echo "      with a BMAN-<N> marker matching the parent dir + justification." >&2
     exit 1
 fi
 
-echo "bundle-manifest: clean (${#covered_paths[@]} datas entries cover all runtime-data dirs in $SOURCE_ROOT)"
+echo "bundle-manifest: clean (${#covered_paths[@]} datas entries cover all runtime-data files in $SOURCE_ROOT)"

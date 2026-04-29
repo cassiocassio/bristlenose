@@ -72,6 +72,17 @@ a = Analysis(
             os.path.join(PROJECT_ROOT, "bristlenose", "server", "codebook"),
             os.path.join("bristlenose", "server", "codebook"),
         ),
+        # LLM cost-baselines (alpha-telemetry Slice A, 27 Apr 2026).
+        # bristlenose/llm/pricing.py:68 loads this at runtime via
+        # `Path(__file__).parent / "cohort-baselines.json"` for the
+        # baseline-fallback path of cost forecasting. Without this entry
+        # the sidecar can't resolve baselines and falls back to whatever
+        # the no-baseline path does — silent in unit tests because they
+        # run against `pip install -e .` where __file__ resolves correctly.
+        (
+            os.path.join(PROJECT_ROOT, "bristlenose", "llm", "cohort-baselines.json"),
+            os.path.join("bristlenose", "llm"),
+        ),
     ],
     hiddenimports=[
         *collect_submodules("rich"),

@@ -12,8 +12,10 @@
 # the Resources directory at archive time.
 #
 # Prerequisites:
-#   - Python 3.12 venv with bristlenose[dev,serve] installed (.venv at repo root)
-#   - pip install pyinstaller
+#   - Python 3.12 venv with bristlenose[dev,serve,desktop] installed (.venv
+#     at repo root). The `desktop` extra carries pyinstaller — see
+#     pyproject.toml's `[project.optional-dependencies]` for what each
+#     extra means and when to use it.
 
 set -euo pipefail
 
@@ -33,7 +35,9 @@ if [ ! -x "$PYTHON" ]; then
 fi
 
 if ! "$PYTHON" -m PyInstaller --version >/dev/null 2>&1; then
-    echo "error: PyInstaller not installed. run: $PYTHON -m pip install pyinstaller" >&2
+    echo "error: PyInstaller not installed." >&2
+    echo "run: $PYTHON -m pip install -e '.[dev,serve,desktop]'" >&2
+    echo "(the 'desktop' extra carries pyinstaller — see pyproject.toml)" >&2
     exit 1
 fi
 

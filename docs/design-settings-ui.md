@@ -1,13 +1,14 @@
 ---
 status: partial
-last-trued: 2026-04-21
-trued-against: HEAD@sidecar-signing on 2026-04-21
+last-trued: 2026-04-29
+trued-against: HEAD@main on 2026-04-29
 ---
 
 > **Truing status:** Partial — Phase 1 (web gear-icon modal, `SettingsModal.tsx`, `ModalNav.tsx`, `⌘,` shortcut) **shipped**; Phases 2/3/4 remain pending as described. The "API Keys" section is architecturally superseded for the desktop-embedded deployment — see banner there. The serve-mode CLI path still applies when running `bristlenose serve` outside the sandboxed desktop app.
 
 ## Changelog
 
+- _2026-04-29_ — trued: Tier 1 table updated to 5 providers (added Ollama as Local, no key); §Add new key step 3 annotated to call out that no live API roundtrip validation is shipped on either surface (desktop LLMSettingsView is Keychain-presence-only; web SettingsModal API Keys is `<StubSection>`); cross-reference to AIConsentView added.
 - _2026-04-21_ — trued up: marked Phase 1 as shipped with anchors; fixed `bristlenose credential` → `bristlenose configure` (shipped command name, 2 occurrences); added "Shipping status (Apr 2026)" callout; added supersedence banner to §API Keys pointing at `design-desktop-settings.md` + `design-keychain.md` §Desktop credential path; corrected "Existing infrastructure → Config loading" claim (keychain lookup is in `credentials.py`, not `config.py`); added cross-references to `design-desktop-settings.md`. Anchors: `frontend/src/components/SettingsModal.tsx:414`, `frontend/src/components/ModalNav.tsx`, `frontend/src/layouts/AppLayout.tsx:17,162,171,545`, `frontend/src/hooks/useKeyboardShortcuts.ts:284`, `bristlenose/cli.py:1613`. Preserved: Phase 2/3/4 plans (still correct, still pending).
 
 # Settings UI — API Keys & Provider Switching
@@ -41,7 +42,7 @@ First-run onboarding (no keys at all, no project) belongs in the **macOS desktop
 
 | Setting | Scope | Why GUI |
 |---------|-------|---------|
-| API keys (Claude, ChatGPT, Gemini, Azure) | App-wide | Can't analyse without one |
+| API keys (Claude, ChatGPT, Gemini, Azure) — and Ollama URL (Local, no key) | App-wide | Can't analyse without one of the five providers configured |
 | Active LLM provider | Per-project | Must match an available key |
 | LLM model | Per-project | Power users want to pick model |
 
@@ -247,7 +248,7 @@ A researcher might have a personal Claude key and a work Claude key, or keys for
 
 1. Click `[+ Add new key]`
 2. Form appears: Name (text), Provider (dropdown), Key (password input)
-3. Save button shows "Validating..." spinner during API round-trip (form disabled during validation)
+3. Save button shows "Validating..." spinner during API round-trip (form disabled during validation) — **note: as of 29 Apr 2026, no shipped surface implements live API roundtrip validation. Desktop `LLMSettingsView` saves to Keychain on blur; status dot reflects Keychain presence only. The web `SettingsModal` API Keys section is still a `<StubSection>`. Live validation is the design intent for both, not the shipped reality. AIConsentView gates first LLM use on consent version, not on key validity.**
 4. Success → stores in Keychain → row appears in list
 5. Failure → inline error message, form stays open
 

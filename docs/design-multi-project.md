@@ -1,8 +1,38 @@
+---
+status: mixed
+last-trued: 2026-04-29
+trued-against: HEAD@main on 2026-04-29
+split-candidate: true
+---
+
 # Multi-Project Awareness — Design Doc
 
 ## Status
 
-**Design only** — no code changes. Maps assumptions, designs the data model, documents the identity problem.
+**Phase 1 shipped, phase 2 features still pending** (trued 29 Apr 2026 against `port-v01-ingestion` reality).
+
+| Section | Status | Anchor |
+|---|---|---|
+| §1 Project Index — `projects.json`, schema, location detection, drag-and-drop | ✅ shipped | `desktop/Bristlenose/Bristlenose/ProjectIndex.swift` |
+| §1 Folders — one level of grouping | ✅ shipped | `Folder` struct in `ProjectIndex.swift`; "Move to" submenu in `MenuCommands.swift:317-415` |
+| §1 Home screen UX (search bar / Cmd+K) | ⏳ pending | — |
+| §1 CLI passive accumulation, `bristlenose projects` / `--recent` / `--all` | ⏳ pending | — |
+| §2 Person Identity Model (cross-project linking, suggestion algorithm) | ⏳ pending | — |
+| §3 Lifecycle states, unavailable-volume detection | ✅ shipped | `Project.availability`, `VolumeWatcher.swift` |
+| §3 Mid-session disconnect SQLite-relocation design | ⏳ pending | DB still at `<output_dir>/.bristlenose/` |
+| §3a Archive UX | ⏳ pending | `MenuCommands.swift` Archive `.disabled(true)` |
+| §3b Cross-project search (folder-scoped) | ⏳ pending | — |
+| §3c Finding 4 — `bristlenose forget` (right to erasure) | ⏳ pending | — |
+| §4 Audit table (hardcoded project ID locations) | snapshot | needs re-scan vs current code |
+
+**Cross-references:**
+- [`design-project-sidebar.md`](design-project-sidebar.md) — sidebar UX + phasing (this doc owns data-model + policy)
+- `desktop/Bristlenose/Bristlenose/{ProjectIndex,VolumeWatcher,FolderRow}.swift` — shipped surface
+
+## Changelog
+
+- **2026-04-29** — Trued against shipped reality. ProjectIndex + VolumeWatcher + folders + drag-reorder shipped via `port-v01-ingestion` (commit `e781ebe`, v0.15.0, 26 Apr). Front-matter flipped from "Design only — no code changes" to `status: mixed`. Per-section status table added; `split-candidate: true` because the data-model/policy half is now shipped reference material while §2/§3a/§3b/§3c remain forward-looking design.
+- **2026-03-18** — Original draft (single-project assumptions audit + multi-project data-model + identity problem).
 
 ## Context
 

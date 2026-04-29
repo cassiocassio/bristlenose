@@ -36,10 +36,25 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+# Each extra answers two questions: WHEN it's installed (CLI install /
+# contributor venv / release machine / Mac-only build) and WHERE it
+# lands (runtime in the .app bundle / dev venv only / build-time only).
+# Keep version specifiers as floor-only (>=) to match the rest of the
+# project's "no upper bounds, bump deliberately" cadence.
+
+# Apple Silicon transcription. Pulled in by Mac users who want MLX
+# Whisper as their transcription backend (faster than ctranslate2 on
+# arm64). Ships in the desktop sidecar bundle. Linux/Windows users
+# never install this; faster-whisper (in core deps) is the default.
 apple = [
     "mlx>=0.16",
     "mlx-whisper>=0.4",
 ]
+
+# Contributor dev environment — tests, lint, types. Adds Mac-only MLX
+# packages on Apple Silicon so transcription tests don't skip locally
+# (CI runs Linux and skips MLX gracefully). Not installed by end users,
+# not shipped in the sidecar bundle.
 dev = [
     "pytest>=8.0",
     "pytest-cov>=5.0",
@@ -50,6 +65,13 @@ dev = [
     "mlx>=0.16; sys_platform == 'darwin' and platform_machine == 'arm64'",
     "mlx-whisper>=0.4; sys_platform == 'darwin' and platform_machine == 'arm64'",
 ]
+
+# Serve mode runtime — `bristlenose serve`, the FastAPI + SQLite
+# backend that powers both the HTML report's interactive features and
+# the macOS app's WKWebView. Pulled in by anyone running serve mode
+# from the CLI; bundled into the desktop sidecar (PyInstaller spec
+# lists these as hiddenimports too). Linux/Windows CLI users running
+# `bristlenose run` only (no serve) can skip this extra.
 serve = [
     "fastapi>=0.115",
     "uvicorn[standard]>=0.32",
@@ -58,11 +80,28 @@ serve = [
     "openpyxl>=3.1",
     "alembic>=1.13",
 ]
+
+# Release-time tooling. Run on the release machine when cutting a
+# version (THIRD-PARTY-BINARIES.md auto-generation, etc.). Not a
+# runtime dep, not in the sidecar bundle, not needed by contributors.
 release = [
-    # Tools used at release time only (e.g. THIRD-PARTY-BINARIES.md
-    # auto-generation by scripts/generate-third-party-binaries.py).
-    # Not needed for runtime, not in the desktop sidecar bundle.
     "pip-licenses>=5.0",
+]
+
+# macOS desktop sidecar build tooling. Run on the Mac where the
+# `.app` is being built — produces the PyInstaller --onedir bundle
+# that ships inside `Bristlenose.app/Contents/Resources/bristlenose-sidecar/`.
+# Not a runtime dep, not in the bundle itself (the bundle IS its
+# output), not needed by Linux/Windows contributors or CLI-only users.
+# Required by `desktop/scripts/build-sidecar.sh`.
+#
+# PyInstaller version is pinned-floor: the spec is empirically
+# validated against a specific bundle layout (e.g. the disable-library-
+# validation entitlement story in docs/design-desktop-python-runtime.md
+# depends on how PyInstaller bundles `Python.framework`). Bump
+# deliberately and re-run the C0/C1 retest, don't track latest.
+desktop = [
+    "pyinstaller>=6.10",
 ]
 
 [project.scripts]

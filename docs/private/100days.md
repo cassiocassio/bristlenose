@@ -164,6 +164,7 @@ The canonical end-to-end beats a first-time user must complete successfully in t
 - ~~**Histogram bar alignment** — right-align user-tags bars (#13)~~
 - **~~Day of week in session Start column~~** (#11)
 - **~~Right-hand sidebar animations~~** — match left-hand sidebar push/slide animations
+- **Desktop home view — full design** — "no project selected" is an accidental engineering state, not designed UX. Designer's question: *what do you see on arrival?* Candidates: last project (already restored via `@AppStorage("selectedProjectID")`), help for first-timers, summary of recent work, new Bristlenose features, latest models, codebooks from the community. Today (30 Apr 2026, `first-run` branch, `ContentView.swift` detail else-branch) ships a static "Welcome to Bristlenose" placeholder — minimum plumbing only. Post-alpha: full design pass + window position/size restoration across launches (the project ID is restored; the window frame is the gap). Also: prune the now-unused `chrome.noProjectSelected` / `chrome.selectProject` locale keys (6 files) once the home view is finalised.
 
 
 ### Could

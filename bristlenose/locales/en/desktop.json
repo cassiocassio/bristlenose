@@ -139,7 +139,9 @@
     "emptyStateHint": "Drag a folder here or press \u2318N",
     "addedInterviews": "Added %d interviews to %@",
     "multipleSelected": "%d items selected",
-    "multipleSelectedHint": "Select a single project to view its report."
+    "multipleSelectedHint": "Select a single project to view its report.",
+    "welcomeTitle": "Welcome to Bristlenose",
+    "welcomeBody": "Drag a folder of interview recordings into the sidebar, or click + New Project to start."
   },
   "toolbar": {
     "back": "Back (⌘[)",

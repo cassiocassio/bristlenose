@@ -139,7 +139,9 @@
     "emptyStateHint": "Glissez un dossier ici ou appuyez sur \u2318N",
     "addedInterviews": "%d entretiens ajout\u00e9s \u00e0 %@",
     "multipleSelected": "%d \u00e9l\u00e9ments s\u00e9lectionn\u00e9s",
-    "multipleSelectedHint": "S\u00e9lectionnez un seul projet pour afficher son rapport."
+    "multipleSelectedHint": "S\u00e9lectionnez un seul projet pour afficher son rapport.",
+    "welcomeTitle": "Bienvenue dans Bristlenose",
+    "welcomeBody": "Glissez un dossier d\u2019enregistrements d\u2019entretiens dans la barre lat\u00e9rale, ou cliquez sur + Nouveau projet pour commencer."
   },
   "toolbar": {
     "back": "Précédent (⌘[)",

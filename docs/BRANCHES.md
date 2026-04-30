@@ -2,7 +2,7 @@
 
 This document tracks active feature branches to help multiple Claude sessions coordinate without conflicts.
 
-**Updated:** 29 Apr 2026 (first-run started)
+**Updated:** 1 May 2026 (japanese-translation merged + closed)
 
 ---
 
@@ -23,7 +23,6 @@ Each active feature branch gets its own **git worktree** — a full working copy
 | `bristlenose_branch sandbox-debug/` | `sandbox-debug` | S2 Track A — macOS app sandbox violation triage (A1 spike onward) |
 | `bristlenose_branch first-run/` | `first-run` | S2 Track B Branch 1 — first-run experience (cold open → AI consent → API key → empty-state narrative) |
 | `bristlenose_branch track-c-c1-bundled-sidecar/` | `track-c-c1-bundled-sidecar` | S2 Track C C1 — PyInstaller bundling pipeline + Xcode Copy Sidecar Resources phase + SidecarMode bundled-path resolve |
-| `bristlenose_branch japanese-translation/` | `japanese-translation` | Finish Japanese (`ja`) locale — bulk-translate ~614 stub strings across 8 namespaces + seed glossary.csv with ~50–80 ja rows. Alpha gate. |
 
 
 
@@ -113,7 +112,6 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 | `sandbox-debug` | `bristlenose_branch sandbox-debug/` | local only |
 | `first-run` | `bristlenose_branch first-run/` | local only |
 | `track-c-c1-bundled-sidecar` | `bristlenose_branch track-c-c1-bundled-sidecar/` | local only |
-| `japanese-translation` | `bristlenose_branch japanese-translation/` | local only |
 
 
 
@@ -121,26 +119,6 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 ---
 
 ## Active Branches
-
-### `japanese-translation`
-
-**Status:** Just started
-**Started:** 30 Apr 2026
-**Worktree:** `/Users/cassio/Code/bristlenose_branch japanese-translation/`
-**Remote:** local only (push when ready)
-
-**What it does:** Finish the Japanese (`ja`) locale — currently the most incomplete: ~614 strings empty/missing across 8 namespace files in `bristlenose/locales/ja/`, plus zero `ja` rows in `bristlenose/locales/glossary.csv` (de/es/fr/ko have 21 each). Same playbook as the other locales: AI bulk-fill anchored on a multi-source glossary (Apple JA, Microsoft JA, JTF, Notion/Figma/Slack/MAXQDA/NVivo, HCD-Net, KJ法), then friend-of-a-friend native review later. Hard alpha gate: `scripts/check-locales.py` shows zero `ja` warnings. Plan: `~/.claude/plans/make-a-plan-to-flickering-floyd.md`.
-
-**Files this branch will touch:**
-- `bristlenose/locales/glossary.csv` — append ~50–80 `ja` rows
-- `bristlenose/locales/ja/{pipeline,server,doctor,enums,cli,settings,desktop,common}.json` — fill all empty values + add ~178 missing keys
-- `experiments/ja-glossary-research.md` — working draft (throwaway after Phase 1 lands)
-
-**Potential conflicts with other branches:**
-- None expected — locale files are not touched by `track-c-c1-bundled-sidecar`, `first-run`, `sandbox-debug`, or any frontend/theme branch
-- `first-run` uses Settings/Welcome strings that may need new keys; if so, add them in `en/` first then translate here. Coordinate before merging if `first-run` adds keys mid-flight
-
----
 
 ### `track-c-c1-bundled-sidecar`
 
@@ -309,6 +287,10 @@ Cloud-session `claude/<adjective>-<noun>-<hash>` branches that have been verifie
 ---
 
 ## Completed Branches (for reference)
+
+### `japanese-translation` — merged 1 May 2026
+
+Finished the Japanese (`ja`) locale: bulk-translated ~614 stub strings across 8 namespace files in `bristlenose/locales/ja/`, seeded `glossary.csv` with 83 `ja` rows, and added 11 i18n keys to the tag sidebar across all 6 locales. Alpha gate cleared. 10 commits.
 
 ### `sidecar-signing` — merged 28 Apr 2026
 

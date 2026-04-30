@@ -157,11 +157,13 @@
 
 **Settings status check is misleading.** LLM Settings → Claude shows "Status: Online" with green dot. Pipeline immediately fails 401 Unauthorized. Status check probably tests (a) key non-empty, (b) `api.anthropic.com` reachable — does NOT test that the key authenticates. Fix: real auth-validating call (e.g. `POST /v1/messages` with `max_tokens: 1`), debounced on key change, OR surface the doctor `✗ API key` line directly in the Settings status row.
 
-**Keychain re-prompts during run.** Multiple `security` prompts within a single pipeline run. Pre-existing — `MacOSCredentialStore` shells out to `/usr/bin/security` per credential read; "Always Allow" ACL not persisted, or each subprocess invocation treated as new requester. **Track C C3 retires this** (Swift fetches once, caches in-process, injects via env var to Python sidecar). Until then: power through, or `"Allow all applications"` in Keychain Access during dev.
+**Keychain re-prompts during run.** Multiple `security` prompts within a single pipeline run. Pre-existing — `MacOSCredentialStore` shells out to `/usr/bin/security` per credential read; "Always Allow" ACL not persisted, or each subprocess invocation treated as new requester. **Track C C3 ✅ shipped 20 Apr** (`a8dc3cb..ab1b2a1`, `ServeManager.overlayAPIKeys()` — Swift fetches once, caches in-process, injects via env var to sidecar). Verify the prompt-spam is actually gone in QA before deleting this entry.
 
 **Dev port + no dev server = silent WebView spin.** When `BRISTLENOSE_DEV_PORT=8150` is set in Xcode scheme but no terminal-side `bristlenose serve` is running there, WebView spins on `"Loading report…"` indefinitely with `NSURLErrorDomain code=-1004` errors in console. Real fix: ServeManager fail-fast with clear error in detail view — *"Dev server expected on port 8150 but nothing is listening — start `bristlenose serve --dev` in a terminal, or unset BRISTLENOSE_DEV_PORT."*
 
-**Xcode-launched app doesn't inherit shell PATH.** `brew install ffmpeg` succeeds but doctor reports `✗ FFmpeg not found` because Xcode-launched apps get minimal PATH. Bundled sidecar (Track C C1) ships its own ffmpeg, retiring this. Until then: 1-line `PATH` prepend (`/opt/homebrew/bin:/usr/local/bin`) in `BristlenoseShared.buildChildEnvironment()` to unstick first run.
+**Xcode-launched app doesn't inherit shell PATH.** `brew install ffmpeg` succeeds but doctor reports `✗ FFmpeg not found` because Xcode-launched apps get minimal PATH. Bundled sidecar (Track C C1 ✅ shipped 18 Apr; `fetch-ffmpeg.sh` + `sign-ffmpeg.sh`) ships its own ffmpeg. For the bundled-app path this is retired; for `bristlenose serve` from a non-bundled venv the 1-line `PATH` prepend (`/opt/homebrew/bin:/usr/local/bin`) workaround in `BristlenoseShared.buildChildEnvironment()` is still relevant.
+
+**Ollama detection rich on Python side, not surfaced in Swift UI.** `bristlenose/ollama.py` has install-method probe (brew/app/snap/systemd), `start_ollama_serve()`, `pull_model()`, `validate_local_endpoint()`, model probe with priority order. None of this is exposed in the Swift app: AIConsentView's "Use Ollama Instead (No Cloud)" button just sets `activeProvider = "local"` and dismisses. No detection probe, no model picker, no install hint, no auto-start trigger. **Branch 1 (`first-run` worktree) scope** — beat 3b in §1a.
 
 ---
 
@@ -191,7 +193,7 @@ These are the items from the post-Slice 7 review that user explicitly deferred (
 
 - **`foobar` row stays in inline-rename mode** across pill clicks, popover open/close. Pre-existing v0.2 bug — rename mode should dismiss on focus loss outside the field.
 - **Drop-on-row parked** (List-gesture breakage on macOS 26 — already documented in `desktop/CLAUDE.md` as the all-tap-gestures-break-selection issue). Workaround currently shipped via `SidebarDropDelegate` for Finder file drops. Verify add-files-by-drop-on-row still works on the row, and surface a clear toast confirmation. (Toasts already added: *"Adding extra interviews to an analysed project isn't supported yet."* etc. — needs reconsideration once incremental re-analysis lands.)
-- **Incremental re-analysis** — *must for alpha* per 23 Apr 2026 user triage. Currently dropping more files onto a `.ready` project surfaces *"Adding extra interviews to an analysed project isn't supported yet"*. Design doc `docs/design-project-sidebar.md:246` promises *"Added 3 interviews to Mobile Banking Pilot"* with Undo. Gap is pipeline-side: needs (a) detect new sessions via manifest, (b) re-run stages 1–7 for new sessions only, (c) re-run stages 8–11 globally (corpus-scoped), (d) `bristlenose run --incremental` flag or auto-detect. Pipeline-resilience design (`docs/design-pipeline-resilience.md`) is the prereq. **This iteration ships the UX shell; the pipeline plumbing is its own slice.**
+- **Incremental re-analysis** — *must for alpha* per 23 Apr 2026 user triage. Currently dropping more files onto a `.ready` project surfaces *"Adding extra interviews to an analysed project isn't supported yet"*. Design doc `docs/design-project-sidebar.md:246` promises *"Added 3 interviews to Mobile Banking Pilot"* with Undo. Gap is pipeline-side: needs (a) detect new sessions via manifest, (b) re-run stages 1–7 for new sessions only, (c) re-run stages 8–11 globally (corpus-scoped), (d) `bristlenose run --incremental` flag or auto-detect. Pipeline-resilience events log + Cause + EventLogReader ✅ shipped (Phase 1f Slices 1–4 in `port-v01-ingestion`, 26 Apr); incremental detection plumbing (a/b/c/d above) is the remaining slice. **This iteration ships the UX shell; the pipeline plumbing is its own slice.**
 
 ---
 
@@ -228,7 +230,7 @@ Move all to `bristlenose/locales/*/desktop.json` per `docs/design-i18n.md` in th
 - Stop-mid-run lands in `.idle` not `.failed` (committed inline 23 Apr) — done
 - Phase 1f event-log + cost — done across Slices 1–4
 - Sandbox / TestFlight signing rough edges — Track C C0–C5 (separate)
-- Multi-project advanced UX (folders, drag-reorder, smart folders) — Sprint 3
+- Multi-project advanced UX: folders + drag-reorder ✅ shipped via `port-v01-ingestion` 26 Apr; smart folders + cross-project search + person identity model — Sprint 3
 
 ---
 

@@ -486,6 +486,21 @@ def _mount_prod_report(app: FastAPI, output_dir: Path, *, dev: bool = False) -> 
     def redirect_report_to_slash_prod() -> RedirectResponse:
         return RedirectResponse("/report/", status_code=301)
 
+    # Theme CSS fallback: brand-new projects that haven't been through the
+    # pipeline yet have no `<output_dir>/assets/bristlenose-theme.css`. Without
+    # this route the SPA's <link> 404s and the whole UI renders unstyled.
+    # Mirror dev mode's `_load_default_css()` behaviour: prefer the project's
+    # rendered CSS if it exists (so per-project theme tweaks still win), fall
+    # back to the bundled source otherwise.
+    @app.get("/report/assets/bristlenose-theme.css")
+    def serve_theme_css_with_fallback() -> Response:
+        per_project = output_dir / "assets" / "bristlenose-theme.css"
+        if per_project.is_file():
+            return FileResponse(per_project, media_type="text/css")
+        from bristlenose.stages.s12_render.theme_assets import _load_default_css
+
+        return Response(_load_default_css(), media_type="text/css")
+
     @app.get("/report/{path:path}", response_model=None)
     def serve_report_spa_prod(path: str = "") -> Response:
         """SPA catch-all (production): serve SPA HTML for all /report/* paths.

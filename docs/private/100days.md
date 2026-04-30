@@ -199,6 +199,7 @@ The canonical end-to-end beats a first-time user must complete successfully in t
 - **Dashboard stats coverage** — increase the number of pipeline metrics surfaced on dashboard
 - **PII summary dashboard widget** — surface pii_summary.txt findings (entity counts, flagged items needing review) in the serve-mode dashboard instead of expecting users to find and read a hidden text file
 - **Drag-and-drop tags to quotes** — drag tag badge onto quote card to apply
+- **s09 SS/GC classifier — navigational-vocabulary cue spike** — 30 Apr 2026 A/B against the s10 *clustering* prompt confirmed s10 cannot move coverage (it only ever sees pre-classified `SCREEN_SPECIFIC` quotes — adding cues there only re-partitions the existing pool, and on ikea regressed clean 8-section flow into 12 product-themed clusters). The right place for the cue ("here", "back", "on this page", "after I clicked", "the search bar at the top", etc.) is `bristlenose/llm/prompts/quote-extraction.md` (the SS/GC binary). Higher-risk than the s10 attempt — shifts quote counts between sections and themes — so needs its own A/B against ikea + fossda baselines and probably a methodology-doc note. See SS/GC docstring on `bristlenose/stages/s10_quote_clustering.py` and `experiments/thematic-spike/output/{ikea,fossda}/themes_s10_{before,after}.json` for the dead-end attempt
 
 ### Could
 - **~~Analysis Phase 5~~** — LLM narration of signal cards

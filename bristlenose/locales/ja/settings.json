@@ -1,30 +1,30 @@
 {
-  "heading": "",
+  "heading": "設定",
   "appearance": {
-    "legend": "",
-    "auto": "",
-    "light": "",
-    "dark": ""
+    "legend": "アプリケーションの外観",
+    "auto": "システムの外観に合わせる",
+    "light": "ライト",
+    "dark": "ダーク"
   },
   "language": {
-    "legend": "",
-    "description": "",
-    "helpTranslate": ""
+    "legend": "言語",
+    "description": "インターフェイスの表示言語を切り替えます。レポート内容は翻訳されません。",
+    "helpTranslate": "Bristlenose の翻訳にご協力ください:"
   },
   "settingsNav": {
-    "general": "",
-    "project": "",
-    "profile": "",
-    "apiKeys": "",
-    "config": "",
-    "projectStub": "",
-    "profileStub": "",
-    "apiKeysStub": ""
+    "general": "一般",
+    "project": "プロジェクト",
+    "profile": "プロフィール",
+    "apiKeys": "API キー",
+    "config": "構成",
+    "projectStub": "プロジェクトごとの設定はここに表示されます。近日公開。",
+    "profileStub": "プロフィール設定 (名前、メール、Whisper バックエンド) はここに表示されます。近日公開。",
+    "apiKeysStub": "API キーの管理はここに表示されます。近日公開。"
   },
   "configReference": {
-    "heading": "",
-    "intro": "",
-    "clickToCopy": "",
-    "copied": ""
+    "heading": "構成リファレンス",
+    "intro": "以下の設定はすべて環境変数または <code>.env</code> ファイルで構成します。値を変更するには、各行に表示されているファイルを編集してください。",
+    "clickToCopy": "クリックでコピー",
+    "copied": "コピーしました"
   }
 }

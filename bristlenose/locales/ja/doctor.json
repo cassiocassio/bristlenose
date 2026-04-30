@@ -1,10 +1,10 @@
 {
-  "heading": "",
-  "checkOk": "",
-  "checkFail": "",
-  "checkWarn": "",
+  "heading": "ドクター",
+  "checkOk": "{label}",
+  "checkFail": "{label}",
+  "checkWarn": "{label}",
   "summary": {
-    "allPassed": "",
-    "issuesFound": ""
+    "allPassed": "すべてのチェックに合格しました。",
+    "issuesFound": "{count} 件の問題が見つかりました。"
   }
 }

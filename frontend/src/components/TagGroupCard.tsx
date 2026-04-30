@@ -8,6 +8,7 @@
  */
 
 import { useCallback, useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import type { CodebookTagResponse } from "../utils/types";
 import { getTagBg, getBarColour } from "../utils/colours";
 import { useSidebarStore } from "../contexts/SidebarStore";
@@ -65,6 +66,7 @@ export function TagGroupCard({
   onSoloClick,
   soloTag,
 }: TagGroupCardProps) {
+  const { t } = useTranslation();
   const { hiddenTagGroups } = useSidebarStore();
   const isHidden = hiddenTagGroups.has(name);
 
@@ -75,9 +77,9 @@ export function TagGroupCard({
 
   // Max count across tags in this group (for micro-bar scaling, including tentative)
   const maxCount = useMemo(
-    () => Math.max(0, ...tags.map((t) => {
-      const accepted = tagCounts[t.name.toLowerCase()] ?? 0;
-      const tentative = tentativeCounts?.[t.name.toLowerCase()] ?? 0;
+    () => Math.max(0, ...tags.map((tag) => {
+      const accepted = tagCounts[tag.name.toLowerCase()] ?? 0;
+      const tentative = tentativeCounts?.[tag.name.toLowerCase()] ?? 0;
       return accepted + tentative;
     })),
     [tags, tagCounts, tentativeCounts],
@@ -85,7 +87,7 @@ export function TagGroupCard({
 
   // Group total (sum of visible tag counts)
   const groupTotal = useMemo(
-    () => tags.reduce((sum, t) => sum + (tagCounts[t.name.toLowerCase()] ?? 0), 0),
+    () => tags.reduce((sum, tag) => sum + (tagCounts[tag.name.toLowerCase()] ?? 0), 0),
     [tags, tagCounts],
   );
 
@@ -139,7 +141,7 @@ export function TagGroupCard({
           </div>
           {tags.length > 1 && (
             <div className="group-total-row">
-              <span className="group-total-label">Total</span>
+              <span className="group-total-label">{t("tags.total")}</span>
               <span className="group-total-count">{groupTotal}</span>
             </div>
           )}

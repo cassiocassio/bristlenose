@@ -100,7 +100,18 @@
     "selectAll": "Seleccionar todo",
     "clear": "Borrar",
     "searchPlaceholder": "Buscar etiquetas\u2026",
-    "noTagsLabel": "(Sin etiquetas)"
+    "noTagsLabel": "(Sin etiquetas)",
+    "used": "Usadas",
+    "all": "Todas",
+    "total": "Total",
+    "close": "Cerrar",
+    "closeAriaLabel": "Cerrar la barra lateral de etiquetas",
+    "userTags": "Etiquetas de usuario",
+    "other": "Otras",
+    "summary": "{{count}} etiquetas en {{frameworks}} marcos",
+    "showFramework": "Mostrar {{framework}}",
+    "hideFramework": "Ocultar {{framework}}",
+    "frameworkSentiment": "Sentimiento"
   },
   "header": {
     "logoAlt": "Logotipo de Bristlenose",

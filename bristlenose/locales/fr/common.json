@@ -100,7 +100,18 @@
     "selectAll": "Tout sélectionner",
     "clear": "Effacer",
     "searchPlaceholder": "Rechercher des étiquettes\u2026",
-    "noTagsLabel": "(Sans étiquette)"
+    "noTagsLabel": "(Sans étiquette)",
+    "used": "Utilisées",
+    "all": "Toutes",
+    "total": "Total",
+    "close": "Fermer",
+    "closeAriaLabel": "Fermer la barre latérale des étiquettes",
+    "userTags": "Étiquettes utilisateur",
+    "other": "Autres",
+    "summary": "{{count}} étiquettes dans {{frameworks}} cadres",
+    "showFramework": "Afficher {{framework}}",
+    "hideFramework": "Masquer {{framework}}",
+    "frameworkSentiment": "Sentiment"
   },
   "header": {
     "logoAlt": "Logo Bristlenose",

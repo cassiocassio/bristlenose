@@ -553,6 +553,8 @@ Seven patterns that machine translation gets wrong. Use this list as a pre-fligh
 
 7. **Duplicate keys across namespaces drift independently.** `sessions.colDuration` and `dashboard.colDuration` both had "길이" — fixing one without the other creates inconsistency. *Fix:* grep for all occurrences of a concept before fixing. Consider extracting shared column labels into a `columns` sub-namespace
 
+8. **CLDR plural categories ≠ "missing translations".** Korean and Japanese have a single plural category (`other`) per CLDR. i18next emits `_one` / `_other` variants from English source, so a diff against EN reports the `_one` keys as missing for ko/ja — but those keys are not translatable strings in those languages. As of 30 Apr 2026 this accounts for ~3% of the apparent ko gap on Weblate (19 of 26 "missing" keys are `_one` plurals; the remaining 7 are deliberate identicals — brand name `bristlenose`, acronym `LLM`, `ID`, and pure-placeholder strings like `"{label}"`). *Fix:* if Weblate's component config exposes plural-rule overrides, set ko/ja to skip `_one` form-counting. Otherwise, document the floor and stop chasing it
+
 ## Frontend extraction lessons (24 Mar 2026)
 
 Lessons from wiring ~200 hardcoded strings across ~35 React components to i18next.

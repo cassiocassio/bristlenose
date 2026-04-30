@@ -91,6 +91,7 @@ Performance: stress sweep shows clean linear scaling to 3000 quotes — virtuali
 ### Icebox (100 days)
 - **Miro bridge** — Miro-shaped CSV export → API integration → layout engine. CSV export works as stopgap. Killer feature - Resuresct for move out of beta! See `docs/private/design-miro-bridge.md`
 - **Spring-loaded folders during drag** — open folder on hover during drag. SwiftUI List doesn't support natively; needs timer or NSEvent monitor. Low priority — "Move to" submenu covers the use case
+- **iPad companion (read-mostly thin client)** — post-alpha. Mac runs the pipeline as today; iPad syncs quotes/stars/tags/hidden state from a per-subscriber cloud workspace. "Workbench → reading chair" — sofa skim of the 15% of quotes that matter, star-favourite pass on iPad, edits flow back. Text+audio-proxy sync is small; video originals stay on the Mac (or optional 480p HLS proxy). Subscription funds the relay rather than GPU time. Pairs with the broader cloud-tier framing: differentiator is "you pick the LLM, you can leave anytime with a self-contained HTML", not "bytes never leave the device". Discussion 30 Apr 2026.
 
 ---
 

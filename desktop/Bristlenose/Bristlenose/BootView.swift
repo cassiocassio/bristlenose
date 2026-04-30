@@ -45,23 +45,33 @@ struct BootView: View {
         VStack(spacing: 18) {
             Spacer()
 
-            Image(nsImage: NSApp.applicationIconImage)
-                .resizable()
-                .interpolation(.high)
-                .frame(width: 96, height: 96)
-                .opacity(isFailed ? 0.7 : 1)
+            // Brand block — combine icon + wordmark + tagline into a single
+            // VoiceOver element so the screen reader announces "Bristlenose,
+            // <tagline>" once. Status zone below stays in its own accessibility
+            // group so Retry / Show details / error message remain individually
+            // reachable in the failure phase.
+            VStack(spacing: 18) {
+                Image(nsImage: NSApp.applicationIconImage)
+                    .resizable()
+                    .interpolation(.high)
+                    .frame(width: 96, height: 96)
+                    .opacity(isFailed ? 0.7 : 1)
 
-            VStack(spacing: 4) {
-                Text("Bristlenose")
-                    .font(.title)
-                    .foregroundStyle(.primary)
-                Text(i18n.t("desktop.boot.tagline"))
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
+                VStack(spacing: 4) {
+                    Text("Bristlenose")
+                        .font(.title)
+                        .foregroundStyle(.primary)
+                    Text(i18n.t("desktop.boot.tagline"))
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                }
             }
+            .accessibilityElement(children: .combine)
+            .accessibilityLabel("Bristlenose — \(i18n.t("desktop.boot.tagline"))")
 
             // Status zone — fixed height so the icon+title don't shift when
-            // the progress/error block changes.
+            // the progress/error block changes. Children stay individually
+            // accessible so VoiceOver can reach Retry + Show details.
             statusZone
                 .frame(maxWidth: 420, minHeight: 64)
                 .padding(.top, 8)
@@ -69,8 +79,6 @@ struct BootView: View {
             Spacer()
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel(statusText)
     }
 
     @ViewBuilder

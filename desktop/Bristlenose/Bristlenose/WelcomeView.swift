@@ -87,10 +87,13 @@ struct WelcomeView: View {
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
                 .frame(maxWidth: 380)
+            // Cmd+N is owned by the File > New Project menu item, not by this
+            // button — declaring it here would conflict with the menu and with
+            // the firstRun variant's New Project card (three responders for
+            // one shortcut, undefined SwiftUI resolution). Click still works.
             Button(i18n.t("desktop.welcome.newProject"), action: onNewProject)
                 .controlSize(.large)
                 .buttonStyle(.borderedProminent)
-                .keyboardShortcut("n", modifiers: .command)
                 .padding(.top, 4)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -101,6 +104,7 @@ struct WelcomeView: View {
     private var actionRow: some View {
         HStack(alignment: .top, spacing: 16) {
             // New Project card
+            // Cmd+N owned by File > New Project menu (single source of truth).
             actionCard(
                 systemImage: "plus.square.dashed",
                 title: i18n.t("desktop.welcome.newProject"),
@@ -108,7 +112,6 @@ struct WelcomeView: View {
                 isPrimary: true,
                 action: onNewProject
             )
-            .keyboardShortcut("n", modifiers: .command)
 
             // Drop target card
             dropTargetCard

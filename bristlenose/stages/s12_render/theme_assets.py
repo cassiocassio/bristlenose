@@ -95,8 +95,13 @@ _THEME_FILES: list[str] = [
 ]
 
 
-def _load_default_css() -> str:
-    """Read and concatenate all theme CSS files into a single stylesheet."""
+def load_default_css() -> str:
+    """Read and concatenate all theme CSS files into a single stylesheet.
+
+    Public name so server callers can depend on it without reaching through
+    the private API of a deprecated package. Prefer ``get_default_css()``
+    on hot paths — that variant caches the result.
+    """
     header = (
         f"/* {_CSS_VERSION} — default research report theme */\n"
         "/* Auto-generated from bristlenose/theme/ — "
@@ -115,11 +120,17 @@ def _load_default_css() -> str:
 _default_css_cache: str | None = None
 
 
-def _get_default_css() -> str:
+def get_default_css() -> str:
+    """Cached wrapper around ``load_default_css()`` — use on request hot paths."""
     global _default_css_cache  # noqa: PLW0603
     if _default_css_cache is None:
-        _default_css_cache = _load_default_css()
+        _default_css_cache = load_default_css()
     return _default_css_cache
+
+
+# Back-compat shims for any in-tree callers still using the old underscore names.
+_load_default_css = load_default_css
+_get_default_css = get_default_css
 
 
 # ---------------------------------------------------------------------------

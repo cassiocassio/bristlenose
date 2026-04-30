@@ -1,7 +1,7 @@
 ---
 status: mixed
-last-trued: 2026-04-24
-trued-against: HEAD@port-v01-ingestion on 2026-04-24
+last-trued: 2026-05-01
+trued-against: HEAD@first-run on 2026-05-01
 split-candidate: true
 ---
 
@@ -16,6 +16,7 @@ split-candidate: true
 
 ## Changelog
 
+- _2026-05-01_ — trued against `first-run` branch after Track B Beat 1 shipped (commit `816ab65`). Updated four locations to record the boot/welcome surfaces that replace v0.1 placeholders: §"Loading and transition states" rows (App-launch / Empty-state) point at `BootView` + `WelcomeView` shipped reality; state-machine diagram footnote now cross-refs `BootView(phase: .failed)` as the surface for the `Failed` state; decision-table row 16 (Empty state) banner-flagged because shipped first-run welcome includes a 3-step rail + AI privacy link, which is more than the "drop zone + one sentence, no tutorial" decision recorded. Body preserved.
 - _2026-04-24_ — Tier 1 truing follow-up (post `design-doc-review` audit): fixed two stranded `SIGTERM` mentions in §"Cleanup" body and §"Multi-window (future)" that the previous SIGINT banner only covered for the diagram (`docs/design-desktop-app.md:1139, 1143`); added section-head banners on §"Native menu bar" (redirects to `design-desktop-menu-actions.md`), §"Bridge protocol (expanded)" (redirects to `desktop/CLAUDE.md` "Bridge communication"), and §"WKWebView configuration" (corrects the per-project-config claim — shipped is `SharedConfigStore` singleton with `.nonPersistent()` shared instance for BroadcastChannel).
 - _2026-04-23_ — trued up during port-v01-ingestion QA: added top-of-file supersession banner; inline-banner'd ServeManager-signal claim (SIGINT, not SIGTERM); inline-banner'd sidebar-row pipeline-progress UI (shipped is toolbar pill `PipelineActivityItem`, not row badge); inline-banner'd v0.1→v1 transition section (substantially landed in port-v01-ingestion). Body preserved as planning history. Anchors: `PipelineRunner.swift`, `ContentView.swift:754-761`, `PipelineActivityItem.swift`. Commits: 3d9f43c.
 - _Feb 2026_ — initial draft (v0.1 launcher vision).
@@ -466,6 +467,7 @@ Studied: Slack (sidebar pattern), Claude macOS (back/forward, sidebar-top `+ New
 | 14 | Context menu | **Right-click only** (Mail pattern), no `•••` hover affordance | Mac-only app, no iPad tax. Researchers know right-click from Dovetail/Figma/Miro |
 | 15 | Drag-and-drop | **Yes** — reorder projects, drag between folders, drag media files onto sidebar to create new project, drag onto existing project to add sessions | See drop target matrix below |
 | 16 | Empty state | **Drop zone + one sentence**, no tutorial | Researchers are professionals. `+ Add Project` plus main-area drop zone |
+> **Diverged 2026-05-01.** Shipped `WelcomeView.firstRun` includes a 3-step rail (ingest → process → export) and an "AI & privacy" link below the action cards — slightly more than the "no tutorial" decision recorded here. Trade-off accepted because the rail is a calm hairline-divider strip, not procedural prose, and answers the "what happens after I drop a folder?" question that researchers asked in early QA. `.noSelection` variant remains close to the original spirit (icon + sentence + button). See `WelcomeView.swift`.
 | 17 | Multi-window | **Notes pattern** — single-click loads in main window, double-click pops report into standalone window (no sidebar). Design-for now, ship later | Researchers must compare two reports side-by-side — otherwise CLI + two browser tabs wins |
 
 ### Communication bridge
@@ -1142,6 +1144,8 @@ One serve process per active project, managed by a `ServeManager` observable obj
 
 **Failure handling:** If the serve process doesn't output "Uvicorn running on..." within 10 seconds, or the `ready` bridge message doesn't arrive within 15 seconds of page load, transition to `Failed` state. Show error sheet: stderr log, [Retry] [Dismiss]. During `Switching`, do NOT navigate the WKWebView or SIGTERM the old process until the new one reaches `Active`. If the new process fails, cancel the switch — restore old WKWebView to full opacity with an error toast.
 
+> **Shipped reality (2026-05-01):** the `Failed` state is rendered in-pane by `BootView(phase: .failed(message:retry:))` rather than a separate sheet — same icon position as `.startingSidecar`, dimmed opacity, headline + error message, `[Retry]` (`.keyboardShortcut(.defaultAction)`) + `[Show details]` disclosure that reveals the last 40 lines of `serveManager.outputLines`. Keeping the failure surface in the same composition as the boot surface so the user's eye doesn't relocate between phases. See `BootView.swift`.
+
 **Cleanup:** `applicationWillTerminate` sends `SIGINT` to all managed processes. `atexit` handler catches crashes. `ServeManager` tracks PIDs and ports in an in-memory dictionary — no persistent state.
 
 > **Superseded 2026-04-23.** Shipped signal is **SIGINT**, not SIGTERM (Python CLI's atexit handlers flush manifest writes on SIGINT; SIGTERM bypasses them). See `desktop/CLAUDE.md` "Key conventions" and `PipelineRunner.swift:630`, `ServeManager.swift`. For `bristlenose run` subprocesses (not covered by this section), ServeManager no longer owns them — they have their own PID-file lifecycle managed by `PipelineRunner`; see `design-subprocess-lifecycle.md`.
@@ -1152,14 +1156,14 @@ One serve process per active project, managed by a `ServeManager` observable obj
 
 | Transition | What the user sees | Duration |
 |-----------|-------------------|----------|
-| **App launch → first project** | Native sidebar renders immediately (< 100ms). WKWebView area shows a centered `ProgressView` (system spinner) on the window background. Dismisses on `ready` bridge message | ~1-3s (serve startup + React mount) |
+| **App launch → first project** | Native sidebar renders immediately (< 100ms). WKWebView area shows `BootView` — app icon + "Bristlenose" wordmark + tagline "Sensemaking for User Research" + linear `ProgressView` + status line ("Starting Bristlenose…" → "Loading report…"). Dismisses on `ready` bridge message via `.transition(.opacity)` (shipped 2026-05-01, `BootView.swift`, was a bare centred system spinner) | ~1-3s (serve startup + React mount) |
 | **Project switch** (sidebar click) | WKWebView dims to 0.7 opacity. Sidebar selection updates immediately. On `ready`, new content fades in (200ms `easeInOut`) | ~1-2s (new serve startup, old stays visible underneath) |
 | **Tab switch** (`Cmd+1-5`) | Instant — `evaluateJavaScript` changes the URL, React Router handles client-side transition. No native loading state needed | < 100ms |
 | **Pipeline running** | Sidebar project row shows a spinning activity indicator (replaces status badge). Main content stays on current report. Progress streams to a sheet or popover anchored to the sidebar row | Minutes |
 | **Pipeline failed** | Activity indicator replaced by red exclamation badge. Clicking the badge opens a sheet: error message, stdout/stderr log, [Retry] [Copy Error] [Dismiss]. If partial output exists (transcription done, analysis failed): [View Partial Report] button | — |
 
 > **Superseded 2026-04-23** — two rows above describe pipeline progress/failure on the sidebar row. Shipped reality is the **toolbar-trailing pill** (`PipelineActivityItem` in `ContentView.swift:754-761`) with a popover for stage/elapsed/Stop/Retry; sidebar rows carry only a short subtitle ("Analysing…", "Transcription failed", "Analysed N min ago"). `[View Partial Report]` affordance is not shipped. See `design-project-sidebar.md` inline banner on "Activity status bar" and `design-subprocess-lifecycle.md` for the surfacing model.
-| **No project selected** (empty state) | Sidebar shows `+ Add Project` and project list. Main area shows a drop zone with one sentence: _"Drag a folder of interviews here, or click + Add Project"_ | — |
+| **No project selected** (empty state) | Sidebar shows `+ Add Project` and project list. Main area shows `WelcomeView` (shipped 2026-05-01, `WelcomeView.swift`). Two variants: `.firstRun` (projects empty) shows app icon + "Welcome to Bristlenose" + subtitle + two-card action row (`plus.square.dashed` New Project + `tray.and.arrow.down` drop target with dashed-border accent-tinted hover) + 3-step rail (ingest → process → export) + "Review AI & privacy settings…" link. `.noSelection` (projects exist, none selected) shows `sidebar.left` symbol + "No Project Selected" + secondary copy + borderedProminent New Project button (`Cmd+N`). Resurrects the previously-dead `chrome.noProjectSelected` / `chrome.selectProject` locale keys. Was a single drop zone + one sentence ("Drag a folder of interviews here, or click + Add Project") | — |
 
 ### WKWebView configuration
 

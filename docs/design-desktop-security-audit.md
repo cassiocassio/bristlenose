@@ -1,5 +1,7 @@
 # Desktop App Security Audit — March 2026
 
+> **Trued 30 Apr 2026** — Beat 3 + 3b first-run round of fixes: Finding #12 (Ollama URL accepts arbitrary HTTP) and Opportunity G closed by the desktop GUI hardwire (commit `dbd54ec`); new auth-check trust surface enumerated under "What's Already Strong" (verdict cache, TTL gate, privacy-marked logging); HTTP-only Ollama detection ✅ row added.
+
 > **Trued 28 Apr 2026.** Multiple Distribution Blockers and Medium gaps shipped in Track C C0–C3 plus the SECURITY #5/#8 unblocker; rows below flipped to ✅ with commit anchors. Constraint #17 (Hardened Runtime entitlement) reframed: DLV is empirically required (Python.framework's nested `_CodeSignature/` seal is the binding reason), not "kept defensively". Distribution Prep row H ("Code signing + notarization CI pipeline") is half-done, half-rejected: code signing shipped, notarisation rejected for the App Store-only path. Canonical post-Track-C docs: `design-desktop-python-runtime.md` (sidecar mechanics, entitlements, signing), `design-modularity.md` (channels), `desktop/scripts/build-all.sh` (orchestrator).
 
 Comprehensive security review of the macOS desktop app (`desktop/Bristlenose/`), combining:
@@ -24,6 +26,9 @@ Comprehensive security review of the macOS desktop app (`desktop/Bristlenose/`),
 | Ephemeral WKWebView | Strong | `.nonPersistent()` data store per project — no cross-project leakage |
 | SecurityChecklist.swift | Innovative | Compile-time `#error` blocks Release builds with known security gaps |
 | Local-first privacy | Major differentiator | Zero telemetry, zero phone-home, zero crash reporting. Ollama escape hatch |
+| Settings auth-check trust surface | Strong | Beat 3 round-trip key validation (`LLMValidator.swift`, `LLMSettingsView.swift`). Verdict cache stores 8-byte SHA256 hash + verdict only — no key material. 60s TTL gate caps outbound traffic (verified by `LLMValidatorTests.swift`). All `os.Logger` calls covering `error.localizedDescription` are `privacy: .private`. Provider-specific HTTP semantics (Anthropic 4xx-not-401-is-online forward-compat, Azure 404 → invalid, OpenAI standard codes). User-facing disclosure in `SECURITY.md` §"Data leaves your machine only when" item 2 |
+| Ollama URL hardwired in desktop GUI | Strong | Trust-boundary closure (commit `dbd54ec`, 30 Apr 2026). Settings shows static read-only `localhost:11434`; no editable field. CLI/CI override path preserved via parent-process `BRISTLENOSE_LOCAL_URL` env var (`ServeManager.swift:351-357`, `BristlenoseShared.swift:122-127`). Replaces what would otherwise be a social-engineering footgun (paste an attacker URL → silent transcript exfil) |
+| Ollama detection HTTP-only | Strong | First-run install/probe via `OllamaSetupSheet.swift` uses HTTP GET `127.0.0.1:11434/api/tags` exclusively. No `Process()` exec, no `/usr/sbin/lsof`, no `/Applications/Ollama.app` filesystem polling — sandbox-clean and Homebrew-friendly. `failureMessage(for:)` catalogues `URLError.notConnectedToInternet` / `.timedOut` / `.cannotConnectToHost` |
 
 ---
 
@@ -54,7 +59,7 @@ Comprehensive security review of the macOS desktop app (`desktop/Bristlenose/`),
 |---|-----------|---------|
 | 10 | ~~Auth token prefix (8 chars) logged to stdout~~ ✅ **FIXED — C3 (`8a41f60`, `c17954d`)** | Runtime log redactor in `ServeManager.handleLine` masks Anthropic/OpenAI/Google key shapes (Azure deferred, pre-beta re-audit); source-level `check-logging-hygiene.sh` CI gate prevents Swift-side regressions. Auth-token parse runs before redaction so base64url tokens can't collide |
 | 11 | Hardcoded dev paths in release binary (`~/Code/bristlenose/...`) | §6 Should (new) |
-| 12 | Ollama URL accepts arbitrary HTTP without warning | §6 Should |
+| 12 | ~~Ollama URL accepts arbitrary HTTP without warning~~ ✅ **DONE — first-run branch (`dbd54ec`, 30 Apr 2026)** — chosen mitigation was hardwire-not-warn (stronger than the original ticket): the editable URL field was removed from the desktop GUI entirely, replaced with a static `localhost:11434` display. CLI/CI override via parent-process `BRISTLENOSE_LOCAL_URL` env var only. Closes the trust boundary that would otherwise allow a social-engineered user to paste an attacker URL and silently exfiltrate transcripts over plain HTTP. Anchor: `LLMSettingsView.swift:331-348`, `ServeManager.swift:351-357` |
 | 13 | CFBundleVersion = 1 (blocks Sparkle/App Store updates) | §11 Should |
 | 14 | PyInstaller malware association → AV false positives | §11 Should |
 | 15 | Bundled fallback API key extractable from binary | §6 Should |
@@ -79,7 +84,7 @@ Comprehensive security review of the macOS desktop app (`desktop/Bristlenose/`),
 | D | Wrap dev paths in `#if DEBUG` | Trivial | No info disclosure |
 | E | Strip token prefix from release logs | 1 line | No token fragment in Console.app |
 | F | Add `NSAllowsLocalNetworking` to Info.plist | Config | Correct ATS (not implicit via sandbox-off) |
-| G | Warn on non-localhost Ollama URL | Small SwiftUI | Prevents unencrypted transcript transmission |
+| G | ~~Warn on non-localhost Ollama URL~~ ✅ **DONE — first-run branch (`dbd54ec`)** — closed by Finding #12 hardwire. Stronger mitigation than warn (no editable field at all in the desktop GUI). |
 | H1 | ~~Broaden `MacOSCredentialStore` subprocess exception handling for sandbox-denied cases~~ ✅ **DONE — C3 (`f44ac52`)** | 1 commit | `credentials_macos.py` `get`/`set`/`delete` now also catch `FileNotFoundError` / `PermissionError` / `OSError` alongside `CalledProcessError`, with DEBUG-level diagnostic logging. Sandbox regressions surface as "No API key configured" rather than unhandled tracebacks |
 | H2 | ~~Source-level logging-hygiene CI gate~~ ✅ **DONE — C3 (`c17954d`)** | 1 script | `check-logging-hygiene.sh` scans Swift for credential-shaped interpolations without `privacy: .private` markers; wired as `build-all.sh` pre-flight step 1a |
 | H3 | ~~Bundle-data coverage gate~~ ✅ **DONE — C3 (`673ddee`, BUG-6)** | 1 script | `check-bundle-manifest.sh` AST-parses the PyInstaller spec, walks the source tree, fails closed on any runtime-data directory missing from `datas`. Prevents the BUG-3/4/5 class (React SPA, codebook YAMLs, llm/prompts shipped missing because Analysis only discovers `.py` imports) |

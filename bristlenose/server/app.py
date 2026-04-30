@@ -379,9 +379,13 @@ def _mount_dev_report(app: FastAPI, output_dir: Path) -> None:
     @app.get("/report/assets/bristlenose-theme.css")
     def serve_live_theme_css() -> Response:
         """Dev only: concatenate CSS from source on every request."""
-        from bristlenose.stages.s12_render.theme_assets import _load_default_css
+        from bristlenose.stages.s12_render.theme_assets import load_default_css
 
-        return Response(_load_default_css(), media_type="text/css")
+        return Response(
+            load_default_css(),
+            media_type="text/css",
+            headers={"Cache-Control": "no-store"},
+        )
 
     @app.get("/report")
     def redirect_report_to_slash() -> RedirectResponse:
@@ -485,6 +489,32 @@ def _mount_prod_report(app: FastAPI, output_dir: Path, *, dev: bool = False) -> 
     @app.get("/report")
     def redirect_report_to_slash_prod() -> RedirectResponse:
         return RedirectResponse("/report/", status_code=301)
+
+    # Theme CSS fallback: brand-new projects that haven't been through the
+    # pipeline yet have no `<output_dir>/assets/bristlenose-theme.css`. Without
+    # this route the SPA's <link> 404s and the whole UI renders unstyled.
+    # Mirror dev mode's `load_default_css()` behaviour: prefer the project's
+    # rendered CSS if it exists (so per-project theme tweaks still win), fall
+    # back to the cached bundled source otherwise. The cache is process-scoped
+    # so the 47-file disk read happens at most once per server process.
+    _theme_cache_headers = {"Cache-Control": "public, max-age=3600"}
+
+    @app.get("/report/assets/bristlenose-theme.css")
+    def serve_theme_css_with_fallback() -> Response:
+        per_project = output_dir / "assets" / "bristlenose-theme.css"
+        if per_project.is_file():
+            return FileResponse(
+                per_project,
+                media_type="text/css",
+                headers=_theme_cache_headers,
+            )
+        from bristlenose.stages.s12_render.theme_assets import get_default_css
+
+        return Response(
+            get_default_css(),
+            media_type="text/css",
+            headers=_theme_cache_headers,
+        )
 
     @app.get("/report/{path:path}", response_model=None)
     def serve_report_spa_prod(path: str = "") -> Response:

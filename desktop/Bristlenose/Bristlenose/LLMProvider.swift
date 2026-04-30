@@ -56,25 +56,27 @@ enum LLMProvider: String, CaseIterable, Identifiable {
         needsAPIKey ? rawValue : nil
     }
 
-    /// Default model for this provider.
+    /// Default model for this provider. Ollama default is RAM-aware via
+    /// `OllamaCatalog.recommendedTag()` — see end of file.
     var defaultModel: String {
         switch self {
         case .claude: "claude-sonnet-4-20250514"
         case .chatGPT: "gpt-4o"
         case .gemini: "gemini-2.0-flash"
         case .azure: "gpt-4o"
-        case .ollama: "llama3.2:3b"
+        case .ollama: OllamaCatalog.recommendedTag()
         }
     }
 
     /// Known models for the picker. "Custom…" is appended by the UI.
+    /// Ollama's list comes from the curated catalog (RAM tiers + sizes).
     var availableModels: [String] {
         switch self {
         case .claude: ["claude-sonnet-4-20250514", "claude-haiku-4-5-20251001", "claude-opus-4-20250514"]
         case .chatGPT: ["gpt-4o", "gpt-4o-mini"]
         case .gemini: ["gemini-2.0-flash", "gemini-2.5-pro"]
         case .azure: ["gpt-4o", "gpt-4o-mini"]
-        case .ollama: ["llama3.2:3b", "mistral"]
+        case .ollama: OllamaCatalog.curated.map(\.tag)
         }
     }
 
@@ -83,6 +85,95 @@ enum LLMProvider: String, CaseIterable, Identifiable {
         switch self {
         case .ollama: "Free, runs locally. No API key needed."
         default: nil
+        }
+    }
+
+    /// User-facing label for a status, with provider-specific overrides.
+    /// Ollama swaps "Online" for "Local" — both healthy, but "Local"
+    /// names the actual privacy property the user picked Ollama for.
+    func statusLabel(for status: ProviderStatus) -> String {
+        if self == .ollama && status == .online {
+            return "Local"
+        }
+        return status.label
+    }
+
+    /// Label for the "Use this provider" activation toggle.
+    /// Cloud providers use the generic phrasing — they're already named
+    /// in the sidebar row above. Ollama gets a custom label that names
+    /// the local-only property, since "Use this provider" undersells the
+    /// reason a user would pick it.
+    var activationToggleLabel: String {
+        switch self {
+        case .ollama: "Use the local Ollama model"
+        default: "Use this provider"
+        }
+    }
+
+    // MARK: - External links
+
+    /// External links for the provider — homepage (label = bare domain),
+    /// pricing page, and the console where keys are issued. Surfaced as a
+    /// row under the Status toggle so a `.notSetUp` user knows where to
+    /// go to get a key. URLs drift over time; keep them centralised here
+    /// so updates are one-file. `pricing` and `console` are optional —
+    /// Ollama has neither (free, local).
+    struct ProviderLinks {
+        let homepage: URL
+        let homepageLabel: String
+        let pricing: URL?
+        let console: URL?
+        let consoleLabel: String  // "Keys" for cloud APIs; "Portal" for Azure
+    }
+
+    var links: ProviderLinks {
+        switch self {
+        case .claude:
+            return ProviderLinks(
+                homepage: URL(string: "https://anthropic.com")!,
+                homepageLabel: "anthropic.com",
+                pricing: URL(string: "https://anthropic.com/pricing"),
+                console: URL(string: "https://console.anthropic.com"),
+                consoleLabel: "Keys"
+            )
+        case .chatGPT:
+            return ProviderLinks(
+                homepage: URL(string: "https://openai.com")!,
+                homepageLabel: "openai.com",
+                pricing: URL(string: "https://openai.com/api/pricing"),
+                console: URL(string: "https://platform.openai.com/api-keys"),
+                consoleLabel: "Keys"
+            )
+        case .gemini:
+            return ProviderLinks(
+                homepage: URL(string: "https://ai.google.dev")!,
+                homepageLabel: "ai.google.dev",
+                pricing: URL(string: "https://ai.google.dev/pricing"),
+                console: URL(string: "https://aistudio.google.com/app/apikey"),
+                consoleLabel: "Keys"
+            )
+        case .azure:
+            // Azure customers manage keys inside their org's portal under
+            // their own deployment — there's no single "get a key" page.
+            return ProviderLinks(
+                homepage: URL(
+                    string: "https://azure.microsoft.com/en-us/products/ai-services/openai-service")!,
+                homepageLabel: "azure.microsoft.com",
+                pricing: URL(
+                    string:
+                        "https://azure.microsoft.com/en-us/pricing/details/cognitive-services/openai-service/"
+                ),
+                console: URL(string: "https://portal.azure.com"),
+                consoleLabel: "Portal"
+            )
+        case .ollama:
+            return ProviderLinks(
+                homepage: URL(string: "https://ollama.com")!,
+                homepageLabel: "ollama.com",
+                pricing: nil,
+                console: nil,
+                consoleLabel: ""
+            )
         }
     }
 }
@@ -138,7 +229,8 @@ enum ProviderStatus: Equatable {
         }
     }
 
-    /// True when the key has been validated successfully.
+    /// True when the provider may be activated. `.online` only — every
+    /// other state (including `.unavailable`) blocks the radio.
     var isConfigured: Bool {
         self == .online
     }
@@ -154,4 +246,69 @@ extension Notification.Name {
     static let showAIConsentSheet = Notification.Name("showAIConsentSheet")
     /// Posted by the app menu to show the Build Info diagnostic sheet.
     static let showBuildInfoSheet = Notification.Name("showBuildInfoSheet")
+}
+
+// MARK: - Ollama catalog
+
+/// Curated Ollama models with sizes + RAM tiers. The list is local
+/// (we know what models exist + their costs without needing Ollama
+/// installed or running). Mirrors `docs/design-gemma4-local-models.md`
+/// LOCAL_MODEL_RAM but trimmed to four — one per RAM tier — to keep
+/// the picker tight.
+struct OllamaModel: Identifiable, Hashable {
+    var id: String { tag }
+    let tag: String
+    let displayName: String
+    let weightsGB: Double
+    let minRAMGB: Double
+}
+
+enum OllamaCatalog {
+    static let curated: [OllamaModel] = [
+        // Order: small → large. The greyed unfit rows still appear so
+        // the user can see what's possible at higher tiers.
+        OllamaModel(tag: "llama3.2:3b",  displayName: "Llama 3.2 3B", weightsGB: 2,  minRAMGB: 4),
+        OllamaModel(tag: "gemma4:e4b",   displayName: "Gemma 4 E4B",  weightsGB: 3,  minRAMGB: 8),
+        OllamaModel(tag: "gemma4:26b",   displayName: "Gemma 4 26B",  weightsGB: 16, minRAMGB: 24),
+        OllamaModel(tag: "gemma4:31b",   displayName: "Gemma 4 31B",  weightsGB: 20, minRAMGB: 32),
+    ]
+
+    /// System RAM in GB. Reads `ProcessInfo.processInfo.physicalMemory`
+    /// (sandbox-safe, no entitlement required).
+    static var systemRAMGB: Double {
+        Double(ProcessInfo.processInfo.physicalMemory) / 1_000_000_000
+    }
+
+    /// Best-fit recommendation for the user's hardware. Threshold of
+    /// `>= 15` rather than `>= 16` — `physicalMemory` reports slightly
+    /// less than the advertised RAM tier (e.g. ~15.5 GB for a "16 GB"
+    /// Mac), and we don't want a 16 GB machine to fall back to the
+    /// floor model. Mirrors the waterfall in
+    /// `docs/design-gemma4-local-models.md`.
+    static func recommendedTag(forRAMGB ramGB: Double = systemRAMGB) -> String {
+        if ramGB >= 47 { return "gemma4:31b" }
+        if ramGB >= 35 { return "gemma4:26b" }
+        if ramGB >= 15 { return "gemma4:e4b" }
+        return "llama3.2:3b"
+    }
+
+    /// True if this model fits in the given RAM tier. Drives grey-out
+    /// in the Set up sheet's picker.
+    ///
+    /// `minRAMGB` is the floor — total system RAM, with OS + foreground
+    /// apps + Bristlenose itself already factored in (Llama 3.2 3B
+    /// `minRAMGB: 4` = ~2 GB weights + ~2 GB everything else). Don't
+    /// subtract additional headroom here — that double-counts and locks
+    /// the smallest Mac tier out of every model. `recommendedTag`
+    /// thresholds (15 / 35 / 47) carry the comfort margin above this
+    /// floor.
+    static func fits(_ model: OllamaModel, ramGB: Double = systemRAMGB) -> Bool {
+        ramGB >= model.minRAMGB
+    }
+
+    /// Look up a model by tag. Returns nil for tags not in the curated
+    /// list (e.g. user-typed Custom… values).
+    static func model(for tag: String) -> OllamaModel? {
+        curated.first { $0.tag == tag }
+    }
 }

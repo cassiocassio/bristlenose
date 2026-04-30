@@ -1,3 +1,13 @@
+---
+status: current
+last-trued: 2026-04-30
+trued-against: HEAD@first-run on 2026-04-30
+---
+
+## Changelog
+
+- _2026-04-30_ — Trued §"Local LLM" against Beat 3b shipped reality. Desktop GUI hardwires the Ollama URL to `localhost:11434` (commit `dbd54ec`) — editable field removed as a trust-boundary closure (paste-an-attacker-URL → silent transcript exfil). CLI/CI override path preserved via parent-process `BRISTLENOSE_LOCAL_URL` env var only. First-run detection / install / model-pull lives in `OllamaSetupSheet.swift` (Beat 3b, `07ee058`) — HTTP-only daemon probe, no `Process()` exec, no filesystem polling.
+
 # Modular Packaging and Optional Components (CLI + macOS)
 
 _Written 18 Apr 2026. Update when components are added, extras are restructured, or a platform mechanism changes._
@@ -105,7 +115,9 @@ Awkwardness: Background Assets natively targets data files, not Python packages.
 | Ollama binary | ~2 GB | **Not bundled.** User installs from ollama.com | Same |
 | Ollama models (llama3, etc.) | 4–70 GB | Downloaded by user via `ollama pull` | Same |
 
-**Code side:** detect Ollama via HTTP GET `http://localhost:11434` on both platforms. Drop all `subprocess.run(["ollama", …])` calls (sandbox blocks on Mac, no benefit on Linux). UX if not detected: "Install Ollama from ollama.com" link. Single code path.
+**Code side:** detect Ollama via HTTP GET `http://localhost:11434/api/tags` on both platforms. Drop all `subprocess.run(["ollama", …])` calls (sandbox blocks on Mac, no benefit on Linux). UX if not detected: the Mac desktop ships `OllamaSetupSheet.swift` (Beat 3b) which opens `https://ollama.com/download` in the system browser and polls daemon reachability with a 120 s timeout + URLError catalogue (no internet / timed out / cannot connect). The CLI surfaces the same probe via `bristlenose doctor`. Single HTTP code path; sandbox-clean and Homebrew-friendly.
+
+**Desktop URL hardwire (alpha):** the Mac GUI's Settings tab shows the Ollama URL as a static read-only display (`http://localhost:11434/v1`) — no editable field. CLI users keep the override via the `BRISTLENOSE_LOCAL_URL` env var; the Mac sidecar honours it only when present in the *parent process* environment (`ServeManager.swift:351-357`). This closes the trust-boundary footgun where a social-engineered user could be tricked into pasting an attacker URL — see `design-desktop-security-audit.md` Finding #12.
 
 ### UI locales
 

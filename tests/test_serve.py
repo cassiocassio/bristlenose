@@ -348,9 +348,22 @@ class TestProdServeReport:
             assert 'id="bn-app-root"' in resp.text
 
     def test_output_dir_assets_served(self, prod_client: TestClient) -> None:
-        """Files with extensions in the output dir are served as assets."""
-        # The output dir was created but is empty — expect 404 for missing asset
+        """Files with extensions in the output dir are served as assets.
+
+        Special case: the theme CSS route falls back to the bundled default
+        when the per-project file doesn't exist (commit 9e6224b — without
+        this, brand-new projects render the SPA unstyled). So an empty
+        output dir still serves CSS, just from the package source rather
+        than the project's rendered assets.
+        """
         resp = prod_client.get("/report/assets/bristlenose-theme.css")
+        assert resp.status_code == 200
+        assert resp.headers["content-type"].startswith("text/css")
+        # Bundled fallback marker — present in load_default_css() output.
+        assert "default research report theme" in resp.text
+
+        # Other missing asset paths still 404 — fallback is theme-CSS only.
+        resp = prod_client.get("/report/assets/missing-thumbnail.png")
         assert resp.status_code == 404
 
     def test_existing_output_asset_served(self, tmp_path: Path) -> None:

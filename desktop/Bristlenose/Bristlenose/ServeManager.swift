@@ -348,9 +348,12 @@ final class ServeManager: ObservableObject {
             env["BRISTLENOSE_AZURE_API_VERSION"] = apiVersion
         }
 
-        // Ollama
-        if let localURL = defaults.string(forKey: "localURL"), !localURL.isEmpty {
-            env["BRISTLENOSE_LOCAL_URL"] = localURL
+        // Ollama — hardwired to localhost in the desktop GUI (security
+        // boundary; see LLMSettingsView.hardwiredOllamaURL). CLI users
+        // and CI override via the parent process env var.
+        if let envURL = ProcessInfo.processInfo.environment["BRISTLENOSE_LOCAL_URL"],
+           !envURL.isEmpty {
+            env["BRISTLENOSE_LOCAL_URL"] = envURL
         }
     }
 

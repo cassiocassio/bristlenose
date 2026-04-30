@@ -143,6 +143,31 @@
     "welcomeTitle": "Welcome to Bristlenose",
     "welcomeBody": "Drag a folder of interview recordings into the sidebar, or click + New Project to start."
   },
+  "boot": {
+    "tagline": "Sensemaking for User Research",
+    "startingSidecar": "Starting Bristlenose…",
+    "loadingReport": "Loading report…",
+    "failedTitle": "Couldn’t start Bristlenose",
+    "retry": "Retry",
+    "showDetails": "Show details",
+    "hideDetails": "Hide details"
+  },
+  "welcome": {
+    "subtitle": "Turn a folder of interviews into a report you can share — on your laptop, nothing uploaded.",
+    "newProject": "New Project",
+    "newProjectHint": "Pick a folder of recordings or transcripts and start fresh.",
+    "dropFolderTitle": "Drop a folder",
+    "dropFolderHint": "Drag a folder of recordings or transcripts here to add it as a project.",
+    "aiPrivacyLink": "Review AI & privacy settings…",
+    "steps": {
+      "ingestTitle": "Add interviews",
+      "ingestDetail": "Audio, video, or existing transcripts.",
+      "processTitle": "Bristlenose analyses",
+      "processDetail": "Transcribe, find quotes, cluster themes.",
+      "exportTitle": "Browse & export",
+      "exportDetail": "Read findings, export HTML or CSV."
+    }
+  },
   "toolbar": {
     "back": "Back (⌘[)",
     "forward": "Forward (⌘])",

@@ -143,6 +143,31 @@
     "welcomeTitle": "Bienvenue dans Bristlenose",
     "welcomeBody": "Glissez un dossier d\u2019enregistrements d\u2019entretiens dans la barre lat\u00e9rale, ou cliquez sur + Nouveau projet pour commencer."
   },
+  "boot": {
+    "tagline": "Analyse pour la recherche utilisateur",
+    "startingSidecar": "D\u00e9marrage de Bristlenose\u2026",
+    "loadingReport": "Chargement du rapport\u2026",
+    "failedTitle": "Impossible de d\u00e9marrer Bristlenose",
+    "retry": "R\u00e9essayer",
+    "showDetails": "Afficher les d\u00e9tails",
+    "hideDetails": "Masquer les d\u00e9tails"
+  },
+  "welcome": {
+    "subtitle": "Transformez un dossier d\u2019entretiens en un rapport partageable \u2014 sur votre Mac, sans rien envoyer.",
+    "newProject": "Nouveau projet",
+    "newProjectHint": "Choisissez un dossier d\u2019enregistrements ou de transcriptions pour d\u00e9marrer.",
+    "dropFolderTitle": "D\u00e9posez un dossier",
+    "dropFolderHint": "Glissez ici un dossier d\u2019enregistrements ou de transcriptions pour l\u2019ajouter comme projet.",
+    "aiPrivacyLink": "V\u00e9rifier les r\u00e9glages IA et confidentialit\u00e9\u2026",
+    "steps": {
+      "ingestTitle": "Ajoutez les entretiens",
+      "ingestDetail": "Audio, vid\u00e9o ou transcriptions existantes.",
+      "processTitle": "Bristlenose analyse",
+      "processDetail": "Transcription, extraction de citations, regroupement.",
+      "exportTitle": "Parcourez et exportez",
+      "exportDetail": "Lisez les conclusions, exportez en HTML ou CSV."
+    }
+  },
   "toolbar": {
     "back": "Précédent (⌘[)",
     "forward": "Suivant (⌘])",

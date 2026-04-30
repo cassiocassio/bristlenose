@@ -143,6 +143,31 @@
     "welcomeTitle": "Willkommen bei Bristlenose",
     "welcomeBody": "Ziehen Sie einen Ordner mit Interview-Aufnahmen in die Seitenleiste, oder klicken Sie auf + Neues Projekt, um zu starten."
   },
+  "boot": {
+    "tagline": "Analyse für User Research",
+    "startingSidecar": "Bristlenose wird gestartet…",
+    "loadingReport": "Bericht wird geladen…",
+    "failedTitle": "Bristlenose konnte nicht gestartet werden",
+    "retry": "Erneut versuchen",
+    "showDetails": "Details anzeigen",
+    "hideDetails": "Details ausblenden"
+  },
+  "welcome": {
+    "subtitle": "Aus einem Ordner mit Interviews wird ein teilbarer Bericht — lokal, nichts wird hochgeladen.",
+    "newProject": "Neues Projekt",
+    "newProjectHint": "Wählen Sie einen Ordner mit Aufnahmen oder Transkripten und legen Sie los.",
+    "dropFolderTitle": "Ordner ablegen",
+    "dropFolderHint": "Ziehen Sie hier einen Ordner mit Aufnahmen oder Transkripten als neues Projekt hinein.",
+    "aiPrivacyLink": "KI- und Datenschutz-Einstellungen prüfen…",
+    "steps": {
+      "ingestTitle": "Interviews hinzufügen",
+      "ingestDetail": "Audio, Video oder vorhandene Transkripte.",
+      "processTitle": "Bristlenose analysiert",
+      "processDetail": "Transkribieren, Zitate finden, Themen clustern.",
+      "exportTitle": "Durchstöbern & exportieren",
+      "exportDetail": "Ergebnisse lesen, als HTML oder CSV exportieren."
+    }
+  },
   "toolbar": {
     "back": "Zurück (⌘[)",
     "forward": "Vorwärts (⌘])",

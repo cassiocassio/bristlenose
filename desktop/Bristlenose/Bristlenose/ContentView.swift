@@ -1112,11 +1112,23 @@ struct ContentView: View {
                 description: Text(i18n.t("desktop.chrome.multipleSelectedHint"))
             )
         } else {
-            ContentUnavailableView(
-                i18n.t("desktop.chrome.noProjectSelected"),
-                systemImage: "doc.text.magnifyingglass",
-                description: Text(i18n.t("desktop.chrome.selectProject"))
-            )
+            // "Home" view — shown whenever no project is selected.
+            // In practice rarely seen: `@AppStorage("selectedProjectID")` restores
+            // the previously-open project on relaunch (see desktop/CLAUDE.md).
+            // TODO: post-alpha — recents, suggestions, useful first-timer actions.
+            VStack(spacing: 16) {
+                Image(nsImage: NSApp.applicationIconImage)
+                    .resizable()
+                    .interpolation(.high)
+                    .frame(width: 96, height: 96)
+                Text(i18n.t("desktop.chrome.welcomeTitle"))
+                    .font(.title)
+                Text(i18n.t("desktop.chrome.welcomeBody"))
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+                    .frame(maxWidth: 420)
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
     }
 

@@ -139,7 +139,9 @@
     "emptyStateHint": "Arrastra una carpeta aqu\u00ed o pulsa \u2318N",
     "addedInterviews": "%d entrevistas a\u00f1adidas a %@",
     "multipleSelected": "%d elementos seleccionados",
-    "multipleSelectedHint": "Selecciona un solo proyecto para ver su informe."
+    "multipleSelectedHint": "Selecciona un solo proyecto para ver su informe.",
+    "welcomeTitle": "Te damos la bienvenida a Bristlenose",
+    "welcomeBody": "Arrastra una carpeta con grabaciones de entrevistas a la barra lateral, o haz clic en + Nuevo proyecto para empezar."
   },
   "toolbar": {
     "back": "Atrás (⌘[)",

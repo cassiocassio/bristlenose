@@ -139,7 +139,9 @@
     "emptyStateHint": "Ordner hierher ziehen oder \u2318N dr\u00fccken",
     "addedInterviews": "%d Interviews zu %@ hinzugef\u00fcgt",
     "multipleSelected": "%d Elemente ausgew\u00e4hlt",
-    "multipleSelectedHint": "W\u00e4hlen Sie ein einzelnes Projekt aus, um den Bericht anzuzeigen."
+    "multipleSelectedHint": "W\u00e4hlen Sie ein einzelnes Projekt aus, um den Bericht anzuzeigen.",
+    "welcomeTitle": "Willkommen bei Bristlenose",
+    "welcomeBody": "Ziehen Sie einen Ordner mit Interview-Aufnahmen in die Seitenleiste, oder klicken Sie auf + Neues Projekt, um zu starten."
   },
   "toolbar": {
     "back": "Zurück (⌘[)",

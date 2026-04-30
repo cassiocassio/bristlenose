@@ -157,7 +157,7 @@ Low-frequency content. Researchers see it once.
 |----------|-------------------------|
 | **Python** (`bristlenose/i18n.py`) | Direct filesystem read at runtime. `t("namespace.key")` |
 | **React** (`frontend/src/i18n/`) | Vite `resolve.alias` (`@locales`) at build time. English bundled inline; other locales lazy-loaded via dynamic `import()` |
-| **macOS desktop** (`desktop/.../I18n.swift`) | `I18n` class loads JSON from disk. Discovers locale files from dev repo, bundled .app, or Homebrew paths |
+| **macOS desktop** (`desktop/.../I18n.swift`) | `I18n` class loads JSON from disk. `findLocalesDirectory()` priority (top wins): (1) `#filePath`-derived path relative to `I18n.swift` itself — resolves to the worktree's own `bristlenose/locales/` so each git worktree reads its own files, not the main repo's; (2) `~/Code/bristlenose/bristlenose/locales` legacy fallback; (3) bundled `.app` (`Bundle.main.resourceURL/sidecar/_internal/.../locales`); (4) Homebrew / pipx site-packages. Worktree-aware fallback added 2026-05-01 (commit `816ab65`) — without it, locale keys added in a worktree silently fail to resolve at runtime |
 
 ### Namespace inventory
 
@@ -170,7 +170,7 @@ Low-frequency content. Researchers see it once.
 | `pipeline.json` | Python only | ~5 (stage progress) |
 | `server.json` | Python only | ~5 (API errors) |
 | `doctor.json` | Python only | ~5 (health checks) |
-| `desktop.json` | Desktop only | ~75 (menu bar, toolbar, native chrome) |
+| `desktop.json` | Desktop only | ~95 (menu bar, toolbar, native chrome, `boot.*` and `welcome.*` blocks added 2026-05-01) |
 
 ### Desktop locale flow
 

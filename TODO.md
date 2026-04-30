@@ -1,6 +1,6 @@
 # Bristlenose — Where I Left Off
 
-Last updated: 26 Apr 2026
+Last updated: 30 Apr 2026 (first-run branch in flight — Beats 3, 3b, home view + pre-merge review fixes + topic truing landed on branch; not yet merged to main)
 
 **Most recent ship: v0.15.0 (26 Apr 2026)** — Phase 1f / 4a-pre. Pipeline-resilience event log (`pipeline-events.jsonl`) + structured `Cause` (10 categories) + honest `cost_usd_estimate` + desktop `EventLogReader`. Replaces the manifest-inference path that mis-classified interrupted runs as `.ready`. See `CHANGELOG.md` for full features, `docs/design-pipeline-resilience.md` for the design, and `docs/private/desktop-ux-iteration.md` for the deferred desktop UX work (Resume / Retry / Re-analyse… verb wiring + 9 other themed sections).
 
@@ -87,6 +87,21 @@ Remaining multi-project phases tracked in `docs/design-project-sidebar.md` (Phas
 - [x] **PII audit artifacts** — `docs/pii-audit/` with README, redacted transcript, and summary log. Linked from help panel
 
 Remaining PII work tracked in `docs/private/100days.md` §4 Value (PII dashboard widget) and §6 Risk.
+
+---
+
+## Re-evaluate security-review agent calibration (29 Apr 2026)
+
+AI makes it cheap to enumerate every "could go wrong" — that doesn't mean every finding is worth acting on. During Beat 3 QA setup, security-review returned 11 findings against a single QA doc; piping them verbatim (rotate test keys, dedicated $5-cap key, Logger privacy spot-check, quit Zoom/iCloud before Wi-Fi off, wipe keychain via shell) added theatre without proportional risk reduction for a dev Mac with $20-cap + no-auto-renew keys. User pushback ("if they get my mac and cut my thumb off they can have the keychain — what do i care about $20 in a log") was the right calibration check.
+
+Agent-side fixes to evaluate:
+- Have the agent lead each finding with realistic impact + cost-of-mitigation, not adversarial scenario. Proportionality as burden of proof.
+- Self-classify findings as "ship blocker" / "code-quality nice" / "threat-model dependent" instead of flat severity.
+- Inject the user's threat model (single-user dev Mac, capped keys, security-literate ex-Canonical) so the agent weighs against actual consequence.
+
+Caller-side discipline already captured in `feedback_proportionate_security.md` and the index entry in `MEMORY.md` — don't pipe agent output verbatim, mediate.
+
+Bigger question: same calibration likely applies to other adversarial-by-design agents (a11y-review, perf-review). Worth tuning the suite prompts together.
 
 ---
 

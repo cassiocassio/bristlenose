@@ -34,7 +34,8 @@ A complete inventory of every third-party binary and Python wheel that ships in 
 ## Data leaves your machine only when:
 
 1. **You use a cloud LLM provider.** Transcript text is sent to the provider you selected in Settings (Claude, ChatGPT, Azure OpenAI, or Gemini), using your own API key, at the moment you trigger an analysis. Using Ollama with a local model eliminates even this.
-2. **Whisper downloads its transcription model**, once per model, on first transcription. Model files are downloaded from huggingface.co to `~/Library/Application Support/Bristlenose/models/`. This is data, not code — the download is consumed by the transcription library that already ships signed inside the app.
+2. **You open the LLM settings tab.** Bristlenose pings each configured cloud provider with a minimal auth-check request to confirm your key still works. No transcript data is sent — just an empty or minimal request that the provider answers with a 200 or 401. Capped at once per minute per provider (verdict cache). Ollama is never contacted off-machine — the URL is hardwired to localhost in the desktop GUI.
+3. **Whisper downloads its transcription model**, once per model, on first transcription. Model files are downloaded from huggingface.co to `~/Library/Application Support/Bristlenose/models/`. This is data, not code — the download is consumed by the transcription library that already ships signed inside the app.
 
 Bristlenose itself has zero sub-processors. There is no cloud database, no analytics service, no error-tracking vendor, no auth provider, and no telemetry endpoint.
 

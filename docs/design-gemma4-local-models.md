@@ -1,6 +1,18 @@
+---
+status: mixed
+last-trued: 2026-04-30
+trued-against: HEAD@first-run on 2026-04-30
+---
+
+## Changelog
+
+- _2026-04-30_ — Trued against Beat 3b shipped reality. Curated 4-model subset shipped in the macOS desktop via `OllamaCatalog` (commit `07ee058`); `OllamaSetupSheet.swift` runs the first-run install + model-pull flow. Empirical thresholds and the no-headroom-subtraction invariant added below; original pre-ship tiers preserved as research baseline.
+
 # Design: Hardware-Aware Gemma 4 Local Model Recommendations
 
-_13 Apr 2026 — research & plan, not yet implemented._
+_13 Apr 2026 — research & plan, partially shipped 30 Apr 2026 (desktop only)._
+
+> **Status (`mixed`):** The desktop macOS path has shipped a curated subset (`llama3.2:3b`, `gemma4:e4b`, `gemma4:26b`, `gemma4:31b`) wired into `OllamaCatalog` (`LLMProvider.swift:264-312`) and surfaced through `OllamaSetupSheet.swift`. `gemma4:e2b` was dropped from the curated list — `e4b` covers the entry tier. The CLI hardware-aware flow described in §Implementation plan is **not yet shipped**; CLI users still get `llama3.2:3b` as the default.
 
 ## Problem
 
@@ -53,6 +65,10 @@ Bristlenose uses `response_format={"type": "json_object"}` via Ollama's OpenAI-c
 | < 8 GB | `llama3.2:3b` | ~2 GB | Gemma E2B untested for JSON |
 
 **Gap at 24 GB:** No good Gemma 4 fit — E4B is capable but small, 26B causes swapping. Options: (a) recommend E4B at this tier too, (b) keep `qwen2.5:7b` or `llama3.1:8b` as the 24 GB recommendation, (c) test whether 26B works at `llm_concurrency=1`. Decision deferred to implementation.
+
+> **Shipped thresholds (desktop, 30 Apr 2026):** `OllamaCatalog.recommendedTag(forRAMGB:)` waterfall uses `>= 47 / >= 35 / >= 15 / default` — one GB below the design above on each tier. Reason: `ProcessInfo.processInfo.physicalMemory` reports slightly less than the advertised RAM tier (a "16 GB" Mac reports ~15.5 GB). Without the trim, a 16 GB Mac would fall back to the floor model. See `LLMProvider.swift:286-291`.
+
+> **Invariant: `fits()` is `ramGB >= minRAMGB`, no headroom subtraction.** `minRAMGB` in the curated catalog is total-system-RAM with OS + apps + Bristlenose itself already factored in (e.g. Llama 3.2 3B `minRAMGB: 4` = ~2 GB weights + ~2 GB everything else). Subtracting additional headroom in `fits()` double-counts and locks the entry-tier 8 GB Mac out of every model. The `recommendedTag` thresholds carry the comfort margin above this floor; `fits()` is the can-it-run-at-all gate. Burned in by the `dbd54ec` → `06e8351` revert pair after a brief experiment with 8 GB headroom subtraction. See `LLMProvider.swift:296-302`.
 
 ## Implementation plan
 

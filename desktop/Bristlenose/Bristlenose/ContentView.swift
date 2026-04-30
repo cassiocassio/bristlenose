@@ -1098,8 +1098,7 @@ struct ContentView: View {
                 ZStack {
                     switch serveManager.state {
                     case .idle, .starting:
-                        ProgressView(i18n.t("desktop.chrome.startingServer"))
-                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        BootView(phase: .startingSidecar)
 
                     case .running:
                         WebView(url: serveURLWithLocale, bridgeHandler: bridgeHandler, authToken: serveManager.authToken)
@@ -1108,25 +1107,21 @@ struct ContentView: View {
                             .accessibilityHidden(!bridgeHandler.isReady)
                             .focusSection()
 
-                        // Loading overlay — shown until the React SPA posts "ready".
+                        // Boot surface stays visible until the React SPA posts "ready"
+                        // — same icon + tagline as the sidecar-starting phase, just
+                        // with a different status line, so the eye doesn't relocate.
                         if !bridgeHandler.isReady {
                             ZStack {
                                 Color(nsColor: .windowBackgroundColor)
-                                ProgressView(i18n.t("desktop.chrome.loadingReport"))
+                                BootView(phase: .loadingReport)
                             }
                             .transition(.opacity)
                         }
 
                     case .failed(let error):
-                        ContentUnavailableView {
-                            Label(i18n.t("desktop.chrome.serverError"), systemImage: "exclamationmark.triangle")
-                        } description: {
-                            Text(error)
-                        } actions: {
-                            Button(i18n.t("desktop.chrome.retry")) {
-                                serveManager.start(projectPath: project.path)
-                            }
-                        }
+                        BootView(phase: .failed(message: error, retry: {
+                            serveManager.start(projectPath: project.path)
+                        }))
                     }
                 }
                 .animation(reduceMotion ? nil : .easeInOut(duration: 0.2), value: bridgeHandler.isReady)
@@ -1138,10 +1133,17 @@ struct ContentView: View {
                 description: Text(i18n.t("desktop.chrome.multipleSelectedHint"))
             )
         } else {
-            ContentUnavailableView(
-                i18n.t("desktop.chrome.noProjectSelected"),
-                systemImage: "doc.text.magnifyingglass",
-                description: Text(i18n.t("desktop.chrome.selectProject"))
+            WelcomeView(
+                variant: projectIndex.projects.isEmpty ? .firstRun : .noSelection,
+                onNewProject: { createNewProject() },
+                onDropFolders: { urls in
+                    let directories = urls.filter { $0.hasDirectoryPath }
+                    let files = urls.filter { !$0.hasDirectoryPath }
+                    createProjectFromURLs(directories: directories, files: files)
+                },
+                onShowAIPrivacy: {
+                    NotificationCenter.default.post(name: .showAIConsentSheet, object: nil)
+                }
             )
         }
     }

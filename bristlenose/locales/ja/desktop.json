@@ -139,7 +139,9 @@
     "emptyStateHint": "フォルダをここにドラッグするか、⌘N を押してください",
     "addedInterviews": "%@ に %d 件のインタビューを追加しました",
     "multipleSelected": "%d 個の項目を選択中",
-    "multipleSelectedHint": "レポートを表示するには、プロジェクトを 1 つ選択してください。"
+    "multipleSelectedHint": "レポートを表示するには、プロジェクトを 1 つ選択してください。",
+    "welcomeTitle": "Bristlenose へようこそ",
+    "welcomeBody": "インタビュー録音のフォルダをサイドバーにドラッグするか、＋ 新規プロジェクト をクリックして始めてください。"
   },
   "toolbar": {
     "back": "戻る (⌘[)",
@@ -198,5 +200,30 @@
     "continue": "続ける",
     "useOllama": "代わりに Ollama を使用 (クラウドなし)",
     "done": "完了"
+  },
+  "boot": {
+    "tagline": "ユーザーリサーチの分析",
+    "startingSidecar": "Bristlenose を起動中…",
+    "loadingReport": "レポートを読み込み中…",
+    "failedTitle": "Bristlenose を起動できませんでした",
+    "retry": "再試行",
+    "showDetails": "詳細を表示",
+    "hideDetails": "詳細を非表示"
+  },
+  "welcome": {
+    "subtitle": "インタビューのフォルダから共有できるレポートを — このMacの中で、アップロードはありません。",
+    "newProject": "新規プロジェクト",
+    "newProjectHint": "録音や書き起こしのフォルダを選んで始めましょう。",
+    "dropFolderTitle": "フォルダをドロップ",
+    "dropFolderHint": "録音や書き起こしのフォルダをここにドラッグするとプロジェクトとして追加されます。",
+    "aiPrivacyLink": "AI とプライバシー設定を確認…",
+    "steps": {
+      "ingestTitle": "インタビューを追加",
+      "ingestDetail": "音声・動画・既存の書き起こし。",
+      "processTitle": "Bristlenose が解析",
+      "processDetail": "文字起こし・引用抽出・テーマのまとめ。",
+      "exportTitle": "閲覧してエクスポート",
+      "exportDetail": "結果を読み、HTML または CSV で書き出します。"
+    }
   }
 }

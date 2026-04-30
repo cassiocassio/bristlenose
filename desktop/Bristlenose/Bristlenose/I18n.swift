@@ -139,14 +139,33 @@ final class I18n: ObservableObject {
     /// Find the bristlenose locales directory based on common install locations.
     ///
     /// Priority:
-    /// 1. Dev mode — repo source tree (fastest iteration)
-    /// 2. Bundled .app — host target's Copy Sidecar Resources phase
-    /// 3. Bundled .app — PyInstaller sidecar (legacy fallback)
-    /// 4. Homebrew / pipx — site-packages
+    /// 1. Dev mode — this source file's enclosing worktree (so each git worktree
+    ///    reads its own locales, not the main repo's)
+    /// 2. Dev mode — `~/Code/bristlenose/bristlenose/locales` legacy fallback
+    /// 3. Bundled .app — host target's Copy Sidecar Resources phase
+    /// 4. Bundled .app — PyInstaller sidecar `_internal` (legacy fallback)
+    /// 5. Homebrew / pipx — site-packages
     static func findLocalesDirectory() -> URL? {
         let fm = FileManager.default
 
-        // 1. Dev mode: source tree (most common during development)
+        // 1. Dev mode: locales relative to this source file. `#filePath` is
+        // resolved at compile time, so each worktree's build points at its
+        // own `bristlenose/locales/`. Path layout from this file:
+        //   <worktree>/desktop/Bristlenose/Bristlenose/I18n.swift
+        // → strip 4 components to reach <worktree>, then append the locales path.
+        let sourceFile = URL(fileURLWithPath: #filePath)
+        let worktreeURL = sourceFile
+            .deletingLastPathComponent()  // Bristlenose/
+            .deletingLastPathComponent()  // Bristlenose/ (Xcode project)
+            .deletingLastPathComponent()  // desktop/
+            .deletingLastPathComponent()  // <worktree>
+        let worktreeLocales = worktreeURL.appendingPathComponent("bristlenose/locales")
+        if fm.fileExists(atPath: worktreeLocales.appendingPathComponent("en/common.json").path) {
+            return worktreeLocales
+        }
+
+        // 2. Dev mode: main-repo fallback (covers builds where #filePath
+        // resolution doesn't reach a checkout — e.g. archived debug builds).
         let devPath = NSString("~/Code/bristlenose/bristlenose/locales")
             .expandingTildeInPath
         let devURL = URL(fileURLWithPath: devPath)
@@ -154,7 +173,7 @@ final class I18n: ObservableObject {
             return devURL
         }
 
-        // 2. App bundle: host-target Resources/locales (copied by the
+        // 3. App bundle: host-target Resources/locales (copied by the
         // "Copy Sidecar Resources" build phase). This is the canonical
         // location for shipped builds — independent of the sidecar's
         // PyInstaller layout.
@@ -165,7 +184,7 @@ final class I18n: ObservableObject {
                 return bundledPath
             }
 
-            // 3. Legacy fallback: PyInstaller sidecar's _internal dir.
+            // 4. Legacy fallback: PyInstaller sidecar's _internal dir.
             // Kept for older builds where locales weren't copied to the
             // host bundle directly.
             let sidecarPath = URL(fileURLWithPath: resourcePath)
@@ -175,7 +194,7 @@ final class I18n: ObservableObject {
             }
         }
 
-        // 3. Homebrew / pipx: find site-packages via known binary locations
+        // 5. Homebrew / pipx: find site-packages via known binary locations
         let pythonPrefixes = [
             "/opt/homebrew/lib/python3",
             "/usr/local/lib/python3",

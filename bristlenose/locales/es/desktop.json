@@ -139,7 +139,34 @@
     "emptyStateHint": "Arrastra una carpeta aqu\u00ed o pulsa \u2318N",
     "addedInterviews": "%d entrevistas a\u00f1adidas a %@",
     "multipleSelected": "%d elementos seleccionados",
-    "multipleSelectedHint": "Selecciona un solo proyecto para ver su informe."
+    "multipleSelectedHint": "Selecciona un solo proyecto para ver su informe.",
+    "welcomeTitle": "Te damos la bienvenida a Bristlenose",
+    "welcomeBody": "Arrastra una carpeta con grabaciones de entrevistas a la barra lateral, o haz clic en + Nuevo proyecto para empezar."
+  },
+  "boot": {
+    "tagline": "Análisis para investigación de usuarios",
+    "startingSidecar": "Iniciando Bristlenose…",
+    "loadingReport": "Cargando informe…",
+    "failedTitle": "No se pudo iniciar Bristlenose",
+    "retry": "Reintentar",
+    "showDetails": "Mostrar detalles",
+    "hideDetails": "Ocultar detalles"
+  },
+  "welcome": {
+    "subtitle": "Convierte una carpeta de entrevistas en un informe compartible, en tu portátil, sin subir nada.",
+    "newProject": "Nuevo proyecto",
+    "newProjectHint": "Elige una carpeta de grabaciones o transcripciones y empieza de cero.",
+    "dropFolderTitle": "Suelta una carpeta",
+    "dropFolderHint": "Arrastra aquí una carpeta de grabaciones o transcripciones para añadirla como proyecto.",
+    "aiPrivacyLink": "Revisar ajustes de IA y privacidad…",
+    "steps": {
+      "ingestTitle": "Añade entrevistas",
+      "ingestDetail": "Audio, vídeo o transcripciones existentes.",
+      "processTitle": "Bristlenose analiza",
+      "processDetail": "Transcribe, extrae citas y agrupa temas.",
+      "exportTitle": "Explora y exporta",
+      "exportDetail": "Lee hallazgos, exporta HTML o CSV."
+    }
   },
   "toolbar": {
     "back": "Atrás (⌘[)",

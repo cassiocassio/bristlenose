@@ -1,13 +1,14 @@
 ---
 status: partial
-last-trued: 2026-04-21
-trued-against: HEAD@sidecar-signing on 2026-04-21
+last-trued: 2026-04-30
+trued-against: HEAD@first-run on 2026-04-30
 ---
 
 > **Truing status:** Partial — the original design (§Design Decisions, §Module Structure, §CLI Commands) shipped and remains the canonical CLI/serve-mode credential path, with provider-list expansion (2→5). The Track C sandboxed-desktop deployment ships a different credential path (Swift reads Keychain, injects env vars; Python never touches Keychain) — documented in the new §"Desktop (sandboxed) credential path" section. Inline Python source (§Module Structure) is the pre-ship plan; see `bristlenose/credentials.py` + `credentials_macos.py` for current.
 
 ## Changelog
 
+- _2026-04-29_ — confirmed still current after Beat 3 (desktop SwiftUI round-trip credential validation, `LLMValidator.swift`). Beat 3 added a new validation surface in Swift Settings that reads the Keychain key briefly to authenticate against the provider's API, but does NOT change the storage or injection architecture this doc describes — the Swift→env-var→Python flow on sidecar launch is unchanged. The verdict cache (UserDefaults: SHA-256 hash prefix + status + timestamp) is opaque metadata, not secret material; threat shape unchanged. See `design-desktop-settings.md` §"Validation flow (Beat 3)" for the validator details.
 - _2026-04-21_ — trued up: expanded provider list from 2 (anthropic, openai) to 5 (anthropic, openai, azure, google, miro); updated `bristlenose configure` samples to use product names (`claude`, `chatgpt`); marked Snap section as shipped via env-var fallback; added new §"Desktop (sandboxed) credential path" for the Track C Swift→env-var→Python architecture (load-bearing invariant for alpha); added §"Secret-leak defences" covering runtime log redactor + `check-logging-hygiene.sh` CI gate. Anchors: `bristlenose/credentials.py:53-58`, `bristlenose/credentials_macos.py:42-44`, `bristlenose/cli.py:1613-1727`, `desktop/Bristlenose/Bristlenose/ServeManager.swift:183-197,356-383,409-473`, `desktop/Bristlenose/Bristlenose/KeychainHelper.swift`, `desktop/scripts/check-logging-hygiene.sh`, commits "inject keychain api keys as env vars", "runtime log redactor for api key shapes", "tests for env injection, redactor", "CI grep gate for Swift logging hygiene". Preserved: inlined Python source in §Module Structure as pre-ship plan record.
 
 # Keychain Integration
@@ -47,7 +48,7 @@ Examples (expanded from original 2 providers to 5 shipped):
 - `Bristlenose OpenAI API Key`
 - `Bristlenose Azure API Key`
 - `Bristlenose Google API Key`
-- `Bristlenose Miro API Key` (Miro board-bridge integration)
+- ~~`Bristlenose Miro API Key`~~ (Miro board-bridge descoped from alpha — `KeychainHelper` and `ServeManager.overlayAPIKeys()` iterate only the four cloud providers `anthropic / openai / azure / google`. Re-add this row when Miro integration ships.)
 
 See `bristlenose/credentials_macos.py:42-44` for the shipped service-name table.
 
@@ -117,6 +118,8 @@ bristlenose configure chatgpt
 ## Desktop (sandboxed) credential path
 
 **Shipped in Track C (Apr 2026).** This is a distinct deployment from the CLI/serve-mode path above. When Bristlenose runs embedded in the macOS desktop app (sandboxed, signed, TestFlight/App Store bound), the credential flow inverts: **Swift reads Keychain via Security.framework; Python never touches Keychain.**
+
+> **Beat 3 addition (2026-04-29).** A new component, `LLMValidator.swift`, reads the Keychain key inside Swift Settings to do round-trip authentication against the provider's API. It does NOT change the flow below — the env-var injection on sidecar launch is unchanged. See `design-desktop-settings.md` §"Validation flow (Beat 3)" for the validator details (verdict cache, TTL, offline survival).
 
 ### The flow
 

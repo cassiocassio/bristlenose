@@ -1,7 +1,7 @@
 ---
 status: partial
-last-trued: 2026-04-29
-trued-against: HEAD@first-run on 2026-04-29 (uncommitted Beat 3)
+last-trued: 2026-04-30
+trued-against: HEAD@first-run on 2026-04-30
 ---
 
 > **Truing status:** Partial — the original design (§Design Decisions, §Module Structure, §CLI Commands) shipped and remains the canonical CLI/serve-mode credential path, with provider-list expansion (2→5). The Track C sandboxed-desktop deployment ships a different credential path (Swift reads Keychain, injects env vars; Python never touches Keychain) — documented in the new §"Desktop (sandboxed) credential path" section. Inline Python source (§Module Structure) is the pre-ship plan; see `bristlenose/credentials.py` + `credentials_macos.py` for current.
@@ -48,7 +48,7 @@ Examples (expanded from original 2 providers to 5 shipped):
 - `Bristlenose OpenAI API Key`
 - `Bristlenose Azure API Key`
 - `Bristlenose Google API Key`
-- `Bristlenose Miro API Key` (Miro board-bridge integration)
+- ~~`Bristlenose Miro API Key`~~ (Miro board-bridge descoped from alpha — `KeychainHelper` and `ServeManager.overlayAPIKeys()` iterate only the four cloud providers `anthropic / openai / azure / google`. Re-add this row when Miro integration ships.)
 
 See `bristlenose/credentials_macos.py:42-44` for the shipped service-name table.
 

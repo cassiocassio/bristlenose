@@ -155,6 +155,17 @@ The space is well-mapped; we should align with conventions, not invent.
 
 ## Design
 
+### Out-of-band LLM traffic (Settings auth-check)
+
+**Auth-check calls do not flow through `LLMClient.analyze()` and are not captured by this telemetry.** Beat 3 (Apr 2026) added Swift-side round-trip credential validation in `desktop/Bristlenose/Bristlenose/LLMValidator.swift`. When the user opens the LLM Settings tab — or saves a new key — the desktop fires a per-provider auth-check (Anthropic POST `/v1/messages` `max_tokens=1`, OpenAI GET `/v1/models`, Azure GET `/openai/deployments`, Gemini GET `/v1beta/models`, Ollama GET `/api/tags`) capped at once per minute per provider via a 60s verdict-cache TTL. These calls:
+
+- Carry no input data — auth-only, no transcript content.
+- Generate no completion, no token usage, no billable cost we'd want to forecast.
+- Run in Swift, not Python — `os.Logger` privacy-marked, written to Console.app, never to `<output_dir>/.bristlenose/llm-calls.jsonl`.
+- Are user-facing-disclosed in `SECURITY.md` §"Data leaves your machine only when" item 2 and enumerated in `design-desktop-security-audit.md` "What's Already Strong" → "Settings auth-check trust surface."
+
+If a future telemetry phase ever uploads `llm-calls.jsonl` (it doesn't today), the disclosure-completeness story still needs to namecheck this auth-check path even though it's not in the file — otherwise an auditor could legitimately ask "why does the audit say four-providers-pinged-at-Settings-open and the JSONL show nothing?"
+
 ### Trust boundary
 
 **This file is a re-identification key.** Same handling discipline as `pii_summary.txt`:

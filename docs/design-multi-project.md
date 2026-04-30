@@ -1,8 +1,19 @@
+---
+status: mixed
+last-trued: 2026-04-30
+trued-against: HEAD@first-run on 2026-04-30
+split-candidate: true
+---
+
 # Multi-Project Awareness — Design Doc
+
+## Changelog
+
+- 2026-04-30 — Trued against shipped reality. Phase 1 (Project Index, Folders, VolumeWatcher / availability) shipped via `port-v01-ingestion` (commit `e781ebe`, merged to v0.15.0 on 26 Apr 2026); per-section `status:current` markers added. Person identity (§2), Archive (§3a), cross-project search (§3b), `bristlenose forget` (§3c), CLI `bristlenose projects` / `--recent` / `--all` all stay pending.
 
 ## Status
 
-**Design only** — no code changes. Maps assumptions, designs the data model, documents the identity problem.
+**Mixed — Phase 1 shipped, Phase 2+ pending.** Project Index, folders + drag-reorder + Move-To submenu, volume mount/unmount tracking and `Project.availability` enum, "Plug in [volume]" UX shipped via `port-v01-ingestion` (v0.15.0, 26 Apr 2026). Anchors: `desktop/Bristlenose/Bristlenose/ProjectIndex.swift:1-779`, `VolumeWatcher.swift`, `MenuCommands.swift:317-415`. Person identity model, Archive, cross-project search, `forget` command remain pending. The home-screen design in §1 below describes a sidebar-list-centric view; a separate detail-pane welcome placeholder shipped in commit `4772c3a` (parked for full design post-alpha — see 100days §3 Should "Desktop home view"). This doc maps assumptions, designs the data model, and documents the identity problem.
 
 ## Context
 
@@ -31,6 +42,8 @@ This doc does **not** propose building multi-project now. It:
 ---
 
 ## 1. Project Index — How Bristlenose Discovers and Remembers Projects
+
+> **Status (`current`):** Project index, JSON persistence, and folder grouping shipped (26 Apr 2026, `port-v01-ingestion`). Schema below matches `ProjectIndex.swift:30-115`.
 
 Projects are directory-native — each project is a folder on disk containing input files and a `bristlenose-output/` directory. There is no central database of project data. The "project index" is just a list of pointers.
 
@@ -73,6 +86,8 @@ The index stores only pointers (path, name, timestamps, location hints). All pro
 - Deleting the index loses the project list but not the data — `bristlenose serve <folder>` still works
 
 ### Folders — one level of grouping
+
+> **Status (`current`):** Folders, drag-reorder, "Move to" submenu, inline rename, expand/collapse persistence all shipped (`MenuCommands.swift:317-415`, `FolderRow.swift`, `ProjectIndex.swift` `Folder` struct). One-level depth as designed.
 
 The project index supports **one level of folders** — a flat grouping that maps to how researchers naturally organise work (by client, product, team, or research programme). No nesting.
 
@@ -243,6 +258,10 @@ Present matches as suggestions with a "Link" / "Not the same" action. Store the 
 | **Archived** | Works if path exists | Greyed, collapsed archive section | Listed with `[archived]` marker |
 
 ### Unavailable projects (volumes that come and go)
+
+> **Status (`current`):** `Project.availability` enum (`ProjectIndex.swift:132-145`) + `VolumeWatcher.swift` shipped. Volume mount/unmount tracking, availability re-computation, "Plug in [volume]" UX live (26 Apr 2026, `port-v01-ingestion`). Mid-session SQLite-relocation discussion further down stays `pending` — DB still lives at `<output_dir>/.bristlenose/bristlenose.db`.
+
+
 
 Researchers work across multiple storage locations: local SSD, a SharePoint at a client site, an external drive, a NAS at home. At any given moment, half the projects in the index may be on a volume that isn't mounted. This is **normal, not an error**.
 

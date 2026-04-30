@@ -127,6 +127,8 @@ The canonical end-to-end beats a first-time user must complete successfully in t
 
 
 ### Should
+- **Translation catch-up pass — first-run desktop screens** — `LLMSettingsView.swift` and `OllamaSetupSheet.swift` ship with ~30 hardcoded English strings on the first-run path (Beat 3 + 3b, 30 Apr 2026, `first-run` branch). Plan: machine-translate as good-enough first pass before alpha (subsumes Finding 39 from settings-ui review log) + glossary discussion for any new vocabulary (status labels, install copy, error catalogue). Same pass cleans up unused `chrome.noProjectSelected` / `chrome.selectProject` keys in 6 locales. Ja-locale gap is the longest pole: `ja/desktop.json` has ~53% empty values pre-existing, including `aiConsent.useOllama` + `aiConsent.ollamaCallout` which collapse the alt-AI path to invisible for Japanese users. If not done in time for alpha: pull ja from the locale picker.
+- **AIConsent sheet rewrite for clarity + simplicity** — alpha→beta polish window. Current sheet has 6 sections + 2 buttons; "Researcher responsibility" copy at the bottom probably never read. Plan: fold into a Learn more disclosure, shrink to disclosure + decision. (Finding 50 from settings-ui review log, 30 Apr 2026.)
 - **Local model reliability** — ~85% vs ~99% cloud. Investigate parse failure patterns (llm/CLAUDE.md)
 - **Speaker diarisation** — cross-session moderator linking not working (#25, #26) — single-session detection improved (LLM splitting, generalised heuristic, format-agnostic prompt, Apr 2026). Cross-session linking remains. See `docs/design-transcript-speaker-editing-roadmap.md` Layer 11
 - **Badge × character** — platform-inconsistent rendering, replace with SVG (badge.css TODO)

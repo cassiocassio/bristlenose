@@ -403,12 +403,12 @@ export function SidebarLayout({ active, leftPanel, leftPanelTitle, showRightSide
             inert={!tagsOpen ? true : undefined}
           >
             <div className="sidebar-header tag-sidebar-header">
-              <span className="sidebar-title">Tags</span>
+              <span className="sidebar-title">{t("tags.tags")}</span>
               <button
                 className="sidebar-close"
                 onClick={handleCloseTags}
-                title="Close"
-                aria-label="Close tag sidebar"
+                title={t("tags.close")}
+                aria-label={t("tags.closeAriaLabel")}
               >
                 ×
               </button>
@@ -434,12 +434,12 @@ export function SidebarLayout({ active, leftPanel, leftPanelTitle, showRightSide
 
           {/* Column 6: Tag rail (rightmost — visible when tag sidebar is closed) */}
           <div className="tag-rail">
-            <Tooltip content="Tags" shortcut={{ key: "]" }}>
+            <Tooltip content={t("tags.tags")} shortcut={{ key: "]" }}>
               <button
                 ref={tagRailBtnRef}
                 className="rail-btn"
                 onClick={handleToggleTags}
-                aria-label="Toggle tag sidebar"
+                aria-label={t("tags.tags")}
               >
                 <TagIcon />
               </button>

@@ -149,7 +149,7 @@ describe("SidebarLayout", () => {
         <div>Content</div>
       </SidebarLayout>,
     );
-    expect(screen.getByLabelText("Toggle tag sidebar")).toBeTruthy();
+    expect(screen.getAllByLabelText("Tags").length).toBeGreaterThan(0);
   });
 
   it("adds .toc-open class when tocMode is push", () => {

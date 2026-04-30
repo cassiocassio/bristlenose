@@ -99,7 +99,18 @@
     "selectAll": "Alle auswählen",
     "clear": "Löschen",
     "searchPlaceholder": "Tags suchen\u2026",
-    "noTagsLabel": "(Keine Tags)"
+    "noTagsLabel": "(Keine Tags)",
+    "used": "Verwendet",
+    "all": "Alle",
+    "total": "Gesamt",
+    "close": "Schließen",
+    "closeAriaLabel": "Tag-Seitenleiste schließen",
+    "userTags": "Benutzer-Tags",
+    "other": "Sonstige",
+    "summary": "{{count}} Tags in {{frameworks}} Frameworks",
+    "showFramework": "{{framework}} anzeigen",
+    "hideFramework": "{{framework}} ausblenden",
+    "frameworkSentiment": "Stimmung"
   },
   "header": {
     "logoAlt": "Bristlenose-Logo",

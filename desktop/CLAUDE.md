@@ -248,6 +248,8 @@ open desktop/Bristlenose/Bristlenose.xcodeproj
 
 The Xcode project uses `PBXFileSystemSynchronizedRootGroup` — Swift files added to `desktop/Bristlenose/Bristlenose/` are auto-discovered. No need to manually add them to the project.
 
+**Auto-sync only covers files inside `desktop/Bristlenose/Bristlenose/`.** Shared data dirs at the repo root (e.g. `bristlenose/locales/`) won't ship in the bundle unless an explicit Copy Bundle Resources phase or shell-script copy puts them there. Without that, `Bundle.main` lookups return nil at runtime — symptom is chrome strings rendering as raw i18n keys (e.g. `desktop.settingsTabs.llm` instead of "LLM"). The "Copy Sidecar Resources" shell-script phase in `Bristlenose.xcodeproj/project.pbxproj` is the established pattern for this — it `rsync`s the sidecar, ffmpeg, models, and locales (added Apr 2026 after locales were missing from the bundle on `main`). Add new shared dirs to that phase rather than inventing new ones.
+
 ### Alpha build (Track C C1 and beyond)
 
 End-to-end orchestration lives in `desktop/scripts/build-all.sh`:

@@ -1,11 +1,11 @@
 {
   "error": {
-    "notFound": "",
-    "badRequest": "",
-    "internal": ""
+    "notFound": "リソースが見つかりません。",
+    "badRequest": "不正なリクエスト: {detail}",
+    "internal": "サーバー内部エラーです。"
   },
   "status": {
-    "healthy": "",
-    "degraded": ""
+    "healthy": "正常",
+    "degraded": "低下"
   }
 }

@@ -35,7 +35,7 @@ Code-archaeology and Swift/Python wiring. Driven by sandbox violation logs from 
 - `bristlenose/utils/hardware.py`
 
 **Suggested branch structure:**
-1. `sandbox-debug` — flip sandbox in Debug scheme, exercise MVP flow, produce violation log. No fixes.
+1. `sandbox-debug` — flip sandbox in Debug scheme, exercise MVP flow, produce violation log. No fixes. **Started 29 Apr 2026** on `bristlenose_branch sandbox-debug/` worktree.
 2. Per-Python-migration narrow branches as the violation log dictates (`credentials-security-framework`, `ollama-http`, `bundled-binary-helper`, etc.).
 
 **Won't touch:** PyInstaller signing script, frontend, server route handlers (other than subprocess audit).
@@ -43,6 +43,8 @@ Code-archaeology and Swift/Python wiring. Driven by sandbox violation logs from 
 **A1 first move:** sandbox on in Debug, walk §1a, log every `deny(1) …`. Output: a ranked violation list in this directory (e.g. `sandbox-violations-A1.md`).
 
 ### Track B — MVP UX flow
+
+> **Status (29 Apr 2026):** Track B happy path **shipped 26 Apr** via `port-v01-ingestion` (commit `e781ebe` → v0.15.0) — broader scope than predicted: ingestion + multi-project core + lifecycle. End-to-end new project → drop folder → ingestion → processing → display works. Branch 1 = `first-run` worktree (started 29 Apr) for the remaining first-run polish (beat 3 API-key validation, beat 3b Ollama wiring in `AIConsentView`, cold-start splash, empty-state narrative). Polish backlog at `desktop-ux-iteration.md`. The "narrow branch per broken beat" framing below is preserved as the original 18 Apr planning context.
 
 The `100days.md` §1a beats 1–13. The long pole. Judgment-heavy. Quality bar: "Martin can run this on a laptop with no API keys pre-configured and no cached state, from new, in under an hour, and produce a report he'd send to a UXR friend without apologising."
 
@@ -63,9 +65,9 @@ The `100days.md` §1a beats 1–13. The long pole. Judgment-heavy. Quality bar: 
 | 10. Stars / filtering | `frontend/src/contexts/QuotesStore.ts`, related components |
 | 13. CSV export | `frontend/src/components/ExportMenu.tsx`, `bristlenose/server/routes/quotes_export.py` |
 
-(Beats 2, 11, 12 already shipped — see §1a in `100days.md`.)
+(Original 18 Apr framing said "Beats 2, 11, 12 already shipped". Updated 29 Apr: beats 1, 2, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13 reachable end-to-end as of 26 Apr via `port-v01-ingestion`. **Still gaps:** beat 3 — Settings + Keychain shipped (`LLMSettingsView.swift`, `KeychainHelper.swift`) but no live API roundtrip validation; beat 3b implicit — Ollama detection rich on Python side (`bristlenose/ollama.py`) but Swift UI doesn't surface install method / auto-start / model picker.)
 
-**B1 first move:** clean-profile walkthrough on the current build to identify the first broken beat. Clean profile = wipe `~/Library/Application Support/Bristlenose` + Keychain entries, no Claude key set.
+**B1 first move (18 Apr framing):** clean-profile walkthrough on the current build to identify the first broken beat. **B1 actual outcome (29 Apr):** the walkthrough effectively happened across `port-v01-ingestion` QA (20–25 Apr) and produced `desktop-ux-iteration.md` (10-section deferred polish backlog). The narrow "per broken beat" branches predicted here did not materialise; what shipped instead was one larger ingestion + multi-project + lifecycle branch. The remaining first-run polish lives on the `first-run` worktree (started 29 Apr).
 
 ### Track C — Sidecar bundling + signing (re-scoped 18 Apr 2026)
 
@@ -97,7 +99,7 @@ The `100days.md` §1a beats 1–13. The long pole. Judgment-heavy. Quality bar: 
 
 **Branch:** `sidecar-signing` (current worktree — scope extended from original three-sentence version)
 
-**Won't do in Track C:** Developer ID / `.dmg` pipeline (rejected per road-to-alpha); CI upload job (#11); actual TestFlight upload (#12); App Store Connect app record (#10). These belong to Track B and land whenever the schedule allows — S6 was a provisional bucket, not a commitment.
+**Won't do in Track C:** Developer ID / `.dmg` pipeline (deferred per road-to-alpha — revisit at ~10k paying users or first enterprise MDM ask); CI upload job (#11); actual TestFlight upload (#12); App Store Connect app record (#10). These belong to Track B and land whenever the schedule allows — S6 was a provisional bucket, not a commitment.
 
 **Deferred to public-beta polish pass (post-alpha, before 100-days):**
 - Native SwiftUI splash window during sidecar boot (alpha can cope with 3–6 s blank WKWebView; paying users can't).
@@ -144,7 +146,7 @@ These belong to S6 (per `100days.md` and `road-to-alpha.md` §14):
 
 Also out of scope and parked elsewhere:
 - CI cleanup (separate session, not a track here)
-- Developer ID cert + `.dmg` pipeline (rejected — see road-to-alpha §"Decision")
+- Developer ID cert + `.dmg` pipeline (deferred — see road-to-alpha §"Decision")
 
 ## Branch hygiene
 

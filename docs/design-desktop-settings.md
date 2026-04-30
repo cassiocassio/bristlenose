@@ -1,11 +1,12 @@
 ---
 status: current
-last-trued: 2026-04-29
-trued-against: HEAD@first-run on 2026-04-29 (uncommitted Beat 3)
+last-trued: 2026-04-30
+trued-against: HEAD@first-run on 2026-04-30 (Beat 3 + 3b shipped)
 ---
 
 ## Changelog
 
+- _2026-04-30_ — Beat 3b + post-merge review fixes reconciled. Ollama URL hardwired to `localhost:11434/v1` in the desktop GUI (commit `dbd54ec`); editable TextField removed and replaced with static read-only display. CLI/CI override via parent-process `BRISTLENOSE_LOCAL_URL` env var only (`ServeManager.swift:351-357`, `BristlenoseShared.swift:122-127`). `localURL` UserDefaults key dropped from the env-injection table — no longer touched by the GUI. Added §"Validation invariants" subsection capturing the "presence-and-cache reader never sets `.checking`" contract that prevents radio-toggle stranded-spinner regressions, and the Azure focus-blur revalidation pattern that deliberately replaced per-keystroke validation. AIConsent + OllamaSetupSheet first-run flow cross-referenced (canonical home is the parked `design-first-run-flow.md` — see 100days §3 Should). Anchors: `LLMSettingsView.swift:331-348`, `LLMSettingsView.swift:524-536`, `LLMSettingsView.swift:629-637`.
 - _2026-04-29_ — Beat 3 reconciled: round-trip credential validation now shipped via new `LLMValidator.swift`. ProviderStatus table augmented to cover Azure 404 → `.invalid` and Anthropic forward-compat (any 4xx ≠ 401/403/402/429 → `.online`, robust against haiku-model deprecation). New §"Validation flow" subsection documents the verdict cache (SHA256-prefix keyed, UserDefaults), 60s TTL gate, offline survival via cache fallback on transient `.unavailable`, `.checking` rendered as `ProgressView` (Mail-style spinner), animated dot transitions, and the "Last verified Xm ago" line. Tightened Ollama line to specify HTTP probe target (`<url>/api/tags`). Anchors: `desktop/Bristlenose/Bristlenose/LLMValidator.swift`, `desktop/Bristlenose/Bristlenose/LLMSettingsView.swift`, `desktop/Bristlenose/Bristlenose/LLMProvider.swift`.
 - _2026-04-21_ — trued up, minor additions: noted Ollama status derives from URL reachability (no key-injection); noted `overlayPreferences` don't-override-default guard (only explicitly-set values get emitted); noted `KeychainStore` protocol + `InMemoryKeychain` test shim; promoted threat-model rationale (env-vars vs keychain-access-groups residual-risk delta) from `ServeManager.swift:366-371` comment; added cross-ref to `design-settings-ui.md` for the serve-mode web-UI path (complement, not competitor) and `design-keychain.md` §Desktop credential path.
 - _2026-04-20_ — trued in C3 closeout pass; structural accuracy confirmed against `SettingsView.swift`, `ServeManager.swift`, `LLMProvider.swift`.
@@ -24,7 +25,7 @@ Left sidebar list of 5 pre-populated providers (Claude, ChatGPT, Gemini, Azure, 
 - **Radio/checkmark** — which provider is active (user choice, `@AppStorage("activeProvider")`)
 - **Status dot** — whether the provider is configured (green "Online" / grey "Not set up" / red "Invalid" / orange "Unavailable")
 
-Right detail pane shows the selected provider's settings: API key (`SecureField` → Keychain via `KeychainHelper`), model picker (per-provider known models + "Custom…"), temperature slider, concurrency slider. Azure adds endpoint/deployment/version fields. Ollama shows URL instead of API key (no key injection — status derives from an HTTP probe to `<url>/api/tags`, parsing the models list to distinguish "not running" from "running but no models pulled"; see `LLMValidator.probeOllama`).
+Right detail pane shows the selected provider's settings: API key (`SecureField` → Keychain via `KeychainHelper`), model picker (per-provider known models + "Custom…"), temperature slider, concurrency slider. Azure adds endpoint/deployment/version fields. Ollama shows a **read-only** static display of the URL (`localhost:11434`) — the field is hardwired in the desktop GUI as a trust-boundary closure (commit `dbd54ec`, 30 Apr 2026): a social-engineered user pasting an attacker URL would silently exfiltrate transcripts over plain HTTP, contradicting the "transcripts stay on your Mac" claim. Status derives from an HTTP probe to `<hardwired-url>/api/tags`, parsing the models list to distinguish "not running" from "running but no models pulled"; see `LLMValidator.probeOllama`. CLI users and CI keep the override path via the `BRISTLENOSE_LOCAL_URL` env var (parent-process only — see §Preferences below).
 
 **Activation guard**: a provider cannot be activated (radio or toggle) unless its status is `.online`. You can select a provider in the sidebar to set it up, but the radio stays greyed out until a valid key is entered. One provider must always be active.
 
@@ -54,8 +55,10 @@ API keys are injected via `ServeManager.overlayAPIKeys()` (C3, Apr 2026) — Swi
 | Azure endpoint | `azureEndpoint` | `BRISTLENOSE_AZURE_ENDPOINT` |
 | Azure deployment | `azureDeployment` | `BRISTLENOSE_AZURE_DEPLOYMENT` |
 | Azure API version | `azureAPIVersion` | `BRISTLENOSE_AZURE_API_VERSION` |
-| Ollama URL | `localURL` | `BRISTLENOSE_LOCAL_URL` |
+| Ollama URL | *(parent process env only)* | `BRISTLENOSE_LOCAL_URL` |
 | Appearance | `appearance` | *(bridge, not env)* |
+
+> **Note on `BRISTLENOSE_LOCAL_URL`:** the desktop GUI hardwires the Ollama URL (no editable field). `overlayPreferences` therefore reads only the **parent process environment** for `BRISTLENOSE_LOCAL_URL` and forwards it to the sidecar if set — there's no UserDefaults round-trip. CLI users and CI keep the override path; desktop alpha users are locked to localhost. See `ServeManager.swift:351-357`, `BristlenoseShared.swift:122-127`, and `LLMSettingsView.swift` `hardwiredOllamaURL` constant.
 | API keys | **Keychain** | *(Python reads directly)* |
 
 ## Provider status model
@@ -127,5 +130,34 @@ Settings. Future work would add `NWPathMonitor` to fire validation on
 wifi-reconnect and post a toast on cached-`.ok` → fresh-`.invalid`
 transitions ("Claude key was rejected — open Settings to update"). Tracked
 as a follow-up dependency for that toast affordance.
+
+## Validation invariants
+
+These contracts protect against regressions seen during Beat 3b QA:
+
+**`applyPresenceAndCache` never sets `.checking`.** Only `kickOffValidation`
+does — and it sets `.checking` synchronously before the await. The
+presence-and-cache reader is purely a "show last-known state" function. If
+it ever wrote `.checking` itself, any code path that calls `refreshStatuses`
+without following up with `kickOffValidation` (radio-toggle, active-toggle)
+would strand the provider in a forever-spinner. Masked for cloud providers
+by the verdict cache; immediately surfaced for Ollama because Ollama doesn't
+use the cache. Comment block at `LLMSettingsView.swift:629-637` is the
+load-bearing record.
+
+**Azure revalidation fires on focus blur, not per-keystroke.** Typing
+`https://my-instance.openai.azure.com` would otherwise issue ~30 validation
+requests, each one a billed Azure call plus a rate-limit hit. `revalidateAzure()`
+(`LLMSettingsView.swift:524-536`) is wired through `@FocusState` for the
+endpoint and `apiVersion` fields with `onSubmit` (Enter) as the secondary
+trigger. Per-keystroke `.onChange` is retained only for the prefs notification
+(cheap UI signal, no network round-trip).
+
+**Consent recorded BEFORE prefs notification on Ollama setup.** When the
+"Use Ollama Instead" path completes (`AIConsentView.swift:60-69`), `recordConsent`
+runs first, then `activeProvider` is set, then `bristlenosePrefsChanged`
+posts. If the order were reversed, a prefs-change-driven serve start could
+fire pre-consent. Consent gate downstream still catches it — but the
+ordering is deliberate, not incidental.
 
 Status is orthogonal to active selection. Providers don't expose balance, free-tier, or trial status via API — we report only what we can detect.

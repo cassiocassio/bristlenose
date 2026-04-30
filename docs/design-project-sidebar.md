@@ -1,7 +1,7 @@
 ---
-status: trued
-last-trued: 2026-04-24
-trued-against: HEAD@port-v01-ingestion on 2026-04-24
+status: current
+last-trued: 2026-04-30
+trued-against: HEAD@first-run on 2026-04-30
 ---
 
 > **Truing status:** Trued. Phases 1–3 shipped; remaining drift carries inline banners. Project-menu and context-menu ASCII art trued (phantom Add Interviews / Analyse / Get Info removed). Drop matrix duplicate row clarified. Phase 2 "not shipped" list updated with strikethrough on items that did ship. Pipeline-state × run-trigger matrix at end of doc.
@@ -83,6 +83,8 @@ Explore options — possibilities include:
 No full-width button row at the top of the sidebar (that's an iOS pattern).
 
 ### Empty state
+
+> **Status (`partial`):** Shipped is a plain centred callout — `Text(i18n.t("desktop.chrome.emptyStateHint"))` at `ContentView.swift:833` ("Drag a folder here or press ⌘N"). No `doc.badge.plus` SF Symbol, no drag-target highlight, no TipKit tip yet. The richer design below stays aspirational, parked alongside the post-alpha home-view work in 100days §3 Should "Desktop home view".
 
 `ContentUnavailableView` with clear CTA: "Drag a folder of interviews here, or press Cmd+N to create a project" with a `doc.badge.plus` SF Symbol. The placeholder doubles as a drag target.
 

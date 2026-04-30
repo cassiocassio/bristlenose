@@ -49,6 +49,13 @@ a = Analysis(
             os.path.join(PROJECT_ROOT, "bristlenose", "llm", "prompts"),
             os.path.join("bristlenose", "llm", "prompts"),
         ),
+        # Cohort baselines for LLM cost forecasting (bristlenose/llm/pricing.py
+        # ::_load_baselines reads at runtime). Falls back to empty list on
+        # missing file, but cost-forecast quality degrades — ship the file.
+        (
+            os.path.join(PROJECT_ROOT, "bristlenose", "llm", "cohort-baselines.json"),
+            os.path.join("bristlenose", "llm"),
+        ),
         # Alembic migrations (read at runtime by server/db.py).
         (
             os.path.join(PROJECT_ROOT, "bristlenose", "server", "alembic"),

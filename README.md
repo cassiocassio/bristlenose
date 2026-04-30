@@ -384,6 +384,16 @@ Edit `bristlenose/__init__.py` (the single source of truth for version), commit,
 
 ## Changelog
 
+**0.15.1** — _1 May 2026_
+
+- **Desktop alpha-readiness (Sprint 2 Track C C2–C5)** — sandbox-safe API-key injection via Swift Keychain → env vars (no more `/usr/bin/security` exec from Python), libproc-based zombie cleanup, `os.Logger` with privacy redaction, key-shape stdout redactor, `SidecarMode.resolve` + three Xcode schemes, privacy manifests for host + sidecar, per-binary signing, supply-chain provenance. Desktop-only
+- **Desktop first-run experience (Sprint 2 Track B Branch 1)** — `BootView` unified boot/loading/failed surface, `WelcomeView` two-variant empty state, Beat 3 round-trip API key validation, Beat 3b Ollama setup sheet for local AI install, `boot.*` + `welcome.*` translation blocks across all 6 desktop locales. Desktop-only
+- **`bristlenose serve` fall-back to bundled theme CSS** — fixes brand-new projects rendering as raw HTML inside WKWebView when no per-project CSS has been generated yet
+- **`bristlenose doctor --self-test`** — verify sidecar bundle integrity (spec → bundle file presence)
+- **`bristlenose serve` fail-loud on missing React bundle** — returns a "Build incomplete" 500 page instead of silently falling back to the static render
+- **Japanese (`ja`) locale completion** — ~614 strings across 8 namespaces, alpha gate cleared
+- **i18n: tag sidebar** — 11 keys across all 6 locales
+
 **0.15.0** — _26 Apr 2026_
 
 - **Pipeline resilience: run-level event log + honest run state** — pipelines now write `pipeline-events.jsonl` recording how each run ended, with a structured `Cause` (10 categories). Replaces the desktop's old inference path that mis-classified interrupted runs as ready

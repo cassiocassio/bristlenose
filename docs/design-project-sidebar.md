@@ -1,13 +1,14 @@
 ---
 status: current
-last-trued: 2026-04-30
-trued-against: HEAD@first-run on 2026-04-30
+last-trued: 2026-05-01
+trued-against: HEAD@first-run on 2026-05-01
 ---
 
 > **Truing status:** Trued. Phases 1–3 shipped; remaining drift carries inline banners. Project-menu and context-menu ASCII art trued (phantom Add Interviews / Analyse / Get Info removed). Drop matrix duplicate row clarified. Phase 2 "not shipped" list updated with strikethrough on items that did ship. Pipeline-state × run-trigger matrix at end of doc.
 
 ## Changelog
 
+- _2026-05-01_ — §"Empty state" status banner flipped from `partial` to `shipped` after `WelcomeView` landed on `first-run` (commit `816ab65`). Drop-target affordance and New Project CTA now ship via the welcome detail-pane (not via the sidebar `ContentUnavailableView` shape originally designed in this doc); see `WelcomeView.swift` and `design-desktop-app.md` §"Loading and transition states" empty-state row. The four downstream "ContentUnavailableView empty state" mentions in this doc were not rewritten — the original sidebar-level vision is preserved as planning history; the actual empty surface lives in the detail pane. TipKit first-project hint remains parked.
 - _2026-04-24 (evening)_ — Sidebar row subtitle now switches "Analysing…" → "Stopping…" the moment the user clicks Stop on the toolbar pill, in lockstep with the pill itself. `ProjectRow` takes `liveData: PipelineLiveData` and reads `progress[id].isStopping` (commit `da5cc45`). See `design-subprocess-lifecycle.md` §Cancellation for the full chain.
 - _2026-04-24_ — Tier 1 truing follow-up (post `design-doc-review` audit): Project menu ASCII art corrected to match `MenuCommands.swift:317-415` shipped reality (phantom `Add Interviews… ⇧⌘I`, `Analyse… ⇧⌘A`, `Get Info ⌘I` removed; Locate, Move to submenu, ⌘⌫ shortcut added); right-click context menu ASCII corrected and `Choose Icon…` added (`ContentView.swift:967-969`); drop-matrix "Drop on empty area" column nuanced to call out `duplicateDropAlert` flow (`ContentView.swift:301-323`); Phase 2 "not shipped" list updated with strikethrough markers for items that the override banner already noted as shipped (multi-select, drop-on-row, duplicate alert, addedInterviews toast, extension allow-list).
 - _2026-04-23_ — trued up during port-v01-ingestion QA: inline-banner'd the Project-states table (shipped `PipelineState` enum has .scanning/.queued/.failed/.unreachable/attached-orphan that the table omits); inline-banner'd drop-matrix row 2 (shipped behaviour is blocker toast for `.ready` until incremental re-analyse lands); inline-banner'd "Pipeline does not auto-run on drop" (shipped behaviour DOES auto-run on folder drop); inline-banner'd Activity-status-bar section (shipped placement is toolbar pill `PipelineActivityItem`, not sidebar-bottom); inline-banner'd Phase 2 "not shipped" list (multi-select delete, drag-to-folder, duplicate-drop alert, drop-on-row via SidebarDropDelegate, extension allow-list, addedInterviews toast are in fact shipped); added "Pipeline state × run-trigger matrix" at end. Anchors: `ContentView.swift:508-605`, `PipelineRunner.swift:37-53`, `MenuCommands.swift:397-400`, `PipelineActivityItem.swift:207-210`. Commits: 3d9f43c, 5e254cd, 6d08f3f.
@@ -84,7 +85,7 @@ No full-width button row at the top of the sidebar (that's an iOS pattern).
 
 ### Empty state
 
-> **Status (`partial`):** Shipped is a plain centred callout — `Text(i18n.t("desktop.chrome.emptyStateHint"))` at `ContentView.swift:833` ("Drag a folder here or press ⌘N"). No `doc.badge.plus` SF Symbol, no drag-target highlight, no TipKit tip yet. The richer design below stays aspirational, parked alongside the post-alpha home-view work in 100days §3 Should "Desktop home view".
+> **Status (shipped 2026-05-01):** The drop-target + CTA empty-surface vision in this section moved out of the sidebar and into the detail pane via `WelcomeView` (`WelcomeView.swift`, commit `816ab65` on `first-run`). `WelcomeView.firstRun` ships the affordance with a different SF Symbol pair (`plus.square.dashed` for the New Project card, `tray.and.arrow.down(.fill)` for the drop card) inside dashed-border accent-tinted cards, plus a 3-step rail and an AI privacy link. `WelcomeView.noSelection` keeps closer to the original sidebar-icon-plus-CTA spirit. The sidebar itself still shows only `Text(i18n.t("desktop.chrome.emptyStateHint"))` at `ContentView.swift:833` ("Drag a folder here or press ⌘N") — the full empty UX lives one column over. The four "ContentUnavailableView" mentions later in this doc are preserved as planning history; the shipped surface is `WelcomeView`. TipKit first-project hint remains parked.
 
 `ContentUnavailableView` with clear CTA: "Drag a folder of interviews here, or press Cmd+N to create a project" with a `doc.badge.plus` SF Symbol. The placeholder doubles as a drag target.
 

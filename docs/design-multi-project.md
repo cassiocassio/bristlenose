@@ -1,7 +1,7 @@
 ---
 status: mixed
-last-trued: 2026-04-30
-trued-against: HEAD@first-run on 2026-04-30
+last-trued: 2026-05-01
+trued-against: HEAD@first-run on 2026-05-01
 split-candidate: true
 ---
 
@@ -9,11 +9,12 @@ split-candidate: true
 
 ## Changelog
 
+- 2026-05-01 — §"Status" updated: the detail-pane welcome placeholder from commit `4772c3a` was replaced by `WelcomeView` (commit `816ab65` on `first-run`) with `.firstRun` and `.noSelection` variants. The "parked for full design post-alpha" framing carried over from the placeholder is no longer accurate — a minimum-viable home view has shipped; what remains parked is the recents / community-codebooks expansion and window-frame restoration.
 - 2026-04-30 — Trued against shipped reality. Phase 1 (Project Index, Folders, VolumeWatcher / availability) shipped via `port-v01-ingestion` (commit `e781ebe`, merged to v0.15.0 on 26 Apr 2026); per-section `status:current` markers added. Person identity (§2), Archive (§3a), cross-project search (§3b), `bristlenose forget` (§3c), CLI `bristlenose projects` / `--recent` / `--all` all stay pending.
 
 ## Status
 
-**Mixed — Phase 1 shipped, Phase 2+ pending.** Project Index, folders + drag-reorder + Move-To submenu, volume mount/unmount tracking and `Project.availability` enum, "Plug in [volume]" UX shipped via `port-v01-ingestion` (v0.15.0, 26 Apr 2026). Anchors: `desktop/Bristlenose/Bristlenose/ProjectIndex.swift:1-779`, `VolumeWatcher.swift`, `MenuCommands.swift:317-415`. Person identity model, Archive, cross-project search, `forget` command remain pending. The home-screen design in §1 below describes a sidebar-list-centric view; a separate detail-pane welcome placeholder shipped in commit `4772c3a` (parked for full design post-alpha — see 100days §3 Should "Desktop home view"). This doc maps assumptions, designs the data model, and documents the identity problem.
+**Mixed — Phase 1 shipped, Phase 2+ pending.** Project Index, folders + drag-reorder + Move-To submenu, volume mount/unmount tracking and `Project.availability` enum, "Plug in [volume]" UX shipped via `port-v01-ingestion` (v0.15.0, 26 Apr 2026). Anchors: `desktop/Bristlenose/Bristlenose/ProjectIndex.swift:1-779`, `VolumeWatcher.swift`, `MenuCommands.swift:317-415`. Person identity model, Archive, cross-project search, `forget` command remain pending. The home-screen design in §1 below describes a sidebar-list-centric view; the detail-pane welcome surface shipped on 2026-05-01 via `WelcomeView` (commit `816ab65` on `first-run`) with two variants (`.firstRun` and `.noSelection`) — see `design-desktop-app.md` §"Loading and transition states" empty-state row, and `design-project-sidebar.md` §"Empty state". Recents / community-codebooks / window-frame restoration remain post-alpha (100days §3 Should "Desktop home view"). This doc maps assumptions, designs the data model, and documents the identity problem.
 
 ## Context
 
